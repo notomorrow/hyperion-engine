@@ -2,9 +2,9 @@
 #ifndef HYPERION_DATA_STORE_HPP
 #define HYPERION_DATA_STORE_HPP
 
-#include <util/fs/FsUtil.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/ByteBuffer.hpp>
+#include <core/filesystem/FilePath.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/ByteBuffer.hpp>
 
 namespace hyperion {
 

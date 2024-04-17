@@ -23,11 +23,11 @@
 #include <scene/ecs/components/ScriptComponent.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/Pair.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Queue.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/utilities/Pair.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/Queue.hpp>
+#include <core/threading/AtomicVar.hpp>
 
 #include <util/ArgParse.hpp>
 #include <util/json/JSON.hpp>

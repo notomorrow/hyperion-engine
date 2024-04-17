@@ -2,8 +2,8 @@
 #ifndef HYPERION_DUMMY_DATA_HPP
 #define HYPERION_DUMMY_DATA_HPP
 
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/TypeMap.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/TypeMap.hpp>
 
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
@@ -14,7 +14,7 @@
 
 #include <math/MathUtil.hpp>
 
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 #include <memory>
 
@@ -70,7 +70,7 @@ public:
     /*! \brief Get or create a buffer of at least the given size */
     GPUBufferRef GetOrCreateBuffer(Device *device, GPUBufferType buffer_type, SizeType required_size, bool exact_size = false)
     {
-        Threads::AssertOnThread(THREAD_RENDER);
+        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         if (!m_buffers.Contains(buffer_type)) {
             m_buffers.Set(buffer_type, { });

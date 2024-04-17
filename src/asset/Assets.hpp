@@ -11,11 +11,11 @@
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
 #include <core/Defines.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 #include <Constants.hpp>
 #include <core/ObjectPool.hpp>
 
-#include <TaskSystem.hpp>
+#include <core/threading/TaskSystem.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -101,7 +101,7 @@ public:
         static_assert(std::is_base_of_v<AssetLoaderBase, Loader>,
             "Loader must be a derived class of AssetLoaderBase!");
 
-        // Threads::AssertOnThread(THREAD_GAME);
+        // Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
         const FixedArray<String, sizeof...(formats)> format_strings {
             String(formats)...

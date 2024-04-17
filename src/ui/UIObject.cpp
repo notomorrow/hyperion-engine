@@ -20,13 +20,13 @@
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
 
-#include <core/lib/Queue.hpp>
+#include <core/containers/Queue.hpp>
 
 #include <system/Application.hpp>
 
 #include <input/InputManager.hpp>
 
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

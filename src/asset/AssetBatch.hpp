@@ -8,7 +8,7 @@
 #include <core/ID.hpp>
 #include <scene/Node.hpp>
 #include <math/MathUtil.hpp>
-#include <TaskSystem.hpp>
+#include <core/threading/TaskSystem.hpp>
 
 #include <type_traits>
 

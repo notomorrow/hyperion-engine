@@ -45,7 +45,7 @@ PostFXPass::~PostFXPass() = default;
 
 void PostFXPass::CreateDescriptors()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (!m_framebuffer->GetAttachmentUsages().Empty()) {
         if (m_effect_index == ~0u) {
@@ -124,7 +124,7 @@ PostProcessing::~PostProcessing() = default;
 
 void PostProcessing::Create()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     for (uint stage_index = 0; stage_index < 2; stage_index++) {
         for (auto &effect : m_effects[stage_index]) {
@@ -143,7 +143,7 @@ void PostProcessing::Create()
 
 void PostProcessing::Destroy()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     {
         std::lock_guard guard(m_effects_mutex);
@@ -169,7 +169,7 @@ void PostProcessing::Destroy()
 
 void PostProcessing::PerformUpdates()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (!m_effects_updated.Get(MemoryOrder::RELAXED)) {
         return;
@@ -244,7 +244,7 @@ PostProcessingUniforms PostProcessing::GetUniforms() const
 
 void PostProcessing::CreateUniformBuffer()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const PostProcessingUniforms post_processing_uniforms = GetUniforms();
 
@@ -265,7 +265,7 @@ void PostProcessing::CreateUniformBuffer()
 
 void PostProcessing::RenderPre(Frame *frame) const
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     uint index = 0;
 
@@ -280,7 +280,7 @@ void PostProcessing::RenderPre(Frame *frame) const
 
 void PostProcessing::RenderPost(Frame *frame) const
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     uint index = 0;
 

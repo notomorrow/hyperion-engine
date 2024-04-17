@@ -59,7 +59,6 @@ public:
 
     void CreateShader();
     virtual void CreatePipeline(const RenderableAttributeSet &renderable_attributes) override;
-    virtual void CreateDescriptors() override;
     virtual void Create() override;
     virtual void Record(uint frame_index) override;
     virtual void Render(Frame *frame) override;

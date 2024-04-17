@@ -9,7 +9,7 @@
 #include <rendering/backend/RendererAttachment.hpp>
 
 #include <math/Vector4.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 
 #include <Types.hpp>
 

@@ -53,7 +53,7 @@ void PointLightShadowRenderer::Init()
 // called from game thread
 void PointLightShadowRenderer::InitGame()
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_env_probe.IsValid());
 }
@@ -69,7 +69,7 @@ void PointLightShadowRenderer::OnRemoved()
 
 void PointLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_env_probe.IsValid());
     AssertThrow(m_light.IsValid());
@@ -86,7 +86,7 @@ void PointLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 
 void PointLightShadowRenderer::OnRender(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (!m_env_probe.IsValid() || !m_light.IsValid()) {
         DebugLog(

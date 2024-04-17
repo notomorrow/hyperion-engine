@@ -7,8 +7,8 @@
 #include <math/MathUtil.hpp>
 #include <math/Extent.hpp>
 
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/ArrayMap.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/containers/ArrayMap.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/Platform.hpp>

@@ -23,11 +23,11 @@
 #include <rendering/FinalPass.hpp>
 #include <scene/World.hpp>
 
-#include <Threads.hpp>
-#include <TaskSystem.hpp>
+#include <core/threading/Threads.hpp>
+#include <core/threading/TaskSystem.hpp>
 
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/TypeMap.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/TypeMap.hpp>
 #include <core/ObjectPool.hpp>
 
 #include <rendering/backend/RendererImage.hpp>
@@ -115,11 +115,11 @@ public:
 
     void Initialize(Engine *engine);
 
-    void AddDescriptorSet(Name name, const DescriptorSet2Ref &ref);
-    DescriptorSet2Ref GetDescriptorSet(Name name) const;
+    void AddDescriptorSet(Name name, const DescriptorSetRef &ref);
+    DescriptorSetRef GetDescriptorSet(Name name) const;
 
 private:
-    HashMap<Name, DescriptorSet2Ref>    m_descriptor_sets;
+    HashMap<Name, DescriptorSetRef>    m_descriptor_sets;
     mutable Mutex                       m_mutex;
 };
 

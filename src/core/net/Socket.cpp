@@ -2,7 +2,7 @@
 
 #include <core/net/Socket.hpp>
 
-#include <core/lib/Queue.hpp>
+#include <core/containers/Queue.hpp>
 
 #ifdef HYP_UNIX
 

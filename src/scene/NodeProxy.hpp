@@ -209,7 +209,7 @@ public:
     /*! \brief If the Node exists, sets the name of the Node. */
     void SetName(const String &name);
 
-    /* \brief If the NodeProxy is not empty, returns the Entity, if any,
+    /*! \brief If the NodeProxy is not empty, returns the Entity, if any,
         attached to the underlying Node. */
     ID<Entity> GetEntity() const;
 

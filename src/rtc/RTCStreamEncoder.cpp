@@ -3,10 +3,10 @@
 #include <rtc/RTCServer.hpp>
 #include <rtc/RTCTrack.hpp>
 
-#include <core/lib/AtomicVar.hpp>
-#include <core/lib/Queue.hpp>
+#include <core/threading/AtomicVar.hpp>
+#include <core/threading/TaskThread.hpp>
 
-#include <TaskThread.hpp>
+#include <core/containers/Queue.hpp>
 
 #include <mutex>
 

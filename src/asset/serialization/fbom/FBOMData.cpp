@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <asset/serialization/fbom/FBOMData.hpp>
-#include <core/lib/Memory.hpp>
+#include <core/memory/Memory.hpp>
 
 namespace hyperion::fbom {
 

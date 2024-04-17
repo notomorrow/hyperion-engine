@@ -2,8 +2,8 @@
 #ifndef HYPERION_CORE_ID_CREATOR_HPP
 #define HYPERION_CORE_ID_CREATOR_HPP
 
-#include <core/lib/Queue.hpp>
-#include <core/lib/TypeMap.hpp>
+#include <core/containers/Queue.hpp>
+#include <core/containers/TypeMap.hpp>
 #include <core/ID.hpp>
 #include <Constants.hpp>
 #include <Types.hpp>

@@ -193,7 +193,7 @@ RC<UIGridRow> UIGrid::AddRow()
 
 void UIGrid::Init()
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     UIPanel::Init();
 

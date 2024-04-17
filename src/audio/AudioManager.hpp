@@ -5,8 +5,8 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
 
 #include <math/Vector3.hpp>
 

@@ -3,7 +3,7 @@
 #ifndef HYPERION_RENDERER_BACKEND_VULKAN_SWAPCHAIN_HPP
 #define HYPERION_RENDERER_BACKEND_VULKAN_SWAPCHAIN_HPP
 
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererDevice.hpp>
@@ -14,8 +14,6 @@
 
 #include <Types.hpp>
 #include <Constants.hpp>
-
-#include <vector>
 
 #define HYP_ENABLE_VSYNC 0
 

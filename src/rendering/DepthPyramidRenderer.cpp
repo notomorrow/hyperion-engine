@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <rendering/DepthPyramidRenderer.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <Engine.hpp>
 
@@ -50,7 +50,7 @@ struct RENDER_COMMAND(UnsetDepthPyramidInGlobalDescriptorSet) : renderer::Render
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 DepthPyramidRenderer::DepthPyramidRenderer()
     : m_is_rendered(false)
@@ -61,7 +61,7 @@ DepthPyramidRenderer::~DepthPyramidRenderer() = default;
 
 void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     
     AssertThrow(m_depth_attachment_usage == nullptr);
     // AssertThrow(depth_attachment_usage->IsDepthAttachment());
@@ -130,7 +130,7 @@ void DepthPyramidRenderer::Create(AttachmentUsageRef depth_attachment_usage)
         DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            const DescriptorSet2Ref &depth_pyramid_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DepthPyramidDescriptorSet), frame_index);
+            const DescriptorSetRef &depth_pyramid_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DepthPyramidDescriptorSet), frame_index);
             AssertThrow(depth_pyramid_descriptor_set != nullptr);
 
             if (mip_level == 0) {

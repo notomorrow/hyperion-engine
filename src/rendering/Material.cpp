@@ -4,7 +4,6 @@
 
 #include <util/ByteUtil.hpp>
 
-
 #include <Engine.hpp>
 #include <Types.hpp>
 
@@ -89,7 +88,7 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : renderer::RenderCommand
     virtual Result operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            const DescriptorSet2Ref &descriptor_set = g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(id, frame_index);
+            const DescriptorSetRef &descriptor_set = g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(id, frame_index);
             AssertThrow(descriptor_set != nullptr);
 
             if (texture.IsValid()) {
@@ -107,7 +106,9 @@ struct RENDER_COMMAND(UpdateMaterialTexture) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
+
+#pragma region Material
 
 Material::ParameterTable Material::DefaultParameters()
 {
@@ -412,7 +413,9 @@ Handle<Material> Material::Clone() const
     return handle;
 }
 
-// MaterialGroup
+#pragma endregion Material
+
+#pragma region MaterialGroup
 
 MaterialGroup::MaterialGroup()
     : BasicObject()
@@ -458,7 +461,9 @@ bool MaterialGroup::Remove(const String &name)
     return false;
 }
 
-// MaterialCache
+#pragma endregion MaterialGroup
+
+#pragma region MaterialCache
 
 MaterialCache *MaterialCache::GetInstance()
 {
@@ -471,7 +476,7 @@ void MaterialCache::Add(const Handle<Material> &material)
         return;
     }
 
-    std::lock_guard guard(m_mutex);
+    Mutex::Guard guard(m_mutex);
 
     HashCode hc;
     hc.Add(material->GetRenderAttributes().GetHashCode());
@@ -532,7 +537,7 @@ Handle<Material> MaterialCache::GetOrCreate(
     hc.Add(parameters.GetHashCode());
     hc.Add(textures.GetHashCode());
 
-    std::lock_guard guard(m_mutex);
+    Mutex::Guard guard(m_mutex);
 
     const auto it = m_map.Find(hc.Value());
 
@@ -568,7 +573,9 @@ Handle<Material> MaterialCache::GetOrCreate(
     return handle;
 }
 
-// MaterialDescriptorSetManager
+#pragma region MaterialCache
+
+#pragma region MaterialDescriptorSetManager
 
 MaterialDescriptorSetManager::MaterialDescriptorSetManager()
     : m_pending_addition_flag { false },
@@ -607,7 +614,7 @@ void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
 
     const renderer::DescriptorSetLayout layout(*declaration);
 
-    const DescriptorSet2Ref invalid_descriptor_set = layout.CreateDescriptorSet();
+    const DescriptorSetRef invalid_descriptor_set = layout.CreateDescriptorSet();
     
     for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
         invalid_descriptor_set->SetElement(HYP_NAME(Textures), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
@@ -618,14 +625,14 @@ void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
     m_material_descriptor_sets.Set(ID<Material>::invalid, { invalid_descriptor_set, invalid_descriptor_set });
 }
 
-const DescriptorSet2Ref &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> material, uint frame_index) const
+const DescriptorSetRef &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> material, uint frame_index) const
 {
-    Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
 
     const auto it = m_material_descriptor_sets.Find(material);
 
     if (it == m_material_descriptor_sets.End()) {
-        return DescriptorSet2Ref::unset;
+        return DescriptorSetRef::unset;
     }
 
     return it->second[frame_index];
@@ -640,10 +647,10 @@ void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material)
 
     renderer::DescriptorSetLayout layout(*declaration);
 
-    FixedArray<DescriptorSet2Ref, max_frames_in_flight> descriptor_sets;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        descriptor_sets[frame_index] = MakeRenderObject<renderer::DescriptorSet2>(layout);
+        descriptor_sets[frame_index] = MakeRenderObject<renderer::DescriptorSet>(layout);
 
         for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
             descriptor_sets[frame_index]->SetElement(HYP_NAME(Textures), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
@@ -667,7 +674,7 @@ void MaterialDescriptorSetManager::EnqueueAdd(ID<Material> material, FixedArray<
 
     const renderer::DescriptorSetLayout layout(*declaration);
 
-    FixedArray<DescriptorSet2Ref, max_frames_in_flight> descriptor_sets;
+    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         descriptor_sets[frame_index] = layout.CreateDescriptorSet();
@@ -744,7 +751,7 @@ void MaterialDescriptorSetManager::Initialize()
 
 void MaterialDescriptorSetManager::Update(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const uint frame_index = frame->GetFrameIndex();
 
@@ -800,5 +807,7 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
 
     m_pending_addition_flag.Set(false, MemoryOrder::RELAXED);
 }
+
+#pragma endregion MaterialDescriptorSetManager
 
 } // namespace hyperion

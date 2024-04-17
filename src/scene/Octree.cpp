@@ -7,7 +7,7 @@
 #include <scene/camera/Camera.hpp>
 
 #include <Engine.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 namespace hyperion {
 

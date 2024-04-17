@@ -7,7 +7,7 @@ namespace hyperion {
 
 HYP_API void InitializeApplication(RC<Application> application)
 {
-    Threads::AssertOnThread(THREAD_MAIN);
+    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
     AssertThrowMsg(
         g_engine == nullptr,
@@ -27,7 +27,7 @@ HYP_API void InitializeApplication(RC<Application> application)
 
 HYP_API void ShutdownApplication()
 {
-    Threads::AssertOnThread(THREAD_MAIN);
+    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
     AssertThrowMsg(
         g_engine != nullptr,

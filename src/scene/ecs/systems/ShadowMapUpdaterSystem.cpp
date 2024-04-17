@@ -10,7 +10,7 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/EntityDrawCollection.hpp>
 #include <math/MathUtil.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {

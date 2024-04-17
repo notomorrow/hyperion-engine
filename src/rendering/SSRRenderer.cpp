@@ -1,9 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <rendering/SSRRenderer.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <Engine.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
@@ -123,7 +123,7 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 SSRRenderer::SSRRenderer(const Extent2D &extent, SSRRendererOptions options)
     : m_extent(extent),
@@ -266,7 +266,7 @@ void SSRRenderer::CreateComputePipelines()
     DescriptorTableRef write_uvs_shader_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(write_uvs_shader_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = write_uvs_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = write_uvs_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(UVImage), m_image_outputs[0]->GetImageView());
@@ -291,7 +291,7 @@ void SSRRenderer::CreateComputePipelines()
     DescriptorTableRef sample_shader_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(sample_shader_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = sample_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = sample_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(UVImage), m_image_outputs[0]->GetImageView());
@@ -310,7 +310,7 @@ void SSRRenderer::CreateComputePipelines()
 
     PUSH_RENDER_COMMAND(
         CreateSSRDescriptors,
-        FixedArray {
+        FixedArray<ImageViewRef, max_frames_in_flight> {
             m_temporal_blending ? m_temporal_blending->GetImageOutput(0).image_view : m_image_outputs[1]->GetImageView(),
             m_temporal_blending ? m_temporal_blending->GetImageOutput(1).image_view : m_image_outputs[1]->GetImageView()
         }

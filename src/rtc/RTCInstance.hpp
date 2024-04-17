@@ -8,8 +8,8 @@
 #include <rtc/RTCStream.hpp>
 #include <rtc/RTCStreamEncoder.hpp>
 
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/memory/UniquePtr.hpp>
 
 namespace hyperion {
 

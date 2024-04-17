@@ -3,12 +3,12 @@
 #include <Engine.hpp>
 #include <Types.hpp>
 
-#include <core/lib/Mutex.hpp>
-#include <core/lib/HashMap.hpp>
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Pair.hpp>
-#include <core/lib/String.hpp>
+#include <core/threading/Mutex.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/Pair.hpp>
+#include <core/containers/String.hpp>
 
 #include <dotnet/Class.hpp>
 #include <dotnet/Assembly.hpp>

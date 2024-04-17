@@ -2,7 +2,7 @@
 
 #include <rendering/backend/RenderCommand.hpp>
 
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 namespace hyperion::renderer {
 
@@ -37,7 +37,7 @@ Result RenderCommands::Flush()
         HYPERION_RETURN_OK;
     }
 
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     Array<RenderCommand *> commands;
 
@@ -118,7 +118,7 @@ Result RenderCommands::FlushOrWait()
         HYPERION_RETURN_OK;
     }
 
-    if (Threads::IsOnThread(THREAD_RENDER)) {
+    if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
         return Flush();
     }
 
@@ -129,7 +129,7 @@ Result RenderCommands::FlushOrWait()
 
 void RenderCommands::Wait()
 {
-    Threads::AssertOnThread(~THREAD_RENDER);
+    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
 
     std::unique_lock lock(mtx);
     flushed_cv.wait(lock, [] { return RenderCommands::Count() == 0; });

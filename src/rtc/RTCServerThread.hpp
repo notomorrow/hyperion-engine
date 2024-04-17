@@ -2,8 +2,8 @@
 #ifndef HYPERION_RTC_SERVER_THREAD_HPP
 #define HYPERION_RTC_SERVER_THREAD_HPP
 
-#include <core/Thread.hpp>
-#include <core/Scheduler.hpp>
+#include <core/threading/Thread.hpp>
+#include <core/threading/Scheduler.hpp>
 
 namespace hyperion {
 

@@ -3,15 +3,15 @@
 #ifndef HYPERION_CONFIG_HPP
 #define HYPERION_CONFIG_HPP
 
-#include <core/lib/Variant.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/String.hpp>
+#include <core/utilities/Variant.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/containers/String.hpp>
 #include <core/Defines.hpp>
 #include <util/definitions/DefinitionsFile.hpp>
 #include <Types.hpp>
 
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 namespace hyperion {
 

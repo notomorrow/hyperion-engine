@@ -163,9 +163,9 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
-// ShadowPass
+#pragma region ShadowPass
 
 ShadowPass::ShadowPass(const Handle<Scene> &parent_scene, Extent2D extent, ShadowMode shadow_mode)
     : FullScreenPass(shadow_map_formats[uint(shadow_mode)], extent),
@@ -314,7 +314,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(CombineShadowMapsDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(CombineShadowMapsDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(PrevTexture), m_shadow_map_statics->GetImageView());
@@ -339,7 +339,7 @@ void ShadowPass::CreateComputePipelines()
     // have to create descriptor sets specifically for compute shader,
     // holding framebuffer attachment image (src), and our final shadowmap image (dst)
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(BlurShadowMapDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(BlurShadowMapDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(InputTexture), m_framebuffer->GetAttachmentUsages().Front()->GetImageView());
@@ -406,7 +406,7 @@ void ShadowPass::Destroy()
 
 void ShadowPass::Render(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     Image *framebuffer_image = m_attachments.Front()->GetImage();
 
@@ -531,6 +531,10 @@ void ShadowPass::Render(Frame *frame)
     }
 }
 
+#pragma endregion ShadowPass
+
+#pragma region DirectionalLightShadowRenderer
+
 DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Extent2D resolution, ShadowMode shadow_mode)
     : RenderComponent(name),
       m_resolution(resolution),
@@ -560,12 +564,12 @@ void DirectionalLightShadowRenderer::Init()
 // called from game thread
 void DirectionalLightShadowRenderer::InitGame()
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 }
 
 void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_shadow_pass != nullptr);
     AssertThrow(m_shadow_pass->GetCamera().IsValid());
@@ -606,7 +610,7 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 
 void DirectionalLightShadowRenderer::OnRender(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     AssertThrow(m_shadow_pass != nullptr);
 
@@ -648,5 +652,7 @@ void DirectionalLightShadowRenderer::OnComponentIndexChanged(RenderComponentBase
 {
     AssertThrowMsg(false, "Not implemented");
 }
+
+#pragma endregion DirectionalLightShadowRenderer
 
 } // namespace hyperion

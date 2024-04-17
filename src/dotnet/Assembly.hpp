@@ -2,9 +2,9 @@
 #ifndef HYP_DOTNET_ASSEMBLY_HPP
 #define HYP_DOTNET_ASSEMBLY_HPP
 
-#include <core/lib/Mutex.hpp>
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/threading/Mutex.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 #include <dotnet/Types.hpp>
 #include <dotnet/interop/ManagedGuid.hpp>

@@ -3,9 +3,9 @@
 #ifndef HYPERION_CORE_NET_MESSAGE_QUEUE_HPP
 #define HYPERION_CORE_NET_MESSAGE_QUEUE_HPP
 
-#include <core/lib/AtomicVar.hpp>
-#include <core/lib/Queue.hpp>
-#include <core/lib/Mutex.hpp>
+#include <core/threading/AtomicVar.hpp>
+#include <core/containers/Queue.hpp>
+#include <core/threading/Mutex.hpp>
 
 #include <util/json/JSON.hpp>
 

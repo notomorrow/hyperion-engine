@@ -2,7 +2,7 @@
 #ifndef HYPERION_DOTNET_DOT_NET_SYSTEM_HPP
 #define HYPERION_DOTNET_DOT_NET_SYSTEM_HPP
 
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 #include <Types.hpp>
 

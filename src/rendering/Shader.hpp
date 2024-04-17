@@ -4,7 +4,7 @@
 
 #include <core/Base.hpp>
 #include <core/Name.hpp>
-#include <core/lib/Mutex.hpp>
+#include <core/threading/Mutex.hpp>
 
 #include <rendering/Bindless.hpp>
 #include <rendering/backend/RenderObject.hpp>

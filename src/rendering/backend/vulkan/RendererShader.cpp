@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <system/Debug.hpp>
 

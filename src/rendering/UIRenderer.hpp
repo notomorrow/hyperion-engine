@@ -3,7 +3,7 @@
 #define HYPERION_UI_RENDERER_HPP
 
 #include <core/Base.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/memory/UniquePtr.hpp>
 
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderComponent.hpp>
@@ -13,6 +13,7 @@
 
 #include <scene/Scene.hpp>
 #include <scene/camera/Camera.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion {

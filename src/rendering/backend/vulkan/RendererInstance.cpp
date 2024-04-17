@@ -5,7 +5,7 @@
 #include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 
 #include <system/Debug.hpp>
 #include <system/Application.hpp>

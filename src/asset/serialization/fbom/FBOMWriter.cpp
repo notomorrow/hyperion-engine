@@ -3,7 +3,7 @@
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/ByteWriter.hpp>
 
-#include <core/lib/Stack.hpp>
+#include <core/containers/Stack.hpp>
 
 #include <Constants.hpp>
 

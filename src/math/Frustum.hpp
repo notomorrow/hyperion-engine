@@ -7,7 +7,7 @@
 #include <math/BoundingBox.hpp>
 #include <math/BoundingSphere.hpp>
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 
 #include <Types.hpp>
 

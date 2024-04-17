@@ -3,13 +3,13 @@
 #ifndef HYPERION_FBOM_DESERIALIZED_OBJECT_HPP
 #define HYPERION_FBOM_DESERIALIZED_OBJECT_HPP
 
-#include <core/lib/Any.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/Variant.hpp>
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/memory/Any.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/utilities/Variant.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/ID.hpp>
 
 #include <asset/AssetBatch.hpp>

@@ -125,7 +125,7 @@ struct RENDER_COMMAND(SetBLASMesh) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 BLAS::BLAS(
     ID<Entity> entity_id,
@@ -223,7 +223,7 @@ void BLAS::UpdateRender(
 )
 {
 #if 0 // TopLevelAccelerationStructure does this work here.
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     if (!NeedsUpdate()) {

@@ -4,8 +4,8 @@
 #define HYPERION_CAMERA_TRACK_HPP
 
 #include <math/Transform.hpp>
-#include <core/lib/SortedArray.hpp>
-#include <core/lib/Optional.hpp>
+#include <core/containers/SortedArray.hpp>
+#include <core/utilities/Optional.hpp>
 #include <Types.hpp>
 
 namespace hyperion {
@@ -35,9 +35,7 @@ public:
     void SetDuration(double duration)
         { m_duration = duration; }
 
-    /**
-     * \brief Get a blended CameraTrackPivot at {timestamp}
-     */
+    /*! \brief Get a blended CameraTrackPivot at \ref{timestamp} */
     CameraTrackPivot GetPivotAt(double timestamp) const;
 
     void AddPivot(const CameraTrackPivot &pivot);

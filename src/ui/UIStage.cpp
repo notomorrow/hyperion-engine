@@ -22,7 +22,7 @@
 
 #include <input/InputManager.hpp>
 
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -84,7 +84,7 @@ void UIStage::Init()
         CreateObject<Camera>(),
         Scene::InitInfo
         {
-            THREAD_GAME,
+            ThreadName::THREAD_GAME,
             Scene::InitInfo::SCENE_FLAGS_NON_WORLD
         }
     );
@@ -111,7 +111,7 @@ void UIStage::Update(GameCounter::TickUnit delta)
 
 bool UIStage::TestRay(const Vec2f &position, RayTestResults &out_ray_test_results)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     out_ray_test_results.Clear();
 

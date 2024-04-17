@@ -81,7 +81,7 @@ struct RENDER_COMMAND(BindEnvProbes) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 Scene::Scene()
     : Scene(Handle<Camera>::empty, { })
@@ -180,14 +180,14 @@ void Scene::SetCamera(Handle<Camera> camera)
 void Scene::SetWorld(World *world)
 {
     // be cautious
-    // Threads::AssertOnThread(THREAD_GAME);
+    // Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     m_world = world;
 }
 
 NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_root_node_proxy);
     return m_root_node_proxy.Get()->FindChildWithEntity(entity);
@@ -195,7 +195,7 @@ NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const
 
 NodeProxy Scene::FindNodeByName(const String &name) const
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_root_node_proxy);
     return m_root_node_proxy.Get()->FindChildByName(name);
@@ -203,7 +203,7 @@ NodeProxy Scene::FindNodeByName(const String &name) const
 
 void Scene::Update(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertReady();
 
@@ -241,7 +241,7 @@ void Scene::CollectEntities(
     bool skip_frustum_culling
 ) const
 {
-    Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
 
     // clear out existing entities before populating
     render_list.ClearEntities();
@@ -301,7 +301,7 @@ void Scene::CollectDynamicEntities(
     bool skip_frustum_culling
 ) const
 {
-    Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
 
     // clear out existing entities before populating
     render_list.ClearEntities();
@@ -363,7 +363,7 @@ void Scene::CollectStaticEntities(
     bool skip_frustum_culling
 ) const
 {
-    Threads::AssertOnThread(THREAD_GAME | THREAD_TASK);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
 
     // clear out existing entities before populating
     render_list.ClearEntities();

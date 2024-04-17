@@ -9,8 +9,8 @@
 #include <core/ID.hpp>
 #include <core/Name.hpp>
 #include <core/Handle.hpp>
-#include <core/lib/TypeMap.hpp>
-#include <core/lib/StaticString.hpp>
+#include <core/containers/TypeMap.hpp>
+#include <core/containers/StaticString.hpp>
 
 #include <rendering/backend/RendererInstance.hpp>
 
@@ -45,7 +45,7 @@ struct StubbedClass : public ClassInfo<ClassName>
 template <auto X>
 struct ClassName
 {
-    using Sequence = IntegerSequenceFromString<X>;
+    using Sequence = containers::detail::IntegerSequenceFromString<X>;
 };
 
 #define STUB_CLASS(name) ::hyperion::StubbedClass<name, ClassName<StaticString(HYP_STR(name))>>

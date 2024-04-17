@@ -4,7 +4,7 @@
 #define HYPERION_FBOM_MARSHALER_HPP
 
 #include <core/Core.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/Util.hpp>
 
 #include <asset/serialization/fbom/FBOMDeserializedObject.hpp>

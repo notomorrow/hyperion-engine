@@ -14,7 +14,7 @@
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererSampler.hpp>
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
 namespace hyperion {

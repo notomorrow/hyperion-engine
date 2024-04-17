@@ -5,10 +5,10 @@
 
 #include <asset/ByteReader.hpp>
 #include <util/json/parser/Lexer.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/Variant.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/HashMap.hpp>
+#include <core/containers/String.hpp>
+#include <core/utilities/Variant.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/HashMap.hpp>
 #include <util/StringUtil.hpp>
 #include <core/Defines.hpp>
 

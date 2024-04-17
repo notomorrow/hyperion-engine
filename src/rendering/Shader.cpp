@@ -109,7 +109,7 @@ struct RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages) : renderer::Rend
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 GlobalSphericalHarmonicsGrid::GlobalSphericalHarmonicsGrid()
 {

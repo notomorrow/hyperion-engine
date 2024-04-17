@@ -3,8 +3,8 @@
 #ifndef HYP_JSON_TOKEN_STREAM_HPP
 #define HYP_JSON_TOKEN_STREAM_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
 #include <util/json/parser/Token.hpp>
 #include <system/Debug.hpp>
 #include <Types.hpp>

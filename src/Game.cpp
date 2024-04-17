@@ -1,9 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <Game.hpp>
-#include <GameThread.hpp>
+#include <core/threading/GameThread.hpp>
+#include <core/threading/Threads.hpp>
 #include <Engine.hpp>
-#include <Threads.hpp>
 
 #include <system/Debug.hpp>
 
@@ -37,7 +37,7 @@ Game::~Game()
 
 void Game::Init()
 {
-    Threads::AssertOnThread(THREAD_MAIN);
+    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
     AssertThrowMsg(m_application != nullptr, "No valid Application instance was provided to Game constructor!");
     
@@ -85,7 +85,7 @@ void Game::Update(GameCounter::TickUnit delta)
 
 void Game::InitGame()
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     m_ui_stage.Init();
 
@@ -104,7 +104,7 @@ void Game::InitGame()
 
 void Game::InitRender()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 }
 
 void Game::Teardown()
@@ -146,7 +146,7 @@ void Game::HandleEvent(SystemEvent &&event)
 
 void Game::OnInputEvent(const SystemEvent &event)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     // forward to UI
     if (m_ui_stage.OnInputEvent(m_input_manager.Get(), event)) {
@@ -222,7 +222,7 @@ void Game::OnInputEvent(const SystemEvent &event)
 
 void Game::OnFrameBegin(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     g_engine->GetRenderState().AdvanceFrameCounter();
     g_engine->GetRenderState().BindScene(m_scene.Get());
@@ -234,7 +234,7 @@ void Game::OnFrameBegin(Frame *frame)
 
 void Game::OnFrameEnd(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (m_scene->GetCamera()) {
         g_engine->GetRenderState().UnbindCamera();

@@ -7,8 +7,8 @@
 #include <core/Name.hpp>
 #include <core/Containers.hpp>
 #include <core/IDCreator.hpp>
-#include <core/lib/ValueStorage.hpp>
-#include <Threads.hpp>
+#include <core/utilities/ValueStorage.hpp>
+#include <core/threading/Threads.hpp>
 #include <Constants.hpp>
 #include <Types.hpp>
 
@@ -721,7 +721,7 @@ static inline void DeferCreate(RefType ref, Args &&... args)
     }
 
     // // If we are already on the render thread, create the object immediately.
-    // if (Threads::IsOnThread(THREAD_RENDER)) {
+    // if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
     //     HYPERION_ASSERT_RESULT(ref->Create(std::forward<Args>(args)...));
     //     return;
     // }
@@ -737,8 +737,6 @@ static inline void DeferCreate(RefType ref, Args &&... args)
     using T##Ref = T##Ref##_WEBGPU; \
     using T##WeakRef = T##WeakRef##_WEBGPU
 #endif
-
-DEF_RENDER_OBJECT(DescriptorSet,       4096);
 
 DEF_RENDER_PLATFORM_OBJECT(Device,                                          1);
 DEF_RENDER_PLATFORM_OBJECT(Image,                                           16384);
@@ -757,7 +755,7 @@ DEF_RENDER_PLATFORM_OBJECT(Fence,                                           16);
 DEF_RENDER_PLATFORM_OBJECT(Frame,                                           16);
 DEF_RENDER_PLATFORM_OBJECT(Attachment,                                      4096);
 DEF_RENDER_PLATFORM_OBJECT(AttachmentUsage,                                 8192);
-DEF_RENDER_PLATFORM_OBJECT(DescriptorSet2,                                  16384);
+DEF_RENDER_PLATFORM_OBJECT(DescriptorSet,                                   16384);
 DEF_RENDER_PLATFORM_OBJECT(DescriptorTable,                                 4096);
 DEF_RENDER_PLATFORM_OBJECT_NAMED(BLAS, BottomLevelAccelerationStructure,    65536);
 DEF_RENDER_PLATFORM_OBJECT_NAMED(TLAS, TopLevelAccelerationStructure,       16);
@@ -779,7 +777,7 @@ DEF_CURRENT_PLATFORM_RENDER_OBJECT(Fence);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(Frame);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(Attachment);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(AttachmentUsage);
-DEF_CURRENT_PLATFORM_RENDER_OBJECT(DescriptorSet2);
+DEF_CURRENT_PLATFORM_RENDER_OBJECT(DescriptorSet);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(DescriptorTable);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(BLAS);
 DEF_CURRENT_PLATFORM_RENDER_OBJECT(TLAS);
@@ -838,7 +836,7 @@ struct RenderObjectDeleter
 
         virtual void Iterate() override
         {
-            Threads::AssertOnThread(THREAD_RENDER);
+            Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
             if (!Base::num_items.Get(MemoryOrder::ACQUIRE)) {
                 return;
@@ -873,7 +871,7 @@ struct RenderObjectDeleter
 
         virtual void ForceDeleteAll() override
         {
-            Threads::AssertOnThread(THREAD_RENDER);
+            Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
             if (!Base::num_items.Get(MemoryOrder::ACQUIRE)) {
                 return;

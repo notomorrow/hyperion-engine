@@ -1,13 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_CORE_OBJECT_POOL_HPP
 #define HYPERION_CORE_OBJECT_POOL_HPP
 
 #include <core/Containers.hpp>
 #include <core/IDCreator.hpp>
 #include <core/ID.hpp>
-#include <core/lib/Mutex.hpp>
+#include <core/threading/Mutex.hpp>
 #include <core/Name.hpp>
-#include <core/lib/HashMap.hpp>
+#include <core/containers/HashMap.hpp>
 #include <core/Util.hpp>
 #include <Constants.hpp>
 #include <Types.hpp>

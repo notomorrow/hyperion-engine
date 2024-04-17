@@ -1,4 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #include <core/ObjectPool.hpp>
 
 namespace hyperion {
@@ -13,7 +14,7 @@ ObjectPool::ObjectContainerHolder &ObjectPool::GetObjectContainerHolder()
 
 UniquePtr<ObjectContainerBase> *ObjectPool::ObjectContainerHolder::AllotObjectContainer(TypeID type_id)
 {
-    // Threads::AssertOnThread(THREAD_MAIN);
+    // Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
     auto it = s_object_container_map.map.FindIf([type_id](const auto &element)
     {

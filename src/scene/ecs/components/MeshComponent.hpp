@@ -4,7 +4,7 @@
 #define HYPERION_ECS_MESH_COMPONENT_HPP
 
 #include <core/Handle.hpp>
-#include <core/lib/UserData.hpp>
+#include <core/utilities/UserData.hpp>
 
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>

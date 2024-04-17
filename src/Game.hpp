@@ -5,8 +5,8 @@
 
 #include <GameCounter.hpp>
 
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/Optional.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <input/InputManager.hpp>
 

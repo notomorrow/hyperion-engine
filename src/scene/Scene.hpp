@@ -9,7 +9,7 @@
 #include <scene/camera/Camera.hpp>
 
 #include <core/Base.hpp>
-#include <core/Scheduler.hpp>
+#include <core/threading/Scheduler.hpp>
 #include <core/Containers.hpp>
 #include <core/Name.hpp>
 
@@ -50,7 +50,7 @@ struct ComponentInitInfo<STUB_CLASS(Scene)>
         SCENE_FLAGS_NON_WORLD   = 0x2
     };
 
-    ThreadMask      thread_mask = THREAD_GAME;
+    ThreadMask      thread_mask = ThreadName::THREAD_GAME;
     ComponentFlags  flags = SCENE_FLAGS_NONE;
 };
 

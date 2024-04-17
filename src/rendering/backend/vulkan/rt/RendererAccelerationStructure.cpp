@@ -5,7 +5,7 @@
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
-#include <core/lib/Range.hpp>
+#include <core/utilities/Range.hpp>
 #include <math/MathUtil.hpp>
 
 namespace hyperion {

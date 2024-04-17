@@ -4,7 +4,7 @@
 
 #include <ui/UIObject.hpp>
 
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 #include <math/Vector2.hpp>
 

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/ecs/ComponentInterface.hpp>
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 
 namespace hyperion {
 

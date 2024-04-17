@@ -91,7 +91,7 @@ struct RENDER_COMMAND(DestroyCubemapRenderPass) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, const Vec3f &origin)
 {
@@ -369,7 +369,8 @@ void EnvProbe::CreateFramebuffer()
 
 void EnvProbe::EnqueueBind() const
 {
-    Threads::AssertOnThread(~THREAD_RENDER);
+    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
+
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
@@ -379,7 +380,8 @@ void EnvProbe::EnqueueBind() const
 
 void EnvProbe::EnqueueUnbind() const
 {
-    Threads::AssertOnThread(~THREAD_RENDER);
+    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
+
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
@@ -389,7 +391,7 @@ void EnvProbe::EnqueueUnbind() const
 
 void EnvProbe::Update(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(THREAD_GAME);
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
     AssertReady();
 
     // Check if octree has changes, and we need to re-render.
@@ -476,7 +478,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
 void EnvProbe::Render(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     if (IsControlledByEnvGrid()) {
@@ -589,7 +591,7 @@ void EnvProbe::Render(Frame *frame)
 
 void EnvProbe::UpdateRenderData(bool set_texture)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     AssertThrow(m_bound_index.GetProbeIndex() != ~0u);
@@ -668,7 +670,7 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
     m_bound_index = probe_index;
 
     if (IsReady()) {
-        if (Threads::IsOnThread(THREAD_RENDER)) {
+        if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
             UpdateRenderData(set_texture);
         } else {
             struct RENDER_COMMAND(UpdateEnvProbeRenderData) : renderer::RenderCommand

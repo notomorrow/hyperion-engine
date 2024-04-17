@@ -160,7 +160,7 @@ struct RENDER_COMMAND(CreateDDGIRadianceBuffer) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 DDGI::DDGI(DDGIInfo &&grid_info)
     : m_grid_info(std::move(grid_info)),
@@ -243,7 +243,7 @@ void DDGI::CreatePipelines()
     DescriptorTableRef raytracing_pipeline_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(raytracing_pipeline_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = raytracing_pipeline_descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = raytracing_pipeline_descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());
@@ -287,7 +287,7 @@ void DDGI::CreatePipelines()
         DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
+            const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
             AssertThrow(descriptor_set != nullptr);
 
             descriptor_set->SetElement(HYP_NAME(DDGIUniforms), m_uniform_buffer);
@@ -426,7 +426,7 @@ void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
     }
     
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = m_pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = m_pipeline->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE) {
@@ -489,7 +489,7 @@ void DDGI::UpdateUniforms(Frame *frame)
 
 void DDGI::RenderProbes(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     UpdateUniforms(frame);
 
@@ -531,7 +531,7 @@ void DDGI::RenderProbes(Frame *frame)
 
 void DDGI::ComputeIrradiance(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const auto probe_counts = m_grid_info.NumProbesPerDimension();
 

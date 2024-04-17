@@ -9,8 +9,8 @@
 #include <HashCode.hpp>
 #include <Types.hpp>
 
-#include <core/lib/FlatSet.hpp>
-#include <core/lib/Optional.hpp>
+#include <core/containers/FlatSet.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <array>
 #include <tuple>

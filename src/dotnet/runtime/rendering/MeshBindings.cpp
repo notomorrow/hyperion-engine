@@ -4,7 +4,7 @@
 
 #include <rendering/Mesh.hpp>
 
-#include <core/lib/TypeID.hpp>
+#include <core/utilities/TypeID.hpp>
 
 #include <Engine.hpp>
 #include <Types.hpp>

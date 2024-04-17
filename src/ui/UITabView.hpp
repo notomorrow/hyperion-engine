@@ -4,7 +4,7 @@
 
 #include <ui/UIPanel.hpp>
 
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 
 namespace hyperion {
 

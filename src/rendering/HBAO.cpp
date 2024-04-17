@@ -52,7 +52,7 @@ struct RENDER_COMMAND(RemoveHBAODescriptors) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 HBAO::HBAO(const Extent2D &extent)
     : m_extent(extent)

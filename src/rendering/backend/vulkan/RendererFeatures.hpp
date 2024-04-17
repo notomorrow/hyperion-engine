@@ -8,8 +8,8 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/Array.hpp>
 
 #include <core/Defines.hpp>
 #include <Types.hpp>

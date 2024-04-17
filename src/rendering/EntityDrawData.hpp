@@ -1,9 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_ENTITY_DRAW_DATA_HPP
 #define HYPERION_ENTITY_DRAW_DATA_HPP
 
 #include <core/ID.hpp>
-#include <core/lib/UserData.hpp>
+#include <core/utilities/UserData.hpp>
 
 #include <math/Transform.hpp>
 #include <math/BoundingBox.hpp>

@@ -3,8 +3,8 @@
 #define HYPERION_MESH_BUILDER_HPP
 
 #include <rendering/Mesh.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/UniquePtr.hpp>
+#include <core/containers/Array.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/Handle.hpp>
 #include <math/BoundingBox.hpp>
 #include <math/Vector3.hpp>

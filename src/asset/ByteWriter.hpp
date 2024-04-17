@@ -2,10 +2,10 @@
 #ifndef BYTE_WRITER_HPP
 #define BYTE_WRITER_HPP
 
-#include <core/lib/Memory.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/filesystem/FilePath.hpp>
+#include <core/memory/Memory.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/filesystem/FilePath.hpp>
 #include <Types.hpp>
 
 #include <type_traits>

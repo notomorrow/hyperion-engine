@@ -3,8 +3,8 @@
 #define HYPERION_RTC_SERVER_HPP
 
 #include <core/Containers.hpp>
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/Optional.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <rtc/RTCClientList.hpp>
 

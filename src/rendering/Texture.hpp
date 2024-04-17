@@ -4,8 +4,8 @@
 
 #include <core/Base.hpp>
 #include <core/Handle.hpp>
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/FixedArray.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/FixedArray.hpp>
 
 #include <streaming/StreamedData.hpp>
 

@@ -6,7 +6,7 @@
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
-#include <core/lib/util/ForEach.hpp>
+#include <core/util/ForEach.hpp>
 
 #include <math/MathUtil.hpp>
 #include <math/Color.hpp>
@@ -183,7 +183,7 @@ struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderComm
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 ParticleSpawner::ParticleSpawner()
     : m_params { }
@@ -258,7 +258,7 @@ void ParticleSpawner::CreateRenderGroup()
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ParticleDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ParticleDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(ParticlesBuffer), m_particle_buffer);
@@ -303,7 +303,7 @@ void ParticleSpawner::CreateComputePipelines()
     DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(UpdateParticlesDescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(UpdateParticlesDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(ParticlesBuffer), m_particle_buffer);
@@ -323,7 +323,7 @@ void ParticleSpawner::CreateComputePipelines()
 
 ParticleSystem::ParticleSystem()
     : BasicObject(),
-      m_particle_spawners(THREAD_RENDER),
+      m_particle_spawners(ThreadName::THREAD_RENDER),
       m_counter(0u)
 {
 }
@@ -388,7 +388,7 @@ void ParticleSystem::CreateCommandBuffers()
 
 void ParticleSystem::UpdateParticles(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
     if (m_particle_spawners.GetItems().Empty()) {

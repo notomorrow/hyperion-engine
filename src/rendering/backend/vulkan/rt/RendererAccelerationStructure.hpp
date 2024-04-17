@@ -5,7 +5,7 @@
 
 #include <math/Matrix4.hpp>
 
-#include <core/lib/DynArray.hpp>
+#include <core/containers/Array.hpp>
 
 #include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RendererResult.hpp>

@@ -4,7 +4,7 @@
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
-#include <core/lib/Delegate.hpp>
+#include <core/functional/Delegate.hpp>
 
 #include <scene/Node.hpp>
 #include <scene/NodeProxy.hpp>

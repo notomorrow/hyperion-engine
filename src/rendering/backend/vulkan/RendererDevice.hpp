@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <string>
 
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/Array.hpp>
 
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -87,10 +87,10 @@ public:
     Result Create(const std::set<uint32_t> &required_queue_families);
     Result CheckDeviceSuitable(const ExtensionMap &unsupported_extensions);
 
-    /*  Wait for the device to be idle */
+    /*! \brief Wait for the device to be idle */
     Result Wait() const;
     
-    /* \brief Check if the set required extensions extensions are supported. Any unsupported extensions are returned. */
+    /*! \brief Check if the set required extensions extensions are supported. Any unsupported extensions are returned. */
     ExtensionMap GetUnsupportedExtensions();
 
     Array<VkExtensionProperties> GetSupportedExtensions();

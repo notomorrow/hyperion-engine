@@ -2,10 +2,10 @@
 #ifndef HYPERION_RENDER_STATE_HPP
 #define HYPERION_RENDER_STATE_HPP
 
-#include <core/lib/FlatSet.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/Optional.hpp>
-#include <core/lib/Stack.hpp>
+#include <core/containers/FlatSet.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/containers/Stack.hpp>
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/Lightmap.hpp>

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <rendering/Light.hpp>
 #include <Engine.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 #include <util/ByteUtil.hpp>
 
@@ -74,7 +74,7 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 Light::Light(
     LightType type,
@@ -180,7 +180,8 @@ void Light::Init()
 #if 0
 void Light::EnqueueBind() const
 {
-    Threads::AssertOnThread(~THREAD_RENDER);
+    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
+
     AssertReady();
 
     PUSH_RENDER_COMMAND(BindLight, m_id);
@@ -189,7 +190,7 @@ void Light::EnqueueBind() const
 
 void Light::EnqueueUnbind() const
 {
-    Threads::AssertOnThread(~THREAD_RENDER);
+    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
     AssertReady();
 
     PUSH_RENDER_COMMAND(UnbindLight, GetID());

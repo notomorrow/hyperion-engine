@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <rendering/TemporalAA.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <math/Vector2.hpp>
 #include <math/MathUtil.hpp>
@@ -41,7 +41,7 @@ struct RENDER_COMMAND(SetTemporalAAResultInGlobalDescriptorSet) : renderer::Rend
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 TemporalAA::TemporalAA(const Extent2D &extent)
     : m_extent(extent)
@@ -114,7 +114,7 @@ void TemporalAA::CreateComputePipelines()
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
-        const DescriptorSet2Ref &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(TemporalAADescriptorSet), frame_index);
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(TemporalAADescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(HYP_NAME(InColorTexture), g_engine->GetDeferredRenderer().GetCombinedResult()->GetImageView());

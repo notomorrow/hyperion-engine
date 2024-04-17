@@ -2,7 +2,7 @@
 #ifndef HYP_CORE_CORE_HPP
 #define HYP_CORE_CORE_HPP
 
-#include <core/lib/Memory.hpp>
+#include <core/memory/Memory.hpp>
 #include <system/Debug.hpp>
 #include <core/Defines.hpp>
 #include <Types.hpp>
@@ -38,9 +38,7 @@ static HYP_FORCE_INLINE bool InitObjectIntern(EngineImpl *engine, Handle<T> &han
     return engine->template InitObject<T>(handle);
 }
 
-/**
- * \brief Initializes an object with the engine. This is a wrapper around the engine's InitObject function.
- */
+/*! \brief Initializes an object with the engine. This is a wrapper around the engine's InitObject function. */
 template <class T>
 static HYP_FORCE_INLINE bool InitObject(Handle<T> &handle)
 {

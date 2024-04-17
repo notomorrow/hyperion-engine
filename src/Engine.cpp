@@ -9,11 +9,11 @@
 #include <rendering/RenderEnvironment.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/AsyncCompute.hpp>
 
 #include <Game.hpp>
-#include <GameThread.hpp>
+#include <core/threading/GameThread.hpp>
 
 #include <util/MeshBuilder.hpp>
 #include <util/fs/FsUtil.hpp>
@@ -62,7 +62,7 @@ struct RENDER_COMMAND(CopyBackbufferToCPU) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 Engine *Engine::GetInstance()
 {
@@ -85,7 +85,7 @@ HYP_API bool Engine::InitializeGame(Game *game)
     AssertThrow(game != nullptr);
     AssertThrowMsg(game_thread == nullptr || !game_thread->IsRunning(), "Game thread already running; cannot initialize game instance");
 
-    Threads::AssertOnThread(THREAD_MAIN, "Must be on main thread to initialize game instance");
+    Threads::AssertOnThread(ThreadName::THREAD_MAIN, "Must be on main thread to initialize game instance");
 
     game->Init();
 
@@ -98,7 +98,7 @@ HYP_API bool Engine::InitializeGame(Game *game)
 
 void Engine::FindTextureFormatDefaults()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const Device *device = m_instance->GetDevice();
 
@@ -147,7 +147,7 @@ HYP_API void Engine::Initialize(RC<Application> application)
 {
     m_application = application;
 
-    Threads::AssertOnThread(THREAD_MAIN);
+    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
     Threads::SetCurrentThreadPriority(ThreadPriorityValue::HIGHEST);
 
     game_thread.Reset(new GameThread);
@@ -350,7 +350,7 @@ void Engine::RequestStop()
 
 void Engine::FinalizeStop()
 {
-    Threads::AssertOnThread(THREAD_MAIN);
+    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
     m_is_stopping = true;
     m_is_render_loop_active = false;
@@ -598,7 +598,7 @@ void Engine::AddRenderGroupInternal(Handle<RenderGroup> &render_group, bool cach
 
 void Engine::PreFrameUpdate(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     m_render_list_container.AddPendingRenderGroups();
 
@@ -643,7 +643,7 @@ void Engine::UpdateBuffersAndDescriptors(Frame *frame)
 
 void Engine::RenderDeferred(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     m_deferred_renderer.Render(frame, render_state.GetScene().render_environment);
 }
@@ -656,7 +656,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
     for (auto &it : renderer::g_static_descriptor_table_decl->GetElements()) {
         renderer::DescriptorSetLayout layout(it);
 
-        DescriptorSet2Ref ref = layout.CreateDescriptorSet();
+        DescriptorSetRef ref = layout.CreateDescriptorSet();
         AssertThrow(ref.IsValid());
 
         DebugLog(LogType::Debug, "Num elements for descriptor set %s: %u\n", ref.GetName().LookupString(), ref->GetLayout().GetElements().Size());
@@ -753,7 +753,7 @@ GlobalDescriptorSetManager::~GlobalDescriptorSetManager() = default;
 
 void GlobalDescriptorSetManager::Initialize(Engine *engine)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     Mutex::Guard guard(m_mutex);
 
@@ -762,7 +762,7 @@ void GlobalDescriptorSetManager::Initialize(Engine *engine)
     }
 }
 
-void GlobalDescriptorSetManager::AddDescriptorSet(Name name, const DescriptorSet2Ref &ref)
+void GlobalDescriptorSetManager::AddDescriptorSet(Name name, const DescriptorSetRef &ref)
 {
     Mutex::Guard guard(m_mutex);
 
@@ -770,7 +770,7 @@ void GlobalDescriptorSetManager::AddDescriptorSet(Name name, const DescriptorSet
     AssertThrowMsg(insert_result.second, "Failed to insert descriptor set, item %s already exists", name.LookupString());
 }
 
-DescriptorSet2Ref GlobalDescriptorSetManager::GetDescriptorSet(Name name) const
+DescriptorSetRef GlobalDescriptorSetManager::GetDescriptorSet(Name name) const
 {
     Mutex::Guard guard(m_mutex);
 
@@ -780,7 +780,7 @@ DescriptorSet2Ref GlobalDescriptorSetManager::GetDescriptorSet(Name name) const
         return it->second;
     }
 
-    return DescriptorSet2Ref { };
+    return DescriptorSetRef { };
 }
 
 } // namespace hyperion

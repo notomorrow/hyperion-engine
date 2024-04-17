@@ -3,13 +3,13 @@
 #ifndef HYPERION_ECS_ENTITY_MANAGER_HPP
 #define HYPERION_ECS_ENTITY_MANAGER_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/FlatSet.hpp>
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/TypeMap.hpp>
-#include <core/lib/Proc.hpp>
-#include <core/lib/Mutex.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/FlatSet.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/containers/TypeMap.hpp>
+#include <core/functional/Proc.hpp>
+#include <core/threading/Mutex.hpp>
 #include <core/Handle.hpp>
 #include <core/ID.hpp>
 
@@ -222,7 +222,7 @@ public:
         : m_owner_thread_mask(owner_thread_mask),
           m_scene(scene),
           m_command_queue(
-              (owner_thread_mask & THREAD_GAME)
+              (owner_thread_mask & ThreadName::THREAD_GAME)
                   ? ENTITY_MANAGER_COMMAND_QUEUE_POLICY_EXEC_ON_OWNER_THREAD
                   : ENTITY_MANAGER_COMMAND_QUEUE_POLICY_DISCARD // discard commands if not on the game thread
           )

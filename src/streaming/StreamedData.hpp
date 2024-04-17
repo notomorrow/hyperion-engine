@@ -2,9 +2,9 @@
 #ifndef HYPERION_STREAMED_DATA_HPP
 #define HYPERION_STREAMED_DATA_HPP
 
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/filesystem/FilePath.hpp>
+#include <core/memory/ByteBuffer.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/filesystem/FilePath.hpp>
 
 #include <core/Defines.hpp>
 

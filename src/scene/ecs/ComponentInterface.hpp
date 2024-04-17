@@ -3,10 +3,10 @@
 #ifndef HYPERION_ECS_COMPONENT_INTERFACE_HPP
 #define HYPERION_ECS_COMPONENT_INTERFACE_HPP
 
-#include <core/lib/TypeID.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Optional.hpp>
-#include <core/lib/Variant.hpp>
+#include <core/utilities/TypeID.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/utilities/Variant.hpp>
 #include <core/Name.hpp>
 
 #include <math/Vector2.hpp>

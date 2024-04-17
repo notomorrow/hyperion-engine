@@ -10,12 +10,12 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 
-#include <core/lib/HashMap.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/Mutex.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/threading/Mutex.hpp>
+#include <core/threading/AtomicVar.hpp>
 
-#include <TaskSystem.hpp>
+#include <core/threading/TaskSystem.hpp>
 
 #include <util/NoiseFactory.hpp>
 

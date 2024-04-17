@@ -3,8 +3,8 @@
 #ifndef HYPERION_ECS_SYSTEM_HPP
 #define HYPERION_ECS_SYSTEM_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/TypeID.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/TypeID.hpp>
 #include <scene/ecs/EntitySet.hpp>
 #include <scene/ecs/ComponentContainer.hpp>
 #include <GameCounter.hpp>

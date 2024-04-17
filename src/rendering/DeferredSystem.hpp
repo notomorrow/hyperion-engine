@@ -5,7 +5,7 @@
 #include <Constants.hpp>
 
 #include <core/Containers.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/threading/AtomicVar.hpp>
 #include <core/ID.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderBucket.hpp>
@@ -61,7 +61,7 @@ public:
         Array<Handle<RenderGroup>>  renderer_instances;
         Array<Handle<RenderGroup>>  renderer_instances_pending_addition;
         AtomicVar<bool>             renderer_instances_changed;
-        std::mutex                  renderer_instances_mutex;
+        Mutex                       renderer_instances_mutex;
 
     public:
         RenderGroupHolder();
@@ -74,11 +74,11 @@ public:
         Bucket GetBucket() const { return bucket; }
         void SetBucket(Bucket bucket) { this->bucket = bucket; }
         
-        Handle<Framebuffer> &GetFramebuffer() { return framebuffer; }
-        const Handle<Framebuffer> &GetFramebuffer() const { return framebuffer; }
+        const Handle<Framebuffer> &GetFramebuffer() const
+            { return framebuffer; }
 
-        Array<Handle<RenderGroup>> &GetRenderGroups() { return renderer_instances; }
-        const Array<Handle<RenderGroup>> &GetRenderGroups() const { return renderer_instances; }
+        const Array<Handle<RenderGroup>> &GetRenderGroups() const
+            { return renderer_instances; }
 
         const AttachmentUsageRef &GetGBufferAttachment(GBufferResourceName resource_name) const
         {
@@ -97,9 +97,9 @@ public:
     };
 
     DeferredSystem();
-    DeferredSystem(const DeferredSystem &other) = delete;
-    DeferredSystem &operator=(const DeferredSystem &other) = delete;
-    ~DeferredSystem() = default;
+    DeferredSystem(const DeferredSystem &other)             = delete;
+    DeferredSystem &operator=(const DeferredSystem &other)  = delete;
+    ~DeferredSystem()                                       = default;
 
     RenderGroupHolder &Get(Bucket bucket)
         { return m_buckets[static_cast<uint>(bucket)]; }
@@ -120,8 +120,7 @@ public:
     void AddFramebuffersToRenderGroups();
 
 private:
-
-    FixedArray<RenderGroupHolder, Bucket::BUCKET_MAX> m_buckets;
+    FixedArray<RenderGroupHolder, Bucket::BUCKET_MAX>   m_buckets;
 };
 
 } // namespace hyperion

@@ -3,7 +3,7 @@
 #ifndef HYPERION_CAMERA_TRACK_CONTROLLER_HPP
 #define HYPERION_CAMERA_TRACK_CONTROLLER_HPP
 
-#include <core/lib/RefCountedPtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 #include <scene/camera/PerspectiveCamera.hpp>
 #include <scene/camera/CameraTrack.hpp>
 

@@ -8,7 +8,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <core/lib/Optional.hpp>
+#include <core/utilities/Optional.hpp>
 #include <Types.hpp>
 
 namespace hyperion {

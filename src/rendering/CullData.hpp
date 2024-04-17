@@ -6,7 +6,7 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RenderObject.hpp>
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>

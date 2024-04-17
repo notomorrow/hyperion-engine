@@ -4,9 +4,9 @@
 #define HYPERION_RENDERER_BACKEND_VULKAN_PIPELINE_HPP
 
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Optional.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <math/Vector4.hpp>
 #include <Types.hpp>

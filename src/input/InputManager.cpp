@@ -2,7 +2,7 @@
 
 #include <input/InputManager.hpp>
 
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 #include <iostream>
 #include <string.h>
@@ -20,7 +20,7 @@ InputManager::~InputManager()
 
 void InputManager::CheckEvent(SystemEvent *event)
 {
-    Threads::AssertOnThread(THREAD_INPUT);
+    Threads::AssertOnThread(ThreadName::THREAD_INPUT);
 
     switch (event->GetType()) {
     case SystemEventType::EVENT_KEYDOWN:
@@ -64,7 +64,7 @@ void InputManager::SetMousePosition(int x, int y)
 
 void InputManager::UpdateMousePosition()
 {
-    //Threads::AssertOnThread(THREAD_INPUT);
+    //Threads::AssertOnThread(ThreadName::THREAD_INPUT);
     
     if (!m_window) {
         return;
@@ -78,7 +78,7 @@ void InputManager::UpdateMousePosition()
 
 void InputManager::UpdateWindowSize()
 {
-    //Threads::AssertOnThread(THREAD_INPUT);
+    //Threads::AssertOnThread(ThreadName::THREAD_INPUT);
     
     if (!m_window) {
         return;

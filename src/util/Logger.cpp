@@ -1,9 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <util/Logger.hpp>
 
-#include <core/lib/Mutex.hpp>
-#include <core/lib/AtomicVar.hpp>
-#include <core/lib/HashMap.hpp>
+#include <core/threading/Mutex.hpp>
+#include <core/threading/AtomicVar.hpp>
+#include <core/containers/HashMap.hpp>
 
 namespace hyperion {
 

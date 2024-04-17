@@ -3,8 +3,8 @@
 #define HYPERION_MESH_HPP
 
 #include <core/Base.hpp>
-#include <core/lib/Pair.hpp>
-#include <core/lib/DynArray.hpp>
+#include <core/utilities/Pair.hpp>
+#include <core/containers/Array.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <math/Vertex.hpp>

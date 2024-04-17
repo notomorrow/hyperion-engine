@@ -12,7 +12,7 @@
 
 #include <rendering/backend/RendererFrame.hpp>
 
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/FixedArray.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <scene/Scene.hpp>

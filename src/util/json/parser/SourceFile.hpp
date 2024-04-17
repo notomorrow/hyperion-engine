@@ -4,8 +4,8 @@
 #define HYP_JSON_SOURCE_FILE_HPP
 
 #include <Types.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/ByteBuffer.hpp>
+#include <core/containers/String.hpp>
+#include <core/memory/ByteBuffer.hpp>
 
 namespace hyperion::json {
 

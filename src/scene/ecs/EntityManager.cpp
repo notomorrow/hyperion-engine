@@ -2,7 +2,7 @@
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/Entity.hpp>
-#include <TaskSystem.hpp>
+#include <core/threading/TaskSystem.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -297,7 +297,7 @@ void SystemExecutionGroup::Process(EntityManager &entity_manager, GameCounter::T
 #ifdef HYP_ENTITY_MANAGER_SYSTEMS_EXECUTION_PARALLEL
     if (m_systems.Size() >= systems_execution_parallel_threshold) {
         TaskSystem::GetInstance().ParallelForEach(
-            THREAD_POOL_GENERIC,
+            TaskThreadPoolName::THREAD_POOL_GENERIC,
             m_systems,
             [&, delta](auto &it, uint index, uint)
             {

@@ -9,7 +9,7 @@
 #include <math/Vertex.hpp>
 
 #include <rendering/backend/RendererShader.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <util/definitions/DefinitionsFile.hpp>
 #include <core/Defines.hpp>
@@ -153,9 +153,7 @@ struct ShaderProperty
     bool IsValueGroup() const
         { return possible_values.Any(); }
 
-    /**
-     * \brief If this ShaderProperty is a value group, returns the number of possible values, otherwise returns 0. If a default value is set for this ShaderProperty, that is taken into account
-     */
+    /*! \brief If this ShaderProperty is a value group, returns the number of possible values, otherwise returns 0. If a default value is set for this ShaderProperty, that is taken into account */
     SizeType ValueGroupSize() const
     {
         if (!IsValueGroup()) {
@@ -175,9 +173,7 @@ struct ShaderProperty
         return value_group_size;
     }
 
-    /**
-     * \brief If this ShaderProperty is a value group, returns an Array of all possible values. Otherwise, returns the currently set value (if applicable). If a default value is set for this ShaderProperty, that is included in the Array.
-     */
+    /*! \brief If this ShaderProperty is a value group, returns an Array of all possible values. Otherwise, returns the currently set value (if applicable). If a default value is set for this ShaderProperty, that is included in the Array. */
     FlatSet<ShaderProperty> GetAllPossibleValues()
     {
         FlatSet<ShaderProperty> result;

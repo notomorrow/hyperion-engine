@@ -2,30 +2,32 @@
 #ifndef HYPERION_CORE_CONTAINERS_HPP
 #define HYPERION_CORE_CONTAINERS_HPP
 
-#include <core/lib/HashMap.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/TypeMap.hpp>
-#include <core/lib/StaticMap.hpp>
-#include <core/lib/ArrayMap.hpp>
-#include <core/lib/FlatSet.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/HeapArray.hpp>
-#include <core/lib/ByteBuffer.hpp>
-#include <core/lib/StringView.hpp>
-#include <core/lib/String.hpp>
-#include <core/lib/Queue.hpp>
-#include <core/lib/Stack.hpp>
-#include <core/lib/Proc.hpp>
-#include <core/lib/RefCountedPtr.hpp>
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/Variant.hpp>
-#include <core/lib/Optional.hpp>
-#include <core/lib/Bitset.hpp>
-#include <core/lib/Span.hpp>
-#include <core/lib/LinkedList.hpp>
-#include <core/lib/AtomicVar.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/containers/TypeMap.hpp>
+#include <core/containers/StaticMap.hpp>
+#include <core/containers/ArrayMap.hpp>
+#include <core/containers/FlatSet.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/containers/HeapArray.hpp>
+#include <core/containers/String.hpp>
+#include <core/containers/Queue.hpp>
+#include <core/containers/Stack.hpp>
+#include <core/containers/LinkedList.hpp>
+
+#include <core/memory/ByteBuffer.hpp>
+#include <core/utilities/StringView.hpp>
+#include <core/functional/Proc.hpp>
+#include <core/memory/RefCountedPtr.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/utilities/Variant.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/containers/Bitset.hpp>
+#include <core/utilities/Span.hpp>
+#include <core/threading/AtomicVar.hpp>
 #include <math/MathUtil.hpp>
+
 #include <Types.hpp>
 
 #include <vector>
@@ -404,7 +406,7 @@ public:
         TriggerCallbacks(false, key, std::move(args)...);
     }
 
-    /* \brief Trigger all `once` and `on` events for the given key,
+    /*! \brief Trigger all `once` and `on` events for the given key,
      * keeping the holder of all callbacks in that key in the triggered state,
      * so that any newly added callbacks will be executed immediately.
      */

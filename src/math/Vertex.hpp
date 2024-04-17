@@ -5,8 +5,8 @@
 #define MAX_BONE_WEIGHTS 4
 #define MAX_BONE_INDICES 4
 
-#include <core/lib/FixedArray.hpp>
-#include <core/lib/Variant.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/utilities/Variant.hpp>
 #include <util/EnumOptions.hpp>
 
 #include <math/Vector2.hpp>

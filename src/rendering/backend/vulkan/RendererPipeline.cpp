@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/RendererPipeline.hpp>
-#include <rendering/backend/RendererDescriptorSet2.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
-#include <core/lib/FlatSet.hpp>
-#include <core/lib/Memory.hpp>
+#include <core/containers/FlatSet.hpp>
+#include <core/memory/Memory.hpp>
 
 #include <system/Debug.hpp>
 
@@ -51,7 +51,7 @@ Array<VkDescriptorSetLayout> Pipeline<Platform::VULKAN>::GetDescriptorSetLayouts
     Array<VkDescriptorSetLayout> used_layouts;
     used_layouts.Reserve(m_descriptor_table->GetSets()[0].Size());
 
-    for (const DescriptorSet2Ref<Platform::VULKAN> &descriptor_set : m_descriptor_table->GetSets()[0]) {
+    for (const DescriptorSetRef<Platform::VULKAN> &descriptor_set : m_descriptor_table->GetSets()[0]) {
         AssertThrow(descriptor_set != nullptr);
 
         used_layouts.PushBack(descriptor_set->GetVkDescriptorSetLayout());

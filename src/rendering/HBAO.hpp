@@ -8,14 +8,11 @@
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/FullScreenPass.hpp>
 
-#include <array>
-
 namespace hyperion {
 
 using renderer::StorageImage;
 using renderer::ImageView;
 using renderer::Frame;
-;
 using renderer::Result;
 
 class Engine;
@@ -28,8 +25,8 @@ public:
     friend struct RenderCommand_AddHBAOFinalImagesToGlobalDescriptorSet;
 
     HBAO(const Extent2D &extent);
-    HBAO(const HBAO &other) = delete;
-    HBAO &operator=(const HBAO &other) = delete;
+    HBAO(const HBAO &other)             = delete;
+    HBAO &operator=(const HBAO &other)  = delete;
     ~HBAO();
 
     void Create();
@@ -41,7 +38,7 @@ private:
     void CreatePass();
     void CreateTemporalBlending();
 
-    Extent2D m_extent;
+    Extent2D                    m_extent;
 
     UniquePtr<FullScreenPass>   m_hbao_pass;
     UniquePtr<TemporalBlending> m_temporal_blending;

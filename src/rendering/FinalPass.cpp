@@ -73,7 +73,7 @@ FinalPass::~FinalPass() = default;
 
 void FinalPass::Create()
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     m_composite_pass.Create();
 
@@ -195,7 +195,7 @@ void FinalPass::Destroy()
 
 void FinalPass::Render(Frame *frame)
 {
-    Threads::AssertOnThread(THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const GraphicsPipelineRef &pipeline = m_render_group->GetPipeline();
     const uint acquired_image_index = g_engine->GetGPUInstance()->GetFrameHandler()->GetAcquiredImageIndex();

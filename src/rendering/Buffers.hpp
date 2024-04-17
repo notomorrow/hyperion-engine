@@ -11,14 +11,14 @@
 
 #include <core/Defines.hpp>
 
-#include <core/lib/HeapArray.hpp>
-#include <core/lib/DynArray.hpp>
-#include <core/lib/Range.hpp>
-#include <core/lib/FixedArray.hpp>
+#include <core/containers/HeapArray.hpp>
+#include <core/containers/Array.hpp>
+#include <core/utilities/Range.hpp>
+#include <core/containers/FixedArray.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>
-#include <Threads.hpp>
+#include <core/threading/Threads.hpp>
 
 #include <memory>
 #include <atomic>
@@ -489,7 +489,7 @@ public:
     BufferTicket<StructType> AcquireTicket()
     {
         std::lock_guard guard(m_mutex);
-        // Threads::AssertOnThread(THREAD_RENDER);
+        // Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         if (free_indices.Any()) {
             return free_indices.Pop();
@@ -500,7 +500,7 @@ public:
 
     void ReleaseTicket(BufferTicket<StructType> batch_index)
     {
-        // Threads::AssertOnThread(THREAD_RENDER);
+        // Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         if (batch_index == 0) {
             return;
@@ -515,7 +515,7 @@ public:
 
     void ResetBatch(BufferTicket<StructType> batch_index)
     {
-        // Threads::AssertOnThread(THREAD_RENDER | THREAD_TASK);
+        // Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
 
         if (batch_index == 0) {
             return;

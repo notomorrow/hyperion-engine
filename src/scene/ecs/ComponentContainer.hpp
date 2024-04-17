@@ -3,11 +3,11 @@
 #ifndef HYPERION_ECS_COMPONENT_CONTAINER_HPP
 #define HYPERION_ECS_COMPONENT_CONTAINER_HPP
 
-#include <core/lib/DynArray.hpp>
-#include <core/lib/FlatMap.hpp>
-#include <core/lib/Optional.hpp>
-#include <core/lib/UniquePtr.hpp>
-#include <core/lib/TypeID.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FlatMap.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/utilities/TypeID.hpp>
 #include <core/ID.hpp>
 #include <core/Util.hpp>
 

@@ -4,11 +4,6 @@
 
 namespace hyperion {
 
-#pragma region Render commands
-
-
-#pragma endregion
-
 DOFBlur::DOFBlur(const Extent2D &extent)
     : m_extent(extent)
 {

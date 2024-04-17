@@ -44,7 +44,7 @@ struct RENDER_COMMAND(UpdateEntityDrawDatas) : renderer::RenderCommand
     }
 };
 
-#pragma endregion
+#pragma endregion Render commands
 
 void EntityDrawDataUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
