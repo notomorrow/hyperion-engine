@@ -1,9 +1,7 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-
 #ifndef WORLEY_NOISE_H
 #define WORLEY_NOISE_H
 
-#include "../../math/Vector3.hpp"
+#include <math/Vector3.hpp>
 
 #include <Types.hpp>
 

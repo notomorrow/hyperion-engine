@@ -1,9 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "Skeleton.hpp"
-#include "Bone.hpp"
-#include <Engine.hpp>
+#include <scene/animation/Skeleton.hpp>
+#include <scene/animation/Bone.hpp>
+
 #include <rendering/backend/RendererResult.hpp>
+
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 

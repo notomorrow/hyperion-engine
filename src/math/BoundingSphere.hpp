@@ -2,13 +2,13 @@
 #ifndef HYPERION_BOUNDING_SPHERE_H
 #define HYPERION_BOUNDING_SPHERE_H
 
-#include "Vector3.hpp"
-#include "Matrix4.hpp"
-#include "BoundingBox.hpp"
-#include "Transform.hpp"
-#include "Ray.hpp"
-#include "../HashCode.hpp"
+#include <math/Vector3.hpp>
+#include <math/Matrix4.hpp>
+#include <math/BoundingBox.hpp>
+#include <math/Transform.hpp>
+#include <math/Ray.hpp>
 
+#include <HashCode.hpp>
 #include <Types.hpp>
 
 #include <array>

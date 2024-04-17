@@ -1,7 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "Animation.hpp"
-#include "Bone.hpp"
+#include <scene/animation/Animation.hpp>
+#include <scene/animation/Bone.hpp>
+
 #include <math/MathUtil.hpp>
 
 namespace hyperion::v2 {

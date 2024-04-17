@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <ui/UIText.hpp>
-#include <ui/UIScene.hpp>
+#include <ui/UIStage.hpp>
 
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
@@ -175,7 +175,7 @@ Handle<Mesh> CharMeshBuilder::OptimizeCharMeshes(Vec2i screen_size, Array<UIChar
 
 // UIText
 
-UIText::UIText(ID<Entity> entity, UIScene *parent, NodeProxy node_proxy)
+UIText::UIText(ID<Entity> entity, UIStage *parent, NodeProxy node_proxy)
     : UIObject(entity, parent, std::move(node_proxy)),
       m_text("No text set"),
       m_text_color(Vec4f { 0.0f, 0.0f, 0.0f, 1.0f })

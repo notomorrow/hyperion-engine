@@ -2,19 +2,19 @@
 #ifndef HYPERION_V2_SHADER_GLOBALS_H
 #define HYPERION_V2_SHADER_GLOBALS_H
 
-#include "Buffers.hpp"
-#include "Bindless.hpp"
-#include "DrawProxy.hpp"
-
-#include <core/lib/Queue.hpp>
-#include <core/ID.hpp>
-
-#include <math/MathUtil.hpp>
+#include <rendering/Buffers.hpp>
+#include <rendering/Bindless.hpp>
+#include <rendering/DrawProxy.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+
+#include <core/lib/Queue.hpp>
+#include <core/ID.hpp>
+
+#include <math/MathUtil.hpp>
 
 #include <utility>
 

@@ -1,7 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "Texture.hpp"
-#include <Engine.hpp>
+
+#include <rendering/Texture.hpp>
+
 #include <rendering/backend/RendererFeatures.hpp>
+
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 

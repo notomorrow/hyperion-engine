@@ -2,12 +2,11 @@
 #ifndef MATRIX3_H
 #define MATRIX3_H
 
-#include "Vector3.hpp"
+#include <math/Vector3.hpp>
 
 #include <Types.hpp>
 
 #include <iostream>
-#include <array>
 #include <string.h>
 
 namespace hyperion {

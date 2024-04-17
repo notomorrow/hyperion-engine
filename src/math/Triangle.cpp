@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "Triangle.hpp"
-#include "MathUtil.hpp"
+
+#include <math/Triangle.hpp>
+#include <math/MathUtil.hpp>
 
 namespace hyperion {
 Triangle::Triangle()

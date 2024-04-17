@@ -1,5 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include <ui/UIScene.hpp>
+#include <ui/UIStage.hpp>
 #include <ui/UIButton.hpp>
 #include <ui/UIText.hpp>
 
@@ -27,17 +27,17 @@
 
 namespace hyperion::v2 {
 
-UIScene::UIScene()
+UIStage::UIStage()
     : BasicObject(),
       m_surface_size { 1000, 1000 }
 {
 }
 
-UIScene::~UIScene()
+UIStage::~UIStage()
 {
 }
 
-void UIScene::Init()
+void UIStage::Init()
 {
     if (IsInitCalled()) {
         return;
@@ -100,7 +100,7 @@ void UIScene::Init()
     SetReady(true);
 }
 
-void UIScene::Update(GameCounter::TickUnit delta)
+void UIStage::Update(GameCounter::TickUnit delta)
 {
     m_scene->Update(delta);
 
@@ -109,7 +109,7 @@ void UIScene::Update(GameCounter::TickUnit delta)
     }
 }
 
-bool UIScene::TestRay(const Vec2f &position, RayTestResults &out_ray_test_results)
+bool UIStage::TestRay(const Vec2f &position, RayTestResults &out_ray_test_results)
 {
     Threads::AssertOnThread(THREAD_GAME);
 
@@ -144,7 +144,7 @@ bool UIScene::TestRay(const Vec2f &position, RayTestResults &out_ray_test_result
     return out_ray_test_results.Any();
 }
 
-bool UIScene::OnInputEvent(
+bool UIStage::OnInputEvent(
     InputManager *input_manager,
     const SystemEvent &event
 )
@@ -344,7 +344,7 @@ bool UIScene::OnInputEvent(
     return event_handled;
 }
 
-bool UIScene::Remove(ID<Entity> entity)
+bool UIStage::Remove(ID<Entity> entity)
 {
     if (!m_scene.IsValid()) {
         return false;

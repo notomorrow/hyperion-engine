@@ -1,9 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "FBOM.hpp"
+#include <asset/serialization/fbom/FBOM.hpp>
+
 #include <asset/ByteWriter.hpp>
 #include <asset/Assets.hpp>
-#include <util/fs/FsUtil.hpp>
 
 #include <asset/serialization/fbom/marshals/EntityMarshal.hpp>
 #include <asset/serialization/fbom/marshals/MeshMarshal.hpp>
@@ -16,9 +16,10 @@
 #include <asset/serialization/fbom/marshals/SceneMarshal.hpp>
 #include <asset/serialization/fbom/marshals/CameraMarshal.hpp>
 #include <asset/serialization/fbom/marshals/ShaderBundleMarshal.hpp>
-#include <asset/serialization/fbom/marshals/ControllerMarshal.hpp>
 #include <asset/serialization/fbom/marshals/AudioSourceMarshal.hpp>
 #include <asset/serialization/fbom/marshals/PhysicsShapeMarshal.hpp>
+
+#include <util/fs/FsUtil.hpp>
 
 namespace hyperion::v2::fbom {
 
@@ -37,7 +38,6 @@ FBOM::FBOM()
     RegisterLoader<Camera>();
     RegisterLoader<CompiledShader>();
     RegisterLoader<CompiledShaderBatch>();
-    RegisterLoader<Controller>();
     RegisterLoader<AudioSource>();
     RegisterLoader<physics::PhysicsShape>();
 }

@@ -8,14 +8,14 @@
 
 namespace hyperion::v2 {
 
-class UIScene;
+class UIStage;
 
 #pragma region UIImage
 
 class HYP_API UIImage : public UIObject
 {
 public:
-    UIImage(ID<Entity> entity, UIScene *ui_scene, NodeProxy node_proxy);
+    UIImage(ID<Entity> entity, UIStage *stage, NodeProxy node_proxy);
     UIImage(const UIImage &other)                   = delete;
     UIImage &operator=(const UIImage &other)        = delete;
     UIImage(UIImage &&other) noexcept               = delete;

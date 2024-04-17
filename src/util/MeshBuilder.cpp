@@ -1,11 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "MeshBuilder.hpp"
-#include <Engine.hpp>
+
+#include <util/MeshBuilder.hpp>
 
 #include <math/Triangle.hpp>
 
-// temp
-#include <util/NoiseFactory.hpp>
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 

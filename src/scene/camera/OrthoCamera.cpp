@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "OrthoCamera.hpp"
+#include <scene/camera/OrthoCamera.hpp>
 
 namespace hyperion::v2 {
 OrthoCameraController::OrthoCameraController()

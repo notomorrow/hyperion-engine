@@ -87,14 +87,15 @@ void Game::InitGame()
 {
     Threads::AssertOnThread(THREAD_GAME);
 
-    m_ui.Init();
+    m_ui_stage.Init();
 
     if (m_managed_game_object) {
-        m_managed_game_object->InvokeMethodByName<void, ManagedHandle, void *, void *>(
+        m_managed_game_object->InvokeMethodByName<void, ManagedHandle, void *, void *, void *>(
             "BeforeInit",
             CreateManagedHandleFromHandle(m_scene),
             m_input_manager.Get(),
-            g_asset_manager
+            g_asset_manager,
+            &m_ui_stage
         );
 
         m_managed_game_object->InvokeMethodByName<void>("Init");
@@ -148,7 +149,7 @@ void Game::OnInputEvent(const SystemEvent &event)
     Threads::AssertOnThread(THREAD_GAME);
 
     // forward to UI
-    if (m_ui.OnInputEvent(m_input_manager.Get(), event)) {
+    if (m_ui_stage.OnInputEvent(m_input_manager.Get(), event)) {
         // ui handled the event
         return;
     }

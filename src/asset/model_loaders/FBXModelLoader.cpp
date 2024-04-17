@@ -1,8 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "FBXModelLoader.hpp"
-#include <Engine.hpp>
-#include <rendering/Mesh.hpp>
+#include <asset/model_loaders/FBXModelLoader.hpp>
+
 #include <scene/Entity.hpp>
 #include <scene/animation/Bone.hpp>
 #include <scene/ecs/EntityManager.hpp>
@@ -11,12 +10,16 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
+
+#include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
+
 #include <util/fs/FsUtil.hpp>
 #include <core/lib/Memory.hpp>
 
+#include <Engine.hpp>
+
 #include <algorithm>
-#include <stack>
 #include <string>
 
 #ifdef HYP_ZLIB

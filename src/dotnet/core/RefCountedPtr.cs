@@ -13,6 +13,11 @@ namespace Hyperion
 
         private IntPtr ctrlBlock;
 
+        public RefCountedPtr()
+        {
+            this.ctrlBlock = IntPtr.Zero;
+        }
+
         public RefCountedPtr(IntPtr ctrlBlock)
         {
             this.ctrlBlock = ctrlBlock;

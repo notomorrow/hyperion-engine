@@ -2,8 +2,8 @@
 #ifndef HYPERION_RECT_H
 #define HYPERION_RECT_H
 
-#include "Vector2.hpp"
-#include "Vector4.hpp"
+#include <math/Vector2.hpp>
+#include <math/Vector4.hpp>
 
 namespace hyperion {
 

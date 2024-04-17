@@ -3,7 +3,6 @@
 #include <Engine.hpp>
 
 #include <asset/ByteReader.hpp>
-#include <util/fs/FsUtil.hpp>
 
 #include <rendering/PostFX.hpp>
 #include <rendering/DrawProxy.hpp>
@@ -13,12 +12,11 @@
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <rendering/backend/AsyncCompute.hpp>
 
-#include <scene/controllers/FollowCameraController.hpp>
-
 #include <Game.hpp>
 #include <GameThread.hpp>
 
 #include <util/MeshBuilder.hpp>
+#include <util/fs/FsUtil.hpp>
 
 #include <audio/AudioManager.hpp>
 

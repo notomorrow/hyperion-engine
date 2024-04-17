@@ -1,10 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "TemporalBlending.hpp"
-#include <Engine.hpp>
-#include <Threads.hpp>
+
+#include <rendering/TemporalBlending.hpp>
 
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
+
+#include <Engine.hpp>
+#include <Threads.hpp>
 
 namespace hyperion::v2 {
 

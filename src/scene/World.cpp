@@ -1,9 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "World.hpp"
+
+#include <scene/World.hpp>
+
+#include <rendering/RenderEnvironment.hpp>
+
 #include <Engine.hpp>
 #include <Threads.hpp>
-
-#include "rendering/RenderEnvironment.hpp"
 
 namespace hyperion::v2 {
 

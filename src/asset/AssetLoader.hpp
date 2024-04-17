@@ -11,8 +11,7 @@
 
 #include <system/Debug.hpp>
 
-#include "Loader.hpp"
-#include "LoaderObject.hpp"
+#include <asset/Loader.hpp>
 
 namespace hyperion::v2 {
 

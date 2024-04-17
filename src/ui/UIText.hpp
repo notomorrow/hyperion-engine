@@ -3,7 +3,7 @@
 #define HYPERION_V2_UI_TEXT_H
 
 #include <ui/UIObject.hpp>
-#include <ui/UIScene.hpp>
+#include <ui/UIStage.hpp>
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
@@ -42,7 +42,7 @@ struct UITextOptions
 class HYP_API UIText : public UIObject
 {
 public:
-    UIText(ID<Entity> entity, UIScene *ui_scene, NodeProxy node_proxy);
+    UIText(ID<Entity> entity, UIStage *stage, NodeProxy node_proxy);
     UIText(const UIText &other)                 = delete;
     UIText &operator=(const UIText &other)      = delete;
     UIText(UIText &&other) noexcept             = delete;

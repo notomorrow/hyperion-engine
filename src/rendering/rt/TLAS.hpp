@@ -4,8 +4,8 @@
 #define HYPERION_V2_TLAS_H
 
 #include <core/Base.hpp>
-#include "BLAS.hpp"
 
+#include <rendering/rt/BLAS.hpp>
 #include <rendering/backend/rt/RendererAccelerationStructure.hpp>
 
 #include <mutex>

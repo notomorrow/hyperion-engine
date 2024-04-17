@@ -7,7 +7,6 @@
 #include <asset/serialization/fbom/marshals/MeshMarshal.hpp>
 #include <asset/serialization/fbom/marshals/ShaderMarshal.hpp>
 #include <asset/serialization/fbom/marshals/MaterialMarshal.hpp>
-#include <asset/serialization/fbom/marshals/ControllerMarshal.hpp>
 #include <scene/Entity.hpp>
 #include <Engine.hpp>
 

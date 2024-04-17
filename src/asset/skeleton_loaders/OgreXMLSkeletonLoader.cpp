@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "OgreXMLSkeletonLoader.hpp"
-#include <Engine.hpp>
+#include <asset/skeleton_loaders/OgreXMLSkeletonLoader.hpp>
+
 #include <scene/animation/Skeleton.hpp>
 #include <scene/animation/Bone.hpp>
 
@@ -9,8 +9,9 @@
 
 #include <util/xml/SAXParser.hpp>
 
+#include <Engine.hpp>
+
 #include <algorithm>
-#include <stack>
 
 namespace hyperion::v2 {
 

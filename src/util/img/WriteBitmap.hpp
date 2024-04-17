@@ -1,5 +1,3 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-
 #ifndef WRITE_BITMAP_H
 #define WRITE_BITMAP_H
 

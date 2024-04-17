@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <ui/UIObject.hpp>
-#include <ui/UIScene.hpp>
+#include <ui/UIStage.hpp>
 
 #include <util/MeshBuilder.hpp>
 
@@ -83,7 +83,7 @@ Handle<Mesh> UIObject::GetQuadMesh()
     return quad_mesh_initializer.mesh;
 }
 
-UIObject::UIObject(ID<Entity> entity, UIScene *parent, NodeProxy node_proxy)
+UIObject::UIObject(ID<Entity> entity, UIStage *parent, NodeProxy node_proxy)
     : m_entity(entity),
       m_parent(parent),
       m_node_proxy(std::move(node_proxy)),
@@ -98,7 +98,7 @@ UIObject::UIObject(ID<Entity> entity, UIScene *parent, NodeProxy node_proxy)
       m_focus_state(UI_OBJECT_FOCUS_STATE_NONE)
 {
     AssertThrowMsg(entity.IsValid(), "Invalid Entity provided to UIObject!");
-    AssertThrowMsg(parent != nullptr, "Invalid UIScene parent pointer provided to UIObject!");
+    AssertThrowMsg(parent != nullptr, "Invalid UIStage parent pointer provided to UIObject!");
     AssertThrowMsg(m_node_proxy.IsValid(), "Invalid NodeProxy provided to UIObject!");
 }
 
@@ -401,7 +401,7 @@ int UIObject::GetDepth() const
     }
 
     if (const NodeProxy &node = GetNode()) {
-        return MathUtil::Clamp(int(node->CalculateDepth()), UIScene::min_depth, UIScene::max_depth + 1);
+        return MathUtil::Clamp(int(node->CalculateDepth()), UIStage::min_depth, UIStage::max_depth + 1);
     }
 
     return 0;
@@ -409,7 +409,7 @@ int UIObject::GetDepth() const
 
 void UIObject::SetDepth(int depth)
 {
-    m_depth = MathUtil::Clamp(depth, UIScene::min_depth, UIScene::max_depth + 1);
+    m_depth = MathUtil::Clamp(depth, UIStage::min_depth, UIStage::max_depth + 1);
 
     UpdatePosition();
     UpdateMaterial(); // Update material to change z-layer

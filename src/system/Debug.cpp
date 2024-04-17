@@ -1,9 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-//
-// Created by emd22 on 2022-02-14.
-//
 
-#include "Debug.hpp"
+#include <system/Debug.hpp>
+
 #include <cstdio>
 #include <cstdarg>
 

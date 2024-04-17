@@ -27,8 +27,6 @@ private:
     static constexpr ValueType void_value = ValueType(0);
 
 public:
-    static const TypeID void_type_id;
-
     template <class T>
     static constexpr TypeID ForType()
     {
@@ -36,7 +34,7 @@ public:
             return Void();
         } else {
             return TypeID {
-                ValueType(TypeName<T>().GetHashCode().Value() % HashCode::ValueType(MathUtil::MaxSafeValue<ValueType>()))
+                ValueType(TypeNameWithoutNamespace<T>().GetHashCode().Value() % HashCode::ValueType(MathUtil::MaxSafeValue<ValueType>()))
             };
         }
     }
@@ -72,13 +70,13 @@ public:
     constexpr TypeID(TypeID &&other) noexcept
         : value(other.value)
     {
-        other.value = 0;
+        other.value = void_value;
     }
     
     constexpr TypeID &operator=(TypeID &&other) noexcept
     {
         value = other.value;
-        other.value = 0;
+        other.value = void_value;
 
         return *this;
     }

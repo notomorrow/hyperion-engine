@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "FollowCamera.hpp"
+#include <scene/camera/FollowCamera.hpp>
 
 namespace hyperion::v2 {
 

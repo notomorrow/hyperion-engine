@@ -3,7 +3,7 @@
 #ifndef HYPERION_V2_FOLLOW_CAMERA_H
 #define HYPERION_V2_FOLLOW_CAMERA_H
 
-#include "PerspectiveCamera.hpp"
+#include <scene/camera/PerspectiveCamera.hpp>
 
 namespace hyperion::v2 {
 class FollowCameraController : public PerspectiveCameraController

@@ -1,76 +1,69 @@
 # Hyperion Engine
 
-
-## About
-
-Hyperion Engine is a 3D game engine written in C++, rendering on Vulkan. Currently, it targets Windows, macOS and Linux.
-
-The goal of Hyperion is to be easy to understand and build games with, while still giving you ample control over the game engine.
+Hyperion Engine is a 3D game engine written in C++. Currently, it targets Windows, macOS and Linux and has support for C# scripting.
 
 Dynamic Diffuse Global Illumination (DDGI) | GPU Particles
 :-----------------------------------------:|:-------------------------:
 ![DDG(](/screenshots/ddgi.gif)             | ![GPU particles](/screenshots/particles.gif)
 
-### Current features include:
-* Highly multi-threaded
-     * Async task system
-     * Async asset loading
-     * Parallel command list recording
-* Physically based rendering
-     * With physically based camera effects (aperture, exposure etc.)
-* Post processing
-     * HBAO (horizon based ambient occlusion)
-     * Screen space global illumination
-     * Screen space reflections with glossiness (SSR)
-     * Refraction
-     * FXAA and TAA for anti-aliasing
-     * Tone mapping
-* Raytracing - Reflections, Global Illumination (DDGI)
-* Procedural, paged terrain generation
-* Serialization / deserialization system
-* Shader compilation and caching system
-     * Integrates with glslang
-     * Generates separate shader versions with separate functionalities,
-       so you can select one on the fly with the functionality you need, and it will already be compiled and ready to go.
+### Some features include:
+* Multi threading with task system
+* Entity component system
+* PBR and post processing
+* Hardware ray tracing support for reflections and global illumination
 * Skeletal animation
-* Scene graph + octree
+* C# scripting using .NET Core
+* More reflection and global illumination techniques such as
+     * Screen space reflections
+     * Voxel cone tracing
+     * Environment probes
 * GPU occlusion culling
-* GPU particle rendering
-* Dynamic cubemap rendering with local correction, so reflections match up
-* Voxel cone tracing (dynamic global illumination and reflections)
-     * Implemented both with a 3D texture and a sparse voxel octree
-* Shadow rendering
-     * Variance shadow maps
-     * Contact-hardened soft shadows
-* Scripting engine (Hypscript)
-
-
-Feel free to contribute anything - but please note, issues are not constantly monitored so expect a potential delay before hearing back.
-
-## Docs (in the works)
-[Scripting Language](doc/ScriptingLanguage.md)
-
-## Screenshots
-![Point light shadows](/screenshots/room.jpg)\
-*Point light shadows*\
-![Particle physics demo](/screenshots/particle_phys2.gif)\
-*GPU particles with basic physics simulation*\
-![screenshot](/screenshots/ssr.jpg)\
-*Screen space reflections*\
-![screenshot](/screenshots/point-shadows.jpg)\
-*Point light shadows*\
-![screenshot](/screenshots/procedural_terrain.jpg)\
-*Procedural terrain generation*
+* GPU particles
 
 
 ## Building
 
-This section will be updated soon. Hyperion uses a pretty simple CMake set up, using vcpkg for MSVC on Windows, and a build script (`build.sh`) for macOS and Linux.
+Hyperion uses CMake to configure and generate the build files for both C++ and C#. Depending on your target platform, make sure you have the following dependencies installed:
 
-Make sure you install the required packages listed in CMakeLists.txt.
+### Windows
+* Visual Studio 2019 or newer
+* vcpkg (and ensure VCPKG_INSTALLED_DIR environment variable is set)
+* Vulkan SDK
+* SDL 2
+* OpenAL 
+* Bullet (optional)
+* FreeType (optional)
+* GStreamer (optional, only required for WebRTC streaming)
 
-### Known issues
-* Currently may get a deadlock on close as render thread is synced to in many places. This can be alleviated by using `GPUBufferRef`, `ImageRef`, etc. types instead of something like UniquePtr<GPUBuffer>.
-* Scripting has issues with generic types
-* Binding C++ variables to scripts still not fleshed out
-* Voxel cone tracing may have stability issues
+### macOS
+* Xcode build tools (Clang compiler)
+* Homebrew (to install necessary dependencies)
+* MoltenVK (Vulkan SDK wrapper for Metal)
+* SDL 2
+* OpenAL
+* Bullet (optional)
+* FreeType (optional)
+* GStreamer (optional, only required for WebRTC streaming)
+
+### Linux
+* GCC or Clang
+* Vulkan SDK
+* SDL 2
+* OpenAL
+* Bullet (optional)
+* FreeType (optional)
+* GStreamer (optional, only required for WebRTC streaming)
+
+## Submodules
+
+You should also ensure that submodules for the repo are initialized and updated. The main ones you'll need are:
+* .NET Core Runtime (https://github.com/dotnet/runtime)
+* glslang (https://github.com/KhronosGroup/glslang)
+
+Some optional submodules include:
+* xatlas (If you plan to bake lightmaps) (https://github.com/jpcy/xatlas)
+* libdatachannel (For WebRTC support) (https://github.com/paullouisageneau/libdatachannel)
+
+```bash
+git submodule update --init --recursive
+```

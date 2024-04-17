@@ -1,6 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "Framebuffer.hpp"
-#include "../Engine.hpp"
+
+#include <rendering/Framebuffer.hpp>
+
+#include <Engine.hpp>
 
 namespace hyperion::v2 {
 

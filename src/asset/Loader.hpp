@@ -5,8 +5,6 @@
 #include <asset/ByteReader.hpp>
 #include <asset/BufferedByteReader.hpp>
 
-#include "LoaderObject.hpp"
-
 #include <vector>
 
 #define HYP_LOADER_BUFFER_SIZE 2048

@@ -4,13 +4,14 @@
 
 #include <HashCode.hpp>
 
+#include <math/Vector3.hpp>
+
 #include <core/Defines.hpp>
 #include <Types.hpp>
 
 #include <ostream>
 #include <cmath>
 
-#include "Vector3.hpp"
 
 namespace hyperion {
 

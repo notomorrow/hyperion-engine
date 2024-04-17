@@ -1,6 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "Matrix3.hpp"
-#include <cassert>
+#include <math/Matrix3.hpp>
 #include <core/Core.hpp>
 
 namespace hyperion {

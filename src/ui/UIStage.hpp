@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_UI_SCENE_HPP
-#define HYPERION_V2_UI_SCENE_HPP
+
+#ifndef HYPERION_V2_UI_STAGE_HPP
+#define HYPERION_V2_UI_STAGE_HPP
 
 #include <ui/UIObject.hpp>
 
@@ -34,23 +35,20 @@ namespace hyperion::v2 {
 class UIButton;
 class FontAtlas;
 
-class UIScene : public BasicObject<STUB_CLASS(UIScene)>
+class UIStage : public BasicObject<STUB_CLASS(UIStage)>
 {
 public:
     // The minimum and maximum depth values for the UI scene for layering
     static const int min_depth = -10000;
     static const int max_depth = 10000;
 
-    HYP_API UIScene();
-    UIScene(const UIScene &other)               = delete;
-    UIScene &operator=(const UIScene &other)    = delete;
-    HYP_API ~UIScene();
+    HYP_API UIStage();
+    UIStage(const UIStage &other)               = delete;
+    UIStage &operator=(const UIStage &other)    = delete;
+    HYP_API ~UIStage();
 
     Vec2i GetSurfaceSize() const
         { return m_surface_size; }
-
-    Handle<Scene> &GetScene()
-        { return m_scene; }
 
     const Handle<Scene> &GetScene() const
         { return m_scene; }

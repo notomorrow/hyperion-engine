@@ -12,7 +12,7 @@
 
 #include <scene/Scene.hpp>
 
-#include <ui/UIScene.hpp>
+#include <ui/UIStage.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 
@@ -69,11 +69,11 @@ public:
 protected:
     virtual void Logic(GameCounter::TickUnit delta) = 0;
 
-    UIScene &GetUI()
-        { return m_ui; }
+    UIStage &GetUIStage()
+        { return m_ui_stage; }
 
-    const UIScene &GetUI() const
-        { return m_ui; }
+    const UIStage &GetUIStage() const
+        { return m_ui_stage; }
 
     const UniquePtr<InputManager> &GetInputManager() const
         { return m_input_manager; }
@@ -83,7 +83,7 @@ protected:
     UniquePtr<InputManager>     m_input_manager;
     Handle<Scene>               m_scene;
 
-    UIScene                     m_ui;
+    UIStage                     m_ui_stage;
 
     RC<Assembly>                m_managed_assembly;
     UniquePtr<Object>           m_managed_game_object;
