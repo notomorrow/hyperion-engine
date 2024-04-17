@@ -7,7 +7,7 @@
 #include <util/fs/FsUtil.hpp>
 #include <util/MeshBuilder.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBufferType;
 using renderer::FillMode;
@@ -286,4 +286,4 @@ void FullScreenPass::End(Frame *frame)
     m_framebuffer->EndCapture(frame_index, frame->GetCommandBuffer());
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

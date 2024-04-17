@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RENDER_STATE_HPP
-#define HYPERION_V2_RENDER_STATE_HPP
+#ifndef HYPERION_RENDER_STATE_HPP
+#define HYPERION_RENDER_STATE_HPP
 
 #include <core/lib/FlatSet.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -20,7 +20,7 @@
 
 #include <stack>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RenderEnvironment;
 class EnvGrid;
@@ -315,6 +315,6 @@ private:
     FixedArray<uint, ENV_PROBE_BINDING_SLOT_MAX>    m_env_probe_texture_slot_counters { };
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

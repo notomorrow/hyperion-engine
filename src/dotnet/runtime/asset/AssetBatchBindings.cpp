@@ -7,7 +7,6 @@
 #include <Types.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT AssetBatch *AssetBatch_Create(AssetManager *asset_manager)

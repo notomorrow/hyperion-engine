@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_LIGHTMAP_HPP
-#define HYPERION_V2_LIGHTMAP_HPP
+#ifndef HYPERION_LIGHTMAP_HPP
+#define HYPERION_LIGHTMAP_HPP
 
 #include <core/Base.hpp>
 #include <core/Handle.hpp>
@@ -9,7 +9,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class HYP_API Lightmap
     : public BasicObject<STUB_CLASS(Lightmap)>
@@ -35,6 +35,6 @@ protected:
     Handle<Texture> m_irradiance_texture;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

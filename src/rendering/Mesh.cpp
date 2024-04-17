@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <cstring>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 using renderer::GPUBufferType;
@@ -768,4 +768,4 @@ void Mesh::CalculateAABB()
     m_aabb = aabb;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

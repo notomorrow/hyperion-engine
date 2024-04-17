@@ -3,7 +3,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using namespace renderer;
 
@@ -17,4 +17,4 @@ Device *GetEngineDevice()
     return g_engine->GetGPUInstance()->GetDevice();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

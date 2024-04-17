@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_ENV_GRID_UPDATER_SYSTEM_HPP
-#define HYPERION_V2_ECS_ENV_GRID_UPDATER_SYSTEM_HPP
+#ifndef HYPERION_ECS_ENV_GRID_UPDATER_SYSTEM_HPP
+#define HYPERION_ECS_ENV_GRID_UPDATER_SYSTEM_HPP
 
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/components/EnvGridComponent.hpp>
@@ -9,7 +9,7 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class EnvGridUpdaterSystem : public System<
     ComponentDescriptor<EnvGridComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
@@ -26,6 +26,6 @@ public:
     virtual void Process(EntityManager &entity_manager, GameCounter::TickUnit delta) override;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

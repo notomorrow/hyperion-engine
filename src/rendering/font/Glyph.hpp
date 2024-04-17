@@ -9,7 +9,7 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/Texture.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct GlyphImageData
 {
@@ -76,6 +76,6 @@ private:
     Metrics                 m_metrics { 0 };
 };
 
-}; // namespace hyperion::v2
+}; // namespace hyperion
 
 #endif //HYP_FONT_FONTGLYPH_HPP

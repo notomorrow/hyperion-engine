@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_ENTITY_TAG_HPP
-#define HYPERION_V2_ECS_ENTITY_TAG_HPP
+#ifndef HYPERION_ECS_ENTITY_TAG_HPP
+#define HYPERION_ECS_ENTITY_TAG_HPP
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 enum class EntityTag : uint32
 {
@@ -27,6 +27,6 @@ struct EntityTagComponent
     static constexpr EntityTag value = tag;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

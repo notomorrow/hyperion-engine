@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FOLLOW_CAMERA_H
-#define HYPERION_V2_FOLLOW_CAMERA_H
+#ifndef HYPERION_FOLLOW_CAMERA_HPP
+#define HYPERION_FOLLOW_CAMERA_HPP
 
 #include <scene/camera/PerspectiveCamera.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 class FollowCameraController : public PerspectiveCameraController
 {
 public:
@@ -36,6 +36,6 @@ private:
     Vector2 m_mag,
         m_prev_mag;
 };
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

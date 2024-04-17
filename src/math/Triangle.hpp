@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef TRIANGLE_H
-#define TRIANGLE_H
+#ifndef TRIANGLE_HPP
+#define TRIANGLE_HPP
 
 #include <math/Vertex.hpp>
 #include <math/Transform.hpp>

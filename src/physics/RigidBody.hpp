@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_PHYSICS_RIGID_BODY_HPP
-#define HYPERION_V2_PHYSICS_RIGID_BODY_HPP
+#ifndef HYPERION_PHYSICS_RIGID_BODY_HPP
+#define HYPERION_PHYSICS_RIGID_BODY_HPP
 
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
@@ -15,13 +15,13 @@
 
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-namespace hyperion::v2::physics {
+namespace hyperion::physics {
 
 enum class PhysicsShapeType : uint32
 {
@@ -226,6 +226,6 @@ private:
     UniquePtr<void> m_handle;
 };
 
-} // namespace hyperion::v2::physics
+} // namespace hyperion::physics
 
 #endif

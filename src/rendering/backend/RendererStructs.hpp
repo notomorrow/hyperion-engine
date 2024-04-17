@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BACKEND_RENDERER_STRUCTS_H
-#define HYPERION_V2_BACKEND_RENDERER_STRUCTS_H
+#ifndef HYPERION_BACKEND_RENDERER_STRUCTS_HPP
+#define HYPERION_BACKEND_RENDERER_STRUCTS_HPP
 
 #include <core/lib/String.hpp>
 #include <core/Defines.hpp>
@@ -409,15 +409,6 @@ struct alignas(16) ShaderMat4
 };
 
 static_assert(sizeof(ShaderMat4) == 64);
-
-struct alignas(8) Rect
-{
-    uint32 x0, y0,
-        x1, y1;
-};
-
-static_assert(sizeof(Rect) == 16);
-
 
 template <SizeType N, class T>
 struct PaddedStructValue

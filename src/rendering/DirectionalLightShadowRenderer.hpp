@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
-#define HYPERION_V2_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
+#ifndef HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
+#define HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
 
 #include <rendering/FullScreenPass.hpp>
 #include <core/Base.hpp>
@@ -21,7 +21,7 @@
 
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -138,6 +138,6 @@ private:
     ShadowMode              m_shadow_mode;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,16 +1,16 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_PHYSICS_MATERIAL_HPP
-#define HYPERION_V2_PHYSICS_MATERIAL_HPP
+#ifndef HYPERION_PHYSICS_MATERIAL_HPP
+#define HYPERION_PHYSICS_MATERIAL_HPP
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-namespace hyperion::v2::physics {
+namespace hyperion::physics {
 
 struct PhysicsMaterial
 {
@@ -23,6 +23,6 @@ struct PhysicsMaterial
         { mass = value; }
 };
 
-} // namespace hyperion::v2::physics
+} // namespace hyperion::physics
 
 #endif

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ASSET_BATCH_HPP
-#define HYPERION_V2_ASSET_BATCH_HPP
+#ifndef HYPERION_ASSET_BATCH_HPP
+#define HYPERION_ASSET_BATCH_HPP
 
 #include <asset/AssetLoader.hpp>
 #include <core/Core.hpp>
@@ -12,7 +12,7 @@
 
 #include <type_traits>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class AssetManager;
 
@@ -203,6 +203,6 @@ private:
     AssetBatchCallbacks                         callbacks;
 };
 
-} // namespace hyperion::V2
+} // namespace hyperion
 
 #endif

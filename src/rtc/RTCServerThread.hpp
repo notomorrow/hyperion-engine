@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RTC_SERVER_THREAD_HPP
-#define HYPERION_V2_RTC_SERVER_THREAD_HPP
+#ifndef HYPERION_RTC_SERVER_THREAD_HPP
+#define HYPERION_RTC_SERVER_THREAD_HPP
 
 #include <core/Thread.hpp>
 #include <core/Scheduler.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RTCServer;
 
@@ -27,6 +27,6 @@ private:
     AtomicVar<bool> m_is_running;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif // HYPERION_V2_RTC_SERVER_THREAD_HPP
+#endif // HYPERION_RTC_SERVER_THREAD_HPP

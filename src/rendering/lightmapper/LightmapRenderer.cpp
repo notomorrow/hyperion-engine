@@ -9,7 +9,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region Render commands
 
@@ -871,4 +871,4 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
     m_num_jobs.Decrement(1u, MemoryOrder::RELAXED);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

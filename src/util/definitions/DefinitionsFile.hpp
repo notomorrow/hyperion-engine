@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_DEFINITIONS_FILE_HPP
-#define HYPERION_V2_DEFINITIONS_FILE_HPP
+#ifndef HYPERION_DEFINITIONS_FILE_HPP
+#define HYPERION_DEFINITIONS_FILE_HPP
 
 #include <core/Containers.hpp>
 #include <core/Defines.hpp>
@@ -11,7 +11,7 @@
 #include <system/Debug.hpp>
 #include <Config.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class DefinitionsFile
 {
@@ -73,6 +73,6 @@ private:
     HashMap<String, Section>    m_sections;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

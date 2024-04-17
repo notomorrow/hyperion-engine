@@ -25,7 +25,7 @@
 #include <Threads.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 UIStage::UIStage()
     : BasicObject(),
@@ -361,4 +361,4 @@ bool UIStage::Remove(ID<Entity> entity)
     return false;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BACKEND_RENDERER_SHADER_H
-#define HYPERION_V2_BACKEND_RENDERER_SHADER_H
+#ifndef HYPERION_BACKEND_RENDERER_SHADER_HPP
+#define HYPERION_BACKEND_RENDERER_SHADER_HPP
 
 #include <rendering/backend/Platform.hpp>
 

@@ -8,9 +8,8 @@
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
-using renderer::Rect;
 using renderer::ShaderVec2;
 using renderer::Result;
 using renderer::GPUBufferType;
@@ -411,4 +410,4 @@ void SSRRenderer::Render(Frame *frame)
     /* ==========  END SSR  ========== */
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

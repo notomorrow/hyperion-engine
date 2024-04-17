@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DRAW_CALL_HPP
-#define HYPERION_V2_DRAW_CALL_HPP
+#ifndef HYPERION_DRAW_CALL_HPP
+#define HYPERION_DRAW_CALL_HPP
 
 #include <core/Containers.hpp>
 #include <Constants.hpp>
@@ -16,7 +16,7 @@
 
 #include <rendering/ShaderGlobals.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 
@@ -257,6 +257,6 @@ struct DrawCallCollection
     void Reset();
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

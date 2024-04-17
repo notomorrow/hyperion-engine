@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_PHYSICS_WORLD_HPP
-#define HYPERION_V2_PHYSICS_WORLD_HPP
+#ifndef HYPERION_PHYSICS_WORLD_HPP
+#define HYPERION_PHYSICS_WORLD_HPP
 
 #include <physics/Adapter.hpp>
 #include <physics/RigidBody.hpp>
@@ -10,7 +10,7 @@
 
 #include <type_traits>
 
-namespace hyperion::v2::physics {
+namespace hyperion::physics {
 
 class HYP_API PhysicsWorldBase
 {
@@ -95,21 +95,21 @@ private:
     Adapter m_adapter;
 };
 
-} // namespace hyperion::v2::physics
+} // namespace hyperion::physics
 
 #ifdef HYP_BULLET_PHYSICS
 
 #include <physics/bullet/Adapter.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 using PhysicsWorld = physics::PhysicsWorld<physics::BulletPhysicsAdapter>;
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #else
 
 #include <physics/null/Adapter.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 using PhysicsWorld = physics::PhysicsWorld<physics::NullPhysicsAdapter>;
 } // na
 

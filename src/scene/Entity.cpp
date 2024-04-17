@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <scene/Entity.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 Entity::Entity()
     : BasicObject()
@@ -28,4 +28,4 @@ bool Entity::IsReady() const
     return Base::IsReady();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

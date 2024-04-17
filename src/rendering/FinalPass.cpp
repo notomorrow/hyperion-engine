@@ -6,7 +6,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 CompositePass::CompositePass()
     : FullScreenPass(InternalFormat::R11G11B10F)
@@ -231,4 +231,4 @@ void FinalPass::Render(Frame *frame)
     m_render_group->GetFramebuffers()[acquired_image_index]->EndCapture(0, frame->GetCommandBuffer());
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

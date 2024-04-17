@@ -1,14 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_TERRAIN_COMPONENT_HPP
-#define HYPERION_V2_ECS_TERRAIN_COMPONENT_HPP
+#ifndef HYPERION_ECS_TERRAIN_COMPONENT_HPP
+#define HYPERION_ECS_TERRAIN_COMPONENT_HPP
 
 #include <math/Vector3.hpp>
 #include <math/Extent.hpp>
 
 #include <core/lib/FixedArray.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using TerrainPatchCoord = Vec2i;
 
@@ -64,6 +64,6 @@ struct TerrainComponent
     TerrainComponentFlags   flags = TERRAIN_COMPONENT_FLAG_NONE;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

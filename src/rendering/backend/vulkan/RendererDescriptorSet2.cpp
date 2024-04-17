@@ -379,6 +379,8 @@ Result DescriptorSet2<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device
                     .imageView      = ref->GetImageView(),
                     .imageLayout    = is_storage_image ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 };
+
+                DebugLog(LogType::Debug, "Imagelayout: %u\n", descriptor_element_info.image_info.imageLayout);
             } else if (value_it->second.Is<SamplerRef<Platform::VULKAN>>()) {
                 const SamplerRef<Platform::VULKAN> &ref = value_it->second.Get<SamplerRef<Platform::VULKAN>>();
                 AssertThrowMsg(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), i);

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HASH_CODE_H
-#define HASH_CODE_H
+#ifndef HASH_CODE_HPP
+#define HASH_CODE_HPP
 
 #include <Types.hpp>
 #include <Constants.hpp>

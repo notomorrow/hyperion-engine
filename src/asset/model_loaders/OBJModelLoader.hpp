@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_OBJ_MODEL_LOADER_H
-#define HYPERION_V2_OBJ_MODEL_LOADER_H
+#ifndef HYPERION_OBJ_MODEL_LOADER_HPP
+#define HYPERION_OBJ_MODEL_LOADER_HPP
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -9,7 +9,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class OBJModelLoader : public AssetLoader
 {
@@ -63,12 +63,12 @@ public:
 
 using OBJIndex = OBJModelLoader::OBJModel::OBJIndex;
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 namespace std {
 template<>
-struct hash<hyperion::v2::OBJIndex> {
-    size_t operator()(const hyperion::v2::OBJIndex &obj) const
+struct hash<hyperion::OBJIndex> {
+    size_t operator()(const hyperion::OBJIndex &obj) const
     {
         hyperion::HashCode hc;
         hc.Add(obj.vertex);

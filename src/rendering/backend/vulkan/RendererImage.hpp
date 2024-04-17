@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef RENDERER_IMAGE_H
-#define RENDERER_IMAGE_H
+#ifndef RENDERER_IMAGE_HPP
+#define RENDERER_IMAGE_HPP
 
 #include <streaming/StreamedData.hpp>
 
@@ -16,9 +16,6 @@
 
 namespace hyperion {
 namespace renderer {
-
-using v2::StreamedData;
-using v2::MemoryStreamedData;
 
 
 namespace platform {
@@ -93,15 +90,15 @@ public:
     HYP_API Result Blit(
         CommandBuffer<Platform::VULKAN> *command_buffer,
         const Image *src,
-        Rect src_rect,
-        Rect dst_rect
+        Rect<uint32> src_rect,
+        Rect<uint32> dst_rect
     );
 
     HYP_API Result Blit(
         CommandBuffer<Platform::VULKAN> *command_buffer,
         const Image *src,
-        Rect src_rect,
-        Rect dst_rect,
+        Rect<uint32> src_rect,
+        Rect<uint32> dst_rect,
         uint src_mip,
         uint dst_mip
     );

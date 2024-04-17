@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_TEXTURE_LOADER_H
-#define HYPERION_V2_TEXTURE_LOADER_H
+#ifndef HYPERION_TEXTURE_LOADER_HPP
+#define HYPERION_TEXTURE_LOADER_HPP
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -10,7 +10,7 @@
 #include <Types.hpp>
 #include <rendering/Texture.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class TextureLoader : public AssetLoader
 {
@@ -28,6 +28,6 @@ public:
     };
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

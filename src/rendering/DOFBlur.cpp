@@ -2,7 +2,7 @@
 #include <rendering/DOFBlur.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region Render commands
 
@@ -87,4 +87,4 @@ void DOFBlur::Render(Frame *frame)
     m_blur_mix_pass->Render(frame);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

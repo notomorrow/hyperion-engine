@@ -5,7 +5,7 @@
 #include <util/MeshBuilder.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 DebugDrawer::DebugDrawer()
 {
@@ -329,4 +329,4 @@ void DebugDrawCommandList::Commit()
     m_debug_drawer->CommitCommands(*this);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

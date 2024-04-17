@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RTC_STREAM_HPP
-#define HYPERION_V2_RTC_STREAM_HPP
+#ifndef HYPERION_RTC_STREAM_HPP
+#define HYPERION_RTC_STREAM_HPP
 
 #include <core/lib/String.hpp>
 #include <core/lib/ByteBuffer.hpp>
@@ -10,7 +10,7 @@ namespace hyperion {
 class TaskThread;
 } // namespace hyperion
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RTCStreamEncoder;
 class RTCTrack;
@@ -109,6 +109,6 @@ using LibDataChannelRTCStream = NullRTCStream;
 
 #endif // HYP_LIBDATACHANNEL
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

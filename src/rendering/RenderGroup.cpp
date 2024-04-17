@@ -9,7 +9,7 @@
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 using renderer::CommandBufferType;
@@ -609,4 +609,4 @@ void RendererProxy::Submit(Frame *frame)
     command_buffer->SubmitSecondary(frame->GetCommandBuffer());
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

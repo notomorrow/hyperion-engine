@@ -2,7 +2,7 @@
 
 #include <scene/camera/FirstPersonCamera.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 static const float mouse_sensitivity = 1.0f;
 static const float mouse_blending = 0.35f;
@@ -118,4 +118,4 @@ void FirstPersonCameraController::RespondToCommand(const CameraCommand &command,
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

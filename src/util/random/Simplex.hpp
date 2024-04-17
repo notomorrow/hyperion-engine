@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef SIMPLEX_H
-#define SIMPLEX_H
+#ifndef SIMPLEX_HPP
+#define SIMPLEX_HPP
 
 #include <util/random/OpenSimplexNoise.hpp>
 

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RENDERER_H
-#define HYPERION_V2_RENDERER_H
+#ifndef HYPERION_RENDERER_HPP
+#define HYPERION_RENDERER_HPP
 
 #include <core/Containers.hpp>
 #include <rendering/Shader.hpp>
@@ -26,7 +26,7 @@
 #include <mutex>
 #include <vector>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 using renderer::Topology;
@@ -178,6 +178,6 @@ private:
     DrawCallCollection m_draw_state;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

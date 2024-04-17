@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_SHADOW_MAP_COMPONENT_HPP
-#define HYPERION_V2_ECS_SHADOW_MAP_COMPONENT_HPP
+#ifndef HYPERION_ECS_SHADOW_MAP_COMPONENT_HPP
+#define HYPERION_ECS_SHADOW_MAP_COMPONENT_HPP
 
 #include <core/Handle.hpp>
 #include <core/Name.hpp>
@@ -17,7 +17,7 @@
 
 #include <HashCode.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RenderComponentBase;
 
@@ -33,6 +33,6 @@ struct ShadowMapComponent
 
 static_assert(sizeof(ShadowMapComponent) == 32, "ShadowMapComponent size mismatch with C#");
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_SCREEN_CAPTURE_HPP
-#define HYPERION_V2_SCREEN_CAPTURE_HPP
+#ifndef HYPERION_SCREEN_CAPTURE_HPP
+#define HYPERION_SCREEN_CAPTURE_HPP
 
 #include <core/Base.hpp>
 #include <rendering/PostFX.hpp>
@@ -22,7 +22,7 @@
 
 #include <array>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -61,6 +61,6 @@ private:
         { }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

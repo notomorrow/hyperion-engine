@@ -4,7 +4,7 @@
 #include <asset/BufferedByteReader.hpp>
 #include <system/Debug.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const DefinitionsFile::Element DefinitionsFile::Element::empty = { };
 
@@ -172,4 +172,4 @@ void DefinitionsFile::Parse()
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

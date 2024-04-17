@@ -13,7 +13,7 @@
 #include <Constants.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
@@ -45,6 +45,6 @@ private:
     FontEngine::Font m_face;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif //HYP_FONT_FACE_HPP

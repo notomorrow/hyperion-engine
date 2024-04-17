@@ -3,7 +3,7 @@
 #include <asset/font_loaders/FontFaceLoader.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 LoadedAsset FontFaceLoader::LoadAsset(LoaderState &state) const
 {
@@ -17,4 +17,4 @@ LoadedAsset FontFaceLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, font_face.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

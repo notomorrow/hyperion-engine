@@ -8,7 +8,7 @@
 #include <Threads.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void EnvGridUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -75,4 +75,4 @@ void EnvGridUpdaterSystem::Process(EntityManager &entity_manager, GameCounter::T
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

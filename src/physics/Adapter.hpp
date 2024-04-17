@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_PHYSICS_ADAPTER_HPP
-#define HYPERION_V2_PHYSICS_ADAPTER_HPP
+#ifndef HYPERION_PHYSICS_ADAPTER_HPP
+#define HYPERION_PHYSICS_ADAPTER_HPP
 
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
@@ -8,7 +8,7 @@
 
 #include <type_traits>
 
-namespace hyperion::v2::physics {
+namespace hyperion::physics {
 
 class PhysicsWorldBase;
 class RigidBody;
@@ -48,6 +48,6 @@ public:
         { GetDerivedAdapter()->DerivedAdapter::ApplyForceToBody(rigid_body, force); }
 };
 
-} // namespace hyperion::v2::physics
+} // namespace hyperion::physics
 
 #endif

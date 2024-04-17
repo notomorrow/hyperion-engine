@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RANGE_H
-#define HYPERION_RANGE_H
+#ifndef HYPERION_RANGE_HPP
+#define HYPERION_RANGE_HPP
 
 #include <math/MathUtil.hpp>
 

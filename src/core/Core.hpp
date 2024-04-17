@@ -21,7 +21,7 @@ using Device = platform::Device<Platform::CURRENT>;
 
 } // namespace hyperion::renderer
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class ObjectPool;
@@ -47,6 +47,6 @@ static HYP_FORCE_INLINE bool InitObject(Handle<T> &handle)
     return InitObjectIntern(GetEngine(), handle);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

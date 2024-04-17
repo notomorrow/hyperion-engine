@@ -13,7 +13,7 @@
 #include <Threads.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void ShadowMapUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -153,4 +153,4 @@ void ShadowMapUpdaterSystem::Process(EntityManager &entity_manager, GameCounter:
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

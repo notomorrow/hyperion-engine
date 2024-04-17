@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CORE_ID_HPP
-#define HYPERION_V2_CORE_ID_HPP
+#ifndef HYPERION_CORE_ID_HPP
+#define HYPERION_CORE_ID_HPP
 
 #include <core/lib/RefCountedPtr.hpp>
 #include <core/lib/TypeID.hpp>
@@ -11,11 +11,7 @@
 
 namespace hyperion {
 
-namespace v2 {
-
 class Engine;
-
-} // namespace v2
 
 struct IDBase
 {

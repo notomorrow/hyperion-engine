@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef BOUNDING_BOX_H
-#define BOUNDING_BOX_H
+#ifndef BOUNDING_BOX_HPP
+#define BOUNDING_BOX_HPP
 
 #include <math/Vector3.hpp>
 #include <math/Transform.hpp>

@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -234,4 +234,4 @@ void BLAS::UpdateRender(
 #endif
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

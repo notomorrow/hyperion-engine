@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_CONFIG_HPP
-#define HYPERION_V2_CONFIG_HPP
+#ifndef HYPERION_CONFIG_HPP
+#define HYPERION_CONFIG_HPP
 
 #include <core/lib/Variant.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -13,7 +13,7 @@
 
 #include <Threads.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
@@ -264,6 +264,6 @@ private:
     FixedArray<Option, CONFIG_MAX> m_variables;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

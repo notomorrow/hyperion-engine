@@ -1,5 +1,5 @@
-#ifndef WRITE_BITMAP_H
-#define WRITE_BITMAP_H
+#ifndef WRITE_BITMAP_HPP
+#define WRITE_BITMAP_HPP
 
 #include <core/Defines.hpp>
 

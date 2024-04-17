@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class EnvProbe;
 
@@ -699,4 +699,4 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

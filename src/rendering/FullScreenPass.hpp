@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_FULL_SCREEN_PASS_H
-#define HYPERION_V2_FULL_SCREEN_PASS_H
+#ifndef HYPERION_FULL_SCREEN_PASS_HPP
+#define HYPERION_FULL_SCREEN_PASS_HPP
 
 #include <rendering/Framebuffer.hpp>
 #include <rendering/Shader.hpp>
@@ -20,7 +20,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Attachment;
 using renderer::Frame;
@@ -140,6 +140,6 @@ protected:
 
     Optional<DescriptorTableRef>                        m_descriptor_table;
 };
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

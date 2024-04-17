@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_DEFINES_H
-#define HYPERION_DEFINES_H
+#ifndef HYPERION_DEFINES_HPP
+#define HYPERION_DEFINES_HPP
 
 // #define HYP_LOG_MEMORY_OPERATIONS
 // #define HYP_LOG_DESCRIPTOR_SET_UPDATES
@@ -329,4 +329,4 @@
 //#pragma warning(disable: C4251) // class needs to have dll-interface to be used by clients of class
 #endif
 
-#endif // !HYPERION_DEFINES_H
+#endif // !HYPERION_DEFINES_HPP

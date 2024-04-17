@@ -2,7 +2,7 @@
 #include <rendering/Lightmap.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 Lightmap::Lightmap(Handle<Texture> radiance_texture, Handle<Texture> irradiance_texture)
     : BasicObject(),
@@ -27,4 +27,4 @@ void Lightmap::Init()
     SetReady(true);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

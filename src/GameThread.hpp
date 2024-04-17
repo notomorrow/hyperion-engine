@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_GAME_THREAD_H
-#define HYPERION_V2_GAME_THREAD_H
+#ifndef HYPERION_GAME_THREAD_HPP
+#define HYPERION_GAME_THREAD_HPP
 
 #include <GameCounter.hpp>
 
@@ -9,7 +9,7 @@
 #include <core/Scheduler.hpp>
 #include <core/Containers.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class Game;
@@ -32,6 +32,6 @@ private:
     AtomicVar<bool> m_stop_requested;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

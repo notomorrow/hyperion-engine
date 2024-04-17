@@ -3,7 +3,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 UIImage::UIImage(ID<Entity> entity, UIStage *parent, NodeProxy node_proxy)
     : UIObject(entity, parent, std::move(node_proxy))
@@ -48,4 +48,4 @@ Handle<Material> UIImage::GetMaterial() const
     );
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

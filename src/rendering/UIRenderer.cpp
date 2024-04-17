@@ -12,7 +12,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -149,4 +149,4 @@ void UIRenderer::OnRender(Frame *frame)
     g_engine->GetRenderState().UnbindScene();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

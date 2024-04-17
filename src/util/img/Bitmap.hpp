@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BITMAP_HPP
-#define HYPERION_V2_BITMAP_HPP
+#ifndef HYPERION_BITMAP_HPP
+#define HYPERION_BITMAP_HPP
 
 #include <asset/ByteWriter.hpp>
 
@@ -17,7 +17,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 template <class ComponentType, uint NumComponents>
 struct Pixel
@@ -694,6 +694,6 @@ private:
 
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

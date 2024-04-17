@@ -20,7 +20,7 @@
 #include <core/Defines.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct HYP_API FontAtlasTextureSet
 {
@@ -96,7 +96,7 @@ private:
     SymbolList              m_symbol_list;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 
 #endif //HYPERION_FONTATLAS_HPP

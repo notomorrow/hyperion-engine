@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 FBOMWriter::FBOMWriter()
 {
@@ -496,4 +496,4 @@ void FBOMWriter::WriteStream::MarkStaticDataWritten(const UniqueID &unique_id)
     m_static_data[unique_id].written = true;
 }
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom

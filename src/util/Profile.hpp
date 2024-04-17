@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_PROFILE_H
-#define HYPERION_PROFILE_H
+#ifndef HYPERION_PROFILE_HPP
+#define HYPERION_PROFILE_HPP
 
 #include <Types.hpp>
 

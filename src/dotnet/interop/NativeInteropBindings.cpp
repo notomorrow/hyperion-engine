@@ -16,7 +16,6 @@
 #include <dotnet/interop/ManagedGuid.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 using namespace hyperion::dotnet;
 
 extern "C" {

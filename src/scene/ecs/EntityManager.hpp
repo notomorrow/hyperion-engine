@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_ENTITY_MANAGER_HPP
-#define HYPERION_V2_ECS_ENTITY_MANAGER_HPP
+#ifndef HYPERION_ECS_ENTITY_MANAGER_HPP
+#define HYPERION_ECS_ENTITY_MANAGER_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -23,7 +23,7 @@
 
 #include <GameCounter.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Scene;
 
@@ -644,6 +644,6 @@ private:
     Array<SystemExecutionGroup>                                             m_system_execution_groups;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

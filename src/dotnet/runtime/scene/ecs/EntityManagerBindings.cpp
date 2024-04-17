@@ -21,7 +21,6 @@
 #include <Types.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT ManagedEntity EntityManager_AddEntity(EntityManager *manager)

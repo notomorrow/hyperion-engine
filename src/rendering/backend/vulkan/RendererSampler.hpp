@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef RENDERER_SAMPLER_H
-#define RENDERER_SAMPLER_H
+#ifndef RENDERER_SAMPLER_HPP
+#define RENDERER_SAMPLER_HPP
 
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RendererImage.hpp>

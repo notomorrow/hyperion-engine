@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIB_FLAT_SET_H
-#define HYPERION_V2_LIB_FLAT_SET_H
+#ifndef HYPERION_LIB_FLAT_SET_HPP
+#define HYPERION_LIB_FLAT_SET_HPP
 
 #include <core/lib/ContainerBase.hpp>
 #include <core/lib/SortedArray.hpp>

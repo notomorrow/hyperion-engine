@@ -3,7 +3,7 @@
 #include <asset/serialization/fbom/FBOMData.hpp>
 #include <core/lib/Memory.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 const FBOMData FBOMData::UNSET = FBOMData();
 
@@ -94,4 +94,4 @@ void FBOMData::SetBytes(SizeType n, const void *data)
     bytes.SetData(n, data);
 }
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom

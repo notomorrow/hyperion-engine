@@ -6,7 +6,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 FXAAEffect::FXAAEffect()
     : PostProcessingEffect(stage, index)
@@ -28,4 +28,4 @@ Handle<Shader> FXAAEffect::CreateShader()
     return g_shader_manager->GetOrCreate(HYP_NAME(FXAA));
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

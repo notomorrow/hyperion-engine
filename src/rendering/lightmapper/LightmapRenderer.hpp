@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIGHTMAP_RENDERER_HPP
-#define HYPERION_V2_LIGHTMAP_RENDERER_HPP
+#ifndef HYPERION_LIGHTMAP_RENDERER_HPP
+#define HYPERION_LIGHTMAP_RENDERER_HPP
 
 #include <core/Base.hpp>
 #include <core/lib/Queue.hpp>
@@ -24,7 +24,7 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -229,6 +229,6 @@ private:
     AtomicVar<uint>                 m_num_jobs;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

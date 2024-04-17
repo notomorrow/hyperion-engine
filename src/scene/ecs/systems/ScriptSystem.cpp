@@ -10,7 +10,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void ScriptSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -93,4 +93,4 @@ void ScriptSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit 
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

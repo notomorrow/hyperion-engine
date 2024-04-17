@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RTC_TRACK_HPP
-#define HYPERION_V2_RTC_TRACK_HPP
+#ifndef HYPERION_RTC_TRACK_HPP
+#define HYPERION_RTC_TRACK_HPP
 
 #include <core/lib/String.hpp>
 #include <core/lib/ByteBuffer.hpp>
@@ -17,7 +17,7 @@ class RtpPacketizationConfig;
 #include <memory>
 #endif // HYP_LIBDATACHANNEL
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class RTCClient;
 class RTCStream;
@@ -111,6 +111,6 @@ using LibDataChannelRTCTrack = NullRTCTrack;
 
 #endif // HYP_LIBDATACHANNEL
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -10,7 +10,7 @@
 #include <Engine.hpp>
 #include <Threads.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 static constexpr bool do_parallel_collection = true;
 
@@ -662,4 +662,4 @@ void RenderList::Reset()
     *m_draw_collection = { };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

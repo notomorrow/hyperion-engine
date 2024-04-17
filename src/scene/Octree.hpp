@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_OCTREE_HPP
-#define HYPERION_V2_OCTREE_HPP
+#ifndef HYPERION_OCTREE_HPP
+#define HYPERION_OCTREE_HPP
 
 #include <core/Containers.hpp>
 #include <core/lib/Pair.hpp>
@@ -18,7 +18,7 @@
 
 // #define HYP_OCTREE_DEBUG 1
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Entity;
 class EntityManager;
@@ -406,6 +406,6 @@ private:
     uint                                                m_invalidation_marker;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

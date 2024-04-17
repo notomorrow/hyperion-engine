@@ -8,7 +8,7 @@
 
 #include <Constants.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 RC<StreamedMeshData> StreamedMeshData::FromMeshData(const MeshData &mesh_data)
 {
@@ -157,4 +157,4 @@ const MeshData &StreamedMeshData::GetMeshData() const
     return m_mesh_data;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

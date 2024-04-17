@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_PHYSICS_NULL_ADAPTER_HPP
-#define HYPERION_V2_PHYSICS_NULL_ADAPTER_HPP
+#ifndef HYPERION_PHYSICS_NULL_ADAPTER_HPP
+#define HYPERION_PHYSICS_NULL_ADAPTER_HPP
 
 #include <physics/Adapter.hpp>
 
-namespace hyperion::v2::physics {
+namespace hyperion::physics {
 
 class HYP_API NullPhysicsAdapter : public PhysicsAdapter<NullPhysicsAdapter>
 {
@@ -26,6 +26,6 @@ public:
     void ApplyForceToBody(const RigidBody *rigid_body, const Vector3 &force);
 };
 
-} // namespace hyperion::v2::physics
+} // namespace hyperion::physics
 
 #endif

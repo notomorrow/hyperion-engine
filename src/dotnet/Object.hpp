@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DOTNET_OBJECT_HPP
-#define HYPERION_V2_DOTNET_OBJECT_HPP
+#ifndef HYPERION_DOTNET_OBJECT_HPP
+#define HYPERION_DOTNET_OBJECT_HPP
 
 #include <Engine.hpp>
 #include <Types.hpp>

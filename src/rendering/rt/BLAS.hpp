@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BLAS_H
-#define HYPERION_V2_BLAS_H
+#ifndef HYPERION_BLAS_HPP
+#define HYPERION_BLAS_HPP
 
 #include <core/Base.hpp>
 #include <rendering/Mesh.hpp>
@@ -12,7 +12,7 @@
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/rt/RendererAccelerationStructure.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::BottomLevelAccelerationStructure;
 using renderer::AccelerationStructureFlagBits;
@@ -72,6 +72,6 @@ private:
     BLASRef             m_blas;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

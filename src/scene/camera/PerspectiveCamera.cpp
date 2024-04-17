@@ -2,7 +2,7 @@
 
 #include <scene/camera/PerspectiveCamera.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 PerspectiveCameraController::PerspectiveCameraController()
     : CameraController(CameraType::PERSPECTIVE)
 {
@@ -34,4 +34,4 @@ void PerspectiveCameraController::UpdateProjectionMatrix()
         m_camera->m_far
     );
 }
-} // namespace hyperion::v2
+} // namespace hyperion

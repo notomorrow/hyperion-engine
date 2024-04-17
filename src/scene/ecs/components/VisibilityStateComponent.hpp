@@ -1,14 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_VISIBILITY_STATE_COMPONENT_HPP
-#define HYPERION_V2_ECS_VISIBILITY_STATE_COMPONENT_HPP
+#ifndef HYPERION_ECS_VISIBILITY_STATE_COMPONENT_HPP
+#define HYPERION_ECS_VISIBILITY_STATE_COMPONENT_HPP
 
 #include <core/lib/RefCountedPtr.hpp>
 
 #include <scene/VisibilityState.hpp>
 #include <scene/Octree.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using VisibilityStateFlags = uint32;
 
@@ -30,6 +30,6 @@ struct VisibilityStateComponent
 };
 static_assert(sizeof(VisibilityStateComponent) == 40, "VisibilityStateComponent must match C# struct size");
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

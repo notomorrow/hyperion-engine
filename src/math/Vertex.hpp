@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef VERTEX_H
-#define VERTEX_H
+#ifndef VERTEX_HPP
+#define VERTEX_HPP
 
 #define MAX_BONE_WEIGHTS 4
 #define MAX_BONE_INDICES 4

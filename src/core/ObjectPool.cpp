@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <core/ObjectPool.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 ObjectPool::ObjectContainerMap ObjectPool::ObjectContainerHolder::s_object_container_map = { };
 ObjectPool::ObjectContainerHolder ObjectPool::s_object_container_holder = { };
@@ -51,4 +51,4 @@ ObjectContainerBase *ObjectPool::ObjectContainerHolder::TryGetObjectContainer(Ty
     return it->second.Get();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_RENDERABLE_ATTRIBUTES_H
-#define HYPERION_V2_RENDERABLE_ATTRIBUTES_H
+#ifndef HYPERION_RENDERABLE_ATTRIBUTES_HPP
+#define HYPERION_RENDERABLE_ATTRIBUTES_HPP
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/RenderBucket.hpp>
@@ -10,7 +10,7 @@
 #include <Types.hpp>
 #include <HashCode.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::FaceCullMode;
 using renderer::Topology;
@@ -217,6 +217,6 @@ private:
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

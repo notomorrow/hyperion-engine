@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ANIMATION_H
-#define HYPERION_V2_ANIMATION_H
+#ifndef HYPERION_ANIMATION_HPP
+#define HYPERION_ANIMATION_HPP
 
 #include <scene/animation/Keyframe.hpp>
 #include <core/Containers.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Bone;
 
@@ -69,6 +69,6 @@ private:
     Array<AnimationTrack>   m_tracks;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

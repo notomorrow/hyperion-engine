@@ -1,14 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_GAME_COUNTER_H
-#define HYPERION_V2_GAME_COUNTER_H
+#ifndef HYPERION_GAME_COUNTER_HPP
+#define HYPERION_GAME_COUNTER_HPP
 
 #include <core/Defines.hpp>
 #include <Types.hpp>
 
 #include <chrono>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct GameCounter
 {
@@ -62,6 +62,6 @@ struct LockstepGameCounter : GameCounter
      HYP_FORCE_INLINE bool Waiting() const { return Interval(Now()) < target_interval - padding; }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

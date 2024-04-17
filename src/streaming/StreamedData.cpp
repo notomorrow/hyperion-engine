@@ -4,7 +4,7 @@
 #include <core/lib/StaticString.hpp>
 #include <asset/BufferedByteReader.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 // StreamedDataRefBase
 
@@ -234,4 +234,4 @@ const ByteBuffer &FileStreamedData::Load() const
     return m_byte_buffer.Get();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

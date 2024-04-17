@@ -12,7 +12,6 @@
 #include <Types.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT uint32 Scene_GetTypeID()

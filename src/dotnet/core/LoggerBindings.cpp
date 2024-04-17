@@ -6,7 +6,6 @@
 #include <Types.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT void Logger_Log(int log_level, const char *func_name, uint32 line, const char *message)

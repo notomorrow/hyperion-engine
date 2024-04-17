@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_PARTICLE_SYSTEM_HPP
-#define HYPERION_V2_PARTICLE_SYSTEM_HPP
+#ifndef HYPERION_PARTICLE_SYSTEM_HPP
+#define HYPERION_PARTICLE_SYSTEM_HPP
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
@@ -30,7 +30,7 @@
 #include <atomic>
 #include <mutex>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 using renderer::Frame;
@@ -138,6 +138,6 @@ private:
     uint32 m_counter;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

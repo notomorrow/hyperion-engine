@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_ENTITY_SET_HPP
-#define HYPERION_V2_ECS_ENTITY_SET_HPP
+#ifndef HYPERION_ECS_ENTITY_SET_HPP
+#define HYPERION_ECS_ENTITY_SET_HPP
 
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/DynArray.hpp>
@@ -17,7 +17,7 @@
 
 #include <tuple>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 template <class ... Components>
 class EntitySet;
@@ -223,6 +223,6 @@ private:
 template <class ... Components>
 const EntitySetTypeID EntitySet<Components...>::type_id = EntitySetBase::GenerateEntitySetTypeID<Components...>();
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

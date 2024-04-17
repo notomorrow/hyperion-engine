@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CRASH_HANDLER_HPP
-#define HYPERION_V2_CRASH_HANDLER_HPP
+#ifndef HYPERION_CRASH_HANDLER_HPP
+#define HYPERION_CRASH_HANDLER_HPP
 
 #include <core/Defines.hpp>
 
 #include <rendering/backend/RendererResult.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -20,6 +20,6 @@ private:
     bool m_is_initialized = false;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

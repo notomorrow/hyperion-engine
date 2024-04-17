@@ -9,8 +9,6 @@
 
 namespace hyperion {
 
-using namespace v2;
-
 InputManager::InputManager()
     : m_window(nullptr)
 {

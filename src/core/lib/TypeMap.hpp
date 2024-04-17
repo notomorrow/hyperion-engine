@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_TYPE_MAP_H
-#define HYPERION_TYPE_MAP_H
+#ifndef HYPERION_TYPE_MAP_HPP
+#define HYPERION_TYPE_MAP_HPP
 
 #include <core/lib/ContainerBase.hpp>
 #include <core/lib/FlatMap.hpp>

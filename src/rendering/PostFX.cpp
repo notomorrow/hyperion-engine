@@ -7,7 +7,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 
 PostFXPass::PostFXPass(InternalFormat image_format)

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_BASE_TYPES_HPP
-#define HYPERION_V2_FBOM_BASE_TYPES_HPP
+#ifndef HYPERION_FBOM_BASE_TYPES_HPP
+#define HYPERION_FBOM_BASE_TYPES_HPP
 
 #include <core/Name.hpp>
 #include <core/lib/String.hpp>
@@ -9,7 +9,7 @@
 #include <asset/serialization/fbom/FBOMType.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 struct FBOMUnset        : FBOMType { FBOMUnset() : FBOMType() {} };
 struct FBOMUnsignedInt  : FBOMType { FBOMUnsignedInt() : FBOMType("u32", 4) { } };
@@ -78,6 +78,6 @@ struct FBOMObjectType : FBOMType
     }
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

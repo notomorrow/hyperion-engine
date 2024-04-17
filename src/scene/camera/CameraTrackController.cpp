@@ -2,7 +2,7 @@
 
 #include <scene/camera/CameraTrackController.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 CameraTrackController::CameraTrackController()
     : PerspectiveCameraController(),
       m_track_time(0.0)
@@ -40,4 +40,4 @@ void CameraTrackController::RespondToCommand(const CameraCommand &command, GameC
 {
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

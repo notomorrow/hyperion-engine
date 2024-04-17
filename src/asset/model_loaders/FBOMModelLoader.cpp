@@ -14,7 +14,7 @@
 #include <string>
 
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 LoadedAsset FBOMModelLoader::LoadAsset(LoaderState &state) const
 {
@@ -31,4 +31,4 @@ LoadedAsset FBOMModelLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, std::move(object.m_value) };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

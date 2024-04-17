@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_ENTITY_SET_BASE_HPP
-#define HYPERION_V2_ECS_ENTITY_SET_BASE_HPP
+#ifndef HYPERION_ECS_ENTITY_SET_BASE_HPP
+#define HYPERION_ECS_ENTITY_SET_BASE_HPP
 
 #include <core/lib/UniquePtr.hpp>
 #include <core/lib/DynArray.hpp>
@@ -12,7 +12,7 @@
 
 #include <atomic>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Entity;
 
@@ -71,6 +71,6 @@ public:
     virtual void OnEntityUpdated(ID<Entity> entity) = 0;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

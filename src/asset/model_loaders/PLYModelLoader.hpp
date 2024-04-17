@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_PLY_MODEL_LOADER_H
-#define HYPERION_V2_PLY_MODEL_LOADER_H
+#ifndef HYPERION_PLY_MODEL_LOADER_HPP
+#define HYPERION_PLY_MODEL_LOADER_HPP
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
@@ -9,7 +9,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class PLYModelLoader : public AssetLoader
 {
@@ -58,6 +58,6 @@ public:
     static LoadedAsset BuildModel(LoaderState &state, PLYModel &model);
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

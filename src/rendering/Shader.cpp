@@ -3,7 +3,7 @@
 #include <Engine.hpp>
 #include <util/MiscUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 

@@ -1,14 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SHADER_MANAGER_H
-#define HYPERION_V2_SHADER_MANAGER_H
+#ifndef HYPERION_SHADER_MANAGER_HPP
+#define HYPERION_SHADER_MANAGER_HPP
 
 #include <rendering/Shader.hpp>
 
 #include <core/lib/FlatMap.hpp>
 #include <core/lib/String.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,11 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ORTHO_CAMERA_H
-#define HYPERION_V2_ORTHO_CAMERA_H
+#ifndef HYPERION_ORTHO_CAMERA_HPP
+#define HYPERION_ORTHO_CAMERA_HPP
 
 #include <scene/camera/Camera.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 class OrthoCameraController : public CameraController
 {
 public:
@@ -24,6 +24,6 @@ protected:
         m_bottom, m_top,
         m_near, m_far;
 };
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

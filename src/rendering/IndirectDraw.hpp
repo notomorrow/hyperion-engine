@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_INDIRECT_DRAW_H
-#define HYPERION_V2_INDIRECT_DRAW_H
+#ifndef HYPERION_INDIRECT_DRAW_HPP
+#define HYPERION_INDIRECT_DRAW_HPP
 
 #include <core/Base.hpp>
 #include <rendering/Buffers.hpp>
@@ -26,7 +26,7 @@
 
 #include <memory>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::IndirectDrawCommand;
 using renderer::Frame;
@@ -119,6 +119,6 @@ private:
     uint8                                               m_cached_cull_data_updated_bits;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

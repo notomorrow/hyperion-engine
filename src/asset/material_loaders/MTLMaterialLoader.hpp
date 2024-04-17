@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_MTL_MATERIAL_LOADER_H
-#define HYPERION_V2_MTL_MATERIAL_LOADER_H
+#ifndef HYPERION_MTL_MATERIAL_LOADER_HPP
+#define HYPERION_MTL_MATERIAL_LOADER_HPP
 
 #include <asset/Assets.hpp>
 #include <core/Containers.hpp>
@@ -11,7 +11,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 
 class MTLMaterialLoader : public AssetLoader
@@ -54,6 +54,6 @@ public:
     virtual LoadedAsset LoadAsset(LoaderState &state) const override;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

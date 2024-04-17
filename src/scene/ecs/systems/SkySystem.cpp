@@ -8,7 +8,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void SkySystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -70,4 +70,4 @@ void SkySystem::Process(EntityManager &entity_manager, GameCounter::TickUnit del
     // do nothing
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

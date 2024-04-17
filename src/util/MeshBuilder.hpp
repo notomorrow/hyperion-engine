@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_MESH_BUILDER_H
-#define HYPERION_V2_MESH_BUILDER_H
+#ifndef HYPERION_MESH_BUILDER_HPP
+#define HYPERION_MESH_BUILDER_HPP
 
 #include <rendering/Mesh.hpp>
 #include <core/lib/DynArray.hpp>
@@ -11,7 +11,7 @@
 #include <core/Defines.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Topology;
 
@@ -116,6 +116,6 @@ public:
     static Handle<Mesh> BuildVoxelMesh(VoxelGrid voxel_grid);
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

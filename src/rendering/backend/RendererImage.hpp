@@ -1,11 +1,15 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BACKEND_RENDERER_IMAGE_H
-#define HYPERION_V2_BACKEND_RENDERER_IMAGE_H
+#ifndef HYPERION_BACKEND_RENDERER_IMAGE_HPP
+#define HYPERION_BACKEND_RENDERER_IMAGE_HPP
 
 #include <core/Defines.hpp>
+
 #include <math/MathUtil.hpp>
+#include <math/Rect.hpp>
+
 #include <rendering/backend/Platform.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion::renderer {

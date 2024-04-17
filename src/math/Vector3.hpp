@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef VECTOR3_H
-#define VECTOR3_H
+#ifndef VECTOR3_HPP
+#define VECTOR3_HPP
 
 #include <cmath>
 #include <iostream>

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIB_VARIANT_H
-#define HYPERION_V2_LIB_VARIANT_H
+#ifndef HYPERION_LIB_VARIANT_HPP
+#define HYPERION_LIB_VARIANT_HPP
 
 #include <core/lib/Memory.hpp>
 #include <core/lib/TypeID.hpp>

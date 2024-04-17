@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_COMPONENT_INTERFACE_HPP
-#define HYPERION_V2_ECS_COMPONENT_INTERFACE_HPP
+#ifndef HYPERION_ECS_COMPONENT_INTERFACE_HPP
+#define HYPERION_ECS_COMPONENT_INTERFACE_HPP
 
 #include <core/lib/TypeID.hpp>
 #include <core/lib/DynArray.hpp>
@@ -15,7 +15,7 @@
 #include <math/Matrix4.hpp>
 #include <math/Quaternion.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class ComponentInterfaceBase;
 
@@ -157,6 +157,6 @@ static inline ComponentInterface<ComponentType> *GetComponentInterface()
     return static_cast<ComponentInterface<ComponentType> *>(GetComponentInterface(type_id));
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

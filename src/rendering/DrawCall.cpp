@@ -3,7 +3,7 @@
 #include <rendering/IndirectDraw.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 static bool PushEntityToBatch(BufferTicket<EntityInstanceBatch> batch_index, ID<Entity> entity_id)
 {
@@ -134,4 +134,4 @@ void DrawCallCollection::Reset()
     index_map.Clear();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -3,8 +3,8 @@
 // Created by emd22 on 2022-02-14.
 //
 
-#ifndef HYPERION_DEBUG_H
-#define HYPERION_DEBUG_H
+#ifndef HYPERION_DEBUG_HPP
+#define HYPERION_DEBUG_HPP
 
 #include <core/Defines.hpp>
 
@@ -159,4 +159,4 @@ struct EnsureValidPointerWrapper
 
 #endif
 
-#endif //HYPERION_DEBUG_H
+#endif //HYPERION_DEBUG_HPP

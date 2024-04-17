@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_BUFFERS_H
-#define HYPERION_V2_BUFFERS_H
+#ifndef HYPERION_BUFFERS_HPP
+#define HYPERION_BUFFERS_HPP
 
 #include <rendering/DrawProxy.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -40,7 +40,7 @@ using Device = platform::Device<Platform::CURRENT>;
 
 } // namespace hyperion::renderer
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Device;
 using renderer::ShaderVec2;
@@ -610,6 +610,6 @@ private:
     StagingObjectsPool  m_staging_objects_pool;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

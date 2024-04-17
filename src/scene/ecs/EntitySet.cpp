@@ -2,6 +2,6 @@
 
 #include <scene/ecs/EntitySet.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
-} // namespace hyperion::v2
+} // namespace hyperion

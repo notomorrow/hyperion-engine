@@ -1,8 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DEFAULT_FORMATS_H
-#define HYPERION_V2_DEFAULT_FORMATS_H
+#ifndef HYPERION_DEFAULT_FORMATS_HPP
+#define HYPERION_DEFAULT_FORMATS_HPP
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 enum TextureFormatDefault
 {
@@ -15,6 +15,6 @@ enum TextureFormatDefault
     TEXTURE_FORMAT_DEFAULT_STORAGE      = 1 << 5
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

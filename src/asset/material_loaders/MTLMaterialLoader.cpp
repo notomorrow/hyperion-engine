@@ -5,7 +5,7 @@
 
 #include <util/fs/FsUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using Tokens = Array<String>;
 using MaterialLibrary = MTLMaterialLoader::MaterialLibrary;
@@ -323,4 +323,4 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
     return { { LoaderResult::Status::OK }, material_group_handle.Cast<void>() };
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

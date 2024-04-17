@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_SHADER_COMPILER_H
-#define HYPERION_V2_SHADER_COMPILER_H
+#ifndef HYPERION_SHADER_COMPILER_HPP
+#define HYPERION_SHADER_COMPILER_HPP
 
 #include <core/Containers.hpp>
 #include <core/Name.hpp>
@@ -28,7 +28,7 @@ class JSONValue;
 } // namespace json
 } // namespace hyperion
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 
@@ -1031,6 +1031,6 @@ private:
     Array<Bundle>   m_bundles;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

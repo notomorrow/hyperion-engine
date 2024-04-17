@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DRAW_PROXY_H
-#define HYPERION_V2_DRAW_PROXY_H
+#ifndef HYPERION_DRAW_PROXY_HPP
+#define HYPERION_DRAW_PROXY_HPP
 
 #include <core/Base.hpp>
 #include <rendering/RenderBucket.hpp>
@@ -22,7 +22,7 @@
 #include <memory>
 #include <atomic>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::IndirectDrawCommand;
 using renderer::Frame;
@@ -236,6 +236,6 @@ private:
     std::atomic_uint m_has_render_updates { 0u };
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

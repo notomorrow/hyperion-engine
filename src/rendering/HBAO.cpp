@@ -3,7 +3,7 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 
@@ -168,4 +168,4 @@ void HBAO::Render(Frame *frame)
     m_temporal_blending->Render(frame);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef BYTE_WRITER_H
-#define BYTE_WRITER_H
+#ifndef BYTE_WRITER_HPP
+#define BYTE_WRITER_HPP
 
 #include <core/lib/Memory.hpp>
 #include <core/lib/String.hpp>

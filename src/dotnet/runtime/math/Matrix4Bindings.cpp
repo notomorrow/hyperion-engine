@@ -6,7 +6,6 @@
 #include <Types.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT void Matrix4_Identity(Matrix4 *matrix)

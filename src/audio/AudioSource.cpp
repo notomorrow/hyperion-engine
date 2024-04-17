@@ -5,7 +5,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 AudioSource::AudioSource(Format format, const ByteBuffer &byte_buffer, SizeType freq)
     : BasicObject(),
@@ -164,4 +164,4 @@ void AudioSource::FindSampleLength()
     m_sample_length = byte_size * 8 / (num_channels * bits);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 AttachmentMap::~AttachmentMap()
 {
@@ -124,4 +124,4 @@ void Framebuffer::EndCapture(uint frame_index, CommandBuffer *command_buffer)
     m_render_pass->End(command_buffer);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

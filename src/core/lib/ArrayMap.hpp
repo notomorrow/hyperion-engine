@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_LIB_ARRAY_MAP_HPP
-#define HYPERION_V2_LIB_ARRAY_MAP_HPP
+#ifndef HYPERION_LIB_ARRAY_MAP_HPP
+#define HYPERION_LIB_ARRAY_MAP_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/Pair.hpp>

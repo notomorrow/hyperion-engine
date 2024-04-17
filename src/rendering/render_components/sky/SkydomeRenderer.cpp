@@ -7,7 +7,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 SkydomeRenderer::SkydomeRenderer(Name name, Extent2D dimensions)
     : RenderComponent(name, 60),
@@ -82,4 +82,4 @@ void SkydomeRenderer::OnRender(Frame *frame)
     m_env_probe->Render(frame);
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

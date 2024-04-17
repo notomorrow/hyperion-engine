@@ -10,7 +10,7 @@
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/runtime/ManagedHandle.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 Game::Game(RC<Application> application)
     : m_application(application),
@@ -243,4 +243,4 @@ void Game::OnFrameEnd(Frame *frame)
     g_engine->GetRenderState().UnbindScene();
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

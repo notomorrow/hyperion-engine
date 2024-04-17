@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_TYPE_HPP
-#define HYPERION_V2_FBOM_TYPE_HPP
+#ifndef HYPERION_FBOM_TYPE_HPP
+#define HYPERION_FBOM_TYPE_HPP
 
 #include <core/lib/String.hpp>
 #include <core/lib/UniqueID.hpp>
@@ -11,7 +11,7 @@
 #include <string>
 #include <cstddef>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 struct FBOMType
 {
@@ -180,6 +180,6 @@ struct FBOMType
     }
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_BACKEND_RENDERER_RENDER_OBJECT_HPP
-#define HYPERION_V2_BACKEND_RENDERER_RENDER_OBJECT_HPP
+#ifndef HYPERION_BACKEND_RENDERER_RENDER_OBJECT_HPP
+#define HYPERION_BACKEND_RENDERER_RENDER_OBJECT_HPP
 
 #include <core/Core.hpp>
 #include <core/Name.hpp>
@@ -50,7 +50,7 @@ static inline Name GetNameForRenderObject()
 template <class T, PlatformType PLATFORM>
 class RenderObjectContainer
 {
-    using IDCreatorType = v2::IDCreator<PLATFORM>;
+    using IDCreatorType = IDCreator<PLATFORM>;
 
 public:
     static constexpr SizeType max_size = RenderObjectDefinition<T, PLATFORM>::max_size;
@@ -721,7 +721,7 @@ static inline void DeferCreate(RefType ref, Args &&... args)
     }
 
     // // If we are already on the render thread, create the object immediately.
-    // if (v2::Threads::IsOnThread(v2::THREAD_RENDER)) {
+    // if (Threads::IsOnThread(THREAD_RENDER)) {
     //     HYPERION_ASSERT_RESULT(ref->Create(std::forward<Args>(args)...));
     //     return;
     // }
@@ -867,7 +867,7 @@ struct RenderObjectDeleter
                     continue;
                 }
                 
-                HYPERION_ASSERT_RESULT(object->Destroy(v2::GetEngineDevice()));
+                HYPERION_ASSERT_RESULT(object->Destroy(GetEngineDevice()));
             }
         }
 
@@ -882,7 +882,7 @@ struct RenderObjectDeleter
             Base::mtx.lock();
 
             for (auto &it : items) {
-                HYPERION_ASSERT_RESULT(it.first->Destroy(v2::GetEngineDevice()));
+                HYPERION_ASSERT_RESULT(it.first->Destroy(GetEngineDevice()));
             }
 
             items.Clear();

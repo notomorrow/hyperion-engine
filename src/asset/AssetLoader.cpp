@@ -2,7 +2,7 @@
 #include <asset/AssetLoader.hpp>
 #include <asset/Assets.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 FilePath AssetLoader::GetRebasedFilepath(const AssetManager &asset_manager, const FilePath &filepath) const
 {
@@ -62,4 +62,4 @@ LoadedAsset AssetLoader::Load(AssetManager &asset_manager, const String &path) c
     return asset;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

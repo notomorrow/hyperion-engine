@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef INPUT_MANAGER_H
-#define INPUT_MANAGER_H
+#ifndef INPUT_MANAGER_HPP
+#define INPUT_MANAGER_HPP
 
 #define NUM_KEYBOARD_KEYS 350
 #define NUM_MOUSE_BUTTONS 3

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_CAMERA_H
-#define HYPERION_V2_CAMERA_H
+#ifndef HYPERION_CAMERA_HPP
+#define HYPERION_CAMERA_HPP
 
 #include <GameCounter.hpp>
 
@@ -18,7 +18,6 @@
 #include <mutex>
 
 namespace hyperion {
-namespace v2 {
 
 class Engine;
 class Framebuffer;
@@ -311,7 +310,6 @@ private:
     Matrix4                 m_previous_view_matrix;
 };
 
-} // namespace v2
 } // namespace hyperion
 
 #endif

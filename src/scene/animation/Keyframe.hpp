@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_KEYFRAME_H
-#define HYPERION_V2_KEYFRAME_H
+#ifndef HYPERION_KEYFRAME_HPP
+#define HYPERION_KEYFRAME_HPP
 
 #include <math/Transform.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class HYP_API Keyframe
 {
@@ -35,6 +35,6 @@ private:
     Transform   m_transform;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

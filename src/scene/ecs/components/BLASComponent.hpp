@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_BLAS_COMPONENT_HPP
-#define HYPERION_V2_ECS_BLAS_COMPONENT_HPP
+#ifndef HYPERION_ECS_BLAS_COMPONENT_HPP
+#define HYPERION_ECS_BLAS_COMPONENT_HPP
 
 #include <core/Handle.hpp>
 #include <rendering/rt/BLAS.hpp>
 #include <HashCode.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct BLASComponent
 {
@@ -16,6 +16,6 @@ struct BLASComponent
     HashCode        transform_hash_code;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

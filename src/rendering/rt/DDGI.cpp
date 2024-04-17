@@ -9,7 +9,7 @@
 #include <util/fs/FsUtil.hpp>
 #include <util/ByteUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::ResourceState;
 using renderer::Result;
@@ -679,4 +679,4 @@ void DDGI::ComputeIrradiance(Frame *frame)
     );
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

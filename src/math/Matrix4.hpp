@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef MATRIX4_H
-#define MATRIX4_H
+#ifndef MATRIX4_HPP
+#define MATRIX4_HPP
 
 #include <math/Vector3.hpp>
 #include <math/Vector4.hpp>

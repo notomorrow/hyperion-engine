@@ -7,7 +7,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -239,4 +239,4 @@ const Animation *Skeleton::FindAnimation(const String &name, uint *out_index) co
     return it;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

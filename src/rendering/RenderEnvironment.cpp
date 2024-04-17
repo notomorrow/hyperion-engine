@@ -6,7 +6,7 @@
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -354,4 +354,4 @@ void RenderEnvironment::RenderComponents(Frame *frame)
     ++m_frame_counter;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -7,7 +7,7 @@
 #include <asset/ByteReader.hpp>
 #include <util/fs/FsUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region Render commands
 
@@ -248,4 +248,4 @@ void DepthPyramidRenderer::Render(Frame *frame)
     m_is_rendered = true;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

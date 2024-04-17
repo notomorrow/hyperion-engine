@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_UI_STAGE_HPP
-#define HYPERION_V2_UI_STAGE_HPP
+#ifndef HYPERION_UI_STAGE_HPP
+#define HYPERION_UI_STAGE_HPP
 
 #include <ui/UIObject.hpp>
 
@@ -30,7 +30,7 @@ class InputManager;
 
 } // namespace hyperion
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class UIButton;
 class FontAtlas;
@@ -139,6 +139,6 @@ private:
     DelegateHandler             m_on_current_window_changed_handler;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

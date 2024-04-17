@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_LOADER_H
-#define HYPERION_V2_LOADER_H
+#ifndef HYPERION_LOADER_HPP
+#define HYPERION_LOADER_HPP
 
 #include <asset/ByteReader.hpp>
 #include <asset/BufferedByteReader.hpp>
@@ -9,7 +9,7 @@
 
 #define HYP_LOADER_BUFFER_SIZE 2048
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class AssetManager;
@@ -42,6 +42,6 @@ struct LoaderResult
     bool operator!=(Status status) const { return this->status != status; }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

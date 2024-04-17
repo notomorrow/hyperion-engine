@@ -26,7 +26,7 @@
 #include <arpa/inet.h>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class EncoderDataQueue
 {
@@ -490,4 +490,4 @@ LibDataChannelRTCStream::LibDataChannelRTCStream(RTCStreamType stream_type)
 
 #endif
 
-}  // namespace hyperion::v2
+}  // namespace hyperion

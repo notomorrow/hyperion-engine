@@ -6,7 +6,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 #pragma region UITab
 
@@ -259,4 +259,4 @@ void UITabView::UpdateTabSizes()
 
 #pragma region UITabView
 
-} // namespace hyperion::v2
+} // namespace hyperion

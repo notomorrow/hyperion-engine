@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_NODE_H
-#define HYPERION_V2_NODE_H
+#ifndef HYPERION_NODE_HPP
+#define HYPERION_NODE_HPP
 
 #include <core/Containers.hpp>
 #include <core/Name.hpp>
@@ -20,7 +20,7 @@
 #include <HashCode.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Engine;
 class Scene;
@@ -446,6 +446,6 @@ protected:
     UniquePtr<Delegates>    m_delegates;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

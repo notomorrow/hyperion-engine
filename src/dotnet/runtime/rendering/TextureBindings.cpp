@@ -13,7 +13,6 @@
 #include <type_traits>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 extern "C" {
 HYP_EXPORT uint32 Texture_GetTypeID()

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_ASSET_LOADER_HPP
-#define HYPERION_V2_ASSET_LOADER_HPP
+#ifndef HYPERION_ASSET_LOADER_HPP
+#define HYPERION_ASSET_LOADER_HPP
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
@@ -13,7 +13,7 @@
 
 #include <asset/Loader.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class AssetManager;
 
@@ -291,6 +291,6 @@ protected:
     FilePath GetRebasedFilepath(const AssetManager &asset_manager, const FilePath &filepath) const;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

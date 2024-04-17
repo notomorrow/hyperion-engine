@@ -15,7 +15,7 @@
 #include <iomanip>
 #endif
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void CrashHandler::Initialize()
 {
@@ -211,4 +211,4 @@ void CrashHandler::HandleGPUCrash(Result result)
 #endif
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

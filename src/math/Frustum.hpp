@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef FRUSTUM_H
-#define FRUSTUM_H
+#ifndef FRUSTUM_HPP
+#define FRUSTUM_HPP
 
 #include <math/Matrix4.hpp>
 #include <math/Vector4.hpp>

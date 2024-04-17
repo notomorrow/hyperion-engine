@@ -3,7 +3,7 @@
 #include <scene/animation/Bone.hpp>
 #include <scene/animation/Skeleton.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 Bone::Bone(const String &name)
     : Node(Type::BONE, name, ID<Entity>::invalid, Transform()),
@@ -170,4 +170,4 @@ void Bone::SetSkeleton(Skeleton *skeleton)
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_RAY_H
-#define HYPERION_RAY_H
+#ifndef HYPERION_RAY_HPP
+#define HYPERION_RAY_HPP
 
 #include <math/Vector3.hpp>
 #include <math/Vertex.hpp>

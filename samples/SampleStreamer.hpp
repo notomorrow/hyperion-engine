@@ -8,7 +8,6 @@
 #include <rtc/RTCInstance.hpp>
 
 using namespace hyperion;
-using namespace hyperion::v2;
 
 class SampleStreamer : public Game
 {

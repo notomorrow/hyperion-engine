@@ -16,7 +16,7 @@
 #include <Engine.hpp>
 #include <util/fs/FsUtil.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 AssetManager *AssetManager::GetInstance()
 {
@@ -93,4 +93,4 @@ const AssetLoaderDefinition *AssetManager::GetLoader(const FilePath &path, TypeI
     return nullptr;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

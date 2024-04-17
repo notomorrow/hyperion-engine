@@ -1,5 +1,5 @@
-#ifndef WORLEY_NOISE_H
-#define WORLEY_NOISE_H
+#ifndef WORLEY_NOISE_HPP
+#define WORLEY_NOISE_HPP
 
 #include <math/Vector3.hpp>
 

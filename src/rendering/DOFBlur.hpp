@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_DOF_BLUR_HPP
-#define HYPERION_V2_DOF_BLUR_HPP
+#ifndef HYPERION_DOF_BLUR_HPP
+#define HYPERION_DOF_BLUR_HPP
 
 #include <Constants.hpp>
 #include <core/Containers.hpp>
 
 #include <rendering/FullScreenPass.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::StorageImage;
 using renderer::ImageView;
@@ -47,6 +47,6 @@ private:
     UniquePtr<FullScreenPass> m_blur_mix_pass;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

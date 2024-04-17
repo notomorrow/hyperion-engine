@@ -1,12 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CORE_HANDLE_HPP
-#define HYPERION_V2_CORE_HANDLE_HPP
+#ifndef HYPERION_CORE_HANDLE_HPP
+#define HYPERION_CORE_HANDLE_HPP
 
 #include <core/Core.hpp>
 #include <core/ID.hpp>
 #include <core/ObjectPool.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 template <class T>
 class ObjectContainer;
@@ -507,6 +507,6 @@ static HYP_FORCE_INLINE Handle<T> CreateObject(Args &&... args)
 #undef DEF_HANDLE
 #undef DEF_HANDLE_NS
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

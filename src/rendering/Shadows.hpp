@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SHADOWS_HPP
-#define HYPERION_V2_SHADOWS_HPP
+#ifndef HYPERION_SHADOWS_HPP
+#define HYPERION_SHADOWS_HPP
 
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 enum class ShadowMode : uint
 {
@@ -16,6 +16,6 @@ enum class ShadowMode : uint
     MAX
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

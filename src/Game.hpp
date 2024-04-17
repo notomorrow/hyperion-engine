@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_GAME_H
-#define HYPERION_V2_GAME_H
+#ifndef HYPERION_GAME_HPP
+#define HYPERION_GAME_HPP
 
 #include <GameCounter.hpp>
 
@@ -23,7 +23,7 @@
 
 #include <core/Defines.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 
@@ -94,6 +94,6 @@ private:
     Optional<ManagedGameInfo>   m_managed_game_info;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

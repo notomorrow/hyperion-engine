@@ -1,13 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_MARSHALS_TEXTURE_MARSHAL_HPP
-#define HYPERION_V2_FBOM_MARSHALS_TEXTURE_MARSHAL_HPP
+#ifndef HYPERION_FBOM_MARSHALS_TEXTURE_MARSHAL_HPP
+#define HYPERION_FBOM_MARSHALS_TEXTURE_MARSHAL_HPP
 
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <rendering/Texture.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 template <>
 class FBOMMarshaler<Texture> : public FBOMObjectMarshalerBase<Texture>
@@ -98,6 +98,6 @@ public:
     }
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

@@ -7,7 +7,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 void AudioSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -107,4 +107,4 @@ void AudioSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit d
     }
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

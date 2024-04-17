@@ -4,7 +4,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Result;
 
@@ -152,4 +152,4 @@ void TLAS::UpdateRender(
     HYPERION_ASSERT_RESULT(m_tlas->UpdateStructure(g_engine->GetGPUInstance(), out_update_state_flags));
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -3,7 +3,7 @@
 #include <scene/ecs/ComponentInterface.hpp>
 #include <core/lib/FixedArray.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct ComponentInterfaceHolder
 {
@@ -62,4 +62,4 @@ ComponentInterfaceBase *GetComponentInterface(TypeID type_id)
     return nullptr;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef BUFFERED_BYTE_READER_H
-#define BUFFERED_BYTE_READER_H
+#ifndef BUFFERED_BYTE_READER_HPP
+#define BUFFERED_BYTE_READER_HPP
 
 #include <math/MathUtil.hpp>
 

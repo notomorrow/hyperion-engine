@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_UI_PANEL_HPP
-#define HYPERION_V2_UI_PANEL_HPP
+#ifndef HYPERION_UI_PANEL_HPP
+#define HYPERION_UI_PANEL_HPP
 
 #include <ui/UIObject.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class UIStage;
 
@@ -26,6 +26,6 @@ protected:
 
 #pragma endregion UIPanel
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

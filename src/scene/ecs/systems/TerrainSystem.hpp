@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_TERRAIN_SYSTEM_HPP
-#define HYPERION_V2_ECS_TERRAIN_SYSTEM_HPP
+#ifndef HYPERION_ECS_TERRAIN_SYSTEM_HPP
+#define HYPERION_ECS_TERRAIN_SYSTEM_HPP
 
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/components/TerrainComponent.hpp>
@@ -19,7 +19,7 @@
 
 #include <util/NoiseFactory.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class TerrainSystem : public System<
     ComponentDescriptor<TerrainComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
@@ -113,6 +113,6 @@ private:
     HashMap<ID<Entity>, RC<TerrainGenerationState>> m_states;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_FRAMEBUFFER_H
-#define HYPERION_V2_FRAMEBUFFER_H
+#ifndef HYPERION_FRAMEBUFFER_HPP
+#define HYPERION_FRAMEBUFFER_HPP
 
 #include <core/Base.hpp>
 
@@ -9,7 +9,7 @@
 #include <rendering/backend/RendererRenderPass.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::CommandBuffer;
 using renderer::AttachmentUsage;
@@ -145,6 +145,6 @@ private:
     Extent3D                                                m_extent;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
-#endif // !HYPERION_V2_FRAMEBUFFER_H
+#endif // !HYPERION_FRAMEBUFFER_HPP

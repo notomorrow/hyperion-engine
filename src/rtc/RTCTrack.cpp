@@ -12,7 +12,7 @@
 #include <rtc/rtcpnackresponder.hpp>
 #endif // HYP_LIBDATACHANNEL
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 bool NullRTCTrack::IsOpen() const
 {
@@ -122,4 +122,4 @@ void LibDataChannelRTCTrack::SendData(const ByteBuffer &data, uint64 sample_time
 
 #endif // HYP_LIBDATACHANNEL
 
-}  // namespace hyperion::v2
+}  // namespace hyperion

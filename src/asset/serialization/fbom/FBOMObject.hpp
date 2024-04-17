@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_OBJECT_HPP
-#define HYPERION_V2_FBOM_OBJECT_HPP
+#ifndef HYPERION_FBOM_OBJECT_HPP
+#define HYPERION_FBOM_OBJECT_HPP
 
 #include <core/lib/Any.hpp>
 #include <core/lib/String.hpp>
@@ -24,7 +24,7 @@
 #include <map>
 #include <type_traits>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 class FBOMNodeHolder;
 
@@ -255,6 +255,6 @@ public:
     // )
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

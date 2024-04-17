@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SAFE_DELETER_H
-#define HYPERION_V2_SAFE_DELETER_H
+#ifndef HYPERION_SAFE_DELETER_HPP
+#define HYPERION_SAFE_DELETER_HPP
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
@@ -24,7 +24,7 @@
 #include <tuple>
 #include <atomic>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Device;
 using renderer::GPUImageMemory;
@@ -308,6 +308,6 @@ private:
     AtomicVar<HandleDeletionMask>       m_render_resource_deletion_flag { RENDERABLE_DELETION_NONE };
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

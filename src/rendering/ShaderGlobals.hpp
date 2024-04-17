@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_SHADER_GLOBALS_H
-#define HYPERION_V2_SHADER_GLOBALS_H
+#ifndef HYPERION_SHADER_GLOBALS_HPP
+#define HYPERION_SHADER_GLOBALS_HPP
 
 #include <rendering/Buffers.hpp>
 #include <rendering/Bindless.hpp>
@@ -18,7 +18,7 @@
 
 #include <utility>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::ShaderProgram;
 using renderer::ShaderObject;
@@ -74,6 +74,6 @@ struct ShaderGlobals
     GlobalSphericalHarmonicsGrid spherical_harmonics_grid;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

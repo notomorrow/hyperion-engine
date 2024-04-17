@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef RENDERER_ACCELERATION_STRUCTURE_H
-#define RENDERER_ACCELERATION_STRUCTURE_H
+#ifndef RENDERER_ACCELERATION_STRUCTURE_HPP
+#define RENDERER_ACCELERATION_STRUCTURE_HPP
 
 #include <math/Matrix4.hpp>
 

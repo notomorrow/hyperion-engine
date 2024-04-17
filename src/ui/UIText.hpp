@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_UI_TEXT_H
-#define HYPERION_V2_UI_TEXT_H
+#ifndef HYPERION_UI_TEXT_HPP
+#define HYPERION_UI_TEXT_HPP
 
 #include <ui/UIObject.hpp>
 #include <ui/UIStage.hpp>
@@ -32,7 +32,7 @@ class InputManager;
 
 } // namespace hyperion
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 struct UITextOptions
 {
@@ -89,6 +89,6 @@ protected:
     UITextOptions   m_options;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

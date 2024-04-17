@@ -4,7 +4,7 @@
 
 #include <asset/Assets.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 extern AssetManager *g_asset_manager;
 
@@ -112,4 +112,4 @@ FilePath DataStoreBase::GetDirectory() const
     return g_asset_manager->GetBasePath() / "data" / m_prefix;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

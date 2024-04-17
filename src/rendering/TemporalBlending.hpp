@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_TEMPORAL_BLENDING_HPP
-#define HYPERION_V2_TEMPORAL_BLENDING_HPP
+#ifndef HYPERION_TEMPORAL_BLENDING_HPP
+#define HYPERION_TEMPORAL_BLENDING_HPP
 
 #include <Constants.hpp>
 
@@ -17,7 +17,7 @@
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::Frame;
 using renderer::Image;
@@ -142,6 +142,6 @@ private:
     Handle<Framebuffer>                             m_input_framebuffer;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

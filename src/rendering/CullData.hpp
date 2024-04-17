@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_CULL_DATA_H
-#define HYPERION_V2_CULL_DATA_H
+#ifndef HYPERION_CULL_DATA_HPP
+#define HYPERION_CULL_DATA_HPP
 
 #include <rendering/backend/RendererImageView.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -11,7 +11,7 @@
 #include <Constants.hpp>
 #include <Types.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 using renderer::ImageView;
 
@@ -37,6 +37,6 @@ struct CullData
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

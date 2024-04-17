@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_FBOM_MARSHALS_ENTITY_MARSHAL_HPP
-#define HYPERION_V2_FBOM_MARSHALS_ENTITY_MARSHAL_HPP
+#ifndef HYPERION_FBOM_MARSHALS_ENTITY_MARSHAL_HPP
+#define HYPERION_FBOM_MARSHALS_ENTITY_MARSHAL_HPP
 
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/marshals/MeshMarshal.hpp>
@@ -10,7 +10,7 @@
 #include <scene/Entity.hpp>
 #include <Engine.hpp>
 
-namespace hyperion::v2::fbom {
+namespace hyperion::fbom {
 
 template <>
 class FBOMMarshaler<Entity> : public FBOMObjectMarshalerBase<Entity>
@@ -33,6 +33,6 @@ public:
     }
 };
 
-} // namespace hyperion::v2::fbom
+} // namespace hyperion::fbom
 
 #endif

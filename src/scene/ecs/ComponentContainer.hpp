@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_V2_ECS_COMPONENT_CONTAINER_HPP
-#define HYPERION_V2_ECS_COMPONENT_CONTAINER_HPP
+#ifndef HYPERION_ECS_COMPONENT_CONTAINER_HPP
+#define HYPERION_ECS_COMPONENT_CONTAINER_HPP
 
 #include <core/lib/DynArray.hpp>
 #include <core/lib/FlatMap.hpp>
@@ -11,7 +11,7 @@
 #include <core/ID.hpp>
 #include <core/Util.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class Entity;
 
@@ -270,6 +270,6 @@ typename ComponentContainer<Component>::Factory ComponentContainer<Component>::f
     }
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif

@@ -9,7 +9,7 @@
 #include <Engine.hpp>
 #include <Threads.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 const BoundingBox Octree::default_bounds = BoundingBox({ -250.0f }, { 250.0f });
 
@@ -1171,4 +1171,4 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results) const
     return has_hit;
 }
 
-} // namespace hyperion::v2
+} // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#ifndef HYPERION_V2_STREAMED_DATA_HPP
-#define HYPERION_V2_STREAMED_DATA_HPP
+#ifndef HYPERION_STREAMED_DATA_HPP
+#define HYPERION_STREAMED_DATA_HPP
 
 #include <core/lib/ByteBuffer.hpp>
 #include <core/lib/RefCountedPtr.hpp>
@@ -8,7 +8,7 @@
 
 #include <core/Defines.hpp>
 
-namespace hyperion::v2 {
+namespace hyperion {
 
 class StreamedData;
 
@@ -209,6 +209,6 @@ protected:
     mutable Optional<ByteBuffer>    m_byte_buffer;
 };
 
-} // namespace hyperion::v2
+} // namespace hyperion
 
 #endif
