@@ -9,7 +9,7 @@ namespace Hyperion
         [MarshalAs(UnmanagedType.U4)]
         public uint id;
 
-        public bool Valid
+        public bool IsValid
         {
             get
             {

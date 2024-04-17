@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
+    internal delegate void HandleAssetResultsDelegate(IntPtr assetMapPtr);
+
     public class AssetBatch : IDisposable
     {
         private IntPtr ptr;
@@ -28,14 +30,23 @@ namespace Hyperion
             AssetBatch_AddToBatch(ptr, key, path);
         }
 
-        public void LoadAsync()
+        public async Task<AssetMap> Load()
         {
-            AssetBatch_LoadAsync(ptr);
-        }
+            var completionSource = new TaskCompletionSource<AssetMap>();
+            
+            AssetBatch_LoadAsync(ptr, Marshal.GetFunctionPointerForDelegate(new HandleAssetResultsDelegate((assetMapPtr) =>
+            {
+                if (assetMapPtr == IntPtr.Zero)
+                {
+                    completionSource.SetException(new Exception("Failed to load assets"));
 
-        public AssetMap AwaitResults()
-        {
-            return new AssetMap(AssetBatch_AwaitResults(ptr));
+                    return;
+                }
+
+                completionSource.SetResult(new AssetMap(assetMapPtr));
+            })));
+
+            return await completionSource.Task;
         }
 
         [DllImport("hyperion", EntryPoint = "AssetBatch_Create")]
@@ -48,7 +59,7 @@ namespace Hyperion
         private static extern void AssetBatch_AddToBatch(IntPtr assetBatchPtr, [MarshalAs(UnmanagedType.LPStr)] string key, [MarshalAs(UnmanagedType.LPStr)] string path);
 
         [DllImport("hyperion", EntryPoint = "AssetBatch_LoadAsync")]
-        private static extern void AssetBatch_LoadAsync(IntPtr assetBatchPtr);
+        private static extern void AssetBatch_LoadAsync(IntPtr assetBatchPtr, IntPtr handleAssetResultsPtr);
 
         [DllImport("hyperion", EntryPoint = "AssetBatch_AwaitResults")]
         private static extern IntPtr AssetBatch_AwaitResults(IntPtr assetBatchPtr);

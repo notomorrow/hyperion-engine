@@ -5,9 +5,14 @@ namespace Hyperion
 {
     public struct Asset
     {
-        public IntPtr ptr;
+        private IntPtr ptr;
 
-        public bool Valid
+        public Asset(IntPtr ptr)
+        {
+            this.ptr = ptr;
+        }
+
+        public bool IsValid
         {
             get
             {
@@ -17,7 +22,7 @@ namespace Hyperion
 
         public Node GetNode()
         {
-            if (!Valid)
+            if (!IsValid)
             {
                 throw new Exception("Asset is not valid");
             }
@@ -25,7 +30,7 @@ namespace Hyperion
             ManagedNode node = new ManagedNode();
             Asset_GetNode(ptr, out node);
 
-            if (!node.Valid)
+            if (!node.IsValid)
             {
                 throw new Exception("Failed to get node from asset");
             }
@@ -35,7 +40,7 @@ namespace Hyperion
 
         public Texture GetTexture()
         {
-            if (!Valid)
+            if (!IsValid)
             {
                 throw new Exception("Asset is not valid");
             }
@@ -43,7 +48,7 @@ namespace Hyperion
             ManagedHandle handle = new ManagedHandle();
             Asset_GetTexture(ptr, out handle);
 
-            if (!handle.Valid)
+            if (!handle.IsValid)
             {
                 throw new Exception("Failed to get texture from asset");
             }

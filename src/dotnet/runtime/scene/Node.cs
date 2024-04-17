@@ -10,7 +10,7 @@ namespace Hyperion
     {
         public IntPtr refPtr;
 
-        public bool Valid
+        public bool IsValid
         {
             get
             {

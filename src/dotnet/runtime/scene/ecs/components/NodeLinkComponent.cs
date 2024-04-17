@@ -20,7 +20,7 @@ namespace Hyperion
                 ManagedNode managedNode = new ManagedNode();
                 NodeLinkComponent_LockReference(node.Address, out managedNode);
 
-                if (!managedNode.Valid)
+                if (!managedNode.IsValid)
                 {
                     throw new Exception("NodeLinkComponent is not valid");
                 }

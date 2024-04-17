@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 
         application->SetCurrentWindow(application->CreateSystemWindow({
             "Hyperion Engine",
-            { 1000, 1000 },
+            { 1280, 720 },
             window_flags
         }));
     }
