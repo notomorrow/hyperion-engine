@@ -68,7 +68,7 @@ RUN set -e; \
     cmake ..; \
     make -j4; \
     cd ..; \
-    mv ./build/samples/hyperion-sample /app/hyperion-sample;  \
+    mv ./build/hyperion-sample /app/hyperion-sample;  \
     mv ./build/lib* /app/;
 
 RUN rm -rf src include samples submodules build.sh CMakeLists.txt build/*
