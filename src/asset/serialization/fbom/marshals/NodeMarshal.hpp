@@ -113,15 +113,15 @@ public:
         { // world transform
             Transform transform = Transform::identity;
 
-            if (auto err = in.GetProperty("world_transform.translation").ReadArrayElements(FBOMFloat(), 3, &transform.GetTranslation())) {
+            if (auto err = in.GetProperty("world_transform.translation").ReadElements(FBOMFloat(), 3, &transform.GetTranslation())) {
                 return err;
             }
         
-            if (auto err = in.GetProperty("world_transform.rotation").ReadArrayElements(FBOMFloat(), 4, &transform.GetRotation())) {
+            if (auto err = in.GetProperty("world_transform.rotation").ReadElements(FBOMFloat(), 4, &transform.GetRotation())) {
                 return err;
             }
 
-            if (auto err = in.GetProperty("world_transform.scale").ReadArrayElements(FBOMFloat(), 3, &transform.GetScale())) {
+            if (auto err = in.GetProperty("world_transform.scale").ReadElements(FBOMFloat(), 3, &transform.GetScale())) {
                 return err;
             }
 

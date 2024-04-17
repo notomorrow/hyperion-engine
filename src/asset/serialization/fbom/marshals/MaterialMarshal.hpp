@@ -84,7 +84,7 @@ public:
 
         out.SetProperty(
             "texture_keys",
-            FBOMArray(FBOMUnsignedInt(), std::size(texture_keys)),
+            FBOMSequence(FBOMUnsignedInt(), std::size(texture_keys)),
             &texture_keys[0]
         );
 
@@ -119,7 +119,7 @@ public:
             Material::MaterialKey key;
             Material::Parameter param;
 
-            if (auto err = in.GetProperty(param_string).ReadArrayElements(FBOMFloat(), 4, &param.values)) {
+            if (auto err = in.GetProperty(param_string).ReadElements(FBOMFloat(), 4, &param.values)) {
                 continue;
             }
 
@@ -149,7 +149,7 @@ public:
         uint32 texture_keys[Material::max_textures];
         Memory::MemSet(&texture_keys[0], 0, sizeof(texture_keys));
 
-        if (auto err = in.GetProperty("texture_keys").ReadArrayElements(FBOMUnsignedInt(), std::size(texture_keys), &texture_keys[0])) {
+        if (auto err = in.GetProperty("texture_keys").ReadElements(FBOMUnsignedInt(), std::size(texture_keys), &texture_keys[0])) {
             return err;
         }
 

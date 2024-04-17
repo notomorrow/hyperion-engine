@@ -62,8 +62,6 @@
 
 #include "util/Profile.hpp"
 
-/* Standard library */
-
 #include "rendering/RenderEnvironment.hpp"
 #include "rendering/UIRenderer.hpp"
 #include <rendering/GaussianSplatting.hpp>

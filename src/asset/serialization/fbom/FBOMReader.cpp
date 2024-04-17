@@ -19,7 +19,7 @@ FBOMReader::FBOMReader(const FBOMConfig &config)
         FBOMByte(),
         FBOMString(),
         FBOMStruct(0),
-        FBOMArray()
+        FBOMSequence()
     };
 }
 

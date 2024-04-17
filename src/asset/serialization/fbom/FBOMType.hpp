@@ -15,9 +15,9 @@ namespace hyperion::fbom {
 
 struct FBOMType
 {
-    String name;
-    SizeType size;
-    FBOMType *extends = nullptr;
+    String      name;
+    SizeType    size;
+    FBOMType    *extends = nullptr;
 
     FBOMType()
         : name("UNSET"),
