@@ -15,7 +15,7 @@ namespace Hyperion
     public class UIObject : IDisposable
     {
         private RefCountedPtr refCountedPtr = RefCountedPtr.Null;
-
+        
         public UIObject()
         {
             this.refCountedPtr = RefCountedPtr.Null;

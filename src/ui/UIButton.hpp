@@ -6,14 +6,14 @@
 
 namespace hyperion::v2 {
 
-class UIScene;
+class UIStage;
 
 // UIButton
 
 class HYP_API UIButton : public UIObject
 {
 public:
-    UIButton(ID<Entity> entity, UIScene *ui_scene, NodeProxy node_proxy);
+    UIButton(ID<Entity> entity, UIStage *stage, NodeProxy node_proxy);
     UIButton(const UIButton &other)                 = delete;
     UIButton &operator=(const UIButton &other)      = delete;
     UIButton(UIButton &&other) noexcept             = delete;

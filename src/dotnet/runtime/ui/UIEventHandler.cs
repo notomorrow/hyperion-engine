@@ -5,6 +5,7 @@ namespace Hyperion
 {
     public abstract class UIEventHandler : Script
     {
+        private UIStage? uiStage;
         private UIObject? uiObject;
 
         public override void Init(Entity entity)
@@ -12,6 +13,14 @@ namespace Hyperion
             base.Init(entity);
 
             uiObject = Scene.EntityManager.GetComponent<UIComponent>(Entity).UIObject;
+        }
+
+        protected UIStage UIStage
+        {
+            get
+            {
+                return uiStage!;
+            }
         }
         
         public UIObject UIObject

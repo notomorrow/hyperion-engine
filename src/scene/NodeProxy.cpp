@@ -1,10 +1,11 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "NodeProxy.hpp"
-#include "Node.hpp"
+
+#include <scene/NodeProxy.hpp>
+#include <scene/Node.hpp>
 
 namespace hyperion::v2 {
 
-// NodeProxyChildren
+#pragma region NodeProxyChildren
 
 uint NodeProxyChildren::Size() const
 {
@@ -55,7 +56,9 @@ const NodeProxy *NodeProxyChildren::ConstIterator::operator->() const
     return &node->GetChildren()[index];
 }
 
-// NodeProxy
+#pragma endregion NodeProxyChildren
+
+#pragma region NodeProxy
 
 const NodeProxy NodeProxy::empty = NodeProxy();
 
@@ -352,5 +355,7 @@ HashCode NodeProxy::GetHashCode() const
 
     return hc;
 }
+
+#pragma endregion NodeProxy
 
 } // namespace hyperion::v2

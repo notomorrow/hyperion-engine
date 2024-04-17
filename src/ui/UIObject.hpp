@@ -18,15 +18,15 @@
 
 namespace hyperion::v2 {
 
-class UIScene;
+class UIStage;
 
-// Helper function to get the scene from a UI scene
-template <class UISceneType>
-static inline Scene *GetScene(UISceneType *ui_scene)
+// Helper function to get the scene from a UIStage
+template <class UIStageType>
+static inline Scene *GetScene(UIStageType *stage)
 {
-    AssertThrow(ui_scene != nullptr);
+    AssertThrow(stage != nullptr);
 
-    return ui_scene->GetScene().Get();
+    return stage->GetScene().Get();
 }
 
 // UIObject
@@ -164,7 +164,7 @@ private:
 class HYP_API UIObject : public EnableRefCountedPtrFromThis<UIObject>
 {
 public:
-    UIObject(ID<Entity> entity, UIScene *parent, NodeProxy node_proxy);
+    UIObject(ID<Entity> entity, UIStage *parent, NodeProxy node_proxy);
     UIObject(const UIObject &other)                 = delete;
     UIObject &operator=(const UIObject &other)      = delete;
     UIObject(UIObject &&other) noexcept             = delete;
@@ -180,7 +180,7 @@ public:
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    UIScene *GetParent() const
+    UIStage *GetStage() const
         { return m_parent; }
 
     [[nodiscard]]
@@ -220,7 +220,7 @@ public:
     /*! \brief Set the depth of the UI object
      *
      * The depth of the UI object is used to determine the rendering order of the object in the scene, with higher depth values being rendered on top of lower depth values.
-     * Set the depth to a value between UIScene::min_depth and UIScene::max_depth. If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
+     * Set the depth to a value between UIStage::min_depth and UIStage::max_depth. If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
      *
      * \param depth The depth of the UI object
      */
@@ -313,7 +313,7 @@ protected:
     void UpdateMaterial();
 
     ID<Entity>          m_entity;
-    UIScene             *m_parent;
+    UIStage             *m_parent;
 
     Name                m_name;
 

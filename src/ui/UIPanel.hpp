@@ -6,14 +6,14 @@
 
 namespace hyperion::v2 {
 
-class UIScene;
+class UIStage;
 
 #pragma region UIPanel
 
 class HYP_API UIPanel : public UIObject
 {
 public:
-    UIPanel(ID<Entity> entity, UIScene *ui_scene, NodeProxy node_proxy);
+    UIPanel(ID<Entity> entity, UIStage *stage, NodeProxy node_proxy);
     UIPanel(const UIPanel &other)                   = delete;
     UIPanel &operator=(const UIPanel &other)        = delete;
     UIPanel(UIPanel &&other) noexcept               = delete;

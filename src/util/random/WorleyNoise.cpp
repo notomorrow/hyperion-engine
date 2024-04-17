@@ -1,6 +1,4 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-
-#include "WorleyNoise.hpp"
+#include <util/random/WorleyNoise.hpp>
 
 #include <algorithm>
 #include <cmath>

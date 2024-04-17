@@ -1,10 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "Octree.hpp"
-#include "Entity.hpp"
-#include <Engine.hpp>
+#include <scene/Octree.hpp>
+#include <scene/Entity.hpp>
+
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/camera/Camera.hpp>
+
+#include <Engine.hpp>
 #include <Threads.hpp>
 
 namespace hyperion::v2 {

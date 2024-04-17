@@ -2,14 +2,10 @@
 #ifndef HYPERION_V2_FULL_SCREEN_PASS_H
 #define HYPERION_V2_FULL_SCREEN_PASS_H
 
-#include "Framebuffer.hpp"
-#include "Shader.hpp"
-#include "RenderGroup.hpp"
-#include "Mesh.hpp"
-#include <Constants.hpp>
-
-#include <Types.hpp>
-#include <core/Containers.hpp>
+#include <rendering/Framebuffer.hpp>
+#include <rendering/Shader.hpp>
+#include <rendering/RenderGroup.hpp>
+#include <rendering/Mesh.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererAttachment.hpp>
@@ -18,8 +14,11 @@
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererDescriptorSet2.hpp>
 
-#include <memory>
-#include <utility>
+#include <core/Containers.hpp>
+
+#include <Constants.hpp>
+
+#include <Types.hpp>
 
 namespace hyperion::v2 {
 

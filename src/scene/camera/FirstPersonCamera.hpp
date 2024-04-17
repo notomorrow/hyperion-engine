@@ -3,8 +3,9 @@
 #ifndef HYPERION_V2_FIRST_PERSON_CAMERA_H
 #define HYPERION_V2_FIRST_PERSON_CAMERA_H
 
+#include <scene/camera/PerspectiveCamera.hpp>
+
 #include <math/Vector2.hpp>
-#include "PerspectiveCamera.hpp"
 
 namespace hyperion::v2 {
 

@@ -2,10 +2,12 @@
 #ifndef HYPERION_V2_SCENE_H
 #define HYPERION_V2_SCENE_H
 
-#include "Node.hpp"
-#include "NodeProxy.hpp"
-#include "Entity.hpp"
-#include "Octree.hpp"
+#include <scene/Node.hpp>
+#include <scene/NodeProxy.hpp>
+#include <scene/Entity.hpp>
+#include <scene/Octree.hpp>
+#include <scene/camera/Camera.hpp>
+
 #include <core/Base.hpp>
 #include <core/Scheduler.hpp>
 #include <core/Containers.hpp>
@@ -18,8 +20,6 @@
 #include <rendering/EnvProbe.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/EntityDrawCollection.hpp>
-
-#include <scene/camera/Camera.hpp>
 
 #include <math/Color.hpp>
 
@@ -60,7 +60,7 @@ class Scene
 {
     friend class Entity;
     friend class World;
-    friend class UIScene;
+    friend class UIStage;
 
 public:
     HYP_API Scene();

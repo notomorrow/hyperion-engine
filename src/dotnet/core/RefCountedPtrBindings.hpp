@@ -36,6 +36,21 @@ extern HYP_API void WeakRefCountedPtr_IncRef(ManagedWeakRefCountedPtr);
 extern HYP_API void WeakRefCountedPtr_DecRef(ManagedWeakRefCountedPtr);
 } // extern "C"
 
+/*! \brief Creates a ManagedRefCountedPtr from a RefCountedPtr. Increments the reference count.
+ *
+ * \param ref_counted_ptr The RefCountedPtr to create a ManagedRefCountedPtr from.
+ * \return The ManagedRefCountedPtr.
+ */
+template <class T>
+static inline ManagedRefCountedPtr CreateManagedRefCountedPtr(const RC<T> &ref_counted_ptr)
+{
+    ManagedRefCountedPtr managed_ref_counted_ptr;
+    managed_ref_counted_ptr.address = reinterpret_cast<uintptr_t>(static_cast<const void *>(ref_counted_ptr.GetRefCountData()));
+    RefCountedPtr_IncRef(managed_ref_counted_ptr);
+
+    return managed_ref_counted_ptr;
+}
+
 template <class T>
 static inline RC<T> GetRefCountedPtrFromManaged(ManagedRefCountedPtr managed_ref_counted_ptr)
 {
@@ -47,6 +62,7 @@ static inline RC<T> GetRefCountedPtrFromManaged(ManagedRefCountedPtr managed_ref
 
     RC<T> ref_counted_ptr;
     ref_counted_ptr.SetRefCountData(ref_count_data, true /* inc_ref */);
+
     return ref_counted_ptr;
 }
 
@@ -61,6 +77,7 @@ static inline Weak<T> GetWeakRefCountedPtrFromManaged(ManagedWeakRefCountedPtr m
 
     Weak<T> weak_ref_counted_ptr;
     weak_ref_counted_ptr.SetRefCountData(ref_count_data, true /* inc_ref */);
+
     return weak_ref_counted_ptr;
 }
 

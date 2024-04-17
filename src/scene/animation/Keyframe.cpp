@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "Keyframe.hpp"
+#include <scene/animation/Keyframe.hpp>
 
 namespace hyperion::v2 {
 

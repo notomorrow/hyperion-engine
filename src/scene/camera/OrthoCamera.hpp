@@ -3,7 +3,7 @@
 #ifndef HYPERION_V2_ORTHO_CAMERA_H
 #define HYPERION_V2_ORTHO_CAMERA_H
 
-#include "Camera.hpp"
+#include <scene/camera/Camera.hpp>
 
 namespace hyperion::v2 {
 class OrthoCameraController : public CameraController

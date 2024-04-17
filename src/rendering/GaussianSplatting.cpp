@@ -1,19 +1,21 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "GaussianSplatting.hpp"
+#include <rendering/GaussianSplatting.hpp>
 
-#include <Engine.hpp>
 #include <scene/camera/OrthoCamera.hpp>
-#include <util/MeshBuilder.hpp>
-#include <math/MathUtil.hpp>
-#include <math/Color.hpp>
-#include <util/NoiseFactory.hpp>
 
 #include <rendering/Buffers.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <math/MathUtil.hpp>
+#include <math/Color.hpp>
+
 #include <util/fs/FsUtil.hpp>
+#include <util/NoiseFactory.hpp>
+#include <util/MeshBuilder.hpp>
+
+#include <Engine.hpp>
 
 //#define HYP_GAUSSIAN_SPLATTING_CPU_SORT
 

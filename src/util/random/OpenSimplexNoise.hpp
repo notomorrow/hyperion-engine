@@ -1,5 +1,3 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-
 #ifndef OPEN_SIMPLEX_NOISE_H__
 #define OPEN_SIMPLEX_NOISE_H__
 

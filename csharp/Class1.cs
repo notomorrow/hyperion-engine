@@ -89,8 +89,6 @@ public class TestGame : Game
 {
     public override void Init()
     {
-        return;
-
         TypeID testTypeID = TypeID.ForType<TransformComponent>();
 
         var assetBatch = new AssetBatch(AssetManager);

@@ -1,6 +1,5 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+#include <util/img/WriteBitmap.hpp>
 
-#include "WriteBitmap.hpp"
 #include <stdio.h>
 
 const int BYTES_PER_PIXEL = 3;

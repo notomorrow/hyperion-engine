@@ -3,13 +3,13 @@
 #ifndef HYPERION_V2_LIB_ARRAY_MAP_HPP
 #define HYPERION_V2_LIB_ARRAY_MAP_HPP
 
-#include "DynArray.hpp"
-#include "Pair.hpp"
-#include "ContainerBase.hpp"
+#include <core/lib/DynArray.hpp>
+#include <core/lib/Pair.hpp>
+#include <core/lib/ContainerBase.hpp>
+
 #include <HashCode.hpp>
 
 #include <algorithm>
-#include <vector>
 #include <utility>
 
 namespace hyperion {

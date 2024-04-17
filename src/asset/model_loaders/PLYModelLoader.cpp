@@ -1,14 +1,15 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "PLYModelLoader.hpp"
-#include <Engine.hpp>
+#include <asset/model_loaders/PLYModelLoader.hpp>
+
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
+
 #include <util/fs/FsUtil.hpp>
 
+#include <Engine.hpp>
+
 #include <algorithm>
-#include <stack>
-#include <string>
 
 
 namespace hyperion::v2 {

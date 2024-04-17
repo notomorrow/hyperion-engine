@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "AudioSource.hpp"
-#include "AudioManager.hpp"
+
+#include <audio/AudioSource.hpp>
+#include <audio/AudioManager.hpp>
 
 #include <Engine.hpp>
 

@@ -1,9 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "FBOMModelLoader.hpp"
+#include <asset/model_loaders/FBOMModelLoader.hpp>
+
 #include <Engine.hpp>
+
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
+
 #include <util/fs/FsUtil.hpp>
 
 #include <algorithm>

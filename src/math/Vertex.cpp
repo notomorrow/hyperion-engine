@@ -1,5 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "Vertex.hpp"
+
+#include <math/Vertex.hpp>
 
 namespace hyperion {
 

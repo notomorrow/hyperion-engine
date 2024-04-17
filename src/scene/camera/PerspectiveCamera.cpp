@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "PerspectiveCamera.hpp"
+#include <scene/camera/PerspectiveCamera.hpp>
 
 namespace hyperion::v2 {
 PerspectiveCameraController::PerspectiveCameraController()

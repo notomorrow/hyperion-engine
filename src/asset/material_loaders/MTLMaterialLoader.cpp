@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "MTLMaterialLoader.hpp"
+#include <asset/material_loaders/MTLMaterialLoader.hpp>
 #include <Engine.hpp>
 
 #include <util/fs/FsUtil.hpp>

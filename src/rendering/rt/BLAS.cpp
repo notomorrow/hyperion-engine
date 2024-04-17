@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "BLAS.hpp"
+#include <rendering/rt/BLAS.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion::v2 {

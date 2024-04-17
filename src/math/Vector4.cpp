@@ -1,9 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include "Vector4.hpp"
-#include "MathUtil.hpp"
-#include "Vector3.hpp"
-#include "Vector2.hpp"
-#include "Matrix4.hpp"
+
+#include <math/Vector4.hpp>
+#include <math/MathUtil.hpp>
+#include <math/Vector3.hpp>
+#include <math/Vector2.hpp>
+#include <math/Matrix4.hpp>
 
 namespace hyperion {
 

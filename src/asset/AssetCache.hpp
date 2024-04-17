@@ -6,12 +6,13 @@
 #include <core/Containers.hpp>
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
-#include <scene/Node.hpp>
-#include <Constants.hpp>
 
-#include "Loader.hpp"
+#include <scene/Node.hpp>
+
+#include <asset/Loader.hpp>
 
 #include <system/Debug.hpp>
+#include <Constants.hpp>
 
 #include <mutex>
 

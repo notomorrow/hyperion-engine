@@ -71,7 +71,7 @@ namespace Hyperion
             });
         }
 
-        public void RegisterComponent<T>(ComponentDefinition componentDefinition) where T : IComponent
+        public void RegisterComponent<T>(ComponentDefinition componentDefinition) where T : struct, IComponent
         {
             componentNativeTypeIDs.Add(typeof(T), componentDefinition);
         }
@@ -100,14 +100,14 @@ namespace Hyperion
 
         public ComponentID AddComponent<T>(Entity entity, T component) where T : struct, IComponent
         {
-            ComponentDefinition typeId = componentNativeTypeIDs[typeof(T)];
+            ComponentDefinition componentDefinition = componentNativeTypeIDs[typeof(T)];
 
             // Have to pass address of component to native code
             IntPtr componentPtr = Marshal.AllocHGlobal(Marshal.SizeOf(component));
             Marshal.StructureToPtr(component, componentPtr, false);
 
             // call the native method
-            ComponentID result = typeId.addComponent(ptr, entity, componentPtr);
+            ComponentID result = componentDefinition.addComponent(ptr, entity, componentPtr);
 
             // Free the memory
             Marshal.FreeHGlobal(componentPtr);

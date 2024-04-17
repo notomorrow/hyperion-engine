@@ -5,7 +5,7 @@
 
 namespace hyperion::v2 {
 
-UIButton::UIButton(ID<Entity> entity, UIScene *parent, NodeProxy node_proxy)
+UIButton::UIButton(ID<Entity> entity, UIStage *parent, NodeProxy node_proxy)
     : UIObject(entity, parent, std::move(node_proxy))
 {
     SetBorderRadius(5);

@@ -2,10 +2,11 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
-#include "../HashCode.hpp"
-#include "Vector3.hpp"
-#include "Quaternion.hpp"
-#include "Matrix4.hpp"
+#include <math/Vector3.hpp>
+#include <math/Quaternion.hpp>
+#include <math/Matrix4.hpp>
+
+#include <HashCode.hpp>
 
 namespace hyperion {
 class HYP_API Transform

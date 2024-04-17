@@ -3,7 +3,7 @@
 #ifndef SIMPLEX_H
 #define SIMPLEX_H
 
-#include "OpenSimplexNoise.hpp"
+#include <util/random/OpenSimplexNoise.hpp>
 
 #define OSN_OCTAVE_COUNT 8
 

@@ -1,19 +1,21 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include "OBJModelLoader.hpp"
-#include <Engine.hpp>
+#include <asset/model_loaders/OBJModelLoader.hpp>
+
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
+
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
+
 #include <util/fs/FsUtil.hpp>
 
+#include <Engine.hpp>
+
 #include <algorithm>
-#include <stack>
-#include <string>
 
 
 namespace hyperion::v2 {

@@ -1,6 +1,6 @@
 #define VMA_IMPLEMENTATION
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
-#include "../Debug.hpp"
+#include <system/Debug.hpp>
 
 #ifdef HYP_LOG_MEMORY_OPERATIONS
 #define VMA_DEBUG_LOG(...) \
@@ -9,4 +9,4 @@
 #endif
 
 
-#include "VmaUsage.hpp"
+#include <system/vma/VmaUsage.hpp>
