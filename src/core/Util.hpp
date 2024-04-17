@@ -20,7 +20,7 @@ template <auto Str>
 constexpr auto StripNamespace()
 {
     constexpr auto left_arrow_index = Str.template FindFirst< IntegerSequenceFromString< StaticString("<") > >();
-    constexpr auto right_arrow_index = Str.template FindFirst< IntegerSequenceFromString< StaticString(">") > >();
+    constexpr auto right_arrow_index = Str.template FindLast< IntegerSequenceFromString< StaticString(">") > >();
 
     if constexpr (left_arrow_index != -1 && right_arrow_index != -1) {
         constexpr auto before_left_arrow = StripNamespace< Str.template Substr<0, left_arrow_index>() >();
