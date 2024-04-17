@@ -1,6 +1,6 @@
 # Hyperion Engine
 
-Hyperion Engine is a 3D game engine written in C++. Currently, it targets Windows, macOS and Linux and has support for C# scripting.
+Hyperion Engine is a 3D game engine written in C++. Currently, it targets Windows, macOS and Linux and has support for C# scripting via .NET Core. 
 
 Dynamic Diffuse Global Illumination (DDGI) | GPU Particles
 :-----------------------------------------:|:-------------------------:
