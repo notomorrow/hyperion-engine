@@ -187,9 +187,9 @@ void SSRRenderer::Create()
     if (use_temporal_blending) {
         m_temporal_blending.Reset(new TemporalBlending(
             m_extent,
-            InternalFormat::RGBA16F,
+            InternalFormat::RGBA8,
             TemporalBlendTechnique::TECHNIQUE_1,
-            TemporalBlendFeedback::LOW,
+            TemporalBlendFeedback::MEDIUM,
             FixedArray<ImageViewRef, 2> {
                 m_image_outputs[1]->GetImageView(),
                 m_image_outputs[1]->GetImageView()

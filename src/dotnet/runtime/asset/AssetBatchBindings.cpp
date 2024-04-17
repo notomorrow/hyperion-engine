@@ -19,9 +19,13 @@ HYP_EXPORT void AssetBatch_Destroy(AssetBatch *batch)
     delete batch;
 }
 
-HYP_EXPORT void AssetBatch_LoadAsync(AssetBatch *batch)
+HYP_EXPORT void AssetBatch_LoadAsync(AssetBatch *batch, void(*callback)(void *), void *user_data)
 {
     batch->LoadAsync();
+
+    // Note: Will be deleted when AssetMap_Destroy is called from C#.
+    AssetMap *asset_map = new AssetMap(batch->AwaitResults());
+    callback(asset_map);
 }
 
 HYP_EXPORT AssetMap *AssetBatch_AwaitResults(AssetBatch *batch)

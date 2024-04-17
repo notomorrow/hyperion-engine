@@ -15,8 +15,6 @@
 #include <core/Defines.hpp>
 #include <system/Debug.hpp>
 
-#include <mutex>
-#include <atomic>
 #include <type_traits>
 
 namespace hyperion {

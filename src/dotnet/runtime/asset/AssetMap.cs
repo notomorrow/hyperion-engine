@@ -35,11 +35,9 @@ namespace Hyperion
         {
             get
             {
-                IntPtr keyPtr = Marshal.StringToHGlobalAnsi(key);
-                IntPtr assetPtr = AssetMap_GetAsset(this.ptr, keyPtr);
-                Marshal.FreeHGlobal(keyPtr);
+                IntPtr assetPtr = AssetMap_GetAsset(ptr, key);
 
-                return new Asset { ptr = assetPtr };
+                return new Asset(assetPtr);
             }
         }
 
@@ -47,6 +45,6 @@ namespace Hyperion
         private static extern void AssetMap_Destroy(IntPtr assetMapPtr);
 
         [DllImport("hyperion", EntryPoint = "AssetMap_GetAsset")]
-        private static extern IntPtr AssetMap_GetAsset(IntPtr assetMapPtr, IntPtr keyPtr);
+        private static extern IntPtr AssetMap_GetAsset(IntPtr assetMapPtr, [MarshalAs(UnmanagedType.LPStr)] string keyPtr);
     }
 }

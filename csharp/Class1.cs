@@ -87,42 +87,39 @@ public class TestScript : Script
 
 public class TestGame : Game
 {
-    public override void Init()
+    public override async void Init()
     {
-        TypeID testTypeID = TypeID.ForType<TransformComponent>();
-
         var assetBatch = new AssetBatch(AssetManager);
         assetBatch.Add("test_model", "models/house.obj");
-        assetBatch.LoadAsync();
 
-        var assetMap = assetBatch.AwaitResults();
+        var assetMap = await assetBatch.Load();
 
         Scene.Root.AddChild(assetMap["test_model"].GetNode());
 
-        var lightNode = Scene.Root.AddChild();
-        var lightEntity = Scene.EntityManager.AddEntity();
-        Scene.EntityManager.AddComponent<LightComponent>(lightEntity, new LightComponent
-        {
-            Light = new Light(
-                LightType.Point,
-                new Vec3f(0, 3, 0),
-                new Color(1, 0, 0, 1),
-                50.0f,
-                50.0f
-            )
-        });
+        // var lightNode = Scene.Root.AddChild();
+        // var lightEntity = Scene.EntityManager.AddEntity();
+        // Scene.EntityManager.AddComponent<LightComponent>(lightEntity, new LightComponent
+        // {
+        //     Light = new Light(
+        //         LightType.Point,
+        //         new Vec3f(0, 3, 0),
+        //         new Color(1, 0, 0, 1),
+        //         50.0f,
+        //         50.0f
+        //     )
+        // });
 
-        Scene.EntityManager.AddComponent<TransformComponent>(lightEntity, new TransformComponent
-        {
-            transform = new Transform
-            {
-                Translation = new Vec3f(0, 3, 0),
-                Scale = new Vec3f(1, 1, 1),
-                Rotation = new Quaternion(0, 0, 0, 1)
-            }
-        });
+        // Scene.EntityManager.AddComponent<TransformComponent>(lightEntity, new TransformComponent
+        // {
+        //     transform = new Transform
+        //     {
+        //         Translation = new Vec3f(0, 3, 0),
+        //         Scale = new Vec3f(1, 1, 1),
+        //         Rotation = new Quaternion(0, 0, 0, 1)
+        //     }
+        // });
 
-        lightNode.Entity = lightEntity;
+        // lightNode.Entity = lightEntity;
     }
 
     public override void Update(float deltaTime)
