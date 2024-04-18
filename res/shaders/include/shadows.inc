@@ -4,8 +4,8 @@
 #include "noise.inc"
 #include "aabb.inc"
 
-#define HYP_SHADOW_BIAS 0.0005
-#define HYP_SHADOW_VARIABLE_BIAS 1
+#define HYP_SHADOW_BIAS 0.0001
+//#define HYP_SHADOW_VARIABLE_BIAS 1
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
 
@@ -19,7 +19,7 @@
 // #define HYP_PENUMBRA_SAMPLES_4
 #define HYP_PENUMBRA_SAMPLES_8
 
-#define HYP_SHADOW_NOISE_SPREAD 0.001
+#define HYP_SHADOW_NOISE_SPREAD 0.0005
 
 #define HYP_SHADOW_PENUMBRA 1
 #define HYP_SHADOW_VARIANCE 1
@@ -69,7 +69,7 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 
 #if defined(HYP_SHADOW_VARIABLE_BIAS) && HYP_SHADOW_VARIABLE_BIAS
     bias *= tan(acos(NdotL));
-    bias = clamp(bias, 0.0, 0.01);
+    bias = clamp(bias, 0.0, 0.005);
 #endif
 
     return max(step(coord.z - bias, shadow_depth), 0.0);

@@ -11,7 +11,6 @@ layout(location=2) in vec2 v_texcoord0;
 
 HYP_DESCRIPTOR_SRV(Global, PostFXPreStack, count = 4) uniform texture2D effects_pre_stack[4];
 HYP_DESCRIPTOR_SRV(Global, PostFXPostStack, count = 4) uniform texture2D effects_post_stack[4];
-HYP_DESCRIPTOR_SRV(Global, UITexture) uniform texture2D ui_texture;
 
 HYP_DESCRIPTOR_CBUFF(Global, PostProcessingUniforms, size = 32) uniform PostProcessingUniforms {
     uvec2 effect_counts;
@@ -73,20 +72,6 @@ void main()
     // out_color.rgb = (Texture2D(HYP_SAMPLER_NEAREST, hbao_gi, v_texcoord0).rgb - vec3(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, v_texcoord0).rrr)) * 6.0;
 #endif
     out_color.a = 1.0;
-
-    // // blend in UI.
-    // vec4 ui_color = Texture2D(HYP_SAMPLER_LINEAR, ui_texture, v_texcoord0);
-
-    // out_color = vec4(
-    //     (ui_color.rgb * ui_color.a) + (out_color.rgb * (1.0 - ui_color.a)),
-    //     1.0
-    // );
-
-    // out_color = any(isnan(out_color)) ? vec4(0.0, 1.0, 0.0, 65535.0) : out_color;
-
-    // Draw env_grid_probe_data buffer to screen.
-    // out_color = vec4(Texture2D(HYP_SAMPLER_LINEAR, gbuffer_deferred_result, v_texcoord0).rgb, 1.0);
-    
 
 
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
