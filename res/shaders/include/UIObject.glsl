@@ -5,6 +5,7 @@
 #define UI_OBJECT_FOCUS_STATE_HOVER     0x1
 #define UI_OBJECT_FOCUS_STATE_PRESSED   0x2
 #define UI_OBJECT_FOCUS_STATE_TOGGLED   0x4
+#define UI_OBJECT_FOCUS_STATE_FOCUSED   0x8
 
 #define UIObjectFocusState uint
 
