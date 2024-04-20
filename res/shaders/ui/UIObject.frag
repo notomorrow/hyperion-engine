@@ -121,6 +121,13 @@ void main()
         ui_color.a *= roundedness;
     }
 #endif
+#if defined(TYPE_BUTTON) || defined(TYPE_TAB) || defined(TYPE_PANEL)
+    // If focused show a border around the object
+    // TEMP Testing.
+    if (bool(properties.focus_state & UI_OBJECT_FOCUS_STATE_FOCUSED)) {
+        ui_color = mix(ui_color, vec4(1.0, 1.0, 1.0, 1.0), 0.5);
+    }
+#endif
 
     uint mask = GET_OBJECT_BUCKET(object);
 
