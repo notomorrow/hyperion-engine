@@ -63,7 +63,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 1 // multiple samples having issues
+#define SAMPLE_COUNT 8
 
 void main()
 {
