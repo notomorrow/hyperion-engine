@@ -147,6 +147,7 @@ void main()
 
         vec3 origin = position + normal * RAY_OFFSET;
 
+#if 0
         { // radiance
             vec4 emissive = vec4(0.0);
 
@@ -170,6 +171,7 @@ void main()
             // @TODO: Proper BRDF
             radiance += emissive * (albedo * (1.0 - metalness));
         }
+#endif
 
         { // irradiance
             RayBounceInfo bounces[NUM_BOUNCES];
@@ -205,16 +207,16 @@ void main()
                         bounces[bounce_index].emissive += TextureCube(sampler_linear, env_probe_textures[probe_texture_index], direction);
                     }
                     
-                    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
-                        const Light light = HYP_GET_LIGHT(light_index);
+                    // for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+                    //     const Light light = HYP_GET_LIGHT(light_index);
 
-                        if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
-                            continue;
-                        }
+                    //     if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
+                    //         continue;
+                    //     }
 
-                        const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
-                        bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
-                    }
+                    //     const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
+                    //     bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                    // }
 
                     ++num_bounces;
 
@@ -226,11 +228,11 @@ void main()
                 H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
                 H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
                 H = normalize(H);
-                    
-                direction = reflect(direction, H);
 
                 vec3 hit_position = origin + direction * payload.distance;
                 origin = hit_position + payload.normal * RAY_OFFSET;
+                    
+                direction = reflect(direction, H);
 
                 ++num_bounces;
             }
@@ -263,7 +265,7 @@ void main()
     }
 
     color = irradiance / float(NUM_SAMPLES);
-    color += radiance / float(NUM_SAMPLES);
+    //color += radiance / float(NUM_SAMPLES);
 
     // color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
     
