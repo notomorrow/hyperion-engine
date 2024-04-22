@@ -81,7 +81,7 @@ layout(location = 0) rayPayloadEXT RayPayload payload;
 
 #define RAY_OFFSET 0.05
 #define NUM_SAMPLES 4
-#define NUM_BOUNCES 2
+#define NUM_BOUNCES 4
 
 struct RayBounceInfo
 {
@@ -153,7 +153,7 @@ void main()
             for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
                 const Light light = HYP_GET_LIGHT(light_index);
 
-                if (light.type != 0) {
+                if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
                     continue;
                 }
 
@@ -173,16 +173,20 @@ void main()
 
         { // irradiance
             RayBounceInfo bounces[NUM_BOUNCES];
-            uint num_bounces = 0;
+
+            bounces[0].throughput = (albedo * (1.0 - metalness));
+            bounces[0].emissive = vec4(0.0);
+            bounces[0].radiance = vec4(0.0);
+
+            uint num_bounces = 1;
             
             vec3 direction = reflect(-V, H);
 
             payload.throughput = vec4(1.0);
             payload.emissive = vec4(0.0);
-            payload.beta = vec4(1.0);
             payload.normal = normal;
 
-            for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
+            for (int bounce_index = 1; bounce_index < NUM_BOUNCES; bounce_index++) {
                 payload.distance = -1.0;
 
                 vec4 throughput = payload.throughput;
@@ -204,7 +208,7 @@ void main()
                     for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
                         const Light light = HYP_GET_LIGHT(light_index);
 
-                        if (light.type != 0) {
+                        if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
                             continue;
                         }
 
@@ -221,6 +225,7 @@ void main()
 
                 H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
                 H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+                H = normalize(H);
                     
                 direction = reflect(direction, H);
 
@@ -230,7 +235,9 @@ void main()
                 ++num_bounces;
             }
 
-            for (int bounce_index = int(num_bounces - 1); bounce_index >= 0; bounce_index--) {
+            int bounce_index = int(num_bounces) - 1;
+
+            for (; bounce_index >= 0; bounce_index--) {
                 vec4 r = bounces[bounce_index].emissive;
 
                 if (bounce_index != num_bounces - 1) {
@@ -248,8 +255,10 @@ void main()
                 
                 bounces[bounce_index].radiance = r;
             }
-
-            irradiance += num_bounces > 0 ? bounces[0].radiance : vec4(0.0);
+            
+            // If ray has not been discarded then bounces[0] will have final radiance set,
+            // otherwise it will be zeros
+            irradiance += bounces[0].radiance;
         }
     }
 
