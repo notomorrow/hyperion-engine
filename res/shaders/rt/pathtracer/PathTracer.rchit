@@ -250,6 +250,12 @@ void main()
     for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
 
+        // skip directional lights
+        // @TODO: Implement more light types besides point lights
+        if (light.type != HYP_LIGHT_TYPE_POINT) {
+            continue;
+        }
+
         float light_dist = CheckLightIntersection(light, hit_position, gl_WorldRayDirectionEXT);
 
         if (light_dist < closest_light_dist) {
@@ -258,10 +264,9 @@ void main()
         }
     }
 
-    // russian roulette to select a light
-
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), gl_PrimitiveID);
 
+    // russian roulette to select a light
     if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
         const Light light = HYP_GET_LIGHT(closest_light_index);
 

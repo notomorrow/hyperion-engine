@@ -209,8 +209,8 @@ void main(void)
     previous_color = ADJUST_COLOR_IN(previous_color);
 
     // Moving average over number of frames
-    const float blending = 1.0 / float(blending_frame_counter + 1);
-    color = mix(previous_color, color, blending);
+    color = previous_color * (float(blending_frame_counter) / float(blending_frame_counter + 1))
+        + color * (1.0 / float(blending_frame_counter + 1));
 
     color = ADJUST_COLOR_OUT(color);
 #endif
