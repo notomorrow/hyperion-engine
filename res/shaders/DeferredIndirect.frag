@@ -118,6 +118,7 @@ void main()
     const vec3 F0 = CalculateF0(albedo_linear, metalness);
 
     F = CalculateFresnelTerm(F0, roughness, NdotV);
+    const vec3 kD = (vec3(1.0) - F) * (1.0 - metalness);
 
     const float perceptual_roughness = sqrt(roughness);
     const vec3 dfg = CalculateDFG(F, roughness, NdotV);
@@ -150,28 +151,20 @@ void main()
     CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 #endif
 
-    vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
+    // vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
 
-    vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
-    specular_ao *= energy_compensation;
+    // vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
+    // specular_ao *= energy_compensation;
 
-    vec3 Fr = ibl * E * specular_ao;
+    // vec3 Fr = ibl * E * specular_ao;
 
-    vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
-    Fd *= multibounce;
-    Fr *= multibounce;
+    // vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
+    // Fd *= multibounce;
+    // Fr *= multibounce;
 
-    // Fr *= exposure * IBL_INTENSITY;
-    // Fd *= exposure * IBL_INTENSITY;
+    vec3 spec = (ibl * mix(dfg.xxx, dfg.yyy, F0)) * energy_compensation;
 
-    result = Fd + Fr;
-
-    // vec4 final_result = vec4(result, 1.0);
-    // ApplyFog(position.xyz, final_result);
-    // result = final_result.rgb;
-
-    // TEMP -- debugging
-    // result = albedo.rgb;
+    result = kD * (irradiance * albedo_linear / HYP_FMATH_PI) + spec;//Fd + Fr;
 
 #ifdef PATHTRACER
     result = CalculatePathTracing(deferred_params, texcoord).rgb;

@@ -4,7 +4,7 @@
 #define HYPERION_SKELETON_HPP
 
 #include <core/Base.hpp>
-#include <core/DataMutationState.hpp>
+#include <core/utilities/DataMutationState.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/containers/Array.hpp>
 

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_DEFINITIONS_FILE_HPP
-#define HYPERION_DEFINITIONS_FILE_HPP
+#ifndef HYPERION_INI_FILE_HPP
+#define HYPERION_INI_FILE_HPP
 
 #include <core/Containers.hpp>
 
@@ -11,7 +11,7 @@
 
 namespace hyperion {
 
-class DefinitionsFile
+class INIFile
 {
 public:
     struct Element
@@ -44,8 +44,8 @@ public:
 
     using Section = HashMap<String, Value>;
 
-    DefinitionsFile(const FilePath &path);
-    ~DefinitionsFile() = default;
+    INIFile(const FilePath &path);
+    ~INIFile() = default;
 
     bool IsValid() const
         { return m_is_valid; }

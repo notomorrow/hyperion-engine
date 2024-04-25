@@ -1,21 +1,21 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <util/definitions/DefinitionsFile.hpp>
+#include <util/ini/INIFile.hpp>
 #include <asset/BufferedByteReader.hpp>
 #include <system/Debug.hpp>
 
 namespace hyperion {
 
-const DefinitionsFile::Element DefinitionsFile::Element::empty = { };
+const INIFile::Element INIFile::Element::empty = { };
 
-DefinitionsFile::DefinitionsFile(const FilePath &path)
+INIFile::INIFile(const FilePath &path)
     : m_path(path),
       m_is_valid(false)
 { 
     Parse();
 }
 
-void DefinitionsFile::Parse()
+void INIFile::Parse()
 {
     m_is_valid = false;
 

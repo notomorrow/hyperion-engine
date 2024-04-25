@@ -8,7 +8,7 @@
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
 #include <core/Defines.hpp>
-#include <util/definitions/DefinitionsFile.hpp>
+#include <util/ini/INIFile.hpp>
 #include <Types.hpp>
 
 #include <core/threading/Threads.hpp>

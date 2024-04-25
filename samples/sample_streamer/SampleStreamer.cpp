@@ -555,7 +555,7 @@ void SampleStreamer::InitGame()
     // add sample model
     {
         auto batch = AssetManager::GetInstance()->CreateBatch();
-        batch->Add("test_model", "models/pica_pica/pica_pica.obj");////living_room/living_room.obj");//sponza/sponza.obj");
+        batch->Add("test_model", "models/sponza/sponza.obj");//pica_pica/pica_pica.obj");////living_room/living_room.obj");
         batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
         batch->Add("cart", "models/coffee_cart/coffee_cart.obj");
         batch->LoadAsync();
@@ -675,14 +675,14 @@ void SampleStreamer::InitGame()
         
         if (results["test_model"]) {
             auto node = results["test_model"].ExtractAs<Node>();
-            node.Scale(3.0f);
-            //node.Scale(0.0125f);
+            //node.Scale(3.0f);
+            node.Scale(0.0125f);
             node.SetName("test_model");
             node.LockTransform();
 
             GetScene()->GetRoot().AddChild(node);
 
-#if 0
+#if 1
             // Add a reflection probe
             // TEMP: Commented out due to blending issues with multiple reflection probes
             m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
@@ -761,7 +761,6 @@ void SampleStreamer::InitGame()
             "New",
             []()
             {
-                HYP_BREAKPOINT;
                 DebugLog(LogType::Debug, "New clicked!\n");
             }
         });

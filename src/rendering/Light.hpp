@@ -5,7 +5,7 @@
 
 #include <core/Base.hpp>
 #include <core/containers/Bitset.hpp>
-#include <core/DataMutationState.hpp>
+#include <core/utilities/DataMutationState.hpp>
 
 #include <rendering/DrawProxy.hpp>
 #include <rendering/Material.hpp>

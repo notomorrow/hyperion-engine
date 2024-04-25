@@ -100,7 +100,8 @@ UIObject::UIObject()
       m_border_radius(5),
       m_border_flags(UI_OBJECT_BORDER_NONE),
       m_focus_state(UI_OBJECT_FOCUS_STATE_NONE),
-      m_is_visible(true)
+      m_is_visible(true),
+      m_accepts_focus(true)
 {
 }
 
@@ -459,6 +460,15 @@ void UIObject::SetDepth(int depth)
     UpdatePosition();
 }
 
+void UIObject::SetAcceptsFocus(bool accepts_focus)
+{
+    m_accepts_focus = accepts_focus;
+
+    if (HasFocus(true)) {
+        Blur();
+    }
+}
+
 void UIObject::Focus()
 {
     if (!AcceptsFocus()) {
@@ -473,9 +483,13 @@ void UIObject::Focus()
         return;
     }
 
+    SetFocusState(GetFocusState() | UI_OBJECT_FOCUS_STATE_FOCUSED);
+
+    // Note: Calling `SetFocusedObject` between `SetFocusState` and `OnGainFocus` is intentional
+    // as `SetFocusedObject` calls `Blur()` on any previously focused object (which may include a parent of this object)
+    // Some UI object types may need to know if any child object is focused when handling `OnLoseFocus`
     m_parent->SetFocusedObject(RefCountedPtrFromThis());
 
-    SetFocusState(GetFocusState() | UI_OBJECT_FOCUS_STATE_FOCUSED);
     OnGainFocus(UIMouseEventData { });
 }
 
@@ -485,16 +499,10 @@ void UIObject::Blur()
         return;
     }
 
-    if (!(GetFocusState() & UI_OBJECT_FOCUS_STATE_FOCUSED)) {
-        return;
+    if (GetFocusState() & UI_OBJECT_FOCUS_STATE_FOCUSED) {
+        SetFocusState(GetFocusState() & ~UI_OBJECT_FOCUS_STATE_FOCUSED);
+        OnLoseFocus(UIMouseEventData { });
     }
-
-    if (!m_parent) {
-        return;
-    }
-
-    SetFocusState(GetFocusState() & ~UI_OBJECT_FOCUS_STATE_FOCUSED);
-    OnLoseFocus(UIMouseEventData { });
 
     ForEachChildUIObject([](const RC<UIObject> &child)
     {
@@ -502,6 +510,10 @@ void UIObject::Blur()
 
         return UI_OBJECT_ITERATION_RESULT_CONTINUE;
     });
+
+    if (!m_parent) {
+        return;
+    }
 
     if (m_parent->GetFocusedObject() != this) {
         return;
@@ -581,7 +593,8 @@ bool UIObject::HasFocus(bool include_children) const
     // check if any child has focus
     ForEachChildUIObject([&has_focus](const RC<UIObject> &child)
     {
-        if (child->HasFocus(true)) {
+        // Don't include children in the `HasFocus` check as we're already iterating over them
+        if (child->HasFocus(false)) {
             has_focus = true;
 
             return UI_OBJECT_ITERATION_RESULT_STOP;
