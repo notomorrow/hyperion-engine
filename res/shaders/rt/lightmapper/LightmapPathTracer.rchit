@@ -238,6 +238,11 @@ void main()
     for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
 
+        // Skip directional lights for direct hits
+        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) {
+            continue;
+        }
+
         float light_dist = CheckLightIntersection(light, hit_position, gl_WorldRayDirectionEXT);
 
         if (light_dist < closest_light_dist) {

@@ -119,11 +119,10 @@ void main()
         vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
         vec3 H;
 
-        payload.throughput = vec4(1.0);
+        payload.throughput = vec4(1.0); // multiplied be albedo when sampled after bake
         payload.emissive = vec4(0.0);
         payload.triangle_index = ~0u;
         payload.entity_index = ~0u;
-        payload.beta = vec4(1.0);
         payload.normal = ray.direction.xyz;
 
         vec3 origin = ray.origin.xyz + ray.direction.xyz * RAY_OFFSET;
