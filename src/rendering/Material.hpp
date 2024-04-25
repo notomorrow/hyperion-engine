@@ -8,7 +8,7 @@
 #include <rendering/Shader.hpp>
 #include <rendering/RenderableAttributes.hpp>
 
-#include <core/DataMutationState.hpp>
+#include <core/utilities/DataMutationState.hpp>
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
 #include <core/containers/HashMap.hpp>

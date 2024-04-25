@@ -5,6 +5,7 @@
 #include <core/Base.hpp>
 #include <core/Containers.hpp>
 #include <core/functional/Delegate.hpp>
+#include <core/utilities/UniqueID.hpp>
 
 #include <scene/Node.hpp>
 #include <scene/NodeProxy.hpp>
@@ -163,6 +164,8 @@ private:
     }
 };
 
+struct UIObjectID : UniqueID { };
+
 class HYP_API UIObject : public EnableRefCountedPtrFromThis<UIObject>
 {
 protected:
@@ -179,6 +182,11 @@ public:
     virtual ~UIObject();
 
     virtual void Init();
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const UIObjectID &GetID() const
+        { return m_id; }
 
     [[nodiscard]]
     HYP_FORCE_INLINE
@@ -233,11 +241,16 @@ public:
      */
     void SetDepth(int depth);
 
-    /*! \brief Check if the UI object accepts focus. All UIObjects accept focus by default, unless overridden by derived classes
+    /*! \brief Check if the UI object accepts focus. All UIObjects accept focus by default, unless overridden by derived classes or set using \ref{SetAcceptsFocus}.
      * \return True if the this object accepts focus, false otherwise */
     [[nodiscard]]
     virtual bool AcceptsFocus() const
-        { return true; }
+        { return m_accepts_focus; }
+
+    /*! \brief Set whether the UI object accepts focus.
+     *  \details If set to true, the UI object can receive focus. If set to false, the UI object cannot receive focus.
+     *  \note If a class deriving \ref{UIObject} overrides \ref{AcceptsFocus}, this function has no effect. */
+    void SetAcceptsFocus(bool accepts_focus);
 
     /*! \brief Set the focus to this UI object, if AcceptsFocus() returns true.
      * This function is called when the UI object is focused. */
@@ -407,11 +420,15 @@ private:
     template <class Lambda>
     void ForEachChildUIObject(Lambda &&lambda) const;
 
+    const UIObjectID    m_id;
+
     bool                m_is_init;
 
     UIObjectFocusState  m_focus_state;
 
     bool                m_is_visible;
+    
+    bool                m_accepts_focus;
 
     NodeProxy           m_node_proxy;
 

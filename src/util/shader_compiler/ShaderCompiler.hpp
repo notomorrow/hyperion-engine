@@ -12,7 +12,7 @@
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
-#include <util/definitions/DefinitionsFile.hpp>
+#include <util/ini/INIFile.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>
@@ -1036,7 +1036,7 @@ private:
     );
 
     void ParseDefinitionSection(
-        const DefinitionsFile::Section &section,
+        const INIFile::Section &section,
         Bundle &bundle
     );
 
@@ -1059,7 +1059,7 @@ private:
         CompiledShaderBatch &out
     );
 
-    DefinitionsFile *m_definitions;
+    INIFile         *m_definitions;
     ShaderCache     m_cache;
     Array<Bundle>   m_bundles;
 };

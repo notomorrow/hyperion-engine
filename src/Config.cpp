@@ -68,7 +68,7 @@ Configuration::Configuration() = default;
 
 bool Configuration::LoadFromDefinitionsFile()
 {
-    const DefinitionsFile definitions(g_asset_manager->GetBasePath() / "config.def");
+    const INIFile definitions(g_asset_manager->GetBasePath() / "Config.ini");
 
     if (!definitions.IsValid()) {
         return false;
@@ -77,7 +77,7 @@ bool Configuration::LoadFromDefinitionsFile()
     for (const auto &it : definitions.GetSections()) {
         for (const auto &option_it : it.second) {
             const OptionName option_name = StringToOptionName(option_it.first);
-            const DefinitionsFile::Value &option_value = option_it.second;
+            const INIFile::Value &option_value = option_it.second;
 
             if (option_name == CONFIG_NONE || option_name >= CONFIG_MAX) {
                 DebugLog(
@@ -143,7 +143,7 @@ bool Configuration::SaveToDefinitionsFile()
         str_result += OptionNameToString(OptionName(index)) + " = " + value_string + "\n";
     }
 
-    const String path = g_asset_manager->GetBasePath() / "config.def";
+    const String path = g_asset_manager->GetBasePath() / "Config.ini";
 
     FileByteWriter writer(path.Data());
 

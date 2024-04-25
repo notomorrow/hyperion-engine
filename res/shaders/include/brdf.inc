@@ -366,9 +366,10 @@ vec4 CalculateDiffuseColor(vec4 albedo, float metalness)
 
 vec3 CalculateF0(vec3 albedo, float metalness)
 {
-    const float material_reflectance = 0.5;
-    const float reflectance = 0.16 * material_reflectance * material_reflectance;
-    return albedo * metalness + (reflectance * (1.0 - metalness));
+    const float IOR = 1.5;
+    vec3 F0 = vec3(pow(IOR - 1.0, 2.0) / pow(IOR + 1.0, 2.0));
+    F0 = mix(F0, albedo, metalness);
+    return F0;
 }
 
 vec3 CalculateFresnelTerm(vec3 F0, float roughness, float NdotV)

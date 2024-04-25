@@ -119,14 +119,6 @@ struct PushConstantData
         { return ptr && size; }
 };
 
-struct RenderListQuery
-{
-    Bucket bucket = BUCKET_INVALID;
-
-    explicit operator bool() const
-        { return bucket != BUCKET_INVALID; }
-};
-
 class RenderList
 {
 public:

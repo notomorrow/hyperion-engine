@@ -13,13 +13,6 @@ namespace hyperion {
 
 using renderer::Frame;
 
-struct RenderListNode
-{
-    RenderList      *render_list = nullptr;
-    RenderListNode  *prev = nullptr;
-    RenderListNode  *next = nullptr;
-};
-
 class RenderListContainer
 {
 public:

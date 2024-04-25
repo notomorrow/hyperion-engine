@@ -6,6 +6,7 @@
 #include <Types.hpp>
 
 namespace hyperion {
+namespace utilities {
 
 struct DataMutationState
 {
@@ -51,6 +52,10 @@ struct DataMutationState
 private:
     uint32  state;
 };
+
+} // namespace utilities
+
+using DataMutationState = utilities::DataMutationState;
 
 } // namespace hyperion
 

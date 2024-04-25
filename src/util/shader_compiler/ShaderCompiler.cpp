@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <util/shader_compiler/ShaderCompiler.hpp>
-#include <util/definitions/DefinitionsFile.hpp>
+#include <util/ini/INIFile.hpp>
 #include <util/fs/FsUtil.hpp>
 #include <util/json/JSON.hpp>
 #include <util/ByteUtil.hpp>
@@ -775,7 +775,7 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties &properties)
 }
 
 void ShaderCompiler::ParseDefinitionSection(
-    const DefinitionsFile::Section &section,
+    const INIFile::Section &section,
     ShaderCompiler::Bundle &bundle
 )
 {
@@ -980,7 +980,7 @@ bool ShaderCompiler::LoadOrCreateCompiledShaderBatch(
     GetPlatformSpecificProperties(bundle.versions);
 
     // apply each permutable property from the definitions file
-    const DefinitionsFile::Section &section = m_definitions->GetSection(name_string);
+    const INIFile::Section &section = m_definitions->GetSection(name_string);
     ParseDefinitionSection(section, bundle);
 
     const FilePath output_file_path = g_asset_manager->GetBasePath() / "data/compiled_shaders" / name_string + ".hypshader";
@@ -1050,7 +1050,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
         delete m_definitions;
     }
 
-    m_definitions = new DefinitionsFile(g_asset_manager->GetBasePath() / "shaders.def");
+    m_definitions = new INIFile(g_asset_manager->GetBasePath() / "Shaders.ini");
 
     if (!m_definitions->IsValid()) {
         DebugLog(
@@ -1074,7 +1074,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
     // create a bundle for each section.
     for (const auto &it : m_definitions->GetSections()) {
         const String &key = it.first;
-        const DefinitionsFile::Section &section = it.second;
+        const INIFile::Section &section = it.second;
 
         const Name name_from_string = CreateNameFromDynamicString(ANSIString(key));
 

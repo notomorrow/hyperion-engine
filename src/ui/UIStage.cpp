@@ -162,7 +162,17 @@ RC<UIObject> UIStage::GetUIObjectForEntity(ID<Entity> entity) const
 
 void UIStage::SetFocusedObject(const RC<UIObject> &ui_object)
 {
+    if (ui_object) {
+        DebugLog(LogType::Debug, "SetFocusedObject: %s\n", *ui_object->GetName());
+    } else {
+        DebugLog(LogType::Debug, "SetFocusedObject: nullptr\n");
+    }
+
     RC<UIObject> current_focused_ui_object = m_focused_object.Lock();
+
+    // Be sure to set the focused object to nullptr before calling Blur() to prevent infinite recursion
+    // due to Blur() calling SetFocusedObject() again.
+    m_focused_object.Reset();
 
     if (current_focused_ui_object != nullptr) {
         if (current_focused_ui_object == ui_object) {
@@ -341,9 +351,9 @@ UIEventHandlerResult UIStage::OnInputEvent(
             }
         }
 
-        if (focused_object == nullptr) {
-            SetFocusedObject(nullptr);
-        }
+        // if (focused_object == nullptr) {
+        //     SetFocusedObject(nullptr);
+        // }
 
         break;
     }

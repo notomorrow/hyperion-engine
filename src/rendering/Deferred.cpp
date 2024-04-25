@@ -618,6 +618,10 @@ ReflectionProbePass::ReflectionProbePass()
     : FullScreenPass(InternalFormat::RGBA8_SRGB),
       m_is_first_frame(true)
 {
+    SetBlendFunction(BlendFunction(
+        BlendModeFactor::SRC_ALPHA, BlendModeFactor::ONE_MINUS_SRC_ALPHA,
+        BlendModeFactor::ONE, BlendModeFactor::ONE_MINUS_SRC_ALPHA
+    ));
 }
 
 ReflectionProbePass::~ReflectionProbePass()
@@ -1118,9 +1122,9 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
     struct alignas(128)
     {
-        uint32 flags;
-        uint32 screen_width;
-        uint32 screen_height;
+        uint32  flags;
+        uint32  screen_width;
+        uint32  screen_height;
     } deferred_data;
 
     Memory::MemSet(&deferred_data, 0, sizeof(deferred_data));
