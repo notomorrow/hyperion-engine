@@ -3,7 +3,7 @@
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <math/MathUtil.hpp>
 #include <math/Transform.hpp>
 

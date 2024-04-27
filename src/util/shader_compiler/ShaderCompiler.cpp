@@ -1708,14 +1708,6 @@ bool ShaderCompiler::CompileBundle(
                     BufferedReader reader;
 
                     if (output_filepath.Open(reader)) {
-                        DebugLog(
-                            LogType::Info,
-                            "Shader source (%s) has not been modified since binary was generated. Reusing shader binary at path: %s\n\tProperties: [%s]\n",
-                            item.file.path.Data(),
-                            output_filepath.Data(),
-                            properties.ToString().Data()
-                        );
-
                         compiled_shader.modules[item.type] = reader.ReadBytes();
 
                         return;

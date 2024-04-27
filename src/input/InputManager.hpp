@@ -7,9 +7,9 @@
 #define NUM_MOUSE_BUTTONS 3
 
 #include <core/containers/FlatMap.hpp>
-#include <math/Vector2.hpp>
+#include <core/system/AppContext.hpp>
 
-#include <system/Application.hpp>
+#include <math/Vector2.hpp>
 
 #include <atomic>
 

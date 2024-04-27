@@ -13,7 +13,7 @@
 
 #include <asset/Loader.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <Constants.hpp>
 
 namespace hyperion {

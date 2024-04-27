@@ -1,4 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #include <ui/UIObject.hpp>
 #include <ui/UIStage.hpp>
 
@@ -20,12 +21,11 @@
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
 
-#include <system/Application.hpp>
-
 #include <input/InputManager.hpp>
 
 #include <core/threading/Threads.hpp>
 #include <core/containers/Queue.hpp>
+#include <core/system/AppContext.hpp>
 
 #include <Engine.hpp>
 

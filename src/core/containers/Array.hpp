@@ -10,7 +10,7 @@
 #include <core/memory/Memory.hpp>
 #include <core/utilities/ValueStorage.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <Types.hpp>
 #include <HashCode.hpp>
@@ -295,8 +295,8 @@ public:
     )
 
 protected:
-
-    HYP_FORCE_INLINE T *GetBuffer()
+    HYP_FORCE_INLINE
+    T *GetBuffer()
     {
         if constexpr (use_inline_storage) {
             return reinterpret_cast<T *>(m_is_dynamic ? m_buffer : &m_inline_storage[0]);
@@ -305,7 +305,8 @@ protected:
         }
     }
 
-    HYP_FORCE_INLINE const T *GetBuffer() const
+    HYP_FORCE_INLINE
+    const T *GetBuffer() const
     {
         if constexpr (use_inline_storage) {
             return reinterpret_cast<const T *>(m_is_dynamic ? m_buffer : &m_inline_storage[0]);
@@ -314,7 +315,8 @@ protected:
         }
     }
 
-    HYP_FORCE_INLINE Storage *GetStorage()
+    HYP_FORCE_INLINE
+    Storage *GetStorage()
     {
         if constexpr (use_inline_storage) {
             return m_is_dynamic ? m_buffer : &m_inline_storage[0];
@@ -323,7 +325,8 @@ protected:
         }
     }
 
-    HYP_FORCE_INLINE const Storage *GetStorage() const
+    HYP_FORCE_INLINE
+    const Storage *GetStorage() const
     {
         if constexpr (use_inline_storage) {
             return m_is_dynamic ? m_buffer : &m_inline_storage[0];
@@ -747,9 +750,13 @@ void Array<T, NumInlineBytes>::Resize(SizeType new_size)
             Memory::Construct<T>(&buffer[m_size++].data_buffer);
         }
     } else {
-        while (new_size < Size()) {
-            PopBack();
+        const SizeType diff = current_size - new_size;
+
+        for (SizeType i = m_size; i > m_start_offset;) {
+            Memory::Destruct(GetStorage()[--i].Get());
         }
+
+        m_size -= diff;
     }
 }
 
@@ -775,9 +782,13 @@ void Array<T, NumInlineBytes>::ResizeUninitialized(SizeType new_size)
 
         m_size += diff;
     } else {
-        while (new_size < Size()) {
-            PopBack();
+        const SizeType diff = current_size - new_size;
+
+        for (SizeType i = m_size; i > m_start_offset;) {
+            Memory::Destruct(GetStorage()[--i].Get());
         }
+
+        m_size -= diff;
     }
 }
 
@@ -1087,7 +1098,9 @@ auto Array<T, NumInlineBytes>::Insert(ConstIterator where, const ValueType &valu
         return Begin();
     }
 
+#ifdef HYP_DEBUG_MODE
     AssertThrow(where >= Begin() && where <= End());
+#endif
 
     if (m_size + 1 >= m_capacity) {
         if (m_capacity >= Size() + 1) {
@@ -1097,7 +1110,9 @@ auto Array<T, NumInlineBytes>::Insert(ConstIterator where, const ValueType &valu
         }
     }
 
+#ifdef HYP_DEBUG_MODE
     AssertThrow(m_capacity >= m_size + 1);
+#endif
 
     SizeType index;
 
@@ -1120,7 +1135,6 @@ auto Array<T, NumInlineBytes>::Insert(ConstIterator where, const ValueType &valu
     return Begin() + index;
 }
 
-
 template <class T, SizeType NumInlineBytes>
 auto Array<T, NumInlineBytes>::Insert(ConstIterator where, ValueType &&value) -> Iterator
 {
@@ -1136,7 +1150,9 @@ auto Array<T, NumInlineBytes>::Insert(ConstIterator where, ValueType &&value) ->
         return Begin();
     }
 
+#ifdef HYP_DEBUG_MODE
     AssertThrow(where >= Begin() && where <= End());
+#endif
 
     if (m_size + 1 >= m_capacity) {
         if (m_capacity >= Size() + 1) {
@@ -1146,7 +1162,9 @@ auto Array<T, NumInlineBytes>::Insert(ConstIterator where, ValueType &&value) ->
         }
     }
 
+#ifdef HYP_DEBUG_MODE
     AssertThrow(m_capacity >= m_size + 1);
+#endif
 
     SizeType index;
 
@@ -1172,7 +1190,9 @@ auto Array<T, NumInlineBytes>::Insert(ConstIterator where, ValueType &&value) ->
 template <class T, SizeType NumInlineBytes>
 auto Array<T, NumInlineBytes>::PopFront() -> ValueType
 {
+#ifdef HYP_DEBUG_MODE
     AssertThrow(Size() != 0);
+#endif
 
     auto value = std::move(GetStorage()[m_start_offset].Get());
 
@@ -1186,7 +1206,9 @@ auto Array<T, NumInlineBytes>::PopFront() -> ValueType
 template <class T, SizeType NumInlineBytes>
 auto Array<T, NumInlineBytes>::PopBack() -> ValueType
 {
+#ifdef HYP_DEBUG_MODE
     AssertThrow(m_size != 0);
+#endif
 
     auto value = std::move(GetStorage()[m_size - 1].Get());
 

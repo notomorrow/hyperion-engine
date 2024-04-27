@@ -292,7 +292,7 @@ RC<UIMenuItem> UIMenuBar::AddMenuItem(Name name, const String &text)
 
     menu_item->OnClick.Bind([this, name](const UIMouseEventData &data) -> UIEventHandlerResult
     {
-        if (data.button == MOUSE_BUTTON_LEFT)
+        if (data.button == MouseButton::MOUSE_BUTTON_LEFT)
         {
             const uint menu_item_index = GetMenuItemIndex(name);
 

@@ -64,6 +64,7 @@ public:
     void Initialize();
 
 private:
+    void CreateFontAtlas();
     void CreateMainPanel();
     void CreateInitialState();
 
@@ -74,10 +75,24 @@ private:
     RC<UIObject>    m_main_panel;
 };
 
+void HyperionEditorImpl::CreateFontAtlas()
+{
+    RC<FontFace> font_face = AssetManager::GetInstance()->Load<FontFace>("fonts/Roboto/Roboto-Regular.ttf");
+
+    if (!font_face) {
+        DebugLog(LogType::Error, "Failed to load font face!\n");
+
+        return;
+    }
+
+    RC<FontAtlas> atlas(new FontAtlas(std::move(font_face)));
+    atlas->Render();
+
+    GetUIStage()->SetDefaultFontAtlas(std::move(atlas));
+}
+
 void HyperionEditorImpl::CreateMainPanel()
 {
-    
-
     m_main_panel = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Main_Panel), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }), true);
     // btn->SetPadding(Vec2i { 5, 5 });
     
@@ -162,30 +177,23 @@ void HyperionEditorImpl::CreateMainPanel()
     tab_view->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
     m_main_panel->AddChildUIObject(tab_view);
 
-    auto scene_tab_content_grid = GetUIStage()->CreateUIObject<UIGrid>(HYP_NAME(Scene_Tab_Grid), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-    scene_tab_content_grid->SetNumColumns(3);
+    // auto scene_tab_content_grid = GetUIStage()->CreateUIObject<UIGrid>(HYP_NAME(Scene_Tab_Grid), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+    // scene_tab_content_grid->SetNumColumns(3);
     // scene_tab_content_grid->SetNumRows(5);
 
-    auto scene_tab_content_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Scene_Tab_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 30, UIObjectSize::PIXEL }));
-    scene_tab_content_text->SetText("grid test 1234567");
-    scene_tab_content_text->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    scene_tab_content_text->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-    scene_tab_content_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
+    // auto scene_tab_content_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Scene_Tab_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 30, UIObjectSize::PIXEL }));
+    // scene_tab_content_text->SetText("grid test 1234567");
+    // scene_tab_content_text->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    // scene_tab_content_text->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+    // scene_tab_content_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
 
-    auto scene_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(HYP_NAME(Hello_world_button), Vec2i { 20, 0 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
-    scene_tab_content_button->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    scene_tab_content_button->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    scene_tab_content_button->SetText("Hello hello helloworld");
+    // auto scene_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(HYP_NAME(Hello_world_button), Vec2i { 20, 0 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
+    // scene_tab_content_button->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    // scene_tab_content_button->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    // scene_tab_content_button->SetText("Hello hello helloworld");
 
     auto scene_tab = tab_view->AddTab(HYP_NAME(Scene_Tab), "Scene");
-    //scene_tab->GetContents()->AddChildUIObject(scene_tab_content_grid);
-
-    scene_tab_content_grid->AddChildUIObject(scene_tab_content_text);
-    scene_tab->GetContents()->AddChildUIObject(scene_tab_content_button);
-
-    auto game_tab = tab_view->AddTab(HYP_NAME(Game_Tab), "Game");
     auto ui_image = GetUIStage()->CreateUIObject<UIImage>(HYP_NAME(Sample_Image), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-    // ui_image->SetTexture(AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg"));
 
     ui_image->OnMouseDown.Bind([this](...)
     {
@@ -214,7 +222,10 @@ void HyperionEditorImpl::CreateMainPanel()
     }).Detach();
 
     ui_image->SetTexture(m_scene_texture);
-    game_tab->GetContents()->AddChildUIObject(ui_image);
+    scene_tab->GetContents()->AddChildUIObject(ui_image);
+
+    auto game_tab = tab_view->AddTab(HYP_NAME(Game_Tab), "Game");
+    // ui_image->SetTexture(AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg"));
 }
 
 void HyperionEditorImpl::CreateInitialState()
@@ -242,11 +253,9 @@ void HyperionEditorImpl::CreateInitialState()
 
 void HyperionEditorImpl::Initialize()
 {
+    CreateFontAtlas();
     CreateMainPanel();
     CreateInitialState();
-
-
-
 
     // auto ui_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Sample_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 18, UIObjectSize::PIXEL }));
     // ui_text->SetText("Hi hello");
@@ -278,8 +287,8 @@ void HyperionEditorImpl::Initialize()
 
 #pragma region HyperionEditor
 
-HyperionEditor::HyperionEditor(RC<Application> application)
-    : Game(std::move(application))
+HyperionEditor::HyperionEditor()
+    : Game()
 {
 }
 
@@ -297,7 +306,7 @@ void HyperionEditor::InitGame()
     
     Extent2D window_size;
 
-    if (ApplicationWindow *current_window = GetApplication()->GetCurrentWindow()) {
+    if (ApplicationWindow *current_window = GetAppContext()->GetCurrentWindow()) {
         window_size = current_window->GetDimensions();
     } else {
         window_size = Extent2D { 1280, 720 };
@@ -308,6 +317,32 @@ void HyperionEditor::InitGame()
     m_impl = new HyperionEditorImpl(GetScene(), GetScene()->GetCamera(), GetUIStage());
     m_impl->SetSceneTexture(screen_capture_component->GetTexture());
     m_impl->Initialize();
+
+    // add sun
+    auto sun = CreateObject<Light>(DirectionalLight(
+        Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
+        Color(1.0f),
+        4.0f
+    ));
+
+    InitObject(sun);
+
+    auto sun_node = m_scene->GetRoot().AddChild();
+    sun_node.SetName("Sun");
+
+    auto sun_entity = m_scene->GetEntityManager()->AddEntity();
+    sun_node.SetEntity(sun_entity);
+    sun_node.SetWorldTranslation(Vec3f { -0.1f, 0.65f, 0.1f });
+
+    m_scene->GetEntityManager()->AddComponent(sun_entity, LightComponent {
+        sun
+    });
+
+    m_scene->GetEntityManager()->AddComponent(sun_entity, ShadowMapComponent {
+        .mode       = ShadowMode::PCF,
+        .radius     = 18.0f,
+        .resolution = { 2048, 2048 }
+    });
 }
 
 void HyperionEditor::Teardown()

@@ -9,7 +9,7 @@
 #include <scene/Node.hpp>
 #include <Constants.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <asset/Loader.hpp>
 

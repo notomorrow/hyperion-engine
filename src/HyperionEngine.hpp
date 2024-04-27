@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include <Engine.hpp>
-#include <system/Application.hpp>
+#include <core/system/AppContext.hpp>
 #include <core/Defines.hpp>
+#include <Engine.hpp>
 
 namespace hyperion {
 
-HYP_API void InitializeApplication(RC<Application> application);
+HYP_API void InitializeAppContext(RC<AppContext> app_context);
 HYP_API void ShutdownApplication();
 
 } // namespace hyperion

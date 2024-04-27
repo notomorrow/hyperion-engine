@@ -1,5 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
-#include <system/StackDump.hpp>
+
+#include <core/system/StackDump.hpp>
 
 #ifdef HYP_WINDOWS
 #define WIN32_LEAN_AND_MEAN
@@ -10,6 +11,7 @@
 #endif
 
 namespace hyperion {
+namespace sys {
 
 static Array<String> CreatePlatformStackTrace(uint depth)
 {
@@ -96,9 +98,10 @@ static Array<String> CreatePlatformStackTrace(uint depth)
     return stack_trace;
 }
 
-HYP_API StackDump::StackDump(uint depth)
+StackDump::StackDump(uint depth)
     : m_trace(CreatePlatformStackTrace(depth))
 {
 }
 
+} // namespace sys
 } // namespace hyperion

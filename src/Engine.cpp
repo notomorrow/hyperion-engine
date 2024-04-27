@@ -9,6 +9,7 @@
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/AsyncCompute.hpp>
+#include <rendering/backend/RendererInstance.hpp>
 
 #include <Game.hpp>
 #include <core/threading/GameThread.hpp>
@@ -81,17 +82,12 @@ Engine::~Engine()
 HYP_API bool Engine::InitializeGame(Game *game)
 {
     AssertThrow(game != nullptr);
-    AssertThrowMsg(game_thread == nullptr || !game_thread->IsRunning(), "Game thread already running; cannot initialize game instance");
 
     Threads::AssertOnThread(ThreadName::THREAD_MAIN, "Must be on main thread to initialize game instance");
 
     game->Init();
 
-    if (game_thread == nullptr) {
-        game_thread.Reset(new GameThread);
-    }
-
-    return game_thread->Start(game);
+    return true;
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -139,22 +135,23 @@ void Engine::FindTextureFormatDefaults()
     );
 }
 
-HYP_API void Engine::Initialize(RC<Application> application)
+HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 {
-    m_application = application;
+    AssertThrow(app_context != nullptr);
+
+    m_app_context = app_context;
 
     Threads::AssertOnThread(ThreadName::THREAD_MAIN);
     Threads::SetCurrentThreadPriority(ThreadPriorityValue::HIGHEST);
-
-    game_thread.Reset(new GameThread);
 
     m_crash_handler.Initialize();
 
     TaskSystem::GetInstance().Start();
 
     AssertThrow(m_instance == nullptr);
-    m_instance.Reset(new Instance(application));
-    HYPERION_ASSERT_RESULT(m_instance->Initialize(use_debug_layers));
+    m_instance.Reset(new Instance());
+
+    HYPERION_ASSERT_RESULT(m_instance->Initialize(*app_context, use_debug_layers));
 
     FindTextureFormatDefaults();
 
@@ -372,25 +369,6 @@ void Engine::FinalizeStop()
             LogType::Debug,
             "Task system stopped\n"
         );
-    }
-
-    // Stop game thread and wait for it to finish
-    if (game_thread != nullptr) {
-        DebugLog(
-            LogType::Debug,
-            "Stopping game thread\n"
-        );
-
-        game_thread->Stop();
-        while (game_thread->IsRunning()) {
-            // DebugLog(
-            //     LogType::Debug,
-            //     "Waiting for game thread to stop\n"
-            // );
-
-            Threads::Sleep(1);
-        }
-        game_thread->Join();
     }
 
     HYPERION_ASSERT_RESULT(m_global_descriptor_table->Destroy(m_instance->GetDevice()));

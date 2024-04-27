@@ -7,6 +7,8 @@
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/utilities/Optional.hpp>
+#include <core/system/AppContext.hpp>
+#include <core/Defines.hpp>
 
 #include <input/InputManager.hpp>
 
@@ -16,12 +18,8 @@
 
 #include <rendering/backend/RendererFrame.hpp>
 
-#include <system/Application.hpp>
-
 #include <dotnet/Assembly.hpp>
 #include <dotnet/Object.hpp>
-
-#include <core/Defines.hpp>
 
 namespace hyperion {
 
@@ -43,15 +41,21 @@ class Game
     friend class GameThread;
 
 public:
-    HYP_API Game(RC<Application> application);
-    HYP_API Game(RC<Application> application, Optional<ManagedGameInfo> managed_game_info);
+    HYP_API Game();
+    HYP_API Game(Optional<ManagedGameInfo> managed_game_info);
     HYP_API virtual ~Game();
 
     const Handle<Scene> &GetScene() const
         { return m_scene; }
 
-    const RC<Application> &GetApplication() const
-        { return m_application; }
+    const RC<AppContext> &GetAppContext() const
+        { return m_app_context; }
+
+    GameThread *GetGameThread() const
+        { return m_game_thread.Get(); }
+
+    void SetAppContext(const RC<AppContext> &app_context)
+        { m_app_context = app_context; }
 
     HYP_API virtual void Init() final;
     HYP_API virtual void Update(GameCounter::TickUnit delta) final;
@@ -75,7 +79,7 @@ protected:
     const UniquePtr<InputManager> &GetInputManager() const
         { return m_input_manager; }
 
-    RC<Application>             m_application;
+    RC<AppContext>              m_app_context;
 
     UniquePtr<InputManager>     m_input_manager;
     Handle<Scene>               m_scene;
@@ -86,9 +90,13 @@ protected:
     UniquePtr<Object>           m_managed_game_object;
 
 private:
+    void RequestStop();
+
     bool                        m_is_init;
 
     Optional<ManagedGameInfo>   m_managed_game_info;
+
+    UniquePtr<GameThread>       m_game_thread;
 };
 
 } // namespace hyperion

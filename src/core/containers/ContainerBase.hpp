@@ -266,11 +266,8 @@ public:
     {
         static_assert(Container::is_contiguous && OtherContainer::is_contiguous, "Containers must be contiguous to perform bitwise comparison");
 
-        const SizeType this_size = static_cast<const Container *>(this)->Size();
-        const SizeType this_size_bytes = this_size * sizeof(typename Container::ValueType);
-
-        const SizeType other_size = other_container.Size();
-        const SizeType other_size_bytes = other_size * sizeof(typename OtherContainer::ValueType);
+        const SizeType this_size_bytes = static_cast<const Container *>(this)->ByteSize();
+        const SizeType other_size_bytes = other_container.ByteSize();
 
         if (this_size_bytes != other_size_bytes) {
             return false;

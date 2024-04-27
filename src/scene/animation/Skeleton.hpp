@@ -13,7 +13,7 @@
 #include <scene/animation/Animation.hpp>
 #include <scene/NodeProxy.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <GameCounter.hpp>
 #include <Types.hpp>

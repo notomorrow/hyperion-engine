@@ -6,7 +6,7 @@
 #include <core/containers/FlatMap.hpp>
 #include <core/threading/Thread.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <Types.hpp>
 

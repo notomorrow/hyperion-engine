@@ -12,7 +12,7 @@
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/EntityDrawData.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <Types.hpp>
 
@@ -54,6 +54,85 @@ template <>
 struct ResourceUsageTypeMap<Skeleton>
     { enum { value = RESOURCE_USAGE_TYPE_SKELETON }; };
 
+struct ResourceUsageMapBase
+{
+    Bitset  usage_bits;
+
+    virtual ~ResourceUsageMapBase() = default;
+
+    virtual void TakeUsagesFrom(ResourceUsageMapBase *other) = 0;
+};
+
+template <class T>
+struct ResourceUsageMap : ResourceUsageMapBase
+{
+    HashMap<ID<T>, Handle<T>>   handles;
+
+    virtual ~ResourceUsageMap() override
+    {
+        for (auto &it : handles) {
+            // Use SafeRelease to defer the actual destruction of the resource.
+            // This is used so that any resources that will require a mutex lock to release render side resources
+            // will not cause a deadlock.
+            DebugLog(LogType::Debug, "Safe releasing handle of type %s for resource ID: %u", TypeName<T>().Data(), it.first.Value());
+            
+            g_safe_deleter->SafeReleaseHandle(std::move(it.second));
+        }
+    }
+
+    virtual void TakeUsagesFrom(ResourceUsageMapBase *other) override
+    {
+        ResourceUsageMap<T> *other_map = static_cast<ResourceUsageMap<T> *>(other);
+
+        // If any of the bitsets are different sizes, resize them to match the largest one,
+        // this makes ~ and & operations work as expected
+        if (usage_bits.NumBits() > other_map->usage_bits.NumBits()) {
+            other_map->usage_bits.Resize(usage_bits.NumBits());
+        } else if (usage_bits.NumBits() < other_map->usage_bits.NumBits()) {
+            usage_bits.Resize(other_map->usage_bits.NumBits());
+        }
+
+        SizeType first_set_bit_index;
+
+        Bitset removed_id_bits = usage_bits & ~other_map->usage_bits;
+
+        // Iterate over the bits that were removed, and drop the references to them.
+        while ((first_set_bit_index = removed_id_bits.FirstSetBitIndex()) != -1) {
+            const auto it = handles.Find(ID<T>::FromIndex(first_set_bit_index));
+
+#ifdef HYP_DEBUG_MODE
+            AssertThrow(it != handles.End());
+            AssertThrow(it->second.IsValid());
+#endif
+            // Use SafeRelease to defer the actual destruction of the resource.
+            // This is used so that any resources that will require a mutex lock to release render side resources
+            // will not cause a deadlock.
+            g_safe_deleter->SafeReleaseHandle(std::move(it->second));
+
+            removed_id_bits.Set(first_set_bit_index, false);
+        }
+
+        Bitset newly_added_id_bits = other_map->usage_bits & ~usage_bits;
+
+        while ((first_set_bit_index = newly_added_id_bits.FirstSetBitIndex()) != -1) {
+            // Move the handle from the other map to this map
+            const auto it = other_map->handles.Find(ID<T>::FromIndex(first_set_bit_index));
+
+#ifdef HYP_DEBUG_MODE
+            AssertThrow(it != other_map->handles.End());
+            AssertThrow(it->second.IsValid());
+#endif
+
+            handles.Set(it->first, std::move(it->second));
+
+            newly_added_id_bits.Set(first_set_bit_index, false);
+        }
+
+        usage_bits = std::move(other_map->usage_bits);
+    }
+};
+
+
 // holds a handle for any resource needed in
 // rendering, so that objects like meshes and materials
 // do not get destroyed while being rendered.
@@ -62,30 +141,7 @@ struct ResourceUsageTypeMap<Skeleton>
 class RenderResourceManager
 {
 private:
-    struct ResourceUsageMapBase
-    {
-    };
-
-    template <class T>
-    struct ResourceUsageMap : ResourceUsageMapBase
-    {
-        HashMap<ID<T>, Handle<T>>   handles;
-        Bitset                      usage_bits;
-
-        ~ResourceUsageMap()
-        {
-            for (auto &it : handles) {
-                // Use SafeRelease to defer the actual destruction of the resource.
-                // This is used so that any resources that will require a mutex lock to release render side resources
-                // will not cause a deadlock.
-                DebugLog(LogType::Debug, "Safe releasing handle of type %s for resource ID: %u", TypeName<T>().Data(), it.first.Value());
-                
-                g_safe_deleter->SafeReleaseHandle(std::move(it.second));
-            }
-        }
-    };
-
-    FixedArray<UniquePtr<ResourceUsageMapBase>, RESOURCE_USAGE_TYPE_MAX> m_resource_usage_maps;
+    FixedArray<UniquePtr<ResourceUsageMapBase>, RESOURCE_USAGE_TYPE_MAX>    m_resource_usage_maps;
 
 public:
 
@@ -95,6 +151,20 @@ public:
     RenderResourceManager(RenderResourceManager &&other) noexcept           = default;
     RenderResourceManager &operator=(RenderResourceManager &&other)         = default;
     ~RenderResourceManager()                                                = default;
+
+    void TakeUsagesFrom(RenderResourceManager &other)
+    {
+        if (&other == this) {
+            return;
+        }
+
+        for (uint i = 0; i < RESOURCE_USAGE_TYPE_MAX; i++) {
+            AssertThrow(m_resource_usage_maps[i] == nullptr);
+            AssertThrow(other.m_resource_usage_maps[i] != nullptr);
+
+            m_resource_usage_maps[i]->TakeUsagesFrom(other.m_resource_usage_maps[i].Get());
+        }
+    }
 
     template <class T>
     HYP_FORCE_INLINE
@@ -113,19 +183,27 @@ public:
     }
 
     template <class T>
-    void SetIsUsed(ID<T> id, Handle<T> &&handle, bool is_used)
+    void SetIsUsed(ResourceUsageMap<T> *ptr, ID<T> id, Handle<T> &&handle, bool is_used)
     {
-        if (!id) {
+        if (!id.IsValid()) {
+            DebugLog(
+                LogType::Warn,
+                "Invalid ID passed to SetIsUsed for resource type %s\n",
+                TypeName<T>().Data()
+            );
+
             return;
         }
 
-        ResourceUsageMap<T> *ptr = GetResourceUsageMap<T>();
+        DebugLog(LogType::Debug, "SetIsUsed() : resource ID: %u of type: %s, is_used: %d\n", id.Value(), TypeName<T>().Data(), is_used ? 1 : 0);
 
         if (is_used != ptr->usage_bits.Test(id.ToIndex())) {
+            DebugLog(LogType::Debug, "SetIsUsed() : changed for resource ID: %u of type: %s, is_used: %d\n", id.Value(), TypeName<T>().Data(), is_used ? 1 : 0);
+
             ptr->usage_bits.Set(id.ToIndex(), is_used);
 
             if (is_used) {
-                if (!handle) {
+                if (!handle.IsValid()) {
                     // Grab a handle from the resource manager, incrementing the reference count
                     handle = Handle<T>(id);
                 }
@@ -140,16 +218,16 @@ public:
 
     template <class T>
     HYP_FORCE_INLINE
-    void SetIsUsed(ID<T> id, bool is_used)
+    void SetIsUsed(ResourceUsageMapBase *ptr, ID<T> id, bool is_used)
     {
-        SetIsUsed<T>(id, Handle<T>(), is_used);
+        SetIsUsed<T>(static_cast<ResourceUsageMap<T> *>(ptr), id, Handle<T>(), is_used);
     }
 
     template <class T>
     HYP_FORCE_INLINE
     bool IsUsed(ID<T> id) const
     {
-        if (!id) {
+        if (!id.IsValid()) {
             return false;
         }
 

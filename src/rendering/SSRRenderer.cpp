@@ -318,11 +318,8 @@ void SSRRenderer::CreateComputePipelines()
 
 void SSRRenderer::Render(Frame *frame)
 {
-    const auto &scene_binding = g_engine->render_state.GetScene();
-    const uint scene_index = scene_binding.id.ToIndex();
-
-    const auto &camera_binding = g_engine->render_state.GetCamera();
-    const uint camera_index = camera_binding.id.ToIndex();
+    const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
+    const uint camera_index = g_engine->render_state.GetCamera().id.ToIndex();
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();

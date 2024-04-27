@@ -1,4 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_STACK_DUMP_HPP
 #define HYPERION_STACK_DUMP_HPP
 
@@ -7,11 +8,12 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
+namespace sys {
 
-class StackDump
+class HYP_API StackDump
 {
 public:
-    HYP_API StackDump(uint depth = 20);
+    StackDump(uint depth = 20);
 
     StackDump(const StackDump &other)                   = default;
     StackDump &operator=(const StackDump &other)        = default;
@@ -29,6 +31,10 @@ private:
     Array<String>   m_trace;
 };
 
+} // namespace sys
+
+using sys::StackDump;
+
 } // namespace hyperion
 
-#endif // HYPERION_STACK_DUMP_HPP
+#endif

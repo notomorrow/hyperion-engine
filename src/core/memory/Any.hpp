@@ -5,7 +5,7 @@
 
 #include <core/utilities/TypeID.hpp>
 #include <core/memory/Memory.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <Types.hpp>
 
 #include <core/Defines.hpp>

@@ -15,7 +15,7 @@
 #include <math/Matrix3.hpp>
 #include <math/Matrix4.hpp>
 #include <math/Quaternion.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <Types.hpp>
 

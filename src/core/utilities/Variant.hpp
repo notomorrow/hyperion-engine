@@ -10,7 +10,7 @@
 
 #include <math/MathUtil.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <Types.hpp>
 
 #include <type_traits>

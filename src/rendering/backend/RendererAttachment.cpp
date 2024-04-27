@@ -2,7 +2,7 @@
 
 #include <rendering/backend/RendererAttachment.hpp>
 #include <rendering/backend/RendererDevice.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 namespace hyperion::renderer {
 

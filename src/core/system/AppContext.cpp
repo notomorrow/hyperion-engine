@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <system/Application.hpp>
-#include <system/Debug.hpp>
+#include <core/system/AppContext.hpp>
+#include <core/system/Debug.hpp>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -9,6 +9,7 @@
 #include <rendering/backend/RendererInstance.hpp>
 
 namespace hyperion {
+namespace sys {
 
 SDL_Event *SystemEvent::GetInternalEvent() {
     return &(this->sdl_event);
@@ -111,20 +112,20 @@ bool SDLApplicationWindow::HasMouseFocus() const
     return focus_window == window;
 }
 
-SDLApplication::SDLApplication(ANSIString name, int argc, char **argv)
-    : Application(std::move(name), argc, argv)
+SDLAppContext::SDLAppContext(ANSIString name, const CommandLineArguments &arguments)
+    : AppContext(std::move(name), arguments)
 {
     const int sdl_init_result = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
     AssertThrowMsg(sdl_init_result == 0, "Failed to initialize SDL: %s", SDL_GetError());
 }
 
-SDLApplication::~SDLApplication()
+SDLAppContext::~SDLAppContext()
 {
     SDL_Quit();
 }
 
-UniquePtr<ApplicationWindow> SDLApplication::CreateSystemWindow(WindowOptions window_options)
+UniquePtr<ApplicationWindow> SDLAppContext::CreateSystemWindow(WindowOptions window_options)
 {
     UniquePtr<SDLApplicationWindow> window;
     window.Reset(new SDLApplicationWindow(window_options.title.Data(), window_options.size));
@@ -133,7 +134,7 @@ UniquePtr<ApplicationWindow> SDLApplication::CreateSystemWindow(WindowOptions wi
     return window;
 }
 
-int SDLApplication::PollEvent(SystemEvent &event)
+int SDLAppContext::PollEvent(SystemEvent &event)
 {
     const int result = SDL_PollEvent(event.GetInternalEvent());
 
@@ -152,7 +153,7 @@ int SDLApplication::PollEvent(SystemEvent &event)
 }
 
 #ifdef HYP_VULKAN
-bool SDLApplication::GetVkExtensions(Array<const char *> &out_extensions) const
+bool SDLAppContext::GetVkExtensions(Array<const char *> &out_extensions) const
 {
     uint32 num_extensions = 0;
     SDL_Window *window = static_cast<SDLApplicationWindow *>(m_current_window.Get())->GetInternalWindow();
@@ -171,8 +172,8 @@ bool SDLApplication::GetVkExtensions(Array<const char *> &out_extensions) const
 }
 #endif
 
-Application::Application(ANSIString name, int argc, char **argv)
-    : m_arguments(argc, argv)
+AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
+    : m_arguments(arguments)
 {
     if (name == nullptr) {
         name = "HyperionApp";
@@ -181,13 +182,14 @@ Application::Application(ANSIString name, int argc, char **argv)
     m_name = name;
 }
 
-Application::~Application() = default;
+AppContext::~AppContext() = default;
 
-void Application::SetCurrentWindow(UniquePtr<ApplicationWindow> &&window)
+void AppContext::SetCurrentWindow(UniquePtr<ApplicationWindow> &&window)
 {
     m_current_window = std::move(window);
 
     OnCurrentWindowChanged.Broadcast(m_current_window.Get());
 }
 
+} // namespace sys
 } // namespace hyperion

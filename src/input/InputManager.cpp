@@ -2,6 +2,8 @@
 
 #include <input/InputManager.hpp>
 
+#include <core/system/AppContext.hpp>
+
 #include <core/threading/Threads.hpp>
 
 #include <iostream>

@@ -22,6 +22,7 @@ class Bitset
 public:
     using BlockType = uint32;
 
+    static constexpr uint32 num_preallocated_blocks = 2;
     static constexpr uint32 num_bits_per_block = sizeof(BlockType) * CHAR_BIT;
 
 private:
@@ -45,19 +46,25 @@ public:
 
     Bitset(const Bitset &other)                 = default;
     Bitset &operator=(const Bitset &other)      = default;
-    Bitset(Bitset &&other) noexcept             = default;
-    Bitset &operator=(Bitset &&other) noexcept  = default;
+    Bitset(Bitset &&other) noexcept;
+    Bitset &operator=(Bitset &&other) noexcept;
     ~Bitset()                                   = default;
 
     [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(const Bitset &other) const
-        { return m_blocks.CompareBitwise(other.m_blocks); }
+    {
+        if (m_blocks.Size() == other.m_blocks.Size()) {
+            return m_blocks.CompareBitwise(other.m_blocks);
+        }
+
+        return (*this | other).m_blocks.CompareBitwise(m_blocks.Size() > other.m_blocks.Size() ? other.m_blocks : m_blocks);
+    }
     
     [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!=(const Bitset &other) const
-        { return m_blocks.CompareBitwise(other.m_blocks); }
+        { return !operator==(other); }
 
     /*! \brief Returns a Bitset with all bits flipped. 
         Note, that the number of bits in the returned bitset is the same as
@@ -76,17 +83,17 @@ public:
     HYP_API Bitset operator^(const Bitset &other) const;
     HYP_API Bitset &operator^=(const Bitset &other);
 
-    /*! \brief Resizes the bitset to the given number of bits. 
-        If the new number of bits is greater than the current number of bits,
-        the new bits are set to the given value.
-        Setting num_bits to a value < 64 has no effect 
-        \param num_bits The new number of bits in the bitset.
-        \param value The value to set the new bits to. */
-    HYP_API Bitset &Resize(uint32 num_bits, bool value = false);
+    /*! \brief Resizes the bitset to the given number of bits.
+        \param num_bits The new number of bits in the bitset. */
+    HYP_API Bitset &Resize(uint32 num_bits);
 
     /*! \brief Returns the index of the first set bit. If no bit is set, -1 is returned.
         \returns The index of the first set bit. */
     HYP_API uint64 FirstSetBitIndex() const;
+
+    /*! \brief Returns the index of the last set bit. If no bit is set, -1 is returned.
+        \returns The index of the last set bit. */
+    HYP_API uint64 LastSetBitIndex() const;
 
     /*! \brief Get the value of the bit at the given index.
         \param index The index of the bit to get.
@@ -95,8 +102,10 @@ public:
     HYP_FORCE_INLINE
     bool Get(uint32 index) const
     {
-        return GetBlockIndex(index) < m_blocks.Size()
-            && (m_blocks[GetBlockIndex(index)] & GetBitMask(index));
+        const uint32 block_index = GetBlockIndex(index);
+
+        return block_index < m_blocks.Size()
+            && (m_blocks[block_index] & GetBitMask(index));
     }
 
     /*! \brief Test the value of the bit at the given index.
@@ -111,6 +120,11 @@ public:
         \param index The index of the bit to set.
         \param value True to set the bit, false to unset the bit. */
     HYP_API void Set(uint32 index, bool value);
+
+    /*! \brief Clear the entire bitset.
+     *  \details The bitset is cleared by setting it to its default state,
+     *  deallocating any memory that was allocated. */
+    HYP_API void Clear();
 
     /*! \brief Returns the total number of bits in the bitset.
         \returns The total number of bits in the bitset. */
@@ -214,7 +228,13 @@ public:
     }
 
 private:
-    void RemoveLeadingZeros();
+    HYP_FORCE_INLINE
+    void RemoveLeadingZeros()
+    {
+        while (m_blocks.Size() > num_preallocated_blocks && m_blocks.Back() == 0) {
+            m_blocks.PopBack();
+        }
+    }
 
     Array<BlockType, 64>    m_blocks;
 };

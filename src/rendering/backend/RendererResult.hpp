@@ -4,7 +4,7 @@
 #define HYPERION_BACKEND_RENDERER_RESULT_HPP
 
 #include <core/Defines.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 namespace hyperion {
 namespace renderer {

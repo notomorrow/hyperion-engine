@@ -1,15 +1,15 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_CORE_SYSTEM_SHARED_MEMORY_HPP
-#define HYPERION_CORE_SYSTEM_SHARED_MEMORY_HPP
+#ifndef HYPERION_SHARED_MEMORY_HPP
+#define HYPERION_SHARED_MEMORY_HPP
 
 #include <core/containers/String.hpp>
-
 #include <core/Defines.hpp>
 
 #include <Types.hpp>
 
 namespace hyperion {
+namespace sys {
 
 class HYP_API SharedMemory
 {
@@ -64,6 +64,10 @@ private:
     int         m_handle;
     Address     m_address;
 };
+
+} // namespace sys
+
+using sys::SharedMemory;
 
 } // namespace hyperion
 

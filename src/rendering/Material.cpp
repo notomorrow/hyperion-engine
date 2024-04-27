@@ -839,7 +839,7 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
         const auto material_descriptor_sets_it = m_material_descriptor_sets.Find(*it);
 
         if (material_descriptor_sets_it != m_material_descriptor_sets.End()) {
-            DebugLog(LogType::Debug, "Releasing descriptor sets for material with ID %u from thread %s\n", it->Value(), Threads::CurrentThreadID().name.LookupString());
+            DebugLog(LogType::Debug, "Releasing descriptor sets for material with ID %u from thread %s\n", it->Value(), *Threads::CurrentThreadID().name);
 
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 SafeRelease(std::move(material_descriptor_sets_it->second[frame_index]));

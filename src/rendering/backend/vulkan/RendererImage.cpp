@@ -9,7 +9,7 @@
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <util/img/ImageUtil.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <vulkan/vulkan.h>
 
