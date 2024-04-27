@@ -28,7 +28,6 @@ HYP_EXPORT UIObjectType UIObject_GetType(ManagedRefCountedPtr obj)
 
 HYP_EXPORT void UIObject_GetName(ManagedRefCountedPtr obj, Name *out_name)
 {
-    DebugLog(LogType::Debug, "GetName called with address: %llu\n", obj.address);
     RC<UIObject> ui_object = GetRefCountedPtrFromManaged<UIObject>(obj);
 
     if (!ui_object) {

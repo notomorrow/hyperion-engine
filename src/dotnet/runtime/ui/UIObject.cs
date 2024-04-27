@@ -12,7 +12,12 @@ namespace Hyperion
         Panel = 3,
         Image = 4,
         TabView = 5,
-        Grid = 6
+        Tab = 6,
+        Grid = 7,
+        GridRow = 8,
+        GridColumn = 9,
+        MenuBar = 10,
+        MenuItem = 11
     }
 
     public enum UIEventHandlerResult : uint
@@ -33,7 +38,7 @@ namespace Hyperion
 
     public class UIObject : IDisposable
     {
-        private RefCountedPtr refCountedPtr = RefCountedPtr.Null;
+        protected RefCountedPtr refCountedPtr = RefCountedPtr.Null;
         
         public UIObject()
         {

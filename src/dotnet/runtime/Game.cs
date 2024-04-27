@@ -49,13 +49,13 @@ namespace Hyperion
         /// <param name="sceneHandle">Native handle to the scene</param>
         /// <param name="inputManagerPtr">Native pointer to the input manager</param>
         /// <param name="assetManagerPtr">Native pointer to the asset manager</param>
-        /// <param name="uiStagePtr">Native pointer to the UI stage</param>
-        internal void BeforeInit(ManagedHandle sceneHandle, IntPtr inputManagerPtr, IntPtr assetManagerPtr, IntPtr uiStagePtr)
+        /// <param name="uiStagePtr">Native RefCountedPtr to the UI stage</param>
+        internal void BeforeInit(ManagedHandle sceneHandle, IntPtr inputManagerPtr, IntPtr assetManagerPtr, RefCountedPtr uiStageRc)
         {
             scene = new Scene(sceneHandle);
             inputManager = new InputManager(inputManagerPtr);
             assetManager = new AssetManager(assetManagerPtr);
-            uiStage = new UIStage(uiStagePtr);
+            uiStage = new UIStage(uiStageRc);
         }
 
         public abstract void Init();

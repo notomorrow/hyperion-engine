@@ -14,24 +14,26 @@
 namespace hyperion {
 
 extern "C" {
-    struct ManagedEntity
+
+struct ManagedEntity
+{
+    uint32 id;
+
+    ManagedEntity() = default;
+
+    ManagedEntity(ID<Entity> id)
+        : id(id.Value())
     {
-        uint32 id;
+    }
 
-        ManagedEntity() = default;
+    operator ID<Entity>() const
+        { return ID<Entity> { id }; }
+};
 
-        ManagedEntity(ID<Entity> id)
-            : id(id.Value())
-        {
-        }
+static_assert(std::is_trivial_v<ManagedEntity>, "ManagedEntity must be a trivial type to be used in C#");
+static_assert(sizeof(ManagedEntity) == 4, "ManagedEntity must be 4 bytes to be used in C#");
 
-        operator ID<Entity>() const
-            { return ID<Entity> { id }; }
-    };
-
-    static_assert(std::is_trivial_v<ManagedEntity>, "ManagedEntity must be a trivial type to be used in C#");
-    static_assert(sizeof(ManagedEntity) == 4, "ManagedEntity must be 4 bytes to be used in C#");
-}
+} // extern "C"
 
 } // namespace hyperion
 

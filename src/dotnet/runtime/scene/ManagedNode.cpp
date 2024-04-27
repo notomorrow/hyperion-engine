@@ -15,7 +15,7 @@ void ManagedNode::Dispose()
     RC<Node> rc;
 
     // Take ownership of the ref count data, so don't increment the ref count immediately
-    rc.SetRefCountData(ref, false /* inc_ref */);
+    rc.SetRefCountData_Internal(ref, false /* inc_ref */);
 
     ref = nullptr;
 

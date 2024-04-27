@@ -53,7 +53,7 @@ static inline ManagedNode CreateManagedNodeFromNodeProxy(NodeProxy node_proxy)
 static inline NodeProxy CreateNodeProxyFromManagedNode(ManagedNode managed_node)
 {
     RC<Node> rc;
-    rc.SetRefCountData(managed_node.ref);
+    rc.SetRefCountData_Internal(managed_node.ref);
 
     return NodeProxy(std::move(rc));
 }
