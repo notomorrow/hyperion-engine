@@ -60,7 +60,7 @@ void DebugDrawer::Create()
                 .vertex_attributes = static_mesh_vertex_attributes
             },
             MaterialAttributes {
-                .bucket         = Bucket::BUCKET_OPAQUE,
+                .bucket         = Bucket::BUCKET_TRANSLUCENT,
                 .fill_mode      = FillMode::FILL,
                 .blend_function = BlendFunction::None(),
                 .cull_faces     = FaceCullMode::NONE
@@ -134,11 +134,6 @@ void DebugDrawer::Render(Frame *frame)
 
         g_engine->GetRenderData()->immediate_draws.Set(index, shader_data);
     }
-
-    g_engine->GetRenderData()->immediate_draws.UpdateBuffer(
-        g_engine->GetGPUDevice(),
-        frame->GetFrameIndex()
-    );
 
     RendererProxy proxy = m_render_group->GetProxy();
     proxy.Bind(frame);

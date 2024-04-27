@@ -133,7 +133,7 @@ void main()
     vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
     ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb * env_grid_radiance.a);
 
-    irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_PROBE_MULTIPLIER;
+    irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_GRID_MULTIPLIER;
 
 #ifdef RT_REFLECTIONS_ENABLED
     CalculateRaytracingReflection(deferred_params, texcoord, ibl);

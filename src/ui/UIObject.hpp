@@ -257,8 +257,9 @@ public:
     virtual void Focus();
 
     /*! \brief Remove the focus from this UI object, if AcceptsFocus() returns true.
-     * This function is called when the UI object loses focus. */
-    virtual void Blur();
+     * This function is called when the UI object loses focus.
+     * \param blur_children If true, also remove focus from all child objects. */
+    virtual void Blur(bool blur_children = true);
 
     /*! \brief Get the border radius of the UI object
      * \details The border radius of the UI object is used to create rounded corners for the object's border.

@@ -45,8 +45,12 @@ void Game::Init()
 
     AssertThrowMsg(m_application != nullptr, "No valid Application instance was provided to Game constructor!");
     
+    Extent2D window_size;
+
     if (m_application->GetCurrentWindow()) {
         m_input_manager->SetWindow(m_application->GetCurrentWindow());
+
+        window_size = m_application->GetCurrentWindow()->GetDimensions();
     }
 
     if (m_managed_game_info.HasValue()) {
@@ -63,6 +67,12 @@ void Game::Init()
             .flags = Scene::InitInfo::SCENE_FLAGS_HAS_TLAS // default it to having a top level acceleration structure for RT
         }
     );
+
+    m_scene->SetCamera(CreateObject<Camera>(
+        70.0f,
+        window_size.width, window_size.height,
+        0.01f, 30000.0f
+    ));
 
     m_scene->SetIsAudioListener(true);
 

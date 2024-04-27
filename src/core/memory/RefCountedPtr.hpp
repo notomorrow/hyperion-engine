@@ -349,13 +349,17 @@ public:
     WeakRefCountedPtrBase(const RefCountedPtrBase<CountType> &other)
         : m_ref(other.m_ref)
     {
-        IncRefCount();
+        if (m_ref) {
+            IncRefCount();
+        }
     }
 
     WeakRefCountedPtrBase(const WeakRefCountedPtrBase &other)
         : m_ref(other.m_ref)
     {
-        IncRefCount();
+        if (m_ref) {
+            IncRefCount();
+        }
     }
 
     WeakRefCountedPtrBase &operator=(const RefCountedPtrBase<CountType> &other)
@@ -364,7 +368,9 @@ public:
 
         m_ref = other.m_ref;
 
-        IncRefCount();
+        if (m_ref) {
+            IncRefCount();
+        }
 
         return *this;
     }
@@ -375,7 +381,9 @@ public:
 
         m_ref = other.m_ref;
 
-        IncRefCount();
+        if (m_ref) {
+            IncRefCount();
+        }
 
         return *this;
     }

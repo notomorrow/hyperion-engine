@@ -110,7 +110,7 @@ void main() {
     gbuffer_ws_normals = EncodeNormal(normal);
 
 #ifdef IMMEDIATE_MODE
-    gbuffer_albedo = vec4(v_color.rgb, 0.0);
+    gbuffer_albedo = vec4(v_color.rgb, 1.0);
     gbuffer_mask = UINT_TO_VEC4(0x400);
 
     if (v_probe_id != 0 && v_probe_type == ENV_PROBE_TYPE_REFLECTION) {

@@ -12,7 +12,8 @@ RenderPass<Platform::VULKAN>::RenderPass(RenderPassStage stage, RenderPassMode m
     : m_stage(stage),
       m_mode(mode),
       m_handle(VK_NULL_HANDLE),
-      m_num_multiview_layers(0)
+      m_num_multiview_layers(0),
+      m_clear_color(Vec4f::Zero())
 {
 }
 
@@ -20,7 +21,8 @@ RenderPass<Platform::VULKAN>::RenderPass(RenderPassStage stage, RenderPassMode m
     : m_stage(stage),
       m_mode(mode),
       m_handle(VK_NULL_HANDLE),
-      m_num_multiview_layers(num_multiview_layers)
+      m_num_multiview_layers(num_multiview_layers),
+      m_clear_color(Vec4f::Zero())
 {
 }
 

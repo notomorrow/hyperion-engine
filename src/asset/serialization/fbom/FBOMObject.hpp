@@ -51,12 +51,12 @@ enum FBOMObjectFlagBits : FBOMObjectFlags
 class FBOMObject
 {
 public:
-    FBOMType m_object_type;
-    FBOMNodeHolder *nodes;
-    FlatMap<String, FBOMData> properties;
-    FBOMDeserializedObject deserialized;
-    Optional<FBOMExternalObjectInfo> m_external_info;
-    UniqueID m_unique_id;
+    FBOMType                            m_object_type;
+    FBOMNodeHolder                      *nodes;
+    FlatMap<String, FBOMData>           properties;
+    FBOMDeserializedObject              deserialized;
+    Optional<FBOMExternalObjectInfo>    m_external_info;
+    UniqueID                            m_unique_id;
 
     FBOMObject();
     FBOMObject(const FBOMType &loader_type);

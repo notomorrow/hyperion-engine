@@ -106,7 +106,7 @@ void DoPixel(uint probe_index, uvec3 coord)
     }
 
 #ifdef MODE_VOXELIZE
-    color_sample.rgb = pow(color_sample.rgb, vec3(1.0 / 2.2));
+    // color_sample.rgb = pow(color_sample.rgb, vec3(1.0 / 2.2));
 
     imageStore(voxel_grid_image, voxel_storage_position, color_sample);//vec4(UINT_TO_VEC4(env_probe.position_in_grid.w).rgb, 1.0));
 #endif

@@ -38,7 +38,7 @@ static Extent2D GetProbeDimensions(EnvProbeType env_probe_type)
         AssertThrowMsg(false, "Invalid probe type");
     }
 
-    return Extent2D { uint(-1), uint(-1) };
+    return Extent2D { 0, 0 };
 }
 
 static EnvProbeIndex GetProbeBindingIndex(const Vec3f &probe_position, const BoundingBox &grid_aabb, const Extent3D &grid_density)
@@ -274,6 +274,7 @@ void EnvGrid::Init()
     AssertThrow(probe_type != ENV_PROBE_TYPE_INVALID);
 
     const Extent2D probe_dimensions = GetProbeDimensions(probe_type);
+    AssertThrow(probe_dimensions.Size() != 0);
 
     if (num_ambient_probes != 0) {
         // m_ambient_probes.Resize(num_ambient_probes);

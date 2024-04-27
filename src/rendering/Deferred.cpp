@@ -23,7 +23,7 @@ static const InternalFormat mip_chain_format = InternalFormat::R10G10B10A2;
 static const Extent2D hbao_extent { 512, 512 };
 static const Extent2D ssr_extent { 512, 512 };
 
-static const InternalFormat env_grid_radiance_format = InternalFormat::RGBA16F;
+static const InternalFormat env_grid_radiance_format = InternalFormat::RGBA8_SRGB;
 static const InternalFormat env_grid_irradiance_format = InternalFormat::R11G11B10F;
 static const Extent2D env_grid_irradiance_extent { 1024, 768 };
 static const Extent2D env_grid_radiance_extent { 1024, 768 };
@@ -413,6 +413,12 @@ EnvGridPass::EnvGridPass(EnvGridPassMode mode)
       m_mode(mode),
       m_is_first_frame(true)
 {
+    if (mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE) {
+        SetBlendFunction(BlendFunction(
+            BlendModeFactor::SRC_ALPHA, BlendModeFactor::ONE_MINUS_SRC_ALPHA,
+            BlendModeFactor::ONE, BlendModeFactor::ONE_MINUS_SRC_ALPHA
+        ));
+    }
 }
 
 EnvGridPass::~EnvGridPass()
@@ -464,7 +470,9 @@ void EnvGridPass::Create()
         },
         MaterialAttributes {
             .fill_mode      = FillMode::FILL,
-            .blend_function = BlendFunction::AlphaBlending()
+            .blend_function = BlendFunction(BlendModeFactor::SRC_ALPHA, BlendModeFactor::ONE_MINUS_SRC_ALPHA,
+                                            BlendModeFactor::ONE, BlendModeFactor::ONE_MINUS_SRC_ALPHA),
+            .flags          = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
         }
     );
 
@@ -473,7 +481,7 @@ void EnvGridPass::Create()
     if (m_mode == EnvGridPassMode::ENV_GRID_PASS_MODE_RADIANCE) {
         m_temporal_blending.Reset(new TemporalBlending(
             m_framebuffer->GetExtent(),
-            InternalFormat::RGBA16F,
+            InternalFormat::RGBA8,
             TemporalBlendTechnique::TECHNIQUE_1,
             TemporalBlendFeedback::LOW,
             m_framebuffer
@@ -481,6 +489,17 @@ void EnvGridPass::Create()
 
         m_temporal_blending->Create();
     }
+
+    // Create previous image
+    m_previous_texture = CreateObject<Texture>(Texture2D(
+        m_extent,
+        m_image_format,
+        FilterMode::TEXTURE_FILTER_LINEAR,
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        nullptr
+    ));
+
+    InitObject(m_previous_texture);
 
     // Create render texture to screen pass.
     // this is used to render the previous frame's result to the screen,
@@ -495,7 +514,7 @@ void EnvGridPass::Create()
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement(HYP_NAME(InTexture), m_framebuffer->GetAttachmentUsages()[0]->GetImageView());
+        descriptor_set->SetElement(HYP_NAME(InTexture), m_previous_texture->GetImageView());
     }
 
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
@@ -605,6 +624,22 @@ void EnvGridPass::Render(Frame *frame)
 
     GetFramebuffer()->EndCapture(frame_index, frame->GetCommandBuffer());
 
+    { // Copy the result to the previous texture
+        const ImageRef &src_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
+        const ImageRef &dst_image = m_previous_texture->GetImage();
+
+        src_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_SRC);
+        dst_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_DST);
+
+        dst_image->Blit(
+            frame->GetCommandBuffer(),
+            src_image
+        );
+
+        src_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+        dst_image->GetGPUImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    }
+
     if (m_temporal_blending) {
         m_temporal_blending->Render(frame);
     }
@@ -707,7 +742,9 @@ void ReflectionProbePass::Create()
         },
         MaterialAttributes {
             .fill_mode      = FillMode::FILL,
-            .blend_function = BlendFunction::AlphaBlending()
+            .blend_function = BlendFunction(BlendModeFactor::SRC_ALPHA, BlendModeFactor::ONE_MINUS_SRC_ALPHA,
+                                            BlendModeFactor::ONE, BlendModeFactor::ONE_MINUS_SRC_ALPHA),
+            .flags          = MaterialAttributes::RENDERABLE_ATTRIBUTE_FLAGS_NONE
         }
     );
 
@@ -1169,8 +1206,6 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
         RenderOpaqueObjects(frame);
 
-        g_engine->GetDebugDrawer().Render(frame);
-
         m_opaque_fbo->EndCapture(frame_index, primary);
     }
     // end opaque objs
@@ -1279,6 +1314,9 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         }
 
         RenderSkybox(frame);
+
+        // render debug draw
+        g_engine->GetDebugDrawer().Render(frame);
 
         m_translucent_fbo->EndCapture(frame_index, primary);
     }

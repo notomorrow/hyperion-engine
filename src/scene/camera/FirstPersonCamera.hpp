@@ -32,7 +32,7 @@ public:
 
     virtual void UpdateLogic(double dt) override;
 
-private:
+protected:
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) override;
 
     FirstPersonCameraControllerMode m_mode;

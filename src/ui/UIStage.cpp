@@ -179,13 +179,10 @@ void UIStage::SetFocusedObject(const RC<UIObject> &ui_object)
             return;
         }
 
-        current_focused_ui_object->Blur();
-    }
+        // Only blur children if 
+        const bool should_blur_children = ui_object == nullptr || !ui_object->IsOrHasParent(current_focused_ui_object);
 
-    if (!ui_object) {
-        m_focused_object.Reset();
-
-        return;
+        current_focused_ui_object->Blur(should_blur_children);
     }
 
     m_focused_object = ui_object;

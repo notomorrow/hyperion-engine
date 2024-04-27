@@ -89,7 +89,7 @@ void main()
     v_probe_id = probe_id;
     v_probe_type = probe_type;
 
-    if (probe_type == ENV_PROBE_TYPE_AMBIENT && probe_id != 0)
+    if (probe_id != 0 && probe_type == ENV_PROBE_TYPE_AMBIENT)
     {
         const int storage_index = env_probes[probe_id - 1].position_in_grid.w * 9;
 

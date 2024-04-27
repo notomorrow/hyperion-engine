@@ -3,36 +3,21 @@
 #ifndef HYPERION_FBOM_HPP
 #define HYPERION_FBOM_HPP
 
-#include <core/utilities/Optional.hpp>
 #include <core/containers/TypeMap.hpp>
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/HashMap.hpp>
 #include <core/containers/String.hpp>
-#include <core/memory/Any.hpp>
+#include <core/utilities/Optional.hpp>
 #include <core/utilities/Variant.hpp>
-#include <core/memory/ByteBuffer.hpp>
 #include <core/utilities/UniqueID.hpp>
+#include <core/memory/Any.hpp>
+#include <core/memory/ByteBuffer.hpp>
 #include <core/ClassInfo.hpp>
+
 #include <math/MathUtil.hpp>
-#include <Constants.hpp>
+
 #include <asset/ByteWriter.hpp>
 #include <asset/Assets.hpp>
-#include <util/fs/FsUtil.hpp>
-
-#include <Constants.hpp>
-#include <Types.hpp>
-#include <HashCode.hpp>
-
-#include <vector>
-#include <string>
-#include <map>
-#include <type_traits>
-#include <sstream>
-#include <unordered_map>
-#include <iomanip>
-#include <memory>
-#include <map>
-#include <cstring>
 
 #include <asset/serialization/fbom/FBOMObject.hpp>
 #include <asset/serialization/fbom/FBOMResult.hpp>
@@ -41,6 +26,15 @@
 #include <asset/serialization/fbom/FBOMData.hpp>
 #include <asset/serialization/fbom/FBOMLoadable.hpp>
 #include <asset/serialization/fbom/FBOMMarshaler.hpp>
+
+#include <util/fs/FsUtil.hpp>
+
+#include <Constants.hpp>
+#include <Types.hpp>
+#include <HashCode.hpp>
+
+#include <type_traits>
+#include <cstring>
 
 namespace hyperion {
 namespace fbom {
@@ -413,7 +407,7 @@ public:
             m_config.base_path = FileSystem::RelativePath(StringUtil::BasePath(path.Data()), FileSystem::CurrentPath()).c_str();
         }
 
-        const FilePath read_path { FileSystem::Join(m_config.base_path.Data(), std::string(FilePath(path).Basename().Data())).c_str()};
+        const FilePath read_path { FileSystem::Join(m_config.base_path.Data(), FilePath(path).Basename().Data()).c_str()};
 
         BufferedReader reader(RC<FileBufferedReaderSource>(new FileBufferedReaderSource(read_path)));
 
