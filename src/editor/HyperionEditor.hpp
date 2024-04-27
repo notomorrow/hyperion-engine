@@ -13,7 +13,7 @@ class HyperionEditorImpl;
 class HYP_API HyperionEditor : public Game
 {
 public:
-    HyperionEditor(RC<Application> application);
+    HyperionEditor();
     HyperionEditor(const HyperionEditor &other)                 = delete;
     HyperionEditor &operator=(const HyperionEditor &other)      = delete;
     HyperionEditor(HyperionEditor &&other) noexcept             = delete;

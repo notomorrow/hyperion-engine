@@ -2,7 +2,7 @@
 
 #include <util/ini/INIFile.hpp>
 #include <asset/BufferedByteReader.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 namespace hyperion {
 

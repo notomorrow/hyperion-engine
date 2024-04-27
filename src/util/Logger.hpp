@@ -4,7 +4,7 @@
 
 #include <core/Name.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 namespace hyperion {
 

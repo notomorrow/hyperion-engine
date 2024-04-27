@@ -15,14 +15,13 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 
 #include <rendering/Texture.hpp>
-
 #include <rendering/font/FontAtlas.hpp>
 
-#include <system/Application.hpp>
+#include <core/system/AppContext.hpp>
+#include <core/threading/Threads.hpp>
 
 #include <input/InputManager.hpp>
 
-#include <core/threading/Threads.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -40,7 +39,7 @@ UIStage::~UIStage()
 
 void UIStage::Init()
 {
-    if (const RC<Application> &application = g_engine->GetApplication()) {
+    if (const RC<AppContext> &app_context = g_engine->GetAppContext()) {
         const auto UpdateWindowSize = [this](ApplicationWindow *window)
         {
             if (window == nullptr) {
@@ -60,8 +59,8 @@ void UIStage::Init()
             }
         };
 
-        UpdateWindowSize(application->GetCurrentWindow());
-        m_on_current_window_changed_handler = application->OnCurrentWindowChanged.Bind(UpdateWindowSize);
+        UpdateWindowSize(app_context->GetCurrentWindow());
+        m_on_current_window_changed_handler = app_context->OnCurrentWindowChanged.Bind(UpdateWindowSize);
     }
 
     if (!m_default_font_atlas) {

@@ -3,8 +3,9 @@
 #ifndef HYPERION_BACKEND_RENDERER_PLATFORM_HPP
 #define HYPERION_BACKEND_RENDERER_PLATFORM_HPP
 
-#include <Types.hpp>
 #include <core/Defines.hpp>
+
+#include <Types.hpp>
 
 namespace hyperion {
 namespace renderer {

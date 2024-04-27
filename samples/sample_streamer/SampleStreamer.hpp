@@ -12,7 +12,7 @@ using namespace hyperion;
 class SampleStreamer : public Game
 {
 public:
-    SampleStreamer(RC<Application> application);
+    SampleStreamer();
     virtual ~SampleStreamer() = default;
 
     virtual void InitGame() override;

@@ -1,61 +1,38 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_APPLICATION_HPP
-#define HYPERION_APPLICATION_HPP
+#ifndef HYPERION_APP_CONTEXT_HPP
+#define HYPERION_APP_CONTEXT_HPP
 
 #include <SDL2/SDL_vulkan.h>
 #include <SDL2/SDL.h>
 
 #include <core/Containers.hpp>
 #include <core/functional/Delegate.hpp>
-
-#include <util/fs/FsUtil.hpp>
+#include <core/filesystem/FilePath.hpp>
+#include <core/system/ArgParse.hpp>
 #include <core/Defines.hpp>
+
+#include <rendering/backend/Platform.hpp>
+
 #include <Types.hpp>
 
-#include <rendering/backend/RendererInstance.hpp>
-
-#include <vector>
 
 namespace hyperion {
 
-struct CommandLineArguments
-{
-    String          command;
-    Array<String>   arguments;
+namespace renderer {
+namespace platform {
 
-    CommandLineArguments() = default;
+// forward declare Instance
+template <PlatformType PLATFORM>
+class Instance;
 
-    CommandLineArguments(int argc, char **argv)
-    {
-        if (argc < 1) {
-            return;
-        }
+} // namespace platform
 
-        command = argv[0];
-        
-        arguments.Reserve(argc - 1);
+using Instance = platform::Instance<Platform::CURRENT>;
 
-        for (int i = 1; i < argc; i++) {
-            arguments.PushBack(argv[i]);
-        }
-    }
+} // namespace renderer
 
-    CommandLineArguments(const CommandLineArguments &other) = default;
-    CommandLineArguments &operator=(const CommandLineArguments &other) = default;
-    CommandLineArguments(CommandLineArguments &&other) noexcept = default;
-    CommandLineArguments &operator=(CommandLineArguments &&other) noexcept = default;
-    ~CommandLineArguments() = default;
-
-    operator const Array<String> &() const
-        { return arguments; }
-
-    const String &GetCommand() const
-        { return command; }
-
-    SizeType Size() const
-        { return arguments.Size(); }
-};
+namespace sys {
 
 using WindowFlags = uint32;
 
@@ -101,11 +78,9 @@ enum SystemWindowEventType
     EVENT_WINDOW_MINIMIZED      = SDL_WINDOWEVENT_MINIMIZED,
 };
 
-using KeyCode = uint16;
-
-enum SystemKey : KeyCode
+enum KeyCode : uint16
 {
-    KEY_UNKNOWN = KeyCode(-1),
+    KEY_UNKNOWN = uint16(-1),
 
     KEY_A = 'A',
     KEY_B,
@@ -229,7 +204,7 @@ public:
     }
 
     KeyCode GetKeyCode() const
-        { return sdl_event.key.keysym.sym; }
+        { return KeyCode(sdl_event.key.keysym.sym); }
 
     /*! \brief For any characters a-z, returns the uppercase version.
      *  Otherwise, the result from GetKeyCode() is returned.
@@ -240,7 +215,7 @@ public:
         
         /* Set all letters to uppercase */
         if (key >= 'a' && key <= 'z') {
-            key = 'A' + (key - 'a');
+            key = KeyCode('A' + (key - 'a'));
         }
 
         return key;
@@ -334,11 +309,11 @@ private:
     SDL_Window *window = nullptr;
 };
 
-class HYP_API ApplicationInstance
+class HYP_API AppContext
 {
 public:
-    ApplicationInstance(ANSIString name, int argc, char **argv);
-    virtual ~ApplicationInstance();
+    AppContext(ANSIString name, const CommandLineArguments &arguments);
+    virtual ~AppContext();
 
     const ANSIString &GetAppName() const
         { return m_name; }
@@ -366,11 +341,11 @@ protected:
     CommandLineArguments                m_arguments;
 };
 
-class HYP_API SDLApplicationInstance : public ApplicationInstance
+class HYP_API SDLAppContext : public AppContext
 {
 public:
-    SDLApplicationInstance(ANSIString name, int argc, char **argv);
-    virtual ~SDLApplicationInstance() override;
+    SDLAppContext(ANSIString name, const CommandLineArguments &arguments);
+    virtual ~SDLAppContext() override;
 
     virtual UniquePtr<ApplicationWindow> CreateSystemWindow(WindowOptions) override;
 
@@ -382,6 +357,26 @@ public:
 
 };
 
+} // namespace sys
+
+using sys::KeyCode;
+using sys::MouseButton;
+using sys::MouseButtonMask;
+using sys::MouseState;
+
+using sys::WindowOptions;
+using sys::WindowFlags;
+
+using sys::SystemEvent;
+using sys::SystemEventType;
+using sys::SystemWindowEventType;
+
+using sys::AppContext;
+using sys::ApplicationWindow;
+
+using sys::SDLAppContext;
+using sys::SDLApplicationWindow;
+
 } // namespace hyperion
 
-#endif //HYPERION_SDL_SYSTEM_HPP
+#endif

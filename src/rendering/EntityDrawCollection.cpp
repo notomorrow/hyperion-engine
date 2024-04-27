@@ -21,13 +21,13 @@ static constexpr bool do_parallel_collection = true;
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(UpdateDrawCollectionRenderSide) : renderer::RenderCommand
+struct RENDER_COMMAND(SetRenderSideList) : renderer::RenderCommand
 {
     RC<EntityDrawCollection>            collection;
     RenderableAttributeSet              attributes;
     EntityDrawCollection::EntityList    entity_list;
 
-    RENDER_COMMAND(UpdateDrawCollectionRenderSide)(
+    RENDER_COMMAND(SetRenderSideList)(
         const RC<EntityDrawCollection> &collection,
         const RenderableAttributeSet &attributes,
         EntityDrawCollection::EntityList &&entity_list
@@ -37,11 +37,31 @@ struct RENDER_COMMAND(UpdateDrawCollectionRenderSide) : renderer::RenderCommand
     {
     }
 
-    virtual ~RENDER_COMMAND(UpdateDrawCollectionRenderSide)() override = default;
+    virtual ~RENDER_COMMAND(SetRenderSideList)() override = default;
 
     virtual Result operator()() override
     {
         collection->SetRenderSideList(attributes, std::move(entity_list));
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+struct RENDER_COMMAND(UpdateRenderSideResources) : renderer::RenderCommand
+{
+    RC<EntityDrawCollection>    collection;
+
+    RENDER_COMMAND(UpdateRenderSideResources)(
+        const RC<EntityDrawCollection> &collection
+    ) : collection(collection)
+    {
+    }
+
+    virtual ~RENDER_COMMAND(UpdateRenderSideResources)() override = default;
+
+    virtual Result operator()() override
+    {
+        collection->UpdateRenderSideResources();
 
         HYPERION_RETURN_OK;
     }
@@ -81,9 +101,23 @@ const FixedArray<ArrayMap<RenderableAttributeSet, EntityDrawCollection::EntityLi
     return m_lists[uint(thread_type)];
 }
 
-void EntityDrawCollection::InsertEntityWithAttributes(const RenderableAttributeSet &attributes, EntityDrawData entity_draw_data)
+void EntityDrawCollection::InsertEntityWithAttributes(const RenderableAttributeSet &attributes, const EntityDrawData &entity_draw_data)
 {
-    GetEntityList(ThreadType::THREAD_TYPE_GAME)[BucketToPassType(attributes.GetMaterialAttributes().bucket)][attributes].entity_draw_datas.PushBack(std::move(entity_draw_data));
+    auto &list = GetEntityList(ThreadType::THREAD_TYPE_GAME)[BucketToPassType(attributes.GetMaterialAttributes().bucket)][attributes];
+
+    if (entity_draw_data.mesh_id.IsValid()) {
+        list.usage_bits[RESOURCE_USAGE_TYPE_MESH].Set(entity_draw_data.mesh_id.ToIndex(), true);
+    }
+
+    if (entity_draw_data.material_id.IsValid()) {
+        list.usage_bits[RESOURCE_USAGE_TYPE_MATERIAL].Set(entity_draw_data.material_id.ToIndex(), true);
+    }
+
+    if (entity_draw_data.skeleton_id.IsValid()) {
+        list.usage_bits[RESOURCE_USAGE_TYPE_SKELETON].Set(entity_draw_data.skeleton_id.ToIndex(), true);
+    }
+    
+    list.entity_draw_datas.PushBack(entity_draw_data);
 }
 
 void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attributes, EntityList &&entity_list)
@@ -92,34 +126,68 @@ void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attri
 
     const PassType pass_type = BucketToPassType(attributes.GetMaterialAttributes().bucket);
 
-    auto render_side_resources_it = m_render_side_resources[pass_type].Find(attributes);
+    auto &mappings = GetEntityList()[pass_type];
+    auto it = mappings.Find(attributes);
 
-    if (render_side_resources_it == m_render_side_resources[pass_type].End()) {
-        const auto insert_result = m_render_side_resources[pass_type].Insert(attributes, { });
-        
-        render_side_resources_it = insert_result.first;
+    if (it != mappings.End()) {
+        it->second = std::move(entity_list);
+    } else {
+        if (!entity_list.entity_draw_datas.Empty()) {
+            mappings.Set(attributes, std::move(entity_list));
+        }
     }
+}
 
-    RenderResourceManager &render_side_resources = render_side_resources_it->second;
+void EntityDrawCollection::UpdateRenderSideResources()
+{
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    Bitset prev_bitsets[3] = {
-        render_side_resources.GetResourceUsageMap<Mesh>()->usage_bits,
-        render_side_resources.GetResourceUsageMap<Material>()->usage_bits,
-        render_side_resources.GetResourceUsageMap<Skeleton>()->usage_bits
+    RenderResourceManager &render_side_resources = m_current_render_side_resources;
+    
+    ResourceUsageMapBase *resource_usage_maps[] = {
+        render_side_resources.GetResourceUsageMap<Mesh>(),
+        render_side_resources.GetResourceUsageMap<Material>(),
+        render_side_resources.GetResourceUsageMap<Skeleton>()
     };
 
-    Bitset new_bitsets[3] = { }; // mesh, material, skeleton
+    Bitset prev_bitsets[ArraySize(resource_usage_maps)];
+
+    for (uint32 i = 0; i < ArraySize(resource_usage_maps); i++) {
+        if (resource_usage_maps[i]) {
+            prev_bitsets[i] = resource_usage_maps[i]->usage_bits;
+        }
+    }
+
+    Bitset new_bitsets[ArraySize(resource_usage_maps)] = { }; // mesh, material, skeleton
 
     // prevent these objects from going out of scope while rendering is happening
-    for (const EntityDrawData &entity_draw_data : entity_list.entity_draw_datas) {
-        new_bitsets[0].Set(entity_draw_data.mesh_id.ToIndex(), true);
-        new_bitsets[1].Set(entity_draw_data.material_id.ToIndex(), true);
-        new_bitsets[2].Set(entity_draw_data.skeleton_id.ToIndex(), true);
+
+    // @TODO: Optimize without nested looping
+    for (auto &list_per_pass_type : GetEntityList(ThreadType::THREAD_TYPE_RENDER)) {
+        for (auto &it : list_per_pass_type) {
+            new_bitsets[RESOURCE_USAGE_TYPE_MESH] |= it.second.usage_bits[RESOURCE_USAGE_TYPE_MESH];
+            new_bitsets[RESOURCE_USAGE_TYPE_MATERIAL] |= it.second.usage_bits[RESOURCE_USAGE_TYPE_MATERIAL];
+            new_bitsets[RESOURCE_USAGE_TYPE_SKELETON] |= it.second.usage_bits[RESOURCE_USAGE_TYPE_SKELETON];
+
+            // for (const EntityDrawData &entity_draw_data : it.second.entity_draw_datas) {
+            //     if (entity_draw_data.mesh_id.IsValid()) {
+            //         new_bitsets[RESOURCE_USAGE_TYPE_MESH].Set(entity_draw_data.mesh_id.ToIndex(), true);
+            //     }
+
+            //     if (entity_draw_data.material_id.IsValid()) {
+            //         new_bitsets[RESOURCE_USAGE_TYPE_MATERIAL].Set(entity_draw_data.material_id.ToIndex(), true);
+            //     }
+
+            //     if (entity_draw_data.skeleton_id.IsValid()) {
+            //         new_bitsets[RESOURCE_USAGE_TYPE_SKELETON].Set(entity_draw_data.skeleton_id.ToIndex(), true);
+            //     }
+            // }
+        }
     }
 
     // Set each bitset to be the bits that are in the previous bitset, but not in the new one.
     // This will give us a list of IDs that were removed.
-    for (uint i = 0; i < ArraySize(prev_bitsets); i++) {
+    for (uint32 i = 0; i < ArraySize(resource_usage_maps); i++) {
         // If any of the bitsets are different sizes, resize them to match the largest one,
         // this makes ~ and & operations work as expected
         if (prev_bitsets[i].NumBits() > new_bitsets[i].NumBits()) {
@@ -136,14 +204,14 @@ void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attri
         while ((first_set_bit_index = removed_id_bits.FirstSetBitIndex()) != -1) {
             // Remove the reference
             switch (i) {
-            case 0:
-                render_side_resources.SetIsUsed(ID<Mesh>::FromIndex(first_set_bit_index), false);
+            case RESOURCE_USAGE_TYPE_MESH:
+                render_side_resources.SetIsUsed(resource_usage_maps[i], ID<Mesh>::FromIndex(first_set_bit_index), false);
                 break;
-            case 1:
-                render_side_resources.SetIsUsed(ID<Material>::FromIndex(first_set_bit_index), false);
+            case RESOURCE_USAGE_TYPE_MATERIAL:
+                render_side_resources.SetIsUsed(resource_usage_maps[i], ID<Material>::FromIndex(first_set_bit_index), false);
                 break;
-            case 2:
-                render_side_resources.SetIsUsed(ID<Skeleton>::FromIndex(first_set_bit_index), false);
+            case RESOURCE_USAGE_TYPE_SKELETON:
+                render_side_resources.SetIsUsed(resource_usage_maps[i], ID<Skeleton>::FromIndex(first_set_bit_index), false);
                 break;
             }
 
@@ -155,29 +223,18 @@ void EntityDrawCollection::SetRenderSideList(const RenderableAttributeSet &attri
         while ((first_set_bit_index = newly_added_id_bits.FirstSetBitIndex()) != -1) {
             // Create a reference to it in the resources list.
             switch (i) {
-            case 0:
-                render_side_resources.SetIsUsed(ID<Mesh>::FromIndex(first_set_bit_index), true);
+            case RESOURCE_USAGE_TYPE_MESH:
+                render_side_resources.SetIsUsed(resource_usage_maps[i], ID<Mesh>::FromIndex(first_set_bit_index), true);
                 break;
-            case 1:
-                render_side_resources.SetIsUsed(ID<Material>::FromIndex(first_set_bit_index), true);
+            case RESOURCE_USAGE_TYPE_MATERIAL:
+                render_side_resources.SetIsUsed(resource_usage_maps[i], ID<Material>::FromIndex(first_set_bit_index), true);
                 break;
-            case 2:
-                render_side_resources.SetIsUsed(ID<Skeleton>::FromIndex(first_set_bit_index), true);
+            case RESOURCE_USAGE_TYPE_SKELETON:
+                render_side_resources.SetIsUsed(resource_usage_maps[i], ID<Skeleton>::FromIndex(first_set_bit_index), true);
                 break;
             }
 
             newly_added_id_bits.Set(first_set_bit_index, false);
-        }
-    }
-
-    auto &mappings = GetEntityList()[pass_type];
-    auto it = mappings.Find(attributes);
-
-    if (it != mappings.End()) {
-            it->second = std::move(entity_list);
-    } else {
-        if (!entity_list.entity_draw_datas.Empty()) {
-            mappings.Set(attributes, std::move(entity_list));
         }
     }
 }
@@ -188,7 +245,7 @@ void EntityDrawCollection::ClearEntities()
     // as well as render groups.
     for (auto &collection_per_pass_type : GetEntityList()) {
         for (auto &it : collection_per_pass_type) {
-            it.second.entity_draw_datas.Clear();
+            it.second.ClearEntities();
         }
     }
 }
@@ -286,12 +343,17 @@ void RenderList::UpdateRenderGroups()
         }
 
         PUSH_RENDER_COMMAND(
-            UpdateDrawCollectionRenderSide,
+            SetRenderSideList,
             m_draw_collection,
             attributes,
             std::move(entity_list)
         );
     };
+    
+    PUSH_RENDER_COMMAND(
+        UpdateRenderSideResources,
+        m_draw_collection
+    );
 
     if constexpr (do_parallel_collection) {
         TaskSystem::GetInstance().ParallelForEach(

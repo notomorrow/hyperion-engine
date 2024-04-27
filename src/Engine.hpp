@@ -25,7 +25,6 @@
 
 #include <core/threading/Threads.hpp>
 #include <core/threading/TaskSystem.hpp>
-
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/TypeMap.hpp>
 #include <core/ObjectPool.hpp>
@@ -36,7 +35,7 @@
 #include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 
-#include <system/CrashHandler.hpp>
+#include <rendering/CrashHandler.hpp>
 
 #include <util/shader_compiler/ShaderCompiler.hpp>
 
@@ -45,6 +44,12 @@
 #include <mutex>
 
 namespace hyperion {
+
+namespace sys {
+class AppContext;
+} // namespace sys
+
+using sys::AppContext;
 
 using renderer::Instance;
 using renderer::Device;
@@ -138,8 +143,8 @@ public:
     Engine();
     ~Engine();
 
-    const RC<Application> &GetApplication() const
-        { return m_application; }
+    const RC<AppContext> &GetAppContext() const
+        { return m_app_context; }
 
     HYP_FORCE_INLINE
     Instance *GetGPUInstance() const
@@ -244,18 +249,12 @@ public:
         DescriptorTableRef descriptor_table
     );
 
-    // /*! \brief Create a RenderGroup, using implied DescriptorSets from the Shader's CompiledShaderBatch Definition */
-    // Handle<RenderGroup> CreateRenderGroup(
-    //     const Handle<Shader> &shader,
-    //     const RenderableAttributeSet &renderable_attributes
-    // );
-
     void AddRenderGroup(Handle<RenderGroup> &render_group);
 
     bool IsRenderLoopActive() const
         { return m_is_render_loop_active; }
 
-    HYP_API void Initialize(RC<Application> application);
+    HYP_API void Initialize(const RC<AppContext> &app_context);
     HYP_API bool InitializeGame(Game *game);
     HYP_API void RenderNextFrame(Game *game);
     HYP_API void RequestStop();
@@ -265,8 +264,6 @@ public:
     RenderState render_state;
 
     AtomicVar<bool> m_stop_requested;
-
-    UniquePtr<GameThread> game_thread;
 
     template <class T, class ... Args>
     Handle<T> CreateObject(Args &&... args)
@@ -324,7 +321,7 @@ private:
 
     void AddRenderGroupInternal(Handle<RenderGroup> &, bool cache);
 
-    RC<Application>                                         m_application;
+    RC<AppContext>                                          m_app_context;
     
     UniquePtr<Instance>                                     m_instance;
 

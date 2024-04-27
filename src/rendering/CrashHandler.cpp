@@ -1,15 +1,16 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <system/CrashHandler.hpp>
-#include <system/Debug.hpp>
+#include <rendering/CrashHandler.hpp>
+
+#include <core/system/Debug.hpp>
+
+#include <asset/ByteWriter.hpp>
 
 #if defined(HYP_AFTERMATH) && HYP_AFTERMATH
 #include <Aftermath/GFSDK_Aftermath.h>
 #include <Aftermath/GFSDK_Aftermath_GpuCrashDump.h>
 #include <Aftermath/GFSDK_Aftermath_GpuCrashDumpDecoding.h>
 #include <Aftermath/GFSDK_Aftermath_Defines.h>
-
-#include <asset/ByteWriter.hpp>
 
 #include <chrono>
 #include <thread>

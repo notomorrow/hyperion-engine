@@ -2,7 +2,7 @@
 
 #include <util/fs/FsUtil.hpp>
 #include <core/Defines.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <asset/BufferedByteReader.hpp>
 
 #include <filesystem>

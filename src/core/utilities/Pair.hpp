@@ -3,7 +3,7 @@
 #ifndef HYPERION_PAIR_HPP
 #define HYPERION_PAIR_HPP
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <core/Traits.hpp>
 #include <Types.hpp>
 #include <Constants.hpp>

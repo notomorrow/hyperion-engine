@@ -2,8 +2,9 @@
 
 #include <editor/HyperionEditor.hpp>
 
-#include <system/StackDump.hpp>
-#include <util/ArgParse.hpp>
+#include <core/system/App.hpp>
+#include <core/system/StackDump.hpp>
+#include <core/system/ArgParse.hpp>
 
 #include <HyperionEngine.hpp>
 
@@ -48,93 +49,26 @@ int main(int argc, char **argv)
     // handle fatal crashes
     signal(SIGSEGV, HandleSignal);
 
-    WindowFlags window_flags = 0;//WINDOW_FLAGS_HIGH_DPI;
-
     ArgParse arg_parse;
-    arg_parse.Add("headless", String::empty, ArgParse::ARG_FLAGS_NONE, ArgParse::ARGUMENT_TYPE_BOOL, false);    
-    arg_parse.Add("mode", "m", ArgParse::ARG_FLAGS_NONE, Array<String> { "precompile_shaders", "streamer" }, String("streamer"));
+    arg_parse.Add("Headless", String::empty, ArgParse::ARG_FLAGS_NONE, CommandLineArgumentType::CLAT_BOOL, false);    
+    arg_parse.Add("Mode", "m", ArgParse::ARG_FLAGS_NONE, Array<String> { "PrecompileShaders", "Streamer" }, String("Streamer"));
 
     if (auto parse_result = arg_parse.Parse(argc, argv)) {
-        if (const bool *headless_ptr = parse_result["headless"].TryGet<bool>()) {
-            if (*headless_ptr) {
-                window_flags |= WINDOW_FLAGS_HEADLESS;
-            }
-        }
+        HyperionEditor editor;
 
-        if (const String *mode_str = parse_result["mode"].TryGet<String>()) {
-            if (*mode_str == "precompile_shaders") {
-                window_flags |= WINDOW_FLAGS_NO_GFX;
-
-                if (!Engine::GetInstance()->GetShaderCompiler().LoadShaderDefinitions(true)) {
-                    DebugLog(LogType::Error, "Shader precompilation failed!\n");
-
-                    std::exit(1);
-                } else {
-                    DebugLog(LogType::Info, "Precompiled shaders successfuly\n");
-
-                    std::exit(0);
-                }
-            }
-        }
-    }
-    
-    RC<Application> application(new SDLApplication("My Application", argc, argv));
-
-    if (!(window_flags & WINDOW_FLAGS_NO_GFX)) {
+        App app;
+        app.Launch(&editor, parse_result.result);
+    } else {
         DebugLog(
-            LogType::Info,
-            "Creating window with flags: %u\n",
-            window_flags
+            LogType::Error,
+            "Failed to parse arguments!\n\t%s\n",
+            parse_result.message.HasValue()
+                ? parse_result.message->Data()
+                : "<no message>"
         );
 
-        application->SetCurrentWindow(application->CreateSystemWindow({
-            "Hyperion Engine",
-            { 1280, 720 },
-            window_flags
-        }));
+        return 1;
     }
-
-    hyperion::InitializeApplication(application);
-
-    // auto my_game = SampleStreamer(application);
-
-    HyperionEditor editor(application);
-
-    Engine::GetInstance()->InitializeGame(&editor);
-
-    SystemEvent event;
-
-    uint num_frames = 0;
-    float delta_time_accum = 0.0f;
-    GameCounter counter;
-
-    // AssertThrow(server.Start());
-
-    while (Engine::GetInstance()->IsRenderLoopActive()) {
-        // input manager stuff
-        while (application->PollEvent(event)) {
-            editor.HandleEvent(std::move(event));
-        }
-
-        counter.NextTick();
-        delta_time_accum += counter.delta;
-        num_frames++;
-
-        if (num_frames >= 250) {
-            DebugLog(
-                LogType::Debug,
-                "Render FPS: %f\n",
-                1.0f / (delta_time_accum / float(num_frames))
-            );
-
-            delta_time_accum = 0.0f;
-            num_frames = 0;
-        }
-
-        Engine::GetInstance()->RenderNextFrame(&editor);
-    }
-
-    hyperion::ShutdownApplication();
 
     return 0;
 }

@@ -3,7 +3,7 @@
 #include <rendering/font/FontEngine.hpp>
 #include <rendering/font/FontFace.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #ifdef HYP_FREETYPE
 

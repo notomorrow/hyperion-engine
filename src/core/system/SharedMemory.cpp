@@ -1,9 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#include <core/system/StackDump.hpp>
 #include <core/system/SharedMemory.hpp>
+#include <core/system/Debug.hpp>
 #include <core/memory/Memory.hpp>
 #include <core/Defines.hpp>
-#include <system/Debug.hpp>
 
 #ifdef HYP_UNIX
 #include <sys/mman.h>
@@ -11,6 +12,7 @@
 #endif
 
 namespace hyperion {
+namespace sys {
 
 SharedMemory::SharedMemory(const String &id, SizeType size, Mode mode)
     : m_id(id),
@@ -117,4 +119,5 @@ void SharedMemory::Write(const void *data, SizeType count)
     Memory::MemCpy(m_address, data, count);
 }
 
+} // namespace sys
 } // namespace hyperion

@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <Engine.hpp>
 #include <Types.hpp>

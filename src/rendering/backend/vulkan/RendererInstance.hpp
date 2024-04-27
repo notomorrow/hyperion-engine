@@ -4,15 +4,9 @@
 #define HYPERION_RENDERER_BACKEND_VULKAN_INSTANCE_HPP
 
 #include <vector>
-#include <set>
-#include <optional>
-#include <array>
 
 #include <core/Containers.hpp>
-
-#include <vulkan/vulkan.h>
-
-#include <system/vma/VmaUsage.hpp>
+#include <core/Defines.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererDevice.hpp>
@@ -24,13 +18,19 @@
 #include <rendering/backend/RendererFrameHandler.hpp>
 #include <rendering/backend/RendererQueue.hpp>
 
-#include <core/Defines.hpp>
+#include <system/vma/VmaUsage.hpp>
 
 #include <Types.hpp>
 
+#include <vulkan/vulkan.h>
+
 namespace hyperion {
 
-class Application;
+namespace sys {
+class AppContext;
+} // namespace sys
+
+using sys::AppContext;
 
 namespace renderer {
 namespace platform {
@@ -48,9 +48,8 @@ class Instance<Platform::VULKAN>
     Result SetupDebugMessenger();
 
 public:
-    Instance(RC<Application> application);
-    Result Initialize(bool load_debug_layers = false);
-    void CreateSurface();
+    Instance();
+    Result Initialize(const AppContext &app_context, bool load_debug_layers = false);
 
     VkInstance GetInstance() const
         { return this->instance; }
@@ -89,10 +88,10 @@ public:
     FrameHandler<Platform::VULKAN>  *frame_handler;
 
 private:
-    RC<Application>                 m_application;
+    void CreateSurface();
 
     VkInstance                      instance = nullptr;
-    VkSurfaceKHR                    surface = nullptr;
+    VkSurfaceKHR                    m_surface;
 
     VmaAllocator                    allocator = nullptr;
 

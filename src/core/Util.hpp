@@ -7,7 +7,7 @@
 #include <core/containers/StaticString.hpp>
 #include <core/Defines.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -156,6 +156,17 @@ template <class T, uint N>
 constexpr uint ArraySize(const T (&)[N])
 {
     return N;
+}
+
+template <class T>
+HYP_FORCE_INLINE
+void Swap(T &a, T &b)
+{
+    static_assert(std::is_move_constructible_v<T> && std::is_move_assignable_v<T>, "Swap requires T to be move constructible and move assignable");
+
+    T temp = Move(a);
+    a = Move(b);
+    b = Move(temp);
 }
 
 } // namespace hyperion

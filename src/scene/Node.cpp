@@ -7,7 +7,7 @@
 #include <scene/ecs/components/NodeLinkComponent.hpp>
 #include <scene/animation/Bone.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <Engine.hpp>
 
 #include <cstring>

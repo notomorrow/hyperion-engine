@@ -9,7 +9,7 @@
 
 #include <math/MathUtil.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <core/threading/Threads.hpp>
 #include <core/threading/TaskThread.hpp>

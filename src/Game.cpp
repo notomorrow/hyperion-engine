@@ -6,7 +6,7 @@
 
 #include <Engine.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
@@ -14,17 +14,15 @@
 
 namespace hyperion {
 
-Game::Game(RC<Application> application)
-    : m_application(application),
-      m_is_init(false),
+Game::Game()
+    : m_is_init(false),
       m_input_manager(new InputManager()),
       m_ui_stage(new UIStage())
 {
 }
 
-Game::Game(RC<Application> application, Optional<ManagedGameInfo> managed_game_info)
-    : m_application(application),
-      m_is_init(false),
+Game::Game(Optional<ManagedGameInfo> managed_game_info)
+    : m_is_init(false),
       m_input_manager(new InputManager()),
       m_managed_game_info(std::move(managed_game_info)),
       m_ui_stage(new UIStage())
@@ -43,14 +41,17 @@ void Game::Init()
 {
     Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
-    AssertThrowMsg(m_application != nullptr, "No valid Application instance was provided to Game constructor!");
+    AssertThrowMsg(m_game_thread == nullptr, "Game thread already initialized!");
+    m_game_thread.Reset(new GameThread);
+
+    AssertThrowMsg(m_app_context != nullptr, "No valid Application instance was provided to Game constructor!");
     
     Extent2D window_size;
 
-    if (m_application->GetCurrentWindow()) {
-        m_input_manager->SetWindow(m_application->GetCurrentWindow());
+    if (m_app_context->GetCurrentWindow()) {
+        m_input_manager->SetWindow(m_app_context->GetCurrentWindow());
 
-        window_size = m_application->GetCurrentWindow()->GetDimensions();
+        window_size = m_app_context->GetCurrentWindow()->GetDimensions();
     }
 
     if (m_managed_game_info.HasValue()) {
@@ -76,12 +77,14 @@ void Game::Init()
 
     m_scene->SetIsAudioListener(true);
 
-    DebugLog(LogType::Debug, "Init game scene #%u\n", m_scene.GetID().Value());
-
     InitObject(m_scene);
     g_engine->GetWorld()->AddScene(m_scene);
 
+    // Init on render thread
     InitRender();
+
+    // Init game thread (calls InitGame() on game thread)
+    m_game_thread->Start(this);
 
     m_is_init = true;
 }
@@ -135,6 +138,32 @@ void Game::Teardown()
     m_is_init = false;
 }
 
+void Game::RequestStop()
+{
+    // Stop game thread and wait for it to finish
+    if (m_game_thread != nullptr) {
+        DebugLog(
+            LogType::Debug,
+            "Stopping game thread\n"
+        );
+
+        m_game_thread->Stop();
+
+        while (m_game_thread->IsRunning()) {
+            DebugLog(
+                LogType::Debug,
+                "Waiting for game thread to stop\n"
+            );
+
+            Threads::Sleep(1);
+        }
+
+        m_game_thread->Join();
+    }
+    
+    g_engine->RequestStop();
+}
+
 void Game::HandleEvent(SystemEvent &&event)
 {
     if (m_input_manager == nullptr) {
@@ -145,12 +174,12 @@ void Game::HandleEvent(SystemEvent &&event)
 
     switch (event.GetType()) {
     case SystemEventType::EVENT_SHUTDOWN:
-        g_engine->RequestStop();
+        RequestStop();
 
         break;
     default:
-        if (g_engine->game_thread->IsRunning()) {
-            g_engine->game_thread->GetScheduler().Enqueue([this, event = std::move(event)](...) mutable
+        if (m_game_thread->IsRunning()) {
+            m_game_thread->GetScheduler().Enqueue([this, event = std::move(event)](...) mutable
             {
                 OnInputEvent(event);
             });

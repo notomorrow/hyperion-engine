@@ -3,7 +3,7 @@
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 #include <algorithm>
 

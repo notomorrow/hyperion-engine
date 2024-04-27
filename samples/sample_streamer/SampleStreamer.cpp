@@ -1,8 +1,8 @@
 
 #include "SampleStreamer.hpp"
 
-#include "system/Application.hpp"
-#include "system/Debug.hpp"
+#include <core/system/AppContext.hpp>
+#include <core/system/Debug.hpp>
 
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererImage.hpp>
@@ -28,8 +28,7 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/Queue.hpp>
 #include <core/threading/AtomicVar.hpp>
-
-#include <util/ArgParse.hpp>
+#include <core/system/ArgParse.hpp>
 #include <util/json/JSON.hpp>
 #include <rendering/lightmapper/LightmapRenderer.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
@@ -83,8 +82,8 @@
 // }
 
 
-SampleStreamer::SampleStreamer(RC<Application> application)
-    : Game(application, ManagedGameInfo {
+SampleStreamer::SampleStreamer()
+    : Game(ManagedGameInfo {
           "csharp.dll",
           "TestGame"
       })
@@ -95,11 +94,12 @@ void SampleStreamer::InitGame()
 {
     Game::InitGame();
 
+#if 0
     ArgParse args;
-    args.Add("SignallingServerIP", "s", ArgParse::ARG_FLAGS_REQUIRED, ArgParse::ArgumentType::ARGUMENT_TYPE_STRING);
-    args.Add("SignallingServerPort", "p", ArgParse::ARG_FLAGS_REQUIRED, ArgParse::ArgumentType::ARGUMENT_TYPE_INT);
+    args.Add("SignallingServerIP", "s", ArgParse::ARG_FLAGS_REQUIRED, CommandLineArgumentType::ARGUMENT_TYPE_STRING);
+    args.Add("SignallingServerPort", "p", ArgParse::ARG_FLAGS_REQUIRED, CommandLineArgumentType::ARGUMENT_TYPE_INT);
 
-    auto arg_parse_result = args.Parse(GetApplication()->GetArguments());
+    auto arg_parse_result = args.Parse(GetAppContext()->GetArguments());
     if (arg_parse_result.ok) {
         for (const auto &arg : arg_parse_result.values) {
             const TypeID type_id = arg.second.GetTypeID();
@@ -183,6 +183,7 @@ void SampleStreamer::InitGame()
             server->Start();
         }
     }
+#endif
 
     // // Test freetype font rendering
     auto font_face = AssetManager::GetInstance()->Load<FontFace>("fonts/Roboto/Roboto-Regular.ttf");
@@ -1053,25 +1054,25 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
     const Extent2D window_size = GetInputManager()->GetWindow()->GetDimensions();
 
     if (event.GetType() == SystemEventType::EVENT_KEYDOWN) {
-        if (event.GetKeyCode() == KEY_ARROW_LEFT) {
+        if (event.GetKeyCode() == KeyCode::KEY_ARROW_LEFT) {
             auto sun_node = m_scene->GetRoot().Select("Sun");
 
             if (sun_node) {
                 sun_node.SetWorldTranslation((sun_node.GetWorldTranslation() + Vec3f(-0.1f, 0.0f, 0.0f)).Normalized());
             }
-        } else if (event.GetKeyCode() == KEY_ARROW_RIGHT) {
+        } else if (event.GetKeyCode() == KeyCode::KEY_ARROW_RIGHT) {
             auto sun_node = m_scene->GetRoot().Select("Sun");
 
             if (sun_node) {
                 sun_node.SetWorldTranslation((sun_node.GetWorldTranslation() + Vec3f(0.1f, 0.0f, 0.0f)).Normalized());
             }
-        } else if (event.GetKeyCode() == KEY_ARROW_UP) {
+        } else if (event.GetKeyCode() == KeyCode::KEY_ARROW_UP) {
             auto sun_node = m_scene->GetRoot().Select("Sun");
 
             if (sun_node) {
                 sun_node.SetWorldTranslation((sun_node.GetWorldTranslation() + Vec3f(0.0f, 0.1f, 0.0f)).Normalized());
             }
-        } else if (event.GetKeyCode() == KEY_ARROW_DOWN) {
+        } else if (event.GetKeyCode() == KeyCode::KEY_ARROW_DOWN) {
             auto sun_node = m_scene->GetRoot().Select("Sun");
 
             if (sun_node) {
@@ -1110,7 +1111,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
 #endif
 
         // shoot bullet on mouse button left
-        if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {
+        if (event.GetMouseButton() == MouseButton::MOUSE_BUTTON_LEFT) {
 #if 0
             const Vec3f &camera_position = m_scene->GetCamera()->GetTranslation();
             const Vec3f &camera_direction = m_scene->GetCamera()->GetDirection();
@@ -1167,7 +1168,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
 
 #if 0
     if (event.GetType() == SystemEventType::EVENT_MOUSEBUTTON_UP) {
-        if (event.GetMouseButton() == MOUSE_BUTTON_LEFT) {
+        if (event.GetMouseButton() == MouseButton::MOUSE_BUTTON_LEFT) {
             const auto &mouse_position = GetInputManager()->GetMousePosition();
 
             const int mouse_x = mouse_position.GetX();
@@ -1323,28 +1324,28 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
 // not overloading; just creating a method to handle camera movement
 void SampleStreamer::HandleCameraMovement(GameCounter::TickUnit delta)
 {
-    if (m_input_manager->IsKeyDown(KEY_W)) {
+    if (m_input_manager->IsKeyDown(KeyCode::KEY_W)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_FORWARD } }
         });
     }
 
-    if (m_input_manager->IsKeyDown(KEY_S)) {
+    if (m_input_manager->IsKeyDown(KeyCode::KEY_S)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_BACKWARD } }
         });
     }
 
-    if (m_input_manager->IsKeyDown(KEY_A)) {
+    if (m_input_manager->IsKeyDown(KeyCode::KEY_A)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_LEFT } }
         });
     }
 
-    if (m_input_manager->IsKeyDown(KEY_D)) {
+    if (m_input_manager->IsKeyDown(KeyCode::KEY_D)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_RIGHT } }

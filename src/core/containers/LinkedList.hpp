@@ -7,7 +7,7 @@
 #include <core/Defines.hpp>
 #include <Types.hpp>
 #include <core/memory/Memory.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <HashCode.hpp>
 
 #include <algorithm>

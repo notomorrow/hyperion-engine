@@ -66,15 +66,23 @@ class EntityDrawCollection
 public:
     struct EntityList
     {
-        Array<EntityDrawData>   entity_draw_datas;
-        Handle<RenderGroup>     render_group;
+        Array<EntityDrawData>                       entity_draw_datas;
+        Handle<RenderGroup>                         render_group;
+        FixedArray<Bitset, RESOURCE_USAGE_TYPE_MAX> usage_bits;
+
+        void ClearEntities()
+        {
+            entity_draw_datas.Clear();
+            usage_bits = { };
+        }
     };
 
-    void InsertEntityWithAttributes(const RenderableAttributeSet &attributes, EntityDrawData entity_draw_data);
+    void InsertEntityWithAttributes(const RenderableAttributeSet &attributes, const EntityDrawData &entity_draw_data);
 
     void ClearEntities();
 
     void SetRenderSideList(const RenderableAttributeSet &attributes, EntityList &&entity_list);
+    void UpdateRenderSideResources();
 
     FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList();
     const FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX> &GetEntityList() const;
@@ -86,7 +94,7 @@ public:
 
 private:
     FixedArray<FixedArray<ArrayMap<RenderableAttributeSet, EntityList>, PASS_TYPE_MAX>, ThreadType::THREAD_TYPE_MAX>    m_lists;
-    FixedArray<ArrayMap<RenderableAttributeSet, RenderResourceManager>, PASS_TYPE_MAX>                                  m_render_side_resources;
+    RenderResourceManager                                                                                               m_current_render_side_resources;
 };
 
 struct PushConstantData

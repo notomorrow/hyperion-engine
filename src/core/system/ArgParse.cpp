@@ -1,28 +1,18 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <util/ArgParse.hpp>
+#include <core/system/ArgParse.hpp>
+
 #include <util/StringUtil.hpp>
 
 namespace hyperion {
-
-const ArgParse::ArgumentValue &ArgParse::Result::operator[](const String &key) const
-{
-    auto it = values.FindIf([&key](const auto &item)
-    {
-        return item.first == key;
-    });
-
-    AssertThrowMsg(it != values.End(), "Key not found: '%s'", key.Data());
-
-    return it->second;
-}
+namespace sys {
 
 void ArgParse::Add(
     String name,
     String shorthand,
     ArgFlags flags,
-    ArgumentType type,
-    ArgumentValue default_value
+    CommandLineArgumentType type,
+    CommandLineArgumentValue default_value
 )
 {
     auto it = m_definitions.FindIf([&name](const auto &item)
@@ -56,7 +46,7 @@ void ArgParse::Add(
     String shorthand,
     ArgFlags flags,
     Optional<Array<String>> enum_values,
-    ArgumentValue default_value
+    CommandLineArgumentValue default_value
 )
 {
     auto it = m_definitions.FindIf([&name](const auto &item)
@@ -69,7 +59,7 @@ void ArgParse::Add(
             std::move(name),
             shorthand.Empty() ? Optional<String>() : std::move(shorthand),
             flags,
-            ArgumentType::ARGUMENT_TYPE_ENUM,
+            CLAT_ENUM,
             std::move(default_value),
             std::move(enum_values)
         };
@@ -81,13 +71,13 @@ void ArgParse::Add(
         std::move(name),
         shorthand.Empty() ? Optional<String>() : std::move(shorthand),
         flags,
-        ArgumentType::ARGUMENT_TYPE_ENUM,
+        CLAT_ENUM,
         std::move(default_value),
         std::move(enum_values)
     });
 }
 
-ArgParse::Result ArgParse::Parse(int argc, char **argv) const
+ArgParse::ParseResult ArgParse::Parse(int argc, char **argv) const
 {
     Array<String> args;
 
@@ -95,45 +85,45 @@ ArgParse::Result ArgParse::Parse(int argc, char **argv) const
         args.PushBack(argv[i]);
     }
 
-    return Parse(args);
+    return Parse(argv[0], args);
 }
 
-ArgParse::Result ArgParse::Parse(const Array<String> &args) const
+ArgParse::ParseResult ArgParse::Parse(const String &command, const Array<String> &args) const
 {
-    DebugLog(LogType::Debug, "TypeID<String> = %u\n", TypeID::ForType<String>().Value());
-    Result result;
+    ParseResult result;
     result.ok = true;
+    result.result.command = command;
 
     FlatSet<String> used_arguments;
 
-    auto ParseArgument = [](const ArgumentDefinition &argument_definition, const String &str) -> Optional<ArgumentValue>
+    auto ParseArgument = [](const ArgumentDefinition &argument_definition, const String &str) -> Optional<CommandLineArgumentValue>
     {
-        const ArgumentType type = argument_definition.type;
+        const CommandLineArgumentType type = argument_definition.type;
 
         switch (type) {
-        case ArgumentType::ARGUMENT_TYPE_STRING:
-            return ArgumentValue { str };
-        case ArgumentType::ARGUMENT_TYPE_INT: {
+        case CLAT_STRING:
+            return CommandLineArgumentValue { str };
+        case CLAT_INT: {
             int i = 0;
 
             if (!StringUtil::Parse(str, &i)) {
                 return { };
             }
 
-            return ArgumentValue { i };
+            return CommandLineArgumentValue { i };
         }
-        case ArgumentType::ARGUMENT_TYPE_FLOAT: {
+        case CLAT_FLOAT: {
             float f = 0.0f;
 
             if (!StringUtil::Parse(str, &f)) {
                 return { };
             }
 
-            return ArgumentValue { f };
+            return CommandLineArgumentValue { f };
         }
-        case ArgumentType::ARGUMENT_TYPE_BOOL:
-            return ArgumentValue { str == "true" };
-        case ArgumentType::ARGUMENT_TYPE_ENUM: {
+        case CLAT_BOOL:
+            return CommandLineArgumentValue { str == "true" };
+        case CLAT_ENUM: {
             const Array<String> *enum_values = argument_definition.enum_values.TryGet();
 
             if (!enum_values) {
@@ -144,7 +134,7 @@ ArgParse::Result ArgParse::Parse(const Array<String> &args) const
                 return { };
             }
 
-            return ArgumentValue { str };
+            return CommandLineArgumentValue { str };
         }
         }
 
@@ -181,7 +171,7 @@ ArgParse::Result ArgParse::Parse(const Array<String> &args) const
         used_arguments.Insert(it->name);
 
         if (parts.Size() > 1) {
-            Optional<ArgumentValue> parsed_value = ParseArgument(*it, parts[1]);
+            Optional<CommandLineArgumentValue> parsed_value = ParseArgument(*it, parts[1]);
 
             if (!parsed_value.HasValue()) {
                 result.ok = false;
@@ -190,13 +180,13 @@ ArgParse::Result ArgParse::Parse(const Array<String> &args) const
                 return result;
             }
 
-            result.values.PushBack({ arg, std::move(parsed_value.Get()) });
+            result.result.values.PushBack({ arg, std::move(parsed_value.Get()) });
 
             continue;
         }
 
-        if (it->type == ArgumentType::ARGUMENT_TYPE_BOOL) {
-            result.values.PushBack({ arg, ArgumentValue { true } });
+        if (it->type == CLAT_BOOL) {
+            result.result.values.PushBack({ arg, CommandLineArgumentValue { true } });
 
             continue;
         }
@@ -208,7 +198,7 @@ ArgParse::Result ArgParse::Parse(const Array<String> &args) const
             return result;
         }
 
-        Optional<ArgumentValue> parsed_value = ParseArgument(*it, args[++i]);
+        Optional<CommandLineArgumentValue> parsed_value = ParseArgument(*it, args[++i]);
 
         if (!parsed_value.HasValue()) {
             result.ok = false;
@@ -217,7 +207,7 @@ ArgParse::Result ArgParse::Parse(const Array<String> &args) const
             return result;
         }
 
-        result.values.PushBack({ arg, std::move(parsed_value.Get()) });
+        result.result.values.PushBack({ arg, std::move(parsed_value.Get()) });
     }
 
     for (const ArgumentDefinition &def : m_definitions) {
@@ -226,7 +216,7 @@ ArgParse::Result ArgParse::Parse(const Array<String> &args) const
         }
 
         if (def.default_value.HasValue()) {
-            result.values.PushBack({ def.name, def.default_value });
+            result.result.values.PushBack({ def.name, def.default_value });
 
             continue;
         }
@@ -242,4 +232,5 @@ ArgParse::Result ArgParse::Parse(const Array<String> &args) const
     return result;
 }
 
+} // namespace sys
 } // namespace hyperion

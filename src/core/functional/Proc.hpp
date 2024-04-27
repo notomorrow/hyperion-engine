@@ -156,9 +156,7 @@ public:
             functor.memory.template Set<InlineStorage>({ });
             Memory::Construct<FunctorNormalized>(functor.GetPointer(), std::forward<Functor>(fn));
 
-            if constexpr (std::is_trivially_destructible_v<FunctorNormalized>) {
-                functor.delete_fn = &Memory::NoOp;
-            } else {
+            if constexpr (!std::is_trivially_destructible_v<FunctorNormalized>) {
                 functor.delete_fn = &Memory::Destruct<FunctorNormalized>;
             }
         } else {

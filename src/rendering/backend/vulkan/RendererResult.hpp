@@ -3,7 +3,7 @@
 #ifndef RENDERER_RESULT_HPP
 #define RENDERER_RESULT_HPP
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 namespace hyperion {
 namespace renderer {

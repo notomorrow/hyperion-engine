@@ -1,11 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <HyperionEngine.hpp>
+
 #include <dotnet/DotNetSystem.hpp>
 
 namespace hyperion {
 
-HYP_API void InitializeApplication(RC<Application> application)
+HYP_API void InitializeAppContext(RC<AppContext> app_context)
 {
     Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
@@ -20,7 +21,7 @@ HYP_API void InitializeApplication(RC<Application> application)
     g_material_system = new MaterialCache;
     g_safe_deleter = new SafeDeleter;
 
-    g_engine->Initialize(std::move(application));
+    g_engine->Initialize(app_context);
 
     dotnet::DotNetSystem::GetInstance().Initialize();
 }

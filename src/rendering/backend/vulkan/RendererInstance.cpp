@@ -6,11 +6,11 @@
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <core/containers/Array.hpp>
-
-#include <system/Debug.hpp>
-#include <system/Application.hpp>
-#include <system/vma/VmaUsage.hpp>
+#include <core/system/AppContext.hpp>
+#include <core/system/Debug.hpp>
 #include <core/Defines.hpp>
+
+#include <system/vma/VmaUsage.hpp>
 
 #include <Types.hpp>
 
@@ -164,9 +164,9 @@ Result Instance<Platform::VULKAN>::SetupDebug()
     HYPERION_RETURN_OK;
 }
 
-Instance<Platform::VULKAN>::Instance(RC<Application> application)
-    : m_application(application),
-      frame_handler(nullptr)
+Instance<Platform::VULKAN>::Instance()
+    : frame_handler(nullptr),
+      m_surface(VK_NULL_HANDLE)
 {
     m_swapchain = new Swapchain<Platform::VULKAN>();
 }
@@ -196,7 +196,7 @@ Result Instance<Platform::VULKAN>::SetupDebugMessenger()
     HYPERION_RETURN_OK;
 }
 
-Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
+Result Instance<Platform::VULKAN>::Initialize(const AppContext &app_context, bool load_debug_layers)
 {
     /* Set up our debug and validation layers */
     if (load_debug_layers) {
@@ -204,7 +204,7 @@ Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
     }
 
     VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    app_info.pApplicationName = m_application->GetAppName().Data();
+    app_info.pApplicationName = app_context.GetAppName().Data();
     app_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
     app_info.pEngineName = "HyperionEngine";
     app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
@@ -226,7 +226,7 @@ Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
     // Setup Vulkan extensions
     Array<const char *> extension_names;
 
-    if (!m_application->GetVkExtensions(extension_names)) {
+    if (!app_context.GetVkExtensions(extension_names)) {
         return { Result::RENDERER_ERR, "Failed to load Vulkan extensions." };
     }
     
@@ -256,10 +256,10 @@ Result Instance<Platform::VULKAN>::Initialize(bool load_debug_layers)
         "Failed to create Vulkan Instance!"
     );
 
-    this->surface = nullptr;
-
     /* Create our renderable surface from SDL */
-    CreateSurface();
+    AssertThrow(app_context.GetCurrentWindow() != nullptr);
+    m_surface = app_context.GetCurrentWindow()->CreateVkSurface(this);
+
     /* Find and set up an adequate GPU for rendering and presentation */
     HYPERION_BUBBLE_ERRORS(InitializeDevice());
     /* Set up our swapchain for our GPU to present our image.
@@ -314,7 +314,7 @@ Result Instance<Platform::VULKAN>::Destroy()
     }
 
     /* Destroy the surface from SDL */
-    vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
+    vkDestroySurfaceKHR(this->instance, m_surface, nullptr);
 
     m_device->Destroy();
     delete m_device;
@@ -331,15 +331,6 @@ Result Instance<Platform::VULKAN>::Destroy()
     DebugLog(LogType::Debug, "Destroyed instance\n");
 
     return result;
-}
-
-void Instance<Platform::VULKAN>::CreateSurface()
-{
-    AssertThrow(m_application != nullptr);
-    AssertThrow(m_application->GetCurrentWindow() != nullptr);
-
-    surface = m_application->GetCurrentWindow()->CreateVkSurface(this);
-    DebugLog(LogType::Debug, "Created window surface\n");
 }
 
 VkPhysicalDevice Instance<Platform::VULKAN>::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices)
@@ -409,7 +400,7 @@ Result Instance<Platform::VULKAN>::InitializeDevice(VkPhysicalDevice physical_de
         physical_device = PickPhysicalDevice(EnumeratePhysicalDevices());
     }
     
-    m_device = new Device<Platform::VULKAN>(physical_device, this->surface);
+    m_device = new Device<Platform::VULKAN>(physical_device, m_surface);
     m_device->SetRequiredExtensions(GetExtensionMap());
 
     const QueueFamilyIndices &family_indices = m_device->GetQueueFamilyIndices();
@@ -433,7 +424,7 @@ Result Instance<Platform::VULKAN>::InitializeDevice(VkPhysicalDevice physical_de
 
 Result Instance<Platform::VULKAN>::InitializeSwapchain()
 {
-    HYPERION_BUBBLE_ERRORS(m_swapchain->Create(m_device, this->surface));
+    HYPERION_BUBBLE_ERRORS(m_swapchain->Create(m_device, m_surface));
 
     HYPERION_RETURN_OK;
 }

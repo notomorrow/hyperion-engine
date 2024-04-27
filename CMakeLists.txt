@@ -127,7 +127,10 @@ add_definitions(-DHYP_VERSION_PATCH=${HYP_VERSION_PATCH})
 
 add_definitions(-DHYP_EDITOR=1)
 
+add_definitions(-DHYP_SDL=1)
+
 add_definitions(-DSDL_MAIN_HANDLED=1)
+
 add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYP_ROOT_DIR=\\\"${CMAKE_CURRENT_LIST_DIR}\\\"")

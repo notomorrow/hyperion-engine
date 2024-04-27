@@ -5,11 +5,10 @@
 #include <asset/ByteWriter.hpp>
 #include <asset/Assets.hpp>
 
-#include <system/Application.hpp>
+#include <core/system/AppContext.hpp>
+#include <core/dll/DynamicLibrary.hpp>
 
 #include <Engine.hpp>
-
-#include <core/dll/DynamicLibrary.hpp>
 
 #include <util/fs/FsUtil.hpp>
 #include <util/json/JSON.hpp>
@@ -30,10 +29,10 @@ static Optional<FilePath> FindAssemblyFilePath(const char *path)
 {
     FilePath filepath = FilePath::Current() / path;
 
-    if (!filepath.Exists() && g_engine->GetApplication() != nullptr) {
+    if (!filepath.Exists() && g_engine->GetAppContext() != nullptr) {
         DebugLog(LogType::Warn, "Failed to load .NET assembly at path: %s. Trying next path...\n", filepath.Data());
 
-        filepath = FilePath(g_engine->GetApplication()->GetArguments().GetCommand()).BasePath() / path;
+        filepath = FilePath(g_engine->GetAppContext()->GetArguments().GetCommand()).BasePath() / path;
     }
     
     if (!filepath.Exists()) {
@@ -223,8 +222,8 @@ private:
 
         probing_paths.PushBack(FilePath::Relative(GetLibraryPath(), current_path));
 
-        if (g_engine->GetApplication() != nullptr) {
-            probing_paths.PushBack(FilePath::Relative(FilePath(g_engine->GetApplication()->GetArguments().GetCommand()).BasePath(), current_path));
+        if (g_engine->GetAppContext() != nullptr) {
+            probing_paths.PushBack(FilePath::Relative(FilePath(g_engine->GetAppContext()->GetArguments().GetCommand()).BasePath(), current_path));
         }
 
         const json::JSONValue runtime_config_json(json::JSONObject {

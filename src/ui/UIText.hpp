@@ -27,8 +27,12 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
+namespace sys {
 class SystemEvent;
+} // namespace sys
+
+using sys::SystemEvent;
+
 class InputManager;
 
 } // namespace hyperion

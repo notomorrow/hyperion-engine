@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <core/Defines.hpp>
 
 namespace hyperion {

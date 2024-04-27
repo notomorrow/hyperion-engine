@@ -6,7 +6,7 @@
 #include <core/containers/FlatSet.hpp>
 #include <core/memory/Memory.hpp>
 
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 
 namespace hyperion {
 namespace renderer {

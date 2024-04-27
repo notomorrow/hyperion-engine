@@ -3,7 +3,7 @@
 #define HYP_CORE_CORE_HPP
 
 #include <core/memory/Memory.hpp>
-#include <system/Debug.hpp>
+#include <core/system/Debug.hpp>
 #include <core/Defines.hpp>
 #include <Types.hpp>
 
