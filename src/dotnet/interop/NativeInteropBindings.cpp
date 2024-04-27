@@ -82,6 +82,18 @@ HYP_EXPORT void ManagedClass_AddMethod(ManagedClass managed_class, const char *m
         }
     }
 
+    DebugLog(LogType::Info, "Attributes for method %s:\n", method_name);
+
+    for (const String &attribute_name : method_object.attribute_names) {
+        DebugLog(LogType::Info, "\t%s\n", attribute_name.Data());
+    }
+
+    if (managed_class.class_object->HasMethod(method_name)) {
+        DebugLog(LogType::Error, "Class '%s' already has a method named '%s'!\n", managed_class.class_object->GetName().Data(), method_name);
+
+        return;
+    }
+
     managed_class.class_object->AddMethod(
         method_name,
         std::move(method_object)

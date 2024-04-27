@@ -68,8 +68,6 @@ void ScriptSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> ent
 {
     SystemBase::OnEntityRemoved(entity_manager, entity);
 
-    DebugLog(LogType::Debug, "remove script component for entity with id %u from thread %s\n", entity.Value(), *Threads::CurrentThreadID().name);
-
     ScriptComponent &script_component = entity_manager.GetComponent<ScriptComponent>(entity);
 
     if (!(script_component.flags & SCF_INIT)) {
