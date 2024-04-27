@@ -195,16 +195,12 @@ public:
             return;
         }
 
-        DebugLog(LogType::Debug, "SetIsUsed() : resource ID: %u of type: %s, is_used: %d\n", id.Value(), TypeName<T>().Data(), is_used ? 1 : 0);
-
         if (is_used != ptr->usage_bits.Test(id.ToIndex())) {
-            DebugLog(LogType::Debug, "SetIsUsed() : changed for resource ID: %u of type: %s, is_used: %d\n", id.Value(), TypeName<T>().Data(), is_used ? 1 : 0);
-
             ptr->usage_bits.Set(id.ToIndex(), is_used);
 
             if (is_used) {
                 if (!handle.IsValid()) {
-                    // Grab a handle from the resource manager, incrementing the reference count
+                    // Increment reference count
                     handle = Handle<T>(id);
                 }
 
