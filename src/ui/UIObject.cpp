@@ -143,38 +143,52 @@ void UIObject::Init()
     struct ScriptedDelegate
     {
         UIObject    *ui_object;
-        ID<Entity>  entity;
-        Scene       *scene;
         String      method_name;
 
         ScriptedDelegate(UIObject *ui_object, const String &method_name)
             : ui_object(ui_object),
-              entity(ui_object->GetEntity()),
-              scene(ui_object->GetScene()),
               method_name(method_name)
         {
         }
 
         UIEventHandlerResult operator()(const UIMouseEventData &)
         {
-            if (!entity.IsValid() || !scene) {
+            AssertThrow(ui_object != nullptr);
+
+            if (!ui_object->GetEntity().IsValid()) {
+                DebugLog(LogType::Warn, "Entity invalid for UIObject with name: %s\n", *ui_object->GetName());
+
                 return UI_EVENT_HANDLER_RESULT_ERR;
             }
 
-            ScriptComponent *script_component = scene->GetEntityManager()->TryGetComponent<ScriptComponent>(entity);
+            if (!ui_object->GetScene()) {
+                DebugLog(LogType::Warn, "Scene invalid for UIObject with name: %s\n", *ui_object->GetName());
+
+                return UI_EVENT_HANDLER_RESULT_ERR;
+            }
+
+            ScriptComponent *script_component = ui_object->GetScene()->GetEntityManager()->TryGetComponent<ScriptComponent>(ui_object->GetEntity());
 
             if (!script_component) {
-                return UI_EVENT_HANDLER_RESULT_ERR;
+                // DebugLog(LogType::Info, "[%s] No Script component for UIObject with name: %s\n", method_name.Data(), *ui_object->GetName());
+
+                // No script component, do not call.
+                return UI_EVENT_HANDLER_RESULT_OK;
             }
 
             if (!script_component->object) {
+                DebugLog(LogType::Warn, "Script component has no object for UIObject with name: %s\n", *ui_object->GetName());
+
                 return UI_EVENT_HANDLER_RESULT_ERR;
             }
             
             if (dotnet::Class *class_ptr = script_component->object->GetClass()) {
-                if (auto *method_ptr = class_ptr->GetMethod(method_name)) {
+                if (dotnet::ManagedMethod *method_ptr = class_ptr->GetMethod(method_name)) {
                     // Stubbed method, do not call
                     if (method_ptr->HasAttribute("Hyperion.ScriptMethodStub")) {
+                        // Stubbed method, do not bother calling it
+                        DebugLog(LogType::Info, "Stubbed method %s for UI object with name: %s\n", method_name.Data(), *ui_object->GetName());
+
                         return UI_EVENT_HANDLER_RESULT_OK;
                     }
 
@@ -182,17 +196,19 @@ void UIObject::Init()
                 }
             }
 
+            DebugLog(LogType::Error, "Failed to call method %s for UI object with name: %s\n", method_name.Data(), *ui_object->GetName());
+
             return UI_EVENT_HANDLER_RESULT_ERR;
         }
     };
 
     OnMouseHover.Bind(ScriptedDelegate { this, "OnMouseHover" }).Detach();
     OnMouseLeave.Bind(ScriptedDelegate { this, "OnMouseLeave" }).Detach();
-    OnGainFocus.Bind(ScriptedDelegate { this, "OnGainFocus" }).Detach();
-    OnLoseFocus.Bind(ScriptedDelegate { this, "OnLoseFocus" }).Detach();
     OnMouseDrag.Bind(ScriptedDelegate { this, "OnMouseDrag" }).Detach();
     OnMouseUp.Bind(ScriptedDelegate { this, "OnMouseUp" }).Detach();
     OnMouseDown.Bind(ScriptedDelegate { this, "OnMouseDown" }).Detach();
+    OnGainFocus.Bind(ScriptedDelegate { this, "OnGainFocus" }).Detach();
+    OnLoseFocus.Bind(ScriptedDelegate { this, "OnLoseFocus" }).Detach();
     OnClick.Bind(ScriptedDelegate { this, "OnClick" }).Detach();
 
     // set `m_is_init` to true before calling `UpdatePosition` and `UpdateSize` to allow them to run

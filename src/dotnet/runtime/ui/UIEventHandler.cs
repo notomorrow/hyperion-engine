@@ -62,6 +62,18 @@ namespace Hyperion
         }
 
         [Hyperion.ScriptMethodStub]
+        public virtual UIEventHandlerResult OnGainFocus()
+        {
+            return UIEventHandlerResult.Ok;
+        }
+
+        [Hyperion.ScriptMethodStub]
+        public virtual UIEventHandlerResult OnLoseFocus()
+        {
+            return UIEventHandlerResult.Ok;
+        }
+
+        [Hyperion.ScriptMethodStub]
         public virtual UIEventHandlerResult OnClick()
         {
             return UIEventHandlerResult.Ok;

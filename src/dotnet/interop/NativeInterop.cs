@@ -78,6 +78,33 @@ namespace Hyperion
             NativeInterop_SetInvokeMethodFunction(classHolderPtr, Marshal.GetFunctionPointerForDelegate<InvokeMethodDelegate>(InvokeMethod));
         }
 
+        private static void CollectMethods(Type type, Dictionary<string, MethodInfo> methods)
+        {
+            MethodInfo[] methodInfos = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+
+            foreach (MethodInfo methodInfo in methodInfos)
+            {
+                // Skip duplicates in hierarchy
+                if (methods.ContainsKey(methodInfo.Name))
+                {
+                    continue;
+                }
+
+                // Skip constructors
+                if (methodInfo.IsConstructor)
+                {
+                    continue;
+                }
+
+                methods.Add(methodInfo.Name, methodInfo);
+            }
+
+            if (type.BaseType != null)
+            {
+                CollectMethods(type.BaseType, methods);
+            }
+        }
+
         private static ManagedClass InitManagedClass(IntPtr classHolderPtr, Type type)
         {
             string typeName = type.Name;
@@ -91,18 +118,13 @@ namespace Hyperion
 
             Marshal.FreeHGlobal(typeNamePtr);
 
-            MethodInfo[] methodInfos = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+            Dictionary<string, MethodInfo> methods = new Dictionary<string, MethodInfo>();
+            CollectMethods(type, methods);
 
-            foreach (MethodInfo methodInfo in methodInfos)
+            foreach (var item in methods)
             {
-                // Skip constructors
-                if (methodInfo.IsConstructor)
-                {
-                    continue;
-                }
-
                 // Get all custom attributes for the method
-                object[] attributes = methodInfo.GetCustomAttributes(false /* inherit */);
+                object[] attributes = item.Value.GetCustomAttributes(false /* inherit */);
 
                 List<string> attributeNames = new List<string>();
 
@@ -114,9 +136,9 @@ namespace Hyperion
 
                 // Add the objects being pointed to to the delegate cache so they don't get GC'd
                 Guid guid = Guid.NewGuid();
-                managedClass.AddMethod(methodInfo.Name, guid, attributeNames.ToArray());
+                managedClass.AddMethod(item.Key, guid, attributeNames.ToArray());
 
-                ManagedMethodCache.Instance.AddMethod(guid, methodInfo);
+                ManagedMethodCache.Instance.AddMethod(guid, item.Value);
             }
 
             // Add new object, free object delegates
