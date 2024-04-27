@@ -100,6 +100,7 @@ private:
     const EnvGridPassMode       m_mode;
     UniquePtr<TemporalBlending> m_temporal_blending;
     UniquePtr<FullScreenPass>   m_render_texture_to_screen_pass;
+    Handle<Texture>             m_previous_texture;
     bool                        m_is_first_frame;
 };
 

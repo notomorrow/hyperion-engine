@@ -334,11 +334,11 @@ private:
     SDL_Window *window = nullptr;
 };
 
-class HYP_API Application
+class HYP_API ApplicationInstance
 {
 public:
-    Application(ANSIString name, int argc, char **argv);
-    virtual ~Application();
+    ApplicationInstance(ANSIString name, int argc, char **argv);
+    virtual ~ApplicationInstance();
 
     const ANSIString &GetAppName() const
         { return m_name; }
@@ -366,11 +366,11 @@ protected:
     CommandLineArguments                m_arguments;
 };
 
-class HYP_API SDLApplication : public Application
+class HYP_API SDLApplicationInstance : public ApplicationInstance
 {
 public:
-    SDLApplication(ANSIString name, int argc, char **argv);
-    virtual ~SDLApplication() override;
+    SDLApplicationInstance(ANSIString name, int argc, char **argv);
+    virtual ~SDLApplicationInstance() override;
 
     virtual UniquePtr<ApplicationWindow> CreateSystemWindow(WindowOptions) override;
 

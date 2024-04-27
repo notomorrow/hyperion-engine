@@ -1,4 +1,7 @@
-﻿#include "SampleStreamer.hpp"
+﻿// #include "SampleStreamer.hpp"
+
+#include <editor/HyperionEditor.hpp>
+
 #include <system/StackDump.hpp>
 #include <util/ArgParse.hpp>
 
@@ -93,8 +96,11 @@ int main(int argc, char **argv)
 
     hyperion::InitializeApplication(application);
 
-    auto my_game = SampleStreamer(application);
-    Engine::GetInstance()->InitializeGame(&my_game);
+    // auto my_game = SampleStreamer(application);
+
+    HyperionEditor editor(application);
+
+    Engine::GetInstance()->InitializeGame(&editor);
 
     SystemEvent event;
 
@@ -107,7 +113,7 @@ int main(int argc, char **argv)
     while (Engine::GetInstance()->IsRenderLoopActive()) {
         // input manager stuff
         while (application->PollEvent(event)) {
-            my_game.HandleEvent(std::move(event));
+            editor.HandleEvent(std::move(event));
         }
 
         counter.NextTick();
@@ -125,7 +131,7 @@ int main(int argc, char **argv)
             num_frames = 0;
         }
 
-        Engine::GetInstance()->RenderNextFrame(&my_game);
+        Engine::GetInstance()->RenderNextFrame(&editor);
     }
 
     hyperion::ShutdownApplication();

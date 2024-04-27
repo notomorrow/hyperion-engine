@@ -493,23 +493,21 @@ void UIObject::Focus()
     OnGainFocus(UIMouseEventData { });
 }
 
-void UIObject::Blur()
+void UIObject::Blur(bool blur_children)
 {
-    if (!AcceptsFocus()) {
-        return;
-    }
-
     if (GetFocusState() & UI_OBJECT_FOCUS_STATE_FOCUSED) {
         SetFocusState(GetFocusState() & ~UI_OBJECT_FOCUS_STATE_FOCUSED);
         OnLoseFocus(UIMouseEventData { });
     }
 
-    ForEachChildUIObject([](const RC<UIObject> &child)
-    {
-        child->Blur();
+    if (blur_children) {
+        ForEachChildUIObject([](const RC<UIObject> &child)
+        {
+            child->Blur(false);
 
-        return UI_OBJECT_ITERATION_RESULT_CONTINUE;
-    });
+            return UI_OBJECT_ITERATION_RESULT_CONTINUE;
+        });
+    }
 
     if (!m_parent) {
         return;

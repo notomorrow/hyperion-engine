@@ -9,12 +9,9 @@ namespace hyperion {
 
 class EnvProbe;
 
-struct RenderCommand_CreateCubemapImages;
-struct RenderCommand_DestroyCubemapRenderPass;
-
 using renderer::Result;
 
-static const InternalFormat reflection_probe_format = InternalFormat::RGBA8_SRGB;
+static const InternalFormat reflection_probe_format = InternalFormat::RGBA16F;
 static const InternalFormat shadow_probe_format = InternalFormat::RG32F;
 
 static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, const Vec3f &origin);
@@ -435,7 +432,8 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     MeshAttributes { },
                     MaterialAttributes {
                         .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
-                        .cull_faces         = FaceCullMode::NONE
+                        .cull_faces         = FaceCullMode::NONE,
+                        .blend_function     = BlendFunction::AlphaBlending()
                     }
                 ),
                 true // skip frustum culling
@@ -451,7 +449,8 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
                     MeshAttributes { },
                     MaterialAttributes {
                         .shader_definition  = m_shader->GetCompiledShader().GetDefinition(),
-                        .cull_faces         = FaceCullMode::NONE
+                        .cull_faces         = FaceCullMode::NONE,
+                        .blend_function     = BlendFunction::AlphaBlending()
                     }
                 ),
                 true // skip frustum culling (for now, until Camera can have multiple frustums for cubemaps)
@@ -566,7 +565,7 @@ void EnvProbe::Render(Frame *frame)
         g_engine->GetRenderState().UnsetActiveEnvProbe();
     }
 
-    Image *framebuffer_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
+    const ImageRef &framebuffer_image = m_framebuffer->GetAttachmentUsages()[0]->GetAttachment()->GetImage();
 
     framebuffer_image->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
     m_texture->GetImage()->GetGPUImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);

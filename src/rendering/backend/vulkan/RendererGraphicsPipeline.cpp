@@ -277,22 +277,7 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
             continue;
         }
 
-        const bool blend_enabled = attachment_usage->AllowBlending() && blend_function != BlendFunction::None();
-
-        // static const VkBlendFactor src_blend_factors_rgb[] = { VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_SRC_ALPHA };
-        // static const VkBlendFactor dst_blend_factors_rgb[] = { VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE };
-        // static const VkBlendFactor src_blend_factors_alpha[] = { VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE };
-        // static const VkBlendFactor dst_blend_factors_alpha[] = { VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ONE };
-
-        // static const VkBlendFactor src_blend_factors_rgb[] = { VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_SRC_ALPHA };
-        // static const VkBlendFactor dst_blend_factors_rgb[] = { VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE };
-        // static const VkBlendFactor src_blend_factors_alpha[] = { VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE };
-        // static const VkBlendFactor dst_blend_factors_alpha[] = { VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE };
-
-        // static const VkBlendFactor src_blend_factors_rgb[] = { VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_SRC_ALPHA };
-        // static const VkBlendFactor dst_blend_factors_rgb[] = { VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE };
-        // static const VkBlendFactor src_blend_factors_alpha[] = { VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE };
-        // static const VkBlendFactor dst_blend_factors_alpha[] = { VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_FACTOR_ONE };
+        const bool blend_enabled = blend_function != BlendFunction::None();
 
         static const VkBlendOp color_blend_ops[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };
         static const VkBlendOp alpha_blend_ops[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };
@@ -318,18 +303,10 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
     color_blending.blendConstants[2] = 0.0f;
     color_blending.blendConstants[3] = 0.0f;
 
-    /* Dynamic states; these are the values that can be changed without
-     * rebuilding the rendering pipeline. */
     VkPipelineDynamicStateCreateInfo dynamic_state { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     dynamic_state.dynamicStateCount = uint32(m_dynamic_states.Size());
     dynamic_state.pDynamicStates = m_dynamic_states.Data();
-    DebugLog(
-        LogType::Debug,
-        "Enabling [%d] dynamic states\n",
-        dynamic_state.dynamicStateCount
-    );
 
-    /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
     const uint32 max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;

@@ -16,7 +16,6 @@ public:
     virtual ~SampleStreamer() = default;
 
     virtual void InitGame() override;
-    virtual void InitRender() override;
 
     virtual void Teardown() override;
     virtual void Logic(GameCounter::TickUnit delta) override;
