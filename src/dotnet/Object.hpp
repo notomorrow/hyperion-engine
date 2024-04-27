@@ -46,7 +46,7 @@ public:
                 ValueStorage<ReturnType> return_value_storage;
                 void *result_vptr = InvokeMethod(method_ptr, args_vptr, return_value_storage.GetPointer());
 
-                return return_value_storage.Get();
+                return std::move(return_value_storage.Get());
             }
         } else {
             if constexpr (std::is_void_v<ReturnType>) {
@@ -55,7 +55,7 @@ public:
                 ValueStorage<ReturnType> return_value_storage;
                 void *result_vptr = InvokeMethod(method_ptr, nullptr, return_value_storage.GetPointer());
 
-                return return_value_storage.Get();
+                return std::move(return_value_storage.Get());
             }
         }
     }
