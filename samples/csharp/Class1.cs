@@ -28,14 +28,16 @@ public class TestUIScript : UIEventHandler
 
     public override UIEventHandlerResult OnClick()
     {
-        Logger.Log(LogType.Info, "Object RefCountedPtr address: {0}", UIObject.RefCountedPtr.Address);
-        Logger.Log(LogType.Info, "Object name: {0}", UIObject.Name.HashCode);
-        Vec2i offset = new Vec2i(10, 10);
-        Logger.Log(LogType.Info, "OnClick for custom UI component {0} {1}", offset.X, offset.Y);
+        Logger.Log(LogType.Info, "Typeof this UI Object: {0}", UIObject.GetType().Name);
 
-        Logger.Log(LogType.Info, "Current position: {0}, {1}", UIObject.Position.X, UIObject.Position.Y);
+        // Logger.Log(LogType.Info, "Object RefCountedPtr address: {0}", UIObject.RefCountedPtr.Address);
+        // Logger.Log(LogType.Info, "Object name: {0}", UIObject.Name.HashCode);
+        // Vec2i offset = new Vec2i(10, 10);
+        // Logger.Log(LogType.Info, "OnClick for custom UI component {0} {1}", offset.X, offset.Y);
 
-        UIObject.Position += offset;
+        // Logger.Log(LogType.Info, "Current position: {0}, {1}", UIObject.Position.X, UIObject.Position.Y);
+
+        // UIObject.Position += offset;
 
         return UIEventHandlerResult.Ok;
     }

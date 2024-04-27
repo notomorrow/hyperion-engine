@@ -13,14 +13,6 @@ namespace Hyperion
         public static InvokeMethodDelegate InvokeMethodDelegate = InvokeMethod;
 
         [UnmanagedCallersOnly]
-        public static void TestFunction()
-        {
-            Console.WriteLine("Hello from C#!");
-
-            Logger.Log(LogType.Info, "Hello from C#!");
-        }
-
-        [UnmanagedCallersOnly]
         public static void InitializeAssembly(IntPtr classHolderPtr, IntPtr assemblyPathStringPtr)
         {
             // Create a managed string from the pointer
@@ -108,8 +100,6 @@ namespace Hyperion
         private static ManagedClass InitManagedClass(IntPtr classHolderPtr, Type type)
         {
             string typeName = type.Name;
-
-            Console.WriteLine("Initializing managed class: " + typeName);
 
             IntPtr typeNamePtr = Marshal.StringToHGlobalAnsi(typeName);
 
@@ -226,6 +216,13 @@ namespace Hyperion
 
             object? returnValue = methodInfo.Invoke(thisObject, parameters);
 
+            // If returnType is an enum we need to get the underlying type and cast the value to it
+            if (returnType.IsEnum)
+            {
+                returnType = Enum.GetUnderlyingType(returnType);
+                returnValue = Convert.ChangeType(returnValue, returnType);
+            }
+
             if (returnType == typeof(void))
             {
                 // No need to fill out the outPtr
@@ -235,6 +232,13 @@ namespace Hyperion
             if (returnType == typeof(string))
             {
                 throw new NotImplementedException("String return type not implemented");
+            }
+
+            if (returnType == typeof(bool))
+            {
+                Marshal.WriteByte(outPtr, (byte)((bool)returnValue ? 1 : 0));
+
+                return;
             }
 
             // write the return value to the outPtr
