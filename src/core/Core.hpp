@@ -33,7 +33,7 @@ HYP_API Engine *GetEngine();
 HYP_API renderer::Device *GetEngineDevice();
 
 template <class T, class EngineImpl>
-static HYP_FORCE_INLINE bool InitObjectIntern(EngineImpl *engine, Handle<T> &handle)
+static HYP_FORCE_INLINE bool InitObject_Internal(EngineImpl *engine, Handle<T> &handle)
 {
     return engine->template InitObject<T>(handle);
 }
@@ -42,7 +42,7 @@ static HYP_FORCE_INLINE bool InitObjectIntern(EngineImpl *engine, Handle<T> &han
 template <class T>
 static HYP_FORCE_INLINE bool InitObject(Handle<T> &handle)
 {
-    return InitObjectIntern(GetEngine(), handle);
+    return InitObject_Internal(GetEngine(), handle);
 }
 
 } // namespace hyperion

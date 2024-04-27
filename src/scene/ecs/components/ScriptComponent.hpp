@@ -12,6 +12,14 @@
 
 namespace hyperion {
 
+using ScriptComponentFlags = uint32;
+
+enum ScriptComponentFlagBits : ScriptComponentFlags
+{
+    SCF_NONE = 0x0,
+    SCF_INIT = 0x1
+};
+
 struct ScriptInfo
 {
     String  assembly_name;
@@ -24,6 +32,8 @@ struct ScriptComponent
 
     RC<dotnet::Assembly>        assembly;
     UniquePtr<dotnet::Object>   object;
+
+    ScriptComponentFlags        flags = SCF_NONE;
 };
 
 } // namespace hyperion

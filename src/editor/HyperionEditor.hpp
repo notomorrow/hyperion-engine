@@ -20,7 +20,7 @@ public:
     HyperionEditor &operator=(HyperionEditor &&other) noexcept  = delete;
     virtual ~HyperionEditor() override;
 
-    virtual void InitGame() override;
+    virtual void Init() override;
     virtual void Teardown() override;
 
     virtual void Logic(GameCounter::TickUnit delta) override;

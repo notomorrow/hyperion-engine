@@ -35,7 +35,7 @@ void GameThread::operator()(Game *game)
 
     m_is_running.Set(true, MemoryOrder::RELAXED);
 
-    game->InitGame();
+    game->Init();
     
     Queue<Scheduler::ScheduledTask> tasks;
 

@@ -90,9 +90,9 @@ SampleStreamer::SampleStreamer()
 {
 }
 
-void SampleStreamer::InitGame()
+void SampleStreamer::Init()
 {
-    Game::InitGame();
+    Game::Init();
 
 #if 0
     ArgParse args;
@@ -219,7 +219,7 @@ void SampleStreamer::InitGame()
     ));
     InitObject(m_texture);
     
-    DebugLog(LogType::Debug, "SampleStreamer::InitGame : Scene ID = %u\n", m_scene.GetID().Value());
+    DebugLog(LogType::Debug, "SampleStreamer::Init : Scene ID = %u\n", m_scene.GetID().Value());
     m_scene->SetCamera(CreateObject<Camera>(
         70.0f,
         window_size.width, window_size.height,

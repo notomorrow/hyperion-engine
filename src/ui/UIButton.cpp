@@ -8,7 +8,7 @@
 namespace hyperion {
 
 UIButton::UIButton(UIStage *parent, NodeProxy node_proxy)
-    : UIObject(parent, std::move(node_proxy))
+    : UIObject(parent, std::move(node_proxy), UOT_BUTTON)
 {
     SetBorderRadius(5);
     SetBorderFlags(UI_OBJECT_BORDER_ALL);

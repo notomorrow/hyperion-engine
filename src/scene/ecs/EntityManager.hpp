@@ -252,57 +252,61 @@ public:
      *  This is useful for moving entities between scenes.
      *  All components will be moved to the other EntityManager.
      *
-     *  \param[in] id The ID of the entity to move.
+     *  \param[in] entity The Entity to move.
      *  \param[in] other The EntityManager to move the entity to.
      */
-    void MoveEntity(ID<Entity> id, EntityManager &other);
+    void MoveEntity(ID<Entity> entity, EntityManager &other);
     
     HYP_FORCE_INLINE
-    bool HasEntity(ID<Entity> id) const
+    bool HasEntity(ID<Entity> entity) const
     {
         Threads::AssertOnThread(m_owner_thread_mask);
 
-        return m_entities.Find(id) != m_entities.End();
+        if (!entity.IsValid()) {
+            return false;
+        }
+
+        return m_entities.Find(entity) != m_entities.End();
     }
 
     template <EntityTag tag>
-    bool HasTag(ID<Entity> id) const
+    bool HasTag(ID<Entity> entity) const
     {
-        return HasComponent<EntityTagComponent<tag>>(id);
+        return HasComponent<EntityTagComponent<tag>>(entity);
     }
 
     template <EntityTag tag>
-    void AddTag(ID<Entity> id)
+    void AddTag(ID<Entity> entity)
     {
-        if (HasTag<tag>(id)) {
+        if (HasTag<tag>(entity)) {
             return;
         }
 
-        AddComponent<EntityTagComponent<tag>>(id, EntityTagComponent<tag>());
+        AddComponent<EntityTagComponent<tag>>(entity, EntityTagComponent<tag>());
     }
 
     template <EntityTag tag>
-    void RemoveTag(ID<Entity> id)
+    void RemoveTag(ID<Entity> entity)
     {
-        if (!HasTag<tag>(id)) {
+        if (!HasTag<tag>(entity)) {
             return;
         }
 
-        RemoveComponent<EntityTagComponent<tag>>(id);
+        RemoveComponent<EntityTagComponent<tag>>(entity);
     }
 
-    Array<EntityTag> GetTags(ID<Entity> id) const
+    Array<EntityTag> GetTags(ID<Entity> entity) const
     {
         Array<EntityTag> tags;
-        GetTagsHelper(id, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), tags);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), tags);
 
         return tags;
     }
 
-    uint32 GetTagsMask(ID<Entity> id) const
+    uint32 GetTagsMask(ID<Entity> entity) const
     {
         uint32 mask = 0;
-        GetTagsHelper(id, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), mask);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), mask);
 
         return mask;
     }
@@ -311,6 +315,8 @@ public:
     bool HasComponent(ID<Entity> entity) const
     {
         Threads::AssertOnThread(m_owner_thread_mask);
+
+        AssertThrowMsg(entity.IsValid(), "Invalid entity ID");
 
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
@@ -321,6 +327,8 @@ public:
     bool HasComponent(TypeID component_type_id, ID<Entity> entity)
     {
         Threads::AssertOnThread(m_owner_thread_mask);
+
+        AssertThrowMsg(entity.IsValid(), "Invalid entity ID");
 
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
@@ -333,6 +341,8 @@ public:
     {
         // // Temporarily remove this check because OnEntityAdded() and OnEntityRemoved() are called from the game thread
         // Threads::AssertOnThread(m_owner_thread_mask);
+
+        AssertThrowMsg(entity.IsValid(), "Invalid entity ID");
 
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
@@ -358,6 +368,10 @@ public:
         // temp removed
         //// OnEntityAdded() and OnEntityRemoved() are called from the game thread so include it in the mask
         //Threads::AssertOnThread(m_owner_thread_mask | THREAD_GAME);
+
+        if (!entity.IsValid()) {
+            return nullptr;
+        }
 
         auto it = m_entities.Find(entity);
 
@@ -400,6 +414,10 @@ public:
         // // Temporarily remove this check because OnEntityAdded() and OnEntityRemoved() are called from the game thread
         // Threads::AssertOnThread(m_owner_thread_mask);
 
+        if (!entity.IsValid()) {
+            return nullptr;
+        }
+
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
         
@@ -440,6 +458,8 @@ public:
     {
         Threads::AssertOnThread(m_owner_thread_mask);
 
+        AssertThrowMsg(entity.IsValid(), "Invalid entity ID");
+
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
 
@@ -453,14 +473,18 @@ public:
         auto components_insert_result = it->second.components.Set<Component>(component_id);
         component_it = components_insert_result.first;
 
-        auto component_entity_sets_it = m_component_entity_sets.Find(component_type_id);
+        { // Lock the entity sets mutex
+            Mutex::Guard entity_sets_guard(m_entity_sets_mutex);
 
-        if (component_entity_sets_it != m_component_entity_sets.End()) {
-            for (EntitySetTypeID entity_set_id : component_entity_sets_it->second) {
-                auto entity_set_it = m_entity_sets.Find(entity_set_id);
-                AssertThrowMsg(entity_set_it != m_entity_sets.End(), "Entity set does not exist");
+            auto component_entity_sets_it = m_component_entity_sets.Find(component_type_id);
 
-                entity_set_it->second->OnEntityUpdated(entity);
+            if (component_entity_sets_it != m_component_entity_sets.End()) {
+                for (EntitySetTypeID entity_set_id : component_entity_sets_it->second) {
+                    auto entity_set_it = m_entity_sets.Find(entity_set_id);
+                    AssertThrowMsg(entity_set_it != m_entity_sets.End(), "Entity set does not exist");
+
+                    entity_set_it->second->OnEntityUpdated(entity);
+                }
             }
         }
 
@@ -474,6 +498,8 @@ public:
     void RemoveComponent(ID<Entity> entity)
     {
         Threads::AssertOnThread(m_owner_thread_mask);
+
+        AssertThrowMsg(entity.IsValid(), "Invalid entity ID");
 
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");

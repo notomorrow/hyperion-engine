@@ -125,7 +125,7 @@ Scene::Scene(
     m_entity_manager->AddSystem<TerrainSystem>();
     m_entity_manager->AddSystem<ScriptSystem>();
 
-    m_root_node_proxy.Get()->SetScene(this);
+    m_root_node_proxy->SetScene(this);
 }
 
 Scene::~Scene()
@@ -134,7 +134,7 @@ Scene::~Scene()
     m_tlas.Reset();
     m_environment.Reset();
 
-    m_root_node_proxy.Get()->SetScene(nullptr);
+    m_root_node_proxy->SetScene(nullptr);
 
     HYP_SYNC_RENDER();
 }
@@ -193,7 +193,7 @@ NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_root_node_proxy);
-    return m_root_node_proxy.Get()->FindChildWithEntity(entity);
+    return m_root_node_proxy->FindChildWithEntity(entity);
 }
 
 NodeProxy Scene::FindNodeByName(const String &name) const
@@ -201,7 +201,7 @@ NodeProxy Scene::FindNodeByName(const String &name) const
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_root_node_proxy);
-    return m_root_node_proxy.Get()->FindChildByName(name);
+    return m_root_node_proxy->FindChildByName(name);
 }
 
 void Scene::Update(GameCounter::TickUnit delta)

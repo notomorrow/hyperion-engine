@@ -37,7 +37,7 @@ Game::~Game()
     );
 }
 
-void Game::Init()
+void Game::Init_Internal()
 {
     Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
@@ -80,10 +80,7 @@ void Game::Init()
     InitObject(m_scene);
     g_engine->GetWorld()->AddScene(m_scene);
 
-    // Init on render thread
-    InitRender();
-
-    // Init game thread (calls InitGame() on game thread)
+    // Init game thread (calls Init() on game thread)
     m_game_thread->Start(this);
 
     m_is_init = true;
@@ -104,7 +101,7 @@ void Game::Update(GameCounter::TickUnit delta)
     g_engine->GetWorld()->Update(delta);
 }
 
-void Game::InitGame()
+void Game::Init()
 {
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
@@ -121,11 +118,6 @@ void Game::InitGame()
 
         m_managed_game_object->InvokeMethodByName<void>("Init");
     }
-}
-
-void Game::InitRender()
-{
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 }
 
 void Game::Teardown()
@@ -160,7 +152,7 @@ void Game::RequestStop()
 
         m_game_thread->Join();
     }
-    
+
     g_engine->RequestStop();
 }
 

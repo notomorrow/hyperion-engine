@@ -89,8 +89,9 @@ Handle<Mesh> UIObject::GetQuadMesh()
     return quad_mesh_initializer.mesh;
 }
 
-UIObject::UIObject()
-    : m_parent(nullptr),
+UIObject::UIObject(UIObjectType type)
+    : m_type(type),
+      m_parent(nullptr),
       m_is_init(false),
       m_origin_alignment(UI_OBJECT_ALIGNMENT_TOP_LEFT),
       m_parent_alignment(UI_OBJECT_ALIGNMENT_TOP_LEFT),
@@ -105,8 +106,8 @@ UIObject::UIObject()
 {
 }
 
-UIObject::UIObject(UIStage *parent, NodeProxy node_proxy)
-    : UIObject()
+UIObject::UIObject(UIStage *parent, NodeProxy node_proxy, UIObjectType type)
+    : UIObject(type)
 {
     AssertThrowMsg(parent != nullptr, "Invalid UIStage parent pointer provided to UIObject!");
     AssertThrowMsg(node_proxy.IsValid(), "Invalid NodeProxy provided to UIObject!");
@@ -141,12 +142,14 @@ void UIObject::Init()
 
     struct ScriptedDelegate
     {
+        UIObject    *ui_object;
         ID<Entity>  entity;
         Scene       *scene;
         String      method_name;
 
         ScriptedDelegate(UIObject *ui_object, const String &method_name)
-            : entity(ui_object->GetEntity()),
+            : ui_object(ui_object),
+              entity(ui_object->GetEntity()),
               scene(ui_object->GetScene()),
               method_name(method_name)
         {
@@ -160,7 +163,11 @@ void UIObject::Init()
 
             ScriptComponent *script_component = scene->GetEntityManager()->TryGetComponent<ScriptComponent>(entity);
 
-            if (!script_component || !script_component->object) {
+            if (!script_component) {
+                return UI_EVENT_HANDLER_RESULT_ERR;
+            }
+
+            if (!script_component->object) {
                 return UI_EVENT_HANDLER_RESULT_ERR;
             }
             
@@ -822,7 +829,7 @@ Scene *UIObject::GetScene() const
         return node->GetScene();
     }
 
-    return nullptr;
+    return nullptr;//g_engine->GetWorld()->GetDetachedScene().Get();
 }
 
 void UIObject::UpdateActualSizes()

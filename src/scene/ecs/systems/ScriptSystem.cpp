@@ -3,6 +3,8 @@
 #include <scene/ecs/systems/ScriptSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
+#include <core/threading/Threads.hpp>
+
 #include <dotnet/Class.hpp>
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/runtime/scene/ManagedSceneTypes.hpp>
@@ -17,6 +19,10 @@ void ScriptSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entit
     SystemBase::OnEntityAdded(entity_manager, entity);
 
     ScriptComponent &script_component = entity_manager.GetComponent<ScriptComponent>(entity);
+
+    if (script_component.flags & SCF_INIT) {
+        return;
+    }
 
     script_component.assembly = nullptr;
     script_component.object = nullptr;
@@ -45,18 +51,30 @@ void ScriptSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entit
 
     if (!script_component.assembly) {
         DebugLog(LogType::Error, "ScriptSystem::OnEntityAdded: Failed to load assembly '%s'\n", script_component.script_info.assembly_name.Data());
+
+        return;
     }
 
     if (!script_component.object) {
         DebugLog(LogType::Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '%s' from assembly '%s'\n", script_component.script_info.class_name.Data(), script_component.script_info.assembly_name.Data());
+
+        return;
     }
+
+    script_component.flags |= SCF_INIT;
 }
 
 void ScriptSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> entity)
 {
     SystemBase::OnEntityRemoved(entity_manager, entity);
 
+    DebugLog(LogType::Debug, "remove script component for entity with id %u from thread %s\n", entity.Value(), *Threads::CurrentThreadID().name);
+
     ScriptComponent &script_component = entity_manager.GetComponent<ScriptComponent>(entity);
+
+    if (!(script_component.flags & SCF_INIT)) {
+        return;
+    }
 
     if (script_component.object != nullptr) {
         if (dotnet::Class *class_ptr = script_component.object->GetClass()) {
@@ -68,12 +86,14 @@ void ScriptSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity> ent
 
     script_component.object = nullptr;
     script_component.assembly = nullptr;
+
+    script_component.flags &= ~SCF_INIT;
 }
 
 void ScriptSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit delta)
 {
     for (auto [entity_id, script_component] : entity_manager.GetEntitySet<ScriptComponent>()) {
-        if (!script_component.object) {
+        if (!(script_component.flags & SCF_INIT)) {
             continue;
         }
 

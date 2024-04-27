@@ -33,6 +33,20 @@ static inline Scene *GetScene(UIStageType *stage)
 
 // UIObject
 
+// Used for interop with the C# UIObject class.
+// Ensure that the enum values match the C# UIObjectType enum.
+enum UIObjectType : uint32
+{
+    UOT_UNKNOWN = ~0u,
+    UOT_STAGE = 0,
+    UOT_BUTTON = 1,
+    UOT_TEXT = 2,
+    UOT_PANEL = 3,
+    UOT_IMAGE = 4,
+    UOT_TAB_VIEW = 5,
+    UOT_GRID = 6
+};
+
 enum UIObjectAlignment : uint32
 {
     UI_OBJECT_ALIGNMENT_TOP_LEFT        = 0,
@@ -169,12 +183,12 @@ struct UIObjectID : UniqueID { };
 class HYP_API UIObject : public EnableRefCountedPtrFromThis<UIObject>
 {
 protected:
-    UIObject();
+    UIObject(UIObjectType type);
 
 public:
     friend class UIRenderer;
 
-    UIObject(UIStage *parent, NodeProxy node_proxy);
+    UIObject(UIStage *parent, NodeProxy node_proxy, UIObjectType type);
     UIObject(const UIObject &other)                 = delete;
     UIObject &operator=(const UIObject &other)      = delete;
     UIObject(UIObject &&other) noexcept             = delete;
@@ -187,6 +201,11 @@ public:
     HYP_FORCE_INLINE
     const UIObjectID &GetID() const
         { return m_id; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    UIObjectType GetType() const
+        { return m_type; }
 
     [[nodiscard]]
     HYP_FORCE_INLINE
@@ -344,6 +363,8 @@ public:
 
     const NodeProxy &GetNode() const;
 
+    Scene *GetScene() const;
+
     BoundingBox GetLocalAABB() const;
     BoundingBox GetWorldAABB() const;
 
@@ -383,8 +404,6 @@ protected:
 
     const UIObject *GetParentUIObject() const;
 
-    Scene *GetScene() const;
-
     void SetLocalAABB(const BoundingBox &aabb);
 
     void UpdateMeshData();
@@ -422,6 +441,7 @@ private:
     void ForEachChildUIObject(Lambda &&lambda) const;
 
     const UIObjectID    m_id;
+    const UIObjectType  m_type;
 
     bool                m_is_init;
 

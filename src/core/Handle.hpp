@@ -463,7 +463,7 @@ template <class T>
 ObjectContainer<T> *WeakHandle<T>::s_container = nullptr;
 
 template <class T, class Engine, class ...Args>
-static Handle<T> CreateObjectIntern(Engine *engine, Args &&... args)
+static Handle<T> CreateObject_Internal(Engine *engine, Args &&... args)
 {
     return engine->template CreateObject<T>(std::forward<Args>(args)...);
 }
@@ -472,7 +472,7 @@ static Handle<T> CreateObjectIntern(Engine *engine, Args &&... args)
 template <class T, class ...Args>
 static HYP_FORCE_INLINE Handle<T> CreateObject(Args &&... args)
 {
-    return CreateObjectIntern<T>(GetEngine(), std::forward<Args>(args)...);
+    return CreateObject_Internal<T>(GetEngine(), std::forward<Args>(args)...);
 }
 
 #define DEF_HANDLE(T, _max_size) \

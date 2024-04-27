@@ -51,7 +51,7 @@ Skeleton::Skeleton(const NodeProxy &root_bone)
       m_root_bone(nullptr),
       m_mutation_state(DataMutationState::CLEAN)
 {
-    if (root_bone && root_bone.Get()->GetType() == Node::Type::BONE) {
+    if (root_bone.IsValid() && root_bone->GetType() == Node::Type::BONE) {
         m_root_bone = root_bone;
         static_cast<Bone *>(m_root_bone.Get())->SetSkeleton(this);
     }
@@ -89,12 +89,12 @@ void Skeleton::Update(GameCounter::TickUnit)
         m_bone_data.SetMatrix(0, static_cast<Bone *>(m_root_bone.Get())->GetBoneMatrix());
 
         for (SizeType i = 1; i < num_bones; i++) {
-            if (auto &descendent = m_root_bone.Get()->GetDescendents()[i - 1]) {
-                if (!descendent) {
+            if (auto &descendent = m_root_bone->GetDescendents()[i - 1]) {
+                if (!descendent.IsValid()) {
                     continue;
                 }
 
-                if (descendent.Get()->GetType() != Node::Type::BONE) {
+                if (descendent->GetType() != Node::Type::BONE) {
                     continue;
                 }
 
@@ -118,12 +118,12 @@ Bone *Skeleton::FindBone(const String &name)
         return static_cast<Bone *>(m_root_bone.Get());
     }
 
-    for (auto &node : m_root_bone.Get()->GetDescendents()) {
+    for (auto &node : m_root_bone->GetDescendents()) {
         if (!node) {
             continue;
         }
 
-        if (node.Get()->GetType() != Node::Type::BONE) {
+        if (node->GetType() != Node::Type::BONE) {
             continue;
         }
 
@@ -149,14 +149,14 @@ uint Skeleton::FindBoneIndex(const String &name) const
         return index;
     }
 
-    for (auto &node : m_root_bone.Get()->GetDescendents()) {
+    for (auto &node : m_root_bone->GetDescendents()) {
         ++index;
 
         if (!node) {
             continue;
         }
 
-        if (node.Get()->GetType() != Node::Type::BONE) {
+        if (node->GetType() != Node::Type::BONE) {
             continue;
         }
 
@@ -188,7 +188,7 @@ void Skeleton::SetRootBone(const NodeProxy &root_bone)
         m_root_bone = NodeProxy();
     }
 
-    if (!root_bone || root_bone.Get()->GetType() != Node::Type::BONE) {
+    if (!root_bone.IsValid() || root_bone->GetType() != Node::Type::BONE) {
         return;
     }
 
@@ -198,11 +198,11 @@ void Skeleton::SetRootBone(const NodeProxy &root_bone)
 
 SizeType Skeleton::NumBones() const
 {
-    if (!m_root_bone) {
+    if (!m_root_bone.IsValid()) {
         return 0;
     }
 
-    return 1 + m_root_bone.Get()->GetDescendents().Size();
+    return 1 + m_root_bone->GetDescendents().Size();
 }
 
 void Skeleton::AddAnimation(Animation &&animation)

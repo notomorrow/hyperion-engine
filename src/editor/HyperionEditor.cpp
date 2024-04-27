@@ -96,13 +96,6 @@ void HyperionEditorImpl::CreateMainPanel()
     m_main_panel = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Main_Panel), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }), true);
     // btn->SetPadding(Vec2i { 5, 5 });
     
-    // GetUIStage()->GetScene()->GetEntityManager()->AddComponent(btn->GetEntity(), ScriptComponent {
-    //     {
-    //         .assembly_name  = "csharp.dll",
-    //         .class_name     = "TestUIScript"
-    //     }
-    // });
-
     auto menu_bar = GetUIStage()->CreateUIObject<UIMenuBar>(HYP_NAME(Sample_MenuBar), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
     menu_bar->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
     menu_bar->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
@@ -177,9 +170,9 @@ void HyperionEditorImpl::CreateMainPanel()
     tab_view->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
     m_main_panel->AddChildUIObject(tab_view);
 
-    // auto scene_tab_content_grid = GetUIStage()->CreateUIObject<UIGrid>(HYP_NAME(Scene_Tab_Grid), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-    // scene_tab_content_grid->SetNumColumns(3);
-    // scene_tab_content_grid->SetNumRows(5);
+    auto scene_tab_content_grid = GetUIStage()->CreateUIObject<UIGrid>(HYP_NAME(Scene_Tab_Grid), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+    scene_tab_content_grid->SetNumColumns(3);
+    scene_tab_content_grid->SetNumRows(5);
 
     // auto scene_tab_content_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Scene_Tab_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 30, UIObjectSize::PIXEL }));
     // scene_tab_content_text->SetText("grid test 1234567");
@@ -187,10 +180,6 @@ void HyperionEditorImpl::CreateMainPanel()
     // scene_tab_content_text->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
     // scene_tab_content_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
 
-    // auto scene_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(HYP_NAME(Hello_world_button), Vec2i { 20, 0 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
-    // scene_tab_content_button->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    // scene_tab_content_button->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    // scene_tab_content_button->SetText("Hello hello helloworld");
 
     auto scene_tab = tab_view->AddTab(HYP_NAME(Scene_Tab), "Scene");
     auto ui_image = GetUIStage()->CreateUIObject<UIImage>(HYP_NAME(Sample_Image), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
@@ -225,6 +214,26 @@ void HyperionEditorImpl::CreateMainPanel()
     scene_tab->GetContents()->AddChildUIObject(ui_image);
 
     auto game_tab = tab_view->AddTab(HYP_NAME(Game_Tab), "Game");
+    auto game_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(HYP_NAME(Hello_world_button), Vec2i { 20, 50 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
+    game_tab_content_button->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    game_tab_content_button->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    game_tab_content_button->SetText("Hello hello helloworld");
+    game_tab->GetContents()->AddChildUIObject(game_tab_content_button);
+
+    AssertThrow(game_tab_content_button->GetScene() != nullptr);
+
+    game_tab_content_button->GetScene()->GetEntityManager()->AddComponent(game_tab_content_button->GetEntity(), ScriptComponent {
+        {
+            .assembly_name  = "csharp.dll",
+            .class_name     = "TestUIScript"
+        }
+    });
+
+    // AssertThrow(game_tab_content_button->GetScene() != nullptr);
+
+    // AssertThrow(game_tab_content_button->GetScene()->GetEntityManager()->HasComponent<ScriptComponent>(game_tab_content_button->GetEntity()));
+    AssertThrow(game_tab_content_button->GetScene()->GetEntityManager()->HasEntity(game_tab_content_button->GetEntity()));
+
     // ui_image->SetTexture(AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg"));
 }
 
@@ -296,9 +305,9 @@ HyperionEditor::~HyperionEditor()
 {
 }
 
-void HyperionEditor::InitGame()
+void HyperionEditor::Init()
 {
-    Game::InitGame();
+    Game::Init();
 
     GetScene()->GetCamera()->SetCameraController(RC<CameraController>(new EditorCameraController()));
 

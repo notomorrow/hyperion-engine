@@ -23,7 +23,7 @@ namespace Hyperion
             this.ctrlBlock = ctrlBlock;
         }
 
-        public bool Valid
+        public bool IsValid
         {
             get
             {
@@ -68,7 +68,7 @@ namespace Hyperion
             this.ctrlBlock = ctrlBlock;
         }
 
-        public bool Valid
+        public bool IsValid
         {
             get
             {

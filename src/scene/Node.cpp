@@ -203,18 +203,21 @@ void Node::SetScene(Scene *scene)
 
     AssertThrow(scene != nullptr);
 
-    if (m_scene && m_entity.IsValid()) {
-        m_scene->GetEntityManager()->MoveEntity(m_entity, *scene->GetEntityManager().Get());
-    }
+    Scene *previous_scene = m_scene;
 
     m_scene = scene;
+
+    // Move entity from previous scene to new scene
+    if (previous_scene != nullptr && m_entity.IsValid()) {
+        previous_scene->GetEntityManager()->MoveEntity(m_entity, *m_scene->GetEntityManager());
+    }
 
     for (auto &child : m_child_nodes) {
         if (!child) {
             continue;
         }
 
-        child->SetScene(scene);
+        child->SetScene(m_scene);
     }
 }
 
