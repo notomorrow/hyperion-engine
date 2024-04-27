@@ -3,6 +3,18 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
+    public enum UIObjectType : uint
+    {
+        Unknown = ~0u,
+        Stage = 0,
+        Button = 1,
+        Text = 2,
+        Panel = 3,
+        Image = 4,
+        TabView = 5,
+        Grid = 6
+    }
+
     public enum UIEventHandlerResult : uint
     {
         Error = 0x1u << 31,
@@ -32,7 +44,7 @@ namespace Hyperion
         {
             this.refCountedPtr = refCountedPtr;
 
-            if (this.refCountedPtr.Valid)
+            if (this.refCountedPtr.IsValid)
             {
                 this.refCountedPtr.IncRef();
             }
@@ -40,7 +52,7 @@ namespace Hyperion
 
         public void Dispose()
         {
-            if (this.refCountedPtr.Valid)
+            if (this.refCountedPtr.IsValid)
             {
                 refCountedPtr.DecRef();
             }
@@ -119,6 +131,10 @@ namespace Hyperion
                 UIObject_SetParentAlignment(refCountedPtr, value);
             }
         }
+
+        [DllImport("hyperion", EntryPoint = "UIObject_GetType")]
+        [return: MarshalAs(UnmanagedType.U4)]
+        private static extern UIObjectType UIObject_GetType(RefCountedPtr rc);
 
         [DllImport("hyperion", EntryPoint = "UIObject_GetName")]
         private static extern void UIObject_GetName(RefCountedPtr rc, [Out] out Name name);

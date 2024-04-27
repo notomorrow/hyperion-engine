@@ -39,6 +39,7 @@ struct ManagedGameInfo
 class Game
 {
     friend class GameThread;
+    friend class Engine;
 
 public:
     HYP_API Game();
@@ -57,12 +58,9 @@ public:
     void SetAppContext(const RC<AppContext> &app_context)
         { m_app_context = app_context; }
 
-    HYP_API virtual void Init() final;
+    HYP_API virtual void Init();
     HYP_API virtual void Update(GameCounter::TickUnit delta) final;
     HYP_API virtual void Teardown();
-
-    HYP_API virtual void InitGame();
-    HYP_API virtual void InitRender();
 
     HYP_API virtual void OnFrameBegin(Frame *frame);
     HYP_API virtual void OnFrameEnd(Frame *frame);
@@ -90,6 +88,8 @@ protected:
     UniquePtr<Object>           m_managed_game_object;
 
 private:
+    void Init_Internal();
+
     void RequestStop();
 
     bool                        m_is_init;

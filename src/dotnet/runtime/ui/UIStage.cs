@@ -94,14 +94,12 @@ namespace Hyperion
 
             RefCountedPtr refCountedPtr = method(ptr, name, position, size, attachToRoot);
 
-            if (!refCountedPtr.Valid)
+            if (!refCountedPtr.IsValid)
             {
                 throw new Exception("Failed to create UI object");
             }
 
-            T uiObject = Activator.CreateInstance(typeof(T), refCountedPtr) as T;
-
-            return uiObject;
+            return UIHelpers.MarshalUIObject(refCountedPtr) as T;
         }
 
         [DllImport("hyperion", EntryPoint = "UIStage_GetScene")]

@@ -15,6 +15,17 @@ using namespace hyperion;
 
 extern "C" {
 
+HYP_EXPORT UIObjectType UIObject_GetType(ManagedRefCountedPtr obj)
+{
+    RC<UIObject> ui_object = GetRefCountedPtrFromManaged<UIObject>(obj);
+
+    if (!ui_object) {
+        return UOT_UNKNOWN;
+    }
+
+    return ui_object->GetType();
+}
+
 HYP_EXPORT void UIObject_GetName(ManagedRefCountedPtr obj, Name *out_name)
 {
     DebugLog(LogType::Debug, "GetName called with address: %llu\n", obj.address);

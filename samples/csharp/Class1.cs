@@ -37,7 +37,7 @@ public class TestUIScript : UIEventHandler
 
         UIObject.Position += offset;
 
-        return UIEventHandlerResult.StopBubbling;
+        return UIEventHandlerResult.Ok;
     }
 }
 

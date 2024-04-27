@@ -85,7 +85,7 @@ HYP_API bool Engine::InitializeGame(Game *game)
 
     Threads::AssertOnThread(ThreadName::THREAD_MAIN, "Must be on main thread to initialize game instance");
 
-    game->Init();
+    game->Init_Internal();
 
     return true;
 }

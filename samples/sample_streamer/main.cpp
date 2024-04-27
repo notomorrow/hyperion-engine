@@ -49,14 +49,14 @@ int main(int argc, char **argv)
     // handle fatal crashes
     signal(SIGSEGV, HandleSignal);
 
+    HyperionEditor editor;
+    App app;
+
     ArgParse arg_parse;
     arg_parse.Add("Headless", String::empty, ArgParse::ARG_FLAGS_NONE, CommandLineArgumentType::CLAT_BOOL, false);    
     arg_parse.Add("Mode", "m", ArgParse::ARG_FLAGS_NONE, Array<String> { "PrecompileShaders", "Streamer" }, String("Streamer"));
 
     if (auto parse_result = arg_parse.Parse(argc, argv)) {
-        HyperionEditor editor;
-
-        App app;
         app.Launch(&editor, parse_result.result);
     } else {
         DebugLog(

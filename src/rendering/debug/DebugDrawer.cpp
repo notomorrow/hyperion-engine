@@ -138,9 +138,9 @@ void DebugDrawer::Render(Frame *frame)
     RendererProxy proxy = m_render_group->GetProxy();
     proxy.Bind(frame);
 
-    const uint debug_drawer_descriptor_set_index = proxy.GetGraphicsPipeline()->GetDescriptorTable().Get()->GetDescriptorSetIndex(HYP_NAME(DebugDrawerDescriptorSet));
+    const uint debug_drawer_descriptor_set_index = proxy.GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(HYP_NAME(DebugDrawerDescriptorSet));
 
-    proxy.GetGraphicsPipeline()->GetDescriptorTable().Get()->Bind<GraphicsPipelineRef>(
+    proxy.GetGraphicsPipeline()->GetDescriptorTable()->Bind<GraphicsPipelineRef>(
         proxy.GetCommandBuffer(frame_index),
         frame_index,
         proxy.GetGraphicsPipeline(),
@@ -177,7 +177,7 @@ void DebugDrawer::Render(Frame *frame)
     for (SizeType index = 0; index < m_draw_commands.Size(); index++) {
         const DebugDrawCommand &draw_command = m_draw_commands[index];
 
-        proxy.GetGraphicsPipeline()->GetDescriptorTable().Get()->GetDescriptorSet(HYP_NAME(DebugDrawerDescriptorSet), frame_index)->Bind(
+        proxy.GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSet(HYP_NAME(DebugDrawerDescriptorSet), frame_index)->Bind(
             proxy.GetCommandBuffer(frame_index),
             proxy.GetGraphicsPipeline(),
             {

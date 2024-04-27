@@ -17,12 +17,12 @@ namespace Hyperion
         {
             get
             {
-                if (!uiObjectPtr.Valid)
+                if (!uiObjectPtr.IsValid)
                 {
                     throw new Exception("UIComponent is not valid");
                 }
 
-                return new UIObject(uiObjectPtr);
+                return UIHelpers.MarshalUIObject(uiObjectPtr);
             }
         }
     }

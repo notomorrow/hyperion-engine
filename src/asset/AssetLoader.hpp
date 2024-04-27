@@ -199,8 +199,8 @@ struct AssetLoaderWrapper<Node>
         if (value.Is<ResultType>()) {
             auto result = value.Get<ResultType>();
 
-            if (result) {
-                result.Get()->SetScene(nullptr); // sets it to detached scene for the current thread we're on.
+            if (result.IsValid()) {
+                result->SetScene(nullptr); // sets it to detached scene for the current thread we're on.
             }
     
             return result;

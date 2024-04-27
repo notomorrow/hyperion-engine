@@ -27,7 +27,7 @@
 namespace hyperion {
 
 UIStage::UIStage()
-    : UIObject(),
+    : UIObject(UOT_STAGE),
       m_surface_size { 1000, 1000 }
 {
     SetName(HYP_NAME(Stage));
