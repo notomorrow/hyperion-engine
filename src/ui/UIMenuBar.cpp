@@ -13,7 +13,7 @@ namespace hyperion {
 #pragma region UIMenuItem
 
 UIMenuItem::UIMenuItem(UIStage *parent, NodeProxy node_proxy)
-    : UIPanel(parent, std::move(node_proxy))
+    : UIPanel(parent, std::move(node_proxy), UOT_MENU_ITEM)
 {
     SetBorderRadius(0);
     SetPadding({ 10, 0 });
@@ -173,7 +173,7 @@ void UIMenuItem::UpdateDropDownMenu()
 #pragma region UIMenuBar
 
 UIMenuBar::UIMenuBar(UIStage *parent, NodeProxy node_proxy)
-    : UIPanel(parent, std::move(node_proxy)),
+    : UIPanel(parent, std::move(node_proxy), UOT_MENU_BAR),
       m_selected_menu_item_index(~0u)
 {
     SetBorderRadius(0);

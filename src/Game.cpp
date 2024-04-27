@@ -11,6 +11,7 @@
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
 #include <dotnet/runtime/ManagedHandle.hpp>
+#include <dotnet/core/RefCountedPtrBindings.hpp>
 
 namespace hyperion {
 
@@ -108,12 +109,12 @@ void Game::Init()
     m_ui_stage->Init();
 
     if (m_managed_game_object) {
-        m_managed_game_object->InvokeMethodByName<void, ManagedHandle, void *, void *, void *>(
+        m_managed_game_object->InvokeMethodByName<void, ManagedHandle, void *, void *, ManagedRefCountedPtr>(
             "BeforeInit",
             CreateManagedHandleFromHandle(m_scene),
             m_input_manager.Get(),
             g_asset_manager,
-            m_ui_stage.Get()
+            CreateManagedRefCountedPtr(m_ui_stage)
         );
 
         m_managed_game_object->InvokeMethodByName<void>("Init");

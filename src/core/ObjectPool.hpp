@@ -4,6 +4,7 @@
 #define HYPERION_CORE_OBJECT_POOL_HPP
 
 #include <core/threading/Mutex.hpp>
+#include <core/system/Debug.hpp>
 #include <core/Containers.hpp>
 #include <core/IDGenerator.hpp>
 #include <core/ID.hpp>
@@ -13,7 +14,6 @@
 
 #include <Constants.hpp>
 #include <Types.hpp>
-#include <core/system/Debug.hpp>
 
 #include <type_traits>
 

@@ -3,66 +3,93 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class UIStage
+    public class UIStage : UIObject
     {
-        private IntPtr ptr;
 
         // This dictionary is used to map the generic type of the UI object to the corresponding method that creates the UI object
-        private static readonly Dictionary<Type, Func<IntPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr>> createUIObjectMethods = new Dictionary<Type, Func<IntPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr>>
+        private static readonly Dictionary<Type, Func<RefCountedPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr>> createUIObjectMethods = new Dictionary<Type, Func<RefCountedPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr>>
         {
             {
-                typeof(UIButton), (IntPtr ptr, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                typeof(UIButton), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
                 {
                     RefCountedPtr outPtr = new RefCountedPtr();
-                    UIStage_CreateUIObject_UIButton(ptr, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    UIStage_CreateUIObject_UIButton(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
                     return outPtr;
                 }
             },
             {
-                typeof(UIText), (IntPtr ptr, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                typeof(UIText), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
                 {
                     RefCountedPtr outPtr = new RefCountedPtr();
-                    UIStage_CreateUIObject_UIText(ptr, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    UIStage_CreateUIObject_UIText(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
                     return outPtr;
                 }
             },
             {
-                typeof(UIPanel), (IntPtr ptr, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                typeof(UIPanel), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
                 {
                     RefCountedPtr outPtr = new RefCountedPtr();
-                    UIStage_CreateUIObject_UIPanel(ptr, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    UIStage_CreateUIObject_UIPanel(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
                     return outPtr;
                 }
             },
             {
-                typeof(UIImage), (IntPtr ptr, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                typeof(UIImage), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
                 {
                     RefCountedPtr outPtr = new RefCountedPtr();
-                    UIStage_CreateUIObject_UIImage(ptr, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    UIStage_CreateUIObject_UIImage(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
                     return outPtr;
                 }
             },
             {
-                typeof(UITabView), (IntPtr ptr, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                typeof(UITabView), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
                 {
                     RefCountedPtr outPtr = new RefCountedPtr();
-                    UIStage_CreateUIObject_UITabView(ptr, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    UIStage_CreateUIObject_UITabView(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
                     return outPtr;
                 }
             },
             {
-                typeof(UIGrid), (IntPtr ptr, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                typeof(UITab), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
                 {
                     RefCountedPtr outPtr = new RefCountedPtr();
-                    UIStage_CreateUIObject_UIGrid(ptr, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    UIStage_CreateUIObject_UITab(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    return outPtr;
+                }
+            },
+            {
+                typeof(UIGrid), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                {
+                    RefCountedPtr outPtr = new RefCountedPtr();
+                    UIStage_CreateUIObject_UIGrid(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    return outPtr;
+                }
+            },
+            {
+                typeof(UIMenuBar), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                {
+                    RefCountedPtr outPtr = new RefCountedPtr();
+                    UIStage_CreateUIObject_UIMenuBar(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
+                    return outPtr;
+                }
+            },
+            {
+                typeof(UIMenuItem), (RefCountedPtr rc, Name name, Vec2i position, Vec2i size, bool attachToRoot) =>
+                {
+                    RefCountedPtr outPtr = new RefCountedPtr();
+                    UIStage_CreateUIObject_UIMenuItem(rc, ref name, ref position, ref size, attachToRoot, out outPtr);
                     return outPtr;
                 }
             }
         };
 
-        public UIStage(IntPtr ptr)
+        public UIStage() : base()
         {
-            this.ptr = ptr;
+                
+        }
+
+        public UIStage(RefCountedPtr refCountedPtr) : base(refCountedPtr)
+        {
         }
 
         public Scene Scene
@@ -70,7 +97,7 @@ namespace Hyperion
             get
             {
                 ManagedHandle sceneHandle = new ManagedHandle();
-                UIStage_GetScene(ptr, out sceneHandle);
+                UIStage_GetScene(refCountedPtr, out sceneHandle);
                 return new Scene(sceneHandle);
             }
         }
@@ -80,50 +107,65 @@ namespace Hyperion
             get
             {
                 Vec2i size = new Vec2i();
-                UIStage_GetSurfaceSize(ptr, out size);
+                UIStage_GetSurfaceSize(refCountedPtr, out size);
                 return size;
             }
         }
 
         public T CreateUIObject<T>(Name name, Vec2i position, Vec2i size, bool attachToRoot) where T : UIObject, new()
         {
-            if (!createUIObjectMethods.TryGetValue(typeof(T), out Func<IntPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr> method))
+            if (!createUIObjectMethods.TryGetValue(typeof(T), out Func<RefCountedPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr> method))
             {
                 throw new Exception("Failed to create UI object");
             }
 
-            RefCountedPtr refCountedPtr = method(ptr, name, position, size, attachToRoot);
+            RefCountedPtr result = method(refCountedPtr, name, position, size, attachToRoot);
 
-            if (!refCountedPtr.IsValid)
+            if (!result.IsValid)
             {
                 throw new Exception("Failed to create UI object");
             }
 
-            return UIHelpers.MarshalUIObject(refCountedPtr) as T;
+            return UIObjectHelpers.MarshalUIObject(result) as T;
         }
 
         [DllImport("hyperion", EntryPoint = "UIStage_GetScene")]
-        private static extern void UIStage_GetScene(IntPtr uiStagePtr, [Out] out ManagedHandle sceneHandle);
+        private static extern void UIStage_GetScene(RefCountedPtr rc, [Out] out ManagedHandle sceneHandle);
 
         [DllImport("hyperion", EntryPoint = "UIStage_GetSurfaceSize")]
-        private static extern void UIStage_GetSurfaceSize(IntPtr uiStagePtr, [Out] out Vec2i size);
+        private static extern void UIStage_GetSurfaceSize(RefCountedPtr rc, [Out] out Vec2i size);
 
         [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIButton")]
-        private static extern void UIStage_CreateUIObject_UIButton(IntPtr uiStagePtr, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+        private static extern void UIStage_CreateUIObject_UIButton(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
 
         [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIText")]
-        private static extern void UIStage_CreateUIObject_UIText(IntPtr uiStagePtr, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+        private static extern void UIStage_CreateUIObject_UIText(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
 
         [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIPanel")]
-        private static extern void UIStage_CreateUIObject_UIPanel(IntPtr uiStagePtr, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+        private static extern void UIStage_CreateUIObject_UIPanel(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
 
         [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIImage")]
-        private static extern void UIStage_CreateUIObject_UIImage(IntPtr uiStagePtr, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+        private static extern void UIStage_CreateUIObject_UIImage(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
 
         [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UITabView")]
-        private static extern void UIStage_CreateUIObject_UITabView(IntPtr uiStagePtr, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+        private static extern void UIStage_CreateUIObject_UITabView(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+
+        [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UITab")]
+        private static extern void UIStage_CreateUIObject_UITab(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
 
         [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIGrid")]
-        private static extern void UIStage_CreateUIObject_UIGrid(IntPtr uiStagePtr, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+        private static extern void UIStage_CreateUIObject_UIGrid(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+
+        [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIGridRow")]
+        private static extern void UIStage_CreateUIObject_UIGridRow(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+
+        [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIGridColumn")]
+        private static extern void UIStage_CreateUIObject_UIGridColumn(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+
+        [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIMenuBar")]
+        private static extern void UIStage_CreateUIObject_UIMenuBar(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
+
+        [DllImport("hyperion", EntryPoint = "UIStage_CreateUIObject_UIMenuItem")]
+        private static extern void UIStage_CreateUIObject_UIMenuItem(RefCountedPtr rc, [MarshalAs(UnmanagedType.LPStruct)] ref Name name, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i position, [MarshalAs(UnmanagedType.LPStruct)] ref Vec2i size, bool attachToRoot, [Out] out RefCountedPtr outPtr);
     }
 }

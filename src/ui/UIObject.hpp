@@ -44,7 +44,12 @@ enum UIObjectType : uint32
     UOT_PANEL = 3,
     UOT_IMAGE = 4,
     UOT_TAB_VIEW = 5,
-    UOT_GRID = 6
+    UOT_TAB = 6,
+    UOT_GRID = 7,
+    UOT_GRID_ROW = 8,
+    UOT_GRID_COLUMN = 9,
+    UOT_MENU_BAR = 10,
+    UOT_MENU_ITEM = 11
 };
 
 enum UIObjectAlignment : uint32

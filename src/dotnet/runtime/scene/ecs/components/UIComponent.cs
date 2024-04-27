@@ -22,7 +22,7 @@ namespace Hyperion
                     throw new Exception("UIComponent is not valid");
                 }
 
-                return UIHelpers.MarshalUIObject(uiObjectPtr);
+                return UIObjectHelpers.MarshalUIObject(uiObjectPtr);
             }
         }
     }

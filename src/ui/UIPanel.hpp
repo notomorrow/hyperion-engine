@@ -13,6 +13,9 @@ class UIStage;
 
 class HYP_API UIPanel : public UIObject
 {
+protected:
+    UIPanel(UIStage *stage, NodeProxy node_proxy, UIObjectType type);
+
 public:
     UIPanel(UIStage *stage, NodeProxy node_proxy);
     UIPanel(const UIPanel &other)                   = delete;

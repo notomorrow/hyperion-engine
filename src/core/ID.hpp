@@ -1,10 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_CORE_ID_HPP
 #define HYPERION_CORE_ID_HPP
 
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/utilities/TypeID.hpp>
 #include <core/Defines.hpp>
+
 #include <Types.hpp>
 #include <Constants.hpp>
 #include <HashCode.hpp>

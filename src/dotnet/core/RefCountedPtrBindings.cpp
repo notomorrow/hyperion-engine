@@ -20,7 +20,7 @@ HYP_EXPORT void RefCountedPtr_IncRef(ManagedRefCountedPtr managed_ref_counted_pt
     }
 
     memory::detail::RefCountedPtrBase<> ref_counted_ptr;
-    ref_counted_ptr.SetRefCountData(ref_count_data, true /* inc_ref */);
+    ref_counted_ptr.SetRefCountData_Internal(ref_count_data, true /* inc_ref */);
     ref_counted_ptr.Release(); // Release the object to prevent the ref count from being decremented on destruction
 }
 
@@ -33,7 +33,7 @@ HYP_EXPORT void RefCountedPtr_DecRef(ManagedRefCountedPtr managed_ref_counted_pt
     }
 
     memory::detail::RefCountedPtrBase<> ref_counted_ptr;
-    ref_counted_ptr.SetRefCountData(ref_count_data, false /* inc_ref */);
+    ref_counted_ptr.SetRefCountData_Internal(ref_count_data, false /* inc_ref */);
     ref_counted_ptr.Reset(); // Reset the ref count data to decrement the ref count
 }
 
@@ -46,7 +46,7 @@ HYP_EXPORT void WeakRefCountedPtr_IncRef(ManagedWeakRefCountedPtr managed_weak_r
     }
 
     memory::detail::WeakRefCountedPtrBase<> weak_ref_counted_ptr;
-    weak_ref_counted_ptr.SetRefCountData(ref_count_data, true /* inc_ref */);
+    weak_ref_counted_ptr.SetRefCountData_Internal(ref_count_data, true /* inc_ref */);
     weak_ref_counted_ptr.Release(); // Release the object to prevent the ref count from being decremented on destruction
 }
 
@@ -59,7 +59,7 @@ HYP_EXPORT void WeakRefCountedPtr_DecRef(ManagedWeakRefCountedPtr managed_weak_r
     }
 
     memory::detail::WeakRefCountedPtrBase<> weak_ref_counted_ptr;
-    weak_ref_counted_ptr.SetRefCountData(ref_count_data, false /* inc_ref */);
+    weak_ref_counted_ptr.SetRefCountData_Internal(ref_count_data, false /* inc_ref */);
     weak_ref_counted_ptr.Reset(); // Reset the weak ref count data to decrement the ref count
 }
 

@@ -5,11 +5,16 @@
 
 namespace hyperion {
 
-UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy)
-    : UIObject(parent, std::move(node_proxy), UOT_PANEL)
+UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy, UIObjectType type)
+    : UIObject(parent, std::move(node_proxy), type)
 {
     SetBorderRadius(5);
     SetBorderFlags(UI_OBJECT_BORDER_ALL);
+}
+
+UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy)
+    : UIPanel(parent, std::move(node_proxy), UOT_PANEL)
+{
 }
 
 Handle<Material> UIPanel::GetMaterial() const

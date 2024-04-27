@@ -3,13 +3,13 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class UIHelpers
+    public class UIObjectHelpers
     {
-        public static UIObject MarshalUIObject(RefCountedPtr rc)
+        public static UIObject? MarshalUIObject(RefCountedPtr rc)
         {
             if (!rc.IsValid)
             {
-                return new UIObject();
+                return null;
             }
 
             UIObjectType type = UIObject_GetType(rc);
@@ -17,8 +17,8 @@ namespace Hyperion
             switch (type) {
             case UIObjectType.Unknown: // Custom override type
                 return new UIObject(rc);
-            // case UIObjectType.Stage: // <-- TODO
-            //     return new UIStage(rc);
+            case UIObjectType.Stage:
+                return new UIStage(rc);
             case UIObjectType.Button:
                 return new UIButton(rc);
             case UIObjectType.Text:
@@ -29,8 +29,18 @@ namespace Hyperion
                 return new UIImage(rc);
             case UIObjectType.TabView:
                 return new UITabView(rc);
+            case UIObjectType.Tab:
+                return new UITab(rc);
             case UIObjectType.Grid:
                 return new UIGrid(rc);
+            case UIObjectType.GridRow:
+                return new UIGridRow(rc);
+            case UIObjectType.GridColumn:
+                return new UIGridColumn(rc);
+            case UIObjectType.MenuBar:
+                return new UIMenuBar(rc);
+            case UIObjectType.MenuItem:
+                return new UIMenuItem(rc);
             default:
                 throw new Exception("Unknown UIObjectType!");
             }

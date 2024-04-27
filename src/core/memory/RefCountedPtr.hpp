@@ -71,11 +71,9 @@ struct RefCountData
 
         // Setup weak ptr for EnableRefCountedPtrFromThis
         if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>) {
-            // static_cast<T *>(value)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(this, true);
-
             dtor = [](void *ptr)
             {
-                static_cast<T *>(ptr)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(nullptr, false);
+                static_cast<T *>(ptr)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData_Internal(nullptr, false);
 
                 Memory::Delete<T>(ptr);
             };
@@ -91,11 +89,11 @@ struct RefCountData
     {
         // Setup weak ptr for EnableRefCountedPtrFromThis
         if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>) {
-            ptr->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(this, true);
+            ptr->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData_Internal(this, true);
 
             dtor = [](void *ptr)
             {
-                static_cast<T *>(ptr)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData(nullptr, false);
+                static_cast<T *>(ptr)->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData_Internal(nullptr, false);
 
                 Memory::Delete<T>(ptr);
             };
@@ -260,12 +258,12 @@ public:
 
     /*! \brief Used by objects inheriting from this class or marshaling data. Not ideal to use externally */
     HYP_FORCE_INLINE
-    RefCountDataType *GetRefCountData() const
+    RefCountDataType *GetRefCountData_Internal() const
         { return m_ref; }
 
     /*! \brief Sets the internal reference to the given RefCountDataType. Only for internal use. */
     HYP_FORCE_INLINE
-    void SetRefCountData(RefCountDataType *ref, bool inc_ref = true)
+    void SetRefCountData_Internal(RefCountDataType *ref, bool inc_ref = true)
     {
         DropRefCount();
         m_ref = ref;
@@ -492,12 +490,12 @@ public:
 
     /*! \brief Used by objects inheriting from this class or marshaling data. Not ideal to use externally */
     HYP_FORCE_INLINE
-    RefCountDataType *GetRefCountData() const
+    RefCountDataType *GetRefCountData_Internal() const
         { return m_ref; }
 
     /*! \brief Sets the internal reference to the given RefCountDataType. Only for internal use. */
     HYP_FORCE_INLINE
-    void SetRefCountData(RefCountDataType *ref, bool inc_ref = true)
+    void SetRefCountData_Internal(RefCountDataType *ref, bool inc_ref = true)
     {
         DropRefCount();
         m_ref = ref;
