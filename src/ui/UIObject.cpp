@@ -48,7 +48,7 @@ enum UIObjectFlags : uint32
 
 struct UIObjectMeshData
 {
-    uint32 focus_state = UI_OBJECT_FOCUS_STATE_NONE;
+    uint32 focus_state = UOFS_NONE;
     uint32 width = 0u;
     uint32 height = 0u;
     uint32 additional_data = 0u;
@@ -93,14 +93,15 @@ UIObject::UIObject(UIObjectType type)
     : m_type(type),
       m_parent(nullptr),
       m_is_init(false),
-      m_origin_alignment(UI_OBJECT_ALIGNMENT_TOP_LEFT),
-      m_parent_alignment(UI_OBJECT_ALIGNMENT_TOP_LEFT),
+      m_origin_alignment(UOA_TOP_LEFT),
+      m_parent_alignment(UOA_TOP_LEFT),
       m_position(0, 0),
       m_size(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT })),
+      m_inner_size(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT })),
       m_depth(0),
       m_border_radius(5),
-      m_border_flags(UI_OBJECT_BORDER_NONE),
-      m_focus_state(UI_OBJECT_FOCUS_STATE_NONE),
+      m_border_flags(UOB_NONE),
+      m_focus_state(UOFS_NONE),
       m_is_visible(true),
       m_accepts_focus(true)
 {
@@ -158,13 +159,13 @@ void UIObject::Init()
             if (!ui_object->GetEntity().IsValid()) {
                 DebugLog(LogType::Warn, "Entity invalid for UIObject with name: %s\n", *ui_object->GetName());
 
-                return UI_EVENT_HANDLER_RESULT_ERR;
+                return UEHR_ERR;
             }
 
             if (!ui_object->GetScene()) {
                 DebugLog(LogType::Warn, "Scene invalid for UIObject with name: %s\n", *ui_object->GetName());
 
-                return UI_EVENT_HANDLER_RESULT_ERR;
+                return UEHR_ERR;
             }
 
             ScriptComponent *script_component = ui_object->GetScene()->GetEntityManager()->TryGetComponent<ScriptComponent>(ui_object->GetEntity());
@@ -173,13 +174,13 @@ void UIObject::Init()
                 // DebugLog(LogType::Info, "[%s] No Script component for UIObject with name: %s\n", method_name.Data(), *ui_object->GetName());
 
                 // No script component, do not call.
-                return UI_EVENT_HANDLER_RESULT_OK;
+                return UEHR_OK;
             }
 
             if (!script_component->object) {
                 DebugLog(LogType::Warn, "Script component has no object for UIObject with name: %s\n", *ui_object->GetName());
 
-                return UI_EVENT_HANDLER_RESULT_ERR;
+                return UEHR_ERR;
             }
             
             if (dotnet::Class *class_ptr = script_component->object->GetClass()) {
@@ -189,7 +190,7 @@ void UIObject::Init()
                         // Stubbed method, do not bother calling it
                         DebugLog(LogType::Info, "Stubbed method %s for UI object with name: %s\n", method_name.Data(), *ui_object->GetName());
 
-                        return UI_EVENT_HANDLER_RESULT_OK;
+                        return UEHR_OK;
                     }
 
                     return script_component->object->InvokeMethod<UIEventHandlerResult>(method_ptr);
@@ -198,7 +199,7 @@ void UIObject::Init()
 
             DebugLog(LogType::Error, "Failed to call method %s for UI object with name: %s\n", method_name.Data(), *ui_object->GetName());
 
-            return UI_EVENT_HANDLER_RESULT_ERR;
+            return UEHR_ERR;
         }
     };
 
@@ -209,6 +210,7 @@ void UIObject::Init()
     OnMouseDown.Bind(ScriptedDelegate { this, "OnMouseDown" }).Detach();
     OnGainFocus.Bind(ScriptedDelegate { this, "OnGainFocus" }).Detach();
     OnLoseFocus.Bind(ScriptedDelegate { this, "OnLoseFocus" }).Detach();
+    OnScroll.Bind(ScriptedDelegate { this, "OnScroll" }).Detach();
     OnClick.Bind(ScriptedDelegate { this, "OnClick" }).Detach();
 
     // set `m_is_init` to true before calling `UpdatePosition` and `UpdateSize` to allow them to run
@@ -257,23 +259,23 @@ void UIObject::UpdatePosition(bool update_children)
     Vec2f offset_position(m_position);
 
     switch (m_origin_alignment) {
-    case UI_OBJECT_ALIGNMENT_TOP_LEFT:
+    case UOA_TOP_LEFT:
         // no offset
         break;
-    case UI_OBJECT_ALIGNMENT_TOP_RIGHT:
-        offset_position -= Vec2f(float(m_actual_size.x), 0.0f);
+    case UOA_TOP_RIGHT:
+        offset_position -= Vec2f(float(m_actual_inner_size.x), 0.0f);
 
         break;
-    case UI_OBJECT_ALIGNMENT_CENTER:
-        offset_position -= Vec2f(float(m_actual_size.x) * 0.5f, float(m_actual_size.y) * 0.5f);
+    case UOA_CENTER:
+        offset_position -= Vec2f(float(m_actual_inner_size.x) * 0.5f, float(m_actual_inner_size.y) * 0.5f);
 
         break;
-    case UI_OBJECT_ALIGNMENT_BOTTOM_LEFT:
-        offset_position -= Vec2f(0.0f, float(m_actual_size.y));
+    case UOA_BOTTOM_LEFT:
+        offset_position -= Vec2f(0.0f, float(m_actual_inner_size.y));
 
         break;
-    case UI_OBJECT_ALIGNMENT_BOTTOM_RIGHT:
-        offset_position -= Vec2f(float(m_actual_size.x), float(m_actual_size.y));
+    case UOA_BOTTOM_RIGHT:
+        offset_position -= Vec2f(float(m_actual_inner_size.x), float(m_actual_inner_size.y));
 
         break;
     }
@@ -284,34 +286,30 @@ void UIObject::UpdatePosition(bool update_children)
         const Vec2i parent_actual_size(parent_ui_object->GetActualSize());
 
         switch (m_parent_alignment) {
-        case UI_OBJECT_ALIGNMENT_TOP_LEFT:
+        case UOA_TOP_LEFT:
             offset_position += parent_padding;
 
             break;
-        case UI_OBJECT_ALIGNMENT_TOP_RIGHT:
+        case UOA_TOP_RIGHT:
             offset_position += Vec2f(float(parent_actual_size.x) - parent_padding.x, parent_padding.y);
 
             break;
-        case UI_OBJECT_ALIGNMENT_CENTER:
+        case UOA_CENTER:
             offset_position += Vec2f(float(parent_actual_size.x) * 0.5f, float(parent_actual_size.y) * 0.5f);
 
             break;
-        case UI_OBJECT_ALIGNMENT_BOTTOM_LEFT:
+        case UOA_BOTTOM_LEFT:
             offset_position += Vec2f(parent_padding.x, float(parent_actual_size.y) - parent_padding.y);
 
             break;
-        case UI_OBJECT_ALIGNMENT_BOTTOM_RIGHT:
+        case UOA_BOTTOM_RIGHT:
             offset_position += Vec2f(float(parent_actual_size.x) - parent_padding.x, float(parent_actual_size.y) - parent_padding.y);
 
             break;
         }
     }
-
-    // float z_value = 0.0f;
-
-    // if (m_depth != 0) {
-    //     z_value = float(m_depth);
-    // }
+    
+    offset_position += Vec2f(m_scroll_offset);
 
     float z_value = 1.0f;
 
@@ -357,28 +355,30 @@ void UIObject::SetSize(UIObjectSize size)
     UpdateMeshData();
 }
 
-int UIObject::GetMaxWidth() const
+UIObjectSize UIObject::GetInnerSize() const
 {
-    return m_actual_max_size.x;
+    return m_inner_size;
 }
 
-void UIObject::SetMaxWidth(int max_width, UIObjectSize::Flags flags)
+void UIObject::SetInnerSize(UIObjectSize size)
 {
-    m_max_size = UIObjectSize({ max_width, flags }, { m_max_size.GetValue().y, m_max_size.GetFlagsY() });
+    m_inner_size = size;
 
     UpdateSize();
+    UpdateMeshData();
 }
 
-int UIObject::GetMaxHeight() const
+UIObjectSize UIObject::GetMaxSize() const
 {
-    return m_actual_max_size.y;
+    return m_max_size;
 }
 
-void UIObject::SetMaxHeight(int max_height, UIObjectSize::Flags flags)
+void UIObject::SetMaxSize(UIObjectSize size)
 {
-    m_max_size = UIObjectSize({ m_max_size.GetValue().x, m_max_size.GetFlagsX() }, { max_height, flags });
+    m_max_size = size;
 
     UpdateSize();
+    UpdateMeshData();
 }
 
 void UIObject::UpdateSize(bool update_children)
@@ -440,6 +440,32 @@ void UIObject::UpdateSize(bool update_children)
     }
 }
 
+Vec2i UIObject::GetScrollOffset() const
+{
+    return m_scroll_offset;
+}
+
+void UIObject::SetScrollOffset(Vec2i scroll_offset)
+{
+    // @TODO: Add UpdateScrollOffset() for when size changes
+
+    scroll_offset.x = m_actual_inner_size.x > m_actual_size.x
+        ? MathUtil::Clamp(scroll_offset.x, 0, m_actual_inner_size.x - m_actual_size.x)
+        : 0;
+
+    scroll_offset.y = m_actual_inner_size.y > m_actual_size.y
+        ? MathUtil::Clamp(scroll_offset.y, 0, m_actual_inner_size.y - m_actual_size.y)
+        : 0;
+
+    if (scroll_offset == m_scroll_offset) {
+        return;
+    }
+
+    m_scroll_offset = scroll_offset;
+
+    UpdatePosition();
+}
+
 void UIObject::SetFocusState(UIObjectFocusState focus_state)
 {
     m_focus_state = focus_state;
@@ -498,7 +524,7 @@ void UIObject::Focus()
         return;
     }
 
-    if (GetFocusState() & UI_OBJECT_FOCUS_STATE_FOCUSED) {
+    if (GetFocusState() & UOFS_FOCUSED) {
         return;
     }
 
@@ -506,7 +532,7 @@ void UIObject::Focus()
         return;
     }
 
-    SetFocusState(GetFocusState() | UI_OBJECT_FOCUS_STATE_FOCUSED);
+    SetFocusState(GetFocusState() | UOFS_FOCUSED);
 
     // Note: Calling `SetFocusedObject` between `SetFocusState` and `OnGainFocus` is intentional
     // as `SetFocusedObject` calls `Blur()` on any previously focused object (which may include a parent of this object)
@@ -518,8 +544,8 @@ void UIObject::Focus()
 
 void UIObject::Blur(bool blur_children)
 {
-    if (GetFocusState() & UI_OBJECT_FOCUS_STATE_FOCUSED) {
-        SetFocusState(GetFocusState() & ~UI_OBJECT_FOCUS_STATE_FOCUSED);
+    if (GetFocusState() & UOFS_FOCUSED) {
+        SetFocusState(GetFocusState() & ~UOFS_FOCUSED);
         OnLoseFocus(UIMouseEventData { });
     }
 
@@ -601,7 +627,7 @@ void UIObject::SetIsVisible(bool is_visible)
 
 bool UIObject::HasFocus(bool include_children) const
 {
-    if (GetFocusState() & UI_OBJECT_FOCUS_STATE_FOCUSED) {
+    if (GetFocusState() & UOFS_FOCUSED) {
         return true;
     }
 
@@ -856,30 +882,32 @@ void UIObject::UpdateActualSizes()
 
     ComputeActualSize(m_size, m_actual_size);
 
+    ComputeActualSize(m_inner_size, m_actual_inner_size, true);
+
     // clamp actual size to max size (if set for either x or y axis)
     m_actual_size.x = m_actual_max_size.x != 0 ? MathUtil::Min(m_actual_size.x, m_actual_max_size.x) : m_actual_size.x;
     m_actual_size.y = m_actual_max_size.y != 0 ? MathUtil::Min(m_actual_size.y, m_actual_max_size.y) : m_actual_size.y;
 }
 
-void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_size)
+void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_size, bool is_inner)
 {
     Vec2i parent_size = { 0, 0 };
     Vec2i parent_padding = { 0, 0 };
+    Vec2i self_padding = { 0, 0 };
 
     const UIObject *parent_ui_object = GetParentUIObject();
 
-    if (parent_ui_object) {
+    if (is_inner) {
+        parent_size = GetActualSize();
+        parent_padding = GetPadding();
+    } else if (parent_ui_object) {
         parent_size = parent_ui_object->GetActualSize();
         parent_padding = parent_ui_object->GetPadding();
+        self_padding = GetPadding();
     } else if (m_parent) {
         parent_size = m_parent->GetSurfaceSize();
-    } else /*if (Scene *scene = GetScene(); scene->GetCamera().IsValid()) {
-        // In the case that this UIObject is actually a UIStage
-        parent_size = {
-            GetScene()->GetCamera()->GetWidth(),
-            GetScene()->GetCamera()->GetHeight()
-        };
-    } else*/ {
+        self_padding = GetPadding();
+    } else {
         return;
     }
 
@@ -918,12 +946,12 @@ void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_
 
         if (in_size.GetFlagsX() & UIObjectSize::GROW) {
             out_actual_size.x = dynamic_size.x;
-            out_actual_size.x += m_padding.x * 2;
+            out_actual_size.x += self_padding.x * 2;
         }
 
         if (in_size.GetFlagsY() & UIObjectSize::GROW) {
             out_actual_size.y = dynamic_size.y;
-            out_actual_size.y += m_padding.y * 2;
+            out_actual_size.y += self_padding.y * 2;
         }
     }
 

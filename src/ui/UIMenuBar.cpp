@@ -24,8 +24,8 @@ void UIMenuItem::Init()
     UIPanel::Init();
 
     auto text_element = m_parent->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_Text"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 14, UIObjectSize::PIXEL }));
-    text_element->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    text_element->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    text_element->SetParentAlignment(UIObjectAlignment::UOA_CENTER);
+    text_element->SetOriginAlignment(UIObjectAlignment::UOA_CENTER);
     text_element->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
     text_element->SetText(m_text);
     m_text_element = text_element;
@@ -34,9 +34,9 @@ void UIMenuItem::Init()
 
     auto drop_down_menu = m_parent->CreateUIObject<UIPanel>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_DropDownMenu"), Vec2i { 0, 0 }, UIObjectSize({ 150, UIObjectSize::PIXEL }, { 0, UIObjectSize::GROW }));
     drop_down_menu->SetAcceptsFocus(false);
-    drop_down_menu->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-    drop_down_menu->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-    drop_down_menu->SetBorderFlags(UI_OBJECT_BORDER_BOTTOM | UI_OBJECT_BORDER_LEFT | UI_OBJECT_BORDER_RIGHT);
+    drop_down_menu->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+    drop_down_menu->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+    drop_down_menu->SetBorderFlags(UOB_BOTTOM | UOB_LEFT | UOB_RIGHT);
     m_drop_down_menu = drop_down_menu;
 
     UpdateDropDownMenu();
@@ -132,9 +132,9 @@ void UIMenuItem::UpdateDropDownMenu()
 
         drop_down_menu_item = m_parent->CreateUIObject<UIButton>(drop_down_menu_item_name, offset, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
         drop_down_menu_item->SetAcceptsFocus(false);
-        drop_down_menu_item->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-        drop_down_menu_item->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-        drop_down_menu_item->SetBorderFlags(UI_OBJECT_BORDER_NONE);
+        drop_down_menu_item->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+        drop_down_menu_item->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+        drop_down_menu_item->SetBorderFlags(UOB_NONE);
         drop_down_menu_item->SetBorderRadius(0);
         drop_down_menu_item->SetText(item.text);
 
@@ -147,20 +147,20 @@ void UIMenuItem::UpdateDropDownMenu()
             if (item_ptr == nullptr) {
                 DebugLog(LogType::Warn, "Could not find drop down menu item with name %s\n", *name);
 
-                return UI_EVENT_HANDLER_RESULT_ERR;
+                return UEHR_ERR;
             }
 
             if (!item_ptr->action.IsValid()) {
-                return UI_EVENT_HANDLER_RESULT_OK;
+                return UEHR_OK;
             }
 
             item_ptr->action();
 
-            return UI_EVENT_HANDLER_RESULT_OK; // bubble up to container so it can close
+            return UEHR_OK; // bubble up to container so it can close
         }).Detach();
 
-        drop_down_menu_item->GetTextElement()->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-        drop_down_menu_item->GetTextElement()->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+        drop_down_menu_item->GetTextElement()->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+        drop_down_menu_item->GetTextElement()->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
 
         m_drop_down_menu->AddChildUIObject(drop_down_menu_item);
 
@@ -188,10 +188,10 @@ void UIMenuBar::Init()
 
     m_container = m_parent->CreateUIObject<UIPanel>(HYP_NAME(MenuItemContents), Vec2i { 0, 0 }, UIObjectSize({ 250, UIObjectSize::PIXEL }, { 0, UIObjectSize::GROW }));
     m_container->SetIsVisible(false);
-    m_container->SetBorderFlags(UI_OBJECT_BORDER_NONE);
+    m_container->SetBorderFlags(UOB_NONE);
     m_container->SetBorderRadius(0);
-    m_container->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_BOTTOM_LEFT);
-    m_container->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+    m_container->SetParentAlignment(UIObjectAlignment::UOA_BOTTOM_LEFT);
+    m_container->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
     m_container->SetPadding({ 1, 1 });
     m_container->SetDepth(100);
 
@@ -202,7 +202,7 @@ void UIMenuBar::Init()
         // Lose focus of the container (otherwise hovering over other menu items will cause the menu strips to reappear)
         Blur();
 
-        return UI_EVENT_HANDLER_RESULT_STOP_BUBBLING;
+        return UEHR_STOP_BUBBLING;
     }).Detach();
 
     m_container->OnLoseFocus.Bind([this](const UIMouseEventData &data) -> UIEventHandlerResult
@@ -212,7 +212,7 @@ void UIMenuBar::Init()
             SetSelectedMenuItemIndex(~0u);
         }
 
-        return UI_EVENT_HANDLER_RESULT_OK;
+        return UEHR_OK;
     }).Detach();
 
     AddChildUIObject(m_container);
@@ -245,7 +245,7 @@ void UIMenuBar::SetSelectedMenuItemIndex(uint index)
             continue;
         }
 
-        menu_item->SetFocusState(menu_item->GetFocusState() & ~UI_OBJECT_FOCUS_STATE_TOGGLED);
+        menu_item->SetFocusState(menu_item->GetFocusState() & ~UOFS_TOGGLED);
     }
 
     if (m_selected_menu_item_index >= m_menu_items.Size()) {
@@ -260,7 +260,7 @@ void UIMenuBar::SetSelectedMenuItemIndex(uint index)
         return;
     }
 
-    menu_item->SetFocusState(menu_item->GetFocusState() | UI_OBJECT_FOCUS_STATE_TOGGLED);
+    menu_item->SetFocusState(menu_item->GetFocusState() | UOFS_TOGGLED);
 
     m_container->SetPosition({ menu_item->GetPosition().x, 0 });
     m_container->AddChildUIObject(menu_item->GetDropDownMenuElement());
@@ -274,8 +274,8 @@ RC<UIMenuItem> UIMenuBar::AddMenuItem(Name name, const String &text)
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     auto menu_item = m_parent->CreateUIObject<UIMenuItem>(name, Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 100, UIObjectSize::PERCENT }));
-    menu_item->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-    menu_item->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+    menu_item->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+    menu_item->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
     menu_item->SetText(text);
 
     // Mouse hover: set selected menu item index if this menu bar has focus
@@ -287,12 +287,12 @@ RC<UIMenuItem> UIMenuBar::AddMenuItem(Name name, const String &text)
             SetSelectedMenuItemIndex(menu_item_index);
         }
 
-        return UI_EVENT_HANDLER_RESULT_OK;
+        return UEHR_OK;
     }).Detach();
 
     menu_item->OnClick.Bind([this, name](const UIMouseEventData &data) -> UIEventHandlerResult
     {
-        if (data.button == MouseButton::MOUSE_BUTTON_LEFT)
+        if (data.button == MouseButton::MB_LEFT)
         {
             const uint menu_item_index = GetMenuItemIndex(name);
 
@@ -302,10 +302,10 @@ RC<UIMenuItem> UIMenuBar::AddMenuItem(Name name, const String &text)
                 SetSelectedMenuItemIndex(menu_item_index);
             }
 
-            return UI_EVENT_HANDLER_RESULT_STOP_BUBBLING;
+            return UEHR_STOP_BUBBLING;
         }
 
-        return UI_EVENT_HANDLER_RESULT_OK;
+        return UEHR_OK;
     }).Detach();
 
     AddChildUIObject(menu_item);

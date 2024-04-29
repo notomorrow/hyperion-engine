@@ -31,59 +31,59 @@ static inline Scene *GetScene(UIStageType *stage)
     return stage->GetScene().Get();
 }
 
-// UIObject
+#pragma region UIObject
 
 // Used for interop with the C# UIObject class.
 // Ensure that the enum values match the C# UIObjectType enum.
 enum UIObjectType : uint32
 {
-    UOT_UNKNOWN = ~0u,
-    UOT_STAGE = 0,
-    UOT_BUTTON = 1,
-    UOT_TEXT = 2,
-    UOT_PANEL = 3,
-    UOT_IMAGE = 4,
-    UOT_TAB_VIEW = 5,
-    UOT_TAB = 6,
-    UOT_GRID = 7,
-    UOT_GRID_ROW = 8,
+    UOT_UNKNOWN     = ~0u,
+    UOT_STAGE       = 0,
+    UOT_BUTTON      = 1,
+    UOT_TEXT        = 2,
+    UOT_PANEL       = 3,
+    UOT_IMAGE       = 4,
+    UOT_TAB_VIEW    = 5,
+    UOT_TAB         = 6,
+    UOT_GRID        = 7,
+    UOT_GRID_ROW    = 8,
     UOT_GRID_COLUMN = 9,
-    UOT_MENU_BAR = 10,
-    UOT_MENU_ITEM = 11
+    UOT_MENU_BAR    = 10,
+    UOT_MENU_ITEM   = 11
 };
 
 enum UIObjectAlignment : uint32
 {
-    UI_OBJECT_ALIGNMENT_TOP_LEFT        = 0,
-    UI_OBJECT_ALIGNMENT_TOP_RIGHT       = 1,
+    UOA_TOP_LEFT        = 0,
+    UOA_TOP_RIGHT       = 1,
 
-    UI_OBJECT_ALIGNMENT_CENTER          = 2,
+    UOA_CENTER          = 2,
 
-    UI_OBJECT_ALIGNMENT_BOTTOM_LEFT     = 3,
-    UI_OBJECT_ALIGNMENT_BOTTOM_RIGHT    = 4
+    UOA_BOTTOM_LEFT     = 3,
+    UOA_BOTTOM_RIGHT    = 4
 };
 
 using UIObjectFocusState = uint32;
 
 enum UIObjectFocusStateBits : UIObjectFocusState
 {
-    UI_OBJECT_FOCUS_STATE_NONE          = 0x0,
-    UI_OBJECT_FOCUS_STATE_HOVER         = 0x1,
-    UI_OBJECT_FOCUS_STATE_PRESSED       = 0x2,
-    UI_OBJECT_FOCUS_STATE_TOGGLED       = 0x4,
-    UI_OBJECT_FOCUS_STATE_FOCUSED       = 0x8
+    UOFS_NONE       = 0x0,
+    UOFS_HOVER      = 0x1,
+    UOFS_PRESSED    = 0x2,
+    UOFS_TOGGLED    = 0x4,
+    UOFS_FOCUSED    = 0x8
 };
 
 using UIObjectBorderFlags = uint32;
 
 enum UIObjectBorderFlagBits : UIObjectBorderFlags
 {
-    UI_OBJECT_BORDER_NONE   = 0x00,
-    UI_OBJECT_BORDER_TOP    = 0x01,
-    UI_OBJECT_BORDER_LEFT   = 0x02,
-    UI_OBJECT_BORDER_BOTTOM = 0x04,
-    UI_OBJECT_BORDER_RIGHT  = 0x08,
-    UI_OBJECT_BORDER_ALL    = UI_OBJECT_BORDER_TOP | UI_OBJECT_BORDER_LEFT | UI_OBJECT_BORDER_BOTTOM | UI_OBJECT_BORDER_RIGHT
+    UOB_NONE    = 0x00,
+    UOB_TOP     = 0x01,
+    UOB_LEFT    = 0x02,
+    UOB_BOTTOM  = 0x04,
+    UOB_RIGHT   = 0x08,
+    UOB_ALL     = UOB_TOP | UOB_LEFT | UOB_BOTTOM | UOB_RIGHT
 };
 
 struct UIObjectSize
@@ -236,37 +236,56 @@ public:
     UIObjectSize GetSize() const;
     void SetSize(UIObjectSize size);
 
-    int GetMaxWidth() const;
-    void SetMaxWidth(int max_width, UIObjectSize::Flags flags = UIObjectSize::DEFAULT);
+    UIObjectSize GetInnerSize() const;
+    void SetInnerSize(UIObjectSize size);
 
-    int GetMaxHeight() const;
-    void SetMaxHeight(int max_height, UIObjectSize::Flags flags = UIObjectSize::DEFAULT);
+    UIObjectSize GetMaxSize() const;
+    void SetMaxSize(UIObjectSize size);
     
+    /*! \brief Get the computed size (in pixels) of the UI object.
+     *  The actual size of the UI object is calculated based on the size of the parent object and the size of the object itself.
+     *  \return The computed size of the UI object */
     [[nodiscard]]
     HYP_FORCE_INLINE
     Vec2i GetActualSize() const
         { return m_actual_size; }
 
+    /*! \brief Get the computed inner size (in pixels) of the UI object.
+     *  \return The computed inner size of the UI object */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    Vec2i GetActualInnerSize() const
+        { return m_actual_inner_size; }
+
+    /*! \brief Get the scroll offset (in pixels) of the UI object.
+     *  \return The scroll offset of the UI object */
+    [[nodiscard]]
+    Vec2i GetScrollOffset() const;
+
+    /*! \brief Set the scroll offset (in pixels) of the UI object.
+     *  \param scroll_offset The scroll offset of the UI object */
+    void SetScrollOffset(Vec2i scroll_offset);
+
     /*! \brief Get the DrawableLayer of the UI object, based on its depth and parent index.
-     * The DrawableLayer of the UI object is used to determine the rendering order of the object in the scene.
-     * \return The DrawableLayer of the UI object */
+     *  The DrawableLayer of the UI object is used to determine the rendering order of the object in the scene.
+     *  \return The DrawableLayer of the UI object */
     DrawableLayer GetDrawableLayer() const;
 
     /*! \brief Get the depth of the UI object
-     * The depth of the UI object is used to determine the rendering order of the object in the scene relative to its sibling elements, with higher depth values being rendered on top of lower depth values.
-     * If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
-     * \return The depth of the UI object */
+     *  The depth of the UI object is used to determine the rendering order of the object in the scene relative to its sibling elements, with higher depth values being rendered on top of lower depth values.
+     *  If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
+     *  \return The depth of the UI object */
     int GetDepth() const;
 
     /*! \brief Set the depth of the UI object
-     * The depth of the UI object is used to determine the rendering order of the object in the scene relative to its sibling elements, with higher depth values being rendered on top of lower depth values.
-     * Set the depth to a value between UIStage::min_depth and UIStage::max_depth. If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
-     * \param depth The depth of the UI object
+     *  The depth of the UI object is used to determine the rendering order of the object in the scene relative to its sibling elements, with higher depth values being rendered on top of lower depth values.
+     *  Set the depth to a value between UIStage::min_depth and UIStage::max_depth. If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
+     *  \param depth The depth of the UI object
      */
     void SetDepth(int depth);
 
     /*! \brief Check if the UI object accepts focus. All UIObjects accept focus by default, unless overridden by derived classes or set using \ref{SetAcceptsFocus}.
-     * \return True if the this object accepts focus, false otherwise */
+     *  \return True if the this object accepts focus, false otherwise */
     [[nodiscard]]
     virtual bool AcceptsFocus() const
         { return m_accepts_focus; }
@@ -281,13 +300,13 @@ public:
     virtual void Focus();
 
     /*! \brief Remove the focus from this UI object, if AcceptsFocus() returns true.
-     * This function is called when the UI object loses focus.
-     * \param blur_children If true, also remove focus from all child objects. */
+     *  This function is called when the UI object loses focus.
+     *  \param blur_children If true, also remove focus from all child objects. */
     virtual void Blur(bool blur_children = true);
 
     /*! \brief Get the border radius of the UI object
-     * \details The border radius of the UI object is used to create rounded corners for the object's border.
-     * \return The border radius of the UI object */
+     *  \details The border radius of the UI object is used to create rounded corners for the object's border.
+     *  \return The border radius of the UI object */
     [[nodiscard]]
     HYP_FORCE_INLINE
     uint32 GetBorderRadius() const
@@ -300,7 +319,7 @@ public:
 
     /*! \brief Get the border flags of the UI object
      *  \details The border flags of the UI object are used to determine which borders of the object should be rounded, if the border radius is set to a non-zero value.
-     *  \example To display a border radius the top left and right corners of the object, set the border flags to \code{UI_OBJECT_BORDER_TOP | UI_OBJECT_BORDER_LEFT | UI_OBJECT_BORDER_RIGHT}.
+     *  \example To display a border radius the top left and right corners of the object, set the border flags to \code{UOB_TOP | UOB_LEFT | UOB_RIGHT}.
      *  \return The border flags of the UI object */
     [[nodiscard]]
     HYP_FORCE_INLINE
@@ -390,6 +409,7 @@ public:
     Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnMouseLeave;
     Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnGainFocus;
     Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnLoseFocus;
+    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnScroll;
     Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnClick;
 
 protected:
@@ -423,8 +443,13 @@ protected:
     UIObjectSize        m_size;
     Vec2i               m_actual_size;
 
+    UIObjectSize        m_inner_size;
+    Vec2i               m_actual_inner_size;
+
     UIObjectSize        m_max_size;
     Vec2i               m_actual_max_size;
+
+    Vec2i               m_scroll_offset;
 
     Vec2i               m_padding;
 
@@ -440,7 +465,7 @@ private:
     void SetDrawableLayer(DrawableLayer layer);
 
     void UpdateActualSizes();
-    void ComputeActualSize(const UIObjectSize &size, Vec2i &out_actual_size);
+    void ComputeActualSize(const UIObjectSize &size, Vec2i &out_actual_size, bool is_inner = false);
 
     template <class Lambda>
     void ForEachChildUIObject(Lambda &&lambda) const;
@@ -460,6 +485,8 @@ private:
 
     DrawableLayer       m_drawable_layer;
 };
+
+#pragma endregion UIObject
 
 } // namespace hyperion
 

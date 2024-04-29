@@ -5,7 +5,6 @@ namespace Hyperion
 {
     public class UIStage : UIObject
     {
-
         // This dictionary is used to map the generic type of the UI object to the corresponding method that creates the UI object
         private static readonly Dictionary<Type, Func<RefCountedPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr>> createUIObjectMethods = new Dictionary<Type, Func<RefCountedPtr, Name, Vec2i, Vec2i, bool, RefCountedPtr>>
         {

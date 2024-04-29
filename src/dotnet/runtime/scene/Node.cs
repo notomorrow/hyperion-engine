@@ -3,12 +3,11 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    // Care must be taken to ensure this object is disposed of properly,
-    // so it must only be held by one object at a time.
+    // Care must be taken to ensure this object is disposed of properly
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct ManagedNode
     {
-        public IntPtr refPtr;
+        internal IntPtr refPtr;
 
         public bool IsValid
         {

@@ -14,16 +14,16 @@ UITab::UITab(UIStage *parent, NodeProxy node_proxy)
     : UIPanel(parent, std::move(node_proxy), UOT_TAB)
 {
     SetBorderRadius(5);
-    SetBorderFlags(UI_OBJECT_BORDER_TOP | UI_OBJECT_BORDER_LEFT | UI_OBJECT_BORDER_RIGHT);
+    SetBorderFlags(UOB_TOP | UOB_LEFT | UOB_RIGHT);
 }
 
 void UITab::Init()
 {
     UIPanel::Init();
 
-    auto title_text = m_parent->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_Title"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 14, UIObjectSize::PIXEL }));
-    title_text->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    title_text->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    auto title_text = m_parent->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(*m_name) + "_Title"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 14, UIObjectSize::PIXEL }));
+    title_text->SetParentAlignment(UIObjectAlignment::UOA_CENTER);
+    title_text->SetOriginAlignment(UIObjectAlignment::UOA_CENTER);
     title_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
     title_text->SetText(m_title);
 
@@ -31,8 +31,8 @@ void UITab::Init()
 
     m_title_text = title_text;
 
-    m_contents = m_parent->CreateUIObject<UIPanel>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_Contents"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-    m_contents->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+    m_contents = m_parent->CreateUIObject<UIPanel>(CreateNameFromDynamicString(ANSIString(*m_name) + "_Contents"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+    m_contents->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
 }
 
 void UITab::SetTitle(const String &title)
@@ -74,7 +74,7 @@ UITabView::UITabView(UIStage *parent, NodeProxy node_proxy)
       m_selected_tab_index(~0u)
 {
     SetBorderRadius(5);
-    SetBorderFlags(UI_OBJECT_BORDER_BOTTOM | UI_OBJECT_BORDER_LEFT | UI_OBJECT_BORDER_RIGHT);
+    SetBorderFlags(UOB_BOTTOM | UOB_LEFT | UOB_RIGHT);
 }
 
 void UITabView::Init()
@@ -84,7 +84,7 @@ void UITabView::Init()
     UIPanel::Init();
 
     m_container = m_parent->CreateUIObject<UIPanel>(HYP_NAME(TabContents), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-    m_container->SetBorderFlags(UI_OBJECT_BORDER_BOTTOM | UI_OBJECT_BORDER_LEFT | UI_OBJECT_BORDER_RIGHT);
+    m_container->SetBorderFlags(UOB_BOTTOM | UOB_LEFT | UOB_RIGHT);
     m_container->SetBorderRadius(5);
     m_container->SetPadding({ 5, 5 });
 
@@ -118,7 +118,7 @@ void UITabView::SetSelectedTabIndex(uint index)
             continue;
         }
 
-        tab->SetFocusState(tab->GetFocusState() & ~UI_OBJECT_FOCUS_STATE_TOGGLED);
+        tab->SetFocusState(tab->GetFocusState() & ~UOFS_TOGGLED);
     }
 
     if (index >= m_tabs.Size()) {
@@ -137,7 +137,7 @@ void UITabView::SetSelectedTabIndex(uint index)
         return;
     }
 
-    tab->SetFocusState(tab->GetFocusState() | UI_OBJECT_FOCUS_STATE_TOGGLED);
+    tab->SetFocusState(tab->GetFocusState() | UOFS_TOGGLED);
 
     m_container->AddChildUIObject(tab->GetContents());
 }
@@ -147,24 +147,22 @@ RC<UITab> UITabView::AddTab(Name name, const String &title)
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     auto tab = m_parent->CreateUIObject<UITab>(name, Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::PIXEL }, { 30, UIObjectSize::PIXEL }));
-    tab->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-    tab->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_BOTTOM_LEFT);
+    tab->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+    tab->SetOriginAlignment(UIObjectAlignment::UOA_BOTTOM_LEFT);
     tab->SetTitle(title);
 
     tab->OnClick.Bind([this, name](const UIMouseEventData &data) -> UIEventHandlerResult
     {
-        if (data.button == MouseButton::MOUSE_BUTTON_LEFT)
+        if (data.button == MouseButton::MB_LEFT)
         {
             const uint tab_index = GetTabIndex(name);
-            
-            DebugLog(LogType::Debug, "Tab clicked: %u\n", tab_index);
 
             SetSelectedTabIndex(tab_index);
 
-            return UI_EVENT_HANDLER_RESULT_STOP_BUBBLING;
+            return UEHR_STOP_BUBBLING;
         }
 
-        return UI_EVENT_HANDLER_RESULT_OK;
+        return UEHR_OK;
     }).Detach();
 
     AddChildUIObject(tab);

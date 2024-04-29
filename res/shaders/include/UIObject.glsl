@@ -1,19 +1,19 @@
 #ifndef HYP_UI_OBJECT_GLSL
 #define HYP_UI_OBJECT_GLSL
 
-#define UI_OBJECT_FOCUS_STATE_NONE      0x0
-#define UI_OBJECT_FOCUS_STATE_HOVER     0x1
-#define UI_OBJECT_FOCUS_STATE_PRESSED   0x2
-#define UI_OBJECT_FOCUS_STATE_TOGGLED   0x4
-#define UI_OBJECT_FOCUS_STATE_FOCUSED   0x8
+#define UOFS_NONE      0x0
+#define UOFS_HOVER     0x1
+#define UOFS_PRESSED   0x2
+#define UOFS_TOGGLED   0x4
+#define UOFS_FOCUSED   0x8
 
 #define UIObjectFocusState uint
 
-#define UI_OBJECT_BORDER_NONE           0x0
-#define UI_OBJECT_BORDER_TOP            0x1
-#define UI_OBJECT_BORDER_LEFT           0x2
-#define UI_OBJECT_BORDER_BOTTOM         0x4
-#define UI_OBJECT_BORDER_RIGHT          0x8
+#define UOB_NONE           0x0
+#define UOB_TOP            0x1
+#define UOB_LEFT           0x2
+#define UOB_BOTTOM         0x4
+#define UOB_RIGHT          0x8
 
 #define UIObjectBorderFlags uint
 
