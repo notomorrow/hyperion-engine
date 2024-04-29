@@ -45,6 +45,20 @@ HYP_EXPORT void UIStage_GetSurfaceSize(ManagedRefCountedPtr obj, Vec2i *out_surf
     *out_surface_size = stage->GetSurfaceSize();
 }
 
+// HYP_EXPORT void UIStage_CreateUIObject(ManagedRefCountedPtr obj, Name *name, Vec2i *position, Vec2i *size, bool attach_to_root, ManagedRefCountedPtr *out_ptr)
+// {
+//     RC<UIStage> stage = GetRefCountedPtrFromManaged<UIStage>(obj);
+
+//     if (!stage) {
+//         *out_ptr = ManagedRefCountedPtr { 0 };
+//         return;
+//     }
+
+//     RC<UIObject> ui_object = stage->CreateUIObject<UIObject>(*name, *position, UIObjectSize({ size->x, UIObjectSize::PIXEL }, { size->y, UIObjectSize::PIXEL }), attach_to_root);
+
+//     *out_ptr = CreateManagedRefCountedPtr(ui_object);
+// }
+
 #define DEF_CREATE_UI_OBJECT(T) \
     HYP_EXPORT void UIStage_CreateUIObject_##T(ManagedRefCountedPtr obj, Name *name, Vec2i *position, Vec2i *size, bool attach_to_root, ManagedRefCountedPtr *out_ptr) \
     { \

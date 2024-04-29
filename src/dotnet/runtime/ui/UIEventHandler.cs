@@ -74,6 +74,12 @@ namespace Hyperion
         }
 
         [Hyperion.ScriptMethodStub]
+        public virtual UIEventHandlerResult OnScroll()
+        {
+            return UIEventHandlerResult.Ok;
+        }
+
+        [Hyperion.ScriptMethodStub]
         public virtual UIEventHandlerResult OnClick()
         {
             return UIEventHandlerResult.Ok;

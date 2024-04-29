@@ -187,7 +187,7 @@ void Game::OnInputEvent(const SystemEvent &event)
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     // forward to UI
-    if (m_ui_stage->OnInputEvent(m_input_manager.Get(), event) & UI_EVENT_HANDLER_RESULT_STOP_BUBBLING) {
+    if (m_ui_stage->OnInputEvent(m_input_manager.Get(), event) & UEHR_STOP_BUBBLING) {
         // ui handled the event
         return;
     }
@@ -196,8 +196,8 @@ void Game::OnInputEvent(const SystemEvent &event)
     case SystemEventType::EVENT_MOUSESCROLL:
     {
         if (m_scene && m_scene->GetCamera()) {
-            int wheel_x,
-                wheel_y;
+            int wheel_x;
+            int wheel_y;
 
             event.GetMouseWheel(&wheel_x, &wheel_y);
 

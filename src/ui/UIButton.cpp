@@ -11,7 +11,7 @@ UIButton::UIButton(UIStage *parent, NodeProxy node_proxy)
     : UIObject(parent, std::move(node_proxy), UOT_BUTTON)
 {
     SetBorderRadius(5);
-    SetBorderFlags(UI_OBJECT_BORDER_ALL);
+    SetBorderFlags(UOB_ALL);
 }
 
 void UIButton::Init()
@@ -19,8 +19,8 @@ void UIButton::Init()
     UIObject::Init();
 
     auto text_element = m_parent->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_Text"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 16, UIObjectSize::PIXEL }));
-    text_element->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    text_element->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    text_element->SetParentAlignment(UIObjectAlignment::UOA_CENTER);
+    text_element->SetOriginAlignment(UIObjectAlignment::UOA_CENTER);
     text_element->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
     text_element->SetText(m_text);
 

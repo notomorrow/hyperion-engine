@@ -155,9 +155,9 @@ enum KeyCode : uint16
 
 enum MouseButton
 {
-    MOUSE_BUTTON_LEFT = SDL_BUTTON_LEFT,
-    MOUSE_BUTTON_MIDDLE,
-    MOUSE_BUTTON_RIGHT,
+    MB_LEFT = SDL_BUTTON_LEFT,
+    MB_MIDDLE,
+    MB_RIGHT,
 };
 
 using MouseButtonMask = uint32;

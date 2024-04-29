@@ -97,8 +97,8 @@ void HyperionEditorImpl::CreateMainPanel()
     // btn->SetPadding(Vec2i { 5, 5 });
     
     auto menu_bar = GetUIStage()->CreateUIObject<UIMenuBar>(HYP_NAME(Sample_MenuBar), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
-    menu_bar->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-    menu_bar->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+    menu_bar->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+    menu_bar->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
 
     auto file_menu_item = menu_bar->AddMenuItem(HYP_NAME(File_Menu_Item), "File");
 
@@ -166,8 +166,8 @@ void HyperionEditorImpl::CreateMainPanel()
     m_main_panel->AddChildUIObject(menu_bar);
 
     auto tab_view = GetUIStage()->CreateUIObject<UITabView>(HYP_NAME(Sample_TabView), Vec2i { 60, 80 }, Vec2i { 1150, 650 });
-    tab_view->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
-    tab_view->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+    tab_view->SetParentAlignment(UIObjectAlignment::UOA_TOP_LEFT);
+    tab_view->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
     m_main_panel->AddChildUIObject(tab_view);
 
     auto scene_tab_content_grid = GetUIStage()->CreateUIObject<UIGrid>(HYP_NAME(Scene_Tab_Grid), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
@@ -176,8 +176,8 @@ void HyperionEditorImpl::CreateMainPanel()
 
     // auto scene_tab_content_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Scene_Tab_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 30, UIObjectSize::PIXEL }));
     // scene_tab_content_text->SetText("grid test 1234567");
-    // scene_tab_content_text->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    // scene_tab_content_text->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_TOP_LEFT);
+    // scene_tab_content_text->SetParentAlignment(UIObjectAlignment::UOA_CENTER);
+    // scene_tab_content_text->SetOriginAlignment(UIObjectAlignment::UOA_TOP_LEFT);
     // scene_tab_content_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
 
 
@@ -194,7 +194,7 @@ void HyperionEditorImpl::CreateMainPanel()
             editor_camera_controller->SetMode(EC_MODE_FOCUSED);
         }
 
-        return UI_EVENT_HANDLER_RESULT_OK;
+        return UEHR_OK;
     }).Detach();
 
     ui_image->OnMouseUp.Bind([this](...)
@@ -207,7 +207,7 @@ void HyperionEditorImpl::CreateMainPanel()
             editor_camera_controller->SetMode(EC_MODE_INACTIVE);
         }
 
-        return UI_EVENT_HANDLER_RESULT_OK;
+        return UEHR_OK;
     }).Detach();
 
     ui_image->SetTexture(m_scene_texture);
@@ -215,9 +215,10 @@ void HyperionEditorImpl::CreateMainPanel()
 
     auto game_tab = tab_view->AddTab(HYP_NAME(Game_Tab), "Game");
     auto game_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(HYP_NAME(Hello_world_button), Vec2i { 20, 50 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
-    game_tab_content_button->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    game_tab_content_button->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    game_tab_content_button->SetParentAlignment(UIObjectAlignment::UOA_CENTER);
+    game_tab_content_button->SetOriginAlignment(UIObjectAlignment::UOA_CENTER);
     game_tab_content_button->SetText("Hello hello helloworld");
+    game_tab->GetContents()->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 900, UIObjectSize::PIXEL }));
     game_tab->GetContents()->AddChildUIObject(game_tab_content_button);
 
     AssertThrow(game_tab_content_button->GetScene() != nullptr);
@@ -268,8 +269,8 @@ void HyperionEditorImpl::Initialize()
 
     // auto ui_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Sample_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::GROW }, { 18, UIObjectSize::PIXEL }));
     // ui_text->SetText("Hi hello");
-    // ui_text->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    // ui_text->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    // ui_text->SetParentAlignment(UIObjectAlignment::UOA_CENTER);
+    // ui_text->SetOriginAlignment(UIObjectAlignment::UOA_CENTER);
     // ui_text->OnClick.Bind([ui_text](...) -> bool
     // {
     //     ui_text->SetText("Hi hello world\nMultiline test");
@@ -282,8 +283,8 @@ void HyperionEditorImpl::Initialize()
     // ui_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
 
     // auto new_btn = GetUIStage()->CreateUIObject<UIButton>(HYP_NAME(Nested_Button), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT | UIObjectSize::RELATIVE }, { 100, UIObjectSize::PERCENT | UIObjectSize::RELATIVE }));
-    // new_btn->SetOriginAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
-    // new_btn->SetParentAlignment(UIObjectAlignment::UI_OBJECT_ALIGNMENT_CENTER);
+    // new_btn->SetOriginAlignment(UIObjectAlignment::UOA_CENTER);
+    // new_btn->SetParentAlignment(UIObjectAlignment::UOA_CENTER);
     // btn->AddChildUIObject(new_btn);
     // new_btn->UpdatePosition();
     // new_btn->UpdateSize();

@@ -1,4 +1,5 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #include <ui/UIPanel.hpp>
 
 #include <Engine.hpp>
@@ -9,7 +10,14 @@ UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy, UIObjectType type)
     : UIObject(parent, std::move(node_proxy), type)
 {
     SetBorderRadius(5);
-    SetBorderFlags(UI_OBJECT_BORDER_ALL);
+    SetBorderFlags(UOB_ALL);
+
+    OnScroll.Bind([this](const UIMouseEventData &event_data) -> UIEventHandlerResult
+    {
+        SetScrollOffset(GetScrollOffset() + event_data.wheel);
+
+        return UEHR_STOP_BUBBLING;
+    }).Detach();
 }
 
 UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy)

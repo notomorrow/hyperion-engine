@@ -21,17 +21,18 @@ struct UIMouseEventData
     Vec2f   position;
     int     button = 0;
     bool    is_down = false;
+    Vec2i   wheel;
 };
 
 using UIEventHandlerResult = uint32;
 
 enum UIEventHandlerResultBits : UIEventHandlerResult
 {
-    UI_EVENT_HANDLER_RESULT_ERR             = 0x1u << 31u,
-    UI_EVENT_HANDLER_RESULT_OK              = 0x0,
+    UEHR_ERR            = 0x1u << 31u,
+    UEHR_OK             = 0x0,
 
     // Stop bubbling the event up the hierarchy
-    UI_EVENT_HANDLER_RESULT_STOP_BUBBLING   = 0x1
+    UEHR_STOP_BUBBLING  = 0x1
 };
 
 struct UIComponent
