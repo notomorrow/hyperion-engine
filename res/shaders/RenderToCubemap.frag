@@ -159,7 +159,7 @@ void main()
     
     moments.y += 0.25 * (HYP_FMATH_SQR(dx) + HYP_FMATH_SQR(dy));
 
-    output_color = vec4(moments, 0.0, 0.0);
+    output_color = vec4(moments, 0.0, 1.0);
 #else
 
     const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
