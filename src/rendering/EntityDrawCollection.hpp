@@ -70,8 +70,8 @@ constexpr PassType BucketToPassType(Bucket bucket)
 
 struct RenderProxyGroup
 {
-    Array<RenderProxy>  m_render_proxies;
-    Handle<RenderGroup> m_render_group;
+    Array<RenderProxy *>    m_render_proxies;
+    Handle<RenderGroup>     m_render_group;
 
 public:
     RenderProxyGroup() = default;
@@ -83,10 +83,9 @@ public:
 
     void ClearProxies();
 
-    void AddRenderProxy(const RenderProxy &render_proxy);
-    bool RemoveRenderProxy(const RenderProxy &render_proxy);
+    void AddRenderProxy(RenderProxy *render_proxy);
 
-    const Array<RenderProxy> &GetRenderProxies() const
+    const Array<RenderProxy *> &GetRenderProxies() const
         { return m_render_proxies; }
 
     void ResetRenderGroup();

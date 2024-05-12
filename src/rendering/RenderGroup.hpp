@@ -132,7 +132,7 @@ public:
      * to mark any occluded objects as such. Must be used with indirect rendering.
      * If nullptr is provided for cull_data, no occlusion culling will happen.
      */
-    void CollectDrawCalls(const Array<RenderProxy> &render_proxies);
+    void CollectDrawCalls(const Array<RenderProxy *> &render_proxies);
 
     /*! \brief Render objects using direct rendering, no occlusion culling is provided. */
     void PerformRendering(Frame *frame, bool parallel = true);

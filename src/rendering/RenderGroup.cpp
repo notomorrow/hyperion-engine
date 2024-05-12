@@ -256,7 +256,7 @@ void RenderGroup::Init()
     SetReady(true);
 }
 
-void RenderGroup::CollectDrawCalls(const Array<RenderProxy> &render_proxies)
+void RenderGroup::CollectDrawCalls(const Array<RenderProxy *> &render_proxies)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
 
@@ -270,18 +270,18 @@ void RenderGroup::CollectDrawCalls(const Array<RenderProxy> &render_proxies)
 
     DrawCallCollection previous_draw_state = std::move(m_draw_state);
 
-    for (const RenderProxy &render_proxy : render_proxies) {
+    for (const RenderProxy *render_proxy : render_proxies) {
 #ifdef HYP_DEBUG_MODE
-        AssertThrow(render_proxy.mesh.IsValid());
-        AssertThrow(render_proxy.material.IsValid());
+        AssertThrow(render_proxy->mesh.IsValid());
+        AssertThrow(render_proxy->material.IsValid());
 #endif
 
         DrawCallID draw_call_id;
 
         if constexpr (DrawCall::unique_per_material) {
-            draw_call_id = DrawCallID(render_proxy.mesh.GetID(), render_proxy.material.GetID());
+            draw_call_id = DrawCallID(render_proxy->mesh.GetID(), render_proxy->material.GetID());
         } else {
-            draw_call_id = DrawCallID(render_proxy.mesh.GetID());
+            draw_call_id = DrawCallID(render_proxy->mesh.GetID());
         }
 
         BufferTicket<EntityInstanceBatch> batch_index = 0;
@@ -295,7 +295,7 @@ void RenderGroup::CollectDrawCalls(const Array<RenderProxy> &render_proxies)
             draw_call->batch_index = 0;
         }
 
-        m_draw_state.PushDrawCall(batch_index, draw_call_id, render_proxy);
+        m_draw_state.PushDrawCall(batch_index, draw_call_id, *render_proxy);
     }
 
     previous_draw_state.Reset();

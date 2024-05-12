@@ -398,42 +398,42 @@ void HyperionEditor::Init()
         .resolution = { 2048, 2048 }
     });
 
-    // if (false) {
+    if (true) {
         
 
-    //     Array<Handle<Light>> point_lights;
+        Array<Handle<Light>> point_lights;
 
-    //     point_lights.PushBack(CreateObject<Light>(PointLight(
-    //         Vector3(-5.0f, 0.5f, 0.0f),
-    //         Color(1.0f, 0.0f, 0.0f),
-    //         1.0f,
-    //         5.0f
-    //     )));
-    //     point_lights.PushBack(CreateObject<Light>(PointLight(
-    //         Vector3(5.0f, 2.0f, 0.0f),
-    //         Color(0.0f, 1.0f, 0.0f),
-    //         1.0f,
-    //         15.0f
-    //     )));
+        point_lights.PushBack(CreateObject<Light>(PointLight(
+            Vector3(-5.0f, 0.5f, 0.0f),
+            Color(1.0f, 0.0f, 0.0f),
+            1.0f,
+            5.0f
+        )));
+        point_lights.PushBack(CreateObject<Light>(PointLight(
+            Vector3(5.0f, 2.0f, 0.0f),
+            Color(0.0f, 1.0f, 0.0f),
+            1.0f,
+            15.0f
+        )));
 
-    //     for (auto &light : point_lights) {
-    //         auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
+        for (auto &light : point_lights) {
+            auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
 
-    //         m_scene->GetEntityManager()->AddComponent(point_light_entity, ShadowMapComponent { });
+            m_scene->GetEntityManager()->AddComponent(point_light_entity, ShadowMapComponent { });
 
-    //         m_scene->GetEntityManager()->AddComponent(point_light_entity, TransformComponent {
-    //             Transform(
-    //                 light->GetPosition(),
-    //                 Vec3f(1.0f),
-    //                 Quaternion::Identity()
-    //             )
-    //         });
+            m_scene->GetEntityManager()->AddComponent(point_light_entity, TransformComponent {
+                Transform(
+                    light->GetPosition(),
+                    Vec3f(1.0f),
+                    Quaternion::Identity()
+                )
+            });
 
-    //         m_scene->GetEntityManager()->AddComponent(point_light_entity, LightComponent {
-    //             light
-    //         });
-    //     }
-    // }
+            m_scene->GetEntityManager()->AddComponent(point_light_entity, LightComponent {
+                light
+            });
+        }
+    }
 
 
     // {

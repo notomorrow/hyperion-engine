@@ -139,7 +139,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
                 RenderProxyGroup &render_proxy_group = collection->GetProxyGroups()[pass_type][attributes];
                 AssertThrow(render_proxy_group.GetRenderGroup().IsValid());
 
-                render_proxy_group.AddRenderProxy(*proxy);
+                render_proxy_group.AddRenderProxy(proxy);
             } else {
                 last_render_proxy_group = {
                     attributes.GetHashCode(),
@@ -169,7 +169,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
                     render_proxy_group.SetRenderGroup(render_group);
                 }
 
-                render_proxy_group.AddRenderProxy(*proxy);
+                render_proxy_group.AddRenderProxy(proxy);
             }
         }
 
