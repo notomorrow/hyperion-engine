@@ -22,6 +22,8 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 #define HYP_INSTANCING
 #include "../include/object.inc"
 
+#include "../include/UIObject.glsl"
+
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
 {
     Camera camera;
@@ -39,7 +41,15 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 256) rea
 
 void main()
 {
+    UIObjectProperties properties;
+    GetUIObjectProperties(object, properties);
+
+#ifdef TYPE_TEXT // Text uses a different sizing method. See UIText::UpdateSize
     vec4 position = object.model_matrix * vec4(a_position, 1.0);
+#else
+    vec4 position = object.model_matrix * vec4(a_position * vec3(float(properties.size.x), float(properties.size.y), 1.0), 1.0);
+#endif
+
     vec4 ndc_position = camera.projection * camera.view * position;
 
     v_position = position.xyz;
