@@ -66,7 +66,7 @@ LoadedAsset TextureLoader::LoadAsset(LoaderState &state) const
         data.format = InternalFormat::R8;
         break;
     default:
-        return { { LoaderResult::Status::ERR, "Invalid format -- invalid number of components returned" }, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, "Invalid format -- invalid number of components returned" } };
     }
 
     //data.width = 1;
@@ -77,9 +77,9 @@ LoadedAsset TextureLoader::LoadAsset(LoaderState &state) const
         * SizeType(data.height)
         * SizeType(data.num_components);
 
-    auto memory_streamed_data = UniquePtr<MemoryStreamedData>::Construct(ByteBuffer(image_bytes_count, image_bytes));
+    UniquePtr<MemoryStreamedData> memory_streamed_data = UniquePtr<MemoryStreamedData>::Construct(ByteBuffer(image_bytes_count, image_bytes));
 
-    UniquePtr<Handle<Texture>> texture(new Handle<Texture>(CreateObject<Texture>(Texture2D(
+    Handle<Texture> texture = CreateObject<Texture>(Texture2D(
         Extent2D {
             uint(data.width),
             uint(data.height)
@@ -88,13 +88,13 @@ LoadedAsset TextureLoader::LoadAsset(LoaderState &state) const
         FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
         WrapMode::TEXTURE_WRAP_REPEAT,
         std::move(memory_streamed_data)
-    ))));
+    ));
 
     stbi_image_free(image_bytes);
 
-    (*texture)->SetName(CreateNameFromDynamicString(StringUtil::Basename(state.filepath.Data()).c_str()));
+    texture->SetName(CreateNameFromDynamicString(StringUtil::Basename(state.filepath.Data()).c_str()));
 
-    return { { LoaderResult::Status::OK }, texture.Cast<void>() };
+    return { { LoaderResult::Status::OK }, texture };
 }
 
 } // namespace hyperion

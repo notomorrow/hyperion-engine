@@ -24,7 +24,7 @@ public:
         return { FBOMResult::FBOM_ERR, "Not implemented" };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         // @TODO
 

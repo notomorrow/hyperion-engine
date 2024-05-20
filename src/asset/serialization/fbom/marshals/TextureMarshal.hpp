@@ -42,7 +42,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         Extent3D extent;
 
@@ -85,14 +85,14 @@ public:
             }
         }
 
-        out_object = UniquePtr<Handle<Texture>>::Construct(CreateObject<Texture>(
+        out_object = CreateObject<Texture>(
             extent,
             format,
             type,
             filter_mode,
             wrap_mode,
             UniquePtr<MemoryStreamedData>::Construct(std::move(byte_buffer))
-        ));
+        );
 
         return { FBOMResult::FBOM_OK };
     }

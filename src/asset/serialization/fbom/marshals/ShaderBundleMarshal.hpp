@@ -141,7 +141,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         uint64 global_descriptor_table_version = -1;
 
@@ -162,7 +162,7 @@ public:
             return { FBOMResult::FBOM_ERR, "Global descriptor table version mismatch" };
         }
 
-        auto compiled_shader = UniquePtr<CompiledShader>::Construct();
+        CompiledShader compiled_shader;
 
         Name name;
 
@@ -171,11 +171,11 @@ public:
         }
 
         if (in.HasProperty("entry_point_name")) {
-            if (auto err = in.GetProperty("entry_point_name").ReadString(compiled_shader->entry_point_name)) {
+            if (auto err = in.GetProperty("entry_point_name").ReadString(compiled_shader.entry_point_name)) {
                 return err;
             }
         } else {
-            compiled_shader->entry_point_name = "main";
+            compiled_shader.entry_point_name = "main";
         }
 
         VertexAttributeSet required_vertex_attributes;
@@ -184,8 +184,8 @@ public:
         VertexAttributeSet optional_vertex_attributes;
         in.GetProperty("optional_vertex_attributes").ReadUnsignedLong(&optional_vertex_attributes.flag_mask);
 
-        compiled_shader->GetDefinition().GetProperties().SetRequiredVertexAttributes(required_vertex_attributes);
-        compiled_shader->GetDefinition().GetProperties().SetOptionalVertexAttributes(optional_vertex_attributes);
+        compiled_shader.GetDefinition().GetProperties().SetRequiredVertexAttributes(required_vertex_attributes);
+        compiled_shader.GetDefinition().GetProperties().SetOptionalVertexAttributes(optional_vertex_attributes);
 
         uint num_descriptor_usages = 0;
 
@@ -241,7 +241,7 @@ public:
                         usage.params[key] = value;
                     }
 
-                    compiled_shader->GetDescriptorUsages().Add(std::move(usage));
+                    compiled_shader.GetDescriptorUsages().Add(std::move(usage));
                 }
             }
         }
@@ -285,19 +285,19 @@ public:
                 }
             }
 
-            compiled_shader->GetDefinition().properties.Set(property);
+            compiled_shader.GetDefinition().properties.Set(property);
         }
 
         for (SizeType index = 0; index < ShaderModuleType::MAX; index++) {
             const auto module_property_name = String("module[") + String::ToString(index) + "]";
 
             if (const auto &property = in.GetProperty(module_property_name)) {
-                if (auto err = property.ReadByteBuffer(compiled_shader->modules[index])) {
+                if (auto err = property.ReadByteBuffer(compiled_shader.modules[index])) {
                     return err;
                 }
             }
         }
-        if (!compiled_shader->IsValid()) {
+        if (!compiled_shader.IsValid()) {
             return { FBOMResult::FBOM_ERR, "Cannot deserialize invalid compiled shader instance" };
         }
 
@@ -322,16 +322,17 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
-        auto batch = UniquePtr<CompiledShaderBatch>::Construct();
+        CompiledShaderBatch batch;
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("CompiledShader")) {
-                auto compiled_shader = node.deserialized.Get<CompiledShader>();
-                AssertThrow(compiled_shader != nullptr);
+                Optional<CompiledShader> compiled_shader = node.deserialized.Get<CompiledShader>();
 
-                batch->compiled_shaders.PushBack(*compiled_shader);
+                if (compiled_shader.HasValue()) {
+                    batch.compiled_shaders.PushBack(*compiled_shader);
+                }
             }
         }
 

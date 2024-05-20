@@ -300,17 +300,13 @@ public:
     HYP_FORCE_INLINE
     void Reset(Ty *ptr)
     {
-        if (std::is_base_of_v<UIObject, Ty>) {
-            HYP_BREAKPOINT;
-        }
-
         using TyN = NormalizedType<Ty>;
 
         DropRefCount();
 
         if (ptr) {
             if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, TyN>) {
-                m_ref = ptr->EnableRefCountedPtrFromThisBase<CountType>::weak.GetRefCountData_Internal();
+                m_ref = ptr->template EnableRefCountedPtrFromThisBase<CountType>::weak.GetRefCountData_Internal();
             } else {
                 m_ref = new RefCountDataType;
             }

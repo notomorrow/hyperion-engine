@@ -102,7 +102,7 @@ void StreamedMeshData::LoadMeshData(const ByteBuffer &byte_buffer) const
         return;
     }
 
-    m_mesh_data = std::move(*object.Get<MeshData>());
+    m_mesh_data = *object.Get<MeshData>();
     m_mesh_data_loaded = true;
 }
 

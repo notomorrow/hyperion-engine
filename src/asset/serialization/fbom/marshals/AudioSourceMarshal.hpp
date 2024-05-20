@@ -24,7 +24,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         ByteBuffer byte_buffer;
 
@@ -44,11 +44,11 @@ public:
             return err;
         }
 
-        out_object = UniquePtr<Handle<AudioSource>>::Construct(CreateObject<AudioSource>(
+        out_object = CreateObject<AudioSource>(
             AudioSource::Format(format),
             byte_buffer,
             freq
-        ));
+        );
 
         return { FBOMResult::FBOM_OK };
     }

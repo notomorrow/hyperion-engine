@@ -9,12 +9,12 @@ LoadedAsset FontFaceLoader::LoadAsset(LoaderState &state) const
 {
     FontEngine &font_engine = FontEngine::GetInstance();
 
-    auto font_face = UniquePtr<FontFace>::Construct(
+    RC<FontFace> font_face = RC<FontFace>::Construct(
         font_engine.GetFontBackend(),
         state.filepath
     );
 
-    return { { LoaderResult::Status::OK }, font_face.Cast<void>() };
+    return { { LoaderResult::Status::OK }, font_face };
 }
 
 } // namespace hyperion

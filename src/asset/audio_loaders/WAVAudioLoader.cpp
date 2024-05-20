@@ -14,17 +14,17 @@ LoadedAsset WAVAudioLoader::LoadAsset(LoaderState &state) const
     state.stream.Read(&object.riff_header);
 
     if (std::strncmp(reinterpret_cast<const char *>(object.riff_header.chunk_id), "RIFF", 4) != 0) {
-        return { { LoaderResult::Status::ERR, "invalid RIFF header"}, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, "invalid RIFF header"} };
     }
 
     if (std::strncmp(reinterpret_cast<const char *>(object.riff_header.format), "WAVE", 4) != 0) {
-        return { { LoaderResult::Status::ERR, "invalid WAVE header"}, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, "invalid WAVE header"} };
     }
     
     state.stream.Read(&object.wave_format);
 
     if (std::strncmp(reinterpret_cast<const char *>(object.wave_format.sub_chunk_id), "fmt ", 4) != 0) {
-        return { { LoaderResult::Status::ERR, "invalid wave sub chunk id"}, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, "invalid wave sub chunk id"} };
     }
 
     if (object.wave_format.sub_chunk_size > 16) {
@@ -34,12 +34,12 @@ LoadedAsset WAVAudioLoader::LoadAsset(LoaderState &state) const
     state.stream.Read(&object.wave_data);
 
     if (std::strncmp(reinterpret_cast<const char *>(object.wave_data.sub_chunk_id), "data", 4) != 0) {
-        return { { LoaderResult::Status::ERR, "invalid data header" }, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, "invalid data header" } };
     }
     
-    object.wave_bytes.resize(object.wave_data.sub_chunk_2_size);
+    object.wave_bytes.SetSize(object.wave_data.sub_chunk_2_size);
 
-    state.stream.Read(&object.wave_bytes[0], object.wave_data.sub_chunk_2_size);
+    state.stream.Read(object.wave_bytes.Data(), object.wave_data.sub_chunk_2_size);
 
     object.size = object.wave_data.sub_chunk_2_size;
     object.frequency = object.wave_format.sample_rate;
@@ -58,15 +58,15 @@ LoadedAsset WAVAudioLoader::LoadAsset(LoaderState &state) const
         }
     }
 
-    ByteBuffer byte_buffer(object.wave_bytes.size(), &object.wave_bytes[0]);
+    ByteBuffer byte_buffer(object.wave_bytes.Size(), &object.wave_bytes[0]);
 
-    auto audio_source = UniquePtr<Handle<AudioSource>>::Construct(CreateObject<AudioSource>(
+    RC<Handle<AudioSource>> audio_source = RC<Handle<AudioSource>>::Construct(CreateObject<AudioSource>(
         object.format,
         byte_buffer,
         object.frequency
     ));
 
-    return { { LoaderResult::Status::OK }, audio_source.Cast<void>() };
+    return { { LoaderResult::Status::OK }, audio_source };
 }
 
 } // namespace hyperion

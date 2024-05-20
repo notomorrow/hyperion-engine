@@ -19,8 +19,21 @@ namespace memory {
 template <class T>
 class UniquePtr;
 
+namespace detail {
+
+template <class T>
+static inline void *Any_CopyConstruct(void *src)
+{
+    static_assert(std::is_copy_constructible_v<T>, "T must be copy constructible to use copyable Any type");
+
+    return new T(*static_cast<T *>(src));
+}
+
+} // namespace detail
+
 class Any
 {
+    using CopyConstructor = std::add_pointer_t<void *(void *)>;
     using DeleteFunction = std::add_pointer_t<void(void *)>;
 
 public:
@@ -31,7 +44,8 @@ public:
     Any()
         : m_type_id(TypeID::ForType<void>()),
           m_ptr(nullptr),
-          m_delete_function(nullptr)
+          m_copy_ctor(nullptr),
+          m_dtor(nullptr)
     {
     }
 
@@ -43,28 +57,25 @@ public:
     static Any Construct(Args &&... args)
     {
         Any any;
-        any.m_type_id = TypeID::ForType<T>();
-        any.m_ptr = new T(std::forward<Args>(args)...);
-        any.m_delete_function = &Memory::Delete<T>;
-
+        any.Emplace<NormalizedType<T>>(std::forward<Args>(args)...);
         return any;
     }
 
     template <class T>
-    explicit Any(const T &value)
-        : m_type_id(TypeID::ForType<T>()),
-          m_ptr(new T(value)),
-          m_delete_function(&Memory::Delete<T>)
+    Any(const T &value)
+        : m_type_id(TypeID::ForType<NormalizedType<T>>()),
+          m_ptr(new NormalizedType<T>(value)),
+          m_copy_ctor(&detail::Any_CopyConstruct<NormalizedType<T>>),
+          m_dtor(&Memory::Delete<NormalizedType<T>>)
     {
     }
 
     template <class T>
     Any &operator=(const T &value)
     {
-        const auto new_type_id = TypeID::ForType<T>();
-
-
-        if constexpr (std::is_copy_assignable_v<T>) {
+        const TypeID new_type_id = TypeID::ForType<NormalizedType<T>>();
+        
+        if constexpr (std::is_copy_assignable_v<NormalizedType<T>>) {
             if (m_type_id == new_type_id) {
                 // types are same, call copy assignment operator.
                 *static_cast<T *>(m_ptr) = value;
@@ -74,75 +85,109 @@ public:
         }
 
         if (HasValue()) {
-            m_delete_function(m_ptr);
+            m_dtor(m_ptr);
         }
 
         m_type_id = new_type_id;
-        m_ptr = new T(value);
-        m_delete_function = &Memory::Delete<T>;
+        m_ptr = new NormalizedType<T>(value);
+        m_copy_ctor = &detail::Any_CopyConstruct<NormalizedType<T>>;
+        m_dtor = &Memory::Delete<NormalizedType<T>>;
 
         return *this;
     }
 
     template <class T>
-    explicit Any(T &&value) noexcept
-        : m_type_id(TypeID::ForType<T>()),
-          m_ptr(new T(std::forward<T>(value))),
-          m_delete_function(&Memory::Delete<T>)
+    Any(T &&value) noexcept
+        : m_type_id(TypeID::ForType<NormalizedType<T>>()),
+          m_ptr(new NormalizedType<T>(std::forward<NormalizedType<T>>(value))),
+          m_copy_ctor(&detail::Any_CopyConstruct<NormalizedType<T>>),
+          m_dtor(&Memory::Delete<NormalizedType<T>>)
     {
     }
 
     template <class T>
     Any &operator=(T &&value) noexcept
     {
-        const auto new_type_id = TypeID::ForType<T>();
+        const auto new_type_id = TypeID::ForType<NormalizedType<T>>();
 
-        if constexpr (std::is_move_assignable_v<T>) {
+        if constexpr (std::is_move_assignable_v<NormalizedType<T>>) {
             if (m_type_id == new_type_id) {
                 // types are same, call move assignment operator
-                *static_cast<T *>(m_ptr) = std::move(value);
+                *static_cast<NormalizedType<T> *>(m_ptr) = std::move(value);
 
                 return *this;
             }
         }
 
         if (HasValue()) {
-            m_delete_function(m_ptr);
+            m_dtor(m_ptr);
         }
 
         m_type_id = new_type_id;
-        m_ptr = new T(std::move(value));
-        m_delete_function = &Memory::Delete<T>;
+        m_ptr = new NormalizedType<T>(std::move(value));
+        m_copy_ctor = &detail::Any_CopyConstruct<NormalizedType<NormalizedType<T>>>;
+        m_dtor = &Memory::Delete<NormalizedType<T>>;
 
         return *this;
     }
 
-    Any(const Any &other) = delete;
-    Any &operator=(const Any &other) = delete;
+    Any(const Any &other)
+        : m_type_id(other.m_type_id),
+          m_ptr(other.HasValue() ? other.m_copy_ctor(other.m_ptr) : nullptr),
+          m_copy_ctor(other.m_copy_ctor),
+          m_dtor(other.m_dtor)
+    {
+    }
+
+    Any &operator=(const Any &other)
+    {
+        if (this == &other) {
+            return *this;
+        }
+
+        if (HasValue()) {
+            m_dtor(m_ptr);
+        }
+
+        m_type_id = other.m_type_id;
+        m_ptr = other.HasValue() ? other.m_copy_ctor(other.m_ptr) : nullptr;
+        m_copy_ctor = other.m_copy_ctor;
+        m_dtor = other.m_dtor;
+
+        return *this;
+    }
 
     Any(Any &&other) noexcept
         : m_type_id(std::move(other.m_type_id)),
           m_ptr(other.m_ptr),
-          m_delete_function(other.m_delete_function)
+          m_copy_ctor(other.m_copy_ctor),
+          m_dtor(other.m_dtor)
     {
         other.m_type_id = TypeID::ForType<void>();
         other.m_ptr = nullptr;
-        other.m_delete_function = nullptr;
+        other.m_copy_ctor = nullptr;
+        other.m_dtor = nullptr;
     }
 
     Any &operator=(Any &&other) noexcept
     {
+        if (this == &other) {
+            return *this;
+        }
+
         if (HasValue()) {
-            m_delete_function(m_ptr);
+            m_dtor(m_ptr);
         }
 
         m_type_id = other.m_type_id;
         m_ptr = other.m_ptr;
-        m_delete_function = other.m_delete_function;
+        m_copy_ctor = other.m_copy_ctor;
+        m_dtor = other.m_dtor;
 
         other.m_type_id = TypeID::ForType<void>();
         other.m_ptr = nullptr;
-        other.m_delete_function = nullptr;
+        other.m_copy_ctor = nullptr;
+        other.m_dtor = nullptr;
         
         return *this;
     }
@@ -150,7 +195,7 @@ public:
     ~Any()
     {
         if (HasValue()) {
-            m_delete_function(m_ptr);
+            m_dtor(m_ptr);
         }
     }
 
@@ -164,7 +209,7 @@ public:
 
     /*! \brief Get the delete function for the held object. */
     HYP_FORCE_INLINE DeleteFunction GetDeleteFunction() const
-        { return m_delete_function; }
+        { return m_dtor; }
 
     /*! \brief Returns true if the Any has a value. */
     HYP_FORCE_INLINE bool HasValue() const
@@ -177,7 +222,7 @@ public:
     /*! \brief Returns true if the held object is of type T. */
     template <class T>
     HYP_FORCE_INLINE bool Is() const
-        { return m_type_id == TypeID::ForType<T>(); }
+        { return m_type_id == TypeID::ForType<NormalizedType<T>>(); }
 
     /*! \brief Returns true if the held object is of type \ref{type_id}. */
     HYP_FORCE_INLINE bool Is(TypeID type_id) const
@@ -187,7 +232,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE T &Get()
     {
-        const auto requested_type_id = TypeID::ForType<T>();
+        const TypeID requested_type_id = TypeID::ForType<NormalizedType<T>>();
         AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
 
         return *static_cast<T *>(m_ptr);
@@ -197,7 +242,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE const T &Get() const
     {
-        const auto requested_type_id = TypeID::ForType<T>();
+        const TypeID requested_type_id = TypeID::ForType<NormalizedType<T>>();
         AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
 
         return *static_cast<const T *>(m_ptr);
@@ -207,7 +252,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE T *TryGet()
     {
-        const auto requested_type_id = TypeID::ForType<T>();
+        const TypeID requested_type_id = TypeID::ForType<NormalizedType<T>>();
         if (m_type_id == requested_type_id) {
             return static_cast<T *>(m_ptr);
         }
@@ -219,7 +264,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE const T *TryGet() const
     {
-        const auto requested_type_id = TypeID::ForType<T>();
+        const TypeID requested_type_id = TypeID::ForType<NormalizedType<T>>();
         if (m_type_id == requested_type_id) {
             return static_cast<const T *>(m_ptr);
         }
@@ -232,20 +277,23 @@ public:
     void Emplace(Args &&... args)
     {
         if (HasValue()) {
-            m_delete_function(m_ptr);
+            m_dtor(m_ptr);
         }
 
-        m_type_id = TypeID::ForType<T>();
-        m_ptr = new T(std::forward<Args>(args)...);
-        m_delete_function = &Memory::Delete<T>;
+        m_type_id = TypeID::ForType<NormalizedType<T>>();
+        m_ptr = new NormalizedType<T>(std::forward<Args>(args)...);
+        m_copy_ctor = &detail::Any_CopyConstruct<NormalizedType<T>>;
+        m_dtor = &Memory::Delete<NormalizedType<T>>;
     }
 
     /*! \brief Drop ownership of the object, giving it to the caller.
         Make sure to use delete! */
     template <class T>
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     T *Release()
     {
-        const auto requested_type_id = TypeID::ForType<T>();
+        const TypeID requested_type_id = TypeID::ForType<NormalizedType<T>>();
 
         AssertThrowMsg(m_type_id == requested_type_id, "Held type not equal to requested type!");
 
@@ -253,7 +301,8 @@ public:
 
         m_type_id = TypeID::ForType<void>();
         m_ptr = nullptr;
-        m_delete_function = nullptr;
+        m_copy_ctor = nullptr;
+        m_dtor = nullptr;
 
         return ptr;
     }
@@ -262,38 +311,44 @@ public:
         Do NOT delete the value passed to this function, as it is deleted by the Any.
     */
     template <class T>
+    HYP_FORCE_INLINE
     void Reset(T *ptr)
     {
         if (HasValue()) {
-            m_delete_function(m_ptr);
+            m_dtor(m_ptr);
         }
 
-        m_type_id = TypeID::ForType<T>();
+        m_type_id = TypeID::ForType<NormalizedType<T>>();
         m_ptr = ptr;
 
         if (ptr) {
-            m_delete_function = &Memory::Delete<T>;
+            m_copy_ctor = &detail::Any_CopyConstruct<NormalizedType<T>>;
+            m_dtor = &Memory::Delete<NormalizedType<T>>;
         } else {
-            m_delete_function = nullptr;
+            m_copy_ctor = nullptr;
+            m_dtor = nullptr;
         }
     }
 
     /*! \brief Resets the current value held in the Any. */
+    HYP_FORCE_INLINE
     void Reset()
     {
         if (HasValue()) {
-            m_delete_function(m_ptr);
+            m_dtor(m_ptr);
         }
 
         m_type_id = TypeID::ForType<void>();
         m_ptr = nullptr;
-        m_delete_function = nullptr;
+        m_copy_ctor = nullptr;
+        m_dtor = nullptr;
     }
 
 private:
     TypeID          m_type_id;
     void            *m_ptr;
-    DeleteFunction  m_delete_function;
+    CopyConstructor m_copy_ctor;
+    DeleteFunction  m_dtor;
 };
 } // namespace memory
 

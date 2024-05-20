@@ -187,7 +187,7 @@ void SampleStreamer::Init()
 #endif
 
     // // Test freetype font rendering
-    auto font_face = AssetManager::GetInstance()->Load<FontFace>("fonts/Roboto/Roboto-Regular.ttf");
+    auto font_face = AssetManager::GetInstance()->Load<RC<FontFace>>("fonts/Roboto/Roboto-Regular.ttf");
 
     RC<FontAtlas> atlas(new FontAtlas(font_face));
     atlas->Render();
@@ -722,8 +722,7 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
     AssetMap loaded_assets = batch->AwaitResults();
 
     if (name == HYP_NAME(GaussianSplatting)) {
-        auto cameras_json = loaded_assets["cameras json"].Get<json::JSONValue>();
-        AssertThrow(loaded_assets["cameras json"].result.status == LoaderResult::Status::OK);
+        json::JSONValue cameras_json = *loaded_assets["cameras json"].Get<json::JSONValue>();
 
         struct GaussianSplattingCameraDefinition
         {
@@ -731,7 +730,7 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
             String  img_name;
             uint32  width;
             uint32  height;
-            Vector3 position;
+            Vec3f   position;
             Matrix3 rotation;
             float   fx;
             float   fy;
@@ -739,10 +738,10 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
 
         Array<GaussianSplattingCameraDefinition> camera_definitions;
 
-        if (cameras_json && cameras_json->IsArray()) {
-            camera_definitions.Reserve(cameras_json->AsArray().Size());
+        if (cameras_json && cameras_json.IsArray()) {
+            camera_definitions.Reserve(cameras_json.AsArray().Size());
 
-            for (const json::JSONValue &item : cameras_json->AsArray()) {
+            for (const json::JSONValue &item : cameras_json.AsArray()) {
                 GaussianSplattingCameraDefinition definition;
                 definition.id       = item["id"].ToString();
                 definition.img_name = item["img_name"].ToString();
@@ -780,30 +779,30 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
         }
 
         Quaternion camera_offset_rotation = Quaternion::Identity();
-        Vector3 up_direction = Vector3::UnitY();
+        Vec3f up_direction = Vec3f::UnitY();
 
-        Array<Vector3> all_up_directions;
+        Array<Vec3f> all_up_directions;
         all_up_directions.Reserve(camera_definitions.Size());
 
         for (const auto &camera_definition : camera_definitions) {
-            const Vector3 camera_up = Matrix4(camera_definition.rotation) * Vector3::UnitY();
+            const Vec3f camera_up = Matrix4(camera_definition.rotation) * Vec3f::UnitY();
 
             all_up_directions.PushBack(camera_up);
         }
 
         if (all_up_directions.Size() != 0) {
-            up_direction = Vector3::Zero();
+            up_direction = Vec3f::Zero();
 
-            for (const Vector3 &camera_up_direction : all_up_directions) {
+            for (const Vec3f &camera_up_direction : all_up_directions) {
                 up_direction += camera_up_direction;
             }
 
             up_direction /= float(all_up_directions.Size());
             up_direction.Normalize();
 
-            const Vector3 axis = up_direction.Cross(Vector3::UnitY()).Normalize();
+            const Vec3f axis = up_direction.Cross(Vec3f::UnitY()).Normalize();
 
-            const float cos_theta = up_direction.Dot(Vector3::UnitY());
+            const float cos_theta = up_direction.Dot(Vec3f::UnitY());
             const float theta = MathUtil::Arccos(cos_theta);
 
             camera_offset_rotation = Quaternion(axis, theta).Invert();
@@ -811,41 +810,41 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
 
         DebugLog(LogType::Debug, "Up direction = %f, %f, %f\n", up_direction.x, up_direction.y, up_direction.z);
 
-        auto ply_model = loaded_assets["ply model"].Get<PLYModelLoader::PLYModel>();
+        PLYModelLoader::PLYModel ply_model = *loaded_assets["ply model"].Get<PLYModelLoader::PLYModel>();
 
-        const SizeType num_points = ply_model->vertices.Size();
+        const SizeType num_points = ply_model.vertices.Size();
 
         RC<GaussianSplattingModelData> gaussian_splatting_model = RC<GaussianSplattingModelData>::Construct();
         gaussian_splatting_model->points.Resize(num_points);
         gaussian_splatting_model->transform.SetRotation(Quaternion(Vector3(1, 0, 0), M_PI));
 
-        const bool has_rotations = ply_model->custom_data.Contains("rot_0")
-            && ply_model->custom_data.Contains("rot_1")
-            && ply_model->custom_data.Contains("rot_2")
-            && ply_model->custom_data.Contains("rot_3");
+        const bool has_rotations = ply_model.custom_data.Contains("rot_0")
+            && ply_model.custom_data.Contains("rot_1")
+            && ply_model.custom_data.Contains("rot_2")
+            && ply_model.custom_data.Contains("rot_3");
 
-        const bool has_scales = ply_model->custom_data.Contains("scale_0")
-            && ply_model->custom_data.Contains("scale_1")
-            && ply_model->custom_data.Contains("scale_2");
+        const bool has_scales = ply_model.custom_data.Contains("scale_0")
+            && ply_model.custom_data.Contains("scale_1")
+            && ply_model.custom_data.Contains("scale_2");
 
-        const bool has_sh = ply_model->custom_data.Contains("f_dc_0")
-            && ply_model->custom_data.Contains("f_dc_1")
-            && ply_model->custom_data.Contains("f_dc_2");
+        const bool has_sh = ply_model.custom_data.Contains("f_dc_0")
+            && ply_model.custom_data.Contains("f_dc_1")
+            && ply_model.custom_data.Contains("f_dc_2");
 
-        const bool has_opacity = ply_model->custom_data.Contains("opacity");
+        const bool has_opacity = ply_model.custom_data.Contains("opacity");
 
         for (SizeType index = 0; index < num_points; index++) {
             auto &out_point = gaussian_splatting_model->points[index];
 
-            out_point.position = Vector4(ply_model->vertices[index].GetPosition(), 1.0f);
+            out_point.position = Vector4(ply_model.vertices[index].GetPosition(), 1.0f);
 
             if (has_rotations) {
                 Quaternion rotation;
 
-                ply_model->custom_data["rot_0"].Read(index * sizeof(float), &rotation.w);
-                ply_model->custom_data["rot_1"].Read(index * sizeof(float), &rotation.x);
-                ply_model->custom_data["rot_2"].Read(index * sizeof(float), &rotation.y);
-                ply_model->custom_data["rot_3"].Read(index * sizeof(float), &rotation.z);
+                ply_model.custom_data["rot_0"].Read(index * sizeof(float), &rotation.w);
+                ply_model.custom_data["rot_1"].Read(index * sizeof(float), &rotation.x);
+                ply_model.custom_data["rot_2"].Read(index * sizeof(float), &rotation.y);
+                ply_model.custom_data["rot_3"].Read(index * sizeof(float), &rotation.z);
 
                 rotation.Normalize();
 
@@ -855,9 +854,9 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
             if (has_scales) {
                 Vector3 scale = Vector3::One();
 
-                ply_model->custom_data["scale_0"].Read(index * sizeof(float), &scale.x);
-                ply_model->custom_data["scale_1"].Read(index * sizeof(float), &scale.y);
-                ply_model->custom_data["scale_2"].Read(index * sizeof(float), &scale.z);
+                ply_model.custom_data["scale_0"].Read(index * sizeof(float), &scale.x);
+                ply_model.custom_data["scale_1"].Read(index * sizeof(float), &scale.y);
+                ply_model.custom_data["scale_2"].Read(index * sizeof(float), &scale.z);
 
                 out_point.scale = Vector4(scale, 1.0f);
             }
@@ -870,12 +869,12 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
 
                 static constexpr float SH_C0 = 0.28209479177387814f;
 
-                ply_model->custom_data["f_dc_0"].Read(index * sizeof(float), &f_dc_0);
-                ply_model->custom_data["f_dc_1"].Read(index * sizeof(float), &f_dc_1);
-                ply_model->custom_data["f_dc_2"].Read(index * sizeof(float), &f_dc_2);
+                ply_model.custom_data["f_dc_0"].Read(index * sizeof(float), &f_dc_0);
+                ply_model.custom_data["f_dc_1"].Read(index * sizeof(float), &f_dc_1);
+                ply_model.custom_data["f_dc_2"].Read(index * sizeof(float), &f_dc_2);
 
                 if (has_opacity) {
-                    ply_model->custom_data["opacity"].Read(index * sizeof(float), &opacity);
+                    ply_model.custom_data["opacity"].Read(index * sizeof(float), &opacity);
                 }
 
                 out_point.color = Vector4(

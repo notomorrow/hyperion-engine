@@ -89,7 +89,7 @@ private:
 
 void HyperionEditorImpl::CreateFontAtlas()
 {
-    RC<FontFace> font_face = AssetManager::GetInstance()->Load<FontFace>("fonts/Roboto/Roboto-Regular.ttf");
+    RC<FontFace> font_face = AssetManager::GetInstance()->Load<RC<FontFace>>("fonts/Roboto/Roboto-Regular.ttf");
 
     if (!font_face) {
         DebugLog(LogType::Error, "Failed to load font face!\n");
@@ -107,7 +107,7 @@ void HyperionEditorImpl::CreateMainPanel()
 {
     // btn->SetPadding(Vec2i { 5, 5 });
     
-    if (RC<UIObject> loaded_ui = AssetManager::GetInstance()->Load<UIObject>("ui/Editor.Main.ui.xml")) {
+    if (RC<UIObject> loaded_ui = AssetManager::GetInstance()->Load<RC<UIObject>>("ui/Editor.Main.ui.xml")) {
         if (loaded_ui.Is<UIStage>()) {
             loaded_ui.Cast<UIStage>()->SetOwnerThreadID(ThreadID::Current());
         }
@@ -633,7 +633,7 @@ void HyperionEditor::Init()
     batch->LoadAsync();
     auto results = batch->AwaitResults();
 
-    auto node = results["test_model"].ExtractAs<Node>();
+    NodeProxy node = results["test_model"].ExtractAs<Node>();
     node.Scale(0.0125f);
     node.SetName("test_model");
     node.LockTransform();

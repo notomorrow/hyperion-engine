@@ -281,7 +281,7 @@ LoadedAsset UILoader::LoadAsset(LoaderState &state) const
 {
     AssertThrow(state.asset_manager != nullptr);
 
-    UniquePtr<UIObject> ui_stage(new UIStage(ThreadID::Current()));
+    RC<UIObject> ui_stage(new UIStage(ThreadID::Current()));
     ui_stage->Init();
 
     UISAXHandler handler(&state, static_cast<UIStage *>(ui_stage.Get()));
@@ -292,10 +292,10 @@ LoadedAsset UILoader::LoadAsset(LoaderState &state) const
     if (!sax_result) {
         DebugLog(LogType::Warn, "Failed to parse UI stage: %s\n", sax_result.message.Data());
 
-        return { { LoaderResult::Status::ERR, sax_result.message }, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, sax_result.message } };
     }
 
-    return { { LoaderResult::Status::OK }, ui_stage.Cast<void>() };
+    return { { LoaderResult::Status::OK }, ui_stage };
 }
 
 } // namespace hyperion

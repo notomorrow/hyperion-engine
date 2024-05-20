@@ -37,21 +37,21 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
-        auto scene_handle = UniquePtr<Handle<Scene>>::Construct(CreateObject<Scene>(Handle<Camera>()));
+        Handle<Scene> scene_handle = CreateObject<Scene>(Handle<Camera>());
 
         Name name;
         in.GetProperty("name").ReadName(&name);
 
-        (*scene_handle)->SetName(name);
+        scene_handle->SetName(name);
 
         for (auto &node : *in.nodes) {
             if (node.GetType().IsOrExtends("Node")) {
-                (*scene_handle)->GetRoot().AddChild(node.deserialized.Get<Node>());
+                scene_handle->GetRoot().AddChild(node.deserialized.Get<Node>());
                 // out_object->SetRoot(node.deserialized.Get<Node>());
             } else if (node.GetType().IsOrExtends("Camera")) {
-                (*scene_handle)->SetCamera(node.deserialized.Get<Camera>());
+                scene_handle->SetCamera(node.deserialized.Get<Camera>());
             }
         }
 

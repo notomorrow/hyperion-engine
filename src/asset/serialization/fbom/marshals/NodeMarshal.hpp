@@ -65,7 +65,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         Node::Type node_type = Node::Type::NODE;
 
@@ -73,14 +73,14 @@ public:
             return err;
         }
 
-        UniquePtr<Node> node_ptr;
+        NodeProxy node;
 
         switch (node_type) {
         case Node::Type::NODE:
-            node_ptr.Reset(new Node());
+            node = NodeProxy(new Node());
             break;
         case Node::Type::BONE:
-            node_ptr.Reset(new Bone());
+            node = NodeProxy(new Bone());
             break;
         default:
             return { FBOMResult::FBOM_ERR, "Unsupported node type" }; 
@@ -88,7 +88,7 @@ public:
 
         String name;
         in.GetProperty("name").ReadString(name);
-        node_ptr->SetName(std::move(name));
+        node->SetName(std::move(name));
 
         { // local transform
             Transform transform = Transform::identity;
@@ -106,7 +106,7 @@ public:
             }
 
             transform.UpdateMatrix();
-            node_ptr->SetLocalTransform(transform);
+            node->SetLocalTransform(transform);
         }
 
         { // world transform
@@ -125,7 +125,7 @@ public:
             }
 
             transform.UpdateMatrix();
-            node_ptr->SetWorldTransform(transform);
+            node->SetWorldTransform(transform);
         }
 
         { // bounding box
@@ -136,12 +136,12 @@ public:
                 return err;
             }
 
-            node_ptr->SetEntityAABB(aabb);
+            node->SetEntityAABB(aabb);
         }
 
         for (auto &sub_object : *in.nodes) {
             if (sub_object.GetType().IsOrExtends("Node")) {
-                node_ptr->AddChild(sub_object.deserialized.Get<Node>());
+                node->AddChild(sub_object.deserialized.Get<Node>());
             } else if (sub_object.GetType().IsOrExtends("Entity")) {
                 // @TODO: Fix when entity moving between EntityManager instances is supported
 
@@ -149,7 +149,7 @@ public:
             }
         }
 
-        out_object = std::move(node_ptr);
+        out_object = std::move(node);
 
         return { FBOMResult::FBOM_OK };
     }

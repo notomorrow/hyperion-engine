@@ -24,7 +24,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         uint32 type;
 
@@ -32,7 +32,7 @@ public:
             return err;
         }
 
-        out_object = UniquePtr<physics::PhysicsShape>::Construct(physics::PhysicsShapeType(type));
+        out_object = RC<physics::PhysicsShape>::Construct(physics::PhysicsShapeType(type));
 
         return { FBOMResult::FBOM_OK };
     }

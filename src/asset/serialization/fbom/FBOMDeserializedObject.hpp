@@ -20,10 +20,7 @@
 #include <Types.hpp>
 #include <Constants.hpp>
 
-#include <vector>
-#include <string>
 #include <type_traits>
-#include <map>
 
 namespace hyperion::fbom {
 
@@ -31,8 +28,7 @@ class FBOMDeserializedObject
 {
 public:
     AssetValue m_value;
-
-
+    
     FBOMDeserializedObject()
     {
     }
@@ -83,7 +79,7 @@ public:
     template <class T>
     void Set(typename AssetLoaderWrapper<T>::ResultType &&value)
     {
-        m_value.Set(std::move(value));
+        m_value = std::move(value);
     }
 
     /*! \brief Drops ownership of the object held.

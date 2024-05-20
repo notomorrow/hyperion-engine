@@ -192,22 +192,22 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
     xml::SAXParser::Result sax_result = parser.Parse(&state.stream);
 
     if (!sax_result) {
-        return { { LoaderResult::Status::ERR, sax_result.message }, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, sax_result.message } };
     }
 
-    auto skeleton_handle = UniquePtr<Handle<Skeleton>>::Construct(CreateObject<Skeleton>());
+    Handle<Skeleton> skeleton_handle = CreateObject<Skeleton>();
 
     for (const auto &item : object.bones) {
         UniquePtr<Bone> bone(new Bone(item.name));
 
         bone->SetBindingTransform(Transform(
             item.binding_translation,
-            Vector3::One(),
+            Vec3f::One(),
             item.binding_rotation
         ));
 
         if (item.parent_name.Any()) {
-            if (auto *parent_bone = (*skeleton_handle)->FindBone(item.parent_name)) {
+            if (Bone *parent_bone = skeleton_handle->FindBone(item.parent_name)) {
                 parent_bone->AddChild(NodeProxy(bone.Release()));
 
                 continue;
@@ -218,14 +218,14 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
                 "Ogre XML parser: Parent bone '%s' not found in skeleton at this stage\n",
                 item.parent_name.Data()
             );
-        } else if ((*skeleton_handle)->GetRootBone() != nullptr) {
+        } else if (skeleton_handle->GetRootBone() != nullptr) {
             DebugLog(
                 LogType::Warn,
                 "Ogre XML parser: Attempt to set root bone to node '%s' but it has already been set\n",
                 item.name.Data()
             );
         } else {
-            (*skeleton_handle)->SetRootBone(NodeProxy(bone.Release()));
+            skeleton_handle->SetRootBone(NodeProxy(bone.Release()));
         }
     }
 
@@ -247,10 +247,10 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
             animation.AddTrack(animation_track);
         }
 
-        (*skeleton_handle)->AddAnimation(std::move(animation));
+        skeleton_handle->AddAnimation(std::move(animation));
     }
 
-    if (Bone *root_bone = (*skeleton_handle)->GetRootBone()) {
+    if (Bone *root_bone = skeleton_handle->GetRootBone()) {
         root_bone->SetToBindingPose();
 
         root_bone->CalculateBoneRotation();
@@ -262,7 +262,7 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
         root_bone->UpdateBoneTransform();
     }
     
-    return { { LoaderResult::Status::OK }, skeleton_handle.Cast<void>() };
+    return { { LoaderResult::Status::OK }, skeleton_handle };
 }
 
 } // namespace hyperion
