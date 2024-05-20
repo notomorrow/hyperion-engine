@@ -31,7 +31,7 @@ LoadedAsset JSONLoader::LoadAsset(LoaderState &state) const
 
     return {
         { LoaderResult::Status::OK },
-        UniquePtr<JSONValue>::Construct(json_parse_result.value).Cast<void>()
+        json_parse_result.value
     };
 }
 

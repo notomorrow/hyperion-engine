@@ -266,7 +266,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
 {
     AssertThrow(state.asset_manager != nullptr);
 
-    auto top = UniquePtr<Node>::Construct(model.tag);
+    NodeProxy top(new Node(model.tag));
 
     Handle<MaterialGroup> material_library;
     
@@ -431,7 +431,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
         top->AddChild(NodeProxy(node));
     }
 
-    return { { LoaderResult::Status::OK }, top.Cast<void>() };
+    return { { LoaderResult::Status::OK }, top };
 }
 
 } // namespace hyperion

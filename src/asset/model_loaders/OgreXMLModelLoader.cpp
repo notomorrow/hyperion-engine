@@ -209,12 +209,12 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
     auto sax_result = parser.Parse(&state.stream);
 
     if (!sax_result) {
-        return { { LoaderResult::Status::ERR, sax_result.message }, UniquePtr<void>() };
+        return { { LoaderResult::Status::ERR, sax_result.message } };
     }
     
     BuildVertices(model);
 
-    auto top = UniquePtr<Node>::Construct();
+    NodeProxy top(new Node());
 
     Handle<Skeleton> skeleton;
 
@@ -308,7 +308,7 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
         top->AddChild(std::move(node));
     }
 
-    return { { LoaderResult::Status::OK }, top.Cast<void>() };
+    return { { LoaderResult::Status::OK }, top };
 }
 
 } // namespace hyperion

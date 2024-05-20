@@ -41,7 +41,7 @@ public:
         { return FBOMObjectType(TypeNameWithoutNamespace<T>().Data()); }
 
     virtual FBOMResult Serialize(const T &in_object, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const = 0;
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const = 0;
 
 private:
     // virtual FBOMResult Serialize(const FBOMDeserializedObject &in, FBOMObject &out) const override
@@ -53,17 +53,20 @@ private:
 
     virtual FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out) const override final
     {
-        UniquePtr<void> ptr;
+        Any any_value;
 
-        auto result = Deserialize(in, ptr);
+        auto result = Deserialize(in, any_value);
 
         if (result.value == FBOMResult::FBOM_OK) {
-            AssertThrow(ptr != nullptr);
+            AssertThrow(any_value.HasValue());
+            
+            out.m_value = std::move(any_value);
 
-            auto result_value = AssetLoaderWrapper<T>::MakeResultType(std::move(ptr));
-            AssertThrow(result_value.Get() != nullptr);
+            /*// @TODO Come back to this
+            UniquePtr<AssetLoaderWrapper<T>::ResultType> result_ptr = ptr.Cast<AssetLoaderWrapper<T>::ResultType>();
+            AssertThrow(result_ptr != nullptr);
 
-            out.Set<T>(std::move(result_value));
+            out.Set<T>(std::move(*result_ptr));*/
         }
 
         return result;

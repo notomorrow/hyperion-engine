@@ -82,7 +82,7 @@ void UIStage::Init()
 
     if (!m_default_font_atlas) {
         LoaderResult loader_result;
-        RC<FontAtlas> font_atlas = g_asset_manager->Load<FontAtlas>("fonts/default.json", loader_result);
+        RC<FontAtlas> font_atlas = g_asset_manager->Load<RC<FontAtlas>>("fonts/default.json", loader_result);
 
         if (font_atlas != nullptr) {
             m_default_font_atlas = std::move(font_atlas);

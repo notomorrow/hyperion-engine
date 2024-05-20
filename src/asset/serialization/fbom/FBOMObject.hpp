@@ -111,8 +111,7 @@ public:
 
     /*! \brief Add a child object to this object node.
         @param object The child object to add
-        @param external If true, store the child object in a separate file,
-                        To be pulled in when the final object is loaded */
+        @param flags Options to use for loading */
     template <class T, class MarshalClass = FBOMMarshaler<NormalizedType<T>>>
     typename std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>, FBOMResult>
     AddChild(const T &object, FBOMObjectFlags flags = FBOM_OBJECT_FLAGS_NONE)

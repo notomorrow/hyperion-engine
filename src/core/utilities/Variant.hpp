@@ -218,7 +218,7 @@ public:
     explicit VariantBase(const T &value)
         : m_current_type_id(invalid_type_id)
     {
-        static_assert(Helper::template holds_type<T>, "Type is not valid for the variant");
+        static_assert(Helper::template holds_type<T> || resolution_failure<T>, "Type is not valid for the variant");
 
         const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
@@ -230,7 +230,7 @@ public:
     explicit VariantBase(T &&value) noexcept
         : m_current_type_id(invalid_type_id)
     {
-        static_assert(Helper::template holds_type<T>, "Type is not valid for the variant");
+        static_assert(Helper::template holds_type<T> || resolution_failure<T>, "Type is not valid for the variant");
 
         const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 

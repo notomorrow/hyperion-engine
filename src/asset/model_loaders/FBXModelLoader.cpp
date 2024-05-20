@@ -592,7 +592,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 {
     AssertThrow(state.asset_manager != nullptr);
 
-    auto top = UniquePtr<Node>::Construct();
+    NodeProxy top(new Node());
     Handle<Skeleton> root_skeleton = CreateObject<Skeleton>();
 
     // Include our root dir as part of the path
@@ -1371,7 +1371,8 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 #endif
     };
 
-    auto ApplyBindPoses = [&]() {
+    auto ApplyBindPoses = [&]()
+    {
         for (const FBXObjectID id : bind_pose_ids) {
             FBXBindPose *bind_pose;
 
@@ -1405,7 +1406,8 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
     std::function<void(FBXNode &)> ApplyLocalBindPose;
 
-    ApplyLocalBindPose = [&](FBXNode &node) {
+    ApplyLocalBindPose = [&](FBXNode &node)
+    {
         node.local_bind_matrix = node.world_bind_matrix;
 
         if (node.parent_id) {
@@ -1427,7 +1429,8 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         }
     };
 
-    auto CalculateLocalBindPoses = [&]() {
+    auto CalculateLocalBindPoses = [&]()
+    {
         for (const FBXObjectID id : bind_pose_ids) {
             FBXBindPose *bind_pose;
 
@@ -1464,7 +1467,8 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
     std::function<void(FBXNode &)> BuildLimbNodes;
 
-    BuildLimbNodes = [&](FBXNode &node) {
+    BuildLimbNodes = [&](FBXNode &node)
+    {
         if (node.type == FBXNode::Type::LIMB_NODE) {
             found_first_bone = true;
 
@@ -1486,7 +1490,8 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
     std::function<FBXNode *(FBXNode &)> FindFirstLimbNode;
 
-    FindFirstLimbNode = [&](FBXNode &node) -> FBXNode * {
+    FindFirstLimbNode = [&](FBXNode &node) -> FBXNode *
+    {
         if (node.type == FBXNode::Type::LIMB_NODE) {
             return &node;
         }
@@ -1545,7 +1550,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         }
     }
 
-    return { { LoaderResult::Status::OK }, top.Cast<void>() };
+    return { { LoaderResult::Status::OK }, top };
 }
 
 } // namespace hyperion

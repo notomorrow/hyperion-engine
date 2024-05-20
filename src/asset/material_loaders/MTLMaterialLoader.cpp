@@ -209,7 +209,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
         DebugLog(LogType::Warn, "Obj Mtl loader: Unable to parse mtl material line: %s\n", trimmed.Data());
     });
 
-    auto material_group_handle = UniquePtr<Handle<MaterialGroup>>::Construct(CreateObject<MaterialGroup>());
+    RC<Handle<MaterialGroup>> material_group_handle = RC<Handle<MaterialGroup>>::Construct(CreateObject<MaterialGroup>());
 
     HashMap<String, String> texture_names_to_path;
     FlatSet<String> unique_paths;
@@ -290,7 +290,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
         for (auto &it : item.textures) {
             // Handle<Texture> texture = loaded_textures[String(texture_path.c_str())].Get<Texture>();
-            auto texture = loaded_textures[it.name].ExtractAs<Texture>();
+            Handle<Texture> texture = loaded_textures[it.name].ExtractAs<Texture>();
 
             if (!texture) {
                 DebugLog(
@@ -320,7 +320,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
         (*material_group_handle)->Add(item.tag, std::move(material));
     }
 
-    return { { LoaderResult::Status::OK }, material_group_handle.Cast<void>() };
+    return { { LoaderResult::Status::OK }, material_group_handle };
 }
 
 } // namespace hyperion

@@ -43,7 +43,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
 
         struct CameraParams
@@ -65,24 +65,20 @@ public:
         in.GetProperty("bottom").ReadFloat(&camera_params.bottom);
         in.GetProperty("top").ReadFloat(&camera_params.top);
 
-        UniquePtr<Handle<Camera>> camera_handle;
+        Handle<Camera> camera_handle;
 
         if (camera_params.fov > MathUtil::epsilon_f) {
-            camera_handle = UniquePtr<Handle<Camera>>::Construct(
-                CreateObject<Camera>(
-                    camera_params.fov,
-                    camera_params.width, camera_params.height,
-                    camera_params._near, camera_params._far
-                )
+            camera_handle = CreateObject<Camera>(
+                camera_params.fov,
+                camera_params.width, camera_params.height,
+                camera_params._near, camera_params._far
             );
         } else {
-            camera_handle = UniquePtr<Handle<Camera>>::Construct(
-                CreateObject<Camera>(
-                    camera_params.width, camera_params.height,
-                    camera_params.left, camera_params.right,
-                    camera_params.bottom, camera_params.top,
-                    camera_params._near, camera_params._far
-                )
+            camera_handle = CreateObject<Camera>(
+                camera_params.width, camera_params.height,
+                camera_params.left, camera_params.right,
+                camera_params.bottom, camera_params.top,
+                camera_params._near, camera_params._far
             );
         }
         
@@ -92,13 +88,13 @@ public:
             in.GetProperty("direction").ReadElements(FBOMFloat(), 3, &direction);
             in.GetProperty("up").ReadElements(FBOMFloat(), 3, &up_vector);
 
-            (*camera_handle)->SetTranslation(translation);
-            (*camera_handle)->SetDirection(direction);
-            (*camera_handle)->SetUpVector(up_vector);
+            camera_handle->SetTranslation(translation);
+            camera_handle->SetDirection(direction);
+            camera_handle->SetUpVector(up_vector);
             
-            in.GetProperty("view_matrix").ReadMat4(&(*camera_handle)->GetViewMatrix());
-            in.GetProperty("projection_matrix").ReadMat4(&(*camera_handle)->GetProjectionMatrix());
-            in.GetProperty("view_projection_matrix").ReadMat4(&(*camera_handle)->GetViewProjectionMatrix());
+            in.GetProperty("view_matrix").ReadMat4(&camera_handle->GetViewMatrix());
+            in.GetProperty("projection_matrix").ReadMat4(&camera_handle->GetProjectionMatrix());
+            in.GetProperty("view_projection_matrix").ReadMat4(&camera_handle->GetViewProjectionMatrix());
         }
 
         { // frustum
@@ -107,7 +103,7 @@ public:
             in.GetProperty("frustum").ReadElements(FBOMVec4f(), 6, &planes[0]);
 
             for (uint i = 0; i < std::size(planes); i++) {
-                (*camera_handle)->GetFrustum().GetPlane(i) = planes[i];
+                camera_handle->GetFrustum().GetPlane(i) = planes[i];
             }
         }
 

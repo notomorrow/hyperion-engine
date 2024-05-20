@@ -33,12 +33,12 @@ public:
 private:
     [[nodiscard]]
     HYP_FORCE_INLINE
-    static constexpr uint32 GetBlockIndex(BitIndex bit)
+    static constexpr uint64 GetBlockIndex(BitIndex bit)
         { return bit / CHAR_BIT / sizeof(BlockType); }
     
     [[nodiscard]]
     HYP_FORCE_INLINE
-    static constexpr uint32 GetBitMask(uint32 bit)
+    static constexpr uint64 GetBitMask(BitIndex bit)
         { return 1ull << (bit & (num_bits_per_block - 1)); }
 
     template <bool IsConst>
@@ -163,7 +163,7 @@ public:
     HYP_FORCE_INLINE
     bool Get(BitIndex index) const
     {
-        const uint32 block_index = GetBlockIndex(index);
+        const uint64 block_index = GetBlockIndex(index);
 
         return block_index < m_blocks.Size()
             && (m_blocks[block_index] & GetBitMask(index));

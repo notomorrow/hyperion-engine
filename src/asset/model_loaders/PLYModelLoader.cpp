@@ -207,9 +207,9 @@ LoadedAsset PLYModelLoader::BuildModel(LoaderState &state, PLYModel &model)
 {
     AssertThrow(state.asset_manager != nullptr);
 
-    auto ply_model_ptr = UniquePtr<PLYModel>::Construct(model);
+    RC<PLYModel> ply_model_ptr(new PLYModel(model));
 
-    return { { LoaderResult::Status::OK }, ply_model_ptr.Cast<void>() };
+    return { { LoaderResult::Status::OK }, ply_model_ptr };
 }
 
 } // namespace hyperion

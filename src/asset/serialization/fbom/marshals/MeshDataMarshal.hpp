@@ -32,7 +32,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         Array<Vertex> vertices;
 
@@ -62,10 +62,10 @@ public:
             }
         }
 
-        out_object = UniquePtr<MeshData>(new MeshData {
+        out_object = MeshData {
             std::move(vertices),
             std::move(indices)
-        });
+        };
 
         return { FBOMResult::FBOM_OK };
     }

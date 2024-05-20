@@ -462,11 +462,9 @@ public:
         Base::m_holder.type_id = value.m_type_id;
         Base::m_holder.base_type_id = value.m_type_id;
         Base::m_holder.value = value.m_ptr;
-        Base::m_holder.dtor = value.m_delete_function;
-
-        value.m_ptr = nullptr;
-        value.m_delete_function = nullptr;
-        value.m_type_id = TypeID::ForType<void>();
+        Base::m_holder.dtor = value.m_dtor;
+        
+        (void)value.Release<void>();
     }
 
     UniquePtr(const Base &other) = delete;

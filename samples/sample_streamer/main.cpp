@@ -8,6 +8,9 @@
 
 #include <HyperionEngine.hpp>
 
+#include "asset/font_loaders/FontAtlasLoader.hpp"
+#include "asset/ui_loaders/UILoader.hpp"
+
 using namespace hyperion;
 
 void HandleSignal(int signum)
@@ -48,6 +51,15 @@ int main(int argc, char **argv)
     
     // handle fatal crashes
     signal(SIGSEGV, HandleSignal);
+
+    auto font_atlas_type_id = TypeID::ForType<RC<FontAtlas>>();
+    auto font_atlas_type_name = TypeName<RC<FontAtlas>>();
+    auto ui_object_type_id = TypeID::ForType<RC<UIObject>>();
+    auto ui_object_type_name = TypeName<RC<UIObject>>();
+
+    AssertThrow(font_atlas_type_id != ui_object_type_id);
+    DebugLog(LogType::Debug, "Font atlas type name : %s\n", font_atlas_type_name.Data());
+    DebugLog(LogType::Debug, "UI type name : %s\n", ui_object_type_name.Data());
 
     HyperionEditor editor;
     // SampleStreamer editor;

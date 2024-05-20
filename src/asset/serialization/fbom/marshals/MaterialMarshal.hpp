@@ -92,7 +92,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
         Name name;
         in.GetProperty("name").ReadName(&name);
@@ -175,14 +175,14 @@ public:
             }
         }
 
-        auto material_handle = g_material_system->GetOrCreate(attributes, parameters, textures);
+        Handle<Material> material_handle = g_material_system->GetOrCreate(attributes, parameters, textures);
         material_handle->SetShader(std::move(shader));
 
         if (name) {
             material_handle->SetName(name);
         }
 
-        out_object = std::move(UniquePtr<Handle<Material>>::Construct(material_handle));
+        out_object = std::move(material_handle);
 
         return { FBOMResult::FBOM_OK };
     }

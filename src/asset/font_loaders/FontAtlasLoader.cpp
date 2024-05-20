@@ -97,11 +97,11 @@ LoadedAsset FontAtlasLoader::LoadAsset(LoaderState &state) const
     }
 
     // @TODO: Fix
-    UniquePtr<FontAtlas> font_atlas;
+    RC<FontAtlas> font_atlas;
 
     // UniquePtr<FontAtlas> font_atlas(new FontAtlas(std::move(bitmap_texture), cell_dimensions, std::move(glyph_metrics)));
 
-    return { { LoaderResult::Status::OK }, font_atlas.Cast<void>() };
+    return { { LoaderResult::Status::OK }, font_atlas };
 }
 
 } // namespace hyperion

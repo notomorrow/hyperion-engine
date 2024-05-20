@@ -28,11 +28,11 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, UniquePtr<void> &out_object) const override
+    virtual FBOMResult Deserialize(const FBOMObject &in, Any &out_object) const override
     {
-        auto sub_shader = UniquePtr<SubShader>::Construct();
+        SubShader sub_shader;
 
-        if (auto err = in.GetProperty("type").ReadUnsignedInt(&sub_shader->type)) {
+        if (auto err = in.GetProperty("type").ReadUnsignedInt(&sub_shader.type)) {
             return err;
         }
 
@@ -40,7 +40,7 @@ public:
             const auto num_bytes = bytes_property.NumElements(FBOMByte());
 
             if (num_bytes != 0) {
-                if (auto err = bytes_property.ReadBytes(num_bytes, sub_shader->spirv.bytes)) {
+                if (auto err = bytes_property.ReadBytes(num_bytes, sub_shader.spirv.bytes)) {
                     return err;
                 }
             }

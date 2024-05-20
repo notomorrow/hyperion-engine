@@ -20,6 +20,17 @@ public:
     {
     }
 
+    /*! \brief Constructs an Optional<T> from a pointer to T. If the given value is
+     *  nullptr, it will be an empty Optional<T>. Otherwise, the value will be set to
+     *  the value that is pointed to. */
+    Optional(T *ptr)
+        : m_has_value(ptr != nullptr)
+    {
+        if (ptr != nullptr) {
+            new (&m_storage.data_buffer) T(*ptr);
+        }
+    }
+
     template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
     Optional(const Ty &value)
         : m_has_value(true)

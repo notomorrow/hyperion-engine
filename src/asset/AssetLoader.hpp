@@ -4,8 +4,10 @@
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
+#include <core/utilities/Optional.hpp>
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
+#include <core/memory/Any.hpp>
 #include <scene/Node.hpp>
 #include <Constants.hpp>
 
@@ -18,23 +20,17 @@ namespace hyperion {
 class AssetManager;
 
 // reference counted value (used internally and by serializer/deserializer)
-using AssetValue = Variant<NodeProxy, AtomicRefCountedPtr<void>>;
+using AssetValue = Any;
 
 struct LoadedAsset
 {
-    LoaderResult                result;
-    Variant<AnyPtr, AssetValue> value;
+    LoaderResult    result;
+    AssetValue      value;
 
     LoadedAsset() = default;
 
     LoadedAsset(LoaderResult result)
         : result(std::move(result))
-    {
-    }
-
-    LoadedAsset(LoaderResult result, AnyPtr &&value)
-        : result(std::move(result)),
-          value(std::move(value))
     {
     }
 
@@ -63,23 +59,6 @@ public:
 template <class T>
 struct AssetLoadResultWrapper;
 
-
-
-template <class T, bool b>
-struct InnerTypeImpl;
-
-template <class T>
-struct InnerTypeImpl<T, true>
-{
-    using type = typename AssetLoadResultWrapper<T>::type;
-};
-
-template <class T>
-struct InnerTypeImpl<T, false>
-{
-    using type = T;
-};
-
 template <class T>
 struct AssetLoaderWrapper
 {
@@ -88,28 +67,22 @@ private:
 public:
     static constexpr bool is_opaque_handle = has_opaque_handle_defined<T>;
 
-    using InnerType = typename InnerTypeImpl<T, implementation_exists<AssetLoadResultWrapper<T>>>::type;
-
-    using ResultType = AtomicRefCountedPtr<void>;
-    using CastedType = std::conditional_t<is_opaque_handle, Handle<T>, AtomicRefCountedPtr< InnerType > >;
+    using ResultType = Any;
+    using CastedType = std::conditional_t<is_opaque_handle, Handle<T>, Optional<T>>;
 
     AssetLoaderBase &loader;
 
     static inline CastedType ExtractAssetValue(AssetValue &value)
     {   
-        if (value.Is<ResultType>()) {
-            if constexpr (is_opaque_handle) {
-                AtomicRefCountedPtr<Handle<T>> casted = value.Get<ResultType>().Cast<Handle<T>>();
-
-                if (casted != nullptr) {
-                    return *casted;
-                }
-            } else {
-                return value.Get<ResultType>().Cast<InnerType>();
+        if constexpr (is_opaque_handle) {
+            if (Handle<T> *handle_ptr = value.TryGet<Handle<T>>()) {
+                return *handle_ptr;
             }
-        }
 
-        return EmptyResult();
+            return Handle<T>::empty;
+        } else {
+            return Optional<T>(value.TryGet<T>());
+        }
     }
 
     AssetLoaderWrapper(AssetLoaderBase &loader)
@@ -128,85 +101,28 @@ public:
         if (!loaded_asset.result) {
             return EmptyResult();
         }
-
-        if (loaded_asset.value.template Is<AnyPtr>()) {
-            AnyPtr &casted_result = loaded_asset.value.template Get<AnyPtr>();
-            
-            return MakeCastedType(std::move(casted_result));
-        } else if (loaded_asset.value.template Is<AssetValue>()) {
-
-            return ExtractAssetValue(loaded_asset.value.template Get<AssetValue>());
-        } else {
-            AssertThrowMsg(false, "Unhandled variant type!");
-        }
-
-        return EmptyResult();
-    }
-
-    static auto MakeCastedType(AnyPtr &&ptr) -> CastedType
-    {
-        if (ptr) {
-            if constexpr (is_opaque_handle) {
-                UniquePtr<Handle<T>> casted = ptr.Cast<Handle<T>>();
-
-                if (casted != nullptr) {
-                    return *casted;
-                }
-            } else if (UniquePtr<InnerType> casted = ptr.Cast<InnerType>()) {
-                AtomicRefCountedPtr<InnerType> ref_counted_ptr;
-                ref_counted_ptr.Reset(casted.Release());
-                return ref_counted_ptr;
-            }
-        }
-
-        return EmptyResult();
-    }
-
-    static auto MakeResultType(AnyPtr &&ptr) -> ResultType
-    {
-        if constexpr (is_opaque_handle) {
-            Handle<T> handle = MakeCastedType(std::move(ptr));
-
-            return AtomicRefCountedPtr<Handle<T>>::Construct(std::move(handle)).template Cast<void>();
-        } else {
-            // AtomicRefCountedPtr<void>
-            return MakeCastedType(std::move(ptr)).template Cast<void>();
-        }
+        
+        return ExtractAssetValue(loaded_asset.value);
     }
 
     static auto MakeResultType(CastedType &&casted_value) -> ResultType
     {
-        if constexpr (is_opaque_handle) {
-            static_assert(std::is_same_v<CastedType, Handle<T>>);
-            return AtomicRefCountedPtr<Handle<T>>::Construct(std::move(casted_value)).template Cast<void>();
-        } else {
-            // AtomicRefCountedPtr<void>
-            return casted_value.template Cast<void>();
-        }
+        return Any(std::move(casted_value));
     }
 };
 
-template <>
-struct AssetLoaderWrapper<Node>
+template <class T>
+struct AssetLoaderWrapper<RC<T>>
 {
-    using ResultType = NodeProxy;
-    using CastedType = NodeProxy;
+public:
+    using ResultType = Any;
+    using CastedType = RC<T>;
 
     AssetLoaderBase &loader;
 
     static inline CastedType ExtractAssetValue(AssetValue &value)
-    {
-        if (value.Is<ResultType>()) {
-            ResultType result = value.Get<ResultType>();
-
-            if (result.IsValid()) {
-                result->SetScene(nullptr); // sets scene to be the "detached" scene for the current thread we're on.
-            }
-    
-            return result;
-        }
-
-        return CastedType();
+    {   
+        return value.Get<RC<T>>();
     }
 
     AssetLoaderWrapper(AssetLoaderBase &loader)
@@ -214,10 +130,10 @@ struct AssetLoaderWrapper<Node>
     {
     }
 
-    static inline NodeProxy EmptyResult()
-        { return NodeProxy(); }
+    static inline CastedType EmptyResult()
+        { return CastedType(); }
 
-    NodeProxy Load(AssetManager &asset_manager, const String &path, LoaderResult &out_result)
+    CastedType Load(AssetManager &asset_manager, const String &path, LoaderResult &out_result)
     {
         LoadedAsset loaded_asset = loader.Load(asset_manager, path);
         out_result = loaded_asset.result;
@@ -225,43 +141,62 @@ struct AssetLoaderWrapper<Node>
         if (!loaded_asset.result) {
             return EmptyResult();
         }
-
-        if (loaded_asset.value.Is<AnyPtr>()) {
-            UniquePtr<Node> casted_result = loaded_asset.value.Get<AnyPtr>().Cast<Node>();
-            
-            return MakeCastedType(std::move(casted_result));
-        }
-
-        if (loaded_asset.value.Is<AssetValue>()) {
-            AssetValue &as_ref_counted = loaded_asset.value.Get<AssetValue>();
-
-            if (as_ref_counted.Is<ResultType>()) {
-                return as_ref_counted.Get<ResultType>();
-            }
-        }
-
-        return EmptyResult();
-    }
-
-    static auto MakeCastedType(AnyPtr &&ptr) -> CastedType
-    {
-        UniquePtr<Node> casted_result = ptr.Cast<Node>();
-
-        if (casted_result != nullptr) {
-            return NodeProxy(casted_result.Release());
-        }
-
-        return EmptyResult();
-    }
-
-    static auto MakeResultType(AnyPtr &&ptr) -> ResultType
-    {
-        return MakeCastedType(std::move(ptr));
+        
+        return ExtractAssetValue(loaded_asset.value);
     }
 
     static auto MakeResultType(CastedType &&casted_value) -> ResultType
     {
-        return casted_value;
+        return Any(std::move(casted_value));
+    }
+};
+
+template <>
+struct AssetLoaderWrapper<Node>
+{
+    using ResultType = Any;
+    using CastedType = NodeProxy;
+
+    AssetLoaderBase &loader;
+
+    static inline CastedType ExtractAssetValue(AssetValue &value)
+    {
+        NodeProxy *result = value.TryGet<NodeProxy>();
+
+        if (!result) {
+            return EmptyResult();
+        }
+
+        if (result->IsValid()) {
+            (*result)->SetScene(nullptr); // sets scene to be the "detached" scene for the current thread we're on.
+        }
+
+        return *result;
+    }
+
+    AssetLoaderWrapper(AssetLoaderBase &loader)
+        : loader(loader)
+    {
+    }
+
+    static inline CastedType EmptyResult()
+        { return CastedType(); }
+
+    CastedType Load(AssetManager &asset_manager, const String &path, LoaderResult &out_result)
+    {
+        LoadedAsset loaded_asset = loader.Load(asset_manager, path);
+        out_result = loaded_asset.result;
+
+        if (!loaded_asset.result) {
+            return EmptyResult();
+        }
+        
+        return ExtractAssetValue(loaded_asset.value);
+    }
+
+    static auto MakeResultType(CastedType &&casted_value) -> ResultType
+    {
+        return Any(std::move(casted_value));
     }
 };
 

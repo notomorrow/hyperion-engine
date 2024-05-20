@@ -38,7 +38,7 @@ struct EnqueuedAsset
     
     HYP_FORCE_INLINE
     explicit operator bool() const
-        { return result.status == LoaderResult::Status::OK && value.IsValid(); }
+        { return result.status == LoaderResult::Status::OK && value.HasValue(); }
 };
 
 using AssetMap = FlatMap<String, EnqueuedAsset>;
@@ -52,7 +52,7 @@ enum AssetBatchCallbackMessages
 struct AssetBatchCallbackData
 {
     using EnqueuedAssetDataType = Pair<std::reference_wrapper<const String>, std::reference_wrapper<EnqueuedAsset>>;
-    using DataType              = Variant<EnqueuedAssetDataType, std::reference_wrapper<AssetMap>>;
+    using DataType = Variant<EnqueuedAssetDataType, std::reference_wrapper<AssetMap>>;
 
     DataType data;
 
@@ -91,8 +91,7 @@ struct LoadObjectWrapper
     )
     {
         EnqueuedAsset &asset = (*map)[key];
-
-        asset.value.Set(AssetLoaderWrapper<T>::MakeResultType(asset_manager->template Load<T>(asset.path, asset.result)));
+        asset.value = AssetLoaderWrapper<T>::MakeResultType(asset_manager->template Load<T>(asset.path, asset.result));
 
         if (asset.result == LoaderResult::Status::OK) {
             if (callbacks) {

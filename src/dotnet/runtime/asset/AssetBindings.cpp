@@ -19,8 +19,8 @@ HYP_EXPORT void Asset_GetNode(EnqueuedAsset *asset, ManagedNode *node)
         return;
     }
     
-    auto value = asset->ExtractAs<Node>();
-
+    NodeProxy value = asset->ExtractAs<Node>();
+    
     *node = CreateManagedNodeFromNodeProxy(std::move(value));
 }
 
@@ -32,8 +32,8 @@ HYP_EXPORT void Asset_GetTexture(EnqueuedAsset *asset, ManagedHandle *handle)
         return;
     }
 
-    auto value = asset->ExtractAs<Texture>();
-
+    Handle<Texture> value = asset->ExtractAs<Texture>();
+    
     *handle = CreateManagedHandleFromHandle(std::move(value));
 }
 

@@ -1018,7 +1018,7 @@ bool ShaderCompiler::LoadOrCreateCompiledShaderBatch(
         if (!CompileBundle(bundle, properties, out)) {
             return false;
         }
-    } else if (auto compiled_shader_batch = deserialized.Get<CompiledShaderBatch>()) {
+    } else if (Optional<CompiledShaderBatch> compiled_shader_batch = deserialized.Get<CompiledShaderBatch>()) {
         out = *compiled_shader_batch;
     } else {
         return false;

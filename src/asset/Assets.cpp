@@ -50,11 +50,11 @@ void AssetManager::RegisterDefaultLoaders()
     // Register<PLYModelLoader, PLYModel>("ply");
     Register<JSONLoader, JSONValue>("json");
     // freetype font loader
-    Register<FontFaceLoader, FontFace>(
+    Register<FontFaceLoader, RC<UIObject>>(
         "ttf", "otf", "ttc", "dfont"
     );
-    Register<FontAtlasLoader, FontAtlas>();
-    Register<UILoader, UIObject>();
+    Register<FontAtlasLoader, RC<UIObject>>();
+    Register<UILoader, RC<UIObject>>();
 }
 
 const AssetLoaderDefinition *AssetManager::GetLoader(const FilePath &path, TypeID desired_type_id)
