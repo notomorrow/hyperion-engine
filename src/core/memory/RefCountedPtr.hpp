@@ -894,8 +894,8 @@ public:
     /*! \brief Returns a boolean indicating whether the type of this RefCountedPtr is the same as the given type,
      *  or if the given type is convertible to the type of this RefCountedPtr. */
     template <class Ty>
-    HYP_FORCE_INLINE
     [[nodiscard]]
+    HYP_FORCE_INLINE
     bool Is() const
     {
         return Base::GetTypeID() == TypeID::ForType<Ty>()
