@@ -107,6 +107,7 @@ void HyperionEditorImpl::CreateMainPanel()
 {
     // btn->SetPadding(Vec2i { 5, 5 });
     
+#if 0
     if (RC<UIObject> loaded_ui = AssetManager::GetInstance()->Load<RC<UIObject>>("ui/Editor.Main.ui.xml")) {
         if (loaded_ui.Is<UIStage>()) {
             loaded_ui.Cast<UIStage>()->SetOwnerThreadID(ThreadID::Current());
@@ -123,11 +124,11 @@ void HyperionEditorImpl::CreateMainPanel()
 
         GetUIStage()->AddChildUIObject(loaded_ui);
     }
+#else
 
-#if 0
     m_main_panel = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Main_Panel), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }), true);
 
-#if 0
+#if 1
     RC<UIMenuBar> menu_bar = GetUIStage()->CreateUIObject<UIMenuBar>(HYP_NAME(Sample_MenuBar), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
     menu_bar->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
     menu_bar->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);

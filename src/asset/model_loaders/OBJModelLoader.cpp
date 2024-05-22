@@ -44,7 +44,7 @@ static Vector ReadVector(const Tokens &tokens, SizeType offset = 1)
             continue;
         }
 
-        result.values[value_index++] = static_cast<float>(std::atof(token.Data()));
+        result.values[value_index++] = static_cast<typename Vector::Type>(std::atof(token.Data()));
 
         if (value_index == std::size(result.values)) {
             break;
@@ -64,12 +64,12 @@ static void AddMesh(OBJModel &model, const String &tag, const String &material)
     }
 
     model.meshes.PushBack(OBJMesh {
-        .tag = unique_tag,
-        .material = material
+        .tag        = unique_tag,
+        .material   = material
     });
 }
 
-static auto &LastMesh(OBJModel &model)
+static OBJMesh &LastMesh(OBJModel &model)
 {
     if (model.meshes.Empty()) {
         AddMesh(model, "default", "default");
@@ -78,14 +78,14 @@ static auto &LastMesh(OBJModel &model)
     return model.meshes.Back();
 }
 
-static auto ParseOBJIndex(const String &token)
+static OBJIndex ParseOBJIndex(const String &token)
 {
     OBJIndex obj_index { 0, 0, 0 };
     SizeType token_index = 0;
 
-    const auto parts = token.Split('/');
+    const Array<String> parts = token.Split('/');
 
-    for (const auto &part : parts) {
+    for (const String &part : parts) {
         if (!part.Empty()) {
             switch (token_index) {
             case 0:
@@ -143,7 +143,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
     state.stream.ReadLines([&](const String &line, bool *) {
         tokens.Clear();
 
-        const auto trimmed = line.Trimmed();
+        const String trimmed = line.Trimmed();
 
         if (trimmed.Empty() || trimmed.Front() == '#') {
             return;
@@ -156,25 +156,25 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
         }
 
         if (tokens[0] == "v") {
-            model.positions.PushBack(ReadVector<Vector3>(tokens, 1));
+            model.positions.PushBack(ReadVector<Vec3f>(tokens, 1));
 
             return;
         }
 
         if (tokens[0] == "vn") {
-            model.normals.PushBack(ReadVector<Vector3>(tokens, 1));
+            model.normals.PushBack(ReadVector<Vec3f>(tokens, 1));
 
             return;
         }
 
         if (tokens[0] == "vt") {
-            model.texcoords.PushBack(ReadVector<Vector2>(tokens, 1));
+            model.texcoords.PushBack(ReadVector<Vec2f>(tokens, 1));
 
             return;
         }
 
         if (tokens[0] == "f") {
-            auto &last_mesh = LastMesh(model);
+            OBJMesh &last_mesh = LastMesh(model);
 
             /* we don't support per-face material so we compromise by setting the mesh's material
              * to the last 'usemtl' value when we hit the face command.
@@ -271,7 +271,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
     Handle<MaterialGroup> material_library;
     
     if (load_materials && !model.material_library.Empty()) {
-        auto material_library_path = String(FileSystem::RelativePath(
+        String material_library_path = String(FileSystem::RelativePath(
             (String(StringUtil::BasePath(model.filepath.Data()).c_str()) + "/" + model.material_library).Data(),
             FileSystem::CurrentPath()
         ).c_str());
@@ -292,7 +292,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
         has_normals = !model.normals.Empty(),
         has_texcoords = !model.texcoords.Empty();
 
-    for (auto &obj_mesh : model.meshes) {
+    for (OBJMesh &obj_mesh : model.meshes) {
         Array<Vertex> vertices;
         vertices.Reserve(model.positions.Size());
 
@@ -329,7 +329,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
                     vertex.SetTexCoord0(GetIndexedVertexProperty(obj_index.texcoord, model.texcoords));
                 }
 
-                const auto index = Mesh::Index(vertices.Size());
+                const uint32 index = uint32(vertices.Size());
 
                 vertices.PushBack(vertex);
                 indices.PushBack(index);
@@ -346,7 +346,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             continue;
         }
 
-        auto mesh = CreateObject<Mesh>(
+        Handle<Mesh> mesh = CreateObject<Mesh>(
             vertices, 
             indices,
             Topology::TRIANGLES
@@ -386,7 +386,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
                     .bucket = Bucket::BUCKET_OPAQUE
                 },
                 {
-                    { Material::MATERIAL_KEY_ALBEDO, Vector4(1.0f) },
+                    { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f) },
                     { Material::MATERIAL_KEY_ROUGHNESS, 0.65f },
                     { Material::MATERIAL_KEY_METALNESS, 0.0f }
                 }
@@ -424,11 +424,10 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             VisibilityStateComponent { }
         );
 
-        auto *node = new Node(obj_mesh.tag);
+        NodeProxy node(new Node(obj_mesh.tag));
         node->SetEntity(entity);
-
-        // Takes ownership of node
-        top->AddChild(NodeProxy(node));
+        
+        top->AddChild(std::move(node));
     }
 
     return { { LoaderResult::Status::OK }, top };

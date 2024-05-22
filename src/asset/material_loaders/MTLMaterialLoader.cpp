@@ -209,7 +209,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
         DebugLog(LogType::Warn, "Obj Mtl loader: Unable to parse mtl material line: %s\n", trimmed.Data());
     });
 
-    RC<Handle<MaterialGroup>> material_group_handle = RC<Handle<MaterialGroup>>::Construct(CreateObject<MaterialGroup>());
+    Handle<MaterialGroup> material_group_handle = CreateObject<MaterialGroup>();
 
     HashMap<String, String> texture_names_to_path;
     FlatSet<String> unique_paths;
@@ -239,7 +239,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             uint num_enqueued = 0;
             String paths_string;
 
-            auto textures_batch = state.asset_manager->CreateBatch();
+            RC<AssetBatch> textures_batch = state.asset_manager->CreateBatch();
             
             for (auto &it : texture_names_to_path) {
                 all_filepaths.PushBack(it.second);
@@ -257,13 +257,6 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             }
 
             if (num_enqueued != 0) {
-                DebugLog(
-                    LogType::Info,
-                    "Loading %u textures async:\n\t%s\n",
-                    num_enqueued,
-                    paths_string.Data()
-                );
-
                 textures_batch->LoadAsync();
                 loaded_textures = textures_batch->AwaitResults();
             }
@@ -290,9 +283,12 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
         for (auto &it : item.textures) {
             // Handle<Texture> texture = loaded_textures[String(texture_path.c_str())].Get<Texture>();
+            AssertThrow(loaded_textures[it.name].value.Is<Handle<Texture>>());
+            AssertThrow(loaded_textures[it.name].value.Get<Handle<Texture>>().IsValid());
+
             Handle<Texture> texture = loaded_textures[it.name].ExtractAs<Texture>();
 
-            if (!texture) {
+            if (!texture.IsValid()) {
                 DebugLog(
                     LogType::Warn,
                     "OBJ MTL loader: Texture %s could not be used because it could not be loaded!\n",
@@ -317,7 +313,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             textures
         );
 
-        (*material_group_handle)->Add(item.tag, std::move(material));
+        material_group_handle->Add(item.tag, std::move(material));
     }
 
     return { { LoaderResult::Status::OK }, material_group_handle };
