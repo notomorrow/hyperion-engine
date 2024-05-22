@@ -534,7 +534,7 @@ private:
     void ComputeOffsetPosition();
 
     void UpdateActualSizes(UpdateSizePhase phase, EnumFlags<UIObjectUpdateSizeFlags> flags);
-    void ComputeActualSize(const UIObjectSize &size, Vec2i &out_actual_size, UpdateSizePhase phase, bool is_inner = false);
+    virtual void ComputeActualSize(const UIObjectSize &size, Vec2i &out_actual_size, UpdateSizePhase phase, bool is_inner = false);
 
     template <class Lambda>
     void ForEachChildUIObject(Lambda &&lambda) const;
