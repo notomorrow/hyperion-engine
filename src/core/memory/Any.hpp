@@ -207,10 +207,6 @@ public:
     HYP_FORCE_INLINE const void *GetPointer() const
         { return m_ptr; }
 
-    /*! \brief Get the delete function for the held object. */
-    HYP_FORCE_INLINE DeleteFunction GetDeleteFunction() const
-        { return m_dtor; }
-
     /*! \brief Returns true if the Any has a value. */
     HYP_FORCE_INLINE bool HasValue() const
         { return m_ptr != nullptr; }

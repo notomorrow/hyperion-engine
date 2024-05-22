@@ -65,16 +65,16 @@ struct AssetLoaderWrapper
 private:
 
 public:
-    static constexpr bool is_opaque_handle = has_opaque_handle_defined<T>;
+    static constexpr bool is_handle = has_opaque_handle_defined<T>;
 
     using ResultType = Any;
-    using CastedType = std::conditional_t<is_opaque_handle, Handle<T>, Optional<T>>;
+    using CastedType = std::conditional_t<is_handle, Handle<T>, Optional<T>>;
 
     AssetLoaderBase &loader;
 
     static inline CastedType ExtractAssetValue(AssetValue &value)
     {   
-        if constexpr (is_opaque_handle) {
+        if constexpr (is_handle) {
             if (Handle<T> *handle_ptr = value.TryGet<Handle<T>>()) {
                 return *handle_ptr;
             }
