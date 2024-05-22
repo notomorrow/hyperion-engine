@@ -169,6 +169,8 @@ protected:
     virtual void OnDetached_Internal() override;
 
 private:
+    virtual void ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_size, UpdateSizePhase phase, bool is_inner) override;
+
     /*! \brief To be called internally from UIObject only */
     void SetFocusedObject(const RC<UIObject> &ui_object);
 

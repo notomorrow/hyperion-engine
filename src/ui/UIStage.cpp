@@ -37,7 +37,6 @@ UIStage::UIStage(ThreadID owner_thread_id)
 
 UIStage::~UIStage()
 {
-    HYP_BREAKPOINT;
 }
 
 Scene *UIStage::GetScene() const
@@ -57,7 +56,7 @@ Scene *UIStage::GetScene() const
 void UIStage::Init()
 {
     if (const RC<AppContext> &app_context = g_engine->GetAppContext()) {
-        const auto UpdateWindowSize = [this](ApplicationWindow *window)
+        const auto UpdateSurfaceSize = [this](ApplicationWindow *window)
         {
             if (window == nullptr) {
                 return;
@@ -76,8 +75,8 @@ void UIStage::Init()
             }
         };
 
-        UpdateWindowSize(app_context->GetCurrentWindow());
-        m_on_current_window_changed_handler = app_context->OnCurrentWindowChanged.Bind(UpdateWindowSize);
+        UpdateSurfaceSize(app_context->GetCurrentWindow());
+        m_on_current_window_changed_handler = app_context->OnCurrentWindowChanged.Bind(UpdateSurfaceSize);
     }
 
     if (!m_default_font_atlas) {
@@ -108,6 +107,7 @@ void UIStage::Init()
     InitObject(m_scene);
 
     m_scene->GetRoot()->SetEntity(m_scene->GetEntityManager()->AddEntity());
+
     m_scene->GetEntityManager()->AddComponent(m_scene->GetRoot()->GetEntity(), UIComponent { RefCountedPtrFromThis() });
 
     m_scene->GetRoot()->LockTransform();
@@ -149,18 +149,10 @@ void UIStage::OnAttached_Internal(UIObject *parent)
 {
     AssertThrow(parent != nullptr);
     AssertThrow(parent->GetNode() != nullptr);
-    
+
     UIObject::OnAttached_Internal(parent);
-
-    // temp
-    auto main_panel = parent->FindChildUIObject(HYP_NAME(Main_Panel));
-    AssertThrow(main_panel != nullptr);
-    auto main_panel_parent = main_panel->GetParentUIObject();
-    AssertThrow(main_panel_parent == this);
-    AssertThrow(parent->GetScene()->GetEntityManager()->GetComponent<UIComponent>(main_panel_parent->GetEntity()).ui_object == main_panel_parent);
-
     // Set root to be empty node proxy, now that it is attached to another object.
-    m_scene->SetRoot(NodeProxy::empty);
+    m_scene->SetRoot(NodeProxy::empty);;
 }
 
 void UIStage::OnDetached_Internal()
@@ -275,6 +267,26 @@ void UIStage::SetFocusedObject(const RC<UIObject> &ui_object)
     }
 
     m_focused_object = ui_object;
+}
+
+
+void UIStage::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_size, UpdateSizePhase phase, bool is_inner)
+{
+    // stage with a parent stage: treat self like a normal UIObject
+    if (m_stage != nullptr) {
+        UIObject::ComputeActualSize(in_size, out_actual_size, phase, is_inner);
+
+        return;
+    }
+
+    // inner calculation is the same
+    if (is_inner) {
+        UIObject::ComputeActualSize(in_size, out_actual_size, phase, is_inner);
+
+        return;
+    }
+
+    out_actual_size = m_surface_size;
 }
 
 EnumFlags<UIEventHandlerResult> UIStage::OnInputEvent(

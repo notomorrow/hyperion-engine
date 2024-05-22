@@ -833,12 +833,6 @@ RC<UIObject> UIObject::GetParentUIObject() const
             if (UIComponent *ui_component = scene->GetEntityManager()->TryGetComponent<UIComponent>(parent_node->GetEntity())) {
                 AssertThrow(ui_component->ui_object != nullptr);
 
-                // @FIXME: Remove this when loading stage from .ui.xml and adding it to a parent stage works.
-                // Currently, this is messing with size calculation
-                if (ui_component->ui_object->GetType() == UIObjectType::STAGE) {
-                    return nullptr;
-                }
-
                 return ui_component->ui_object;
             }
         }
@@ -892,7 +886,6 @@ void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_
     if (is_inner) {
         parent_size = GetActualSize();
         parent_padding = GetPadding();
-        DebugLog(LogType::Debug, "inner for %s, parent size: %d, %d\n", *GetName(), parent_size.x, parent_size.y);
     } else if (parent_ui_object) {
         parent_size = parent_ui_object->GetActualSize();
         parent_padding = parent_ui_object->GetPadding();
