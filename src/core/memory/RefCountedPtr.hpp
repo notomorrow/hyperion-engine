@@ -578,7 +578,7 @@ protected:
 
 /*! \brief A simple ref counted pointer class.
     Not atomic by default, but using AtomicRefCountedPtr allows it to be. */
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType>
 class RefCountedPtr : public detail::RefCountedPtrBase<CountType>
 {
     friend class WeakRefCountedPtr<std::remove_const_t<T>, CountType>;
@@ -1122,12 +1122,6 @@ private:
 };
 
 } // namespace memory
-
-template <class T>
-using AtomicRefCountedPtr = memory::RefCountedPtr<T, std::atomic<uint>>;
-
-template <class T>
-using RefCountedPtr = memory::RefCountedPtr<T, uint>;
 
 template <class T, class CountType = std::atomic<uint>>
 using Weak = memory::WeakRefCountedPtr<T, CountType>; 

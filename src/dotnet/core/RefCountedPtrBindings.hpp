@@ -18,7 +18,7 @@ struct ManagedRefCountedPtr
 };
 
 static_assert(sizeof(ManagedRefCountedPtr) == 8, "sizeof(ManagedRefCountedPtr) must be 8 bytes to match C#");
-static_assert(sizeof(ManagedRefCountedPtr) == sizeof(RefCountedPtr<void>), "ManagedRefCountedPtr size mismatch");
+static_assert(sizeof(ManagedRefCountedPtr) == sizeof(RC<void>), "ManagedRefCountedPtr size mismatch");
 
 struct ManagedWeakRefCountedPtr
 {

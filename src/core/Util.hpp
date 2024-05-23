@@ -12,7 +12,8 @@
 namespace hyperion {
 namespace detail {
 
-struct StripNamespaceTransformer;
+template <auto Str, bool ShouldStripNamespace>
+constexpr auto ParseTypeName();
 
 // strip "class " or "struct " from beginning StaticString
 template <auto Str>
@@ -37,6 +38,8 @@ struct TypeNameStringTransformer
 {
     static constexpr char delimiter = ',';
 
+    static constexpr uint32 balance_bracket_options = containers::helpers::BALANCE_BRACKETS_ANGLE;
+
     template <auto String>
     static constexpr auto Transform()
     {
@@ -45,10 +48,24 @@ struct TypeNameStringTransformer
             : SizeType(-1);
 
         if constexpr (last_index == -1) {
-            return detail::StripClassOrStruct< containers::helpers::Trim< String >::value >();
+            return StripClassOrStruct< containers::helpers::Trim< String >::value >();
         } else {
-            return detail::StripClassOrStruct< containers::helpers::Substr< containers::helpers::Trim< String >::value, last_index + 2, SizeType(-1) >::value >();
+            return StripClassOrStruct< containers::helpers::Substr< containers::helpers::Trim< String >::value, last_index + 2, SizeType(-1) >::value >();
         }
+    }
+};
+
+template <bool ShouldStripNamespace>
+struct TypeNameStringTransformer2
+{
+    static constexpr char delimiter = ',';
+
+    static constexpr uint32 balance_bracket_options = containers::helpers::BALANCE_BRACKETS_ANGLE;
+
+    template <auto String>
+    static constexpr auto Transform()
+    {
+        return ParseTypeName< String, ShouldStripNamespace >();
     }
 };
 
@@ -60,9 +77,9 @@ constexpr auto ParseTypeName()
 
     if constexpr (left_arrow_index != SizeType(-1) && right_arrow_index != SizeType(-1)) {
         return containers::helpers::Concat<
-            ParseTypeName< containers::helpers::Substr< Str, 0, left_arrow_index>::value, ShouldStripNamespace >(),
+            containers::helpers::TransformSplit< TypeNameStringTransformer2<ShouldStripNamespace>, containers::helpers::Substr< Str, 0, left_arrow_index >::value >::value,
             StaticString("<"),
-            ParseTypeName< containers::helpers::Substr< Str, left_arrow_index + 1, right_arrow_index>::value, ShouldStripNamespace >(),
+            containers::helpers::TransformSplit< TypeNameStringTransformer2<ShouldStripNamespace>, containers::helpers::Substr< Str, left_arrow_index + 1, right_arrow_index >::value >::value,
             StaticString(">")
         >::value;
     } else {
