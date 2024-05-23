@@ -323,6 +323,8 @@ struct BasicStaticStringTransformer
 {
     static constexpr bool keep_delimiter = true;
 
+    static constexpr uint32 balance_bracket_options = 0;
+
     template <auto String>
     static constexpr auto Transform()
     {
@@ -681,22 +683,86 @@ struct TransformParts
 
 #pragma endregion TransformParts
 
-#pragma region GetSplitIndices
+#pragma region FindCharCount
 
-/*! \brief Get the indices of the occurrences of a character in the StaticString.  */
-template <auto String, char Delimiter, SizeType Count = SizeType(-1)>
-struct GetSplitIndices;
-
-template <auto String, char Delimiter>
-struct GetSplitIndices<String, Delimiter, SizeType(-1)>
+enum BalanceBracketsOptions : uint32
 {
-    static constexpr auto value = GetSplitIndices< String, Delimiter, String.template Count<Delimiter>() >::value;
+    BALANCE_BRACKETS_NONE           = 0x0,
+    BALANCE_BRACKETS_SQUARE         = 0x1,
+    BALANCE_BRACKETS_PARENTHESES    = 0x2,
+    BALANCE_BRACKETS_ANGLE          = 0x4
 };
 
-template <auto String, char Delimiter, SizeType Count>
-struct GetSplitIndices
+template <auto String, char Delimiter, uint32 BracketOptions>
+struct FindCharCount;
+
+template <auto String, char Delimiter>
+struct FindCharCount<String, Delimiter, BALANCE_BRACKETS_NONE>
 {
-    static constexpr auto value = MakePairSequence<std::pair<SizeType, SizeType>>([]() -> std::array<std::pair<SizeType, SizeType>, Count + 1>
+    static constexpr SizeType value = String.template Count< Delimiter >();
+};
+
+namespace detail {
+
+template <auto String, char Delimiter, uint32 BracketOptions>
+struct FindCharCount_Impl
+{
+    constexpr SizeType operator()() const
+    {
+        constexpr char brackets[] = "[]()<>";
+
+        SizeType count = 0;
+
+        int bracket_counts[(std::size(brackets) - 1) / 2] = { 0 };
+
+        for (SizeType i = 0; i < String.Size(); i++) {
+            for (SizeType j = 0; j < std::size(brackets) - 1; j++) {
+                if (String.data[i] == brackets[j]) {
+                    bracket_counts[j / 2] += (j % 2) ? -1 : 1;
+
+                    break;
+                }
+            }
+
+            if (String.data[i] == Delimiter) {
+                if ((BracketOptions & BALANCE_BRACKETS_SQUARE) && bracket_counts[0] > 0) {
+                    continue;
+                }
+                if ((BracketOptions & BALANCE_BRACKETS_PARENTHESES) && bracket_counts[1] > 0) {
+                    continue;
+                }
+                if ((BracketOptions & BALANCE_BRACKETS_ANGLE) && bracket_counts[2] > 0) {
+                    continue;
+                }
+
+                ++count;
+            }
+        }
+
+        return count;
+    }
+};
+
+} // namespace detail
+
+template <auto String, char Delimiter, uint32 BracketOptions>
+struct FindCharCount
+{
+    static constexpr SizeType value = detail::FindCharCount_Impl<String, Delimiter, BracketOptions>{}();
+};
+
+#pragma endregion FindCharCount
+
+#pragma region GetSplitIndices
+
+namespace detail {
+
+template <auto String, char Delimiter, uint32 BracketOptions, SizeType Count>
+struct GetSplitIndices_Impl
+{
+    constexpr auto operator()() const
+    {
+        return containers::MakePairSequence<std::pair<SizeType, SizeType>>([]() -> std::array<std::pair<SizeType, SizeType>, Count + 1>
         {
             std::array<std::pair<SizeType, SizeType>, Count + 1> split_indices = { };
 
@@ -707,7 +773,31 @@ struct GetSplitIndices
 
                 SizeType index = 0;
 
+                constexpr char brackets[] = "[]()<>";
+
+                int bracket_counts[(std::size(brackets) - 1) / 2] = { 0 };
+
                 for (SizeType i = 0; i < String.size; i++) {
+                    for (SizeType j = 0; j < std::size(brackets) - 1; j++) {
+                        if (String.data[i] == brackets[j]) {
+                            bracket_counts[j / 2] += (j % 2) ? -1 : 1;
+
+                            break;
+                        }
+                    }
+
+                    if (String.data[i] == Delimiter) {
+                        if ((BracketOptions & BALANCE_BRACKETS_SQUARE) && bracket_counts[0] > 0) {
+                            continue;
+                        }
+                        if ((BracketOptions & BALANCE_BRACKETS_PARENTHESES) && bracket_counts[1] > 0) {
+                            continue;
+                        }
+                        if ((BracketOptions & BALANCE_BRACKETS_ANGLE) && bracket_counts[2] > 0) {
+                            continue;
+                        }
+                    }
+
                     if (String.data[i] == Delimiter) {
                         delimiter_indices[index++] = i;
                     }
@@ -728,34 +818,25 @@ struct GetSplitIndices
 
             return split_indices;
         });
+    }
+};
 
+} // namespace detail
 
-    // static constexpr auto value = hyperion::containers::detail::make_seq<SizeType>([]() -> std::array<SizeType, (Count + 1) * 2>
-    //     {
-    //         std::array<char, Count> delimiter_indices = { };
-    //         std::array<SizeType, (Count + 1) * 2> split_indices = { };
+/*! \brief Get the indices of the occurrences of a character in the StaticString.  */
+template <auto String, char Delimiter, uint32 BracketOptions, SizeType Count = SizeType(-1)>
+struct GetSplitIndices;
 
-    //         SizeType index = 0;
+template <auto String, char Delimiter, uint32 BracketOptions>
+struct GetSplitIndices<String, Delimiter, BracketOptions, SizeType(-1)>
+{
+    static constexpr auto value = GetSplitIndices< String, Delimiter, BracketOptions, FindCharCount< String, Delimiter, BracketOptions >::value >::value;
+};
 
-    //         for (SizeType i = 0; i < String.size; i++) {
-    //             if (String.data[i] == Delimiter) {
-    //                 delimiter_indices[index++] = i;
-    //             }
-    //         }
-
-    //         for (SizeType i = 0; i < std::size(delimiter_indices); i++) {
-    //             SizeType prev = i == 0 ? 0 : delimiter_indices[i - 1] + 1;
-    //             SizeType current = delimiter_indices[i];
-
-    //             split_indices[i * 2] = prev;
-    //             split_indices[i * 2 + 1] = current;
-    //         }
-
-    //         split_indices[Count * 2] = delimiter_indices[std::size(delimiter_indices) - 1] + 1;
-    //         split_indices[Count * 2 + 1] = String.Size() - 1; /* -1 for NUL char */
-
-    //         return split_indices;
-    //     });
+template <auto String, char Delimiter, uint32 BracketOptions, SizeType Count>
+struct GetSplitIndices
+{
+    static constexpr auto value = detail::GetSplitIndices_Impl< String, Delimiter, BracketOptions, Count >{}();
 };
 
 #pragma endregion GetSplitIndices
@@ -781,7 +862,7 @@ constexpr auto TransformSplit_Impl(PairSequence<std::pair<SizeType, SizeType>, S
 template <class Transformer, auto String>
 struct TransformSplit
 {
-    static constexpr auto value = detail::TransformSplit_Impl< Transformer, String >(GetSplitIndices< String, Transformer::delimiter >::value);
+    static constexpr auto value = detail::TransformSplit_Impl< Transformer, String >(GetSplitIndices< String, Transformer::delimiter, Transformer::balance_bracket_options >::value);
 };
 
 #pragma endregion TransformSplit
