@@ -2,9 +2,12 @@
 #include <core/system/AppContext.hpp>
 #include <core/system/SystemEvent.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Game.hpp>
 
 #include <HyperionEngine.hpp>
+
 
 namespace hyperion {
 namespace sys {
@@ -41,6 +44,8 @@ void App::RunMainLoop(Game *game)
         }
 
         Engine::GetInstance()->RenderNextFrame(game);
+
+        Logger::GetInstance().FlushChannels();
     }
 }
 
