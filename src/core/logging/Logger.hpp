@@ -31,87 +31,9 @@ namespace logging {
 
 class Logger;
 
-class HYP_API LogMessageQueue
+struct LogMessage
 {
-public:
-    LogMessageQueue(ThreadID owner_thread_id = ThreadID::Invalid());
-    LogMessageQueue(const LogMessageQueue &other)                   = delete;
-    LogMessageQueue &operator=(const LogMessageQueue &other)        = delete;
-    LogMessageQueue(LogMessageQueue &&other) noexcept;
-    LogMessageQueue &operator=(LogMessageQueue &&other) noexcept;
-    ~LogMessageQueue()                                              = default;
-
-    void PushBytes(ByteView bytes);
-    void SwapBuffers();
-
-private:
-    ThreadID                    m_owner_thread_id;
-
-    FixedArray<ByteBuffer, 2>   m_buffers;
-    AtomicVar<uint32>           m_buffer_index;
-};
-
-struct HYP_API LogMessageQueueContainer
-{
-    FixedArray<LogMessageQueue, MathUtil::FastLog2_Pow2(uint64(ThreadName::THREAD_STATIC))> static_thread_queues;
-    HashMap<ThreadID, LogMessageQueue>                                                      dynamic_thread_queues;
-    Mutex                                                                                   dynamic_thread_queues_mutex;
-
-    LogMessageQueueContainer()
-    {
-        for (uint64 i = 0; i < static_thread_queues.Size(); i++) {
-            const uint64 thread_name_value = 1ull << i;
-            const ThreadName thread_name = ThreadName(thread_name_value);
-
-            const ThreadID thread_id = Threads::GetThreadID(thread_name);
-
-            if (!thread_id.IsValid()) {
-                continue;
-            }
-
-            AssertThrow(!thread_id.IsDynamic());
-
-            static_thread_queues[i] = LogMessageQueue(thread_id);
-        }
-    }
-
-    LogMessageQueue &GetMessageQueue(ThreadID thread_id)
-    {
-        if (thread_id.IsDynamic()) {
-            Mutex::Guard guard(dynamic_thread_queues_mutex);
-
-            auto it = dynamic_thread_queues.Find(thread_id);
-
-            if (it == dynamic_thread_queues.End()) {
-                it = dynamic_thread_queues.Insert({
-                    thread_id,
-                    LogMessageQueue(thread_id)
-                }).first;
-            }
-
-            return it->second;
-        }
-
-#ifdef HYP_DEBUG_MODE
-        AssertThrow(MathUtil::IsPowerOfTwo(thread_id.value));
-        AssertThrow(MathUtil::FastLog2_Pow2(thread_id.value) < static_thread_queues.Size());
-#endif
-
-        return static_thread_queues[MathUtil::FastLog2_Pow2(thread_id.value)];
-    }
-
-    void SwapBuffers()
-    {
-        for (LogMessageQueue &queue : static_thread_queues) {
-            queue.SwapBuffers();
-        }
-
-        Mutex::Guard guard(dynamic_thread_queues_mutex);
-
-        for (auto &it : dynamic_thread_queues) {
-            it.second.SwapBuffers();
-        }
-    }
+    StringView<StringType::UTF8>    message;
 };
 
 class HYP_API LogChannel
@@ -139,17 +61,10 @@ public:
     EnumFlags<LogChannelFlags> GetFlags() const
         { return m_flags; }
 
-    void Write(ByteView bytes);
-
-    void FlushMessages();
-
 private:
-    LogMessageQueue &GetMessageQueue();
-
     uint32                      m_id;
     Name                        m_name;
     EnumFlags<LogChannelFlags>  m_flags;
-    LogMessageQueueContainer    m_message_queue_container;
 };
 
 class HYP_API Logger
@@ -174,22 +89,25 @@ public:
 
     void SetChannelEnabled(const LogChannel &channel, bool enabled);
 
-    void FlushChannels();
-
-    template <auto FormatString, class... Args>
+    template <auto FunctionNameString, auto FormatString, class... Args>
     void Log(const LogChannel &channel, Args &&... args)
     {
         if (IsChannelEnabled(channel)) {
-            Log(channel, utilities::Format<FormatString>(std::forward<Args>(args)...));
+            Log(
+                channel,
+                LogMessage {
+                    utilities::Format< containers::helpers::Concat< StaticString("["), FunctionNameString, StaticString("] "), FormatString >::value >(std::forward<Args>(args)...)
+                }
+            );
         }
     }
 
 private:
-    void Log(const LogChannel &channel, StringView<StringType::UTF8> message);
+    static String GetCurrentFunction();
+
+    void Log(const LogChannel &channel, const LogMessage &message);
 
     AtomicVar<uint64>                       m_log_mask;
-
-    AtomicVar<uint64>                       m_dirty_channels;
 
     FixedArray<LogChannel *, max_channels>  m_log_channels;
 };
@@ -209,6 +127,6 @@ using logging::LogChannel;
     static hyperion::logging::LogChannel Log_##name(HYP_NAME(name))
 
 #define HYP_LOG(channel, fmt, ...) \
-    hyperion::logging::Logger::GetInstance().Log< hyperion::StaticString(fmt) >(Log_##channel, __VA_ARGS__)
+    hyperion::logging::Logger::GetInstance().Log< hyperion::StaticString(HYP_DEBUG_FUNC_SHORT), hyperion::StaticString(fmt) >(Log_##channel, __VA_ARGS__)
 
 #endif

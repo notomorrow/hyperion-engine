@@ -44,8 +44,6 @@ void App::RunMainLoop(Game *game)
         }
 
         Engine::GetInstance()->RenderNextFrame(game);
-
-        Logger::GetInstance().FlushChannels();
     }
 }
 

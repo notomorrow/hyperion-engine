@@ -8,6 +8,8 @@
 #include <core/containers/HashMap.hpp>
 #include <core/containers/Bitset.hpp>
 
+#include <core/system/StackDump.hpp>
+
 namespace hyperion {
 namespace logging {
 
@@ -46,58 +48,6 @@ private:
 
 static LogChannelIDGenerator g_log_channel_id_generator { };
 
-#pragma region LogMessageQueue
-
-LogMessageQueue::LogMessageQueue(ThreadID owner_thread_id)
-    : m_owner_thread_id(owner_thread_id),
-      m_buffer_index(0)
-{
-}
-
-LogMessageQueue::LogMessageQueue(LogMessageQueue &&other) noexcept
-    : m_owner_thread_id(std::move(other.m_owner_thread_id)),
-      m_buffers(std::move(other.m_buffers)),
-      m_buffer_index(other.m_buffer_index.Exchange(0, MemoryOrder::SEQUENTIAL))
-{
-    other.m_owner_thread_id = ThreadID::Invalid();
-    other.m_buffers = { };
-}
-
-LogMessageQueue &LogMessageQueue::operator=(LogMessageQueue &&other) noexcept
-{
-    if (this == &other) {
-        return *this;
-    }
-
-    m_owner_thread_id = std::move(other.m_owner_thread_id);
-    m_buffers = std::move(other.m_buffers);
-    m_buffer_index.Set(other.m_buffer_index.Exchange(0, MemoryOrder::SEQUENTIAL), MemoryOrder::SEQUENTIAL);
-
-    other.m_owner_thread_id = ThreadID::Invalid();
-
-    return *this;
-}
-
-void LogMessageQueue::PushBytes(ByteView bytes)
-{
-    ByteBuffer &buffer = m_buffers[m_buffer_index.Get(MemoryOrder::ACQUIRE)];
-
-    const SizeType offset = buffer.Size();
-
-    ubyte *dst = buffer.Data() + offset;
-
-    buffer.SetSize(buffer.Size() + bytes.Size());
-
-    Memory::MemCpy(dst, bytes.Data(), bytes.Size());
-}
-
-void LogMessageQueue::SwapBuffers()
-{
-    m_buffer_index.BitAnd(1, MemoryOrder::RELEASE);
-}
-
-#pragma endregion LogMessageQueue
-
 #pragma region LogChannel
 
 LogChannel::LogChannel(Name name)
@@ -109,21 +59,6 @@ LogChannel::LogChannel(Name name)
 
 LogChannel::~LogChannel()
 {
-}
-
-LogMessageQueue &LogChannel::GetMessageQueue()
-{
-    return m_message_queue_container.GetMessageQueue(ThreadID::Current());
-}
-
-void LogChannel::Write(ByteView bytes)
-{
-    GetMessageQueue().PushBytes(bytes);
-}
-
-void LogChannel::FlushMessages()
-{
-    m_message_queue_container.SwapBuffers();
 }
 
 #pragma endregion LogChannel
@@ -138,14 +73,12 @@ Logger &Logger::GetInstance()
 }
 
 Logger::Logger()
-    : m_log_mask(uint64(-1)),
-      m_dirty_channels(uint64(-1))
+    : m_log_mask(uint64(-1))
 {
 }
 
 Logger::Logger(Name context_name)
-    : m_log_mask(uint64(-1)),
-      m_dirty_channels(uint64(-1))
+    : m_log_mask(uint64(-1))
 {
 }
 
@@ -171,18 +104,16 @@ void Logger::SetChannelEnabled(const LogChannel &channel, bool enabled)
     }
 }
 
-void Logger::FlushChannels()
+void Logger::Log(const LogChannel &channel, const LogMessage &message)
 {
-    for (Bitset::BitIndex bit_index : Bitset(m_dirty_channels.Exchange(0, MemoryOrder::ACQUIRE_RELEASE))) {
-        if (LogChannel *channel = m_log_channels[bit_index]) {
-            channel->FlushMessages();
-        }
-    }
+    // std::printf("%s %s\n", *message.function, *message.message);
+
+    std::puts(*message.message);
 }
 
-void Logger::Log(const LogChannel &channel, StringView<StringType::UTF8> message)
+String Logger::GetCurrentFunction()
 {
-    puts(message.Data());
+    return StackDump(2).GetTrace().Front();
 }
 
 #pragma endregion Logger
