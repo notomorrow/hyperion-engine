@@ -6,6 +6,9 @@
 #include <core/system/StackDump.hpp>
 #include <core/system/ArgParse.hpp>
 
+
+#include <core/utilities/Format.hpp>
+
 #include <HyperionEngine.hpp>
 
 #include "asset/font_loaders/FontAtlasLoader.hpp"
@@ -52,6 +55,12 @@ int main(int argc, char **argv)
     // handle fatal crashes
     signal(SIGSEGV, HandleSignal);
 
+    int test_num = 12345;
+
+    String x = HYP_FORMAT("Hello world {} {1} {2}", "woah!", 0.5f, test_num);
+    DebugLog(LogType::Debug, "Formatted value: %s\n", x.Data());
+
+    HYP_BREAKPOINT;
 
     HyperionEditor editor;
     // SampleStreamer editor;

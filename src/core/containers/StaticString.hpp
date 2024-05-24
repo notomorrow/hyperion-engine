@@ -104,7 +104,7 @@ struct StaticString
 
         if constexpr (this_size < other_size) {
             return -1;
-        } else if constexpr (Index >= this_size - other_size) {
+        } else if constexpr (Index > this_size - other_size) {
             return -1;
         } else {
             bool found = true;
@@ -866,6 +866,44 @@ struct TransformSplit
 };
 
 #pragma endregion TransformSplit
+
+#pragma region ParseInteger
+
+template <auto String, SizeType CharIndex = 0, int Value = 0>
+struct ParseInteger;
+
+namespace detail {
+
+template <auto String, SizeType CharIndex>
+struct ParseInteger_ParseChar_Impl
+{
+    static constexpr auto value = String.data[CharIndex] - '0';
+};
+
+template <auto String, SizeType CharIndex, int Value, bool AtEnd>
+struct ParseInteger_Impl;
+
+template <auto String, SizeType CharIndex, int Value>
+struct ParseInteger_Impl<String, CharIndex, Value, false>
+{
+    static constexpr auto value = ParseInteger< String, CharIndex + 1, Value * 10 + ParseInteger_ParseChar_Impl< String, CharIndex >::value >::value;
+};
+
+template <auto String, SizeType CharIndex, int Value>
+struct ParseInteger_Impl<String, CharIndex, Value, true>
+{
+    static constexpr auto value = Value;
+};
+
+} // namespace detail
+
+template <auto String, SizeType CharIndex, int Value>
+struct ParseInteger
+{
+    static constexpr auto value = detail::ParseInteger_Impl< String, CharIndex, Value, CharIndex >= String.size - 1 || String.data[CharIndex] == '\0' >::value;
+};
+
+#pragma endregion ParseInteger
 
 } // namespace helpers
 

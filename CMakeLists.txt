@@ -59,6 +59,13 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "/O2 /MD")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+
+    # no exceptions
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+
+    # for full template backtrace
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=0")
+
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address")
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 endif()

@@ -136,7 +136,7 @@ public:
     bool Start(Args ...args);
 
     /*! \brief Detach the thread from the current thread and let it run in the background until it finishes execution */
-    bool Detach();
+    void Detach();
 
     /*!\brief Join the thread and wait for it to finish execution before continuing execution of the current thread */
     bool Join();
@@ -208,19 +208,13 @@ bool Thread<SchedulerType, Args...>::Start(Args ...args)
 }
 
 template <class SchedulerType, class ...Args>
-bool Thread<SchedulerType, Args...>::Detach()
+void Thread<SchedulerType, Args...>::Detach()
 {
     if (m_thread == nullptr) {
-        return false;
+        return;
     }
 
-    try {
-        m_thread->detach();
-    } catch (...) {
-        return false;
-    }
-
-    return true;
+    m_thread->detach();
 }
 
 template <class SchedulerType, class ...Args>
