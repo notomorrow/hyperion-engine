@@ -56,6 +56,9 @@ if(MSVC)
     # add _CRT_SECURE_NO_WARNINGS
     add_definitions("/D_CRT_SECURE_NO_WARNINGS")
 
+    # no exceptions
+    add_definitions("/D_HAS_EXCEPTIONS=0")
+
     set(CMAKE_CXX_FLAGS_RELEASE "/O2 /MD")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")

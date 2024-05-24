@@ -6,6 +6,7 @@
 #include <core/system/StackDump.hpp>
 #include <core/system/ArgParse.hpp>
 
+#include <core/logging/Logger.hpp>
 
 #include <core/utilities/Format.hpp>
 
@@ -48,6 +49,8 @@ void HandleSignal(int signum)
     exit(signum);
 }
 
+HYP_DEFINE_LOG_CHANNEL(Core);
+
 int main(int argc, char **argv)
 {
     signal(SIGINT, HandleSignal);
@@ -57,8 +60,7 @@ int main(int argc, char **argv)
 
     int test_num = 12345;
 
-    String x = HYP_FORMAT("Hello world {} {1} {2}", "woah!", 0.5f, test_num);
-    DebugLog(LogType::Debug, "Formatted value: %s\n", x.Data());
+    HYP_LOG(Core, "Hello world! {0} {1} {2}", "woah!", 0.5f, test_num);
 
     HYP_BREAKPOINT;
 
