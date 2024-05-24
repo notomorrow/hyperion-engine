@@ -23,16 +23,16 @@ struct StaticMap
     using Iterator = typename std::array<std::pair<Key, Value>, Size>::iterator;
     using ConstIterator = typename std::array<std::pair<Key, Value>, Size>::const_iterator;
     
-    constexpr const Value &operator[](const Key &key) const
-    {
-        for (auto it = pairs.begin(); it != pairs.end(); ++it) {
-            if (it->first == key) {
-                return it->second;
-            }
-        }
+    // constexpr const Value &operator[](const Key &key) const
+    // {
+    //     for (auto it = pairs.begin(); it != pairs.end(); ++it) {
+    //         if (it->first == key) {
+    //             return it->second;
+    //         }
+    //     }
 
-        throw std::range_error("Key not found");
-    }
+    //     throw std::range_error("Key not found");
+    // }
 
     template <auto OtherStaticMap>
     constexpr auto Concat() const

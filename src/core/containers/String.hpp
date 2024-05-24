@@ -632,6 +632,11 @@ public:
     HashCode GetHashCode() const
         { return HashCode::GetHashCode(Data()); }
 
+    HYP_DEF_STL_BEGIN_END(
+        Base::Begin(),
+        Base::End()
+    )
+
 protected:
     const CharType *StrStr(const String &other) const;
 
