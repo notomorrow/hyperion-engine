@@ -18,6 +18,7 @@
 #include <core/containers/Stack.hpp>
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/String.hpp>
+#include <core/logging/Logger.hpp>
 #include <core/Name.hpp>
 
 #include <math/Vector2.hpp>
@@ -25,6 +26,8 @@
 #include <algorithm>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Assets);
 
 #define UI_OBJECT_CREATE_FUNCTION(name) \
     { \
@@ -210,7 +213,7 @@ public:
                 if (Optional<UIObjectSize> parsed_size = ParseUIObjectSize(attributes.At("size")); parsed_size.HasValue()) {
                     size = *parsed_size;
                 } else {
-                    DebugLog(LogType::Warn, "UI object has invalid size property: %s\n", attributes.At("size").Data());
+                    HYP_LOG(Assets, LogLevel::WARNING, "UI object has invalid size property: {}", attributes.At("size"));
                 }
             }
 
@@ -258,7 +261,7 @@ public:
 
             // must always have one object in stack.
             if (m_ui_object_stack.Size() <= 1) {
-                DebugLog(LogType::Warn, "Invalid UI object structure\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "Invalid UI object structure");
 
                 return;
             }
@@ -290,7 +293,7 @@ LoadedAsset UILoader::LoadAsset(LoaderState &state) const
     auto sax_result = parser.Parse(&state.stream);
 
     if (!sax_result) {
-        DebugLog(LogType::Warn, "Failed to parse UI stage: %s\n", sax_result.message.Data());
+        HYP_LOG(Assets, LogLevel::WARNING, "Failed to parse UI stage: {}", sax_result.message);
 
         return { { LoaderResult::Status::ERR, sax_result.message } };
     }

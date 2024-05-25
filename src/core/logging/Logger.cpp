@@ -23,27 +23,13 @@ public:
     LogChannelIDGenerator &operator=(LogChannelIDGenerator &&other) noexcept    = delete;
     ~LogChannelIDGenerator()                                                    = default;
 
-    uint32 ForName(Name name)
+    uint32 Next()
     {
-        Mutex::Guard guard(mutex);
-
-        auto it = name_map.Find(name);
-
-        if (it != name_map.End()) {
-            return it->second;
-        }
-
-        const uint32 id = id_counter++;
-
-        name_map.Insert(name, id);
-
-        return id;
+        return m_counter.Increment(1, MemoryOrder::SEQUENTIAL);
     }
 
 private:
-    uint32                  id_counter = 0u;
-    Mutex                   mutex;
-    HashMap<Name, uint64>   name_map;
+    AtomicVar<uint32>   m_counter { 0 };
 };
 
 static LogChannelIDGenerator g_log_channel_id_generator { };
@@ -51,7 +37,7 @@ static LogChannelIDGenerator g_log_channel_id_generator { };
 #pragma region LogChannel
 
 LogChannel::LogChannel(Name name)
-    : m_id(g_log_channel_id_generator.ForName(name)),
+    : m_id(g_log_channel_id_generator.Next()),
       m_name(name),
       m_flags(LogChannelFlags::NONE)
 {
@@ -106,7 +92,7 @@ void Logger::SetChannelEnabled(const LogChannel &channel, bool enabled)
 
 void Logger::Log(const LogChannel &channel, const LogMessage &message)
 {
-    // std::printf("%s %s\n", *message.function, *message.message);
+    // @TODO handle log level
 
     std::puts(*message.message);
 }

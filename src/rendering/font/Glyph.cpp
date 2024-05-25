@@ -6,6 +6,8 @@
 
 #include <rendering/Texture.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <util/img/Bitmap.hpp>
 
 #include <Engine.hpp>
@@ -19,6 +21,8 @@
 #endif
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Font);
 
 #pragma region GlyphImageData
 
@@ -58,13 +62,13 @@ void Glyph::LoadMetrics()
 
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale))) {
-        DebugLog(LogType::Error, "Error setting pixel size for font face!\n");
+        HYP_LOG(Font, LogLevel::ERROR, "Error setting pixel size for font face!");
 
         return;
     }
 
     if (FT_Load_Glyph(m_face->GetFace(), m_index, FT_LOAD_DEFAULT | FT_LOAD_COLOR | FT_PIXEL_MODE_GRAY)) {
-        DebugLog(LogType::Error, "Error loading glyph from font face!\n");
+        HYP_LOG(Font, LogLevel::ERROR, "Error loading glyph from font face!");
 
         return;
     }
@@ -79,20 +83,14 @@ void Glyph::Render()
     PackedMetrics packed_metrics { };
 
 #ifdef HYP_FREETYPE
-    // int error = FT_Render_Glyph(m_face->GetFace()->glyph, FT_RENDER_MODE_NORMAL);
-
-    // if (error) {
-    //     DebugLog(LogType::Error, "Error rendering glyph '%s': %u\n", FT_Error_String(error), error);
-    // }
-
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale))) {
-        DebugLog(LogType::Error, "Error setting pixel size for font face!\n");
+        HYP_LOG(Font, LogLevel::ERROR, "Error setting pixel size for font face!");
 
         return;
     }
 
     if (FT_Load_Glyph(m_face->GetFace(), m_index, FT_LOAD_DEFAULT | FT_LOAD_COLOR | FT_LOAD_RENDER | FT_PIXEL_MODE_GRAY)) {
-        DebugLog(LogType::Error, "Error loading glyph from font face!\n");
+        HYP_LOG(Font, LogLevel::ERROR, "Error loading glyph from font face!");
 
         return;
     }

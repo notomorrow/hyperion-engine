@@ -155,12 +155,6 @@ public:
           pos(0),
           max_pos(0)
     {
-        DebugLog(
-            LogType::Debug,
-            "Create FileByteReader instance with path %s\n",
-            filepath.c_str()
-        );
-
         file = new std::ifstream(
             filepath,
             std::ifstream::in

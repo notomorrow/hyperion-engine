@@ -11,14 +11,17 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <util/fs/FsUtil.hpp>
 
 #include <Engine.hpp>
 
 #include <algorithm>
 
-
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Assets);
 
 constexpr bool create_obj_indices = true;
 constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
@@ -184,7 +187,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
             }
 
             if (tokens.Size() > 5) {
-                DebugLog(LogType::Warn, "Faces with more than 4 vertices are not supported by the OBJ model loader\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "Faces with more than 4 vertices are not supported by the OBJ model loader");
             }
 
             /* Performs simple triangulation on quad faces */
@@ -242,7 +245,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
 
         if (tokens[0] == "usemtl") {
             if (tokens.Size() == 1) {
-                DebugLog(LogType::Warn, "Cannot set obj model material -- no material provided");
+                HYP_LOG(Assets, LogLevel::WARNING, "Cannot set obj model material -- no material provided");
 
                 return;
             }
@@ -256,7 +259,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
             return;
         }
 
-        DebugLog(LogType::Warn, "Unable to parse obj model line: %s\n", trimmed.Data());
+        HYP_LOG(Assets, LogLevel::WARNING, "Unable to parse obj model line: {}", trimmed);
     });
 
     return model;
@@ -284,7 +287,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
         material_library = state.asset_manager->Load<MaterialGroup>(material_library_path, result);
 
         if (result.status != LoaderResult::Status::OK || !material_library) {
-            DebugLog(LogType::Warn, "Obj model loader: Could not load material library at %s\n", material_library_path.Data());
+            HYP_LOG(Assets, LogLevel::WARNING, "Obj model loader: Could not load material library at {}", material_library_path);
         }
     }
 
@@ -338,10 +341,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             }
         } else {
             /* mesh does not have faces defined */
-            DebugLog(
-                LogType::Warn,
-                "Obj model loader: Mesh does not have any faces defined; skipping.\n"
-            );
+            HYP_LOG(Assets, LogLevel::WARNING, "Obj model loader: Mesh does not have any faces defined; skipping.");
 
             continue;
         }
@@ -368,11 +368,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             if (material_library->Has(obj_mesh.material)) {
                 material = material_library->Get(obj_mesh.material)->Clone();
             } else {
-                DebugLog(
-                    LogType::Warn,
-                    "Obj model loader: Material '%s' could not be found in material library\n",
-                    obj_mesh.material.Data()
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "OBJ model loader: Material '{}' could not be found in material library", obj_mesh.material);
             }
         }
 

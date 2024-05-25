@@ -3,8 +3,13 @@
 #include <rendering/backend/RenderCommand.hpp>
 
 #include <core/threading/Threads.hpp>
+#include <core/logging/Logger.hpp>
 
-namespace hyperion::renderer {
+namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(RenderCommands);
+
+namespace renderer {
 
 FixedArray<RenderCommandHolder, max_render_command_types> RenderCommands::holders = { };
 AtomicVar<SizeType> RenderCommands::render_command_type_index = { 0 };
@@ -80,7 +85,7 @@ Result RenderCommands::Flush()
         RenderCommand *front = commands[index];
 
 #ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
-        DebugLog(LogType::RenDebug, "Executing render command %s\n", front->_debug_name.Data());
+        HYP_LOG(RenderCommands, LogLevel::DEBUG, "Executing render command {}", front->_debug_name);
 #endif
 
         const Result command_result = front->Call();
@@ -105,7 +110,7 @@ Result RenderCommands::Flush()
         RenderCommand *front = commands[index];
 
 #ifdef HYP_DEBUG_LOG_RENDER_COMMANDS
-        DebugLog(LogType::RenDebug, "Executing render command %s\n", front->_debug_name.Data());
+        HYP_LOG(RenderCommands, LogLevel::DEBUG, "Executing render command {}", front->_debug_name);
 #endif
 
         const Result command_result = front->Call();
@@ -172,4 +177,5 @@ void RenderCommands::Rewind(uint buffer_index)
 
 #pragma endregion RenderCommands
 
-} // namespace hyperion::renderer
+} // namespace renderer
+} // namespace hyperion

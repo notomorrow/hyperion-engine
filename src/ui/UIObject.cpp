@@ -26,10 +26,13 @@
 #include <core/threading/Threads.hpp>
 #include <core/containers/Queue.hpp>
 #include <core/system/AppContext.hpp>
+#include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(UI);
 
 enum class UIObjectIterationResult : uint8
 {
@@ -148,13 +151,13 @@ void UIObject::Init()
             AssertThrow(ui_object != nullptr);
 
             if (!ui_object->GetEntity().IsValid()) {
-                DebugLog(LogType::Warn, "Entity invalid for UIObject with name: %s\n", *ui_object->GetName());
+                HYP_LOG(UI, LogLevel::WARNING, "Entity invalid for UIObject with name: {}", ui_object->GetName());
 
                 return UIEventHandlerResult::ERR;
             }
 
             if (!ui_object->GetScene()) {
-                DebugLog(LogType::Warn, "Scene invalid for UIObject with name: %s\n", *ui_object->GetName());
+                HYP_LOG(UI, LogLevel::WARNING, "Scene invalid for UIObject with name: {}", ui_object->GetName());
 
                 return UIEventHandlerResult::ERR;
             }
@@ -169,7 +172,7 @@ void UIObject::Init()
             }
 
             if (!script_component->object) {
-                DebugLog(LogType::Warn, "Script component has no object for UIObject with name: %s\n", *ui_object->GetName());
+                HYP_LOG(UI, LogLevel::WARNING, "Script component has no object for UIObject with name: {}", ui_object->GetName());
 
                 return UIEventHandlerResult::ERR;
             }
@@ -179,7 +182,7 @@ void UIObject::Init()
                     // Stubbed method, do not call
                     if (method_ptr->HasAttribute("Hyperion.ScriptMethodStub")) {
                         // Stubbed method, do not bother calling it
-                        DebugLog(LogType::Info, "Stubbed method %s for UI object with name: %s\n", method_name.Data(), *ui_object->GetName());
+                        HYP_LOG(UI, LogLevel::INFO, "Stubbed method {} for UI object with name: {}", method_name, ui_object->GetName());
 
                         return UIEventHandlerResult::OK;
                     }
@@ -188,7 +191,7 @@ void UIObject::Init()
                 }
             }
 
-            DebugLog(LogType::Error, "Failed to call method %s for UI object with name: %s\n", method_name.Data(), *ui_object->GetName());
+            HYP_LOG(UI, LogLevel::ERROR, "Failed to call method {} for UI object with name: {}", method_name, ui_object->GetName());
 
             return UIEventHandlerResult::ERR;
         }
@@ -438,9 +441,9 @@ void UIObject::SetScrollOffset(Vec2i scroll_offset)
         return;
     }
 
-    DebugLog(LogType::Info, "Scroll offset changed for UI object %s: %d, %d\n", *GetName(), scroll_offset.x, scroll_offset.y);
-    DebugLog(LogType::Info, "Actual size: %d, %d\n", m_actual_size.x, m_actual_size.y);
-    DebugLog(LogType::Info, "Actual inner size: %d, %d\n", m_actual_inner_size.x, m_actual_inner_size.y);
+    HYP_LOG(UI, LogLevel::INFO, "Scroll offset changed for UI object {}: {}", GetName(), scroll_offset);
+    HYP_LOG(UI, LogLevel::INFO, "Actual size: {}", m_actual_size);
+    HYP_LOG(UI, LogLevel::INFO, "Actual inner size: {}", m_actual_inner_size);
 
     m_scroll_offset = scroll_offset;
 
@@ -650,21 +653,21 @@ void UIObject::AddChildUIObject(UIObject *ui_object)
     const NodeProxy &node = GetNode();
 
     if (!node) {
-        DebugLog(LogType::Error, "Parent UI object has no attachable node: %s\n", *GetName());
+        HYP_LOG(UI, LogLevel::ERROR, "Parent UI object has no attachable node: {}", GetName());
 
         return;
     }
 
     if (NodeProxy child_node = ui_object->GetNode()) {
         if (child_node->GetParent() != nullptr && !child_node->Remove()) {
-            DebugLog(LogType::Error, "Failed to remove child node '%s' from current parent\n", child_node->GetName().Data(), child_node->GetParent()->GetName().Data());
+            HYP_LOG(UI, LogLevel::ERROR, "Failed to remove child node '{}' from current parent {}", child_node->GetName(), child_node->GetParent()->GetName());
 
             return;
         }
 
         node->AddChild(child_node);
     } else {
-        DebugLog(LogType::Error, "Child UI object '%s' has no attachable node\n", *ui_object->GetName());
+        HYP_LOG(UI, LogLevel::ERROR, "Child UI object '{}' has no attachable node", ui_object->GetName());
 
         return;
     }
@@ -952,7 +955,7 @@ void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_
     out_actual_size = MathUtil::Max(out_actual_size, Vec2i { 0, 0 });
 
     if (is_inner) {
-        DebugLog(LogType::Debug, "inner for %s, in size: %d, %d\tout size: %d, %d\n", *GetName(), in_size.GetValue().x, in_size.GetValue().y, out_actual_size.x, out_actual_size.y);
+        HYP_LOG(UI, LogLevel::DEBUG, "inner for {}, in size: {}, {}\tout size: {}, {}", GetName(), in_size.GetValue().x, in_size.GetValue().y, out_actual_size.x, out_actual_size.y);
     }
 }
 

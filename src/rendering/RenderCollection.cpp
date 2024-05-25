@@ -3,9 +3,10 @@
 #include <core/containers/Array.hpp>
 #include <core/threading/Threads.hpp>
 #include <core/utilities/UniqueID.hpp>
+#include <core/logging/Logger.hpp>
 #include <core/Util.hpp>
 
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/RenderGroup.hpp>
 
@@ -16,6 +17,8 @@
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(RenderCollection);
 
 static constexpr bool do_parallel_collection = true;
 
@@ -110,22 +113,21 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         RenderProxyGroup &render_proxy_group = collection->GetProxyGroups()[pass_type][attributes];
 
         if (!render_proxy_group.GetRenderGroup().IsValid()) {
-            DebugLog(LogType::Debug, "Creating RenderGroup for attributes:\n"
-                "\tVertex Attributes: %llu\n"
-                "\tBucket: %u\n"
-                "\tShader Definition: %s  %llu\n"
-                "\tFramebuffer: %llu\n"
-                "\tCull Mode: %u\n"
-                "\tFlags: %u\n"
-                "\tDrawable layer: %u\n"
-                "\n",
+            HYP_LOG(RenderCollection, LogLevel::DEBUG, "Creating RenderGroup for attributes:\n"
+                "\tVertex Attributes: {}\n"
+                "\tBucket: {}\n"
+                "\tShader Definition: {}  {}\n"
+                "\tFramebuffer: {}\n"
+                "\tCull Mode: {}\n"
+                "\tFlags: {}\n"
+                "\tDrawable layer: {}\n",
                 attributes.GetMeshAttributes().vertex_attributes.flag_mask,
-                attributes.GetMaterialAttributes().bucket,
-                *attributes.GetShaderDefinition().GetName(),
+                uint32(attributes.GetMaterialAttributes().bucket),
+                attributes.GetShaderDefinition().GetName(),
                 attributes.GetShaderDefinition().GetProperties().GetHashCode().Value(),
                 attributes.GetFramebuffer().index,
-                attributes.GetMaterialAttributes().cull_faces,
-                attributes.GetMaterialAttributes().flags,
+                uint32(attributes.GetMaterialAttributes().cull_faces),
+                uint32(attributes.GetMaterialAttributes().flags),
                 attributes.GetDrawableLayer().layer_index);
 
             // Create RenderGroup
@@ -204,9 +206,9 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             AssertThrow(RemoveRenderProxy(proxy_list, entity, attributes, pass_type));
         }
 
-        DebugLog(LogType::Debug, "Added Proxies: %llu\n", proxy_list.GetAddedEntities().Count());
-        DebugLog(LogType::Debug, "Removed Proxies: %llu\n", proxy_list.GetRemovedEntities().Count());
-        DebugLog(LogType::Debug, "Changed Proxies: %llu\n", proxy_list.GetChangedEntities().Count());
+        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Added Proxies: {}", proxy_list.GetAddedEntities().Count());
+        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Removed Proxies: {}", proxy_list.GetRemovedEntities().Count());
+        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Changed Proxies: {}", proxy_list.GetChangedEntities().Count());
 
         proxy_list.Advance(RenderProxyListAdvanceAction::PERSIST);
         

@@ -20,12 +20,15 @@
 #include <core/system/AppContext.hpp>
 #include <core/system/SystemEvent.hpp>
 #include <core/threading/Threads.hpp>
+#include <core/logging/Logger.hpp>
 
 #include <input/InputManager.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(UI);
 
 UIStage::UIStage(ThreadID owner_thread_id)
     : UIObject(UIObjectType::STAGE),
@@ -86,7 +89,7 @@ void UIStage::Init()
         if (font_atlas != nullptr) {
             m_default_font_atlas = std::move(font_atlas);
         } else {
-            DebugLog(LogType::Error, "Failed to load default font atlas! Error was: %s\n", loader_result.message.Data());
+            HYP_LOG(UI, LogLevel::ERROR, "Failed to load default font atlas! Error was: {}", loader_result.message);
         }
     }
 
@@ -243,12 +246,6 @@ RC<UIObject> UIStage::GetUIObjectForEntity(ID<Entity> entity) const
 
 void UIStage::SetFocusedObject(const RC<UIObject> &ui_object)
 {
-    if (ui_object) {
-        DebugLog(LogType::Debug, "SetFocusedObject: %s\n", *ui_object->GetName());
-    } else {
-        DebugLog(LogType::Debug, "SetFocusedObject: nullptr\n");
-    }
-
     RC<UIObject> current_focused_ui_object = m_focused_object.Lock();
 
     // Be sure to set the focused object to nullptr before calling Blur() to prevent infinite recursion
@@ -413,10 +410,8 @@ EnumFlags<UIEventHandlerResult> UIStage::OnInputEvent(
                         .is_down            = false
                     });
 
-                    DebugLog(LogType::Debug, "Mouse hover on: %s, AABB: %f, %f, %f\t%f, %f, %f\n",
-                        *ui_object->GetName(),
-                        ui_object->GetWorldAABB().min.x, ui_object->GetWorldAABB().min.y, ui_object->GetWorldAABB().min.z,
-                        ui_object->GetWorldAABB().max.x, ui_object->GetWorldAABB().max.y, ui_object->GetWorldAABB().max.z);
+                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on: {}, AABB: {}\t{}",
+                        ui_object->GetName(), ui_object->GetWorldAABB().min, ui_object->GetWorldAABB().max);
 
                     if (mouse_hover_event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {
                         break;

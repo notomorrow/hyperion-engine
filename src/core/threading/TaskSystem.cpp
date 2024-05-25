@@ -2,7 +2,12 @@
 
 #include <core/threading/TaskSystem.hpp>
 
+#include <core/logging/Logger.hpp>
+
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Tasks);
+
 namespace threading {
 
 const FlatMap<TaskThreadPoolName, TaskSystem::TaskThreadPoolInfo> TaskSystem::s_thread_pool_infos {
@@ -76,10 +81,6 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
 
     const ThreadID &current_thread_id = Threads::CurrentThreadID();
 
-    /*if (Threads::IsThreadInMask(current_thread_id, THREAD_TASK)) {
-        DebugLog(LogType::Warn, "Enqueuing tasks from within a task thread may have performance implications\n");
-    }*/
-
     TaskThreadPool &pool = GetPool(batch->pool);
 
     const uint num_threads_in_pool = uint(pool.threads.Size());
@@ -117,11 +118,7 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
         // we don't want to risk that another task thread is waiting on our current task thread,
         // which would cause a deadlock.
         if (was_busy) {
-            DebugLog(
-                LogType::Warn,
-                "On task thread %s: All other task threads busy; Executing task inline\n",
-                current_thread_id.name.LookupString()
-            );
+            HYP_LOG(Tasks, LogLevel::WARNING, "On task thread {}: All other task threads busy; Executing task inline", current_thread_id.name);
 
             task.Execute();
 

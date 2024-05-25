@@ -6,7 +6,7 @@
 #include <core/Base.hpp>
 
 #include <rendering/RenderComponent.hpp>
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 

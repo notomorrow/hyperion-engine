@@ -10,6 +10,8 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <ui/UIStage.hpp>
 
 #include <util/fs/FsUtil.hpp>
@@ -17,6 +19,8 @@
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(UI);
 
 using renderer::Result;
 
@@ -154,11 +158,11 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
                     // Create RenderGroup
                     Handle<RenderGroup> render_group = g_engine->CreateRenderGroup(attributes);
 
-                    DebugLog(LogType::Debug, "Create render group %llu (#%u)\n", attributes.GetHashCode().Value(), render_group.GetID().Value());
+                    HYP_LOG(UI, LogLevel::DEBUG, "Create render group {} (#{})", attributes.GetHashCode().Value(), render_group.GetID().Value());
 
 #ifdef HYP_DEBUG_MODE
                     if (!render_group.IsValid()) {
-                        DebugLog(LogType::Error, "Render group not valid for attribute set %llu!\n", attributes.GetHashCode().Value());
+                        HYP_LOG(UI, LogLevel::ERROR, "Render group not valid for attribute set {}!", attributes.GetHashCode().Value());
 
                         continue;
                     }

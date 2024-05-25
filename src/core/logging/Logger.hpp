@@ -2,6 +2,8 @@
 #ifndef HYPERION_UTIL_LOGGER_HPP
 #define HYPERION_UTIL_LOGGER_HPP
 
+#include <core/logging/LoggerFwd.hpp>
+
 #include <core/Name.hpp>
 #include <core/system/Debug.hpp>
 #include <core/Defines.hpp>
@@ -30,6 +32,15 @@ HYP_MAKE_ENUM_FLAGS(LogChannelFlags)
 namespace logging {
 
 class Logger;
+
+enum LogLevel : uint32
+{
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
+    FATAL
+};
 
 struct LogMessage
 {
@@ -69,6 +80,24 @@ private:
 
 class HYP_API Logger
 {
+    template <LogLevel Level>
+    static constexpr auto LogLevelToString()
+    {
+        if constexpr (Level == LogLevel::DEBUG) {
+            return StaticString("Debug");
+        } else if constexpr (Level == LogLevel::INFO) {
+            return StaticString("Info");
+        } else if constexpr (Level == LogLevel::WARNING) {
+            return StaticString("Warning");
+        } else if constexpr (Level == LogLevel::ERROR) {
+            return StaticString("Error");
+        } else if constexpr (Level == LogLevel::FATAL) {
+            return StaticString("Fatal");
+        } else {
+            return StaticString("Unknown");
+        }
+    }
+
 public:
     static constexpr uint max_channels = 64;
 
@@ -89,14 +118,23 @@ public:
 
     void SetChannelEnabled(const LogChannel &channel, bool enabled);
 
-    template <auto FunctionNameString, auto FormatString, class... Args>
+    template <LogLevel Level, auto FunctionNameString, auto FormatString, class... Args>
     void Log(const LogChannel &channel, Args &&... args)
     {
         if (IsChannelEnabled(channel)) {
             Log(
                 channel,
                 LogMessage {
-                    utilities::Format< containers::helpers::Concat< StaticString("["), FunctionNameString, StaticString("] "), FormatString >::value >(std::forward<Args>(args)...)
+                    utilities::Format<
+                        containers::helpers::Concat<
+                            StaticString("["),
+                            LogLevelToString< Level >(),
+                            StaticString("] "),
+                            FunctionNameString,
+                            StaticString(": "),
+                            FormatString
+                        >::value
+                    >(std::forward<Args>(args)...)
                 }
             );
         }
@@ -116,17 +154,17 @@ private:
 
 using logging::Logger;
 using logging::LogChannel;
+using logging::LogLevel;
 
 } // namespace hyperion
 
 // Helper macros
-#define HYP_DECLARE_LOG_CHANNEL(name) \
-    extern hyperion::logging::LogChannel Log_##name
 
+// Must be used outside of function (in global scope)
 #define HYP_DEFINE_LOG_CHANNEL(name) \
-    static hyperion::logging::LogChannel Log_##name(HYP_NAME(name))
+    hyperion::logging::LogChannel Log_##name(HYP_NAME_UNSAFE(name))
 
-#define HYP_LOG(channel, fmt, ...) \
-    hyperion::logging::Logger::GetInstance().Log< hyperion::StaticString(HYP_DEBUG_FUNC_SHORT), hyperion::StaticString(fmt) >(Log_##channel, __VA_ARGS__)
+#define HYP_LOG(channel, level, fmt, ...) \
+    hyperion::logging::Logger::GetInstance().Log< level, hyperion::StaticString(HYP_DEBUG_FUNC_SHORT), hyperion::StaticString(fmt) >(hyperion::Log_##channel __VA_OPT__(,) __VA_ARGS__)
 
 #endif

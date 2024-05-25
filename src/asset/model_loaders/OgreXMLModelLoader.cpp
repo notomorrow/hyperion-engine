@@ -7,6 +7,9 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
+
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 #include <util/xml/SAXParser.hpp>
@@ -14,6 +17,8 @@
 #include <algorithm>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Assets);
 
 using OgreXMLModel = OgreXMLModelLoader::OgreXMLModel;
 using BoneAssignment = OgreXMLModelLoader::OgreXMLModel::BoneAssignment;
@@ -74,7 +79,7 @@ public:
             m_model.texcoords.PushBack(Vec2f(x, y));
         } else if (name == "face") {
             if (attributes.Size() != 3) {
-                DebugLog(LogType::Warn, "Ogre XML parser: `face` tag expected to have 3 attributes.\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: `face` tag expected to have 3 attributes.");
             }
             
             FlatMap<String, uint32> face_elements;
@@ -109,7 +114,7 @@ public:
         } else if (name == "vertex") {
             /* no-op */
         }  else {
-            DebugLog(LogType::Warn, "Ogre XML parser: No handler for '%s' tag\n", name.Data());
+            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: No handler for '{}' tag", name);
         }
     }
 
@@ -137,12 +142,7 @@ void BuildVertices(OgreXMLModel &model)
         if (i < model.positions.Size()) {
             position = model.positions[i];
         } else {
-            DebugLog(
-                LogType::Warn,
-                "Ogre XML parser: Vertex index (%llu) out of bounds (%llu)\n",
-                i,
-                model.positions.Size()
-            );
+            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Vertex index ({}) out of bounds ({})", i, model.positions.Size());
 
             continue;
         }
@@ -151,12 +151,7 @@ void BuildVertices(OgreXMLModel &model)
             if (i < model.normals.Size()) {
                 normal = model.normals[i];
             } else {
-                DebugLog(
-                    LogType::Warn,
-                    "Ogre XML parser: Normal index (%lu) out of bounds (%llu)\n",
-                    i,
-                    model.normals.Size()
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Normal index ({}) out of bounds ({})", i, model.normals.Size());
             }
         }
 
@@ -164,12 +159,7 @@ void BuildVertices(OgreXMLModel &model)
             if (i < model.texcoords.Size()) {
                 texcoord = model.texcoords[i];
             } else {
-                DebugLog(
-                    LogType::Warn,
-                    "Ogre XML parser: Texcoord index (%lu) out of bounds (%llu)\n",
-                    i,
-                    model.texcoords.Size()
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Texcoord index ({}) out of bounds ({})", i, model.texcoords.Size());
             }
         }
 
@@ -182,7 +172,7 @@ void BuildVertices(OgreXMLModel &model)
 
             for (SizeType j = 0; j < bone_assignments.Size(); j++) {
                 if (j == 4) {
-                    DebugLog(LogType::Warn, "Ogre XML parser: Attempt to add more than 4 bone assignments\n");
+                    HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Attempt to add more than 4 bone assignments");
 
                     break;
                 }
@@ -225,13 +215,13 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
         skeleton = state.asset_manager->Load<Skeleton>(skeleton_path, result);
 
         if (result.status != LoaderResult::Status::OK || !skeleton) {
-            DebugLog(LogType::Warn, "Ogre XML parser: Could not load skeleton at %s\n", skeleton_path.Data());
+            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Could not load skeleton at {}", skeleton_path);
         }
     }
 
     for (SubMesh &sub_mesh : model.submeshes) {
         if (sub_mesh.indices.Empty()) {
-            DebugLog(LogType::Info, "Ogre XML parser: Skipping submesh with empty indices\n");
+            HYP_LOG(Assets, LogLevel::INFO, "Ogre XML parser: Skipping submesh with empty indices");
 
             continue;
         }

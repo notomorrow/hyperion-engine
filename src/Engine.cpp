@@ -13,6 +13,7 @@
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <Game.hpp>
+
 #include <core/threading/GameThread.hpp>
 
 #include <util/MeshBuilder.hpp>
@@ -21,8 +22,14 @@
 #include <audio/AudioManager.hpp>
 
 #include <core/system/StackDump.hpp>
+#include <core/logging/Logger.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Config);
+HYP_DECLARE_LOG_CHANNEL(Tasks);
+
+HYP_DEFINE_LOG_CHANNEL(Engine);
 
 using renderer::Attachment;
 using renderer::ImageView;
@@ -166,10 +173,7 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     // save default configuration to file if
     // anything changed from the loading process
     if (!m_configuration.SaveToDefinitionsFile()) {
-        DebugLog(
-            LogType::Error,
-            "Failed to save configuration file\n"
-        );
+        HYP_LOG(Config, LogLevel::ERROR, "Failed to save configuration file");
     }
 
     if (!m_shader_compiler.LoadShaderDefinitions()) {
@@ -353,27 +357,18 @@ void Engine::FinalizeStop()
     m_is_shutting_down.Set(true, MemoryOrder::SEQUENTIAL);
     m_is_render_loop_active = false;
 
-    DebugLog(
-        LogType::Debug,
-        "Stopping all engine processes\n"
-    );
+    HYP_LOG(Engine, LogLevel::INFO, "Stopping all engine processes");
 
     m_delegates.OnShutdown.Broadcast();
 
     m_world.Reset();
 
     if (TaskSystem::GetInstance().IsRunning()) { // Stop task system
-        DebugLog(
-            LogType::Debug,
-            "Stopping task system\n"
-        );
+        HYP_LOG(Tasks, LogLevel::INFO, "Stopping task system");
 
         TaskSystem::GetInstance().Stop();
 
-        DebugLog(
-            LogType::Debug,
-            "Task system stopped\n"
-        );
+        HYP_LOG(Tasks, LogLevel::INFO, "Task system stopped");
     }
 
     m_gbuffer.Destroy();
@@ -469,10 +464,7 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
     ShaderRef shader = g_shader_manager->GetOrCreate(shader_definition);
 
     if (!shader) {
-        DebugLog(
-            LogType::Error,
-            "Shader is empty; Cannot create RenderGroup.\n"
-        );
+        HYP_LOG(Engine, LogLevel::ERROR, "Shader is empty; Cannot create RenderGroup.");
 
         return Handle<RenderGroup>::empty;
     }
@@ -483,12 +475,9 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
         renderable_attributes
     );
 
-    DebugLog(
-        LogType::Debug,
-        "Created RenderGroup for RenderableAttributeSet with hash %llu from thread %s\n",
+    HYP_LOG(Engine, LogLevel::DEBUG, "Created RenderGroup for RenderableAttributeSet with hash {} from thread {}",
         renderable_attributes.GetHashCode().Value(),
-        Threads::CurrentThreadID().name.LookupString()
-    );
+        Threads::CurrentThreadID().name);
 
     std::lock_guard guard(m_render_group_mapping_mutex);
 
@@ -504,19 +493,13 @@ Handle<RenderGroup> Engine::CreateRenderGroup(
 )
 {
     if (!shader.IsValid()) {
-        DebugLog(
-            LogType::Error,
-            "Shader is empty; Cannot create RenderGroup.\n"
-        );
+        HYP_LOG(Engine, LogLevel::ERROR, "Shader is empty; Cannot create RenderGroup.");
 
         return Handle<RenderGroup>::empty;
     }
 
     if (!shader->GetCompiledShader()) {
-        DebugLog(
-            LogType::Error,
-            "Shader is not compiled; Cannot create RenderGroup.\n"
-        );
+        HYP_LOG(Engine, LogLevel::ERROR, "Shader is not compiled; Cannot create RenderGroup.");
 
         return Handle<RenderGroup>::empty;
     }
@@ -544,11 +527,8 @@ void Engine::AddRenderGroup(Handle<RenderGroup> &render_group)
 void Engine::AddRenderGroupInternal(Handle<RenderGroup> &render_group, bool cache)
 {
     if (cache) {
-        DebugLog(
-            LogType::Debug,
-            "Insert RenderGroup in mapping for renderable attribute set hash %llu\n",
-            render_group->GetRenderableAttributes().GetHashCode().Value()
-        );
+        HYP_LOG(Engine, LogLevel::ERROR, "Insert RenderGroup in mapping for renderable attribute set hash {}",
+            render_group->GetRenderableAttributes().GetHashCode().Value());
 
         m_render_group_mapping.Insert(
             render_group->GetRenderableAttributes(),
@@ -622,7 +602,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
         DescriptorSetRef ref = layout.CreateDescriptorSet();
         AssertThrow(ref.IsValid());
 
-        DebugLog(LogType::Debug, "Num elements for descriptor set %s: %u\n", ref.GetName().LookupString(), ref->GetLayout().GetElements().Size());
+        HYP_LOG(Engine, LogLevel::DEBUG, "Num elements for descriptor set {}: {}", ref.GetName(), ref->GetLayout().GetElements().Size());
         HYP_BREAKPOINT;
 
         // Init with placeholder data

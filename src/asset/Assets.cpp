@@ -14,12 +14,16 @@
 #include <asset/font_loaders/FontAtlasLoader.hpp>
 #include <asset/ui_loaders/UILoader.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <ui/UIObject.hpp>
 
 #include <Engine.hpp>
 #include <util/fs/FsUtil.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Assets);
 
 AssetManager *AssetManager::GetInstance()
 {

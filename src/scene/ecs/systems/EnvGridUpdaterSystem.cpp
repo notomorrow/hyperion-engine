@@ -2,13 +2,20 @@
 
 #include <scene/ecs/systems/EnvGridUpdaterSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
+
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
+
 #include <math/MathUtil.hpp>
+
 #include <core/threading/Threads.hpp>
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(EnvGrid);
 
 void EnvGridUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -34,7 +41,7 @@ void EnvGridUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entit
     }
 
     if (!world_aabb.IsValid()) {
-        DebugLog(LogType::Warn, "EnvGridUpdaterSystem::OnEntityAdded: Entity #%u has invalid bounding box\n", entity.Value());
+        HYP_LOG(EnvGrid, LogLevel::WARNING, "EnvGridUpdaterSystem::OnEntityAdded: Entity #{} has invalid bounding box", entity.Value());
     }
 
     env_grid_component.render_component = entity_manager.GetScene()->GetEnvironment()->AddRenderComponent<EnvGrid>(

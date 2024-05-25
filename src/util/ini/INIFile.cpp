@@ -1,10 +1,15 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <util/ini/INIFile.hpp>
+
 #include <asset/BufferedByteReader.hpp>
+
 #include <core/system/Debug.hpp>
+#include <core/logging/Logger.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(INI);
 
 const INIFile::Element INIFile::Element::empty = { };
 
@@ -52,10 +57,7 @@ void INIFile::Parse()
             }
 
             if (section_name.Empty()) {
-                DebugLog(
-                    LogType::Warn,
-                    "Empty section name\n"
-                );
+                HYP_LOG(INI, LogLevel::WARNING, "Empty section name");
             }
 
             sections.PushBack(Pair<String, Section> { std::move(section_name), { } });
@@ -71,11 +73,7 @@ void INIFile::Parse()
         }
 
         if (split.Size() < 2) {
-            DebugLog(
-                LogType::Warn,
-                "Line is not in required format (key = value):\n\t%s\n",
-                line_trimmed.Data()
-            );
+            HYP_LOG(INI, LogLevel::WARNING, "Line is not in required format (key = value): {}", line_trimmed);
 
             continue;
         }

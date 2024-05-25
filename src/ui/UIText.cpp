@@ -11,9 +11,14 @@
 #include <math/Vector3.hpp>
 #include <math/Quaternion.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(UI);
+
 struct UICharMesh
 {
     RC<StreamedMeshData>    mesh_data;
@@ -232,7 +237,7 @@ void UIText::UpdateMesh()
 
         mesh = char_mesh_builder.OptimizeCharMeshes(GetStage()->GetSurfaceSize(), char_mesh_builder.BuildCharMeshes(*font_atlas, m_text));
     } else {
-        DebugLog(LogType::Warn, "No font atlas for UIText %s", *GetName());
+        HYP_LOG(UI, LogLevel::WARNING, "No font atlas for UIText {}", GetName());
     }
 
     if (!mesh.IsValid()) {

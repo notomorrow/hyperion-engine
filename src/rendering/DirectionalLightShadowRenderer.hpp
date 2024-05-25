@@ -9,7 +9,7 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/Light.hpp>
 #include <rendering/RenderComponent.hpp>
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
 #include <rendering/Shadows.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>

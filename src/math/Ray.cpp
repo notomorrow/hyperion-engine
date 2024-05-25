@@ -4,7 +4,11 @@
 #include <math/Triangle.hpp>
 #include <math/MathUtil.hpp>
 
+#include <core/logging/Logger.hpp>
+
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Math);
 
 bool Ray::TestAABB(const BoundingBox &aabb) const
 {
@@ -221,11 +225,7 @@ bool Ray::TestTriangleList(
     bool intersected = false;
     
     if (indices.Size() % 3 != 0) {
-        DebugLog(
-            LogType::Error,
-            "Cannot perform raytest on triangle list because number of indices (%llu) was not divisible by 3\n",
-            indices.Size()
-        );
+        HYP_LOG(Math, LogLevel::WARNING, "Cannot perform raytest on triangle list because number of indices ({}) was not divisible by 3", indices.Size());
 
         return false;
     }

@@ -30,11 +30,16 @@
 #include <ui/UIImage.hpp>
 #include <ui/UIDockableContainer.hpp>
 
+#include <core/logging/Logger.hpp>
+
 // temp
 #include <util/Profile.hpp>
 #include <core/system/SystemEvent.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Editor);
+
 namespace editor {
 
 #pragma region HyperionEditorImpl
@@ -92,7 +97,7 @@ void HyperionEditorImpl::CreateFontAtlas()
     RC<FontFace> font_face = AssetManager::GetInstance()->Load<RC<FontFace>>("fonts/Roboto/Roboto-Regular.ttf");
 
     if (!font_face) {
-        DebugLog(LogType::Error, "Failed to load font face!\n");
+        HYP_LOG(Editor, LogLevel::ERROR, "Failed to load font face!");
 
         return;
     }

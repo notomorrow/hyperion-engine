@@ -3,9 +3,13 @@
 #include <rendering/font/FontAtlas.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Font);
 
 using renderer::StagingBuffer;
 
@@ -120,7 +124,7 @@ void FontAtlas::Render()
     AssertThrow(m_face != nullptr);
 
     if ((m_symbol_list.Size() / symbol_columns) > symbol_rows) {
-        DebugLog(LogType::Warn, "Symbol list size is greater than the allocated font atlas!\n");
+        HYP_LOG(Font, LogLevel::WARNING, "Symbol list size is greater than the allocated font atlas!");
     }
 
     m_glyph_metrics.Clear();
@@ -133,7 +137,7 @@ void FontAtlas::Render()
             MathUtil::Ceil<float, uint32>(float(m_cell_dimensions.height) * scale)
         };
 
-        DebugLog(LogType::Info, "Rendering font atlas for pixel size %u\n", scaled_extent.height);
+        HYP_LOG(Font, LogLevel::INFO, "Rendering font atlas for pixel size {}", scaled_extent.height);
 
         Handle<Texture> atlas = CreateObject<Texture>(
             Texture2D(
@@ -307,7 +311,8 @@ void FontAtlas::WriteToBuffer(uint pixel_size, ByteBuffer &buffer) const
     Handle<Texture> atlas = m_atlases->GetAtlasForPixelSize(pixel_size);
 
     if (!atlas.IsValid()) {
-        DebugLog(LogType::Error, "Failed to get atlas for pixel size %u\n", pixel_size);
+        HYP_LOG(Font, LogLevel::ERROR, "Failed to get atlas for pixel size {}", pixel_size);
+
         return;
     }
 
@@ -385,7 +390,8 @@ Bitmap<1> FontAtlas::GenerateBitmap(uint pixel_size) const
     Handle<Texture> atlas = m_atlases->GetAtlasForPixelSize(pixel_size);
 
     if (!atlas.IsValid()) {
-        DebugLog(LogType::Error, "Failed to get atlas for pixel size %u\n", pixel_size);
+        HYP_LOG(Font, LogLevel::ERROR, "Failed to get atlas for pixel size {}", pixel_size);
+
         return { };
     }
 

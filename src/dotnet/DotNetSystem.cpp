@@ -7,6 +7,7 @@
 
 #include <core/system/AppContext.hpp>
 #include <core/dll/DynamicLibrary.hpp>
+#include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
@@ -19,7 +20,11 @@
 #include <dotnetcore/coreclr_delegates.h>
 #endif
 
-namespace hyperion::dotnet {
+namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(DotNET);
+
+namespace dotnet {
 
 namespace detail {
 
@@ -30,25 +35,19 @@ static Optional<FilePath> FindAssemblyFilePath(const char *path)
     FilePath filepath = FilePath::Current() / path;
 
     if (!filepath.Exists() && g_engine->GetAppContext() != nullptr) {
-        DebugLog(LogType::Warn, "Failed to load .NET assembly at path: %s. Trying next path...\n", filepath.Data());
+        HYP_LOG(DotNET, LogLevel::WARNING, "Failed to load .NET assembly at path: {}. Trying next path...", filepath);
 
         filepath = FilePath(g_engine->GetAppContext()->GetArguments().GetCommand()).BasePath() / path;
     }
     
     if (!filepath.Exists()) {
-        DebugLog(LogType::Warn, "Failed to load .NET assembly at path: %s. Trying next path...\n", filepath.Data());
+        HYP_LOG(DotNET, LogLevel::WARNING, "Failed to load .NET assembly at path: {}. Trying next path...", filepath);
 
         filepath = g_asset_manager->GetBasePath() / path;
     }
     
     if (!filepath.Exists()) {
-        DebugLog(LogType::Warn, "Failed to load .NET assembly at path: %s.\n", filepath.Data());
-
-        DebugLog(
-            LogType::Error,
-            "Failed to load .NET assembly: Could not locate assembly %s.\n",
-            path
-        );
+        HYP_LOG(DotNET, LogLevel::ERROR, "Failed to load .NET assembly at path: {}. Could not locate an assembly for {}.", filepath, path);
 
         return { };
     }
@@ -73,7 +72,7 @@ public:
     virtual ~DotNetImpl() override
     {
         if (!ShutdownDotNetRuntime()) {
-            DebugLog(LogType::Error, "Failed to shutdown .NET runtime\n");
+            HYP_LOG(DotNET, LogLevel::ERROR, "Failed to shutdown .NET runtime");
         }
     }
 
@@ -162,16 +161,12 @@ public:
         void *load_assembly_and_get_function_pointer_fptr = nullptr;
 
         if (m_get_delegate_fptr(m_cxt, hdt_load_assembly_and_get_function_pointer, &load_assembly_and_get_function_pointer_fptr) != 0) {
-            DebugLog(LogType::Error, "Failed to get delegate: Failed to get function pointer\n");
+            HYP_LOG(DotNET, LogLevel::ERROR, "Failed to get delegate: Failed to get function pointer");
 
             return nullptr;
         }
 
-#ifdef HYP_WINDOWS
-        DebugLog(LogType::Info, "Loading .NET assembly: %S\tType Name: %S\tMethod Name: %S\n", assembly_path, type_name, method_name);
-#else
-        DebugLog(LogType::Info, "Loading .NET assembly: %s\tType Name: %s\tMethod Name: %s\n", assembly_path, type_name, method_name);
-#endif
+        HYP_LOG(DotNET, LogLevel::INFO, "Loading .NET assembly: {}\tType Name: {}\tMethod Name: {}", assembly_path, type_name, method_name);
 
         void *delegate_ptr = nullptr;
         
@@ -179,12 +174,10 @@ public:
         bool result = load_assembly_and_get_function_pointer(assembly_path, type_name, method_name, delegate_type_name, nullptr, &delegate_ptr) == 0;
 
         if (!result) {
-            DebugLog(LogType::Error, "Failed to get delegate: Failed to load assembly and get function pointer\n");
+            HYP_LOG(DotNET, LogLevel::ERROR, "Failed to get delegate: Failed to load assembly and get function pointer");
 
             return nullptr;
         }
-
-        DebugLog(LogType::Info, "Loaded delegate: %p\n", delegate_ptr);
 
         return delegate_ptr;
     }
@@ -217,8 +210,6 @@ private:
 
         String str = runtime_config_json.ToString(true);
 
-        DebugLog(LogType::Debug, "JSON string: %s\n", str.Data());
-
         FileByteWriter writer(filepath.Data());
         writer.WriteString(str);
         writer.Close();
@@ -234,11 +225,7 @@ private:
             return false;
         }
 
-#ifdef HYP_WINDOWS
-        DebugLog(LogType::Debug, "Loading hostfxr from: %S\n", &buffer[0]);
-#else
-        DebugLog(LogType::Debug, "Loading hostfxr from: %s\n", &buffer[0]);
-#endif
+        HYP_LOG(DotNET, LogLevel::DEBUG, "Loading hostfxr from: {}", &buffer[0]);
 
         // Load hostfxr and get desired exports
         m_dll = DynamicLibrary::Load(buffer);
@@ -251,7 +238,7 @@ private:
         m_get_delegate_fptr = (hostfxr_get_runtime_delegate_fn)m_dll->GetFunction("hostfxr_get_runtime_delegate");
         m_close_fptr = (hostfxr_close_fn)m_dll->GetFunction("hostfxr_close");
 
-        DebugLog(LogType::Debug, "Loaded hostfxr functions\n");
+        HYP_LOG(DotNET, LogLevel::DEBUG, "Loaded hostfxr functions");
 
         return m_init_fptr && m_get_delegate_fptr && m_close_fptr;
     }
@@ -260,15 +247,15 @@ private:
     {
         AssertThrow(m_cxt == nullptr);
 
-        DebugLog(LogType::Debug, "Initializing .NET runtime\n");
+        HYP_LOG(DotNET, LogLevel::DEBUG, "Initializing .NET runtime");
 
         if (m_init_fptr(PlatformString(GetRuntimeConfigPath()).Data(), nullptr, &m_cxt) != 0) {
-            DebugLog(LogType::Error, "Failed to initialize .NET runtime\n");
+            HYP_LOG(DotNET, LogLevel::ERROR, "Failed to initialize .NET runtime");
 
             return false;
         }
 
-        DebugLog(LogType::Debug, "Initialized .NET runtime\n");
+        HYP_LOG(DotNET, LogLevel::DEBUG, "Initialized .NET runtime");
 
         return true;
     }
@@ -277,12 +264,12 @@ private:
     {
         AssertThrow(m_cxt != nullptr);
 
-        DebugLog(LogType::Debug, "Shutting down .NET runtime\n");
+        HYP_LOG(DotNET, LogLevel::DEBUG, "Shutting down .NET runtime");
 
         m_close_fptr(m_cxt);
         m_cxt = nullptr;
 
-        DebugLog(LogType::Debug, "Shut down .NET runtime\n");
+        HYP_LOG(DotNET, LogLevel::DEBUG, "Shut down .NET runtime");
 
         return true;
     }
@@ -348,13 +335,13 @@ DotNetSystem::~DotNetSystem() = default;
 RC<Assembly> DotNetSystem::LoadAssembly(const char *path) const
 {
     if (!IsEnabled()) {
-        DebugLog(LogType::Warn, "DotNetSystem not enabled, cannot load assemblies\n");
+        HYP_LOG(DotNET, LogLevel::ERROR, "DotNetSystem not enabled, cannot load assemblies");
 
         return nullptr;
     }
 
     if (!IsInitialized()) {
-        DebugLog(LogType::Warn, "DotNetSystem not initialized, call Initialize() before attempting to load assemblies\n");
+        HYP_LOG(DotNET, LogLevel::ERROR, "DotNetSystem not initialized, call Initialize() before attempting to load assemblies");
 
         return nullptr;
     }
@@ -411,4 +398,5 @@ void DotNetSystem::Shutdown()
     m_is_initialized = false;
 }
 
-} // namespace hyperion::dotnet
+} // namespace dotnet
+} // namespace hyperion

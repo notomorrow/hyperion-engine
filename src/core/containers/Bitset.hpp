@@ -4,6 +4,8 @@
 #define HYPERION_BITSET_HPP
 
 #include <core/containers/Array.hpp>
+#include <core/utilities/FormatFwd.hpp>
+
 #include <math/MathUtil.hpp>
 
 #include <Types.hpp>
@@ -15,8 +17,6 @@ namespace hyperion {
 namespace containers {
 
 class Bitset;
-
-std::ostream &operator<<(std::ostream &os, const Bitset &bitset);
 
 class Bitset
 {
@@ -78,8 +78,6 @@ private:
     };
     
 public:
-    friend std::ostream &operator<<(std::ostream &os, const Bitset &bitset);
-
     struct ConstIterator : IteratorBase<true>
     {
     };
@@ -343,6 +341,33 @@ private:
 } // namespace containers
 
 using Bitset = containers::Bitset;
+
+namespace utilities {
+
+template <int StringType>
+struct Formatter<StringType, Bitset>
+{
+    auto operator()(const Bitset &bitset) const
+    {
+        containers::detail::String<StringType> result;
+
+        for (uint32 block_index = bitset.NumBits() / bitset.num_bits_per_block; block_index != 0; --block_index) {
+            for (uint32 bit_index = Bitset::num_bits_per_block; bit_index != 0; --bit_index) {
+                const uint32 combined_bit_index = ((block_index - 1) * Bitset::num_bits_per_block) + (bit_index - 1);
+
+                result.Append(bitset.Get(combined_bit_index) ? '1' : '0');
+
+                if (((bit_index - 1) % CHAR_BIT) == 0) {
+                    result.Append(' ');
+                }
+            }
+        }
+
+        return result;
+    }
+};
+
+} // namespace utilities
 
 } // namespace hyperion
 

@@ -3,10 +3,14 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/backend/AsyncCompute.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <scene/Scene.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(EnvGrid);
 
 using renderer::Image;
 using renderer::StorageImage;
@@ -354,7 +358,7 @@ void EnvGrid::Init()
         m_render_list.SetCamera(m_camera);
     }
 
-    DebugLog(LogType::Info, "Created %llu total ambient EnvProbes in grid\n", num_ambient_probes);
+    HYP_LOG(EnvGrid, LogLevel::INFO, "Created {} total ambient EnvProbes in grid", num_ambient_probes);
 }
 
 // called from game thread
@@ -435,7 +439,7 @@ void EnvGrid::OnRender(Frame *frame)
 
     if (m_options.use_voxel_grid) {
         if (flags & ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET) {
-            DebugLog(LogType::Debug, "Offsetting voxel grid\n");
+            HYP_LOG(EnvGrid, LogLevel::DEBUG, "Offsetting voxel grid");
 
             // // Offset the voxel grid.
             // const Vec3f offset = (grid_aabb.GetCenter() - Vector4(m_shader_data.center).GetXYZ()) / SizeOfProbe();
@@ -534,17 +538,8 @@ void EnvGrid::OnRender(Frame *frame)
                         break;
                     }
                 } else {
-                    DebugLog(
-                        LogType::Warn,
-                        "EnvProbe #%u out of range of max bound env probes (position: %u, %u, %u, world position: %f, %f, %f)\n",
-                        probe->GetID().Value(),
-                        binding_index.position[0],
-                        binding_index.position[1],
-                        binding_index.position[2],
-                        probe->GetDrawProxy().world_position.x,
-                        probe->GetDrawProxy().world_position.y,
-                        probe->GetDrawProxy().world_position.z
-                    );
+                    HYP_LOG(EnvGrid, LogLevel::WARNING, "EnvProbe #{} out of range of max bound env probes (position: {}, world position: {}",
+                        probe->GetID().Value(), binding_index.position, probe->GetDrawProxy().world_position);
                 }
 
                 // probe->SetNeedsRender(false);

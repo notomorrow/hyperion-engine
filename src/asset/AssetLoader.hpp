@@ -4,18 +4,20 @@
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
-#include <core/utilities/Optional.hpp>
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 #include <core/memory/Any.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/logging/LoggerFwd.hpp>
+#include <core/system/Debug.hpp>
 #include <scene/Node.hpp>
 #include <Constants.hpp>
-
-#include <core/system/Debug.hpp>
 
 #include <asset/Loader.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Assets);
 
 class AssetManager;
 

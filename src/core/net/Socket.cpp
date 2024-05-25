@@ -4,6 +4,8 @@
 
 #include <core/containers/Queue.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #ifdef HYP_UNIX
 
 #include <unistd.h>
@@ -14,7 +16,11 @@
 
 #endif
 
-namespace hyperion::net {
+namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Socket);
+
+namespace net {
 
 struct SocketServerImpl
 {
@@ -66,11 +72,7 @@ bool SocketServer::Start()
 #endif
 
     if (m_impl->socket_id == -1) {
-        DebugLog(
-            LogType::Error,
-            "Failed to open socket server. Code: %d\n",
-            errno
-        );
+        HYP_LOG(Socket, LogLevel::ERROR, "Failed to open socket server. Code: {}", errno);
 
         TriggerProc(HYP_NAME(OnError), { SocketProcArgument(String("Failed to open socket")), SocketProcArgument(int32(errno)) });
 
@@ -194,11 +196,7 @@ bool SocketServer::PollForConnections(Array<RC<SocketClient>> &out_connections)
 
         // Make the socket non-blocking
         if (fcntl(new_socket, F_SETFL, O_NONBLOCK) == -1) {
-            DebugLog(
-                LogType::Error,
-                "Failed to set socket to non-blocking. Code: %d\n",
-                errno
-            );
+            HYP_LOG(Socket, LogLevel::ERROR, "Failed to set socket to non-blocking. Code: {}", errno);
 
             close(new_socket);
             continue;
@@ -445,4 +443,5 @@ void SocketClient::Close()
 
 #pragma endregion SocketClient
 
-} // namespace hyperion::net
+} // namespace net
+} // namespace hyperion

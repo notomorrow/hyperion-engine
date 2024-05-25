@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <core/threading/GameThread.hpp>
+#include <core/logging/Logger.hpp>
 #include <core/Defines.hpp>
 
 #include <math/MathUtil.hpp>
@@ -12,6 +13,8 @@
 #define HYP_GAME_THREAD_LOCKED 1
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(GameThread);
 
 static constexpr float game_thread_target_ticks_per_second = 60.0f;
 

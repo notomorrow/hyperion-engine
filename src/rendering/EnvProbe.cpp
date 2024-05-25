@@ -3,9 +3,13 @@
 #include <rendering/EnvProbe.hpp>
 #include <rendering/ShaderGlobals.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(EnvProbe);
 
 class EnvProbe;
 
@@ -455,11 +459,7 @@ void EnvProbe::Render(Frame *frame)
     AssertReady();
 
     if (IsControlledByEnvGrid()) {
-        DebugLog(
-            LogType::Warn,
-            "EnvProbe #%u is controlled by an EnvGrid, but Render() is being called!\n",
-            GetID().Value()
-        );
+        HYP_LOG(EnvProbe, LogLevel::WARNING, "EnvProbe #{} is controlled by an EnvGrid, but Render() is being called!", GetID().Value());
 
         return;
     }
@@ -486,12 +486,8 @@ void EnvProbe::Render(Frame *frame)
 
         if (it != env_probes.End()) {
             if (!it->second.HasValue()) {
-                DebugLog(
-                    LogType::Warn,
-                    "Env Probe #%u (type: %u) has no value set for texture slot!\n",
-                    GetID().Value(),
-                    GetEnvProbeType()
-                );
+                HYP_LOG(EnvProbe, LogLevel::WARNING, "Env Probe #{} (type: {}) has no value set for texture slot!",
+                    GetID().Value(), GetEnvProbeType());
 
                 return;
             }
@@ -506,12 +502,8 @@ void EnvProbe::Render(Frame *frame)
         }
 
         if (probe_index == ~0u) {
-            DebugLog(
-                LogType::Warn,
-                "Env Probe #%u (type: %u) not found in render state bound env probe IDs\n",
-                GetID().Value(),
-                GetEnvProbeType()
-            );
+            HYP_LOG(EnvProbe, LogLevel::WARNING, "Env Probe #{} (type: {}) not found in render state bound env probe IDs",
+                GetID().Value(), GetEnvProbeType());
 
             return;
         }
@@ -624,19 +616,19 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
 
     if (IsControlledByEnvGrid()) {
         if (probe_index.GetProbeIndex() >= max_bound_ambient_probes) {
-            DebugLog(LogType::Warn, "Probe index (%u) out of range of max bound ambient probes\n", probe_index.GetProbeIndex());
+            HYP_LOG(EnvProbe, LogLevel::WARNING, "Probe index ({}) out of range of max bound ambient probes", probe_index.GetProbeIndex());
         }
 
         set_texture = false;
     } else if (IsReflectionProbe() || IsSkyProbe()) {
         if (probe_index.GetProbeIndex() >= max_bound_reflection_probes) {
-            DebugLog(LogType::Warn, "Probe index (%u) out of range of max bound reflection probes\n", probe_index.GetProbeIndex());
+            HYP_LOG(EnvProbe, LogLevel::WARNING, "Probe index ({}) out of range of max bound reflection probes", probe_index.GetProbeIndex());
 
             set_texture = false;
         }
     } else if (IsShadowProbe()) {
         if (probe_index.GetProbeIndex() >= max_bound_point_shadow_maps) {
-            DebugLog(LogType::Warn, "Probe index (%u) out of range of max bound shadow map probes\n", probe_index.GetProbeIndex());
+            HYP_LOG(EnvProbe, LogLevel::WARNING, "Probe index ({}) out of range of max bound shadow map probes", probe_index.GetProbeIndex());
 
             set_texture = false;
         }

@@ -5,6 +5,7 @@
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
+#include <core/logging/LoggerFwd.hpp>
 #include <core/Defines.hpp>
 
 #include <math/MathUtil.hpp>
@@ -20,6 +21,9 @@
 #include <atomic>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Tasks);
+
 namespace threading {    
 
 enum TaskThreadPoolName : uint

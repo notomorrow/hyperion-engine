@@ -4,12 +4,16 @@
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <util/ByteUtil.hpp>
 
 #include <Engine.hpp>
 #include <Types.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Material);
 
 using renderer::CommandBuffer;
 using renderer::Result;
@@ -210,8 +214,6 @@ Material::Material(
 
 Material::~Material()
 {
-    DebugLog(LogType::Debug, "Destroy material with ID : %u\n", m_id.Value());
-
     SetReady(false);
 
     for (SizeType i = 0; i < m_textures.Size(); i++) {
@@ -239,14 +241,6 @@ void Material::Init()
 
     for (SizeType i = 0; i < m_textures.Size(); i++) {
         if (Handle<Texture> &texture = m_textures.ValueAt(i)) {
-            DebugLog(
-                LogType::Debug,
-                "Material with ID %u: Init texture with ID %u, ImageViewRef index %u\n",
-                GetID().Value(),
-                texture->GetID().Value(),
-                texture->GetImageView().index
-            );
-
             InitObject(texture);
         }
     }
@@ -362,7 +356,7 @@ void Material::EnqueueTextureUpdate(TextureKey key)
 void Material::SetShader(const ShaderRef &shader)
 {
     if (IsStatic()) {
-        DebugLog(LogType::Warn, "Setting shader on static material with ID #%u (name: %s)\n", GetID().Value(), GetName().LookupString());
+        HYP_LOG(Material, LogLevel::WARNING, "Setting shader on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     if (m_shader == shader) {
@@ -387,7 +381,7 @@ void Material::SetShader(const ShaderRef &shader)
 void Material::SetParameter(MaterialKey key, const Parameter &value)
 {
     if (IsStatic()) {
-        DebugLog(LogType::Warn, "Setting parameter on static material with ID #%u (name: %s)\n", GetID().Value(), GetName().LookupString());
+        HYP_LOG(Material, LogLevel::WARNING, "Setting parameter on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     if (m_parameters[key] == value) {
@@ -404,7 +398,7 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
 void Material::ResetParameters()
 {
     if (IsStatic()) {
-        DebugLog(LogType::Warn, "Resetting parameters on static material with ID #%u (name: %s)\n", GetID().Value(), GetName().LookupString());
+        HYP_LOG(Material, LogLevel::WARNING, "Resetting parameters on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     m_parameters = DefaultParameters();
@@ -417,7 +411,7 @@ void Material::ResetParameters()
 void Material::SetTexture(TextureKey key, Handle<Texture> &&texture)
 {
     if (IsStatic()) {
-        DebugLog(LogType::Warn, "Setting texture on static material with ID #%u (name: %s)\n", GetID().Value(), GetName().LookupString());
+        HYP_LOG(Material, LogLevel::WARNING, "Setting texture on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     if (m_textures[key] == texture) {
@@ -539,11 +533,7 @@ void MaterialCache::Add(const Handle<Material> &material)
     hc.Add(material->GetParameters().GetHashCode());
     hc.Add(material->GetTextures().GetHashCode());
 
-    DebugLog(
-        LogType::Debug,
-        "Adding material with hash %u to material cache\n",
-        hc.Value()
-    );
+    HYP_LOG(Material, LogLevel::WARNING, "Adding material with hash {} to material cache", hc.Value());
 
     m_map.Set(hc.Value(), material);
 }
@@ -599,11 +589,7 @@ Handle<Material> MaterialCache::GetOrCreate(
 
     if (it != m_map.End()) {
         if (Handle<Material> handle = it->second.Lock()) {
-            DebugLog(
-                LogType::Debug,
-                "Reusing material with hash %u from material cache\n",
-                hc.Value()
-            );
+            HYP_LOG(Material, LogLevel::WARNING, "Reusing material with hash {} from material cache", hc.Value());
 
             return handle;
         }
@@ -616,11 +602,7 @@ Handle<Material> MaterialCache::GetOrCreate(
         textures
     );
 
-    DebugLog(
-        LogType::Debug,
-        "Adding material with hash %u to material cache\n",
-        hc.Value()
-    );
+    HYP_LOG(Material, LogLevel::DEBUG, "Adding material with hash {} to material cache", hc.Value());
 
     InitObject(handle);
 
@@ -782,7 +764,7 @@ void MaterialDescriptorSetManager::AddMaterial(ID<Material> id, FixedArray<Handl
 
 void MaterialDescriptorSetManager::EnqueueRemoveMaterial(ID<Material> id)
 {
-    DebugLog(LogType::Debug, "EnqueueRemove material with ID %u from thread %s\n", id.Value(), Threads::CurrentThreadID().name.LookupString());
+    HYP_LOG(Material, LogLevel::DEBUG, "EnqueueRemove material with ID {} from thread {}", id.Value(), Threads::CurrentThreadID().name);
 
     Mutex::Guard guard(m_pending_mutex);
     
@@ -836,7 +818,7 @@ void MaterialDescriptorSetManager::RemoveMaterial(ID<Material> id)
     const auto material_descriptor_sets_it = m_material_descriptor_sets.Find(id);
 
     if (material_descriptor_sets_it != m_material_descriptor_sets.End()) {
-        DebugLog(LogType::Debug, "Releasing descriptor sets for material with ID %u from thread %s\n", id.Value(), *Threads::CurrentThreadID().name);
+        HYP_LOG(Material, LogLevel::DEBUG, "Releasing descriptor sets for material with ID {} from thread {}", id.Value(), Threads::CurrentThreadID().name);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             SafeRelease(std::move(material_descriptor_sets_it->second[frame_index]));
@@ -906,7 +888,7 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
         const auto material_descriptor_sets_it = m_material_descriptor_sets.Find(*it);
 
         if (material_descriptor_sets_it != m_material_descriptor_sets.End()) {
-            DebugLog(LogType::Debug, "Releasing descriptor sets for material with ID %u from thread %s\n", it->Value(), *Threads::CurrentThreadID().name);
+            HYP_LOG(Material, LogLevel::DEBUG, "Releasing descriptor sets for material with ID {} from thread {}", it->Value(), Threads::CurrentThreadID().name);
 
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 SafeRelease(std::move(material_descriptor_sets_it->second[frame_index]));

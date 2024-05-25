@@ -7,9 +7,11 @@
 
 #include <core/threading/Thread.hpp>
 #include <core/threading/Scheduler.hpp>
-#include <core/Containers.hpp>
+#include <core/logging/LoggerFwd.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(GameThread);
 
 class Engine;
 class Game;

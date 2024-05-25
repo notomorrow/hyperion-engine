@@ -5,6 +5,7 @@
 
 #include <core/containers/HashMap.hpp>
 #include <core/containers/String.hpp>
+#include <core/utilities/FormatFwd.hpp>
 #include <core/threading/Mutex.hpp>
 
 #include <core/NameInternal.hpp>
@@ -80,6 +81,20 @@ static inline Name CreateNameFromStaticString_NoLock(HashedName &&hashed_name)
 
     return Name(name_registration.id);
 }
+
+// Formatter for Name
+namespace utilities {
+
+template <int StringType>
+struct Formatter<StringType, Name>
+{
+    auto operator()(const Name &value) const
+    {
+        return *value;
+    }
+};
+
+} // namespace utilities
 
 
 /*! \brief Creates a Name from a dynamic string. */

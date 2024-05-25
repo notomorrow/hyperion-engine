@@ -4,6 +4,7 @@
 #include <scene/ecs/EntityManager.hpp>
 
 #include <core/threading/Threads.hpp>
+#include <core/logging/Logger.hpp>
 
 #include <dotnet/Class.hpp>
 #include <dotnet/DotNetSystem.hpp>
@@ -13,6 +14,8 @@
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Script);
 
 void ScriptSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -50,13 +53,13 @@ void ScriptSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entit
     }
 
     if (!script_component.assembly) {
-        DebugLog(LogType::Error, "ScriptSystem::OnEntityAdded: Failed to load assembly '%s'\n", script_component.script_info.assembly_name.Data());
+        HYP_LOG(Script, LogLevel::ERROR, "ScriptSystem::OnEntityAdded: Failed to load assembly '{}'", script_component.script_info.assembly_name);
 
         return;
     }
 
     if (!script_component.object) {
-        DebugLog(LogType::Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '%s' from assembly '%s'\n", script_component.script_info.class_name.Data(), script_component.script_info.assembly_name.Data());
+        HYP_LOG(Script, LogLevel::ERROR, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", script_component.script_info.class_name, script_component.script_info.assembly_name.Data());
 
         return;
     }
@@ -103,7 +106,7 @@ void ScriptSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit 
                     continue;
                 }
 
-                DebugLog(LogType::Debug, "ScriptSystem::Process: Calling Update on entity %u\n", entity_id.Value());
+                HYP_LOG(Script, LogLevel::DEBUG, "ScriptSystem::Process: Calling Update on entity {}", entity_id.Value());
 
                 script_component.object->InvokeMethod<void, float>(update_method_ptr, float(delta));
             }

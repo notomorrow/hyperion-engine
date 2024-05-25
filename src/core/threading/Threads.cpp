@@ -2,7 +2,12 @@
 
 #include <core/threading/Threads.hpp>
 
+#include <core/logging/Logger.hpp>
+
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Threads);
+
 namespace threading {
 
 const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
@@ -33,8 +38,6 @@ void Threads::SetCurrentThreadID(ThreadID id)
 #ifdef HYP_ENABLE_THREAD_ID
     current_thread_id = id;
 #endif
-    
-    DebugLog(LogType::Debug, "SetCurrentThreadID() %u\n", id.value);
 
 #ifdef HYP_WINDOWS
     HRESULT set_thread_result = SetThreadDescription(
@@ -43,11 +46,7 @@ void Threads::SetCurrentThreadID(ThreadID id)
     );
 
     if (FAILED(set_thread_result)) {
-        DebugLog(
-            LogType::Warn,
-            "Failed to set Win32 thread name for thread %s\n",
-            id.name.LookupString()
-        );
+        HYP_LOG(Threads, LogLevel::ERROR, "Failed to set Win32 thread name for thread {}", id.name);
     }
 #elif defined(HYP_MACOS)
     pthread_setname_np(id.name.LookupString());
@@ -72,10 +71,7 @@ void Threads::AssertOnThread(ThreadMask mask, const char *message)
     );
 
 #else
-    DebugLog(
-        LogType::Error,
-        "AssertOnThread() called but thread IDs are currently disabled!\n"
-    );
+    HYP_LOG(Threads, LogLevel::ERROR, "AssertOnThread() called but thread IDs are currently disabled");
 #endif
 #endif
 }
@@ -96,10 +92,7 @@ void Threads::AssertOnThread(const ThreadID &thread_id, const char *message)
         message ? message : "(no message)"
     );
 #else
-    DebugLog(
-        LogType::Error,
-        "AssertOnThread() called but thread IDs are currently disabled!\n"
-    );
+    HYP_LOG(Threads, LogLevel::ERROR, "AssertOnThread() called but thread IDs are currently disabled!");
 #endif
 #endif
 }
@@ -121,10 +114,7 @@ bool Threads::IsOnThread(ThreadMask mask)
     }
 
 #else
-    DebugLog(
-        LogType::Error,
-        "IsOnThread() called but thread IDs are currently disabled!\n"
-    );
+    HYP_LOG(Threads, LogLevel::ERROR, "IsOnThread() called but thread IDs are currently disabled!");
 #endif
 
     return false;
@@ -138,10 +128,7 @@ bool Threads::IsOnThread(const ThreadID &thread_id)
     }
 
 #else
-    DebugLog(
-        LogType::Error,
-        "IsOnThread() called but thread IDs are currently disabled!\n"
-    );
+    HYP_LOG(Threads, LogLevel::ERROR, "IsOnThread() called but thread IDs are currently disabled!");
 #endif
 
     return false;

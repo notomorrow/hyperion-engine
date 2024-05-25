@@ -1,6 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <asset/material_loaders/MTLMaterialLoader.hpp>
+
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 #include <util/fs/FsUtil.hpp>
@@ -126,7 +129,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             if (tokens.Size() >= 2) {
                 name = tokens[1];
             } else {
-                DebugLog(LogType::Warn, "Obj Mtl loader: material arg name missing\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: material arg name missing");
             }
 
             AddMaterial(library, name);
@@ -150,7 +153,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
         if (tokens[0] == "ns") {
             if (tokens.Size() < 2) {
-                DebugLog(LogType::Warn, "Obj Mtl loader: spec value missing\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: spec value missing");
 
                 return;
             }
@@ -166,7 +169,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
         if (tokens[0] == "illum") {
             if (tokens.Size() < 2) {
-                DebugLog(LogType::Warn, "Obj Mtl loader: illum value missing\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: illum value missing");
 
                 return;
             }
@@ -195,7 +198,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             if (tokens.Size() >= 2) {
                 name = tokens.Back();
             } else {
-                DebugLog(LogType::Warn, "Obj Mtl loader: texture arg name missing\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: texture arg name missing");
             }
 
             LastMaterial(library).textures.PushBack(TextureDef {
@@ -206,7 +209,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             return;
         }
 
-        DebugLog(LogType::Warn, "Obj Mtl loader: Unable to parse mtl material line: %s\n", trimmed.Data());
+        HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: Unable to parse mtl material line: {}", trimmed);
     });
 
     Handle<MaterialGroup> material_group_handle = CreateObject<MaterialGroup>();
@@ -289,11 +292,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             Handle<Texture> texture = loaded_textures[it.name].ExtractAs<Texture>();
 
             if (!texture.IsValid()) {
-                DebugLog(
-                    LogType::Warn,
-                    "OBJ MTL loader: Texture %s could not be used because it could not be loaded!\n",
-                    it.name.Data()
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: Texture {} could not be used because it could not be loaded!", it.name);
 
                 continue;
             }

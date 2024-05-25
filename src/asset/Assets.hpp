@@ -12,10 +12,11 @@
 #include <core/Containers.hpp>
 #include <core/Defines.hpp>
 #include <core/threading/Threads.hpp>
-#include <Constants.hpp>
-#include <core/ObjectPool.hpp>
-
 #include <core/threading/TaskSystem.hpp>
+#include <core/logging/LoggerFwd.hpp>
+#include <core/ObjectPool.hpp>
+#include <Constants.hpp>
+
 
 #include <string>
 #include <unordered_map>
@@ -25,6 +26,8 @@
 #include <asset/BufferedByteReader.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Assets);
 
 class AssetCache;
 
@@ -156,8 +159,6 @@ public:
 
         if (asset_cache_enabled && (flags & ASSET_LOAD_FLAGS_CACHE_READ) && cache_pool->Has(path)) {
             out_result = { };
-
-            DebugLog(LogType::Info, "%s: Load from cache\n", path.Data());
 
             return cache_pool->Get(path);
         }

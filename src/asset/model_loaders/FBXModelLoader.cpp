@@ -15,7 +15,9 @@
 #include <rendering/Material.hpp>
 
 #include <util/fs/FsUtil.hpp>
+
 #include <core/memory/Memory.hpp>
+#include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
@@ -27,6 +29,8 @@
 #endif
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Assets);
 
 constexpr char header_string[] = "Kaydara FBX Binary  ";
 constexpr uint8 header_bytes[] = { 0x1A, 0x00 };
@@ -673,10 +677,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 }
 
             } else {
-                DebugLog(
-                    LogType::Warn,
-                    "Invalid matrix in FBX node -- invalid size\n"
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "Invalid matrix in FBX node -- invalid size");
             }
         }
 
@@ -724,11 +725,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             FBXCluster *cluster;
 
             if (!GetFBXObject(cluster_id, cluster)) {
-                DebugLog(
-                    LogType::Warn,
-                    "Cluster with id %lld not found in mapping!\n",
-                    cluster_id
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "Cluster with id {} not found in mapping!", cluster_id);
 
                 continue;
             }
@@ -737,11 +734,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 FBXNode *limb_node;
 
                 if (!GetFBXObject(cluster->limb_id, limb_node)) {
-                    DebugLog(
-                        LogType::Warn,
-                        "LimbNode with id %lld not found in mapping!\n",
-                        cluster->limb_id
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "LimbNode with id {} not found in mapping!", cluster->limb_id);
 
                     continue;
                 }
@@ -750,22 +743,15 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 Handle<Skeleton> skeleton_from_limb = GetSkeletonFromLimbNode(*limb_node);
 
                 if (skeleton && skeleton_from_limb && skeleton != skeleton_from_limb) {
-                    DebugLog(
-                        LogType::Warn,
-                        "LimbNode with id %lld has Skeleton with ID #%u, but multiple skeletons are attached to the mesh!\n",
+                    HYP_LOG(Assets, LogLevel::WARNING, "LimbNode with id {} has Skeleton with ID #{}, but multiple skeletons are attached to the mesh!",
                         cluster->limb_id,
-                        skeleton_from_limb->GetID()
-                    );
+                        skeleton_from_limb->GetID().Value());
                 }
 
                 skeleton = skeleton_from_limb;
 
                 if (!skeleton) {
-                    DebugLog(
-                        LogType::Warn,
-                        "LimbNode with id %lld has no Skeleton!\n",
-                        cluster->limb_id
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "LimbNode with id {} has no Skeleton!", cluster->limb_id);
 
                     continue;
                 }
@@ -774,12 +760,8 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 const uint bone_index = skeleton->FindBoneIndex(limb_node->name);
 
                 if (bone_index == uint(-1)) {
-                    DebugLog(
-                        LogType::Warn,
-                        "LimbNode with id %lld: Bone with name %s not found in Skeleton\n",
-                        cluster->limb_id,
-                        limb_node->name.Data()
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "LimbNode with id {}: Bone with name {} not found in Skeleton",
+                        cluster->limb_id, limb_node->name);
 
                     continue;
                 }
@@ -792,22 +774,14 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     }
 
                     if (SizeType(position_index) >= mesh.vertices.Size()) {
-                        DebugLog(
-                            LogType::Warn,
-                            "Position index (%d) out of range of vertex count (%llu)\n",
-                            position_index,
-                            mesh.vertices.Size()
-                        );
+                        HYP_LOG(Assets, LogLevel::WARNING, "Position index {} out of range of vertex count {}",
+                            position_index, mesh.vertices.Size());
 
                         break;
                     }
 
                     if (index >= cluster->bone_weights.Size()) {
-                        DebugLog(
-                            LogType::Warn,
-                            "Index (%llu) out of range of bone weights\n",
-                            index
-                        );
+                       HYP_LOG(Assets, LogLevel::WARNING, "Index {} out of range of bone weights", index);
 
                         break;
                     }
@@ -829,12 +803,12 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             FBXConnection connection { };
 
             if (!child->GetFBXPropertyValue<FBXObjectID>(1, connection.left)) {
-                DebugLog(LogType::Warn, "Invalid FBX Node connection, cannot get left ID value\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "Invalid FBX Node connection, cannot get left ID value");
                 continue;
             }
 
             if (!child->GetFBXPropertyValue<FBXObjectID>(2, connection.right)) {
-                DebugLog(LogType::Warn, "Invalid FBX Node connection, cannot get right ID value\n");
+                HYP_LOG(Assets, LogLevel::WARNING, "Invalid FBX Node connection, cannot get right ID value");
                 continue;
             }
 
@@ -885,11 +859,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
                     bind_pose_ids.Insert(object_id);
                 } else {
-                    DebugLog(
-                        LogType::Debug,
-                        "Unsure how to handle Pose type %s\n",
-                        pose_type.Data()
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "Unsure how to handle Pose type {}", pose_type.Data());
 
                     continue;
                 }
@@ -934,11 +904,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
                     mapping.data.Set(cluster);
                 } else {
-                    DebugLog(
-                        LogType::Debug,
-                        "Unsure how to handle Deformer type %s\n",
-                        deformer_type.Data()
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "Unsure how to handle Deformer type {}",  deformer_type.Data());
 
                     continue;
                 }
@@ -1166,9 +1132,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             right_name = "<not found>"; \
         } \
         \
-        DebugLog( \
-            LogType::Warn, \
-            "Invalid node connection: %s \"%s\" (%u) -> %s \"%s\" (%u)\n\t" msg "\n", \
+        HYP_LOG(Assets, LogLevel::WARNING, "Invalid node connection: {} \"{}\" ({}) -> {} \"{}\" ({})\n\t" msg, \
             left_type.Data(), \
             left_name.Data(), \
             connection.left, \
@@ -1221,7 +1185,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         } else if (auto *left_node = left_it->second.data.TryGet<FBXNode>()) {
             if (auto *right_node = right_it->second.data.TryGet<FBXNode>()) {
                 if (left_node->parent_id) {
-                    DebugLog(LogType::Warn, "Left node already has parent, cannot add to right node\n");
+                    HYP_LOG(Assets, LogLevel::WARNING, "Left node already has parent, cannot add to right node");
                 } else {
                     left_node->parent_id = right_it->first;
                     right_node->child_ids.Insert(left_it->first);
@@ -1237,7 +1201,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             }
         } else if (auto *left_cluster = left_it->second.data.TryGet<FBXCluster>()) {
             if (auto *right_skin = right_it->second.data.TryGet<FBXSkin>()) {
-                DebugLog(LogType::Debug, "Attach cluster to Skin\n");
+                HYP_LOG(Assets, LogLevel::DEBUG, "Attach cluster to Skin");
 
                 right_skin->cluster_ids.Insert(left_it->first);
 
@@ -1246,11 +1210,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         } else if (auto *left_skin = left_it->second.data.TryGet<FBXSkin>()) {
             if (auto *right_mesh = right_it->second.data.TryGet<FBXMesh>()) {
                 if (right_mesh->skin_id) {
-                    DebugLog(
-                        LogType::Warn,
-                        "FBX Mesh %lld already has a Skin attachment\n",
-                        left_it->first
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "FBX Mesh {} already has a Skin attachment", left_it->first);
                 }
 
                 right_mesh->skin_id = left_it->first;
@@ -1359,11 +1319,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     continue;
                 }
 
-                DebugLog(
-                    LogType::Error,
-                    "Unsure how to build child object %lld\n",
-                    id
-                );
+                HYP_LOG(Assets, LogLevel::ERROR, "Unsure how to build child object {}", id);
             }
         }
 
@@ -1377,11 +1333,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             FBXBindPose *bind_pose;
 
             if (!GetFBXObject(id, bind_pose)) {
-                DebugLog(
-                    LogType::Warn,
-                    "Not a valid bind pose node: %lld\n",
-                    id
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "Not a valid bind pose node: {}", id);
 
                 continue;
             }
@@ -1390,11 +1342,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 FBXNode *linked_node;
 
                 if (!GetFBXObject(pose_node.node_id, linked_node)) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Linked node %lld to pose node is not valid\n",
-                        pose_node.node_id
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "Linked node {} to pose node is not valid", pose_node.node_id);
 
                     continue;
                 }
@@ -1435,11 +1383,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             FBXBindPose *bind_pose;
 
             if (!GetFBXObject(id, bind_pose)) {
-                DebugLog(
-                    LogType::Warn,
-                    "Not a valid bind pose node: %lld\n",
-                    id
-                );
+                HYP_LOG(Assets, LogLevel::WARNING, "Not a valid bind pose node: {}", id);
 
                 continue;
             }
@@ -1448,11 +1392,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 FBXNode *linked_node;
 
                 if (!GetFBXObject(pose_node.node_id, linked_node)) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Linked node %lld to pose node is not valid\n",
-                        pose_node.node_id
-                    );
+                    HYP_LOG(Assets, LogLevel::WARNING, "Linked node {} to pose node is not valid", pose_node.node_id);
 
                     continue;
                 }

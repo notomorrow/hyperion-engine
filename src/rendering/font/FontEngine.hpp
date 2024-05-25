@@ -5,11 +5,15 @@
 
 #include <core/filesystem/FilePath.hpp>
 
+#include <core/logging/LoggerFwd.hpp>
+
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
 struct FT_GlyphSlotRec_;
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Font);
 
 class FontFace;
 

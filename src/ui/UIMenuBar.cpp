@@ -7,9 +7,13 @@
 #include <input/InputManager.hpp>
 #include <input/Mouse.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(UI);
 
 #pragma region UIMenuItem
 
@@ -140,12 +144,12 @@ void UIMenuItem::UpdateDropDownMenu()
 
         drop_down_menu_item->OnClick.Bind([this, name = item.name](const UIMouseEventData &data) -> UIEventHandlerResult
         {
-            DebugLog(LogType::Debug, "OnClick item with name %s\n", *name);
+            HYP_LOG(UI, LogLevel::DEBUG, "OnClick item with name {}", name);
 
             DropDownMenuItem *item_ptr = GetDropDownMenuItem(name);
 
             if (item_ptr == nullptr) {
-                DebugLog(LogType::Warn, "Could not find drop down menu item with name %s\n", *name);
+                HYP_LOG(UI, LogLevel::WARNING, "Could not find drop down menu item with name {}", name);
 
                 return UIEventHandlerResult::ERR;
             }
@@ -296,7 +300,7 @@ RC<UIMenuItem> UIMenuBar::AddMenuItem(Name name, const String &text)
         {
             const uint menu_item_index = GetMenuItemIndex(name);
 
-            DebugLog(LogType::Debug, "Menu item index for item with name %s: %u\n", *name, menu_item_index);
+            HYP_LOG(UI, LogLevel::DEBUG, "Menu item index for item with name {}: {}", name, menu_item_index);
 
             if (GetSelectedMenuItemIndex() == menu_item_index) {
                 SetSelectedMenuItemIndex(~0u);

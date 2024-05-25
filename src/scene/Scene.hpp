@@ -13,6 +13,7 @@
 #include <core/threading/Scheduler.hpp>
 #include <core/Containers.hpp>
 #include <core/Name.hpp>
+#include <core/logging/LoggerFwd.hpp>
 
 #include <rendering/rt/TLAS.hpp>
 #include <rendering/Texture.hpp>
@@ -20,7 +21,7 @@
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/DrawProxy.hpp>
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
 
 #include <math/Color.hpp>
 
@@ -28,6 +29,8 @@
 #include <Types.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Scene);
 
 class RenderEnvironment;
 class World;

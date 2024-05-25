@@ -4,6 +4,7 @@
 #include <rendering/font/FontFace.hpp>
 
 #include <core/system/Debug.hpp>
+#include <core/logging/Logger.hpp>
 
 #ifdef HYP_FREETYPE
 
@@ -13,6 +14,8 @@
 #endif
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Font);
 
 FontEngine &FontEngine::GetInstance()
 {
@@ -26,7 +29,7 @@ FontEngine::FontEngine()
 {
 #ifdef HYP_FREETYPE
     if (FT_Init_FreeType(&m_backend)) {
-        DebugLog(LogType::Error, "Error! Cannot start FreeType engine.\n");
+        HYP_LOG(Font, LogLevel::ERROR, "Error! Cannot start FreeType engine.");
         m_backend = nullptr;
         return;
     }
@@ -51,7 +54,7 @@ FontEngine::Backend FontEngine::GetFontBackend()
 hyperion::FontFace FontEngine::LoadFont(const FilePath &path)
 {
     if (m_backend == nullptr) {
-        DebugLog(LogType::Error, "Font backend system not initialized!\n");
+        HYP_LOG(Font, LogLevel::ERROR, "Font backend system not initialized!");
     }
 
     return { GetFontBackend(), path };

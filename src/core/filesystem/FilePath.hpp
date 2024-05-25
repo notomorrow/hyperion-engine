@@ -6,6 +6,7 @@
 #include <core/containers/String.hpp>
 #include <core/containers/ContainerBase.hpp>
 #include <core/system/Time.hpp>
+#include <core/utilities/FormatFwd.hpp>
 #include <core/Defines.hpp>
 
 #include <util/fs/FsUtil.hpp>
@@ -174,6 +175,19 @@ public:
 } // namespace filesystem
 
 using filesystem::FilePath;
+
+namespace utilities {
+
+template <int StringType>
+struct Formatter<StringType, FilePath>
+{
+    auto operator()(const FilePath &value) const
+    {
+        return containers::detail::String<StringType>(value.Data());
+    }
+};
+
+} // namespace utilities
 
 } // namespace hyperion
 

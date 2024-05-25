@@ -3,11 +3,15 @@
 #include <Config.hpp>
 #include <Engine.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <asset/ByteWriter.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Config);
 
 const FlatMap<OptionName, String> Configuration::option_name_strings = {
     { CONFIG_DEBUG_MODE, "DebugMode" },
@@ -80,11 +84,7 @@ bool Configuration::LoadFromDefinitionsFile()
             const INIFile::Value &option_value = option_it.second;
 
             if (option_name == CONFIG_NONE || option_name >= CONFIG_MAX) {
-                DebugLog(
-                    LogType::Warn,
-                    "%s: Unknown config option\n",
-                    option_it.first.Data()
-                );
+                HYP_LOG(Config, LogLevel::WARNING, "{}: Unknown config option", option_it.first);
 
                 continue;
             }

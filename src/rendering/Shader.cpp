@@ -3,10 +3,14 @@
 #include <rendering/Shader.hpp>
 #include <rendering/ShaderGlobals.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 #include <util/MiscUtil.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Shader);
 
 using renderer::Result;
 
@@ -176,12 +180,11 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
                 if (EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetProperties())) {
                     return shader;
                 } else {
-                    DebugLog(
-                        LogType::Error,
-                        "Loaded shader from cache (Name: %s, Properties: %s) does not contain the requested properties!\n\tRequested: %s\n",
-                        *definition.GetName().LookupString(),
-                        *shader->GetCompiledShader()->GetProperties().ToString(),
-                        *definition.GetProperties().ToString()
+                    HYP_LOG(Shader, LogLevel::ERROR,
+                        "Loaded shader from cache (Name: {}, Properties: {}) does not contain the requested properties!\n\tRequested: {}",
+                        definition.GetName(),
+                        shader->GetCompiledShader()->GetProperties().ToString(),
+                        definition.GetProperties().ToString()
                     );
 
                     // remove bad value from cache
@@ -206,12 +209,12 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
         definition.GetProperties().GetHashCode().Value()
     );
 
-    DebugLog(LogType::Debug, "Creating shader '%s'\n", *definition.GetName());
+    HYP_LOG(Shader, LogLevel::DEBUG, "Creating shader '{}'", definition.GetName());
 
     ShaderRef shader = MakeRenderObject<renderer::Shader>(RC<CompiledShader>(new CompiledShader(std::move(compiled_shader))));
     DeferCreate(shader, g_engine->GetGPUDevice());
 
-    DebugLog(LogType::Debug, "Shader '%s' created\n", *definition.GetName());
+    HYP_LOG(Shader, LogLevel::DEBUG, "Shader '{}' created", definition.GetName());
 
 #ifdef HYP_DEBUG_MODE
     AssertThrow(EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));

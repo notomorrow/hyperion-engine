@@ -28,6 +28,8 @@
 
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <math/Halton.hpp>
 
 #include <Engine.hpp>
@@ -36,6 +38,8 @@
 // #define HYP_DISABLE_VISIBILITY_CHECK
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Scene);
 
 using renderer::Result;
 
@@ -132,7 +136,7 @@ Scene::Scene(
 
 Scene::~Scene()
 {
-    DebugLog(LogType::Debug, "Destroy scene with ID %u (name: %s) from thread : %s\n", GetID().Value(), *GetName(), *ThreadID::Current().name);
+    HYP_LOG(Scene, LogLevel::DEBUG, "Destroy scene with ID {} (name: {}) from thread : {}", GetID().Value(), GetName(), ThreadID::Current().name);
     
     m_octree.SetEntityManager(nullptr);
     m_octree.Clear();
@@ -294,12 +298,8 @@ RenderListCollectionResult Scene::CollectEntities(
 
             if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                DebugLog(
-                    LogType::Debug,
-                    "Skipping entity #%u for camera #%u due to visibility state being invalid.\n",
-                    entity_id.Value(),
-                    camera_id.Value()
-                );
+                HYP_LOG(Scene, LogLevel::DEBUG, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
+                    entity_id.Value(), camera_id.Value());
 #endif
 
                 continue;
@@ -350,12 +350,8 @@ RenderListCollectionResult Scene::CollectDynamicEntities(
 
             if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                DebugLog(
-                    LogType::Debug,
-                    "Skipping entity #%u for camera #%u due to visibility state being invalid.\n",
-                    entity_id.Value(),
-                    camera_id.Value()
-                );
+                HYP_LOG(Scene, LogLevel::DEBUG, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
+                    entity_id.Value(), camera_id.Value());
 #endif
 
                 continue;
@@ -410,12 +406,8 @@ RenderListCollectionResult Scene::CollectStaticEntities(
 
             if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                DebugLog(
-                    LogType::Debug,
-                    "Skipping entity #%u for camera #%u due to visibility state being invalid.\n",
-                    entity_id.Value(),
-                    camera_id.Value()
-                );
+                HYP_LOG(Scene, LogLevel::DEBUG, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
+                    entity_id.Value(), camera_id.Value());
 #endif
 
                 continue;

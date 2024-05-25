@@ -4,12 +4,16 @@
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererResult.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 #include <unordered_map>
 #include <cstring>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Mesh);
 
 using renderer::Result;
 using renderer::GPUBufferType;
@@ -507,7 +511,7 @@ Array<PackedIndex> Mesh::BuildPackedIndices() const
 void Mesh::CalculateNormals(bool weighted)
 {
     if (!m_streamed_mesh_data) {
-        DebugLog(LogType::Warn, "Cannot calculate normals before mesh data is set!\n");
+        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before mesh data is set!");
 
         return;
     }
@@ -516,7 +520,7 @@ void Mesh::CalculateNormals(bool weighted)
     MeshData mesh_data = ref->GetMeshData();
 
     if (mesh_data.indices.Empty()) {
-        DebugLog(LogType::Warn, "Cannot calculate normals before indices are generated!\n");
+        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before indices are generated!");
 
         return;
     }
@@ -652,7 +656,7 @@ void Mesh::CalculateNormals(bool weighted)
 void Mesh::CalculateTangents()
 {
     if (!m_streamed_mesh_data) {
-        DebugLog(LogType::Warn, "Cannot calculate normals before mesh data is set!\n");
+        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before mesh data is set!");
 
         return;
     }
@@ -733,7 +737,7 @@ void Mesh::CalculateTangents()
 void Mesh::InvertNormals()
 {
     if (!m_streamed_mesh_data) {
-        DebugLog(LogType::Warn, "Cannot invert normals before mesh data is set!\n");
+        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot invert normals before mesh data is set!");
 
         return;
     }
@@ -751,7 +755,7 @@ void Mesh::InvertNormals()
 void Mesh::CalculateAABB()
 {
     if (!m_streamed_mesh_data) {
-        DebugLog(LogType::Warn, "Cannot calculate Mesh bounds before mesh data is set!\n");
+        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate Mesh bounds before mesh data is set!");
 
         return;
     }

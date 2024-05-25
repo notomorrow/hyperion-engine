@@ -2,7 +2,11 @@
 #include <asset/AssetLoader.hpp>
 #include <asset/Assets.hpp>
 
+#include <core/logging/Logger.hpp>
+
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Assets);
 
 FilePath AssetLoader::GetRebasedFilepath(const AssetManager &asset_manager, const FilePath &filepath) const
 {
@@ -35,11 +39,7 @@ LoadedAsset AssetLoader::Load(AssetManager &asset_manager, const String &path) c
 
         if (!path.Open(reader)) {
             // could not open... try next path
-            DebugLog(
-                LogType::Warn,
-                "Could not open file at path : %s, trying next path...\n",
-                path.Data()
-            );
+            HYP_LOG(Assets, LogLevel::WARNING, "Could not open file at path: {}, trying next path...", path);
 
             continue;
         }

@@ -6,7 +6,11 @@
 #include <asset/BufferedByteReader.hpp>
 #include <asset/ByteWriter.hpp>
 
+#include <core/logging/Logger.hpp>
+
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Streaming);
 
 RC<StreamedMeshData> StreamedMeshData::FromMeshData(MeshData mesh_data)
 {
@@ -98,7 +102,7 @@ void StreamedMeshData::LoadMeshData(const ByteBuffer &byte_buffer) const
     fbom::FBOMDeserializedObject object;
 
     if (auto err = deserializer.Deserialize(reader, object)) {
-        DebugLog(LogType::Warn, "StreamedMeshData: Error deserializing mesh data: %s\n", err.message);
+        HYP_LOG(Streaming, LogLevel::WARNING, "StreamedMeshData: Error deserializing mesh data: {}", err.message);
         return;
     }
 

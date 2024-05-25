@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_ENTITY_DRAW_COLLECTION_HPP
-#define HYPERION_ENTITY_DRAW_COLLECTION_HPP
+#ifndef HYPERION_RENDER_COLLECTION_HPP
+#define HYPERION_RENDER_COLLECTION_HPP
 
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/ArrayMap.hpp>

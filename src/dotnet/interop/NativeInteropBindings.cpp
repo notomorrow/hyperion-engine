@@ -5,10 +5,11 @@
 
 #include <core/threading/Mutex.hpp>
 #include <core/containers/HashMap.hpp>
-#include <core/memory/UniquePtr.hpp>
-#include <core/containers/Array.hpp>
-#include <core/utilities/Pair.hpp>
 #include <core/containers/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/memory/UniquePtr.hpp>
+#include <core/utilities/Pair.hpp>
+#include <core/logging/Logger.hpp>
 
 #include <dotnet/Class.hpp>
 #include <dotnet/Assembly.hpp>
@@ -17,6 +18,10 @@
 
 using namespace hyperion;
 using namespace hyperion::dotnet;
+
+namespace hyperion {
+HYP_DECLARE_LOG_CHANNEL(DotNET);
+} // namespace hyperion
 
 extern "C" {
 HYP_EXPORT bool NativeInterop_VerifyEngineVersion(uint32 assembly_engine_version, bool major, bool minor, bool patch)
@@ -32,16 +37,13 @@ HYP_EXPORT bool NativeInterop_VerifyEngineVersion(uint32 assembly_engine_version
     const uint32 engine_version_major_minor = engine_version & mask;
 
     if ((assembly_engine_version & mask) != engine_version_major_minor) {
-        DebugLog(
-            LogType::Error,
-            "Assembly engine version mismatch: Assembly version: %u.%u.%u, Engine version: %u.%u.%u\n",
+        HYP_LOG(DotNET, LogLevel::ERROR, "Assembly engine version mismatch: Assembly version: {}.{}.{}, Engine version: {}.{}.{}",
             (assembly_engine_version >> 16u) & 0xffu,
             (assembly_engine_version >> 8u) & 0xffu,
             assembly_engine_version & 0xffu,
             (engine_version >> 16u) & 0xffu,
             (engine_version >> 8u) & 0xffu,
-            engine_version & 0xffu
-        );
+            engine_version & 0xffu);
 
         return false;
     }
@@ -82,14 +84,8 @@ HYP_EXPORT void ManagedClass_AddMethod(ManagedClass managed_class, const char *m
         }
     }
 
-    DebugLog(LogType::Info, "Attributes for method %s:\n", method_name);
-
-    for (const String &attribute_name : method_object.attribute_names) {
-        DebugLog(LogType::Info, "\t%s\n", attribute_name.Data());
-    }
-
     if (managed_class.class_object->HasMethod(method_name)) {
-        DebugLog(LogType::Error, "Class '%s' already has a method named '%s'!\n", managed_class.class_object->GetName().Data(), method_name);
+        HYP_LOG(DotNET, LogLevel::ERROR, "Class '{}' already has a method named '{}'!", managed_class.class_object->GetName(), method_name);
 
         return;
     }

@@ -26,18 +26,6 @@ World::~World()
 
         scene->SetWorld(nullptr);
     }
-
-    for (auto &it : m_scenes) {
-        DebugLog(LogType::Debug, "~World, scene ID: %u\n", it->GetID().value);
-    }
-
-    for (auto &it : m_scenes_pending_addition) {
-        DebugLog(LogType::Debug, "~World, pending add scene ID: %u\n", it->GetID().value);
-    }
-
-    for (auto &it : m_scenes_pending_removal) {
-        DebugLog(LogType::Debug, "~World, pending removal scene ID: %u\n", it->GetID().value);
-    }
     
     m_scenes.Clear();
     m_scenes_pending_addition.Clear();

@@ -7,9 +7,13 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/camera/Camera.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DEFINE_LOG_CHANNEL(Octree);
 
 const BoundingBox Octree::default_bounds = BoundingBox({ -250.0f }, { 250.0f });
 
@@ -163,12 +167,9 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
 {
     if (octant_id == OctantID::Invalid()) {
 #if HYP_OCTREE_DEBUG
-        DebugLog(
-            LogType::Warn,
-            "Invalid octant id %u:%u: Octant is invalid\n",
-            octant_id.GetDepth(),
-            octant_id.GetIndex()
-        );
+        HYP_LOG(Octree, LogLevel::WARNING,
+            "Invalid octant id {}:{}: Octant is invalid",
+            octant_id.GetDepth(), octant_id.GetIndex());
 #endif
 
         return nullptr;
@@ -180,14 +181,10 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
 
     if (octant_id.depth <= m_octant_id.depth) {
 #if HYP_OCTREE_DEBUG
-        DebugLog(
-            LogType::Warn,
-            "Octant id %u:%u is not a child of %u:%u: Octant is not deep enough\n",
-            octant_id.GetDepth(),
-            octant_id.GetIndex(),
-            m_octant_id.GetDepth(),
-            m_octant_id.GetIndex()
-        );
+        HYP_LOG(Octree, LogLevel::WARNING,
+            "Octant id {}:{} is not a child of {}:{}: Octant is not deep enough",
+            octant_id.GetDepth(), octant_id.GetIndex(),
+            m_octant_id.GetDepth(), m_octant_id.GetIndex());
 #endif
 
         return nullptr;
@@ -200,13 +197,10 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
 
         if (!current || !current->IsDivided()) {
 #if HYP_OCTREE_DEBUG
-            DebugLog(
-                LogType::Warn,
-                "Octant id %u:%u is not a child of %u:%u: Octant %u:%u is not divided",
-                octant_id.GetDepth(),
-                octant_id.GetIndex(),
-                m_octant_id.GetDepth(),
-                m_octant_id.GetIndex(),
+            HYP_DEBUG(Octree, LogLevel::WARNING,
+                "Octant id {}:{} is not a child of {}:{}: Octant {}:{} is not divided",
+                octant_id.GetDepth(), octant_id.GetIndex(),
+                m_octant_id.GetDepth(), m_octant_id.GetIndex(),
                 current ? current->m_octant_id.GetDepth() : ~0u,
                 current ? current->m_octant_id.GetIndex() : ~0u
             );
@@ -385,11 +379,9 @@ Octree::InsertResult Octree::Insert(ID<Entity> id, const BoundingBox &aabb, bool
 
                 if (!rebuild_result.first) {
 #ifdef HYP_OCTREE_DEBUG
-                    DebugLog(
-                        LogType::Warn,
-                        "Failed to rebuild octree when inserting entity #%lu\n",
-                        id.Value()
-                    );
+                    HYP_LOG(Octree, LogLevel::WARNING,
+                        "Failed to rebuild octree when inserting entity #{}",
+                        id.Value());
 #endif
 
                     return rebuild_result;
@@ -448,13 +440,9 @@ Octree::InsertResult Octree::InsertInternal(ID<Entity> id, const BoundingBox &aa
                     });
 
 #ifdef HYP_OCTREE_DEBUG
-                    DebugLog(
-                        LogType::Warn,
-                        "Entity #%lu octant_id was not set, so it was set to %u:%u\n",
-                        id.Value(),
-                        octant_id.GetDepth(),
-                        octant_id.GetIndex()
-                    );
+                    HYP_LOG(Octree, LogLevel::WARNING,
+                        "Entity #{} octant_id was not set, so it was set to {}:{}",
+                        id.Value(), octant_id.GetDepth(), octant_id.GetIndex());
 #endif
                 } else {
                     VisibilityStateComponent &visibility_state_component = mgr.GetComponent<VisibilityStateComponent>(id);
@@ -462,13 +450,9 @@ Octree::InsertResult Octree::InsertInternal(ID<Entity> id, const BoundingBox &aa
                     visibility_state_component.visibility_state = nullptr;
 
 #ifdef HYP_OCTREE_DEBUG
-                    DebugLog(
-                        LogType::Debug,
-                        "Entity #%lu octant_id was set to %u:%u\n",
-                        id.Value(),
-                        octant_id.GetDepth(),
-                        octant_id.GetIndex()
-                    );
+                    HYP_LOG(Octree, LogLevel::DEBUG,
+                        "Entity #{} octant_id was set to {}:{}",
+                        id.Value(), octant_id.GetDepth(), octant_id.GetIndex());
 #endif
                 }
             }
@@ -585,11 +569,9 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
             // which we have a Contains() check for child nodes walking upwards
 
 #if HYP_OCTREE_DEBUG
-            DebugLog(
-                LogType::Debug,
-                "In root, but does not contain node aabb, so rebuilding octree. %lu\n",
-                id.Value()
-            );
+            HYP_LOG(Octree, LogLevel::DEBUG,
+                "In root, but does not contain node aabb, so rebuilding octree. {}",
+                id.Value());
 #endif
 
             if (allow_rebuild) {
@@ -608,11 +590,9 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
 
         // not root
 #if HYP_OCTREE_DEBUG
-        DebugLog(
-            LogType::Debug,
-            "Moving entity #%lu into the closest fitting (or root) parent\n",
-            id.Value()
-        );
+        HYP_LOG(Octree, LogLevel::DEBUG,
+            "Moving entity #{} into the closest fitting (or root) parent",
+            id.Value());
 #endif
 
 
@@ -655,11 +635,9 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
         // this invalidating `this`
 
 #if HYP_OCTREE_DEBUG
-        DebugLog(
-            LogType::Debug,
-            "In child, no parents contain AABB so calling Move() on last valid octant (root). This will invalidate `this`.. %lu\n",
-            id.Value()
-        );
+        HYP_LOG(Octree, LogLevel::DEBUG,
+            "In child, no parents contain AABB so calling Move() on last valid octant (root). This will invalidate `this`.. {}",
+            id.Value());
 #endif
 
         AssertThrow(last_parent != nullptr);
@@ -726,13 +704,9 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
             });
 
 #ifdef HYP_OCTREE_DEBUG
-            DebugLog(
-                LogType::Debug,
-                "Entity #%lu octant_id was moved to %u:%u\n",
-                id.Value(),
-                m_octant_id.GetDepth(),
-                m_octant_id.GetIndex()
-            );
+            HYP_LOG(Octree, LogLevel::DEBUG,
+                "Entity #{} octant_id was moved to {}:{}",
+                id.Value(), m_octant_id.GetDepth(), m_octant_id.GetIndex());
 #endif
         }
     }
@@ -792,11 +766,9 @@ Octree::InsertResult Octree::UpdateInternal(ID<Entity> id, const BoundingBox &aa
     }
 
     if (force_invalidation) {
-        DebugLog(
-            LogType::Debug,
-            "Forcing invalidation of octant entity #%lu\n",
-            id.Value()
-        );
+        HYP_LOG(Octree, LogLevel::DEBUG,
+            "Forcing invalidation of octant entity #{}",
+            id.Value());
 
         // force invalidation of this entry so the octant's hash will be updated
         Invalidate();
@@ -829,7 +801,7 @@ Octree::InsertResult Octree::UpdateInternal(ID<Entity> id, const BoundingBox &aa
 Octree::InsertResult Octree::Rebuild()
 {
 #ifdef HYP_OCTREE_DEBUG
-    DebugLog(LogType::Debug, "Rebuild octant (Index: %u, Depth: %u)\n", m_octant_id.GetIndex(), m_octant_id.GetDepth());
+    HYP_LOG(Octree, LogLevel::DEBUG, "Rebuild octant (Index: {}, Depth: {})", m_octant_id.GetIndex(), m_octant_id.GetDepth());
 #endif
 
     Array<Node> new_nodes;
@@ -927,11 +899,9 @@ void Octree::PerformUpdates()
     RebuildNodesHash();
 
     if (!rebuild_result.first) {
-        DebugLog(
-            LogType::Warn,
-            "Failed to rebuild octree when performing updates: %s\n",
-            rebuild_result.first.message
-        );
+        HYP_LOG(Octree, LogLevel::WARNING,
+            "Failed to rebuild octree when performing updates: {}",
+            rebuild_result.first.message);
     } else {
         // set rebuild state to invalid if rebuild was successful
         m_state->rebuild_state = OctantID::Invalid();
@@ -1063,11 +1033,10 @@ void Octree::CalculateVisibility(const Handle<Camera> &camera)
     if (frustum.ContainsAABB(m_aabb)) {
         UpdateVisibilityState(camera, m_visibility_state->GetSnapshot(camera.GetID()).validity_marker);
     } else {
-        DebugLog(LogType::Debug,
-            "Camera frustum for camera #%lu does not contain octree aabb [%f, %f, %f] - [%f, %f, %f].\n",
+        HYP_LOG(Octree, LogLevel::DEBUG,
+            "Camera frustum for camera #{} does not contain octree aabb {} - {}.",
             camera->GetID().Value(),
-            m_aabb.GetMin().x, m_aabb.GetMin().y, m_aabb.GetMin().z,
-            m_aabb.GetMax().x, m_aabb.GetMax().y, m_aabb.GetMax().z);
+            m_aabb.GetMin(), m_aabb.GetMax());
     }
 }
 

@@ -11,7 +11,7 @@
 
 #include <rendering/Texture.hpp>
 #include <rendering/DrawProxy.hpp>
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
 #include <rendering/Buffers.hpp>
 
 #include <rendering/backend/RenderCommand.hpp>

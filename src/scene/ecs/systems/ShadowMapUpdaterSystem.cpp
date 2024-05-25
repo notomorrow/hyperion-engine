@@ -8,7 +8,7 @@
 #include <rendering/DirectionalLightShadowRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <rendering/FullScreenPass.hpp>
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
 #include <math/MathUtil.hpp>
 #include <core/threading/Threads.hpp>
 #include <Engine.hpp>

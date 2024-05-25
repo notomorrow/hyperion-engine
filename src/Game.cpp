@@ -8,6 +8,7 @@
 #include <core/threading/Threads.hpp>
 #include <core/system/SystemEvent.hpp>
 #include <core/system/Debug.hpp>
+#include <core/logging/Logger.hpp>
 
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
@@ -15,6 +16,8 @@
 #include <dotnet/core/RefCountedPtrBindings.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(GameThread);
 
 Game::Game()
     : m_is_init(false),
@@ -141,18 +144,12 @@ void Game::RequestStop()
 
     // Stop game thread and wait for it to finish
     if (m_game_thread != nullptr) {
-        DebugLog(
-            LogType::Debug,
-            "Stopping game thread\n"
-        );
+        HYP_LOG(GameThread, LogLevel::DEBUG, "Stopping game thread");
 
         m_game_thread->Stop();
 
         while (m_game_thread->IsRunning()) {
-            DebugLog(
-                LogType::Debug,
-                "Waiting for game thread to stop\n"
-            );
+            HYP_LOG(GameThread, LogLevel::DEBUG, "Waiting for game thread to stop");
 
             Threads::Sleep(1);
         }

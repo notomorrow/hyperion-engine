@@ -6,9 +6,12 @@
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/filesystem/FilePath.hpp>
+#include <core/logging/LoggerFwd.hpp>
 #include <core/Defines.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Streaming);
 
 class StreamedData;
 

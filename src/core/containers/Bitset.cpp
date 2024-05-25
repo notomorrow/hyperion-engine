@@ -276,23 +276,5 @@ Bitset::BitIndex Bitset::NextSetBitIndex(BitIndex offset) const
     return not_found;
 }
 
-std::ostream &operator<<(std::ostream &os, const Bitset &bitset)
-{
-    for (uint32 block_index = bitset.m_blocks.Size(); block_index != 0; --block_index) {
-        for (uint32 bit_index = Bitset::num_bits_per_block; bit_index != 0; --bit_index) {
-            const uint32 combined_bit_index = ((block_index - 1) * Bitset::num_bits_per_block) + (bit_index - 1);
-
-            os << (bitset.Get(combined_bit_index) ? '1' : '0');
-
-            if (((bit_index - 1) % CHAR_BIT) == 0) {
-                os << ' ';
-            }
-        }
-
-    }
-
-    return os;
-}
-
 } // namespace containers
 } // namespace hyperion

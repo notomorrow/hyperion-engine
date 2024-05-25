@@ -5,7 +5,7 @@
 #include <core/Base.hpp>
 #include <core/threading/AtomicVar.hpp>
 
-#include <rendering/EntityDrawCollection.hpp>
+#include <rendering/RenderCollection.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/Buffers.hpp>
