@@ -2,9 +2,13 @@
 
 #include <ui/UIPanel.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(UI);
 
 UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy, UIObjectType type)
     : UIObject(parent, std::move(node_proxy), type)
@@ -43,7 +47,7 @@ Handle<Material> UIPanel::GetMaterial() const
             //.stencil_function   = StencilFunction(StencilOp::KEEP, StencilOp::REPLACE, StencilOp::REPLACE, StencilCompareOp::ALWAYS, 0xFF, 0x1)// <-- @TEMP test
         },
         {
-            { Material::MATERIAL_KEY_ALBEDO, Vec4f { 0.075f, 0.09f, 0.135f, 1.0f } }
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(Color(0x0D0D0DFFu)) }
         },
         {
             { Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture> { } }

@@ -22,7 +22,7 @@ void UITab::Init()
 {
     UIPanel::Init();
 
-    RC<UIText> title_text = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(*m_name) + "_Title"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 14, UIObjectSize::PIXEL }));
+    RC<UIText> title_text = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(*m_name) + "_Title"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
     title_text->SetParentAlignment(UIObjectAlignment::CENTER);
     title_text->SetOriginAlignment(UIObjectAlignment::CENTER);
     title_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
@@ -47,22 +47,7 @@ void UITab::SetTitle(const String &title)
 
 Handle<Material> UITab::GetMaterial() const
 {
-    return g_material_system->GetOrCreate(
-        MaterialAttributes {
-            .shader_definition  = ShaderDefinition { HYP_NAME(UIObject), ShaderProperties(static_mesh_vertex_attributes, { "TYPE_TAB" }) },
-            .bucket             = Bucket::BUCKET_UI,
-            .blend_function     = BlendFunction(BlendModeFactor::SRC_ALPHA, BlendModeFactor::ONE_MINUS_SRC_ALPHA,
-                                                BlendModeFactor::ONE, BlendModeFactor::ONE_MINUS_SRC_ALPHA),
-            .cull_faces         = FaceCullMode::BACK,
-            .flags              = MaterialAttributeFlags::NONE
-        },
-        {
-            { Material::MATERIAL_KEY_ALBEDO, Vec4f { 0.05f, 0.06f, 0.09f, 1.0f } }
-        },
-        {
-            { Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture> { } }
-        }
-    );
+    return UIPanel::GetMaterial();
 }
 
 #pragma endregion UITab

@@ -3,7 +3,6 @@
 #ifndef HYPERION_NODE_PROXY_HPP
 #define HYPERION_NODE_PROXY_HPP
 
-#include <core/Containers.hpp>
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 

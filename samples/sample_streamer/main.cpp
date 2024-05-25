@@ -10,6 +10,7 @@
 
 #include <core/logging/Logger.hpp>
 #include <core/utilities/Optional.hpp>
+#include <core/utilities/UUID.hpp>
 
 #include <core/utilities/Format.hpp>
 

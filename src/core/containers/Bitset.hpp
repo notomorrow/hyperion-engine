@@ -344,12 +344,12 @@ using Bitset = containers::Bitset;
 
 namespace utilities {
 
-template <int StringType>
+template <class StringType>
 struct Formatter<StringType, Bitset>
 {
     auto operator()(const Bitset &bitset) const
     {
-        containers::detail::String<StringType> result;
+        StringType result;
 
         for (uint32 block_index = bitset.NumBits() / bitset.num_bits_per_block; block_index != 0; --block_index) {
             for (uint32 bit_index = Bitset::num_bits_per_block; bit_index != 0; --bit_index) {

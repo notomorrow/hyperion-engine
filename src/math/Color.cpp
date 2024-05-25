@@ -3,43 +3,43 @@
 #include <math/Color.hpp>
 #include <math/MathUtil.hpp>
 
-#include <util/ByteUtil.hpp>
-
 namespace hyperion {
 
 Color::Color()
-    : value(0)
+    : bytes { 0 }
 {
 }
 
 Color::Color(uint32 hex)
-    : value(hex)
 {
+    Vec4f unpacked = ByteUtil::UnpackVec4f(hex);
+    bytes[0] = static_cast<ubyte>(unpacked.x * 255.0f);
+    bytes[1] = static_cast<ubyte>(unpacked.y * 255.0f);
+    bytes[2] = static_cast<ubyte>(unpacked.z * 255.0f);
+    bytes[3] = static_cast<ubyte>(unpacked.w * 255.0f);
 }
 
 Color::Color(float r, float g, float b, float a)
-    : value(ByteUtil::PackVec4f(Vec4f(r, g, b, a)))
-{
-}
-
-Color::Color(float rgba)
-    : value(ByteUtil::PackVec4f(Vec4f(rgba, rgba, rgba, rgba)))
+    : Color(ByteUtil::PackVec4f(Vec4f(r, g, b, a)))
 {
 }
 
 Color::Color(const Color &other)
-    : value(other.value)
 {
+    Memory::MemCpy(bytes, other.bytes, size);
 }
 
 Color::Color(const Vec4f &vec)
-    : value(ByteUtil::PackVec4f(vec))
 {
+    bytes[0] = ubyte(vec.x * 255.0f);
+    bytes[1] = ubyte(vec.y * 255.0f);
+    bytes[2] = ubyte(vec.z * 255.0f);
+    bytes[3] = ubyte(vec.w * 255.0f);
 }
 
 Color &Color::operator=(const Color &other)
 {
-    value = other.value;    
+    Memory::MemCpy(bytes, other.bytes, size);
 
     return *this;
 }
@@ -126,12 +126,12 @@ Color &Color::operator/=(const Color &other)
 
 bool Color::operator==(const Color &other) const
 {
-    return value == other.value;
+    return Memory::MemCmp(bytes, other.bytes, size) == 0;
 }
 
 bool Color::operator!=(const Color &other) const
 {
-    return value != other.value;
+    return Memory::MemCmp(bytes, other.bytes, size) != 0;
 }
 
 Color &Color::Lerp(const Color &to, float amt)
@@ -142,12 +142,6 @@ Color &Color::Lerp(const Color &to, float amt)
     SetAlpha(MathUtil::Lerp(GetAlpha(), to.GetAlpha(), amt));
 
     return *this;
-}
-
-std::ostream &operator<<(std::ostream &out, const Color &color) // output
-{
-    out << "[" << color.GetRed() << ", " << color.GetGreen() << ", " << color.GetBlue() << ", " << color.GetAlpha() << "]";
-    return out;
 }
 
 } // namespace hyperion

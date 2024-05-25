@@ -85,12 +85,12 @@ static inline Name CreateNameFromStaticString_NoLock(HashedName &&hashed_name)
 // Formatter for Name
 namespace utilities {
 
-template <int StringType>
+template <class StringType>
 struct Formatter<StringType, Name>
 {
     auto operator()(const Name &value) const
     {
-        return *value;
+        return StringType(value.LookupString());
     }
 };
 

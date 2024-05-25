@@ -178,12 +178,16 @@ using filesystem::FilePath;
 
 namespace utilities {
 
-template <int StringType>
+template <class StringType>
 struct Formatter<StringType, FilePath>
 {
     auto operator()(const FilePath &value) const
     {
-        return containers::detail::String<StringType>(value.Data());
+        if constexpr (std::is_base_of_v<StringType, FilePath>) {
+            return static_cast<StringType>(value);
+        } else {
+            return StringType(value.Data());
+        }
     }
 };
 

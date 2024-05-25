@@ -296,13 +296,13 @@ void HyperionEditorImpl::CreateMainPanel()
     // }
 
     RC<UITab> game_tab = tab_view->AddTab(HYP_NAME(Game_Tab), "Game");
+    game_tab->GetContents()->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
 
     for (int i = 0; i < 50; i++) {
         auto game_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(CreateNameFromDynamicString(ANSIString("Hello_world_button_") + ANSIString::ToString(i)), Vec2i { 20, i * 25 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
         // game_tab_content_button->SetParentAlignment(UIObjectAlignment::CENTER);
         // game_tab_content_button->SetOriginAlignment(UIObjectAlignment::CENTER);
         game_tab_content_button->SetText(String("Hello ") + String::ToString(i));
-        game_tab->GetContents()->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
         game_tab->GetContents()->AddChildUIObject(game_tab_content_button);
     }
 
@@ -329,6 +329,7 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
     RC<UIPanel> scene_outline = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Outline), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
 
     RC<UIListView> list_view = GetUIStage()->CreateUIObject<UIListView>(HYP_NAME(Scene_Outline_ListView), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+    list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
 
     // auto test_item0 = list_view->GetStage()->CreateUIObject<UIText>(HYP_NAME(TestItem_0), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 25, UIObjectSize::PIXEL }));
     // test_item0->SetText("Test item 0");
@@ -343,6 +344,7 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
     {
         auto ui_text = list_view->GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString("SceneOutlineText_") + ANSIString::ToString(node.GetName())), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
         ui_text->SetText(node.GetName());
+        ui_text->SetTextColor(Vec4f::One());
         list_view->AddChildUIObject(ui_text);
     }).Detach();
 
@@ -350,7 +352,11 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
     {
         RC<UIObject> found_ui_object = list_view->FindChildUIObject([&node](const RC<UIObject> &child)
         {
-            return child->GetName() == CreateNameFromDynamicString(ANSIString("SceneOutlineText_") + ANSIString::ToString(node.GetName()));
+            if (const NodeProxy &child_node = child->GetNode()) {
+                return child_node->GetUUID() == node->GetUUID();
+            }
+
+            return false;
         });
 
         if (found_ui_object != nullptr) {
@@ -485,7 +491,7 @@ void HyperionEditor::Init()
     // add sun
     auto sun = CreateObject<Light>(DirectionalLight(
         Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
-        Color(1.0f),
+        Color(Vec4f(1.0f)),
         4.0f
     ));
 

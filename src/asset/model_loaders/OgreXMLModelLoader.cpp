@@ -293,7 +293,7 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
         }
         
         NodeProxy node(new Node);
-        node.SetEntity(entity);
+        node->SetEntity(entity);
 
         top->AddChild(std::move(node));
     }

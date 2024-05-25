@@ -3,10 +3,11 @@
 #ifndef HYPERION_NODE_HPP
 #define HYPERION_NODE_HPP
 
-#include <core/Containers.hpp>
+#include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/functional/Delegate.hpp>
+#include <core/utilities/UUID.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/NodeProxy.hpp>
@@ -83,10 +84,17 @@ public:
     Node &operator=(Node &&other) noexcept;
     ~Node();
 
+    /*! \brief Get the UUID of the Node. */
+    const UUID &GetUUID() const
+        { return m_uuid; }
+
     /*! \returns The string tag that was given to the Node on creation. */
-    const String &GetName() const { return m_name; }
+    const String &GetName() const
+        { return m_name; }
+        
     /*! \brief Set the string tag of this Node. Used for nested lookups. */
-    void SetName(const String &name) { m_name = name; }
+    void SetName(const String &name)
+        { m_name = name; }
 
     /*! \returns The type of the node. By default, it will just be NODE. */
     Type GetType() const
@@ -455,6 +463,8 @@ protected:
     bool                    m_transform_locked;
 
     UniquePtr<Delegates>    m_delegates;
+
+    UUID                    m_uuid;
 };
 
 } // namespace hyperion

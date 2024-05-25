@@ -31,16 +31,16 @@ struct Vec4;
 namespace utilities {
 
 // Int types
-template <int StringType, class T>
+template <class StringType, class T>
 struct Formatter< StringType, T, std::enable_if_t< std::is_integral_v< T > > >
 {
     auto operator()(T value) const
     {
-        return containers::detail::String< StringType >::template ToString(value);
+        return StringType::ToString(value);
     }
 };
 
-template <int StringType>
+template <class StringType>
 struct Formatter< StringType, float >
 {
     auto operator()(float value) const
@@ -56,12 +56,12 @@ struct Formatter< StringType, float >
             result_size = std::snprintf(reinterpret_cast<char *>(byte_buffer.Data()), byte_buffer.Size(), "%f", value);
         }
 
-        return containers::detail::String<StringType>(byte_buffer);
+        return StringType(byte_buffer);
     }
 };
 
 // Enum specialization
-template <int StringType, class T>
+template <class StringType, class T>
 struct Formatter< StringType, T, std::enable_if_t< std::is_enum_v< T > > >
 {
     auto operator()(T value) const
@@ -71,15 +71,15 @@ struct Formatter< StringType, T, std::enable_if_t< std::is_enum_v< T > > >
 };
 
 // StaticString< Size >
-template <int StringType, SizeType Size>
+template <class StringType, SizeType Size>
 struct Formatter< StringType, StaticString< Size > >
 {
     auto operator()(const StaticString< Size > &value) const
     {
-        return containers::detail::String< StringType >(value.Data());
+        return StringType(value.Data());
     }
 };
-template <int StringType, int OtherStringType>
+template <class StringType, int OtherStringType>
 struct Formatter< StringType, containers::detail::String < OtherStringType > >
 {
     auto operator()(const containers::detail::String< OtherStringType > &value) const
@@ -87,16 +87,16 @@ struct Formatter< StringType, containers::detail::String < OtherStringType > >
         return value.ToUTF8();
     }
 };
-template <int StringType>
+template <class StringType>
 struct Formatter<StringType, char *>
 {
     auto operator()(const char *value) const
     {
-        return containers::detail::String< StringType >(value);
+        return StringType(value);
     }
 };
 
-template <int StringType, class T>
+template <class StringType, class T>
 struct Formatter< StringType, math::detail::Vec2< T > >
 {
     HYP_FORCE_INLINE
@@ -140,11 +140,11 @@ struct Formatter< StringType, math::detail::Vec2< T > >
             result_size = std::snprintf(reinterpret_cast<char *>(byte_buffer.Data()), byte_buffer.Size(), GetFormatString(), value.x, value.y);
         }
 
-        return containers::detail::String<StringType>(byte_buffer);
+        return StringType(byte_buffer);
     }
 };
 
-template <int StringType, class T>
+template <class StringType, class T>
 struct Formatter< StringType, math::detail::Vec3< T > >
 {
     HYP_FORCE_INLINE
@@ -188,11 +188,11 @@ struct Formatter< StringType, math::detail::Vec3< T > >
             result_size = std::snprintf(reinterpret_cast<char *>(byte_buffer.Data()), byte_buffer.Size(), GetFormatString(), value.x, value.y, value.z);
         }
 
-        return containers::detail::String< StringType >(byte_buffer);
+        return StringType(byte_buffer);
     }
 };
 
-template <int StringType, class T>
+template <class StringType, class T>
 struct Formatter< StringType, math::detail::Vec4< T > >
 {
     HYP_FORCE_INLINE
@@ -236,7 +236,7 @@ struct Formatter< StringType, math::detail::Vec4< T > >
             result_size = std::snprintf(reinterpret_cast<char *>(byte_buffer.Data()), byte_buffer.Size(), GetFormatString(), value.x, value.y, value.z, value.w);
         }
 
-        return containers::detail::String< StringType >(byte_buffer);
+        return StringType(byte_buffer);
     }
 };
 
@@ -315,7 +315,7 @@ struct FormatString_BadFormat_IndexOutOfBounds : std::false_type
 #pragma region FormatString_FormatElement
 
 template <int StringType, class T>
-containers::detail::String<StringType> FormatString_FormatElement_Runtime(const T &element)
+containers::detail::String< StringType > FormatString_FormatElement_Runtime(const T &element)
 {
     using FormatterSpecializationType = std::conditional_t<
         std::is_pointer_v< std::remove_cvref_t< T > >,
@@ -323,11 +323,11 @@ containers::detail::String<StringType> FormatString_FormatElement_Runtime(const 
         std::remove_cvref_t< T >
     >;
 
-    static_assert(implementation_exists< Formatter< StringType, FormatterSpecializationType > >, "No Formatter specialization exists for type");
+    static_assert(implementation_exists< Formatter< containers::detail::String< StringType >, FormatterSpecializationType > >, "No Formatter specialization exists for type");
 
     // if-constexpr is to prevent a huge swath of errors preventing the user from seeing the assertion failure.
-    if constexpr (implementation_exists< Formatter< StringType, FormatterSpecializationType > >) {
-        return Formatter< StringType, FormatterSpecializationType >{}(element);
+    if constexpr (implementation_exists< Formatter< containers::detail::String< StringType >, FormatterSpecializationType > >) {
+        return Formatter< containers::detail::String< StringType >, FormatterSpecializationType >{}(element);
     } else {
         return containers::detail::String< StringType >::empty;
     }
@@ -419,7 +419,7 @@ constexpr auto FormatString_ProcessTuple_ProcessElements_CompileTime(const std::
 template <int StringType, class... Ts, SizeType... Indices>
 containers::detail::String<StringType> FormatString_ProcessTuple_ProcessElements_Runtime(const std::tuple< Ts... > &args, std::index_sequence< Indices... >)
 {
-    return ConcatRuntimeStrings<StringType>(FormatString_FormatElement_Runtime< StringType >(std::get< Indices >(args))...);
+    return ConcatRuntimeStrings< StringType >(FormatString_FormatElement_Runtime< StringType >(std::get< Indices >(args))...);
 }
 
 template <int StringType, class ... Ts>

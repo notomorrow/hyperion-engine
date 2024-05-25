@@ -19,6 +19,7 @@
 #include <rendering/debug/DebugDrawer.hpp>
 #include <rendering/Material.hpp>
 #include <rendering/FinalPass.hpp>
+#include <rendering/RenderGroup.hpp>
 #include <scene/World.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
@@ -268,14 +269,16 @@ public:
         { return m_is_shutting_down.Get(MemoryOrder::SEQUENTIAL); }
 
     Handle<RenderGroup> CreateRenderGroup(
-        const RenderableAttributeSet &renderable_attributes
+        const RenderableAttributeSet &renderable_attributes,
+        EnumFlags<RenderGroupFlags> flags = RenderGroupFlags::DEFAULT
     );
     
     /*! \brief Create a RenderGroup using defined set of DescriptorSets. The result will not be cached. */
     Handle<RenderGroup> CreateRenderGroup(
         const ShaderRef &shader,
         const RenderableAttributeSet &renderable_attributes,
-        const DescriptorTableRef &descriptor_table
+        const DescriptorTableRef &descriptor_table,
+        EnumFlags<RenderGroupFlags> flags = RenderGroupFlags::DEFAULT
     );
 
     void AddRenderGroup(Handle<RenderGroup> &render_group);

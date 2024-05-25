@@ -56,7 +56,7 @@ void UIListView::AddChildUIObject(UIObject *ui_object)
 
     UIObject::AddChildUIObject(ui_object);
 
-    UpdateLayout();
+    UpdateSize(false);
 }
 
 bool UIListView::RemoveChildUIObject(UIObject *ui_object)
@@ -70,7 +70,7 @@ bool UIListView::RemoveChildUIObject(UIObject *ui_object)
             UIObject::RemoveChildUIObject(ui_object);
             m_list_view_items.EraseAt(i);
 
-            UpdateLayout();
+            UpdateSize(false);
 
             return true;
         }

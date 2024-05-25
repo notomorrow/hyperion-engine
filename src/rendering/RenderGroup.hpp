@@ -80,8 +80,9 @@ enum class RenderGroupFlags : uint32
     NONE                = 0x0,
     OCCLUSION_CULLING   = 0x1,
     INDIRECT_RENDERING  = 0x2,
+    PARALLEL_RENDERING  = 0x4,
 
-    DEFAULT             = OCCLUSION_CULLING | INDIRECT_RENDERING
+    DEFAULT             = OCCLUSION_CULLING | INDIRECT_RENDERING | PARALLEL_RENDERING
 };
 
 HYP_MAKE_ENUM_FLAGS(RenderGroupFlags)
@@ -135,11 +136,11 @@ public:
     void CollectDrawCalls(const Array<RenderProxy> &render_proxies);
 
     /*! \brief Render objects using direct rendering, no occlusion culling is provided. */
-    void PerformRendering(Frame *frame, bool parallel = true);
+    void PerformRendering(Frame *frame);
 
     /*! \brief Render objects using indirect rendering. The objects must have had the culling shader ran on them,
      * using CollectDrawCalls(). */
-    void PerformRenderingIndirect(Frame *frame, bool parallel = true);
+    void PerformRenderingIndirect(Frame *frame);
 
     void PerformOcclusionCulling(Frame *frame, const CullData *cull_data);
 
@@ -163,11 +164,11 @@ private:
 
     RC<IndirectRenderer>                                m_indirect_renderer;
 
-    Array<FramebufferRef>                         m_fbos;
+    Array<FramebufferRef>                               m_fbos;
 
     // for each frame in flight - have an array of command buffers to use
     // for async command buffer recording.
-    AsyncCommandBuffers                                 m_command_buffers;
+    UniquePtr<AsyncCommandBuffers>                      m_command_buffers;
 
     // cache so we don't allocate every frame
     Array<Span<const DrawCall>>                         m_divided_draw_calls;

@@ -426,8 +426,8 @@ EnumFlags<UIEventHandlerResult> UIStage::OnInputEvent(
                         .is_down            = false
                     });
 
-                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on: {}, AABB: {}\t{}",
-                        ui_object->GetName(), ui_object->GetWorldAABB().min, ui_object->GetWorldAABB().max);
+                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on: {}, Size: {}, Inner size: {}",
+                        ui_object->GetName(), ui_object->GetActualSize(), ui_object->GetActualInnerSize());
 
                     if (mouse_hover_event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {
                         break;

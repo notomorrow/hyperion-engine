@@ -456,7 +456,10 @@ HYP_API void Engine::RenderNextFrame(Game *game)
     GetGPUInstance()->GetFrameHandler()->NextFrame();
 }
 
-Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &renderable_attributes)
+Handle<RenderGroup> Engine::CreateRenderGroup(
+    const RenderableAttributeSet &renderable_attributes,
+    EnumFlags<RenderGroupFlags> flags
+)
 {
     const ShaderDefinition &shader_definition = renderable_attributes.GetShaderDefinition();
     AssertThrowMsg(shader_definition, "Shader definition is unset");
@@ -472,7 +475,8 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
     // create a RenderGroup with the given params
     Handle<RenderGroup> render_group = CreateObject<RenderGroup>(
         shader,
-        renderable_attributes
+        renderable_attributes,
+        flags
     );
 
     HYP_LOG(Engine, LogLevel::DEBUG, "Created RenderGroup for RenderableAttributeSet with hash {} from thread {}",
@@ -489,7 +493,8 @@ Handle<RenderGroup> Engine::CreateRenderGroup(const RenderableAttributeSet &rend
 Handle<RenderGroup> Engine::CreateRenderGroup(
     const ShaderRef &shader,
     const RenderableAttributeSet &renderable_attributes,
-    const DescriptorTableRef &descriptor_table
+    const DescriptorTableRef &descriptor_table,
+    EnumFlags<RenderGroupFlags> flags
 )
 {
     if (!shader.IsValid()) {
@@ -511,7 +516,8 @@ Handle<RenderGroup> Engine::CreateRenderGroup(
     Handle<RenderGroup> render_group = CreateObject<RenderGroup>(
         shader,
         new_renderable_attributes,
-        descriptor_table
+        descriptor_table,
+        flags
     );
 
     return render_group;
