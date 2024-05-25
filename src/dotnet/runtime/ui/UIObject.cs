@@ -19,7 +19,9 @@ namespace Hyperion
         MenuBar = 10,
         MenuItem = 11,
         DockableContainer = 12,
-        DockableItem = 13
+        DockableItem = 13,
+        ListView = 14,
+        ListViewItem = 15
     }
 
     public enum UIEventHandlerResult : uint

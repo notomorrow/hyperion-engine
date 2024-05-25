@@ -60,7 +60,7 @@ public:
      * \param local_transform An optional parameter representing the local-space transform of this Node.
      */
     Node(
-        const String &name = String::empty,
+        const String &name = "<unnamed>",
         const Transform &local_transform = Transform()
     );
 

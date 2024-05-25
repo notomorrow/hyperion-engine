@@ -6,6 +6,7 @@
 #include <GameCounter.hpp>
 
 #include <core/containers/Queue.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/Handle.hpp>
 
 #include <math/Vector3.hpp>
@@ -15,6 +16,8 @@
 
 #include <rendering/DrawProxy.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
+
+#include <input/InputHandler.hpp>
 
 #include <atomic>
 #include <mutex>
@@ -82,6 +85,15 @@ public:
     CameraController(CameraType type);
     virtual ~CameraController() = default;
 
+    InputHandler *GetInputHandler() const
+        { return m_input_handler.Get(); }
+
+    void SetInputHandler(UniquePtr<InputHandler> &&input_handler)
+        { m_input_handler = std::move(input_handler); }
+
+    Camera *GetCamera() const
+        { return m_camera; }
+
     CameraType GetType() const
         { return m_type; }
 
@@ -109,6 +121,8 @@ protected:
     void SetMouseLocked(bool mouse_locked);
 
     Camera                  *m_camera;
+
+    UniquePtr<InputHandler> m_input_handler;
 
     CameraType              m_type;
 

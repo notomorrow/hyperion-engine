@@ -45,6 +45,10 @@ namespace Hyperion
                 return new UIDockableItem(rc);
             case UIObjectType.DockableContainer:
                 return new UIDockableContainer(rc);
+            case UIObjectType.ListView:
+                return new UIListView(rc);
+            case UIObjectType.ListViewItem:
+                return new UIListViewItem(rc);
             default:
                 throw new Exception("Unknown UIObjectType!");
             }

@@ -12,6 +12,7 @@
 #include <ui/UIGrid.hpp>
 #include <ui/UIImage.hpp>
 #include <ui/UIDockableContainer.hpp>
+#include <ui/UIListView.hpp>
 
 #include <util/xml/SAXParser.hpp>
 
@@ -49,7 +50,9 @@ static const FlatMap<String, std::add_pointer_t<RC<UIObject>(UIStage *, Name, Ve
     UI_OBJECT_CREATE_FUNCTION(MenuBar),
     UI_OBJECT_CREATE_FUNCTION(MenuItem),
     UI_OBJECT_CREATE_FUNCTION(DockableContainer),
-    UI_OBJECT_CREATE_FUNCTION(DockableItem)
+    UI_OBJECT_CREATE_FUNCTION(DockableItem),
+    UI_OBJECT_CREATE_FUNCTION(ListView),
+    UI_OBJECT_CREATE_FUNCTION(ListViewItem)
 };
 
 #undef UI_OBJECT_CREATE_FUNCTION

@@ -5,6 +5,8 @@
 
 namespace hyperion {
 
+class InputManager;
+
 enum class KeyCode : uint16
 {
     UNKNOWN = uint16(-1),
@@ -78,6 +80,12 @@ enum class KeyCode : uint16
     ARROW_LEFT = 80,
     ARROW_DOWN = 81,
     ARROW_UP = 82,
+};
+
+struct KeyboardEvent
+{
+    InputManager    *input_manager = nullptr;
+    KeyCode         key_code = KeyCode::UNKNOWN;
 };
 
 } // namespace hyperion

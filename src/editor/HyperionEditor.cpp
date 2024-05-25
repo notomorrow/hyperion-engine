@@ -29,6 +29,7 @@
 #include <ui/UIGrid.hpp>
 #include <ui/UIImage.hpp>
 #include <ui/UIDockableContainer.hpp>
+#include <ui/UIListView.hpp>
 
 #include <core/logging/Logger.hpp>
 
@@ -80,6 +81,7 @@ public:
 private:
     void CreateFontAtlas();
     void CreateMainPanel();
+    RC<UIObject> CreateSceneOutline();
     void CreateInitialState();
 
     Handle<Scene>       m_scene;
@@ -217,32 +219,9 @@ void HyperionEditorImpl::CreateMainPanel()
 
     RC<UIImage> ui_image = GetUIStage()->CreateUIObject<UIImage>(HYP_NAME(Sample_Image), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
 
-    ui_image->OnMouseDrag.Bind([this, ui_image = ui_image.Get()](const UIMouseEventData &event)
+    ui_image->OnMouseDrag.Bind([this, ui_image = ui_image.Get()](const MouseEvent &event)
     {
-        CameraController *camera_controller = m_camera->GetCameraController();
-        
-        const Vec2f delta = (event.position - event.previous_position) * 150.0f;
-
-        const Vec3f dir_cross_y = m_camera->GetDirection().Cross(m_camera->GetUpVector());
-
-        if (event.mouse_buttons & MouseButtonState::LEFT) {
-            const Vec2i delta_sign = Vec2i(MathUtil::Sign(delta));
-
-            if (event.mouse_buttons & MouseButtonState::RIGHT) {
-                m_camera->SetNextTranslation(m_camera->GetTranslation() + dir_cross_y * 0.1f * float(-delta_sign.y));
-            } else {
-                m_camera->Rotate(m_camera->GetUpVector(), MathUtil::DegToRad(delta.x));
-
-                m_camera->SetNextTranslation(m_camera->GetTranslation() + m_camera->GetDirection() * 0.1f * float(-delta_sign.y));
-            }
-        } else if (event.mouse_buttons & MouseButtonState::RIGHT) {
-            m_camera->Rotate(m_camera->GetUpVector(), MathUtil::DegToRad(delta.x));
-            m_camera->Rotate(dir_cross_y, MathUtil::DegToRad(delta.y));
-
-            if (m_camera->GetDirection().y > 0.98f || m_camera->GetDirection().y < -0.98f) {
-                m_camera->Rotate(dir_cross_y, MathUtil::DegToRad(-delta.y));
-            }
-        }
+        m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
 
         if (m_camera->GetCameraController()->IsMouseLocked()) {
             const Vec2f position = ui_image->GetAbsolutePosition();
@@ -256,68 +235,37 @@ void HyperionEditorImpl::CreateMainPanel()
         return UIEventHandlerResult::OK;
     }).Detach();
 
-    ui_image->OnMouseDown.Bind([this](const UIMouseEventData &event)
+    ui_image->OnMouseDown.Bind([this](const MouseEvent &event)
     {
-        CameraController *camera_controller = m_camera->GetCameraController();
-
-        if (EditorCameraController *editor_camera_controller = dynamic_cast<EditorCameraController *>(camera_controller)) {
-            editor_camera_controller->SetMode(EditorCameraControllerMode::MOUSE_LOCKED);
-        }
+        m_camera->GetCameraController()->GetInputHandler()->OnMouseDown(event);
 
         return UIEventHandlerResult::OK;
     }).Detach();
 
-    ui_image->OnMouseUp.Bind([this](const UIMouseEventData &event)
+    ui_image->OnMouseUp.Bind([this](const MouseEvent &event)
     {
-        CameraController *camera_controller = m_camera->GetCameraController();
-
-        if (EditorCameraController *editor_camera_controller = dynamic_cast<EditorCameraController *>(camera_controller)) {
-            editor_camera_controller->SetMode(EditorCameraControllerMode::INACTIVE);
-        }
+        m_camera->GetCameraController()->GetInputHandler()->OnMouseUp(event);
 
         return UIEventHandlerResult::OK;
     }).Detach();
 
-    /*ui_image->OnKeyDown.Bind([this](const UIKeyEventData &event)
+    ui_image->OnKeyDown.Bind([this](const KeyboardEvent &event)
     {
-        DebugLog(LogType::Debug, "Got keydown event, keycode = %u\n", event.key_code);
-        if (event.key_code == KeyCode::KEY_W || event.key_code == KeyCode::KEY_S || event.key_code == KeyCode::KEY_A || event.key_code == KeyCode::KEY_D) {
-            CameraController *camera_controller = m_camera->GetCameraController();
-
-            Vec3f translation = m_camera->GetTranslation();
-
-            const Vec3f direction = m_camera->GetDirection();
-            const Vec3f dir_cross_y = direction.Cross(m_camera->GetUpVector());
-
-            if (event.key_code == KeyCode::KEY_W) {
-                translation += direction * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_S) {
-                translation -= direction * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_A) {
-                translation += dir_cross_y * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_D) {
-                translation -= dir_cross_y * 0.01f;
-            }
-
-            camera_controller->SetNextTranslation(translation);
-
+        if (m_camera->GetCameraController()->GetInputHandler()->OnKeyDown(event)) {
             return UIEventHandlerResult::STOP_BUBBLING;
         }
 
         return UIEventHandlerResult::OK;
-    }).Detach();*/
+    }).Detach();
 
-    ui_image->OnGainFocus.Bind([this](const UIMouseEventData &event)
+    ui_image->OnGainFocus.Bind([this](const MouseEvent &event)
     {
         m_editor_camera_enabled = true;
 
         return UIEventHandlerResult::OK;
     });
 
-    ui_image->OnLoseFocus.Bind([this](const UIMouseEventData &event)
+    ui_image->OnLoseFocus.Bind([this](const MouseEvent &event)
     {
         m_editor_camera_enabled = false;
 
@@ -330,8 +278,7 @@ void HyperionEditorImpl::CreateMainPanel()
 
     dockable_container->AddChildUIObject(tab_view, UIDockableItemPosition::CENTER);
 
-    RC<UIPanel> scene_graph = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Graph_Panel), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
-    dockable_container->AddChildUIObject(scene_graph, UIDockableItemPosition::LEFT);
+    dockable_container->AddChildUIObject(CreateSceneOutline(), UIDockableItemPosition::LEFT);
 
     RC<UIPanel> properties_panel = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Properties_panel), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
     dockable_container->AddChildUIObject(properties_panel, UIDockableItemPosition::RIGHT);
@@ -375,6 +322,45 @@ void HyperionEditorImpl::CreateMainPanel()
     // AssertThrow(game_tab_content_button->GetScene()->GetEntityManager()->HasEntity(game_tab_content_button->GetEntity()));
 
     // ui_image->SetTexture(AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg"));
+}
+
+RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
+{
+    RC<UIPanel> scene_outline = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Outline), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
+
+    RC<UIListView> list_view = GetUIStage()->CreateUIObject<UIListView>(HYP_NAME(Scene_Outline_ListView), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+
+    // auto test_item0 = list_view->GetStage()->CreateUIObject<UIText>(HYP_NAME(TestItem_0), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 25, UIObjectSize::PIXEL }));
+    // test_item0->SetText("Test item 0");
+    // list_view->AddChildUIObject(test_item0);
+
+    // auto test_item1 = list_view->GetStage()->CreateUIObject<UIText>(HYP_NAME(TestItem_1), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 25, UIObjectSize::PIXEL }));
+    // test_item1->SetText("Test item 1");
+    // list_view->AddChildUIObject(test_item1);
+
+    // TODO make it more efficient to add/remove items instead of searching by name
+    GetScene()->GetRoot()->GetDelegates()->OnNestedNodeAdded.Bind([list_view](const NodeProxy &node, bool)
+    {
+        auto ui_text = list_view->GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString("SceneOutlineText_") + ANSIString::ToString(node.GetName())), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
+        ui_text->SetText(node.GetName());
+        list_view->AddChildUIObject(ui_text);
+    }).Detach();
+
+    GetScene()->GetRoot()->GetDelegates()->OnNestedNodeRemoved.Bind([list_view](const NodeProxy &node, bool)
+    {
+        RC<UIObject> found_ui_object = list_view->FindChildUIObject([&node](const RC<UIObject> &child)
+        {
+            return child->GetName() == CreateNameFromDynamicString(ANSIString("SceneOutlineText_") + ANSIString::ToString(node.GetName()));
+        });
+
+        if (found_ui_object != nullptr) {
+            list_view->RemoveChildUIObject(found_ui_object);
+        }
+    }).Detach();
+
+    scene_outline->AddChildUIObject(list_view);
+
+    return scene_outline;
 }
 
 void HyperionEditorImpl::CreateInitialState()

@@ -53,7 +53,9 @@ enum class UIObjectType : uint32
     MENU_BAR            = 10,
     MENU_ITEM           = 11,
     DOCKABLE_CONTAINER  = 12,
-    DOCKABLE_ITEM       = 13
+    DOCKABLE_ITEM       = 13,
+    LIST_VIEW           = 14,
+    LIST_VIEW_ITEM      = 15
 };
 
 HYP_MAKE_ENUM_FLAGS(UIObjectType)
@@ -420,6 +422,15 @@ public:
      *  \return The child UIObject with the specified Name, or nullptr if no child UIObject with the specified Name was found. */
     RC<UIObject> FindChildUIObject(Name name) const;
 
+    /*! \brief Find a child UIObject by predicate. Checks descendents using breadth-first search. If multiple children match the predicate, the first one found is returned.
+     *  If no child UIObject matches the predicate, nullptr is returned.
+     *  \param predicate The predicate to match against the child UIObjects.
+     *  \return The child UIObject that matches the predicate, or nullptr if no child UIObject matches the predicate. */
+    RC<UIObject> FindChildUIObject(const Proc<bool, const RC<UIObject> &> &predicate) const;
+
+    /*! \brief Check if the UI object has any child UIObjects.
+     *  \return True if the object has child UIObjects, false otherwise. */
+    [[nodiscard]]
     bool HasChildUIObjects() const;
 
     const NodeProxy &GetNode() const;
@@ -459,18 +470,18 @@ public:
     Vec2f TransformScreenCoordsToRelative(Vec2i coords) const;
 
     // Events
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnMouseDown;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnMouseUp;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnMouseDrag;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnMouseHover;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnMouseLeave;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnMouseMove;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnGainFocus;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnLoseFocus;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnScroll;
-    Delegate<UIEventHandlerResult, const UIMouseEventData &>    OnClick;
-    Delegate<UIEventHandlerResult, const UIKeyEventData &>      OnKeyDown;
-    Delegate<UIEventHandlerResult, const UIKeyEventData &>      OnKeyUp;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnMouseDown;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnMouseUp;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnMouseDrag;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnMouseHover;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnMouseLeave;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnMouseMove;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnGainFocus;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnLoseFocus;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnScroll;
+    Delegate<UIEventHandlerResult, const MouseEvent &>    OnClick;
+    Delegate<UIEventHandlerResult, const KeyboardEvent &>      OnKeyDown;
+    Delegate<UIEventHandlerResult, const KeyboardEvent &>      OnKeyUp;
 
 protected:
     virtual void Update_Internal(GameCounter::TickUnit delta);

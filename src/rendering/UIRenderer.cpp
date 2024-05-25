@@ -138,7 +138,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
 
             if (last_render_proxy_group.drawable_layer != ~0u && last_render_proxy_group.attributes_hash_code == attributes.GetHashCode()) {
                 // Set drawable layer on the attributes so it is grouped properly.
-                attributes.SetDrawableLayer(DrawableLayer(0, last_render_proxy_group.drawable_layer));
+                attributes.SetDrawableLayer(last_render_proxy_group.drawable_layer);
 
                 RenderProxyGroup &render_proxy_group = collection->GetProxyGroups()[pass_type][attributes];
                 AssertThrow(render_proxy_group.GetRenderGroup().IsValid());
@@ -150,7 +150,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
                     last_render_proxy_group.drawable_layer + 1
                 };
 
-                attributes.SetDrawableLayer(DrawableLayer(0, last_render_proxy_group.drawable_layer));
+                attributes.SetDrawableLayer(last_render_proxy_group.drawable_layer);
 
                 RenderProxyGroup &render_proxy_group = collection->GetProxyGroups()[pass_type][attributes];
 

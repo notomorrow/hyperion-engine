@@ -27,70 +27,6 @@ using renderer::BlendModeFactor;
 
 class Framebuffer;
 
-struct alignas(uint32) DrawableLayer
-{
-    uint16  object_index;
-    uint16  layer_index;
-
-    DrawableLayer()
-        : object_index(0),
-          layer_index(0)
-    {
-    }
-
-    DrawableLayer(uint16 object_index, uint16 layer_index)
-        : object_index(object_index),
-          layer_index(layer_index)
-    {
-    }
-
-    DrawableLayer(const DrawableLayer &other)                   = default;
-    DrawableLayer &operator=(const DrawableLayer &other)        = default;
-    DrawableLayer(DrawableLayer &&other) noexcept               = default;
-    DrawableLayer &operator=(DrawableLayer &&other) noexcept    = default;
-    ~DrawableLayer()                                            = default;
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool operator==(const DrawableLayer &other) const
-        { return object_index == other.object_index && layer_index == other.layer_index; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool operator!=(const DrawableLayer &other) const
-        { return !(*this == other); }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool operator<(const DrawableLayer &other) const
-    {
-        // if (object_index < other.object_index) {
-        //     return true;
-        // } else if (object_index == other.object_index) {
-        //     return layer_index < other.layer_index;
-        // }
-
-        // return false;
-
-        // @TEMP: Fix this
-
-        return layer_index < other.layer_index;
-    }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    HashCode GetHashCode() const
-    {
-        HashCode hc;
-        hc.Add(object_index);
-        hc.Add(layer_index);
-
-        return hc;
-    }
-};
-
-
-
 enum class MaterialAttributeFlags : uint32
 {
     NONE        = 0x0,
@@ -176,7 +112,7 @@ class RenderableAttributeSet
     MeshAttributes      m_mesh_attributes;
     MaterialAttributes  m_material_attributes;
     uint32              m_override_flags;
-    DrawableLayer       m_drawable_layer;
+    uint32              m_drawable_layer = 0;
 
     mutable HashCode    m_cached_hash_code;
     mutable bool        m_needs_hash_code_recalculation = true;
@@ -275,11 +211,11 @@ public:
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    const DrawableLayer &GetDrawableLayer() const
+    uint32 GetDrawableLayer() const
         { return m_drawable_layer; }
 
     HYP_FORCE_INLINE
-    void SetDrawableLayer(const DrawableLayer &drawable_layer)
+    void SetDrawableLayer(uint32 drawable_layer)
     {
         m_drawable_layer = drawable_layer;
         m_needs_hash_code_recalculation = true;

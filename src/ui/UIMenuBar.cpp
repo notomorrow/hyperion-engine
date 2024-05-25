@@ -142,7 +142,7 @@ void UIMenuItem::UpdateDropDownMenu()
         drop_down_menu_item->SetBorderRadius(0);
         drop_down_menu_item->SetText(item.text);
 
-        drop_down_menu_item->OnClick.Bind([this, name = item.name](const UIMouseEventData &data) -> UIEventHandlerResult
+        drop_down_menu_item->OnClick.Bind([this, name = item.name](const MouseEvent &data) -> UIEventHandlerResult
         {
             HYP_LOG(UI, LogLevel::DEBUG, "OnClick item with name {}", name);
 
@@ -199,7 +199,7 @@ void UIMenuBar::Init()
     m_container->SetPadding({ 1, 1 });
     // m_container->SetDepth(100);
 
-    m_container->OnClick.Bind([this](const UIMouseEventData &data) -> UIEventHandlerResult
+    m_container->OnClick.Bind([this](const MouseEvent &data) -> UIEventHandlerResult
     {
         // Hide container on any item clicked
         SetSelectedMenuItemIndex(~0u);
@@ -209,7 +209,7 @@ void UIMenuBar::Init()
         return UIEventHandlerResult::STOP_BUBBLING;
     }).Detach();
 
-    m_container->OnLoseFocus.Bind([this](const UIMouseEventData &data) -> UIEventHandlerResult
+    m_container->OnLoseFocus.Bind([this](const MouseEvent &data) -> UIEventHandlerResult
     {
         // First check that any child items aren't focused before hiding the container.
         if (!HasFocus(true)) {
@@ -283,7 +283,7 @@ RC<UIMenuItem> UIMenuBar::AddMenuItem(Name name, const String &text)
     menu_item->SetText(text);
 
     // Mouse hover: set selected menu item index if this menu bar has focus
-    menu_item->OnMouseHover.Bind([this, name](const UIMouseEventData &data) -> UIEventHandlerResult
+    menu_item->OnMouseHover.Bind([this, name](const MouseEvent &data) -> UIEventHandlerResult
     {
         if (HasFocus(true)) {
             const uint menu_item_index = GetMenuItemIndex(name);
@@ -294,7 +294,7 @@ RC<UIMenuItem> UIMenuBar::AddMenuItem(Name name, const String &text)
         return UIEventHandlerResult::OK;
     }).Detach();
 
-    menu_item->OnClick.Bind([this, name](const UIMouseEventData &data) -> UIEventHandlerResult
+    menu_item->OnClick.Bind([this, name](const MouseEvent &data) -> UIEventHandlerResult
     {
         if (data.mouse_buttons == MouseButtonState::LEFT)
         {

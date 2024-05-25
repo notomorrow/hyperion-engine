@@ -76,7 +76,8 @@ static Matrix4 BuildJitterMatrix(const Camera &camera, uint frame_counter)
 #pragma region CameraController
 
 CameraController::CameraController(CameraType type)
-    : m_camera(nullptr),
+    : m_input_handler(new NullInputHandler()),
+      m_camera(nullptr),
       m_type(type),
       m_command_queue_count { 0 }
 {

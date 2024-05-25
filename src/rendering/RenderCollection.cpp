@@ -128,7 +128,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
                 attributes.GetFramebuffer().index,
                 uint32(attributes.GetMaterialAttributes().cull_faces),
                 uint32(attributes.GetMaterialAttributes().flags),
-                attributes.GetDrawableLayer().layer_index);
+                attributes.GetDrawableLayer());
 
             // Create RenderGroup
             Handle<RenderGroup> render_group = g_engine->CreateRenderGroup(attributes);

@@ -158,7 +158,7 @@ RC<UITab> UITabView::AddTab(Name name, const String &title)
     tab->SetOriginAlignment(UIObjectAlignment::BOTTOM_LEFT);
     tab->SetTitle(title);
 
-    tab->OnClick.Bind([this, name](const UIMouseEventData &data) -> UIEventHandlerResult
+    tab->OnClick.Bind([this, name](const MouseEvent &data) -> UIEventHandlerResult
     {
         if (data.mouse_buttons == MouseButtonState::LEFT)
         {

@@ -146,7 +146,7 @@ void UIObject::Init()
         {
         }
 
-        UIEventHandlerResult operator()(const UIMouseEventData &)
+        UIEventHandlerResult operator()(const MouseEvent &)
         {
             AssertThrow(ui_object != nullptr);
 
@@ -512,14 +512,14 @@ void UIObject::Focus()
     // Some UI object types may need to know if any child object is focused when handling `OnLoseFocus`
     m_stage->SetFocusedObject(RefCountedPtrFromThis());
 
-    OnGainFocus(UIMouseEventData { });
+    OnGainFocus(MouseEvent { });
 }
 
 void UIObject::Blur(bool blur_children)
 {
     if (GetFocusState() & UIObjectFocusState::FOCUSED) {
         SetFocusState(GetFocusState() & ~UIObjectFocusState::FOCUSED);
-        OnLoseFocus(UIMouseEventData { });
+        OnLoseFocus(MouseEvent { });
     }
 
     if (blur_children) {
@@ -715,6 +715,24 @@ RC<UIObject> UIObject::FindChildUIObject(Name name) const
     ForEachChildUIObject([name, &found_object](const RC<UIObject> &child)
     {
         if (child->GetName() == name) {
+            found_object = child;
+
+            return UIObjectIterationResult::STOP;
+        }
+
+        return UIObjectIterationResult::CONTINUE;
+    });
+
+    return found_object;
+}
+
+RC<UIObject> UIObject::FindChildUIObject(const Proc<bool, const RC<UIObject> &> &predicate) const
+{
+    RC<UIObject> found_object;
+
+    ForEachChildUIObject([&found_object, &predicate](const RC<UIObject> &child)
+    {
+        if (predicate(child)) {
             found_object = child;
 
             return UIObjectIterationResult::STOP;

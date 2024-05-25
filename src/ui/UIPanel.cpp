@@ -12,7 +12,7 @@ UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy, UIObjectType type)
     SetBorderRadius(5);
     SetBorderFlags(UIObjectBorderFlags::ALL);
 
-    OnScroll.Bind([this](const UIMouseEventData &event_data) -> UIEventHandlerResult
+    OnScroll.Bind([this](const MouseEvent &event_data) -> UIEventHandlerResult
     {
         SetScrollOffset(GetScrollOffset() - event_data.wheel);
 
