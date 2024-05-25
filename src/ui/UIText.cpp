@@ -235,7 +235,7 @@ void UIText::UpdateMesh()
     if (FontAtlas *font_atlas = GetFontAtlasOrDefault()) {
         CharMeshBuilder char_mesh_builder(m_options);
 
-        mesh = char_mesh_builder.OptimizeCharMeshes(GetStage()->GetSurfaceSize(), char_mesh_builder.BuildCharMeshes(*font_atlas, m_text));
+        mesh = char_mesh_builder.OptimizeCharMeshes(GetStage()->GetActualSize(), char_mesh_builder.BuildCharMeshes(*font_atlas, m_text));
     } else {
         HYP_LOG(UI, LogLevel::WARNING, "No font atlas for UIText {}", GetName());
     }

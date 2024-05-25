@@ -81,17 +81,13 @@ public:
      * 
      *  \return The default font atlas. */
     [[nodiscard]]
-    HYP_FORCE_INLINE
-    const RC<FontAtlas> &GetDefaultFontAtlas() const
-        { return m_default_font_atlas; }
+    const RC<FontAtlas> &GetDefaultFontAtlas() const;
 
     /*! \brief Set the default font atlas to use for text rendering.
      *  UIText objects will use this font atlas if they don't have a font atlas set.
      * 
      *  \param font_atlas The font atlas to set. */
-    HYP_FORCE_INLINE
-    void SetDefaultFontAtlas(RC<FontAtlas> font_atlas)
-        { m_default_font_atlas = std::move(font_atlas); }
+    void SetDefaultFontAtlas(RC<FontAtlas> font_atlas);
 
     /*! \brief Get the UI object that is currently focused. If no object is focused, returns nullptr.
      *  \note Because the focused object is a weak reference, a lock is required to access the object.

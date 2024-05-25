@@ -36,6 +36,7 @@ UIStage::UIStage(ThreadID owner_thread_id)
       m_surface_size { 1000, 1000 }
 {
     SetName(HYP_NAME(Stage));
+    SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
 }
 
 UIStage::~UIStage()
@@ -54,6 +55,24 @@ Scene *UIStage::GetScene() const
     }
 
     return m_scene.Get();
+}
+
+const RC<FontAtlas> &UIStage::GetDefaultFontAtlas() const
+{
+    // Parent stage
+    if (m_stage != nullptr) {
+        return m_stage->GetDefaultFontAtlas();
+    }
+
+    return m_default_font_atlas;
+}
+
+void UIStage::SetDefaultFontAtlas(RC<FontAtlas> font_atlas)
+{
+    m_default_font_atlas = std::move(font_atlas);
+    
+    // Force child UIObjects to update their materials
+    UpdateMaterial(true);
 }
 
 void UIStage::Init()
@@ -116,9 +135,6 @@ void UIStage::Init()
     m_scene->GetRoot()->LockTransform();
 
     SetNodeProxy(m_scene->GetRoot());
-
-    SetSize(UIObjectSize({ m_scene->GetCamera()->GetWidth(), UIObjectSize::PIXEL }, { m_scene->GetCamera()->GetHeight(), UIObjectSize::PIXEL }));
-    m_actual_size = { m_scene->GetCamera()->GetWidth(), m_scene->GetCamera()->GetHeight() };
 
     UIObject::Init();
 }

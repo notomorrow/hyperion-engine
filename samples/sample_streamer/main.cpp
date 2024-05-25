@@ -9,6 +9,7 @@
 #include <core/containers/Bitset.hpp>
 
 #include <core/logging/Logger.hpp>
+#include <core/utilities/Optional.hpp>
 
 #include <core/utilities/Format.hpp>
 
@@ -18,6 +19,10 @@
 #include "asset/ui_loaders/UILoader.hpp"
 
 using namespace hyperion;
+
+namespace hyperion {
+HYP_DEFINE_LOG_CHANNEL(Core);
+}
 
 void HandleSignal(int signum)
 {
@@ -50,8 +55,6 @@ void HandleSignal(int signum)
 
     exit(signum);
 }
-
-HYP_DEFINE_LOG_CHANNEL(Core);
 
 int main(int argc, char **argv)
 {

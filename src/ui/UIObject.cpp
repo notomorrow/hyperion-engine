@@ -1044,12 +1044,6 @@ void UIObject::UpdateMeshData()
 
 void UIObject::UpdateMaterial(bool update_children)
 {
-    const Scene *scene = GetScene();
-
-    if (!scene) {
-        return;
-    }
-
     if (update_children) {
         ForEachChildUIObject([](const RC<UIObject> &child)
         {
@@ -1058,6 +1052,12 @@ void UIObject::UpdateMaterial(bool update_children)
 
             return UIObjectIterationResult::CONTINUE;
         });
+    }
+
+    const Scene *scene = GetScene();
+
+    if (!scene) {
+        return;
     }
 
     MeshComponent *mesh_component = scene->GetEntityManager()->TryGetComponent<MeshComponent>(GetEntity());

@@ -190,14 +190,29 @@ public:
         );
     }
 
-    int GetWidth() const { return m_width; }
-    void SetWidth(int width) { m_width = width; }
-    int GetHeight() const { return m_height; }
-    void SetHeight(int height) { m_height = height; }
-    float GetNear() const { return m_near; }
-    void SetNear(float _near) { m_near = _near; }
-    float GetFar() const { return m_far; }
-    void SetFar(float _far) { m_far = _far; }
+    int GetWidth() const
+        { return m_width; }
+
+    void SetWidth(int width)
+        { m_width = width; }
+
+    int GetHeight() const
+        { return m_height; }
+
+    void SetHeight(int height)
+        { m_height = height; }
+
+    float GetNear() const
+        { return m_near; }
+
+    void SetNear(float _near)
+        { m_near = _near; }
+
+    float GetFar() const
+        { return m_far; }
+
+    void SetFar(float _far)
+        { m_far = _far; }
 
     // perspective only
     float GetFOV() const { return m_fov; }

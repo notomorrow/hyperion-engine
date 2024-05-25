@@ -110,8 +110,6 @@ void HyperionEditorImpl::CreateFontAtlas()
 
 void HyperionEditorImpl::CreateMainPanel()
 {
-    // btn->SetPadding(Vec2i { 5, 5 });
-    
 #if 0
     if (RC<UIObject> loaded_ui = AssetManager::GetInstance()->Load<RC<UIObject>>("ui/Editor.Main.ui.xml")) {
         if (loaded_ui.Is<UIStage>()) {
@@ -128,6 +126,8 @@ void HyperionEditorImpl::CreateMainPanel()
         // DebugLog(LogType::Debug, "Loaded UI: %s\n", *loaded_ui->GetName());
 
         GetUIStage()->AddChildUIObject(loaded_ui);
+
+        loaded_ui.Cast<UIStage>()->SetDefaultFontAtlas(GetUIStage()->GetDefaultFontAtlas());
     }
 #else
 
@@ -477,9 +477,6 @@ HyperionEditor::~HyperionEditor()
 void HyperionEditor::Init()
 {
     Game::Init();
-
-    Name test_name = HYP_NAME(TestName1);
-    AssertThrow(Memory::StrCmp(test_name.LookupString(), "TestName1") == 0);
 
     GetScene()->GetCamera()->SetCameraController(RC<CameraController>(new EditorCameraController()));
 

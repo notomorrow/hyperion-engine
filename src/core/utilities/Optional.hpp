@@ -11,8 +11,14 @@
 
 namespace hyperion {
 namespace utilities {
+
+namespace detail {
+
+template <class T, typename IsReferenceType = void>
+class Optional;
+
 template <class T>
-class Optional
+class Optional<T, std::enable_if_t< !std::is_reference_v< std::remove_const_t< T > > > >
 {
 public:
     Optional()
@@ -282,6 +288,170 @@ private:
 
     bool m_has_value;
 };
+
+template <class T>
+class Optional<T, std::enable_if_t< std::is_reference_v< std::remove_const_t< T > > > >
+{
+public:
+    Optional()
+        : m_ptr(nullptr)
+    {
+    }
+
+    /*! \brief Constructs an Optional<T> from a pointer to T. If the given value is
+     *  nullptr, it will be an empty Optional<T>. Otherwise, the value will be set to
+     *  the value that is pointed to. */
+    Optional(typename std::remove_reference_t< T > *ptr)
+        : m_ptr(ptr)
+    {
+    }
+
+    Optional(typename std::remove_reference_t< T > &ref)
+        : m_ptr(&ref)
+    {
+    }
+
+    Optional &operator=(typename std::remove_reference_t< T > &ref)
+    {
+        m_ptr = &ref;
+
+        return *this;
+    }
+
+    Optional(const Optional &other)
+        : m_ptr(other.m_ptr)
+    {
+    }
+
+    Optional &operator=(const Optional &other)
+    {
+        if (&other == this) {
+            return *this;
+        }
+
+        m_ptr = other.m_ptr;
+
+        return *this;
+    }
+
+    Optional(Optional &&other) noexcept
+        : m_ptr(other.m_ptr)
+    {
+        other.m_ptr = nullptr;
+    }
+
+    Optional &operator=(Optional &&other) noexcept
+    {
+        if (&other == this) {
+            return *this;
+        }
+
+        m_ptr = other.m_ptr;
+        other.m_ptr = nullptr;
+
+        return *this;
+    }
+
+    ~Optional() = default;
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    explicit operator bool() const
+        { return m_ptr != nullptr; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    typename std::remove_reference_t< T > *TryGet()
+    {
+        return m_ptr;
+    }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const typename std::remove_reference_t< T > *TryGet() const
+    {
+        return m_ptr;
+    }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    typename std::remove_reference_t< T > &Get()
+    {
+        AssertThrow(m_ptr != nullptr);
+
+        return *m_ptr;
+    }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const typename std::remove_reference_t< T > &Get() const
+    {
+        AssertThrow(m_ptr != nullptr);
+
+        return *m_ptr;
+    }
+
+    //! \brief Remove the held value, setting the Optional<> to a default state.
+    HYP_FORCE_INLINE
+    void Unset()
+    {
+        m_ptr = nullptr;
+    }
+    
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    std::remove_reference_t< T > *operator->()
+        { return m_ptr; }
+    
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const std::remove_reference_t< T > *operator->() const
+        { return m_ptr; }
+    
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    std::remove_reference_t< T > &operator*()
+        { return Get(); }
+    
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const std::remove_reference_t< T > &operator*() const
+        { return Get(); }
+    
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool HasValue() const
+        { return m_ptr != nullptr; }
+    
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Any() const
+        { return m_ptr != nullptr; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool Empty() const
+        { return m_ptr == nullptr; }
+    
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    HashCode GetHashCode() const
+    {
+        if (m_ptr != nullptr) {
+            return HashCode::GetHashCode(Get());
+        }
+
+        return HashCode();
+    }
+
+private:
+    typename std::remove_reference_t< T >   *m_ptr;
+};
+
+} // namespace detail
+
+using detail::Optional;
+
 } // namespace utilities
 
 using utilities::Optional;
