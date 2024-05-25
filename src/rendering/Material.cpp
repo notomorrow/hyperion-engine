@@ -4,6 +4,7 @@
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <util/ByteUtil.hpp>
@@ -12,8 +13,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Material);
 
 using renderer::CommandBuffer;
 using renderer::Result;

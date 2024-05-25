@@ -3,14 +3,13 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/backend/AsyncCompute.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <scene/Scene.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(EnvGrid);
 
 using renderer::Image;
 using renderer::StorageImage;

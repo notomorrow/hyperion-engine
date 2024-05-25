@@ -9,6 +9,7 @@
 #include <core/Defines.hpp>
 #include <core/util/ForEach.hpp>
 #include <core/system/Time.hpp>
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <asset/ByteWriter.hpp>
@@ -30,7 +31,7 @@
 
 namespace hyperion {
 
-HYP_DEFINE_LOG_CHANNEL(ShaderCompiler);
+HYP_DEFINE_LOG_SUBCHANNEL(ShaderCompiler, Core);
 
 using renderer::g_static_descriptor_table_decl;
 

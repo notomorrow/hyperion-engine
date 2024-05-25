@@ -7,13 +7,12 @@
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/camera/Camera.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Octree);
 
 const BoundingBox Octree::default_bounds = BoundingBox({ -250.0f }, { 250.0f });
 

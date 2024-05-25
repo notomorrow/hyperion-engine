@@ -10,6 +10,9 @@
 
 #include <core/util/ForEach.hpp>
 
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 #include <Constants.hpp>
 
@@ -203,7 +206,7 @@ void RenderGroup::Init()
         SafeRelease(std::move(m_pipeline));
     }));
 
-    DebugLog(LogType::Info, "Init RenderGroup with ID: #%u\n", GetID().Value());
+    HYP_LOG(Rendering, LogLevel::INFO, "Init RenderGroup with ID: #{}\n", GetID().Value());
 
     if (m_flags & RenderGroupFlags::INDIRECT_RENDERING) {
         m_indirect_renderer.Reset(new IndirectRenderer());
@@ -541,7 +544,7 @@ RenderAll_Parallel(
         return;
     }
 
-    HYP_LOG()
+    HYP_LOG(Rendering, LogLevel::DEBUG, "Rendering {} draw calls in {} batches", draw_state.draw_calls.Size(), num_batches);
 
     ParallelForEach(divided_draw_calls, num_batches, TaskThreadPoolName::THREAD_POOL_RENDER,
         [&](Span<const DrawCall> draw_calls, uint index, uint)

@@ -5,13 +5,13 @@
 
 #include <core/threading/TaskSystem.hpp>
 #include <core/containers/StaticString.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <asset/BufferedByteReader.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Streaming);
 
 #pragma region StreamedDataRefBase
 

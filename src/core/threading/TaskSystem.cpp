@@ -2,11 +2,10 @@
 
 #include <core/threading/TaskSystem.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Tasks);
 
 namespace threading {
 

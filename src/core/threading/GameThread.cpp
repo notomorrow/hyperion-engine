@@ -1,7 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <core/threading/GameThread.hpp>
+
 #include <core/logging/Logger.hpp>
+
 #include <core/Defines.hpp>
 
 #include <math/MathUtil.hpp>

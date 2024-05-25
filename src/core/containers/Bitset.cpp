@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <core/containers/Bitset.hpp>
+#include <core/utilities/Span.hpp>
 
 #include <util/ByteUtil.hpp>
 
@@ -15,31 +16,39 @@ namespace hyperion {
 
 namespace containers {
 
-static Array<Bitset::BlockType, 64> CreateBlocks(uint64 value = 0)
+static Array<Bitset::BlockType, 64> CreateBlocks_Internal(uint64 value)
 {
     return { Bitset::BlockType(value & 0xFFFFFFFF), Bitset::BlockType((value & (0xFFFFFFFFull << 32ull)) >> 32ull) };
 }
 
+template <uint64 InitialValue>
+static Span<const Bitset::BlockType> CreateBlocks_Static_Internal()
+{
+    static const Bitset::BlockType blocks[2] = { Bitset::BlockType(InitialValue & 0xFFFFFFFF), Bitset::BlockType((InitialValue & (0xFFFFFFFFull << 32ull)) >> 32ull) };
+
+    return Span<const Bitset::BlockType>(blocks);
+}
+
 Bitset::Bitset()
-    : m_blocks(CreateBlocks())
+    : m_blocks(CreateBlocks_Static_Internal< 0 >())
 {
 }
 
 Bitset::Bitset(uint64 value)
-    : m_blocks(CreateBlocks(value))
+    : m_blocks(CreateBlocks_Internal(value))
 {
 }
 
 Bitset::Bitset(Bitset &&other) noexcept
     : m_blocks(std::move(other.m_blocks))
 {
-    other.m_blocks = CreateBlocks();
+    other.m_blocks = CreateBlocks_Static_Internal< 0 >();
 }
 
 Bitset &Bitset::operator=(Bitset &&other) noexcept
 {
     m_blocks = std::move(other.m_blocks);
-    other.m_blocks = CreateBlocks();
+    other.m_blocks = CreateBlocks_Static_Internal< 0 >();
 
     return *this;
 }
@@ -178,7 +187,7 @@ void Bitset::Set(BitIndex index, bool value)
 
 void Bitset::Clear()
 {
-    m_blocks = CreateBlocks();
+    m_blocks = CreateBlocks_Static_Internal< 0 >();
 }
 
 uint64 Bitset::Count() const

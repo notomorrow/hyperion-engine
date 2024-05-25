@@ -4,11 +4,10 @@
 #include <math/Triangle.hpp>
 #include <math/MathUtil.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 namespace hyperion {
-
-HYP_DECLARE_LOG_CHANNEL(Math);
 
 bool Ray::TestAABB(const BoundingBox &aabb) const
 {

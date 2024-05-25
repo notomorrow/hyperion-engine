@@ -3,13 +3,12 @@
 #include <rendering/EnvProbe.hpp>
 #include <rendering/ShaderGlobals.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(EnvProbe);
 
 class EnvProbe;
 

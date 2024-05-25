@@ -4,6 +4,7 @@
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RendererResult.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
@@ -12,8 +13,6 @@
 #include <cstring>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Mesh);
 
 using renderer::Result;
 using renderer::GPUBufferType;

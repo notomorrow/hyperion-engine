@@ -4,6 +4,8 @@
 #include <rendering/font/FontFace.hpp>
 
 #include <core/system/Debug.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #ifdef HYP_FREETYPE
@@ -14,8 +16,6 @@
 #endif
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Font);
 
 FontEngine &FontEngine::GetInstance()
 {

@@ -28,6 +28,7 @@
 
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <math/Halton.hpp>
@@ -38,8 +39,6 @@
 // #define HYP_DISABLE_VISIBILITY_CHECK
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Scene);
 
 using renderer::Result;
 

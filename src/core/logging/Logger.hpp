@@ -53,29 +53,42 @@ public:
     friend class Logger;
 
     LogChannel(Name name);
+    LogChannel(Name name, LogChannel *parent_channel);
     LogChannel(const LogChannel &other)                 = delete;
     LogChannel &operator=(const LogChannel &other)      = delete;
     LogChannel(LogChannel &&other) noexcept             = delete;
     LogChannel &operator=(LogChannel &&other) noexcept  = delete;
     ~LogChannel();
 
+    /*! \brief Get the ID of this channel. */
     [[nodiscard]]
     HYP_FORCE_INLINE
     uint32 GetID() const
         { return m_id; }
 
+    /*! \brief Get the name of this channel. */
     [[nodiscard]]
     HYP_FORCE_INLINE
     Name GetName() const
         { return m_name; }
 
+    /*! \brief Get the flags for this channel. */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     EnumFlags<LogChannelFlags> GetFlags() const
         { return m_flags; }
+
+    /*! \brief Get a pointer to the parent channel, if one exists. */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    LogChannel *GetParentChannel() const
+        { return m_parent_channel; }
 
 private:
     uint32                      m_id;
     Name                        m_name;
     EnumFlags<LogChannelFlags>  m_flags;
+    LogChannel                  *m_parent_channel;
 };
 
 class HYP_API Logger
@@ -163,6 +176,9 @@ using logging::LogLevel;
 // Must be used outside of function (in global scope)
 #define HYP_DEFINE_LOG_CHANNEL(name) \
     hyperion::logging::LogChannel Log_##name(HYP_NAME_UNSAFE(name))
+
+#define HYP_DEFINE_LOG_SUBCHANNEL(name, parent_name) \
+    hyperion::logging::LogChannel Log_##name(HYP_NAME_UNSAFE(name), &Log_##parent_name)
 
 #define HYP_LOG(channel, level, fmt, ...) \
     hyperion::logging::Logger::GetInstance().Log< level, hyperion::StaticString(HYP_DEBUG_FUNC_SHORT), hyperion::StaticString(fmt) >(hyperion::Log_##channel __VA_OPT__(,) __VA_ARGS__)

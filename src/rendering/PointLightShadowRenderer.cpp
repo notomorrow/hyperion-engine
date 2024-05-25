@@ -5,6 +5,9 @@
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/Light.hpp>
 
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -24,10 +27,7 @@ PointLightShadowRenderer::~PointLightShadowRenderer() = default;
 void PointLightShadowRenderer::Init()
 {
     if (!InitObject(m_light)) {
-        DebugLog(
-            LogType::Warn,
-            "Point shadow renderer attached to invalid Light\n"
-        );
+        HYP_LOG(Shadows, LogLevel::WARNING, "Point shadow renderer attached to invalid Light");
 
         return;
     }
@@ -87,10 +87,7 @@ void PointLightShadowRenderer::OnRender(Frame *frame)
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (!m_env_probe.IsValid() || !m_light.IsValid()) {
-        DebugLog(
-            LogType::Warn,
-            "Point shadow renderer attached to invalid Light or EnvProbe\n"
-        );
+        HYP_LOG(Shadows, LogLevel::WARNING, "Point shadow renderer attached to invalid Light or EnvProbe");
 
         return;
     }

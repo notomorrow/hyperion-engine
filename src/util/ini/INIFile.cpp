@@ -5,11 +5,12 @@
 #include <asset/BufferedByteReader.hpp>
 
 #include <core/system/Debug.hpp>
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 namespace hyperion {
 
-HYP_DEFINE_LOG_CHANNEL(INI);
+HYP_DEFINE_LOG_SUBCHANNEL(INI, Core);
 
 const INIFile::Element INIFile::Element::empty = { };
 

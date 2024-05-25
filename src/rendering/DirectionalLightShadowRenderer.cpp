@@ -7,6 +7,9 @@
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
+
 #include <scene/camera/OrthoCamera.hpp>
 
 #include <util/fs/FsUtil.hpp>
@@ -582,7 +585,7 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
         );
 
         if (statics_collection_result.NeedsUpdate() || m_cached_view_matrix != m_camera->GetViewMatrix()) {
-            DebugLog(LogType::Debug, "statics collection result: %u, %u, %u\n", statics_collection_result.num_added_entities, statics_collection_result.num_removed_entities, statics_collection_result.num_changed_entities);
+            HYP_LOG(Shadows, LogLevel::DEBUG, "statics collection result: {}, {}, {}", statics_collection_result.num_added_entities, statics_collection_result.num_removed_entities, statics_collection_result.num_changed_entities);
             
             m_cached_view_matrix = m_camera->GetViewMatrix();
 

@@ -6,13 +6,12 @@
 
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Texture);
 
 using renderer::Result;
 using renderer::Frame;

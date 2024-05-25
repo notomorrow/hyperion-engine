@@ -4,6 +4,7 @@
 
 #include <core/containers/Queue.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #ifdef HYP_UNIX
@@ -17,8 +18,6 @@
 #endif
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Socket);
 
 namespace net {
 

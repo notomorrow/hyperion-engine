@@ -3,12 +3,11 @@
 #include <rendering/backend/RenderCommand.hpp>
 
 #include <core/threading/Threads.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(RenderCommands);
-
 namespace renderer {
 
 FixedArray<RenderCommandHolder, max_render_command_types> RenderCommands::holders = { };

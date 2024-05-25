@@ -22,14 +22,11 @@
 #include <audio/AudioManager.hpp>
 
 #include <core/system/StackDump.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 namespace hyperion {
-
-HYP_DECLARE_LOG_CHANNEL(Config);
-HYP_DECLARE_LOG_CHANNEL(Tasks);
-
-HYP_DEFINE_LOG_CHANNEL(Engine);
 
 using renderer::Attachment;
 using renderer::ImageView;

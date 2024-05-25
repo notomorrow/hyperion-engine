@@ -3,7 +3,10 @@
 #include <core/containers/Array.hpp>
 #include <core/threading/Threads.hpp>
 #include <core/utilities/UniqueID.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
+
 #include <core/Util.hpp>
 
 #include <rendering/RenderCollection.hpp>
@@ -17,8 +20,6 @@
 #include <Engine.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(RenderCollection);
 
 static constexpr bool do_parallel_collection = true;
 

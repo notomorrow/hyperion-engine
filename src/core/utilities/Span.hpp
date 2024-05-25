@@ -15,8 +15,8 @@ struct Span
     using Iterator = T *;
     using ConstIterator = const T *;
 
-    T *first;
-    T *last;
+    T   *first;
+    T   *last;
 
     Span()
         : first(nullptr),
@@ -110,8 +110,6 @@ struct Span
         return *this;
     }
 
-    ~Span() = default;
-
     Span(T *first, T *last)
         : first(first),
           last(last)
@@ -125,11 +123,13 @@ struct Span
     }
 
     template <SizeType Size>
-    Span(const T (&ary)[Size])
+    Span(T (&ary)[Size])
         : first(&ary[0]),
           last(&ary[Size])
     {
     }
+
+    ~Span() = default;
 
     HYP_FORCE_INLINE
     bool operator==(const Span &other) const

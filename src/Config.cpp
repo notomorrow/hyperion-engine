@@ -3,6 +3,7 @@
 #include <Config.hpp>
 #include <Engine.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
@@ -10,8 +11,6 @@
 #include <asset/ByteWriter.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Config);
 
 const FlatMap<OptionName, String> Configuration::option_name_strings = {
     { CONFIG_DEBUG_MODE, "DebugMode" },

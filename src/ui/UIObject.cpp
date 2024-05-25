@@ -26,13 +26,12 @@
 #include <core/threading/Threads.hpp>
 #include <core/containers/Queue.hpp>
 #include <core/system/AppContext.hpp>
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(UI);
 
 enum class UIObjectIterationResult : uint8
 {

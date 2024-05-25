@@ -7,6 +7,8 @@
 
 #include <core/system/AppContext.hpp>
 #include <core/dll/DynamicLibrary.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
@@ -21,8 +23,6 @@
 #endif
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(DotNET);
 
 namespace dotnet {
 

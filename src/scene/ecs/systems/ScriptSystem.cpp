@@ -4,6 +4,8 @@
 #include <scene/ecs/EntityManager.hpp>
 
 #include <core/threading/Threads.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <dotnet/Class.hpp>
@@ -14,8 +16,6 @@
 #include <Engine.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Script);
 
 void ScriptSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {

@@ -7,6 +7,7 @@
 #include <core/containers/FixedArray.hpp>
 #include <core/utilities/Pair.hpp>
 #include <core/utilities/ValueStorage.hpp>
+#include <core/utilities/Span.hpp>
 #include <core/memory/Memory.hpp>
 #include <core/system/Debug.hpp>
 #include <core/Defines.hpp>
@@ -61,6 +62,16 @@ public:
     using InsertResult = Pair<Iterator, bool>; // iterator, was inserted
 
     Array();
+
+    Array(Span<T> span)
+        : Array(span.Data(), span.Size())
+    {
+    }
+
+    Array(Span<const T> span)
+        : Array(span.Data(), span.Size())
+    {
+    }
 
     template <SizeType Sz>
     Array(T const (&items)[Sz])

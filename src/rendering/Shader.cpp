@@ -3,14 +3,13 @@
 #include <rendering/Shader.hpp>
 #include <rendering/ShaderGlobals.hpp>
 
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 #include <util/MiscUtil.hpp>
 
 namespace hyperion {
-
-HYP_DEFINE_LOG_CHANNEL(Shader);
 
 using renderer::Result;
 

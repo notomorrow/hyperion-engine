@@ -11,6 +11,8 @@
 #include <core/system/StackDump.hpp>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Core);
 namespace logging {
 
 class LogChannelIDGenerator
@@ -39,8 +41,15 @@ static LogChannelIDGenerator g_log_channel_id_generator { };
 LogChannel::LogChannel(Name name)
     : m_id(g_log_channel_id_generator.Next()),
       m_name(name),
-      m_flags(LogChannelFlags::NONE)
+      m_flags(LogChannelFlags::NONE),
+      m_parent_channel(nullptr)
 {
+}
+
+LogChannel::LogChannel(Name name, LogChannel *parent_channel)
+    : LogChannel(name)
+{
+    m_parent_channel = parent_channel;
 }
 
 LogChannel::~LogChannel()
@@ -78,7 +87,18 @@ void Logger::RegisterChannel(LogChannel *channel)
 
 bool Logger::IsChannelEnabled(const LogChannel &channel) const
 {
-    return m_log_mask.Get(MemoryOrder::ACQUIRE) & (1ull << channel.GetID());
+    // @TODO: Come up with a more efficient solution that doesn't require atomics, looping, or dynamic bitsets
+
+    const Bitset mask_value(m_log_mask.Get(MemoryOrder::RELAXED));
+
+    Bitset bs;
+    bs.Set(channel.GetID(), true);
+
+    for (LogChannel *parent = channel.GetParentChannel(); parent != nullptr; parent = parent->GetParentChannel()) {
+        bs.Set(parent->GetID(), true);
+    }
+
+    return (mask_value & bs) == bs;
 }
 
 void Logger::SetChannelEnabled(const LogChannel &channel, bool enabled)
