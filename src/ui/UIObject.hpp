@@ -15,6 +15,8 @@
 #include <scene/ecs/components/UIComponent.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
+#include <math/Color.hpp>
+
 #include <rendering/FullScreenPass.hpp>
 
 #include <Types.hpp>
@@ -381,6 +383,26 @@ public:
      * \param padding The padding of the UI object */
     void SetPadding(Vec2i padding);
 
+    /*! \brief Get the background color of the UI object
+     * \return The background color of the UI object */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    Color GetBackgroundColor() const;
+
+    /*! \brief Set the background color of the UI object
+     *  \param background_color The background color of the UI object */
+    void SetBackgroundColor(const Color &background_color);
+
+    /*! \brief Get the text color of the UI object
+     * \return The text color of the UI object */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    Color GetTextColor() const;
+
+    /*! \brief Set the text color of the UI object
+     *  \param text_color The text color of the UI object */
+    void SetTextColor(const Color &text_color);
+
     /*! \brief Check if the UI object is visible.
      * \return True if the object is visible, false otherwise. */
     [[nodiscard]]
@@ -540,6 +562,9 @@ protected:
 
     UIObjectAlignment               m_origin_alignment;
     UIObjectAlignment               m_parent_alignment;
+
+    Color                           m_background_color;
+    Color                           m_text_color;
 
 private:
     void ComputeOffsetPosition();

@@ -544,7 +544,7 @@ RenderAll_Parallel(
         return;
     }
 
-    HYP_LOG(Rendering, LogLevel::DEBUG, "Rendering {} draw calls in {} batches", draw_state.draw_calls.Size(), num_batches);
+    // HYP_LOG(Rendering, LogLevel::DEBUG, "Rendering {} draw calls in {} batches", draw_state.draw_calls.Size(), num_batches);
 
     ParallelForEach(divided_draw_calls, num_batches, TaskThreadPoolName::THREAD_POOL_RENDER,
         [&](Span<const DrawCall> draw_calls, uint index, uint)

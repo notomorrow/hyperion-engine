@@ -11,6 +11,8 @@ namespace hyperion {
 namespace renderer {
 namespace platform {
 
+static const bool use_srgb = false;
+
 Swapchain<Platform::VULKAN>::Swapchain()
     : swapchain(nullptr),
       image_format(InternalFormat::NONE)
@@ -21,30 +23,32 @@ VkSurfaceFormatKHR Swapchain<Platform::VULKAN>::ChooseSurfaceFormat(Device<Platf
 {
     DebugLog(LogType::Info, "Looking for SRGB surface format\n");
 
-    /* look for srgb format */
-    this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(
-        this->support_details,
-        std::array {
-            InternalFormat::RGBA8_SRGB,
-            InternalFormat::BGRA8_SRGB
-        },
-        [this](const VkSurfaceFormatKHR &format)
-        {
-            if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                return false;
+    if (use_srgb) {
+        /* look for srgb format */
+        this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(
+            this->support_details,
+            std::array {
+                InternalFormat::RGBA8_SRGB,
+                InternalFormat::BGRA8_SRGB
+            },
+            [this](const VkSurfaceFormatKHR &format)
+            {
+                if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                    return false;
+                }
+
+                this->surface_format = format;
+
+                return true;
             }
+        );
 
-            this->surface_format = format;
-
-            return true;
+        if (this->image_format != InternalFormat::NONE) {
+            return this->surface_format;
         }
-    );
 
-    if (this->image_format != InternalFormat::NONE) {
-        return this->surface_format;
+        DebugLog(LogType::Warn, "Could not find SRGB surface format, looking for non-srgb format\n");
     }
-
-    DebugLog(LogType::Warn, "Could not find SRGB surface format, looking for non-srgb format\n");
 
     /* look for non-srgb format */
     this->image_format = device->GetFeatures().FindSupportedSurfaceFormat(

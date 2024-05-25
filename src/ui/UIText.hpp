@@ -80,17 +80,6 @@ public:
      * \param font_atlas The font atlas to set. */
     void SetFontAtlas(RC<FontAtlas> font_atlas);
 
-    /*! \brief Gets the color of the text.
-     * 
-     * \return The color of the text. */
-    const Vec4f &GetTextColor() const
-        { return m_text_color; }
-
-    /*! \brief Sets the color of the text.
-     * 
-     * \param color The color to set. */
-    void SetTextColor(const Vec4f &color);
-
     /*! \brief Gets the options for rendering the text.
      * 
      * \return The options for rendering the text. */
@@ -121,8 +110,6 @@ protected:
 
     String          m_text;
     RC<FontAtlas>   m_font_atlas;
-
-    Vec4f           m_text_color;
 
     UITextOptions   m_options;
 

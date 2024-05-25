@@ -11,12 +11,8 @@ Color::Color()
 }
 
 Color::Color(uint32 hex)
+    : Color(ByteUtil::UnpackVec4f(hex))
 {
-    Vec4f unpacked = ByteUtil::UnpackVec4f(hex);
-    bytes[0] = static_cast<ubyte>(unpacked.x * 255.0f);
-    bytes[1] = static_cast<ubyte>(unpacked.y * 255.0f);
-    bytes[2] = static_cast<ubyte>(unpacked.z * 255.0f);
-    bytes[3] = static_cast<ubyte>(unpacked.w * 255.0f);
 }
 
 Color::Color(float r, float g, float b, float a)

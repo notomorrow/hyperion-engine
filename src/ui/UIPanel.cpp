@@ -16,6 +16,9 @@ UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy, UIObjectType type)
     SetBorderRadius(5);
     SetBorderFlags(UIObjectBorderFlags::ALL);
 
+    m_background_color = Color(0x101012FFu);
+    m_text_color = Color(0xFFFFFFFFu);
+
     OnScroll.Bind([this](const MouseEvent &event_data) -> UIEventHandlerResult
     {
         SetScrollOffset(GetScrollOffset() - event_data.wheel);
@@ -47,7 +50,7 @@ Handle<Material> UIPanel::GetMaterial() const
             //.stencil_function   = StencilFunction(StencilOp::KEEP, StencilOp::REPLACE, StencilOp::REPLACE, StencilCompareOp::ALWAYS, 0xFF, 0x1)// <-- @TEMP test
         },
         {
-            { Material::MATERIAL_KEY_ALBEDO, Vec4f(Color(0x0D0D0DFFu)) }
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(GetBackgroundColor()) }
         },
         {
             { Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture> { } }

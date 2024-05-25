@@ -4,6 +4,9 @@
 
 #include <input/InputManager.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -47,7 +50,32 @@ void UITab::SetTitle(const String &title)
 
 Handle<Material> UITab::GetMaterial() const
 {
-    return UIPanel::GetMaterial();
+    Color color;
+
+    if (GetFocusState() & UIObjectFocusState::TOGGLED) {
+        color = Color(0x202124FFu);
+    } else if (GetFocusState() & UIObjectFocusState::HOVER) {
+        color = Color(0x3E3D40FFu);
+    } else {
+        color = m_background_color;
+    }
+
+    return g_material_system->GetOrCreate(
+        MaterialAttributes {
+            .shader_definition  = ShaderDefinition { HYP_NAME(UIObject), ShaderProperties(static_mesh_vertex_attributes, { "TYPE_TAB" }) },
+            .bucket             = Bucket::BUCKET_UI,
+            .blend_function     = BlendFunction(BlendModeFactor::SRC_ALPHA, BlendModeFactor::ONE_MINUS_SRC_ALPHA,
+                                                BlendModeFactor::ONE, BlendModeFactor::ONE_MINUS_SRC_ALPHA),
+            .cull_faces         = FaceCullMode::BACK,
+            .flags              = MaterialAttributeFlags::NONE
+        },
+        {
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(color) }
+        },
+        {
+            { Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture> { } }
+        }
+    );
 }
 
 #pragma endregion UITab
@@ -72,6 +100,7 @@ void UITabView::Init()
     m_container->SetBorderFlags(UIObjectBorderFlags::BOTTOM | UIObjectBorderFlags::LEFT | UIObjectBorderFlags::RIGHT);
     m_container->SetBorderRadius(5);
     m_container->SetPadding({ 5, 5 });
+    m_container->SetBackgroundColor(Color(0x202124FFu));
 
     AddChildUIObject(m_container);
 

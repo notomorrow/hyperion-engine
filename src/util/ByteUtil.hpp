@@ -284,10 +284,10 @@ public:
     static inline Vec4f UnpackVec4f(uint32 value)
     {
         return {
-            float(value & 0xff000000) / 255.0f,
-            float(value & 0x00ff0000) / 255.0f,
-            float(value & 0x0000ff00) / 255.0f,
-            float(value & 0x000000ff) / 255.0f
+            float((value & 0xFF000000u) >> 24) / 255.0f,
+            float((value & 0x00FF0000u) >> 16) / 255.0f,
+            float((value & 0x0000FF00u) >> 8) / 255.0f,
+            float((value & 0x000000FFu)) / 255.0f
         };
     }
 

@@ -180,9 +180,9 @@ Handle<Mesh> CharMeshBuilder::OptimizeCharMeshes(Vec2i screen_size, Array<UIChar
 
 UIText::UIText(UIStage *parent, NodeProxy node_proxy)
     : UIObject(parent, std::move(node_proxy), UIObjectType::TEXT),
-      m_text("No text set"),
-      m_text_color(Vec4f { 0.0f, 0.0f, 0.0f, 1.0f })
+      m_text("No text set")
 {
+    m_text_color = Color(Vec4f::One());
 }
 
 void UIText::Init()
@@ -211,13 +211,6 @@ void UIText::SetFontAtlas(RC<FontAtlas> font_atlas)
     m_font_atlas = std::move(font_atlas);
 
     UpdateMesh();
-}
-
-void UIText::SetTextColor(const Vec4f &color)
-{
-    m_text_color = color;
-
-    UpdateMaterial();
 }
 
 void UIText::UpdateMesh()
@@ -276,7 +269,7 @@ Handle<Material> UIText::GetMaterial() const
             .flags              = MaterialAttributeFlags::NONE
         },
         {
-            { Material::MATERIAL_KEY_ALBEDO, m_text_color }
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(GetTextColor()) }
         },
         {
             { Material::MATERIAL_TEXTURE_ALBEDO_MAP, font_atlas_texture }

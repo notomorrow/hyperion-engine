@@ -453,6 +453,7 @@ void UIObject::SetFocusState(EnumFlags<UIObjectFocusState> focus_state)
 {
     m_focus_state = focus_state;
 
+    UpdateMaterial();
     UpdateMeshData();
 }
 
@@ -585,6 +586,42 @@ void UIObject::SetPadding(Vec2i padding)
 
     UpdateSize();
     UpdatePosition();
+}
+
+Color UIObject::GetBackgroundColor() const
+{
+    if (uint32(m_background_color) == 0) {
+        if (const UIObject *parent = GetParentUIObject()) {
+            return parent->GetBackgroundColor();
+        }
+    }
+
+    return m_background_color;
+}
+
+void UIObject::SetBackgroundColor(const Color &background_color)
+{
+    m_background_color = background_color;
+
+    UpdateMaterial();
+}
+
+Color UIObject::GetTextColor() const
+{
+    if (uint32(m_text_color) == 0) {
+        if (const UIObject *parent = GetParentUIObject()) {
+            return parent->GetTextColor();
+        }
+    }
+
+    return m_text_color;
+}
+
+void UIObject::SetTextColor(const Color &text_color)
+{
+    m_text_color = text_color;
+
+    UpdateMaterial();
 }
 
 bool UIObject::IsVisible() const
@@ -812,7 +849,7 @@ Handle<Material> UIObject::GetMaterial() const
             .flags              = MaterialAttributeFlags::NONE
         },
         {
-            { Material::MATERIAL_KEY_ALBEDO, Vec4f { 0.0f, 0.005f, 0.015f, 0.95f } }
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(GetBackgroundColor()) }
         }
     );
 }
