@@ -28,13 +28,13 @@ uint RenderCommands::buffer_index = 0;
 void RenderScheduler::Commit(RenderCommand *command)
 {
     m_commands.PushBack(command);
-    m_num_enqueued.Increment(1, MemoryOrder::RELAXED);
+    m_num_enqueued.Increment(1, MemoryOrder::RELEASE);
 }
 
 void RenderScheduler::AcceptAll(Array<RenderCommand *> &out_container)
 {
     out_container = std::move(m_commands);
-    m_num_enqueued.Set(0, MemoryOrder::RELAXED);
+    m_num_enqueued.Set(0, MemoryOrder::RELEASE);
 }
 
 #pragma endregion RenderScheduler

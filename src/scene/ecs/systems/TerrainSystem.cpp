@@ -341,10 +341,9 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                 .Use<SimplexNoiseGenerator>(8, NoiseCombinator::Mode::ADDITIVE, base_height * 0.015f, 0.0f, Vector3(1.56f, 1.56f, 0.0f) * global_terrain_noise_scale);
         }
 
-        if (state->patch_generation_queue_shared->has_updates.Get(MemoryOrder::RELAXED)) {
+        if (state->patch_generation_queue_shared->has_updates.Exchange(false, MemoryOrder::ACQUIRE_RELEASE)) {
             state->patch_generation_queue_shared->mutex.Lock();
 
-            state->patch_generation_queue_shared->has_updates.Set(false, MemoryOrder::RELAXED);
             state->patch_generation_queue_owned = std::move(state->patch_generation_queue_shared->queue);
 
             state->patch_generation_queue_shared->mutex.Unlock();
@@ -519,7 +518,7 @@ void TerrainSystem::Process(EntityManager &entity_manager, GameCounter::TickUnit
                         .mesh       = std::move(mesh)
                     });
 
-                    generation_queue->has_updates.Set(true, MemoryOrder::RELAXED);
+                    generation_queue->has_updates.Set(true, MemoryOrder::RELEASE);
 
                     DebugLog(
                         LogType::Debug,

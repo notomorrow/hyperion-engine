@@ -91,7 +91,7 @@ void DebugDrawer::Render(Frame *frame)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    if (m_num_draw_commands_pending_addition.load(std::memory_order_relaxed) != 0) {
+    if (m_num_draw_commands_pending_addition.Get(MemoryOrder::ACQUIRE) != 0) {
         UpdateDrawCommands();
     }
 
@@ -197,10 +197,10 @@ void DebugDrawer::Render(Frame *frame)
 
 void DebugDrawer::UpdateDrawCommands()
 {
-    std::lock_guard guard(m_draw_commands_mutex);
+    Mutex::Guard guard(m_draw_commands_mutex);
 
     SizeType size = m_draw_commands_pending_addition.Size();
-    int64 previous_value = m_num_draw_commands_pending_addition.fetch_sub(int64(size), std::memory_order_relaxed);
+    int64 previous_value = m_num_draw_commands_pending_addition.Decrement(int64(size), MemoryOrder::ACQUIRE_RELEASE);
     AssertThrow(previous_value - int64(size) >= 0);
 
     m_draw_commands.Concat(std::move(m_draw_commands_pending_addition));
@@ -213,10 +213,11 @@ UniquePtr<DebugDrawCommandList> DebugDrawer::CreateCommandList()
 
 void DebugDrawer::CommitCommands(DebugDrawCommandList &command_list)
 {
-    std::lock_guard guard(m_draw_commands_mutex);
+    Mutex::Guard guard(m_draw_commands_mutex);
 
-    m_num_draw_commands_pending_addition.fetch_add(int64(command_list.m_draw_commands.Size()), std::memory_order_relaxed);
+    const SizeType num_added_items = command_list.m_draw_commands.Size();
     m_draw_commands_pending_addition.Concat(std::move(command_list.m_draw_commands));
+    m_num_draw_commands_pending_addition.Increment(int64(num_added_items), MemoryOrder::RELEASE);
 }
 
 void DebugDrawer::Sphere(const Vec3f &position, float radius, Color color)

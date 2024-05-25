@@ -195,7 +195,7 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
     m_aabb.SetCenter(Vec3f(position_snapped) * size_of_probe + m_offset);
 
     // If the grid has moved, we need to offset the voxel grid.
-    m_flags.BitOr(ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET, MemoryOrder::ACQUIRE_RELEASE);
+    m_flags.BitOr(ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET, MemoryOrder::RELEASE);
 
     if (m_camera) {
         m_camera->SetTranslation(m_aabb.GetCenter());

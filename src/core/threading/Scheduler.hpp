@@ -142,10 +142,11 @@ public:
     Scheduler &operator=(Scheduler &&other) noexcept    = default;
     ~Scheduler()                                        = default;
 
+    [[nodiscard]]
     HYP_FORCE_INLINE
     uint NumEnqueued() const
     {
-        return m_num_enqueued.Get(MemoryOrder::RELAXED);
+        return m_num_enqueued.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE
@@ -218,7 +219,7 @@ public:
             out_container.Push(std::move(front));
             m_enqueued_tasks.PopFront();
 
-            m_num_enqueued.Decrement(1u, MemoryOrder::RELAXED);
+            m_num_enqueued.Decrement(1u, MemoryOrder::RELEASE);
         }
     }
     
@@ -235,7 +236,7 @@ public:
         }
 
         m_enqueued_tasks.Clear();
-        m_num_enqueued.Set(0, MemoryOrder::RELAXED);
+        m_num_enqueued.Set(0, MemoryOrder::RELEASE);
     }
     
     /*! \brief Move all tasks in the queue to an external container. Blocks the current thread until there are tasks to execute, or the scheduler is stopped.
@@ -262,7 +263,7 @@ public:
         }
 
         m_enqueued_tasks.Clear();
-        m_num_enqueued.Set(0, MemoryOrder::RELAXED);
+        m_num_enqueued.Set(0, MemoryOrder::RELEASE);
 
         return true;
     }
@@ -292,7 +293,7 @@ public:
             m_enqueued_tasks.PopFront();
         }
 
-        m_num_enqueued.Set(0, MemoryOrder::RELAXED);
+        m_num_enqueued.Set(0, MemoryOrder::RELEASE);
     }
     
 private:
@@ -301,8 +302,7 @@ private:
         fn.id = ++m_id_counter;
 
         m_enqueued_tasks.EmplaceBack(std::forward<Task>(fn), atomic_counter);
-
-        m_num_enqueued.Increment(1, MemoryOrder::RELAXED);
+        m_num_enqueued.Increment(1, MemoryOrder::RELEASE);
 
         return m_enqueued_tasks.Back().task.id;
     }
@@ -325,7 +325,7 @@ private:
 
         m_enqueued_tasks.Erase(it);
 
-        m_num_enqueued.Decrement(1, MemoryOrder::RELAXED);
+        m_num_enqueued.Decrement(1, MemoryOrder::RELEASE);
 
         return true;
     }

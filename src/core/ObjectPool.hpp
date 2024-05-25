@@ -105,7 +105,7 @@ class ObjectContainer : public ObjectContainerBase
 
             uint16 count;
 
-            if ((count = ref_count_strong.Decrement(1, MemoryOrder::SEQUENTIAL)) == 1) {
+            if ((count = ref_count_strong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1) {
                 reinterpret_cast<T *>(bytes)->~T();
             }
 
@@ -114,16 +114,16 @@ class ObjectContainer : public ObjectContainerBase
 
         uint DecRefWeak()
         {
-            const uint16 count = ref_count_weak.Decrement(1, MemoryOrder::SEQUENTIAL);
+            const uint16 count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE);
 
             return uint(count) - 1;
         }
 
         HYP_FORCE_INLINE uint GetRefCountStrong() const
-            { return uint(ref_count_strong.Get(MemoryOrder::SEQUENTIAL)); }
+            { return uint(ref_count_strong.Get(MemoryOrder::ACQUIRE)); }
 
         HYP_FORCE_INLINE uint GetRefCountWeak() const
-            { return uint(ref_count_weak.Get(MemoryOrder::SEQUENTIAL)); }
+            { return uint(ref_count_weak.Get(MemoryOrder::ACQUIRE)); }
 
         HYP_FORCE_INLINE T &Get()
             { return *reinterpret_cast<T *>(bytes); }

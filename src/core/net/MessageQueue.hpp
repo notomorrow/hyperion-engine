@@ -26,7 +26,7 @@ public:
         Mutex::Guard guard(m_mutex);
 
         m_messages.Push(std::move(message));
-        m_size.Increment(1, MemoryOrder::SEQUENTIAL);
+        m_size.Increment(1, MemoryOrder::RELEASE);
     }
 
     json::JSONValue Pop()
@@ -35,12 +35,16 @@ public:
         
         Mutex::Guard guard(m_mutex);
 
-        m_size.Decrement(1, MemoryOrder::SEQUENTIAL);
-        return m_messages.Pop();
+        json::JSONValue last = m_messages.Pop();
+        m_size.Decrement(1, MemoryOrder::RELEASE);
+        
+        return last;
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     uint Size() const
-        { return m_size.Get(MemoryOrder::SEQUENTIAL); }
+        { return m_size.Get(MemoryOrder::ACQUIRE); }
 
     bool Empty() const
         { return Size() == 0; }

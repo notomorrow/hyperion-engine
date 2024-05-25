@@ -830,7 +830,7 @@ struct RenderObjectDeleter
         {
             Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-            if (Base::num_items.Get(MemoryOrder::SEQUENTIAL) <= 0) {
+            if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0) {
                 return;
             }
             
@@ -842,7 +842,7 @@ struct RenderObjectDeleter
 
                     it = items.Erase(it);
 
-                    Base::num_items.Decrement(1, MemoryOrder::RELAXED);
+                    Base::num_items.Decrement(1, MemoryOrder::RELEASE);
                 } else {
                     ++it;
                 }
@@ -865,7 +865,7 @@ struct RenderObjectDeleter
         {
             Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-            if (Base::num_items.Get(MemoryOrder::SEQUENTIAL) <= 0) {
+            if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0) {
                 return 0;
             }
 
@@ -874,11 +874,11 @@ struct RenderObjectDeleter
             Base::mtx.lock();
 
             for (auto it = items.Begin(); it != items.End();) {
-                Base::num_items.Decrement(1, MemoryOrder::RELAXED);
-
                 to_delete.Push(std::move(it->first));
 
                 it = items.Erase(it);
+
+                Base::num_items.Decrement(1, MemoryOrder::RELEASE);
 
                 ++num_deleted_objects;
             }
@@ -896,11 +896,11 @@ struct RenderObjectDeleter
 
         void Push(renderer::RenderObjectHandle_Strong<T, PLATFORM> &&handle)
         {
-            Base::num_items.Increment(1, MemoryOrder::RELAXED);
-
             std::lock_guard guard(Base::mtx);
 
             items.PushBack({ std::move(handle), initial_cycles_remaining });
+            
+            Base::num_items.Increment(1, MemoryOrder::RELEASE);
         }
     };
 
@@ -912,7 +912,7 @@ struct RenderObjectDeleter
 
         DeletionQueueInstance()
         {
-            index = queue_index.Increment(1, MemoryOrder::SEQUENTIAL);
+            index = queue_index.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
             AssertThrowMsg(index < max_queues, "Maximum number of deletion queues added");
 

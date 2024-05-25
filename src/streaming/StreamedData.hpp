@@ -102,13 +102,13 @@ public:
             return *this;
         }
 
-        m_use_count.Set(other.m_use_count.Get(MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+        m_use_count.Set(other.m_use_count.Get(MemoryOrder::ACQUIRE), MemoryOrder::RELEASE);
 
         return *this;
     }
 
     StreamedData(StreamedData &&other) noexcept
-        : m_use_count { other.m_use_count.Get(MemoryOrder::ACQUIRE_RELEASE) }
+        : m_use_count { other.m_use_count.Get(MemoryOrder::ACQUIRE) }
     {
         other.m_use_count.Set(0u, MemoryOrder::RELEASE);
     }

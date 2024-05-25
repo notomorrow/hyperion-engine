@@ -5,7 +5,10 @@
 
 #include <Constants.hpp>
 
-#include <core/Containers.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FixedArray.hpp>
+#include <core/threading/AtomicVar.hpp>
+#include <core/threading/Mutex.hpp>
 
 #include <math/Transform.hpp>
 #include <math/Color.hpp>
@@ -118,8 +121,8 @@ private:
     FixedArray<Handle<Mesh>, uint(DebugDrawShape::MAX)> m_shapes;
     Array<DebugDrawCommand>                             m_draw_commands;
     Array<DebugDrawCommand>                             m_draw_commands_pending_addition;
-    std::atomic<int64>                                  m_num_draw_commands_pending_addition { 0 };
-    std::mutex                                          m_draw_commands_mutex;
+    AtomicVar<uint32>                                   m_num_draw_commands_pending_addition { 0 };
+    Mutex                                               m_draw_commands_mutex;
 };
 
 } // namespace hyperion

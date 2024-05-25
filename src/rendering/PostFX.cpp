@@ -176,7 +176,7 @@ void PostProcessing::PerformUpdates()
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    if (!m_effects_updated.Get(MemoryOrder::RELAXED)) {
+    if (!m_effects_updated.Get(MemoryOrder::ACQUIRE)) {
         return;
     }
 
@@ -213,7 +213,7 @@ void PostProcessing::PerformUpdates()
         m_effects_pending_removal[stage_index].Clear();
     }
 
-    m_effects_updated.Set(false, MemoryOrder::RELAXED);
+    m_effects_updated.Set(false, MemoryOrder::RELEASE);
 
     HYP_SYNC_RENDER();
 }

@@ -28,7 +28,7 @@ struct IDGenerator
         Mutex::Guard guard(free_id_mutex);
 
         if (free_indices.Empty()) {
-            return id_counter.Increment(1, MemoryOrder::SEQUENTIAL) + 1;
+            return id_counter.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
         }
 
         return free_indices.Pop();

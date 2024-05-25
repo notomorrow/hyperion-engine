@@ -265,7 +265,7 @@ private:
 
             Data()
             {
-                command_type_index = RenderCommands::render_command_type_index.Increment(1, MemoryOrder::SEQUENTIAL);
+                command_type_index = RenderCommands::render_command_type_index.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
                 AssertThrowMsg(
                     command_type_index < max_render_command_types - 1,

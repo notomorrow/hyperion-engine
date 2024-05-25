@@ -194,7 +194,7 @@ private:
             m_effects_pending_addition[uint(stage)].Set<EffectClass>(std::move(effect));
         }
 
-        m_effects_updated.Set(true, MemoryOrder::RELAXED);
+        m_effects_updated.Set(true, MemoryOrder::RELEASE);
     }
 
     template <class EffectClass>

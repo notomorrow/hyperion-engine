@@ -100,13 +100,13 @@ const ByteBuffer &StreamedData::Load() const
 
 void StreamedData::Unpage()
 {
-    const int use_count = StreamedData::m_use_count.Get(MemoryOrder::SEQUENTIAL);
+    const int use_count = StreamedData::m_use_count.Get(MemoryOrder::ACQUIRE);
 
     if (use_count <= 0) {
         return;
     }
 
-    StreamedData::m_use_count.Decrement(1, MemoryOrder::RELAXED);
+    StreamedData::m_use_count.Decrement(1, MemoryOrder::RELEASE);
 
     if (use_count == 1) {
         Unpage_Internal();

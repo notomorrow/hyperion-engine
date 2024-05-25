@@ -710,7 +710,7 @@ void MaterialDescriptorSetManager::AddMaterial(ID<Material> id)
         std::move(descriptor_sets)
     });
 
-    m_pending_addition_flag.Set(true, MemoryOrder::RELAXED);
+    m_pending_addition_flag.Set(true, MemoryOrder::RELEASE);
 }
 
 void MaterialDescriptorSetManager::AddMaterial(ID<Material> id, FixedArray<Handle<Texture>, max_bound_textures> &&textures)
@@ -758,7 +758,7 @@ void MaterialDescriptorSetManager::AddMaterial(ID<Material> id, FixedArray<Handl
         std::move(descriptor_sets)
     });
 
-    m_pending_addition_flag.Set(true, MemoryOrder::RELAXED);
+    m_pending_addition_flag.Set(true, MemoryOrder::RELEASE);
 }
 
 void MaterialDescriptorSetManager::EnqueueRemoveMaterial(ID<Material> id)
@@ -784,7 +784,7 @@ void MaterialDescriptorSetManager::EnqueueRemoveMaterial(ID<Material> id)
         m_pending_removal.PushBack(id);
     }
 
-    m_pending_addition_flag.Set(true, MemoryOrder::RELAXED);
+    m_pending_addition_flag.Set(true, MemoryOrder::RELEASE);
 }
 
 void MaterialDescriptorSetManager::RemoveMaterial(ID<Material> id)
@@ -841,7 +841,7 @@ void MaterialDescriptorSetManager::SetNeedsDescriptorSetUpdate(ID<Material> id)
         m_descriptor_sets_to_update[frame_index].PushBack(id);
     }
 
-    m_descriptor_sets_to_update_flag.Set(0x3, MemoryOrder::RELAXED);
+    m_descriptor_sets_to_update_flag.Set(0x3, MemoryOrder::RELEASE);
 }
 
 
@@ -874,7 +874,7 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
 
         m_descriptor_sets_to_update[frame_index].Clear();
 
-        m_descriptor_sets_to_update_flag.BitAnd(~(1u << frame_index), MemoryOrder::ACQUIRE_RELEASE);
+        m_descriptor_sets_to_update_flag.BitAnd(~(1u << frame_index), MemoryOrder::RELEASE);
     }
 
     if (!m_pending_addition_flag.Get(MemoryOrder::ACQUIRE)) {

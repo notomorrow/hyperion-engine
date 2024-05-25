@@ -202,9 +202,6 @@ public:
     const DrawProxy<T> &GetDrawProxy() const { return m_draw_proxy; }
 
 protected:
-    bool HasPendingRenderUpdates() const
-        { return m_has_render_updates.load(std::memory_order_acquire) != 0; }
-
     // Only touch from render thread.
     // Update this when updates are enqueued, so just update
     // the shader data state to dirty to refresh this.

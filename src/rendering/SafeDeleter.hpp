@@ -143,7 +143,7 @@ public:
         
         m_deletion_entries.PushBack(UniquePtr<DeletionEntry<T>>::Construct(std::move(resource)));
 
-        m_num_deletion_entries.Increment(1, MemoryOrder::RELAXED);
+        m_num_deletion_entries.Increment(1, MemoryOrder::RELEASE);
     }
 
     void SafeRelease(RenderProxy &&proxy)
@@ -157,7 +157,7 @@ public:
     void ForceDeleteAll();
 
     int32 NumEnqueuedDeletions() const
-        { return m_num_deletion_entries.Get(MemoryOrder::SEQUENTIAL); }
+        { return m_num_deletion_entries.Get(MemoryOrder::ACQUIRE); }
 
 private:
     bool CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>> &out_entries);

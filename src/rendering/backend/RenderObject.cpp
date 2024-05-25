@@ -41,7 +41,7 @@ void RenderObjectDeleter<Platform::CURRENT>::ForceDeleteAll()
     }
 
     // Loop until all queues are empty
-    while (queue_num_items.Any([](AtomicVar<int32> *count) { return count != nullptr && count->Get(MemoryOrder::SEQUENTIAL) > 0; })) {
+    while (queue_num_items.Any([](AtomicVar<int32> *count) { return count != nullptr && count->Get(MemoryOrder::ACQUIRE) > 0; })) {
         for (DeletionQueueBase **queue = queues.Data(); *queue; ++queue) {
             (*queue)->ForceDeleteAll();
         }
