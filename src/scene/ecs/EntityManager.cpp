@@ -82,11 +82,11 @@ void EntityManagerCommandQueue::Execute(EntityManager &mgr, GameCounter::TickUni
 
 ID<Entity> EntityManager::AddEntity()
 {
-    auto handle = CreateObject<Entity>();
-
     Threads::AssertOnThread(m_owner_thread_mask);
+    
+    const uint index = Handle<Entity>::GetContainer().NextIndex();
 
-    return m_entities.AddEntity(std::move(handle));
+    return m_entities.AddEntity(Handle<Entity>(ID<Entity>::FromIndex(index)));
 }
 
 bool EntityManager::RemoveEntity(ID<Entity> entity)

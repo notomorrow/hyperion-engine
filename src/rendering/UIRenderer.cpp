@@ -415,13 +415,10 @@ void UIRenderer::OnRemoved()
 
 void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
-    Array<RC<UIObject>> objects;
-    m_ui_stage->CollectObjects(objects);
-    
     m_render_list.ResetOrdering();
 
-    for (uint i = 0; i < objects.Size(); i++) {
-        const RC<UIObject> &object = objects[i];
+    m_ui_stage->CollectObjects([this](const RC<UIObject> &object)
+    {
         AssertThrow(object != nullptr);
 
         const NodeProxy &node = object->GetNode();
@@ -437,7 +434,7 @@ void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
             entity,
             *mesh_component->proxy
         );
-    }
+    });
 
     m_render_list.UpdateOnRenderThread(m_ui_stage->GetScene()->GetCamera()->GetFramebuffer());
 }

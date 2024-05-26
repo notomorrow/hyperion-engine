@@ -4,13 +4,13 @@
 #define HYPERION_COMPONENTS_BASE_HPP
 
 #include <core/Core.hpp>
-#include <core/Containers.hpp>
 #include <core/ObjectPool.hpp>
 #include <core/ClassInfo.hpp>
 #include <core/ID.hpp>
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
 
+#include <core/containers/Array.hpp>
 #include <core/containers/StaticString.hpp>
 
 #include <core/functional/Delegate.hpp>
@@ -22,9 +22,7 @@
 #include <HashCode.hpp>
 #include <Types.hpp>
 
-#include <atomic>
 #include <type_traits>
-
 
 namespace hyperion {
 

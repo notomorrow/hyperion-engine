@@ -496,6 +496,25 @@ public:
     std::tuple<const Components &...> GetComponents(ID<Entity> entity) const
         { return std::tuple<const Components &...>(GetComponent<Components>(entity)...); }
 
+    /*! \brief Get a map of all component types to respective component IDs for a given Entity.
+     *  \param entity The entity to lookup components for
+     *  \returns An Optional object holding a reference to the typemap if it exists, otherwise an empty optional. */
+    Optional<const TypeMap<ComponentID> &> GetAllComponents(ID<Entity> entity) const
+    {
+        Threads::AssertOnThread(m_owner_thread_mask);
+
+        if (!entity.IsValid()) {
+            return { };
+        }
+
+        auto it = m_entities.Find(entity);
+        if (it == m_entities.End()) {
+            return { };
+        }
+
+        return it->second.components;
+    }
+
     ComponentInterfaceBase *GetComponentInterface(TypeID type_id);
 
     template <class Component>

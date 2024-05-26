@@ -92,8 +92,8 @@ void main()
     }
     
 #if defined(TYPE_BUTTON)
-    ui_color = mix(ui_color, clamp(ui_color * 1.33, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & UOFS_HOVER) && !bool(properties.focus_state & (UOFS_PRESSED | UOFS_TOGGLED))));
-    ui_color = mix(ui_color, clamp(ui_color * 1.5, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & (UOFS_PRESSED | UOFS_TOGGLED))));
+    ui_color = mix(ui_color, clamp(ui_color * 1.65, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & UOFS_HOVER) && !bool(properties.focus_state & (UOFS_PRESSED | UOFS_TOGGLED))));
+    ui_color = mix(ui_color, clamp(ui_color * 1.40, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & (UOFS_PRESSED | UOFS_TOGGLED))));
 #endif
 
 #if defined(TYPE_BUTTON) || defined(TYPE_PANEL) || defined(TYPE_TAB)

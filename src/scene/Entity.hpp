@@ -7,14 +7,10 @@
 
 namespace hyperion {
 
-class HYP_API Entity : public BasicObject<STUB_CLASS(Entity)>
+class Entity : public BasicObject<STUB_CLASS(Entity)>
 {
-public:
-    Entity();
-    ~Entity();
-
-    bool IsReady() const;
-    void Init();
+private:
+    Entity() = default;
 };
 
 } // namespace hyperion

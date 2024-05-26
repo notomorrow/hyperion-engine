@@ -107,6 +107,7 @@ UIObject::UIObject(UIObjectType type)
       m_border_flags(UIObjectBorderFlags::NONE),
       m_focus_state(UIObjectFocusState::NONE),
       m_is_visible(true),
+      m_computed_visibility(true),
       m_accepts_focus(true)
 {
 }
@@ -339,6 +340,8 @@ void UIObject::UpdatePosition(bool update_children)
     }
 
     node->LockTransform();
+
+    UpdateComputedVisibility();
 }
 
 UIObjectSize UIObject::GetSize() const
@@ -634,6 +637,34 @@ void UIObject::SetIsVisible(bool is_visible)
     m_is_visible = is_visible;
 }
 
+void UIObject::UpdateComputedVisibility()
+{
+    if (!IsVisible()) {
+        m_computed_visibility = false;
+
+        return;
+    }
+
+    if (RC<UIObject> parent_ui_object = GetParentUIObject()) {
+        const Vec2i parent_size = parent_ui_object->GetActualSize();
+        const Vec2f parent_position = parent_ui_object->GetAbsolutePosition();
+
+        const Vec2i self_size = GetActualSize();
+        const Vec2f self_position = GetAbsolutePosition();
+
+        const BoundingBox parent_aabb { Vec3f { parent_position.x, parent_position.y, 0.0f }, Vec3f { parent_position.x + float(parent_size.x), parent_position.y + float(parent_size.y), 0.0f } };
+        const BoundingBox self_aabb { Vec3f { self_position.x, self_position.y, 0.0f }, Vec3f { self_position.x + float(self_size.x), self_position.y + float(self_size.y), 0.0f } };
+
+        m_computed_visibility = parent_aabb.Intersects(self_aabb);
+
+        return;
+    }
+
+    m_computed_visibility = true;
+
+    return;
+}
+
 bool UIObject::HasFocus(bool include_children) const
 {
     if (GetFocusState() & UIObjectFocusState::FOCUSED) {
@@ -830,11 +861,24 @@ void UIObject::SetAABB(const BoundingBox &aabb)
 
     BoundingBoxComponent &bounding_box_component = scene->GetEntityManager()->GetComponent<BoundingBoxComponent>(GetEntity());
     bounding_box_component.local_aabb = aabb;
+
+    UpdateComputedVisibility();
 }
 
 BoundingBox UIObject::CalculateAABB() const
 {
     return { Vec3f::Zero(), Vec3f(float(m_actual_size.x), float(m_actual_size.y), 0.0f) };
+}
+
+BoundingBox UIObject::CalculateWorldAABBExcludingChildren() const
+{
+    if (const NodeProxy &node = GetNode()) {
+        Transform transform = node->GetWorldTransform();
+        transform.SetScale(Vec3f::One());
+        return node->GetEntityAABB() * transform;
+    }
+
+    return BoundingBox::Empty();
 }
 
 Handle<Material> UIObject::GetMaterial() const
@@ -1179,7 +1223,7 @@ void UIObject::SetNodeProxy(NodeProxy node_proxy)
     m_node_proxy = std::move(node_proxy);
 }
 
-void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc) const
+void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc, Array<RC<UIObject>> &out_deferred_child_objects) const
 {
     AssertThrow(proc.IsValid());
 
@@ -1200,7 +1244,7 @@ void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc) cons
 
         if (ui_component && ui_component->ui_object) {
             // Visibility affects all child nodes as well, so return from here.
-            if (!ui_component->ui_object->IsVisible()) {
+            if (!ui_component->ui_object->GetComputedVisibility()) {
                 return;
             }
 
@@ -1232,8 +1276,24 @@ void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc) cons
         });
     }
 
-    for (const Pair<NodeProxy, RC<UIObject>> &it : children) {
-        it.second->CollectObjects(proc);
+    if (IsContainer()) {
+        for (const Pair<NodeProxy, RC<UIObject>> &it : children) {
+            it.second->CollectObjects(proc, out_deferred_child_objects);
+        }
+    } else {
+        for (Pair<NodeProxy, RC<UIObject>> &it : children) {
+            out_deferred_child_objects.PushBack(std::move(it.second));
+        }
+    }
+}
+
+void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc) const
+{
+    Array<RC<UIObject>> deferred_child_objects;
+    CollectObjects(proc, deferred_child_objects);
+
+    for (RC<UIObject> &child_object : deferred_child_objects) {
+        child_object->CollectObjects(proc);
     }
 }
 

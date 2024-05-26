@@ -327,18 +327,17 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
 {
     RC<UIPanel> scene_outline = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Outline), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
 
-    RC<UIPanel> scene_outline_header = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Outline_Header), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 25, UIObjectSize::PIXEL }));
-    RC<UIText> scene_outline_header_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Scene_Outline_Header_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 10, UIObjectSize::PIXEL }));
-    scene_outline_header_text->SetOriginAlignment(UIObjectAlignment::CENTER);
-    scene_outline_header_text->SetParentAlignment(UIObjectAlignment::CENTER);
-    scene_outline_header_text->SetText("SCENE");
-    scene_outline_header_text->SetTextColor(Vec4f::One());
-    scene_outline_header->AddChildUIObject(scene_outline_header_text);
-    scene_outline->AddChildUIObject(scene_outline_header);
+    // RC<UIPanel> scene_outline_header = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Outline_Header), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 25, UIObjectSize::PIXEL }));
+    // RC<UIText> scene_outline_header_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Scene_Outline_Header_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 10, UIObjectSize::PIXEL }));
+    // scene_outline_header_text->SetOriginAlignment(UIObjectAlignment::CENTER);
+    // scene_outline_header_text->SetParentAlignment(UIObjectAlignment::CENTER);
+    // scene_outline_header_text->SetText("SCENE");
+    // scene_outline_header_text->SetTextColor(Vec4f::One());
+    // scene_outline_header->AddChildUIObject(scene_outline_header_text);
+    // scene_outline->AddChildUIObject(scene_outline_header);
 
-    RC<UIListView> list_view = GetUIStage()->CreateUIObject<UIListView>(HYP_NAME(Scene_Outline_ListView), Vec2i { 0, 25 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+    RC<UIListView> list_view = GetUIStage()->CreateUIObject<UIListView>(HYP_NAME(Scene_Outline_ListView), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
     list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-    list_view->SetBackgroundColor(Vec4f(1.0f, 0.0f, 0.0f, 1.0f));
 
     // TODO make it more efficient to add/remove items instead of searching by name
     GetScene()->GetRoot()->GetDelegates()->OnNestedNodeAdded.Bind([list_view](const NodeProxy &node, bool)

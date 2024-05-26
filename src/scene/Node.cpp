@@ -8,6 +8,8 @@
 #include <scene/animation/Bone.hpp>
 
 #include <core/system/Debug.hpp>
+
+#include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
@@ -15,8 +17,6 @@
 #include <cstring>
 
 namespace hyperion {
-
-HYP_DECLARE_LOG_CHANNEL(Scene);
 
 // @NOTE: In some places we have a m_scene->GetEntityManager() != nullptr check,
 // this only happens in the case that the scene in question is destructing and
@@ -422,7 +422,7 @@ NodeProxy Node::Select(const char *selector) const
             ++buffer_index;
 
             if (buffer_index == std::size(buffer)) {
-                HYP_LOG(Scene, LogLevel::WARNING, "Node search string too long, must be within buffer size limit of {}",
+                HYP_LOG(Node, LogLevel::WARNING, "Node search string too long, must be within buffer size limit of {}",
                     std::size(buffer));
 
                 return NodeProxy::empty;

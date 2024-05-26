@@ -3,6 +3,8 @@
 #include <ui/UIButton.hpp>
 #include <ui/UIText.hpp>
 
+#include <core/utilities/Format.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -18,7 +20,7 @@ void UIButton::Init()
 {
     UIObject::Init();
 
-    RC<UIText> text_element = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_Text"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 16, UIObjectSize::PIXEL }));
+    RC<UIText> text_element = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(HYP_FORMAT("_Text", m_name)), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
     text_element->SetParentAlignment(UIObjectAlignment::CENTER);
     text_element->SetOriginAlignment(UIObjectAlignment::CENTER);
     text_element->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
@@ -50,7 +52,7 @@ Handle<Material> UIButton::GetMaterial() const
             .flags              = MaterialAttributeFlags::NONE
         },
         {
-            { Material::MATERIAL_KEY_ALBEDO, Vec4f { 0.05f, 0.055f, 0.075f, 1.0f } }
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(GetBackgroundColor()) }
         },
         {
             { Material::MATERIAL_TEXTURE_ALBEDO_MAP, Handle<Texture> { } }

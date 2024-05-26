@@ -20,18 +20,22 @@ struct IDGenerator
 {
     TypeID              type_id;
     AtomicVar<uint32>   id_counter { 0u };
+    AtomicVar<uint32>   num_free_indices { 0u };
     Mutex               free_id_mutex;
     Queue<uint>         free_indices;
 
     uint NextID()
     {
-        Mutex::Guard guard(free_id_mutex);
-
-        if (free_indices.Empty()) {
+        if (num_free_indices.Get(MemoryOrder::ACQUIRE) == 0) {
             return id_counter.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
         }
 
-        return free_indices.Pop();
+        Mutex::Guard guard(free_id_mutex);
+        const uint index = free_indices.Pop();
+
+        num_free_indices.Decrement(1, MemoryOrder::RELEASE);
+
+        return index;
     }
 
     void FreeID(uint index)
@@ -39,6 +43,8 @@ struct IDGenerator
         Mutex::Guard guard(free_id_mutex);
 
         free_indices.Push(index);
+
+        num_free_indices.Increment(1, MemoryOrder::RELEASE);
     }
 };
 

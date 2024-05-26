@@ -208,17 +208,6 @@ bool UIStage::TestRay(const Vec2f &position, Array<RC<UIObject>> &out_objects)
     ray.position = world_position.GetXYZ() / world_position.w;
     ray.direction = direction;
 
-    /*CollectObjects([&out_objects, &direction, &position](const RC<UIObject> &ui_object)
-    {
-        BoundingBox aabb(ui_object->GetWorldAABB());
-        aabb.min.z = -1.0f;
-        aabb.max.z = 1.0f;
-        
-        if (aabb.ContainsPoint(direction)) {
-            out_objects.PushBack(ui_object);
-        }
-    });*/
-
     RayTestResults ray_test_results;
 
     for (auto [entity_id, ui_component, transform_component, bounding_box_component] : m_scene->GetEntityManager()->GetEntitySet<UIComponent, TransformComponent, BoundingBoxComponent>()) {

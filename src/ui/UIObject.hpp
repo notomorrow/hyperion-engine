@@ -342,6 +342,13 @@ public:
      *  \param blur_children If true, also remove focus from all child objects. */
     virtual void Blur(bool blur_children = true);
 
+    /*! \brief Returns whether or not this UIObject type acts as a container for other objects. 
+     *  Container types can have objects that sit outside and move independently of this object itself,
+     *  and is useful for things like tab views, panels that scroll, etc. However, it comes with the added cost
+     *  of more bookkeeping and more RenderGroup creation for rendering. See \ref{CollectObjects} and \ref{UIRenderer::OnUpdate} for example. */
+    virtual bool IsContainer() const
+        { return false; }
+
     /*! \brief Get the border radius of the UI object
      *  \details The border radius of the UI object is used to create rounded corners for the object's border.
      *  \return The border radius of the UI object */
@@ -405,8 +412,8 @@ public:
      *  \param text_color The text color of the UI object */
     void SetTextColor(const Color &text_color);
 
-    /*! \brief Check if the UI object is visible.
-     * \return True if the object is visible, false otherwise. */
+    /*! \brief Check if the UI object is set to visible or not. This does not include computed visibility.
+     *  \returns True if the object is visible, false otherwise. */
     [[nodiscard]]
     bool IsVisible() const;
 
@@ -415,6 +422,11 @@ public:
      *  Can be used to hide the object without removing it from the scene.
      *  \param is_visible Whether to set the object as visible or not. */
     void SetIsVisible(bool is_visible);
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool GetComputedVisibility() const
+        { return m_computed_visibility; }
 
     /*! \brief Check if the UI object has focus. If \ref{include_children} is true, also return true if any child objects have focus.
      *  \details The focus state of the UI object is used to determine if the object is currently focused.
@@ -513,6 +525,9 @@ protected:
     virtual void OnAttached_Internal(UIObject *parent);
     virtual void OnDetached_Internal();
 
+    /*! \brief Check if the object has been computed as visible or not. E.g scrolled out of view in a parent container */
+    virtual void UpdateComputedVisibility();
+
     /*! \brief Sets the NodeProxy for this UIObject.
      *  \note To be called internally from UIStage */
     void SetNodeProxy(NodeProxy);
@@ -527,13 +542,17 @@ protected:
      *  should be in range of (0,0,0):(size,size,size). */
     virtual BoundingBox CalculateAABB() const;
 
+    /*! \brief Calculate the world space bounding box (in pixels) of the object,
+     *  without taking child objects into account. */
+    BoundingBox CalculateWorldAABBExcludingChildren() const;
+
     /*! \brief Override to have the UIObject use a different material. */
     virtual Handle<Material> GetMaterial() const;
 
     const Handle<Mesh> &GetMesh() const;
 
     void SetAABB(const BoundingBox &aabb);
-    
+
     Vec2i GetParentScrollOffset() const;
 
     void UpdateMeshData();
@@ -571,6 +590,11 @@ protected:
     Color                           m_text_color;
 
 private:
+    /*! \brief Collect all nested UIObjects in the hierarchy, calling `proc` for each collected UIObject.
+     *  \param proc The function to call for each collected UIObject.
+     *  \param out_deferred_child_objects Array to push child objects to, in the case that its parent type is not a container type (IsContainer() returns false) */
+    void CollectObjects(const Proc<void, const RC<UIObject> &> &proc, Array<RC<UIObject>> &out_deferred_child_objects) const;
+
     void ComputeOffsetPosition();
 
     void UpdateActualSizes(UpdateSizePhase phase, EnumFlags<UIObjectUpdateSizeFlags> flags);
@@ -590,6 +614,7 @@ private:
     EnumFlags<UIObjectFocusState>   m_focus_state;
 
     bool                            m_is_visible;
+    bool                            m_computed_visibility;
     
     bool                            m_accepts_focus;
 
