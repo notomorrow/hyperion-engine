@@ -40,9 +40,6 @@ class Instance<Platform::VULKAN>
 {
     static ExtensionMap GetExtensionMap();
 
-    std::vector<VkPhysicalDevice> EnumeratePhysicalDevices();
-    VkPhysicalDevice PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices);
-
     /* Setup debug mode */
     Result SetupDebug();
     Result SetupDebugMessenger();
@@ -52,7 +49,7 @@ public:
     Result Initialize(const AppContext &app_context, bool load_debug_layers = false);
 
     VkInstance GetInstance() const
-        { return this->instance; }
+        { return m_instance; }
 
     Swapchain<Platform::VULKAN> *GetSwapchain() const
         { return m_swapchain; }
@@ -90,7 +87,7 @@ public:
 private:
     void CreateSurface();
 
-    VkInstance                      instance = nullptr;
+    VkInstance                      m_instance;
     VkSurfaceKHR                    m_surface;
 
     VmaAllocator                    allocator = nullptr;

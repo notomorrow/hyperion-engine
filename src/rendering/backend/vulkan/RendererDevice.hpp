@@ -50,7 +50,6 @@ public:
 
     void Destroy();
     
-    void SetPhysicalDevice(VkPhysicalDevice);
     void SetRenderSurface(const VkSurfaceKHR &surface);
     void SetRequiredExtensions(const ExtensionMap &extensions);
 

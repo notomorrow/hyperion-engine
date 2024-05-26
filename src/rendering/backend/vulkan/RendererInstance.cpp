@@ -6,6 +6,9 @@
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <core/containers/Array.hpp>
+#include <core/utilities/Span.hpp>
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
 #include <core/system/AppContext.hpp>
 #include <core/system/Debug.hpp>
 #include <core/Defines.hpp>
@@ -21,6 +24,71 @@
 namespace hyperion {
 namespace renderer {
 namespace platform {
+
+static VkPhysicalDevice PickPhysicalDevice(Span<VkPhysicalDevice> devices)
+{
+    if (!devices.Size()) {
+        return VK_NULL_HANDLE;
+    }
+
+    Features::DeviceRequirementsResult device_requirements_result(
+        Features::DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR,
+        "No device found"
+    );
+
+    Features device_features;
+
+    /* Check for a discrete/dedicated GPU with geometry shaders */
+    for (VkPhysicalDevice device : devices) {
+        device_features.SetPhysicalDevice(device);
+
+        if (device_features.IsDiscreteGpu()) {
+            if ((device_requirements_result = device_features.SatisfiesMinimumRequirements())) {
+                HYP_LOG(Vulkan, LogLevel::INFO, "Select discrete device {}", device_features.GetDeviceName());
+
+                return device;
+            }
+        }
+    }
+
+    /* No discrete gpu found, look for a device which satisfies requirements */
+    for (VkPhysicalDevice device : devices) {
+        device_features.SetPhysicalDevice(device);
+
+        if ((device_requirements_result = device_features.SatisfiesMinimumRequirements())) {
+            HYP_LOG(Vulkan, LogLevel::INFO, "Select non-discrete device {}", device_features.GetDeviceName());
+
+            return device;
+        }
+    }
+
+    VkPhysicalDevice device = devices[0];
+    device_features.SetPhysicalDevice(device);
+
+    device_requirements_result = device_features.SatisfiesMinimumRequirements();
+
+    HYP_LOG(Vulkan, LogLevel::ERROR, "No device found which satisfied the minimum requirements; selecting device {}.\nThe error message was: {}",
+        device_features.GetDeviceName(), device_requirements_result.message);
+
+    return device;
+}
+
+static Array<VkPhysicalDevice> EnumeratePhysicalDevices(VkInstance instance)
+{
+    uint32 device_count = 0;
+
+    vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
+
+    AssertThrowMsg(device_count != 0, "No devices with Vulkan support found! " \
+                                      "Please update your graphics drivers or install a Vulkan compatible device.\n");
+
+    Array<VkPhysicalDevice> devices;
+    devices.Resize(device_count);
+
+    vkEnumeratePhysicalDevices(instance, &device_count, devices.Data());
+
+    return devices;
+}
 
 static Result HandleNextFrame(
     Device<Platform::VULKAN> *device,
@@ -135,7 +203,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     return VK_FALSE;
 }
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
     if (auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"))) {
         return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
@@ -166,7 +234,8 @@ Result Instance<Platform::VULKAN>::SetupDebug()
 
 Instance<Platform::VULKAN>::Instance()
     : frame_handler(nullptr),
-      m_surface(VK_NULL_HANDLE)
+      m_surface(VK_NULL_HANDLE),
+      m_instance(VK_NULL_HANDLE)
 {
     m_swapchain = new Swapchain<Platform::VULKAN>();
 }
@@ -311,87 +380,28 @@ Result Instance<Platform::VULKAN>::Destroy()
         m_swapchain = nullptr;
     }
 
-    vkDestroySurfaceKHR(this->instance, m_surface, nullptr);
+    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
     m_device->Destroy();
     delete m_device;
     m_device = nullptr;
 
 #ifndef HYPERION_BUILD_RELEASE
-    DestroyDebugUtilsMessengerEXT(this->instance, this->debug_messenger, nullptr);
+    DestroyDebugUtilsMessengerEXT(m_instance, this->debug_messenger, nullptr);
 #endif
 
-    vkDestroyInstance(this->instance, nullptr);
-    this->instance = nullptr;
+    vkDestroyInstance(m_instance, nullptr);
+    m_instance = VK_NULL_HANDLE;
 
     return result;
-}
-
-VkPhysicalDevice Instance<Platform::VULKAN>::PickPhysicalDevice(std::vector<VkPhysicalDevice> _devices)
-{
-    Features::DeviceRequirementsResult device_requirements_result(
-        Features::DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR,
-        "No device found"
-    );
-
-    Features device_features;
-
-    /* Check for a discrete/dedicated GPU with geometry shaders */
-    for (const auto &_device : _devices) {
-        device_features.SetPhysicalDevice(_device);
-
-        if (device_features.IsDiscreteGpu()) {
-            if ((device_requirements_result = device_features.SatisfiesMinimumRequirements())) {
-                DebugLog(LogType::Info, "Select discrete device %s\n", device_features.GetDeviceName());
-
-                return _device;
-            }
-        }
-    }
-
-    /* No discrete gpu found, look for a device which satisfies requirements */
-    for (const auto &_device : _devices) {
-        device_features.SetPhysicalDevice(_device);
-
-        if ((device_requirements_result = device_features.SatisfiesMinimumRequirements())) {
-            DebugLog(LogType::Info, "Select non-discrete device %s\n", device_features.GetDeviceName());
-
-            return _device;
-        }
-    }
-
-    AssertThrow(!_devices.empty());
-
-    auto _device = _devices[0];
-    device_features.SetPhysicalDevice(_device);
-
-    device_requirements_result = device_features.SatisfiesMinimumRequirements();
-
-#if 0
-    AssertThrowMsg(
-        device_requirements_result,
-        "No device found which satisfied the minimum requirements.\nThe error message was: %s\n",
-        device_requirements_result.message
-    );
-
-#else
-    DebugLog(
-        LogType::Error,
-        "No device found which satisfied the minimum requirements; selecting device %s.\nThe error message was: %s\n",
-        device_features.GetDeviceName(),
-        device_requirements_result.message
-    );
-#endif
-
-    /* well shit, we'll just hope for the best at this point */
-    return _device;
 }
 
 Result Instance<Platform::VULKAN>::InitializeDevice(VkPhysicalDevice physical_device)
 {
     /* If no physical device passed in, we select one */
-    if (physical_device == nullptr) {
-        physical_device = PickPhysicalDevice(EnumeratePhysicalDevices());
+    if (physical_device == VK_NULL_HANDLE) {
+        Array<VkPhysicalDevice> devices = EnumeratePhysicalDevices(m_instance);
+        physical_device = PickPhysicalDevice(Span<VkPhysicalDevice>(devices.Begin(), devices.End()));
     }
     
     m_device = new Device<Platform::VULKAN>(physical_device, m_surface);
@@ -421,21 +431,6 @@ Result Instance<Platform::VULKAN>::InitializeSwapchain()
     HYPERION_BUBBLE_ERRORS(m_swapchain->Create(m_device, m_surface));
 
     HYPERION_RETURN_OK;
-}
-
-std::vector<VkPhysicalDevice> Instance<Platform::VULKAN>::EnumeratePhysicalDevices()
-{
-    uint32_t device_count = 0;
-
-    vkEnumeratePhysicalDevices(this->instance, &device_count, nullptr);
-
-    AssertThrowMsg(device_count != 0, "No devices with Vulkan support found! " \
-                                      "Please update your graphics drivers or install a Vulkan compatible device.\n");
-
-    std::vector<VkPhysicalDevice> devices(device_count);
-    vkEnumeratePhysicalDevices(this->instance, &device_count, devices.data());
-
-    return devices;
 }
 
 helpers::SingleTimeCommands Instance<Platform::VULKAN>::GetSingleTimeCommands()
