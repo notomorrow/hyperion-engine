@@ -64,9 +64,6 @@ struct TaskBatch
     HYP_FORCE_INLINE void AddTask(TaskThread::Scheduler::Task &&task)
         { tasks.PushBack(std::move(task)); }
 
-    // we can use memory_order_relaxed because we do not add taks once the
-    // batch has been enqueued, so once num_completed is equal to num_enqueued,
-    // we know it's done
     HYP_FORCE_INLINE bool IsCompleted() const
         { return num_completed.Get(MemoryOrder::RELAXED) >= num_enqueued; }
 

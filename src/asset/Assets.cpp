@@ -30,9 +30,22 @@ AssetManager *AssetManager::GetInstance()
 }
 
 AssetManager::AssetManager()
-    : m_asset_cache(new AssetCache())
+    : m_asset_cache(new AssetCache()),
+      m_num_pending_batches { 0 }
 {
     RegisterDefaultLoaders();
+}
+
+RC<AssetBatch> AssetManager::CreateBatch()
+{
+    RC<AssetBatch> batch(new AssetBatch(this));
+
+    Mutex::Guard guard(m_pending_batches_mutex);
+
+    m_pending_batches.PushBack(batch);
+    m_num_pending_batches.Increment(1, MemoryOrder::RELEASE);
+
+    return batch;
 }
 
 void AssetManager::RegisterDefaultLoaders()
@@ -98,6 +111,39 @@ const AssetLoaderDefinition *AssetManager::GetLoader(const FilePath &path, TypeI
     }
 
     return nullptr;
+}
+
+void AssetManager::Update(GameCounter::TickUnit delta)
+{
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    uint32 num_pending_batches;
+
+    if ((num_pending_batches = m_num_pending_batches.Get(MemoryOrder::ACQUIRE)) != 0) {
+        Mutex::Guard guard(m_pending_batches_mutex);
+
+        for (auto it = m_pending_batches.Begin(); it != m_pending_batches.End();) {
+            if ((*it)->IsCompleted()) {
+                m_completed_batches.PushBack(std::move(*it));
+
+                it = m_pending_batches.Erase(it);
+
+                m_num_pending_batches.Decrement(1, MemoryOrder::RELEASE);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    if (m_completed_batches.Empty()) {
+        return;
+    }
+
+    for (const RC<AssetBatch> &batch : m_completed_batches) {
+        batch->OnComplete.Broadcast(batch->AwaitResults());
+    }
+
+    m_completed_batches.Clear();
 }
 
 } // namespace hyperion

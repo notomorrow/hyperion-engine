@@ -6,9 +6,13 @@
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
 #include <core/ID.hpp>
-#include <scene/Node.hpp>
-#include <math/MathUtil.hpp>
 #include <core/threading/TaskSystem.hpp>
+#include <core/functional/Delegate.hpp>
+
+#include <scene/Node.hpp>
+
+
+#include <math/MathUtil.hpp>
 
 #include <type_traits>
 
@@ -196,6 +200,10 @@ public:
     HYP_API AssetMap ForceLoad();
 
     AssetManager                                *asset_manager;
+
+    /*! \brief Functions bound to this delegates are called in
+     *  the game thread. */
+    Delegate<void, AssetMap>                    OnComplete;
 
 private:
     Array<UniquePtr<ProcessAssetFunctorBase>>   procs;

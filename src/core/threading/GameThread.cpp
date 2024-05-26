@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <core/threading/GameThread.hpp>
-
 #include <core/logging/Logger.hpp>
-
 #include <core/Defines.hpp>
+
+#include <asset/Assets.hpp>
 
 #include <math/MathUtil.hpp>
 
@@ -54,6 +54,8 @@ void GameThread::operator()(Game *game)
 #endif
 
         counter.NextTick();
+
+        g_asset_manager->Update(counter.delta);
         
         game->Update(counter.delta);
 

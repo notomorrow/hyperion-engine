@@ -82,6 +82,7 @@ private:
     void CreateFontAtlas();
     void CreateMainPanel();
     RC<UIObject> CreateSceneOutline();
+    RC<UIObject> CreateDetailView();
     void CreateInitialState();
 
     Handle<Scene>       m_scene;
@@ -279,9 +280,7 @@ void HyperionEditorImpl::CreateMainPanel()
     dockable_container->AddChildUIObject(tab_view, UIDockableItemPosition::CENTER);
 
     dockable_container->AddChildUIObject(CreateSceneOutline(), UIDockableItemPosition::LEFT);
-
-    RC<UIPanel> properties_panel = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Properties_panel), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
-    dockable_container->AddChildUIObject(properties_panel, UIDockableItemPosition::RIGHT);
+    dockable_container->AddChildUIObject(CreateDetailView(), UIDockableItemPosition::RIGHT);
 
     RC<UIPanel> bottom_panel = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Bottom_panel), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PIXEL }));
     dockable_container->AddChildUIObject(bottom_panel, UIDockableItemPosition::BOTTOM);
@@ -328,16 +327,17 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
 {
     RC<UIPanel> scene_outline = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Outline), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
 
-    RC<UIListView> list_view = GetUIStage()->CreateUIObject<UIListView>(HYP_NAME(Scene_Outline_ListView), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+    RC<UIPanel> scene_outline_header = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Scene_Outline_Header), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 25, UIObjectSize::PIXEL }));
+    RC<UIText> scene_outline_header_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Scene_Outline_Header_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 10, UIObjectSize::PIXEL }));
+    scene_outline_header_text->SetOriginAlignment(UIObjectAlignment::CENTER);
+    scene_outline_header_text->SetParentAlignment(UIObjectAlignment::CENTER);
+    scene_outline_header_text->SetText("SCENE");
+    scene_outline_header_text->SetTextColor(Vec4f::One());
+    scene_outline_header->AddChildUIObject(scene_outline_header_text);
+    scene_outline->AddChildUIObject(scene_outline_header);
+
+    RC<UIListView> list_view = GetUIStage()->CreateUIObject<UIListView>(HYP_NAME(Scene_Outline_ListView), Vec2i { 0, 25 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
     list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-
-    // auto test_item0 = list_view->GetStage()->CreateUIObject<UIText>(HYP_NAME(TestItem_0), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 25, UIObjectSize::PIXEL }));
-    // test_item0->SetText("Test item 0");
-    // list_view->AddChildUIObject(test_item0);
-
-    // auto test_item1 = list_view->GetStage()->CreateUIObject<UIText>(HYP_NAME(TestItem_1), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 25, UIObjectSize::PIXEL }));
-    // test_item1->SetText("Test item 1");
-    // list_view->AddChildUIObject(test_item1);
 
     // TODO make it more efficient to add/remove items instead of searching by name
     GetScene()->GetRoot()->GetDelegates()->OnNestedNodeAdded.Bind([list_view](const NodeProxy &node, bool)
@@ -367,6 +367,22 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
     scene_outline->AddChildUIObject(list_view);
 
     return scene_outline;
+}
+
+RC<UIObject> HyperionEditorImpl::CreateDetailView()
+{
+    RC<UIPanel> detail_view = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Detail_View), Vec2i { 0, 0 }, UIObjectSize({ 200, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT }));
+
+    RC<UIPanel> detail_view_header = GetUIStage()->CreateUIObject<UIPanel>(HYP_NAME(Detail_View_Header), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 25, UIObjectSize::PIXEL }));
+    RC<UIText> detail_view_header_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Detail_View_Header_Text), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 10, UIObjectSize::PIXEL }));
+    detail_view_header_text->SetOriginAlignment(UIObjectAlignment::CENTER);
+    detail_view_header_text->SetParentAlignment(UIObjectAlignment::CENTER);
+    detail_view_header_text->SetText("PROPERTIES");
+    detail_view_header_text->SetTextColor(Vec4f::One());
+    detail_view_header->AddChildUIObject(detail_view_header_text);
+    detail_view->AddChildUIObject(detail_view_header);
+
+    return detail_view;
 }
 
 void HyperionEditorImpl::CreateInitialState()
@@ -621,42 +637,45 @@ void HyperionEditor::Init()
     // }
 
     // temp
-    auto batch = AssetManager::GetInstance()->CreateBatch();
+    RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
     batch->Add("test_model", "models/sponza/sponza.obj");
     batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     batch->Add("house", "models/house.obj");
-    batch->LoadAsync();
-    auto results = batch->AwaitResults();
 
-    NodeProxy node = results["test_model"].ExtractAs<Node>();
-    node.Scale(0.0125f);
-    node.SetName("test_model");
-    node.LockTransform();
+    batch->OnComplete.Bind([this](AssetMap &&results)
+    {
+        NodeProxy node = results["test_model"].ExtractAs<Node>();
+        node.Scale(0.0125f);
+        node.SetName("test_model");
+        node.LockTransform();
 
-    // if (auto house = results["house"].Get<Node>()) {
-    //     house.Scale(0.25f);
-    //     m_scene->GetRoot().AddChild(house);
-    // }
+        // if (auto house = results["house"].Get<Node>()) {
+        //     house.Scale(0.25f);
+        //     m_scene->GetRoot().AddChild(house);
+        // }
 
-    if (auto zombie = results["zombie"].Get<Node>()) {
-        zombie.Scale(0.25f);
-        zombie.Translate(Vec3f(0, 2.0f, -1.0f));
-        auto zombie_entity = zombie[0].GetEntity();
+        if (auto zombie = results["zombie"].Get<Node>()) {
+            zombie.Scale(0.25f);
+            zombie.Translate(Vec3f(0, 2.0f, -1.0f));
+            auto zombie_entity = zombie[0].GetEntity();
 
-        m_scene->GetRoot().AddChild(zombie);
+            m_scene->GetRoot().AddChild(zombie);
 
-        if (zombie_entity.IsValid()) {
-            if (auto *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombie_entity)) {
-                mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-                mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.05f);
-                mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
+            if (zombie_entity.IsValid()) {
+                if (auto *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombie_entity)) {
+                    mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+                    mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.05f);
+                    mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 1.0f);
+                }
             }
+
+            zombie.SetName("zombie");
         }
 
-        zombie.SetName("zombie");
-    }
+        GetScene()->GetRoot().AddChild(node);
+    }).Detach();
 
-    GetScene()->GetRoot().AddChild(node);
+    batch->LoadAsync();
 }
 
 void HyperionEditor::Teardown()

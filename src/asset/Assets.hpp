@@ -5,8 +5,9 @@
 #include <asset/AssetBatch.hpp>
 #include <asset/AssetLoader.hpp>
 #include <asset/AssetCache.hpp>
+#include <asset/BufferedByteReader.hpp>
+
 #include <util/fs/FsUtil.hpp>
-#include <scene/Node.hpp>
 
 #include <core/Core.hpp>
 #include <core/Containers.hpp>
@@ -15,15 +16,15 @@
 #include <core/threading/TaskSystem.hpp>
 #include <core/logging/LoggerFwd.hpp>
 #include <core/ObjectPool.hpp>
+
+#include <GameCounter.hpp>
+
+#include <scene/Node.hpp>
+
 #include <Constants.hpp>
 
-
-#include <string>
-#include <unordered_map>
-#include <thread>
 #include <algorithm>
 #include <type_traits>
-#include <asset/BufferedByteReader.hpp>
 
 namespace hyperion {
 
@@ -190,14 +191,15 @@ public:
         return Load<T>(path);
     }
 
-    RC<AssetBatch> CreateBatch()
-        { return RC<AssetBatch>::Construct(this); }
+    HYP_API RC<AssetBatch> CreateBatch();
 
     AssetCache *GetAssetCache()
         { return m_asset_cache.Get(); }
 
     const AssetCache *GetAssetCache() const
         { return m_asset_cache.Get(); }
+
+    HYP_API void Update(GameCounter::TickUnit delta);
 
 private:
     HYP_API const AssetLoaderDefinition *GetLoader(const FilePath &path, TypeID desired_type_id = TypeID::Void());
@@ -229,6 +231,11 @@ private:
 
     Array<AssetLoaderDefinition>        m_loaders;
     TypeMap<ProcessAssetFunctorFactory> m_functor_factories;
+
+    Array<RC<AssetBatch>>               m_pending_batches;
+    Mutex                               m_pending_batches_mutex;
+    AtomicVar<uint32>                   m_num_pending_batches;
+    Array<RC<AssetBatch>>               m_completed_batches;
 };
 
 } // namespace hyperion
