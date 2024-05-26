@@ -308,7 +308,7 @@ void UIObject::UpdatePosition(bool update_children)
 
     ComputeOffsetPosition();
 
-    const Vec2f offset_position = m_offset_position - Vec2f(m_scroll_offset);
+    const Vec2f offset_position = m_offset_position - Vec2f(GetParentScrollOffset());
 
     float z_value = 1.0f;
 
@@ -407,9 +407,9 @@ void UIObject::UpdateSize(bool update_children)
     }
 
     // auto needs recalculation
-    const bool needs_update_after_children = (m_size.GetAllFlags() & UIObjectSize::AUTO)
-        || (m_inner_size.GetAllFlags() & UIObjectSize::AUTO)
-        || (m_max_size.GetAllFlags() & UIObjectSize::AUTO);
+    const bool needs_update_after_children = (m_size.GetAllFlags() & (UIObjectSize::AUTO | UIObjectSize::FILL))
+        || (m_inner_size.GetAllFlags() & (UIObjectSize::AUTO | UIObjectSize::FILL))
+        || (m_max_size.GetAllFlags() &  (UIObjectSize::AUTO | UIObjectSize::FILL));
 
     if (needs_update_after_children) {
         UpdateActualSizes(UpdateSizePhase::AFTER_CHILDREN, UIObjectUpdateSizeFlags::DEFAULT);
@@ -900,6 +900,15 @@ RC<UIObject> UIObject::GetParentUIObject() const
     return nullptr;
 }
 
+Vec2i UIObject::GetParentScrollOffset() const
+{
+    if (RC<UIObject> parent_ui_object = GetParentUIObject()) {
+        return parent_ui_object->GetScrollOffset();
+    }
+
+    return Vec2i::Zero();
+}
+
 Scene *UIObject::GetScene() const
 {
     if (const NodeProxy &node = GetNode()) {
@@ -969,6 +978,10 @@ void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_
 
         // Reduce size due to parent object's padding
         out_actual_size.y -= parent_padding.y * 2;
+    }
+
+    if (phase == UpdateSizePhase::AFTER_CHILDREN && (in_size.GetAllFlags() & UIObjectSize::FILL)) {
+        // @TODO
     }
 
     // Calculate "auto" sizing based on children. Must be executed after children have their sizes calculated.

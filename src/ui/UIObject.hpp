@@ -107,6 +107,8 @@ struct UIObjectSize
         PIXEL           = 0x10,
         PERCENT         = 0x20,
 
+        FILL            = 0x40,
+
         DEFAULT         = PIXEL
     };
 
@@ -531,6 +533,8 @@ protected:
     const Handle<Mesh> &GetMesh() const;
 
     void SetAABB(const BoundingBox &aabb);
+    
+    Vec2i GetParentScrollOffset() const;
 
     void UpdateMeshData();
     void UpdateMaterial(bool update_children = true);

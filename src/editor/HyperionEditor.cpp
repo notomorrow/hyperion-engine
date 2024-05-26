@@ -338,6 +338,7 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
 
     RC<UIListView> list_view = GetUIStage()->CreateUIObject<UIListView>(HYP_NAME(Scene_Outline_ListView), Vec2i { 0, 25 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
     list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+    list_view->SetBackgroundColor(Vec4f(1.0f, 0.0f, 0.0f, 1.0f));
 
     // TODO make it more efficient to add/remove items instead of searching by name
     GetScene()->GetRoot()->GetDelegates()->OnNestedNodeAdded.Bind([list_view](const NodeProxy &node, bool)
