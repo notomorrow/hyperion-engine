@@ -258,7 +258,7 @@ Result Instance<Platform::VULKAN>::SetupDebugMessenger()
     messenger_info.pfnUserCallback = &DebugCallback;
     messenger_info.pUserData = nullptr;
 
-    HYPERION_VK_CHECK(CreateDebugUtilsMessengerEXT(this->instance, &messenger_info, nullptr, &this->debug_messenger));
+    HYPERION_VK_CHECK(CreateDebugUtilsMessengerEXT(m_instance, &messenger_info, nullptr, &this->debug_messenger));
 
     DebugLog(LogType::Info, "Using Vulkan Debug Messenger\n");
 #endif
@@ -317,7 +317,7 @@ Result Instance<Platform::VULKAN>::Initialize(const AppContext &app_context, boo
 
     DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.Size());
 
-    VkResult instance_result = vkCreateInstance(&create_info, nullptr, &this->instance);
+    VkResult instance_result = vkCreateInstance(&create_info, nullptr, &m_instance);
 
     DebugLog(LogType::Info, "Instance result: %d\n", instance_result);
     HYPERION_VK_CHECK_MSG(

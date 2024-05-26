@@ -7,6 +7,7 @@
 #include <input/InputManager.hpp>
 #include <input/Mouse.hpp>
 
+#include <core/utilities/Format.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
@@ -28,7 +29,7 @@ void UIMenuItem::Init()
 {
     UIPanel::Init();
 
-    RC<UIText> text_element = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_Text"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
+    RC<UIText> text_element = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(HYP_FORMAT("{}_Text", m_name)), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
     text_element->SetParentAlignment(UIObjectAlignment::CENTER);
     text_element->SetOriginAlignment(UIObjectAlignment::CENTER);
     text_element->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
@@ -37,7 +38,7 @@ void UIMenuItem::Init()
 
     AddChildUIObject(text_element);
 
-    RC<UIPanel> drop_down_menu = GetStage()->CreateUIObject<UIPanel>(CreateNameFromDynamicString(ANSIString(m_name.LookupString()) + "_DropDownMenu"), Vec2i { 0, 0 }, UIObjectSize({ 150, UIObjectSize::PIXEL }, { 0, UIObjectSize::AUTO }));
+    RC<UIPanel> drop_down_menu = GetStage()->CreateUIObject<UIPanel>(CreateNameFromDynamicString(HYP_FORMAT("{}_DropDownMenu", m_name)), Vec2i { 0, 0 }, UIObjectSize({ 150, UIObjectSize::PIXEL }, { 0, UIObjectSize::AUTO }));
     drop_down_menu->SetAcceptsFocus(false);
     drop_down_menu->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
     drop_down_menu->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);

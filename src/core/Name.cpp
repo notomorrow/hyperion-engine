@@ -1,36 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <core/Name.hpp>
+#include <core/utilities/UUID.hpp>
+
 #include <math/MathUtil.hpp>
 
 namespace hyperion {
 
 NameRegistry *g_name_registry = nullptr;
-
-static ANSIString GenerateUUID()
-{
-    static constexpr SizeType num_uuid_groups = 5;
-    static constexpr SizeType num_uuid_chars = 4;
-
-    static constexpr char uuid_chars[] = "0123456789abcdef";
-
-    ANSIString uuid;
-    uuid.Reserve(num_uuid_groups * num_uuid_chars + num_uuid_groups - 1);
-
-    for (SizeType i = 0; i < num_uuid_groups; ++i) {
-        for (SizeType j = 0; j < num_uuid_chars; ++j) {
-            const uint index = rand() % uint(sizeof(uuid_chars));
-
-            uuid.Append(uuid_chars[index]);
-        }
-
-        if (i < num_uuid_groups - 1) {
-            uuid.Append('-');
-        }
-    }
-
-    return uuid;
-}
 
 NameRegistry *Name::GetRegistry()
 {
@@ -50,12 +27,12 @@ NameRegistry *Name::GetRegistry()
 
 Name Name::Unique()
 {
-    return CreateNameFromDynamicString(GenerateUUID());
+    return CreateNameFromDynamicString(UUID().ToString());
 }
 
 Name Name::Unique(const char *prefix)
 {
-    return CreateNameFromDynamicString(ANSIString(prefix) + "_" + GenerateUUID());
+    return CreateNameFromDynamicString(ANSIString(prefix) + "_" + UUID().ToString());
 }
 
 const char *Name::LookupString() const

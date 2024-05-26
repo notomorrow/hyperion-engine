@@ -25,7 +25,7 @@ void UITab::Init()
 {
     UIPanel::Init();
 
-    RC<UIText> title_text = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString(*m_name) + "_Title"), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
+    RC<UIText> title_text = GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(HYP_FORMAT("{}_Title", m_name)), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
     title_text->SetParentAlignment(UIObjectAlignment::CENTER);
     title_text->SetOriginAlignment(UIObjectAlignment::CENTER);
     title_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
@@ -35,7 +35,7 @@ void UITab::Init()
 
     m_title_text = title_text;
 
-    m_contents = GetStage()->CreateUIObject<UIPanel>(CreateNameFromDynamicString(ANSIString(*m_name) + "_Contents"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+    m_contents = GetStage()->CreateUIObject<UIPanel>(CreateNameFromDynamicString(HYP_FORMAT("{}_Contents", m_name)), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
     m_contents->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
 }
 
