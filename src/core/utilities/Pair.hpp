@@ -38,56 +38,48 @@ struct PairHelper
     static constexpr bool move_assignable = (std::is_move_assignable_v<First> && (std::is_move_assignable_v<Second>));
 };
 
-template <PairArgTraits FirstTraits, PairArgTraits SecondTraits, class First, class Second>
-struct PairBase :
-    private ConstructAssignmentTraits<
-        PairHelper<First, Second>::default_constructible,
-        (FirstTraits & COPY_CONSTRUCTIBLE) && (SecondTraits & COPY_CONSTRUCTIBLE),
-        (FirstTraits & MOVE_CONSTRUCTIBLE) && (SecondTraits & MOVE_CONSTRUCTIBLE),
-        PairBase<FirstTraits, SecondTraits, First, Second>
-    >
-{
-};
+// template <PairArgTraits FirstTraits, PairArgTraits SecondTraits, class First, class Second>
+// struct PairBase :
+//     private ConstructAssignmentTraits<
+//         PairHelper<First, Second>::default_constructible,
+//         (FirstTraits & COPY_CONSTRUCTIBLE) && (SecondTraits & COPY_CONSTRUCTIBLE),
+//         (FirstTraits & MOVE_CONSTRUCTIBLE) && (SecondTraits & MOVE_CONSTRUCTIBLE),
+//         PairBase<FirstTraits, SecondTraits, First, Second>
+//     >
+// {
+// };
 
 /*! \brief Simple Pair class that is also able to hold a reference to a key or value */
 template <PairArgTraits FirstTraits, PairArgTraits SecondTraits, class First, class Second>
-struct PairImpl :
-    PairBase<
-        FirstTraits, SecondTraits,
-        First, Second
-    >
+struct PairImpl
 {
     static_assert(resolution_failure<PairImpl>, "Invalid PairImpl traits");
 };
 
 template <class First, class Second>
-struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(const First &first, const Second &second)
+    constexpr PairImpl(const First &first, const Second &second)
         : first(first), second(second) {}
 
-    PairImpl(First &&first, const Second &second)
+    constexpr PairImpl(First &&first, const Second &second)
         : first(std::move(first)), second(second) {}
 
-    PairImpl(const First &first, Second &&second)
+    constexpr PairImpl(const First &first, Second &&second)
         : first(first), second(std::move(second)) {}
 
-    PairImpl(First &&first, Second &&second)
+    constexpr PairImpl(First &&first, Second &&second)
         : first(std::move(first)), second(std::move(second)) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -128,27 +120,23 @@ struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MO
 };
 
 template <class First, class Second>
-struct PairImpl<MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(First &&first, const Second &second)
+    constexpr PairImpl(First &&first, const Second &second)
         : first(std::move(first)), second(second) {}
 
-    PairImpl(First &&first, Second &&second)
+    constexpr PairImpl(First &&first, Second &&second)
         : first(std::move(first)), second(std::move(second)) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -189,27 +177,23 @@ struct PairImpl<MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, Fir
 };
 
 template <class First, class Second>
-struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(const First &first, const Second &second)
+    constexpr PairImpl(const First &first, const Second &second)
         : first(first), second(second) {}
 
-    PairImpl(First &&first, const Second &second)
+    constexpr PairImpl(First &&first, const Second &second)
         : first(std::move(first)), second(second) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -250,27 +234,23 @@ struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, Fir
 };
 
 template <class First, class Second>
-struct PairImpl<COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(const First &first, const Second &second)
+    constexpr PairImpl(const First &first, const Second &second)
         : first(first), second(second) {}
 
-    PairImpl(const First &first, Second &&second)
+    constexpr PairImpl(const First &first, Second &&second)
         : first(first), second(std::move(second)) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -311,27 +291,23 @@ struct PairImpl<COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, Fir
 };
 
 template <class First, class Second>
-struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(const First &first, Second &&second)
+    constexpr PairImpl(const First &first, Second &&second)
         : first(first), second(std::move(second)) {}
 
-    PairImpl(First &&first, Second &&second)
+    constexpr PairImpl(First &&first, Second &&second)
         : first(std::move(first)), second(std::move(second)) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -372,24 +348,20 @@ struct PairImpl<COPY_CONSTRUCTIBLE | MOVE_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, Fir
 };
 
 template <class First, class Second>
-struct PairImpl<MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(First &&first, const Second &second)
+    constexpr PairImpl(First &&first, const Second &second)
         : first(std::move(first)), second(second) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -430,24 +402,20 @@ struct PairImpl<MOVE_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second> :
 };
 
 template <class First, class Second>
-struct PairImpl<COPY_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        COPY_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<COPY_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(const First &first, Second &&second)
+    constexpr PairImpl(const First &first, Second &&second)
         : first(first), second(std::move(second)) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -488,24 +456,20 @@ struct PairImpl<COPY_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, First, Second> :
 };
 
 template <class First, class Second>
-struct PairImpl<COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(const First &first, const Second &second)
+    constexpr PairImpl(const First &first, const Second &second)
         : first(first), second(second) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;
@@ -546,24 +510,20 @@ struct PairImpl<COPY_CONSTRUCTIBLE, COPY_CONSTRUCTIBLE, First, Second> :
 };
 
 template <class First, class Second>
-struct PairImpl<MOVE_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, First, Second> :
-    PairBase<
-        MOVE_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE,
-        First, Second
-    >
+struct PairImpl<MOVE_CONSTRUCTIBLE, MOVE_CONSTRUCTIBLE, First, Second>
 {
     First   first;
     Second  second;
 
-    PairImpl()                                      = default;
+    constexpr PairImpl()                            = default;
 
-    PairImpl(First &&first, Second &&second)
+    constexpr PairImpl(First &&first, Second &&second)
         : first(std::move(first)), second(std::move(second)) {}
 
-    PairImpl(const PairImpl &other)                 = default;
+    constexpr PairImpl(const PairImpl &other)       = default;
     PairImpl &operator=(const PairImpl &other)      = default;
 
-    PairImpl(PairImpl &&other) noexcept             = default;
+    constexpr PairImpl(PairImpl &&other) noexcept   = default;
     PairImpl &operator=(PairImpl &&other) noexcept  = default;
 
     ~PairImpl()                                     = default;

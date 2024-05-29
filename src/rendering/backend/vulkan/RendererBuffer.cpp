@@ -265,7 +265,7 @@ VmaAllocationCreateFlags GetVkAllocationCreateFlags(GPUBufferType type)
     case GPUBufferType::INDIRECT_ARGS_BUFFER:
         return 0;
     case GPUBufferType::SHADER_BINDING_TABLE:
-        return 0;
+        return VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     case GPUBufferType::ACCELERATION_STRUCTURE_BUFFER:
         return 0;
     case GPUBufferType::ACCELERATION_STRUCTURE_INSTANCE_BUFFER:

@@ -4,6 +4,7 @@
 #define HYPERION_STATIC_STRING_HPP
 
 #include <core/Defines.hpp>
+#include <core/utilities/Pair.hpp>
 
 #include <Types.hpp>
 #include <HashCode.hpp>
@@ -762,9 +763,9 @@ struct GetSplitIndices_Impl
 {
     constexpr auto operator()() const
     {
-        return containers::MakePairSequence<std::pair<SizeType, SizeType>>([]() -> std::array<std::pair<SizeType, SizeType>, Count + 1>
+        return containers::MakePairSequence<Pair<SizeType, SizeType>>([]() -> std::array<Pair<SizeType, SizeType>, Count + 1>
         {
-            std::array<std::pair<SizeType, SizeType>, Count + 1> split_indices = { };
+            std::array<Pair<SizeType, SizeType>, Count + 1> split_indices = { };
 
             if constexpr (Count == 0) {
                 split_indices[0] = { 0, String.Size() - 1 /* -1 for NUL char */ };
@@ -810,7 +811,7 @@ struct GetSplitIndices_Impl
                     split_indices[i] = { prev, current };
                 }
 
-                split_indices[Count] = std::pair<SizeType, SizeType> {
+                split_indices[Count] = Pair<SizeType, SizeType> {
                     delimiter_indices[std::size(delimiter_indices) - 1] + 1,
                     String.Size() - 1 /* -1 for NUL char */
                 };
@@ -845,8 +846,8 @@ struct GetSplitIndices
 
 namespace detail {
 
-template <class Transformer, auto String, std::pair<SizeType, SizeType> ... SplitIndices>
-constexpr auto TransformSplit_Impl(PairSequence<std::pair<SizeType, SizeType>, SplitIndices...>)
+template <class Transformer, auto String, Pair< SizeType, SizeType > ... SplitIndices>
+constexpr auto TransformSplit_Impl(PairSequence< Pair< SizeType, SizeType >, SplitIndices... >)
 {
     return TransformParts< Transformer, Substr< String, SplitIndices.first, SplitIndices.second >::value... >::value;
 }
