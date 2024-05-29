@@ -967,7 +967,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
 
                 auto track = m_rtc_instance->CreateTrack(RTCTrackType::RTC_TRACK_TYPE_VIDEO);
 
-                client->GetCallbacks().On(RTCClientCallbackMessages::MESSAGE, [client_weak = Weak<RTCClient>(client)](RTCClientCallbackData data)
+                client->GetCallbacks().OnMessage.Bind([client_weak = Weak<RTCClient>(client)](RTCClientCallbackData data)
                 {
                     if (!data.bytes.HasValue()) {
                         return;

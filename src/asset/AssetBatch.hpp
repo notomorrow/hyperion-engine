@@ -47,12 +47,6 @@ struct EnqueuedAsset
 
 using AssetMap = FlatMap<String, EnqueuedAsset>;
 
-enum AssetBatchCallbackMessages
-{
-    ASSET_BATCH_ITEM_COMPLETE   = 1,
-    ASSET_BATCH_ITEM_FAILED     = 2
-};
-
 struct AssetBatchCallbackData
 {
     using EnqueuedAssetDataType = Pair<std::reference_wrapper<const String>, std::reference_wrapper<EnqueuedAsset>>;
@@ -80,7 +74,11 @@ struct AssetBatchCallbackData
         { return data.Get<EnqueuedAssetDataType>().second.get(); }
 };
 
-using AssetBatchCallbacks = Callbacks<AssetBatchCallbackMessages, AssetBatchCallbackData>;
+struct AssetBatchCallbacks
+{
+    Delegate< void, const AssetBatchCallbackData & >    OnItemComplete;
+    Delegate< void, const AssetBatchCallbackData & >    OnItemFailed;
+};
 
 template <class T>
 struct LoadObjectWrapper
@@ -99,11 +97,11 @@ struct LoadObjectWrapper
 
         if (asset.result == LoaderResult::Status::OK) {
             if (callbacks) {
-                callbacks->Trigger(ASSET_BATCH_ITEM_COMPLETE, AssetBatchCallbackData(key, asset));
+                callbacks->OnItemComplete(AssetBatchCallbackData(key, asset));
             }
         } else {
             if (callbacks) {
-                callbacks->Trigger(ASSET_BATCH_ITEM_FAILED, AssetBatchCallbackData(key, asset));
+                callbacks->OnItemFailed(AssetBatchCallbackData(key, asset));
             }
 
             asset.value.Reset();

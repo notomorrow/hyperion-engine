@@ -6,6 +6,7 @@
 #include <core/Containers.hpp>
 #include <core/containers/String.hpp>
 #include <core/memory/RefCountedPtr.hpp>
+#include <core/functional/Delegate.hpp>
 #include <core/utilities/Optional.hpp>
 #include <core/Name.hpp>
 
@@ -38,18 +39,6 @@ enum RTCClientState
     RTC_CLIENT_STATE_DISCONNECTED
 };
 
-enum class RTCClientCallbackMessages : uint32
-{
-    UNKNOWN         = 0,
-
-    ERR             = uint32(-1),
-
-    CONNECTED       = 1,
-    DISCONNECTED,
-
-    MESSAGE
-};
-
 struct RTCClientError
 {
     String message;
@@ -61,7 +50,13 @@ struct RTCClientCallbackData
     Optional<RTCClientError>    error;
 };
 
-using RTCClientCallbacks = Callbacks<RTCClientCallbackMessages, RTCClientCallbackData>;
+struct RTCClientCallbacks
+{
+    Delegate< void, const RTCClientCallbackData & > OnError;
+    Delegate< void, const RTCClientCallbackData & > OnConnected;
+    Delegate< void, const RTCClientCallbackData & > OnDisconnected;
+    Delegate< void, const RTCClientCallbackData & > OnMessage;
+};
 
 class HYP_API RTCClient
 {

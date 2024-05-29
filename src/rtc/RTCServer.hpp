@@ -5,6 +5,7 @@
 #include <core/Containers.hpp>
 #include <core/memory/ByteBuffer.hpp>
 #include <core/utilities/Optional.hpp>
+#include <core/functional/Delegate.hpp>
 
 #include <rtc/RTCClientList.hpp>
 
@@ -17,18 +18,6 @@ namespace hyperion {
 class RTCClient;
 class RTCServerThread;
 
-enum class RTCServerCallbackMessages : uint32
-{
-    UNKNOWN         = 0,
-
-    ERR             = uint32(-1),
-
-    CONNECTED       = 1,
-    DISCONNECTED,
-
-    MESSAGE
-};
-
 struct RTCServerError
 {
     String message;
@@ -40,7 +29,13 @@ struct RTCServerCallbackData
     Optional<RTCServerError>    error;
 };
 
-using RTCServerCallbacks = Callbacks<RTCServerCallbackMessages, RTCServerCallbackData>;
+struct RTCServerCallbacks
+{
+    Delegate< void, RTCServerCallbackData & >   OnError;
+    Delegate< void, RTCServerCallbackData & >   OnConnected;
+    Delegate< void, RTCServerCallbackData & >   OnDisconnected;
+    Delegate< void, RTCServerCallbackData & >   OnMessage;
+};
 
 struct RTCServerAddress
 {

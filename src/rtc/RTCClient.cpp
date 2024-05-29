@@ -95,7 +95,7 @@ LibDataChannelRTCClient::LibDataChannelRTCClient(String id, RTCServer *server)
             
             m_state = RTC_CLIENT_STATE_DISCONNECTED;
 
-            m_callbacks.Trigger(RTCClientCallbackMessages::DISCONNECTED, RTCClientCallbackData { });
+            m_callbacks.OnDisconnected(RTCClientCallbackData { });
 
             m_server->EnqueueClientRemoval(id);
 
@@ -105,7 +105,7 @@ LibDataChannelRTCClient::LibDataChannelRTCClient(String id, RTCServer *server)
             
             m_state = RTC_CLIENT_STATE_DISCONNECTED;
 
-            m_callbacks.Trigger(RTCClientCallbackMessages::ERR, RTCClientCallbackData {
+            m_callbacks.OnError(RTCClientCallbackData {
                 Optional<ByteBuffer>(),
                 Optional<RTCClientError>({ "Connection failed" })
             });
@@ -128,7 +128,7 @@ LibDataChannelRTCClient::LibDataChannelRTCClient(String id, RTCServer *server)
         case rtc::PeerConnection::State::Connected:
             m_state = RTC_CLIENT_STATE_CONNECTED;
 
-            m_callbacks.Trigger(RTCClientCallbackMessages::CONNECTED, RTCClientCallbackData { });
+            m_callbacks.OnConnected(RTCClientCallbackData { });
 
             break;
         default:
@@ -191,14 +191,14 @@ RC<RTCDataChannel> LibDataChannelRTCClient::CreateDataChannel(Name name)
         if (std::holds_alternative<rtc::binary>(data)) {
             const rtc::binary &bytes = std::get<rtc::binary>(data);
 
-            m_callbacks.Trigger(RTCClientCallbackMessages::MESSAGE, {
+            m_callbacks.OnMessage({
                 Optional<ByteBuffer>(ByteBuffer(bytes.size(), bytes.data())),
                 Optional<RTCClientError>()
             });
         } else {
             const std::string &str = std::get<std::string>(data);
 
-            m_callbacks.Trigger(RTCClientCallbackMessages::MESSAGE, {
+            m_callbacks.OnMessage({
                 Optional<ByteBuffer>(ByteBuffer(str.size(), str.data())),
                 Optional<RTCClientError>()
             });

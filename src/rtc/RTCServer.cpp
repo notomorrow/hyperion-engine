@@ -121,14 +121,14 @@ void LibDataChannelRTCServer::Start()
     m_thread->GetScheduler().Enqueue([this]()
     {
         m_websocket->onOpen([this]() {
-            m_callbacks.Trigger(RTCServerCallbackMessages::CONNECTED, {
+            m_callbacks.OnConnected({
                 Optional<ByteBuffer>(),
                 Optional<RTCServerError>()
             });
         });
 
         m_websocket->onClosed([this]() {
-            m_callbacks.Trigger(RTCServerCallbackMessages::DISCONNECTED, {
+            m_callbacks.OnDisconnected({
                 Optional<ByteBuffer>(),
                 Optional<RTCServerError>()
             });
@@ -137,7 +137,7 @@ void LibDataChannelRTCServer::Start()
         });
 
         m_websocket->onError([this](const std::string &error) {
-            m_callbacks.Trigger(RTCServerCallbackMessages::ERR, {
+            m_callbacks.OnError({
                 Optional<ByteBuffer>(),
                 Optional<RTCServerError>(RTCServerError { error.c_str() })
             });
@@ -147,14 +147,14 @@ void LibDataChannelRTCServer::Start()
             if (std::holds_alternative<rtc::binary>(data)) {
                 const rtc::binary &bytes = std::get<rtc::binary>(data);
 
-                m_callbacks.Trigger(RTCServerCallbackMessages::MESSAGE, {
+                m_callbacks.OnMessage({
                     Optional<ByteBuffer>(ByteBuffer(bytes.size(), bytes.data())),
                     Optional<RTCServerError>()
                 });
             } else {
                 const std::string &str = std::get<std::string>(data);
 
-                m_callbacks.Trigger(RTCServerCallbackMessages::MESSAGE, {
+                m_callbacks.OnMessage({
                     Optional<ByteBuffer>(ByteBuffer(str.size(), str.data())),
                     Optional<RTCServerError>()
                 });
@@ -222,7 +222,7 @@ void LibDataChannelRTCServer::SendToSignallingServer(ByteBuffer bytes)
         Memory::MemCpy(bin.data(), byte_buffer->Data(), byte_buffer->Size());
 
         if (!m_websocket->send(std::move(bin))) {
-            m_callbacks.Trigger(RTCServerCallbackMessages::ERR, {
+            m_callbacks.OnError({
                 Optional<ByteBuffer>(),
                 Optional<RTCServerError>(RTCServerError { "Message could not be sent" })
             });
