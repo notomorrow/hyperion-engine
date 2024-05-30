@@ -10,6 +10,7 @@
 #include <core/containers/TypeMap.hpp>
 #include <core/functional/Proc.hpp>
 #include <core/threading/Mutex.hpp>
+#include <core/utilities/Tuple.hpp>
 #include <core/Handle.hpp>
 #include <core/ID.hpp>
 
@@ -489,12 +490,12 @@ public:
         { return const_cast<EntityManager *>(this)->TryGetComponent(component_type_id, entity); }
 
     template <class ... Components>
-    std::tuple<Components &...> GetComponents(ID<Entity> entity)
-        { return std::tuple<Components &...>(GetComponent<Components>(entity)...); }
+    Tuple< Components &... > GetComponents(ID<Entity> entity)
+        { return Tie(GetComponent<Components>(entity)...); }
 
     template <class ... Components>
-    std::tuple<const Components &...> GetComponents(ID<Entity> entity) const
-        { return std::tuple<const Components &...>(GetComponent<Components>(entity)...); }
+    Tuple< const Components &... > GetComponents(ID<Entity> entity) const
+        { return Tie(GetComponent<Components>(entity)...); }
 
     /*! \brief Get a map of all component types to respective component IDs for a given Entity.
      *  \param entity The entity to lookup components for

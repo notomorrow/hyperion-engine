@@ -3,7 +3,7 @@
 #define HYPERION_ASSET_CACHE_HPP
 
 #include <core/Core.hpp>
-#include <core/Containers.hpp>
+#include <core/containers/HashMap.hpp>
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 

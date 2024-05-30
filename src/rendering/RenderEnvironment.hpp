@@ -13,7 +13,6 @@
 
 #include <core/Base.hpp>
 #include <core/Name.hpp>
-#include <core/Containers.hpp>
 #include <core/utilities/Pair.hpp>
 
 #include <math/MathUtil.hpp>

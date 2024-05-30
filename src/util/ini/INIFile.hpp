@@ -3,7 +3,7 @@
 #ifndef HYPERION_INI_FILE_HPP
 #define HYPERION_INI_FILE_HPP
 
-#include <core/Containers.hpp>
+#include <core/containers/HashMap.hpp>
 
 #include <asset/BufferedByteReader.hpp>
 

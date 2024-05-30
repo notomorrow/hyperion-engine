@@ -4,7 +4,6 @@
 #define HYPERION_PHYSICS_RIGID_BODY_HPP
 
 #include <core/Base.hpp>
-#include <core/Containers.hpp>
 
 #include <math/Transform.hpp>
 #include <math/BoundingBox.hpp>

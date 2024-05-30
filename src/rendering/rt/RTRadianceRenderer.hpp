@@ -5,7 +5,6 @@
 
 #include <Constants.hpp>
 
-#include <core/Containers.hpp>
 
 #include <rendering/Shader.hpp>
 #include <rendering/TemporalBlending.hpp>

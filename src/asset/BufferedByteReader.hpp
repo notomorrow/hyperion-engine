@@ -8,6 +8,7 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/ByteBuffer.hpp>
 #include <core/filesystem/FilePath.hpp>
 #include <core/Defines.hpp>

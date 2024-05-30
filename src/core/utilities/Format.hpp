@@ -1,14 +1,12 @@
 #ifndef HYPERION_FORMAT_HPP
 #define HYPERION_FORMAT_HPP
 
+#include <core/utilities/FormatFwd.hpp>
 #include <core/utilities/StringView.hpp>
+#include <core/utilities/Tuple.hpp>
 #include <core/containers/String.hpp>
 #include <core/containers/StaticString.hpp>
 #include <core/memory/ByteBuffer.hpp>
-
-#include <core/utilities/FormatFwd.hpp>
-
-#include <utility> // for std::tuple
 
 namespace hyperion {
 
@@ -87,12 +85,21 @@ struct Formatter< StringType, containers::detail::String < OtherStringType > >
         return value.ToUTF8();
     }
 };
+
 template <class StringType>
 struct Formatter<StringType, char *>
 {
     auto operator()(const char *value) const
     {
         return StringType(value);
+    }
+};
+template <class StringType, SizeType Size>
+struct Formatter<StringType, char[Size]>
+{
+    auto operator()(const char (&value)[Size]) const
+    {
+        return StringType(static_cast<const char *>(value));
     }
 };
 
@@ -349,7 +356,7 @@ struct FormatString_BuildTuple_Impl< Str, Transformer, SizeType(-1), SizeType(-1
     template <class ... Args>
     constexpr auto operator()(Args &&... args) const
     {
-        return std::tuple { Str };
+        return MakeTuple(Str);
     }
 };
 
@@ -366,24 +373,28 @@ struct FormatString_BuildTuple_Impl
             constexpr SizeType parsed_integer = SizeType(containers::helpers::ParseInteger< inner_value >::value);
 
             if constexpr (parsed_integer < sizeof...(Args)) {
-                return std::tuple_cat(
-                    std::make_tuple(containers::helpers::Substr< Str, 0, StringIndexStart >::value),
-                    std::forward_as_tuple(std::get< parsed_integer >(std::forward_as_tuple(std::forward< Args >(args)...))),
-                    FormatString_BuildTuple< containers::helpers::Substr< Str, StringIndexEnd + 1, Str.Size() - 1 >::value, Transformer, parsed_integer >{}(std::forward<Args>(args)...)
+                return ConcatTuples(
+                    MakeTuple(containers::helpers::Substr< Str, 0, StringIndexStart >::value),
+                    ConcatTuples(
+                        ForwardAsTuple(ForwardAsTuple(std::forward< Args >(args)...).template GetElement< parsed_integer >()),
+                        FormatString_BuildTuple< containers::helpers::Substr< Str, StringIndexEnd + 1, Str.Size() - 1 >::value, Transformer, parsed_integer >{}(std::forward< Args >(args)...)
+                    )
                 );
             } else {
                 static_assert(FormatString_BadFormat_IndexOutOfBounds< Str, inner_value >{}, "String interpolation attempted to access out of range element. Explicitly provided index value was outside of the number of arguments.");
             }
         } else if constexpr (SubIndex < sizeof...(Args)) {
-            return std::tuple_cat(
-                std::make_tuple(containers::helpers::Substr< Str, 0, StringIndexStart >::value),
-                std::forward_as_tuple(std::get< SubIndex >(std::forward_as_tuple(std::forward< Args >(args)...))),
-                FormatString_BuildTuple< containers::helpers::Substr< Str, StringIndexEnd + 1, Str.Size() - 1 >::value, Transformer, SubIndex + 1 >{}(std::forward< Args >(args)...)
+            return ConcatTuples(
+                MakeTuple(containers::helpers::Substr< Str, 0, StringIndexStart >::value),
+                ConcatTuples(
+                    ForwardAsTuple(ForwardAsTuple(std::forward< Args >(args)...).template GetElement< SubIndex >()),
+                    FormatString_BuildTuple< containers::helpers::Substr< Str, StringIndexEnd + 1, Str.Size() - 1 >::value, Transformer, SubIndex + 1 >{}(std::forward< Args >(args)...)
+                )
             );
         } else {
             static_assert(FormatString_BadFormat_IndexOutOfBounds< Str, SubIndex >{}, "String interpolation attempted to access out of range element. Does the number of arguments match the number of replacement tokens?");
 
-            return std::tuple { Str };
+            return MakeTuple(Str);
         }
     }
 };
@@ -410,24 +421,24 @@ struct FormatString_BuildTuple
 
 #if 0
 template <class... Ts, SizeType... Indices>
-constexpr auto FormatString_ProcessTuple_ProcessElements_CompileTime(const std::tuple< Ts... > &args, std::index_sequence<Indices...>)
+constexpr auto FormatString_ProcessTuple_ProcessElements_CompileTime(const Tuple< Ts... > &args, std::index_sequence<Indices...>)
 {
-    return containers::helpers::ConcatStrings(FormatString_FormatElement_CompileTime(std::get< Indices >(args))...);
+    return containers::helpers::ConcatStrings(FormatString_FormatElement_CompileTime(args.template GetElement< Indices >())...);
 }
 #endif
 
 template <int StringType, class... Ts, SizeType... Indices>
-containers::detail::String<StringType> FormatString_ProcessTuple_ProcessElements_Runtime(const std::tuple< Ts... > &args, std::index_sequence< Indices... >)
+containers::detail::String<StringType> FormatString_ProcessTuple_ProcessElements_Runtime(const Tuple< Ts... > &args, std::index_sequence< Indices... >)
 {
-    return ConcatRuntimeStrings< StringType >(FormatString_FormatElement_Runtime< StringType >(std::get< Indices >(args))...);
+    return ConcatRuntimeStrings< StringType >(FormatString_FormatElement_Runtime< StringType >(args.template GetElement< Indices >())...);
 }
 
 template <int StringType, class ... Ts>
 struct FormatString_ProcessTuple_Impl
 {
-    using Types = std::tuple< Ts... >;
+    using Types = Tuple< Ts... >;
 
-    std::tuple< Ts... > args;
+    Tuple< Ts... >  args;
 
     constexpr auto operator()() const
     {
@@ -441,7 +452,7 @@ struct FormatString_ProcessTuple_Impl
 };
 
 template <int StringType, class ... Ts>
-constexpr auto FormatString_ProcessTuple(std::tuple< Ts... > &&tup)
+constexpr auto FormatString_ProcessTuple(Tuple< Ts... > &&tup)
 {
     return FormatString_ProcessTuple_Impl< StringType, Ts... > { std::move(tup) };
 }

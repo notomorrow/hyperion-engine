@@ -3,7 +3,6 @@
 #ifndef HYPERION_DEPTH_PYRAMID_RENDERER_HPP
 #define HYPERION_DEPTH_PYRAMID_RENDERER_HPP
 
-#include <core/Containers.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererImage.hpp>

@@ -7,7 +7,7 @@
 #include <ui/UIStage.hpp>
 
 #include <core/Base.hpp>
-#include <core/Containers.hpp>
+#include <core/containers/String.hpp>
 #include <core/Handle.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
@@ -21,7 +21,6 @@
 
 #include <scene/Scene.hpp>
 
-#include <core/Containers.hpp>
 #include <GameCounter.hpp>
 
 #include <Types.hpp>

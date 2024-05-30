@@ -5,11 +5,11 @@
 
 #include <core/Defines.hpp>
 #include <core/utilities/Pair.hpp>
+#include <core/utilities/Tuple.hpp>
 
 #include <Types.hpp>
 #include <HashCode.hpp>
 
-#include <utility> // for std::tuple, std::pair
 #include <string_view>
 #include <array>
 
@@ -474,7 +474,7 @@ struct Split_Impl;
 template <auto String, char Delimiter, class Transformer>
 struct Split_Impl<String, Delimiter, Transformer, SizeType(-1)>
 {
-    static constexpr auto value = std::tuple { Transformer::template Transform< String >() };
+    static constexpr auto value = MakeTuple(Transformer::template Transform< String >());
 };
 
 template <auto String, char Delimiter, bool KeepDelimiter>
@@ -508,13 +508,9 @@ namespace detail {
 template <auto String, char Delimiter, class Transformer, SizeType Index>
 struct Split_Impl
 {
-    static constexpr auto value = std::tuple_cat(
-        std::tuple {
-            Transformer::template Transform< Split_ApplyDelimiter_Impl< Substr< String, 0, Index >::value, Delimiter, Transformer::keep_delimiter >::value >()
-        },
-        std::tuple {
-            Split< Substr< String, Index + 1, String.Size() >::value, Delimiter, Transformer >::value
-        }
+    static constexpr auto value = ConcatTuples(
+        MakeTuple(Transformer::template Transform< Split_ApplyDelimiter_Impl< Substr< String, 0, Index >::value, Delimiter, Transformer::keep_delimiter >::value >()),
+        MakeTuple(Split< Substr< String, Index + 1, String.Size() >::value, Delimiter, Transformer >::value)
     );
 };
 } // namespace detail

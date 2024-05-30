@@ -5,7 +5,8 @@
 
 #include <core/threading/Mutex.hpp>
 #include <core/system/Debug.hpp>
-#include <core/Containers.hpp>
+#include <core/containers/LinkedList.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/IDGenerator.hpp>
 #include <core/ID.hpp>
 #include <core/Util.hpp>

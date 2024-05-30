@@ -4,7 +4,6 @@
 #define HYPERION_PARTICLE_SYSTEM_HPP
 
 #include <Constants.hpp>
-#include <core/Containers.hpp>
 #include <core/containers/ThreadSafeContainer.hpp>
 #include <core/threading/Threads.hpp>
 

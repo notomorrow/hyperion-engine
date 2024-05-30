@@ -5,7 +5,6 @@
 
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
-#include <core/Containers.hpp>
 
 #include <Types.hpp>
 

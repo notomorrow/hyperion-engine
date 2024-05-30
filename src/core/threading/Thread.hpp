@@ -4,10 +4,11 @@
 
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Task.hpp>
+#include <core/utilities/Tuple.hpp>
+#include <core/utilities/StringView.hpp>
 
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
-#include <core/utilities/StringView.hpp>
 
 #include <Types.hpp>
 
@@ -133,7 +134,7 @@ public:
     }
 
     /*! \brief Start the thread with the given arguments and run the thread function with them */
-    bool Start(Args ...args);
+    bool Start(Args... args);
 
     /*! \brief Detach the thread from the current thread and let it run in the background until it finishes execution */
     void Detach();
@@ -185,23 +186,21 @@ Thread<SchedulerType, Args...>::~Thread()
     }
 }
 
-template <class SchedulerType, class ...Args>
-bool Thread<SchedulerType, Args...>::Start(Args ...args)
+template <class SchedulerType, class... Args>
+bool Thread<SchedulerType, Args...>::Start(Args ... args)
 {
     if (m_thread != nullptr) {
         return false;
     }
 
-    std::tuple<Args...> tuple_args(std::forward<Args>(args)...);
-
-    m_thread = new std::thread([&self = *this, tuple_args](...) -> void
+    m_thread = new std::thread([&self = *this, tuple_args = MakeTuple(args...)](...) -> void
     {
         SetCurrentThreadID(self.GetID());
         SetCurrentThreadPriority(self.GetPriority());
 
         self.m_scheduler.SetOwnerThread(self.GetID());
 
-        self(std::get<Args>(tuple_args)...);
+        self((tuple_args.template GetElement<Args>())...);
     });
 
     return true;

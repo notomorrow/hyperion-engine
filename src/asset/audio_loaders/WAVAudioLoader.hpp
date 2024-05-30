@@ -5,7 +5,8 @@
 
 #include <asset/Assets.hpp>
 #include <audio/AudioSource.hpp>
-#include <core/Containers.hpp>
+
+#include <core/memory/ByteBuffer.hpp>
 
 namespace hyperion {
 

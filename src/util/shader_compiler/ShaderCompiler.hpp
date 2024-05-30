@@ -3,7 +3,6 @@
 #ifndef HYPERION_SHADER_COMPILER_HPP
 #define HYPERION_SHADER_COMPILER_HPP
 
-#include <core/Containers.hpp>
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
 

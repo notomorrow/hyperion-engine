@@ -12,7 +12,6 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererImage.hpp>
 
-#include <core/Containers.hpp>
 
 #include <Constants.hpp>
 

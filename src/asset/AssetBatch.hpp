@@ -4,13 +4,15 @@
 
 #include <asset/AssetLoader.hpp>
 #include <core/Core.hpp>
-#include <core/Containers.hpp>
 #include <core/ID.hpp>
+
+#include <core/containers/String.hpp>
+
 #include <core/threading/TaskSystem.hpp>
+
 #include <core/functional/Delegate.hpp>
 
 #include <scene/Node.hpp>
-
 
 #include <math/MathUtil.hpp>
 

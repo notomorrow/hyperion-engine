@@ -5,16 +5,18 @@
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
+#include <core/containers/Array.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/logging/LoggerFwd.hpp>
 #include <core/Defines.hpp>
-
-#include <math/MathUtil.hpp>
 
 #include <core/system/Debug.hpp>
 
 #include <core/threading/Threads.hpp>
 #include <core/threading/TaskThread.hpp>
 #include <core/threading/AtomicVar.hpp>
+
+#include <math/MathUtil.hpp>
 
 #include <Types.hpp>
 

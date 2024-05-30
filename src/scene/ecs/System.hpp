@@ -5,6 +5,7 @@
 
 #include <core/containers/Array.hpp>
 #include <core/utilities/TypeID.hpp>
+#include <core/utilities/Tuple.hpp>
 #include <core/Defines.hpp>
 
 #include <scene/ecs/ComponentContainer.hpp>
@@ -143,7 +144,7 @@ template <class ... ComponentDescriptors>
 class System : public SystemBase
 {
 public:
-    using ComponentDescriptorTypes = std::tuple<ComponentDescriptors...>;
+    using ComponentDescriptorTypes = Tuple< ComponentDescriptors... >;
 
     System()
         : SystemBase({ TypeID::ForType<typename ComponentDescriptors::Type>()... }, { ComponentInfo(ComponentDescriptors())... })

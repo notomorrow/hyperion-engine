@@ -3,7 +3,6 @@
 #ifndef HYPERION_DRAW_CALL_HPP
 #define HYPERION_DRAW_CALL_HPP
 
-#include <core/Containers.hpp>
 #include <core/ID.hpp>
 #include <core/Defines.hpp>
 

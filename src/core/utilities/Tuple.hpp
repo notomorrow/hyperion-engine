@@ -43,6 +43,19 @@ struct MakeTupleIndices
 
 #pragma endregion TupleIndices
 
+#pragma region TupleSize
+
+template <class TupleType>
+struct TupleSize;
+
+template <class... Types>
+struct TupleSize< Tuple< Types... > >
+{
+    static constexpr SizeType value = sizeof...(Types);
+};
+
+#pragma endregion TupleSize
+
 #pragma region TupleLeaf
 
 template <SizeType Index, class T>
@@ -93,12 +106,12 @@ struct TupleLeaf
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    bool operator==(const TupleLeaf &other) const
+    constexpr bool operator==(const TupleLeaf &other) const
         { return value == other.value; }
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    bool operator!=(const TupleLeaf &other) const
+    constexpr bool operator!=(const TupleLeaf &other) const
         { return value != other.value; }
 };
 
@@ -133,14 +146,14 @@ struct TupleLeaf<Index, T &>
 
     template <SizeType Index_, class T_>
     constexpr TupleLeaf(TupleLeaf< Index_, T_ > &&other) noexcept
-        : value(std::move(other.value))
+        : value(other.value)
     {
     }
 
     template <SizeType Index_, class T_>
     TupleLeaf &operator=(TupleLeaf< Index_, T_ > &&other) noexcept
     {
-        value = std::move(other.value);
+        value = other.value;
 
         return *this;
     }
@@ -149,12 +162,12 @@ struct TupleLeaf<Index, T &>
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    bool operator==(const TupleLeaf &other) const
+    constexpr bool operator==(const TupleLeaf &other) const
         { return value == other.value; }
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    bool operator!=(const TupleLeaf &other) const
+    constexpr bool operator!=(const TupleLeaf &other) const
         { return value != other.value; }
 };
 
@@ -212,6 +225,44 @@ struct FindTypeElementIndex
 
 #pragma endregion FindTypeElementIndex
 
+#pragma region Tuple_Compare
+
+// fwd decl of Tuple_Impl
+template <class TupleIndicesType, class... Types>
+struct Tuple_Impl;
+
+template <class Comparator, SizeType Index, class... Types>
+constexpr bool Tuple_Compare(
+    const detail::Tuple_Impl< typename detail::MakeTupleIndices< sizeof...(Types) >::Type, Types... > &tup0,
+    const detail::Tuple_Impl< typename detail::MakeTupleIndices< sizeof...(Types) >::Type, Types... > &tup1
+);
+
+template <class Comparator, SizeType Index, class... Types>
+constexpr bool Tuple_Compare(
+    const detail::Tuple_Impl< typename detail::MakeTupleIndices< sizeof...(Types) >::Type, Types... > &tup0,
+    const detail::Tuple_Impl< typename detail::MakeTupleIndices< sizeof...(Types) >::Type, Types... > &tup1
+)
+{
+    if constexpr (Index == sizeof...(Types)) {
+        return false;
+    } else {
+        const auto &lhs = static_cast< const detail::TupleLeaf< Index, typename detail::TupleElement< Index, Types... >::Type > &>(tup0).value;
+        const auto &rhs = static_cast< const detail::TupleLeaf< Index, typename detail::TupleElement< Index, Types... >::Type > &>(tup1).value;
+
+        if (Comparator{}(lhs, rhs)) {
+            return true;
+        }
+
+        if (Comparator{}(rhs, lhs)) {
+            return false;
+        }
+
+        return Tuple_Compare< Comparator, Index + 1, Types... >(tup0, tup1);
+    }
+}
+
+#pragma endregion Tuple_Compare
+
 #pragma region Tuple_Impl
 
 template <class TupleIndicesType, class... Types>
@@ -259,16 +310,23 @@ struct Tuple_Impl< TupleIndices< Indices ... >, Types... > : TupleLeaf< Indices,
     ~Tuple_Impl() = default;
 
     template <SizeType... Indices_, class... Types_>
-    [[nodiscard]] HYP_FORCE_INLINE bool operator==(const Tuple_Impl< TupleIndices< Indices_ ... >, Types_... > &other) const
+    [[nodiscard]] HYP_FORCE_INLINE
+    constexpr bool operator==(const Tuple_Impl< TupleIndices< Indices_ ... >, Types_... > &other) const
     {
         return (TupleLeaf< Indices, Types >::operator==(static_cast< const TupleLeaf< Indices_, Types_ > & >(other)) && ...);
     }
 
     template <SizeType... Indices_, class... Types_>
-    [[nodiscard]] HYP_FORCE_INLINE bool operator!=(const Tuple_Impl< TupleIndices< Indices_ ... >, Types_... > &other) const
+    [[nodiscard]] HYP_FORCE_INLINE
+    constexpr bool operator!=(const Tuple_Impl< TupleIndices< Indices_ ... >, Types_... > &other) const
     {
         return (TupleLeaf< Indices, Types >::operator!=(static_cast< const TupleLeaf< Indices_, Types_ > & >(other)) || ...);
     }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    constexpr SizeType Size() const
+        { return sizeof...(Types); }
 };
 
 #pragma endregion Tuple_Impl
@@ -276,19 +334,6 @@ struct Tuple_Impl< TupleIndices< Indices ... >, Types... > : TupleLeaf< Indices,
 } // namespace detail
 
 namespace helpers {
-
-#pragma region TupleSize
-
-template <class TupleType>
-struct TupleSize;
-
-template <class... Types>
-struct TupleSize< Tuple< Types... > >
-{
-    static constexpr SizeType value = sizeof...(Types);
-};
-
-#pragma endregion TupleSize
 
 #pragma region ConcatTuples
 
@@ -343,6 +388,16 @@ constexpr Tuple< Types &... > Tie(Types &... values)
 }
 
 #pragma endregion Tie
+
+#pragma region ForwardAsTuple
+
+template <class... Types>
+constexpr Tuple< Types &&... > ForwardAsTuple(Types &&... values)
+{
+    return Tuple< Types &&... >(std::forward< Types >(values)...);
+}
+
+#pragma endregion ForwardAsTuple
 
 } // namespace helpers
 
@@ -426,13 +481,33 @@ public:
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    bool operator==(const Tuple &other) const
+    constexpr bool operator==(const Tuple &other) const
         { return impl == other.impl; }
 
     [[nodiscard]]
     HYP_FORCE_INLINE
-    bool operator!=(const Tuple &other) const
+    constexpr bool operator!=(const Tuple &other) const
         { return impl != other.impl; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    constexpr bool operator<(const Tuple &other) const
+        { return detail::Tuple_Compare<std::less< >, 0>(impl, other.impl); }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    constexpr bool operator<=(const Tuple &other) const
+        { return detail::Tuple_Compare<std::less< >, 0>(impl, other.impl) || impl == other.impl; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    constexpr bool operator>(const Tuple &other) const
+        { return detail::Tuple_Compare<std::greater< >, 0>(impl, other.impl); }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    constexpr bool operator>=(const Tuple &other) const
+        { return detail::Tuple_Compare<std::greater< >, 0>(impl, other.impl) || impl == other.impl; }
 
     template <SizeType Index>
     constexpr typename detail::TupleElement< Index, Types... >::Type &GetElement()
@@ -458,7 +533,23 @@ public:
         if constexpr (index == SizeType(-1)) {
             static_assert(resolution_failure< T >, "Tuple does not contain element of given type");
 
+            // to silence errors for wrong type being returned
             return *((T *)(nullptr));
+        } else {
+            return static_cast< detail::TupleLeaf< index, T > &>(impl).value;
+        }
+    }
+
+    template <class T>
+    constexpr const T &GetElement() const
+    {
+        constexpr SizeType index = detail::FindTypeElementIndex< T, Types... >::value;
+
+        if constexpr (index == SizeType(-1)) {
+            static_assert(resolution_failure< T >, "Tuple does not contain element of given type");
+
+            // to silence errors for wrong type being returned
+            return *((const T *)(nullptr));
         } else {
             return static_cast< const detail::TupleLeaf< index, T > &>(impl).value;
         }
@@ -476,6 +567,7 @@ using utilities::Tuple;
 using utilities::helpers::MakeTuple;
 using utilities::helpers::ConcatTuples;
 using utilities::helpers::Tie;
+using utilities::helpers::ForwardAsTuple;
 
 } // namespace hyperion
 

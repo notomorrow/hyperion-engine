@@ -9,7 +9,8 @@
 
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Threads.hpp>
-#include <core/Containers.hpp>
+#include <core/containers/LinkedList.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/Util.hpp>
 
 #include <Types.hpp>

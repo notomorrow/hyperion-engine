@@ -12,6 +12,7 @@
 #include <math/Vector3.hpp>
 
 #include <core/containers/SortedArray.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/utilities/Range.hpp>
 
 #include <Types.hpp>

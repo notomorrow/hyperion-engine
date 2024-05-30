@@ -3,7 +3,6 @@
 #ifndef HYPERION_VISIBILITY_STATE_HPP
 #define HYPERION_VISIBILITY_STATE_HPP
 
-#include <core/Containers.hpp>
 #include <core/ID.hpp>
 
 #include <Types.hpp>

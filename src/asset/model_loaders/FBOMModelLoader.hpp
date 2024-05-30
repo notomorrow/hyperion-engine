@@ -6,7 +6,6 @@
 #include <asset/Assets.hpp>
 #include <scene/Node.hpp>
 #include <asset/serialization/Serialization.hpp>
-#include <core/Containers.hpp>
 
 #include <Types.hpp>
 

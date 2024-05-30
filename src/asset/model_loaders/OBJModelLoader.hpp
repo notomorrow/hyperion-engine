@@ -4,8 +4,12 @@
 #define HYPERION_OBJ_MODEL_LOADER_HPP
 
 #include <asset/Assets.hpp>
+
 #include <scene/Node.hpp>
-#include <core/Containers.hpp>
+
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
+#include <core/utilities/Tuple.hpp>
 
 #include <Types.hpp>
 
@@ -28,7 +32,7 @@ public:
                     && texcoord == other.texcoord; }
 
             bool operator<(const OBJIndex &other) const
-                { return std::tie(vertex, normal, texcoord) < std::tie(other.vertex, other.normal, other.texcoord); }
+                { return Tie(vertex, normal, texcoord) < Tie(other.vertex, other.normal, other.texcoord); }
         };
 
         struct OBJMesh

@@ -4,7 +4,7 @@
 #define HYPERION_SAFE_DELETER_HPP
 
 #include <core/Core.hpp>
-#include <core/Containers.hpp>
+#include <core/containers/LinkedList.hpp>
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
 #include <core/ID.hpp>

@@ -11,7 +11,6 @@
 
 #include <core/Base.hpp>
 #include <core/threading/Scheduler.hpp>
-#include <core/Containers.hpp>
 #include <core/Name.hpp>
 #include <core/logging/LoggerFwd.hpp>
 

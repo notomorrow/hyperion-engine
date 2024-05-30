@@ -2,8 +2,8 @@
 #ifndef HYPERION_RTC_SERVER_HPP
 #define HYPERION_RTC_SERVER_HPP
 
-#include <core/Containers.hpp>
 #include <core/memory/ByteBuffer.hpp>
+#include <core/memory/UniquePtr.hpp>
 #include <core/utilities/Optional.hpp>
 #include <core/functional/Delegate.hpp>
 

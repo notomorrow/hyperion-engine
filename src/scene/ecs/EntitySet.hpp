@@ -6,6 +6,7 @@
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/Array.hpp>
 #include <core/containers/FixedArray.hpp>
+#include <core/utilities/Tuple.hpp>
 #include <core/memory/UniquePtr.hpp>
 
 #include <scene/Entity.hpp>
@@ -52,31 +53,31 @@ struct EntitySetIterator
     bool operator!=(const EntitySetIterator &other) const
         { return !(*this == other); }
 
-    std::tuple<ID<Entity>, Components &...> operator*()
+    Tuple< ID<Entity>, Components &... > operator*()
     {
         const typename EntitySet<Components...>::Element &element = set.m_elements[index];
 
-        return std::tuple_cat(
-            std::make_tuple(element.first),
+        return ConcatTuples(
+            MakeTuple(element.first),
             GetComponents(element.second, std::make_index_sequence<sizeof...(Components)>())
         );
     }
 
-    std::tuple<ID<Entity>, const Components &...> operator*() const
+    Tuple< ID<Entity>, const Components &... > operator*() const
         { return const_cast<EntitySetIterator *>(this)->operator*(); }
 
-    std::tuple<ID<Entity>, Components &...> operator->()
+    Tuple< ID<Entity>, Components &... > operator->()
         { return **this; }
 
-    std::tuple<ID<Entity>, const Components &...> operator->() const
+    Tuple< ID<Entity>, const Components &... > operator->() const
         { return **this; }
 
 private:
     template <SizeType ... Indices>
-    std::tuple<Components &...> GetComponents(const FixedArray<ComponentID, sizeof...(Components)> &component_ids, std::index_sequence<Indices...>)
+    Tuple< Components &... > GetComponents(const FixedArray<ComponentID, sizeof...(Components)> &component_ids, std::index_sequence<Indices...>)
     {
-        return std::tuple<Components &...>(
-            std::get<ComponentContainer<Components> &>(set.m_component_containers).GetComponent(component_ids[Indices])...
+        return Tuple< Components &... >(
+            set.m_component_containers.template GetElement< ComponentContainer<Components> & >().GetComponent(component_ids[Indices])...
         );
     }
 };
@@ -225,7 +226,7 @@ private:
     Array<Element>                                  m_elements;
 
     EntityContainer                                 &m_entities;
-    std::tuple<ComponentContainer<Components> &...> m_component_containers;
+    Tuple< ComponentContainer<Components> &... >    m_component_containers;
 };
 
 template <class ... Components>

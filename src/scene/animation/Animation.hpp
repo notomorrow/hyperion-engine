@@ -4,7 +4,8 @@
 #define HYPERION_ANIMATION_HPP
 
 #include <scene/animation/Keyframe.hpp>
-#include <core/Containers.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/String.hpp>
 #include <Types.hpp>
 
 namespace hyperion {

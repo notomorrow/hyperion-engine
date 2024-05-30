@@ -3,7 +3,6 @@
 #ifndef HYPERION_RTC_CLIENT_HPP
 #define HYPERION_RTC_CLIENT_HPP
 
-#include <core/Containers.hpp>
 #include <core/containers/String.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 #include <core/functional/Delegate.hpp>

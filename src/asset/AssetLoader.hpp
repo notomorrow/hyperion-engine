@@ -3,7 +3,6 @@
 #define HYPERION_ASSET_LOADER_HPP
 
 #include <core/Core.hpp>
-#include <core/Containers.hpp>
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 #include <core/memory/Any.hpp>

@@ -5,7 +5,6 @@
 
 #include <asset/Assets.hpp>
 #include <util/json/JSON.hpp>
-#include <core/Containers.hpp>
 
 #include <Types.hpp>
 

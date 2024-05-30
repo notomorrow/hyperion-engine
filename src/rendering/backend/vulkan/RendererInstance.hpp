@@ -5,7 +5,6 @@
 
 #include <vector>
 
-#include <core/Containers.hpp>
 #include <core/Defines.hpp>
 
 #include <rendering/backend/RenderObject.hpp>

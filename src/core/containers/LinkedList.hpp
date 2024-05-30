@@ -4,6 +4,7 @@
 #define HYPERION_LINKED_LIST_HPP
 
 #include <core/containers/ContainerBase.hpp>
+#include <core/utilities/ValueStorage.hpp>
 #include <core/Defines.hpp>
 #include <core/memory/Memory.hpp>
 #include <core/system/Debug.hpp>

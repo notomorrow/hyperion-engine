@@ -3,7 +3,6 @@
 #ifndef HYPERION_DDGI_HPP
 #define HYPERION_DDGI_HPP
 
-#include <core/Containers.hpp>
 
 #include <rendering/Shader.hpp>
 #include <rendering/rt/TLAS.hpp>

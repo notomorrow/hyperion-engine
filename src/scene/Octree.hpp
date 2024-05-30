@@ -3,9 +3,10 @@
 #ifndef HYPERION_OCTREE_HPP
 #define HYPERION_OCTREE_HPP
 
-#include <core/Containers.hpp>
-#include <core/utilities/Pair.hpp>
+#include <core/containers/Array.hpp>
+#include <core/containers/FixedArray.hpp>
 #include <core/containers/HashMap.hpp>
+#include <core/utilities/Pair.hpp>
 #include <scene/Entity.hpp>
 #include <scene/VisibilityState.hpp>
 #include <scene/ecs/EntityTag.hpp>

@@ -10,7 +10,6 @@
 #include <util/fs/FsUtil.hpp>
 
 #include <core/Core.hpp>
-#include <core/Containers.hpp>
 #include <core/Defines.hpp>
 #include <core/threading/Threads.hpp>
 #include <core/threading/TaskSystem.hpp>

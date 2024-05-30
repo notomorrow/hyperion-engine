@@ -3,7 +3,6 @@
 #ifndef HYPERION_FS_UTIL_HPP
 #define HYPERION_FS_UTIL_HPP
 
-#include <core/Containers.hpp>
 #include <core/Defines.hpp>
 #include <util/StringUtil.hpp>
 

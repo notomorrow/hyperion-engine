@@ -4,7 +4,6 @@
 #define HYPERION_AUDIO_SOURCE_HPP
 
 #include <core/Base.hpp>
-#include <core/Containers.hpp>
 #include <math/Vector3.hpp>
 
 #include <Types.hpp>

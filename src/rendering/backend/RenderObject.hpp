@@ -7,8 +7,9 @@
 #include <core/threading/Threads.hpp>
 #include <core/Core.hpp>
 #include <core/Name.hpp>
-#include <core/Containers.hpp>
+#include <core/containers/FixedArray.hpp>
 #include <core/IDGenerator.hpp>
+
 #include <HashCode.hpp>
 #include <Constants.hpp>
 #include <Types.hpp>

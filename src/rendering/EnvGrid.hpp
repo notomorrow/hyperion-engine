@@ -11,7 +11,6 @@
 #include <rendering/Buffers.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
-#include <core/Containers.hpp>
 #include <core/threading/Threads.hpp>
 
 namespace hyperion {

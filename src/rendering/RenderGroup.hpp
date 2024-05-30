@@ -3,7 +3,6 @@
 #ifndef HYPERION_RENDERER_HPP
 #define HYPERION_RENDERER_HPP
 
-#include <core/Containers.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/ID.hpp>
 #include <core/Defines.hpp>

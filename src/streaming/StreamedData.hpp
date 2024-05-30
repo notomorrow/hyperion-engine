@@ -5,6 +5,8 @@
 
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/RefCountedPtr.hpp>
+#include <core/utilities/Optional.hpp>
+#include <core/threading/AtomicVar.hpp>
 #include <core/filesystem/FilePath.hpp>
 #include <core/logging/LoggerFwd.hpp>
 #include <core/Defines.hpp>

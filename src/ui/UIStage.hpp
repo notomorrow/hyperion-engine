@@ -6,7 +6,6 @@
 #include <ui/UIObject.hpp>
 
 #include <core/Base.hpp>
-#include <core/Containers.hpp>
 #include <core/functional/Delegate.hpp>
 
 #include <scene/Node.hpp>

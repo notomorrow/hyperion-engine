@@ -9,6 +9,7 @@
 
 #include <core/containers/FlatSet.hpp>
 #include <core/utilities/Optional.hpp>
+#include <core/utilities/Tuple.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>
@@ -128,14 +129,14 @@ struct RayHit
 
     bool operator<(const RayHit &other) const
     {
-        return std::tie(
+        return Tie(
             distance,
             hitpoint,
             normal,
             barycentric_coords,
             id,
             user_data
-        ) < std::tie(
+        ) < Tie(
             other.distance,
             other.hitpoint,
             other.normal,
