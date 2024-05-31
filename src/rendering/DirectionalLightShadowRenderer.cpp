@@ -2,6 +2,7 @@
 
 #include <rendering/DirectionalLightShadowRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/Shadows.hpp>
 
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererShader.hpp>
@@ -130,12 +131,12 @@ struct RENDER_COMMAND(DestroyShadowPassData) : renderer::RenderCommand
 
 struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
 {
-    uint            shadow_map_index;
-    Matrix4         view_matrix;
-    Matrix4         projection_matrix;
-    BoundingBox     aabb;
-    Extent2D        dimensions;
-    ShadowFlags     flags;
+    uint                    shadow_map_index;
+    Matrix4                 view_matrix;
+    Matrix4                 projection_matrix;
+    BoundingBox             aabb;
+    Extent2D                dimensions;
+    EnumFlags<ShadowFlags>  flags;
 
     RENDER_COMMAND(UpdateShadowMapRenderData)(
         uint shadow_map_index,
@@ -143,7 +144,7 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
         const Matrix4 &projection_matrix,
         const BoundingBox &aabb,
         Extent2D dimensions,
-        ShadowFlags flags
+        EnumFlags<ShadowFlags> flags
     ) : shadow_map_index(shadow_map_index),
         view_matrix(view_matrix),
         projection_matrix(projection_matrix),
@@ -217,7 +218,7 @@ void ShadowPass::CreateShader()
 void ShadowPass::CreateFramebuffer()
 {
     /* Add the filters' renderpass */
-    m_framebuffer = MakeRenderObject<renderer::Framebuffer>(
+    m_framebuffer = MakeRenderObject<Framebuffer>(
         GetExtent(),
         RenderPassStage::SHADER,
         RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
@@ -292,7 +293,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
 
     DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(CombineShadowMapsDescriptorSet), frame_index);
@@ -315,7 +316,7 @@ void ShadowPass::CreateComputePipelines()
 
     renderer::DescriptorTableDeclaration descriptor_table_decl = blur_shadow_map_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     // have to create descriptor sets specifically for compute shader,
     // holding framebuffer attachment image (src), and our final shadowmap image (dst)
@@ -329,7 +330,7 @@ void ShadowPass::CreateComputePipelines()
 
     DeferCreate(descriptor_table, g_engine->GetGPUInstance()->GetDevice());
 
-    m_blur_shadow_map_pipeline = MakeRenderObject<renderer::ComputePipeline>(
+    m_blur_shadow_map_pipeline = MakeRenderObject<ComputePipeline>(
         blur_shadow_map_shader,
         descriptor_table
     );
@@ -601,17 +602,17 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
     );
 
     // Render data update
-    ShadowFlags flags = SHADOW_FLAGS_NONE;
+    EnumFlags<ShadowFlags> flags = ShadowFlags::NONE;
 
     switch (m_shadow_pass->GetShadowMode()) {
     case ShadowMode::VSM:
-        flags |= SHADOW_FLAGS_VSM;
+        flags |= ShadowFlags::VSM;
         break;
     case ShadowMode::CONTACT_HARDENED:
-        flags |= SHADOW_FLAGS_CONTACT_HARDENED;
+        flags |= ShadowFlags::CONTACT_HARDENED;
         break;
     case ShadowMode::PCF:
-        flags |= SHADOW_FLAGS_PCF;
+        flags |= ShadowFlags::PCF;
         break;
     default:
         break;

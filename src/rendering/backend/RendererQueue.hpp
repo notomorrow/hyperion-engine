@@ -25,6 +25,7 @@ namespace platform {
 template <PlatformType PLATFORM>
 struct DeviceQueue
 {
+    static constexpr PlatformType platform = PLATFORM;
 };
 
 } // namespace platform

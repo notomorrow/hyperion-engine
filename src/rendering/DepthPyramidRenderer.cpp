@@ -1,7 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/DepthPyramidRenderer.hpp>
+
+#include <rendering/backend/RendererAttachment.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererImageView.hpp>
+#include <rendering/backend/RendererSampler.hpp>
 
 #include <Engine.hpp>
 
@@ -73,6 +79,15 @@ DepthPyramidRenderer::~DepthPyramidRenderer()
     SafeRelease(std::move(m_generate_depth_pyramid));
 }
 
+Extent3D DepthPyramidRenderer::GetExtent() const
+{
+    if (!m_depth_pyramid.IsValid()) {
+        return Extent3D { 1, 1, 1 };
+    }
+
+    return m_depth_pyramid->GetExtent();
+}
+
 void DepthPyramidRenderer::Create(const AttachmentRef &depth_attachment)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
@@ -83,7 +98,7 @@ void DepthPyramidRenderer::Create(const AttachmentRef &depth_attachment)
     AssertThrow(m_depth_attachment == nullptr);
     m_depth_attachment = depth_attachment;
 
-    m_depth_pyramid_sampler = MakeRenderObject<renderer::Sampler>(
+    m_depth_pyramid_sampler = MakeRenderObject<Sampler>(
         FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -95,7 +110,7 @@ void DepthPyramidRenderer::Create(const AttachmentRef &depth_attachment)
     AssertThrow(depth_image.IsValid());
 
     // create depth pyramid image
-    m_depth_pyramid = MakeRenderObject<renderer::Image>(renderer::StorageImage(
+    m_depth_pyramid = MakeRenderObject<Image>(renderer::StorageImage(
         Extent3D {
             uint32(MathUtil::NextPowerOf2(depth_image->GetExtent().width)),
             uint32(MathUtil::NextPowerOf2(depth_image->GetExtent().height)),
@@ -110,14 +125,14 @@ void DepthPyramidRenderer::Create(const AttachmentRef &depth_attachment)
 
     m_depth_pyramid->Create(g_engine->GetGPUDevice());
 
-    m_depth_pyramid_view = MakeRenderObject<renderer::ImageView>();
+    m_depth_pyramid_view = MakeRenderObject<ImageView>();
     m_depth_pyramid_view->Create(g_engine->GetGPUDevice(), m_depth_pyramid);
 
     const uint num_mip_levels = m_depth_pyramid->NumMipmaps();
     m_depth_pyramid_mips.Reserve(num_mip_levels);
 
     for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
-        ImageViewRef mip_image_view = MakeRenderObject<renderer::ImageView>();
+        ImageViewRef mip_image_view = MakeRenderObject<ImageView>();
 
         HYPERION_ASSERT_RESULT(mip_image_view->Create(
             g_engine->GetGPUDevice(),
@@ -140,7 +155,7 @@ void DepthPyramidRenderer::Create(const AttachmentRef &depth_attachment)
     AssertThrow(depth_pyramid_descriptor_set_decl != nullptr);
 
     for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
-        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &depth_pyramid_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DepthPyramidDescriptorSet), frame_index);
@@ -162,7 +177,7 @@ void DepthPyramidRenderer::Create(const AttachmentRef &depth_attachment)
     }
 
     // use the first mip descriptor table to create the compute pipeline, since the descriptor set layout is the same for all mip levels
-    m_generate_depth_pyramid = MakeRenderObject<renderer::ComputePipeline>(shader, m_mip_descriptor_tables.Front());
+    m_generate_depth_pyramid = MakeRenderObject<ComputePipeline>(shader, m_mip_descriptor_tables.Front());
     DeferCreate(m_generate_depth_pyramid, g_engine->GetGPUDevice());
 
     PUSH_RENDER_COMMAND(

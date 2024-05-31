@@ -7,7 +7,10 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
+
 #include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
 
 #include <math/MathUtil.hpp>
 #include <math/Color.hpp>
@@ -494,7 +497,7 @@ void GaussianSplattingInstance::CreateShader()
 
 void GaussianSplattingInstance::CreateRenderGroup()
 {
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(
         m_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable()
     );
 
@@ -545,7 +548,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         base_properties
     );
 
-    DescriptorTableRef update_splats_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
+    DescriptorTableRef update_splats_descriptor_table = MakeRenderObject<DescriptorTable>(
         update_splats_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable()
     );
 
@@ -564,7 +567,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         g_engine->GetGPUDevice()
     );
 
-    m_update_splats = MakeRenderObject<renderer::ComputePipeline>(
+    m_update_splats = MakeRenderObject<ComputePipeline>(
         update_splats_shader,
         update_splats_descriptor_table
     );
@@ -581,7 +584,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         base_properties
     );
 
-    DescriptorTableRef update_splat_distances_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
+    DescriptorTableRef update_splat_distances_descriptor_table = MakeRenderObject<DescriptorTable>(
         update_splat_distances_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable()
     );
 
@@ -599,7 +602,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         g_engine->GetGPUDevice()
     );
 
-    m_update_splat_distances = MakeRenderObject<renderer::ComputePipeline>(
+    m_update_splat_distances = MakeRenderObject<ComputePipeline>(
         update_splat_distances_shader,
         update_splat_distances_descriptor_table
     );
@@ -619,7 +622,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
     m_sort_stage_descriptor_tables.Resize(SortStage::SORT_STAGE_MAX);
 
     for (uint sort_stage_index = 0; sort_stage_index < SortStage::SORT_STAGE_MAX; sort_stage_index++) {
-        DescriptorTableRef sort_splats_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(
+        DescriptorTableRef sort_splats_descriptor_table = MakeRenderObject<DescriptorTable>(
             sort_splats_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable()
         );
 
@@ -640,7 +643,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         m_sort_stage_descriptor_tables[sort_stage_index] = std::move(sort_splats_descriptor_table);
     }
 
-    m_sort_splats = MakeRenderObject<renderer::ComputePipeline>(
+    m_sort_splats = MakeRenderObject<ComputePipeline>(
         sort_splats_shader,
         m_sort_stage_descriptor_tables[0]
     );

@@ -15,21 +15,15 @@
 #include <rendering/DrawCall.hpp>
 #include <rendering/Mesh.hpp>
 
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
 #include <rendering/backend/RenderObject.hpp>
 
 #include <Constants.hpp>
 
 namespace hyperion {
 
-using renderer::CommandBuffer;
 using renderer::Topology;
 using renderer::FillMode;
 using renderer::FaceCullMode;
-using renderer::Frame;
-using renderer::Pipeline;
 
 class Engine;
 class Mesh;

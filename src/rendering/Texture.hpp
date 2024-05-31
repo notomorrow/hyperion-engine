@@ -13,7 +13,6 @@
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererImage.hpp>
 #include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
 
 #include <scene/VisibilityState.hpp>
 
@@ -24,14 +23,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
-using renderer::Image;
-using renderer::TextureImage;
-using renderer::StorageImage;
-using renderer::ImageView;
-using renderer::Sampler;
-;
-using renderer::CommandBuffer;
 
 class HYP_API Texture
     : public BasicObject<STUB_CLASS(Texture)>

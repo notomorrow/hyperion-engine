@@ -35,6 +35,8 @@ class Swapchain<Platform::VULKAN>
     void RetrieveImageHandles(Device<Platform::VULKAN> *device);
 
 public:
+    static constexpr PlatformType platform = Platform::VULKAN;
+    
     Swapchain();
     ~Swapchain() = default;
 

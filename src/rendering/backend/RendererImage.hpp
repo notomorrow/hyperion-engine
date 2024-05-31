@@ -287,6 +287,8 @@ class Image
 public:
     friend struct ImagePlatformImpl<PLATFORM>;
 
+    static constexpr PlatformType platform = PLATFORM;
+    
     HYP_API Image(
         Extent3D extent,
         InternalFormat format,

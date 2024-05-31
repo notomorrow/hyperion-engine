@@ -9,7 +9,6 @@
 #include <core/threading/Mutex.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
-#include <rendering/backend/RendererShader.hpp>
 
 #include <util/shader_compiler/ShaderCompiler.hpp>
 

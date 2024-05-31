@@ -11,7 +11,11 @@ namespace renderer {
 namespace platform {
 
 template <PlatformType PLATFORM>
-class Swapchain { };
+class Swapchain
+{
+public:
+    static constexpr PlatformType platform = PLATFORM;
+};
 
 } // namespace platform
 } // namespace renderer

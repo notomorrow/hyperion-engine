@@ -35,24 +35,24 @@ struct RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer) : renderer::RenderC
 
 #pragma endregion Render commands
 
-// LightmapPathTracer
+#pragma region LightmapPathTracer
 
-LightmapPathTracer::LightmapPathTracer(Handle<TLAS> tlas, LightmapShadingType shading_type)
-    : m_tlas(std::move(tlas)),
+LightmapPathTracer::LightmapPathTracer(const TLASRef &tlas, LightmapShadingType shading_type)
+    : m_tlas(tlas),
       m_shading_type(shading_type),
       m_uniform_buffers({
-          MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER),
-          MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER)
+          MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER),
+          MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::CONSTANT_BUFFER)
       }),
       m_rays_buffers({
-          MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER),
-          MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER)
+          MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER),
+          MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER)
       }),
       m_hits_buffers({
-          MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER),
-          MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER)
+          MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER),
+          MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER)
       }),
-      m_raytracing_pipeline(MakeRenderObject<renderer::RaytracingPipeline>())
+      m_raytracing_pipeline(MakeRenderObject<RaytracingPipeline>())
 {
     
 }
@@ -108,14 +108,14 @@ void LightmapPathTracer::Create()
 
     renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RTRadianceDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());
-        descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
+        descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas);
+        descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetMeshDescriptionsBuffer());
         descriptor_set->SetElement(HYP_NAME(HitsBuffer), m_hits_buffers[frame_index]);
         descriptor_set->SetElement(HYP_NAME(RaysBuffer), m_rays_buffers[frame_index]);
 
@@ -247,7 +247,9 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
     );
 }
 
-// LightmapJob
+#pragma endregion LightmapPathTracer
+
+#pragma region LightmapJob
 
 LightmapJob::LightmapJob(Scene *scene, Array<LightmapEntity> entities)
     : m_scene(scene),
@@ -510,7 +512,9 @@ void LightmapJob::TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShading
     });
 }
 
-// LightmapRenderer
+#pragma endregion LightmapJob
+
+#pragma region LightmapRenderer
 
 LightmapRenderer::LightmapRenderer(Name name)
     : RenderComponent(name),
@@ -867,5 +871,7 @@ void LightmapRenderer::HandleCompletedJob(LightmapJob *job)
     m_queue.Pop();
     m_num_jobs.Decrement(1u, MemoryOrder::RELAXED);
 }
+
+#pragma endregion LightmapRenderer
 
 } // namespace hyperion

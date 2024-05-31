@@ -7,6 +7,7 @@
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
 
 namespace hyperion::renderer {
 
@@ -18,12 +19,12 @@ Result AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VULKAN> *de
 template <>
 AsyncCompute<Platform::VULKAN>::AsyncCompute()
     : m_command_buffers({
-          MakeRenderObject<CommandBuffer<Platform::VULKAN>, Platform::VULKAN>(CommandBufferType::COMMAND_BUFFER_PRIMARY),
-          MakeRenderObject<CommandBuffer<Platform::VULKAN>, Platform::VULKAN>(CommandBufferType::COMMAND_BUFFER_PRIMARY)
+          MakeRenderObject<CommandBuffer<Platform::VULKAN>>(CommandBufferType::COMMAND_BUFFER_PRIMARY),
+          MakeRenderObject<CommandBuffer<Platform::VULKAN>>(CommandBufferType::COMMAND_BUFFER_PRIMARY)
       }),
       m_fences({
-          MakeRenderObject<Fence<Platform::VULKAN>, Platform::VULKAN>(),
-          MakeRenderObject<Fence<Platform::VULKAN>, Platform::VULKAN>()
+          MakeRenderObject<Fence<Platform::VULKAN>>(),
+          MakeRenderObject<Fence<Platform::VULKAN>>()
       }),
       m_is_supported(false),
       m_is_fallback(false)

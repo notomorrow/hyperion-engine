@@ -97,14 +97,14 @@ RenderEnvironment::~RenderEnvironment()
 
     m_update_marker.BitAnd(~RENDER_ENVIRONMENT_UPDATES_CONTAINERS, MemoryOrder::RELEASE);
 
+    SafeRelease(std::move(m_tlas));
+
     HYP_SYNC_RENDER();
 }
 
-void RenderEnvironment::SetTLAS(Handle<TLAS> tlas)
+void RenderEnvironment::SetTLAS(const TLASRef &tlas)
 {
-    m_tlas = std::move(tlas);
-
-    InitObject(m_tlas);
+    m_tlas = tlas;
 
     m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_TLAS, MemoryOrder::RELEASE);
 }
@@ -340,11 +340,11 @@ void RenderEnvironment::RenderComponents(Frame *frame)
         // for RT, we may need to perform resizing of buffers, and thus modification of descriptor sets
         AssertThrow(m_scene != nullptr);
 
-        if (const auto &tlas = m_scene->GetTLAS()) {
+        if (const TLASRef &tlas = m_scene->GetTLAS()) {
             RTUpdateStateFlags update_state_flags = renderer::RT_UPDATE_STATE_FLAGS_NONE;
 
-            tlas->UpdateRender(
-                frame,
+            tlas->UpdateStructure(
+                g_engine->GetGPUInstance(),
                 update_state_flags
             );
 

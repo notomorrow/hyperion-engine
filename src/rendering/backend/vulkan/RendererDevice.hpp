@@ -41,6 +41,8 @@ class Device<Platform::VULKAN>
     static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
 
 public:
+    static constexpr PlatformType platform = Platform::VULKAN;
+    
     Device(VkPhysicalDevice physical, VkSurfaceKHR surface);
     Device(const Device &)                  = delete;
     Device &operator=(const Device &)       = delete;

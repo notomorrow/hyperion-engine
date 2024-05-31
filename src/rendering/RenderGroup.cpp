@@ -121,7 +121,7 @@ RenderGroup::RenderGroup(
 ) : BasicObject(),
     m_flags(flags),
     m_shader(shader),
-    m_pipeline(MakeRenderObject<renderer::GraphicsPipeline>()),
+    m_pipeline(MakeRenderObject<GraphicsPipeline>()),
     m_renderable_attributes(renderable_attributes)
 {
     if (m_shader != nullptr) {
@@ -136,7 +136,7 @@ RenderGroup::RenderGroup(
     EnumFlags<RenderGroupFlags> flags
 ) : BasicObject(),
     m_flags(flags),
-    m_pipeline(MakeRenderObject<renderer::GraphicsPipeline>(ShaderRef::unset, descriptor_table)),
+    m_pipeline(MakeRenderObject<GraphicsPipeline>(ShaderRef::unset, descriptor_table)),
     m_shader(shader),
     m_renderable_attributes(renderable_attributes)
 {
@@ -218,7 +218,7 @@ void RenderGroup::Init()
 
         for (uint i = 0; i < max_frames_in_flight; i++) {
             for (CommandBufferRef &command_buffer : (*m_command_buffers)[i]) {
-                command_buffer = MakeRenderObject<renderer::CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
+                command_buffer = MakeRenderObject<CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
             }
         }
     }
@@ -246,7 +246,7 @@ void RenderGroup::Init()
     if (!m_pipeline->GetDescriptorTable().IsValid()) {
         renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
         AssertThrow(descriptor_table != nullptr);
         DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 

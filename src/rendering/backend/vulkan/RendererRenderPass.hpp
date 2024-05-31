@@ -39,6 +39,8 @@ class RenderPass<Platform::VULKAN>
     friend class GraphicsPipeline<Platform::VULKAN>;
 
 public:
+    static constexpr PlatformType platform = Platform::VULKAN;
+    
     RenderPass(RenderPassStage stage, RenderPassMode mode);
     RenderPass(RenderPassStage stage, RenderPassMode mode, uint num_multiview_layers);
     RenderPass(const RenderPass &other) = delete;

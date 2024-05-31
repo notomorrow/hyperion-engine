@@ -51,6 +51,8 @@ template <PlatformType PLATFORM>
 class Attachment
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     HYP_API Attachment(
         const ImageRef<PLATFORM> &image,
         RenderPassStage stage,

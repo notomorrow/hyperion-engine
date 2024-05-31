@@ -7,11 +7,9 @@
 
 #include <physics/PhysicsWorld.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
 
 class RenderListContainer
 {

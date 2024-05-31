@@ -25,6 +25,8 @@ class ImageView
 {
 public:
     friend struct ImageViewPlatformImpl<PLATFORM>;
+    
+    static constexpr PlatformType platform = PLATFORM;
 
     HYP_API ImageView();
     ImageView(const ImageView &other)               = delete;

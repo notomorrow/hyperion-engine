@@ -132,9 +132,9 @@ VkImageViewType ToVkImageViewType(ImageType type, bool is_array)
 
 Result SingleTimeCommands::Begin(Device *device)
 {
-    m_fence = MakeRenderObject<platform::Fence<Platform::VULKAN>, Platform::VULKAN>();
+    m_fence = MakeRenderObject<platform::Fence<Platform::VULKAN>>();
 
-    command_buffer = MakeRenderObject<platform::CommandBuffer<Platform::VULKAN>, Platform::VULKAN>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+    command_buffer = MakeRenderObject<platform::CommandBuffer<Platform::VULKAN>>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
     command_buffer->GetPlatformImpl().command_pool = pool;
     HYPERION_BUBBLE_ERRORS(command_buffer->Create(device));
 

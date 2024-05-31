@@ -45,7 +45,7 @@ Framebuffer<Platform::VULKAN>::Framebuffer(
     uint num_multiview_layers
 ) : m_platform_impl { this, VK_NULL_HANDLE },
     m_extent(extent),
-    m_render_pass(MakeRenderObject<renderer::RenderPass>(stage, render_pass_mode, num_multiview_layers)),
+    m_render_pass(MakeRenderObject<RenderPass<Platform::VULKAN>>(stage, render_pass_mode, num_multiview_layers)),
     m_attachment_map(new AttachmentMap<Platform::VULKAN>())
 {
 }

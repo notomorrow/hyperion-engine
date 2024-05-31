@@ -6,6 +6,7 @@
 #include <core/Base.hpp>
 #include <core/containers/Bitset.hpp>
 #include <core/threading/AtomicVar.hpp>
+#include <core/utilities/EnumFlags.hpp>
 
 #include <math/BoundingBox.hpp>
 
@@ -21,11 +22,22 @@
 
 namespace hyperion {
 
-struct RenderCommand_UpdateEnvProbeDrawProxy;
-struct RenderCommand_CreateCubemapBuffers;
-struct RenderCommand_DestroyCubemapRenderPass;
+using renderer::Result;
 
-class Framebuffer;
+struct RENDER_COMMAND(UpdateEnvProbeDrawProxy);
+struct RENDER_COMMAND(CreateCubemapBuffers);
+struct RENDER_COMMAND(DestroyCubemapRenderPass);
+
+enum class EnvProbeFlags : uint32
+{
+    NONE                = 0x0,
+    PARALLAX_CORRECTED  = 0x1,
+    SHADOW              = 0x2,
+    DIRTY               = 0x4,
+    MAX                 = 0x7 // 3 bits after are used for shadow
+};
+
+HYP_MAKE_ENUM_FLAGS(EnvProbeFlags);
 
 enum EnvProbeBindingSlot : uint
 {
@@ -52,19 +64,10 @@ enum EnvProbeType : uint
 
 class EnvProbe;
 
-struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : renderer::RenderCommand
-{
-    EnvProbe &env_probe;
-    EnvProbeDrawProxy draw_proxy;
+template <>
+struct DrawProxy<STUB_CLASS(EnvProbe)>;
 
-    RENDER_COMMAND(UpdateEnvProbeDrawProxy)(EnvProbe &env_probe, EnvProbeDrawProxy &&draw_proxy)
-        : env_probe(env_probe),
-          draw_proxy(std::move(draw_proxy))
-    {
-    }
-
-    virtual Result operator()() override;
-};
+using EnvProbeDrawProxy = DrawProxy<STUB_CLASS(EnvProbe)>;
 
 struct EnvProbeIndex
 {
@@ -125,22 +128,36 @@ struct EnvProbeIndex
     }
 };
 
-class EnvProbe
-    : public BasicObject<STUB_CLASS(EnvProbe)>,
-      public HasDrawProxy<STUB_CLASS(EnvProbe)>
+template <>
+struct DrawProxy<STUB_CLASS(EnvProbe)>
+{
+    ID<EnvProbe>                id;
+    BoundingBox                 aabb;
+    Vec3f                       world_position;
+    uint32                      texture_index;
+    float                       camera_near;
+    float                       camera_far;
+    EnumFlags<EnvProbeFlags>    flags;
+    uint32                      grid_slot;
+    uint64                      visibility_bits; // bitmask indicating if EnvProbe is visible to cameras by camera ID
+};
+
+using EnvProbeDrawProxy = DrawProxy<STUB_CLASS(EnvProbe)>;
+
+class HYP_API EnvProbe : public BasicObject<STUB_CLASS(EnvProbe)>
 {
 public:
-    friend struct RenderCommand_UpdateEnvProbeDrawProxy;
-    friend struct RenderCommand_DestroyCubemapRenderPass;
+    friend struct RENDER_COMMAND(UpdateEnvProbeDrawProxy);
+    friend struct RENDER_COMMAND(DestroyCubemapRenderPass);
     
-    HYP_API EnvProbe(
+    EnvProbe(
         const Handle<Scene> &parent_scene,
         const BoundingBox &aabb,
         const Extent2D &dimensions,
         EnvProbeType env_probe_type
     );
     
-    HYP_API EnvProbe(
+    EnvProbe(
         const Handle<Scene> &parent_scene,
         const BoundingBox &aabb,
         const Extent2D &dimensions,
@@ -150,42 +167,64 @@ public:
 
     EnvProbe(const EnvProbe &other)             = delete;
     EnvProbe &operator=(const EnvProbe &other)  = delete;
-    HYP_API ~EnvProbe();
+    ~EnvProbe();
 
-    HYP_FORCE_INLINE EnvProbeType GetEnvProbeType() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    EnvProbeType GetEnvProbeType() const
         { return m_env_probe_type; }
 
-    HYP_FORCE_INLINE bool IsReflectionProbe() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool IsReflectionProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_REFLECTION; }
 
-    HYP_FORCE_INLINE bool IsSkyProbe() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool IsSkyProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SKY; }
 
-    HYP_FORCE_INLINE bool IsShadowProbe() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool IsShadowProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SHADOW; }
 
-    HYP_FORCE_INLINE bool IsAmbientProbe() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool IsAmbientProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT; }
 
-    HYP_FORCE_INLINE bool IsControlledByEnvGrid() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool IsControlledByEnvGrid() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT; }
 
-    HYP_FORCE_INLINE const EnvProbeIndex &GetBoundIndex() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const EnvProbeIndex &GetBoundIndex() const
         { return m_bound_index; }
 
-    HYP_FORCE_INLINE void SetBoundIndex(const EnvProbeIndex &bound_index)
+    HYP_FORCE_INLINE
+    void SetBoundIndex(const EnvProbeIndex &bound_index)
         { m_bound_index = bound_index; }
 
-    HYP_FORCE_INLINE const Matrix4 &GetProjectionMatrix() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const Matrix4 &GetProjectionMatrix() const
         { return m_projection_matrix; }
 
-    HYP_FORCE_INLINE const FixedArray<Matrix4, 6> &GetViewMatrices() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const FixedArray<Matrix4, 6> &GetViewMatrices() const
         { return m_view_matrices; }
 
-    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const BoundingBox &GetAABB() const
         { return m_aabb; }
 
-    HYP_FORCE_INLINE void SetAABB(const BoundingBox &aabb)
+    HYP_FORCE_INLINE
+    void SetAABB(const BoundingBox &aabb)
     {
         if (m_aabb != aabb) {
             m_aabb = aabb;
@@ -194,6 +233,8 @@ public:
         }
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     Vec3f GetOrigin() const
     {
         // ambient probes use the min point of the aabb as the origin,
@@ -205,19 +246,27 @@ public:
         }
     }
 
-    HYP_FORCE_INLINE Handle<Texture> &GetTexture()
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    Handle<Texture> &GetTexture()
         { return m_texture; }
 
-    HYP_FORCE_INLINE const Handle<Texture> &GetTexture() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const Handle<Texture> &GetTexture() const
         { return m_texture; }
 
-    HYP_FORCE_INLINE void SetNeedsUpdate(bool needs_update)
+    HYP_FORCE_INLINE
+    void SetNeedsUpdate(bool needs_update)
         { m_needs_update = needs_update; }
 
-    HYP_FORCE_INLINE bool NeedsUpdate() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool NeedsUpdate() const
         { return m_needs_update; }
 
-    HYP_FORCE_INLINE void SetNeedsRender(bool needs_render)
+    HYP_FORCE_INLINE
+    void SetNeedsRender(bool needs_render)
     {
         if (needs_render) {
             m_needs_render_counter.Set(1, MemoryOrder::RELAXED);
@@ -226,22 +275,27 @@ public:
         }
     }
 
-    HYP_FORCE_INLINE bool NeedsRender() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool NeedsRender() const
     {
         const int32 counter = m_needs_render_counter.Get(MemoryOrder::RELAXED);
 
         return counter > 0;
     }
 
-    HYP_API bool IsVisible(ID<Camera> camera_id) const;
-    HYP_API void SetIsVisible(ID<Camera> camera_id, bool is_visible);
+    bool IsVisible(ID<Camera> camera_id) const;
+    void SetIsVisible(ID<Camera> camera_id, bool is_visible);
 
-    HYP_API void Init();
-    HYP_API void EnqueueBind() const;
-    HYP_API void EnqueueUnbind() const;
-    HYP_API void Update(GameCounter::TickUnit delta);
+    const EnvProbeDrawProxy &GetProxy() const
+        { return m_proxy; }
 
-    HYP_API void Render(Frame *frame);
+    void Init();
+    void EnqueueBind() const;
+    void EnqueueUnbind() const;
+    void Update(GameCounter::TickUnit delta);
+
+    void Render(Frame *frame);
 
     void UpdateRenderData(bool set_texture = false);
 
@@ -287,6 +341,8 @@ private:
     AtomicVar<bool>         m_is_rendered;
     AtomicVar<int32>        m_needs_render_counter;
     HashCode                m_octant_hash_code;
+
+    EnvProbeDrawProxy       m_proxy;
 };
 
 } // namespace hyperion

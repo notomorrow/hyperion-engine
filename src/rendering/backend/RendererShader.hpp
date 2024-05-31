@@ -78,6 +78,8 @@ template <PlatformType PLATFORM>
 class Shader
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     HYP_API Shader();
     HYP_API Shader(const RC<CompiledShader> &compiled_shader);
     Shader(const Shader &other)               = delete;

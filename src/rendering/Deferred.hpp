@@ -16,10 +16,9 @@
 #include <rendering/HBAO.hpp>
 #include <rendering/TemporalAA.hpp>
 
-namespace hyperion {
+#include <rendering/backend/RenderObject.hpp>
 
-using renderer::Frame;
-using renderer::Device;
+namespace hyperion {
 
 class IndirectDrawState;
 class RenderEnvironment;

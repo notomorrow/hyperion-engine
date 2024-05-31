@@ -513,7 +513,7 @@ void HyperionEditor::Init()
 
     InitObject(sun);
 
-    auto sun_node = m_scene->GetRoot().AddChild();
+    NodeProxy sun_node = m_scene->GetRoot()->AddChild();
     sun_node.SetName("Sun");
 
     auto sun_entity = m_scene->GetEntityManager()->AddEntity();
@@ -649,17 +649,34 @@ void HyperionEditor::Init()
         node.SetName("test_model");
         node.LockTransform();
 
-        // if (auto house = results["house"].Get<Node>()) {
-        //     house.Scale(0.25f);
-        //     m_scene->GetRoot().AddChild(house);
-        // }
+        if (true) {
+            ID<Entity> env_grid_entity = m_scene->GetEntityManager()->AddEntity();
+
+            m_scene->GetEntityManager()->AddComponent(env_grid_entity, TransformComponent {
+                node.GetWorldTransform()
+            });
+
+            m_scene->GetEntityManager()->AddComponent(env_grid_entity, BoundingBoxComponent {
+                node.GetLocalAABB() * 1.0f,
+                node.GetWorldAABB() * 1.0f
+            });
+
+            // Add env grid component
+            m_scene->GetEntityManager()->AddComponent(env_grid_entity, EnvGridComponent {
+                EnvGridType::ENV_GRID_TYPE_SH
+            });
+
+            NodeProxy env_grid_node = m_scene->GetRoot()->AddChild();
+            env_grid_node.SetEntity(env_grid_entity);
+            env_grid_node.SetName("EnvGrid");
+        }
 
         if (auto zombie = results["zombie"].Get<Node>()) {
             zombie.Scale(0.25f);
             zombie.Translate(Vec3f(0, 2.0f, -1.0f));
             auto zombie_entity = zombie[0].GetEntity();
 
-            m_scene->GetRoot().AddChild(zombie);
+            m_scene->GetRoot()->AddChild(zombie);
 
             if (zombie_entity.IsValid()) {
                 if (auto *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombie_entity)) {
@@ -672,7 +689,7 @@ void HyperionEditor::Init()
             zombie.SetName("zombie");
         }
 
-        GetScene()->GetRoot().AddChild(node);
+        GetScene()->GetRoot()->AddChild(node);
     }).Detach();
 
     batch->LoadAsync();

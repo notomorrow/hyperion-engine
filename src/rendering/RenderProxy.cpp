@@ -1,6 +1,8 @@
 #include <rendering/RenderProxy.hpp>
 #include <rendering/SafeDeleter.hpp>
 
+#include <rendering/backend/RendererFramebuffer.hpp>
+
 namespace hyperion {
 
 extern HYP_API SafeDeleter *g_safe_deleter;

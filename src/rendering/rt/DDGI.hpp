@@ -3,28 +3,21 @@
 #ifndef HYPERION_DDGI_HPP
 #define HYPERION_DDGI_HPP
 
-
 #include <rendering/Shader.hpp>
-#include <rendering/rt/TLAS.hpp>
+#include <rendering/Buffers.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 #include <math/BoundingBox.hpp>
+
 #include <Types.hpp>
 
 #include <random>
 
 namespace hyperion {
 
-using renderer::RaytracingPipeline;
-using renderer::StorageImage;
-using renderer::ImageView;
-using renderer::CommandBuffer;
-;
-using renderer::Frame;
 using renderer::RTUpdateStateFlags;
 using renderer::ShaderVec4;
 
@@ -120,8 +113,8 @@ public:
     const Array<Probe> &GetProbes() const
         { return m_probes; }
 
-    void SetTLAS(Handle<TLAS> tlas)
-        { m_tlas = std::move(tlas); }
+    void SetTLAS(const TLASRef &tlas)
+        { m_tlas = tlas; }
 
     HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
 
@@ -168,7 +161,7 @@ private:
     ImageRef                                    m_depth_image;
     ImageViewRef                                m_depth_image_view;
 
-    Handle<TLAS>                                m_tlas;
+    TLASRef                                     m_tlas;
 
     DDGIUniforms                                m_uniforms;
 

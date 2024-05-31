@@ -70,12 +70,12 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Insta
 
 template <>
 AccelerationGeometry<Platform::VULKAN>::AccelerationGeometry(
-    Array<PackedVertex> &&packed_vertices,
-    Array<PackedIndex> &&packed_indices,
+    const Array<PackedVertex> &packed_vertices,
+    const Array<uint32> &packed_indices,
     uint entity_index,
     uint material_index
-) : m_packed_vertices(std::move(packed_vertices)),
-    m_packed_indices(std::move(packed_indices)),
+) : m_packed_vertices(packed_vertices),
+    m_packed_indices(packed_indices),
     m_packed_vertex_buffer(MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::RT_MESH_VERTEX_BUFFER)),
     m_packed_index_buffer(MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::RT_MESH_INDEX_BUFFER)),
     m_entity_index(entity_index),
@@ -209,8 +209,9 @@ Result AccelerationGeometry<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> 
 }
 
 template <>
-AccelerationStructure<Platform::VULKAN>::AccelerationStructure()
-    : m_acceleration_structure(VK_NULL_HANDLE),
+AccelerationStructure<Platform::VULKAN>::AccelerationStructure(const Matrix4 &transform)
+    : m_transform(transform),
+      m_acceleration_structure(VK_NULL_HANDLE),
       m_instances_buffer(MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::ACCELERATION_STRUCTURE_INSTANCE_BUFFER)),
       m_device_address(0),
       m_flags(ACCELERATION_STRUCTURE_FLAGS_NONE)
@@ -551,33 +552,16 @@ std::vector<uint32> TopLevelAccelerationStructure<Platform::VULKAN>::GetPrimitiv
 template <>
 Result TopLevelAccelerationStructure<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
-    Instance<Platform::VULKAN> *instance,
-    Array<BLASRef<Platform::VULKAN>> &&blas
+    Instance<Platform::VULKAN> *instance
 )
 {
     AssertThrow(m_acceleration_structure == VK_NULL_HANDLE);
-
-    m_blas = std::move(blas);
-    
-    // no BLASes in here to create any buffers for
-    //AssertThrowMsg(!m_blas.empty(), "Cannot create TLAS without any BLASes.");
-
-    // check each BLAS, assert that it is valid.
-    for (const auto &blas : m_blas) {
-        AssertThrow(blas != nullptr);
-        AssertThrow(!blas->GetGeometries().Empty());
-
-        for (const auto &geometry : blas->GetGeometries()) {
-            AssertThrow(geometry->GetPackedVertexStorageBuffer() != nullptr);
-            AssertThrow(geometry->GetPackedIndexStorageBuffer() != nullptr);
-        }
-    }
 
     HYPERION_BUBBLE_ERRORS(CreateOrRebuildInstancesBuffer(instance));
 
     RTUpdateStateFlags update_state_flags = RT_UPDATE_STATE_FLAGS_NONE;
 
-    Result result = Result { };
+    Result result { };
     
     HYPERION_PASS_ERRORS(
         CreateAccelerationStructure(
@@ -639,7 +623,7 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform:
 }
 
 template <>
-void TopLevelAccelerationStructure<Platform::VULKAN>::AddBLAS(BLASRef<Platform::VULKAN> blas)
+void TopLevelAccelerationStructure<Platform::VULKAN>::AddBLAS(const BLASRef<Platform::VULKAN> &blas)
 {
     AssertThrow(blas != nullptr);
     AssertThrow(!blas->GetGeometries().Empty());
@@ -650,7 +634,7 @@ void TopLevelAccelerationStructure<Platform::VULKAN>::AddBLAS(BLASRef<Platform::
         AssertThrow(geometry->GetPackedIndexStorageBuffer() != nullptr);
     }
 
-    m_blas.PushBack(std::move(blas));
+    m_blas.PushBack(blas);
 
     SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING);
 }
@@ -984,8 +968,8 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platfor
 }
 
 template <>
-BottomLevelAccelerationStructure<Platform::VULKAN>::BottomLevelAccelerationStructure()
-    : AccelerationStructure()
+BottomLevelAccelerationStructure<Platform::VULKAN>::BottomLevelAccelerationStructure(const Matrix4 &transform)
+    : AccelerationStructure(transform)
 {
     m_instances_buffer.SetName(HYP_NAME(BLASInstancesBuffer));
 }
@@ -1006,7 +990,7 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::Create(Device<Platfor
     }
 
     for (SizeType i = 0; i < m_geometries.Size(); i++) {
-        const auto &geometry = m_geometries[i];
+        const AccelerationGeometryRef<Platform::VULKAN> &geometry = m_geometries[i];
 
         if (geometry->GetPackedIndices().Size() % 3 != 0) {
             return { Result::RENDERER_ERR, "Invalid triangle mesh!" };
@@ -1085,6 +1069,10 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Plat
     for (SizeType i = 0; i < m_geometries.Size(); i++) {
         const AccelerationGeometryRef<Platform::VULKAN> &geometry = m_geometries[i];
         AssertThrow(geometry != nullptr);
+
+        if (!geometry->GetPackedIndices().Empty()) {
+            return { Result::RENDERER_ERR, "No mesh data set on geometry!" };
+        }
 
         geometries[i] = geometry->m_geometry;
         primitive_counts[i] = uint32(geometry->GetPackedIndices().Size() / 3);

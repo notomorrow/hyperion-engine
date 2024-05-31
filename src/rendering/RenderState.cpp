@@ -2,6 +2,8 @@
 
 #include <rendering/RenderState.hpp>
 
+#include <rendering/backend/RendererFramebuffer.hpp>
+
 namespace hyperion {
 
 const RenderBinding<Scene> RenderBinding<Scene>::empty = { };

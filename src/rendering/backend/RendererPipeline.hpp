@@ -27,6 +27,8 @@ class Pipeline
 public:
     friend struct PipelinePlatformImpl<PLATFORM>;
 
+    static constexpr PlatformType platform = PLATFORM;
+
     HYP_API Pipeline();
     HYP_API Pipeline(const ShaderRef<PLATFORM> &shader, const DescriptorTableRef<PLATFORM> &descriptor_table);
     Pipeline(const Pipeline &other)             = delete;

@@ -4,29 +4,30 @@
 
 #include <core/Base.hpp>
 #include <core/threading/AtomicVar.hpp>
+#include <core/threading/Threads.hpp>
+
+#include <core/utilities/EnumFlags.hpp>
 
 #include <rendering/RenderCollection.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/Buffers.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
 
-#include <core/threading/Threads.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 namespace hyperion {
 
 class Entity;
 
-using EnvGridFlags = uint32;
-
-enum EnvGridFlagBits : EnvGridFlags
+enum class EnvGridFlags : uint32
 {
-    ENV_GRID_FLAGS_NONE                     = 0x0,
-    ENV_GRID_FLAGS_RESET_REQUESTED          = 0x1,
-    ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET  = 0x2
+    NONE                    = 0x0,
+    USE_VOXEL_GRID          = 0x1
 };
 
-struct RenderCommand_UpdateEnvProbeAABBsInGrid;
+HYP_MAKE_ENUM_FLAGS(EnvGridFlags);
+
+struct RENDER_COMMAND(UpdateEnvProbeAABBsInGrid);
 
 struct EnvProbeCollection
 {
@@ -103,41 +104,49 @@ struct EnvProbeCollection
 
 struct EnvGridOptions
 {
-    EnvGridType type = ENV_GRID_TYPE_SH;
-    BoundingBox aabb;
-    Extent3D    density = { 0, 0, 0 };
-    bool        use_voxel_grid = false;
+    EnvGridType             type = ENV_GRID_TYPE_SH;
+    BoundingBox             aabb;
+    Extent3D                density = { 0, 0, 0 };
+    EnumFlags<EnvGridFlags> flags = EnvGridFlags::NONE;
 };
 
-class EnvGrid : public RenderComponent<EnvGrid>
+class HYP_API EnvGrid : public RenderComponent<EnvGrid>
 {
 public:
-    friend struct RenderCommand_UpdateEnvProbeAABBsInGrid;
+    friend struct RENDER_COMMAND(UpdateEnvProbeAABBsInGrid);
 
-    HYP_API EnvGrid(Name name, EnvGridOptions options);
-    HYP_API EnvGrid(const EnvGrid &other) = delete;
-    HYP_API EnvGrid &operator=(const EnvGrid &other) = delete;
-    HYP_API virtual ~EnvGrid();
+    EnvGrid(Name name, EnvGridOptions options);
+    EnvGrid(const EnvGrid &other)               = delete;
+    EnvGrid &operator=(const EnvGrid &other)    = delete;
+    virtual ~EnvGrid();
 
-    HYP_FORCE_INLINE EnvGridType GetEnvGridType() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    EnvGridType GetEnvGridType() const
         { return m_options.type; }
 
-    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const BoundingBox &GetAABB() const
         { return m_aabb; }
 
-    HYP_API void SetCameraData(const BoundingBox &aabb, const Vec3f &camera_position);
+    void SetCameraData(const BoundingBox &aabb, const Vec3f &camera_position);
 
-    HYP_API void Init();
-    HYP_API void InitGame(); // init on game thread
-    HYP_API void OnRemoved();
+    void Init();
+    void InitGame(); // init on game thread
+    void OnRemoved();
 
-    HYP_API void OnUpdate(GameCounter::TickUnit delta);
-    HYP_API void OnRender(Frame *frame);
+    void OnUpdate(GameCounter::TickUnit delta);
+    void OnRender(Frame *frame);
 
 private:
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     Vec3f SizeOfProbe() const
         { return m_aabb.GetExtent() / Vec3f(m_options.density); }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     EnvProbeType GetEnvProbeType() const
     {
         switch (GetEnvGridType()) {
@@ -148,7 +157,7 @@ private:
         }
     }
 
-    HYP_API virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
+    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
 
     void CreateShader();
     void CreateFramebuffer();
@@ -195,8 +204,6 @@ private:
 
     EnvGridShaderData           m_shader_data;
     uint                        m_current_probe_index;
-
-    AtomicVar<EnvGridFlags>     m_flags;
 
     ComputePipelineRef          m_clear_sh;
     ComputePipelineRef          m_compute_sh;

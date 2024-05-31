@@ -8,16 +8,12 @@
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EnvProbe.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <scene/Scene.hpp>
 #include <scene/camera/Camera.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
 
 class HYP_API SkydomeRenderer : public RenderComponent<SkydomeRenderer>
 {

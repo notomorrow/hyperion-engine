@@ -11,6 +11,8 @@
 
 #include <rendering/DrawProxy.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RenderObject.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/Platform.hpp>
 
 #include <math/Matrix4.hpp>
@@ -36,12 +38,10 @@ using Device = platform::Device<Platform::CURRENT>;
 
 namespace hyperion {
 
-using renderer::Device;
 using renderer::ShaderVec2;
 using renderer::ShaderVec3;
 using renderer::ShaderVec4;
 using renderer::ShaderMat4;
-using renderer::GPUBuffer;
 using renderer::GPUBufferType;
 
 static constexpr SizeType max_entities_per_instance_batch = 60;

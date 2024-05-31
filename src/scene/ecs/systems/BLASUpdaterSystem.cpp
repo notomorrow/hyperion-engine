@@ -2,9 +2,86 @@
 
 #include <scene/ecs/systems/BLASUpdaterSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
+
+#include <rendering/backend/RenderCommand.hpp>
+#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+#pragma region Render commands
+
+struct RENDER_COMMAND(UpdateBLASTransform) : renderer::RenderCommand
+{
+    BLASRef blas;
+    Matrix4 transform;
+
+    RENDER_COMMAND(UpdateBLASTransform)(
+        const BLASRef &blas,
+        const Matrix4 &transform
+    ) : blas(blas),
+        transform(transform)
+    {
+    }
+
+    virtual ~RENDER_COMMAND(UpdateBLASTransform)() override = default;
+
+    virtual Result operator()() override
+    {
+        blas->SetTransform(transform);
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+struct RENDER_COMMAND(AddBLASToTLAS) : renderer::RenderCommand
+{
+    TLASRef tlas;
+    BLASRef blas;
+
+    RENDER_COMMAND(AddBLASToTLAS)(
+        const TLASRef &tlas,
+        const BLASRef &blas
+    ) : tlas(tlas),
+        blas(blas)
+    {
+    }
+
+    virtual ~RENDER_COMMAND(AddBLASToTLAS)() override = default;
+
+    virtual Result operator()() override
+    {
+        tlas->AddBLAS(blas);
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+struct RENDER_COMMAND(RemoveBLASFromTLAS) : renderer::RenderCommand
+{
+    TLASRef tlas;
+    BLASRef blas;
+
+    RENDER_COMMAND(RemoveBLASFromTLAS)(
+        const TLASRef &tlas,
+        const BLASRef &blas
+    ) : tlas(tlas),
+        blas(blas)
+    {
+    }
+
+    virtual ~RENDER_COMMAND(RemoveBLASFromTLAS)() override = default;
+
+    virtual Result operator()() override
+    {
+        tlas->RemoveBLAS(blas);
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+#pragma endregion Render commands
 
 void BLASUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> entity)
 {
@@ -24,17 +101,23 @@ void BLASUpdaterSystem::OnEntityAdded(EntityManager &entity_manager, ID<Entity> 
 
     blas_component.transform_hash_code = transform_component.transform.GetHashCode();
 
-    blas_component.blas = CreateObject<BLAS>(
-        entity,
-        mesh_component.mesh,
-        mesh_component.material,
-        transform_component.transform
+    blas_component.blas = MakeRenderObject<BLAS>(transform_component.transform.GetMatrix());
+
+    AccelerationGeometryRef geometry = MakeRenderObject<AccelerationGeometry>(
+        mesh_component.mesh->BuildPackedVertices(),
+        mesh_component.mesh->BuildPackedIndices(),
+        entity.ToIndex(),
+        mesh_component.material.GetID().ToIndex()
     );
 
-    if (InitObject(blas_component.blas)) {
-        if (const Handle<TLAS> &tlas = entity_manager.GetScene()->GetTLAS(); tlas.IsValid()) {
-            tlas->AddBLAS(blas_component.blas);
-        }
+    DeferCreate(geometry, g_engine->GetGPUDevice(), g_engine->GetGPUInstance());
+
+    blas_component.blas->AddGeometry(std::move(geometry));
+
+    DeferCreate(blas_component.blas, g_engine->GetGPUDevice(), g_engine->GetGPUInstance());
+    
+    if (const TLASRef &tlas = entity_manager.GetScene()->GetTLAS(); tlas.IsValid()) {
+        PUSH_RENDER_COMMAND(AddBLASToTLAS, tlas, blas_component.blas);
     }
 }
 
@@ -49,11 +132,11 @@ void BLASUpdaterSystem::OnEntityRemoved(EntityManager &entity_manager, ID<Entity
     BLASComponent &blas_component = entity_manager.GetComponent<BLASComponent>(entity);
 
     if (blas_component.blas.IsValid()) {
-        if (const Handle<TLAS> &tlas = entity_manager.GetScene()->GetTLAS(); tlas.IsValid()) {
-            tlas->RemoveBLAS(blas_component.blas.GetID());
+        if (const TLASRef &tlas = entity_manager.GetScene()->GetTLAS(); tlas.IsValid()) {
+            PUSH_RENDER_COMMAND(RemoveBLASFromTLAS, tlas, blas_component.blas);
         }
 
-        blas_component.blas.Reset();
+        SafeRelease(std::move(blas_component.blas));
     }
 }
 
@@ -70,16 +153,17 @@ void BLASUpdaterSystem::Process(EntityManager &entity_manager, GameCounter::Tick
             continue;
         }
 
-        if (blas_component.blas->GetMesh() != mesh_component.mesh) {
-            blas_component.blas->SetMesh(mesh_component.mesh);
-        }
+        /// vvv FIXME
+        // if (blas_component.blas->GetMesh() != mesh_component.mesh) {
+        //     blas_component.blas->SetMesh(mesh_component.mesh);
+        // }
 
-        if (blas_component.blas->GetMaterial() != mesh_component.material) {
-            blas_component.blas->SetMaterial(mesh_component.material);
-        }
+        // if (blas_component.blas->GetMaterial() != mesh_component.material) {
+        //     blas_component.blas->SetMaterial(mesh_component.material);
+        // }
 
         if (transform_hash_code != blas_component.transform_hash_code) {
-            blas_component.blas->SetTransform(transform_component.transform);
+            PUSH_RENDER_COMMAND(UpdateBLASTransform, blas_component.blas, transform_component.transform.GetMatrix());
 
             blas_component.transform_hash_code = transform_hash_code;
         }

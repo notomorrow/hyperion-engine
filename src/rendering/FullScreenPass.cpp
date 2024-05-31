@@ -3,6 +3,8 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
 
+#include <rendering/backend/RendererFramebuffer.hpp>
+
 #include <Engine.hpp>
 #include <Types.hpp>
 
@@ -79,6 +81,13 @@ FullScreenPass::FullScreenPass(
 
 FullScreenPass::~FullScreenPass() = default;
 
+const AttachmentRef &FullScreenPass::GetAttachment(uint attachment_index) const
+{
+    AssertThrow(m_framebuffer.IsValid());
+
+    return m_framebuffer->GetAttachment(attachment_index);
+}
+
 void FullScreenPass::SetBlendFunction(const BlendFunction &blend_function)
 {
     m_blend_function = blend_function;
@@ -130,7 +139,7 @@ void FullScreenPass::CreateFramebuffer()
         m_extent = g_engine->GetGPUInstance()->GetSwapchain()->extent;
     }
 
-    m_framebuffer = MakeRenderObject<renderer::Framebuffer>(
+    m_framebuffer = MakeRenderObject<Framebuffer>(
         m_extent,
         renderer::RenderPassStage::SHADER,
         renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
@@ -146,7 +155,7 @@ void FullScreenPass::CreateFramebuffer()
 
     DeferCreate(attachment_image, g_engine->GetGPUDevice());
 
-    AttachmentRef attachment = MakeRenderObject<renderer::Attachment>(
+    AttachmentRef attachment = MakeRenderObject<Attachment>(
         attachment_image,
         renderer::RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,

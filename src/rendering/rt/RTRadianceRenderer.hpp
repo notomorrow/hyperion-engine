@@ -5,29 +5,16 @@
 
 #include <Constants.hpp>
 
-
 #include <rendering/Shader.hpp>
 #include <rendering/TemporalBlending.hpp>
-#include <rendering/rt/TLAS.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 namespace hyperion {
 
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
-using renderer::StorageImage;
-using renderer::Sampler;
-using renderer::Device;
 using renderer::Result;
-using renderer::RaytracingPipeline;
 using renderer::RTUpdateStateFlags;
 
 class Engine;
@@ -61,8 +48,8 @@ public:
     bool IsPathTracer() const
         { return m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER; }
     
-    void SetTLAS(Handle<TLAS> tlas)
-        { m_tlas = std::move(tlas); }
+    void SetTLAS(const TLASRef &tlas)
+        { m_tlas = tlas; }
 
     HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
 
@@ -81,7 +68,7 @@ private:
     RTRadianceRendererOptions                           m_options;
 
     Extent2D                                            m_extent;
-    Handle<TLAS>                                        m_tlas;
+    TLASRef                                             m_tlas;
     
     FixedArray<uint32, max_frames_in_flight>            m_updates;
 

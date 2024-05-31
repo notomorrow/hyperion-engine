@@ -494,11 +494,11 @@ public:
 
     /*! \brief Collect all nested UIObjects in the hierarchy, calling `proc` for each collected UIObject.
      *  \param proc The function to call for each collected UIObject. */
-    void CollectObjects(const Proc<void, const RC<UIObject> &> &proc) const;
+    void CollectObjects(const Proc<void, UIObject *> &proc) const;
 
     /*! \brief Collect all nested UIObjects in the hierarchy and push them to the `out_objects` array.
      *  \param out_objects The array to store the collected UIObjects in. */
-    void CollectObjects(Array<RC<UIObject>> &out_objects) const;
+    void CollectObjects(Array<UIObject *> &out_objects) const;
 
     /*! \brief Transform a screen coordinate to a relative coordinate within the UIObject.
      *  \param coords The screen coordinates to transform.
@@ -593,7 +593,7 @@ private:
     /*! \brief Collect all nested UIObjects in the hierarchy, calling `proc` for each collected UIObject.
      *  \param proc The function to call for each collected UIObject.
      *  \param out_deferred_child_objects Array to push child objects to, in the case that its parent type is not a container type (IsContainer() returns false) */
-    void CollectObjects(const Proc<void, const RC<UIObject> &> &proc, Array<RC<UIObject>> &out_deferred_child_objects) const;
+    void CollectObjects(const Proc<void, UIObject *> &proc, Array<UIObject *> &out_deferred_child_objects) const;
 
     void ComputeOffsetPosition();
 

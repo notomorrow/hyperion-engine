@@ -7,8 +7,6 @@
 
 namespace hyperion {
 
-using renderer::CommandBuffer;
-
 #pragma region Render commands
 
 struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : renderer::RenderCommand
@@ -96,7 +94,7 @@ void HBAO::CreatePass()
 
     renderer::DescriptorTableDeclaration descriptor_table_decl = hbao_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
     m_hbao_pass.Reset(new FullScreenPass(

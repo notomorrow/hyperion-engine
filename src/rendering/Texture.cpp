@@ -5,6 +5,9 @@
 #include <rendering/ShaderGlobals.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RenderObject.hpp>
+#include <rendering/backend/RendererImage.hpp>
+#include <rendering/backend/RendererSampler.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -14,7 +17,6 @@
 namespace hyperion {
 
 using renderer::Result;
-using renderer::Frame;
 
 class Texture;
 class TextureMipmapRenderer;
@@ -302,7 +304,7 @@ public:
         for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
             renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-            DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+            DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
             const uint32 mip_width = MathUtil::Max(1u, extent.width >> mip_level);
             const uint32 mip_height = MathUtil::Max(1u, extent.height >> mip_level);
@@ -369,7 +371,7 @@ private:
 
 Texture::Texture()
     : Texture(
-          TextureImage(
+          renderer::TextureImage(
               Extent3D { 1, 1, 1},
               InternalFormat::RGBA8,
               ImageType::TEXTURE_TYPE_2D,
@@ -404,7 +406,7 @@ Texture::Texture(
     WrapMode wrap_mode,
     UniquePtr<StreamedData> &&streamed_data
 ) : Texture(
-        TextureImage(
+        renderer::TextureImage(
             extent,
             format,
             type,

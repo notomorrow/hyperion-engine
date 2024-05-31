@@ -27,6 +27,7 @@
 #include <rendering/ReflectionProbeRenderer.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -103,7 +104,6 @@ Scene::Scene(
     ThreadID owner_thread_id,
     const InitInfo &info
 ) : BasicObject(info),
-    HasDrawProxy(),
     m_owner_thread_id(owner_thread_id),
     m_camera(std::move(camera)),
     m_root_node_proxy(new Node("<ROOT>", ID<Entity>::invalid, Transform { }, this)),
@@ -141,7 +141,6 @@ Scene::~Scene()
     m_octree.Clear();
 
     m_camera.Reset();
-    m_tlas.Reset();
     m_environment.Reset();
 
     if (m_root_node_proxy.IsValid()) {
@@ -151,6 +150,8 @@ Scene::~Scene()
     // Move so destruction of components can check GetEntityManager() returns nullptr
     RC<EntityManager> entity_manager = std::move(m_entity_manager);
     entity_manager.Reset();
+
+    SafeRelease(std::move(m_tlas));
 
     HYP_SYNC_RENDER();
 }
@@ -181,8 +182,6 @@ void Scene::Init()
                 SetFlags(InitInfo::SCENE_FLAGS_HAS_TLAS, false);
             }
         }
-
-        InitObject(m_tlas);
         
         m_environment->Init();
 
@@ -476,7 +475,7 @@ void Scene::EnqueueRenderUpdates()
         m_environment->GetGlobalTimer(),
         m_fog_params,
         m_environment.Get(),
-        m_draw_proxy
+        m_proxy
     );
 
     m_mutation_state = DataMutationState::CLEAN;
@@ -499,11 +498,10 @@ bool Scene::CreateTLAS()
         return false;
     }
 
-    m_tlas = CreateObject<TLAS>();
+    m_tlas = MakeRenderObject<TLAS>();
+    DeferCreate(m_tlas, g_engine->GetGPUDevice(), g_engine->GetGPUInstance());
 
     if (IsReady()) {
-        InitObject(m_tlas);
-
         m_environment->SetTLAS(m_tlas);
     }
 

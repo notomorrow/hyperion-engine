@@ -2,7 +2,10 @@
 
 #include <rendering/TemporalAA.hpp>
 #include <rendering/RenderEnvironment.hpp>
+
 #include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RendererFramebuffer.hpp>
 
 #include <math/Vector2.hpp>
 #include <math/MathUtil.hpp>
@@ -107,7 +110,7 @@ void TemporalAA::CreateComputePipelines()
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    auto descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    auto descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     const FixedArray<Handle<Texture> *, 2> textures = {
         &m_result_texture,
@@ -139,7 +142,7 @@ void TemporalAA::CreateComputePipelines()
         g_engine->GetGPUDevice()
     );
 
-    m_compute_taa = MakeRenderObject<renderer::ComputePipeline>(
+    m_compute_taa = MakeRenderObject<ComputePipeline>(
         shader,
         descriptor_table
     );

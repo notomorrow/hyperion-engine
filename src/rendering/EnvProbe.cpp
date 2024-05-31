@@ -2,6 +2,7 @@
 
 #include <rendering/EnvProbe.hpp>
 #include <rendering/ShaderGlobals.hpp>
+#include <rendering/Shadows.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -21,18 +22,33 @@ static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, con
 
 #pragma region Render commands
 
-Result RENDER_COMMAND(UpdateEnvProbeDrawProxy)::operator()()
-{
-    // update m_draw_proxy on render thread.
-    env_probe.m_draw_proxy = draw_proxy;
 
-    HYPERION_RETURN_OK;
-}
+#pragma region Render commands
+
+struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : renderer::RenderCommand
+{
+    EnvProbe            &env_probe;
+    EnvProbeDrawProxy   proxy;
+
+    RENDER_COMMAND(UpdateEnvProbeDrawProxy)(EnvProbe &env_probe, const EnvProbeDrawProxy &proxy)
+        : env_probe(env_probe),
+          proxy(proxy)
+    {
+    }
+
+    virtual Result operator()() override
+    {
+        // update m_draw_proxy on render thread.
+        env_probe.m_proxy = proxy;
+
+        HYPERION_RETURN_OK;
+    }
+};
 
 struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
 {
-    EnvProbeType env_probe_type;
-    ID<EnvProbe> id;
+    EnvProbeType    env_probe_type;
+    ID<EnvProbe>    id;
 
     RENDER_COMMAND(BindEnvProbe)(EnvProbeType env_probe_type, ID<EnvProbe> id)
         : env_probe_type(env_probe_type),
@@ -52,8 +68,8 @@ struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
 
 struct RENDER_COMMAND(UnbindEnvProbe) : renderer::RenderCommand
 {
-    EnvProbeType env_probe_type;
-    ID<EnvProbe> id;
+    EnvProbeType    env_probe_type;
+    ID<EnvProbe>    id;
 
     RENDER_COMMAND(UnbindEnvProbe)(EnvProbeType env_probe_type, ID<EnvProbe> id)
         : env_probe_type(env_probe_type),
@@ -94,8 +110,8 @@ void EnvProbe::UpdateRenderData(
     Extent3D grid_size
 )
 {
-    const BoundingBox &aabb = GetDrawProxy().aabb;
-    const Vec3f world_position = GetDrawProxy().world_position;
+    const BoundingBox &aabb = m_proxy.aabb;
+    const Vec3f world_position = m_proxy.world_position;
 
     const FixedArray<Matrix4, 6> view_matrices = CreateCubemapMatrices(aabb, world_position);
 
@@ -112,9 +128,9 @@ void EnvProbe::UpdateRenderData(
         .aabb_min           = Vec4f(aabb.min, 1.0f),
         .world_position     = Vec4f(world_position, 1.0f),
         .texture_index      = texture_slot,
-        .flags              = GetDrawProxy().flags,
-        .camera_near        = GetDrawProxy().camera_near,
-        .camera_far         = GetDrawProxy().camera_far,
+        .flags              = m_proxy.flags,
+        .camera_near        = m_proxy.camera_near,
+        .camera_far         = m_proxy.camera_far,
         .dimensions         = m_dimensions,
         .position_in_grid   = grid_slot != ~0u
             ? Vec4i {
@@ -204,15 +220,15 @@ void EnvProbe::Init()
         SafeRelease(std::move(m_framebuffer));
     }));
 
-    m_draw_proxy = EnvProbeDrawProxy {
+    m_proxy = EnvProbeDrawProxy {
         .id = GetID(),
         .aabb = m_aabb,
         .world_position = GetOrigin(),
         .camera_near = m_camera_near,
         .camera_far = m_camera_far,
-        .flags = (IsReflectionProbe() ? ENV_PROBE_FLAGS_PARALLAX_CORRECTED : ENV_PROBE_FLAGS_NONE)
-            | (IsShadowProbe() ? ENV_PROBE_FLAGS_SHADOW : ENV_PROBE_FLAGS_NONE)
-            | (NeedsRender() ? ENV_PROBE_FLAGS_DIRTY : ENV_PROBE_FLAGS_NONE),
+        .flags = (IsReflectionProbe() ? EnvProbeFlags::PARALLAX_CORRECTED : EnvProbeFlags::NONE)
+            | (IsShadowProbe() ? EnvProbeFlags::SHADOW : EnvProbeFlags::NONE)
+            | (NeedsRender() ? EnvProbeFlags::DIRTY : EnvProbeFlags::NONE),
         .grid_slot = m_grid_slot
     };
 
@@ -304,7 +320,7 @@ void EnvProbe::CreateShader()
 
 void EnvProbe::CreateFramebuffer()
 {
-    m_framebuffer = MakeRenderObject<renderer::Framebuffer>(
+    m_framebuffer = MakeRenderObject<Framebuffer>(
         m_dimensions,
         renderer::RenderPassStage::SHADER,
         renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER,
@@ -442,9 +458,9 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
         .world_position = GetOrigin(),
         .camera_near    = m_camera_near,
         .camera_far     = m_camera_far,
-        .flags          = (IsReflectionProbe() ? ENV_PROBE_FLAGS_PARALLAX_CORRECTED : ENV_PROBE_FLAGS_NONE)
-                        | (IsShadowProbe() ? ENV_PROBE_FLAGS_SHADOW : ENV_PROBE_FLAGS_NONE)
-                        | ENV_PROBE_FLAGS_DIRTY,
+        .flags          = (IsReflectionProbe() ? EnvProbeFlags::PARALLAX_CORRECTED : EnvProbeFlags::NONE)
+                        | (IsShadowProbe() ? EnvProbeFlags::SHADOW : EnvProbeFlags::NONE)
+                        | EnvProbeFlags::DIRTY,
         .grid_slot      = m_grid_slot
     });
 
@@ -568,14 +584,14 @@ void EnvProbe::UpdateRenderData(bool set_texture)
 
     const uint texture_slot = IsControlledByEnvGrid() ? ~0u : m_bound_index.GetProbeIndex();
 
-    {
-        const ShadowFlags shadow_flags = IsShadowProbe() ? SHADOW_FLAGS_VSM : SHADOW_FLAGS_NONE;
+    { // build proxy flags
+        const EnumFlags<ShadowFlags> shadow_flags = IsShadowProbe() ? ShadowFlags::VSM : ShadowFlags::NONE;
 
         if (NeedsRender()) {
-            m_draw_proxy.flags |= ENV_PROBE_FLAGS_DIRTY;
+            m_proxy.flags |= EnvProbeFlags::DIRTY;
         }
 
-        m_draw_proxy.flags |= shadow_flags << 3;
+        m_proxy.flags |= uint32(shadow_flags) << 3;
     }
 
     UpdateRenderData(

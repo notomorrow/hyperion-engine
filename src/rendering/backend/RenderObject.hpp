@@ -633,24 +633,6 @@ const RenderObjectHandle_Weak<T, PLATFORM> RenderObjectHandle_Weak<T, PLATFORM>:
 
 } // namespace renderer
 
-#define DEF_RENDER_OBJECT(T, _max_size) \
-    namespace renderer { \
-    class T; \
-    template <> \
-    struct RenderObjectDefinition< T, Platform::CURRENT > \
-    { \
-        static constexpr SizeType max_size = (_max_size); \
-        \
-        static Name GetNameForType() \
-        { \
-            static const Name name = HYP_NAME(T); \
-            return name; \
-        } \
-    }; \
-    } \
-    using T##Ref = renderer::RenderObjectHandle_Strong< renderer::T, renderer::Platform::CURRENT >; \
-    using T##WeakRef = renderer::RenderObjectHandle_Weak< renderer::T, renderer::Platform::CURRENT >
-
 #define DEF_RENDER_PLATFORM_OBJECT_(_platform, T, _max_size) \
     namespace renderer { \
     namespace platform { \
@@ -670,6 +652,7 @@ const RenderObjectHandle_Weak<T, PLATFORM> RenderObjectHandle_Weak<T, PLATFORM>:
         } \
     }; \
     } \
+    using T##_##_platform = renderer::T##_##_platform; \
     using T##Ref##_##_platform = renderer::RenderObjectHandle_Strong< renderer::T##_##_platform, renderer::Platform::_platform >; \
     using T##WeakRef##_##_platform = renderer::RenderObjectHandle_Weak< renderer::T##_##_platform, renderer::Platform::_platform >; \
 
@@ -692,6 +675,7 @@ const RenderObjectHandle_Weak<T, PLATFORM> RenderObjectHandle_Weak<T, PLATFORM>:
         } \
     }; \
     } \
+    using NAME##_##_platform = renderer::NAME##_##_platform; \
     using NAME##Ref##_##_platform = renderer::RenderObjectHandle_Strong< renderer::NAME##_##_platform, renderer::Platform::_platform >; \
     using NAME##WeakRef##_##_platform = renderer::RenderObjectHandle_Weak< renderer::NAME##_##_platform, renderer::Platform::_platform >; \
 
@@ -766,9 +750,11 @@ static inline void DeferCreate(RefType ref, Args &&... args)
 
 #if HYP_VULKAN
 #define DEF_CURRENT_PLATFORM_RENDER_OBJECT(T) \
+    using T = T##_VULKAN; \
     using T##Ref = T##Ref##_VULKAN; \
     using T##WeakRef = T##WeakRef##_VULKAN
 #elif HYP_WEBGPU
+    using T = T##_WEBGPU; \
     using T##Ref = T##Ref##_WEBGPU; \
     using T##WeakRef = T##WeakRef##_WEBGPU
 #endif
@@ -779,13 +765,13 @@ static inline void DeferCreate(RefType ref, Args &&... args)
 #undef DEF_RENDER_PLATFORM_OBJECT
 #undef DEF_CURRENT_PLATFORM_RENDER_OBJECT
 
-template <class T, renderer::PlatformType PLATFORM, class ... Args>
-static inline renderer::RenderObjectHandle_Strong<T, PLATFORM> MakeRenderObject(Args &&... args)
-    { return renderer::RenderObjects<PLATFORM>::template Make<T>(std::forward<Args>(args)...); }
-
 template <class T, class ... Args>
-static inline renderer::RenderObjectHandle_Strong<T, renderer::Platform::CURRENT> MakeRenderObject(Args &&... args)
-    { return renderer::RenderObjects<renderer::Platform::CURRENT>::template Make<T>(std::forward<Args>(args)...); }
+static inline renderer::RenderObjectHandle_Strong<T, T::platform> MakeRenderObject(Args &&... args)
+    { return renderer::RenderObjects<T::platform>::template Make<T>(std::forward<Args>(args)...); }
+
+// template <class T, class ... Args>
+// static inline renderer::RenderObjectHandle_Strong<T, renderer::Platform::CURRENT> MakeRenderObject(Args &&... args)
+//     { return renderer::RenderObjects<renderer::Platform::CURRENT>::template Make<T>(std::forward<Args>(args)...); }
 
 struct DeletionQueueBase
 {

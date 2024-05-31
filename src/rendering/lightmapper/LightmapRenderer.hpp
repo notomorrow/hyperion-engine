@@ -19,15 +19,9 @@
 #include <rendering/EnvProbe.hpp>
 #include <rendering/Mesh.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererBuffer.hpp>
-#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
 
 struct LightmapHitsBuffer;
 
@@ -82,7 +76,7 @@ static_assert(sizeof(LightmapHitsBuffer) == max_ray_hits_gpu * 16);
 class LightmapPathTracer
 {
 public:
-    LightmapPathTracer(Handle<TLAS> tlas, LightmapShadingType shading_type);
+    LightmapPathTracer(const TLASRef &tlas, LightmapShadingType shading_type);
     LightmapPathTracer(const LightmapPathTracer &other)                 = delete;
     LightmapPathTracer &operator=(const LightmapPathTracer &other)      = delete;
     LightmapPathTracer(LightmapPathTracer &&other) noexcept             = delete;
@@ -101,7 +95,7 @@ private:
     void CreateUniformBuffer();
     void UpdateUniforms(Frame *frame, uint32 ray_offset);
 
-    Handle<TLAS>                                        m_tlas;
+    TLASRef                                             m_tlas;
     LightmapShadingType                                 m_shading_type;
     
     FixedArray<GPUBufferRef, max_frames_in_flight>      m_uniform_buffers;

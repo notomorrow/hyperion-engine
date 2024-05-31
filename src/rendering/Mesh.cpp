@@ -1,8 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/Mesh.hpp>
-#include <rendering/backend/RendererCommandBuffer.hpp>
-#include <rendering/backend/RendererResult.hpp>
+
+#include <rendering/backend/RenderObject.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>

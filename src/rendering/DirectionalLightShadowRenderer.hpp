@@ -12,7 +12,6 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/Shadows.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RenderObject.hpp>
 
 #include <math/BoundingBox.hpp>
@@ -23,8 +22,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
 
 struct ShadowMapCameraData
 {

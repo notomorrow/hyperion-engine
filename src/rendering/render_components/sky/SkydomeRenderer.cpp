@@ -48,7 +48,7 @@ void SkydomeRenderer::InitGame()
     dome_node.Scale(Vec3f(10.0f));
     dome_node.LockTransform();
 
-    m_virtual_scene->GetRoot().AddChild(dome_node);
+    m_virtual_scene->GetRoot()->AddChild(dome_node);
 }
 
 void SkydomeRenderer::OnRemoved()

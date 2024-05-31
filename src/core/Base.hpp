@@ -17,17 +17,12 @@
 
 #include <core/threading/AtomicVar.hpp>
 
-#include <rendering/backend/RendererInstance.hpp>
-
 #include <HashCode.hpp>
 #include <Types.hpp>
 
 #include <type_traits>
 
 namespace hyperion {
-
-using renderer::Instance;
-using renderer::Device;
 
 template <class T, class ClassName>
 struct StubbedClass : public ClassInfo<ClassName>

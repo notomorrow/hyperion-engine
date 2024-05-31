@@ -28,14 +28,8 @@
 
 namespace hyperion {
 
-using renderer::Attachment;
-using renderer::ImageView;
-using renderer::Framebuffer;
 using renderer::FillMode;
 using renderer::GPUBufferType;
-using renderer::GPUBuffer;
-using renderer::UniformBuffer;
-using renderer::StorageBuffer;
 
 Engine              *g_engine = nullptr;
 AssetManager        *g_asset_manager = nullptr;
@@ -77,7 +71,7 @@ Engine *Engine::GetInstance()
 
 Engine::Engine()
     : m_placeholder_data(new PlaceholderData()),
-      m_global_descriptor_table(MakeRenderObject<renderer::DescriptorTable>(*renderer::g_static_descriptor_table_decl))
+      m_global_descriptor_table(MakeRenderObject<DescriptorTable>(*renderer::g_static_descriptor_table_decl))
 {
 }
 

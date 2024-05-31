@@ -45,6 +45,8 @@ template <PlatformType PLATFORM>
 class CommandBuffer
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+
     HYP_API CommandBuffer(CommandBufferType type);
     CommandBuffer(const CommandBuffer &other)               = delete;
     CommandBuffer &operator=(const CommandBuffer &other)    = delete;

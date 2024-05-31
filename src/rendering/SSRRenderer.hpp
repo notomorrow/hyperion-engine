@@ -7,19 +7,9 @@
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/FullScreenPass.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
-using renderer::Sampler;
-using renderer::Device;
 
 class Engine;
 

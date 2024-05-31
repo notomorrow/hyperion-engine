@@ -1223,7 +1223,7 @@ void UIObject::SetNodeProxy(NodeProxy node_proxy)
     m_node_proxy = std::move(node_proxy);
 }
 
-void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc, Array<RC<UIObject>> &out_deferred_child_objects) const
+void UIObject::CollectObjects(const Proc<void, UIObject *> &proc, Array<UIObject *> &out_deferred_child_objects) const
 {
     AssertThrow(proc.IsValid());
 
@@ -1254,7 +1254,7 @@ void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc, Arra
         }
     }
 
-    Array<Pair<NodeProxy, RC<UIObject>>> children;
+    Array<Pair<Node *, UIObject *>> children;
     children.Reserve(m_node_proxy->GetChildren().Size());
 
     for (const auto &it : m_node_proxy->GetChildren()) {
@@ -1271,35 +1271,35 @@ void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc, Arra
         }
 
         children.PushBack({
-            it,
-            ui_component->ui_object
+            it.Get(),
+            ui_component->ui_object.Get()
         });
     }
 
     if (IsContainer()) {
-        for (const Pair<NodeProxy, RC<UIObject>> &it : children) {
+        for (const Pair<Node *, UIObject *> &it : children) {
             it.second->CollectObjects(proc, out_deferred_child_objects);
         }
     } else {
-        for (Pair<NodeProxy, RC<UIObject>> &it : children) {
-            out_deferred_child_objects.PushBack(std::move(it.second));
+        for (Pair<Node *, UIObject *> &it : children) {
+            out_deferred_child_objects.PushBack(it.second);
         }
     }
 }
 
-void UIObject::CollectObjects(const Proc<void, const RC<UIObject> &> &proc) const
+void UIObject::CollectObjects(const Proc<void, UIObject *> &proc) const
 {
-    Array<RC<UIObject>> deferred_child_objects;
+    Array<UIObject *> deferred_child_objects;
     CollectObjects(proc, deferred_child_objects);
 
-    for (RC<UIObject> &child_object : deferred_child_objects) {
+    for (UIObject *child_object : deferred_child_objects) {
         child_object->CollectObjects(proc);
     }
 }
 
-void UIObject::CollectObjects(Array<RC<UIObject>> &out_objects) const
+void UIObject::CollectObjects(Array<UIObject *> &out_objects) const
 {
-    CollectObjects([&out_objects](const RC<UIObject> &ui_object)
+    CollectObjects([&out_objects](UIObject *ui_object)
     {
         out_objects.PushBack(ui_object);
     });

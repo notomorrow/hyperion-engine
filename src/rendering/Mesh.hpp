@@ -12,9 +12,9 @@
 
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/Shader.hpp>
-#include <rendering/backend/RendererBuffer.hpp>
+
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/rt/RendererAccelerationStructure.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <streaming/StreamedMeshData.hpp>
 
@@ -22,13 +22,8 @@
 
 namespace hyperion {
 
-using renderer::CommandBuffer;
-using renderer::Device;
-using renderer::GPUBuffer;
 using renderer::PackedVertex;
 using renderer::PackedIndex;
-using renderer::AccelerationStructure;
-using renderer::AccelerationGeometry;
 using renderer::Topology;
 using renderer::IndirectDrawCommand;
 

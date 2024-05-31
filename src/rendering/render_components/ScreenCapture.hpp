@@ -5,7 +5,7 @@
 
 #include <rendering/RenderComponent.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <math/BoundingBox.hpp>
 
@@ -17,10 +17,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
 
 enum class ScreenCaptureMode
 {

@@ -19,6 +19,8 @@ RC<StreamedMeshData> StreamedMeshData::FromMeshData(MeshData mesh_data)
 
 StreamedMeshData::StreamedMeshData()
     : m_streamed_data(RC<NullStreamedData>(new NullStreamedData())),
+      m_num_vertices(0),
+      m_num_indices(0),
       m_mesh_data({ }),
       m_mesh_data_loaded(false)
 {
@@ -26,6 +28,8 @@ StreamedMeshData::StreamedMeshData()
 
 StreamedMeshData::StreamedMeshData(MeshData &&mesh_data)
     : m_streamed_data(nullptr),
+      m_num_vertices(mesh_data.vertices.Size()),
+      m_num_indices(mesh_data.indices.Size()),
       m_mesh_data({ }),
       m_mesh_data_loaded(false)
 {
@@ -39,14 +43,6 @@ StreamedMeshData::StreamedMeshData(MeshData &&mesh_data)
 
     m_mesh_data = std::move(mesh_data);
     m_mesh_data_loaded = true;
-}
-
-StreamedMeshData::StreamedMeshData(RC<StreamedData> streamed_data)
-    : m_streamed_data(std::move(streamed_data)),
-      m_mesh_data({ }),
-      m_mesh_data_loaded(false)
-{
-    AssertThrow(m_streamed_data != nullptr);
 }
 
 bool StreamedMeshData::IsNull() const
@@ -108,6 +104,14 @@ void StreamedMeshData::LoadMeshData(const ByteBuffer &byte_buffer) const
 
     m_mesh_data = *object.Get<MeshData>();
     m_mesh_data_loaded = true;
+
+    if (m_mesh_data.vertices.Size() != m_num_vertices) {
+        HYP_LOG(Streaming, LogLevel::WARNING, "StreamedMeshData: Vertex count mismatch! Expected {} vertices, but loaded data has {} vertices", m_num_vertices, m_mesh_data.vertices.Size());
+    }
+
+    if (m_mesh_data.indices.Size() != m_num_indices) {
+        HYP_LOG(Streaming, LogLevel::WARNING, "StreamedMeshData: Index count mismatch! Expected {} indices, but loaded data has {} indices", m_num_indices, m_mesh_data.indices.Size());
+    }
 }
 
 const MeshData &StreamedMeshData::GetMeshData() const

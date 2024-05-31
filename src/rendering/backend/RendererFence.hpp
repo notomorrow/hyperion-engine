@@ -22,6 +22,8 @@ template <PlatformType PLATFORM>
 class Fence
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     HYP_API Fence();
     Fence(const Fence &other)               = delete;
     Fence &operator=(const Fence &other)    = delete;

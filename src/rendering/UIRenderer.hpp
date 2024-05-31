@@ -8,15 +8,11 @@
 #include <rendering/RenderComponent.hpp>
 #include <rendering/RenderCollection.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <scene/Scene.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
 
 class UIStage;
 class UIObject;

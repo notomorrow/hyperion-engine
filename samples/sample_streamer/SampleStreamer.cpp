@@ -251,12 +251,12 @@ void SampleStreamer::Init()
         auto gun = AssetManager::GetInstance()->Load<Node>("models/gun/AK47NoSubdiv.obj");
 
         if (gun) {
-            auto gun_parent = m_scene->GetRoot().AddChild();
+            auto gun_parent = m_scene->GetRoot()->AddChild();
             gun_parent.SetName("gun");
 
             gun.SetLocalScale(0.25f);
             gun.SetLocalRotation(Quaternion(Vec3f(0.0f, 1.0f, 0.0f), M_PI));
-            gun_parent.AddChild(gun);
+            gun_parent->AddChild(gun);
 
             m_scene->GetEntityManager()->AddComponent(gun[0].GetEntity(), BLASComponent { });
         }
@@ -266,7 +266,7 @@ void SampleStreamer::Init()
         auto box = AssetManager::GetInstance()->Load<Node>("models/cube.obj");
 
         if (box) {
-            m_scene->GetRoot().AddChild(box);
+            m_scene->GetRoot()->AddChild(box);
 
             MeshComponent &mesh_component = m_scene->GetEntityManager()->GetComponent<MeshComponent>(box[0].GetEntity());
             mesh_component.material = MaterialCache::GetInstance()->GetOrCreate({
@@ -282,7 +282,7 @@ void SampleStreamer::Init()
     }
 
     if (false) {
-        auto cube_node = m_scene->GetRoot().AddChild();
+        auto cube_node = m_scene->GetRoot()->AddChild();
         cube_node.SetName("TestCube");
 
         auto entity_id = m_scene->GetEntityManager()->AddEntity();
@@ -319,7 +319,7 @@ void SampleStreamer::Init()
 
     if (false) {
 
-        auto cube_node = m_scene->GetRoot().AddChild();
+        auto cube_node = m_scene->GetRoot()->AddChild();
         cube_node.SetName("TestCube2");
         cube_node.Scale(1.05f);
         cube_node.SetWorldTranslation(Vec3f { 0.0f, 150.0f, 0.0f });
@@ -368,7 +368,7 @@ void SampleStreamer::Init()
     auto streaming_capture_component = m_scene->GetEnvironment()->AddRenderComponent<ScreenCaptureRenderComponent>(HYP_NAME(StreamingCapture), window_size);
 
     if (false) {
-        auto terrain_node = m_scene->GetRoot().AddChild();
+        auto terrain_node = m_scene->GetRoot()->AddChild();
         auto terrain_entity = m_scene->GetEntityManager()->AddEntity();
 
         // MeshComponent
@@ -400,7 +400,7 @@ void SampleStreamer::Init()
 
         InitObject(sun);
 
-        auto sun_node = m_scene->GetRoot().AddChild();
+        auto sun_node = m_scene->GetRoot()->AddChild();
         sun_node.SetName("Sun");
 
         auto sun_entity = m_scene->GetEntityManager()->AddEntity();
@@ -534,7 +534,7 @@ void SampleStreamer::Init()
         auto results = batch->AwaitResults();
 
         if (true) {
-            auto plane_node = m_scene->GetRoot().AddChild();
+            auto plane_node = m_scene->GetRoot()->AddChild();
             plane_node.Rotate(Quaternion(Vec3f(1.0f, 0.0f, 0.0f), -M_PI_2));
             plane_node.Scale(1.0f);
             plane_node.Translate(Vec3f(0.0f, 2.0f, 0.0f));
@@ -593,7 +593,7 @@ void SampleStreamer::Init()
             zombie.Scale(0.25f);
             auto zombie_entity = zombie[0].GetEntity();
 
-            m_scene->GetRoot().AddChild(zombie);
+            m_scene->GetRoot()->AddChild(zombie);
 
             if (zombie_entity.IsValid()) {
                 if (auto *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombie_entity)) {
@@ -626,7 +626,7 @@ void SampleStreamer::Init()
             cart.Scale(1.5f);
             cart.SetName("cart");
 
-            //m_scene->GetRoot().AddChild(cart);
+            //m_scene->GetRoot()->AddChild(cart);
 
             // ByteBuffer lightmap_bitmap_bytebuffer = lightmap_result.result.bitmap.ToByteBuffer();
             // UniquePtr<StreamedData> streamed_data(new MemoryStreamedData(std::move(lightmap_bitmap_bytebuffer)));
@@ -652,7 +652,7 @@ void SampleStreamer::Init()
             node.SetName("test_model");
             node.LockTransform();
 
-            GetScene()->GetRoot().AddChild(node);
+            GetScene()->GetRoot()->AddChild(node);
 
             m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
                 HYP_NAME(ReflectionProbe0),
@@ -684,7 +684,7 @@ void SampleStreamer::Init()
                     EnvGridType::ENV_GRID_TYPE_SH
                 });
 
-                auto env_grid_node = m_scene->GetRoot().AddChild();
+                auto env_grid_node = m_scene->GetRoot()->AddChild();
                 env_grid_node.SetEntity(env_grid_entity);
                 env_grid_node.SetName("EnvGrid");
             }
@@ -1126,7 +1126,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
 
             Vec3f bullet_position = gun_position;
 
-            auto bullet = m_scene->GetRoot().AddChild();
+            auto bullet = m_scene->GetRoot()->AddChild();
             bullet.SetName("Bullet");
             bullet.SetLocalTranslation(bullet_position);
             bullet.SetLocalRotation(rotation);

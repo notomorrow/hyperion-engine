@@ -1,7 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 #include <rendering/EnvGrid.hpp>
 #include <rendering/RenderEnvironment.hpp>
+
 #include <rendering/backend/AsyncCompute.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -155,8 +157,7 @@ EnvGrid::EnvGrid(Name name, EnvGridOptions options)
       m_aabb(options.aabb),
       m_voxel_grid_aabb(options.aabb),
       m_offset(options.aabb.GetCenter()),
-      m_current_probe_index(0),
-      m_flags(ENV_GRID_FLAGS_RESET_REQUESTED)
+      m_current_probe_index(0)
 {
 }
 
@@ -193,9 +194,6 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
     }
 
     m_aabb.SetCenter(Vec3f(position_snapped) * size_of_probe + m_offset);
-
-    // If the grid has moved, we need to offset the voxel grid.
-    m_flags.BitOr(ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET, MemoryOrder::RELEASE);
 
     if (m_camera) {
         m_camera->SetTranslation(m_aabb.GetCenter());
@@ -433,27 +431,6 @@ void EnvGrid::OnRender(Frame *frame)
         return;
     }
 
-    const EnvGridFlags flags = m_flags.Get(MemoryOrder::ACQUIRE);
-    EnvGridFlags new_flags = flags;
-
-    if (m_options.use_voxel_grid) {
-        if (flags & ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET) {
-            HYP_LOG(EnvGrid, LogLevel::DEBUG, "Offsetting voxel grid");
-
-            // // Offset the voxel grid.
-            // const Vec3f offset = (grid_aabb.GetCenter() - Vector4(m_shader_data.center).GetXYZ()) / SizeOfProbe();
-            // const Vec3i offset_i {
-            //     MathUtil::Floor<float, Vec3i::Type>(offset.x),
-            //     MathUtil::Floor<float, Vec3i::Type>(offset.y),
-            //     MathUtil::Floor<float, Vec3i::Type>(offset.z)
-            // };
-
-            // OffsetVoxelGrid(frame, offset_i);
-
-            new_flags &= ~ENV_GRID_FLAGS_NEEDS_VOXEL_GRID_OFFSET;
-        }
-    }
-
     m_shader_data.enabled_indices_mask = { 0, 0, 0, 0 };
 
     for (uint index = 0; index < ArraySize(m_shader_data.probe_indices); index++) {
@@ -474,7 +451,7 @@ void EnvGrid::OnRender(Frame *frame)
             }
 
             g_engine->GetDebugDrawer().AmbientProbeSphere(
-                probe->GetDrawProxy().world_position,
+                probe->GetProxy().world_position,
                 0.25f,
                 probe->GetID()
             );
@@ -502,7 +479,7 @@ void EnvGrid::OnRender(Frame *frame)
             if (probe.IsValid() && probe->NeedsRender()) {
                 indices_distances.PushBack({
                     index,
-                    probe->GetDrawProxy().world_position.Distance(camera_position)
+                    probe->GetProxy().world_position.Distance(camera_position)
                 });
             }
         }
@@ -519,7 +496,7 @@ void EnvGrid::OnRender(Frame *frame)
                 const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(indirect_index);
                 AssertThrow(probe.IsValid());
 
-                const EnvProbeIndex binding_index = GetProbeBindingIndex(probe->GetDrawProxy().world_position, grid_aabb, m_options.density);
+                const EnvProbeIndex binding_index = GetProbeBindingIndex(probe->GetProxy().world_position, grid_aabb, m_options.density);
 
                 if (binding_index != invalid_probe_index) {
                     if (m_next_render_indices.Size() < max_queued_probes_for_render) {
@@ -538,7 +515,7 @@ void EnvGrid::OnRender(Frame *frame)
                     }
                 } else {
                     HYP_LOG(EnvGrid, LogLevel::WARNING, "EnvProbe #{} out of range of max bound env probes (position: {}, world position: {}",
-                        probe->GetID().Value(), binding_index.position, probe->GetDrawProxy().world_position);
+                        probe->GetID().Value(), binding_index.position, probe->GetProxy().world_position);
                 }
 
                 // probe->SetNeedsRender(false);
@@ -553,10 +530,6 @@ void EnvGrid::OnRender(Frame *frame)
     m_shader_data.density = { m_options.density.width, m_options.density.height, m_options.density.depth, 0 };
 
     g_engine->GetRenderData()->env_grids.Set(GetComponentIndex(), m_shader_data);
-
-    if (flags != new_flags) {
-        m_flags.Set(new_flags, MemoryOrder::RELEASE);
-    }
 }
 
 void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
@@ -566,7 +539,7 @@ void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, Rend
 
 void EnvGrid::CreateVoxelGridData()
 {
-    if (!m_options.use_voxel_grid) {
+    if (!(m_options.flags & EnvGridFlags::USE_VOXEL_GRID)) {
         return;
     }
 
@@ -602,7 +575,7 @@ void EnvGrid::CreateVoxelGridData()
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = voxelize_probe_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
@@ -624,7 +597,7 @@ void EnvGrid::CreateVoxelGridData()
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
     { // Compute shader to clear the voxel grid at a specific position
-        m_clear_voxels = MakeRenderObject<renderer::ComputePipeline>(
+        m_clear_voxels = MakeRenderObject<ComputePipeline>(
             clear_voxels_shader,
             descriptor_table
         );
@@ -633,7 +606,7 @@ void EnvGrid::CreateVoxelGridData()
     }
 
     { // Compute shader to voxelize a probe into voxel grid
-        m_voxelize_probe = MakeRenderObject<renderer::ComputePipeline>(
+        m_voxelize_probe = MakeRenderObject<ComputePipeline>(
             voxelize_probe_shader,
             descriptor_table
         );
@@ -642,7 +615,7 @@ void EnvGrid::CreateVoxelGridData()
     }
 
     { // Compute shader to 'offset' the voxel grid
-        m_offset_voxel_grid = MakeRenderObject<renderer::ComputePipeline>(
+        m_offset_voxel_grid = MakeRenderObject<ComputePipeline>(
             offset_voxel_grid_shader,
             descriptor_table
         );
@@ -660,7 +633,7 @@ void EnvGrid::CreateVoxelGridData()
         m_voxel_grid_mips.Resize(num_voxel_grid_mip_levels);
 
         for (uint mip_level = 0; mip_level < num_voxel_grid_mip_levels; mip_level++) {
-            m_voxel_grid_mips[mip_level] = MakeRenderObject<renderer::ImageView>();
+            m_voxel_grid_mips[mip_level] = MakeRenderObject<ImageView>();
 
             DeferCreate(
                 m_voxel_grid_mips[mip_level],
@@ -671,7 +644,7 @@ void EnvGrid::CreateVoxelGridData()
             );
 
             // create descriptor sets for mip generation.
-            DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(generate_voxel_grid_mipmaps_descriptor_table_decl);
+            DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(generate_voxel_grid_mipmaps_descriptor_table_decl);
 
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 const DescriptorSetRef &mip_descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(GenerateMipmapDescriptorSet), frame_index);
@@ -692,7 +665,7 @@ void EnvGrid::CreateVoxelGridData()
             m_generate_voxel_grid_mipmaps_descriptor_tables.PushBack(std::move(descriptor_table));
         }
 
-        m_generate_voxel_grid_mipmaps = MakeRenderObject<renderer::ComputePipeline>(
+        m_generate_voxel_grid_mipmaps = MakeRenderObject<ComputePipeline>(
             generate_voxel_grid_mipmaps_shader,
             m_generate_voxel_grid_mipmaps_descriptor_tables[0]
         );
@@ -732,7 +705,7 @@ void EnvGrid::CreateSHData()
     m_compute_sh_descriptor_tables.Resize(sh_num_levels);
     
     for (uint i = 0; i < sh_num_levels; i++) {
-        m_compute_sh_descriptor_tables[i] = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        m_compute_sh_descriptor_tables[i] = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &compute_sh_descriptor_set = m_compute_sh_descriptor_tables[i]->GetDescriptorSet(HYP_NAME(ComputeSHDescriptorSet), frame_index);
@@ -754,28 +727,28 @@ void EnvGrid::CreateSHData()
         );
     }
 
-    m_clear_sh = MakeRenderObject<renderer::ComputePipeline>(
+    m_clear_sh = MakeRenderObject<ComputePipeline>(
         shaders[0],
         m_compute_sh_descriptor_tables[0]
     );
 
     DeferCreate(m_clear_sh, g_engine->GetGPUDevice());
 
-    m_compute_sh = MakeRenderObject<renderer::ComputePipeline>(
+    m_compute_sh = MakeRenderObject<ComputePipeline>(
         shaders[1],
         m_compute_sh_descriptor_tables[0]
     );
 
     DeferCreate(m_compute_sh, g_engine->GetGPUDevice());
 
-    m_reduce_sh = MakeRenderObject<renderer::ComputePipeline>(
+    m_reduce_sh = MakeRenderObject<ComputePipeline>(
         shaders[2],
         m_compute_sh_descriptor_tables[0]
     );
 
     DeferCreate(m_reduce_sh, g_engine->GetGPUDevice());
 
-    m_finalize_sh = MakeRenderObject<renderer::ComputePipeline>(
+    m_finalize_sh = MakeRenderObject<ComputePipeline>(
         shaders[3],
         m_compute_sh_descriptor_tables[0]
     );
@@ -801,7 +774,7 @@ void EnvGrid::CreateShader()
 
 void EnvGrid::CreateFramebuffer()
 {
-    m_framebuffer = MakeRenderObject<renderer::Framebuffer>(
+    m_framebuffer = MakeRenderObject<Framebuffer>(
         framebuffer_dimensions,
         renderer::RenderPassStage::SHADER,
         renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER,
@@ -893,7 +866,7 @@ void EnvGrid::RenderEnvProbe(
         break;
     }
 
-    if (m_options.use_voxel_grid) {
+    if (m_options.flags & EnvGridFlags::USE_VOXEL_GRID) {
         VoxelizeProbe(frame, probe_index);
     }
 
@@ -1177,7 +1150,7 @@ void EnvGrid::VoxelizeProbe(
 
     push_constants.voxel_texture_dimensions = Vec4u(voxel_grid_texture_extent, 0);
     push_constants.cubemap_dimensions = { cubemap_dimensions.width, cubemap_dimensions.height, 0, 0 };
-    push_constants.world_position = Vec4f(probe->GetDrawProxy().world_position, 1.0f);
+    push_constants.world_position = Vec4f(probe->GetProxy().world_position, 1.0f);
 
     color_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
 

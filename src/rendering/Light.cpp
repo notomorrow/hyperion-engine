@@ -15,7 +15,7 @@ class Light;
 
 struct RENDER_COMMAND(UnbindLight) : renderer::RenderCommand
 {
-    ID<Light> id;
+    ID<Light>   id;
 
     RENDER_COMMAND(UnbindLight)(ID<Light> id)
         : id(id)
@@ -34,12 +34,12 @@ struct RENDER_COMMAND(UnbindLight) : renderer::RenderCommand
 
 struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
 {
-    Light &light;
-    LightDrawProxy draw_proxy;
+    Light           &light;
+    LightDrawProxy  proxy;
 
-    RENDER_COMMAND(UpdateLightShaderData)(Light &light, LightDrawProxy &&draw_proxy)
+    RENDER_COMMAND(UpdateLightShaderData)(Light &light, const LightDrawProxy &proxy)
         : light(light),
-          draw_proxy(std::move(draw_proxy))
+          proxy(proxy)
     {
     }
 
@@ -47,28 +47,28 @@ struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
 
     virtual Result operator()() override
     {
-        light.m_draw_proxy = draw_proxy;
+        light.m_proxy = proxy;
         
-        if (draw_proxy.visibility_bits == 0) {
-            g_engine->GetRenderState().UnbindLight(draw_proxy.id);
+        if (proxy.visibility_bits == 0) {
+            g_engine->GetRenderState().UnbindLight(proxy.id);
         } else {
-            g_engine->GetRenderState().BindLight(draw_proxy.id, draw_proxy);
+            g_engine->GetRenderState().BindLight(proxy.id, proxy);
         }
 
         g_engine->GetRenderData()->lights.Set(
             light.GetID().ToIndex(),
             LightShaderData {
-                .light_id           = draw_proxy.id.Value(),
-                .light_type         = uint32(draw_proxy.type),
-                .color_packed       = uint32(draw_proxy.color),
-                .radius             = draw_proxy.radius,
-                .falloff            = draw_proxy.falloff,
-                .shadow_map_index   = draw_proxy.shadow_map_index,
-                .area_size          = draw_proxy.area_size,
-                .position_intensity = draw_proxy.position_intensity,
-                .normal             = draw_proxy.normal,
-                .spot_angles        = draw_proxy.spot_angles,
-                .material_id        = draw_proxy.material_id.Value()
+                .light_id           = proxy.id.Value(),
+                .light_type         = uint32(proxy.type),
+                .color_packed       = uint32(proxy.color),
+                .radius             = proxy.radius,
+                .falloff            = proxy.falloff,
+                .shadow_map_index   = proxy.shadow_map_index,
+                .area_size          = proxy.area_size,
+                .position_intensity = proxy.position_intensity,
+                .normal             = proxy.normal,
+                .spot_angles        = proxy.spot_angles,
+                .material_id        = proxy.material_id.Value()
             }
         );
 
@@ -159,7 +159,7 @@ void Light::Init()
 
     InitObject(m_material);
 
-    m_draw_proxy = LightDrawProxy {
+    m_proxy = LightDrawProxy {
         .id                 = GetID(),
         .type               = m_type,
         .color              = m_color,

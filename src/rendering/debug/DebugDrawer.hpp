@@ -19,13 +19,8 @@
 #include <rendering/Shader.hpp>
 #include <rendering/Mesh.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
-#include <rendering/backend/rt/RendererRaytracingPipeline.hpp>
 
 #include <Types.hpp>
 
@@ -36,8 +31,6 @@ namespace hyperion {
 
 class Engine;
 class DebugDrawer;
-
-using renderer::Frame;
 
 enum class DebugDrawShape : uint
 {

@@ -5,6 +5,7 @@
 #include <rendering/Mesh.hpp>
 #include <rendering/ShaderGlobals.hpp>
 
+#include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 
 #include <math/MathUtil.hpp>
@@ -374,7 +375,7 @@ void IndirectRenderer::Create()
 
     renderer::DescriptorTableDeclaration descriptor_table_decl = object_visibility_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ObjectVisibilityDescriptorSet), frame_index);
@@ -387,7 +388,7 @@ void IndirectRenderer::Create()
 
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
-    m_object_visibility = MakeRenderObject<renderer::ComputePipeline>(
+    m_object_visibility = MakeRenderObject<ComputePipeline>(
         object_visibility_shader,
         descriptor_table
     );

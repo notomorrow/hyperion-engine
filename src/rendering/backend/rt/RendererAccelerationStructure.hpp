@@ -45,15 +45,4 @@ enum AccelerationStructureFlagBits : AccelerationStructureFlags
 #error Unsupported rendering backend
 #endif
 
-namespace hyperion {
-namespace renderer {
-
-using AccelerationGeometry = platform::AccelerationGeometry<Platform::CURRENT>;
-using AccelerationStructure = platform::AccelerationStructure<Platform::CURRENT>;
-using TopLevelAccelerationStructure = platform::TopLevelAccelerationStructure<Platform::CURRENT>;
-using BottomLevelAccelerationStructure = platform::BottomLevelAccelerationStructure<Platform::CURRENT>;
-
-} // namespace renderer
-} // namespace hyperion
-
 #endif

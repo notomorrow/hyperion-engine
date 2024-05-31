@@ -161,7 +161,7 @@ struct RenderState
                 scene->GetID(),
                 scene->GetEnvironment(),
                 &scene->GetRenderList(),
-                scene->GetDrawProxy()
+                scene->GetProxy()
             });
         }
     }
@@ -189,7 +189,7 @@ struct RenderState
 
             camera_bindings.Push(RenderBinding<Camera> {
                 camera->GetID(),
-                camera->GetDrawProxy()
+                camera->GetProxy()
             });
         }
     }

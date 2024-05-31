@@ -19,6 +19,8 @@ namespace platform {
 template <PlatformType PLATFORM>
 struct AttachmentDef
 {
+    static constexpr PlatformType platform = PLATFORM;
+    
     ImageRef<PLATFORM>      image;
     AttachmentRef<PLATFORM> attachment;
 };
@@ -26,6 +28,8 @@ struct AttachmentDef
 template <PlatformType PLATFORM>
 struct AttachmentMap
 {
+    static constexpr PlatformType platform = PLATFORM;
+    
     using Iterator = typename FlatMap<uint, AttachmentDef<PLATFORM>>::Iterator;
     using ConstIterator = typename FlatMap<uint, AttachmentDef<PLATFORM>>::ConstIterator;
 
@@ -121,6 +125,8 @@ template <PlatformType PLATFORM>
 class Framebuffer
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     HYP_API Framebuffer(
         Extent2D extent,
         RenderPassStage stage = RenderPassStage::SHADER,

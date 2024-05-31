@@ -4,11 +4,13 @@
 #define HYPERION_BACKEND_RENDERER_BUFFER_HPP
 
 #include <core/Defines.hpp>
+
 #include <rendering/backend/RendererResult.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererShader.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/Platform.hpp>
+
 #include <Types.hpp>
 
 #include <unordered_set>
@@ -82,6 +84,8 @@ template <PlatformType PLATFORM>
 class GPUBuffer
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+
     HYP_API GPUBuffer(GPUBufferType type);
 
     GPUBuffer(const GPUBuffer &other)                   = delete;

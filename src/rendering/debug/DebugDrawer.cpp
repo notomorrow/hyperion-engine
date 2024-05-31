@@ -42,7 +42,7 @@ void DebugDrawer::Create()
 
     renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
     AssertThrow(descriptor_table != nullptr);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {

@@ -4,16 +4,16 @@
 #define HYPERION_ECS_BLAS_COMPONENT_HPP
 
 #include <core/Handle.hpp>
-#include <rendering/rt/BLAS.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <HashCode.hpp>
 
 namespace hyperion {
 
 struct BLASComponent
 {
-    Handle<BLAS>    blas;
+    BLASRef     blas;
     
-    HashCode        transform_hash_code;
+    HashCode    transform_hash_code;
 };
 
 } // namespace hyperion

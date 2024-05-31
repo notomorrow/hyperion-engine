@@ -3,6 +3,9 @@
 #include <rendering/Shader.hpp>
 #include <rendering/ShaderGlobals.hpp>
 
+#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RendererShader.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -169,7 +172,7 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
         return true;
     };
 
-    Mutex::Guard guard(m_mutex);
+    m_mutex.Lock();
 
     { // check if exists in cache
         const auto it = m_map.Find(definition);
@@ -177,6 +180,8 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
         if (it != m_map.End()) {
             if (ShaderRef shader = it->second.Lock()) {
                 if (EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetProperties())) {
+                    m_mutex.Unlock();
+
                     return shader;
                 } else {
                     HYP_LOG(Shader, LogLevel::ERROR,
@@ -210,8 +215,7 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
 
     HYP_LOG(Shader, LogLevel::DEBUG, "Creating shader '{}'", definition.GetName());
 
-    ShaderRef shader = MakeRenderObject<renderer::Shader>(RC<CompiledShader>(new CompiledShader(std::move(compiled_shader))));
-    DeferCreate(shader, g_engine->GetGPUDevice());
+    ShaderRef shader = MakeRenderObject<Shader>(RC<CompiledShader>(new CompiledShader(std::move(compiled_shader))));
 
     HYP_LOG(Shader, LogLevel::DEBUG, "Shader '{}' created", definition.GetName());
 
@@ -220,6 +224,13 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
 #endif
 
     m_map.Set(definition, shader);
+
+    // NOTE: Unlock before DeferCreate() is important,
+    // otherwise can cause deadlocks when this method
+    // is used on the render thread during render command execution.
+    m_mutex.Unlock();
+
+    DeferCreate(shader, g_engine->GetGPUDevice());
 
     return shader;
 }

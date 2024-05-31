@@ -101,7 +101,7 @@ public:
             required_size = MathUtil::NextPowerOf2(required_size);
         }
 
-        GPUBufferRef buffer = MakeRenderObject<renderer::GPUBuffer>(buffer_type);
+        GPUBufferRef buffer = MakeRenderObject<GPUBuffer>(buffer_type);
         HYPERION_ASSERT_RESULT(buffer->Create(device, required_size));
 
         if (buffer->IsCPUAccessible()) {

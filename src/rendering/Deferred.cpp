@@ -4,11 +4,10 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderGroup.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
+#include <rendering/backend/RenderObject.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
+#include <rendering/backend/RendererCommandBuffer.hpp>
 
 #include <util/BlueNoise.hpp>
 
@@ -18,7 +17,6 @@
 
 namespace hyperion {
 
-using renderer::Image;
 using renderer::Result;
 using renderer::GPUBufferType;
 
@@ -177,7 +175,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
     }
 
     { // linear transform cosines texture data
-        m_ltc_sampler = MakeRenderObject<renderer::Sampler>(
+        m_ltc_sampler = MakeRenderObject<Sampler>(
             renderer::FilterMode::TEXTURE_FILTER_NEAREST,
             renderer::FilterMode::TEXTURE_FILTER_LINEAR,
             renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -218,11 +216,11 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DeferredDirectDescriptorSet), frame_index);
-            AssertThrow(descriptor_set != nullptr);
+            AssertThrow(descriptor_set.IsValid());
             
             descriptor_set->SetElement(HYP_NAME(MaterialsBuffer), g_engine->GetRenderData()->materials.GetBuffer(frame_index));
             
@@ -513,7 +511,7 @@ void EnvGridPass::Create()
     AssertThrow(render_texture_to_screen_shader.IsValid());
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);
@@ -707,7 +705,7 @@ void ReflectionProbePass::CreatePipeline(const RenderableAttributeSet &renderabl
         
         renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
         DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
         Handle<RenderGroup> render_group = CreateObject<RenderGroup>(
@@ -785,7 +783,7 @@ void ReflectionProbePass::Create()
     AssertThrow(render_texture_to_screen_shader.IsValid());
 
     const DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);

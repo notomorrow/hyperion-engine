@@ -14,13 +14,14 @@
 #include <core/Name.hpp>
 #include <core/logging/LoggerFwd.hpp>
 
-#include <rendering/rt/TLAS.hpp>
 #include <rendering/Texture.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Light.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/DrawProxy.hpp>
 #include <rendering/RenderCollection.hpp>
+
+#include <rendering/backend/RenderObject.hpp>
 
 #include <math/Color.hpp>
 
@@ -56,19 +57,25 @@ struct ComponentInitInfo<STUB_CLASS(Scene)>
     ComponentFlags  flags = SCENE_FLAGS_NONE;
 };
 
-class Scene
-    : public BasicObject<STUB_CLASS(Scene)>,
-      public HasDrawProxy<STUB_CLASS(Scene)>
+template <>
+struct DrawProxy<STUB_CLASS(Scene)>
+{
+    uint32 frame_counter;
+};
+
+using SceneDrawProxy = DrawProxy<STUB_CLASS(Scene)>;
+
+class HYP_API Scene : public BasicObject<STUB_CLASS(Scene)>
 {
     friend class Entity;
     friend class World;
     friend class UIStage;
 
 public:
-    HYP_API Scene();
-    HYP_API Scene(Handle<Camera> camera);
+    Scene();
+    Scene(Handle<Camera> camera);
 
-    HYP_API Scene(
+    Scene(
         Handle<Camera> camera,
         ThreadID owner_thread_id,
         const InitInfo &info = { }
@@ -76,7 +83,7 @@ public:
 
     Scene(const Scene &other)               = delete;
     Scene &operator=(const Scene &other)    = delete;
-    HYP_API ~Scene();
+    ~Scene();
 
     /*! \brief Get the thread ID that owns this Scene. */
     [[nodiscard]]
@@ -96,39 +103,43 @@ public:
         { return m_camera; }
 
     /*! \brief Set the camera that is used to render this Scene. */
-    HYP_API void SetCamera(Handle<Camera> camera);
+    void SetCamera(Handle<Camera> camera);
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     RenderList &GetRenderList()
         { return m_render_list; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const RenderList &GetRenderList() const
         { return m_render_list; }
 
-    HYP_API NodeProxy FindNodeWithEntity(ID<Entity>) const;
-    HYP_API NodeProxy FindNodeByName(const String &) const;
+    [[nodiscard]]
+    NodeProxy FindNodeWithEntity(ID<Entity>) const;
 
-    /*! \brief Get the top level acceleration structure for this Scene, if it exists. */
-    Handle<TLAS> &GetTLAS()
-        { return m_tlas; }
+    [[nodiscard]]
+    NodeProxy FindNodeByName(const String &) const;
     
     /*! \brief Get the top level acceleration structure for this Scene, if it exists. */
-    const Handle<TLAS> &GetTLAS() const
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const TLASRef &GetTLAS() const
         { return m_tlas; }
 
     /*! \brief Creates a top level acceleration structure for this Scene. If one already exists on this Scene,
      *  no action is performed and true is returned. If the TLAS could not be created, false is returned.
      *  The Scene must have had Init() called on it before calling this.
      */
-    HYP_API bool CreateTLAS();
-
-    NodeProxy &GetRoot()
-        { return m_root_node_proxy; }
+    [[nodiscard]]
+    bool CreateTLAS();
 
     const NodeProxy &GetRoot() const
         { return m_root_node_proxy; }
 
     /*! \brief Set the root node of this Scene, discarding the current.
      *  \internal For internal use only. Should not be called from user code. */
+    HYP_FORCE_INLINE
     void SetRoot(NodeProxy root)
     {
         if (m_root_node_proxy.IsValid() && m_root_node_proxy->GetScene() == this) {
@@ -142,37 +153,57 @@ public:
         }
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const RC<EntityManager> &GetEntityManager() const
         { return m_entity_manager; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     Octree &GetOctree()
         { return m_octree; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const Octree &GetOctree() const
         { return m_octree; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     RenderEnvironment *GetEnvironment() const
         { return m_environment.Get(); }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     World *GetWorld() const
         { return m_world; }
 
-    HYP_API void SetWorld(World *world);
+    void SetWorld(World *world);
 
     /*! \brief A scene is a non-world scene if it exists not as an owner of entities,
         but rather a simple container that has items based on another Scene. For example,
         you could have a "shadow map" scene, which gathers entities from the main scene,
         but does not call Update() on them. */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsWorldScene() const
         { return !m_is_non_world_scene; }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsAudioListener() const
         { return m_is_audio_listener; }
 
+    HYP_FORCE_INLINE
     void SetIsAudioListener(bool is_audio_listener)
         { m_is_audio_listener = is_audio_listener; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const SceneDrawProxy &GetProxy() const
+        { return m_proxy; }
     
-    HYP_API void Init();
+    void Init();
 
     /*! \brief Update the scene, including all entities, lights, etc.
         This is to be called from the GAME thread.
@@ -180,23 +211,23 @@ public:
         by the World, unless you are using a Scene as a non-world scene.
         * @param delta The delta time since the last update.
     */
-    HYP_API void Update(GameCounter::TickUnit delta);
+    void Update(GameCounter::TickUnit delta);
 
-    HYP_API RenderListCollectionResult CollectEntities(
+    RenderListCollectionResult CollectEntities(
         RenderList &render_list, 
         const Handle<Camera> &camera,
         const Optional<RenderableAttributeSet> &override_attributes = { },
         bool skip_frustum_culling = false
     ) const;
 
-    HYP_API RenderListCollectionResult CollectDynamicEntities(
+    RenderListCollectionResult CollectDynamicEntities(
         RenderList &render_list, 
         const Handle<Camera> &camera,
         const Optional<RenderableAttributeSet> &override_attributes = { },
         bool skip_frustum_culling = false
     ) const;
 
-    HYP_API RenderListCollectionResult CollectStaticEntities(
+    RenderListCollectionResult CollectStaticEntities(
         RenderList &render_list, 
         const Handle<Camera> &camera,
         const Optional<RenderableAttributeSet> &override_attributes = { },
@@ -221,7 +252,7 @@ private:
 
     Octree                          m_octree;
 
-    Handle<TLAS>                    m_tlas;
+    TLASRef                         m_tlas;
 
     Matrix4                         m_last_view_projection_matrix;
     
@@ -230,6 +261,8 @@ private:
     bool                            m_is_audio_listener;
                                  
     mutable DataMutationState       m_mutation_state;
+
+    SceneDrawProxy                  m_proxy;
 };
 
 } // namespace hyperion

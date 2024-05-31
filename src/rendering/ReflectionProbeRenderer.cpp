@@ -82,13 +82,13 @@ void ReflectionProbeRenderer::OnRender(Frame *frame)
 
     if (g_engine->GetConfig().Get(CONFIG_DEBUG_REFLECTION_PROBES)) {
         g_engine->GetDebugDrawer().ReflectionProbeSphere(
-            m_env_probe->GetDrawProxy().world_position,
+            m_env_probe->GetProxy().world_position,
             0.5f,
             m_env_probe->GetID()
         );
     }
 
-    // if (m_env_probe->GetDrawProxy().visibility_bits & (1ull << SizeType(GetParent()->GetScene()->GetCamera().GetID().ToIndex()))) {
+    // if (m_env_probe->GetProxy().visibility_bits & (1ull << SizeType(GetParent()->GetScene()->GetCamera().GetID().ToIndex()))) {
     //     if (!m_last_visibility_state) {
     //         g_engine->GetRenderState().BindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
 

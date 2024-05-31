@@ -50,7 +50,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/packing.inc"
 #include "include/brdf.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.01
+#define HYP_CUBEMAP_AMBIENT 0.05
 
 #ifdef MODE_AMBIENT
     #define LIGHTING

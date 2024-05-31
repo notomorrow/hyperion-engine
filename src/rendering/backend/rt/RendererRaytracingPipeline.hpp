@@ -26,12 +26,4 @@ class RaytracingPipeline : public Pipeline<PLATFORM>
 #error Unsupported rendering backend
 #endif
 
-namespace hyperion {
-namespace renderer {
-
-using RaytracingPipeline = platform::RaytracingPipeline<Platform::CURRENT>;
-
-} // namespace renderer
-} // namespace hyperion
-
 #endif

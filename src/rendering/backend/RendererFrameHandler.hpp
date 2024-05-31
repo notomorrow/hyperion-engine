@@ -35,6 +35,8 @@ template <PlatformType PLATFORM>
 class FrameHandler
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     using NextImageFunction = std::add_pointer_t<Result(Device<PLATFORM> *device, Swapchain<PLATFORM> *swapchain, Frame<PLATFORM> *frame, uint *image_index)>;
 
     FrameHandler(uint num_frames, NextImageFunction next_image);

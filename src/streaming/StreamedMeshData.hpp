@@ -27,15 +27,27 @@ public:
     
     StreamedMeshData();
     StreamedMeshData(MeshData &&mesh_data);
-    StreamedMeshData(RC<StreamedData> streamed_data);
     StreamedMeshData(const StreamedMeshData &other)                 = default;
     StreamedMeshData &operator=(const StreamedMeshData &other)      = default;
     StreamedMeshData(StreamedMeshData &&other) noexcept             = default;
     StreamedMeshData &operator=(StreamedMeshData &&other) noexcept  = default;
     virtual ~StreamedMeshData() override                            = default;
 
+    [[nodiscard]]
     const MeshData &GetMeshData() const;
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType NumVertices() const
+        { return m_num_vertices; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType NumIndices() const
+        { return m_num_indices; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     StreamedDataRef<StreamedMeshData> AcquireRef()
         { return { RefCountedPtrFromThis().CastUnsafe<StreamedMeshData>() }; }
 
@@ -50,6 +62,10 @@ private:
     void LoadMeshData(const ByteBuffer &byte_buffer) const;
 
     RC<StreamedData>    m_streamed_data;
+
+    SizeType            m_num_vertices;
+    SizeType            m_num_indices;
+
     mutable MeshData    m_mesh_data;
     mutable bool        m_mesh_data_loaded;
 };

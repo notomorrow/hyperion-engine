@@ -7,7 +7,6 @@
 namespace hyperion {
 
 using renderer::Platform;
-using renderer::CommandBuffer;
 
 template <>
 void RenderObjectDeleter<Platform::CURRENT>::Initialize()

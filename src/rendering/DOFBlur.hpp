@@ -7,10 +7,6 @@
 
 namespace hyperion {
 
-using renderer::StorageImage;
-using renderer::ImageView;
-using renderer::Frame;
-
 using renderer::Result;
 
 class Engine;

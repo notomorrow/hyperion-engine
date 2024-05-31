@@ -10,6 +10,7 @@
 
 #include <rendering/RenderBucket.hpp>
 #include <rendering/DefaultFormats.hpp>
+
 #include <rendering/backend/RendererImage.hpp>
 
 #include <Types.hpp>

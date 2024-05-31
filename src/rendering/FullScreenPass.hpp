@@ -6,12 +6,7 @@
 #include <rendering/Shader.hpp>
 #include <rendering/Mesh.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
-#include <rendering/backend/RendererAttachment.hpp>
-#include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererImage.hpp>
-
+#include <rendering/backend/RenderObject.hpp>
 
 #include <Constants.hpp>
 
@@ -19,11 +14,6 @@
 
 namespace hyperion {
 
-using renderer::Frame;
-using renderer::CommandBuffer;
-using renderer::Image;
-using renderer::ImageView;
-using renderer::Pipeline;
 using renderer::PushConstantData;
 
 class Engine;
@@ -61,8 +51,7 @@ public:
     InternalFormat GetFormat() const
         { return m_image_format; }
 
-    const AttachmentRef &GetAttachment(uint attachment_index) const
-        { return GetFramebuffer()->GetAttachment(attachment_index); }
+    const AttachmentRef &GetAttachment(uint attachment_index) const;
 
     const CommandBufferRef &GetCommandBuffer(uint index) const
         { return m_command_buffers[index]; }

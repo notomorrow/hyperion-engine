@@ -204,13 +204,13 @@ void FinalPass::Create()
     uint iteration = 0;
 
     for (const ImageRef &image_ref : g_engine->GetGPUInstance()->GetSwapchain()->GetImages()) {
-        FramebufferRef fbo = MakeRenderObject<renderer::Framebuffer>(
+        FramebufferRef fbo = MakeRenderObject<Framebuffer>(
             m_extent,
             renderer::RenderPassStage::PRESENT,
             renderer::RenderPassMode::RENDER_PASS_INLINE
         );
         
-        AttachmentRef color_attachment = MakeRenderObject<renderer::Attachment>(
+        AttachmentRef color_attachment = MakeRenderObject<Attachment>(
             image_ref,
             renderer::RenderPassStage::PRESENT,
             renderer::LoadOperation::CLEAR,
@@ -246,7 +246,7 @@ void FinalPass::Create()
 
     // Create final image to hold last frame's color texture
 
-    m_last_frame_image = MakeRenderObject<renderer::Image>(renderer::TextureImage(
+    m_last_frame_image = MakeRenderObject<Image>(renderer::TextureImage(
         Extent3D { m_extent.width, m_extent.height, 1 },
         InternalFormat::RGBA8_SRGB,
         ImageType::TEXTURE_TYPE_2D,
@@ -264,7 +264,7 @@ void FinalPass::Create()
     AssertThrow(render_texture_to_screen_shader.IsValid());
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(RenderTextureToScreenDescriptorSet), frame_index);

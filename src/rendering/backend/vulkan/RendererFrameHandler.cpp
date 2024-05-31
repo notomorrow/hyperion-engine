@@ -33,11 +33,11 @@ Result FrameHandler<Platform::VULKAN>::CreateFrames(
         VkCommandPool pool = queue->command_pools[0];
         AssertThrow(pool != VK_NULL_HANDLE);
         
-        CommandBufferRef<Platform::VULKAN> command_buffer = MakeRenderObject<renderer::CommandBuffer, Platform::VULKAN>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+        CommandBufferRef<Platform::VULKAN> command_buffer = MakeRenderObject<CommandBuffer<Platform::VULKAN>>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
         command_buffer->GetPlatformImpl().command_pool = pool;
         HYPERION_BUBBLE_ERRORS(command_buffer->Create(device));
 
-        FrameRef<Platform::VULKAN> frame = MakeRenderObject<renderer::Frame, Platform::VULKAN>(i);
+        FrameRef<Platform::VULKAN> frame = MakeRenderObject<Frame<Platform::VULKAN>>(i);
 
         HYPERION_BUBBLE_ERRORS(frame->Create(
             device,

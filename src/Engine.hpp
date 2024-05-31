@@ -22,6 +22,7 @@
 #include <rendering/RenderGroup.hpp>
 #include <scene/World.hpp>
 
+#include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 
@@ -42,17 +43,13 @@
 
 namespace hyperion {
 
+using renderer::Instance;
+
 namespace sys {
 class AppContext;
 } // namespace sys
 
 using sys::AppContext;
-
-using renderer::Instance;
-using renderer::Device;
-using renderer::Semaphore;
-using renderer::SemaphoreChain;
-using renderer::Image;
 
 class Engine;
 class Game;
@@ -67,15 +64,15 @@ extern SafeDeleter          *g_safe_deleter;
 
 struct DebugMarker
 {
-    CommandBuffer *command_buffer = nullptr;
-    const char * const name = "<Unnamed debug marker>";
-    bool is_ended = false;
+    const CommandBuffer *command_buffer;
+    const char * const  name = "<Unnamed debug marker>";
+    bool                is_ended = false;
 
-    DebugMarker(CommandBuffer *command_buffer, const char *marker_name)
+    DebugMarker(const CommandBuffer *command_buffer, const char *marker_name)
         : command_buffer(command_buffer),
           name(marker_name)
     {
-        if (command_buffer != nullptr) {
+        if (command_buffer) {
             command_buffer->DebugMarkerBegin(name);
         }
     }

@@ -11,14 +11,11 @@
 
 #include <algorithm>
 
-
 namespace hyperion {
 
 constexpr bool create_obj_indices = true;
 constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
 constexpr bool load_materials = true;
-
-using Tokens = std::vector<std::string>;
 
 using PLYModel = PLYModelLoader::PLYModel;
 

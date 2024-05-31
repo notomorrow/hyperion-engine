@@ -15,18 +15,12 @@
 #include <rendering/Mesh.hpp>
 #include <rendering/Texture.hpp>
 
-#include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <Constants.hpp>
 
 namespace hyperion {
 
-using renderer::CommandBuffer;
-using renderer::Frame;
-using renderer::Device;
 using renderer::Result;
 
 class Engine;

@@ -25,8 +25,6 @@ using renderer::StencilCompareOp;
 using renderer::BlendFunction;
 using renderer::BlendModeFactor;
 
-class Framebuffer;
-
 enum class MaterialAttributeFlags : uint32
 {
     NONE        = 0x0,

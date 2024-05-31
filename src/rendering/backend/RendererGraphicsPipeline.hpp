@@ -21,6 +21,8 @@ template <PlatformType PLATFORM>
 class GraphicsPipeline : public Pipeline<PLATFORM>
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     HYP_API GraphicsPipeline();
     HYP_API GraphicsPipeline(const ShaderRef<PLATFORM> &shader, const DescriptorTableRef<PLATFORM> &descriptor_table);
     GraphicsPipeline(const GraphicsPipeline &other)             = delete;

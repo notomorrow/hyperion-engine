@@ -417,7 +417,7 @@ void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
     m_render_list.ResetOrdering();
 
-    m_ui_stage->CollectObjects([this](const RC<UIObject> &object)
+    m_ui_stage->CollectObjects([this](UIObject *object)
     {
         AssertThrow(object != nullptr);
 

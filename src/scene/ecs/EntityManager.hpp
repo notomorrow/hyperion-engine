@@ -10,6 +10,7 @@
 #include <core/containers/TypeMap.hpp>
 #include <core/functional/Proc.hpp>
 #include <core/threading/Mutex.hpp>
+#include <core/threading/Threads.hpp>
 #include <core/utilities/Tuple.hpp>
 #include <core/Handle.hpp>
 #include <core/ID.hpp>

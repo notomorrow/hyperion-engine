@@ -5,14 +5,12 @@
 
 #include <scene/Scene.hpp>
 
+#include <rendering/backend/RenderObject.hpp>
+
 #include <rendering/RenderState.hpp>
 
 namespace hyperion {
 
-using renderer::StorageImage;
-using renderer::Image;
-using renderer::ImageView;
-using renderer::Frame;
 using renderer::Result;
 
 class Engine;

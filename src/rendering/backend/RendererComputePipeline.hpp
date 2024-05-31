@@ -21,6 +21,8 @@ template <PlatformType PLATFORM>
 class ComputePipeline : public Pipeline<PLATFORM>
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+
     ComputePipeline();
     ComputePipeline(const ShaderRef<PLATFORM> &shader, const DescriptorTableRef<PLATFORM> &descriptor_table);
     ComputePipeline(const ComputePipeline &other)               = delete;

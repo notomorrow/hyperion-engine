@@ -2,6 +2,8 @@
 
 #include <rendering/TemporalBlending.hpp>
 
+#include <rendering/backend/RendererComputePipeline.hpp>
+
 #include <core/threading/Threads.hpp>
 
 #include <Engine.hpp>
@@ -158,7 +160,7 @@ void TemporalBlending::CreateDescriptorSets()
 
     const renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    m_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    m_descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         if (m_input_framebuffer.IsValid()) {
@@ -202,7 +204,7 @@ void TemporalBlending::CreateComputePipelines()
     ShaderRef shader = g_shader_manager->GetOrCreate(HYP_NAME(TemporalBlending), GetShaderProperties());
     AssertThrow(shader.IsValid());
 
-    m_perform_blending = MakeRenderObject<renderer::ComputePipeline>(
+    m_perform_blending = MakeRenderObject<ComputePipeline>(
         shader,
         m_descriptor_table
     );

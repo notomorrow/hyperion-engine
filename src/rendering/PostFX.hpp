@@ -12,8 +12,7 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/Buffers.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <Types.hpp>
@@ -22,8 +21,6 @@
 
 namespace hyperion {
 
-using renderer::Frame;
-using renderer::CommandBuffer;
 using renderer::ShaderVec2;
 
 class Engine;

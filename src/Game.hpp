@@ -16,14 +16,12 @@
 
 #include <ui/UIStage.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <dotnet/Assembly.hpp>
 #include <dotnet/Object.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
 
 using dotnet::Object;
 using dotnet::Assembly;

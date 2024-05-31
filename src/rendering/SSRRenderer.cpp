@@ -3,7 +3,9 @@
 #include <core/threading/Threads.hpp>
 
 #include <rendering/SSRRenderer.hpp>
+
 #include <rendering/backend/RendererDescriptorSet.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <Engine.hpp>
 
@@ -259,7 +261,7 @@ void SSRRenderer::CreateComputePipelines()
     AssertThrow(write_uvs_shader.IsValid());
 
     const renderer::DescriptorTableDeclaration write_uvs_shader_descriptor_table_decl = write_uvs_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
-    DescriptorTableRef write_uvs_shader_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(write_uvs_shader_descriptor_table_decl);
+    DescriptorTableRef write_uvs_shader_descriptor_table = MakeRenderObject<DescriptorTable>(write_uvs_shader_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = write_uvs_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
@@ -271,7 +273,7 @@ void SSRRenderer::CreateComputePipelines()
 
     DeferCreate(write_uvs_shader_descriptor_table, g_engine->GetGPUDevice());
 
-    m_write_uvs = MakeRenderObject<renderer::ComputePipeline>(
+    m_write_uvs = MakeRenderObject<ComputePipeline>(
         g_shader_manager->GetOrCreate(HYP_NAME(SSRWriteUVs), shader_properties),
         write_uvs_shader_descriptor_table
     );
@@ -284,7 +286,7 @@ void SSRRenderer::CreateComputePipelines()
     AssertThrow(sample_shader.IsValid());
 
     const renderer::DescriptorTableDeclaration sample_shader_descriptor_table_decl = sample_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
-    DescriptorTableRef sample_shader_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(sample_shader_descriptor_table_decl);
+    DescriptorTableRef sample_shader_descriptor_table = MakeRenderObject<DescriptorTable>(sample_shader_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = sample_shader_descriptor_table->GetDescriptorSet(HYP_NAME(SSRDescriptorSet), frame_index);
@@ -297,7 +299,7 @@ void SSRRenderer::CreateComputePipelines()
 
     DeferCreate(sample_shader_descriptor_table, g_engine->GetGPUDevice());
 
-    m_sample = MakeRenderObject<renderer::ComputePipeline>(
+    m_sample = MakeRenderObject<ComputePipeline>(
         sample_shader,
         sample_shader_descriptor_table
     );

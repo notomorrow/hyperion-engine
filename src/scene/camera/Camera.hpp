@@ -15,7 +15,6 @@
 #include <math/Frustum.hpp>
 
 #include <rendering/DrawProxy.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
 
 #include <input/InputHandler.hpp>
 
@@ -25,7 +24,6 @@
 namespace hyperion {
 
 class Engine;
-class Framebuffer;
 
 enum class CameraType
 {
@@ -73,7 +71,7 @@ struct CameraCommand
     };
 };
 
-struct RenderCommand_UpdateCameraDrawProxy;
+struct RENDER_COMMAND(UpdateCameraDrawProxy);
 
 class Camera;
 
@@ -136,9 +134,28 @@ class OrthoCameraController;
 class FirstPersonCameraController;
 class FollowCameraController;
 
-class HYP_API Camera :
-    public BasicObject<STUB_CLASS(Camera)>,
-    public HasDrawProxy<STUB_CLASS(Camera)>
+template <>
+struct DrawProxy<STUB_CLASS(Camera)>
+{
+    Matrix4     view;
+    Matrix4     projection;
+    Matrix4     previous_view;
+    Vec3f       position;
+    Vec3f       direction;
+    Vec3f       up;
+    Extent2D    dimensions;
+    float       clip_near;
+    float       clip_far;
+    float       fov;
+    Frustum     frustum;
+
+    uint64      visibility_bitmask;
+    uint16      visibility_nonce;
+};
+
+using CameraDrawProxy = DrawProxy<STUB_CLASS(Camera)>;
+
+class HYP_API Camera : public BasicObject<STUB_CLASS(Camera)>
 {
 public:
     friend class CameraController;
@@ -147,7 +164,7 @@ public:
     friend class FirstPersonCameraController;
     friend class FollowCameraController;
 
-    friend struct RenderCommand_UpdateCameraDrawProxy;
+    friend struct RENDER_COMMAND(UpdateCameraDrawProxy);
 
     Camera();
     Camera(int width, int height);
@@ -229,17 +246,33 @@ public:
         { m_far = _far; }
 
     // perspective only
-    float GetFOV() const { return m_fov; }
+    float GetFOV() const
+        { return m_fov; }
 
     // ortho only
-    float GetLeft() const { return m_left; }
-    void SetLeft(float left) { m_left = left; }
-    float GetRight() const { return m_right; }
-    void SetRight(float right) { m_right = right; }
-    float GetBottom() const { return m_bottom; }
-    void SetBottom(float bottom) { m_bottom = bottom; }
-    float GetTop() const { return m_top; }
-    void SetTop(float top) { m_top = top; }
+    float GetLeft() const
+        { return m_left; }
+
+    void SetLeft(float left)
+        { m_left = left; }
+
+    float GetRight() const
+        { return m_right; }
+
+    void SetRight(float right)
+        { m_right = right; }
+
+    float GetBottom() const
+        { return m_bottom; }
+
+    void SetBottom(float bottom)
+        { m_bottom = bottom; }
+
+    float GetTop() const
+        { return m_top; }
+        
+    void SetTop(float top)
+        { m_top = top; }
 
     const Vec3f &GetTranslation() const
         { return m_translation; }
@@ -269,25 +302,41 @@ public:
     void Rotate(const Vec3f &axis, float radians);
 
     /*! \brief For deserialization, allow modification of the object. */
-    Frustum &GetFrustum() { return m_frustum; }
-    const Frustum &GetFrustum() const { return m_frustum; }
+    Frustum &GetFrustum()
+        { return m_frustum; }
+
+    const Frustum &GetFrustum() const
+        { return m_frustum; }
 
     /*! \brief For deserialization, allow modification of the object. */
-    Matrix4 &GetViewMatrix() { return m_view_mat; }
-    const Matrix4 &GetViewMatrix() const { return m_view_mat; }
+    Matrix4 &GetViewMatrix()
+        { return m_view_mat; }
+
+    const Matrix4 &GetViewMatrix() const
+        { return m_view_mat; }
+
     void SetViewMatrix(const Matrix4 &view_mat);
 
     /*! \brief For deserialization, allow modification of the object. */
-    Matrix4 &GetProjectionMatrix() { return m_proj_mat; }
-    const Matrix4 &GetProjectionMatrix() const { return m_proj_mat; }
+    Matrix4 &GetProjectionMatrix()
+        { return m_proj_mat; }
+
+    const Matrix4 &GetProjectionMatrix() const
+        { return m_proj_mat; }
+
     void SetProjectionMatrix(const Matrix4 &proj_mat);
 
     /*! \brief For deserialization, allow modification of the object. */
-    Matrix4 &GetViewProjectionMatrix() { return m_view_proj_mat; }
-    const Matrix4 &GetViewProjectionMatrix() const { return m_view_proj_mat; }
+    Matrix4 &GetViewProjectionMatrix()
+        { return m_view_proj_mat; }
+
+    const Matrix4 &GetViewProjectionMatrix() const
+        { return m_view_proj_mat; }
+
     void SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &proj_mat);
 
-    const Matrix4 &GetPreviousViewMatrix() const { return m_previous_view_matrix; }
+    const Matrix4 &GetPreviousViewMatrix() const
+        { return m_previous_view_matrix; }
 
     /*! \brief Transform a 2D vector of x,y ranging from [0, 1] into ndc coordinates */
     Vec3f TransformScreenToNDC(const Vec2f &screen) const;
@@ -309,8 +358,10 @@ public:
 
     Vec2f GetPixelSize() const;
 
-    void Update(GameCounter::TickUnit dt);
+    const CameraDrawProxy &GetProxy() const
+        { return m_proxy; }
 
+    void Update(GameCounter::TickUnit dt);
     void UpdateMatrices();
 
     void Init();
@@ -340,6 +391,8 @@ protected:
 private:
     Matrix4                 m_view_proj_mat;
     Matrix4                 m_previous_view_matrix;
+    
+    CameraDrawProxy         m_proxy;
 };
 
 } // namespace hyperion

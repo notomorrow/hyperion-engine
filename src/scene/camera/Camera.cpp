@@ -6,6 +6,8 @@
 
 #include <rendering/ShaderGlobals.hpp>
 
+#include <rendering/backend/RendererFramebuffer.hpp>
+
 #include <core/system/AppContext.hpp>
 
 #include <Engine.hpp>
@@ -21,11 +23,11 @@ class Camera;
 struct RENDER_COMMAND(UpdateCameraDrawProxy) : renderer::RenderCommand
 {
     Camera          *camera;
-    CameraDrawProxy draw_proxy;
+    CameraDrawProxy proxy;
 
-    RENDER_COMMAND(UpdateCameraDrawProxy)(Camera *camera, const CameraDrawProxy &draw_proxy)
+    RENDER_COMMAND(UpdateCameraDrawProxy)(Camera *camera, const CameraDrawProxy &proxy)
         : camera(camera),
-          draw_proxy(draw_proxy)
+          proxy(proxy)
     {
     }
 
@@ -33,18 +35,18 @@ struct RENDER_COMMAND(UpdateCameraDrawProxy) : renderer::RenderCommand
 
     virtual Result operator()() override
     {
-        camera->m_draw_proxy = draw_proxy;
+        camera->m_proxy = proxy;
 
         g_engine->GetRenderData()->cameras.Set(camera->GetID().ToIndex(), CameraShaderData {
-            .view               = draw_proxy.view,
-            .projection         = draw_proxy.projection,
-            .previous_view      = draw_proxy.previous_view,
-            .dimensions         = { draw_proxy.dimensions.width, draw_proxy.dimensions.height, 0, 1 },
-            .camera_position    = Vec4f(draw_proxy.position, 1.0f),
-            .camera_direction   = Vec4f(draw_proxy.position, 1.0f),
-            .camera_near        = draw_proxy.clip_near,
-            .camera_far         = draw_proxy.clip_far,
-            .camera_fov         = draw_proxy.fov
+            .view               = proxy.view,
+            .projection         = proxy.projection,
+            .previous_view      = proxy.previous_view,
+            .dimensions         = { proxy.dimensions.width, proxy.dimensions.height, 0, 1 },
+            .camera_position    = Vec4f(proxy.position, 1.0f),
+            .camera_direction   = Vec4f(proxy.position, 1.0f),
+            .camera_near        = proxy.clip_near,
+            .camera_far         = proxy.clip_far,
+            .camera_fov         = proxy.fov
         });
         
         HYPERION_RETURN_OK;
@@ -133,7 +135,6 @@ Camera::Camera()
 
 Camera::Camera(int width, int height)
     : BasicObject(),
-      HasDrawProxy(),
       m_fov(50.0f),
       m_width(width),
       m_height(height),
@@ -151,7 +152,6 @@ Camera::Camera(int width, int height)
 
 Camera::Camera(float fov, int width, int height, float _near, float _far)
     : BasicObject(),
-      HasDrawProxy(),
       m_fov(fov),
       m_width(width),
       m_height(height),
@@ -164,7 +164,6 @@ Camera::Camera(float fov, int width, int height, float _near, float _far)
 
 Camera::Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far)
     : BasicObject(),
-      HasDrawProxy(),
       m_fov(0.0f),
       m_width(width),
       m_height(height),
@@ -196,7 +195,7 @@ void Camera::Init()
         SafeRelease(std::move(m_framebuffer));
     }));
 
-    m_draw_proxy = CameraDrawProxy {
+    m_proxy = CameraDrawProxy {
         .view           = m_view_mat,
         .projection     = m_proj_mat,
         .previous_view  = m_previous_view_matrix,

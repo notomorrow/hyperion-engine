@@ -2,6 +2,7 @@
 
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderGroup.hpp>
+
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <Engine.hpp>
@@ -42,7 +43,7 @@ static void AddOwnedAttachment(
 
     HYPERION_ASSERT_RESULT(attachment_image->Create(g_engine->GetGPUInstance()->GetDevice()));
 
-    AttachmentRef attachment = MakeRenderObject<renderer::Attachment>(
+    AttachmentRef attachment = MakeRenderObject<Attachment>(
         attachment_image,
         renderer::RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,
@@ -71,7 +72,7 @@ static void AddSharedAttachment(
     const AttachmentRef &parent_attachment = opaque_fbo->GetAttachment(binding);
     AssertThrow(parent_attachment.IsValid());
     
-    AttachmentRef attachment = MakeRenderObject<renderer::Attachment>(
+    AttachmentRef attachment = MakeRenderObject<Attachment>(
         parent_attachment->GetImage(),
         renderer::RenderPassStage::SHADER,
         renderer::LoadOperation::LOAD,
@@ -176,7 +177,7 @@ void GBuffer::GBufferBucket::CreateFramebuffer()
     //     extent = {2000, 2000};//tmp
     // }
 
-    framebuffer = MakeRenderObject<renderer::Framebuffer>(
+    framebuffer = MakeRenderObject<Framebuffer>(
         extent,
         renderer::RenderPassStage::SHADER,
         mode

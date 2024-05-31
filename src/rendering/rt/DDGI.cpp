@@ -2,7 +2,9 @@
 
 #include <rendering/rt/DDGI.hpp>
 #include <rendering/ShaderGlobals.hpp>
+
 #include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <Engine.hpp>
 #include <Types.hpp>
@@ -177,8 +179,8 @@ DDGI::~DDGI()
 void DDGI::Init()
 {
     AssertThrowMsg(
-        InitObject(m_tlas),
-        "Failed to initialize the top level acceleration structure!"
+        m_tlas.IsValid(),
+        "Invalid TLAS provided"
     );
 
     DebugLog(
@@ -241,17 +243,17 @@ void DDGI::CreatePipelines()
     AssertThrow(m_shader.IsValid());
 
     const DescriptorTableDeclaration raytracing_pipeline_descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
-    DescriptorTableRef raytracing_pipeline_descriptor_table = MakeRenderObject<renderer::DescriptorTable>(raytracing_pipeline_descriptor_table_decl);
+    DescriptorTableRef raytracing_pipeline_descriptor_table = MakeRenderObject<DescriptorTable>(raytracing_pipeline_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = raytracing_pipeline_descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());
+        descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas);
         
         descriptor_set->SetElement(HYP_NAME(LightsBuffer), g_engine->GetRenderData()->lights.GetBuffer(frame_index));
         descriptor_set->SetElement(HYP_NAME(MaterialsBuffer), g_engine->GetRenderData()->materials.GetBuffer(frame_index));
-        descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
+        descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetMeshDescriptionsBuffer());
 
         descriptor_set->SetElement(HYP_NAME(DDGIUniforms), m_uniform_buffer);
         descriptor_set->SetElement(HYP_NAME(ProbeRayData), m_radiance_buffer);
@@ -285,7 +287,7 @@ void DDGI::CreatePipelines()
         
         const DescriptorTableDeclaration descriptor_table_decl = it.first->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-        DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+        DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(DDGIDescriptorSet), frame_index);
@@ -300,7 +302,7 @@ void DDGI::CreatePipelines()
 
         DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
-        it.second = MakeRenderObject<renderer::ComputePipeline>(
+        it.second = MakeRenderObject<ComputePipeline>(
             it.first,
             descriptor_table
         );
@@ -432,12 +434,12 @@ void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
 
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE) {
             // update acceleration structure in descriptor set
-            descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas->GetInternalTLAS());
+            descriptor_set->SetElement(HYP_NAME(TLAS), m_tlas);
         }
 
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS) {
             // update mesh descriptions buffer in descriptor set
-            descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetInternalTLAS()->GetMeshDescriptionsBuffer());
+            descriptor_set->SetElement(HYP_NAME(MeshDescriptionsBuffer), m_tlas->GetMeshDescriptionsBuffer());
         }
 
         descriptor_set->Update(g_engine->GetGPUDevice());

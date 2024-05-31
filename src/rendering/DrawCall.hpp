@@ -10,11 +10,11 @@
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderProxy.hpp>
 
+#include <rendering/backend/RenderObject.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion {
-
-using renderer::CommandBuffer;
 
 class Engine;
 class Mesh;

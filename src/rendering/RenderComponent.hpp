@@ -3,14 +3,19 @@
 #define HYPERION_RENDER_COMPONENT_HPP
 
 #include <core/Base.hpp>
+#include <core/threading/Threads.hpp>
+
 #include <scene/Entity.hpp>
+
 #include <math/MathUtil.hpp>
+
 #include <rendering/Buffers.hpp>
 #include <rendering/ShaderGlobals.hpp>
-#include <rendering/backend/RendererFrame.hpp>
+
+#include <rendering/backend/RenderObject.hpp>
+
 #include <GameCounter.hpp>
 #include <Constants.hpp>
-#include <core/threading/Threads.hpp>
 #include <Types.hpp>
 
 #include <atomic>
@@ -19,8 +24,6 @@
 namespace hyperion {
 
 class RenderEnvironment;
-
-using renderer::Frame;
 
 class RenderComponentBase
 {

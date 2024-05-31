@@ -35,6 +35,8 @@ template <PlatformType PLATFORM>
 class Frame
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     static Frame TemporaryFrame(CommandBufferRef<PLATFORM> command_buffer, uint frame_index = 0)
     {
         Frame frame;
@@ -97,13 +99,5 @@ private:
 #else
 #error Unsupported rendering backend
 #endif
-
-namespace hyperion {
-namespace renderer {
-
-using Frame = platform::Frame<Platform::CURRENT>;
-
-} // namespace renderer
-} // namespace hyperion
 
 #endif

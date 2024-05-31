@@ -6,6 +6,8 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
+
+#include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <core/util/ForEach.hpp>
@@ -258,7 +260,7 @@ void ParticleSpawner::CreateRenderGroup()
 
     renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(ParticleDescriptorSet), frame_index);
@@ -304,7 +306,7 @@ void ParticleSpawner::CreateComputePipelines()
 
     renderer::DescriptorTableDeclaration descriptor_table_decl = update_particles_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-    DescriptorTableRef descriptor_table = MakeRenderObject<renderer::DescriptorTable>(descriptor_table_decl);
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(HYP_NAME(UpdateParticlesDescriptorSet), frame_index);
@@ -317,7 +319,7 @@ void ParticleSpawner::CreateComputePipelines()
 
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
-    m_update_particles = MakeRenderObject<renderer::ComputePipeline>(
+    m_update_particles = MakeRenderObject<ComputePipeline>(
         update_particles_shader,
         descriptor_table
     );
@@ -371,7 +373,7 @@ void ParticleSystem::Init()
 
 void ParticleSystem::CreateBuffers()
 {
-    m_staging_buffer = MakeRenderObject<renderer::GPUBuffer>(renderer::GPUBufferType::STAGING_BUFFER);
+    m_staging_buffer = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STAGING_BUFFER);
 
     PUSH_RENDER_COMMAND(
         CreateParticleSystemBuffers,

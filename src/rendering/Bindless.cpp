@@ -28,7 +28,7 @@ void BindlessStorage::Destroy()
     m_resources.Clear();
 }
 
-void BindlessStorage::AddResource(ID<Texture> id, ImageViewRef image_view)
+void BindlessStorage::AddResource(ID<Texture> id, const ImageViewRef &image_view)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
@@ -46,7 +46,7 @@ void BindlessStorage::AddResource(ID<Texture> id, ImageViewRef image_view)
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(HYP_NAME(Material), frame_index)
-            ->SetElement(HYP_NAME(Textures), id.ToIndex(), std::move(image_view));
+            ->SetElement(HYP_NAME(Textures), id.ToIndex(), image_view);
     }
 }
 

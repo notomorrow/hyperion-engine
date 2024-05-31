@@ -2,6 +2,8 @@
 
 #include <rendering/Material.hpp>
 #include <rendering/ShaderGlobals.hpp>
+
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <core/logging/LogChannels.hpp>
@@ -14,7 +16,6 @@
 
 namespace hyperion {
 
-using renderer::CommandBuffer;
 using renderer::Result;
 
 #pragma region Render commands
@@ -685,7 +686,7 @@ void MaterialDescriptorSetManager::AddMaterial(ID<Material> id)
     FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        descriptor_sets[frame_index] = MakeRenderObject<renderer::DescriptorSet>(layout);
+        descriptor_sets[frame_index] = MakeRenderObject<DescriptorSet>(layout);
 
         for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
             descriptor_sets[frame_index]->SetElement(HYP_NAME(Textures), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());

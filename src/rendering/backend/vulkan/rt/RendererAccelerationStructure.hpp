@@ -12,6 +12,8 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
+#include <streaming/StreamedMeshData.hpp>
+
 #include <Types.hpp>
 
 #include <vector>
@@ -44,9 +46,11 @@ public:
     friend class TopLevelAccelerationStructure<PLATFORM>;
     friend class BottomLevelAccelerationStructure<PLATFORM>;
 
+    static constexpr PlatformType platform = PLATFORM;
+
     AccelerationGeometry(
-        Array<PackedVertex> &&packed_vertices,
-        Array<PackedIndex> &&packed_indices,
+        const Array<PackedVertex> &packed_vertices,
+        const Array<uint32> &packed_indices,
         uint entity_index,
         uint material_index
     );
@@ -55,11 +59,17 @@ public:
     AccelerationGeometry &operator=(const AccelerationGeometry &other)  = delete;
     ~AccelerationGeometry();
 
-    const Array<PackedVertex> &GetPackedVertices() const { return m_packed_vertices; }
-    const Array<PackedIndex> &GetPackedIndices() const { return m_packed_indices; }
+    const Array<PackedVertex> &GetPackedVertices() const
+        { return m_packed_vertices; }
 
-    const GPUBufferRef<PLATFORM> &GetPackedVertexStorageBuffer() const { return m_packed_vertex_buffer; }
-    const GPUBufferRef<PLATFORM> &GetPackedIndexStorageBuffer() const { return m_packed_index_buffer; }
+    const Array<uint32> &GetPackedIndices() const
+        { return m_packed_indices; }
+
+    const GPUBufferRef<PLATFORM> &GetPackedVertexStorageBuffer() const
+        { return m_packed_vertex_buffer; }
+
+    const GPUBufferRef<PLATFORM> &GetPackedIndexStorageBuffer() const
+        { return m_packed_index_buffer; }
 
     uint GetEntityIndex() const
         { return m_entity_index; }
@@ -83,7 +93,7 @@ public:
 
 private:
     Array<PackedVertex>                         m_packed_vertices;
-    Array<PackedIndex>                          m_packed_indices;
+    Array<uint32>                               m_packed_indices;
 
     GPUBufferRef<PLATFORM>                      m_packed_vertex_buffer;
     GPUBufferRef<PLATFORM>                      m_packed_index_buffer;
@@ -98,7 +108,9 @@ template <PlatformType PLATFORM>
 class AccelerationStructure
 {
 public:
-    AccelerationStructure();
+    static constexpr PlatformType platform = PLATFORM;
+
+    AccelerationStructure(const Matrix4 &transform = Matrix4::identity);
     AccelerationStructure(const AccelerationStructure &other)               = delete;
     AccelerationStructure &operator=(const AccelerationStructure &other)    = delete;
     ~AccelerationStructure();
@@ -180,7 +192,9 @@ template <PlatformType PLATFORM>
 class BottomLevelAccelerationStructure : public AccelerationStructure<PLATFORM>
 {
 public:
-    BottomLevelAccelerationStructure();
+    static constexpr PlatformType platform = PLATFORM;
+
+    BottomLevelAccelerationStructure(const Matrix4 &transform = Matrix4::identity);
     BottomLevelAccelerationStructure(const BottomLevelAccelerationStructure &other)             = delete;
     BottomLevelAccelerationStructure &operator=(const BottomLevelAccelerationStructure &other)  = delete;
     ~BottomLevelAccelerationStructure();
@@ -200,6 +214,8 @@ template <PlatformType PLATFORM>
 class TopLevelAccelerationStructure : public AccelerationStructure<PLATFORM>
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+
     TopLevelAccelerationStructure();
     TopLevelAccelerationStructure(const TopLevelAccelerationStructure &other)               = delete;
     TopLevelAccelerationStructure &operator=(const TopLevelAccelerationStructure &other)    = delete;
@@ -210,13 +226,12 @@ public:
     const GPUBufferRef<PLATFORM> &GetMeshDescriptionsBuffer() const
         { return m_mesh_descriptions_buffer; }
 
-    void AddBLAS(BLASRef<PLATFORM> blas);
+    void AddBLAS(const BLASRef<PLATFORM> &blas);
     void RemoveBLAS(const BLASRef<PLATFORM> &blas);
     
     Result Create(
         Device<PLATFORM> *device,
-        Instance<PLATFORM> *instance,
-        Array<BLASRef<PLATFORM>> &&blas
+        Instance<PLATFORM> *instance
     );
 
     Result Destroy(Device<PLATFORM> *device);

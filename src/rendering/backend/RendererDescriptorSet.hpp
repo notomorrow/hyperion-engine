@@ -450,6 +450,8 @@ private:
 template <PlatformType PLATFORM>
 struct DescriptorSetElement
 {
+    static constexpr PlatformType platform = PLATFORM;
+    
     using ValueType = Variant<GPUBufferRef<PLATFORM>, ImageViewRef<PLATFORM>, SamplerRef<PLATFORM>, TLASRef<PLATFORM>>;
 
     FlatMap<uint, ValueType>    values;
@@ -492,6 +494,8 @@ template <PlatformType PLATFORM>
 class DescriptorSet
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+
     DescriptorSet(const DescriptorSetLayout<PLATFORM> &layout);
     DescriptorSet(const DescriptorSet &other)                 = delete;
     DescriptorSet &operator=(const DescriptorSet &other)      = delete;
@@ -702,6 +706,8 @@ template <PlatformType PLATFORM>
 class DescriptorTable
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+
     DescriptorTable(const DescriptorTableDeclaration &decl);
     DescriptorTable(const DescriptorTable &other)                 = default;
     DescriptorTable &operator=(const DescriptorTable &other)      = default;

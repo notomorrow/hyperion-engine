@@ -19,6 +19,8 @@ template <PlatformType PLATFORM>
 class Sampler
 {
 public:
+    static constexpr PlatformType platform = PLATFORM;
+    
     HYP_API Sampler(
         FilterMode min_filter_mode = FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode mag_filter_mode = FilterMode::TEXTURE_FILTER_NEAREST,

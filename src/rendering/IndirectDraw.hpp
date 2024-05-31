@@ -9,8 +9,7 @@
 #include <core/containers/Array.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -18,7 +17,6 @@
 namespace hyperion {
 
 using renderer::IndirectDrawCommand;
-using renderer::Frame;
 using renderer::Result;
 
 class Mesh;

@@ -18,6 +18,7 @@
 
 #include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RendererStructs.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <Types.hpp>
 
@@ -41,7 +42,6 @@ class Camera;
 class Entity;
 class RenderGroup;
 
-using renderer::Frame;
 using renderer::PushConstantData;
 
 enum PassType : uint

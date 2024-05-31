@@ -6,6 +6,10 @@
 #include <core/Base.hpp>
 #include <core/ID.hpp>
 
+#include <core/containers/HashMap.hpp>
+
+#include <rendering/backend/RenderObject.hpp>
+
 namespace hyperion {
 
 class Engine;
@@ -25,7 +29,7 @@ public:
     void Destroy();
 
     /*! \brief Add a texture to the bindless descriptor set. */
-    void AddResource(ID<Texture> id, ImageViewRef image_view);
+    void AddResource(ID<Texture> id, const ImageViewRef &image_view);
     /*! \brief Remove the given texture from the bindless descriptor set. */
     void RemoveResource(ID<Texture> id);
 

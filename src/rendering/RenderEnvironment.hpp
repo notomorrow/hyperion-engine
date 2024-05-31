@@ -9,7 +9,7 @@
 #include <rendering/rt/RTRadianceRenderer.hpp>
 #include <rendering/rt/DDGI.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <core/Base.hpp>
 #include <core/Name.hpp>
@@ -50,7 +50,7 @@ public:
     RenderEnvironment &operator=(const RenderEnvironment &other) = delete;
     ~RenderEnvironment();
 
-    void SetTLAS(Handle<TLAS> tlas);
+    void SetTLAS(const TLASRef &tlas);
 
     Scene *GetScene() const
         { return m_scene; }
@@ -231,7 +231,7 @@ private:
     DDGI                                            m_ddgi;
     bool                                            m_has_rt_radiance;
     bool                                            m_has_ddgi_probes;
-    Handle<TLAS>                                    m_tlas;
+    TLASRef                                         m_tlas;
 
     float                                           m_global_timer;
     uint32                                          m_frame_counter;

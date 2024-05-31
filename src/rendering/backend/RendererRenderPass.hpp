@@ -20,6 +20,8 @@ namespace platform {
 template <PlatformType PLATFORM>
 class RenderPass
 {
+public:
+    static constexpr PlatformType platform = PLATFORM;
 };
 
 } // namespace platform

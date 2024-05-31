@@ -13,6 +13,8 @@ namespace platform {
 template <PlatformType PLATFORM>
 class Device
 {
+public:
+    static constexpr PlatformType platform = PLATFORM;
 };
 
 } // namespace platform

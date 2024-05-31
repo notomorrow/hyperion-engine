@@ -8,15 +8,11 @@
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EnvProbe.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 #include <math/BoundingBox.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
 
 class HYP_API ReflectionProbeRenderer : public RenderComponent<ReflectionProbeRenderer>
 {

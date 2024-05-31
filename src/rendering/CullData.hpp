@@ -9,8 +9,6 @@
 
 namespace hyperion {
 
-using renderer::ImageView;
-
 struct CullData
 {
     ImageViewRef    depth_pyramid_image_view;

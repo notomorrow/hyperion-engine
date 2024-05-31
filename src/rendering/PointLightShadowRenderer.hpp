@@ -6,17 +6,13 @@
 #include <core/Base.hpp>
 
 #include <rendering/RenderComponent.hpp>
-#include <rendering/backend/RendererFrame.hpp>
+
+#include <rendering/backend/RenderObject.hpp>
 
 #include <math/BoundingBox.hpp>
 #include <scene/camera/Camera.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
-;
 
 class Light;
 

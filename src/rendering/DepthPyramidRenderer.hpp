@@ -3,20 +3,13 @@
 #ifndef HYPERION_DEPTH_PYRAMID_RENDERER_HPP
 #define HYPERION_DEPTH_PYRAMID_RENDERER_HPP
 
+#include <core/containers/Array.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RenderObject.hpp>
+
+#include <math/Extent.hpp>
 
 namespace hyperion {
-
-using renderer::Frame;
-using renderer::Image;
-using renderer::ImageView;
-using renderer::Sampler;
-using renderer::Device;
 
 class DepthPyramidRenderer
 {
@@ -30,11 +23,10 @@ public:
     const Array<ImageViewRef> &GetMipImageVIews() const
         { return m_depth_pyramid_mips; }
 
-    Extent3D GetExtent() const
-        { return m_depth_pyramid ? m_depth_pyramid->GetExtent() : Extent3D { 1, 1, 1 }; }
-
     bool IsRendered() const
         { return m_is_rendered; }
+
+    Extent3D GetExtent() const;
 
     void Create(const AttachmentRef &depth_attachment);
 

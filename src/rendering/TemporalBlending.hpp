@@ -9,21 +9,10 @@
 
 #include <rendering/Shader.hpp>
 
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererFramebuffer.hpp>
-#include <rendering/backend/RendererImage.hpp>
-#include <rendering/backend/RendererImageView.hpp>
-#include <rendering/backend/RendererSampler.hpp>
-#include <rendering/backend/RendererComputePipeline.hpp>
+#include <rendering/backend/RenderObject.hpp>
 
 namespace hyperion {
 
-using renderer::Frame;
-using renderer::Image;
-using renderer::StorageImage;
-using renderer::ImageView;
-using renderer::Sampler;
-using renderer::Device;
 using renderer::Result;
 
 class Engine;
