@@ -466,6 +466,36 @@ public:
     Iterator Find(const KeyType &key);
     ConstIterator Find(const KeyType &key) const;
 
+    template <class U>
+    Iterator FindAs(const U &key)
+    {
+        const HashCode::ValueType hash_code = HashCode::GetHashCode(key).Value();
+        detail::HashBucket<KeyType, ValueType> *bucket = GetBucketForHash(hash_code);
+
+        typename detail::HashBucket<KeyType, ValueType>::Iterator it = bucket->Find(hash_code);
+
+        if (it == bucket->End()) {
+            return End();
+        }
+
+        return Iterator(this, it);
+    }
+
+    template <class U>
+    ConstIterator FindAs(const U &key) const
+    {
+        const HashCode::ValueType hash_code = HashCode::GetHashCode(key).Value();
+        const detail::HashBucket<KeyType, ValueType> *bucket = GetBucketForHash(hash_code);
+
+        const typename detail::HashBucket<KeyType, ValueType>::ConstIterator it = bucket->Find(hash_code);
+
+        if (it == bucket->End()) {
+            return End();
+        }
+
+        return ConstIterator(this, it);
+    }
+
     bool Contains(const KeyType &key) const;
     
     Iterator Erase(Iterator iter);
