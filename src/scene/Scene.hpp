@@ -131,9 +131,10 @@ public:
      *  no action is performed and true is returned. If the TLAS could not be created, false is returned.
      *  The Scene must have had Init() called on it before calling this.
      */
-    [[nodiscard]]
     bool CreateTLAS();
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     const NodeProxy &GetRoot() const
         { return m_root_node_proxy; }
 

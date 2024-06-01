@@ -6,8 +6,11 @@
 #include <core/Name.hpp>
 #include <core/containers/String.hpp>
 #include <core/memory/ByteBuffer.hpp>
+#include <core/system/Debug.hpp>
+
 #include <asset/serialization/fbom/FBOMResult.hpp>
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
+
 #include <math/MathUtil.hpp>
 #include <math/Vector2.hpp>
 #include <math/Vector3.hpp>
@@ -15,7 +18,6 @@
 #include <math/Matrix3.hpp>
 #include <math/Matrix4.hpp>
 #include <math/Quaternion.hpp>
-#include <core/system/Debug.hpp>
 
 #include <Types.hpp>
 
@@ -42,11 +44,20 @@ struct FBOMData
     FBOMData &operator=(FBOMData &&other) noexcept;
     ~FBOMData();
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return bytes.Any(); }
 
-    const FBOMType &GetType() const { return type; }
-    SizeType TotalSize() const { return bytes.Size(); }
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    const FBOMType &GetType() const
+        { return type; }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    SizeType TotalSize() const
+        { return bytes.Size(); }
 
     /*! \returns The number of bytes read */
     SizeType ReadBytes(SizeType n, void *out) const;
@@ -125,16 +136,20 @@ struct FBOMData
     FBOM_TYPE_FUNCTIONS(Name, Name)
     FBOM_TYPE_FUNCTIONS(Mat3, Matrix3)
     FBOM_TYPE_FUNCTIONS(Mat4, Matrix4)
-    FBOM_TYPE_FUNCTIONS(Vec2f, Vector2)
-    FBOM_TYPE_FUNCTIONS(Vec3f, Vector3)
-    FBOM_TYPE_FUNCTIONS(Vec4f, Vector4)
+    FBOM_TYPE_FUNCTIONS(Vec2f, Vec2f)
+    FBOM_TYPE_FUNCTIONS(Vec3f, Vec3f)
+    FBOM_TYPE_FUNCTIONS(Vec4f, Vec4f)
     FBOM_TYPE_FUNCTIONS(Quaternion, Quaternion)
 
 #undef FBOM_TYPE_FUNCTIONS
 
-    bool IsString() const { return type.IsOrExtends(FBOMString()); }
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool IsString() const
+        { return type.IsOrExtends(FBOMString()); }
 
     template <int string_type>
+    HYP_FORCE_INLINE
     FBOMResult ReadString(containers::detail::String<string_type> &str) const
     {
         static_assert(string_type == int(StringType::ANSI) || string_type == int(StringType::UTF8), "String type must be ANSI or UTF8");
@@ -155,6 +170,8 @@ struct FBOMData
     }
     
     template <int string_type>
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     static FBOMData FromString(const containers::detail::String<string_type> &str)
     {
         static_assert(string_type == int(StringType::ANSI) || string_type == int(StringType::UTF8), "String type must be ANSI or UTF8");
@@ -165,9 +182,12 @@ struct FBOMData
         return data;
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsByteBuffer() const
         { return type.IsOrExtends(FBOMByteBuffer()); }
 
+    HYP_FORCE_INLINE
     FBOMResult ReadByteBuffer(ByteBuffer &byte_buffer) const
     {
         FBOM_ASSERT(IsByteBuffer(), "Type mismatch (expected ByteBuffer)");
@@ -177,6 +197,8 @@ struct FBOMData
         FBOM_RETURN_OK;
     }
     
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     static FBOMData FromByteBuffer(const ByteBuffer &byte_buffer)
     {
         FBOMData data(FBOMByteBuffer(byte_buffer.Size()));
@@ -185,12 +207,17 @@ struct FBOMData
         return data;
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsStruct(const char *type_name) const
         { return type.IsOrExtends(FBOMStruct(type_name, 0)); }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsStruct(const char *type_name, SizeType size) const
         { return type.IsOrExtends(FBOMStruct(type_name, size)); }
 
+    HYP_FORCE_INLINE
     FBOMResult ReadStruct(const char *type_name, SizeType size, void *out) const
     {
         AssertThrow(out != nullptr);
@@ -203,6 +230,7 @@ struct FBOMData
     }
 
     template <class T>
+    HYP_FORCE_INLINE
     FBOMResult ReadStruct(T *out) const
     {
         static_assert(std::is_standard_layout_v<T>, "T must be standard layout to use ReadStruct()");
@@ -211,14 +239,20 @@ struct FBOMData
         return ReadStruct(TypeNameWithoutNamespace<T>().Data(), sizeof(T), out);
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsSequence() const
         { return type.IsOrExtends(FBOMSequence()); }
 
     // does NOT check that the types are exact, just that the size is a match
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsSequenceMatching(const FBOMType &held_type, SizeType num_items) const
         { return type.IsOrExtends(FBOMSequence(held_type, num_items)); }
 
     // does the array size equal byte_size bytes?
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     bool IsSequenceOfByteSize(SizeType byte_size) const
         { return type.IsOrExtends(FBOMSequence(FBOMByte(), byte_size)); }
 
@@ -227,6 +261,8 @@ struct FBOMData
         contain another type, and still a result will be returned.
         
         If type is /not/ an sequence, return zero. */
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     SizeType NumElements(const FBOMType &held_type) const
     {
         if (!IsSequence()) {
@@ -242,6 +278,7 @@ struct FBOMData
         return TotalSize() / held_type_size;
     }
 
+    HYP_FORCE_INLINE
     FBOMResult ReadBytes(SizeType count, ByteBuffer &out) const
     {
         FBOM_ASSERT(count <= bytes.Size(), "Attempt to read past max size of object");
@@ -252,6 +289,7 @@ struct FBOMData
     }
 
     // count is number of ELEMENTS
+    HYP_FORCE_INLINE
     FBOMResult ReadElements(const FBOMType &held_type, SizeType num_items, void *out) const
     {
         AssertThrow(out != nullptr);
@@ -263,6 +301,7 @@ struct FBOMData
         FBOM_RETURN_OK;
     }
 
+    HYP_FORCE_INLINE
     FBOMResult ReadAsType(const FBOMType &read_type, void *out) const
     {
         AssertThrow(out != nullptr);
@@ -274,6 +313,8 @@ struct FBOMData
         FBOM_RETURN_OK;
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     String ToString() const
     {
         std::stringstream stream;
@@ -297,9 +338,13 @@ struct FBOMData
         return String(stream.str().c_str());
     }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     UniqueID GetUniqueID() const
         { return UniqueID(GetHashCode()); }
 
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -312,8 +357,8 @@ struct FBOMData
     }
 
 private:
-    ByteBuffer bytes;
-    FBOMType type;
+    ByteBuffer  bytes;
+    FBOMType    type;
 };
 
 } // namespace hyperion::fbom

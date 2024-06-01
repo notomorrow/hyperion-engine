@@ -279,6 +279,11 @@ void EntityManager::NotifySystemsOfEntityRemoved(ID<Entity> entity, const TypeMa
     }
 }
 
+ComponentInterfaceBase *EntityManager::GetComponentInterface(TypeID type_id)
+{
+    return ComponentInterfaceRegistry::GetInstance().GetComponentInterface(type_id);
+}
+
 void EntityManager::Update(GameCounter::TickUnit delta)
 {
     if (m_command_queue.HasUpdates()) {

@@ -23,7 +23,6 @@
 namespace hyperion {
 
 using renderer::PackedVertex;
-using renderer::PackedIndex;
 using renderer::Topology;
 using renderer::IndirectDrawCommand;
 
@@ -104,7 +103,7 @@ public:
     Topology GetTopology() const { return m_mesh_attributes.topology; }
 
     Array<PackedVertex> BuildPackedVertices() const;
-    Array<PackedIndex> BuildPackedIndices() const;
+    Array<uint32> BuildPackedIndices() const;
 
     void CalculateNormals(bool weighted = false);
     void CalculateTangents();

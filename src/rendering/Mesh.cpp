@@ -498,14 +498,14 @@ Array<PackedVertex> Mesh::BuildPackedVertices() const
     return packed_vertices;
 }
 
-Array<PackedIndex> Mesh::BuildPackedIndices() const
+Array<uint32> Mesh::BuildPackedIndices() const
 {
     auto ref = m_streamed_mesh_data->AcquireRef();
     const MeshData &mesh_data = ref->GetMeshData();
 
     AssertThrow(mesh_data.indices.Size() % 3 == 0);
 
-    return Array<PackedIndex>(mesh_data.indices.Begin(), mesh_data.indices.End());
+    return Array<uint32>(mesh_data.indices.Begin(), mesh_data.indices.End());
 }
 
 void Mesh::CalculateNormals(bool weighted)

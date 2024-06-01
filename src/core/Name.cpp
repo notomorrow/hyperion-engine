@@ -47,7 +47,12 @@ Name CreateNameFromDynamicString(const ANSIString &str)
     return Name(name_registration.id);
 }
 
-NameID NameRegistration::GenerateID(const ANSIString &str)
+Name CreateWeakNameFromDynamicString(const ANSIStringView &str)
+{
+    return Name(NameRegistration::GenerateID(str));
+}
+
+NameID NameRegistration::GenerateID(const ANSIStringView &str)
 {
     const HashCode hash_code = HashCode::GetHashCode(str.Data());
     const NameID id = hash_code.Value();

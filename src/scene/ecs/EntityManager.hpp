@@ -517,8 +517,6 @@ public:
         return it->second.components;
     }
 
-    ComponentInterfaceBase *GetComponentInterface(TypeID type_id);
-
     template <class Component>
     ComponentID AddComponent(ID<Entity> entity, Component &&component)
     {
@@ -599,6 +597,8 @@ public:
             }
         }
     }
+
+    ComponentInterfaceBase *GetComponentInterface(TypeID type_id);
 
     /*! \brief Gets an entity set with the specified components, creating it if it doesn't exist.
      *  This method is thread-safe, and can be used within Systems running in task threads.

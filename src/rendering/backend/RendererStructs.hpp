@@ -10,8 +10,6 @@
 #include <Types.hpp>
 #include <HashCode.hpp>
 
-#include <tuple>
-
 namespace hyperion::renderer {
 
 struct alignas(16) PackedVertex
@@ -27,8 +25,6 @@ struct alignas(16) PackedVertex
 };
 
 static_assert(sizeof(PackedVertex) == sizeof(float32) * 8);
-
-using PackedIndex = uint32;
 
 enum class DatumType : uint32
 {

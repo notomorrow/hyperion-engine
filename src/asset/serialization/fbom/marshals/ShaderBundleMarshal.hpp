@@ -86,7 +86,7 @@ public:
             }
         }
 
-        auto properties_array = in_object.GetDefinition().properties.GetPropertySet().ToArray();
+        auto properties_array = in_object.GetDefinition().GetProperties().GetPropertySet().ToArray();
         out.SetProperty("properties.size", FBOMData::FromUnsignedInt(uint32(properties_array.Size())));
 
         for (SizeType index = 0; index < properties_array.Size(); index++) {

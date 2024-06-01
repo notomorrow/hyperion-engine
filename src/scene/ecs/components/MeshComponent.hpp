@@ -7,7 +7,6 @@
 #include <core/utilities/UserData.hpp>
 
 #include <scene/animation/Skeleton.hpp>
-#include <scene/ecs/ComponentInterface.hpp>
 
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>

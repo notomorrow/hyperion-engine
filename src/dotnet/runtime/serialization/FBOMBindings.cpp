@@ -1,0 +1,133 @@
+/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#include <asset/serialization/Serialization.hpp>
+#include <asset/serialization/fbom/FBOMBaseTypes.hpp>
+
+using namespace hyperion;
+using namespace fbom;
+
+extern "C" {
+
+#pragma region FBOMType
+
+#define FBOM_TYPE_CREATE_FUNCTION(fbom_type_name, function_suffix) \
+    HYP_EXPORT FBOMType *FBOMType_##function_suffix() \
+    { \
+        return new FBOM##fbom_type_name(); \
+    }
+
+FBOM_TYPE_CREATE_FUNCTION(Unset, Unset)
+FBOM_TYPE_CREATE_FUNCTION(UnsignedInt, UInt32)
+FBOM_TYPE_CREATE_FUNCTION(UnsignedLong, UInt64)
+FBOM_TYPE_CREATE_FUNCTION(Int, Int32)
+FBOM_TYPE_CREATE_FUNCTION(Long, Int64)
+FBOM_TYPE_CREATE_FUNCTION(Float, Float)
+FBOM_TYPE_CREATE_FUNCTION(Bool, Bool)
+FBOM_TYPE_CREATE_FUNCTION(Byte, Byte)
+FBOM_TYPE_CREATE_FUNCTION(Name, Name)
+FBOM_TYPE_CREATE_FUNCTION(Mat3, Matrix3)
+FBOM_TYPE_CREATE_FUNCTION(Mat4, Matrix4)
+FBOM_TYPE_CREATE_FUNCTION(Vec2f, Vec2f)
+FBOM_TYPE_CREATE_FUNCTION(Vec3f, Vec3f)
+FBOM_TYPE_CREATE_FUNCTION(Vec4f, Vec4f)
+FBOM_TYPE_CREATE_FUNCTION(Quaternion, Quaternion)
+
+#undef FBOM_TYPE_CREATE_FUNCTION
+
+HYP_EXPORT void FBOMType_Destroy(FBOMType *ptr)
+{
+    if (!ptr) {
+        return;
+    }
+
+    delete ptr;
+}
+
+HYP_EXPORT bool FBOMType_Equals(FBOMType *lhs, FBOMType *rhs)
+{
+    if (!lhs || !rhs) {
+        return !lhs && !rhs;
+    }
+
+    return *lhs == *rhs;
+}
+
+HYP_EXPORT bool FBOMType_IsOrExtends(FBOMType *lhs, FBOMType *rhs, bool allow_unbounded)
+{
+    if (!lhs || !rhs) {
+        return false;
+    }
+
+    return lhs->IsOrExtends(*rhs, allow_unbounded);
+}
+
+#pragma endregion FBOMType
+
+#pragma region FBOMData
+
+HYP_EXPORT FBOMData *FBOMData_Create(FBOMType *type_ptr)
+{
+    return new FBOMData(type_ptr != nullptr ? *type_ptr : FBOMUnset());
+}
+
+HYP_EXPORT void FBOMData_Destroy(FBOMData *ptr)
+{
+    if (!ptr) {
+        return;
+    }
+
+    delete ptr;
+}
+
+HYP_EXPORT FBOMType *FBOMData_GetType(FBOMData *data)
+{
+    if (!data) {
+        return nullptr;
+    }
+
+    return new FBOMType(data->GetType());
+}
+
+HYP_EXPORT uint64 FBOMData_TotalSize(FBOMData *data)
+{
+    if (!data) {
+        return 0;
+    }
+
+    return data->TotalSize();
+}
+
+#define FBOM_TYPE_GET_VALUE_FUNCTION(fbom_type_name, function_suffix, c_type) \
+    HYP_EXPORT bool FBOMData_Get##function_suffix(FBOMData *data, c_type *out_value) \
+    { \
+        if (!data) { \
+            return false; \
+        } \
+        \
+        if (auto err = data->Read##fbom_type_name(out_value)) { \
+            return false; \
+        } \
+        \
+        return true; \
+    }
+
+FBOM_TYPE_GET_VALUE_FUNCTION(UnsignedInt, UInt32, uint32)
+FBOM_TYPE_GET_VALUE_FUNCTION(UnsignedLong, UInt64, uint64)
+FBOM_TYPE_GET_VALUE_FUNCTION(Int, Int32, int32)
+FBOM_TYPE_GET_VALUE_FUNCTION(Long, Int64, int64)
+FBOM_TYPE_GET_VALUE_FUNCTION(Float, Float, float)
+FBOM_TYPE_GET_VALUE_FUNCTION(Bool, Bool, bool)
+FBOM_TYPE_GET_VALUE_FUNCTION(Byte, Byte, ubyte)
+FBOM_TYPE_GET_VALUE_FUNCTION(Name, Name, Name)
+FBOM_TYPE_GET_VALUE_FUNCTION(Mat3, Matrix3, Matrix3)
+FBOM_TYPE_GET_VALUE_FUNCTION(Mat4, Matrix4, Matrix4)
+FBOM_TYPE_GET_VALUE_FUNCTION(Vec2f, Vec2f, Vec2f)
+FBOM_TYPE_GET_VALUE_FUNCTION(Vec3f, Vec3f, Vec3f)
+FBOM_TYPE_GET_VALUE_FUNCTION(Vec4f, Vec4f, Vec4f)
+FBOM_TYPE_GET_VALUE_FUNCTION(Quaternion, Quaternion, Quaternion)
+
+#undef FBOM_TYPE_GET_VALUE_FUNCTION
+
+#pragma endregion FBOMData
+
+} // extern "C"

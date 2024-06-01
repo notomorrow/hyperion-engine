@@ -18,6 +18,9 @@
 #include <dotnet/runtime/scene/ManagedSceneTypes.hpp>
 #include <dotnet/core/RefCountedPtrBindings.hpp>
 
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
+
 #include <Engine.hpp>
 #include <Types.hpp>
 
@@ -47,6 +50,11 @@ HYP_EXPORT bool EntityManager_HasComponent(EntityManager *manager, uint32 compon
 HYP_EXPORT void *EntityManager_GetComponent(EntityManager *manager, uint32 component_type_id, ManagedEntity entity)
 {
     return manager->TryGetComponent(TypeID { component_type_id }, entity);
+}
+
+HYP_EXPORT ComponentInterfaceBase *EntityManager_GetComponentInterface(EntityManager *manager, uint32 component_type_id)
+{
+    return manager->GetComponentInterface(TypeID { component_type_id });
 }
 
 // Components

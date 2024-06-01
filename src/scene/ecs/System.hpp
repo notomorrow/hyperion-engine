@@ -12,8 +12,6 @@
 
 #include <GameCounter.hpp>
 
-#include <tuple>
-
 namespace hyperion {
 
 class EntityManager;

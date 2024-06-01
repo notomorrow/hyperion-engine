@@ -5,6 +5,7 @@
 
 #include <core/containers/HashMap.hpp>
 #include <core/containers/String.hpp>
+#include <core/utilities/StringView.hpp>
 #include <core/utilities/FormatFwd.hpp>
 #include <core/threading/Mutex.hpp>
 
@@ -48,7 +49,7 @@ struct NameRegistration
         return id;
     }
     
-    HYP_API static NameID GenerateID(const ANSIString &str);
+    HYP_API static NameID GenerateID(const ANSIStringView &str);
 
     template <class HashedName>
     static NameRegistration FromHashedName(HashedName &&hashed_name, bool lock = true)
@@ -97,8 +98,11 @@ struct Formatter<StringType, Name>
 } // namespace utilities
 
 
-/*! \brief Creates a Name from a dynamic string. */
+/*! \brief Creates a Name from a dynamic string. Adds it to the registry, so a lock is required. */
 extern HYP_API Name CreateNameFromDynamicString(const ANSIString &str);
+
+/*! \brief Creates a Name from a dynamic string. Does not add it to the registry. */
+extern HYP_API Name CreateWeakNameFromDynamicString(const ANSIStringView &str);
 
 #if defined(HYP_COMPILE_TIME_NAME_HASHING) && HYP_COMPILE_TIME_NAME_HASHING
 #define HYP_HASHED_NAME(name)   ::hyperion::HashedName<::hyperion::StaticString<sizeof(HYP_STR(name))>(HYP_STR(name))>()

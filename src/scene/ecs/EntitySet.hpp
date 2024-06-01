@@ -16,8 +16,6 @@
 
 #include <Types.hpp>
 
-#include <tuple>
-
 namespace hyperion {
 
 template <class ... Components>

@@ -107,10 +107,10 @@ Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
         AssertThrow(m_packed_indices[i] < m_packed_vertices.Size());
     }
 
-    Result result = Result { };
+    Result result { };
 
     const SizeType packed_vertices_size = m_packed_vertices.Size() * sizeof(PackedVertex);
-    const SizeType packed_indices_size = m_packed_indices.Size() * sizeof(PackedIndex);
+    const SizeType packed_indices_size = m_packed_indices.Size() * sizeof(uint32);
 
     HYPERION_BUBBLE_ERRORS(
         m_packed_vertex_buffer->Create(device, packed_vertices_size)
@@ -127,7 +127,7 @@ Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
         return result;
     }
 
-    auto vertices_staging_buffer = MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::STAGING_BUFFER);
+    GPUBufferRef<Platform::VULKAN> vertices_staging_buffer = MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::STAGING_BUFFER);
     HYPERION_BUBBLE_ERRORS(vertices_staging_buffer->Create(device, packed_vertices_size));
     vertices_staging_buffer->Memset(device, packed_vertices_size, 0x0); // zero out
     vertices_staging_buffer->Copy(device, m_packed_vertices.Size() * sizeof(PackedVertex), m_packed_vertices.Data());
@@ -138,10 +138,10 @@ Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
         return result;
     }
     
-    auto indices_staging_buffer = MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::STAGING_BUFFER);
+    GPUBufferRef<Platform::VULKAN> indices_staging_buffer = MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::STAGING_BUFFER);
     HYPERION_BUBBLE_ERRORS(indices_staging_buffer->Create(device, packed_indices_size));
     indices_staging_buffer->Memset(device, packed_indices_size, 0x0); // zero out
-    indices_staging_buffer->Copy(device, m_packed_indices.Size() * sizeof(PackedIndex), m_packed_indices.Data());
+    indices_staging_buffer->Copy(device, m_packed_indices.Size() * sizeof(uint32), m_packed_indices.Data());
 
     if (!result) {
         HYPERION_IGNORE_ERRORS(vertices_staging_buffer->Destroy(device));

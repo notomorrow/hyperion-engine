@@ -1,32 +1,76 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/ecs/ComponentInterface.hpp>
+
 #include <core/containers/FixedArray.hpp>
+
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
 
 namespace hyperion {
 
-struct ComponentInterfaceHolder
+#pragma region ComponentInterfaceRegistry
+
+ComponentInterfaceRegistry &ComponentInterfaceRegistry::GetInstance()
 {
-    static constexpr uint max_component_interfaces = 256;
+    static ComponentInterfaceRegistry instance;
 
-    FixedArray<ComponentInterfaceBase *, max_component_interfaces> component_interfaces;
-    uint num_component_interfaces = 0;
+    return instance;
+}
 
-    void AddComponentInterface(ComponentInterfaceBase *component_interface)
-    {
-        AssertThrowMsg(num_component_interfaces < max_component_interfaces, "Maximum number of component interfaces reached");
+ComponentInterfaceRegistry::ComponentInterfaceRegistry()
+    : m_is_initialized(false)
+{
+}
 
-        component_interfaces[num_component_interfaces++] = component_interface;
+void ComponentInterfaceRegistry::Initialize()
+{
+    AssertThrowMsg(!m_is_initialized, "Component interface registry already initialized!");
+
+    HYP_LOG(ECS, LogLevel::DEBUG, "Initializing ComponentInterface registry with {} factories", m_factories.Size());
+
+    for (auto &it : m_factories) {
+        m_interfaces.Insert({ it.first, it.second() });
     }
-};
 
-static ComponentInterfaceHolder component_interface_holder { };
+    for (auto &it : m_interfaces) {
+        it.second->Initialize();
 
-ComponentInterfaceBase::ComponentInterfaceBase(TypeID type_id, Array<ComponentProperty> &&properties)
-    : m_type_id(type_id),
-      m_properties(std::move(properties))
+        HYP_LOG(ECS, LogLevel::DEBUG, "Create new ComponentInterface with {} Properties", it.second->GetProperties().Size());
+    }
+
+    m_is_initialized = true;
+}
+
+void ComponentInterfaceRegistry::Shutdown()
 {
-    component_interface_holder.AddComponentInterface(this);
+    if (!m_is_initialized) {
+        return;
+    }
+
+    m_interfaces.Clear();
+
+    m_is_initialized = false;
+}
+
+void ComponentInterfaceRegistry::Register(TypeID component_type_id, UniquePtr< ComponentInterfaceBase >(*fptr)())
+{
+    m_factories.Insert({ component_type_id, fptr });
+}
+
+#pragma endregion ComponentInterfaceRegistry
+
+#pragma region ComponentInterfaceBase
+
+void ComponentInterfaceBase::Initialize()
+{
+    m_type_id = GetTypeID_Internal();
+    m_properties = GetProperties_Internal();
+}
+
+ComponentInterfaceBase::ComponentInterfaceBase()
+    : m_type_id(TypeID::Void())
+{
 }
 
 ComponentProperty *ComponentInterfaceBase::GetProperty(Name name)
@@ -51,15 +95,6 @@ const ComponentProperty *ComponentInterfaceBase::GetProperty(Name name) const
     return nullptr;
 }
 
-ComponentInterfaceBase *GetComponentInterface(TypeID type_id)
-{
-    for (uint i = 0; i < component_interface_holder.num_component_interfaces; ++i) {
-        if (component_interface_holder.component_interfaces[i]->GetTypeID() == type_id) {
-            return component_interface_holder.component_interfaces[i];
-        }
-    }
-
-    return nullptr;
-}
+#pragma endregion ComponentInterfaceBase
 
 } // namespace hyperion

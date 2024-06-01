@@ -14,8 +14,6 @@
 #include <HashCode.hpp>
 #include <Types.hpp>
 
-#include <tuple>
-
 namespace hyperion {
 
 class BoundingBox;

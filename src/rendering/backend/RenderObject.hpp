@@ -19,7 +19,6 @@
 #include <rendering/backend/Platform.hpp>
 
 #include <mutex>
-#include <tuple>
 
 namespace hyperion {
 namespace renderer {

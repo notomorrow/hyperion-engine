@@ -297,28 +297,27 @@ void HyperionEditorImpl::CreateMainPanel()
     RC<UITab> game_tab = tab_view->AddTab(HYP_NAME(Game_Tab), "Game");
     game_tab->GetContents()->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
 
-    for (int i = 0; i < 50; i++) {
-        auto game_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(CreateNameFromDynamicString(ANSIString("Hello_world_button_") + ANSIString::ToString(i)), Vec2i { 20, i * 25 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
-        // game_tab_content_button->SetParentAlignment(UIObjectAlignment::CENTER);
-        // game_tab_content_button->SetOriginAlignment(UIObjectAlignment::CENTER);
-        game_tab_content_button->SetText(String("Hello ") + String::ToString(i));
-        game_tab->GetContents()->AddChildUIObject(game_tab_content_button);
-    }
+    auto game_tab_content_button = GetUIStage()->CreateUIObject<UIButton>(CreateNameFromDynamicString("Hello_world_button"), Vec2i { 20, 0 }, UIObjectSize({ 50, UIObjectSize::PIXEL }, { 25, UIObjectSize::PIXEL }));
+    // game_tab_content_button->SetParentAlignment(UIObjectAlignment::CENTER);
+    // game_tab_content_button->SetOriginAlignment(UIObjectAlignment::CENTER);
+    game_tab_content_button->SetText("Hello");
+
+    game_tab_content_button->GetScene()->GetEntityManager()->AddComponent(game_tab_content_button->GetEntity(), ScriptComponent {
+        {
+            .assembly_name  = "csharp.dll",
+            .class_name     = "TestUIScript"
+        }
+    });
+
+    AssertThrow(game_tab_content_button->GetScene()->GetEntityManager()->HasEntity(game_tab_content_button->GetEntity()));
+
+    game_tab->GetContents()->AddChildUIObject(game_tab_content_button);
 
     m_main_panel->AddChildUIObject(dockable_container);
 
 #endif
 
     // AssertThrow(game_tab_content_button->GetScene() != nullptr);
-
-    // game_tab_content_button->GetScene()->GetEntityManager()->AddComponent(game_tab_content_button->GetEntity(), ScriptComponent {
-    //     {
-    //         .assembly_name  = "csharp.dll",
-    //         .class_name     = "TestUIScript"
-    //     }
-    // });
-
-    // AssertThrow(game_tab_content_button->GetScene()->GetEntityManager()->HasEntity(game_tab_content_button->GetEntity()));
 
     // ui_image->SetTexture(AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg"));
 }

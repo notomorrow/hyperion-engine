@@ -130,6 +130,20 @@ namespace Hyperion
             return Marshal.PtrToStructure<T>(componentPtr);
         }
 
+        public ComponentInterface<T>? GetComponentInterface<T>() where T : struct, IComponent
+        {
+            ComponentDefinition typeId = componentNativeTypeIDs[typeof(T)];
+
+            IntPtr componentInterfacePtr = EntityManager_GetComponentInterface(ptr, typeId.nativeTypeId);
+
+            if (componentInterfacePtr == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            return new ComponentInterface<T>(componentInterfacePtr);
+        }
+
         [DllImport("hyperion", EntryPoint = "EntityManager_AddEntity")]
         private static extern Entity EntityManager_AddEntity(IntPtr entityManagerPtr);
 
@@ -144,6 +158,9 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "EntityManager_GetComponent")]
         private static extern IntPtr EntityManager_GetComponent(IntPtr entityManagerPtr, TypeID typeID, Entity entity);
+
+        [DllImport("hyperion", EntryPoint = "EntityManager_GetComponentInterface")]
+        private static extern IntPtr EntityManager_GetComponentInterface(IntPtr entityManagerPtr, TypeID typeID);
 
         // Components
         // TransformComponent

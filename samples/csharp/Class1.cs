@@ -10,7 +10,33 @@ public class TestUIScript : UIEventHandler
     {
         base.Init(entity);
 
-        // UIObject.OriginAlignment = UIObjectAlignment.TopLeft;
+        UIObject.OriginAlignment = UIObjectAlignment.TopLeft;
+
+        var tmpEntity = Scene.EntityManager.AddEntity();
+        var meshComponentId = Scene.EntityManager.AddComponent<MeshComponent>(tmpEntity, new MeshComponent
+        {
+            Mesh = new Mesh(
+                new List<Vertex>
+                {
+                    new Vertex(new Vec3f(0, 0, 0), new Vec2f(0, 0), new Vec3f(0, 0, 1)),
+                    new Vertex(new Vec3f(1, 0, 0), new Vec2f(1, 0), new Vec3f(0, 0, 1)),
+                    new Vertex(new Vec3f(1, 1, 0), new Vec2f(1, 1), new Vec3f(0, 0, 1)),
+                    new Vertex(new Vec3f(0, 1, 0), new Vec2f(0, 1), new Vec3f(0, 0, 1))
+                },
+                new List<uint>
+                {
+                    0, 1, 2,
+                    2, 3, 0
+                }
+            ),
+            Material = new Material()
+        });
+        var meshComponent = Scene.EntityManager.GetComponent<MeshComponent>(tmpEntity);
+
+        var testComponentInterface = Scene.EntityManager.GetComponentInterface<MeshComponent>();
+        Logger.Log(LogType.Info, "Test component interface: {0}", testComponentInterface.GetType().Name);
+        Logger.Log(LogType.Info, "Test component interface: {0}", testComponentInterface["Mesh"].GetValue(ref meshComponent).GetUInt32());
+
 
         Console.WriteLine("Init TestUIScript object with entity : " + entity.ID);
 
