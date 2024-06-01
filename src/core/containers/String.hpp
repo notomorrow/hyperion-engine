@@ -630,7 +630,7 @@ public:
     [[nodiscard]]
     HYP_FORCE_INLINE
     HashCode GetHashCode() const
-        { return HashCode::GetHashCode(Data()); }
+        { return HashCode::GetHashCode(Begin(), End()); }
 
     HYP_DEF_STL_BEGIN_END(
         Base::Begin(),

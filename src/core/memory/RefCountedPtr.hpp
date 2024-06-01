@@ -975,6 +975,16 @@ public:
 
     [[nodiscard]]
     HYP_FORCE_INLINE
+    bool operator==(const WeakRefCountedPtr &other) const
+        { return Base::operator==(other); }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
+    bool operator!=(const WeakRefCountedPtr &other) const
+        { return Base::operator!=(other); }
+
+    [[nodiscard]]
+    HYP_FORCE_INLINE
     RefCountedPtr<T, CountType> Lock() const
     {
         RefCountedPtr<T, CountType> rc;
