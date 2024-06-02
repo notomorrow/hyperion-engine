@@ -27,12 +27,12 @@ class ByteBuffer
 public:
     ByteBuffer() = default;
 
-    ByteBuffer(SizeType count)
+    explicit ByteBuffer(SizeType count)
     {
         SetSize(count);
     }
 
-    ByteBuffer(SizeType count, const void *data)
+    explicit ByteBuffer(SizeType count, const void *data)
     {
         SetData(count, data);
     }

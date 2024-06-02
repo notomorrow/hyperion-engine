@@ -299,10 +299,9 @@ public:
 
 struct FBOMConfig
 {
-    bool continue_on_external_load_error = false;
-
-    String base_path;
-    FlatMap<Pair<String, uint32>, FBOMObject> external_data_cache;
+    bool                                        continue_on_external_load_error = false;
+    String                                      base_path;
+    FlatMap<Pair<String, uint32>, FBOMObject>   external_data_cache;
 };
 
 class FBOMReader
@@ -314,7 +313,7 @@ public:
     FBOMResult Deserialize(const FBOMObject &in, FBOMDeserializedObject &out_object)
     {
         const String object_type_name(in.m_object_type.name);
-        const auto *loader = FBOM::GetInstance().GetLoader(object_type_name);
+        const FBOMMarshalerBase *loader = FBOM::GetInstance().GetLoader(object_type_name);
 
         if (!loader) {
             return { FBOMResult::FBOM_ERR, "Loader not registered for type" };
@@ -437,6 +436,11 @@ private:
         } else if (m_swap_endianness) {
             SwapEndianness(value);
         }
+    }
+
+    bool HasCustomMarshalerForType(const FBOMType &type) const
+    {
+        return FBOM::GetInstance().GetLoader(type.name) != nullptr;
     }
 
     FBOMCommand NextCommand(BufferedReader *);

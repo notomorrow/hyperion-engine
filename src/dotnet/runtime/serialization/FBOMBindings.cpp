@@ -97,37 +97,104 @@ HYP_EXPORT uint64 FBOMData_TotalSize(FBOMData *data)
     return data->TotalSize();
 }
 
-#define FBOM_TYPE_GET_VALUE_FUNCTION(fbom_type_name, function_suffix, c_type) \
+#define FBOM_TYPE_GET_SET_FUNCTIONS(fbom_type_name, function_suffix, c_type) \
     HYP_EXPORT bool FBOMData_Get##function_suffix(FBOMData *data, c_type *out_value) \
     { \
-        if (!data) { \
-            return false; \
-        } \
+        AssertThrow(data != nullptr); \
         \
         if (auto err = data->Read##fbom_type_name(out_value)) { \
             return false; \
         } \
         \
         return true; \
+    } \
+    \
+    HYP_EXPORT void FBOMData_Set##function_suffix(FBOMData *data, c_type *in_value) \
+    { \
+        AssertThrow(data != nullptr); \
+        \
+        *data = FBOMData::From##fbom_type_name(*in_value); \
     }
 
-FBOM_TYPE_GET_VALUE_FUNCTION(UnsignedInt, UInt32, uint32)
-FBOM_TYPE_GET_VALUE_FUNCTION(UnsignedLong, UInt64, uint64)
-FBOM_TYPE_GET_VALUE_FUNCTION(Int, Int32, int32)
-FBOM_TYPE_GET_VALUE_FUNCTION(Long, Int64, int64)
-FBOM_TYPE_GET_VALUE_FUNCTION(Float, Float, float)
-FBOM_TYPE_GET_VALUE_FUNCTION(Bool, Bool, bool)
-FBOM_TYPE_GET_VALUE_FUNCTION(Byte, Byte, ubyte)
-FBOM_TYPE_GET_VALUE_FUNCTION(Name, Name, Name)
-FBOM_TYPE_GET_VALUE_FUNCTION(Mat3, Matrix3, Matrix3)
-FBOM_TYPE_GET_VALUE_FUNCTION(Mat4, Matrix4, Matrix4)
-FBOM_TYPE_GET_VALUE_FUNCTION(Vec2f, Vec2f, Vec2f)
-FBOM_TYPE_GET_VALUE_FUNCTION(Vec3f, Vec3f, Vec3f)
-FBOM_TYPE_GET_VALUE_FUNCTION(Vec4f, Vec4f, Vec4f)
-FBOM_TYPE_GET_VALUE_FUNCTION(Quaternion, Quaternion, Quaternion)
+FBOM_TYPE_GET_SET_FUNCTIONS(UnsignedInt, UInt32, uint32)
+FBOM_TYPE_GET_SET_FUNCTIONS(UnsignedLong, UInt64, uint64)
+FBOM_TYPE_GET_SET_FUNCTIONS(Int, Int32, int32)
+FBOM_TYPE_GET_SET_FUNCTIONS(Long, Int64, int64)
+FBOM_TYPE_GET_SET_FUNCTIONS(Float, Float, float)
+FBOM_TYPE_GET_SET_FUNCTIONS(Bool, Bool, bool)
+FBOM_TYPE_GET_SET_FUNCTIONS(Byte, Byte, ubyte)
+FBOM_TYPE_GET_SET_FUNCTIONS(Name, Name, Name)
+FBOM_TYPE_GET_SET_FUNCTIONS(Mat3, Matrix3, Matrix3)
+FBOM_TYPE_GET_SET_FUNCTIONS(Mat4, Matrix4, Matrix4)
+FBOM_TYPE_GET_SET_FUNCTIONS(Vec2f, Vec2f, Vec2f)
+FBOM_TYPE_GET_SET_FUNCTIONS(Vec3f, Vec3f, Vec3f)
+FBOM_TYPE_GET_SET_FUNCTIONS(Vec4f, Vec4f, Vec4f)
+FBOM_TYPE_GET_SET_FUNCTIONS(Quaternion, Quaternion, Quaternion)
 
-#undef FBOM_TYPE_GET_VALUE_FUNCTION
+HYP_EXPORT bool FBOMData_GetObject(FBOMData *data, FBOMObject *out_ptr)
+{
+    AssertThrow(data != nullptr);
+    AssertThrow(out_ptr != nullptr);
+
+    if (auto err = data->ReadObject(*out_ptr)) {
+        return false;
+    }
+
+    return true;
+}
+
+HYP_EXPORT void FBOMData_SetObject(FBOMData *data, FBOMObject *in_ptr)
+{
+    AssertThrow(data != nullptr);
+    AssertThrow(in_ptr != nullptr);
+
+    *data = FBOMData::FromObject(*in_ptr);
+}
+
+#undef FBOM_TYPE_GET_SET_FUNCTIONS
 
 #pragma endregion FBOMData
+
+#pragma region FBOMObject
+
+HYP_EXPORT FBOMObject *FBOMObject_Create()
+{
+    return new FBOMObject();
+}
+
+HYP_EXPORT void FBOMObject_Destroy(FBOMObject *ptr)
+{
+    if (!ptr) {
+        return;
+    }
+
+    delete ptr;
+}
+
+HYP_EXPORT bool FBOMObject_GetProperty(FBOMObject *ptr, const char *key, FBOMData *out_data_ptr)
+{
+    AssertThrow(ptr != nullptr);
+    AssertThrow(out_data_ptr != nullptr);
+
+    if (!ptr->HasProperty(key)) {
+        return false;
+    }
+
+    *out_data_ptr = ptr->GetProperty(key);
+
+    return true;
+}
+
+HYP_EXPORT bool FBOMObject_SetProperty(FBOMObject *ptr, const char *key, FBOMData *data_ptr)
+{
+    AssertThrow(ptr != nullptr);
+    AssertThrow(data_ptr != nullptr);
+
+    ptr->SetProperty(key, *data_ptr);
+
+    return true;
+}
+
+#pragma endregion FBOMObject
 
 } // extern "C"

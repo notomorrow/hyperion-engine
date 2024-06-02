@@ -167,6 +167,11 @@ namespace Hyperion
             return new BoundingBox(left.min * right, left.max * right);
         }
 
+        public override string ToString()
+        {
+            return $"BoundingBox(min: {min}, max: {max})";
+        }
+
         [DllImport("hyperion", EntryPoint = "BoundingBox_GetRadius")]
         private static extern float BoundingBox_GetRadius([In] ref BoundingBox box);
 

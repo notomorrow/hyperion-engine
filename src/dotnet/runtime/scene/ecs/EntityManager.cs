@@ -115,7 +115,7 @@ namespace Hyperion
             return result;
         }
 
-        public T GetComponent<T>(Entity entity) where T : struct, IComponent
+        public ref T GetComponent<T>(Entity entity) where T : struct, IComponent
         {
             ComponentDefinition typeId = componentNativeTypeIDs[typeof(T)];
 
@@ -123,11 +123,38 @@ namespace Hyperion
 
             if (componentPtr == IntPtr.Zero)
             {
-                return default(T);
+                throw new Exception("Failed to get component of type " + typeof(T).Name + " for entity " + entity);
             }
 
-            // convert the native pointer to component struct
-            return Marshal.PtrToStructure<T>(componentPtr);
+            // marshal IntPtr to struct ref
+            unsafe
+            {
+                return ref System.Runtime.CompilerServices.Unsafe.AsRef<T>(componentPtr.ToPointer());
+            }
+        }
+
+        public ComponentWrapper<T> GetComponentWrapper<T>(Entity entity) where T : struct, IComponent
+        {
+            ComponentDefinition componentDefinition = componentNativeTypeIDs[typeof(T)];
+
+            IntPtr componentPtr = EntityManager_GetComponent(ptr, componentDefinition.nativeTypeId, entity);
+
+            if (componentPtr == IntPtr.Zero)
+            {
+                throw new Exception("Failed to get component of type " + typeof(T).Name + " for entity " + entity);
+            }
+
+            IntPtr componentInterfacePtr = EntityManager_GetComponentInterface(ptr, componentDefinition.nativeTypeId);
+
+            if (componentInterfacePtr == IntPtr.Zero)
+            {
+                throw new Exception("Failed to get component interface for type " + typeof(T).Name);
+            }
+
+            return new ComponentWrapper<T> {
+                componentPtr = componentPtr,
+                componentInterfacePtr = componentInterfacePtr
+            };
         }
 
         public ComponentInterface<T>? GetComponentInterface<T>() where T : struct, IComponent

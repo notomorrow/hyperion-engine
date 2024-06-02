@@ -12,6 +12,7 @@
 
 #include <dotnet/interop/ManagedMethod.hpp>
 #include <dotnet/interop/ManagedObject.hpp>
+#include <dotnet/interop/ManagedGuid.hpp>
 
 namespace hyperion::dotnet {
 class Object;
@@ -23,8 +24,10 @@ extern "C" {
 
 struct ManagedClass
 {
-    hyperion::int32         type_hash;
-    hyperion::dotnet::Class *class_object;
+    hyperion::int32                 type_hash;
+    hyperion::dotnet::Class         *class_object;
+    hyperion::dotnet::ManagedGuid   new_object_guid;
+    hyperion::dotnet::ManagedGuid   free_object_guid;
 };
 
 }
@@ -35,8 +38,8 @@ class Class
 {
 public:
     // Function to create a new object of this class with the given arguments
-    using NewObjectFunction     = ManagedObject(*)(void);
-    using FreeObjectFunction    = void(*)(ManagedObject);
+    using NewObjectFunction = ManagedObject(*)(void);
+    using FreeObjectFunction = void(*)(ManagedObject);
 
     Class(ClassHolder *parent, String name)
         : m_parent(parent),

@@ -22,6 +22,9 @@ extern "C" struct ManagedHandle
     // Called from C# to release the handle
     // and decrement the reference count
     void DecRef(uint32 type_id);
+
+    uint32 GetRefCountStrong(uint32 type_id) const;
+    uint32 GetRefCountWeak(uint32 type_id) const;
 };
 
 static_assert(sizeof(ManagedHandle) == 4, "ManagedHandle must be 4 bytes to match C# struct size");

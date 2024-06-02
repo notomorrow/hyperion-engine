@@ -3,7 +3,28 @@
 
 #include <rendering/backend/RendererFramebuffer.hpp>
 
+#include <core/utilities/Variant.hpp>
+
 namespace hyperion {
+
+template <class T>
+struct Property
+{
+    void    *parent;
+    T       value;
+
+    Property(void *parent)
+        : parent(parent)
+    {
+    }
+
+    template <class... Args>
+    Property(void *parent, Args &&... args)
+        : parent(parent),
+          value(std::forward<Args>(args)...)
+    {
+    }
+};
 
 template <>
 class ComponentInterface<MeshComponent> : public ComponentInterfaceBase
@@ -16,7 +37,7 @@ protected:
     {
         return TypeID::ForType<MeshComponent>();
     }
-
+    
     virtual Array<ComponentProperty> GetProperties_Internal() const override
     {
         return {
@@ -24,8 +45,23 @@ protected:
                 HYP_NAME(Mesh),
                 [](const void *component, fbom::FBOMData *out)
                 {
-                    DebugLog(LogType::Debug, "Mesh ID = #%u\n", static_cast<const MeshComponent *>(component)->mesh.GetID().Value());
-                    *out = fbom::FBOMData::FromUnsignedInt(static_cast<const MeshComponent *>(component)->mesh.GetID().Value());
+                    DebugLog(LogType::Debug, "Get Mesh property, ID = #%u\n", static_cast<const MeshComponent *>(component)->mesh.GetID().Value());
+
+                    fbom::FBOMObject result_object;
+                    result_object.SetProperty("ID", fbom::FBOMUnsignedInt(), static_cast<const MeshComponent *>(component)->mesh.GetID().Value());
+
+                    *out = fbom::FBOMData::FromObject(result_object);
+                }
+            },
+            {
+                HYP_NAME(Flags),
+                [](const void *component, fbom::FBOMData *out)
+                {
+                    *out = fbom::FBOMData::FromUnsignedInt(uint32(static_cast<const MeshComponent *>(component)->flags));
+                },
+                [](void *component, const fbom::FBOMData *in)
+                {
+                    in->ReadUnsignedInt(&static_cast<MeshComponent *>(component)->flags);
                 }
             }
         };

@@ -1,6 +1,12 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <asset/serialization/fbom/FBOMData.hpp>
+#include <asset/serialization/fbom/FBOMObject.hpp>
+#include <asset/serialization/fbom/FBOM.hpp>
+
+#include <asset/BufferedByteReader.hpp>
+#include <asset/ByteWriter.hpp>
+
 #include <core/memory/Memory.hpp>
 
 namespace hyperion::fbom {
@@ -57,6 +63,27 @@ FBOMData &FBOMData::operator=(FBOMData &&other) noexcept
 
 FBOMData::~FBOMData() = default;
 
+FBOMResult FBOMData::ReadObject(FBOMObject &out_object) const
+{
+    BufferedReader byte_reader(RC<BufferedReaderSource>(new MemoryBufferedReaderSource(bytes.ToByteView())));
+    
+    FBOMReader deserializer(fbom::FBOMConfig { });
+    return deserializer.Deserialize(byte_reader, out_object);
+}
+
+FBOMData FBOMData::FromObject(const FBOMObject &object)
+{
+    MemoryByteWriter byte_writer;
+
+    FBOMWriter serializer;
+    serializer.Append(object);
+
+    const FBOMResult serialize_result = serializer.Emit(&byte_writer);
+    AssertThrowMsg(serialize_result == FBOMResult::FBOM_OK, "Failed to serialize object: %s", serialize_result.message);
+
+    return FBOMData::FromByteBuffer(byte_writer.GetBuffer());
+}
+
 SizeType FBOMData::ReadBytes(SizeType n, void *out) const
 {
     if (!type.IsUnbouned()) {
@@ -87,7 +114,7 @@ ByteBuffer FBOMData::ReadBytes(SizeType n) const
 void FBOMData::SetBytes(SizeType n, const void *data)
 {
     if (!type.IsUnbouned()) {
-        AssertThrowMsg(n <= type.size, "Attempt to insert data past size max size of object");
+        AssertThrowMsg(n <= type.size, "Attempt to insert data past size max size of object (%llu > %llu)", n, type.size);
     }
 
     bytes.SetSize(n);

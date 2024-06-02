@@ -87,9 +87,9 @@ FBOMObject::~FBOMObject()
     }
 }
 
-bool FBOMObject::HasProperty(const String &key) const
+bool FBOMObject::HasProperty(UTF8StringView key) const
 {
-    auto it = properties.Find(key);
+    auto it = properties.FindAs(key);
 
     if (it == properties.End()) {
         return false;
@@ -98,9 +98,9 @@ bool FBOMObject::HasProperty(const String &key) const
     return true;
 }
 
-const FBOMData &FBOMObject::GetProperty(const String &key) const
+const FBOMData &FBOMObject::GetProperty(UTF8StringView key) const
 {
-    auto it = properties.Find(key);
+    auto it = properties.FindAs(key);
 
     if (it == properties.End()) {
         return FBOMData::UNSET;

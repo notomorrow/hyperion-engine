@@ -24,6 +24,15 @@ template <int string_type>
 class StringView
 {
 public:
+    template <int FirstStringType, int SecondStringType>
+    friend bool operator<(const StringView<FirstStringType> &lhs, const StringView<SecondStringType> &rhs);
+
+    template <int FirstStringType, int SecondStringType>
+    friend bool operator<(const containers::detail::String<FirstStringType> &lhs, const StringView<SecondStringType> &rhs);
+
+    template <int FirstStringType, int SecondStringType>
+    friend bool operator<(const StringView<FirstStringType> &lhs, const containers::detail::String<SecondStringType> &rhs);
+
     using CharType = typename containers::detail::StringTypeImpl<string_type>::CharType;
     using WidestCharType = typename containers::detail::StringTypeImpl<string_type>::WidestCharType;
 
@@ -113,10 +122,9 @@ public:
      *  \returns The raw string that the StringView has a pointer to. */
     [[nodiscard]]
     HYP_FORCE_INLINE
-    const char * operator*() const
+    const CharType *operator*() const
         { return m_begin; }
     
-
     /*! \brief Compare two StringView objects. If the underlying pointers are equal by memory address,
      *  compares the length to ensure both strings are equal. If the strings are not nullptr, then
      *  the strings are compared using the \ref{Memory::AreStaticStringsEqual} function.
@@ -142,14 +150,6 @@ public:
     HYP_FORCE_INLINE
     constexpr bool operator!=(const StringView &other) const
         { return !operator==(other); }
-
-    /*! \brief Compare two StringView objects using the \ref{Memory::StrCmp} function.
-     *  \param other The other StringView object to compare against.
-     *  \returns True if the strcmp result is less than 0, false otherwise. */
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool operator<(const StringView &other) const
-        { return m_begin == nullptr ? true : bool(Memory::StrCmp(m_begin, other.m_begin) < 0); }
 
     /*! \brief Return the size of the string. For UTF-8 strings, this is the number of bytes.
      *  For other types, this is the number of characters.
@@ -192,6 +192,49 @@ private:
     const CharType  *m_end;
     SizeType        m_length;
 };
+
+template <int StringType>
+bool operator<(const StringView<StringType> &lhs, const StringView<StringType> &rhs)
+{
+    if (!lhs.Begin()) {
+        return true;
+    }
+
+    if (!rhs.Begin()) {
+        return false;
+    }
+
+    return utf::utf_strcmp<typename StringView<StringType>::CharType, StringView<StringType>::is_utf8>(lhs.Begin(), rhs.Begin()) < 0;
+}
+
+template <int StringType>
+bool operator<(const containers::detail::String<StringType> &lhs, const StringView<StringType> &rhs)
+{
+    if (!lhs.Begin()) {
+        return true;
+    }
+
+    if (!rhs.Begin()) {
+        return false;
+    }
+
+    return utf::utf_strcmp<typename StringView<StringType>::CharType, StringView<StringType>::is_utf8>(lhs.Begin(), rhs.Begin()) < 0;
+}
+
+template <int StringType>
+bool operator<(const StringView<StringType> &lhs, const containers::detail::String<StringType> &rhs)
+{
+    if (!lhs.Begin()) {
+        return true;
+    }
+
+    if (!rhs.Begin()) {
+        return false;
+    }
+
+    return utf::utf_strcmp<typename StringView<StringType>::CharType, StringView<StringType>::is_utf8>(lhs.Begin(), rhs.Begin()) < 0;
+}
+
 } // namespace detail
 
 template <int string_type>

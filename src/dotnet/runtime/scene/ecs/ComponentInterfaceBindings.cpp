@@ -14,13 +14,15 @@ extern "C" {
 
 #pragma region ComponentInterface
 
+HYP_EXPORT ComponentInterfaceBase *ComponentRegistry_GetComponentInterface(uint32 component_type_id)
+{
+    return ComponentInterfaceRegistry::GetInstance().GetComponentInterface(TypeID { component_type_id });
+}
+
 HYP_EXPORT bool ComponentInterface_GetProperty(ComponentInterfaceBase *component_interface, const char *key, ComponentProperty *out_property)
 {
+    AssertThrow(component_interface != nullptr);
     AssertThrow(out_property != nullptr);
-
-    if (!component_interface) {
-        return false;
-    }
 
     if (ComponentProperty *property = component_interface->GetProperty(CreateWeakNameFromDynamicString(key))) {
         *out_property = *property;

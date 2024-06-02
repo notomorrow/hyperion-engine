@@ -31,6 +31,8 @@
 
 namespace hyperion::fbom {
 
+class FBOMObject;
+
 struct FBOMData
 {
     static const FBOMData UNSET;
@@ -255,6 +257,11 @@ struct FBOMData
     HYP_FORCE_INLINE
     bool IsSequenceOfByteSize(SizeType byte_size) const
         { return type.IsOrExtends(FBOMSequence(FBOMByte(), byte_size)); }
+
+    FBOMResult ReadObject(FBOMObject &out_object) const;
+    
+    [[nodiscard]]
+    static FBOMData FromObject(const FBOMObject &object);
 
     /*! \brief If type is an sequence, return the number of elements,
         assuming the sequence contains the given type. Note, sequence could

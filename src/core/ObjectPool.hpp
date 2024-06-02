@@ -34,10 +34,12 @@ class ObjectContainerBase
 public:
     virtual ~ObjectContainerBase() = default;
 
-    virtual void IncRefStrong(uint index) = 0;
-    virtual void IncRefWeak(uint index) = 0;
-    virtual void DecRefStrong(uint index) = 0;
-    virtual void DecRefWeak(uint index) = 0;
+    virtual void IncRefStrong(uint32 index) = 0;
+    virtual void IncRefWeak(uint32 index) = 0;
+    virtual void DecRefStrong(uint32 index) = 0;
+    virtual void DecRefWeak(uint32 index) = 0;
+    virtual uint32 GetRefCountStrong(uint32 index) = 0;
+    virtual uint32 GetRefCountWeak(uint32 index) = 0;
 };
 
 template <class T>
@@ -98,7 +100,7 @@ class ObjectContainer : public ObjectContainerBase
             ref_count_weak.Increment(1, MemoryOrder::RELAXED);
         }
 
-        uint DecRefStrong()
+        uint32 DecRefStrong()
         {
 #ifdef HYP_OBJECT_POOL_DEBUG
             AssertThrow(HasValue());
@@ -113,18 +115,18 @@ class ObjectContainer : public ObjectContainerBase
             return uint(count) - 1;
         }
 
-        uint DecRefWeak()
+        uint32 DecRefWeak()
         {
             const uint16 count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE);
 
-            return uint(count) - 1;
+            return uint32(count) - 1;
         }
 
-        HYP_FORCE_INLINE uint GetRefCountStrong() const
-            { return uint(ref_count_strong.Get(MemoryOrder::ACQUIRE)); }
+        HYP_FORCE_INLINE uint32 GetRefCountStrong() const
+            { return uint32(ref_count_strong.Get(MemoryOrder::ACQUIRE)); }
 
-        HYP_FORCE_INLINE uint GetRefCountWeak() const
-            { return uint(ref_count_weak.Get(MemoryOrder::ACQUIRE)); }
+        HYP_FORCE_INLINE uint32 GetRefCountWeak() const
+            { return uint32(ref_count_weak.Get(MemoryOrder::ACQUIRE)); }
 
         HYP_FORCE_INLINE T &Get()
             { return *reinterpret_cast<T *>(bytes); }
@@ -156,9 +158,9 @@ public:
     ObjectContainer &operator=(ObjectContainer &&other) noexcept    = delete;
     virtual ~ObjectContainer() override                             = default;
 
-    HYP_FORCE_INLINE uint NextIndex()
+    HYP_FORCE_INLINE uint32 NextIndex()
     {
-        const uint index = m_id_generator.NextID() - 1;
+        const uint32 index = m_id_generator.NextID() - 1;
 
         AssertThrowMsg(
             index < HandleDefinition<T>::max_size,
@@ -170,17 +172,17 @@ public:
         return index;
     }
 
-    virtual void IncRefStrong(uint index) override
+    virtual void IncRefStrong(uint32 index) override
     {
         m_data[index].IncRefStrong();
     }
 
-    virtual void IncRefWeak(uint index) override
+    virtual void IncRefWeak(uint32 index) override
     {
         m_data[index].IncRefWeak();
     }
 
-    virtual void DecRefStrong(uint index) override
+    virtual void DecRefStrong(uint32 index) override
     {
         if (m_data[index].DecRefStrong() == 0) {
 #ifdef HYP_OBJECT_POOL_DEBUG
@@ -193,35 +195,45 @@ public:
         }
     }
 
-    virtual void DecRefWeak(uint index) override
+    virtual void DecRefWeak(uint32 index) override
     {
         if (m_data[index].DecRefWeak() == 0 && m_data[index].GetRefCountStrong() == 0) {
             m_id_generator.FreeID(index + 1);
         }
     }
 
+    virtual uint32 GetRefCountStrong(uint32 index) override
+    {
+        return m_data[index].GetRefCountStrong();
+    }
+
+    virtual uint32 GetRefCountWeak(uint32 index) override
+    {
+        return m_data[index].GetRefCountWeak();
+    }
+
     HYP_FORCE_INLINE
-    T *GetPointer(uint index)
+    T *GetPointer(uint32 index)
         { return m_data[index].GetPointer(); }
 
     HYP_FORCE_INLINE
-    const T *GetPointer(uint index) const
+    const T *GetPointer(uint32 index) const
         { return m_data[index].GetPointer(); }
 
     HYP_FORCE_INLINE
-    T &Get(uint index)
+    T &Get(uint32 index)
         { return m_data[index].Get(); }
 
     HYP_FORCE_INLINE
-    ObjectBytes &GetObjectBytes(uint index)
+    ObjectBytes &GetObjectBytes(uint32 index)
         { return m_data[index]; }
 
     HYP_FORCE_INLINE
-    const ObjectBytes &GetObjectBytes(uint index) const
+    const ObjectBytes &GetObjectBytes(uint32 index) const
         { return m_data[index]; }
     
     template <class ...Args>
-    HYP_FORCE_INLINE void ConstructAtIndex(uint index, Args &&... args)
+    HYP_FORCE_INLINE void ConstructAtIndex(uint32 index, Args &&... args)
     {
         T *ptr = m_data[index].Construct(std::forward<Args>(args)...);
 
@@ -240,6 +252,7 @@ private:
 
 class ObjectPool
 {
+public:
     struct ObjectContainerMap
     {
         // Mutex for accessing the map
@@ -257,7 +270,7 @@ class ObjectPool
         ~ObjectContainerMap()                                           = default;
     };
 
-    static struct ObjectContainerHolder
+    struct ObjectContainerHolder
     {
         template <class T>
         struct ObjectContainerDeclaration
@@ -281,24 +294,23 @@ class ObjectPool
             ~ObjectContainerDeclaration()                                                   = default;
         };
 
-        static ObjectContainerMap s_object_container_map;
+        ObjectContainerMap object_container_map;
 
         template <class T>
-        static ObjectContainer<T> &GetObjectContainer(UniquePtr<ObjectContainerBase> *allotted_container)
+        ObjectContainer<T> &GetObjectContainer(UniquePtr<ObjectContainerBase> *allotted_container)
         {
             static ObjectContainerDeclaration<T> object_container_declaration(allotted_container);
 
             return *static_cast<ObjectContainer<T> *>((*allotted_container).Get());
         }
         
-        HYP_API static UniquePtr<ObjectContainerBase> *AllotObjectContainer(TypeID type_id);
+        HYP_API UniquePtr<ObjectContainerBase> *AllotObjectContainer(TypeID type_id);
 
-        HYP_API static ObjectContainerBase *TryGetObjectContainer(TypeID type_id);
-    } s_object_container_holder;
+        HYP_API ObjectContainerBase *TryGetObjectContainer(TypeID type_id);
+    };
 
     HYP_API static ObjectContainerHolder &GetObjectContainerHolder();
 
-public:
     template <class T>
     HYP_FORCE_INLINE
     static ObjectContainer<T> &GetContainer(UniquePtr<ObjectContainerBase> *allotted_container)

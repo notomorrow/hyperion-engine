@@ -87,9 +87,9 @@ public:
     const FBOMType &GetType() const
         { return m_object_type; }
 
-    bool HasProperty(const String &key) const;
+    bool HasProperty(UTF8StringView key) const;
 
-    const FBOMData &GetProperty(const String &key) const;
+    const FBOMData &GetProperty(UTF8StringView key) const;
 
     void SetProperty(const String &key, const FBOMData &data);
     void SetProperty(const String &key, FBOMData &&data);
@@ -174,7 +174,6 @@ public:
         }
     }
 
-private:
     void AddChild(FBOMObject &&object, const String &external_object_key = String::empty);
 };
 

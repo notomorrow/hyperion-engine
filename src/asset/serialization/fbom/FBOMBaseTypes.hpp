@@ -124,6 +124,15 @@ struct FBOMObjectType : FBOMType
     }
 };
 
+// /*! \brief An in-memory representation of an object. Cannot be serialized. */
+// struct FBOMMemoryObjectType : FBOMType
+// {
+//     FBOMMemoryObjectType()
+//         : FBOMType("memory_object", 0)
+//     {
+//     }
+// };
+
 } // namespace hyperion::fbom
 
 #endif

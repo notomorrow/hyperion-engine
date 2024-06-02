@@ -31,20 +31,27 @@ public class TestUIScript : UIEventHandler
             ),
             Material = new Material()
         });
+
         var meshComponent = Scene.EntityManager.GetComponent<MeshComponent>(tmpEntity);
+        Logger.Log(LogType.Info, "Mesh Component Mesh ref count: {0}", meshComponent.Mesh.StrongRefCount);
 
-        var testComponentInterface = Scene.EntityManager.GetComponentInterface<MeshComponent>();
-        Logger.Log(LogType.Info, "Test component interface: {0}", testComponentInterface.GetType().Name);
-        Logger.Log(LogType.Info, "Test component interface: {0}", testComponentInterface["Mesh"].GetValue(ref meshComponent).GetUInt32());
+        GC.Collect();
+        GC.Collect();
+        GC.Collect();
 
+        Logger.Log(LogType.Info, "Mesh Component Mesh ref count: {0}", meshComponent.Mesh.StrongRefCount);
+        var mesh = meshComponent.Mesh;
+        Logger.Log(LogType.Info, "Mesh AABB:: {0}", mesh.AABB);
+        Logger.Log(LogType.Info, "Mesh Component Mesh ref count: {0}", meshComponent.Mesh.StrongRefCount);
+        Logger.Log(LogType.Info, "Mesh Component Mesh ref count: {0}", meshComponent.Mesh.StrongRefCount);
+        Logger.Log(LogType.Info, "Mesh Component Mesh ref count: {0}", meshComponent.Mesh.StrongRefCount);
+        Logger.Log(LogType.Info, "Mesh Component Mesh ref count: {0}", meshComponent.Mesh.StrongRefCount);
+        Logger.Log(LogType.Info, "Mesh Component Mesh ref count: {0}", meshComponent.Mesh.StrongRefCount);
 
-        Console.WriteLine("Init TestUIScript object with entity : " + entity.ID);
-
-        Logger.Log(LogType.Info, "Init UI script");
-
-        // Logger.Log(LogType.Info, "Checking light typeid == Light.Light_GetTypeID() ({0}) == ({1})",
-        //     TypeID.ForType<Light>().Value, Light.Light_GetTypeID().Value);
-        // Debug.Assert(TypeID.ForType<Light>() == Light.Light_GetTypeID(), "Testing typeids");
+        meshComponent.Flags = (uint)MeshComponentFlags.None;
+        Logger.Log(LogType.Info, "Mesh Component Flags (before): {0}", meshComponent.Flags);
+        meshComponent.Flags |= (uint)MeshComponentFlags.Dirty;
+        Logger.Log(LogType.Info, "Mesh Component Flags (after): {0}", meshComponent.Flags);
     }
 
     public override void Destroy()
@@ -167,6 +174,7 @@ public class MyClass
     {
         // NativeInterop.Initialize("build/HyperionRuntime.dll");
 
+#if false
         Scene scene = new Scene();
         var sceneID = scene.ID;
 
@@ -260,5 +268,6 @@ public class MyClass
         Logger.Log(LogType.Info, "Hello from C#, childRemoved: {0}", childRemoved);
         // see if this breaks:
         Logger.Log(LogType.Info, "Hello from C#, myNode name: {0}", myNode.Name);
+#endif
     }
 }

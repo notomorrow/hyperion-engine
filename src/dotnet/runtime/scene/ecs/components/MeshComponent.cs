@@ -21,7 +21,7 @@ namespace Hyperion
         [FieldOffset(12)]
         private RefCountedPtr proxyRc;
         [FieldOffset(20)]
-        private MeshComponentFlags meshComponentFlags;
+        private uint meshComponentFlags;
         [FieldOffset(32)] // align to 16 byte boundary
         private Matrix4 previousModelMatrix;
         
@@ -50,6 +50,18 @@ namespace Hyperion
             set
             {
                 materialHandle = value.Handle;
+            }
+        }
+
+        public uint Flags
+        {
+            get
+            {
+                return meshComponentFlags;
+            }
+            set
+            {
+                meshComponentFlags = value;
             }
         }
     }

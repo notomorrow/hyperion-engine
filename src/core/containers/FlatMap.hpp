@@ -74,6 +74,30 @@ public:
     [[nodiscard]] Iterator Find(const Key &key);
     [[nodiscard]] ConstIterator Find(const Key &key) const;
 
+    template <class U>
+    auto FindAs(const U &key) -> Iterator
+    {
+        const auto it = FlatMap<Key, Value>::Base::LowerBound(key);
+
+        if (it == End()) {
+            return it;
+        }
+
+        return (it->first == key) ? it : End();
+    }
+
+    template <class U>
+    auto FindAs(const U &key) const -> ConstIterator
+    {
+        const auto it = FlatMap<Key, Value>::Base::LowerBound(key);
+
+        if (it == End()) {
+            return it;
+        }
+
+        return (it->first == key) ? it : End();
+    }
+
     [[nodiscard]] bool Contains(const Key &key) const;
 
     InsertResult Insert(const Key &key, const Value &value);

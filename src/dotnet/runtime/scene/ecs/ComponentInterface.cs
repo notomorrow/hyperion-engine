@@ -62,7 +62,7 @@ namespace Hyperion
             }
         }
 
-        public FBOMData GetValue<T>(ref T component) where T : struct, IComponent
+        public FBOMData GetValue(IntPtr componentPtr)
         {
             if (!IsReadable)
             {
@@ -71,33 +71,45 @@ namespace Hyperion
 
             FBOMData data = new FBOMData();
 
-            GCHandle componentHandle = GCHandle.Alloc(component, GCHandleType.Pinned);
-            IntPtr componentPtr = componentHandle.AddrOfPinnedObject();
-
             if (!ComponentProperty_InvokeGetter(ref this, componentPtr, data.ptr))
             {
                 throw new Exception("Failed to invoke property getter");
             }
 
-            componentHandle.Free();
-
             return data;
         }
 
-        public void SetValue<T>(ref T component, FBOMData data) where T : struct, IComponent
+        public FBOMData GetValue<T>(ref T component) where T : struct, IComponent
+        {
+            GCHandle componentHandle = GCHandle.Alloc(component, GCHandleType.Pinned);
+            IntPtr componentPtr = componentHandle.AddrOfPinnedObject();
+
+            FBOMData result = GetValue(componentPtr);
+
+            componentHandle.Free();
+
+            return result;
+        }
+
+        public void SetValue(IntPtr componentPtr, FBOMData data)
         {
             if (!IsWritable)
             {
                 throw new Exception("Property is not writable");
             }
 
-            GCHandle componentHandle = GCHandle.Alloc(component, GCHandleType.Pinned);
-            IntPtr componentPtr = componentHandle.AddrOfPinnedObject();
-
             if (!ComponentProperty_InvokeSetter(ref this, componentPtr, data.ptr))
             {
                 throw new Exception("Failed to invoke property setter");
             }
+        }
+
+        public void SetValue<T>(ref T component, FBOMData data) where T : struct, IComponent
+        {
+            GCHandle componentHandle = GCHandle.Alloc(component, GCHandleType.Pinned);
+            IntPtr componentPtr = componentHandle.AddrOfPinnedObject();
+
+            SetValue(componentPtr, data);
 
             componentHandle.Free();
         }
@@ -112,16 +124,16 @@ namespace Hyperion
     public class ComponentInterfaceBase
     {
         [DllImport("hyperion", EntryPoint = "ComponentInterface_GetProperty")]
-        protected static extern bool ComponentInterface_GetProperty(IntPtr componentInterfacePtr, [MarshalAs(UnmanagedType.LPStr)] string key, [Out] out ComponentProperty property);
+        internal static extern bool ComponentInterface_GetProperty(IntPtr componentInterfacePtr, [MarshalAs(UnmanagedType.LPStr)] string key, [Out] out ComponentProperty property);
     }
 
     public class ComponentInterface<T> : ComponentInterfaceBase
     {
-        private IntPtr componentInterfacePtr;
+        internal IntPtr ptr;
 
-        public ComponentInterface(IntPtr componentInterfacePtr) : base()
+        public ComponentInterface(IntPtr ptr) : base()
         {
-            this.componentInterfacePtr = componentInterfacePtr;
+            this.ptr = ptr;
         }
 
         public ComponentProperty this[string key]
@@ -130,7 +142,7 @@ namespace Hyperion
             {
                 ComponentProperty property;
 
-                if (ComponentInterface_GetProperty(componentInterfacePtr, key, out property))
+                if (ComponentInterface_GetProperty(ptr, key, out property))
                 {
                     return property;
                 }

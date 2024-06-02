@@ -223,9 +223,11 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &object, FB
                 break;
             }
             case FBOM_OBJECT_END:
-                // call deserializer function, writing into object.deserialized
-                if (auto err = Deserialize(object, object.deserialized)) {
-                    return err;
+                if (HasCustomMarshalerForType(object_type)) {
+                    // call deserializer function, writing into object.deserialized
+                    if (auto err = Deserialize(object, object.deserialized)) {
+                        return err;
+                    }
                 }
 
                 break;

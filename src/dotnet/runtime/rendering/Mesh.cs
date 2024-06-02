@@ -59,6 +59,14 @@ namespace Hyperion
             }
         }
 
+        public uint StrongRefCount
+        {
+            get
+            {
+                return handle.GetRefCountStrong(Mesh_GetTypeID());
+            }
+        }
+
         [DllImport("hyperion", EntryPoint = "Mesh_GetTypeID")]
         [return: MarshalAs(UnmanagedType.Struct, SizeConst = 4)]
         private static extern TypeID Mesh_GetTypeID();

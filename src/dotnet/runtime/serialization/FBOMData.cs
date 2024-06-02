@@ -42,6 +42,32 @@ namespace Hyperion
             }
         }
 
+        public FBOMData? this[string key]
+        {
+            get
+            {
+                FBOMObject? asObject = GetObject();
+
+                if (asObject == null)
+                {
+                    throw new Exception("Data is not subscriptable");
+                }
+
+                return asObject[key];
+            }
+            set
+            {
+                FBOMObject? asObject = GetObject();
+
+                if (asObject == null)
+                {
+                    throw new Exception("Data is not subscriptable");
+                }
+
+                asObject[key] = value;
+            }
+        }
+
         public uint? GetUInt32()
         {
             uint value;
@@ -52,6 +78,13 @@ namespace Hyperion
             }
 
             return null;
+        }
+
+        public static FBOMData FromUInt32(uint value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetUInt32(data.ptr, ref value);
+            return data;
         }
 
         public ulong? GetUInt64()
@@ -66,6 +99,13 @@ namespace Hyperion
             return null;
         }
 
+        public static FBOMData FromUInt64(ulong value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetUInt64(data.ptr, ref value);
+            return data;
+        }
+
         public int? GetInt32()
         {
             int value;
@@ -76,6 +116,13 @@ namespace Hyperion
             }
 
             return null;
+        }
+
+        public static FBOMData FromInt32(int value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetInt32(data.ptr, ref value);
+            return data;
         }
 
         public long? GetInt64()
@@ -90,6 +137,13 @@ namespace Hyperion
             return null;
         }
 
+        public static FBOMData FromInt64(long value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetInt64(data.ptr, ref value);
+            return data;
+        }
+
         public float? GetFloat()
         {
             float value;
@@ -100,6 +154,13 @@ namespace Hyperion
             }
 
             return null;
+        }
+
+        public static FBOMData FromFloat(float value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetFloat(data.ptr, ref value);
+            return data;
         }
 
         public bool? GetBool()
@@ -114,6 +175,13 @@ namespace Hyperion
             return null;
         }
 
+        public static FBOMData FromBool(bool value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetBool(data.ptr, ref value);
+            return data;
+        }
+
         public byte? GetByte()
         {
             byte value;
@@ -126,6 +194,13 @@ namespace Hyperion
             return null;
         }
 
+        public static FBOMData FromByte(byte value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetByte(data.ptr, ref value);
+            return data;
+        }
+
         public Name? GetName()
         {
             Name value;
@@ -136,6 +211,13 @@ namespace Hyperion
             }
 
             return null;
+        }
+
+        public static FBOMData FromName(Name value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetName(data.ptr, ref value);
+            return data;
         }
 
         // public Matrix3? GetMatrix3()
@@ -152,6 +234,13 @@ namespace Hyperion
             return null;
         }
 
+        public static FBOMData FromMatrix4(Matrix4 value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetMatrix4(data.ptr, ref value);
+            return data;
+        }
+
         public Vec2f? GetVec2f()
         {
             Vec2f value;
@@ -162,6 +251,13 @@ namespace Hyperion
             }
 
             return null;
+        }
+
+        public static FBOMData FromVec2f(Vec2f value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetVec2f(data.ptr, ref value);
+            return data;
         }
 
         public Vec3f? GetVec3f()
@@ -176,6 +272,13 @@ namespace Hyperion
             return null;
         }
 
+        public static FBOMData FromVec3f(Vec3f value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetVec3f(data.ptr, ref value);
+            return data;
+        }
+
         // public Vec4f? GetVec4f()
         // {
         //     Vec4f value;
@@ -188,6 +291,8 @@ namespace Hyperion
         //     return null;
         // }
 
+        // public static FBOMData FromVec4f(Vec4f value)
+
         public Quaternion? GetQuaternion()
         {
             Quaternion value;
@@ -198,6 +303,32 @@ namespace Hyperion
             }
 
             return null;
+        }
+
+        public static FBOMData FromQuaternion(Quaternion value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetQuaternion(data.ptr, ref value);
+            return data;
+        }
+
+        public FBOMObject? GetObject()
+        {
+            FBOMObject value = new FBOMObject();
+
+            if (FBOMData_GetObject(this.ptr, value.ptr))
+            {
+                return value;
+            }
+
+            return null;
+        }
+
+        public static FBOMData FromObject(FBOMObject value)
+        {
+            FBOMData data = new FBOMData();
+            FBOMData_SetObject(data.ptr, value.ptr);
+            return data;
         }
 
         [DllImport("hyperion", EntryPoint = "FBOMData_Create")]
@@ -215,43 +346,91 @@ namespace Hyperion
         [DllImport("hyperion", EntryPoint = "FBOMData_GetUInt32")]
         private static extern bool FBOMData_GetUInt32(IntPtr dataPtr, [Out] out uint value);
 
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetUInt32")]
+        private static extern void FBOMData_SetUInt32(IntPtr dataPtr, [In] ref uint value);
+
         [DllImport("hyperion", EntryPoint = "FBOMData_GetUInt64")]
         private static extern bool FBOMData_GetUInt64(IntPtr dataPtr, [Out] out ulong value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetUInt64")]
+        private static extern void FBOMData_SetUInt64(IntPtr dataPtr, [In] ref ulong value);
 
         [DllImport("hyperion", EntryPoint = "FBOMData_GetInt32")]
         private static extern bool FBOMData_GetInt32(IntPtr dataPtr, [Out] out int value);
 
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetInt32")]
+        private static extern void FBOMData_SetInt32(IntPtr dataPtr, [In] ref int value);
+
         [DllImport("hyperion", EntryPoint = "FBOMData_GetInt64")]
         private static extern bool FBOMData_GetInt64(IntPtr dataPtr, [Out] out long value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetInt64")]
+        private static extern void FBOMData_SetInt64(IntPtr dataPtr, [In] ref long value);
 
         [DllImport("hyperion", EntryPoint = "FBOMData_GetFloat")]
         private static extern bool FBOMData_GetFloat(IntPtr dataPtr, [Out] out float value);
 
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetFloat")]
+        private static extern void FBOMData_SetFloat(IntPtr dataPtr, [In] ref float value);
+
         [DllImport("hyperion", EntryPoint = "FBOMData_GetBool")]
         private static extern bool FBOMData_GetBool(IntPtr dataPtr, [Out] out bool value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetBool")]
+        private static extern void FBOMData_SetBool(IntPtr dataPtr, [In] ref bool value);
 
         [DllImport("hyperion", EntryPoint = "FBOMData_GetByte")]
         private static extern bool FBOMData_GetByte(IntPtr dataPtr, [Out] out byte value);
 
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetByte")]
+        private static extern void FBOMData_SetByte(IntPtr dataPtr, [In] ref byte value);
+
         [DllImport("hyperion", EntryPoint = "FBOMData_GetName")]
         private static extern bool FBOMData_GetName(IntPtr dataPtr, [Out] out Name value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetName")]
+        private static extern void FBOMData_SetName(IntPtr dataPtr, [In] ref Name value);
 
         // [DllImport("hyperion", EntryPoint = "FBOMData_GetMatrix3")]
         // private static extern bool FBOMData_GetMatrix3(IntPtr dataPtr, [Out] out Matrix3 value);
 
+        // [DllImport("hyperion", EntryPoint = "FBOMData_SetMatrix3")]
+        // private static extern void FBOMData_SetMatrix3(IntPtr dataPtr, [In] ref Matrix3 value);
+
         [DllImport("hyperion", EntryPoint = "FBOMData_GetMatrix4")]
         private static extern bool FBOMData_GetMatrix4(IntPtr dataPtr, [Out] out Matrix4 value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetMatrix4")]
+        private static extern void FBOMData_SetMatrix4(IntPtr dataPtr, [In] ref Matrix4 value);
 
         [DllImport("hyperion", EntryPoint = "FBOMData_GetVec2f")]
         private static extern bool FBOMData_GetVec2f(IntPtr dataPtr, [Out] out Vec2f value);
 
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetVec2f")]
+        private static extern void FBOMData_SetVec2f(IntPtr dataPtr, [In] ref Vec2f value);
+
         [DllImport("hyperion", EntryPoint = "FBOMData_GetVec3f")]
         private static extern bool FBOMData_GetVec3f(IntPtr dataPtr, [Out] out Vec3f value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetVec3f")]
+        private static extern void FBOMData_SetVec3f(IntPtr dataPtr, [In] ref Vec3f value);
 
         // [DllImport("hyperion", EntryPoint = "FBOMData_GetVec4f")]
         // private static extern bool FBOMData_GetVec4f(IntPtr dataPtr, [Out] out Vec4f value);
 
+        // [DllImport("hyperion", EntryPoint = "FBOMData_SetVec4f")]
+        // private static extern void FBOMData_SetVec4f(IntPtr dataPtr, [In] ref Vec4f value);
+
         [DllImport("hyperion", EntryPoint = "FBOMData_GetQuaternion")]
         private static extern bool FBOMData_GetQuaternion(IntPtr dataPtr, [Out] out Quaternion value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetQuaternion")]
+        private static extern void FBOMData_SetQuaternion(IntPtr dataPtr, [In] ref Quaternion value);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_GetObject")]
+        private static extern bool FBOMData_GetObject(IntPtr dataPtr, [Out] IntPtr ptr);
+
+        [DllImport("hyperion", EntryPoint = "FBOMData_SetObject")]
+        private static extern void FBOMData_SetObject(IntPtr dataPtr, [In] IntPtr ptr);
     }
 }

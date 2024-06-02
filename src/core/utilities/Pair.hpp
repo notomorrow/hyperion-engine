@@ -642,30 +642,6 @@ struct KeyValuePair : public Pair<Key, Value>
     ~KeyValuePair() = default;
 
     HYP_FORCE_INLINE
-    bool operator<(const Key &key) const { return Pair<Key, Value>::first < key; }
-
-    HYP_FORCE_INLINE
-    bool operator<=(const Key &key) const { return Pair<Key, Value>::first <= key; }
-
-    HYP_FORCE_INLINE
-    bool operator>(const Key &key) const { return Pair<Key, Value>::first > key; }
-
-    HYP_FORCE_INLINE
-    bool operator>=(const Key &key) const { return Pair<Key, Value>::first >= key; }
-
-    HYP_FORCE_INLINE
-    bool operator<(const KeyValuePair &other) const { return Pair<Key, Value>::first < other.first; }
-
-    HYP_FORCE_INLINE
-    bool operator<=(const KeyValuePair &other) const { return Pair<Key, Value>::first <= other.first; }
-
-    HYP_FORCE_INLINE
-    bool operator>(const KeyValuePair &other) const { return Pair<Key, Value>::first > other.first; }
-
-    HYP_FORCE_INLINE
-    bool operator>=(const KeyValuePair &other) const { return Pair<Key, Value>::first >= other.first; }
-
-    HYP_FORCE_INLINE
     bool operator==(const KeyValuePair &other) const
     {
         return Pair<Key, Value>::first == other.first
@@ -673,32 +649,33 @@ struct KeyValuePair : public Pair<Key, Value>
     }
 
     HYP_FORCE_INLINE
-    HashCode GetHashCode() const { return Pair<Key, Value>::GetHashCode(); }
+    HashCode GetHashCode() const
+        { return Pair<Key, Value>::GetHashCode(); }
 };
 
-template <class K, class V>
-bool operator<(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first < rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator<(const KeyValuePair<K0, V0> &lhs, const Pair<K1, V1> &rhs) { return lhs.first < rhs.first; }
 
-template <class K, class V>
-bool operator<=(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first <= rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator<=(const KeyValuePair<K0, V0> &lhs, const Pair<K1, V1> &rhs) { return lhs.first <= rhs.first; }
 
-template <class K, class V>
-bool operator>(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first > rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator>(const KeyValuePair<K0, V0> &lhs, const Pair<K1, V1> &rhs) { return lhs.first > rhs.first; }
 
-template <class K, class V>
-bool operator>=(const KeyValuePair<K, V> &lhs, const Pair<K, V> &rhs) { return lhs.first >= rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator>=(const KeyValuePair<K0, V0> &lhs, const Pair<K1, V1> &rhs) { return lhs.first >= rhs.first; }
 
-template <class K, class V>
-bool operator<(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first < rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator<(const Pair<K0, V0> &lhs, const KeyValuePair<K1, V1> &rhs) { return lhs.first < rhs.first; }
 
-template <class K, class V>
-bool operator<=(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first <= rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator<=(const Pair<K0, V0> &lhs, const KeyValuePair<K1, V1> &rhs) { return lhs.first <= rhs.first; }
 
-template <class K, class V>
-bool operator>(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first > rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator>(const Pair<K0, V0> &lhs, const KeyValuePair<K1, V1> &rhs) { return lhs.first > rhs.first; }
 
-template <class K, class V>
-bool operator>=(const Pair<K, V> &lhs, const KeyValuePair<K, V> &rhs) { return lhs.first >= rhs.first; }
+template <class K0, class V0, class K1, class V1>
+bool operator>=(const Pair<K0, V0> &lhs, const KeyValuePair<K1, V1> &rhs) { return lhs.first >= rhs.first; }
 
 template <class K, class V>
 bool operator<(const K &lhs, const KeyValuePair<K, V> &rhs) { return lhs < rhs.first; }
@@ -712,17 +689,17 @@ bool operator>(const K &lhs, const KeyValuePair<K, V> &rhs) { return lhs > rhs.f
 template <class K, class V>
 bool operator>=(const K &lhs, const KeyValuePair<K, V> &rhs) { return lhs >= rhs.first; }
 
-template <class K, class V>
-bool operator<(const KeyValuePair<K, V> &lhs, const K &rhs) { return lhs.first < rhs; }
+template <class K, class V, class T>
+bool operator<(const KeyValuePair<K, V> &lhs, const T &rhs) { return lhs.first < rhs; }
 
-template <class K, class V>
-bool operator<=(const KeyValuePair<K, V> &lhs, const K &rhs) { return lhs.first <= rhs; }
+template <class K, class V, class T>
+bool operator<=(const KeyValuePair<K, V> &lhs, const T &rhs) { return lhs.first <= rhs; }
 
-template <class K, class V>
-bool operator>(const KeyValuePair<K, V> &lhs, const K &rhs) { return lhs.first > rhs; }
+template <class K, class V, class T>
+bool operator>(const KeyValuePair<K, V> &lhs, const T &rhs) { return lhs.first > rhs; }
 
-template <class K, class V>
-bool operator>=(const KeyValuePair<K, V> &lhs, const K &rhs) { return lhs.first >= rhs; }
+template <class K, class V, class T>
+bool operator>=(const KeyValuePair<K, V> &lhs, const T &rhs) { return lhs.first >= rhs; }
 
 } // namespace utilities
 

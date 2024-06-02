@@ -1,16 +1,55 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace Hyperion
 {
     public delegate ManagedObject NewObjectDelegate();
     public delegate void FreeObjectDelegate(ManagedObject obj);
 
+    internal class DelegateCache
+    {
+        private static readonly DelegateCache instance = new DelegateCache();
+
+        public static DelegateCache Instance
+        {
+            get
+            {
+                return instance;
+            }
+        }
+
+        private Dictionary<Guid, GCHandle> pinnedDelegates = new Dictionary<Guid, GCHandle>();
+
+        public void AddToCache(Guid delegateGuid, GCHandle handle)
+        {
+            if (pinnedDelegates.ContainsKey(delegateGuid))
+            {
+                throw new Exception("Delegate already exists in cache");
+            }
+
+            pinnedDelegates.Add(delegateGuid, handle);
+        }
+
+        public void RemoveFromCache(Guid delegateGuid)
+        {
+            if (!pinnedDelegates.ContainsKey(delegateGuid))
+            {
+                throw new Exception("Delegate does not exist in cache");
+            }
+            
+            pinnedDelegates[delegateGuid].Free();
+            pinnedDelegates.Remove(delegateGuid);
+        }
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct ManagedClass
     {
         private int typeHash;
         private IntPtr classObjectPtr;
+        private Guid newObjectGuid;
+        private Guid freeObjectGuid;
 
         public void AddMethod(string methodName, Guid guid, string[] attributeNames)
         {
@@ -36,6 +75,16 @@ namespace Hyperion
         {
             set
             {
+                if (newObjectGuid != Guid.Empty)
+                {
+                    DelegateCache.Instance.RemoveFromCache(newObjectGuid);
+                }
+
+                newObjectGuid = Guid.NewGuid();
+
+                GCHandle handle = GCHandle.Alloc(value);
+                DelegateCache.Instance.AddToCache(newObjectGuid, handle);
+
                 ManagedClass_SetNewObjectFunction(this, Marshal.GetFunctionPointerForDelegate(value));
             }
         }
@@ -44,6 +93,16 @@ namespace Hyperion
         {
             set
             {
+                if (freeObjectGuid != Guid.Empty)
+                {
+                    DelegateCache.Instance.RemoveFromCache(freeObjectGuid);
+                }
+
+                freeObjectGuid = Guid.NewGuid();
+
+                GCHandle handle = GCHandle.Alloc(value);
+                DelegateCache.Instance.AddToCache(freeObjectGuid, handle);
+
                 ManagedClass_SetFreeObjectFunction(this, Marshal.GetFunctionPointerForDelegate(value));
             }
         }
