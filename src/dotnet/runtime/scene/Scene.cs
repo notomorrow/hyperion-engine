@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class Scene : IDisposable
+    public class Scene
     {
         private ManagedHandle handle;
 
@@ -33,7 +33,7 @@ namespace Hyperion
             this.entityManager = new EntityManager(Scene_GetEntityManager(this.handle));
         }
 
-        public void Dispose()
+        ~Scene()
         {
             handle.DecRef(Scene_GetTypeID());
         }

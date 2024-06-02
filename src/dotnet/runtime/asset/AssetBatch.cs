@@ -5,7 +5,7 @@ namespace Hyperion
 {
     internal delegate void HandleAssetResultsDelegate(IntPtr assetMapPtr);
 
-    public class AssetBatch : IDisposable
+    public class AssetBatch
     {
         private IntPtr ptr;
 
@@ -14,7 +14,7 @@ namespace Hyperion
             this.ptr = AssetBatch_Create(assetManager.Handle);
         }
 
-        public void Dispose()
+        ~AssetBatch()
         {
             if (ptr == IntPtr.Zero)
             {

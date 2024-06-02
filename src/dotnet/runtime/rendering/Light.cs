@@ -11,7 +11,7 @@ namespace Hyperion
         AreaRect = 3
     }
 
-    public class Light : IDisposable
+    public class Light
     {
         private ManagedHandle handle;
 
@@ -34,7 +34,7 @@ namespace Hyperion
             this.handle.IncRef(Light_GetTypeID());
         }
 
-        public void Dispose()
+        ~Light()
         {
             handle.DecRef(Light_GetTypeID());
         }

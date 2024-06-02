@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class AssetMap : IDisposable
+    public class AssetMap
     {
         private IntPtr ptr;
 
@@ -12,7 +12,7 @@ namespace Hyperion
             this.ptr = ptr;
         }
 
-        public void Dispose()
+        ~AssetMap()
         {
             if (ptr == IntPtr.Zero)
             {

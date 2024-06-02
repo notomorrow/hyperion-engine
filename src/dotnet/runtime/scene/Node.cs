@@ -17,7 +17,7 @@ namespace Hyperion
             }
         }
 
-        public void Dispose()
+        public void Free()
         {
             ManagedNode_Dispose(this);
 
@@ -28,7 +28,7 @@ namespace Hyperion
         private static extern void ManagedNode_Dispose(ManagedNode managed_node);
     }
 
-    public class Node : IDisposable
+    public class Node
     {
         private ManagedNode managedNode;
 
@@ -43,9 +43,9 @@ namespace Hyperion
             this.managedNode = managedNode;
         }
 
-        public void Dispose()
+        ~Node()
         {
-            managedNode.Dispose();
+            managedNode.Free();
         }
 
         public string Name

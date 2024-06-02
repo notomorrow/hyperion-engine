@@ -10,7 +10,7 @@ namespace Hyperion
     /// <summary>
     ///  Represents a native (C++) TaskBatch (see TaskSystem.hpp)
     /// </summary>
-    public class TaskBatch : IDisposable
+    public class TaskBatch
     {
         protected IntPtr ptr;
 
@@ -19,7 +19,7 @@ namespace Hyperion
             this.ptr = TaskBatch_Create();
         }
 
-        public void Dispose()
+        ~TaskBatch()
         {
             if (ptr == IntPtr.Zero)
             {

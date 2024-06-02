@@ -252,7 +252,7 @@ namespace Hyperion
         private static extern void Material_SetTexture(ManagedHandle material, TextureKey key, ManagedHandle texture);
     }
 
-    public class Material : IDisposable
+    public class Material
     {
         private ManagedHandle handle;
 
@@ -269,7 +269,7 @@ namespace Hyperion
             this.handle.IncRef(Material_GetTypeID());
         }
 
-        public void Dispose()
+        ~Material()
         {
             handle.DecRef(Material_GetTypeID());
         }

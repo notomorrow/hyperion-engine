@@ -40,7 +40,7 @@ namespace Hyperion
         BottomRight = 4
     }
 
-    public class UIObject : IDisposable
+    public class UIObject
     {
         protected RefCountedPtr refCountedPtr = RefCountedPtr.Null;
 
@@ -59,9 +59,9 @@ namespace Hyperion
             }
         }
 
-        public void Dispose()
+        ~UIObject()
         {
-            if (this.refCountedPtr.IsValid)
+            if (refCountedPtr.IsValid)
             {
                 refCountedPtr.DecRef();
             }

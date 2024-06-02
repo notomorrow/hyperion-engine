@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class FBOMType : IDisposable
+    public class FBOMType
     {
 
         public static readonly FBOMType Unset;
@@ -40,7 +40,7 @@ namespace Hyperion
             Vec4f = new FBOMType(FBOMType_Vec4f());
             Quaternion = new FBOMType(FBOMType_Quaternion());
         }
-        
+
         internal IntPtr ptr;
 
         internal FBOMType(IntPtr ptr)
@@ -48,7 +48,7 @@ namespace Hyperion
             this.ptr = ptr;
         }
 
-        public void Dispose()
+        ~FBOMType()
         {
             FBOMType_Destroy(this.ptr);
         }

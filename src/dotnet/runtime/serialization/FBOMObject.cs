@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class FBOMObject : IDisposable
+    public class FBOMObject
     {
 
         internal IntPtr ptr;
@@ -18,7 +18,7 @@ namespace Hyperion
             this.ptr = ptr;
         }
 
-        public void Dispose()
+        ~FBOMObject()
         {
             FBOMObject_Destroy(this.ptr);
         }

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class Mesh : IDisposable
+    public class Mesh
     {
         private ManagedHandle handle;
 
@@ -23,7 +23,7 @@ namespace Hyperion
             this.handle.IncRef(Mesh_GetTypeID());
         }
 
-        public void Dispose()
+        ~Mesh()
         {
             handle.DecRef(Mesh_GetTypeID());
         }

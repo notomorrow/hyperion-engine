@@ -77,7 +77,7 @@ namespace Hyperion
         ImageCube
     }
 
-    public class Texture : IDisposable
+    public class Texture
     {
         private ManagedHandle handle;
 
@@ -93,7 +93,7 @@ namespace Hyperion
             this.handle.IncRef(Texture_GetTypeID());
         }
 
-        public void Dispose()
+        ~Texture()
         {
             handle.DecRef(Texture_GetTypeID());
         }
