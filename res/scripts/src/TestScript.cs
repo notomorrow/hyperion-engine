@@ -8,7 +8,12 @@ namespace FooBar
     {
         public void Init()
         {
-            Console.WriteLine("Thiis is a test");
+            Console.WriteLine("Blah");
+        }
+
+        public void Update(float delta)
+        {
+            Console.WriteLine("Update " + delta);
         }
     }
 }
