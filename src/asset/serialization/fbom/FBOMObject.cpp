@@ -24,7 +24,7 @@ FBOMObject::FBOMObject(const FBOMObject &other)
     : m_object_type(other.m_object_type),
       nodes(nullptr),
       properties(other.properties),
-      deserialized(other.deserialized),
+      m_deserialized_object(other.m_deserialized_object),
       m_external_info(other.m_external_info),
       m_unique_id(other.m_unique_id)
 {
@@ -49,7 +49,7 @@ FBOMObject &FBOMObject::operator=(const FBOMObject &other)
 
     m_object_type = other.m_object_type;
     properties = other.properties;
-    deserialized = other.deserialized;
+    m_deserialized_object = other.m_deserialized_object;
     m_external_info = other.m_external_info;
     m_unique_id = other.m_unique_id;
 
@@ -60,7 +60,7 @@ FBOMObject::FBOMObject(FBOMObject &&other) noexcept
     : m_object_type(std::move(other.m_object_type)),
       nodes(other.nodes),
       properties(std::move(other.properties)),
-      deserialized(std::move(other.deserialized)),
+      m_deserialized_object(std::move(other.m_deserialized_object)),
       m_external_info(std::move(other.m_external_info)),
       m_unique_id(std::move(other.m_unique_id))
 {
@@ -77,7 +77,7 @@ FBOMObject &FBOMObject::operator=(FBOMObject &&other) noexcept
 
     m_object_type = std::move(other.m_object_type);
     properties = std::move(other.properties);
-    deserialized = std::move(other.deserialized);
+    m_deserialized_object = std::move(other.m_deserialized_object);
     m_external_info = std::move(other.m_external_info);
     m_unique_id = std::move(other.m_unique_id);
 
@@ -122,6 +122,16 @@ FBOMObject &FBOMObject::SetProperty(Name key, const FBOMData &data)
 
 FBOMObject &FBOMObject::SetProperty(Name key, FBOMData &&data)
 {
+    // sanity check
+    ANSIString str = key.LookupString();
+    AssertThrowMsg(key.hash_code == str.GetHashCode().Value(),
+        "Expected hash for %s (%llu) to equal hash of %s (%llu)",
+        key.LookupString(),
+        key.hash_code,
+        str.Data(),
+        str.GetHashCode().Value());
+    AssertThrow(key.hash_code == CreateNameFromDynamicString(str).hash_code);
+
     properties.Set(key, std::move(data));
 
     return *this;
@@ -173,16 +183,6 @@ void FBOMObject::AddChild(FBOMObject &&object, const String &external_object_key
     if (external_object_key.Length() != 0) {
         object.SetExternalObjectInfo(FBOMExternalObjectInfo { external_object_key });
     }
-
-    // // debug sanity check
-    // if (object.GetType().IsOrExtends("Node")) {
-    //     FlatSet<UniqueID> subobject_ids;
-
-    //     for (FBOMObject &subobject : *nodes) {
-    //         auto insert_result = subobject_ids.Insert(subobject.GetUniqueID());
-    //         AssertThrow(insert_result.second);
-    //     }
-    // }
 
     nodes->PushBack(std::move(object));
 }

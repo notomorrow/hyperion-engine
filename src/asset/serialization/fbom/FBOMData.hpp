@@ -28,7 +28,15 @@
 #include <sstream>
 
 #define FBOM_ASSERT(cond, message) \
-    if (!(cond)) { return FBOMResult(FBOMResult::FBOM_ERR, (message)); }
+    do { \
+        static const char *_message = (message); \
+        \
+        AssertThrowMsg((cond), "FBOM error: %s", _message); \
+        \
+        if (!(cond)) { \
+            return FBOMResult { FBOMResult::FBOM_ERR, _message }; \
+        } \
+    } while (0)
 
 #define FBOM_RETURN_OK return FBOMResult(FBOMResult::FBOM_OK)
 
@@ -409,16 +417,16 @@ struct FBOMData : public IFBOMSerializable
     HYP_NODISCARD HYP_FORCE_INLINE
     Optional<FBOMDeserializedObject &> GetDeserializedObject()
     {
-        return m_deserialized_object.m_value.HasValue()
-            ? Optional<FBOMDeserializedObject &> { m_deserialized_object }
+        return m_deserialized_object != nullptr
+            ? Optional<FBOMDeserializedObject &> { *m_deserialized_object }
             : Optional<FBOMDeserializedObject &> { };
     }
 
     HYP_NODISCARD HYP_FORCE_INLINE
     Optional<const FBOMDeserializedObject &> GetDeserializedObject() const
     {
-        return m_deserialized_object.m_value.HasValue()
-            ? Optional<const FBOMDeserializedObject &> { m_deserialized_object }
+        return m_deserialized_object != nullptr
+            ? Optional<const FBOMDeserializedObject &> { *m_deserialized_object }
             : Optional<const FBOMDeserializedObject &> { };
     }
 
@@ -467,10 +475,10 @@ struct FBOMData : public IFBOMSerializable
     }
 
 private:
-    ByteBuffer              bytes;
-    FBOMType                type;
+    ByteBuffer                  bytes;
+    FBOMType                    type;
 
-    FBOMDeserializedObject  m_deserialized_object;
+    RC<FBOMDeserializedObject>  m_deserialized_object;
 };
 
 } // namespace fbom
