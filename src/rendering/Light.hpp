@@ -7,7 +7,6 @@
 #include <core/containers/Bitset.hpp>
 #include <core/utilities/DataMutationState.hpp>
 
-#include <rendering/DrawProxy.hpp>
 #include <rendering/Material.hpp>
 
 #include <math/Vector3.hpp>
@@ -29,8 +28,7 @@ enum class LightType : uint32
     MAX
 };
 
-template <>
-struct DrawProxy<STUB_CLASS(Light)>
+struct LightDrawProxy
 {
     ID<Light>       id;
     LightType       type;
@@ -46,11 +44,9 @@ struct DrawProxy<STUB_CLASS(Light)>
     ID<Material>    material_id;
 };
 
-using LightDrawProxy = DrawProxy<STUB_CLASS(Light)>;
-
 struct RENDER_COMMAND(UpdateLightShaderData);
 
-class HYP_API Light : public BasicObject<STUB_CLASS(Light)>
+class HYP_API Light : public BasicObject<Light>
 {
     friend struct RENDER_COMMAND(UpdateLightShaderData);
 

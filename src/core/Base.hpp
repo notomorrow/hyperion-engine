@@ -5,7 +5,6 @@
 
 #include <core/Core.hpp>
 #include <core/ObjectPool.hpp>
-#include <core/ClassInfo.hpp>
 #include <core/ID.hpp>
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
@@ -24,28 +23,6 @@
 
 namespace hyperion {
 
-template <class T, class ClassName>
-struct StubbedClass : public ClassInfo<ClassName>
-{
-    using InnerType = T;
-
-    StubbedClass() = default;
-    ~StubbedClass() = default;
-
-    /*! \brief Create a new UniquePtr instance of the type. */
-    template <class ...Args>
-    static UniquePtr<T> Construct(Args &&... args)
-        { return UniquePtr<T>::Construct(std::forward<Args>(args)...); }
-};
-
-template <auto X>
-struct ClassName
-{
-    using Sequence = containers::detail::IntegerSequenceFromString<X>;
-};
-
-#define STUB_CLASS(name) ::hyperion::StubbedClass<name, ClassName<StaticString(HYP_STR(name))>>
-
 using ComponentFlags = uint;
 
 template <class T>
@@ -58,16 +35,17 @@ struct ComponentInitInfo
 
 class BasicObjectBase
 {
-
 };
 
-template <class Type>
+template <class T>
 class BasicObject : public BasicObjectBase
 {
-    using InnerType = typename Type::InnerType;
+    using InnerType = T;
+
+    static constexpr auto type_name = TypeNameWithoutNamespace<InnerType>();
 
 public:
-    using InitInfo = ComponentInitInfo<Type>;
+    using InitInfo = ComponentInitInfo<InnerType>;
 
     static constexpr ID<InnerType> empty_id = ID<InnerType> { };
 
@@ -130,8 +108,7 @@ public:
     HYP_FORCE_INLINE void SetFlags(ComponentFlags flags, bool enable = true)
         { m_init_info.flags = enable ? (m_init_info.flags | flags) : (m_init_info.flags & ~flags); }
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
+    HYP_NODISCARD HYP_FORCE_INLINE
     ID<InnerType> GetID() const
         { return m_id; }
 
@@ -141,8 +118,7 @@ public:
         { m_id = id; }
 
     /*! \brief Get assigned name of the object */
-    [[nodiscard]]
-    HYP_FORCE_INLINE
+    HYP_NODISCARD HYP_FORCE_INLINE
     Name GetName() const
         { return m_name; }
 
@@ -151,13 +127,11 @@ public:
     void SetName(Name name)
         { m_name = name; }
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
+    HYP_NODISCARD HYP_FORCE_INLINE
     bool IsInitCalled() const
         { return m_init_state.Get(MemoryOrder::RELAXED) & INIT_STATE_INIT_CALLED; }
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
+    HYP_NODISCARD HYP_FORCE_INLINE
     bool IsReady() const
         { return m_init_state.Get(MemoryOrder::RELAXED) & INIT_STATE_READY; }
 
@@ -166,9 +140,18 @@ public:
         m_init_state.BitOr(INIT_STATE_INIT_CALLED, MemoryOrder::RELAXED);
     }
 
+    HYP_NODISCARD HYP_FORCE_INLINE
+    HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(type_name);
+        hc.Add(m_id);
+
+        return hc;
+    }
+
 protected:
-    using ClassType = Type;
-    using Base = BasicObject<Type>;
+    using Base = BasicObject<T>;
     
     void SetReady(bool is_ready)
     {

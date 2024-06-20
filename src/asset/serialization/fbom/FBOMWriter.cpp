@@ -44,7 +44,7 @@ FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueID &unique_id, con
         }
     }
 
-    // check external files
+    // check external objects
     for (auto &it : m_external_objects) {
         const FBOMExternalData &external_data = it.second;
 
@@ -109,6 +109,15 @@ FBOMWriter::~FBOMWriter()
 FBOMResult FBOMWriter::Append(const FBOMObject &object)
 {
     AddObjectData(object, object.GetUniqueID());
+
+    return FBOMResult::FBOM_OK;
+}
+
+FBOMResult FBOMWriter::Append(FBOMObject &&object)
+{
+    const UniqueID id = object.GetUniqueID();
+
+    AddObjectData(std::move(object), id);
 
     return FBOMResult::FBOM_OK;
 }
@@ -759,10 +768,23 @@ void FBOMWriter::AddObjectData(const FBOMObject &object, UniqueID id)
     auto it = m_write_stream->m_hash_use_count_map.Find(id);
 
     if (it == m_write_stream->m_hash_use_count_map.End()) {
-        m_write_stream->m_hash_use_count_map[id] = 0;
+        it = m_write_stream->m_hash_use_count_map.Insert(id, 0).first;
     }
 
-    m_write_stream->m_hash_use_count_map[id]++;
+    it->second++;
+}
+
+void FBOMWriter::AddObjectData(FBOMObject &&object, UniqueID id)
+{
+    m_write_stream->m_object_data.PushBack(std::move(object));
+
+    auto it = m_write_stream->m_hash_use_count_map.Find(id);
+
+    if (it == m_write_stream->m_hash_use_count_map.End()) {
+        it = m_write_stream->m_hash_use_count_map.Insert(id, 0).first;
+    }
+
+    it->second++;
 }
 
 UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData &&static_data)
