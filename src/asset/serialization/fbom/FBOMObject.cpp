@@ -168,12 +168,8 @@ const FBOMData &FBOMObject::operator[](WeakName key) const
     return GetProperty(key);
 }
 
-void FBOMObject::AddChild(FBOMObject &&object, const String &external_object_key)
+void FBOMObject::AddChild(FBOMObject &&object)
 {
-    if (external_object_key.Length() != 0) {
-        object.SetExternalObjectInfo(FBOMExternalObjectInfo { external_object_key });
-    }
-
     nodes->PushBack(std::move(object));
 }
 
@@ -208,7 +204,7 @@ HashCode FBOMObject::GetHashCode() const
     HashCode hc;
 
     if (IsExternal()) {
-        hc.Add(m_external_info.GetHashCode());
+        hc.Add(m_external_info->GetHashCode());
     } else {
         hc.Add(m_object_type.GetHashCode());
 

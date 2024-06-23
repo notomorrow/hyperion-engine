@@ -28,15 +28,26 @@
 #include <sstream>
 
 #define FBOM_ASSERT(cond, message) \
-    if (!(cond)) { return FBOMResult(FBOMResult::FBOM_ERR, (message)); }
+    do { \
+        static const char *_message = (message); \
+        \
+        AssertDebugMsg((cond), "FBOM error: %s", _message); \
+        \
+        if (!(cond)) { \
+            return FBOMResult { FBOMResult::FBOM_ERR, _message }; \
+        } \
+    } while (0)
 
-#define FBOM_RETURN_OK return FBOMResult(FBOMResult::FBOM_OK)
+
+#define FBOM_RETURN_OK return FBOMResult { FBOMResult::FBOM_OK }
 
 namespace hyperion {
 namespace fbom {
 
 class FBOMObject;
 class FBOMArray;
+
+HYP_DISABLE_OPTIMIZATION;
 
 struct FBOMData : public IFBOMSerializable
 {
@@ -472,6 +483,8 @@ private:
 
     RC<FBOMDeserializedObject>  m_deserialized_object;
 };
+
+HYP_ENABLE_OPTIMIZATION;
 
 } // namespace fbom
 } // namespace hyperion

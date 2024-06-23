@@ -1713,7 +1713,7 @@ bool ShaderCompiler::CompileBundle(
         {
             // check if a file exists w/ same hash
             
-            const auto output_filepath = item.GetOutputFilepath(
+            const FilePath output_filepath = item.GetOutputFilepath(
                 g_asset_manager->GetBasePath(),
                 compiled_shader
             );
@@ -1854,14 +1854,20 @@ bool ShaderCompiler::CompileBundle(
     FileByteWriter byte_writer(final_output_path.Data());
 
     fbom::FBOMWriter writer;
-    writer.Append(out);
+    
+    if (fbom::FBOMResult err = writer.Append(out)) {
+        HYP_BREAKPOINT_DEBUG_MODE;
 
-    auto err = writer.Emit(&byte_writer);
-    byte_writer.Close();
-
-    if (err.value != fbom::FBOMResult::FBOM_OK) {
         return false;
     }
+
+    if (fbom::FBOMResult err = writer.Emit(&byte_writer)) {
+        HYP_BREAKPOINT_DEBUG_MODE;
+
+        return false;
+    }
+
+    byte_writer.Close();
 
     m_cache.Set(bundle.name, out);
 

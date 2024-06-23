@@ -49,16 +49,25 @@ class FBOMNodeHolder;
 
 struct FBOMExternalObjectInfo
 {
-    String key;
+    UUID    library_id = UUID::Invalid();
+    uint32  index = ~0u;
 
-    explicit operator bool() const
-        { return key.Any(); }
-
+    HYP_NODISCARD HYP_FORCE_INLINE
     UniqueID GetUniqueID() const
-        { return UniqueID(key); }
+        { return UniqueID(GetHashCode()); }
+
+    HYP_NODISCARD HYP_FORCE_INLINE
+    bool IsLinked() const
+        { return library_id != UUID::Invalid() && index != ~0u; }
 
     HashCode GetHashCode() const
-        { return key.GetHashCode(); }
+    {
+        HashCode hc;
+        hc.Add(library_id);
+        hc.Add(index);
+
+        return hc;
+    }
 };
 
 class HYP_API FBOMObject : public IFBOMSerializable
@@ -83,22 +92,23 @@ public:
     bool IsExternal() const
         { return m_external_info.HasValue(); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const String &GetExternalObjectKey() const
-        { return IsExternal() ? m_external_info->key : String::empty; }
-
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const FBOMExternalObjectInfo *GetExternalObjectInfo() const
-        { return IsExternal() ? m_external_info.TryGet() : nullptr; }
-
-    void SetExternalObjectInfo(const FBOMExternalObjectInfo &info)
+    HYP_FORCE_INLINE
+    void SetIsExternal(bool is_external)
     {
-        if (info) {
-            m_external_info.Set(info);
+        if (is_external) {
+            m_external_info.Set({ });
         } else {
             m_external_info.Unset();
         }
     }
+
+    HYP_NODISCARD HYP_FORCE_INLINE
+    FBOMExternalObjectInfo *GetExternalObjectInfo()
+        { return IsExternal() ? m_external_info.TryGet() : nullptr; }
+
+    HYP_NODISCARD HYP_FORCE_INLINE
+    const FBOMExternalObjectInfo *GetExternalObjectInfo() const
+        { return IsExternal() ? m_external_info.TryGet() : nullptr; }
 
     HYP_NODISCARD HYP_FORCE_INLINE
     const FBOMType &GetType() const
@@ -194,7 +204,7 @@ public:
         return FBOMResult::FBOM_OK;
     }
 
-    void AddChild(FBOMObject &&object, const String &external_object_key = String::empty);
+    void AddChild(FBOMObject &&object);
 
     FBOMResult Visit(FBOMWriter *writer, ByteWriter *out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const
         { return Visit(GetUniqueID(), writer, out, attributes); }
@@ -229,7 +239,7 @@ public:
             return { FBOMResult::FBOM_ERR, "No registered marshal class for type" };
         }
         
-        String external_object_key;
+        ANSIString external_object_key;
 
         out_object = FBOMObject(marshal->GetObjectType());
 
@@ -245,18 +255,7 @@ public:
         }
 
         if (flags & FBOMObjectFlags::EXTERNAL) {
-            if constexpr (std::is_base_of_v<BasicObjectBase, NormalizedType<T>>) {
-                const String class_name_lower = marshal->GetObjectType().name.ToLower();
-                external_object_key = String::ToString(uint64(out_object.GetUniqueID())) + ".hyp" + class_name_lower;
-            } else {
-                external_object_key = String::ToString(uint64(out_object.GetUniqueID())) + ".hypdata";
-            }
-
-            AssertThrow(external_object_key.Any());
-        }
-
-        if (external_object_key.Any()) {
-            out_object.SetExternalObjectInfo(FBOMExternalObjectInfo { external_object_key });
+            out_object.SetIsExternal(true);
         }
 
         return FBOMResult::FBOM_OK;
