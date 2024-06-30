@@ -9,10 +9,15 @@ namespace hyperion {
 
 namespace threading {
 
-const FlatMap<TaskThreadPoolName, TaskSystem::TaskThreadPoolInfo> TaskSystem::s_thread_pool_infos {
-    { TaskThreadPoolName::THREAD_POOL_GENERIC,          { 4u, ThreadPriorityValue::NORMAL } },
-    { TaskThreadPoolName::THREAD_POOL_RENDER,           { 4u, ThreadPriorityValue::HIGHEST } },
-    { TaskThreadPoolName::THREAD_POOL_RENDER_COLLECT,   { 2u, ThreadPriorityValue::HIGHEST } }
+struct TaskThreadPoolInfo
+{
+    uint32              num_task_threads = 0u;
+    ThreadPriorityValue priority = ThreadPriorityValue::NORMAL;
+};
+
+static const FlatMap<TaskThreadPoolName, TaskThreadPoolInfo> g_thread_pool_info {
+    { TaskThreadPoolName::THREAD_POOL_GENERIC,  { 4u, ThreadPriorityValue::NORMAL } },
+    { TaskThreadPoolName::THREAD_POOL_RENDER,   { 4u, ThreadPriorityValue::HIGHEST } }
 };
 
 TaskSystem &TaskSystem::GetInstance()
@@ -20,6 +25,35 @@ TaskSystem &TaskSystem::GetInstance()
     static TaskSystem instance;
 
     return instance;
+}
+
+TaskSystem::TaskSystem()
+{
+    ThreadMask mask = THREAD_TASK_0;
+
+    for (uint32 i = 0; i < THREAD_POOL_MAX; i++) {
+        const TaskThreadPoolName pool_name { i };
+
+        auto thread_pool_info_it = g_thread_pool_info.Find(pool_name);
+
+        AssertThrowMsg(
+            thread_pool_info_it != g_thread_pool_info.End(),
+            "TaskThreadPoolName for %u not found in g_thread_pool_info",
+            i
+        );
+
+        const TaskThreadPoolInfo &task_thread_pool_info = thread_pool_info_it->second;
+
+        TaskThreadPool &pool = m_pools[i];
+        pool.threads.Resize(task_thread_pool_info.num_task_threads);
+
+        for (auto &it : pool.threads) {
+            AssertThrow(THREAD_TASK & mask);
+
+            it.Reset(new TaskThread(Threads::thread_ids.At(ThreadName(mask)), task_thread_pool_info.priority));
+            mask <<= 1;
+        }
+    }
 }
 
 void TaskSystem::Start()

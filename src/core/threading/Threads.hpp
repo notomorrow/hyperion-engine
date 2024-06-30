@@ -17,30 +17,28 @@ namespace threading {
 
 enum ThreadName : ThreadMask
 {
-    THREAD_MAIN     = 0x01u,
-    THREAD_RENDER   = THREAD_MAIN, // for now
-    THREAD_GAME     = 0x04u,
-    THREAD_INPUT    = THREAD_GAME,
-    THREAD_TERRAIN  = 0x08u,
+    THREAD_MAIN         = 0x01u,
+    THREAD_RENDER       = THREAD_MAIN, // for now
+    THREAD_GAME         = 0x04u,
+    THREAD_INPUT        = THREAD_GAME,
+    THREAD_RESERVED0    = 0x08u,
 
-    THREAD_TASK_0   = 0x10u,
-    THREAD_TASK_1   = 0x20u,
-    THREAD_TASK_2   = 0x40u,
-    THREAD_TASK_3   = 0x80u,
-    THREAD_TASK_4   = 0x100u,
-    THREAD_TASK_5   = 0x200u,
-    THREAD_TASK_6   = 0x400u,
-    THREAD_TASK_7   = 0x800u,
-    THREAD_TASK_8   = 0x1000u,
-    THREAD_TASK_9   = 0x2000u,
-    THREAD_TASK_10  = 0x4000u,
+    THREAD_TASK_0       = 0x10u,
+    THREAD_TASK_1       = 0x20u,
+    THREAD_TASK_2       = 0x40u,
+    THREAD_TASK_3       = 0x80u,
+    THREAD_TASK_4       = 0x100u,
+    THREAD_TASK_5       = 0x200u,
+    THREAD_TASK_6       = 0x400u,
+    THREAD_TASK_7       = 0x800u,
+    THREAD_TASK_8       = 0x1000u,
+    THREAD_RESERVED1    = 0x2000u,
+    THREAD_RESERVED2    = 0x4000u,
 
-    THREAD_TASK     = 0x7ff0u, // all task threads or'd together
-
-    THREAD_PHYSICS  = THREAD_GAME, // for now
-
-    THREAD_STATIC   = 0xFFFFu,
-    THREAD_DYNAMIC  = 0xFFFFu << 16u
+    THREAD_TASK         = 0x1FF0u, //0x7ff0u, // all task threads or'd together
+     
+    THREAD_STATIC       = 0xFFFFu,
+    THREAD_DYNAMIC      = 0xFFFFu << 16u
 };
 
 // Used for having 1 value of something per thread,

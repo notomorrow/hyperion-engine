@@ -220,14 +220,6 @@ void UIObject::Update(GameCounter::TickUnit delta)
 {
     Update_Internal(delta);
 
-    if (const NodeProxy &node = GetNode()) {
-        // temp
-        AssertThrow(node->GetScene() == GetScene());
-        for (auto &child1 : node->GetDescendents()) {
-            AssertThrow(child1->GetScene() == GetScene());
-        }
-    }
-
     ForEachChildUIObject([this, delta](const RC<UIObject> &child)
     {
         child->Update_Internal(delta);

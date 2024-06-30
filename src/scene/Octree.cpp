@@ -222,8 +222,6 @@ void Octree::Divide()
 {
     AssertThrow(!IsDivided());
 
-    DebugLog(LogType::Debug, "Function name: %s\n", HYP_PRETTY_FUNCTION_NAME.Data());
-
     for (int i = 0; i < 8; i++) {
         Octant &octant = m_octants[i];
         AssertThrow(octant.octree == nullptr);

@@ -10,20 +10,20 @@ namespace hyperion {
 namespace threading {
 
 const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
-    { THREAD_MAIN,      ThreadID { uint(THREAD_MAIN),       HYP_NAME_UNSAFE(MainThread) } },
-    { THREAD_GAME,      ThreadID { uint(THREAD_GAME),       HYP_NAME_UNSAFE(GameThread) } },
-    { THREAD_TERRAIN,   ThreadID { uint(THREAD_TERRAIN),    HYP_NAME_UNSAFE(TerrainGenerationThread) } },
-    { THREAD_TASK_0,    ThreadID { uint(THREAD_TASK_0),     HYP_NAME_UNSAFE(TaskThread0) } },
-    { THREAD_TASK_1,    ThreadID { uint(THREAD_TASK_1),     HYP_NAME_UNSAFE(TaskThread1) } },
-    { THREAD_TASK_2,    ThreadID { uint(THREAD_TASK_2),     HYP_NAME_UNSAFE(TaskThread2) } },
-    { THREAD_TASK_3,    ThreadID { uint(THREAD_TASK_3),     HYP_NAME_UNSAFE(TaskThread3) } },
-    { THREAD_TASK_4,    ThreadID { uint(THREAD_TASK_4),     HYP_NAME_UNSAFE(TaskThread4) } },
-    { THREAD_TASK_5,    ThreadID { uint(THREAD_TASK_5),     HYP_NAME_UNSAFE(TaskThread5) } },
-    { THREAD_TASK_6,    ThreadID { uint(THREAD_TASK_6),     HYP_NAME_UNSAFE(TaskThread6) } },
-    { THREAD_TASK_7,    ThreadID { uint(THREAD_TASK_7),     HYP_NAME_UNSAFE(TaskThread7) } },
-    { THREAD_TASK_8,    ThreadID { uint(THREAD_TASK_8),     HYP_NAME_UNSAFE(TaskThread8) } },
-    { THREAD_TASK_9,    ThreadID { uint(THREAD_TASK_9),     HYP_NAME_UNSAFE(TaskThread9) } },
-    { THREAD_TASK_10,   ThreadID { uint(THREAD_TASK_10),    HYP_NAME_UNSAFE(TaskThread10) } }
+    { THREAD_MAIN,      ThreadID { uint32(THREAD_MAIN),         HYP_NAME_UNSAFE(MainThread) } },
+    { THREAD_GAME,      ThreadID { uint32(THREAD_GAME),         HYP_NAME_UNSAFE(GameThread) } },
+    { THREAD_RESERVED0, ThreadID { uint32(THREAD_RESERVED0),    HYP_NAME_UNSAFE(ReservedThread0) } },
+    { THREAD_TASK_0,    ThreadID { uint32(THREAD_TASK_0),       HYP_NAME_UNSAFE(TaskThread0) } },
+    { THREAD_TASK_1,    ThreadID { uint32(THREAD_TASK_1),       HYP_NAME_UNSAFE(TaskThread1) } },
+    { THREAD_TASK_2,    ThreadID { uint32(THREAD_TASK_2),       HYP_NAME_UNSAFE(TaskThread2) } },
+    { THREAD_TASK_3,    ThreadID { uint32(THREAD_TASK_3),       HYP_NAME_UNSAFE(TaskThread3) } },
+    { THREAD_TASK_4,    ThreadID { uint32(THREAD_TASK_4),       HYP_NAME_UNSAFE(TaskThread4) } },
+    { THREAD_TASK_5,    ThreadID { uint32(THREAD_TASK_5),       HYP_NAME_UNSAFE(TaskThread5) } },
+    { THREAD_TASK_6,    ThreadID { uint32(THREAD_TASK_6),       HYP_NAME_UNSAFE(TaskThread6) } },
+    { THREAD_TASK_7,    ThreadID { uint32(THREAD_TASK_7),       HYP_NAME_UNSAFE(TaskThread7) } },
+    { THREAD_TASK_8,    ThreadID { uint32(THREAD_TASK_8),       HYP_NAME_UNSAFE(TaskThread8) } },
+    { THREAD_RESERVED1, ThreadID { uint32(THREAD_RESERVED1),    HYP_NAME_UNSAFE(ReservedThread1) } },
+    { THREAD_RESERVED2, ThreadID { uint32(THREAD_RESERVED2),    HYP_NAME_UNSAFE(ReservedThread2) } }
 };
 
 thread_local ThreadBase *g_current_thread = nullptr;

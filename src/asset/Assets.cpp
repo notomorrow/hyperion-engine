@@ -17,6 +17,8 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <core/utilities/Format.hpp>
+
 #include <ui/UIObject.hpp>
 
 #include <util/fs/FsUtil.hpp>
@@ -77,14 +79,16 @@ void AssetManager::RegisterDefaultLoaders()
 
 const AssetLoaderDefinition *AssetManager::GetLoader(const FilePath &path, TypeID desired_type_id)
 {
+    HYP_SCOPE;
+
     const String extension(StringUtil::ToLower(StringUtil::GetExtension(path.Data())).c_str());
 
     AssetLoaderBase *loader = nullptr;
 
-    SortedArray<KeyValuePair<uint, const AssetLoaderDefinition *>> loader_ptrs;
+    SortedArray<KeyValuePair<uint32, const AssetLoaderDefinition *>> loader_ptrs;
 
     for (const AssetLoaderDefinition &asset_loader_definition : m_loaders) {
-        uint rank = 0;
+        uint32 rank = 0;
 
         if (desired_type_id != TypeID::Void()) {
             if (!asset_loader_definition.HandlesResultType(desired_type_id)) {
@@ -117,28 +121,26 @@ const AssetLoaderDefinition *AssetManager::GetLoader(const FilePath &path, TypeI
 
 void AssetManager::Update(GameCounter::TickUnit delta)
 {
-    HYP_NAMED_SCOPE("AssetManager Update");
+    HYP_SCOPE;
 
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
-    {
-        HYP_NAMED_SCOPE("Update pending batches");
+    uint32 num_pending_batches;
 
-        uint32 num_pending_batches;
+    if ((num_pending_batches = m_num_pending_batches.Get(MemoryOrder::ACQUIRE)) != 0) {
+        HYP_NAMED_SCOPE_FMT("Update pending batches ({})", num_pending_batches);
 
-        if ((num_pending_batches = m_num_pending_batches.Get(MemoryOrder::ACQUIRE)) != 0) {
-            Mutex::Guard guard(m_pending_batches_mutex);
+        Mutex::Guard guard(m_pending_batches_mutex);
 
-            for (auto it = m_pending_batches.Begin(); it != m_pending_batches.End();) {
-                if ((*it)->IsCompleted()) {
-                    m_completed_batches.PushBack(std::move(*it));
+        for (auto it = m_pending_batches.Begin(); it != m_pending_batches.End();) {
+            if ((*it)->IsCompleted()) {
+                m_completed_batches.PushBack(std::move(*it));
 
-                    it = m_pending_batches.Erase(it);
+                it = m_pending_batches.Erase(it);
 
-                    m_num_pending_batches.Decrement(1, MemoryOrder::RELEASE);
-                } else {
-                    ++it;
-                }
+                m_num_pending_batches.Decrement(1, MemoryOrder::RELEASE);
+            } else {
+                ++it;
             }
         }
     }

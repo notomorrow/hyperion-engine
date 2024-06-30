@@ -32,7 +32,6 @@ namespace threading {
 enum TaskThreadPoolName : uint
 {
     THREAD_POOL_GENERIC,
-    THREAD_POOL_RENDER_COLLECT,
     THREAD_POOL_RENDER,
     THREAD_POOL_MAX
 };
@@ -93,52 +92,18 @@ class TaskSystem
         Array<UniquePtr<TaskThread>>    threads;
     };
 
-    struct TaskThreadPoolInfo
-    {
-        uint32              num_task_threads = 0u;
-        ThreadPriorityValue priority = ThreadPriorityValue::NORMAL;
-    };
-
-    static const FlatMap<TaskThreadPoolName, TaskThreadPoolInfo>    s_thread_pool_infos;
-
 public:
     HYP_API static TaskSystem &GetInstance();
 
-    TaskSystem()
-    {
-        ThreadMask mask = THREAD_TASK_0;
+    TaskSystem();
 
-        for (uint32 i = 0; i < THREAD_POOL_MAX; i++) {
-            const TaskThreadPoolName pool_name { i };
+    TaskSystem(const TaskSystem &other)                 = delete;
+    TaskSystem &operator=(const TaskSystem &other)      = delete;
 
-            auto thread_pool_infos_it = s_thread_pool_infos.Find(pool_name);
-            AssertThrowMsg(
-                thread_pool_infos_it != s_thread_pool_infos.End(),
-                "TaskThreadPoolName for %u not found in s_thread_pool_infos",
-                i
-            );
+    TaskSystem(TaskSystem &&other) noexcept             = delete;
+    TaskSystem &operator=(TaskSystem &&other) noexcept  = delete;
 
-            const TaskThreadPoolInfo &task_thread_pool_info = thread_pool_infos_it->second;
-
-            TaskThreadPool &pool = m_pools[i];
-            pool.threads.Resize(task_thread_pool_info.num_task_threads);
-
-            for (auto &it : pool.threads) {
-                AssertThrow(THREAD_TASK & mask);
-
-                it.Reset(new TaskThread(Threads::thread_ids.At(ThreadName(mask)), task_thread_pool_info.priority));
-                mask <<= 1;
-            }
-        }
-    }
-
-    TaskSystem(const TaskSystem &other) = delete;
-    TaskSystem &operator=(const TaskSystem &other) = delete;
-
-    TaskSystem(TaskSystem &&other) noexcept = delete;
-    TaskSystem &operator=(TaskSystem &&other) noexcept = delete;
-
-    ~TaskSystem() = default;
+    ~TaskSystem()                                       = default;
 
     HYP_FORCE_INLINE
     bool IsRunning() const
