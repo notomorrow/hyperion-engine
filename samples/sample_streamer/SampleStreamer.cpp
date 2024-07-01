@@ -936,16 +936,6 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
         gun_node.SetLocalRotation(rotation);
     }
 
-    if (auto terrain_node = m_scene->FindNodeByName("TerrainNode")) {
-        if (auto terrain_entity = terrain_node.GetEntity()) {
-            TerrainComponent *terrain_component = m_scene->GetEntityManager()->TryGetComponent<TerrainComponent>(terrain_entity);
-
-            if (terrain_component) {
-                terrain_component->camera_position = m_scene->GetCamera()->GetTranslation();
-            }
-        }
-    }
-
     for (auto it = m_asset_batches.Begin(); it != m_asset_batches.End();) {
         if (it->second->IsCompleted()) {
             DebugLog(LogType::Debug, "Handle completed asset batch %s\n", it->first.LookupString());

@@ -4,13 +4,17 @@
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/camera/Camera.hpp>
 #include <scene/camera/OrthoCamera.hpp>
+
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderCollection.hpp>
+
 #include <math/MathUtil.hpp>
+
 #include <core/threading/Threads.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {

@@ -3,6 +3,10 @@
 #include <scene/ecs/systems/TerrainSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
+#include <core/utilities/Format.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -429,7 +433,10 @@ void TerrainSystem::Process(GameCounter::TickUnit delta)
             }
         }
 
-        const TerrainPatchCoord camera_patch_coord = WorldSpaceToPatchCoord(terrain_component.camera_position, terrain_component, transform_component);
+        const Handle<Camera> &camera = GetEntityManager().GetScene()->GetCamera();
+        const Vec3f camera_position = camera.IsValid() ? camera->GetTranslation() : Vec3f::Zero();
+
+        const TerrainPatchCoord camera_patch_coord = WorldSpaceToPatchCoord(camera_position, terrain_component, transform_component);
 
         if (!state->GetPatchEntity(camera_patch_coord).IsValid()) {
             // Enqueue a patch to be created at the current camera position
@@ -506,6 +513,8 @@ void TerrainSystem::Process(GameCounter::TickUnit delta)
                 // add task to generation queue
                 Task<void> generation_task = TaskSystem::GetInstance().Enqueue([patch_info, generation_queue = state->patch_generation_queue_shared, noise_combinator = state->noise_combinator]()
                 {
+                    HYP_NAMED_SCOPE_FMT("Generating Terrain Mesh {}", patch_info.coord);
+
                     terrain::TerrainMeshBuilder mesh_builder(patch_info);
                     mesh_builder.GenerateHeights(*noise_combinator);
 
@@ -529,7 +538,7 @@ void TerrainSystem::Process(GameCounter::TickUnit delta)
                         patch_info.coord.x,
                         patch_info.coord.y
                     );
-                }, TaskThreadPoolName::THREAD_POOL_GENERIC);
+                });
 
                 state->patch_generation_tasks.Insert(patch_info.coord, std::move(generation_task));
 

@@ -11,6 +11,7 @@
 namespace hyperion {
 
 class BLASUpdaterSystem : public System<
+    BLASUpdaterSystem,
     ComponentDescriptor<BLASComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<MeshComponent, COMPONENT_RW_FLAGS_READ>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ>

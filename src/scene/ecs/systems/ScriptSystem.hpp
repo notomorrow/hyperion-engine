@@ -11,6 +11,7 @@
 namespace hyperion {
 
 class ScriptSystem : public System<
+    ScriptSystem,
     ComponentDescriptor<ScriptComponent, COMPONENT_RW_FLAGS_READ_WRITE>
 >
 {

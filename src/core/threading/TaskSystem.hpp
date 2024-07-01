@@ -125,10 +125,7 @@ public:
         
         TaskThreadPool &pool = GetPool(pool_name);
 
-        const uint32 cycle = pool.cycle.Get(MemoryOrder::RELAXED);
-
-        TaskThread *task_thread = pool.threads[cycle].Get();
-        pool.cycle.Set((cycle + 1) % pool.threads.Size(), MemoryOrder::RELAXED);
+        TaskThread *task_thread = GetNextTaskThread(pool);
 
         return task_thread->GetScheduler().Enqueue(std::forward<Lambda>(fn), flags);
     }
@@ -304,6 +301,8 @@ public:
     }
 
 private:
+    HYP_API TaskThread *GetNextTaskThread(TaskThreadPool &pool);
+
     FixedArray<TaskThreadPool, THREAD_POOL_MAX> m_pools;
     Array<TaskBatch *>                          m_running_batches;
     AtomicVar<bool>                             m_running;

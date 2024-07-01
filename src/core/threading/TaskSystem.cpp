@@ -202,5 +202,38 @@ Array<bool> TaskSystem::DequeueBatch(TaskBatch *batch)
     return results;
 }
 
+TaskThread *TaskSystem::GetNextTaskThread(TaskThreadPool &pool)
+{
+    TaskThread *task_thread = nullptr;
+
+    const ThreadID current_thread_id = Threads::CurrentThreadID();
+
+    const uint32 num_threads_in_pool = uint32(pool.threads.Size());
+    const uint32 max_spins = 40;
+
+    uint32 cycle = pool.cycle.Get(MemoryOrder::RELAXED);
+
+    uint num_spins = 0;
+    
+    // if we are currently on a task thread we need to move to the next task thread in the pool
+    // if we selected the current task thread. otherwise we will have a deadlock.
+    // this does require that there are > 1 task thread in the pool.
+    do {
+        if (num_spins >= max_spins) {
+            AssertThrowMsg(task_thread != nullptr, "All task threads are busy and we have not found a free one");
+            return task_thread;
+        }
+
+        do {
+            task_thread = pool.threads[cycle].Get();
+            cycle = (cycle + 1) % num_threads_in_pool;
+
+            ++num_spins;
+        } while (task_thread->GetID() == current_thread_id);
+    } while (!task_thread->IsRunning() || !task_thread->IsFree());
+
+    return task_thread;
+}
+
 } // namespace threading
 } // namespace hyperion

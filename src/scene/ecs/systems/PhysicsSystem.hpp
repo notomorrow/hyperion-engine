@@ -10,6 +10,7 @@
 namespace hyperion {
 
 class PhysicsSystem : public System<
+    PhysicsSystem,
     ComponentDescriptor<RigidBodyComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ_WRITE>
 >

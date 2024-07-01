@@ -10,6 +10,7 @@
 namespace hyperion {
 
 class AudioSystem : public System<
+    AudioSystem,
     ComponentDescriptor<AudioComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ>
 >

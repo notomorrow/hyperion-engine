@@ -11,6 +11,7 @@
 namespace hyperion {
 
 class VisibilityStateUpdaterSystem : public System<
+    VisibilityStateUpdaterSystem,
     ComponentDescriptor<VisibilityStateComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<BoundingBoxComponent, COMPONENT_RW_FLAGS_READ>
 >

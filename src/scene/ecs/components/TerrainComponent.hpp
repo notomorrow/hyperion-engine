@@ -85,7 +85,6 @@ struct TerrainComponent
     Vec3f                   scale = Vec3f::One();
     float                   max_distance = 2.0f;
 
-    Vec3f                   camera_position = Vec3f::Zero();
     TerrainComponentFlags   flags = TERRAIN_COMPONENT_FLAG_NONE;
 
     HYP_NODISCARD HYP_FORCE_INLINE
@@ -95,7 +94,6 @@ struct TerrainComponent
 
         hash_code.Add(seed);
         hash_code.Add(Vec3u(patch_size));
-        hash_code.Add(camera_position);
         hash_code.Add(scale);
         hash_code.Add(max_distance);
 

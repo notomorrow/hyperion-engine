@@ -721,6 +721,30 @@ void HyperionEditor::Init()
     //     });
     // }
 
+    { // test terrain
+        auto terrain_node = m_scene->GetRoot()->AddChild();
+        auto terrain_entity = m_scene->GetEntityManager()->AddEntity();
+
+        // MeshComponent
+        m_scene->GetEntityManager()->AddComponent(terrain_entity, MeshComponent {
+            Handle<Mesh> { },
+            MaterialCache::GetInstance()->GetOrCreate({
+                .shader_definition = ShaderDefinition {
+                    HYP_NAME(Terrain),
+                    ShaderProperties(static_mesh_vertex_attributes)
+                },
+                .bucket = Bucket::BUCKET_OPAQUE
+            })
+        });
+
+        // TerrainComponent
+        m_scene->GetEntityManager()->AddComponent(terrain_entity, TerrainComponent {
+        });
+
+        terrain_node.SetEntity(terrain_entity);
+        terrain_node.SetName("TerrainNode");
+    }
+
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
     batch->Add("test_model", "models/sponza/sponza.obj");

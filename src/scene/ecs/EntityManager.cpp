@@ -5,6 +5,8 @@
 
 #include <core/threading/TaskSystem.hpp>
 
+#include <core/utilities/Format.hpp>
+
 #include <util/profiling/ProfileScope.hpp>
 
 #include <Engine.hpp>
@@ -374,7 +376,7 @@ void SystemExecutionGroup::StartProcessing(GameCounter::TickUnit delta)
     for (auto &it : m_systems) {
         m_tasks.PushBack(TaskSystem::GetInstance().Enqueue([system = it.second.Get(), delta]
         {
-            HYP_NAMED_SCOPE("Processing system");
+            HYP_NAMED_SCOPE_FMT("Processing system {}", system->GetName());
 
             system->Process(delta);
         }));

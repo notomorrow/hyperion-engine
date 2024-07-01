@@ -12,6 +12,7 @@
 namespace hyperion {
 
 class EnvGridUpdaterSystem : public System<
+    EnvGridUpdaterSystem,
     ComponentDescriptor<EnvGridComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ>,
     ComponentDescriptor<BoundingBoxComponent, COMPONENT_RW_FLAGS_READ>

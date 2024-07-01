@@ -10,6 +10,7 @@
 namespace hyperion {
 
 class UISystem : public System<
+    UISystem,
     ComponentDescriptor<UIComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ>
 >

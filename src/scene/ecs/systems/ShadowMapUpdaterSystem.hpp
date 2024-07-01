@@ -14,6 +14,7 @@
 namespace hyperion {
 
 class ShadowMapUpdaterSystem : public System<
+    ShadowMapUpdaterSystem,
     ComponentDescriptor<ShadowMapComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<LightComponent, COMPONENT_RW_FLAGS_READ>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ>

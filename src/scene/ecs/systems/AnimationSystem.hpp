@@ -10,6 +10,7 @@
 namespace hyperion {
 
 class AnimationSystem : public System<
+    AnimationSystem,
     ComponentDescriptor<AnimationComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<MeshComponent, COMPONENT_RW_FLAGS_READ_WRITE>
 >

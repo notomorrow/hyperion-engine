@@ -16,8 +16,7 @@ thread_local uint32 profile_iteration = 0;
 
 struct ProfileScopeEntry
 {
-
-    const ANSIStringView            label;
+    const ANSIString                label;
     const ANSIStringView            location;
     uint64                          start_timestamp_us;
     uint64                          measured_time_us;

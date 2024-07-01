@@ -22,6 +22,7 @@
 namespace hyperion {
 
 class TerrainSystem : public System<
+    TerrainSystem,
     ComponentDescriptor<TerrainComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<MeshComponent, COMPONENT_RW_FLAGS_READ_WRITE>

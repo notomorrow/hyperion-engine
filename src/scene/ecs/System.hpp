@@ -6,6 +6,7 @@
 #include <core/containers/Array.hpp>
 #include <core/utilities/TypeID.hpp>
 #include <core/utilities/Tuple.hpp>
+#include <core/utilities/StringView.hpp>
 #include <core/Defines.hpp>
 
 #include <scene/ecs/ComponentContainer.hpp>
@@ -20,6 +21,8 @@ class HYP_API SystemBase
 {
 public:
     virtual ~SystemBase() = default;
+
+    virtual ANSIStringView GetName() const = 0;
 
     HYP_NODISCARD HYP_FORCE_INLINE
     bool IsEntityInitialized(ID<Entity> entity) const
@@ -149,7 +152,7 @@ private:
  *
  *  \tparam ComponentDescriptors ComponentDescriptor structs for the Components this System operates on.
  */
-template <class ... ComponentDescriptors>
+template <class Derived, class... ComponentDescriptors>
 class System : public SystemBase
 {
 public:
@@ -169,6 +172,11 @@ public:
     System(System &&other) noexcept             = delete;
     System &operator=(System &&other) noexcept  = delete;
     virtual ~System() override                  = default;
+
+    virtual ANSIStringView GetName() const override final
+    {
+        return { TypeNameHelper<Derived, true>::value };
+    }
 
     virtual void Process(GameCounter::TickUnit delta) override = 0;
 };

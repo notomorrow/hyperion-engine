@@ -12,6 +12,7 @@
 namespace hyperion {
 
 class WorldAABBUpdaterSystem : public System<
+    WorldAABBUpdaterSystem,
     ComponentDescriptor<BoundingBoxComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ>,
     ComponentDescriptor<MeshComponent, COMPONENT_RW_FLAGS_READ_WRITE>

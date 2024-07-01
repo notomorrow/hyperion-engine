@@ -13,6 +13,8 @@
 namespace hyperion {
 
 class LightVisibilityUpdaterSystem : public System<
+    LightVisibilityUpdaterSystem,
+    
     ComponentDescriptor<LightComponent, COMPONENT_RW_FLAGS_READ_WRITE>,
     ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ>,
 
