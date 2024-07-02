@@ -423,8 +423,6 @@ Vec2i UIObject::GetScrollOffset() const
 
 void UIObject::SetScrollOffset(Vec2i scroll_offset)
 {
-    // @TODO: Add UpdateScrollOffset() for when size changes
-
     scroll_offset.x = m_actual_inner_size.x > m_actual_size.x
         ? MathUtil::Clamp(scroll_offset.x, 0, m_actual_inner_size.x - m_actual_size.x)
         : 0;

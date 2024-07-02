@@ -451,6 +451,10 @@ Array<float> Mesh::BuildVertexBuffer(const VertexAttributeSet &vertex_attributes
 
 void Mesh::Render(CommandBuffer *cmd, uint num_instances) const
 {
+#ifdef HYP_DEBUG_MODE
+    AssertReady();
+#endif
+
     cmd->BindVertexBuffer(m_vbo);
     cmd->BindIndexBuffer(m_ibo);
 
@@ -463,6 +467,10 @@ void Mesh::RenderIndirect(
     uint32 buffer_offset
 ) const
 {
+#ifdef HYP_DEBUG_MODE
+    AssertReady();
+#endif
+
     cmd->BindVertexBuffer(m_vbo);
     cmd->BindIndexBuffer(m_ibo);
 

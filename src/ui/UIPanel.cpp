@@ -21,7 +21,7 @@ UIPanel::UIPanel(UIStage *parent, NodeProxy node_proxy, UIObjectType type)
 
     OnScroll.Bind([this](const MouseEvent &event_data) -> UIEventHandlerResult
     {
-        SetScrollOffset(GetScrollOffset() - event_data.wheel);
+        SetScrollOffset(GetScrollOffset() - event_data.wheel * 5);
 
         return UIEventHandlerResult::STOP_BUBBLING;
     }).Detach();

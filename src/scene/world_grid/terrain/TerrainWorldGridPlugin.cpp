@@ -391,15 +391,15 @@ void TerrainWorldGridPlugin::Initialize()
     m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
     m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, 1.0f);
 
-    // if (auto albedo_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-albedo.png")) {
-    //     Handle<Texture> albedo_texture = albedo_texture_asset.Result();
-    //     albedo_texture->GetImage()->SetIsSRGB(true);
-    //     m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(albedo_texture));
-    // }
+    if (auto albedo_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-albedo.png")) {
+        Handle<Texture> albedo_texture = albedo_texture_asset.Result();
+        albedo_texture->GetImage()->SetIsSRGB(true);
+        m_material->SetTexture(Material::MATERIAL_TEXTURE_ALBEDO_MAP, std::move(albedo_texture));
+    }
 
-    // if (auto ground_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-preview.png")) {
-    //     m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, ground_texture_asset.Result());
-    // }
+    if (auto ground_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-preview.png")) {
+        m_material->SetTexture(Material::MATERIAL_TEXTURE_NORMAL_MAP, ground_texture_asset.Result());
+    }
 
     InitObject(m_material);
 }
@@ -420,15 +420,13 @@ UniquePtr<WorldGridPatch> TerrainWorldGridPlugin::CreatePatch(const WorldGridPat
 {
     HYP_SCOPE;
 
-    HYP_LOG(TerrainWorldGridPlugin, LogLevel::INFO, "Generating terrain patch mesh");
-
     terrain::TerrainMeshBuilder mesh_builder(patch_info);
     mesh_builder.GenerateHeights(*m_noise_combinator);
 
     Handle<Mesh> mesh = mesh_builder.BuildMesh();
     AssertThrowMsg(mesh.IsValid(), "Generated terrain mesh is invalid");
 
-    DebugLog(LogType::Debug, "From thread: %s\tTerrain mesh has %u indices\n", Threads::CurrentThreadID().name.LookupString(), mesh->NumIndices());
+    InitObject(mesh);
 
     return UniquePtr<WorldGridPatch>(new TerrainWorldGridPatch(patch_info, mesh, m_material));
 }

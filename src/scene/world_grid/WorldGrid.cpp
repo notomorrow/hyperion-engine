@@ -66,6 +66,19 @@ WorldGridPatch::~WorldGridPatch()
 
 #pragma endregion WorldGridPatch
 
+#pragma region WorldGridState
+
+void WorldGridState::PushUpdate(WorldGridPatchUpdate &&update)
+{
+    Mutex::Guard guard(patch_update_queue_mutex);
+
+    patch_update_queue.Push(std::move(update));
+
+    patch_update_queue_size.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+}
+
+#pragma endregion WorldGridState
+
 #pragma region WorldGrid
 
 HYP_DEFINE_CLASS(WorldGrid);
@@ -134,8 +147,6 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
     AssertThrow(m_is_initialized);
 
     for (const auto &it : m_plugins) {
-        HYP_NAMED_SCOPE_FMT("Update Plugin: {}", it.first);
-
         it.second->Update(delta);
     }
     
@@ -146,48 +157,70 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
     AssertThrow(entity_manager != nullptr);
 
     if (m_state.patch_generation_queue_shared.has_updates.Exchange(false, MemoryOrder::ACQUIRE_RELEASE)) {
+        HYP_NAMED_SCOPE("Processing patch generation updates");
+
+        AssertThrow(m_state.patch_generation_queue_owned.Empty());
+
+        // take the shared queue items and move it to the owned queue for this thread
         m_state.patch_generation_queue_shared.mutex.Lock();
-
         m_state.patch_generation_queue_owned = std::move(m_state.patch_generation_queue_shared.queue);
-
         m_state.patch_generation_queue_shared.mutex.Unlock();
 
         while (m_state.patch_generation_queue_owned.Any()) {
+            HYP_NAMED_SCOPE_FMT("Processing completed patch generation ({} patches ready)", m_state.patch_generation_queue_owned.Size());
+
             UniquePtr<WorldGridPatch> patch = m_state.patch_generation_queue_owned.Pop();
+            AssertThrow(patch != nullptr);
+            
             const WorldGridPatchInfo &patch_info = patch->GetPatchInfo();
 
-            const auto patch_generation_task_it = m_state.patch_generation_tasks.Find(patch_info.coord);
+            { // remove task
+                const auto patch_generation_task_it = m_state.patch_generation_tasks.Find(patch_info.coord);
 
-            if (patch_generation_task_it == m_state.patch_generation_tasks.End()) {
-                HYP_LOG(WorldGrid, LogLevel::INFO, "Generation task for patch at {} no longer in map, must have been removed. Skipping.", patch_info.coord);
+                if (patch_generation_task_it == m_state.patch_generation_tasks.End()) {
+                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Generation task for patch at {} no longer in map, must have been removed. Skipping.", patch_info.coord);
+
+                    continue;
+                }
+
+                if (patch_generation_task_it->second.IsCompleted()) {
+                    m_state.patch_generation_tasks.Erase(patch_generation_task_it);
+                } else {
+                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Generation task for patch at {} is not completed. Skipping.", patch_info.coord);
+                }
+            }
+
+            HYP_LOG(WorldGrid, LogLevel::INFO, "Adding generated patch at {}", patch_info.coord);
+
+            Mutex::Guard guard(m_state.patches_mutex);
+
+            auto it = m_state.patches.Find(patch_info.coord);
+
+            if (it == m_state.patches.End()) {
+                HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch at {} was not found when updating entity", patch_info.coord);
 
                 continue;
             }
 
-            m_state.patch_generation_tasks.Erase(patch_generation_task_it);
+            const ID<Entity> patch_entity = it->second.entity;
 
-            HYP_LOG(WorldGrid, LogLevel::INFO, "Add completed patch at {}", patch_info.coord);
+            // @TODO: what should happen if this is hit before the entity is created?
+
+            if (!patch_entity.IsValid()) {
+                HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch entity at {} was not found when updating entity", patch_info.coord);
+
+                continue;
+            }
 
             // Initialize patch entity on game thread
-            entity_manager->PushCommand([&state = m_state, coord = patch_info.coord, patch = std::move(patch), scene](EntityManager &mgr, GameCounter::TickUnit delta) mutable
+            entity_manager->PushCommand([&state = m_state, coord = patch_info.coord, patch = patch.Get(), scene, patch_entity](EntityManager &mgr, GameCounter::TickUnit delta) mutable
             {
-                const ID<Entity> patch_entity = state.GetPatchEntity(coord);
-
-                if (!patch_entity.IsValid()) {
-                    DebugLog(
-                        LogType::Warn,
-                        "Patch entity at [%d, %d] was not found when updating mesh\n",
-                        coord.x, coord.y
-                    );
-
-                    return;
-                }
-
-                // Prevent patch entity from being removed while updating
-                Mutex::Guard guard(state.patch_entities_mutex);
+                Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
                 patch->InitializeEntity(scene, patch_entity);
             });
+
+            it->second.patch = std::move(patch);
         }
     }
 
@@ -195,38 +228,42 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
     const Vec3f camera_position = camera.IsValid() ? camera->GetTranslation() : Vec3f::Zero();
     const Vec2i camera_patch_coord = WorldSpaceToPatchCoord(*this, camera_position);
 
-    if (!m_state.GetPatchEntity(camera_patch_coord).IsValid()) {
-        // Enqueue a patch to be created at the current camera position
-        if (!m_state.queued_neighbors.Contains(camera_patch_coord)) {
-            m_state.patch_update_queue.Push({
-                .coord  = camera_patch_coord,
-                .state  = WorldGridPatchState::WAITING
-            });
+    // {
+        
+    //     Mutex::Guard guard(m_state.patches_mutex);
+    //     auto camera_patch_desc_it = m_state.patches.Find(camera_patch_coord);
 
-            m_state.queued_neighbors.Insert(camera_patch_coord);
+    //     if (camera_patch_desc_it == m_state.patches.End()) {
+    //         // Enqueue a patch to be created at the current camera position
+    //         m_state.PushUpdate({
+    //             .coord  = camera_patch_coord,
+    //             .state  = WorldGridPatchState::WAITING
+    //         });
+    //     }
+    // }
+
+    // process queued updates
+    uint32 queue_size = 0;
+
+    while ((queue_size = m_state.patch_update_queue_size.Get(MemoryOrder::ACQUIRE)) != 0) {
+        HYP_NAMED_SCOPE_FMT("Processing patch updates (queue size: {})", queue_size);
+
+        WorldGridPatchUpdate update;
+
+        { // grab update from queue
+            Mutex::Guard guard(m_state.patch_update_queue_mutex);
+
+            update = m_state.patch_update_queue.Pop();
+
+            m_state.patch_update_queue_size.Decrement(1, MemoryOrder::ACQUIRE_RELEASE);
         }
-    }
-
-    Array<Vec2i> patch_coords_in_range;
-
-    for (int x = MathUtil::Floor(-m_params.max_distance); x <= MathUtil::Ceil(m_params.max_distance) + 1; ++x) {
-        for (int z = MathUtil::Floor(-m_params.max_distance); z <= MathUtil::Ceil(m_params.max_distance) + 1; ++z) {
-            patch_coords_in_range.PushBack(camera_patch_coord + Vec2i { x, z });
-        }
-    }
-
-    Array<Vec2i> patch_coords_to_add = patch_coords_in_range;
-
-    // state machine for patch updates
-    while (m_state.patch_update_queue.Any()) {
-        const WorldGridPatchUpdate update = m_state.patch_update_queue.Pop();
 
         switch (update.state) {
         case WorldGridPatchState::WAITING:
         {
             HYP_LOG(WorldGrid, LogLevel::INFO, "Add patch at {}", update.coord);
 
-            const WorldGridPatchInfo patch_info {
+            const WorldGridPatchInfo initial_patch_info {
                 .extent     = m_params.patch_size,
                 .coord      = update.coord,
                 .scale      = m_params.scale,
@@ -234,9 +271,25 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                 .neighbors  = GetPatchNeighbors(update.coord)
             };
 
-            // add command to add the entity
-            entity_manager->PushCommand([&state = m_state, &params = m_params, patch_info](EntityManager &mgr, GameCounter::TickUnit delta)
             {
+                Mutex::Guard guard(m_state.patches_mutex);
+
+                auto patches_it = m_state.patches.Find(update.coord);
+
+                if (patches_it == m_state.patches.End()) {
+                    patches_it = m_state.patches.Insert(update.coord, WorldGridPatchDesc {
+                        .patch_info = initial_patch_info,
+                        .entity     = ID<Entity>(),
+                        .patch      = nullptr
+                    }).first;
+                }
+            }
+
+            // add command to create the entity
+            entity_manager->PushCommand([&state = m_state, &params = m_params, patch_info = initial_patch_info](EntityManager &mgr, GameCounter::TickUnit delta)
+            {
+                Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
                 const ID<Entity> patch_entity = mgr.AddEntity();
 
                 // Add WorldGridPatchComponent
@@ -263,214 +316,200 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
 
                 HYP_LOG(WorldGrid, LogLevel::INFO, "Patch entity at {} added", patch_info.coord);
 
-                state.AddPatchEntity(patch_entity, patch_info.coord);
+                Mutex::Guard guard(state.patches_mutex);
+                auto it = state.patches.Find(patch_info.coord);
+                AssertThrow(it != state.patches.End());
+
+                it->second.entity = patch_entity;
             });
 
+            // @TODO: Only generate patch if entity is created successfully
             if (RC<WorldGridPlugin> plugin = GetMainPlugin()) {
-                // add task to generation queue
-                Task<void> generation_task = TaskSystem::GetInstance().Enqueue([patch_info, &generation_queue = m_state.patch_generation_queue_shared, plugin = std::move(plugin)]()
-                {
-                    HYP_NAMED_SCOPE_FMT("Generating patch at {}", patch_info.coord);
-
-                    Mutex::Guard guard(generation_queue.mutex);
-                    generation_queue.queue.Push(plugin->CreatePatch(patch_info));
-                    generation_queue.has_updates.Set(true, MemoryOrder::RELEASE);
-
-                    HYP_LOG(WorldGrid, LogLevel::INFO, "Patch generation at {} completed", patch_info.coord);
-                });
-
-                auto it = m_state.patch_generation_tasks.Find(patch_info.coord);
+                auto it = m_state.patch_generation_tasks.Find(initial_patch_info.coord);
 
                 if (it != m_state.patch_generation_tasks.End()) {
-                    if (!it->second.Cancel()) {
-                        HYP_LOG(WorldGrid, LogLevel::WARNING, "Failed to cancel patch generation task at {}", patch_info.coord);
-                    }
-
-                    it->second = std::move(generation_task);
+                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch generation at {} already in progress", initial_patch_info.coord);
                 } else {
-                    m_state.patch_generation_tasks.Insert(patch_info.coord, std::move(generation_task));
+                    // add task to generation queue
+                    Task<void> generation_task = TaskSystem::GetInstance().Enqueue([patch_info = initial_patch_info, &shared_queue = m_state.patch_generation_queue_shared, plugin = std::move(plugin)]()
+                    {
+                        HYP_NAMED_SCOPE_FMT("Generating patch at {}", patch_info.coord);
+
+                        Mutex::Guard guard(shared_queue.mutex);
+                        shared_queue.queue.Push(plugin->CreatePatch(patch_info));
+                        shared_queue.has_updates.Set(true, MemoryOrder::RELEASE);
+
+                        HYP_LOG(WorldGrid, LogLevel::INFO, "Patch generation at {} completed", patch_info.coord);
+                    });
+                    
+                    m_state.patch_generation_tasks.Insert(initial_patch_info.coord, std::move(generation_task));
                 }
             } else {
-                HYP_LOG(WorldGrid, LogLevel::WARNING, "No main plugin found to generate patch at {}", patch_info.coord);
+                HYP_LOG(WorldGrid, LogLevel::WARNING, "No main plugin found to generate patch at {}", initial_patch_info.coord);
             }
 
             break;
         }
-        case WorldGridPatchState::UNLOADED:
+        case WorldGridPatchState::UNLOADING:
         {
-            HYP_LOG(WorldGrid, LogLevel::INFO, "Unload patch at {}", update.coord);
+            HYP_LOG(WorldGrid, LogLevel::INFO, "Unloading patch at {}", update.coord);
 
-            const auto patch_generation_task_it = m_state.patch_generation_tasks.Find(update.coord);
+            { // remove associated tasks
+                const auto patch_generation_task_it = m_state.patch_generation_tasks.Find(update.coord);
 
-            if (patch_generation_task_it != m_state.patch_generation_tasks.End()) {
-                Task<void> &patch_generation_task = patch_generation_task_it->second;
+                if (patch_generation_task_it != m_state.patch_generation_tasks.End()) {
+                    Task<void> &patch_generation_task = patch_generation_task_it->second;
 
-                if (!patch_generation_task.Cancel()) {
-                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Failed to cancel patch generation task at {}", update.coord);
+                    if (!patch_generation_task.Cancel()) {
+                        HYP_LOG(WorldGrid, LogLevel::WARNING, "Failed to cancel patch generation task at {}", update.coord);
+
+                        patch_generation_task.Await();
+                    }
+
+                    m_state.patch_generation_tasks.Erase(patch_generation_task_it);
                 }
-
-                m_state.patch_generation_tasks.Erase(patch_generation_task_it);
             }
 
-            const auto queued_neighbors_it = m_state.queued_neighbors.Find(update.coord);
+            { // remove the patch
+                Mutex::Guard guard(m_state.patches_mutex);
 
-            if (queued_neighbors_it != m_state.queued_neighbors.End()) {
-                m_state.queued_neighbors.Erase(queued_neighbors_it);
+                ID<Entity> patch_entity;
+
+                const auto patches_it = m_state.patches.Find(update.coord);
+
+                if (patches_it != m_state.patches.End()) {
+                    patch_entity = patches_it->second.entity;
+                    m_state.patches.Erase(patches_it);
+                }
+
+                if (patch_entity.IsValid()) {
+                    // Push command to remove the entity
+                    entity_manager->PushCommand([&state = m_state, update, patch_entity](EntityManager &mgr, GameCounter::TickUnit delta)
+                    {
+                        if (mgr.HasEntity(patch_entity)) {
+                            mgr.RemoveEntity(patch_entity);
+                        }
+
+                        HYP_LOG(WorldGrid, LogLevel::INFO, "Patch entity at {} removed", update.coord);
+                    });
+                }
             }
 
-            // Push command to remove the entity
-            entity_manager->PushCommand([&state = m_state, update](EntityManager &mgr, GameCounter::TickUnit delta)
-            {
-                const ID<Entity> patch_entity = state.GetPatchEntity(update.coord);
-
-                if (!patch_entity.IsValid()) {
-                    HYP_LOG(WorldGrid, LogLevel::INFO, "Patch entity at {} was not found when unloading", update.coord);
-
-                    return;
-                }
-
-                AssertThrowMsg(
-                    state.RemovePatchEntity(patch_entity),
-                    "Failed to remove patch entity at [%d, %d]",
-                    update.coord.x,
-                    update.coord.y
-                );
-
-                if (mgr.HasEntity(patch_entity)) {
-                    mgr.RemoveEntity(patch_entity);
-                }
-
-                HYP_LOG(WorldGrid, LogLevel::INFO, "Patch entity at {} removed", update.coord);
+            m_state.PushUpdate({
+                .coord  = update.coord,
+                .state  = WorldGridPatchState::UNLOADED
             });
 
             break;
         }
         default:
         {
-            // Push command to update patch state
-            entity_manager->PushCommand([&state = m_state, update](EntityManager &mgr, GameCounter::TickUnit delta)
-            {
-                const ID<Entity> patch_entity = state.GetPatchEntity(update.coord);
+            // // Push command to update patch state
+            // entity_manager->PushCommand([&state = m_state, update](EntityManager &mgr, GameCounter::TickUnit delta)
+            // {
+            //     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
-                if (!patch_entity.IsValid()) {
-                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch entity at {} was not found when updating state", update.coord);
+            //     const WorldGridPatchDesc *patch_desc = state.GetPatchDesc(update.coord);
+            //     AssertThrow(patch_desc != nullptr);
 
-                    return;
-                }
+            //     const ID<Entity> patch_entity = patch_desc->entity;
 
-                WorldGridPatchComponent *patch_component = mgr.TryGetComponent<WorldGridPatchComponent>(patch_entity);
-                AssertThrowMsg(patch_component, "Patch entity did not have a WorldGridPatchComponent when updating state");
+            //     if (!patch_entity.IsValid()) {
+            //         HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch entity at {} was not found when updating state", update.coord);
 
-                // set new state
-                patch_component->patch_info.state = update.state;
-            });
+            //         return;
+            //     }
+
+            //     WorldGridPatchComponent *patch_component = mgr.TryGetComponent<WorldGridPatchComponent>(patch_entity);
+            //     AssertThrowMsg(patch_component, "Patch entity did not have a WorldGridPatchComponent when updating state");
+
+            //     // set new state
+            //     patch_component->patch_info.state = update.state;
+            // });
 
             break;
         }
         }
+    }
 
-        {
-            Mutex::Guard guard(m_state.patch_entities_mutex);
+    // get new updates or next iteration
+    Array<Vec2i> desired_patch_coords;
+    GetDesiredPatches(camera_patch_coord, desired_patch_coords);
 
-            for (auto &it : m_state.patch_entities) {
-                const auto in_range_it = patch_coords_in_range.Find(it.first);
+    if (desired_patch_coords == m_state.previous_desired_patch_coords) {
+        return;
+    }
 
-                const bool is_in_range = in_range_it != patch_coords_in_range.End();
+    Array<Vec2i> patch_coords_to_add = desired_patch_coords;
+    Array<Vec2i> patch_coords_to_remove;
 
-                if (is_in_range) {
-                    patch_coords_to_add.Erase(it.first);
-                }
+    { // get diff of patches in range
+        HYP_NAMED_SCOPE_FMT("Getting diff of patches in range ({} patches desired)", desired_patch_coords.Size());
 
-                // Push command to update patch state
-                // @FIXME: thread safety issues with using state here
-                entity_manager->PushCommand([patch_coord = it.first, is_in_range, &state = m_state](EntityManager &mgr, GameCounter::TickUnit delta)
-                {
-                    const ID<Entity> entity = state.GetPatchEntity(patch_coord);
+        Mutex::Guard guard(m_state.patches_mutex);
 
-                    if (!entity.IsValid()) {
-                        // Patch entity was removed, skip
-                        return;
-                    }
+        for (KeyValuePair<Vec2i, WorldGridPatchDesc> &kv : m_state.patches) {
+            auto it = desired_patch_coords.Find(kv.first);
 
-                    WorldGridPatchComponent *world_grid_patch_component = mgr.TryGetComponent<WorldGridPatchComponent>(entity);
-
-                    AssertThrowMsg(
-                        world_grid_patch_component,
-                        "Patch entity at [%d, %d] did not have a WorldGridPatchComponent when updating state",
-                        patch_coord.x,
-                        patch_coord.y
-                    );
-
-                    const WorldGridPatchInfo &patch_info = world_grid_patch_component->patch_info;
-
-                    switch (patch_info.state) {
-                    case WorldGridPatchState::LOADED:
-                    {
-                        // reset unload timer
-                        world_grid_patch_component->patch_info.unload_timer = 0.0f;
-
-                        auto queued_neighbors_it = state.queued_neighbors.Find(patch_info.coord);
-
-                        // Remove loaded patch from queued neighbors
-                        if (queued_neighbors_it != state.queued_neighbors.End()) {
-                            state.queued_neighbors.Erase(queued_neighbors_it);
-                        }
-
-                        if (!is_in_range) {
-                            HYP_LOG(WorldGrid, LogLevel::INFO, "Patch {} no longer in range, unloading", patch_info.coord);
-
-                            // Start unloading
-                            state.patch_update_queue.Push({
-                                .coord  = patch_info.coord,
-                                .state  = WorldGridPatchState::UNLOADING
-                            });
-                        }
-
-                        break;
-                    }
-                    case WorldGridPatchState::UNLOADING:
-                        if (is_in_range) {
-                            HYP_LOG(WorldGrid, LogLevel::INFO, "Patch {} back in range, stopping unloading", patch_info.coord);
-
-                            // Stop unloading
-                            state.patch_update_queue.Push({
-                                .coord  = patch_info.coord,
-                                .state  = WorldGridPatchState::LOADED
-                            });
-                        } else {
-                            world_grid_patch_component->patch_info.unload_timer += delta;
-
-                            if (world_grid_patch_component->patch_info.unload_timer >= 10.0f) {
-                                HYP_LOG(WorldGrid, LogLevel::INFO, "Unloading patch at {}", patch_info.coord);
-
-                                // Unload it now
-                                state.patch_update_queue.Push({
-                                    .coord  = patch_info.coord,
-                                    .state  = WorldGridPatchState::UNLOADED
-                                });
-                            }
-                        }
-
-                        break;
-                    default:
-                        break;
-                    }
-                });
-            }
-        }
-
-        // enqueue a patch to be created for each patch in range
-        for (const Vec2i &coord : patch_coords_to_add) {
-            if (!m_state.queued_neighbors.Contains(coord)) {
-                m_state.patch_update_queue.Push({
-                    .coord  = coord,
-                    .state  = WorldGridPatchState::WAITING
-                });
-
-                m_state.queued_neighbors.Insert(coord);
+            if (it == desired_patch_coords.End()) {
+                patch_coords_to_remove.PushBack(kv.first);
+            } else {
+                patch_coords_to_add.Erase(kv.first);
             }
         }
     }
+
+    if (patch_coords_to_remove.Any()) {
+        HYP_NAMED_SCOPE_FMT("Unloading {} patches", patch_coords_to_remove.Size());
+
+        Mutex::Guard guard(m_state.patches_mutex);
+
+        for (const Vec2i &coord : patch_coords_to_remove) {
+            const auto it = m_state.patches.Find(coord);
+
+            if (it == m_state.patches.End()) {
+                HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch at {} was not found when unloading", coord);
+
+                continue;
+            }
+
+            const WorldGridPatchInfo &patch_info = it->second.patch_info;
+
+            switch (patch_info.state) {
+            case WorldGridPatchState::UNLOADED: // fallthrough
+            case WorldGridPatchState::UNLOADING:
+                break;
+            default:
+                HYP_LOG(WorldGrid, LogLevel::INFO, "Patch {} no longer in range, unloading", patch_info.coord);
+
+                // Start unloading
+                m_state.PushUpdate({
+                    .coord  = patch_info.coord,
+                    .state  = WorldGridPatchState::UNLOADING
+                });
+
+                break;
+            }
+        }
+    }
+
+    // enqueue a patch to be created for each patch in range
+    if (patch_coords_to_add.Any()) {
+        HYP_NAMED_SCOPE_FMT("Adding {} patches", patch_coords_to_add.Size());
+
+        Mutex::Guard guard(m_state.patches_mutex);
+
+        for (const Vec2i &coord : patch_coords_to_add) {
+            if (!m_state.patches.Contains(coord)) {
+                m_state.PushUpdate({
+                    .coord  = coord,
+                    .state  = WorldGridPatchState::WAITING
+                });
+            }
+        }
+    }
+
+    m_state.previous_desired_patch_coords = std::move(desired_patch_coords);
 }
 
 void WorldGrid::AddPlugin(int priority, RC<WorldGridPlugin> &&plugin)
@@ -506,6 +545,15 @@ RC<WorldGridPlugin> WorldGrid::GetMainPlugin() const
     }
 
     return m_plugins.Front().second;
+}
+
+void WorldGrid::GetDesiredPatches(Vec2i coord, Array<Vec2i> &out_patch_coords) const
+{
+    for (int x = MathUtil::Floor(-m_params.max_distance); x <= MathUtil::Ceil(m_params.max_distance) + 1; ++x) {
+        for (int z = MathUtil::Floor(-m_params.max_distance); z <= MathUtil::Ceil(m_params.max_distance) + 1; ++z) {
+            out_patch_coords.PushBack(coord + Vec2i { x, z });
+        }
+    }
 }
 
 #pragma endregion WorldGrid

@@ -7,6 +7,7 @@
 #include <core/Handle.hpp>
 #include <core/memory/UniquePtr.hpp>
 #include <core/containers/FixedArray.hpp>
+#include <core/utilities/Pair.hpp>
 
 #include <streaming/StreamedData.hpp>
 
@@ -28,7 +29,7 @@ class HYP_API Texture
     : public BasicObject<Texture>
 {
 public:
-    static const FixedArray<std::pair<Vector3, Vector3>, 6> cubemap_directions;
+    static const FixedArray<Pair<Vec3f, Vec3f>, 6> cubemap_directions;
 
     Texture();
 

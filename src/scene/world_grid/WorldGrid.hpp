@@ -80,11 +80,24 @@ public:
     const WorldGridPatchInfo &GetPatchInfo() const
         { return m_patch_info; }
 
+    void SetState(WorldGridPatchState state)
+        { m_patch_info.state = state; }
+
     virtual void InitializeEntity(const Handle<Scene> &scene, ID<Entity> entity) = 0;
     virtual void Update(GameCounter::TickUnit delta) = 0;
 
 protected:
     WorldGridPatchInfo  m_patch_info;
+};
+
+struct WorldGridPatchDesc
+{
+    WorldGridPatchInfo          patch_info;
+
+    ID<Entity>                  entity;
+    
+    // May be null if the patch is not yet created
+    UniquePtr<WorldGridPatch>   patch;
 };
 
 struct WorldGridPatchGenerationQueue
@@ -96,55 +109,67 @@ struct WorldGridPatchGenerationQueue
 
 struct WorldGridState
 {
-    FlatMap<Vec2i, Task<void>>              patch_generation_tasks;
-    Queue<UniquePtr<WorldGridPatch>>        patch_generation_queue_owned;
-    WorldGridPatchGenerationQueue           patch_generation_queue_shared;
+    FlatMap<Vec2i, Task<void>>                  patch_generation_tasks;
+    Queue<UniquePtr<WorldGridPatch>>            patch_generation_queue_owned;
+    WorldGridPatchGenerationQueue               patch_generation_queue_shared;
+    
+    Queue<WorldGridPatchUpdate>                 patch_update_queue;
+    AtomicVar<uint32>                           patch_update_queue_size { 0 };
+    mutable Mutex                               patch_update_queue_mutex;
 
-    FlatSet<Vec2i>                          queued_neighbors;
-    Queue<WorldGridPatchUpdate>             patch_update_queue;
-    FlatMap<Vec2i, ID<Entity>>              patch_entities;
-    mutable Mutex                           patch_entities_mutex;
+    FlatMap<Vec2i, WorldGridPatchDesc>          patches;
+    mutable Mutex                               patches_mutex;
 
-    void AddPatchEntity(ID<Entity> entity, const Vec2i &coord)
+    // Keep track of the last desired patches to avoid unnecessary comparison and locking
+    Array<Vec2i>                                previous_desired_patch_coords;
+
+    void PushUpdate(WorldGridPatchUpdate &&update);
+
+    void AddPatch(const Vec2i &coord, WorldGridPatchDesc &&patch_desc)
     {
-        Mutex::Guard guard(patch_entities_mutex);
+        Mutex::Guard guard(patches_mutex);
 
-        patch_entities.Insert(coord, entity);
+        patches.Insert(coord, std::move(patch_desc));
     }
 
-    bool RemovePatchEntity(ID<Entity> entity)
+    bool RemovePatch(const Vec2i &coord)
     {
-        Mutex::Guard guard(patch_entities_mutex);
+        Mutex::Guard guard(patches_mutex);
 
-        for (auto it = patch_entities.Begin(); it != patch_entities.End(); ++it) {
-            if (it->second == entity) {
-                patch_entities.Erase(it);
+        const auto it = patches.Find(coord);
 
-                return true;
-            }
+        if (it != patches.End()) {
+            patches.Erase(it);
+            return true;
         }
 
         return false;
     }
 
-    bool RemovePatchEntity(const Vec2i &coord)
+    WorldGridPatchDesc *GetPatchDesc(const Vec2i &coord)
     {
-        Mutex::Guard guard(patch_entities_mutex);
+        Mutex::Guard guard(patches_mutex);
 
-        return patch_entities.Erase(coord);
-    }
+        const auto it = patches.Find(coord);
 
-    ID<Entity> GetPatchEntity(const Vec2i &coord) const
-    {
-        Mutex::Guard guard(patch_entities_mutex);
-
-        const auto it = patch_entities.Find(coord);
-
-        if (it != patch_entities.End()) {
-            return it->second;
+        if (it != patches.End()) {
+            return &it->second;
         }
 
-        return {};
+        return nullptr;
+    }
+
+    const WorldGridPatchDesc *GetPatchDesc(const Vec2i &coord) const
+    {
+        Mutex::Guard guard(patches_mutex);
+
+        const auto it = patches.Find(coord);
+
+        if (it != patches.End()) {
+            return &it->second;
+        }
+
+        return nullptr;
     }
 };
 
@@ -153,7 +178,7 @@ struct WorldGridParams
     Vec3i   patch_size { 32, 32, 32 };
     Vec3f   offset { 0.0f, 0.0f, 0.0f };
     Vec3f   scale { 1.0f, 1.0f, 1.0f };
-    float   max_distance = 2.0f;
+    float   max_distance = 4.0f;
 
     HashCode GetHashCode() const
     {
@@ -204,6 +229,8 @@ public:
     }
 
 private:
+    void GetDesiredPatches(Vec2i coord, Array<Vec2i> &out_patch_coords) const;
+
     RC<WorldGridPlugin> GetMainPlugin() const;
 
     const WorldGridParams               m_params;

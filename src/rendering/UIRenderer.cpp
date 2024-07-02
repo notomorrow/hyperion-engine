@@ -253,8 +253,6 @@ void UIRenderList::PushUpdatesToRenderThread(const FramebufferRef &framebuffer, 
     Array<RenderProxy *> added_proxies_ptrs;
     proxy_list.GetAddedEntities(added_proxies_ptrs, true);
 
-    // @TODO Changed
-
     if (added_proxies_ptrs.Any() || removed_proxies.Any()) {
         Array<RenderProxy> added_proxies;
         added_proxies.Resize(added_proxies_ptrs.Size());
@@ -467,13 +465,8 @@ void UIRenderer::OnRender(Frame *frame)
 
     g_engine->GetRenderState().BindScene(m_ui_stage->GetScene());
 
-    m_render_list.CollectDrawCalls(
-        frame
-    );
-
-    m_render_list.ExecuteDrawCalls(
-        frame
-    );
+    m_render_list.CollectDrawCalls(frame);
+    m_render_list.ExecuteDrawCalls(frame);
 
     g_engine->GetRenderState().UnbindScene();
 }
