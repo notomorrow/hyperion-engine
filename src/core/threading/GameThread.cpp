@@ -43,8 +43,6 @@ void GameThread::operator()(Game *game)
 #endif
 
     m_is_running.Set(true, MemoryOrder::RELAXED);
-
-    game->Init();
     
     Queue<Scheduler::ScheduledTask> tasks;
 
@@ -60,8 +58,6 @@ void GameThread::operator()(Game *game)
         HYP_PROFILE_BEGIN;
 
         g_asset_manager->Update(counter.delta);
-        
-        game->Update(counter.delta);
 
         if (auto num_enqueued = m_scheduler.NumEnqueued()) {
             m_scheduler.AcceptAll(tasks);
@@ -70,6 +66,8 @@ void GameThread::operator()(Game *game)
                 tasks.Pop().Execute(counter.delta);
             }
         }
+        
+        game->Update(counter.delta);
     }
 
     // flush scheduler

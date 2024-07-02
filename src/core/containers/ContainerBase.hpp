@@ -31,7 +31,7 @@ public:
         return static_cast<Container *>(this)->operator[](key);
     }
 
-    [[nodiscard]] const auto &Get(KeyType key) const
+    const auto &Get(KeyType key) const
     {
         const auto it = static_cast<const Container *>(this)->Find(key);
         AssertThrowMsg(it != static_cast<const Container *>(this)->End(), "Cannot Get(): value not found");
@@ -54,7 +54,7 @@ public:
     }
 
     template <class T>
-    [[nodiscard]] auto Find(const T &value)
+    auto Find(const T &value)
     {
         auto _begin = static_cast<Container *>(this)->Begin();
         const auto _end = static_cast<Container *>(this)->End();
@@ -69,7 +69,7 @@ public:
     }
     
     template <class T>
-    [[nodiscard]] auto Find(const T &value) const
+    auto Find(const T &value) const
     {
         auto _begin = static_cast<const Container *>(this)->Begin();
         const auto _end = static_cast<const Container *>(this)->End();
@@ -83,8 +83,38 @@ public:
         return _begin;
     }
 
+    template <class U>
+    auto FindAs(const U &key)
+    {
+        auto _begin = static_cast<Container *>(this)->Begin();
+        const auto _end = static_cast<Container *>(this)->End();
+
+        for (; _begin != _end; ++_begin) {
+            if (*_begin == key) {
+                return _begin;
+            }
+        }
+
+        return _begin;
+    }
+
+    template <class U>
+    auto FindAs(const U &key) const
+    {
+        auto _begin = static_cast<const Container *>(this)->Begin();
+        const auto _end = static_cast<const Container *>(this)->End();
+
+        for (; _begin != _end; ++_begin) {
+            if (*_begin == key) {
+                return _begin;
+            }
+        }
+
+        return _begin;
+    }
+
     template <class Function>
-    [[nodiscard]] auto FindIf(Function &&pred)
+    auto FindIf(Function &&pred)
     {
         typename Container::Iterator _begin = static_cast<Container *>(this)->Begin();
         const typename Container::Iterator _end = static_cast<Container *>(this)->End();
@@ -99,7 +129,7 @@ public:
     }
 
     template <class Function>
-    [[nodiscard]] auto FindIf(Function &&pred) const
+    auto FindIf(Function &&pred) const
     {
         typename Container::ConstIterator _begin = static_cast<const Container *>(this)->Begin();
         const typename Container::ConstIterator _end = static_cast<const Container *>(this)->End();
@@ -114,7 +144,7 @@ public:
     }
     
     template <class T>
-    [[nodiscard]] auto LowerBound(const T &key)
+    auto LowerBound(const T &key)
     {
         const auto _begin = static_cast<Container *>(this)->Begin();
         const auto _end = static_cast<Container *>(this)->End();
@@ -127,7 +157,7 @@ public:
     }
     
     template <class T>
-    [[nodiscard]] auto LowerBound(const T &key) const
+    auto LowerBound(const T &key) const
     {
         const auto _begin = static_cast<const Container *>(this)->Begin();
         const auto _end = static_cast<const Container *>(this)->End();
@@ -140,7 +170,7 @@ public:
     }
     
     template <class T>
-    [[nodiscard]] auto UpperBound(const T &key)
+    auto UpperBound(const T &key)
     {
         const auto _begin = static_cast<Container *>(this)->Begin();
         const auto _end = static_cast<Container *>(this)->End();
@@ -153,7 +183,7 @@ public:
     }
     
     template <class T>
-    [[nodiscard]] auto UpperBound(const T &key) const
+    auto UpperBound(const T &key) const
     {
         const auto _begin = static_cast<const Container *>(this)->Begin();
         const auto _end = static_cast<const Container *>(this)->End();
@@ -166,14 +196,14 @@ public:
     }
 
     template <class T>
-    [[nodiscard]] bool Contains(const T &value) const
+    bool Contains(const T &value) const
     {
         return static_cast<const Container *>(this)->Find(value)
             != static_cast<const Container *>(this)->End();
     }
 
     template <class Lambda>
-    [[nodiscard]] bool Any(Lambda &&lambda) const
+    bool Any(Lambda &&lambda) const
     {
         const auto _begin = static_cast<const Container *>(this)->Begin();
         const auto _end = static_cast<const Container *>(this)->End();
@@ -188,7 +218,7 @@ public:
     }
 
     template <class Lambda>
-    [[nodiscard]] bool Every(Lambda &&lambda) const
+    bool Every(Lambda &&lambda) const
     {
         const auto _begin = static_cast<const Container *>(this)->Begin();
         const auto _end = static_cast<const Container *>(this)->End();
@@ -202,7 +232,7 @@ public:
         return true;
     }
 
-    [[nodiscard]] auto Sum() const
+    auto Sum() const
     {
         using HeldType = std::remove_const_t<std::remove_reference_t<decltype(*static_cast<const Container *>(this)->Begin())>>;
 
@@ -223,7 +253,7 @@ public:
         return result;
     }
 
-    [[nodiscard]] auto Avg() const
+    auto Avg() const
     {
         using HeldType = std::remove_const_t<std::remove_reference_t<decltype(*static_cast<const Container *>(this)->Begin())>>;
 
@@ -262,7 +292,7 @@ public:
     }
 
     template <class OtherContainer>
-    [[nodiscard]] bool CompareBitwise(const OtherContainer &other_container) const
+    bool CompareBitwise(const OtherContainer &other_container) const
     {
         static_assert(Container::is_contiguous && OtherContainer::is_contiguous, "Containers must be contiguous to perform bitwise comparison");
 
@@ -302,7 +332,7 @@ public:
         );
     }
     
-    [[nodiscard]] HashCode GetHashCode() const
+    HashCode GetHashCode() const
     {
         HashCode hc;
 

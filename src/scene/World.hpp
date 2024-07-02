@@ -4,6 +4,7 @@
 #define HYPERION_WORLD_HPP
 
 #include <scene/Scene.hpp>
+#include <scene/Subsystem.hpp>
 
 #include <physics/PhysicsWorld.hpp>
 
@@ -35,10 +36,12 @@ public:
 
         const uint scene_index = scene->GetID().ToIndex();
 
-        m_render_lists_by_id_index[scene_index].SetCamera(scene->GetCamera());
+        RenderList &render_list = m_render_lists_by_id_index[scene_index];
+        render_list.SetCamera(scene->GetCamera());
+        render_list.SetRenderEnvironment(scene->GetEnvironment());
 
         const uint render_list_index = m_num_render_lists.Increment(1u, MemoryOrder::ACQUIRE_RELEASE);
-        m_render_lists[render_list_index] = &m_render_lists_by_id_index[scene_index];
+        m_render_lists[render_list_index] = &render_list;
     }
 
     void RemoveScene(const Scene *scene)
@@ -48,8 +51,11 @@ public:
         const uint scene_index = scene->GetID().ToIndex();
         
         m_num_render_lists.Decrement(1u, MemoryOrder::RELEASE);
-        m_render_lists_by_id_index[scene_index].SetCamera(Handle<Camera>::empty);
-        m_render_lists_by_id_index[scene_index].Reset();
+
+        RenderList &render_list = m_render_lists_by_id_index[scene_index];
+        render_list.SetCamera(Handle<Camera>::empty);
+        render_list.SetRenderEnvironment(nullptr);
+        render_list.Reset();
     }
 
     RenderList &GetRenderListForScene(ID<Scene> scene_id)
@@ -159,18 +165,43 @@ public:
      */
     const Handle<Scene> &GetDetachedScene(ThreadID thread_id);
 
-    PhysicsWorld &GetPhysicsWorld() { return m_physics_world; }
-    const PhysicsWorld &GetPhysicsWorld() const { return m_physics_world; }
+    HYP_FORCE_INLINE
+    PhysicsWorld &GetPhysicsWorld()
+        { return m_physics_world; }
 
+    HYP_FORCE_INLINE
+    const PhysicsWorld &GetPhysicsWorld() const
+        { return m_physics_world; }
+
+    HYP_FORCE_INLINE
     RenderListContainer &GetRenderListContainer()
         { return m_render_list_container; }
 
+    HYP_FORCE_INLINE
     const RenderListContainer &GetRenderListContainer() const
         { return m_render_list_container; }
 
+    template <class T>
+    HYP_FORCE_INLINE
+    T *AddSubsystem()
+    {
+        static_assert(std::is_base_of_v<Subsystem<T>, T>, "T must be a subclass of Subsystem<T>");
+
+        return static_cast<T *>(AddSubsystem(TypeID::ForType<T>(), UniquePtr<T>(new T())));
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE
+    T *GetSubsystem()
+    {
+        static_assert(std::is_base_of_v<Subsystem<T>, T>, "T must be a subclass of Subsystem<T>");
+
+        return static_cast<T *>(GetSubsystem(TypeID::ForType<T>()));
+    }
+
     void AddScene(const Handle<Scene> &scene);
     void AddScene(Handle<Scene> &&scene);
-    void RemoveScene(ID<Scene> id);
+    void RemoveScene(const WeakHandle<Scene> &scene);
 
     void Init();
     
@@ -184,7 +215,10 @@ public:
     void Render(Frame *frame);
 
 private:
-    void PerformSceneUpdates();
+    SubsystemBase *AddSubsystem(TypeID type_id, UniquePtr<SubsystemBase> &&subsystem);
+    SubsystemBase *GetSubsystem(TypeID type_id);
+
+    void UpdatePendingScenes();
 
     PhysicsWorld                        m_physics_world;
     RenderListContainer                 m_render_list_container;
@@ -194,9 +228,11 @@ private:
 
     DetachedScenesContainer             m_detached_scenes;
 
-    FlatSet<Handle<Scene>>              m_scenes;
-    FlatSet<Handle<Scene>>              m_scenes_pending_addition;
-    FlatSet<Handle<Scene>>              m_scenes_pending_removal;
+    Array<Handle<Scene>>                m_scenes;
+    FlatSet<ID<Scene>>                  m_scenes_pending_removal;
+    FlatSet<ID<Scene>>                  m_scenes_pending_addition;
+
+    TypeMap<UniquePtr<SubsystemBase>>   m_subsystems;
 
     AtomicVar<bool>                     m_has_scene_updates { false };
     Mutex                               m_scene_update_mutex;

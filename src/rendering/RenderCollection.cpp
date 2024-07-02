@@ -381,12 +381,14 @@ void EntityDrawCollection::RemoveEmptyProxyGroups()
 #pragma region RenderList
 
 RenderList::RenderList()
-    : m_draw_collection(new EntityDrawCollection())
+    : m_render_environment(nullptr),
+      m_draw_collection(new EntityDrawCollection())
 {
 }
 
 RenderList::RenderList(const Handle<Camera> &camera)
-    : m_camera(camera)
+    : m_render_environment(nullptr),
+      m_camera(camera)
 {
 }
 

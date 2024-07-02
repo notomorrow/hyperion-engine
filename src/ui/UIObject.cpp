@@ -218,6 +218,8 @@ void UIObject::Init()
 
 void UIObject::Update(GameCounter::TickUnit delta)
 {
+    AssertThrow(m_is_init);
+
     Update_Internal(delta);
 
     ForEachChildUIObject([this, delta](const RC<UIObject> &child)

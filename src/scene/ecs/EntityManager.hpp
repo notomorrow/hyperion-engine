@@ -205,6 +205,10 @@ public:
     bool HasUpdates() const
         { return m_count.Get(MemoryOrder::ACQUIRE) != 0; }
 
+    /*! \brief Waits for the command queue to be empty.
+     *  Useful for ensuring that all commands have been processed before continuing. */
+    void AwaitEmpty();
+
     void Push(EntityManagerCommandProc &&command);
     void Execute(EntityManager &mgr, GameCounter::TickUnit delta);
 
@@ -220,6 +224,7 @@ private:
     FixedArray<EntityManagerCommandBuffer, 2>   m_command_buffers;
     AtomicVar<uint>                             m_buffer_index { 0 };
     AtomicVar<uint>                             m_count { 0 };
+    std::condition_variable                     m_condition_variable;
 };
 
 class EntityToEntityManagerMap

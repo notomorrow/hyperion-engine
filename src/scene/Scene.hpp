@@ -35,6 +35,7 @@ class RenderEnvironment;
 class World;
 class Scene;
 class EntityManager;
+class WorldGrid;
 
 struct FogParams
 {
@@ -82,7 +83,7 @@ public:
     ~Scene();
 
     /*! \brief Get the thread ID that owns this Scene. */
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     ThreadID GetOwnerThreadID() const
         { return m_owner_thread_id; }
 
@@ -99,11 +100,11 @@ public:
     /*! \brief Set the camera that is used to render this Scene. */
     void SetCamera(Handle<Camera> camera);
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     RenderList &GetRenderList()
         { return m_render_list; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     const RenderList &GetRenderList() const
         { return m_render_list; }
 
@@ -114,7 +115,7 @@ public:
     NodeProxy FindNodeByName(const String &) const;
     
     /*! \brief Get the top level acceleration structure for this Scene, if it exists. */
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     const TLASRef &GetTLAS() const
         { return m_tlas; }
 
@@ -124,7 +125,7 @@ public:
      */
     bool CreateTLAS();
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     const NodeProxy &GetRoot() const
         { return m_root_node_proxy; }
 
@@ -144,23 +145,23 @@ public:
         }
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     const RC<EntityManager> &GetEntityManager() const
         { return m_entity_manager; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     Octree &GetOctree()
         { return m_octree; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     const Octree &GetOctree() const
         { return m_octree; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     RenderEnvironment *GetEnvironment() const
         { return m_environment.Get(); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     World *GetWorld() const
         { return m_world; }
 
@@ -170,11 +171,11 @@ public:
         but rather a simple container that has items based on another Scene. For example,
         you could have a "shadow map" scene, which gathers entities from the main scene,
         but does not call Update() on them. */
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool IsWorldScene() const
         { return !m_is_non_world_scene; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool IsAudioListener() const
         { return m_is_audio_listener; }
 
@@ -182,9 +183,11 @@ public:
     void SetIsAudioListener(bool is_audio_listener)
         { m_is_audio_listener = is_audio_listener; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     const SceneDrawProxy &GetProxy() const
         { return m_proxy; }
+
+    WorldGrid *GetWorldGrid() const;
     
     void Init();
 
@@ -240,7 +243,7 @@ private:
 
     Matrix4                         m_last_view_projection_matrix;
     
-    bool                            m_is_non_world_scene;
+    const bool                      m_is_non_world_scene;
 
     bool                            m_is_audio_listener;
 

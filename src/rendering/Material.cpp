@@ -193,10 +193,6 @@ Material::Material(Name name, Bucket bucket)
       m_is_dynamic(false),
       m_mutation_state(DataMutationState::CLEAN)
 {
-    if (m_render_attributes.shader_definition) {
-        m_shader = g_shader_manager->GetOrCreate(m_render_attributes.shader_definition);
-    }
-
     ResetParameters();
 }
 
@@ -212,9 +208,6 @@ Material::Material(
     m_is_dynamic(false),
     m_mutation_state(DataMutationState::CLEAN)
 {
-    if (m_render_attributes.shader_definition) {
-        m_shader = g_shader_manager->GetOrCreate(m_render_attributes.shader_definition);
-    }
 }
 
 Material::~Material()
@@ -243,6 +236,16 @@ void Material::Init()
     }
 
     BasicObject::Init();
+
+    if (!m_shader.IsValid()) {
+        if (m_render_attributes.shader_definition) {
+            m_shader = g_shader_manager->GetOrCreate(m_render_attributes.shader_definition);
+        }
+
+        if (!m_shader.IsValid()) {
+            HYP_LOG(Material, LogLevel::ERROR, "Failed to create shader for material with ID #{} (name: {})", GetID().Value(), GetName());
+        }
+    }
 
     for (SizeType i = 0; i < m_textures.Size(); i++) {
         if (Handle<Texture> &texture = m_textures.ValueAt(i)) {

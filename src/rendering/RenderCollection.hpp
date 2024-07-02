@@ -41,6 +41,7 @@ class Scene;
 class Camera;
 class Entity;
 class RenderGroup;
+class RenderEnvironment;
 
 using renderer::PushConstantData;
 
@@ -59,7 +60,7 @@ constexpr PassType BucketToPassType(Bucket bucket)
     constexpr const PassType pass_type_per_bucket[uint(BUCKET_MAX)] = {
         PASS_TYPE_INVALID,     // BUCKET_SWAPCHAIN
         PASS_TYPE_INVALID,     // BUCKET_RESERVED0
-        PASS_TYPE_INVALID,     // BUCKET_SHADOW
+        PASS_TYPE_INVALID,     // BUCKET_RESERVED1
         PASS_TYPE_OPAQUE,      // BUCKET_OPAQUE
         PASS_TYPE_TRANSLUCENT, // BUCKET_TRANSLUCENT
         PASS_TYPE_SKYBOX,      // BUCKET_SKYBOX
@@ -122,7 +123,6 @@ struct RenderListCollectionResult
     uint32  num_changed_entities = 0;
 
     /*! \brief Returns true if any proxies have been added, removed or changed. */
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool NeedsUpdate() const
         { return num_added_entities != 0 || num_removed_entities != 0 || num_changed_entities != 0; }
@@ -139,12 +139,23 @@ public:
     RenderList &operator=(RenderList &&other) noexcept  = default;
     ~RenderList();
 
+    HYP_FORCE_INLINE
     const Handle<Camera> &GetCamera() const
         { return m_camera; }
 
+    HYP_FORCE_INLINE
     void SetCamera(const Handle<Camera> &camera)
         { m_camera = camera; }
 
+    HYP_FORCE_INLINE
+    RenderEnvironment *GetRenderEnvironment() const
+        { return m_render_environment; }
+
+    HYP_FORCE_INLINE
+    void SetRenderEnvironment(RenderEnvironment *render_environment)
+        { m_render_environment = render_environment; }
+
+    HYP_FORCE_INLINE
     const RC<EntityDrawCollection> &GetEntityCollection() const
         { return m_draw_collection; }
 
@@ -206,8 +217,9 @@ public:
     void Reset();
 
 protected:
-    Handle<Camera>                                              m_camera;
-    RC<EntityDrawCollection>                                    m_draw_collection;
+    Handle<Camera>              m_camera;
+    RenderEnvironment           *m_render_environment;
+    RC<EntityDrawCollection>    m_draw_collection;
 };
 
 } // namespace hyperion

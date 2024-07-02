@@ -39,35 +39,35 @@ struct TaskID
     
     TaskID &operator=(const TaskID &other) = default;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool operator==(uint id) const
         { return value == id; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool operator!=(uint id) const
         { return value != id; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool operator==(const TaskID &other) const
         { return value == other.value; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool operator!=(const TaskID &other) const
         { return value != other.value; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool operator<(const TaskID &other) const
         { return value < other.value; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     explicit operator bool() const
         { return value != 0; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool operator!() const
         { return value == 0; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool IsValid() const
         { return value != 0; }
 };
@@ -114,15 +114,16 @@ public:
 
     virtual ~TaskExecutor() = default;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     TaskID GetTaskID() const
         { return m_id; }
 
     /*! \internal This function is used by the Scheduler to set the task ID. */
+    HYP_FORCE_INLINE
     void SetTaskID(TaskID id)
         { m_id = id; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool IsCompleted() const
         { return m_completed_flag.Get(MemoryOrder::ACQUIRE); }
 
@@ -179,24 +180,26 @@ public:
 
     virtual void Execute(ArgTypes... args) override final
     {
+        AssertThrow(m_fn.IsValid());
+
         m_result_value.Emplace(m_fn(std::forward<ArgTypes>(args)...));
 
         Base::SetIsCompleted(true);
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     ReturnType &Result() &
         { return m_result_value.Get(); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     const ReturnType &Result() const &
         { return m_result_value.Get(); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     ReturnType Result() &&
         { return std::move(m_result_value.Get()); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     ReturnType Result() const &&
         { return m_result_value.Get(); }
 
@@ -242,6 +245,8 @@ public:
 
     virtual void Execute(ArgTypes... args) override final
     {
+        AssertThrow(m_fn.IsValid());
+        
         m_fn(std::forward<ArgTypes>(args)...);
 
         Base::SetIsCompleted(true);
@@ -298,7 +303,7 @@ struct TaskRef
 
     ~TaskRef() = default;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     bool IsValid() const
         { return id.IsValid() && assigned_scheduler != nullptr; }
 };
@@ -338,19 +343,17 @@ public:
 
     virtual ~TaskBase() = default;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     TaskID GetTaskID() const
         { return m_id; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
+    HYP_FORCE_INLINE
     SchedulerBase *GetAssignedScheduler() const
         { return m_assigned_scheduler; }
 
-    HYP_NODISCARD
     virtual bool IsValid() const
         { return m_id.IsValid() && m_assigned_scheduler != nullptr; }
 
-    HYP_NODISCARD
     virtual bool IsCompleted() const = 0;
 
     /*! \brief Remove the task from the scheduler.
@@ -427,7 +430,6 @@ public:
         // otherwise, the executor will be freed when the task is completed
     }
 
-    HYP_NODISCARD
     virtual bool IsValid() const override
     {
         return TaskBase::IsValid()
@@ -435,7 +437,6 @@ public:
             && m_executor->GetTaskID() != 0;
     }
 
-    HYP_NODISCARD
     virtual bool IsCompleted() const override
     {
         return m_executor->IsCompleted();
@@ -549,7 +550,6 @@ public:
         // otherwise, the executor will be freed when the task is completed
     }
 
-    HYP_NODISCARD
     virtual bool IsValid() const override
     {
         return TaskBase::IsValid()
@@ -557,7 +557,6 @@ public:
             && m_executor->GetTaskID() != 0;
     }
 
-    HYP_NODISCARD
     virtual bool IsCompleted() const override
     {
         return m_executor->IsCompleted();

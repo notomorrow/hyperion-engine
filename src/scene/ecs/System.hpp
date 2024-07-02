@@ -134,7 +134,6 @@ protected:
         AssertThrowMsg(m_component_type_ids.Size() == m_component_infos.Size(), "Component type ID count and component infos count mismatch");
     }
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     EntityManager &GetEntityManager()
         { return m_entity_manager; }

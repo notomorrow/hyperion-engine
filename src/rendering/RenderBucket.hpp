@@ -11,8 +11,8 @@ enum Bucket : uint32
 {
     BUCKET_INVALID = uint32(-1),
     BUCKET_SWAPCHAIN = 0, /* Main swapchain */
-    BUCKET_RESERVED1,     /* Reserved, unused */
-    BUCKET_SHADOW,
+    BUCKET_RESERVED0,     /* Reserved, unused */
+    BUCKET_RESERVED1,
     /* === Scene objects === */
     BUCKET_OPAQUE,        /* Opaque items */
     BUCKET_TRANSLUCENT,   /* Transparent - rendering on top of opaque objects */
@@ -45,8 +45,7 @@ static bool BucketHasGlobalIllumination(Bucket bucket)
 HYP_FORCE_INLINE
 static bool BucketFrustumCullingEnabled(Bucket bucket)
 {
-    return bucket == BUCKET_SHADOW
-        || bucket == BUCKET_OPAQUE
+    return bucket == BUCKET_OPAQUE
         || bucket == BUCKET_TRANSLUCENT;
 }
 

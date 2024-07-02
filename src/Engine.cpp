@@ -14,8 +14,6 @@
 
 #include <Game.hpp>
 
-#include <core/threading/GameThread.hpp>
-
 #include <util/profiling/ProfileScope.hpp>
 #include <util/MeshBuilder.hpp>
 #include <util/fs/FsUtil.hpp>

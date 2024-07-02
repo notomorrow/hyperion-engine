@@ -26,8 +26,33 @@ EntityManagerCommandQueue::EntityManagerCommandQueue(EntityManagerCommandQueuePo
 {
 }
 
+void EntityManagerCommandQueue::AwaitEmpty()
+{
+    HYP_SCOPE;
+    
+    switch (m_policy) {
+    case ENTITY_MANAGER_COMMAND_QUEUE_POLICY_EXEC_ON_OWNER_THREAD: {
+        const uint32 current_buffer_index = m_buffer_index.Get(MemoryOrder::ACQUIRE);
+        EntityManagerCommandBuffer &buffer = m_command_buffers[current_buffer_index];
+
+        std::unique_lock<std::mutex> guard(buffer.mutex);
+
+        while (m_count.Get(MemoryOrder::ACQUIRE)) {
+            m_condition_variable.wait(guard);
+        }
+
+        break;
+    }
+    case ENTITY_MANAGER_COMMAND_QUEUE_POLICY_DISCARD:
+        // Do nothing
+        break;
+    }
+}
+
 void EntityManagerCommandQueue::Push(EntityManagerCommandProc &&command)
 {
+    HYP_SCOPE;
+    
     switch (m_policy) {
     case ENTITY_MANAGER_COMMAND_QUEUE_POLICY_EXEC_ON_OWNER_THREAD: {
         const uint32 current_buffer_index = m_buffer_index.Get(MemoryOrder::ACQUIRE);
@@ -73,6 +98,7 @@ void EntityManagerCommandQueue::Execute(EntityManager &mgr, GameCounter::TickUni
 
         // Update count to be the number of commands in the next buffer (0 unless one of the commands added more commands to the queue)
         m_count.Set(uint(m_command_buffers[next_buffer_index].commands.Size()), MemoryOrder::RELEASE);
+        m_condition_variable.notify_all();
 
         break;
     }

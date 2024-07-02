@@ -20,6 +20,9 @@
 #include <scene/ecs/components/BLASComponent.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
 
+#include <scene/world_grid/terrain/TerrainWorldGridPlugin.hpp>
+#include <scene/world_grid/WorldGrid.hpp>
+
 #include <ui/UIObject.hpp>
 #include <ui/UIText.hpp>
 #include <ui/UIButton.hpp>
@@ -721,28 +724,36 @@ void HyperionEditor::Init()
     //     });
     // }
 
-    { // test terrain
-        auto terrain_node = m_scene->GetRoot()->AddChild();
-        auto terrain_entity = m_scene->GetEntityManager()->AddEntity();
+    // if (false) { // test terrain
+    //     auto terrain_node = m_scene->GetRoot()->AddChild();
+    //     auto terrain_entity = m_scene->GetEntityManager()->AddEntity();
 
-        // MeshComponent
-        m_scene->GetEntityManager()->AddComponent(terrain_entity, MeshComponent {
-            Handle<Mesh> { },
-            MaterialCache::GetInstance()->GetOrCreate({
-                .shader_definition = ShaderDefinition {
-                    HYP_NAME(Terrain),
-                    ShaderProperties(static_mesh_vertex_attributes)
-                },
-                .bucket = Bucket::BUCKET_OPAQUE
-            })
-        });
+    //     // MeshComponent
+    //     m_scene->GetEntityManager()->AddComponent(terrain_entity, MeshComponent {
+    //         Handle<Mesh> { },
+    //         MaterialCache::GetInstance()->GetOrCreate({
+    //             .shader_definition = ShaderDefinition {
+    //                 HYP_NAME(Terrain),
+    //                 ShaderProperties(static_mesh_vertex_attributes)
+    //             },
+    //             .bucket = Bucket::BUCKET_OPAQUE
+    //         })
+    //     });
 
-        // TerrainComponent
-        m_scene->GetEntityManager()->AddComponent(terrain_entity, TerrainComponent {
-        });
+    //     // TerrainComponent
+    //     m_scene->GetEntityManager()->AddComponent(terrain_entity, TerrainComponent {
+    //     });
 
-        terrain_node.SetEntity(terrain_entity);
-        terrain_node.SetName("TerrainNode");
+    //     terrain_node.SetEntity(terrain_entity);
+    //     terrain_node.SetName("TerrainNode");
+    // }
+
+    { // test terrain 2
+        if (WorldGrid *world_grid = m_scene->GetWorldGrid()) {
+            world_grid->AddPlugin(0, RC<TerrainWorldGridPlugin>(new TerrainWorldGridPlugin()));
+        } else {
+            HYP_FAIL("Failed to get world grid");
+        }
     }
 
     // temp

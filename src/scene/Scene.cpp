@@ -23,6 +23,8 @@
 #include <scene/ecs/systems/TerrainSystem.hpp>
 #include <scene/ecs/systems/ScriptSystem.hpp>
 
+#include <scene/world_grid/WorldGridSubsystem.hpp>
+
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
 
@@ -174,8 +176,6 @@ void Scene::Init()
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
     {
         m_environment.Reset();
-        // since environment is now reset
-        m_is_non_world_scene = true;
     }));
 
     InitObject(m_camera);
@@ -224,6 +224,20 @@ void Scene::SetWorld(World *world)
     // Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     m_world = world;
+}
+
+WorldGrid *Scene::GetWorldGrid() const
+{
+    // if (!m_world) {
+    //     return nullptr;
+    // }
+    AssertThrow(m_world != nullptr);
+
+    if (WorldGridSubsystem *world_grid_subsystem = m_world->GetSubsystem<WorldGridSubsystem>()) {
+        return world_grid_subsystem->GetWorldGrid(GetID());
+    }
+
+    return nullptr;
 }
 
 NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const

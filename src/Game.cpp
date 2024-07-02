@@ -75,26 +75,31 @@ void Game::Init_Internal()
         }
     }
 
-    m_scene = CreateObject<Scene>(
-        Handle<Camera>(),
-        Threads::GetThreadID(ThreadName::THREAD_GAME),
-        Scene::InitInfo {
-            .flags = Scene::InitInfo::SCENE_FLAGS_HAS_TLAS // default it to having a top level acceleration structure for RT
-        }
-    );
+    m_game_thread->GetScheduler().Enqueue([this, window_size](GameCounter::TickUnit delta) -> void
+    {
+        m_scene = CreateObject<Scene>(
+            Handle<Camera>(),
+            Threads::GetThreadID(ThreadName::THREAD_GAME),
+            Scene::InitInfo {
+                .flags = Scene::InitInfo::SCENE_FLAGS_HAS_TLAS // default it to having a top level acceleration structure for RT
+            }
+        );
 
-    m_scene->SetCamera(CreateObject<Camera>(
-        70.0f,
-        window_size.width, window_size.height,
-        0.01f, 30000.0f
-    ));
+        m_scene->SetCamera(CreateObject<Camera>(
+            70.0f,
+            window_size.width, window_size.height,
+            0.01f, 30000.0f
+        ));
 
-    m_scene->SetIsAudioListener(true);
+        m_scene->SetIsAudioListener(true);
 
-    InitObject(m_scene);
-    g_engine->GetWorld()->AddScene(m_scene);
+        InitObject(m_scene);
+        g_engine->GetWorld()->AddScene(m_scene);
 
-    // Init game thread (calls Init() on game thread)
+        // Call Init method (overridden)
+        Init();
+    }, TaskEnqueueFlags::FIRE_AND_FORGET);
+
     m_game_thread->Start(this);
 
     m_is_init = true;
@@ -145,7 +150,7 @@ void Game::Teardown()
     HYP_SCOPE;
 
     if (m_scene) {
-        g_engine->GetWorld()->RemoveScene(m_scene->GetID());
+        g_engine->GetWorld()->RemoveScene(m_scene);
         m_scene.Reset();
     }
 
