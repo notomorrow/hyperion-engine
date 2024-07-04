@@ -35,8 +35,8 @@ struct alignas(alignof(T) * 4) HYP_API Vec3
     };
 
     constexpr Vec3()                                    : x(0), y(0), z(0) { }
-    constexpr Vec3(Type x, Type y, Type z)              : x(x), y(y), z(z) { }
     constexpr Vec3(Type xyz)                            : x(xyz), y(xyz), z(xyz) { }
+    constexpr Vec3(Type x, Type y, Type z)              : x(x), y(y), z(z) { }
     constexpr Vec3(const Vec3 &other)                   = default;
     constexpr Vec3 &operator=(const Vec3 &other)        = default;
     constexpr Vec3(Vec3 &&other) noexcept               = default;
@@ -234,8 +234,8 @@ struct alignas(alignof(float) * 4) HYP_API Vec3<float>
     };
 
     constexpr Vec3()                                    : x(0), y(0), z(0) { }
-    constexpr Vec3(Type x, Type y, Type z)              : x(x), y(y), z(z) { }
     constexpr Vec3(Type xyz)                            : x(xyz), y(xyz), z(xyz) { }
+    constexpr Vec3(Type x, Type y, Type z)              : x(x), y(y), z(z) { }
     constexpr Vec3(const Vec3 &other)                   = default;
     constexpr Vec3 &operator=(const Vec3 &other)        = default;
     constexpr Vec3(Vec3 &&other) noexcept               = default;

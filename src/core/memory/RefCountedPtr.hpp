@@ -67,7 +67,6 @@ struct RefCountData
     }
 #endif
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool HasValue() const
         { return value != nullptr; }
@@ -92,7 +91,6 @@ struct RefCountData
         }
     }
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     uint UseCount_Strong() const
     {
@@ -103,7 +101,6 @@ struct RefCountData
         }
     }
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     uint UseCount_Weak() const
     {
@@ -316,7 +313,6 @@ public:
     }
 
     /*! \brief Used by objects inheriting from this class or marshaling data. Not ideal to use externally */
-    [[nodiscard]]
     HYP_FORCE_INLINE
     RefCountDataType *GetRefCountData_Internal() const
         { return m_ref; }
@@ -336,8 +332,7 @@ public:
     /*! \brief Releases the reference to the currently held value, if any, and returns it.
         * The caller is responsible for handling the reference count of the returned value.
     */
-    [[nodiscard]]
-    HYP_FORCE_INLINE
+    HYP_NODISCARD HYP_FORCE_INLINE
     RefCountDataType *Release()
     {
         RefCountDataType *ref = m_ref;
@@ -491,8 +486,7 @@ public:
     /*! \brief Releases the reference to the currently held value, if any, and returns it.
         * The caller is responsible for handling the reference count of the returned value.
     */
-    [[nodiscard]]
-    HYP_FORCE_INLINE
+    HYP_NODISCARD HYP_FORCE_INLINE
     RefCountDataType *Release()
     {
         RefCountDataType *ref = m_ref;
@@ -502,7 +496,6 @@ public:
     }
 
     template <class T>
-    [[nodiscard]]
     HYP_FORCE_INLINE
     WeakRefCountedPtr<T, CountType> CastUnsafe() const
     {
@@ -512,7 +505,6 @@ public:
     }
 
     /*! \brief Used by objects inheriting from this class or marshaling data. Not ideal to use externally */
-    [[nodiscard]]
     HYP_FORCE_INLINE
     RefCountDataType *GetRefCountData_Internal() const
         { return m_ref; }
@@ -589,7 +581,7 @@ protected:
 
 public:
     template <class ...Args>
-    [[nodiscard]] static RefCountedPtr Construct(Args &&... args)
+    static RefCountedPtr Construct(Args &&... args)
     {
         return RefCountedPtr(new T(std::forward<Args>(args)...));
     }
@@ -682,52 +674,42 @@ public:
 
     ~RefCountedPtr() = default;
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     operator T *() const
         { return Get(); }
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     T *Get() const
         { return static_cast<T *>(Base::m_ref->value); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     T *operator->() const
         { return Get(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     T &operator*() const
         { return *Get(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     operator bool() const
         { return Base::operator bool(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!() const
         { return Base::operator!(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(const RefCountedPtr &other) const
         { return Base::operator==(other); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(std::nullptr_t) const
         { return Base::operator==(nullptr); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!=(const RefCountedPtr &other) const
         { return Base::operator!=(other); }
-    
-    [[nodiscard]]
+
     HYP_FORCE_INLINE
     bool operator!=(std::nullptr_t) const
         { return Base::operator!=(nullptr); }
@@ -752,7 +734,6 @@ public:
 
     /*! \brief Returns a boolean indicating whether the type of this RefCountedPtr is the same as the given type, or if the given type is convertible to the type of this RefCountedPtr. */
     template <class Ty>
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool Is() const
     {
@@ -766,7 +747,6 @@ public:
         no cast is performed and a null RefCountedPtr is returned. Otherwise, a new RefCountedPtr is returned,
         with the currently held pointer casted to Ty as the held value. */
     template <class Ty>
-    [[nodiscard]]
     HYP_FORCE_INLINE
     RefCountedPtr<Ty, CountType> Cast()
     {
@@ -775,6 +755,12 @@ public:
         }
 
         return RefCountedPtr<Ty, CountType>();
+    }
+
+    HYP_FORCE_INLINE
+    WeakRefCountedPtr<T, CountType> ToWeak() const
+    {
+        return WeakRefCountedPtr<T, CountType>(*this);
     }
 };
 
@@ -834,42 +820,34 @@ public:
 
     ~RefCountedPtr() = default;
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     operator void *() const
         { return Base::Get(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     void *Get() const
         { return Base::Get(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
-    operator bool() const
+    explicit operator bool() const
         { return Base::operator bool(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!() const
         { return Base::operator!(); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(const RefCountedPtr &other) const
         { return Base::operator==(other); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(std::nullptr_t) const
         { return Base::operator==(nullptr); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!=(const RefCountedPtr &other) const
         { return Base::operator!=(other); }
     
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!=(std::nullptr_t) const
         { return Base::operator!=(nullptr); }
@@ -894,7 +872,6 @@ public:
     /*! \brief Returns a boolean indicating whether the type of this RefCountedPtr is the same as the given type,
      *  or if the given type is convertible to the type of this RefCountedPtr. */
     template <class Ty>
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool Is() const
     {
@@ -907,7 +884,6 @@ public:
         no cast is performed and a null RefCountedPtr is returned. Otherwise, a new RefCountedPtr is returned,
         with the currently held pointer casted to Ty as the held value. */
     template <class Ty>
-    [[nodiscard]]
     HYP_FORCE_INLINE
     RefCountedPtr<Ty, CountType> Cast()
     {
@@ -916,6 +892,12 @@ public:
         }
 
         return RefCountedPtr<Ty, CountType>();
+    }
+
+    HYP_FORCE_INLINE
+    WeakRefCountedPtr<void, CountType> ToWeak() const
+    {
+        return WeakRefCountedPtr<void, CountType>(*this);
     }
 };
 
@@ -973,17 +955,14 @@ public:
 
     ~WeakRefCountedPtr() = default;
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator==(const WeakRefCountedPtr &other) const
         { return Base::operator==(other); }
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     bool operator!=(const WeakRefCountedPtr &other) const
         { return Base::operator!=(other); }
 
-    [[nodiscard]]
     HYP_FORCE_INLINE
     RefCountedPtr<T, CountType> Lock() const
     {

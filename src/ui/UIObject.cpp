@@ -232,7 +232,13 @@ void UIObject::Update(GameCounter::TickUnit delta)
 
 void UIObject::Update_Internal(GameCounter::TickUnit delta)
 {
-    // Do nothing
+    // If the scroll offset has changed, recalculate the position
+    bool recalculate_position = false;
+    recalculate_position |= m_scroll_offset.Advance(delta);
+
+    if (recalculate_position) {
+        UpdatePosition();
+    }
 }
 
 void UIObject::OnAttached_Internal(UIObject *parent)
@@ -418,7 +424,7 @@ void UIObject::UpdateSize(bool update_children)
 
 Vec2i UIObject::GetScrollOffset() const
 {
-    return m_scroll_offset;
+    return Vec2i(m_scroll_offset.GetValue());
 }
 
 void UIObject::SetScrollOffset(Vec2i scroll_offset)
@@ -431,13 +437,7 @@ void UIObject::SetScrollOffset(Vec2i scroll_offset)
         ? MathUtil::Clamp(scroll_offset.y, 0, m_actual_inner_size.y - m_actual_size.y)
         : 0;
 
-    if (scroll_offset == m_scroll_offset) {
-        return;
-    }
-
-    m_scroll_offset = scroll_offset;
-
-    UpdatePosition();
+    m_scroll_offset.SetTarget(Vec2f(scroll_offset));
 }
 
 void UIObject::SetFocusState(EnumFlags<UIObjectFocusState> focus_state)

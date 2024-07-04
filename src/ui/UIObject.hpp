@@ -16,6 +16,7 @@
 #include <scene/ecs/EntityManager.hpp>
 
 #include <math/Color.hpp>
+#include <math/BlendVar.hpp>
 
 #include <rendering/FullScreenPass.hpp>
 
@@ -598,7 +599,7 @@ protected:
     UIObjectSize                    m_max_size;
     Vec2i                           m_actual_max_size;
 
-    Vec2i                           m_scroll_offset;
+    BlendVar<Vec2f>                 m_scroll_offset;
 
     Vec2i                           m_padding;
 

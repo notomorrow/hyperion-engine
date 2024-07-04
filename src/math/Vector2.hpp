@@ -31,6 +31,7 @@ struct alignas(alignof(T) * 2) HYP_API Vec2
     };
 
     constexpr Vec2() : x(0), y(0) { }
+    constexpr Vec2(T xy) : x(xy), y(xy) { }
     constexpr Vec2(T x, T y) : x(x), y(y) { }
     constexpr Vec2(const Vec2 &other)                   = default;
     constexpr Vec2 &operator=(const Vec2 &other)        = default;
@@ -199,13 +200,13 @@ public:
     {
     }
 
-    constexpr Vec2(float x, float y)
-        : x(x), y(y)
+    constexpr Vec2(float xy)
+        : x(xy), y(xy)
     {
     }
 
-    constexpr Vec2(float xy)
-        : x(xy), y(xy)
+    constexpr Vec2(float x, float y)
+        : x(x), y(y)
     {
     }
 

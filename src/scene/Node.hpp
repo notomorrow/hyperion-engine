@@ -9,9 +9,13 @@
 #include <core/functional/Delegate.hpp>
 #include <core/utilities/UUID.hpp>
 #include <core/utilities/EnumFlags.hpp>
+#include <core/utilities/StringView.hpp>
+#include <core/utilities/Variant.hpp>
+#include <core/Name.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/NodeProxy.hpp>
+#include <scene/ecs/EntityTag.hpp>
 
 #include <math/Transform.hpp>
 #include <math/Ray.hpp>
@@ -36,6 +40,118 @@ enum NodeFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(NodeFlags)
 
+struct NodeTag
+{
+    using ValueType = Variant<String, UUID, int32, uint32, float, double, bool>;
+
+    ValueType   value;
+
+    NodeTag() = default;
+
+    explicit NodeTag(const String &value)
+        : value(value)
+    {
+    }
+
+    explicit NodeTag(const UUID &value)
+        : value(value)
+    {
+    }
+
+    explicit NodeTag(int32 value)
+        : value(value)
+    {
+    }
+
+    explicit NodeTag(uint32 value)
+        : value(value)
+    {
+    }
+
+    explicit NodeTag(float value)
+        : value(value)
+    {
+    }
+
+    explicit NodeTag(double value)
+        : value(value)
+    {
+    }
+
+    explicit NodeTag(bool value)
+        : value(value)
+    {
+    }
+
+    NodeTag(const NodeTag &other)
+        : value(other.value)
+    {
+    }
+
+    NodeTag &operator=(const NodeTag &other)
+    {
+        value = other.value;
+
+        return *this;
+    }
+
+    NodeTag(NodeTag &&other) noexcept
+        : value(std::move(other.value))
+    {
+    }
+
+    NodeTag &operator=(NodeTag &&other) noexcept
+    {
+        value = std::move(other.value);
+
+        return *this;
+    }
+
+    HYP_FORCE_INLINE
+    bool operator==(const NodeTag &other) const
+    {
+        return value == other.value;
+    }
+
+    template <typename T>
+    HYP_FORCE_INLINE
+    bool operator==(const T &other) const
+    {
+        return value.GetTypeID() == TypeID::ForType<NormalizedType<T>>()
+            && value.Get<NormalizedType<T>>() == other;
+    }
+
+    HYP_FORCE_INLINE
+    bool operator!=(const NodeTag &other) const
+    {
+        return value != other.value;
+    }
+
+    template <typename T>
+    HYP_FORCE_INLINE
+    bool operator!=(const T &other) const
+    {
+        return value.GetTypeID() != TypeID::ForType<NormalizedType<T>>()
+            || value.Get<NormalizedType<T>>() != other;
+    }
+
+    HYP_FORCE_INLINE
+    explicit operator bool() const
+        { return value.HasValue(); }
+
+    HYP_FORCE_INLINE
+    bool operator!() const
+        { return !value.HasValue(); }
+
+    HYP_FORCE_INLINE
+    bool IsValid() const
+        { return value.HasValue(); }
+
+    HYP_FORCE_INLINE
+    HashCode GetHashCode() const
+        { return value.GetHashCode(); }
+};
+
 class HYP_API Node : public EnableRefCountedPtrFromThis<Node>
 {
     friend class Scene;
@@ -57,7 +173,7 @@ public:
         BONE
     };
 
-    /*! \brief Construct the node, optionally taking in a string tag to improve identification.
+    /*! \brief Construct the node, optionally taking in a name string to improve identification.
      * \param name A String representing the name of the Node.
      * \param local_transform An optional parameter representing the local-space transform of this Node.
      */
@@ -89,11 +205,11 @@ public:
     const UUID &GetUUID() const
         { return m_uuid; }
 
-    /*! \returns The string tag that was given to the Node on creation. */
+    /*! \returns The name that was given to the Node on creation. */
     const String &GetName() const
         { return m_name; }
         
-    /*! \brief Set the string tag of this Node. Used for nested lookups. */
+    /*! \brief Set the name of this Node. Used for nested lookups. */
     void SetName(const String &name)
         { m_name = name; }
 
@@ -168,9 +284,9 @@ public:
     NodeProxy GetChild(SizeType index) const;
 
     /*! \brief Search for a (potentially nested) node using the syntax `some/child/node`.
-     * Each `/` indicates searching a level deeper, so first a child node with the tag "some"
-     * is found, after which a child node with the tag "child" is searched for on the previous "some" node,
-     * and finally a node with the tag "node" is searched for from the above "child" node.
+     * Each `/` indicates searching a level deeper, so first a child node with the name "some"
+     * is found, after which a child node with the name "child" is searched for on the previous "some" node,
+     * and finally a node with the name "node" is searched for from the above "child" node.
      * If any level fails to find a node, nullptr is returned.
      *
      * The string is case-sensitive.
@@ -190,14 +306,14 @@ public:
      */
     NodeList::ConstIterator FindChild(const Node *node) const;
 
-    /*! \brief Get an iterator for a node by finding it by its string tag
-     * \param name The string tag to compare with the child Node's string tag
+    /*! \brief Get an iterator for a node by finding it by its name
+     * \param name The string to compare with the child Node's name
      * \returns The resulting iterator
      */
     NodeList::Iterator FindChild(const char *name);
 
-    /*! \brief Get an iterator for a node by finding it by its string tag
-     * \param name The string tag to compare with the child Node's string tag
+    /*! \brief Get an iterator for a node by finding it by its name
+     * \param name The string to compare with the child Node's name
      * \returns The resulting iterator
      */
     NodeList::ConstIterator FindChild(const char *name) const;
@@ -358,6 +474,16 @@ public:
      * \returns The relative transform of this Node to the given parent transform. */
     Transform GetRelativeTransform(const Transform &parent_transform) const;
 
+    /*! \brief Returns whether the Node is locked from being transformed. */
+    bool IsTransformLocked() const
+        { return m_transform_locked; }
+
+    /*! \brief Lock the Node from being transformed. */
+    void LockTransform();
+
+    /*! \brief Unlock the Node from being transformed. */
+    void UnlockTransform();
+
     /*! \brief \returns The underlying entity AABB for this node. */
     const BoundingBox &GetEntityAABB() const
         { return m_entity_aabb; }
@@ -395,19 +521,31 @@ public:
     NodeProxy FindChildWithEntity(ID<Entity>) const;
     /*! \brief Search child nodes (breadth-first) until a node with the given name is found. */
     NodeProxy FindChildByName(const String &) const;
+    /*! \brief Search child nodes (breadth-first) until a node with the given UUID is found. */
+    NodeProxy FindChildByUUID(const UUID &uuid) const;
 
-    /*! \brief Returns whether the Node is locked from being transformed. */
-    bool IsTransformLocked() const
-        { return m_transform_locked; }
-
-    /*! \brief Lock the Node from being transformed. */
-    void LockTransform();
-
-    /*! \brief Unlock the Node from being transformed. */
-    void UnlockTransform();
-
+    /*! \brief Get the delegates for this Node. */
     Delegates *GetDelegates() const
         { return m_delegates.Get(); }
+
+    /*! \brief Get all tags of this Node. */
+    HYP_FORCE_INLINE
+    const FlatMap<Name, NodeTag> &GetTags() const
+        { return m_tags; }
+
+    /*! \brief Add a tag to this Node. */
+    void AddTag(Name key, const NodeTag &value);
+
+    /*! \brief Remove a tag from this Node. */
+    void RemoveTag(Name key);
+
+    /*! \brief Get a tag from this Node.
+     *  \returns The tag with the given name. If the tag does not exist, an empty NodeTag is returned */
+    const NodeTag &GetTag(Name key) const;
+
+    /*! \brief Check if this Node has a tag with the given name.
+     *  \returns True if the tag exists, false otherwise. */
+    bool HasTag(Name key) const;
 
     /*! \brief Get a NodeProxy for this Node. Increments the reference count of the Node's underlying reference count. */
     NodeProxy GetProxy()
@@ -448,26 +586,28 @@ protected:
     void OnNestedNodeAdded(const NodeProxy &node, bool direct);
     void OnNestedNodeRemoved(const NodeProxy &node, bool direct);
 
-    Type                    m_type = Type::NODE;
-    EnumFlags<NodeFlags>    m_flags = NodeFlags::NONE;
-    String                  m_name;
-    Node                    *m_parent_node;
-    NodeList                m_child_nodes;
-    Transform               m_local_transform;
-    Transform               m_world_transform;
-    BoundingBox             m_entity_aabb;
+    Type                        m_type = Type::NODE;
+    EnumFlags<NodeFlags>        m_flags = NodeFlags::NONE;
+    String                      m_name;
+    Node                        *m_parent_node;
+    NodeList                    m_child_nodes;
+    Transform                   m_local_transform;
+    Transform                   m_world_transform;
+    BoundingBox                 m_entity_aabb;
 
-    ID<Entity>              m_entity;
+    ID<Entity>                  m_entity;
 
-    Array<NodeProxy>        m_descendents;
+    Array<NodeProxy>            m_descendents;
 
-    Scene                   *m_scene;
+    Scene                       *m_scene;
 
-    bool                    m_transform_locked;
+    bool                        m_transform_locked;
 
-    UniquePtr<Delegates>    m_delegates;
+    UniquePtr<Delegates>        m_delegates;
 
-    UUID                    m_uuid;
+    FlatMap<Name, NodeTag>      m_tags;
+
+    UUID                        m_uuid;
 };
 
 } // namespace hyperion

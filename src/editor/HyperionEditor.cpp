@@ -95,12 +95,16 @@ private:
     RC<UIObject> CreateDetailView();
     void CreateInitialState();
 
+    void SetFocusedNode(const NodeProxy &node);
+
     Handle<Scene>       m_scene;
     Handle<Camera>      m_camera;
     InputManager        *m_input_manager;
     RC<UIStage>         m_ui_stage;
     Handle<Texture>     m_scene_texture;
     RC<UIObject>        m_main_panel;
+
+    NodeProxy           m_focused_node;
 
     bool                m_editor_camera_enabled;
 };
@@ -354,20 +358,67 @@ RC<UIObject> HyperionEditorImpl::CreateSceneOutline()
     list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
 
     // TODO make it more efficient to add/remove items instead of searching by name
-    GetScene()->GetRoot()->GetDelegates()->OnNestedNodeAdded.Bind([list_view](const NodeProxy &node, bool)
+    GetScene()->GetRoot()->GetDelegates()->OnNestedNodeAdded.Bind([this, list_view_weak = list_view.ToWeak()](const NodeProxy &node, bool)
     {
-        auto ui_text = list_view->GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString("SceneOutlineText_") + ANSIString::ToString(node.GetName())), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
-        ui_text->SetText(node.GetName());
+        RC<UIListView> list_view = list_view_weak.Lock();
+
+        if (!list_view) {
+            return;
+        }
+
+        AssertThrow(node.IsValid());
+
+        RC<UIText> ui_text = list_view->GetStage()->CreateUIObject<UIText>(CreateNameFromDynamicString(ANSIString("SceneOutlineText_") + ANSIString::ToString(node.GetName())), Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 12, UIObjectSize::PIXEL }));
+        ui_text->SetText(node->GetName());
         ui_text->SetTextColor(Vec4f::One());
+        ui_text->GetNode()->AddTag(NAME("AssociatedNodeUUID"), NodeTag(node->GetUUID()));
+
+        ui_text->OnClick.Bind([this, ui_text_weak = ui_text.ToWeak()](...)
+        {
+            RC<UIText> ui_text = ui_text_weak.Lock();
+
+            if (!ui_text) {
+                return UIEventHandlerResult::ERR;
+            }
+
+            const NodeProxy &ui_text_node = ui_text->GetNode();
+
+            if (!ui_text_node.IsValid()) {
+                return UIEventHandlerResult::ERR;
+            }
+            
+            const NodeTag &node_uuid = ui_text_node->GetTag(NAME("AssociatedNodeUUID"));
+
+            if (!node_uuid.IsValid()) {
+                return UIEventHandlerResult::ERR;
+            }
+
+            NodeProxy associated_node = GetScene()->GetRoot()->FindChildByUUID(node_uuid.value.Get<UUID>());
+
+            if (!associated_node.IsValid()) {
+                return UIEventHandlerResult::ERR;
+            }
+
+            SetFocusedNode(associated_node);
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
         list_view->AddChildUIObject(ui_text);
     }).Detach();
 
-    GetScene()->GetRoot()->GetDelegates()->OnNestedNodeRemoved.Bind([list_view](const NodeProxy &node, bool)
+    GetScene()->GetRoot()->GetDelegates()->OnNestedNodeRemoved.Bind([list_view_weak = list_view.ToWeak()](const NodeProxy &node, bool)
     {
+        RC<UIListView> list_view = list_view_weak.Lock();
+
+        if (!list_view) {
+            return;
+        }
+
         RC<UIObject> found_ui_object = list_view->FindChildUIObject([&node](const RC<UIObject> &child)
         {
             if (const NodeProxy &child_node = child->GetNode()) {
-                return child_node->GetUUID() == node->GetUUID();
+                return child_node->GetTag(NAME("AssociatedNodeUUID")) == node->GetUUID();
             }
 
             return false;
@@ -420,6 +471,15 @@ void HyperionEditorImpl::CreateInitialState()
     m_scene->GetEntityManager()->AddComponent(skybox_entity, BoundingBoxComponent {
         BoundingBox(Vec3f(-1000.0f), Vec3f(1000.0f))
     });
+}
+
+void HyperionEditorImpl::SetFocusedNode(const NodeProxy &node)
+{
+    m_focused_node = node;
+
+    if (m_focused_node.IsValid()) {
+        HYP_LOG(Editor, LogLevel::INFO, "Focused node: {}", m_focused_node->GetName());
+    }
 }
 
 void HyperionEditorImpl::Initialize()
@@ -499,7 +559,6 @@ HyperionEditor::~HyperionEditor()
 void HyperionEditor::Init()
 {
     Game::Init();
-
 
 #if 0
     // const HypClass *cls = GetClass<Mesh>();

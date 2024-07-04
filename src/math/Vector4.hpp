@@ -42,19 +42,19 @@ struct alignas(alignof(T) * 4) HYP_API Vec4
     {
     }
 
-    Vec4(Type x, Type y, Type z, Type w)
-        : x(x),
-          y(y),
-          z(z),
-          w(w)
-    {
-    }
-
     Vec4(Type xyzw)
         : x(xyzw),
           y(xyzw),
           z(xyzw),
           w(xyzw)
+    {
+    }
+
+    Vec4(Type x, Type y, Type z, Type w)
+        : x(x),
+          y(y),
+          z(z),
+          w(w)
     {
     }
 
@@ -277,19 +277,19 @@ struct alignas(alignof(float) * 4) HYP_API Vec4<float>
     {
     }
 
-    Vec4(Type x, Type y, Type z, Type w)
-        : x(x),
-          y(y),
-          z(z),
-          w(w)
-    {
-    }
-
     Vec4(Type xyzw)
         : x(xyzw),
           y(xyzw),
           z(xyzw),
           w(xyzw)
+    {
+    }
+
+    Vec4(Type x, Type y, Type z, Type w)
+        : x(x),
+          y(y),
+          z(z),
+          w(w)
     {
     }
 

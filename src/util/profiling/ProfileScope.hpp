@@ -14,7 +14,7 @@
 
 #include <Types.hpp>
 
-#define HYP_ENABLE_PROFILE
+// #define HYP_ENABLE_PROFILE
 
 namespace hyperion {
 
@@ -56,6 +56,7 @@ struct HYP_API ProfileScope
 
 #else
     #define HYP_NAMED_SCOPE(...)
+    #define HYP_NAMED_SCOPE_FMT(label, ...)
     #define HYP_SCOPE
     #define HYP_PROFILE_BEGIN
 #endif

@@ -160,6 +160,8 @@ void UIStage::Update_Internal(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
+    UIObject::Update_Internal(delta);
+
     m_scene->BeginUpdate(delta);
     m_scene->EndUpdate();
 

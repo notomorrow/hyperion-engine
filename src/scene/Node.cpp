@@ -678,6 +678,27 @@ void Node::UpdateWorldTransform()
     }
 }
 
+void Node::RefreshEntityTransform()
+{
+    m_entity_aabb = BoundingBox::Empty();
+
+    if (m_entity.IsValid() && m_scene->GetEntityManager() != nullptr) {
+        if (BoundingBoxComponent *bounding_box_component = m_scene->GetEntityManager()->TryGetComponent<BoundingBoxComponent>(m_entity)) {
+            m_entity_aabb = bounding_box_component->local_aabb;
+        } else {
+            m_entity_aabb = BoundingBox::Empty();
+        }
+
+        if (TransformComponent *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
+            transform_component->transform = m_world_transform;
+        } else {
+            m_scene->GetEntityManager()->AddComponent(m_entity, TransformComponent {
+                m_world_transform
+            });
+        }
+    }
+}
+
 uint Node::CalculateDepth() const
 {
     uint depth = 0;
@@ -705,27 +726,6 @@ uint Node::FindSelfIndex() const
     }
 
     return uint(it - m_parent_node->GetChildren().Begin());
-}
-
-void Node::RefreshEntityTransform()
-{
-    m_entity_aabb = BoundingBox::Empty();
-
-    if (m_entity.IsValid() && m_scene->GetEntityManager() != nullptr) {
-        if (BoundingBoxComponent *bounding_box_component = m_scene->GetEntityManager()->TryGetComponent<BoundingBoxComponent>(m_entity)) {
-            m_entity_aabb = bounding_box_component->local_aabb;
-        } else {
-            m_entity_aabb = BoundingBox::Empty();
-        }
-
-        if (TransformComponent *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity)) {
-            transform_component->transform = m_world_transform;
-        } else {
-            m_scene->GetEntityManager()->AddComponent(m_entity, TransformComponent {
-                m_world_transform
-            });
-        }
-    }
 }
 
 bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
@@ -808,6 +808,54 @@ NodeProxy Node::FindChildByName(const String &name) const
     }
 
     return NodeProxy::empty;
+}
+
+NodeProxy Node::FindChildByUUID(const UUID &uuid) const
+{
+    // breadth-first search
+    Queue<const Node *> queue;
+    queue.Push(this);
+
+    while (queue.Any()) {
+        const Node *parent = queue.Pop();
+
+        for (const NodeProxy &child : parent->GetChildren()) {
+            if (!child) {
+                continue;
+            }
+
+            if (child->GetUUID() == uuid) {
+                return child;
+            }
+
+            queue.Push(child.Get());
+        }
+    }
+
+    return NodeProxy::empty;
+}
+
+void Node::AddTag(Name key, const NodeTag &value)
+{
+    m_tags.Set(key, value);
+}
+
+void Node::RemoveTag(Name key)
+{
+    m_tags.Erase(key);
+}
+
+const NodeTag &Node::GetTag(Name key) const
+{
+    static const NodeTag empty_tag = NodeTag();
+
+    const auto it = m_tags.Find(key);
+
+    if (it == m_tags.End()) {
+        return empty_tag;
+    }
+
+    return it->second;
 }
 
 Scene *Node::GetDefaultScene()
