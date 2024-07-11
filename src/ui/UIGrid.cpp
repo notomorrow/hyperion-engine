@@ -371,7 +371,7 @@ void UIGrid::SetDataSource_Internal(UIDataSourceBase *data_source)
                         element->GetValue()
                     );
                 } else {
-                    HYP_LOG(UI, LogLevel::ERROR, "Failed to update element {}; No UIObject child at index 0", element->GetUUID().ToString());
+                    HYP_LOG(UI, LogLevel::ERR, "Failed to update element {}; No UIObject child at index 0", element->GetUUID().ToString());
                 }
             }
         }

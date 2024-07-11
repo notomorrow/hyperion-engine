@@ -90,7 +90,7 @@ void ScriptSystem::OnEntityAdded(ID<Entity> entity)
             HYP_LOG(Script, LogLevel::INFO, "ScriptSystem::OnEntityAdded: Loaded class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
 
             if (!class_ptr->HasParentClass("Script")) {
-                HYP_LOG(Script, LogLevel::ERROR, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", script_component.script.class_name, script_component.script.assembly_path);
+                HYP_LOG(Script, LogLevel::ERR, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", script_component.script.class_name, script_component.script.assembly_path);
 
                 return;
             }

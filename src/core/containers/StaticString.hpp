@@ -90,8 +90,6 @@ struct StaticString
 
     static constexpr SizeType size = Sz;
 
-    using CharType = char;
-
     CharType data[Sz];
 
     constexpr StaticString(const CharType (&str)[Sz])

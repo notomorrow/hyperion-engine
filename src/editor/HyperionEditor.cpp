@@ -426,6 +426,7 @@ void HyperionEditorImpl::CreateMainPanel()
 
     RC<UIMenuItem> file_menu_item = menu_bar->AddMenuItem(NAME("File_Menu_Item"), "File");
 
+#if 0
     file_menu_item->AddDropDownMenuItem({
         NAME("New"),
         "New",
@@ -454,8 +455,11 @@ void HyperionEditorImpl::CreateMainPanel()
         NAME("Exit"),
         "Exit"
     });
+#endif
 
     RC<UIMenuItem> edit_menu_item = menu_bar->AddMenuItem(NAME("Edit_Menu_Item"), "Edit");
+
+#if 0
     edit_menu_item->AddDropDownMenuItem({
         NAME("Undo"),
         "Undo"
@@ -480,15 +484,16 @@ void HyperionEditorImpl::CreateMainPanel()
         NAME("Paste"),
         "Paste"
     });
+#endif
 
     RC<UIMenuItem> tools_menu_item = menu_bar->AddMenuItem(NAME("Tools_Menu_Item"), "Tools");
-    tools_menu_item->AddDropDownMenuItem({ NAME("Build_Lightmap"), "Build Lightmaps" });
+    // tools_menu_item->AddDropDownMenuItem({ NAME("Build_Lightmap"), "Build Lightmaps" });
 
     RC<UIMenuItem> view_menu_item = menu_bar->AddMenuItem(NAME("View_Menu_Item"), "View");
-    view_menu_item->AddDropDownMenuItem({ NAME("Content_Browser"), "Content Browser" });
+    // view_menu_item->AddDropDownMenuItem({ NAME("Content_Browser"), "Content Browser" });
     
     RC<UIMenuItem> window_menu_item = menu_bar->AddMenuItem(NAME("Window_Menu_Item"), "Window");
-    window_menu_item->AddDropDownMenuItem({ NAME("Reset_Layout"), "Reset Layout" });
+    // window_menu_item->AddDropDownMenuItem({ NAME("Reset_Layout"), "Reset Layout" });
 
     m_main_panel->AddChildUIObject(menu_bar);
 #endif
