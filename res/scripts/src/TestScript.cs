@@ -5,7 +5,7 @@ using Hyperion;
 
 namespace FooBar
 {
-    public class FizzBuzzTest
+    public class FizzBuzzTest : Script
     {
         private Scene? scene = null;
 
@@ -36,10 +36,6 @@ namespace FooBar
             scene.Root.AddChild(node);
 
             Console.WriteLine("Init Script " + entity.ID);
-        }
-
-        public void Update(float delta)
-        {
         }
     }
 }

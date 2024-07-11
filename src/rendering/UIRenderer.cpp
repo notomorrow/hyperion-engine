@@ -475,6 +475,8 @@ void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
 
     m_render_list.ResetOrdering();
 
+    // HYP_LOG(UI, LogLevel::DEBUG, "BEGIN Collecting UIObjects");
+
     m_ui_stage->CollectObjects([this](UIObject *object)
     {
         AssertThrow(object != nullptr);
@@ -492,7 +494,11 @@ void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
             entity,
             *mesh_component->proxy
         );
+
+        // HYP_LOG(UI, LogLevel::DEBUG, "Pushed UIObject {} to render list", object->GetName());
     });
+
+    // HYP_LOG(UI, LogLevel::DEBUG, "END Collecting UIObjects");
 
     m_render_list.PushUpdatesToRenderThread(m_ui_stage->GetScene()->GetCamera()->GetFramebuffer());
 }

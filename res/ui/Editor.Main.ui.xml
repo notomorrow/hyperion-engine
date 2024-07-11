@@ -1,10 +1,17 @@
 <?xml version="1.0"?>
-<Panel name="Main_Panel" position="0 0" size="100% 100%">
-    <!-- <MenuBar name="Main_MenuBar" position="0 0" size="100% 30" originAlignment="topleft" parentAlignment="topleft" padding="5 2">
+<Panel name="Main_Panel" position="0 0" size="100% 500">
+    <MenuBar name="Main_MenuBar" position="0 0" size="100% 30" originAlignment="topleft" parentAlignment="topleft" padding="5 2">
         <MenuItem name="File_MenuItem" text="File">
+            <MenuItem name="New_MenuItem">New</MenuItem>
+            <MenuItem name="Open_MenuItem" text="Open"></MenuItem>
+            <MenuItem name="Save_MenuItem" text="Save"></MenuItem>
+            <MenuItem name="SaveAs_MenuItem" text="Save As"></MenuItem>
+            <MenuItem name="Exit_MenuItem" text="Exit"></MenuItem>
         </MenuItem>
-    </MenuBar> -->
+        <MenuItem name="Edit_MenuItem" text="Edit"></MenuItem>
+        <MenuItem name="View_MenuItem" text="View"></MenuItem>
+        <MenuItem name="Help_MenuItem" text="Help"></MenuItem>
+    </MenuBar>
 
-    <Button name="btn1" position="0 0" size="150 80">
-    </Button>
+    <Button name="btn1" position="10 10" size="150 80">Hello World</Button>
 </Panel>
