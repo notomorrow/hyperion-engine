@@ -339,8 +339,8 @@ void main()
     }
 
     // // TEMP testing lightmaps
-    gbuffer_albedo = (irradiance + radiance) * gbuffer_albedo;
-    gbuffer_albedo.a = 0.0; 
+    // gbuffer_albedo = (irradiance + radiance) * gbuffer_albedo;
+    // gbuffer_albedo.a = 0.0; 
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
