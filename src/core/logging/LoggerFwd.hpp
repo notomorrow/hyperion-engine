@@ -17,4 +17,9 @@ using logging::LogChannel;
 #define HYP_DECLARE_LOG_CHANNEL(name) \
     extern hyperion::logging::LogChannel Log_##name
 
+#ifndef HYP_LOG
+    #define HYP_LOG(...)
+    #define HYP_LOG_ONCE(...)
+#endif
+
 #endif
