@@ -41,7 +41,7 @@ HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform textureCube cubemap_t
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform textureCube cubemap_textures[];
 #endif
 
-// #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
 HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, size = 8388608) readonly buffer MaterialsBuffer
 {
     Material materials[HYP_MAX_MATERIALS];
@@ -50,17 +50,17 @@ HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, size = 8388608) readonly buffer Mat
 #ifndef CURRENT_MATERIAL
     #define CURRENT_MATERIAL (materials[object.material_index])
 #endif
-// #else
+#else
 
-// HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer MaterialsBuffer
-// {
-//     Material material;
-// };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer MaterialsBuffer
+{
+    Material material;
+};
 
-// #ifndef CURRENT_MATERIAL
-//     #define CURRENT_MATERIAL material
-// #endif
-// #endif
+#ifndef CURRENT_MATERIAL
+    #define CURRENT_MATERIAL material
+#endif
+#endif
 
 void main()
 {

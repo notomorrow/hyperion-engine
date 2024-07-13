@@ -42,7 +42,6 @@ struct Material
 #define MATERIAL_TEXTURE_RADIANCE_MAP   6
 #define MATERIAL_TEXTURE_IRRADIANCE_MAP 7
 #define MATERIAL_TEXTURE_RESERVED0      8
-#define MATERIAL_TEXTURE_UI_CACHE       8 // same as MATERIAL_TEXTURE_RESERVED0
 
 #define MATERIAL_ALPHA_DISCARD         0.25
 
@@ -50,11 +49,11 @@ struct Material
     (((mat).texture_usage & (1 << index)) != 0)
 
 #define GET_TEXTURE(mat, index) \
-    textures[(mat).texture_indices[(index / 4)][index % 4]]
+    textures[(mat).texture_indices[(index) / 4][(index) % 4]]
 
 #if defined(HYP_MATERIAL_CUBEMAP_TEXTURES) && HYP_MATERIAL_CUBEMAP_TEXTURES
     #define GET_TEXTURE_CUBE(mat, index) \
-        cubemap_textures[(mat).texture_indices[(index / 4)][index % 4]]
+        cubemap_textures[(mat).texture_indices[(index) / 4][(index) % 4]]
 #endif
 
 #define SAMPLE_TEXTURE(mat, index, texcoord) \
