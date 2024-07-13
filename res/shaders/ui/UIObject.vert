@@ -47,7 +47,8 @@ void main()
 #ifdef TYPE_TEXT // Text uses a different sizing method. See UIText::UpdateSize
     vec4 position = object.model_matrix * vec4(a_position, 1.0);
 #else
-    vec4 position = object.model_matrix * vec4(a_position * vec3(float(properties.size.x), float(properties.size.y), 1.0), 1.0);
+    // scale the quad mesh to the size of the object
+    vec4 position = object.model_matrix * vec4(a_position * vec3((object.world_aabb_max - object.world_aabb_min).xy, 1.0), 1.0);
 #endif
 
     vec4 ndc_position = camera.projection * camera.view * position;
