@@ -31,7 +31,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 
-// #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
+#ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
 HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, size = 8388608) readonly buffer MaterialsBuffer
 {
     Material materials[HYP_MAX_MATERIALS];
@@ -46,17 +46,17 @@ HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 #ifndef CURRENT_MATERIAL
     #define CURRENT_MATERIAL (materials[object.material_index])
 #endif
-// #else
+#else
 
-// HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer MaterialsBuffer
-// {
-//     Material material;
-// };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer MaterialsBuffer
+{
+    Material material;
+};
 
-// #ifndef CURRENT_MATERIAL
-//     #define CURRENT_MATERIAL material
-// #endif
-// #endif
+#ifndef CURRENT_MATERIAL
+    #define CURRENT_MATERIAL material
+#endif
+#endif
 
 float RoundedRectangle(vec2 pos, vec2 size, float radius)
 {
@@ -127,6 +127,9 @@ void main()
 
     uint mask = GET_OBJECT_BUCKET(object);
 
+    // gbuffer_albedo = vec4(vec3(bvec3(HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))), 1.0);//ui_color;
+    // gbuffer_albedo = vec4(vec3(bvec3((CURRENT_MATERIAL).texture_indices[(MATERIAL_TEXTURE_ALBEDO_map / 4)][MATERIAL_TEXTURE_ALBEDO_map % 4] != 0)), 1.0);//ui_color;
     gbuffer_albedo = ui_color;
+    // gbuffer_albedo = vec4(UINT_TO_VEC4(object.material_index).rgb * 10.0, 1.0);
     gbuffer_mask = UINT_TO_VEC4(mask);
 }
