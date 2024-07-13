@@ -37,12 +37,6 @@ HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, size = 8388608) readonly buffer Mat
     Material materials[HYP_MAX_MATERIALS];
 };
 
-#ifndef HYP_FEATURES_BINDLESS_TEXTURES
-HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
-#else
-HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
-#endif
-
 #ifndef CURRENT_MATERIAL
     #define CURRENT_MATERIAL (materials[object.material_index])
 #endif
@@ -56,6 +50,12 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer
 #ifndef CURRENT_MATERIAL
     #define CURRENT_MATERIAL material
 #endif
+#endif
+
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
+HYP_DESCRIPTOR_SRV(Material, Textures, count = 16) uniform texture2D textures[HYP_MAX_BOUND_TEXTURES];
+#else
+HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 #endif
 
 float RoundedRectangle(vec2 pos, vec2 size, float radius)
@@ -129,7 +129,7 @@ void main()
 
     // gbuffer_albedo = vec4(vec3(bvec3(HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))), 1.0);//ui_color;
     // gbuffer_albedo = vec4(vec3(bvec3((CURRENT_MATERIAL).texture_indices[(MATERIAL_TEXTURE_ALBEDO_map / 4)][MATERIAL_TEXTURE_ALBEDO_map % 4] != 0)), 1.0);//ui_color;
-    gbuffer_albedo = ui_color;
+    // gbuffer_albedo = ui_color;
     // gbuffer_albedo = vec4(UINT_TO_VEC4(object.material_index).rgb * 10.0, 1.0);
     gbuffer_mask = UINT_TO_VEC4(mask);
 }
