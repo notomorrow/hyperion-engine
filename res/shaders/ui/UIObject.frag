@@ -91,12 +91,6 @@ void main()
 #endif
     }
     
-#if defined(TYPE_BUTTON)
-    ui_color = mix(ui_color, clamp(ui_color * 1.65, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & UOFS_HOVER) && !bool(properties.focus_state & (UOFS_PRESSED | UOFS_TOGGLED))));
-    ui_color = mix(ui_color, clamp(ui_color * 1.40, vec4(0.0), vec4(1.0)), bvec4(bool(properties.focus_state & (UOFS_PRESSED | UOFS_TOGGLED))));
-#endif
-
-#if defined(TYPE_BUTTON) || defined(TYPE_PANEL) || defined(TYPE_TAB)
     if (properties.border_radius > 0.0) {
         // rounded corners
         vec2 size = vec2(properties.size);
@@ -116,7 +110,6 @@ void main()
 
         ui_color.a *= roundedness;
     }
-#endif
 // #if defined(TYPE_BUTTON) || defined(TYPE_TAB) || defined(TYPE_PANEL)
 //     // If focused show a border around the object
 //     // TEMP Testing.
@@ -130,7 +123,7 @@ void main()
     // gbuffer_albedo = vec4(vec3(bvec3(HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))), 1.0);//ui_color;
     // gbuffer_albedo = vec4(vec3(bvec3((CURRENT_MATERIAL).texture_indices[(MATERIAL_TEXTURE_ALBEDO_map / 4)][MATERIAL_TEXTURE_ALBEDO_map % 4] != 0)), 1.0);//ui_color;
     // gbuffer_albedo = vec4(vec3(float(TextureSize(HYP_SAMPLER_LINEAR, GET_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)).x) * 0.0005), 1.0);//ui_color;
-    // gbuffer_albedo = vec4(UINT_TO_VEC4(object.material_index).rgb * 10.0, 1.0);
     gbuffer_albedo = ui_color;
+    // gbuffer_albedo = vec4(UINT_TO_VEC4(v_object_index).rgb * 10.0, 1.0);
     gbuffer_mask = UINT_TO_VEC4(mask);
 }
