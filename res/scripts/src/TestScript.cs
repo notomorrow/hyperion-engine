@@ -37,5 +37,10 @@ namespace FooBar
 
             Console.WriteLine("Init Script " + entity.ID);
         }
+
+        public void OnClick_TestFooBar()
+        {
+            Console.WriteLine("OnClick_TestFooBar");
+        }
     }
 }
