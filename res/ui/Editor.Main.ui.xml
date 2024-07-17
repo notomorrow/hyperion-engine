@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Panel name="Main_Panel" position="0 0" size="100% 500">
-    <Script assembly="GameName.dll" class="FizzBuzzTest" />
+    <Script assembly="GameName.UI.dll" class="TestUIScript" />
     <MenuBar name="Main_MenuBar" position="0 0" size="100% 30" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New"></MenuItem>
@@ -15,5 +15,9 @@
         <MenuItem name="Test_MenuItem" text="Test" size="auto 100%"></MenuItem>
     </MenuBar>
 
-    <Button name="btn1" position="10 10" size="150 80">Hello World</Button>
+    <Window name="TestWindow" position="100 100" size="300 200" text="Test Window">
+        <Button name="btn2" position="10 10" size="150 80" onclick="ButtonClick">
+            Hello World
+        </Button>
+    </Window> 
 </Panel>
