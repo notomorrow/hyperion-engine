@@ -15,9 +15,35 @@
         <MenuItem name="Test_MenuItem" text="Test" size="auto 100%"></MenuItem>
     </MenuBar>
 
-    <Panel name="Dockable_Container" position="0 30" size="100% fill">
-        <Button name="btn2" size="fill" onclick="ButtonClick">
-            Hello World
-        </Button>
-    </Panel>
+    <DockableContainer name="Dockable_Container" position="0 30" size="100% fill">
+        <Panel name="Scene_Outline" size="200 100%" side="left">
+            <Panel size="100% 25">
+                <Text size="auto 11">
+                    Scene
+                </Text>
+            </Panel>
+            <ListView name="Scene_Outline_ListView" position="0 25" size="100% fill" />
+        </Panel>
+        <Panel name="Detail_View" size="200 100%" side="right">
+            <Panel size="100% 25">
+                <Text size="auto 11">
+                    Properties
+                </Text>
+            </Panel>
+            <ListView name="Detail_View_ListView" position="0 25" size="100% fill" />
+        </Panel>
+
+        <Panel name="Main_Content" size="100%" side="center">
+            <TabView name="Main_Content_TabView" size="100%">
+                <Tab name="Scene_Tab" text="Scene">
+                    <Image name="Scene_Image" size="100%" />
+                </Tab>
+                <Tab name="Game_Tab" text="Game">
+                    <Button name="Generate_Lightmaps_Button" size="auto 35">
+                        Generate Lightmaps (test)
+                    </Button>
+                </Tab>
+            </TabView>
+        </Panel>
+    </DockableContainer>
 </Panel>
