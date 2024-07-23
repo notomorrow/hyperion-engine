@@ -39,7 +39,7 @@
                     <Image name="Scene_Image" size="100%" />
                 </Tab>
                 <Tab name="Game_Tab" text="Game">
-                    <Button name="Generate_Lightmaps_Button" size="auto 35">
+                    <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps">
                         Generate Lightmaps (test)
                     </Button>
                 </Tab>
