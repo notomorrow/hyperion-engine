@@ -18,24 +18,24 @@ namespace FooBar
         {
             Console.WriteLine("Blah, scene id = " + scene.ID);
 
-            var node = scene.Root.FindChild("house");
+            // var node = scene.Root.FindChild("house");
             
-            if (node != null)
-            {
-                return;
-            }
+            // if (node != null)
+            // {
+            //     return;
+            // }
             
-            var assetBatch = new AssetBatch();
-            assetBatch.Add("test_model", "models/house.obj");
+            // var assetBatch = new AssetBatch();
+            // assetBatch.Add("test_model", "models/house.obj");
 
-            var assetMap = await assetBatch.Load();
+            // var assetMap = await assetBatch.Load();
 
-            node = assetMap["test_model"].GetNode();
-            node.Name = "house";
+            // node = assetMap["test_model"].GetNode();
+            // node.Name = "house";
 
-            scene.Root.AddChild(node);
+            // scene.Root.AddChild(node);
 
-            Console.WriteLine("Init Script " + entity.ID);
+            // Console.WriteLine("Init Script " + entity.ID);
         }
     }
 }
