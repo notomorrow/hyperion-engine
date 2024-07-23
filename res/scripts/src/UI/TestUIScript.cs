@@ -16,11 +16,14 @@ namespace FooBar
 
         public void Init(Entity entity)
         {
+            var editorSubsystem = Engine.Instance.World!.GetSubsystem(TypeID.FromString("EditorSubsystem"));
+
+            if (editorSubsystem == null)
+            {
+                Console.WriteLine("EditorSubsystem not found");
+                return;
+            }
         }
 
-        public void ButtonClick()
-        { 
-            Console.WriteLine("DELETE THE WHOLE WORLD");
-        }
     }
 }
