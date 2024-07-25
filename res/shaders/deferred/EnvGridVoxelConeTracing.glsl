@@ -76,6 +76,14 @@ vec4 ConeTraceSpecular(vec3 P, vec3 N, vec3 R, vec3 V, float roughness, in AABB 
     return ConeTrace(voxel_grid_aabb, voxel_size, VctWorldToTexCoord(P, voxel_grid_aabb) + (N * voxel_size), R, RoughnessToConeAngle(roughness), 0.55 /* max distance */, 0.5 /* sampling factor */);
 }
 
+vec4 ConeTraceDiffuse(vec3 P, vec3 N, in AABB voxel_grid_aabb)
+{
+    const float greatest_extent = 256.0;
+    const float voxel_size = 1.0 / greatest_extent;
+
+    return ConeTrace(voxel_grid_aabb, voxel_size, VctWorldToTexCoord(P, voxel_grid_aabb) + (N * voxel_size), N, /*ratio*/0.6, 0.55 /* max distance */, 0.5 /* sampling factor */);
+}
+
 vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, uvec2 pixel_coord, uvec2 screen_resolution, uint frame_counter, ivec3 grid_size, in AABB voxel_grid_aabb)
 {
     roughness = clamp(roughness, 0.01, 0.99);
@@ -102,6 +110,11 @@ vec4 ComputeVoxelRadiance(vec3 world_position, vec3 N, vec3 V, float roughness, 
 #endif
     
     return ConeTraceSpecular(world_position, N, R, V, roughness, voxel_grid_aabb);
+}
+
+vec4 ComputeVoxelIrradiance(vec3 world_position, vec3 N, uvec2 pixel_coord, uvec2 screen_resolution, uint frame_counter, ivec3 grid_size, in AABB voxel_grid_aabb)
+{
+    return ConeTraceDiffuse(world_position, N, voxel_grid_aabb);
 }
 
 #endif // ENV_GRID_RADIANCE_GLSL
