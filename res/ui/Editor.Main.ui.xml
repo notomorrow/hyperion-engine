@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Panel name="Main_Panel" position="0 0" size="100%">
     <Script assembly="GameName.UI.dll" class="TestUIScript" />
-    <MenuBar name="Main_MenuBar" position="0 0" size="100% 30" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
+    <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New"></MenuItem>
             <MenuItem name="Open_MenuItem" text="Open"></MenuItem>
@@ -15,22 +15,21 @@
         <MenuItem name="Test_MenuItem" text="Test" size="auto 100%"></MenuItem>
     </MenuBar>
 
-    <DockableContainer name="Dockable_Container" position="0 30" size="100% fill">
-        <Panel name="Scene_Outline" size="200 100%" side="left">
-            <Panel size="100% 25">
-                <Text size="auto 11">
-                    Scene
-                </Text>
-            </Panel>
-            <ListView name="Scene_Outline_ListView" position="0 25" size="100% fill" />
+    <DockableContainer name="Dockable_Container" position="0 25" size="100% fill">
+        <Panel name="Left_Panel" size="200 100%" side="left" padding="5 5">
+            <TabView size="100% 25" size="100%">
+                <Tab name="Scene_Tab" text="Scene">
+                    <ListView name="Scene_Outline_ListView" position="0 0" size="100% fill" />
+                </Tab>
+            </TabView>
         </Panel>
-        <Panel name="Detail_View" size="200 100%" side="right">
-            <Panel size="100% 25">
-                <Text size="auto 11">
-                    Properties
-                </Text>
-            </Panel>
-            <ListView name="Detail_View_ListView" position="0 25" size="100% fill" />
+        
+        <Panel name="Right_Panel" size="200 100%" side="right" padding="5 5">
+            <TabView size="100% 25" size="100%">
+                <Tab name="Details_Tab" text="Properties">
+                    <ListView name="Detail_View_ListView" position="0 0" size="100% fill" />
+                </Tab>
+            </TabView>
         </Panel>
 
         <Panel name="Main_Content" size="100%" side="center">
@@ -42,6 +41,13 @@
                     <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps">
                         Generate Lightmaps (test)
                     </Button>
+                </Tab>
+            </TabView>
+        </Panel>
+
+        <Panel name="Bottom_Panel" size="100% 200" side="bottom">
+            <TabView name="Bottom_Panel_TabView" size="100%">
+                <Tab name="Assets_Tab" text="Assets">
                 </Tab>
             </TabView>
         </Panel>
