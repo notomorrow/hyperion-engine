@@ -3,6 +3,8 @@
     "ssr": {
       "enabled": false
     },
+    "hbao": { "enabled": false },
+    "hbil": { "enabled": false },
     "rt": {
       "reflections": {
         "enabled": false
