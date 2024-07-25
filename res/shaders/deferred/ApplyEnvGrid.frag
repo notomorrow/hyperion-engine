@@ -15,14 +15,6 @@ HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-#ifdef MODE_IRRADIANCE
-#define MODE 0
-#elif defined(MODE_RADIANCE)
-#define MODE 1
-#else
-#define MODE 0
-#endif
-
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "../include/scene.inc"
@@ -54,10 +46,7 @@ HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvPr
 
 #include "./DeferredLighting.glsl"
 
-#if MODE == 0
-#include "../light_field/ComputeIrradiance.glsl"
-#elif MODE == 1
-
+#if defined(MODE_RADIANCE) || defined (MODE_IRRADIANCE_VOXEL)
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
 {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
@@ -67,7 +56,7 @@ HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer Blu
 
 HYP_DESCRIPTOR_SRV(Scene, VoxelGridTexture) uniform texture3D voxel_image;
 
-#include "./EnvGridRadiance.glsl"
+#include "./EnvGridVoxelConeTracing.glsl"
 #endif
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -79,8 +68,8 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {
-#if MODE == 1
-    // Skip every other pixel for radiance
+#if defined(MODE_RADIANCE) || defined(MODE_IRRADIANCE_VOXEL)
+    // Checkerboard rendering
     uvec2 screen_resolution = uvec2(camera.dimensions.xy);
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution) - 1.0);
     const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
@@ -102,20 +91,26 @@ void main()
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, v_texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
 
-#if MODE == 0 // Irradiance
-    irradiance = CalculateEnvProbeIrradiance(P, N);
-
-    color_output = vec4(irradiance, 1.0);
-#else // Radiance
+#if defined(MODE_RADIANCE) || defined(MODE_IRRADIANCE_VOXEL)
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
 
     AABB voxel_grid_aabb;
     voxel_grid_aabb.min = env_grid.voxel_grid_aabb_min.xyz;
     voxel_grid_aabb.max = env_grid.voxel_grid_aabb_max.xyz;
+#endif
 
+#if defined(MODE_IRRADIANCE)
+    irradiance = CalculateEnvProbeIrradiance(P, N);
+
+    color_output = vec4(irradiance, 1.0);
+#elif defined(MODE_RADIANCE)
     vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, scene.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
 
     color_output = radiance;
+#elif defined(MODE_IRRADIANCE_VOXEL)
+    irradiance = ComputeVoxelIrradiance(P, N, pixel_coord, screen_resolution, scene.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb).rgb;
+
+    color_output = vec4(irradiance, 1.0);
 #endif
 }

@@ -1,0 +1,33 @@
+{
+  "rendering": {
+    "ssr": {
+      "enabled": false
+    },
+    "rt": {
+      "reflections": {
+        "enabled": false
+      },
+      "gi": {
+        "enabled": false
+      },
+      "path_tracer": {
+        "enabled": false
+      }
+    },
+    "env_grid": {
+      "reflections": {
+        "enabled": false
+      },
+      "gi": {
+        "enabled": false
+      }
+    },
+    "taa": {
+      "enabled": true
+    },
+    "debug": {
+      "reflections": false,
+      "irradiance": false
+    }
+  }
+}
