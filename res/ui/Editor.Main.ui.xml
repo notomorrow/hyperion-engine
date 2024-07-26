@@ -16,7 +16,7 @@
     </MenuBar>
 
     <DockableContainer name="Dockable_Container" position="0 25" size="100% fill">
-        <Panel name="Left_Panel" size="200 100%" side="left" padding="5 5">
+        <Panel name="Left_Panel" size="200 100%" padding="5 5" side="left">
             <TabView size="100% 25" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
                     <ListView name="Scene_Outline_ListView" position="0 0" size="100% fill" />
@@ -24,7 +24,7 @@
             </TabView>
         </Panel>
         
-        <Panel name="Right_Panel" size="200 100%" side="right" padding="5 5">
+        <Panel name="Right_Panel" size="200 100%" padding="5 5" side="right">
             <TabView size="100% 25" size="100%">
                 <Tab name="Details_Tab" text="Properties">
                     <ListView name="Detail_View_ListView" position="0 0" size="100% fill" />
@@ -45,7 +45,7 @@
             </TabView>
         </Panel>
 
-        <Panel name="Bottom_Panel" size="100% 200" side="bottom">
+        <Panel name="Bottom_Panel" size="100% 200"  padding="5 5" side="bottom">
             <TabView name="Bottom_Panel_TabView" size="100%">
                 <Tab name="Assets_Tab" text="Assets">
                 </Tab>
