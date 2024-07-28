@@ -48,7 +48,7 @@ void main()
     vec4 position = object.model_matrix * vec4(a_position, 1.0);
 #else
     // scale the quad mesh to the size of the object
-    vec4 position = object.model_matrix * vec4(a_position * vec3((object.world_aabb_max - object.world_aabb_min).xy, 1.0), 1.0);
+    vec4 position = object.model_matrix * vec4(a_position * vec3(vec2(properties.size.xy), 1.0), 1.0);
 #endif
 
     vec4 ndc_position = camera.projection * camera.view * position;
