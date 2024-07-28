@@ -36,11 +36,11 @@
             <TabView name="Main_Content_TabView" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
                     <Image name="Scene_Image" size="100%" />
-                </Tab>
-                <Tab name="Game_Tab" text="Game">
-                    <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps">
+                    <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="2">
                         Generate Lightmaps (test)
                     </Button>
+                </Tab>
+                <Tab name="Game_Tab" text="Game">
                 </Tab>
             </TabView>
         </Panel>
