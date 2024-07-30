@@ -1,7 +1,10 @@
 {
+  "app": {
+    "name": "HyperionEditor"
+  },
   "rendering": {
     "ssr": {
-      "enabled": true
+      "enabled": false
     },
     "rt": {
       "reflections": {
