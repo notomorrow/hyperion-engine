@@ -274,6 +274,8 @@ bool Node::IsOrHasParent(const Node *node) const
 
 void Node::SetScene(Scene *scene)
 {
+    HYP_LOG(Node, LogLevel::DEBUG, "{} set scene to {}", GetName(), (void *)(scene));
+    
     if (!scene) {
         scene = g_engine->GetWorld()->GetDetachedScene(Threads::CurrentThreadID()).Get();
     }
@@ -361,9 +363,22 @@ NodeProxy Node::AddChild(const NodeProxy &node)
         return NodeProxy::empty;
     }
 
+    if (node.Get() == this || node->GetParent() == this) {
+        return node;
+    }
+
+    if (node->GetParent() != nullptr) {
+        HYP_LOG(Node, LogLevel::WARNING, "Attaching node {} to {} when it already has a parent node ({}). Node will be detached from parent.",
+            node->GetName(), GetName(), node->GetParent()->GetName());
+
+        AssertThrowMsg(node->Remove(), "Node %s could not be detached from parent", node->GetName().Data());
+    }
+
     AssertThrowMsg(
-        node->GetParent() == nullptr,
-        "Cannot attach a child node that already has a parent"
+        !IsOrHasParent(node.Get()),
+        "Attaching node %s to %s would create a circular reference",
+        node->GetName().Data(),
+        GetName().Data()
     );
 
     m_child_nodes.PushBack(node);
@@ -902,7 +917,7 @@ NodeProxy Node::FindChildWithEntity(ID<Entity> entity) const
         const Node *parent = queue.Pop();
 
         for (const NodeProxy &child : parent->GetChildren()) {
-            if (!child || !child->GetEntity().IsValid()) {
+            if (!child) {
                 continue;
             }
 

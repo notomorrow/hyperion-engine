@@ -17,6 +17,13 @@
 namespace hyperion {
 namespace sys {
 
+static const ArgParseDefinitions g_default_arg_parse_definitions = ArgParseDefinitions()
+    .Add("Profile", "", ArgFlags::NONE, CommandLineArgumentType::BOOLEAN, false)
+    .Add("ResX", "", ArgFlags::NONE, CommandLineArgumentType::INTEGER)
+    .Add("ResY", "", ArgFlags::NONE, CommandLineArgumentType::INTEGER)
+    .Add("Headless", "", ArgFlags::NONE, CommandLineArgumentType::BOOLEAN, false)
+    .Add("Mode", "m", ArgFlags::NONE, Array<String> { "precompile_shaders", "editor" }, String("editor"));
+
 #pragma region ApplicationWindow
 
 ApplicationWindow::ApplicationWindow(ANSIString title, Vec2i size)
@@ -214,8 +221,7 @@ bool SDLAppContext::GetVkExtensions(Array<const char *> &out_extensions) const
 #pragma region AppContext
 
 AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
-    : m_arguments(UniquePtr<CommandLineArguments>::Construct(arguments)),
-      m_configuration("app")
+    : m_configuration("app")
 {
     m_name = std::move(name);
 
@@ -224,6 +230,26 @@ AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
             m_name = m_configuration.Get("app.name").ToString();
         }
     }
+
+    UniquePtr<CommandLineArguments> new_arguments;
+    
+    if (json::JSONValue config_args = m_configuration.Get("app.args")) {
+        json::JSONString config_args_string = config_args.ToString();
+        Array<String> config_args_string_split = config_args_string.Split(' ');
+
+        ArgParse arg_parse(g_default_arg_parse_definitions);
+        ArgParse::ParseResult parse_result = arg_parse.Parse(arguments.GetCommand(), config_args_string_split);
+
+        if (parse_result) { 
+            new_arguments.Reset(new CommandLineArguments(CommandLineArguments::Merge(parse_result.result, arguments)));
+        }
+    }
+
+    if (!new_arguments) {
+        new_arguments.Reset(new CommandLineArguments(arguments));
+    }
+
+    m_arguments = std::move(new_arguments);
 }
 
 AppContext::~AppContext() = default;
@@ -256,6 +282,11 @@ void AppContext::UpdateConfigurationOverrides()
             m_configuration.Save();
         }
     }
+}
+
+const ArgParseDefinitions &AppContext::GetArgParseDefinitions() const
+{
+    return g_default_arg_parse_definitions;
 }
 
 #pragma endregion AppContext

@@ -17,6 +17,22 @@ namespace utilities {
 
 using TypeIDValue = uint32;
 
+namespace detail {
+
+template <class T>
+struct TypeID_Impl
+{
+    static constexpr TypeIDValue value = TypeNameWithoutNamespace<T>().GetHashCode().Value() % HashCode::ValueType(MathUtil::MaxSafeValue<TypeIDValue>());
+};
+
+template <>
+struct TypeID_Impl<void>
+{
+    static constexpr TypeIDValue value = 0;
+};
+
+} // namespace detail
+
 /*! \brief Simple 32-bit identifier for a given type. Stable across DLLs as the type hash is based on the name of the type. */
 struct TypeID
 {
@@ -30,18 +46,10 @@ private:
 public:
     template <class T>
     static constexpr TypeID ForType()
-    {
-        if constexpr (std::is_same_v<void, T>) {
-            return Void();
-        } else {
-            return TypeID {
-                ValueType(TypeNameWithoutNamespace<T>().GetHashCode().Value() % HashCode::ValueType(MathUtil::MaxSafeValue<ValueType>()))
-            };
-        }
-    }
+        { return TypeID { detail::TypeID_Impl<T>::value }; }
 
-    template <SizeType size>
-    static constexpr TypeID FromString(const char (&str)[size])
+    template <SizeType Sz>
+    static constexpr TypeID FromString(const char (&str)[Sz])
     {
         return TypeID {
             ValueType(HashCode::GetHashCode(str).Value() % HashCode::ValueType(MathUtil::MaxSafeValue<ValueType>()))

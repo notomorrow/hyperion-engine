@@ -55,6 +55,7 @@ namespace sys {
 
 class SystemEvent;
 class CommandLineArguments;
+struct ArgParseDefinitions;
 
 struct WindowOptions
 {
@@ -151,6 +152,8 @@ public:
     virtual int PollEvent(SystemEvent &event) = 0;
 
     virtual void UpdateConfigurationOverrides();
+
+    virtual const ArgParseDefinitions &GetArgParseDefinitions() const;
 
 #ifdef HYP_VULKAN
     virtual bool GetVkExtensions(Array<const char *> &out_extensions) const = 0;

@@ -244,9 +244,6 @@ void Scene::SetWorld(World *world)
 
 WorldGrid *Scene::GetWorldGrid() const
 {
-    // if (!m_world) {
-    //     return nullptr;
-    // }
     AssertThrow(m_world != nullptr);
 
     if (WorldGridSubsystem *world_grid_subsystem = m_world->GetSubsystem<WorldGridSubsystem>()) {
@@ -261,6 +258,11 @@ NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_root_node_proxy);
+
+    if (m_root_node_proxy->GetEntity() == entity) {
+        return m_root_node_proxy;
+    }
+
     return m_root_node_proxy->FindChildWithEntity(entity);
 }
 
@@ -269,6 +271,11 @@ NodeProxy Scene::FindNodeByName(const String &name) const
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertThrow(m_root_node_proxy);
+
+    if (m_root_node_proxy->GetName() == name) {
+        return m_root_node_proxy;
+    }
+
     return m_root_node_proxy->FindChildByName(name);
 }
 

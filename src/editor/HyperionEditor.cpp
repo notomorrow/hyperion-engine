@@ -47,8 +47,10 @@
 #include <scripting/Script.hpp>
 #include <scripting/ScriptingService.hpp>
 
-// temp
 #include <util/profiling/Profile.hpp>
+
+#include <util/MeshBuilder.hpp>
+
 #include <rendering/lightmapper/LightmapRenderer.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
@@ -323,7 +325,8 @@ public:
           m_camera(camera),
           m_input_manager(input_manager),
           m_ui_stage(ui_stage),
-          m_editor_camera_enabled(false)
+          m_editor_camera_enabled(false),
+          m_should_cancel_next_click(false)
     {
     }
 
@@ -349,6 +352,8 @@ public:
     void UpdateEditorCamera(GameCounter::TickUnit delta);
 
 private:
+    void CreateHighlightNode();
+
     RC<FontAtlas> CreateFontAtlas();
     void CreateMainPanel();
 
@@ -371,11 +376,73 @@ private:
     RC<UIObject>                                            m_main_panel;
 
     NodeProxy                                               m_focused_node;
+    // the actual node that displays the highlight for the focused item
+    NodeProxy                                               m_highlight_node;
 
     bool                                                    m_editor_camera_enabled;
+    bool                                                    m_should_cancel_next_click;
 
     Delegate<void, const NodeProxy &, const NodeProxy &>    OnFocusedNodeChanged;
 };
+
+void HyperionEditorImpl::CreateHighlightNode()
+{
+    m_highlight_node = NodeProxy(new Node("Editor_Highlight"));
+
+    const ID<Entity> entity = GetScene()->GetEntityManager()->AddEntity();
+
+    Handle<Mesh> mesh = MeshBuilder::Cube();
+    InitObject(mesh);
+
+    Handle<Material> material = g_material_system->GetOrCreate(
+        {
+            .shader_definition = ShaderDefinition {
+                NAME("Forward"),
+                ShaderProperties(mesh->GetVertexAttributes())
+            },
+            .bucket = Bucket::BUCKET_TRANSLUCENT
+        },
+        {
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f) },
+            { Material::MATERIAL_KEY_ROUGHNESS, 0.0f },
+            { Material::MATERIAL_KEY_METALNESS, 0.0f }
+        }
+    );
+
+    InitObject(material);
+
+    GetScene()->GetEntityManager()->AddComponent<MeshComponent>(
+        entity,
+        MeshComponent {
+            mesh,
+            material
+        }
+    );
+
+    GetScene()->GetEntityManager()->AddComponent<TransformComponent>(
+        entity,
+        TransformComponent { }
+    );
+
+    GetScene()->GetEntityManager()->AddComponent<VisibilityStateComponent>(
+        entity,
+        VisibilityStateComponent {
+            VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE
+        }
+    );
+
+    GetScene()->GetEntityManager()->AddComponent<BoundingBoxComponent>(
+        entity,
+        BoundingBoxComponent {
+            mesh->GetAABB()
+        }
+    );
+
+    m_highlight_node->SetEntity(entity);
+
+    // temp
+    GetScene()->GetRoot()->AddChild(m_highlight_node);
+}
 
 RC<FontAtlas> HyperionEditorImpl::CreateFontAtlas()
 {
@@ -411,9 +478,52 @@ void HyperionEditorImpl::CreateMainPanel()
             RC<UIImage> ui_image = scene_image_object.Cast<UIImage>();
             
             if (ui_image != nullptr) {
+                ui_image->OnClick.Bind([this](const MouseEvent &event)
+                {
+                    HYP_LOG(Editor, LogLevel::DEBUG, "Click at : {}", event.position);
+
+                    if (m_should_cancel_next_click) {
+                        return UIEventHandlerResult::STOP_BUBBLING;
+                    }
+
+                    if (m_camera->GetCameraController()->GetInputHandler()->OnClick(event)) {
+                        return UIEventHandlerResult::STOP_BUBBLING;
+                    }
+
+                    const Vec4f mouse_world = GetScene()->GetCamera()->TransformScreenToWorld(event.position);
+
+                    const Vec4f ray_direction = mouse_world.Normalized();
+
+                    const Ray ray { GetScene()->GetCamera()->GetTranslation(), ray_direction.GetXYZ() };
+                    RayTestResults results;
+
+                    if (GetScene()->GetOctree().TestRay(ray, results)) {
+                        for (const RayHit &hit : results) {
+                            if (ID<Entity> entity = ID<Entity>(hit.id)) {
+                                HYP_LOG(Editor, LogLevel::INFO, "Hit: {}", entity.Value());
+
+                                if (NodeProxy node = GetScene()->GetRoot()->FindChildWithEntity(entity)) {
+                                    HYP_LOG(Editor, LogLevel::INFO, "  Hit name: {}", node->GetName());
+
+                                    SetFocusedNode(node);
+
+                                    break;
+                                }
+                            }
+                        }
+
+                        return UIEventHandlerResult::STOP_BUBBLING;
+                    }
+
+                    return UIEventHandlerResult::OK;
+                }).Detach();
+
                 ui_image->OnMouseDrag.Bind([this, ui_image = ui_image.Get()](const MouseEvent &event)
                 {
                     m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
+
+                    // prevent click being triggered on release once mouse has been dragged
+                    m_should_cancel_next_click = true;
 
                     if (m_camera->GetCameraController()->IsMouseLocked()) {
                         const Vec2f position = ui_image->GetAbsolutePosition();
@@ -431,12 +541,16 @@ void HyperionEditorImpl::CreateMainPanel()
                 {
                     m_camera->GetCameraController()->GetInputHandler()->OnMouseDown(event);
 
+                    m_should_cancel_next_click = false;
+
                     return UIEventHandlerResult::OK;
                 }).Detach();
 
                 ui_image->OnMouseUp.Bind([this](const MouseEvent &event)
                 {
                     m_camera->GetCameraController()->GetInputHandler()->OnMouseUp(event);
+
+                    m_should_cancel_next_click = false;
 
                     return UIEventHandlerResult::OK;
                 }).Detach();
@@ -467,10 +581,8 @@ void HyperionEditorImpl::CreateMainPanel()
                 ui_image->SetTexture(m_scene_texture);
             }
         }
-
+        
         GetUIStage()->AddChildUIObject(loaded_ui);
-
-        return; // temp
 
         // overflowing inner sizes is messing up AABB calculation for higher up parents
 
@@ -1023,11 +1135,23 @@ void HyperionEditorImpl::SetFocusedNode(const NodeProxy &node)
 
     m_focused_node = node;
 
+    // m_highlight_node.Remove();
+
+    if (m_focused_node.IsValid()) {
+        // @TODO watch for transform changes and update the highlight node
+
+        // m_focused_node->AddChild(m_highlight_node);
+        m_highlight_node->SetWorldScale(m_focused_node->GetWorldAABB().GetExtent() * 0.5f);
+        m_highlight_node->SetWorldTranslation(m_focused_node->GetWorldTranslation());
+    }
+
     OnFocusedNodeChanged(m_focused_node, previous_focused_node);
 }
 
 void HyperionEditorImpl::Initialize()
 {
+    CreateHighlightNode();
+
     CreateMainPanel();
     CreateInitialState();
 }

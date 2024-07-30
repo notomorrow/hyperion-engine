@@ -52,10 +52,10 @@ void GameThread::operator()(Game *game)
             continue;
         }
 #endif
-
-        counter.NextTick();
         
         HYP_PROFILE_BEGIN;
+
+        counter.NextTick();
 
         g_asset_manager->Update(counter.delta);
 

@@ -110,6 +110,11 @@ public:
         return true;
     }
 
+    virtual bool OnClick(const MouseEvent &event) override
+    {
+        return false;
+    }
+
 private:
     EditorCameraController  *m_controller;
 };

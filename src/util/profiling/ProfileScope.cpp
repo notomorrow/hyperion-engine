@@ -344,9 +344,7 @@ public:
         m_root_entry.StartMeasure();
     }
 
-    ~ProfileScopeStack()
-    {
-    }
+    ~ProfileScopeStack() = default;
 
     void Reset()
     {
@@ -354,16 +352,17 @@ public:
 
         m_root_entry.SaveDiff();
 
-        m_queue.PushBack(m_root_entry.ToJSON());
-        
-        if (m_queue.Size() >= 100) {
-            // DebugLogProfileScopeEntry(&m_root_entry);
+        if (g_engine->GetAppContext()->GetArguments()["Profile"]) {
+            m_queue.PushBack(m_root_entry.ToJSON());
+            
+            if (m_queue.Size() >= 100) {
+                // DebugLogProfileScopeEntry(&m_root_entry);
 
-            ProfilerConnection::GetInstance().Push(std::move(m_queue));
+                ProfilerConnection::GetInstance().Push(std::move(m_queue));
+            }
         }
 
         m_root_entry.children.Clear();
-
         m_root_entry.StartMeasure();
 
         m_head = &m_root_entry;

@@ -83,22 +83,22 @@ RC<AppContext> App::InitAppContext(const CommandLineArguments &arguments)
     #error "No AppContext implementation for this platform!"
 #endif
 
+    const CommandLineArguments &app_context_arguments = app_context->GetArguments();
+
     Vec2i resolution = { 1280, 720 };
 
     EnumFlags<WindowFlags> window_flags = WindowFlags::HIGH_DPI;
 
-    if (arguments["Headless"].IsBool()) {
-        if (arguments["Headless"].AsBool()) {
-            window_flags |= WindowFlags::HEADLESS;
-        }
+    if (app_context_arguments["Headless"].ToBool()) {
+        window_flags |= WindowFlags::HEADLESS;
     }
 
-    if (arguments["ResX"].IsNumber()) {
-        resolution.x = arguments["ResX"].ToInt32();
+    if (app_context_arguments["ResX"].IsNumber()) {
+        resolution.x = app_context_arguments["ResX"].ToInt32();
     }
 
-    if (arguments["ResY"].IsNumber()) {
-        resolution.y = arguments["ResY"].ToInt32();
+    if (app_context_arguments["ResY"].IsNumber()) {
+        resolution.y = app_context_arguments["ResY"].ToInt32();
     }
 
     if (!(window_flags & WindowFlags::HEADLESS)) {

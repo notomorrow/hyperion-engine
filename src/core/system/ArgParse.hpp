@@ -27,6 +27,14 @@ enum class ArgFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(ArgFlags)
 
+enum class ArgParseFlags : uint32
+{
+    NONE                = 0x0,
+    ALLOW_UNKNOWN_ARGS  = 0x1
+};
+
+HYP_MAKE_ENUM_FLAGS(ArgParseFlags)
+
 enum class CommandLineArgumentType
 {
     STRING = 1,
@@ -69,15 +77,91 @@ public:
     HYP_FORCE_INLINE SizeType Size() const
         { return values.Size(); }
 
-    HYP_FORCE_INLINE ConstIterator Find(const UTF8StringView &key) const
+    HYP_FORCE_INLINE Iterator Find(UTF8StringView key)
+        { return values.FindIf([key](auto &pair) { return pair.first == key; }); }
+
+    HYP_FORCE_INLINE ConstIterator Find(UTF8StringView key) const
         { return values.FindIf([key](const auto &pair) { return pair.first == key; }); }
 
-    HYP_FORCE_INLINE bool Contains(const UTF8StringView &key) const
+    HYP_FORCE_INLINE bool Contains(UTF8StringView key) const
         { return Find(key) != values.End(); }
+
+    HYP_NODISCARD static CommandLineArguments Merge(const CommandLineArguments &a, const CommandLineArguments &b);
 
     HYP_DEF_STL_BEGIN_END(
         values.Begin(),
         values.End()
+    )
+};
+
+struct ArgParseDefinition
+{
+    String                              name;
+    Optional<String>                    shorthand;
+    ArgFlags                            flags;
+    CommandLineArgumentType             type;
+    Optional<CommandLineArgumentValue>  default_value;
+    Optional<Array<String>>             enum_values;
+};
+
+struct ArgParseDefinitions
+{
+    using Iterator = typename Array<ArgParseDefinition>::Iterator;
+    using ConstIterator = typename Array<ArgParseDefinition>::ConstIterator;
+
+    Array<ArgParseDefinition>   definitions;
+
+    ArgParseDefinitions()                                                   = default;
+    ArgParseDefinitions(const Array<ArgParseDefinition> &definitions)
+        : definitions(definitions)
+    {
+    }
+
+    ArgParseDefinitions(const ArgParseDefinitions &other)                   = default;
+    ArgParseDefinitions &operator=(const ArgParseDefinitions &other)        = default;
+
+    ArgParseDefinitions(ArgParseDefinitions &&other) noexcept               = default;
+    ArgParseDefinitions &operator=(ArgParseDefinitions &&other) noexcept    = default;
+
+    ~ArgParseDefinitions()                                                  = default;
+
+    // Add an argument - may be a string, int, float, bool.
+    HYP_API ArgParseDefinitions &Add(
+        const String &name,
+        const String &shorthand = String::empty,
+        EnumFlags<ArgFlags> flags = ArgFlags::NONE,
+        CommandLineArgumentType type = CommandLineArgumentType::STRING,
+        const CommandLineArgumentValue &default_value = { }
+    );
+
+    // Add an enum argument
+    HYP_API ArgParseDefinitions &Add(
+        const String &name,
+        const String &shorthand = String::empty,
+        EnumFlags<ArgFlags> flags = ArgFlags::NONE,
+        const Optional<Array<String>> &enum_values = { },
+        const CommandLineArgumentValue &default_value = { }
+    );
+    
+    HYP_FORCE_INLINE Iterator Find(UTF8StringView key)
+    {
+        return definitions.FindIf([key](const ArgParseDefinition &definition)
+        {
+            return definition.name == key;
+        });
+    }
+    
+    HYP_FORCE_INLINE ConstIterator Find(UTF8StringView key) const
+    {
+        return definitions.FindIf([key](const ArgParseDefinition &definition)
+        {
+            return definition.name == key;
+        });
+    }
+
+    HYP_DEF_STL_BEGIN_END(
+        definitions.Begin(),
+        definitions.End()
     )
 };
 
@@ -94,39 +178,46 @@ public:
             { return ok; }
     };
 
-    struct ArgumentDefinition
+    ArgParse(const ArgParseDefinitions &definitions = { }, EnumFlags<ArgParseFlags> flags = ArgParseFlags::NONE)
+        : m_definitions(definitions),
+          m_flags(flags)
     {
-        String                              name;
-        Optional<String>                    shorthand;
-        ArgFlags                            flags;
-        CommandLineArgumentType             type;
-        Optional<CommandLineArgumentValue>  default_value;
-        Optional<Array<String>>             enum_values;
-    };
+    }
 
-    // Add an argument - may be a string, int, float, bool.
-    HYP_API void Add(
-        String name,
-        String shorthand = String::empty,
+    ArgParse(const ArgParse &other)                 = default;
+    ArgParse &operator=(const ArgParse &other)      = default;
+    ArgParse(ArgParse &&other) noexcept             = default;
+    ArgParse &operator=(ArgParse &&other) noexcept  = default;
+    ~ArgParse()                                     = default;
+
+    HYP_FORCE_INLINE void Add(
+        const String &name,
+        const String &shorthand = String::empty,
         EnumFlags<ArgFlags> flags = ArgFlags::NONE,
         CommandLineArgumentType type = CommandLineArgumentType::STRING,
-        CommandLineArgumentValue default_value = { }
-    );
+        const CommandLineArgumentValue &default_value = { }
+    )
+    {
+        m_definitions.Add(name, shorthand, flags, type, default_value);
+    }
 
-    // Add an enum argument
-    HYP_API void Add(
-        String name,
-        String shorthand = String::empty,
+    HYP_FORCE_INLINE void Add(
+        const String &name,
+        const String &shorthand = String::empty,
         EnumFlags<ArgFlags> flags = ArgFlags::NONE,
-        Optional<Array<String>> enum_values = { },
-        CommandLineArgumentValue = { }
-    );
+        const Optional<Array<String>> &enum_values = { },
+        const CommandLineArgumentValue &default_value = { }
+    )
+    {
+        m_definitions.Add(name, shorthand, flags, enum_values, default_value);
+    }
 
     HYP_API ParseResult Parse(int argc, char **argv) const;
     HYP_API ParseResult Parse(const String &command, const Array<String> &args) const;
 
 private:
-    Array<ArgumentDefinition>   m_definitions;
+    ArgParseDefinitions         m_definitions;
+    EnumFlags<ArgParseFlags>    m_flags;
 };
 
 } // namespace sys

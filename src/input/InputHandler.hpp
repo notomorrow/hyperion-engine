@@ -22,6 +22,7 @@ public:
     virtual bool OnMouseUp(const MouseEvent &event) = 0;
     virtual bool OnMouseMove(const MouseEvent &event) = 0;
     virtual bool OnMouseDrag(const MouseEvent &event) = 0;
+    virtual bool OnClick(const MouseEvent &event) = 0;
 };
 
 class NullInputHandler : public InputHandler
@@ -36,6 +37,7 @@ public:
     virtual bool OnMouseUp(const MouseEvent &event) override    { return false; }
     virtual bool OnMouseMove(const MouseEvent &event) override  { return false; }
     virtual bool OnMouseDrag(const MouseEvent &event) override  { return false; }
+    virtual bool OnClick(const MouseEvent &event) override      { return false; }
 };
 
 } // namespace hyperion

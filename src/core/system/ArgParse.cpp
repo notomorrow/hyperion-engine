@@ -22,79 +22,106 @@ const CommandLineArgumentValue &CommandLineArguments::operator[](UTF8StringView 
     return it->second;
 }
 
+CommandLineArguments CommandLineArguments::Merge(const CommandLineArguments &a, const CommandLineArguments &b)
+{
+    CommandLineArguments result = a;
+
+    for (const Pair<String, CommandLineArgumentValue> &element : b) {
+        auto it = result.Find(element.first);
+
+        if (it == result.End()) {
+            result.values.PushBack(element);
+
+            continue;
+        }
+
+        it->second = element.second;
+    }
+
+    return result;
+}
+
 #pragma endregion CommandLineArguments
 
-#pragma region ArgParse
+#pragma region ArgParseDefinitions
 
-void ArgParse::Add(
-    String name,
-    String shorthand,
+ArgParseDefinitions &ArgParseDefinitions::Add(
+    const String &name,
+    const String &shorthand,
     EnumFlags<ArgFlags> flags,
     CommandLineArgumentType type,
-    CommandLineArgumentValue default_value
+    const CommandLineArgumentValue &default_value
 )
 {
-    auto it = m_definitions.FindIf([&name](const auto &item)
+    auto it = definitions.FindIf([&name](const auto &item)
     {
         return item.name == name;
     });
 
-    if (it != m_definitions.End()) {
-        *it = ArgumentDefinition {
-            std::move(name),
-            shorthand.Empty() ? Optional<String>() : std::move(shorthand),
+    if (it != definitions.End()) {
+        *it = ArgParseDefinition {
+            name,
+            shorthand.Empty() ? Optional<String>() : shorthand,
             flags,
             type,
-            std::move(default_value)
+            default_value
         };
 
-        return;
+        return *this;
     }
 
-    m_definitions.PushBack(ArgumentDefinition {
-        std::move(name),
-        shorthand.Empty() ? Optional<String>() : std::move(shorthand),
+    definitions.PushBack(ArgParseDefinition {
+        name,
+        shorthand.Empty() ? Optional<String>() : shorthand,
         flags,
         type,
-        std::move(default_value)
+        default_value
     });
+
+    return *this;
 }
 
-void ArgParse::Add(
-    String name,
-    String shorthand,
+ArgParseDefinitions &ArgParseDefinitions::Add(
+    const String &name,
+    const String &shorthand,
     EnumFlags<ArgFlags> flags,
-    Optional<Array<String>> enum_values,
-    CommandLineArgumentValue default_value
+    const Optional<Array<String>> &enum_values,
+    const CommandLineArgumentValue &default_value
 )
 {
-    auto it = m_definitions.FindIf([&name](const auto &item)
+    auto it = definitions.FindIf([&name](const auto &item)
     {
         return item.name == name;
     });
 
-    if (it != m_definitions.End()) {
-        *it = ArgumentDefinition {
-            std::move(name),
-            shorthand.Empty() ? Optional<String>() : std::move(shorthand),
+    if (it != definitions.End()) {
+        *it = ArgParseDefinition {
+            name,
+            shorthand.Empty() ? Optional<String>() : shorthand,
             flags,
             CommandLineArgumentType::ENUM,
-            std::move(default_value),
-            std::move(enum_values)
+            default_value,
+            enum_values
         };
 
-        return;
+        return *this;
     }
 
-    m_definitions.PushBack(ArgumentDefinition {
-        std::move(name),
-        shorthand.Empty() ? Optional<String>() : std::move(shorthand),
+    definitions.PushBack(ArgParseDefinition {
+        name,
+        shorthand.Empty() ? Optional<String>() : shorthand,
         flags,
         CommandLineArgumentType::ENUM,
-        std::move(default_value),
-        std::move(enum_values)
+        default_value,
+        enum_values
     });
+
+    return *this;
 }
+
+#pragma endregion ArgParseDefinitions
+
+#pragma region ArgParse
 
 ArgParse::ParseResult ArgParse::Parse(int argc, char **argv) const
 {
@@ -115,9 +142,9 @@ ArgParse::ParseResult ArgParse::Parse(const String &command, const Array<String>
 
     FlatSet<String> used_arguments;
 
-    auto ParseArgument = [](const ArgumentDefinition &argument_definition, const String &str) -> Variant<CommandLineArgumentValue, CommandLineArgumentError>
+    auto ParseArgument = [](const ArgParseDefinition &definition, const String &str) -> Variant<CommandLineArgumentValue, CommandLineArgumentError>
     {
-        const CommandLineArgumentType type = argument_definition.type;
+        const CommandLineArgumentType type = definition.type;
 
         json::ParseResult parse_result = json::JSON::Parse(str);
 
@@ -137,7 +164,7 @@ ArgParse::ParseResult ArgParse::Parse(const String &command, const Array<String>
         case CommandLineArgumentType::ENUM: {
             const json::JSONString string_value = parse_result.value.ToString();
 
-            const Array<String> *enum_values = argument_definition.enum_values.TryGet();
+            const Array<String> *enum_values = definition.enum_values.TryGet();
 
             if (!enum_values) {
                 return CommandLineArgumentError { "Internal error parsing enum argument" };
@@ -171,10 +198,7 @@ ArgParse::ParseResult ArgParse::Parse(const String &command, const Array<String>
             return result;
         }
 
-        auto it = m_definitions.FindIf([&arg](const auto &item)
-        {
-            return item.name == arg;
-        });
+        const auto it = m_definitions.Find(arg);
 
         if (it == m_definitions.End()) {
             // Unknown argument
@@ -223,7 +247,7 @@ ArgParse::ParseResult ArgParse::Parse(const String &command, const Array<String>
         result.result.values.EmplaceBack(arg, std::move(parsed_value.Get<CommandLineArgumentValue>()));
     }
 
-    for (const ArgumentDefinition &def : m_definitions) {
+    for (const ArgParseDefinition &def : m_definitions) {
         if (used_arguments.Contains(def.name)) {
             continue;
         }

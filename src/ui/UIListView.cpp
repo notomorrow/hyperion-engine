@@ -23,6 +23,7 @@ UIListViewItem::UIListViewItem(UIStage *parent, NodeProxy node_proxy)
     : UIObject(parent, std::move(node_proxy), UIObjectType::LIST_VIEW_ITEM),
       m_is_selected_item(false)
 {
+    SetBackgroundColor(Vec4f::Zero());
 }
 
 void UIListViewItem::Init()
