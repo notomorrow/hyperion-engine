@@ -1,7 +1,7 @@
 {
   "rendering": {
     "ssr": {
-      "enabled": false
+      "enabled": true
     },
     "rt": {
       "reflections": {
