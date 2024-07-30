@@ -199,6 +199,8 @@ struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderComm
 
 #pragma endregion Render commands
 
+#pragma region ParticleSpawner
+
 ParticleSpawner::ParticleSpawner()
     : m_params { }
 {
@@ -333,6 +335,10 @@ void ParticleSpawner::CreateComputePipelines()
 
     DeferCreate(m_update_particles, g_engine->GetGPUDevice());
 }
+
+#pragma endregion ParticleSpawner
+
+#pragma region ParticleSystem
 
 ParticleSystem::ParticleSystem()
     : BasicObject(),
@@ -571,5 +577,7 @@ void ParticleSystem::Render(Frame *frame)
             ->SubmitSecondary(frame->GetCommandBuffer());
     }
 }
+
+#pragma endregion ParticleSystem
 
 } // namespace hyperion

@@ -89,6 +89,12 @@ public:
     HYP_FORCE_INLINE const Array<FramebufferRef> &GetFramebuffers() const
         { return m_fbos; }
 
+    HYP_FORCE_INLINE const DrawCallCollection &GetDrawState() const
+        { return m_draw_state; }
+
+    HYP_FORCE_INLINE EnumFlags<RenderGroupFlags> GetFlags() const
+        { return m_flags; }
+
     /*! \brief Collect drawable objects, then run the culling compute shader
      *  to mark any occluded objects as such. Must be used with indirect rendering.
      *  If nullptr is provided for cull_data, no occlusion culling will happen.

@@ -35,8 +35,7 @@ struct RenderProxy
     BoundingBox                             aabb;
     UserData<sizeof(Vec4u), alignof(Vec4u)> user_data;
     
-    HYP_FORCE_INLINE
-    bool operator==(const RenderProxy &other) const
+    HYP_FORCE_INLINE bool operator==(const RenderProxy &other) const
     {
         return entity == other.entity
             && mesh == other.mesh
@@ -48,8 +47,7 @@ struct RenderProxy
             && user_data == other.user_data;
     }
     
-    HYP_FORCE_INLINE
-    bool operator!=(const RenderProxy &other) const
+    HYP_FORCE_INLINE bool operator!=(const RenderProxy &other) const
     {
         return entity != other.entity
             || mesh != other.mesh

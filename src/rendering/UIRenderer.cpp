@@ -421,6 +421,8 @@ void UIRenderList::ExecuteDrawCalls(Frame *frame) const
         });
     }
 
+    HYP_LOG(UI, LogLevel::DEBUG, " UI rendering {} render groups", iterators.Size());
+
     for (SizeType index = 0; index < iterators.Size(); index++) {
         const auto &it = *iterators[index];
 
@@ -439,6 +441,8 @@ void UIRenderList::ExecuteDrawCalls(Frame *frame) const
                 "Given Framebuffer does not match RenderList item's framebuffer -- invalid data passed?"
             );
         }
+
+        HYP_LOG(UI, LogLevel::DEBUG, "  RenderGroup {} has {} draw calls", proxy_group.GetRenderGroup()->GetName(), proxy_group.GetRenderGroup()->GetDrawState().draw_calls.Size());
 
         proxy_group.GetRenderGroup()->PerformRendering(frame);
     }
