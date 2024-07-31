@@ -59,9 +59,9 @@ struct UIObjectMeshData
 
 static_assert(sizeof(UIObjectMeshData) == sizeof(MeshComponentUserData), "UIObjectMeshData size must match sizeof(MeshComponentUserData)");
 
-#pragma region UIObject
+#pragma region UIObjectQuadMeshHelper
 
-Handle<Mesh> UIObject::GetQuadMesh()
+const Handle<Mesh> &UIObjectQuadMeshHelper::GetQuadMesh()
 {
     static struct QuadMeshInitializer
     {
@@ -90,6 +90,15 @@ Handle<Mesh> UIObject::GetQuadMesh()
     } quad_mesh_initializer;
 
     return quad_mesh_initializer.mesh;
+}
+
+#pragma endregion UIObjectQuadMeshHelper
+
+#pragma region UIObject
+
+Handle<Mesh> UIObject::GetQuadMesh()
+{
+    return UIObjectQuadMeshHelper::GetQuadMesh();
 }
 
 UIObject::UIObject(UIObjectType type)

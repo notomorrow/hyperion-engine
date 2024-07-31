@@ -43,9 +43,25 @@ struct UITextOptions
     float line_height = 1.0f;
 };
 
+struct UITextCharacter
+{
+    Matrix4 transform;
+    Vec2f   texcoord_start;
+    Vec2f   texcoord_end;
+};
+
+struct UITextRenderData
+{
+    Array<UITextCharacter>  characters;
+    RC<FontAtlas>           font_atlas;
+    Handle<Texture>         font_atlas_texture;
+};
+
 class HYP_API UIText : public UIObject
 {
 public:
+    friend struct RenderCommand_UpdateUITextRenderData;
+
     UIText(UIStage *stage, NodeProxy node_proxy);
     UIText(const UIText &other)                 = delete;
     UIText &operator=(const UIText &other)      = delete;
@@ -85,6 +101,8 @@ public:
     HYP_FORCE_INLINE void SetOptions(const UITextOptions &options)
         { m_options = options; }
 
+    const RC<UITextRenderData> &GetRenderData() const;
+
     /*! \brief Overriden from UIObject to return false as text is not focusable
      * 
      * \return False */
@@ -103,15 +121,18 @@ protected:
     virtual void OnFontAtlasUpdate_Internal() override;
 
     void UpdateMesh();
+    void UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture);
 
-    FontAtlas *GetFontAtlasOrDefault() const;
+    RC<FontAtlas> GetFontAtlasOrDefault() const;
 
-    RC<FontAtlas>   m_font_atlas;
+    RC<FontAtlas>           m_font_atlas;
 
-    UITextOptions   m_options;
+    UITextOptions           m_options;
 
 private:
-    BoundingBox     m_text_aabb;
+    BoundingBox             m_text_aabb;
+
+    RC<UITextRenderData>    m_render_data;
 };
 
 } // namespace hyperion

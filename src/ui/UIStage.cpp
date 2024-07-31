@@ -101,7 +101,7 @@ Scene *UIStage::GetScene() const
 const RC<FontAtlas> &UIStage::GetDefaultFontAtlas() const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
+    // Threads::AssertOnThread(m_owner_thread_id);
 
     if (m_default_font_atlas != nullptr) {
         return m_default_font_atlas;

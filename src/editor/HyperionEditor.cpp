@@ -586,6 +586,8 @@ void HyperionEditorImpl::CreateMainPanel()
         
         GetUIStage()->AddChildUIObject(loaded_ui);
 
+        return;
+
         // overflowing inner sizes is messing up AABB calculation for higher up parents
 
         InitSceneOutline();

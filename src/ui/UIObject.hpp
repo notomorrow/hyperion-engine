@@ -227,6 +227,16 @@ HYP_MAKE_ENUM_FLAGS(UIObjectUpdateSizeFlags)
 
 #pragma endregion UIObjectSize
 
+#pragma region UIObjectQuadMeshHelper
+
+class HYP_API UIObjectQuadMeshHelper
+{
+public:
+    static const Handle<Mesh> &GetQuadMesh();
+};
+
+#pragma endregion UIObjectQuadMeshHelper
+
 #pragma region UIObject
 
 struct UIObjectID : UniqueID { };

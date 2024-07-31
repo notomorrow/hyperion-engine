@@ -71,19 +71,19 @@ public:
 
     ~Mesh();
 
-    const GPUBufferRef &GetVertexBuffer() const
+    HYP_FORCE_INLINE const GPUBufferRef &GetVertexBuffer() const
         { return m_vbo; }
 
-    const GPUBufferRef &GetIndexBuffer() const
+    HYP_FORCE_INLINE const GPUBufferRef &GetIndexBuffer() const
         { return m_ibo; }
 
     void SetVertices(Array<Vertex> vertices);
     void SetVertices(Array<Vertex> vertices, Array<Index> indices);
 
-    uint NumIndices() const
+    HYP_FORCE_INLINE uint32 NumIndices() const
         { return m_indices_count; }
 
-    const RC<StreamedMeshData> &GetStreamedMeshData() const
+    HYP_FORCE_INLINE const RC<StreamedMeshData> &GetStreamedMeshData() const
         { return m_streamed_mesh_data; }
 
     /*! \brief Set the mesh data for the Mesh. Only usable on the Render thread. If needed
@@ -91,15 +91,17 @@ public:
     void SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data);
     static void SetStreamedMeshData(Handle<Mesh> mesh, RC<StreamedMeshData> streamed_mesh_data);
 
-    const VertexAttributeSet &GetVertexAttributes() const
+    HYP_FORCE_INLINE const VertexAttributeSet &GetVertexAttributes() const
         { return m_mesh_attributes.vertex_attributes; }
 
-    void SetVertexAttributes(const VertexAttributeSet &attributes)
+    HYP_FORCE_INLINE void SetVertexAttributes(const VertexAttributeSet &attributes)
         { m_mesh_attributes.vertex_attributes = attributes; }
 
-    const MeshAttributes &GetMeshAttributes() const { return m_mesh_attributes; }
+    HYP_FORCE_INLINE const MeshAttributes &GetMeshAttributes() const
+        { return m_mesh_attributes; }
 
-    Topology GetTopology() const { return m_mesh_attributes.topology; }
+    HYP_FORCE_INLINE Topology GetTopology() const
+        { return m_mesh_attributes.topology; }
 
     Array<PackedVertex> BuildPackedVertices() const;
     Array<uint32> BuildPackedIndices() const;
@@ -111,17 +113,17 @@ public:
     /*! \brief Get the axis-aligned bounding box for the mesh.
         If the mesh has not been initialized, the AABB will be invalid, unless SetAABB() has been called.
         Otherwise, the AABB will be calculated from the mesh vertices. */
-    const BoundingBox &GetAABB() const
+    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
         { return m_aabb; }
 
     /*! \brief Manually set the AABB for the mesh. If CalculateAABB is called after this, or the mesh data is changed, the
         manually set AABB will be overwritten. */
-    void SetAABB(const BoundingBox &aabb)
+    HYP_FORCE_INLINE void SetAABB(const BoundingBox &aabb)
         { m_aabb = aabb; }
 
     void Init();
 
-    void Render(CommandBuffer *cmd, uint num_instances = 1) const;
+    void Render(CommandBuffer *cmd, uint32 num_instances = 1, uint32 instance_index = 0) const;
 
     void RenderIndirect(
         CommandBuffer *cmd,
@@ -156,7 +158,7 @@ private:
     GPUBufferRef            m_vbo;
     GPUBufferRef            m_ibo;
 
-    uint                    m_indices_count = 0;
+    uint32                  m_indices_count = 0;
 
     MeshAttributes          m_mesh_attributes;
 

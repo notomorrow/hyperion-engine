@@ -312,7 +312,7 @@ void Mesh::Init()
     auto ref = m_streamed_mesh_data->AcquireRef();
     const MeshData &mesh_data = ref->GetMeshData();
 
-    m_indices_count = uint(mesh_data.indices.Size());
+    m_indices_count = uint32(mesh_data.indices.Size());
 
     PUSH_RENDER_COMMAND(
         UploadMeshData,
@@ -450,7 +450,7 @@ Array<float> Mesh::BuildVertexBuffer(const VertexAttributeSet &vertex_attributes
 
 #undef PACKED_SET_ATTR
 
-void Mesh::Render(CommandBuffer *cmd, uint num_instances) const
+void Mesh::Render(CommandBuffer *cmd, uint32 num_instances, uint32 instance_index) const
 {
 #ifdef HYP_DEBUG_MODE
     AssertReady();
@@ -459,7 +459,7 @@ void Mesh::Render(CommandBuffer *cmd, uint num_instances) const
     cmd->BindVertexBuffer(m_vbo);
     cmd->BindIndexBuffer(m_ibo);
 
-    cmd->DrawIndexed(m_indices_count, num_instances);
+    cmd->DrawIndexed(m_indices_count, num_instances, instance_index);
 }
 
 void Mesh::RenderIndirect(

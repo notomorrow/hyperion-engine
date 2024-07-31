@@ -20,6 +20,8 @@ namespace hyperion {
 
 class UIStage;
 class UIObject;
+class UITextRenderer;
+struct UITextRenderData;
 
 class UIRenderList : public RenderList
 {
@@ -32,8 +34,7 @@ public:
     UIRenderList &operator=(UIRenderList &&other) noexcept  = default;
     ~UIRenderList();
 
-    HYP_FORCE_INLINE
-    SizeType GetProxyCount() const
+    HYP_FORCE_INLINE SizeType GetProxyCount() const
         { return m_proxy_ordering.Size(); }
 
     void ResetOrdering();
@@ -78,12 +79,17 @@ private:
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override
         { AssertThrowMsg(false, "Not permitted!"); }
 
-    RC<UIStage>     m_ui_stage;
-    FramebufferRef  m_framebuffer;
-    ShaderRef       m_shader;
-    UIRenderList    m_render_list;
+    RC<UIStage>                                 m_ui_stage;
+    FramebufferRef                              m_framebuffer;
+    ShaderRef                                   m_shader;
+    UIRenderList                                m_render_list;
 
-    DelegateHandler m_on_gbuffer_resolution_changed_handle;
+    UniquePtr<UITextRenderer>                   m_text_renderer;
+
+    // testing
+    Array<Pair<RC<UITextRenderData>, Matrix4>>  m_text_render_data;
+
+    DelegateHandler                             m_on_gbuffer_resolution_changed_handle;
 };
 
 } // namespace hyperion
