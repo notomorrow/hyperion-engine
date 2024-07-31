@@ -6,6 +6,8 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
 
+#include <rendering/debug/DebugDrawer.hpp>
+
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -1592,7 +1594,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         RenderSkybox(frame);
 
         // render debug draw
-        g_engine->GetDebugDrawer().Render(frame);
+        g_engine->GetDebugDrawer()->Render(frame);
 
         m_translucent_fbo->EndCapture(primary, frame_index);
     }

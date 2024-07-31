@@ -12,7 +12,6 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderState.hpp>
-#include <rendering/debug/DebugDrawer.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <scene/World.hpp>
@@ -52,6 +51,7 @@ class GameThread;
 class ShaderGlobals;
 class ScriptingService;
 class AssetManager;
+class DebugDrawer;
 
 extern Engine               *g_engine;
 extern AssetManager         *g_asset_manager;
@@ -179,11 +179,8 @@ public:
     HYP_FORCE_INLINE  const ShaderCompiler &GetShaderCompiler() const
         { return m_shader_compiler; }
     
-    HYP_FORCE_INLINE DebugDrawer &GetDebugDrawer()
-        { return m_debug_drawer; }
-    
-    HYP_FORCE_INLINE const DebugDrawer &GetDebugDrawer() const
-        { return m_debug_drawer; }
+    HYP_FORCE_INLINE DebugDrawer *GetDebugDrawer() const
+        { return m_debug_drawer.Get(); }
     
     HYP_FORCE_INLINE InternalFormat GetDefaultFormat(TextureFormatDefault type) const
         { return m_texture_format_defaults.At(type); }
@@ -260,7 +257,7 @@ private:
     
     Configuration                                           m_configuration;
 
-    DebugDrawer                                             m_debug_drawer;
+    UniquePtr<DebugDrawer>                                  m_debug_drawer;
 
     UniquePtr<FinalPass>                                    m_final_pass;
 

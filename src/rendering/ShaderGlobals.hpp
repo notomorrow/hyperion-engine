@@ -58,7 +58,6 @@ struct ShaderGlobals
     ShaderData<ShadowShaderData, GPUBufferType::STORAGE_BUFFER, max_shadow_maps>                shadow_map_data;
     ShaderData<EnvProbeShaderData, GPUBufferType::STORAGE_BUFFER, max_env_probes>               env_probes;
     ShaderData<EnvGridShaderData, GPUBufferType::CONSTANT_BUFFER, max_env_grids>                env_grids;
-    ShaderData<ImmediateDrawShaderData, GPUBufferType::STORAGE_BUFFER, max_immediate_draws>     immediate_draws;
     ShaderData<EntityInstanceBatch, GPUBufferType::STORAGE_BUFFER, max_entity_instance_batches> entity_instance_batches;
     
     BindlessStorage textures;

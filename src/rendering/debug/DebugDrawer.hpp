@@ -18,14 +18,12 @@
 
 #include <rendering/Shader.hpp>
 #include <rendering/Mesh.hpp>
+#include <rendering/Buffers.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <Types.hpp>
-
-#include <mutex>
-#include <atomic>
 
 namespace hyperion {
 
@@ -92,7 +90,6 @@ public:
     ~DebugDrawer();
 
     void Create();
-    void Destroy();
 
     void Render(Frame *frame);
 
@@ -116,6 +113,8 @@ private:
     Array<DebugDrawCommand>                             m_draw_commands_pending_addition;
     AtomicVar<uint32>                                   m_num_draw_commands_pending_addition { 0 };
     Mutex                                               m_draw_commands_mutex;
+
+    FixedArray<GPUBufferRef, max_frames_in_flight>      m_instance_buffers;
 };
 
 } // namespace hyperion

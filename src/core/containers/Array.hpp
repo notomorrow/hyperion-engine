@@ -236,6 +236,9 @@ public:
     /*! \brief Updates the capacity of the array to be at least {capacity} */
     void SetCapacity(SizeType capacity, SizeType copy_offset = 0);
 
+    HYP_FORCE_INLINE SizeType Capacity() const
+        { return m_capacity; }
+
     /*! \brief Push an item to the back of the container.
      *  \param value The value to push back.
      *  \return Reference to the newly pushed back item. */

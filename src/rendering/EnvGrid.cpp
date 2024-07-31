@@ -2,6 +2,8 @@
 #include <rendering/EnvGrid.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
+#include <rendering/debug/DebugDrawer.hpp>
+
 #include <rendering/backend/AsyncCompute.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
@@ -458,7 +460,7 @@ void EnvGrid::OnRender(Frame *frame)
                 continue;
             }
 
-            g_engine->GetDebugDrawer().AmbientProbeSphere(
+            g_engine->GetDebugDrawer()->AmbientProbeSphere(
                 probe->GetProxy().world_position,
                 0.25f,
                 probe->GetID()

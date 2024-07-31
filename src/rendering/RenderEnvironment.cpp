@@ -4,6 +4,9 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
+
+#include <rendering/debug/DebugDrawer.hpp>
+
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
@@ -218,7 +221,7 @@ void RenderEnvironment::RenderDDGIProbes(Frame *frame)
 
         if (g_engine->GetConfig().Get(CONFIG_RT_GI_DEBUG_PROBES).GetBool()) {
             for (const Probe &probe : m_ddgi.GetProbes()) {
-                g_engine->GetDebugDrawer().Sphere(probe.position);
+                g_engine->GetDebugDrawer()->Sphere(probe.position);
             }
         }
     }

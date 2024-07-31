@@ -105,7 +105,7 @@ public:
         HYPERION_ASSERT_RESULT(buffer->Create(device, required_size));
 
         if (buffer->IsCPUAccessible()) {
-            buffer->Memset(device, required_size, 0x0); // fill with zeros
+            buffer->Memset(device, required_size, 0); // fill with zeros
         }
 
         const auto insert_result = buffer_container.Insert(required_size, buffer);

@@ -71,7 +71,7 @@ static bool ResizeIndirectDrawCommandsBuffer(
     staging_buffer->Memset(
         g_engine->GetGPUDevice(),
         staging_buffer->Size(),
-        0x0 // fill buffer with zeros
+        0 // fill buffer with zeros
     );
 
     staging_buffer->InsertBarrier(
@@ -117,7 +117,7 @@ static bool ResizeInstancesBuffer(
         instance_buffer->Memset(
             g_engine->GetGPUDevice(),
             instance_buffer->Size(),
-            0x0
+            0
         );
     }
 

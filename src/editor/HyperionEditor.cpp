@@ -8,6 +8,8 @@
 #include <rendering/UIRenderer.hpp>
 #include <rendering/render_components/ScreenCapture.hpp>
 
+#include <rendering/debug/DebugDrawer.hpp>
+
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/SkyComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
@@ -441,7 +443,7 @@ void HyperionEditorImpl::CreateHighlightNode()
     m_highlight_node->SetEntity(entity);
 
     // temp
-    GetScene()->GetRoot()->AddChild(m_highlight_node);
+    // GetScene()->GetRoot()->AddChild(m_highlight_node);
 }
 
 RC<FontAtlas> HyperionEditorImpl::CreateFontAtlas()
@@ -1158,6 +1160,20 @@ void HyperionEditorImpl::Initialize()
 
 void HyperionEditorImpl::UpdateEditorCamera(GameCounter::TickUnit delta)
 {
+    // temp
+    if (m_focused_node.IsValid()) {
+
+
+        auto debug_drawer_command_list = g_engine->GetDebugDrawer()->CreateCommandList();
+        debug_drawer_command_list->Box(
+            m_focused_node->GetWorldTranslation(),
+            m_focused_node->GetWorldAABB().GetExtent(),
+            Color(Vec4f(1.0f, 0.0f, 0.0f, 1.0f))
+        );
+
+        debug_drawer_command_list->Commit();
+    }
+
     if (!m_editor_camera_enabled) {
         return;
     }

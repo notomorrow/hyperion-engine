@@ -722,6 +722,11 @@ Result GPUBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Siz
         );
     }
 
+    if (IsCPUAccessible()) {
+        // Memset all to zero
+        Memset(device, size, 0);
+    }
+
     HYPERION_RETURN_OK;
 }
 

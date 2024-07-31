@@ -8,6 +8,8 @@
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/GBuffer.hpp>
 
+#include <rendering/debug/DebugDrawer.hpp>
+
 #include <rendering/backend/AsyncCompute.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -334,7 +336,8 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     m_final_pass.Reset(new FinalPass);
     m_final_pass->Create();
 
-    m_debug_drawer.Create();
+    m_debug_drawer.Reset(new DebugDrawer);
+    m_debug_drawer->Create();
 
     m_world = CreateObject<World>();
     InitObject(m_world);
@@ -393,9 +396,9 @@ void Engine::FinalizeStop()
     m_deferred_renderer->Destroy();
     m_deferred_renderer.Reset();
 
-    m_final_pass.Reset();
+    m_debug_drawer.Reset();
 
-    m_debug_drawer.Destroy();
+    m_final_pass.Reset();
 
     m_render_data->Destroy();
 
@@ -552,7 +555,6 @@ void Engine::UpdateBuffersAndDescriptors(uint32 frame_index)
     m_render_data->shadow_map_data.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_render_data->env_probes.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_render_data->env_grids.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->immediate_draws.UpdateBuffer(m_instance->GetDevice(), frame_index);
     m_render_data->entity_instance_batches.UpdateBuffer(m_instance->GetDevice(), frame_index);
 }
 

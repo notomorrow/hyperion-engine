@@ -8,8 +8,11 @@
 
 #include <rendering/backend/RenderConfig.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/RendererBuffer.hpp>
 
 #include <util/MeshBuilder.hpp>
+
+#include <util/profiling/ProfileScope.hpp>
 
 #include <Engine.hpp>
 
@@ -61,6 +64,7 @@ const GraphicsPipelineRef &DebugDrawerRenderGroupProxy::GetGraphicsPipeline() co
 
 void DebugDrawerRenderGroupProxy::Bind(Frame *frame)
 {
+    HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     CommandBuffer *command_buffer = GetCommandBuffer(frame);
@@ -75,6 +79,8 @@ void DebugDrawerRenderGroupProxy::Bind(Frame *frame)
 
 void DebugDrawerRenderGroupProxy::DrawMesh(Frame *frame, Mesh *mesh)
 {
+    HYP_SCOPE;
+
     CommandBuffer *command_buffer = GetCommandBuffer(frame);
     AssertThrow(command_buffer != nullptr);
 
@@ -83,6 +89,8 @@ void DebugDrawerRenderGroupProxy::DrawMesh(Frame *frame, Mesh *mesh)
 
 void DebugDrawerRenderGroupProxy::Submit(Frame *frame)
 {
+    HYP_SCOPE;
+
     CommandBuffer *command_buffer = GetCommandBuffer(frame);
     AssertThrow(command_buffer != nullptr);
 
@@ -103,10 +111,21 @@ DebugDrawer::DebugDrawer()
 
 DebugDrawer::~DebugDrawer()
 {
+    m_render_group.Reset();
+    m_shader.Reset();
+
+    SafeRelease(std::move(m_instance_buffers));
 }
 
 void DebugDrawer::Create()
 {
+    HYP_SCOPE;
+
+    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        m_instance_buffers[frame_index] = MakeRenderObject<GPUBuffer>(GPUBufferType::STORAGE_BUFFER);
+        DeferCreate(m_instance_buffers[frame_index], g_engine->GetGPUDevice(), m_draw_commands.Capacity() * sizeof(ImmediateDrawShaderData));
+    }
+
     m_shapes[uint(DebugDrawShape::SPHERE)] = MeshBuilder::NormalizedCubeSphere(4);
     m_shapes[uint(DebugDrawShape::BOX)] = MeshBuilder::Cube();
     m_shapes[uint(DebugDrawShape::PLANE)] = MeshBuilder::Quad();
@@ -134,7 +153,7 @@ void DebugDrawer::Create()
         const DescriptorSetRef &debug_drawer_descriptor_set = descriptor_table->GetDescriptorSet(NAME("DebugDrawerDescriptorSet"), frame_index);
         AssertThrow(debug_drawer_descriptor_set != nullptr);
 
-        debug_drawer_descriptor_set->SetElement(NAME("ImmediateDrawsBuffer"), g_engine->GetRenderData()->immediate_draws.GetBuffer(frame_index));
+        debug_drawer_descriptor_set->SetElement(NAME("ImmediateDrawsBuffer"), m_instance_buffers[frame_index]);
     }
 
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
@@ -162,16 +181,9 @@ void DebugDrawer::Create()
     InitObject(m_render_group);
 }
 
-void DebugDrawer::Destroy()
-{
-    m_shapes = { };
-
-    m_render_group.Reset();
-    m_shader.Reset();
-}
-
 void DebugDrawer::Render(Frame *frame)
 {
+    HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (m_num_draw_commands_pending_addition.Get(MemoryOrder::ACQUIRE) != 0) {
@@ -189,6 +201,20 @@ void DebugDrawer::Render(Frame *frame)
     }
 
     const uint frame_index = frame->GetFrameIndex();
+
+    GPUBufferRef &instance_buffer = m_instance_buffers[frame_index];
+    bool was_instance_buffer_rebuilt = false;
+
+    if (m_draw_commands.Size() * sizeof(ImmediateDrawShaderData) > instance_buffer->Size()) {
+        HYPERION_ASSERT_RESULT(instance_buffer->EnsureCapacity(
+            g_engine->GetGPUDevice(),
+            m_draw_commands.Size() * sizeof(ImmediateDrawShaderData),
+            &was_instance_buffer_rebuilt
+        ));
+    }
+
+    Array<ImmediateDrawShaderData> shader_data;
+    shader_data.Resize(m_draw_commands.Size());
 
     for (SizeType index = 0; index < m_draw_commands.Size(); index++) {
         const auto &draw_command = m_draw_commands[index];
@@ -209,20 +235,30 @@ void DebugDrawer::Render(Frame *frame)
             break;
         }
 
-        const ImmediateDrawShaderData shader_data {
+       shader_data[index] = ImmediateDrawShaderData {
             draw_command.transform_matrix,
             draw_command.color.Packed(),
             env_probe_type,
             env_probe_id.Value()
         };
-
-        g_engine->GetRenderData()->immediate_draws.Set(index, shader_data);
     }
+
+    instance_buffer->Copy(
+        g_engine->GetGPUDevice(),
+        shader_data.ByteSize(),
+        shader_data.Data()
+    );
 
     DebugDrawerRenderGroupProxy proxy(m_render_group.Get());
     proxy.Bind(frame);
 
     const uint debug_drawer_descriptor_set_index = proxy.GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("DebugDrawerDescriptorSet"));
+
+    // Update descriptor set if instance buffer was rebuilt
+    if (was_instance_buffer_rebuilt) {
+        proxy.GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSet(debug_drawer_descriptor_set_index, frame_index)
+            ->SetElement(NAME("ImmediateDrawsBuffer"), instance_buffer);
+    }
 
     if (renderer::RenderConfig::ShouldCollectUniqueDrawCallPerMaterial()) {
         proxy.GetGraphicsPipeline()->GetDescriptorTable()->Bind<GraphicsPipelineRef>(
@@ -311,6 +347,8 @@ void DebugDrawer::Render(Frame *frame)
 
 void DebugDrawer::UpdateDrawCommands()
 {
+    HYP_SCOPE;
+
     Mutex::Guard guard(m_draw_commands_mutex);
 
     SizeType size = m_draw_commands_pending_addition.Size();
@@ -322,11 +360,15 @@ void DebugDrawer::UpdateDrawCommands()
 
 UniquePtr<DebugDrawCommandList> DebugDrawer::CreateCommandList()
 {
+    HYP_SCOPE;
+
     return UniquePtr<DebugDrawCommandList>(new DebugDrawCommandList(this));
 }
 
 void DebugDrawer::CommitCommands(DebugDrawCommandList &command_list)
 {
+    HYP_SCOPE;
+
     Mutex::Guard guard(m_draw_commands_mutex);
 
     const SizeType num_added_items = command_list.m_draw_commands.Size();
@@ -336,6 +378,8 @@ void DebugDrawer::CommitCommands(DebugDrawCommandList &command_list)
 
 void DebugDrawer::Sphere(const Vec3f &position, float radius, Color color)
 {
+    HYP_SCOPE;
+
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::SPHERE,
         DebugDrawType::DEFAULT,
@@ -346,6 +390,8 @@ void DebugDrawer::Sphere(const Vec3f &position, float radius, Color color)
 
 void DebugDrawer::AmbientProbeSphere(const Vec3f &position, float radius, ID<EnvProbe> env_probe_id)
 {
+    HYP_SCOPE;
+
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::SPHERE,
         DebugDrawType::AMBIENT_PROBE,
@@ -357,6 +403,8 @@ void DebugDrawer::AmbientProbeSphere(const Vec3f &position, float radius, ID<Env
 
 void DebugDrawer::ReflectionProbeSphere(const Vec3f &position, float radius, ID<EnvProbe> env_probe_id)
 {
+    HYP_SCOPE;
+
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::SPHERE,
         DebugDrawType::REFLECTION_PROBE,
@@ -368,6 +416,8 @@ void DebugDrawer::ReflectionProbeSphere(const Vec3f &position, float radius, ID<
 
 void DebugDrawer::Box(const Vec3f &position, const Vec3f &size, Color color)
 {
+    HYP_SCOPE;
+
     m_draw_commands.PushBack(DebugDrawCommand {
         DebugDrawShape::BOX,
         DebugDrawType::DEFAULT,
@@ -378,6 +428,8 @@ void DebugDrawer::Box(const Vec3f &position, const Vec3f &size, Color color)
 
 void DebugDrawer::Plane(const FixedArray<Vec3f, 4> &points, Color color)
 {
+    HYP_SCOPE;
+
     Vec3f x = (points[1] - points[0]).Normalize();
     Vec3f y = (points[2] - points[0]).Normalize();
     Vec3f z = x.Cross(y).Normalize();
@@ -404,6 +456,8 @@ void DebugDrawer::Plane(const FixedArray<Vec3f, 4> &points, Color color)
 
 void DebugDrawCommandList::Sphere(const Vec3f &position, float radius, Color color)
 {
+    HYP_SCOPE;
+
     Mutex::Guard guard(m_draw_commands_mutex);
     
     m_draw_commands.PushBack(DebugDrawCommand {
@@ -416,6 +470,8 @@ void DebugDrawCommandList::Sphere(const Vec3f &position, float radius, Color col
 
 void DebugDrawCommandList::Box(const Vec3f &position, const Vec3f &size, Color color)
 {
+    HYP_SCOPE;
+
     Mutex::Guard guard(m_draw_commands_mutex);
 
     m_draw_commands.PushBack(DebugDrawCommand {
@@ -428,6 +484,8 @@ void DebugDrawCommandList::Box(const Vec3f &position, const Vec3f &size, Color c
 
 void DebugDrawCommandList::Plane(const Vec3f &position, const Vector2 &size, Color color)
 {
+    HYP_SCOPE;
+
     Mutex::Guard guard(m_draw_commands_mutex);
 
     m_draw_commands.PushBack(DebugDrawCommand {
@@ -440,6 +498,8 @@ void DebugDrawCommandList::Plane(const Vec3f &position, const Vector2 &size, Col
 
 void DebugDrawCommandList::Commit()
 {
+    HYP_SCOPE;
+    
     Mutex::Guard guard(m_draw_commands_mutex);
     
     m_debug_drawer->CommitCommands(*this);
