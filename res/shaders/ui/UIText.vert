@@ -30,7 +30,7 @@ HYP_DESCRIPTOR_SSBO(UITextDescriptorSet, CharacterInstanceBuffer, standard = std
     UITextCharacterInstance characters[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(UITextDescriptorSet, TextInstanceBuffer, standard = std430) readonly buffer TextInstanceBuffer
+HYP_DESCRIPTOR_CBUFF(UITextDescriptorSet, UITextUniforms, standard = std430) uniform UITextUniforms
 {
     mat4    model_matrix;
 };
@@ -56,5 +56,5 @@ void main()
 
     v_texcoord0 = texcoord_start + a_texcoord0 * texcoord_size;
 
-    gl_Position = camera.projection * camera.view * position;
+    gl_Position = vec4(a_position, 1.0);//camera.projection * camera.view * position;
 } 

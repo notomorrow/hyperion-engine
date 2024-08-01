@@ -1,7 +1,55 @@
 <?xml version="1.0"?>
-<Text size="120 auto">
-    Hello world, this is a test!!!
-</Text>
-<Text size="120 auto" position="150 90">
-    Another test here.
-</Text>
+<Panel name="Main_Panel" position="0 0" size="100%">
+    <Script assembly="GameName.UI.dll" class="TestUIScript" />
+    <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
+        <MenuItem name="File_MenuItem" text="File" size="auto 100%">
+            <MenuItem name="New_MenuItem" text="New"></MenuItem>
+            <MenuItem name="Open_MenuItem" text="Open"></MenuItem>
+            <MenuItem name="Save_MenuItem" text="Save"></MenuItem>
+            <MenuItem name="SaveAs_MenuItem" text="Save As"></MenuItem>
+            <MenuItem name="Exit_MenuItem" text="Exit"></MenuItem>
+        </MenuItem>
+        <MenuItem name="Edit_MenuItem" text="Edit" size="auto 100%"></MenuItem>
+        <MenuItem name="View_MenuItem" text="View" size="auto 100%"></MenuItem>
+        <MenuItem name="Help_MenuItem" text="Help" size="auto 100%"></MenuItem>
+        <MenuItem name="Test_MenuItem" text="Test" size="auto 100%"></MenuItem>
+    </MenuBar>
+
+    <DockableContainer name="Dockable_Container" position="0 25" size="100% fill">
+        <Panel name="Left_Panel" size="200 100%" padding="5 5" side="left">
+            <TabView size="100% 25" size="100%">
+                <Tab name="Scene_Tab" text="Scene">
+                    <ListView name="Scene_Outline_ListView" position="0 0" size="100% fill" />
+                </Tab>
+            </TabView>
+        </Panel>
+        
+        <Panel name="Right_Panel" size="200 100%" padding="5 5" side="right">
+            <TabView size="100% 25" size="100%">
+                <Tab name="Details_Tab" text="Properties">
+                    <ListView name="Detail_View_ListView" position="0 0" size="100% fill" />
+                </Tab>
+            </TabView>
+        </Panel>
+
+        <Panel name="Main_Content" size="100%" side="center">
+            <TabView name="Main_Content_TabView" size="100%">
+                <Tab name="Scene_Tab" text="Scene">
+                    <Image name="Scene_Image" size="100%" />
+                    <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="2">
+                        Generate Lightmaps (test)
+                    </Button>
+                </Tab>
+                <Tab name="Game_Tab" text="Game">
+                </Tab>
+            </TabView>
+        </Panel>
+
+        <Panel name="Bottom_Panel" size="100% 200"  padding="5 5" side="bottom">
+            <TabView name="Bottom_Panel_TabView" size="100%">
+                <Tab name="Assets_Tab" text="Assets">
+                </Tab>
+            </TabView>
+        </Panel>
+    </DockableContainer>
+</Panel>

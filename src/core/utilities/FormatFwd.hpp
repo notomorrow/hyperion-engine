@@ -6,7 +6,7 @@
 namespace hyperion {
 namespace utilities {
 
-template <class StringType, class T, typename T2 = void>
+template <class StringType, class T, class T2 = void>
 struct Formatter;
 
 } // namespace utilities

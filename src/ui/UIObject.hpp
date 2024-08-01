@@ -707,6 +707,9 @@ protected:
     bool NeedsRepaint() const;
     void SetNeedsRepaintFlag(bool needs_repaint = true);
 
+    void Repaint();
+    virtual bool Repaint_Internal();
+
     HYP_FORCE_INLINE const Handle<Texture> &GetCachedTexture() const
         { return m_cached_texture; }
 

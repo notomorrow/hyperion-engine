@@ -207,6 +207,10 @@ void UIObject::Update_Internal(GameCounter::TickUnit delta)
     if (recalculate_position) {
         UpdatePosition();
     }
+
+    if (NeedsRepaint()) {
+        Repaint();
+    }
 }
 
 void UIObject::OnAttached_Internal(UIObject *parent)
@@ -217,6 +221,8 @@ void UIObject::OnAttached_Internal(UIObject *parent)
 
     m_stage = parent->GetStage();
     SetAllChildUIObjectsStage(m_stage);
+
+    SetNeedsRepaintFlag();
 }
 
 void UIObject::OnRemoved_Internal()
@@ -226,6 +232,8 @@ void UIObject::OnRemoved_Internal()
     m_stage = nullptr;
 
     SetAllChildUIObjectsStage(nullptr);
+
+    SetNeedsRepaintFlag();
 }
 
 Name UIObject::GetName() const
@@ -1986,6 +1994,20 @@ void UIObject::SetNeedsRepaintFlag(bool needs_repaint)
             return UIObjectIterationResult::CONTINUE;
         });
     }
+}
+
+void UIObject::Repaint()
+{
+    HYP_SCOPE;
+    
+    if (Repaint_Internal()) {
+        SetNeedsRepaintFlag(false);
+    }
+}
+
+bool UIObject::Repaint_Internal()
+{
+    return true;
 }
 
 #pragma endregion UIObject

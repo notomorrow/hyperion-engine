@@ -333,6 +333,7 @@ void FinalPass::Render(Frame *frame)
 
         m_last_frame_image->Blit(frame->GetCommandBuffer(), source_image);
 
+        m_last_frame_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
         source_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
     }
 

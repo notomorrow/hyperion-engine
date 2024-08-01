@@ -20,7 +20,6 @@ namespace hyperion {
 
 class UIStage;
 class UIObject;
-class UITextRenderer;
 struct UITextRenderData;
 
 class UIRenderList : public RenderList
@@ -83,8 +82,6 @@ private:
     FramebufferRef                              m_framebuffer;
     ShaderRef                                   m_shader;
     UIRenderList                                m_render_list;
-
-    UniquePtr<UITextRenderer>                   m_text_renderer;
 
     // testing
     Array<Pair<RC<UITextRenderData>, Matrix4>>  m_text_render_data;

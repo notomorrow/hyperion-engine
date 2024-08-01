@@ -439,9 +439,6 @@ HYP_API void Engine::RenderNextFrame(Game *game)
     }
 
     Frame *frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
-    HYPERION_ASSERT_RESULT(GetGPUDevice()->GetAsyncCompute()->PrepareForFrame(GetGPUDevice(), frame));
-
-    PreFrameUpdate(frame);
 
     if (g_should_recreate_swapchain) {
         GetDelegates().OnBeforeSwapchainRecreated();
@@ -462,16 +459,10 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 
         m_deferred_renderer->Resize(GetGPUInstance()->GetSwapchain()->extent);
 
-        // m_deferred_renderer->Destroy();
-
-        // RemoveAllEnqueuedRenderObjectsNow<renderer::Platform::CURRENT>(/* force */false);
-
-        // m_deferred_renderer.Reset(new DeferredRenderer);
-        // m_deferred_renderer->Create();
-
         m_final_pass.Reset(new FinalPass);
         m_final_pass->Create();
 
+        // HYPERION_ASSERT_RESULT(frame->EndCapture(GetGPUInstance()->GetDevice()));
         frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
 
         GetDelegates().OnAfterSwapchainRecreated();
@@ -479,7 +470,10 @@ HYP_API void Engine::RenderNextFrame(Game *game)
         g_should_recreate_swapchain = false;
     }
 
+    HYPERION_ASSERT_RESULT(GetGPUDevice()->GetAsyncCompute()->PrepareForFrame(GetGPUDevice(), frame));
     HYPERION_ASSERT_RESULT(frame->BeginCapture(GetGPUInstance()->GetDevice()));
+
+    PreFrameUpdate(frame);
     
     m_world->PreRender(frame);
 

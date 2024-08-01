@@ -52,6 +52,8 @@ struct UITextCharacter
 
 struct UITextRenderData
 {
+    Vec2i                   size;
+    Matrix4                 transform;
     Array<UITextCharacter>  characters;
     RC<FontAtlas>           font_atlas;
     Handle<Texture>         font_atlas_texture;
@@ -120,6 +122,8 @@ protected:
 
     virtual void OnFontAtlasUpdate_Internal() override;
 
+    virtual bool Repaint_Internal() override;
+
     void UpdateMesh();
     void UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture);
 
@@ -133,6 +137,8 @@ private:
     BoundingBox             m_text_aabb;
 
     RC<UITextRenderData>    m_render_data;
+
+    Handle<Texture>         m_texture;
 };
 
 } // namespace hyperion

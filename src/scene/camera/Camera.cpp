@@ -198,19 +198,25 @@ void Camera::Init()
         SafeRelease(std::move(m_framebuffer));
     }));
 
-    m_proxy = CameraDrawProxy {
-        .view           = m_view_mat,
-        .projection     = m_proj_mat,
-        .previous_view  = m_previous_view_matrix,
-        .position       = m_translation,
-        .direction      = m_direction,
-        .up             = m_up,
-        .dimensions     = Extent2D { uint(MathUtil::Abs(m_width)), uint(MathUtil::Abs(m_height)) },
-        .clip_near      = m_near,
-        .clip_far       = m_far,
-        .fov            = m_fov,
-        .frustum        = m_frustum
-    };
+    UpdateMatrices();
+
+    PUSH_RENDER_COMMAND(
+        UpdateCameraDrawProxy,
+        this,
+        CameraDrawProxy {
+            .view           = m_view_mat,
+            .projection     = m_proj_mat,
+            .previous_view  = m_previous_view_matrix,
+            .position       = m_translation,
+            .direction      = m_direction,
+            .up             = m_up,
+            .dimensions     = Extent2D { uint(MathUtil::Abs(m_width)), uint(MathUtil::Abs(m_height)) },
+            .clip_near      = m_near,
+            .clip_far       = m_far,
+            .fov            = m_fov,
+            .frustum        = m_frustum
+        }
+    );
 
     DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
 

@@ -174,69 +174,94 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
         return true;
     };
 
-    m_mutex.Lock();
+    RC<ShaderMapEntry> entry;
 
-    { // check if exists in cache
-        const auto it = m_map.Find(definition);
+    { // pulling value from cache if it exists
+        Mutex::Guard guard(m_mutex);
+
+        auto it = m_map.Find(definition);
 
         if (it != m_map.End()) {
-            if (ShaderRef shader = it->second.Lock()) {
-                if (EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetProperties())) {
-                    m_mutex.Unlock();
-
-                    return shader;
-                } else {
-                    HYP_LOG(Shader, LogLevel::ERR,
-                        "Loaded shader from cache (Name: {}, Properties: {}) does not contain the requested properties!\n\tRequested: {}",
-                        definition.GetName(),
-                        shader->GetCompiledShader()->GetProperties().ToString(),
-                        definition.GetProperties().ToString()
-                    );
-
-                    // remove bad value from cache
-                    m_map.Erase(it);
-                }
-            }
+            entry = it->second;
+            AssertThrow(entry != nullptr);
         }
     }
 
-    CompiledShader compiled_shader;
+    if (entry != nullptr) {
+        // loading from another thread -- wait until state is no longer LOADING
+        while (entry->state.Get(MemoryOrder::SEQUENTIAL) == ShaderMapEntry::State::LOADING) {
+            // sanity check - should never happen
+            AssertThrow(entry->loading_thread_id != Threads::CurrentThreadID());
+        }
 
-    bool is_valid_compiled_shader = true;
-    
-    is_valid_compiled_shader &= g_engine->GetShaderCompiler().GetCompiledShader(
-        definition.GetName(),
-        definition.GetProperties(),
-        compiled_shader
-    );
+        if (ShaderRef shader = entry->shader.Lock()) {
+            if (EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetProperties())) {
+                return shader;
+            } else {
+                HYP_LOG(Shader, LogLevel::ERR,
+                    "Loaded shader from cache (Name: {}, Properties: {}) does not contain the requested properties!\n\tRequested: {}",
+                    definition.GetName(),
+                    shader->GetCompiledShader()->GetProperties().ToString(),
+                    definition.GetProperties().ToString()
+                );
 
-    is_valid_compiled_shader &= compiled_shader.GetDefinition().IsValid();
-    
-    AssertThrowMsg(
-        is_valid_compiled_shader,
-        "Failed to get compiled shader with name %s and props hash %llu!\n",
-        definition.GetName().LookupString(),
-        definition.GetProperties().GetHashCode().Value()
-    );
+            }
+        }
 
-    HYP_LOG(Shader, LogLevel::DEBUG, "Creating shader '{}'", definition.GetName());
+        // @TODO: remove bad value from cache?
+    }
 
-    ShaderRef shader = MakeRenderObject<Shader>(RC<CompiledShader>(new CompiledShader(std::move(compiled_shader))));
+    {// lock here, to add new entry to cache
+        Mutex::Guard guard(m_mutex);
+        
+        entry.Reset(new ShaderMapEntry {
+            ShaderWeakRef { },
+            AtomicVar<ShaderMapEntry::State> { ShaderMapEntry::State::LOADING },
+            Threads::CurrentThreadID()
+        });
 
-    HYP_LOG(Shader, LogLevel::DEBUG, "Shader '{}' created", definition.GetName());
+        m_map.Set(definition, entry);
+    }
+
+    ShaderRef shader;
+
+    { // loading / compilation of shader (outside of mutex lock)
+        CompiledShader compiled_shader;
+
+        bool is_valid_compiled_shader = true;
+        
+        is_valid_compiled_shader &= g_engine->GetShaderCompiler().GetCompiledShader(
+            definition.GetName(),
+            definition.GetProperties(),
+            compiled_shader
+        );
+
+        is_valid_compiled_shader &= compiled_shader.GetDefinition().IsValid();
+        
+        AssertThrowMsg(
+            is_valid_compiled_shader,
+            "Failed to get compiled shader with name %s and props hash %llu!\n",
+            definition.GetName().LookupString(),
+            definition.GetProperties().GetHashCode().Value()
+        );
+
+        HYP_LOG(Shader, LogLevel::DEBUG, "Creating shader '{}'", definition.GetName());
+
+        shader = MakeRenderObject<Shader>(RC<CompiledShader>(new CompiledShader(std::move(compiled_shader))));
+
+        HYP_LOG(Shader, LogLevel::DEBUG, "Shader '{}' created", definition.GetName());
 
 #ifdef HYP_DEBUG_MODE
-    AssertThrow(EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));
+        AssertThrow(EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));
 #endif
 
-    m_map.Set(definition, shader);
 
-    // NOTE: Unlock before DeferCreate() is important,
-    // otherwise can cause deadlocks when this method
-    // is used on the render thread during render command execution.
-    m_mutex.Unlock();
+        DeferCreate(shader, g_engine->GetGPUDevice());
 
-    DeferCreate(shader, g_engine->GetGPUDevice());
+        // Update the entry
+        entry->shader = shader;
+        entry->state.Set(ShaderMapEntry::State::LOADED, MemoryOrder::SEQUENTIAL);
+    }
 
     return shader;
 }

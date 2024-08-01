@@ -44,28 +44,28 @@ static constexpr std::memory_order ToCxxMemoryOrder(MemoryOrder order)
     
 } // namespace detail
 
-template <class T>
-class AtomicVar
-{
-    static_assert(
-        std::is_integral_v<T> || std::is_pointer_v<T> || std::is_standard_layout_v<T>,
-        "T must be a type suitable for atomic intrinsics"
-    );
+template <class T, class T2 = void>
+class AtomicVar;
 
+template <class T>
+class AtomicVar<T, std::enable_if_t< std::is_integral_v<T> || std::is_pointer_v<T> > >
+{
     static_assert(
         sizeof(T) <= 8,
         "T must have a sizeof value of <= 8"
     );
 
-    std::atomic<T> m_value;
+    using Type = T;
+
+    std::atomic<Type>   m_value;
 
 public:
-    AtomicVar() : m_value { T { } }
+    AtomicVar() : m_value { Type(T { }) }
     {
     }
 
     AtomicVar(T value)
-        : m_value { value }
+        : m_value { Type(value) }
     {
     }
 
@@ -98,6 +98,44 @@ public:
 
     HYP_FORCE_INLINE T BitXor(T value, MemoryOrder order)
         { return m_value.fetch_xor(value, detail::ToCxxMemoryOrder(order)); }
+};
+
+template <class T>
+class AtomicVar<T, std::enable_if_t< std::is_enum_v< T > > >
+{
+    using Type = std::underlying_type_t<T>;
+
+    static_assert(
+        sizeof(T) <= 8,
+        "T must have a sizeof value of <= 8"
+    );
+
+    std::atomic<Type>   m_value;
+
+public:
+    AtomicVar() : m_value { Type(T { }) }
+    {
+    }
+
+    AtomicVar(T value)
+        : m_value { Type(value) }
+    {
+    }
+
+    AtomicVar(const AtomicVar &other)                   = delete;
+    AtomicVar &operator=(const AtomicVar &other)        = delete;
+    AtomicVar(AtomicVar &&other) noexcept               = delete;
+    AtomicVar &operator=(AtomicVar &&other) noexcept    = delete;
+    ~AtomicVar()                                        = default;
+
+    HYP_FORCE_INLINE T Get(MemoryOrder order) const
+        { return T(m_value.load(detail::ToCxxMemoryOrder(order))); }
+
+    HYP_FORCE_INLINE void Set(T value, MemoryOrder order)
+        { m_value.store(Type(value), detail::ToCxxMemoryOrder(order)); }
+
+    HYP_FORCE_INLINE T Exchange(T new_value, MemoryOrder order)
+        { return T(m_value.exchange(Type(new_value), detail::ToCxxMemoryOrder(order))); }
 };
 
 } // namespace threading

@@ -53,8 +53,22 @@ public:
     );
 
 private:
-    HashMap<ShaderDefinition, ShaderWeakRef>    m_map;
-    Mutex                                       m_mutex;
+    struct ShaderMapEntry
+    {
+        enum class State : uint8
+        {
+            UNLOADED    = 0,
+            LOADING     = 1,
+            LOADED      = 2
+        };
+
+        ShaderWeakRef       shader;
+        AtomicVar<State>    state = State::UNLOADED;
+        ThreadID            loading_thread_id = ThreadID::Invalid();
+    };
+
+    HashMap<ShaderDefinition, RC<ShaderMapEntry>>   m_map;
+    Mutex                                           m_mutex;
 };
 
 } // namespace hyperion
