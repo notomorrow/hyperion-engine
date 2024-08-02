@@ -19,12 +19,13 @@ namespace Hyperion
         [FieldOffset(8)]
         private ManagedHandle skeletonHandle;
         [FieldOffset(12)]
+        private uint numInstances;
+        [FieldOffset(16)]
         private RefCountedPtr proxyRc;
-        [FieldOffset(20)]
+        [FieldOffset(24)]
         private uint meshComponentFlags;
         [FieldOffset(32)] // align to 16 byte boundary
         private Matrix4 previousModelMatrix;
-        
         // 16 bytes of user data
         [FieldOffset(96)]
         private fixed byte userData[16];

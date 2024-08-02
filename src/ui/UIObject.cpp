@@ -208,7 +208,7 @@ void UIObject::Update_Internal(GameCounter::TickUnit delta)
         UpdatePosition();
     }
 
-    if (NeedsRepaint()) {
+    if (m_computed_visibility && NeedsRepaint()) {
         Repaint();
     }
 }
@@ -341,7 +341,6 @@ void UIObject::UpdatePosition(bool update_children)
     node->LockTransform();
 
     UpdateComputedVisibility();
-    SetNeedsRepaintFlag();
 }
 
 UIObjectSize UIObject::GetSize() const
@@ -471,8 +470,6 @@ void UIObject::SetFocusState(EnumFlags<UIObjectFocusState> focus_state)
 void UIObject::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state)
 {
     m_focus_state = focus_state;
-
-    SetNeedsRepaintFlag();
 }
 
 int UIObject::GetComputedDepth() const
@@ -661,7 +658,7 @@ void UIObject::SetBackgroundColor(const Color &background_color)
 
     m_background_color = background_color;
 
-    UpdateMaterial();
+    UpdateMaterial(false);
 }
 
 Color UIObject::GetTextColor() const
@@ -683,7 +680,7 @@ void UIObject::SetTextColor(const Color &text_color)
 
     m_text_color = text_color;
 
-    UpdateMaterial();
+    UpdateMaterial(true);
 }
 
 void UIObject::SetText(const String &text)
@@ -826,8 +823,6 @@ void UIObject::AddChildUIObject(UIObject *ui_object)
     ui_object->UpdateSize();
     ui_object->UpdatePosition();
     ui_object->UpdateMeshData();
-
-    SetNeedsRepaintFlag();
 }
 
 bool UIObject::RemoveChildUIObject(UIObject *ui_object)
@@ -855,7 +850,7 @@ bool UIObject::RemoveChildUIObject(UIObject *ui_object)
                 ui_object->UpdatePosition();
                 ui_object->UpdateMeshData();
 
-                SetNeedsRepaintFlag();
+                ui_object->SetNeedsRepaintFlag();
 
                 return true;
             }
@@ -1453,8 +1448,6 @@ void UIObject::UpdateMeshData(bool update_children)
 
     mesh_component->user_data.Set(ui_object_mesh_data);
     mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
-
-    SetNeedsRepaintFlag();
 }
 
 void UIObject::UpdateMaterial(bool update_children)

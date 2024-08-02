@@ -33,6 +33,8 @@ struct MeshComponent
     Handle<Material>        material;
     Handle<Skeleton>        skeleton;
 
+    uint32                  num_instances = 1;
+
     RC<RenderProxy>         proxy;
     MeshComponentFlags      flags = MESH_COMPONENT_FLAG_DIRTY;
 
@@ -47,6 +49,7 @@ struct MeshComponent
         hash_code.Add(mesh);
         hash_code.Add(material);
         hash_code.Add(skeleton);
+        hash_code.Add(num_instances);
 
         return hash_code;
     }

@@ -32,18 +32,12 @@ HYP_DESCRIPTOR_SSBO(UITextDescriptorSet, CharacterInstanceBuffer, standard = std
 
 HYP_DESCRIPTOR_CBUFF(UITextDescriptorSet, UITextUniforms, standard = std430) uniform UITextUniforms
 {
-    mat4    view_matrix;
     mat4    projection_matrix;
     vec2    text_aabb_min;
     vec2    text_aabb_max;
 };
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
-{
-    Camera camera;
-};
 
 void main()
 {

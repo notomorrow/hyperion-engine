@@ -535,50 +535,6 @@ void UIRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
-    struct RENDER_COMMAND(Temp_ClearTextsToRender) : renderer::RenderCommand
-    {
-        UIRenderer  *ui_renderer;
-
-        RENDER_COMMAND(Temp_ClearTextsToRender)(UIRenderer *ui_renderer)
-            : ui_renderer(ui_renderer)
-        {
-        }
-
-        virtual ~RENDER_COMMAND(Temp_ClearTextsToRender)() = default;
-
-        virtual renderer::Result operator()() override
-        {
-            ui_renderer->m_text_render_data.Clear();
-
-            HYPERION_RETURN_OK;
-        }
-    };
-
-    struct RENDER_COMMAND(Temp_PushTextToRender) : renderer::RenderCommand
-    {
-        UIRenderer              *ui_renderer;
-        RC<UITextRenderData>    text_render_data;
-        Matrix4                 transform;
-
-        RENDER_COMMAND(Temp_PushTextToRender)(UIRenderer *ui_renderer, const RC<UITextRenderData> &text_render_data, const Matrix4 &transform)
-            : ui_renderer(ui_renderer),
-              text_render_data(text_render_data),
-              transform(transform)
-        {
-        }
-
-        virtual ~RENDER_COMMAND(Temp_PushTextToRender)() = default;
-
-        virtual renderer::Result operator()() override
-        {
-            ui_renderer->m_text_render_data.EmplaceBack(std::move(text_render_data), transform);
-
-            HYPERION_RETURN_OK;
-        }
-    };
-
-    PUSH_RENDER_COMMAND(Temp_ClearTextsToRender, this);
-
     m_render_list.ResetOrdering();
 
     m_ui_stage->CollectObjects([this](UIObject *object)

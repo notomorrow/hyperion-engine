@@ -75,6 +75,7 @@ struct ManagedMeshComponent
     ManagedHandle           mesh_handle;
     ManagedHandle           material_handle;
     ManagedHandle           skeleton_handle;
+    uint32                  num_instances;
     ManagedRefCountedPtr    proxy_rc;
     uint32                  mesh_component_flags;
     Matrix4                 previous_model_matrix;
@@ -102,6 +103,7 @@ HYP_EXPORT ComponentID MeshComponent_AddComponent(EntityManager *manager, Manage
         std::move(mesh),
         std::move(material),
         Handle<Skeleton> { },
+        component->num_instances,
         std::move(proxy),
         component->mesh_component_flags,
         component->previous_model_matrix,

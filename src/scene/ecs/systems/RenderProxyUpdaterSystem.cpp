@@ -77,7 +77,8 @@ void RenderProxyUpdaterSystem::OnEntityAdded(ID<Entity> entity)
             Matrix4::Identity(),
             Matrix4::Identity(),
             BoundingBox::Empty(),
-            mesh_component.user_data
+            mesh_component.user_data,
+            mesh_component.num_instances
         });
     }
 
@@ -115,7 +116,8 @@ void RenderProxyUpdaterSystem::Process(GameCounter::TickUnit delta)
             transform_component.transform.GetMatrix(),
             mesh_component.previous_model_matrix,
             bounding_box_component.world_aabb,
-            mesh_component.user_data
+            mesh_component.user_data,
+            mesh_component.num_instances
         };
 
         render_proxies.PushBack(mesh_component.proxy);

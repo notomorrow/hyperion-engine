@@ -208,7 +208,6 @@ struct alignas(16) UITextCharacterShaderData
 
 struct alignas(16) UITextUniforms
 {
-    Matrix4 view_matrix;
     Matrix4 projection_matrix;
     Vec2f   text_aabb_min;
     Vec2f   text_aabb_max;
@@ -261,26 +260,6 @@ public:
 
             DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
         }
-
-        { // camera
-            m_camera = CreateObject<Camera>(extent.width, extent.height);
-
-            m_camera->SetViewMatrix(Matrix4::LookAt(
-                Vec3f::Zero(),
-                Vec3f::UnitZ(),
-                Vec3f::UnitY()
-            ));
-
-            m_camera->SetToOrthographicProjection(
-                0.0f, 1.0f,
-                0.0f, 1.0f,
-                -1.0f, 1.0f
-            );
-
-            m_camera->SetFramebuffer(m_framebuffer);
-
-            InitObject(m_camera);
-        }
     }
 
     UITextRenderer(const UITextRenderer &other)             = delete;
@@ -290,7 +269,6 @@ public:
         : m_framebuffer(std::move(other.m_framebuffer)),
           m_shader(std::move(other.m_shader)),
           m_quad_mesh(std::move(other.m_quad_mesh)),
-          m_camera(std::move(other.m_camera)),
           m_character_instance_buffer(std::move(other.m_character_instance_buffer)),
           m_uniform_buffer(std::move(other.m_uniform_buffer)),
           m_render_group(std::move(other.m_render_group))
@@ -308,7 +286,6 @@ public:
             m_shader = std::move(other.m_shader);
             m_framebuffer = std::move(other.m_framebuffer);
             m_quad_mesh = std::move(other.m_quad_mesh);
-            m_camera = std::move(other.m_camera);
             m_character_instance_buffer = std::move(other.m_character_instance_buffer);
             m_uniform_buffer = std::move(other.m_uniform_buffer);
             m_render_group = std::move(other.m_render_group);
@@ -334,8 +311,6 @@ public:
         Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
         const uint frame_index = frame->GetFrameIndex();
-
-        g_engine->GetRenderState().BindCamera(m_camera.Get());
 
         m_framebuffer->BeginCapture(frame->GetCommandBuffer(), frame_index);
         
@@ -389,10 +364,15 @@ public:
         { // copy uniform
             // // testing
             // g_engine->GetRenderData()->cameras.UpdateBuffer(g_engine->GetGPUDevice(), frame_index);
+            
+            Matrix4 projection_matrix = Matrix4::Orthographic(
+                0.0f, 1.0f,
+                0.0f, 1.0f,
+                -1.0f, 1.0f
+            );
 
             UITextUniforms uniforms;
-            uniforms.view_matrix = m_camera->GetViewMatrix();
-            uniforms.projection_matrix = m_camera->GetProjectionMatrix();
+            uniforms.projection_matrix = projection_matrix;
             uniforms.text_aabb_min = Vec2f(render_data.aabb.min.x, render_data.aabb.min.y);
             uniforms.text_aabb_max = Vec2f(render_data.aabb.max.x, render_data.aabb.max.y);
 
@@ -528,7 +508,6 @@ private:
     FramebufferRef          m_framebuffer;
     ShaderRef               m_shader;
     Handle<Mesh>            m_quad_mesh;
-    Handle<Camera>          m_camera;
     GPUBufferRef            m_character_instance_buffer;
     GPUBufferRef            m_uniform_buffer;
     Handle<RenderGroup>     m_render_group;
@@ -814,7 +793,7 @@ void UIText::Init()
 {
     UIObject::Init();
 
-    UpdateMesh();
+    // UpdateMesh();
 }
 
 void UIText::SetText(const String &text)
@@ -822,7 +801,7 @@ void UIText::SetText(const String &text)
     UIObject::SetText(text);
 
     UpdateSize();
-    UpdateMesh();
+    // UpdateMesh();
 }
 
 RC<FontAtlas> UIText::GetFontAtlasOrDefault() const
@@ -848,47 +827,17 @@ void UIText::UpdateMesh()
         return;
     }
 
-    MeshComponent &mesh_component = scene->GetEntityManager()->GetComponent<MeshComponent>(GetEntity());
-
-    Handle<Mesh> mesh;
-
     if (RC<FontAtlas> font_atlas = GetFontAtlasOrDefault()) {
         Handle<Texture> font_atlas_texture = font_atlas->GetAtlases()->GetAtlasForPixelSize(GetActualSize().y);
         UpdateRenderData(font_atlas, font_atlas_texture);
 
-        // CharMeshBuilder char_mesh_builder(m_options);
-
-        // mesh = char_mesh_builder.OptimizeCharMeshes(GetStage()->GetActualSize(), char_mesh_builder.BuildCharMeshes(*font_atlas, m_text));
-
-
         m_text_aabb_with_bearing = CalculateTextAABB(*font_atlas, m_text, true);
         m_text_aabb_without_bearing = CalculateTextAABB(*font_atlas, m_text, false);
-
-        // HYP_LOG(UI, LogLevel::DEBUG, "Text aabb for {} = {}", m_text, m_text_aabb);
     } else {
         HYP_LOG(UI, LogLevel::WARNING, "No font atlas for UIText {}", GetName());
 
         UpdateRenderData(nullptr, Handle<Texture>::empty);
     }
-
-    // mesh = GetQuadMesh();
-
-    // // AssertThrow(mesh.IsValid());
-    // // m_text_aabb = mesh->GetAABB();
-
-    // // const Vec3f text_extent = mesh->GetAABB().GetExtent();
-    // // const float text_aabb_ratio = text_extent.y / text_extent.x;
-
-    // // SetAspectRatio(text_aabb_ratio);
-
-    // // if (!mesh.IsValid()) {
-    //     // mesh = GetQuadMesh();
-    // // }
-
-    // g_safe_deleter->SafeRelease(std::move(mesh_component.mesh));
-
-    // mesh_component.mesh = mesh;
-    // mesh_component.flags |= MESH_COMPONENT_FLAG_DIRTY;
 }
 
 void UIText::UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture)
@@ -977,12 +926,14 @@ void UIText::UpdateSize(bool update_children)
     m_actual_size = Vec2i(size.x, size.y * extent_div.y);
 
     // Update material to get new font size if necessary
-    UpdateMaterial();
-    UpdateMeshData();
+    // UpdateMaterial();
+    // UpdateMeshData();
 
-    if (IsInit()) {
-        HYP_LOG(UI, LogLevel::DEBUG, "Text AABB For {} : {}\tActual Size: {}", m_text, GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(GetEntity()).world_aabb, GetActualSize());
-    }
+    // UpdateMesh();
+
+    // if (IsInit()) {
+    //     HYP_LOG(UI, LogLevel::DEBUG, "Text AABB For {} : {}\tActual Size: {}", m_text, GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(GetEntity()).world_aabb, GetActualSize());
+    // }
 }
 
 BoundingBox UIText::CalculateInnerAABB_Internal() const

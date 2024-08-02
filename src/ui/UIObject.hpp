@@ -269,6 +269,11 @@ public:
 
 #pragma endregion UIObjectQuadMeshHelper
 
+#pragma region UIObjectRenderProxy
+
+
+#pragma endregion UIObjectRenderProxy
+
 #pragma region UIObject
 
 struct UIObjectID : UniqueID { };

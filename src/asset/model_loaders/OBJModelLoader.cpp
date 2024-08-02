@@ -393,12 +393,12 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
 
         const ID<Entity> entity = scene->GetEntityManager()->AddEntity();
 
-        scene->GetEntityManager()->AddComponent(
+        scene->GetEntityManager()->AddComponent<TransformComponent>(
             entity,
             TransformComponent { }
         );
 
-        scene->GetEntityManager()->AddComponent(
+        scene->GetEntityManager()->AddComponent<MeshComponent>(
             entity,
             MeshComponent {
                 mesh,
@@ -406,14 +406,14 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             }
         );
 
-        scene->GetEntityManager()->AddComponent(
+        scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(
             entity,
             BoundingBoxComponent {
                 mesh->GetAABB()
             }
         );
 
-        scene->GetEntityManager()->AddComponent(
+        scene->GetEntityManager()->AddComponent<VisibilityStateComponent>(
             entity,
             VisibilityStateComponent { }
         );

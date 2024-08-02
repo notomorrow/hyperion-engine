@@ -29,7 +29,7 @@ void UIImage::SetTexture(Handle<Texture> texture)
 
     InitObject(m_texture);
 
-    UpdateMaterial();
+    UpdateMaterial(false);
 }
 
 MaterialAttributes UIImage::GetMaterialAttributes() const

@@ -34,6 +34,7 @@ struct RenderProxy
     Matrix4                                 previous_model_matrix;
     BoundingBox                             aabb;
     UserData<sizeof(Vec4u), alignof(Vec4u)> user_data;
+    uint32                                  num_instances;
     
     HYP_FORCE_INLINE bool operator==(const RenderProxy &other) const
     {
@@ -44,7 +45,8 @@ struct RenderProxy
             && model_matrix == other.model_matrix
             && previous_model_matrix == other.previous_model_matrix
             && aabb == other.aabb
-            && user_data == other.user_data;
+            && user_data == other.user_data
+            && num_instances == other.num_instances;
     }
     
     HYP_FORCE_INLINE bool operator!=(const RenderProxy &other) const
@@ -56,7 +58,8 @@ struct RenderProxy
             || model_matrix != other.model_matrix
             || previous_model_matrix != other.previous_model_matrix
             || aabb != other.aabb
-            || user_data != other.user_data;
+            || user_data != other.user_data
+            || num_instances != other.num_instances;
     }
 };
 
