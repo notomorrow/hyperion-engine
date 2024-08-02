@@ -32,9 +32,10 @@ HYP_DESCRIPTOR_SSBO(UITextDescriptorSet, CharacterInstanceBuffer, standard = std
 
 HYP_DESCRIPTOR_CBUFF(UITextDescriptorSet, UITextUniforms, standard = std430) uniform UITextUniforms
 {
-    mat4    model_matrix;
     mat4    view_matrix;
     mat4    projection_matrix;
+    vec2    text_aabb_min;
+    vec2    text_aabb_max;
 };
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -44,26 +45,15 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBu
     Camera camera;
 };
 
-mat4 view_mat = transpose(mat4(
-    vec4(-1.0, 0.0, 0.0, 0.0),
-    vec4(0.0, 1.0, 0.0, 0.0),
-    vec4(0.0, 0.0, 1.0, 0.0),
-    vec4(0.0, 0.0, 0.0, 1.0)
-));
-
-mat4 projection_mat = transpose(mat4(
-    vec4(-0.0128205, 0.0, 0.0, -1.0),
-    vec4(0.0, 0.142857, 0.0, -1.0),
-    vec4(0.0, 0.0, -1.0, -0),
-    vec4(0.0, 0.0, 0.0, 1.0)
-));
-
 void main()
 {
     const int instance_id = gl_InstanceIndex;
 
-    vec4 position = model_matrix * characters[instance_id].transform * vec4((a_position * 0.5 + 0.5), 1.0);
+    UITextCharacterInstance character_instance = characters[instance_id];
 
+    vec2 text_aabb_extent = text_aabb_max - text_aabb_min;
+
+    vec4 position = character_instance.transform * ((vec4((a_position * 0.5 + 0.5), 1.0))) / vec4(vec3(text_aabb_extent, 1.0), 1.0);
     v_position = position.xyz;
 
     vec2 texcoord_start = characters[instance_id].texcoord_start;

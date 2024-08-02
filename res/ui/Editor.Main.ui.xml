@@ -36,7 +36,7 @@
             <TabView name="Main_Content_TabView" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
                     <Image name="Scene_Image" size="100%" />
-                    <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="2">
+                    <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="10">
                         Generate Lightmaps (test)
                     </Button>
                 </Tab>

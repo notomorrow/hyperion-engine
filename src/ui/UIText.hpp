@@ -53,7 +53,7 @@ struct UITextCharacter
 struct UITextRenderData
 {
     Vec2i                   size;
-    Matrix4                 transform;
+    BoundingBox             aabb;
     Array<UITextCharacter>  characters;
     RC<FontAtlas>           font_atlas;
     Handle<Texture>         font_atlas_texture;
@@ -134,7 +134,8 @@ protected:
     UITextOptions           m_options;
 
 private:
-    BoundingBox             m_text_aabb;
+    BoundingBox             m_text_aabb_with_bearing;
+    BoundingBox             m_text_aabb_without_bearing;
 
     RC<UITextRenderData>    m_render_data;
 

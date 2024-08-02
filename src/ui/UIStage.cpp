@@ -520,10 +520,16 @@ EnumFlags<UIEventHandlerResult> UIStage::OnInputEvent(
                         .is_down            = false
                     });
 
-                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on: {}, Size: {}, Inner size: {}, World AABB: {}, Entity AABB: {}, Actual Size: {}, Mouse Position: {}",
+
+                    BoundingBoxComponent &bounding_box_component = ui_object->GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(ui_object->GetEntity());
+
+
+                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on: {}, Size: {}, Inner size: {}, World AABB: {}, Entity AABB: {}, AABB component (local): {}, AABB component (world): {}, Actual Size: {}, Mouse Position: {}",
                         ui_object->GetName(), ui_object->GetActualSize(), ui_object->GetActualInnerSize(),
                         ui_object->GetWorldAABB(),
                         ui_object->GetNode()->GetEntityAABB(),
+                        bounding_box_component.local_aabb,
+                        bounding_box_component.world_aabb,
                         ui_object->GetActualSize(),
                         ui_object->TransformScreenCoordsToRelative(mouse_position));
 

@@ -928,15 +928,15 @@ Result Image<Platform::VULKAN>::Blit(
     uint32 dst_mip
 )
 {
-    const auto num_faces = MathUtil::Min(NumFaces(), src_image->NumFaces());
+    const uint32 num_faces = MathUtil::Min(NumFaces(), src_image->NumFaces());
 
     for (uint32 face = 0; face < num_faces; face++) {
         const ImageSubResource src {
             .flags = src_image->IsDepthStencil()
                 ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
                 : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
-            .base_array_layer = face,
-            .base_mip_level = src_mip
+            .base_array_layer   = face,
+            .base_mip_level     = src_mip
         };
 
         const ImageSubResource dst {
@@ -986,7 +986,7 @@ Result Image<Platform::VULKAN>::Blit(
             m_platform_impl.handle,
             GetVkImageLayout(m_platform_impl.GetResourceState()),
             1, &blit,
-            helpers::ToVkFilter(src_image->GetMinFilterMode())
+            helpers::ToVkFilter(GetMinFilterMode())
         );
     }
 
@@ -1008,8 +1008,8 @@ Result Image<Platform::VULKAN>::Blit(
             .flags = src_image->IsDepthStencil()
                 ? IMAGE_SUB_RESOURCE_FLAGS_DEPTH | IMAGE_SUB_RESOURCE_FLAGS_STENCIL
                 : IMAGE_SUB_RESOURCE_FLAGS_COLOR,
-            .base_array_layer = face,
-            .base_mip_level = 0
+            .base_array_layer   = face,
+            .base_mip_level     = 0
         };
 
         const ImageSubResource dst {
@@ -1059,7 +1059,7 @@ Result Image<Platform::VULKAN>::Blit(
             m_platform_impl.handle,
             GetVkImageLayout(m_platform_impl.GetResourceState()),
             1, &blit,
-            helpers::ToVkFilter(src_image->GetMinFilterMode())
+            helpers::ToVkFilter(GetMinFilterMode())
         );
     }
 
@@ -1189,7 +1189,6 @@ ByteBuffer Image<Platform::VULKAN>::ReadBack(Device<Platform::VULKAN> *device, I
         if (!result) {
             return ByteBuffer(0, nullptr);
         }
-
 
         commands.Push([this, &staging_buffer](const CommandBufferRef<Platform::VULKAN> &command_buffer)
         {

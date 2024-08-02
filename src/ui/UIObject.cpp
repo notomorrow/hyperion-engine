@@ -401,7 +401,7 @@ void UIObject::UpdateSize(bool update_children)
     }
 
     UpdateActualSizes(UpdateSizePhase::BEFORE_CHILDREN, UIObjectUpdateSizeFlags::DEFAULT);
-    SetEntityAABB(CalculateAABB());
+    SetAABB(CalculateAABB());
 
     Array<RC<UIObject>> deferred_children;
 
@@ -425,7 +425,7 @@ void UIObject::UpdateSize(bool update_children)
 
     if (needs_update_after_children) {
         UpdateActualSizes(UpdateSizePhase::AFTER_CHILDREN, UIObjectUpdateSizeFlags::DEFAULT);
-        SetEntityAABB(CalculateAABB());
+        SetAABB(CalculateAABB());
     }
 
     // FILL needs to update the size of the children
@@ -1023,6 +1023,9 @@ void UIObject::SetEntityAABB(const BoundingBox &aabb)
         if (transform_locked) {
             node->LockTransform();
         }
+
+        bounding_box_component.world_aabb = aabb * node->GetWorldTransform();
+        bounding_box_component.transform_hash_code = node->GetWorldTransform().GetHashCode();
     }
 
     UpdateComputedVisibility();

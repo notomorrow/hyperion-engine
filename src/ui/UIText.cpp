@@ -21,6 +21,8 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <core/system/AppContext.hpp>
+
 #include <util/MeshBuilder.hpp>
 
 #include <util/profiling/ProfileScope.hpp>
@@ -188,6 +190,13 @@ Handle<Mesh> CharMeshBuilder::OptimizeCharMeshes(Vec2i screen_size, Array<UIChar
     return transformed_mesh;
 }
 
+static float GetWindowDPIFactor()
+{
+    return g_engine->GetAppContext()->GetMainWindow()->IsHighDPI()
+        ? 2.0f
+        : 1.0f;
+}
+
 #pragma region UITextRenderer
 
 struct alignas(16) UITextCharacterShaderData
@@ -199,9 +208,10 @@ struct alignas(16) UITextCharacterShaderData
 
 struct alignas(16) UITextUniforms
 {
-    Matrix4 model_matrix;
     Matrix4 view_matrix;
     Matrix4 projection_matrix;
+    Vec2f   text_aabb_min;
+    Vec2f   text_aabb_max;
 };
 
 class UITextRenderer
@@ -227,13 +237,15 @@ public:
         }
 
         { // mesh
+            // m_quad_mesh = UIObjectQuadMeshHelper::GetQuadMesh();
+            
             m_quad_mesh = MeshBuilder::Quad();
             InitObject(m_quad_mesh);
         }
 
         { // framebuffer
             m_framebuffer = MakeRenderObject<Framebuffer>(
-                extent,
+                extent * GetWindowDPIFactor(),
                 renderer::RenderPassStage::PRESENT,
                 renderer::RenderPassMode::RENDER_PASS_INLINE
             );
@@ -260,16 +272,14 @@ public:
             ));
 
             m_camera->SetToOrthographicProjection(
-                0.0f, float(extent.width),
-                0.0f, float(extent.height),
+                0.0f, 1.0f,
+                0.0f, 1.0f,
                 -1.0f, 1.0f
             );
 
             m_camera->SetFramebuffer(m_framebuffer);
 
             InitObject(m_camera);
-            std::cout << "Ortho Camera View: " << m_camera->GetViewMatrix() << "\n";
-            std::cout << "Ortho Camera Projection: " << m_camera->GetProjectionMatrix() << "\n";
         }
     }
 
@@ -381,9 +391,10 @@ public:
             // g_engine->GetRenderData()->cameras.UpdateBuffer(g_engine->GetGPUDevice(), frame_index);
 
             UITextUniforms uniforms;
-            uniforms.model_matrix = render_data.transform;
             uniforms.view_matrix = m_camera->GetViewMatrix();
             uniforms.projection_matrix = m_camera->GetProjectionMatrix();
+            uniforms.text_aabb_min = Vec2f(render_data.aabb.min.x, render_data.aabb.min.y);
+            uniforms.text_aabb_max = Vec2f(render_data.aabb.max.x, render_data.aabb.max.y);
 
             m_uniform_buffer->Copy(
                 g_engine->GetGPUDevice(),
@@ -614,15 +625,23 @@ static void ForEachCharacter(const FontAtlas &font_atlas, const String &text, co
     }
 }
 
-static BoundingBox CalculateTextAABB(const FontAtlas &font_atlas, const String &text)
+static BoundingBox CalculateTextAABB(const FontAtlas &font_atlas, const String &text, bool include_bearing)
 {
     BoundingBox aabb;
 
-    ForEachCharacter(font_atlas, text, [&aabb](const FontAtlasCharacterIterator &iter)
+    ForEachCharacter(font_atlas, text, [include_bearing, &aabb](const FontAtlasCharacterIterator &iter)
     {
         BoundingBox character_aabb;
-        character_aabb.Extend(Vec3f(iter.placement.x, iter.placement.y, 0.0f));
-        character_aabb.Extend(Vec3f(iter.placement.x + iter.glyph_dimensions.x, iter.placement.y + iter.cell_dimensions.y, 0.0f));
+
+        if (include_bearing) {
+            const float offset_y = (iter.cell_dimensions.y - iter.glyph_dimensions.y) + iter.bearing_y;
+
+            character_aabb.Extend(Vec3f(iter.placement.x, iter.placement.y + offset_y, 0.0f));
+            character_aabb.Extend(Vec3f(iter.placement.x + iter.glyph_dimensions.x, iter.placement.y + offset_y + iter.cell_dimensions.y, 0.0f));
+        } else {
+            character_aabb.Extend(Vec3f(iter.placement.x, iter.placement.y, 0.0f));
+            character_aabb.Extend(Vec3f(iter.placement.x + iter.glyph_dimensions.x, iter.placement.y + iter.cell_dimensions.y, 0.0f));
+        }
 
         aabb.Extend(character_aabb);
     });
@@ -637,15 +656,15 @@ struct RENDER_COMMAND(UpdateUITextRenderData) : renderer::RenderCommand
     String                  text;
     RC<UITextRenderData>    render_data;
     Vec2i                   size;
-    Matrix4                 text_transform;
+    BoundingBox             aabb;
     RC<FontAtlas>           font_atlas;
     Handle<Texture>         font_atlas_texture;
 
-    RENDER_COMMAND(UpdateUITextRenderData)(const String &text, const RC<UITextRenderData> &render_data, Vec2i size, const Matrix4 &text_transform, const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture)
+    RENDER_COMMAND(UpdateUITextRenderData)(const String &text, const RC<UITextRenderData> &render_data, Vec2i size, const BoundingBox &aabb, const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture)
         : text(text),
           render_data(render_data),
           size(size),
-          text_transform(text_transform),
+          aabb(aabb),
           font_atlas(font_atlas),
           font_atlas_texture(font_atlas_texture)
     {
@@ -683,7 +702,7 @@ struct RENDER_COMMAND(UpdateUITextRenderData) : renderer::RenderCommand
         });
 
         render_data->size = size;
-        render_data->transform = text_transform;
+        render_data->aabb = aabb;
         render_data->font_atlas = std::move(font_atlas);
         render_data->font_atlas_texture = std::move(font_atlas_texture);
 
@@ -842,9 +861,10 @@ void UIText::UpdateMesh()
         // mesh = char_mesh_builder.OptimizeCharMeshes(GetStage()->GetActualSize(), char_mesh_builder.BuildCharMeshes(*font_atlas, m_text));
 
 
-        m_text_aabb = CalculateTextAABB(*font_atlas, m_text);
+        m_text_aabb_with_bearing = CalculateTextAABB(*font_atlas, m_text, true);
+        m_text_aabb_without_bearing = CalculateTextAABB(*font_atlas, m_text, false);
 
-        HYP_LOG(UI, LogLevel::DEBUG, "Text aabb for {} = {}", m_text, m_text_aabb);
+        // HYP_LOG(UI, LogLevel::DEBUG, "Text aabb for {} = {}", m_text, m_text_aabb);
     } else {
         HYP_LOG(UI, LogLevel::WARNING, "No font atlas for UIText {}", GetName());
 
@@ -878,23 +898,14 @@ void UIText::UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Text
     const NodeProxy &node = GetNode();
 
     const Vec2i size = MathUtil::Max(GetActualSize(), Vec2i::One());
-    
-    // Transform transform = node.IsValid() ? node->GetWorldTransform() : Transform::identity;
-    // transform.SetTranslation(Vec3f::Zero());
-
-
-    // // test
-    // transform.SetScale(Vec3f(1.0f));
-    Transform transform;
-    transform.SetScale(Vec3f(size.x, size.y, 1.0f));
 
     if (!m_texture.IsValid() || Extent2D(m_texture->GetExtent()) != Extent2D(size)) {
         g_safe_deleter->SafeRelease(std::move(m_texture));
 
         m_texture = CreateObject<Texture>(Texture2D(
-            Extent2D(size),
+            Extent2D(size) * GetWindowDPIFactor(),
             InternalFormat::RGBA8,
-            FilterMode::TEXTURE_FILTER_LINEAR,
+            FilterMode::TEXTURE_FILTER_NEAREST,
             WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
         ));
         
@@ -902,7 +913,7 @@ void UIText::UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Text
     }
 
     if (font_atlas != nullptr && font_atlas_texture != nullptr) {
-        PUSH_RENDER_COMMAND(UpdateUITextRenderData, m_text, m_render_data, size, transform.GetMatrix(), font_atlas, font_atlas_texture);
+        PUSH_RENDER_COMMAND(UpdateUITextRenderData, m_text, m_render_data, size, m_text_aabb_with_bearing, font_atlas, font_atlas_texture);
     }
 
     SetNeedsRepaintFlag(true);
@@ -957,14 +968,26 @@ void UIText::UpdateSize(bool update_children)
 {
     UIObject::UpdateSize(update_children);
 
+    const Vec3f extent_with_bearing = m_text_aabb_with_bearing.GetExtent();
+    const Vec3f extent_without_bearing = m_text_aabb_without_bearing.GetExtent();
+
+    const Vec3f extent_div = extent_with_bearing / extent_without_bearing;
+
+    const Vec2i size = GetActualSize();
+    m_actual_size = Vec2i(size.x, size.y * extent_div.y);
+
     // Update material to get new font size if necessary
     UpdateMaterial();
     UpdateMeshData();
+
+    if (IsInit()) {
+        HYP_LOG(UI, LogLevel::DEBUG, "Text AABB For {} : {}\tActual Size: {}", m_text, GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(GetEntity()).world_aabb, GetActualSize());
+    }
 }
 
 BoundingBox UIText::CalculateInnerAABB_Internal() const
 {
-    return m_text_aabb;
+    return m_text_aabb_without_bearing;
 }
 
 void UIText::OnFontAtlasUpdate_Internal()

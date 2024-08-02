@@ -26,7 +26,7 @@ HYP_DESCRIPTOR_SRV(UITextDescriptorSet, FontAtlasTexture) uniform texture2D font
 
 void main()
 {
-    vec4 ui_color = vec4(1.0);//CURRENT_MATERIAL.albedo;
+    vec4 ui_color = vec4(1.0);
     vec4 sampled_texture = Texture2D(sampler_linear, font_atlas_texture, v_texcoord0).rrrr;
 
     ui_color *= sampled_texture;
