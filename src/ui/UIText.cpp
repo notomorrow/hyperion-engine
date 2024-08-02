@@ -11,6 +11,8 @@
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
+#include <scene/camera/OrthoCamera.hpp>
+
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 
@@ -131,7 +133,8 @@ Array<UICharMesh> CharMeshBuilder::BuildCharMeshes(const FontAtlas &font_atlas, 
             position += placement;
 
             vert.SetPosition(Vec3f { position.x, position.y, current_position.z });
-            vert.SetTexCoord0((Vec2f(char_offset) + (vert.GetTexCoord0() * glyph_dimensions * 64.0f)) * atlas_pixel_size);
+            vert.SetTexCoord0((Vec2f(1.0f / float(length) * float(i)) + vert.GetTexCoord0() * Vec2f(1.0f / float(length))));
+            // vert.SetTexCoord0((Vec2f(char_offset) + (vert.GetTexCoord0() * glyph_dimensions * 64.0f)) * atlas_pixel_size);
         }
 
         char_mesh.aabb.Extend(Vec3f(placement.x, placement.y, 0.0f));
@@ -196,7 +199,9 @@ struct alignas(16) UITextCharacterShaderData
 
 struct alignas(16) UITextUniforms
 {
-    Matrix4 transform;
+    Matrix4 model_matrix;
+    Matrix4 view_matrix;
+    Matrix4 projection_matrix;
 };
 
 class UITextRenderer
@@ -246,16 +251,25 @@ public:
         }
 
         { // camera
-            m_camera = CreateObject<Camera>(
-                extent.width, extent.height,
-                0.0f, -float(extent.width),
-                0.0f, -float(extent.height),
-                float(UIStage::min_depth), float(UIStage::max_depth)
+            m_camera = CreateObject<Camera>(extent.width, extent.height);
+
+            m_camera->SetViewMatrix(Matrix4::LookAt(
+                Vec3f::Zero(),
+                Vec3f::UnitZ(),
+                Vec3f::UnitY()
+            ));
+
+            m_camera->SetToOrthographicProjection(
+                0.0f, float(extent.width),
+                0.0f, float(extent.height),
+                -1.0f, 1.0f
             );
 
             m_camera->SetFramebuffer(m_framebuffer);
 
             InitObject(m_camera);
+            std::cout << "Ortho Camera View: " << m_camera->GetViewMatrix() << "\n";
+            std::cout << "Ortho Camera Projection: " << m_camera->GetProjectionMatrix() << "\n";
         }
     }
 
@@ -363,8 +377,13 @@ public:
         }
 
         { // copy uniform
+            // // testing
+            // g_engine->GetRenderData()->cameras.UpdateBuffer(g_engine->GetGPUDevice(), frame_index);
+
             UITextUniforms uniforms;
-            uniforms.transform = render_data.transform;
+            uniforms.model_matrix = render_data.transform;
+            uniforms.view_matrix = m_camera->GetViewMatrix();
+            uniforms.projection_matrix = m_camera->GetProjectionMatrix();
 
             m_uniform_buffer->Copy(
                 g_engine->GetGPUDevice(),
@@ -506,6 +525,111 @@ private:
 
 #pragma endregion UITextRenderer
 
+struct FontAtlasCharacterIterator
+{
+    Vec2f           placement;
+    Vec2f           atlas_pixel_size;
+    Vec2f           cell_dimensions;
+
+    utf::u32char    char_value;
+
+    Vec2i           char_offset;
+
+    Vec2f           glyph_dimensions;
+    Vec2f           glyph_scaling;
+
+    float           bearing_y;
+    float           char_width;
+};
+
+static void ForEachCharacter(const FontAtlas &font_atlas, const String &text, const Proc<void, const FontAtlasCharacterIterator &> &proc)
+{
+    Vec2f placement;
+
+    const SizeType length = text.Length();
+    
+    const Vec2f cell_dimensions = Vec2f(font_atlas.GetCellDimensions()) / 64.0f;
+    AssertThrowMsg(cell_dimensions.x * cell_dimensions.y != 0.0f, "Cell dimensions are invalid");
+
+    const float cell_dimensions_ratio = cell_dimensions.x / cell_dimensions.y;
+
+    AssertThrowMsg(font_atlas.GetAtlases() != nullptr, "Font atlas invalid");
+
+    const Handle<Texture> &main_texture_atlas = font_atlas.GetAtlases()->GetMainAtlas();
+    AssertThrowMsg(main_texture_atlas.IsValid(), "Main texture atlas is invalid");
+
+    const Vec2f atlas_pixel_size = Vec2f::One() / Vec2f(Extent2D(main_texture_atlas->GetExtent()));
+
+    for (SizeType i = 0; i < length; i++) {
+        UITextCharacter character { };
+
+        const utf::u32char ch = text.GetChar(i);
+
+        if (ch == utf::u32char(' ')) {
+            // add room for space
+            placement.x += cell_dimensions.x * 0.5f;
+
+            continue;
+        }
+
+        if (ch == utf::u32char('\n')) {
+            // reset placement, add room for newline
+            placement.x = 0.0f;
+            placement.y += cell_dimensions.y;
+
+            continue;
+        }
+
+        Optional<Glyph::Metrics> glyph_metrics = font_atlas.GetGlyphMetrics(ch);
+
+        if (!glyph_metrics.HasValue()) {
+            // @TODO Add a placeholder character for missing glyphs
+            continue;
+        }
+
+        if (glyph_metrics->metrics.width == 0 || glyph_metrics->metrics.height == 0) {
+            // empty width or height will cause issues
+            continue;
+        }
+
+        FontAtlasCharacterIterator iter;
+
+        iter.char_value = ch;
+
+        iter.placement = placement;
+        iter.atlas_pixel_size = atlas_pixel_size;
+        iter.cell_dimensions = cell_dimensions;
+
+        iter.char_offset = glyph_metrics->image_position;
+
+        iter.glyph_dimensions = Vec2f { float(glyph_metrics->metrics.width), float(glyph_metrics->metrics.height) } / 64.0f;
+        iter.glyph_scaling = Vec2f(iter.glyph_dimensions) / (Vec2f(cell_dimensions));
+
+        iter.bearing_y = float(glyph_metrics->metrics.height - glyph_metrics->metrics.bearing_y) / 64.0f;
+        iter.char_width = float(glyph_metrics->metrics.advance / 64) / 64.0f;
+
+        proc(iter);
+
+        placement.x += iter.char_width;
+    }
+}
+
+static BoundingBox CalculateTextAABB(const FontAtlas &font_atlas, const String &text)
+{
+    BoundingBox aabb;
+
+    ForEachCharacter(font_atlas, text, [&aabb](const FontAtlasCharacterIterator &iter)
+    {
+        BoundingBox character_aabb;
+        character_aabb.Extend(Vec3f(iter.placement.x, iter.placement.y, 0.0f));
+        character_aabb.Extend(Vec3f(iter.placement.x + iter.glyph_dimensions.x, iter.placement.y + iter.cell_dimensions.y, 0.0f));
+
+        aabb.Extend(character_aabb);
+    });
+
+    return aabb;
+}
+
 #pragma region Render commands
 
 struct RENDER_COMMAND(UpdateUITextRenderData) : renderer::RenderCommand
@@ -513,15 +637,15 @@ struct RENDER_COMMAND(UpdateUITextRenderData) : renderer::RenderCommand
     String                  text;
     RC<UITextRenderData>    render_data;
     Vec2i                   size;
-    Matrix4                 transform;
+    Matrix4                 text_transform;
     RC<FontAtlas>           font_atlas;
     Handle<Texture>         font_atlas_texture;
 
-    RENDER_COMMAND(UpdateUITextRenderData)(const String &text, const RC<UITextRenderData> &render_data, Vec2i size, const Matrix4 &transform, const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture)
+    RENDER_COMMAND(UpdateUITextRenderData)(const String &text, const RC<UITextRenderData> &render_data, Vec2i size, const Matrix4 &text_transform, const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture)
         : text(text),
           render_data(render_data),
           size(size),
-          transform(transform),
+          text_transform(text_transform),
           font_atlas(font_atlas),
           font_atlas_texture(font_atlas_texture)
     {
@@ -540,81 +664,26 @@ struct RENDER_COMMAND(UpdateUITextRenderData) : renderer::RenderCommand
         }
 
         render_data->characters.Clear();
-        
-        Vec2f placement;
 
-        const SizeType length = text.Length();
-        
-        const Vec2f cell_dimensions = Vec2f(font_atlas->GetCellDimensions()) / 64.0f;
-        AssertThrowMsg(cell_dimensions.x * cell_dimensions.y != 0.0f, "Cell dimensions are invalid");
+        ForEachCharacter(*font_atlas, text, [&](const FontAtlasCharacterIterator &iter)
+        {
+            Transform character_transform;
+            character_transform.SetScale(Vec3f(iter.glyph_dimensions.x, iter.glyph_dimensions.y, 1.0f));
+            character_transform.GetTranslation().y += iter.cell_dimensions.y - iter.glyph_dimensions.y;
+            character_transform.GetTranslation().y += iter.bearing_y;
+            character_transform.GetTranslation() += Vec3f(iter.placement.x, iter.placement.y, 0.0f);
+            character_transform.UpdateMatrix();
 
-        const float cell_dimensions_ratio = cell_dimensions.x / cell_dimensions.y;
-
-        AssertThrowMsg(font_atlas->GetAtlases() != nullptr, "Font atlas invalid");
-
-        const Handle<Texture> &main_texture_atlas = font_atlas->GetAtlases()->GetMainAtlas();
-        AssertThrowMsg(main_texture_atlas.IsValid(), "Main texture atlas is invalid");
-
-        const Vec2f atlas_pixel_size = Vec2f::One() / Vec2f(Extent2D(main_texture_atlas->GetExtent()));
-
-        for (SizeType i = 0; i < length; i++) {
             UITextCharacter character { };
-
-            const utf::u32char ch = text.GetChar(i);
-
-            if (ch == utf::u32char(' ')) {
-                // add room for space
-                placement.x += cell_dimensions.x * 0.5f;
-
-                continue;
-            }
-
-            if (ch == utf::u32char('\n')) {
-                // reset placement, add room for newline
-                placement.x = 0.0f;
-                placement.y += cell_dimensions.y;
-
-                continue;
-            }
-
-            Optional<Glyph::Metrics> glyph_metrics = font_atlas->GetGlyphMetrics(ch);
-
-            if (!glyph_metrics.HasValue()) {
-                // @TODO Add a placeholder character for missing glyphs
-                continue;
-            }
-
-            if (glyph_metrics->metrics.width == 0 || glyph_metrics->metrics.height == 0) {
-                // empty width or height will cause issues
-                continue;
-            }
-
-            const Vec2i char_offset = glyph_metrics->image_position;
-
-            const Vec2f glyph_dimensions = Vec2f { float(glyph_metrics->metrics.width), float(glyph_metrics->metrics.height) } / 64.0f;
-            const Vec2f glyph_scaling = Vec2f(glyph_dimensions) / (Vec2f(cell_dimensions));
-
-            const float bearing_y = float(glyph_metrics->metrics.height - glyph_metrics->metrics.bearing_y) / 64.0f;
-            const float char_width = float(glyph_metrics->metrics.advance / 64) / 64.0f;
-
-            Transform transform;
-            transform.SetScale(Vec3f(glyph_dimensions.x, glyph_dimensions.y, 1.0f));
-            transform.GetTranslation().y += cell_dimensions.y - glyph_dimensions.y;
-            transform.GetTranslation().y += bearing_y;
-            transform.GetTranslation() += Vec3f(placement.x, placement.y, 0.0f);
-            transform.UpdateMatrix();
-
-            character.transform = transform.GetMatrix();
-            character.texcoord_start = Vec2f(char_offset) * atlas_pixel_size;
-            character.texcoord_end = (Vec2f(char_offset) + (glyph_dimensions * 64.0f)) * atlas_pixel_size;
-
-            placement.x += char_width;
+            character.transform = character_transform.GetMatrix();
+            character.texcoord_start = Vec2f(iter.char_offset) * iter.atlas_pixel_size;
+            character.texcoord_end = (Vec2f(iter.char_offset) + (iter.glyph_dimensions * 64.0f)) * iter.atlas_pixel_size;
 
             render_data->characters.PushBack(character);
-        }
+        });
 
         render_data->size = size;
-        render_data->transform = transform;
+        render_data->transform = text_transform;
         render_data->font_atlas = std::move(font_atlas);
         render_data->font_atlas_texture = std::move(font_atlas_texture);
 
@@ -733,6 +802,7 @@ void UIText::SetText(const String &text)
 {
     UIObject::SetText(text);
 
+    UpdateSize();
     UpdateMesh();
 }
 
@@ -747,6 +817,7 @@ void UIText::SetFontAtlas(RC<FontAtlas> font_atlas)
 {
     m_font_atlas = std::move(font_atlas);
 
+    UpdateSize();
     UpdateMesh();
 }
 
@@ -766,26 +837,38 @@ void UIText::UpdateMesh()
         Handle<Texture> font_atlas_texture = font_atlas->GetAtlases()->GetAtlasForPixelSize(GetActualSize().y);
         UpdateRenderData(font_atlas, font_atlas_texture);
 
-        CharMeshBuilder char_mesh_builder(m_options);
+        // CharMeshBuilder char_mesh_builder(m_options);
 
-        mesh = char_mesh_builder.OptimizeCharMeshes(GetStage()->GetActualSize(), char_mesh_builder.BuildCharMeshes(*font_atlas, m_text));
+        // mesh = char_mesh_builder.OptimizeCharMeshes(GetStage()->GetActualSize(), char_mesh_builder.BuildCharMeshes(*font_atlas, m_text));
+
+
+        m_text_aabb = CalculateTextAABB(*font_atlas, m_text);
+
+        HYP_LOG(UI, LogLevel::DEBUG, "Text aabb for {} = {}", m_text, m_text_aabb);
     } else {
         HYP_LOG(UI, LogLevel::WARNING, "No font atlas for UIText {}", GetName());
 
         UpdateRenderData(nullptr, Handle<Texture>::empty);
     }
 
-    if (!mesh.IsValid()) {
-        mesh = GetQuadMesh();
-    }
+    // mesh = GetQuadMesh();
 
-    AssertThrow(mesh.IsValid());
-    m_text_aabb = mesh->GetAABB();
+    // // AssertThrow(mesh.IsValid());
+    // // m_text_aabb = mesh->GetAABB();
 
-    g_safe_deleter->SafeRelease(std::move(mesh_component.mesh));
+    // // const Vec3f text_extent = mesh->GetAABB().GetExtent();
+    // // const float text_aabb_ratio = text_extent.y / text_extent.x;
 
-    mesh_component.mesh = mesh;
-    mesh_component.flags |= MESH_COMPONENT_FLAG_DIRTY;
+    // // SetAspectRatio(text_aabb_ratio);
+
+    // // if (!mesh.IsValid()) {
+    //     // mesh = GetQuadMesh();
+    // // }
+
+    // g_safe_deleter->SafeRelease(std::move(mesh_component.mesh));
+
+    // mesh_component.mesh = mesh;
+    // mesh_component.flags |= MESH_COMPONENT_FLAG_DIRTY;
 }
 
 void UIText::UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Texture> &font_atlas_texture)
@@ -793,9 +876,17 @@ void UIText::UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Text
     HYP_SCOPE;
 
     const NodeProxy &node = GetNode();
-    const Matrix4 &transform = node.IsValid() ? node->GetWorldTransform().GetMatrix() : Matrix4::identity;
 
     const Vec2i size = MathUtil::Max(GetActualSize(), Vec2i::One());
+    
+    // Transform transform = node.IsValid() ? node->GetWorldTransform() : Transform::identity;
+    // transform.SetTranslation(Vec3f::Zero());
+
+
+    // // test
+    // transform.SetScale(Vec3f(1.0f));
+    Transform transform;
+    transform.SetScale(Vec3f(size.x, size.y, 1.0f));
 
     if (!m_texture.IsValid() || Extent2D(m_texture->GetExtent()) != Extent2D(size)) {
         g_safe_deleter->SafeRelease(std::move(m_texture));
@@ -811,7 +902,7 @@ void UIText::UpdateRenderData(const RC<FontAtlas> &font_atlas, const Handle<Text
     }
 
     if (font_atlas != nullptr && font_atlas_texture != nullptr) {
-        PUSH_RENDER_COMMAND(UpdateUITextRenderData, m_text, m_render_data, size, transform, font_atlas, font_atlas_texture);
+        PUSH_RENDER_COMMAND(UpdateUITextRenderData, m_text, m_render_data, size, transform.GetMatrix(), font_atlas, font_atlas_texture);
     }
 
     SetNeedsRepaintFlag(true);
@@ -839,7 +930,7 @@ bool UIText::Repaint_Internal()
 MaterialAttributes UIText::GetMaterialAttributes() const
 {
     return MaterialAttributes {
-        .shader_definition  = ShaderDefinition { NAME("UIObject"), ShaderProperties(static_mesh_vertex_attributes, { "TYPE_DEFAULT" }) },
+        .shader_definition  = ShaderDefinition { NAME("UIObject"), ShaderProperties(static_mesh_vertex_attributes, { "TYPE_TEXT" }) },
         .bucket             = Bucket::BUCKET_UI,
         .blend_function     = BlendFunction(BlendModeFactor::SRC_ALPHA, BlendModeFactor::ONE_MINUS_SRC_ALPHA,
                                             BlendModeFactor::ONE, BlendModeFactor::ONE_MINUS_SRC_ALPHA),
@@ -866,48 +957,14 @@ void UIText::UpdateSize(bool update_children)
 {
     UIObject::UpdateSize(update_children);
 
-    if (NodeProxy node = GetNode()) {
-        const Vec3f aabb_extent = m_text_aabb.GetExtent();
-
-        const bool was_transform_locked = node->IsTransformLocked();
-
-        if (was_transform_locked) {
-            node->UnlockTransform();
-        }
-
-        HYP_LOG(UI, LogLevel::INFO, "Updating size for UIText {}, text AABB: {}", GetText(), m_text_aabb);
-        
-        // node->SetLocalScale(Vec3f {
-        //     1.0f / node->GetWorldAABB().GetExtent().x,
-        //     1.0f / node->GetWorldAABB().GetExtent().y,
-        //     1.0f
-        // });
-
-        node->SetWorldScale(Vec3f {
-            float(m_actual_size.x) / MathUtil::Max(aabb_extent.x, MathUtil::epsilon_f),
-            float(m_actual_size.y) / MathUtil::Max(aabb_extent.y, MathUtil::epsilon_f),
-            1.0f
-        });
-
-        if (was_transform_locked) {
-            node->LockTransform();
-        }
-    }
-
     // Update material to get new font size if necessary
     UpdateMaterial();
+    UpdateMeshData();
 }
 
-BoundingBox UIText::CalculateAABB() const
+BoundingBox UIText::CalculateInnerAABB_Internal() const
 {
     return m_text_aabb;
-    // return UIObject::CalculateAABB();
-    // const Vec3f text_aabb_extent = m_text_aabb.GetExtent();
-
-    // const Vec3f min = Vec3f::Zero();
-    // const Vec3f max = Vec3f { float(m_actual_size.x), float(m_actual_size.y), 0.0f } * text_aabb_extent;
-
-    // return BoundingBox { min, max };
 }
 
 void UIText::OnFontAtlasUpdate_Internal()

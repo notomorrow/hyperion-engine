@@ -33,6 +33,8 @@ HYP_DESCRIPTOR_SSBO(UITextDescriptorSet, CharacterInstanceBuffer, standard = std
 HYP_DESCRIPTOR_CBUFF(UITextDescriptorSet, UITextUniforms, standard = std430) uniform UITextUniforms
 {
     mat4    model_matrix;
+    mat4    view_matrix;
+    mat4    projection_matrix;
 };
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -41,6 +43,20 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBu
 {
     Camera camera;
 };
+
+mat4 view_mat = transpose(mat4(
+    vec4(-1.0, 0.0, 0.0, 0.0),
+    vec4(0.0, 1.0, 0.0, 0.0),
+    vec4(0.0, 0.0, 1.0, 0.0),
+    vec4(0.0, 0.0, 0.0, 1.0)
+));
+
+mat4 projection_mat = transpose(mat4(
+    vec4(-0.0128205, 0.0, 0.0, -1.0),
+    vec4(0.0, 0.142857, 0.0, -1.0),
+    vec4(0.0, 0.0, -1.0, -0),
+    vec4(0.0, 0.0, 0.0, 1.0)
+));
 
 void main()
 {
@@ -56,5 +72,5 @@ void main()
 
     v_texcoord0 = texcoord_start + a_texcoord0 * texcoord_size;
 
-    gl_Position = vec4(a_position, 1.0);//camera.projection * camera.view * position;
+    gl_Position = projection_matrix * position;
 } 

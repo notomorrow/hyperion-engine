@@ -18,6 +18,7 @@
 
 #include <math/Color.hpp>
 #include <math/BlendVar.hpp>
+#include <math/MathUtil.hpp>
 
 #include <rendering/FullScreenPass.hpp>
 
@@ -109,6 +110,37 @@ enum class UIObjectIterationResult : uint8
 {
     CONTINUE = 0,
     STOP
+};
+
+struct UIObjectAspectRatio
+{
+    float x = 1.0f;
+    float y = 1.0f;
+
+    UIObjectAspectRatio()                                                   = default;
+
+    UIObjectAspectRatio(float ratio)
+        : x(ratio),
+          y(1.0f / ratio)
+    {
+    }
+
+    UIObjectAspectRatio(float x, float y)
+        : x(x),
+          y(y)
+    {
+    }
+
+    UIObjectAspectRatio(const UIObjectAspectRatio &other)                   = default;
+    UIObjectAspectRatio &operator=(const UIObjectAspectRatio &other)        = default;
+    UIObjectAspectRatio(UIObjectAspectRatio &&other) noexcept               = default;
+    UIObjectAspectRatio &operator=(UIObjectAspectRatio &&other) noexcept    = default;
+
+    HYP_FORCE_INLINE bool IsValid() const
+        { return float(*this) == float(*this); }
+
+    HYP_FORCE_INLINE explicit operator float() const
+        { return x / y; }
 };
 
 #pragma region UIObjectSize
@@ -421,6 +453,11 @@ public:
 
     void SetParentAlignment(UIObjectAlignment alignment);
 
+    HYP_FORCE_INLINE UIObjectAspectRatio GetAspectRatio() const
+        { return m_aspect_ratio; }
+
+    void SetAspectRatio(UIObjectAspectRatio aspect_ratio);
+
     /*! \brief Get the padding of the UI object
      * The padding of the UI object is used to add space around the object's content.
      * \return The padding of the UI object */
@@ -672,7 +709,9 @@ protected:
 
     /*! \brief Calculate the local (object space) bounding box (in pixels) of this object.
      *  should be in range of (0,0,0):(size,size,size). */
-    virtual BoundingBox CalculateAABB() const;
+    BoundingBox CalculateAABB() const;
+
+    virtual BoundingBox CalculateInnerAABB_Internal() const;
 
     const Handle<Mesh> &GetMesh() const;
 
@@ -693,7 +732,7 @@ protected:
     void AddDelegateHandler(DelegateHandler &&delegate_handler)
         { m_delegate_handlers.PushBack(std::move(delegate_handler)); }
 
-    void UpdateMeshData();
+    void UpdateMeshData(bool update_children = true);
     void UpdateMaterial(bool update_children = true);
 
     Array<RC<UIObject>> GetChildUIObjects(bool deep) const;
@@ -744,6 +783,8 @@ protected:
 
     UIObjectAlignment               m_origin_alignment;
     UIObjectAlignment               m_parent_alignment;
+
+    UIObjectAspectRatio             m_aspect_ratio;
 
     Color                           m_background_color;
     Color                           m_text_color;

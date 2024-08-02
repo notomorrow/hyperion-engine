@@ -25,6 +25,8 @@ struct Vec3;
 template <class T>
 struct Vec4;
 
+struct Matrix;
+
 } // namespace detail
 } // namespace math
 

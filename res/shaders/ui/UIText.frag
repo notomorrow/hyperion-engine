@@ -31,5 +31,5 @@ void main()
 
     ui_color *= sampled_texture;
 
-    out_color = vec4(v_texcoord0, 0.0, 1.0);//ui_color;
+    out_color = ui_color;
 }

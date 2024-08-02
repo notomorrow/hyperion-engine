@@ -220,9 +220,16 @@ void UIObject::OnAttached_Internal(UIObject *parent)
     AssertThrow(parent != nullptr);
 
     m_stage = parent->GetStage();
+    
     SetAllChildUIObjectsStage(m_stage);
 
-    SetNeedsRepaintFlag();
+    if (IsInit()) {
+        UpdateSize();
+        UpdatePosition();
+        UpdateMeshData();
+
+        SetNeedsRepaintFlag();
+    }
 }
 
 void UIObject::OnRemoved_Internal()
@@ -233,7 +240,13 @@ void UIObject::OnRemoved_Internal()
 
     SetAllChildUIObjectsStage(nullptr);
 
-    SetNeedsRepaintFlag();
+    if (IsInit()) {
+        UpdateSize();
+        UpdatePosition();
+        UpdateMeshData();
+
+        SetNeedsRepaintFlag();
+    }
 }
 
 Name UIObject::GetName() const
@@ -344,6 +357,7 @@ void UIObject::SetSize(UIObjectSize size)
 
     UpdateSize();
     UpdatePosition();
+    UpdateMeshData();
 }
 
 UIObjectSize UIObject::GetInnerSize() const
@@ -359,6 +373,7 @@ void UIObject::SetInnerSize(UIObjectSize size)
 
     UpdateSize();
     UpdatePosition();
+    UpdateMeshData();
 }
 
 UIObjectSize UIObject::GetMaxSize() const
@@ -374,6 +389,7 @@ void UIObject::SetMaxSize(UIObjectSize size)
 
     UpdateSize();
     UpdatePosition();
+    UpdateMeshData();
 }
 
 void UIObject::UpdateSize(bool update_children)
@@ -418,7 +434,6 @@ void UIObject::UpdateSize(bool update_children)
         child->UpdateSize();
     }
 
-    UpdateMeshData();
     SetNeedsRepaintFlag();
 }
 
@@ -605,6 +620,17 @@ void UIObject::SetParentAlignment(UIObjectAlignment alignment)
     UpdatePosition();
 }
 
+void UIObject::SetAspectRatio(UIObjectAspectRatio aspect_ratio)
+{
+    HYP_SCOPE;
+
+    m_aspect_ratio = aspect_ratio;
+
+    UpdateSize();
+    UpdatePosition();
+    UpdateMeshData();
+}
+
 void UIObject::SetPadding(Vec2i padding)
 {
     HYP_SCOPE;
@@ -613,6 +639,7 @@ void UIObject::SetPadding(Vec2i padding)
 
     UpdateSize();
     UpdatePosition();
+    UpdateMeshData();
 }
 
 Color UIObject::GetBackgroundColor() const
@@ -702,7 +729,7 @@ void UIObject::UpdateComputedVisibility()
             HYP_LOG(UI, LogLevel::DEBUG, "Testing intersection for parent AABB: {} and menu contents: {}", parent_aabb, self_aabb);
         }
 
-        m_computed_visibility = parent_aabb.Intersects(self_aabb);
+        m_computed_visibility = parent_aabb.Overlaps(self_aabb);
 
         return;
     }
@@ -798,6 +825,7 @@ void UIObject::AddChildUIObject(UIObject *ui_object)
 
     ui_object->UpdateSize();
     ui_object->UpdatePosition();
+    ui_object->UpdateMeshData();
 
     SetNeedsRepaintFlag();
 }
@@ -825,6 +853,7 @@ bool UIObject::RemoveChildUIObject(UIObject *ui_object)
 
                 ui_object->UpdateSize();
                 ui_object->UpdatePosition();
+                ui_object->UpdateMeshData();
 
                 SetNeedsRepaintFlag();
 
@@ -1002,17 +1031,22 @@ void UIObject::SetEntityAABB(const BoundingBox &aabb)
 BoundingBox UIObject::CalculateAABB() const
 {
     const Vec3f min = Vec3f::Zero();
-    Vec3f max = Vec3f { float(m_actual_size.x), float(m_actual_size.y), 0.0f };
-
-    // if (m_size.GetFlagsX() & UIObjectSize::AUTO) {
-    //     max.x = 0.0f;
-    // }
-
-    // if (m_size.GetFlagsY() & UIObjectSize::AUTO) {
-    //     max.y = 0.0f;
-    // }
+    const Vec3f max = Vec3f { float(m_actual_size.x), float(m_actual_size.y), 0.0f };
 
     return BoundingBox { min, max };
+}
+
+BoundingBox UIObject::CalculateInnerAABB_Internal() const
+{
+    if (const NodeProxy &node = GetNode()) {
+        const BoundingBox &node_aabb = node->GetLocalAABB();
+
+        if (node_aabb.IsFinite() && node_aabb.IsValid()) {
+            return node_aabb;
+        }
+    }
+
+    return BoundingBox::Zero();
 }
 
 void UIObject::SetAffectsParentSize(bool affects_parent_size)
@@ -1261,39 +1295,34 @@ void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &actual_size
     if (in_size.GetAllFlags() & UIObjectSize::AUTO) {
         // Calculate "auto" sizing based on children. Must be executed after children have their sizes calculated.
         if (phase == UpdateSizePhase::AFTER_CHILDREN) {
-            Vec2i dynamic_size;
+            Vec2f dynamic_size;
 
-            Optional<Vec3f> extent;
+            const Vec3f extent = CalculateInnerAABB_Internal().GetExtent();
 
-            if (const NodeProxy &node = GetNode()) {
-                const BoundingBox &node_aabb = node->GetLocalAABB();
+            if ((in_size.GetFlagsX() & UIObjectSize::AUTO) && (in_size.GetFlagsY() & UIObjectSize::AUTO)) {
+                // If both X and Y are set to auto, use the AABB size (we can't calculate a ratio if both are auto)
+                dynamic_size = Vec2f { extent.x, extent.y };
+            } else {
+                float ratio = (extent.x / MathUtil::Max(extent.y, MathUtil::epsilon_f));
 
-                if (node_aabb.IsFinite() && node_aabb.IsValid()) {
-                    extent = node_aabb.GetExtent();
-                }
-            }
+                // // @TEMP TESTING
+                // if (float(m_aspect_ratio) != 1.0f) {
+                //     ratio = float(m_aspect_ratio);
+                // }
 
-            if (extent.HasValue()) {
-                if ((in_size.GetFlagsX() & UIObjectSize::AUTO) && (in_size.GetFlagsY() & UIObjectSize::AUTO)) {
-                    // If both X and Y are set to auto, use the AABB size (we can't calculate a ratio if both are auto)
-                    dynamic_size = Vec2i { MathUtil::Floor(extent->x), MathUtil::Floor(extent->y) };
-                } else {
-                    const float ratio = extent->x / MathUtil::Max(extent->y, MathUtil::epsilon_f);
-
-                    dynamic_size = Vec2i {
-                        MathUtil::Floor(float(actual_size.y) * ratio),
-                        MathUtil::Floor(float(actual_size.x) / ratio)
-                    };
-                }
+                dynamic_size = Vec2f {
+                    float(actual_size.y) * ratio,
+                    float(actual_size.x) / ratio
+                };
             }
 
             if (in_size.GetFlagsX() & UIObjectSize::AUTO) {
-                actual_size.x = dynamic_size.x;
+                actual_size.x = MathUtil::Floor(dynamic_size.x);
                 actual_size.x += self_padding.x * 2;
             }
 
             if (in_size.GetFlagsY() & UIObjectSize::AUTO) {
-                actual_size.y = dynamic_size.y;
+                actual_size.y = MathUtil::Floor(dynamic_size.y);
                 actual_size.y += self_padding.y * 2;
             }
         } else {
@@ -1386,9 +1415,19 @@ void UIObject::ComputeOffsetPosition()
     m_offset_position = offset_position;
 }
 
-void UIObject::UpdateMeshData()
+void UIObject::UpdateMeshData(bool update_children)
 {
     HYP_SCOPE;
+    
+    if (update_children) {
+        ForEachChildUIObject([](const RC<UIObject> &child)
+        {
+            // Do not update children in the next call; ForEachChildUIObject runs for all descendants
+            child->UpdateMeshData();
+
+            return UIObjectIterationResult::CONTINUE;
+        }, false);
+    }
     
     const Scene *scene = GetScene();
 

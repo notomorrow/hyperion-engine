@@ -112,7 +112,7 @@ public:
         { return false; }
 
 protected:
-    virtual BoundingBox CalculateAABB() const override;
+    virtual BoundingBox CalculateInnerAABB_Internal() const override;
     
     virtual MaterialAttributes GetMaterialAttributes() const override;
     virtual Material::ParameterTable GetMaterialParameters() const override;

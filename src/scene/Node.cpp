@@ -274,8 +274,6 @@ bool Node::IsOrHasParent(const Node *node) const
 
 void Node::SetScene(Scene *scene)
 {
-    HYP_LOG(Node, LogLevel::DEBUG, "{} set scene to {}", GetName(), (void *)(scene));
-    
     if (!scene) {
         scene = g_engine->GetWorld()->GetDetachedScene(Threads::CurrentThreadID()).Get();
     }

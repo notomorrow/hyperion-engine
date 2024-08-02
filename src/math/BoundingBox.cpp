@@ -205,6 +205,15 @@ BoundingBox &BoundingBox::Extend(const BoundingBox &bb)
     return *this;
 }
 
+bool BoundingBox::Overlaps(const BoundingBox &other) const
+{
+    if (max.x < other.min.x || min.x > other.max.x) return false;
+    if (max.y < other.min.y || min.y > other.max.y) return false;
+    if (max.z < other.min.z || min.z > other.max.z) return false;
+
+    return true;
+}
+
 bool BoundingBox::Intersects(const BoundingBox &other) const
 {
     const FixedArray<Vec3f, 8> corners = other.GetCorners();
