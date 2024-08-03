@@ -199,7 +199,7 @@ Task<HTTPResponse> HTTPRequest::Send()
             case HTTPMethod::PATCH:
                 curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
                 break;
-            case HTTPMethod::DELETE:
+            case HTTPMethod::DELETE_:
                 curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
                 break;
             default:

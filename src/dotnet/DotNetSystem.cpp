@@ -141,7 +141,13 @@ public:
             HYP_THROW("Could not initialize .NET runtime: Could not locate HyperionInterop.dll!");
         }
 
-        const PlatformString interop_assembly_path_platform = *interop_assembly_path;
+        PlatformString interop_assembly_path_platform;
+
+#ifdef HYP_WINDOWS
+        interop_assembly_path_platform = interop_assembly_path->ToWide();
+#else
+        interop_assembly_path_platform = *interop_assembly_path;
+#endif
 
         m_root_assembly.Reset(new Assembly());
 
@@ -351,7 +357,18 @@ private:
 
         HYP_LOG(DotNET, LogLevel::DEBUG, "Initializing .NET runtime");
 
-        if (m_init_fptr(PlatformString(GetRuntimeConfigPath()).Data(), nullptr, &m_cxt) != 0) {
+        
+        PlatformString runtime_config_path;
+
+#ifdef HYP_WINDOWS
+        runtime_config_path = GetRuntimeConfigPath().ToWide();
+
+        std::wcout << L".NET Runtime path = " << runtime_config_path.Data() << L"\n";
+#else
+        runtime_config_path = GetRuntimeConfigPath();
+#endif
+
+        if (m_init_fptr(runtime_config_path.Data(), nullptr, &m_cxt) != 0) {
             HYP_LOG(DotNET, LogLevel::ERR, "Failed to initialize .NET runtime");
 
             return false;

@@ -651,6 +651,11 @@ inline uint32 wide_to_utf8(const wchar_t *start, const wchar_t *end, u8char *res
 
     if (result) {
         len = WideCharToMultiByte(CP_UTF8, 0, start, (int)(end - start), (char *)result, 0, NULL, NULL);
+
+        if (len == 0) {
+            return 0;
+        }
+
         WideCharToMultiByte(CP_UTF8, 0, start, (int)(end - start), (char *)result, len, NULL, NULL);
     } else {
         len = WideCharToMultiByte(CP_UTF8, 0, start, (int)(end - start), NULL, 0, NULL, NULL);
@@ -706,7 +711,12 @@ inline uint32 utf8_to_wide(const u8char *start, const u8char *end, wchar_t *resu
 
 #ifdef _WIN32
     if (result) {
-        len = MultiByteToWideChar(CP_UTF8, 0, (const char *)start, (int)(end - start), result, 0);
+        len = MultiByteToWideChar(CP_UTF8, 0, (const char *)start, (int)(end - start), NULL, 0);
+
+        if (len == 0) {
+            return 0;
+        }
+
         MultiByteToWideChar(CP_UTF8, 0, (const char *)start, (int)(end - start), result, len);
     } else {
         len = MultiByteToWideChar(CP_UTF8, 0, (const char *)start, (int)(end - start), NULL, 0);

@@ -98,7 +98,6 @@ Engine *Engine::GetInstance()
 
 Engine::Engine()
     : m_placeholder_data(new PlaceholderData()),
-      m_global_descriptor_table(MakeRenderObject<DescriptorTable>(*renderer::g_static_descriptor_table_decl)),
       m_is_initialized(false)
 {
 }
@@ -195,6 +194,8 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     m_instance.Reset(new Instance());
 
     HYPERION_ASSERT_RESULT(m_instance->Initialize(*app_context, use_debug_layers));
+    
+    m_global_descriptor_table = MakeRenderObject<DescriptorTable>(*renderer::g_static_descriptor_table_decl);
 
     // Update app configuration to reflect device, after instance is created (e.g RT is not supported)
     m_app_context->UpdateConfigurationOverrides();

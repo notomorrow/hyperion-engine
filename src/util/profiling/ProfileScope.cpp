@@ -395,25 +395,30 @@ private:
     json::JSONArray                 m_queue;
 };
 
-thread_local ProfileScopeStack g_profile_scope_stack { };
-
 #pragma endregion ProfileScopeStack
 
 #pragma region ProfileScope
 
+ProfileScopeStack &ProfileScope::GetProfileScopeStackForCurrentThread()
+{
+    static thread_local ProfileScopeStack profile_scope_stack;
+
+    return profile_scope_stack;
+}
+
+void ProfileScope::ResetForCurrentThread()
+{
+    GetProfileScopeStackForCurrentThread().Reset();
+}
+
 ProfileScope::ProfileScope(ANSIStringView label, ANSIStringView location)
-    : entry(&g_profile_scope_stack.Open(label, location))
+    : entry(&GetProfileScopeStackForCurrentThread().Open(label, location))
 {
 }
 
 ProfileScope::~ProfileScope()
 {
-    g_profile_scope_stack.Close();
-}
-
-void ProfileScope::ResetForCurrentThread()
-{
-    g_profile_scope_stack.Reset();
+    GetProfileScopeStackForCurrentThread().Close();
 }
 
 #pragma endregion ProfileScope

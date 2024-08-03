@@ -427,7 +427,7 @@ public:
             size = Size();
         }
 
-        return ByteView(Data() + offset, size);
+        return ByteView(reinterpret_cast<ubyte *>(Data()) + offset, size);
     }
 
     /*! \brief Returns a ConstByteView of the Array's data. */
@@ -441,7 +441,7 @@ public:
             size = Size();
         }
 
-        return ConstByteView(Data() + offset, size);
+        return ConstByteView(reinterpret_cast<const ubyte *>(Data()) + offset, size);
     }
     
     HYP_DEF_STL_BEGIN_END(

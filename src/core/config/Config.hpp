@@ -108,23 +108,23 @@ public:
     HYP_FORCE_INLINE const String &GetPath() const
         { return m_path; }
 
-    HYP_FORCE_INLINE constexpr bool IsValid() const
+    HYP_FORCE_INLINE bool IsValid() const
         { return m_path.Any(); }
 
-    HYP_FORCE_INLINE constexpr explicit operator bool() const
+    HYP_FORCE_INLINE explicit operator bool() const
         { return IsValid(); }
 
-    HYP_FORCE_INLINE constexpr bool operator==(const ConfigurationValueKey &other) const
+    HYP_FORCE_INLINE bool operator==(const ConfigurationValueKey &other) const
     {
         return m_path == other.m_path;
     }
 
-    HYP_FORCE_INLINE constexpr bool operator!=(const ConfigurationValueKey &other) const
+    HYP_FORCE_INLINE bool operator!=(const ConfigurationValueKey &other) const
     {
         return m_path != other.m_path;
     }
 
-    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         return HashCode::GetHashCode(m_path);
     }

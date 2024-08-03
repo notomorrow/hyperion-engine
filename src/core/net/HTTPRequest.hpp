@@ -30,7 +30,7 @@ enum class HTTPMethod
     POST,
     PUT,
     PATCH,
-    DELETE
+    DELETE_
 };
 
 class HYP_API HTTPResponse

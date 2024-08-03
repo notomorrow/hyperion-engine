@@ -11,10 +11,10 @@
 namespace hyperion {
 namespace utilities {
 
-template <class T, uint Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
+template <class T, SizeType Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
 struct alignas(Alignment) ValueStorage
 {
-    static constexpr uint alignment = Alignment;
+    static constexpr SizeType alignment = Alignment;
 
     alignas(Alignment) ubyte data_buffer[sizeof(T)];
 
@@ -53,32 +53,26 @@ struct alignas(Alignment) ValueStorage
     ~ValueStorage()                                         = default;
 
     template <class ...Args>
-    HYP_FORCE_INLINE
-    T *Construct(Args &&... args)
+    HYP_FORCE_INLINE T *Construct(Args &&... args)
     {
         Memory::Construct<T>(data_buffer, std::forward<Args>(args)...);
 
         return &Get();
     }
     
-    HYP_FORCE_INLINE
-    void Destruct()
+    HYP_FORCE_INLINE void Destruct()
         { Memory::Destruct<T>(static_cast<void *>(data_buffer)); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    T &Get()
+    HYP_FORCE_INLINE T &Get()
         { return *reinterpret_cast<T *>(&data_buffer); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const T &Get() const
+    HYP_FORCE_INLINE const T &Get() const
         { return *reinterpret_cast<const T *>(&data_buffer); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    void *GetPointer()
+    HYP_FORCE_INLINE void *GetPointer()
         { return &data_buffer[0]; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const void *GetPointer() const
+    HYP_FORCE_INLINE const void *GetPointer() const
         { return &data_buffer[0]; }
 };
 
@@ -93,72 +87,60 @@ struct ValueStorage<void>
     ~ValueStorage()                                     = default;
 };
 
-template <class T, uint Count, uint Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
+template <class T, SizeType Count, SizeType Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
 struct ValueStorageArray
 {
     ValueStorage<T, Alignment>  data[Count];
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    ValueStorage<T, Alignment> &operator[](uint index)
+    HYP_FORCE_INLINE ValueStorage<T, Alignment> &operator[](SizeType index)
         { return data[index]; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const ValueStorage<T, Alignment> &operator[](uint index) const
+    HYP_FORCE_INLINE const ValueStorage<T, Alignment> &operator[](SizeType index) const
         { return data[index]; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    T *GetPointer()
+    HYP_FORCE_INLINE T *GetPointer()
         { return static_cast<T *>(&data[0]); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const T *GetPointer() const
+    HYP_FORCE_INLINE const T *GetPointer() const
         { return static_cast<const T *>(&data[0]); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    void *GetRawPointer()
+    HYP_FORCE_INLINE void *GetRawPointer()
         { return static_cast<void *>(&data[0]); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const void *GetRawPointer() const
+    HYP_FORCE_INLINE const void *GetRawPointer() const
         { return static_cast<const void *>(&data[0]); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr uint Size() const
+    HYP_FORCE_INLINE constexpr SizeType Size() const
         { return Count; }
-    
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr uint TotalSize() const
+
+    HYP_FORCE_INLINE constexpr SizeType TotalSize() const
         { return Count * sizeof(T); }
 };
 
-template <class T, uint Alignment>
+template <class T, SizeType Alignment>
 struct ValueStorageArray<T, 0, Alignment>
 {
     ValueStorage<char>  data[1];
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    void *GetRawPointer()
+    HYP_FORCE_INLINE void *GetRawPointer()
         { return static_cast<void *>(&data[0]); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const void *GetRawPointer() const
+    HYP_FORCE_INLINE const void *GetRawPointer() const
         { return static_cast<const void *>(&data[0]); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr uint Size() const
+    HYP_FORCE_INLINE constexpr SizeType Size() const
         { return 0; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr uint TotalSize() const
+    HYP_FORCE_INLINE constexpr SizeType TotalSize() const
         { return 0; }
 };
 
 } // namespace utilities
 
-template <class T, uint Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
+template <class T, SizeType Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
 using ValueStorage = utilities::ValueStorage<T, Alignment>;
 
-template <class T, uint Size, uint Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
+template <class T, SizeType Size, SizeType Alignment = std::alignment_of_v<std::conditional_t<std::is_void_v<T>, ubyte, T>>>
 using ValueStorageArray = utilities::ValueStorageArray<T, Size, Alignment>;
 
 } // namespace hyperion

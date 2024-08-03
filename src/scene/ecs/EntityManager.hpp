@@ -121,7 +121,7 @@ public:
 
     /*! \brief Checks if the SystemExecutionGroup has a System of the given type.
      *
-     *  \tparam System The type of the System to check for.
+     *  \tparam SystemType The type of the System to check for.
      *
      *  \return True if the SystemExecutionGroup has a System of the given type, false otherwise.
      */
@@ -135,7 +135,7 @@ public:
 
     /*! \brief Adds a System to the SystemExecutionGroup.
      *
-     *  \tparam System The type of the System to add.
+     *  \tparam SystemType The type of the System to add.
      *
      *  \param[in] system_ptr The System to add.
      */
@@ -155,7 +155,7 @@ public:
 
     /*! \brief Removes a System from the SystemExecutionGroup.
      *
-     *  \tparam System The type of the System to remove.
+     *  \tparam SystemType The type of the System to remove.
      *
      *  \return True if the System was removed, false otherwise.
      */

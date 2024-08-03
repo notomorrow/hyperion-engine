@@ -75,16 +75,16 @@ void Game::Init_Internal()
         }
     }
 
+    m_scene = CreateObject<Scene>(
+        Handle<Camera>(),
+        Threads::GetThreadID(ThreadName::THREAD_GAME),
+        Scene::InitInfo {
+            .flags = Scene::InitInfo::SCENE_FLAGS_HAS_TLAS // default it to having a top level acceleration structure for RT
+        }
+    );
+
     m_game_thread->GetSchedulerInstance()->Enqueue([this, window_size](GameCounter::TickUnit delta) -> void
     {
-        m_scene = CreateObject<Scene>(
-            Handle<Camera>(),
-            Threads::GetThreadID(ThreadName::THREAD_GAME),
-            Scene::InitInfo {
-                .flags = Scene::InitInfo::SCENE_FLAGS_HAS_TLAS // default it to having a top level acceleration structure for RT
-            }
-        );
-
         m_scene->SetCamera(CreateObject<Camera>(
             70.0f,
             window_size.width, window_size.height,

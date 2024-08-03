@@ -26,7 +26,7 @@ const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
     { THREAD_RESERVED2, ThreadID { uint32(THREAD_RESERVED2),    HYP_NAME_UNSAFE(ReservedThread2) } }
 };
 
-thread_local ThreadBase *g_current_thread = nullptr;
+thread_local IThread *g_current_thread = nullptr;
 
 // @TODO heirarchical thread IDs so task thread ids can be derived from the main thread id
 #ifdef HYP_ENABLE_THREAD_ID
@@ -35,12 +35,12 @@ thread_local ThreadID g_current_thread_id = ThreadID { uint(THREAD_MAIN), HYP_NA
 static const ThreadID g_current_thread_id = ThreadID { uint(THREAD_MAIN), HYP_NAME_UNSAFE(MainThread) };
 #endif
 
-ThreadBase *Threads::CurrentThreadObject()
+IThread *Threads::CurrentThreadObject()
 {
     return g_current_thread;
 }
 
-void Threads::SetCurrentThreadObject(ThreadBase *thread)
+void Threads::SetCurrentThreadObject(IThread *thread)
 {
     AssertThrow(thread != nullptr);
 

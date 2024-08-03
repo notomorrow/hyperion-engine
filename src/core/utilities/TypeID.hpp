@@ -96,60 +96,38 @@ public:
 
         return *this;
     }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr explicit operator bool() const
+    
+    HYP_FORCE_INLINE constexpr explicit operator bool() const
         { return value != void_value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr bool operator!() const
+    HYP_FORCE_INLINE constexpr bool operator!() const
         { return value == void_value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr bool operator==(const TypeID &other) const
+    HYP_FORCE_INLINE constexpr bool operator==(const TypeID &other) const
         { return value == other.value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr bool operator!=(const TypeID &other) const
+    HYP_FORCE_INLINE constexpr bool operator!=(const TypeID &other) const
         { return value != other.value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr bool operator<(const TypeID &other) const
+    HYP_FORCE_INLINE constexpr bool operator<(const TypeID &other) const
         { return value < other.value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr bool operator<=(const TypeID &other) const
+    HYP_FORCE_INLINE constexpr bool operator<=(const TypeID &other) const
         { return value <= other.value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr bool operator>(const TypeID &other) const
+    HYP_FORCE_INLINE constexpr bool operator>(const TypeID &other) const
         { return value > other.value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr bool operator>=(const TypeID &other) const
+    HYP_FORCE_INLINE constexpr bool operator>=(const TypeID &other) const
         { return value >= other.value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr ValueType Value() const
+    HYP_FORCE_INLINE constexpr ValueType Value() const
         { return value; }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    constexpr HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
         { return HashCode::GetHashCode(value); }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    static constexpr TypeID Void()
+    HYP_FORCE_INLINE static constexpr TypeID Void()
         { return TypeID { void_value }; }
 };
 

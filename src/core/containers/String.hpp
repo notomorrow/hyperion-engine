@@ -599,7 +599,7 @@ public:
         if constexpr (is_wide) {
             return *this;
         } else if constexpr (is_utf8 || is_ansi) {
-            uint32 len = utf::utf8_to_wide(Data(), Data() + Size(), nullptr);
+            uint32 len = utf::utf8_to_wide(reinterpret_cast<const utf::u8char *>(Data()), reinterpret_cast<const utf::u8char *>(Data()) + Size(), nullptr);
 
             if (len == 0) {
                 return String<WIDE_CHAR>::empty;
@@ -608,9 +608,9 @@ public:
             Array<wchar_t> buffer;
             buffer.Resize(len + 1);
 
-            utf::utf8_to_wide(Data(), Data() + Size(), buffer.Data());
+            utf::utf8_to_wide(reinterpret_cast<const utf::u8char *>(Data()), reinterpret_cast<const utf::u8char *>(Data()) + Size(), buffer.Data());
 
-            return String<WIDE_CHAR>(buffer.ToByteView());
+            return String<WIDE_CHAR>(buffer.Data());
         } else if constexpr (is_utf16) {
             uint32 len = utf::utf16_to_wide(Data(), Data() + Size(), nullptr);
 
@@ -623,7 +623,7 @@ public:
 
             utf::utf16_to_wide(Data(), Data() + Size(), buffer.Data());
 
-            return String<WIDE_CHAR>(buffer.ToByteView());
+            return String<WIDE_CHAR>(buffer.Data());
         } else if constexpr (is_utf32) {
             uint32 len = utf::utf32_to_wide(Data(), Data() + Size(), nullptr);
 
@@ -636,7 +636,7 @@ public:
 
             utf::utf32_to_wide(Data(), Data() + Size(), buffer.Data());
 
-            return String<WIDE_CHAR>(buffer.ToByteView());
+            return String<WIDE_CHAR>(buffer.Data());
         } else {
             return String<WIDE_CHAR>::empty;
         }

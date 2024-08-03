@@ -37,7 +37,7 @@ ThreadID ThreadID::CreateDynamicThreadID(Name name)
 
     static ThreadIDGenerator generator;
 
-    return { generator.Next() << 16u, name };
+    return { (generator.Next() << 16u) & THREAD_DYNAMIC, name };
 }
 
 ThreadID ThreadID::Invalid()
@@ -60,7 +60,7 @@ ThreadMask ThreadID::GetMask() const
     return IsDynamic() ? THREAD_DYNAMIC : ThreadMask(value);
 }
 
-HYP_API void SetCurrentThreadObject(ThreadBase *thread)
+HYP_API void SetCurrentThreadObject(IThread *thread)
 {
     Threads::SetCurrentThreadObject(thread);
 }

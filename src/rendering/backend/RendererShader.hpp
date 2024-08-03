@@ -17,7 +17,7 @@
 
 namespace hyperion {
 
-class CompiledShader;
+struct CompiledShader;
 
 namespace renderer {
 
@@ -25,7 +25,7 @@ struct ShaderObject
 {
     ByteBuffer bytes;
 
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
 

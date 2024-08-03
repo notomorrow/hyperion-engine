@@ -37,7 +37,7 @@ public:
     virtual void Render(Frame *frame) override;
 };
 
-class FinalPass final : public FullScreenPass
+class HYP_API FinalPass final : public FullScreenPass
 {
 public:
     friend struct RENDER_COMMAND(SetUITexture);
@@ -67,8 +67,6 @@ public:
     virtual void Render(Frame *frame) override;
 
 private:
-    void RenderUITexture() const;
-
     virtual void Resize_Internal(Extent2D new_size) override;
 
     CompositePass               m_composite_pass;

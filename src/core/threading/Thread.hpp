@@ -80,10 +80,10 @@ struct ThreadID
 static_assert(std::is_trivially_destructible_v<ThreadID>,
     "ThreadID must be trivially destructible! Otherwise thread_local current_thread_id var may  be generated using a wrapper function.");
 
-class ThreadBase
+class IThread
 {
 public:
-    virtual ~ThreadBase() = default;
+    virtual ~IThread() = default;
 
     /*! \brief Get the ID of this thread. This ID is unique to this thread and is used to identify it. */
     virtual const ThreadID &GetID() const = 0;
@@ -95,12 +95,12 @@ public:
     virtual ThreadPriorityValue GetPriority() const = 0;
 };
 
-extern HYP_API void SetCurrentThreadObject(ThreadBase *);
+extern HYP_API void SetCurrentThreadObject(IThread *);
 extern HYP_API void SetCurrentThreadID(const ThreadID &thread_id);
 extern HYP_API void SetCurrentThreadPriority(ThreadPriorityValue priority);
 
 template <class SchedulerType, class ...Args>
-class Thread : public ThreadBase
+class Thread : public IThread
 {
 public:
     using Scheduler = SchedulerType;
@@ -231,6 +231,7 @@ bool Thread<SchedulerType, Args...>::CanJoin() const
 }
 } // namespace threading
 
+using threading::IThread;
 using threading::Thread;
 using threading::ThreadID;
 using threading::ThreadPriorityValue;

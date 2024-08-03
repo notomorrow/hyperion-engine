@@ -31,6 +31,9 @@ extern HYP_API void StopProfilerConnectionThread();
 
 struct HYP_API ProfileScope
 {
+    static ProfileScopeStack &GetProfileScopeStackForCurrentThread();
+    static void ResetForCurrentThread();
+
     ProfileScopeEntry   *entry;
 
     ProfileScope(ANSIStringView label = "", ANSIStringView location = "");
@@ -42,8 +45,6 @@ struct HYP_API ProfileScope
     ProfileScope &operator=(ProfileScope &&other)       = delete;
 
     ~ProfileScope();
-
-    static void ResetForCurrentThread();
 };
 
 #ifdef HYP_ENABLE_PROFILE
