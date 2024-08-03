@@ -8,7 +8,6 @@
 
 #include <rendering/Buffers.hpp>
 #include <rendering/SafeDeleter.hpp>
-#include <rendering/RenderProxy.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
@@ -23,6 +22,7 @@ class Skeleton;
 
 extern HYP_API SafeDeleter *g_safe_deleter;
 
+struct RenderProxy;
 struct DrawCommandData;
 class IndirectDrawState;
 
@@ -32,10 +32,10 @@ struct DrawCallID
 
     using ValueType = uint64;
 
-    ValueType value;
-
     static constexpr uint64 mesh_mask = uint64(0xFFFFFFFF);
     static constexpr uint64 material_mask = uint64(0xFFFFFFFF) << 32;
+
+    ValueType value;
 
     DrawCallID()
         : value(0)

@@ -31,8 +31,7 @@ struct AnimationPlaybackState
     float                   speed = 1.0f;
     float                   current_time = 0.0f;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
 
@@ -50,8 +49,7 @@ struct AnimationComponent
 {
     AnimationPlaybackState  playback_state;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
 

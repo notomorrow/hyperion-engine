@@ -2,11 +2,11 @@
 #ifndef HYPERION_INDIRECT_DRAW_HPP
 #define HYPERION_INDIRECT_DRAW_HPP
 
-#include <rendering/Buffers.hpp>
-#include <rendering/CullData.hpp>
-
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/Array.hpp>
+
+#include <rendering/Buffers.hpp>
+#include <rendering/CullData.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RenderObject.hpp>
@@ -45,13 +45,13 @@ public:
     IndirectDrawState();
     ~IndirectDrawState();
 
-    const GPUBufferRef &GetInstanceBuffer(uint frame_index) const
+    HYP_FORCE_INLINE const GPUBufferRef &GetInstanceBuffer(uint frame_index) const
         { return m_instance_buffers[frame_index]; }
 
-    const GPUBufferRef &GetIndirectBuffer(uint frame_index) const
+    HYP_FORCE_INLINE const GPUBufferRef &GetIndirectBuffer(uint frame_index) const
         { return m_indirect_buffers[frame_index]; }
 
-    const Array<ObjectInstance> &GetInstances() const
+    HYP_FORCE_INLINE const Array<ObjectInstance> &GetInstances() const
         { return m_object_instances; }
 
     void Create();
@@ -86,10 +86,10 @@ public:
     IndirectRenderer &operator=(IndirectRenderer &&) noexcept   = delete;
     ~IndirectRenderer();
 
-    IndirectDrawState &GetDrawState()
+    HYP_FORCE_INLINE IndirectDrawState &GetDrawState()
         { return m_indirect_draw_state; }
 
-    const IndirectDrawState &GetDrawState() const
+    HYP_FORCE_INLINE const IndirectDrawState &GetDrawState() const
         { return m_indirect_draw_state; }
 
     void Create();

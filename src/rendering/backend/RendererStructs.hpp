@@ -383,7 +383,7 @@ struct StencilFunction
 struct PushConstantData
 {
     ubyte   data[128];
-    uint    size;
+    uint32  size;
 
     PushConstantData()
         : data { 0 },
@@ -391,7 +391,7 @@ struct PushConstantData
     {
     }
 
-    PushConstantData(const void *ptr, SizeType size)
+    PushConstantData(const void *ptr, uint32 size)
         : size(size)
     {
         AssertThrowMsg(size <= 128, "Push constant data size exceeds 128 bytes");
@@ -401,7 +401,7 @@ struct PushConstantData
 
     template <class T>
     PushConstantData(const T *value)
-        : size(sizeof(T))
+        : size(uint32(sizeof(T)))
     {
         static_assert(sizeof(T) <= 128, "Push constant data size exceeds 128 bytes");
         static_assert(std::is_trivial_v<T>, "T must be a trivial type");
@@ -419,7 +419,7 @@ struct PushConstantData
     HYP_FORCE_INLINE const void *Data() const
         { return data; }
 
-    HYP_FORCE_INLINE uint Size() const
+    HYP_FORCE_INLINE uint32 Size() const
         { return size; }
 
     HYP_FORCE_INLINE explicit operator bool() const

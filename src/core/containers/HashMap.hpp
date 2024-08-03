@@ -22,8 +22,7 @@ struct HashElement
     Pair<KeyType, ValueType>    pair;
 
     /*! \brief Implement GetHashCode() so GetHashCode() of the entire HashMap can be used. */
-    HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
         { return pair.GetHashCode(); }
 };
 

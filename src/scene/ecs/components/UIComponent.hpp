@@ -33,8 +33,7 @@ struct UIComponent
 {
     RC<UIObject>    ui_object;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         // @TODO
         return HashCode();

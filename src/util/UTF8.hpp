@@ -771,7 +771,7 @@ inline uint32 utf8_to_wide(const u8char *start, const u8char *end, wchar_t *resu
 
 inline uint32 utf16_to_wide(const u16char *start, const u16char *end, wchar_t *result)
 {
-    uint32 len = end - start;
+    const intptr_t len = end - start;
 
     if (result) {
         for (uint32 i = 0; i < len; i++) {
@@ -784,7 +784,7 @@ inline uint32 utf16_to_wide(const u16char *start, const u16char *end, wchar_t *r
 
 inline uint32 utf32_to_wide(const u32char *start, const u32char *end, wchar_t *result)
 {
-    uint32 len = end - start;
+    const intptr_t len = end - start;
 
     if (result) {
         for (uint32 i = 0; i < len; i++) {
@@ -792,7 +792,7 @@ inline uint32 utf32_to_wide(const u32char *start, const u32char *end, wchar_t *r
         }
     }
 
-    return len;
+    return uint32(len);
 }
 
 /*! \brief How to use:

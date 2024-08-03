@@ -531,20 +531,21 @@ struct HashedShaderDefinition
     HashCode            property_set_hash;
     VertexAttributeSet  required_vertex_attributes;
 
-    HYP_FORCE_INLINE
-    bool operator==(const HashedShaderDefinition &other) const
+    HYP_FORCE_INLINE bool operator==(const HashedShaderDefinition &other) const
     {
         return name == other.name
             && property_set_hash == other.property_set_hash
             && required_vertex_attributes == other.required_vertex_attributes;
     }
 
-    HYP_FORCE_INLINE
-    bool operator!=(const HashedShaderDefinition &other) const
-        { return !(*this == other); }
+    HYP_FORCE_INLINE bool operator!=(const HashedShaderDefinition &other) const
+    {
+        return name != other.name
+            || property_set_hash != other.property_set_hash
+            || required_vertex_attributes != other.required_vertex_attributes;
+    }
 
-    HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(name.GetHashCode());
@@ -644,6 +645,15 @@ struct DescriptorUsage
             && descriptor_name == other.descriptor_name
             && flags == other.flags
             && params == other.params;
+    }
+
+    HYP_FORCE_INLINE bool operator!=(const DescriptorUsage &other) const
+    {
+        return slot != other.slot
+            || set_name != other.set_name
+            || descriptor_name != other.descriptor_name
+            || flags != other.flags
+            || params != other.params;
     }
 
     HYP_FORCE_INLINE bool operator<(const DescriptorUsage &other) const

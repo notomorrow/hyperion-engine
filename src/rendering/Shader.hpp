@@ -27,7 +27,7 @@ struct SubShader
     ShaderModuleType    type;
     ShaderObject        spirv;
 
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
 

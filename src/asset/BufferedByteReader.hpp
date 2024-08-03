@@ -66,7 +66,7 @@ public:
             return 0;
         }
 
-        fseek(m_file, offset, SEEK_SET);
+        fseek(m_file, long(offset), SEEK_SET);
         return fread(ptr, 1, count, m_file);
     }
 
@@ -380,8 +380,8 @@ public:
         }
 
         bool stop = false;
-        uint32 total_read = 0;
-        uint32 total_processed = 0;
+        SizeType total_read = 0;
+        SizeType total_processed = 0;
 
         if (!buffered)
         { // not buffered, do it in one pass
@@ -391,7 +391,7 @@ public:
             String accum;
             accum.Reserve(buffer_size);
             
-            for (uint32 i = 0; i < all_bytes.Size(); i++)
+            for (SizeType i = 0; i < all_bytes.Size(); i++)
             {
                 if (all_bytes[i] == '\n')
                 {
@@ -400,7 +400,7 @@ public:
 
                     if (stop)
                     {
-                        const uint32 amount_remaining = total_read - total_processed;
+                        const SizeType amount_remaining = total_read - total_processed;
 
                         if (amount_remaining != 0)
                         {

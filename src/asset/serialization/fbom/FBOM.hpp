@@ -20,7 +20,6 @@
 #include <math/MathUtil.hpp>
 
 #include <asset/ByteWriter.hpp>
-#include <asset/Assets.hpp>
 
 #include <asset/serialization/fbom/FBOMObject.hpp>
 #include <asset/serialization/fbom/FBOMResult.hpp>

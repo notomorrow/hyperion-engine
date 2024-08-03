@@ -4,6 +4,8 @@
 #include <ui/UIButton.hpp>
 #include <ui/UIText.hpp>
 
+#include <asset/Assets.hpp>
+
 #include <util/MeshBuilder.hpp>
 
 #include <math/MathUtil.hpp>

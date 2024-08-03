@@ -157,7 +157,7 @@ public:
     void PerformEnqueuedDeletions();
     void ForceDeleteAll();
 
-    int32 NumEnqueuedDeletions() const
+    HYP_FORCE_INLINE int32 NumEnqueuedDeletions() const
         { return m_num_deletion_entries.Get(MemoryOrder::ACQUIRE); }
 
 private:

@@ -28,7 +28,7 @@ using renderer::Image;
 
 using GBufferFormat = Variant<TextureFormatDefault, InternalFormat, Array<InternalFormat>>;
 
-enum GBufferResourceName : uint
+enum GBufferResourceName : uint32
 {
     GBUFFER_RESOURCE_ALBEDO = 0,
     GBUFFER_RESOURCE_NORMALS = 1,
@@ -101,7 +101,7 @@ public:
     HYP_FORCE_INLINE const FixedArray<GBufferBucket, Bucket::BUCKET_MAX> &GetBuckets() const
         { return m_buckets; }
 
-    HYP_FORCE_INLINE Extent2D GetResolution() const
+    HYP_FORCE_INLINE const Extent2D &GetResolution() const
         { return m_resolution; }
 
     void Create();

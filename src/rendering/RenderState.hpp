@@ -45,18 +45,19 @@ struct RenderBinding
 
     ID<T> id;
 
-    explicit operator bool() const { return bool(id); }
+    HYP_FORCE_INLINE explicit operator bool() const
+        { return bool(id); }
 
-    explicit operator ID<T>() const
+    HYP_FORCE_INLINE explicit operator ID<T>() const
         { return id; }
 
-    bool operator==(const RenderBinding &other) const
+    HYP_FORCE_INLINE bool operator==(const RenderBinding &other) const
         { return id == other.id; }
 
-    bool operator<(const RenderBinding &other) const
+    HYP_FORCE_INLINE bool operator<(const RenderBinding &other) const
         { return id < other.id; }
 
-    bool operator==(ID<T> id) const
+    HYP_FORCE_INLINE bool operator==(ID<T> id) const
         { return this->id == id; }
 };
 
@@ -68,12 +69,13 @@ struct RenderBinding<Scene>
 {
     static const RenderBinding empty;
 
-    ID<Scene> id;
-    RenderEnvironment *render_environment = nullptr;
-    const RenderList *render_list = nullptr;
-    SceneDrawProxy scene;
+    ID<Scene>           id;
+    RenderEnvironment   *render_environment = nullptr;
+    const RenderList    *render_list = nullptr;
+    SceneDrawProxy      scene;
 
-    explicit operator bool() const { return bool(id); }
+    HYP_FORCE_INLINE explicit operator bool() const
+        { return bool(id); }
 };
 
 template <>
@@ -81,10 +83,11 @@ struct RenderBinding<Camera>
 {
     static const RenderBinding empty;
 
-    ID<Camera> id;
+    ID<Camera>      id;
     CameraDrawProxy camera;
 
-    explicit operator bool() const { return bool(id); }
+    HYP_FORCE_INLINE explicit operator bool() const
+        { return bool(id); }
 };
 
 struct RenderState
@@ -97,43 +100,43 @@ struct RenderState
     Stack<ID<EnvProbe>>                                                     env_probe_bindings;
     uint32                                                                  frame_counter = ~0u;
 
-    void AdvanceFrameCounter()
+    HYP_FORCE_INLINE void AdvanceFrameCounter()
         { ++frame_counter; }
 
-    void SetActiveEnvProbe(ID<EnvProbe> id)
+    HYP_FORCE_INLINE void SetActiveEnvProbe(ID<EnvProbe> id)
         { env_probe_bindings.Push(id); }
 
-    void UnsetActiveEnvProbe()
+    HYP_FORCE_INLINE void UnsetActiveEnvProbe()
     {
         if (env_probe_bindings.Any()) {
             env_probe_bindings.Pop();
         }
     }
 
-    ID<EnvProbe> GetActiveEnvProbe() const
+    HYP_FORCE_INLINE ID<EnvProbe> GetActiveEnvProbe() const
         { return env_probe_bindings.Any() ? env_probe_bindings.Top() : ID<EnvProbe>(); }
 
-    void BindEnvGrid(ID<EnvGrid> id)
+    HYP_FORCE_INLINE void BindEnvGrid(ID<EnvGrid> id)
     {
         bound_env_grid = id;
     }
 
-    void UnbindEnvGrid()
+    HYP_FORCE_INLINE void UnbindEnvGrid()
     {
         bound_env_grid = ID<EnvGrid>();
     }
 
-    void BindLight(ID<Light> id, const LightDrawProxy &light)
+    HYP_FORCE_INLINE void BindLight(ID<Light> id, const LightDrawProxy &light)
     {
         lights.Insert(id, light);
     }
 
-    void UnbindLight(ID<Light> id)
+    HYP_FORCE_INLINE void UnbindLight(ID<Light> id)
     {
         lights.Erase(id);
     }
 
-    void BindScene(const Scene *scene)
+    HYP_FORCE_INLINE void BindScene(const Scene *scene)
     {
         if (scene == nullptr) {
             scene_bindings.Push(RenderBinding<Scene>::empty);
@@ -149,14 +152,14 @@ struct RenderState
         }
     }
 
-    void UnbindScene()
+    HYP_FORCE_INLINE void UnbindScene()
     {
         if (scene_bindings.Any()) {
             scene_bindings.Pop();
         }
     }
 
-    const RenderBinding<Scene> &GetScene() const
+    HYP_FORCE_INLINE const RenderBinding<Scene> &GetScene() const
     {
         return scene_bindings.Empty()
             ? RenderBinding<Scene>::empty
@@ -166,7 +169,7 @@ struct RenderState
     void BindCamera(const Camera *camera);
     void UnbindCamera();
 
-    const RenderBinding<Camera> &GetCamera() const
+    HYP_FORCE_INLINE const RenderBinding<Camera> &GetCamera() const
     {
         return camera_bindings.Empty()
             ? RenderBinding<Camera>::empty

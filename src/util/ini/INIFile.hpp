@@ -6,9 +6,7 @@
 #include <core/Defines.hpp>
 #include <core/containers/HashMap.hpp>
 
-#include <asset/BufferedByteReader.hpp>
-
-#include <Config.hpp>
+#include <core/filesystem/FilePath.hpp>
 
 namespace hyperion {
 

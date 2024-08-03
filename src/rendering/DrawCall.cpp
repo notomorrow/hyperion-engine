@@ -3,6 +3,7 @@
 #include <rendering/DrawCall.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/ShaderGlobals.hpp>
+#include <rendering/RenderProxy.hpp>
 
 #include <Engine.hpp>
 

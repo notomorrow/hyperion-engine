@@ -49,51 +49,45 @@ public:
     FullScreenPass &operator=(const FullScreenPass &)   = delete;
     virtual ~FullScreenPass();
 
-    Extent2D GetExtent() const
+    HYP_FORCE_INLINE const Extent2D &GetExtent() const
         { return m_extent; }
 
-    InternalFormat GetFormat() const
+    HYP_FORCE_INLINE InternalFormat GetFormat() const
         { return m_image_format; }
 
     const AttachmentRef &GetAttachment(uint attachment_index) const;
 
-    const CommandBufferRef &GetCommandBuffer(uint index) const
+    HYP_FORCE_INLINE const CommandBufferRef &GetCommandBuffer(uint index) const
         { return m_command_buffers[index]; }
 
-    const FramebufferRef &GetFramebuffer() const
+    HYP_FORCE_INLINE const FramebufferRef &GetFramebuffer() const
         { return m_framebuffer; }
 
-    const ShaderRef &GetShader() const
+    HYP_FORCE_INLINE const ShaderRef &GetShader() const
         { return m_shader; }
 
     void SetShader(const ShaderRef &shader);
 
-    const Handle<Mesh> &GetQuadMesh() const
+    HYP_FORCE_INLINE const Handle<Mesh> &GetQuadMesh() const
         { return m_full_screen_quad; }
 
-    const Handle<RenderGroup> &GetRenderGroup() const
+    HYP_FORCE_INLINE const Handle<RenderGroup> &GetRenderGroup() const
         { return m_render_group; }
 
-    PushConstantData &GetPushConstants()
-        { return m_push_constant_data; }
-
-    const PushConstantData &GetPushConstants() const
-        { return m_push_constant_data; }
-
-    void SetPushConstants(const PushConstantData &pc)
+    HYP_FORCE_INLINE void SetPushConstants(const PushConstantData &pc)
         { m_push_constant_data = pc; }
 
-    void SetPushConstants(const void *ptr, SizeType size)
+    HYP_FORCE_INLINE void SetPushConstants(const void *ptr, SizeType size)
         { SetPushConstants(PushConstantData(ptr, size)); }
 
-    const BlendFunction &GetBlendFunction() const
+    HYP_FORCE_INLINE const BlendFunction &GetBlendFunction() const
         { return m_blend_function; }
 
     /*! \brief Sets the blend function of the render pass.
         Must be set before Create() is called. */
     void SetBlendFunction(const BlendFunction &blend_function);
 
-    const Optional<DescriptorTableRef> &GetDescriptorTable() const
+    HYP_FORCE_INLINE const Optional<DescriptorTableRef> &GetDescriptorTable() const
         { return m_descriptor_table; }
 
     /*! \brief Resizes the full screen pass to the new size.

@@ -3,6 +3,8 @@
 #include <rendering/render_components/sky/SkydomeRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
+#include <asset/Assets.hpp>
+
 #include <scene/ecs/EntityManager.hpp>
 
 #include <Engine.hpp>

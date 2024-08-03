@@ -26,7 +26,8 @@ struct TerrainPatchNeighbor
 {
     TerrainPatchCoord coord { };
 
-    Vec2f GetCenter() const { return Vec2f(coord) - 0.5f; }
+    HYP_FORCE_INLINE Vec2f GetCenter() const
+        { return Vec2f(coord) - 0.5f; }
 };
 
 struct TerrainPatchInfo
@@ -38,8 +39,7 @@ struct TerrainPatchInfo
     float                               unload_timer { 0.0f };
     FixedArray<TerrainPatchNeighbor, 8> neighbors { };
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 
@@ -64,11 +64,10 @@ struct TerrainPatchComponent
 {
     TerrainPatchInfo    patch_info;
 
-    Vec2f GetCenter() const
+    HYP_FORCE_INLINE Vec2f GetCenter() const
         { return Vec2f(patch_info.coord) - 0.5f; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 
@@ -87,8 +86,7 @@ struct TerrainComponent
 
     TerrainComponentFlags   flags = TERRAIN_COMPONENT_FLAG_NONE;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 

@@ -28,6 +28,7 @@
 #include <scene/world_grid/WorldGrid.hpp>
 
 #include <asset/AssetBatch.hpp>
+#include <asset/Assets.hpp>
 
 #include <ui/UIObject.hpp>
 #include <ui/UIText.hpp>

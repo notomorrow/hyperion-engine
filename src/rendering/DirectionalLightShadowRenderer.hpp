@@ -38,13 +38,20 @@ public:
     ShadowPass &operator=(const ShadowPass &other)  = delete;
     virtual ~ShadowPass() override;
 
-    const Handle<Light> &GetLight() const { return m_light; }
+    HYP_FORCE_INLINE const Handle<Light> &GetLight() const
+        { return m_light; }
 
-    RenderList &GetRenderListStatics() { return m_render_list_statics; }
-    const RenderList &GetRenderListStatics() const { return m_render_list_statics; }
+    HYP_FORCE_INLINE RenderList &GetRenderListStatics()
+        { return m_render_list_statics; }
 
-    RenderList &GetRenderListDynamics() { return m_render_list_dynamics; }
-    const RenderList &GetRenderListDynamics() const { return m_render_list_dynamics; }
+    HYP_FORCE_INLINE  const RenderList &GetRenderListStatics() const
+        { return m_render_list_statics; }
+
+    HYP_FORCE_INLINE RenderList &GetRenderListDynamics()
+        { return m_render_list_dynamics; }
+
+    HYP_FORCE_INLINE const RenderList &GetRenderListDynamics() const
+        { return m_render_list_dynamics; }
 
     void SetLight(const Handle<Light> &light)
     {
@@ -55,16 +62,22 @@ public:
         }
     }
 
-    ShadowMode GetShadowMode() const { return m_shadow_mode; }
-    void SetShadowMode(ShadowMode shadow_mode) { m_shadow_mode = shadow_mode; }
+    HYP_FORCE_INLINE ShadowMode GetShadowMode() const
+        { return m_shadow_mode; }
 
-    const Vector3 &GetOrigin() const { return m_origin; }
-    void SetOrigin(const Vector3 &origin) { m_origin = origin; }
+    HYP_FORCE_INLINE void SetShadowMode(ShadowMode shadow_mode)
+        { m_shadow_mode = shadow_mode; }
 
-    uint GetShadowMapIndex() const
+    HYP_FORCE_INLINE const Vec3f &GetOrigin() const
+        { return m_origin; }
+
+    HYP_FORCE_INLINE void SetOrigin(const Vec3f &origin)
+        { m_origin = origin; }
+
+    HYP_FORCE_INLINE uint32 GetShadowMapIndex() const
         { return m_shadow_map_index; }
 
-    void SetShadowMapIndex(uint index)
+    HYP_FORCE_INLINE void SetShadowMapIndex(uint index)
     {
         m_shadow_map_index = index;
 
@@ -73,10 +86,10 @@ public:
         }
     }
 
-    const Handle<Texture> &GetShadowMap() const
+    HYP_FORCE_INLINE const Handle<Texture> &GetShadowMap() const
         { return m_shadow_map_all; }
 
-    ThreadSignal &GetShouldRerenderStaticObjectsSignal()
+    HYP_FORCE_INLINE ThreadSignal &GetShouldRerenderStaticObjectsSignal()
         { return m_should_rerender_static_objects_signal; }
 
     void CreateShader();
@@ -97,7 +110,7 @@ private:
     RenderList                          m_render_list_statics;
     RenderList                          m_render_list_dynamics;
     Vec3f                               m_origin;
-    uint                                m_shadow_map_index;
+    uint32                              m_shadow_map_index;
     
     Handle<Texture>                     m_shadow_map_statics;
     Handle<Texture>                     m_shadow_map_dynamics;
@@ -117,16 +130,16 @@ public:
     DirectionalLightShadowRenderer &operator=(const DirectionalLightShadowRenderer &other) = delete;
     virtual ~DirectionalLightShadowRenderer();
 
-    ShadowPass *GetPass() const
+    HYP_FORCE_INLINE ShadowPass *GetPass() const
         { return m_shadow_pass.Get(); }
 
-    const Handle<Camera> &GetCamera() const
+    HYP_FORCE_INLINE const Handle<Camera> &GetCamera() const
         { return m_camera; }
 
-    const BoundingBox &GetAABB() const
+    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
         { return m_aabb; }
 
-    void SetAABB(const BoundingBox &aabb)
+    HYP_FORCE_INLINE void SetAABB(const BoundingBox &aabb)
         { m_aabb = aabb; }
 
     void Init();     // init on render thread

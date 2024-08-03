@@ -785,7 +785,7 @@ struct GetSplitIndices_Impl
             if constexpr (Count == 0) {
                 split_indices[0] = Pair<SizeType, SizeType> { 0, String.Size() - 1 /* -1 for NUL char */ };
             } else {
-                std::array<char, Count> delimiter_indices = { };
+                std::array<SizeType, Count> delimiter_indices = { };
 
                 SizeType index = 0;
 

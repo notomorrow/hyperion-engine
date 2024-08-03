@@ -33,7 +33,7 @@ public:
     SSRRenderer(const Extent2D &extent, SSRRendererOptions options);
     ~SSRRenderer();
 
-    bool IsRendered() const
+    HYP_FORCE_INLINE bool IsRendered() const
         { return m_is_rendered; }
 
     void Create();

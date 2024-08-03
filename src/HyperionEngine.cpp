@@ -2,6 +2,8 @@
 
 #include <HyperionEngine.hpp>
 
+#include <asset/Assets.hpp>
+
 #include <dotnet/DotNetSystem.hpp>
 
 #include <scene/ecs/ComponentInterface.hpp>

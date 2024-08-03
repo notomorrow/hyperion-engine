@@ -44,10 +44,8 @@ struct MaterialAttributes
     FaceCullMode                        cull_faces = FaceCullMode::BACK;
     EnumFlags<MaterialAttributeFlags>   flags = MaterialAttributeFlags::DEPTH_WRITE | MaterialAttributeFlags::DEPTH_TEST;
     StencilFunction                     stencil_function;
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool operator==(const MaterialAttributes &other) const
+    
+    HYP_FORCE_INLINE bool operator==(const MaterialAttributes &other) const
     {
         return shader_definition == other.shader_definition
             && bucket == other.bucket
@@ -57,15 +55,19 @@ struct MaterialAttributes
             && flags == other.flags
             && stencil_function == other.stencil_function;
     }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool operator!=(const MaterialAttributes &other) const
-        { return !(*this == other); }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    
+    HYP_FORCE_INLINE bool operator!=(const MaterialAttributes &other) const
+    {
+        return shader_definition != other.shader_definition
+            || bucket != other.bucket
+            || fill_mode != other.fill_mode
+            || blend_function != other.blend_function
+            || cull_faces != other.cull_faces
+            || flags != other.flags
+            || stencil_function != other.stencil_function;
+    }
+    
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(shader_definition.GetHashCode());

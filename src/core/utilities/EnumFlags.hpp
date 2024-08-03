@@ -43,116 +43,94 @@ struct EnumFlags
     EnumFlags &operator=(EnumFlags &&other) noexcept    = default;
     ~EnumFlags()                                        = default;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr explicit operator bool() const
+    HYP_FORCE_INLINE constexpr explicit operator bool() const
         { return bool(value); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr operator EnumType() const
+    HYP_FORCE_INLINE constexpr operator EnumType() const
         { return static_cast<EnumType>(value); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr operator UnderlyingType() const
+    HYP_FORCE_INLINE constexpr operator UnderlyingType() const
         { return value; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr bool operator==(const EnumFlags &other) const
+    HYP_FORCE_INLINE constexpr bool operator==(const EnumFlags &other) const
         { return value == other.value; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr bool operator==(Enum rhs) const
+    HYP_FORCE_INLINE constexpr bool operator==(Enum rhs) const
         { return *this == EnumFlags<Enum>(rhs); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr bool operator!=(const EnumFlags &other) const
+    HYP_FORCE_INLINE constexpr bool operator!=(const EnumFlags &other) const
         { return value != other.value; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr bool operator!=(Enum rhs) const
+    HYP_FORCE_INLINE constexpr bool operator!=(Enum rhs) const
         { return *this != EnumFlags<Enum>(rhs); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr EnumFlags operator~() const
+    HYP_FORCE_INLINE constexpr EnumFlags operator~() const
         { return EnumFlags(~value); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr EnumFlags operator|(const EnumFlags &other) const
+    HYP_FORCE_INLINE constexpr EnumFlags operator|(const EnumFlags &other) const
         { return EnumFlags(value | other.value); }
 
-    HYP_FORCE_INLINE
-    EnumFlags &operator|=(const EnumFlags &other)
+    HYP_FORCE_INLINE EnumFlags &operator|=(const EnumFlags &other)
     {
         value |= other.value;
 
         return *this;
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr EnumFlags operator|(EnumType flag) const
+    HYP_FORCE_INLINE constexpr EnumFlags operator|(EnumType flag) const
         { return EnumFlags(value | static_cast<UnderlyingType>(flag)); }
 
-    HYP_FORCE_INLINE
-    EnumFlags &operator|=(EnumType flag)
+    HYP_FORCE_INLINE EnumFlags &operator|=(EnumType flag)
     {
         value |= static_cast<UnderlyingType>(flag);
 
         return *this;
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr EnumFlags operator&(const EnumFlags &other) const
+    HYP_FORCE_INLINE constexpr EnumFlags operator&(const EnumFlags &other) const
         { return EnumFlags(value & other.value); }
 
-    HYP_FORCE_INLINE
-    EnumFlags &operator&=(const EnumFlags &other)
+    HYP_FORCE_INLINE EnumFlags &operator&=(const EnumFlags &other)
     {
         value &= other.value;
 
         return *this;
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr EnumFlags operator&(EnumType flag) const
+    HYP_FORCE_INLINE constexpr EnumFlags operator&(EnumType flag) const
         { return EnumFlags(value & static_cast<UnderlyingType>(flag)); }
 
-    HYP_FORCE_INLINE
-    EnumFlags &operator&=(EnumType flag)
+    HYP_FORCE_INLINE EnumFlags &operator&=(EnumType flag)
     {
         value &= static_cast<UnderlyingType>(flag);
 
         return *this;
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr EnumFlags operator^(const EnumFlags &other) const
+    HYP_FORCE_INLINE constexpr EnumFlags operator^(const EnumFlags &other) const
         { return EnumFlags(value ^ other.value); }
 
-    HYP_FORCE_INLINE
-    EnumFlags &operator^=(const EnumFlags &other)
+    HYP_FORCE_INLINE EnumFlags &operator^=(const EnumFlags &other)
     {
         value ^= other.value;
 
         return *this;
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr EnumFlags operator^(EnumType flag) const
+    HYP_FORCE_INLINE constexpr EnumFlags operator^(EnumType flag) const
         { return EnumFlags(value ^ static_cast<UnderlyingType>(flag)); }
 
-    HYP_FORCE_INLINE
-    EnumFlags &operator^=(EnumType flag)
+    HYP_FORCE_INLINE EnumFlags &operator^=(EnumType flag)
     {
         value ^= static_cast<UnderlyingType>(flag);
 
         return *this;
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr bool operator[](EnumType flag) const
+    HYP_FORCE_INLINE constexpr bool operator[](EnumType flag) const
         { return (value & static_cast<UnderlyingType>(flag)) != 0; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    constexpr HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
         { return HashCode::GetHashCode(value); }
 };
 

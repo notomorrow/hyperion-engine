@@ -15,11 +15,10 @@ struct WorldGridPatchComponent
 {
     WorldGridPatchInfo  patch_info;
 
-    Vec2f GetCenter() const
+    HYP_FORCE_INLINE Vec2f GetCenter() const
         { return Vec2f(patch_info.coord) - 0.5f; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 

@@ -84,21 +84,18 @@ public:
      *
      * \return The mutation state.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    DataMutationState GetMutationState() const
+    HYP_FORCE_INLINE DataMutationState GetMutationState() const
         { return m_mutation_state; }
 
     /*! \brief Get the type of the light.
      *
      * \return The type.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    LightType GetType() const
+    HYP_FORCE_INLINE LightType GetType() const
         { return m_type; }
 
     /*! \brief Set the type of the light. */
-    HYP_FORCE_INLINE
-    void SetType(LightType type)
+    HYP_FORCE_INLINE void SetType(LightType type)
     {
         if (m_type == type) {
             return;
@@ -112,16 +109,14 @@ public:
      *
      * \return The position or direction.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Vec3f GetPosition() const
+    HYP_FORCE_INLINE const Vec3f &GetPosition() const
         { return m_position; }
 
     /*! \brief Set the position for the light. For directional lights, this is the direction the light is pointing.
      *
      * \param position The position or direction to set.
      */
-    HYP_FORCE_INLINE
-    void SetPosition(Vec3f position)
+    HYP_FORCE_INLINE void SetPosition(const Vec3f &position)
     {
         if (m_position == position) {
             return;
@@ -135,16 +130,14 @@ public:
      *
      * \return The normal.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Vec3f GetNormal() const
+    HYP_FORCE_INLINE const Vec3f &GetNormal() const
         { return m_normal; }
 
     /*! \brief Set the normal for the light. This is used only for area lights.
      *
      * \param normal The normal to set.
      */
-    HYP_FORCE_INLINE
-    void SetNormal(Vec3f normal)
+    HYP_FORCE_INLINE void SetNormal(const Vec3f &normal)
     {
         if (m_normal == normal) {
             return;
@@ -158,16 +151,14 @@ public:
      *
      * \return The area size. (x = width, y = height)
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Vec2f GetAreaSize() const
+    HYP_FORCE_INLINE const Vec2f &GetAreaSize() const
         { return m_area_size; }
 
     /*! \brief Set the area size for the light. This is used only for area lights.
      *
      * \param area_size The area size to set. (x = width, y = height)
      */
-    HYP_FORCE_INLINE
-    void SetAreaSize(Vec2f area_size)
+    HYP_FORCE_INLINE void SetAreaSize(const Vec2f &area_size)
     {
         if (m_area_size == area_size) {
             return;
@@ -181,16 +172,14 @@ public:
      *
      * \return The color.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Color GetColor() const
+    HYP_FORCE_INLINE const Color &GetColor() const
         { return m_color; }
 
     /*! \brief Set the color for the light.
      *
      * \param color The color to set.
      */
-    HYP_FORCE_INLINE
-    void SetColor(Color color)
+    HYP_FORCE_INLINE void SetColor(const Color &color)
     {
         if (m_color == color) {
             return;
@@ -204,16 +193,14 @@ public:
      *
      * \return The intensity.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    float GetIntensity() const
+    HYP_FORCE_INLINE float GetIntensity() const
         { return m_intensity; }
 
     /*! \brief Set the intensity for the light. This is used to determine how bright the light is.
      *
      * \param intensity The intensity to set.
      */
-    HYP_FORCE_INLINE
-    void SetIntensity(float intensity)
+    HYP_FORCE_INLINE void SetIntensity(float intensity)
     {
         if (m_intensity == intensity) {
             return;
@@ -227,8 +214,7 @@ public:
      *
      * \return The radius.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    float GetRadius() const
+    HYP_FORCE_INLINE float GetRadius() const
     {
         switch (m_type) {
         case LightType::DIRECTIONAL:
@@ -244,8 +230,7 @@ public:
      *
      * \param radius The radius to set.
      */
-    HYP_FORCE_INLINE
-    void SetRadius(float radius)
+    HYP_FORCE_INLINE void SetRadius(float radius)
     {
         if (m_type != LightType::POINT) {
             return;
@@ -263,16 +248,14 @@ public:
      *
      * \return The falloff.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    float GetFalloff() const
+    HYP_FORCE_INLINE float GetFalloff() const
         { return m_falloff; }
 
     /*! \brief Set the falloff for the light. This is used to determine how the light intensity falls off with distance (point lights only).
      *
      * \param falloff The falloff to set.
      */
-    HYP_FORCE_INLINE
-    void SetFalloff(float falloff)
+    HYP_FORCE_INLINE void SetFalloff(float falloff)
     {
         if (m_type != LightType::POINT) {
             return;
@@ -290,16 +273,14 @@ public:
      *
      * \return The spotlight angles.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Vec2f GetSpotAngles() const
+    HYP_FORCE_INLINE const Vec2f &GetSpotAngles() const
         { return m_spot_angles; }
 
     /*! \brief Set the angles for the spotlight (x = outer, y = inner). This is used to determine the angle of the light cone (spot lights only).
      *
      * \param spot_angles The angles to set for the spotlight.
      */
-    HYP_FORCE_INLINE
-    void SetSpotAngles(Vec2f spot_angles)
+    HYP_FORCE_INLINE void SetSpotAngles(const Vec2f &spot_angles)
     {
         if (m_type != LightType::SPOT) {
             return;
@@ -317,16 +298,14 @@ public:
      *
      * \return The shadow map index.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    uint GetShadowMapIndex() const
+    HYP_FORCE_INLINE uint32 GetShadowMapIndex() const
         { return m_shadow_map_index; }
 
     /*! \brief Set the shadow map index for the light. This is used when sampling shadow maps for the particular light.
      *
      * \param shadow_map_index The shadow map index to set.
      */
-    HYP_FORCE_INLINE
-    void SetShadowMapIndex(uint shadow_map_index)
+    HYP_FORCE_INLINE void SetShadowMapIndex(uint32 shadow_map_index)
     {
         if (shadow_map_index == m_shadow_map_index) {
             return;
@@ -340,8 +319,7 @@ public:
      *
      * \return The material handle associated with the Light.
      */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const Handle<Material> &GetMaterial() const
+    HYP_FORCE_INLINE const Handle<Material> &GetMaterial() const
         { return m_material; }
 
     /*! \brief Sets the material handle associated with the Light. Used for textured area lights.
@@ -355,7 +333,6 @@ public:
      * \param camera_id The camera to check visibility for.
      * \return True if the light is visible, false otherwise.
      */
-    HYP_NODISCARD
     bool IsVisible(ID<Camera> camera_id) const;
 
     /*! \brief Set the visibility of the light to the camera.
@@ -365,14 +342,11 @@ public:
      */
     void SetIsVisible(ID<Camera> camera_id, bool is_visible);
 
-    HYP_NODISCARD
     BoundingBox GetAABB() const;
 
-    HYP_NODISCARD
     BoundingSphere GetBoundingSphere() const;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const LightDrawProxy &GetProxy() const
+    HYP_FORCE_INLINE const LightDrawProxy &GetProxy() const
         { return m_proxy; }
 
     void Init();
@@ -391,7 +365,7 @@ protected:
     float               m_radius;
     float               m_falloff;
     Vec2f               m_spot_angles;
-    uint                m_shadow_map_index;
+    uint32              m_shadow_map_index;
     Handle<Material>    m_material;
 
 private:
@@ -423,12 +397,10 @@ public:
     {
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Vec3f GetDirection() const
+    HYP_FORCE_INLINE const Vec3f &GetDirection() const
         { return GetPosition(); }
 
-    HYP_FORCE_INLINE
-    void SetDirection(Vec3f direction)
+    HYP_FORCE_INLINE void SetDirection(Vec3f direction)
         { SetPosition(direction); }
 };
 
@@ -482,12 +454,10 @@ public:
         SetSpotAngles(angles);
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Vec3f GetDirection() const
+    HYP_FORCE_INLINE const Vec3f &GetDirection() const
         { return GetNormal(); }
 
-    HYP_FORCE_INLINE
-    void SetDirection(Vec3f direction)
+    HYP_FORCE_INLINE void SetDirection(const Vec3f &direction)
         { SetNormal(direction); }
 };
 

@@ -13,8 +13,7 @@ struct TransformComponent
 {
     Transform   transform;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 

@@ -275,13 +275,13 @@ public:
         Mutex::Guard guard(m_mutex);
 #endif
 
-        const int num_removed = m_procs.Size();
+        const SizeType num_removed = m_procs.Size();
 
         m_procs.Clear();
 
         m_id_generator.Reset();
 
-        return num_removed;
+        return int(num_removed);
     }
 
     /*! \brief Remove a DelegateHandler from the Delegate

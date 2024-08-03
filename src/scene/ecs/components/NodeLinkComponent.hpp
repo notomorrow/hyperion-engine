@@ -15,8 +15,7 @@ struct NodeLinkComponent
 {
     Weak<Node>  node;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         return HashCode();
     }

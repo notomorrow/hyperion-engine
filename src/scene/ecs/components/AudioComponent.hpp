@@ -39,11 +39,9 @@ struct AudioPlaybackState
     float               speed = 1.0f;
     float               current_time = 0.0f;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
-
         hash_code.Add(status);
         hash_code.Add(loop_mode);
         hash_code.Add(speed);
@@ -63,11 +61,9 @@ struct AudioComponent
     Vec3f                   last_position;
     GameCounter::TickUnit   timer = 0.0f;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
-
         hash_code.Add(audio_source);
         hash_code.Add(playback_state);
 

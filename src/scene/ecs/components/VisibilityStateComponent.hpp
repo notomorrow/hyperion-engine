@@ -30,8 +30,7 @@ struct VisibilityStateComponent
 
     HashCode                last_aabb_hash;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         return HashCode();
     }

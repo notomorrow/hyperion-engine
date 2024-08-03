@@ -66,16 +66,16 @@ public:
     TemporalBlending &operator=(const TemporalBlending &other) = delete;
     ~TemporalBlending();
 
-    TemporalBlendTechnique GetTechnique() const
+    HYP_FORCE_INLINE TemporalBlendTechnique GetTechnique() const
         { return m_technique; }
 
-    TemporalBlendFeedback GetFeedback() const
+    HYP_FORCE_INLINE TemporalBlendFeedback GetFeedback() const
         { return m_feedback; }
 
-    const Handle<Texture> &GetResultTexture() const
+    HYP_FORCE_INLINE const Handle<Texture> &GetResultTexture() const
         { return m_result_texture; }
 
-    const Handle<Texture> &GetHistoryTexture() const
+    HYP_FORCE_INLINE const Handle<Texture> &GetHistoryTexture() const
         { return m_history_texture; }
 
     void ResetProgressiveBlending();

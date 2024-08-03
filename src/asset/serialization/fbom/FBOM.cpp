@@ -4,7 +4,6 @@
 #include <asset/serialization/fbom/marshals/HypClassInstanceMarshal.hpp>
 
 #include <asset/ByteWriter.hpp>
-#include <asset/Assets.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>

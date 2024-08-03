@@ -12,6 +12,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <asset/Assets.hpp>
 #include <asset/ByteWriter.hpp>
 #include <asset/BufferedByteReader.hpp>
 #include <asset/serialization/fbom/FBOM.hpp>

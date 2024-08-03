@@ -9,6 +9,10 @@
 
 using namespace hyperion;
 
+namespace hyperion {
+struct AssetBatch;
+} // namespace hyperion
+
 class SampleStreamer : public Game
 {
 public:

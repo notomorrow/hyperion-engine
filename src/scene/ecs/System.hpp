@@ -176,7 +176,7 @@ public:
 
     virtual ANSIStringView GetName() const override final
     {
-        return { TypeNameHelper<Derived, true>::value };
+        return ANSIStringView(TypeNameHelper<Derived, true>::value);
     }
 
     virtual void Process(GameCounter::TickUnit delta) override = 0;

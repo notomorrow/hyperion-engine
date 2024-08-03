@@ -54,10 +54,10 @@ public:
 
     virtual void CreateDescriptors() override;
 
-    PostProcessingStage GetStage() const
+    HYP_FORCE_INLINE PostProcessingStage GetStage() const
         { return m_stage; }
 
-    uint GetEffectIndex() const
+    HYP_FORCE_INLINE uint GetEffectIndex() const
         { return m_effect_index; }
 
 protected:

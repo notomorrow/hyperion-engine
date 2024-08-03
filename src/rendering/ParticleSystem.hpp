@@ -18,9 +18,6 @@
 
 #include <rendering/backend/RenderObject.hpp>
 
-#include <atomic>
-#include <mutex>
-
 namespace hyperion {
 
 using renderer::Result;

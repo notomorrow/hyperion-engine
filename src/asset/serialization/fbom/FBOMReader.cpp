@@ -3,6 +3,8 @@
 #include <asset/serialization/fbom/FBOM.hpp>
 #include <asset/serialization/fbom/FBOMArray.hpp>
 
+#include <asset/BufferedByteReader.hpp>
+
 #include <core/utilities/Format.hpp>
 
 #include <core/logging/LogChannels.hpp>
@@ -20,7 +22,7 @@ struct Formatter<StringType, fbom::FBOMVersion>
 {
     auto operator()(const fbom::FBOMVersion &value) const
     {
-        return Format< StaticString("{}.{}.{}") >(value.GetMajor(), value.GetMinor(), value.GetPatch());
+        return Format< HYP_STATIC_STRING("{}.{}.{}") >(value.GetMajor(), value.GetMinor(), value.GetPatch());
     }
 };
 

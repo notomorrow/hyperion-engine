@@ -196,8 +196,10 @@ if(Bullet_FOUND)
     )
 endif()
 
-set(CURL_LIBRARY /opt/homebrew/opt/curl/lib/libcurl.dylib)
-set(CURL_INCLUDE_DIR /opt/homebrew/opt/curl/include)
+if(APPLE)
+    set(CURL_LIBRARY /opt/homebrew/opt/curl/lib/libcurl.dylib)
+    set(CURL_INCLUDE_DIR /opt/homebrew/opt/curl/include)
+endif()
 
 find_package(CURL)
 # include_directories(${CURL_INCLUDE_DIR})

@@ -4,7 +4,6 @@
 
 #include <asset/AssetLoader.hpp>
 #include <asset/AssetCache.hpp>
-#include <asset/BufferedByteReader.hpp>
 
 #include <util/fs/FsUtil.hpp>
 

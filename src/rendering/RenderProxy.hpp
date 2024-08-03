@@ -94,52 +94,42 @@ public:
 
     /*! \brief Checks if the RenderProxyList already has a proxy for the given entity
      *  from the previous frame */
-    HYP_FORCE_INLINE
-    bool HasProxyForEntity(ID<Entity> entity) const
+    HYP_FORCE_INLINE bool HasProxyForEntity(ID<Entity> entity) const
         { return m_previous_entities.Test(entity.ToIndex()); }
 
-    HYP_FORCE_INLINE
-    const Bitset &GetEntities() const
+    HYP_FORCE_INLINE const Bitset &GetEntities() const
         { return m_previous_entities; }
 
-    HYP_FORCE_INLINE
-    const Bitset &GetNextEntities() const
+    HYP_FORCE_INLINE const Bitset &GetNextEntities() const
         { return m_next_entities; }
 
-    HYP_FORCE_INLINE
-    FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies()
+    HYP_FORCE_INLINE FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies()
         { return m_proxies; }
 
-    HYP_FORCE_INLINE
-    const FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies() const
+    HYP_FORCE_INLINE const FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies() const
         { return m_proxies; }
 
-    HYP_FORCE_INLINE
-    FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies()
+    HYP_FORCE_INLINE FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies()
         { return m_changed_proxies; }
 
-    HYP_FORCE_INLINE
-    const FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies() const
+    HYP_FORCE_INLINE const FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies() const
         { return m_changed_proxies; }
 
-    HYP_FORCE_INLINE
-    Bitset GetAddedEntities() const
+    HYP_FORCE_INLINE Bitset GetAddedEntities() const
     {
-        const SizeType new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
+        const uint32 new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
 
         return Bitset(m_next_entities).Resize(new_num_bits) & ~Bitset(m_previous_entities).Resize(new_num_bits);
     }
 
-    HYP_FORCE_INLINE
-    Bitset GetRemovedEntities() const
+    HYP_FORCE_INLINE Bitset GetRemovedEntities() const
     {
-        const SizeType new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
+        const uint32 new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
 
         return Bitset(m_previous_entities).Resize(new_num_bits) & ~Bitset(m_next_entities).Resize(new_num_bits);
     }
 
-    HYP_FORCE_INLINE
-    const Bitset &GetChangedEntities() const
+    HYP_FORCE_INLINE const Bitset &GetChangedEntities() const
         { return m_changed_entities; }
 
 private:

@@ -87,13 +87,15 @@ struct RENDER_COMMAND(UploadMeshData) : renderer::RenderCommand
                 auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
                 staging_buffer_indices->Copy(device, packed_indices_size, index_data.Data());
 
-                commands.Push([&](CommandBuffer *cmd) {
+                commands.Push([&](CommandBuffer *cmd)
+                {
                     vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
 
                     HYPERION_RETURN_OK;
                 });
 
-                commands.Push([&](CommandBuffer *cmd) {
+                commands.Push([&](CommandBuffer *cmd)
+                {
                     ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
 
                     HYPERION_RETURN_OK;
@@ -309,18 +311,22 @@ void Mesh::Init()
         m_streamed_mesh_data.Reset(new StreamedMeshData());
     }
 
-    auto ref = m_streamed_mesh_data->AcquireRef();
-    const MeshData &mesh_data = ref->GetMeshData();
+    { // upload mesh data
+        auto ref = m_streamed_mesh_data->AcquireRef();
+        const MeshData &mesh_data = ref->GetMeshData();
 
-    m_indices_count = uint32(mesh_data.indices.Size());
+        m_indices_count = uint32(mesh_data.indices.Size());
 
-    PUSH_RENDER_COMMAND(
-        UploadMeshData,
-        BuildVertexBuffer(GetVertexAttributes(), mesh_data),
-        mesh_data.indices,
-        m_vbo,
-        m_ibo
-    );
+        PUSH_RENDER_COMMAND(
+            UploadMeshData,
+            BuildVertexBuffer(GetVertexAttributes(), mesh_data),
+            mesh_data.indices,
+            m_vbo,
+            m_ibo
+        );
+    }
+    
+    m_streamed_mesh_data->Unpage();
 
     SetReady(true);
 }

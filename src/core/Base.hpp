@@ -108,31 +108,25 @@ public:
     HYP_FORCE_INLINE void SetFlags(ComponentFlags flags, bool enable = true)
         { m_init_info.flags = enable ? (m_init_info.flags | flags) : (m_init_info.flags & ~flags); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    ID<InnerType> GetID() const
+    HYP_FORCE_INLINE ID<InnerType> GetID() const
         { return m_id; }
 
     /* To be called from ObjectHolder<Type> */
-    HYP_FORCE_INLINE
-    void SetID(ID<InnerType> id)
+    HYP_FORCE_INLINE void SetID(ID<InnerType> id)
         { m_id = id; }
 
     /*! \brief Get assigned name of the object */
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Name GetName() const
+    HYP_FORCE_INLINE Name GetName() const
         { return m_name; }
 
     /*! \brief Set the assigned name of the object */
-    HYP_FORCE_INLINE
-    void SetName(Name name)
+    HYP_FORCE_INLINE void SetName(Name name)
         { m_name = name; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool IsInitCalled() const
+    HYP_FORCE_INLINE bool IsInitCalled() const
         { return m_init_state.Get(MemoryOrder::RELAXED) & INIT_STATE_INIT_CALLED; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool IsReady() const
+    HYP_FORCE_INLINE bool IsReady() const
         { return m_init_state.Get(MemoryOrder::RELAXED) & INIT_STATE_READY; }
 
     void Init()
@@ -140,8 +134,7 @@ public:
         m_init_state.BitOr(INIT_STATE_INIT_CALLED, MemoryOrder::RELAXED);
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(type_name);
@@ -162,8 +155,7 @@ protected:
         }
     }
 
-    HYP_FORCE_INLINE
-    void AssertReady() const
+    HYP_FORCE_INLINE void AssertReady() const
     {
         AssertThrowMsg(
             IsReady(),
@@ -174,8 +166,7 @@ protected:
         );
     }
 
-    HYP_FORCE_INLINE
-    void AssertIsInitCalled() const
+    HYP_FORCE_INLINE void AssertIsInitCalled() const
     {
         AssertThrowMsg(
             IsInitCalled(),

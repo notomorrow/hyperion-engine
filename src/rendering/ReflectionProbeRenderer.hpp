@@ -31,7 +31,7 @@ public:
     ReflectionProbeRenderer &operator=(const ReflectionProbeRenderer &other)    = delete;
     virtual ~ReflectionProbeRenderer();
 
-    const Handle<EnvProbe> &GetEnvProbe() const
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbe() const
         { return m_env_probe; }
 
     void Init();

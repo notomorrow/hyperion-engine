@@ -28,8 +28,7 @@ struct RigidBodyComponent
     RigidBodyComponentFlags     flags = RIGID_BODY_COMPONENT_FLAG_NONE;
     HashCode                    transform_hash_code;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 

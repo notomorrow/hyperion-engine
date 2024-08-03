@@ -31,8 +31,7 @@ struct LightComponent
     void SetLight(const Handle<Light> &light)
         { this->light = light; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 

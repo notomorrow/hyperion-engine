@@ -18,6 +18,8 @@
 
 #include <Game.hpp>
 
+#include <asset/Assets.hpp>
+
 #include <util/profiling/ProfileScope.hpp>
 #include <util/MeshBuilder.hpp>
 #include <util/fs/FsUtil.hpp>
