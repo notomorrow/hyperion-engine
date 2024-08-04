@@ -423,8 +423,6 @@ Result DescriptorSet<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device)
         write.pBufferInfo = &descriptor_element_info.buffer_info;
     }
 
-    HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Updating descriptor set {} ({})", m_layout.GetName().LookupString(), (void*)m_platform_impl.handle);
-
     vkUpdateDescriptorSets(
         device->GetDevice(),
         uint32(vk_write_descriptor_sets.Size()),

@@ -519,13 +519,13 @@ void Engine::PreFrameUpdate(Frame *frame)
     // otherwise we'll have an issue when render commands expect the descriptor sets to be there.
     m_material_descriptor_set_manager.UpdatePendingDescriptorSets(frame);
 
-    HYPERION_ASSERT_RESULT(renderer::RenderCommands::Flush());
-
-    m_deferred_renderer->GetPostProcessing().PerformUpdates();
-
     m_material_descriptor_set_manager.Update(frame);
 
     HYPERION_ASSERT_RESULT(m_global_descriptor_table->Update(m_instance->GetDevice(), frame->GetFrameIndex()));
+
+    m_deferred_renderer->GetPostProcessing().PerformUpdates();
+
+    HYPERION_ASSERT_RESULT(renderer::RenderCommands::Flush());
 
     RenderObjectDeleter<renderer::Platform::CURRENT>::Iterate();
 
