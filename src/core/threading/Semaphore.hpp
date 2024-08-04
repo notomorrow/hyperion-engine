@@ -31,6 +31,18 @@ struct AtomicSemaphoreImpl
     {
     }
 
+    AtomicSemaphoreImpl(const AtomicSemaphoreImpl &other)                   = delete;
+    AtomicSemaphoreImpl &operator=(const AtomicSemaphoreImpl &other)        = delete;
+
+    AtomicSemaphoreImpl(AtomicSemaphoreImpl &&other) noexcept
+        : value(other.value.Get(MemoryOrder::SEQUENTIAL))
+    {
+    }
+    
+    AtomicSemaphoreImpl &operator=(AtomicSemaphoreImpl &&other) noexcept    = delete;
+
+    ~AtomicSemaphoreImpl()                                                  = default;
+
     void Acquire()
     {
         while (value.Get(MemoryOrder::SEQUENTIAL) > 0) {
@@ -59,7 +71,6 @@ struct AtomicSemaphoreImpl
     }
 };
 
-// @FIXME 
 template <class T>
 struct ConditionVarSemaphoreImpl
 {
@@ -75,6 +86,18 @@ struct ConditionVarSemaphoreImpl
         : value(initial_value)
     {
     }
+
+    ConditionVarSemaphoreImpl(const ConditionVarSemaphoreImpl &other)                   = delete;
+    ConditionVarSemaphoreImpl &operator=(const ConditionVarSemaphoreImpl &other)        = delete;
+
+    ConditionVarSemaphoreImpl(ConditionVarSemaphoreImpl &&other) noexcept
+        : value(other.value)
+    {
+    }
+    
+    ConditionVarSemaphoreImpl &operator=(ConditionVarSemaphoreImpl &&other) noexcept    = delete;
+
+    ~ConditionVarSemaphoreImpl()                                                        = default;
 
     void Acquire()
     {
@@ -130,14 +153,19 @@ public:
     {
     }
 
-    Semaphore(const Semaphore &other) = delete;
-    Semaphore &operator=(const Semaphore &other) = delete;
-    Semaphore(Semaphore &&other) = delete;
-    Semaphore &operator=(Semaphore &&other) = delete;
-    ~Semaphore() = default;
+    Semaphore(const Semaphore &other)                   = delete;
+    Semaphore &operator=(const Semaphore &other)        = delete;
+
+    Semaphore(Semaphore &&other) noexcept
+        : m_impl(std::move(other.m_impl))
+    {
+    }
+
+    Semaphore &operator=(Semaphore &&other) noexcept    = delete;
+    ~Semaphore()                                        = default;
 
     HYP_FORCE_INLINE void Acquire()
-        { m_impl.Acquire();  }
+        { m_impl.Acquire(); }
 
     HYP_FORCE_INLINE CounterType Release(CounterType delta = 1)
         { return m_impl.Release(delta); }

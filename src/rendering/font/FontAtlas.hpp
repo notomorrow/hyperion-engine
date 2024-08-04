@@ -27,11 +27,9 @@ struct HYP_API FontAtlasTextureSet
 
     ~FontAtlasTextureSet();
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const Handle<Texture> &GetMainAtlas() const
+    HYP_FORCE_INLINE const Handle<Texture> &GetMainAtlas() const
         { return main_atlas; }
     
-    HYP_NODISCARD
     Handle<Texture> GetAtlasForPixelSize(uint pixel_size) const;
 
     void AddAtlas(uint pixel_size, Handle<Texture> texture, bool is_main_atlas = false);
@@ -61,20 +59,16 @@ public:
 
     HYP_API void Render();
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const GlyphMetricsBuffer &GetGlyphMetrics() const
+    HYP_FORCE_INLINE const GlyphMetricsBuffer &GetGlyphMetrics() const
         { return m_glyph_metrics; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const RC<FontAtlasTextureSet> &GetAtlases() const
+    HYP_FORCE_INLINE const RC<FontAtlasTextureSet> &GetAtlases() const
         { return m_atlases; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    Extent2D GetCellDimensions() const
+    HYP_FORCE_INLINE const Extent2D &GetCellDimensions() const
         { return m_cell_dimensions; }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const SymbolList &GetSymbolList() const
+    HYP_FORCE_INLINE const SymbolList &GetSymbolList() const
         { return m_symbol_list; }
 
     HYP_API Optional<Glyph::Metrics> GetGlyphMetrics(FontFace::WChar symbol) const;

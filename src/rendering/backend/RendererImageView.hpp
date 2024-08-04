@@ -34,20 +34,14 @@ public:
     HYP_API ImageView(ImageView &&other) noexcept;
     HYP_API ImageView &operator=(ImageView &&other) noexcept;
     HYP_API ~ImageView();
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    ImageViewPlatformImpl<PLATFORM> &GetPlatformImpl()
+    
+    HYP_FORCE_INLINE ImageViewPlatformImpl<PLATFORM> &GetPlatformImpl()
         { return m_platform_impl; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const ImageViewPlatformImpl<PLATFORM> &GetPlatformImpl() const
+    
+    HYP_FORCE_INLINE const ImageViewPlatformImpl<PLATFORM> &GetPlatformImpl() const
         { return m_platform_impl; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    uint NumFaces() const
+    
+    HYP_FORCE_INLINE uint NumFaces() const
         { return m_num_faces; }
 
     HYP_API bool IsCreated() const;

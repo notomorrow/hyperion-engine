@@ -9,7 +9,7 @@
     },
     "rt": {
       "reflections": {
-        "enabled": false
+        "enabled": true
       },
       "path_tracer": {
         "enabled": false
@@ -17,7 +17,7 @@
       "gi": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
       "enabled": true

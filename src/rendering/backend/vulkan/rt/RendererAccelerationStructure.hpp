@@ -87,6 +87,8 @@ public:
     HYP_FORCE_INLINE void SetMaterialIndex(uint material_index)
         { m_material_index = material_index; }
 
+    HYP_API bool IsCreated() const;
+
     HYP_API Result Create(Device<PLATFORM> *device, Instance<PLATFORM> *instance);
     /* Remove from the parent acceleration structure */
     HYP_API Result Destroy(Device<PLATFORM> *device);

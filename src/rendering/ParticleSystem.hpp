@@ -46,22 +46,22 @@ public:
     ParticleSpawner &operator=(const ParticleSpawner &other)    = delete;
     ~ParticleSpawner();
 
-    const ParticleSpawnerParams &GetParams() const
+    HYP_FORCE_INLINE const ParticleSpawnerParams &GetParams() const
         { return m_params; }
 
-    const GPUBufferRef &GetParticleBuffer() const
+    HYP_FORCE_INLINE const GPUBufferRef &GetParticleBuffer() const
         { return m_particle_buffer; }
 
-    const GPUBufferRef &GetIndirectBuffer() const
+    HYP_FORCE_INLINE const GPUBufferRef &GetIndirectBuffer() const
         { return m_indirect_buffer; }
 
-    const Handle<RenderGroup> &GetRenderGroup() const
+    HYP_FORCE_INLINE const Handle<RenderGroup> &GetRenderGroup() const
         { return m_render_group; }
 
-    const ComputePipelineRef &GetComputePipeline() const
+    HYP_FORCE_INLINE const ComputePipelineRef &GetComputePipeline() const
         { return m_update_particles; }
 
-    BoundingSphere GetBoundingSphere() const
+    HYP_FORCE_INLINE BoundingSphere GetBoundingSphere() const
         { return BoundingSphere(m_params.origin, m_params.radius); }
 
     void Init();
@@ -83,8 +83,7 @@ private:
     Bitmap<1>               m_noise_map;
 };
 
-class HYP_API ParticleSystem
-    : public BasicObject<ParticleSystem>
+class HYP_API ParticleSystem : public BasicObject<ParticleSystem>
 {
 public:
     ParticleSystem();
@@ -92,10 +91,10 @@ public:
     ParticleSystem &operator=(const ParticleSystem &other)  = delete;
     ~ParticleSystem();
 
-    ThreadSafeContainer<ParticleSpawner> &GetParticleSpawners()
+    HYP_FORCE_INLINE ThreadSafeContainer<ParticleSpawner> &GetParticleSpawners()
         { return m_particle_spawners; }
 
-    const ThreadSafeContainer<ParticleSpawner> &GetParticleSpawners() const
+    HYP_FORCE_INLINE const ThreadSafeContainer<ParticleSpawner> &GetParticleSpawners() const
         { return m_particle_spawners; }
 
     void Init();
@@ -109,18 +108,18 @@ private:
     void CreateBuffers();
     void CreateCommandBuffers();
 
-    Handle<Mesh> m_quad_mesh;
+    Handle<Mesh>                                                                                        m_quad_mesh;
 
     // for zeroing out data
-    GPUBufferRef m_staging_buffer;
+    GPUBufferRef                                                                                        m_staging_buffer;
 
     // for each frame in flight - have an array of command buffers to use
     // for async command buffer recording. size will never change once created
     FixedArray<FixedArray<CommandBufferRef, num_async_rendering_command_buffers>, max_frames_in_flight> m_command_buffers;
 
-    ThreadSafeContainer<ParticleSpawner> m_particle_spawners;
+    ThreadSafeContainer<ParticleSpawner>                                                                m_particle_spawners;
 
-    uint32 m_counter;
+    uint32                                                                                              m_counter;
 };
 
 } // namespace hyperion

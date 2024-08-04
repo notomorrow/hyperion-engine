@@ -36,6 +36,7 @@ class Camera;
 */
 struct OctantID
 {
+    // This bit is reserved for invalid octants -- We use 3 bits for each index, leaving 1 bit left on a 64-bit integer
     static constexpr uint64 invalid_bits = 1ull << 63;
     static constexpr SizeType max_depth = 64 / 3;
 
@@ -59,44 +60,34 @@ struct OctantID
     OctantID &operator=(OctantID &&other) noexcept  = default;
     ~OctantID()                                     = default;
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool IsInvalid() const // This bit is reserved for invalid octants -- We use 3 bits for each index, leaving 1 bit left on a 64-bit integer
+    HYP_FORCE_INLINE bool IsInvalid() const
         { return index_bits & invalid_bits; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool operator==(const OctantID &other) const
+    HYP_FORCE_INLINE bool operator==(const OctantID &other) const
         { return index_bits == other.index_bits && depth == other.depth; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool operator!=(const OctantID &other) const
+    HYP_FORCE_INLINE bool operator!=(const OctantID &other) const
         { return !(*this == other); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    uint8 GetIndex(uint8 depth) const
+    HYP_FORCE_INLINE uint8 GetIndex(uint8 depth) const
         { return (index_bits >> (uint64(depth) * 3ull)) & 0x7; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    uint8 GetIndex() const
+    HYP_FORCE_INLINE uint8 GetIndex() const
         { return GetIndex(depth); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    uint8 GetDepth() const
+    HYP_FORCE_INLINE uint8 GetDepth() const
         { return depth; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool IsSiblingOf(OctantID other) const
+    HYP_FORCE_INLINE bool IsSiblingOf(OctantID other) const
         { return depth == other.depth && (index_bits & ~(~0ull << (uint64(depth) * 3ull))) == (other.index_bits & ~(~0ull << (uint64(depth) * 3ull))); }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool IsChildOf(OctantID other) const
+    HYP_FORCE_INLINE bool IsChildOf(OctantID other) const
         { return depth > other.depth && (index_bits & ~(~0ull << (uint64(other.depth) * 3ull))) == other.index_bits; }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    bool IsParentOf(OctantID other) const
+    HYP_FORCE_INLINE bool IsParentOf(OctantID other) const
         { return depth < other.depth && index_bits == (other.index_bits & ~(~0ull << (uint64(depth) * 3ull))); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    OctantID GetParent() const
+    HYP_FORCE_INLINE OctantID GetParent() const
     {
         if (depth == 0) {
             return OctantID::Invalid();
@@ -105,8 +96,7 @@ struct OctantID
         return OctantID(index_bits & ~(~0ull << (uint64(depth) * 3ull)), depth - 1);
     }
     
-    HYP_NODISCARD HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(index_bits);
@@ -171,8 +161,8 @@ public:
         Result(const Result &other)
             : result(other.result), message(other.message), error_code(other.error_code) {}
 
-        HYP_FORCE_INLINE
-        operator bool() const { return result == OCTREE_OK; }
+        HYP_FORCE_INLINE operator bool() const
+            { return result == OCTREE_OK; }
     };
 
     using InsertResult = Pair<Result, OctantID>;
@@ -273,19 +263,19 @@ public:
      *  \internal */
     void SetEntityManager(RC<EntityManager> entity_manager);
 
-    BoundingBox &GetAABB()
+    HYP_FORCE_INLINE BoundingBox &GetAABB()
         { return m_aabb; }
 
-    const BoundingBox &GetAABB() const
+    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
         { return m_aabb; }
 
-    const Array<Entry> &GetEntries() const
+    HYP_FORCE_INLINE const Array<Entry> &GetEntries() const
         { return m_entries; }
 
-    OctantID GetOctantID() const
+    HYP_FORCE_INLINE OctantID GetOctantID() const
         { return m_octant_id; }
 
-    const FixedArray<Octant, 8> &GetOctants() const
+    HYP_FORCE_INLINE const FixedArray<Octant, 8> &GetOctants() const
         { return m_octants; }
 
     /*! \brief Get the child (nested) octant with the specified index
@@ -294,13 +284,13 @@ public:
     */
     Octree *GetChildOctant(OctantID octant_id);
 
-    bool IsDivided() const
+    HYP_FORCE_INLINE bool IsDivided() const
         { return m_is_divided; }
 
     /*! \brief Get a hashcode of all entities currently in this Octant that have the given tags (child octants affect this too)
     */
     template <EntityTag... tags>
-    HashCode GetEntryListHash() const
+    HYP_FORCE_INLINE HashCode GetEntryListHash() const
     {
         const uint32 mask = ((tags == EntityTag::NONE ? 0 : (1u << (uint32(tags) - 1))) | ...);
 
@@ -310,7 +300,7 @@ public:
 
     /*! \brief Get a hashcode of all entities currently in this Octant that match the mask tag (child octants affect this too)
     */
-    HashCode GetEntryListHash(uint32 entity_tag_mask) const
+    HYP_FORCE_INLINE HashCode GetEntryListHash(uint32 entity_tag_mask) const
     {
         AssertThrow(entity_tag_mask < m_entry_hashes.Size());
 
@@ -343,7 +333,7 @@ public:
 
     void PerformUpdates();
 
-    OctreeState *GetState() const
+    HYP_FORCE_INLINE OctreeState *GetState() const
         { return m_state; }
 
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;
@@ -368,10 +358,10 @@ private:
         });
     }
 
-    bool IsRoot() const
+    HYP_FORCE_INLINE bool IsRoot() const
         { return m_parent == nullptr; }
 
-    bool Empty() const
+    HYP_FORCE_INLINE bool Empty() const
         { return m_entries.Empty(); }
     
     void SetParent(Octree *parent);

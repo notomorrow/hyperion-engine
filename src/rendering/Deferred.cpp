@@ -1407,7 +1407,9 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     
     const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
 
-    const bool do_particles = environment && environment->IsReady();
+    const bool is_render_environment_ready = environment && environment->IsReady();
+
+    const bool do_particles = true;
     const bool do_gaussian_splatting = false;//environment && environment->IsReady();
 
     const bool use_ssr = !g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.reflections.enabled").ToBool()
@@ -1454,13 +1456,15 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     deferred_data.screen_height = g_engine->GetGPUInstance()->GetSwapchain()->extent.height;
 
     CollectDrawCalls(frame);
+    
+    if (is_render_environment_ready) {
+        if (do_particles) {
+            environment->GetParticleSystem()->UpdateParticles(frame);
+        }
 
-    if (do_particles) {
-        environment->GetParticleSystem()->UpdateParticles(frame);
-    }
-
-    if (do_gaussian_splatting) {
-        environment->GetGaussianSplatting()->UpdateSplats(frame);
+        if (do_gaussian_splatting) {
+            environment->GetGaussianSplatting()->UpdateSplats(frame);
+        }
     }
 
     { // indirect lighting
@@ -1512,16 +1516,18 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         m_reflection_probe_pass->Render(frame);
     }
 
-    if (use_rt_radiance) {
-        DebugMarker marker(primary, "RT Radiance");
+    if (is_render_environment_ready) {
+        if (use_rt_radiance) {
+            DebugMarker marker(primary, "RT Radiance");
 
-        environment->RenderRTRadiance(frame);
-    }
+            environment->RenderRTRadiance(frame);
+        }
 
-    if (use_ddgi) {
-        DebugMarker marker(primary, "DDGI");
+        if (use_ddgi) {
+            DebugMarker marker(primary, "DDGI");
 
-        environment->RenderDDGIProbes(frame);
+            environment->RenderDDGIProbes(frame);
+        }
     }
 
     if (use_ssr) { // screen space reflection
@@ -1579,16 +1585,18 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         // begin translucent with forward rendering
         RenderTranslucentObjects(frame);
 
-        if (do_particles) {
-            environment->GetParticleSystem()->Render(frame);
-        }
+        if (is_render_environment_ready) {
+            if (do_particles) {
+                environment->GetParticleSystem()->Render(frame);
+            }
 
-        if (do_gaussian_splatting) {
-            environment->GetGaussianSplatting()->Render(frame);
-        }
+            if (do_gaussian_splatting) {
+                environment->GetGaussianSplatting()->Render(frame);
+            }
 
-        if (has_set_active_env_probe) {
-            g_engine->GetRenderState().UnsetActiveEnvProbe();
+            if (has_set_active_env_probe) {
+                g_engine->GetRenderState().UnsetActiveEnvProbe();
+            }
         }
 
         RenderSkybox(frame);

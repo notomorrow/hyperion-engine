@@ -248,7 +248,7 @@ Material::~Material()
             EnqueueDescriptorSetDestroy();
         }
 
-        HYP_SYNC_RENDER();
+        //HYP_SYNC_RENDER();
     }
 }
 
@@ -892,9 +892,9 @@ void MaterialDescriptorSetManager::RemoveMaterial(ID<Material> id)
     
         while (true) {
             const auto pending_addition_it = m_pending_addition.FindIf([id](const auto &item)
-                {
-                    return item.first == id;
-                });
+            {
+                return item.first == id;
+            });
 
             if (pending_addition_it == m_pending_addition.End()) {
                 break;

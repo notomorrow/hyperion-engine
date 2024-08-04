@@ -554,6 +554,11 @@ void Texture::Readback() const
     PUSH_RENDER_COMMAND(Texture_Readback, m_image, result_byte_buffer);
     HYP_SYNC_RENDER();
 
+    // sanity check -- temp
+    const SizeType expected = m_image->GetByteSize();
+    const SizeType real = result_byte_buffer.Size();
+    AssertThrowMsg(expected == real, "Expected %llu == %llu", expected, real);
+
     RC<StreamedTextureData> streamed_data(new StreamedTextureData(TextureData {
         GetTextureDesc(),
         std::move(result_byte_buffer)

@@ -129,14 +129,14 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
 #endif
 
     for (auto it = batch->executors.Begin(); it != batch->executors.End(); ++it) {
-        TaskExecutor<> *executor = it;
-        AssertThrow(executor != nullptr);
+        //TaskExecutor<> *executor = it;
+        //AssertThrow(executor != nullptr);
 
         TaskThread *task_thread = GetNextTaskThread(pool);
         AssertThrow(task_thread != nullptr);
 
         const TaskID task_id = task_thread->GetSchedulerInstance()->EnqueueTaskExecutor(
-            executor,
+            &(*it),
             &batch->semaphore,
             next_batch != nullptr
                 ? [this, next_batch, num_enqueued = batch->num_enqueued]() { EnqueueBatch(next_batch); }

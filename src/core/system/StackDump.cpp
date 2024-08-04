@@ -67,7 +67,7 @@ static Array<String> CreatePlatformStackTrace(uint depth)
         symbol->MaxNameLen = MAX_SYM_NAME;
 
         if (SymFromAddr(process, address, &displacementSym, symbol)) {
-            char line[MAX_PATH];
+            char line[2000];
             sprintf_s(line, "%s - 0x%0llX", symbol->Name, symbol->Address);
             stack_trace.PushBack(line);
         } else {

@@ -88,29 +88,29 @@ struct EnvProbeIndex
     EnvProbeIndex &operator=(EnvProbeIndex &&other) noexcept    = default;
     ~EnvProbeIndex()                                            = default;
 
-    uint GetProbeIndex() const
+    HYP_FORCE_INLINE uint GetProbeIndex() const
     {
         return (position.x * grid_size.height * grid_size.depth)
             + (position.y * grid_size.depth)
             + position.z;
     }
 
-    bool operator<(uint value) const
+    HYP_FORCE_INLINE bool operator<(uint value) const
         { return GetProbeIndex() < value; }
 
-    bool operator==(uint value) const
+    HYP_FORCE_INLINE bool operator==(uint value) const
         { return GetProbeIndex() == value; }
 
-    bool operator!=(uint value) const
+    HYP_FORCE_INLINE bool operator!=(uint value) const
         { return GetProbeIndex() != value; }
 
-    bool operator<(const EnvProbeIndex &other) const
+    HYP_FORCE_INLINE bool operator<(const EnvProbeIndex &other) const
         { return GetProbeIndex() < other.GetProbeIndex(); }
 
-    bool operator==(const EnvProbeIndex &other) const
+    HYP_FORCE_INLINE bool operator==(const EnvProbeIndex &other) const
         { return GetProbeIndex() == other.GetProbeIndex(); }
 
-    bool operator!=(const EnvProbeIndex &other) const
+    HYP_FORCE_INLINE bool operator!=(const EnvProbeIndex &other) const
         { return GetProbeIndex() != other.GetProbeIndex(); }
 
     HashCode GetHashCode() const
@@ -161,63 +161,41 @@ public:
     EnvProbe(const EnvProbe &other)             = delete;
     EnvProbe &operator=(const EnvProbe &other)  = delete;
     ~EnvProbe();
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    EnvProbeType GetEnvProbeType() const
+    
+    HYP_FORCE_INLINE EnvProbeType GetEnvProbeType() const
         { return m_env_probe_type; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool IsReflectionProbe() const
+    
+    HYP_FORCE_INLINE bool IsReflectionProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_REFLECTION; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool IsSkyProbe() const
+    
+    HYP_FORCE_INLINE bool IsSkyProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SKY; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool IsShadowProbe() const
+    
+    HYP_FORCE_INLINE bool IsShadowProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SHADOW; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool IsAmbientProbe() const
+    
+    HYP_FORCE_INLINE bool IsAmbientProbe() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool IsControlledByEnvGrid() const
+    
+    HYP_FORCE_INLINE bool IsControlledByEnvGrid() const
         { return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const EnvProbeIndex &GetBoundIndex() const
+    
+    HYP_FORCE_INLINE const EnvProbeIndex &GetBoundIndex() const
         { return m_bound_index; }
 
-    HYP_FORCE_INLINE
-    void SetBoundIndex(const EnvProbeIndex &bound_index)
+    HYP_FORCE_INLINE void SetBoundIndex(const EnvProbeIndex &bound_index)
         { m_bound_index = bound_index; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const Matrix4 &GetProjectionMatrix() const
+    
+    HYP_FORCE_INLINE const Matrix4 &GetProjectionMatrix() const
         { return m_projection_matrix; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const FixedArray<Matrix4, 6> &GetViewMatrices() const
+    
+    HYP_FORCE_INLINE const FixedArray<Matrix4, 6> &GetViewMatrices() const
         { return m_view_matrices; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const BoundingBox &GetAABB() const
+    
+    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
         { return m_aabb; }
 
-    HYP_FORCE_INLINE
-    void SetAABB(const BoundingBox &aabb)
+    HYP_FORCE_INLINE void SetAABB(const BoundingBox &aabb)
     {
         if (m_aabb != aabb) {
             m_aabb = aabb;
@@ -225,10 +203,8 @@ public:
             SetNeedsUpdate(true);
         }
     }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    Vec3f GetOrigin() const
+    
+    HYP_FORCE_INLINE Vec3f GetOrigin() const
     {
         // ambient probes use the min point of the aabb as the origin,
         // so it can blend between 7 other probes
@@ -238,28 +214,17 @@ public:
             return m_aabb.GetCenter();
         }
     }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    Handle<Texture> &GetTexture()
+    
+    HYP_FORCE_INLINE const Handle<Texture> &GetTexture() const
         { return m_texture; }
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const Handle<Texture> &GetTexture() const
-        { return m_texture; }
-
-    HYP_FORCE_INLINE
-    void SetNeedsUpdate(bool needs_update)
+    HYP_FORCE_INLINE void SetNeedsUpdate(bool needs_update)
         { m_needs_update = needs_update; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool NeedsUpdate() const
+    
+    HYP_FORCE_INLINE bool NeedsUpdate() const
         { return m_needs_update; }
 
-    HYP_FORCE_INLINE
-    void SetNeedsRender(bool needs_render)
+    HYP_FORCE_INLINE void SetNeedsRender(bool needs_render)
     {
         if (needs_render) {
             m_needs_render_counter.Set(1, MemoryOrder::RELAXED);
@@ -268,20 +233,18 @@ public:
         }
     }
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool NeedsRender() const
+    HYP_FORCE_INLINE bool NeedsRender() const
     {
         const int32 counter = m_needs_render_counter.Get(MemoryOrder::RELAXED);
 
         return counter > 0;
     }
 
+    HYP_FORCE_INLINE const EnvProbeDrawProxy &GetProxy() const
+        { return m_proxy; }
+
     bool IsVisible(ID<Camera> camera_id) const;
     void SetIsVisible(ID<Camera> camera_id, bool is_visible);
-
-    const EnvProbeDrawProxy &GetProxy() const
-        { return m_proxy; }
 
     void Init();
     void EnqueueBind() const;

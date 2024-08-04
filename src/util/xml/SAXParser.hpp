@@ -3,14 +3,10 @@
 #ifndef HYPERION_SAX_PARSER_HPP
 #define HYPERION_SAX_PARSER_HPP
 
-#include <asset/BufferedByteReader.hpp>
 #include <core/containers/HashMap.hpp>
 #include <core/containers/String.hpp>
-#include <core/utilities/Pair.hpp>
-#include <util/fs/FsUtil.hpp>
 
-#include <fstream>
-#include <iostream>
+#include <core/filesystem/FilePath.hpp>
 
 namespace hyperion {
 namespace xml {

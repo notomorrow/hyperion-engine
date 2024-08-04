@@ -423,7 +423,7 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 
     for (uint index = 0; index < m_env_probe_collection.num_probes; index++) {
         // Don't worry about using the indirect index
-        Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(index);
+        const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(index);
         AssertThrow(probe.IsValid());
 
         probe->Update(delta);

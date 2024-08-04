@@ -19,9 +19,9 @@ class HYP_API SkydomeRenderer : public RenderComponent<SkydomeRenderer>
 {
 public:
     SkydomeRenderer(Name name, Extent2D dimensions = { 1024, 1024 });
-    virtual ~SkydomeRenderer() = default;
+    virtual ~SkydomeRenderer() override = default;
 
-    const Handle<Texture> &GetCubemap() const
+    HYP_FORCE_INLINE const Handle<Texture> &GetCubemap() const
         { return m_cubemap; }
 
     void Init();

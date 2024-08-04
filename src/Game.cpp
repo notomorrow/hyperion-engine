@@ -300,7 +300,7 @@ void Game::OnFrameBegin(Frame *frame)
     g_engine->GetRenderState().AdvanceFrameCounter();
     g_engine->GetRenderState().BindScene(m_scene.Get());
 
-    if (m_scene->GetCamera()) {
+    if (m_scene.IsValid() && m_scene->GetCamera()) {
         g_engine->GetRenderState().BindCamera(m_scene->GetCamera().Get());
     }
 }
@@ -311,7 +311,7 @@ void Game::OnFrameEnd(Frame *frame)
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    if (m_scene->GetCamera()) {
+    if (m_scene.IsValid() && m_scene->GetCamera()) {
         g_engine->GetRenderState().UnbindCamera();
     }
 

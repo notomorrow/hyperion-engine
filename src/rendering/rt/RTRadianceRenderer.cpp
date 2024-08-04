@@ -147,7 +147,12 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
     m_uniform_buffers[frame->GetFrameIndex()]->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
 
     if (m_updates[frame->GetFrameIndex()]) {
-        m_raytracing_pipeline->GetDescriptorTable()->Update(g_engine->GetGPUDevice(), frame->GetFrameIndex());
+        const DescriptorSetRef &descriptor_set = m_raytracing_pipeline->GetDescriptorTable()
+            ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
+
+        AssertThrow(descriptor_set.IsValid());
+
+        HYPERION_ASSERT_RESULT(descriptor_set->Update(g_engine->GetGPUDevice()));
 
         m_updates[frame->GetFrameIndex()] = RT_RADIANCE_UPDATES_NONE;
     }

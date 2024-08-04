@@ -38,7 +38,8 @@ struct WorldGridPatchNeighbor
 {
     Vec2i   coord { 0, 0 };
 
-    Vec2f GetCenter() const { return Vec2f(coord) - 0.5f; }
+    HYP_FORCE_INLINE Vec2f GetCenter() const
+        { return Vec2f(coord) - 0.5f; }
 };
 
 struct WorldGridPatchUpdate
@@ -56,8 +57,7 @@ struct WorldGridPatchInfo
     float                                   unload_timer { 0.0f };
     FixedArray<WorldGridPatchNeighbor, 8>   neighbors { };
 
-    HYP_FORCE_INLINE
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hash_code;
 
@@ -202,16 +202,13 @@ public:
     WorldGrid &operator=(WorldGrid &&other)         = delete;
     ~WorldGrid();
 
-    HYP_FORCE_INLINE
-    const WorldGridParams &GetParams() const
+    HYP_FORCE_INLINE const WorldGridParams &GetParams() const
         { return m_params; }
 
-    HYP_FORCE_INLINE
-    const WeakHandle<Scene> &GetScene() const
+    HYP_FORCE_INLINE const WeakHandle<Scene> &GetScene() const
         { return m_scene; }
 
-    HYP_FORCE_INLINE
-    const WorldGridState &GetState() const
+    HYP_FORCE_INLINE const WorldGridState &GetState() const
         { return m_state; }
 
     void AddPlugin(int priority, RC<WorldGridPlugin> &&plugin);
@@ -221,7 +218,7 @@ public:
     void Shutdown();
     void Update(GameCounter::TickUnit delta);
 
-    HashCode GetHashCode() const
+    HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(m_params);

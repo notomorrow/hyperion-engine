@@ -34,8 +34,8 @@ struct LoaderResult
         ERR_EOF
     };
 
-    Status status = Status::INVALID;
-    String message;
+    Status  status = Status::INVALID;
+    String  message;
 
     constexpr explicit operator bool() const { return status == Status::OK; }
     constexpr bool operator==(Status status) const { return this->status == status; }

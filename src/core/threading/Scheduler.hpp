@@ -28,7 +28,7 @@ namespace threading {
 class HYP_API SchedulerBase
 {
 public:
-    using SemaphoreType = Semaphore<int32, detail::ConditionVarSemaphoreImpl<int32>>;
+    using SemaphoreType = TaskSemaphore;
 
     SchedulerBase()                                             = delete;
     SchedulerBase(const SchedulerBase &other)                   = delete;
@@ -50,7 +50,7 @@ public:
 
     virtual void Await(TaskID id) = 0;
     virtual bool Dequeue(TaskID id) = 0;
-    virtual bool TakeOwnershipOfTask(TaskID id, TaskExecutorBase *executor) = 0;
+    virtual bool TakeOwnershipOfTask(TaskID id, ITaskExecutor *executor) = 0;
     virtual bool IsWaitingOnTaskFromThread(ThreadID thread_id) const = 0;
 
 protected:
@@ -193,12 +193,10 @@ public:
     Scheduler &operator=(Scheduler &&other) noexcept    = default;
     virtual ~Scheduler() override                       = default;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    uint NumEnqueued() const
+    HYP_FORCE_INLINE uint NumEnqueued() const
         { return m_num_enqueued.Get(MemoryOrder::ACQUIRE); }
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const Array<ScheduledTask> &GetEnqueuedTasks() const
+    HYP_FORCE_INLINE const Array<ScheduledTask> &GetEnqueuedTasks() const
         { return m_queue; }
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
@@ -216,6 +214,7 @@ public:
         ScheduledTask scheduled_task;
         scheduled_task.executor = executor;
         scheduled_task.owns_executor = (flags & TaskEnqueueFlags::FIRE_AND_FORGET);
+        scheduled_task.semaphore = &executor->GetSemaphore();
         scheduled_task.task_executed = &m_task_executed;
 
         EnqueueInternal(std::move(scheduled_task));
@@ -297,7 +296,7 @@ public:
         return false;
     }
 
-    virtual bool TakeOwnershipOfTask(TaskID id, TaskExecutorBase *executor) override
+    virtual bool TakeOwnershipOfTask(TaskID id, ITaskExecutor *executor) override
     {
         AssertThrow(!Threads::IsOnThread(m_owner_thread));
 
@@ -335,6 +334,7 @@ public:
         // Release memory from the UniquePtr and assign it to the ScheduledTask
         // the ScheduledTask will delete the executor when it is destructed.
         scheduled_task.executor = executor_casted;
+        scheduled_task.semaphore = &executor_casted->GetSemaphore();
         scheduled_task.owns_executor = true;
 
         return true;

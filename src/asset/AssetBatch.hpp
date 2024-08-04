@@ -3,8 +3,6 @@
 #define HYPERION_ASSET_BATCH_HPP
 
 #include <asset/AssetLoader.hpp>
-#include <core/Core.hpp>
-#include <core/ID.hpp>
 
 #include <core/containers/String.hpp>
 
@@ -45,10 +43,10 @@ struct AssetBatchCallbackData
     AssetBatchCallbackData &operator=(AssetBatchCallbackData &&) noexcept   = default;
     ~AssetBatchCallbackData()                                               = default;
 
-    const String &GetAssetKey()
+    HYP_FORCE_INLINE const String &GetAssetKey()
         { return data.Get<AssetKeyValuePair>().first; }
 
-    const LoadedAsset &GetAsset()
+    HYP_FORCE_INLINE const LoadedAsset &GetAsset()
         { return data.Get<AssetKeyValuePair>().second; }
 };
 
@@ -62,8 +60,7 @@ template <class T>
 struct LoadObjectWrapper
 {
     template <class AssetManager>
-    HYP_FORCE_INLINE
-    void Process(
+    HYP_FORCE_INLINE void Process(
         AssetManager *asset_manager,
         AssetMap *map,
         const String &key,
@@ -159,10 +156,10 @@ public:
         }
     }
 
-    AssetBatchCallbacks &GetCallbacks()
+    HYP_FORCE_INLINE AssetBatchCallbacks &GetCallbacks()
         { return callbacks; }
 
-    const AssetBatchCallbacks &GetCallbacks() const
+    HYP_FORCE_INLINE const AssetBatchCallbacks &GetCallbacks() const
         { return callbacks; }
 
     /*! \brief Enqueue an asset of type T to be loaded in this batch.
@@ -172,11 +169,8 @@ public:
     /*! \brief Begin loading this batch asynchronously. Note that
         you may not add any more tasks to be loaded once you call this method. */
     HYP_API void LoadAsync(uint num_batches = MathUtil::MaxSafeValue<uint>());
-
-    [[nodiscard]]
+    
     HYP_API AssetMap AwaitResults();
-
-    [[nodiscard]]
     HYP_API AssetMap ForceLoad();
 
     AssetManager                                *asset_manager;

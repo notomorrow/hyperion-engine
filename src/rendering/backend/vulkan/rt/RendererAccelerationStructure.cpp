@@ -94,8 +94,19 @@ AccelerationGeometry<Platform::VULKAN>::~AccelerationGeometry()
 }
 
 template <>
+bool AccelerationGeometry<Platform::VULKAN>::IsCreated() const
+{
+    return m_packed_vertex_buffer.IsValid() && m_packed_vertex_buffer->IsCreated()
+        && m_packed_index_buffer.IsValid() && m_packed_index_buffer->IsCreated();
+}
+
+template <>
 Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance)
 {
+    if (IsCreated()) {
+        return { Result::RENDERER_ERR, "Cannot initialize acceleration geometry that has already been initialized" };
+    }
+
     if (!device->GetFeatures().IsRaytracingSupported()) {
         return { Result::RENDERER_ERR, "Device does not support raytracing" };
     }
@@ -151,7 +162,6 @@ Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
 
         return result;
     }
-
     
     SingleTimeCommands<Platform::CURRENT> commands { device };
 
@@ -1012,7 +1022,9 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::Create(Device<Platfor
             return { Result::RENDERER_ERR, "Invalid triangle mesh!" };
         }
 
-        HYPERION_PASS_ERRORS(geometry->Create(device, instance), result);
+        if (!geometry->IsCreated()) {
+            HYPERION_PASS_ERRORS(geometry->Create(device, instance), result);
+        }
 
         if (result) {
             geometries[i] = geometry->m_geometry;

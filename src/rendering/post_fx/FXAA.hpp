@@ -15,7 +15,7 @@ public:
     static constexpr uint index = 0;
 
     FXAAEffect();
-    virtual ~FXAAEffect();
+    virtual ~FXAAEffect() override;
 
     virtual void OnAdded() override;
     virtual void OnRemoved() override;

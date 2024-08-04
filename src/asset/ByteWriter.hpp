@@ -1,11 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef BYTE_WRITER_HPP
-#define BYTE_WRITER_HPP
+#ifndef HYPERION_BYTE_WRITER_HPP
+#define HYPERION_BYTE_WRITER_HPP
 
-#include <core/memory/Memory.hpp>
-#include <core/containers/String.hpp>
-#include <core/containers/Array.hpp>
 #include <core/utilities/StringView.hpp>
 #include <core/filesystem/FilePath.hpp>
 

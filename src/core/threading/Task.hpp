@@ -3,10 +3,14 @@
 #define HYPERION_TASK_HPP
 
 #include <core/functional/Proc.hpp>
+
 #include <core/utilities/Optional.hpp>
 #include <core/utilities/EnumFlags.hpp>
+
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Thread.hpp>
+#include <core/threading/Semaphore.hpp>
+
 #include <core/memory/UniquePtr.hpp>
 #include <core/Util.hpp>
 
@@ -27,6 +31,10 @@ namespace threading {
 class TaskThread;
 class SchedulerBase;
 struct TaskBatch;
+
+using TaskSemaphore = Semaphore<int32, detail::ConditionVarSemaphoreImpl<int32>>;
+
+using OnTaskCompletedCallback = Proc<void>;
 
 struct TaskID
 {
@@ -66,22 +74,27 @@ struct TaskID
         { return value != 0; }
 };
 
-class TaskExecutorBase
+class ITaskExecutor
 {
 public:
-    virtual ~TaskExecutorBase() = default;
+    virtual ~ITaskExecutor()    = default;
+
+    virtual TaskID GetTaskID() const = 0;
+
+    virtual bool IsCompleted() const = 0;
 };
 
 template <class... ArgTypes>
-class TaskExecutor  : public TaskExecutorBase
+class TaskExecutor : public ITaskExecutor
 {
 public:
     TaskExecutor()
         : m_id { },
           m_initiator_thread_id { },
-          m_assigned_scheduler(nullptr),
-          m_completed_flag(false)
+          m_assigned_scheduler(nullptr)
     {
+        // set semaphore to initial value of 1 (one task)
+        m_semaphore.Produce(1);
     }
 
     TaskExecutor(const TaskExecutor &other)             = delete;
@@ -91,7 +104,7 @@ public:
         : m_id(other.m_id),
           m_initiator_thread_id(other.m_initiator_thread_id),
           m_assigned_scheduler(other.m_assigned_scheduler),
-          m_completed_flag(other.m_completed_flag.Exchange(false, MemoryOrder::ACQUIRE_RELEASE))
+          m_semaphore(std::move(other.m_semaphore))
     {
         other.m_id = {};
         other.m_initiator_thread_id = {};
@@ -107,7 +120,7 @@ public:
         m_id = other.m_id;
         m_initiator_thread_id = other.m_initiator_thread_id;
         m_assigned_scheduler = other.m_assigned_scheduler;
-        m_completed_flag.Set(other.m_completed_flag.Exchange(false, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+        m_semaphore = std::move(other.m_semaphore);
 
         other.m_id = {};
         other.m_initiator_thread_id = {};
@@ -116,9 +129,9 @@ public:
         return *this;
     }
 
-    virtual ~TaskExecutor() = default;
+    virtual ~TaskExecutor() override = default;
 
-    HYP_FORCE_INLINE TaskID GetTaskID() const
+    virtual TaskID GetTaskID() const override final
         { return m_id; }
 
     /*! \internal This function is used by the Scheduler to set the task ID. */
@@ -139,20 +152,22 @@ public:
     HYP_FORCE_INLINE void SetAssignedScheduler(SchedulerBase *assigned_scheduler)
         { m_assigned_scheduler = assigned_scheduler; }
 
-    HYP_FORCE_INLINE bool IsCompleted() const
-        { return m_completed_flag.Get(MemoryOrder::ACQUIRE); }
+    HYP_FORCE_INLINE TaskSemaphore &GetSemaphore()
+        { return m_semaphore; }
+
+    HYP_FORCE_INLINE const TaskSemaphore &GetSemaphore() const
+        { return m_semaphore; }
+
+    virtual bool IsCompleted() const override final
+        { return m_semaphore.IsInSignalState(); }
 
     virtual void Execute(ArgTypes... args) = 0;
 
 protected:
-    void SetIsCompleted(bool is_completed)
-        { m_completed_flag.Set(is_completed, MemoryOrder::RELEASE); }
-
     TaskID          m_id;
     ThreadID        m_initiator_thread_id;
     SchedulerBase   *m_assigned_scheduler;
-
-    AtomicVar<bool> m_completed_flag;
+    TaskSemaphore   m_semaphore;
 };
 
 template <class ReturnType, class... ArgTypes>
@@ -194,15 +209,6 @@ public:
     
     virtual ~TaskExecutorInstance() override = default;
 
-    virtual void Execute(ArgTypes... args) override final
-    {
-        AssertThrow(m_fn.IsValid());
-
-        m_result_value.Emplace(m_fn(std::forward<ArgTypes>(args)...));
-
-        Base::SetIsCompleted(true);
-    }
-
     HYP_FORCE_INLINE ReturnType &Result() &
         { return m_result_value.Get(); }
 
@@ -214,6 +220,13 @@ public:
 
     HYP_FORCE_INLINE ReturnType Result() const &&
         { return m_result_value.Get(); }
+
+    virtual void Execute(ArgTypes... args) override final
+    {
+        AssertThrow(m_fn.IsValid());
+
+        m_result_value.Emplace(m_fn(std::forward<ArgTypes>(args)...));
+    }
 
 private:
     Function                m_fn;
@@ -260,8 +273,6 @@ public:
         AssertThrow(m_fn.IsValid());
         
         m_fn(std::forward<ArgTypes>(args)...);
-
-        Base::SetIsCompleted(true);
     }
 
 private:
@@ -319,8 +330,6 @@ struct TaskRef
         { return id.IsValid() && assigned_scheduler != nullptr; }
 };
 
-using OnTaskCompletedCallback = Proc<void>;
-
 class TaskBase
 {
 public:
@@ -360,17 +369,28 @@ public:
     HYP_FORCE_INLINE SchedulerBase *GetAssignedScheduler() const
         { return m_assigned_scheduler; }
 
-    virtual bool IsValid() const
-        { return m_id.IsValid() && m_assigned_scheduler != nullptr; }
+    virtual ITaskExecutor *GetTaskExecutor() const = 0;
 
-    virtual bool IsCompleted() const = 0;
+    virtual bool IsValid() const
+    {
+        if (!m_id.IsValid() || !m_assigned_scheduler) {
+            return false;
+        }
+
+        const ITaskExecutor *executor = GetTaskExecutor();
+
+        return executor != nullptr && executor->GetTaskID().IsValid();
+    }
+
+    virtual bool IsCompleted() const final
+        { return GetTaskExecutor()->IsCompleted(); }
 
     /*! \brief Remove the task from the scheduler.
      *  \returns True if the task was successfully cancelled, false otherwise. */
     bool Cancel();
 
 protected:
-    void Await_Internal() const;
+    virtual void Await_Internal() const;
 
     // Message logging for tasks
     
@@ -439,16 +459,9 @@ public:
         // otherwise, the executor will be freed when the task is completed
     }
 
-    virtual bool IsValid() const override
+    virtual ITaskExecutor *GetTaskExecutor() const override
     {
-        return TaskBase::IsValid()
-            && m_executor != nullptr
-            && m_executor->GetTaskID() != 0;
-    }
-
-    virtual bool IsCompleted() const override
-    {
-        return m_executor->IsCompleted();
+        return m_executor;
     }
 
     /*! \brief Wait for the task to complete.
@@ -489,6 +502,17 @@ public:
         Await_Internal();
 
         return m_executor->Result();
+    }
+
+protected:
+    virtual void Await_Internal() const override
+    {
+        m_executor->GetSemaphore().Acquire();
+
+#ifdef HYP_DEBUG_MODE
+        // Sanity Check
+        AssertThrow(IsCompleted());
+#endif
     }
 
 private:
@@ -563,21 +587,25 @@ public:
         // otherwise, the executor will be freed when the task is completed
     }
 
-    virtual bool IsValid() const override
+    virtual ITaskExecutor *GetTaskExecutor() const override
     {
-        return TaskBase::IsValid()
-            && m_executor != nullptr
-            && m_executor->GetTaskID() != 0;
-    }
-
-    virtual bool IsCompleted() const override
-    {
-        return m_executor->IsCompleted();
+        return m_executor;
     }
 
     HYP_FORCE_INLINE void Await()
     {
         Await_Internal();
+    }
+
+protected:
+    virtual void Await_Internal() const override
+    {
+        m_executor->GetSemaphore().Acquire();
+
+#ifdef HYP_DEBUG_MODE
+        // Sanity Check
+        AssertThrow(IsCompleted());
+#endif
     }
 
 private:

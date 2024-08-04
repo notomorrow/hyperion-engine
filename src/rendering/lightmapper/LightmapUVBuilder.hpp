@@ -95,16 +95,14 @@ public:
               uv_map(std::move(uv_map))
         { }
 
-        HYP_NODISCARD HYP_FORCE_INLINE
-        explicit operator bool() const
+        HYP_FORCE_INLINE explicit operator bool() const
             { return status == RESULT_OK; }
     };
 
     LightmapUVBuilder(const LightmapUVBuilderParams &params);
     ~LightmapUVBuilder() = default;
 
-    HYP_NODISCARD HYP_FORCE_INLINE
-    const Array<LightmapMeshData> &GetMeshData() const
+    HYP_FORCE_INLINE const Array<LightmapMeshData> &GetMeshData() const
         { return m_mesh_data; }
     
     Result Build();

@@ -41,44 +41,34 @@ public:
     {
         Node *node;
 
-        HYP_FORCE_INLINE
-        T &operator*()
+        HYP_FORCE_INLINE T &operator*()
             { return node->value.Get(); }
 
-        HYP_FORCE_INLINE
-        const T &operator*() const
+        HYP_FORCE_INLINE const T &operator*() const
             { return node->value.Get(); }
 
-        HYP_FORCE_INLINE
-        T *operator->()
+        HYP_FORCE_INLINE T *operator->()
             { return &node->value.Get(); }
 
-        HYP_FORCE_INLINE
-        const T *operator->() const
+        HYP_FORCE_INLINE const T *operator->() const
             { return &node->value.Get(); }
 
-        HYP_FORCE_INLINE
-        Iterator &operator++()
+        HYP_FORCE_INLINE Iterator &operator++()
             { node = node->next; return *this; }
 
-        HYP_FORCE_INLINE
-        Iterator operator++(int)
+        HYP_FORCE_INLINE Iterator operator++(int)
             { return Iterator { node->next }; }
 
-        HYP_FORCE_INLINE
-        bool operator==(const Iterator &other) const
+        HYP_FORCE_INLINE bool operator==(const Iterator &other) const
             { return node == other.node; }
 
-        HYP_FORCE_INLINE
-        bool operator!=(const Iterator &other) const
+        HYP_FORCE_INLINE bool operator!=(const Iterator &other) const
             { return node != other.node; }
 
-        HYP_FORCE_INLINE
-        bool operator==(const ConstIterator &other) const
+        HYP_FORCE_INLINE bool operator==(const ConstIterator &other) const
             { return node == other.node; }
 
-        HYP_FORCE_INLINE
-        bool operator!=(const ConstIterator &other) const
+        HYP_FORCE_INLINE bool operator!=(const ConstIterator &other) const
             { return node != other.node; }
     };
 
@@ -86,36 +76,28 @@ public:
     {
         const Node *node;
         
-        HYP_FORCE_INLINE
-        const T &operator*() const
+        HYP_FORCE_INLINE const T &operator*() const
             { return node->value.Get(); }
 
-        HYP_FORCE_INLINE
-        const T *operator->() const
+        HYP_FORCE_INLINE const T *operator->() const
             { return &node->value.Get(); }
         
-        HYP_FORCE_INLINE
-        ConstIterator &operator++()
+        HYP_FORCE_INLINE ConstIterator &operator++()
             { node = node->next; return *this; }
 
-        HYP_FORCE_INLINE
-        ConstIterator operator++(int)
+        HYP_FORCE_INLINE ConstIterator operator++(int)
             { return ConstIterator { node->next }; }
 
-        HYP_FORCE_INLINE
-        bool operator==(const Iterator &other) const
+        HYP_FORCE_INLINE bool operator==(const Iterator &other) const
             { return node == other.node; }
 
-        HYP_FORCE_INLINE
-        bool operator!=(const Iterator &other) const
+        HYP_FORCE_INLINE bool operator!=(const Iterator &other) const
             { return node != other.node; }
 
-        HYP_FORCE_INLINE
-        bool operator==(const ConstIterator &other) const
+        HYP_FORCE_INLINE bool operator==(const ConstIterator &other) const
             { return node == other.node; }
 
-        HYP_FORCE_INLINE
-        bool operator!=(const ConstIterator &other) const
+        HYP_FORCE_INLINE bool operator!=(const ConstIterator &other) const
             { return node != other.node; }
     };
 

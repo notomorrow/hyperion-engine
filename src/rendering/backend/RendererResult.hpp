@@ -36,14 +36,10 @@ struct Result
     {
     }
     
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    static Result OK()
+    HYP_FORCE_INLINE static Result OK()
         { return Result(RENDERER_OK); }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    operator bool() const
+    
+    HYP_FORCE_INLINE operator bool() const
         { return result == RENDERER_OK; }
 };
 

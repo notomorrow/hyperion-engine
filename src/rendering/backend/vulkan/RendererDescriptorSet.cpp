@@ -12,6 +12,9 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+// For LogStackTrace (temp)
+#include <core/system/StackDump.hpp>
+
 #include <Engine.hpp>
 
 #include <vulkan/vulkan.h>
@@ -420,6 +423,8 @@ Result DescriptorSet<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device)
         write.pBufferInfo = &descriptor_element_info.buffer_info;
     }
 
+    HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Updating descriptor set {} ({})", m_layout.GetName().LookupString(), (void*)m_platform_impl.handle);
+
     vkUpdateDescriptorSets(
         device->GetDevice(),
         uint32(vk_write_descriptor_sets.Size()),
@@ -466,10 +471,7 @@ Result DescriptorSet<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 template <>
 Result DescriptorSet<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
-    DebugLog(LogType::Debug, "Destroying descriptor set: %s\n", m_layout.GetName().LookupString());
-    if (!std::strcmp(m_layout.GetName().LookupString(), "Scene")) {
-        HYP_BREAKPOINT;
-    }
+    HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Destroying descriptor set: {} ({})", m_layout.GetName(), (void *)m_platform_impl.handle);
 
     if (m_platform_impl.handle != VK_NULL_HANDLE) {
         device->GetDescriptorSetManager()->DestroyDescriptorSet(device, m_platform_impl.handle);

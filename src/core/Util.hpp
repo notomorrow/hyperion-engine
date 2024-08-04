@@ -238,7 +238,7 @@ constexpr auto PrettyFunctionName()
     }
 }
 
-#define HYP_PRETTY_FUNCTION_NAME hyperion::PrettyFunctionName< StaticString(HYP_FUNCTION_NAME_LIT) >()
+#define HYP_PRETTY_FUNCTION_NAME hyperion::PrettyFunctionName< HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT) >()
 
 #pragma region FunctionTraits
 

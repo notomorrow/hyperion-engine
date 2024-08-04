@@ -17,13 +17,13 @@ public:
     DepthPyramidRenderer();
     ~DepthPyramidRenderer();
 
-    const ImageViewRef &GetResultImageView() const
+    HYP_FORCE_INLINE const ImageViewRef &GetResultImageView() const
         { return m_depth_pyramid_view; }
 
-    const Array<ImageViewRef> &GetMipImageVIews() const
+    HYP_FORCE_INLINE const Array<ImageViewRef> &GetMipImageVIews() const
         { return m_depth_pyramid_mips; }
 
-    bool IsRendered() const
+    HYP_FORCE_INLINE bool IsRendered() const
         { return m_is_rendered; }
 
     Extent3D GetExtent() const;

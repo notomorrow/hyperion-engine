@@ -49,7 +49,7 @@ using OnTaskBatchCompletedCallback = Proc<void>;
 
 struct TaskBatch
 {
-    SchedulerBase::SemaphoreType            semaphore;
+    TaskSemaphore                           semaphore;
     uint32                                  num_enqueued = 0;
 
     /*! \brief The priority / pool lane for which to place
@@ -59,7 +59,7 @@ struct TaskBatch
 
     /* Number of tasks must remain constant from creation of the TaskBatch,
      * to completion. */
-    Array<TaskExecutorInstance<void>>       executors;
+    LinkedList<TaskExecutorInstance<void>>  executors;
 
     /* TaskRefs to be set by the TaskSystem, holding task ids and pointers to the threads
      * each task has been scheduled to. */
@@ -82,7 +82,7 @@ struct TaskBatch
         HYP_MT_CHECK_RW(data_race_detector);
 #endif
 
-        executors.PushBack(std::move(executor)); 
+        executors.EmplaceBack(std::move(executor));
 
         ++num_enqueued;
         // temp
@@ -112,8 +112,8 @@ struct TaskBatch
         HYP_MT_CHECK_RW(data_race_detector);
 #endif
 
-        for (TaskExecutor<> &executor : executors) {
-            executor.Execute();
+        for (auto it = executors.Begin(); it != executors.End(); ++it) {
+            it->Execute();
         }
 
         if (execute_dependent_batches && next_batch != nullptr) {

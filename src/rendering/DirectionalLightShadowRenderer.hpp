@@ -128,7 +128,7 @@ public:
     DirectionalLightShadowRenderer(Name name, Extent2D resolution, ShadowMode shadow_mode);
     DirectionalLightShadowRenderer(const DirectionalLightShadowRenderer &other) = delete;
     DirectionalLightShadowRenderer &operator=(const DirectionalLightShadowRenderer &other) = delete;
-    virtual ~DirectionalLightShadowRenderer();
+    virtual ~DirectionalLightShadowRenderer() override;
 
     HYP_FORCE_INLINE ShadowPass *GetPass() const
         { return m_shadow_pass.Get(); }

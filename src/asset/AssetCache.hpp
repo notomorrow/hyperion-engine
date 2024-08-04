@@ -3,18 +3,11 @@
 #define HYPERION_ASSET_CACHE_HPP
 
 #include <core/Core.hpp>
-#include <core/containers/HashMap.hpp>
-#include <core/ID.hpp>
 #include <core/Handle.hpp>
 
+#include <core/containers/HashMap.hpp>
+
 #include <core/threading/Mutex.hpp>
-
-#include <scene/Node.hpp>
-
-#include <asset/Loader.hpp>
-
-#include <core/system/Debug.hpp>
-#include <Constants.hpp>
 
 namespace hyperion {
 

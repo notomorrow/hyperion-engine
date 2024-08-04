@@ -68,19 +68,13 @@ struct EnvProbeCollection
         indirect_indices[index] = new_index;
     }
 
-    uint GetEnvProbeIndexOnGameThread(uint index) const
+    HYP_FORCE_INLINE uint GetEnvProbeIndexOnGameThread(uint index) const
         { return indirect_indices[index]; }
 
-    Handle<EnvProbe> &GetEnvProbeDirect(uint index)
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeDirect(uint index) const
         { return probes[index]; }
 
-    const Handle<EnvProbe> &GetEnvProbeDirect(uint index) const
-        { return probes[index]; }
-
-    Handle<EnvProbe> &GetEnvProbeOnGameThread(uint index)
-        { return probes[indirect_indices[index]]; }
-
-    const Handle<EnvProbe> &GetEnvProbeOnGameThread(uint index) const
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnGameThread(uint index) const
         { return probes[indirect_indices[index]]; }
 
     void SetProbeIndexOnRenderThread(uint index, uint new_index)
@@ -91,13 +85,10 @@ struct EnvProbeCollection
         indirect_indices[max_bound_ambient_probes + index] = new_index;
     }
 
-    uint GetEnvProbeIndexOnRenderThread(uint index) const
+    HYP_FORCE_INLINE uint GetEnvProbeIndexOnRenderThread(uint index) const
         { return indirect_indices[max_bound_ambient_probes + index]; }
     
-    Handle<EnvProbe> &GetEnvProbeOnRenderThread(uint index)
-        { return probes[indirect_indices[max_bound_ambient_probes + index]]; }
-    
-    const Handle<EnvProbe> &GetEnvProbeOnRenderThread(uint index) const
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnRenderThread(uint index) const
         { return probes[indirect_indices[max_bound_ambient_probes + index]]; }
 };
 
@@ -118,15 +109,11 @@ public:
     EnvGrid(const EnvGrid &other)               = delete;
     EnvGrid &operator=(const EnvGrid &other)    = delete;
     virtual ~EnvGrid();
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    EnvGridType GetEnvGridType() const
+    
+    HYP_FORCE_INLINE EnvGridType GetEnvGridType() const
         { return m_options.type; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const BoundingBox &GetAABB() const
+    
+    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
         { return m_aabb; }
 
     void SetCameraData(const BoundingBox &aabb, const Vec3f &camera_position);
@@ -139,14 +126,10 @@ public:
     void OnRender(Frame *frame);
 
 private:
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    Vec3f SizeOfProbe() const
+    HYP_FORCE_INLINE Vec3f SizeOfProbe() const
         { return m_aabb.GetExtent() / Vec3f(m_options.density); }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    EnvProbeType GetEnvProbeType() const
+    
+    HYP_FORCE_INLINE EnvProbeType GetEnvProbeType() const
     {
         switch (GetEnvGridType()) {
         case ENV_GRID_TYPE_SH:

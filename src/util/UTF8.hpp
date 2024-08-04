@@ -190,13 +190,15 @@ constexpr int utf_strlen(const T *str)
 {
     if constexpr (is_utf8) {
         return utf8_strlen(str);
+    } else if constexpr (sizeof(T) == sizeof(char)) {
+        return std::strlen(str);
+    } else {
+        int count = 0;
+        const T *pos = str;
+        for (; *pos; ++pos, count++);
+
+        return count;
     }
-
-    int count = 0;
-    const T *pos = str;
-    for (; *pos; ++pos, count++);
-
-    return count;
 }
 
 template <class T, bool is_utf8>
@@ -204,15 +206,15 @@ constexpr int utf_strlen(const T *str, int &out_codepoints)
 {
     if constexpr (is_utf8) {
         return utf8_strlen(str, out_codepoints);
+    } else if constexpr (sizeof(T) == sizeof(char)) {
+        return (out_codepoints = std::strlen(str));
+    } else {
+        int cp = 0;
+        const T *pos = str;
+        for (; *pos; ++pos, cp++);
+
+        return (out_codepoints = cp);
     }
-
-    int cp = 0;
-    const T *pos = str;
-    for (; *pos; ++pos, cp++);
-
-    out_codepoints = cp;
-
-    return cp;
 }
 
 inline int utf8_strcmp(const char *s1, const char *s2)

@@ -2,6 +2,8 @@
 
 #include <util/xml/SAXParser.hpp>
 
+#include <asset/BufferedByteReader.hpp>
+
 namespace hyperion {
 namespace xml {
 

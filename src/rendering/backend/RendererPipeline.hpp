@@ -39,26 +39,18 @@ public:
 
     HYP_API bool IsCreated() const;
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    PipelinePlatformImpl<PLATFORM> &GetPlatformImpl()
+    HYP_FORCE_INLINE PipelinePlatformImpl<PLATFORM> &GetPlatformImpl()
         { return m_platform_impl; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const PipelinePlatformImpl<PLATFORM> &GetPlatformImpl() const
+    
+    HYP_FORCE_INLINE const PipelinePlatformImpl<PLATFORM> &GetPlatformImpl() const
         { return m_platform_impl; }
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const DescriptorTableRef<PLATFORM> &GetDescriptorTable() const
+    
+    HYP_FORCE_INLINE const DescriptorTableRef<PLATFORM> &GetDescriptorTable() const
         { return m_descriptor_table; }
 
     HYP_API void SetDescriptorTable(const DescriptorTableRef<PLATFORM> &descriptor_table);
-
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const ShaderRef<PLATFORM> &GetShader() const
+    
+    HYP_FORCE_INLINE const ShaderRef<PLATFORM> &GetShader() const
         { return m_shader; }
 
     HYP_API void SetShader(const ShaderRef<PLATFORM> &shader);
