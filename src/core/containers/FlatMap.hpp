@@ -151,6 +151,24 @@ public:
     HYP_NODISCARD FlatSet<Key> Keys() const;
     HYP_NODISCARD FlatSet<Value> Values() const;
 
+    template <class OtherContainerType>
+    void Merge(const OtherContainerType &other)
+    {
+        for (const auto &item : other) {
+            Insert(item);
+        }
+    }
+
+    template <class OtherContainerType>
+    void Merge(OtherContainerType &&other)
+    {
+        for (auto &item : other) {
+            Insert(std::move(item));
+        }
+
+        other.Clear();
+    }
+
 #ifndef HYP_DEBUG_MODE
     HYP_FORCE_INLINE ValueType &At(const KeyType &key)
         { return Find(key)->second; }

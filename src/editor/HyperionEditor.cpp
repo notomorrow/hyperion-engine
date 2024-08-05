@@ -587,11 +587,6 @@ void HyperionEditorImpl::CreateMainPanel()
         
         GetUIStage()->AddChildUIObject(loaded_ui);
 
-        // overflowing inner sizes is messing up AABB calculation for higher up parents
-
-        InitSceneOutline();
-        InitDetailView();
-
         // test generate lightmap
         if (RC<UIObject> generate_lightmaps_button = loaded_ui->FindChildUIObject(NAME("Generate_Lightmaps_Button"))) {
 
@@ -628,6 +623,13 @@ void HyperionEditorImpl::CreateMainPanel()
                 return UIEventHandlerResult::OK;
             }).Detach();
         }
+
+        return;
+
+        // overflowing inner sizes is messing up AABB calculation for higher up parents
+
+        InitSceneOutline();
+        InitDetailView();
     }
 
     g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript &script)
@@ -1470,7 +1472,7 @@ void HyperionEditor::Init()
 
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
-    batch->Add("test_model", "models/sponza/sponza.obj");
+    batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");
     // batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     // batch->Add("house", "models/house.obj");
 
@@ -1491,7 +1493,7 @@ void HyperionEditor::Init()
 #if 1
         NodeProxy node = results["test_model"].ExtractAs<Node>();
 
-        node.Scale(0.02f);
+        // node.Scale(0.02f);
         node.SetName("test_model");
         node.LockTransform();
 

@@ -23,6 +23,8 @@
 
 namespace hyperion {
 
+static constexpr int max_bounces_cpu = 3;
+
 struct LightmapHitsBuffer;
 
 enum LightmapTraceMode
@@ -57,7 +59,7 @@ struct LightmapRay
 };
 
 constexpr uint max_ray_hits_gpu = 512 * 512;
-constexpr uint max_ray_hits_cpu = 64 * 64;
+constexpr uint max_ray_hits_cpu = 128 * 128;
 
 struct alignas(16) LightmapHit
 {
@@ -72,6 +74,20 @@ struct alignas(16) LightmapHitsBuffer
 };
 
 static_assert(sizeof(LightmapHitsBuffer) == max_ray_hits_gpu * 16);
+
+class LightmapTopLevelAccelerationStructure;
+
+struct LightmapRayHitPayload
+{
+    Vec4f       throughput;
+    Vec4f       emissive;
+    Vec4f       radiance;
+    Vec3f       normal;
+    float       distance = -1.0f;
+    Vec3f       barycentric_coords;
+    ID<Mesh>    mesh_id;
+    uint32      triangle_index;
+};
 
 class HYP_API LightmapPathTracer
 {
@@ -111,7 +127,7 @@ public:
     static constexpr uint num_multisamples = 1;
 
     LightmapJob(Scene *scene, Array<LightmapEntity> entities);
-    LightmapJob(Scene *scene, Array<LightmapEntity> entities, HashMap<ID<Mesh>, Array<Triangle>> triangle_cache);
+    LightmapJob(Scene *scene, Array<LightmapEntity> entities, UniquePtr<LightmapTopLevelAccelerationStructure> &&acceleration_structure);
 
     LightmapJob(const LightmapJob &other)                   = delete;
     LightmapJob &operator=(const LightmapJob &other)        = delete;
@@ -168,7 +184,7 @@ public:
 
 private:
     void BuildUVMap();
-    Optional<LightmapHit> TraceSingleRayOnCPU(const LightmapRay &ray);
+    void TraceSingleRayOnCPU(const LightmapRay &ray, LightmapRayHitPayload &out_payload);
 
     Scene                                                   *m_scene;
     Array<LightmapEntity>                                   m_entities;
@@ -177,7 +193,7 @@ private:
 
     Array<uint>                                             m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
 
-    HashMap<ID<Mesh>, Array<Triangle>>                      m_triangle_cache; // for cpu tracing
+    UniquePtr<LightmapTopLevelAccelerationStructure>        m_acceleration_structure; // for CPU tracing
 
     FixedArray<Array<LightmapRay>, max_frames_in_flight>    m_previous_frame_rays;
 

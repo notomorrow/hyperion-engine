@@ -1,8 +1,4 @@
 {
-  "app": {
-    "name": "HyperionEditor",
-    "args": "-ResX=1920 -ResY=1080"
-  },
   "rendering": {
     "ssr": {
       "enabled": false
@@ -17,7 +13,7 @@
       "gi": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": true
@@ -42,5 +38,9 @@
     "hbao": {
       "enabled": false
     }
+  },
+  "app": {
+    "name": "HyperionEditor",
+    "args": "-ResX=1920 -ResY=1080"
   }
 }

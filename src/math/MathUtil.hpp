@@ -202,6 +202,16 @@ public:
         return a + r;
     }
 
+    static uint32 RandomUInt32(uint32 &seed)
+    {
+        return (seed = 1664525 * seed + 1013904223);
+    }
+
+    static float RandomFloat(uint32 &seed)
+    {
+        return (float(RandomUInt32(seed) & 0x00FFFFFF) / float(0x01000000));
+    }
+
     template <class T>
     HYP_FORCE_INLINE
     static constexpr T RadToDeg(T rad)

@@ -14,6 +14,7 @@
 #include <core/logging/Logger.hpp>
 
 #include <core/system/AppContext.hpp>
+#include <core/system/Time.hpp>
 
 #include <Engine.hpp>
 
@@ -42,6 +43,301 @@ struct RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer) : renderer::RenderC
 };
 
 #pragma endregion Render commands
+
+#pragma region LightmapAccelerationStructure
+
+struct LightmapRayHitData
+{
+    ID<Entity>  entity;
+    Triangle    triangle;
+    RayHit      hit;
+};
+
+using LightmapRayTestResults = FlatMap<float, LightmapRayHitData>;
+
+class ILightmapAccelerationStructure
+{
+public:
+    virtual ~ILightmapAccelerationStructure() = default;
+
+    virtual LightmapRayTestResults TestRay(const Ray &ray) const = 0;
+};
+
+/// reference: https://gdbooks.gitbooks.io/3dcollisions/content/Chapter4/bvh.html
+
+class LightmapBVHNode
+{
+    static constexpr int max_depth = 3;
+
+public:
+    LightmapBVHNode(const BoundingBox &aabb)
+        : m_aabb(aabb),
+          m_is_leaf_node(true)
+    {
+    }
+
+    LightmapBVHNode(const LightmapBVHNode &other)                   = delete;
+    LightmapBVHNode &operator=(const LightmapBVHNode &other)        = delete;
+
+    LightmapBVHNode(LightmapBVHNode &&other) noexcept               = default;
+    LightmapBVHNode &operator=(LightmapBVHNode &&other) noexcept    = default;
+
+    ~LightmapBVHNode()                                              = default;
+
+    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
+        { return m_aabb; }
+
+    HYP_FORCE_INLINE const Array<UniquePtr<LightmapBVHNode>> &GetChildren() const
+        { return m_children; }
+
+    HYP_FORCE_INLINE const Array<Triangle> &GetTriangles() const
+        { return m_triangles; }
+
+    HYP_FORCE_INLINE void AddTriangle(const Triangle &triangle)
+        { m_triangles.PushBack(triangle); }
+
+    HYP_FORCE_INLINE bool IsLeafNode() const
+        { return m_is_leaf_node; }
+
+    void Split()
+    {
+        Split(0);
+    }
+
+    HYP_NODISCARD RayTestResults TestRay(const Ray &ray) const
+    {
+        RayTestResults results;
+
+        if (ray.TestAABB(m_aabb)) {
+            if (IsLeafNode()) {
+                for (SizeType triangle_index = 0; triangle_index < m_triangles.Size(); triangle_index++) {
+                    const Triangle &triangle = m_triangles[triangle_index];
+
+                    ray.TestTriangle(triangle, triangle_index, this, results);
+                }
+            } else {
+                for (const UniquePtr<LightmapBVHNode> &node : m_children) {
+                    results.Merge(node->TestRay(ray));
+                }
+            }
+        }
+
+        return results;
+    }
+
+    static void DebugLogBVHNode(LightmapBVHNode *node, int depth = 0)
+    {
+        String indentation_string;
+
+        for (int i = 0; i < depth; i++) {
+            indentation_string += "  ";
+        }
+
+        HYP_LOG(Lightmap, LogLevel::DEBUG, "{}Node {} (AABB: {}, {} triangles)", indentation_string, node->IsLeafNode() ? "(leaf)" : "(parent)", node->GetAABB(), node->m_triangles.Size());
+
+        for (const UniquePtr<LightmapBVHNode> &node : node->m_children) {
+            DebugLogBVHNode(node.Get(), depth + 1);
+        }
+    }
+
+private:
+    void Split(int depth)
+    {
+        if (m_is_leaf_node) {
+            if (m_triangles.Any()) {
+                if (depth < max_depth) {
+                    const Vec3f center = m_aabb.GetCenter();
+                    const Vec3f extent = m_aabb.GetExtent();
+
+                    const Vec3f &min = m_aabb.GetMin();
+                    const Vec3f &max = m_aabb.GetMax();
+
+                    for (int i = 0; i < 2; i++) {
+                        for (int j = 0; j < 2; j++) {
+                            for (int k = 0; k < 2; k++) {
+                                const Vec3f new_min = Vec3f(
+                                    i == 0 ? min.x : center.x,
+                                    j == 0 ? min.y : center.y,
+                                    k == 0 ? min.z : center.z
+                                );
+
+                                const Vec3f new_max = Vec3f(
+                                    i == 0 ? center.x : max.x,
+                                    j == 0 ? center.y : max.y,
+                                    k == 0 ? center.z : max.z
+                                );
+
+                                m_children.EmplaceBack(new LightmapBVHNode(BoundingBox(new_min, new_max)));
+                            }
+                        }
+                    }
+
+                    for (const Triangle &triangle : m_triangles) {
+                        for (const UniquePtr<LightmapBVHNode> &node : m_children) {
+                            bool intersects_triangle = false;
+
+                            for (int i = 0; i < 3; i++) {
+                                if (node->GetAABB().ContainsPoint(triangle.GetPoint(i).GetPosition())) {
+                                    intersects_triangle = true;
+
+                                    break;
+                                }
+                            }
+
+                            if (intersects_triangle) {
+                                node->m_triangles.PushBack(triangle);
+
+                                break;
+                            }
+                        }
+                    }
+
+                    m_triangles.Clear();
+
+                    m_is_leaf_node = false;
+                }
+            }
+        }
+
+        for (const UniquePtr<LightmapBVHNode> &node : m_children) {
+            node->Split(depth + 1);
+        }
+    }
+
+    BoundingBox                         m_aabb;
+    Array<UniquePtr<LightmapBVHNode>>   m_children;
+    Array<Triangle>                     m_triangles;
+    bool                                m_is_leaf_node;
+};
+
+class LightmapBottomLevelAccelerationStructure final : public ILightmapAccelerationStructure
+{
+public:
+    LightmapBottomLevelAccelerationStructure(ID<Entity> entity, const Handle<Mesh> &mesh, const Transform &transform)
+        : m_entity(entity),
+          m_mesh(mesh),
+          m_root(BuildBVH(mesh, transform))
+    {
+    }
+
+    virtual ~LightmapBottomLevelAccelerationStructure() override = default;
+
+    virtual LightmapRayTestResults TestRay(const Ray &ray) const override
+    {
+        LightmapRayTestResults results;
+
+        if (m_root != nullptr) {
+            const RayTestResults triangle_ray_test_results = m_root->TestRay(ray);
+
+            for (const RayHit &ray_hit : triangle_ray_test_results) {
+                AssertThrow(ray_hit.user_data != nullptr);
+
+                const LightmapBVHNode *bvh_node = static_cast<const LightmapBVHNode *>(ray_hit.user_data);
+
+                results.Insert(
+                    ray_hit.distance,
+                    LightmapRayHitData {
+                        m_entity,
+                        bvh_node->GetTriangles()[ray_hit.id],
+                        ray_hit
+                    }
+                );
+            }
+        }
+
+        return results;
+    }
+
+    HYP_FORCE_INLINE LightmapBVHNode *GetRoot() const
+        { return m_root.Get(); }
+
+private:
+    static UniquePtr<LightmapBVHNode> BuildBVH(const Handle<Mesh> &mesh, const Transform &transform)
+    {
+        if (!mesh.IsValid()) {
+            return nullptr;
+        }
+
+        if (!mesh->GetStreamedMeshData()) {
+            return nullptr;
+        }
+
+        UniquePtr<LightmapBVHNode> root(new LightmapBVHNode(mesh->GetAABB() * transform));
+
+        auto ref = mesh->GetStreamedMeshData()->AcquireRef();
+        const MeshData &mesh_data = ref->GetMeshData();
+
+        const Matrix4 &model_matrix = transform.GetMatrix();
+        const Matrix4 normal_matrix = model_matrix.Inverted().Transpose();
+
+        for (uint i = 0; i < mesh_data.indices.Size(); i += 3) {
+            Triangle triangle {
+                mesh_data.vertices[mesh_data.indices[i + 0]],
+                mesh_data.vertices[mesh_data.indices[i + 1]],
+                mesh_data.vertices[mesh_data.indices[i + 2]]
+            };
+
+            triangle[0].position = model_matrix * triangle[0].position;
+            triangle[1].position = model_matrix * triangle[1].position;
+            triangle[2].position = model_matrix * triangle[2].position;
+
+            triangle[0].normal = (normal_matrix * Vec4f(triangle[0].normal, 0.0f)).GetXYZ();
+            triangle[1].normal = (normal_matrix * Vec4f(triangle[1].normal, 0.0f)).GetXYZ();
+            triangle[2].normal = (normal_matrix * Vec4f(triangle[2].normal, 0.0f)).GetXYZ();
+
+            triangle[0].tangent = (normal_matrix * Vec4f(triangle[0].tangent, 0.0f)).GetXYZ();
+            triangle[1].tangent = (normal_matrix * Vec4f(triangle[1].tangent, 0.0f)).GetXYZ();
+            triangle[2].tangent = (normal_matrix * Vec4f(triangle[2].tangent, 0.0f)).GetXYZ();
+
+            triangle[0].bitangent = (normal_matrix * Vec4f(triangle[0].bitangent, 0.0f)).GetXYZ();
+            triangle[1].bitangent = (normal_matrix * Vec4f(triangle[1].bitangent, 0.0f)).GetXYZ();
+            triangle[2].bitangent = (normal_matrix * Vec4f(triangle[2].bitangent, 0.0f)).GetXYZ();
+
+            root->AddTriangle(triangle);
+        }
+
+        root->Split();
+
+        // LightmapBVHNode::DebugLogBVHNode(root.Get());
+
+        return root;
+    }
+
+    ID<Entity>                  m_entity;
+    Handle<Mesh>                m_mesh;
+    UniquePtr<LightmapBVHNode>  m_root;
+};
+
+class LightmapTopLevelAccelerationStructure final : public ILightmapAccelerationStructure
+{
+public:
+    virtual ~LightmapTopLevelAccelerationStructure() override = default;
+
+    virtual LightmapRayTestResults TestRay(const Ray &ray) const override
+    {
+        LightmapRayTestResults results;
+
+        for (const UniquePtr<LightmapBottomLevelAccelerationStructure> &acceleration_structure : m_acceleration_structures) {
+            results.Merge(acceleration_structure->TestRay(ray));
+        }
+
+        return results;
+    }
+
+    void Add(UniquePtr<LightmapBottomLevelAccelerationStructure> &&acceleration_structure)
+    {
+        if (!acceleration_structure) {
+            return;
+        }
+
+        m_acceleration_structures.PushBack(std::move(acceleration_structure));
+    }
+
+private:
+    Array<UniquePtr<LightmapBottomLevelAccelerationStructure>>  m_acceleration_structures;
+};
+
+#pragma endregion LightmapAccelerationStructure
 
 #pragma region LightmapPathTracer
 
@@ -268,10 +564,10 @@ LightmapJob::LightmapJob(Scene *scene, Array<LightmapEntity> entities)
 {
 }
 
-LightmapJob::LightmapJob(Scene *scene, Array<LightmapEntity> entities, HashMap<ID<Mesh>, Array<Triangle>> triangle_cache)
+LightmapJob::LightmapJob(Scene *scene, Array<LightmapEntity> entities, UniquePtr<LightmapTopLevelAccelerationStructure> &&acceleration_structure)
     : LightmapJob(scene, std::move(entities))
 {
-    m_triangle_cache = std::move(triangle_cache);
+    m_acceleration_structure = std::move(acceleration_structure);
 }
 
 void LightmapJob::Start()
@@ -445,77 +741,173 @@ void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *h
     }
 }
 
-Optional<LightmapHit> LightmapJob::TraceSingleRayOnCPU(const LightmapRay &ray)
+void LightmapJob::TraceSingleRayOnCPU(const LightmapRay &ray, LightmapRayHitPayload &out_payload)
 {
-    RayTestResults octree_results;
+    out_payload.throughput = Vec4f(0.0f);
+    out_payload.emissive = Vec4f(0.0f);
+    out_payload.radiance = Vec4f(0.0f);
+    out_payload.normal = Vec3f(0.0f);
+    out_payload.distance = -1.0f;
+    out_payload.barycentric_coords = Vec3f(0.0f);
+    out_payload.mesh_id = ID<Mesh>::invalid;
+    out_payload.triangle_index = 0;
 
-    if (m_scene->GetOctree().TestRay(ray.ray, octree_results)) {
-        // distance, hit
-        FlatMap<float, LightmapHit> results;
+    if (!m_acceleration_structure) {
+        HYP_LOG(Lightmap, LogLevel::WARNING, "No CPU acceleration structure set while tracing on CPU, cannot perform trace");
 
-        for (const RayHit &hit : octree_results) {
-            // now ray test each result as triangle mesh to find exact hit point
-            if (ID<Entity> entity_id = ID<Entity>(hit.id)) {
-                const MeshComponent *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(entity_id);
-                const TransformComponent *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(entity_id);
-
-                if (mesh_component != nullptr && mesh_component->mesh.IsValid() && mesh_component->material.IsValid() && mesh_component->mesh->NumIndices() != 0 && transform_component != nullptr) {
-                    const ID<Mesh> mesh_id = mesh_component->mesh.GetID();
-
-                    auto triangle_cache_it = m_triangle_cache.Find(mesh_id);
-                    if (triangle_cache_it == m_triangle_cache.End()) {
-                        continue;
-                    }
-
-                    const Optional<RayHit> triangle_hit = ray.ray.TestTriangleList(
-                        triangle_cache_it->second,
-                        transform_component->transform
-                    );
-
-                    if (triangle_hit.HasValue()) {
-                        // Sample albedo and return as LightmapHit
-                        const uint triangle_index = triangle_hit->id;
-                        const Vec3f barycentric_coords = triangle_hit->barycentric_coords;
-
-                        const Triangle &triangle = triangle_cache_it->second[triangle_index];
-
-                        const Vec2f uv = triangle.GetPoint(0).texcoord0 * barycentric_coords.x
-                            + triangle.GetPoint(1).texcoord0 * barycentric_coords.y
-                            + triangle.GetPoint(2).texcoord0 * barycentric_coords.z;
-
-                        const Vec4f color = Vec4f(mesh_component->material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
-
-                        // @TODO Sample albedo from texture
-
-                        auto insert_result = results.Insert({
-                            triangle_hit->distance,
-                            {
-                                color
-                            }
-                        });
-
-                        // @TODO Recursion
-                    }
-                }
-            }
-        }
-
-        if (!results.Empty()) {
-            return results.Front().second;
-        }
+        return;
     }
 
-    return { };
+    LightmapRayTestResults results = m_acceleration_structure->TestRay(ray.ray);
+    
+    if (!results.Any()) {
+        return;
+    }
+    
+    for (const Pair<float, LightmapRayHitData> &hit_data : results) {
+        if (!hit_data.second.entity.IsValid()) {
+            continue;
+        }
+
+        const MeshComponent *mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(hit_data.second.entity);
+        const TransformComponent *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(hit_data.second.entity);
+
+        if (mesh_component != nullptr && mesh_component->mesh.IsValid() && mesh_component->material.IsValid() && mesh_component->mesh->NumIndices() != 0 && transform_component != nullptr) {
+            const ID<Mesh> mesh_id = mesh_component->mesh.GetID();
+
+            const Vec3f barycentric_coords = hit_data.second.hit.barycentric_coords;
+
+            const Triangle &triangle = hit_data.second.triangle;
+
+            const Vec2f uv = triangle.GetPoint(0).GetTexCoord0() * barycentric_coords.x
+                + triangle.GetPoint(1).GetTexCoord0() * barycentric_coords.y
+                + triangle.GetPoint(2).GetTexCoord0() * barycentric_coords.z;
+
+            const Vec4f color = Vec4f(mesh_component->material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
+
+            // @TODO sample textures
+
+            out_payload.emissive = Vec4f(0.0f);
+            out_payload.throughput = color;
+            out_payload.barycentric_coords = barycentric_coords;
+            out_payload.mesh_id = mesh_id;
+            out_payload.triangle_index = hit_data.second.hit.id;
+            out_payload.normal = hit_data.second.hit.normal;
+            out_payload.distance = hit_data.first;
+
+            return;
+        }
+    }
 }
 
 void LightmapJob::TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShadingType shading_type)
 {
-    rays.ParallelForEach(TaskSystem::GetInstance(), [this, shading_type](const LightmapRay &ray, uint index, uint batch_index)
+    rays.ParallelForEach(TaskSystem::GetInstance(), [this, shading_type](const LightmapRay &first_ray, uint index, uint batch_index)
     {
-        Optional<LightmapHit> hit = TraceSingleRayOnCPU(ray);
+        uint32 seed = uint32((uint64(Time::Now()) % UINT32_MAX) ^ (index << 16));
 
-        if (hit.HasValue()) {
-            IntegrateRayHits(&ray, &hit.Get(), 1, shading_type);
+        FixedArray<LightmapRay, max_bounces_cpu + 1> rays;
+        
+        FixedArray<LightmapRayHitPayload, max_bounces_cpu + 1> bounces;
+        int num_bounces = 0;
+
+        Vec3f direction = first_ray.ray.direction;
+
+        if (shading_type == LightmapShadingType::LIGHTMAP_SHADING_TYPE_IRRADIANCE) {
+            direction = MathUtil::RandomInHemisphere(
+                Vec3f(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed)),
+                first_ray.ray.direction
+            );
+        }
+
+        Vec3f origin = first_ray.ray.position + first_ray.ray.direction * 0.05f;
+
+        for (int bounce_index = 0; bounce_index < max_bounces_cpu; bounce_index++) {
+            LightmapRay bounce_ray = first_ray;
+
+            if (bounce_index != 0) {
+                bounce_ray.mesh_id = bounces[bounce_index - 1].mesh_id;
+                bounce_ray.triangle_index = bounces[bounce_index - 1].triangle_index;
+            }
+
+            bounce_ray.ray = Ray {
+                origin,
+                direction
+            };
+
+            rays[bounce_index] = bounce_ray;
+
+            LightmapRayHitPayload &payload = bounces[bounce_index];
+            payload.throughput = Vec4f(1.0f);
+            payload.emissive = Vec4f(0.0f);
+            payload.radiance = Vec4f(0.0f);
+            payload.distance = -1.0f;
+            payload.normal = Vec3f(0.0f);
+            payload.barycentric_coords = Vec3f(0.0f);
+            payload.mesh_id = ID<Mesh>::invalid;
+            payload.triangle_index = 0;
+
+            TraceSingleRayOnCPU(bounce_ray, payload);
+
+            if (payload.distance < 0.0f) {
+                // @TODO Sample environment map
+                const Vec3f normal = bounce_index == 0 ? first_ray.ray.direction : bounces[bounce_index - 1].normal;
+
+                // testing!! @FIXME
+                const Vec3f L = Vec3f(-0.4f, 0.65f, 0.1f).Normalize();
+                payload.emissive += Vec4f(1.0f) * MathUtil::Max(0.0f, normal.Dot(L));
+
+                ++num_bounces;
+
+                break;
+            }
+
+            Vec3f hit_position = origin + direction * payload.distance;
+            origin = hit_position + payload.normal * 0.05f;
+
+            if (shading_type == LightmapShadingType::LIGHTMAP_SHADING_TYPE_IRRADIANCE) {
+                direction = MathUtil::RandomInHemisphere(
+                    Vec3f(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed)),
+                    payload.normal
+                );
+            } else {
+                // @TODO
+            }
+
+            ++num_bounces;
+        }
+
+        for (int bounce_index = int(num_bounces - 1); bounce_index >= 0; bounce_index--) {
+            Vec4f radiance = bounces[bounce_index].emissive;
+
+            if (bounce_index != num_bounces - 1) {
+                radiance += bounces[bounce_index + 1].radiance * bounces[bounce_index].throughput;
+            }
+
+            float p = MathUtil::Max(radiance.x, MathUtil::Max(radiance.y, MathUtil::Max(radiance.z, radiance.w)));
+
+            if (MathUtil::RandomFloat(seed) > p) {
+                break;
+            }
+
+            radiance /= MathUtil::Max(p, 0.0001f);
+
+            bounces[bounce_index].radiance = radiance;
+        }
+
+        if (num_bounces != 0) {
+            LightmapHit hits;
+            hits.color = bounces[0].radiance;
+
+            if (MathUtil::IsNaN(hits.color) || !MathUtil::IsFinite(hits.color)) {
+                HYP_LOG_ONCE(Lightmap, LogLevel::WARNING, "NaN or infinite color detected while tracing rays");
+
+                hits.color = Vec4f(0.0f);
+            }
+
+            hits.color.w = 1.0f;
+
+            IntegrateRayHits(rays.Data(), &hits, 1, shading_type);
         }
     });
 }
@@ -546,7 +938,9 @@ void LightmapRenderer::Init()
         HYP_LOG(Lightmap, LogLevel::INFO, "Building graph for lightmapper");
 
         Array<LightmapEntity> lightmap_entities;
-        HashMap<ID<Mesh>, Array<Triangle>> triangle_cache;
+
+        UniquePtr<LightmapTopLevelAccelerationStructure> acceleration_structure;
+
         uint num_triangles = 0;
 
         for (auto [entity, mesh_component, transform_component, bounding_box_component] : mgr.GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(DataAccessFlags::ACCESS_READ)) {
@@ -569,18 +963,9 @@ void LightmapRenderer::Init()
                 continue;
             }
 
-            const RC<StreamedMeshData> &streamed_mesh_data = mesh_component.mesh->GetStreamedMeshData();
-
-            if (!streamed_mesh_data) {
-                continue;
-            }
-
-            auto ref = streamed_mesh_data->AcquireRef();
-            const MeshData &mesh_data = ref->GetMeshData();
-
-            if (ideal_triangles_per_job != 0 && num_triangles + mesh_data.indices.Size() / 3 > ideal_triangles_per_job) {
+            if (ideal_triangles_per_job != 0 && num_triangles != 0 && num_triangles + mesh_component.mesh->NumIndices() / 3 > ideal_triangles_per_job) {
                 if (lightmap_entities.Any()) {
-                    UniquePtr<LightmapJob> job(new LightmapJob(m_parent->GetScene(), std::move(lightmap_entities), std::move(triangle_cache)));
+                    UniquePtr<LightmapJob> job(new LightmapJob(m_parent->GetScene(), std::move(lightmap_entities), std::move(acceleration_structure)));
 
                     AddJob(std::move(job));
                 }
@@ -588,38 +973,18 @@ void LightmapRenderer::Init()
                 num_triangles = 0;
             }
 
-            // Set triangle data in m_triangle_cache
-            // On CPU, we need to cache the triangles for ray tracing
             if (m_trace_mode == LIGHTMAP_TRACE_MODE_CPU) {
-                const Matrix4 &transform_matrix = transform_component.transform.GetMatrix();
-
-                const Matrix4 normal_matrix = transform_matrix.Inverted().Transpose();
-
-                for (uint i = 0; i < mesh_data.indices.Size(); i += 3) {
-                    Triangle triangle {
-                        mesh_data.vertices[mesh_data.indices[i + 0]],
-                        mesh_data.vertices[mesh_data.indices[i + 1]],
-                        mesh_data.vertices[mesh_data.indices[i + 2]]
-                    };
-
-                    triangle[0].position = transform_matrix * triangle[0].position;
-                    triangle[1].position = transform_matrix * triangle[1].position;
-                    triangle[2].position = transform_matrix * triangle[2].position;
-
-                    triangle[0].normal = (normal_matrix * Vec4f(triangle[0].normal, 0.0f)).GetXYZ();
-                    triangle[1].normal = (normal_matrix * Vec4f(triangle[1].normal, 0.0f)).GetXYZ();
-                    triangle[2].normal = (normal_matrix * Vec4f(triangle[2].normal, 0.0f)).GetXYZ();
-
-                    triangle[0].tangent = (normal_matrix * Vec4f(triangle[0].tangent, 0.0f)).GetXYZ();
-                    triangle[1].tangent = (normal_matrix * Vec4f(triangle[1].tangent, 0.0f)).GetXYZ();
-                    triangle[2].tangent = (normal_matrix * Vec4f(triangle[2].tangent, 0.0f)).GetXYZ();
-
-                    triangle[0].bitangent = (normal_matrix * Vec4f(triangle[0].bitangent, 0.0f)).GetXYZ();
-                    triangle[1].bitangent = (normal_matrix * Vec4f(triangle[1].bitangent, 0.0f)).GetXYZ();
-                    triangle[2].bitangent = (normal_matrix * Vec4f(triangle[2].bitangent, 0.0f)).GetXYZ();
-
-                    triangle_cache[mesh_component.mesh.GetID()].PushBack(triangle);
+                if (!acceleration_structure) {
+                    acceleration_structure.Reset(new LightmapTopLevelAccelerationStructure);
                 }
+
+                acceleration_structure->Add(UniquePtr<LightmapBottomLevelAccelerationStructure>(
+                    new LightmapBottomLevelAccelerationStructure(
+                        entity,
+                        mesh_component.mesh,
+                        transform_component.transform
+                    )
+                ));
             }
 
             HYP_LOG(Lightmap, LogLevel::INFO, "Add Entity (#{}) to be processed for lightmap", entity.Value());
@@ -632,13 +997,13 @@ void LightmapRenderer::Init()
                 bounding_box_component.world_aabb
             });
 
-            num_triangles += mesh_data.indices.Size() / 3;
+            num_triangles += mesh_component.mesh->NumIndices() / 3;
         }
 
         if (lightmap_entities.Any()) {
             HYP_LOG(Lightmap, LogLevel::INFO, "Adding lightmap job for {} entities", lightmap_entities.Size());
 
-            UniquePtr<LightmapJob> job(new LightmapJob(m_parent->GetScene(), std::move(lightmap_entities), std::move(triangle_cache)));
+            UniquePtr<LightmapJob> job(new LightmapJob(m_parent->GetScene(), std::move(lightmap_entities), std::move(acceleration_structure)));
 
             AddJob(std::move(job));
         } else {
