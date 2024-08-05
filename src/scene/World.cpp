@@ -34,7 +34,8 @@ using renderer::RTUpdateStateFlags;
 World::World()
     : BasicObject(),
       m_detached_scenes(this),
-      m_has_scene_updates(false)
+      m_has_scene_updates(false),
+      m_game_time(0.0)
 {
 #ifdef HYP_EDITOR
     AddSubsystem<EditorSubsystem>();
@@ -220,6 +221,8 @@ void World::Update(GameCounter::TickUnit delta)
         task.Await();
     }
 #endif
+
+    m_game_time += delta;
 }
 
 void World::PreRender(Frame *frame)

@@ -492,41 +492,43 @@ void Scene::EnqueueRenderUpdates()
 
     struct RENDER_COMMAND(UpdateSceneRenderData) : renderer::RenderCommand
     {
-        ID<Scene>           id;
-        BoundingBox         aabb;
-        float               global_timer;
-        FogParams           fog_params;
-        RenderEnvironment   *render_environment;
-        SceneDrawProxy      &draw_proxy;
+        ID<Scene>               id;
+        BoundingBox             aabb;
+        GameCounter::TickUnit   game_time;
+        FogParams               fog_params;
+        RenderEnvironment       *render_environment;
+        SceneDrawProxy          &draw_proxy;
 
         RENDER_COMMAND(UpdateSceneRenderData)(
             ID<Scene> id,
             const BoundingBox &aabb,
-            float global_timer,
+            GameCounter::TickUnit game_time,
             const FogParams &fog_params,
             RenderEnvironment *render_environment,
             SceneDrawProxy &draw_proxy
         ) : id(id),
             aabb(aabb),
-            global_timer(global_timer),
+            game_time(game_time),
             fog_params(fog_params),
             render_environment(render_environment),
             draw_proxy(draw_proxy)
         {
         }
 
-        virtual Result operator()()
+        virtual ~RENDER_COMMAND(UpdateSceneRenderData)() override = default;
+
+        virtual Result operator()() override
         {
             const uint frame_counter = render_environment->GetFrameCounter();
 
             draw_proxy.frame_counter = frame_counter;
 
             SceneShaderData shader_data { };
-            shader_data.aabb_max         = Vec4f(aabb.max, 1.0f);
-            shader_data.aabb_min         = Vec4f(aabb.min, 1.0f);
-            shader_data.fog_params       = Vec4f(float(fog_params.color.Packed()), fog_params.start_distance, fog_params.end_distance, 0.0f);
-            shader_data.global_timer     = global_timer;
-            shader_data.frame_counter    = frame_counter;
+            shader_data.aabb_max = Vec4f(aabb.max, 1.0f);
+            shader_data.aabb_min = Vec4f(aabb.min, 1.0f);
+            shader_data.fog_params = Vec4f(float(fog_params.color.Packed()), fog_params.start_distance, fog_params.end_distance, 0.0f);
+            shader_data.game_time = game_time;
+            shader_data.frame_counter = frame_counter;
             shader_data.enabled_render_components_mask = render_environment->GetEnabledRenderComponentsMask();
             
             g_engine->GetRenderData()->scenes.Set(id.ToIndex(), shader_data);
@@ -539,7 +541,7 @@ void Scene::EnqueueRenderUpdates()
         UpdateSceneRenderData, 
         m_id,
         m_root_node_proxy.GetWorldAABB(),
-        m_environment->GetGlobalTimer(),
+        m_world->GetGameTime(),
         m_fog_params,
         m_environment.Get(),
         m_proxy

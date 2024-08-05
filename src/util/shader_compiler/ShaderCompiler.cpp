@@ -1851,7 +1851,7 @@ bool ShaderCompiler::CompileBundle(
     }
 
     if (!all_process_errors.Empty()) {
-        for (const auto &error : all_process_errors) {
+        for (const ProcessError &error : all_process_errors) {
             HYP_LOG(
                 ShaderCompiler,
                 LogLevel::ERR,
@@ -2006,8 +2006,9 @@ bool ShaderCompiler::CompileBundle(
         // load each source file, check if the output file exists, and if it does, check if it is older than the source file
         // if it is, we can reuse the file.
         // otherwise, we process the source and prepare it for compilation
-        ParallelForEach(loaded_source_files, [&](const LoadedSourceFile &item, uint index, uint)
-        {
+        for (SizeType index = 0; index < loaded_source_files.Size(); index++) {
+            const LoadedSourceFile &item = loaded_source_files[index];
+
             // check if a file exists w/ same hash
             const FilePath output_filepath = item.GetOutputFilepath(
                 g_asset_manager->GetBasePath(),
@@ -2078,7 +2079,7 @@ bool ShaderCompiler::CompileBundle(
 
                 processed_source = process_result.processed_source;
             }
-        });
+        }
 
         // merge all descriptor usages together for the source files before compiling.
         for (const DescriptorUsageSet &descriptor_usage_set : all_descriptor_usage_sets) {
@@ -2088,8 +2089,9 @@ bool ShaderCompiler::CompileBundle(
         all_descriptor_usage_sets.Clear();
 
         // final substitution of properties + compilation
-        ParallelForEach(loaded_source_files, [&](const LoadedSourceFile &item, uint index, uint)
-        {
+        for (SizeType index = 0; index < loaded_source_files.Size(); index++) {
+            const LoadedSourceFile &item = loaded_source_files[index];
+
             const Pair<FilePath, bool> &filepath_state = filepaths[index];
 
             // don't process these files
@@ -2183,7 +2185,7 @@ bool ShaderCompiler::CompileBundle(
             any_files_compiled.Set(true, MemoryOrder::RELAXED);
 
             compiled_shader.modules[item.type] = std::move(byte_buffer);
-        });
+        }
 
         num_compiled_permutations.Increment(uint32(!any_files_errored.Get(MemoryOrder::RELAXED) && any_files_compiled.Get(MemoryOrder::RELAXED)), MemoryOrder::RELAXED);
         num_errored_permutations.Increment(uint32(any_files_errored.Get(MemoryOrder::RELAXED)), MemoryOrder::RELAXED);
@@ -2191,7 +2193,7 @@ bool ShaderCompiler::CompileBundle(
         compiled_shaders_mutex.lock();
         out.compiled_shaders.PushBack(std::move(compiled_shader));
         compiled_shaders_mutex.unlock();
-    }, false);//true);
+    }, true);
 
     if (num_errored_permutations.Get(MemoryOrder::RELAXED)) {
         HYP_LOG(

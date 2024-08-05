@@ -194,9 +194,6 @@ public:
     uint32 GetEnabledRenderComponentsMask() const
         { return m_current_enabled_render_components_mask; }
 
-    float GetGlobalTimer() const
-        { return m_global_timer; }
-
     uint32 GetFrameCounter() const
         { return m_frame_counter; }
 
@@ -232,8 +229,7 @@ private:
     bool                                            m_has_rt_radiance;
     bool                                            m_has_ddgi_probes;
     TLASRef                                         m_tlas;
-
-    float                                           m_global_timer;
+    
     uint32                                          m_frame_counter;
 };
 

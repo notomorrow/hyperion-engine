@@ -75,7 +75,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer
 #endif
 #endif
 
-#define SUN_INTENSITY 16.0
+#define SUN_INTENSITY 32.0
 
 #define PLANET_RADIUS 6371e3
 #define ATMOSPHERE_RADIUS 6471e3

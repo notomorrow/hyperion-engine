@@ -439,11 +439,16 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 
         m_is_render_loop_active = false;
         RequestStop();
+
+        return;
     }
 
     Frame *frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
 
     if (g_should_recreate_swapchain) {
+        HYP_LOG(Rendering, LogLevel::INFO, "Recreating swapchain - New size: {}",
+            Vec2i(GetGPUInstance()->GetSwapchain()->extent));
+
         GetDelegates().OnBeforeSwapchainRecreated();
 
         HYPERION_ASSERT_RESULT(GetGPUDevice()->Wait());
@@ -492,16 +497,20 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 
     UpdateBuffersAndDescriptors((GetGPUInstance()->GetFrameHandler()->GetCurrentFrameIndex()));
 
+    game->OnFrameEnd(frame);
+
     frame_result = frame->Submit(&GetGPUDevice()->GetGraphicsQueue());
 
     if (!frame_result) {
-        m_crash_handler.HandleGPUCrash(frame_result);
+        //m_crash_handler.HandleGPUCrash(frame_result);
 
-        m_is_render_loop_active = false;
-        RequestStop();
+        //m_is_render_loop_active = false;
+        //RequestStop();
+
+        g_should_recreate_swapchain = true;
+
+        return;
     }
-
-    game->OnFrameEnd(frame);
 
     HYPERION_ASSERT_RESULT(GetGPUDevice()->GetAsyncCompute()->Submit(GetGPUDevice(), frame));
 

@@ -38,6 +38,11 @@ using OnTaskCompletedCallback = Proc<void>;
 
 struct TaskID
 {
+    static TaskID Invalid()
+    {
+        return TaskID { 0 };
+    }
+
     uint32 value { 0 };
     
     TaskID &operator=(uint32 id)
@@ -89,8 +94,8 @@ class TaskExecutor : public ITaskExecutor
 {
 public:
     TaskExecutor()
-        : m_id { },
-          m_initiator_thread_id { },
+        : m_id(TaskID::Invalid()),
+          m_initiator_thread_id(ThreadID::Invalid()),
           m_assigned_scheduler(nullptr)
     {
         // set semaphore to initial value of 1 (one task)

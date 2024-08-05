@@ -161,7 +161,7 @@ struct SceneShaderData
     Vec4f   aabb_min;
     Vec4f   fog_params;
 
-    float   global_timer;
+    float   game_time;
     uint32  frame_counter;
     uint32  enabled_render_components_mask;
     uint32  enabled_environment_maps_mask;

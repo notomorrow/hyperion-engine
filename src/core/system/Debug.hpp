@@ -30,17 +30,17 @@ enum class LogType : int
 #define DebugLogRaw(type, ...) \
     DebugLog_(type, nullptr, 0, __VA_ARGS__)
 
-#ifdef HYPERION_BUILD_RELEASE
-    #define DebugLog(type, ...) \
-        DebugLog_(type, __VA_ARGS__)
-
-    extern HYP_API void DebugLog_(LogType type, const char *fmt, ...);
-#else
+#ifdef HYP_DEBUG_MODE
     //#define DebugLog(type, fmt) DebugLog(type, HYP_DEBUG_FUNC_SHORT, HYP_DEBUG_LINE, fmt)
     #define DebugLog(type, ...) \
         DebugLog_(type, HYP_DEBUG_FUNC_SHORT, HYP_DEBUG_LINE, __VA_ARGS__)
 
     extern HYP_API void DebugLog_(LogType type, const char *callee, uint32_t line, const char *fmt, ...);
+#else
+    #define DebugLog(type, ...) \
+        DebugLog_(type, __VA_ARGS__)
+
+    extern HYP_API void DebugLog_(LogType type, const char *fmt, ...);
 #endif
 
 #define DebugLogAssertion(level, cond) \

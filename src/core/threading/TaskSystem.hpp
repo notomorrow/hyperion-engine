@@ -57,9 +57,8 @@ struct TaskBatch
      */
     TaskThreadPoolName                      pool = THREAD_POOL_GENERIC;
 
-    /* Number of tasks must remain constant from creation of the TaskBatch,
-     * to completion. */
-    LinkedList<TaskExecutorInstance<void>>  executors;
+    /* Tasks must remain constant from creation of the TaskBatch to completion. */
+    Array<TaskExecutorInstance<void>>       executors;
 
     /* TaskRefs to be set by the TaskSystem, holding task ids and pointers to the threads
      * each task has been scheduled to. */
@@ -85,22 +84,17 @@ struct TaskBatch
         executors.EmplaceBack(std::move(executor));
 
         ++num_enqueued;
-        // temp
+
         semaphore.Produce(1);
     }
 
     /*! \brief Check if all tasks in the batch have been completed. */
     HYP_FORCE_INLINE bool IsCompleted() const
         { return semaphore.IsInSignalState(); }
-        // { return num_completed.Get(MemoryOrder::RELAXED) == num_enqueued; }
 
     /*! \brief Block the current thread until all tasks have been marked as completed. */
     HYP_FORCE_INLINE void AwaitCompletion()
     {
-        // while (!IsCompleted()) {
-        //     HYP_WAIT_IDLE();
-        // }
-
         semaphore.Acquire();
     }
 
@@ -127,14 +121,8 @@ struct TaskBatch
         HYP_MT_CHECK_RW(data_race_detector);
 #endif
 
-        AssertThrowMsg(
-            IsCompleted(),
-            "TaskBatch::ResetState() must be called after all tasks have been completed"
-        );
-
-        // semaphore.SetValue(0);
-
-        // num_completed.Set(0, MemoryOrder::SEQUENTIAL);
+        AssertThrowMsg(IsCompleted(), "TaskBatch::ResetState() must be called after all tasks have been completed");
+        
         semaphore.SetValue(0);
         num_enqueued = 0;
         executors.Clear();
@@ -164,23 +152,35 @@ public:
 
     ~TaskSystem()                                       = default;
 
-    HYP_FORCE_INLINE
-    bool IsRunning() const
+    HYP_FORCE_INLINE bool IsRunning() const
         { return m_running.Get(MemoryOrder::RELAXED); }
 
     HYP_API void Start();
     HYP_API void Stop();
 
-    TaskThreadPool &GetPool(TaskThreadPoolName pool_name)
+    HYP_FORCE_INLINE TaskThreadPool &GetPool(TaskThreadPoolName pool_name)
         { return m_pools[uint(pool_name)]; }
+
+    HYP_FORCE_INLINE TaskThread *GetTaskThread(ThreadID thread_id) const
+    {
+        for (const TaskThreadPool &pool : m_pools) {
+            const auto it = pool.threads.FindIf([thread_id](const UniquePtr<TaskThread> &task_thread)
+            {
+                return task_thread->GetID() == thread_id;
+            });
+
+            if (it != pool.threads.End()) {
+                return it->Get();
+            }
+        }
+
+        return nullptr;
+    }
 
     template <class Lambda>
     auto Enqueue(Lambda &&fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE, TaskThreadPoolName pool_name = THREAD_POOL_GENERIC) -> Task<typename FunctionTraits<Lambda>::ReturnType>
     {
-        AssertThrowMsg(
-            IsRunning(),
-            "TaskSystem::Start() must be called before enqueuing tasks"
-        );
+        AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
         
         TaskThreadPool &pool = GetPool(pool_name);
 

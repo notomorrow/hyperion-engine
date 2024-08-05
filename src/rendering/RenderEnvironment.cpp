@@ -58,7 +58,6 @@ struct RENDER_COMMAND(RemoveAllRenderComponents) : renderer::RenderCommand
 RenderEnvironment::RenderEnvironment(Scene *scene)
     : BasicObject(),
       m_scene(scene),
-      m_global_timer(0.0f),
       m_frame_counter(0),
       m_current_enabled_render_components_mask(0),
       m_next_enabled_render_components_mask(0),
@@ -168,8 +167,6 @@ void RenderEnvironment::Update(GameCounter::TickUnit delta)
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertReady();
-
-    m_global_timer += delta;
 
     std::lock_guard guard(m_render_component_mutex);
 

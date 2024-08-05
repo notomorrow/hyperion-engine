@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <core/threading/Threads.hpp>
+#include <core/threading/TaskSystem.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -25,6 +26,15 @@ const FlatMap<ThreadName, ThreadID> Threads::thread_ids = {
     { THREAD_RESERVED1, ThreadID { uint32(THREAD_RESERVED1),    HYP_NAME_UNSAFE(ReservedThread1) } },
     { THREAD_RESERVED2, ThreadID { uint32(THREAD_RESERVED2),    HYP_NAME_UNSAFE(ReservedThread2) } }
 };
+
+IThread *Threads::GetTaskThread(ThreadID thread_id)
+{
+    if (!(THREAD_TASK & thread_id.GetMask())) {
+        return nullptr;
+    }
+
+    return TaskSystem::GetInstance().GetTaskThread(thread_id);
+}
 
 thread_local IThread *g_current_thread = nullptr;
 

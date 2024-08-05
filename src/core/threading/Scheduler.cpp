@@ -2,6 +2,9 @@
 
 #include <core/threading/Scheduler.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 namespace threading {
 

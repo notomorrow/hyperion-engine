@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "HyperionEditor",
-    "args": "-ResX=1280 -ResY=720"
+    "args": "-ResX=1920 -ResY=1080"
   },
   "rendering": {
     "ssr": {
@@ -12,10 +12,10 @@
         "enabled": true
       },
       "path_tracer": {
-        "enabled": false
+        "enabled": true
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       },
       "enabled": true
     },

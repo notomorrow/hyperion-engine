@@ -32,6 +32,12 @@ else()
     set(HYP_BUILD_TYPE "Debug")
 endif()
 
+set(HYP_DEBUG_MODE 1)
+
+if(HYP_DEBUG_MODE)
+    add_definitions(-DHYP_DEBUG_MODE=1)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(NATIVE false CACHE BOOL "Is the build occuring on a native platform? (Access to native libraries, filesystem etc.)")
 else()
@@ -59,7 +65,15 @@ if(MSVC)
     # no exceptions
     add_definitions("/D_HAS_EXCEPTIONS=0")
 
-    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /MD")
+    if(HYP_DEBUG_MODE)
+        message(STATUS "Generating PDB for Hyperion library")
+
+        set(CMAKE_CXX_FLAGS_RELEASE "/O2 /MD /Zi")
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
+        set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG")
+    else()
+        set(CMAKE_CXX_FLAGS_RELEASE "/O2 /MD")
+    endif()
 else()
     # no exceptions
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")

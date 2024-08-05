@@ -9,7 +9,7 @@ struct Scene
     vec4 aabb_min;
     vec4 fog_params;
 
-    float global_timer;
+    float game_time;
     uint frame_counter;
     uint enabled_render_components_mask;
     float _pad0;

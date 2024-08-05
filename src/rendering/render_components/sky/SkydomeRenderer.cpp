@@ -29,6 +29,8 @@ void SkydomeRenderer::Init()
     InitObject(m_camera);
 
     m_virtual_scene = CreateObject<Scene>(m_camera);
+    m_virtual_scene->SetName(Name::Unique("SkydomeRendererScene"));
+    g_engine->GetWorld()->AddScene(m_virtual_scene);
     InitObject(m_virtual_scene);
 
     m_env_probe = CreateObject<EnvProbe>(
@@ -65,6 +67,7 @@ void SkydomeRenderer::OnRemoved()
         m_env_probe.Reset();
     }
 
+    g_engine->GetWorld()->RemoveScene(m_virtual_scene);
     m_virtual_scene.Reset();
 
     m_camera.Reset();
@@ -78,9 +81,6 @@ void SkydomeRenderer::OnUpdate(GameCounter::TickUnit delta)
 
     m_env_probe->SetNeedsUpdate(true);
     m_env_probe->SetNeedsRender(true);
-
-    m_virtual_scene->BeginUpdate(delta);
-    m_virtual_scene->EndUpdate();
     
     m_env_probe->Update(delta);
 }

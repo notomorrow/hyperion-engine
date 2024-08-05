@@ -151,8 +151,10 @@ class HYP_API World : public BasicObject<World>
 {
 public:
     World();
-    World(const World &other)               = delete;
-    World &operator=(const World &other)    = delete;
+    World(const World &other)                   = delete;
+    World &operator=(const World &other)        = delete;
+    World(World &&other) noexcept               = delete;
+    World &operator=(World &&other) noexcept    = delete;
     ~World();
 
     /*! \brief Get the placeholder Scene, used for Entities that are not attached to a Scene.
@@ -203,6 +205,9 @@ public:
     
     SubsystemBase *GetSubsystem(TypeID type_id);
 
+    HYP_FORCE_INLINE GameCounter::TickUnit GetGameTime() const
+        { return m_game_time; }
+
     void AddScene(const Handle<Scene> &scene);
     void AddScene(Handle<Scene> &&scene);
     void RemoveScene(const WeakHandle<Scene> &scene);
@@ -234,6 +239,8 @@ private:
 
     AtomicVar<bool>                     m_has_scene_updates { false };
     Mutex                               m_scene_update_mutex;
+
+    GameCounter::TickUnit               m_game_time;
 };
 
 } // namespace hyperion

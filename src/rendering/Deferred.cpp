@@ -631,7 +631,7 @@ void EnvGridPass::CreateRenderTextureToScreenPass()
 
     m_render_texture_to_screen_pass.Reset(new FullScreenPass(
         render_texture_to_screen_shader,
-        std::move(descriptor_table),
+        descriptor_table,
         m_image_format,
         m_extent
     ));

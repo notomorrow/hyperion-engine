@@ -37,8 +37,8 @@ void main() {
 
     vec3 displaced_position = a_position;
     const float movement = a_texcoord0.t * a_texcoord0.t;
-    displaced_position += vec3(sin(scene.global_timer * 2.0) * 0.1, 0.0, cos(scene.global_timer * 2.0) * 0.1) * movement;
-    displaced_position += vec3(sin(scene.global_timer * 0.5) * 0.4, 0.0, cos(scene.global_timer * 0.5) * 0.4) * movement;
+    displaced_position += vec3(sin(scene.game_time * 2.0) * 0.1, 0.0, cos(scene.game_time * 2.0) * 0.1) * movement;
+    displaced_position += vec3(sin(scene.game_time * 0.5) * 0.4, 0.0, cos(scene.game_time * 0.5) * 0.4) * movement;
     
     if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
         mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);

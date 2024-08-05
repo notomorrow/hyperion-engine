@@ -25,6 +25,8 @@
 namespace hyperion {
 namespace threading {
 
+
+
 class HYP_API SchedulerBase
 {
 public:
@@ -51,7 +53,10 @@ public:
     virtual void Await(TaskID id) = 0;
     virtual bool Dequeue(TaskID id) = 0;
     virtual bool TakeOwnershipOfTask(TaskID id, ITaskExecutor *executor) = 0;
-    virtual bool IsWaitingOnTaskFromThread(ThreadID thread_id) const = 0;
+
+    /*! \brief Has \ref{thread_id} given us work to complete?
+     *  Returns true if \ref{thread_id} might be waiting on us to complete some work for them. */
+    virtual bool HasWorkAssignedFromThread(ThreadID thread_id) const = 0;
 
 protected:
     SchedulerBase(ThreadID owner_thread)
@@ -217,7 +222,7 @@ public:
         scheduled_task.semaphore = &executor->GetSemaphore();
         scheduled_task.task_executed = &m_task_executed;
 
-        EnqueueInternal(std::move(scheduled_task));
+        Enqueue_Internal(std::move(scheduled_task));
 
         lock.unlock();
 
@@ -248,7 +253,7 @@ public:
         scheduled_task.task_executed = &m_task_executed;
         scheduled_task.callback = std::move(callback);
 
-        EnqueueInternal(std::move(scheduled_task));
+        Enqueue_Internal(std::move(scheduled_task));
 
         const TaskID task_id = executor_ptr->GetTaskID();
 
@@ -289,7 +294,7 @@ public:
 
         std::unique_lock lock(m_mutex);
 
-        if (DequeueInternal(id)) {
+        if (Dequeue_Internal(id)) {
             return true;
         }
 
@@ -340,7 +345,7 @@ public:
         return true;
     }
 
-    virtual bool IsWaitingOnTaskFromThread(ThreadID thread_id) const override
+    virtual bool HasWorkAssignedFromThread(ThreadID thread_id) const override
     {
         std::unique_lock lock(m_mutex);
 
@@ -449,7 +454,7 @@ public:
     }
     
 private:
-    void EnqueueInternal(ScheduledTask &&scheduled_task)
+    void Enqueue_Internal(ScheduledTask &&scheduled_task)
     {
         const TaskID task_id { ++m_id_counter };
 
@@ -461,7 +466,7 @@ private:
         m_num_enqueued.Increment(1, MemoryOrder::RELEASE);
     }
 
-    bool DequeueInternal(TaskID id)
+    bool Dequeue_Internal(TaskID id)
     {
         const auto it = m_queue.FindIf([&id](const auto &item)
         {

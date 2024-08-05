@@ -3,14 +3,12 @@
 #ifndef HYPERION_THREADS_HPP
 #define HYPERION_THREADS_HPP
 
+#include <core/Defines.hpp>
+
 #include <core/containers/FlatMap.hpp>
 #include <core/threading/Thread.hpp>
 
-#include <core/system/Debug.hpp>
-
 #include <Types.hpp>
-
-#include <core/Defines.hpp>
 
 namespace hyperion {
 namespace threading {
@@ -63,6 +61,8 @@ public:
     HYP_API static bool IsOnThread(ThreadMask mask);
     HYP_API static bool IsOnThread(const ThreadID &thread_id);
 
+    HYP_API static IThread *GetTaskThread(ThreadID thread_id);
+
     HYP_API static IThread *CurrentThreadObject();
 
     HYP_API static ThreadID GetThreadID(ThreadName thread_name);
@@ -78,6 +78,7 @@ public:
 
     HYP_API static void Sleep(uint32 milliseconds);
 };
+
 } // namespace threading
 
 using threading::Threads;

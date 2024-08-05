@@ -130,10 +130,26 @@
     </Expand>
   </Type>
 
+  <Type Name="hyperion::threading::ThreadID">
+    <DisplayString>{name}</DisplayString>
+    <Expand>
+      <Item Name="[Name]">name</Item>
+      <Item Name="[Value]">value</Item>
+    </Expand>
+  </Type>
+
   <Type Name="hyperion::threading::AtomicVar&lt;*&gt;">
     <DisplayString>{{ Value={m_value} }}</DisplayString>
     <Expand>
       <Item Name="[Value]">m_value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="hyperion::threading::Semaphore&lt;*,hyperion::threading::detail::ConditionVarSemaphoreImpl&lt;*&gt;&gt;">
+    <DisplayString Condition="m_impl.value&lt;=0">Signaled</DisplayString>
+    <DisplayString Condition="m_impl.value&gt;0">Not Signaled</DisplayString>
+    <Expand>
+      <Item Name="[Value]">m_impl.value</Item>
     </Expand>
   </Type>
 

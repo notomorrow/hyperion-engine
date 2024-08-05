@@ -56,6 +56,7 @@ HYP_DECLARE_LOG_CHANNEL(Threading);
 
 HYP_DECLARE_LOG_CHANNEL(Tasks);
 HYP_DECLARE_LOG_CHANNEL(DataRaceDetector);
+HYP_DECLARE_LOG_CHANNEL(Scheduler);
 
 #pragma endregion Threading
 

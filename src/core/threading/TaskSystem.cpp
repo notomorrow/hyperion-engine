@@ -58,10 +58,7 @@ TaskSystem::TaskSystem()
 
 void TaskSystem::Start()
 {
-    AssertThrowMsg(
-        !IsRunning(),
-        "TaskSystem::Start() has already been called"
-    );
+    AssertThrowMsg(!IsRunning(), "TaskSystem::Start() has already been called");
 
     for (auto &pool : m_pools) {
         for (auto &it : pool.threads) {
@@ -75,10 +72,7 @@ void TaskSystem::Start()
 
 void TaskSystem::Stop()
 {
-    AssertThrowMsg(
-        IsRunning(),
-        "TaskSystem::Start() must be called before TaskSystem::Stop()"
-    );
+    AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before TaskSystem::Stop()");
 
     m_running.Set(false, MemoryOrder::RELAXED);
 
@@ -175,31 +169,28 @@ TaskThread *TaskSystem::GetNextTaskThread(TaskThreadPool &pool)
 {
     static constexpr uint32 max_spins = 40;
 
-    TaskThread *task_thread = nullptr;
+    const uint32 num_threads_in_pool = uint32(pool.threads.Size());
 
     const ThreadID current_thread_id = Threads::CurrentThreadID();
     const bool is_on_task_thread = current_thread_id & THREAD_TASK;
 
-    const uint32 num_threads_in_pool = uint32(pool.threads.Size());
+    IThread *current_thread_object = is_on_task_thread
+        ? Threads::CurrentThreadObject()
+        : nullptr;
+
+    if (is_on_task_thread) {
+        AssertThrow(current_thread_object != nullptr);
+    }
 
     uint32 cycle = pool.cycle.Get(MemoryOrder::RELAXED) % num_threads_in_pool;
-
     uint32 num_spins = 0;
+
+    TaskThread *task_thread = nullptr;
     
     // if we are currently on a task thread we need to move to the next task thread in the pool
     // if we selected the current task thread. otherwise we will have a deadlock.
     // this does require that there are > 1 task thread in the pool.
     do {
-        if (num_spins >= max_spins) {
-            AssertThrowMsg(task_thread != nullptr, "All task threads are busy and we have not found a free one");
-
-            HYP_LOG(Tasks, LogLevel::WARNING, "Maximum spins reached in GetNextTaskThread");
-
-            pool.cycle.Increment(1, MemoryOrder::RELAXED);
-
-            return task_thread;
-        }
-
         do {
             task_thread = pool.threads[cycle].Get();
 
@@ -207,7 +198,18 @@ TaskThread *TaskSystem::GetNextTaskThread(TaskThreadPool &pool)
             pool.cycle.Increment(1, MemoryOrder::RELAXED);
 
             ++num_spins;
-        } while (task_thread->GetID() == current_thread_id || (is_on_task_thread && task_thread->IsWaitingOnTaskFromThread(current_thread_id)));
+            
+            if (num_spins >= max_spins) {
+                if (is_on_task_thread) {
+                    return static_cast<TaskThread *>(current_thread_object);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+                }
+
+                HYP_LOG(Tasks, LogLevel::WARNING, "Maximum spins reached in GetNextTaskThread -- all task threads busy");
+
+                return task_thread;
+            }
+        } while (task_thread->GetID() == current_thread_id
+            || (is_on_task_thread && current_thread_object->GetScheduler()->HasWorkAssignedFromThread(task_thread->GetID())));
     } while (!task_thread->IsRunning() && !task_thread->IsFree());
 
     return task_thread;
