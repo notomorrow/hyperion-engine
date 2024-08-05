@@ -327,19 +327,21 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
-    vec4 irradiance = vec4(0.0);
-    vec4 radiance = vec4(0.0);
-
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP)) {
-        irradiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
-    }
-
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP)) {
-        radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
-    }
 
     // // TEMP testing lightmaps
-    // gbuffer_albedo = (irradiance + radiance) * gbuffer_albedo;
+
+    // vec4 irradiance = vec4(0.0);
+    // vec4 radiance = vec4(0.0);
+
+    // if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP)) {
+    //     irradiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+    // }
+
+    // if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP)) {
+    //    radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+    // }
+
+    // gbuffer_albedo = (irradiance + radiance);// * gbuffer_albedo;
     // gbuffer_albedo.a = 0.0; 
 
     gbuffer_normals = EncodeNormal(N);

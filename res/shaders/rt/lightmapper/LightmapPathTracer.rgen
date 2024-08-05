@@ -87,7 +87,7 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 #define RAY_OFFSET 0.05
 #define NUM_SAMPLES 16
-#define NUM_BOUNCES 3
+#define NUM_BOUNCES 8
 
 // uncomment to see the actual object colors
 // #define DEBUG_TEST
@@ -111,35 +111,42 @@ void main()
 
     const vec3 normal = ray.direction.xyz;
 
+    vec3 tangent;
+    vec3 bitangent;
+
     vec4 radiance = vec4(0.0, 0.0, 0.0, 0.0);
 
     uint ray_seed = InitRandomSeed(((rt_radiance_uniforms.ray_offset + ray_index) * 2), ((rt_radiance_uniforms.ray_offset + ray_index) * 2) + 1);
 
     for (uint sample_index = 0; sample_index < NUM_SAMPLES; sample_index++) {
+        ComputeOrthonormalBasis(normal, tangent, bitangent);
+
         vec2 rnd = vec2(RandomFloat(ray_seed), RandomFloat(ray_seed));
         vec3 H;
+
+        vec3 direction;
+
+#ifdef MODE_IRRADIANCE        
+        direction = normalize(RandomInHemisphere(
+            vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
+            normal
+        ));
+#else
+        direction = normal;
+#endif
+
+        vec3 origin = ray.origin.xyz + direction.xyz * RAY_OFFSET;
 
         payload.throughput = vec4(1.0); // multiplied be albedo when sampled after bake
         payload.emissive = vec4(0.0);
         payload.triangle_index = ~0u;
         payload.entity_index = ~0u;
-        payload.normal = ray.direction.xyz;
-
-        vec3 origin = ray.origin.xyz + ray.direction.xyz * RAY_OFFSET;
+        payload.normal = normal;
 
 #ifdef MODE_IRRADIANCE
 
         RayBounceInfo bounces[NUM_BOUNCES];
         uint num_bounces = 0;
-
-#ifdef DEBUG_TEST
-        vec3 direction = -ray.direction.xyz;
-#else
-        vec3 direction = normalize(RandomInHemisphere(
-            vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
-            ray.direction.xyz
-        ));
-#endif
 
         for (int bounce_index = 0; bounce_index < NUM_BOUNCES; bounce_index++) {
             payload.distance = -1.0;
@@ -163,7 +170,8 @@ void main()
                 for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
                     const Light light = HYP_GET_LIGHT(light_index);
 
-                    if (light.type != 0) {
+                    // Only handle directional lights here
+                    if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
                         continue;
                     }
 
@@ -175,14 +183,25 @@ void main()
 
                 break;
             }
+            
+            vec3 hit_position = origin + direction * payload.distance;
+            origin = hit_position + payload.normal * RAY_OFFSET;
 
             direction = normalize(RandomInHemisphere(
                 vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
                 payload.normal
             ));
 
-            vec3 hit_position = origin + direction * payload.distance;
-            origin = hit_position + payload.normal * RAY_OFFSET;
+            // ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
+
+            // H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
+            // H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+            // H = normalize(H);
+
+            // vec3 hit_position = origin + direction * payload.distance;
+            // origin = hit_position + payload.normal * RAY_OFFSET;
+                
+            // direction = reflect(direction, H);
 
             ++num_bounces;
         }
@@ -209,15 +228,13 @@ void main()
         radiance += num_bounces > 0 ? bounces[0].radiance : vec4(0.0);
 
 #elif defined(MODE_RADIANCE)
-        const vec3 normal = normalize(ray.direction.xyz);
-
         // test directional lights
         vec4 emissive = vec4(0.0);
 
         for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
             const Light light = HYP_GET_LIGHT(light_index);
 
-            if (light.type != 0) {
+            if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
                 continue;
             }
 

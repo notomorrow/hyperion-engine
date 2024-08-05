@@ -115,130 +115,131 @@ void main()
     const float metalness = material.g;
 
     bool perform_lighting = albedo.a > 0.0;
-
-    const float material_reflectance = 0.5;
-    // dialetric f0
-    const float reflectance = 0.16 * material_reflectance * material_reflectance;
-    vec4 F0 = vec4(albedo.rgb * metalness + (reflectance * (1.0 - metalness)), 1.0);
-
-    const vec4 diffuse_color = CalculateDiffuseColor(albedo, metalness);
-
-    vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
-
-    vec3 N = normalize(normal);
-    vec3 T = normalize(tangent);
-    vec3 B = normalize(bitangent);
-    vec3 V = normalize(camera.position.xyz - position.xyz);
-
-    const float NdotV = max(0.000001, dot(N, V));
- 
     vec4 result = vec4(0.0);
+
+    if (perform_lighting)
+    {
+        const float material_reflectance = 0.5;
+        // dialetric f0
+        const float reflectance = 0.16 * material_reflectance * material_reflectance;
+        vec4 F0 = vec4(albedo.rgb * metalness + (reflectance * (1.0 - metalness)), 1.0);
+
+        const vec4 diffuse_color = CalculateDiffuseColor(albedo, metalness);
+
+        vec4 F90 = vec4(clamp(dot(F0, vec4(50.0 * 0.33)), 0.0, 1.0));
+
+        vec3 N = normalize(normal);
+        vec3 T = normalize(tangent);
+        vec3 B = normalize(bitangent);
+        vec3 V = normalize(camera.position.xyz - position.xyz);
+
+        const float NdotV = max(0.000001, dot(N, V));
     
-    float ao = 1.0;
-    float shadow = 1.0;
+        float ao = 1.0;
+        float shadow = 1.0;
 
-    const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, texcoord);
-    ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
+        const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, texcoord);
+        ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
 
-    vec4 area_light_radiance;
+        vec4 area_light_radiance;
 
 #if defined(LIGHT_TYPE_DIRECTIONAL) || defined(LIGHT_TYPE_POINT) || defined(LIGHT_TYPE_SPOT)
-    vec3 L = light.position_intensity.xyz;
-    L -= position.xyz * float(min(light.type, 1));
-    L = normalize(L);
+        vec3 L = light.position_intensity.xyz;
+        L -= position.xyz * float(min(light.type, 1));
+        L = normalize(L);
 
-    const vec3 H = normalize(L + V);
+        const vec3 H = normalize(L + V);
 
-    const float NdotL = max(0.000001, dot(N, L));
-    const float LdotH = max(0.000001, dot(L, H));
-    const float NdotH = max(0.000001, dot(N, H));
-    const float HdotV = max(0.000001, dot(H, V));
+        const float NdotL = max(0.000001, dot(N, L));
+        const float LdotH = max(0.000001, dot(L, H));
+        const float NdotH = max(0.000001, dot(N, H));
+        const float HdotV = max(0.000001, dot(H, V));
 #elif defined(LIGHT_TYPE_AREA_RECT)
-    vec3 L;
+        vec3 L;
 
-    const vec3 R = reflect(-V, N);
+        const vec3 R = reflect(-V, N);
 
-    // const float theta = acos(NdotV);
-    // vec2 lut_uv = (vec2(roughness, theta / HYP_FMATH_PI * 0.5));
-    vec2 lut_uv = (vec2(roughness, sqrt(1.0 - NdotV)));
-    lut_uv.y = 1.0 - lut_uv.y;
-    lut_uv = lut_uv * lut_scale + lut_bias;
-    lut_uv = clamp(lut_uv, vec2(0.0), vec2(1.0));
+        // const float theta = acos(NdotV);
+        // vec2 lut_uv = (vec2(roughness, theta / HYP_FMATH_PI * 0.5));
+        vec2 lut_uv = (vec2(roughness, sqrt(1.0 - NdotV)));
+        lut_uv.y = 1.0 - lut_uv.y;
+        lut_uv = lut_uv * lut_scale + lut_bias;
+        lut_uv = clamp(lut_uv, vec2(0.0), vec2(1.0));
 
-    const vec4 t1 = Texture2D(ltc_sampler, ltc_matrix_texture, lut_uv);
-    const vec4 t2 = Texture2D(ltc_sampler, ltc_brdf_texture, lut_uv);
+        const vec4 t1 = Texture2D(ltc_sampler, ltc_matrix_texture, lut_uv);
+        const vec4 t2 = Texture2D(ltc_sampler, ltc_brdf_texture, lut_uv);
 
-    const mat3 Minv = mat3(
-        vec3(t1.x, 0.0, t1.y),
-        vec3(0.0, 1.0, 0.0),
-        vec3(t1.z, 0.0, t1.w)
-    );
-
-    const float half_width = light.area_size.x * 0.5;
-    const float half_height = light.area_size.y * 0.5;
-
-    vec3 light_tangent;
-    vec3 light_bitangent;
-    ComputeOrthonormalBasis(light.normal.xyz, light_tangent, light_bitangent);
-    
-    const vec3 p0 = light.position_intensity.xyz - light_tangent * half_width - light_bitangent * half_height;
-    const vec3 p1 = light.position_intensity.xyz + light_tangent * half_width - light_bitangent * half_height;
-    const vec3 p2 = light.position_intensity.xyz + light_tangent * half_width + light_bitangent * half_height;
-    const vec3 p3 = light.position_intensity.xyz - light_tangent * half_width + light_bitangent * half_height;
-
-    const vec3 pts[4] = vec3[4](p0, p1, p2, p3);
-
-    vec4 area_light_diffuse = CalculateAreaLightRadiance(light, mat3(1.0), pts, position.xyz, N, V);
-    area_light_diffuse *= diffuse_color * (1.0 / HYP_FMATH_PI);
-
-    vec4 area_light_specular = CalculateAreaLightRadiance(light, Minv, pts, position.xyz, N, V);
-
-    // GGX BRDF shadowing and Fresnel
-    // t2.x: shadowedF90 (F90 normally it should be 1.0)
-    // t2.y: Smith function for Geometric Attenuation Term, it is dot(V or L, H).
-    area_light_specular *= diffuse_color * t2.x + (vec4(1.0) - diffuse_color) * t2.y;
-    area_light_radiance = area_light_specular + area_light_diffuse;
-
-    const float NdotL = 0.0;
-    const float LdotH = 0.0;
-    const float NdotH = 0.0;
-    const float HdotV = 0.0;
-#else
-    const float NdotL = 0.0;
-    const float LdotH = 0.0;
-    const float NdotH = 0.0;
-    const float HdotV = 0.0;
-#endif
-
-    vec4 light_rays = vec4(0.0);
-    vec4 light_color = UINT_TO_VEC4(light.color_encoded);
-
-#ifdef LIGHT_TYPE_POINT
-    if (light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
-        const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
-        const uint shadow_flags = current_env_probe.flags >> 3;
-
-        shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
-    }
-#elif defined(LIGHT_TYPE_DIRECTIONAL)
-    if (light.shadow_map_index != ~0u) {
-        shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, camera.dimensions.xy, NdotL);
-
-#ifdef LIGHT_RAYS_ENABLED
-        const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
-
-        const float light_ray_attenuation = LightRays(
-            light.shadow_map_index,
-            texcoord,
-            L,
-            position.xyz,
-            camera.position.xyz,
-            depth
+        const mat3 Minv = mat3(
+            vec3(t1.x, 0.0, t1.y),
+            vec3(0.0, 1.0, 0.0),
+            vec3(t1.z, 0.0, t1.w)
         );
 
-        light_rays = vec4(light_color * light_ray_attenuation);
+        const float half_width = light.area_size.x * 0.5;
+        const float half_height = light.area_size.y * 0.5;
+
+        vec3 light_tangent;
+        vec3 light_bitangent;
+        ComputeOrthonormalBasis(light.normal.xyz, light_tangent, light_bitangent);
+    
+        const vec3 p0 = light.position_intensity.xyz - light_tangent * half_width - light_bitangent * half_height;
+        const vec3 p1 = light.position_intensity.xyz + light_tangent * half_width - light_bitangent * half_height;
+        const vec3 p2 = light.position_intensity.xyz + light_tangent * half_width + light_bitangent * half_height;
+        const vec3 p3 = light.position_intensity.xyz - light_tangent * half_width + light_bitangent * half_height;
+
+        const vec3 pts[4] = vec3[4](p0, p1, p2, p3);
+
+        vec4 area_light_diffuse = CalculateAreaLightRadiance(light, mat3(1.0), pts, position.xyz, N, V);
+        area_light_diffuse *= diffuse_color * (1.0 / HYP_FMATH_PI);
+
+        vec4 area_light_specular = CalculateAreaLightRadiance(light, Minv, pts, position.xyz, N, V);
+
+        // GGX BRDF shadowing and Fresnel
+        // t2.x: shadowedF90 (F90 normally it should be 1.0)
+        // t2.y: Smith function for Geometric Attenuation Term, it is dot(V or L, H).
+        area_light_specular *= diffuse_color * t2.x + (vec4(1.0) - diffuse_color) * t2.y;
+        area_light_radiance = area_light_specular + area_light_diffuse;
+
+        const float NdotL = 0.0;
+        const float LdotH = 0.0;
+        const float NdotH = 0.0;
+        const float HdotV = 0.0;
+#else
+        const float NdotL = 0.0;
+        const float LdotH = 0.0;
+        const float NdotH = 0.0;
+        const float HdotV = 0.0;
 #endif
-    }
+
+        vec4 light_rays = vec4(0.0);
+        vec4 light_color = UINT_TO_VEC4(light.color_encoded);
+
+#ifdef LIGHT_TYPE_POINT
+        if (light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
+            const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
+            const uint shadow_flags = current_env_probe.flags >> 3;
+
+            shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
+        }
+#elif defined(LIGHT_TYPE_DIRECTIONAL)
+        if (light.shadow_map_index != ~0u) {
+            shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, camera.dimensions.xy, NdotL);
+
+#ifdef LIGHT_RAYS_ENABLED
+            const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
+
+            const float light_ray_attenuation = LightRays(
+                light.shadow_map_index,
+                texcoord,
+                L,
+                position.xyz,
+                camera.position.xyz,
+                depth
+            );
+
+            light_rays = vec4(light_color * light_ray_attenuation);
+#endif
+        }
 #endif
 
         const float D = CalculateDistributionTerm(roughness, NdotH);
@@ -281,7 +282,8 @@ void main()
         result = area_light_radiance;
 #endif
 
-    result = (result * (1.0 - light_rays.a)) + light_rays;
+        result = (result * (1.0 - light_rays.a)) + light_rays;
+    }
 
 #if defined(DEBUG_REFLECTIONS) || defined(DEBUG_IRRADIANCE) || defined(PATHTRACER)
     output_color = vec4(0.0);

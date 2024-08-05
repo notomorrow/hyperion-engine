@@ -572,14 +572,14 @@ void HyperionEditorImpl::CreateMainPanel()
                     m_editor_camera_enabled = true;
 
                     return UIEventHandlerResult::OK;
-                });
+                }).Detach();
 
                 ui_image->OnLoseFocus.Bind([this](const MouseEvent &event)
                 {
                     m_editor_camera_enabled = false;
 
                     return UIEventHandlerResult::OK;
-                });
+                }).Detach();
 
                 ui_image->SetTexture(m_scene_texture);
             }
@@ -598,38 +598,32 @@ void HyperionEditorImpl::CreateMainPanel()
             generate_lightmaps_button->OnClick.RemoveAll();
             generate_lightmaps_button->OnClick.Bind([this](...)
             {
-                GetUIStage()->GetScene()->GetEntityManager()->PushCommand([ui_stage = GetUIStage()](EntityManager &mgr, GameCounter::TickUnit delta)
+                HYP_LOG(Editor, LogLevel::INFO, "Generate lightmaps clicked!");
+
+                struct RENDER_COMMAND(SubmitLightmapJob) : renderer::RenderCommand
                 {
-                    ui_stage->UpdateSize(true);
-                    ui_stage->UpdatePosition(true);
-                });
+                    Handle<Scene> scene;
 
-                // HYP_LOG(Editor, LogLevel::INFO, "Generate lightmaps clicked!");
+                    RENDER_COMMAND(SubmitLightmapJob)(Handle<Scene> scene)
+                        : scene(std::move(scene))
+                    {
+                    }
 
-                // struct RENDER_COMMAND(SubmitLightmapJob) : renderer::RenderCommand
-                // {
-                //     Handle<Scene> scene;
+                    virtual ~RENDER_COMMAND(SubmitLightmapJob)() override = default;
 
-                //     RENDER_COMMAND(SubmitLightmapJob)(Handle<Scene> scene)
-                //         : scene(std::move(scene))
-                //     {
-                //     }
+                    virtual Result operator()() override
+                    {
+                        if (scene->GetEnvironment()->HasRenderComponent<LightmapRenderer>()) {
+                            scene->GetEnvironment()->RemoveRenderComponent<LightmapRenderer>();
+                        } else {
+                            scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(Name::Unique("LightmapRenderer"));
+                        }
 
-                //     virtual ~RENDER_COMMAND(SubmitLightmapJob)() override = default;
-
-                //     virtual Result operator()() override
-                //     {
-                //         if (scene->GetEnvironment()->HasRenderComponent<LightmapRenderer>()) {
-                //             scene->GetEnvironment()->RemoveRenderComponent<LightmapRenderer>();
-                //         } else {
-                //             scene->GetEnvironment()->AddRenderComponent<LightmapRenderer>(Name::Unique("LightmapRenderer"));
-                //         }
-
-                //         HYPERION_RETURN_OK;
-                //     }
-                // };
+                        HYPERION_RETURN_OK;
+                    }
+                };
                 
-                // PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);
+                PUSH_RENDER_COMMAND(SubmitLightmapJob, m_scene);
 
                 return UIEventHandlerResult::OK;
             }).Detach();
@@ -1162,7 +1156,7 @@ void HyperionEditorImpl::Initialize()
 void HyperionEditorImpl::UpdateEditorCamera(GameCounter::TickUnit delta)
 {
     // temp
-    if (m_focused_node.IsValid()) {
+    /*if (m_focused_node.IsValid()) {
 
 
         auto debug_drawer_command_list = g_engine->GetDebugDrawer()->CreateCommandList();
@@ -1173,13 +1167,13 @@ void HyperionEditorImpl::UpdateEditorCamera(GameCounter::TickUnit delta)
         );
 
         debug_drawer_command_list->Commit();
-    }
+    }*/
+
+    static constexpr float speed = 15.0f;
 
     if (!m_editor_camera_enabled) {
         return;
     }
-
-    CameraController *camera_controller = m_camera->GetCameraController();
 
     Vec3f translation = m_camera->GetTranslation();
 
@@ -1187,19 +1181,19 @@ void HyperionEditorImpl::UpdateEditorCamera(GameCounter::TickUnit delta)
     const Vec3f dir_cross_y = direction.Cross(m_camera->GetUpVector());
 
     if (m_input_manager->IsKeyDown(KeyCode::KEY_W)) {
-        translation += direction * 0.01f;
+        translation += direction * delta * speed;
     }
     if (m_input_manager->IsKeyDown(KeyCode::KEY_S)) {
-        translation -= direction * 0.01f;
+        translation -= direction * delta * speed;
     }
     if (m_input_manager->IsKeyDown(KeyCode::KEY_A)) {
-        translation += dir_cross_y * 0.01f;
+        translation -= dir_cross_y * delta * speed;
     }
     if (m_input_manager->IsKeyDown(KeyCode::KEY_D)) {
-        translation -= dir_cross_y * 0.01f;
+        translation += dir_cross_y * delta * speed;
     }
 
-    camera_controller->SetNextTranslation(translation);
+    m_camera->SetNextTranslation(translation);
 }
 
 #pragma endregion HyperionEditorImpl
@@ -1312,7 +1306,7 @@ void HyperionEditor::Init()
 
     // add sun
     auto sun = CreateObject<Light>(DirectionalLight(
-        Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
+        Vec3f(-0.4f, 0.65f, 0.1f).Normalize(),
         Color(Vec4f(1.0f)),
         4.0f
     ));

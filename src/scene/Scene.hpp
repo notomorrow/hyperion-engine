@@ -141,8 +141,7 @@ public:
     HYP_FORCE_INLINE Octree &GetOctree()
         { return m_octree; }
 
-    HYP_FORCE_INLINE
-    const Octree &GetOctree() const
+    HYP_FORCE_INLINE const Octree &GetOctree() const
         { return m_octree; }
 
     HYP_FORCE_INLINE RenderEnvironment *GetEnvironment() const

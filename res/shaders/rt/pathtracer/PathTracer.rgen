@@ -207,17 +207,17 @@ void main()
                        bounces[bounce_index].emissive += TextureCube(sampler_linear, env_probe_textures[probe_texture_index], direction);
                     }
 
-                    for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
-                        const Light light = HYP_GET_LIGHT(light_index);
+                    // for (uint light_index = 0; light_index < rt_radiance_uniforms.num_bound_lights; light_index++) {
+                    //     const Light light = HYP_GET_LIGHT(light_index);
 
-                        if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
-                            continue;
-                        }
+                    //     if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
+                    //         continue;
+                    //     }
 
-                        const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
+                    //     const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
 
-                        bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
-                    }
+                    //     bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                    // }
 
                     ++num_bounces;
 

@@ -8,7 +8,7 @@
 
 namespace hyperion {
 
-// LightmapUVMap
+#pragma region LightmapUVMap
 
 Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 {
@@ -54,7 +54,9 @@ Bitmap<4, float> LightmapUVMap::ToBitmapIrradiance() const
     return bitmap;
 }
 
-// LightmapUVBuilder
+#pragma endregion LightmapUVMap
+
+#pragma region LightmapUVBuilder
 
 LightmapUVBuilder::LightmapUVBuilder(const LightmapUVBuilderParams &params)
     : m_params(params)
@@ -151,7 +153,7 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions pack_options { };
-    pack_options.resolution = 128;//2048;
+    pack_options.resolution = 1024;
     pack_options.padding = 8;
     //pack_options.texelsPerUnit = 128.0f;
     pack_options.bilinear = true;
@@ -278,5 +280,7 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
     return { LightmapUVBuilder::Result::RESULT_ERR, "No method to build lightmap" };
 #endif
 }
+
+#pragma endregion LightmapUVBuilder
 
 } // namespace hyperion

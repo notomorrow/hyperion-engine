@@ -4,8 +4,10 @@
 #include <core/utilities/FormatFwd.hpp>
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Tuple.hpp>
+
 #include <core/containers/String.hpp>
 #include <core/containers/StaticString.hpp>
+
 #include <core/memory/ByteBuffer.hpp>
 
 #include <math/Quaternion.hpp>
@@ -593,6 +595,6 @@ using utilities::Format;
 } // namespace hyperion
 
 // Helper macro for utilities::Format< FormatString >(...)
-#define HYP_FORMAT(fmt, ...) Format< StaticString(fmt) >(__VA_ARGS__)
+#define HYP_FORMAT(fmt, ...) Format< HYP_STATIC_STRING(fmt) >(__VA_ARGS__)
 
 #endif

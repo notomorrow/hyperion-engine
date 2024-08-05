@@ -100,7 +100,7 @@ void InputManager::UpdateWindowSize(Vec2i new_size)
 void InputManager::SetKey(KeyCode key, bool pressed)
 {
     if (uint32(key) < NUM_KEYBOARD_KEYS) {
-        m_input_state.last_key_states[uint32(key)] = pressed;
+        m_input_state.key_states[uint32(key)] = pressed;
     }
 }
 

@@ -90,11 +90,10 @@ void main()
     float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
     vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
+    
+    vec3 result = vec3(0.0);
 
     bool perform_lighting = albedo.a > 0.0;
-    
-    vec3 albedo_linear = albedo.rgb;
-    vec3 result = vec3(0.0);
 
     vec3 N = normalize(normal);
     vec3 V = normalize(camera.position.xyz - position.xyz);
@@ -114,8 +113,8 @@ void main()
 
     float NdotV = max(0.0001, dot(N, V));
 
-    const vec3 diffuse_color = CalculateDiffuseColor(albedo_linear, metalness);
-    const vec3 F0 = CalculateF0(albedo_linear, metalness);
+    const vec3 diffuse_color = CalculateDiffuseColor(albedo.rgb, metalness);
+    const vec3 F0 = CalculateF0(albedo.rgb, metalness);
 
     F = CalculateFresnelTerm(F0, roughness, NdotV);
     const vec3 kD = (vec3(1.0) - F) * (1.0 - metalness);
@@ -164,7 +163,9 @@ void main()
 
     vec3 spec = (ibl * mix(dfg.xxx, dfg.yyy, F0)) * energy_compensation;
 
-    result = kD * (irradiance * albedo_linear / HYP_FMATH_PI) + spec;//Fd + Fr;
+    result = kD * (irradiance * albedo.rgb / HYP_FMATH_PI) + spec;//Fd + Fr;
+
+    result = mix(albedo.rgb, result, bvec3(perform_lighting));
 
 #ifdef PATHTRACER
     result = CalculatePathTracing(deferred_params, texcoord).rgb;

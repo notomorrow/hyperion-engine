@@ -564,7 +564,7 @@ void Texture::Readback() const
         std::move(result_byte_buffer)
     }));
 
-    m_image->SetStreamedData(std::move(streamed_data));
+    m_image->SetStreamedData(streamed_data);
 }
 
 Vec4f Texture::Sample(Vec2f uv) const

@@ -20,16 +20,25 @@ public:
     Triangle(const Triangle &other);
     ~Triangle() = default;
 
-    Vertex &operator[](SizeType index) { return m_points[index]; }
-    const Vertex &operator[](SizeType index) const { return m_points[index]; }
-    Vertex &GetPoint(SizeType index) { return operator[](index); }
-    const Vertex &GetPoint(SizeType index) const { return operator[](index); }
-    void SetPoint(SizeType index, const Vertex &value) { m_points[index] = value; }
+    HYP_FORCE_INLINE Vertex &operator[](SizeType index)
+        { return m_points[index]; }
 
-    Vec3f GetPosition() const
+    HYP_FORCE_INLINE const Vertex &operator[](SizeType index) const
+        { return m_points[index]; }
+
+    HYP_FORCE_INLINE Vertex &GetPoint(SizeType index)
+        { return m_points[index]; }
+
+    HYP_FORCE_INLINE const Vertex &GetPoint(SizeType index) const
+        { return m_points[index]; }
+
+    HYP_FORCE_INLINE void SetPoint(SizeType index, const Vertex &value)
+        { m_points[index] = value; }
+
+    HYP_FORCE_INLINE Vec3f GetPosition() const
         { return (m_points[0].GetPosition() + m_points[1].GetPosition() + m_points[2].GetPosition()) / 3.0f; }
 
-    Vec3f GetNormal() const
+    HYP_FORCE_INLINE Vec3f GetNormal() const
         { return (m_points[1].GetPosition() - m_points[0].GetPosition()).Cross(m_points[2].GetPosition() - m_points[0].GetPosition()).Normalize(); }
 
     Vertex &Closest(const Vec3f &vec);
@@ -41,7 +50,7 @@ public:
     bool ContainsPoint(const Vec3f &pt) const;
 
 private:
-    FixedArray<Vertex, 3> m_points;
+    FixedArray<Vertex, 3>   m_points;
 };
 } // namespace hyperion
 

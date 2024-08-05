@@ -6,6 +6,7 @@
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
+#include <scene/ecs/components/BoundingBoxComponent.hpp>
 
 #include <core/threading/TaskSystem.hpp>
 
@@ -548,7 +549,7 @@ void LightmapRenderer::Init()
         HashMap<ID<Mesh>, Array<Triangle>> triangle_cache;
         uint num_triangles = 0;
 
-        for (auto [entity, mesh_component, transform_component] : mgr.GetEntitySet<MeshComponent, TransformComponent>().GetScopedView(DataAccessFlags::ACCESS_READ)) {
+        for (auto [entity, mesh_component, transform_component, bounding_box_component] : mgr.GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(DataAccessFlags::ACCESS_READ)) {
             if (!mesh_component.mesh.IsValid()) {
                 HYP_LOG(Lightmap, LogLevel::INFO, "Skip entity with invalid mesh on MeshComponent");
 
@@ -627,7 +628,8 @@ void LightmapRenderer::Init()
                 entity,
                 mesh_component.mesh,
                 mesh_component.material,
-                transform_component.transform.GetMatrix()
+                transform_component.transform.GetMatrix(),
+                bounding_box_component.world_aabb
             });
 
             num_triangles += mesh_data.indices.Size() / 3;

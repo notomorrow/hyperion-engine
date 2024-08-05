@@ -24,6 +24,7 @@ struct LightmapEntity
     Handle<Mesh>        mesh;
     Handle<Material>    material;
     Matrix4             transform;
+    BoundingBox         aabb;
 };
 
 struct LightmapUVBuilderParams
