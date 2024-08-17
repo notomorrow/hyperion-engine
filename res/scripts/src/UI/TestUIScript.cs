@@ -9,9 +9,9 @@ namespace FooBar
     {
         private Scene? scene = null;
 
-        public void BeforeInit(ManagedHandle sceneHandle)
+        public void BeforeInit(Scene scene)
         {
-            scene = new Scene(sceneHandle);
+            this.scene = scene;
         }
 
         public void Init(Entity entity)
