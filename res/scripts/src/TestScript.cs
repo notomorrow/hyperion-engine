@@ -16,7 +16,7 @@ namespace FooBar
 
         public async void Init(Entity entity)
         {
-            Console.WriteLine("Blah, scene id = " + scene.ID);
+            Console.WriteLine("Blah, scene = " + scene);
 
             // var node = scene.Root.FindChild("house");
             
