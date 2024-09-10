@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Panel name="Main_Panel" position="0 0" size="100%">
     <Script assembly="GameName.UI.dll" class="TestUIScript" />
-    <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
+    <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" textSize="12" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New"></MenuItem>
             <MenuItem name="Open_MenuItem" text="Open"></MenuItem>
@@ -15,7 +15,16 @@
         <MenuItem name="Test_MenuItem" text="Test" size="auto 100%"></MenuItem>
     </MenuBar>
 
-    <DockableContainer name="Dockable_Container" position="0 25" size="100% fill">
+    <Panel name="Main_Toolbar" position="0 25" size="100% 50" textSize="10" backgroundColor="#ff0000">
+        <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="10">
+            Generate Lightmaps (test)
+        </Button>
+        <Button name="Simulate_Button" size="auto 35" position="250 0" onclick="SimulateClicked" depth="10">
+            Simulate
+        </Button>
+    </Panel>
+
+    <DockableContainer name="Dockable_Container" position="0 75" size="100% fill">
         <Panel name="Left_Panel" size="200 100%" padding="5 5" side="left">
             <TabView size="100% 25" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
@@ -33,16 +42,7 @@
         </Panel>
 
         <Panel name="Main_Content" size="100%" side="center">
-            <TabView name="Main_Content_TabView" size="100%">
-                <Tab name="Scene_Tab" text="Scene">
-                    <Image name="Scene_Image" size="100%" />
-                    <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="10">
-                        Generate Lightmaps (test)
-                    </Button>
-                </Tab>
-                <Tab name="Game_Tab" text="Game">
-                </Tab>
-            </TabView>
+            <Image name="Scene_Image" size="100%" />
         </Panel>
 
         <Panel name="Bottom_Panel" size="100% 200"  padding="5 5" side="bottom">

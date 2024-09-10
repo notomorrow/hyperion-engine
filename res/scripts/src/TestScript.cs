@@ -7,35 +7,8 @@ namespace FooBar
 {
     public class FizzBuzzTest : Script
     {
-        private Scene? scene = null;
-
-        public void BeforeInit(Scene scene)
+        public override void Init(Entity entity)
         {
-            this.scene = scene;
-        }
-
-        public async void Init(Entity entity)
-        {
-            Console.WriteLine("Blah, scene = " + scene);
-
-            // var node = scene.Root.FindChild("house");
-            
-            // if (node != null)
-            // {
-            //     return;
-            // }
-            
-            // var assetBatch = new AssetBatch();
-            // assetBatch.Add("test_model", "models/house.obj");
-
-            // var assetMap = await assetBatch.Load();
-
-            // node = assetMap["test_model"].GetNode();
-            // node.Name = "house";
-
-            // scene.Root.AddChild(node);
-
-            // Console.WriteLine("Init Script " + entity.ID);
         }
     }
 }
