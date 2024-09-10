@@ -176,4 +176,5 @@ void main()
 #endif
 
     output_color = vec4(result, 1.0);
+    // output_color = vec4(metalness, metalness, metalness, 1.0);
 }

@@ -1,7 +1,7 @@
 {
   "rendering": {
     "ssr": {
-      "enabled": true,
+      "enabled": false,
       "quality": "low",
       "roughness_scattering": true,
       "cone_tracing": true

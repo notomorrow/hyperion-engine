@@ -15,7 +15,7 @@ namespace FooBar
         
         public override void Update(float deltaTime)
         {
-            Console.WriteLine("Update TestGame1");
+            // Console.WriteLine("Update TestGame1");
         }
     }
 }

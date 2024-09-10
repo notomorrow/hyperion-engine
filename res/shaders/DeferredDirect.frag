@@ -290,4 +290,7 @@ void main()
 #else
     output_color = vec4(result);
 #endif
+
+    // // temp
+    // output_color = vec4(0.0);
 }
