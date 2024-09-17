@@ -8,6 +8,7 @@
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec2 v_texcoord0;
+layout(location=2) in vec4 v_color;
 
 layout(location=0) out vec4 out_color;
 
@@ -26,10 +27,10 @@ HYP_DESCRIPTOR_SRV(UITextDescriptorSet, FontAtlasTexture) uniform texture2D font
 
 void main()
 {
-    vec4 ui_color = vec4(1.0);
+    vec4 color = v_color;
     vec4 sampled_texture = Texture2D(sampler_linear, font_atlas_texture, v_texcoord0).rrrr;
 
-    ui_color *= sampled_texture;
+    color *= sampled_texture;
 
-    out_color = ui_color;
+    out_color = color;
 }
