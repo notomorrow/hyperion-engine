@@ -15,11 +15,11 @@
         <MenuItem name="Test_MenuItem" text="Test" size="auto 100%"></MenuItem>
     </MenuBar>
 
-    <Panel name="Main_Toolbar" position="0 25" size="100% 50" textSize="10" backgroundColor="#ff0000">
+    <Panel name="Main_Toolbar" position="0 25" size="100% 40" textSize="10">
         <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="10">
-            Generate Lightmaps (test)
+            Build Lightmaps
         </Button>
-        <Button name="Simulate_Button" size="auto 35" position="250 0" onclick="SimulateClicked" depth="10">
+        <Button name="Simulate_Button" size="auto 35" position="125 0" onclick="SimulateClicked" depth="10">
             Simulate
         </Button>
     </Panel>

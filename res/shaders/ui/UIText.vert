@@ -4,6 +4,7 @@
 
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec2 v_texcoord0;
+layout(location=2) out vec4 v_color;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -33,6 +34,7 @@ HYP_DESCRIPTOR_SSBO(UITextDescriptorSet, CharacterInstanceBuffer, standard = std
 HYP_DESCRIPTOR_CBUFF(UITextDescriptorSet, UITextUniforms, standard = std430) uniform UITextUniforms
 {
     mat4    projection_matrix;
+    vec4    color;
     vec2    text_aabb_min;
     vec2    text_aabb_max;
 };
@@ -55,6 +57,8 @@ void main()
     vec2 texcoord_size = texcoord_end - texcoord_start;
 
     v_texcoord0 = texcoord_start + a_texcoord0 * texcoord_size;
+
+    v_color = color;
 
     gl_Position = projection_matrix * position;
 } 

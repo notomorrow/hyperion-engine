@@ -32,6 +32,8 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
 HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(Global, DepthPyramidResult) uniform texture2D depth_pyramid;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler depth_pyramid_sampler;
 HYP_DESCRIPTOR_SRV(Global, DeferredDirectResultTexture) uniform texture2D deferred_direct_texture;
 HYP_DESCRIPTOR_SRV(Global, DeferredResult) uniform texture2D gbuffer_deferred_result;
 HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
@@ -74,6 +76,8 @@ void main()
     out_color.a = 1.0;
 
 
+    // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, depth_pyramid, v_texcoord0).rgb;
+    
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
 
     // out_color.rgb = vec3(float(is_sky));
