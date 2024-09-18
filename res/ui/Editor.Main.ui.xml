@@ -28,7 +28,7 @@
         <Panel name="Left_Panel" size="200 100%" padding="5 5" side="left">
             <TabView size="100% 25" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
-                    <ListView name="Scene_Outline_ListView" position="0 0" size="100% fill" />
+                    <ListView name="Scene_Outline_ListView" position="0 0" size="100% fill" textSize="12" />
                 </Tab>
             </TabView>
         </Panel>
@@ -36,7 +36,7 @@
         <Panel name="Right_Panel" size="200 100%" padding="5 5" side="right">
             <TabView size="100% 25" size="100%">
                 <Tab name="Details_Tab" text="Properties">
-                    <ListView name="Detail_View_ListView" position="0 0" size="100% fill" />
+                    <ListView name="Detail_View_ListView" position="0 0" size="100% fill" textSize="12" />
                 </Tab>
             </TabView>
         </Panel>
