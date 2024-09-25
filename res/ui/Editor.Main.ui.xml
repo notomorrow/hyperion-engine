@@ -19,21 +19,22 @@
         <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="10">
             Build Lightmaps
         </Button>
-        <Button name="Simulate_Button" size="auto 35" position="125 0" onclick="SimulateClicked" depth="10">
-            Simulate
-        </Button>
+        <Button name="Simulate_Button" size="auto 35" position="125 0" onclick="SimulateClicked" text="Simulate" depth="10"></Button>
     </Panel>
 
     <DockableContainer name="Dockable_Container" position="0 75" size="100% fill">
-        <Panel name="Left_Panel" size="200 100%" padding="5 5" side="left">
+        <Panel name="Left_Panel" size="200 100%" padding="5 0" side="left">
             <TabView size="100% 25" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
-                    <ListView name="Scene_Outline_ListView" position="0 0" size="100% fill" textSize="12" />
+                    <Panel size="100% 35" padding="0 2">
+                        <Textbox name="Scene_Outline_Filter" size="fill auto"></Textbox>
+                    </Panel>
+                    <ListView name="Scene_Outline_ListView" position="0 35" size="100% fill" textSize="12" />
                 </Tab>
             </TabView>
         </Panel>
         
-        <Panel name="Right_Panel" size="200 100%" padding="5 5" side="right">
+        <Panel name="Right_Panel" size="200 100%" padding="5 0" side="right">
             <TabView size="100% 25" size="100%">
                 <Tab name="Details_Tab" text="Properties">
                     <ListView name="Detail_View_ListView" position="0 0" size="100% fill" textSize="12" />
