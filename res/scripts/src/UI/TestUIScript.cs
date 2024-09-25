@@ -21,18 +21,24 @@ namespace FooBar
 
         public void SimulateClicked()
         {
-            if (Scene.GetWorld().GetGameState().Mode == GameStateMode.Simulating)
+            World world = Scene.GetWorld();
+            
+            if (world.GetGameState().Mode == GameStateMode.Simulating)
             {
                 Logger.Log(LogType.Info, "Stop simulation");
 
-                Scene.GetWorld().StopSimulating();
+                world.StopSimulating();
                 return;
             }
 
             Logger.Log(LogType.Info, "Start simulation");
 
-            Scene.GetWorld().StartSimulating();
+            world.StartSimulating();
         }
 
+        public void AddNodeClicked()
+        {
+            Scene.GetRoot().AddChild(new Node());
+        }
     }
 }
