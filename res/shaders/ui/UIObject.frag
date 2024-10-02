@@ -123,6 +123,8 @@ void main()
     // gbuffer_albedo = vec4(vec3(bvec3(HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))), 1.0);//ui_color;
     // gbuffer_albedo = vec4(vec3(bvec3((CURRENT_MATERIAL).texture_indices[(MATERIAL_TEXTURE_ALBEDO_map / 4)][MATERIAL_TEXTURE_ALBEDO_map % 4] != 0)), 1.0);//ui_color;
     // gbuffer_albedo = vec4(vec3(float(TextureSize(HYP_SAMPLER_LINEAR, GET_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)).x) * 0.0005), 1.0);//ui_color;
+    // gbuffer_albedo.rgb = UINT_TO_VEC4(object.material_index).rgb;//ui_color;
+    // gbuffer_albedo.a = 1.0;
     gbuffer_albedo = ui_color;
 // #ifdef TYPE_TEXT
 //     gbuffer_albedo = vec4(v_texcoord0, 0.0, 1.0);
