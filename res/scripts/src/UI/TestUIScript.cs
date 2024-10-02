@@ -19,7 +19,7 @@ namespace FooBar
             // }
         }
 
-        public void SimulateClicked()
+        public async void SimulateClicked()
         {
             World world = Scene.GetWorld();
             
@@ -32,6 +32,17 @@ namespace FooBar
             }
 
             Logger.Log(LogType.Info, "Start simulation");
+
+            TaskBatch taskBatch = new TaskBatch();
+            taskBatch.AddTask(() =>
+            {
+                Console.WriteLine("Task 1 complete");
+            });
+            taskBatch.AddTask(() =>
+            {
+                Console.WriteLine("Task 2 complete");
+            });
+            await taskBatch.Execute();
 
             world.StartSimulating();
         }
