@@ -50,7 +50,7 @@ TaskSystem::TaskSystem()
         for (auto &it : pool.threads) {
             AssertThrow(THREAD_TASK & mask);
 
-            it.Reset(new TaskThread(Threads::thread_ids.At(ThreadName(mask)), task_thread_pool_info.priority));
+            it = MakeUnique<TaskThread>(Threads::thread_ids.At(ThreadName(mask)), task_thread_pool_info.priority);
             mask <<= 1;
         }
     }
@@ -136,7 +136,7 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
             &batch->semaphore,
             next_batch != nullptr
                 ? OnTaskCompletedCallback([this, &OnComplete = batch->OnComplete, next_batch]() { OnComplete(); EnqueueBatch(next_batch); })
-                : OnTaskCompletedCallback(batch->OnComplete.AnyBound() ? &batch->OnComplete : nullptr)
+                : OnTaskCompletedCallback(batch->OnComplete ? &batch->OnComplete : nullptr)
         );
 
         batch->task_refs.EmplaceBack(task_id, task_thread->GetScheduler());

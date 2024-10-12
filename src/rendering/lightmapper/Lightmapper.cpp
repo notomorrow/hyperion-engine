@@ -85,15 +85,13 @@ struct RENDER_COMMAND(LightmapTraceRaysOnGPU) : renderer::RenderCommand
             // Read previous frame hits into CPU buffer
             if (previous_rays.Any()) {
                 // @NOTE Use heap allocation to avoid stack overflow (max_ray_hits_gpu * sizeof(LightmapHit) > 1MB)
-                LightmapHitsBuffer *hits_buffer(new LightmapHitsBuffer);
+                UniquePtr<LightmapHitsBuffer> hits_buffer = MakeUnique<LightmapHitsBuffer>();
 
-                path_tracer_radiance->ReadHitsBuffer(hits_buffer, frame_index);
+                path_tracer_radiance->ReadHitsBuffer(hits_buffer.Get(), frame_index);
                 job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size(), LIGHTMAP_SHADING_TYPE_RADIANCE);
 
-                path_tracer_irradiance->ReadHitsBuffer(hits_buffer, frame_index);
+                path_tracer_irradiance->ReadHitsBuffer(hits_buffer.Get(), frame_index);
                 job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size(), LIGHTMAP_SHADING_TYPE_IRRADIANCE);
-
-                delete hits_buffer;
             }
 
             ray_offset = job->GetTexelIndex() % MathUtil::Max(job->GetTexelIndices().Size(), 1u);
@@ -235,7 +233,7 @@ private:
                                     k == 0 ? center.z : max.z
                                 );
 
-                                m_children.EmplaceBack(new LightmapBVHNode(BoundingBox(new_min, new_max)));
+                                m_children.PushBack(MakeUnique<LightmapBVHNode>(BoundingBox(new_min, new_max)));
                             }
                         }
                     }
@@ -318,7 +316,7 @@ private:
             return nullptr;
         }
 
-        UniquePtr<LightmapBVHNode> root(new LightmapBVHNode(mesh->GetAABB() * transform));
+        UniquePtr<LightmapBVHNode> root = MakeUnique<LightmapBVHNode>(mesh->GetAABB() * transform);
 
         auto ref = mesh->GetStreamedMeshData()->AcquireRef();
         const MeshData &mesh_data = ref->GetMeshData();
@@ -1173,7 +1171,7 @@ void Lightmapper::PerformLightmapping()
             if (lightmap_entities_index_end - lightmap_entities_index_start != 0) {
                 HYP_LOG(Lightmap, LogLevel::INFO, "Adding lightmap job for {} entities", lightmap_entities_index_end - lightmap_entities_index_start);
 
-                UniquePtr<LightmapJob> job(new LightmapJob(CreateLightmapJobParams(lightmap_entities_index_start, lightmap_entities_index_end, std::move(acceleration_structure))));
+                UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(lightmap_entities_index_start, lightmap_entities_index_end, std::move(acceleration_structure)));
 
                 lightmap_entities_index_start = lightmap_entities_index_end;
 
@@ -1185,15 +1183,13 @@ void Lightmapper::PerformLightmapping()
 
         if (m_trace_mode == LIGHTMAP_TRACE_MODE_CPU) {
             if (!acceleration_structure) {
-                acceleration_structure.Reset(new LightmapTopLevelAccelerationStructure);
+                acceleration_structure = MakeUnique<LightmapTopLevelAccelerationStructure>();
             }
 
-            acceleration_structure->Add(UniquePtr<LightmapBottomLevelAccelerationStructure>(
-                new LightmapBottomLevelAccelerationStructure(
-                    lightmap_entity.entity_id,
-                    lightmap_entity.mesh,
-                    lightmap_entity.transform
-                )
+            acceleration_structure->Add(MakeUnique<LightmapBottomLevelAccelerationStructure>(
+                lightmap_entity.entity_id,
+                lightmap_entity.mesh,
+                lightmap_entity.transform
             ));
         }
 
@@ -1205,7 +1201,7 @@ void Lightmapper::PerformLightmapping()
     if (lightmap_entities_index_end - lightmap_entities_index_start != 0) {
         HYP_LOG(Lightmap, LogLevel::INFO, "Adding final lightmap job for {} entities", lightmap_entities_index_end - lightmap_entities_index_start);
 
-        UniquePtr<LightmapJob> job(new LightmapJob(CreateLightmapJobParams(lightmap_entities_index_start, lightmap_entities_index_end, std::move(acceleration_structure))));
+        UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(lightmap_entities_index_start, lightmap_entities_index_end, std::move(acceleration_structure)));
 
         AddJob(std::move(job));
     } else {
@@ -1319,7 +1315,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
     FixedArray<Handle<Texture>, 2> textures;
 
     for (uint i = 0; i < 2; i++) {
-        RC<StreamedTextureData> streamed_data(new StreamedTextureData(TextureData {
+        RC<StreamedTextureData> streamed_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
             TextureDesc {
                 ImageType::TEXTURE_TYPE_2D,
                 InternalFormat::RGBA32F,
@@ -1329,7 +1325,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
                 WrapMode::TEXTURE_WRAP_REPEAT
             },
             bitmaps[i].ToByteBuffer()
-        }));
+        });
 
         Handle<Texture> texture = CreateObject<Texture>(std::move(streamed_data));
         InitObject(texture);
