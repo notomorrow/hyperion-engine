@@ -49,14 +49,14 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
         .Slice(offset, size);
 
     // @TODO: Do not require this allocation to initialize an object
-    BufferedReader byte_reader(RC<BufferedReaderSource>(new MemoryBufferedReaderSource(view)));
+    BufferedReader byte_reader(MakeRefCountedPtr<MemoryBufferedReaderSource>(view));
 
     switch (type) {
     case FBOMStaticData::FBOM_STATIC_DATA_NONE:
         return { FBOMResult::FBOM_ERR, "Cannot process static data type, unknown type" };
     case FBOMStaticData::FBOM_STATIC_DATA_OBJECT:
     {
-        ptr.Reset(new FBOMObject());
+        ptr = MakeUnique<FBOMObject>();
 
         if (FBOMResult err = reader->ReadObject(&byte_reader, *static_cast<FBOMObject *>(ptr.Get()), nullptr)) {
             ptr.Reset();
@@ -68,7 +68,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     }
     case FBOMStaticData::FBOM_STATIC_DATA_TYPE:
     {
-        ptr.Reset(new FBOMType());
+        ptr = MakeUnique<FBOMType>();
 
         if (FBOMResult err = reader->ReadObjectType(&byte_reader, *static_cast<FBOMType *>(ptr.Get()))) {
             ptr.Reset();
@@ -80,7 +80,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     }
     case FBOMStaticData::FBOM_STATIC_DATA_DATA:
     {
-        ptr.Reset(new FBOMData());
+        ptr = MakeUnique<FBOMData>();
 
         if (FBOMResult err = reader->ReadData(&byte_reader, *static_cast<FBOMData *>(ptr.Get()))) {
             ptr.Reset();
@@ -94,7 +94,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     }
     case FBOMStaticData::FBOM_STATIC_DATA_ARRAY:
     {
-        ptr.Reset(new FBOMArray(FBOMUnset()));
+        ptr = MakeUnique<FBOMArray>(FBOMUnset());
 
         if (FBOMResult err = reader->ReadArray(&byte_reader, *static_cast<FBOMArray *>(ptr.Get()))) {
             ptr.Reset();
@@ -106,7 +106,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     }
     case FBOMStaticData::FBOM_STATIC_DATA_NAME_TABLE:
     {
-        ptr.Reset(new FBOMNameTable());
+        ptr = MakeUnique<FBOMNameTable>();
 
         if (FBOMResult err = reader->ReadNameTable(&byte_reader, *static_cast<FBOMNameTable *>(ptr.Get()))) {
             ptr.Reset();
@@ -319,7 +319,7 @@ FBOMResult FBOMReader::LoadFromFile(const String &path, FBOMObjectLibrary &out)
         return { FBOMResult::FBOM_ERR, "File does not exist" };
     }
 
-    BufferedReader reader(RC<FileBufferedReaderSource>(new FileBufferedReaderSource(read_path)));
+    BufferedReader reader(MakeRefCountedPtr<FileBufferedReaderSource>(read_path));
 
     return Deserialize(reader, out);
 }
@@ -337,7 +337,7 @@ FBOMResult FBOMReader::LoadFromFile(const String &path, FBOMObject &out)
         return { FBOMResult::FBOM_ERR, "File does not exist" };
     }
 
-    BufferedReader reader(RC<FileBufferedReaderSource>(new FileBufferedReaderSource(read_path)));
+    BufferedReader reader(MakeRefCountedPtr<FileBufferedReaderSource>(read_path));
 
     return Deserialize(reader, out);
 }
@@ -593,7 +593,7 @@ FBOMResult FBOMReader::ReadObjectLibrary(BufferedReader *reader, FBOMObjectLibra
             return { FBOMResult::FBOM_ERR, "Buffer size does not match expected size - file is likely corrupt" };
         }
 
-        BufferedReader byte_reader(RC<BufferedReaderSource>(new MemoryBufferedReaderSource(buffer.ToByteView())));
+        BufferedReader byte_reader(MakeRefCountedPtr<MemoryBufferedReaderSource>(buffer.ToByteView()));
 
         FBOMReader deserializer(m_config);
 
@@ -736,7 +736,7 @@ FBOMResult FBOMReader::ReadArray(BufferedReader *reader, FBOMArray &out_array)
                 return { FBOMResult::FBOM_ERR, err.message.Data() };
             }
 
-            compressed_data_reader = BufferedReader(RC<BufferedReaderSource>(new MemoryBufferedReaderSource(byte_buffer.ToByteView())));
+            compressed_data_reader = BufferedReader(MakeRefCountedPtr<MemoryBufferedReaderSource>(byte_buffer.ToByteView()));
             reader_ptr = &compressed_data_reader;
         }
 
@@ -1058,7 +1058,7 @@ FBOMResult FBOMReader::ReadArchive(const ByteBuffer &in_buffer, ByteBuffer &out_
     // Read archive
     Archive archive;
 
-    BufferedReader reader(RC<BufferedReaderSource>(new MemoryBufferedReaderSource(in_buffer.ToByteView())));
+    BufferedReader reader(MakeRefCountedPtr<MemoryBufferedReaderSource>(in_buffer.ToByteView()));
 
     if (FBOMResult err = ReadArchive(&reader, archive)) {
         return err;

@@ -52,7 +52,7 @@ NullRTCClient::NullRTCClient(String id, RTCServer *server)
 
 RC<RTCDataChannel> NullRTCClient::CreateDataChannel(Name name)
 {
-    auto data_channel = RC<RTCDataChannel>(new NullRTCDataChannel());
+    RC<NullRTCDataChannel> data_channel = MakeRefCountedPtr<NullRTCDataChannel>();
 
     m_data_channels.Insert(name, data_channel);
 
@@ -82,8 +82,7 @@ LibDataChannelRTCClient::LibDataChannelRTCClient(String id, RTCServer *server)
     rtc_configuration.iceServers.emplace_back(stun_server);
     rtc_configuration.disableAutoNegotiation = true;
 
-    RC<rtc::PeerConnection> peer_connection;
-    peer_connection.Reset(new rtc::PeerConnection(rtc_configuration));
+    RC<rtc::PeerConnection> peer_connection = MakeRefCountedPtr<rtc::PeerConnection>(rtc_configuration);
 
     peer_connection->onStateChange([this, id = m_id](rtc::PeerConnection::State state)
     {
@@ -172,8 +171,7 @@ RC<RTCDataChannel> LibDataChannelRTCClient::CreateDataChannel(Name name)
         name = CreateNameFromDynamicString(ANSIString("dc_") + ANSIString::ToString(m_data_channels.Size()));
     }
 
-    RC<LibDataChannelRTCDataChannel> data_channel;
-    data_channel.Reset(new LibDataChannelRTCDataChannel());
+    RC<LibDataChannelRTCDataChannel> data_channel = MakeRefCountedPtr<LibDataChannelRTCDataChannel>();
 
     data_channel->m_data_channel = m_peer_connection->createDataChannel(name.LookupString());
 

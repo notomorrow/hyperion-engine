@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Window name="Add_Component_Window" size="250 500" originAlignment="center" parentAlignment="center" text="Add Component">
+    <Grid name="Window_Content_Grid">
+        <GridRow size="100% 400">
+            <GridColumn>
+                <Panel size="100%" onInit="LoadComponents">
+
+                </Panel>
+            </GridColumn>
+        </GridRow>
+
+        <GridRow size="100% fill">
+            <GridColumn>
+                <Script assembly="GameName.UI.dll" class="AddComponent" />
+                <Grid name="Window_Footer_Grid">
+                    <GridRow>
+                        <GridColumn>
+                            <Button name="Add_Component_Button" size="auto" onClick="AddComponentClicked">
+                                Add Component
+                            </Button>
+                        </GridColumn>
+                        <GridColumn>
+                            <Button name="Cancel_Button" size="auto" onClick="CancelClicked">
+                                Cancel
+                            </Button>
+                        </GridColumn>
+                    </GridRow>
+                </Grid>
+            </GridColumn>
+        </GridRow>
+    </Grid>
+</Window>

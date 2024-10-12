@@ -214,11 +214,9 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
     {// lock here, to add new entry to cache
         Mutex::Guard guard(m_mutex);
         
-        entry.Reset(new ShaderMapEntry {
-            ShaderWeakRef { },
-            AtomicVar<ShaderMapEntry::State> { ShaderMapEntry::State::LOADING },
-            Threads::CurrentThreadID()
-        });
+        entry = MakeRefCountedPtr<ShaderMapEntry>();
+        entry->state.Set(ShaderMapEntry::State::LOADING, MemoryOrder::SEQUENTIAL);
+        entry->loading_thread_id = Threads::CurrentThreadID();
 
         m_map.Set(definition, entry);
     }
@@ -247,7 +245,7 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
 
         HYP_LOG(Shader, LogLevel::DEBUG, "Creating shader '{}'", definition.GetName());
 
-        shader = MakeRenderObject<Shader>(RC<CompiledShader>(new CompiledShader(std::move(compiled_shader))));
+        shader = MakeRenderObject<Shader>(MakeRefCountedPtr<CompiledShader>(std::move(compiled_shader)));
 
         HYP_LOG(Shader, LogLevel::DEBUG, "Shader '{}' created", definition.GetName());
 

@@ -164,19 +164,22 @@ void UIObject::Init()
 
     scene->GetEntityManager()->AddComponent<MeshComponent>(GetEntity(), MeshComponent { GetQuadMesh(), CreateMaterial() });
     scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(GetEntity(), BoundingBoxComponent { });
-
-    OnMouseDown.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseDown" }).Detach();
-    OnMouseUp.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseUp" }).Detach();
-    OnMouseDrag.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseDrag" }).Detach();
-    OnMouseHover.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseHover" }).Detach();
-    OnMouseLeave.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseLeave" }).Detach();
-    OnMouseMove.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseMove" }).Detach();
-    OnGainFocus.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnGainFocus" }).Detach();
-    OnLoseFocus.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnLoseFocus" }).Detach();
-    OnScroll.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnScroll" }).Detach();
-    OnClick.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnClick" }).Detach();
-    OnKeyDown.Bind(UIScriptDelegate< const KeyboardEvent & > { this, "OnKeyDown" }).Detach();
-    OnKeyUp.Bind(UIScriptDelegate< const KeyboardEvent & > { this, "OnKeyUp" }).Detach();
+    
+    OnInit.Bind(UIScriptDelegate< > { this, "OnInit", /* allow_nested */ false }).Detach();
+    OnAttached.Bind(UIScriptDelegate< > { this, "OnAttached", /* allow_nested */ false }).Detach();
+    OnRemoved.Bind(UIScriptDelegate< > { this, "OnRemoved", /* allow_nested */ false }).Detach();
+    OnMouseDown.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseDown", /* allow_nested */ false }).Detach();
+    OnMouseUp.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseUp", /* allow_nested */ false }).Detach();
+    OnMouseDrag.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseDrag", /* allow_nested */ false }).Detach();
+    OnMouseHover.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseHover", /* allow_nested */ false }).Detach();
+    OnMouseLeave.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseLeave", /* allow_nested */ false }).Detach();
+    OnMouseMove.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnMouseMove", /* allow_nested */ false }).Detach();
+    OnGainFocus.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnGainFocus", /* allow_nested */ false }).Detach();
+    OnLoseFocus.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnLoseFocus", /* allow_nested */ false }).Detach();
+    OnScroll.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnScroll", /* allow_nested */ false }).Detach();
+    OnClick.Bind(UIScriptDelegate< const MouseEvent & > { this, "OnClick", /* allow_nested */ false }).Detach();
+    OnKeyDown.Bind(UIScriptDelegate< const KeyboardEvent & > { this, "OnKeyDown", /* allow_nested */ false }).Detach();
+    OnKeyUp.Bind(UIScriptDelegate< const KeyboardEvent & > { this, "OnKeyUp", /* allow_nested */ false }).Detach();
 
     // set `m_is_init` to true before calling `UpdatePosition` and `UpdateSize` to allow them to run
     m_is_init = true;
@@ -186,6 +189,8 @@ void UIObject::Init()
     UpdateMeshData();
 
     SetNeedsRepaintFlag(true);
+
+    OnInit();
 }
 
 void UIObject::Update(GameCounter::TickUnit delta)
@@ -261,6 +266,8 @@ void UIObject::OnAttached_Internal(UIObject *parent)
 
         SetNeedsRepaintFlag();
     }
+
+    OnAttached();
 }
 
 void UIObject::OnRemoved_Internal()
@@ -278,6 +285,8 @@ void UIObject::OnRemoved_Internal()
 
         SetNeedsRepaintFlag();
     }
+
+    OnRemoved();
 }
 
 Name UIObject::GetName() const
@@ -860,10 +869,6 @@ void UIObject::UpdateComputedVisibility(bool update_children)
                 const BoundingBox parent_aabb { Vec3f { parent_position.x, parent_position.y, 0.0f }, Vec3f { parent_position.x + float(parent_size.x), parent_position.y + float(parent_size.y), 0.0f } };
                 const BoundingBox self_aabb { Vec3f { self_position.x, self_position.y, 0.0f }, Vec3f { self_position.x + float(self_size.x), self_position.y + float(self_size.y), 0.0f } };
 
-                if (GetName() == HYP_WEAK_NAME(MenuItemContents)) {
-                    HYP_LOG(UI, LogLevel::DEBUG, "Testing intersection for parent AABB: {} and menu contents: {}", parent_aabb, self_aabb);
-                }
-
                 computed_visibility = parent_aabb.Overlaps(self_aabb);
             } else {
                 computed_visibility = false;
@@ -1015,8 +1020,7 @@ int UIObject::RemoveAllChildUIObjects()
 
     SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
 
-    HYP_DEFER([this, &num_removed]()
-    {
+    HYP_DEFER({
         SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
 
         if (num_removed > 0 && UseAutoSizing()) {
@@ -1043,8 +1047,7 @@ int UIObject::RemoveAllChildUIObjects(ProcRef<bool, const RC<UIObject> &> predic
 
     SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
 
-    HYP_DEFER([this, &num_removed]()
-    {
+    HYP_DEFER({
         SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
 
         if (num_removed > 0 && UseAutoSizing()) {
@@ -1087,7 +1090,7 @@ RC<UIObject> UIObject::DetachFromParent()
     return this_ref_counted;
 }
 
-RC<UIObject> UIObject::FindChildUIObject(Name name, bool deep) const
+RC<UIObject> UIObject::FindChildUIObject(WeakName name, bool deep) const
 {
     HYP_SCOPE;
 
@@ -1801,7 +1804,7 @@ bool UIObject::HasChildUIObjects() const
     return false;
 }
 
-ScriptComponent *UIObject::GetScriptComponent() const
+ScriptComponent *UIObject::GetScriptComponent(bool deep) const
 {
     HYP_SCOPE;
 
@@ -1812,6 +1815,10 @@ ScriptComponent *UIObject::GetScriptComponent() const
             if (ScriptComponent *script_component = node->GetScene()->GetEntityManager()->TryGetComponent<ScriptComponent>(node->GetEntity())) {
                 return script_component;
             }
+        }
+
+        if (!deep) {
+            return nullptr;
         }
 
         node = node->GetParent();
