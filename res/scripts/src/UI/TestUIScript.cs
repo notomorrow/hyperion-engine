@@ -5,20 +5,14 @@ using Hyperion;
 
 namespace FooBar
 {
-    public class TestUIScript : Script
+    public class TestUIScript : UIEventHandler
     {
         public override void Init(Entity entity)
         {
-            Logger.Log(LogType.Info, "Init for TestUIScript");
-            // var editorSubsystem = Engine.Instance.World!.GetSubsystem(TypeID.FromString("EditorSubsystem"));
-
-            // if (editorSubsystem == null)
-            // {
-            //     Console.WriteLine("EditorSubsystem not found");
-            //     return;
-            // }
+            base.Init(entity);
         }
 
+        [UIEvent(AllowNested = true)]
         public async void SimulateClicked()
         {
             World world = Scene.GetWorld();
@@ -36,6 +30,7 @@ namespace FooBar
             world.StartSimulating();
         }
 
+        [UIEvent(AllowNested = true)]
         public void AddNodeClicked()
         {
             // temp; testing
