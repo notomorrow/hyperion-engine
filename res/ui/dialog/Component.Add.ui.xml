@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Window name="Add_Component_Window" size="250 500" originAlignment="center" parentAlignment="center" text="Add Component">
-    <Grid name="Window_Content_Grid">
+    <Grid name="Window_Content_Grid" size="100%">
         <GridRow size="100% 400">
             <GridColumn>
                 <Panel size="100%" onInit="LoadComponents">
