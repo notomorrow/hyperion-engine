@@ -52,6 +52,34 @@
         <Panel name="Bottom_Panel" size="100% 200"  padding="5 5" side="bottom">
             <TabView name="Bottom_Panel_TabView" size="100%">
                 <Tab name="Assets_Tab" text="Assets">
+                    <Script assembly="GameName.UI.dll" class="ContentBrowser" />
+                    <Panel size="100% 35" padding="0 2">
+                        <Button size="50 fill" onclick="ImportContentClicked">
+                            Import
+                        </Button>
+                    </Panel>
+                    
+                    <Grid size="100% fill" position="0 35" padding="0 2" cols="12" backgroundColor="#000000">
+                        <GridRow size="100%">
+                            <GridColumn size="auto 100%" colsize="2" padding="1">
+                                <Grid size="100%" backgroundColor="#101012">
+                                    <GridRow name="Browse_Heading" size="100% 35" backgroundColor="#000000">
+                                        <Text textSize="12" originAlignment="center" parentAlignment="center">Folders</Text>
+                                    </GridRow>
+                                    <GridRow size="100% fill">
+                                        <GridColumn size="auto 100%">
+                                            <ListView name="ContentBrowser_Directory_List" size="100%" backgroundColor="#FFFFFF">
+                                            </ListView>
+                                        </GridColumn>
+                                    </GridRow>
+                                </Grid>
+                            </GridColumn>
+                            <GridColumn size="auto 100%" colsize="10" padding="1">
+                                <Panel name="ContentBrowser_Directory_Contents_Panel" size="100%" backgroundColor="#101012" padding="5">
+                                </Panel>
+                            </GridColumn>
+                        </GridRow>
+                    </Grid>
                 </Tab>
             </TabView>
         </Panel>
