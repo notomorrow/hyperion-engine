@@ -64,7 +64,7 @@
                             <GridColumn size="auto 100%" colsize="2" padding="1">
                                 <Grid size="100%" backgroundColor="#101012">
                                     <GridRow name="Browse_Heading" size="100% 35" backgroundColor="#000000">
-                                        <Text textSize="12" originAlignment="center" parentAlignment="center">Asset Manager Path</Text>
+                                        <Text textSize="12" originAlignment="center" parentAlignment="center">Folders</Text>
                                     </GridRow>
                                     <GridRow size="100% fill">
                                         <GridColumn size="auto 100%">

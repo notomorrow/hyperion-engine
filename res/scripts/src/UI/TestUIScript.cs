@@ -5,6 +5,12 @@ using Hyperion;
 
 namespace FooBar
 {
+    // temp
+    class TestDataSource : UIDataSourceBase
+    {
+
+    }
+
     public class TestUIScript : UIEventHandler
     {
         public override void Init(Entity entity)
@@ -28,6 +34,10 @@ namespace FooBar
             Logger.Log(LogType.Info, "Start simulation");
 
             world.StartSimulating();
+
+
+            // temp testing
+            var testDataSource = new TestDataSource();
         }
 
         [UIEvent(AllowNested = true)]
