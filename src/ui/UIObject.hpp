@@ -501,34 +501,37 @@ public:
     void SetAspectRatio(UIObjectAspectRatio aspect_ratio);
 
     /*! \brief Get the padding of the UI object
-     * The padding of the UI object is used to add space around the object's content.
-     * \return The padding of the UI object */
-    HYP_METHOD()
+     *  The padding of the UI object is used to add space around the object's content.
+     *  \return The padding of the UI object */
+    HYP_METHOD(Property="Padding")
     HYP_FORCE_INLINE Vec2i GetPadding() const
         { return m_padding; }
 
     /*! \brief Set the padding of the UI object
-     * The padding of the UI object is used to add space around the object's content.
-     * \param padding The padding of the UI object */
-    HYP_METHOD()
+     *  The padding of the UI object is used to add space around the object's content.
+     *  \param padding The padding of the UI object */
+    HYP_METHOD(Property="Padding")
     void SetPadding(Vec2i padding);
 
     /*! \brief Get the background color of the UI object
      * \return The background color of the UI object */
-    Color GetBackgroundColor() const;
+    HYP_METHOD(Property="BackgroundColor")
+    HYP_FORCE_INLINE Color GetBackgroundColor() const
+        { return m_background_color; }
 
     /*! \brief Set the background color of the UI object
      *  \param background_color The background color of the UI object */
+    HYP_METHOD(Property="BackgroundColor")
     void SetBackgroundColor(const Color &background_color);
 
     /*! \brief Get the text color of the UI object
      * \return The text color of the UI object */
-    HYP_METHOD()
+    HYP_METHOD(Property="TextColor")
     Color GetTextColor() const;
 
     /*! \brief Set the text color of the UI object
      *  \param text_color The text color of the UI object */
-    HYP_METHOD()
+    HYP_METHOD(Property="TextColor")
     void SetTextColor(const Color &text_color);
 
     /*! \brief Gets the text to render.
@@ -579,11 +582,22 @@ public:
 
     /*! \brief Get the parent UIObject to this object, if one exists.
      *  \returns A pointer to the parent UIObject or nullptr if none exists. */ 
-    UIObject *GetParentUIObject() const;
+    RC<UIObject> GetParentUIObject() const;
 
     /*! \brief Get the closest parent UIObject with UIObjectType \ref{type} if one exists.
      *  \returns A pointer to the closest parent UIObject with UIObjectType \ref{type} or nullptr if none exists. */ 
-    UIObject *GetClosestParentUIObject(UIObjectType type) const;
+    RC<UIObject> GetClosestParentUIObject(UIObjectType type) const;
+
+    template <class T>
+    RC<T> GetClosestParentUIObject() const
+    {
+        static_assert(std::is_base_of_v<UIObject, T>, "T must be a subclass of UIObject");
+
+        return GetClosestParentUIObjectWithPredicate([](const RC<UIObject> &parent) -> bool
+        {
+            return parent.Is<T>();
+        }).template CastUnsafe<T>();
+    }
 
     virtual void AddChildUIObject(UIObject *ui_object);
     virtual bool RemoveChildUIObject(UIObject *ui_object);
@@ -717,26 +731,14 @@ public:
 
     /*! \brief Get the data source associated with this UIObject. The data source is used to populate the UIObject with data.
      *  \return The data source associated with this UIObject. */
-    HYP_FORCE_INLINE UIDataSourceBase *GetDataSource() const
-        { return m_data_source.Get(); }
-
-    /*! \brief Get the data source associated with this UIObject, casted to the specified type.
-     *  \tparam T The type to cast the data source to.
-     *  \return The data source associated with this UIObject, cast to the specified type.
-     *  Nullptr if the data source is not of the specified type. */
-    template <class T>
-    HYP_FORCE_INLINE UIDataSource<T> *GetDataSource() const
-    {
-        if (!m_data_source.IsDynamic<UIDataSource<T>>()) {
-            return nullptr;
-        }
-
-        return static_cast<UIDataSource<T> *>(m_data_source.Get());
-    }
+    HYP_METHOD(Property="DataSource")
+    HYP_FORCE_INLINE const RC<UIDataSourceBase> &GetDataSource() const
+        { return m_data_source; }
 
     /*! \brief Set the data source associated with this UIObject. The data source is used to populate the UIObject with data.
      *  \param data_source The data source to associate with this UIObject. */
-    void SetDataSource(UniquePtr<UIDataSourceBase> &&data_source);
+    HYP_METHOD(Property="DataSource")
+    void SetDataSource(const RC<UIDataSourceBase> &data_source);
 
     /*! \brief Gets the UUID of the associated data source element (if applicable).
      *  Otherwise, returns an empty UUID.
@@ -773,6 +775,8 @@ public:
     Delegate<UIEventHandlerResult, const KeyboardEvent &>   OnKeyUp;
 
 protected:
+    RC<UIObject> GetClosestParentUIObjectWithPredicate(const ProcRef<bool, const RC<UIObject> &> &predicate) const;
+
     HYP_FORCE_INLINE bool UseAutoSizing() const
     {
         return (GetSize().GetAllFlags() | GetInnerSize().GetAllFlags() | GetMaxSize().GetAllFlags()) & UIObjectSize::AUTO;
@@ -888,7 +892,7 @@ protected:
 
     float                           m_text_size;
 
-    UniquePtr<UIDataSourceBase>     m_data_source;
+    RC<UIDataSourceBase>            m_data_source;
     DelegateHandler                 m_data_source_on_change_handler;
     DelegateHandler                 m_data_source_on_element_add_handler;
     DelegateHandler                 m_data_source_on_element_remove_handler;
