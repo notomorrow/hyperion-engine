@@ -6,7 +6,7 @@ using Hyperion;
 namespace FooBar
 {
     // temp
-    class TestDataSource : UIDataSourceBase
+    class TestDataSource : UIDataSource
     {
 
     }
@@ -37,7 +37,7 @@ namespace FooBar
 
 
             // temp testing
-            var testDataSource = new TestDataSource();
+            var testDataSource = new UIDataSource();//TestDataSource();
         }
 
         [UIEvent(AllowNested = true)]
