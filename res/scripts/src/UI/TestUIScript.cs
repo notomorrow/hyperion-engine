@@ -21,6 +21,9 @@ namespace FooBar
         [UIEvent(AllowNested = true)]
         public async void SimulateClicked()
         {
+            // Test: Force GC
+            GC.Collect();
+            
             World world = Scene.GetWorld();
             
             if (world.GetGameState().Mode == GameStateMode.Simulating)
