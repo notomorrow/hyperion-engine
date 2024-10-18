@@ -23,7 +23,7 @@ namespace FooBar
         {
             // Test: Force GC
             GC.Collect();
-            
+
             World world = Scene.GetWorld();
             
             if (world.GetGameState().Mode == GameStateMode.Simulating)
@@ -40,7 +40,7 @@ namespace FooBar
 
 
             // temp testing
-            var testDataSource = new UIDataSource();//TestDataSource();
+            var testDataSource = new TestDataSource();
         }
 
         [UIEvent(AllowNested = true)]
