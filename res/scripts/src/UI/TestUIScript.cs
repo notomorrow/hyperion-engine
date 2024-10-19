@@ -41,6 +41,9 @@ namespace FooBar
 
             // temp testing
             var testDataSource = new TestDataSource();
+
+            var testUIButton = new UIButton();
+            testUIButton.SetName(new Name("Test Button"));
         }
 
         [UIEvent(AllowNested = true)]
