@@ -893,8 +893,9 @@ public:
         }
 
         if (RC<UIPanel> content = ui_object->FindChildUIObject(WeakName("PropertyPanel_Content")).Cast<UIPanel>()) {
+            content->RemoveAllChildUIObjects();
+            
             if (RC<UIObject> element = factory->CreateUIObject(ui_object->GetStage(), value.property->Get(HypData(node_rc)), ConstAnyRef(&value))) {
-                content->RemoveAllChildUIObjects();
                 content->AddChildUIObject(element);
             }
         }

@@ -24,6 +24,11 @@ namespace Hyperion
             }
             else
             {
+                // @FIXME: Would present an issue if we:
+                // 1) create an object from C# side (creates 1 weak reference to the unmanaged object)
+                // 2) reference the object from C++ side (creates 1 strong reference to the unmanaged object)
+                // 3) delete the object from C# side, removing it from the cache (removes the weak reference to the managed object)
+                // 4) attempt to access the managed object from C++ side (the weak reference is gone, so the managed object is collected)
                 this.gcHandle = GCHandle.Alloc(obj, keepAlive ? GCHandleType.Normal : GCHandleType.Weak);
             }
 

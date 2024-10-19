@@ -462,6 +462,10 @@ public:
 
     WeakRefCountedPtrBase &operator=(const WeakRefCountedPtrBase &other)
     {
+        if (std::addressof(other) == this) {
+            return *this;
+        }
+
         DecRefCount();
 
         m_ref = other.m_ref;
