@@ -179,7 +179,7 @@ namespace Hyperion
             {
                 HypObject obj = (HypObject)value;
 
-                HypData_SetHypObject(ref this, obj.HypClass.Address, obj.NativeAddress);
+                HypData_SetHypObject(ref this, obj.HypClass.Address, obj.NativeAddress, obj.ControlBlockPtr);
                 return;
             }
 
@@ -669,7 +669,7 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "HypData_SetHypObject")]
         [return: MarshalAs(UnmanagedType.I1)]
-        internal static extern bool HypData_SetHypObject([In] ref HypDataBuffer hypData, [In] IntPtr hypClassPtr, [In] IntPtr nativeAddress);
+        internal static extern bool HypData_SetHypObject([In] ref HypDataBuffer hypData, [In] IntPtr hypClassPtr, [In] IntPtr nativeAddress, [In] IntPtr controlBlockPtr);
 
         [DllImport("hyperion", EntryPoint = "HypData_SetHypStruct")]
         [return: MarshalAs(UnmanagedType.I1)]

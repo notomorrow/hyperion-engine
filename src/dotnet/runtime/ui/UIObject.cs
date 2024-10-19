@@ -193,5 +193,11 @@ namespace Hyperion
         public UIObject()
         {
         }
+
+        // temp testing
+        ~UIObject()
+        {
+            Logger.Log(LogType.Info, "UIObject destroyed: \"" + this.GetName() + "\"");
+        }
     }
 }

@@ -242,11 +242,11 @@ void UIListView::UpdateLayout()
 
 void UIListView::SetDataSource_Internal(UIDataSourceBase *data_source)
 {
+    RemoveAllChildUIObjects();
+
     if (!data_source) {
         return;
     }
-
-    RemoveAllChildUIObjects();
 
     m_data_source_on_element_add_handler = data_source->OnElementAdd.Bind([this, data_source](UIDataSourceBase *data_source_ptr, UIDataSourceElement *element, UIDataSourceElement *parent)
     {

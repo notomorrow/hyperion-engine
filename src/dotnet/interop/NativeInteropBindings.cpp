@@ -107,7 +107,7 @@ HYP_EXPORT void NativeInterop_SetInvokeSetterFunction(ManagedGuid *assembly_guid
     class_holder->SetInvokeSetterFunction(invoke_setter_fptr);
 }
 
-HYP_EXPORT ObjectReference NativeInterop_SetAddObjectToCacheFunction(AddObjectToCacheFunction add_object_to_cache_fptr)
+HYP_EXPORT void NativeInterop_SetAddObjectToCacheFunction(AddObjectToCacheFunction add_object_to_cache_fptr)
 {
     DotNetSystem::GetInstance().SetAddObjectToCacheFunction(add_object_to_cache_fptr);
 }

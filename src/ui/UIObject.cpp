@@ -164,7 +164,7 @@ void UIObject::Init()
     if (m_type != UIObjectType::STAGE) {
         AssertThrowMsg(m_stage != nullptr, "Invalid UIStage pointer provided to UIObject!");
     }
-    
+
     AssertThrowMsg(m_node_proxy.IsValid(), "Invalid NodeProxy provided to UIObject!");
 
     const Scene *scene = GetScene();
@@ -1065,17 +1065,22 @@ int UIObject::RemoveAllChildUIObjects()
         }
     }
 
-    num_removed = int(m_child_ui_objects.Size());
+    // num_removed = int(m_child_ui_objects.Size());
 
-    m_child_ui_objects.Clear();
+    // temp testing
+    for (const RC<UIObject> &child_ui_object : m_child_ui_objects) {
+        HYP_LOG(UI, LogLevel::DEBUG, "Remove child {} from {} -- {} refs", child_ui_object->GetName(), GetName(), child_ui_object.GetRefCountData_Internal()->UseCount_Strong());
+    }
 
-    // Array<RC<UIObject>> children = GetChildUIObjects(false);
+    // m_child_ui_objects.Clear();
 
-    // for (const RC<UIObject> &child : children) {
-    //     if (RemoveChildUIObject(child)) {
-    //         ++num_removed;
-    //     }
-    // }
+    Array<UIObject *> children = GetChildUIObjects(false);
+
+    for (UIObject *child : children) {
+        if (RemoveChildUIObject(child)) {
+            ++num_removed;
+        }
+    }
 
     return num_removed;
 }
@@ -1096,31 +1101,11 @@ int UIObject::RemoveAllChildUIObjects(ProcRef<bool, UIObject *> predicate)
         }
     });
 
-    // Array<RC<UIObject>> children = FilterChildUIObjects(predicate, false);
+    Array<UIObject *> children = FilterChildUIObjects(predicate, false);
 
-    // for (const RC<UIObject> &child : children) {
-    //     if (RemoveChildUIObject(child)) {
-    //         ++num_removed;
-    //     }
-    // }
-
-    // for (const RC<UIObject> &child_ui_object : children) {
-    //     if (const NodeProxy &child_node = child_ui_object->GetNode()) {
-    //         child_node->Remove();
-    //     }
-    // }
-
-    for (auto it = m_child_ui_objects.Begin(); it != m_child_ui_objects.End();) {
-        if (predicate(it->Get())) {
-            if (const NodeProxy &child_node = (*it)->GetNode()) {
-                child_node->Remove();
-            }
-
+    for (UIObject *child : children) {
+        if (RemoveChildUIObject(child)) {
             ++num_removed;
-
-            it = m_child_ui_objects.Erase(it);
-        } else {
-            ++it;
         }
     }
 

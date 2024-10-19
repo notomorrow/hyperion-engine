@@ -332,7 +332,7 @@ HYP_EXPORT int8 HypData_GetHypObject(const HypData *hyp_data, void **out_object)
     return false;
 }
 
-HYP_EXPORT int8 HypData_SetHypObject(HypData *hyp_data, const HypClass *hyp_class, void *native_address)
+HYP_EXPORT int8 HypData_SetHypObject(HypData *hyp_data, const HypClass *hyp_class, void *native_address, void *control_block_ptr)
 {
     if (!hyp_data || !hyp_class || !native_address) {
         return false;
@@ -353,10 +353,9 @@ HYP_EXPORT int8 HypData_SetHypObject(HypData *hyp_data, const HypClass *hyp_clas
 
             return true;
         } else if (hyp_class->UseRefCountedPtr()) {
-            EnableRefCountedPtrFromThisBase<> *ptr_casted = static_cast<EnableRefCountedPtrFromThisBase<> *>(native_address);
-        
-            auto *ref_count_data = ptr_casted->weak.GetRefCountData_Internal();
-            AssertThrow(ref_count_data != nullptr);
+            AssertThrow(control_block_ptr != nullptr);
+
+            typename RC<void>::RefCountedPtrBase::RefCountDataType *ref_count_data = static_cast<typename RC<void>::RefCountedPtrBase::RefCountDataType *>(control_block_ptr);
 
             RC<void> rc;
             rc.SetRefCountData_Internal(ref_count_data, /* inc_ref */ true);
