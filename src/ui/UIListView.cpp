@@ -46,7 +46,7 @@ void UIListViewItem::Init()
     UIObject::AddChildUIObject(m_inner_element);
 }
 
-void UIListViewItem::AddChildUIObject(UIObject *ui_object)
+void UIListViewItem::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     HYP_SCOPE;
 
@@ -167,7 +167,7 @@ void UIListView::Init()
     AssertThrow(GetStage() != nullptr);
 }
 
-void UIListView::AddChildUIObject(UIObject *ui_object)
+void UIListView::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     HYP_SCOPE;
 
@@ -175,9 +175,18 @@ void UIListView::AddChildUIObject(UIObject *ui_object)
         return;
     }
 
-    m_list_view_items.PushBack(ui_object);
+    if (ui_object->GetType() == UIObjectType::LIST_VIEW_ITEM) {
+        m_list_view_items.PushBack(ui_object.Cast<UIListViewItem>());
 
-    UIObject::AddChildUIObject(ui_object);
+        UIObject::AddChildUIObject(ui_object);
+    } else {
+        RC<UIListViewItem> list_view_item = GetStage()->CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+        list_view_item->AddChildUIObject(ui_object);
+
+        m_list_view_items.PushBack(list_view_item);
+
+        UIObject::AddChildUIObject(list_view_item);
+    }
 
     UpdateSize(false);
 }
@@ -190,17 +199,33 @@ bool UIListView::RemoveChildUIObject(UIObject *ui_object)
         return false;
     }
     
-    for (SizeType i = 0; i < m_list_view_items.Size(); i++) {
-        if (m_list_view_items[i] == ui_object) {
-            AssertThrow(UIObject::RemoveChildUIObject(ui_object));
+    if (ui_object->GetClosestParentUIObject(UIObjectType::LIST_VIEW) == this) {
+        bool removed = false;
 
-            m_list_view_items.EraseAt(i);
+        {
+            UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
 
+            for (auto it = m_list_view_items.Begin(); it != m_list_view_items.End();) {
+                if (ui_object->IsOrHasParent(*it)) {
+                    AssertThrow(UIObject::RemoveChildUIObject(ui_object));
+
+                    it = m_list_view_items.Erase(it);
+
+                    removed = true;
+                } else {
+                    ++it;
+                }
+            }
+        }
+
+        if (removed) {
             // Updates layout as well
             UpdateSize(false);
 
             return true;
         }
+
+        HYP_LOG(UI, LogLevel::WARNING, "Failed to directly remove UIObject {} from ListView {}", ui_object->GetName(), GetName());
     }
 
     return UIObject::RemoveChildUIObject(ui_object);
@@ -248,77 +273,25 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase *data_source)
         return;
     }
 
+    // Add initial elements
+    for (const auto &pair : data_source->GetValues()) {
+        AddDataSourceElement(data_source, pair.first, pair.second);
+    }
+
     m_data_source_on_element_add_handler = data_source->OnElementAdd.Bind([this, data_source](UIDataSourceBase *data_source_ptr, UIDataSourceElement *element, UIDataSourceElement *parent)
     {
         HYP_NAMED_SCOPE("Add element from data source to list view");
 
-        SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
-
-        HYP_DEFER({
-            SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
-
-            SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
-        });
-
-        RC<UIListViewItem> list_view_item = GetStage()->CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-        list_view_item->GetNode()->AddTag(NAME("DataSourceElementUUID"), NodeTag(element->GetUUID()));
-        list_view_item->SetDataSourceElementUUID(element->GetUUID());
-        
-        list_view_item->OnClick.Bind([this, list_view_item_weak = list_view_item.ToWeak()](const MouseEvent &event) -> UIEventHandlerResult
-        {
-            RC<UIListViewItem> list_view_item = list_view_item_weak.Lock();
-
-            if (!list_view_item) {
-                return UIEventHandlerResult::ERR;
-            }
-
-            if (!list_view_item->HasFocus(true)) {
-                // only call Focus if the item doesn't have focus (including children)
-                list_view_item->Focus();
-            }
-
-            if (RC<UIListViewItem> selected_item = m_selected_item.Lock()) {
-                selected_item->SetIsSelectedItem(false);
-            }
-            
-            m_selected_item = list_view_item;
-
-            list_view_item->SetIsSelectedItem(true);
-
-            OnSelectedItemChange(list_view_item.Get());
-
-            return UIEventHandlerResult::OK;
-        }).Detach();
-
-        // create UIObject for the element and add it to the list view
-        list_view_item->AddChildUIObject(data_source->GetElementFactory()->CreateUIObject(GetStage(), element->GetValue()));
-
-        if (parent) {
-            // Child element - Find the parent
-            UIListViewItem *parent_list_view_item = FindListViewItem(parent->GetUUID());
-
-            if (parent_list_view_item) {
-                parent_list_view_item->AddChildUIObject(list_view_item);
-
-                return;
-            } else {
-                HYP_LOG(UI, LogLevel::WARNING, "Parent list view item not found, no list view item with data source element UUID {}", parent->GetUUID().ToString());
-            }
-        }
-
-        // add the list view item to the list view
-        AddChildUIObject(list_view_item);
+        AddDataSourceElement(data_source_ptr, element, parent);
     });
 
     m_data_source_on_element_remove_handler = data_source->OnElementRemove.Bind([this](UIDataSourceBase *data_source_ptr, UIDataSourceElement *element, UIDataSourceElement *parent)
     {
         HYP_NAMED_SCOPE("Remove element from data source from list view");
 
-        SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
+        UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
 
         HYP_DEFER({
-            SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
-
             SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
         });
 
@@ -395,6 +368,64 @@ UIListViewItem *UIListView::FindListViewItem(const UIObject *parent_object, cons
     }, false);
 
     return result_ptr;
+}
+
+void UIListView::AddDataSourceElement(UIDataSourceBase *data_source, UIDataSourceElement *element, UIDataSourceElement *parent)
+{
+    UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
+
+    HYP_DEFER({
+        SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
+    });
+
+    RC<UIListViewItem> list_view_item = GetStage()->CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+    list_view_item->GetNode()->AddTag(NAME("DataSourceElementUUID"), NodeTag(element->GetUUID()));
+    list_view_item->SetDataSourceElementUUID(element->GetUUID());
+    
+    list_view_item->OnClick.Bind([this, list_view_item_weak = list_view_item.ToWeak()](const MouseEvent &event) -> UIEventHandlerResult
+    {
+        RC<UIListViewItem> list_view_item = list_view_item_weak.Lock();
+
+        if (!list_view_item) {
+            return UIEventHandlerResult::ERR;
+        }
+
+        if (!list_view_item->HasFocus(true)) {
+            // only call Focus if the item doesn't have focus (including children)
+            list_view_item->Focus();
+        }
+
+        if (RC<UIListViewItem> selected_item = m_selected_item.Lock()) {
+            selected_item->SetIsSelectedItem(false);
+        }
+        
+        m_selected_item = list_view_item;
+
+        list_view_item->SetIsSelectedItem(true);
+
+        OnSelectedItemChange(list_view_item.Get());
+
+        return UIEventHandlerResult::OK;
+    }).Detach();
+
+    // create UIObject for the element and add it to the list view
+    list_view_item->AddChildUIObject(data_source->GetElementFactory()->CreateUIObject(GetStage(), element->GetValue()));
+
+    if (parent) {
+        // Child element - Find the parent
+        UIListViewItem *parent_list_view_item = FindListViewItem(parent->GetUUID());
+
+        if (parent_list_view_item) {
+            parent_list_view_item->AddChildUIObject(list_view_item);
+
+            return;
+        } else {
+            HYP_LOG(UI, LogLevel::WARNING, "Parent list view item not found, no list view item with data source element UUID {}", parent->GetUUID().ToString());
+        }
+    }
+
+    // add the list view item to the list view
+    AddChildUIObject(list_view_item);
 }
 
 #pragma region UIListView

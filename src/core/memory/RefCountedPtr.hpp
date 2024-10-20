@@ -703,6 +703,12 @@ public:
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
         { return Base::m_ref->value == nullptr; }
     
+    HYP_FORCE_INLINE bool operator==(const T *ptr) const
+        { return Base::m_ref->value == ptr; }
+    
+    HYP_FORCE_INLINE bool operator==(T *ptr) const
+        { return Base::m_ref->value == ptr; }
+    
     HYP_FORCE_INLINE bool operator!=(const RefCountedPtr &other) const
         { return Base::m_ref->value != other.m_ref->value; }
     
@@ -711,6 +717,12 @@ public:
     
     HYP_FORCE_INLINE bool operator!=(std::nullptr_t) const
         { return Base::m_ref->value != nullptr; }
+    
+    HYP_FORCE_INLINE bool operator!=(T *ptr) const
+        { return Base::m_ref->value != ptr; }
+    
+    HYP_FORCE_INLINE bool operator!=(const T *ptr) const
+        { return Base::m_ref->value != ptr; }
 
     HYP_FORCE_INLINE bool operator<(const RefCountedPtr &other) const
         { return Base::m_ref->value < other.m_ref->value; }
@@ -873,7 +885,13 @@ public:
         { return Base::m_ref->value == other.m_ref->value; }
     
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
-        { return Base::m_ref->value != nullptr; }
+        { return Base::m_ref->value == nullptr; }
+    
+    HYP_FORCE_INLINE bool operator==(void *ptr) const
+        { return Base::m_ref->value == ptr; }
+    
+    HYP_FORCE_INLINE bool operator==(const void *ptr) const
+        { return Base::m_ref->value == ptr; }
     
     HYP_FORCE_INLINE bool operator!=(const RefCountedPtr &other) const
         { return Base::m_ref->value != other.m_ref->value; }
@@ -883,6 +901,12 @@ public:
     
     HYP_FORCE_INLINE bool operator!=(std::nullptr_t) const
         { return Base::m_ref->value != nullptr; }
+    
+    HYP_FORCE_INLINE bool operator!=(void *ptr) const
+        { return Base::m_ref->value != ptr; }
+    
+    HYP_FORCE_INLINE bool operator!=(const void *ptr) const
+        { return Base::m_ref->value != ptr; }
 
     HYP_FORCE_INLINE bool operator<(const RefCountedPtr &other) const
         { return Base::m_ref->value < other.m_ref->value; }

@@ -60,6 +60,13 @@ namespace Hyperion
 
                     NativeInterop_AddObjectToCache(objectWrapperPtr, out classObjectPtr, objectReferencePtr);
 
+#if DEBUG
+                    if (objectReference.guid == Guid.Empty)
+                    {
+                        throw new Exception("Failed to add object to cache");
+                    }
+#endif
+
                     _hypClassPtr = hypClass.Address;
                     _nativeAddress = hypClass.InitInstance(classObjectPtr, objectReference);
 

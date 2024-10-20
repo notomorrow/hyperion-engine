@@ -237,10 +237,10 @@ void UIStage::Init()
     UIObject::Init();
 }
 
-void UIStage::AddChildUIObject(UIObject *ui_object)
+void UIStage::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     HYP_SCOPE;
-    
+
     Threads::AssertOnThread(m_owner_thread_id);
 
     if (!ui_object) {

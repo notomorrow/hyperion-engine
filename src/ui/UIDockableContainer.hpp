@@ -60,9 +60,9 @@ public:
     UIDockableContainer &operator=(UIDockableContainer &&other) noexcept    = delete;
     virtual ~UIDockableContainer() override                                 = default;
 
-    void AddChildUIObject(UIObject *ui_object, UIDockableItemPosition position);
+    void AddChildUIObject(const RC<UIObject> &ui_object, UIDockableItemPosition position);
 
-    virtual void AddChildUIObject(UIObject *ui_object) override;
+    virtual void AddChildUIObject(const RC<UIObject> &ui_object) override;
     virtual bool RemoveChildUIObject(UIObject *ui_object) override;
 
     virtual void Init() override;

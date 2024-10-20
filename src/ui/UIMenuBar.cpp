@@ -46,7 +46,7 @@ void UIMenuItem::Init()
     // UpdateDropDownMenu();
 }
 
-void UIMenuItem::AddChildUIObject(UIObject *ui_object)
+void UIMenuItem::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (ui_object->GetType() != UIObjectType::MENU_ITEM) {
         HYP_LOG(UI, LogLevel::WARNING, "UIMenuItem::AddChildUIObject() called with a UIObject that is not a UIMenuItem");
@@ -65,10 +65,7 @@ void UIMenuItem::AddChildUIObject(UIObject *ui_object)
         return;
     }
 
-    RC<UIObject> menu_item = ToRefCountedPtr(ui_object);
-    AssertThrow(menu_item != nullptr);
-
-    m_menu_items.PushBack(menu_item.Cast<UIMenuItem>());
+    m_menu_items.PushBack(ui_object.Cast<UIMenuItem>());
 
     UpdateDropDownMenu();
 
@@ -335,7 +332,7 @@ void UIMenuBar::SetSelectedMenuItemIndex(uint32 index)
     m_container->Focus();
 }
 
-void UIMenuBar::AddChildUIObject(UIObject *ui_object)
+void UIMenuBar::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (ui_object->GetType() != UIObjectType::MENU_ITEM) {
         HYP_LOG(UI, LogLevel::WARNING, "UIMenuBar::AddChildUIObject() called with a UIObject that is not a UIMenuItem");

@@ -48,7 +48,7 @@ void UITab::SetText(const String &text)
     }
 }
 
-void UITab::AddChildUIObject(UIObject *ui_object)
+void UITab::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (m_contents != nullptr) {
         m_contents->AddChildUIObject(ui_object);
@@ -121,7 +121,7 @@ void UITabView::Init()
     SetSelectedTabIndex(0);
 }
 
-void UITabView::AddChildUIObject(UIObject *ui_object)
+void UITabView::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (ui_object->GetType() != UIObjectType::TAB) {
         HYP_LOG(UI, LogLevel::WARNING, "UITabView::AddChildUIObject() called with a UIObject that is not a UITab");
@@ -140,7 +140,7 @@ void UITabView::AddChildUIObject(UIObject *ui_object)
         return;
     }
 
-    RC<UIObject> tab = ToRefCountedPtr(ui_object);
+    RC<UIObject> tab = ui_object.Cast<UITab>();
     AssertThrow(tab != nullptr);
 
     tab->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 30, UIObjectSize::PIXEL }));

@@ -113,7 +113,7 @@ void UIWindow::SetText(const String &text)
     UIObject::SetText(text);
 }
 
-void UIWindow::AddChildUIObject(UIObject *ui_object)
+void UIWindow::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     HYP_SCOPE;
 

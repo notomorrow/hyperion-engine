@@ -11,6 +11,8 @@
 
 namespace hyperion {
 
+class UIDataSourceElement;
+
 #pragma region UIListViewItem
 
 HYP_CLASS()
@@ -30,7 +32,7 @@ public:
 
     virtual void Init() override;
 
-    virtual void AddChildUIObject(UIObject *ui_object) override;
+    virtual void AddChildUIObject(const RC<UIObject> &ui_object) override;
     virtual bool RemoveChildUIObject(UIObject *ui_object) override;
 
     HYP_FORCE_INLINE const RC<UIObject> &GetInnerElement() const
@@ -74,15 +76,12 @@ public:
     UIListView &operator=(UIListView &&other) noexcept  = delete;
     virtual ~UIListView() override                      = default;
 
-    /*! \brief Get the number of items in the list view.
-     * 
-     * \return The number of items in the list view. */
-    HYP_FORCE_INLINE uint NumListViewItems() const
-        { return m_list_view_items.Size(); }
+    HYP_FORCE_INLINE const Array<RC<UIListViewItem>> &GetListViewItems() const
+        { return m_list_view_items; }
 
     virtual void Init() override;
 
-    virtual void AddChildUIObject(UIObject *ui_object) override;
+    virtual void AddChildUIObject(const RC<UIObject> &ui_object) override;
     virtual bool RemoveChildUIObject(UIObject *ui_object) override;
 
     UIListViewItem *FindListViewItem(const UUID &data_source_element_uuid) const;
@@ -99,8 +98,10 @@ protected:
 private:
     static UIListViewItem *FindListViewItem(const UIObject *parent_object, const UUID &data_source_element_uuid);
 
-    Array<UIObject *>       m_list_view_items;
-    Weak<UIListViewItem>    m_selected_item;
+    void AddDataSourceElement(UIDataSourceBase *data_source, UIDataSourceElement *element, UIDataSourceElement *parent);
+
+    Array<RC<UIListViewItem>>   m_list_view_items;
+    Weak<UIListViewItem>        m_selected_item;
 };
 
 #pragma endregion UIListView
