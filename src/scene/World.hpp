@@ -54,15 +54,13 @@ public:
         m_render_lists[render_list_index] = &render_list;
     }
 
-    void RemoveScene(const Scene *scene)
+    void RemoveScene(ID<Scene> id)
     {
-        AssertThrow(scene != nullptr);
-
-        const uint scene_index = scene->GetID().ToIndex();
+        AssertThrow(id.IsValid());
         
         m_num_render_lists.Decrement(1u, MemoryOrder::RELEASE);
 
-        RenderList &render_list = m_render_lists_by_id_index[scene_index];
+        RenderList &render_list = m_render_lists_by_id_index[id.ToIndex()];
         render_list.SetCamera(Handle<Camera>::empty);
         render_list.SetRenderEnvironment(nullptr);
         render_list.Reset();
@@ -258,8 +256,8 @@ private:
     DetachedScenesContainer                 m_detached_scenes;
 
     Array<Handle<Scene>>                    m_scenes;
-    FlatSet<ID<Scene>>                      m_scenes_pending_removal;
-    FlatSet<ID<Scene>>                      m_scenes_pending_addition;
+    FlatSet<WeakHandle<Scene>>              m_scenes_pending_removal;
+    FlatSet<WeakHandle<Scene>>              m_scenes_pending_addition;
 
     TypeMap<RC<Subsystem>>                  m_subsystems;
 

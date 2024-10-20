@@ -576,7 +576,7 @@ public:
                 }
             }
 
-            LastObject()->AddChildUIObject(ui_object.Get());
+            LastObject()->AddChildUIObject(ui_object);
 
             m_ui_object_stack.Push(ui_object.Get());
         } else if (node_name_upper == "SCRIPT") {

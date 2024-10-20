@@ -533,6 +533,10 @@ void Scene::EnqueueRenderUpdates()
         }
     };
 
+    AssertReady();
+
+    AssertThrow(m_world != nullptr);
+
     PUSH_RENDER_COMMAND(
         UpdateSceneRenderData, 
         m_id,

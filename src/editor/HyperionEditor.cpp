@@ -810,6 +810,8 @@ public:
     void Update(UIObject *ui_object, const ID<Entity> &entity) const
     {
         // @TODO
+
+        HYP_NOT_IMPLEMENTED_VOID();
     }
 };
 
@@ -823,12 +825,16 @@ public:
         RC<Node> node_rc = value.node.Lock();
         
         if (!node_rc) {
+            HYP_LOG(Editor, LogLevel::ERR, "Node reference is invalid, cannot create UI element for property \"{}\"", value.title);
+
             return nullptr;
         }
 
         IUIDataSourceElementFactory *factory = GetEditorUIDataSourceElementFactory(value.property->GetTypeID());
 
         if (!factory) {
+            HYP_LOG(Editor, LogLevel::ERR, "No factory registered for TypeID {} when creating UI element for property \"{}\"", value.property->GetTypeID().Value(), value.title);
+
             return nullptr;
         }
 
@@ -881,24 +887,20 @@ public:
     void Update(UIObject *ui_object, const EditorNodePropertyRef &value) const
     {
         RC<Node> node_rc = value.node.Lock();
-
-        if (!node_rc) {
-            return;
-        }
+        AssertThrow(node_rc != nullptr);
 
         IUIDataSourceElementFactory *factory = GetEditorUIDataSourceElementFactory(value.property->GetTypeID());
+        AssertThrow(factory != nullptr);
 
-        if (!factory) {
-            return;
-        }
+        RC<UIPanel> content = ui_object->FindChildUIObject(WeakName("PropertyPanel_Content")).Cast<UIPanel>();
+        AssertThrow(content != nullptr);
+        
+        content->RemoveAllChildUIObjects();
 
-        if (RC<UIPanel> content = ui_object->FindChildUIObject(WeakName("PropertyPanel_Content")).Cast<UIPanel>()) {
-            content->RemoveAllChildUIObjects();
-            
-            if (RC<UIObject> element = factory->CreateUIObject(ui_object->GetStage(), value.property->Get(HypData(node_rc)), ConstAnyRef(&value))) {
-                content->AddChildUIObject(element);
-            }
-        }
+        RC<UIObject> element = factory->CreateUIObject(ui_object->GetStage(), value.property->Get(HypData(node_rc)), ConstAnyRef(&value));
+        AssertThrow(element != nullptr);
+
+        content->AddChildUIObject(element);
     }
 };
 
@@ -1397,7 +1399,7 @@ void HyperionEditorImpl::InitDetailView()
             return;
         }
 
-        HYP_LOG(Editor, LogLevel::DEBUG, "Focused node: ", node->GetName());
+        HYP_LOG(Editor, LogLevel::DEBUG, "Focused node: {}", node->GetName());
 
         list_view->SetDataSource(MakeRefCountedPtr<UIDataSource>(TypeWrapper<EditorNodePropertyRef> { }));
 
@@ -1432,8 +1434,17 @@ void HyperionEditorImpl::InitDetailView()
                 node_property_ref.description = attr.GetString();
             }
 
+            HYP_LOG(Editor, LogLevel::DEBUG, "Push property {} (title: {}) to data source", it.first, node_property_ref.title);
+
             data_source->Push(UUID(), HypData(std::move(node_property_ref)));
         }
+
+        // temp
+        AssertThrow(list_view->HasChildUIObjects());
+        AssertThrow(list_view->GetDataSource()->Size() != 0);
+        list_view->UpdateSize();
+        list_view->SetBackgroundColor(Color(0xFF0000FFu));
+        HYP_LOG(Editor, LogLevel::DEBUG, "UIListView has {} items", list_view->GetListViewItems().Size());
 
         EditorDelegates::GetInstance().AddNodeWatcher(NAME("DetailView"), {}, [this, hyp_class = Node::GetClass(), list_view_weak](Node *node, const HypProperty *property)
         {
@@ -1448,6 +1459,8 @@ void HyperionEditorImpl::InitDetailView()
             RC<UIListView> list_view = list_view_weak.Lock();
 
             if (!list_view) {
+                HYP_LOG(Editor, LogLevel::ERR, "Failed to get strong reference to list view!");
+
                 return;
             }
 
@@ -1458,13 +1471,16 @@ void HyperionEditorImpl::InitDetailView()
                 });
 
                 AssertThrow(data_source_element != nullptr);
+                data_source->ForceUpdate(data_source_element->GetUUID());
 
-                if (data_source_element != nullptr) {
-                    // trigger update to rebuild UI
-                    EditorNodePropertyRef &node_property_ref = data_source_element->GetValue().Get<EditorNodePropertyRef>();
-                    
-                    data_source->Set(data_source_element->GetUUID(), HypData(&node_property_ref));
-                }
+                // // trigger update to rebuild UI
+                // EditorNodePropertyRef &node_property_ref = data_source_element->GetValue().Get<EditorNodePropertyRef>();
+
+                // // temp; sanity check.
+                // RC<Node> node_rc = node_property_ref.node.Lock();
+                // AssertThrow(node_rc != nullptr);
+                
+                // data_source->Set(data_source_element->GetUUID(), HypData(&node_property_ref));
             }
         });
     }).Detach();

@@ -335,6 +335,8 @@ private:
     mutable Mutex                           m_mutex;
 };
 
+// @TODO Refactor to use Handle<Entity> instead of ID<Entity> so the entities are ref counted
+
 HYP_CLASS()
 class HYP_API EntityManager : public EnableRefCountedPtrFromThis<EntityManager>
 {
@@ -622,12 +624,12 @@ public:
     HYP_FORCE_INLINE ConstAnyRef TryGetComponent(TypeID component_type_id, ID<Entity> entity) const
         { return const_cast<EntityManager *>(this)->TryGetComponent(component_type_id, entity); }
 
-    template <class ... Components>
-    HYP_FORCE_INLINE Tuple< Components &... > GetComponents(ID<Entity> entity)
+    template <class... Components>
+    HYP_FORCE_INLINE Tuple<Components &...> GetComponents(ID<Entity> entity)
         { return Tie(GetComponent<Components>(entity)...); }
 
-    template <class ... Components>
-    HYP_FORCE_INLINE Tuple< const Components &... > GetComponents(ID<Entity> entity) const
+    template <class... Components>
+    HYP_FORCE_INLINE Tuple<const Components &...> GetComponents(ID<Entity> entity) const
         { return Tie(GetComponent<Components>(entity)...); }
 
     /*! \brief Get a map of all component types to respective component IDs for a given Entity.
@@ -891,16 +893,16 @@ private:
 #endif
     }
 
-    template <uint32... indices>
-    HYP_FORCE_INLINE void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, indices...>, Array<EntityTag> &out_tags) const
+    template <uint32... Indices>
+    HYP_FORCE_INLINE void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, Indices...>, Array<EntityTag> &out_tags) const
     {
-        ((HasTag<EntityTag(indices + 1)>(id) ? (void)(out_tags.PushBack(EntityTag(indices + 1))) : void()), ...);
+        ((HasTag<EntityTag(Indices + 1)>(id) ? (void)(out_tags.PushBack(EntityTag(Indices + 1))) : void()), ...);
     }
 
-    template <uint32... indices>
-    HYP_FORCE_INLINE void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, indices...>, uint32 &out_mask) const
+    template <uint32... Indices>
+    HYP_FORCE_INLINE void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, Indices...>, uint32 &out_mask) const
     {
-        ((HasTag<EntityTag(indices + 1)>(id) ? (void)(out_mask |= (1u << uint32(indices))) : void()), ...);
+        ((HasTag<EntityTag(Indices + 1)>(id) ? (void)(out_mask |= (1u << uint32(Indices))) : void()), ...);
     }
 
     template <class SystemType>

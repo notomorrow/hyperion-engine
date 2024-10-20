@@ -142,6 +142,8 @@ UIObject::~UIObject()
 {
     HYP_LOG(UI, LogLevel::DEBUG, "Destroying UIObject with name: {}", GetName());
 
+    m_node_proxy.Reset();
+
     // Remove the entity from the entity manager
     if (ID<Entity> entity = GetEntity()) {
         Scene *scene = GetScene();
@@ -490,9 +492,6 @@ void UIObject::UpdateSize(bool update_children)
 
 void UIObject::UpdateSize_Internal(bool update_children)
 {
-    // @TODO : UpdateSize() needs to update parent object size when parent has AUTO sizing.
-    // Needs to update child element's sizes when size is PERCENT or FILL.
-
     m_deferred_updates &= ~(UIObjectUpdateType::UPDATE_SIZE | (update_children ? UIObjectUpdateType::UPDATE_CHILDREN_SIZE : UIObjectUpdateType::NONE));
 
     UpdateActualSizes(UpdateSizePhase::BEFORE_CHILDREN, UIObjectUpdateSizeFlags::DEFAULT);
@@ -500,18 +499,20 @@ void UIObject::UpdateSize_Internal(bool update_children)
 
     Array<UIObject *> deferred_children;
 
-    if (update_children) {
-        ForEachChildUIObject([&deferred_children](UIObject *child)
-        {
-            if (child->GetSize().GetAllFlags() & (UIObjectSize::FILL | UIObjectSize::PERCENT)) {
-                deferred_children.PushBack(child);
-            } else {
+    ForEachChildUIObject([update_children, &deferred_children](UIObject *child)
+    {
+        if (child->GetSize().GetAllFlags() & (UIObjectSize::FILL | UIObjectSize::PERCENT)) {
+            // Even if update_children is false, these objects will need to be updated anyway
+            // as they are dependent on the size of this object
+            deferred_children.PushBack(child);
+        } else {
+            if (update_children) {
                 child->UpdateSize_Internal(/* update_children */ true);
             }
+        }
 
-            return UIObjectIterationResult::CONTINUE;
-        }, false);
-    }
+        return UIObjectIterationResult::CONTINUE;
+    }, false);
 
     // auto needs recalculation
     const bool needs_update_after_children = UseAutoSizing();
@@ -952,7 +953,7 @@ bool UIObject::IsOrHasParent(const UIObject *other) const
     return this_node->IsOrHasParent(other_node.Get());
 }
 
-void UIObject::AddChildUIObject(UIObject *ui_object)
+void UIObject::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     HYP_SCOPE;
 
@@ -1005,38 +1006,44 @@ bool UIObject::RemoveChildUIObject(UIObject *ui_object)
     if (const NodeProxy &child_node = ui_object->GetNode()) {
         if (child_node->IsOrHasParent(node.Get())) {
             Node *parent_node = child_node->GetParent();
-            bool node_removed = child_node->Remove();
+            AssertThrow(parent_node != nullptr);
 
-            if (node_removed) {
-                ui_object->OnRemoved_Internal();
+            if (UIComponent *ui_component = parent_node->GetScene()->GetEntityManager()->TryGetComponent<UIComponent>(parent_node->GetEntity())) {
+                UIObject *parent_ui_object = ui_component->ui_object;
+                AssertThrow(parent_ui_object != nullptr);
 
-                Array<RC<UIObject>> *target_array = &m_child_ui_objects;
-                
-                AssertThrow(parent_node != nullptr);
+                if (parent_ui_object == this) {
+                    AssertThrow(child_node->Remove());
 
-                if (UIComponent *parent_ui_component = parent_node->GetScene()->GetEntityManager()->TryGetComponent<UIComponent>(parent_node->GetEntity())) {
-                    AssertThrow(parent_ui_component->ui_object != nullptr);
+                    ui_object->OnRemoved_Internal();
 
-                    auto it = parent_ui_component->ui_object->m_child_ui_objects.FindAs(ui_object);
+                    auto it = m_child_ui_objects.FindAs(ui_object);
 
-                    if (it != parent_ui_component->ui_object->m_child_ui_objects.End()) {
-                        parent_ui_component->ui_object->m_child_ui_objects.Erase(it);
+                    if (it != m_child_ui_objects.End()) {
+                        m_child_ui_objects.Erase(it);
+                        
+                        if (UseAutoSizing()) {
+                            UpdateSize(/* update_children */ false);
+                        }
 
                         return true;
                     }
 
-                    HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent: Parent UIObject {} did not have the child object in its children array!", ui_object->GetName(), parent_ui_component->ui_object->GetName());
+                    HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent: Parent UIObject {} did not have the child object in its children array!", ui_object->GetName(), parent_ui_object->GetName());
 
                     return false;
                 } else {
-                    HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent: Parent node ({}) had no UIComponent!", ui_object->GetName(), parent_node->GetName());
-
-                    return false;
+                    return parent_ui_object->RemoveChildUIObject(ui_object);
                 }
+            } else {
+                HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent: Parent node ({}) had no UIComponent!", ui_object->GetName(), parent_node->GetName());
 
+                return false;
             }
         }
     }
+
+    HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent!", ui_object->GetName());
 
     return false;
 }
@@ -1047,39 +1054,37 @@ int UIObject::RemoveAllChildUIObjects()
 
     int num_removed = 0;
 
-    SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
+    {
+        UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
 
-    HYP_DEFER({
-        SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
+        // const NodeProxy &node = GetNode();
 
-        if (num_removed > 0 && UseAutoSizing()) {
-            UpdateSize(/* update_children */ false);
+        // for (const RC<UIObject> &child_ui_object : m_child_ui_objects) {
+        //     if (const NodeProxy &child_node = child_ui_object->GetNode()) {
+        //         child_node->Remove();
+        //     }
+        // }
+
+        // num_removed = int(m_child_ui_objects.Size());
+
+        // temp testing
+        for (const RC<UIObject> &child_ui_object : m_child_ui_objects) {
+            HYP_LOG(UI, LogLevel::DEBUG, "Remove child {} from {} -- {} refs", child_ui_object->GetName(), GetName(), child_ui_object.GetRefCountData_Internal()->UseCount_Strong());
         }
-    });
 
-    const NodeProxy &node = GetNode();
+        // m_child_ui_objects.Clear();
 
-    for (const RC<UIObject> &child_ui_object : m_child_ui_objects) {
-        if (const NodeProxy &child_node = child_ui_object->GetNode()) {
-            child_node->Remove();
+        Array<UIObject *> children = GetChildUIObjects(false);
+
+        for (UIObject *child : children) {
+            if (RemoveChildUIObject(child)) {
+                ++num_removed;
+            }
         }
     }
 
-    // num_removed = int(m_child_ui_objects.Size());
-
-    // temp testing
-    for (const RC<UIObject> &child_ui_object : m_child_ui_objects) {
-        HYP_LOG(UI, LogLevel::DEBUG, "Remove child {} from {} -- {} refs", child_ui_object->GetName(), GetName(), child_ui_object.GetRefCountData_Internal()->UseCount_Strong());
-    }
-
-    // m_child_ui_objects.Clear();
-
-    Array<UIObject *> children = GetChildUIObjects(false);
-
-    for (UIObject *child : children) {
-        if (RemoveChildUIObject(child)) {
-            ++num_removed;
-        }
+    if (num_removed > 0 && UseAutoSizing()) {
+        UpdateSize(/* update_children */ false);
     }
 
     return num_removed;
@@ -1091,22 +1096,20 @@ int UIObject::RemoveAllChildUIObjects(ProcRef<bool, UIObject *> predicate)
 
     int num_removed = 0;
 
-    SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
+    {
+        UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
 
-    HYP_DEFER({
-        SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
+        Array<UIObject *> children = FilterChildUIObjects(predicate, false);
 
-        if (num_removed > 0 && UseAutoSizing()) {
-            UpdateSize(/* update_children */ false);
+        for (UIObject *child : children) {
+            if (RemoveChildUIObject(child)) {
+                ++num_removed;
+            }
         }
-    });
+    }
 
-    Array<UIObject *> children = FilterChildUIObjects(predicate, false);
-
-    for (UIObject *child : children) {
-        if (RemoveChildUIObject(child)) {
-            ++num_removed;
-        }
+    if (num_removed > 0 && UseAutoSizing()) {
+        UpdateSize(/* update_children */ false);
     }
 
     return num_removed;
@@ -2290,12 +2293,10 @@ void UIObject::SetDataSource(const RC<UIDataSourceBase> &data_source)
 {
     HYP_SCOPE;
 
-    if (m_data_source != nullptr) {
-        m_data_source_on_change_handler.Reset();
-        m_data_source_on_element_add_handler.Reset();
-        m_data_source_on_element_remove_handler.Reset();
-        m_data_source_on_element_update_handler.Reset();
-    }
+    m_data_source_on_change_handler.Reset();
+    m_data_source_on_element_add_handler.Reset();
+    m_data_source_on_element_remove_handler.Reset();
+    m_data_source_on_element_update_handler.Reset();
 
     m_data_source = data_source;
 

@@ -45,7 +45,7 @@ World::World()
 World::~World()
 {
     if (IsInitCalled()) {
-        for (Handle<Scene> &scene : m_scenes) {
+        for (const Handle<Scene> &scene : m_scenes) {
             if (!scene.IsValid()) {
                 continue;
             }
@@ -56,6 +56,8 @@ World::~World()
 
             scene->SetWorld(nullptr);
         }
+
+        m_scenes.Clear();
 
         for (auto &it : m_subsystems) {
             it.second->Shutdown();
@@ -75,7 +77,9 @@ void World::Init()
         it.second->Initialize();
     }
 
-    for (Handle<Scene> &scene : m_scenes) {
+    for (const Handle<Scene> &scene : m_scenes) {
+        scene->SetWorld(this);
+
         InitObject(scene);
 
         for (auto &it : m_subsystems) {
@@ -98,40 +102,16 @@ void World::UpdatePendingScenes()
 
     Mutex::Guard guard(m_scene_update_mutex);
 
-    for (ID<Scene> id : m_scenes_pending_removal) {
-        if (!id.IsValid()) {
-            continue;
-        }
-
-        const auto it = m_scenes.FindIf([id](const Handle<Scene> &scene)
-        {
-            return scene->GetID() == id;
-        });
-
-        if (it == m_scenes.End()) {
-            continue;
-        }
-        
-        m_render_list_container.RemoveScene(it->Get());
+    for (const WeakHandle<Scene> &scene_weak : m_scenes_pending_removal) {
+        m_render_list_container.RemoveScene(scene_weak.GetID());
     }
 
     m_scenes_pending_removal.Clear();
 
-    for (ID<Scene> id : m_scenes_pending_addition) {
-        if (!id.IsValid()) {
-            continue;
+    for (const WeakHandle<Scene> &scene_weak : m_scenes_pending_addition) {
+        if (Handle<Scene> scene = scene_weak.Lock()) {
+            m_render_list_container.AddScene(scene.Get());
         }
-
-        const auto it = m_scenes.FindIf([id](const Handle<Scene> &scene)
-        {
-            return scene->GetID() == id;
-        });
-
-        if (it == m_scenes.End()) {
-            continue;
-        }
-
-        m_render_list_container.AddScene(it->Get());
     }
 
     m_scenes_pending_addition.Clear();
@@ -206,13 +186,23 @@ void World::Update(GameCounter::TickUnit delta)
     for (uint32 index = 0; index < m_scenes.Size(); index++) {
         HYP_NAMED_SCOPE("Begin scene updates");
 
-        m_scenes[index]->BeginUpdate(delta);
+        const Handle<Scene> &scene = m_scenes[index];
+        AssertThrow(scene.IsValid());
+
+        // sanity check
+        AssertThrow(scene->GetWorld() == this);
+
+        scene->BeginUpdate(delta);
     }
 
     for (uint32 index = 0; index < m_scenes.Size(); index++) {
         HYP_NAMED_SCOPE("End scene updates");
 
         const Handle<Scene> &scene = m_scenes[index];
+        AssertThrow(scene.IsValid());
+
+        // sanity check
+        AssertThrow(scene->GetWorld() == this);
 
         scene->EndUpdate();
 
@@ -220,6 +210,10 @@ void World::Update(GameCounter::TickUnit delta)
         collect_entities_tasks.PushBack(TaskSystem::GetInstance().Enqueue([this, index]
         {
             const Handle<Scene> &scene = m_scenes[index];
+            AssertThrow(scene.IsValid());
+
+            // sanity check
+            AssertThrow(scene->GetWorld() == this);
 
             RenderList &render_list = m_render_list_container.GetRenderListForScene(scene->GetID());
 
@@ -384,13 +378,13 @@ void World::AddScene(const Handle<Scene> &scene)
         }
     }
 
-    const ID<Scene> scene_id = scene->GetID();
-
     m_scenes.PushBack(scene);
 
     Mutex::Guard guard(m_scene_update_mutex);
 
-    m_scenes_pending_addition.Insert(scene_id);
+    m_scenes_pending_removal.Erase(scene);
+    m_scenes_pending_addition.Insert(scene);
+
     m_has_scene_updates.Set(true, MemoryOrder::RELEASE);
 }
 
@@ -418,11 +412,15 @@ void World::RemoveScene(const WeakHandle<Scene> &scene_weak)
         }
 
         scene->SetWorld(nullptr);
+
+        m_scenes.Erase(it);
     }
 
     Mutex::Guard guard(m_scene_update_mutex);
 
-    m_scenes_pending_removal.Insert(scene->GetID());
+    m_scenes_pending_addition.Erase(scene);
+    m_scenes_pending_removal.Insert(scene);
+
     m_has_scene_updates.Set(true, MemoryOrder::RELEASE);
 }
 
@@ -432,12 +430,8 @@ const Handle<Scene> &World::GetSceneByName(Name name) const
 
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
-    HYP_LOG(Scene, LogLevel::DEBUG, "GetSceneByName({})", name);
-
     const auto it = m_scenes.FindIf([name](const Handle<Scene> &scene)
     {
-        HYP_LOG(Scene, LogLevel::DEBUG, "Compare scene name {} == {}", scene->GetName(), name);
-        
         return scene->GetName() == name;
     });
 

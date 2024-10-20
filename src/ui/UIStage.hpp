@@ -205,7 +205,7 @@ public:
         { return true; }
 
     virtual void Init() override;
-    virtual void AddChildUIObject(UIObject *ui_object) override;
+    virtual void AddChildUIObject(const RC<UIObject> &ui_object) override;
 
 protected:
     virtual void Update_Internal(GameCounter::TickUnit delta) override;

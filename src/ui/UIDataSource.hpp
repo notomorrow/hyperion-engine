@@ -183,6 +183,7 @@ public:
     virtual void Push(const UUID &uuid, HypData &&value, const UUID &parent_uuid = UUID::Invalid()) = 0;
     virtual const UIDataSourceElement *Get(const UUID &uuid) const = 0;
     virtual void Set(const UUID &uuid, HypData &&value) = 0;
+    virtual void ForceUpdate(const UUID &uuid) = 0;
     virtual bool Remove(const UUID &uuid) = 0;
     virtual void RemoveAllWithPredicate(ProcRef<bool, UIDataSourceElement *> predicate) = 0;
 
@@ -316,8 +317,21 @@ public:
 
         OnElementUpdate(this, &*it, GetParentElementFromIterator(it));
         OnChange(this);
+    }
 
-        return;
+    virtual void ForceUpdate(const UUID &uuid) override
+    {
+        auto it = m_values.FindIf([&uuid](const auto &item)
+        {
+            return item.GetUUID() == uuid;
+        });
+
+        if (it == m_values.End()) {
+            HYP_FAIL("Element with UUID %s not found", uuid.ToString().Data());
+        }
+
+        OnElementUpdate(this, &*it, GetParentElementFromIterator(it));
+        OnChange(this);
     }
 
     virtual bool Remove(const UUID &uuid) override

@@ -8,6 +8,7 @@
 #include <core/object/HypObject.hpp>
 
 #include <core/containers/Array.hpp>
+#include <core/containers/Stack.hpp>
 
 #include <core/functional/Delegate.hpp>
 
@@ -292,6 +293,12 @@ public:
 
 #pragma endregion UIObjectRenderProxy
 
+#pragma region UILockedUpdatesScope
+
+struct UILockedUpdatesScope;
+
+#pragma endregion UILockedUpdatesScope
+
 #pragma region UIObject
 
 struct UIObjectID : UniqueID { };
@@ -313,6 +320,7 @@ protected:
 public:
     friend class UIRenderer;
     friend class UIStage;
+    friend struct UILockedUpdatesScope;
 
     UIObject(const UIObject &other)                 = delete;
     UIObject &operator=(const UIObject &other)      = delete;
@@ -599,7 +607,7 @@ public:
         }).template CastUnsafe<T>();
     }
 
-    virtual void AddChildUIObject(UIObject *ui_object);
+    virtual void AddChildUIObject(const RC<UIObject> &ui_object);
     virtual bool RemoveChildUIObject(UIObject *ui_object);
 
     /*! \brief Remove all child UIObjects from this object.
@@ -925,33 +933,61 @@ private:
 
     Handle<Material> CreateMaterial() const;
 
-    const UIObjectID                m_id;
-    const UIObjectType              m_type;
+    const UIObjectID                        m_id;
+    const UIObjectType                      m_type;
 
-    bool                            m_is_init;
+    bool                                    m_is_init;
 
-    EnumFlags<UIObjectFocusState>   m_focus_state;
+    EnumFlags<UIObjectFocusState>           m_focus_state;
 
-    bool                            m_is_visible;
-    bool                            m_computed_visibility;
+    bool                                    m_is_visible;
+    bool                                    m_computed_visibility;
     
-    bool                            m_accepts_focus;
+    bool                                    m_accepts_focus;
 
-    bool                            m_affects_parent_size;
+    bool                                    m_affects_parent_size;
 
-    AtomicVar<bool>                 m_needs_repaint;
+    AtomicVar<bool>                         m_needs_repaint;
 
-    EnumFlags<UIObjectUpdateType>   m_deferred_updates;
-    EnumFlags<UIObjectUpdateType>   m_locked_updates;
+    EnumFlags<UIObjectUpdateType>           m_deferred_updates;
+    EnumFlags<UIObjectUpdateType>           m_locked_updates;
 
-    NodeProxy                       m_node_proxy;
+    NodeProxy                               m_node_proxy;
 
-    Array<RC<UIObject>>             m_child_ui_objects;
+    Array<RC<UIObject>>                     m_child_ui_objects;
 
-    Array<DelegateHandler>          m_delegate_handlers;
+    Array<DelegateHandler>                  m_delegate_handlers;
 };
 
 #pragma endregion UIObject
+
+#pragma region UILockedUpdatesScope
+
+struct UILockedUpdatesScope
+{
+    UILockedUpdatesScope(UIObject *ui_object, EnumFlags<UIObjectUpdateType> value)
+        : ui_object(ui_object),
+          value(value & ~ui_object->m_locked_updates)
+    {
+        ui_object->m_locked_updates |= this->value;
+    }
+
+    UILockedUpdatesScope(const UILockedUpdatesScope &other)                 = delete;
+    UILockedUpdatesScope &operator=(const UILockedUpdatesScope &other)      = delete;
+
+    UILockedUpdatesScope(UILockedUpdatesScope &&other) noexcept             = delete;
+    UILockedUpdatesScope &operator=(UILockedUpdatesScope &&other) noexcept  = delete;
+
+    ~UILockedUpdatesScope()
+    {
+        ui_object->m_locked_updates &= ~value;
+    }
+
+    UIObject                        *ui_object;
+    EnumFlags<UIObjectUpdateType>   value;
+};
+
+#pragma endregion UILockedUpdatesScope
 
 } // namespace hyperion
 

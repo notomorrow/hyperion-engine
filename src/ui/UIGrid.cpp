@@ -46,7 +46,7 @@ void UIGridRow::Init()
     UIPanel::Init();
 }
 
-void UIGridRow::AddChildUIObject(UIObject *ui_object)
+void UIGridRow::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (ui_object->GetType() == UIObjectType::GRID_COLUMN) {
         UIObject::AddChildUIObject(ui_object);
@@ -268,7 +268,7 @@ void UIGrid::Init()
     UIPanel::Init();
 }
 
-void UIGrid::AddChildUIObject(UIObject *ui_object)
+void UIGrid::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (ui_object->GetType() == UIObjectType::GRID_ROW) {
         RC<UIGridRow> row = ui_object->RefCountedPtrFromThis().CastUnsafe<UIGridRow>();
@@ -372,13 +372,7 @@ void UIGrid::SetDataSource_Internal(UIDataSourceBase *data_source)
     {
         HYP_NAMED_SCOPE("Add element from data source to grid view");
 
-        SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
-
-        HYP_DEFER({
-            SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
-
-            SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
-        });
+        UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
 
         // add new row
         RC<UIGridRow> row = AddRow();
@@ -398,6 +392,8 @@ void UIGrid::SetDataSource_Internal(UIDataSourceBase *data_source)
 
             column->AddChildUIObject(object);
         }
+
+        SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
     });
 
     m_data_source_on_element_remove_handler = data_source->OnElementRemove.Bind([this](UIDataSourceBase *data_source_ptr, UIDataSourceElement *element, UIDataSourceElement *parent)
@@ -414,15 +410,9 @@ void UIGrid::SetDataSource_Internal(UIDataSourceBase *data_source)
         });
 
         if (it != m_rows.End()) {
-            SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, true);
+            UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
 
-            HYP_DEFER({
-                SetUpdatesLocked(UIObjectUpdateType::UPDATE_SIZE, false);
-
-                SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
-            });
-
-            RemoveChildUIObject(*it);
+            SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
         }
     });
 
