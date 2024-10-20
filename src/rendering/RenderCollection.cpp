@@ -33,6 +33,9 @@ static constexpr bool do_parallel_collection = true;
 
 #pragma region Render commands
 
+// @TODO: Make Material, Texture(?), etc. only need to have their render objects (e.g DescriptorSetRef)
+// while the objects are used by this system (any RenderProxy objects)
+// would free up quite a bit of memory.
 struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
 {
     RC<EntityDrawCollection>            collection;
@@ -234,9 +237,10 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             AssertThrow(RemoveRenderProxy(proxy_list, entity, attributes, pass_type));
         }
 
-        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Added Proxies: {}", proxy_list.GetAddedEntities().Count());
-        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Removed Proxies: {}", proxy_list.GetRemovedEntities().Count());
-        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Changed Proxies: {}", proxy_list.GetChangedEntities().Count());
+        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Added Proxies: {}\nRemoved Proxies: {}\nChanged Proxies:{}",
+            proxy_list.GetAddedEntities().Count(),
+            proxy_list.GetRemovedEntities().Count(),
+            proxy_list.GetChangedEntities().Count());
 
         proxy_list.Advance(RenderProxyListAdvanceAction::PERSIST);
         
