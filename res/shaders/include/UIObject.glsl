@@ -19,18 +19,20 @@
 
 struct UIObjectProperties
 {
-    UIObjectFocusState  focus_state;
     uvec2               size;
+    uvec2               clamped_size;
     float               border_radius;
     uint                border_flags;
+    UIObjectFocusState  focus_state;
 };
 
 void GetUIObjectProperties(in Object obj, out UIObjectProperties properties)
 {
-    properties.focus_state = obj.user_data[0];
-    properties.size = uvec2(obj.user_data[1], obj.user_data[2]);
+    properties.size = uvec2(obj.user_data[0], obj.user_data[1]);
+    properties.clamped_size = uvec2(properties.size) - uvec2(obj.user_data[2] & 0xFFFFu, obj.user_data[2] >> 16u);
     properties.border_radius = float(obj.user_data[3] & 0xFFu);
     properties.border_flags = uint(obj.user_data[3] >> 8u) & 0xFu;
+    properties.focus_state = uint(obj.user_data[3] >> 16u) & 0xFFu;
 }
 
 #endif
