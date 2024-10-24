@@ -44,18 +44,17 @@ void main()
     UIObjectProperties properties;
     GetUIObjectProperties(object, properties);
 
-// #ifdef TYPE_TEXT // Text uses a different sizing method. See UIText::UpdateSize
-//     vec4 position = object.model_matrix * vec4(a_position, 1.0);
-// #else
     // scale the quad mesh to the size of the object
-    vec4 position = object.model_matrix * vec4(a_position * vec3(vec2(properties.size.xy), 1.0), 1.0);
-// #endif
+    vec4 position = object.model_matrix * vec4(a_position * vec3(vec2(properties.clamped_size.xy), 1.0), 1.0);
 
     vec4 ndc_position = camera.projection * camera.view * position;
 
     v_position = position.xyz;
     v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);
-    v_texcoord0 = a_texcoord0;
+
+    // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
+    // v_texcoord0 = a_texcoord0 * vec2(properties.clamped_size.xy) + size_diff * a_texcoord0;
+    v_texcoord0 = a_texcoord0 * (vec2(properties.clamped_size) / vec2(properties.size));
 
     v_object_index = OBJECT_INDEX;
 
