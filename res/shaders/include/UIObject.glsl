@@ -29,7 +29,7 @@ struct UIObjectProperties
 void GetUIObjectProperties(in Object obj, out UIObjectProperties properties)
 {
     properties.size = uvec2(obj.user_data[0], obj.user_data[1]);
-    properties.clamped_size = uvec2(ivec2(properties.size) + ivec2(int(obj.user_data[2] & 0xFFFFu) - 32768, int(obj.user_data[2] >> 16u) - 32768));
+    properties.clamped_size = uvec2(properties.size) - uvec2(obj.user_data[2] & 0xFFFFu, obj.user_data[2] >> 16u);
     properties.border_radius = float(obj.user_data[3] & 0xFFu);
     properties.border_flags = uint(obj.user_data[3] >> 8u) & 0xFu;
     properties.focus_state = uint(obj.user_data[3] >> 16u) & 0xFFu;
