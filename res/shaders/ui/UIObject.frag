@@ -8,6 +8,7 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_screen_space_position;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=3) in flat uint v_object_index;
+layout (location=4) in vec4 v_color;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=5) out vec4 gbuffer_mask;
@@ -125,7 +126,7 @@ void main()
     // gbuffer_albedo = vec4(vec3(float(TextureSize(HYP_SAMPLER_LINEAR, GET_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)).x) * 0.0005), 1.0);//ui_color;
     // gbuffer_albedo.rgb = UINT_TO_VEC4(object.material_index).rgb;//ui_color;
     // gbuffer_albedo.a = 1.0;
-    gbuffer_albedo = ui_color;
+    gbuffer_albedo = ui_color * v_color;
 // #ifdef TYPE_TEXT
 //     gbuffer_albedo = vec4(v_texcoord0, 0.0, 1.0);
 // #endif
