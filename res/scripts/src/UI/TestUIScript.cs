@@ -64,6 +64,11 @@ namespace FooBar
             var node = mainScene.GetRoot().AddChild(new Node());
             node.SetName("New Node");
 
+            // testing
+            EntityManager entityManager = mainScene.GetEntityManager();
+            ref TransformComponent transformComponent = ref entityManager.GetComponent<TransformComponent>(node.GetEntity());
+            Logger.Log(LogType.Info, "TransformComponent - {0}", transformComponent.Transform);
+
             var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
 
             if (editorSubsystem == null)
