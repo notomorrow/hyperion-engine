@@ -59,15 +59,11 @@ namespace FooBar
                 return;
             }
 
-            Logger.Log(LogType.Info, "Scene name - {0}", mainScene.GetName());
+            EntityManager entityManager = mainScene.GetEntityManager();
 
             var node = mainScene.GetRoot().AddChild(new Node());
             node.SetName("New Node");
-
-            // testing
-            EntityManager entityManager = mainScene.GetEntityManager();
-            ref TransformComponent transformComponent = ref entityManager.GetComponent<TransformComponent>(node.GetEntity());
-            Logger.Log(LogType.Info, "TransformComponent - {0}", transformComponent.Transform);
+            node.SetEntity(entityManager.AddEntity());
 
             var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
 
