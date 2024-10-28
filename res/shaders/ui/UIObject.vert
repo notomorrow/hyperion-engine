@@ -57,12 +57,7 @@ void main()
     // v_texcoord0 = a_texcoord0 * vec2(properties.clamped_size.xy) + size_diff * a_texcoord0;
     v_texcoord0 = a_texcoord0 * (vec2(properties.clamped_size) / vec2(properties.size));
 
-    // debugging
-    if (properties.clamped_size.x > 10000 || properties.clamped_size.y > 10000) {
-        v_color = vec4(1.0, 0.0, 0.0, 1.0);
-    } else {
-        v_color = vec4(1.0);
-    }
+    v_color = vec4(1.0);
 
     v_object_index = OBJECT_INDEX;
 
