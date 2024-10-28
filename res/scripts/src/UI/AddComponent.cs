@@ -6,7 +6,7 @@ namespace Hyperion
     {
         public class AddComponent : UIEventHandler
         {
-            public override void Init(Entity entity)
+            public override void Init(IDBase entity)
             {
                 base.Init(entity);
             }
