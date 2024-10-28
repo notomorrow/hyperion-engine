@@ -13,7 +13,7 @@ namespace FooBar
 
     public class TestUIScript : UIEventHandler
     {
-        public override void Init(Entity entity)
+        public override void Init(IDBase entity)
         {
             base.Init(entity);
         }
@@ -72,6 +72,8 @@ namespace FooBar
                 Logger.Log(LogType.Error, "EditorSubsystem not found");
                 return;
             }
+
+            editorSubsystem.SetFocusedNode(node);
 
             // @TODO Focus on node in scene view
         }
