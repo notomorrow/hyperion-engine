@@ -26,8 +26,8 @@ struct Object
     uint    _pad3;
     uint    _pad4;
 
-    uvec4   user_data;
-    vec4    _pad6;
+    uvec4   user_data0;
+    uvec4   user_data1;
 };
 
 #define MAX_ENTITIES_PER_INSTANCE_BATCH 60
