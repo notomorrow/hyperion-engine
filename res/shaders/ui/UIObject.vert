@@ -52,6 +52,8 @@ void main()
     model_matrix[0][0] = clamped_size.x;
     model_matrix[1][1] = clamped_size.y;
     model_matrix[2][2] = 1.0;
+
+    vec2 clamped_offset = model_matrix[3].xy - properties.clamped_aabb.xy;
     
     model_matrix[3][0] = properties.clamped_aabb.x;
     model_matrix[3][1] = properties.clamped_aabb.y;
@@ -66,7 +68,7 @@ void main()
 
     // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
     // v_texcoord0 = a_texcoord0 * vec2(properties.clamped_size.xy) + size_diff * a_texcoord0;
-    v_texcoord0 = a_texcoord0 * (vec2(clamped_size) / vec2(properties.size));
+    v_texcoord0 = (a_texcoord0 - (clamped_offset / vec2(clamped_size))) * (vec2(clamped_size) / vec2(properties.size));
 
     v_color = vec4(1.0);
 
