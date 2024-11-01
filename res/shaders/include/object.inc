@@ -34,12 +34,11 @@ struct Object
 
 struct EntityInstanceBatch
 {
-    uint num_entities;
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
-
-    uvec4 indices[MAX_ENTITIES_PER_INSTANCE_BATCH / 4];
+    uint    num_entities;
+    uint    use_transforms_buffer;
+    uint    _pad0;
+    uint    _pad1;
+    uvec4   entity_indices[MAX_ENTITIES_PER_INSTANCE_BATCH / 4];
 };
 
 // can use up to 16 bits.
@@ -62,7 +61,7 @@ struct EntityInstanceBatch
         | (uint((obj).bucket == HYP_OBJECT_BUCKET_UI) * (OBJECT_MASK_UI)))
 
 #ifdef VERTEX_SHADER
-    #define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
+    #define OBJECT_INDEX (entity_instance_batch.entity_indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
     #define object (objects[OBJECT_INDEX])
 #elif defined(FRAGMENT_SHADER)
     #define object (objects[v_object_index])

@@ -62,9 +62,9 @@ HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, IndirectDrawCommandsBuffer, s
     IndirectDrawCommand indirect_draw_commands[];
 };
 
-HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, EntityInstanceBatchesBuffer) buffer EntityInstanceBatchesBuffer
+HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, EntityInstanceBatchBuffer) buffer EntityInstanceBatchBuffer
 {
-    EntityInstanceBatch entity_instance_batches[];
+    EntityInstanceBatch entity_instance_batch;
 };
 
 layout(push_constant) uniform ObjectVisibilityData
@@ -185,7 +185,7 @@ void main()
 
         if (instance_index < MAX_ENTITIES_PER_INSTANCE_BATCH) {
             atomicExchange(
-                entity_instance_batches[object_instance.batch_index].indices[instance_index >> 2][instance_index & 3],
+                entity_instance_batch.entity_indices[instance_index >> 2][instance_index & 3],
                 entity_id - 1
             );
         }
