@@ -62,7 +62,7 @@ HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, IndirectDrawCommandsBuffer, s
     IndirectDrawCommand indirect_draw_commands[];
 };
 
-HYP_DESCRIPTOR_SSBO(ObjectVisibilityDescriptorSet, EntityInstanceBatchBuffer) buffer EntityInstanceBatchBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(ObjectVisibilityDescriptorSet, EntityInstanceBatchBuffer, size = 256) buffer EntityInstanceBatchBuffer
 {
     EntityInstanceBatch entity_instance_batch;
 };

@@ -35,7 +35,7 @@ HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer Objec
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO(Object, EntityInstanceBatchBuffer, size = 256) readonly buffer EntityInstanceBatchBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 256) readonly buffer EntityInstanceBatchesBuffer
 {
     EntityInstanceBatch entity_instance_batch;
 };
