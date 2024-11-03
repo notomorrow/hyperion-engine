@@ -53,7 +53,7 @@ HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer Objec
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 256) readonly buffer EntityInstanceBatchesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 4096) readonly buffer EntityInstanceBatchesBuffer
 {
     EntityInstanceBatch entity_instance_batch;
 };
@@ -86,21 +86,24 @@ void main() {
     vec4 previous_position;
     mat4 normal_matrix;
 
+    mat4 model_matrix = entity_instance_batch.transforms[gl_InstanceIndex] * object.model_matrix;
+    // @TODO: Previous transform for instances?
+
 #ifdef VERTEX_SKINNING_ENABLED
     if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
     {
         mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
-        position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
+        position = model_matrix * skinning_matrix * vec4(a_position, 1.0);
         previous_position = object.previous_model_matrix * skinning_matrix * vec4(a_position, 1.0);
-        normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
+        normal_matrix = transpose(inverse(model_matrix * skinning_matrix));
     }
     else
 #endif
     {
-        position = object.model_matrix * vec4(a_position, 1.0);
+        position = model_matrix * vec4(a_position, 1.0);
         previous_position = object.previous_model_matrix * vec4(a_position, 1.0);
-		normal_matrix = transpose(inverse(object.model_matrix));
+		normal_matrix = transpose(inverse(model_matrix));
     }
 
     v_position = position.xyz / position.w;

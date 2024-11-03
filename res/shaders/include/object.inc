@@ -34,12 +34,13 @@ struct Object
 
 struct EntityInstanceBatch
 {
-    uint num_entities;
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
+    uint    num_entities;
+    uint    _pad0;
+    uint    _pad1;
+    uint    _pad2;
 
-    uvec4 indices[MAX_ENTITIES_PER_INSTANCE_BATCH / 4];
+    uvec4   indices[MAX_ENTITIES_PER_INSTANCE_BATCH / 4];
+    mat4    transforms[MAX_ENTITIES_PER_INSTANCE_BATCH];
 };
 
 // can use up to 16 bits.
