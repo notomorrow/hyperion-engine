@@ -1,7 +1,7 @@
 {
   "rendering": {
     "ssr": {
-      "enabled": false,
+      "enabled": true,
       "quality": "low",
       "roughness_scattering": true,
       "cone_tracing": true
@@ -35,7 +35,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       }
     },
     "hbao": {
