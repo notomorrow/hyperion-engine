@@ -25,7 +25,7 @@
       "env_grid_probes": false,
       "reflection_probes": false,
       "reflections": false,
-      "irradiance": true
+      "irradiance": false
     },
     "hbil": {
       "enabled": false
