@@ -67,8 +67,8 @@ void main()
     v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);
 
     // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
-    // v_texcoord0 = a_texcoord0 * vec2(properties.clamped_size.xy) + size_diff * a_texcoord0;
-    v_texcoord0 = (a_texcoord0 - (clamped_offset / vec2(clamped_size))) * (vec2(clamped_size) / vec2(properties.size));
+    v_texcoord0 = a_texcoord0;
+    // v_texcoord0 = (a_texcoord0 - (clamped_offset / vec2(clamped_size))) * (vec2(clamped_size) / vec2(properties.size));
 
     v_color = vec4(1.0);
 
