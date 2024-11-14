@@ -49,17 +49,17 @@ void main()
     vec2 clamped_size = properties.clamped_aabb.zw - properties.clamped_aabb.xy;
 
     mat4 model_matrix = object.model_matrix;
-    model_matrix[0][0] = clamped_size.x;
-    model_matrix[1][1] = clamped_size.y;
+    model_matrix[0][0] = 1.0;//clamped_size.x;
+    model_matrix[1][1] = 1.0;//clamped_size.y;
     model_matrix[2][2] = 1.0;
 
     vec2 clamped_offset = model_matrix[3].xy - properties.clamped_aabb.xy;
     
-    model_matrix[3][0] = properties.clamped_aabb.x;
-    model_matrix[3][1] = properties.clamped_aabb.y;
+    model_matrix[3][0] = 0.0;//properties.clamped_aabb.x;
+    model_matrix[3][1] = 0.0;//properties.clamped_aabb.y;
     model_matrix[3][3] = 1.0;
 
-    vec4 position = model_matrix * vec4(a_position, 1.0);
+    vec4 position = entity_instance_batch.transforms[gl_InstanceIndex] * model_matrix * vec4(a_position, 1.0);
 
     vec4 ndc_position = camera.projection * camera.view * position;
 
