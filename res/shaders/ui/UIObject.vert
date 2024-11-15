@@ -35,10 +35,13 @@ HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer Objec
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, EntityInstanceBatchesBuffer, size = 4096) readonly buffer EntityInstanceBatchesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer, size = 5056) readonly buffer EntityInstanceBatchesBuffer
 {
-    EntityInstanceBatch entity_instance_batch;
+    EntityInstanceBatch_UI  entity_instance_batch;
 };
+
+#undef OBJECT_INDEX
+#define OBJECT_INDEX (entity_instance_batch.batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
 
 void main()
 {
@@ -59,7 +62,7 @@ void main()
     model_matrix[3][1] = 0.0;//properties.clamped_aabb.y;
     model_matrix[3][3] = 1.0;
 
-    vec4 position = entity_instance_batch.transforms[gl_InstanceIndex] * model_matrix * vec4(a_position, 1.0);
+    vec4 position = entity_instance_batch.batch.transforms[gl_InstanceIndex] * model_matrix * vec4(a_position, 1.0);
 
     vec4 ndc_position = camera.projection * camera.view * position;
 
