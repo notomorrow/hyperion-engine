@@ -26,6 +26,12 @@ struct UIObjectProperties
     UIObjectFocusState  focus_state;
 };
 
+struct EntityInstanceBatch_UI
+{
+    EntityInstanceBatch batch;
+    vec4                texcoords[MAX_ENTITIES_PER_INSTANCE_BATCH];
+};
+
 void GetUIObjectProperties(in Object obj, out UIObjectProperties properties)
 {
     properties.border_radius = float(obj.user_data0[0] & 0xFFu);
