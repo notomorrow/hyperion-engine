@@ -225,20 +225,20 @@ void main()
         if (light.shadow_map_index != ~0u) {
             shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, camera.dimensions.xy, NdotL);
 
-#ifdef LIGHT_RAYS_ENABLED
-            const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
+// #ifdef LIGHT_RAYS_ENABLED
+//             const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
 
-            const float light_ray_attenuation = LightRays(
-                light.shadow_map_index,
-                texcoord,
-                L,
-                position.xyz,
-                camera.position.xyz,
-                depth
-            );
+//             const float light_ray_attenuation = LightRays(
+//                 light.shadow_map_index,
+//                 texcoord,
+//                 L,
+//                 position.xyz,
+//                 camera.position.xyz,
+//                 depth
+//             );
 
-            light_rays = vec4(light_color * light_ray_attenuation);
-#endif
+//             light_rays = vec4(light_color * light_ray_attenuation);
+// #endif
         }
 #endif
 
