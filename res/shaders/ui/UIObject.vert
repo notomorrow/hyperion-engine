@@ -70,7 +70,9 @@ void main()
     v_screen_space_position = vec3(ndc_position.xy * 0.5 + 0.5, ndc_position.z);
 
     // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
-    v_texcoord0 = a_texcoord0;
+    vec4 instance_texcoords = entity_instance_batch.texcoords[gl_InstanceIndex];
+    vec2 instance_texcoord_size = instance_texcoords.zw - instance_texcoords.xy;
+    v_texcoord0 = instance_texcoords.xy + (a_texcoord0 * instance_texcoord_size);
     // v_texcoord0 = (a_texcoord0 - (clamped_offset / vec2(clamped_size))) * (vec2(clamped_size) / vec2(properties.size));
 
     v_color = vec4(1.0);
