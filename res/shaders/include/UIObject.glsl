@@ -30,6 +30,8 @@ struct EntityInstanceBatch_UI
 {
     EntityInstanceBatch batch;
     vec4                texcoords[MAX_ENTITIES_PER_INSTANCE_BATCH];
+    vec4                offsets[MAX_ENTITIES_PER_INSTANCE_BATCH];
+    vec4                sizes[MAX_ENTITIES_PER_INSTANCE_BATCH];
 };
 
 void GetUIObjectProperties(in Object obj, out UIObjectProperties properties)
