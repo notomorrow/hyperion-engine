@@ -25,19 +25,19 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 
 #include "../include/UIObject.glsl"
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer, size = 5056) readonly buffer EntityInstanceBatchesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly buffer EntityInstanceBatchesBuffer
 {
-    EntityInstanceBatch_UI  entity_instance_batch;
+    EntityInstanceBatch_UI entity_instance_batch;
 };
 
 #undef OBJECT_INDEX
@@ -48,22 +48,19 @@ void main()
     UIObjectProperties properties;
     GetUIObjectProperties(object, properties);
 
-    // scale the quad mesh to the size of the object
-    vec2 clamped_size = properties.clamped_aabb.zw - properties.clamped_aabb.xy;
-
     mat4 model_matrix = object.model_matrix;
-    model_matrix[0][0] = 1.0;//clamped_size.x;
-    model_matrix[1][1] = 1.0;//clamped_size.y;
+    model_matrix[0][0] = 1.0;
+    model_matrix[1][1] = 1.0;
     model_matrix[2][2] = 1.0;
-
-    vec2 clamped_offset = model_matrix[3].xy - properties.clamped_aabb.xy;
-    
-    model_matrix[3][0] = 0.0;//properties.clamped_aabb.x;
-    model_matrix[3][1] = 0.0;//properties.clamped_aabb.y;
+    model_matrix[3][0] = 0.0;
+    model_matrix[3][1] = 0.0;
     model_matrix[3][3] = 1.0;
 
-    vec4 position = entity_instance_batch.batch.transforms[gl_InstanceIndex] * model_matrix * vec4(a_position, 1.0);
+    vec2 clamped_offset = entity_instance_batch.offsets[gl_InstanceIndex].xy;
+    vec2 size = entity_instance_batch.sizes[gl_InstanceIndex].xy;
+    vec2 clamped_size = entity_instance_batch.sizes[gl_InstanceIndex].zw;
 
+    vec4 position = entity_instance_batch.batch.transforms[gl_InstanceIndex] * model_matrix * vec4(a_position, 1.0);
     vec4 ndc_position = camera.projection * camera.view * position;
 
     v_position = position.xyz;
@@ -71,9 +68,12 @@ void main()
 
     // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
     vec4 instance_texcoords = entity_instance_batch.texcoords[gl_InstanceIndex];
+
+
     vec2 instance_texcoord_size = instance_texcoords.zw - instance_texcoords.xy;
-    v_texcoord0 = instance_texcoords.xy + (a_texcoord0 * instance_texcoord_size);
-    // v_texcoord0 = (a_texcoord0 - (clamped_offset / vec2(clamped_size))) * (vec2(clamped_size) / vec2(properties.size));
+    vec2 clamped_instance_texcoord_size = instance_texcoord_size * (clamped_size / size);
+    
+    v_texcoord0 = instance_texcoords.xy - (clamped_offset / clamped_size * clamped_instance_texcoord_size) + (a_texcoord0 * clamped_instance_texcoord_size);
 
     v_color = vec4(1.0);
 
