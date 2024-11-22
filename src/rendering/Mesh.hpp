@@ -9,6 +9,8 @@
 
 #include <core/containers/Array.hpp>
 
+#include <core/threading/DataRaceDetector.hpp>
+
 #include <math/BoundingBox.hpp>
 #include <math/Vertex.hpp>
 
@@ -30,12 +32,78 @@ using renderer::IndirectDrawCommand;
 
 struct RENDER_COMMAND(SetStreamedMeshData);
 
+HYP_STRUCT(Size=104)
+struct MeshInstanceData
+{
+    static constexpr uint32 max_buffers = 8;
+
+    HYP_FIELD(Property="NumInstances", Serialize=true)
+    uint32                          num_instances = 0;
+
+    HYP_FIELD(Property="Buffers", Serialize=true)
+    Array<Array<ubyte>, 0>          buffers;
+
+    HYP_FIELD(Property="BufferStructSizes", Serialize=true)
+    FixedArray<uint32, max_buffers> buffer_struct_sizes;
+
+    HYP_FIELD(Property="BufferStructAlignments", Serialize=true)
+    FixedArray<uint32, max_buffers> buffer_struct_alignments;
+
+    HYP_FORCE_INLINE bool operator==(const MeshInstanceData &other) const
+    {
+        return num_instances == other.num_instances
+            && buffers == other.buffers
+            && buffer_struct_sizes == other.buffer_struct_sizes
+            && buffer_struct_alignments == other.buffer_struct_alignments;
+    }
+
+    HYP_FORCE_INLINE bool operator!=(const MeshInstanceData &other) const
+    {
+        return num_instances != other.num_instances
+            || buffers != other.buffers
+            || buffer_struct_sizes != other.buffer_struct_sizes
+            || buffer_struct_alignments != other.buffer_struct_alignments;
+    }
+
+    HYP_FORCE_INLINE uint32 NumInstances() const
+        { return num_instances; }
+
+    template <class StructType>
+    void SetBufferData(int buffer_index, StructType *ptr, SizeType count)
+    {
+        static_assert(IsPODType<StructType>, "Struct type must a POD type");
+
+        AssertThrowMsg(buffer_index < max_buffers, "Buffer index %d must be less than maximum number of buffers (%u)", buffer_index, max_buffers);
+
+        if (buffers.Size() <= buffer_index) {
+            buffers.Resize(buffer_index + 1);
+        }
+
+        buffer_struct_sizes[buffer_index] = sizeof(StructType);
+        buffer_struct_alignments[buffer_index] = alignof(StructType);
+
+        buffers[buffer_index].Resize(sizeof(StructType) * count);
+        Memory::MemCpy(buffers[buffer_index].Data(), ptr, sizeof(StructType) * count);
+    }
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(num_instances);
+        hc.Add(buffers);
+        hc.Add(buffer_struct_sizes);
+        hc.Add(buffer_struct_alignments);
+
+        return hc;
+    }
+};
+
 HYP_CLASS()
 class HYP_API Mesh final : public BasicObject<Mesh>
 {
     HYP_OBJECT_BODY(Mesh);
 
-    HYP_PROPERTY(ID, &Mesh::GetID)
+    HYP_PROPERTY(ID, &Mesh::GetID, { { "serialize", false } });
     
 public:
     friend struct RENDER_COMMAND(SetStreamedMeshData);
@@ -99,22 +167,19 @@ public:
     HYP_FORCE_INLINE uint32 NumIndices() const
         { return m_indices_count; }
 
-    HYP_METHOD(Property="StreamedMeshData", Serialize=true)
-    HYP_FORCE_INLINE const RC<StreamedMeshData> &GetStreamedMeshData() const
-        { return m_streamed_mesh_data; }
+    HYP_METHOD(Property="StreamedMeshData")
+    const RC<StreamedMeshData> &GetStreamedMeshData() const;
 
-    /*! \brief Set the mesh data for the Mesh. Only usable on the Render thread. If needed
-        from another thread, use the static version of this function. */
-    HYP_METHOD(Property="StreamedMeshData", Serialize=true)
+    HYP_METHOD(Property="StreamedMeshData")
     void SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data);
 
-    static void SetStreamedMeshData_ThreadSafe(Handle<Mesh> mesh, RC<StreamedMeshData> streamed_mesh_data);
+    void SetStreamedMeshData_ThreadSafe(RC<StreamedMeshData> streamed_mesh_data);
 
-    HYP_METHOD(Property="VertexAttributes", Serialize=true)
+    HYP_METHOD(Property="VertexAttributes")
     HYP_FORCE_INLINE const VertexAttributeSet &GetVertexAttributes() const
         { return m_mesh_attributes.vertex_attributes; }
 
-    HYP_METHOD(Property="VertexAttributes", Serialize=true)
+    HYP_METHOD(Property="VertexAttributes")
     HYP_FORCE_INLINE void SetVertexAttributes(const VertexAttributeSet &attributes)
         { m_mesh_attributes.vertex_attributes = attributes; }
 
@@ -124,7 +189,7 @@ public:
     HYP_FORCE_INLINE void SetMeshAttributes(const MeshAttributes &attributes)
         { m_mesh_attributes = attributes; }
 
-    HYP_METHOD(Property="Topology", Serialize=true)
+    HYP_METHOD(Property="Topology")
     HYP_FORCE_INLINE Topology GetTopology() const
         { return m_mesh_attributes.topology; }
 
@@ -179,6 +244,8 @@ private:
     RC<StreamedMeshData>    m_streamed_mesh_data;
 
     mutable BoundingBox     m_aabb;
+
+    DataRaceDetector        m_data_race_detector;
 };
 
 } // namespace hyperion

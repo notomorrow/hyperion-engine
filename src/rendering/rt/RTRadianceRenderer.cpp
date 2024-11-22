@@ -90,7 +90,7 @@ struct RENDER_COMMAND(CreateRTRadianceUniformBuffers) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
-RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent, RTRadianceRendererOptions options)
+RTRadianceRenderer::RTRadianceRenderer(const Vec2u &extent, RTRadianceRendererOptions options)
     : m_extent(extent),
       m_options(options),
       m_updates { RT_RADIANCE_UPDATES_NONE, RT_RADIANCE_UPDATES_NONE }
@@ -136,10 +136,21 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 
     Memory::MemSet(&uniforms, 0, sizeof(uniforms));
 
-    const uint32 num_bound_lights = MathUtil::Min(uint32(g_engine->GetRenderState().lights.Size()), 16);
+    const uint32 max_bound_lights = MathUtil::Min(g_engine->GetRenderState().NumBoundLights(), ArraySize(uniforms.light_indices));
+    uint32 num_bound_lights = 0;
 
-    for (uint32 index = 0; index < num_bound_lights; index++) {
-        uniforms.light_indices[index] = (g_engine->GetRenderState().lights.Data() + index)->first.ToIndex();
+    for (uint32 light_type = 0; light_type < uint32(LightType::MAX); light_type++) {
+        if (num_bound_lights >= max_bound_lights) {
+            break;
+        }
+
+        for (const auto &it : g_engine->GetRenderState().bound_lights[light_type]) {
+            if (num_bound_lights >= max_bound_lights) {
+                break;
+            }
+
+            uniforms.light_indices[num_bound_lights++] = it.first.ToIndex();
+        }
     }
 
     uniforms.num_bound_lights = num_bound_lights;
@@ -186,17 +197,15 @@ void RTRadianceRenderer::Render(Frame *frame)
         ResourceState::UNORDERED_ACCESS
     );
 
-    const Extent3D image_extent = m_texture->GetImage()->GetExtent();
-    const SizeType num_pixels = image_extent.Size();
-    
+    const Vec3u image_extent = m_texture->GetImage()->GetExtent();
+
+    const SizeType num_pixels = image_extent.Volume();
     const SizeType half_num_pixels = num_pixels / 2;
 
     m_raytracing_pipeline->TraceRays(
         g_engine->GetGPUDevice(),
         frame->GetCommandBuffer(),
-        Extent3D {
-            uint32(half_num_pixels), 1, 1
-        }
+        Vec3u { uint32(half_num_pixels), 1, 1 }
     );
 
     m_texture->GetImage()->InsertBarrier(
@@ -219,7 +228,7 @@ void RTRadianceRenderer::CreateImages()
     m_texture = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         InternalFormat::RGBA8,
-        Vec3u { m_extent.width, m_extent.height, 1 },
+        Vec3u { m_extent.x, m_extent.y, 1 },
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE

@@ -9,7 +9,7 @@ from cxxheaderparser.cxxheaderparser.simple import parse_string as parse_cxx_hea
 from cxxheaderparser.cxxheaderparser.preprocessor import make_gcc_preprocessor, make_msvc_preprocessor
 from cxxheaderparser.cxxheaderparser.options import ParserOptions
 
-from util import parse_cxx_field_name, get_generated_path, map_type, parse_attributes_string, format_attribute_value
+from util import parse_cxx_field_name, get_generated_path, map_type, parse_attributes_string, format_attribute_value, extract_class_name, extract_base_classes, to_pascal_case
 
 CXX_CLASS_TEMPLATE = Template(filename=os.path.join(os.path.dirname(__file__), 'templates', 'class_template.hpp'))
 CXX_MODULE_TEMPLATE = Template(filename=os.path.join(os.path.dirname(__file__), 'templates', 'module_template.hpp'))
@@ -21,6 +21,7 @@ CXX_PREAMBLE = """
 #define HYP_API
 #define HYP_CLASS(...)
 #define HYP_STRUCT(...)
+#define HYP_ENUM(...)
 #define HYP_FIELD(...)
 #define HYP_PROPERTY(...)
 #define HYP_METHOD(...)
@@ -43,12 +44,14 @@ class SourceLocation:
 
 class HypClassType:
     CLASS = 0
-    STRUCT = 1
+    STRUCT = 1,
+    ENUM = 2
 
 class HypMemberType:
     FIELD = 0
     PROPERTY = 1
-    METHOD = 2
+    METHOD = 2,
+    ENUMERATOR = 3
 
 class GeneratedSource:
     def __init__(self, source_location, content=""):
@@ -56,12 +59,13 @@ class GeneratedSource:
         self.content = content
 
 class HypMemberDefinition:
-    def __init__(self, member_type: int, name: str, attributes: 'list[tuple[str, str, int]]'=[], method_return_type: 'str | None'=None, method_args: 'list[str | None]'=None, property_args: 'list[str] | None'=None):
+    def __init__(self, member_type: int, name: str, attributes: 'list[tuple[str, str, int]]'=[], method_return_type: 'str | None'=None, method_args: 'list[tuple[str, str]]'=None, is_const_method: bool=False, property_args: 'list[str] | None'=None):
         self.member_type = member_type
         self.name = name
         self.attributes = attributes
         self.method_return_type = method_return_type
         self.method_args = method_args
+        self.is_const_method = is_const_method
         self.property_args = property_args
 
         if self.is_method:
@@ -90,6 +94,10 @@ class HypMemberDefinition:
         return self.member_type == HypMemberType.METHOD
     
     @property
+    def is_enumerator(self):
+        return self.member_type == HypMemberType.ENUMERATOR
+    
+    @property
     def return_type(self):
         if self.is_method:
             if self.method_return_type is None:
@@ -113,6 +121,16 @@ class HypMemberDefinition:
             return self.property_args
         
         raise Exception('Member is not a method')
+    
+    def get_attribute(self, attribute_name: str):
+        for name, value, attr_type in self.attributes:
+            if name.lower() == attribute_name.lower():
+                return value
+
+        return None
+
+    def has_attribute(self, attribute_name):
+        return self.get_attribute(attribute_name) is not None
 
 class HypClassDefinition:
     def __init__(self, class_type: int, location: SourceLocation, name: str, base_classes: 'list[str]', attributes: 'list[tuple[str, str, int]]', parsed_data: ParsedData, content: str):
@@ -131,6 +149,30 @@ class HypClassDefinition:
 
         self.is_built = False
 
+    @property
+    def is_class(self):
+        return self.class_type == HypClassType.CLASS
+    
+    @property
+    def is_struct(self):
+        return self.class_type == HypClassType.STRUCT
+
+    @property
+    def is_class_or_struct(self):
+        return self.is_class or self.is_struct
+    
+    @property
+    def is_enum(self):
+        return self.class_type == HypClassType.ENUM
+    
+    @property
+    def has_scriptable_methods(self):
+        for member in self.members:
+            if member.is_method and member.has_attribute('Scriptable'):
+                return True
+            
+        return False
+
     def get_attribute(self, attribute_name: str):
         for name, value, attr_type in self.attributes:
             if name.lower() == attribute_name.lower():
@@ -142,7 +184,18 @@ class HypClassDefinition:
         return self.get_attribute(attribute_name) is not None
 
     def parse_members(self, state):
-        class_data = self.parsed_data.namespace.classes[0]
+        class_data = None
+
+        if self.is_enum:
+            class_data = self.parsed_data.namespace.enums[0]
+
+            for enum_value in class_data.values:
+                self.members.append(HypMemberDefinition(HypMemberType.ENUMERATOR, enum_value.name, attributes=[]))
+
+            return
+        
+        if self.is_class_or_struct:
+            class_data = self.parsed_data.namespace.classes[0]
 
         if not class_data:
             state.add_error(f'Error: Failed to parse class data for {self.name}')
@@ -263,9 +316,13 @@ class HypClassDefinition:
 
                         member_name = member.name.segments[-1].name
 
+                        print(f"Method {member_name} - {member}")
+
+                        is_const_method = member.const
+
                         return_type = map_type(member.return_type)
 
-                        args = []
+                        args: 'list[tuple[str, str]]' = []
 
                         for param in member.parameters:
                             param_type = map_type(param.type)
@@ -285,7 +342,7 @@ class HypClassDefinition:
 
                         # return_type
 
-                        self.members.append(HypMemberDefinition(member_type, member_name, attributes=inner_args, method_return_type=return_type, method_args=args))
+                        self.members.append(HypMemberDefinition(member_type, member_name, attributes=inner_args, method_return_type=return_type, method_args=args, is_const_method=is_const_method))
                     else:
                         raise Exception(f'Invalid member type {member_type}')
                 
@@ -405,11 +462,13 @@ class Codegen:
             with open(os.path.join(self.state.src_dir, file), 'r') as f:
                 content = f.read()
 
-                for class_match in re.finditer(r'HYP_(?:CLASS|STRUCT)\s*\(\s*(.*?)\s*\)', content):
+                for class_match in re.finditer(r'HYP_(?:CLASS|STRUCT|ENUM)\s*\(\s*(.*?)\s*\)', content):
                     class_type = HypClassType.CLASS
 
                     if 'HYP_STRUCT' in class_match.group(0):
                         class_type = HypClassType.STRUCT
+                    elif 'HYP_ENUM' in class_match.group(0):
+                        class_type = HypClassType.ENUM
 
                     source_location = SourceLocation(file, class_match.start(0))
 
@@ -423,8 +482,8 @@ class Codegen:
                     class_content = content[class_match.start(0)-1:opening_brace + 1]
 
                     # get class name, base classes from class content
-                    class_name = self.extract_class_name(class_content)
-                    base_classes = self.extract_base_classes(class_content)
+                    class_name = extract_class_name(class_content)
+                    base_classes = extract_base_classes(class_content)
 
                     remaining_content = content[opening_brace+1:]
 
@@ -527,7 +586,7 @@ class Codegen:
 
         if hyp_class.last_modified is None or self.metadata.get(hyp_class.name, {}).get("last_modified", 0) < hyp_class.last_modified:
             cxx_source = self.cxx_generated_sources.get(cxx_generated_path, GeneratedSource(hyp_class.location))
-            cxx_source.content += CXX_CLASS_TEMPLATE.render(hyp_class=hyp_class, HypMemberType=HypMemberType, HypClassType=HypClassType, format_attribute_value=format_attribute_value)
+            cxx_source.content += CXX_CLASS_TEMPLATE.render(hyp_class=hyp_class, HypMemberType=HypMemberType, HypClassType=HypClassType, format_attribute_value=format_attribute_value, to_pascal_case=to_pascal_case)
             self.cxx_generated_sources.update({cxx_generated_path: cxx_source})
         else:
             sys.stdout.write(f'Skipping C++ codegen for {hyp_class.name} - up to date\n')
@@ -546,20 +605,6 @@ class Codegen:
             sys.stdout.write(f'Skipping C# codegen for {hyp_class.name} - up to date\n')
 
         hyp_class.is_built = True
-
-    def extract_class_name(self, class_match):
-        class_name_match = re.search(r'(?:class|struct)\s+(?:alignas\(.*\)\s+)?(?:HYP_API\s+)?(\w+)', class_match)
-        if class_name_match:
-            return class_name_match.group(1)
-        return None
-
-    def extract_base_classes(self, class_match):
-        base_classes_match = re.search(r'(?:class|struct)\s+(?:alignas\(.*\)\s+)?(?:HYP_API\s+)?(?:\w+)\s*(?:final)?\s*:\s*((?:public|private|protected)?\s*(?:\w+\s*,?\s*)+)', class_match)
-        if base_classes_match:
-            base_classes = base_classes_match.group(1)
-            return [base.strip().split(' ')[-1] for base in base_classes.split(',')]
-
-        return []
     
     def write_generated_sources(self):
         for path, generated_source in self.cxx_generated_sources.items():

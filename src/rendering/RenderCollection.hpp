@@ -10,6 +10,8 @@
 
 #include <math/Transform.hpp>
 
+#include <scene/camera/Camera.hpp>
+
 #include <rendering/DrawProxy.hpp>
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderableAttributes.hpp>
@@ -72,8 +74,8 @@ constexpr PassType BucketToPassType(Bucket bucket)
 
 struct RenderProxyGroup
 {
-    FlatMap<ID<Entity>, RenderProxy>    m_render_proxies;
-    Handle<RenderGroup>                 m_render_group;
+    RenderProxyEntityMap    m_render_proxies;
+    Handle<RenderGroup>     m_render_group;
 
 public:
     RenderProxyGroup() = default;
@@ -88,9 +90,9 @@ public:
     void AddRenderProxy(const RenderProxy &render_proxy);
 
     bool RemoveRenderProxy(ID<Entity> entity);
-    typename FlatMap<ID<Entity>, RenderProxy>::Iterator RemoveRenderProxy(typename FlatMap<ID<Entity>, RenderProxy>::ConstIterator iterator);
+    typename RenderProxyEntityMap::Iterator RemoveRenderProxy(typename RenderProxyEntityMap::ConstIterator iterator);
 
-    HYP_FORCE_INLINE const FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies() const
+    HYP_FORCE_INLINE const RenderProxyEntityMap &GetRenderProxies() const
         { return m_render_proxies; }
 
     void ResetRenderGroup();
@@ -117,30 +119,30 @@ public:
 
 private:
     FixedArray<FlatMap<RenderableAttributeSet, RenderProxyGroup>, PASS_TYPE_MAX>    m_proxy_groups;
-    FixedArray<RenderProxyList, ThreadType::THREAD_TYPE_MAX>                        m_proxy_lists;
+    FixedArray<RenderProxyList, 2>                                                  m_proxy_lists;
 };
 
-struct RenderListCollectionResult
-{
-    uint32  num_added_entities = 0;
-    uint32  num_removed_entities = 0;
-    uint32  num_changed_entities = 0;
-
-    /*! \brief Returns true if any proxies have been added, removed or changed. */
-    HYP_FORCE_INLINE bool NeedsUpdate() const
-        { return num_added_entities != 0 || num_removed_entities != 0 || num_changed_entities != 0; }
-};
-
-class RenderList
+class RenderCollector
 {
 public:
-    RenderList();
-    RenderList(const Handle<Camera> &camera);
-    RenderList(const RenderList &other)                 = delete;
-    RenderList &operator=(const RenderList &other)      = delete;
-    RenderList(RenderList &&other) noexcept             = default;
-    RenderList &operator=(RenderList &&other) noexcept  = default;
-    ~RenderList();
+    struct CollectionResult
+    {
+        uint32  num_added_entities = 0;
+        uint32  num_removed_entities = 0;
+        uint32  num_changed_entities = 0;
+
+        /*! \brief Returns true if any proxies have been added, removed or changed. */
+        HYP_FORCE_INLINE bool NeedsUpdate() const
+            { return num_added_entities != 0 || num_removed_entities != 0 || num_changed_entities != 0; }
+    };
+
+    RenderCollector();
+    RenderCollector(const Handle<Camera> &camera);
+    RenderCollector(const RenderCollector &other)                 = delete;
+    RenderCollector &operator=(const RenderCollector &other)      = delete;
+    RenderCollector(RenderCollector &&other) noexcept             = default;
+    RenderCollector &operator=(RenderCollector &&other) noexcept  = default;
+    ~RenderCollector();
 
     HYP_FORCE_INLINE const Handle<Camera> &GetCamera() const
         { return m_camera; }
@@ -157,7 +159,7 @@ public:
     HYP_FORCE_INLINE const RC<EntityDrawCollection> &GetEntityCollection() const
         { return m_draw_collection; }
 
-    /*! \brief Pushes an entity to the RenderList.
+    /*! \brief Pushes an entity to the RenderCollector.
      *  \param entity The entity the proxy is used for
      *  \param proxy A RenderProxy associated with the entity
      */
@@ -168,7 +170,7 @@ public:
 
     /*! \brief Creates RenderGroups needed for rendering the Entity objects.
      *  Call after calling CollectEntities() on Scene. */
-    RenderListCollectionResult PushUpdatesToRenderThread(
+    CollectionResult PushUpdatesToRenderThread(
         const FramebufferRef &framebuffer = nullptr,
         const Optional<RenderableAttributeSet> &override_attributes = { }
     );

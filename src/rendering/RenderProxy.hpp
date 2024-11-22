@@ -25,18 +25,24 @@ class Entity;
 
 struct RenderProxy
 {
-    // uses Handle<Entity> instead of ID<Entity> to keep the entity alive while it is in the RenderProxyList
-    Handle<Entity>                          entity;
-    Handle<Mesh>                            mesh;
-    Handle<Material>                        material;
-    Handle<Skeleton>                        skeleton;
-    Matrix4                                 model_matrix;
-    Matrix4                                 previous_model_matrix;
-    BoundingBox                             aabb;
-    UserData<sizeof(Vec4u), alignof(Vec4u)> user_data;
-    uint32                                  num_instances;
-    
-    HYP_FORCE_INLINE bool operator==(const RenderProxy &other) const
+    Handle<Entity>      entity;
+    Handle<Mesh>        mesh;
+    Handle<Material>    material;
+    Handle<Skeleton>    skeleton;
+    Matrix4             model_matrix;
+    Matrix4             previous_model_matrix;
+    BoundingBox         aabb;
+    UserData<32, 16>    user_data;
+    MeshInstanceData    instance_data;
+    uint32              version = 0;
+
+    HYP_FORCE_INLINE uint32 NumInstances() const
+        { return MathUtil::Max(instance_data.NumInstances(), 1); }
+
+    void ClaimRenderResources() const;
+    void UnclaimRenderResources() const;
+
+    bool operator==(const RenderProxy &other) const
     {
         return entity == other.entity
             && mesh == other.mesh
@@ -46,10 +52,11 @@ struct RenderProxy
             && previous_model_matrix == other.previous_model_matrix
             && aabb == other.aabb
             && user_data == other.user_data
-            && num_instances == other.num_instances;
+            && instance_data == other.instance_data
+            && version == other.version;
     }
-    
-    HYP_FORCE_INLINE bool operator!=(const RenderProxy &other) const
+
+    bool operator!=(const RenderProxy &other) const
     {
         return entity != other.entity
             || mesh != other.mesh
@@ -59,9 +66,12 @@ struct RenderProxy
             || previous_model_matrix != other.previous_model_matrix
             || aabb != other.aabb
             || user_data != other.user_data
-            || num_instances != other.num_instances;
+            || instance_data != other.instance_data
+            || version != other.version;
     }
 };
+
+using RenderProxyEntityMap = FlatMap<ID<Entity>, RenderProxy>;
 
 /*! \brief The action to take on call to \ref{RenderProxyList::Advance}. */
 enum class RenderProxyListAdvanceAction : uint32
@@ -106,16 +116,16 @@ public:
     HYP_FORCE_INLINE const Bitset &GetNextEntities() const
         { return m_next_entities; }
 
-    HYP_FORCE_INLINE FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies()
+    HYP_FORCE_INLINE RenderProxyEntityMap &GetRenderProxies()
         { return m_proxies; }
 
-    HYP_FORCE_INLINE const FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies() const
+    HYP_FORCE_INLINE const RenderProxyEntityMap &GetRenderProxies() const
         { return m_proxies; }
 
-    HYP_FORCE_INLINE FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies()
+    HYP_FORCE_INLINE RenderProxyEntityMap &GetChangedRenderProxies()
         { return m_changed_proxies; }
 
-    HYP_FORCE_INLINE const FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies() const
+    HYP_FORCE_INLINE const RenderProxyEntityMap &GetChangedRenderProxies() const
         { return m_changed_proxies; }
 
     HYP_FORCE_INLINE Bitset GetAddedEntities() const
@@ -136,12 +146,12 @@ public:
         { return m_changed_entities; }
 
 private:
-    FlatMap<ID<Entity>, RenderProxy>    m_proxies;
-    FlatMap<ID<Entity>, RenderProxy>    m_changed_proxies;
+    RenderProxyEntityMap    m_proxies;
+    RenderProxyEntityMap    m_changed_proxies;
 
-    Bitset                              m_previous_entities;
-    Bitset                              m_next_entities;
-    Bitset                              m_changed_entities;
+    Bitset                  m_previous_entities;
+    Bitset                  m_next_entities;
+    Bitset                  m_changed_entities;
 };
 
 } // namespace hyperion

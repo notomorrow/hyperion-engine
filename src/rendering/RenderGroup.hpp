@@ -30,7 +30,8 @@ class Mesh;
 class Material;
 class Skeleton;
 class Entity;
-class RenderList;
+class RenderCollector;
+class GPUBufferHolderBase;
 
 enum class RenderGroupFlags : uint32
 {
@@ -95,12 +96,14 @@ public:
     HYP_FORCE_INLINE EnumFlags<RenderGroupFlags> GetFlags() const
         { return m_flags; }
 
+    void SetDrawCallCollectionImpl(IDrawCallCollectionImpl *draw_call_collection_impl);
+
     /*! \brief Collect drawable objects, then run the culling compute shader
      *  to mark any occluded objects as such. Must be used with indirect rendering.
      *  If nullptr is provided for cull_data, no occlusion culling will happen.
      *  \param render_proxies The render proxies to collect draw calls from.
      */
-    void CollectDrawCalls(const FlatMap<ID<Entity>, RenderProxy> &render_proxies);
+    void CollectDrawCalls(const RenderProxyEntityMap &render_proxies);
 
     /*! \brief Render objects using direct rendering, no occlusion culling is provided. */
     void PerformRendering(Frame *frame);
@@ -125,6 +128,7 @@ private:
 
     EnumFlags<RenderGroupFlags>                         m_flags;
 
+
     GraphicsPipelineRef                                 m_pipeline;
 
     ShaderRef                                           m_shader;
@@ -146,8 +150,6 @@ private:
     // try to call it more than num_async_rendering_command_buffers
     // (or if parallel rendering is enabled, more than the number of task threads available (usually 2))
     uint                                                m_command_buffer_index = 0u;
-
-    FlatMap<uint, BufferTicket<EntityInstanceBatch>>    m_entity_batches;
 
     DrawCallCollection                                  m_draw_state;
 };

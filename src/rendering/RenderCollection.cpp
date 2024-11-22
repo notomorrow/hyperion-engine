@@ -33,15 +33,12 @@ static constexpr bool do_parallel_collection = true;
 
 #pragma region Render commands
 
-// @TODO: Make Material, Texture(?), etc. only need to have their render objects (e.g DescriptorSetRef)
-// while the objects are used by this system (any RenderProxy objects)
-// would free up quite a bit of memory.
 struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
 {
     RC<EntityDrawCollection>            collection;
     Array<RenderProxy>                  added_proxies;
     Array<ID<Entity>>                   removed_proxies;
-    FlatMap<ID<Entity>, RenderProxy>    changed_proxies;
+    RenderProxyEntityMap                changed_proxies;
 
     FramebufferRef                      framebuffer;
     Optional<RenderableAttributeSet>    override_attributes;
@@ -50,7 +47,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         const RC<EntityDrawCollection> &collection,
         Array<RenderProxy> &&added_proxies,
         Array<ID<Entity>> &&removed_proxies,
-        FlatMap<ID<Entity>, RenderProxy> &&changed_proxies,
+        RenderProxyEntityMap &&changed_proxies,
         const FramebufferRef &framebuffer = nullptr,
         const Optional<RenderableAttributeSet> &override_attributes = { }
     ) : collection(collection),
@@ -60,6 +57,13 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         framebuffer(framebuffer),
         override_attributes(override_attributes)
     {
+        // sanity checking
+        for (auto &it : this->added_proxies) {
+            if (!it.material) {
+                continue;
+            }
+            AssertThrow(it.material->GetRenderAttributes().bucket != BUCKET_UI);
+        }
     }
 
     virtual ~RENDER_COMMAND(RebuildProxyGroups)() override
@@ -81,10 +85,6 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             mesh->GetMeshAttributes(),
             material->GetRenderAttributes()
         };
-
-        if (framebuffer != nullptr) {
-            attributes.SetFramebuffer(framebuffer);
-        }
 
         if (override_attributes.HasValue()) {
             if (const ShaderDefinition &override_shader_definition = override_attributes->GetShaderDefinition()) {
@@ -133,7 +133,6 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
                 "\tVertex Attributes: {}\n"
                 "\tBucket: {}\n"
                 "\tShader Definition: {}  {}\n"
-                "\tFramebuffer: {}\n"
                 "\tCull Mode: {}\n"
                 "\tFlags: {}\n"
                 "\tDrawable layer: {}",
@@ -141,7 +140,6 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
                 uint32(attributes.GetMaterialAttributes().bucket),
                 attributes.GetShaderDefinition().GetName(),
                 attributes.GetShaderDefinition().GetProperties().GetHashCode().Value(),
-                attributes.GetFramebuffer().index,
                 uint32(attributes.GetMaterialAttributes().cull_faces),
                 uint32(attributes.GetMaterialAttributes().flags),
                 attributes.GetDrawableLayer());
@@ -151,6 +149,15 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
                 g_shader_manager->GetOrCreate(attributes.GetShaderDefinition()),
                 attributes
             );
+
+            if (framebuffer != nullptr) {
+                render_group->AddFramebuffer(framebuffer);
+            } else {
+                const FramebufferRef &bucket_framebuffer = g_engine->GetDeferredRenderer()->GetGBuffer()->GetBucket(attributes.GetMaterialAttributes().bucket).GetFramebuffer();
+                AssertThrow(bucket_framebuffer != nullptr);
+
+                render_group->AddFramebuffer(bucket_framebuffer);
+            }
 
             InitObject(render_group);
 
@@ -166,20 +173,12 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
     {
         HYP_SCOPE;
 
-        bool removed = false;
+        auto &proxy_groups = collection->GetProxyGroups()[pass_type];
 
-        // for (auto &proxy_groups : collection->GetProxyGroups()) {
-            // for (auto &it : proxy_groups) {
-            //     removed |= it.second.RemoveRenderProxy(entity);
-            // }
+        auto it = proxy_groups.Find(attributes);
+        AssertThrow(it != proxy_groups.End());
 
-            auto &proxy_groups = collection->GetProxyGroups()[pass_type];
-
-            auto it = proxy_groups.Find(attributes);
-            AssertThrow(it != proxy_groups.End());
-
-            removed |= it->second.RemoveRenderProxy(entity);
-        // }
+        const bool removed = it->second.RemoveRenderProxy(entity);
 
         proxy_list.MarkToRemove(entity);
 
@@ -192,9 +191,14 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
 
         RenderProxyList &proxy_list = collection->GetProxyList(ThreadType::THREAD_TYPE_RENDER);
 
+        // @TODO For changed proxies it would be more efficient
+        // to update the RenderResources rather than Destroy + Recreate.
+
         for (const auto &it : changed_proxies) {
             const ID<Entity> entity = it.first;
             const RenderProxy &proxy = it.second;
+
+            proxy.UnclaimRenderResources();
 
             const Handle<Mesh> &mesh = proxy.mesh;
             AssertThrow(mesh.IsValid());
@@ -209,6 +213,8 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         }
 
         for (const RenderProxy &proxy : added_proxies) {
+            proxy.ClaimRenderResources();
+
             const Handle<Mesh> &mesh = proxy.mesh;
             AssertThrow(mesh.IsValid());
 
@@ -225,6 +231,8 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             const RenderProxy *proxy = proxy_list.GetProxyForEntity(entity);
             AssertThrow(proxy != nullptr);
 
+            proxy->UnclaimRenderResources();
+
             const Handle<Mesh> &mesh = proxy->mesh;
             AssertThrow(mesh.IsValid());
 
@@ -237,7 +245,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             AssertThrow(RemoveRenderProxy(proxy_list, entity, attributes, pass_type));
         }
 
-        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Added Proxies: {}\nRemoved Proxies: {}\nChanged Proxies:{}",
+        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Added Proxies: {}\nRemoved Proxies: {}\nChanged Proxies: {}",
             proxy_list.GetAddedEntities().Count(),
             proxy_list.GetRemovedEntities().Count(),
             proxy_list.GetChangedEntities().Count());
@@ -314,7 +322,7 @@ bool RenderProxyGroup::RemoveRenderProxy(ID<Entity> entity)
     return true;
 }
 
-typename FlatMap<ID<Entity>, RenderProxy>::Iterator RenderProxyGroup::RemoveRenderProxy(typename FlatMap<ID<Entity>, RenderProxy>::ConstIterator iterator)
+typename RenderProxyEntityMap::Iterator RenderProxyGroup::RemoveRenderProxy(typename RenderProxyEntityMap::ConstIterator iterator)
 {
     return m_render_proxies.Erase(iterator);
 }
@@ -349,14 +357,14 @@ const FixedArray<FlatMap<RenderableAttributeSet, RenderProxyGroup>, PASS_TYPE_MA
 
 RenderProxyList &EntityDrawCollection::GetProxyList(ThreadType thread_type)
 {
-    AssertThrowMsg(thread_type != ThreadType::THREAD_TYPE_INVALID, "Invalid thread for calling method");
+    AssertThrowMsg(uint32(thread_type) <= ThreadType::THREAD_TYPE_RENDER, "Invalid thread for calling method");
 
     return m_proxy_lists[uint(thread_type)];
 }
 
 const RenderProxyList &EntityDrawCollection::GetProxyList(ThreadType thread_type) const
 {
-    AssertThrowMsg(thread_type != ThreadType::THREAD_TYPE_INVALID, "Invalid thread for calling method");
+    AssertThrowMsg(uint32(thread_type) <= ThreadType::THREAD_TYPE_RENDER, "Invalid thread for calling method");
 
     return m_proxy_lists[uint(thread_type)];
 }
@@ -418,25 +426,25 @@ uint32 EntityDrawCollection::NumRenderGroups() const
 
 #pragma endregion EntityDrawCollection
 
-#pragma region RenderList
+#pragma region RenderCollector
 
-RenderList::RenderList()
+RenderCollector::RenderCollector()
     : m_render_environment(nullptr),
       m_draw_collection(MakeRefCountedPtr<EntityDrawCollection>())
 {
 }
 
-RenderList::RenderList(const Handle<Camera> &camera)
+RenderCollector::RenderCollector(const Handle<Camera> &camera)
     : m_render_environment(nullptr),
       m_camera(camera)
 {
 }
 
-RenderList::~RenderList()
+RenderCollector::~RenderCollector()
 {
 }
 
-RenderListCollectionResult RenderList::PushUpdatesToRenderThread(const FramebufferRef &framebuffer, const Optional<RenderableAttributeSet> &override_attributes)
+RenderCollector::CollectionResult RenderCollector::PushUpdatesToRenderThread(const FramebufferRef &framebuffer, const Optional<RenderableAttributeSet> &override_attributes)
 {
     HYP_SCOPE;
 
@@ -445,7 +453,7 @@ RenderListCollectionResult RenderList::PushUpdatesToRenderThread(const Framebuff
 
     RenderProxyList &proxy_list = m_draw_collection->GetProxyList(ThreadType::THREAD_TYPE_GAME);
 
-    RenderListCollectionResult collection_result { };
+    CollectionResult collection_result { };
     collection_result.num_added_entities = proxy_list.GetAddedEntities().Count();
     collection_result.num_removed_entities = proxy_list.GetRemovedEntities().Count();
     collection_result.num_changed_entities = proxy_list.GetChangedEntities().Count();
@@ -457,7 +465,7 @@ RenderListCollectionResult RenderList::PushUpdatesToRenderThread(const Framebuff
         Array<RenderProxy *> added_proxies_ptrs;
         proxy_list.GetAddedEntities(added_proxies_ptrs, true /* include_changed */);
 
-        FlatMap<ID<Entity>, RenderProxy> changed_proxies = std::move(proxy_list.GetChangedRenderProxies());
+        RenderProxyEntityMap changed_proxies = std::move(proxy_list.GetChangedRenderProxies());
 
         if (added_proxies_ptrs.Any() || removed_proxies.Any() || changed_proxies.Any()) {
             Array<RenderProxy> added_proxies;
@@ -487,7 +495,7 @@ RenderListCollectionResult RenderList::PushUpdatesToRenderThread(const Framebuff
     return collection_result;
 }
 
-void RenderList::PushEntityToRender(
+void RenderCollector::PushEntityToRender(
     ID<Entity> entity,
     const RenderProxy &proxy
 )
@@ -501,7 +509,7 @@ void RenderList::PushEntityToRender(
     proxy_list.Add(entity, proxy);
 }
 
-void RenderList::CollectDrawCalls(
+void RenderCollector::CollectDrawCalls(
     Frame *frame,
     const Bitset &bucket_bits,
     const CullData *cull_data
@@ -561,7 +569,7 @@ void RenderList::CollectDrawCalls(
     }
 }
 
-void RenderList::ExecuteDrawCalls(
+void RenderCollector::ExecuteDrawCalls(
     Frame *frame,
     const Bitset &bucket_bits,
     const CullData *cull_data,
@@ -574,7 +582,7 @@ void RenderList::ExecuteDrawCalls(
     ExecuteDrawCalls(frame, m_camera, m_camera->GetFramebuffer(), bucket_bits, cull_data, push_constant);
 }
 
-void RenderList::ExecuteDrawCalls(
+void RenderCollector::ExecuteDrawCalls(
     Frame *frame,
     const FramebufferRef &framebuffer,
     const Bitset &bucket_bits,
@@ -587,7 +595,7 @@ void RenderList::ExecuteDrawCalls(
     ExecuteDrawCalls(frame, m_camera, framebuffer, bucket_bits, cull_data, push_constant);
 }
 
-void RenderList::ExecuteDrawCalls(
+void RenderCollector::ExecuteDrawCalls(
     Frame *frame,
     const Handle<Camera> &camera,
     const Bitset &bucket_bits,
@@ -601,7 +609,7 @@ void RenderList::ExecuteDrawCalls(
     ExecuteDrawCalls(frame, camera, camera->GetFramebuffer(), bucket_bits, cull_data, push_constant);
 }
 
-void RenderList::ExecuteDrawCalls(
+void RenderCollector::ExecuteDrawCalls(
     Frame *frame,
     const Handle<Camera> &camera,
     const FramebufferRef &framebuffer,
@@ -640,13 +648,6 @@ void RenderList::ExecuteDrawCalls(
 
             AssertThrow(proxy_group.GetRenderGroup().IsValid());
 
-            if (framebuffer.IsValid()) {
-                AssertThrowMsg(
-                    attributes.GetFramebuffer() == framebuffer,
-                    "Given Framebuffer does not match RenderList item's framebuffer -- invalid data passed?"
-                );
-            }
-
             if (push_constant) {
                 proxy_group.GetRenderGroup()->GetPipeline()->SetPushConstants(push_constant.Data(), push_constant.Size());
             }
@@ -666,9 +667,9 @@ void RenderList::ExecuteDrawCalls(
     }
 }
 
-void RenderList::Reset()
+void RenderCollector::Reset()
 {
-    HYP_NAMED_SCOPE("RenderList Reset");
+    HYP_NAMED_SCOPE("RenderCollector Reset");
 
     AssertThrow(m_draw_collection != nullptr);
     // Threads::AssertOnThread(ThreadName::THREAD_GAME);
@@ -677,6 +678,6 @@ void RenderList::Reset()
     *m_draw_collection = { };
 }
 
-#pragma endregion RenderList
+#pragma endregion RenderCollector
 
 } // namespace hyperion

@@ -66,7 +66,7 @@ struct VertexAttribute
 HYP_STRUCT()
 struct VertexAttributeSet
 {
-    HYP_FIELD()
+    HYP_FIELD(Property="FlagMask", Serialize=true)
     uint64 flag_mask;
 
     constexpr VertexAttributeSet()
@@ -151,8 +151,8 @@ struct VertexAttributeSet
     HYP_FORCE_INLINE void SetFlagMask(uint64 flags)
         { flag_mask = flags; }
 
-    HYP_FORCE_INLINE uint Size() const
-        { return uint(ByteUtil::BitCount(flag_mask)); }
+    HYP_FORCE_INLINE uint32 Size() const
+        { return uint32(ByteUtil::BitCount(flag_mask)); }
 
     HYP_API Array<VertexAttribute::Type> BuildAttributes() const;
     HYP_API SizeType CalculateVertexSize() const;
@@ -180,7 +180,7 @@ constexpr VertexAttributeSet skeleton_vertex_attributes(
     | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES
 );
 
-HYP_STRUCT()
+HYP_STRUCT(Size=128, Serialize="bitwise")
 struct alignas(16) Vertex
 {
     friend Vertex operator*(const Matrix4 &mat, const Vertex &vertex);
@@ -190,7 +190,7 @@ struct alignas(16) Vertex
         : num_indices(0),
           num_weights(0)
     {
-        for (uint i = 0; i < MAX_BONE_INDICES; i++) {
+        for (int i = 0; i < MAX_BONE_INDICES; i++) {
             bone_indices[i] = 0;
             bone_weights[i] = 0;
         }
@@ -201,7 +201,7 @@ struct alignas(16) Vertex
           num_indices(0),
           num_weights(0)
     {
-        for (uint i = 0; i < MAX_BONE_INDICES; i++) {
+        for (int i = 0; i < MAX_BONE_INDICES; i++) {
             bone_indices[i] = 0;
             bone_weights[i] = 0;
         }
@@ -213,7 +213,7 @@ struct alignas(16) Vertex
           num_indices(0),
           num_weights(0)
     {
-        for (uint i = 0; i < MAX_BONE_INDICES; i++) {
+        for (int i = 0; i < MAX_BONE_INDICES; i++) {
             bone_indices[i] = 0;
             bone_weights[i] = 0;
         }
@@ -226,15 +226,16 @@ struct alignas(16) Vertex
           num_indices(0),
           num_weights(0)
     {
-        for (uint i = 0; i < MAX_BONE_INDICES; i++) {
+        for (int i = 0; i < MAX_BONE_INDICES; i++) {
             bone_indices[i] = 0;
             bone_weights[i] = 0;
         }
     }
 
     Vertex(const Vertex &other)                 = default;
-    Vertex(Vertex &&other) noexcept             = default;
     Vertex &operator=(const Vertex &other)      = default;
+
+    Vertex(Vertex &&other) noexcept             = default;
     Vertex &operator=(Vertex &&other) noexcept  = default;
 
     bool operator==(const Vertex &other) const;
@@ -297,7 +298,7 @@ struct alignas(16) Vertex
     {
         num_weights = 0;
 
-        for (uint i = 0; i < MAX_BONE_WEIGHTS; i++) {
+        for (int i = 0; i < MAX_BONE_WEIGHTS; i++) {
             if (weights[i] != 0.0f) {
                 bone_weights[i] = weights[i];
                 num_weights = i + 1;
@@ -324,7 +325,7 @@ struct alignas(16) Vertex
     {
         num_indices = 0;
 
-        for (uint i = 0; i < MAX_BONE_INDICES; i++) {
+        for (int i = 0; i < MAX_BONE_INDICES; i++) {
             if (indices[i] != 0) {
                 bone_indices[i] = indices[i];
                 num_indices = i + 1;
@@ -383,52 +384,51 @@ struct alignas(16) Vertex
         hc.Add(num_indices);
         hc.Add(num_weights);
 
-        for (uint i = 0; i < MAX_BONE_INDICES; i++) {
+        for (int i = 0; i < MAX_BONE_INDICES; i++) {
             hc.Add(bone_indices[i]);
         }
 
-        for (uint i = 0; i < MAX_BONE_WEIGHTS; i++) {
+        for (int i = 0; i < MAX_BONE_WEIGHTS; i++) {
             hc.Add(bone_weights[i]);
         }
 
         return hc;
     }
 
-    HYP_FIELD()
+    HYP_FIELD(Property="Position", Serialize=true)
     Vec3f                               position;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="Normal", Serialize=true)
     Vec3f                               normal;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="Tangent", Serialize=true)
     Vec3f                               tangent;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="Bitangent", Serialize=true)
     Vec3f                               bitangent;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="TexCoord0", Serialize=true)
     Vec2f                               texcoord0;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="TexCoord1", Serialize=true)
     Vec2f                               texcoord1;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="BoneWeights", Serialize=true)
     FixedArray<float, MAX_BONE_WEIGHTS> bone_weights;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="BoneIndices", Serialize=true)
     FixedArray<uint, MAX_BONE_INDICES>  bone_indices;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="NumIndices", Serialize=true)
     uint8                               num_indices;
 
-    HYP_FIELD()
+    HYP_FIELD(Property="NumWeights", Serialize=true)
     uint8                               num_weights;
 };
 
 Vertex operator*(const Matrix4 &mat, const Vertex &vertex);
 Vertex operator*(const Transform &transform, const Vertex &vertex);
 
-static_assert(sizeof(Vertex) == 128, "Vertex size is not 128 bytes, ensure size matches C# Vertex struct size");
 static_assert(alignof(Vertex) == 16, "Vertex alignment is not 16 bytes, ensure size matches C# Vertex struct alignment");
 
 } // namespace hyperion

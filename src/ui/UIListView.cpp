@@ -203,7 +203,7 @@ bool UIListView::RemoveChildUIObject(UIObject *ui_object)
         bool removed = false;
 
         {
-            UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
+            UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
 
             for (auto it = m_list_view_items.Begin(); it != m_list_view_items.End();) {
                 if (ui_object->IsOrHasParent(*it)) {
@@ -289,7 +289,7 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase *data_source)
     {
         HYP_NAMED_SCOPE("Remove element from data source from list view");
 
-        UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
+        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
 
         HYP_DEFER({
             SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
@@ -320,19 +320,20 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase *data_source)
 
         HYP_LOG(UI, LogLevel::INFO, "Updating element {}", element->GetUUID().ToString());
 
-        // update the list view item with the new data
-
-        const UIListViewItem *list_view_item = FindListViewItem(element->GetUUID());
-
-        if (list_view_item) {
+        if (const UIListViewItem *list_view_item = FindListViewItem(element->GetUUID())) {
             if (RC<UIObject> ui_object = list_view_item->GetInnerElement()->GetChildUIObject(0)) {
                 data_source->GetElementFactory()->UpdateUIObject(
                     ui_object.Get(),
                     element->GetValue()
                 );
+
+                // temp; sanity check
+                AssertThrow(FindListViewItem(element->GetUUID()) != nullptr);
             } else {
                 HYP_LOG(UI, LogLevel::ERR, "Failed to update element {}; No UIObject child at index 0", element->GetUUID().ToString());
             }
+        } else {
+            HYP_LOG(UI, LogLevel::WARNING, "Failed to update list view item with data source element UUID {}", element->GetUUID());
         }
     });
 }
@@ -372,7 +373,7 @@ UIListViewItem *UIListView::FindListViewItem(const UIObject *parent_object, cons
 
 void UIListView::AddDataSourceElement(UIDataSourceBase *data_source, UIDataSourceElement *element, UIDataSourceElement *parent)
 {
-    UILockedUpdatesScope scope(this, UIObjectUpdateType::UPDATE_SIZE);
+    UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
 
     HYP_DEFER({
         SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
@@ -405,7 +406,7 @@ void UIListView::AddDataSourceElement(UIDataSourceBase *data_source, UIDataSourc
 
         OnSelectedItemChange(list_view_item.Get());
 
-        return UIEventHandlerResult::OK;
+        return UIEventHandlerResult::STOP_BUBBLING;
     }).Detach();
 
     // create UIObject for the element and add it to the list view

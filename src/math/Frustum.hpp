@@ -14,7 +14,7 @@
 
 namespace hyperion {
 
-HYP_STRUCT()
+HYP_STRUCT(Size=224, Serialize="bitwise")
 struct HYP_API Frustum
 {
     HYP_FIELD()
@@ -24,7 +24,10 @@ struct HYP_API Frustum
     FixedArray<Vec3f, 8>    corners;
 
     Frustum();
-    Frustum(const Frustum &other);
+    
+    Frustum(const Frustum &other) = default;
+    Frustum &operator=(const Frustum &other) = default;
+
     Frustum(const Matrix4 &view_proj);
 
     HYP_FORCE_INLINE FixedArray<Vec4f, 6> &GetPlanes()
@@ -51,8 +54,6 @@ struct HYP_API Frustum
     Frustum &SetFromViewProjectionMatrix(const Matrix4 &view_proj);
     Vec3f GetIntersectionPoint(uint plane_index_0, uint plane_index_1, uint plane_index_2) const;
 };
-
-static_assert(sizeof(Frustum) == 224, "sizeof(Frustum) should match C# struct size");
 
 } // namespace hyperion
 

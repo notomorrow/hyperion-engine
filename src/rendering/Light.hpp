@@ -57,7 +57,7 @@ class HYP_API Light : public BasicObject<Light>
 
     HYP_OBJECT_BODY(Light);
 
-    HYP_PROPERTY(ID, &Light::GetID);
+    HYP_PROPERTY(ID, &Light::GetID, { { "serialize", false } });
 
 public:
     Light();
@@ -100,12 +100,12 @@ public:
      *  \return The type.
      */
     HYP_METHOD(Property="Type", Serialize=true)
-    LightType GetType() const
+    LightType GetLightType() const
         { return m_type; }
 
     /*! \brief Set the type of the light. */
     HYP_METHOD(Property="Type", Serialize=true)
-    void SetType(LightType type)
+    void SetLightType(LightType type)
     {
         if (m_type == type) {
             return;

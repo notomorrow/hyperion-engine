@@ -152,7 +152,7 @@ struct CameraDrawProxy
     Vec3f       position;
     Vec3f       direction;
     Vec3f       up;
-    Extent2D    dimensions;
+    Vec2u       dimensions;
     float       clip_near;
     float       clip_far;
     float       fov;
@@ -167,7 +167,7 @@ class HYP_API Camera : public BasicObject<Camera>
 {
     HYP_OBJECT_BODY(Camera);
 
-    HYP_PROPERTY(ID, &Camera::GetID)
+    HYP_PROPERTY(ID, &Camera::GetID, { { "serialize", false } });
 
 public:
     friend class CameraController;

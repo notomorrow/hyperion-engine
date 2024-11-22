@@ -7,6 +7,7 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/GBuffer.hpp>
+#include <rendering/EntityInstanceBatchHolderMap.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -170,10 +171,6 @@ void Engine::FindTextureFormatDefaults()
 HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 {
     HYP_SCOPE;
-
-    const HypClass *memory_streamed_data_class = MemoryStreamedData::GetClass();
-    AssertThrow(memory_streamed_data_class->GetParent() == StreamedData::GetClass());
-
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     AssertThrow(!m_is_initialized);
@@ -243,6 +240,8 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     if (m_app_context->GetArguments()["Profile"]) {
         StartProfilerConnectionThread();
     }
+
+    m_entity_instance_batch_holder_map = MakeUnique<EntityInstanceBatchHolderMap>();
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // Global
@@ -320,7 +319,7 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         // Object
         m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("MaterialsBuffer"), m_render_data->materials.GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("SkeletonsBuffer"), m_render_data->skeletons.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("EntityInstanceBatchesBuffer"), m_render_data->entity_instance_batches.GetBuffer(frame_index));
+        // m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("EntityInstanceBatchesBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(EntityInstanceBatch)));
 
         // Material
 #ifdef HYP_FEATURES_BINDLESS_TEXTURES
@@ -413,6 +412,8 @@ void Engine::FinalizeStop()
     m_debug_drawer.Reset();
 
     m_final_pass.Reset();
+
+    m_entity_instance_batch_holder_map.Reset();
 
     m_render_data->Destroy();
 
@@ -551,7 +552,7 @@ void Engine::PreFrameUpdate(Frame *frame)
 
     g_safe_deleter->PerformEnqueuedDeletions();
 
-    ResetRenderState(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_SCENE | RENDER_STATE_CAMERA);
+    ResetRenderState(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_ACTIVE_LIGHT | RENDER_STATE_SCENE | RENDER_STATE_CAMERA);
 }
 
 void Engine::ResetRenderState(RenderStateMask mask)
@@ -563,16 +564,11 @@ void Engine::UpdateBuffersAndDescriptors(uint32 frame_index)
 {
     HYP_SCOPE;
 
-    m_render_data->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->cameras.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->lights.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->shadow_map_data.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->env_probes.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->env_grids.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->entity_instance_batches.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    m_render_data->UpdateBuffers(frame_index);
+
+    for (auto &it : m_entity_instance_batch_holder_map->GetItems()) {
+        it.second->UpdateBuffer(m_instance->GetDevice(), frame_index);
+    }
 }
 
 void Engine::RenderDeferred(Frame *frame)

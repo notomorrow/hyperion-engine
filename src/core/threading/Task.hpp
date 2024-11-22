@@ -2,14 +2,18 @@
 #ifndef HYPERION_TASK_HPP
 #define HYPERION_TASK_HPP
 
-#include <core/functional/Proc.hpp>
+#include <core/containers/Bitset.hpp>
 
 #include <core/utilities/Optional.hpp>
 #include <core/utilities/EnumFlags.hpp>
+#include <core/utilities/Span.hpp>
 
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Thread.hpp>
 #include <core/threading/Semaphore.hpp>
+
+#include <core/functional/Proc.hpp>
+#include <core/functional/Delegate.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 #include <core/Util.hpp>
@@ -32,7 +36,7 @@ class TaskThread;
 class SchedulerBase;
 struct TaskBatch;
 
-using TaskSemaphore = Semaphore<int32, detail::ConditionVarSemaphoreImpl<int32>>;
+using TaskSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>;
 
 using OnTaskCompletedCallback = Proc<void>;
 
@@ -87,13 +91,14 @@ public:
     virtual TaskID GetTaskID() const = 0;
 
     virtual bool IsCompleted() const = 0;
+
+    virtual Delegate<void> &GetOnCompleteDelegate() = 0;
 };
 
-template <class... ArgTypes>
-class TaskExecutor : public ITaskExecutor
+class TaskExecutorBase : public ITaskExecutor
 {
 public:
-    TaskExecutor()
+    TaskExecutorBase()
         : m_id(TaskID::Invalid()),
           m_initiator_thread_id(ThreadID::Invalid()),
           m_assigned_scheduler(nullptr)
@@ -102,39 +107,42 @@ public:
         m_semaphore.Produce(1);
     }
 
-    TaskExecutor(const TaskExecutor &other)             = delete;
-    TaskExecutor &operator=(const TaskExecutor &other)  = delete;
+    TaskExecutorBase(const TaskExecutorBase &other)             = delete;
+    TaskExecutorBase &operator=(const TaskExecutorBase &other)  = delete;
 
-    TaskExecutor(TaskExecutor &&other) noexcept
+    TaskExecutorBase(TaskExecutorBase &&other) noexcept
         : m_id(other.m_id),
           m_initiator_thread_id(other.m_initiator_thread_id),
           m_assigned_scheduler(other.m_assigned_scheduler),
-          m_semaphore(std::move(other.m_semaphore))
+          m_semaphore(std::move(other.m_semaphore)),
+          OnComplete(std::move(other.OnComplete))
     {
         other.m_id = {};
         other.m_initiator_thread_id = {};
         other.m_assigned_scheduler = nullptr;
     }
 
-    TaskExecutor &operator=(TaskExecutor &&other) noexcept
-    {
-        if (this == &other) {
-            return *this;
-        }
+    TaskExecutorBase &operator=(TaskExecutorBase &&other) noexcept = delete;
 
-        m_id = other.m_id;
-        m_initiator_thread_id = other.m_initiator_thread_id;
-        m_assigned_scheduler = other.m_assigned_scheduler;
-        m_semaphore = std::move(other.m_semaphore);
+    // TaskExecutorBase &operator=(TaskExecutorBase &&other) noexcept
+    // {
+    //     if (this == &other) {
+    //         return *this;
+    //     }
 
-        other.m_id = {};
-        other.m_initiator_thread_id = {};
-        other.m_assigned_scheduler = nullptr;
+    //     m_id = other.m_id;
+    //     m_initiator_thread_id = other.m_initiator_thread_id;
+    //     m_assigned_scheduler = other.m_assigned_scheduler;
+    //     m_semaphore = std::move(other.m_semaphore);
 
-        return *this;
-    }
+    //     other.m_id = {};
+    //     other.m_initiator_thread_id = {};
+    //     other.m_assigned_scheduler = nullptr;
 
-    virtual ~TaskExecutor() override = default;
+    //     return *this;
+    // }
+
+    virtual ~TaskExecutorBase() override = default;
 
     virtual TaskID GetTaskID() const override final
         { return m_id; }
@@ -166,7 +174,13 @@ public:
     virtual bool IsCompleted() const override final
         { return m_semaphore.IsInSignalState(); }
 
-    virtual void Execute(ArgTypes... args) = 0;
+    virtual void Execute() = 0;
+
+    virtual Delegate<void> &GetOnCompleteDelegate() override final
+        { return OnComplete; }
+
+    /*! \brief Not called if task is part of a TaskBatch. */
+    Delegate<void>  OnComplete;
 
 protected:
     TaskID          m_id;
@@ -175,12 +189,12 @@ protected:
     TaskSemaphore   m_semaphore;
 };
 
-template <class ReturnType, class... ArgTypes>
-class TaskExecutorInstance : public TaskExecutor<ArgTypes...>
+template <class ReturnType>
+class TaskExecutorInstance : public TaskExecutorBase
 {
 public:
-    using Function = Proc<ReturnType, ArgTypes...>;
-    using Base = TaskExecutor<ArgTypes...>;
+    using Function = Proc<ReturnType>;
+    using Base = TaskExecutorBase;
 
     template <class Lambda>
     TaskExecutorInstance(Lambda &&fn)
@@ -226,11 +240,11 @@ public:
     HYP_FORCE_INLINE ReturnType Result() const &&
         { return m_result_value.Get(); }
 
-    virtual void Execute(ArgTypes... args) override
+    virtual void Execute() override
     {
         AssertThrow(m_fn.IsValid());
 
-        m_result_value.Emplace(m_fn(std::forward<ArgTypes>(args)...));
+        m_result_value.Emplace(m_fn());
     }
 
 protected:
@@ -239,13 +253,13 @@ protected:
 };
 
 /*! \brief Specialization for void return type. */
-template <class... ArgTypes>
-class TaskExecutorInstance<void, ArgTypes...> : public TaskExecutor<ArgTypes...>
+template <>
+class TaskExecutorInstance<void> : public TaskExecutorBase
 {
-    using Function = Proc<void, ArgTypes...>;
+    using Function = Proc<void>;
 
 public:
-    using Base = TaskExecutor<ArgTypes...>;
+    using Base = TaskExecutorBase;
 
     template <class Lambda>
     TaskExecutorInstance(Lambda &&fn)
@@ -253,8 +267,8 @@ public:
     {
     }
 
-    TaskExecutorInstance(const TaskExecutorInstance &other)             = delete;
-    TaskExecutorInstance &operator=(const TaskExecutorInstance &other)  = delete;
+    TaskExecutorInstance(const TaskExecutorInstance &other)                 = delete;
+    TaskExecutorInstance &operator=(const TaskExecutorInstance &other)      = delete;
 
     TaskExecutorInstance(TaskExecutorInstance &&other) noexcept
         : Base(static_cast<Base &&>(other)),
@@ -262,33 +276,35 @@ public:
     {
     }
 
-    TaskExecutorInstance &operator=(TaskExecutorInstance &&other) noexcept
-    {
-        Base::operator=(static_cast<Base &&>(other));
+    TaskExecutorInstance &operator=(TaskExecutorInstance &&other) noexcept  = delete;
 
-        m_fn = std::move(other.m_fn);
+    // TaskExecutorInstance &operator=(TaskExecutorInstance &&other) noexcept
+    // {
+    //     Base::operator=(static_cast<Base &&>(other));
 
-        return *this;
-    }
+    //     m_fn = std::move(other.m_fn);
+
+    //     return *this;
+    // }
     
-    virtual ~TaskExecutorInstance() override = default;
+    virtual ~TaskExecutorInstance() override                                = default;
 
-    virtual void Execute(ArgTypes... args) override
+    virtual void Execute() override
     {
         AssertThrow(m_fn.IsValid());
         
-        m_fn(std::forward<ArgTypes>(args)...);
+        m_fn();
     }
 
 protected:
     Function    m_fn;
 };
 
-template <class ReturnType, class... ArgTypes>
-class ManuallyFulfilledTaskExecutorInstance : public TaskExecutorInstance<ReturnType, ArgTypes...>
+template <class ReturnType>
+class ManuallyFulfilledTaskExecutorInstance : public TaskExecutorInstance<ReturnType>
 {
 public:
-    using Base = TaskExecutorInstance<ReturnType, ArgTypes...>;
+    using Base = TaskExecutorInstance<ReturnType>;
 
     ManuallyFulfilledTaskExecutorInstance()
         : Base(static_cast<ReturnType(*)(void)>(nullptr))
@@ -323,6 +339,8 @@ public:
         Base::m_result_value.Set(std::move(value));
 
         Base::GetSemaphore().Release(1);
+
+        Base::OnComplete();
     }
 
     void Fulfill(const ReturnType &value)
@@ -332,17 +350,19 @@ public:
         Base::m_result_value.Set(value);
 
         Base::GetSemaphore().Release(1);
+        
+        Base::OnComplete();
     }
 
 protected:
-    virtual void Execute(ArgTypes... args) override final { }
+    virtual void Execute() override final { }
 };
 
-template <class... ArgTypes>
-class ManuallyFulfilledTaskExecutorInstance<void, ArgTypes...> : public TaskExecutorInstance<void, ArgTypes...>
+template <>
+class ManuallyFulfilledTaskExecutorInstance<void> : public TaskExecutorInstance<void>
 {
 public:
-    using Base = TaskExecutorInstance<void, ArgTypes...>;
+    using Base = TaskExecutorInstance<void>;
 
     ManuallyFulfilledTaskExecutorInstance()
         : Base(static_cast<void(*)(void)>(nullptr))
@@ -357,16 +377,18 @@ public:
     {
     }
 
-    ManuallyFulfilledTaskExecutorInstance &operator=(ManuallyFulfilledTaskExecutorInstance &&other) noexcept
-    {
-        if (this == &other) {
-            return *this;
-        }
+    ManuallyFulfilledTaskExecutorInstance &operator=(ManuallyFulfilledTaskExecutorInstance &&other) noexcept = delete;
 
-        Base::operator=(static_cast<Base &&>(other));
+    // ManuallyFulfilledTaskExecutorInstance &operator=(ManuallyFulfilledTaskExecutorInstance &&other) noexcept
+    // {
+    //     if (this == &other) {
+    //         return *this;
+    //     }
 
-        return *this;
-    }
+    //     Base::operator=(static_cast<Base &&>(other));
+
+    //     return *this;
+    // }
     
     virtual ~ManuallyFulfilledTaskExecutorInstance() override = default;
 
@@ -375,14 +397,16 @@ public:
         AssertThrow(!Base::IsCompleted());
 
         Base::GetSemaphore().Release(1);
+        
+        Base::OnComplete();
     }
 
 protected:
-    virtual void Execute(ArgTypes...) override final { }
+    virtual void Execute() override final { }
 };
 
 
-template <class ReturnType, class... Args>
+template <class ReturnType>
 class Task;
 
 struct TaskRef
@@ -398,8 +422,8 @@ struct TaskRef
     {
     }
 
-    template <class ReturnType, class... Args>
-    TaskRef(const Task<ReturnType, Args...> &task)
+    template <class ReturnType>
+    TaskRef(const Task<ReturnType> &task)
         : id(task.GetTaskID()),
           assigned_scheduler(task.GetAssignedScheduler())
     {
@@ -505,12 +529,16 @@ protected:
     SchedulerBase   *m_assigned_scheduler;
 };
 
-template <class ReturnType, class... Args>
+// @TODO: Refactor so we can use a custom deleter for the task executor.
+// use pre-allocated memory for manually fulfilled instances, so that Fulfill() and Await()
+// on a task from the same thread doesn't cost much more than a typical function call.
+
+template <class ReturnType>
 class Task final : public TaskBase
 {
 public:
     using Base = TaskBase;
-    using TaskExecutorType = TaskExecutorInstance<ReturnType, Args...>;
+    using TaskExecutorType = TaskExecutorInstance<ReturnType>;
 
     // Default constructor, sets task as invalid
     Task()
@@ -568,25 +596,26 @@ public:
 
     /*! \brief Initialize the task without scheduling it.
      *  The task must be resolved with the \ref{Fulfill} method. */
-    ManuallyFulfilledTaskExecutorInstance<ReturnType, Args...> *Initialize()
+    ManuallyFulfilledTaskExecutorInstance<ReturnType> *Initialize()
     {
         Reset();
 
         m_id = TaskID { ~0u };
 
-        m_executor = new ManuallyFulfilledTaskExecutorInstance<ReturnType, Args...>();
+        m_executor = new ManuallyFulfilledTaskExecutorInstance<ReturnType>();
         m_owns_executor = true;
 
-        return static_cast<ManuallyFulfilledTaskExecutorInstance<ReturnType, Args...> *>(m_executor);
+        return static_cast<ManuallyFulfilledTaskExecutorInstance<ReturnType> *>(m_executor);
     }
 
-    /*! \brief Emplace a value of type \ref{ReturnType} to resolve the task with. Constructs it in place. */
-    void Fulfill(Args... args)
+    template <class... ArgTypes>
+    void Fulfill(ArgTypes &&... args)
     {
-        AssertThrowMsg(m_assigned_scheduler == nullptr, "Cannot manually Fulfill() scheduled tasks!");
+        AssertThrowMsg(m_assigned_scheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
 
-        m_executor->Execute(std::forward<Args>(args)...);
-        m_executor->GetSemaphore().Release(1);
+        ManuallyFulfilledTaskExecutorInstance<ReturnType> *executor = Initialize();
+
+        executor->Fulfill(ReturnType(std::forward<ArgTypes>(args)...));
     }
 
     /*! \brief Wait for the task to complete.
@@ -668,12 +697,12 @@ private:
     bool                m_owns_executor;
 };
 
-template <class... Args>
-class Task<void, Args...> final : public TaskBase
+template <>
+class Task<void> final : public TaskBase
 {
 public:
     using Base = TaskBase;
-    using TaskExecutorType = TaskExecutorInstance<void, Args...>;
+    using TaskExecutorType = TaskExecutorInstance<void>;
 
     // Default constructor, sets task as invalid
     Task()
@@ -742,16 +771,16 @@ public:
 
     /*! \brief Initialize the task without scheduling it.
      *  The task must be resolved with the \ref{Fulfill} method. */
-    ManuallyFulfilledTaskExecutorInstance<void, Args...> *Initialize()
+    ManuallyFulfilledTaskExecutorInstance<void> *Initialize()
     {
         Reset();
 
         m_id = TaskID { ~0u };
 
-        m_executor = new ManuallyFulfilledTaskExecutorInstance<void, Args...>();
+        m_executor = new ManuallyFulfilledTaskExecutorInstance<void>();
         m_owns_executor = true;
 
-        return static_cast<ManuallyFulfilledTaskExecutorInstance<void, Args...> *>(m_executor);
+        return static_cast<ManuallyFulfilledTaskExecutorInstance<void> *>(m_executor);
     }
 
     // /*! \brief Emplace a value of type \ref{ReturnType} to resolve the task with. Constructs it in place. */
@@ -807,11 +836,105 @@ private:
     bool                m_owns_executor;
 };
 
+#pragma region AwaitAll
+
+namespace detail {
+
+template <class TaskType>
+struct TaskAwaitAll_Impl;
+
+template <class ReturnType>
+struct TaskAwaitAll_Impl<Task<ReturnType>>
+{
+    Array<ReturnType> operator()(Span<Task<ReturnType>> tasks) const
+    {
+        for (SizeType i = 0; i < tasks.Size(); ++i) {
+            Task<ReturnType> &task = tasks[i];
+
+            AssertThrow(task.IsValid());
+        }
+
+        Bitset completion_states;
+        Bitset bound_states;
+
+        //debug
+        Array<int> called_states;
+        called_states.Resize(tasks.Size());
+
+        Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE> semaphore(tasks.Size());
+
+        while ((completion_states | bound_states).Count() != tasks.Size()) {
+            for (SizeType i = 0; i < tasks.Size(); ++i) {
+                if (completion_states.Test(i) || bound_states.Test(i)) {
+                    continue;
+                }
+
+                Task<ReturnType> &task = tasks[i];
+
+                if (task.IsCompleted()) {
+                    completion_states.Set(i, true);
+
+                    semaphore.Release(1);
+
+                    continue;
+                }
+
+                // @TODO : What if task finished right before delegate handler was bound?
+
+                task.GetTaskExecutor()->GetOnCompleteDelegate().Bind([&semaphore, &completion_states, &called_states, &tasks, task_index = i]()
+                {
+                    AssertThrow(called_states[task_index] == 0);
+
+                    called_states[task_index] = 1;
+                    DebugLog(LogType::Debug, "Call OnCompleted for task index %u (executor ptr: %p)\n", task_index, tasks[task_index].GetTaskExecutor());
+                    semaphore.Release(1);
+                });
+
+                bound_states.Set(i, true);
+            }
+        }
+
+        semaphore.Acquire();
+
+        Array<ReturnType> results;
+        results.ResizeUninitialized(tasks.Size());
+
+        for (SizeType i = 0; i < tasks.Size(); ++i) {
+            Task<ReturnType> &task = tasks[i];
+            AssertThrow(task.IsCompleted());
+            
+            Memory::Construct<ReturnType>(&results[i], std::move(task.Await()));
+        }
+
+        return results;
+    }
+};
+
+template <>
+struct TaskAwaitAll_Impl<Task<void>>
+{
+    void operator()(Span<Task<void>> tasks) const
+    {
+        HYP_NOT_IMPLEMENTED_VOID();
+    }
+};
+
+} // namespace detail
+
+template <class TaskType>
+decltype(auto) AwaitAll(Span<TaskType> tasks)
+{
+    return detail::TaskAwaitAll_Impl<TaskType>{}(tasks);
+}
+
+#pragma endregion AwaitAll
+
 } // namespace threading
 
 using threading::Task;
-using threading::TaskExecutor;
+using threading::TaskExecutorBase;
 using threading::TaskID;
+using threading::AwaitAll;
 
 } // namespace hyperion
 

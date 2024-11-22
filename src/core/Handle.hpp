@@ -6,11 +6,15 @@
 #include <core/Core.hpp>
 #include <core/ID.hpp>
 #include <core/ObjectPool.hpp>
+#include <core/object/HypObjectFwd.hpp>
 
 namespace hyperion {
 
 template <class T>
 class ObjectContainer;
+
+template <class T>
+struct WeakHandle;
 
 template <class T>
 static inline ObjectContainer<T> &GetContainer(UniquePtr<ObjectContainerBase> *allotted_container)
@@ -76,6 +80,15 @@ struct Handle : HandleBase
     {
         if (index != 0) {
             GetContainer().IncRefStrong(index - 1);
+        }
+    }
+
+    template <class TPointerType, typename = std::enable_if_t<IsHypObject<TPointerType>::value && std::is_convertible_v<TPointerType *, T *>>>
+    explicit Handle(TPointerType *ptr)
+        : HandleBase()
+    {
+        if (ptr != nullptr) {
+            *this = ptr->HandleFromThis();
         }
     }
 
@@ -149,6 +162,9 @@ struct Handle : HandleBase
     
     HYP_FORCE_INLINE explicit operator bool() const
         { return IsValid(); }
+
+    HYP_FORCE_INLINE operator IDType() const
+        { return IDType(index); }
     
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
         { return !IsValid(); }
@@ -214,6 +230,11 @@ struct Handle : HandleBase
 
         index = 0;
     }
+
+    HYP_FORCE_INLINE WeakHandle<T> ToWeak() const
+    {
+        return WeakHandle<T>(*this);
+    }
     
     static Name GetTypeName()
     {
@@ -273,6 +294,15 @@ struct WeakHandle
     {
         if (index != 0) {
             GetContainer().IncRefWeak(index - 1);
+        }
+    }
+
+    template <class TPointerType, typename = std::enable_if_t<IsHypObject<TPointerType>::value && std::is_convertible_v<TPointerType *, T *>>>
+    explicit WeakHandle(TPointerType *ptr)
+        : index(0)
+    {
+        if (ptr != nullptr) {
+            *this = ptr->WeakHandleFromThis();
         }
     }
 
@@ -360,12 +390,24 @@ struct WeakHandle
             ? Handle<T>(IDType { index })
             : Handle<T>();
     }
+
+    HYP_FORCE_INLINE T *GetUnsafe() const
+    {
+        if (index == 0) {
+            return nullptr;
+        }
+
+        return &GetContainer().Get(index - 1);
+    }
     
     HYP_FORCE_INLINE bool operator!() const
         { return !IsValid(); }
     
     HYP_FORCE_INLINE explicit operator bool() const
         { return IsValid(); }
+
+    HYP_FORCE_INLINE operator IDType() const
+        { return IDType(index); }
     
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
         { return !IsValid(); }

@@ -1,5 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace Hyperion
 {
@@ -8,12 +10,15 @@ namespace Hyperion
     {
         None = 0x0,
         ClassType = 0x1,
-        StructType = 0x2
+        StructType = 0x2,
+        EnumType = 0x4
     }
 
     public struct HypClass
     {
         public static readonly HypClass Invalid = new HypClass(IntPtr.Zero);
+        private static readonly Dictionary<string, HypClass> hypClassCache = new Dictionary<string, HypClass>();
+        private static readonly object hypClassCacheLock = new object();
 
         private IntPtr ptr;
 
@@ -92,6 +97,41 @@ namespace Hyperion
             {
                 return (Flags & HypClassFlags.StructType) != 0;
             }
+        }
+
+        public bool IsEnumType
+        {
+            get
+            {
+                return (Flags & HypClassFlags.EnumType) != 0;
+            }
+        }
+
+        public IEnumerable<HypClassAttribute> Attributes
+        {
+            get
+            {
+                IntPtr attributesPtr;
+                uint count = HypClass_GetAttributes(ptr, out attributesPtr);
+
+                for (int i = 0; i < count; i++)
+                {
+                    IntPtr attributePtr = Marshal.ReadIntPtr(attributesPtr, i * IntPtr.Size);
+                    yield return new HypClassAttribute(attributePtr);
+                }
+            }
+        }
+
+        public HypClassAttribute? GetAttribute(string name)
+        {
+            IntPtr attributePtr = HypClass_GetAttribute(ptr, name);
+
+            if (attributePtr == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            return new HypClassAttribute(attributePtr);
         }
 
         public IEnumerable<HypProperty> Properties
@@ -203,6 +243,68 @@ namespace Hyperion
             return instancePtr;
         }
 
+        public void ValidateType(Type type)
+        {
+            if (!IsValid)
+            {
+                throw new Exception("Invalid HypClass");
+            }
+
+            if (IsStructType)
+            {
+                if (!type.IsValueType)
+                {
+                    throw new Exception("Expected a struct type");
+                }
+            }
+            else if (IsClassType)
+            {
+                if (!type.IsClass)
+                {
+                    throw new Exception("Expected a class type");
+                }
+            }
+            else if (IsEnumType)
+            {
+                if (!type.IsEnum)
+                {
+                    throw new Exception("Expected an enum type");
+                }
+            }
+            else
+            {
+                throw new Exception("Invalid HypClass type");
+            }
+
+            HypClassAttribute? sizeAttribute = this.GetAttribute("size");
+
+            if (sizeAttribute != null)
+            {
+                int size = sizeAttribute.Value.GetInt();
+
+                if (size != Marshal.SizeOf(type))
+                {
+                    throw new Exception($"Struct size mismatch: HypClass struct size ({size}) does not match C# struct size ({Marshal.SizeOf(type)})");
+                }
+            }
+
+            // Validate that all fields from the struct are present in the HypClass
+            foreach (FieldInfo field in type.GetFields())
+            {
+                HypField? hypField = this.GetField(new Name(field.Name));
+
+                if (hypField == null)
+                {
+                    throw new Exception($"Field {field.Name} not found in HypClass");
+                }
+
+                if ((int)hypField.Value.Offset != Marshal.OffsetOf(type, field.Name).ToInt32())
+                {
+                    throw new Exception($"Field {field.Name} offset mismatch: HypClass offset ({hypField.Value.Offset}) does not match C# offset ({Marshal.OffsetOf(type, field.Name).ToInt32()})");
+                }
+            }
+        }
+
         public static bool operator==(HypClass a, HypClass b)
         {
             return a.ptr == b.ptr;
@@ -215,14 +317,27 @@ namespace Hyperion
 
         public static HypClass? GetClass(string name)
         {
-            IntPtr ptr = HypClass_GetClassByName(name);
+            HypClass? hypClass = null;
 
-            if (ptr == IntPtr.Zero)
+            lock (hypClassCacheLock)
             {
-                return null;
+                if (hypClassCache.TryGetValue(name, out HypClass foundHypClass))
+                {
+                    hypClass = foundHypClass;
+                }
+                else
+                {
+                    IntPtr ptr = HypClass_GetClassByName(name);
+
+                    if (ptr != IntPtr.Zero)
+                    {
+                        hypClass = new HypClass(ptr);
+                        hypClassCache[name] = hypClass.Value;
+                    }
+                }
             }
 
-            return new HypClass(ptr);
+            return hypClass;
         }
 
         public static HypClass GetClass<T>()
@@ -237,6 +352,23 @@ namespace Hyperion
             if (hypClassBindingAttribute == null)
             {
                 throw new InvalidOperationException($"Type {type.Name} is not a HypObject");
+            }
+
+            return ((HypClassBinding)hypClassBindingAttribute).HypClass;
+        }
+
+        public static HypClass? TryGetClass<T>()
+        {
+            return TryGetClass(typeof(T));
+        }
+
+        public static HypClass? TryGetClass(Type type)
+        {
+            HypClassBinding? hypClassBindingAttribute = HypClassBinding.ForType(type);
+
+            if (hypClassBindingAttribute == null)
+            {
+                return null;
             }
 
             return hypClassBindingAttribute.HypClass;
@@ -262,6 +394,12 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "HypClass_GetFlags")]
         private static extern uint HypClass_GetFlags([In] IntPtr hypClassPtr);
+
+        [DllImport("hyperion", EntryPoint = "HypClass_GetAttributes")]
+        private static extern uint HypClass_GetAttributes([In] IntPtr hypClassPtr, [Out] out IntPtr outAttributesPtr);
+
+        [DllImport("hyperion", EntryPoint = "HypClass_GetAttribute")]
+        private static extern IntPtr HypClass_GetAttribute([In] IntPtr hypClassPtr, [MarshalAs(UnmanagedType.LPStr)] string name);
 
         [DllImport("hyperion", EntryPoint = "HypClass_GetProperties")]
         private static extern uint HypClass_GetProperties([In] IntPtr hypClassPtr, [Out] out IntPtr outPropertiesPtr);

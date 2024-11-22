@@ -5,16 +5,32 @@
 
 #include <core/object/HypClass.hpp>
 #include <core/object/HypStruct.hpp>
+#include <core/object/HypEnum.hpp>
 #include <core/object/HypMember.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
 
 #include <Constants.hpp>
 
+#include <type_traits>
+
 namespace hyperion {
 
-#define HYP_DEFINE_CLASS(T, ...) \
-    static ::hyperion::detail::HypClassRegistration<T, HypClassFlags::CLASS_TYPE> T##_ClassRegistration { NAME(HYP_STR(T)), {}, {}, Span<HypMember> { { __VA_ARGS__ } } }
+template <class T, class T2 = void>
+struct DefaultHypClassFlags;
+
+template <class T>
+struct DefaultHypClassFlags<T, std::enable_if_t<std::is_class_v<T>>>
+{
+    static constexpr EnumFlags<HypClassFlags> value = (IsPODType<T> ? HypClassFlags::POD_TYPE : HypClassFlags::NONE)
+        | (std::is_abstract_v<T> ? HypClassFlags::ABSTRACT : HypClassFlags::NONE);
+};
+
+template <class T>
+struct DefaultHypClassFlags<T, std::enable_if_t<std::is_enum_v<T>>>
+{
+    static constexpr EnumFlags<HypClassFlags> value = HypClassFlags::NONE;
+};
 
 #define HYP_FUNCTION(name, fn) HypMethod(NAME(HYP_STR(name)), fn)
 
@@ -23,12 +39,12 @@ namespace hyperion {
     { \
         using Type = cls; \
         \
-        using RegistrationType = ::hyperion::detail::HypStructRegistration<Type, HypClassFlags::STRUCT_TYPE>; \
+        using RegistrationType = ::hyperion::detail::HypStructRegistration<Type, HypClassFlags::STRUCT_TYPE | DefaultHypClassFlags<Type>::value>; \
         \
         static RegistrationType s_class_registration; \
     } g_class_initializer_##cls { }; \
     \
-    HypClassInitializer_##cls::RegistrationType HypClassInitializer_##cls::s_class_registration { NAME(HYP_STR(cls)), Span<HypClassAttribute> { { __VA_ARGS__ } }, Span<HypMember> { {
+    HypClassInitializer_##cls::RegistrationType HypClassInitializer_##cls::s_class_registration { NAME(HYP_STR(cls)), Span<const HypClassAttribute> { { __VA_ARGS__ } }, Span<HypMember> { {
 
 #define HYP_END_STRUCT } } };
 
@@ -36,14 +52,27 @@ namespace hyperion {
     { \
         using Type = cls; \
         \
-        using RegistrationType = ::hyperion::detail::HypClassRegistration<Type, HypClassFlags::CLASS_TYPE>; \
+        using RegistrationType = ::hyperion::detail::HypClassRegistration<Type, HypClassFlags::CLASS_TYPE | DefaultHypClassFlags<Type>::value>; \
         \
         static RegistrationType s_class_registration; \
     } g_class_initializer_##cls { }; \
     \
-    HypClassInitializer_##cls::RegistrationType HypClassInitializer_##cls::s_class_registration { NAME(HYP_STR(cls)), parent_class, Span<HypClassAttribute> { { __VA_ARGS__ } }, Span<HypMember> { {
+    HypClassInitializer_##cls::RegistrationType HypClassInitializer_##cls::s_class_registration { NAME(HYP_STR(cls)), parent_class, Span<const HypClassAttribute> { { __VA_ARGS__ } }, Span<HypMember> { {
 
 #define HYP_END_CLASS } } };
+
+#define HYP_BEGIN_ENUM(cls, ...) static struct HypClassInitializer_##cls \
+    { \
+        using Type = cls; \
+        \
+        using RegistrationType = ::hyperion::detail::HypEnumRegistration<Type, HypClassFlags::ENUM_TYPE>; \
+        \
+        static RegistrationType s_class_registration; \
+    } g_class_initializer_##cls { }; \
+    \
+    HypClassInitializer_##cls::RegistrationType HypClassInitializer_##cls::s_class_registration { NAME(HYP_STR(cls)), Span<const HypClassAttribute> { { __VA_ARGS__ } }, Span<HypMember> { {
+
+#define HYP_END_ENUM } } };
 
 } // namespace hyperion
 

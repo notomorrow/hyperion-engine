@@ -35,10 +35,6 @@ World::World()
       m_detached_scenes(this),
       m_has_scene_updates(false)
 {
-#ifdef HYP_EDITOR
-    AddSubsystem<EditorSubsystem>();
-#endif
-
     AddSubsystem<WorldGridSubsystem>();
 }
 
@@ -103,14 +99,14 @@ void World::UpdatePendingScenes()
     Mutex::Guard guard(m_scene_update_mutex);
 
     for (const WeakHandle<Scene> &scene_weak : m_scenes_pending_removal) {
-        m_render_list_container.RemoveScene(scene_weak.GetID());
+        m_render_collector_container.RemoveScene(scene_weak.GetID());
     }
 
     m_scenes_pending_removal.Clear();
 
     for (const WeakHandle<Scene> &scene_weak : m_scenes_pending_addition) {
         if (Handle<Scene> scene = scene_weak.Lock()) {
-            m_render_list_container.AddScene(scene.Get());
+            m_render_collector_container.AddScene(scene.Get());
         }
     }
 
@@ -144,7 +140,7 @@ void World::Update(GameCounter::TickUnit delta)
 
         update_subsystem_tasks.PushBack(TaskSystem::GetInstance().Enqueue([this, subsystem = it.second.Get(), delta]
         {
-            HYP_NAMED_SCOPE_FMT("Update subsystem: {}", subsystem->GetClass()->GetName());
+            HYP_NAMED_SCOPE_FMT("Update subsystem: {}", subsystem->InstanceClass()->GetName());
 
             subsystem->Update(delta);
         }));
@@ -167,7 +163,7 @@ void World::Update(GameCounter::TickUnit delta)
             continue;
         }
 
-        if (!m_scenes[index]->IsWorldScene()) {
+        if (m_scenes[index]->IsNonWorldScene()) {
             continue;
         }
 
@@ -189,8 +185,9 @@ void World::Update(GameCounter::TickUnit delta)
         const Handle<Scene> &scene = m_scenes[index];
         AssertThrow(scene.IsValid());
 
-        // sanity check
+        // sanity checks
         AssertThrow(scene->GetWorld() == this);
+        AssertThrow(!(scene->GetFlags() & SceneFlags::DETACHED));
 
         scene->BeginUpdate(delta);
     }
@@ -206,6 +203,10 @@ void World::Update(GameCounter::TickUnit delta)
 
         scene->EndUpdate();
 
+        if (scene->IsNonWorldScene()) {
+            continue;
+        }
+
 #ifdef HYP_WORLD_ASYNC_SCENE_UPDATES
         collect_entities_tasks.PushBack(TaskSystem::GetInstance().Enqueue([this, index]
         {
@@ -215,9 +216,9 @@ void World::Update(GameCounter::TickUnit delta)
             // sanity check
             AssertThrow(scene->GetWorld() == this);
 
-            RenderList &render_list = m_render_list_container.GetRenderListForScene(scene->GetID());
+            RenderCollector &render_collector = m_render_collector_container.GetRenderCollectorForScene(scene->GetID());
 
-            scene->CollectEntities(render_list, scene->GetCamera());
+            scene->CollectEntities(render_collector, scene->GetCamera());
         }));
 #endif
     }
@@ -248,10 +249,10 @@ void World::Render(Frame *frame)
 
     AssertReady();
 
-    const uint32 num_render_lists = m_render_list_container.NumRenderLists();
+    const uint32 num_render_collectors = m_render_collector_container.NumRenderCollectors();
 
-    for (uint32 i = 0; i < num_render_lists; i++) {
-        if (RenderEnvironment *render_environment = m_render_list_container.GetRenderListAtIndex(i)->GetRenderEnvironment()) {
+    for (uint32 i = 0; i < num_render_collectors; i++) {
+        if (RenderEnvironment *render_environment = m_render_collector_container.GetRenderCollectorAtIndex(i)->GetRenderEnvironment()) {
             render_environment->RenderComponents(frame);
         }
     }
@@ -261,6 +262,10 @@ Subsystem *World::AddSubsystem(TypeID type_id, RC<Subsystem> &&subsystem)
 {
     HYP_SCOPE;
 
+    if (!subsystem) {
+        return nullptr;
+    }
+
     // If World is already initialized, ensure that the call is made on the correct thread
     // otherwise, it is safe to call this function from the World constructor (main thread)
     if (IsInitCalled()) {
@@ -268,6 +273,8 @@ Subsystem *World::AddSubsystem(TypeID type_id, RC<Subsystem> &&subsystem)
     } else {
         Threads::AssertOnThread(ThreadName::THREAD_MAIN);
     }
+
+    subsystem->SetWorld(this);
 
     const auto it = m_subsystems.Find(type_id);
     AssertThrowMsg(it == m_subsystems.End(), "Subsystem already exists in World");
@@ -361,16 +368,19 @@ void World::StopSimulating()
 void World::AddScene(const Handle<Scene> &scene)
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     if (!scene.IsValid()) {
         return;
     }
 
-    if (IsInitCalled()) {
-        scene->SetWorld(this);
+    if (m_scenes.Contains(scene)) {
+        return;
+    }
 
+    scene->SetWorld(this);
+
+    if (IsInitCalled()) {
         InitObject(scene);
 
         for (auto &it : m_subsystems) {
@@ -391,7 +401,6 @@ void World::AddScene(const Handle<Scene> &scene)
 void World::RemoveScene(const WeakHandle<Scene> &scene_weak)
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     typename Array<Handle<Scene>>::Iterator it = m_scenes.FindAs(scene_weak);
@@ -411,10 +420,10 @@ void World::RemoveScene(const WeakHandle<Scene> &scene_weak)
             it.second->OnSceneDetached(scene);
         }
 
-        scene->SetWorld(nullptr);
-
         m_scenes.Erase(it);
     }
+
+    scene->SetWorld(nullptr);
 
     Mutex::Guard guard(m_scene_update_mutex);
 
@@ -440,7 +449,7 @@ const Handle<Scene> &World::GetSceneByName(Name name) const
 
 const Handle<Scene> &World::GetDetachedScene(ThreadName thread_name)
 {
-    const ThreadID thread_id = Threads::GetThreadID(thread_name);
+    const ThreadID thread_id = Threads::GetStaticThreadID(thread_name);
 
     Threads::AssertOnThread(thread_id);
 
