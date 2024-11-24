@@ -92,7 +92,7 @@ struct RayBounceInfo
 
 void main() 
 {
-    const ivec2 resolution = imageSize(image);
+    const ivec2 resolution = rt_radiance_uniforms.output_image_resolution;
     
     const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(scene.frame_counter & 1);
     const ivec2 storage_coord = ivec2(
@@ -144,6 +144,7 @@ void main()
 
         vec3 H = ImportanceSampleGGX(rnd, normal, roughness);
         H = tangent * H.x + bitangent * H.y + normal * H.z;
+        H = normalize(H);
 
         vec3 origin = position + normal * RAY_OFFSET;
 
