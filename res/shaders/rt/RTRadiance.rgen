@@ -56,7 +56,13 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraSha
     Camera camera;
 };
 
+#include "../include/rt/RTRadiance.inc"
 #include "../include/rt/payload.inc"
+
+HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadianceUniformBuffer
+{
+    RTRadianceUniforms rt_radiance_uniforms;
+};
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define RAY_OFFSET 0.25
@@ -64,7 +70,7 @@ layout(location = 0) rayPayloadEXT RayPayload payload;
 
 void main() 
 {
-    const ivec2 resolution = imageSize(image);
+    const ivec2 resolution = rt_radiance_uniforms.output_image_resolution;
     
     const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(scene.frame_counter & 1);
 
