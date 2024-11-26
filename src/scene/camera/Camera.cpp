@@ -5,6 +5,7 @@
 #include <math/Halton.hpp>
 
 #include <rendering/ShaderGlobals.hpp>
+#include <rendering/Camera.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -38,11 +39,11 @@ struct RENDER_COMMAND(UpdateCameraDrawProxy) : renderer::RenderCommand
     {
         camera->m_proxy = proxy;
 
-        g_engine->GetRenderData()->cameras.Set(camera->GetID().ToIndex(), CameraShaderData {
+        g_engine->GetRenderData()->cameras->Set(camera->GetID().ToIndex(), CameraShaderData {
             .view               = proxy.view,
             .projection         = proxy.projection,
             .previous_view      = proxy.previous_view,
-            .dimensions         = { proxy.dimensions.width, proxy.dimensions.height, 0, 1 },
+            .dimensions         = Vec4u { proxy.dimensions.x, proxy.dimensions.y, 0, 1 },
             .camera_position    = Vec4f(proxy.position, 1.0f),
             .camera_direction   = Vec4f(proxy.position, 1.0f),
             .camera_near        = proxy.clip_near,
@@ -208,7 +209,7 @@ void Camera::Init()
             .position       = m_translation,
             .direction      = m_direction,
             .up             = m_up,
-            .dimensions     = Extent2D { uint(MathUtil::Abs(m_width)), uint(MathUtil::Abs(m_height)) },
+            .dimensions     = Vec2u { uint32(MathUtil::Abs(m_width)), uint32(MathUtil::Abs(m_height)) },
             .clip_near      = m_near,
             .clip_far       = m_far,
             .fov            = m_fov,
@@ -390,7 +391,7 @@ void Camera::Update(GameCounter::TickUnit dt)
             .position       = m_translation,
             .direction      = m_direction,
             .up             = m_up,
-            .dimensions     = Extent2D { uint(MathUtil::Abs(m_width)), uint(MathUtil::Abs(m_height)) },
+            .dimensions     = Vec2u { uint32(MathUtil::Abs(m_width)), uint32(MathUtil::Abs(m_height)) },
             .clip_near      = m_near,
             .clip_far       = m_far,
             .fov            = m_fov,

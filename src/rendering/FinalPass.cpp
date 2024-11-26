@@ -3,6 +3,7 @@
 #include <rendering/FinalPass.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/RenderGroup.hpp>
+#include <rendering/PlaceholderData.hpp>
 
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
@@ -170,7 +171,7 @@ void FinalPass::SetUITexture(Handle<Texture> texture)
         texture = CreateObject<Texture>(TextureDesc {
             ImageType::TEXTURE_TYPE_2D,
             InternalFormat::RGBA8,
-            Extent3D(1, 1, 1),
+            Vec3u { 1, 1, 1 },
             FilterMode::TEXTURE_FILTER_LINEAR,
             FilterMode::TEXTURE_FILTER_LINEAR,
             WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -374,13 +375,7 @@ void FinalPass::Render(Frame *frame)
             {
                 {
                     NAME("Scene"),
-                    {
-                        { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, 0) },
-                        { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, 0) },
-                        { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                        { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                        { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
-                    }
+                    { }
                 }
             }
         );

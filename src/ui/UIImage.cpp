@@ -14,7 +14,7 @@ void UIImage::Init()
     UIObject::Init();
 }
 
-void UIImage::SetTexture(Handle<Texture> texture)
+void UIImage::SetTexture(const Handle<Texture> &texture)
 {
     if (texture == m_texture) {
         return;
@@ -24,7 +24,7 @@ void UIImage::SetTexture(Handle<Texture> texture)
         g_safe_deleter->SafeRelease(std::move(m_texture));
     }
 
-    m_texture = std::move(texture);
+    m_texture = texture;
 
     InitObject(m_texture);
 
@@ -54,7 +54,7 @@ Material::ParameterTable UIImage::GetMaterialParameters() const
 Material::TextureSet UIImage::GetMaterialTextures() const
 {
     return Material::TextureSet {
-        { Material::MATERIAL_TEXTURE_ALBEDO_MAP, m_texture }
+        { MaterialTextureKey::ALBEDO_MAP, m_texture }
     };
 }
 

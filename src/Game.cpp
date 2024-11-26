@@ -14,8 +14,6 @@
 
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
-#include <dotnet/runtime/ManagedHandle.hpp>
-#include <dotnet/core/RefCountedPtrBindings.hpp>
 
 #include <util/profiling/ProfileScope.hpp>
 
@@ -67,7 +65,7 @@ void Game::Init_Internal()
 
     m_game_thread->GetSchedulerInstance()->Enqueue([this](GameCounter::TickUnit delta) -> void
     {
-        Extent2D window_size;
+        Vec2i window_size;
 
         if (m_app_context->GetMainWindow()) {
             window_size = m_app_context->GetMainWindow()->GetDimensions();
@@ -83,7 +81,7 @@ void Game::Init_Internal()
 
         m_scene->SetCamera(CreateObject<Camera>(
             70.0f,
-            window_size.width, window_size.height,
+            window_size.x, window_size.y,
             0.01f, 30000.0f
         ));
 
@@ -91,9 +89,6 @@ void Game::Init_Internal()
 
         g_engine->GetWorld()->AddScene(m_scene);
         InitObject(m_scene);
-
-        m_input_manager = CreateObject<InputManager>();
-        m_input_manager->SetWindow(m_app_context->GetMainWindow());
         
         m_ui_stage.Emplace(Threads::GetThreadID(ThreadName::THREAD_GAME));
 
@@ -137,7 +132,7 @@ void Game::Init()
         m_managed_game_object->InvokeMethodByName<void, dotnet::Object *, dotnet::Object *, dotnet::Object *, dotnet::Object *>(
             "BeforeInit",
             m_scene->GetManagedObject(),
-            m_input_manager->GetManagedObject(),
+            m_app_context->GetInputManager()->GetManagedObject(),
             g_asset_manager->GetManagedObject(),
             m_ui_stage->GetManagedObject()
         );
@@ -188,11 +183,11 @@ void Game::HandleEvent(SystemEvent &&event)
 
     Threads::AssertOnThread(ThreadName::THREAD_INPUT);
 
-    if (m_input_manager == nullptr) {
+    if (!m_app_context->GetInputManager().IsValid()) {
         return;
     }
 
-    m_input_manager->CheckEvent(&event);
+    m_app_context->GetInputManager()->CheckEvent(&event);
 
     OnInputEvent(std::move(event));
 }
@@ -224,7 +219,7 @@ void Game::OnInputEvent(const SystemEvent &event)
     Threads::AssertOnThread(ThreadName::THREAD_INPUT);
     
     // forward to UI
-    if (m_ui_stage->OnInputEvent(m_input_manager.Get(), event) & UIEventHandlerResult::STOP_BUBBLING) {
+    if (m_ui_stage->OnInputEvent(m_app_context->GetInputManager().Get(), event) & UIEventHandlerResult::STOP_BUBBLING) {
         // ui handled the event
         return;
     }
@@ -255,9 +250,9 @@ void Game::OnInputEvent(const SystemEvent &event)
     }
     case SystemEventType::EVENT_MOUSEMOTION:
     {
-        if (m_input_manager->GetWindow()->HasMouseFocus()) {
-            const Vec2i mouse_position = m_input_manager->GetMousePosition();
-            const Vec2i window_size = m_input_manager->GetWindow()->GetDimensions();
+        if (m_app_context->GetInputManager()->GetWindow()->HasMouseFocus()) {
+            const Vec2i mouse_position = m_app_context->GetInputManager()->GetMousePosition();
+            const Vec2i window_size = m_app_context->GetInputManager()->GetWindow()->GetDimensions();
 
             const float mx = (float(mouse_position.x) - float(window_size.x) * 0.5f) / (float(window_size.x));
             const float my = (float(mouse_position.y) - float(window_size.y) * 0.5f) / (float(window_size.y));
@@ -275,7 +270,7 @@ void Game::OnInputEvent(const SystemEvent &event)
                     });
 
                     if (controller->IsMouseLocked()) {
-                        m_input_manager->SetMousePosition(Vec2i { int(window_size.x / 2), int(window_size.y / 2) });
+                        m_app_context->GetInputManager()->SetMousePosition(Vec2i { int(window_size.x / 2), int(window_size.y / 2) });
                     }
                 }
             }

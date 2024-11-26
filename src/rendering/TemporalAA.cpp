@@ -2,6 +2,8 @@
 
 #include <rendering/TemporalAA.hpp>
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/PlaceholderData.hpp>
+#include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
@@ -218,7 +220,7 @@ void TemporalAA::Render(Frame *frame)
 
     m_compute_taa->Dispatch(
         command_buffer,
-        Extent3D {
+        Vec3u {
             (m_extent.x + 7) / 8,
             (m_extent.y + 7) / 8,
             1

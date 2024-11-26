@@ -49,7 +49,8 @@ enum class SceneFlags : uint32
 {
     NONE        = 0x0,
     HAS_TLAS    = 0x1,
-    NON_WORLD   = 0x2
+    NON_WORLD   = 0x2,
+    DETACHED    = 0x4
 };
 
 HYP_MAKE_ENUM_FLAGS(SceneFlags);
@@ -67,11 +68,14 @@ class HYP_API Scene : public BasicObject<Scene>
 
     HYP_OBJECT_BODY(Scene);
 
-    HYP_PROPERTY(ID, &Scene::GetID)
+    HYP_PROPERTY(ID, &Scene::GetID, { { "serialize", false } });
 
 public:
     Scene();
-    Scene(Handle<Camera> camera);
+    Scene(
+        Handle<Camera> camera,
+        EnumFlags<SceneFlags> flags = SceneFlags::NONE
+    );
 
     Scene(
         Handle<Camera> camera,
@@ -92,6 +96,9 @@ public:
      *  \note Only call this if you know what you are doing. */
     void SetOwnerThreadID(ThreadID owner_thread_id);
 
+    HYP_FORCE_INLINE EnumFlags<SceneFlags> GetFlags() const
+        { return m_flags; }
+
     HYP_METHOD(Property="Name", Serialize=true, Editor=true)
     HYP_FORCE_INLINE Name GetName() const
         { return m_name; }
@@ -101,23 +108,25 @@ public:
         { m_name = name; }
 
     /*! \brief Get the camera that is used to render this Scene perform frustum culling. */
-    HYP_METHOD(Serialize, Property="Camera")
+    HYP_METHOD(Property="Camera", Serialize=true, Editor=true)
     HYP_FORCE_INLINE const Handle<Camera> &GetCamera() const
         { return m_camera; }
 
     /*! \brief Set the camera that is used to render this Scene. */
-    HYP_METHOD(Serialize, Property="Camera")
+    HYP_METHOD(Property="Camera", Serialize=true, Editor=true)
     void SetCamera(const Handle<Camera> &camera);
 
-    HYP_FORCE_INLINE RenderList &GetRenderList()
-        { return m_render_list; }
+    HYP_FORCE_INLINE RenderCollector &GetRenderCollector()
+        { return m_render_collector; }
 
-    HYP_FORCE_INLINE const RenderList &GetRenderList() const
-        { return m_render_list; }
+    HYP_FORCE_INLINE const RenderCollector &GetRenderCollector() const
+        { return m_render_collector; }
 
-    HYP_NODISCARD NodeProxy FindNodeWithEntity(ID<Entity>) const;
+    HYP_METHOD()
+    HYP_NODISCARD NodeProxy FindNodeWithEntity(ID<Entity> entity) const;
 
-    HYP_NODISCARD NodeProxy FindNodeByName(const String &) const;
+    HYP_METHOD()
+    HYP_NODISCARD NodeProxy FindNodeByName(UTF8StringView name) const;
     
     /*! \brief Get the top level acceleration structure for this Scene, if it exists. */
     HYP_FORCE_INLINE const TLASRef &GetTLAS() const
@@ -129,13 +138,13 @@ public:
      */
     bool CreateTLAS();
 
-    HYP_METHOD(Serialize, Property="Root")
+    HYP_METHOD(Property="Root", Serialize=true, Editor=true)
     HYP_FORCE_INLINE const NodeProxy &GetRoot() const
         { return m_root_node_proxy; }
 
     /*! \brief Set the root node of this Scene, discarding the current.
      *  \internal For internal use only. Should not be called from user code. */
-    HYP_METHOD(Serialize, Property="Root")
+    HYP_METHOD(Property="Root", Serialize=true, Editor=true)
     HYP_FORCE_INLINE void SetRoot(NodeProxy root)
     {
         if (m_root_node_proxy.IsValid() && m_root_node_proxy->GetScene() == this) {
@@ -159,8 +168,12 @@ public:
     HYP_FORCE_INLINE const Octree &GetOctree() const
         { return m_octree; }
 
-    HYP_FORCE_INLINE RenderEnvironment *GetEnvironment() const
-        { return m_environment.Get(); }
+    HYP_FORCE_INLINE const Handle<RenderEnvironment> &GetEnvironment() const
+        { return m_environment; }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsAttachedToWorld() const
+        { return m_world != nullptr; }
 
     HYP_METHOD()
     HYP_FORCE_INLINE World *GetWorld() const
@@ -168,19 +181,15 @@ public:
 
     void SetWorld(World *world);
 
-    /*! \brief A scene is a non-world scene if it exists not as an owner of entities,
-        but rather a simple container that has items based on another Scene. For example,
-        you could have a "shadow map" scene, which gathers entities from the main scene,
-        but does not call Update() on them. */
     HYP_METHOD()
-    HYP_FORCE_INLINE bool IsWorldScene() const
-        { return !m_is_non_world_scene; }
+    HYP_FORCE_INLINE bool IsNonWorldScene() const
+        { return m_flags & SceneFlags::NON_WORLD; }
 
-    HYP_METHOD(Serialize, Property="IsAudioListener")
+    HYP_METHOD(Property="IsAudioListener", Serialize=true)
     HYP_FORCE_INLINE bool IsAudioListener() const
         { return m_is_audio_listener; }
 
-    HYP_METHOD(Serialize, Property="IsAudioListener")
+    HYP_METHOD(Property="IsAudioListener", Serialize=true)
     HYP_FORCE_INLINE void SetIsAudioListener(bool is_audio_listener)
         { m_is_audio_listener = is_audio_listener; }
 
@@ -200,26 +209,30 @@ public:
     void BeginUpdate(GameCounter::TickUnit delta);
     void EndUpdate();
 
-    RenderListCollectionResult CollectEntities(
-        RenderList &render_list, 
+    RenderCollector::CollectionResult CollectEntities(
+        RenderCollector &render_collector, 
         const Handle<Camera> &camera,
         const Optional<RenderableAttributeSet> &override_attributes = { },
         bool skip_frustum_culling = false
     ) const;
 
-    RenderListCollectionResult CollectDynamicEntities(
-        RenderList &render_list, 
+    RenderCollector::CollectionResult CollectDynamicEntities(
+        RenderCollector &render_collector, 
         const Handle<Camera> &camera,
         const Optional<RenderableAttributeSet> &override_attributes = { },
         bool skip_frustum_culling = false
     ) const;
 
-    RenderListCollectionResult CollectStaticEntities(
-        RenderList &render_list, 
+    RenderCollector::CollectionResult CollectStaticEntities(
+        RenderCollector &render_collector, 
         const Handle<Camera> &camera,
         const Optional<RenderableAttributeSet> &override_attributes = { },
         bool skip_frustum_culling = false
     ) const;
+
+    bool AddToWorld(World *world);
+    bool RemoveFromWorld();
+    
 
 private:
     void EnqueueRenderUpdates();
@@ -231,9 +244,9 @@ private:
     EnumFlags<SceneFlags>           m_flags;
 
     Handle<Camera>                  m_camera;
-    RenderList                      m_render_list;
+    RenderCollector                 m_render_collector;
 
-    UniquePtr<RenderEnvironment>    m_environment;
+    Handle<RenderEnvironment>       m_environment;
     World                           *m_world;
 
     FogParams                       m_fog_params;
@@ -246,8 +259,6 @@ private:
     TLASRef                         m_tlas;
 
     Matrix4                         m_last_view_projection_matrix;
-    
-    const bool                      m_is_non_world_scene;
 
     bool                            m_is_audio_listener;
 

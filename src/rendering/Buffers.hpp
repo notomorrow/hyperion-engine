@@ -3,9 +3,17 @@
 #ifndef HYPERION_BUFFERS_HPP
 #define HYPERION_BUFFERS_HPP
 
+#include <core/Handle.hpp>
+
 #include <core/containers/HeapArray.hpp>
 #include <core/containers/FixedArray.hpp>
+
+#include <core/threading/DataRaceDetector.hpp>
+
 #include <core/utilities/Range.hpp>
+
+#include <core/IDGenerator.hpp>
+
 #include <core/Defines.hpp>
 
 #include <rendering/DrawProxy.hpp>
@@ -21,9 +29,6 @@
 
 #include <mutex>
 
-#define HYP_RENDER_OBJECT_OFFSET(cls, index) \
-    (uint32((index) * sizeof(cls ## ShaderData)))
-
 namespace hyperion::renderer {
 
 namespace platform {
@@ -37,28 +42,13 @@ using Device = platform::Device<Platform::CURRENT>;
 
 namespace hyperion {
 
+class Engine;
+
+extern HYP_API Handle<Engine>   g_engine;
+
 using renderer::GPUBufferType;
 
-static constexpr SizeType max_entities_per_instance_batch = 60;
 static constexpr SizeType max_probes_in_sh_grid_buffer = max_bound_ambient_probes;
-
-enum EnvGridType : uint32
-{
-    ENV_GRID_TYPE_INVALID   = uint32(-1),
-    ENV_GRID_TYPE_SH        = 0,
-    ENV_GRID_TYPE_MAX
-};
-
-struct alignas(256) EntityInstanceBatch
-{
-    uint32 num_entities;
-    uint32 _pad0;
-    uint32 _pad1;
-    uint32 _pad2;
-    uint32 indices[max_entities_per_instance_batch];
-};
-
-static_assert(sizeof(EntityInstanceBatch) == 256);
 
 struct alignas(16) ParticleShaderData
 {
@@ -93,120 +83,42 @@ struct alignas(256) CubemapUniforms
 
 static_assert(sizeof(CubemapUniforms) % 256 == 0);
 
-struct alignas(256) SkeletonShaderData
-{
-    static constexpr SizeType max_bones = 256;
-
-    Matrix4 bones[max_bones];
-};
-
-static_assert(sizeof(SkeletonShaderData) % 256 == 0);
-
 enum EntityGPUDataFlags : uint32
 {
     ENTITY_GPU_FLAG_NONE            = 0x0,
     ENTITY_GPU_FLAG_HAS_SKELETON    = 0x1
 };
 
+struct alignas(16) EntityUserData
+{
+    Vec4u   user_data0;
+    Vec4u   user_data1;
+};
+
 struct alignas(256) EntityShaderData
 {
-    Matrix4 model_matrix;
-    Matrix4 previous_model_matrix;
+    Matrix4         model_matrix;
+    Matrix4         previous_model_matrix;
 
-    Vec4f   _pad0;
-    Vec4f   _pad1;
-    Vec4f   world_aabb_max;
-    Vec4f   world_aabb_min;
+    Vec4f           _pad0;
+    Vec4f           _pad1;
+    Vec4f           world_aabb_max;
+    Vec4f           world_aabb_min;
 
-    uint32  entity_index;
-    uint32  _unused;
-    uint32  material_index;
-    uint32  skeleton_index;
+    uint32          entity_index;
+    uint32          _unused;
+    uint32          material_index;
+    uint32          skeleton_index;
 
-    uint32  bucket;
-    uint32  flags;
-    uint32  _pad3;
-    uint32  _pad4;
+    uint32          bucket;
+    uint32          flags;
+    uint32          _pad3;
+    uint32          _pad4;
 
-    Vec4u   user_data;
-    Vec4f   _pad6;
+    EntityUserData  user_data;
 };
 
 static_assert(sizeof(EntityShaderData) == 256);
-
-struct MaterialShaderData
-{
-    Vec4f               albedo;
-    
-    // 4 vec4s of 0.0..1.0 values stuffed into uint32s
-    Vec4u               packed_params;
-    
-    Vec2f               uv_scale;
-    float               parallax_height;
-    float               _pad0;
-    
-    uint32              texture_index[16];
-    
-    uint32              texture_usage;
-    uint32              _pad1;
-    uint32              _pad2;
-    uint32              _pad3;
-};
-
-static_assert(sizeof(MaterialShaderData) == 128);
-
-struct SceneShaderData
-{
-    Vec4f   aabb_max;
-    Vec4f   aabb_min;
-    Vec4f   fog_params;
-
-    float   game_time;
-    uint32  frame_counter;
-    uint32  enabled_render_components_mask;
-    uint32  enabled_environment_maps_mask;
-
-    HYP_PAD_STRUCT_HERE(uint8, 64 + 128);
-};
-
-static_assert(sizeof(SceneShaderData) == 256);
-
-struct alignas(256) CameraShaderData
-{
-    Matrix4     view;
-    Matrix4     projection;
-    Matrix4     previous_view;
-
-    Vec4u       dimensions;
-    Vec4f       camera_position;
-    Vec4f       camera_direction;
-    Vec4f       jitter;
-    
-    float       camera_near;
-    float       camera_far;
-    float       camera_fov;
-    float       _pad0;
-};
-
-static_assert(sizeof(CameraShaderData) == 512);
-
-struct alignas(256) EnvGridShaderData
-{
-    uint32  probe_indices[max_bound_ambient_probes];
-
-    Vec4f   center;
-    Vec4f   extent;
-    Vec4f   aabb_max;
-    Vec4f   aabb_min;
-
-    Vec4u   density;
-    Vec4u   enabled_indices_mask;
-
-    Vec4f   voxel_grid_aabb_max;
-    Vec4f   voxel_grid_aabb_min;
-};
-
-static_assert(sizeof(EnvGridShaderData) == 4352);
 
 struct alignas(256) ShadowShaderData
 {
@@ -220,29 +132,6 @@ struct alignas(256) ShadowShaderData
 
 static_assert(sizeof(ShadowShaderData) == 256);
 
-struct alignas(256) EnvProbeShaderData
-{
-    Matrix4 face_view_matrices[6];
-
-    Vec4f   aabb_max;
-    Vec4f   aabb_min;
-    Vec4f   world_position;
-
-    uint32  texture_index;
-    uint32  flags;
-    float   camera_near;
-    float   camera_far;
-
-    Vec2u   dimensions;
-    Vec2u   _pad2;
-
-    Vec4i   position_in_grid;
-    Vec4i   position_offset;
-    Vec4u   _pad5;
-};
-
-static_assert(sizeof(EnvProbeShaderData) == 512);
-
 struct alignas(16) ImmediateDrawShaderData
 {
     Matrix4 transform;
@@ -252,44 +141,6 @@ struct alignas(16) ImmediateDrawShaderData
 };
 
 static_assert(sizeof(ImmediateDrawShaderData) == 80);
-
-struct alignas(16) ObjectInstance
-{
-    uint32 entity_id;
-    uint32 draw_command_index;
-    uint32 instance_index;
-    uint32 batch_index;
-};
-
-static_assert(sizeof(ObjectInstance) == 16);
-
-struct alignas(128) LightShaderData
-{
-    uint32  light_id;
-    uint32  light_type;
-    uint32  color_packed;
-    float   radius;
-    // 16
-
-    float   falloff;
-    uint32  shadow_map_index;
-    Vec2f   area_size;
-    // 32
-
-    Vec4f   position_intensity;
-    Vec4f   normal;
-    // 64
-
-    Vec2f   spot_angles;
-    uint32  material_id;
-    uint32  _pad2;
-
-    Vec4u   pad3;
-    Vec4u   pad4;
-    Vec4u   pad5;
-};
-
-static_assert(sizeof(LightShaderData) == 128);
 
 struct alignas(256) SH9Buffer
 {
@@ -329,264 +180,408 @@ struct alignas(16) VoxelUniforms
 
 static_assert(sizeof(VoxelUniforms) == 64);
 
-struct alignas(256) BlueNoiseBuffer
+struct BlueNoiseBuffer
 {
     Vec4i   sobol_256spp_256d[256 * 256 / 4];
     Vec4i   scrambling_tile[128 * 128 * 8 / 4];
     Vec4i   ranking_tile[128 * 128 * 8 / 4];
 };
 
-static_assert(sizeof(BlueNoiseBuffer) == 1310720);
-struct alignas(16) PostProcessingUniforms
-{
-    Vec2u   effect_counts; // pre, post
-    Vec2u   last_enabled_indices; // pre, post
-    Vec2u   masks; // pre, post
-};
-
-static_assert(sizeof(PostProcessingUniforms) == 32);
-
-struct alignas(256) DDGIUniforms
-{
-    Vec4f   aabb_max;
-    Vec4f   aabb_min;
-    Vec4u   probe_border;
-    Vec4u   probe_counts;
-    Vec4u   grid_dimensions;
-    Vec4u   image_dimensions;
-    Vec4u   params; // x = probe distance, y = num rays per probe, z = flags, w = num bound lights
-    uint32  shadow_map_index;
-    uint32  _pad0, _pad1, _pad2;
-    uint32  light_indices[16];
-    //HYP_PAD_STRUCT_HERE(uint32, 4);
-};
-
-static_assert(sizeof(DDGIUniforms) == 256);
-
-
 struct alignas(16) RTRadianceUniforms
 {
     uint32 num_bound_lights;
     uint32 ray_offset; // for lightmapper
-    uint32 _pad1, _pad2;
+    Vec2i  output_image_resolution;
     uint32 light_indices[16];
 };
 
 static_assert(sizeof(RTRadianceUniforms) == 80);
 
-/* max number of skeletons, based on size in mb */
-static const SizeType max_skeletons = (8ull * 1024ull * 1024ull) / sizeof(SkeletonShaderData);
-static const SizeType max_skeletons_bytes = max_skeletons * sizeof(SkeletonShaderData);
-/* max number of materials, based on size in mb */
-static const SizeType max_materials = (8ull * 1024ull * 1024ull) / sizeof(MaterialShaderData);
-static const SizeType max_materials_bytes = max_materials * sizeof(MaterialShaderData);
 /* max number of entities, based on size in mb */
 static const SizeType max_entities = (32ull * 1024ull * 1024ull) / sizeof(EntityShaderData);
 static const SizeType max_entities_bytes = max_entities * sizeof(EntityShaderData);
-/* max number of scenes, based on size in kb */
-static const SizeType max_scenes = (32ull * 1024ull) / sizeof(SceneShaderData);
-static const SizeType max_scenes_bytes = max_scenes * sizeof(SceneShaderData);
-/* max number of cameras, based on size in kb */
-static const SizeType max_cameras = (16ull * 1024ull) / sizeof(CameraShaderData);
-static const SizeType max_cameras_bytes = max_cameras * sizeof(CameraShaderData);
-/* max number of lights, based on size in kb */
-static const SizeType max_lights = (64ull * 1024ull) / sizeof(LightShaderData);
-static const SizeType max_lights_bytes = max_lights * sizeof(LightShaderData);
 /* max number of shadow maps, based on size in kb */
 static const SizeType max_shadow_maps = (4ull * 1024ull) / sizeof(ShadowShaderData);
 static const SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
-/* max number of env probes, based on size in mb */
-static const SizeType max_env_probes = (8ull * 1024ull * 1024ull) / sizeof(EnvProbeShaderData);
-static const SizeType max_env_probes_bytes = max_env_probes * sizeof(EnvProbeShaderData);
-/* max number of env grids, based on size in mb */
-static const SizeType max_env_grids = (1ull * 1024ull * 1024ull) / sizeof(EnvGridShaderData);
-static const SizeType max_env_grids_bytes = max_env_grids * sizeof(EnvGridShaderData);
-/* max number of instance batches, based on size in mb */
-static const SizeType max_entity_instance_batches = (8ull * 1024ull * 1024ull) / sizeof(EntityInstanceBatch);
-static const SizeType max_entity_instance_batches_bytes = max_entity_instance_batches * sizeof(EntityInstanceBatch);
 
-template <class T>
-using BufferTicket = uint;
-
-template <class StructType, GPUBufferType BufferType, uint32 Size>
-class ShaderData
+class GPUBufferHolderBase
 {
+protected:
+    GPUBufferHolderBase(TypeID struct_type_id)
+        : m_struct_type_id(struct_type_id)
+    {
+    }
+
 public:
-    ShaderData()
-    {
-        for (uint buffer_index = 0; buffer_index < m_buffers.Size(); buffer_index++) {
-            m_buffers[buffer_index] = MakeRenderObject<GPUBuffer>(BufferType);
+    virtual ~GPUBufferHolderBase();
 
-            m_dirty_ranges[buffer_index].SetStart(0);
-            m_dirty_ranges[buffer_index].SetEnd(Size);
+    virtual uint32 Count() const = 0;
+
+    HYP_FORCE_INLINE const GPUBufferRef &GetBuffer(uint32 frame_index) const
+        { return m_buffers[frame_index]; }
+
+    virtual void MarkDirty(uint32 index) = 0;
+    virtual void ResetElement(uint32 index) = 0;
+    virtual void UpdateBuffer(Device *device, uint32 frame_index) = 0;
+
+    template <class T>
+    HYP_FORCE_INLINE T &Get(uint32 index)
+    {
+        AssertThrowMsg(TypeID::ForType<T>() == m_struct_type_id, "T does not match the expected type!");
+
+        return *static_cast<T *>(Get_Internal(index));
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE void Set(uint32 index, const T &value)
+    {
+        AssertThrowMsg(TypeID::ForType<T>() == m_struct_type_id, "T does not match the expected type!");
+
+        Set_Internal(index, &value);
+    }
+
+protected:
+    void CreateBuffers(SizeType count, SizeType size, SizeType alignment = 0);
+
+    virtual void *Get_Internal(uint32 index) = 0;
+    virtual void Set_Internal(uint32 index, const void *ptr) = 0;
+
+    TypeID                                          m_struct_type_id;
+    FixedArray<GPUBufferRef, max_frames_in_flight>  m_buffers;
+    FixedArray<Range<uint32>, max_frames_in_flight> m_dirty_ranges;
+};
+
+HYP_DISABLE_OPTIMIZATION;
+template <class StructType>
+class BufferList
+{
+    static constexpr uint32 num_elements_per_block = 16;
+
+    struct Block
+    {
+        FixedArray<StructType, num_elements_per_block>          data;
+        AtomicVar<uint32>                                       num_elements { 0 };
+
+#ifdef HYP_ENABLE_MT_CHECK
+        FixedArray<DataRaceDetector, num_elements_per_block>    data_race_detectors;
+#endif
+
+        Block()
+        {
+            Memory::MemSet(data.Data(), 0, sizeof(StructType) * num_elements_per_block);
+        }
+
+        HYP_FORCE_INLINE bool IsEmpty() const
+            { return num_elements.Get(MemoryOrder::ACQUIRE) == 0; }
+    };
+
+public:
+    static constexpr uint32 s_invalid_index = ~0u;
+
+    BufferList(uint32 initial_count = 16 * num_elements_per_block)
+        : m_initial_num_blocks((initial_count + num_elements_per_block - 1) / num_elements_per_block),
+          m_num_blocks(m_initial_num_blocks)
+    {
+        for (uint32 i = 0; i < m_initial_num_blocks; i++) {
+            m_blocks.EmplaceBack();
         }
     }
 
-    ShaderData(const ShaderData &other)             = delete;
-    ShaderData &operator=(const ShaderData &other)  = delete;
-    ~ShaderData()                                   = default;
-
-    const GPUBufferRef &GetBuffer(uint buffer_index) const
-        { return m_buffers[buffer_index]; }
-    
-    void Create(Device *device)
+    HYP_FORCE_INLINE uint32 NumElements() const
     {
-        for (uint buffer_index = 0; buffer_index < m_buffers.Size(); buffer_index++) {
-            HYPERION_ASSERT_RESULT(m_buffers[buffer_index]->Create(device, sizeof(StructType) * Size));
-            m_buffers[buffer_index]->Memset(device, sizeof(StructType) * Size, 0x0); // fill with zeros
+        return m_num_blocks.Get(MemoryOrder::ACQUIRE) * num_elements_per_block;
+    }
 
-            m_dirty_ranges[buffer_index].SetStart(0);
-            m_dirty_ranges[buffer_index].SetEnd(Size);
+    HYP_FORCE_INLINE void MarkDirty(uint32 index)
+    {
+        for (auto &it : m_dirty_ranges) {
+            it |= { index, index + 1 };
         }
     }
 
-    void Destroy(Device *device)
+    uint32 AcquireIndex()
     {
-        SafeRelease(std::move(m_buffers));
-        
-        for (auto &dirty_range : m_dirty_ranges) {
-            dirty_range.Reset();
+        const uint32 index = m_id_generator.NextID() - 1;
+
+        const uint32 block_index = index / num_elements_per_block;
+
+        if (block_index < m_initial_num_blocks) {
+            Block &block = m_blocks[block_index];
+            block.num_elements.Increment(1, MemoryOrder::RELEASE);
+        } else {
+            Mutex::Guard guard(m_blocks_mutex);
+
+            if (index < num_elements_per_block * m_num_blocks.Get(MemoryOrder::ACQUIRE)) {
+                Block &block = m_blocks[block_index];
+                block.num_elements.Increment(1, MemoryOrder::RELEASE);
+            } else {
+                // Add blocks until we can insert the element
+                while (index >= num_elements_per_block * m_num_blocks.Get(MemoryOrder::ACQUIRE)) {
+                    m_blocks.EmplaceBack();
+                    m_num_blocks.Increment(1, MemoryOrder::RELEASE);
+                }
+
+                Block &block = m_blocks[block_index];
+                block.num_elements.Increment(1, MemoryOrder::RELEASE);
+            }
+        }
+
+        return index;
+    }
+
+    void ReleaseIndex(uint32 index)
+    {
+        m_id_generator.FreeID(index + 1);
+
+        const uint32 block_index = index / num_elements_per_block;
+
+        if (block_index < m_initial_num_blocks) {
+            Block &block = m_blocks[block_index];
+
+            block.num_elements.Decrement(1, MemoryOrder::RELEASE);
+        } else {
+            Mutex::Guard guard(m_blocks_mutex);
+
+            AssertThrow(index < num_elements_per_block * m_num_blocks.Get(MemoryOrder::ACQUIRE));
+
+            Block &block = m_blocks[block_index];
+            block.num_elements.Decrement(1, MemoryOrder::RELEASE);
         }
     }
 
-    HYP_FORCE_INLINE
-    void UpdateBuffer(Device *device, uint buffer_index)
+    StructType &GetElement(uint32 index)
     {
-        m_staging_objects_pool.m_cpu_buffer.PerformUpdate(
-            device,
-            m_buffers[buffer_index],
-            m_dirty_ranges[buffer_index]
-        );
+        AssertThrow(index < m_blocks.Size() * num_elements_per_block);
 
-        m_dirty_ranges[buffer_index].Reset();
+        const uint32 block_index = index / num_elements_per_block;
+        const uint32 element_index = index % num_elements_per_block;
+
+        if (block_index < m_initial_num_blocks) {
+            Block &block = m_blocks[block_index];
+            //HYP_MT_CHECK_READ(block.data_race_detectors[element_index]);
+
+            return block.data[element_index];
+        } else {
+            Mutex::Guard guard(m_blocks_mutex);
+
+            Block &block = m_blocks[block_index];
+            //HYP_MT_CHECK_READ(block.data_race_detectors[element_index]);
+            
+            return block.data[element_index];
+        }
     }
 
-    HYP_FORCE_INLINE
-    void Set(uint index, const StructType &value)
+    void SetElement(uint32 index, const StructType &value)
     {
-        m_staging_objects_pool.Set(index, value);
+        AssertThrow(index < m_blocks.Size() * num_elements_per_block);
+
+        const uint32 block_index = index / num_elements_per_block;
+        const uint32 element_index = index % num_elements_per_block;
+
+        if (block_index < m_initial_num_blocks) {
+            Block &block = m_blocks[block_index];
+            //HYP_MT_CHECK_RW(block.data_race_detectors[element_index]);
+                
+            block.data[element_index] = value;
+        } else {
+            Mutex::Guard guard(m_blocks_mutex);
+
+            AssertThrow(block_index < m_num_blocks.Get(MemoryOrder::ACQUIRE));
+
+            Block &block = m_blocks[block_index];
+            //HYP_MT_CHECK_RW(block.data_race_detectors[element_index]);
+                
+            block.data[element_index] = value;
+        }
 
         MarkDirty(index);
+    }
+
+    void CopyToGPUBuffer(Device *device, const GPUBufferRef &buffer, uint32 frame_index)
+    {
+        HYP_MT_CHECK_READ(m_data_race_detector);
+
+        const uint32 range_end = m_dirty_ranges[frame_index].GetEnd(),
+            range_start = m_dirty_ranges[frame_index].GetStart();
+
+        if (range_end <= range_start) {
+            return;
+        }
+
+        AssertThrowMsg(buffer->Size() >= range_end * sizeof(StructType),
+            "Buffer does not have enough space for the current number of elements! Buffer size = %llu",
+            buffer->Size());
+
+        uint32 block_index = 0;
+
+        typename LinkedList<Block>::Iterator begin_it = m_blocks.Begin();
+        typename LinkedList<Block>::Iterator end_it = m_blocks.End();
+
+        for (uint32 block_index = 0; block_index < m_num_blocks.Get(MemoryOrder::ACQUIRE) && begin_it != end_it; ++block_index, ++begin_it) {
+            if (block_index < range_start / num_elements_per_block) {
+                continue;
+            }
+
+            if (block_index * num_elements_per_block >= range_end) {
+                break;
+            }
+
+            uint32 index = block_index * num_elements_per_block;
+
+            uint32 offset = (range_start > index)
+                ? range_start
+                : index;
+
+            uint32 count = (range_end > (block_index + 1) * num_elements_per_block)
+                ? num_elements_per_block
+                : range_end - offset;
+
+            // sanity checks
+            AssertThrow(offset - index < begin_it->data.Size());
+            AssertThrow((offset + count) * sizeof(StructType) <= buffer->Size());
+
+            buffer->Copy(
+                device,
+                offset * sizeof(StructType),
+                count * sizeof(StructType),
+                &begin_it->data[offset - index]
+            );
+        }
+
+        m_dirty_ranges[frame_index].Reset();
+    }
+
+    /*! \brief Remove empty blocks from the back of the list */
+    void RemoveEmptyBlocks()
+    {
+        HYP_MT_CHECK_RW(m_data_race_detector);
+
+        if (m_num_blocks.Get(MemoryOrder::ACQUIRE) <= m_initial_num_blocks) {
+            return;
+        }
+
+        Mutex::Guard guard(m_blocks_mutex);
+
+        typename LinkedList<Block>::Iterator begin_it = m_blocks.Begin();
+        typename LinkedList<Block>::Iterator end_it = m_blocks.End();
+
+        Array<typename LinkedList<Block>::Iterator> to_remove;
+
+        for (uint32 block_index = 0; block_index < m_num_blocks.Get(MemoryOrder::ACQUIRE) && begin_it != end_it; ++block_index, ++begin_it) {
+            if (block_index < m_initial_num_blocks) {
+                continue;
+            }
+
+            if (begin_it->IsEmpty()) {
+                to_remove.PushBack(begin_it);
+            } else {
+                to_remove.Clear();
+            }
+        }
+
+        if (to_remove.Any()) {
+            m_num_blocks.Decrement(to_remove.Size(), MemoryOrder::RELEASE);
+
+            while (to_remove.Any()) {
+                m_blocks.Erase(to_remove.PopBack());
+            }
+        }
+    }
+
+private:
+    uint32                          m_initial_num_blocks;
+
+    LinkedList<Block>               m_blocks;
+    AtomicVar<uint32>               m_num_blocks;
+    // Needs to be locked when accessing blocks beyond initial_num_blocks or adding/removing blocks.
+    Mutex                           m_blocks_mutex;
+    // @TODO Make atomic
+    FixedArray<Range<uint32>, 2>    m_dirty_ranges;
+
+    IDGenerator                     m_id_generator;
+
+#ifdef HYP_ENABLE_MT_CHECK
+    DataRaceDetector                m_data_race_detector;
+#endif
+};
+HYP_ENABLE_OPTIMIZATION;
+
+template <class StructType, GPUBufferType BufferType>
+class GPUBufferHolder final : public GPUBufferHolderBase
+{
+public:
+    GPUBufferHolder(uint32 count)
+        : GPUBufferHolderBase(TypeID::ForType<StructType>()),
+          m_buffer_list(count)
+    {
+        for (uint32 frame_index = 0; frame_index < m_buffers.Size(); frame_index++) {
+            m_buffers[frame_index] = MakeRenderObject<GPUBuffer>(BufferType);
+        }
+        GPUBufferHolderBase::CreateBuffers(count, sizeof(StructType));
+    }
+
+    GPUBufferHolder(const GPUBufferHolder &other)               = delete;
+    GPUBufferHolder &operator=(const GPUBufferHolder &other)    = delete;
+
+    virtual ~GPUBufferHolder() override                         = default;
+
+    virtual uint32 Count() const override
+    {
+        return m_buffer_list.NumElements();
+    }
+
+    virtual void UpdateBuffer(Device *device, uint32 frame_index) override
+    {
+        m_buffer_list.RemoveEmptyBlocks();
+        m_buffer_list.CopyToGPUBuffer(device, m_buffers[frame_index], frame_index);
+    }
+
+    virtual void MarkDirty(uint32 index) override
+    {
+        m_buffer_list.MarkDirty(index);
+    }
+
+    virtual void ResetElement(uint32 index) override
+    {
+        Set(index, { });
     }
 
     /*! \brief Get a reference to an object in the _current_ staging buffer,
      * use when it is preferable to fetch the object, update the struct, and then
      * call Set. This is usually when the object would have a large stack size
      */
-    HYP_FORCE_INLINE
-    StructType &Get(uint index)
+    HYP_FORCE_INLINE StructType &Get(uint32 index)
     {
-        return m_staging_objects_pool.m_cpu_buffer.objects[index];
-    }
-    
-    HYP_FORCE_INLINE
-    void MarkDirty(uint index)
-    {
-        for (auto &dirty_range : m_dirty_ranges) {
-            dirty_range |= Range<uint32> { index, index + 1 };
-        }
+        return m_buffer_list.GetElement(index);
     }
 
-    // @TODO: Optimize to use double buffering rather than needing mutex lock.
-
-    BufferTicket<StructType>        current_index = 1; // reserve first index (0)
-    Queue<BufferTicket<StructType>> free_indices;
-    std::mutex                      m_mutex;
-
-    BufferTicket<StructType> AcquireTicket()
+    HYP_FORCE_INLINE void Set(uint32 index, const StructType &value)
     {
-        std::lock_guard guard(m_mutex);
-        // Threads::AssertOnThread(ThreadName::THREAD_RENDER);
-
-        if (free_indices.Any()) {
-            return free_indices.Pop();
-        }
-
-        return current_index++;
+        m_buffer_list.SetElement(index, value);
     }
 
-    void ReleaseTicket(BufferTicket<StructType> batch_index)
+    uint32 AcquireIndex()
     {
-        // Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        return m_buffer_list.AcquireIndex();
+    }
 
-        if (batch_index == 0) {
-            return;
-        }
-
-        std::lock_guard guard(m_mutex);
-
-        free_indices.Push(batch_index);
-
-        // MarkDirty(batch_index);
+    void ReleaseIndex(uint32 batch_index)
+    {
+        return m_buffer_list.ReleaseIndex(batch_index);
     }
     
 private:
-    struct StagingObjectsPool
+    virtual void *Get_Internal(uint32 index) override
     {
-        static constexpr uint32 num_staging_buffers = 1;
+        return &Get(index);
+    }
 
-        StagingObjectsPool() = default;
-        StagingObjectsPool(const StagingObjectsPool &other) = delete;
-        StagingObjectsPool &operator=(const StagingObjectsPool &other) = delete;
-        StagingObjectsPool(StagingObjectsPool &other) = delete;
-        StagingObjectsPool &operator=(StagingObjectsPool &&other) = delete;
-        ~StagingObjectsPool() = default;
+    virtual void Set_Internal(uint32 index, const void *ptr)
+    {
+        Set(index, *static_cast<const StructType *>(ptr));
+    }
 
-        struct StagingObjects
-        {
-            HeapArray<StructType, Size> objects;
-
-            StagingObjects()
-            {
-                for (auto &object : objects) {
-                    object = { };
-                }
-            }
-
-            StagingObjects(const StagingObjects &other)                 = delete;
-            StagingObjects &operator=(const StagingObjects &other)      = delete;
-            StagingObjects(StagingObjects &other) noexcept              = delete;
-            StagingObjects &operator=(StagingObjects &&other) noexcept  = delete;
-            ~StagingObjects()                                           = default;
-
-            void PerformUpdate(Device *device, const GPUBufferRef &buffer, const Range<uint32> &range)
-            {
-                const uint32 range_end = range.GetEnd(),
-                    range_start = range.GetStart();
-
-                if (range_end <= range_start) {
-                    return;
-                }
-
-                const uint32 range_distance = range_end - range_start;
-
-                buffer->Copy(
-                    device,
-                    range_start * sizeof(StructType),
-                    range_distance * sizeof(StructType),
-                    &objects.Data()[range_start]
-                );
-            }
-        } m_cpu_buffer;
-
-        HYP_FORCE_INLINE void Set(uint index, const StructType &value)
-        {
-            AssertThrowMsg(index < m_cpu_buffer.objects.Size(), "Cannot set shader data at %llu in buffer: out of bounds", index);
-
-            m_cpu_buffer.objects[index] = value;
-        }
-
-        HYP_FORCE_INLINE const StructType &Get(uint index)
-        {
-            AssertThrowMsg(index < m_cpu_buffer.objects.Size(), "Cannot get shader data at %llu in buffer: out of bounds", index);
-
-            return m_cpu_buffer.objects[index];
-        }
-    };
-
-    FixedArray<GPUBufferRef, max_frames_in_flight>      m_buffers;
-    FixedArray<Range<uint32>, max_frames_in_flight>     m_dirty_ranges;
-    StagingObjectsPool                                  m_staging_objects_pool;
+    BufferList<StructType>              m_buffer_list;
 };
 
 } // namespace hyperion

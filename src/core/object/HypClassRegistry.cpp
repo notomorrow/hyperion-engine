@@ -2,6 +2,7 @@
 
 #include <core/object/HypClassRegistry.hpp>
 #include <core/object/HypClass.hpp>
+#include <core/object/HypEnum.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
@@ -59,6 +60,28 @@ const HypClass *HypClassRegistry::GetClass(WeakName type_name) const
     return it->second;
 }
 
+const HypEnum *HypClassRegistry::GetEnum(TypeID type_id) const
+{
+    const HypClass *hyp_class = GetClass(type_id);
+
+    if (!hyp_class || !(hyp_class->GetFlags() & HypClassFlags::ENUM_TYPE)) {
+        return nullptr;
+    }
+
+    return static_cast<const HypEnum *>(hyp_class);
+}
+
+const HypEnum *HypClassRegistry::GetEnum(WeakName type_name) const
+{
+    const HypClass *hyp_class = GetClass(type_name);
+
+    if (!hyp_class || !(hyp_class->GetFlags() & HypClassFlags::ENUM_TYPE)) {
+        return nullptr;
+    }
+
+    return static_cast<const HypEnum *>(hyp_class);
+}
+
 void HypClassRegistry::RegisterClass(TypeID type_id, HypClass *hyp_class)
 {
     AssertThrow(hyp_class != nullptr);
@@ -85,6 +108,20 @@ void HypClassRegistry::RegisterManagedClass(dotnet::Class *managed_class, const 
 
     auto it = m_managed_classes.FindAs(hyp_class);
     AssertThrowMsg(it == m_managed_classes.End(), "Class %s already has a managed class registered for it", *hyp_class->GetName());
+
+    if (managed_class->GetFlags() & ManagedClassFlags::STRUCT_TYPE) {
+        if (const HypClassAttributeValue &size_attribute_value = hyp_class->GetAttribute("size"); size_attribute_value.IsValid()) {
+            AssertThrowMsg(managed_class->GetSize() == size_attribute_value.GetInt(),
+                "Expected value type managed class %s to have a size equal to %d but got %u",
+                managed_class->GetName().Data(),
+                size_attribute_value.GetInt(),
+                managed_class->GetSize());
+        } else {
+            HYP_LOG(Object, LogLevel::WARNING, "HypClass {} is missing \"Size\" attribute, cannot validate size of managed object matches", hyp_class->GetName());
+        }
+
+        // @TODO Validate fields all match
+    }
 
     m_managed_classes.Insert(const_cast<HypClass *>(hyp_class), managed_class);
 }

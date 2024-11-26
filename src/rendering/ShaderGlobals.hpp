@@ -3,6 +3,13 @@
 #ifndef HYPERION_SHADER_GLOBALS_HPP
 #define HYPERION_SHADER_GLOBALS_HPP
 
+#include <core/containers/HashMap.hpp>
+#include <core/containers/TypeMap.hpp>
+
+#include <core/memory/UniquePtr.hpp>
+
+#include <core/threading/DataRaceDetector.hpp>
+
 #include <rendering/Buffers.hpp>
 #include <rendering/Bindless.hpp>
 
@@ -48,21 +55,21 @@ struct ShaderGlobals
 
     void Create();
     void Destroy();
+    void UpdateBuffers(uint32 frame_index);
 
-    ShaderData<SceneShaderData, GPUBufferType::STORAGE_BUFFER, max_scenes>                      scenes;
-    ShaderData<CameraShaderData, GPUBufferType::CONSTANT_BUFFER, max_cameras>                   cameras;
-    ShaderData<LightShaderData, GPUBufferType::STORAGE_BUFFER, max_lights>                      lights;
-    ShaderData<EntityShaderData, GPUBufferType::STORAGE_BUFFER, max_entities>                   objects;
-    ShaderData<MaterialShaderData, GPUBufferType::STORAGE_BUFFER, max_materials>                materials;
-    ShaderData<SkeletonShaderData, GPUBufferType::STORAGE_BUFFER, max_skeletons>                skeletons;
-    ShaderData<ShadowShaderData, GPUBufferType::STORAGE_BUFFER, max_shadow_maps>                shadow_map_data;
-    ShaderData<EnvProbeShaderData, GPUBufferType::STORAGE_BUFFER, max_env_probes>               env_probes;
-    ShaderData<EnvGridShaderData, GPUBufferType::CONSTANT_BUFFER, max_env_grids>                env_grids;
-    ShaderData<EntityInstanceBatch, GPUBufferType::STORAGE_BUFFER, max_entity_instance_batches> entity_instance_batches;
+    UniquePtr<GPUBufferHolderBase>  scenes;
+    UniquePtr<GPUBufferHolderBase>  cameras;
+    UniquePtr<GPUBufferHolderBase>  lights;
+    UniquePtr<GPUBufferHolderBase>  objects;
+    UniquePtr<GPUBufferHolderBase>  materials;
+    UniquePtr<GPUBufferHolderBase>  skeletons;
+    UniquePtr<GPUBufferHolderBase>  shadow_map_data;
+    UniquePtr<GPUBufferHolderBase>  env_probes;
+    UniquePtr<GPUBufferHolderBase>  env_grids;
     
-    BindlessStorage textures;
+    BindlessStorage                         textures;
 
-    GlobalSphericalHarmonicsGrid spherical_harmonics_grid;
+    GlobalSphericalHarmonicsGrid            spherical_harmonics_grid;
 };
 
 } // namespace hyperion

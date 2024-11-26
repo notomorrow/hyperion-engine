@@ -37,18 +37,16 @@ public:
     friend struct RenderCommand_CreateRTRadianceImageOutputs;
  
     HYP_API RTRadianceRenderer(
-        const Extent2D &extent,
+        const Vec2u &extent,
         RTRadianceRendererOptions options = RT_RADIANCE_RENDERER_OPTION_NONE
     );
 
     HYP_API ~RTRadianceRenderer();
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    bool IsPathTracer() const
+    HYP_FORCE_INLINE bool IsPathTracer() const
         { return m_options & RT_RADIANCE_RENDERER_OPTION_PATHTRACER; }
     
-    void SetTLAS(const TLASRef &tlas)
+    HYP_FORCE_INLINE void SetTLAS(const TLASRef &tlas)
         { m_tlas = tlas; }
 
     HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
@@ -67,7 +65,7 @@ private:
 
     RTRadianceRendererOptions                           m_options;
 
-    Extent2D                                            m_extent;
+    Vec2u                                               m_extent;
     TLASRef                                             m_tlas;
     
     FixedArray<uint32, max_frames_in_flight>            m_updates;

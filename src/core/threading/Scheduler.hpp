@@ -187,8 +187,8 @@ public:
         }
     };
     
-    Scheduler()
-        : SchedulerBase(Threads::CurrentThreadID())
+    Scheduler(ThreadID owner_thread_id = Threads::CurrentThreadID())
+        : SchedulerBase(owner_thread_id)
     {
     }
 
@@ -221,6 +221,7 @@ public:
         scheduled_task.owns_executor = (flags & TaskEnqueueFlags::FIRE_AND_FORGET);
         scheduled_task.semaphore = &executor->GetSemaphore();
         scheduled_task.task_executed = &m_task_executed;
+        scheduled_task.callback = &executor->GetOnCompleteDelegate();
 
         Enqueue_Internal(std::move(scheduled_task));
 

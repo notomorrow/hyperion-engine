@@ -59,10 +59,11 @@ namespace FooBar
                 return;
             }
 
-            Logger.Log(LogType.Info, "Scene name - {0}", mainScene.GetName());
+            EntityManager entityManager = mainScene.GetEntityManager();
 
             var node = mainScene.GetRoot().AddChild(new Node());
             node.SetName("New Node");
+            node.SetEntity(entityManager.AddEntity());
 
             var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
 
@@ -71,6 +72,8 @@ namespace FooBar
                 Logger.Log(LogType.Error, "EditorSubsystem not found");
                 return;
             }
+
+            editorSubsystem.SetFocusedNode(node);
 
             // @TODO Focus on node in scene view
         }

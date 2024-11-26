@@ -22,7 +22,9 @@ HYP_EXPORT void *HypClass_CreateInstance(const HypClass *hyp_class)
     AssertThrow(hyp_class != nullptr);
 
     if (hyp_class->UseHandles()) {
-        ObjectContainerBase &container = ObjectPool::GetContainer(hyp_class->GetTypeID());
+        //ObjectContainerBase &container = ObjectPool::GetContainer(hyp_class->GetTypeID());
+        
+        ObjectContainerBase &container = ObjectPool::GetObjectContainerHolder().GetObjectContainer(hyp_class->GetTypeID());
         
         const uint32 index = container.NextIndex();
         container.ConstructAtIndex(index);
@@ -66,7 +68,9 @@ HYP_EXPORT void *HypClass_InitInstance(const HypClass *hyp_class, dotnet::Class 
         HypObjectInitializerFlagsGuard flags_guard(HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION);
 
         if (hyp_class->UseHandles()) {
-            ObjectContainerBase &container = ObjectPool::GetContainer(hyp_class->GetTypeID());
+            //ObjectContainerBase &container = ObjectPool::GetContainer(hyp_class->GetTypeID());
+            
+            ObjectContainerBase &container = ObjectPool::GetObjectContainerHolder().GetObjectContainer(hyp_class->GetTypeID());
             
             const uint32 index = container.NextIndex();
             container.ConstructAtIndex(index);
@@ -94,8 +98,8 @@ HYP_EXPORT void *HypClass_InitInstance(const HypClass *hyp_class, dotnet::Class 
     // @FIXME: Don't use hyp_class->GetManagedClass(), instead, take Class* passed into the function
     // this will allow C# derived classes to be used
     UniquePtr<dotnet::Object> managed_object = MakeUnique<dotnet::Object>(class_object_ptr, *object_reference, ObjectFlags::WEAK_REFERENCE);
-
-    SetHypObjectInitializerManagedObject(initializer, created_object_ptr, std::move(managed_object));
+    initializer->SetManagedObject(managed_object.Release());
+    // SetHypObjectInitializerManagedObject(initializer, created_object_ptr, std::move(managed_object));
 
     return created_object_ptr;
 }
@@ -145,6 +149,36 @@ HYP_EXPORT uint32 HypClass_GetFlags(const HypClass *hyp_class)
     }
 
     return uint32(hyp_class->GetFlags());
+}
+
+HYP_EXPORT uint32 HypClass_GetAttributes(const HypClass *hyp_class, const void **out_attributes)
+{
+    if (!hyp_class || !out_attributes) {
+        return 0;
+    }
+
+    if (hyp_class->GetAttributes().Empty()) {
+        return 0;
+    }
+
+    *out_attributes = hyp_class->GetAttributes().Begin();
+
+    return (uint32)hyp_class->GetAttributes().Size();
+}
+
+HYP_EXPORT const HypClassAttribute *HypClass_GetAttribute(const HypClass *hyp_class, const char *name)
+{
+    if (!hyp_class || !name) {
+        return nullptr;
+    }
+
+    auto it = hyp_class->GetAttributes().Find(name);
+
+    if (it == hyp_class->GetAttributes().End()) {
+        return nullptr;
+    }
+
+    return it;
 }
 
 HYP_EXPORT uint32 HypClass_GetProperties(const HypClass *hyp_class, const void **out_properties)

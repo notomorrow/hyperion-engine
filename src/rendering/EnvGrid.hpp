@@ -1,16 +1,21 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_ENV_GRID_HPP
 #define HYPERION_ENV_GRID_HPP
 
 #include <core/Base.hpp>
+
 #include <core/threading/AtomicVar.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <core/utilities/EnumFlags.hpp>
+
+#include <scene/camera/Camera.hpp>
 
 #include <rendering/RenderCollection.hpp>
 #include <rendering/RenderComponent.hpp>
 #include <rendering/EnvProbe.hpp>
-#include <rendering/Buffers.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
@@ -26,7 +31,32 @@ enum class EnvGridFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(EnvGridFlags);
 
-struct RENDER_COMMAND(UpdateEnvProbeAABBsInGrid);
+enum EnvGridType : uint32
+{
+    ENV_GRID_TYPE_INVALID   = uint32(-1),
+    ENV_GRID_TYPE_SH        = 0,
+    ENV_GRID_TYPE_MAX
+};
+
+struct alignas(256) EnvGridShaderData
+{
+    uint32  probe_indices[max_bound_ambient_probes];
+
+    Vec4f   center;
+    Vec4f   extent;
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
+
+    Vec4u   density;
+    Vec4u   enabled_indices_mask;
+
+    Vec4f   voxel_grid_aabb_max;
+    Vec4f   voxel_grid_aabb_min;
+};
+
+static_assert(sizeof(EnvGridShaderData) == 4352);
+
+static constexpr uint32 max_env_grids = (1ull * 1024ull * 1024ull) / sizeof(EnvGridShaderData);
 
 struct EnvProbeCollection
 {
@@ -96,15 +126,16 @@ struct EnvGridOptions
 {
     EnvGridType             type = ENV_GRID_TYPE_SH;
     BoundingBox             aabb;
-    Extent3D                density = { 0, 0, 0 };
+    Vec3u                   density = Vec3u::Zero();
     EnumFlags<EnvGridFlags> flags = EnvGridFlags::NONE;
 };
 
-class HYP_API EnvGrid : public RenderComponent<EnvGrid>
+HYP_CLASS()
+class HYP_API EnvGrid : public RenderComponentBase
 {
-public:
-    friend struct RENDER_COMMAND(UpdateEnvProbeAABBsInGrid);
+    HYP_OBJECT_BODY(EnvGrid);
 
+public:
     EnvGrid(Name name, EnvGridOptions options);
     EnvGrid(const EnvGrid &other)               = delete;
     EnvGrid &operator=(const EnvGrid &other)    = delete;
@@ -113,19 +144,23 @@ public:
     HYP_FORCE_INLINE EnvGridType GetEnvGridType() const
         { return m_options.type; }
     
-    HYP_FORCE_INLINE const BoundingBox &GetAABB() const
+    HYP_METHOD(Property="AABB", Editor=true, Label="EnvGrid Area Bounds", Description="The area that will be considered for inclusion in the EnvGrid")
+    const BoundingBox &GetAABB() const
         { return m_aabb; }
+
+    HYP_METHOD(Property="AABB", Editor=true)
+    void SetAABB(const BoundingBox &aabb)
+        { m_aabb = aabb; }
 
     void SetCameraData(const BoundingBox &aabb, const Vec3f &camera_position);
 
-    void Init();
-    void InitGame(); // init on game thread
-    void OnRemoved();
-
-    void OnUpdate(GameCounter::TickUnit delta);
-    void OnRender(Frame *frame);
-
 private:
+    virtual void Init() override;
+    virtual void InitGame() override; // init on game thread
+    virtual void OnRemoved() override;
+    virtual void OnUpdate(GameCounter::TickUnit delta) override;
+    virtual void OnRender(Frame *frame) override;
+
     HYP_FORCE_INLINE Vec3f SizeOfProbe() const
         { return m_aabb.GetExtent() / Vec3f(m_options.density); }
     
@@ -177,7 +212,7 @@ private:
     Vec3f                       m_offset;
     
     Handle<Camera>              m_camera;
-    RenderList                  m_render_list;
+    RenderCollector             m_render_collector;
 
     ShaderRef                   m_ambient_shader;
     FramebufferRef              m_framebuffer;

@@ -4,8 +4,9 @@
 #define HYP_CORE_CORE_HPP
 
 #include <core/Defines.hpp>
-#include <core/object/HypClassRegistry.hpp>
 #include <core/ID.hpp>
+
+#include <core/object/HypClassRegistry.hpp>
 
 #include <core/utilities/TypeID.hpp>
 
@@ -26,8 +27,14 @@ using Device = platform::Device<Platform::CURRENT>;
 namespace hyperion {
 
 class Engine;
-class HypClass;
 class ObjectPool;
+
+class HypClass;
+class HypEnum;
+class HypObjectPtr;
+
+template <class T>
+class ObjectContainer;
 
 template <class T>
 struct Handle;
@@ -35,9 +42,11 @@ struct Handle;
 template <class T>
 HYP_NODISCARD HYP_FORCE_INLINE inline Handle<T> CreateObject()
 {
-    auto &container = Handle<T>::GetContainer();
+    //auto *container = GetContainer<T>();
+    
+    ObjectContainer<T> &container = ObjectPool::GetObjectContainerHolder().GetObjectContainer<T>(HandleDefinition<T>::GetAllottedContainerPointer());
 
-    const uint index = container.NextIndex();
+    const uint32 index = container.NextIndex();
     container.ConstructAtIndex(index);
 
     return Handle<T>(ID<T>::FromIndex(index));
@@ -46,9 +55,11 @@ HYP_NODISCARD HYP_FORCE_INLINE inline Handle<T> CreateObject()
 template <class T, class... Args>
 HYP_NODISCARD HYP_FORCE_INLINE inline Handle<T> CreateObject(Args &&... args)
 {
-    auto &container = Handle<T>::GetContainer();
+    //auto *container = GetContainer<T>();
+    
+    ObjectContainer<T> &container = ObjectPool::GetObjectContainerHolder().GetObjectContainer<T>(HandleDefinition<T>::GetAllottedContainerPointer());
 
-    const uint index = container.NextIndex();
+    const uint32 index = container.NextIndex();
 
     container.ConstructAtIndex(
         index,
@@ -93,10 +104,18 @@ HYP_FORCE_INLINE const HypClass *GetClass(const Handle<T> &handle)
 }
 
 HYP_API const HypClass *GetClass(TypeID type_id);
-
 HYP_API const HypClass *GetClass(WeakName type_name);
 
-HYP_API bool IsInstanceOfHypClass(const HypClass *hyp_class, TypeID type_id);
+template <class T>
+HYP_FORCE_INLINE const HypEnum *GetEnum()
+{
+    return HypClassRegistry::GetInstance().template GetEnum<T>();
+}
+
+HYP_API const HypEnum *GetEnum(TypeID type_id);
+HYP_API const HypEnum *GetEnum(WeakName type_name);
+
+HYP_API bool IsInstanceOfHypClass(const HypClass *hyp_class, const void *ptr, TypeID type_id);
 
 } // namespace hyperion
 

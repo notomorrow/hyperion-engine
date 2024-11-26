@@ -45,7 +45,7 @@ struct HypField : public IHypMember
     Proc<fbom::FBOMData, const HypData &>           serialize_proc;
     Proc<void, HypData &, const fbom::FBOMData &>   deserialize_proc;
 
-    HypField(Span<HypClassAttribute> attributes = { })
+    HypField(Span<const HypClassAttribute> attributes = { })
         : name(Name::Invalid()),
           type_id(TypeID::Void()),
           target_type_id(TypeID::Void()),
@@ -56,7 +56,7 @@ struct HypField : public IHypMember
     }
 
     template <class ThisType, class FieldType>
-    HypField(Name name, FieldType ThisType::*member, uint32 offset, Span<HypClassAttribute> attributes = { })
+    HypField(Name name, FieldType ThisType::*member, uint32 offset, Span<const HypClassAttribute> attributes = { })
         : name(name),
           type_id(TypeID::ForType<FieldType>()),
           target_type_id(TypeID::ForType<ThisType>()),
@@ -95,22 +95,22 @@ struct HypField : public IHypMember
                 if constexpr (std::is_array_v<NormalizedType<FieldType>>) {
                     using InnerType = std::remove_extent_t<NormalizedType<FieldType>>;
 
-                    if (data.IsValid()) {
+                    if (data.IsNull()) {
+                        for (SizeType i = 0; i < std::extent_v<NormalizedType<FieldType>>; i++) {
+                            (target->*member)[i] = NormalizedType<InnerType> { };
+                        }
+                    } else {
                         auto &array_value = data.Get<NormalizedType<FieldType>>();
 
                         for (SizeType i = 0; i < array_value.Size(); i++) {
                             (target->*member)[i] = array_value[i];
                         }
-                    } else {
-                        for (SizeType i = 0; i < std::extent_v<NormalizedType<FieldType>>; i++) {
-                            (target->*member)[i] = NormalizedType<InnerType> { };
-                        }
                     }
                 } else {
-                    if (data.IsValid()) {
-                        target->*member = data.Get<NormalizedType<FieldType>>();
-                    } else {
+                    if (data.IsNull()) {
                         target->*member = NormalizedType<FieldType> { };
+                    } else {
+                        target->*member = data.Get<NormalizedType<FieldType>>();
                     }
                 }
             }
@@ -160,22 +160,22 @@ struct HypField : public IHypMember
                     if constexpr (std::is_array_v<NormalizedType<FieldType>>) {
                         using InnerType = std::remove_extent_t<NormalizedType<FieldType>>;
 
-                        if (value.IsValid()) {
+                        if (value.IsNull()) {
+                            for (SizeType i = 0; i < std::extent_v<NormalizedType<FieldType>>; i++) {
+                                (target->*member)[i] = NormalizedType<InnerType> { };
+                            }
+                        } else {
                             auto &array_value = value.Get<NormalizedType<FieldType>>();
 
                             for (SizeType i = 0; i < array_value.Size(); i++) {
                                 (target->*member)[i] = array_value[i];
                             }
-                        } else {
-                            for (SizeType i = 0; i < std::extent_v<NormalizedType<FieldType>>; i++) {
-                                (target->*member)[i] = NormalizedType<InnerType> { };
-                            }
                         }
                     } else {
-                        if (value.IsValid()) {
-                            target->*member = value.Get<NormalizedType<FieldType>>();
-                        } else {
+                        if (value.IsNull()) {
                             target->*member = NormalizedType<FieldType> { };
+                        } else {
+                            target->*member = value.Get<NormalizedType<FieldType>>();
                         }
                     }
                 }

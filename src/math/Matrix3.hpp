@@ -13,7 +13,7 @@
 
 namespace hyperion {
 
-HYP_STRUCT()
+HYP_STRUCT(Size=48)
 class HYP_API Matrix3
 {
     friend std::ostream &operator<<(std::ostream &os, const Matrix3 &mat);
@@ -31,7 +31,8 @@ public:
 
     Matrix3();
     explicit Matrix3(const float *v);
-    Matrix3(const Matrix3 &other);
+    Matrix3(const Matrix3 &other) = default;
+    Matrix3 &operator=(const Matrix3 &other) = default;
 
     float Determinant() const;
     Matrix3 &Transpose();
@@ -39,7 +40,6 @@ public:
     Matrix3 &Invert();
     Matrix3 Inverted() const;
 
-    Matrix3 &operator=(const Matrix3 &other);
     Matrix3 operator+(const Matrix3 &other) const;
     Matrix3 &operator+=(const Matrix3 &other);
     Matrix3 operator*(const Matrix3 &other) const;
@@ -82,8 +82,6 @@ public:
         return hc;
     }
 };
-
-static_assert(sizeof(Matrix3) == sizeof(float) * 12, "sizeof(Matrix3) must be equal to sizeof(float) * 12");
 
 } // namespace hyperion
 

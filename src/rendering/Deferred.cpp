@@ -5,6 +5,11 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
+#include <rendering/EnvGrid.hpp>
+#include <rendering/EnvProbe.hpp>
+#include <rendering/Scene.hpp>
+#include <rendering/Camera.hpp>
+#include <rendering/ShaderGlobals.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -152,11 +157,6 @@ static ShaderProperties GetDeferredShaderProperties()
     properties.Set(
         "HBAO_ENABLED",
         g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbao.enabled").ToBool()
-    );
-
-    properties.Set(
-        "LIGHT_RAYS_ENABLED",
-        g_engine->GetAppContext()->GetConfiguration().Get("rendering.light_rays.enabled").ToBool()
     );
 
     if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.path_tracer.enabled").ToBool()) {
@@ -311,7 +311,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
             const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("DeferredDirectDescriptorSet"), frame_index);
             AssertThrow(descriptor_set.IsValid());
             
-            descriptor_set->SetElement(NAME("MaterialsBuffer"), g_engine->GetRenderData()->materials.GetBuffer(frame_index));
+            descriptor_set->SetElement(NAME("MaterialsBuffer"), g_engine->GetRenderData()->materials->GetBuffer(frame_index));
             
             descriptor_set->SetElement(NAME("LTCSampler"), m_ltc_sampler);
             descriptor_set->SetElement(NAME("LTCMatrixTexture"), m_ltc_matrix_texture->GetImageView());
@@ -377,24 +377,13 @@ void DeferredPass::Record(uint frame_index)
     }
 
     // no lights bound, do not render direct shading at all
-    if (g_engine->GetRenderState().lights.Empty()) {
+    if (g_engine->GetRenderState().NumBoundLights() == 0) {
         return;
     }
 
     static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
 
     const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
-
-    FixedArray<Array<decltype(g_engine->GetRenderState().lights)::Iterator>, uint(LightType::MAX)> light_iterators;
-
-    // Set up light iterators
-    for (auto &it : g_engine->GetRenderState().lights) {
-        const LightDrawProxy &light = it.second;
-
-        if (light.visibility_bits & (1ull << uint64(camera_index))) {
-            light_iterators[uint(light.type)].PushBack(&it);
-        }
-    }
     
     const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
@@ -450,19 +439,19 @@ void DeferredPass::Record(uint frame_index)
                         );
                 }
 
-                const auto &light_it = light_iterators[light_type_index];
+                const auto &lights = g_engine->GetRenderState().bound_lights[uint32(light_type)]; 
 
-                for (const auto &it : light_it) {
-                    const ID<Light> light_id = it->first;
-                    const LightDrawProxy &light = it->second;
+                for (const auto &it : lights) {
+                    const ID<Light> light_id = it.first;
+                    const LightDrawProxy &light_proxy = it.second;
 
                     // We'll use the EnvProbe slot to bind whatever EnvProbe
                     // is used for the light's shadow map (if applicable)
 
                     uint shadow_probe_index = 0;
 
-                    if (light.shadow_map_index != ~0u && light_type == LightType::POINT) {
-                        shadow_probe_index = light.shadow_map_index;
+                    if (light_proxy.shadow_map_index != ~0u && light_type == LightType::POINT) {
+                        shadow_probe_index = light_proxy.shadow_map_index;
                     }
 
                     render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index)
@@ -470,18 +459,18 @@ void DeferredPass::Record(uint frame_index)
                             cmd,
                             render_group->GetPipeline(),
                             {
-                                { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                                { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                                { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, light_id.ToIndex()) },
-                                { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, env_grid_index) },
-                                { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, shadow_probe_index) }
+                                { NAME("ScenesBuffer"), HYP_SHADER_DATA_OFFSET(Scene, scene_index) },
+                                { NAME("CamerasBuffer"), HYP_SHADER_DATA_OFFSET(Camera, camera_index) },
+                                { NAME("LightsBuffer"), HYP_SHADER_DATA_OFFSET(Light, light_id.ToIndex()) },
+                                { NAME("EnvGridsBuffer"), HYP_SHADER_DATA_OFFSET(EnvGrid, env_grid_index) },
+                                { NAME("CurrentEnvProbe"), HYP_SHADER_DATA_OFFSET(EnvProbe, shadow_probe_index) }
                             },
                             scene_descriptor_set_index
                         );
                     
                     // Bind material descriptor set (for area lights)
                     if (material_descriptor_set_index != ~0u && !use_bindless_textures) {
-                        g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(light.material_id, frame_index)
+                        g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(light_proxy.material_id, frame_index)
                             ->Bind(cmd, render_group->GetPipeline(), material_descriptor_set_index);
                     }
 
@@ -648,7 +637,7 @@ void EnvGridPass::CreateTemporalBlending()
     m_temporal_blending = MakeUnique<TemporalBlending>(
         m_framebuffer->GetExtent(),
         InternalFormat::RGBA8,
-        TemporalBlendTechnique::TECHNIQUE_1,
+        TemporalBlendTechnique::TECHNIQUE_2,
         TemporalBlendFeedback::LOW,
         m_framebuffer
     );
@@ -730,11 +719,9 @@ void EnvGridPass::Render(Frame *frame)
                         {
                             NAME("Scene"),
                             {
-                                { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                                { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                                { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                                { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, env_grid_index) },
-                                { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                                { NAME("ScenesBuffer"), HYP_SHADER_DATA_OFFSET(Scene, scene_index) },
+                                { NAME("CamerasBuffer"), HYP_SHADER_DATA_OFFSET(Camera, camera_index) },
+                                { NAME("EnvGridsBuffer"), HYP_SHADER_DATA_OFFSET(EnvGrid, env_grid_index) }
                             }
                         }
                     }
@@ -780,11 +767,9 @@ void EnvGridPass::Render(Frame *frame)
                     cmd,
                     m_render_group->GetPipeline(),
                     {
-                        { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                        { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                        { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                        { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, env_grid_index) },
-                        { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                        { NAME("ScenesBuffer"), HYP_SHADER_DATA_OFFSET(Scene, scene_index) },
+                        { NAME("CamerasBuffer"), HYP_SHADER_DATA_OFFSET(Camera, camera_index) },
+                        { NAME("EnvGridsBuffer"), HYP_SHADER_DATA_OFFSET(EnvGrid, env_grid_index) }
                     },
                     scene_descriptor_set_index
                 );
@@ -1024,10 +1009,10 @@ void ReflectionProbePass::Render(Frame *frame)
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
-    const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
-    const uint camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
+    const uint32 scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
+    const uint32 camera_index = g_engine->GetRenderState().GetCamera().id.ToIndex();
 
     // Sky renders first
     static const FixedArray<EnvProbeType, ApplyReflectionProbeMode::MAX> reflection_probe_types {
@@ -1076,11 +1061,8 @@ void ReflectionProbePass::Render(Frame *frame)
                         {
                             NAME("Scene"),
                             {
-                                { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                                { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                                { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                                { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                                { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                                { NAME("ScenesBuffer"), HYP_SHADER_DATA_OFFSET(Scene, scene_index) },
+                                { NAME("CamerasBuffer"), HYP_SHADER_DATA_OFFSET(Camera, camera_index) }
                             }
                         }
                     }
@@ -1117,7 +1099,7 @@ void ReflectionProbePass::Render(Frame *frame)
         const Result record_result = command_buffer->Record(
             g_engine->GetGPUInstance()->GetDevice(),
             render_group->GetPipeline()->GetRenderPass(),
-            [this, frame_index, scene_index, camera_index, &render_group, &env_probes, &num_rendered_env_probes](CommandBuffer *cmd)
+            [&](CommandBuffer *cmd)
             {
                 render_group->GetPipeline()->SetPushConstants(
                     m_push_constant_data.Data(),
@@ -1143,21 +1125,19 @@ void ReflectionProbePass::Render(Frame *frame)
                         break;
                     }
 
-                    // TODO: Add visibility check so we skip probes that don't have any impact on the current view
-
                     render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index)
                         ->Bind(
                             cmd,
                             render_group->GetPipeline(),
                             {
-                                { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                                { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                                { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                                { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                                { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, env_probe_id.ToIndex()) }
+                                { NAME("ScenesBuffer"), HYP_SHADER_DATA_OFFSET(Scene, scene_index) },
+                                { NAME("CamerasBuffer"), HYP_SHADER_DATA_OFFSET(Camera, camera_index) },
+                                { NAME("CurrentEnvProbe"), HYP_SHADER_DATA_OFFSET(EnvProbe, env_probe_id.ToIndex()) }
                             },
                             scene_descriptor_set_index
                         );
+
+                    // HYP_LOG(Rendering, LogLevel::DEBUG, "ReflectionProbePass: Render reflection probe #{}, type: {}", env_probe_id.Value(), uint32(env_probe_type));
 
                     m_full_screen_quad->Render(cmd);
 
@@ -1586,7 +1566,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
         m_indirect_pass->GetCommandBuffer(frame_index)->SubmitSecondary(primary);
 
-        if (g_engine->GetRenderState().lights.Any()) {
+        if (g_engine->GetRenderState().NumBoundLights() != 0) {
             m_direct_pass->GetCommandBuffer(frame_index)->SubmitSecondary(primary);
         }
 
@@ -1645,11 +1625,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
             uint32  deferred_flags;
         } deferred_combine_constants;
 
-        deferred_combine_constants.image_dimensions = {
-            m_combine_pass->GetFramebuffer()->GetExtent().width,
-            m_combine_pass->GetFramebuffer()->GetExtent().height
-        };
-
+        deferred_combine_constants.image_dimensions = m_combine_pass->GetFramebuffer()->GetExtent();
         deferred_combine_constants.deferred_flags = deferred_data.flags;
 
         m_combine_pass->GetRenderGroup()->GetPipeline()->SetPushConstants(&deferred_combine_constants, sizeof(deferred_combine_constants));
@@ -1663,11 +1639,11 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
                 {
                     NAME("Scene"),
                     {
-                        { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                        { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                        { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                        { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                        { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                        { NAME("ScenesBuffer"), HYP_SHADER_DATA_OFFSET(Scene, scene_index) },
+                        { NAME("CamerasBuffer"), HYP_SHADER_DATA_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
+                        { NAME("LightsBuffer"), HYP_SHADER_DATA_OFFSET(Light, 0) },
+                        { NAME("EnvGridsBuffer"), HYP_SHADER_DATA_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                        { NAME("CurrentEnvProbe"), HYP_SHADER_DATA_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
                     }
                 }
             }
@@ -1746,10 +1722,10 @@ void DeferredRenderer::ApplyCameraJitter()
     static const float jitter_scale = 0.25f;
 
     if (camera.projection[3][3] < MathUtil::epsilon_f) {
-        Matrix4::Jitter(frame_counter, camera.dimensions.width, camera.dimensions.height, jitter);
+        Matrix4::Jitter(frame_counter, camera.dimensions.x, camera.dimensions.y, jitter);
 
-        g_engine->GetRenderData()->cameras.Get(camera_id.ToIndex()).jitter = jitter * jitter_scale;
-        g_engine->GetRenderData()->cameras.MarkDirty(camera_id.ToIndex());
+        g_engine->GetRenderData()->cameras->Get<CameraShaderData>(camera_id.ToIndex()).jitter = jitter * jitter_scale;
+        g_engine->GetRenderData()->cameras->MarkDirty(camera_id.ToIndex());
     }
 }
 
@@ -1768,10 +1744,10 @@ void DeferredRenderer::CollectDrawCalls(Frame *frame)
 {
     HYP_SCOPE;
 
-    const uint num_render_lists = g_engine->GetWorld()->GetRenderListContainer().NumRenderLists();
+    const uint num_render_collectors = g_engine->GetWorld()->GetRenderCollectorContainer().NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_lists; index++) {
-        g_engine->GetWorld()->GetRenderListContainer().GetRenderListAtIndex(index)->CollectDrawCalls(
+    for (uint index = 0; index < num_render_collectors; index++) {
+        g_engine->GetWorld()->GetRenderCollectorContainer().GetRenderCollectorAtIndex(index)->CollectDrawCalls(
             frame,
             Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_SKYBOX) | (1 << BUCKET_TRANSLUCENT)),
             &m_cull_data
@@ -1783,10 +1759,10 @@ void DeferredRenderer::RenderSkybox(Frame *frame)
 {
     HYP_SCOPE;
 
-    const uint num_render_lists = g_engine->GetWorld()->GetRenderListContainer().NumRenderLists();
+    const uint num_render_collectors = g_engine->GetWorld()->GetRenderCollectorContainer().NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_lists; index++) {
-        g_engine->GetWorld()->GetRenderListContainer().GetRenderListAtIndex(index)->ExecuteDrawCalls(
+    for (uint index = 0; index < num_render_collectors; index++) {
+        g_engine->GetWorld()->GetRenderCollectorContainer().GetRenderCollectorAtIndex(index)->ExecuteDrawCalls(
             frame,
             nullptr,
             Bitset((1 << BUCKET_SKYBOX)),
@@ -1799,10 +1775,10 @@ void DeferredRenderer::RenderOpaqueObjects(Frame *frame)
 {
     HYP_SCOPE;
 
-    const uint num_render_lists = g_engine->GetWorld()->GetRenderListContainer().NumRenderLists();
+    const uint num_render_collectors = g_engine->GetWorld()->GetRenderCollectorContainer().NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_lists; index++) {
-        g_engine->GetWorld()->GetRenderListContainer().GetRenderListAtIndex(index)->ExecuteDrawCalls(
+    for (uint index = 0; index < num_render_collectors; index++) {
+        g_engine->GetWorld()->GetRenderCollectorContainer().GetRenderCollectorAtIndex(index)->ExecuteDrawCalls(
             frame,
             nullptr,
             Bitset((1 << BUCKET_OPAQUE)),
@@ -1815,10 +1791,10 @@ void DeferredRenderer::RenderTranslucentObjects(Frame *frame)
 {
     HYP_SCOPE;
 
-    const uint num_render_lists = g_engine->GetWorld()->GetRenderListContainer().NumRenderLists();
+    const uint num_render_collectors = g_engine->GetWorld()->GetRenderCollectorContainer().NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_lists; index++) {
-        g_engine->GetWorld()->GetRenderListContainer().GetRenderListAtIndex(index)->ExecuteDrawCalls(
+    for (uint index = 0; index < num_render_collectors; index++) {
+        g_engine->GetWorld()->GetRenderCollectorContainer().GetRenderCollectorAtIndex(index)->ExecuteDrawCalls(
             frame,
             nullptr,
             Bitset((1 << BUCKET_TRANSLUCENT)),

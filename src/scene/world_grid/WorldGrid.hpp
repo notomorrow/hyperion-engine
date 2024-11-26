@@ -15,6 +15,9 @@
 #include <core/threading/Task.hpp>
 #include <core/threading/Mutex.hpp>
 
+#include <scene/Entity.hpp>
+#include <scene/Node.hpp>
+
 #include <math/Vector2.hpp>
 
 #include <GameCounter.hpp>
@@ -26,6 +29,7 @@ class Scene;
 class EntityManager;
 class WorldGridPlugin;
 
+HYP_ENUM()
 enum class WorldGridPatchState
 {
     UNLOADED,
@@ -107,7 +111,7 @@ struct WorldGridPatchDesc
 {
     WorldGridPatchInfo  patch_info;
 
-    ID<Entity>          entity;
+    Handle<Entity>      entity;
     
     // May be null if the patch is not yet created
     RC<WorldGridPatch>  patch;
@@ -249,6 +253,8 @@ private:
     WorldGridState                      m_state;
 
     FlatMap<int, RC<WorldGridPlugin>>   m_plugins;
+
+    NodeProxy                           m_root_node;
 
     bool                                m_is_initialized;
 };

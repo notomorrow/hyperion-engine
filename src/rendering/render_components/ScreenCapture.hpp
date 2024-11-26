@@ -14,6 +14,8 @@
 
 #include <core/containers/FixedArray.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <Types.hpp>
 
 namespace hyperion {
@@ -24,14 +26,13 @@ enum class ScreenCaptureMode
     TO_BUFFER
 };
 
-class HYP_API ScreenCaptureRenderComponent : public RenderComponent<ScreenCaptureRenderComponent>
+HYP_CLASS()
+class HYP_API ScreenCaptureRenderComponent : public RenderComponentBase
 {
-    Extent2D        m_window_size;
-    Handle<Texture> m_texture;
-    GPUBufferRef    m_buffer;
+    HYP_OBJECT_BODY(ScreenCaptureRenderComponent);
 
 public:
-    ScreenCaptureRenderComponent(Name name, const Extent2D window_size, ScreenCaptureMode screen_capture_mode = ScreenCaptureMode::TO_TEXTURE);
+    ScreenCaptureRenderComponent(Name name, const Vec2u &window_size, ScreenCaptureMode screen_capture_mode = ScreenCaptureMode::TO_TEXTURE);
     ScreenCaptureRenderComponent(const ScreenCaptureRenderComponent &other)                 = delete;
     ScreenCaptureRenderComponent &operator=(const ScreenCaptureRenderComponent &other)      = delete;
     ScreenCaptureRenderComponent(ScreenCaptureRenderComponent &&other) noexcept             = delete;
@@ -44,18 +45,20 @@ public:
     HYP_FORCE_INLINE const Handle<Texture> &GetTexture() const
         { return m_texture; }
 
-    void Init();
-    void InitGame();
-
-    void OnRemoved();
-    void OnUpdate(GameCounter::TickUnit delta);
-    void OnRender(Frame *frame);
-
 private:
+    virtual void Init() override;
+    virtual void InitGame() override;
+    virtual void OnRemoved() override;
+    virtual void OnUpdate(GameCounter::TickUnit delta) override;
+    virtual void OnRender(Frame *frame) override;
+
     virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override
         { }
 
     ScreenCaptureMode   m_screen_capture_mode;
+    Vec2u               m_window_size;
+    Handle<Texture>     m_texture;
+    GPUBufferRef        m_buffer;
 };
 
 } // namespace hyperion

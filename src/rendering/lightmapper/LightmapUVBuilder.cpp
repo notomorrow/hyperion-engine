@@ -64,7 +64,7 @@ LightmapUVBuilder::LightmapUVBuilder(const LightmapUVBuilderParams &params)
     m_mesh_data.Resize(params.elements.Size());
 
     for (SizeType i = 0; i < params.elements.Size(); i++) {
-        const LightmapEntity &element = params.elements[i];
+        const LightmapElement &element = params.elements[i];
 
         LightmapMeshData &lightmap_mesh_data = m_mesh_data[i];
 
@@ -153,7 +153,8 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
     }
 
     xatlas::PackOptions pack_options { };
-    // pack_options.resolution = 1024;
+    pack_options.resolution = 1024;
+    //pack_options.maxChartSize = 4096;
     pack_options.padding = 8;
     pack_options.texelsPerUnit = 128.0f;
     pack_options.bilinear = true;
@@ -246,7 +247,7 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
 
     for (SizeType mesh_index = 0; mesh_index < m_mesh_data.Size(); mesh_index++) {
         const LightmapMeshData &lightmap_mesh_data = m_mesh_data[mesh_index];
-        const LightmapEntity &element = m_params.elements[mesh_index];
+        const LightmapElement &element = m_params.elements[mesh_index];
 
         const Handle<Mesh> &mesh = element.mesh;
         AssertThrow(mesh.IsValid());
@@ -267,7 +268,7 @@ LightmapUVBuilder::Result LightmapUVBuilder::Build()
             };
         }
 
-        Mesh::SetStreamedMeshData_ThreadSafe(mesh, StreamedMeshData::FromMeshData(new_mesh_data));
+        mesh->SetStreamedMeshData(StreamedMeshData::FromMeshData(new_mesh_data));
     }
 
     xatlas::Destroy(atlas);

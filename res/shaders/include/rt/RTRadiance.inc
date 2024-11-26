@@ -5,8 +5,7 @@ struct RTRadianceUniforms
 {
     uint num_bound_lights;
     uint ray_offset; // for lightmapper
-    uint _pad1;
-    uint _pad2;
+    ivec2 output_image_resolution;
     uvec4 light_indices[4];
 };
 

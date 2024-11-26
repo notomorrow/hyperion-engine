@@ -6,6 +6,7 @@
 #include <core/Core.hpp>
 #include <core/ID.hpp>
 #include <core/ObjectPool.hpp>
+#include <core/memory/UniquePtr.hpp>
 
 namespace hyperion {
 
@@ -13,7 +14,13 @@ template <class T>
 class ObjectContainer;
 
 template <class T>
-static inline ObjectContainer<T> &GetContainer(UniquePtr<ObjectContainerBase> *allotted_container)
+struct Handle;
+
+template <class T>
+struct WeakHandle;
+
+template <class T>
+static inline ObjectContainer<T> &GetContainer(UniquePtr<ObjectContainerBase> &allotted_container)
 {
     return ObjectPool::template GetContainer<T>(allotted_container);
 }
@@ -36,6 +43,17 @@ struct HandleBase
     HandleBase &operator=(HandleBase &&other) noexcept  = default;
 };
 
+template <class T>
+HYP_FORCE_INLINE static auto GetContainer() -> std::conditional_t< implementation_exists<T>, ObjectContainer<T> *, ObjectContainerBase * >
+{
+    // If T is a defined type, we can use ObjectContainer<T> methods (ObjectContainer<T> is final, virtual calls can be optimized)
+    if constexpr (implementation_exists<T>) {
+        return reinterpret_cast<ObjectContainer<T> *>(Handle<T>::GetContainer_Internal());
+    } else {
+        return Handle<T>::GetContainer_Internal();
+    }
+}
+
 /*! \brief Definition of a handle for a type.
  *  \details In Hyperion, a handle is a reference to an instance of a specific core engine object type.
  *  These objects are managed by the ObjectPool and are reference counted.
@@ -50,19 +68,21 @@ struct Handle : HandleBase
 
     static_assert(has_opaque_handle_defined<T>, "Type does not support handles");
     
-    static ObjectContainer<T> *s_container;
+    static ObjectContainerBase *s_container;
 
-    static ObjectContainer<T> &GetContainer()
+    static ObjectContainerBase *GetContainer_Internal()
     {
         static struct Initializer
         {
             Initializer()
             {
-                s_container = &(ObjectPool::template GetContainer<T>(HandleDefinition<T>::GetAllottedContainerPointer()));
+                //s_container = &(ObjectPool::template GetContainer<T>(*HandleDefinition<T>::GetAllottedContainerPointer()));
+                s_container = HandleDefinition<T>::GetAllottedContainerPointer()->Get();
+                AssertThrow(s_container != nullptr);
             }
         } initializer;
 
-        return *s_container;
+        return s_container;
     }
 
     static const Handle empty;
@@ -75,7 +95,7 @@ struct Handle : HandleBase
         : HandleBase(id.Value())
     {
         if (index != 0) {
-            GetContainer().IncRefStrong(index - 1);
+            GetContainer<T>()->IncRefStrong(index - 1);
         }
     }
 
@@ -83,7 +103,7 @@ struct Handle : HandleBase
         : HandleBase(static_cast<const HandleBase &>(other))
     {
         if (index != 0) {
-            GetContainer().IncRefStrong(index - 1);
+            GetContainer<T>()->IncRefStrong(index - 1);
         }
     }
 
@@ -94,13 +114,13 @@ struct Handle : HandleBase
         }
 
         if (index != 0) {
-            GetContainer().DecRefStrong(index - 1);
+            GetContainer<T>()->DecRefStrong(index - 1);
         }
 
         index = other.index;
 
         if (index != 0) {
-            GetContainer().IncRefStrong(index - 1);
+            GetContainer<T>()->IncRefStrong(index - 1);
         }
 
         return *this;
@@ -119,7 +139,7 @@ struct Handle : HandleBase
         }
 
         if (index != 0) {
-            GetContainer().DecRefStrong(index - 1);
+            GetContainer<T>()->DecRefStrong(index - 1);
         }
 
         index = other.index;
@@ -131,7 +151,7 @@ struct Handle : HandleBase
     ~Handle()
     {
         if (index != 0) {
-            GetContainer().DecRefStrong(index - 1);
+            GetContainer<T>()->DecRefStrong(index - 1);
         }
     }
     
@@ -149,6 +169,9 @@ struct Handle : HandleBase
     
     HYP_FORCE_INLINE explicit operator bool() const
         { return IsValid(); }
+
+    HYP_FORCE_INLINE operator IDType() const
+        { return IDType(index); }
     
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
         { return !IsValid(); }
@@ -200,7 +223,7 @@ struct Handle : HandleBase
             return nullptr;
         }
 
-        return &GetContainer().Get(index - 1);
+        return static_cast<T *>(GetContainer<T>()->GetPointer(index - 1));
     }
     
     /*! \brief Reset the handle to an empty state.
@@ -209,10 +232,15 @@ struct Handle : HandleBase
     HYP_FORCE_INLINE void Reset()
     {
         if (index != 0) {
-            GetContainer().DecRefStrong(index - 1);
+            GetContainer<T>()->DecRefStrong(index - 1);
         }
 
         index = 0;
+    }
+
+    HYP_FORCE_INLINE WeakHandle<T> ToWeak() const
+    {
+        return WeakHandle<T>(*this);
     }
     
     static Name GetTypeName()
@@ -238,25 +266,8 @@ struct WeakHandle
     using IDType = ID<T>;
 
     static_assert(has_opaque_handle_defined<T>, "Type does not support handles");
-    
-    static ObjectContainer<T> *s_container;
 
-    static ObjectContainer<T> &GetContainer()
-    {
-        static struct Initializer
-        {
-            ObjectContainer<T> *ptr;
-
-            Initializer()
-                : ptr(nullptr)
-            {
-                WeakHandle<T>::s_container = &(ObjectPool::template GetContainer<T>(HandleDefinition<T>::GetAllottedContainerPointer()));
-                ptr = s_container;
-            }
-        } initializer;
-
-        return *s_container;
-    }
+    static const WeakHandle empty;
 
     /*! \brief The index of the object in the object pool's container for \ref{T} */
     uint index;
@@ -272,7 +283,7 @@ struct WeakHandle
         : index(id.Value())
     {
         if (index != 0) {
-            GetContainer().IncRefWeak(index - 1);
+            GetContainer<T>()->IncRefWeak(index - 1);
         }
     }
 
@@ -280,20 +291,20 @@ struct WeakHandle
         : index(other.index)
     {
         if (index != 0) {
-            GetContainer().IncRefWeak(index - 1);
+            GetContainer<T>()->IncRefWeak(index - 1);
         }
     }
 
     WeakHandle &operator=(const Handle<T> &other)
     {
         if (index != 0) {
-            GetContainer().DecRefWeak(index - 1);
+            GetContainer<T>()->DecRefWeak(index - 1);
         }
 
         index = other.index;
 
         if (index != 0) {
-            GetContainer().IncRefWeak(index - 1);
+            GetContainer<T>()->IncRefWeak(index - 1);
         }
 
         return *this;
@@ -303,20 +314,20 @@ struct WeakHandle
         : index(other.index)
     {
         if (index != 0) {
-            GetContainer().IncRefWeak(index - 1);
+            GetContainer<T>()->IncRefWeak(index - 1);
         }
     }
 
     WeakHandle &operator=(const WeakHandle &other)
     {
         if (index != 0) {
-            GetContainer().DecRefWeak(index - 1);
+            GetContainer<T>()->DecRefWeak(index - 1);
         }
 
         index = other.index;
 
         if (index != 0) {
-            GetContainer().IncRefWeak(index - 1);
+            GetContainer<T>()->IncRefWeak(index - 1);
         }
 
         return *this;
@@ -331,7 +342,7 @@ struct WeakHandle
     WeakHandle &operator=(WeakHandle &&other) noexcept
     {
         if (index != 0) {
-            GetContainer().DecRefWeak(index - 1);
+            GetContainer<T>()->DecRefWeak(index - 1);
         }
 
         index = other.index;
@@ -343,7 +354,7 @@ struct WeakHandle
     ~WeakHandle()
     {
         if (index != 0) {
-            GetContainer().DecRefWeak(index - 1);
+            GetContainer<T>()->DecRefWeak(index - 1);
         }
     }
 
@@ -356,9 +367,18 @@ struct WeakHandle
             return Handle<T>();
         }
 
-        return GetContainer().GetObjectBytes(index - 1).GetRefCountStrong() != 0
+        return GetContainer<T>()->GetObjectBytes(index - 1).GetRefCountStrong() != 0
             ? Handle<T>(IDType { index })
             : Handle<T>();
+    }
+
+    HYP_FORCE_INLINE T *GetUnsafe() const
+    {
+        if (index == 0) {
+            return nullptr;
+        }
+
+        return &GetContainer<T>()->Get(index - 1);
     }
     
     HYP_FORCE_INLINE bool operator!() const
@@ -366,6 +386,9 @@ struct WeakHandle
     
     HYP_FORCE_INLINE explicit operator bool() const
         { return IsValid(); }
+
+    HYP_FORCE_INLINE operator IDType() const
+        { return IDType(index); }
     
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
         { return !IsValid(); }
@@ -414,7 +437,7 @@ struct WeakHandle
     void Reset()
     {
         if (index != 0) {
-            GetContainer().DecRefWeak(index - 1);
+            GetContainer<T>()->DecRefWeak(index - 1);
         }
 
         index = 0;
@@ -565,10 +588,13 @@ template <class T>
 const Handle<T> Handle<T>::empty = { };
 
 template <class T>
-ObjectContainer<T> *Handle<T>::s_container = nullptr;
+const WeakHandle<T> WeakHandle<T>::empty = { };
 
 template <class T>
-ObjectContainer<T> *WeakHandle<T>::s_container = nullptr;
+ObjectContainerBase *Handle<T>::s_container = nullptr;
+
+//template <class T>
+//ObjectContainerBase *WeakHandle<T>::s_container = nullptr;
 
 #define DEF_HANDLE(T, _max_size) \
     class T; \
