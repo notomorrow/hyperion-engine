@@ -1,22 +1,22 @@
 {
   "rendering": {
     "ssr": {
-      "enabled": false,
       "quality": "low",
       "roughness_scattering": true,
+      "enabled": false,
       "cone_tracing": true
     },
     "rt": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "path_tracer": {
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": true
