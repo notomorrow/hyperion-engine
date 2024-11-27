@@ -57,7 +57,7 @@ struct Light
     vec4    normal;                 // for area lights
 
     vec2    spot_angles;            // for spot lights (x = outer, y = inner)
-    uint    material_id;            // for area lights - ~0u == no material
+    uint    material_index;            // for area lights - ~0u == no material
     uint    _pad2;
 
     uvec4   _pad3;
