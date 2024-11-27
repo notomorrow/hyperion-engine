@@ -180,7 +180,12 @@ void main()
     vec4 material_color = vec4(1.0);
 
     const uint32_t material_index = mesh_description.material_index;
-    const Material material = materials[material_index];
+
+    Material material;
+
+    if (material_index != ~0u) {
+        material = materials[material_index];
+    }
 
     const uint32_t entity_index = mesh_description.entity_index;
     const Object entity = entities[entity_index];
