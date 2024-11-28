@@ -72,8 +72,8 @@ namespace FooBar
             world.StartSimulating();
 
 
-            // temp testing
-            var testDataSource = new TestDataSource();
+            // // temp testing
+            // var testDataSource = new TestDataSource();
 
             var testUIButton = new UIButton();
             testUIButton.SetName(new Name("Test Button"));
