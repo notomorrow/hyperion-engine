@@ -11,40 +11,7 @@ namespace FooBar
 
     }
 
-    public class TestCustomEditorAction : IEditorAction
-    {
-        private Name name;
-        private Action execute;
-        private Action revert;
-
-        public TestCustomEditorAction(Name name, Action execute, Action revert) : base()
-        {
-            this.name = name;
-            this.execute = execute;
-            this.revert = revert;
-        }
-
-        public override Name GetName()
-        {
-            return name;
-        }
-
-        public override void Execute()
-        {
-            Logger.Log(LogType.Info, "TestCustomEditorAction.Execute()");
-
-            execute();
-        }
-
-        public override void Revert()
-        {
-            Logger.Log(LogType.Info, "TestCustomEditorAction.Revert()");
-
-            revert();
-        }
-    }
-
-    public class TestUIScript : UIEventHandler
+    public class EditorMain : UIEventHandler
     {
         public override void Init(Entity entity)
         {
@@ -72,8 +39,8 @@ namespace FooBar
             world.StartSimulating();
 
 
-            // temp testing
-            var testDataSource = new TestDataSource();
+            // // temp testing
+            // var testDataSource = new TestDataSource();
 
             var testUIButton = new UIButton();
             testUIButton.SetName(new Name("Test Button"));
@@ -158,8 +125,6 @@ namespace FooBar
 
             EntityManager entityManager = mainScene.GetEntityManager();
 
-            // node.SetEntity(entityManager.AddEntity());
-
             var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
 
             if (editorSubsystem == null)
@@ -171,19 +136,15 @@ namespace FooBar
             var node = new Node();
             node.SetName("New Node");
 
-            editorSubsystem.GetActionStack().Push(new TestCustomEditorAction(
+            editorSubsystem.GetActionStack().Push(new EditorAction(
                 new Name("AddNewNode"),
                 () =>
                 {
-                    Logger.Log(LogType.Info, "TestCustomEditorAction.Execute()");
-
                     mainScene.GetRoot().AddChild(node);
                     editorSubsystem.SetFocusedNode(node);
                 },
                 () =>
                 {
-                    Logger.Log(LogType.Info, "TestCustomEditorAction.Revert()");
-
                     node.Remove();
                 }
             ));

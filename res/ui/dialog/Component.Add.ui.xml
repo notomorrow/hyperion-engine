@@ -11,7 +11,7 @@
 
         <GridRow size="100% fill">
             <GridColumn>
-                <Script assembly="GameName.UI.dll" class="AddComponent" />
+                <Script assembly="Hyperion.Editor.UI.dll" class="AddComponent" />
                 <Grid name="Window_Footer_Grid">
                     <GridRow>
                         <GridColumn>
