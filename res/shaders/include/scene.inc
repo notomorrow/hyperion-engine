@@ -33,7 +33,7 @@ struct Camera
     float near;
     float far;
     float fov;
-    float _pad0;
+    uint  id;
 
     vec4 _pad1; vec4 _pad2; vec4 _pad3;
 

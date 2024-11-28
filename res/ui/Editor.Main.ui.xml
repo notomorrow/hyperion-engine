@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Panel name="Main_Panel" position="0 0" size="100%">
-    <Script assembly="GameName.UI.dll" class="TestUIScript" />
+    <Script assembly="Hyperion.Editor.UI.dll" class="EditorMain" />
     <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" textSize="12" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New"></MenuItem>
@@ -55,7 +55,7 @@
         <Panel name="Bottom_Panel" size="100% 200"  padding="5 5" side="bottom">
             <TabView name="Bottom_Panel_TabView" size="100%">
                 <Tab name="Assets_Tab" text="Assets">
-                    <Script assembly="GameName.UI.dll" class="ContentBrowser" />
+                    <Script assembly="Hyperion.Editor.UI.dll" class="ContentBrowser" />
                     <Panel size="100% 35" padding="0 2">
                         <Button size="50 fill" onclick="ImportContentClicked">
                             Import
