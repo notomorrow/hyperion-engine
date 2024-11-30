@@ -19,6 +19,13 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "../include/material.inc"
 #include "../include/object.inc"
 #include "../include/UIObject.glsl"
+#include "../include/scene.inc"
+
+// temp
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
+{
+    Camera camera;
+};
 
 HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
 {
