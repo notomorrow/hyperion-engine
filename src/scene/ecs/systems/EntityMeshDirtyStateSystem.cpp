@@ -3,11 +3,14 @@
 #include <scene/ecs/systems/EntityMeshDirtyStateSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
+#include <rendering/Material.hpp>
+#include <rendering/Mesh.hpp>
+
 #include <rendering/backend/RenderCommand.hpp>
 
 namespace hyperion {
 
-void EntityMeshDirtyStateSystem::OnEntityAdded(ID<Entity> entity)
+void EntityMeshDirtyStateSystem::OnEntityAdded(const Handle<Entity> &entity)
 {
     SystemBase::OnEntityAdded(entity);
 

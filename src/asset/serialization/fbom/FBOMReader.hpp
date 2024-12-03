@@ -133,7 +133,7 @@ private:
         }
     }
 
-    bool HasMarshalForType(const FBOMType &type) const;
+    FBOMMarshalerBase *GetMarshalForType(const FBOMType &type) const;
 
     FBOMResult RequestExternalObject(UUID library_id, uint32 index, FBOMObject &out_object);
 
@@ -175,7 +175,7 @@ private:
 
     FBOMResult Handle(BufferedReader *, FBOMCommand, FBOMObject *root);
 
-public: // temp
+public:
     FBOMReaderConfig        m_config;
 
     bool                    m_in_static_data;

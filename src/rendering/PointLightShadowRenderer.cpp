@@ -2,8 +2,10 @@
 
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/Light.hpp>
+#include <rendering/EnvProbe.hpp>
+
+#include <rendering/backend/RendererFeatures.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -17,8 +19,8 @@ namespace hyperion {
 PointLightShadowRenderer::PointLightShadowRenderer(
     Name name,
     Handle<Light> light,
-    const Extent2D &extent
-) : RenderComponent(name),
+    const Vec2u &extent
+) : RenderComponentBase(name),
     m_light(std::move(light)),
     m_extent(extent)
 {
@@ -89,7 +91,7 @@ void PointLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 void PointLightShadowRenderer::OnRender(Frame *frame)
 {
     HYP_SCOPE;
-    
+
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (!m_env_probe.IsValid() || !m_light.IsValid()) {
@@ -98,7 +100,9 @@ void PointLightShadowRenderer::OnRender(Frame *frame)
         return;
     }
 
-    if (m_light->GetProxy().visibility_bits & (1ull << SizeType(GetParent()->GetScene()->GetCamera().GetID().ToIndex()))) {
+    LightRenderResources &light_render_resources = m_light->GetRenderResources();
+
+    if (light_render_resources.GetVisibilityBits().Test(GetParent()->GetScene()->GetCamera().GetID().ToIndex())) {
         if (!m_last_visibility_state) {
             g_engine->GetRenderState().BindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
 

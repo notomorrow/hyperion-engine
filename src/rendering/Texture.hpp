@@ -4,7 +4,6 @@
 #define HYPERION_TEXTURE_HPP
 
 #include <core/Base.hpp>
-#include <core/Handle.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 
@@ -31,11 +30,11 @@
 namespace hyperion {
 
 HYP_CLASS()
-class HYP_API Texture : public BasicObject<Texture>
+class HYP_API Texture : public HypObject<Texture>
 {
     HYP_OBJECT_BODY(Texture);
 
-    HYP_PROPERTY(ID, &Texture::GetID);
+    HYP_PROPERTY(ID, &Texture::GetID, { { "serialize", false } });
 
 public:
     static const FixedArray<Pair<Vec3f, Vec3f>, 6> cubemap_directions;
@@ -108,6 +107,9 @@ public:
     HYP_FORCE_INLINE FilterMode GetMagFilterMode() const
         { return GetTextureDesc().filter_mode_mag; }
 
+    HYP_FORCE_INLINE bool HasMipmaps() const
+        { return m_image->HasMipmaps(); }
+
     HYP_FORCE_INLINE WrapMode GetWrapMode() const
         { return GetTextureDesc().wrap_mode; }
     
@@ -135,7 +137,7 @@ class HYP_API Texture2D : public Texture
 {
 public:
     Texture2D(
-        Extent2D extent,
+        const Vec2u &extent,
         InternalFormat format,
         FilterMode filter_mode,
         WrapMode wrap_mode
@@ -144,7 +146,7 @@ public:
             {
                 ImageType::TEXTURE_TYPE_2D,
                 format,
-                Vec3u { extent.width, extent.height, 1 },
+                Vec3u { extent.x, extent.y, 1 },
                 filter_mode,
                 filter_mode,
                 wrap_mode
@@ -154,14 +156,14 @@ public:
     }
 
     Texture2D(
-        Extent2D extent,
+        const Vec2u &extent,
         InternalFormat format
     ) : Texture(
             TextureDesc
             {
                 ImageType::TEXTURE_TYPE_2D,
                 format,
-                Vec3u { extent.width, extent.height, 1 }
+                Vec3u { extent.x, extent.y, 1 }
             }
         )
     {

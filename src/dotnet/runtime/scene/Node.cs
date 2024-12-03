@@ -3,29 +3,20 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    // Care must be taken to ensure this object is disposed of properly
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct ManagedNode
+    [Flags]
+    [HypClassBinding(Name="NodeFlags")]
+    public enum NodeFlags : uint
     {
-        internal IntPtr refPtr;
+        None = 0x0,
 
-        public bool IsValid
-        {
-            get
-            {
-                return refPtr != IntPtr.Zero;
-            }
-        }
+        IgnoreParentTranslation = 0x1,
+        IgnoreParentScale = 0x2,
+        IgnoreParentRotation = 0x4,
+        IgnoreParentTransform = IgnoreParentTranslation | IgnoreParentScale | IgnoreParentRotation,
 
-        public void Free()
-        {
-            ManagedNode_Dispose(this);
+        ExcludeFromParentAABB = 0x8,
 
-            refPtr = IntPtr.Zero;
-        }
-
-        [DllImport("hyperion", EntryPoint = "ManagedNode_Dispose")]
-        private static extern void ManagedNode_Dispose(ManagedNode managed_node);
+        HideInSceneOutline = 0x100 // Should this node be hidden in the editor's outline window?
     }
 
     [HypClassBinding(Name="Node")]

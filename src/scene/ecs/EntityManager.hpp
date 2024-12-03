@@ -17,6 +17,7 @@
 
 #include <core/threading/Mutex.hpp>
 #include <core/threading/Threads.hpp>
+#include <core/threading/Task.hpp>
 #include <core/threading/DataRaceDetector.hpp>
 
 #include <core/utilities/Tuple.hpp>
@@ -39,7 +40,7 @@
 namespace hyperion {
 
 namespace threading {
-struct TaskBatch;
+class TaskBatch;
 } // namespace threading
 
 using threading::TaskBatch;
@@ -191,7 +192,7 @@ struct EntityListener
 
     EntityListener()                                        = default;
 
-    EntityListener(Proc<void, ID<Entity>> &&on_entity_added, Proc<void, ID<Entity>> &&on_entity_removed)
+    EntityListener(Proc<void, const Handle<Entity> &> &&on_entity_added, Proc<void, ID<Entity>> &&on_entity_removed)
         : on_entity_added(std::move(on_entity_added)),
           on_entity_removed(std::move(on_entity_removed))
     {
@@ -203,20 +204,20 @@ struct EntityListener
     EntityListener &operator=(EntityListener &&) noexcept   = default;
     ~EntityListener()                                       = default;
 
-    Proc<void, ID<Entity>> on_entity_added;
-    Proc<void, ID<Entity>> on_entity_removed;
+    Proc<void, const Handle<Entity> &>  on_entity_added;
+    Proc<void, ID<Entity>>              on_entity_removed;
 
-    void OnEntityAdded(ID<Entity> id)
+    void OnEntityAdded(const Handle<Entity> &entity)
     {
         if (on_entity_added) {
-            on_entity_added(id);
+            on_entity_added(entity);
         }
     }
 
-    void OnEntityRemoved(ID<Entity> id)
+    void OnEntityRemoved(ID<Entity> entity_id)
     {
         if (on_entity_removed) {
-            on_entity_removed(id);
+            on_entity_removed(entity_id);
         }
     }
 };
@@ -280,21 +281,21 @@ public:
         m_map.Set(entity, entity_manager);
     }
 
-    HYP_FORCE_INLINE void Remove(ID<Entity> entity)
+    HYP_FORCE_INLINE void Remove(ID<Entity> id)
     {
         Mutex::Guard guard(m_mutex);
 
-        const auto it = m_map.Find(entity);
+        const auto it = m_map.FindAs(id);
         AssertThrowMsg(it != m_map.End(), "Entity -> EntityManager mapping does not exist!");
 
         m_map.Erase(it);
     }
 
-    HYP_FORCE_INLINE EntityManager *GetEntityManager(ID<Entity> entity) const
+    HYP_FORCE_INLINE EntityManager *GetEntityManager(ID<Entity> id) const
     {
         Mutex::Guard guard(m_mutex);
 
-        const auto it = m_map.Find(entity);
+        const auto it = m_map.FindAs(id);
 
         if (it == m_map.End()) {
             return nullptr;
@@ -315,27 +316,27 @@ public:
             }
         }
 
-        for (ID<Entity> entity : keys_to_remove) {
+        for (const ID<Entity> &entity : keys_to_remove) {
             m_map.Erase(entity);
         }
     }
 
-    HYP_FORCE_INLINE void Remap(ID<Entity> entity, EntityManager *new_entity_manager)
+    HYP_FORCE_INLINE void Remap(ID<Entity> id, EntityManager *new_entity_manager)
     {
         Mutex::Guard guard(m_mutex);
 
-        const auto it = m_map.Find(entity);
+        const auto it = m_map.FindAs(id);
         AssertThrowMsg(it != m_map.End(), "Entity -> EntityManager mapping does not exist!");
 
         it->second = new_entity_manager;
     }
 
+    HYP_API Task<bool> PerformActionWithEntity(ID<Entity> id, void(*callback)(EntityManager *entity_manager, ID<Entity> id));
+
 private:
     HashMap<ID<Entity>, EntityManager *>    m_map;
     mutable Mutex                           m_mutex;
 };
-
-// @TODO Refactor to use Handle<Entity> instead of ID<Entity> so the entities are ref counted
 
 HYP_CLASS()
 class HYP_API EntityManager : public EnableRefCountedPtrFromThis<EntityManager>
@@ -343,6 +344,11 @@ class HYP_API EntityManager : public EnableRefCountedPtrFromThis<EntityManager>
     static EntityToEntityManagerMap s_entity_to_entity_manager_map;
 
     HYP_OBJECT_BODY(EntityManager);
+
+    friend class EntityToEntityManagerMap;
+
+    // Allow Entity destructor to call RemoveEntity().
+    friend class Entity;
 
 public:
     static constexpr ComponentID invalid_component_id = 0;
@@ -399,20 +405,15 @@ public:
     HYP_FORCE_INLINE const EntityManagerCommandQueue &GetCommandQueue() const
         { return m_command_queue; }
 
+    HYP_FORCE_INLINE const EntityContainer &GetEntities() const
+        { return m_entities; }
+
     /*! \brief Adds a new entity to the EntityManager.
      *  \note Must be called from the owner thread.
      *
-     *  \return The Entity that was added.
-     */
-    HYP_NODISCARD ID<Entity> AddEntity();
-
-    /*! \brief Removes an entity from the EntityManager.
-     *
-     *  \param[in] id The Entity to remove.
-     *
-     *  \return True if the entity was removed, false otherwise.
-     */
-    bool RemoveEntity(ID<Entity> id);
+     *  \return The Entity that was added. */
+    HYP_METHOD()
+    HYP_NODISCARD Handle<Entity> AddEntity();
 
     /*! \brief Moves an entity from one EntityManager to another.
      *  This is useful for moving entities between scenes.
@@ -421,7 +422,7 @@ public:
      *  \param[in] entity The Entity to move.
      *  \param[in] other The EntityManager to move the entity to.
      */
-    void MoveEntity(ID<Entity> entity, EntityManager &other);
+    void MoveEntity(const Handle<Entity> &entity, EntityManager &other);
     
     HYP_FORCE_INLINE bool HasEntity(ID<Entity> entity) const
     {
@@ -653,7 +654,7 @@ public:
     }
 
     template <class Component, class U = Component>
-    ComponentID AddComponent(ID<Entity> entity, U &&component)
+    Component &AddComponent(ID<Entity> entity, U &&component)
     {
         EnsureValidComponentType<Component>();
 
@@ -670,10 +671,9 @@ public:
         AssertThrowMsg(component_it == it->second.components.End(), "Entity already has component of type %s", TypeNameWithoutNamespace<Component>().Data());
 
         const TypeID component_type_id = TypeID::ForType<Component>();
-        const ComponentID component_id = GetContainer<Component>().AddComponent(std::move(component));
+        const Pair<ComponentID, Component &> component_insert_result = GetContainer<Component>().AddComponent(std::move(component));
 
-        auto components_insert_result = it->second.components.Set<Component>(component_id);
-        component_it = components_insert_result.first;
+        it->second.components.Set<Component>(component_insert_result.first);
 
         { // Lock the entity sets mutex
             Mutex::Guard entity_sets_guard(m_entity_sets_mutex);
@@ -692,11 +692,11 @@ public:
 
         // Notify systems that entity is being added to them
         NotifySystemsOfEntityAdded(entity, it->second.components);
-
-        return component_id;
+        
+        return component_insert_result.second;
     }
 
-    ComponentID AddComponent(ID<Entity> entity, AnyRef component)
+    void AddComponent(ID<Entity> entity, AnyRef component)
     {
         const TypeID component_type_id = component.GetTypeID();
 
@@ -719,8 +719,7 @@ public:
 
         const ComponentID component_id = container->AddComponent(component);
 
-        auto components_insert_result = it->second.components.Set(component.GetTypeID(), component_id);
-        component_it = components_insert_result.first;
+        it->second.components.Set(component.GetTypeID(), component_id);
 
         { // Lock the entity sets mutex
             Mutex::Guard entity_sets_guard(m_entity_sets_mutex);
@@ -739,8 +738,6 @@ public:
 
         // Notify systems that entity is being added to them
         NotifySystemsOfEntityAdded(entity, it->second.components);
-
-        return component_id;
     }
 
     template <class Component>
@@ -815,17 +812,19 @@ public:
 
             entity_sets_it = entity_sets_insert_result.first;
 
-            // Make sure the element exists in m_component_entity_sets
-            for (TypeID component_type_id : { TypeID::ForType<Components>()... }) {
-                auto component_entity_sets_it = m_component_entity_sets.Find(component_type_id);
+            if constexpr (sizeof...(Components) > 0) {
+                // Make sure the element exists in m_component_entity_sets
+                for (TypeID component_type_id : { TypeID::ForType<Components>()... }) {
+                    auto component_entity_sets_it = m_component_entity_sets.Find(component_type_id);
 
-                if (component_entity_sets_it == m_component_entity_sets.End()) {
-                    auto component_entity_sets_insert_result = m_component_entity_sets.Set(component_type_id, { });
+                    if (component_entity_sets_it == m_component_entity_sets.End()) {
+                        auto component_entity_sets_insert_result = m_component_entity_sets.Set(component_type_id, { });
 
-                    component_entity_sets_it = component_entity_sets_insert_result.first;
+                        component_entity_sets_it = component_entity_sets_insert_result.first;
+                    }
+
+                    component_entity_sets_it->second.Insert(type_id);
                 }
-
-                component_entity_sets_it->second.Insert(type_id);
             }
         }
 
@@ -932,8 +931,16 @@ private:
         return ptr;
     }
 
-    void NotifySystemsOfEntityAdded(ID<Entity> id, const TypeMap<ComponentID> &component_ids);
-    void NotifySystemsOfEntityRemoved(ID<Entity> id, const TypeMap<ComponentID> &component_ids);
+    void NotifySystemsOfEntityAdded(ID<Entity> entity, const TypeMap<ComponentID> &component_ids);
+    void NotifySystemsOfEntityRemoved(ID<Entity> entity, const TypeMap<ComponentID> &component_ids);
+
+    /*! \brief Removes an entity from the EntityManager.
+     *
+     *  \param[in] id The Entity to remove.
+     *
+     *  \return True if the entity was removed, false otherwise.
+     */
+    bool RemoveEntity(ID<Entity> id);
 
     ThreadMask                                                              m_owner_thread_mask;
     Scene                                                                   *m_scene;

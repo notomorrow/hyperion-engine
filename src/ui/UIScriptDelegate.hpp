@@ -10,7 +10,6 @@
 
 #include <scene/Scene.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
-#include <scene/ecs/EntityManager.hpp>
 
 #include <Types.hpp>
 
@@ -99,7 +98,7 @@ public:
                     return UIEventHandlerResult::OK;
                 }
 
-                return script_component->object->InvokeMethod<UIEventHandlerResult>(method_ptr);
+                return script_component->object->InvokeMethod<UIEventHandlerResult>(method_ptr, std::forward<Args>(args)...);
             }
 
             return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Unknown error; method missing on class"));

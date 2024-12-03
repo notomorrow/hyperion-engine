@@ -3,17 +3,20 @@
 #ifndef HYP_FONT_FONTGLYPH_HPP
 #define HYP_FONT_FONTGLYPH_HPP
 
+#include <core/Handle.hpp>
+
 #include <rendering/font/FontEngine.hpp>
 #include <rendering/font/FontFace.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/Texture.hpp>
 
 namespace hyperion {
 
+class Texture;
+
 struct GlyphImageData
 {
-    Extent2D    dimensions;
+    Vec2i       dimensions;
     ByteBuffer  byte_buffer;
 
     HYP_API Handle<Texture> CreateTexture() const;
@@ -49,21 +52,17 @@ public:
 
     ~Glyph()                                    = default;
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    Metrics GetMetrics() const
+    HYP_FORCE_INLINE const Metrics &GetMetrics() const
         { return m_metrics; }
 
-    [[nodiscard]]
-    HYP_FORCE_INLINE
-    const GlyphImageData &GetImageData() const
+    HYP_FORCE_INLINE const GlyphImageData &GetImageData() const
         { return m_glyph_image_data; }
 
     HYP_API void LoadMetrics();
     HYP_API void Render();
 
-    HYP_API Extent2D GetMax();
-    HYP_API Extent2D GetMin();
+    HYP_API Vec2i GetMax();
+    HYP_API Vec2i GetMin();
 
 private:
     RC<FontFace>            m_face;

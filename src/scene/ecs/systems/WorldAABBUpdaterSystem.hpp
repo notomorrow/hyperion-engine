@@ -7,7 +7,6 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
-#include <rendering/RenderProxy.hpp>
 
 namespace hyperion {
 
@@ -26,7 +25,7 @@ public:
 
     virtual ~WorldAABBUpdaterSystem() override = default;
 
-    virtual void OnEntityAdded(ID<Entity> entity) override;
+    virtual void OnEntityAdded(const Handle<Entity> &entity) override;
     virtual void OnEntityRemoved(ID<Entity> entity) override;
 
     virtual void Process(GameCounter::TickUnit delta) override;

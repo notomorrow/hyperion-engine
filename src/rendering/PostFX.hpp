@@ -9,7 +9,6 @@
 #include <rendering/Shader.hpp>
 #include <rendering/Mesh.hpp>
 #include <rendering/FullScreenPass.hpp>
-#include <rendering/Buffers.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -21,6 +20,15 @@
 namespace hyperion {
 
 class Engine;
+
+struct alignas(16) PostProcessingUniforms
+{
+    Vec2u   effect_counts; // pre, post
+    Vec2u   last_enabled_indices; // pre, post
+    Vec2u   masks; // pre, post
+};
+
+static_assert(sizeof(PostProcessingUniforms) == 32);
 
 enum PostProcessingStage
 {
@@ -65,7 +73,7 @@ protected:
     uint                m_effect_index;
 };
 
-class HYP_API PostProcessingEffect : public BasicObject<PostProcessingEffect>
+class HYP_API PostProcessingEffect
 {
 public:
     PostProcessingEffect(
@@ -89,7 +97,7 @@ public:
     PostProcessingStage GetStage() const
         { return m_pass.GetStage(); }
 
-    uint GetEffectIndex() const
+    uint32 GetEffectIndex() const
         { return m_pass.GetEffectIndex(); }
 
     bool IsEnabled() const
@@ -211,11 +219,11 @@ private:
 
     FixedArray<TypeMap<UniquePtr<PostProcessingEffect>>, 2> m_effects; // only touch from render thread
     FixedArray<TypeMap<UniquePtr<PostProcessingEffect>>, 2> m_effects_pending_addition;
-    FixedArray<FlatSet<TypeID>, 2> m_effects_pending_removal;
-    std::mutex m_effects_mutex;
-    AtomicVar<bool> m_effects_updated { false };
+    FixedArray<FlatSet<TypeID>, 2>                          m_effects_pending_removal;
+    std::mutex                                              m_effects_mutex;
+    AtomicVar<bool>                                         m_effects_updated { false };
 
-    GPUBufferRef m_uniform_buffer;
+    GPUBufferRef                                            m_uniform_buffer;
 };
 
 } // namespace hyperion

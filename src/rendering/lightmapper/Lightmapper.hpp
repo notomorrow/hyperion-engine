@@ -7,6 +7,7 @@
 
 #include <core/containers/Queue.hpp>
 #include <core/containers/LinkedList.hpp>
+#include <core/containers/HeapArray.hpp>
 
 #include <core/threading/Mutex.hpp>
 #include <core/threading/AtomicVar.hpp>
@@ -143,8 +144,8 @@ struct LightmapJobParams
 {
     LightmapTraceMode                                   trace_mode;
     Handle<Scene>                                       scene;
-    Span<LightmapEntity>                                entities_view;
-    HashMap<ID<Entity>, LightmapEntity *>               *all_entities_map;
+    Span<LightmapElement>                               elements_view;
+    HashMap<Handle<Entity>, LightmapElement *>          *all_elements_map;
     Variant<LightmapJobCPUParams, LightmapJobGPUParams> params;
 };
 
@@ -167,9 +168,6 @@ public:
 
     HYP_FORCE_INLINE const UUID &GetUUID() const
         { return m_uuid; }
-    
-    HYP_FORCE_INLINE LightmapUVMap &GetUVMap()
-        { return m_uv_map; }
 
     HYP_FORCE_INLINE const LightmapUVMap &GetUVMap() const
         { return m_uv_map; }
@@ -177,8 +175,8 @@ public:
     HYP_FORCE_INLINE Scene *GetScene() const
         { return m_params.scene.Get(); }
 
-    HYP_FORCE_INLINE Span<LightmapEntity> GetEntities() const
-        { return m_params.entities_view; }
+    HYP_FORCE_INLINE Span<LightmapElement> GetElements() const
+        { return m_params.elements_view; }
 
     HYP_FORCE_INLINE uint32 GetTexelIndex() const
         { return m_texel_index; }
@@ -225,9 +223,9 @@ private:
      *  \param rays The rays to trace.    
      */
     void TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShadingType shading_type);
-
-    void BuildUVMap();
     void TraceSingleRayOnCPU(const LightmapRay &ray, LightmapRayHitPayload &out_payload);
+
+    Optional<LightmapUVMap> BuildUVMap();
 
     HYP_FORCE_INLINE LightmapTopLevelAccelerationStructure *GetAccelerationStructure() const
     {
@@ -277,13 +275,15 @@ public:
 
 private:
     LightmapJobParams CreateLightmapJobParams(
-        SizeType lightmap_entities_index_start,
-        SizeType lightmap_entities_index_end,
+        SizeType start_index,
+        SizeType end_index,
         UniquePtr<LightmapTopLevelAccelerationStructure> &&acceleration_structure = nullptr
     );
 
     void AddJob(UniquePtr<LightmapJob> &&job)
     {
+        Mutex::Guard guard(m_queue_mutex);
+        
         m_queue.Push(std::move(job));
 
         m_num_jobs.Increment(1, MemoryOrder::RELEASE);
@@ -291,18 +291,19 @@ private:
 
     void HandleCompletedJob(LightmapJob *job);
 
-    LightmapTraceMode                       m_trace_mode;
+    LightmapTraceMode                           m_trace_mode;
 
-    Handle<Scene>                           m_scene;
+    Handle<Scene>                               m_scene;
 
-    RC<LightmapPathTracer>                  m_path_tracer_radiance;
-    RC<LightmapPathTracer>                  m_path_tracer_irradiance;
+    RC<LightmapPathTracer>                      m_path_tracer_radiance;
+    RC<LightmapPathTracer>                      m_path_tracer_irradiance;
 
-    Queue<UniquePtr<LightmapJob>>           m_queue;
-    AtomicVar<uint>                         m_num_jobs;
+    Queue<UniquePtr<LightmapJob>>               m_queue;
+    Mutex                                       m_queue_mutex;
+    AtomicVar<uint>                             m_num_jobs;
 
-    Array<LightmapEntity>                   m_lightmap_entities;
-    HashMap<ID<Entity>, LightmapEntity *>   m_all_entities_map;
+    Array<LightmapElement>                      m_lightmap_elements;
+    HashMap<Handle<Entity>, LightmapElement *>  m_all_elements_map;
 };
 
 } // namespace hyperion

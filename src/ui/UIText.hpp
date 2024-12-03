@@ -11,8 +11,6 @@
 #include <core/Handle.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/FullScreenPass.hpp>
-#include <rendering/Texture.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -38,6 +36,8 @@ class InputManager;
 
 namespace hyperion {
 
+class Texture;
+
 struct UITextOptions
 {
     float line_height = 1.0f;
@@ -50,24 +50,12 @@ struct UITextCharacter
     Vec2f   texcoord_end;
 };
 
-struct UITextRenderData
-{
-    Vec4f                   color;
-    Vec2i                   size;
-    BoundingBox             aabb;
-    Array<UITextCharacter>  characters;
-    RC<FontAtlas>           font_atlas;
-    Handle<Texture>         font_atlas_texture;
-};
-
 HYP_CLASS()
 class HYP_API UIText : public UIObject
 {
     HYP_OBJECT_BODY(UIText);
 
 public:
-    friend struct RenderCommand_UpdateUITextRenderData;
-
     UIText();
     UIText(const UIText &other)                 = delete;
     UIText &operator=(const UIText &other)      = delete;
@@ -107,8 +95,6 @@ public:
     HYP_FORCE_INLINE void SetOptions(const UITextOptions &options)
         { m_options = options; }
 
-    const RC<UITextRenderData> &GetRenderData() const;
-
     /*! \brief Overriden from UIObject to return false as text is not focusable
      * 
      * \return False */
@@ -128,10 +114,14 @@ protected:
 
     virtual void OnComputedVisibilityChange_Internal() override;
 
+    virtual void UpdateMeshData_Internal() override;
+
     virtual bool Repaint_Internal() override;
 
     void UpdateTextAABB();
     void UpdateRenderData();
+
+    virtual void Update_Internal(GameCounter::TickUnit delta) override;
 
     const RC<FontAtlas> &GetFontAtlasOrDefault() const;
 
@@ -147,9 +137,7 @@ private:
     BoundingBox             m_text_aabb_with_bearing;
     BoundingBox             m_text_aabb_without_bearing;
 
-    RC<UITextRenderData>    m_render_data;
-
-    Handle<Texture>         m_texture;
+    Handle<Texture>         m_current_font_atlas_texture;
 };
 
 } // namespace hyperion

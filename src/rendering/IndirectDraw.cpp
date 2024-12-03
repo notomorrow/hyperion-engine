@@ -5,12 +5,20 @@
 #include <rendering/Mesh.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
+#include <rendering/Scene.hpp>
+#include <rendering/Camera.hpp>
+#include <rendering/EnvGrid.hpp>
+#include <rendering/EnvProbe.hpp>
+#include <rendering/Deferred.hpp>
 
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
 #include <math/MathUtil.hpp>
+
+#include <util/profiling/ProfileScope.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -247,7 +255,7 @@ void IndirectDrawState::Destroy()
 
 void IndirectDrawState::PushDrawCall(const DrawCall &draw_call, DrawCommandData &out)
 {
-    // assume render thread
+    // assume render thread or render task thread
 
     out = { };
 
@@ -258,7 +266,7 @@ void IndirectDrawState::PushDrawCall(const DrawCall &draw_call, DrawCommandData 
             draw_call.entity_ids[index].Value(),
             draw_command_index,
             index,
-            draw_call.batch_index
+            draw_call.batch->batch_index
         });
     }
 
@@ -268,8 +276,7 @@ void IndirectDrawState::PushDrawCall(const DrawCall &draw_call, DrawCommandData 
         m_draw_commands.Resize(m_num_draw_commands);
     }
 
-    Handle<Mesh>::GetContainer().Get(draw_call.mesh_id.ToIndex())
-        .PopulateIndirectDrawCommand(m_draw_commands[draw_command_index]);
+    draw_call.mesh->PopulateIndirectDrawCommand(m_draw_commands[draw_command_index]);
     
     m_dirty_bits |= 0x3;
 }
@@ -357,9 +364,11 @@ void IndirectDrawState::UpdateBufferData(Frame *frame, bool *out_was_resized)
 
 #pragma region IndirectRenderer
 
-IndirectRenderer::IndirectRenderer()
-    : m_cached_cull_data_updated_bits(0x0)
+IndirectRenderer::IndirectRenderer(DrawCallCollection *draw_call_collection)
+    : m_draw_call_collection(draw_call_collection),
+      m_cached_cull_data_updated_bits(0x0)
 {
+    AssertThrow(m_draw_call_collection != nullptr);
 }
 
 IndirectRenderer::~IndirectRenderer() = default;
@@ -375,13 +384,32 @@ void IndirectRenderer::Create()
 
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
+    AssertThrow(m_draw_call_collection != nullptr);
+    AssertThrow(m_draw_call_collection->GetImpl() != nullptr);
+
+    GPUBufferHolderBase *entity_instance_batches = m_draw_call_collection->GetImpl()->GetEntityInstanceBatchHolder();
+    const SizeType batch_sizeof = m_draw_call_collection->GetImpl()->GetBatchSizeOf();
+
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
+        auto *entity_instance_batches_buffer_element = descriptor_set->GetLayout().GetElement(NAME("EntityInstanceBatchesBuffer"));
+        AssertThrow(entity_instance_batches_buffer_element != nullptr);
+
+        if (entity_instance_batches_buffer_element->size != ~0u) {
+            const SizeType entity_instance_batches_buffer_size = entity_instance_batches_buffer_element->size;
+            const SizeType size_mod = entity_instance_batches_buffer_size % batch_sizeof;
+            
+            AssertThrowMsg(size_mod == 0,
+                "EntityInstanceBatchesBuffer descriptor has size %llu but DrawCallCollection has batch struct size of %llu",
+                entity_instance_batches_buffer_size,
+                batch_sizeof);
+        }
+
         descriptor_set->SetElement(NAME("ObjectInstancesBuffer"), m_indirect_draw_state.GetInstanceBuffer(frame_index));
         descriptor_set->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirect_draw_state.GetIndirectBuffer(frame_index));
-        descriptor_set->SetElement(NAME("EntityInstanceBatchesBuffer"), g_engine->GetRenderData()->entity_instance_batches.GetBuffer(frame_index));
+        descriptor_set->SetElement(NAME("EntityInstanceBatchesBuffer"), entity_instance_batches->GetBuffer(frame_index));
     }
 
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
@@ -402,18 +430,36 @@ void IndirectRenderer::Destroy()
     m_indirect_draw_state.Destroy();
 }
 
+void IndirectRenderer::PushDrawCallsToIndirectState()
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
+
+    for (DrawCall &draw_call : m_draw_call_collection->GetDrawCalls()) {
+        DrawCommandData draw_command_data;
+        m_indirect_draw_state.PushDrawCall(draw_call, draw_command_data);
+
+        draw_call.draw_command_index = draw_command_data.draw_command_index;
+    }
+}
+
 void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &cull_data)
 {
+    HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
 
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    uint32 camera_index = camera_render_resources.GetBufferIndex();
+    AssertThrow(camera_index != ~0u);
+
     AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index).IsValid());
     AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index)->Size() != 0);
 
-    const uint num_instances = m_indirect_draw_state.GetInstances().Size();
-    const uint num_batches = (num_instances / IndirectDrawState::batch_size) + 1;
+    const SizeType num_instances = m_indirect_draw_state.GetInstances().Size();
+    const uint32 num_batches = (uint32(num_instances) / IndirectDrawState::batch_size) + 1;
 
     if (num_instances == 0) {
         return;
@@ -452,11 +498,10 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                    { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                    { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                    { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
                 }
             }
         }
@@ -484,7 +529,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
 
     m_object_visibility->Bind(command_buffer);
     
-    m_object_visibility->Dispatch(command_buffer, Extent3D { num_batches, 1, 1 });
+    m_object_visibility->Dispatch(command_buffer, Vec3u { num_batches, 1, 1 });
     
     m_indirect_draw_state.GetIndirectBuffer(frame_index)->InsertBarrier(
         frame->GetCommandBuffer(),
@@ -494,6 +539,8 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
 
 void IndirectRenderer::RebuildDescriptors(Frame *frame)
 {
+    HYP_SCOPE;
+    
     const uint frame_index = frame->GetFrameIndex();
 
     const DescriptorTableRef &descriptor_table = m_object_visibility->GetDescriptorTable();

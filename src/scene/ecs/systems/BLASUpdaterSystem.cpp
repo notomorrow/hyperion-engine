@@ -85,7 +85,7 @@ struct RENDER_COMMAND(RemoveBLASFromTLAS) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
-void BLASUpdaterSystem::OnEntityAdded(ID<Entity> entity)
+void BLASUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
 {
     SystemBase::OnEntityAdded(entity);
 
@@ -108,8 +108,8 @@ void BLASUpdaterSystem::OnEntityAdded(ID<Entity> entity)
     AccelerationGeometryRef geometry = MakeRenderObject<AccelerationGeometry>(
         mesh_component.mesh->BuildPackedVertices(),
         mesh_component.mesh->BuildPackedIndices(),
-        entity.ToIndex(),
-        mesh_component.material.GetID().ToIndex()
+        entity,
+        mesh_component.material
     );
 
     DeferCreate(geometry, g_engine->GetGPUDevice(), g_engine->GetGPUInstance());

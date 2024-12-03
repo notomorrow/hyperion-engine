@@ -4,7 +4,6 @@
 #define HYPERION_CORE_NAME_INTERNAL_HPP
 
 #include <core/containers/StaticString.hpp>
-#include <core/containers/HeapArray.hpp>
 #include <core/Defines.hpp>
 
 #include <HashCode.hpp>
@@ -71,7 +70,7 @@ struct Name
     {
     }
 
-    constexpr Name(NameID id)
+    constexpr explicit Name(NameID id)
         : hash_code(id)
     {
     }
@@ -144,7 +143,7 @@ struct WeakName
     {
     }
 
-    constexpr WeakName(NameID id)
+    constexpr explicit WeakName(NameID id)
         : hash_code(id)
     {
     }

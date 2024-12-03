@@ -18,6 +18,7 @@
 #include <core/object/HypObject.hpp>
 
 #include <core/Name.hpp>
+#include <core/Handle.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/NodeProxy.hpp>
@@ -38,7 +39,9 @@ namespace hyperion {
 
 class Engine;
 class Scene;
+class EditorDelegates;
 
+HYP_ENUM()
 enum NodeFlags : uint32
 {
     NONE                        = 0x0,
@@ -48,7 +51,11 @@ enum NodeFlags : uint32
     IGNORE_PARENT_ROTATION      = 0x4,
     IGNORE_PARENT_TRANSFORM     = IGNORE_PARENT_TRANSLATION | IGNORE_PARENT_SCALE | IGNORE_PARENT_ROTATION,
 
-    EXCLUDE_FROM_PARENT_AABB    = 0x8
+    EXCLUDE_FROM_PARENT_AABB    = 0x8,
+
+    TRANSIENT                   = 0x100, // Set if the node should not be serialized
+
+    HIDE_IN_SCENE_OUTLINE       = 0x1000 // Should this node be hidden in the editor's outline window?
 };
 
 HYP_MAKE_ENUM_FLAGS(NodeFlags)
@@ -176,6 +183,8 @@ class HYP_API Node : public EnableRefCountedPtrFromThis<Node>
     HYP_OBJECT_BODY(Node);
 
 public:
+    static const String s_unnamed_node_name;
+
 
 #ifdef HYP_EDITOR
     class EditorObservables
@@ -244,8 +253,8 @@ public:
 
     struct Delegates
     {
-        Delegate<void, const NodeProxy &, bool /* direct */> OnNestedNodeAdded;
-        Delegate<void, const NodeProxy &, bool /* direct */> OnNestedNodeRemoved;
+        Delegate<void, Node *, bool /* direct */> OnChildAdded;
+        Delegate<void, Node *, bool /* direct */> OnChildRemoved;
     };
 
     using NodeList = Array<NodeProxy>;
@@ -267,13 +276,13 @@ public:
 
     Node(
         const String &name,
-        ID<Entity> entity,
+        const Handle<Entity> &entity,
         const Transform &local_transform = Transform()
     );
 
     Node(
         const String &name,
-        ID<Entity> entity,
+        const Handle<Entity> &entity,
         const Transform &local_transform,
         Scene *scene
     );
@@ -285,8 +294,14 @@ public:
     ~Node();
 
     /*! \brief Get the UUID of the Node. */
+    HYP_METHOD(Property="UUID", Serialize=true, Editor=false, Label="UUID")
     HYP_FORCE_INLINE const UUID &GetUUID() const
         { return m_uuid; }
+
+    /*! \brief Set the UUID of the Node. For deserialization purposes only. */
+    HYP_METHOD(Property="UUID", Serialize=true, Editor=false)
+    HYP_FORCE_INLINE void SetUUID(const UUID &uuid)
+        { m_uuid = uuid; }
 
     /*! \returns The name that was given to the Node on creation. */
     HYP_METHOD(Property="Name", Serialize=true, Editor=true, Label="Name", Description="The name of the node.")
@@ -297,6 +312,9 @@ public:
     HYP_METHOD(Property="Name", Serialize=true, Editor=true)
     void SetName(const String &name);
 
+    HYP_METHOD()
+    bool HasName() const;
+
     /*! \returns The type of the node. By default, it will just be NODE. */
     HYP_METHOD(Property="Type")
     HYP_FORCE_INLINE Type GetType() const
@@ -304,16 +322,16 @@ public:
 
     /*! \brief Get the flags of the Node.
      *  \see NodeFlagBits
-     *  \returns The flags of the Node.
-    */
-    HYP_FORCE_INLINE NodeFlags GetFlags() const
+     *  \returns The flags of the Node. */
+    HYP_METHOD(Property="Flags", Serialize=true)
+    HYP_FORCE_INLINE EnumFlags<NodeFlags> GetFlags() const
         { return m_flags; }
 
     /*! \brief Set the flags of the Node.
      *  \see NodeFlagBits
      *  \param flags The flags to set on the Node. */
-    HYP_FORCE_INLINE void SetFlags(NodeFlags flags)
-        { m_flags = flags; }
+    HYP_METHOD(Property="Flags", Serialize=true)
+    void SetFlags(EnumFlags<NodeFlags> flags);
 
     HYP_METHOD(Property="Parent")
     HYP_FORCE_INLINE Node *GetParent() const
@@ -336,6 +354,10 @@ public:
     HYP_METHOD(Property="Scene")
     void SetScene(Scene *scene);
 
+    /*! \returns A pointer to the World this Node and its children are attached to. May be null. */
+    HYP_METHOD(Property="World")
+    World *GetWorld() const;
+
     /*! \brief \returns The underlying entity AABB for this node. */
     HYP_METHOD(Property="EntityAABB", Serialize=true, Editor=true, Label="Bounding Box", Description="The underlying axis-aligned bounding box for this node, not considering child nodes or transform")
     HYP_FORCE_INLINE const BoundingBox &GetEntityAABB() const
@@ -348,11 +370,11 @@ public:
     void SetEntityAABB(const BoundingBox &aabb);
 
     HYP_METHOD(Property="Entity", Serialize=true, Editor=true, Label="Entity", Description="The entity that this node is linked with.")
-    HYP_FORCE_INLINE ID<Entity> GetEntity() const
+    HYP_FORCE_INLINE const Handle<Entity> &GetEntity() const
         { return m_entity; }
 
     HYP_METHOD(Property="Entity", Serialize=true, Editor=true)
-    void SetEntity(ID<Entity> entity);
+    void SetEntity(const Handle<Entity> &entity);
 
     /*! \brief Add the Node as a child of this object, taking ownership over the given Node.
      *  \param node The Node to be added as achild of this Node
@@ -426,17 +448,11 @@ public:
     HYP_FORCE_INLINE const NodeList &GetChildren() const
         { return m_child_nodes; }
 
-    /*! \brief Get all descendent child Nodes from this Node. This vector is pre-calculated,
+    /*! \brief Get all descendant child Nodes from this Node. This vector is pre-calculated,
      * so no calculation happens when calling this method.
-     * \returns A vector of raw pointers to descendent Nodes */
-    HYP_FORCE_INLINE Array<NodeProxy> &GetDescendents()
-        { return m_descendents; }
-
-    /*! \brief Get all descendent child Nodes from this Node. This vector is pre-calculated,
-     * so no calculation happens when calling this method.
-     * \returns A vector of raw pointers to descendent Nodes */
-    HYP_FORCE_INLINE const Array<NodeProxy> &GetDescendents() const
-        { return m_descendents; }
+     * \returns A vector of raw pointers to descendant Nodes */
+    HYP_FORCE_INLINE const Array<Node *> &GetDescendants() const
+        { return m_descendants; }
 
     /*! \brief Set the local-space translation, scale, rotation of this Node (not influenced by the parent Node) */
     HYP_METHOD(Property="LocalTransform", Serialize=true, Editor=true, Label="Local-space Transform")
@@ -455,7 +471,7 @@ public:
     /*! \brief Set the local-space translation of this Node (not influenced by the parent Node) */
     HYP_METHOD()
     HYP_FORCE_INLINE void SetLocalTranslation(const Vec3f &translation)
-        { SetLocalTransform({translation, m_local_transform.GetScale(), m_local_transform.GetRotation()}); }
+        { SetLocalTransform(Transform { translation, m_local_transform.GetScale(), m_local_transform.GetRotation() }); }
 
     /*! \brief Move the Node in local-space by adding the given vector to the current local-space translation.
      * \param translation The vector to translate this Node by
@@ -472,7 +488,7 @@ public:
     /*! \brief Set the local-space scale of this Node (not influenced by the parent Node) */
     HYP_METHOD()
     HYP_FORCE_INLINE void SetLocalScale(const Vec3f &scale)
-        { SetLocalTransform({m_local_transform.GetTranslation(), scale, m_local_transform.GetRotation()}); }
+        { SetLocalTransform(Transform { m_local_transform.GetTranslation(), scale, m_local_transform.GetRotation() }); }
 
     /*! \brief Scale the Node in local-space by multiplying the current local-space scale by the given scale vector.
      * \param scale The vector to scale this Node by */
@@ -488,7 +504,7 @@ public:
     /*! \brief Set the local-space rotation of this Node (not influenced by the parent Node) */
     HYP_METHOD()
     HYP_FORCE_INLINE void SetLocalRotation(const Quaternion &rotation)
-        { SetLocalTransform(Transform(m_local_transform.GetTranslation(), m_local_transform.GetScale(), rotation)); }
+        { SetLocalTransform(Transform { m_local_transform.GetTranslation(), m_local_transform.GetScale(), rotation }); }
 
     /*! \brief Rotate the Node by multiplying the current local-space rotation by the given quaternion.
      * \param rotation The quaternion to rotate this Node by */
@@ -616,7 +632,7 @@ public:
     /*! \brief Update the world transform of the Node to reflect changes in the local transform and parent transform.
      *  This will update the TransformComponent of the entity if it exists. */
     HYP_METHOD()
-    void UpdateWorldTransform();
+    void UpdateWorldTransform(bool update_child_transforms = true);
 
     /*! \brief Calculate the depth of the Node relative to the root Node.
      * \returns The depth of the Node relative to the root Node. If the Node has no parent, 0 is returned. */
@@ -689,19 +705,23 @@ protected:
     Node(
         Type type,
         const String &name,
-        ID<Entity> entity,
+        const Handle<Entity> &entity,
         const Transform &local_transform = Transform(),
         Scene *scene = nullptr
     );
 
-    static Scene *GetDefaultScene();
+    Scene *GetDefaultScene();
 
     /*! \brief Refresh the transform of the entity attached to this Node. This will update the entity AABB to match,
      *  and will update the TransformComponent of the entity if it exists. */
     void RefreshEntityTransform();
 
-    void OnNestedNodeAdded(const NodeProxy &node, bool direct);
-    void OnNestedNodeRemoved(const NodeProxy &node, bool direct);
+    void OnNestedNodeAdded(Node *node, bool direct);
+    void OnNestedNodeRemoved(Node *node, bool direct);
+
+#ifdef HYP_EDITOR
+    EditorDelegates *GetEditorDelegates();
+#endif
 
     Type                        m_type = Type::NODE;
     EnumFlags<NodeFlags>        m_flags = NodeFlags::NONE;
@@ -712,13 +732,16 @@ protected:
     Transform                   m_world_transform;
     BoundingBox                 m_entity_aabb;
 
-    ID<Entity>                  m_entity;
+    Handle<Entity>              m_entity;
 
-    Array<NodeProxy>            m_descendents;
+    Array<Node *>               m_descendants;
 
     Scene                       *m_scene;
 
     bool                        m_transform_locked;
+
+    // has the transform been updated since the entity has been set or transform has been unlocked?
+    bool                        m_transform_changed;
 
     UniquePtr<Delegates>        m_delegates;
 

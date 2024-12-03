@@ -3,6 +3,7 @@
 #include <rendering/Texture.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/ShaderGlobals.hpp>
+#include <rendering/FullScreenPass.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -37,17 +38,17 @@ const FixedArray<Pair<Vec3f, Vec3f>, 6> Texture::cubemap_directions = {
 
 struct RENDER_COMMAND(CreateTexture) : renderer::RenderCommand
 {
-    ID<Texture>             id;
+    WeakHandle<Texture>     texture;
     renderer::ResourceState initial_state;
     ImageRef                image;
     ImageViewRef            image_view;
 
     RENDER_COMMAND(CreateTexture)(
-        ID<Texture> id,
+        const WeakHandle<Texture> &texture,
         renderer::ResourceState initial_state,
         ImageRef image,
         ImageViewRef image_view
-    ) : id(id),
+    ) : texture(texture),
         initial_state(initial_state),
         image(std::move(image)),
         image_view(std::move(image_view))
@@ -60,16 +61,18 @@ struct RENDER_COMMAND(CreateTexture) : renderer::RenderCommand
 
     virtual Result operator()() override
     {
-        if (!image->IsCreated()) {
-            HYPERION_BUBBLE_ERRORS(image->Create(g_engine->GetGPUDevice(), g_engine->GetGPUInstance(), initial_state));
-        }
+        if (Handle<Texture> texture_locked = texture.Lock()) {
+            if (!image->IsCreated()) {
+                HYPERION_BUBBLE_ERRORS(image->Create(g_engine->GetGPUDevice(), g_engine->GetGPUInstance(), initial_state));
+            }
 
-        if (!image_view->IsCreated()) {
-            HYPERION_BUBBLE_ERRORS(image_view->Create(g_engine->GetGPUInstance()->GetDevice(), image.Get()));
-        }
-        
-        if (g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
-            g_engine->GetRenderData()->textures.AddResource(id, image_view);
+            if (!image_view->IsCreated()) {
+                HYPERION_BUBBLE_ERRORS(image_view->Create(g_engine->GetGPUInstance()->GetDevice(), image.Get()));
+            }
+            
+            if (g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
+                g_engine->GetRenderData()->textures.AddResource(texture.GetID(), image_view);
+            }
         }
 
         HYPERION_RETURN_OK;
@@ -78,11 +81,10 @@ struct RENDER_COMMAND(CreateTexture) : renderer::RenderCommand
 
 struct RENDER_COMMAND(DestroyTexture) : renderer::RenderCommand
 {
-    ID<Texture>     id;
+    WeakHandle<Texture> texture;
 
-    RENDER_COMMAND(DestroyTexture)(
-        ID<Texture> id
-    ) : id(id)
+    RENDER_COMMAND(DestroyTexture)(const WeakHandle<Texture> &texture)
+        : texture(texture)
     {
     }
 
@@ -97,7 +99,7 @@ struct RENDER_COMMAND(DestroyTexture) : renderer::RenderCommand
         }
 
         if (g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()) {
-            g_engine->GetRenderData()->textures.RemoveResource(id);
+            g_engine->GetRenderData()->textures.RemoveResource(texture.GetID());
         }
 
         HYPERION_RETURN_OK;
@@ -166,22 +168,22 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
 
         commands.Push([this](const CommandBufferRef &command_buffer)
         {
-            const Extent3D extent = m_image->GetExtent();
+            const Vec3u extent = m_image->GetExtent();
 
-            uint32 mip_width = extent.width,
-                mip_height = extent.height;
+            uint32 mip_width = extent.x,
+                mip_height = extent.y;
 
             ImageRef &dst_image = m_image;
 
             for (uint mip_level = 0; mip_level < uint(m_mip_image_views.Size()); mip_level++) {
-                auto &pass = m_passes[mip_level];
+                RC<FullScreenPass> &pass = m_passes[mip_level];
                 AssertThrow(pass != nullptr);
 
                 const uint32 prev_mip_width = mip_width,
                     prev_mip_height = mip_height;
 
-                mip_width = MathUtil::Max(1u, extent.width >> (mip_level));
-                mip_height = MathUtil::Max(1u, extent.height >> (mip_level));
+                mip_width = MathUtil::Max(1u, extent.x >> (mip_level));
+                mip_height = MathUtil::Max(1u, extent.y >> (mip_level));
 
                 struct alignas(128)
                 {
@@ -286,12 +288,12 @@ public:
 
     void Create()
     {
-        const uint num_mip_levels = m_image->NumMipmaps();
+        const uint32 num_mip_levels = m_image->NumMipmaps();
 
         m_mip_image_views.Resize(num_mip_levels);
         m_passes.Resize(num_mip_levels);
 
-        const Extent3D extent = m_image->GetExtent();
+        const Vec3u extent = m_image->GetExtent();
 
         ShaderRef shader = g_shader_manager->GetOrCreate(
             NAME("GenerateMipmaps"),
@@ -303,8 +305,8 @@ public:
 
             DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-            const uint32 mip_width = MathUtil::Max(1u, extent.width >> mip_level);
-            const uint32 mip_height = MathUtil::Max(1u, extent.height >> mip_level);
+            const uint32 mip_width = MathUtil::Max(1u, extent.x >> mip_level);
+            const uint32 mip_height = MathUtil::Max(1u, extent.y >> mip_level);
 
             ImageViewRef mip_image_view = MakeRenderObject<ImageView>();
             PUSH_RENDER_COMMAND(CreateMipImageView, m_image, mip_image_view, mip_level);
@@ -321,7 +323,7 @@ public:
                     shader,
                     descriptor_table,
                     m_image->GetTextureFormat(),
-                    Extent2D { mip_width, mip_height }
+                    Vec2u { mip_width, mip_height }
                 );
 
                 pass->Create();
@@ -391,7 +393,7 @@ Texture::Texture(RC<StreamedTextureData> &&streamed_data)
 Texture::Texture(
     ImageRef image,
     ImageViewRef image_view
-) : BasicObject(),
+) : HypObject(),
     m_image(std::move(image)),
     m_image_view(std::move(image_view))
 {
@@ -406,7 +408,7 @@ Texture::Texture(
 
 Texture::Texture(
     Image &&image
-) : BasicObject(),
+) : HypObject(),
     m_image(MakeRenderObject<Image>(std::move(image))),
     m_image_view(MakeRenderObject<ImageView>())
 {
@@ -425,7 +427,7 @@ Texture::~Texture()
     SafeRelease(std::move(m_image_view));
 
     if (IsInitCalled()) {
-        PUSH_RENDER_COMMAND(DestroyTexture, m_id);
+        PUSH_RENDER_COMMAND(DestroyTexture, WeakHandleFromThis());
     }
 }
 
@@ -435,7 +437,7 @@ void Texture::Init()
         return;
     }
 
-    BasicObject::Init();
+    HypObject::Init();
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
     {
@@ -443,13 +445,13 @@ void Texture::Init()
         SafeRelease(std::move(m_image_view));
 
         if (IsInitCalled()) {
-            PUSH_RENDER_COMMAND(DestroyTexture, m_id);
+            PUSH_RENDER_COMMAND(DestroyTexture, WeakHandleFromThis());
         }
     }));
 
     PUSH_RENDER_COMMAND(
         CreateTexture,
-        m_id,
+        WeakHandleFromThis(),
         renderer::ResourceState::SHADER_RESOURCE,
         m_image,
         m_image_view

@@ -12,7 +12,6 @@
 
 #include <rendering/Texture.hpp>
 #include <rendering/RenderCollection.hpp>
-#include <rendering/Buffers.hpp>
 
 #include <rendering/backend/RenderCommand.hpp>
 
@@ -61,12 +60,37 @@ enum EnvProbeType : uint
     ENV_PROBE_TYPE_MAX
 };
 
+struct alignas(256) EnvProbeShaderData
+{
+    Matrix4 face_view_matrices[6];
+
+    Vec4f   aabb_max;
+    Vec4f   aabb_min;
+    Vec4f   world_position;
+
+    uint32  texture_index;
+    uint32  flags;
+    float   camera_near;
+    float   camera_far;
+
+    Vec2u   dimensions;
+    Vec2u   _pad2;
+
+    Vec4i   position_in_grid;
+    Vec4i   position_offset;
+    Vec4u   _pad5;
+};
+
+static_assert(sizeof(EnvProbeShaderData) == 512);
+
+static constexpr uint32 max_env_probes = (8ull * 1024ull * 1024ull) / sizeof(EnvProbeShaderData);
+
 class EnvProbe;
 
 struct EnvProbeIndex
 {
-    Vec3u       position;
-    Extent3D    grid_size;
+    Vec3u   position;
+    Vec3u   grid_size;
 
     // defaults such that GetProbeIndex() == ~0u
     // because (~0u * 0 * 0) + (~0u * 0) + ~0u == ~0u
@@ -76,7 +100,7 @@ struct EnvProbeIndex
     {
     }
 
-    EnvProbeIndex(const Vec3u &position, const Extent3D &grid_size)
+    EnvProbeIndex(const Vec3u &position, const Vec3u &grid_size)
         : position(position),
           grid_size(grid_size)
     {
@@ -88,10 +112,10 @@ struct EnvProbeIndex
     EnvProbeIndex &operator=(EnvProbeIndex &&other) noexcept    = default;
     ~EnvProbeIndex()                                            = default;
 
-    HYP_FORCE_INLINE uint GetProbeIndex() const
+    HYP_FORCE_INLINE uint32 GetProbeIndex() const
     {
-        return (position.x * grid_size.height * grid_size.depth)
-            + (position.y * grid_size.depth)
+        return (position.x * grid_size.y * grid_size.z)
+            + (position.y * grid_size.z)
             + position.z;
     }
 
@@ -135,7 +159,7 @@ struct EnvProbeDrawProxy
     uint64                      visibility_bits; // bitmask indicating if EnvProbe is visible to cameras by camera ID
 };
 
-class HYP_API EnvProbe : public BasicObject<EnvProbe>
+class HYP_API EnvProbe : public HypObject<EnvProbe>
 {
 public:
     friend struct RENDER_COMMAND(UpdateEnvProbeDrawProxy);
@@ -146,14 +170,14 @@ public:
     EnvProbe(
         const Handle<Scene> &parent_scene,
         const BoundingBox &aabb,
-        const Extent2D &dimensions,
+        const Vec2u &dimensions,
         EnvProbeType env_probe_type
     );
     
     EnvProbe(
         const Handle<Scene> &parent_scene,
         const BoundingBox &aabb,
-        const Extent2D &dimensions,
+        const Vec2u &dimensions,
         EnvProbeType env_probe_type,
         const ShaderRef &custom_shader
     );
@@ -258,7 +282,7 @@ public:
     void UpdateRenderData(
         uint32 texture_slot,
         uint32 grid_slot,
-        Extent3D grid_size
+        const Vec3u &grid_size
     );
 
     void BindToIndex(const EnvProbeIndex &probe_index);
@@ -274,7 +298,7 @@ private:
 
     Handle<Scene>           m_parent_scene;
     BoundingBox             m_aabb;
-    Extent2D                m_dimensions;
+    Vec2u                   m_dimensions;
     EnvProbeType            m_env_probe_type;
 
     float                   m_camera_near;
@@ -284,7 +308,7 @@ private:
     FramebufferRef          m_framebuffer;
     ShaderRef               m_shader;
     Handle<Camera>          m_camera;
-    RenderList              m_render_list;
+    RenderCollector         m_render_collector;
 
     Matrix4                 m_projection_matrix;
     FixedArray<Matrix4, 6>  m_view_matrices;

@@ -1,6 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <core/object/HypObject.hpp>
+#include <core/ObjectPool.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
@@ -99,7 +100,7 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
 
     if (!(GetCurrentHypObjectInitializerFlags() & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION)) {
         if (dotnet::Class *managed_class = hyp_class->GetManagedClass()) {
-            HYP_LOG(Object, LogLevel::DEBUG, "Create new managed {} for address {}", hyp_class->GetName(), address);
+            // HYP_LOG(Object, LogLevel::DEBUG, "Create new managed {} for address {}", hyp_class->GetName(), address);
 
             managed_object = managed_class->NewObject(hyp_class, address);
         }
@@ -132,33 +133,59 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
 
 #pragma endregion HypObjectInitializerGuardBase
 
-// static HypObjectInitializerContext *FindTopmostInitializerContext(const void *native_address)
-// {
-//     HypObjectInitializerContext *found_context = nullptr;
+#pragma region HypObjectBase
 
-//     for (int i = int(g_contexts.Size()) - 1; i >= 0; i--) {
-//         // Return at first that doesn't equal, since we will always be looking when we're at the top
-//         if (g_contexts[i].native_address != native_address) {
-//             break;
-//         }
-//     }
+TypeID HypObjectBase::GetTypeID() const
+{
+    return m_header->container->GetObjectTypeID();
+}
 
-//     return found_context;
-// }
+const HypClass *HypObjectBase::InstanceClass() const
+{
+    return m_header->container->GetObjectClass();
+}
 
-HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer, const void *address)
+IDBase HypObjectBase::GetID_Internal() const
+{
+    return IDBase { m_header->index + 1 };
+}
+
+#pragma endregion HypObjectBase
+
+#pragma region HypObjectPtr
+
+HYP_API const HypClass *HypObjectPtr::GetHypClass(TypeID type_id) const
+{
+    const HypClass *hyp_class = ::hyperion::GetClass(type_id);
+    AssertThrow(hyp_class != nullptr);
+
+    if (m_ptr != nullptr) {
+        const IHypObjectInitializer *initializer = hyp_class->GetObjectInitializer(m_ptr);
+        AssertThrow(initializer != nullptr);
+
+        hyp_class = initializer->GetClass();
+        AssertThrow(hyp_class != nullptr);
+    }
+
+    return hyp_class;
+}
+
+#pragma endregion HypObjectPtr
+
+HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer, TypeID type_id, const HypClass *hyp_class, const void *address)
 {
 #ifdef HYP_DEBUG_MODE
     AssertThrow(initializer != nullptr);
+    AssertThrow(hyp_class != nullptr);
     AssertThrow(address != nullptr);
-
-    AssertThrow(initializer->GetClass() != nullptr);
 #endif
+
+    Stack<HypObjectInitializerContext> &contexts = g_contexts;
 
     bool valid = false;
 
-    for (int i = int(g_contexts.Size()) - 1; i >= 0; i--) {
-        HypObjectInitializerContext *context = g_contexts.Data() + i;
+    for (int i = int(contexts.Size()) - 1; i >= 0; i--) {
+        HypObjectInitializerContext *context = contexts.Data() + i;
 
         if (context->address != address) {
             valid = false;
@@ -166,7 +193,7 @@ HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer,
             break;
         }
 
-        if (context->hyp_class == initializer->GetClass()) {
+        if (context->hyp_class == hyp_class) {
             valid = true;
 
             break;
@@ -176,61 +203,57 @@ HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer,
     if (!valid) {
         ANSIString initializer_contexts_string = "\tHypClass\t\tObject Address\n";
 
-        for (int i = int(g_contexts.Size()) - 1; i >= 0; i--) {
-            HypObjectInitializerContext *context = g_contexts.Data() + i;
+        for (int i = int(contexts.Size()) - 1; i >= 0; i--) {
+            HypObjectInitializerContext *context = contexts.Data() + i;
 
-            initializer_contexts_string += HYP_FORMAT("\t{}\t\t{}\n", context->hyp_class->GetName(), context->address);
+            initializer_contexts_string += HYP_FORMAT("\t{}\t\t{}\n", hyp_class->GetName(), context->address);
         }
 
         HYP_LOG(Object, LogLevel::ERR, "Initialization context stack:\n{}", initializer_contexts_string);
 
         HYP_FAIL("HypObject \"%s\" being initialized incorrectly -- must be initialized using CreateObject<T> if the object is using Handle<T>, or RC<T>::Construct / MakeRefCountedPtr otherwise!",
-            initializer->GetClass()->GetName().LookupString());
+            hyp_class->GetName().LookupString());
     }
 }
 
 HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *native_address, TypeID type_id, const HypClass *hyp_class, UniquePtr<dotnet::Object> &&managed_object)
 {
     AssertThrow(initializer != nullptr);
-    AssertThrowMsg(hyp_class != nullptr, "No HypClass registered for class! Is HYP_DEFINE_CLASS missing for the type?");
-
-    AssertThrowMsg(!hyp_class->IsAbstract(), "Cannot directly create an instance of object with HypClass \"%s\" which is marked abstract!", hyp_class->GetName().LookupString());
+    AssertThrowMsg(hyp_class != nullptr, "No HypClass registered for class! Is HYP_CLASS() missing for the type?");
 
     if (hyp_class->GetAllocationMethod() == HypClassAllocationMethod::REF_COUNTED_PTR) {
         // Hack to make EnableRefCountedPtr<Base> internally have TypeID of most derived class for a given instance.
         static_cast<EnableRefCountedPtrFromThisBase<> *>(native_address)->weak.GetRefCountData_Internal()->type_id = type_id;
     }
 
-    SetHypObjectInitializerManagedObject(initializer, native_address, std::move(managed_object));
+    // Fixup the pointers on objects up the chain - all should point to the HypObjectInitializer for the most derived class.
+    IHypObjectInitializer *parent_initializer = initializer;
+
+    do {
+        if (const HypClass *parent_hyp_class = parent_initializer->GetClass()->GetParent()) {
+            parent_initializer = parent_hyp_class->GetObjectInitializer(native_address);
+            AssertThrow(parent_initializer != nullptr);
+
+            parent_initializer->FixupPointer(native_address, initializer);
+        } else {
+            parent_initializer = nullptr;
+        }
+    } while (parent_initializer != nullptr);
+
+    // Managed object only needs to live on the most derived class
+    if (dotnet::Object *managed_object_ptr = managed_object.Release()) {
+        initializer->SetManagedObject(managed_object_ptr);
+
+        dotnet::ObjectReference tmp;
+        AssertThrow(initializer->GetClass()->GetManagedObject(native_address, tmp));
+    }
 }
 
 HYP_API void CleanupHypObjectInitializer(const HypClass *hyp_class, dotnet::Object *managed_object_ptr)
 {
     // No cleanup on the managed object needed if we have a parent class - parent class will manage it
-    if (managed_object_ptr != nullptr && hyp_class->GetParent() == nullptr) {
+    if (managed_object_ptr != nullptr) {// && hyp_class->GetParent() == nullptr) {
         delete managed_object_ptr;
-    }
-}
-
-HYP_API void SetHypObjectInitializerManagedObject(IHypObjectInitializer *initializer, void *native_address, UniquePtr<dotnet::Object> &&managed_object)
-{
-    AssertThrow(initializer != nullptr);
-
-    if (dotnet::Object *managed_object_ptr = managed_object.Release()) {
-        IHypObjectInitializer *current_initializer = initializer;
-
-        do {
-            current_initializer->SetManagedObject(managed_object_ptr);
-
-            dotnet::ObjectReference tmp;
-            AssertThrow(current_initializer->GetClass()->GetManagedObject(native_address, tmp));
-
-            if (const HypClass *parent_hyp_class = current_initializer->GetClass()->GetParent()) {
-                current_initializer = parent_hyp_class->GetObjectInitializer(native_address);
-            } else {
-                current_initializer = nullptr;
-            }
-        } while (current_initializer != nullptr);
     }
 }
 

@@ -151,6 +151,15 @@ struct alignas(alignof(T) * 2) HYP_API Vec2
         return false;
     }
 
+    HYP_FORCE_INLINE constexpr Type Avg() const
+        { return (x + y) / Type(size); }
+
+    HYP_FORCE_INLINE constexpr Type Sum() const
+        { return x + y; }
+
+    HYP_FORCE_INLINE constexpr Type Volume() const
+        { return x * y; }
+
     Type Max() const;
     Type Min() const;
 
@@ -224,11 +233,11 @@ public:
     float GetY() const      { return y; }
     float &GetY()           { return y; }
     Vec2 &SetY(float y)     { this->y = y; return *this; }
-    
-    constexpr float operator[](SizeType index) const
-        { return values[index]; }
 
     constexpr float &operator[](SizeType index)
+        { return values[index]; }
+    
+    constexpr float operator[](SizeType index) const
         { return values[index]; }
 
     explicit operator bool() const
@@ -320,6 +329,8 @@ public:
 
     constexpr float Avg() const { return (x + y) / 2.0f; }
     constexpr float Sum() const { return x + y; }
+    constexpr float Volume() const { return x * y; }
+
     float Max() const;
     float Min() const;
 

@@ -8,6 +8,7 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_screen_space_position;
 layout(location=2) in vec2 v_texcoord0;
 layout(location=3) in flat uint v_object_index;
+layout (location=4) in vec4 v_color;
 
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=5) out vec4 gbuffer_mask;
@@ -18,6 +19,13 @@ layout(location=5) out vec4 gbuffer_mask;
 #include "../include/material.inc"
 #include "../include/object.inc"
 #include "../include/UIObject.glsl"
+#include "../include/scene.inc"
+
+// temp
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
+{
+    Camera camera;
+};
 
 HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
 {
@@ -83,12 +91,7 @@ void main()
         // ivec2 texture_size = textureSize(sampler2D(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texture_sampler), 0);
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
         
-// #ifdef TYPE_TEXT
-//         vec4 text_color = albedo_texture.rrrr;
-//         ui_color.a *= text_color.a;
-// #else
-        ui_color = albedo_texture;
-// #endif
+        ui_color *= albedo_texture;
     }
     
     if (properties.border_radius > 0.0) {
@@ -125,7 +128,7 @@ void main()
     // gbuffer_albedo = vec4(vec3(float(TextureSize(HYP_SAMPLER_LINEAR, GET_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)).x) * 0.0005), 1.0);//ui_color;
     // gbuffer_albedo.rgb = UINT_TO_VEC4(object.material_index).rgb;//ui_color;
     // gbuffer_albedo.a = 1.0;
-    gbuffer_albedo = ui_color;
+    gbuffer_albedo = ui_color * v_color;
 // #ifdef TYPE_TEXT
 //     gbuffer_albedo = vec4(v_texcoord0, 0.0, 1.0);
 // #endif

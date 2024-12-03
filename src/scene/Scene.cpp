@@ -15,6 +15,7 @@
 #include <scene/ecs/systems/LightVisibilityUpdaterSystem.hpp>
 #include <scene/ecs/systems/ShadowMapUpdaterSystem.hpp>
 #include <scene/ecs/systems/EnvGridUpdaterSystem.hpp>
+#include <scene/ecs/systems/ReflectionProbeUpdaterSystem.hpp>
 #include <scene/ecs/systems/AnimationSystem.hpp>
 #include <scene/ecs/systems/SkySystem.hpp>
 #include <scene/ecs/systems/AudioSystem.hpp>
@@ -24,8 +25,10 @@
 
 #include <scene/world_grid/WorldGridSubsystem.hpp>
 
+#include <rendering/Scene.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
+#include <rendering/ShaderGlobals.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/rt/RendererAccelerationStructure.hpp>
@@ -52,29 +55,6 @@ using renderer::Result;
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(BindLights) : renderer::RenderCommand
-{
-    SizeType num_lights;
-    Pair<ID<Light>, LightDrawProxy> *lights;
-
-    RENDER_COMMAND(BindLights)(SizeType num_lights, Pair<ID<Light>, LightDrawProxy> *lights)
-        : num_lights(num_lights),
-          lights(lights)
-    {
-    }
-
-    virtual Result operator()()
-    {
-        for (SizeType i = 0; i < num_lights; i++) {
-            g_engine->GetRenderState().BindLight(lights[i].first, lights[i].second);
-        }
-
-        delete[] lights;
-
-        HYPERION_RETURN_OK;
-    }
-};
-
 struct RENDER_COMMAND(BindEnvProbes) : renderer::RenderCommand
 {
     Array<Pair<ID<EnvProbe>, EnvProbeType>> items;
@@ -97,12 +77,12 @@ struct RENDER_COMMAND(BindEnvProbes) : renderer::RenderCommand
 #pragma endregion Render commands
 
 Scene::Scene()
-    : Scene(Handle<Camera>::empty, Threads::GetThreadID(ThreadName::THREAD_GAME), { })
+    : Scene(Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), { })
 {
 }
 
-Scene::Scene(Handle<Camera> camera)
-    : Scene(std::move(camera), Threads::GetThreadID(ThreadName::THREAD_GAME), { })
+Scene::Scene(Handle<Camera> camera, EnumFlags<SceneFlags> flags)
+    : Scene(std::move(camera), Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
 {
 }
 
@@ -114,10 +94,9 @@ Scene::Scene(
     m_owner_thread_id(owner_thread_id),
     m_flags(flags),
     m_camera(std::move(camera)),
-    m_root_node_proxy(MakeRefCountedPtr<Node>("<ROOT>", ID<Entity>::invalid, Transform::identity, this)),
-    m_environment(MakeUnique<RenderEnvironment>(this)),
+    m_root_node_proxy(MakeRefCountedPtr<Node>("<ROOT>", Handle<Entity>::empty, Transform::identity, this)),
+    m_environment(CreateObject<RenderEnvironment>(this)),
     m_world(nullptr),
-    m_is_non_world_scene(flags & SceneFlags::NON_WORLD),
     m_is_audio_listener(false),
     m_entity_manager(MakeRefCountedPtr<EntityManager>(owner_thread_id.GetMask(), this)),
     m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
@@ -136,6 +115,7 @@ Scene::Scene(
     m_entity_manager->AddSystem<ShadowMapUpdaterSystem>();
     m_entity_manager->AddSystem<VisibilityStateUpdaterSystem>();
     m_entity_manager->AddSystem<EnvGridUpdaterSystem>();
+    m_entity_manager->AddSystem<ReflectionProbeUpdaterSystem>();
     m_entity_manager->AddSystem<AnimationSystem>();
     m_entity_manager->AddSystem<SkySystem>();
     m_entity_manager->AddSystem<AudioSystem>();
@@ -175,7 +155,7 @@ void Scene::Init()
         return;
     }
     
-    BasicObject::Init();
+    HypObject::Init();
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
     {
@@ -183,11 +163,11 @@ void Scene::Init()
     }));
 
     InitObject(m_camera);
-    m_render_list.SetCamera(m_camera);
+    m_render_collector.SetCamera(m_camera);
 
     m_entity_manager->Initialize();
 
-    if (IsWorldScene()) {
+    if (!IsNonWorldScene()) {
         if (!m_tlas) {
             if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool() && (m_flags & SceneFlags::HAS_TLAS)) {
                 CreateTLAS();
@@ -196,7 +176,7 @@ void Scene::Init()
             }
         }
         
-        m_environment->Init();
+        InitObject(m_environment);
 
         if (m_tlas) {
             m_environment->SetTLAS(m_tlas);
@@ -227,7 +207,7 @@ void Scene::SetCamera(const Handle<Camera> &camera)
     m_camera = camera;
     InitObject(m_camera);
 
-    m_render_list.SetCamera(m_camera);
+    m_render_collector.SetCamera(m_camera);
 }
 
 void Scene::SetWorld(World *world)
@@ -262,7 +242,7 @@ NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const
     return m_root_node_proxy->FindChildWithEntity(entity);
 }
 
-NodeProxy Scene::FindNodeByName(const String &name) const
+NodeProxy Scene::FindNodeByName(UTF8StringView name) const
 {
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
@@ -324,8 +304,8 @@ void Scene::EndUpdate()
     EnqueueRenderUpdates();
 }
 
-RenderListCollectionResult Scene::CollectEntities(
-    RenderList &render_list,
+RenderCollector::CollectionResult Scene::CollectEntities(
+    RenderCollector &render_collector,
     const Handle<Camera> &camera,
     const Optional<RenderableAttributeSet> &override_attributes,
     bool skip_frustum_culling
@@ -363,20 +343,20 @@ RenderListCollectionResult Scene::CollectEntities(
 
         AssertThrow(mesh_component.proxy != nullptr);
 
-        render_list.PushEntityToRender(
+        render_collector.PushEntityToRender(
             entity_id,
             *mesh_component.proxy
         );
     }
 
-    return render_list.PushUpdatesToRenderThread(
+    return render_collector.PushUpdatesToRenderThread(
         camera->GetFramebuffer(),
         override_attributes
     );
 }
 
-RenderListCollectionResult Scene::CollectDynamicEntities(
-    RenderList &render_list,
+RenderCollector::CollectionResult Scene::CollectDynamicEntities(
+    RenderCollector &render_collector,
     const Handle<Camera> &camera,
     const Optional<RenderableAttributeSet> &override_attributes,
     bool skip_frustum_culling
@@ -415,20 +395,20 @@ RenderListCollectionResult Scene::CollectDynamicEntities(
 
         AssertThrow(mesh_component.proxy != nullptr);
 
-        render_list.PushEntityToRender(
+        render_collector.PushEntityToRender(
             entity_id,
             *mesh_component.proxy
         );
     }
 
-    return render_list.PushUpdatesToRenderThread(
+    return render_collector.PushUpdatesToRenderThread(
         camera->GetFramebuffer(),
         override_attributes
     );
 }
 
-RenderListCollectionResult Scene::CollectStaticEntities(
-    RenderList &render_list,
+RenderCollector::CollectionResult Scene::CollectStaticEntities(
+    RenderCollector &render_collector,
     const Handle<Camera> &camera,
     const Optional<RenderableAttributeSet> &override_attributes,
     bool skip_frustum_culling
@@ -440,7 +420,7 @@ RenderListCollectionResult Scene::CollectStaticEntities(
 
     if (!camera.IsValid()) {
         // if camera is invalid, update without adding any entities
-        return render_list.PushUpdatesToRenderThread(
+        return render_collector.PushUpdatesToRenderThread(
             camera->GetFramebuffer(),
             override_attributes
         );
@@ -470,13 +450,13 @@ RenderListCollectionResult Scene::CollectStaticEntities(
 
         AssertThrow(mesh_component.proxy != nullptr);
 
-        render_list.PushEntityToRender(
+        render_collector.PushEntityToRender(
             entity_id,
             *mesh_component.proxy
         );
     }
 
-    return render_list.PushUpdatesToRenderThread(
+    return render_collector.PushUpdatesToRenderThread(
         camera->GetFramebuffer(),
         override_attributes
     );
@@ -527,7 +507,7 @@ void Scene::EnqueueRenderUpdates()
             shader_data.frame_counter = frame_counter;
             shader_data.enabled_render_components_mask = render_environment->GetEnabledRenderComponentsMask();
             
-            g_engine->GetRenderData()->scenes.Set(id.ToIndex(), shader_data);
+            g_engine->GetRenderData()->scenes->Set(id.ToIndex(), shader_data);
 
             HYPERION_RETURN_OK;
         }
@@ -539,7 +519,7 @@ void Scene::EnqueueRenderUpdates()
 
     PUSH_RENDER_COMMAND(
         UpdateSceneRenderData, 
-        m_id,
+        GetID(),
         m_root_node_proxy.GetWorldAABB(),
         m_world->GetGameState().game_time,
         m_fog_params,
@@ -554,7 +534,7 @@ bool Scene::CreateTLAS()
 {
     HYP_SCOPE;
 
-    AssertThrowMsg(IsWorldScene(), "Can only create TLAS for world scenes");
+    AssertThrowMsg(!IsNonWorldScene(), "Can only create TLAS for world scenes");
     AssertIsInitCalled();
 
     if (m_tlas) {
@@ -577,6 +557,44 @@ bool Scene::CreateTLAS()
     }
 
     m_flags |= SceneFlags::HAS_TLAS;
+
+    return true;
+}
+
+bool Scene::AddToWorld(World *world)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    AssertReady();
+
+    if (world == m_world) {
+        // World is same, just return true
+        return true;
+    }
+
+    if (m_world != nullptr) {
+        // Can't add to world, world already set
+        return false;
+    }
+
+    world->AddScene(HandleFromThis());
+
+    return true;
+}
+
+bool Scene::RemoveFromWorld()
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    AssertReady();
+
+    if (m_world == nullptr) {
+        return false;
+    }
+
+    m_world->RemoveScene(WeakHandleFromThis());
 
     return true;
 }

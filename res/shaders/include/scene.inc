@@ -33,7 +33,7 @@ struct Camera
     float near;
     float far;
     float fov;
-    float _pad0;
+    uint  id;
 
     vec4 _pad1; vec4 _pad2; vec4 _pad3;
 
@@ -57,7 +57,7 @@ struct Light
     vec4    normal;                 // for area lights
 
     vec2    spot_angles;            // for spot lights (x = outer, y = inner)
-    uint    material_id;            // for area lights - ~0u == no material
+    uint    material_index;            // for area lights - ~0u == no material
     uint    _pad2;
 
     uvec4   _pad3;

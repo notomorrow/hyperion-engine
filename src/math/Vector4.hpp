@@ -105,11 +105,11 @@ struct alignas(alignof(T) * 4) HYP_API Vec4
     /*! \brief Get the XYZ components of this vector as a Vector3. */
     HYP_FORCE_INLINE Vec3<Type> GetXYZ() const
         { return Vec3<Type>(x, y, z); }
-    
-    constexpr Type operator[](SizeType index) const
-        { return values[index]; }
 
     constexpr Type &operator[](SizeType index)
+        { return values[index]; }
+    
+    constexpr Type operator[](SizeType index) const
         { return values[index]; }
 
     Vec4 operator+(const Vec4 &other) const
@@ -216,8 +216,14 @@ struct alignas(alignof(T) * 4) HYP_API Vec4
 
     Type Length() const { return std::sqrt(LengthSquared()); }
 
-    constexpr Type Avg() const { return (x + y + z + w) / Type(size); }
-    constexpr Type Sum() const { return x + y + z + w; }
+    HYP_FORCE_INLINE constexpr Type Avg() const
+        { return (x + y + z + w) / Type(size); }
+
+    HYP_FORCE_INLINE constexpr Type Sum() const
+        { return x + y + z + w; }
+
+    HYP_FORCE_INLINE constexpr Type Volume() const
+        { return x * y * z * w; }
 
     Type Max() const;
     Type Min() const;
@@ -340,11 +346,11 @@ struct alignas(alignof(float) * 4) HYP_API Vec4<float>
 
     /*! \brief Get the XYZ components of this vector as a Vector3. */
     Vec3<Type> GetXYZ() const   { return Vec3<Type>(x, y, z); }
-    
-    constexpr Type operator[](SizeType index) const
-        { return values[index]; }
 
     constexpr Type &operator[](SizeType index)
+        { return values[index]; }
+    
+    constexpr Type operator[](SizeType index) const
         { return values[index]; }
 
     Vec4 operator+(const Vec4 &other) const
@@ -451,8 +457,14 @@ struct alignas(alignof(float) * 4) HYP_API Vec4<float>
 
     Type Length() const { return std::sqrt(LengthSquared()); }
 
-    constexpr Type Avg() const { return (x + y + z + w) / Type(size); }
-    constexpr Type Sum() const { return x + y + z + w; }
+    HYP_FORCE_INLINE constexpr Type Avg() const
+        { return (x + y + z + w) / Type(size); }
+
+    HYP_FORCE_INLINE constexpr Type Sum() const
+        { return x + y + z + w; }
+
+    HYP_FORCE_INLINE constexpr Type Volume() const
+        { return x * y * z * w; }
 
     Type Max() const;
     Type Min() const;

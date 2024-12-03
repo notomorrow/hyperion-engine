@@ -12,8 +12,6 @@
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
 
-#include <dotnet/runtime/ManagedHandle.hpp>
-
 #include <asset/serialization/fbom/FBOM.hpp>
 
 #include <Types.hpp>
@@ -45,13 +43,11 @@ HYP_EXPORT void HypData_GetTypeID(const HypData *hyp_data, TypeID *out_type_id)
     *out_type_id = hyp_data->GetTypeID();
 }
 
-HYP_EXPORT int8 HypData_IsValid(const HypData *hyp_data)
+HYP_EXPORT int8 HypData_IsNull(const HypData *hyp_data)
 {
-    if (!hyp_data) {
-        return false;
-    }
+    AssertThrow(hyp_data != nullptr);
 
-    return hyp_data->IsValid();
+    return hyp_data->IsNull();
 }
 
 #define HYP_DEFINE_HYPDATA_GET(type, name) \
@@ -158,7 +154,7 @@ HYP_EXPORT int8 HypData_GetArray(HypData *hyp_data, HypData **out_array, uint32 
     return false;
 }
 
-HYP_EXPORT int8 HypData_SetArray(HypData *hyp_data, HypData *elements, uint32 size)
+HYP_EXPORT int8 HypData_SetArray(HypData *hyp_data, HypData **elements, uint32 size)
 {
     if (!hyp_data || !elements) {
         return false;
@@ -168,7 +164,7 @@ HYP_EXPORT int8 HypData_SetArray(HypData *hyp_data, HypData *elements, uint32 si
     hyp_data_array.Reserve(size);
 
     for (uint32 i = 0; i < size; i++) {
-        hyp_data_array.PushBack(std::move(*(elements + i)));
+        hyp_data_array.PushBack(std::move(*(elements[i])));
     }
 
     *hyp_data = HypData(std::move(hyp_data_array));
@@ -292,16 +288,14 @@ HYP_EXPORT int8 HypData_IsHypObject(const HypData *hyp_data)
     return GetClass(hyp_data->GetTypeID()) != nullptr;
 }
 
-HYP_EXPORT int8 HypData_GetHypObject(const HypData *hyp_data, void **out_object)
+HYP_EXPORT int8 HypData_GetHypObject(const HypData *hyp_data, dotnet::ObjectReference *out_object_reference)
 {
-    if (!hyp_data || !out_object) {
+    if (!hyp_data || !out_object_reference) {
         return false;
     }
 
-    *out_object = nullptr;
-
-    if (!hyp_data->IsValid()) {
-        HYP_LOG(Object, LogLevel::ERR, "Cannot get HypObject from invalid HypData");
+    if (hyp_data->IsNull()) {
+        HYP_LOG(Object, LogLevel::ERR, "Cannot get HypObject from null HypData");
 
         return false;
     }
@@ -322,7 +316,7 @@ HYP_EXPORT int8 HypData_GetHypObject(const HypData *hyp_data, void **out_object)
     dotnet::ObjectReference object_reference;
 
     if (hyp_class->GetManagedObject(hyp_data->ToRef().GetPointer(), object_reference)) {
-        *out_object = object_reference.ptr;
+        *out_object_reference = object_reference;
 
         return true;
     }
@@ -342,14 +336,9 @@ HYP_EXPORT int8 HypData_SetHypObject(HypData *hyp_data, const HypClass *hyp_clas
 
     if (hyp_class->IsClassType()) {
         if (hyp_class->UseHandles()) {
-            ObjectContainerBase &container = ObjectPool::GetContainer(type_id);
-            
-            const uint32 index = container.GetObjectIndex(native_address);
-            if (index == ~0u) {
-                HYP_FAIL("Address %p is not valid for object container for TypeID %u", native_address, type_id.Value());
-            }
+            HypObjectBase *hyp_object_ptr = static_cast<HypObjectBase *>(native_address);
 
-            *hyp_data = HypData(AnyHandle(type_id, IDBase { index + 1 }));
+            *hyp_data = HypData(AnyHandle(hyp_object_ptr));
 
             return true;
         } else if (hyp_class->UseRefCountedPtr()) {
@@ -386,9 +375,9 @@ HYP_EXPORT int8 HypData_IsHypStruct(const HypData *hyp_data)
     return hyp_class->IsStructType();
 }
 
-HYP_EXPORT int8 HypData_GetHypStruct(const HypData *hyp_data, void **out_ptr)
+HYP_EXPORT int8 HypData_GetHypStruct(const HypData *hyp_data, dotnet::ObjectReference *out_object_reference)
 {
-    if (!hyp_data || !out_ptr) {
+    if (!hyp_data || !out_object_reference) {
         return false;
     }
 
@@ -414,7 +403,7 @@ HYP_EXPORT int8 HypData_GetHypStruct(const HypData *hyp_data, void **out_ptr)
 
     // @TODO: Find another way to marshal it without needing to add to ManagedObjectCache.
     //  maybe we need to pass the function pointer back to C# so it can invoke it.
-    *out_ptr = managed_class->GetMarshalObjectFunction()(ref.GetPointer(), uint32(hyp_class->GetSize())).ptr;
+    *out_object_reference = managed_class->GetMarshalObjectFunction()(ref.GetPointer(), uint32(hyp_class->GetSize()));
 
     return true;
 }

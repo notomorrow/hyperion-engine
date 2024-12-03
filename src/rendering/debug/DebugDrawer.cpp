@@ -1,10 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/debug/DebugDrawer.hpp>
+#include <rendering/Scene.hpp>
+#include <rendering/Camera.hpp>
+#include <rendering/EnvGrid.hpp>
 #include <rendering/EnvProbe.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/GBuffer.hpp>
+#include <rendering/Deferred.hpp>
 
 #include <rendering/backend/RenderConfig.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
@@ -132,6 +136,9 @@ void DebugDrawer::Create()
 
     for (auto &shape : m_shapes) {
         InitObject(shape);
+
+        // Allow Render() to be called on it
+        shape->SetPersistentRenderResourcesEnabled(true);
     }
 
     m_shader = g_shader_manager->GetOrCreate(
@@ -149,8 +156,11 @@ void DebugDrawer::Create()
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
     AssertThrow(descriptor_table != nullptr);
 
+    const uint debug_drawer_descriptor_set_index = descriptor_table->GetDescriptorSetIndex(NAME("DebugDrawerDescriptorSet"));
+    AssertThrow(debug_drawer_descriptor_set_index != ~0u);
+
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSetRef &debug_drawer_descriptor_set = descriptor_table->GetDescriptorSet(NAME("DebugDrawerDescriptorSet"), frame_index);
+        const DescriptorSetRef &debug_drawer_descriptor_set = descriptor_table->GetDescriptorSet(debug_drawer_descriptor_set_index, frame_index);
         AssertThrow(debug_drawer_descriptor_set != nullptr);
 
         debug_drawer_descriptor_set->SetElement(NAME("ImmediateDrawsBuffer"), m_instance_buffers[frame_index]);
@@ -201,6 +211,10 @@ void DebugDrawer::Render(Frame *frame)
     }
 
     const uint frame_index = frame->GetFrameIndex();
+
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    uint32 camera_index = camera_render_resources.GetBufferIndex();
+    AssertThrow(camera_index != ~0u);
 
     GPUBufferRef &instance_buffer = m_instance_buffers[frame_index];
     bool was_instance_buffer_rebuilt = false;
@@ -253,11 +267,16 @@ void DebugDrawer::Render(Frame *frame)
     proxy.Bind(frame);
 
     const uint debug_drawer_descriptor_set_index = proxy.GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("DebugDrawerDescriptorSet"));
+    AssertThrow(debug_drawer_descriptor_set_index != ~0u);
 
     // Update descriptor set if instance buffer was rebuilt
     if (was_instance_buffer_rebuilt) {
-        proxy.GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSet(debug_drawer_descriptor_set_index, frame_index)
-            ->SetElement(NAME("ImmediateDrawsBuffer"), instance_buffer);
+        const DescriptorSetRef &descriptor_set = proxy.GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSet(debug_drawer_descriptor_set_index, frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(NAME("ImmediateDrawsBuffer"), instance_buffer);
+
+        descriptor_set->Update(g_engine->GetGPUDevice());
     }
 
     if (renderer::RenderConfig::ShouldCollectUniqueDrawCallPerMaterial()) {
@@ -269,24 +288,26 @@ void DebugDrawer::Render(Frame *frame)
                 {
                     NAME("DebugDrawerDescriptorSet"),
                     {
-                        { NAME("ImmediateDrawsBuffer"), HYP_RENDER_OBJECT_OFFSET(ImmediateDraw, 0) }
+                        { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(0) }
                     }
                 },
                 {
                     NAME("Scene"),
                     {
-                        { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                        { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                        { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                        { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                        { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                        { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                        { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
                     }
                 },
                 {
                     NAME("Object"),
                     {
-                        { NAME("MaterialsBuffer"), HYP_RENDER_OBJECT_OFFSET(Material, 0) },
-                        { NAME("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, 0) },
+                    }
+                },
+                {
+                    NAME("Instancing"),
+                    {
                         { NAME("EntityInstanceBatchesBuffer"), 0 }
                     }
                 }
@@ -301,23 +322,26 @@ void DebugDrawer::Render(Frame *frame)
                 {
                     NAME("DebugDrawerDescriptorSet"),
                     {
-                        { NAME("ImmediateDrawsBuffer"), HYP_RENDER_OBJECT_OFFSET(ImmediateDraw, 0) }
+                        { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(0) }
                     }
                 },
                 {
                     NAME("Scene"),
                     {
-                        { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                        { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                        { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                        { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                        { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                        { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                        { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
                     }
                 },
                 {
                     NAME("Object"),
                     {
-                        { NAME("SkeletonsBuffer"), HYP_RENDER_OBJECT_OFFSET(Skeleton, 0) },
+                    }
+                },
+                {
+                    NAME("Instancing"),
+                    {
                         { NAME("EntityInstanceBatchesBuffer"), 0 }
                     }
                 }
@@ -332,7 +356,7 @@ void DebugDrawer::Render(Frame *frame)
             proxy.GetCommandBuffer(frame),
             proxy.GetGraphicsPipeline(),
             {
-                { NAME("ImmediateDrawsBuffer"), HYP_RENDER_OBJECT_OFFSET(ImmediateDraw, index) }
+                { NAME("ImmediateDrawsBuffer"), ShaderDataOffset<ImmediateDrawShaderData>(index) }
             },
             debug_drawer_descriptor_set_index
         );

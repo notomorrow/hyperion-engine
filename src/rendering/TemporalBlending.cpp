@@ -2,10 +2,16 @@
 
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/GBuffer.hpp>
+#include <rendering/Scene.hpp>
+#include <rendering/Camera.hpp>
+#include <rendering/PlaceholderData.hpp>
+#include <rendering/Deferred.hpp>
 
 #include <rendering/backend/RendererComputePipeline.hpp>
 
 #include <core/threading/Threads.hpp>
+
+#include <util/profiling/ProfileScope.hpp>
 
 #include <Engine.hpp>
 
@@ -16,9 +22,9 @@ namespace hyperion {
 struct RENDER_COMMAND(RecreateTemporalBlendingFramebuffer) : renderer::RenderCommand
 {
     TemporalBlending    &temporal_blending;
-    Extent2D            new_size;
+    Vec2u               new_size;
 
-    RENDER_COMMAND(RecreateTemporalBlendingFramebuffer)(TemporalBlending &temporal_blending, Extent2D new_size)
+    RENDER_COMMAND(RecreateTemporalBlendingFramebuffer)(TemporalBlending &temporal_blending, const Vec2u &new_size)
         : temporal_blending(temporal_blending),
           new_size(new_size)
     {
@@ -37,7 +43,7 @@ struct RENDER_COMMAND(RecreateTemporalBlendingFramebuffer) : renderer::RenderCom
 #pragma endregion Render commands
 
 TemporalBlending::TemporalBlending(
-    const Extent2D &extent,
+    const Vec2u &extent,
     TemporalBlendTechnique technique,
     TemporalBlendFeedback feedback,
     const FixedArray<ImageViewRef, max_frames_in_flight> &input_image_views
@@ -52,7 +58,7 @@ TemporalBlending::TemporalBlending(
 }
 
 TemporalBlending::TemporalBlending(
-    const Extent2D &extent,
+    const Vec2u &extent,
     InternalFormat image_format,
     TemporalBlendTechnique technique,
     TemporalBlendFeedback feedback,
@@ -68,7 +74,7 @@ TemporalBlending::TemporalBlending(
 }
 
 TemporalBlending::TemporalBlending(
-    const Extent2D &extent,
+    const Vec2u &extent,
     InternalFormat image_format,
     TemporalBlendTechnique technique,
     TemporalBlendFeedback feedback,
@@ -126,12 +132,12 @@ void TemporalBlending::Create()
     m_is_initialized = true;
 }
 
-void TemporalBlending::Resize(Extent2D new_size)
+void TemporalBlending::Resize(Vec2u new_size)
 {
     PUSH_RENDER_COMMAND(RecreateTemporalBlendingFramebuffer, *this, new_size);
 }
 
-void TemporalBlending::Resize_Internal(Extent2D new_size)
+void TemporalBlending::Resize_Internal(Vec2u new_size)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
@@ -189,7 +195,7 @@ void TemporalBlending::CreateImageOutputs()
     m_result_texture = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         m_image_format,
-        Extent3D(m_extent),
+        Vec3u(m_extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -201,7 +207,7 @@ void TemporalBlending::CreateImageOutputs()
     m_history_texture = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         m_image_format,
-        Extent3D(m_extent),
+        Vec3u(m_extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -277,6 +283,13 @@ void TemporalBlending::CreateComputePipelines()
 
 void TemporalBlending::Render(Frame *frame)
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    uint32 camera_index = camera_render_resources.GetBufferIndex();
+    AssertThrow(camera_index != ~0u);
+
     const FixedArray<Handle<Texture> *, 2> textures = {
         &m_result_texture,
         &m_history_texture
@@ -312,11 +325,8 @@ void TemporalBlending::Render(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                    { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                    { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                    { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                 }
             }
         }
@@ -324,7 +334,7 @@ void TemporalBlending::Render(Frame *frame)
 
     m_perform_blending->Dispatch(
         frame->GetCommandBuffer(),
-        Extent3D {
+        Vec3u {
             (extent.x + 7) / 8,
             (extent.y + 7) / 8,
             1

@@ -9,10 +9,13 @@
 
 #include <core/containers/Array.hpp>
 
+#include <core/threading/DataRaceDetector.hpp>
+
 #include <math/BoundingBox.hpp>
 #include <math/Vertex.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
+#include <rendering/RenderResources.hpp>
 #include <rendering/Shader.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
@@ -29,16 +32,64 @@ using renderer::Topology;
 using renderer::IndirectDrawCommand;
 
 struct RENDER_COMMAND(SetStreamedMeshData);
+struct RENDER_COMMAND(UploadMeshData);
+
+class MeshRenderResources final : public RenderResourcesBase
+{
+public:
+    MeshRenderResources(Mesh *mesh);
+    MeshRenderResources(MeshRenderResources &&other) noexcept;
+    virtual ~MeshRenderResources() override;
+
+    /*! \note Only to be called from render thread or render task */
+    HYP_FORCE_INLINE const GPUBufferRef &GetVertexBuffer() const
+        { return m_vbo; }
+
+    /*! \note Only to be called from render thread or render task */
+    HYP_FORCE_INLINE const GPUBufferRef &GetIndexBuffer() const
+        { return m_ibo; }
+
+    /*! \note Only to be called from render thread or render task */
+    HYP_FORCE_INLINE uint32 NumIndices() const
+        { return m_num_indices; }
+
+    void SetVertexAttributes(const VertexAttributeSet &vertex_attributes);
+    void SetStreamedMeshData(const RC<StreamedMeshData> &streamed_mesh_data);
+
+protected:
+    virtual void Initialize() override;
+    virtual void Destroy() override;
+    virtual void Update() override;
+
+    virtual Name GetTypeName() const override
+        { return NAME("MeshRenderResources"); }
+
+private:
+    static Array<float> BuildVertexBuffer(const VertexAttributeSet &vertex_attributes, const MeshData &mesh_data);
+
+    void UploadMeshData();
+
+    Mesh                    *m_mesh;
+
+    VertexAttributeSet      m_vertex_attributes;
+    RC<StreamedMeshData>    m_streamed_mesh_data;
+
+    GPUBufferRef            m_vbo;
+    GPUBufferRef            m_ibo;
+
+    uint32                  m_num_indices;
+};
 
 HYP_CLASS()
-class HYP_API Mesh final : public BasicObject<Mesh>
+class HYP_API Mesh final : public HypObject<Mesh>
 {
     HYP_OBJECT_BODY(Mesh);
 
-    HYP_PROPERTY(ID, &Mesh::GetID)
+    HYP_PROPERTY(ID, &Mesh::GetID, { { "serialize", false } });
     
 public:
     friend struct RENDER_COMMAND(SetStreamedMeshData);
+    friend struct RENDER_COMMAND(UploadMeshData);
 
     using Index = uint32;
 
@@ -86,45 +137,36 @@ public:
     HYP_FORCE_INLINE void SetName(Name name)
         { m_name = name; }
 
-    HYP_FORCE_INLINE const GPUBufferRef &GetVertexBuffer() const
-        { return m_vbo; }
-
-    HYP_FORCE_INLINE const GPUBufferRef &GetIndexBuffer() const
-        { return m_ibo; }
+    HYP_FORCE_INLINE MeshRenderResources &GetRenderResources() const
+        { return *m_render_resources; }
 
     void SetVertices(Array<Vertex> vertices);
     void SetVertices(Array<Vertex> vertices, Array<Index> indices);
 
-    HYP_METHOD()
-    HYP_FORCE_INLINE uint32 NumIndices() const
-        { return m_indices_count; }
+    HYP_METHOD(Property="StreamedMeshData")
+    const RC<StreamedMeshData> &GetStreamedMeshData() const;
 
-    HYP_METHOD(Property="StreamedMeshData", Serialize=true)
-    HYP_FORCE_INLINE const RC<StreamedMeshData> &GetStreamedMeshData() const
-        { return m_streamed_mesh_data; }
-
-    /*! \brief Set the mesh data for the Mesh. Only usable on the Render thread. If needed
-        from another thread, use the static version of this function. */
-    HYP_METHOD(Property="StreamedMeshData", Serialize=true)
+    HYP_METHOD(Property="StreamedMeshData")
     void SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data);
 
-    static void SetStreamedMeshData_ThreadSafe(Handle<Mesh> mesh, RC<StreamedMeshData> streamed_mesh_data);
+    void SetStreamedMeshData_ThreadSafe(RC<StreamedMeshData> streamed_mesh_data);
 
-    HYP_METHOD(Property="VertexAttributes", Serialize=true)
+    HYP_METHOD()
+    uint32 NumIndices() const;
+
+    HYP_METHOD(Property="VertexAttributes")
     HYP_FORCE_INLINE const VertexAttributeSet &GetVertexAttributes() const
         { return m_mesh_attributes.vertex_attributes; }
 
-    HYP_METHOD(Property="VertexAttributes", Serialize=true)
-    HYP_FORCE_INLINE void SetVertexAttributes(const VertexAttributeSet &attributes)
-        { m_mesh_attributes.vertex_attributes = attributes; }
+    HYP_METHOD(Property="VertexAttributes")
+    void SetVertexAttributes(const VertexAttributeSet &attributes);
 
     HYP_FORCE_INLINE const MeshAttributes &GetMeshAttributes() const
         { return m_mesh_attributes; }
 
-    HYP_FORCE_INLINE void SetMeshAttributes(const MeshAttributes &attributes)
-        { m_mesh_attributes = attributes; }
+    void SetMeshAttributes(const MeshAttributes &attributes);
 
-    HYP_METHOD(Property="Topology", Serialize=true)
+    HYP_METHOD(Property="Topology")
     HYP_FORCE_INLINE Topology GetTopology() const
         { return m_mesh_attributes.topology; }
 
@@ -162,23 +204,36 @@ public:
 
     void PopulateIndirectDrawCommand(IndirectDrawCommand &out);
 
+    /*! \brief Set the mesh to be able to have Render* methods called without needing to have its resources claimed.
+     *  \note Init() must be called before this method. */
+    void SetPersistentRenderResourcesEnabled(bool enabled)
+    {
+        AssertIsInitCalled();
+
+        HYP_MT_CHECK_RW(m_data_race_detector, "m_always_claimed_render_resources_handle");
+
+        if (enabled) {
+            m_always_claimed_render_resources_handle = RenderResourcesHandle(*m_render_resources);
+        } else {
+            m_always_claimed_render_resources_handle.Reset();
+        }
+    }
+
 private:
     void CalculateAABB();
 
-    static Array<float> BuildVertexBuffer(const VertexAttributeSet &vertex_attributes, const MeshData &mesh_data);
-
     Name                    m_name;
-
-    GPUBufferRef            m_vbo;
-    GPUBufferRef            m_ibo;
-
-    uint32                  m_indices_count = 0;
 
     MeshAttributes          m_mesh_attributes;
 
     RC<StreamedMeshData>    m_streamed_mesh_data;
 
     mutable BoundingBox     m_aabb;
+
+    DataRaceDetector        m_data_race_detector;
+
+    MeshRenderResources     *m_render_resources;
+    RenderResourcesHandle   m_always_claimed_render_resources_handle;
 };
 
 } // namespace hyperion

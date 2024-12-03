@@ -7,6 +7,7 @@
 #include <core/object/HypObjectEnums.hpp>
 #include <core/object/HypData.hpp>
 #include <core/object/HypMemberFwd.hpp>
+#include <core/Base.hpp>
 
 #include <core/containers/LinkedList.hpp>
 #include <core/containers/HashMap.hpp>
@@ -39,6 +40,20 @@ struct HypMethod;
 struct HypField;
 
 class IHypObjectInitializer;
+
+enum class HypClassSerializationMode : uint8
+{
+    NONE                        = 0x0,
+
+    MEMBERWISE                  = 0x1,  // Use HypClassInstanceMarshal - Serialize members
+    BITWISE                     = 0x2,  // Use HypClassInstanceMarshal - Serialize as FBOMStruct (binary)
+
+    USE_MARSHAL_CLASS           = 0x80, // Use Marshal class as override
+
+    DEFAULT = MEMBERWISE | USE_MARSHAL_CLASS
+};
+
+HYP_MAKE_ENUM_FLAGS(HypClassSerializationMode)
 
 class HypClassMemberIterator
 {
@@ -214,7 +229,7 @@ class HYP_API HypClass
 public:
     friend struct detail::HypClassRegistrationBase;
 
-    HypClass(TypeID type_id, Name name, Name parent_name, Span<HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members);
+    HypClass(TypeID type_id, Name name, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members);
     HypClass(const HypClass &other)                 = delete;
     HypClass &operator=(const HypClass &other)      = delete;
     HypClass(HypClass &&other) noexcept             = delete;
@@ -260,8 +275,19 @@ public:
     HYP_FORCE_INLINE bool IsStructType() const
         { return m_flags & HypClassFlags::STRUCT_TYPE; }
 
+    HYP_FORCE_INLINE bool IsPOD() const
+        { return m_flags & HypClassFlags::POD_TYPE; }
+
     HYP_FORCE_INLINE bool IsAbstract() const
-        { return bool(m_attributes["abstract"]); }
+        { return m_flags & HypClassFlags::ABSTRACT; }
+
+    bool CanSerialize() const;
+
+    HYP_FORCE_INLINE EnumFlags<HypClassSerializationMode> GetSerializationMode() const
+        { return m_serialization_mode; }
+
+    HYP_FORCE_INLINE const HypClassAttributeSet &GetAttributes() const
+        { return m_attributes; }
 
     HYP_FORCE_INLINE const HypClassAttributeValue &GetAttribute(ANSIStringView key) const
         { return m_attributes[key]; }
@@ -304,21 +330,21 @@ public:
 
     virtual bool CanCreateInstance() const = 0;
 
-    HYP_FORCE_INLINE void CreateInstance(HypData &out) const
+    HYP_FORCE_INLINE void CreateInstance(HypData &out, bool allow_abstract = false) const
     {
-        AssertThrowMsg(CanCreateInstance() && !IsAbstract(), "Cannot create a new instance for HypClass %s", GetName().LookupString());
+        AssertThrowMsg(CanCreateInstance() && (allow_abstract || !IsAbstract()), "Cannot create a new instance for HypClass %s", GetName().LookupString());
 
         CreateInstance_Internal(out);
     }
 
-    HYP_FORCE_INLINE void CreateInstance(HypData &out, UniquePtr<dotnet::Object> &&managed_object) const
-    {
-        AssertThrowMsg(CanCreateInstance() && !IsAbstract(), "Cannot create a new instance for HypClass %s", GetName().LookupString());
+    // HYP_FORCE_INLINE void CreateInstance(HypData &out, UniquePtr<dotnet::Object> &&managed_object) const
+    // {
+    //     AssertThrowMsg(CanCreateInstance() && !IsAbstract(), "Cannot create a new instance for HypClass %s", GetName().LookupString());
 
-        AssertThrowMsg(managed_object != nullptr, "Managed object must not be null for this overload of CreateInstance()");
+    //     AssertThrowMsg(managed_object != nullptr, "Managed object must not be null for this overload of CreateInstance()");
 
-        CreateInstance_Internal(out, std::move(managed_object));
-    }
+    //     CreateInstance_Internal(out, std::move(managed_object));
+    // }
 
     HYP_FORCE_INLINE HashCode GetInstanceHashCode(ConstAnyRef ref) const
     {
@@ -338,32 +364,33 @@ protected:
 
     static bool GetManagedObjectFromObjectInitializer(const IHypObjectInitializer *object_initializer, dotnet::ObjectReference &out_object_reference);
 
-    TypeID                          m_type_id;
-    Name                            m_name;
-    Name                            m_parent_name;
-    const HypClass                  *m_parent;
-    HypClassAttributeSet            m_attributes;
-    EnumFlags<HypClassFlags>        m_flags;
-    Array<HypProperty *>            m_properties;
-    HashMap<Name, HypProperty *>    m_properties_by_name;
-    Array<HypMethod *>              m_methods;
-    HashMap<Name, HypMethod *>      m_methods_by_name;
-    Array<HypField *>               m_fields;
-    HashMap<Name, HypField *>       m_fields_by_name;
+    TypeID                                  m_type_id;
+    Name                                    m_name;
+    Name                                    m_parent_name;
+    const HypClass                          *m_parent;
+    HypClassAttributeSet                    m_attributes;
+    EnumFlags<HypClassFlags>                m_flags;
+    Array<HypProperty *>                    m_properties;
+    HashMap<Name, HypProperty *>            m_properties_by_name;
+    Array<HypMethod *>                      m_methods;
+    HashMap<Name, HypMethod *>              m_methods_by_name;
+    Array<HypField *>                       m_fields;
+    HashMap<Name, HypField *>               m_fields_by_name;
+    EnumFlags<HypClassSerializationMode>    m_serialization_mode;
 };
 
 template <class T>
-class HypClassInstance : public HypClass
+class HypClassInstance final : public HypClass
 {
 public:
-    static HypClassInstance &GetInstance(Name name, Name parent_name, Span<HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+    static HypClassInstance &GetInstance(Name name, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
     {
         static HypClassInstance instance { name, parent_name, attributes, flags, members };
 
         return instance;
     }
 
-    HypClassInstance(Name name, Name parent_name, Span<HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+    HypClassInstance(Name name, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
         : HypClass(TypeID::ForType<T>(), name, parent_name, attributes, flags, members)
     {
     }
@@ -377,7 +404,7 @@ public:
 
     virtual HypClassAllocationMethod GetAllocationMethod() const override
     {
-        if constexpr (has_opaque_handle_defined<T>) {
+        if constexpr (std::is_base_of_v<HypObjectBase, T>) {
             return HypClassAllocationMethod::OBJECT_POOL_HANDLE;
         } else {
             static_assert(std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>, "HypObject must inherit EnableRefCountedPtrFromThis<T> if it does not use ObjectPool (Handle<T>)");
@@ -412,13 +439,13 @@ protected:
             return nullptr;
         }
 
-        return &static_cast<T *>(object_ptr)->GetObjectInitializer();
+        return static_cast<T *>(object_ptr)->GetObjectInitializer();
     }
     
     virtual void CreateInstance_Internal(HypData &out) const override
     {
         if constexpr (std::is_default_constructible_v<T>) {
-            if constexpr (has_opaque_handle_defined<T>) {
+            if constexpr (std::is_base_of_v<HypObjectBase, T>) {
                 out = CreateObject<T>();
             } else {
                 out = MakeRefCountedPtr<T>();
@@ -434,7 +461,7 @@ protected:
         HypObjectInitializerFlagsGuard flags_guard(HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION);
 
         if constexpr (std::is_default_constructible_v<T>) {
-            if constexpr (has_opaque_handle_defined<T>) {
+            if constexpr (std::is_base_of_v<HypObjectBase, T>) {
                 out = CreateObject<T>();
             } else {
                 out = MakeRefCountedPtr<T>();
@@ -442,7 +469,12 @@ protected:
 
             void *address = out.ToRef().GetPointer();
 
-            SetHypObjectInitializerManagedObject(GetObjectInitializer(address), address, std::move(managed_object));
+            IHypObjectInitializer *initializer = GetObjectInitializer(address);
+            AssertThrow(initializer != nullptr);
+
+            initializer->SetManagedObject(managed_object.Release());
+
+            // SetHypObjectInitializerManagedObject(GetObjectInitializer(address), address, std::move(managed_object));
         } else {
             HYP_NOT_IMPLEMENTED_VOID();
         }

@@ -29,8 +29,8 @@
 #include <core/containers/String.hpp>
 
 #include <core/object/HypClass.hpp>
-#include <core/object/HypMember.hpp>
 #include <core/object/HypData.hpp>
+#include <core/object/HypProperty.hpp>
 
 #include <core/functional/Delegate.hpp>
 
@@ -514,7 +514,7 @@ public:
                     if (get_delegate_functions_mouse_it != g_get_delegate_functions_mouse.End()) {
                         Delegate<UIEventHandlerResult, const MouseEvent &> *delegate = get_delegate_functions_mouse_it->second(ui_object.Get());
 
-                        delegate->Bind(UIScriptDelegate< const MouseEvent & > { ui_object.Get(), attribute.second, /* allow_nested */ true }).Detach();
+                        delegate->Bind(UIScriptDelegate<MouseEvent> { ui_object.Get(), attribute.second, /* allow_nested */ true }).Detach();
 
                         found = true;
                     }
@@ -528,7 +528,7 @@ public:
                     if (get_delegate_functions_keyboard_it != g_get_delegate_functions_keyboard.End()) {
                         Delegate<UIEventHandlerResult, const KeyboardEvent &> *delegate = get_delegate_functions_keyboard_it->second(ui_object.Get());
 
-                        delegate->Bind(UIScriptDelegate< const KeyboardEvent & > { ui_object.Get(), attribute.second, /* allow_nested */ true }).Detach();
+                        delegate->Bind(UIScriptDelegate<KeyboardEvent> { ui_object.Get(), attribute.second, /* allow_nested */ true }).Detach();
                     }
 
                     if (found) {
@@ -640,10 +640,6 @@ LoadedAsset UILoader::LoadAsset(LoaderState &state) const
     AssertThrow(state.asset_manager != nullptr);
 
     RC<UIObject> ui_stage = MakeRefCountedPtr<UIStage>(ThreadID::Current());
-
-    // temp
-    AssertThrow(ui_stage.Is<UIStage>());
-
     ui_stage->Init();
 
     UISAXHandler handler(&state, static_cast<UIStage *>(ui_stage.Get()));

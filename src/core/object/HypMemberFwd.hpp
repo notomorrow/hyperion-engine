@@ -15,10 +15,11 @@ namespace hyperion {
 
 enum class HypMemberType : uint8
 {
-    NONE            = 0x0,
-    TYPE_FIELD      = 0x1,
-    TYPE_METHOD     = 0x2,
-    TYPE_PROPERTY   = 0x4
+    NONE                = 0x0,
+    TYPE_FIELD          = 0x1,
+    TYPE_METHOD         = 0x2,
+    TYPE_PROPERTY       = 0x4,
+    TYPE_ENUM_MEMBER    = 0x8
 };
 
 HYP_MAKE_ENUM_FLAGS(HypMemberType)
@@ -32,6 +33,8 @@ public:
 
     virtual Name GetName() const = 0;
     virtual TypeID GetTypeID() const = 0;
+    virtual TypeID GetTargetTypeID() const = 0;
+    virtual const HypClassAttributeSet &GetAttributes() const = 0;
     virtual const HypClassAttributeValue &GetAttribute(ANSIStringView key) const = 0;
     virtual const HypClassAttributeValue &GetAttribute(ANSIStringView key, const HypClassAttributeValue &default_value) const = 0;
 };
