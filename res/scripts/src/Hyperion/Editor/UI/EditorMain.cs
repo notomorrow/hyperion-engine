@@ -44,7 +44,7 @@ namespace FooBar
         }
     }
 
-    public class TestUIScript : UIEventHandler
+    public class EditorMain : UIEventHandler
     {
         public override void Init(Entity entity)
         {
