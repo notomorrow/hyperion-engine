@@ -47,8 +47,10 @@ namespace FooBar
         }
 
         [UIEvent(AllowNested = true)]
-        public void UndoClicked()
+        public UIEventHandlerResult UndoClicked()
         {
+            Logger.Log(LogType.Info, "Undo clicked");
+
             // Temp, refactor this
             Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
 
@@ -56,7 +58,7 @@ namespace FooBar
             {
                 Logger.Log(LogType.Error, "Scene not found");
 
-                return;
+                return UIEventHandlerResult.Error;
             }
 
             var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
@@ -65,21 +67,23 @@ namespace FooBar
             {
                 Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                return;
+                return UIEventHandlerResult.Error;
             }
 
             if (!editorSubsystem.GetActionStack().CanUndo())
             {
                 Logger.Log(LogType.Info, "Cannot undo, stack is empty");
 
-                return;
+                return UIEventHandlerResult.Ok;
             }
 
             editorSubsystem.GetActionStack().Undo();
+
+            return UIEventHandlerResult.Ok;
         }
 
         [UIEvent(AllowNested = true)]
-        public void RedoClicked()
+        public UIEventHandlerResult RedoClicked()
         {
             // Temp, refactor this
             Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
@@ -88,7 +92,7 @@ namespace FooBar
             {
                 Logger.Log(LogType.Error, "Scene not found");
 
-                return;
+                return UIEventHandlerResult.Error;
             }
 
             var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
@@ -97,17 +101,19 @@ namespace FooBar
             {
                 Logger.Log(LogType.Error, "EditorSubsystem not found");
                 
-                return;
+                return UIEventHandlerResult.Error;
             }
 
             if (!editorSubsystem.GetActionStack().CanRedo())
             {
                 Logger.Log(LogType.Info, "Cannot redo, stack is empty");
 
-                return;
+                return UIEventHandlerResult.Ok;
             }
 
             editorSubsystem.GetActionStack().Redo();
+
+            return UIEventHandlerResult.Ok;
         }
 
         [UIEvent(AllowNested = true)]

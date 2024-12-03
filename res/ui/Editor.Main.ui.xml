@@ -10,8 +10,8 @@
             <MenuItem name="Exit_MenuItem" text="Exit"></MenuItem>
         </MenuItem>
         <MenuItem name="Edit_MenuItem" text="Edit" size="auto 100%">
-            <MenuItem name="Undo_MenuItem" text="Undo" OnClick="UndoClicked"></MenuItem>
-            <MenuItem name="Redo_MenuItem" text="Redo" OnClick="RedoClicked"></MenuItem>
+            <MenuItem name="Undo_MenuItem" text="Undo" onclick="UndoClicked"></MenuItem>
+            <MenuItem name="Redo_MenuItem" text="Redo" onclick="RedoClicked"></MenuItem>
         </MenuItem>
         <MenuItem name="View_MenuItem" text="View" size="auto 100%"></MenuItem>
         <MenuItem name="Help_MenuItem" text="Help" size="auto 100%"></MenuItem>
