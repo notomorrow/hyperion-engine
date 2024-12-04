@@ -150,6 +150,11 @@ namespace FooBar
                 () =>
                 {
                     node.Remove();
+
+                    if (editorSubsystem.GetFocusedNode() == node)
+                    {
+                        editorSubsystem.SetFocusedNode(null);
+                    }
                 }
             ));
 
