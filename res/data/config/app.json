@@ -45,5 +45,9 @@
   "app": {
     "name": "HyperionEditor",
     "args": "-ResX=1920 -ResY=1080"
+  },
+  "lightmapper": {
+    "ideal_triangles_per_job": 4096,
+    "gpu": false
   }
 }
