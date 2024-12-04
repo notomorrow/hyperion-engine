@@ -18,7 +18,6 @@ namespace FooBar
             base.Init(entity);
         }
 
-        [UIEvent(AllowNested = true)]
         public async void SimulateClicked()
         {
             // Test: Force GC
@@ -46,7 +45,6 @@ namespace FooBar
             testUIButton.SetName(new Name("Test Button"));
         }
 
-        [UIEvent(AllowNested = true)]
         public UIEventHandlerResult UndoClicked()
         {
             Logger.Log(LogType.Info, "Undo clicked");
@@ -82,9 +80,10 @@ namespace FooBar
             return UIEventHandlerResult.Ok;
         }
 
-        [UIEvent(AllowNested = true)]
         public UIEventHandlerResult RedoClicked()
         {
+            Logger.Log(LogType.Info, "Redo clicked");
+
             // Temp, refactor this
             Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
 
@@ -116,7 +115,6 @@ namespace FooBar
             return UIEventHandlerResult.Ok;
         }
 
-        [UIEvent(AllowNested = true)]
         public void AddNodeClicked()
         {
             // temp; testing
