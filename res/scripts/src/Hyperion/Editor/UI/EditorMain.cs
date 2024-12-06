@@ -11,6 +11,28 @@ namespace FooBar
 
     }
 
+    public class TestEditorTask : LongRunningEditorTask
+    {
+        public TestEditorTask()
+        {
+        }
+
+        public override void Cancel()
+        {
+            Logger.Log(LogType.Info, "Cancel task");
+        }
+
+        public override bool IsCompleted()
+        {
+            return false;
+        }
+
+        public override void Process()
+        {
+            Logger.Log(LogType.Info, "Process task! testing");
+        }
+    }
+
     public class EditorMain : UIEventHandler
     {
         public override void Init(Entity entity)
@@ -18,7 +40,7 @@ namespace FooBar
             base.Init(entity);
         }
 
-        public async void SimulateClicked()
+        public UIEventHandlerResult SimulateClicked()
         {
             // Test: Force GC
             GC.Collect();
@@ -30,7 +52,7 @@ namespace FooBar
                 Logger.Log(LogType.Info, "Stop simulation");
 
                 world.StopSimulating();
-                return;
+                return UIEventHandlerResult.Ok;
             }
 
             Logger.Log(LogType.Info, "Start simulation");
@@ -38,11 +60,29 @@ namespace FooBar
             world.StartSimulating();
 
 
-            // // temp testing
-            // var testDataSource = new TestDataSource();
+            // testing
+            // Temp, refactor this
+            Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
 
-            var testUIButton = new UIButton();
-            testUIButton.SetName(new Name("Test Button"));
+            if (mainScene == null)
+            {
+                Logger.Log(LogType.Error, "Scene not found");
+
+                return UIEventHandlerResult.Error;
+            }
+
+            var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
+
+            if (editorSubsystem == null)
+            {
+                Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                return UIEventHandlerResult.Error;
+            }
+
+            editorSubsystem.AddTask(new TestEditorTask());
+
+            return UIEventHandlerResult.Ok;
         }
 
         public UIEventHandlerResult UndoClicked()
@@ -115,7 +155,7 @@ namespace FooBar
             return UIEventHandlerResult.Ok;
         }
 
-        public void AddNodeClicked()
+        public UIEventHandlerResult AddNodeClicked()
         {
             // temp; testing
             Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
@@ -124,7 +164,7 @@ namespace FooBar
             {
                 Logger.Log(LogType.Error, "Scene not found");
 
-                return;
+                return UIEventHandlerResult.Ok;
             }
 
             EntityManager entityManager = mainScene.GetEntityManager();
@@ -134,7 +174,8 @@ namespace FooBar
             if (editorSubsystem == null)
             {
                 Logger.Log(LogType.Error, "EditorSubsystem not found");
-                return;
+
+                return UIEventHandlerResult.Ok;
             }
 
             var node = new Node();
@@ -159,6 +200,8 @@ namespace FooBar
             ));
 
             // @TODO Focus on node in scene view
+
+            return UIEventHandlerResult.Ok;
         }
     }
 }
