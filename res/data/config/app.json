@@ -48,6 +48,7 @@
   },
   "lightmapper": {
     "ideal_triangles_per_job": 4096,
-    "gpu": false
+    "gpu": false,
+    "threads": 16
   }
 }
