@@ -85,11 +85,11 @@
                     </Grid>
                 </Tab>
             </TabView>
-    
+
             <Panel name="Main_StatusBar" size="100% 25" textSize="10" padding="5 2" depth="100" originAlignment="bottomleft" parentAlignment="bottomleft" backgroundColor="#101012">
                 <Text name="Status_Text" size="auto 100%" text="Ready" />
 
-                <MenuBar name="Bottom_MenuBar" position="0 0" size="100% 25" textSize="10" originAlignment="topright" parentAlignment="topright" padding="5 2" depth="1" direction="1">
+                <MenuBar name="Bottom_MenuBar" position="0 0" size="100 25" textSize="10" originAlignment="topright" parentAlignment="topright" padding="5 2" depth="1" direction="1">
                     <MenuItem name="Tasks_MenuItem" text="Tasks" size="100%">
                         
                     </MenuItem>
