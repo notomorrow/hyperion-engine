@@ -59,19 +59,7 @@ namespace FooBar
 
             world.StartSimulating();
 
-
-            // testing
-            // Temp, refactor this
-            Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
-
-            if (mainScene == null)
-            {
-                Logger.Log(LogType.Error, "Scene not found");
-
-                return UIEventHandlerResult.Error;
-            }
-
-            var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
+            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
             if (editorSubsystem == null)
             {
@@ -89,17 +77,7 @@ namespace FooBar
         {
             Logger.Log(LogType.Info, "Undo clicked");
 
-            // Temp, refactor this
-            Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
-
-            if (mainScene == null)
-            {
-                Logger.Log(LogType.Error, "Scene not found");
-
-                return UIEventHandlerResult.Error;
-            }
-
-            var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
+            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
             if (editorSubsystem == null)
             {
@@ -124,17 +102,7 @@ namespace FooBar
         {
             Logger.Log(LogType.Info, "Redo clicked");
 
-            // Temp, refactor this
-            Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
-
-            if (mainScene == null)
-            {
-                Logger.Log(LogType.Error, "Scene not found");
-
-                return UIEventHandlerResult.Error;
-            }
-
-            var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
+            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
             if (editorSubsystem == null)
             {
@@ -157,19 +125,7 @@ namespace FooBar
 
         public UIEventHandlerResult AddNodeClicked()
         {
-            // temp; testing
-            Scene mainScene = Scene.GetWorld().GetSceneByName(new Name("Scene_Main", weak: true));
-
-            if (mainScene == null)
-            {
-                Logger.Log(LogType.Error, "Scene not found");
-
-                return UIEventHandlerResult.Ok;
-            }
-
-            EntityManager entityManager = mainScene.GetEntityManager();
-
-            var editorSubsystem = mainScene.GetWorld().GetSubsystem<EditorSubsystem>();
+            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
             if (editorSubsystem == null)
             {
@@ -185,7 +141,7 @@ namespace FooBar
                 new Name("AddNewNode"),
                 () =>
                 {
-                    mainScene.GetRoot().AddChild(node);
+                    editorSubsystem.GetScene().GetRoot().AddChild(node);
                     editorSubsystem.SetFocusedNode(node);
                 },
                 () =>
