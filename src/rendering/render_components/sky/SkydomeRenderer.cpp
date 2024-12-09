@@ -38,7 +38,9 @@ void SkydomeRenderer::Init()
         0.1f, 10000.0f
     );
 
+    m_camera->SetName(NAME("SkydomeRendererCamera"));
     m_camera->SetViewMatrix(Matrix4::LookAt(Vec3f::UnitZ(), Vec3f::Zero(), Vec3f::UnitY()));
+    
     InitObject(m_camera);
 
     m_virtual_scene = CreateObject<Scene>(m_camera);

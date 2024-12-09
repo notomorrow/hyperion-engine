@@ -319,6 +319,9 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     m_placeholder_data = MakeUnique<PlaceholderData>();
     m_placeholder_data->Create();
 
+    m_render_state = CreateObject<RenderState>();
+    InitObject(m_render_state);
+
     // Create script compilation service
     m_scripting_service = MakeUnique<ScriptingService>(
         g_asset_manager->GetBasePath() / "scripts" / "src",
@@ -520,6 +523,8 @@ void Engine::FinalizeStop()
 
     m_entity_instance_batch_holder_map.Reset();
 
+    m_render_state.Reset();
+
     m_render_data->Destroy();
 
     HYPERION_ASSERT_RESULT(m_global_descriptor_table->Destroy(m_instance->GetDevice()));
@@ -652,12 +657,7 @@ void Engine::PreFrameUpdate(Frame *frame)
 
     g_safe_deleter->PerformEnqueuedDeletions();
 
-    ResetRenderState(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_ACTIVE_LIGHT | RENDER_STATE_SCENE | RENDER_STATE_CAMERA);
-}
-
-void Engine::ResetRenderState(RenderStateMask mask)
-{
-    render_state.Reset(mask);
+    m_render_state->ResetStates(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_ACTIVE_LIGHT);
 }
 
 void Engine::UpdateBuffersAndDescriptors(uint32 frame_index)
@@ -677,7 +677,7 @@ void Engine::RenderDeferred(Frame *frame)
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    m_deferred_renderer->Render(frame, render_state.GetScene().render_environment.Get());
+    m_deferred_renderer->Render(frame, m_render_state->GetScene().render_environment.Get());
 }
 
 #pragma endregion Engine

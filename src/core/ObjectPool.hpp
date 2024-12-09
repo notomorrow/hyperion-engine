@@ -247,6 +247,10 @@ struct HypObjectMemory final : HypObjectHeader
 
     HYP_FORCE_INLINE const T *GetPointer() const
         { return reinterpret_cast<const T *>(bytes); }
+
+    /*! \brief Gets the offset past the header (in bytes) of the memory of the actual object held by a HypObjectMemory<T>. */
+    HYP_FORCE_INLINE static constexpr uintptr_t GetAlignedOffset()
+        { return ((sizeof(HypObjectHeader) + alignof(T) - 1) / alignof(T)) * alignof(T); }
 };
 
 template <class T>

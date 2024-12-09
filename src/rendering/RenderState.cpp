@@ -8,16 +8,56 @@
 
 #include <scene/camera/Camera.hpp>
 
+#include <core/logging/Logger.hpp>
+
 namespace hyperion {
 
+HYP_DECLARE_LOG_CHANNEL(Rendering);
+HYP_DEFINE_LOG_SUBCHANNEL(RenderState, Rendering);
+
 const RenderBinding<Scene> RenderBinding<Scene>::empty = { };
+
+RenderState::RenderState()
+{
+}
+
+RenderState::~RenderState() = default;
+
+void RenderState::Init()
+{
+    if (IsInitCalled()) {
+        return;
+    }
+
+    HypObject::Init();
+
+    static const struct DefaultCameraInitializer
+    {
+        Handle<Camera>  camera;
+
+        DefaultCameraInitializer()
+        {
+            camera = CreateObject<Camera>();
+            camera->SetName(NAME("RenderState_DefaultCamera"));
+            InitObject(camera);
+        }
+    } default_camera_initializer;
+
+    // Ensure the default camera is always set
+    camera_bindings.PushBack(&default_camera_initializer.camera->GetRenderResources());
+
+    SetReady(true);
+}
 
 void RenderState::BindCamera(Camera *camera)
 {
     AssertThrow(camera != nullptr);
     AssertThrow(camera->IsReady());
+
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     
-    camera_bindings.Push(&camera->GetRenderResources());
+    // Allow multiple of the same so we can always override the topmost camera
+    camera_bindings.PushBack(&camera->GetRenderResources());
 }
 
 void RenderState::UnbindCamera(Camera *camera)
@@ -25,18 +65,30 @@ void RenderState::UnbindCamera(Camera *camera)
     AssertThrow(camera != nullptr);
     AssertThrow(camera->IsReady());
 
-    AssertThrowMsg(camera_bindings.Any(), "No camera is currently bound!");
-    AssertThrowMsg(camera_bindings.Top()->GetCamera() == camera, "Camera is not currently bound!");
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    camera_bindings.Pop();
+    CameraRenderResources *camera_render_resources = &camera->GetRenderResources();
+
+    for (auto it = camera_bindings.Begin(); it != camera_bindings.End();) {
+        if ((*it) == camera_render_resources) {
+            it = camera_bindings.Erase(it);
+
+            // Stop iterating at first match
+            break;
+        } else {
+            ++it;
+        }
+    }
 }
 
 const CameraRenderResources &RenderState::GetActiveCamera() const
 {
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
     static const CameraRenderResources empty { nullptr };
 
     return camera_bindings.Any()
-        ? *camera_bindings.Top()
+        ? *camera_bindings.Back()
         : empty;
 }
 
@@ -44,6 +96,8 @@ void RenderState::BindLight(Light *light)
 {
     AssertThrow(light != nullptr);
     AssertThrow(light->IsReady());
+
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     auto &array = bound_lights[uint32(light->GetLightType())];
 
@@ -64,6 +118,8 @@ void RenderState::UnbindLight(Light *light)
     AssertThrow(light != nullptr);
     AssertThrow(light->IsReady());
 
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
     auto &array = bound_lights[uint32(light->GetLightType())];
 
     auto it = array.FindIf([light](const TResourceHandle<LightRenderResources> &item)
@@ -78,6 +134,8 @@ void RenderState::UnbindLight(Light *light)
 
 const TResourceHandle<LightRenderResources> &RenderState::GetActiveLight() const
 {
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
     static const TResourceHandle<LightRenderResources> empty;
 
     return light_bindings.Any()
@@ -87,11 +145,15 @@ const TResourceHandle<LightRenderResources> &RenderState::GetActiveLight() const
 
 void RenderState::SetActiveLight(LightRenderResources &light_render_resources)
 {
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
     light_bindings.Push(TResourceHandle(light_render_resources));
 }
 
 void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 {
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
     constexpr EnvProbeBindingSlot binding_slots[ENV_PROBE_TYPE_MAX] = {
         ENV_PROBE_BINDING_SLOT_CUBEMAP,         // reflection
         ENV_PROBE_BINDING_SLOT_CUBEMAP,         // sky
@@ -150,6 +212,8 @@ void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 
 void RenderState::UnbindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 {
+    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
     // @FIXME: There's currently a bug where if an EnvProbe is unbound and then after several EnvProbes are bound, the
     // counter keeps increasing and the slot is never reused. This is because the counter is never reset.
 

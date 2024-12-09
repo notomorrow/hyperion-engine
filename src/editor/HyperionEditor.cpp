@@ -258,13 +258,13 @@ void HyperionEditor::Init()
     //     });
     // }
 
-    { // test terrain
-        if (WorldGrid *world_grid = m_scene->GetWorldGrid()) {
-            world_grid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
-        } else {
-            HYP_FAIL("Failed to get world grid");
-        }
-    }
+    // { // test terrain
+    //     if (WorldGrid *world_grid = m_scene->GetWorldGrid()) {
+    //         world_grid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
+    //     } else {
+    //         HYP_FAIL("Failed to get world grid");
+    //     }
+    // }
 
     if (true) { // add test area light
         Handle<Light> light = CreateObject<Light>(
@@ -377,7 +377,7 @@ void HyperionEditor::Init()
 
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
-    batch->Add("test_model", "models/pica_pica/pica_pica.obj");//sponza/sponza.obj");
+    batch->Add("test_model", "models/sponza/sponza.obj");
     // batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     // batch->Add("house", "models/house.obj");
 
@@ -398,7 +398,7 @@ void HyperionEditor::Init()
 #if 1
         NodeProxy node = results["test_model"].ExtractAs<Node>();
 
-        // node.Scale(0.02f);
+        node.Scale(0.02f);
         node.SetName("test_model");
         node.LockTransform();
 
@@ -410,13 +410,15 @@ void HyperionEditor::Init()
             });
 
             m_scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(env_grid_entity, BoundingBoxComponent {
-                node.GetLocalAABB() * 1.05f,
-                node.GetWorldAABB() * 1.05f
+                node.GetLocalAABB() * 2.0f,
+                node.GetWorldAABB() * 2.0f
             });
 
             // Add env grid component
             m_scene->GetEntityManager()->AddComponent<EnvGridComponent>(env_grid_entity, EnvGridComponent {
-                EnvGridType::ENV_GRID_TYPE_SH
+                EnvGridType::ENV_GRID_TYPE_SH,
+                Vec3u { 24, 4, 24 },
+                EnvGridMobility::FOLLOW_CAMERA_X | EnvGridMobility::FOLLOW_CAMERA_Z
             });
 
             NodeProxy env_grid_node = m_scene->GetRoot()->AddChild();
@@ -615,6 +617,15 @@ void HyperionEditor::Teardown()
     
 void HyperionEditor::Logic(GameCounter::TickUnit delta)
 {
+    // auto env_grid_node = m_scene->FindNodeByName("EnvGrid");
+
+    // if (env_grid_node) {
+    //     env_grid_node.SetWorldTranslation(Vec3f {
+    //         m_scene->GetCamera()->GetTranslation().x,
+    //         0.0f,
+    //         m_scene->GetCamera()->GetTranslation().z
+    //     });
+    // }
 }
 
 void HyperionEditor::OnInputEvent(const SystemEvent &event)

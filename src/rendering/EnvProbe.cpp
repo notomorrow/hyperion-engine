@@ -59,7 +59,7 @@ struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
 
     virtual Result operator()() override
     {
-        g_engine->GetRenderState().BindEnvProbe(env_probe_type, id);
+        g_engine->GetRenderState()->BindEnvProbe(env_probe_type, id);
 
         HYPERION_RETURN_OK;
     }
@@ -80,7 +80,7 @@ struct RENDER_COMMAND(UnbindEnvProbe) : renderer::RenderCommand
 
     virtual Result operator()() override
     {
-        g_engine->GetRenderState().UnbindEnvProbe(env_probe_type, id);
+        g_engine->GetRenderState()->UnbindEnvProbe(env_probe_type, id);
 
         HYPERION_RETURN_OK;
     }
@@ -280,6 +280,7 @@ void EnvProbe::Init()
                 m_camera_near, m_camera_far
             );
 
+            m_camera->SetName(NAME("EnvProbeCamera"));
             m_camera->SetViewMatrix(Matrix4::LookAt(Vector3(0.0f, 0.0f, 1.0f), m_aabb.GetCenter(), Vector3(0.0f, 1.0f, 0.0f)));
             m_camera->SetFramebuffer(m_framebuffer);
 
@@ -503,7 +504,7 @@ void EnvProbe::Render(Frame *frame)
 
     EnvProbeIndex probe_index;
 
-    const auto &env_probes = g_engine->GetRenderState().bound_env_probes[GetEnvProbeType()];
+    const auto &env_probes = g_engine->GetRenderState()->bound_env_probes[GetEnvProbeType()];
 
     {
         const auto it = env_probes.Find(GetID());
@@ -541,7 +542,7 @@ void EnvProbe::Render(Frame *frame)
         // Find a directional light to use for the sky
         // @TODO Support selecting a specific light for the EnvProbe
 
-        auto &directional_lights = g_engine->GetRenderState().bound_lights[uint32(LightType::DIRECTIONAL)];
+        auto &directional_lights = g_engine->GetRenderState()->bound_lights[uint32(LightType::DIRECTIONAL)];
 
         if (directional_lights.Any()) {
             light_render_resources_handle = &directional_lights[0];
@@ -553,14 +554,14 @@ void EnvProbe::Render(Frame *frame)
     }
 
     {
-        g_engine->GetRenderState().SetActiveEnvProbe(GetID());
+        g_engine->GetRenderState()->SetActiveEnvProbe(GetID());
 
         if (light_render_resources_handle != nullptr) {
-            g_engine->GetRenderState().SetActiveLight(**light_render_resources_handle);
+            g_engine->GetRenderState()->SetActiveLight(**light_render_resources_handle);
         }
 
-        g_engine->GetRenderState().BindScene(m_parent_scene.Get());
-        g_engine->GetRenderState().BindCamera(m_camera.Get());
+        g_engine->GetRenderState()->BindScene(m_parent_scene.Get());
+        g_engine->GetRenderState()->BindCamera(m_camera.Get());
 
         m_render_collector.CollectDrawCalls(
             frame,
@@ -573,14 +574,14 @@ void EnvProbe::Render(Frame *frame)
             Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT))
         );
 
-        g_engine->GetRenderState().UnbindCamera(m_camera.Get());
-        g_engine->GetRenderState().UnbindScene();
+        g_engine->GetRenderState()->UnbindCamera(m_camera.Get());
+        g_engine->GetRenderState()->UnbindScene();
 
         if (light_render_resources_handle != nullptr) {
-            g_engine->GetRenderState().UnsetActiveLight();
+            g_engine->GetRenderState()->UnsetActiveLight();
         }
 
-        g_engine->GetRenderState().UnsetActiveEnvProbe();
+        g_engine->GetRenderState()->UnsetActiveEnvProbe();
     }
 
     const ImageRef &framebuffer_image = m_framebuffer->GetAttachment(0)->GetImage();

@@ -55,6 +55,9 @@ public:
 
     void ApplyJitter();
 
+    void EnqueueBind();
+    void EnqueueUnbind();
+
 protected:
     virtual void Initialize() override;
     virtual void Destroy() override;

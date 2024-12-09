@@ -83,7 +83,8 @@ private:
 enum class EnvGridPassMode
 {
     RADIANCE,
-    IRRADIANCE
+    IRRADIANCE,
+    IRRADIANCE_VOXEL
 };
 
 class EnvGridPass final : public FullScreenPass

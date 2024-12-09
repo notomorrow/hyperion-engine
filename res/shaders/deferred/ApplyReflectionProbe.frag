@@ -63,7 +63,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 1
+#define SAMPLE_COUNT 4
 
 void main()
 {
@@ -88,7 +88,7 @@ void main()
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
 
-    const float lod = float(9.0) * roughness * (2.0 - roughness);
+    const float lod = float(12.0) * roughness * (2.0 - roughness);
 
     vec4 ibl = vec4(0.0);
 

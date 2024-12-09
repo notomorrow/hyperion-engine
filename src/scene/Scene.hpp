@@ -107,7 +107,7 @@ public:
     HYP_FORCE_INLINE void SetName(Name name)
         { m_name = name; }
 
-    /*! \brief Get the camera that is used to render this Scene perform frustum culling. */
+    /*! \brief Get the camera that is used to render this Scene and perform frustum culling. */
     HYP_METHOD(Property="Camera", Serialize=true, Editor=true)
     HYP_FORCE_INLINE const Handle<Camera> &GetCamera() const
         { return m_camera; }

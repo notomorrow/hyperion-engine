@@ -15,6 +15,8 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -74,6 +76,32 @@ void CameraController::SetMouseLocked(bool mouse_locked)
 
 #pragma endregion CameraController
 
+#pragma region NullCameraController
+
+NullCameraController::NullCameraController()
+    : CameraController(CameraType::NONE)
+{
+}
+
+void NullCameraController::OnAdded(Camera *camera)
+{
+    m_camera = camera;
+}
+
+void NullCameraController::UpdateLogic(double dt)
+{
+}
+
+void NullCameraController::UpdateViewMatrix()
+{
+}
+
+void NullCameraController::UpdateProjectionMatrix()
+{
+}
+
+#pragma endregion NullCameraController
+
 #pragma region Camera
 
 Camera::Camera()
@@ -83,6 +111,7 @@ Camera::Camera()
 
 Camera::Camera(int width, int height)
     : HypObject(),
+      m_name(Name::Unique("Camera_")),
       m_fov(50.0f),
       m_width(width),
       m_height(height),
@@ -97,10 +126,13 @@ Camera::Camera(int width, int height)
       m_up(Vec3f::UnitY()),
       m_render_resources(nullptr)
 {
+    // make sure there is always at least 1 camera controller
+    m_camera_controllers.PushBack(MakeRefCountedPtr<NullCameraController>());
 }
 
 Camera::Camera(float fov, int width, int height, float _near, float _far)
     : HypObject(),
+      m_name(Name::Unique("Camera_")),
       m_fov(fov),
       m_width(width),
       m_height(height),
@@ -109,11 +141,15 @@ Camera::Camera(float fov, int width, int height, float _near, float _far)
       m_up(Vec3f::UnitY()),
       m_render_resources(nullptr)
 {
+    // make sure there is always at least 1 camera controller
+    m_camera_controllers.PushBack(MakeRefCountedPtr<NullCameraController>());
+    
     SetToPerspectiveProjection(fov, _near, _far);
 }
 
 Camera::Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far)
     : HypObject(),
+      m_name(Name::Unique("Camera_")),
       m_fov(0.0f),
       m_width(width),
       m_height(height),
@@ -122,12 +158,16 @@ Camera::Camera(int width, int height, float left, float right, float bottom, flo
       m_up(Vec3f::UnitY()),
       m_render_resources(nullptr)
 {
+    // make sure there is always at least 1 camera controller
+    m_camera_controllers.PushBack(MakeRefCountedPtr<NullCameraController>());
+
     SetToOrthographicProjection(left, right, bottom, top, _near, _far);
 }
 
 Camera::~Camera()
 {
     if (m_render_resources != nullptr) {
+        m_render_resources->EnqueueUnbind();
         m_render_resources->Unclaim();
         FreeResource(m_render_resources);
     }
@@ -182,6 +222,26 @@ void Camera::Init()
     SetReady(true);
 }
 
+void Camera::AddCameraController(const RC<CameraController> &camera_controller)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    AssertThrow(camera_controller != nullptr);
+    AssertThrowMsg(camera_controller->InstanceClass() != NullCameraController::Class(),
+        "Cannot add NullCameraController instance");
+
+    AssertThrow(!m_camera_controllers.Contains(camera_controller));
+
+    m_camera_controllers.PushBack(camera_controller);
+
+    camera_controller->OnAdded(this);
+
+    UpdateViewMatrix();
+    UpdateProjectionMatrix();
+    UpdateViewProjectionMatrix();
+}
+
 void Camera::SetFramebuffer(const FramebufferRef &framebuffer)
 {
     m_framebuffer = framebuffer;
@@ -189,13 +249,15 @@ void Camera::SetFramebuffer(const FramebufferRef &framebuffer)
 
 void Camera::SetTranslation(const Vec3f &translation)
 {
+    HYP_SCOPE;
+
     m_translation = translation;
     m_next_translation = translation;
     
     m_previous_view_matrix = m_view_mat;
 
-    if (m_camera_controller != nullptr) {
-        m_camera_controller->SetTranslation(translation);
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->SetTranslation(translation);
     }
 
     UpdateViewMatrix();
@@ -204,19 +266,23 @@ void Camera::SetTranslation(const Vec3f &translation)
 
 void Camera::SetNextTranslation(const Vec3f &translation)
 {
+    HYP_SCOPE;
+
     m_next_translation = translation;
 
-    if (m_camera_controller != nullptr) {
-        m_camera_controller->SetNextTranslation(translation);
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->SetNextTranslation(translation);
     }
 }
 
 void Camera::SetDirection(const Vec3f &direction)
 {
+    HYP_SCOPE;
+
     m_direction = direction;
 
-    if (m_camera_controller != nullptr) {
-        m_camera_controller->SetDirection(direction);
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->SetDirection(direction);
     }
 
     // UpdateViewMatrix();
@@ -225,10 +291,12 @@ void Camera::SetDirection(const Vec3f &direction)
 
 void Camera::SetUpVector(const Vec3f &up)
 {
+    HYP_SCOPE;
+
     m_up = up;
 
-    if (m_camera_controller != nullptr) {
-        m_camera_controller->SetUpVector(up);
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->SetUpVector(up);
     }
 
     // UpdateViewMatrix();
@@ -237,6 +305,8 @@ void Camera::SetUpVector(const Vec3f &up)
 
 void Camera::Rotate(const Vec3f &axis, float radians)
 {
+    HYP_SCOPE;
+
     m_direction.Rotate(axis, radians);
     m_direction.Normalize();
     
@@ -248,6 +318,8 @@ void Camera::Rotate(const Vec3f &axis, float radians)
 
 void Camera::SetViewMatrix(const Matrix4 &view_mat)
 {
+    HYP_SCOPE;
+
     m_previous_view_matrix = m_view_mat;
     m_view_mat = view_mat;
 
@@ -256,6 +328,8 @@ void Camera::SetViewMatrix(const Matrix4 &view_mat)
 
 void Camera::SetProjectionMatrix(const Matrix4 &proj_mat)
 {
+    HYP_SCOPE;
+
     m_proj_mat = proj_mat;
 
     UpdateViewProjectionMatrix();
@@ -263,6 +337,8 @@ void Camera::SetProjectionMatrix(const Matrix4 &proj_mat)
 
 void Camera::SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &proj_mat)
 {
+    HYP_SCOPE;
+
     m_previous_view_matrix = m_view_mat;
 
     m_view_mat = view_mat;
@@ -273,6 +349,8 @@ void Camera::SetViewProjectionMatrix(const Matrix4 &view_mat, const Matrix4 &pro
 
 void Camera::UpdateViewProjectionMatrix()
 {
+    HYP_SCOPE;
+
     m_view_proj_mat = m_proj_mat * m_view_mat;
 
     m_frustum.SetFromViewProjectionMatrix(m_view_proj_mat);
@@ -330,13 +408,15 @@ Vec2f Camera::GetPixelSize() const
 
 void Camera::Update(GameCounter::TickUnit dt)
 {
+    HYP_SCOPE;
+
     AssertReady();
 
-    if (m_camera_controller) {
-        m_camera_controller->m_camera = this;
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->m_camera = this;
 
-        m_camera_controller->UpdateCommandQueue(dt);
-        m_camera_controller->UpdateLogic(dt);
+        camera_controller->UpdateCommandQueue(dt);
+        camera_controller->UpdateLogic(dt);
     }
 
     m_translation = m_next_translation;
@@ -359,27 +439,33 @@ void Camera::Update(GameCounter::TickUnit dt)
 
 void Camera::UpdateViewMatrix()
 {
+    HYP_SCOPE;
+
     m_previous_view_matrix = m_view_mat;
 
-    if (m_camera_controller) {
-        m_camera_controller->UpdateViewMatrix();
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->UpdateViewMatrix();
     }
 }
 
 void Camera::UpdateProjectionMatrix()
 {
-    if (m_camera_controller) {
-        m_camera_controller->UpdateProjectionMatrix();
+    HYP_SCOPE;
+
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->UpdateProjectionMatrix();
     }
 }
 
 void Camera::UpdateMatrices()
 {
+    HYP_SCOPE;
+
     m_previous_view_matrix = m_view_mat;
 
-    if (m_camera_controller) {
-        m_camera_controller->UpdateViewMatrix();
-        m_camera_controller->UpdateProjectionMatrix();
+    if (const RC<CameraController> &camera_controller = GetCameraController()) {
+        camera_controller->UpdateViewMatrix();
+        camera_controller->UpdateProjectionMatrix();
     }
 
     UpdateViewProjectionMatrix();

@@ -67,7 +67,7 @@ struct RENDER_COMMAND(BindEnvProbes) : renderer::RenderCommand
     virtual Result operator()()
     {
         for (const auto &it : items) {
-            g_engine->GetRenderState().BindEnvProbe(it.second, it.first);
+            g_engine->GetRenderState()->BindEnvProbe(it.second, it.first);
         }
 
         HYPERION_RETURN_OK;
@@ -205,9 +205,12 @@ void Scene::SetOwnerThreadID(ThreadID owner_thread_id)
 void Scene::SetCamera(const Handle<Camera> &camera)
 {
     m_camera = camera;
-    InitObject(m_camera);
 
-    m_render_collector.SetCamera(m_camera);
+    if (IsInitCalled()) {
+        InitObject(m_camera);
+
+        m_render_collector.SetCamera(m_camera);
+    }
 }
 
 void Scene::SetWorld(World *world)

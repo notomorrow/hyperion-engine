@@ -160,7 +160,7 @@ void EditorSubsystem::Initialize()
 {
     HYP_SCOPE;
 
-    m_camera->SetCameraController(MakeRefCountedPtr<EditorCameraController>());
+    m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
     m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
 
     const Vec2i window_size = m_app_context->GetMainWindow()->GetDimensions();

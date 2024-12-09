@@ -30,11 +30,11 @@ void EnvGridUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
         return;
     }
 
-    bool use_voxel_grid = false;
+    EnumFlags<EnvGridFlags> flags = EnvGridFlags::NONE;
 
     if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.reflections.enabled").ToBool()
         || g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.mode").ToString().ToLower() == "voxel") {
-        use_voxel_grid = true;
+        flags |= EnvGridFlags::USE_VOXEL_GRID;
     }
 
     BoundingBox world_aabb = bounding_box_component.world_aabb;
@@ -56,7 +56,7 @@ void EnvGridUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
                 env_grid_component.env_grid_type,
                 world_aabb,
                 env_grid_component.grid_size,
-                use_voxel_grid
+                flags
             }
         );
     }
@@ -90,6 +90,31 @@ void EnvGridUpdaterSystem::Process(GameCounter::TickUnit delta)
             env_grid_component.env_grid->SetCameraData(world_aabb, transform_component.transform.GetTranslation());
 
             env_grid_component.transform_hash_code = transform_hash_code;
+        }
+
+        // Update movable envgrids
+        if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA) {
+            const Handle<Camera> &camera = GetScene()->GetCamera();
+
+            if (camera.IsValid()) {
+                Vec3f translation = transform_component.transform.GetTranslation();
+
+                if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_X) {
+                    translation.x = camera->GetTranslation().x;
+                }
+
+                if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_Y) {
+                    translation.y = camera->GetTranslation().y;
+                }
+
+                if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_Z) {
+                    translation.z = camera->GetTranslation().z;
+                }
+
+                if (translation != transform_component.transform.GetTranslation()) {
+                    transform_component.transform.SetTranslation(translation);
+                }
+            }
         }
     }
 }

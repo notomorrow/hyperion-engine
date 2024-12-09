@@ -91,6 +91,14 @@ void HBAO::Create()
     FullScreenPass::Create();
 
     CreateTemporalBlending();
+
+    PUSH_RENDER_COMMAND(
+        AddHBAOFinalImagesToGlobalDescriptorSet,
+        FixedArray<ImageViewRef, max_frames_in_flight> {
+            m_temporal_blending ? m_temporal_blending->GetResultTexture()->GetImageView() : GetAttachment(0)->GetImageView(),
+            m_temporal_blending ? m_temporal_blending->GetResultTexture()->GetImageView() : GetAttachment(0)->GetImageView()
+        }
+    );
 }
 
 void HBAO::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
@@ -162,7 +170,7 @@ void HBAO::Render(Frame *frame)
     const uint frame_index = frame->GetFrameIndex();
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -186,7 +194,7 @@ void HBAO::Render(Frame *frame)
                 {
                     NAME("Scene"),
                     {
-                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                     }
                 }

@@ -3,9 +3,14 @@
 #ifndef HYPERION_RENDER_STATE_HPP
 #define HYPERION_RENDER_STATE_HPP
 
-#include <core/containers/FlatMap.hpp>
 #include <core/utilities/Optional.hpp>
+
+#include <core/containers/FlatMap.hpp>
 #include <core/containers/Stack.hpp>
+
+#include <core/object/HypObject.hpp>
+#include <core/Base.hpp>
+
 #include <core/Defines.hpp>
 
 #include <rendering/Light.hpp>
@@ -81,16 +86,29 @@ struct RenderBinding<Scene>
         { return bool(id); }
 };
 
-struct RenderState
+HYP_CLASS()
+class RenderState : public HypObject<RenderState>
 {
+    HYP_OBJECT_BODY(RenderState);
+
+public:
     Stack<RenderBinding<Scene>>                                                             scene_bindings;
-    Stack<CameraRenderResources *>                                                          camera_bindings;
-    FixedArray<Array<TResourceHandle<LightRenderResources>>, uint32(LightType::MAX)> bound_lights;
-    Stack<TResourceHandle<LightRenderResources>>                                     light_bindings;
+    Array<CameraRenderResources *>                                                          camera_bindings;
+    FixedArray<Array<TResourceHandle<LightRenderResources>>, uint32(LightType::MAX)>        bound_lights;
+    Stack<TResourceHandle<LightRenderResources>>                                            light_bindings;
     FixedArray<ArrayMap<ID<EnvProbe>, Optional<uint>>, ENV_PROBE_TYPE_MAX>                  bound_env_probes; // map to texture slot
     ID<EnvGrid>                                                                             bound_env_grid;
     Stack<ID<EnvProbe>>                                                                     env_probe_bindings;
     uint32                                                                                  frame_counter = ~0u;
+
+    HYP_API RenderState();
+    RenderState(const RenderState &)                = delete;
+    RenderState &operator=(const RenderState &)     = delete;
+    RenderState(RenderState &&) noexcept            = delete;
+    RenderState &operator=(RenderState &&) noexcept = delete;
+    HYP_API ~RenderState();
+
+    HYP_API void Init();
 
     HYP_FORCE_INLINE void AdvanceFrameCounter()
         { ++frame_counter; }
@@ -179,7 +197,7 @@ struct RenderState
     void BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id);
     void UnbindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id);
 
-    void Reset(RenderStateMask mask)
+    void ResetStates(RenderStateMask mask)
     {
         if (mask & RENDER_STATE_ENV_PROBES) {
             for (auto &probes : bound_env_probes) {

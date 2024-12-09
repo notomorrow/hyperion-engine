@@ -1,4 +1,5 @@
 DEF_HANDLE(Engine)
+DEF_HANDLE(RenderState)
 DEF_HANDLE(Texture)
 DEF_HANDLE(Camera)
 DEF_HANDLE(Entity)

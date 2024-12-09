@@ -79,6 +79,26 @@ void CameraRenderResources::SetBufferData(const CameraShaderData &buffer_data)
     });
 }
 
+void CameraRenderResources::EnqueueBind()
+{
+    HYP_SCOPE;
+
+    Execute([this]()
+    {
+        g_engine->GetRenderState()->BindCamera(GetCamera());
+    }, /* force_render_thread */ true);
+}
+
+void CameraRenderResources::EnqueueUnbind()
+{
+    HYP_SCOPE;
+
+    Execute([this]()
+    {
+        g_engine->GetRenderState()->UnbindCamera(GetCamera());
+    }, /* force_render_thread */ true);
+}
+
 #pragma endregion CameraRenderResources
 
 namespace renderer {

@@ -55,7 +55,7 @@ private:
     GPUBufferRef                    m_uniform_buffer;
     
     ComputePipelineRef              m_write_uvs;
-    ComputePipelineRef              m_sample;
+    ComputePipelineRef              m_sample_gbuffer;
 
     UniquePtr<TemporalBlending>     m_temporal_blending;
 

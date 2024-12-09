@@ -1,18 +1,19 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 
 namespace Hyperion
 {
     /// <summary>
     /// Represents a hashed name (see core/Name.hpp for implementation)
     /// </summary>
-    [StructLayout(LayoutKind.Sequential, Size = 8)]
+    [StructLayout(LayoutKind.Explicit, Size = 8)]
     public struct Name
     {
-        internal ulong hashCode;
+        internal static ConcurrentDictionary<string, Name> nameCache = new ConcurrentDictionary<string, Name>();
 
-        [ThreadStatic]
-        internal static Dictionary<string, Name> nameCache = new Dictionary<string, Name>();
+        [FieldOffset(0)]
+        internal ulong hashCode;
 
         public Name(ulong hashCode)
         {
@@ -22,6 +23,8 @@ namespace Hyperion
         public Name(string nameString, bool weak = false)
         {
             // try to find the name in the cache
+            Logger.Log(LogType.Info, "Name: {0}", nameString);
+            Logger.Log(LogType.Info, "nameCache: {0}", nameCache);
             if (nameCache.TryGetValue(nameString, out Name cachedName))
             {
                 this = cachedName;

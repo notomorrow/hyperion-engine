@@ -68,8 +68,6 @@ namespace FooBar
                 return UIEventHandlerResult.Error;
             }
 
-            editorSubsystem.AddTask(new TestEditorTask());
-
             return UIEventHandlerResult.Ok;
         }
 

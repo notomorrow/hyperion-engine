@@ -31,7 +31,7 @@ ${start_macro_names[hyp_class.class_type]}(${hyp_class.name}${(f", NAME(\"{hyp_c
         % elif member.member_type == HypMemberType.METHOD:
             <% s += f"HypMethod(NAME(HYP_STR({member.name})), &Type::{member.name}{', ' + attributes if len(member.attributes) > 0 else ''})" %> \
         % elif member.member_type == HypMemberType.PROPERTY:
-            <% property_args = ', '.join([f"{arg_name}" for arg_type, arg_name, cpp_decl in member.args]) if len(member.args) > 0 else "" %> \
+            <% property_args = ', '.join(member.args) if len(member.args) > 0 else "" %> \
             <% s += f"HypProperty(NAME(HYP_STR({member.name})), {property_args})" %> \
         % elif member.member_type == HypMemberType.ENUMERATOR:
             <% s += f"HypProperty(NAME(HYP_STR({to_pascal_case(member.name)})), HypPropertyGetter(static_cast<Type(*)(void)>([](void) {{ return Type::{member.name}; }})))" %> \

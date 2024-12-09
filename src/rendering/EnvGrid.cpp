@@ -39,14 +39,14 @@ static const Vec2u sh_probe_dimensions { 16, 16 };
 static const uint32 sh_num_levels = MathUtil::Max(1u, uint32(MathUtil::FastLog2(sh_num_samples.Max()) + 1));
 static const bool sh_parallel_reduce = false;
 
-static const uint max_queued_probes_for_render = 1;
+static const uint max_queued_probes_for_render = 4;
 
 static const InternalFormat ambient_probe_format = InternalFormat::R10G10B10A2;
 
 static const Vec3u voxel_grid_dimensions { 256, 256, 256 };
 static const InternalFormat voxel_grid_format = InternalFormat::RGBA8;
 
-static const Vec2u framebuffer_dimensions { 128, 128 };
+static const Vec2u framebuffer_dimensions { 16, 16 };
 static const EnvProbeIndex invalid_probe_index = EnvProbeIndex();
 
 static Vec2u GetProbeDimensions(EnvProbeType env_probe_type)
@@ -383,7 +383,8 @@ void EnvGrid::Init()
             -int(probe_dimensions.x), int(probe_dimensions.y),
             0.05f, m_aabb.GetExtent().Max()//(m_aabb.GetExtent() / Vec3f(m_options.density)).Max()
         );
-
+        
+        m_camera->SetName(NAME("EnvGridCamera"));
         m_camera->SetTranslation(m_aabb.GetCenter());
         m_camera->SetFramebuffer(m_framebuffer);
 
@@ -464,7 +465,7 @@ void EnvGrid::OnRender(Frame *frame)
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const CameraRenderResources &active_camera = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &active_camera = g_engine->GetRenderState()->GetActiveCamera();
 
     const BoundingBox grid_aabb = m_aabb;
 
@@ -886,8 +887,8 @@ void EnvGrid::RenderEnvProbe(
         struct alignas(128) { uint32 env_probe_index; } push_constants;
         push_constants.env_probe_index = probe.GetID().ToIndex();
 
-        g_engine->GetRenderState().SetActiveEnvProbe(probe.GetID());
-        g_engine->GetRenderState().BindScene(GetParent()->GetScene());
+        g_engine->GetRenderState()->SetActiveEnvProbe(probe.GetID());
+        g_engine->GetRenderState()->BindScene(GetParent()->GetScene());
 
         m_render_collector.CollectDrawCalls(
             frame,
@@ -902,8 +903,8 @@ void EnvGrid::RenderEnvProbe(
             &push_constants
         );
 
-        g_engine->GetRenderState().UnbindScene();
-        g_engine->GetRenderState().UnsetActiveEnvProbe();
+        g_engine->GetRenderState()->UnbindScene();
+        g_engine->GetRenderState()->UnsetActiveEnvProbe();
     }
 
     const ImageRef &framebuffer_image = m_framebuffer->GetAttachment(0)->GetImage();
@@ -936,7 +937,7 @@ void EnvGrid::ComputeSH(
 
     AssertThrow(GetEnvGridType() == ENV_GRID_TYPE_SH);
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -991,7 +992,7 @@ void EnvGrid::ComputeSH(
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
@@ -1017,7 +1018,7 @@ void EnvGrid::ComputeSH(
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
@@ -1067,7 +1068,7 @@ void EnvGrid::ComputeSH(
                     {
                         NAME("Scene"),
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                             { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
@@ -1104,7 +1105,7 @@ void EnvGrid::ComputeSH(
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
