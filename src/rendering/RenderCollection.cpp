@@ -550,7 +550,7 @@ void RenderCollector::ExecuteDrawCalls(
         framebuffer->BeginCapture(command_buffer, frame_index);
     }
 
-    g_engine->GetRenderState().BindCamera(camera.Get());
+    g_engine->GetRenderState()->BindCamera(camera.Get());
 
     for (const auto &render_groups_by_attributes : m_draw_collection->GetProxyGroups()) {
         for (const auto &it : render_groups_by_attributes) {
@@ -577,7 +577,7 @@ void RenderCollector::ExecuteDrawCalls(
         }
     }
 
-    g_engine->GetRenderState().UnbindCamera(camera.Get());
+    g_engine->GetRenderState()->UnbindCamera(camera.Get());
 
     if (framebuffer) {
         framebuffer->EndCapture(command_buffer, frame_index);

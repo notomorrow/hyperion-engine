@@ -137,6 +137,22 @@ protected:
     Queue<CameraCommand>    m_command_queue;
 };
 
+HYP_CLASS()
+class HYP_API NullCameraController : public CameraController
+{
+    HYP_OBJECT_BODY(NullCameraController);
+
+public:
+    NullCameraController();
+    virtual ~NullCameraController() override = default;
+
+    virtual void OnAdded(Camera *camera) override;
+
+    virtual void UpdateLogic(double dt) override;
+    virtual void UpdateViewMatrix() override;
+    virtual void UpdateProjectionMatrix() override;
+};
+
 class PerspectiveCameraController;
 class OrthoCameraController;
 class FirstPersonCameraController;
@@ -162,6 +178,14 @@ public:
     Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far);
     ~Camera();
 
+    HYP_METHOD(Property="Name", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE Name GetName() const
+        { return m_name; }
+
+    HYP_METHOD(Property="Name", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE void SetName(Name name)
+        { m_name = name; }
+
     HYP_FORCE_INLINE CameraRenderResources &GetRenderResources() const
         { return *m_render_resources; }
 
@@ -170,23 +194,24 @@ public:
 
     void SetFramebuffer(const FramebufferRef &framebuffer);
 
-    HYP_METHOD(Property="Controller", Serialize=true, Editor=true)
+    HYP_METHOD(Property="CameraControllers", Serialize=true)
+    HYP_FORCE_INLINE const Array<RC<CameraController>> &GetCameraControllers() const
+        { return m_camera_controllers; }
+
+    HYP_METHOD(Property="CameraControllers", Serialize=true)
+    HYP_FORCE_INLINE void SetCameraControllers(const Array<RC<CameraController>> &camera_controllers)
+        { m_camera_controllers = camera_controllers; }
+
+    HYP_METHOD()
     HYP_FORCE_INLINE const RC<CameraController> &GetCameraController() const
-        { return m_camera_controller; }
+        { return m_camera_controllers.Back(); }
 
-    HYP_METHOD(Property="Controller", Serialize=true, Editor=true)
-    void SetCameraController(const RC<CameraController> &camera_controller)
-    {
-        m_camera_controller = camera_controller;
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool HasActiveCameraController() const
+        { return m_camera_controllers.Size() > 1; }
 
-        if (m_camera_controller) {
-            m_camera_controller->OnAdded(this);
-        }
-
-        UpdateViewMatrix();
-        UpdateProjectionMatrix();
-        UpdateViewProjectionMatrix();
-    }
+    HYP_METHOD()
+    void AddCameraController(const RC<CameraController> &camera_controller);
 
     void SetToPerspectiveProjection(
         float fov, float _near, float _far
@@ -398,28 +423,30 @@ protected:
     void UpdateProjectionMatrix();
     void UpdateViewProjectionMatrix();
 
-    RC<CameraController>    m_camera_controller;
+    Name                        m_name;
 
-    FramebufferRef          m_framebuffer;
+    Array<RC<CameraController>> m_camera_controllers;
 
-    Vec3f                   m_translation, m_next_translation, m_direction, m_up;
-    Matrix4                 m_view_mat, m_proj_mat;
-    Frustum                 m_frustum;
+    FramebufferRef              m_framebuffer;
 
-    int                     m_width, m_height;
-    float                   m_near, m_far;
+    Vec3f                       m_translation, m_next_translation, m_direction, m_up;
+    Matrix4                     m_view_mat, m_proj_mat;
+    Frustum                     m_frustum;
+
+    int                         m_width, m_height;
+    float                       m_near, m_far;
 
     // only for perspective
-    float                   m_fov;
+    float                       m_fov;
 
     // only for ortho
-    float                   m_left, m_right, m_bottom, m_top;
+    float                       m_left, m_right, m_bottom, m_top;
 
 private:
-    Matrix4                 m_view_proj_mat;
-    Matrix4                 m_previous_view_matrix;
+    Matrix4                     m_view_proj_mat;
+    Matrix4                     m_previous_view_matrix;
 
-    CameraRenderResources   *m_render_resources;
+    CameraRenderResources       *m_render_resources;
 };
 
 } // namespace hyperion

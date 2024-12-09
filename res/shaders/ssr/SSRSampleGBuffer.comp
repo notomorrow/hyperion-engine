@@ -175,11 +175,5 @@ void main(void)
         reflection_sample.a *= alpha;
     }
 
-
-// #ifdef OUTPUT_RGBA8
-    // reflection_sample.rgb = TonemapReinhardSimple(reflection_sample.rgb);
-    // imageStore(ssr_sample, ivec2(coord), vec4(pow(reflection_sample.rgb, vec3(1.0 / 2.2)), reflection_sample.a));
-// #else
     imageStore(ssr_sample, ivec2(coord), vec4(reflection_sample));
-// #endif
 }

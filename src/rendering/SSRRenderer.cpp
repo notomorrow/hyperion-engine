@@ -23,7 +23,7 @@ static constexpr bool use_temporal_blending = true;
 
 static constexpr InternalFormat ssr_format = InternalFormat::RGBA16F;
 
-struct alignas(16) SSRParams
+struct SSRParams
 {
     Vec4u   dimensions;
     float   ray_step,
@@ -60,14 +60,14 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
     {
         const SSRParams ssr_params {
             .dimensions             = Vec4u { extent.x, extent.y, 0, 0 },
-            .ray_step               = 0.1f,
+            .ray_step               = 0.3f,
             .num_iterations         = 128.0f,
-            .max_ray_distance       = 150.0f,
-            .distance_bias          = 0.1f,
+            .max_ray_distance       = 100.0f,
+            .distance_bias          = 0.01f,
             .offset                 = 0.001f,
-            .eye_fade_start         = 0.90f,
-            .eye_fade_end           = 0.96f,
-            .screen_edge_fade_start = 0.7f,
+            .eye_fade_start         = 0.92f,
+            .eye_fade_end           = 0.99f,
+            .screen_edge_fade_start = 0.85f,
             .screen_edge_fade_end   = 0.98f
         };
             
@@ -216,7 +216,7 @@ void SSRRenderer::Destroy()
     m_is_rendered = false;
 
     SafeRelease(std::move(m_write_uvs));
-    SafeRelease(std::move(m_sample));
+    SafeRelease(std::move(m_sample_gbuffer));
 
     if (m_temporal_blending) {
         m_temporal_blending.Reset();
@@ -290,14 +290,14 @@ void SSRRenderer::CreateComputePipelines()
 
     // Sample pass
 
-    ShaderRef sample_shader = g_shader_manager->GetOrCreate(NAME("SSRSample"), shader_properties);
-    AssertThrow(sample_shader.IsValid());
+    ShaderRef sample_gbuffer_shader = g_shader_manager->GetOrCreate(NAME("SSRSampleGBuffer"), shader_properties);
+    AssertThrow(sample_gbuffer_shader.IsValid());
 
-    const renderer::DescriptorTableDeclaration sample_shader_descriptor_table_decl = sample_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
-    DescriptorTableRef sample_shader_descriptor_table = MakeRenderObject<DescriptorTable>(sample_shader_descriptor_table_decl);
+    const renderer::DescriptorTableDeclaration sample_gbuffer_shader_descriptor_table_decl = sample_gbuffer_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
+    DescriptorTableRef sample_gbuffer_shader_descriptor_table = MakeRenderObject<DescriptorTable>(sample_gbuffer_shader_descriptor_table_decl);
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        const DescriptorSetRef &descriptor_set = sample_shader_descriptor_table->GetDescriptorSet(NAME("SSRDescriptorSet"), frame_index);
+        const DescriptorSetRef &descriptor_set = sample_gbuffer_shader_descriptor_table->GetDescriptorSet(NAME("SSRDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(NAME("UVImage"), m_image_outputs[0]->GetImageView());
@@ -305,14 +305,14 @@ void SSRRenderer::CreateComputePipelines()
         descriptor_set->SetElement(NAME("SSRParams"), m_uniform_buffer);
     }
 
-    DeferCreate(sample_shader_descriptor_table, g_engine->GetGPUDevice());
+    DeferCreate(sample_gbuffer_shader_descriptor_table, g_engine->GetGPUDevice());
 
-    m_sample = MakeRenderObject<ComputePipeline>(
-        sample_shader,
-        sample_shader_descriptor_table
+    m_sample_gbuffer = MakeRenderObject<ComputePipeline>(
+        sample_gbuffer_shader,
+        sample_gbuffer_shader_descriptor_table
     );
 
-    DeferCreate(m_sample, g_engine->GetGPUDevice());
+    DeferCreate(m_sample_gbuffer, g_engine->GetGPUDevice());
 
     PUSH_RENDER_COMMAND(
         CreateSSRDescriptors,
@@ -327,9 +327,9 @@ void SSRRenderer::Render(Frame *frame)
 {
     HYP_NAMED_SCOPE("Screen Space Reflections");
 
-    const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
+    const uint scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -375,11 +375,11 @@ void SSRRenderer::Render(Frame *frame)
     // put sample image in writeable state
     m_image_outputs[1]->GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_sample->Bind(command_buffer);
+    m_sample_gbuffer->Bind(command_buffer);
 
-    m_sample->GetDescriptorTable()->Bind(
+    m_sample_gbuffer->GetDescriptorTable()->Bind(
         frame,
-        m_sample,
+        m_sample_gbuffer,
         {
             {
                 NAME("Scene"),
@@ -391,7 +391,7 @@ void SSRRenderer::Render(Frame *frame)
         }
     );
 
-    m_sample->Dispatch(command_buffer, Vec3u { num_dispatch_calls, 1, 1 });
+    m_sample_gbuffer->Dispatch(command_buffer, Vec3u { num_dispatch_calls, 1, 1 });
 
     // transition sample image back into read state
     m_image_outputs[1]->GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);

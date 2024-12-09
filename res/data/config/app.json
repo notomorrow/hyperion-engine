@@ -3,7 +3,7 @@
     "ssr": {
       "quality": "low",
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": true
     },
     "rt": {
@@ -22,6 +22,9 @@
       "enabled": true
     },
     "debug": {
+      "ssr": true,
+      "hbao": false,
+      "hbil": false,
       "env_grid_probes": false,
       "reflection_probes": false,
       "reflections": false,
@@ -35,11 +38,12 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true,
+        "mode": "sh"
       }
     },
     "hbao": {
-      "enabled": false
+      "enabled": true
     }
   },
   "app": {

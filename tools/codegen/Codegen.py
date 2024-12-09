@@ -368,7 +368,7 @@ class HypMemberDefinition:
         raise Exception('Member is not a method')
             
     @property
-    def args(self) -> 'list[tuple[str, str, str]]':
+    def args(self):
         if self.is_method:
             if self.method_args is None:
                 return []

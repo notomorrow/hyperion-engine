@@ -95,7 +95,7 @@ void ReflectionProbeRenderer::OnRender(Frame *frame)
 
     // if (m_env_probe->GetProxy().visibility_bits & (1ull << SizeType(GetParent()->GetScene()->GetCamera().GetID().ToIndex()))) {
     //     if (!m_last_visibility_state) {
-    //         g_engine->GetRenderState().BindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
+    //         g_engine->GetRenderState()->BindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
 
     //         m_last_visibility_state = true;
     //     }
@@ -104,7 +104,7 @@ void ReflectionProbeRenderer::OnRender(Frame *frame)
     // } else {
     //     // No point in keeping it bound if the light is not visible on the screen.
     //     if (m_last_visibility_state) {
-    //         g_engine->GetRenderState().UnbindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
+    //         g_engine->GetRenderState()->UnbindEnvProbe(m_env_probe->GetEnvProbeType(), m_env_probe->GetID());
 
     //         m_last_visibility_state = false;
     //     }

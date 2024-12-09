@@ -41,6 +41,11 @@ namespace Hyperion
 
             if (type.IsValueType)
             {
+                if (type.IsEnum)
+                {
+                    type = Enum.GetUnderlyingType(type);
+                }
+
                 obj = Marshal.PtrToStructure(ptr, type);
 
                 return;

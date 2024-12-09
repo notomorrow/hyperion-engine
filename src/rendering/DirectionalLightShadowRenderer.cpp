@@ -372,7 +372,7 @@ void ShadowPass::Render(Frame *frame)
 
     AssertThrow(m_parent_scene.IsValid());
 
-    g_engine->GetRenderState().BindScene(m_parent_scene.Get());
+    g_engine->GetRenderState()->BindScene(m_parent_scene.Get());
 
     { // Render each shadow map as needed
         if (m_rerender_semaphore->IsInSignalState()) {
@@ -426,7 +426,7 @@ void ShadowPass::Render(Frame *frame)
         }
     }
 
-    g_engine->GetRenderState().UnbindScene();
+    g_engine->GetRenderState()->UnbindScene();
 
     { // Combine static and dynamic shadow maps
         const AttachmentRef &attachment = m_combine_shadow_maps_pass->GetFramebuffer()->GetAttachment(0);
@@ -491,7 +491,8 @@ DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Vec2u 
       m_shadow_mode(shadow_mode)
 {
     m_camera = CreateObject<Camera>(m_resolution.x, m_resolution.y);
-    m_camera->SetCameraController(RC<OrthoCameraController>::Construct());
+    m_camera->SetName(NAME("DirectionalLightShadowRendererCamera"));
+    m_camera->AddCameraController(RC<OrthoCameraController>::Construct());
 
     CreateShader();
 }
@@ -522,9 +523,6 @@ void DirectionalLightShadowRenderer::Init()
     );
     m_shadow_pass->SetShadowMapIndex(GetComponentIndex());
     m_shadow_pass->Create();
-
-    // m_camera = CreateObject<Camera>(m_resolution.x, m_resolution.y);
-    // m_camera->SetCameraController(RC<OrthoCameraController>::Construct());
 
     m_camera->SetFramebuffer(m_shadow_pass->GetFramebuffer());
     InitObject(m_camera);

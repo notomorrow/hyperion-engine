@@ -187,13 +187,13 @@ public:
         { m_callback = std::move(callback); }
 
 protected:
-    TaskID          m_id;
-    ThreadID        m_initiator_thread_id;
-    SchedulerBase   *m_assigned_scheduler;
-    TaskSemaphore   m_semaphore;
+    TaskID              m_id;
+    ThreadID            m_initiator_thread_id;
+    SchedulerBase       *m_assigned_scheduler;
+    TaskSemaphore       m_semaphore;
 
     /*! \brief Not called if task is part of a TaskBatch. */
-    Proc<void>      m_callback;
+    Proc<void>          m_callback;
 };
 
 template <class ReturnType>
@@ -233,7 +233,10 @@ public:
         return *this;
     }
     
-    virtual ~TaskExecutorInstance() override = default;
+    virtual ~TaskExecutorInstance() override
+    {
+        DebugLog(LogType::Debug, "Destruct TaskExecutorInstance %p\n", (void *)this);
+    }
 
     HYP_FORCE_INLINE ReturnType &Result() &
         { return m_result_value.Get(); }
@@ -865,7 +868,7 @@ struct TaskAwaitAll_Impl;
 template <class ReturnType>
 struct TaskAwaitAll_Impl<Task<ReturnType>>
 {
-    Array<ReturnType> operator()(Span<Task<ReturnType>> tasks) const
+    auto operator()(Span<Task<ReturnType>> tasks) const -> std::conditional_t<std::is_void_v<ReturnType>, void, Array<ReturnType>>
     {
         for (SizeType i = 0; i < tasks.Size(); ++i) {
             Task<ReturnType> &task = tasks[i];
@@ -915,17 +918,26 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
 
         semaphore.Acquire();
 
-        Array<ReturnType> results;
-        results.ResizeUninitialized(tasks.Size());
+        if constexpr (std::is_void_v<ReturnType>) {
+            for (SizeType i = 0; i < tasks.Size(); ++i) {
+                Task<ReturnType> &task = tasks[i];
+                AssertThrow(task.IsCompleted());
+                
+                task.Await();
+            }
+        } else {
+            Array<ReturnType> results;
+            results.ResizeUninitialized(tasks.Size());
 
-        for (SizeType i = 0; i < tasks.Size(); ++i) {
-            Task<ReturnType> &task = tasks[i];
-            AssertThrow(task.IsCompleted());
-            
-            Memory::Construct<ReturnType>(&results[i], std::move(task.Await()));
+            for (SizeType i = 0; i < tasks.Size(); ++i) {
+                Task<ReturnType> &task = tasks[i];
+                AssertThrow(task.IsCompleted());
+                
+                Memory::Construct<ReturnType>(&results[i], std::move(task.Await()));
+            }
+
+            return results;
         }
-
-        return results;
     }
 };
 

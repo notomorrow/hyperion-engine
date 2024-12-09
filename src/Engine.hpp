@@ -152,11 +152,8 @@ public:
     HYP_FORCE_INLINE DeferredRenderer *GetDeferredRenderer() const
         { return m_deferred_renderer.Get(); }
     
-    HYP_FORCE_INLINE RenderState &GetRenderState()
-        { return render_state; }
-
-    HYP_FORCE_INLINE const RenderState &GetRenderState() const
-        { return render_state; }
+    HYP_FORCE_INLINE const Handle<RenderState> &GetRenderState() const
+        { return m_render_state; }
     
     HYP_FORCE_INLINE ShaderGlobals *GetRenderData() const
         { return m_render_data.Get(); }
@@ -229,14 +226,11 @@ public:
 
     ShaderCompiler m_shader_compiler;
 
-    RenderState render_state;
-
     AtomicVar<bool> m_stop_requested;
 
     void FinalizeStop();
 
 private:
-    void ResetRenderState(RenderStateMask mask);
     void UpdateBuffersAndDescriptors(uint32 frame_index);
 
     void PreFrameUpdate(Frame *frame);
@@ -275,6 +269,8 @@ private:
     UniquePtr<net::NetRequestThread>                        m_net_request_thread;
 
     UniquePtr<EntityInstanceBatchHolderMap>                 m_entity_instance_batch_holder_map;
+
+    Handle<RenderState>                                     m_render_state;
 
     CrashHandler                                            m_crash_handler;
 

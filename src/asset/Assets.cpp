@@ -126,6 +126,7 @@ void AssetManager::SetBasePath(const FilePath &base_path)
         asset_collector = *asset_collectors_it;
     } else {
         asset_collector = CreateObject<AssetCollector>(base_path);
+        InitObject(asset_collector);
 
         m_asset_collectors.PushBack(asset_collector);
 

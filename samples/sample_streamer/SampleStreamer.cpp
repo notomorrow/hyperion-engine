@@ -255,7 +255,7 @@ void SampleStreamer::Init()
     /*m_scene->GetCamera()->SetCameraController(UniquePtr<FollowCameraController>::Construct(
         Vector3(0.0f, 7.0f, 0.0f), Vector3(0.0f, 0.0f, 5.0f)
     ));*/
-    m_scene->GetCamera()->SetCameraController(MakeRefCountedPtr<FirstPersonCameraController>());
+    m_scene->GetCamera()->AddCameraController(MakeRefCountedPtr<FirstPersonCameraController>());
 
     if (false) {
         auto gun_asset = AssetManager::GetInstance()->Load<Node>("models/gun/AK47NoSubdiv.obj");
@@ -873,8 +873,6 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
 
         RC<CameraTrack> camera_track = RC<CameraTrack>::Construct();
         camera_track->SetDuration(60.0);
-
-        //m_scene->GetCamera()->SetCameraController(UniquePtr<CameraTrackController>::Construct(camera_track));
 
         for (const auto &camera_definition : camera_definitions) {
             camera_track->AddPivot({

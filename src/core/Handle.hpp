@@ -216,11 +216,11 @@ public:
      *  \return A pointer to the object. */
     HYP_FORCE_INLINE T *Get() const
     {
-        if (ptr == nullptr) {
-            return nullptr;
-        }
+        static constexpr uintptr_t offset = HypObjectMemory<T>::GetAlignedOffset();
 
-        return static_cast<HypObjectMemory<T> *>(ptr)->GetPointer();
+        return ptr != nullptr
+            ? reinterpret_cast<T *>((uintptr_t(ptr) + offset))
+            : nullptr;
     }
     
     /*! \brief Reset the handle to an empty state.

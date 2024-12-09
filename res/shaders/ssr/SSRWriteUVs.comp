@@ -148,8 +148,6 @@ void main(void)
     }
 
     vec2 texcoord = saturate((vec2(coord) + 0.5) / (vec2(ssr_params.dimension.xy)));
-    
-        //saturate((vec2(gl_GlobalInvocationID.xy) + 0.5) / (vec2(ssr_params.dimension.xy) * 0.5));
 
     const vec4 material_info = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
     const float roughness = material_info.r;

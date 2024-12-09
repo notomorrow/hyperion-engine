@@ -230,6 +230,56 @@ namespace Hyperion
                 if (type.IsEnum)
                 {
                     type = Enum.GetUnderlyingType(type);
+
+                    if (type == typeof(sbyte))
+                    {
+                        HypData_SetInt8(ref this, (sbyte)value);
+                        return;
+                    }
+
+                    if (type == typeof(short))
+                    {
+                        HypData_SetInt16(ref this, (short)value);
+                        return;
+                    }
+
+                    if (type == typeof(int))
+                    {
+                        HypData_SetInt32(ref this, (int)value);
+                        return;
+                    }
+
+                    if (type == typeof(long))
+                    {
+                        HypData_SetInt64(ref this, (long)value);
+                        return;
+                    }
+
+                    if (type == typeof(byte))
+                    {
+                        HypData_SetUInt8(ref this, (byte)value);
+                        return;
+                    }
+
+                    if (type == typeof(ushort))
+                    {
+                        HypData_SetUInt16(ref this, (ushort)value);
+                        return;
+                    }
+
+                    if (type == typeof(uint))
+                    {
+                        HypData_SetUInt32(ref this, (uint)value);
+                        return;
+                    }
+
+                    if (type == typeof(ulong))
+                    {
+                        HypData_SetUInt64(ref this, (ulong)value);
+                        return;
+                    }
+
+                    throw new NotImplementedException("Unsupported enum type to construct HypData: " + type.FullName);
                 }
 
                 HypClass? hypClass = null;

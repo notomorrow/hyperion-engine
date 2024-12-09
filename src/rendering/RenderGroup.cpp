@@ -533,9 +533,9 @@ static HYP_FORCE_INLINE void RenderAll(
         return;
     }
 
-    const ID<Scene> scene_id = g_engine->GetRenderState().GetScene().id;
+    const ID<Scene> scene_id = g_engine->GetRenderState()->GetScene().id;
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     const uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -581,10 +581,10 @@ static HYP_FORCE_INLINE void RenderAll(
             frame->GetCommandBuffer(),
             pipeline,
             {
-                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                 { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
-                { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
+                { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
             },
             scene_descriptor_set_index
         );
@@ -670,7 +670,7 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
         return;
     }
 
-    const ID<Scene> scene_id = g_engine->GetRenderState().GetScene().id;
+    const ID<Scene> scene_id = g_engine->GetRenderState()->GetScene().id;
 
     const uint frame_index = frame->GetFrameIndex();
 
@@ -703,7 +703,7 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
 
     // AtomicVar<uint32> num_rendered_objects { 0u };
     
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     const uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -745,10 +745,10 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
                         secondary,
                         pipeline,
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
-                            { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                            { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                            { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
+                            { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
                         },
                         scene_descriptor_set_index
                     );

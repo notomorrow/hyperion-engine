@@ -423,7 +423,7 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame) const
 
     framebuffer->BeginCapture(command_buffer, frame_index);
 
-    g_engine->GetRenderState().BindCamera(m_camera.Get());
+    g_engine->GetRenderState()->BindCamera(m_camera.Get());
 
     using IteratorType = FlatMap<RenderableAttributeSet, Handle<RenderGroup>>::ConstIterator;
     Array<IteratorType> iterators;
@@ -460,7 +460,7 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame) const
         render_group->PerformRendering(frame);
     }
 
-    g_engine->GetRenderState().UnbindCamera(m_camera.Get());
+    g_engine->GetRenderState()->UnbindCamera(m_camera.Get());
 
     framebuffer->EndCapture(command_buffer, frame_index);
 }
@@ -565,12 +565,12 @@ void UIRenderer::OnRender(Frame *frame)
 {
     HYP_SCOPE;
 
-    g_engine->GetRenderState().BindScene(m_ui_stage->GetScene());
+    g_engine->GetRenderState()->BindScene(m_ui_stage->GetScene());
 
     m_render_collector.CollectDrawCalls(frame);
     m_render_collector.ExecuteDrawCalls(frame);
 
-    g_engine->GetRenderState().UnbindScene();
+    g_engine->GetRenderState()->UnbindScene();
 }
 
 #pragma endregion UIRenderer

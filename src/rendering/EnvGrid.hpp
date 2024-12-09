@@ -38,7 +38,7 @@ enum EnvGridType : uint32
     ENV_GRID_TYPE_MAX
 };
 
-struct alignas(256) EnvGridShaderData
+struct EnvGridShaderData
 {
     uint32  probe_indices[max_bound_ambient_probes];
 
@@ -53,8 +53,6 @@ struct alignas(256) EnvGridShaderData
     Vec4f   voxel_grid_aabb_max;
     Vec4f   voxel_grid_aabb_min;
 };
-
-static_assert(sizeof(EnvGridShaderData) == 4352);
 
 static constexpr uint32 max_env_grids = (1ull * 1024ull * 1024ull) / sizeof(EnvGridShaderData);
 

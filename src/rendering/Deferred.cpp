@@ -377,13 +377,13 @@ void DeferredPass::Record(uint frame_index)
     }
 
     // no lights bound, do not render direct shading at all
-    if (g_engine->GetRenderState().NumBoundLights() == 0) {
+    if (g_engine->GetRenderState()->NumBoundLights() == 0) {
         return;
     }
 
     static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
     
@@ -394,8 +394,8 @@ void DeferredPass::Record(uint frame_index)
         m_render_group->GetPipeline()->GetRenderPass(),
         [&](CommandBuffer *cmd)
         {
-            const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
-            const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
+            const uint scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
+            const uint env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
 
             // render with each light
             for (uint light_type_index = 0; light_type_index < uint(LightType::MAX); light_type_index++) {
@@ -441,7 +441,7 @@ void DeferredPass::Record(uint frame_index)
                         );
                 }
 
-                const auto &lights = g_engine->GetRenderState().bound_lights[uint32(light_type)]; 
+                const auto &lights = g_engine->GetRenderState()->bound_lights[uint32(light_type)]; 
 
                 for (const TResourceHandle<LightRenderResources> &it : lights) {
                     LightRenderResources &light_render_resources = *it;
@@ -555,17 +555,15 @@ void EnvGridPass::CreateShader()
 
         break;
     case EnvGridPassMode::IRRADIANCE:
-        switch (g_engine->GetConfig().Get(CONFIG_ENV_GRID_GI_MODE).GetInt()) {
-        case 1:
-            properties.Set("MODE_IRRADIANCE_VOXEL");
-            break;
-        case 0: // fallthrough
-        default:
-            properties.Set("MODE_IRRADIANCE");
-            break;
-        }
+        properties.Set("MODE_IRRADIANCE");
 
         break;
+    case EnvGridPassMode::IRRADIANCE_VOXEL:
+        properties.Set("MODE_IRRADIANCE_VOXEL");
+        
+        break;
+    default:
+        HYP_UNREACHABLE();
     }
 
     m_shader = g_shader_manager->GetOrCreate(
@@ -642,7 +640,7 @@ void EnvGridPass::CreateTemporalBlending()
     m_temporal_blending = MakeUnique<TemporalBlending>(
         m_framebuffer->GetExtent(),
         InternalFormat::RGBA8,
-        TemporalBlendTechnique::TECHNIQUE_2,
+        TemporalBlendTechnique::TECHNIQUE_1,
         TemporalBlendFeedback::LOW,
         m_framebuffer
     );
@@ -658,7 +656,7 @@ void EnvGridPass::AddToGlobalDescriptorSet()
             AssertThrow(m_temporal_blending->GetResultTexture()->GetImageView().IsValid());
             AssertThrow(m_temporal_blending->GetResultTexture()->GetImageView()->IsCreated());
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
-                ->SetElement(NAME("EnvGridRadianceResultTexture"), m_temporal_blending->GetResultTexture()->GetImageView());
+                ->SetElement(NAME("EnvGridRadianceResultTexture"), GetAttachment(0)->GetImageView()); //m_temporal_blending->GetResultTexture()->GetImageView());
 
             break;
         case EnvGridPassMode::IRRADIANCE:
@@ -701,49 +699,49 @@ void EnvGridPass::Render(Frame *frame)
 
     const uint frame_index = frame->GetFrameIndex();
 
-    const uint scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
-    const uint env_grid_index = g_engine->GetRenderState().bound_env_grid.ToIndex();
+    const uint scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
+    const uint env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
     GetFramebuffer()->BeginCapture(frame->GetCommandBuffer(), frame_index);
 
-    // render previous frame's result to screen
-    if (!m_is_first_frame) {
-        m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->Record(
-            g_engine->GetGPUInstance()->GetDevice(),
-            m_render_group->GetPipeline()->GetRenderPass(),
-            [&](CommandBuffer *cmd)
-            {
-                // render previous frame's result to screen
-                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->Bind(cmd);
-                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable()->Bind<GraphicsPipelineRef>(
-                    cmd,
-                    frame_index,
-                    m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
-                    {
-                        {
-                            NAME("Scene"),
-                            {
-                                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
-                                { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid_index) }
-                            }
-                        }
-                    }
-                );
+    // // render previous frame's result to screen
+    // if (!m_is_first_frame) {
+    //     m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->Record(
+    //         g_engine->GetGPUInstance()->GetDevice(),
+    //         m_render_group->GetPipeline()->GetRenderPass(),
+    //         [&](CommandBuffer *cmd)
+    //         {
+    //             // render previous frame's result to screen
+    //             m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->Bind(cmd);
+    //             m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable()->Bind<GraphicsPipelineRef>(
+    //                 cmd,
+    //                 frame_index,
+    //                 m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
+    //                 {
+    //                     {
+    //                         NAME("Scene"),
+    //                         {
+    //                             { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
+    //                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+    //                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid_index) }
+    //                         }
+    //                     }
+    //                 }
+    //             );
 
-                m_full_screen_quad->Render(cmd);
+    //             m_full_screen_quad->Render(cmd);
 
-                HYPERION_RETURN_OK;
-            });
+    //             HYPERION_RETURN_OK;
+    //         });
 
-        HYPERION_ASSERT_RESULT(m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->SubmitSecondary(frame->GetCommandBuffer()));
-    } else {
-        m_is_first_frame = false;
-    }
+    //     HYPERION_ASSERT_RESULT(m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->SubmitSecondary(frame->GetCommandBuffer()));
+    // } else {
+    //     m_is_first_frame = false;
+    // }
 
     const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
@@ -1019,9 +1017,9 @@ void ReflectionProbePass::Render(Frame *frame)
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    const uint32 scene_index = g_engine->GetRenderState().GetScene().id.ToIndex();
+    const uint32 scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -1046,7 +1044,7 @@ void ReflectionProbePass::Render(Frame *frame)
 
         const EnvProbeType env_probe_type = reflection_probe_types[mode_index];
 
-        for (const auto &it : g_engine->render_state.bound_env_probes[env_probe_type]) {
+        for (const auto &it : g_engine->GetRenderState()->bound_env_probes[env_probe_type]) {
             const ID<EnvProbe> &env_probe_id = it.first;
 
             pass_ptrs[mode_index].second.PushBack(env_probe_id);
@@ -1246,7 +1244,21 @@ void DeferredRenderer::Create()
     m_env_grid_radiance_pass = MakeUnique<EnvGridPass>(EnvGridPassMode::RADIANCE);
     m_env_grid_radiance_pass->Create();
 
-    m_env_grid_irradiance_pass = MakeUnique<EnvGridPass>(EnvGridPassMode::IRRADIANCE);
+    EnvGridPassMode irradiance_mode = EnvGridPassMode::IRRADIANCE;
+
+    if (const json::JSONString gi_mode_string = g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.mode").ToString(); gi_mode_string.Any()) {
+        if (gi_mode_string == "voxel") {
+            irradiance_mode = EnvGridPassMode::IRRADIANCE_VOXEL;
+        } else if (gi_mode_string == "sh") {
+            irradiance_mode = EnvGridPassMode::IRRADIANCE;
+        } else {
+            HYP_LOG(Config, LogLevel::WARNING, "Unknown EnvGrid GI mode \"{}\"; falling back to \"sh\"", gi_mode_string);
+
+            irradiance_mode = EnvGridPassMode::IRRADIANCE;
+        }
+    }
+
+    m_env_grid_irradiance_pass = MakeUnique<EnvGridPass>(irradiance_mode);
     m_env_grid_irradiance_pass->Create();
 
     m_reflection_probe_pass = MakeUnique<ReflectionProbePass>();
@@ -1426,9 +1438,9 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     CommandBuffer *primary = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
     
-    const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
+    const uint scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -1453,8 +1465,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     const bool use_env_grid_irradiance = g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.enabled").ToBool();
     const bool use_env_grid_radiance = g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.reflections.enabled").ToBool();
 
-    const bool use_reflection_probes = g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_SKY].Any()
-        || g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Any();
+    const bool use_reflection_probes = g_engine->GetRenderState()->bound_env_probes[ENV_PROBE_TYPE_SKY].Any()
+        || g_engine->GetRenderState()->bound_env_probes[ENV_PROBE_TYPE_REFLECTION].Any();
 
     const bool use_temporal_aa = g_engine->GetAppContext()->GetConfiguration().Get("rendering.taa.enabled").ToBool() && m_temporal_aa != nullptr;
 
@@ -1581,7 +1593,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
         m_indirect_pass->GetCommandBuffer(frame_index)->SubmitSecondary(primary);
 
-        if (g_engine->GetRenderState().NumBoundLights() != 0) {
+        if (g_engine->GetRenderState()->NumBoundLights() != 0) {
             m_direct_pass->GetCommandBuffer(frame_index)->SubmitSecondary(primary);
         }
 
@@ -1601,8 +1613,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
         bool has_set_active_env_probe = false;
 
         // Set sky environment map as definition
-        if (g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_SKY].Any()) {
-            g_engine->GetRenderState().SetActiveEnvProbe(g_engine->GetRenderState().bound_env_probes[ENV_PROBE_TYPE_SKY].Front().first);
+        if (g_engine->GetRenderState()->bound_env_probes[ENV_PROBE_TYPE_SKY].Any()) {
+            g_engine->GetRenderState()->SetActiveEnvProbe(g_engine->GetRenderState()->bound_env_probes[ENV_PROBE_TYPE_SKY].Front().first);
 
             has_set_active_env_probe = true;
         }
@@ -1620,7 +1632,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
             }
 
             if (has_set_active_env_probe) {
-                g_engine->GetRenderState().UnsetActiveEnvProbe();
+                g_engine->GetRenderState()->UnsetActiveEnvProbe();
             }
         }
 
@@ -1656,8 +1668,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
                     {
                         { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
-                        { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                        { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                        { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
+                        { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
                     }
                 }
             }
@@ -1728,14 +1740,14 @@ void DeferredRenderer::ApplyCameraJitter()
 
     static const float jitter_scale = 0.25f;
 
-    const CameraRenderResources &active_camera = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &active_camera = g_engine->GetRenderState()->GetActiveCamera();
 
     const uint32 camera_buffer_index = active_camera.GetBufferIndex();
     AssertThrow(camera_buffer_index != ~0u);
 
     Vec4f jitter = Vec4f::Zero();
 
-    const uint frame_counter = g_engine->GetRenderState().frame_counter + 1;
+    const uint frame_counter = g_engine->GetRenderState()->frame_counter + 1;
 
     CameraShaderData &buffer_data = g_engine->GetRenderData()->cameras->Get<CameraShaderData>(camera_buffer_index);
 

@@ -277,7 +277,7 @@ void GaussianSplattingInstance::Record(Frame *frame)
 
     AssertThrow(IsReady());
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -306,7 +306,7 @@ void GaussianSplattingInstance::Record(Frame *frame)
                 {
                     NAME("Scene"),
                     {
-                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                     }
                 }
@@ -402,7 +402,7 @@ void GaussianSplattingInstance::Record(Frame *frame)
                     {
                         NAME("Scene"),
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                         }
                     }
@@ -460,7 +460,7 @@ void GaussianSplattingInstance::Record(Frame *frame)
                 {
                     NAME("Scene"),
                     {
-                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                     }
                 }
@@ -795,7 +795,7 @@ void GaussianSplatting::Render(Frame *frame)
         return;
     }
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -818,7 +818,7 @@ void GaussianSplatting::Render(Frame *frame)
                     {
                         NAME("Scene"),
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                         }
                     }

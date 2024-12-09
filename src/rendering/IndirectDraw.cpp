@@ -451,7 +451,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
 
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
@@ -488,7 +488,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
     //     m_cached_cull_data_updated_bits &= ~(1u << frame_index);
     // }
     
-    const ID<Scene> scene_id = g_engine->GetRenderState().GetScene().id;
+    const ID<Scene> scene_id = g_engine->GetRenderState()->GetScene().id;
     const uint scene_index = scene_id.ToIndex();
 
     m_object_visibility->GetDescriptorTable()->Bind(
@@ -498,10 +498,10 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
-                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
                 }
             }
         }
