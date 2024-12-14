@@ -11,6 +11,7 @@
 #include <core/utilities/StringView.hpp>
 
 #include <core/filesystem/FilePath.hpp>
+#include <core/filesystem/DataStore.hpp>
 
 #include <core/threading/Thread.hpp>
 #include <core/threading/AtomicVar.hpp>
@@ -133,58 +134,190 @@ private:
     String  m_path;
 };
 
-class HYP_API ConfigurationDataStore
+class HYP_API ConfigurationDataStore : public DataStoreBase
 {
 public:
     ConfigurationDataStore(UTF8StringView config_name);
     ConfigurationDataStore(const ConfigurationDataStore &other)                 = delete;
     ConfigurationDataStore &operator=(const ConfigurationDataStore &other)      = delete;
-    ConfigurationDataStore(ConfigurationDataStore &&other) noexcept             = delete;
+    ConfigurationDataStore(ConfigurationDataStore &&other) noexcept;
     ConfigurationDataStore &operator=(ConfigurationDataStore &&other) noexcept  = delete;
-    ~ConfigurationDataStore();
+    virtual ~ConfigurationDataStore() override;
+
+    HYP_FORCE_INLINE const String &GetConfigName() const
+        { return m_config_name; }
 
     FilePath GetFilePath() const;
 
     bool Read(json::JSONValue &out_value) const;
     bool Write(const json::JSONValue &value) const;
 
+protected:
+    virtual Name GetTypeName() const override
+        { return NAME("ConfigurationDataStore"); }
+
 private:
-    const String    m_config_name;
+    String  m_config_name;
 };
 
-
-/*! \brief A table of configuration values, stored as JSON objects.
- *  \details This class is thread-safe, and can be used to store configuration values that can be
- *           read and written from multiple threads. Use Get() and Set() to read and write values using
- *           an (optionally nested) key, in the format "group.subgroup.key", or simply "key" if the
- *           value is not nested. */
 class HYP_API ConfigurationTable
 {
 public:
     ConfigurationTable(const String &config_name);
-    ConfigurationTable(const ConfigurationTable &other)                 = delete;
-    ConfigurationTable &operator=(const ConfigurationTable &other)      = delete;
-    ConfigurationTable(ConfigurationTable &&other) noexcept             = delete;
-    ConfigurationTable &operator=(ConfigurationTable &&other) noexcept  = delete;
-    ~ConfigurationTable()                                               = default;
+    ConfigurationTable(const ConfigurationTable &other);
+    ConfigurationTable &operator=(const ConfigurationTable &other);
+    ConfigurationTable(ConfigurationTable &&other) noexcept;
+    ConfigurationTable &operator=(ConfigurationTable &&other) noexcept;
+    ~ConfigurationTable()   = default;
 
-    HYP_FORCE_INLINE const ConfigurationDataStore &GetDataStore() const
+    HYP_FORCE_INLINE ConfigurationDataStore *GetDataStore() const
         { return m_data_store; }
 
     bool IsChanged() const;
+
+    ConfigurationTable &Merge(const ConfigurationTable &other);
+
+    HYP_FORCE_INLINE const ConfigurationValue &operator[](UTF8StringView key) const
+        { return Get(key); }
 
     const ConfigurationValue &Get(UTF8StringView key) const;
     void Set(UTF8StringView key, const ConfigurationValue &value);
 
     bool Save() const;
 
+    HYP_FORCE_INLINE String ToString() const
+        { return m_root_object.ToString(); }
+
 private:
-    ConfigurationDataStore      m_data_store;
+    ConfigurationDataStore                  *m_data_store;
+    TResourceHandle<ConfigurationDataStore> m_data_store_resource_handle;
 
-    json::JSONValue             m_root_object;
-    mutable HashCode            m_cached_hash_code;
+    json::JSONValue                         m_root_object;
+    mutable HashCode                        m_cached_hash_code;
+};
 
-    DataRaceDetector            m_data_race_detector;
+HYP_API const ConfigurationTable &GetGlobalConfigurationTable();
+
+template <class Derived>
+class ConfigBase : public ConfigurationTable
+{
+    static const ConfigBase<Derived> &GetInstance()
+    {
+        static const Derived instance { };
+
+        return instance;
+    }
+
+protected:
+    ConfigBase()
+        : ConfigurationTable("<default>")
+    {
+    }
+
+    ConfigBase(const String &config_name)
+        : ConfigurationTable(config_name)
+    {
+    }
+
+    ConfigBase(const ConfigurationTable &configuration_table)
+        : ConfigurationTable(configuration_table)
+    {
+    }
+
+public:
+    ConfigBase(const ConfigBase &other)                 = default;
+    ConfigBase &operator=(const ConfigBase &other)      = default;
+    ConfigBase(ConfigBase &&other) noexcept             = default;
+    ConfigBase &operator=(ConfigBase &&other) noexcept  = default;
+
+    virtual ~ConfigBase()                               = default;
+
+    static Derived FromTemplate(const ConfigurationTable &table)
+    {
+        Derived result = Default();
+
+        ConfigurationTable merged_table = table;
+        merged_table.Merge(result);
+
+        static_cast<ConfigurationTable &>(result) = std::move(merged_table);
+
+        return result;
+    }
+
+    static Derived Default()
+    {
+        static const Derived default_value = GetInstance().Default_Internal();
+
+        return default_value;
+    }
+
+    static Derived FromConfig()
+    {
+        Derived result = GetInstance().FromConfig_Internal();
+
+        ConfigurationTable merged_table = GetGlobalConfigurationTable();
+        merged_table.Merge(result);
+
+        static_cast<ConfigurationTable &>(result) = std::move(merged_table);
+
+        return result;
+    }
+
+protected:
+    virtual Derived Default_Internal() const
+        { return FromTemplate(GetGlobalConfigurationTable()); }
+
+    virtual Derived FromConfig_Internal() const = 0;
+
+    virtual bool Validate() const
+        { return true; }
+};
+
+class GlobalConfig final : public ConfigBase<GlobalConfig>
+{
+public:
+    GlobalConfig()
+        : ConfigBase<GlobalConfig>()
+    {
+    }
+
+    GlobalConfig(const String &config_name)
+        : ConfigBase<GlobalConfig>(config_name)
+    {
+    }
+
+    GlobalConfig(const GlobalConfig &other)
+        : ConfigBase<GlobalConfig>(static_cast<const ConfigBase<GlobalConfig> &>(other))
+    {
+    }
+    
+    GlobalConfig &operator=(const GlobalConfig &other)      = delete;
+    GlobalConfig(GlobalConfig &&other) noexcept             = default;
+    GlobalConfig &operator=(GlobalConfig &&other) noexcept  = delete;
+    virtual ~GlobalConfig() override                        = default;
+
+    HYP_FORCE_INLINE const ConfigurationValue &Get(UTF8StringView key) const
+    {
+        HYP_MT_CHECK_READ(m_data_race_detector);
+
+        return ConfigBase<GlobalConfig>::Get(key);
+    }
+
+    HYP_FORCE_INLINE void Set(UTF8StringView key, const ConfigurationValue &value)
+    {
+        HYP_MT_CHECK_RW(m_data_race_detector);
+
+        ConfigBase<GlobalConfig>::Set(key, value);
+    }
+
+protected:
+    virtual GlobalConfig FromConfig_Internal() const override
+    {
+        return GlobalConfig(GetDataStore()->GetConfigName());
+    }
+
+private:
+    DataRaceDetector    m_data_race_detector;
 };
 
 } // namespace config
@@ -192,6 +325,8 @@ private:
 using config::ConfigurationValue;
 using config::ConfigurationValueKey;
 using config::ConfigurationTable;
+using config::ConfigBase;
+using config::GlobalConfig;
 
 } // namespace hyperion
 

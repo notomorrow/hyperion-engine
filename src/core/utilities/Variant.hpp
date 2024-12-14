@@ -428,7 +428,7 @@ protected:
         const void *GetPointer() const { return static_cast<const void *>(&data_buffer[0]); }
     } m_storage;
 
-    HYP_FORCE_INLINE TypeID CurrentTypeID() const
+    HYP_FORCE_INLINE constexpr TypeID CurrentTypeID() const
     {
         static constexpr TypeID type_ids[sizeof...(Types)] { TypeID::ForType<Types>()... };
 

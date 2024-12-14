@@ -6,6 +6,8 @@
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 
+#include <core/memory/resource/Resource.hpp>
+
 #include <core/utilities/Optional.hpp>
 
 #include <core/functional/Proc.hpp>
@@ -22,6 +24,12 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
+
+namespace filesystem {
+class DataStore;
+} // namespace filesystem
+
+using filesystem::DataStore;
 
 HYP_DECLARE_LOG_CHANNEL(Streaming);
 
@@ -204,6 +212,9 @@ protected:
     HashCode                            m_hash_code;
     mutable Optional<ByteBuffer>        m_byte_buffer;
     Proc<bool, HashCode, ByteBuffer &>  m_load_from_memory_proc;
+
+    DataStore                           *m_data_store;
+    ResourceHandle                      m_data_store_resource_handle;
 };
 
 } // namespace hyperion

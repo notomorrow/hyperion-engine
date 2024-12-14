@@ -9,8 +9,12 @@
 
 #include <core/utilities/Format.hpp>
 
+#include <core/system/AppContext.hpp>
+
 #include <asset/ByteWriter.hpp>
 #include <asset/BufferedByteReader.hpp>
+
+#include <Engine.hpp>
 
 namespace hyperion {
 namespace config {
@@ -19,10 +23,15 @@ static const ConfigurationValue g_invalid_configuration_value { };
 
 #pragma region ConfigurationDataStore
 
-static const FilePath g_config_base_path = FilePath::Join(HYP_ROOT_DIR, "res", "data", "config");
-
 ConfigurationDataStore::ConfigurationDataStore(UTF8StringView config_name)
-    : m_config_name(config_name)
+    : DataStoreBase("config", DataStoreOptions { /* flags */ DSF_RW, /* max_size */ 0ull }),
+      m_config_name(config_name)
+{
+}
+
+ConfigurationDataStore::ConfigurationDataStore(ConfigurationDataStore &&other) noexcept
+    : DataStoreBase(static_cast<DataStoreBase &&>(std::move(other))),
+      m_config_name(std::move(other.m_config_name))
 {
 }
 
@@ -32,7 +41,7 @@ ConfigurationDataStore::~ConfigurationDataStore()
 
 FilePath ConfigurationDataStore::GetFilePath() const
 {
-    FilePath config_path = g_config_base_path / m_config_name;
+    FilePath config_path = GetDirectory() / m_config_name;
 
     if (!config_path.EndsWith(".json")) {
         config_path = config_path + ".json";
@@ -84,16 +93,65 @@ bool ConfigurationDataStore::Write(const json::JSONValue &value) const
 #pragma region ConfigurationTable
 
 ConfigurationTable::ConfigurationTable(const String &config_name)
-    : m_data_store(config_name),
+    : m_data_store(&DataStoreBase::GetOrCreate<ConfigurationDataStore>(config_name)),
+      m_data_store_resource_handle(*m_data_store),
       m_root_object(json::JSONObject()),
       m_cached_hash_code(m_root_object.GetHashCode())
 {
+    HYP_LOG(Config, LogLevel::DEBUG, "Reading from configuration {}", config_name);
+
     // try to read from config file
-    if (m_data_store.Read(m_root_object)) {
+    if (m_data_store->Read(m_root_object)) {
         m_cached_hash_code = m_root_object.GetHashCode();
     } else {
-        HYP_LOG(Config, LogLevel::INFO, "Configuration could not be read: {}", m_data_store.GetFilePath());
+        HYP_LOG(Config, LogLevel::INFO, "Configuration could not be read: {}", m_data_store->GetFilePath());
     }
+}
+
+ConfigurationTable::ConfigurationTable(const ConfigurationTable &other)
+    : m_data_store(other.m_data_store),
+      m_data_store_resource_handle(other.m_data_store_resource_handle),
+      m_root_object(other.m_root_object),
+      m_cached_hash_code(other.m_cached_hash_code)
+{
+}
+
+ConfigurationTable &ConfigurationTable::operator=(const ConfigurationTable &other)
+{
+    if (this == &other) {
+        return *this;
+    }
+
+    m_data_store = other.m_data_store;
+    m_data_store_resource_handle = other.m_data_store_resource_handle;
+    m_root_object = other.m_root_object;
+    m_cached_hash_code = other.m_cached_hash_code;
+
+    return *this;
+}
+
+ConfigurationTable::ConfigurationTable(ConfigurationTable &&other) noexcept
+    : m_data_store(std::move(other.m_data_store)),
+      m_data_store_resource_handle(std::move(other.m_data_store_resource_handle)),
+      m_root_object(std::move(other.m_root_object)),
+      m_cached_hash_code(std::move(other.m_cached_hash_code))
+{
+}
+
+ConfigurationTable &ConfigurationTable::operator=(ConfigurationTable &&other) noexcept
+{
+    if (this == &other) {
+        return *this;
+    }
+
+    m_data_store = std::move(other.m_data_store);
+    m_data_store_resource_handle = std::move(other.m_data_store_resource_handle);
+    m_root_object = std::move(other.m_root_object);
+    m_cached_hash_code = std::move(other.m_cached_hash_code);
+
+    other.m_data_store = nullptr;
+
+    return *this;
 }
 
 bool ConfigurationTable::IsChanged() const
@@ -101,10 +159,19 @@ bool ConfigurationTable::IsChanged() const
     return m_root_object.GetHashCode() != m_cached_hash_code;
 }
 
+ConfigurationTable &ConfigurationTable::Merge(const ConfigurationTable &other)
+{
+    if (!m_root_object.IsObject() || !other.m_root_object.IsObject()) {
+        return *this;
+    }
+
+    m_root_object.AsObject().Merge(other.m_root_object.AsObject());
+
+    return *this;
+}
+
 const ConfigurationValue &ConfigurationTable::Get(UTF8StringView key) const
 {
-    HYP_MT_CHECK_READ(m_data_race_detector);
-
     auto select_result = m_root_object.Get(key);
 
     if (select_result.value != nullptr) {
@@ -116,16 +183,14 @@ const ConfigurationValue &ConfigurationTable::Get(UTF8StringView key) const
 
 void ConfigurationTable::Set(UTF8StringView key, const ConfigurationValue &value)
 {
-    HYP_MT_CHECK_RW(m_data_race_detector);
-
     m_root_object.Set(key, value);
 }
 
 bool ConfigurationTable::Save() const
 {
-    HYP_MT_CHECK_RW(m_data_race_detector);
+    AssertThrow(m_data_store != nullptr);
 
-    if (m_data_store.Write(m_root_object)) {
+    if (m_data_store->Write(m_root_object)) {
         m_cached_hash_code = m_root_object.GetHashCode();
 
         return true;
@@ -135,6 +200,14 @@ bool ConfigurationTable::Save() const
 }
 
 #pragma endregion ConfigurationTable
+
+HYP_API const ConfigurationTable &GetGlobalConfigurationTable()
+{
+    AssertThrow(g_engine.IsValid());
+    AssertThrow(g_engine->GetAppContext() != nullptr);
+
+    return g_engine->GetAppContext()->GetConfiguration();
+}
 
 } // namespace config
 } // namespace hyperion
