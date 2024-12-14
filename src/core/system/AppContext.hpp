@@ -154,10 +154,10 @@ public:
 
     const CommandLineArguments &GetArguments() const;
 
-    HYP_FORCE_INLINE ConfigurationTable &GetConfiguration()
+    HYP_FORCE_INLINE GlobalConfig &GetConfiguration()
         { return m_configuration; }
 
-    HYP_FORCE_INLINE const ConfigurationTable &GetConfiguration() const
+    HYP_FORCE_INLINE const GlobalConfig &GetConfiguration() const
         { return m_configuration; }
 
     HYP_FORCE_INLINE ApplicationWindow *GetMainWindow() const
@@ -189,7 +189,7 @@ protected:
     Handle<InputManager>            m_input_manager;
     ANSIString                      m_name;
     UniquePtr<CommandLineArguments> m_arguments;
-    ConfigurationTable              m_configuration;
+    GlobalConfig                    m_configuration;
     Game                            *m_game;
 };
 

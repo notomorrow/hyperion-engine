@@ -213,8 +213,7 @@ protected:
     {
     }
 
-    HYP_FORCE_INLINE
-    TypeID GetBaseTypeID() const
+    HYP_FORCE_INLINE TypeID GetBaseTypeID() const
         { return m_holder.base_type_id; }
 
     UniquePtrHolder m_holder;

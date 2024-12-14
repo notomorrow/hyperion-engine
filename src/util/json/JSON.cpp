@@ -36,7 +36,6 @@ static Array<UTF8StringView> SplitStringView(UTF8StringView view, UTF8StringView
     if (start_index != current_index) {
         tokens.PushBack(view.Substr(start_index, current_index));
     }
-    
 
     return tokens;
 } 

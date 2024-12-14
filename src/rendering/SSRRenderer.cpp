@@ -130,11 +130,22 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
-SSRRenderer::SSRRenderer(const Vec2u &extent, SSRRendererOptions options)
-    : m_extent(extent),
-      m_options(options),
+#pragma region SSRRendererConfig
+
+Vec2u SSRRendererConfig::GetSwapchainExtent()
+{
+    return g_engine->GetGPUInstance()->GetSwapchain()->extent;
+}
+
+#pragma endregion SSRRendererConfig
+
+#pragma region SSRRenderer
+
+SSRRenderer::SSRRenderer(SSRRendererConfig &&config)
+    : m_config(std::move(config)),
       m_is_rendered(false)
 {
+    DebugLog(LogType::Debug, "SSRRenderer created, config path = %s, data = %s\n", m_config.GetDataStore()->GetFilePath().Data(), *m_config.ToString());
 }
 
 SSRRenderer::~SSRRenderer()
@@ -146,7 +157,7 @@ void SSRRenderer::Create()
     m_image_outputs[0] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Vec3u(m_extent, 1),
+        Vec3u(m_config.GetExtent(), 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -158,7 +169,7 @@ void SSRRenderer::Create()
     m_image_outputs[1] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Vec3u(m_extent, 1),
+        Vec3u(m_config.GetExtent(), 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -170,7 +181,7 @@ void SSRRenderer::Create()
     m_image_outputs[2] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Vec3u(m_extent, 1),
+        Vec3u(m_config.GetExtent(), 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -182,7 +193,7 @@ void SSRRenderer::Create()
     m_image_outputs[3] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Vec3u(m_extent, 1),
+        Vec3u(m_config.GetExtent(), 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -195,7 +206,7 @@ void SSRRenderer::Create()
 
     if (use_temporal_blending) {
         m_temporal_blending = MakeUnique<TemporalBlending>(
-            m_extent,
+            m_config.GetExtent(),
             InternalFormat::RGBA8,
             TemporalBlendTechnique::TECHNIQUE_1,
             TemporalBlendFeedback::MEDIUM,
@@ -230,8 +241,8 @@ void SSRRenderer::Destroy()
 ShaderProperties SSRRenderer::GetShaderProperties() const
 {
     ShaderProperties shader_properties;
-    shader_properties.Set("CONE_TRACING", bool(m_options & SSR_RENDERER_OPTIONS_CONE_TRACING));
-    shader_properties.Set("ROUGHNESS_SCATTERING", bool(m_options & SSR_RENDERER_OPTIONS_ROUGHNESS_SCATTERING));
+    shader_properties.Set("CONE_TRACING", m_config.IsConeTracingEnabled());
+    shader_properties.Set("ROUGHNESS_SCATTERING", m_config.IsRoughnessScatteringEnabled());
 
     switch (ssr_format) {
     case InternalFormat::RGBA8:
@@ -254,7 +265,7 @@ void SSRRenderer::CreateUniformBuffers()
 
     PUSH_RENDER_COMMAND(
         CreateSSRUniformBuffer,
-        m_extent,
+        m_config.GetExtent(),
         m_uniform_buffer
     );
 }
@@ -340,7 +351,7 @@ void SSRRenderer::Render(Frame *frame)
     DebugMarker begin_ssr_marker(command_buffer, "Begin SSR");
 
     // We will be dispatching half the number of pixels, due to checkerboarding
-    const uint32 total_pixels_in_image = m_extent.Volume();
+    const uint32 total_pixels_in_image = m_config.GetExtent().Volume();
     const uint32 total_pixels_in_image_div_2 = total_pixels_in_image / 2;
 
     const uint32 num_dispatch_calls = (total_pixels_in_image_div_2 + 255) / 256;
@@ -403,5 +414,7 @@ void SSRRenderer::Render(Frame *frame)
     m_is_rendered = true;
     /* ==========  END SSR  ========== */
 }
+
+#pragma endregion SSRRenderer
 
 } // namespace hyperion

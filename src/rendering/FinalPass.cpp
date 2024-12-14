@@ -87,19 +87,19 @@ void CompositePass::CreateShader()
     const config::ConfigurationTable &config = g_engine->GetAppContext()->GetConfiguration();
 
     ShaderProperties final_output_props;
-    final_output_props.Set("TEMPORAL_AA", config.Get("rendering.taa.enabled").ToBool());
+    final_output_props.Set("TEMPORAL_AA", config["rendering.taa.enabled"].ToBool());
 
-    if (config.Get("rendering.debug.ssr").ToBool()) {
+    if (config["rendering.debug.ssr"]) {
         final_output_props.Set("DEBUG_SSR");
-    } else if (config.Get("rendering.debug.hbao").ToBool()) {
+    } else if (config["rendering.debug.hbao"]) {
         final_output_props.Set("DEBUG_HBAO");
-    } else if (config.Get("rendering.debug.hbil").ToBool()) {
+    } else if (config["rendering.debug.hbil"]) {
         final_output_props.Set("DEBUG_HBIL");
-    } else if (config.Get("rendering.debug.reflections").ToBool()) {
+    } else if (config["rendering.debug.reflections"]) {
         final_output_props.Set("DEBUG_REFLECTIONS");
-    } else if (config.Get("rendering.debug.irradiance").ToBool()) {
+    } else if (config["rendering.debug.irradiance"]) {
         final_output_props.Set("DEBUG_IRRADIANCE");
-    } else if (config.Get("rendering.debug.path_tracer").ToBool()) {
+    } else if (config["rendering.debug.path_tracer"]) {
         final_output_props.Set("PATHTRACER");
     }
 

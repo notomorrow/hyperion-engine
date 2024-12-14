@@ -3,8 +3,11 @@
     "ssr": {
       "quality": "low",
       "roughness_scattering": true,
-      "enabled": true,
+      "enabled": false,
       "cone_tracing": true
+    },
+    "ssgi": {
+      "enabled": false
     },
     "rt": {
       "reflections": {
@@ -22,7 +25,8 @@
       "enabled": true
     },
     "debug": {
-      "ssr": true,
+      "ssgi": false,
+      "ssr": false,
       "hbao": false,
       "hbil": false,
       "env_grid_probes": false,
@@ -38,17 +42,17 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true,
+        "enabled": false,
         "mode": "sh"
       }
     },
     "hbao": {
-      "enabled": true
+      "enabled": false
     }
   },
   "app": {
     "name": "HyperionEditor",
-    "args": "-ResX=1920 -ResY=1080"
+    "args": "-ResX=1280 -ResY=720"
   },
   "lightmapper": {
     "ideal_triangles_per_job": 4096,

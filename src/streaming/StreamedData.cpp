@@ -1,7 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <streaming/StreamedData.hpp>
-#include <streaming/DataStore.hpp>
+
+#include <core/filesystem/DataStore.hpp>
 
 #include <core/threading/TaskSystem.hpp>
 #include <core/containers/StaticString.hpp>
@@ -211,12 +212,12 @@ const ByteBuffer &NullStreamedData::Load_Internal() const
 MemoryStreamedData::MemoryStreamedData(HashCode hash_code, StreamedDataState initial_state, Proc<bool, HashCode, ByteBuffer &> &&load_from_memory_proc)
     : StreamedData(initial_state),
       m_hash_code(hash_code),
-      m_load_from_memory_proc(std::move(load_from_memory_proc))
+      m_load_from_memory_proc(std::move(load_from_memory_proc)),
+      m_data_store(&GetDataStore<HYP_STATIC_STRING("streaming"), DSF_RW>()),
+      m_data_store_resource_handle(*m_data_store)
 {
-    auto &data_store = GetDataStore<StaticString("streaming"), DSF_RW>();
-
     const bool should_load_unpaged = initial_state == StreamedDataState::UNPAGED
-        && !data_store.Exists(String::ToString(hash_code.Value()))
+        && !m_data_store->Exists(String::ToString(hash_code.Value()))
         && m_load_from_memory_proc.IsValid();
 
     if (should_load_unpaged) {
@@ -300,10 +301,9 @@ void MemoryStreamedData::Unpage_Internal()
     }
 
     // Enqueue task to write file to disk
-    TaskSystem::GetInstance().Enqueue([byte_buffer = std::move(*m_byte_buffer), hash_code = m_hash_code]
+    TaskSystem::GetInstance().Enqueue([byte_buffer = std::move(*m_byte_buffer), hash_code = m_hash_code, data_store_resource_handle = TResourceHandle<DataStore>(*m_data_store)]
     {
-        auto &data_store = GetDataStore<StaticString("streaming"), DSF_RW>();
-        data_store.Write(String::ToString(hash_code.Value()), byte_buffer);
+        data_store_resource_handle->Write(String::ToString(hash_code.Value()), byte_buffer);
     }, TaskThreadPoolName::THREAD_POOL_GENERIC, TaskEnqueueFlags::FIRE_AND_FORGET);
 
     m_byte_buffer.Unset();
@@ -314,9 +314,7 @@ const ByteBuffer &MemoryStreamedData::Load_Internal() const
     if (!m_byte_buffer.HasValue()) {
         m_byte_buffer.Emplace();
 
-        const auto &data_store = GetDataStore<StaticString("streaming"), DSF_RW>();
-
-        if (!data_store.Read(String::ToString(m_hash_code.Value()), *m_byte_buffer)) {
+        if (!m_data_store->Read(String::ToString(m_hash_code.Value()), *m_byte_buffer)) {
             if (m_load_from_memory_proc.IsValid()) {
                 if (m_load_from_memory_proc(m_hash_code, *m_byte_buffer)) {
                     return *m_byte_buffer;

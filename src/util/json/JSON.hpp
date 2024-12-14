@@ -440,14 +440,14 @@ public:
     {
         AssertThrow(IsString());
 
-        return m_inner.Get<JSONString>();
+        return m_inner.GetUnchecked<JSONString>();
     }
 
     HYP_FORCE_INLINE const JSONString &AsString() const
     {
         AssertThrow(IsString());
 
-        return m_inner.Get<JSONString>();
+        return m_inner.GetUnchecked<JSONString>();
     }
 
     HYP_FORCE_INLINE JSONString ToString(bool representation = false) const
@@ -457,14 +457,14 @@ public:
     {
         AssertThrow(IsNumber());
 
-        return m_inner.Get<JSONNumber>();
+        return m_inner.GetUnchecked<JSONNumber>();
     }
 
     HYP_FORCE_INLINE JSONNumber AsNumber() const
     {
         AssertThrow(IsNumber());
 
-        return m_inner.Get<JSONNumber>();
+        return m_inner.GetUnchecked<JSONNumber>();
     }
 
     /*! \brief Convert the JSON value to a number. If the value is undefined, the default value is returned.
@@ -531,14 +531,14 @@ public:
     {
         AssertThrow(IsBool());
 
-        return m_inner.Get<JSONBool>();
+        return m_inner.GetUnchecked<JSONBool>();
     }
 
     HYP_FORCE_INLINE JSONBool AsBool() const
     {
         AssertThrow(IsBool());
 
-        return m_inner.Get<JSONBool>();
+        return m_inner.GetUnchecked<JSONBool>();
     }
 
     /*! \brief Convert the JSON value to a boolean. If the value is undefined, the default value is returned.
@@ -583,14 +583,14 @@ public:
     {
         AssertThrow(IsArray());
 
-        return *m_inner.Get<JSONArrayRef>();
+        return *m_inner.GetUnchecked<JSONArrayRef>();
     }
 
     HYP_FORCE_INLINE const JSONArray &AsArray() const
     {
         AssertThrow(IsArray());
 
-        return *m_inner.Get<JSONArrayRef>();
+        return *m_inner.GetUnchecked<JSONArrayRef>();
     }
 
     HYP_FORCE_INLINE JSONArray ToArray() const
@@ -606,14 +606,14 @@ public:
     {
         AssertThrow(IsObject());
 
-        return *m_inner.Get<JSONObjectRef>();
+        return *m_inner.GetUnchecked<JSONObjectRef>();
     }
 
     HYP_FORCE_INLINE const JSONObject &AsObject() const
     {
         AssertThrow(IsObject());
 
-        return *m_inner.Get<JSONObjectRef>();
+        return *m_inner.GetUnchecked<JSONObjectRef>();
     }
 
     HYP_FORCE_INLINE JSONObject ToObject() const
