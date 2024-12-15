@@ -6,9 +6,6 @@
       "enabled": false,
       "cone_tracing": true
     },
-    "ssgi": {
-      "enabled": false
-    },
     "rt": {
       "reflections": {
         "enabled": false
@@ -25,7 +22,6 @@
       "enabled": true
     },
     "debug": {
-      "ssgi": false,
       "ssr": false,
       "hbao": false,
       "hbil": false,

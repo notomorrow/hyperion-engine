@@ -513,9 +513,9 @@ public:
                 
                 if (it == end) {
                     if (current->calling_thread_id.IsValid() && current->calling_thread_id != current_thread_id) {
-                        tasks.PushBack(current->GetCallingThread()->GetScheduler().Enqueue([&result_storage, &proc = *current->proc, args_tuple = std::tie(args...)]()
+                        tasks.PushBack(current->GetCallingThread()->GetScheduler().Enqueue([&result_storage, &proc = *current->proc, args_tuple = Tie(args...)]()
                         {
-                            result_storage.Construct(std::apply([&proc]<class... OtherArgs>(OtherArgs &&... args)
+                            result_storage.Construct(Apply([&proc]<class... OtherArgs>(OtherArgs &&... args)
                             {
                                 return proc(std::forward<OtherArgs>(args)...);
                             }, std::move(args_tuple)));
@@ -529,9 +529,9 @@ public:
                 }
             } else {
                 if (current->calling_thread_id.IsValid() && current->calling_thread_id != current_thread_id) {
-                    tasks.PushBack(current->GetCallingThread()->GetScheduler().Enqueue([&proc = *current->proc, args_tuple = std::tie(args...)]()
+                    tasks.PushBack(current->GetCallingThread()->GetScheduler().Enqueue([&proc = *current->proc, args_tuple = Tie(args...)]()
                     {
-                        std::apply([&proc]<class... OtherArgs>(OtherArgs &&... args)
+                        Apply([&proc]<class... OtherArgs>(OtherArgs &&... args)
                         {
                             return proc(std::forward<OtherArgs>(args)...);
                         }, std::move(args_tuple));

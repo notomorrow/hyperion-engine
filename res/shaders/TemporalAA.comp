@@ -21,7 +21,7 @@ HYP_DESCRIPTOR_SRV(TemporalAADescriptorSet, InDepthTexture) uniform texture2D de
 HYP_DESCRIPTOR_SAMPLER(TemporalAADescriptorSet, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SAMPLER(TemporalAADescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
 
-HYP_DESCRIPTOR_UAV(TemporalAADescriptorSet, OutColorImage, format = rgba16f) uniform writeonly image2D output_image;
+HYP_DESCRIPTOR_UAV(TemporalAADescriptorSet, OutColorImage, format = rgba8) uniform writeonly image2D output_image;
 
 layout(push_constant) uniform PushConstants
 {

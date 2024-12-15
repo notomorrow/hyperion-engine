@@ -692,7 +692,7 @@ static inline void DeferCreate(RefType ref, Args &&... args)
 {
     struct RENDER_COMMAND(CreateRenderObject) : renderer::RenderCommand
     {
-        using ArgsTuple = std::tuple<std::decay_t<Args>...>;
+        using ArgsTuple = Tuple<std::decay_t<Args>...>;
 
         RefType     ref;
         ArgsTuple   args;
@@ -707,7 +707,7 @@ static inline void DeferCreate(RefType ref, Args &&... args)
 
         virtual renderer::Result operator()() override
         {
-            return std::apply([this]<class... OtherArgs>(OtherArgs &&... args)
+            return Apply([this]<class... OtherArgs>(OtherArgs &&... args)
             {
                 return ref->Create(std::forward<OtherArgs>(args)...);
             }, std::move(args));

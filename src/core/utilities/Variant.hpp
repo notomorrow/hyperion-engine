@@ -168,6 +168,7 @@ protected:
     friend struct TypeIndexHelper<VariantBase<Types...>>;
 
     static const inline int invalid_type_index = -1;
+    static constexpr TypeID type_ids[sizeof...(Types)] { TypeID::ForType<Types>()... };
 
 public:
     VariantBase()
@@ -429,11 +430,7 @@ protected:
     } m_storage;
 
     HYP_FORCE_INLINE constexpr TypeID CurrentTypeID() const
-    {
-        static constexpr TypeID type_ids[sizeof...(Types)] { TypeID::ForType<Types>()... };
-
-        return type_ids[m_current_index];
-    }
+        { return type_ids[m_current_index]; }
 };
 
 template <bool IsCopyable, class... Types>
