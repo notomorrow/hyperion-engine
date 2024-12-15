@@ -106,6 +106,7 @@ void UIStage::SetScene(const Handle<Scene> &scene)
 
     if (!new_scene.IsValid()) {
         new_scene = CreateObject<Scene>(
+            nullptr,
             CreateObject<Camera>(),
             m_owner_thread_id,
             SceneFlags::NON_WORLD
@@ -212,6 +213,7 @@ void UIStage::Init()
     }
 
     m_scene = CreateObject<Scene>(
+        nullptr,
         CreateObject<Camera>(),
         m_owner_thread_id,
         SceneFlags::NON_WORLD

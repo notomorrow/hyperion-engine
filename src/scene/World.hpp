@@ -138,17 +138,17 @@ struct DetachedScenesContainer
     }
 
 private:
-
     Handle<Scene> CreateSceneForThread(ThreadID thread_id)
     {
         Handle<Scene> scene = CreateObject<Scene>(
+            world,
             Handle<Camera>::empty,
             thread_id,
             SceneFlags::DETACHED
         );
 
         scene->SetName(CreateNameFromDynamicString(ANSIString("DetachedSceneForThread_") + *thread_id.name));
-        scene->SetWorld(world);
+        
         InitObject(scene);
 
         return scene;

@@ -228,7 +228,7 @@ void EntityManager::SetWorld(World *world)
 {
     HYP_SCOPE;
 
-    // Threads::AssertOnThread(m_owner_thread_mask);
+    Threads::AssertOnThread(m_owner_thread_mask);
 
     if (world == m_world) {
         return;

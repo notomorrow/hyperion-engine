@@ -73,8 +73,6 @@ void Game::Init_Internal()
     camera->GetRenderResources().EnqueueBind();
 
     m_scene = CreateObject<Scene>(
-        Handle<Camera>(),
-        Threads::GetStaticThreadID(ThreadName::THREAD_GAME),
         SceneFlags::HAS_TLAS // default it to having a top level acceleration structure for RT
     );
 

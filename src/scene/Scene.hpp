@@ -72,13 +72,23 @@ class HYP_API Scene : public HypObject<Scene>
 
 public:
     Scene();
+    
+    Scene(EnumFlags<SceneFlags> flags);
+    
     Scene(
-        Handle<Camera> camera,
+        World *world,
         EnumFlags<SceneFlags> flags = SceneFlags::NONE
     );
 
     Scene(
-        Handle<Camera> camera,
+        World *world,
+        const Handle<Camera> &camera,
+        EnumFlags<SceneFlags> flags = SceneFlags::NONE
+    );
+
+    Scene(
+        World *world,
+        const Handle<Camera> &camera,
         ThreadID owner_thread_id,
         EnumFlags<SceneFlags> flags = SceneFlags::NONE
     );
@@ -243,11 +253,12 @@ private:
 
     EnumFlags<SceneFlags>           m_flags;
 
+    World                           *m_world;
+
     Handle<Camera>                  m_camera;
     RenderCollector                 m_render_collector;
 
     Handle<RenderEnvironment>       m_environment;
-    World                           *m_world;
 
     FogParams                       m_fog_params;
 
