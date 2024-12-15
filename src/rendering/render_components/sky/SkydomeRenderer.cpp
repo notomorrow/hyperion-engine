@@ -43,7 +43,7 @@ void SkydomeRenderer::Init()
     
     InitObject(m_camera);
 
-    m_virtual_scene = CreateObject<Scene>(m_camera);
+    m_virtual_scene = CreateObject<Scene>(nullptr, m_camera);
     m_virtual_scene->SetName(Name::Unique("SkydomeRendererScene"));
 
     m_env_probe = CreateObject<EnvProbe>(

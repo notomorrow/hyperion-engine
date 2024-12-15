@@ -77,26 +77,37 @@ struct RENDER_COMMAND(BindEnvProbes) : renderer::RenderCommand
 #pragma endregion Render commands
 
 Scene::Scene()
-    : Scene(Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), { })
+    : Scene(nullptr, Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), { })
+{
+}
+    
+Scene::Scene(EnumFlags<SceneFlags> flags)
+    : Scene(nullptr, Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
+{
+}
+    
+Scene::Scene(World *world, EnumFlags<SceneFlags> flags)
+    : Scene(world, Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
 {
 }
 
-Scene::Scene(Handle<Camera> camera, EnumFlags<SceneFlags> flags)
-    : Scene(std::move(camera), Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
+Scene::Scene(World *world, const Handle<Camera> &camera, EnumFlags<SceneFlags> flags)
+    : Scene(world, camera, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
 {
 }
 
 Scene::Scene(
-    Handle<Camera> camera,
+    World *world,
+    const Handle<Camera> &camera,
     ThreadID owner_thread_id,
     EnumFlags<SceneFlags> flags
 ) : m_name(Name::Unique("Scene_")),
     m_owner_thread_id(owner_thread_id),
     m_flags(flags),
+    m_world(world),
     m_camera(std::move(camera)),
     m_root_node_proxy(MakeRefCountedPtr<Node>("<ROOT>", Handle<Entity>::empty, Transform::identity, this)),
     m_environment(CreateObject<RenderEnvironment>(this)),
-    m_world(nullptr),
     m_is_audio_listener(false),
     m_entity_manager(MakeRefCountedPtr<EntityManager>(owner_thread_id.GetMask(), this)),
     m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
@@ -150,7 +161,6 @@ void Scene::Init()
     InitObject(m_camera);
     m_render_collector.SetCamera(m_camera);
 
-    m_entity_manager->SetWorld(m_world);
     m_entity_manager->Initialize();
 
     m_entity_manager->AddSystem<WorldAABBUpdaterSystem>();
@@ -219,14 +229,6 @@ void Scene::SetCamera(const Handle<Camera> &camera)
 void Scene::SetWorld(World *world)
 {
     HYP_SCOPE;
-
-    // Allow setting the world before Init. Allows call from any thread to make setup easier.
-    if (!IsInitCalled()) {
-        m_world = world;
-
-        return;
-    }
-
     Threads::AssertOnThread(m_owner_thread_id);
 
     if (m_world == world) {
@@ -241,7 +243,12 @@ void Scene::SetWorld(World *world)
 
 WorldGrid *Scene::GetWorldGrid() const
 {
-    AssertThrow(m_world != nullptr);
+    HYP_SCOPE;
+    Threads::AssertOnThread(m_owner_thread_id);
+
+    if (!m_world) {
+        return nullptr;
+    }
 
     if (WorldGridSubsystem *world_grid_subsystem = m_world->GetSubsystem<WorldGridSubsystem>()) {
         return world_grid_subsystem->GetWorldGrid(GetID());
@@ -252,7 +259,8 @@ WorldGrid *Scene::GetWorldGrid() const
 
 NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    HYP_SCOPE;
+    Threads::AssertOnThread(m_owner_thread_id);
 
     AssertThrow(m_root_node_proxy);
 
@@ -265,7 +273,8 @@ NodeProxy Scene::FindNodeWithEntity(ID<Entity> entity) const
 
 NodeProxy Scene::FindNodeByName(UTF8StringView name) const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    HYP_SCOPE;
+    Threads::AssertOnThread(m_owner_thread_id);
 
     AssertThrow(m_root_node_proxy);
 
@@ -279,7 +288,8 @@ NodeProxy Scene::FindNodeByName(UTF8StringView name) const
 void Scene::BeginUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(m_owner_thread_id);
+
     AssertReady();
     
     {
@@ -313,7 +323,8 @@ void Scene::BeginUpdate(GameCounter::TickUnit delta)
 void Scene::EndUpdate()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(m_owner_thread_id);
+    
     AssertReady();
 
     m_entity_manager->EndUpdate();
