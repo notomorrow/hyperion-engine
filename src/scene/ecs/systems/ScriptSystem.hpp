@@ -6,6 +6,8 @@
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
 
+#include <scene/GameState.hpp>
+
 #include <core/functional/Delegate.hpp>
 
 namespace hyperion {
@@ -30,6 +32,11 @@ public:
     virtual void Process(GameCounter::TickUnit delta) override;
 
 private:
+    void HandleGameStateChanged(GameStateMode game_state_mode, GameStateMode previous_game_state_mode);
+
+    void CallScriptMethod(UTF8StringView method_name);
+    void CallScriptMethod(UTF8StringView method_name, ScriptComponent &target);
+
     DelegateHandlerSet  m_delegate_handlers;
 };
 

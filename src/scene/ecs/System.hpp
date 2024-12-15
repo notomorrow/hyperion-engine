@@ -4,9 +4,13 @@
 #define HYPERION_ECS_SYSTEM_HPP
 
 #include <core/containers/Array.hpp>
+
 #include <core/utilities/TypeID.hpp>
 #include <core/utilities/Tuple.hpp>
 #include <core/utilities/StringView.hpp>
+
+#include <core/functional/Delegate.hpp>
+
 #include <core/Defines.hpp>
 
 #include <scene/ecs/ComponentContainer.hpp>
@@ -21,6 +25,8 @@ class Scene;
 class HYP_API SystemBase
 {
 public:
+    friend class EntityManager;
+
     virtual ~SystemBase() = default;
 
     virtual ANSIStringView GetName() const = 0;
@@ -148,13 +154,17 @@ protected:
     Scene *GetScene() const;
     World *GetWorld() const;
 
-    EntityManager               &m_entity_manager;
+    Delegate<void, World * /* new */, World * /* previous */>   OnWorldChanged;
 
-    Array<TypeID>               m_component_type_ids;
-    Array<ComponentInfo>        m_component_infos;
+    EntityManager                                               &m_entity_manager;
+
+    Array<TypeID>                                               m_component_type_ids;
+    Array<ComponentInfo>                                        m_component_infos;
 
 private:
-    FlatSet<WeakHandle<Entity>> m_initialized_entities;
+    void SetWorld(World *world);
+
+    FlatSet<WeakHandle<Entity>>                                 m_initialized_entities;
 };
 
 /*! \brief A System is a class that operates on a set of components.

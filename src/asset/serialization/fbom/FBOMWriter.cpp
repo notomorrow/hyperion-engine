@@ -68,17 +68,6 @@ FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueID &unique_id, con
     return FBOMDataLocation::LOC_INPLACE;
 }
 
-FBOMNameTable &FBOMWriteStream::GetNameTable()
-{
-    auto it = m_static_data.Find(m_name_table_id);
-    AssertThrow(it != m_static_data.End());
-
-    FBOMNameTable *name_table_ptr = it->second.data.TryGetAsDynamic<FBOMNameTable>();
-    AssertThrow(name_table_ptr != nullptr);
-
-    return *name_table_ptr;
-}
-
 void FBOMWriteStream::AddToObjectLibrary(FBOMObject &object)
 {
     // static constexpr SizeType desired_max_size = 1024 * 1024 * 1024 * 32; // 32 MiB
@@ -127,8 +116,6 @@ FBOMWriter::FBOMWriter(const FBOMWriterConfig &config, const RC<FBOMWriteStream>
     : m_config(config),
       m_write_stream(write_stream)
 {
-    // Add name table for the write stream
-    AddStaticData(m_write_stream->m_name_table_id, FBOMStaticData(FBOMNameTable { }));
 }
 
 FBOMWriter::FBOMWriter(FBOMWriter &&other) noexcept
@@ -718,38 +705,6 @@ FBOMResult FBOMWriter::Write(ByteWriter *out, const FBOMArray &array, UniqueID i
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::Write(ByteWriter *out, const FBOMNameTable &name_table, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
-{
-    const FBOMStaticData *static_data_ptr;
-    const FBOMExternalObjectInfo *external_object_info_ptr;
-    
-    const FBOMDataLocation data_location = m_write_stream->GetDataLocation(id, &static_data_ptr, &external_object_info_ptr);
-    
-    if (FBOMResult err = WriteDataAttributes(out, attributes, data_location)) {
-        return err;
-    }
-
-    if (data_location == FBOMDataLocation::LOC_STATIC) {
-        AssertThrow(static_data_ptr != nullptr);
-
-        return WriteStaticDataUsage(out, *static_data_ptr);
-    }
-
-    if (data_location == FBOMDataLocation::LOC_INPLACE) {
-        out->Write<uint32>(uint32(name_table.values.Size()));
-
-        for (const auto &it : name_table.values) {
-            out->WriteString(it.second, BYTE_WRITER_FLAGS_WRITE_SIZE | BYTE_WRITER_FLAGS_WRITE_STRING_TYPE);
-            out->Write<NameID>(it.first.GetID());
-        }
-    } else {
-        // Unsupported method
-        return FBOMResult::FBOM_ERR;
-    }
-
-    return FBOMResult::FBOM_OK;
-}
-
 FBOMResult FBOMWriter::WriteArchive(ByteWriter *out, const Archive &archive) const
 {
     out->Write<uint64>(archive.GetUncompressedSize());
@@ -924,23 +879,11 @@ UniqueID FBOMWriter::AddStaticData(const FBOMData &data)
         AssertThrowMsg(data.ReadArray(array).value == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
 
         AddStaticData(array);
-    } else if (data.IsName()) {
-        // Custom logic for `Name` objects: store their string data in the stream's name table
-
-        Name name;
-        AssertThrowMsg(data.ReadName(&name).value == FBOMResult::FBOM_OK, "Invalid name, cannot write to stream");
-
-        m_write_stream->GetNameTable().Add(name.LookupString());
     } else {
         HYP_FAIL("Unhandled container type");
     }
 
     return AddStaticData(FBOMStaticData(data));
-}
-
-UniqueID FBOMWriter::AddStaticData(const FBOMNameTable &name_table)
-{
-    return AddStaticData(FBOMStaticData(name_table));
 }
 
 #pragma endregion FBOMWriter

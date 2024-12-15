@@ -2,7 +2,9 @@
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/ComponentInterface.hpp>
+
 #include <scene/Entity.hpp>
+#include <scene/Scene.hpp>
 
 #include <core/threading/TaskSystem.hpp>
 
@@ -163,6 +165,7 @@ bool EntityManager::IsValidComponentType(TypeID component_type_id)
 
 EntityManager::EntityManager(ThreadMask owner_thread_mask, Scene *scene, EnumFlags<EntityManagerFlags> flags)
     : m_owner_thread_mask(owner_thread_mask),
+      m_world(scene != nullptr ? scene->GetWorld() : nullptr),
       m_scene(scene),
       m_flags(flags),
       m_command_queue((owner_thread_mask & ThreadName::THREAD_GAME) ? EntityManagerCommandQueueFlags::EXEC_COMMANDS : EntityManagerCommandQueueFlags::NONE),
@@ -219,6 +222,28 @@ void EntityManager::Initialize()
     }
 
     m_is_initialized = true;
+}
+
+void EntityManager::SetWorld(World *world)
+{
+    HYP_SCOPE;
+
+    // Threads::AssertOnThread(m_owner_thread_mask);
+
+    if (world == m_world) {
+        return;
+    }
+
+    // If EntityManager is initialized we need to notify all of our systems that the world has changed.
+    if (m_is_initialized) {
+        for (SystemExecutionGroup &group : m_system_execution_groups) {
+            for (auto &system_it : group.GetSystems()) {
+                system_it.second->SetWorld(world);
+            }
+        }
+    }
+
+    m_world = world;
 }
 
 Handle<Entity> EntityManager::AddEntity()

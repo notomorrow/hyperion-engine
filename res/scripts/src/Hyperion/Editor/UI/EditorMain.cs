@@ -40,6 +40,16 @@ namespace FooBar
             base.Init(entity);
         }
 
+        public override void OnPlayStart()
+        {
+            Logger.Log(LogType.Info, "OnPlayStart");
+        }
+
+        public override void OnPlayStop()
+        {
+            Logger.Log(LogType.Info, "OnPlayStop");
+        }
+
         public UIEventHandlerResult SimulateClicked()
         {
             // Test: Force GC

@@ -56,6 +56,18 @@ namespace Hyperion
         }
 
         [Hyperion.ScriptMethodStub]
+        public virtual void OnPlayStart()
+        {
+            // Do nothing
+        }
+
+        [Hyperion.ScriptMethodStub]
+        public virtual void OnPlayStop()
+        {
+            // Do nothing
+        }
+
+        [Hyperion.ScriptMethodStub]
         public virtual void Update(float deltaTime)
         {
             // Do nothing

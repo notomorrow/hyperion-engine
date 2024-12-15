@@ -23,7 +23,7 @@ namespace hyperion {
 ScriptSystem::ScriptSystem(EntityManager &entity_manager)
     : System(entity_manager)
 {
-    m_delegate_handlers.Add(g_engine->GetScriptingService()->OnScriptStateChanged.Bind([this](const ManagedScript &script)
+    m_delegate_handlers.Add(NAME("OnScriptStateChanged"), g_engine->GetScriptingService()->OnScriptStateChanged.Bind([this](const ManagedScript &script)
     {
         Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
@@ -52,6 +52,47 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
             }
         }
     }));
+
+    if (World *world = GetWorld()) {
+        m_delegate_handlers.Add(NAME("OnGameStateChange"), world->OnGameStateChange.Bind([this](World *world, GameStateMode game_state_mode)
+        {
+            Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+            const GameStateMode previous_game_state_mode = world->GetGameState().mode;
+
+            HandleGameStateChanged(game_state_mode, previous_game_state_mode);
+        }));
+    }
+
+    m_delegate_handlers.Add(NAME("OnWorldChange"), OnWorldChanged.Bind([this](World *new_world, World *previous_world)
+    {
+        Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+        // Remove previous OnGameStateChange handler
+        m_delegate_handlers.Remove(NAME("OnGameStateChange"));
+
+        // If we were simulating before we need to stop it
+        if (previous_world != nullptr && previous_world->GetGameState().mode == GameStateMode::SIMULATING) {
+            CallScriptMethod("OnPlayStop");
+        }
+
+        if (new_world != nullptr) {
+            // If the newly set world is simulating we need to notify the scripts
+            if (new_world->GetGameState().mode == GameStateMode::SIMULATING) {
+                CallScriptMethod("OnPlayStart");
+            }
+
+            // Add new handler for the new world's game state changing
+            m_delegate_handlers.Add(NAME("OnGameStateChange"), new_world->OnGameStateChange.Bind([this](World *world, GameStateMode game_state_mode)
+            {
+                Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+                const GameStateMode previous_game_state_mode = world->GetGameState().mode;
+
+                HandleGameStateChanged(game_state_mode, previous_game_state_mode);
+            }));
+        }
+    }));
 }
 
 void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
@@ -61,6 +102,10 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
     ScriptComponent &script_component = GetEntityManager().GetComponent<ScriptComponent>(entity);
 
     if (script_component.flags & ScriptComponentFlags::INITIALIZED) {
+        if (GetWorld()->GetGameState().mode == GameStateMode::SIMULATING) {
+            CallScriptMethod("OnPlayStart", script_component);
+        }
+
         return;
     }
 
@@ -145,6 +190,11 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
     }
 
     script_component.flags |= ScriptComponentFlags::INITIALIZED;
+
+    // Call OnPlayStart on first init if we're currently simulating
+    if (GetWorld()->GetGameState().mode == GameStateMode::SIMULATING) {
+        CallScriptMethod("OnPlayStart", script_component);
+    }
 }
 
 void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
@@ -155,6 +205,11 @@ void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
 
     if (!(script_component.flags & ScriptComponentFlags::INITIALIZED)) {
         return;
+
+    }
+    // If we're simulating while the script is removed, call OnPlayStop so OnPlayStart never gets double called
+    if (GetWorld()->GetGameState().mode == GameStateMode::SIMULATING) {
+        CallScriptMethod("OnPlayStop", script_component);
     }
 
     if (script_component.object != nullptr) {
@@ -175,6 +230,11 @@ void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
 
 void ScriptSystem::Process(GameCounter::TickUnit delta)
 {
+    // Only update scripts if we're in simulation mode
+    if (GetWorld()->GetGameState().mode != GameStateMode::SIMULATING) {
+        return;
+    }
+
     for (auto [entity_id, script_component] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos())) {
         if (!(script_component.flags & ScriptComponentFlags::INITIALIZED)) {
             continue;
@@ -191,6 +251,57 @@ void ScriptSystem::Process(GameCounter::TickUnit delta)
 
                 script_component.object->InvokeMethod<void, float>(update_method_ptr, float(delta));
             }
+        }
+    }
+}
+
+void ScriptSystem::HandleGameStateChanged(GameStateMode game_state_mode, GameStateMode previous_game_state_mode)
+{
+    HYP_SCOPE;
+
+    if (previous_game_state_mode == GameStateMode::SIMULATING) {
+        CallScriptMethod("OnPlayStop");
+    }
+
+    if (game_state_mode == GameStateMode::SIMULATING) {
+        CallScriptMethod("OnPlayStart");
+    }
+}
+
+void ScriptSystem::CallScriptMethod(UTF8StringView method_name)
+{
+    for (auto [entity_id, script_component] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos())) {
+        if (!(script_component.flags & ScriptComponentFlags::INITIALIZED)) {
+            continue;
+        }
+
+        if (dotnet::Class *class_ptr = script_component.object->GetClass()) {
+            if (dotnet::Method *method_ptr = class_ptr->GetMethod(method_name)) {
+                if (method_ptr->GetAttributes().HasAttribute("ScriptMethodStub")) {
+                    // Stubbed method, don't waste cycles calling it if it's not implemented
+                    continue;
+                }
+
+                script_component.object->InvokeMethod<void>(method_ptr);
+            }
+        }
+    }
+}
+
+void ScriptSystem::CallScriptMethod(UTF8StringView method_name, ScriptComponent &target)
+{
+    if (!(target.flags & ScriptComponentFlags::INITIALIZED)) {
+        return;
+    }
+
+    if (dotnet::Class *class_ptr = target.object->GetClass()) {
+        if (dotnet::Method *method_ptr = class_ptr->GetMethod(method_name)) {
+            if (method_ptr->GetAttributes().HasAttribute("ScriptMethodStub")) {
+                // Stubbed method, don't waste cycles calling it if it's not implemented
+                return;
+            }
+
+            target.object->InvokeMethod<void>(method_ptr);
         }
     }
 }
