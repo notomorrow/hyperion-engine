@@ -18,7 +18,6 @@
 #include <asset/serialization/fbom/FBOMBaseTypes.hpp>
 #include <asset/serialization/fbom/FBOMData.hpp>
 #include <asset/serialization/fbom/FBOMArray.hpp>
-#include <asset/serialization/fbom/FBOMNameTable.hpp>
 #include <asset/serialization/fbom/FBOMInterfaces.hpp>
 
 #include <util/fs/FsUtil.hpp>
@@ -96,14 +95,6 @@ struct FBOMStaticData
     {
     }
 
-    explicit FBOMStaticData(const FBOMNameTable &value, int64 offset = -1)
-        : type(FBOM_STATIC_DATA_NAME_TABLE),
-          data(MakeUnique<FBOMNameTable>(value)),
-          offset(offset),
-          flags(FBOMStaticDataFlags::NONE)
-    {
-    }
-
     explicit FBOMStaticData(FBOMObject &&value, int64 offset = -1) noexcept
         : type(FBOM_STATIC_DATA_OBJECT),
           data(MakeUnique<FBOMObject>(std::move(value))),
@@ -131,14 +122,6 @@ struct FBOMStaticData
     explicit FBOMStaticData(FBOMArray &&value, int64 offset = -1) noexcept
         : type(FBOM_STATIC_DATA_ARRAY),
           data(MakeUnique<FBOMArray>(std::move(value))),
-          offset(offset),
-          flags(FBOMStaticDataFlags::NONE)
-    {
-    }
-
-    explicit FBOMStaticData(FBOMNameTable &&value, int64 offset = -1) noexcept
-        : type(FBOM_STATIC_DATA_NAME_TABLE),
-          data(MakeUnique<FBOMNameTable>(std::move(value))),
           offset(offset),
           flags(FBOMStaticDataFlags::NONE)
     {

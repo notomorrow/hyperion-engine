@@ -108,18 +108,6 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
 
         break;
     }
-    case FBOMStaticData::FBOM_STATIC_DATA_NAME_TABLE:
-    {
-        ptr = MakeUnique<FBOMNameTable>();
-
-        if (FBOMResult err = reader->ReadNameTable(&byte_reader, *static_cast<FBOMNameTable *>(ptr.Get()))) {
-            ptr.Reset();
-            
-            return err;
-        }
-
-        break;
-    }
     default:
         return { FBOMResult::FBOM_ERR, "Cannot process static data type, unknown type" };
     }
@@ -764,62 +752,6 @@ FBOMResult FBOMReader::ReadArray(BufferedReader *reader, FBOMArray &out_array)
         // FBOMArray *as_array = m_static_data_pool[offset].data.TryGetAsDynamic<FBOMArray>();
         // AssertThrowMsg(as_array != nullptr, "Invalid value in static data pool at offset %u. Type: %u", offset, m_static_data_pool[offset].data.GetTypeID().Value());
         // out_array = *as_array;
-    }
-
-    return FBOMResult::FBOM_OK;
-}
-
-FBOMResult FBOMReader::ReadNameTable(BufferedReader *reader, FBOMNameTable &out_name_table)
-{
-    EnumFlags<FBOMDataAttributes> attributes;
-    FBOMDataLocation location;
-
-    if (FBOMResult err = ReadDataAttributes(reader, attributes, location)) {
-        return err;
-    }
-
-    if (location == FBOMDataLocation::LOC_INPLACE) {
-        uint32 count;
-        reader->Read(&count);
-        CheckEndianness(count);
-
-        for (uint32 i = 0; i < count; i++) {
-            ANSIString str;
-            NameID name_data;
-
-            if (FBOMResult err = ReadString(reader, str)) {
-                return err;
-            }
-
-            if (FBOMResult err = ReadRawData<NameID>(reader, &name_data)) {
-                return err;
-            }
-
-            out_name_table.Add(str, WeakName(name_data));
-        }
-    } else if (location == FBOMDataLocation::LOC_STATIC) {
-        // read offset as u32
-        uint32 offset;
-        reader->Read(&offset);
-        CheckEndianness(offset);
-
-        IFBOMSerializable *element = m_static_data_index_map.GetOrInitializeElement(this, offset);
-
-        if (FBOMNameTable *as_name_table = dynamic_cast<FBOMNameTable *>(element)) {
-            out_name_table = *as_name_table;
-        } else {
-            return { FBOMResult::FBOM_ERR, "Invalid name table in static data pool" };
-        }
-        
-        // AssertThrowMsg(offset < m_static_data_pool.Size(),
-        //     "Offset out of bounds of static data pool: %u >= %u",
-        //     offset,
-        //     m_static_data_pool.Size());
-
-        // // grab from static data pool
-        // FBOMNameTable *as_name_table = m_static_data_pool[offset].data.TryGetAsDynamic<FBOMNameTable>();
-        // AssertThrowMsg(as_name_table != nullptr, "Invalid value in static data pool at offset %u. Type: %u", offset, m_static_data_pool[offset].data.GetTypeID().Value());
-        // out_name_table = *as_name_table;
     }
 
     return FBOMResult::FBOM_OK;

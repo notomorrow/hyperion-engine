@@ -96,8 +96,6 @@ struct FBOMWriteStream
 
     HYP_FORCE_INLINE bool IsObjectDataWritingLocked() const
         { return m_object_data_write_locked; }
-    
-    FBOMNameTable &GetNameTable();
 
     void AddToObjectLibrary(FBOMObject &object);
 };
@@ -146,7 +144,6 @@ public:
     FBOMResult Write(ByteWriter *out, const FBOMType &type, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
     FBOMResult Write(ByteWriter *out, const FBOMData &data, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
     FBOMResult Write(ByteWriter *out, const FBOMArray &array, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
-    FBOMResult Write(ByteWriter *out, const FBOMNameTable &name_table, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
 
 private:
     FBOMResult WriteArchive(ByteWriter *out, const Archive &archive) const;
@@ -171,7 +168,6 @@ private:
     UniqueID AddStaticData(const FBOMObject &);
     UniqueID AddStaticData(const FBOMData &);
     UniqueID AddStaticData(const FBOMArray &);
-    UniqueID AddStaticData(const FBOMNameTable &);
 
     UniqueID AddStaticData(UniqueID id, FBOMStaticData &&static_data);
 

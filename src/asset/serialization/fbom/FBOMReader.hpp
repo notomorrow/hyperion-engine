@@ -88,7 +88,6 @@ public:
     FBOMResult ReadObjectLibrary(BufferedReader *, FBOMObjectLibrary &out_library);
     FBOMResult ReadData(BufferedReader *, FBOMData &out_data);
     FBOMResult ReadArray(BufferedReader *, FBOMArray &out_array);
-    FBOMResult ReadNameTable(BufferedReader *, FBOMNameTable &out_name_table);
     FBOMResult ReadPropertyName(BufferedReader *, Name &out_property_name);
 
 private:

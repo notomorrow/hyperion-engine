@@ -210,8 +210,6 @@ struct FBOMArrayType : FBOMType
     }
 };
 
-struct FBOMName : FBOMStruct { FBOMName() : FBOMStruct(TypeWrapper<Name> { }) { } };
-
 } // namespace hyperion::fbom
 
 #endif

@@ -341,6 +341,9 @@ Subsystem *World::GetSubsystemByName(WeakName name) const
 
 void World::StartSimulating()
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
     if (m_game_state.mode == GameStateMode::SIMULATING) {
         return;
     }
@@ -354,6 +357,9 @@ void World::StartSimulating()
 
 void World::StopSimulating()
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    
     if (m_game_state.mode != GameStateMode::SIMULATING) {
         return;
     }

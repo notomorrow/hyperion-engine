@@ -108,21 +108,6 @@ Scene::Scene(
         m_entity_manager->GetCommandQueue().SetFlags(m_entity_manager->GetCommandQueue().GetFlags() & ~EntityManagerCommandQueueFlags::EXEC_COMMANDS);
     }
 
-    m_entity_manager->AddSystem<WorldAABBUpdaterSystem>();
-    m_entity_manager->AddSystem<EntityMeshDirtyStateSystem>();
-    m_entity_manager->AddSystem<RenderProxyUpdaterSystem>();
-    m_entity_manager->AddSystem<LightVisibilityUpdaterSystem>();
-    m_entity_manager->AddSystem<ShadowMapUpdaterSystem>();
-    m_entity_manager->AddSystem<VisibilityStateUpdaterSystem>();
-    m_entity_manager->AddSystem<EnvGridUpdaterSystem>();
-    m_entity_manager->AddSystem<ReflectionProbeUpdaterSystem>();
-    m_entity_manager->AddSystem<AnimationSystem>();
-    m_entity_manager->AddSystem<SkySystem>();
-    m_entity_manager->AddSystem<AudioSystem>();
-    m_entity_manager->AddSystem<BLASUpdaterSystem>();
-    m_entity_manager->AddSystem<PhysicsSystem>();
-    m_entity_manager->AddSystem<ScriptSystem>();
-
     m_root_node_proxy->SetScene(this);
 }
 
@@ -165,14 +150,32 @@ void Scene::Init()
     InitObject(m_camera);
     m_render_collector.SetCamera(m_camera);
 
+    m_entity_manager->SetWorld(m_world);
     m_entity_manager->Initialize();
 
+    m_entity_manager->AddSystem<WorldAABBUpdaterSystem>();
+    m_entity_manager->AddSystem<EntityMeshDirtyStateSystem>();
+    m_entity_manager->AddSystem<RenderProxyUpdaterSystem>();
+    m_entity_manager->AddSystem<LightVisibilityUpdaterSystem>();
+    m_entity_manager->AddSystem<ShadowMapUpdaterSystem>();
+    m_entity_manager->AddSystem<VisibilityStateUpdaterSystem>();
+    m_entity_manager->AddSystem<EnvGridUpdaterSystem>();
+    m_entity_manager->AddSystem<ReflectionProbeUpdaterSystem>();
+    m_entity_manager->AddSystem<AnimationSystem>();
+    m_entity_manager->AddSystem<SkySystem>();
+    m_entity_manager->AddSystem<AudioSystem>();
+    m_entity_manager->AddSystem<BLASUpdaterSystem>();
+    m_entity_manager->AddSystem<PhysicsSystem>();
+    m_entity_manager->AddSystem<ScriptSystem>();
+
     if (!IsNonWorldScene()) {
-        if (!m_tlas) {
-            if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool() && (m_flags & SceneFlags::HAS_TLAS)) {
-                CreateTLAS();
-            } else {
-                m_flags &= ~SceneFlags::HAS_TLAS;
+        if (m_flags & SceneFlags::HAS_TLAS) {
+            if (!m_tlas) {
+                if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool()) {
+                    CreateTLAS();
+                } else {
+                    m_flags &= ~SceneFlags::HAS_TLAS;
+                }
             }
         }
         
@@ -215,8 +218,23 @@ void Scene::SetCamera(const Handle<Camera> &camera)
 
 void Scene::SetWorld(World *world)
 {
-    // be cautious
-    // Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    HYP_SCOPE;
+
+    // Allow setting the world before Init. Allows call from any thread to make setup easier.
+    if (!IsInitCalled()) {
+        m_world = world;
+
+        return;
+    }
+
+    Threads::AssertOnThread(m_owner_thread_id);
+
+    if (m_world == world) {
+        return;
+    }
+
+    // When world is changed, entity manager needs all systems to have this change reflected
+    m_entity_manager->SetWorld(world);
 
     m_world = world;
 }
@@ -261,9 +279,7 @@ NodeProxy Scene::FindNodeByName(UTF8StringView name) const
 void Scene::BeginUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
-
     AssertReady();
     
     {
@@ -297,9 +313,7 @@ void Scene::BeginUpdate(GameCounter::TickUnit delta)
 void Scene::EndUpdate()
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
-
     AssertReady();
 
     m_entity_manager->EndUpdate();
@@ -536,7 +550,6 @@ void Scene::EnqueueRenderUpdates()
 bool Scene::CreateTLAS()
 {
     HYP_SCOPE;
-
     AssertThrowMsg(!IsNonWorldScene(), "Can only create TLAS for world scenes");
     AssertIsInitCalled();
 

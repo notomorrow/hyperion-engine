@@ -65,6 +65,7 @@ enum class EntityManagerCommandQueueFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(EntityManagerCommandQueueFlags)
 
+class World;
 class Scene;
 
 /*! \brief A group of Systems that are able to be processed concurrently, as they do not share any dependencies.
@@ -382,6 +383,16 @@ public:
      *  \internal This is used by the Scene to set the thread mask of the Scene's thread. It should not be called from user code. */
     HYP_FORCE_INLINE void SetOwnerThreadMask(ThreadMask owner_thread_mask)
         { m_owner_thread_mask = owner_thread_mask; }
+
+    /*! \brief Gets the World that this EntityManager is associated with.
+     *
+     *  \return Pointer to the World.
+     */
+    HYP_METHOD()
+    HYP_FORCE_INLINE World *GetWorld() const
+        { return m_world; }
+
+    void SetWorld(World *world);
 
     /*! \brief Gets the Scene that this EntityManager is associated with.
      *
@@ -943,6 +954,7 @@ private:
     bool RemoveEntity(ID<Entity> id);
 
     ThreadMask                                                              m_owner_thread_mask;
+    World                                                                   *m_world;
     Scene                                                                   *m_scene;
     EnumFlags<EntityManagerFlags>                                           m_flags;
 

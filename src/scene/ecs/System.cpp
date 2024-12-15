@@ -14,7 +14,12 @@ Scene *SystemBase::GetScene() const
 
 World *SystemBase::GetWorld() const
 {
-    return m_entity_manager.GetScene()->GetWorld();
+    return m_entity_manager.GetWorld();
+}
+
+void SystemBase::SetWorld(World *world)
+{
+    OnWorldChanged(world, GetWorld());
 }
 
 } // namespace hyperion

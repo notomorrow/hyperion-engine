@@ -64,6 +64,8 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             if (!it.material) {
                 continue;
             }
+
+            // UI rendering uses a different system
             AssertThrow(it.material->GetRenderAttributes().bucket != BUCKET_UI);
         }
     }
