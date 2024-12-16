@@ -5,6 +5,8 @@
 #include <input/InputManager.hpp>
 #include <input/InputHandler.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
 namespace hyperion {
 
 #pragma region EditorCameraInputHandler
@@ -20,6 +22,8 @@ public:
 
     virtual bool OnKeyDown(const KeyboardEvent &event) override
     {
+        HYP_SCOPE;
+
         Camera *camera = m_controller->GetCamera();
 
         if (event.key_code == KeyCode::KEY_W || event.key_code == KeyCode::KEY_S || event.key_code == KeyCode::KEY_A || event.key_code == KeyCode::KEY_D) {
@@ -53,11 +57,15 @@ public:
 
     virtual bool OnKeyUp(const KeyboardEvent &event) override
     {
+        HYP_SCOPE;
+
         return false;
     }
 
     virtual bool OnMouseDown(const MouseEvent &event) override
     {
+        HYP_SCOPE;
+
         m_controller->SetMode(EditorCameraControllerMode::MOUSE_LOCKED);
 
         return true;
@@ -65,6 +73,8 @@ public:
 
     virtual bool OnMouseUp(const MouseEvent &event) override
     {
+        HYP_SCOPE;
+
         m_controller->SetMode(EditorCameraControllerMode::INACTIVE);
 
         return true;
@@ -72,11 +82,15 @@ public:
 
     virtual bool OnMouseMove(const MouseEvent &event) override
     {
+        HYP_SCOPE;
+
         return false;
     }
 
     virtual bool OnMouseDrag(const MouseEvent &event) override
     {
+        HYP_SCOPE;
+
         Camera *camera = m_controller->GetCamera();
         
         if (!camera) {
@@ -129,29 +143,47 @@ EditorCameraController::EditorCameraController()
     m_input_handler = MakeUnique<EditorCameraInputHandler>(this);
 }
 
+void EditorCameraController::OnActivated()
+{
+    HYP_SCOPE;
+
+    FirstPersonCameraController::OnActivated();
+}
+
 void EditorCameraController::SetMode(EditorCameraControllerMode mode)
 {
-    m_mode = mode;
+    HYP_SCOPE;
+
+    if (m_mode == mode) {
+        return;
+    }
 
     switch (mode) {
     case EditorCameraControllerMode::INACTIVE:
     case EditorCameraControllerMode::FOCUSED: // fallthrough
         FirstPersonCameraController::SetMode(FirstPersonCameraControllerMode::MOUSE_FREE);
+        
         break;
     case EditorCameraControllerMode::MOUSE_LOCKED:
         FirstPersonCameraController::SetMode(FirstPersonCameraControllerMode::MOUSE_LOCKED);
 
         break;
     }
+
+    m_mode = mode;
 }
 
 void EditorCameraController::UpdateLogic(double dt)
 {
+    HYP_SCOPE;
+
     FirstPersonCameraController::UpdateLogic(dt);
 }
 
 void EditorCameraController::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)
 {
+    HYP_SCOPE;
+
     switch (command.command) {
     case CameraCommand::CAMERA_COMMAND_MAG:
     case CameraCommand::CAMERA_COMMAND_MOVEMENT: // fallthrough

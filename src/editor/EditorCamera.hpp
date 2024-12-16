@@ -30,10 +30,9 @@ public:
 
     virtual void UpdateLogic(double dt) override;
 
-    virtual bool IsMouseLocked() const override
-        { return m_mode == EditorCameraControllerMode::MOUSE_LOCKED; }
-
 protected:
+    virtual void OnActivated() override;
+
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) override;
 
     EditorCameraControllerMode  m_mode;

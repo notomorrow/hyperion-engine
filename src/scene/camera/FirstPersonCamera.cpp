@@ -2,6 +2,8 @@
 
 #include <scene/camera/FirstPersonCamera.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
 namespace hyperion {
 
 static const float mouse_sensitivity = 1.0f;
@@ -20,30 +22,46 @@ FirstPersonCameraController::FirstPersonCameraController(FirstPersonCameraContro
 {
 }
 
+void FirstPersonCameraController::OnActivated()
+{
+    HYP_SCOPE;
+    
+    PerspectiveCameraController::OnActivated();
+}
+
+void FirstPersonCameraController::OnDeactivated()
+{
+    HYP_SCOPE;
+    
+    PerspectiveCameraController::OnDeactivated();
+}
+
 void FirstPersonCameraController::SetMode(FirstPersonCameraControllerMode mode)
 {
+    HYP_SCOPE;
+    
     if (m_mode == mode) {
         return;
     }
 
-    if (m_mode == FirstPersonCameraControllerMode::MOUSE_LOCKED) {
-        CameraController::SetMouseLocked(false);
+    switch (mode) {
+    case FirstPersonCameraControllerMode::MOUSE_FREE:
+        CameraController::SetIsMouseLockRequested(false);
+
+        break;
+    case FirstPersonCameraControllerMode::MOUSE_LOCKED:
+        CameraController::SetIsMouseLockRequested(true);
+
+        break;
     }
 
     m_mode = mode;
-
-    switch (m_mode) {
-    case FirstPersonCameraControllerMode::MOUSE_FREE:
-        break;
-    case FirstPersonCameraControllerMode::MOUSE_LOCKED:
-        CameraController::SetMouseLocked(true);
-
-        break;
-    }
 }
 
 void FirstPersonCameraController::UpdateLogic(double dt)
 {
+    HYP_SCOPE;
+    
     m_desired_mag = Vec2f {
         m_mouse_x - m_prev_mouse_x,
         m_mouse_y - m_prev_mouse_y
@@ -97,6 +115,8 @@ void FirstPersonCameraController::UpdateLogic(double dt)
 
 void FirstPersonCameraController::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)
 {
+    HYP_SCOPE;
+    
     switch (command.command) {
     case CameraCommand::CAMERA_COMMAND_MAG:
     {

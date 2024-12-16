@@ -27,6 +27,13 @@ namespace Hyperion
         }
     }
 
+    [HypClassBinding(Name="FirstPersonCameraControllerMode")]
+    public enum FirstPersonCameraControllerMode : uint
+    {
+        MouseLocked = 0,
+        MouseFree = 1
+    }
+
     [HypClassBinding(Name="FollowCameraController")]
     public class FollowCameraController : PerspectiveCameraController
     {

@@ -43,6 +43,11 @@ namespace FooBar
         public override void OnPlayStart()
         {
             Logger.Log(LogType.Info, "OnPlayStart");
+
+            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+            var firstPersonCameraController = new FirstPersonCameraController();
+            editorSubsystem.GetScene().GetCamera().AddCameraController(firstPersonCameraController);
+            firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
         }
 
         public override void OnPlayStop()

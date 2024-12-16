@@ -32,11 +32,11 @@ namespace hyperion {
 class Engine;
 class CameraRenderResources;
 
-enum class CameraType
+enum class CameraProjectionMode : uint32
 {
-    NONE,
-    PERSPECTIVE,
-    ORTHOGRAPHIC
+    NONE            = 0,
+    PERSPECTIVE     = 1,
+    ORTHOGRAPHIC    = 2
 };
 
 struct CameraCommand
@@ -88,7 +88,7 @@ class HYP_API CameraController : public EnableRefCountedPtrFromThis<CameraContro
     HYP_OBJECT_BODY(CameraController);
 
 public:
-    CameraController(CameraType type);
+    CameraController(CameraProjectionMode projection_mode);
     virtual ~CameraController() = default;
 
     InputHandler *GetInputHandler() const
@@ -100,18 +100,28 @@ public:
     Camera *GetCamera() const
         { return m_camera; }
 
-    CameraType GetType() const
-        { return m_type; }
+    CameraProjectionMode GetProjectionMode() const
+        { return m_projection_mode; }
 
-    virtual bool IsMouseLocked() const
+    HYP_METHOD()
+    virtual bool IsMouseLockAllowed() const
         { return false; }
 
-    virtual void SetTranslation(const Vec3f &translation) { }
-    virtual void SetNextTranslation(const Vec3f &translation) { }
-    virtual void SetDirection(const Vec3f &direction) { }
-    virtual void SetUpVector(const Vec3f &up) { }
+    HYP_METHOD()
+    bool IsMouseLockRequested() const
+        { return m_mouse_lock_requested; }
 
-    virtual void OnAdded(Camera *camera) = 0;
+    HYP_METHOD()
+    virtual void SetTranslation(const Vec3f &translation) { }
+
+    HYP_METHOD()
+    virtual void SetNextTranslation(const Vec3f &translation) { }
+
+    HYP_METHOD()
+    virtual void SetDirection(const Vec3f &direction) { }
+
+    HYP_METHOD()
+    virtual void SetUpVector(const Vec3f &up) { }
 
     virtual void UpdateLogic(double dt) = 0;
     virtual void UpdateViewMatrix() = 0;
@@ -120,33 +130,42 @@ public:
     void PushCommand(const CameraCommand &command);
 
 protected:
+    virtual void OnAdded();
+    virtual void OnRemoved();
+
+    virtual void OnActivated();
+    virtual void OnDeactivated();
+
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) {}
 
     void UpdateCommandQueue(GameCounter::TickUnit dt);
 
-    void SetMouseLocked(bool mouse_locked);
+    void SetIsMouseLockRequested(bool mouse_lock_requested);
 
     Camera                  *m_camera;
 
     UniquePtr<InputHandler> m_input_handler;
 
-    CameraType              m_type;
+    CameraProjectionMode    m_projection_mode;
 
     std::mutex              m_command_queue_mutex;
     std::atomic_uint        m_command_queue_count;
     Queue<CameraCommand>    m_command_queue;
+
+    bool                    m_mouse_lock_requested;
+
+private:
+    void OnAdded(Camera *camera);
 };
 
 HYP_CLASS()
-class HYP_API NullCameraController : public CameraController
+class HYP_API NullCameraController final : public CameraController
 {
     HYP_OBJECT_BODY(NullCameraController);
 
 public:
     NullCameraController();
     virtual ~NullCameraController() override = default;
-
-    virtual void OnAdded(Camera *camera) override;
 
     virtual void UpdateLogic(double dt) override;
     virtual void UpdateViewMatrix() override;
@@ -443,6 +462,8 @@ protected:
     float                       m_left, m_right, m_bottom, m_top;
 
 private:
+    void UpdateMouseLocked();
+
     Matrix4                     m_view_proj_mat;
     Matrix4                     m_previous_view_matrix;
 

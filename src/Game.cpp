@@ -273,7 +273,7 @@ void Game::OnInputEvent(const SystemEvent &event)
                         }
                     });
 
-                    if (controller->IsMouseLocked()) {
+                    if (controller->IsMouseLockRequested()) {
                         m_app_context->GetInputManager()->SetMousePosition(Vec2i { int(window_size.x / 2), int(window_size.y / 2) });
                     }
                 }

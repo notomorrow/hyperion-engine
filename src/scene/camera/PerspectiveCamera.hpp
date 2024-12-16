@@ -16,11 +16,13 @@ public:
     PerspectiveCameraController();
     virtual ~PerspectiveCameraController() override = default;
 
-    virtual void OnAdded(Camera *camera) override;
-
     virtual void UpdateLogic(double dt) override;
     virtual void UpdateViewMatrix() override;
     virtual void UpdateProjectionMatrix() override;
+
+protected:
+    virtual void OnActivated() override;
+    virtual void OnDeactivated() override;
 };
 
 } // namespace hyperion
