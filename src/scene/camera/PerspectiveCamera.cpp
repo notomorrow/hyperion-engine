@@ -2,24 +2,38 @@
 
 #include <scene/camera/PerspectiveCamera.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
 namespace hyperion {
 
 PerspectiveCameraController::PerspectiveCameraController()
-    : CameraController(CameraType::PERSPECTIVE)
+    : CameraController(CameraProjectionMode::PERSPECTIVE)
 {
 }
 
-void PerspectiveCameraController::OnAdded(Camera *camera)
+void PerspectiveCameraController::OnActivated()
 {
-    m_camera = camera;
+    HYP_SCOPE;
+    
+    CameraController::OnActivated();
+}
+
+void PerspectiveCameraController::OnDeactivated()
+{
+    HYP_SCOPE;
+    
+    CameraController::OnDeactivated();
 }
 
 void PerspectiveCameraController::UpdateLogic(double dt)
 {
+    HYP_SCOPE;
 }
 
 void PerspectiveCameraController::UpdateViewMatrix()
 {
+    HYP_SCOPE;
+    
     m_camera->m_view_mat = Matrix4::LookAt(
         m_camera->m_translation,
         m_camera->GetTarget(),
@@ -29,6 +43,8 @@ void PerspectiveCameraController::UpdateViewMatrix()
 
 void PerspectiveCameraController::UpdateProjectionMatrix()
 {
+    HYP_SCOPE;
+    
     m_camera->SetToPerspectiveProjection(
         m_camera->m_fov,
         m_camera->m_near,

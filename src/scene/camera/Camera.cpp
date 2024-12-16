@@ -27,16 +27,48 @@ class Camera;
 
 #pragma region CameraController
 
-CameraController::CameraController(CameraType type)
+CameraController::CameraController(CameraProjectionMode projection_mode)
     : m_input_handler(MakeUnique<NullInputHandler>()),
       m_camera(nullptr),
-      m_type(type),
-      m_command_queue_count { 0 }
+      m_projection_mode(projection_mode),
+      m_command_queue_count { 0 },
+      m_mouse_lock_requested(false)
 {
+}
+
+void CameraController::OnAdded(Camera *camera)
+{
+    HYP_SCOPE;
+
+    m_camera = camera;
+
+    OnAdded();
+}
+
+void CameraController::OnAdded()
+{
+    // Do nothing
+}
+
+void CameraController::OnRemoved()
+{
+    // Do nothing
+}
+
+void CameraController::OnActivated()
+{
+    // Do nothing
+}
+
+void CameraController::OnDeactivated()
+{
+    // Do nothing
 }
 
 void CameraController::PushCommand(const CameraCommand &command)
 {
+    HYP_SCOPE;
+
     std::lock_guard guard(m_command_queue_mutex);
 
     ++m_command_queue_count;
@@ -46,6 +78,8 @@ void CameraController::PushCommand(const CameraCommand &command)
 
 void CameraController::UpdateCommandQueue(GameCounter::TickUnit dt)
 {
+    HYP_SCOPE;
+
     if (m_command_queue_count == 0) {
         return;
     }
@@ -61,17 +95,17 @@ void CameraController::UpdateCommandQueue(GameCounter::TickUnit dt)
     m_command_queue_count = 0;
 }
 
-void CameraController::SetMouseLocked(bool mouse_locked)
+void CameraController::SetIsMouseLockRequested(bool mouse_lock_requested)
 {
-    if (!g_engine->GetAppContext()) {
+    HYP_SCOPE;
+
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    if (mouse_lock_requested == m_mouse_lock_requested) {
         return;
     }
 
-    if (!g_engine->GetAppContext()->GetMainWindow()) {
-        return;
-    }
-
-    g_engine->GetAppContext()->GetMainWindow()->SetMouseLocked(mouse_locked);
+    m_mouse_lock_requested = mouse_lock_requested;
 }
 
 #pragma endregion CameraController
@@ -79,13 +113,8 @@ void CameraController::SetMouseLocked(bool mouse_locked)
 #pragma region NullCameraController
 
 NullCameraController::NullCameraController()
-    : CameraController(CameraType::NONE)
+    : CameraController(CameraProjectionMode::NONE)
 {
-}
-
-void NullCameraController::OnAdded(Camera *camera)
-{
-    m_camera = camera;
 }
 
 void NullCameraController::UpdateLogic(double dt)
@@ -166,6 +195,13 @@ Camera::Camera(int width, int height, float left, float right, float bottom, flo
 
 Camera::~Camera()
 {
+    while (HasActiveCameraController()) {
+        const RC<CameraController> camera_controller = m_camera_controllers.PopBack();
+
+        camera_controller->OnDeactivated();
+        camera_controller->OnRemoved();
+    }
+
     if (m_render_resources != nullptr) {
         m_render_resources->EnqueueUnbind();
         m_render_resources->Unclaim();
@@ -233,9 +269,18 @@ void Camera::AddCameraController(const RC<CameraController> &camera_controller)
 
     AssertThrow(!m_camera_controllers.Contains(camera_controller));
 
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &current_camera_controller = GetCameraController()) {
+            current_camera_controller->OnDeactivated();
+        }
+    }
+
     m_camera_controllers.PushBack(camera_controller);
 
     camera_controller->OnAdded(this);
+    camera_controller->OnActivated();
+
+    UpdateMouseLocked();
 
     UpdateViewMatrix();
     UpdateProjectionMatrix();
@@ -256,8 +301,10 @@ void Camera::SetTranslation(const Vec3f &translation)
     
     m_previous_view_matrix = m_view_mat;
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->SetTranslation(translation);
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            camera_controller->SetTranslation(translation);
+        }
     }
 
     UpdateViewMatrix();
@@ -270,8 +317,10 @@ void Camera::SetNextTranslation(const Vec3f &translation)
 
     m_next_translation = translation;
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->SetNextTranslation(translation);
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            camera_controller->SetNextTranslation(translation);
+        }
     }
 }
 
@@ -281,8 +330,10 @@ void Camera::SetDirection(const Vec3f &direction)
 
     m_direction = direction;
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->SetDirection(direction);
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            camera_controller->SetDirection(direction);
+        }
     }
 
     // UpdateViewMatrix();
@@ -295,8 +346,10 @@ void Camera::SetUpVector(const Vec3f &up)
 
     m_up = up;
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->SetUpVector(up);
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            camera_controller->SetUpVector(up);
+        }
     }
 
     // UpdateViewMatrix();
@@ -412,11 +465,13 @@ void Camera::Update(GameCounter::TickUnit dt)
 
     AssertReady();
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->m_camera = this;
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            UpdateMouseLocked();
 
-        camera_controller->UpdateCommandQueue(dt);
-        camera_controller->UpdateLogic(dt);
+            camera_controller->UpdateCommandQueue(dt);
+            camera_controller->UpdateLogic(dt);
+        }
     }
 
     m_translation = m_next_translation;
@@ -443,8 +498,10 @@ void Camera::UpdateViewMatrix()
 
     m_previous_view_matrix = m_view_mat;
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->UpdateViewMatrix();
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            camera_controller->UpdateViewMatrix();
+        }
     }
 }
 
@@ -452,8 +509,10 @@ void Camera::UpdateProjectionMatrix()
 {
     HYP_SCOPE;
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->UpdateProjectionMatrix();
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            camera_controller->UpdateProjectionMatrix();
+        }
     }
 }
 
@@ -463,12 +522,39 @@ void Camera::UpdateMatrices()
 
     m_previous_view_matrix = m_view_mat;
 
-    if (const RC<CameraController> &camera_controller = GetCameraController()) {
-        camera_controller->UpdateViewMatrix();
-        camera_controller->UpdateProjectionMatrix();
+    if (HasActiveCameraController()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            camera_controller->UpdateViewMatrix();
+            camera_controller->UpdateProjectionMatrix();
+        }
     }
 
     UpdateViewProjectionMatrix();
+}
+
+void Camera::UpdateMouseLocked()
+{
+    HYP_SCOPE;
+
+    if (!HasActiveCameraController()) {
+        return;
+    }
+
+    // @TODO MouseLockState tied to the camera so we can tell if the lock belongs to us and release it when we're done
+        
+    if (const RC<AppContext> &app_context = g_engine->GetAppContext()) {
+        if (const RC<CameraController> &camera_controller = GetCameraController()) {
+            if (!camera_controller->IsMouseLockAllowed()) {
+                return;
+            }
+
+            const bool should_lock_mouse = camera_controller->IsMouseLockRequested();
+
+            if (app_context->GetInputManager()->IsMouseLocked() != should_lock_mouse) {
+                app_context->GetInputManager()->SetIsMouseLocked(should_lock_mouse);
+            }
+        }
+    }
 }
 
 #pragma endregion Camera

@@ -2,6 +2,8 @@
 
 #include <scene/camera/FollowCamera.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
 namespace hyperion {
 
 FollowCameraController::FollowCameraController(const Vector3 &target, const Vector3 &offset)
@@ -17,15 +19,26 @@ FollowCameraController::FollowCameraController(const Vector3 &target, const Vect
 {
 }
 
-void FollowCameraController::OnAdded(Camera *camera)
+void FollowCameraController::OnActivated()
 {
-    PerspectiveCameraController::OnAdded(camera);
+    HYP_SCOPE;
 
-    camera->SetTarget(m_target);
+    PerspectiveCameraController::OnActivated();
+
+    m_camera->SetTarget(m_target);
+}
+
+void FollowCameraController::OnDeactivated()
+{
+    HYP_SCOPE;
+
+    PerspectiveCameraController::OnDeactivated();
 }
 
 void FollowCameraController::UpdateLogic(double dt)
 {
+    HYP_SCOPE;
+
     m_real_offset.Lerp(m_offset, MathUtil::Clamp(float(dt) * 25.0f, 0.0f, 1.0f));
 
     const Vector3 origin = m_camera->GetTarget();
@@ -36,6 +49,8 @@ void FollowCameraController::UpdateLogic(double dt)
 
 void FollowCameraController::RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt)
 {
+    HYP_SCOPE;
+
     switch (command.command) {
     case CameraCommand::CAMERA_COMMAND_MAG:
     {

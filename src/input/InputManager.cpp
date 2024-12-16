@@ -12,7 +12,8 @@
 namespace hyperion {
 
 InputManager::InputManager()
-    : m_window(nullptr)
+    : m_window(nullptr),
+      m_is_mouse_locked(false)
 {
 }
 
@@ -59,6 +60,32 @@ void InputManager::CheckEvent(SystemEvent *event)
     default:
         return;
     }
+}
+
+bool InputManager::IsMouseLocked() const
+{
+    return m_is_mouse_locked;
+}
+
+void InputManager::SetIsMouseLocked(bool is_mouse_locked)
+{
+    Threads::AssertOnThread(ThreadName::THREAD_INPUT);
+
+    if (m_is_mouse_locked == is_mouse_locked) {
+        return;
+    }
+
+    if (is_mouse_locked) {
+        if (m_window) {
+            m_window->SetIsMouseLocked(true);
+        }
+    } else {
+        if (m_window) {
+            m_window->SetIsMouseLocked(false);
+        }
+    }
+
+    m_is_mouse_locked = is_mouse_locked;
 }
 
 void InputManager::SetMousePosition(Vec2i position)

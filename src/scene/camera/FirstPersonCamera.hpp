@@ -9,10 +9,11 @@
 
 namespace hyperion {
 
-enum class FirstPersonCameraControllerMode
+HYP_ENUM()
+enum class FirstPersonCameraControllerMode : uint32
 {
-    MOUSE_LOCKED,
-    MOUSE_FREE
+    MOUSE_LOCKED    = 0,
+    MOUSE_FREE      = 1
 };
 
 HYP_CLASS()
@@ -24,17 +25,23 @@ public:
     FirstPersonCameraController(FirstPersonCameraControllerMode mode = FirstPersonCameraControllerMode::MOUSE_FREE);
     virtual ~FirstPersonCameraController() = default;
     
+    HYP_METHOD(Property="Mode")
     FirstPersonCameraControllerMode GetMode() const
         { return m_mode; }
 
+    HYP_METHOD(Property="Mode")
     void SetMode(FirstPersonCameraControllerMode mode);
 
-    virtual bool IsMouseLocked() const override
-        { return m_mode == FirstPersonCameraControllerMode::MOUSE_LOCKED; }
+    HYP_METHOD()
+    virtual bool IsMouseLockAllowed() const override
+        { return true; }
 
     virtual void UpdateLogic(double dt) override;
 
 protected:
+    virtual void OnActivated() override;
+    virtual void OnDeactivated() override;
+
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) override;
 
     FirstPersonCameraControllerMode m_mode;

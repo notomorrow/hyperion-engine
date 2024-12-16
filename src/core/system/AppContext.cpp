@@ -123,9 +123,13 @@ Vec2i SDLApplicationWindow::GetDimensions() const
     return Vec2i { width, height };
 }
 
-void SDLApplicationWindow::SetMouseLocked(bool locked)
+void SDLApplicationWindow::SetIsMouseLocked(bool locked)
 {
-    SDL_SetRelativeMouseMode(locked ? SDL_TRUE : SDL_FALSE);
+    if (locked) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+    } else {
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+    }
 }
 
 bool SDLApplicationWindow::HasMouseFocus() const

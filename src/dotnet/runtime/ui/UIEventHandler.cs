@@ -11,7 +11,6 @@ namespace Hyperion
 
     public abstract class UIEventHandler : Script
     {
-        private UIStage? uiStage;
         private UIObject? uiObject;
 
         public override void Init(Entity entity)
@@ -25,20 +24,11 @@ namespace Hyperion
                 throw new InvalidOperationException("UIObject is null");
             }
         }
-
-        protected UIStage UIStage
-        {
-            get
-            {
-                return uiStage!;
-            }
-        }
         
         public UIObject UIObject
         {
             get
             {
-                throw new NotImplementedException();
                 return uiObject!;
             }
         }

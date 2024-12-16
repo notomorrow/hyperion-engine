@@ -59,6 +59,12 @@ public:
     HYP_API void CheckEvent(SystemEvent *event);
 
     HYP_METHOD()
+    HYP_API bool IsMouseLocked() const;
+
+    HYP_METHOD()
+    HYP_API void SetIsMouseLocked(bool is_mouse_locked);
+
+    HYP_METHOD()
     const Vec2i &GetMousePosition() const
         { return m_mouse_position; }
 
@@ -132,6 +138,7 @@ private:
     Vec2i               m_mouse_position;
     Vec2i               m_previous_mouse_position;
     Vec2i               m_window_size;
+    bool                m_is_mouse_locked;
 
     ApplicationWindow   *m_window;
 };

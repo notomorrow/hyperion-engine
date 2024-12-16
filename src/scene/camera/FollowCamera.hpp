@@ -8,7 +8,7 @@
 namespace hyperion {
 
 HYP_CLASS()
-class FollowCameraController : public PerspectiveCameraController
+class HYP_API FollowCameraController : public PerspectiveCameraController
 {
     HYP_OBJECT_BODY(FollowCameraController);
 
@@ -19,9 +19,11 @@ public:
     const Vector3 &GetOffset() const { return m_offset; }
     void SetOffset(const Vector3 &offset) { m_offset = offset; }
 
-    virtual void OnAdded(Camera *camera) override;
-
     virtual void UpdateLogic(double dt) override;
+
+protected:
+    virtual void OnActivated() override;
+    virtual void OnDeactivated() override;
 
 private:
     virtual void RespondToCommand(const CameraCommand &command, GameCounter::TickUnit dt) override;

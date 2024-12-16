@@ -88,7 +88,7 @@ public:
     virtual Vec2i GetDimensions() const = 0;
     virtual void HandleResize(Vec2i new_size);
 
-    virtual void SetMouseLocked(bool locked) = 0;
+    virtual void SetIsMouseLocked(bool locked) = 0;
     virtual bool HasMouseFocus() const = 0;
 
     virtual bool IsHighDPI() const
@@ -119,7 +119,7 @@ public:
 
     virtual Vec2i GetDimensions() const override;
 
-    virtual void SetMouseLocked(bool locked) override;
+    virtual void SetIsMouseLocked(bool locked) override;
     virtual bool HasMouseFocus() const override;
 
     virtual bool IsHighDPI() const override;

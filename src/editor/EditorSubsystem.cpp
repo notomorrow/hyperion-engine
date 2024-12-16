@@ -279,7 +279,7 @@ void EditorSubsystem::CreateEditorUI()
                     // prevent click being triggered on release once mouse has been dragged
                     m_should_cancel_next_click = true;
 
-                    if (m_camera->GetCameraController()->IsMouseLocked()) {
+                    if (m_camera->GetCameraController()->IsMouseLockRequested()) {
                         const Vec2f position = ui_image->GetAbsolutePosition();
                         const Vec2i size = ui_image->GetActualSize();
                         const Vec2i window_size = { m_camera->GetWidth(), m_camera->GetHeight() };
