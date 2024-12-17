@@ -27,6 +27,7 @@ public:
     FirstPersonCameraInputHandler(CameraController *controller);
     virtual ~FirstPersonCameraInputHandler() override = default;
 
+protected:
     virtual bool OnKeyDown_Impl(const KeyboardEvent &evt) override;
     virtual bool OnKeyUp_Impl(const KeyboardEvent &evt) override;
     virtual bool OnMouseDown_Impl(const MouseEvent &evt) override;

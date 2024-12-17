@@ -337,15 +337,6 @@ public:
         CreateInstance_Internal(out);
     }
 
-    // HYP_FORCE_INLINE void CreateInstance(HypData &out, UniquePtr<dotnet::Object> &&managed_object) const
-    // {
-    //     AssertThrowMsg(CanCreateInstance() && !IsAbstract(), "Cannot create a new instance for HypClass %s", GetName().LookupString());
-
-    //     AssertThrowMsg(managed_object != nullptr, "Managed object must not be null for this overload of CreateInstance()");
-
-    //     CreateInstance_Internal(out, std::move(managed_object));
-    // }
-
     HYP_FORCE_INLINE HashCode GetInstanceHashCode(ConstAnyRef ref) const
     {
         AssertThrowMsg(ref.GetTypeID() == GetTypeID(), "Expected HypClass instance to have type ID %u but got type ID %u",
@@ -472,9 +463,9 @@ protected:
             IHypObjectInitializer *initializer = GetObjectInitializer(address);
             AssertThrow(initializer != nullptr);
 
-            initializer->SetManagedObject(managed_object.Release());
+            initializer->SetManagedObject(std::move(*managed_object));
 
-            // SetHypObjectInitializerManagedObject(GetObjectInitializer(address), address, std::move(managed_object));
+            managed_object.Reset();
         } else {
             HYP_NOT_IMPLEMENTED_VOID();
         }

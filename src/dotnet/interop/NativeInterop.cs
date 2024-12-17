@@ -567,7 +567,7 @@ namespace Hyperion
         /// <summary>
         /// Adds a managed object to the managed object cache. The object is not kept alive,
         /// as it is intended for objects that are already handled by the .NET runtime,
-        /// with no UniquePtr<Object> in C++.
+        /// with no dotnet::Object instance in C++.
         /// </summary>
         public static unsafe void AddObjectToCache(IntPtr objectWrapperPtr, out IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr)
         {

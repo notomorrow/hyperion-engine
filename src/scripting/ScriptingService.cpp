@@ -29,16 +29,16 @@ public:
         dotnet::Class *class_ptr = managed_assembly->GetClassObjectHolder().FindClassByName("ScriptTracker");
         AssertThrowMsg(class_ptr != nullptr, "Failed to load ScriptTracker class from HyperionScripting assembly");
 
-        m_object = class_ptr->NewObject();
+        m_object = MakeUnique<dotnet::Object>(class_ptr->NewObject());
         m_assembly = std::move(managed_assembly);
     }
 
-    dotnet::Object *GetObject() const
+    HYP_FORCE_INLINE dotnet::Object *GetObject() const
         { return m_object.Get(); } 
 
     void InvokeUpdate()
     {
-        AssertThrowMsg(m_object != nullptr, "Cannot call InvokeUpdate(), ScriptTracker is not properly initialized");
+        AssertThrowMsg(m_object != nullptr && m_object->IsValid(), "Cannot call InvokeUpdate(), ScriptTracker is not properly initialized");
 
         m_object->InvokeMethodByName<void>("Update");
     }

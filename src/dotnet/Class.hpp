@@ -5,7 +5,6 @@
 
 #include <Types.hpp>
 
-#include <core/memory/UniquePtr.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 
 #include <core/containers/HashMap.hpp>
@@ -73,7 +72,7 @@ constexpr inline T *ToPointerType(T **value)
 
 } // namespace detail
 
-class Class
+class HYP_API Class
 {
 public:
     /*! \brief Function to create a new object of this class.
@@ -159,6 +158,38 @@ public:
      */
     HYP_FORCE_INLINE bool HasMethod(UTF8StringView method_name) const
         { return m_methods.FindAs(method_name) != m_methods.End(); }
+
+    /*! \brief Get a method by the hash code of its name
+     *
+     *  \param hash_code The hash code of the method name to get.
+     *
+     *  \return A pointer to the method object if it exists, otherwise nullptr.
+     */
+    HYP_FORCE_INLINE Method *GetMethodByHash(HashCode hash_code)
+    {
+        auto it = m_methods.FindByHash(hash_code);
+        if (it == m_methods.End()) {
+            return nullptr;
+        }
+
+        return &it->second;
+    }
+
+    /*! \brief Get a method by the hash code of its name
+     *
+     *  \param hash_code The hash code of the method name to get.
+     *
+     *  \return A pointer to the method object if it exists, otherwise nullptr.
+     */
+    HYP_FORCE_INLINE const Method *GetMethodByHash(HashCode hash_code) const
+    {
+        auto it = m_methods.FindByHash(hash_code);
+        if (it == m_methods.End()) {
+            return nullptr;
+        }
+
+        return &it->second;
+    }
 
     /*! \brief Get a method by name.
      *
@@ -266,20 +297,20 @@ public:
     void EnsureLoaded() const;
 
     /*! \brief Create a new managed object of this class.
-     *  The new object will be removed from the managed object cache when the unique pointer goes out of scope, allowing for the .NET runtime to collect it.
+     *  The new object will be removed from the managed object cache when the object goes out of scope, allowing for the .NET runtime to collect it.
      *  The returned object will hold a reference to this class instance, so it will need to remain valid for the lifetime of the object.
      *
-     *  \return A unique pointer to the new managed object.
+     *  \return The new managed object.
      */
-    HYP_NODISCARD UniquePtr<Object> NewObject();
+    HYP_NODISCARD Object NewObject();
 
-    /*! \brief Create a new managed object of this class, providing the owning object's address (C++), along with the HypClass that represents it.
-     *  The new object will be removed from the managed object cache when the unique pointer goes out of scope, allowing for the .NET runtime to collect it.
+    /*! \brief Create a new managed object of this class.
+     *  The new object will be removed from the managed object cache when the object goes out of scope, allowing for the .NET runtime to collect it.
      *  The returned object will hold a reference to this class instance, so it will need to remain valid for the lifetime of the object.
      *
-     *  \return A unique pointer to the new managed object.
+     *  \return The new managed object.
      */
-    HYP_NODISCARD UniquePtr<Object> NewObject(const HypClass *hyp_class, void *owning_object_ptr);
+    HYP_NODISCARD Object NewObject(const HypClass *hyp_class, void *owning_object_ptr);
 
     /*! \brief Create a new managed object of this class, but do not allow its lifetime to be managed from the C++ side.
      *  A struct containing the object's GUID and .NET object address will be returned.
@@ -318,17 +349,17 @@ public:
         void *args_vptr[] = { &args... };
 
         if constexpr (std::is_void_v<ReturnType>) {
-            InvokeStaticMethod(&method_object, args_vptr, nullptr);
+            InvokeStaticMethod_Internal(&method_object, args_vptr, nullptr);
         } else {
             ValueStorage<ReturnType> return_value_storage;
-            void *result_vptr = InvokeStaticMethod(&method_object, args_vptr, return_value_storage.GetPointer());
+            InvokeStaticMethod_Internal(&method_object, args_vptr, return_value_storage.GetPointer());
 
-            return return_value_storage.Get();
+            return std::move(return_value_storage.Get());
         }
     }
 
 private:
-    void *InvokeStaticMethod(const Method *method_ptr, void **args_vptr, void *return_value_vptr);
+    void InvokeStaticMethod_Internal(const Method *method_ptr, void **args_vptr, void *return_value_vptr);
 
     String                          m_name;
     uint32                          m_size;
