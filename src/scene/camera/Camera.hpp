@@ -92,11 +92,13 @@ public:
     CameraController(CameraProjectionMode projection_mode);
     virtual ~CameraController() = default;
 
-    InputHandler *GetInputHandler() const
-        { return m_input_handler.Get(); }
+    HYP_METHOD(Property="InputHandler")
+    HYP_FORCE_INLINE const RC<InputHandlerBase> &GetInputHandler() const
+        { return m_input_handler; }
 
-    void SetInputHandler(UniquePtr<InputHandler> &&input_handler)
-        { m_input_handler = std::move(input_handler); }
+    HYP_METHOD(Property="InputHandler")
+    HYP_FORCE_INLINE void SetInputHandler(const RC<InputHandlerBase> &input_handler)
+        { m_input_handler = input_handler; }
 
     HYP_METHOD(Property="Camera")
     Camera *GetCamera() const
@@ -147,7 +149,7 @@ protected:
 
     Camera                  *m_camera;
 
-    UniquePtr<InputHandler> m_input_handler;
+    RC<InputHandlerBase>    m_input_handler;
 
     CameraProjectionMode    m_projection_mode;
 

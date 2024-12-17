@@ -11,126 +11,119 @@ namespace hyperion {
 
 #pragma region EditorCameraInputHandler
 
-class EditorCameraInputHandler : public InputHandler
+EditorCameraInputHandler::EditorCameraInputHandler(CameraController *controller)
+    : m_controller(dynamic_cast<EditorCameraController *>(controller))
 {
-public:
-    EditorCameraInputHandler(CameraController *controller)
-        : m_controller(dynamic_cast<EditorCameraController *>(controller))
-    {
-        AssertThrowMsg(m_controller != nullptr, "Null camera controller or not of type EditorCameraController");
-    }
+    AssertThrowMsg(m_controller != nullptr, "Null camera controller or not of type EditorCameraController");
+}
 
-    virtual bool OnKeyDown(const KeyboardEvent &event) override
-    {
-        HYP_SCOPE;
+bool EditorCameraInputHandler::OnKeyDown_Impl(const KeyboardEvent &evt)
+{
+    HYP_SCOPE;
 
-        Camera *camera = m_controller->GetCamera();
+    Camera *camera = m_controller->GetCamera();
 
-        if (event.key_code == KeyCode::KEY_W || event.key_code == KeyCode::KEY_S || event.key_code == KeyCode::KEY_A || event.key_code == KeyCode::KEY_D) {
-            CameraController *camera_controller = camera->GetCameraController();
+    if (evt.key_code == KeyCode::KEY_W || evt.key_code == KeyCode::KEY_S || evt.key_code == KeyCode::KEY_A || evt.key_code == KeyCode::KEY_D) {
+        CameraController *camera_controller = camera->GetCameraController();
 
-            Vec3f translation = camera->GetTranslation();
+        Vec3f translation = camera->GetTranslation();
 
-            const Vec3f direction = camera->GetDirection();
-            const Vec3f dir_cross_y = direction.Cross(camera->GetUpVector());
+        const Vec3f direction = camera->GetDirection();
+        const Vec3f dir_cross_y = direction.Cross(camera->GetUpVector());
 
-            if (event.key_code == KeyCode::KEY_W) {
-                translation += direction * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_S) {
-                translation -= direction * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_A) {
-                translation += dir_cross_y * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_D) {
-                translation -= dir_cross_y * 0.01f;
-            }
-
-            camera_controller->SetNextTranslation(translation);
-
-            return true;
+        if (evt.key_code == KeyCode::KEY_W) {
+            translation += direction * 0.01f;
+        }
+        if (evt.key_code == KeyCode::KEY_S) {
+            translation -= direction * 0.01f;
+        }
+        if (evt.key_code == KeyCode::KEY_A) {
+            translation += dir_cross_y * 0.01f;
+        }
+        if (evt.key_code == KeyCode::KEY_D) {
+            translation -= dir_cross_y * 0.01f;
         }
 
-        return false;
-    }
-
-    virtual bool OnKeyUp(const KeyboardEvent &event) override
-    {
-        HYP_SCOPE;
-
-        return false;
-    }
-
-    virtual bool OnMouseDown(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
-
-        m_controller->SetMode(EditorCameraControllerMode::MOUSE_LOCKED);
+        camera_controller->SetNextTranslation(translation);
 
         return true;
     }
 
-    virtual bool OnMouseUp(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
+    return false;
+}
 
-        m_controller->SetMode(EditorCameraControllerMode::INACTIVE);
+bool EditorCameraInputHandler::OnKeyUp_Impl(const KeyboardEvent &evt)
+{
+    HYP_SCOPE;
 
-        return true;
-    }
+    return false;
+}
 
-    virtual bool OnMouseMove(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
+bool EditorCameraInputHandler::OnMouseDown_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
 
+    m_controller->SetMode(EditorCameraControllerMode::MOUSE_LOCKED);
+
+    return true;
+}
+
+bool EditorCameraInputHandler::OnMouseUp_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
+
+    m_controller->SetMode(EditorCameraControllerMode::INACTIVE);
+
+    return true;
+}
+
+bool EditorCameraInputHandler::OnMouseMove_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
+
+    return false;
+}
+
+bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
+
+    Camera *camera = m_controller->GetCamera();
+    
+    if (!camera) {
         return false;
     }
 
-    virtual bool OnMouseDrag(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
+    const Vec2f delta = (evt.position - evt.previous_position) * 150.0f;
 
-        Camera *camera = m_controller->GetCamera();
-        
-        if (!camera) {
-            return false;
-        }
+    const Vec3f dir_cross_y = camera->GetDirection().Cross(camera->GetUpVector());
 
-        const Vec2f delta = (event.position - event.previous_position) * 150.0f;
+    if (evt.mouse_buttons & MouseButtonState::LEFT) {
+        const Vec2i delta_sign = Vec2i(MathUtil::Sign(delta));
 
-        const Vec3f dir_cross_y = camera->GetDirection().Cross(camera->GetUpVector());
-
-        if (event.mouse_buttons & MouseButtonState::LEFT) {
-            const Vec2i delta_sign = Vec2i(MathUtil::Sign(delta));
-
-            if (event.mouse_buttons & MouseButtonState::RIGHT) {
-                camera->SetNextTranslation(camera->GetTranslation() + dir_cross_y * 0.1f * float(-delta_sign.y));
-            } else {
-                camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
-
-                camera->SetNextTranslation(camera->GetTranslation() + camera->GetDirection() * 0.1f * float(-delta_sign.y));
-            }
-        } else if (event.mouse_buttons & MouseButtonState::RIGHT) {
+        if (evt.mouse_buttons & MouseButtonState::RIGHT) {
+            camera->SetNextTranslation(camera->GetTranslation() + dir_cross_y * 0.1f * float(-delta_sign.y));
+        } else {
             camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
-            camera->Rotate(dir_cross_y, MathUtil::DegToRad(delta.y));
 
-            if (camera->GetDirection().y > 0.98f || camera->GetDirection().y < -0.98f) {
-                camera->Rotate(dir_cross_y, MathUtil::DegToRad(-delta.y));
-            }
+            camera->SetNextTranslation(camera->GetTranslation() + camera->GetDirection() * 0.1f * float(-delta_sign.y));
         }
+    } else if (evt.mouse_buttons & MouseButtonState::RIGHT) {
+        camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
+        camera->Rotate(dir_cross_y, MathUtil::DegToRad(delta.y));
 
-        return true;
+        if (camera->GetDirection().y > 0.98f || camera->GetDirection().y < -0.98f) {
+            camera->Rotate(dir_cross_y, MathUtil::DegToRad(-delta.y));
+        }
     }
 
-    virtual bool OnClick(const MouseEvent &event) override
-    {
-        return false;
-    }
+    return true;
+}
 
-private:
-    EditorCameraController  *m_controller;
-};
+bool EditorCameraInputHandler::OnClick_Impl(const MouseEvent &evt)
+{
+    return false;
+}
 
 #pragma endregion EditorCameraInputHandler
 
@@ -140,7 +133,7 @@ EditorCameraController::EditorCameraController()
     : FirstPersonCameraController(),
       m_mode(EditorCameraControllerMode::INACTIVE)
 {
-    m_input_handler = MakeUnique<EditorCameraInputHandler>(this);
+    m_input_handler = MakeRefCountedPtr<EditorCameraInputHandler>(this);
 }
 
 void EditorCameraController::OnActivated()

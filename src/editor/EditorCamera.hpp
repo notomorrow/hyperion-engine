@@ -7,11 +7,35 @@
 
 namespace hyperion {
 
-enum class EditorCameraControllerMode
+class EditorCameraController;
+
+HYP_ENUM()
+enum class EditorCameraControllerMode : uint32
 {
-    INACTIVE,
-    FOCUSED,
-    MOUSE_LOCKED
+    INACTIVE        = 0,
+    FOCUSED         = 1,
+    MOUSE_LOCKED    = 2
+};
+
+HYP_CLASS()
+class HYP_API EditorCameraInputHandler : public InputHandlerBase
+{
+    HYP_OBJECT_BODY(EditorCameraInputHandler);
+
+public:
+    EditorCameraInputHandler(CameraController *controller);
+    virtual ~EditorCameraInputHandler() override = default;
+
+    virtual bool OnKeyDown_Impl(const KeyboardEvent &evt) override;
+    virtual bool OnKeyUp_Impl(const KeyboardEvent &evt) override;
+    virtual bool OnMouseDown_Impl(const MouseEvent &evt) override;
+    virtual bool OnMouseUp_Impl(const MouseEvent &evt) override;
+    virtual bool OnMouseMove_Impl(const MouseEvent &evt) override;
+    virtual bool OnMouseDrag_Impl(const MouseEvent &evt) override;
+    virtual bool OnClick_Impl(const MouseEvent &evt) override;
+
+private:
+    EditorCameraController  *m_controller;
 };
 
 HYP_CLASS()
