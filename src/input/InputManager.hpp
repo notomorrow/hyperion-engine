@@ -12,6 +12,7 @@
 
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/Bitset.hpp>
+#include <core/containers/LinkedList.hpp>
 
 #include <math/Vector2.hpp>
 
@@ -48,6 +49,8 @@ class InputManager : public HypObject<InputManager>
 {
     HYP_OBJECT_BODY(InputManager);
 
+    friend struct InputMouseLockScope;
+
 public:
     HYP_API InputManager();
     InputManager(const InputManager &other)                 = delete;
@@ -62,7 +65,12 @@ public:
     HYP_API bool IsMouseLocked() const;
 
     HYP_METHOD()
-    HYP_API void SetIsMouseLocked(bool is_mouse_locked);
+    HYP_API void PushMouseLockState(bool mouse_locked);
+
+    HYP_METHOD()
+    HYP_API void PopMouseLockState();
+
+    HYP_API InputMouseLockScope AcquireMouseLock();
 
     HYP_METHOD()
     const Vec2i &GetMousePosition() const
@@ -128,19 +136,27 @@ public:
         { return HashCode(); }
 
 private:
+    HYP_API void SetIsMouseLocked(bool is_mouse_locked);
+
     void UpdateMousePosition();
     void UpdateWindowSize(Vec2i new_size);
 
     void SetKey(KeyCode key, bool pressed);
     void SetMouseButton(MouseButton btn, bool pressed);
 
-    InputState          m_input_state;
-    Vec2i               m_mouse_position;
-    Vec2i               m_previous_mouse_position;
-    Vec2i               m_window_size;
-    bool                m_is_mouse_locked;
+    void ApplyMouseLockState(const InputMouseLockState *mouse_lock_state);
+    void RemoveMouseLockState(const InputMouseLockState *mouse_lock_state);
 
-    ApplicationWindow   *m_window;
+    InputState                      m_input_state;
+    Vec2i                           m_mouse_position;
+    Vec2i                           m_previous_mouse_position;
+    Vec2i                           m_window_size;
+    bool                            m_is_mouse_locked;
+
+    LinkedList<InputMouseLockState> m_mouse_lock_states;
+    Mutex                           m_mouse_lock_states_mutex;
+
+    ApplicationWindow               *m_window;
 };
 
 } // namespace hyperion

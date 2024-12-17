@@ -540,18 +540,18 @@ void Camera::UpdateMouseLocked()
         return;
     }
 
-    // @TODO MouseLockState tied to the camera so we can tell if the lock belongs to us and release it when we're done
-        
     if (const RC<AppContext> &app_context = g_engine->GetAppContext()) {
         if (const RC<CameraController> &camera_controller = GetCameraController()) {
             if (!camera_controller->IsMouseLockAllowed()) {
                 return;
             }
 
-            const bool should_lock_mouse = camera_controller->IsMouseLockRequested();
-
-            if (app_context->GetInputManager()->IsMouseLocked() != should_lock_mouse) {
-                app_context->GetInputManager()->SetIsMouseLocked(should_lock_mouse);
+            if (camera_controller->IsMouseLockRequested()) {
+                if (!camera_controller->m_mouse_lock_scope) {
+                    camera_controller->m_mouse_lock_scope = app_context->GetInputManager()->AcquireMouseLock();
+                }
+            } else {
+                camera_controller->m_mouse_lock_scope.Reset();
             }
         }
     }

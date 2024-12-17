@@ -25,7 +25,7 @@ public:
     virtual bool OnClick(const MouseEvent &event) = 0;
 };
 
-class NullInputHandler : public InputHandler
+class NullInputHandler final : public InputHandler
 {
 public:
     NullInputHandler()          = default;

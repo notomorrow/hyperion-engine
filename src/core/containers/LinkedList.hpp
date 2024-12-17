@@ -201,16 +201,16 @@ public:
     }
     
     /*! \brief Push an item to the back of the container.*/
-    void PushBack(const ValueType &value);
+    ValueType &PushBack(const ValueType &value);
 
     /*! \brief Push an item to the back of the container.*/
-    void PushBack(ValueType &&value);
+    ValueType &PushBack(ValueType &&value);
 
     /*! \brief Push an item to the front of the container.*/
-    void PushFront(const ValueType &value);
+    ValueType &PushFront(const ValueType &value);
 
     /*! \brief Push an item to the front of the container. */
-    void PushFront(ValueType &&value);
+    ValueType &PushFront(ValueType &&value);
 
     /*! \brief Pop an item from the back of the linked list. The popped item is returned. */
     ValueType PopBack();
@@ -359,7 +359,7 @@ LinkedList<T>::~LinkedList()
 }
 
 template <class T>
-void LinkedList<T>::PushBack(const ValueType &value)
+auto LinkedList<T>::PushBack(const ValueType &value) -> ValueType &
 {
     Node *new_node = new Node;
     new_node->previous = m_tail;
@@ -374,10 +374,12 @@ void LinkedList<T>::PushBack(const ValueType &value)
     }
 
     ++m_size;
+
+    return new_node->value.Get();
 }
 
 template <class T>
-void LinkedList<T>::PushBack(ValueType &&value)
+auto LinkedList<T>::PushBack(ValueType &&value) -> ValueType &
 {
     Node *new_node = new Node;
     new_node->previous = m_tail;
@@ -392,10 +394,12 @@ void LinkedList<T>::PushBack(ValueType &&value)
     }
 
     ++m_size;
+
+    return new_node->value.Get();
 }
 
 template <class T>
-void LinkedList<T>::PushFront(const ValueType &value)
+auto LinkedList<T>::PushFront(const ValueType &value) -> ValueType &
 {
     Node *new_node = new Node;
     new_node->next = m_head;
@@ -411,10 +415,12 @@ void LinkedList<T>::PushFront(const ValueType &value)
     m_head = new_node;
 
     ++m_size;
+
+    return new_node->value.Get();
 }
 
 template <class T>
-void LinkedList<T>::PushFront(ValueType &&value)
+auto LinkedList<T>::PushFront(ValueType &&value) -> ValueType &
 {
     Node *new_node = new Node;
     new_node->next = m_head;
@@ -430,6 +436,8 @@ void LinkedList<T>::PushFront(ValueType &&value)
     m_head = new_node;
 
     ++m_size;
+
+    return new_node->value.Get();
 }
 
 template <class T>

@@ -11,6 +11,44 @@
 
 namespace hyperion {
 
+#pragma region InputMouseLockScope
+
+InputMouseLockScope &InputMouseLockScope::operator=(InputMouseLockScope &&other) noexcept
+{
+    if (this == &other) {
+        return *this;
+    }
+
+    if (mouse_lock_state) {
+        mouse_lock_state->input_manager->RemoveMouseLockState(mouse_lock_state);
+    }
+
+    mouse_lock_state = other.mouse_lock_state;
+    other.mouse_lock_state = nullptr;
+
+    return *this;
+}
+
+InputMouseLockScope::~InputMouseLockScope()
+{
+    if (mouse_lock_state) {
+        mouse_lock_state->input_manager->RemoveMouseLockState(mouse_lock_state);
+    }
+}
+
+void InputMouseLockScope::Reset()
+{
+    if (mouse_lock_state) {
+        mouse_lock_state->input_manager->RemoveMouseLockState(mouse_lock_state);
+
+        mouse_lock_state = nullptr;
+    }
+}
+
+#pragma endregion InputMouseLockScope
+
+#pragma region InputManager
+
 InputManager::InputManager()
     : m_window(nullptr),
       m_is_mouse_locked(false)
@@ -65,6 +103,45 @@ void InputManager::CheckEvent(SystemEvent *event)
 bool InputManager::IsMouseLocked() const
 {
     return m_is_mouse_locked;
+}
+
+void InputManager::PushMouseLockState(bool mouse_locked)
+{
+    Mutex::Guard guard(m_mouse_lock_states_mutex);
+
+    InputMouseLockState &mouse_lock_state = m_mouse_lock_states.PushBack(InputMouseLockState {
+        this,
+        mouse_locked
+    });
+
+    ApplyMouseLockState(&mouse_lock_state);
+}
+
+void InputManager::PopMouseLockState()
+{
+    Mutex::Guard guard(m_mouse_lock_states_mutex);
+
+    if (m_mouse_lock_states.Empty()) {
+        return;
+    }
+
+    m_mouse_lock_states.PopBack();
+
+    ApplyMouseLockState(m_mouse_lock_states.Any() ? &m_mouse_lock_states.Back() : nullptr);
+}
+
+InputMouseLockScope InputManager::AcquireMouseLock()
+{
+    Mutex::Guard guard(m_mouse_lock_states_mutex);
+
+    InputMouseLockState &mouse_lock_state = m_mouse_lock_states.PushBack(InputMouseLockState {
+        this,
+        true
+    });
+
+    ApplyMouseLockState(&mouse_lock_state);
+
+    return InputMouseLockScope { mouse_lock_state };
 }
 
 void InputManager::SetIsMouseLocked(bool is_mouse_locked)
@@ -169,5 +246,39 @@ EnumFlags<MouseButtonState> InputManager::GetButtonStates() const
 
     return state;
 }
+
+void InputManager::ApplyMouseLockState(const InputMouseLockState *mouse_lock_state)
+{
+    if (!mouse_lock_state) {
+        // apply default state
+
+        SetIsMouseLocked(false);
+
+        return;
+    }
+
+    SetIsMouseLocked(mouse_lock_state->locked);
+}
+
+void InputManager::RemoveMouseLockState(const InputMouseLockState *mouse_lock_state)
+{
+    if (!mouse_lock_state) {
+        return;
+    }
+
+    Mutex::Guard guard(m_mouse_lock_states_mutex);
+
+    auto it = m_mouse_lock_states.Find(*mouse_lock_state);
+    AssertThrow(it != m_mouse_lock_states.End());
+
+    auto erase_it = m_mouse_lock_states.Erase(it);
+
+    if (erase_it == m_mouse_lock_states.End()) {
+        // Update mouse lock state since last was removed
+        ApplyMouseLockState(m_mouse_lock_states.Any() ? &m_mouse_lock_states.Back() : nullptr);
+    }
+}
+
+#pragma endregion InputManager
 
 } // namespace hyperion
