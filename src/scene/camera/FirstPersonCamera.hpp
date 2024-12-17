@@ -9,11 +9,34 @@
 
 namespace hyperion {
 
+class FirstPersonCameraController;
+
 HYP_ENUM()
 enum class FirstPersonCameraControllerMode : uint32
 {
     MOUSE_LOCKED    = 0,
     MOUSE_FREE      = 1
+};
+
+HYP_CLASS()
+class HYP_API FirstPersonCameraInputHandler : public InputHandlerBase
+{
+    HYP_OBJECT_BODY(FirstPersonCameraInputHandler);
+
+public:
+    FirstPersonCameraInputHandler(CameraController *controller);
+    virtual ~FirstPersonCameraInputHandler() override = default;
+
+    virtual bool OnKeyDown_Impl(const KeyboardEvent &evt) override;
+    virtual bool OnKeyUp_Impl(const KeyboardEvent &evt) override;
+    virtual bool OnMouseDown_Impl(const MouseEvent &evt) override;
+    virtual bool OnMouseUp_Impl(const MouseEvent &evt) override;
+    virtual bool OnMouseMove_Impl(const MouseEvent &evt) override;
+    virtual bool OnMouseDrag_Impl(const MouseEvent &evt) override;
+    virtual bool OnClick_Impl(const MouseEvent &evt) override;
+
+private:
+    FirstPersonCameraController *m_controller;
 };
 
 HYP_CLASS()

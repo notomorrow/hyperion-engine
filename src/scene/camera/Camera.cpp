@@ -28,7 +28,7 @@ class Camera;
 #pragma region CameraController
 
 CameraController::CameraController(CameraProjectionMode projection_mode)
-    : m_input_handler(MakeUnique<NullInputHandler>()),
+    : m_input_handler(MakeRefCountedPtr<NullInputHandler>()),
       m_camera(nullptr),
       m_projection_mode(projection_mode),
       m_command_queue_count { 0 },

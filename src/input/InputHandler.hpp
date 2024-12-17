@@ -8,36 +8,81 @@
 
 #include <math/Vector2.hpp>
 
+#include <core/object/HypObject.hpp>
+
+#include <core/memory/RefCountedPtr.hpp>
+
 namespace hyperion {
 
-class InputHandler
+HYP_CLASS(Abstract)
+class HYP_API InputHandlerBase : public EnableRefCountedPtrFromThis<InputHandlerBase>
 {
-public:
-    InputHandler()          = default;
-    virtual ~InputHandler() = default;
+    HYP_OBJECT_BODY(InputHandlerBase);
 
-    virtual bool OnKeyDown(const KeyboardEvent &event) = 0;
-    virtual bool OnKeyUp(const KeyboardEvent &event) = 0;
-    virtual bool OnMouseDown(const MouseEvent &event) = 0;
-    virtual bool OnMouseUp(const MouseEvent &event) = 0;
-    virtual bool OnMouseMove(const MouseEvent &event) = 0;
-    virtual bool OnMouseDrag(const MouseEvent &event) = 0;
-    virtual bool OnClick(const MouseEvent &event) = 0;
+public:
+    InputHandlerBase()          = default;
+    virtual ~InputHandlerBase() = default;
+
+    HYP_METHOD(Scriptable)
+    bool OnKeyDown(const KeyboardEvent &evt);
+
+    HYP_METHOD(Scriptable)
+    bool OnKeyUp(const KeyboardEvent &evt);
+
+    HYP_METHOD(Scriptable)
+    bool OnMouseDown(const MouseEvent &evt);
+
+    HYP_METHOD(Scriptable)
+    bool OnMouseUp(const MouseEvent &evt);
+
+    HYP_METHOD(Scriptable)
+    bool OnMouseMove(const MouseEvent &evt);
+
+    HYP_METHOD(Scriptable)
+    bool OnMouseDrag(const MouseEvent &evt);
+
+    HYP_METHOD(Scriptable)
+    bool OnClick(const MouseEvent &evt);
+
+    HYP_METHOD()
+    virtual bool OnKeyDown_Impl(const KeyboardEvent &evt) = 0;
+
+    HYP_METHOD()
+    virtual bool OnKeyUp_Impl(const KeyboardEvent &evt) = 0;
+
+    HYP_METHOD()
+    virtual bool OnMouseDown_Impl(const MouseEvent &evt) = 0;
+
+    HYP_METHOD()
+    virtual bool OnMouseUp_Impl(const MouseEvent &evt) = 0;
+
+    HYP_METHOD()
+    virtual bool OnMouseMove_Impl(const MouseEvent &evt) = 0;
+
+    HYP_METHOD()
+    virtual bool OnMouseDrag_Impl(const MouseEvent &evt) = 0;
+
+    HYP_METHOD()
+    virtual bool OnClick_Impl(const MouseEvent &evt) = 0;
 };
 
-class NullInputHandler final : public InputHandler
+HYP_CLASS()
+class NullInputHandler final : public InputHandlerBase
 {
-public:
-    NullInputHandler()          = default;
-    virtual ~NullInputHandler() = default;
+    HYP_OBJECT_BODY(NullInputHandler);
 
-    virtual bool OnKeyDown(const KeyboardEvent &event) override { return false; }
-    virtual bool OnKeyUp(const KeyboardEvent &event) override   { return false; }
-    virtual bool OnMouseDown(const MouseEvent &event) override  { return false; }
-    virtual bool OnMouseUp(const MouseEvent &event) override    { return false; }
-    virtual bool OnMouseMove(const MouseEvent &event) override  { return false; }
-    virtual bool OnMouseDrag(const MouseEvent &event) override  { return false; }
-    virtual bool OnClick(const MouseEvent &event) override      { return false; }
+public:
+    NullInputHandler()                      = default;
+    virtual ~NullInputHandler() override    = default;
+
+protected:
+    virtual bool OnKeyDown_Impl(const KeyboardEvent &evt) override    { return false; }
+    virtual bool OnKeyUp_Impl(const KeyboardEvent &evt) override      { return false; }
+    virtual bool OnMouseDown_Impl(const MouseEvent &evt) override     { return false; }
+    virtual bool OnMouseUp_Impl(const MouseEvent &evt) override       { return false; }
+    virtual bool OnMouseMove_Impl(const MouseEvent &evt) override     { return false; }
+    virtual bool OnMouseDrag_Impl(const MouseEvent &evt) override     { return false; }
+    virtual bool OnClick_Impl(const MouseEvent &evt) override         { return false; }
 };
 
 } // namespace hyperion

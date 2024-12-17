@@ -14,114 +14,107 @@ static const float movement_blending = 0.01f;
 
 #pragma region FirstPersonCameraInputHandler
 
-class FirstPersonCameraInputHandler : public InputHandler
+FirstPersonCameraInputHandler::FirstPersonCameraInputHandler(CameraController *controller)
+    : m_controller(dynamic_cast<FirstPersonCameraController *>(controller))
 {
-public:
-    FirstPersonCameraInputHandler(CameraController *controller)
-        : m_controller(dynamic_cast<FirstPersonCameraController *>(controller))
-    {
-        AssertThrowMsg(m_controller != nullptr, "Null camera controller or not of type FirstPersonCameraInputHandler");
-    }
+    AssertThrowMsg(m_controller != nullptr, "Null camera controller or not of type FirstPersonCameraInputHandler");
+}
 
-    virtual bool OnKeyDown(const KeyboardEvent &event) override
-    {
-        HYP_SCOPE;
+bool FirstPersonCameraInputHandler::OnKeyDown_Impl(const KeyboardEvent &evt)
+{
+    HYP_SCOPE;
 
-        Camera *camera = m_controller->GetCamera();
+    Camera *camera = m_controller->GetCamera();
 
-        if (event.key_code == KeyCode::KEY_W || event.key_code == KeyCode::KEY_S || event.key_code == KeyCode::KEY_A || event.key_code == KeyCode::KEY_D) {
-            CameraController *camera_controller = camera->GetCameraController();
+    if (evt.key_code == KeyCode::KEY_W || evt.key_code == KeyCode::KEY_S || evt.key_code == KeyCode::KEY_A || evt.key_code == KeyCode::KEY_D) {
+        CameraController *camera_controller = camera->GetCameraController();
 
-            Vec3f translation = camera->GetTranslation();
+        Vec3f translation = camera->GetTranslation();
 
-            const Vec3f direction = camera->GetDirection();
-            const Vec3f dir_cross_y = direction.Cross(camera->GetUpVector());
+        const Vec3f direction = camera->GetDirection();
+        const Vec3f dir_cross_y = direction.Cross(camera->GetUpVector());
 
-            if (event.key_code == KeyCode::KEY_W) {
-                translation += direction * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_S) {
-                translation -= direction * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_A) {
-                translation += dir_cross_y * 0.01f;
-            }
-            if (event.key_code == KeyCode::KEY_D) {
-                translation -= dir_cross_y * 0.01f;
-            }
-
-            camera_controller->SetNextTranslation(translation);
-
-            return true;
+        if (evt.key_code == KeyCode::KEY_W) {
+            translation += direction * 0.01f;
+        }
+        if (evt.key_code == KeyCode::KEY_S) {
+            translation -= direction * 0.01f;
+        }
+        if (evt.key_code == KeyCode::KEY_A) {
+            translation += dir_cross_y * 0.01f;
+        }
+        if (evt.key_code == KeyCode::KEY_D) {
+            translation -= dir_cross_y * 0.01f;
         }
 
-        return false;
-    }
-
-    virtual bool OnKeyUp(const KeyboardEvent &event) override
-    {
-        HYP_SCOPE;
-
-        return false;
-    }
-
-    virtual bool OnMouseDown(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
-
-        m_controller->SetMode(FirstPersonCameraControllerMode::MOUSE_LOCKED);
+        camera_controller->SetNextTranslation(translation);
 
         return true;
     }
 
-    virtual bool OnMouseUp(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
+    return false;
+}
 
-        m_controller->SetMode(FirstPersonCameraControllerMode::MOUSE_FREE);
+bool FirstPersonCameraInputHandler::OnKeyUp_Impl(const KeyboardEvent &evt)
+{
+    HYP_SCOPE;
 
-        return true;
-    }
+    return false;
+}
 
-    virtual bool OnMouseMove(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
+bool FirstPersonCameraInputHandler::OnMouseDown_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
 
+    m_controller->SetMode(FirstPersonCameraControllerMode::MOUSE_LOCKED);
+
+    return true;
+}
+
+bool FirstPersonCameraInputHandler::OnMouseUp_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
+
+    m_controller->SetMode(FirstPersonCameraControllerMode::MOUSE_FREE);
+
+    return true;
+}
+
+bool FirstPersonCameraInputHandler::OnMouseMove_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
+
+    Camera *camera = m_controller->GetCamera();
+    
+    if (!camera) {
         return false;
     }
 
-    virtual bool OnMouseDrag(const MouseEvent &event) override
-    {
-        HYP_SCOPE;
+    const Vec2f delta = (evt.position - evt.previous_position) * 150.0f;
 
-        Camera *camera = m_controller->GetCamera();
-        
-        if (!camera) {
-            return false;
-        }
+    const Vec3f dir_cross_y = camera->GetDirection().Cross(camera->GetUpVector());
 
-        const Vec2f delta = (event.position - event.previous_position) * 150.0f;
+    camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
+    camera->Rotate(dir_cross_y, MathUtil::DegToRad(delta.y));
 
-        const Vec3f dir_cross_y = camera->GetDirection().Cross(camera->GetUpVector());
-
-        camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
-        camera->Rotate(dir_cross_y, MathUtil::DegToRad(delta.y));
-
-        if (camera->GetDirection().y > 0.98f || camera->GetDirection().y < -0.98f) {
-            camera->Rotate(dir_cross_y, MathUtil::DegToRad(-delta.y));
-        }
-
-        return true;
+    if (camera->GetDirection().y > 0.98f || camera->GetDirection().y < -0.98f) {
+        camera->Rotate(dir_cross_y, MathUtil::DegToRad(-delta.y));
     }
 
-    virtual bool OnClick(const MouseEvent &event) override
-    {
-        return false;
-    }
+    return true;
+}
 
-private:
-    FirstPersonCameraController *m_controller;
-};
+bool FirstPersonCameraInputHandler::OnMouseDrag_Impl(const MouseEvent &evt)
+{
+    HYP_SCOPE;
+
+    return false;
+}
+
+bool FirstPersonCameraInputHandler::OnClick_Impl(const MouseEvent &evt)
+{
+    return false;
+}
 
 #pragma endregion FirstPersonCameraInputHandler
 
@@ -135,7 +128,7 @@ FirstPersonCameraController::FirstPersonCameraController(FirstPersonCameraContro
       m_prev_mouse_x(0.0f),
       m_prev_mouse_y(0.0f)
 {
-    m_input_handler = MakeUnique<FirstPersonCameraInputHandler>(this);
+    m_input_handler = MakeRefCountedPtr<FirstPersonCameraInputHandler>(this);
 }
 
 void FirstPersonCameraController::OnActivated()
