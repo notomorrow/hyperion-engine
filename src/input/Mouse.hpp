@@ -53,6 +53,59 @@ struct MouseEvent
     bool                        is_down = false;
 };
 
+struct InputMouseLockState
+{
+    InputManager    *input_manager = nullptr;
+    bool            locked = false;
+
+    HYP_FORCE_INLINE bool operator==(const InputMouseLockState &other) const
+    {
+        return input_manager == other.input_manager
+            && locked == other.locked;
+    }
+
+    HYP_FORCE_INLINE bool operator!=(const InputMouseLockState &other) const
+    {
+        return input_manager != other.input_manager
+            || locked != other.locked;
+    }
+};
+
+struct InputMouseLockScope
+{
+    InputMouseLockState *mouse_lock_state;
+
+    InputMouseLockScope()
+        : mouse_lock_state(nullptr)
+    {
+    }
+
+    InputMouseLockScope(InputMouseLockState &mouse_lock_state)
+        : mouse_lock_state(&mouse_lock_state)
+    {
+    }
+
+    InputMouseLockScope(const InputMouseLockScope &other)                   = delete;
+    InputMouseLockScope &operator=(const InputMouseLockScope &other)        = delete;
+
+    InputMouseLockScope(InputMouseLockScope &&other) noexcept
+        : mouse_lock_state(other.mouse_lock_state)
+    {
+    }
+
+    HYP_API InputMouseLockScope &operator=(InputMouseLockScope &&other) noexcept;
+
+    HYP_API ~InputMouseLockScope();
+
+    HYP_API void Reset();
+
+    HYP_FORCE_INLINE explicit operator bool() const
+        { return mouse_lock_state != nullptr && mouse_lock_state->locked; }
+
+    HYP_FORCE_INLINE bool operator!() const
+        { return mouse_lock_state == nullptr || !mouse_lock_state->locked; }
+};
+
 } // namespace hyperion
 
 #endif

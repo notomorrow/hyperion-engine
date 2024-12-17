@@ -32,6 +32,7 @@ namespace hyperion {
 class Engine;
 class CameraRenderResources;
 
+HYP_ENUM()
 enum class CameraProjectionMode : uint32
 {
     NONE            = 0,
@@ -97,9 +98,11 @@ public:
     void SetInputHandler(UniquePtr<InputHandler> &&input_handler)
         { m_input_handler = std::move(input_handler); }
 
+    HYP_METHOD(Property="Camera")
     Camera *GetCamera() const
         { return m_camera; }
 
+    HYP_METHOD(Property="ProjectionMode")
     CameraProjectionMode GetProjectionMode() const
         { return m_projection_mode; }
 
@@ -156,6 +159,8 @@ protected:
 
 private:
     void OnAdded(Camera *camera);
+
+    InputMouseLockScope     m_mouse_lock_scope;
 };
 
 HYP_CLASS()
