@@ -66,16 +66,12 @@ bool FirstPersonCameraInputHandler::OnMouseDown_Impl(const MouseEvent &evt)
 {
     HYP_SCOPE;
 
-    m_controller->SetMode(FirstPersonCameraControllerMode::MOUSE_LOCKED);
-
     return true;
 }
 
 bool FirstPersonCameraInputHandler::OnMouseUp_Impl(const MouseEvent &evt)
 {
     HYP_SCOPE;
-
-    m_controller->SetMode(FirstPersonCameraControllerMode::MOUSE_FREE);
 
     return true;
 }
@@ -136,6 +132,8 @@ void FirstPersonCameraController::OnActivated()
     HYP_SCOPE;
     
     PerspectiveCameraController::OnActivated();
+
+    SetMode(FirstPersonCameraControllerMode::MOUSE_LOCKED);
 }
 
 void FirstPersonCameraController::OnDeactivated()

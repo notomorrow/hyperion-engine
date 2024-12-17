@@ -25,7 +25,8 @@ class HYP_API EditorCameraInputHandler : public InputHandlerBase
 public:
     EditorCameraInputHandler(CameraController *controller);
     virtual ~EditorCameraInputHandler() override = default;
-
+    
+protected:
     virtual bool OnKeyDown_Impl(const KeyboardEvent &evt) override;
     virtual bool OnKeyUp_Impl(const KeyboardEvent &evt) override;
     virtual bool OnMouseDown_Impl(const MouseEvent &evt) override;

@@ -36,7 +36,7 @@ struct ScriptComponent
     UniquePtr<dotnet::Assembly>     assembly;
 
     HYP_FIELD()
-    UniquePtr<dotnet::Object>       object;
+    dotnet::Object                  object;
 
     HYP_FIELD()
     EnumFlags<ScriptComponentFlags> flags = ScriptComponentFlags::NONE;

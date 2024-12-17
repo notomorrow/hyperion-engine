@@ -117,8 +117,8 @@ void Game::Update(GameCounter::TickUnit delta)
 
     Logic(delta);
 
-    if (m_managed_game_object) {
-        m_managed_game_object->InvokeMethodByName<void, float>("Update", float(delta));
+    if (m_managed_game_object.IsValid()) {
+        m_managed_game_object.InvokeMethodByName<void, float>("Update", float(delta));
     }
 
     g_engine->GetWorld()->Update(delta);
@@ -132,8 +132,8 @@ void Game::Init()
 
     m_ui_stage->Init();
 
-    if (m_managed_game_object) {
-        m_managed_game_object->InvokeMethodByName<void>(
+    if (m_managed_game_object.IsValid()) {
+        m_managed_game_object.InvokeMethodByName<void>(
             "BeforeInit",
             m_scene,
             m_app_context->GetInputManager(),
@@ -141,7 +141,7 @@ void Game::Init()
             m_ui_stage
         );
 
-        m_managed_game_object->InvokeMethodByName<void>("Init");
+        m_managed_game_object.InvokeMethodByName<void>("Init");
     }
 }
 

@@ -18,7 +18,7 @@ void Class::EnsureLoaded() const
     AssertThrowMsg(GetFreeObjectFunction() != nullptr, "Free object function pointer not set!");
 }
 
-UniquePtr<Object> Class::NewObject()
+Object Class::NewObject()
 {
     EnsureLoaded();
 
@@ -26,10 +26,10 @@ UniquePtr<Object> Class::NewObject()
 
     ObjectReference object_reference = m_new_object_fptr(/* keep_alive */ true, nullptr, nullptr, nullptr, nullptr);
 
-    return UniquePtr<Object>::Construct(this, object_reference);
+    return Object(this, object_reference);
 }
 
-UniquePtr<Object> Class::NewObject(const HypClass *hyp_class, void *owning_object_ptr)
+Object Class::NewObject(const HypClass *hyp_class, void *owning_object_ptr)
 {
     EnsureLoaded();
 
@@ -40,7 +40,7 @@ UniquePtr<Object> Class::NewObject(const HypClass *hyp_class, void *owning_objec
 
     ObjectReference object_reference = m_new_object_fptr(/* keep_alive */ true, hyp_class, owning_object_ptr, nullptr, nullptr);
 
-    return UniquePtr<Object>::Construct(this, object_reference);
+    return Object(this, object_reference);
 }
 
 ObjectReference Class::NewManagedObject(void *context_ptr, InitializeObjectCallbackFunction callback)
@@ -82,13 +82,13 @@ bool Class::HasParentClass(const Class *parent_class) const
     return false;
 }
 
-void *Class::InvokeStaticMethod(const Method *method_ptr, void **args_vptr, void *return_value_vptr)
+void Class::InvokeStaticMethod_Internal(const Method *method_ptr, void **args_vptr, void *return_value_vptr)
 {
     EnsureLoaded();
     
     AssertThrowMsg(m_class_holder->GetInvokeMethodFunction() != nullptr, "Invoke method function pointer not set");
 
-    return m_class_holder->GetInvokeMethodFunction()(method_ptr->GetGuid(), {}, args_vptr, return_value_vptr);
+    m_class_holder->GetInvokeMethodFunction()(method_ptr->GetGuid(), {}, args_vptr, return_value_vptr);
 }
 
 } // namespace hyperion::dotnet

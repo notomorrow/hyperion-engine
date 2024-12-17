@@ -110,7 +110,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
     }
 
     script_component.assembly = nullptr;
-    script_component.object = nullptr;
+    script_component.object.Reset();
 
     ANSIString assembly_path(script_component.script.assembly_path);
 
@@ -149,7 +149,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
                     AssertThrow(GetEntityManager().GetScene() != nullptr);
                     AssertThrow(GetEntityManager().GetScene()->GetWorld() != nullptr);
 
-                    script_component.object->InvokeMethod<void>(
+                    script_component.object.InvokeMethod<void>(
                         before_init_method_ptr,
                         GetWorld(),
                         GetScene()
@@ -164,7 +164,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
                     HYP_NAMED_SCOPE("Call Init() on script component");
                     HYP_LOG(Script, LogLevel::INFO, "Calling Init() on script component");
 
-                    script_component.object->InvokeMethod<void, dotnet::Object *>(
+                    script_component.object.InvokeMethod<void, dotnet::Object *>(
                         init_method_ptr,
                         entity->GetManagedObject()
                     );
@@ -183,7 +183,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
         return;
     }
 
-    if (!script_component.object) {
+    if (!script_component.object.IsValid()) {
         HYP_LOG(Script, LogLevel::ERR, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
 
         return;
@@ -212,17 +212,17 @@ void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
         CallScriptMethod("OnPlayStop", script_component);
     }
 
-    if (script_component.object != nullptr) {
-        if (dotnet::Class *class_ptr = script_component.object->GetClass()) {
+    if (script_component.object.IsValid()) {
+        if (dotnet::Class *class_ptr = script_component.object.GetClass()) {
             if (class_ptr->HasMethod("Destroy")) {
                 HYP_NAMED_SCOPE("Call Destroy() on script component");
 
-                script_component.object->InvokeMethodByName<void>("Destroy");
+                script_component.object.InvokeMethodByName<void>("Destroy");
             }
         }
     }
 
-    script_component.object = nullptr;
+    script_component.object.Reset();
     script_component.assembly = nullptr;
 
     script_component.flags &= ~(ScriptComponentFlags::INITIALIZED | ScriptComponentFlags::BEFORE_INIT_CALLED | ScriptComponentFlags::INIT_CALLED);
@@ -240,7 +240,7 @@ void ScriptSystem::Process(GameCounter::TickUnit delta)
             continue;
         }
 
-        if (dotnet::Class *class_ptr = script_component.object->GetClass()) {
+        if (dotnet::Class *class_ptr = script_component.object.GetClass()) {
             if (dotnet::Method *update_method_ptr = class_ptr->GetMethod("Update")) {
                 if (update_method_ptr->GetAttributes().HasAttribute("ScriptMethodStub")) {
                     // Stubbed method, don't waste cycles calling it if it's not implemented
@@ -249,7 +249,7 @@ void ScriptSystem::Process(GameCounter::TickUnit delta)
 
                 HYP_NAMED_SCOPE("Call Update() on script component");
 
-                script_component.object->InvokeMethod<void, float>(update_method_ptr, float(delta));
+                script_component.object.InvokeMethod<void, float>(update_method_ptr, float(delta));
             }
         }
     }
@@ -275,14 +275,14 @@ void ScriptSystem::CallScriptMethod(UTF8StringView method_name)
             continue;
         }
 
-        if (dotnet::Class *class_ptr = script_component.object->GetClass()) {
+        if (dotnet::Class *class_ptr = script_component.object.GetClass()) {
             if (dotnet::Method *method_ptr = class_ptr->GetMethod(method_name)) {
                 if (method_ptr->GetAttributes().HasAttribute("ScriptMethodStub")) {
                     // Stubbed method, don't waste cycles calling it if it's not implemented
                     continue;
                 }
 
-                script_component.object->InvokeMethod<void>(method_ptr);
+                script_component.object.InvokeMethod<void>(method_ptr);
             }
         }
     }
@@ -294,14 +294,14 @@ void ScriptSystem::CallScriptMethod(UTF8StringView method_name, ScriptComponent 
         return;
     }
 
-    if (dotnet::Class *class_ptr = target.object->GetClass()) {
+    if (dotnet::Class *class_ptr = target.object.GetClass()) {
         if (dotnet::Method *method_ptr = class_ptr->GetMethod(method_name)) {
             if (method_ptr->GetAttributes().HasAttribute("ScriptMethodStub")) {
                 // Stubbed method, don't waste cycles calling it if it's not implemented
                 return;
             }
 
-            target.object->InvokeMethod<void>(method_ptr);
+            target.object.InvokeMethod<void>(method_ptr);
         }
     }
 }

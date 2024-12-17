@@ -20,17 +20,18 @@
 #include <core/threading/Threads.hpp>
 #endif
 
+#include <dotnet/Object.hpp>
+
 namespace hyperion {
 
 class HypClass;
 struct HypData;
 
 namespace dotnet {
-class Object;
 class Class;
 } // namespace dotnet
 
-extern HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *parent, TypeID type_id, const HypClass *hyp_class, UniquePtr<dotnet::Object> &&managed_object);
+extern HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *parent, TypeID type_id, const HypClass *hyp_class, dotnet::Object &&managed_object);
 extern HYP_API const HypClass *GetClass(TypeID type_id);
 extern HYP_API HypClassAllocationMethod GetHypClassAllocationMethod(const HypClass *hyp_class);
 extern HYP_API dotnet::Class *GetHypClassManagedClass(const HypClass *hyp_class);
@@ -50,7 +51,7 @@ public:
 
     virtual dotnet::Class *GetManagedClass() const = 0;
 
-    virtual void SetManagedObject(dotnet::Object *managed_object) = 0;
+    virtual void SetManagedObject(dotnet::Object &&managed_object) = 0;
     virtual dotnet::Object *GetManagedObject() const = 0;
 
     virtual void FixupPointer(void *_this, IHypObjectInitializer *ptr) = 0;
@@ -63,7 +64,6 @@ class HypObjectInitializer final : public IHypObjectInitializer
 
 public:
     HypObjectInitializer(T *_this)
-        : m_managed_object(nullptr)
     {
         CheckHypObjectInitializer(this, GetTypeID_Static(), GetClass_Static(), _this);
     }
@@ -74,7 +74,7 @@ public:
         HYP_MT_CHECK_RW(m_data_race_detector);
 #endif
 
-        CleanupHypObjectInitializer(GetClass_Static(), m_managed_object);
+        CleanupHypObjectInitializer(GetClass_Static(), &m_managed_object);
     }
 
     virtual TypeID GetTypeID() const override
@@ -92,15 +92,13 @@ public:
         return GetHypClassManagedClass(GetClass_Static());
     }
 
-    virtual void SetManagedObject(dotnet::Object *managed_object) override
+    virtual void SetManagedObject(dotnet::Object &&managed_object) override
     {
 #ifdef HYP_DEBUG_MODE
         HYP_MT_CHECK_RW(m_data_race_detector);
 #endif
 
-        AssertThrow(m_managed_object == nullptr);
-
-        m_managed_object = managed_object;
+        m_managed_object = std::move(managed_object);
     }
 
     virtual dotnet::Object *GetManagedObject() const override
@@ -109,7 +107,7 @@ public:
         HYP_MT_CHECK_READ(m_data_race_detector);
 #endif
 
-        return m_managed_object;
+        return m_managed_object.IsValid() ? const_cast<dotnet::Object *>(&m_managed_object) : nullptr;
     }
 
     virtual void FixupPointer(void *_this, IHypObjectInitializer *ptr) override
@@ -132,7 +130,7 @@ public:
     }
 
 private:
-    dotnet::Object      *m_managed_object;
+    dotnet::Object      m_managed_object;
 
 #ifdef HYP_DEBUG_MODE
     DataRaceDetector    m_data_race_detector;

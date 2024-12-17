@@ -55,7 +55,8 @@ ${end_macro_names[hyp_class.class_type]}
 ${f"void {hyp_class.name}::{member.name}({method_args_string_sig})" + (" const" if member.is_const_method else "")}
 ${"{"}
 ${"    if (dotnet::Object *managed_object = GetManagedObject()) {"}
-${f"        if (dotnet::Method *method_ptr = managed_object->GetClass()->GetMethod(\"{member.name}\")) {{"}
+${f"        constexpr HashCode hash_code = HashCode::GetHashCode(\"{member.name}\");"}
+${f"        if (dotnet::Method *method_ptr = managed_object->GetClass()->GetMethodByHash(hash_code)) {{"}
 ${f"            managed_object->InvokeMethod<void>(method_ptr{(', ' + method_args_string_call) if len(method_args_string_call) > 0 else ''});"}
 ${"            return;"}
 ${"        }"}
@@ -67,7 +68,8 @@ ${"}"}
 ${f"{member.method_return_type} {hyp_class.name}::{member.name}({method_args_string_sig})" + (" const" if member.is_const_method else "")}
 ${"{"}
 ${"    if (dotnet::Object *managed_object = GetManagedObject()) {"}
-${f"        if (dotnet::Method *method_ptr = managed_object->GetClass()->GetMethod(\"{member.name}\")) {{"}
+${f"        constexpr HashCode hash_code = HashCode::GetHashCode(\"{member.name}\");"}
+${f"        if (dotnet::Method *method_ptr = managed_object->GetClass()->GetMethodByHash(hash_code)) {{"}
 ${f"            return managed_object->InvokeMethod<{member.method_return_type}>(method_ptr{(', ' + method_args_string_call) if len(method_args_string_call) > 0 else ''});"}
 ${"        }"}
 ${"    }"}

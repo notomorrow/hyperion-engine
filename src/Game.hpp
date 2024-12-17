@@ -81,7 +81,7 @@ protected:
     RC<UIStage>                 m_ui_stage;
 
     UniquePtr<Assembly>         m_managed_assembly;
-    UniquePtr<Object>           m_managed_game_object;
+    Object                      m_managed_game_object;
 
 private:
     void Init_Internal();

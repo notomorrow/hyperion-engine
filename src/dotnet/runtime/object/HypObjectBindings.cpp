@@ -63,8 +63,7 @@ HYP_EXPORT void HypObject_Initialize(const HypClass *hyp_class, dotnet::Class *c
     // make it WEAK_REFERENCE since we don't want to release the object on destructor call,
     // as it is managed by the .NET runtime
 
-    UniquePtr<dotnet::Object> managed_object = MakeUnique<dotnet::Object>(class_object_ptr, *object_reference, ObjectFlags::WEAK_REFERENCE);
-    initializer->SetManagedObject(managed_object.Release());
+    initializer->SetManagedObject(dotnet::Object(class_object_ptr, *object_reference, ObjectFlags::WEAK_REFERENCE));
 }
 
 HYP_EXPORT void HypObject_Verify(const HypClass *hyp_class, void *native_address, dotnet::ObjectReference *object_reference)

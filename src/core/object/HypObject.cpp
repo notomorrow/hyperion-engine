@@ -96,7 +96,7 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
     IHypObjectInitializer *initializer = hyp_class->GetObjectInitializer(address);
     AssertThrow(initializer != nullptr);
 
-    UniquePtr<dotnet::Object> managed_object;
+    dotnet::Object managed_object;
 
     if (!(GetCurrentHypObjectInitializerFlags() & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION)) {
         if (dotnet::Class *managed_class = hyp_class->GetManagedClass()) {
@@ -216,7 +216,7 @@ HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer,
     }
 }
 
-HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *native_address, TypeID type_id, const HypClass *hyp_class, UniquePtr<dotnet::Object> &&managed_object)
+HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *native_address, TypeID type_id, const HypClass *hyp_class, dotnet::Object &&managed_object)
 {
     AssertThrow(initializer != nullptr);
     AssertThrowMsg(hyp_class != nullptr, "No HypClass registered for class!");
@@ -241,9 +241,10 @@ HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *
     } while (parent_initializer != nullptr);
 
     // Managed object only needs to live on the most derived class
-    if (dotnet::Object *managed_object_ptr = managed_object.Release()) {
-        initializer->SetManagedObject(managed_object_ptr);
+    if (managed_object.IsValid()) {
+        initializer->SetManagedObject(std::move(managed_object));
 
+        // sanity check
         dotnet::ObjectReference tmp;
         AssertThrow(initializer->GetClass()->GetManagedObject(native_address, tmp));
     }
@@ -253,7 +254,7 @@ HYP_API void CleanupHypObjectInitializer(const HypClass *hyp_class, dotnet::Obje
 {
     // No cleanup on the managed object needed if we have a parent class - parent class will manage it
     if (managed_object_ptr != nullptr) {// && hyp_class->GetParent() == nullptr) {
-        delete managed_object_ptr;
+        managed_object_ptr->Reset();
     }
 }
 
