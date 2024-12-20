@@ -16,7 +16,7 @@
       "gi": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
       "enabled": true
@@ -48,7 +48,7 @@
   },
   "lightmapper": {
     "ideal_triangles_per_job": 4096,
-    "gpu": false,
+    "gpu": true,
     "threads": 16
   }
 }
