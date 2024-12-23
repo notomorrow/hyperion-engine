@@ -559,6 +559,18 @@ public:
     /*! \brief Creates a Span<T> from the Array's data.
      *  The span is only valid as long as the Array is not modified.
      *  \return A Span<T> of the Array's data. */
+    HYP_NODISCARD HYP_FORCE_INLINE operator Span<T>()
+        { return Span<T>(Data(), Size()); }
+
+    /*! \brief Creates a Span<const T> from the Array's data.
+     *  The span is only valid as long as the Array is not modified.
+     *  \return A Span<const T> of the Array's data. */
+    HYP_NODISCARD HYP_FORCE_INLINE operator Span<const T>() const
+        { return Span<const T>(Data(), Size()); }
+
+    /*! \brief Creates a Span<T> from the Array's data.
+     *  The span is only valid as long as the Array is not modified.
+     *  \return A Span<T> of the Array's data. */
     HYP_NODISCARD HYP_FORCE_INLINE Span<T> ToSpan()
         { return Span<T>(Data(), Size()); }
 

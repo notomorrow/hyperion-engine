@@ -54,7 +54,11 @@ public:
     void RequestStop();
 
     virtual void Await(TaskID id) = 0;
+
+    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr) = 0;
+
     virtual bool Dequeue(TaskID id) = 0;
+    
     virtual bool TakeOwnershipOfTask(TaskID id, ITaskExecutor *executor) = 0;
 
     /*! \brief Has \ref{thread_id} given us work to complete?
@@ -81,7 +85,7 @@ protected:
     ThreadID                m_owner_thread;
 };
 
-class Scheduler : public SchedulerBase
+class Scheduler final : public SchedulerBase
 {
 public:
     struct ScheduledTask
@@ -216,7 +220,7 @@ public:
         scheduled_task.owns_executor = (flags & TaskEnqueueFlags::FIRE_AND_FORGET);
         scheduled_task.semaphore = &executor->GetSemaphore();
         scheduled_task.task_executed = &m_task_executed;
-        scheduled_task.callback = &executor->GetCallback();
+        scheduled_task.callback = &executor->GetCallbackChain();
 
         Enqueue_Internal(std::move(scheduled_task));
 
@@ -238,7 +242,7 @@ public:
      *  \param executor_ptr The TaskExecutor to execute (owned by the caller)
      *  \param atomic_counter A pointer to an atomic uint variable that is incremented upon completion.
      *  \param callback A callback to be executed after the task is completed. */
-    TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr)
+    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr) override
     {
         std::unique_lock lock(m_mutex);
 

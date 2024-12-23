@@ -22,9 +22,36 @@ struct TaskThreadPoolInfo
 
 static const FlatMap<TaskThreadPoolName, TaskThreadPoolInfo> g_thread_pool_info {
     { TaskThreadPoolName::THREAD_POOL_GENERIC,  { 4u, ThreadPriorityValue::NORMAL } },
-    { TaskThreadPoolName::THREAD_POOL_RENDER,   { 4u, ThreadPriorityValue::HIGHEST } }
+    { TaskThreadPoolName::THREAD_POOL_RENDER,   { 2u, ThreadPriorityValue::HIGHEST } }
 };
 
+#pragma region TaskBatch
+
+bool TaskBatch::IsCompleted() const
+{
+    return semaphore.IsInSignalState();
+}
+
+void TaskBatch::AwaitCompletion()
+{
+    if (num_enqueued != 0) {
+        // Sanity check - ensure not awaiting from a thread we depend on for processing any of the tasks
+        // If we get here, we're probably currently on a task thread, and have a circular dependency chain.
+        // Consider breaking up task dependencies.
+        const ThreadID current_thread_id = ThreadID::Current();
+
+        for (const TaskRef &task_ref : task_refs) {
+            AssertThrow(task_ref.assigned_scheduler != nullptr);
+            
+            AssertThrowMsg(task_ref.assigned_scheduler->GetOwnerThread() != current_thread_id,
+                "Cannot wait on a task that is dependent on the current thread!");
+        }
+    }
+
+    semaphore.Acquire();
+}
+
+#pragma endregion TaskBatch
 
 #pragma region TaskThreadPool
 

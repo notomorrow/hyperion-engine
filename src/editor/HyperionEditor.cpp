@@ -402,29 +402,29 @@ void HyperionEditor::Init()
         node.SetName("test_model");
         node.LockTransform();
 
-        if (node.IsValid()) {
-            Handle<Entity> env_grid_entity = m_scene->GetEntityManager()->AddEntity();
+        // if (node.IsValid()) {
+        //     Handle<Entity> env_grid_entity = m_scene->GetEntityManager()->AddEntity();
 
-            m_scene->GetEntityManager()->AddComponent<TransformComponent>(env_grid_entity, TransformComponent {
-                node.GetWorldTransform()
-            });
+        //     m_scene->GetEntityManager()->AddComponent<TransformComponent>(env_grid_entity, TransformComponent {
+        //         node.GetWorldTransform()
+        //     });
 
-            m_scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(env_grid_entity, BoundingBoxComponent {
-                node.GetLocalAABB() * 2.0f,
-                node.GetWorldAABB() * 2.0f
-            });
+        //     m_scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(env_grid_entity, BoundingBoxComponent {
+        //         node.GetLocalAABB() * 2.0f,
+        //         node.GetWorldAABB() * 2.0f
+        //     });
 
-            // Add env grid component
-            m_scene->GetEntityManager()->AddComponent<EnvGridComponent>(env_grid_entity, EnvGridComponent {
-                EnvGridType::ENV_GRID_TYPE_SH,
-                Vec3u { 24, 4, 24 },
-                EnvGridMobility::FOLLOW_CAMERA_X | EnvGridMobility::FOLLOW_CAMERA_Z
-            });
+        //     // Add env grid component
+        //     m_scene->GetEntityManager()->AddComponent<EnvGridComponent>(env_grid_entity, EnvGridComponent {
+        //         EnvGridType::ENV_GRID_TYPE_SH,
+        //         Vec3u { 24, 4, 24 },
+        //         EnvGridMobility::FOLLOW_CAMERA_X | EnvGridMobility::FOLLOW_CAMERA_Z
+        //     });
 
-            NodeProxy env_grid_node = m_scene->GetRoot()->AddChild();
-            env_grid_node.SetEntity(env_grid_entity);
-            env_grid_node.SetName("EnvGrid");
-        }
+        //     NodeProxy env_grid_node = m_scene->GetRoot()->AddChild();
+        //     env_grid_node.SetEntity(env_grid_entity);
+        //     env_grid_node.SetName("EnvGrid");
+        // }
 
         GetScene()->GetRoot()->AddChild(node);
         

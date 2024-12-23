@@ -103,14 +103,10 @@ public:
     }
 
     /*! \brief Check if all tasks in the batch have been completed. */
-    HYP_FORCE_INLINE bool IsCompleted() const
-        { return semaphore.IsInSignalState(); }
+    HYP_API bool IsCompleted() const;
 
     /*! \brief Block the current thread until all tasks have been marked as completed. */
-    HYP_FORCE_INLINE void AwaitCompletion()
-    {
-        semaphore.Acquire();
-    }
+    HYP_API void AwaitCompletion();
 
     /*! \brief Execute each non-enqueued task in serial (not async).
      *  \param execute_dependent_batches If true, the next_batch will also be executed. */

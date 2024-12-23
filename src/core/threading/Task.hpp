@@ -12,6 +12,8 @@
 #include <core/threading/Thread.hpp>
 #include <core/threading/Semaphore.hpp>
 
+#include <core/logging/LoggerFwd.hpp>
+
 #include <core/functional/Proc.hpp>
 
 #include <core/memory/UniquePtr.hpp>
@@ -82,6 +84,32 @@ struct TaskID
         { return value != 0; }
 };
 
+class HYP_API TaskCallbackChain
+{
+public:
+    TaskCallbackChain()                                             = default;
+
+    TaskCallbackChain(const TaskCallbackChain &other)               = delete;
+    TaskCallbackChain &operator=(const TaskCallbackChain &other)    = delete;
+
+    TaskCallbackChain(TaskCallbackChain &&other) noexcept;
+    TaskCallbackChain &operator=(TaskCallbackChain &&other) noexcept;
+
+    ~TaskCallbackChain()                                            = default;
+
+    HYP_FORCE_INLINE explicit operator bool() const
+        { return m_num_callbacks.Get(MemoryOrder::ACQUIRE); }
+
+    void Add(Proc<void> &&callback);
+
+    void operator()();
+
+private:
+    Array<Proc<void>>   m_callbacks;
+    AtomicVar<uint32>   m_num_callbacks;
+    Mutex               m_mutex;
+};
+
 class ITaskExecutor
 {
 public:
@@ -91,12 +119,11 @@ public:
 
     virtual bool IsCompleted() const = 0;
 
-    virtual Proc<void> &GetCallback() = 0;
-    virtual const Proc<void> &GetCallback() const = 0;
-    virtual void SetCallback(Proc<void> &&callback) = 0;
+    /*! \brief Not called if task is part of a TaskBatch. */
+    virtual TaskCallbackChain &GetCallbackChain() = 0;
 };
 
-class TaskExecutorBase : public ITaskExecutor
+class HYP_API TaskExecutorBase : public ITaskExecutor
 {
 public:
     TaskExecutorBase()
@@ -116,7 +143,7 @@ public:
           m_initiator_thread_id(other.m_initiator_thread_id),
           m_assigned_scheduler(other.m_assigned_scheduler),
           m_semaphore(std::move(other.m_semaphore)),
-          m_callback(std::move(other.m_callback))
+          m_callback_chain(std::move(other.m_callback_chain))
     {
         other.m_id = {};
         other.m_initiator_thread_id = {};
@@ -177,14 +204,8 @@ public:
 
     virtual void Execute() = 0;
 
-    virtual Proc<void> &GetCallback() override final
-        { return m_callback; }
-
-    virtual const Proc<void> &GetCallback() const override final
-        { return m_callback; }
-
-    virtual void SetCallback(Proc<void> &&callback) override final
-        { m_callback = std::move(callback); }
+    virtual TaskCallbackChain &GetCallbackChain() override final
+        { return m_callback_chain; }
 
 protected:
     TaskID              m_id;
@@ -192,8 +213,7 @@ protected:
     SchedulerBase       *m_assigned_scheduler;
     TaskSemaphore       m_semaphore;
 
-    /*! \brief Not called if task is part of a TaskBatch. */
-    Proc<void>          m_callback;
+    TaskCallbackChain   m_callback_chain;
 };
 
 template <class ReturnType>
@@ -233,10 +253,7 @@ public:
         return *this;
     }
     
-    virtual ~TaskExecutorInstance() override
-    {
-        DebugLog(LogType::Debug, "Destruct TaskExecutorInstance %p\n", (void *)this);
-    }
+    virtual ~TaskExecutorInstance() override = default;
 
     HYP_FORCE_INLINE ReturnType &Result() &
         { return m_result_value.Get(); }
@@ -311,7 +328,7 @@ protected:
 };
 
 template <class ReturnType>
-class ManuallyFulfilledTaskExecutorInstance : public TaskExecutorInstance<ReturnType>
+class ManuallyFulfilledTaskExecutorInstance final : public TaskExecutorInstance<ReturnType>
 {
 public:
     using Base = TaskExecutorInstance<ReturnType>;
@@ -348,12 +365,12 @@ public:
 
         Base::m_result_value.Set(std::move(value));
 
-        const Proc<void> &callback = Base::GetCallback();
+        TaskCallbackChain &callback_chain = Base::GetCallbackChain();
 
         Base::GetSemaphore().Release(1);
 
-        if (callback) {
-            callback();
+        if (callback_chain) {
+            callback_chain();
         }
     }
 
@@ -363,12 +380,12 @@ public:
         
         Base::m_result_value.Set(value);
 
-        const Proc<void> &callback = Base::GetCallback();
+        TaskCallbackChain &callback_chain = Base::GetCallbackChain();
 
         Base::GetSemaphore().Release(1);
 
-        if (callback) {
-            callback();
+        if (callback_chain) {
+            callback_chain();
         }
     }
 
@@ -377,7 +394,7 @@ protected:
 };
 
 template <>
-class ManuallyFulfilledTaskExecutorInstance<void> : public TaskExecutorInstance<void>
+class ManuallyFulfilledTaskExecutorInstance<void> final : public TaskExecutorInstance<void>
 {
 public:
     using Base = TaskExecutorInstance<void>;
@@ -414,19 +431,18 @@ public:
     {
         AssertThrow(!Base::IsCompleted());
 
-        const Proc<void> &callback = Base::GetCallback();
+        TaskCallbackChain &callback_chain = Base::GetCallbackChain();
 
         Base::GetSemaphore().Release(1);
         
-        if (callback)  {
-            callback();
+        if (callback_chain)  {
+            callback_chain();
         }
     }
 
 protected:
     virtual void Execute() override final { }
 };
-
 
 template <class ReturnType>
 class Task;
@@ -542,10 +558,6 @@ protected:
         m_id = TaskID::Invalid();
         m_assigned_scheduler = nullptr;
     }
-
-    // Message logging for tasks
-    
-    void LogWarning(ANSIStringView message) const;
 
     TaskID          m_id;
     SchedulerBase   *m_assigned_scheduler;
@@ -699,7 +711,7 @@ protected:
 #ifdef HYP_DEBUG_MODE
                 HYP_FAIL("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 #else
-                Base::LogWarning("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
+                HYP_LOG(Tasks, LogLevel::WARNING, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 
                 Base::Await_Internal();
 #endif
@@ -774,7 +786,7 @@ public:
 #ifdef HYP_DEBUG_MODE
                 HYP_FAIL("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 #else
-                Base::LogWarning("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
+                HYP_LOG(Tasks, LogLevel::WARNING, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 
                 Base::Await_Internal();
 #endif
@@ -838,7 +850,7 @@ protected:
 #ifdef HYP_DEBUG_MODE
                 HYP_FAIL("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 #else
-                Base::LogWarning("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
+                HYP_LOG(Tasks, LogLevel::WARNING, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 
                 Base::Await_Internal();
 #endif
@@ -903,7 +915,7 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
 
                 // @TODO : What if task finished right before callback was set?
 
-                task.GetTaskExecutor()->SetCallback([&semaphore, &completion_states, &called_states, &tasks, task_index = i]()
+                task.GetTaskExecutor()->GetCallbackChain().Add([&semaphore, &completion_states, &called_states, &tasks, task_index = i]()
                 {
                     AssertThrow(called_states[task_index] == 0);
 

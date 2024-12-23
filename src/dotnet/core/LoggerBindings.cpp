@@ -21,23 +21,23 @@ HYP_EXPORT void Logger_Log(LogChannel *channel, uint32 log_level, const char *fu
 
     switch (LogLevel(log_level)) {
     case LogLevel::DEBUG:
-        Logger::GetInstance().template Log< LogLevel::DEBUG, StaticString("<script>"), StaticString("{}:{}: {}") >(*channel, func_name, line, message);
+        logging::detail::Log_Internal< LogLevel::DEBUG, StaticString("<script>"), StaticString("{}:{}: {}") >(logging::GetLogger(), *channel, func_name, line, message);
 
         break;
     case LogLevel::INFO:
-        Logger::GetInstance().template Log< LogLevel::INFO, StaticString("<script>"), StaticString("{}:{}: {}") >(*channel, func_name, line, message);
+        logging::detail::Log_Internal< LogLevel::INFO, StaticString("<script>"), StaticString("{}:{}: {}") >(logging::GetLogger(), *channel, func_name, line, message);
 
         break;
     case LogLevel::WARNING:
-        Logger::GetInstance().template Log< LogLevel::WARNING, StaticString("<script>"), StaticString("{}:{}: {}") >(*channel, func_name, line, message);
+        logging::detail::Log_Internal< LogLevel::WARNING, StaticString("<script>"), StaticString("{}:{}: {}") >(logging::GetLogger(), *channel, func_name, line, message);
 
         break;
     case LogLevel::ERR:
-        Logger::GetInstance().template Log< LogLevel::ERR, StaticString("<script>"), StaticString("{}:{}: {}") >(*channel, func_name, line, message);
+        logging::detail::Log_Internal< LogLevel::ERR, StaticString("<script>"), StaticString("{}:{}: {}") >(logging::GetLogger(), *channel, func_name, line, message);
 
         break;
     case LogLevel::FATAL:
-        Logger::GetInstance().template Log< LogLevel::FATAL, StaticString("<script>"), StaticString("{}:{}: {}") >(*channel, func_name, line, message);
+        logging::detail::Log_Internal< LogLevel::FATAL, StaticString("<script>"), StaticString("{}:{}: {}") >(logging::GetLogger(), *channel, func_name, line, message);
 
         break;
     }

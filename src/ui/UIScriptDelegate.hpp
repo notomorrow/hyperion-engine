@@ -78,8 +78,6 @@ public:
     {
         AssertThrow(m_ui_object != nullptr);
 
-        HYP_LOG(UI, LogLevel::DEBUG, "Attempting to call method {} for UI object with name: {}", m_method_name, m_ui_object->GetName());
-
         const UIEventHandlerResult default_result = m_ui_object->GetDefaultEventHandlerResult();
 
         if (!m_ui_object->GetEntity().IsValid()) {

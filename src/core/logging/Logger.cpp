@@ -11,7 +11,13 @@
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Core);
+
 namespace logging {
+
+HYP_API Logger &GetLogger()
+{
+    return Logger::GetInstance();
+}
 
 class LogChannelIDGenerator
 {
@@ -149,11 +155,6 @@ void Logger::SetChannelEnabled(const LogChannel &channel, bool enabled)
 void Logger::Log(const LogChannel &channel, const LogMessage &message)
 {
     std::puts(*message.message);
-}
-
-String Logger::GetCurrentFunction()
-{
-    return StackDump(2).GetTrace().Front();
 }
 
 #pragma endregion Logger

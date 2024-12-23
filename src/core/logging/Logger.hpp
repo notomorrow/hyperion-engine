@@ -35,17 +35,6 @@ HYP_MAKE_ENUM_FLAGS(LogChannelFlags)
 
 namespace logging {
 
-class Logger;
-
-enum LogLevel : uint32
-{
-    DEBUG,
-    INFO,
-    WARNING,
-    ERR,
-    FATAL
-};
-
 struct LogMessage
 {
     StringView<StringType::UTF8>    message;
@@ -93,24 +82,6 @@ private:
 
 class HYP_API Logger
 {
-    template <LogLevel Level>
-    static constexpr auto LogLevelToString()
-    {
-        if constexpr (Level == LogLevel::DEBUG) {
-            return StaticString("Debug");
-        } else if constexpr (Level == LogLevel::INFO) {
-            return StaticString("Info");
-        } else if constexpr (Level == LogLevel::WARNING) {
-            return StaticString("Warning");
-        } else if constexpr (Level == LogLevel::ERR) {
-            return StaticString("Error");
-        } else if constexpr (Level == LogLevel::FATAL) {
-            return StaticString("Fatal");
-        } else {
-            return StaticString("Unknown");
-        }
-    }
-
 public:
     static constexpr uint max_channels = 64;
 
@@ -134,34 +105,9 @@ public:
 
     void SetChannelEnabled(const LogChannel &channel, bool enabled);
 
-    template <LogLevel Level, auto FunctionNameString, auto FormatString, class... Args>
-    void Log(const LogChannel &channel, Args &&... args)
-    {
-        static const auto prefix_static_string = containers::helpers::Concat<
-            StaticString("["),
-            LogLevelToString< Level >(),
-            StaticString("] "),
-            FunctionNameString,
-            StaticString(": ")
-        >::value;
-
-        static const String prefix_string = String(prefix_static_string.Data());
-
-        if (IsChannelEnabled(channel)) {
-            Log(
-                channel,
-                LogMessage {
-                    prefix_string + utilities::Format<FormatString>(std::forward<Args>(args)...)
-                }
-            );
-        }
-    }
-
-private:
-    static String GetCurrentFunction();
-
     void Log(const LogChannel &channel, const LogMessage &message);
 
+private:
     AtomicVar<uint64>                       m_log_mask;
     FixedArray<LogChannel *, max_channels>  m_log_channels;
     LinkedList<LogChannel>                  m_dynamic_log_channels;
@@ -170,18 +116,59 @@ private:
 
 namespace detail {
 
+template <LogLevel Level>
+static constexpr auto LogLevelToString()
+{
+    if constexpr (Level == LogLevel::DEBUG) {
+        return HYP_STATIC_STRING("Debug");
+    } else if constexpr (Level == LogLevel::INFO) {
+        return HYP_STATIC_STRING("Info");
+    } else if constexpr (Level == LogLevel::WARNING) {
+        return HYP_STATIC_STRING("Warning");
+    } else if constexpr (Level == LogLevel::ERR) {
+        return HYP_STATIC_STRING("Error");
+    } else if constexpr (Level == LogLevel::FATAL) {
+        return HYP_STATIC_STRING("Fatal");
+    } else {
+        return HYP_STATIC_STRING("Unknown");
+    }
+}
+
+template <LogLevel Level, auto FunctionNameString, auto FormatString, class... Args>
+static inline void Log_Internal(Logger &logger, const LogChannel &channel, Args &&... args)
+{
+    static const auto prefix_static_string = containers::helpers::Concat<
+        StaticString("["),
+        LogLevelToString< Level >(),
+        StaticString("] "),
+        FunctionNameString,
+        StaticString(": ")
+    >::value;
+
+    static const String prefix_string = String(prefix_static_string.Data());
+
+    if (logger.IsChannelEnabled(channel)) {
+        logger.Log(
+            channel,
+            LogMessage {
+                prefix_string + utilities::Format<FormatString>(std::forward<Args>(args)...)
+            }
+        );
+    }
+}
+
 struct LogOnceHelper
 {
     template <auto LogOnceFileName, int32 LogOnceLineNumber, auto LogOnceFunctionName, LogLevel LogOnceLogLevel, auto LogOnceFormatString, class... LogOnceArgTypes>
-    static void ExecuteLogOnce(const LogChannel &channel, LogOnceArgTypes &&... args)
+    static void ExecuteLogOnce(Logger &logger, const LogChannel &channel, LogOnceArgTypes &&... args)
     {
         static struct LogOnceHelper_Impl
         {
-            LogOnceHelper_Impl(const LogChannel &channel, LogOnceArgTypes &&... args)
+            LogOnceHelper_Impl(Logger &logger, const LogChannel &channel, LogOnceArgTypes &&... args)
             {
-                Logger::GetInstance().Log< LogOnceLogLevel, LogOnceFunctionName, LogOnceFormatString >(channel, std::forward<LogOnceArgTypes>(args)...);
+                Log_Internal< LogOnceLogLevel, LogOnceFunctionName, LogOnceFormatString >(logger, channel, std::forward<LogOnceArgTypes>(args)...);
             }
-        } impl { channel, std::forward<LogOnceArgTypes>(args)... };
+        } impl { logger, channel, std::forward<LogOnceArgTypes>(args)... };
     }
 };
 
@@ -205,17 +192,13 @@ using logging::LogLevel;
     hyperion::logging::LogChannel Log_##name(HYP_NAME_UNSAFE(name), &Log_##parent_name)
 
 // Undefine HYP_LOG if already defined (LoggerFwd could have defined it as an empty macro)
-#ifdef HYP_LOG
-    #undef HYP_LOG
+#ifdef HYP_LOG_ONCE
     #undef HYP_LOG_ONCE
 #endif
 
-#define HYP_LOG(channel, level, fmt, ...) \
-    hyperion::logging::Logger::GetInstance().Log< level, HYP_PRETTY_FUNCTION_NAME, HYP_STATIC_STRING(fmt) >(hyperion::Log_##channel, ##__VA_ARGS__)
-
 #define HYP_LOG_ONCE(channel, level, fmt, ...) \
     do { \
-        ::hyperion::logging::detail::LogOnceHelper::ExecuteLogOnce< HYP_STATIC_STRING(__FILE__), __LINE__, HYP_PRETTY_FUNCTION_NAME, level, HYP_STATIC_STRING(fmt) >(hyperion::Log_##channel, ##__VA_ARGS__); \
+        ::hyperion::logging::detail::LogOnceHelper::ExecuteLogOnce< HYP_STATIC_STRING(__FILE__), __LINE__, HYP_PRETTY_FUNCTION_NAME, level, HYP_STATIC_STRING(fmt) >(hyperion::logging::GetLogger(), hyperion::Log_##channel, ##__VA_ARGS__); \
     } while (0)
 
 #endif
