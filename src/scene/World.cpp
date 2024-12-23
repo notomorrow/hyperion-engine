@@ -26,8 +26,6 @@
 
 namespace hyperion {
 
-using renderer::RTUpdateStateFlags;
-
 #define HYP_WORLD_ASYNC_SCENE_UPDATES
 
 World::World()
@@ -220,6 +218,13 @@ void World::Update(GameCounter::TickUnit delta)
 
             scene->CollectEntities(render_collector, scene->GetCamera());
         }));
+#else
+        // sanity check
+        AssertThrow(scene->GetWorld() == this);
+
+        RenderCollector &render_collector = m_render_collector_container.GetRenderCollectorForScene(scene->GetID());
+
+        scene->CollectEntities(render_collector, scene->GetCamera());
 #endif
     }
 

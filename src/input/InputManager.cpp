@@ -9,6 +9,9 @@
 
 #include <core/threading/Threads.hpp>
 
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
+
 namespace hyperion {
 
 #pragma region InputMouseLockScope

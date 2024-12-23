@@ -481,8 +481,6 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     }
                 }
             }
-
-            break;
         }
 
         Array<RC<UIObject>> ray_test_results;

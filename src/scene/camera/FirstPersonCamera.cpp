@@ -132,8 +132,6 @@ void FirstPersonCameraController::OnActivated()
     HYP_SCOPE;
     
     PerspectiveCameraController::OnActivated();
-
-    SetMode(FirstPersonCameraControllerMode::MOUSE_LOCKED);
 }
 
 void FirstPersonCameraController::OnDeactivated()
