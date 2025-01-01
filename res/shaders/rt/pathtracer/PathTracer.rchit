@@ -276,21 +276,21 @@ void main()
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), gl_PrimitiveID);
 
-    // russian roulette to select a light
-    if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
-        const Light light = HYP_GET_LIGHT(closest_light_index);
+    // // russian roulette to select a light
+    // if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
+    //     const Light light = HYP_GET_LIGHT(closest_light_index);
 
-        payload.distance = closest_light_dist;
-        payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
-        payload.throughput = vec4(0.0);
-        payload.normal = normal;
-        payload.roughness = 0.0;
+    //     payload.distance = closest_light_dist;
+    //     payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
+    //     payload.throughput = vec4(0.0);
+    //     payload.normal = normal;
+    //     payload.roughness = 0.0;
 
-        return;
-    }
+    //     return;
+    // }
 
     payload.emissive = vec4(0.0);
-    payload.throughput *= material_color;
+    payload.throughput = material_color;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;

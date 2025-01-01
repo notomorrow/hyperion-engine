@@ -79,9 +79,9 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-#define RAY_OFFSET 0.05
-#define NUM_SAMPLES 4
-#define NUM_BOUNCES 4
+#define RAY_OFFSET 0.25
+#define NUM_SAMPLES 1
+#define MAX_BOUNCES 4
 
 struct RayBounceInfo
 {
@@ -113,9 +113,12 @@ void main()
     const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
     const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
     const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
-    const float roughness = material_data.r;
+    const float roughness = 0.015;//material_data.r;
     const float perceptual_roughness = sqrt(roughness);
     const float metalness = material_data.g;
+
+    vec4 position_view = camera.view * vec4(position, 1.0);
+    position_view /= position_view.w;
 
     const vec3 V = normalize(camera.position.xyz - position);
     const vec3 R = normalize(reflect(-V, normal));
@@ -123,7 +126,7 @@ void main()
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
     const float tmin = 0.1;
-    const float tmax = 1000.0;
+    const float tmax = 10000.0;
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), scene.frame_counter % 256);
 
@@ -144,7 +147,6 @@ void main()
 
         vec3 H = ImportanceSampleGGX(rnd, normal, roughness);
         H = tangent * H.x + bitangent * H.y + normal * H.z;
-        H = normalize(H);
 
         vec3 origin = position + normal * RAY_OFFSET;
 
@@ -174,33 +176,34 @@ void main()
         }
 #endif
 
+        // Always count at least one bounce since we use the gbuffer for the first bounce
+        int num_bounces = 1;
+
+        RayBounceInfo bounces[MAX_BOUNCES];
+
         { // irradiance
-            RayBounceInfo bounces[NUM_BOUNCES];
 
             bounces[0].throughput = (albedo * (1.0 - metalness));
             bounces[0].emissive = vec4(0.0);
             bounces[0].radiance = vec4(0.0);
-
-            uint num_bounces = 1;
             
-            vec3 direction = reflect(-V, H);
+            vec3 direction = normalize(reflect(-V, H));
 
             payload.throughput = vec4(1.0);
             payload.emissive = vec4(0.0);
-            payload.normal = normal;
 
-            for (int bounce_index = 1; bounce_index < NUM_BOUNCES; bounce_index++) {
-                payload.distance = -1.0;
-
-                vec4 throughput = payload.throughput;
-                vec3 normal = payload.normal;
+            while (num_bounces < MAX_BOUNCES) {
                 traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+
+                int bounce_index = num_bounces++;
 
                 bounces[bounce_index].throughput = payload.throughput;
                 bounces[bounce_index].emissive = payload.emissive;
                 bounces[bounce_index].radiance = vec4(0.0);
 
-                if (payload.distance < 0.0) {
+                if (payload.distance < tmin || payload.distance >= tmax) {
+                    bounces[bounce_index].emissive = vec4(0.0);
+                    
                     // hit the sky, sample the environment map
                     if (current_env_probe.texture_index != ~0u) {
                        uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
@@ -220,42 +223,36 @@ void main()
                     //     bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
                     // }
 
-                    ++num_bounces;
-
                     break;
+                } else {
+                    ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
+
+                    H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
+                    H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
+                    H = normalize(H);
+
+                    vec3 hit_position = origin + direction * payload.distance;
+                    origin = hit_position + payload.normal * RAY_OFFSET;
+                        
+                    direction = reflect(direction, H);
                 }
-            
-                ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
-
-                H = ImportanceSampleGGX(rnd, payload.normal, payload.roughness);
-                H = tangent * H.x + bitangent * H.y + payload.normal * H.z;
-                H = normalize(H);
-
-                vec3 hit_position = origin + direction * payload.distance;
-                origin = hit_position + payload.normal * RAY_OFFSET;
-                    
-                direction = reflect(direction, H);
-
-                ++num_bounces;
             }
 
-            int bounce_index = int(num_bounces) - 1;
-
-            for (; bounce_index >= 0; bounce_index--) {
+            for (int bounce_index = num_bounces - 1; bounce_index >= 0; bounce_index--) {
                 vec4 r = bounces[bounce_index].emissive;
 
-                if (bounce_index != num_bounces - 1) {
+                if (bounce_index < num_bounces - 1) {
                     r += bounces[bounce_index + 1].radiance * bounces[bounce_index].throughput;
+
+                    // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
+                    float p = max(r.r, max(r.g, max(r.b, r.a)));
+
+                    if (RandomFloat(ray_seed) > p) {
+                        break;
+                    }
+
+                    r /= max(p, 0.0001);
                 }
-
-                // As the throughput is multiplied by the albedo, the probability of the ray getting discarded is higher
-                float p = max(r.r, max(r.g, max(r.b, r.a)));
-
-                if (RandomFloat(ray_seed) > p) {
-                    break;
-                }
-
-                r /= max(p, 0.0001);
                 
                 bounces[bounce_index].radiance = r;
             }
@@ -267,7 +264,8 @@ void main()
     }
 
     color = irradiance / float(NUM_SAMPLES);
-    //color += radiance / float(NUM_SAMPLES);
+    // color += radiance / float(NUM_SAMPLES);
+    color.a = 1.0;
 
     // color.rgb = pow(color.rgb, vec3(1.0 / 2.2));
     

@@ -11,7 +11,7 @@
         "enabled": false
       },
       "path_tracer": {
-        "enabled": false
+        "enabled": true
       },
       "gi": {
         "enabled": false
