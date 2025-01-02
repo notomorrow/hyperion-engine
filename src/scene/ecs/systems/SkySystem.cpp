@@ -6,7 +6,7 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/Shader.hpp>
 #include <rendering/Material.hpp>
-#include <rendering/render_components/sky/SkydomeRenderer.hpp>
+#include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 
 #include <util/MeshBuilder.hpp>
 
@@ -18,8 +18,8 @@ void SkySystem::OnEntityAdded(const Handle<Entity> &entity)
 
     SkyComponent &sky_component = GetEntityManager().GetComponent<SkyComponent>(entity);
 
-    if (!sky_component.render_component) {
-        sky_component.render_component = GetEntityManager().GetScene()->GetEnvironment()->AddRenderComponent<SkydomeRenderer>(Name::Unique("sky_renderer"));
+    if (!sky_component.render_subsystem) {
+        sky_component.render_subsystem = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<SkydomeRenderer>(Name::Unique("sky_renderer"));
     }
     
     MeshComponent *mesh_component = GetEntityManager().TryGetComponent<MeshComponent>(entity);
@@ -39,7 +39,7 @@ void SkySystem::OnEntityAdded(const Handle<Entity> &entity)
     if (!mesh_component->material) {
         Handle<Material> material = CreateObject<Material>();
         material->SetBucket(Bucket::BUCKET_SKYBOX);
-        material->SetTexture(MaterialTextureKey::ALBEDO_MAP, sky_component.render_component->GetCubemap());
+        material->SetTexture(MaterialTextureKey::ALBEDO_MAP, sky_component.render_subsystem->GetCubemap());
         material->SetFaceCullMode(FaceCullMode::FRONT);
         material->SetIsDepthTestEnabled(true);
         material->SetIsDepthWriteEnabled(false);
@@ -63,10 +63,10 @@ void SkySystem::OnEntityRemoved(ID<Entity> entity)
     SkyComponent &sky_component = GetEntityManager().GetComponent<SkyComponent>(entity);
     MeshComponent &mesh_component = GetEntityManager().GetComponent<MeshComponent>(entity);
 
-    if (sky_component.render_component) {
-        GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderComponent<SkydomeRenderer>(sky_component.render_component->GetName());
+    if (sky_component.render_subsystem) {
+        GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderSubsystem<SkydomeRenderer>(sky_component.render_subsystem->GetName());
 
-        sky_component.render_component = nullptr;
+        sky_component.render_subsystem = nullptr;
     }
 }
 

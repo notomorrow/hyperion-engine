@@ -8,7 +8,7 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
@@ -20,7 +20,7 @@ class Light;
 class EnvProbe;
 
 HYP_CLASS()
-class HYP_API PointLightShadowRenderer : public RenderComponentBase
+class HYP_API PointLightShadowRenderer : public RenderSubsystem
 {
     HYP_OBJECT_BODY(PointLightShadowRenderer);
 
@@ -37,7 +37,7 @@ private:
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
     virtual void OnRender(Frame *frame) override;
 
-    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
+    virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override;
 
     Handle<Light>       m_light;
     Vec2u               m_extent;

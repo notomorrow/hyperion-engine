@@ -470,7 +470,7 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame) const
 #pragma region UIRenderer
 
 UIRenderer::UIRenderer(Name name, RC<UIStage> ui_stage)
-    : RenderComponentBase(name),
+    : RenderSubsystem(name),
       m_ui_stage(std::move(ui_stage))
 {
 }

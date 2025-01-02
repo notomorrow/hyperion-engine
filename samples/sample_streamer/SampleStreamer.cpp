@@ -44,7 +44,7 @@
 #include <asset/AssetBatch.hpp>
 #include <asset/Assets.hpp>
 
-#include <rendering/render_components/ScreenCapture.hpp>
+#include <rendering/subsystems/ScreenCapture.hpp>
 
 #include <rendering/font/FontFace.hpp>
 #include <rendering/font/FontAtlas.hpp>
@@ -379,7 +379,7 @@ void SampleStreamer::Init()
 
     // Used for RTC streaming or for editor view.
     // Has a performance impact due to copying the framebuffer.
-    auto streaming_capture_component = m_scene->GetEnvironment()->AddRenderComponent<ScreenCaptureRenderComponent>(HYP_NAME(StreamingCapture), Vec2u(window_size));
+    auto streaming_capture_component = m_scene->GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(HYP_NAME(StreamingCapture), Vec2u(window_size));
 
     if (false) {
         auto terrain_node = m_scene->GetRoot()->AddChild();
@@ -656,7 +656,7 @@ void SampleStreamer::Init()
 
             GetScene()->GetRoot()->AddChild(node);
 
-            m_scene->GetEnvironment()->AddRenderComponent<ReflectionProbeRenderer>(
+            m_scene->GetEnvironment()->AddRenderSubsystem<ReflectionProbeRenderer>(
                 HYP_NAME(ReflectionProbe0),
                 node.GetWorldAABB()
             );
@@ -1246,7 +1246,7 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
     }
 
     if (m_rtc_stream) {
-        const ScreenCaptureRenderComponent *screen_capture = m_scene->GetEnvironment()->GetRenderComponent<ScreenCaptureRenderComponent>(HYP_NAME(StreamingCapture));
+        const ScreenCaptureRenderSubsystem *screen_capture = m_scene->GetEnvironment()->GetRenderSubsystem<ScreenCaptureRenderSubsystem>(HYP_NAME(StreamingCapture));
 
         if (screen_capture) {
             const GPUBufferRef &gpu_buffer_ref = screen_capture->GetBuffer();

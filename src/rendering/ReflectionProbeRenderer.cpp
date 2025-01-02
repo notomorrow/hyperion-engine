@@ -18,7 +18,7 @@ namespace hyperion {
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const Vec3f &origin
-) : RenderComponentBase(name),
+) : RenderSubsystem(name),
     m_aabb(BoundingBox(origin - 150.0f, origin + 150.0f))
 {
 }
@@ -26,7 +26,7 @@ ReflectionProbeRenderer::ReflectionProbeRenderer(
 ReflectionProbeRenderer::ReflectionProbeRenderer(
     Name name,
     const BoundingBox &aabb
-) : RenderComponentBase(name),
+) : RenderSubsystem(name),
     m_aabb(aabb)
 {
 }
@@ -111,7 +111,7 @@ void ReflectionProbeRenderer::OnRender(Frame *frame)
     // }
 }
 
-void ReflectionProbeRenderer::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
+void ReflectionProbeRenderer::OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index /*prev_index*/)
 {
     AssertThrowMsg(false, "Not implemented");
 }

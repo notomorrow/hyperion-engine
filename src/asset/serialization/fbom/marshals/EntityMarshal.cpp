@@ -86,7 +86,7 @@ public:
                 FBOMMarshalerBase *marshal = FBOM::GetInstance().GetMarshal(component_type_id);
 
                 if (!marshal) {
-                    HYP_LOG(Serialization, LogLevel::WARNING, "Cannot serialize component with TypeID {} - No marshal registered", component_type_id.Value());
+                    HYP_LOG(Serialization, LogLevel::WARNING, "Cannot serialize component with type name {} and TypeID {} - No marshal registered", component_interface->GetTypeName(), component_type_id.Value());
 
                     continue;
                 }

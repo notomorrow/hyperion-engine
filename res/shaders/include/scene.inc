@@ -11,7 +11,7 @@ struct Scene
 
     float game_time;
     uint frame_counter;
-    uint enabled_render_components_mask;
+    uint enabled_render_subsystems_mask;
     float _pad0;
 
     mat4 _pad1;

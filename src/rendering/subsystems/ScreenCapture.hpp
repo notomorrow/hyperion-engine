@@ -3,7 +3,7 @@
 #ifndef HYPERION_SCREEN_CAPTURE_HPP
 #define HYPERION_SCREEN_CAPTURE_HPP
 
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
@@ -27,17 +27,17 @@ enum class ScreenCaptureMode
 };
 
 HYP_CLASS()
-class HYP_API ScreenCaptureRenderComponent : public RenderComponentBase
+class HYP_API ScreenCaptureRenderSubsystem : public RenderSubsystem
 {
-    HYP_OBJECT_BODY(ScreenCaptureRenderComponent);
+    HYP_OBJECT_BODY(ScreenCaptureRenderSubsystem);
 
 public:
-    ScreenCaptureRenderComponent(Name name, const Vec2u &window_size, ScreenCaptureMode screen_capture_mode = ScreenCaptureMode::TO_TEXTURE);
-    ScreenCaptureRenderComponent(const ScreenCaptureRenderComponent &other)                 = delete;
-    ScreenCaptureRenderComponent &operator=(const ScreenCaptureRenderComponent &other)      = delete;
-    ScreenCaptureRenderComponent(ScreenCaptureRenderComponent &&other) noexcept             = delete;
-    ScreenCaptureRenderComponent &operator=(ScreenCaptureRenderComponent &&other) noexcept  = delete;
-    virtual ~ScreenCaptureRenderComponent() override;
+    ScreenCaptureRenderSubsystem(Name name, const Vec2u &window_size, ScreenCaptureMode screen_capture_mode = ScreenCaptureMode::TO_TEXTURE);
+    ScreenCaptureRenderSubsystem(const ScreenCaptureRenderSubsystem &other)                 = delete;
+    ScreenCaptureRenderSubsystem &operator=(const ScreenCaptureRenderSubsystem &other)      = delete;
+    ScreenCaptureRenderSubsystem(ScreenCaptureRenderSubsystem &&other) noexcept             = delete;
+    ScreenCaptureRenderSubsystem &operator=(ScreenCaptureRenderSubsystem &&other) noexcept  = delete;
+    virtual ~ScreenCaptureRenderSubsystem() override;
 
     HYP_FORCE_INLINE const GPUBufferRef &GetBuffer() const
         { return m_buffer; }
@@ -52,7 +52,7 @@ private:
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
     virtual void OnRender(Frame *frame) override;
 
-    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override
+    virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override
         { }
 
     ScreenCaptureMode   m_screen_capture_mode;

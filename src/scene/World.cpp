@@ -258,7 +258,7 @@ void World::Render(Frame *frame)
 
     for (uint32 i = 0; i < num_render_collectors; i++) {
         if (const WeakHandle<RenderEnvironment> &render_environment = m_render_collector_container.GetRenderCollectorAtIndex(i)->GetRenderEnvironment()) {
-            render_environment.GetUnsafe()->RenderComponents(frame);
+            render_environment.GetUnsafe()->RenderSubsystems(frame);
         }
     }
 }

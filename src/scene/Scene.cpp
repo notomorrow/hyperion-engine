@@ -533,7 +533,7 @@ void Scene::EnqueueRenderUpdates()
             shader_data.fog_params = Vec4f(float(fog_params.color.Packed()), fog_params.start_distance, fog_params.end_distance, 0.0f);
             shader_data.game_time = game_time;
             shader_data.frame_counter = frame_counter;
-            shader_data.enabled_render_components_mask = render_environment->GetEnabledRenderComponentsMask();
+            shader_data.enabled_render_subsystems_mask = render_environment->GetEnabledRenderSubsystemsMask();
             
             g_engine->GetRenderData()->scenes->Set(id.ToIndex(), shader_data);
 

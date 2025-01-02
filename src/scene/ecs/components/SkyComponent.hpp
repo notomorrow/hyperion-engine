@@ -15,7 +15,7 @@ HYP_STRUCT(Component, Label="Sky Component", Description="Controls the rendering
 struct SkyComponent
 {
     HYP_FIELD()
-    RC<SkydomeRenderer> render_component;
+    RC<SkydomeRenderer> render_subsystem;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {

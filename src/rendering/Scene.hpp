@@ -17,7 +17,7 @@ struct SceneShaderData
 
     float   game_time;
     uint32  frame_counter;
-    uint32  enabled_render_components_mask;
+    uint32  enabled_render_subsystems_mask;
     uint32  enabled_environment_maps_mask;
 
     HYP_PAD_STRUCT_HERE(uint8, 64 + 128);

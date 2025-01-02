@@ -26,13 +26,13 @@ void ShadowMapUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
         return;
     }
 
-    if (shadow_map_component.render_component) {
+    if (shadow_map_component.render_subsystem) {
         return;
     }
 
     switch (light_component.light->GetLightType()) {
     case LightType::DIRECTIONAL:
-        shadow_map_component.render_component = GetEntityManager().GetScene()->GetEnvironment()->AddRenderComponent<DirectionalLightShadowRenderer>(
+        shadow_map_component.render_subsystem = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<DirectionalLightShadowRenderer>(
             Name::Unique("shadow_map_renderer_directional"),
             shadow_map_component.resolution,
             shadow_map_component.mode
@@ -40,7 +40,7 @@ void ShadowMapUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
 
         break;
     case LightType::POINT:
-        shadow_map_component.render_component = GetEntityManager().GetScene()->GetEnvironment()->AddRenderComponent<PointLightShadowRenderer>(
+        shadow_map_component.render_subsystem = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<PointLightShadowRenderer>(
             Name::Unique("shadow_map_renderer_point"),
             light_component.light,
             shadow_map_component.resolution
@@ -65,21 +65,21 @@ void ShadowMapUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
     ShadowMapComponent &shadow_map_component = GetEntityManager().GetComponent<ShadowMapComponent>(entity);
     LightComponent &light_component = GetEntityManager().GetComponent<LightComponent>(entity);
 
-    if (shadow_map_component.render_component) {
+    if (shadow_map_component.render_subsystem) {
         switch (light_component.light->GetLightType()) {
         case LightType::DIRECTIONAL:
-            GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderComponent<DirectionalLightShadowRenderer>(shadow_map_component.render_component->GetName());
+            GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderSubsystem<DirectionalLightShadowRenderer>(shadow_map_component.render_subsystem->GetName());
 
             break;
         case LightType::POINT:
-            GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderComponent<PointLightShadowRenderer>(shadow_map_component.render_component->GetName());
+            GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderSubsystem<PointLightShadowRenderer>(shadow_map_component.render_subsystem->GetName());
 
             break;
         default:
             break;
         }
 
-        shadow_map_component.render_component = nullptr;
+        shadow_map_component.render_subsystem = nullptr;
     }
 }
 
@@ -90,7 +90,7 @@ void ShadowMapUpdaterSystem::Process(GameCounter::TickUnit delta)
             continue;
         }
 
-        if (!shadow_map_component.render_component) {
+        if (!shadow_map_component.render_subsystem) {
             continue;
         }
 
@@ -101,7 +101,7 @@ void ShadowMapUpdaterSystem::Process(GameCounter::TickUnit delta)
 
         switch (light_component.light->GetLightType()) {
         case LightType::DIRECTIONAL: {
-            DirectionalLightShadowRenderer *shadow_renderer = static_cast<DirectionalLightShadowRenderer *>(shadow_map_component.render_component.Get());
+            DirectionalLightShadowRenderer *shadow_renderer = static_cast<DirectionalLightShadowRenderer *>(shadow_map_component.render_subsystem.Get());
 
             const Vec3f &center = transform_component.transform.GetTranslation();
             const Vec3f light_direction = light_component.light->GetPosition().Normalized() * -1.0f;

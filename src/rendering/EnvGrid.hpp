@@ -14,7 +14,7 @@
 #include <scene/camera/Camera.hpp>
 
 #include <rendering/RenderCollection.hpp>
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 #include <rendering/EnvProbe.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
@@ -129,7 +129,7 @@ struct EnvGridOptions
 };
 
 HYP_CLASS()
-class HYP_API EnvGrid : public RenderComponentBase
+class HYP_API EnvGrid : public RenderSubsystem
 {
     HYP_OBJECT_BODY(EnvGrid);
 
@@ -172,7 +172,7 @@ private:
         }
     }
 
-    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
+    virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override;
 
     void CreateShader();
     void CreateFramebuffer();

@@ -20,7 +20,7 @@ PointLightShadowRenderer::PointLightShadowRenderer(
     Name name,
     Handle<Light> light,
     const Vec2u &extent
-) : RenderComponentBase(name),
+) : RenderSubsystem(name),
     m_light(std::move(light)),
     m_extent(extent)
 {
@@ -120,7 +120,7 @@ void PointLightShadowRenderer::OnRender(Frame *frame)
     }
 }
 
-void PointLightShadowRenderer::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
+void PointLightShadowRenderer::OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index /*prev_index*/)
 {
     AssertThrowMsg(false, "Not implemented");
 }

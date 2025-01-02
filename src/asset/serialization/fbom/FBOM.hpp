@@ -90,7 +90,7 @@ struct FBOMVersion
     /*! \brief Returns an integer indicating whether the two version are compatible or not.
      *  If the returned value is equal to zero, the two versions are compatible.
      *  If the returned value is less than zero, \ref{lhs} is incompatible, due to being outdated.
-     *  If the returned value is less than zero, \ref{lhs} is incompatible, due to being newer. */
+     *  If the returned value is greater than zero, \ref{lhs} is incompatible, due to being newer. */
     HYP_FORCE_INLINE static int TestCompatibility(const FBOMVersion &lhs, const FBOMVersion &rhs, EnumFlags<FBOMVersionCompareMode> compare_mode = FBOMVersionCompareMode::DEFAULT)
     {
         if (compare_mode & FBOMVersionCompareMode::MAJOR) {
