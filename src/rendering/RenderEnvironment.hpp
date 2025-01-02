@@ -26,7 +26,7 @@ class Scene;
 
 using renderer::RTUpdateStateFlags;
 
-using RenderEnvironmentUpdates = uint8;
+using RenderEnvironmentUpdates = uint64;
 
 enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
 {
@@ -36,7 +36,9 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
 
     RENDER_ENVIRONMENT_UPDATES_CONTAINERS           = RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS,
 
-    RENDER_ENVIRONMENT_UPDATES_TLAS                 = 0x4
+    RENDER_ENVIRONMENT_UPDATES_TLAS                 = 0x4,
+
+    RENDER_ENVIRONMENT_UPDATES_THREAD_MASK          = 0x10 // use mask shifted by ThreadType value to issue unique updates for a specific thread
 };
 
 class HYP_API RenderEnvironment : public HypObject<RenderEnvironment>
@@ -168,6 +170,21 @@ public:
     void RenderComponents(Frame *frame);
 
 private:
+    HYP_FORCE_INLINE void AddUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type)
+    {
+        m_update_marker.BitOr(value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(thread_type)), MemoryOrder::RELEASE);
+    }
+
+    HYP_FORCE_INLINE void RemoveUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type)
+    {
+        m_update_marker.BitAnd(~(value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(thread_type))), MemoryOrder::RELEASE);
+    }
+
+    HYP_FORCE_INLINE bool GetUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type) const
+    {
+        return m_update_marker.Get(MemoryOrder::ACQUIRE) & (value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(thread_type)));
+    }
+
     void AddRenderComponent(TypeID type_id, const RC<RenderComponentBase> &render_component);
     void RemoveRenderComponent(TypeID type_id, Name name);
 
@@ -175,28 +192,28 @@ private:
 
     void InitializeRT();
 
-    Scene                                           *m_scene;
+    Scene                                                                   *m_scene;
 
-    AtomicVar<RenderEnvironmentUpdates>             m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
+    AtomicVar<RenderEnvironmentUpdates>                                     m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
 
-    mutable Mutex                                   m_render_components_mutex;
-    TypeMap<FlatMap<Name, RC<RenderComponentBase>>> m_render_components; // only touch from render thread!
-    Array<RC<RenderComponentBase>>                  m_enabled_render_components;
-    uint32                                          m_current_enabled_render_components_mask;
-    uint32                                          m_next_enabled_render_components_mask;
+    mutable Mutex                                                           m_render_components_mutex;
+    TypeMap<FlatMap<Name, RC<RenderComponentBase>>>                         m_render_components;
+    FixedArray<Array<RC<RenderComponentBase>>, ThreadType::THREAD_TYPE_MAX> m_enabled_render_components;
+    uint32                                                                  m_current_enabled_render_components_mask;
+    uint32                                                                  m_next_enabled_render_components_mask;
 
-    Handle<ParticleSystem>                          m_particle_system;
+    Handle<ParticleSystem>                                                  m_particle_system;
 
-    Handle<GaussianSplatting>                       m_gaussian_splatting;
+    Handle<GaussianSplatting>                                               m_gaussian_splatting;
 
-    UniquePtr<RTRadianceRenderer>                   m_rt_radiance;
-    DDGI                                            m_ddgi;
-    bool                                            m_has_rt_radiance;
-    bool                                            m_has_ddgi_probes;
-    bool                                            m_rt_initialized;
-    TLASRef                                         m_tlas;
+    UniquePtr<RTRadianceRenderer>                                           m_rt_radiance;
+    DDGI                                                                    m_ddgi;
+    bool                                                                    m_has_rt_radiance;
+    bool                                                                    m_has_ddgi_probes;
+    bool                                                                    m_rt_initialized;
+    TLASRef                                                                 m_tlas;
     
-    uint32                                          m_frame_counter;
+    uint32                                                                  m_frame_counter;
 };
 
 } // namespace hyperion
