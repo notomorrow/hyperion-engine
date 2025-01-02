@@ -23,12 +23,12 @@ using renderer::Result;
 
 #pragma region Render commands
 
-struct RENDER_COMMAND(RemoveAllRenderComponents) : renderer::RenderCommand
+struct RENDER_COMMAND(RemoveAllRenderSubsystems) : renderer::RenderCommand
 {
-    TypeMap<FlatMap<Name, RC<RenderComponentBase>>> render_components;
+    TypeMap<FlatMap<Name, RC<RenderSubsystem>>> render_subsystems;
 
-    RENDER_COMMAND(RemoveAllRenderComponents)(TypeMap<FlatMap<Name, RC<RenderComponentBase>>> &&render_components)
-        : render_components(std::move(render_components))
+    RENDER_COMMAND(RemoveAllRenderSubsystems)(TypeMap<FlatMap<Name, RC<RenderSubsystem>>> &&render_subsystems)
+        : render_subsystems(std::move(render_subsystems))
     {
     }
 
@@ -36,12 +36,12 @@ struct RENDER_COMMAND(RemoveAllRenderComponents) : renderer::RenderCommand
     {
         Result result;
 
-        for (auto &it : render_components) {
+        for (auto &it : render_subsystems) {
             for (auto &component_tag_pair : it.second) {
                 if (component_tag_pair.second == nullptr) {
                     DebugLog(
                         LogType::Warn,
-                        "RenderComponent with name %s was null, skipping...\n",
+                        "RenderSubsystem with name %s was null, skipping...\n",
                         component_tag_pair.first.LookupString()
                     );
 
@@ -67,8 +67,8 @@ RenderEnvironment::RenderEnvironment(Scene *scene)
     : HypObject(),
       m_scene(scene),
       m_frame_counter(0),
-      m_current_enabled_render_components_mask(0),
-      m_next_enabled_render_components_mask(0),
+      m_current_enabled_render_subsystems_mask(0),
+      m_next_enabled_render_subsystems_mask(0),
       m_ddgi({
           .aabb = {{-25.0f, -5.0f, -25.0f}, {25.0f, 30.0f, 25.0f}}
       }),
@@ -97,9 +97,9 @@ RenderEnvironment::~RenderEnvironment()
         m_has_ddgi_probes = false;
     }
 
-    m_enabled_render_components = { };
+    m_enabled_render_subsystems = { };
 
-    PUSH_RENDER_COMMAND(RemoveAllRenderComponents, std::move(m_render_components));
+    PUSH_RENDER_COMMAND(RemoveAllRenderSubsystems, std::move(m_render_subsystems));
 
     SafeRelease(std::move(m_tlas));
 
@@ -154,40 +154,40 @@ void RenderEnvironment::Update(GameCounter::TickUnit delta)
 
     AssertReady();
 
-    if (GetUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME)) {
-        m_enabled_render_components[ThreadType::THREAD_TYPE_GAME].Clear();
+    if (GetUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME)) {
+        m_enabled_render_subsystems[ThreadType::THREAD_TYPE_GAME].Clear();
 
         bool all_ready = true;
 
-        Mutex::Guard guard(m_render_components_mutex);
+        Mutex::Guard guard(m_render_subsystems_mutex);
 
-        for (auto &render_components_it : m_render_components) {
-            for (SizeType index = 0; index < render_components_it.second.Size(); index++) {
-                const auto &pair = render_components_it.second.AtIndex(index);
+        for (auto &render_subsystems_it : m_render_subsystems) {
+            for (SizeType index = 0; index < render_subsystems_it.second.Size(); index++) {
+                const auto &pair = render_subsystems_it.second.AtIndex(index);
 
                 const Name name = pair.first;
-                const RC<RenderComponentBase> &render_component = pair.second;
+                const RC<RenderSubsystem> &render_subsystem = pair.second;
 
-                if (!render_component->IsInitialized()) {
+                if (!render_subsystem->IsInitialized()) {
                     all_ready = false;
 
                     continue;
                 }
 
-                m_enabled_render_components[ThreadType::THREAD_TYPE_GAME].PushBack(render_component);
+                m_enabled_render_subsystems[ThreadType::THREAD_TYPE_GAME].PushBack(render_subsystem);
             }
         }
 
         if (all_ready) {
-            RemoveUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME);
+            RemoveUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME);
         }
     }
 
-    // @TODO: Use double buffering, or have another atomic flag for game thread and update an internal array to match m_render_components
-    for (const RC<RenderComponentBase> &render_component : m_enabled_render_components[ThreadType::THREAD_TYPE_GAME]) {
-        AssertThrow(render_component->IsInitialized());
+    // @TODO: Use double buffering, or have another atomic flag for game thread and update an internal array to match m_render_subsystems
+    for (const RC<RenderSubsystem> &render_subsystem : m_enabled_render_subsystems[ThreadType::THREAD_TYPE_GAME]) {
+        AssertThrow(render_subsystem->IsInitialized());
 
-        render_component->ComponentUpdate(delta);
+        render_subsystem->ComponentUpdate(delta);
     }
 }
 
@@ -225,7 +225,7 @@ void RenderEnvironment::RenderDDGIProbes(Frame *frame)
     AssertThrow(g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported());
     
     if (m_has_ddgi_probes) {
-        const DirectionalLightShadowRenderer *shadow_map_renderer = GetRenderComponent<DirectionalLightShadowRenderer>();
+        const DirectionalLightShadowRenderer *shadow_map_renderer = GetRenderSubsystem<DirectionalLightShadowRenderer>();
 
         m_ddgi.RenderProbes(frame);
         m_ddgi.ComputeIrradiance(frame);
@@ -238,42 +238,42 @@ void RenderEnvironment::RenderDDGIProbes(Frame *frame)
     }
 }
 
-void RenderEnvironment::RenderComponents(Frame *frame)
+void RenderEnvironment::RenderSubsystems(Frame *frame)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
-    m_current_enabled_render_components_mask = m_next_enabled_render_components_mask;
+    m_current_enabled_render_subsystems_mask = m_next_enabled_render_subsystems_mask;
 
-    for (const RC<RenderComponentBase> &render_component : m_enabled_render_components[ThreadType::THREAD_TYPE_RENDER]) {
-        render_component->ComponentRender(frame);
+    for (const RC<RenderSubsystem> &render_subsystem : m_enabled_render_subsystems[ThreadType::THREAD_TYPE_RENDER]) {
+        render_subsystem->ComponentRender(frame);
     }
 
-    if (GetUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER)) {
-        m_enabled_render_components[ThreadType::THREAD_TYPE_RENDER].Clear();
+    if (GetUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER)) {
+        m_enabled_render_subsystems[ThreadType::THREAD_TYPE_RENDER].Clear();
 
-        Mutex::Guard guard(m_render_components_mutex);
+        Mutex::Guard guard(m_render_subsystems_mutex);
 
-        for (auto &render_components_it : m_render_components) {
-            for (SizeType index = 0; index < render_components_it.second.Size(); index++) {
-                const auto &pair = render_components_it.second.AtIndex(index);
+        for (auto &render_subsystems_it : m_render_subsystems) {
+            for (SizeType index = 0; index < render_subsystems_it.second.Size(); index++) {
+                const auto &pair = render_subsystems_it.second.AtIndex(index);
 
                 const Name name = pair.first;
-                const RC<RenderComponentBase> &render_component = pair.second;
+                const RC<RenderSubsystem> &render_subsystem = pair.second;
                 
-                AssertThrow(render_component != nullptr);
+                AssertThrow(render_subsystem != nullptr);
 
-                render_component->SetComponentIndex(index);
+                render_subsystem->SetComponentIndex(index);
 
-                if (!render_component->IsInitialized()) {
-                    render_component->ComponentInit();
+                if (!render_subsystem->IsInitialized()) {
+                    render_subsystem->ComponentInit();
                 }
 
-                m_enabled_render_components[ThreadType::THREAD_TYPE_RENDER].PushBack(render_component);
+                m_enabled_render_subsystems[ThreadType::THREAD_TYPE_RENDER].PushBack(render_subsystem);
             }
         }
 
-        RemoveUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER);
+        RemoveUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER);
     }
 
     //if (m_update_marker.Get(MemoryOrder::ACQUIRE) & RENDER_ENVIRONMENT_UPDATES_TLAS) {
@@ -303,33 +303,33 @@ void RenderEnvironment::RenderComponents(Frame *frame)
     ++m_frame_counter;
 }
 
-void RenderEnvironment::AddRenderComponent(TypeID type_id, const RC<RenderComponentBase> &render_component)
+void RenderEnvironment::AddRenderSubsystem(TypeID type_id, const RC<RenderSubsystem> &render_subsystem)
 {
-    struct RENDER_COMMAND(AddRenderComponent) : renderer::RenderCommand
+    struct RENDER_COMMAND(AddRenderSubsystem) : renderer::RenderCommand
     {
         RenderEnvironment       &render_environment;
         TypeID                  type_id;
-        RC<RenderComponentBase> render_component;
+        RC<RenderSubsystem> render_subsystem;
 
-        RENDER_COMMAND(AddRenderComponent)(RenderEnvironment &render_environment, TypeID type_id, const RC<RenderComponentBase> &render_component)
+        RENDER_COMMAND(AddRenderSubsystem)(RenderEnvironment &render_environment, TypeID type_id, const RC<RenderSubsystem> &render_subsystem)
             : render_environment(render_environment),
               type_id(type_id),
-              render_component(render_component)
+              render_subsystem(render_subsystem)
         {
-            AssertThrow(render_component != nullptr);
+            AssertThrow(render_subsystem != nullptr);
         }
         
-        virtual ~RENDER_COMMAND(AddRenderComponent)() override = default;
+        virtual ~RENDER_COMMAND(AddRenderSubsystem)() override = default;
 
         virtual renderer::Result operator()() override
         {
-            const Name name = render_component->GetName();
+            const Name name = render_subsystem->GetName();
 
-            Mutex::Guard guard(render_environment.m_render_components_mutex);
+            Mutex::Guard guard(render_environment.m_render_subsystems_mutex);
 
-            const auto components_it = render_environment.m_render_components.Find(type_id);
+            const auto components_it = render_environment.m_render_subsystems.Find(type_id);
 
-            if (components_it != render_environment.m_render_components.End()) {
+            if (components_it != render_environment.m_render_subsystems.End()) {
                 const auto name_it = components_it->second.Find(name);
 
                 AssertThrowMsg(
@@ -338,70 +338,70 @@ void RenderEnvironment::AddRenderComponent(TypeID type_id, const RC<RenderCompon
                     name.LookupString()
                 );
 
-                components_it->second.Set(name, std::move(render_component));
+                components_it->second.Set(name, std::move(render_subsystem));
             } else {
-                render_environment.m_render_components.Set(type_id, { { name, std::move(render_component) } });
+                render_environment.m_render_subsystems.Set(type_id, { { name, std::move(render_subsystem) } });
             }
 
-            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER);
-            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME);
+            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER);
+            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME);
 
             HYPERION_RETURN_OK;
         }
     };
 
-    AssertThrow(render_component != nullptr);
+    AssertThrow(render_subsystem != nullptr);
 
-    render_component->SetParent(this);
+    render_subsystem->SetParent(this);
 
-    PUSH_RENDER_COMMAND(AddRenderComponent, *this, type_id, render_component);
+    PUSH_RENDER_COMMAND(AddRenderSubsystem, *this, type_id, render_subsystem);
 }
 
-void RenderEnvironment::RemoveRenderComponent(TypeID type_id, Name name)
+void RenderEnvironment::RemoveRenderSubsystem(TypeID type_id, Name name)
 {
-    struct RENDER_COMMAND(RemoveRenderComponent) : renderer::RenderCommand
+    struct RENDER_COMMAND(RemoveRenderSubsystem) : renderer::RenderCommand
     {
         RenderEnvironment       &render_environment;
         TypeID                  type_id;
         Name                    name;
 
-        RENDER_COMMAND(RemoveRenderComponent)(RenderEnvironment &render_environment, TypeID type_id, Name name)
+        RENDER_COMMAND(RemoveRenderSubsystem)(RenderEnvironment &render_environment, TypeID type_id, Name name)
             : render_environment(render_environment),
               type_id(type_id),
               name(name)
         {
         }
         
-        virtual ~RENDER_COMMAND(RemoveRenderComponent)() override = default;
+        virtual ~RENDER_COMMAND(RemoveRenderSubsystem)() override = default;
 
         virtual renderer::Result operator()() override
         {
-            Mutex::Guard guard(render_environment.m_render_components_mutex);
+            Mutex::Guard guard(render_environment.m_render_subsystems_mutex);
 
-            const auto components_it = render_environment.m_render_components.Find(type_id);
+            const auto components_it = render_environment.m_render_subsystems.Find(type_id);
 
-            if (components_it != render_environment.m_render_components.End()) {
-                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER);
-                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME);
+            if (components_it != render_environment.m_render_subsystems.End()) {
+                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER);
+                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME);
 
                 if (name.IsValid()) {
                     const auto name_it = components_it->second.Find(name);
 
                     if (name_it != components_it->second.End()) {
-                        const RC<RenderComponentBase> &render_component = name_it->second;
+                        const RC<RenderSubsystem> &render_subsystem = name_it->second;
 
-                        if (render_component && render_component->IsInitialized()) {
-                            render_component->ComponentRemoved();
+                        if (render_subsystem && render_subsystem->IsInitialized()) {
+                            render_subsystem->ComponentRemoved();
                         }
 
                         components_it->second.Erase(name_it);
                     }
                 } else {
                     for (const auto &it : components_it->second) {
-                        const RC<RenderComponentBase> &render_component = it.second;
+                        const RC<RenderSubsystem> &render_subsystem = it.second;
 
-                        if (render_component && render_component->IsInitialized()) {
-                            render_component->ComponentRemoved();
+                        if (render_subsystem && render_subsystem->IsInitialized()) {
+                            render_subsystem->ComponentRemoved();
                         }
                     }
 
@@ -409,7 +409,7 @@ void RenderEnvironment::RemoveRenderComponent(TypeID type_id, Name name)
                 }
 
                 if (components_it->second.Empty()) {
-                    render_environment.m_render_components.Erase(components_it);
+                    render_environment.m_render_subsystems.Erase(components_it);
                 }
             }
 
@@ -417,7 +417,7 @@ void RenderEnvironment::RemoveRenderComponent(TypeID type_id, Name name)
         }
     };
 
-    PUSH_RENDER_COMMAND(RemoveRenderComponent, *this, type_id, name);
+    PUSH_RENDER_COMMAND(RemoveRenderSubsystem, *this, type_id, name);
 }
 
 void RenderEnvironment::InitializeRT()

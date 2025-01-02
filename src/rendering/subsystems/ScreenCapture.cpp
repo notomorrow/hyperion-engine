@@ -1,14 +1,14 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/render_components/ScreenCapture.hpp>
+#include <rendering/subsystems/ScreenCapture.hpp>
 #include <rendering/FinalPass.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
 
-ScreenCaptureRenderComponent::ScreenCaptureRenderComponent(Name name, const Vec2u &window_size, ScreenCaptureMode screen_capture_mode)
-    : RenderComponentBase(name),
+ScreenCaptureRenderSubsystem::ScreenCaptureRenderSubsystem(Name name, const Vec2u &window_size, ScreenCaptureMode screen_capture_mode)
+    : RenderSubsystem(name),
       m_window_size(window_size),
       m_texture(CreateObject<Texture>(TextureDesc {
           ImageType::TEXTURE_TYPE_2D,
@@ -22,12 +22,12 @@ ScreenCaptureRenderComponent::ScreenCaptureRenderComponent(Name name, const Vec2
 {
 }
 
-ScreenCaptureRenderComponent::~ScreenCaptureRenderComponent()
+ScreenCaptureRenderSubsystem::~ScreenCaptureRenderSubsystem()
 {
     SafeRelease(std::move(m_buffer));
 }
 
-void ScreenCaptureRenderComponent::Init()
+void ScreenCaptureRenderSubsystem::Init()
 {
     InitObject(m_texture);
 
@@ -36,23 +36,23 @@ void ScreenCaptureRenderComponent::Init()
     m_buffer->SetResourceState(renderer::ResourceState::COPY_DST);
 }
 
-void ScreenCaptureRenderComponent::InitGame()
+void ScreenCaptureRenderSubsystem::InitGame()
 {
     
 }
 
-void ScreenCaptureRenderComponent::OnRemoved()
+void ScreenCaptureRenderSubsystem::OnRemoved()
 {
     SafeRelease(std::move(m_buffer));
     g_safe_deleter->SafeRelease(std::move(m_texture));
 }
 
-void ScreenCaptureRenderComponent::OnUpdate(GameCounter::TickUnit delta)
+void ScreenCaptureRenderSubsystem::OnUpdate(GameCounter::TickUnit delta)
 {
     // Do nothing
 }
 
-void ScreenCaptureRenderComponent::OnRender(Frame *frame)
+void ScreenCaptureRenderSubsystem::OnRender(Frame *frame)
 {
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
 

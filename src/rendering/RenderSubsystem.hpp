@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#ifndef HYPERION_RENDER_COMPONENT_HPP
-#define HYPERION_RENDER_COMPONENT_HPP
+#ifndef HYPERION_RENDER_SUBSYSTEM_HPP
+#define HYPERION_RENDER_SUBSYSTEM_HPP
 
 #include <core/Base.hpp>
 
@@ -29,9 +29,9 @@ namespace hyperion {
 class RenderEnvironment;
 
 HYP_CLASS(Abstract)
-class RenderComponentBase : public EnableRefCountedPtrFromThis<RenderComponentBase>
+class RenderSubsystem : public EnableRefCountedPtrFromThis<RenderSubsystem>
 {
-    HYP_OBJECT_BODY(RenderComponentBase);
+    HYP_OBJECT_BODY(RenderSubsystem);
 
 public:
     using Index = uint;
@@ -39,7 +39,7 @@ public:
     friend class RenderEnvironment;
 
     /*! \param render_frame_slicing Number of frames to wait between render calls */
-    RenderComponentBase(Name name, uint render_frame_slicing = 0)
+    RenderSubsystem(Name name, uint render_frame_slicing = 0)
         : m_name(name),
           m_render_frame_slicing(MathUtil::NextMultiple(render_frame_slicing, max_frames_in_flight)),
           m_render_frame_slicing_counter(0),
@@ -49,9 +49,9 @@ public:
     {
     }
 
-    RenderComponentBase(const RenderComponentBase &other)               = delete;
-    RenderComponentBase &operator=(const RenderComponentBase &other)    = delete;
-    virtual ~RenderComponentBase()                                      = default;
+    RenderSubsystem(const RenderSubsystem &other)               = delete;
+    RenderSubsystem &operator=(const RenderSubsystem &other)    = delete;
+    virtual ~RenderSubsystem()                                      = default;
 
     HYP_FORCE_INLINE Name GetName() const
         { return m_name; }
@@ -85,7 +85,7 @@ public:
     HYP_FORCE_INLINE bool IsInitialized(ThreadName thread_name = ThreadName::THREAD_RENDER) const
         { return m_is_initialized.Get(MemoryOrder::ACQUIRE) & thread_name; }
     
-    /*! \brief Init the component. Called on the RENDER thread when the RenderComponent is added to the RenderEnvironment */
+    /*! \brief Init the component. Called on the RENDER thread when the RenderSubsystem is added to the RenderEnvironment */
     void ComponentInit()
     {
         Threads::AssertOnThread(ThreadName::THREAD_RENDER);

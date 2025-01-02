@@ -486,7 +486,7 @@ void ShadowPass::Render(Frame *frame)
 #pragma region DirectionalLightShadowRenderer
 
 DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Vec2u resolution, ShadowMode shadow_mode)
-    : RenderComponentBase(name),
+    : RenderSubsystem(name),
       m_resolution(resolution),
       m_shadow_mode(shadow_mode)
 {
@@ -664,7 +664,7 @@ void DirectionalLightShadowRenderer::OnRender(Frame *frame)
     m_shadow_pass->Render(frame);
 }
 
-void DirectionalLightShadowRenderer::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
+void DirectionalLightShadowRenderer::OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index /*prev_index*/)
 {
     AssertThrowMsg(false, "Not implemented");
 }

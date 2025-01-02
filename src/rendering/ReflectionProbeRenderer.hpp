@@ -8,7 +8,7 @@
 
 #include <rendering/PostFX.hpp>
 #include <rendering/Light.hpp>
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 #include <rendering/EnvProbe.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
@@ -18,7 +18,7 @@
 namespace hyperion {
 
 HYP_CLASS()
-class HYP_API ReflectionProbeRenderer : public RenderComponentBase
+class HYP_API ReflectionProbeRenderer : public RenderSubsystem
 {
     HYP_OBJECT_BODY(ReflectionProbeRenderer);
     
@@ -50,7 +50,7 @@ private:
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
     virtual void OnRender(Frame *frame) override;
 
-    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
+    virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override;
 
     BoundingBox         m_aabb;
     Handle<EnvProbe>    m_env_probe;

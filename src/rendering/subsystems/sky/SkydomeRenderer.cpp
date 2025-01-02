@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <rendering/render_components/sky/SkydomeRenderer.hpp>
+#include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
 #include <core/threading/Scheduler.hpp>
@@ -14,7 +14,7 @@
 namespace hyperion {
 
 SkydomeRenderer::SkydomeRenderer(Name name, Vec2u dimensions)
-    : RenderComponentBase(name, 60),
+    : RenderSubsystem(name, 60),
       m_dimensions(dimensions)
 {
     m_cubemap = CreateObject<Texture>(

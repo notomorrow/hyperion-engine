@@ -142,7 +142,7 @@ struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
 #pragma endregion Render commands
 
 EnvGrid::EnvGrid(Name name, EnvGridOptions options)
-    : RenderComponentBase(name),
+    : RenderSubsystem(name),
       m_options(options),
       m_aabb(options.aabb),
       m_voxel_grid_aabb(options.aabb),
@@ -574,7 +574,7 @@ void EnvGrid::OnRender(Frame *frame)
     g_engine->GetRenderData()->env_grids->Set(GetComponentIndex(), m_shader_data);
 }
 
-void EnvGrid::OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index /*prev_index*/)
+void EnvGrid::OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index /*prev_index*/)
 {
     AssertThrowMsg(false, "Not implemented");
 }

@@ -8,7 +8,7 @@
 #include <core/object/HypObject.hpp>
 
 #include <rendering/PostFX.hpp>
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 #include <rendering/EnvProbe.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
@@ -19,7 +19,7 @@
 namespace hyperion {
 
 HYP_CLASS()
-class HYP_API SkydomeRenderer : public RenderComponentBase
+class HYP_API SkydomeRenderer : public RenderSubsystem
 {
     HYP_OBJECT_BODY(SkydomeRenderer);
 
@@ -37,7 +37,7 @@ private:
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
     virtual void OnRender(Frame *frame) override;
 
-    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override
+    virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override
         { }
 
     Vec2u               m_dimensions;

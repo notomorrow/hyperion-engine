@@ -43,7 +43,7 @@
 
 #include <rendering/UIRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/render_components/ScreenCapture.hpp>
+#include <rendering/subsystems/ScreenCapture.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -161,11 +161,11 @@ void EditorSubsystem::Initialize()
     HYP_SCOPE;
 
     m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
-    m_scene->GetEnvironment()->AddRenderComponent<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
+    m_scene->GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
 
     const Vec2i window_size = m_app_context->GetMainWindow()->GetDimensions();
 
-    RC<ScreenCaptureRenderComponent> screen_capture_component = m_scene->GetEnvironment()->AddRenderComponent<ScreenCaptureRenderComponent>(NAME("EditorSceneCapture"), Vec2u(window_size));
+    RC<ScreenCaptureRenderSubsystem> screen_capture_component = m_scene->GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), Vec2u(window_size));
     m_scene_texture = screen_capture_component->GetTexture();
 
     CreateEditorUI();
@@ -190,8 +190,8 @@ void EditorSubsystem::Shutdown()
 {
     HYP_SCOPE;
 
-    m_scene->GetEnvironment()->RemoveRenderComponent<ScreenCaptureRenderComponent>(NAME("EditorSceneCapture"));
-    m_scene->GetEnvironment()->RemoveRenderComponent<UIRenderer>(NAME("EditorUIRenderer"));
+    m_scene->GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
+    m_scene->GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
 }
 
 void EditorSubsystem::Update(GameCounter::TickUnit delta)

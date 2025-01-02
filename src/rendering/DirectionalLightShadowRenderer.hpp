@@ -12,7 +12,7 @@
 
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/Light.hpp>
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 #include <rendering/RenderCollection.hpp>
 #include <rendering/Shadows.hpp>
 
@@ -120,7 +120,7 @@ private:
 };
 
 HYP_CLASS()
-class DirectionalLightShadowRenderer : public RenderComponentBase
+class DirectionalLightShadowRenderer : public RenderSubsystem
 {
     HYP_OBJECT_BODY(DirectionalLightShadowRenderer);
 
@@ -147,7 +147,7 @@ private:
     virtual void InitGame() override; // init on game thread
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
     virtual void OnRender(Frame *frame) override;
-    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override;
+    virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override;
 
     void CreateShader();
 

@@ -11,7 +11,7 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 #include <rendering/RenderCollection.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
@@ -55,7 +55,7 @@ private:
 };
 
 HYP_CLASS()
-class HYP_API UIRenderer : public RenderComponentBase
+class HYP_API UIRenderer : public RenderSubsystem
 {
     HYP_OBJECT_BODY(UIRenderer);
 
@@ -74,7 +74,7 @@ private:
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
     virtual void OnRender(Frame *frame) override;
 
-    virtual void OnComponentIndexChanged(RenderComponentBase::Index new_index, RenderComponentBase::Index prev_index) override
+    virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override
         { AssertThrowMsg(false, "Not permitted!"); }
 
     void CreateFramebuffer();

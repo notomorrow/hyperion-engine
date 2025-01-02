@@ -5,7 +5,7 @@
 
 #include <rendering/ParticleSystem.hpp>
 #include <rendering/GaussianSplatting.hpp>
-#include <rendering/RenderComponent.hpp>
+#include <rendering/RenderSubsystem.hpp>
 #include <rendering/rt/RTRadianceRenderer.hpp>
 #include <rendering/rt/DDGI.hpp>
 
@@ -31,10 +31,10 @@ using RenderEnvironmentUpdates = uint64;
 enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
 {
     RENDER_ENVIRONMENT_UPDATES_NONE                 = 0x0,
-    RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS    = 0x1,
+    RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS    = 0x1,
     RENDER_ENVIRONMENT_UPDATES_PLACEHOLDER          = 0x2,
 
-    RENDER_ENVIRONMENT_UPDATES_CONTAINERS           = RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS,
+    RENDER_ENVIRONMENT_UPDATES_CONTAINERS           = RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS,
 
     RENDER_ENVIRONMENT_UPDATES_TLAS                 = 0x4,
 
@@ -43,7 +43,7 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
 
 class HYP_API RenderEnvironment : public HypObject<RenderEnvironment>
 {
-    using RenderComponentPendingRemovalEntry = Pair<TypeID, Name>;
+    using RenderSubsystemPendingRemovalEntry = Pair<TypeID, Name>;
 
 public:
     RenderEnvironment();
@@ -64,34 +64,34 @@ public:
         { return m_gaussian_splatting; }
 
     template <class T>
-    RC<T> AddRenderComponent(const RC<T> &component)
+    RC<T> AddRenderSubsystem(const RC<T> &component)
     {
-        static_assert(std::is_base_of_v<RenderComponentBase, T>,
-            "Component should be a derived class of RenderComponentBase");
+        static_assert(std::is_base_of_v<RenderSubsystem, T>,
+            "Component should be a derived class of RenderSubsystem");
 
         AssertThrow(component != nullptr);
 
-        AddRenderComponent(TypeID::ForType<T>(), component);
+        AddRenderSubsystem(TypeID::ForType<T>(), component);
 
         return component;
     }
 
     template <class T, class... Args>
-    RC<T> AddRenderComponent(Name name, Args &&... args)
+    RC<T> AddRenderSubsystem(Name name, Args &&... args)
     {
-        return AddRenderComponent(MakeRefCountedPtr<T>(name, std::forward<Args>(args)...));
+        return AddRenderSubsystem(MakeRefCountedPtr<T>(name, std::forward<Args>(args)...));
     }
 
     template <class T>
-    T *GetRenderComponent(Name name = Name::Invalid())
+    T *GetRenderSubsystem(Name name = Name::Invalid())
     {
-        Mutex::Guard guard(m_render_components_mutex);
+        Mutex::Guard guard(m_render_subsystems_mutex);
 
-        if (!m_render_components.Contains<T>()) {
+        if (!m_render_subsystems.Contains<T>()) {
             return nullptr;
         }
 
-        auto &items = m_render_components.At<T>();
+        auto &items = m_render_subsystems.At<T>();
 
         if (name) {
             const auto it = items.Find(name);
@@ -107,56 +107,56 @@ public:
     }
 
     template <class T>
-    bool HasRenderComponent() const
+    bool HasRenderSubsystem() const
     {
-        static_assert(std::is_base_of_v<RenderComponentBase, T>,
-            "Component should be a derived class of RenderComponentBase");
+        static_assert(std::is_base_of_v<RenderSubsystem, T>,
+            "Component should be a derived class of RenderSubsystem");
 
-        Mutex::Guard guard(m_render_components_mutex);
+        Mutex::Guard guard(m_render_subsystems_mutex);
 
-        if (!m_render_components.Contains<T>()) {
+        if (!m_render_subsystems.Contains<T>()) {
             return false;
         }
 
-        const FlatMap<Name, RC<RenderComponentBase>> &items = m_render_components.At<T>();
+        const FlatMap<Name, RC<RenderSubsystem>> &items = m_render_subsystems.At<T>();
 
         return items.Any();
     }
 
     template <class T>
-    bool HasRenderComponent(Name name) const
+    bool HasRenderSubsystem(Name name) const
     {
-        static_assert(std::is_base_of_v<RenderComponentBase, T>,
-            "Component should be a derived class of RenderComponentBase");
+        static_assert(std::is_base_of_v<RenderSubsystem, T>,
+            "Component should be a derived class of RenderSubsystem");
 
-        Mutex::Guard guard(m_render_components_mutex);
+        Mutex::Guard guard(m_render_subsystems_mutex);
 
-        if (!m_render_components.Contains<T>()) {
+        if (!m_render_subsystems.Contains<T>()) {
             return false;
         }
 
-        const FlatMap<Name, RC<RenderComponentBase>> &items = m_render_components.At<T>();
+        const FlatMap<Name, RC<RenderSubsystem>> &items = m_render_subsystems.At<T>();
 
         return items.Contains(name);
     }
 
-    /*! \brief Remove a RenderComponent of the given type T and the given name value.
+    /*! \brief Remove a RenderSubsystem of the given type T and the given name value.
      *  If the name value is Name::Invalid(), then all items of the type T are removed.
      */
     template <class T>
-    void RemoveRenderComponent(Name name = Name::Invalid())
+    void RemoveRenderSubsystem(Name name = Name::Invalid())
     {
-        static_assert(std::is_base_of_v<RenderComponentBase, T>,
-            "Component should be a derived class of RenderComponentBase");
+        static_assert(std::is_base_of_v<RenderSubsystem, T>,
+            "Component should be a derived class of RenderSubsystem");
 
-        RemoveRenderComponent(TypeID::ForType<T>(), name);
+        RemoveRenderSubsystem(TypeID::ForType<T>(), name);
 
         DebugLog(LogType::Debug, "Remove render component of type %s with name %s\n", TypeName<T>().Data(), name.LookupString());
     }
 
     // only touch from render thread!
-    uint32 GetEnabledRenderComponentsMask() const
-        { return m_current_enabled_render_components_mask; }
+    uint32 GetEnabledRenderSubsystemsMask() const
+        { return m_current_enabled_render_subsystems_mask; }
 
     uint32 GetFrameCounter() const
         { return m_frame_counter; }
@@ -167,7 +167,7 @@ public:
     void RenderRTRadiance(Frame *frame);
     void RenderDDGIProbes(Frame *frame);
 
-    void RenderComponents(Frame *frame);
+    void RenderSubsystems(Frame *frame);
 
 private:
     HYP_FORCE_INLINE void AddUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type)
@@ -185,35 +185,35 @@ private:
         return m_update_marker.Get(MemoryOrder::ACQUIRE) & (value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(thread_type)));
     }
 
-    void AddRenderComponent(TypeID type_id, const RC<RenderComponentBase> &render_component);
-    void RemoveRenderComponent(TypeID type_id, Name name);
+    void AddRenderSubsystem(TypeID type_id, const RC<RenderSubsystem> &render_subsystem);
+    void RemoveRenderSubsystem(TypeID type_id, Name name);
 
     void ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags);
 
     void InitializeRT();
 
-    Scene                                                                   *m_scene;
+    Scene                                                               *m_scene;
 
-    AtomicVar<RenderEnvironmentUpdates>                                     m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
+    AtomicVar<RenderEnvironmentUpdates>                                 m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
 
-    mutable Mutex                                                           m_render_components_mutex;
-    TypeMap<FlatMap<Name, RC<RenderComponentBase>>>                         m_render_components;
-    FixedArray<Array<RC<RenderComponentBase>>, ThreadType::THREAD_TYPE_MAX> m_enabled_render_components;
-    uint32                                                                  m_current_enabled_render_components_mask;
-    uint32                                                                  m_next_enabled_render_components_mask;
+    mutable Mutex                                                       m_render_subsystems_mutex;
+    TypeMap<FlatMap<Name, RC<RenderSubsystem>>>                         m_render_subsystems;
+    FixedArray<Array<RC<RenderSubsystem>>, ThreadType::THREAD_TYPE_MAX> m_enabled_render_subsystems;
+    uint32                                                              m_current_enabled_render_subsystems_mask;
+    uint32                                                              m_next_enabled_render_subsystems_mask;
 
-    Handle<ParticleSystem>                                                  m_particle_system;
+    Handle<ParticleSystem>                                              m_particle_system;
 
-    Handle<GaussianSplatting>                                               m_gaussian_splatting;
+    Handle<GaussianSplatting>                                           m_gaussian_splatting;
 
-    UniquePtr<RTRadianceRenderer>                                           m_rt_radiance;
-    DDGI                                                                    m_ddgi;
-    bool                                                                    m_has_rt_radiance;
-    bool                                                                    m_has_ddgi_probes;
-    bool                                                                    m_rt_initialized;
-    TLASRef                                                                 m_tlas;
+    UniquePtr<RTRadianceRenderer>                                       m_rt_radiance;
+    DDGI                                                                m_ddgi;
+    bool                                                                m_has_rt_radiance;
+    bool                                                                m_has_ddgi_probes;
+    bool                                                                m_rt_initialized;
+    TLASRef                                                             m_tlas;
     
-    uint32                                                                  m_frame_counter;
+    uint32                                                              m_frame_counter;
 };
 
 } // namespace hyperion
