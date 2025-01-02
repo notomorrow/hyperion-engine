@@ -97,7 +97,8 @@ RenderEnvironment::~RenderEnvironment()
         m_has_ddgi_probes = false;
     }
 
-    m_enabled_render_components.Clear();
+    m_enabled_render_components = { };
+
     PUSH_RENDER_COMMAND(RemoveAllRenderComponents, std::move(m_render_components));
 
     SafeRelease(std::move(m_tlas));
@@ -109,7 +110,7 @@ void RenderEnvironment::SetTLAS(const TLASRef &tlas)
 {
     m_tlas = tlas;
 
-    m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_TLAS, MemoryOrder::RELEASE);
+    AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_TLAS, ThreadType::THREAD_TYPE_RENDER);
 }
 
 void RenderEnvironment::Init()
@@ -153,20 +154,40 @@ void RenderEnvironment::Update(GameCounter::TickUnit delta)
 
     AssertReady();
 
-    // @TODO: Use double buffering, or have another atomic flag for game thread and update an internal array to match m_render_components
-    Mutex::Guard guard(m_render_components_mutex);
+    if (GetUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME)) {
+        m_enabled_render_components[ThreadType::THREAD_TYPE_GAME].Clear();
 
-    for (const auto &it : m_render_components) {
-        for (const auto &pair : it.second) {
-            const RC<RenderComponentBase> &render_component = pair.second;
-            AssertThrow(render_component != nullptr);
+        bool all_ready = true;
 
-            if (!render_component->IsInitialized()) {
-                continue;
+        Mutex::Guard guard(m_render_components_mutex);
+
+        for (auto &render_components_it : m_render_components) {
+            for (SizeType index = 0; index < render_components_it.second.Size(); index++) {
+                const auto &pair = render_components_it.second.AtIndex(index);
+
+                const Name name = pair.first;
+                const RC<RenderComponentBase> &render_component = pair.second;
+
+                if (!render_component->IsInitialized()) {
+                    all_ready = false;
+
+                    continue;
+                }
+
+                m_enabled_render_components[ThreadType::THREAD_TYPE_GAME].PushBack(render_component);
             }
-
-            render_component->ComponentUpdate(delta);
         }
+
+        if (all_ready) {
+            RemoveUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME);
+        }
+    }
+
+    // @TODO: Use double buffering, or have another atomic flag for game thread and update an internal array to match m_render_components
+    for (const RC<RenderComponentBase> &render_component : m_enabled_render_components[ThreadType::THREAD_TYPE_GAME]) {
+        AssertThrow(render_component->IsInitialized());
+
+        render_component->ComponentUpdate(delta);
     }
 }
 
@@ -224,12 +245,12 @@ void RenderEnvironment::RenderComponents(Frame *frame)
 
     m_current_enabled_render_components_mask = m_next_enabled_render_components_mask;
 
-    for (const RC<RenderComponentBase> &render_component : m_enabled_render_components) {
+    for (const RC<RenderComponentBase> &render_component : m_enabled_render_components[ThreadType::THREAD_TYPE_RENDER]) {
         render_component->ComponentRender(frame);
     }
 
-    if (m_update_marker.Get(MemoryOrder::ACQUIRE) & RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS) {
-        m_enabled_render_components.Clear();
+    if (GetUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER)) {
+        m_enabled_render_components[ThreadType::THREAD_TYPE_RENDER].Clear();
 
         Mutex::Guard guard(m_render_components_mutex);
 
@@ -248,11 +269,11 @@ void RenderEnvironment::RenderComponents(Frame *frame)
                     render_component->ComponentInit();
                 }
 
-                m_enabled_render_components.PushBack(render_component);
+                m_enabled_render_components[ThreadType::THREAD_TYPE_RENDER].PushBack(render_component);
             }
         }
 
-        m_update_marker.BitAnd(~RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, MemoryOrder::RELEASE);
+        RemoveUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER);
     }
 
     //if (m_update_marker.Get(MemoryOrder::ACQUIRE) & RENDER_ENVIRONMENT_UPDATES_TLAS) {
@@ -260,24 +281,24 @@ void RenderEnvironment::RenderComponents(Frame *frame)
 
     if (!m_rt_initialized) {
         InitializeRT();
+    }
+
+    AssertThrow(m_scene != nullptr);
+
+    if (const TLASRef &tlas = m_scene->GetTLAS()) {
+        RTUpdateStateFlags update_state_flags = renderer::RT_UPDATE_STATE_FLAGS_NONE;
+
+        tlas->UpdateStructure(
+            g_engine->GetGPUInstance(),
+            update_state_flags
+        );
+
+        if (update_state_flags) {
+            ApplyTLASUpdates(frame, update_state_flags);
         }
-        AssertThrow(m_scene != nullptr);
 
-        if (const TLASRef &tlas = m_scene->GetTLAS()) {
-            RTUpdateStateFlags update_state_flags = renderer::RT_UPDATE_STATE_FLAGS_NONE;
-
-            tlas->UpdateStructure(
-                g_engine->GetGPUInstance(),
-                update_state_flags
-            );
-
-            if (update_state_flags) {
-                ApplyTLASUpdates(frame, update_state_flags);
-            }
-        }
-
-        m_update_marker.BitAnd(~RENDER_ENVIRONMENT_UPDATES_TLAS, MemoryOrder::RELEASE);
-    //}
+        RemoveUpdateMarker(RENDER_ENVIRONMENT_UPDATES_TLAS, ThreadType::THREAD_TYPE_RENDER);
+    }
 
     ++m_frame_counter;
 }
@@ -322,7 +343,8 @@ void RenderEnvironment::AddRenderComponent(TypeID type_id, const RC<RenderCompon
                 render_environment.m_render_components.Set(type_id, { { name, std::move(render_component) } });
             }
 
-            render_environment.m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, MemoryOrder::RELEASE);
+            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER);
+            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME);
 
             HYPERION_RETURN_OK;
         }
@@ -359,6 +381,9 @@ void RenderEnvironment::RemoveRenderComponent(TypeID type_id, Name name)
             const auto components_it = render_environment.m_render_components.Find(type_id);
 
             if (components_it != render_environment.m_render_components.End()) {
+                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_RENDER);
+                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, ThreadType::THREAD_TYPE_GAME);
+
                 if (name.IsValid()) {
                     const auto name_it = components_it->second.Find(name);
 
@@ -387,8 +412,6 @@ void RenderEnvironment::RemoveRenderComponent(TypeID type_id, Name name)
                     render_environment.m_render_components.Erase(components_it);
                 }
             }
-
-            render_environment.m_update_marker.BitOr(RENDER_ENVIRONMENT_UPDATES_RENDER_COMPONENTS, MemoryOrder::RELEASE);
 
             HYPERION_RETURN_OK;
         }
