@@ -27,7 +27,7 @@ extern VkPipelineStageFlags GetVkShaderStageMask(ResourceState, bool, ShaderModu
 
 #pragma region ImagePlatformImpl
 
-Result ImagePlatformImpl<Platform::VULKAN>::ConvertTo32BPP(
+RendererResult ImagePlatformImpl<Platform::VULKAN>::ConvertTo32BPP(
     Device<Platform::VULKAN> *device,
     VkImageType image_type,
     VkImageCreateFlags image_create_flags,
@@ -91,7 +91,7 @@ Result ImagePlatformImpl<Platform::VULKAN>::ConvertTo32BPP(
     HYPERION_RETURN_OK;
 }
 
-Result ImagePlatformImpl<Platform::VULKAN>::Create(
+RendererResult ImagePlatformImpl<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
     VkImageLayout initial_layout,
     VkImageCreateInfo *out_image_info
@@ -122,7 +122,7 @@ Result ImagePlatformImpl<Platform::VULKAN>::Create(
     const uint32 num_faces = self->NumFaces();
 
     if (extent.Volume() == 0) {
-        return Result { Result::RENDERER_ERR, "Invalid image extent - width*height*depth cannot equal zero" };
+        return RendererError { "Invalid image extent - width*height*depth cannot equal zero" };
     }
 
     VkFormat vk_format = helpers::ToVkFormat(format);
@@ -192,14 +192,14 @@ Result ImagePlatformImpl<Platform::VULKAN>::Create(
     if (!format_support_result) {
         // try a series of fixes to get the image in a valid state.
 
-        std::vector<std::pair<const char *, std::function<Result()>>> potential_fixes;
+        std::vector<std::pair<const char *, std::function<RendererResult()>>> potential_fixes;
 
         if (!IsDepthFormat(self->GetTextureFormat())) {
             // convert to 32bpp image
             if (self->GetBPP() != 4) {
                 potential_fixes.emplace_back(std::make_pair(
                     "Convert to 32-bpp image",
-                    [&]() -> Result
+                    [&]() -> RendererResult
                     {
                         return ConvertTo32BPP(
                             device,
@@ -216,10 +216,10 @@ Result ImagePlatformImpl<Platform::VULKAN>::Create(
         for (auto &fix : potential_fixes) {
             HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Attempting fix '{}'...\n", fix.first);
 
-            auto fix_result = fix.second();
+            RendererResult fix_result = fix.second();
 
             if (!fix_result) {
-                HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Fix '{}' failed: {}", fix.first, fix_result.message);
+                HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Fix '{}' failed: {}", fix.first, fix_result.GetError().GetMessage());
 
                 continue;
             }
@@ -233,7 +233,7 @@ Result ImagePlatformImpl<Platform::VULKAN>::Create(
                 break;
             }
 
-            HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Fix '{}' failed: {}", fix.first, format_support_result.message);
+            HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Fix '{}' failed: {}", fix.first, format_support_result.GetError().GetMessage());
         }
 
         HYPERION_BUBBLE_ERRORS(format_support_result);
@@ -295,7 +295,7 @@ Result ImagePlatformImpl<Platform::VULKAN>::Create(
     HYPERION_RETURN_OK;
 }
 
-Result ImagePlatformImpl<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult ImagePlatformImpl<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (allocation != VK_NULL_HANDLE) {
         AssertThrowMsg(is_handle_owned, "If allocation is not VK_NULL_HANDLE, is_handle_owned should be true");
@@ -586,13 +586,13 @@ bool Image<Platform::VULKAN>::IsCreated() const
     { return m_platform_impl.handle != VK_NULL_HANDLE; }
 
 template <>
-Result Image<Platform::VULKAN>::GenerateMipmaps(
+RendererResult Image<Platform::VULKAN>::GenerateMipmaps(
     Device<Platform::VULKAN> *device,
     CommandBuffer<Platform::VULKAN> *command_buffer
 )
 {
     if (m_platform_impl.handle == VK_NULL_HANDLE) {
-        return { Result::RENDERER_ERR, "Cannot generate mipmaps on uninitialized image" };
+        return RendererError { "Cannot generate mipmaps on uninitialized image" };
     }
 
     const auto num_faces = NumFaces();
@@ -693,9 +693,9 @@ Result Image<Platform::VULKAN>::GenerateMipmaps(
 }
 
 template <>
-Result Image<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Image<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
-    Result result;
+    RendererResult result;
 
     if (IsCreated()) {
         HYPERION_PASS_ERRORS(m_platform_impl.Destroy(device), result);
@@ -710,7 +710,7 @@ Result Image<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     if (IsCreated()) {
         HYPERION_RETURN_OK;
@@ -722,13 +722,13 @@ Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance, ResourceState state)
+RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance, ResourceState state)
 {
     if (IsCreated()) {
         HYPERION_RETURN_OK;
     }
 
-    Result result;
+    RendererResult result;
 
     VkImageCreateInfo image_info;
 
@@ -919,7 +919,7 @@ void Image<Platform::VULKAN>::InsertSubResourceBarrier(
 }
 
 template <>
-Result Image<Platform::VULKAN>::Blit(
+RendererResult Image<Platform::VULKAN>::Blit(
     CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src_image,
     Rect<uint32> src_rect,
@@ -994,7 +994,7 @@ Result Image<Platform::VULKAN>::Blit(
 }
 
 template <>
-Result Image<Platform::VULKAN>::Blit(
+RendererResult Image<Platform::VULKAN>::Blit(
     CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src_image,
     Rect<uint32> src_rect,
@@ -1067,7 +1067,7 @@ Result Image<Platform::VULKAN>::Blit(
 }
 
 template <>
-Result Image<Platform::VULKAN>::Blit(
+RendererResult Image<Platform::VULKAN>::Blit(
     CommandBuffer<Platform::VULKAN> *command_buffer,
     const Image *src
 )
@@ -1181,7 +1181,7 @@ ByteBuffer Image<Platform::VULKAN>::ReadBack(Device<Platform::VULKAN> *device, I
 
     SingleTimeCommands<Platform::VULKAN> commands { device };
 
-    Result result = Result { };
+    RendererResult result = RendererResult { };
 
     if (HasAssignedImageData()) {
         HYPERION_PASS_ERRORS(staging_buffer.Create(device, m_size), result);

@@ -132,24 +132,24 @@ public:
         SizeType count
     );
 
-    HYP_API Result CheckCanAllocate(Device<PLATFORM> *device, SizeType size) const;
+    HYP_API RendererResult CheckCanAllocate(Device<PLATFORM> *device, SizeType size) const;
 
     HYP_API uint64 GetBufferDeviceAddress(Device<PLATFORM> *device) const;
 
-    HYP_API Result Create(
+    HYP_API RendererResult Create(
         Device<PLATFORM> *device,
         SizeType buffer_size,
         SizeType buffer_alignment = 0
     );
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
-    HYP_API Result EnsureCapacity(
+    HYP_API RendererResult EnsureCapacity(
         Device<PLATFORM> *device,
         SizeType minimum_size,
         bool *out_size_changed = nullptr
     );
 
-    HYP_API Result EnsureCapacity(
+    HYP_API RendererResult EnsureCapacity(
         Device<PLATFORM> *device,
         SizeType minimum_size,
         SizeType alignment,
@@ -341,7 +341,7 @@ public:
         StagingBuffer *Acquire(SizeType required_size);
     };
 
-    using UseFunction = std::function<Result(Context &context)>;
+    using UseFunction = std::function<RendererResult(Context &context)>;
 
     static constexpr time_t hold_time = 1000;
     static constexpr uint gc_threshold = 5; /* run every 5 Use() calls */
@@ -350,12 +350,12 @@ public:
      * is called, and the staging buffers created will not be able to be reused.
      * This will allow the staging buffer(s) acquired by this to be used in sequence
      * in a single time command buffer */
-    Result Use(Device *device, UseFunction &&fn);
+    RendererResult Use(Device *device, UseFunction &&fn);
 
-    Result GC(Device *device);
+    RendererResult GC(Device *device);
 
     /*! \brief Destroy all remaining staging buffers in the pool */
-    Result Destroy(Device *device);
+    RendererResult Destroy(Device *device);
 
 private:
     StagingBuffer *FindStagingBuffer(SizeType size);

@@ -17,7 +17,6 @@
 namespace hyperion {
 
 using renderer::ResourceState;
-using renderer::Result;
 
 enum RTRadianceUpdates : uint32
 {
@@ -40,7 +39,7 @@ struct RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet) : renderer::Rende
 
     virtual ~RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
@@ -55,9 +54,9 @@ struct RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet) : renderer::Ren
 {
     virtual ~RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
-        Result result;
+        RendererResult result;
 
         // remove result image from global descriptor set
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -80,7 +79,7 @@ struct RENDER_COMMAND(CreateRTRadianceUniformBuffers) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateRTRadianceUniformBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const GPUBufferRef &uniform_buffer = uniform_buffers[frame_index];

@@ -15,7 +15,7 @@ namespace platform {
 #pragma region AttachmentMap
 
 template <>
-Result AttachmentMap<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult AttachmentMap<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     for (KeyValuePair<uint, AttachmentDef<Platform::VULKAN>> &it : attachments) {
         AttachmentDef<Platform::VULKAN> &def = it.second;
@@ -37,7 +37,7 @@ Result AttachmentMap<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result AttachmentMap<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *device, Vec2u new_size)
+RendererResult AttachmentMap<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *device, Vec2u new_size)
 {
     for (KeyValuePair<uint, AttachmentDef<Platform::VULKAN>> &it : attachments) {
         AttachmentDef<Platform::VULKAN> &def = it.second;
@@ -79,7 +79,7 @@ Result AttachmentMap<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *device,
 
     SingleTimeCommands<Platform::VULKAN> commands { device };
 
-    commands.Push([&](const CommandBufferRef<Platform::VULKAN> &command_buffer) -> Result
+    commands.Push([&](const CommandBufferRef<Platform::VULKAN> &command_buffer) -> RendererResult
     {
         for (KeyValuePair<uint, AttachmentDef<Platform::VULKAN>> &it : attachments) {
             AttachmentDef<Platform::VULKAN> &def = it.second;
@@ -124,7 +124,7 @@ bool Framebuffer<Platform::VULKAN>::IsCreated() const
 }
 
 template <>
-Result Framebuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult Framebuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     if (IsCreated()) {
         HYPERION_RETURN_OK;
@@ -175,7 +175,7 @@ Result Framebuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Framebuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Framebuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (!IsCreated()) {
         HYPERION_RETURN_OK;
@@ -196,7 +196,7 @@ Result Framebuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Framebuffer<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *device, Vec2u new_size)
+RendererResult Framebuffer<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *device, Vec2u new_size)
 {
     if (m_extent == new_size) {
         HYPERION_RETURN_OK;

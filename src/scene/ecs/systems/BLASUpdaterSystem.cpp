@@ -29,7 +29,7 @@ struct RENDER_COMMAND(UpdateBLASTransform) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(UpdateBLASTransform)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         blas->SetTransform(transform);
 
@@ -52,7 +52,7 @@ struct RENDER_COMMAND(AddBLASToTLAS) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(AddBLASToTLAS)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         tlas->AddBLAS(blas);
 
@@ -75,7 +75,7 @@ struct RENDER_COMMAND(RemoveBLASFromTLAS) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(RemoveBLASFromTLAS)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         tlas->RemoveBLAS(blas);
 

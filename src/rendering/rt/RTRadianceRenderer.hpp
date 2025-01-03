@@ -14,7 +14,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 using renderer::RTUpdateStateFlags;
 
 class Engine;

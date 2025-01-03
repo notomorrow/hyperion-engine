@@ -7,6 +7,7 @@
 #include <core/containers/HashMap.hpp>
 
 #include <core/utilities/Span.hpp>
+#include <core/utilities/Result.hpp>
 
 #include <rendering/Mesh.hpp>
 #include <rendering/Material.hpp>
@@ -76,39 +77,13 @@ struct LightmapUVMap
 class LightmapUVBuilder
 {
 public:
-    struct Result
-    {
-        enum Status { RESULT_OK, RESULT_ERR }   status;
-
-        String                                  message;
-        LightmapUVMap                           uv_map;
-
-        Result()
-            : status(RESULT_OK),
-              message("")
-        { }
-
-        Result(Status status, String message)
-            : status(status),
-              message(std::move(message))
-        { }
-
-        Result(Status status, LightmapUVMap uv_map)
-            : status(status),
-              uv_map(std::move(uv_map))
-        { }
-
-        HYP_FORCE_INLINE explicit operator bool() const
-            { return status == RESULT_OK; }
-    };
-
     LightmapUVBuilder(const LightmapUVBuilderParams &params);
     ~LightmapUVBuilder() = default;
 
     HYP_FORCE_INLINE const Array<LightmapMeshData> &GetMeshData() const
         { return m_mesh_data; }
     
-    Result Build();
+    Result<LightmapUVMap> Build();
 
 private:
     LightmapUVBuilderParams m_params;

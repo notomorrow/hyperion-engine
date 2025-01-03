@@ -19,7 +19,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 
 #pragma region Render commands
 
@@ -32,9 +31,9 @@ struct RENDER_COMMAND(RemoveAllRenderSubsystems) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual RendererResult operator()()
     {
-        Result result;
+        RendererResult result;
 
         for (auto &it : render_subsystems) {
             for (auto &component_tag_pair : it.second) {
@@ -321,7 +320,7 @@ void RenderEnvironment::AddRenderSubsystem(TypeID type_id, const RC<RenderSubsys
         
         virtual ~RENDER_COMMAND(AddRenderSubsystem)() override = default;
 
-        virtual renderer::Result operator()() override
+        virtual RendererResult operator()() override
         {
             const Name name = render_subsystem->GetName();
 
@@ -374,7 +373,7 @@ void RenderEnvironment::RemoveRenderSubsystem(TypeID type_id, Name name)
         
         virtual ~RENDER_COMMAND(RemoveRenderSubsystem)() override = default;
 
-        virtual renderer::Result operator()() override
+        virtual RendererResult operator()() override
         {
             Mutex::Guard guard(render_environment.m_render_subsystems_mutex);
 

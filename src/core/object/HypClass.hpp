@@ -34,10 +34,11 @@ namespace fbom {
 class FBOMData;
 } // namespace fbom
 
-struct HypMember;
-struct HypProperty;
-struct HypMethod;
-struct HypField;
+class HypMember;
+class HypProperty;
+class HypMethod;
+class HypField;
+class HypConstant;
 
 class IHypObjectInitializer;
 
@@ -59,6 +60,7 @@ class HypClassMemberIterator
 {
     enum class Phase
     {
+        ITERATE_CONSTANTS,
         ITERATE_PROPERTIES,
         ITERATE_METHODS,
         ITERATE_FIELDS,
@@ -72,7 +74,7 @@ class HypClassMemberIterator
         const auto GetNext = [](Phase phase) -> Phase
         {
             if (phase == Phase::MAX) {
-                return Phase::ITERATE_PROPERTIES;
+                return Phase::ITERATE_CONSTANTS;
             }
 
             return static_cast<Phase>(static_cast<int>(phase) + 1);
@@ -81,6 +83,8 @@ class HypClassMemberIterator
         const auto CanDoNext = [allowed_types](Phase next_phase) -> bool
         {
             switch (next_phase) {
+            case Phase::ITERATE_CONSTANTS:
+                return allowed_types & HypMemberType::TYPE_CONSTANT;
             case Phase::ITERATE_PROPERTIES:
                 return allowed_types & HypMemberType::TYPE_PROPERTY;
             case Phase::ITERATE_METHODS:
@@ -275,6 +279,9 @@ public:
     HYP_FORCE_INLINE bool IsStructType() const
         { return m_flags & HypClassFlags::STRUCT_TYPE; }
 
+    HYP_FORCE_INLINE bool IsEnumType() const
+        { return m_flags & HypClassFlags::ENUM_TYPE; }
+
     HYP_FORCE_INLINE bool IsPOD() const
         { return m_flags & HypClassFlags::POD_TYPE; }
 
@@ -299,7 +306,7 @@ public:
         { return { this, member_types }; }
 
     HYP_FORCE_INLINE HypClassMemberList GetMembers(bool include_properties = false) const
-        { return { this, HypMemberType::TYPE_METHOD | HypMemberType::TYPE_FIELD | (include_properties ? HypMemberType::TYPE_PROPERTY : HypMemberType::NONE) }; }
+        { return { this, HypMemberType::TYPE_METHOD | HypMemberType::TYPE_FIELD | HypMemberType::TYPE_CONSTANT | (include_properties ? HypMemberType::TYPE_PROPERTY : HypMemberType::NONE) }; }
 
     IHypMember *GetMember(WeakName name) const;
 
@@ -323,6 +330,13 @@ public:
         { return m_fields; }
 
     Array<HypField *> GetFieldsInherited() const;
+
+    HypConstant *GetConstant(WeakName name) const;
+
+    HYP_FORCE_INLINE const Array<HypConstant *> &GetConstants() const
+        { return m_constants; }
+
+    Array<HypConstant *> GetConstantsInherited() const;
 
     dotnet::Class *GetManagedClass() const;
 
@@ -367,6 +381,8 @@ protected:
     HashMap<Name, HypMethod *>              m_methods_by_name;
     Array<HypField *>                       m_fields;
     HashMap<Name, HypField *>               m_fields_by_name;
+    Array<HypConstant *>                    m_constants;
+    HashMap<Name, HypConstant *>            m_constants_by_name;
     EnumFlags<HypClassSerializationMode>    m_serialization_mode;
 };
 

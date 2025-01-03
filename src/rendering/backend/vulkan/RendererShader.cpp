@@ -94,7 +94,7 @@ bool Shader<Platform::VULKAN>::IsCreated() const
 }
 
 template <>
-Result Shader<Platform::VULKAN>::AttachSubShader(Device<Platform::VULKAN> *device, ShaderModuleType type, const ShaderObject &shader_object)
+RendererResult Shader<Platform::VULKAN>::AttachSubShader(Device<Platform::VULKAN> *device, ShaderModuleType type, const ShaderObject &shader_object)
 {
     const ByteBuffer &spirv = shader_object.bytes;
 
@@ -114,14 +114,14 @@ Result Shader<Platform::VULKAN>::AttachSubShader(Device<Platform::VULKAN> *devic
 }
 
 template <>
-Result Shader<Platform::VULKAN>::AttachSubShaders()
+RendererResult Shader<Platform::VULKAN>::AttachSubShaders()
 {
     if (!m_compiled_shader) {
-        return { Result::RENDERER_ERR, "No compiled shader attached" };
+        return RendererError { "No compiled shader attached" };
     }
 
     if (!m_compiled_shader->IsValid()) {
-        return { Result::RENDERER_ERR, "Attached compiled shader is in invalid state" };
+        return RendererError { "Attached compiled shader is in invalid state" };
     }
 
     for (SizeType index = 0; index < m_compiled_shader->modules.Size(); index++) {
@@ -142,7 +142,7 @@ Result Shader<Platform::VULKAN>::AttachSubShaders()
 }
 
 template <>
-Result Shader<Platform::VULKAN>::CreateShaderGroups()
+RendererResult Shader<Platform::VULKAN>::CreateShaderGroups()
 {
     m_shader_groups.Clear();
 
@@ -180,7 +180,7 @@ Result Shader<Platform::VULKAN>::CreateShaderGroups()
 
             break;
         default:
-            return { Result::RENDERER_ERR, "Unimplemented shader group type" };
+            return RendererError { "Unimplemented shader group type" };
         }
     }
 
@@ -188,7 +188,7 @@ Result Shader<Platform::VULKAN>::CreateShaderGroups()
 }
 
 template <>
-Result Shader<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult Shader<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     if (IsCreated()) {
         HYPERION_RETURN_OK;
@@ -212,7 +212,7 @@ Result Shader<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Shader<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Shader<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (!IsCreated()) {
         HYPERION_RETURN_OK;

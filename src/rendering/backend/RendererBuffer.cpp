@@ -92,9 +92,9 @@ StagingBuffer *StagingBufferPool::FindStagingBuffer(SizeType size)
     return nullptr;
 }
 
-Result StagingBufferPool::Use(Device *device, UseFunction &&fn)
+RendererResult StagingBufferPool::Use(Device *device, UseFunction &&fn)
 {
-    Result result;
+    RendererResult result;
 
     Context context(this, device);
 
@@ -120,13 +120,13 @@ Result StagingBufferPool::Use(Device *device, UseFunction &&fn)
     return result;
 }
 
-Result StagingBufferPool::GC(Device *device)
+RendererResult StagingBufferPool::GC(Device *device)
 {
     const auto current_time = std::time(nullptr);
 
     DebugLog(LogType::Debug, "Clean up staging buffers from pool\n");
     
-    Result result;
+    RendererResult result;
     SizeType num_destroyed = 0;
 
     for (auto it = m_staging_buffers.begin(); it != m_staging_buffers.end();) {
@@ -148,9 +148,9 @@ Result StagingBufferPool::GC(Device *device)
     return result;
 }
 
-Result StagingBufferPool::Destroy(Device *device)
+RendererResult StagingBufferPool::Destroy(Device *device)
 {
-    Result result;
+    RendererResult result;
 
     for (auto &record : m_staging_buffers) {
         HYPERION_PASS_ERRORS(record.buffer->Destroy(device), result);

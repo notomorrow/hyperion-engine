@@ -13,7 +13,7 @@ namespace platform {
 
 #pragma region ImageViewPlatformImpl
 
-Result ImageViewPlatformImpl<Platform::VULKAN>::Create(
+RendererResult ImageViewPlatformImpl<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
     VkImage image,
     VkFormat format,
@@ -54,7 +54,7 @@ Result ImageViewPlatformImpl<Platform::VULKAN>::Create(
     HYPERION_RETURN_OK;
 }
 
-Result ImageViewPlatformImpl<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult ImageViewPlatformImpl<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (handle != VK_NULL_HANDLE) {
         vkDestroyImageView(device->GetDevice(), handle, nullptr);
@@ -113,7 +113,7 @@ bool ImageView<Platform::VULKAN>::IsCreated() const
 }
 
 template <>
-Result ImageView<Platform::VULKAN>::Create(
+RendererResult ImageView<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
     const Image<Platform::VULKAN> *image,
     uint mipmap_layer,
@@ -139,7 +139,7 @@ Result ImageView<Platform::VULKAN>::Create(
 }
 
 template <>
-Result ImageView<Platform::VULKAN>::Create(
+RendererResult ImageView<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
     const Image<Platform::VULKAN> *image
 )
@@ -161,7 +161,7 @@ Result ImageView<Platform::VULKAN>::Create(
 }
 
 template <>
-Result ImageView<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult ImageView<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     return m_platform_impl.Destroy(device);
 }

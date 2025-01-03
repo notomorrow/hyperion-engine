@@ -16,7 +16,7 @@
 #include <core/logging/LogChannels.hpp>
 
 #include <core/system/AppContext.hpp>
-#include <core/system/ArgParse.hpp>
+#include <core/system/CommandLine.hpp>
 
 #include <util/json/JSON.hpp>
 
@@ -48,13 +48,16 @@ private:
     {
         m_is_running.Set(true, MemoryOrder::RELAXED);
 
-        while (!m_stop_requested.Get(MemoryOrder::RELAXED)) {
-            DoWork(profiler_connection);
+        if (StartConnection(profiler_connection)) {
+            while (!m_stop_requested.Get(MemoryOrder::RELAXED)) {
+                DoWork(profiler_connection);
+            }
         }
 
         m_is_running.Set(false, MemoryOrder::RELAXED);
     }
 
+    bool StartConnection(ProfilerConnection *profiler_connection);
     void DoWork(ProfilerConnection *profiler_connection);
 
     AtomicVar<bool> m_is_running;
@@ -76,10 +79,11 @@ public:
     }
 
     ProfilerConnection()
-        : m_endpoint_url("http://localhost:8000/trace")
     {
-        if (json::JSONValue trace_url_argument = g_engine->GetAppContext()->GetArguments()["TraceURL"]) {
-            m_endpoint_url = trace_url_argument.ToString();
+        json::JSONValue trace_url = g_engine->GetAppContext()->GetArguments()["TraceURL"];
+        
+        if (trace_url.IsString()) {
+            m_endpoint_url = trace_url.AsString();
         }
     }
 
@@ -102,7 +106,7 @@ public:
         return m_endpoint_url;
     }
 
-    void SetEndpointURL(ANSIStringView endpoint_url)
+    void SetEndpointURL(const String &endpoint_url)
     {
         // @TODO: ensure thread not running - restart it on change
         m_endpoint_url = endpoint_url;
@@ -149,27 +153,66 @@ public:
     {
         const ThreadID current_thread_id = Threads::CurrentThreadID();
 
-        KeyValuePair<ThreadID, UniquePtr<Array<json::JSONValue>>> *it = nullptr;
+        Array<json::JSONValue> *json_values_array = nullptr;
 
         { // critical section - may invalidate iterators
             Mutex::Guard guard(m_values_mutex);
 
-            it = m_per_thread_values.Find(current_thread_id);
+            auto it = m_per_thread_values.Find(current_thread_id);
 
             if (it == m_per_thread_values.End()) {
                 it = m_per_thread_values.Insert(current_thread_id, UniquePtr<Array<json::JSONValue>>::Construct()).first;
             }
+
+            json_values_array = it->second.Get();
         }
 
         // unique per thread; fine outside of mutex
-        it->second->Concat(std::move(values));
+        json_values_array->Concat(std::move(values));
+    }
+
+    bool StartConnection()
+    {
+        Threads::AssertOnThread(m_thread.GetID());
+
+        if (m_endpoint_url.Empty()) {
+            HYP_LOG(Profile, LogLevel::ERR, "Profiler connection endpoint URL not set, cannot start connection.");
+
+            return false;
+        }
+
+        m_trace_id = UUID();
+
+        json::JSONObject object;
+        object["trace_id"] = m_trace_id.ToString();
+
+        Task<net::HTTPResponse> start_request = net::HTTPRequest(m_endpoint_url + "/start", json::JSONValue(std::move(object)), net::HTTPMethod::POST)
+            .Send();
+
+        HYP_LOG(Profile, LogLevel::INFO, "Waiting for profiler connection request to finish");
+
+        net::HTTPResponse &response = start_request.Await();
+
+        if (!response.IsSuccess()) {
+            HYP_LOG(Profile, LogLevel::ERR, "Failed to connect to profiler connection endpoint! Status code: {}", response.GetStatusCode());
+
+            return false;
+        }
+
+        return true;
     }
 
     void Submit()
     {
-        HYP_LOG(Profile, LogLevel::INFO, "Submit requests");
-
         Threads::AssertOnThread(m_thread.GetID());
+
+        if (m_endpoint_url.Empty()) {
+            HYP_LOG(Profile, LogLevel::WARNING, "Profiler connection endpoint URL not set, cannot submit results.");
+
+            return;
+        }
+
+        HYP_LOG(Profile, LogLevel::INFO, "Submitting profiler results to trace server...");
 
         json::JSONObject object;
 
@@ -181,7 +224,7 @@ public:
             for (KeyValuePair<ThreadID, UniquePtr<json::JSONArray>> &it : m_per_thread_values) {
                 json::JSONObject group_object;
                 group_object["name"] = json::JSONString(it.first.name.LookupString());
-                group_object["values"] = std::move(*it.second);
+                group_object["values"] = std::move(*it.second); // move it so it clears current values
                 groups_array.PushBack(std::move(group_object));
             }
 
@@ -189,18 +232,21 @@ public:
         }
 
         // Send request with all queued data
-        net::HTTPRequest request(m_endpoint_url, json::JSONValue(std::move(object)), net::HTTPMethod::POST);
+        net::HTTPRequest request(m_endpoint_url + "/results", json::JSONValue(std::move(object)), net::HTTPMethod::POST);
         m_requests.PushBack(request.Send());
     }
 
 private:
     String                                          m_endpoint_url;
+    UUID                                            m_trace_id;
     ProfilerConnectionThread                        m_thread;
 
     FlatMap<ThreadID, UniquePtr<json::JSONArray>>   m_per_thread_values;
     mutable Mutex                                   m_values_mutex;
 
     Array<Task<net::HTTPResponse>>                  m_requests;
+
+
 };
 
 HYP_API void SetProfilerConnectionEndpoint(ANSIStringView endpoint_url)
@@ -223,6 +269,11 @@ HYP_API void StopProfilerConnectionThread()
 }
 
 #pragma endregion ProfilerConnection
+
+bool ProfilerConnectionThread::StartConnection(ProfilerConnection *profiler_connection)
+{
+    return profiler_connection->StartConnection();
+}
 
 void ProfilerConnectionThread::DoWork(ProfilerConnection *profiler_connection)
 {

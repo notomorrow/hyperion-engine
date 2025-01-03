@@ -30,7 +30,7 @@ struct GPUBufferPlatformImpl<Platform::VULKAN>
     void Map(Device<Platform::VULKAN> *device) const;
     void Unmap(Device<Platform::VULKAN> *device) const;
 
-    Result CheckCanAllocate(
+    RendererResult CheckCanAllocate(
         Device<Platform::VULKAN> *device,
         const VkBufferCreateInfo &buffer_create_info,
         const VmaAllocationCreateInfo &allocation_create_info,
@@ -144,35 +144,35 @@ struct GPUBufferPlatformImpl<Platform::VULKAN>
 //         SizeType count
 //     );
 
-//     HYP_API Result CopyStaged(
+//     HYP_API RendererResult CopyStaged(
 //         Instance<Platform::VULKAN> *instance,
 //         const void *ptr,
 //         SizeType count
 //     );
 
-//     HYP_API Result ReadStaged(
+//     HYP_API RendererResult ReadStaged(
 //         Instance<Platform::VULKAN> *instance,
 //         SizeType count,
 //         void *out_ptr
 //     ) const;
 
-//     Result CheckCanAllocate(Device<Platform::VULKAN> *device, SizeType size) const;
+//     RendererResult CheckCanAllocate(Device<Platform::VULKAN> *device, SizeType size) const;
 
 //     /*! \brief Calls vkGetBufferDeviceAddressKHR. Only use this if the extension is enabled */
 //     uint64_t GetBufferDeviceAddress(Device<Platform::VULKAN> *device) const;
 
-//     HYP_API Result Create(
+//     HYP_API RendererResult Create(
 //         Device<Platform::VULKAN> *device,
 //         SizeType buffer_size,
 //         SizeType buffer_alignment = 0
 //     );
-//     HYP_API Result Destroy(Device<Platform::VULKAN> *device);
-//     HYP_API Result EnsureCapacity(
+//     HYP_API RendererResult Destroy(Device<Platform::VULKAN> *device);
+//     HYP_API RendererResult EnsureCapacity(
 //         Device<Platform::VULKAN> *device,
 //         SizeType minimum_size,
 //         bool *out_size_changed = nullptr
 //     );
-//     HYP_API Result EnsureCapacity(
+//     HYP_API RendererResult EnsureCapacity(
 //         Device<Platform::VULKAN> *device,
 //         SizeType minimum_size,
 //         SizeType alignment,
@@ -182,7 +182,7 @@ struct GPUBufferPlatformImpl<Platform::VULKAN>
 //     VkBuffer                    buffer;
     
 // private:
-//     Result CheckCanAllocate(
+//     RendererResult CheckCanAllocate(
 //         Device<Platform::VULKAN> *device,
 //         const VkBufferCreateInfo &buffer_create_info,
 //         const VmaAllocationCreateInfo &allocation_create_info,

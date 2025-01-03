@@ -50,8 +50,8 @@ public:
 
     HYP_API bool IsCreated() const;
 
-    HYP_API Result Create(Device<PLATFORM> *device);
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Create(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
     Vec2u                           extent;
     InternalFormat                  image_format;

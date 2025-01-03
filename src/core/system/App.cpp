@@ -1,6 +1,6 @@
 #include <core/system/App.hpp>
 #include <core/system/AppContext.hpp>
-#include <core/system/ArgParse.hpp>
+#include <core/system/CommandLine.hpp>
 #include <core/system/SystemEvent.hpp>
 
 #include <core/logging/Logger.hpp>

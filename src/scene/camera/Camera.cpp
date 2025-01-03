@@ -21,7 +21,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 
 class Camera;
 

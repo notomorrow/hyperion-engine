@@ -17,7 +17,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 
 Skeleton::Skeleton()
     : HypObject(),

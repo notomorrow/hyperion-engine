@@ -9,13 +9,11 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 class HYP_API CrashHandler
 {
 public:
     void Initialize();
-    void HandleGPUCrash(Result result);
+    void HandleGPUCrash(RendererResult result);
 
 private:
     bool m_is_initialized = false;

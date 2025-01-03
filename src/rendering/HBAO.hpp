@@ -10,8 +10,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 class Engine;
 
 struct RenderCommand_AddHBAOFinalImagesToGlobalDescriptorSet;

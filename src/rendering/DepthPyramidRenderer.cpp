@@ -33,7 +33,7 @@ struct RENDER_COMMAND(SetDepthPyramidInGlobalDescriptorSet) : renderer::RenderCo
 
     virtual ~RENDER_COMMAND(SetDepthPyramidInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
@@ -48,7 +48,7 @@ struct RENDER_COMMAND(UnsetDepthPyramidInGlobalDescriptorSet) : renderer::Render
 {
     virtual ~RENDER_COMMAND(UnsetDepthPyramidInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)

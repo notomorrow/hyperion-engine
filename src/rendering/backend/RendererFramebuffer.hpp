@@ -40,8 +40,8 @@ struct AttachmentMap
         Reset();
     }
 
-    Result Create(Device<PLATFORM> *device);
-    Result Resize(Device<PLATFORM> *device, Vec2u new_size);
+    RendererResult Create(Device<PLATFORM> *device);
+    RendererResult Resize(Device<PLATFORM> *device, Vec2u new_size);
 
     void Reset()
     {
@@ -195,10 +195,10 @@ public:
 
     HYP_API bool IsCreated() const;
 
-    HYP_API Result Create(Device<PLATFORM> *device);
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Create(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
-    HYP_API Result Resize(Device<PLATFORM> *device, Vec2u new_size);
+    HYP_API RendererResult Resize(Device<PLATFORM> *device, Vec2u new_size);
 
     HYP_API void BeginCapture(CommandBuffer<PLATFORM> *command_buffer, uint frame_index);
     HYP_API void EndCapture(CommandBuffer<PLATFORM> *command_buffer, uint frame_index);

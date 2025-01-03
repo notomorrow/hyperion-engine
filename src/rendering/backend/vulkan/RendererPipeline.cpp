@@ -56,7 +56,7 @@ Pipeline<Platform::VULKAN>::~Pipeline()
 }
 
 template <>
-Result Pipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Pipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     SafeRelease(std::move(m_descriptor_table));
 

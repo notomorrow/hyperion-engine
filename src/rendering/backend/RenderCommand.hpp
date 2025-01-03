@@ -23,8 +23,6 @@
 namespace hyperion {
 namespace renderer {
 
-using renderer::Result;
-
 enum RenderCommandExecuteStage : uint32
 {
     EXECUTE_STAGE_BEFORE_BUFFERS,
@@ -38,8 +36,8 @@ enum RenderCommandExecuteStage : uint32
  *  If called from the render thread, the command is executed immediately. */
 #define PUSH_RENDER_COMMAND(name, ...) \
     if (::hyperion::Threads::IsOnThread(::hyperion::ThreadName::THREAD_RENDER)) { \
-        const ::hyperion::renderer::Result command_result = RENDER_COMMAND(name)(__VA_ARGS__).Call(); \
-        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.error_code, command_result.message); \
+        const ::hyperion::RendererResult command_result = RENDER_COMMAND(name)(__VA_ARGS__).Call(); \
+        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.GetError().GetErrorCode(), command_result.GetError().GetMessage().Data()); \
     } else { \
         ::hyperion::renderer::RenderCommands::Push< RENDER_COMMAND(name) >(__VA_ARGS__); \
     }
@@ -133,18 +131,18 @@ struct RenderCommand
 
     virtual ~RenderCommand() = default;
 
-    HYP_FORCE_INLINE Result Call()
+    HYP_FORCE_INLINE RendererResult Call()
         { return operator()(); }
 
-    virtual Result operator()() = 0;
+    virtual RendererResult operator()() = 0;
 };
 
 struct RenderScheduler
 {
     struct FlushResult
     {
-        Result      result;
-        SizeType    num_executed;
+        RendererResult  result;
+        SizeType        num_executed;
     };
 
     Array<RenderCommand *>  m_commands;
@@ -176,7 +174,7 @@ struct HYP_API RENDER_COMMAND(CustomRenderCommand) : RenderCommand
     RENDER_COMMAND(CustomRenderCommand)()                   = default;
     virtual ~RENDER_COMMAND(CustomRenderCommand)() override = default;
 
-    virtual Result operator()() override = 0;
+    virtual RendererResult operator()() override = 0;
 };
 
 class RenderCommands
@@ -256,7 +254,7 @@ public:
     HYP_FORCE_INLINE static SizeType Count()
         { return scheduler.m_num_enqueued.Get(MemoryOrder::ACQUIRE); }
 
-    static Result Flush();
+    static RendererResult Flush();
     static void Wait();
 
 private:

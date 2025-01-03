@@ -52,8 +52,8 @@ public:
     Frame(Frame &&other) noexcept;
     ~Frame();
 
-    Result Create(Device<PLATFORM> *device, CommandBufferRef<PLATFORM> cmd);
-    Result Destroy(Device<PLATFORM> *device);
+    RendererResult Create(Device<PLATFORM> *device, CommandBufferRef<PLATFORM> cmd);
+    RendererResult Destroy(Device<PLATFORM> *device);
 
     HYP_FORCE_INLINE const FenceRef<PLATFORM> &GetFence() const
         { return m_queue_submit_fence; }
@@ -71,13 +71,13 @@ public:
         { return m_present_semaphores; }
 
     /* Start recording into the command buffer */
-    Result BeginCapture(Device<PLATFORM> *device);
+    RendererResult BeginCapture(Device<PLATFORM> *device);
     /* Stop recording into the command buffer */
-    Result EndCapture(Device<PLATFORM> *device);
+    RendererResult EndCapture(Device<PLATFORM> *device);
     /* Submit command buffer to the given queue */
-    Result Submit(DeviceQueue<PLATFORM> *queue);
+    RendererResult Submit(DeviceQueue<PLATFORM> *queue);
 
-    Result RecreateFence(Device<PLATFORM> *device);
+    RendererResult RecreateFence(Device<PLATFORM> *device);
     
     CommandBufferRef<PLATFORM>  m_command_buffer;
 

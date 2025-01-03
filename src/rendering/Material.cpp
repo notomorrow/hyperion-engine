@@ -23,8 +23,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 #pragma region MaterialRenderResources
 
 MaterialRenderResources::MaterialRenderResources(Material *material)

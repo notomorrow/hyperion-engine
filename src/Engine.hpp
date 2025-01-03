@@ -34,9 +34,11 @@ using renderer::Instance;
 
 namespace sys {
 class AppContext;
+struct CommandLineArgumentDefinitions;
 } // namespace sys
 
 using sys::AppContext;
+using sys::CommandLineArgumentDefinitions;
 
 namespace net {
 class NetRequestThread;

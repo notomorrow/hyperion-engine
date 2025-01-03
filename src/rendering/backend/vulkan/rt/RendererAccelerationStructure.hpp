@@ -84,9 +84,9 @@ public:
 
     HYP_API bool IsCreated() const;
 
-    HYP_API Result Create(Device<PLATFORM> *device, Instance<PLATFORM> *instance);
+    HYP_API RendererResult Create(Device<PLATFORM> *device, Instance<PLATFORM> *instance);
     /* Remove from the parent acceleration structure */
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
 private:
     Array<PackedVertex>                         m_packed_vertices;
@@ -149,7 +149,7 @@ public:
     HYP_FORCE_INLINE void SetTransform(const Matrix4 &transform)
         { m_transform = transform; SetTransformUpdateFlag(); }
 
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
 protected:
     static VkAccelerationStructureTypeKHR ToVkAccelerationStructureType(AccelerationStructureType);
@@ -160,7 +160,7 @@ protected:
     HYP_FORCE_INLINE void SetNeedsRebuildFlag()
         { SetFlag(ACCELERATION_STRUCTURE_FLAGS_NEEDS_REBUILDING); }
 
-    Result CreateAccelerationStructure(
+    RendererResult CreateAccelerationStructure(
         Instance<PLATFORM> *instance,
         AccelerationStructureType type,
         const std::vector<VkAccelerationStructureGeometryKHR> &geometries,
@@ -193,13 +193,13 @@ public:
     HYP_FORCE_INLINE AccelerationStructureType GetType() const
         { return AccelerationStructureType::BOTTOM_LEVEL; }
     
-    HYP_API Result Create(Device<PLATFORM> *device, Instance<PLATFORM> *instance);
+    HYP_API RendererResult Create(Device<PLATFORM> *device, Instance<PLATFORM> *instance);
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
-    HYP_API Result UpdateStructure(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
+    HYP_API RendererResult UpdateStructure(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
 
 private:
-    Result Rebuild(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
+    RendererResult Rebuild(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
 };
 
 template <PlatformType PLATFORM>
@@ -222,29 +222,29 @@ public:
     HYP_API void AddBLAS(const BLASRef<PLATFORM> &blas);
     HYP_API void RemoveBLAS(const BLASRef<PLATFORM> &blas);
     
-    HYP_API Result Create(
+    HYP_API RendererResult Create(
         Device<PLATFORM> *device,
         Instance<PLATFORM> *instance
     );
 
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
-    HYP_API Result UpdateStructure(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
+    HYP_API RendererResult UpdateStructure(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
 
 private:
-    Result Rebuild(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
+    RendererResult Rebuild(Instance<PLATFORM> *instance, RTUpdateStateFlags &out_update_state_flags);
 
     std::vector<VkAccelerationStructureGeometryKHR> GetGeometries(Instance<PLATFORM> *instance) const;
     std::vector<uint32> GetPrimitiveCounts() const;
 
-    Result CreateOrRebuildInstancesBuffer(Instance<PLATFORM> *instance);
-    Result UpdateInstancesBuffer(Instance<PLATFORM> *instance, uint first, uint last);
+    RendererResult CreateOrRebuildInstancesBuffer(Instance<PLATFORM> *instance);
+    RendererResult UpdateInstancesBuffer(Instance<PLATFORM> *instance, uint first, uint last);
     
-    Result CreateMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
-    Result UpdateMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
-    Result UpdateMeshDescriptionsBuffer(Instance<PLATFORM> *instance, uint first, uint last);
-    Result RebuildMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
+    RendererResult CreateMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
+    RendererResult UpdateMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
+    RendererResult UpdateMeshDescriptionsBuffer(Instance<PLATFORM> *instance, uint first, uint last);
+    RendererResult RebuildMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
 
     Array<BLASRef<PLATFORM>>    m_blas;
     GPUBufferRef<PLATFORM>      m_mesh_descriptions_buffer;

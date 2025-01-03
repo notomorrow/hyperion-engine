@@ -47,7 +47,7 @@ Frame<Platform::VULKAN>::~Frame()
 }
 
 template <>
-Result Frame<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, CommandBufferRef<Platform::VULKAN> cmd)
+RendererResult Frame<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, CommandBufferRef<Platform::VULKAN> cmd)
 {
     m_command_buffer = std::move(cmd);
     
@@ -60,9 +60,9 @@ Result Frame<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Command
 }
 
 template <>
-Result Frame<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Frame<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
-    Result result;
+    RendererResult result;
 
     HYPERION_PASS_ERRORS(m_present_semaphores.Destroy(device), result);
 
@@ -73,19 +73,19 @@ Result Frame<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Frame<Platform::VULKAN>::BeginCapture(Device<Platform::VULKAN> *device)
+RendererResult Frame<Platform::VULKAN>::BeginCapture(Device<Platform::VULKAN> *device)
 {
     return m_command_buffer->Begin(device);
 }
 
 template <>
-Result Frame<Platform::VULKAN>::EndCapture(Device<Platform::VULKAN> *device)
+RendererResult Frame<Platform::VULKAN>::EndCapture(Device<Platform::VULKAN> *device)
 {
     return m_command_buffer->End(device);
 }
 
 template <>
-Result Frame<Platform::VULKAN>::Submit(DeviceQueue<Platform::VULKAN> *queue)
+RendererResult Frame<Platform::VULKAN>::Submit(DeviceQueue<Platform::VULKAN> *queue)
 {
     return m_command_buffer->SubmitPrimary(
         queue,
@@ -95,7 +95,7 @@ Result Frame<Platform::VULKAN>::Submit(DeviceQueue<Platform::VULKAN> *queue)
 }
 
 template <>
-Result Frame<Platform::VULKAN>::RecreateFence(Device<Platform::VULKAN> *device)
+RendererResult Frame<Platform::VULKAN>::RecreateFence(Device<Platform::VULKAN> *device)
 {
     if (m_queue_submit_fence.IsValid()) {
         SafeRelease(std::move(m_queue_submit_fence));

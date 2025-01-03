@@ -36,7 +36,7 @@ struct RENDER_COMMAND(UpdateEntityDrawData) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(UpdateEntityDrawData)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (const RC<RenderProxy> &proxy_ptr : render_proxies) {
             const RenderProxy &proxy = *proxy_ptr;

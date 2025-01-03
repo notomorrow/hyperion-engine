@@ -50,7 +50,7 @@ void RenderCommands::PushCustomRenderCommand(RENDER_COMMAND(CustomRenderCommand)
     scheduler.Commit(command);
 }
 
-Result RenderCommands::Flush()
+RendererResult RenderCommands::Flush()
 {
     if (Count() == 0) {
         HYPERION_RETURN_OK;
@@ -88,8 +88,8 @@ Result RenderCommands::Flush()
     for (SizeType index = 0; index < num_commands; index++) {
         RenderCommand *front = commands[index];
 
-        const Result command_result = front->Call();
-        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.error_code, command_result.message);
+        const RendererResult command_result = front->Call();
+        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.GetError().GetErrorCode(), command_result.GetError().GetMessage().Data());
         front->~RenderCommand();
     }
 
@@ -115,8 +115,9 @@ Result RenderCommands::Flush()
         HYP_NAMED_SCOPE("Executing render command");
 #endif
 
-        const Result command_result = front->Call();
-        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.error_code, command_result.message);
+        const RendererResult command_result = front->Call();
+        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.GetError().GetErrorCode(), command_result.GetError().GetMessage().Data());
+        
         front->~RenderCommand();
     }
 
@@ -131,7 +132,7 @@ Result RenderCommands::Flush()
     flushed_cv.notify_all();
 #endif
 
-    return Result { };
+    return { };
 }
 
 void RenderCommands::Wait()

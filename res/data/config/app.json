@@ -48,7 +48,7 @@
   },
   "app": {
     "name": "HyperionEditor",
-    "args": "-ResX=1280 -ResY=720"
+    "args": "-ResX=1280 -ResY=720 -Profile -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
     "ideal_triangles_per_job": 4096,

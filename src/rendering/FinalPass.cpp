@@ -41,7 +41,7 @@ struct RENDER_COMMAND(SetUITexture) : renderer::RenderCommand
         g_safe_deleter->SafeRelease(std::move(texture));
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         g_safe_deleter->SafeRelease(std::move(final_pass.m_ui_texture));
 

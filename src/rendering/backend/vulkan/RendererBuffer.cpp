@@ -360,7 +360,7 @@ VmaAllocationCreateInfo GPUBufferPlatformImpl<Platform::VULKAN>::GetAllocationCr
     return alloc_info;
 }
 
-Result GPUBufferPlatformImpl<Platform::VULKAN>::CheckCanAllocate(
+RendererResult GPUBufferPlatformImpl<Platform::VULKAN>::CheckCanAllocate(
     Device<Platform::VULKAN> *device,
     const VkBufferCreateInfo &buffer_create_info,
     const VmaAllocationCreateInfo &allocation_create_info,
@@ -369,7 +369,7 @@ Result GPUBufferPlatformImpl<Platform::VULKAN>::CheckCanAllocate(
 {
     const Features &features = device->GetFeatures();
 
-    Result result;
+    RendererResult result;
 
     uint32 memory_type_index = UINT32_MAX;
 
@@ -392,8 +392,8 @@ Result GPUBufferPlatformImpl<Platform::VULKAN>::CheckCanAllocate(
     const auto &heap = memory_properties.memoryHeaps[heap_index];
 
     if (heap.size < size) {
-        return {Result::RENDERER_ERR, "Heap size is less than requested size. "
-            "Maybe the wrong memory type has been requested, or the device is out of memory."};
+        return RendererError { "Heap size is less than requested size. "
+            "Maybe the wrong memory type has been requested, or the device is out of memory." };
     }
 
     return result;
@@ -512,7 +512,7 @@ bool GPUBuffer<Platform::VULKAN>::IsCPUAccessible() const
 }
 
 template <>
-Result GPUBuffer<Platform::VULKAN>::CheckCanAllocate(Device<Platform::VULKAN> *device, SizeType size) const
+RendererResult GPUBuffer<Platform::VULKAN>::CheckCanAllocate(Device<Platform::VULKAN> *device, SizeType size) const
 {
     const VkBufferCreateInfo create_info = m_platform_impl.GetBufferCreateInfo(device);
     const VmaAllocationCreateInfo alloc_info = m_platform_impl.GetAllocationCreateInfo(device);
@@ -643,7 +643,7 @@ void GPUBuffer<Platform::VULKAN>::CopyFrom(
 }
 
 template <>
-Result GPUBuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult GPUBuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (!IsCreated()) {
         HYPERION_RETURN_OK;
@@ -662,7 +662,7 @@ Result GPUBuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result GPUBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, SizeType size, SizeType alignment)
+RendererResult GPUBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, SizeType size, SizeType alignment)
 {
     if (IsCreated()) {
         HYP_LOG(RenderingBackend, LogLevel::WARNING, "Create() called on a buffer that has not been destroyed!\n"
@@ -687,7 +687,7 @@ Result GPUBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Siz
         AssertThrowMsg(false, "Creating empty gpu buffer will result in errors!");
 #endif
 
-        return { Result::RENDERER_ERR, "Creating empty gpu buffer will result in errors! \n" };
+        return RendererError { "Creating empty gpu buffer will result in errors! \n" };
     }
 
     const auto create_info = m_platform_impl.GetBufferCreateInfo(device);
@@ -731,14 +731,14 @@ Result GPUBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Siz
 }
 
 template <>
-Result GPUBuffer<Platform::VULKAN>::EnsureCapacity(
+RendererResult GPUBuffer<Platform::VULKAN>::EnsureCapacity(
     Device<Platform::VULKAN> *device,
     SizeType minimum_size,
     SizeType alignment,
     bool *out_size_changed
 )
 {
-    Result result;
+    RendererResult result;
 
     if (minimum_size <= m_platform_impl.size) {
         if (out_size_changed != nullptr) {
@@ -770,7 +770,7 @@ Result GPUBuffer<Platform::VULKAN>::EnsureCapacity(
 }
 
 template <>
-Result GPUBuffer<Platform::VULKAN>::EnsureCapacity(
+RendererResult GPUBuffer<Platform::VULKAN>::EnsureCapacity(
     Device<Platform::VULKAN> *device,
     SizeType minimum_size,
     bool *out_size_changed

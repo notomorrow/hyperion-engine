@@ -705,7 +705,7 @@ static inline void DeferCreate(RefType ref, Args &&... args)
 
         virtual ~RENDER_COMMAND(CreateRenderObject)() override = default;
 
-        virtual renderer::Result operator()() override
+        virtual RendererResult operator()() override
         {
             return Apply([this]<class... OtherArgs>(OtherArgs &&... args)
             {

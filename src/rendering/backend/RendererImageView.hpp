@@ -46,7 +46,7 @@ public:
 
     HYP_API bool IsCreated() const;
 
-    HYP_API Result Create(
+    HYP_API RendererResult Create(
         Device<PLATFORM> *device,
         const Image<PLATFORM> *image,
         uint mipmap_layer,
@@ -55,12 +55,12 @@ public:
         uint num_faces
     );
 
-    HYP_API Result Create(
+    HYP_API RendererResult Create(
         Device<PLATFORM> *device,
         const Image<PLATFORM> *image
     );
 
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
 private:
     ImageViewPlatformImpl<PLATFORM> m_platform_impl;

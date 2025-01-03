@@ -116,8 +116,8 @@ public:
 
     HYP_API void SetCompiledShader(const RC<CompiledShader> &compiled_shader);
 
-    HYP_API Result Create(Device<PLATFORM> *device);
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Create(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
@@ -132,10 +132,10 @@ public:
     }
 
 private:
-    Result AttachSubShaders();
-    Result AttachSubShader(Device<PLATFORM> *device, ShaderModuleType type, const ShaderObject &shader_object);
+    RendererResult AttachSubShaders();
+    RendererResult AttachSubShader(Device<PLATFORM> *device, ShaderModuleType type, const ShaderObject &shader_object);
 
-    Result CreateShaderGroups();
+    RendererResult CreateShaderGroups();
 
     ShaderPlatformImpl<PLATFORM> m_platform_impl;
 

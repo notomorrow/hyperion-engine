@@ -202,13 +202,13 @@ public:
     /*
      * Create the image. No texture data will be copied.
      */
-    HYP_API Result Create(Device<PLATFORM> *device);
+    HYP_API RendererResult Create(Device<PLATFORM> *device);
 
     /* Create the image and transfer the provided texture data into it if given.
      * The image is transitioned into the given state.
      */
-    HYP_API Result Create(Device<PLATFORM> *device, Instance<PLATFORM> *instance, ResourceState state);
-    HYP_API Result Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Create(Device<PLATFORM> *device, Instance<PLATFORM> *instance, ResourceState state);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
 
     HYP_API bool IsCreated() const;
 
@@ -237,19 +237,19 @@ public:
         ResourceState new_state
     );
 
-    HYP_API Result Blit(
+    HYP_API RendererResult Blit(
         CommandBuffer<PLATFORM> *command_buffer,
         const Image *src
     );
 
-    HYP_API Result Blit(
+    HYP_API RendererResult Blit(
         CommandBuffer<PLATFORM> *command_buffer,
         const Image *src,
         Rect<uint32> src_rect,
         Rect<uint32> dst_rect
     );
 
-    HYP_API Result Blit(
+    HYP_API RendererResult Blit(
         CommandBuffer<PLATFORM> *command_buffer,
         const Image *src,
         Rect<uint32> src_rect,
@@ -258,7 +258,7 @@ public:
         uint32 dst_mip
     );
 
-    HYP_API Result GenerateMipmaps(
+    HYP_API RendererResult GenerateMipmaps(
         Device<PLATFORM> *device,
         CommandBuffer<PLATFORM> *command_buffer
     );

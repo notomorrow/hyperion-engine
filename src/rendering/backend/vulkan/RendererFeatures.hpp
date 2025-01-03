@@ -391,7 +391,7 @@ public:
         return InternalFormat::NONE;
     }
 
-    Result GetImageFormatProperties(
+    RendererResult GetImageFormatProperties(
         VkFormat format,
         VkImageType type,
         VkImageTiling tiling,
@@ -401,11 +401,11 @@ public:
     ) const
     {
         if (m_physical_device == nullptr) {
-            return Result(Result::RENDERER_ERR, "Cannot find supported format; physical device is not initialized.");
+            return RendererError { "Cannot find supported format; physical device is not initialized." };
         }
 
         if (vkGetPhysicalDeviceImageFormatProperties(m_physical_device, format, type, tiling, usage, flags, out_properties) != VK_SUCCESS) {
-            return Result(Result::RENDERER_ERR, "Failed to get image format properties");
+            return RendererError { "Failed to get image format properties" };
         }
 
         HYPERION_RETURN_OK;

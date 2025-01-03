@@ -24,7 +24,7 @@ FrameHandler<Platform::VULKAN>::FrameHandler(uint num_frames, NextImageFunction 
 }
 
 template <>
-Result FrameHandler<Platform::VULKAN>::CreateFrames(
+RendererResult FrameHandler<Platform::VULKAN>::CreateFrames(
     Device<Platform::VULKAN> *device,
     DeviceQueue<Platform::VULKAN> *queue
 )
@@ -51,7 +51,7 @@ Result FrameHandler<Platform::VULKAN>::CreateFrames(
 }
 
 template <>
-Result FrameHandler<Platform::VULKAN>::PrepareFrame(
+RendererResult FrameHandler<Platform::VULKAN>::PrepareFrame(
     Device<Platform::VULKAN> *device,
     Swapchain<Platform::VULKAN> *swapchain
 )
@@ -85,7 +85,7 @@ void FrameHandler<Platform::VULKAN>::NextFrame()
 }
 
 template <>
-Result FrameHandler<Platform::VULKAN>::PresentFrame(
+RendererResult FrameHandler<Platform::VULKAN>::PresentFrame(
     DeviceQueue<Platform::VULKAN> *queue,
     Swapchain<Platform::VULKAN> *swapchain
 ) const
@@ -108,11 +108,11 @@ Result FrameHandler<Platform::VULKAN>::PresentFrame(
 }
 
 template <>
-Result FrameHandler<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult FrameHandler<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     SafeRelease(std::move(m_frames));
 
-    return Result { };
+    return RendererResult { };
 }
 
 } // namespace platform

@@ -15,8 +15,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 static const InternalFormat reflection_probe_format = InternalFormat::RGBA16F;
 static const InternalFormat shadow_probe_format = InternalFormat::RG32F;
 
@@ -35,7 +33,7 @@ struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         // update m_draw_proxy on render thread.
         env_probe.m_proxy = proxy;
@@ -57,7 +55,7 @@ struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(BindEnvProbe)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         g_engine->GetRenderState()->BindEnvProbe(env_probe_type, id);
 
@@ -78,7 +76,7 @@ struct RENDER_COMMAND(UnbindEnvProbe) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(UnbindEnvProbe)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         g_engine->GetRenderState()->UnbindEnvProbe(env_probe_type, id);
 
@@ -500,7 +498,7 @@ void EnvProbe::Render(Frame *frame)
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
 
-    Result result { };
+    RendererResult result;
 
     EnvProbeIndex probe_index;
 
@@ -705,11 +703,11 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
 
                 virtual ~RENDER_COMMAND(UpdateEnvProbeRenderData)() override = default;
 
-                virtual Result operator()() override
+                virtual RendererResult operator()() override
                 {
                     env_probe.UpdateRenderData(set_texture);
 
-                    return Result { };
+                    return RendererResult { };
                 }
             };
 

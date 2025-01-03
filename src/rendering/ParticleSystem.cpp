@@ -36,7 +36,6 @@ namespace hyperion {
 
 using renderer::IndirectDrawCommand;
 using renderer::Pipeline;
-using renderer::Result;
 using renderer::GPUBufferType;
 using renderer::CommandBufferType;
 
@@ -63,7 +62,7 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateParticleSpawnerBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         static constexpr uint seed = 0xff;
 
@@ -122,9 +121,9 @@ struct RENDER_COMMAND(DestroyParticleSystem) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(DestroyParticleSystem)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
-        Result result;
+        RendererResult result;
 
         if (spawners->HasUpdatesPending()) {
             spawners->UpdateItems();
@@ -151,7 +150,7 @@ struct RENDER_COMMAND(CreateParticleSystemBuffers) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateParticleSystemBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYPERION_BUBBLE_ERRORS(staging_buffer->Create(
             g_engine->GetGPUDevice(),
@@ -184,7 +183,7 @@ struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderComm
 
     virtual ~RENDER_COMMAND(CreateParticleSystemCommandBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             for (uint i = 0; i < uint(command_buffers[frame_index].Size()); i++) {

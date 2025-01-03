@@ -22,7 +22,7 @@ struct RENDER_COMMAND(RemoveTextureFromBindlessStorage) : renderer::RenderComman
 
     virtual ~RENDER_COMMAND(RemoveTextureFromBindlessStorage)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         g_engine->GetRenderData()->textures.RemoveResource(id);
 

@@ -91,7 +91,7 @@ static Array<VkPhysicalDevice> EnumeratePhysicalDevices(VkInstance instance)
     return devices;
 }
 
-static Result HandleNextFrame(
+static RendererResult HandleNextFrame(
     Device<Platform::VULKAN> *device,
     Swapchain<Platform::VULKAN> *swapchain,
     Frame<Platform::VULKAN> *frame,
@@ -217,7 +217,7 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
 
 #endif
 
-Result Instance<Platform::VULKAN>::SetupDebug()
+RendererResult Instance<Platform::VULKAN>::SetupDebug()
 {
     static const Array<const char *> layers {
         "VK_LAYER_KHRONOS_validation"
@@ -241,7 +241,7 @@ Instance<Platform::VULKAN>::Instance()
 {
 }
 
-Result Instance<Platform::VULKAN>::SetupDebugMessenger()
+RendererResult Instance<Platform::VULKAN>::SetupDebugMessenger()
 {
 #ifndef HYPERION_BUILD_RELEASE
     VkDebugUtilsMessengerCreateInfoEXT messenger_info{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
@@ -266,7 +266,7 @@ Result Instance<Platform::VULKAN>::SetupDebugMessenger()
     HYPERION_RETURN_OK;
 }
 
-Result Instance<Platform::VULKAN>::Initialize(const AppContext &app_context, bool load_debug_layers)
+RendererResult Instance<Platform::VULKAN>::Initialize(const AppContext &app_context, bool load_debug_layers)
 {
     /* Set up our debug and validation layers */
     if (load_debug_layers) {
@@ -297,7 +297,7 @@ Result Instance<Platform::VULKAN>::Initialize(const AppContext &app_context, boo
     Array<const char *> extension_names;
 
     if (!app_context.GetVkExtensions(extension_names)) {
-        return { Result::RENDERER_ERR, "Failed to load Vulkan extensions." };
+        return RendererError { "Failed to load Vulkan extensions." };
     }
     
     extension_names.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -359,9 +359,9 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     }
 }
 
-Result Instance<Platform::VULKAN>::Destroy()
+RendererResult Instance<Platform::VULKAN>::Destroy()
 {
-    Result result;
+    RendererResult result;
 
     HYPERION_PASS_ERRORS(m_device->Wait(), result);
 
@@ -391,7 +391,7 @@ Result Instance<Platform::VULKAN>::Destroy()
     return result;
 }
 
-Result Instance<Platform::VULKAN>::CreateDevice(VkPhysicalDevice physical_device)
+RendererResult Instance<Platform::VULKAN>::CreateDevice(VkPhysicalDevice physical_device)
 {
     /* If no physical device passed in, we select one */
     if (physical_device == VK_NULL_HANDLE) {
@@ -421,10 +421,10 @@ Result Instance<Platform::VULKAN>::CreateDevice(VkPhysicalDevice physical_device
     HYPERION_RETURN_OK;
 }
 
-Result Instance<Platform::VULKAN>::CreateSwapchain()
+RendererResult Instance<Platform::VULKAN>::CreateSwapchain()
 {
     if (m_surface == VK_NULL_HANDLE) {
-        return { Result::RENDERER_ERR, "Surface not created before initializing swapchain" };
+        return RendererError { "Surface not created before initializing swapchain" };
     }
 
     m_swapchain->GetPlatformImpl().surface = m_surface;
@@ -433,14 +433,14 @@ Result Instance<Platform::VULKAN>::CreateSwapchain()
     HYPERION_RETURN_OK;
 }
 
-Result Instance<Platform::VULKAN>::RecreateSwapchain()
+RendererResult Instance<Platform::VULKAN>::RecreateSwapchain()
 {
     if (m_swapchain.IsValid()) {
         SafeRelease(std::move(m_swapchain));
     }
 
     if (m_surface == VK_NULL_HANDLE) {
-        return { Result::RENDERER_ERR, "Surface not created before initializing swapchain" };
+        return RendererError { "Surface not created before initializing swapchain" };
     }
 
     m_swapchain = MakeRenderObject<Swapchain<Platform::VULKAN>>();

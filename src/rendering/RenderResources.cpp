@@ -59,7 +59,7 @@ void RenderResourcesBase::Claim()
 
         virtual ~RENDER_COMMAND(InitializeRenderResources)() override = default;
 
-        virtual renderer::Result operator()() override
+        virtual RendererResult operator()() override
         {
             {
                 HYP_NAMED_SCOPE("Initializing RenderResources - Initialization");
@@ -124,7 +124,7 @@ void RenderResourcesBase::Unclaim()
 
         virtual ~RENDER_COMMAND(DestroyRenderResources)() override = default;
 
-        virtual renderer::Result operator()() override
+        virtual RendererResult operator()() override
         {
             HYP_NAMED_SCOPE("Destroying RenderResources");
 
@@ -172,7 +172,7 @@ void RenderResourcesBase::Execute(Proc<void> &&proc, bool force_render_thread)
 
         virtual ~RENDER_COMMAND(ExecuteOnRenderThread)() override = default;
 
-        virtual renderer::Result operator()() override
+        virtual RendererResult operator()() override
         {
             HYP_NAMED_SCOPE("Executing RenderResources Command on Render Thread");
 
@@ -234,7 +234,7 @@ void RenderResourcesBase::SetNeedsUpdate()
 
         virtual ~RENDER_COMMAND(ApplyRenderResourcesUpdates)() override = default;
 
-        virtual renderer::Result operator()() override
+        virtual RendererResult operator()() override
         {
             HYP_NAMED_SCOPE("Applying RenderResources Updates on Render Thread");
             

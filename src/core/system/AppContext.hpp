@@ -62,7 +62,7 @@ namespace sys {
 
 class SystemEvent;
 class CommandLineArguments;
-struct ArgParseDefinitions;
+struct CommandLineArgumentDefinitions;
 
 struct WindowOptions
 {
@@ -176,8 +176,6 @@ public:
 
     virtual void UpdateConfigurationOverrides();
 
-    virtual const ArgParseDefinitions &GetArgParseDefinitions() const;
-
 #ifdef HYP_VULKAN
     virtual bool GetVkExtensions(Array<const char *> &out_extensions) const = 0;
 #endif
@@ -212,6 +210,8 @@ public:
 
 };
 
+extern HYP_API const CommandLineArgumentDefinitions &DefaultCommandLineArgumentDefinitions();
+
 } // namespace sys
 
 using sys::SystemEvent;
@@ -223,6 +223,8 @@ using sys::ApplicationWindow;
 
 using sys::SDLAppContext;
 using sys::SDLApplicationWindow;
+
+using sys::DefaultCommandLineArgumentDefinitions;
 
 } // namespace hyperion
 

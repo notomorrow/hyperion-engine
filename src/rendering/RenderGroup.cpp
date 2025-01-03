@@ -31,7 +31,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 using renderer::CommandBufferType;
 
 #pragma region Render commands
@@ -64,7 +63,7 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateGraphicsPipeline)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
 #if 0
         DebugLog(LogType::Debug, "Descriptor table has %u sets:\n", pipeline->GetDescriptorTable()->GetSets().Size());

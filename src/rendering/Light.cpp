@@ -32,7 +32,7 @@ struct RENDER_COMMAND(UnbindLight) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(UnbindLight)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         if (Handle<Light> light = light_weak.Lock()) {
             g_engine->GetRenderState()->UnbindLight(light.Get());

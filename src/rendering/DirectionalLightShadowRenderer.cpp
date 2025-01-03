@@ -55,7 +55,7 @@ struct RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet) : renderer::RenderComma
 
     virtual ~RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index)
@@ -78,7 +78,7 @@ struct RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet) : renderer::RenderCom
 
     virtual ~RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index)
@@ -102,7 +102,7 @@ struct RENDER_COMMAND(CreateShadowMapImage) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateShadowMapImage)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYPERION_BUBBLE_ERRORS(shadow_map_image->Create(g_engine->GetGPUDevice()));
         HYPERION_BUBBLE_ERRORS(shadow_map_image_view->Create(g_engine->GetGPUDevice(), shadow_map_image));
@@ -124,9 +124,9 @@ struct RENDER_COMMAND(DestroyShadowPassData) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(DestroyShadowPassData)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
-        Result result;
+        RendererResult result;
 
         HYPERION_PASS_ERRORS(shadow_map_image->Destroy(g_engine->GetGPUDevice()), result);
         HYPERION_PASS_ERRORS(shadow_map_image_view->Destroy(g_engine->GetGPUDevice()), result);
@@ -162,7 +162,7 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(UpdateShadowMapRenderData)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         g_engine->GetRenderData()->shadow_map_data->Set(
             shadow_map_index,

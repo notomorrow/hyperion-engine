@@ -4,6 +4,7 @@
 #include <core/object/HypClassRegistry.hpp>
 #include <core/object/HypMember.hpp>
 #include <core/object/HypObject.hpp>
+#include <core/object/HypConstant.hpp>
 
 #include <core/utilities/Format.hpp>
 
@@ -46,6 +47,18 @@ void HypClassMemberIterator::Advance()
     }
 
     switch (m_phase) {
+    case Phase::ITERATE_CONSTANTS:
+        if (m_current_index < target->GetConstants().Size()) {
+            m_current_value = target->GetConstants()[m_current_index++];
+        } else {
+            m_phase = NextPhase(m_member_types, m_phase);
+            m_current_index = 0;
+            m_current_value = nullptr;
+
+            Advance();
+        }
+
+        break;
     case Phase::ITERATE_PROPERTIES:
         if (m_current_index < target->GetProperties().Size()) {
             m_current_value = target->GetProperties()[m_current_index++];
@@ -126,6 +139,11 @@ HypClass::HypClass(TypeID type_id, Name name, Name parent_name, Span<const HypCl
 
             m_fields.PushBack(field_ptr);
             m_fields_by_name.Set(field_ptr->GetName(), field_ptr);
+        } else if (HypConstant *constant = member.value.TryGet<HypConstant>()) {
+            HypConstant *constant_ptr = new HypConstant(std::move(*constant));
+
+            m_constants.PushBack(constant_ptr);
+            m_constants_by_name.Set(constant_ptr->GetName(), constant_ptr);
         } else {
             HYP_FAIL("Invalid member");
         }
@@ -144,6 +162,10 @@ HypClass::~HypClass()
 
     for (HypField *field_ptr : m_fields) {
         delete field_ptr;
+    }
+
+    for (HypConstant *constant_ptr : m_constants) {
+        delete constant_ptr;
     }
 }
 
@@ -396,6 +418,38 @@ Array<HypField *> HypClass::GetFieldsInherited() const
     }
 
     return m_fields;
+}
+
+HypConstant *HypClass::GetConstant(WeakName name) const
+{
+    const auto it = m_constants_by_name.FindAs(name);
+
+    if (it == m_constants_by_name.End()) {
+        if (const HypClass *parent = GetParent()) {
+            return parent->GetConstant(name);
+        }
+
+        return nullptr;
+    }
+
+    return it->second;
+}
+
+Array<HypConstant *> HypClass::GetConstantsInherited() const
+{
+    if (const HypClass *parent = GetParent()) {
+        FlatSet<HypConstant *> constants { m_constants.Begin(), m_constants.End() };
+
+        Array<HypConstant *> inherited_constants = parent->GetConstantsInherited();
+
+        for (HypConstant *constant : inherited_constants) {
+            constants.Insert(constant);
+        }
+
+        return constants.ToArray();
+    }
+
+    return m_constants;
 }
 
 dotnet::Class *HypClass::GetManagedClass() const

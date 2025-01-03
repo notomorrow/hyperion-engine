@@ -30,7 +30,7 @@ struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : renderer::Rende
 
     virtual ~RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
@@ -49,9 +49,9 @@ struct RENDER_COMMAND(RemoveHBAODescriptors) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(RemoveHBAODescriptors)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
-        Result result;
+        RendererResult result;
 
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)

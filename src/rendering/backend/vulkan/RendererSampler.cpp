@@ -52,7 +52,7 @@ Sampler<Platform::VULKAN>::~Sampler()
 }
 
 template <>
-Result Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     AssertThrow(m_platform_impl.handle == VK_NULL_HANDLE);
 
@@ -100,7 +100,7 @@ Result Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 
     if (m_min_filter_mode == FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP) {
         if (!device->GetFeatures().GetSamplerMinMaxProperties().filterMinmaxSingleComponentFormats) {
-            return { Result::RENDERER_ERR, "Device does not support min/max sampler formats" };
+            return RendererError { "Device does not support min/max sampler formats" };
         }
 
         reduction_info.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
@@ -108,14 +108,14 @@ Result Sampler<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
     }
 
     if (vkCreateSampler(device->GetDevice(), &sampler_info, nullptr, &m_platform_impl.handle) != VK_SUCCESS) {
-        return { Result::RENDERER_ERR, "Failed to create sampler!" };
+        return RendererError { "Failed to create sampler!" };
     }
 
     HYPERION_RETURN_OK;
 }
 
 template <>
-Result Sampler<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Sampler<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (m_platform_impl.handle != VK_NULL_HANDLE) {
         vkDestroySampler(device->GetDevice(), m_platform_impl.handle, nullptr);

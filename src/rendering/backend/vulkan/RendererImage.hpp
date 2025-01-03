@@ -37,7 +37,7 @@ struct ImagePlatformImpl<Platform::VULKAN>
     // true if we created the VkImage, false otherwise (e.g retrieved from swapchain)
     bool                                        is_handle_owned = true;
 
-    Result ConvertTo32BPP(
+    RendererResult ConvertTo32BPP(
         Device<Platform::VULKAN> *device,
         VkImageType image_type,
         VkImageCreateFlags image_create_flags,
@@ -45,13 +45,13 @@ struct ImagePlatformImpl<Platform::VULKAN>
         VkFormat *out_format
     );
 
-    Result Create(
+    RendererResult Create(
         Device<Platform::VULKAN> *device,
         VkImageLayout initial_layout,
         VkImageCreateInfo *out_image_info
     );
 
-    Result Destroy(
+    RendererResult Destroy(
         Device<Platform::VULKAN> *device
     );
 

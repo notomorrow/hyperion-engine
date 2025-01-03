@@ -51,7 +51,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 
 #pragma region Render commands
 
@@ -64,7 +63,7 @@ struct RENDER_COMMAND(BindEnvProbes) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual RendererResult operator()()
     {
         for (const auto &it : items) {
             g_engine->GetRenderState()->BindEnvProbe(it.second, it.first);
@@ -521,7 +520,7 @@ void Scene::EnqueueRenderUpdates()
 
         virtual ~RENDER_COMMAND(UpdateSceneRenderData)() override = default;
 
-        virtual Result operator()() override
+        virtual RendererResult operator()() override
         {
             const uint frame_counter = render_environment->GetFrameCounter();
 

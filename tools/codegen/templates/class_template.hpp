@@ -33,8 +33,8 @@ ${start_macro_names[hyp_class.class_type]}(${hyp_class.name}${(f", NAME(\"{hyp_c
         % elif member.member_type == HypMemberType.PROPERTY:
             <% property_args = ', '.join(member.args) if len(member.args) > 0 else "" %> \
             <% s += f"HypProperty(NAME(HYP_STR({member.name})), {property_args})" %> \
-        % elif member.member_type == HypMemberType.ENUMERATOR:
-            <% s += f"HypProperty(NAME(HYP_STR({to_pascal_case(member.name)})), HypPropertyGetter(static_cast<Type(*)(void)>([](void) {{ return Type::{member.name}; }})))" %> \
+        % elif member.member_type == HypMemberType.CONSTANT:
+            <% s += f"HypConstant(NAME(HYP_STR({to_pascal_case(member.name)})), Type::{member.name})" %> \
         % endif
         <% s += ',' if i != len(hyp_class.members) - 1 else '' %> \
         <% s += '\n' %> \

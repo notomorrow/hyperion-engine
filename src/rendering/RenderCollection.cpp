@@ -190,7 +190,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         return removed;
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYP_SCOPE;
 

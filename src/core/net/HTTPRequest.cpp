@@ -172,7 +172,6 @@ Task<HTTPResponse> HTTPRequest::Send()
 
             // Set the request body
             if (!body.Empty()) {
-                HYP_LOG(Net, LogLevel::DEBUG, "Sending body: {}", String(body.ToByteView()));
                 curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.Data());
                 curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, body.Size());
             }
@@ -218,9 +217,13 @@ Task<HTTPResponse> HTTPRequest::Send()
                 HYP_LOG(Net, LogLevel::ERR, "curl_easy_perform() failed: {}", curl_easy_strerror(res));
             }
 
+            // Get the response code
+            long response_code = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+
             curl_easy_cleanup(curl);
 
-            response.OnComplete(res);
+            response.OnComplete(int(response_code));
 
             return response;
 

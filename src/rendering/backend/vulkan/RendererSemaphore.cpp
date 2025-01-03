@@ -18,7 +18,7 @@ Semaphore::~Semaphore()
     AssertThrowMsg(m_semaphore == nullptr, "semaphore should have been destroyed");
 }
 
-Result Semaphore::Create(Device *device)
+RendererResult Semaphore::Create(Device *device)
 {
     VkSemaphoreCreateInfo semaphore_info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 
@@ -30,7 +30,7 @@ Result Semaphore::Create(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result Semaphore::Destroy(Device *device)
+RendererResult Semaphore::Destroy(Device *device)
 {
     vkDestroySemaphore(device->GetDevice(), m_semaphore, nullptr);
     m_semaphore = nullptr;
@@ -91,7 +91,7 @@ SemaphoreChain::~SemaphoreChain()
     );
 }
 
-Result SemaphoreChain::Create(Device *device)
+RendererResult SemaphoreChain::Create(Device *device)
 {
     for (size_t i = 0; i < m_signal_semaphores.size(); i++) {
         auto &ref = m_signal_semaphores[i];
@@ -112,9 +112,9 @@ Result SemaphoreChain::Create(Device *device)
     HYPERION_RETURN_OK;
 }
 
-Result SemaphoreChain::Destroy(Device *device)
+RendererResult SemaphoreChain::Destroy(Device *device)
 {
-    Result result;
+    RendererResult result;
 
     const auto dec_ref = [this, &result, device](auto &semaphore) {
         auto *ref = semaphore.ref;

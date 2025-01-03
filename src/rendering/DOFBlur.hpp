@@ -7,8 +7,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 class Engine;
 
 class DOFBlur

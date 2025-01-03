@@ -162,7 +162,7 @@ constexpr auto TypeNameWithoutNamespace()
     return detail::ParseTypeName< substr, true >();
 }
 
-template <class T, bool ShouldStripNamespace>
+template <class T, bool ShouldStripNamespace = false>
 struct TypeNameHelper;
 
 template <class T>

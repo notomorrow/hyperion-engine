@@ -39,34 +39,34 @@ VkAccelerationStructureTypeKHR AccelerationStructure<Platform::VULKAN>::ToVkAcce
 // explicit specialization declarations
 
 template <>
-Result AccelerationGeometry<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
+RendererResult AccelerationGeometry<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
 
 template <>
-Result AccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
+RendererResult AccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device);
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstancesBuffer(Instance<Platform::VULKAN> *instance);
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstancesBuffer(Instance<Platform::VULKAN> *instance);
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance);
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance);
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance);
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance);
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last);
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last);
 
 template <>
-Result BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
+RendererResult BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
 
 template <>
-Result BottomLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
+RendererResult BottomLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
 
 // explicit specialization definitions
 
@@ -103,10 +103,10 @@ bool AccelerationGeometry<Platform::VULKAN>::IsCreated() const
 }
 
 template <>
-Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance)
+RendererResult AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance)
 {
     if (IsCreated()) {
-        return { Result::RENDERER_ERR, "Cannot initialize acceleration geometry that has already been initialized" };
+        return RendererError { "Cannot initialize acceleration geometry that has already been initialized" };
     }
 
     if (m_material.IsValid()) {
@@ -114,11 +114,11 @@ Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
     }
 
     if (!device->GetFeatures().IsRaytracingSupported()) {
-        return { Result::RENDERER_ERR, "Device does not support raytracing" };
+        return RendererError { "Device does not support raytracing" };
     }
 
     if (m_packed_vertices.Empty() || m_packed_indices.Empty()) {
-        return { Result::RENDERER_ERR, "An acceleration geometry must have nonzero vertex count, index count, and vertex size." };
+        return RendererError { "An acceleration geometry must have nonzero vertex count, index count, and vertex size." };
     }
 
     // some assertions to prevent gpu faults
@@ -126,7 +126,7 @@ Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
         AssertThrow(m_packed_indices[i] < m_packed_vertices.Size());
     }
 
-    Result result { };
+    RendererResult result { };
 
     const SizeType packed_vertices_size = m_packed_vertices.Size() * sizeof(PackedVertex);
     const SizeType packed_indices_size = m_packed_indices.Size() * sizeof(uint32);
@@ -218,17 +218,17 @@ Result AccelerationGeometry<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
 }
 
 template <>
-Result AccelerationGeometry<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult AccelerationGeometry<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (!IsCreated()) {
-        return { Result::RENDERER_ERR, "Cannot destroy acceleration geometry that has not been initialized" };
+        return RendererError { "Cannot destroy acceleration geometry that has not been initialized" };
     }
 
     if (m_material.IsValid()) {
         m_material->GetRenderResources().Unclaim();
     }
 
-    Result result;
+    RendererResult result;
 
     SafeRelease(std::move(m_packed_vertex_buffer));
     SafeRelease(std::move(m_packed_index_buffer));
@@ -282,7 +282,7 @@ AccelerationStructure<Platform::VULKAN>::~AccelerationStructure()
 }
 
 template <>
-Result AccelerationStructure<Platform::VULKAN>::CreateAccelerationStructure(
+RendererResult AccelerationStructure<Platform::VULKAN>::CreateAccelerationStructure(
     Instance<Platform::VULKAN> *instance,
     AccelerationStructureType type,
     const std::vector<VkAccelerationStructureGeometryKHR> &geometries,
@@ -301,14 +301,14 @@ Result AccelerationStructure<Platform::VULKAN>::CreateAccelerationStructure(
     }
 
     if (!instance->GetDevice()->GetFeatures().IsRaytracingSupported()) {
-        return { Result::RENDERER_ERR, "Device does not support raytracing" };
+        return RendererError { "Device does not support raytracing" };
     }
 
     if (geometries.empty()) {
-        return { Result::RENDERER_ERR, "Geometries empty" };
+        return RendererError { "Geometries empty" };
     }
 
-    Result result;
+    RendererResult result;
     Device<Platform::VULKAN> *device = instance->GetDevice();
     
     if (m_buffer == nullptr) {
@@ -480,9 +480,9 @@ Result AccelerationStructure<Platform::VULKAN>::CreateAccelerationStructure(
 }
 
 template <>
-Result AccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult AccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
-    Result result;
+    RendererResult result;
 
     for (auto &geometry : m_geometries) {
         SafeRelease(std::move(geometry));
@@ -586,7 +586,7 @@ std::vector<uint32> TopLevelAccelerationStructure<Platform::VULKAN>::GetPrimitiv
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::Create(
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
     Instance<Platform::VULKAN> *instance
 )
@@ -597,7 +597,7 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::Create(
 
     RTUpdateStateFlags update_state_flags = RT_UPDATE_STATE_FLAGS_NONE;
 
-    Result result { };
+    RendererResult result;
     
     HYPERION_PASS_ERRORS(
         CreateAccelerationStructure(
@@ -632,9 +632,9 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::Create(
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
-    Result result;
+    RendererResult result;
 
     SafeRelease(std::move(m_mesh_descriptions_buffer));
     SafeRelease(std::move(m_scratch_buffer));
@@ -688,7 +688,7 @@ void TopLevelAccelerationStructure<Platform::VULKAN>::RemoveBLAS(const BLASRef<P
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstancesBuffer(Instance<Platform::VULKAN> *instance)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstancesBuffer(Instance<Platform::VULKAN> *instance)
 {
     Device<Platform::VULKAN> *device = instance->GetDevice();
 
@@ -749,7 +749,7 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildInstances
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateInstancesBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateInstancesBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last)
 {
     if (last == first) {
         HYPERION_RETURN_OK; 
@@ -796,7 +796,7 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateInstancesBuffer(In
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance)
 {
     Device<Platform::VULKAN> *device = instance->GetDevice();
 
@@ -824,13 +824,13 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescriptionsBu
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance)
 {
     return UpdateMeshDescriptionsBuffer(instance, 0u, uint(m_blas.Size()));
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last)
 {
     AssertThrow(m_mesh_descriptions_buffer != nullptr);
     AssertThrow(m_mesh_descriptions_buffer->Size() >= sizeof(MeshDescription) * m_blas.Size());
@@ -839,7 +839,7 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBu
 
     if (last <= first) {
         // nothing to update
-        return Result { };
+        return RendererResult { };
     }
 
     Device<Platform::VULKAN> *device = instance->GetDevice();
@@ -886,11 +886,11 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBu
         mesh_descriptions.Data()
     );
 
-    return Result { };
+    return RendererResult { };
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::RebuildMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::RebuildMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance)
 {
     //SafeRelease(std::move(m_mesh_descriptions_buffer));
     
@@ -900,7 +900,7 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::RebuildMeshDescriptionsB
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
 {
     out_update_state_flags = RT_UPDATE_STATE_FLAGS_NONE;
 
@@ -959,11 +959,11 @@ Result TopLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance
 }
 
 template <>
-Result TopLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
 {
     AssertThrow(m_acceleration_structure != VK_NULL_HANDLE);
 
-    Result result;
+    RendererResult result;
 
     Device<Platform::VULKAN> *device = instance->GetDevice();
 
@@ -1026,22 +1026,22 @@ template <>
 BottomLevelAccelerationStructure<Platform::VULKAN>::~BottomLevelAccelerationStructure() = default;
 
 template <>
-Result BottomLevelAccelerationStructure<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance)
+RendererResult BottomLevelAccelerationStructure<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, Instance<Platform::VULKAN> *instance)
 {
-    Result result;
+    RendererResult result;
 
     std::vector<VkAccelerationStructureGeometryKHR> geometries(m_geometries.Size());
     std::vector<uint32> primitive_counts(m_geometries.Size());
 
     if (m_geometries.Empty()) {
-        return { Result::RENDERER_ERR, "Cannot create BLAS with zero geometries" };
+        return RendererError { "Cannot create BLAS with zero geometries" };
     }
 
     for (SizeType i = 0; i < m_geometries.Size(); i++) {
         const AccelerationGeometryRef<Platform::VULKAN> &geometry = m_geometries[i];
 
         if (geometry->GetPackedIndices().Size() % 3 != 0) {
-            return { Result::RENDERER_ERR, "Invalid triangle mesh!" };
+            return RendererError { "Invalid triangle mesh!" };
         }
 
         if (!geometry->IsCreated()) {
@@ -1055,7 +1055,7 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::Create(Device<Platfor
             if (primitive_counts[i] == 0) {
                 HYPERION_IGNORE_ERRORS(Destroy(device));
 
-                return { Result::RENDERER_ERR, "Cannot create BLAS -- geometry has zero indices" };
+                return RendererError { "Cannot create BLAS -- geometry has zero indices" };
             }
         } else {
             HYPERION_IGNORE_ERRORS(Destroy(device));
@@ -1090,7 +1090,7 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::Create(Device<Platfor
 }
 
 template <>
-Result BottomLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
+RendererResult BottomLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
 {
     out_update_state_flags = RT_UPDATE_STATE_FLAGS_NONE;
     
@@ -1108,9 +1108,9 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(Insta
 }
 
 template <>
-Result BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
+RendererResult BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags)
 {
-    Result result;
+    RendererResult result;
     Device<Platform::VULKAN> *device = instance->GetDevice();
 
     std::vector<VkAccelerationStructureGeometryKHR> geometries(m_geometries.Size());
@@ -1121,7 +1121,7 @@ Result BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Plat
         AssertThrow(geometry != nullptr);
 
         if (!geometry->GetPackedIndices().Empty()) {
-            return { Result::RENDERER_ERR, "No mesh data set on geometry!" };
+            return RendererError { "No mesh data set on geometry!" };
         }
 
         geometries[i] = geometry->m_geometry;

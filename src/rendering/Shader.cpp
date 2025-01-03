@@ -16,7 +16,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 
 ShaderManagerSystem *ShaderManagerSystem::GetInstance()
 {

@@ -16,6 +16,7 @@
 
 #include <core/utilities/Span.hpp>
 #include <core/utilities/UUID.hpp>
+#include <core/utilities/Result.hpp>
 
 #include <math/Triangle.hpp>
 #include <math/Ray.hpp>
@@ -230,7 +231,7 @@ private:
     void TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShadingType shading_type);
     void TraceSingleRayOnCPU(const LightmapRay &ray, LightmapRayHitPayload &out_payload);
 
-    Optional<LightmapUVMap> BuildUVMap();
+    Result<LightmapUVMap> BuildUVMap();
 
     HYP_FORCE_INLINE LightmapTopLevelAccelerationStructure *GetAccelerationStructure() const
     {
@@ -253,7 +254,7 @@ private:
     mutable Mutex                                           m_previous_frame_rays_mutex;
 
     Optional<LightmapUVMap>                                 m_uv_map;
-    Task<Optional<LightmapUVMap>>                           m_build_uv_map_task;
+    Task<Result<LightmapUVMap>>                             m_build_uv_map_task;
     Array<Task<void>>                                       m_current_tasks;
     UniquePtr<LightmapTaskThreadPool>                       m_task_thread_pool;
 

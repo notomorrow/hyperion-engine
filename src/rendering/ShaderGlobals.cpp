@@ -24,7 +24,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 
 #pragma region Render commands
 
@@ -40,7 +39,7 @@ struct RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridBuffer) : renderer::Rend
 
     virtual ~RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridBuffer)() = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         // @TODO: Make GPU only buffer
         HYPERION_BUBBLE_ERRORS(sh_grid_buffer->Create(g_engine->GetGPUDevice(), sizeof(SHGridBuffer)));
@@ -61,7 +60,7 @@ struct RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages) : renderer::Rend
 
     virtual ~RENDER_COMMAND(CreateGlobalSphericalHarmonicsGridImages)() = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (auto &item : grid_textures) {
             HYPERION_BUBBLE_ERRORS(item.image->Create(g_engine->GetGPUDevice()));

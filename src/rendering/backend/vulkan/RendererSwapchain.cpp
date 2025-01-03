@@ -16,10 +16,10 @@ static const VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHME
 
 #pragma region SwapchainPlatformImpl
 
-Result SwapchainPlatformImpl<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult SwapchainPlatformImpl<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     if (surface == VK_NULL_HANDLE) {
-        return { Result::RENDERER_ERR, "Cannot initialize swapchain without a surface" };
+        return RendererError { "Cannot initialize swapchain without a surface" };
     }
 
     RetrieveSupportDetails(device);
@@ -90,7 +90,7 @@ Result SwapchainPlatformImpl<Platform::VULKAN>::Create(Device<Platform::VULKAN> 
     HYPERION_RETURN_OK;
 }
 
-Result SwapchainPlatformImpl<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult SwapchainPlatformImpl<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     DebugLog(LogType::Debug, "Destroying swapchain\n");
 
@@ -218,13 +218,13 @@ bool Swapchain<Platform::VULKAN>::IsCreated() const
 }
 
 template <>
-Result Swapchain<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult Swapchain<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     return m_platform_impl.Create(device);
 }
 
 template <>
-Result Swapchain<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Swapchain<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     SafeRelease(std::move(m_images));
     
