@@ -27,7 +27,7 @@ CommandBuffer<Platform::VULKAN>::~CommandBuffer()
     AssertThrowMsg(m_platform_impl.command_buffer == VK_NULL_HANDLE, "command buffer should have been destroyed");
 }
 template <>
-Result CommandBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult CommandBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     AssertThrow(m_platform_impl.command_pool != VK_NULL_HANDLE);
 
@@ -58,7 +58,7 @@ Result CommandBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result CommandBuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult CommandBuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (m_platform_impl.command_buffer != VK_NULL_HANDLE) {
         AssertThrow(m_platform_impl.command_pool != VK_NULL_HANDLE);
@@ -73,7 +73,7 @@ Result CommandBuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device
 }
 
 template <>
-Result CommandBuffer<Platform::VULKAN>::Begin(Device<Platform::VULKAN> *device, const RenderPass<Platform::VULKAN> *render_pass)
+RendererResult CommandBuffer<Platform::VULKAN>::Begin(Device<Platform::VULKAN> *device, const RenderPass<Platform::VULKAN> *render_pass)
 {
     VkCommandBufferInheritanceInfo inheritance_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
     inheritance_info.subpass = 0;
@@ -83,7 +83,7 @@ Result CommandBuffer<Platform::VULKAN>::Begin(Device<Platform::VULKAN> *device, 
 
     if (m_type == COMMAND_BUFFER_SECONDARY) {
         if (render_pass == nullptr) {
-            return Result { Result::RENDERER_ERR, "Render pass not provided for secondary command buffer!" };
+            return RendererError { "Render pass not provided for secondary command buffer!" };
         }
 
         inheritance_info.renderPass = render_pass->GetHandle();
@@ -101,7 +101,7 @@ Result CommandBuffer<Platform::VULKAN>::Begin(Device<Platform::VULKAN> *device, 
 }
 
 template <>
-Result CommandBuffer<Platform::VULKAN>::End(Device<Platform::VULKAN> *device)
+RendererResult CommandBuffer<Platform::VULKAN>::End(Device<Platform::VULKAN> *device)
 {
     HYPERION_VK_CHECK_MSG(
         vkEndCommandBuffer(m_platform_impl.command_buffer),
@@ -112,7 +112,7 @@ Result CommandBuffer<Platform::VULKAN>::End(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result CommandBuffer<Platform::VULKAN>::Reset(Device<Platform::VULKAN> *device)
+RendererResult CommandBuffer<Platform::VULKAN>::Reset(Device<Platform::VULKAN> *device)
 {
     HYPERION_VK_CHECK_MSG(
         vkResetCommandBuffer(m_platform_impl.command_buffer, 0),
@@ -123,7 +123,7 @@ Result CommandBuffer<Platform::VULKAN>::Reset(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result CommandBuffer<Platform::VULKAN>::SubmitPrimary(
+RendererResult CommandBuffer<Platform::VULKAN>::SubmitPrimary(
     DeviceQueue<Platform::VULKAN> *queue,
     Fence<Platform::VULKAN> *fence,
     SemaphoreChain *semaphore_chain
@@ -157,7 +157,7 @@ Result CommandBuffer<Platform::VULKAN>::SubmitPrimary(
 }
 
 template <>
-Result CommandBuffer<Platform::VULKAN>::SubmitSecondary(CommandBuffer *primary)
+RendererResult CommandBuffer<Platform::VULKAN>::SubmitSecondary(CommandBuffer *primary)
 {
     vkCmdExecuteCommands(
         primary->m_platform_impl.command_buffer,

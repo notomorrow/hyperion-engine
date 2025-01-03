@@ -67,8 +67,8 @@ public:
 
     void DebugLogAllocatorStats() const;
 
-    Result SetupAllocator(Instance<Platform::VULKAN> *instance);
-    Result DestroyAllocator();
+    RendererResult SetupAllocator(Instance<Platform::VULKAN> *instance);
+    RendererResult DestroyAllocator();
     VmaAllocator GetAllocator() const { return m_allocator; }
 
     const QueueFamilyIndices &GetQueueFamilyIndices() const { return m_queue_family_indices; }
@@ -85,11 +85,11 @@ public:
 
     VkQueue GetQueue(uint32 queue_family_index, uint32 queue_index = 0);
 
-    Result Create(const std::set<uint32_t> &required_queue_families);
-    Result CheckDeviceSuitable(const ExtensionMap &unsupported_extensions);
+    RendererResult Create(const std::set<uint32_t> &required_queue_families);
+    RendererResult CheckDeviceSuitable(const ExtensionMap &unsupported_extensions);
 
     /*! \brief Wait for the device to be idle */
-    Result Wait() const;
+    RendererResult Wait() const;
     
     /*! \brief Check if the set required extensions extensions are supported. Any unsupported extensions are returned. */
     ExtensionMap GetUnsupportedExtensions();

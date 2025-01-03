@@ -34,7 +34,7 @@ struct RENDER_COMMAND(CreateCommandBuffers) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateCommandBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint i = 0; i < max_frames_in_flight; i++) {
 #ifdef HYP_VULKAN
@@ -61,7 +61,7 @@ struct RENDER_COMMAND(RecreateFullScreenPassFramebuffer) : renderer::RenderComma
 
     virtual ~RENDER_COMMAND(RecreateFullScreenPassFramebuffer)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         if (full_screen_pass.m_is_initialized) {
             full_screen_pass.Resize_Internal(new_size);

@@ -538,9 +538,9 @@ public:
 
     HYP_API bool IsCreated() const;
 
-    HYP_API Result Create(Device<PLATFORM> *device);
-    HYP_API Result Destroy(Device<PLATFORM> *device);
-    HYP_API Result Update(Device<PLATFORM> *device);
+    HYP_API RendererResult Create(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Update(Device<PLATFORM> *device);
 
     bool HasElement(Name name) const;
 
@@ -776,9 +776,9 @@ public:
     /*! \brief Create all descriptor sets in the table
         \param device The device to create the descriptor sets on
         \return The result of the operation */
-    Result Create(Device<PLATFORM> *device)
+    RendererResult Create(Device<PLATFORM> *device)
     {
-        Result result = Result { };
+        RendererResult result;
 
         for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             for (const DescriptorSetRef<PLATFORM> &set : m_sets[frame_index]) {
@@ -808,7 +808,7 @@ public:
     /*! \brief Safely release all descriptor sets in the table
         \param device The device to destroy the descriptor sets on
         \return The result of the operation */
-    Result Destroy(Device<PLATFORM> *device)
+    RendererResult Destroy(Device<PLATFORM> *device)
     {
         for (auto &it : m_sets) {
             SafeRelease(std::move(it));
@@ -816,14 +816,14 @@ public:
         
         m_sets = { };
 
-        return Result { };
+        return { };
     }
 
     /*! \brief Apply updates to all descriptor sets in the table
         \param device The device to update the descriptor sets on
         \param frame_index The index of the frame to update the descriptor sets for
         \return The result of the operation */
-    Result Update(Device<PLATFORM> *device, uint32 frame_index)
+    RendererResult Update(Device<PLATFORM> *device, uint32 frame_index)
     {
         for (const DescriptorSetRef<PLATFORM> &set : m_sets[frame_index]) {
             const Name descriptor_set_name = set->GetLayout().GetName();
@@ -836,14 +836,14 @@ public:
                 continue;
             }
 
-            const Result set_result = set->Update(device);
+            const RendererResult set_result = set->Update(device);
 
             if (!set_result) {
                 return set_result;
             }
         }
 
-        return Result { };
+        return { };
     }
 
     HYP_FORCE_INLINE void Bind(Frame<PLATFORM> *frame, const GraphicsPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>> &offsets)

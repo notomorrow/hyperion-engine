@@ -207,7 +207,7 @@ void GraphicsPipeline<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *c
 }
 
 template <>
-Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *device)
+RendererResult GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *device)
 {
     Array<VkVertexInputAttributeDescription> vk_vertex_attributes;
     Array<VkVertexInputBindingDescription> vk_vertex_binding_descriptions;
@@ -285,7 +285,7 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
         rasterizer.cullMode = VK_CULL_MODE_NONE;
         break;
     default:
-        return { Result::RENDERER_ERR, "Invalid value for face cull mode!" };
+        return RendererError { "Invalid value for face cull mode!" };
     }
 
     switch (m_fill_mode) {
@@ -361,14 +361,14 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
     const uint32 max_set_layouts = device->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
     
     if (!m_descriptor_table.IsValid()) {
-        return Result { Result::RENDERER_ERR, "No descriptor table set for pipeline" };
+        return RendererError { "No descriptor table set for pipeline" };
     }
     
     Array<VkDescriptorSetLayout> used_layouts = Pipeline<Platform::VULKAN>::m_platform_impl.GetDescriptorSetLayouts();
 
     for (VkDescriptorSetLayout vk_descriptor_set_layout : used_layouts) {
         if (vk_descriptor_set_layout == VK_NULL_HANDLE) {
-            return Result { Result::RENDERER_ERR, "Null descriptor set layout in pipeline" };
+            return RendererError { "Null descriptor set layout in pipeline" };
         }
     }
     
@@ -380,7 +380,7 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
             max_set_layouts
         );
 
-        return Result { Result::RENDERER_ERR, "Device max bound descriptor sets exceeded" };
+        return RendererError { "Device max bound descriptor sets exceeded" };
     }
 
     layout_info.setLayoutCount = uint32(used_layouts.Size());
@@ -472,17 +472,17 @@ Result GraphicsPipeline<Platform::VULKAN>::Rebuild(Device<Platform::VULKAN> *dev
 }
 
 template <>
-Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     if (!m_shader.IsValid()) {
-        return { Result::RENDERER_ERR, "Cannot create a graphics pipeline with no shader" };
+        return RendererError { "Cannot create a graphics pipeline with no shader" };
     }
 
     if (m_framebuffers.Empty()) {
-        return { Result::RENDERER_ERR, "Cannot create a graphics pipeline with no framebuffers" };
+        return RendererError { "Cannot create a graphics pipeline with no framebuffers" };
     }
 
-    Result rebuild_result = Rebuild(device);
+    RendererResult rebuild_result = Rebuild(device);
 
     if (!rebuild_result) {
         return rebuild_result;
@@ -492,7 +492,7 @@ Result GraphicsPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *devi
 }
 
 template <>
-Result GraphicsPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult GraphicsPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     SafeRelease(std::move(m_framebuffers));
 

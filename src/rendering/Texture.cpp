@@ -20,7 +20,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 
 class Texture;
 class TextureMipmapRenderer;
@@ -59,7 +58,7 @@ struct RENDER_COMMAND(CreateTexture) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateTexture)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         if (Handle<Texture> texture_locked = texture.Lock()) {
             if (!image->IsCreated()) {
@@ -90,7 +89,7 @@ struct RENDER_COMMAND(DestroyTexture) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(DestroyTexture)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         // If shutting down, skip removing the resource here,
         // render data may have already been destroyed
@@ -122,7 +121,7 @@ struct RENDER_COMMAND(CreateMipImageView) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         return mip_image_view->Create(
             g_engine->GetGPUDevice(),
@@ -161,7 +160,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
         }
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         // draw a quad for each level
         renderer::SingleTimeCommands commands { g_engine->GetGPUDevice() };
@@ -490,7 +489,7 @@ void Texture::Readback() const
             SafeRelease(std::move(image));
         }
 
-        virtual Result operator()() override
+        virtual RendererResult operator()() override
         {
             GPUBufferRef gpu_buffer = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STAGING_BUFFER);
             HYPERION_ASSERT_RESULT(gpu_buffer->Create(g_engine->GetGPUDevice(), image->GetByteSize()));
@@ -515,7 +514,7 @@ void Texture::Readback() const
                 HYPERION_RETURN_OK;
             });
 
-            renderer::Result result = commands.Execute();
+            RendererResult result = commands.Execute();
 
             if (!result) {
                 return result;

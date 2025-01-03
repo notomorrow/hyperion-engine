@@ -32,7 +32,7 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/Queue.hpp>
 #include <core/threading/AtomicVar.hpp>
-#include <core/system/ArgParse.hpp>
+#include <core/system/CommandLine.hpp>
 #include <util/json/JSON.hpp>
 
 #include <core/net/Socket.hpp>
@@ -102,9 +102,9 @@ void SampleStreamer::Init()
     Game::Init();
 
 #if 0
-    ArgParse args;
-    args.Add("SignallingServerIP", "s", ArgParse::ARG_FLAGS_REQUIRED, CommandLineArgumentType::ARGUMENT_TYPE_STRING);
-    args.Add("SignallingServerPort", "p", ArgParse::ARG_FLAGS_REQUIRED, CommandLineArgumentType::ARGUMENT_TYPE_INT);
+    CommandLineParser args;
+    args.Add("SignallingServerIP", "s", CommandLineParser::ARG_FLAGS_REQUIRED, CommandLineArgumentType::ARGUMENT_TYPE_STRING);
+    args.Add("SignallingServerPort", "p", CommandLineParser::ARG_FLAGS_REQUIRED, CommandLineArgumentType::ARGUMENT_TYPE_INT);
 
     auto arg_parse_result = args.Parse(GetAppContext()->GetArguments());
     if (arg_parse_result.ok) {

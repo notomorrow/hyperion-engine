@@ -182,7 +182,7 @@ void CrashHandler::Initialize()
 #endif
 }
 
-void CrashHandler::HandleGPUCrash(Result result)
+void CrashHandler::HandleGPUCrash(RendererResult result)
 {
     if (result) {
         return;

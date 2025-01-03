@@ -5,7 +5,7 @@
 #include <asset/ByteWriter.hpp>
 
 #include <core/system/AppContext.hpp>
-#include <core/system/ArgParse.hpp>
+#include <core/system/CommandLine.hpp>
 
 #include <core/dll/DynamicLibrary.hpp>
 

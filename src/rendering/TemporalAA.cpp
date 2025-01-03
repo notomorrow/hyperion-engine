@@ -35,7 +35,7 @@ struct RENDER_COMMAND(SetTemporalAAResultInGlobalDescriptorSet) : renderer::Rend
     {
     }
 
-    virtual Result operator()()
+    virtual RendererResult operator()()
     {
         const ImageViewRef &result_texture_view = result_texture.IsValid()
             ? result_texture->GetImageView()

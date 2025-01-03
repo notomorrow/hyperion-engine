@@ -398,6 +398,24 @@ public:
         m_current_index = TypeIndexHelper<VariantBase<Types...>>{}(type_id);
     }
 
+    template <class T, class... Args>
+    void Emplace(Args &&... args)
+    {
+        static_assert(Helper::template holds_type<T>, "Type is not valid for the variant");
+
+        if (IsValid()) {
+            Helper::Destruct(CurrentTypeID(), m_storage.GetPointer());
+        }
+
+        m_current_index = invalid_type_index;
+
+        const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+
+        Memory::Construct<NormalizedType<T>>(m_storage.GetPointer(), std::forward<Args>(args)...);
+
+        m_current_index = TypeIndexHelper<VariantBase<Types...>>{}(type_id);
+    }
+
     /*! \brief Resets the Variant into an invalid state.
      * If there is any present value, it will be destructed
      */
@@ -662,6 +680,10 @@ struct Variant
     template <class T>
     HYP_FORCE_INLINE void Set(T &&value)
         { return m_holder.template Set<T>(std::forward<T>(value)); }
+
+    template <class T, class... Args>
+    HYP_FORCE_INLINE void Emplace(Args &&... args)
+        { return m_holder.template Emplace<T>(std::forward<Args>(args)...); }
     
 
     /*! \brief Resets the Variant into an invalid state.

@@ -32,15 +32,15 @@ RaytracingPipeline<Platform::VULKAN>::RaytracingPipeline(const ShaderRef<Platfor
 
 RaytracingPipeline<Platform::VULKAN>::~RaytracingPipeline() = default;
 
-Result RaytracingPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult RaytracingPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     if (!device->GetFeatures().IsRaytracingSupported()) {
-        return {Result::RENDERER_ERR, "Raytracing is not supported on this device"};
+        return RendererError { "Raytracing is not supported on this device" };
     }
 
     AssertThrow(m_shader != nullptr);
 
-    Result result;
+    RendererResult result;
 
     /* Pipeline layout */
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
@@ -57,7 +57,7 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *de
             max_set_layouts
         );
 
-        return Result{Result::RENDERER_ERR, "Device max bound descriptor sets exceeded"};
+        return RendererError { "Device max bound descriptor sets exceeded" };
     }
 
     layout_info.setLayoutCount = uint32(used_layouts.Size());
@@ -136,11 +136,11 @@ Result RaytracingPipeline<Platform::VULKAN>::Create(Device<Platform::VULKAN> *de
     HYPERION_RETURN_OK;
 }
 
-Result RaytracingPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult RaytracingPipeline<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     SafeRelease(std::move(m_descriptor_table));
 
-    Result result;
+    RendererResult result;
 
     for (auto &it : m_shader_binding_table_buffers) {
         HYPERION_PASS_ERRORS(it.second.buffer->Destroy(device), result);
@@ -195,7 +195,7 @@ void RaytracingPipeline<Platform::VULKAN>::TraceRays(
     );
 }
 
-Result RaytracingPipeline<Platform::VULKAN>::CreateShaderBindingTables(Device<Platform::VULKAN> *device, Shader<Platform::VULKAN> *shader)
+RendererResult RaytracingPipeline<Platform::VULKAN>::CreateShaderBindingTables(Device<Platform::VULKAN> *device, Shader<Platform::VULKAN> *shader)
 {
     const Array<ShaderGroup<Platform::VULKAN>> &shader_groups = shader->GetShaderGroups();
 
@@ -217,7 +217,7 @@ Result RaytracingPipeline<Platform::VULKAN>::CreateShaderBindingTables(Device<Pl
         shader_handle_storage.Data()
     ));
 
-    Result result;
+    RendererResult result;
 
     uint32 offset = 0;
 
@@ -286,7 +286,7 @@ Result RaytracingPipeline<Platform::VULKAN>::CreateShaderBindingTables(Device<Pl
     return result;
 }
 
-Result RaytracingPipeline<Platform::VULKAN>::CreateShaderBindingTableEntry(
+RendererResult RaytracingPipeline<Platform::VULKAN>::CreateShaderBindingTableEntry(
     Device<Platform::VULKAN> *device,
     uint32 num_shaders,
     ShaderBindingTableEntry &out
@@ -297,10 +297,10 @@ Result RaytracingPipeline<Platform::VULKAN>::CreateShaderBindingTableEntry(
     AssertThrow(properties.shaderGroupHandleSize != 0);
 
     if (num_shaders == 0) {
-        return { Result::RENDERER_ERR, "Creating shader binding table entry with zero shader count" };
+        return RendererError { "Creating shader binding table entry with zero shader count" };
     }
 
-    Result result;
+    RendererResult result;
 
     out.buffer = MakeUnique<ShaderBindingTableBuffer<Platform::VULKAN>>();
 

@@ -95,7 +95,7 @@ bool RenderPass<Platform::VULKAN>::RemoveAttachment(const AttachmentRef<Platform
     return true;
 }
 
-Result RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     CreateDependencies();
 
@@ -178,9 +178,9 @@ Result RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
     HYPERION_RETURN_OK;
 }
 
-Result RenderPass<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult RenderPass<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
-    Result result;
+    RendererResult result;
 
     vkDestroyRenderPass(device->GetDevice(), m_handle, nullptr);
     m_handle = nullptr;

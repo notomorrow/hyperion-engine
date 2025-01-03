@@ -48,6 +48,12 @@ public:
     HYP_FORCE_INLINE int GetStatusCode() const
         { return m_status_code; }
 
+    HYP_FORCE_INLINE bool IsSuccess() const
+        { return m_status_code >= 200 && m_status_code < 400; }
+
+    HYP_FORCE_INLINE bool IsError() const
+        { return m_status_code >= 400; }
+
     HYP_FORCE_INLINE const ByteBuffer &ToByteBuffer() const
         { return m_body; }
 

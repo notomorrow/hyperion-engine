@@ -20,8 +20,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 struct RENDER_COMMAND(UpdateEnvProbeDrawProxy);
 struct RENDER_COMMAND(CreateCubemapBuffers);
 struct RENDER_COMMAND(DestroyCubemapRenderPass);

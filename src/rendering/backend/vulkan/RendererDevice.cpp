@@ -236,7 +236,7 @@ ExtensionMap Device<Platform::VULKAN>::GetUnsupportedExtensions()
     return unsupported_extensions;
 }
 
-Result Device<Platform::VULKAN>::CheckDeviceSuitable(const ExtensionMap &unsupported_extensions)
+RendererResult Device<Platform::VULKAN>::CheckDeviceSuitable(const ExtensionMap &unsupported_extensions)
 {
     if (!unsupported_extensions.empty()) {
         HYP_LOG(RenderingBackend, LogLevel::WARNING, "--- Unsupported Extensions ---\n");
@@ -254,7 +254,7 @@ Result Device<Platform::VULKAN>::CheckDeviceSuitable(const ExtensionMap &unsuppo
         }
 
         if (any_required) {
-            return { Result::RENDERER_ERR, "Device does not support required extensions" };
+            return RendererError { "Device does not support required extensions" };
         }
     }
 
@@ -262,17 +262,17 @@ Result Device<Platform::VULKAN>::CheckDeviceSuitable(const ExtensionMap &unsuppo
     const bool swapchains_available = swapchain_support.formats.Any() && swapchain_support.present_modes.Any();
 
     if (!m_queue_family_indices.IsComplete()) {
-        return {Result::RENDERER_ERR, "Device not supported -- indices setup was not complete."};
+        return RendererError { "Device not supported -- indices setup was not complete." };
     }
 
     if (!swapchains_available) {
-        return {Result::RENDERER_ERR, "Device not supported -- swapchains not available."};
+        return RendererError { "Device not supported -- swapchains not available." };
     }
 
     HYPERION_RETURN_OK;
 }
 
-Result Device<Platform::VULKAN>::SetupAllocator(Instance<Platform::VULKAN> *instance)
+RendererResult Device<Platform::VULKAN>::SetupAllocator(Instance<Platform::VULKAN> *instance)
 {
     VmaVulkanFunctions vkfuncs { };
     vkfuncs.vkGetInstanceProcAddr = &vkGetInstanceProcAddr;
@@ -303,7 +303,7 @@ void Device<Platform::VULKAN>::DebugLogAllocatorStats() const
     }
 }
 
-Result Device<Platform::VULKAN>::DestroyAllocator()
+RendererResult Device<Platform::VULKAN>::DestroyAllocator()
 {
     if (m_allocator != VK_NULL_HANDLE) {
         DebugLogAllocatorStats();
@@ -315,9 +315,9 @@ Result Device<Platform::VULKAN>::DestroyAllocator()
     HYPERION_RETURN_OK;
 }
 
-Result Device<Platform::VULKAN>::Wait() const
+RendererResult Device<Platform::VULKAN>::Wait() const
 {
-    Result result = Result { };
+    RendererResult result = RendererResult { };
 
     if (m_queue_graphics.queue != VK_NULL_HANDLE) {
         HYPERION_VK_PASS_ERRORS(vkQueueWaitIdle(m_queue_graphics.queue), result);
@@ -340,7 +340,7 @@ Result Device<Platform::VULKAN>::Wait() const
     return result;
 }
 
-Result Device<Platform::VULKAN>::Create(const std::set<uint32> &required_queue_families)
+RendererResult Device<Platform::VULKAN>::Create(const std::set<uint32> &required_queue_families)
 {
     HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Memory properties:\n");
     const auto &memory_properties = m_features->GetPhysicalDeviceMemoryProperties();

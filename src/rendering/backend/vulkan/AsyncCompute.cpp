@@ -19,7 +19,7 @@ namespace hyperion::renderer {
 namespace platform {
 
 template <>
-Result AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame);
+RendererResult AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame);
 
 template <>
 AsyncCompute<Platform::VULKAN>::AsyncCompute()
@@ -44,7 +44,7 @@ AsyncCompute<Platform::VULKAN>::~AsyncCompute()
 }
 
 template <>
-Result AsyncCompute<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult AsyncCompute<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     HYP_SCOPE;
 
@@ -76,7 +76,7 @@ Result AsyncCompute<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result AsyncCompute<Platform::VULKAN>::Submit(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
+RendererResult AsyncCompute<Platform::VULKAN>::Submit(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
 {
     HYP_SCOPE;
 
@@ -90,7 +90,7 @@ Result AsyncCompute<Platform::VULKAN>::Submit(Device<Platform::VULKAN> *device, 
 }
 
 template <>
-Result AsyncCompute<Platform::VULKAN>::PrepareForFrame(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
+RendererResult AsyncCompute<Platform::VULKAN>::PrepareForFrame(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
 {
     HYP_SCOPE;
 
@@ -104,13 +104,13 @@ Result AsyncCompute<Platform::VULKAN>::PrepareForFrame(Device<Platform::VULKAN> 
 }
 
 template <>
-Result AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
+RendererResult AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
 {
     HYP_SCOPE;
 
     const uint frame_index = frame->GetFrameIndex();
 
-    Result result = m_fences[frame_index]->WaitForGPU(device);
+    RendererResult result = m_fences[frame_index]->WaitForGPU(device);
 
     if (!result) {
         return result;

@@ -33,8 +33,8 @@ struct SwapchainPlatformImpl<Platform::VULKAN>
     VkPresentModeKHR            present_mode;
     SwapchainSupportDetails     support_details;
 
-    Result Create(Device<Platform::VULKAN> *device);
-    Result Destroy(Device<Platform::VULKAN> *device);
+    RendererResult Create(Device<Platform::VULKAN> *device);
+    RendererResult Destroy(Device<Platform::VULKAN> *device);
 
     void ChooseSurfaceFormat(Device<Platform::VULKAN> *device);
     void ChoosePresentMode();

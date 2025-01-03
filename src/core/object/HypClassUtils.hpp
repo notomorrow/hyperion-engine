@@ -74,6 +74,89 @@ struct DefaultHypClassFlags<T, std::enable_if_t<std::is_enum_v<T>>>
 
 #define HYP_END_ENUM } } };
 
+/*! \brief Iterate over the members of a HypEnum.
+ *  \tparam EnumType The enum type to iterate over. The enum must have a HypEnum associated with it, otherwise this function will do nothing.
+ *  \tparam Function The function type to call for each member.
+ *  \param function The function to call for each member. The function should have the following signature:
+ *  \code
+ *  void Function(Name name, EnumType value, bool *stop_iteration)
+ *  \endcode
+ */
+template <class EnumType, class Function, typename = std::enable_if_t<std::is_enum_v<EnumType>>>
+void ForEachEnumMember(Function &&function)
+{
+    using EnumUnderlyingType = std::underlying_type_t<EnumType>;
+
+    const HypClass *hyp_class = GetClass<EnumType>();
+    
+    if (!hyp_class || !hyp_class->IsEnumType()) {
+        return;
+    }
+
+    bool stop_iteration = false;
+
+    for (IHypMember &member : hyp_class->GetMembers(HypMemberType::TYPE_CONSTANT)) {
+        HypConstant &member_constant = static_cast<HypConstant &>(member);
+
+        // If the function sets stop_iteration to true, stop iteration
+        function(member_constant.GetName(), static_cast<EnumType>(member_constant.Get().Get<EnumUnderlyingType>()), &stop_iteration);
+
+        if (stop_iteration) {
+            return;
+        }
+    }
+}
+
+/*! \brief Find the name of an enum member for a given HypEnum, using the members' value.
+ *  \tparam EnumType The enum type the member is a part of. The enum must have a HypEnum associated with it, otherwise this function will do nothing.
+ *  \param value The value of the enum member to find the name of.
+ */
+template <class EnumType, typename = std::enable_if_t<std::is_enum_v<EnumType>>>
+Name GetEnumMemberName(EnumType value)
+{
+    using EnumUnderlyingType = std::underlying_type_t<EnumType>;
+
+    const HypClass *hyp_class = GetClass<EnumType>();
+    
+    if (!hyp_class || !hyp_class->IsEnumType()) {
+        return Name::Invalid();
+    }
+
+    for (IHypMember &member : hyp_class->GetMembers(HypMemberType::TYPE_CONSTANT)) {
+        HypConstant &member_constant = static_cast<HypConstant &>(member);
+
+        // If the function sets stop_iteration to true, stop iteration
+        if (static_cast<EnumType>(member_constant.Get().Get<EnumUnderlyingType>()) == value) {
+            return member_constant.GetName();
+        }
+    }
+
+    return Name::Invalid();
+}
+
+/*! \brief Get the value of an enum member for a given HypEnum dynamically, given the name of the enum member.
+ *  \tparam EnumType The enum type the member is a part of. The enum must have a HypEnum associated with it, otherwise this function will do nothing.
+ *  \param name The name of the enum member to get the value of.
+ *  \param error_value The value to return if the member is not found.
+ */
+template <class EnumType, typename = std::enable_if_t<std::is_enum_v<EnumType>>>
+EnumType GetEnumMemberValue(WeakName member_name, EnumType error_value = EnumType())
+{
+    using EnumUnderlyingType = std::underlying_type_t<EnumType>;
+
+    const HypClass *hyp_class = GetClass<EnumType>();
+    
+    if (!hyp_class || !hyp_class->IsEnumType()) {
+        return error_value;
+    }
+
+    if (HypConstant *member_constant = hyp_class->GetConstant(member_name)) {
+        return static_cast<EnumType>(member_constant->Get().Get<EnumUnderlyingType>());
+    }
+
+    return error_value;
+}
+
 } // namespace hyperion
 
 #endif

@@ -19,8 +19,6 @@
 
 namespace hyperion {
 
-// #define HYP_ENTITY_MANAGER_SYSTEMS_EXECUTION_PARALLEL
-
 // if the number of systems in a group is less than this value, they will be executed sequentially
 static const uint32 systems_execution_parallel_threshold = 3;
 

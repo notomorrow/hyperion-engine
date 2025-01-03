@@ -32,7 +32,7 @@ struct RENDER_COMMAND(RecreateTemporalBlendingFramebuffer) : renderer::RenderCom
 
     virtual ~RENDER_COMMAND(RecreateTemporalBlendingFramebuffer)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         temporal_blending.Resize_Internal(new_size);
 

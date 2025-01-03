@@ -22,7 +22,6 @@
 namespace hyperion {
 
 using renderer::ResourceState;
-using renderer::Result;
 
 enum ProbeSystemUpdates : uint32
 {
@@ -53,7 +52,7 @@ struct RENDER_COMMAND(SetDDGIDescriptors) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(SetDDGIDescriptors)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
@@ -78,7 +77,7 @@ struct RENDER_COMMAND(UnsetDDGIDescriptors) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(UnsetDDGIDescriptors)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {   
         // remove result image from global descriptor set
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -106,7 +105,7 @@ struct RENDER_COMMAND(CreateDDGIUniformBuffer) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateDDGIUniformBuffer)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(DDGIUniforms)));
         uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(DDGIUniforms), &uniforms);
@@ -128,7 +127,7 @@ struct RENDER_COMMAND(CreateDDGIRadianceBuffer) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateDDGIRadianceBuffer)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYPERION_BUBBLE_ERRORS(radiance_buffer->Create(g_engine->GetGPUDevice(), grid_info.GetImageDimensions().x * grid_info.GetImageDimensions().y * sizeof(ProbeRayData)));
         radiance_buffer->Memset(g_engine->GetGPUDevice(), grid_info.GetImageDimensions().x * grid_info.GetImageDimensions().y * sizeof(ProbeRayData), 0x0);

@@ -18,7 +18,8 @@ enum class HypMemberType : uint8
     NONE                = 0x0,
     TYPE_FIELD          = 0x1,
     TYPE_METHOD         = 0x2,
-    TYPE_PROPERTY       = 0x4
+    TYPE_PROPERTY       = 0x4,
+    TYPE_CONSTANT       = 0x8
 };
 
 HYP_MAKE_ENUM_FLAGS(HypMemberType)

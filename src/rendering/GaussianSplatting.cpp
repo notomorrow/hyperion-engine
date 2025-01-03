@@ -35,7 +35,6 @@ namespace hyperion {
 
 using renderer::IndirectDrawCommand;
 using renderer::Pipeline;
-using renderer::Result;
 using renderer::GPUBufferType;
 using renderer::CommandBufferType;
 
@@ -77,7 +76,7 @@ struct RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers) : renderer::Render
 
     virtual ~RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         static_assert(sizeof(GaussianSplattingInstanceShaderData) == sizeof(model->points[0]));
 
@@ -172,7 +171,7 @@ struct RENDER_COMMAND(CreateGaussianSplattingIndirectBuffers) : renderer::Render
 
     virtual ~RENDER_COMMAND(CreateGaussianSplattingIndirectBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYPERION_BUBBLE_ERRORS(staging_buffer->Create(
             g_engine->GetGPUDevice(),
@@ -205,7 +204,7 @@ struct RENDER_COMMAND(CreateGaussianSplattingCommandBuffers) : renderer::RenderC
 
     virtual ~RENDER_COMMAND(CreateGaussianSplattingCommandBuffers)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
 #ifdef HYP_VULKAN

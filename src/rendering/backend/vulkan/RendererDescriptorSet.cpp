@@ -59,7 +59,7 @@ struct VulkanDescriptorSetLayoutWrapper
 {
     VkDescriptorSetLayout   vk_layout = VK_NULL_HANDLE;
 
-    Result Create(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout)
+    RendererResult Create(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout)
     {
         AssertThrow(vk_layout == VK_NULL_HANDLE);
 
@@ -116,10 +116,10 @@ struct VulkanDescriptorSetLayoutWrapper
             &vk_layout
         ));
 
-        return Result { };
+        return RendererResult { };
     }
 
-    Result Destroy(Device<Platform::VULKAN> *device)
+    RendererResult Destroy(Device<Platform::VULKAN> *device)
     {
         AssertThrow(vk_layout != VK_NULL_HANDLE);
 
@@ -131,7 +131,7 @@ struct VulkanDescriptorSetLayoutWrapper
 
         vk_layout = VK_NULL_HANDLE;
 
-        return Result { };
+        return RendererResult { };
     }
 };
 
@@ -304,7 +304,7 @@ DescriptorSet<Platform::VULKAN>::~DescriptorSet()
 }
 
 template <>
-Result DescriptorSet<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device)
+RendererResult DescriptorSet<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device)
 {
     AssertThrow(m_platform_impl.handle != VK_NULL_HANDLE);
 
@@ -434,17 +434,17 @@ Result DescriptorSet<Platform::VULKAN>::Update(Device<Platform::VULKAN> *device)
         element.dirty_range = { };
     }
     
-    return Result { };
+    return RendererResult { };
 }
 
 template <>
-Result DescriptorSet<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult DescriptorSet<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     AssertThrow(m_platform_impl.handle == VK_NULL_HANDLE);
 
     m_platform_impl.vk_layout_wrapper = device->GetDescriptorSetManager()->GetOrCreateVkDescriptorSetLayout(device, m_layout);
 
-    Result result = Result { };
+    RendererResult result = RendererResult { };
 
     HYPERION_PASS_ERRORS(
         device->GetDescriptorSetManager()->CreateDescriptorSet(device, m_platform_impl.vk_layout_wrapper, m_platform_impl.handle),
@@ -464,7 +464,7 @@ Result DescriptorSet<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result DescriptorSet<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult DescriptorSet<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (m_platform_impl.handle != VK_NULL_HANDLE) {
         device->GetDescriptorSetManager()->DestroyDescriptorSet(device, m_platform_impl.handle);
@@ -474,7 +474,7 @@ Result DescriptorSet<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device
     // Release reference to layout
     m_platform_impl.vk_layout_wrapper.Reset();
 
-    return Result { };
+    return RendererResult { };
 }
 
 template <>
@@ -704,7 +704,7 @@ DescriptorSetManager<Platform::VULKAN>::DescriptorSetManager()
 
 DescriptorSetManager<Platform::VULKAN>::~DescriptorSetManager() = default;
 
-Result DescriptorSetManager<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult DescriptorSetManager<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     static const Array<VkDescriptorPoolSize> pool_sizes = {
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
@@ -733,12 +733,12 @@ Result DescriptorSetManager<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
         &m_vk_descriptor_pool
     ));
 
-    return Result { };
+    return RendererResult { };
 }
 
-Result DescriptorSetManager<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult DescriptorSetManager<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
-    Result result = Result { };
+    RendererResult result = RendererResult { };
 
     for (auto &it : m_vk_descriptor_set_layouts) {
         if (auto rc = it.second.Lock()) {
@@ -764,7 +764,7 @@ Result DescriptorSetManager<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> 
     return result;
 }
 
-Result DescriptorSetManager<Platform::VULKAN>::CreateDescriptorSet(Device<Platform::VULKAN> *device, const RC<VulkanDescriptorSetLayoutWrapper> &layout, VkDescriptorSet &out_vk_descriptor_set)
+RendererResult DescriptorSetManager<Platform::VULKAN>::CreateDescriptorSet(Device<Platform::VULKAN> *device, const RC<VulkanDescriptorSetLayoutWrapper> &layout, VkDescriptorSet &out_vk_descriptor_set)
 {
     AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
 
@@ -783,13 +783,13 @@ Result DescriptorSetManager<Platform::VULKAN>::CreateDescriptorSet(Device<Platfo
     );
 
     if (vk_result != VK_SUCCESS) {
-        return { Result::RENDERER_ERR, "Failed to allocate descriptor set", int(vk_result) };
+        return RendererError { "Failed to allocate descriptor set", int(vk_result) };
     }
 
-    return Result { };
+    return RendererResult { };
 }
 
-Result DescriptorSetManager<Platform::VULKAN>::DestroyDescriptorSet(Device<Platform::VULKAN> *device, VkDescriptorSet vk_descriptor_set)
+RendererResult DescriptorSetManager<Platform::VULKAN>::DestroyDescriptorSet(Device<Platform::VULKAN> *device, VkDescriptorSet vk_descriptor_set)
 {
     AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
 
@@ -802,7 +802,7 @@ Result DescriptorSetManager<Platform::VULKAN>::DestroyDescriptorSet(Device<Platf
         &vk_descriptor_set
     );
 
-    return Result { };
+    return RendererResult { };
 }
 
 RC<VulkanDescriptorSetLayoutWrapper> DescriptorSetManager<Platform::VULKAN>::GetOrCreateVkDescriptorSetLayout(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout)

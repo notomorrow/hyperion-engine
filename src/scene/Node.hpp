@@ -28,10 +28,6 @@
 #include <math/Ray.hpp>
 #include <math/BoundingBox.hpp>
 
-#ifdef HYP_EDITOR
-#include <editor/ObservableVar.hpp>
-#endif
-
 #include <HashCode.hpp>
 #include <Types.hpp>
 

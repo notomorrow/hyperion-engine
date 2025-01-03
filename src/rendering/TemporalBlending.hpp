@@ -15,8 +15,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 enum class TemporalBlendTechnique
 {
     TECHNIQUE_0,

@@ -110,19 +110,19 @@ bool Attachment<Platform::VULKAN>::IsCreated() const
 }
 
 template <>
-Result Attachment<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult Attachment<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     AssertThrow(m_image != nullptr);
 
     if (!m_image->IsCreated()) {
-        return { Result::RENDERER_ERR, "Image is expected to be initialized before initializing attachment" };
+        return RendererError { "Image is expected to be initialized before initializing attachment" };
     }
 
     return m_image_view->Create(device, m_image);
 }
 
 template <>
-Result Attachment<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Attachment<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     SafeRelease(std::move(m_image));
     SafeRelease(std::move(m_image_view));

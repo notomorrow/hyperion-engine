@@ -45,11 +45,11 @@ public:
     HYP_FORCE_INLINE bool IsSupported() const
         { return m_is_supported; }
 
-    HYP_API Result Create(Device<PLATFORM> *device);
-    HYP_API Result Submit(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
+    HYP_API RendererResult Create(Device<PLATFORM> *device);
+    HYP_API RendererResult Submit(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
 
-    HYP_API Result PrepareForFrame(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
-    HYP_API Result WaitForFence(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
+    HYP_API RendererResult PrepareForFrame(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
+    HYP_API RendererResult WaitForFence(Device<PLATFORM> *device, Frame<PLATFORM> *frame);
 
     HYP_API void InsertBarrier(
         Frame<PLATFORM> *frame,

@@ -42,7 +42,7 @@
 
 #include <core/net/NetRequestThread.hpp>
 
-#include <core/system/ArgParse.hpp>
+#include <core/system/CommandLine.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -171,7 +171,7 @@ struct RENDER_COMMAND(CopyBackbufferToCPU) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CopyBackbufferToCPU)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         AssertThrow(image.IsValid());
         AssertThrow(buffer.IsValid());
@@ -185,7 +185,7 @@ struct RENDER_COMMAND(RecreateSwapchain) : renderer::RenderCommand
 {
     virtual ~RENDER_COMMAND(RecreateSwapchain)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         g_should_recreate_swapchain = true;
 
@@ -547,7 +547,7 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 {
     HYP_PROFILE_BEGIN;
 
-    Result frame_result = GetGPUInstance()->GetFrameHandler()->PrepareFrame(
+    RendererResult frame_result = GetGPUInstance()->GetFrameHandler()->PrepareFrame(
         GetGPUInstance()->GetDevice(),
         GetGPUInstance()->GetSwapchain()
     );

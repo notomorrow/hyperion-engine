@@ -37,7 +37,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 using renderer::GPUBufferType;
 
 static const Vec2u mip_chain_extent { 512, 512 };
@@ -77,7 +76,7 @@ struct RENDER_COMMAND(SetDeferredResultInGlobalDescriptorSet) : renderer::Render
 
     virtual ~RENDER_COMMAND(SetDeferredResultInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
@@ -97,7 +96,7 @@ struct RENDER_COMMAND(CreateBlueNoiseBuffer) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual RendererResult operator()()
     {
         AssertThrow(buffer.IsValid());
 
@@ -1105,7 +1104,7 @@ void ReflectionProbePass::Render(Frame *frame)
         const Handle<RenderGroup> &render_group = *it.first;
         const Array<ID<EnvProbe>> &env_probes = it.second;
 
-        const Result record_result = command_buffer->Record(
+        const RendererResult record_result = command_buffer->Record(
             g_engine->GetGPUInstance()->GetDevice(),
             render_group->GetPipeline()->GetRenderPass(),
             [&](CommandBuffer *cmd)

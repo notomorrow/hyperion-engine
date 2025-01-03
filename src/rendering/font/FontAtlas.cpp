@@ -46,7 +46,7 @@ struct RENDER_COMMAND(FontAtlas_RenderCharacter) : renderer::RenderCommand
         g_safe_deleter->SafeRelease(std::move(glyph_texture));
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         renderer::SingleTimeCommands commands { g_engine->GetGPUDevice() };
 
@@ -336,9 +336,9 @@ void FontAtlas::WriteToBuffer(uint pixel_size, ByteBuffer &buffer) const
             SafeRelease(std::move(buffer));
         }
 
-        virtual Result operator()() override
+        virtual RendererResult operator()() override
         {
-            Result result = Result::OK();
+            RendererResult result;
 
             buffer = MakeRenderObject<GPUBuffer>(GPUBufferType::STAGING_BUFFER);
             HYPERION_ASSERT_RESULT(buffer->Create(g_engine->GetGPUDevice(), buffer_size));

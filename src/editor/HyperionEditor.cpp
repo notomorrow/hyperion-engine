@@ -73,6 +73,7 @@
 #include <core/object/HypMethod.hpp>
 #include <core/object/HypField.hpp>
 #include <core/object/HypData.hpp>
+#include <core/object/HypClassUtils.hpp>
 
 #include <core/containers/Forest.hpp>
 

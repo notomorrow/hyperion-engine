@@ -20,8 +20,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
-
 class Engine;
 
 struct alignas(16) GaussianSplattingPoint

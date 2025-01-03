@@ -629,7 +629,18 @@ public:
 
     JSONValue Parse()
     {
-        return ParseValue();
+        json::JSONValue value = ParseValue();
+
+        // Should not have any tokens left
+        if (m_token_stream->HasNext()) {
+            m_compilation_unit->GetErrorList().AddError(CompilerError(
+                ErrorLevel::LEVEL_ERROR,
+                ErrorMessage::Msg_unexpected_token,
+                CurrentLocation()
+            ));
+        }
+
+        return value;
     }
 
 private:
@@ -651,16 +662,26 @@ private:
             return JSONValue(ParseNumber());
         }
 
-        if (MatchIdentifier("true", true)) {
-            return JSONValue(true);
-        }
+        const SourceLocation location = CurrentLocation();
 
-        if (MatchIdentifier("false", true)) {
-            return JSONValue(false);
-        }
+        if (Token identifier = Match(TokenClass::TK_IDENT, true)) {
+            if (identifier.GetValue() == "true") {
+                return JSONValue(true);
+            }
 
-        if (MatchIdentifier("null", true)) {
-            return JSONValue(JSONNull());
+            if (identifier.GetValue() == "false") {
+                return JSONValue(false);
+            }
+
+            if (identifier.GetValue() == "null") {
+                return JSONValue(JSONNull());
+            }
+
+            m_compilation_unit->GetErrorList().AddError(CompilerError(
+                ErrorLevel::LEVEL_ERROR,
+                ErrorMessage::Msg_unexpected_identifier,
+                location
+            ));
         }
 
         return JSONValue(JSONUndefined());

@@ -86,6 +86,8 @@ Octree::~Octree()
 
 void Octree::SetEntityManager(const RC<EntityManager> &entity_manager)
 {
+    HYP_SCOPE;
+
     m_entity_manager = entity_manager;
 
     if (IsDivided()) {
@@ -99,6 +101,8 @@ void Octree::SetEntityManager(const RC<EntityManager> &entity_manager)
 
 void Octree::SetParent(Octree *parent)
 {
+    HYP_SCOPE;
+
     m_parent = parent;
 
     if (m_parent != nullptr) {
@@ -120,6 +124,8 @@ void Octree::SetParent(Octree *parent)
 
 bool Octree::EmptyDeep(int depth, uint8 octant_mask) const
 {
+    HYP_SCOPE;
+
     if (!Empty()) {
         return false;
     }
@@ -166,6 +172,8 @@ void Octree::InitOctants()
 
 Octree *Octree::GetChildOctant(OctantID octant_id)
 {
+    HYP_SCOPE;
+
     if (octant_id == OctantID::Invalid()) {
 #if HYP_OCTREE_DEBUG
         HYP_LOG(Octree, LogLevel::WARNING,
@@ -218,6 +226,8 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
 
 void Octree::Divide()
 {
+    HYP_SCOPE;
+
     AssertThrow(!IsDivided());
 
     for (int i = 0; i < 8; i++) {
@@ -232,6 +242,8 @@ void Octree::Divide()
 
 void Octree::Undivide()
 {
+    HYP_SCOPE;
+
     AssertThrow(IsDivided());
     AssertThrowMsg(m_entries.Empty(), "Undivide() should be called on octrees with no remaining entries");
 
@@ -250,6 +262,8 @@ void Octree::Undivide()
 
 void Octree::Invalidate()
 {
+    HYP_SCOPE;
+
     m_invalidation_marker++;
 
     if (IsDivided()) {
@@ -1077,6 +1091,8 @@ bool Octree::GetFittingOctant(const BoundingBox &aabb, Octree const *&out) const
 
 void Octree::NextVisibilityState()
 {
+    HYP_SCOPE;
+
     m_visibility_state->Next();
 }
 
@@ -1121,6 +1137,8 @@ void Octree::UpdateVisibilityState(const Handle<Camera> &camera, uint16 validity
 
 void Octree::ResetEntriesHash()
 {
+    HYP_SCOPE;
+
     m_entry_hashes = { };
 }
 

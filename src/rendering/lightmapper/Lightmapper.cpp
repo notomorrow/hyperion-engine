@@ -41,7 +41,7 @@ struct RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer) : renderer::RenderC
 
     virtual ~RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms)));
         uniform_buffer->Memset(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms), 0x0);
@@ -68,7 +68,7 @@ struct RENDER_COMMAND(LightmapTraceRaysOnGPU) : renderer::RenderCommand
         // SafeRelease(std::move(tlas));
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         Frame *frame = g_engine->GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
 
@@ -703,7 +703,7 @@ void LightmapJob::Start()
 
             HYP_LOG(Lightmap, LogLevel::INFO, "Lightmap job {}: Enqueue task to build UV map", m_uuid);
 
-            m_build_uv_map_task = TaskSystem::GetInstance().Enqueue([this]() -> Optional<LightmapUVMap>
+            m_build_uv_map_task = TaskSystem::GetInstance().Enqueue([this]() -> Result<LightmapUVMap>
             {
                 return BuildUVMap();
             });
@@ -726,15 +726,9 @@ bool LightmapJob::IsCompleted() const
     return !m_running_semaphore.IsInSignalState();
 }
 
-Optional<LightmapUVMap> LightmapJob::BuildUVMap()
+Result<LightmapUVMap> LightmapJob::BuildUVMap()
 {
-    LightmapUVBuilder uv_builder { { m_params.elements_view } };
-
-    if (LightmapUVBuilder::Result uv_builder_result = uv_builder.Build(); uv_builder_result) {
-        return std::move(uv_builder_result.uv_map);
-    }
-
-    return { };
+    return LightmapUVBuilder { { m_params.elements_view } }.Build();
 }
 
 void LightmapJob::Process()
@@ -754,7 +748,9 @@ void LightmapJob::Process()
 
             return;
         } else {
-            m_uv_map = std::move(m_build_uv_map_task.Await());
+            if (Result<LightmapUVMap> &uv_map_result = m_build_uv_map_task.Await()) {
+                m_uv_map = std::move(*uv_map_result);
+            }
 
             if (m_uv_map.HasValue()) {
                 // Flatten texel indices, grouped by mesh IDs

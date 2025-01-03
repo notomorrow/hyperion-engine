@@ -22,7 +22,7 @@ Fence<Platform::VULKAN>::~Fence()
 }
 
 template <>
-Result Fence<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult Fence<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
     AssertThrow(m_platform_impl.handle == VK_NULL_HANDLE);
 
@@ -36,7 +36,7 @@ Result Fence<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Fence<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
+RendererResult Fence<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 {
     if (m_platform_impl.handle != VK_NULL_HANDLE) {
         vkDestroyFence(device->GetDevice(), m_platform_impl.handle, nullptr);
@@ -47,7 +47,7 @@ Result Fence<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *device)
 }
 
 template <>
-Result Fence<Platform::VULKAN>::WaitForGPU(Device<Platform::VULKAN> *device, bool timeout_loop)
+RendererResult Fence<Platform::VULKAN>::WaitForGPU(Device<Platform::VULKAN> *device, bool timeout_loop)
 {
     AssertThrow(m_platform_impl.handle != VK_NULL_HANDLE);
 
@@ -65,7 +65,7 @@ Result Fence<Platform::VULKAN>::WaitForGPU(Device<Platform::VULKAN> *device, boo
 }
 
 template <>
-Result Fence<Platform::VULKAN>::Reset(Device<Platform::VULKAN> *device)
+RendererResult Fence<Platform::VULKAN>::Reset(Device<Platform::VULKAN> *device)
 {
     HYPERION_VK_CHECK(vkResetFences(device->GetDevice(), 1, &m_platform_impl.handle));
 

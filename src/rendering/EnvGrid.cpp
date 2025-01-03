@@ -31,7 +31,6 @@ namespace hyperion {
 using renderer::Image;
 using renderer::StorageImage;
 using renderer::ImageView;
-using renderer::Result;
 
 static const Vec2u sh_num_samples { 16, 16 };
 static const Vec2u sh_num_tiles { 16, 16 };
@@ -95,7 +94,7 @@ struct RENDER_COMMAND(CreateSHData) : renderer::RenderCommand
     {
     }
 
-    virtual Result operator()()
+    virtual RendererResult operator()()
     {
         HYPERION_BUBBLE_ERRORS(sh_tiles_buffer->Create(g_engine->GetGPUDevice(), sizeof(SHTile) * sh_num_tiles.Volume() * 6));
 
@@ -121,7 +120,7 @@ struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(SetElementInGlobalDescriptorSet)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             if (value.Is<GPUBufferRef>()) {
@@ -149,12 +148,10 @@ EnvGrid::EnvGrid(Name name, EnvGridOptions options)
       m_offset(options.aabb.GetCenter()),
       m_current_probe_index(0)
 {
-    HYP_LOG(EnvGrid, LogLevel::DEBUG, "Constructor for EnvGrid {}", (void *)this);
 }
 
 EnvGrid::~EnvGrid()
-{   HYP_LOG(EnvGrid, LogLevel::DEBUG, "Destructor for EnvGrid {}", (void *)this);
-
+{
     SafeRelease(std::move(m_ambient_shader));
 
     SafeRelease(std::move(m_framebuffer));
@@ -197,7 +194,7 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
             }
         }
 
-        virtual Result operator()() override
+        virtual RendererResult operator()() override
         {
             for (uint update_index = 0; update_index < uint(updates.Size()); update_index++) {
                 grid->m_env_probe_collection.SetProbeIndexOnRenderThread(update_index, updates[update_index]);

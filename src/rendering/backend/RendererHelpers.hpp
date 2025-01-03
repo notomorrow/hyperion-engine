@@ -44,16 +44,16 @@ public:
     SingleTimeCommands &operator=(SingleTimeCommands &&other) noexcept  = delete;
     HYP_API ~SingleTimeCommands();
 
-    void Push(Proc<Result, const platform::CommandBufferRef<PLATFORM> &> &&fn)
+    void Push(Proc<RendererResult, const platform::CommandBufferRef<PLATFORM> &> &&fn)
     {
         m_functions.PushBack(std::move(fn));
     }
 
-    Result Execute()
+    RendererResult Execute()
     {
         HYPERION_BUBBLE_ERRORS(Begin());
 
-        Result result;
+        RendererResult result;
 
         for (auto &fn : m_functions) {
             HYPERION_PASS_ERRORS(fn(m_command_buffer), result);
@@ -71,16 +71,16 @@ public:
     }
 
 private:
-    SingleTimeCommandsPlatformImpl<PLATFORM>                            m_platform_impl;
+    SingleTimeCommandsPlatformImpl<PLATFORM>                                    m_platform_impl;
 
-    HYP_API Result Begin();
-    HYP_API Result End();
+    HYP_API RendererResult Begin();
+    HYP_API RendererResult End();
 
-    Device<PLATFORM>                                                    *m_device;
-    Array<Proc<Result, const platform::CommandBufferRef<PLATFORM> &>>   m_functions;
-    FenceRef<PLATFORM>                                                  m_fence;
+    Device<PLATFORM>                                                            *m_device;
+    Array<Proc<RendererResult, const platform::CommandBufferRef<PLATFORM> &>>   m_functions;
+    FenceRef<PLATFORM>                                                          m_fence;
 
-    CommandBufferRef<PLATFORM>                                          m_command_buffer;
+    CommandBufferRef<PLATFORM>                                                  m_command_buffer;
 };
 
 } // namespace platform

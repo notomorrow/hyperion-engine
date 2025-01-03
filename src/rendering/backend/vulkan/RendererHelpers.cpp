@@ -163,7 +163,7 @@ SingleTimeCommands<Platform::VULKAN>::~SingleTimeCommands()
 }
 
 template <>
-Result SingleTimeCommands<Platform::VULKAN>::Begin()
+RendererResult SingleTimeCommands<Platform::VULKAN>::Begin()
 {
     m_fence = MakeRenderObject<Fence<Platform::VULKAN>>();
 
@@ -175,9 +175,9 @@ Result SingleTimeCommands<Platform::VULKAN>::Begin()
 }
 
 template <>
-Result SingleTimeCommands<Platform::VULKAN>::End()
+RendererResult SingleTimeCommands<Platform::VULKAN>::End()
 {
-    Result result;
+    RendererResult result;
 
     HYPERION_PASS_ERRORS(m_command_buffer->End(m_device), result);
 

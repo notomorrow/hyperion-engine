@@ -3,7 +3,9 @@
 #include <core/system/AppContext.hpp>
 #include <core/system/Debug.hpp>
 #include <core/system/SystemEvent.hpp>
-#include <core/system/ArgParse.hpp>
+#include <core/system/CommandLine.hpp>
+
+#include <core/logging/Logger.hpp>
 
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererDevice.hpp>
@@ -15,14 +17,24 @@
 #include <SDL2/SDL_vulkan.h>
 
 namespace hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Core);
+HYP_DEFINE_LOG_SUBCHANNEL(AppContext, Core);
+
 namespace sys {
 
-static const ArgParseDefinitions g_default_arg_parse_definitions = ArgParseDefinitions()
-    .Add("Profile", "", ArgFlags::NONE, CommandLineArgumentType::BOOLEAN, false)
-    .Add("ResX", "", ArgFlags::NONE, CommandLineArgumentType::INTEGER)
-    .Add("ResY", "", ArgFlags::NONE, CommandLineArgumentType::INTEGER)
-    .Add("Headless", "", ArgFlags::NONE, CommandLineArgumentType::BOOLEAN, false)
-    .Add("Mode", "m", ArgFlags::NONE, Array<String> { "precompile_shaders", "editor" }, String("editor"));
+HYP_API const CommandLineArgumentDefinitions &DefaultCommandLineArgumentDefinitions()
+{
+    static const CommandLineArgumentDefinitions default_arg_parse_definitions = CommandLineArgumentDefinitions()
+        .Add("Profile", {}, "Enable collection of profiling data for functions that opt in using HYP_SCOPE.", CommandLineArgumentFlags::NONE, CommandLineArgumentType::BOOLEAN, false)
+        .Add("TraceURL", {}, "The endpoint url that profiling data will be submitted to (this url will have /start appended to it to start the session and /results to add results)", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING)
+        .Add("ResX", {}, {}, CommandLineArgumentFlags::NONE, CommandLineArgumentType::INTEGER)
+        .Add("ResY", {}, {}, CommandLineArgumentFlags::NONE, CommandLineArgumentType::INTEGER)
+        .Add("Headless", {}, {}, CommandLineArgumentFlags::NONE, CommandLineArgumentType::BOOLEAN, false)
+        .Add("Mode", "m", {}, CommandLineArgumentFlags::NONE, Array<String> { "precompile_shaders", "editor" }, String("editor"));
+
+    return default_arg_parse_definitions;
+}
 
 #pragma region ApplicationWindow
 
@@ -243,11 +255,14 @@ AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
         json::JSONString config_args_string = config_args.ToString();
         Array<String> config_args_string_split = config_args_string.Split(' ');
 
-        ArgParse arg_parse { g_default_arg_parse_definitions };
-        ArgParse::ParseResult parse_result = arg_parse.Parse(arguments.GetCommand(), config_args_string_split);
+        CommandLineParser arg_parse { DefaultCommandLineArgumentDefinitions() };
 
-        if (parse_result) { 
-            new_arguments = MakeUnique<CommandLineArguments>(CommandLineArguments::Merge(parse_result.result, arguments));
+        Result parse_result = arg_parse.Parse(arguments.GetCommand(), config_args_string_split);
+
+        if (parse_result.HasValue()) { 
+            new_arguments = MakeUnique<CommandLineArguments>(CommandLineArguments::Merge(*parse_result, arguments));
+        } else {
+            HYP_LOG(AppContext, LogLevel::ERR, "Failed to parse config command line value \"{}\":\n\t{}", config_args_string, parse_result.GetError().GetMessage());
         }
     }
 
@@ -299,11 +314,6 @@ void AppContext::UpdateConfigurationOverrides()
             m_configuration.Save();
         }
     }
-}
-
-const ArgParseDefinitions &AppContext::GetArgParseDefinitions() const
-{
-    return g_default_arg_parse_definitions;
 }
 
 #pragma endregion AppContext

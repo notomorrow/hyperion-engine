@@ -16,7 +16,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 using renderer::GPUBufferType;
 
 static constexpr bool use_temporal_blending = true;
@@ -56,7 +55,7 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateSSRUniformBuffer)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         const SSRParams ssr_params {
             .dimensions             = Vec4u { extent.x, extent.y, 0, 0 },
@@ -98,7 +97,7 @@ struct RENDER_COMMAND(CreateSSRDescriptors) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateSSRDescriptors)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
@@ -117,7 +116,7 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(RemoveSSRDescriptors)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)

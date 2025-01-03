@@ -33,12 +33,12 @@ class Instance<Platform::VULKAN>
     static ExtensionMap GetExtensionMap();
 
     /* Setup debug mode */
-    Result SetupDebug();
-    Result SetupDebugMessenger();
+    RendererResult SetupDebug();
+    RendererResult SetupDebugMessenger();
 
 public:
     Instance();
-    Result Initialize(const AppContext &app_context, bool load_debug_layers = false);
+    RendererResult Initialize(const AppContext &app_context, bool load_debug_layers = false);
 
     HYP_FORCE_INLINE VkInstance GetInstance() const
         { return m_instance; }
@@ -63,11 +63,11 @@ public:
 
     void SetValidationLayers(Array<const char *> validation_layers);
 
-    Result CreateDevice(VkPhysicalDevice _physical_device = nullptr);
-    Result CreateSwapchain();
-    Result RecreateSwapchain();
+    RendererResult CreateDevice(VkPhysicalDevice _physical_device = nullptr);
+    RendererResult CreateSwapchain();
+    RendererResult RecreateSwapchain();
     
-    Result Destroy();
+    RendererResult Destroy();
 
     const char                      *app_name;
     const char                      *engine_name;

@@ -40,7 +40,6 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(UI);
 
-using renderer::Result;
 
 struct alignas(16) EntityInstanceBatch_UI : EntityInstanceBatch
 {
@@ -230,7 +229,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
         return removed;
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         HYP_NAMED_SCOPE("Rebuild UI Proxy Groups");
 
@@ -281,7 +280,7 @@ struct RENDER_COMMAND(CreateUIRendererFramebuffer) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(CreateUIRendererFramebuffer)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         ui_renderer->CreateFramebuffer();
 

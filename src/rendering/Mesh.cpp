@@ -20,7 +20,6 @@
 
 namespace hyperion {
 
-using renderer::Result;
 using renderer::GPUBufferType;
 
 #pragma region Render commands
@@ -42,7 +41,7 @@ struct RENDER_COMMAND(SetStreamedMeshData) : renderer::RenderCommand
 
     virtual ~RENDER_COMMAND(SetStreamedMeshData)() override = default;
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         mesh->SetStreamedMeshData(std::move(streamed_mesh_data));
 

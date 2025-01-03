@@ -61,18 +61,18 @@ public:
     HYP_FORCE_INLINE CommandBufferType GetType() const
         { return m_type; }
 
-    HYP_API Result Create(Device<PLATFORM> *device);
-    HYP_API Result Destroy(Device<PLATFORM> *device);
-    HYP_API Result Begin(Device<PLATFORM> *device, const RenderPass<PLATFORM> *render_pass = nullptr);
-    HYP_API Result End(Device<PLATFORM> *device);
-    HYP_API Result Reset(Device<PLATFORM> *device);
-    HYP_API Result SubmitPrimary(
+    HYP_API RendererResult Create(Device<PLATFORM> *device);
+    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
+    HYP_API RendererResult Begin(Device<PLATFORM> *device, const RenderPass<PLATFORM> *render_pass = nullptr);
+    HYP_API RendererResult End(Device<PLATFORM> *device);
+    HYP_API RendererResult Reset(Device<PLATFORM> *device);
+    HYP_API RendererResult SubmitPrimary(
         DeviceQueue<PLATFORM> *queue,
         Fence<PLATFORM> *fence,
         SemaphoreChain *semaphore_chain
     );
 
-    HYP_API Result SubmitSecondary(CommandBuffer *primary);
+    HYP_API RendererResult SubmitSecondary(CommandBuffer *primary);
 
     HYP_API void BindVertexBuffer(const GPUBuffer<PLATFORM> *buffer);
     HYP_API void BindIndexBuffer(const GPUBuffer<PLATFORM> *buffer, DatumType datum_type = DatumType::UNSIGNED_INT);
@@ -92,11 +92,11 @@ public:
     HYP_API void DebugMarkerEnd() const;
 
     template <class LambdaFunction>
-    Result Record(Device<PLATFORM> *device, const RenderPass<PLATFORM> *render_pass, LambdaFunction &&fn)
+    RendererResult Record(Device<PLATFORM> *device, const RenderPass<PLATFORM> *render_pass, LambdaFunction &&fn)
     {
         HYPERION_BUBBLE_ERRORS(Begin(device, render_pass));
 
-        Result result = fn(this);
+        RendererResult result = fn(this);
 
         HYPERION_PASS_ERRORS(End(device), result);
 

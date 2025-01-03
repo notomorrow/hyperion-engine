@@ -102,11 +102,11 @@ public:
     DescriptorSetManager &operator=(DescriptorSetManager &&other) noexcept  = delete;
     ~DescriptorSetManager();
 
-    Result Create(Device<Platform::VULKAN> *device);
-    Result Destroy(Device<Platform::VULKAN> *device);
+    RendererResult Create(Device<Platform::VULKAN> *device);
+    RendererResult Destroy(Device<Platform::VULKAN> *device);
 
-    Result CreateDescriptorSet(Device<Platform::VULKAN> *device, const RC<VulkanDescriptorSetLayoutWrapper> &layout, VkDescriptorSet &out_vk_descriptor_set);
-    Result DestroyDescriptorSet(Device<Platform::VULKAN> *device, VkDescriptorSet vk_descriptor_set);
+    RendererResult CreateDescriptorSet(Device<Platform::VULKAN> *device, const RC<VulkanDescriptorSetLayoutWrapper> &layout, VkDescriptorSet &out_vk_descriptor_set);
+    RendererResult DestroyDescriptorSet(Device<Platform::VULKAN> *device, VkDescriptorSet vk_descriptor_set);
 
     RC<VulkanDescriptorSetLayoutWrapper> GetOrCreateVkDescriptorSetLayout(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout);
 

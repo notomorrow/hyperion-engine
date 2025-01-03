@@ -23,6 +23,7 @@ CXX_PREAMBLE = """
 #define HYP_STRUCT(...)
 #define HYP_ENUM(...)
 #define HYP_FIELD(...)
+#define HYP_CONSTANT(...)
 #define HYP_PROPERTY(...)
 #define HYP_METHOD(...)
 #define HYP_OBJECT_BODY(...)
@@ -51,7 +52,7 @@ class HypMemberType:
     FIELD = 0
     PROPERTY = 1
     METHOD = 2,
-    ENUMERATOR = 3
+    CONSTANT = 3
 
 class GeneratedSource:
     def __init__(self, source_location, content=""):
@@ -354,8 +355,8 @@ class HypMemberDefinition:
         return self.member_type == HypMemberType.METHOD
     
     @property
-    def is_enumerator(self):
-        return self.member_type == HypMemberType.ENUMERATOR
+    def is_constant(self):
+        return self.member_type == HypMemberType.CONSTANT
     
     @property
     def return_type(self):
@@ -450,7 +451,7 @@ class HypClassDefinition:
             class_data = self.parsed_data.namespace.enums[0]
 
             for enum_value in class_data.values:
-                self.members.append(HypMemberDefinition(HypMemberType.ENUMERATOR, enum_value.name, attributes=[]))
+                self.members.append(HypMemberDefinition(HypMemberType.CONSTANT, enum_value.name, attributes=[]))
 
             return
         
@@ -466,9 +467,9 @@ class HypClassDefinition:
             
         #     print(f'Method: {method_name} = {method}')
         
-        # find matches for fields, properties, methods (via regex, HYP_FIELD, HYP_PROPERTY, HYP_METHOD)
+        # find matches for fields, properties, methods (via regex, HYP_FIELD, HYP_PROPERTY, HYP_METHOD, HYP_CONSTANT)
         # print(f"Content: {self.content}")
-        matches = re.finditer(r'HYP_(FIELD|PROPERTY|METHOD)(?:\((.*)\))?', self.content)
+        matches = re.finditer(r'HYP_(FIELD|PROPERTY|METHOD|CONSTANT)(?:\((.*)\))?', self.content)
 
         for match in matches:
             inner_args: 'list[tuple[str, str, int]]' = []

@@ -4,7 +4,7 @@
 
 #include <core/system/App.hpp>
 #include <core/system/StackDump.hpp>
-#include <core/system/ArgParse.hpp>
+#include <core/system/CommandLine.hpp>
 
 #include <core/containers/Bitset.hpp>
 
@@ -55,8 +55,6 @@ void HandleSignal(int signum)
     exit(signum);
 }
 
-struct TestStruct{ Name name; };
-
 int main(int argc, char **argv)
 {
     signal(SIGINT, HandleSignal);
@@ -69,18 +67,19 @@ int main(int argc, char **argv)
     // SampleStreamer editor;
     App app;
 
-    ArgParse arg_parse;
-    arg_parse.Add("Headless", String::empty, ArgFlags::NONE, CommandLineArgumentType::BOOLEAN, false);    
-    arg_parse.Add("Mode", "m", ArgFlags::NONE, Array<String> { "PrecompileShaders", "Streamer" }, String("Streamer"));
+    CommandLineParser arg_parse { DefaultCommandLineArgumentDefinitions() };
+    auto parse_result = arg_parse.Parse(argc, argv);
 
-    if (auto parse_result = arg_parse.Parse(argc, argv)) {
-        app.Launch(&editor, parse_result.result);
+    if (parse_result.HasValue()) {
+        app.Launch(&editor, parse_result.GetValue());
     } else {
+        const Error &error = parse_result.GetError();
+
         DebugLog(
             LogType::Error,
             "Failed to parse arguments!\n\t%s\n",
-            parse_result.message.HasValue()
-                ? parse_result.message->Data()
+            error.GetMessage()
+                ? error.GetMessage().Data()
                 : "<no message>"
         );
 

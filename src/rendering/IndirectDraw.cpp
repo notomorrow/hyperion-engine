@@ -191,21 +191,21 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers) : renderer::RenderCommand
         SafeRelease(std::move(staging_buffers));
     }
 
-    virtual Result operator()() override
+    virtual RendererResult operator()() override
     {
         renderer::SingleTimeCommands commands { g_engine->GetGPUDevice() };
 
-        commands.Push([this](const CommandBufferRef &command_buffer) -> Result
+        commands.Push([this](const CommandBufferRef &command_buffer) -> RendererResult
         {
             for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 Frame frame = Frame::TemporaryFrame(command_buffer, frame_index);
 
                 if (!ResizeIndirectDrawCommandsBuffer(&frame, IndirectDrawState::initial_count, indirect_buffers[frame_index], staging_buffers[frame_index])) {
-                    return { Result::RENDERER_ERR, "Failed to create indirect draw commands buffer!" };
+                    return RendererError { "Failed to create indirect draw commands buffer!" };
                 }
 
                 if (!ResizeInstancesBuffer(&frame, IndirectDrawState::initial_count, instance_buffers[frame_index], staging_buffers[frame_index])) {
-                    return { Result::RENDERER_ERR, "Failed to create instances buffer!" };
+                    return RendererError { "Failed to create instances buffer!" };
                 }
             }
 
