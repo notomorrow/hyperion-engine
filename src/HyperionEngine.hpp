@@ -8,7 +8,17 @@
 
 namespace hyperion {
 
-HYP_API void InitializeAppContext(RC<AppContext> app_context);
-HYP_API void ShutdownApplication();
+namespace filesystem {
+class FilePath;
+} // namespace filesystem
+
+using filesystem::FilePath;
+
+class game;
+
+HYP_API void InitializeAppContext(const RC<AppContext> &app_context, Game *game);
+
+HYP_API void InitializeEngine(const FilePath &base_path);
+HYP_API void DestroyEngine();
 
 } // namespace hyperion

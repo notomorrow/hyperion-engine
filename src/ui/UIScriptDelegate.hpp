@@ -4,13 +4,15 @@
 #define HYPERION_UI_SCRIPT_DELEGATE_HPP
 
 #include <core/containers/Array.hpp>
+
 #include <core/functional/Delegate.hpp>
 
-#include <core/logging/LoggerFwd.hpp>
+#include <core/utilities/EnumFlags.hpp>
+
+#include <core/logging/Logger.hpp>
 
 #include <scene/Scene.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
-#include <scene/ecs/EntityManager.hpp>
 
 #include <Types.hpp>
 
@@ -21,6 +23,15 @@ HYP_DECLARE_LOG_CHANNEL(UI);
 class UIObject;
 
 #pragma region UIScriptDelegate
+
+enum class UIScriptDelegateFlags : uint32
+{
+    NONE                        = 0x0,
+    ALLOW_NESTED                = 0x1,  //! Allow the method to be called from nested UIObjects.
+    REQUIRE_UI_EVENT_ATTRIBUTE  = 0x2   //! Require the method to have the Hyperion.UIEvent attribute. Used for default event handlers such as OnClick, OnHover, etc.
+};
+
+HYP_MAKE_ENUM_FLAGS(UIScriptDelegateFlags)
 
 class IUIScriptDelegate
 {
@@ -37,11 +48,12 @@ class UIScriptDelegate : public IUIScriptDelegate
 public:
     /*! \param ui_object The UIObject to call the method on.
      *  \param method_name The name of the method to call.
-     *  \param allow_nested If true, the method can be called from nested UIObjects. */
-    UIScriptDelegate(UIObject *ui_object, const String &method_name, bool allow_nested)
+     *  \param flags Flags to control the behavior of the delegate.
+     */
+    UIScriptDelegate(UIObject *ui_object, const String &method_name, EnumFlags<UIScriptDelegateFlags> flags)
         : m_ui_object(ui_object),
           m_method_name(method_name),
-          m_allow_nested(allow_nested)
+          m_flags(flags)
     {
     }
 
@@ -66,6 +78,10 @@ public:
     {
         AssertThrow(m_ui_object != nullptr);
 
+        HYP_LOG(UI, LogLevel::DEBUG, "Attempting to call method {} for UI object with name: {}", m_method_name, m_ui_object->GetName());
+
+        const UIEventHandlerResult default_result = m_ui_object->GetDefaultEventHandlerResult();
+
         if (!m_ui_object->GetEntity().IsValid()) {
             return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Invalid entity"));
         }
@@ -74,11 +90,11 @@ public:
             return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Invalid scene"));
         }
 
-        ScriptComponent *script_component = m_ui_object->GetScriptComponent(m_allow_nested);
+        ScriptComponent *script_component = m_ui_object->GetScriptComponent(bool(m_flags & UIScriptDelegateFlags::ALLOW_NESTED));
 
         if (!script_component) {
             // No script component, do not call.
-            return UIEventHandlerResult::OK;
+            return default_result;
         }
 
         if (!script_component->object) {
@@ -87,19 +103,24 @@ public:
         
         if (dotnet::Class *class_ptr = script_component->object->GetClass()) {
             if (dotnet::Method *method_ptr = class_ptr->GetMethod(m_method_name)) {
-                if (!method_ptr->GetAttributes().HasAttribute("UIEvent")) {
-                    return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Method does not have the Hyperion.UIEvent attribute"));
+                if (m_flags & UIScriptDelegateFlags::REQUIRE_UI_EVENT_ATTRIBUTE) {
+                    if (!method_ptr->GetAttributes().GetAttribute("UIEvent")) {
+                        return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Method does not have the Hyperion.UIEvent attribute"));
+                    }
                 }
 
                 // Stubbed method, do not call
-                if (method_ptr->GetAttributes().HasAttribute("ScriptMethodStub")) {
-                    // // Stubbed method, do not bother calling it
-                    HYP_LOG(UI, LogLevel::INFO, "Stubbed method {} for UI object with name: {}", m_method_name, m_ui_object->GetName());
-
-                    return UIEventHandlerResult::OK;
+                if (method_ptr->GetAttributes().GetAttribute("ScriptMethodStub") != nullptr) {
+                    return default_result;
                 }
 
-                return script_component->object->InvokeMethod<UIEventHandlerResult>(method_ptr);
+                UIEventHandlerResult result = script_component->object->InvokeMethod<UIEventHandlerResult>(method_ptr, std::forward<Args>(args)...);
+
+                if (result == UIEventHandlerResult::OK) {
+                    return result | default_result;
+                }
+
+                return result;
             }
 
             return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Unknown error; method missing on class"));
@@ -111,9 +132,9 @@ public:
     }
     
 private:
-    UIObject    *m_ui_object;
-    String      m_method_name;
-    bool        m_allow_nested;
+    UIObject                            *m_ui_object;
+    String                              m_method_name;
+    EnumFlags<UIScriptDelegateFlags>    m_flags;
 };
 
 #pragma endregion UIScriptDelegate

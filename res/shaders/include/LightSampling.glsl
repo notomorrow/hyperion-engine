@@ -43,7 +43,7 @@ bool RayPlaneIntersect(in Ray ray, vec4 plane, out float t)
 
 vec4 SampleRectLightTexture(in Light light, in vec3 pts[4])
 {
-    if (light.material_id == ~0u || !HAS_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map)) {
+    if (light.material_index == ~0u || !HAS_TEXTURE(materials[light.material_index], MATERIAL_TEXTURE_ALBEDO_map)) {
         return vec4(1.0);
     }
 
@@ -73,8 +73,8 @@ vec4 SampleRectLightTexture(in Light light, in vec3 pts[4])
     float lod_b = ceil(lod);
     float t = lod - lod_a;
 
-    vec4 tex_a = Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map), uv, lod_a);
-    vec4 tex_b = Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_id - 1], MATERIAL_TEXTURE_ALBEDO_map), uv, lod_b);
+    vec4 tex_a = Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_index], MATERIAL_TEXTURE_ALBEDO_map), uv, lod_a);
+    vec4 tex_b = Texture2DLod(HYP_SAMPLER_LINEAR, GET_TEXTURE(materials[light.material_index], MATERIAL_TEXTURE_ALBEDO_map), uv, lod_b);
 
     return mix(tex_a, tex_b, t);
 }

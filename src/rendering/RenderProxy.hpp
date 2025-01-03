@@ -14,29 +14,103 @@
 #include <math/Matrix4.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
-
-#include <scene/animation/Skeleton.hpp>
 
 namespace hyperion {
 
 class Entity;
+class Mesh;
+class Material;
+class Skeleton;
+struct DrawCallID;
+
+HYP_STRUCT(Size=104)
+struct MeshInstanceData
+{
+    static constexpr uint32 max_buffers = 8;
+
+    HYP_FIELD(Property="NumInstances", Serialize=true)
+    uint32                          num_instances = 0;
+
+    HYP_FIELD(Property="Buffers", Serialize=true)
+    Array<Array<ubyte>, 0>          buffers;
+
+    HYP_FIELD(Property="BufferStructSizes", Serialize=true)
+    FixedArray<uint32, max_buffers> buffer_struct_sizes;
+
+    HYP_FIELD(Property="BufferStructAlignments", Serialize=true)
+    FixedArray<uint32, max_buffers> buffer_struct_alignments;
+
+    HYP_FORCE_INLINE bool operator==(const MeshInstanceData &other) const
+    {
+        return num_instances == other.num_instances
+            && buffers == other.buffers
+            && buffer_struct_sizes == other.buffer_struct_sizes
+            && buffer_struct_alignments == other.buffer_struct_alignments;
+    }
+
+    HYP_FORCE_INLINE bool operator!=(const MeshInstanceData &other) const
+    {
+        return num_instances != other.num_instances
+            || buffers != other.buffers
+            || buffer_struct_sizes != other.buffer_struct_sizes
+            || buffer_struct_alignments != other.buffer_struct_alignments;
+    }
+
+    HYP_FORCE_INLINE uint32 NumInstances() const
+        { return num_instances; }
+
+    template <class StructType>
+    void SetBufferData(int buffer_index, StructType *ptr, SizeType count)
+    {
+        static_assert(IsPODType<StructType>, "Struct type must a POD type");
+
+        AssertThrowMsg(buffer_index < max_buffers, "Buffer index %d must be less than maximum number of buffers (%u)", buffer_index, max_buffers);
+
+        if (buffers.Size() <= buffer_index) {
+            buffers.Resize(buffer_index + 1);
+        }
+
+        buffer_struct_sizes[buffer_index] = sizeof(StructType);
+        buffer_struct_alignments[buffer_index] = alignof(StructType);
+
+        buffers[buffer_index].Resize(sizeof(StructType) * count);
+        Memory::MemCpy(buffers[buffer_index].Data(), ptr, sizeof(StructType) * count);
+    }
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(num_instances);
+        hc.Add(buffers);
+        hc.Add(buffer_struct_sizes);
+        hc.Add(buffer_struct_alignments);
+
+        return hc;
+    }
+};
 
 struct RenderProxy
 {
-    // uses Handle<Entity> instead of ID<Entity> to keep the entity alive while it is in the RenderProxyList
-    Handle<Entity>                          entity;
-    Handle<Mesh>                            mesh;
-    Handle<Material>                        material;
-    Handle<Skeleton>                        skeleton;
-    Matrix4                                 model_matrix;
-    Matrix4                                 previous_model_matrix;
-    BoundingBox                             aabb;
-    UserData<sizeof(Vec4u), alignof(Vec4u)> user_data;
-    uint32                                  num_instances;
-    
-    HYP_FORCE_INLINE bool operator==(const RenderProxy &other) const
+    Handle<Entity>      entity;
+    Handle<Mesh>        mesh;
+    Handle<Material>    material;
+    Handle<Skeleton>    skeleton;
+    Matrix4             model_matrix;
+    Matrix4             previous_model_matrix;
+    BoundingBox         aabb;
+    UserData<32, 16>    user_data;
+    MeshInstanceData    instance_data;
+    uint32              version = 0;
+
+    HYP_FORCE_INLINE uint32 NumInstances() const
+        { return MathUtil::Max(instance_data.NumInstances(), 1); }
+
+    bool GetDrawCallID(DrawCallID &out_draw_call_id) const;
+
+    void ClaimRenderResources() const;
+    void UnclaimRenderResources() const;
+
+    bool operator==(const RenderProxy &other) const
     {
         return entity == other.entity
             && mesh == other.mesh
@@ -46,10 +120,11 @@ struct RenderProxy
             && previous_model_matrix == other.previous_model_matrix
             && aabb == other.aabb
             && user_data == other.user_data
-            && num_instances == other.num_instances;
+            && instance_data == other.instance_data
+            && version == other.version;
     }
-    
-    HYP_FORCE_INLINE bool operator!=(const RenderProxy &other) const
+
+    bool operator!=(const RenderProxy &other) const
     {
         return entity != other.entity
             || mesh != other.mesh
@@ -59,9 +134,12 @@ struct RenderProxy
             || previous_model_matrix != other.previous_model_matrix
             || aabb != other.aabb
             || user_data != other.user_data
-            || num_instances != other.num_instances;
+            || instance_data != other.instance_data
+            || version != other.version;
     }
 };
+
+using RenderProxyEntityMap = HashMap<ID<Entity>, RenderProxy>;
 
 /*! \brief The action to take on call to \ref{RenderProxyList::Advance}. */
 enum class RenderProxyListAdvanceAction : uint32
@@ -106,28 +184,28 @@ public:
     HYP_FORCE_INLINE const Bitset &GetNextEntities() const
         { return m_next_entities; }
 
-    HYP_FORCE_INLINE FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies()
+    HYP_FORCE_INLINE RenderProxyEntityMap &GetRenderProxies()
         { return m_proxies; }
 
-    HYP_FORCE_INLINE const FlatMap<ID<Entity>, RenderProxy> &GetRenderProxies() const
+    HYP_FORCE_INLINE const RenderProxyEntityMap &GetRenderProxies() const
         { return m_proxies; }
 
-    HYP_FORCE_INLINE FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies()
+    HYP_FORCE_INLINE RenderProxyEntityMap &GetChangedRenderProxies()
         { return m_changed_proxies; }
 
-    HYP_FORCE_INLINE const FlatMap<ID<Entity>, RenderProxy> &GetChangedRenderProxies() const
+    HYP_FORCE_INLINE const RenderProxyEntityMap &GetChangedRenderProxies() const
         { return m_changed_proxies; }
 
     HYP_FORCE_INLINE Bitset GetAddedEntities() const
     {
-        const uint32 new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
+        const SizeType new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
 
         return Bitset(m_next_entities).Resize(new_num_bits) & ~Bitset(m_previous_entities).Resize(new_num_bits);
     }
 
     HYP_FORCE_INLINE Bitset GetRemovedEntities() const
     {
-        const uint32 new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
+        const SizeType new_num_bits = MathUtil::Max(m_previous_entities.NumBits(), m_next_entities.NumBits());
 
         return Bitset(m_previous_entities).Resize(new_num_bits) & ~Bitset(m_next_entities).Resize(new_num_bits);
     }
@@ -136,12 +214,12 @@ public:
         { return m_changed_entities; }
 
 private:
-    FlatMap<ID<Entity>, RenderProxy>    m_proxies;
-    FlatMap<ID<Entity>, RenderProxy>    m_changed_proxies;
+    RenderProxyEntityMap    m_proxies;
+    RenderProxyEntityMap    m_changed_proxies;
 
-    Bitset                              m_previous_entities;
-    Bitset                              m_next_entities;
-    Bitset                              m_changed_entities;
+    Bitset                  m_previous_entities;
+    Bitset                  m_next_entities;
+    Bitset                  m_changed_entities;
 };
 
 } // namespace hyperion

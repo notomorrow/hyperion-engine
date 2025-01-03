@@ -11,6 +11,8 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
 #include <Engine.hpp>
 
 #include <unordered_map>
@@ -22,84 +24,6 @@ using renderer::Result;
 using renderer::GPUBufferType;
 
 #pragma region Render commands
-
-struct RENDER_COMMAND(UploadMeshData) : renderer::RenderCommand
-{
-    Array<float>    vertex_data;
-    Array<uint32>   index_data;
-    GPUBufferRef    vbo;
-    GPUBufferRef    ibo;
-
-    RENDER_COMMAND(UploadMeshData)(
-        Array<float> vertex_data,
-        Array<uint32> index_data,
-        GPUBufferRef vbo,
-        GPUBufferRef ibo
-    ) : vertex_data(std::move(vertex_data)),
-        index_data(std::move(index_data)),
-        vbo(std::move(vbo)),
-        ibo(std::move(ibo))
-    {
-        // Ensure vertex buffer is not empty
-        if (this->vertex_data.Empty()) {
-            this->vertex_data.Resize(1);
-        }
-
-        // Ensure indices exist and are a multiple of 3
-        if (this->index_data.Empty()) {
-            this->index_data.Resize(3);
-        } else if (this->index_data.Size() % 3 != 0) {
-            this->index_data.Resize(this->index_data.Size() + (3 - (this->index_data.Size() % 3)));
-        }
-    }
-
-    virtual ~RENDER_COMMAND(UploadMeshData)() override = default;
-
-    virtual Result operator()() override
-    {
-        auto *instance = g_engine->GetGPUInstance();
-        auto *device = g_engine->GetGPUDevice();
-
-        const SizeType packed_buffer_size = vertex_data.Size() * sizeof(float);
-        const SizeType packed_indices_size = index_data.Size() * sizeof(uint32);
-
-        HYPERION_BUBBLE_ERRORS(vbo->Create(device, packed_buffer_size));
-        HYPERION_BUBBLE_ERRORS(ibo->Create(device, packed_indices_size));
-
-        HYPERION_BUBBLE_ERRORS(instance->GetStagingBufferPool().Use(
-            device,
-            [&](renderer::StagingBufferPool::Context &holder)
-            {
-                renderer::SingleTimeCommands commands { device };
-
-                auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
-                staging_buffer_vertices->Copy(device, packed_buffer_size, vertex_data.Data());
-
-                auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
-                staging_buffer_indices->Copy(device, packed_indices_size, index_data.Data());
-
-                commands.Push([&](CommandBuffer *cmd)
-                {
-                    vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
-
-                    HYPERION_RETURN_OK;
-                });
-
-                commands.Push([&](CommandBuffer *cmd)
-                {
-                    ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
-
-                    HYPERION_RETURN_OK;
-                });
-
-                HYPERION_BUBBLE_ERRORS(commands.Execute());
-
-                HYPERION_RETURN_OK;
-            }));
-
-        HYPERION_RETURN_OK;
-    }
-};
 
 struct RENDER_COMMAND(SetStreamedMeshData) : renderer::RenderCommand
 {
@@ -128,266 +52,170 @@ struct RENDER_COMMAND(SetStreamedMeshData) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
-Pair<Array<Vertex>, Array<uint32>> Mesh::CalculateIndices(const Array<Vertex> &vertices)
-{
-    std::unordered_map<Vertex, uint32> index_map;
+#pragma region MeshRenderResources
 
-    Array<uint32> indices;
-    indices.Reserve(vertices.Size());
-
-    /* This will be our resulting buffer with only the vertices we need. */
-    Array<Vertex> new_vertices;
-    new_vertices.Reserve(vertices.Size());
-
-    for (const auto &vertex : vertices) {
-        /* Check if the vertex already exists in our map */
-        auto it = index_map.find(vertex);
-
-        /* If it does, push to our indices */
-        if (it != index_map.end()) {
-            indices.PushBack(it->second);
-
-            continue;
-        }
-
-        const uint32 mesh_index = uint32(new_vertices.Size());
-
-        /* The vertex is unique, so we push it. */
-        new_vertices.PushBack(vertex);
-        indices.PushBack(mesh_index);
-
-        index_map[vertex] = mesh_index;
-    }
-
-    return { std::move(new_vertices), std::move(indices) };
-}
-
-Mesh::Mesh()
-    : BasicObject(),
-      m_vbo(MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_VERTEX_BUFFER)),
-      m_ibo(MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_INDEX_BUFFER)),
-      m_mesh_attributes {
-          .vertex_attributes    = static_mesh_vertex_attributes,
-          .topology             = Topology::TRIANGLES
-      },
-      m_aabb(BoundingBox::Empty())
+MeshRenderResources::MeshRenderResources(Mesh *mesh)
+    : m_mesh(mesh),
+      m_num_indices(0)
 {
 }
 
-Mesh::Mesh(
-    RC<StreamedMeshData> streamed_mesh_data,
-    Topology topology,
-    const VertexAttributeSet &vertex_attributes
-) : BasicObject(),
-    m_vbo(MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_VERTEX_BUFFER)),
-    m_ibo(MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_INDEX_BUFFER)),
-    m_mesh_attributes {
-        .vertex_attributes  = vertex_attributes,
-        .topology           = topology
-    },
-    m_streamed_mesh_data(std::move(streamed_mesh_data)),
-    m_aabb(BoundingBox::Empty())
-{
-    CalculateAABB();
-}
-
-Mesh::Mesh(
-    RC<StreamedMeshData> streamed_mesh_data,
-    Topology topology
-) : Mesh(
-        std::move(streamed_mesh_data),
-        topology,
-        static_mesh_vertex_attributes | skeleton_vertex_attributes
-    )
-{
-}
-
-Mesh::Mesh(
-    Array<Vertex> vertices,
-    Array<uint32> indices,
-    Topology topology
-) : Mesh(
-        std::move(vertices),
-        std::move(indices),
-        topology,
-        static_mesh_vertex_attributes | skeleton_vertex_attributes
-    )
-{
-}
-
-Mesh::Mesh(
-    Array<Vertex> vertices,
-    Array<uint32> indices,
-    Topology topology,
-    const VertexAttributeSet &vertex_attributes
-) : BasicObject(),
-    m_vbo(MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_VERTEX_BUFFER)),
-    m_ibo(MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_INDEX_BUFFER)),
-    m_mesh_attributes {
-        .vertex_attributes = vertex_attributes,
-        .topology = topology
-    },
-    m_streamed_mesh_data(MakeRefCountedPtr<StreamedMeshData>(MeshData {
-        std::move(vertices),
-        std::move(indices)
-    })),
-    m_aabb(BoundingBox::Empty())
-{
-    auto ref = m_streamed_mesh_data->AcquireRef();
-    const MeshData &mesh_data = ref->GetMeshData();
-
-    m_indices_count = mesh_data.indices.Size();
-
-    CalculateAABB();
-}
-
-Mesh::Mesh(Mesh &&other) noexcept
-    : m_vbo(std::move(other.m_vbo)),
-      m_ibo(std::move(other.m_ibo)),
-      m_indices_count(other.m_indices_count),
-      m_mesh_attributes(other.m_mesh_attributes),
+MeshRenderResources::MeshRenderResources(MeshRenderResources &&other) noexcept
+    : RenderResourcesBase(static_cast<RenderResourcesBase &&>(other)),
+      m_mesh(other.m_mesh),
+      m_vertex_attributes(other.m_vertex_attributes),
       m_streamed_mesh_data(std::move(other.m_streamed_mesh_data)),
-      m_aabb(other.m_aabb)
+      m_vbo(std::move(other.m_vbo)),
+      m_ibo(std::move(other.m_ibo)),
+      m_num_indices(other.m_num_indices)
 {
-    other.m_aabb = BoundingBox::Empty();
-    other.m_indices_count = 0;
+    other.m_mesh = nullptr;
 }
 
-Mesh &Mesh::operator=(Mesh &&other) noexcept
+MeshRenderResources::~MeshRenderResources() = default;
+
+void MeshRenderResources::Initialize()
 {
-    if (&other == this) {
-        return *this;
-    }
+    HYP_SCOPE;
 
-    m_vbo = std::move(other.m_vbo);
-    m_ibo = std::move(other.m_ibo);
-    m_mesh_attributes = other.m_mesh_attributes;
-    m_streamed_mesh_data = std::move(other.m_streamed_mesh_data);
-    m_aabb = other.m_aabb;
-    m_indices_count = other.m_indices_count;
-
-    other.m_aabb = BoundingBox::Empty();
-    other.m_indices_count = 0;
-
-    return *this;
+    AssertThrow(m_mesh != nullptr);
+    
+    UploadMeshData();
 }
 
-Mesh::~Mesh()
+void MeshRenderResources::Destroy()
 {
-    if (IsInitCalled()) {
-        SetReady(false);
+    HYP_SCOPE;
 
-        SafeRelease(std::move(m_vbo));
-        SafeRelease(std::move(m_ibo));
-    }
+    SafeRelease(std::move(m_vbo));
+    SafeRelease(std::move(m_ibo));
 }
 
-void Mesh::Init()
+void MeshRenderResources::Update()
 {
-    if (IsInitCalled()) {
-        return;
-    }
+    HYP_SCOPE;
 
-    BasicObject::Init();
+    AssertThrow(m_mesh != nullptr);
+    
+    UploadMeshData();
+}
 
-    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
-    {
-        SafeRelease(std::move(m_vbo));
-        SafeRelease(std::move(m_ibo));
-    }));
-
-    AssertThrowMsg(GetVertexAttributes() != 0, "No vertex attributes set on mesh");
-
-    if (!m_streamed_mesh_data) {
-        m_streamed_mesh_data.Emplace();
-    }
-
-    { // upload mesh data
+void MeshRenderResources::UploadMeshData()
+{
+    HYP_SCOPE;
+    
+    // upload mesh data
+    Array<float> vertex_buffer;
+    Array<uint32> index_buffer;
+    
+    if (m_streamed_mesh_data != nullptr) {
         auto ref = m_streamed_mesh_data->AcquireRef();
         const MeshData &mesh_data = ref->GetMeshData();
 
-        m_indices_count = uint32(mesh_data.indices.Size());
-
-        PUSH_RENDER_COMMAND(
-            UploadMeshData,
-            BuildVertexBuffer(GetVertexAttributes(), mesh_data),
-            mesh_data.indices,
-            m_vbo,
-            m_ibo
-        );
-    }
-    
-    m_streamed_mesh_data->Unpage();
-
-    SetReady(true);
-}
-
-void Mesh::SetVertices(Array<Vertex> vertices)
-{
-    Array<uint32> indices;
-    indices.Resize(vertices.Size());
-
-    for (SizeType index = 0; index < vertices.Size(); index++) {
-        indices[index] = uint32(index);
+        vertex_buffer = BuildVertexBuffer(m_vertex_attributes, mesh_data);
+        index_buffer = mesh_data.indices;
+        
+        m_streamed_mesh_data->Unpage();
     }
 
-    SetVertices(std::move(vertices), std::move(indices));
-}
+    // Ensure vertex buffer is not empty
+    if (vertex_buffer.Empty()) {
+        vertex_buffer.Resize(1);
+    }
 
-void Mesh::SetVertices(Array<Vertex> vertices, Array<uint32> indices)
-{
-    SetStreamedMeshData(StreamedMeshData::FromMeshData({
-       std::move(vertices),
-       std::move(indices)
-    }));
-}
+    // Ensure indices exist and are a multiple of 3
+    if (index_buffer.Empty()) {
+        index_buffer.Resize(3);
+    } else if (index_buffer.Size() % 3 != 0) {
+        index_buffer.Resize(index_buffer.Size() + (3 - (index_buffer.Size() % 3)));
+    }
 
-void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
-{
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    m_num_indices = index_buffer.Size();
 
-    m_streamed_mesh_data = std::move(streamed_mesh_data);
+    auto *instance = g_engine->GetGPUInstance();
+    auto *device = g_engine->GetGPUDevice();
 
-    CalculateAABB();
+    const SizeType packed_buffer_size = vertex_buffer.ByteSize();
+    const SizeType packed_indices_size = index_buffer.ByteSize();
 
-    if (IsInitCalled()) {
+    if (!m_vbo.IsValid() || m_vbo->Size() != packed_buffer_size) {
         SafeRelease(std::move(m_vbo));
-        SafeRelease(std::move(m_ibo));
 
         m_vbo = MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_VERTEX_BUFFER);
-        m_ibo = MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_INDEX_BUFFER);
-
-        if (!m_streamed_mesh_data) {
-            // Create empty buffers
-            m_streamed_mesh_data = StreamedMeshData::FromMeshData({
-                Array<Vertex> { },
-                Array<uint32> { }
-            });
-        }
-
-        auto ref = m_streamed_mesh_data->AcquireRef();
-        const MeshData &mesh_data = ref->GetMeshData();
-
-        m_indices_count = mesh_data.indices.Size();
-
-        // Execute render command inline
-        PUSH_RENDER_COMMAND(
-            UploadMeshData,
-            BuildVertexBuffer(GetVertexAttributes(), mesh_data),
-            mesh_data.indices,
-            m_vbo,
-            m_ibo
-        );
     }
+
+    if (!m_vbo->IsCreated()) {
+        HYPERION_ASSERT_RESULT(m_vbo->Create(device, packed_buffer_size));
+    }
+
+    if (!m_ibo.IsValid() || m_ibo->Size() != packed_indices_size) {
+        SafeRelease(std::move(m_ibo));
+
+        m_ibo = MakeRenderObject<GPUBuffer>(GPUBufferType::MESH_INDEX_BUFFER);
+    }
+
+    if (!m_ibo->IsCreated()) {
+        HYPERION_ASSERT_RESULT(m_ibo->Create(device, packed_indices_size));
+    }
+
+    HYPERION_ASSERT_RESULT(instance->GetStagingBufferPool().Use(
+        device,
+        [&](renderer::StagingBufferPool::Context &holder)
+        {
+            renderer::SingleTimeCommands commands { device };
+
+            auto *staging_buffer_vertices = holder.Acquire(packed_buffer_size);
+            staging_buffer_vertices->Copy(device, packed_buffer_size, vertex_buffer.Data());
+
+            auto *staging_buffer_indices = holder.Acquire(packed_indices_size);
+            staging_buffer_indices->Copy(device, packed_indices_size, index_buffer.Data());
+
+            commands.Push([&](CommandBuffer *cmd)
+            {
+                m_vbo->CopyFrom(cmd, staging_buffer_vertices, packed_buffer_size);
+
+                HYPERION_RETURN_OK;
+            });
+
+            commands.Push([&](CommandBuffer *cmd)
+            {
+                m_ibo->CopyFrom(cmd, staging_buffer_indices, packed_indices_size);
+
+                HYPERION_RETURN_OK;
+            });
+
+            HYPERION_BUBBLE_ERRORS(commands.Execute());
+
+            HYPERION_RETURN_OK;
+        }));
 }
 
-void Mesh::SetStreamedMeshData_ThreadSafe(Handle<Mesh> mesh, RC<StreamedMeshData> streamed_mesh_data)
+void MeshRenderResources::SetVertexAttributes(const VertexAttributeSet &vertex_attributes)
 {
-    PUSH_RENDER_COMMAND(
-        SetStreamedMeshData,
-        std::move(mesh),
-        std::move(streamed_mesh_data)
-    );
+    HYP_SCOPE;
+
+    Execute([this, vertex_attributes]()
+    {
+        m_vertex_attributes = vertex_attributes;
+
+        if (m_is_initialized) {
+            SetNeedsUpdate();
+        }
+    });
+}
+
+void MeshRenderResources::SetStreamedMeshData(const RC<StreamedMeshData> &streamed_mesh_data)
+{
+    HYP_SCOPE;
+
+    Execute([this, streamed_mesh_data]()
+    {
+        m_streamed_mesh_data = streamed_mesh_data;
+
+        if (m_is_initialized) {
+            SetNeedsUpdate();
+        }
+    });
 }
 
 /* Copy our values into the packed vertex buffer, and increase the index for the next possible
@@ -398,7 +226,7 @@ void Mesh::SetStreamedMeshData_ThreadSafe(Handle<Mesh> mesh, RC<StreamedMeshData
         current_offset += (arg_size);                                                            \
     } while (0)
 
-Array<float> Mesh::BuildVertexBuffer(const VertexAttributeSet &vertex_attributes, const MeshData &mesh_data)
+Array<float> MeshRenderResources::BuildVertexBuffer(const VertexAttributeSet &vertex_attributes, const MeshData &mesh_data)
 {
     const SizeType vertex_size = vertex_attributes.CalculateVertexSize();
 
@@ -447,16 +275,305 @@ Array<float> Mesh::BuildVertexBuffer(const VertexAttributeSet &vertex_attributes
 
 #undef PACKED_SET_ATTR
 
+#pragma endregion MeshRenderResources
+
+#pragma region Mesh
+
+Pair<Array<Vertex>, Array<uint32>> Mesh::CalculateIndices(const Array<Vertex> &vertices)
+{
+    std::unordered_map<Vertex, uint32> index_map;
+
+    Array<uint32> indices;
+    indices.Reserve(vertices.Size());
+
+    /* This will be our resulting buffer with only the vertices we need. */
+    Array<Vertex> new_vertices;
+    new_vertices.Reserve(vertices.Size());
+
+    for (const auto &vertex : vertices) {
+        /* Check if the vertex already exists in our map */
+        auto it = index_map.find(vertex);
+
+        /* If it does, push to our indices */
+        if (it != index_map.end()) {
+            indices.PushBack(it->second);
+
+            continue;
+        }
+
+        const uint32 mesh_index = uint32(new_vertices.Size());
+
+        /* The vertex is unique, so we push it. */
+        new_vertices.PushBack(vertex);
+        indices.PushBack(mesh_index);
+
+        index_map[vertex] = mesh_index;
+    }
+
+    return { std::move(new_vertices), std::move(indices) };
+}
+
+Mesh::Mesh()
+    : HypObject(),
+      m_mesh_attributes {
+          .vertex_attributes    = static_mesh_vertex_attributes,
+          .topology             = Topology::TRIANGLES
+      },
+      m_aabb(BoundingBox::Empty()),
+      m_render_resources(nullptr)
+{
+}
+
+Mesh::Mesh(
+    RC<StreamedMeshData> streamed_mesh_data,
+    Topology topology,
+    const VertexAttributeSet &vertex_attributes
+) : HypObject(),
+    m_mesh_attributes {
+        .vertex_attributes  = vertex_attributes,
+        .topology           = topology
+    },
+    m_streamed_mesh_data(std::move(streamed_mesh_data)),
+    m_aabb(BoundingBox::Empty()),
+    m_render_resources(nullptr)
+{
+    CalculateAABB();
+}
+
+Mesh::Mesh(
+    RC<StreamedMeshData> streamed_mesh_data,
+    Topology topology
+) : Mesh(
+        std::move(streamed_mesh_data),
+        topology,
+        static_mesh_vertex_attributes | skeleton_vertex_attributes
+    )
+{
+}
+
+Mesh::Mesh(
+    Array<Vertex> vertices,
+    Array<uint32> indices,
+    Topology topology
+) : Mesh(
+        std::move(vertices),
+        std::move(indices),
+        topology,
+        static_mesh_vertex_attributes | skeleton_vertex_attributes
+    )
+{
+}
+
+Mesh::Mesh(
+    Array<Vertex> vertices,
+    Array<uint32> indices,
+    Topology topology,
+    const VertexAttributeSet &vertex_attributes
+) : HypObject(),
+    m_mesh_attributes {
+        .vertex_attributes = vertex_attributes,
+        .topology = topology
+    },
+    m_streamed_mesh_data(MakeRefCountedPtr<StreamedMeshData>(MeshData {
+        std::move(vertices),
+        std::move(indices)
+    })),
+    m_aabb(BoundingBox::Empty()),
+    m_render_resources(nullptr)
+{
+    auto ref = m_streamed_mesh_data->AcquireRef();
+    const MeshData &mesh_data = ref->GetMeshData();
+
+    CalculateAABB();
+}
+
+Mesh::Mesh(Mesh &&other) noexcept
+    : HypObject(static_cast<HypObject &&>(other)),
+      m_mesh_attributes(other.m_mesh_attributes),
+      m_streamed_mesh_data(std::move(other.m_streamed_mesh_data)),
+      m_aabb(other.m_aabb),
+      m_render_resources(other.m_render_resources)
+{
+    other.m_aabb = BoundingBox::Empty();
+    other.m_render_resources = nullptr;
+}
+
+Mesh &Mesh::operator=(Mesh &&other) noexcept
+{
+    if (&other == this) {
+        return *this;
+    }
+
+    if (m_render_resources != nullptr) {
+        FreeResource(m_render_resources);
+    }
+
+    m_mesh_attributes = other.m_mesh_attributes;
+    m_streamed_mesh_data = std::move(other.m_streamed_mesh_data);
+    m_aabb = other.m_aabb;
+    m_render_resources = other.m_render_resources;
+
+    other.m_aabb = BoundingBox::Empty();
+    other.m_render_resources = nullptr;
+
+    return *this;
+}
+
+Mesh::~Mesh()
+{
+    if (IsInitCalled()) {
+        SetReady(false);
+
+        m_always_claimed_render_resources_handle.Reset();
+
+        if (m_render_resources != nullptr) {
+            FreeResource(m_render_resources);
+        }
+    }
+}
+
+void Mesh::Init()
+{
+    if (IsInitCalled()) {
+        return;
+    }
+
+    HypObject::Init();
+
+    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
+    {
+        if (m_render_resources != nullptr) {
+            FreeResource(m_render_resources);
+
+            m_render_resources = nullptr;
+        }
+    }));
+
+    AssertThrowMsg(GetVertexAttributes() != 0, "No vertex attributes set on mesh");
+
+    m_render_resources = AllocateResource<MeshRenderResources>(this);
+
+    {
+        HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
+
+        if (!m_streamed_mesh_data) {
+            m_streamed_mesh_data.Emplace();
+        }
+
+        m_render_resources->SetVertexAttributes(GetVertexAttributes());
+        m_render_resources->SetStreamedMeshData(m_streamed_mesh_data);
+    }
+
+    SetReady(true);
+}
+
+void Mesh::SetVertices(Array<Vertex> vertices)
+{
+    Array<uint32> indices;
+    indices.Resize(vertices.Size());
+
+    for (SizeType index = 0; index < vertices.Size(); index++) {
+        indices[index] = uint32(index);
+    }
+
+    SetVertices(std::move(vertices), std::move(indices));
+}
+
+void Mesh::SetVertices(Array<Vertex> vertices, Array<uint32> indices)
+{
+    SetStreamedMeshData(StreamedMeshData::FromMeshData({
+       std::move(vertices),
+       std::move(indices)
+    }));
+}
+
+const RC<StreamedMeshData> &Mesh::GetStreamedMeshData() const
+{
+    HYP_SCOPE;
+    HYP_MT_CHECK_READ(m_data_race_detector, "Streamed mesh data");
+
+    return m_streamed_mesh_data;
+}
+
+void Mesh::SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data)
+{
+    HYP_SCOPE;
+    HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
+
+    m_streamed_mesh_data = std::move(streamed_mesh_data);
+
+    CalculateAABB();
+
+    if (IsInitCalled()) {
+        if (!m_streamed_mesh_data) {
+            // Create empty buffers
+            m_streamed_mesh_data = StreamedMeshData::FromMeshData({
+                Array<Vertex> { },
+                Array<uint32> { }
+            });
+        }
+
+        m_render_resources->SetStreamedMeshData(m_streamed_mesh_data);
+    }
+}
+
+void Mesh::SetStreamedMeshData_ThreadSafe(RC<StreamedMeshData> streamed_mesh_data)
+{
+    HYP_SCOPE;
+
+    AssertIsInitCalled();
+
+    PUSH_RENDER_COMMAND(
+        SetStreamedMeshData,
+        HandleFromThis(),
+        std::move(streamed_mesh_data)
+    );
+}
+
+uint32 Mesh::NumIndices() const
+{
+    HYP_SCOPE;
+    HYP_MT_CHECK_READ(m_data_race_detector, "Streamed mesh data");
+
+    return m_streamed_mesh_data != nullptr
+        ? m_streamed_mesh_data->NumIndices()
+        : 0;
+}
+
+void Mesh::SetVertexAttributes(const VertexAttributeSet &vertex_attributes)
+{
+    HYP_SCOPE;
+    HYP_MT_CHECK_RW(m_data_race_detector, "Attributes");
+
+    m_mesh_attributes.vertex_attributes = vertex_attributes;
+
+    if (IsInitCalled()) {
+        m_render_resources->SetVertexAttributes(vertex_attributes);
+    }
+}
+
+void Mesh::SetMeshAttributes(const MeshAttributes &attributes)
+{
+    HYP_SCOPE;
+    HYP_MT_CHECK_RW(m_data_race_detector, "Attributes");
+
+    m_mesh_attributes = attributes;
+
+    if (IsInitCalled()) {
+        m_render_resources->SetVertexAttributes(attributes.vertex_attributes);
+    }
+}
+
 void Mesh::Render(CommandBuffer *cmd, uint32 num_instances, uint32 instance_index) const
 {
 #ifdef HYP_DEBUG_MODE
     AssertReady();
 #endif
 
-    cmd->BindVertexBuffer(m_vbo);
-    cmd->BindIndexBuffer(m_ibo);
+    cmd->BindVertexBuffer(m_render_resources->GetVertexBuffer());
+    cmd->BindIndexBuffer(m_render_resources->GetIndexBuffer());
 
-    cmd->DrawIndexed(m_indices_count, num_instances, instance_index);
+    cmd->DrawIndexed(m_render_resources->NumIndices(), num_instances, instance_index);
 }
 
 void Mesh::RenderIndirect(
@@ -469,8 +586,8 @@ void Mesh::RenderIndirect(
     AssertReady();
 #endif
 
-    cmd->BindVertexBuffer(m_vbo);
-    cmd->BindIndexBuffer(m_ibo);
+    cmd->BindVertexBuffer(m_render_resources->GetVertexBuffer());
+    cmd->BindIndexBuffer(m_render_resources->GetIndexBuffer());
 
     cmd->DrawIndexedIndirect(
         indirect_buffer,
@@ -480,9 +597,13 @@ void Mesh::RenderIndirect(
 
 void Mesh::PopulateIndirectDrawCommand(IndirectDrawCommand &out)
 {
+#ifdef HYP_DEBUG_MODE
+    AssertReady();
+#endif
+
 #if HYP_VULKAN
     out.command = {
-        .indexCount = m_indices_count
+        .indexCount = m_render_resources->NumIndices()
     };
 #else
     #error Not implemented for this platform!
@@ -491,6 +612,9 @@ void Mesh::PopulateIndirectDrawCommand(IndirectDrawCommand &out)
 
 Array<PackedVertex> Mesh::BuildPackedVertices() const
 {
+    HYP_SCOPE;
+    HYP_MT_CHECK_READ(m_data_race_detector, "Streamed mesh data");
+
     auto ref = m_streamed_mesh_data->AcquireRef();
     const MeshData &mesh_data = ref->GetMeshData();
 
@@ -517,6 +641,9 @@ Array<PackedVertex> Mesh::BuildPackedVertices() const
 
 Array<uint32> Mesh::BuildPackedIndices() const
 {
+    HYP_SCOPE;
+    HYP_MT_CHECK_READ(m_data_race_detector, "Streamed mesh data");
+
     auto ref = m_streamed_mesh_data->AcquireRef();
     const MeshData &mesh_data = ref->GetMeshData();
 
@@ -527,6 +654,9 @@ Array<uint32> Mesh::BuildPackedIndices() const
 
 void Mesh::CalculateNormals(bool weighted)
 {
+    HYP_SCOPE;
+    HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
+
     if (!m_streamed_mesh_data) {
         HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before mesh data is set!");
 
@@ -672,6 +802,9 @@ void Mesh::CalculateNormals(bool weighted)
 
 void Mesh::CalculateTangents()
 {
+    HYP_SCOPE;
+    HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
+
     if (!m_streamed_mesh_data) {
         HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before mesh data is set!");
 
@@ -753,6 +886,9 @@ void Mesh::CalculateTangents()
 
 void Mesh::InvertNormals()
 {
+    HYP_SCOPE;
+    HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
+
     if (!m_streamed_mesh_data) {
         HYP_LOG(Mesh, LogLevel::WARNING, "Cannot invert normals before mesh data is set!");
 
@@ -771,6 +907,9 @@ void Mesh::InvertNormals()
 
 void Mesh::CalculateAABB()
 {
+    HYP_SCOPE;
+    HYP_MT_CHECK_READ(m_data_race_detector, "Streamed mesh data");
+
     if (!m_streamed_mesh_data) {
         HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate Mesh bounds before mesh data is set!");
 
@@ -783,10 +922,12 @@ void Mesh::CalculateAABB()
     BoundingBox aabb = BoundingBox::Empty();
 
     for (const Vertex &vertex : mesh_data.vertices) {
-        aabb.Extend(vertex.GetPosition());
+        aabb = aabb.Union(vertex.GetPosition());
     }
 
     m_aabb = aabb;
 }
+
+#pragma endregion Mesh
 
 } // namespace hyperion

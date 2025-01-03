@@ -16,10 +16,8 @@
 #include <scene/Scene.hpp>
 
 #include <scene/ecs/components/UIComponent.hpp>
-#include <scene/ecs/EntityManager.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
-#include <rendering/FullScreenPass.hpp>
 
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
@@ -123,70 +121,6 @@ public:
     HYP_FORCE_INLINE RC<UIObject> GetFocusedObject() const
         { return m_focused_object.Lock(); }
 
-    /*! \brief Create a UI object of type T and optionally attach it to the root.
-     *  The object will not be named. To name the object, use the other CreateUIObject overload.
-     * 
-     *  \tparam T The type of UI object to create. Must be a derived class of UIObject.
-     *  \param position The position of the UI object.
-     *  \param size The size of the UI object.
-     *  \param attach_to_root Whether to attach the UI object to the root of the UI scene immediately.
-     *  \return A handle to the created UI object. */
-    template <class T>
-    HYP_NODISCARD RC<T> CreateUIObject(
-        Vec2i position,
-        UIObjectSize size,
-        bool attach_to_root = false
-    )
-    {
-        return CreateUIObject<T>(Name::Invalid(), position, size, attach_to_root);
-    }
-
-    /*! \brief Create a UI object of type T and optionally attach it to the root.
-     * 
-     *  \tparam T The type of UI object to create. Must be a derived class of UIObject.
-     *  \param name The name of the UI object.
-     *  \param position The position of the UI object.
-     *  \param size The size of the UI object.
-     *  \param attach_to_root Whether to attach the UI object to the root of the UI scene immediately.
-     *  \return A handle to the created UI object. */
-    template <class T>
-    HYP_NODISCARD RC<T> CreateUIObject(
-        Name name,
-        Vec2i position,
-        UIObjectSize size,
-        bool attach_to_root = false
-    )
-    {
-        Threads::AssertOnThread(m_owner_thread_id);
-
-        AssertThrow(IsInit());
-        AssertThrow(GetNode().IsValid());
-
-        if (!name.IsValid()) {
-            name = CreateNameFromDynamicString(ANSIString("Unnamed_") + TypeNameHelper<T, true>::value.Data());
-        }
-
-        NodeProxy node_proxy(MakeRefCountedPtr<Node>(name.LookupString()));
-        
-        if (attach_to_root) {
-            node_proxy = GetNode()->AddChild(node_proxy);
-        }
-        
-        // Set it to ignore parent scale so size of the UI object is not affected by the parent
-        node_proxy->SetFlags(node_proxy->GetFlags() | NodeFlags::IGNORE_PARENT_SCALE);
-
-        RC<UIObject> ui_object = CreateUIObjectInternal<T>(name, node_proxy, false /* init */);
-
-        ui_object->SetPosition(position);
-        ui_object->SetSize(size);
-        ui_object->Init();
-
-        RC<T> result = ui_object.Cast<T>();
-        AssertThrow(result != nullptr);
-
-        return result;
-    }
-
     UIEventHandlerResult OnInputEvent(
         InputManager *input_manager,
         const SystemEvent &event
@@ -200,9 +134,6 @@ public:
      *  \note Ensure that the UIStage will not be accessed from any other
      *  thread than the one specified. This method is not thread-safe. */
     void SetOwnerThreadID(ThreadID thread_id);
-
-    virtual bool IsContainer() const override
-        { return true; }
 
     virtual void Init() override;
     virtual void AddChildUIObject(const RC<UIObject> &ui_object) override;
@@ -225,37 +156,7 @@ private:
 
     RC<UIObject> GetUIObjectForEntity(ID<Entity> entity) const;
 
-    template <class T>
-    RC<UIObject> CreateUIObjectInternal(Name name, NodeProxy &node_proxy, bool init = false)
-    {
-        AssertThrow(node_proxy.IsValid());
-
-        static_assert(std::is_base_of_v<UIObject, T>, "T must be a derived class of UIObject");
-
-        const ID<Entity> entity = node_proxy->GetScene()->GetEntityManager()->AddEntity();
-        node_proxy->SetEntity(entity);
-        // node_proxy->LockTransform(); // Lock the transform so it can't be modified by the user except through the UIObject
-
-        RC<UIObject> ui_object = MakeRefCountedPtr<T>();
-        AssertThrow(ui_object.GetTypeID() == TypeID::ForType<T>());
-
-        ui_object->SetStage(this);
-        ui_object->SetNodeProxy(node_proxy);
-
-        ui_object->SetName(name);
-
-        node_proxy->GetScene()->GetEntityManager()->AddComponent<UIComponent>(entity, UIComponent { ui_object.Get() });
-
-        if (init) {
-            ui_object->Init();
-        }
-
-        return ui_object;
-    }
-
     bool Remove(ID<Entity> entity);
-
-    ThreadID                                        m_owner_thread_id;
 
     Vec2i                                           m_surface_size;
 
@@ -263,7 +164,7 @@ private:
 
     RC<FontAtlas>                                   m_default_font_atlas;
 
-    FlatMap<Weak<UIObject>, UIObjectPressedState>   m_mouse_button_pressed_states;
+    HashMap<Weak<UIObject>, UIObjectPressedState>   m_mouse_button_pressed_states;
     FlatSet<Weak<UIObject>>                         m_hovered_ui_objects;
     HashMap<KeyCode, Array<Weak<UIObject>>>         m_keyed_down_objects;
 

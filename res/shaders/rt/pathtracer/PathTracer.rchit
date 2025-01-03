@@ -93,6 +93,11 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
     RTRadianceUniforms rt_radiance_uniforms;
 };
 
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
+{
+    Camera camera;
+};
+
 // for RT, all textures are bindless
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 
@@ -204,7 +209,12 @@ void main()
     vec4 material_color = vec4(1.0);
 
     const uint32_t material_index = mesh_description.material_index;
-    const Material material = materials[material_index];
+
+    Material material;
+
+    if (material_index != ~0u) {
+        material = materials[material_index];
+    }
 
     const uint32_t entity_index = mesh_description.entity_index;
     const Object entity = entities[entity_index];
@@ -235,7 +245,7 @@ void main()
 
     vec3 direct_lighting = vec3(0.0);
     
-    const vec3 V = -gl_WorldRayDirectionEXT;//normalize(camera.position.xyz - position);
+    const vec3 V = normalize(camera.position.xyz - position);
     const float NdotV = max(0.0001, dot(normal, V));
 
     const float material_reflectance = 0.5;
@@ -266,21 +276,21 @@ void main()
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), gl_PrimitiveID);
 
-    // russian roulette to select a light
-    if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
-        const Light light = HYP_GET_LIGHT(closest_light_index);
+    // // russian roulette to select a light
+    // if (closest_light_index != ~0u && RandomFloat(ray_seed) < 0.5) {
+    //     const Light light = HYP_GET_LIGHT(closest_light_index);
 
-        payload.distance = closest_light_dist;
-        payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
-        payload.throughput = vec4(0.0);
-        payload.normal = normal;
-        payload.roughness = 0.0;
+    //     payload.distance = closest_light_dist;
+    //     payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
+    //     payload.throughput = vec4(0.0);
+    //     payload.normal = normal;
+    //     payload.roughness = 0.0;
 
-        return;
-    }
+    //     return;
+    // }
 
     payload.emissive = vec4(0.0);
-    payload.throughput *= material_color;
+    payload.throughput = material_color;
     payload.distance = gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = roughness;

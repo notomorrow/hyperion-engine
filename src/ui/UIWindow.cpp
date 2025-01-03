@@ -16,7 +16,8 @@ HYP_DECLARE_LOG_CHANNEL(UI);
 #pragma region UIWindow
 
 UIWindow::UIWindow()
-    : UIPanel(UIObjectType::WINDOW)
+    : UIPanel(UIObjectType::WINDOW),
+      m_window_flags(UIWindowFlags::DEFAULT)
 {
     SetBorderRadius(5);
     SetBorderFlags(UIObjectBorderFlags::ALL);
@@ -35,7 +36,7 @@ void UIWindow::Init()
     UIPanel::Init();
 
     { // create title bar
-        m_title_bar = GetStage()->CreateUIObject<UIPanel>(NAME("TitleBar"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
+        m_title_bar = CreateUIObject<UIPanel>(NAME("TitleBar"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
         m_title_bar->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
         m_title_bar->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);
         m_title_bar->SetBorderRadius(5);
@@ -43,7 +44,7 @@ void UIWindow::Init()
         m_title_bar->SetPadding(Vec2i { 5, 5 });
         m_title_bar->SetBackgroundColor(Vec4f { 0.4f, 0.4f, 0.4f, 1.0f });
 
-        RC<UIText> title_bar_text = GetStage()->CreateUIObject<UIText>(NAME("TitleBarText"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+        RC<UIText> title_bar_text = CreateUIObject<UIText>(NAME("TitleBarText"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
         title_bar_text->SetParentAlignment(UIObjectAlignment::CENTER);
         title_bar_text->SetOriginAlignment(UIObjectAlignment::CENTER);
         title_bar_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
@@ -52,34 +53,48 @@ void UIWindow::Init()
 
         m_title_bar->OnMouseDown.Bind([this](const MouseEvent &event)
         {
-            m_mouse_drag_start = event.absolute_position;
+            if (m_window_flags & UIWindowFlags::ALLOW_DRAG) {
+                m_mouse_drag_start = event.absolute_position;
 
-            return UIEventHandlerResult::STOP_BUBBLING;
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            return UIEventHandlerResult::OK;
         }).Detach();
 
         m_title_bar->OnMouseUp.Bind([this](const MouseEvent &event)
         {
-            m_mouse_drag_start.Unset();
+            if (m_window_flags & UIWindowFlags::ALLOW_DRAG) {
+                m_mouse_drag_start.Unset();
 
-            return UIEventHandlerResult::STOP_BUBBLING;
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            return UIEventHandlerResult::OK;
         }).Detach();
 
         m_title_bar->OnMouseDrag.Bind([this](const MouseEvent &event)
         {
-            if (m_mouse_drag_start.HasValue()) {
-                Vec2i delta = event.absolute_position - *m_mouse_drag_start;
-                SetPosition(GetPosition() + delta);
+            if (m_window_flags & UIWindowFlags::ALLOW_DRAG) {
+                if (m_mouse_drag_start.HasValue()) {
+                    Vec2i delta = event.absolute_position - *m_mouse_drag_start;
+                    SetPosition(GetPosition() + delta);
 
-                m_mouse_drag_start = event.absolute_position;
+                    m_mouse_drag_start = event.absolute_position;
+                }
+
+                return UIEventHandlerResult::STOP_BUBBLING;
             }
 
-            return UIEventHandlerResult::STOP_BUBBLING;
+            return UIEventHandlerResult::OK;
         }).Detach();
 
-        UIPanel::AddChildUIObject(m_title_bar);
+        if (m_window_flags & UIWindowFlags::TITLE_BAR) {
+            UIPanel::AddChildUIObject(m_title_bar);
+        }
     }
 
-    m_content = GetStage()->CreateUIObject<UIPanel>(NAME("Content"), Vec2i { 0, 30 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::FILL }));
+    m_content = CreateUIObject<UIPanel>(NAME("Content"), Vec2i { 0, 30 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::FILL }));
     m_content->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
     m_content->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);
     m_content->SetBorderRadius(5);
@@ -148,6 +163,25 @@ void UIWindow::UpdateSize_Internal(bool update_children)
     HYP_SCOPE;
 
     UIPanel::UpdateSize_Internal(update_children);
+}
+
+void UIWindow::SetWindowFlags(EnumFlags<UIWindowFlags> window_flags)
+{
+    HYP_SCOPE;
+
+    if (m_window_flags == window_flags) {
+        return;
+    }
+
+    if ((window_flags & UIWindowFlags::TITLE_BAR) != m_window_flags) {
+        if (window_flags & UIWindowFlags::TITLE_BAR) {
+            UIPanel::AddChildUIObject(m_title_bar);
+        } else {
+            UIPanel::RemoveChildUIObject(m_title_bar);
+        }
+    }
+
+    m_window_flags = window_flags;
 }
 
 #pragma region UIWindow

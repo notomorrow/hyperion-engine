@@ -6,8 +6,8 @@
 #include <asset/serialization/fbom/FBOMWriter.hpp>
 #include <asset/serialization/fbom/FBOMReader.hpp>
 
-#include <asset/BufferedByteReader.hpp>
 #include <asset/ByteWriter.hpp>
+#include <asset/BufferedByteReader.hpp>
 
 #include <core/object/HypData.hpp>
 
@@ -84,13 +84,13 @@ StreamedMeshData::StreamedMeshData(MeshData &&mesh_data)
 {
 }
 
-bool StreamedMeshData::IsNull() const
+bool StreamedMeshData::IsNull_Internal() const
 {
     return m_streamed_data == nullptr
         || m_streamed_data->IsNull();
 }
 
-bool StreamedMeshData::IsInMemory() const
+bool StreamedMeshData::IsInMemory_Internal() const
 {
     return m_mesh_data.HasValue();
 }

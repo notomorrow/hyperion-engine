@@ -12,6 +12,8 @@
 
 #include <scene/camera/OrthoCamera.hpp>
 #include <scene/camera/PerspectiveCamera.hpp>
+
+#include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
@@ -40,8 +42,7 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(UI);
 
 UIStage::UIStage(ThreadID owner_thread_id)
-    : UIObject(UIObjectType::STAGE),
-      m_owner_thread_id(owner_thread_id),
+    : UIObject(UIObjectType::STAGE, owner_thread_id),
       m_surface_size { 1000, 1000 }
 {
     SetName(NAME("Stage"));
@@ -51,7 +52,7 @@ UIStage::UIStage(ThreadID owner_thread_id)
 UIStage::~UIStage()
 {
     if (m_scene.IsValid()) {
-        g_engine->GetWorld()->RemoveScene(m_scene);
+        m_scene->RemoveFromWorld();
     }
 }
 
@@ -134,10 +135,11 @@ void UIStage::SetScene(const Handle<Scene> &scene)
     new_scene->SetRoot(std::move(current_root_node));
 
     g_engine->GetWorld()->AddScene(new_scene);
+    
     InitObject(new_scene);
 
     if (m_scene.IsValid()) {
-        g_engine->GetWorld()->RemoveScene(m_scene);
+        m_scene->RemoveFromWorld();
     }
     
     m_scene = std::move(new_scene);
@@ -223,14 +225,9 @@ void UIStage::Init()
         float(min_depth), float(max_depth)
     ));
 
-    g_engine->GetWorld()->AddScene(m_scene);
-    InitObject(m_scene);
+    g_engine->GetDefaultWorld()->AddScene(m_scene);
 
     m_scene->GetRoot()->SetEntity(m_scene->GetEntityManager()->AddEntity());
-
-    m_scene->GetEntityManager()->AddComponent<UIComponent>(m_scene->GetRoot()->GetEntity(), UIComponent { this });
-
-    m_scene->GetRoot()->LockTransform();
 
     SetNodeProxy(m_scene->GetRoot());
 
@@ -324,7 +321,7 @@ bool UIStage::TestRay(const Vec2f &position, Array<RC<UIObject>> &out_objects, E
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_id);
 
-    const Vec4f world_position = Vec4f(position.x * float(GetActualSize().x), position.y * float(GetActualSize().y), 0.0f, 1.0f);
+    const Vec4f world_position = Vec4f(position.x * float(GetSurfaceSize().x), position.y * float(GetSurfaceSize().y), 0.0f, 1.0f);
     const Vec3f direction { world_position.x / world_position.w, world_position.y / world_position.w, 0.0f };
 
     Ray ray;
@@ -344,7 +341,7 @@ bool UIStage::TestRay(const Vec2f &position, Array<RC<UIObject>> &out_objects, E
             continue;
         }
 
-        BoundingBox aabb(bounding_box_component.world_aabb);
+        BoundingBox aabb = ui_object->GetAABBClamped();
         aabb.min.z = -1.0f;
         aabb.max.z = 1.0f;
      
@@ -557,18 +554,14 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
                     BoundingBoxComponent &bounding_box_component = ui_object->GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(ui_object->GetEntity());
 
-                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, World AABB: {}, Entity AABB: {}, AABB component (local): {}, AABB component (world): {}, Actual Size: {}, Mouse Position: {}",
-                        ::hyperion::GetClass(ui_object.GetTypeID())->GetName(),
+                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}, Depth: {}",
+                        GetClass(ui_object.GetTypeID())->GetName(),
                         ui_object->GetName(),
                         ui_object->GetText(),
                         ui_object->GetActualSize(),
                         ui_object->GetActualInnerSize(),
-                        ui_object->GetWorldAABB(),
-                        ui_object->GetNode()->GetEntityAABB(),
-                        bounding_box_component.local_aabb,
-                        bounding_box_component.world_aabb,
-                        ui_object->GetActualSize(),
-                        ui_object->TransformScreenCoordsToRelative(mouse_position));
+                        ui_object->GetActualSizeClamped(),
+                        ui_object->GetComputedDepth());
 
                     // MeshComponent *mesh_component = ui_object->GetNode()->GetScene()->GetEntityManager()->TryGetComponent<MeshComponent>(ui_object->GetEntity());
                     // AssertThrow(mesh_component != nullptr);
@@ -627,8 +620,6 @@ UIEventHandlerResult UIStage::OnInputEvent(
         // project a ray into the scene and test if it hits any objects
         RayHit hit;
 
-        UIObject *focused_object = nullptr;
-
         Array<RC<UIObject>> ray_test_results;
 
         if (TestRay(mouse_screen, ray_test_results)) {
@@ -636,6 +627,16 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
             for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
                 const RC<UIObject> &ui_object = *it;
+
+                HYP_LOG(UI, LogLevel::DEBUG, "\tMOUSE DOWN Ray hit: {}", ui_object->GetName());
+            }
+
+            for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
+                const RC<UIObject> &ui_object = *it;
+
+                if (!first_hit) {
+                    first_hit = ui_object.Get();
+                }
                 
                 // if (first_hit != nullptr) {
                 //     // We don't want to check the current object if it's not a child of the first hit object,
@@ -647,13 +648,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                 //     first_hit = ui_object;
                 // }
 
-                if (focused_object == nullptr && ui_object->AcceptsFocus()) {
-                    ui_object->Focus();
-
-                    focused_object = ui_object.Get();
-                }
-
-                auto mouse_button_pressed_states_it = m_mouse_button_pressed_states.Find(ui_object);
+                auto mouse_button_pressed_states_it = m_mouse_button_pressed_states.FindAs(ui_object);
 
                 if (mouse_button_pressed_states_it != m_mouse_button_pressed_states.End()) {
                     if ((mouse_button_pressed_states_it->second.mouse_buttons & event.GetMouseButtons()) == event.GetMouseButtons()) {
@@ -686,6 +681,10 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     break;
                 }
             }
+        
+            if (first_hit != nullptr && first_hit->AcceptsFocus()) {
+                first_hit->Focus();
+            }
         }
 
         break;
@@ -697,10 +696,27 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
         for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
             const RC<UIObject> &ui_object = *it;
-            
-            HYP_LOG(UI, LogLevel::DEBUG, "Click UIObject {}", ui_object->GetName());
+
+            bool is_clicked = false;
 
             if (m_mouse_button_pressed_states.Contains(ui_object)) {
+                is_clicked = true;
+            }
+
+            HYP_LOG(UI, LogLevel::DEBUG, "\tMOUSE UP Ray hit: {}\t Click: {}", ui_object->GetName(), is_clicked);
+        }
+
+        for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
+            const RC<UIObject> &ui_object = *it;
+
+            if (m_mouse_button_pressed_states.Contains(ui_object)) {
+                HYP_LOG(UI, LogLevel::DEBUG, "Mouse click on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}",
+                    GetClass(ui_object.GetTypeID())->GetName(),
+                    ui_object->GetName(),
+                    ui_object->GetText(),
+                    ui_object->GetActualSize(),
+                    ui_object->GetActualInnerSize(),
+                    ui_object->GetActualSizeClamped());
 
                 const UIEventHandlerResult result = ui_object->OnClick(MouseEvent {
                     .input_manager      = input_manager,
@@ -759,15 +775,17 @@ UIEventHandlerResult UIStage::OnInputEvent(
             for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
                 const RC<UIObject> &ui_object = *it;
 
-                if (first_hit) {
-                    // We don't want to check the current object if it's not a child of the first hit object,
-                    // since it would be behind the first hit object.
-                    if (!first_hit->IsOrHasParent(ui_object)) {
-                        continue;
-                    }
-                } else {
-                    first_hit = ui_object;
-                }
+                // if (first_hit) {
+                //     // We don't want to check the current object if it's not a child of the first hit object,
+                //     // since it would be behind the first hit object.
+                //     if (!first_hit->IsOrHasParent(ui_object)) {
+                //         continue;
+                //     }
+                // } else {
+                //     first_hit = ui_object;
+                // }
+
+                HYP_LOG(UI, LogLevel::DEBUG, "Scroll UIObject {}", ui_object->GetName());
 
                 event_handler_result |= ui_object->OnScroll(MouseEvent {
                     .input_manager      = input_manager,
@@ -775,8 +793,8 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                     .absolute_position  = mouse_position,
                     .mouse_buttons      = event.GetMouseButtons(),
-                    .is_down            = false,
-                    .wheel              = Vec2i { wheel_x, wheel_y }
+                    .wheel              = Vec2i { wheel_x, wheel_y },
+                    .is_down            = false
                 });
 
                 if (event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {
@@ -805,7 +823,11 @@ UIEventHandlerResult UIStage::OnInputEvent(
                 break;
             }
 
-            ui_object = ui_object->GetParentUIObject();
+            if (UIObject *parent = ui_object->GetParentUIObject()) {
+                ui_object = parent->RefCountedPtrFromThis();
+            } else {
+                break;
+            }
         }
 
         break;

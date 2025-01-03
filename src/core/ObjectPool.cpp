@@ -4,43 +4,45 @@
 
 namespace hyperion {
 
-ObjectPool::ObjectContainerHolder &ObjectPool::GetObjectContainerHolder()
+ObjectPool::ObjectContainerMap &ObjectPool::GetObjectContainerHolder()
 {
-    static ObjectPool::ObjectContainerHolder holder { };
+    static ObjectPool::ObjectContainerMap holder { };
 
     return holder;
 }
 
-UniquePtr<ObjectContainerBase> *ObjectPool::ObjectContainerHolder::AllotObjectContainer(TypeID type_id)
+IObjectContainer &ObjectPool::ObjectContainerMap::Add(TypeID type_id)
 {
-    // Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+    Mutex::Guard guard(m_mutex);
 
-    auto it = object_container_map.map.FindIf([type_id](const auto &element)
+    auto it = m_map.FindIf([type_id](const auto &element)
     {
         return element.first == type_id;
     });
 
     // Already allocated
-    if (it != object_container_map.map.End()) {
-        return &it->second;
+    if (it != m_map.End()) {
+        return *it->second;
     }
 
-    object_container_map.map.PushBack({
+    m_map.PushBack({
         type_id,
         nullptr
     });
 
-    return &object_container_map.map.Back().second;
+    return *m_map.Back().second;
 }
 
-ObjectContainerBase &ObjectPool::ObjectContainerHolder::GetObjectContainer(TypeID type_id)
+IObjectContainer &ObjectPool::ObjectContainerMap::Get(TypeID type_id)
 {
-    const auto it = object_container_map.map.FindIf([type_id](const auto &element)
+    Mutex::Guard guard(m_mutex);
+
+    const auto it = m_map.FindIf([type_id](const auto &element)
     {
         return element.first == type_id;
     });
 
-    if (it == object_container_map.map.End()) {
+    if (it == m_map.End()) {
         HYP_FAIL("No object container for TypeID: %u", type_id.Value());
     }
 
@@ -49,14 +51,16 @@ ObjectContainerBase &ObjectPool::ObjectContainerHolder::GetObjectContainer(TypeI
     return *it->second;
 }
 
-ObjectContainerBase *ObjectPool::ObjectContainerHolder::TryGetObjectContainer(TypeID type_id)
+IObjectContainer *ObjectPool::ObjectContainerMap::TryGet(TypeID type_id)
 {
-    const auto it = object_container_map.map.FindIf([type_id](const auto &element)
+    Mutex::Guard guard(m_mutex);
+
+    const auto it = m_map.FindIf([type_id](const auto &element)
     {
         return element.first == type_id;
     });
 
-    if (it == object_container_map.map.End()) {
+    if (it == m_map.End()) {
         return nullptr;
     }
 

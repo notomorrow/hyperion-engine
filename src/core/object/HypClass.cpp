@@ -91,36 +91,41 @@ void HypClassMemberIterator::Advance()
 
 #pragma region HypClass
 
-HypClass::HypClass(TypeID type_id, Name name, Name parent_name, Span<HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+HypClass::HypClass(TypeID type_id, Name name, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
     : m_type_id(type_id),
       m_name(name),
       m_parent_name(parent_name),
       m_parent(nullptr),
       m_attributes(attributes),
-      m_flags(flags)
+      m_flags(flags),
+      m_serialization_mode(HypClassSerializationMode::DEFAULT)
 {
+    if (bool(m_attributes["abstract"])) {
+        m_flags |= HypClassFlags::ABSTRACT;
+    }
+
     // initialize properties containers
     for (HypMember &member : members) {
         if (HypProperty *property = member.value.TryGet<HypProperty>()) {
             HypProperty *property_ptr = new HypProperty(std::move(*property));
 
 #ifdef HYP_DEBUG_MODE
-            property_ptr->getter.type_info.target_type_id = type_id;
-            property_ptr->setter.type_info.target_type_id = type_id;
+            property_ptr->m_getter.type_info.target_type_id = type_id;
+            property_ptr->m_setter.type_info.target_type_id = type_id;
 #endif
 
             m_properties.PushBack(property_ptr);
-            m_properties_by_name.Set(property_ptr->name, property_ptr);
+            m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
         } else if (HypMethod *method = member.value.TryGet<HypMethod>()) {
             HypMethod *method_ptr = new HypMethod(std::move(*method));
 
             m_methods.PushBack(method_ptr);
-            m_methods_by_name.Set(method_ptr->name, method_ptr);
+            m_methods_by_name.Set(method_ptr->GetName(), method_ptr);
         } else if (HypField *field = member.value.TryGet<HypField>()) {
             HypField *field_ptr = new HypField(std::move(*field));
 
             m_fields.PushBack(field_ptr);
-            m_fields_by_name.Set(field_ptr->name, field_ptr);
+            m_fields_by_name.Set(field_ptr->GetName(), field_ptr);
         } else {
             HYP_FAIL("Invalid member");
         }
@@ -144,6 +149,37 @@ HypClass::~HypClass()
 
 void HypClass::Initialize()
 {
+    m_serialization_mode = HypClassSerializationMode::DEFAULT;
+
+    if (const HypClassAttributeValue &serialize_attribute = GetAttribute("serialize")) {
+        if (serialize_attribute.IsString()) {
+            m_serialization_mode = HypClassSerializationMode::NONE;
+
+            const String string_value = serialize_attribute.GetString().ToLower();
+
+            if (string_value == "bitwise") {
+                if (!IsPOD()) {
+                    HYP_FAIL("Cannot use \"bitwise\" serialization mode for non-POD type: %s", m_name.LookupString());
+                }
+
+                m_serialization_mode = HypClassSerializationMode::BITWISE | HypClassSerializationMode::USE_MARSHAL_CLASS;
+            } else {
+                HYP_FAIL("Unknown serialization mode: %s", string_value.Data());
+            }
+        } else if (!serialize_attribute.GetBool()) {
+            m_serialization_mode = HypClassSerializationMode::NONE;
+        }
+    }
+
+    // Disable USE_MARSHAL_CLASS if no marshal is registered by the time this HypClass is initialized
+    if (m_serialization_mode & HypClassSerializationMode::USE_MARSHAL_CLASS) {
+        fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(GetTypeID(), /* allow_fallback */ false);
+
+        if (!marshal) {
+            m_serialization_mode &= ~HypClassSerializationMode::USE_MARSHAL_CLASS;
+        }
+    }
+
     if (m_parent_name.IsValid()) {
         m_parent = GetClass(m_parent_name);
         AssertThrowMsg(m_parent != nullptr, "Invalid parent class: %s", m_parent_name.LookupString());
@@ -185,9 +221,9 @@ void HypClass::Initialize()
             HypProperty *property_ptr = new HypProperty(HypProperty::MakeHypProperty(static_cast<HypField *>(*find_field_it)));
 
             m_properties.PushBack(property_ptr);
-            m_properties_by_name.Set(property_ptr->name, property_ptr);
+            m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
 
-            HYP_LOG(Object, LogLevel::DEBUG, "Built property \"{}\" on HypClass \"{}\" from field", property_ptr->name, m_name);
+            HYP_LOG(Object, LogLevel::DEBUG, "Built property \"{}\" on HypClass \"{}\" from field", property_ptr->GetName(), m_name);
 
             continue;
         }
@@ -195,13 +231,13 @@ void HypClass::Initialize()
         const auto find_getter_it = it.second.FindIf([](IHypMember *member)
         {
             return member->GetMemberType() == HypMemberType::TYPE_METHOD
-                && static_cast<HypMethod *>(member)->params.Size() == 1;
+                && static_cast<HypMethod *>(member)->GetParameters().Size() == 1;
         });
 
         const auto find_setter_it = it.second.FindIf([](IHypMember *member)
         {
             return member->GetMemberType() == HypMemberType::TYPE_METHOD
-                && static_cast<HypMethod *>(member)->params.Size() == 2;
+                && static_cast<HypMethod *>(member)->GetParameters().Size() == 2;
         });
 
         if (find_getter_it != it.second.End() || find_setter_it != it.second.End()) {
@@ -211,15 +247,38 @@ void HypClass::Initialize()
             ));
 
             m_properties.PushBack(property_ptr);
-            m_properties_by_name.Set(property_ptr->name, property_ptr);
+            m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
 
-            HYP_LOG(Object, LogLevel::DEBUG, "Built property \"{}\" on HypClass \"{}\" from methods", property_ptr->name, m_name);
+            HYP_LOG(Object, LogLevel::DEBUG, "Built property \"{}\" on HypClass \"{}\" from methods", property_ptr->GetName(), m_name);
 
             continue;
         }
 
         HYP_FAIL("Invalid property definition for \"%s\": Must be HYP_FIELD() or getter/setter pair of HYP_METHOD()", it.first.Data());
     }
+}
+
+bool HypClass::CanSerialize() const
+{
+    if (m_serialization_mode == HypClassSerializationMode::NONE) {
+        return false;
+    }
+
+    if (m_serialization_mode & HypClassSerializationMode::USE_MARSHAL_CLASS) {
+        return true;
+    }
+
+    if (m_serialization_mode & HypClassSerializationMode::MEMBERWISE) {
+        return true;
+    }
+
+    if (m_serialization_mode & HypClassSerializationMode::BITWISE) {
+        if (IsStructType()) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 IHypMember *HypClass::GetMember(WeakName name) const

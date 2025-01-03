@@ -2,6 +2,8 @@
 
 #include <asset/ui_loaders/UILoader.hpp>
 
+#include <asset/serialization/fbom/FBOM.hpp>
+
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
 
@@ -29,8 +31,8 @@
 #include <core/containers/String.hpp>
 
 #include <core/object/HypClass.hpp>
-#include <core/object/HypMember.hpp>
 #include <core/object/HypData.hpp>
+#include <core/object/HypProperty.hpp>
 
 #include <core/functional/Delegate.hpp>
 
@@ -49,11 +51,11 @@ HYP_DECLARE_LOG_CHANNEL(Assets);
 #define UI_OBJECT_CREATE_FUNCTION(name) \
     { \
         String(HYP_STR(name)).ToUpper(), \
-        [](UIStage *stage, Name name, Vec2i position, UIObjectSize size) -> Pair<RC<UIObject>, const HypClass *> \
-            { return { stage->CreateUIObject<UI##name>(name, position, size, false), GetClass<UI##name>() }; } \
+        [](UIObject *parent, Name name, Vec2i position, UIObjectSize size) -> Pair<RC<UIObject>, const HypClass *> \
+            { return { parent->CreateUIObject<UI##name>(name, position, size), GetClass<UI##name>() }; } \
     }
 
-static const FlatMap<String, std::add_pointer_t<Pair<RC<UIObject>, const HypClass *>(UIStage *, Name, Vec2i, UIObjectSize)>> g_node_create_functions {
+static const FlatMap<String, std::add_pointer_t<Pair<RC<UIObject>, const HypClass *>(UIObject *, Name, Vec2i, UIObjectSize)>> g_node_create_functions {
     UI_OBJECT_CREATE_FUNCTION(Button),
     UI_OBJECT_CREATE_FUNCTION(Text),
     UI_OBJECT_CREATE_FUNCTION(Panel),
@@ -86,6 +88,20 @@ static const FlatMap<String, std::add_pointer_t< Delegate<UIEventHandlerResult> 
     UI_OBJECT_GET_DELEGATE_FUNCTION(OnInit),
     UI_OBJECT_GET_DELEGATE_FUNCTION(OnAttached),
     UI_OBJECT_GET_DELEGATE_FUNCTION(OnRemoved)
+};
+
+#undef UI_OBJECT_GET_DELEGATE_FUNCTION
+
+#define UI_OBJECT_GET_DELEGATE_FUNCTION(name) \
+    { \
+        String(HYP_STR(name)).ToUpper(), \
+        [](UIObject *ui_object) -> Delegate<UIEventHandlerResult, UIObject *> * \
+            { return &ui_object->name; } \
+    }
+
+static const FlatMap<String, std::add_pointer_t< Delegate<UIEventHandlerResult, UIObject *> *(UIObject *)> > g_get_delegate_functions_children {
+    UI_OBJECT_GET_DELEGATE_FUNCTION(OnChildAttached),
+    UI_OBJECT_GET_DELEGATE_FUNCTION(OnChildRemoved)
 };
 
 #undef UI_OBJECT_GET_DELEGATE_FUNCTION
@@ -317,53 +333,18 @@ static Optional<UIObjectSize> ParseUIObjectSize(const String &str)
     return { };
 }
 
-static bool ParseHypData(const String &str, HypData &out_hyp_data)
+static json::ParseResult ParseJSON(const String &str, fbom::FBOMData &out_data)
 {
     // Read string as JSON
     json::ParseResult parse_result = json::JSON::Parse(str);
 
     if (!parse_result.ok) {
-        HYP_LOG(Assets, LogLevel::ERR, "Failed to parse JSON string \"{}\": {}", str, parse_result.message);
-
-        return false;
+        return parse_result;
     }
 
-    // Convert JSON to HypData
+    out_data = fbom::FBOMData::FromJSON(parse_result.value);
 
-    const json::JSONValue &json_value = parse_result.value;
-
-    if (json_value.IsNull() || json_value.IsUndefined()) {
-        out_hyp_data = HypData();
-
-        return true;
-    }
-
-    if (json_value.IsBool()) {
-        out_hyp_data = HypData(json_value.AsBool());
-
-        return true;
-    }
-
-    if (json_value.IsString()) {
-        out_hyp_data = HypData(json_value.AsString().ToUTF8());
-
-        return true;
-    }
-
-    if (json_value.IsNumber()) {
-        const bool is_integer = json::JSONNumber(MathUtil::Floor(json_value.AsNumber())) != json_value.AsNumber();
-
-        if (is_integer) {
-            out_hyp_data = HypData(int(json_value.AsNumber()));
-        } else {
-            out_hyp_data = HypData(double(json_value.AsNumber()));
-        }
-
-        return true;
-    }
-
-    // Arrays and objects are not supported
-    return false;
+    return parse_result;
 }
 
 class UISAXHandler : public xml::SAXHandler
@@ -386,6 +367,14 @@ public:
 
     virtual void Begin(const String &name, const xml::AttributeMap &attributes) override
     {
+        UIObject *parent = LastObject();
+
+        if (parent == nullptr) {
+            parent = m_ui_stage;
+        }
+
+        AssertThrow(parent != nullptr);
+
         const String node_name_upper = name.ToUpper();
 
         const auto node_create_functions_it = g_node_create_functions.Find(node_name_upper);
@@ -413,7 +402,7 @@ public:
                 }
             }
 
-            Pair<RC<UIObject>, const HypClass *> create_result = node_create_functions_it->second(m_ui_stage, ui_object_name, position, size);
+            Pair<RC<UIObject>, const HypClass *> create_result = node_create_functions_it->second(parent, ui_object_name, position, size);
 
             const RC<UIObject> &ui_object = create_result.first;
             const HypClass *hyp_class = create_result.second;
@@ -502,7 +491,23 @@ public:
                     if (get_delegate_functions_it != g_get_delegate_functions.End()) {
                         Delegate<UIEventHandlerResult> *delegate = get_delegate_functions_it->second(ui_object.Get());
 
-                        delegate->Bind(UIScriptDelegate< > { ui_object.Get(), attribute.second, /* allow_nested */ true }).Detach();
+                        delegate->Bind(UIScriptDelegate< > { ui_object.Get(), attribute.second, UIScriptDelegateFlags::ALLOW_NESTED }).Detach();
+
+                        found = true;
+                    }
+
+                    if (found) {
+                        continue;
+                    }
+
+                    const auto get_delegate_functions_children_it = g_get_delegate_functions_children.Find(attribute_name_upper);
+
+                    if (get_delegate_functions_children_it != g_get_delegate_functions_children.End()) {
+                        Delegate<UIEventHandlerResult, UIObject *> *delegate = get_delegate_functions_children_it->second(ui_object.Get());
+
+                        delegate->Bind(UIScriptDelegate<UIObject *> { ui_object.Get(), attribute.second, UIScriptDelegateFlags::ALLOW_NESTED }).Detach();
+
+                        found = true;
                     }
 
                     if (found) {
@@ -514,7 +519,7 @@ public:
                     if (get_delegate_functions_mouse_it != g_get_delegate_functions_mouse.End()) {
                         Delegate<UIEventHandlerResult, const MouseEvent &> *delegate = get_delegate_functions_mouse_it->second(ui_object.Get());
 
-                        delegate->Bind(UIScriptDelegate< const MouseEvent & > { ui_object.Get(), attribute.second, /* allow_nested */ true }).Detach();
+                        delegate->Bind(UIScriptDelegate<MouseEvent> { ui_object.Get(), attribute.second, UIScriptDelegateFlags::ALLOW_NESTED }).Detach();
 
                         found = true;
                     }
@@ -528,7 +533,9 @@ public:
                     if (get_delegate_functions_keyboard_it != g_get_delegate_functions_keyboard.End()) {
                         Delegate<UIEventHandlerResult, const KeyboardEvent &> *delegate = get_delegate_functions_keyboard_it->second(ui_object.Get());
 
-                        delegate->Bind(UIScriptDelegate< const KeyboardEvent & > { ui_object.Get(), attribute.second, /* allow_nested */ true }).Detach();
+                        delegate->Bind(UIScriptDelegate<KeyboardEvent> { ui_object.Get(), attribute.second, UIScriptDelegateFlags::ALLOW_NESTED }).Detach();
+
+                        found = true;
                     }
 
                     if (found) {
@@ -551,21 +558,26 @@ public:
                         });
 
                         if (member_it != hyp_class->GetMembers(HypMemberType::TYPE_PROPERTY).End()) {
-                            FixedArray<HypData, 2> target_and_value;
+                            HypProperty *hyp_property = dynamic_cast<HypProperty *>(&*member_it);
 
-                            target_and_value[0] = HypData(ui_object);
-
-                            if (!ParseHypData(attribute.second, target_and_value[1])) {
-                                HYP_LOG(Assets, LogLevel::ERR, "Failed to parse JSON or JSON could not be converted to HypData: {}", attribute.second);
+                            if (!hyp_property || !hyp_property->CanDeserialize()) {
+                                HYP_LOG(Assets, LogLevel::ERR, "Cannot set HypClass property: {}", member_it->GetName());
 
                                 continue;
                             }
 
-                            if (HypProperty *property = dynamic_cast<HypProperty *>(&*member_it); property && property->CanSet()) {
-                                property->Set(target_and_value[0], target_and_value[1]);
-                            } else {
-                                HYP_LOG(Assets, LogLevel::ERR, "Failed to set HypClass property: {}", member_it->GetName());
+                            fbom::FBOMData data;
+                            json::ParseResult json_parse_result = ParseJSON(attribute.second, data);
+
+                            if (!json_parse_result.ok) {
+                                HYP_LOG(Assets, LogLevel::ERR, "Failed to parse JSON \"{}\": {}", attribute.second, json_parse_result.message);
+
+                                continue;
                             }
+
+                            HypData target_value { ui_object };
+
+                            hyp_property->Deserialize(target_value, data);
 
                             continue;
                         }
@@ -640,10 +652,6 @@ LoadedAsset UILoader::LoadAsset(LoaderState &state) const
     AssertThrow(state.asset_manager != nullptr);
 
     RC<UIObject> ui_stage = MakeRefCountedPtr<UIStage>(ThreadID::Current());
-
-    // temp
-    AssertThrow(ui_stage.Is<UIStage>());
-
     ui_stage->Init();
 
     UISAXHandler handler(&state, static_cast<UIStage *>(ui_stage.Get()));

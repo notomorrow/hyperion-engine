@@ -2,6 +2,7 @@
 
 #include <rendering/Light.hpp>
 #include <rendering/ShaderGlobals.hpp>
+#include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -10,18 +11,22 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <util/profiling/ProfileScope.hpp>
+
 #include <Engine.hpp>
 
 namespace hyperion {
+
+// @TODO Convert Light to use RenderResources
 
 #pragma region Render commands
 
 struct RENDER_COMMAND(UnbindLight) : renderer::RenderCommand
 {
-    ID<Light>   id;
+    WeakHandle<Light>   light_weak;
 
-    RENDER_COMMAND(UnbindLight)(ID<Light> id)
-        : id(id)
+    RENDER_COMMAND(UnbindLight)(const WeakHandle<Light> &light_weak)
+        : light_weak(light_weak)
     {
     }
 
@@ -29,61 +34,133 @@ struct RENDER_COMMAND(UnbindLight) : renderer::RenderCommand
 
     virtual Result operator()() override
     {
-        g_engine->GetRenderState().UnbindLight(id);
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(UpdateLightShaderData) : renderer::RenderCommand
-{
-    Light           &light;
-    LightDrawProxy  proxy;
-
-    RENDER_COMMAND(UpdateLightShaderData)(Light &light, const LightDrawProxy &proxy)
-        : light(light),
-          proxy(proxy)
-    {
-    }
-
-    virtual ~RENDER_COMMAND(UpdateLightShaderData)() override = default;
-
-    virtual Result operator()() override
-    {
-        light.m_proxy = proxy;
-        
-        if (proxy.visibility_bits == 0) {
-            g_engine->GetRenderState().UnbindLight(proxy.id);
-
-            HYP_LOG(Light, LogLevel::DEBUG, "Unbound Light: {}", proxy.id.Value());
-        } else {
-            g_engine->GetRenderState().BindLight(proxy.id, proxy);
-
-            HYP_LOG(Light, LogLevel::DEBUG, "Bound Light: {}", proxy.id.Value());
+        if (Handle<Light> light = light_weak.Lock()) {
+            g_engine->GetRenderState().UnbindLight(light.Get());
         }
-
-        g_engine->GetRenderData()->lights.Set(
-            light.GetID().ToIndex(),
-            LightShaderData {
-                .light_id           = proxy.id.Value(),
-                .light_type         = uint32(proxy.type),
-                .color_packed       = uint32(proxy.color),
-                .radius             = proxy.radius,
-                .falloff            = proxy.falloff,
-                .shadow_map_index   = proxy.shadow_map_index,
-                .area_size          = proxy.area_size,
-                .position_intensity = proxy.position_intensity,
-                .normal             = proxy.normal,
-                .spot_angles        = proxy.spot_angles,
-                .material_id        = proxy.material_id.Value()
-            }
-        );
 
         HYPERION_RETURN_OK;
     }
 };
 
 #pragma endregion Render commands
+
+#pragma region LightRenderResources
+
+LightRenderResources::LightRenderResources(Light *light)
+    : m_light(light),
+      m_buffer_data { }
+{
+}
+
+LightRenderResources::LightRenderResources(LightRenderResources &&other) noexcept
+    : RenderResourcesBase(static_cast<RenderResourcesBase &&>(other)),
+      m_light(other.m_light),
+      m_visibility_bits(std::move(other.m_visibility_bits)),
+      m_material(std::move(other.m_material)),
+      m_material_render_resources_handle(std::move(other.m_material_render_resources_handle)),
+      m_buffer_data(std::move(other.m_buffer_data))
+{
+    other.m_light = nullptr;
+}
+
+LightRenderResources::~LightRenderResources() = default;
+
+void LightRenderResources::Initialize()
+{
+    HYP_SCOPE;
+
+    UpdateBufferData();
+}
+
+void LightRenderResources::Destroy()
+{
+    HYP_SCOPE;
+}
+
+void LightRenderResources::Update()
+{
+    HYP_SCOPE;
+}
+
+GPUBufferHolderBase *LightRenderResources::GetGPUBufferHolder() const
+{
+    return g_engine->GetRenderData()->lights.Get();
+}
+
+void LightRenderResources::UpdateBufferData()
+{
+    HYP_SCOPE;
+
+    // override material buffer index
+    m_buffer_data.material_index = m_material_render_resources_handle
+        ? m_material_render_resources_handle->GetBufferIndex()
+        : ~0u;
+
+    *static_cast<LightShaderData *>(m_buffer_address) = m_buffer_data;
+
+    GetGPUBufferHolder()->MarkDirty(m_buffer_index);
+}
+
+void LightRenderResources::SetMaterial(const Handle<Material> &material)
+{
+    HYP_SCOPE;
+
+    Execute([this, material]()
+    {
+        m_material = material;
+
+        if (m_material.IsValid()) {
+            m_material_render_resources_handle = TResourceHandle<MaterialRenderResources>(m_material->GetRenderResources());
+        } else {
+            m_material_render_resources_handle = TResourceHandle<MaterialRenderResources>();
+        }
+
+        if (m_is_initialized) {
+            SetNeedsUpdate();
+        }
+    });
+}
+
+void LightRenderResources::SetBufferData(const LightShaderData &buffer_data)
+{
+    HYP_SCOPE;
+
+    Execute([this, buffer_data]()
+    {
+        m_buffer_data = buffer_data;
+
+        if (m_is_initialized) {
+            UpdateBufferData();
+        }
+    });
+}
+
+void LightRenderResources::SetVisibilityBits(const Bitset &visibility_bits)
+{
+    HYP_SCOPE;
+
+    Execute([this, visibility_bits]()
+    {
+        const SizeType previous_count = m_visibility_bits.Count();
+        const SizeType new_count = visibility_bits.Count();
+
+        m_visibility_bits = visibility_bits;
+
+        if (previous_count != new_count) {
+            if (previous_count == 0) {
+                // May cause Initialize() to be called due to Claim() being called when binding a light.
+                g_engine->GetRenderState().BindLight(m_light);
+            } else if (new_count == 0) {
+                    // May cause Destroy() to be called due to Unclaim() being called.
+                g_engine->GetRenderState().UnbindLight(m_light);
+            }
+        }
+    }, /* force_render_thread */ true);
+}
+
+#pragma endregion LightRenderResources
+
+#pragma region Light
 
 Light::Light() : Light(
     LightType::DIRECTIONAL,
@@ -101,7 +178,7 @@ Light::Light(
     const Color &color,
     float intensity,
     float radius
-) : BasicObject(),
+) : HypObject(),
     m_type(type),
     m_position(position),
     m_color(color),
@@ -110,7 +187,8 @@ Light::Light(
     m_falloff(1.0f),
     m_spot_angles(Vec2f::Zero()),
     m_shadow_map_index(~0u),
-    m_mutation_state(DataMutationState::CLEAN)
+    m_mutation_state(DataMutationState::CLEAN),
+    m_render_resources(nullptr)
 {
 }
 
@@ -122,7 +200,7 @@ Light::Light(
     const Color &color,
     float intensity,
     float radius
-) : BasicObject(),
+) : HypObject(),
     m_type(type),
     m_position(position),
     m_normal(normal),
@@ -133,37 +211,21 @@ Light::Light(
     m_falloff(1.0f),
     m_spot_angles(Vec2f::Zero()),
     m_shadow_map_index(~0u),
-    m_mutation_state(DataMutationState::CLEAN)
+    m_mutation_state(DataMutationState::CLEAN),
+    m_render_resources(nullptr)
 {
-}
-
-Light::Light(Light &&other) noexcept
-    : BasicObject(std::move(other)),
-      m_type(other.m_type),
-      m_position(other.m_position),
-      m_normal(other.m_normal),
-      m_area_size(other.m_area_size),
-      m_color(other.m_color),
-      m_intensity(other.m_intensity),
-      m_radius(other.m_radius),
-      m_falloff(other.m_falloff),
-      m_spot_angles(other.m_spot_angles),
-      m_shadow_map_index(other.m_shadow_map_index),
-      m_visibility_bits(std::move(other.m_visibility_bits)),
-      m_mutation_state(DataMutationState::CLEAN),
-      m_material(std::move(other.m_material))
-{
-    other.m_shadow_map_index = ~0u;
 }
 
 Light::~Light()
 {
+    if (m_render_resources != nullptr) {
+        FreeResource(m_render_resources);
+    }
+    
     // If material is set for this Light, defer its deletion for a few frames
     if (m_material.IsValid()) {
         g_safe_deleter->SafeRelease(std::move(m_material));
     }
-
-    PUSH_RENDER_COMMAND(UnbindLight, GetID());
 }
 
 void Light::Init()
@@ -172,24 +234,15 @@ void Light::Init()
         return;
     }
 
-    BasicObject::Init();
+    HypObject::Init();
 
-    InitObject(m_material);
+    m_render_resources = AllocateResource<LightRenderResources>(this);
 
-    m_proxy = LightDrawProxy {
-        .id                 = GetID(),
-        .type               = m_type,
-        .color              = m_color,
-        .radius             = m_radius,
-        .falloff            = m_falloff,
-        .spot_angles        = m_spot_angles,
-        .shadow_map_index   = m_shadow_map_index,
-        .area_size          = m_area_size,
-        .position_intensity = Vec4f(m_position, m_intensity),
-        .normal             = Vec4f(m_normal, 0.0f),
-        .visibility_bits    = m_visibility_bits.ToUInt64(),
-        .material_id        = m_material.GetID()
-    };
+    if (m_material.IsValid()) {
+        InitObject(m_material);
+
+        m_render_resources->SetMaterial(m_material);
+    }
 
     m_mutation_state |= DataMutationState::DIRTY;
 
@@ -211,10 +264,9 @@ void Light::EnqueueBind() const
 
 void Light::EnqueueUnbind() const
 {
-    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
     AssertReady();
 
-    PUSH_RENDER_COMMAND(UnbindLight, GetID());
+    PUSH_RENDER_COMMAND(UnbindLight, WeakHandleFromThis());
 }
 
 void Light::EnqueueRenderUpdates()
@@ -222,6 +274,8 @@ void Light::EnqueueRenderUpdates()
     AssertReady();
 
     if (m_material.IsValid() && m_material->GetMutationState().IsDirty()) {
+        m_mutation_state |= DataMutationState::DIRTY;
+
         m_material->EnqueueRenderUpdates();
     }
 
@@ -229,24 +283,22 @@ void Light::EnqueueRenderUpdates()
         return;
     }
 
-    PUSH_RENDER_COMMAND(
-        UpdateLightShaderData,
-        *this,
-        LightDrawProxy {
-            .id                 = GetID(),
-            .type               = m_type,
-            .color              = m_color,
-            .radius             = m_radius,
-            .falloff            = m_falloff,
-            .spot_angles        = m_spot_angles,
-            .shadow_map_index   = m_shadow_map_index,
-            .area_size          = m_area_size,
-            .position_intensity = Vec4f(m_position, m_intensity),
-            .normal             = Vec4f(m_normal, 0.0f),
-            .visibility_bits    = m_visibility_bits.ToUInt64(),
-            .material_id        = m_material.GetID()
-        }
-    );
+    LightShaderData buffer_data {
+        .light_id           = GetID().Value(),
+        .light_type         = uint32(m_type),
+        .color_packed       = uint32(m_color),
+        .radius             = m_radius,
+        .falloff            = m_falloff,
+        .shadow_map_index   = m_shadow_map_index,
+        .area_size          = m_area_size,
+        .position_intensity = Vec4f(m_position, m_intensity),
+        .normal             = Vec4f(m_normal, 0.0f),
+        .spot_angles        = m_spot_angles,
+        .material_index     = ~0u // set later
+    };
+
+    m_render_resources->SetBufferData(buffer_data);
+    m_render_resources->SetVisibilityBits(m_visibility_bits);
 
     m_mutation_state = DataMutationState::CLEAN;
 }
@@ -257,7 +309,7 @@ void Light::SetMaterial(Handle<Material> material)
         return;
     }
 
-    if (m_material.IsValid()) {
+    if (m_material.IsValid() && IsInitCalled()) {
         g_safe_deleter->SafeRelease(std::move(m_material));
     }
 
@@ -265,6 +317,8 @@ void Light::SetMaterial(Handle<Material> material)
 
     if (IsInitCalled()) {
         InitObject(m_material);
+
+        m_render_resources->SetMaterial(m_material);
 
         m_mutation_state |= DataMutationState::DIRTY;
     }
@@ -314,12 +368,10 @@ BoundingBox Light::GetAABB() const
     if (m_type == LightType::AREA_RECT) {
         const Pair<Vec3f, Vec3f> rect = CalculateAreaLightRect();
 
-        BoundingBox aabb;
-        aabb.Extend(rect.first);
-        aabb.Extend(rect.second);
-        aabb.Extend(m_position + m_normal * m_radius);
-
-        return aabb;
+        return BoundingBox::Empty()
+            .Union(rect.first)
+            .Union(rect.second)
+            .Union(m_position + m_normal * m_radius);
     }
 
     if (m_type == LightType::POINT) {
@@ -337,5 +389,13 @@ BoundingSphere Light::GetBoundingSphere() const
 
     return BoundingSphere(m_position, m_radius);
 }
+
+#pragma endregion Light
+
+namespace renderer {
+
+HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer, 1, sizeof(LightShaderData), true);
+
+} // namespace renderer
 
 } // namespace hyperion

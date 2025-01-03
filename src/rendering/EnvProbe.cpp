@@ -4,6 +4,8 @@
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/Shadows.hpp>
 
+#include <rendering/backend/RendererDescriptorSet.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -104,7 +106,7 @@ static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, con
 void EnvProbe::UpdateRenderData(
     uint32 texture_slot,
     uint32 grid_slot,
-    Extent3D grid_size
+    const Vec3u &grid_size
 )
 {
     const BoundingBox &aabb = m_proxy.aabb;
@@ -131,22 +133,22 @@ void EnvProbe::UpdateRenderData(
         .dimensions         = m_dimensions,
         .position_in_grid   = grid_slot != ~0u
             ? Vec4i {
-                  int32(grid_slot % grid_size.width),
-                  int32((grid_slot % (grid_size.width * grid_size.height)) / grid_size.width),
-                  int32(grid_slot / (grid_size.width * grid_size.height)),
+                  int32(grid_slot % grid_size.x),
+                  int32((grid_slot % (grid_size.x * grid_size.y)) / grid_size.x),
+                  int32(grid_slot / (grid_size.x * grid_size.y)),
                   int32(grid_slot)
               }
             : Vec4i::Zero(),
         .position_offset    = Vec4i::Zero()
     };
 
-    g_engine->GetRenderData()->env_probes.Set(GetID().ToIndex(), data);
+    g_engine->GetRenderData()->env_probes->Set(GetID().ToIndex(), data);
 }
 
 EnvProbe::EnvProbe() : EnvProbe(
     Handle<Scene> { },
     BoundingBox::Empty(),
-    Extent2D { 1, 1 },
+    Vec2u { 1, 1 },
     EnvProbeType::ENV_PROBE_TYPE_INVALID,
     nullptr
 )
@@ -156,7 +158,7 @@ EnvProbe::EnvProbe() : EnvProbe(
 EnvProbe::EnvProbe(
     const Handle<Scene> &parent_scene,
     const BoundingBox &aabb,
-    const Extent2D &dimensions,
+    const Vec2u &dimensions,
     EnvProbeType env_probe_type
 ) : EnvProbe(
         parent_scene,
@@ -171,10 +173,10 @@ EnvProbe::EnvProbe(
 EnvProbe::EnvProbe(
     const Handle<Scene> &parent_scene,
     const BoundingBox &aabb,
-    const Extent2D &dimensions,
+    const Vec2u &dimensions,
     EnvProbeType env_probe_type,
     const ShaderRef &custom_shader
-) : BasicObject(),
+) : HypObject(),
     m_parent_scene(parent_scene),
     m_aabb(aabb),
     m_dimensions(dimensions),
@@ -215,11 +217,11 @@ void EnvProbe::Init()
         return;
     }
 
-    BasicObject::Init();
+    HypObject::Init();
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
     {
-        m_render_list.Reset();
+        m_render_collector.Reset();
         m_camera.Reset();
         m_texture.Reset();
         m_shader.Reset();
@@ -242,24 +244,24 @@ void EnvProbe::Init()
     m_view_matrices = CreateCubemapMatrices(m_aabb, GetOrigin());
 
     if (!IsControlledByEnvGrid()) {
-        if (IsReflectionProbe() || IsSkyProbe()) {
-            m_texture = CreateObject<Texture>(
-                TextureDesc {
-                    ImageType::TEXTURE_TYPE_CUBEMAP,
-                    reflection_probe_format,
-                    Vec3u { m_dimensions.width, m_dimensions.height, 1 },
-                    FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
-                    FilterMode::TEXTURE_FILTER_LINEAR
-                }
-            );
-        } else if (IsShadowProbe()) {
+        if (IsShadowProbe()) {
             m_texture = CreateObject<Texture>(
                 TextureDesc {
                     ImageType::TEXTURE_TYPE_CUBEMAP,
                     shadow_probe_format,
-                    Vec3u { m_dimensions.width, m_dimensions.height, 1 },
+                    Vec3u { m_dimensions.x, m_dimensions.y, 1 },
                     FilterMode::TEXTURE_FILTER_NEAREST,
                     FilterMode::TEXTURE_FILTER_NEAREST
+                }
+            );
+        } else {
+            m_texture = CreateObject<Texture>(
+                TextureDesc {
+                    ImageType::TEXTURE_TYPE_CUBEMAP,
+                    reflection_probe_format,
+                    Vec3u { m_dimensions.x, m_dimensions.y, 1 },
+                    IsReflectionProbe() ? FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP : FilterMode::TEXTURE_FILTER_LINEAR,
+                    FilterMode::TEXTURE_FILTER_LINEAR
                 }
             );
         }
@@ -274,7 +276,7 @@ void EnvProbe::Init()
         {
             m_camera = CreateObject<Camera>(
                 90.0f,
-                -int(m_dimensions.width), int(m_dimensions.height),
+                -int(m_dimensions.x), int(m_dimensions.y),
                 m_camera_near, m_camera_far
             );
 
@@ -283,7 +285,7 @@ void EnvProbe::Init()
 
             InitObject(m_camera);
 
-            m_render_list.SetCamera(m_camera);
+            m_render_collector.SetCamera(m_camera);
         }
     }
 
@@ -371,8 +373,6 @@ void EnvProbe::CreateFramebuffer()
 
 void EnvProbe::EnqueueBind() const
 {
-    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
-
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
@@ -382,8 +382,6 @@ void EnvProbe::EnqueueBind() const
 
 void EnvProbe::EnqueueUnbind() const
 {
-    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
-
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
@@ -431,7 +429,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
         if (OnlyCollectStaticEntities()) {
             m_parent_scene->CollectStaticEntities(
-                m_render_list,
+                m_render_collector,
                 m_camera,
                 RenderableAttributeSet(
                     MeshAttributes { },
@@ -448,7 +446,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
             // m_parent_scene->GetOctree().CalculateVisibility(m_camera.Get());
 
             m_parent_scene->CollectEntities(
-                m_render_list,
+                m_render_collector,
                 m_camera,
                 RenderableAttributeSet(
                     MeshAttributes { },
@@ -489,7 +487,7 @@ void EnvProbe::Render(Frame *frame)
 
         return;
     }
-
+    
     // @FIXME!
 
     //if (!NeedsRender()) {
@@ -522,8 +520,8 @@ void EnvProbe::Render(Frame *frame)
             // set it such that the uint value of probe_index
             // would be the held value.
             probe_index = EnvProbeIndex(
-                Extent3D { 0, 0, it->second.Get() },
-                Extent3D { 0, 0, 0 }
+                Vec3u { 0, 0, it->second.Get() },
+                Vec3u { 0, 0, 0 }
             );
         }
 
@@ -536,25 +534,52 @@ void EnvProbe::Render(Frame *frame)
     }
 
     BindToIndex(probe_index);
+    
+    TResourceHandle<LightRenderResources> *light_render_resources_handle = nullptr;
+
+    if (m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SKY) {
+        // Find a directional light to use for the sky
+        // @TODO Support selecting a specific light for the EnvProbe
+
+        auto &directional_lights = g_engine->GetRenderState().bound_lights[uint32(LightType::DIRECTIONAL)];
+
+        if (directional_lights.Any()) {
+            light_render_resources_handle = &directional_lights[0];
+        }
+
+        if (!light_render_resources_handle) {
+            HYP_LOG(EnvProbe, LogLevel::WARNING, "No directional light found for Sky EnvProbe #{}", GetID().Value());
+        }
+    }
 
     {
         g_engine->GetRenderState().SetActiveEnvProbe(GetID());
+
+        if (light_render_resources_handle != nullptr) {
+            g_engine->GetRenderState().SetActiveLight(**light_render_resources_handle);
+        }
+
         g_engine->GetRenderState().BindScene(m_parent_scene.Get());
         g_engine->GetRenderState().BindCamera(m_camera.Get());
 
-        m_render_list.CollectDrawCalls(
+        m_render_collector.CollectDrawCalls(
             frame,
             Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT)),
             nullptr
         );
 
-        m_render_list.ExecuteDrawCalls(
+        m_render_collector.ExecuteDrawCalls(
             frame,
             Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT))
         );
 
-        g_engine->GetRenderState().UnbindCamera();
+        g_engine->GetRenderState().UnbindCamera(m_camera.Get());
         g_engine->GetRenderState().UnbindScene();
+
+        if (light_render_resources_handle != nullptr) {
+            g_engine->GetRenderState().UnsetActiveLight();
+        }
+
         g_engine->GetRenderState().UnsetActiveEnvProbe();
     }
 
@@ -565,7 +590,7 @@ void EnvProbe::Render(Frame *frame)
 
     m_texture->GetImage()->Blit(command_buffer, framebuffer_image);
 
-    if (IsReflectionProbe() || IsSkyProbe()) {
+    if (m_texture->HasMipmaps()) {
         HYPERION_PASS_ERRORS(
             m_texture->GetImage()->GenerateMipmaps(g_engine->GetGPUDevice(), command_buffer),
             result
@@ -608,7 +633,7 @@ void EnvProbe::UpdateRenderData(bool set_texture)
     UpdateRenderData(
         texture_slot,
         IsControlledByEnvGrid() ? m_grid_slot : ~0u,
-        IsControlledByEnvGrid() ? m_bound_index.grid_size : Extent3D { }
+        IsControlledByEnvGrid() ? m_bound_index.grid_size : Vec3u { }
     );
 
     // update cubemap texture in array of bound env probes
@@ -693,5 +718,12 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
         }
     }
 }
+
+namespace renderer {
+
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, 1, sizeof(EnvProbeShaderData) * max_env_probes, false);
+HYP_DESCRIPTOR_SSBO(Scene, CurrentEnvProbe, 1, sizeof(EnvProbeShaderData), true);
+
+} // namespace renderer
 
 } // namespace hyperion

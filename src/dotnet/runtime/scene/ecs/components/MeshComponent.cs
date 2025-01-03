@@ -10,26 +10,32 @@ namespace Hyperion
     }
 
     [HypClassBinding(Name="MeshComponent")]
-    [StructLayout(LayoutKind.Explicit, Size = 112)]
+    [StructLayout(LayoutKind.Explicit, Size = 240)]
     public unsafe struct MeshComponent : IComponent
     {
         [FieldOffset(0)]
-        private ManagedHandle meshHandle;
+        private Handle<Mesh> meshHandle;
+
         [FieldOffset(4)]
-        private ManagedHandle materialHandle;
+        private Handle<Material> materialHandle;
+        
         [FieldOffset(8)]
-        private ManagedHandle skeletonHandle;
-        [FieldOffset(12)]
-        private uint numInstances;
+        private Handle<Skeleton> skeletonHandle;
+
         [FieldOffset(16)]
+        private MeshInstanceData instanceData;
+
+        [FieldOffset(120)]
         private RefCountedPtr proxyRc;
-        [FieldOffset(24)]
+
+        [FieldOffset(128)]
         private uint meshComponentFlags;
-        [FieldOffset(32)] // align to 16 byte boundary
+
+        [FieldOffset(136)]
         private Matrix4 previousModelMatrix;
-        // 16 bytes of user data
-        [FieldOffset(96)]
-        private fixed byte userData[16];
+
+        [FieldOffset(208)]
+        private fixed byte userData[32];
 
         public Mesh Mesh
         {
@@ -56,6 +62,14 @@ namespace Hyperion
             {
                 throw new NotImplementedException();
                 // materialHandle = value.Handle;
+            }
+        }
+
+        public ref MeshInstanceData InstanceData
+        {
+            get
+            {
+                return ref instanceData;
             }
         }
 

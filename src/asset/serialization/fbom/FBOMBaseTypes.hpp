@@ -22,17 +22,17 @@ class HypClass;
 namespace hyperion::fbom {
 
 struct FBOMUnset    : FBOMType { FBOMUnset() : FBOMType() {} };
-struct FBOMUInt8    : FBOMType { FBOMUInt8() : FBOMType("u8", 1, TypeID::ForType<uint8>()) { } };
-struct FBOMUInt16   : FBOMType { FBOMUInt16() : FBOMType("u16", 2, TypeID::ForType<uint16>()) { } };
-struct FBOMUInt32   : FBOMType { FBOMUInt32() : FBOMType("u32", 4, TypeID::ForType<uint32>()) { } };
-struct FBOMUInt64   : FBOMType { FBOMUInt64() : FBOMType("u64", 8, TypeID::ForType<uint64>()) { } };
-struct FBOMInt8     : FBOMType { FBOMInt8() : FBOMType("i8", 1, TypeID::ForType<int8>()) { } };
-struct FBOMInt16    : FBOMType { FBOMInt16() : FBOMType("i16", 2, TypeID::ForType<int16>()) { } };
-struct FBOMInt32    : FBOMType { FBOMInt32() : FBOMType("i32", 4, TypeID::ForType<int32>()) { } };
-struct FBOMInt64    : FBOMType { FBOMInt64() : FBOMType("i64", 8, TypeID::ForType<int64>()) { } };
+struct FBOMUInt8    : FBOMType { FBOMUInt8() : FBOMType("u8", 1, TypeID::ForType<uint8>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMUInt16   : FBOMType { FBOMUInt16() : FBOMType("u16", 2, TypeID::ForType<uint16>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMUInt32   : FBOMType { FBOMUInt32() : FBOMType("u32", 4, TypeID::ForType<uint32>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMUInt64   : FBOMType { FBOMUInt64() : FBOMType("u64", 8, TypeID::ForType<uint64>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMInt8     : FBOMType { FBOMInt8() : FBOMType("i8", 1, TypeID::ForType<int8>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMInt16    : FBOMType { FBOMInt16() : FBOMType("i16", 2, TypeID::ForType<int16>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMInt32    : FBOMType { FBOMInt32() : FBOMType("i32", 4, TypeID::ForType<int32>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMInt64    : FBOMType { FBOMInt64() : FBOMType("i64", 8, TypeID::ForType<int64>(), FBOMTypeFlags::NUMERIC) { } };
+struct FBOMFloat    : FBOMType { FBOMFloat() : FBOMType("f32", 4, TypeID::ForType<float>(), FBOMTypeFlags::NUMERIC) {} };
+struct FBOMDouble   : FBOMType { FBOMDouble() : FBOMType("f64", 8, TypeID::ForType<double>(), FBOMTypeFlags::NUMERIC) {} };
 struct FBOMChar     : FBOMType { FBOMChar() : FBOMType("char", 1, TypeID::ForType<char>()) {} };
-struct FBOMFloat    : FBOMType { FBOMFloat() : FBOMType("f32", 4, TypeID::ForType<float>()) {} };
-struct FBOMDouble   : FBOMType { FBOMDouble() : FBOMType("f64", 8, TypeID::ForType<double>()) {} };
 struct FBOMBool     : FBOMType { FBOMBool() : FBOMType("bool", 1, TypeID::ForType<bool>()) { } };
 
 struct FBOMStruct : FBOMType
@@ -42,8 +42,7 @@ struct FBOMStruct : FBOMType
         && !std::is_reference_v<T>
         && !std::is_const_v<T>
         && !std::is_volatile_v<T>
-        && std::is_standard_layout_v<T>
-        && std::is_trivially_copyable_v<T>;
+        && IsPODType<T>;
 
     FBOMStruct()
         : FBOMType("struct", -1, /* no valid native TypeID */ TypeID::Void())
@@ -55,23 +54,17 @@ struct FBOMStruct : FBOMType
     {
     }
 
-    template <class T>
-    FBOMStruct(TypeWrapper<T>)
+    template <class T, bool CompileTimeChecked = true>
+    FBOMStruct(TypeWrapper<T>, std::bool_constant<CompileTimeChecked> = { })
         : FBOMType(TypeNameWithoutNamespace<T>(), sizeof(T), TypeID::ForType<T>(), FBOMType("struct", sizeof(T), TypeID::ForType<T>()))
     {
-        static_assert(!std::is_pointer_v<T>, "Cannot create struct of pointer type");
-        static_assert(!std::is_reference_v<T>, "Cannot create struct of reference type");
-        static_assert(!std::is_const_v<T>, "Cannot create struct of const type");
-        static_assert(!std::is_volatile_v<T>, "Cannot create struct of volatile type");
-
-        static_assert(std::is_standard_layout_v<T>, "Cannot create struct of non-standard layout type");
-        static_assert(std::is_trivially_copyable_v<T>, "Cannot create struct of non-trivially copyable type");
+        AssertStaticMsgCond(CompileTimeChecked, is_valid_struct_type<T>, "T is not a valid type to use with FBOMStruct");
     }
 
-    template <class T>
+    template <class T, bool CompileTimeChecked = true>
     static FBOMStruct Create()
     {
-        return FBOMStruct(TypeWrapper<T> { });
+        return FBOMStruct(TypeWrapper<T> { }, std::bool_constant<CompileTimeChecked> { });
     }
 };
 
@@ -136,12 +129,12 @@ struct FBOMString : FBOMType
 struct FBOMBaseObjectType : FBOMType
 {
     FBOMBaseObjectType()
-        : FBOMType("object", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::CONTAINER)
+        : FBOMType("object", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::DEFAULT)
     {
     }
 
     FBOMBaseObjectType(const FBOMType &extends)
-        : FBOMType("object", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::CONTAINER, extends)
+        : FBOMType("object", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::DEFAULT, extends)
     {
     }
 };
@@ -161,18 +154,58 @@ struct FBOMObjectType : FBOMType
             name.Data(), extends.name.Data());
     }
 
+    FBOMObjectType(const ANSIStringView &name, EnumFlags<FBOMTypeFlags> flags, const FBOMType &extends)
+        : FBOMType(name, 0, /* no valid TypeID */ TypeID::Void(), flags, extends)
+    {
+        AssertThrowMsg(extends.IsOrExtends(FBOMBaseObjectType()),
+            "Creating FBOMObjectType instance `%s` with parent type `%s`, but parent type does not extend `object`",
+            name.Data(), extends.name.Data());
+    }
+
+    template <class T>
+    FBOMObjectType(TypeWrapper<T>)
+        : FBOMType(TypeNameWithoutNamespace<T>(), 0, TypeID::ForType<T>(), FBOMTypeFlags::CONTAINER, FBOMBaseObjectType())
+    {
+    }
+
+    template <class T>
+    FBOMObjectType(TypeWrapper<T>, const FBOMType &extends)
+        : FBOMType(TypeNameWithoutNamespace<T>(), 0, TypeID::ForType<T>(), FBOMTypeFlags::CONTAINER, extends)
+    {
+        AssertThrowMsg(extends.IsOrExtends(FBOMBaseObjectType()),
+            "Creating FBOMObjectType instance `%s` with parent type `%s`, but parent type does not extend `object`",
+            TypeNameWithoutNamespace<T>().Data(), extends.name.Data());
+    }
+
+    template <class T>
+    FBOMObjectType(TypeWrapper<T>, EnumFlags<FBOMTypeFlags> flags, const FBOMType &extends)
+        : FBOMType(TypeNameWithoutNamespace<T>(), 0, TypeID::ForType<T>(), flags, extends)
+    {
+        AssertThrowMsg(extends.IsOrExtends(FBOMBaseObjectType()),
+            "Creating FBOMObjectType instance `%s` with parent type `%s`, but parent type does not extend `object`",
+            TypeNameWithoutNamespace<T>().Data(), extends.name.Data());
+    }
+
     FBOMObjectType(const HypClass *hyp_class);
+};
+
+struct FBOMPlaceholderType : FBOMType
+{
+    FBOMPlaceholderType()
+        : FBOMType("<placeholder>", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::PLACEHOLDER, FBOMBaseObjectType())
+    {
+    }
 };
 
 struct FBOMArrayType : FBOMType
 {
     FBOMArrayType()
-        : FBOMType("array", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::CONTAINER)
+        : FBOMType("array", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::DEFAULT)
     {
     }
 
     FBOMArrayType(const FBOMType &extends)
-        : FBOMType("array", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::CONTAINER, extends)
+        : FBOMType("array", 0, /* no valid TypeID */ TypeID::Void(), FBOMTypeFlags::DEFAULT, extends)
     {
     }
 };

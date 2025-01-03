@@ -3,6 +3,9 @@
 #include <core/threading/Threads.hpp>
 
 #include <rendering/SSRRenderer.hpp>
+#include <rendering/Scene.hpp>
+#include <rendering/Camera.hpp>
+#include <rendering/PlaceholderData.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
@@ -38,16 +41,16 @@ struct alignas(16) SSRParams
 
 struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
 {
-    Extent2D        extent;
+    Vec2u           extent;
     GPUBufferRef    uniform_buffer;
 
     RENDER_COMMAND(CreateSSRUniformBuffer)(
-        Extent2D extent,
+        Vec2u extent,
         GPUBufferRef uniform_buffers
     ) : extent(extent),
         uniform_buffer(std::move(uniform_buffers))
     {
-        AssertThrow(extent.Size() != 0);
+        AssertThrow(extent.Volume() != 0);
         AssertThrow(this->uniform_buffer != nullptr);
     }
 
@@ -56,7 +59,7 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
     virtual Result operator()() override
     {
         const SSRParams ssr_params {
-            .dimensions             = { extent.width, extent.height, 0, 0 },
+            .dimensions             = Vec4u { extent.x, extent.y, 0, 0 },
             .ray_step               = 0.1f,
             .num_iterations         = 128.0f,
             .max_ray_distance       = 150.0f,
@@ -127,7 +130,7 @@ struct RENDER_COMMAND(RemoveSSRDescriptors) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
-SSRRenderer::SSRRenderer(const Extent2D &extent, SSRRendererOptions options)
+SSRRenderer::SSRRenderer(const Vec2u &extent, SSRRendererOptions options)
     : m_extent(extent),
       m_options(options),
       m_is_rendered(false)
@@ -143,7 +146,7 @@ void SSRRenderer::Create()
     m_image_outputs[0] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Extent3D(m_extent),
+        Vec3u(m_extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -155,7 +158,7 @@ void SSRRenderer::Create()
     m_image_outputs[1] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Extent3D(m_extent),
+        Vec3u(m_extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -167,7 +170,7 @@ void SSRRenderer::Create()
     m_image_outputs[2] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Extent3D(m_extent),
+        Vec3u(m_extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -179,7 +182,7 @@ void SSRRenderer::Create()
     m_image_outputs[3] = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         ssr_format,
-        Extent3D(m_extent),
+        Vec3u(m_extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -325,7 +328,10 @@ void SSRRenderer::Render(Frame *frame)
     HYP_NAMED_SCOPE("Screen Space Reflections");
 
     const uint scene_index = g_engine->render_state.GetScene().id.ToIndex();
-    const uint camera_index = g_engine->render_state.GetCamera().id.ToIndex();
+
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    uint32 camera_index = camera_render_resources.GetBufferIndex();
+    AssertThrow(camera_index != ~0u);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint frame_index = frame->GetFrameIndex();
@@ -334,10 +340,10 @@ void SSRRenderer::Render(Frame *frame)
     DebugMarker begin_ssr_marker(command_buffer, "Begin SSR");
 
     // We will be dispatching half the number of pixels, due to checkerboarding
-    const SizeType total_pixels_in_image = m_extent.Size();
-    const SizeType total_pixels_in_image_div_2 = total_pixels_in_image / 2;
+    const uint32 total_pixels_in_image = m_extent.Volume();
+    const uint32 total_pixels_in_image_div_2 = total_pixels_in_image / 2;
 
-    const uint32 num_dispatch_calls = (uint32(total_pixels_in_image_div_2) + 255) / 256;
+    const uint32 num_dispatch_calls = (total_pixels_in_image_div_2 + 255) / 256;
 
     // PASS 1 -- write UVs
 
@@ -352,19 +358,14 @@ void SSRRenderer::Render(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                    { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                    { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                    { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                 }
             }
         }
     );
 
-    m_write_uvs->Dispatch(command_buffer, Extent3D {
-        num_dispatch_calls, 1, 1
-    });
+    m_write_uvs->Dispatch(command_buffer, Vec3u { num_dispatch_calls, 1, 1 });
 
     // transition the UV image back into read state
     m_image_outputs[0]->GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
@@ -383,19 +384,14 @@ void SSRRenderer::Render(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, scene_index) },
-                    { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, camera_index) },
-                    { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, 0) },
-                    { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, 0) }
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                 }
             }
         }
     );
 
-    m_sample->Dispatch(command_buffer, Extent3D {
-        num_dispatch_calls, 1, 1
-    });
+    m_sample->Dispatch(command_buffer, Vec3u { num_dispatch_calls, 1, 1 });
 
     // transition sample image back into read state
     m_image_outputs[1]->GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);

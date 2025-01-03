@@ -1,9 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Hyperion
 {
-    [StructLayout(LayoutKind.Explicit, Size = 8)]
+    [StructLayout(LayoutKind.Explicit)]
     internal unsafe struct InternalHypDataValue
     {
         [FieldOffset(0)]
@@ -59,7 +60,7 @@ namespace Hyperion
         public Name valueName;
         
         [FieldOffset(0)]
-        public IntPtr valuePtr;
+        public ObjectReference objectReference;
     }
 
     /// <summary>
@@ -82,11 +83,11 @@ namespace Hyperion
             }
         }
 
-        public bool IsValid
+        public bool IsNull
         {
             get
             {
-                return HypData_IsValid(ref this);
+                return HypData_IsNull(ref this);
             }
         }
 
@@ -226,6 +227,11 @@ namespace Hyperion
 
             if (type.IsValueType)
             {
+                if (type.IsEnum)
+                {
+                    type = Enum.GetUnderlyingType(type);
+                }
+
                 HypClass? hypClass = null;
 
                 if (HypStructHelpers.IsHypStruct(value.GetType(), out hypClass))
@@ -244,18 +250,6 @@ namespace Hyperion
                             }
                         }
 
-                        // IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(value));
-                        // Marshal.StructureToPtr(value, ptr, false);
-
-                        // if (!HypData_SetHypStruct(ref this, ((HypClass)hypClass).Address, (uint)Marshal.SizeOf(value), ptr))
-                        // {
-                        //     Marshal.FreeHGlobal(ptr);
-                            
-                        //     throw new InvalidOperationException("Failed to set HypStruct");
-                        // }
-
-                        // Marshal.FreeHGlobal(ptr);
-
                         return;
                     }
                 }
@@ -264,21 +258,21 @@ namespace Hyperion
             {
                 Array array = (Array)value;
 
-                // Create array of HypData
-                HypData[] hypDataArray = new HypData[array.Length];
-                HypDataBuffer[] hypDataBufferArray = new HypDataBuffer[array.Length];
-
-                for (int i = 0; i < hypDataArray.Length; i++)
-                {
-                    hypDataArray[i] = new HypData(array.GetValue(i));
-                    hypDataBufferArray[i] = hypDataArray[i].Buffer;
-                }
-
                 unsafe
                 {
-                    fixed (HypDataBuffer* ptr = hypDataBufferArray)
+                    // Create array of HypData
+                    HypData[] hypDataArray = new HypData[array.Length];
+                    HypDataBuffer*[] hypDataBufferPtrArray = new HypDataBuffer*[array.Length];
+
+                    for (int i = 0; i < hypDataArray.Length; i++)
                     {
-                        if (!HypData_SetArray(ref this, (IntPtr)ptr, (uint)hypDataBufferArray.Length))
+                        hypDataArray[i] = new HypData(array.GetValue(i));
+                        hypDataBufferPtrArray[i] = (HypDataBuffer*)Unsafe.AsPointer(ref hypDataArray[i].Buffer);
+                    }
+
+                    fixed (HypDataBuffer** ptr = hypDataBufferPtrArray)
+                    {
+                        if (!HypData_SetArray(ref this, (IntPtr)ptr, (uint)hypDataBufferPtrArray.Length))
                         {
                             throw new InvalidOperationException("Failed to set array");
                         }
@@ -427,24 +421,14 @@ namespace Hyperion
                 return buffer;
             }
 
-            if (HypData_GetHypStruct(ref this, out value.valuePtr))
+            if (HypData_GetHypStruct(ref this, out value.objectReference))
             {
-                if (value.valuePtr == IntPtr.Zero)
-                {
-                    return null;
-                }
-
-                return *((object*)value.valuePtr.ToPointer());
+                return value.objectReference.LoadObject();
             }
 
-            if (HypData_GetHypObject(ref this, out value.valuePtr))
+            if (HypData_GetHypObject(ref this, out value.objectReference))
             {
-                if (value.valuePtr == IntPtr.Zero)
-                {
-                    return null;
-                }
-
-                return *((object*)value.valuePtr.ToPointer());
+                return value.objectReference.LoadObject();
             }
 
             throw new NotImplementedException("Unsupported type to get value from HypData. Current TypeID: " + TypeID.Value);
@@ -459,9 +443,9 @@ namespace Hyperion
         [DllImport("hyperion", EntryPoint = "HypData_GetTypeID")]
         internal static extern void HypData_GetTypeID([In] ref HypDataBuffer hypData, [Out] out TypeID typeId);
 
-        [DllImport("hyperion", EntryPoint = "HypData_IsValid")]
+        [DllImport("hyperion", EntryPoint = "HypData_IsNull")]
         [return: MarshalAs(UnmanagedType.I1)]
-        internal static extern bool HypData_IsValid([In] ref HypDataBuffer hypData);
+        internal static extern bool HypData_IsNull([In] ref HypDataBuffer hypData);
 
         [DllImport("hyperion", EntryPoint = "HypData_GetInt8")]
         [return: MarshalAs(UnmanagedType.I1)]
@@ -525,11 +509,11 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "HypData_GetHypObject")]
         [return: MarshalAs(UnmanagedType.I1)]
-        internal static extern bool HypData_GetHypObject([In] ref HypDataBuffer hypData, [Out] out IntPtr outObjectPtr);
+        internal static extern bool HypData_GetHypObject([In] ref HypDataBuffer hypData, [Out] out ObjectReference outObjectReference);
 
         [DllImport("hyperion", EntryPoint = "HypData_GetHypStruct")]
         [return: MarshalAs(UnmanagedType.I1)]
-        internal static extern bool HypData_GetHypStruct([In] ref HypDataBuffer hypData, [Out] out IntPtr outObjectPtr);
+        internal static extern bool HypData_GetHypStruct([In] ref HypDataBuffer hypData, [Out] out ObjectReference outObjectReference);
 
         [DllImport("hyperion", EntryPoint = "HypData_GetByteBuffer")]
         [return: MarshalAs(UnmanagedType.I1)]
@@ -680,9 +664,10 @@ namespace Hyperion
         internal static extern bool HypData_SetByteBuffer([In] ref HypDataBuffer hypData, [In] IntPtr bufferPtr, uint bufferSize);
     }
 
-    public class HypData
+    public class HypData : IDisposable
     {
         private HypDataBuffer _data;
+        private bool _disposed = false;
 
         public HypData(object? value)
         {
@@ -698,10 +683,19 @@ namespace Hyperion
         {
             _data = data;
         }
+        
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                HypDataBuffer.HypData_Destruct(ref _data);
+                _disposed = true;
+            }
+        }
 
         ~HypData()
         {
-            HypDataBuffer.HypData_Destruct(ref _data);
+            Dispose();
         }
 
         public TypeID TypeID
@@ -712,11 +706,11 @@ namespace Hyperion
             }
         }
 
-        public bool IsValid
+        public bool IsNull
         {
             get
             {
-                return _data.IsValid;
+                return _data.IsNull;
             }
         }
 
@@ -730,11 +724,31 @@ namespace Hyperion
 
         public object? GetValue()
         {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(HypData));
+            }
+
             return _data.GetValue();
+        }
+
+        public void SetValue(object? value)
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(HypData));
+            }
+
+            _data.SetValue(value);
         }
 
         public override string ToString()
         {
+            if (_disposed)
+            {
+                return "Disposed";
+            }
+
             return GetValue()?.ToString() ?? "null";
         }
     }

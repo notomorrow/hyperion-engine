@@ -4,7 +4,6 @@
 #define HYPERION_CAMERA_HPP
 
 #include <core/Base.hpp>
-#include <core/Handle.hpp>
 
 #include <core/containers/Queue.hpp>
 
@@ -31,6 +30,7 @@
 namespace hyperion {
 
 class Engine;
+class CameraRenderResources;
 
 enum class CameraType
 {
@@ -77,8 +77,6 @@ struct CameraCommand
         } movement_data;
     };
 };
-
-struct RENDER_COMMAND(UpdateCameraDrawProxy);
 
 class Camera;
 
@@ -144,30 +142,12 @@ class OrthoCameraController;
 class FirstPersonCameraController;
 class FollowCameraController;
 
-struct CameraDrawProxy
-{
-    Matrix4     view;
-    Matrix4     projection;
-    Matrix4     previous_view;
-    Vec3f       position;
-    Vec3f       direction;
-    Vec3f       up;
-    Extent2D    dimensions;
-    float       clip_near;
-    float       clip_far;
-    float       fov;
-    Frustum     frustum;
-
-    uint64      visibility_bitmask;
-    uint16      visibility_nonce;
-};
-
 HYP_CLASS()
-class HYP_API Camera : public BasicObject<Camera>
+class HYP_API Camera : public HypObject<Camera>
 {
     HYP_OBJECT_BODY(Camera);
 
-    HYP_PROPERTY(ID, &Camera::GetID)
+    HYP_PROPERTY(ID, &Camera::GetID, { { "serialize", false } });
 
 public:
     friend class CameraController;
@@ -176,13 +156,14 @@ public:
     friend class FirstPersonCameraController;
     friend class FollowCameraController;
 
-    friend struct RENDER_COMMAND(UpdateCameraDrawProxy);
-
     Camera();
     Camera(int width, int height);
     Camera(float fov, int width, int height, float _near, float _far);
     Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far);
     ~Camera();
+
+    HYP_FORCE_INLINE CameraRenderResources &GetRenderResources() const
+        { return *m_render_resources; }
 
     HYP_FORCE_INLINE const FramebufferRef &GetFramebuffer() const
         { return m_framebuffer; }
@@ -242,7 +223,6 @@ public:
     HYP_METHOD(Property="Width", Serialize=true, Editor=true)
     HYP_FORCE_INLINE int GetWidth() const
         { return m_width; }
-
 
     HYP_METHOD(Property="Width", Serialize=true, Editor=true)
     HYP_FORCE_INLINE void SetWidth(int width)
@@ -408,9 +388,6 @@ public:
     HYP_METHOD()
     Vec2f GetPixelSize() const;
 
-    HYP_FORCE_INLINE const CameraDrawProxy &GetProxy() const
-        { return m_proxy; }
-
     void Update(GameCounter::TickUnit dt);
     void UpdateMatrices();
 
@@ -441,8 +418,8 @@ protected:
 private:
     Matrix4                 m_view_proj_mat;
     Matrix4                 m_previous_view_matrix;
-    
-    CameraDrawProxy         m_proxy;
+
+    CameraRenderResources   *m_render_resources;
 };
 
 } // namespace hyperion

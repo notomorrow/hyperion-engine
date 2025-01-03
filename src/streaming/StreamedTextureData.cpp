@@ -6,8 +6,8 @@
 #include <asset/serialization/fbom/FBOMWriter.hpp>
 #include <asset/serialization/fbom/FBOMReader.hpp>
 
-#include <asset/BufferedByteReader.hpp>
 #include <asset/ByteWriter.hpp>
+#include <asset/BufferedByteReader.hpp>
 
 #include <core/object/HypData.hpp>
 
@@ -84,13 +84,13 @@ StreamedTextureData::StreamedTextureData(TextureData &&texture_data)
 {
 }
 
-bool StreamedTextureData::IsNull() const
+bool StreamedTextureData::IsNull_Internal() const
 {
     return m_streamed_data == nullptr
         || m_streamed_data->IsNull();
 }
 
-bool StreamedTextureData::IsInMemory() const
+bool StreamedTextureData::IsInMemory_Internal() const
 {
     return m_texture_data.HasValue();
 }

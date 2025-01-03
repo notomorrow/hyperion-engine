@@ -11,7 +11,6 @@
 #include <dotnet/Class.hpp>
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/runtime/scene/ManagedSceneTypes.hpp>
-#include <dotnet/runtime/ManagedHandle.hpp>
 
 #include <scripting/ScriptingService.hpp>
 
@@ -45,7 +44,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
                 script_component.script.last_modified_timestamp = script.last_modified_timestamp;
 
                 OnEntityRemoved(entity);
-                OnEntityAdded(entity);
+                OnEntityAdded(Handle<Entity>(entity));
 
                 script_component.flags &= ~ScriptComponentFlags::RELOADING;
 
@@ -55,7 +54,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
     }));
 }
 
-void ScriptSystem::OnEntityAdded(ID<Entity> entity)
+void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
 {
     SystemBase::OnEntityAdded(entity);
 
@@ -105,9 +104,10 @@ void ScriptSystem::OnEntityAdded(ID<Entity> entity)
                     AssertThrow(GetEntityManager().GetScene() != nullptr);
                     AssertThrow(GetEntityManager().GetScene()->GetWorld() != nullptr);
 
-                    script_component.object->InvokeMethod<void, dotnet::Object *>(
+                    script_component.object->InvokeMethod<void>(
                         before_init_method_ptr,
-                        GetEntityManager().GetScene()->GetManagedObject()
+                        GetWorld(),
+                        GetScene()
                     );
 
                     script_component.flags |= ScriptComponentFlags::BEFORE_INIT_CALLED;
@@ -119,9 +119,9 @@ void ScriptSystem::OnEntityAdded(ID<Entity> entity)
                     HYP_NAMED_SCOPE("Call Init() on script component");
                     HYP_LOG(Script, LogLevel::INFO, "Calling Init() on script component");
 
-                    script_component.object->InvokeMethod<void, ID<Entity>>(
+                    script_component.object->InvokeMethod<void, dotnet::Object *>(
                         init_method_ptr,
-                        entity
+                        entity->GetManagedObject()
                     );
 
                     script_component.flags |= ScriptComponentFlags::INIT_CALLED;

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    public class FBOMData
+    public class FBOMData : IDisposable
     {
         internal IntPtr ptr;
         private FBOMType type = FBOMType.Unset;
@@ -22,7 +22,21 @@ namespace Hyperion
 
         ~FBOMData()
         {
-            FBOMData_Destroy(this.ptr);
+            if (this.ptr != IntPtr.Zero)
+            {
+                FBOMData_Destroy(this.ptr);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (this.ptr != IntPtr.Zero)
+            {
+                FBOMData_Destroy(this.ptr);
+                this.ptr = IntPtr.Zero;
+            }
+
+            GC.SuppressFinalize(this);
         }
 
         public FBOMType Type

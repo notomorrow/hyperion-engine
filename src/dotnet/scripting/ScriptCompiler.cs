@@ -62,13 +62,24 @@ namespace Hyperion
         {
             // Get the max updated timestamp of all the files in the directory
 
+            Logger.Log(LogType.Debug, "Here1 : {0}", scriptDirectory);
+
             string[] files = System.IO.Directory.GetFiles(scriptDirectory, "*.cs", System.IO.SearchOption.AllDirectories);
+
+            Logger.Log(LogType.Debug, "files:");
+
+            for (int i = 0; i < files.Length; i++)
+            {
+                Logger.Log(LogType.Debug, "  files: {0}", files[i]);
+            }
 
             long maxTimestamp = 0;
 
             foreach (string file in files)
             {
                 long timestamp = System.IO.File.GetLastWriteTime(file).ToFileTime();
+
+                Logger.Log(LogType.Debug, "file {0} timestamp {1}", file, timestamp);
 
                 if (timestamp > maxTimestamp)
                 {
@@ -77,7 +88,14 @@ namespace Hyperion
             }
 
             // Try to find the DLL in the output directory
-            string[] dlls = System.IO.Directory.GetFiles(binaryOutputDirectory, $"{moduleName}.dll", System.IO.SearchOption.AllDirectories);
+            string[] dlls = System.IO.Directory.GetFiles(binaryOutputDirectory, "*.dll", System.IO.SearchOption.AllDirectories);
+
+            Logger.Log(LogType.Debug, "dlls:");
+
+            for (int i = 0; i < dlls.Length; i++)
+            {
+                Logger.Log(LogType.Debug, "  DLL: {0}", dlls[i]);
+            }
 
             if (dlls.Length == 0)
             {
@@ -93,6 +111,8 @@ namespace Hyperion
                 }
             }
 
+            Logger.Log(LogType.Debug, "Here2 : {0}", moduleName);
+
             return false;
         }
 
@@ -105,17 +125,27 @@ namespace Hyperion
 
             Logger.Log(LogType.Info, $"Relative path: {relativePath}");
 
-            if (relativePath.EndsWith("/"))
+            while (relativePath.EndsWith("/"))
             {
                 relativePath = relativePath.Substring(0, relativePath.Length - 1);
             }
 
             // chop the last part of the relative path
-            string moduleName = "GameName";
+            string moduleName = "Default";
 
             if (relativePath.Length != 0)
             {
-                moduleName += "." + relativePath.Replace("/", ".");
+                moduleName = relativePath.Replace("/", ".");
+            }
+
+            while (moduleName.StartsWith("."))
+            {
+                moduleName = moduleName.Substring(1);
+            }
+
+            if (moduleName.Length == 0)
+            {
+                throw new Exception("Invalid module name");
             }
 
             return moduleName;
@@ -156,6 +186,8 @@ namespace Hyperion
         {
             moduleName = GetModuleNameForScriptDirectory(scriptDirectory);
             hotReloadVersion = -1;
+
+            Logger.Log(LogType.Debug, "Here : {0} {1}", moduleName, scriptDirectory);
 
             if (!forceRebuild && !DetectNeedsRebuild(scriptDirectory: scriptDirectory, moduleName: moduleName))
             {

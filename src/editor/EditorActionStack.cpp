@@ -5,14 +5,14 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <dotnet/Object.hpp>
+
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
-namespace editor {
-
 EditorActionStack::EditorActionStack()
-    : m_current_action_index(0)
+    : m_current_action_index(-1)
 {
 }
 
@@ -20,7 +20,7 @@ EditorActionStack::EditorActionStack(EditorActionStack &&other) noexcept
     : m_actions(Move(other.m_actions)),
       m_current_action_index(other.m_current_action_index)
 {
-    other.m_current_action_index = 0;
+    other.m_current_action_index = -1;
 }
 
 EditorActionStack &EditorActionStack::operator=(EditorActionStack &&other) noexcept
@@ -28,7 +28,7 @@ EditorActionStack &EditorActionStack::operator=(EditorActionStack &&other) noexc
     m_actions = Move(other.m_actions);
     m_current_action_index = other.m_current_action_index;
 
-    other.m_current_action_index = 0;
+    other.m_current_action_index = -1;
 
     return *this;
 }
@@ -37,21 +37,31 @@ EditorActionStack::~EditorActionStack() = default;
 
 bool EditorActionStack::CanUndo() const
 {
-    return m_current_action_index > 0;
+    return m_current_action_index >= 0;
 }
 
 bool EditorActionStack::CanRedo() const
 {
-    return m_current_action_index < m_actions.Size();
+    return m_current_action_index + 1 < m_actions.Size();
 }
 
-void EditorActionStack::Push(UniquePtr<IEditorAction> &&action)
+void EditorActionStack::Push(const RC<IEditorAction> &action)
 {
-    if (m_current_action_index < m_actions.Size()) {
-        m_actions.Resize(m_current_action_index);
+    AssertThrow(action != nullptr);
+
+    OnBeforeActionPush(action.Get());
+
+    action->Execute();
+
+    // Chop off any actions that were undone
+    if (m_current_action_index + 1 < m_actions.Size()) {
+        m_actions.Resize(m_current_action_index + 1);
     }
 
-    m_actions.PushBack(Move(action));
+    m_actions.PushBack(action);
+    m_current_action_index = int(m_actions.Size()) - 1;
+
+    OnAfterActionPush(action.Get());
 }
 
 void EditorActionStack::Undo()
@@ -60,7 +70,15 @@ void EditorActionStack::Undo()
         return;
     }
 
-    m_actions[--m_current_action_index]->Undo();
+    IEditorAction *action = m_actions[m_current_action_index].Get();
+
+    OnBeforeActionPop(action);
+
+    action->Revert();
+    
+    --m_current_action_index;
+
+    OnAfterActionPop(action);
 }
 
 void EditorActionStack::Redo()
@@ -69,8 +87,15 @@ void EditorActionStack::Redo()
         return;
     }
 
-    m_actions[m_current_action_index++]->Redo();
+    IEditorAction *action = m_actions[m_current_action_index + 1].Get();
+
+    OnBeforeActionPush(action);
+
+    action->Execute();
+
+    ++m_current_action_index;
+
+    OnAfterActionPush(action);
 }
 
-} // namespace editor
 } // namespace hyperion

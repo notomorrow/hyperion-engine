@@ -4,8 +4,9 @@
 #define HYP_CORE_CORE_HPP
 
 #include <core/Defines.hpp>
-#include <core/object/HypClassRegistry.hpp>
 #include <core/ID.hpp>
+
+#include <core/object/HypClassRegistry.hpp>
 
 #include <core/utilities/TypeID.hpp>
 
@@ -26,53 +27,13 @@ using Device = platform::Device<Platform::CURRENT>;
 namespace hyperion {
 
 class Engine;
+
 class HypClass;
-class ObjectPool;
+class HypEnum;
+class HypObjectPtr;
 
 template <class T>
 struct Handle;
-
-template <class T>
-HYP_NODISCARD HYP_FORCE_INLINE inline Handle<T> CreateObject()
-{
-    auto &container = Handle<T>::GetContainer();
-
-    const uint index = container.NextIndex();
-    container.ConstructAtIndex(index);
-
-    return Handle<T>(ID<T>::FromIndex(index));
-}
-
-template <class T, class... Args>
-HYP_NODISCARD HYP_FORCE_INLINE inline Handle<T> CreateObject(Args &&... args)
-{
-    auto &container = Handle<T>::GetContainer();
-
-    const uint index = container.NextIndex();
-
-    container.ConstructAtIndex(
-        index,
-        std::forward<Args>(args)...
-    );
-
-    return Handle<T>(ID<T>::FromIndex(index));
-}
-
-template <class T>
-HYP_FORCE_INLINE inline bool InitObject(const Handle<T> &handle)
-{
-    if (!handle) {
-        return false;
-    }
-
-    if (!handle->GetID()) {
-        return false;
-    }
-
-    handle->Init();
-
-    return true;
-}
 
 template <class T>
 HYP_FORCE_INLINE const HypClass *GetClass()
@@ -93,10 +54,19 @@ HYP_FORCE_INLINE const HypClass *GetClass(const Handle<T> &handle)
 }
 
 HYP_API const HypClass *GetClass(TypeID type_id);
-
 HYP_API const HypClass *GetClass(WeakName type_name);
 
-HYP_API bool IsInstanceOfHypClass(const HypClass *hyp_class, TypeID type_id);
+template <class T>
+HYP_FORCE_INLINE const HypEnum *GetEnum()
+{
+    return HypClassRegistry::GetInstance().template GetEnum<T>();
+}
+
+HYP_API const HypEnum *GetEnum(TypeID type_id);
+HYP_API const HypEnum *GetEnum(WeakName type_name);
+
+HYP_API bool IsInstanceOfHypClass(const HypClass *hyp_class, const void *ptr, TypeID type_id);
+HYP_API bool IsInstanceOfHypClass(const HypClass *hyp_class, const HypClass *instance_hyp_class);
 
 } // namespace hyperion
 

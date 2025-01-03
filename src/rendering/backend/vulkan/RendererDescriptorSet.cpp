@@ -12,9 +12,6 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-// For LogStackTrace (temp)
-#include <core/system/StackDump.hpp>
-
 #include <Engine.hpp>
 
 #include <vulkan/vulkan.h>
@@ -162,7 +159,7 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
     const DescriptorSetDeclaration *decl_ptr = &decl;
 
     if (decl.is_reference) {
-        decl_ptr = g_static_descriptor_table_decl->FindDescriptorSetDeclaration(decl.name);
+        decl_ptr = GetStaticDescriptorTableDeclaration().FindDescriptorSetDeclaration(decl.name);
 
         AssertThrowMsg(decl_ptr != nullptr, "Invalid global descriptor set reference: %s", decl.name.LookupString());
     }
@@ -571,9 +568,12 @@ void DescriptorSet<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN>
         const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
 
         const auto it = offsets.Find(dynamic_element_name);
-        AssertThrowMsg(it != offsets.End(), "Dynamic element not found: %s", dynamic_element_name.LookupString());
 
-        offsets_flat[i] = it->second;
+        if (it != offsets.End()) {
+            offsets_flat[i] = it->second;
+        } else {
+            offsets_flat[i] = 0;
+        }
     }
 
     vkCmdBindDescriptorSets(
@@ -613,9 +613,12 @@ void DescriptorSet<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN>
         const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
 
         const auto it = offsets.Find(dynamic_element_name);
-        AssertThrowMsg(it != offsets.End(), "Dynamic element not found: %s", dynamic_element_name.LookupString());
 
-        offsets_flat[i] = it->second;
+        if (it != offsets.End()) {
+            offsets_flat[i] = it->second;
+        } else {
+            offsets_flat[i] = 0;
+        }
     }
 
     vkCmdBindDescriptorSets(
@@ -655,9 +658,12 @@ void DescriptorSet<Platform::VULKAN>::Bind(const CommandBuffer<Platform::VULKAN>
         const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
 
         const auto it = offsets.Find(dynamic_element_name);
-        AssertThrowMsg(it != offsets.End(), "Dynamic element not found: %s", dynamic_element_name.LookupString());
 
-        offsets_flat[i] = it->second;
+        if (it != offsets.End()) {
+            offsets_flat[i] = it->second;
+        } else {
+            offsets_flat[i] = 0;
+        }
     }
 
     vkCmdBindDescriptorSets(
@@ -702,7 +708,7 @@ Result DescriptorSetManager<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
 {
     static const Array<VkDescriptorPoolSize> pool_sizes = {
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
-        { VK_DESCRIPTOR_TYPE_SAMPLER,                    128 },
+        { VK_DESCRIPTOR_TYPE_SAMPLER,                    256 },
         { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     8 },
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              32000 },
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              32000 },
@@ -838,7 +844,7 @@ DescriptorTable<Platform::VULKAN>::DescriptorTable(const DescriptorTableDeclarat
 
     for (const DescriptorSetDeclaration &set_decl : m_decl.GetElements()) {
         if (set_decl.is_reference) {
-            const DescriptorSetDeclaration *decl_ptr = g_static_descriptor_table_decl->FindDescriptorSetDeclaration(set_decl.name);
+            const DescriptorSetDeclaration *decl_ptr = GetStaticDescriptorTableDeclaration().FindDescriptorSetDeclaration(set_decl.name);
             AssertThrowMsg(decl_ptr != nullptr, "Invalid global descriptor set reference: %s", set_decl.name.LookupString());
 
             for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {

@@ -9,8 +9,6 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <asset/BufferedByteReader.hpp>
-
 #include <util/profiling/ProfileScope.hpp>
 
 namespace hyperion {
@@ -74,10 +72,7 @@ void StreamedDataRefBase::LoadStreamedData()
     }
 
     m_owner->m_use_count.Increment(1, MemoryOrder::RELAXED);
-
-    if (!m_owner->IsInMemory()) {
-        (void)m_owner->Load();
-    }
+    (void)m_owner->Load();
 }
 
 void StreamedDataRefBase::UnpageStreamedData()
@@ -114,15 +109,49 @@ StreamedData::StreamedData(StreamedDataState initial_state)
     }
 }
 
+bool StreamedData::IsInMemory() const
+{
+    m_loading_semaphore.Acquire();
+    m_pre_init_semaphore.Produce(1);
+
+    bool result = IsInMemory_Internal();
+
+    m_pre_init_semaphore.Release(1);
+
+    return result;
+}
+
+bool StreamedData::IsNull() const
+{
+    m_loading_semaphore.Acquire();
+    m_pre_init_semaphore.Produce(1);
+
+    bool result = IsNull_Internal();
+
+    m_pre_init_semaphore.Release(1);
+
+    return result;
+}
+
 const ByteBuffer &StreamedData::Load() const
 {
-    if (IsInMemory()) {
-        return GetByteBuffer();
-    }
-
     HYP_NAMED_SCOPE("Load streamed data");
-    
-    return Load_Internal();
+
+    m_pre_init_semaphore.Acquire();
+    m_loading_semaphore.Acquire();
+
+    const ByteBuffer *buffer_ptr = &GetByteBuffer();
+
+    m_loading_semaphore.Produce(1, [this, &buffer_ptr]()
+    {
+        buffer_ptr = &Load_Internal();
+    });
+
+    m_loading_semaphore.Release(1);
+
+    AssertDebug(buffer_ptr != nullptr);
+
+    return *buffer_ptr;
 }
 
 void StreamedData::Unpage()
@@ -133,7 +162,15 @@ void StreamedData::Unpage()
 
     HYP_NAMED_SCOPE("Unpage streamed data");
 
-    Unpage_Internal();
+    m_pre_init_semaphore.Acquire();
+    m_loading_semaphore.Acquire();
+    
+    m_loading_semaphore.Produce(1, [this]()
+    {
+        Unpage_Internal();
+    });
+
+    m_loading_semaphore.Release(1);
 }
 
 const ByteBuffer &StreamedData::GetByteBuffer() const
@@ -147,12 +184,12 @@ const ByteBuffer &StreamedData::GetByteBuffer() const
 
 #pragma region NullStreamedData
 
-bool NullStreamedData::IsNull() const
+bool NullStreamedData::IsNull_Internal() const
 {
     return true;
 }
 
-bool NullStreamedData::IsInMemory() const
+bool NullStreamedData::IsInMemory_Internal() const
 {
     return false;
 }
@@ -246,12 +283,12 @@ MemoryStreamedData &MemoryStreamedData::operator=(MemoryStreamedData &&other) no
     return *this;
 }
 
-bool MemoryStreamedData::IsNull() const
+bool MemoryStreamedData::IsNull_Internal() const
 {
     return false;
 }
 
-bool MemoryStreamedData::IsInMemory() const
+bool MemoryStreamedData::IsInMemory_Internal() const
 {
     return m_byte_buffer.HasValue();
 }
@@ -267,7 +304,7 @@ void MemoryStreamedData::Unpage_Internal()
     {
         auto &data_store = GetDataStore<StaticString("streaming"), DSF_RW>();
         data_store.Write(String::ToString(hash_code.Value()), byte_buffer);
-    }, TaskEnqueueFlags::FIRE_AND_FORGET);
+    }, TaskThreadPoolName::THREAD_POOL_GENERIC, TaskEnqueueFlags::FIRE_AND_FORGET);
 
     m_byte_buffer.Unset();
 }

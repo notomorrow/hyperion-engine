@@ -5,15 +5,10 @@
 
 #include <Config.hpp>
 
-#include <rendering/Deferred.hpp>
 #include <rendering/ShaderManager.hpp>
-#include <rendering/RenderableAttributes.hpp>
 #include <rendering/DefaultFormats.hpp>
-#include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderState.hpp>
-#include <rendering/FinalPass.hpp>
-#include <rendering/RenderGroup.hpp>
 
 #include <scene/World.hpp>
 
@@ -22,8 +17,6 @@
 #include <rendering/backend/RenderCommand.hpp>
 
 #include <core/object/HypObject.hpp>
-
-#include <core/containers/FlatMap.hpp>
 
 #include <core/functional/Delegate.hpp>
 
@@ -56,6 +49,10 @@ class ShaderGlobals;
 class ScriptingService;
 class AssetManager;
 class DebugDrawer;
+class DeferredRenderer;
+class FinalPass;
+class PlaceholderData;
+class RenderThread;
 
 extern Handle<Engine>       g_engine;
 extern Handle<AssetManager> g_asset_manager;
@@ -123,6 +120,8 @@ private:
     mutable Mutex                   m_mutex;
 };
 
+class EntityInstanceBatchHolderMap;
+
 struct EngineDelegates
 {
     Delegate<void>  OnShutdown;
@@ -131,7 +130,7 @@ struct EngineDelegates
 };
 
 HYP_CLASS()
-class Engine : public BasicObject<Engine>
+class Engine : public HypObject<Engine>
 {
     HYP_OBJECT_BODY(Engine);
 
@@ -167,6 +166,10 @@ public:
     
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<World> &GetWorld() const
+        { return m_world; }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE const Handle<World> &GetDefaultWorld() const
         { return m_world; }
     
     HYP_FORCE_INLINE HYP_DEPRECATED Configuration &GetConfig()
@@ -205,6 +208,9 @@ public:
     HYP_FORCE_INLINE net::NetRequestThread *GetNetRequestThread() const
         { return m_net_request_thread.Get(); }
 
+    HYP_FORCE_INLINE EntityInstanceBatchHolderMap *GetEntityInstanceBatchHolderMap() const
+        { return m_entity_instance_batch_holder_map.Get(); }
+
     HYP_FORCE_INLINE EngineDelegates &GetDelegates()
         { return m_delegates; }
 
@@ -214,11 +220,10 @@ public:
     HYP_FORCE_INLINE bool IsShuttingDown() const
         { return m_is_shutting_down.Get(MemoryOrder::SEQUENTIAL); }
 
-    HYP_FORCE_INLINE bool IsRenderLoopActive() const
-        { return m_is_render_loop_active; }
+    HYP_API bool IsRenderLoopActive() const;
 
     HYP_API void Initialize(const RC<AppContext> &app_context);
-    HYP_API bool InitializeGame(Game *game);
+
     HYP_API void RenderNextFrame(Game *game);
     HYP_API void RequestStop();
 
@@ -240,6 +245,8 @@ private:
     void FindTextureFormatDefaults();
 
     RC<AppContext>                                          m_app_context;
+
+    UniquePtr<RenderThread>                                 m_render_thread;
     
     UniquePtr<Instance>                                     m_instance;
 
@@ -267,12 +274,13 @@ private:
 
     UniquePtr<net::NetRequestThread>                        m_net_request_thread;
 
+    UniquePtr<EntityInstanceBatchHolderMap>                 m_entity_instance_batch_holder_map;
+
     CrashHandler                                            m_crash_handler;
 
     EngineDelegates                                         m_delegates;
 
     AtomicVar<bool>                                         m_is_shutting_down { false };
-    bool                                                    m_is_render_loop_active { false };
     bool                                                    m_is_initialized;
 };
 

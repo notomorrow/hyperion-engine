@@ -3,6 +3,11 @@
 #include <rendering/rt/RTRadianceRenderer.hpp>
 #include <rendering/rt/DDGI.hpp>
 #include <rendering/ShaderGlobals.hpp>
+#include <rendering/Scene.hpp>
+#include <rendering/Camera.hpp>
+#include <rendering/EnvGrid.hpp>
+#include <rendering/EnvProbe.hpp>
+#include <rendering/PlaceholderData.hpp>
 
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererResult.hpp>
@@ -90,7 +95,7 @@ struct RENDER_COMMAND(CreateRTRadianceUniformBuffers) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
-RTRadianceRenderer::RTRadianceRenderer(const Extent2D &extent, RTRadianceRendererOptions options)
+RTRadianceRenderer::RTRadianceRenderer(const Vec2u &extent, RTRadianceRendererOptions options)
     : m_extent(extent),
       m_options(options),
       m_updates { RT_RADIANCE_UPDATES_NONE, RT_RADIANCE_UPDATES_NONE }
@@ -136,10 +141,23 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 
     Memory::MemSet(&uniforms, 0, sizeof(uniforms));
 
-    const uint32 num_bound_lights = MathUtil::Min(uint32(g_engine->GetRenderState().lights.Size()), 16);
+    uniforms.output_image_resolution = Vec2i(m_extent);
 
-    for (uint32 index = 0; index < num_bound_lights; index++) {
-        uniforms.light_indices[index] = (g_engine->GetRenderState().lights.Data() + index)->first.ToIndex();
+    const uint32 max_bound_lights = MathUtil::Min(g_engine->GetRenderState().NumBoundLights(), ArraySize(uniforms.light_indices));
+    uint32 num_bound_lights = 0;
+
+    for (uint32 light_type = 0; light_type < uint32(LightType::MAX); light_type++) {
+        if (num_bound_lights >= max_bound_lights) {
+            break;
+        }
+
+        for (const auto &it : g_engine->GetRenderState().bound_lights[light_type]) {
+            if (num_bound_lights >= max_bound_lights) {
+                break;
+            }
+
+            uniforms.light_indices[num_bound_lights++] = it->GetBufferIndex();
+        }
     }
 
     uniforms.num_bound_lights = num_bound_lights;
@@ -162,6 +180,9 @@ void RTRadianceRenderer::Render(Frame *frame)
 {
     UpdateUniforms(frame);
 
+    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState().GetActiveCamera();
+    AssertThrow(camera_render_resources.GetBufferIndex() != ~0u);
+
     m_raytracing_pipeline->Bind(frame->GetCommandBuffer());
 
     m_raytracing_pipeline->GetDescriptorTable()->Bind(
@@ -171,11 +192,10 @@ void RTRadianceRenderer::Render(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), HYP_RENDER_OBJECT_OFFSET(Scene, g_engine->GetRenderState().GetScene().id.ToIndex()) },
-                    { NAME("CamerasBuffer"), HYP_RENDER_OBJECT_OFFSET(Camera, g_engine->GetRenderState().GetCamera().id.ToIndex()) },
-                    { NAME("LightsBuffer"), HYP_RENDER_OBJECT_OFFSET(Light, 0) },
-                    { NAME("EnvGridsBuffer"), HYP_RENDER_OBJECT_OFFSET(EnvGrid, g_engine->GetRenderState().bound_env_grid.ToIndex()) },
-                    { NAME("CurrentEnvProbe"), HYP_RENDER_OBJECT_OFFSET(EnvProbe, g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState().GetScene().id.ToIndex()) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources.GetBufferIndex()) },
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState().bound_env_grid.ToIndex()) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState().GetActiveEnvProbe().ToIndex()) }
                 }
             }
         }
@@ -186,17 +206,15 @@ void RTRadianceRenderer::Render(Frame *frame)
         ResourceState::UNORDERED_ACCESS
     );
 
-    const Extent3D image_extent = m_texture->GetImage()->GetExtent();
-    const SizeType num_pixels = image_extent.Size();
-    
+    const Vec3u image_extent = m_texture->GetImage()->GetExtent();
+
+    const SizeType num_pixels = image_extent.Volume();
     const SizeType half_num_pixels = num_pixels / 2;
 
     m_raytracing_pipeline->TraceRays(
         g_engine->GetGPUDevice(),
         frame->GetCommandBuffer(),
-        Extent3D {
-            uint32(half_num_pixels), 1, 1
-        }
+        Vec3u { uint32(half_num_pixels), 1, 1 }
     );
 
     m_texture->GetImage()->InsertBarrier(
@@ -205,10 +223,10 @@ void RTRadianceRenderer::Render(Frame *frame)
     );
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
-    if (IsPathTracer() && g_engine->GetRenderState().GetCamera().camera.view != m_previous_view_matrix) {
+    if (IsPathTracer() && camera_render_resources.GetBufferData().view != m_previous_view_matrix) {
         m_temporal_blending->ResetProgressiveBlending();
 
-        m_previous_view_matrix = g_engine->GetRenderState().GetCamera().camera.view;
+        m_previous_view_matrix = camera_render_resources.GetBufferData().view;
     }
 
     m_temporal_blending->Render(frame);
@@ -219,7 +237,7 @@ void RTRadianceRenderer::CreateImages()
     m_texture = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         InternalFormat::RGBA8,
-        Vec3u { m_extent.width, m_extent.height, 1 },
+        Vec3u { m_extent.x, m_extent.y, 1 },
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -288,8 +306,8 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
 
         descriptor_set->SetElement(NAME("OutputImage"), m_texture->GetImageView());
         
-        descriptor_set->SetElement(NAME("LightsBuffer"), g_engine->GetRenderData()->lights.GetBuffer(frame_index));
-        descriptor_set->SetElement(NAME("MaterialsBuffer"), g_engine->GetRenderData()->materials.GetBuffer(frame_index));
+        descriptor_set->SetElement(NAME("LightsBuffer"), g_engine->GetRenderData()->lights->GetBuffer(frame_index));
+        descriptor_set->SetElement(NAME("MaterialsBuffer"), g_engine->GetRenderData()->materials->GetBuffer(frame_index));
         descriptor_set->SetElement(NAME("RTRadianceUniforms"), m_uniform_buffers[frame_index]);
     }
 

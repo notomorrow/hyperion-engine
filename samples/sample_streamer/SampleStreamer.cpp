@@ -8,6 +8,8 @@
 #include <rendering/backend/RendererImage.hpp>
 
 #include <Engine.hpp>
+
+#include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/SkyComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
@@ -21,8 +23,10 @@
 #include <scene/ecs/components/RigidBodyComponent.hpp>
 #include <scene/ecs/components/BLASComponent.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
+
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
+
 #include <core/utilities/Pair.hpp>
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/Array.hpp>
@@ -213,12 +217,12 @@ void SampleStreamer::Init()
     }
 
 
-    const Extent2D window_size = GetInputManager()->GetWindow()->GetDimensions();
+    const Vec2i window_size = GetAppContext()->GetInputManager()->GetWindow()->GetDimensions();
 
     m_texture = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         InternalFormat::RGBA8,
-        Extent3D(window_size),
+        Vec3u(Vec2u(window_size), 0),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
         WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
@@ -229,7 +233,7 @@ void SampleStreamer::Init()
     DebugLog(LogType::Debug, "SampleStreamer::Init : Scene ID = %u\n", m_scene.GetID().Value());
     m_scene->SetCamera(CreateObject<Camera>(
         70.0f,
-        window_size.width, window_size.height,
+        window_size.x, window_size.y,
         0.01f, 30000.0f
     ));
 
@@ -375,7 +379,7 @@ void SampleStreamer::Init()
 
     // Used for RTC streaming or for editor view.
     // Has a performance impact due to copying the framebuffer.
-    auto streaming_capture_component = m_scene->GetEnvironment()->AddRenderComponent<ScreenCaptureRenderComponent>(HYP_NAME(StreamingCapture), window_size);
+    auto streaming_capture_component = m_scene->GetEnvironment()->AddRenderComponent<ScreenCaptureRenderComponent>(HYP_NAME(StreamingCapture), Vec2u(window_size));
 
     if (false) {
         auto terrain_node = m_scene->GetRoot()->AddChild();
@@ -401,33 +405,33 @@ void SampleStreamer::Init()
         terrain_node.SetName("TerrainNode");
     }
 
-    if (true) { // add sun
-        auto sun = CreateObject<Light>(DirectionalLight(
-            Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
-            Color(1.0f),
-            4.0f
-        ));
+    // if (true) { // add sun
+    //     auto sun = CreateObject<Light>(DirectionalLight(
+    //         Vec3f(-0.1f, 0.65f, 0.1f).Normalize(),
+    //         Color(1.0f),
+    //         4.0f
+    //     ));
 
-        InitObject(sun);
+    //     InitObject(sun);
 
-        auto sun_node = m_scene->GetRoot()->AddChild();
-        sun_node.SetName("Sun");
+    //     auto sun_node = m_scene->GetRoot()->AddChild();
+    //     sun_node.SetName("Sun");
 
-        auto sun_entity = m_scene->GetEntityManager()->AddEntity();
-        sun_node.SetEntity(sun_entity);
+    //     auto sun_entity = m_scene->GetEntityManager()->AddEntity();
+    //     sun_node.SetEntity(sun_entity);
 
-        sun_node.SetWorldTranslation(Vec3f { -0.1f, 0.65f, 0.1f });
+    //     sun_node.SetWorldTranslation(Vec3f { -0.1f, 0.65f, 0.1f });
 
-        m_scene->GetEntityManager()->AddComponent<LightComponent>(sun_entity, {
-            sun
-        });
+    //     m_scene->GetEntityManager()->AddComponent<LightComponent>(sun_entity, {
+    //         sun
+    //     });
 
-        m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sun_entity, {
-            .mode       = ShadowMode::PCF,
-            .radius     = 18.0f,
-            .resolution = { 2048, 2048 }
-        });
-    }
+    //     m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sun_entity, {
+    //         .mode       = ShadowMode::PCF,
+    //         .radius     = 18.0f,
+    //         .resolution = { 2048, 2048 }
+    //     });
+    // }
 
     Array<Handle<Light>> point_lights;
 
@@ -462,83 +466,83 @@ void SampleStreamer::Init()
         });
     }
 
-    { // Add test spotlight
-        auto spotlight = CreateObject<Light>(SpotLight(
-            Vec3f(0.0f, 0.1f, 0.0f),
-            Vec3f(-1.0f, 0.0f, 0.0f).Normalize(),
-            Color(0.0f, 1.0f, 0.0f),
-            2.0f,
-            15.0f,
-            Vec2f { MathUtil::Cos(MathUtil::DegToRad(50.0f)), MathUtil::Cos(MathUtil::DegToRad(10.0f)) }
-        ));
+    // { // Add test spotlight
+    //     auto spotlight = CreateObject<Light>(SpotLight(
+    //         Vec3f(0.0f, 0.1f, 0.0f),
+    //         Vec3f(-1.0f, 0.0f, 0.0f).Normalize(),
+    //         Color(0.0f, 1.0f, 0.0f),
+    //         2.0f,
+    //         15.0f,
+    //         Vec2f { MathUtil::Cos(MathUtil::DegToRad(50.0f)), MathUtil::Cos(MathUtil::DegToRad(10.0f)) }
+    //     ));
 
-        InitObject(spotlight);
+    //     InitObject(spotlight);
 
-        auto spotlight_entity = m_scene->GetEntityManager()->AddEntity();
+    //     auto spotlight_entity = m_scene->GetEntityManager()->AddEntity();
 
-        m_scene->GetEntityManager()->AddComponent<TransformComponent>(spotlight_entity, {
-            Transform(
-                spotlight->GetPosition(),
-                Vec3f(1.0f),
-                Quaternion::Identity()
-            )
-        });
+    //     m_scene->GetEntityManager()->AddComponent<TransformComponent>(spotlight_entity, {
+    //         Transform(
+    //             spotlight->GetPosition(),
+    //             Vec3f(1.0f),
+    //             Quaternion::Identity()
+    //         )
+    //     });
 
-        m_scene->GetEntityManager()->AddComponent<LightComponent>(spotlight_entity, {
-            spotlight
-        });
-    }
+    //     m_scene->GetEntityManager()->AddComponent<LightComponent>(spotlight_entity, {
+    //         spotlight
+    //     });
+    // }
 
-    if (false) { // add test area light
-        auto light = CreateObject<Light>(RectangleLight(
-            Vec3f(0.0f, 1.25f, 0.0f),
-            Vec3f(0.0f, 0.0f, -1.0f).Normalize(),
-            Vec2f(2.0f, 2.0f),
-            Color(1.0f, 0.0f, 0.0f),
-            1.0f
-        ));
+    // if (false) { // add test area light
+    //     auto light = CreateObject<Light>(RectangleLight(
+    //         Vec3f(0.0f, 1.25f, 0.0f),
+    //         Vec3f(0.0f, 0.0f, -1.0f).Normalize(),
+    //         Vec2f(2.0f, 2.0f),
+    //         Color(1.0f, 0.0f, 0.0f),
+    //         1.0f
+    //     ));
 
-        Handle<Texture> dummy_light_texture;
+    //     Handle<Texture> dummy_light_texture;
 
-        if (auto dummy_light_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg")) {
-            dummy_light_texture = dummy_light_texture_asset.Result();
-        }
+    //     if (auto dummy_light_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg")) {
+    //         dummy_light_texture = dummy_light_texture_asset.Result();
+    //     }
 
-        light->SetMaterial(MaterialCache::GetInstance()->GetOrCreate(
-            {
-               .shader_definition = ShaderDefinition {
-                    HYP_NAME(Forward),
-                    ShaderProperties(static_mesh_vertex_attributes)
-                },
-               .bucket = Bucket::BUCKET_OPAQUE
-            },
-            {
-            },
-            {
-                {
-                    Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
-                    std::move(dummy_light_texture)
-                }
-            }
-        ));
-        AssertThrow(light->GetMaterial().IsValid());
+    //     light->SetMaterial(MaterialCache::GetInstance()->GetOrCreate(
+    //         {
+    //            .shader_definition = ShaderDefinition {
+    //                 HYP_NAME(Forward),
+    //                 ShaderProperties(static_mesh_vertex_attributes)
+    //             },
+    //            .bucket = Bucket::BUCKET_OPAQUE
+    //         },
+    //         {
+    //         },
+    //         {
+    //             {
+    //                 MaterialTextureKey::ALBEDO_MAP,
+    //                 std::move(dummy_light_texture)
+    //             }
+    //         }
+    //     ));
+    //     AssertThrow(light->GetMaterial().IsValid());
 
-        InitObject(light);
+    //     InitObject(light);
 
-        auto area_light_entity = m_scene->GetEntityManager()->AddEntity();
+    //     auto area_light_entity = m_scene->GetEntityManager()->AddEntity();
 
-        m_scene->GetEntityManager()->AddComponent<TransformComponent>(area_light_entity, {
-            Transform(
-                light->GetPosition(),
-                Vec3f(1.0f),
-                Quaternion::Identity()
-            )
-        });
+    //     m_scene->GetEntityManager()->AddComponent<TransformComponent>(area_light_entity, {
+    //         Transform(
+    //             light->GetPosition(),
+    //             Vec3f(1.0f),
+    //             Quaternion::Identity()
+    //         )
+    //     });
 
-        m_scene->GetEntityManager()->AddComponent<LightComponent>(area_light_entity, {
-            light
-        });
-    }
+    //     m_scene->GetEntityManager()->AddComponent<LightComponent>(area_light_entity, {
+    //         light
+    //     });
+    // }
 
     // add sample model
     {
@@ -579,7 +583,7 @@ void SampleStreamer::Init()
                     }
                     // {
                     //     {
-                    //         Material::TextureKey::MATERIAL_TEXTURE_ALBEDO_MAP,
+                    //         MaterialTextureKey::ALBEDO_MAP,
                     //         AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg")
                     //     }
                     // }
@@ -688,23 +692,6 @@ void SampleStreamer::Init()
             }
         }
     }
-
-    // auto my_button_entity = GetUIStage()->GetScene()->GetEntityManager()->AddEntity();
-    // GetUIStage()->GetScene()->GetEntityManager()->AddComponent<UIComponent>(my_button_entity, {
-    //     .type = UI_COMPONENT_TYPE_BUTTON,
-    //     .name = HYP_NAME(MyButton),
-    //     .bounds = {
-    //         .position = Vector2(0.0f, 0.0f),
-    //         .size = Vector2(100.0f, 50.0f)
-    //     }
-    // });
-
-
-    // auto ui_text = GetUIStage()->CreateUIObject<UIText>(HYP_NAME(Sample_Text2), Vec2i { 25, 25 }, Vec2i { 100, 30 });
-    // ui_text->SetText("Hello, world!");
-    // ui_text->SetDepth(1);
-    // ui_text->UpdatePosition();
-    // ui_text->UpdateSize();
 }
 
 void SampleStreamer::Teardown()
@@ -1037,7 +1024,7 @@ void SampleStreamer::OnInputEvent(const SystemEvent &event)
 {
     Game::OnInputEvent(event);
 
-    const Extent2D window_size = GetInputManager()->GetWindow()->GetDimensions();
+    const Vec2u window_size = Vec2u(GetAppContext()->GetInputManager()->GetWindow()->GetDimensions());
 
     if (event.GetType() == SystemEventType::EVENT_KEYDOWN) {
         if (event.GetKeyCode() == KeyCode::ARROW_LEFT) {
@@ -1282,28 +1269,30 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
 // not overloading; just creating a method to handle camera movement
 void SampleStreamer::HandleCameraMovement(GameCounter::TickUnit delta)
 {
-    if (m_input_manager->IsKeyDown(KeyCode::KEY_W)) {
+    InputManager *input_manager = GetAppContext()->GetInputManager().Get();
+
+    if (input_manager->IsKeyDown(KeyCode::KEY_W)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_FORWARD } }
         });
     }
 
-    if (m_input_manager->IsKeyDown(KeyCode::KEY_S)) {
+    if (input_manager->IsKeyDown(KeyCode::KEY_S)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_BACKWARD } }
         });
     }
 
-    if (m_input_manager->IsKeyDown(KeyCode::KEY_A)) {
+    if (input_manager->IsKeyDown(KeyCode::KEY_A)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_LEFT } }
         });
     }
 
-    if (m_input_manager->IsKeyDown(KeyCode::KEY_D)) {
+    if (input_manager->IsKeyDown(KeyCode::KEY_D)) {
         GetScene()->GetCamera()->GetCameraController()->PushCommand({
             CameraCommand::CAMERA_COMMAND_MOVEMENT,
             { .movement_data = { CameraCommand::CAMERA_MOVEMENT_RIGHT } }

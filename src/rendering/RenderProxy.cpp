@@ -1,7 +1,14 @@
 #include <rendering/RenderProxy.hpp>
 #include <rendering/SafeDeleter.hpp>
+#include <rendering/Skeleton.hpp>
+#include <rendering/Material.hpp>
+#include <rendering/DrawCall.hpp>
+
+#include <rendering/backend/RenderConfig.hpp>
 
 #include <scene/Entity.hpp>
+
+#include <scene/animation/Skeleton.hpp>
 
 #include <util/profiling/ProfileScope.hpp>
 
@@ -9,19 +16,81 @@ namespace hyperion {
 
 extern HYP_API SafeDeleter *g_safe_deleter;
 
-void RenderProxyList::Add(ID<Entity> entity, const RenderProxy &proxy)
-{
-    FlatMap<ID<Entity>, RenderProxy>::Iterator iter = m_proxies.End();
+#pragma region RenderProxy
 
-    if (HasProxyForEntity(entity)) {
-        iter = m_proxies.Find(entity);
+void RenderProxy::ClaimRenderResources() const
+{
+    if (material.IsValid()) {
+        material->GetRenderResources().Claim();
     }
 
+    if (mesh.IsValid()) {
+        mesh->GetRenderResources().Claim();
+    }
+
+    if (skeleton.IsValid()) {
+        skeleton->GetRenderResources().Claim();
+    }
+}
+
+void RenderProxy::UnclaimRenderResources() const
+{
+    if (material.IsValid()) {
+        material->GetRenderResources().Unclaim();
+    }
+
+    if (mesh.IsValid()) {
+        mesh->GetRenderResources().Unclaim();
+    }
+
+    if (skeleton.IsValid()) {
+        skeleton->GetRenderResources().Unclaim();
+    }
+}
+
+bool RenderProxy::GetDrawCallID(DrawCallID &out_draw_call_id) const
+{
+    static const bool unique_per_material = renderer::RenderConfig::ShouldCollectUniqueDrawCallPerMaterial();
+
+    if (!mesh.IsValid() || !material.IsValid()) {
+        return false;
+    }
+    
+    if (unique_per_material) {
+        out_draw_call_id = DrawCallID(mesh.GetID(), material.GetID());
+    } else {
+        out_draw_call_id = DrawCallID(mesh.GetID());
+    }
+
+    return true;
+}
+
+#pragma endregion RenderProxy
+
+#pragma region RenderProxyList
+
+void RenderProxyList::Add(ID<Entity> entity, const RenderProxy &proxy)
+{
+    RenderProxyEntityMap::Iterator iter = m_proxies.End();
+
+    AssertThrowMsg(!m_next_entities.Test(entity.ToIndex()), "Entity #%u already marked to be added for this iteration!", entity.Value());
+
+    if (HasProxyForEntity(entity)) {
+        iter = m_proxies.FindAs(entity);
+    }
+
+    // issue : getting added here, then added again with different attributes,
+    // causes it to be marked as changed for the same frame - 
+    // try having list of m_previous_proxies and m_proxies for next iteration?
+
     if (iter != m_proxies.End()) {
-        if (proxy != iter->second) {
-            // Sanity check - must not contain duplicates or it will mess up
-            // RemoveRenderProxy() call
-            AssertThrow(!m_changed_proxies.Contains(entity));
+        // if (proxy != iter->second) {
+
+        // Advance if version has changed
+        if (proxy.version != iter->second.version) {
+            // Sanity check - must not contain duplicates or it will mess up safe releasing the previous RenderProxy objects
+            AssertDebug(!m_changed_entities.Test(entity.ToIndex()));
+            AssertDebug(!m_changed_proxies.Contains(entity));
 
             // Mark as changed if it is found in the previous iteration
             m_changed_proxies.Insert({ entity, std::move(iter->second) });
@@ -30,6 +99,10 @@ void RenderProxyList::Add(ID<Entity> entity, const RenderProxy &proxy)
             iter->second = proxy;
         }
     } else {
+        // sanity check - if not in previous iteration, it must not be in the changed list
+        AssertDebug(!m_changed_entities.Test(entity.ToIndex()));
+        AssertDebug(!m_changed_proxies.Contains(entity));
+
         iter = m_proxies.Insert(entity, proxy).first;
     }
 
@@ -150,5 +223,7 @@ void RenderProxyList::Advance(RenderProxyListAdvanceAction action)
         m_changed_proxies.Clear();
     }
 }
+
+#pragma endregion RenderProxyList
 
 } // namespace hyperion

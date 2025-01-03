@@ -36,8 +36,8 @@ struct Span<T, std::enable_if_t<!std::is_const_v<T>>>
     {
     }
 
-    constexpr Span(const Span &other) = default;
-    Span &operator=(const Span &other) = default;
+    constexpr Span(const Span &other)   = default;
+    Span &operator=(const Span &other)  = default;
 
     constexpr Span(Span &&other) noexcept
         : first(other.first),
@@ -205,7 +205,21 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
     }
 
     template <SizeType Size>
+    constexpr Span(Type (&ary)[Size])
+        : first(&ary[0]),
+          last(&ary[Size])
+    {
+    }
+
+    template <SizeType Size>
     constexpr Span(const Type (&ary)[Size])
+        : first(&ary[0]),
+          last(&ary[Size])
+    {
+    }
+
+    template <SizeType Size>
+    constexpr Span(Type (&&ary)[Size])
         : first(&ary[0]),
           last(&ary[Size])
     {
@@ -215,6 +229,11 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
     constexpr Span(const Type (&&ary)[Size])
         : first(&ary[0]),
           last(&ary[Size])
+    {
+    }
+    
+    constexpr Span(std::initializer_list<T> initializer_list)
+        : Span(initializer_list.begin(), initializer_list.end())
     {
     }
 
@@ -244,7 +263,7 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
     HYP_FORCE_INLINE constexpr const Type *Data() const
         { return first; }
 
-    HYP_FORCE_INLINE Span Slice(SizeType offset, SizeType count) const
+    HYP_FORCE_INLINE Span Slice(SizeType offset, SizeType count = SizeType(-1)) const
     {
         if (offset >= Size()) {
             return Span();
@@ -254,8 +273,10 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
             return Span();
         }
 
-        if (offset + count > Size()) {
-            count = Size() - offset;
+        const SizeType max_size = Size() - offset;
+
+        if (count > max_size) {
+            count = max_size;
         }
 
         return Span(first + offset, first + offset + count);

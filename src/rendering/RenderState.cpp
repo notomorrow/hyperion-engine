@@ -1,42 +1,97 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderState.hpp>
+#include <rendering/Camera.hpp>
+#include <rendering/EnvProbe.hpp>
 
 #include <rendering/backend/RendererFramebuffer.hpp>
 
 #include <scene/camera/Camera.hpp>
-#include <rendering/EnvProbe.hpp>
 
 namespace hyperion {
 
 const RenderBinding<Scene> RenderBinding<Scene>::empty = { };
-const RenderBinding<Camera> RenderBinding<Camera>::empty = { };
 
-void RenderState::BindCamera(const Camera *camera)
+void RenderState::BindCamera(Camera *camera)
 {
-    if (camera == nullptr) {
-        camera_bindings.Push(RenderBinding<Camera>::empty);
-    } else {
-        AssertThrow(camera->GetID().ToIndex() < max_cameras);
+    AssertThrow(camera != nullptr);
+    AssertThrow(camera->IsReady());
+    
+    camera_bindings.Push(&camera->GetRenderResources());
+}
 
-        camera_bindings.Push(RenderBinding<Camera> {
-            camera->GetID(),
-            camera->GetProxy()
-        });
+void RenderState::UnbindCamera(Camera *camera)
+{
+    AssertThrow(camera != nullptr);
+    AssertThrow(camera->IsReady());
+
+    AssertThrowMsg(camera_bindings.Any(), "No camera is currently bound!");
+    AssertThrowMsg(camera_bindings.Top()->GetCamera() == camera, "Camera is not currently bound!");
+
+    camera_bindings.Pop();
+}
+
+const CameraRenderResources &RenderState::GetActiveCamera() const
+{
+    static const CameraRenderResources empty { nullptr };
+
+    return camera_bindings.Any()
+        ? *camera_bindings.Top()
+        : empty;
+}
+
+void RenderState::BindLight(Light *light)
+{
+    AssertThrow(light != nullptr);
+    AssertThrow(light->IsReady());
+
+    auto &array = bound_lights[uint32(light->GetLightType())];
+
+    auto it = array.FindIf([light](const TResourceHandle<LightRenderResources> &item)
+    {
+        return item->GetLight() == light;
+    });
+
+    if (it != array.End()) {
+        *it = TResourceHandle(light->GetRenderResources());
+    } else {
+        array.PushBack(TResourceHandle(light->GetRenderResources()));
     }
 }
 
-void RenderState::UnbindCamera()
+void RenderState::UnbindLight(Light *light)
 {
-    if (camera_bindings.Any()) {
-        camera_bindings.Pop();
+    AssertThrow(light != nullptr);
+    AssertThrow(light->IsReady());
+
+    auto &array = bound_lights[uint32(light->GetLightType())];
+
+    auto it = array.FindIf([light](const TResourceHandle<LightRenderResources> &item)
+    {
+        return item->GetLight() == light;
+    });
+
+    if (it != array.End()) {
+        array.Erase(it);
     }
+}
+
+const TResourceHandle<LightRenderResources> &RenderState::GetActiveLight() const
+{
+    static const TResourceHandle<LightRenderResources> empty;
+
+    return light_bindings.Any()
+        ? light_bindings.Top()
+        : empty;
+}
+
+void RenderState::SetActiveLight(LightRenderResources &light_render_resources)
+{
+    light_bindings.Push(TResourceHandle(light_render_resources));
 }
 
 void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 {
-    AssertThrow(type < ENV_PROBE_TYPE_MAX);
-
     constexpr EnvProbeBindingSlot binding_slots[ENV_PROBE_TYPE_MAX] = {
         ENV_PROBE_BINDING_SLOT_CUBEMAP,         // reflection
         ENV_PROBE_BINDING_SLOT_CUBEMAP,         // sky

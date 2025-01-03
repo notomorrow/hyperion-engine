@@ -29,8 +29,8 @@ namespace hyperion {
 
 class HypClass;
 
-struct HypMethod;
-struct HypField;
+class HypMethod;
+class HypField;
 
 struct HypPropertyTypeInfo
 {
@@ -120,6 +120,27 @@ struct HypPropertyGetter
         type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ReturnType>();
     }
 
+    // Special getter that takes no target. Used for Enums
+    template <class ReturnType>
+    HypPropertyGetter(ReturnType(*fnptr)(void))
+        : get_proc([fnptr](const HypData &target) -> HypData
+          {
+              return HypData(fnptr());
+          }),
+          serialize_proc([fnptr](const HypData &target) -> fbom::FBOMData
+          {   
+              fbom::FBOMData out;
+
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(HypData(fnptr()), out)) {
+                  HYP_FAIL("Failed to serialize data: %s", err.message.Data());
+              }
+
+              return out;
+          })
+    {
+        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ReturnType>();
+    }
+
     template <class ValueType, class TargetType, typename = std::enable_if_t< !std::is_member_function_pointer_v<ValueType TargetType::*> > >
     explicit HypPropertyGetter(ValueType TargetType::*member)
         : get_proc([member](const HypData &target) -> HypData
@@ -149,8 +170,7 @@ struct HypPropertyGetter
     HypData Invoke(const HypData &target) const
     {
         AssertThrow(IsValid());
-
-        AssertThrow(target.IsValid());
+        AssertThrow(!target.IsNull());
 
 #ifdef HYP_DEBUG_MODE
         AssertThrowMsg(
@@ -167,8 +187,7 @@ struct HypPropertyGetter
     fbom::FBOMData Serialize(const HypData &target) const
     {
         AssertThrow(IsValid());
-
-        AssertThrow(target.IsValid());
+        AssertThrow(!target.IsNull());
 
 #ifdef HYP_DEBUG_MODE
         AssertThrowMsg(
@@ -195,10 +214,10 @@ struct HypPropertySetter
     HypPropertySetter(ReturnType(TargetType::*MemFn)(ValueType))
         : set_proc([MemFn](HypData &target, const HypData &value) -> void
           {
-              if (value.IsValid()) {
-                  (static_cast<TargetType *>(target.ToRef().GetPointer())->*MemFn)(value.Get<NormalizedType<ValueType>>());
-              } else {
+              if (value.IsNull()) {
                   (static_cast<TargetType *>(target.ToRef().GetPointer())->*MemFn)(NormalizedType<ValueType> { });
+              } else {
+                  (static_cast<TargetType *>(target.ToRef().GetPointer())->*MemFn)(value.Get<NormalizedType<ValueType>>());
               }
           }),
           deserialize_proc([MemFn](HypData &target, const fbom::FBOMData &data) -> void
@@ -209,10 +228,10 @@ struct HypPropertySetter
                   HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
               }
 
-              if (value.IsValid()) {
-                  (static_cast<TargetType *>(target.ToRef().GetPointer())->*MemFn)(value.Get<NormalizedType<ValueType>>());
-              } else {
+              if (value.IsNull()) {
                   (static_cast<TargetType *>(target.ToRef().GetPointer())->*MemFn)(NormalizedType<ValueType> { });
+              } else {
+                  (static_cast<TargetType *>(target.ToRef().GetPointer())->*MemFn)(value.Get<NormalizedType<ValueType>>());
               }
           })
     {
@@ -223,10 +242,10 @@ struct HypPropertySetter
     HypPropertySetter(ReturnType(*fnptr)(TargetType *, const ValueType &))
         : set_proc([fnptr](HypData &target, const HypData &value) -> void
           {
-              if (value.IsValid()) {
-                  fnptr(static_cast<TargetType *>(target.ToRef().GetPointer()), value.Get<NormalizedType<ValueType>>());
-              } else {
+              if (value.IsNull()) {
                   fnptr(static_cast<TargetType *>(target.ToRef().GetPointer()), NormalizedType<ValueType> { });
+              } else {
+                  fnptr(static_cast<TargetType *>(target.ToRef().GetPointer()), value.Get<NormalizedType<ValueType>>());
               }
           }),
           deserialize_proc([fnptr](HypData &target, const fbom::FBOMData &data) -> void
@@ -237,10 +256,10 @@ struct HypPropertySetter
                   HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
               }
     
-              if (value.IsValid()) {
-                  fnptr(static_cast<TargetType *>(target.ToRef().GetPointer()), value.Get<NormalizedType<ValueType>>());
-              } else {
+              if (value.IsNull()) {
                   fnptr(static_cast<TargetType *>(target.ToRef().GetPointer()), NormalizedType<ValueType> { });
+              } else {
+                  fnptr(static_cast<TargetType *>(target.ToRef().GetPointer()), value.Get<NormalizedType<ValueType>>());
               }
           })
     {
@@ -251,10 +270,10 @@ struct HypPropertySetter
     HypPropertySetter(ValueType TargetType::*member)
         : set_proc([member](HypData &target, const HypData &value) -> void
           {
-              if (value.IsValid()) {
-                  static_cast<TargetType *>(target.ToRef().GetPointer())->*member = value.Get<NormalizedType<ValueType>>();
-              } else {
+              if (value.IsNull()) {
                   static_cast<TargetType *>(target.ToRef().GetPointer())->*member = NormalizedType<ValueType> { };
+              } else {
+                  static_cast<TargetType *>(target.ToRef().GetPointer())->*member = value.Get<NormalizedType<ValueType>>();
               }
           }),
           deserialize_proc([member](HypData &target, const fbom::FBOMData &data) -> void
@@ -265,10 +284,10 @@ struct HypPropertySetter
                   HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
               }
 
-              if (value.IsValid()) {
-                  static_cast<TargetType *>(target.ToRef().GetPointer())->*member = value.Get<NormalizedType<ValueType>>();
-              } else {
+              if (value.IsNull()) {
                   static_cast<TargetType *>(target.ToRef().GetPointer())->*member = NormalizedType<ValueType> { };
+              } else {
+                  static_cast<TargetType *>(target.ToRef().GetPointer())->*member = value.Get<NormalizedType<ValueType>>();
               }
           })
     {
@@ -284,8 +303,7 @@ struct HypPropertySetter
     void Invoke(HypData &target, const HypData &value) const
     {
         AssertThrow(IsValid());
-
-        AssertThrow(target.IsValid());
+        AssertThrow(!target.IsNull());
 
 #ifdef HYP_DEBUG_MODE
         AssertThrowMsg(
@@ -302,8 +320,7 @@ struct HypPropertySetter
     void Deserialize(HypData &target, const fbom::FBOMData &value) const
     {
         AssertThrow(IsValid());
-
-        AssertThrow(target.IsValid());
+        AssertThrow(!target.IsNull());
 
 #ifdef HYP_DEBUG_MODE
         AssertThrowMsg(
@@ -318,51 +335,47 @@ struct HypPropertySetter
     }
 };
 
-struct HypProperty : public IHypMember
+class HypProperty : public IHypMember
 {
-    Name                    name;
-    TypeID                  type_id;
-
-    HypClassAttributeSet    attributes;
-
-    HypPropertyGetter       getter;
-    HypPropertySetter       setter;
+public:
+    friend class HypClass;
 
     HypProperty() = default;
 
-    HypProperty(Name name)
-        : name(name)
+    HypProperty(Name name, Span<const HypClassAttribute> attributes = {})
+        : m_name(name),
+          m_attributes(attributes)
     {
     }
 
-    HypProperty(Name name, HypPropertyGetter &&getter)
-        : name(name),
-          type_id(getter.type_info.value_type_id),
-          attributes { FlatSet<HypClassAttribute> { { "serialize", true } } },
-          getter(std::move(getter))
+    HypProperty(Name name, HypPropertyGetter &&getter, Span<const HypClassAttribute> attributes = {})
+        : m_name(name),
+          m_type_id(getter.type_info.value_type_id),
+          m_attributes(attributes),
+          m_getter(std::move(getter))
     {
     }
 
-    HypProperty(Name name, HypPropertyGetter &&getter, HypPropertySetter &&setter)
-        : name(name),
-          type_id(getter.type_info.value_type_id),
-          attributes { FlatSet<HypClassAttribute> { { "serialize", true } } },
-          getter(std::move(getter)),
-          setter(std::move(setter))
+    HypProperty(Name name, HypPropertyGetter &&getter, HypPropertySetter &&setter, Span<const HypClassAttribute> attributes = {})
+        : m_name(name),
+          m_type_id(getter.type_info.value_type_id),
+          m_attributes(attributes),
+          m_getter(std::move(getter)),
+          m_setter(std::move(setter))
     {
 #ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(this->setter.type_info.value_type_id == type_id, "Setter value type id should match property type id");
+        AssertThrowMsg(m_setter.type_info.value_type_id == m_type_id, "Setter value type id should match property type id");
 #endif
     }
 
     template <class ValueType, class TargetType, typename = std::enable_if_t< !std::is_member_function_pointer_v<ValueType TargetType::*> > >
-    HypProperty(Name name, ValueType TargetType::*member)
-        : name(name),
-          attributes { FlatSet<HypClassAttribute> { { "serialize", true } } },
-          getter(HypPropertyGetter(member)),
-          setter(HypPropertySetter(member))
+    HypProperty(Name name, ValueType TargetType::*member, Span<const HypClassAttribute> attributes = {})
+        : m_name(name),
+          m_attributes(attributes),
+          m_getter(HypPropertyGetter(member)),
+          m_setter(HypPropertySetter(member))
     {
-        type_id = getter.type_info.value_type_id;
+        m_type_id = m_getter.type_info.value_type_id;
     }
 
     HypProperty(const HypProperty &other)                   = delete;
@@ -379,62 +392,84 @@ struct HypProperty : public IHypMember
 
     virtual Name GetName() const override
     {
-        return name;
+        return m_name;
     }
 
     virtual TypeID GetTypeID() const override
     {
-        return type_id;
+        return m_type_id;
+    }
+
+    virtual TypeID GetTargetTypeID() const override
+    {
+        return m_getter.IsValid() ? m_getter.type_info.target_type_id
+            : m_setter.IsValid() ? m_setter.type_info.target_type_id
+            : TypeID::Void();
+    }
+    
+    virtual const HypClassAttributeSet &GetAttributes() const override
+    {
+        return m_attributes;
     }
 
     virtual const HypClassAttributeValue &GetAttribute(ANSIStringView key) const override
     {
-        return attributes.Get(key);
+        return m_attributes.Get(key);
     }
 
     virtual const HypClassAttributeValue &GetAttribute(ANSIStringView key, const HypClassAttributeValue &default_value) const override
     {
-        return attributes.Get(key, default_value);
+        return m_attributes.Get(key, default_value);
     }
 
     HYP_FORCE_INLINE bool IsValid() const
-        { return type_id != TypeID::Void() && CanGet(); }
+        { return m_type_id != TypeID::Void() && CanGet(); }
 
     // getter
 
     HYP_FORCE_INLINE bool CanGet() const
-        { return getter.IsValid(); }
+        { return m_getter.IsValid(); }
 
     HYP_NODISCARD HYP_FORCE_INLINE HypData Get(const HypData &target) const
-        { return getter.Invoke(target); }
+        { return m_getter.Invoke(target); }
 
     // Serializing getter
 
     HYP_FORCE_INLINE bool CanSerialize() const
-        { return getter.IsValid(); }
+        { return m_getter.IsValid(); }
 
     HYP_NODISCARD HYP_FORCE_INLINE fbom::FBOMData Serialize(const HypData &target) const
-        { return getter.Serialize(target); }
+        { return m_getter.Serialize(target); }
 
     // setter
 
     HYP_FORCE_INLINE bool CanSet() const
-        { return setter.IsValid(); }
+        { return m_setter.IsValid(); }
 
     HYP_FORCE_INLINE void Set(HypData &target, const HypData &value) const
-        { setter.Invoke(target, value); }
+        { m_setter.Invoke(target, value); }
 
     HYP_FORCE_INLINE bool CanDeserialize() const
-        { return setter.IsValid(); }
+        { return m_setter.IsValid(); }
 
     HYP_FORCE_INLINE void Deserialize(HypData &target, const fbom::FBOMData &serialized_value) const
-        { setter.Deserialize(target, serialized_value); }
+        { m_setter.Deserialize(target, serialized_value); }
 
     /*! \brief Get the associated HypClass for this property's type ID, if applicable. */
     HYP_API const HypClass *GetHypClass() const;
 
     static HYP_API HypProperty MakeHypProperty(const HypField *field);
     static HYP_API HypProperty MakeHypProperty(const HypMethod *getter, const HypMethod *setter);
+
+private:
+    Name                    m_name;
+    TypeID                  m_type_id;
+
+    HypClassAttributeSet    m_attributes;
+
+    HypPropertyGetter       m_getter;
+    HypPropertySetter       m_setter;
+
 };
 
 } // namespace hyperion

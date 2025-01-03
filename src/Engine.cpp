@@ -7,6 +7,11 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/GBuffer.hpp>
+#include <rendering/EntityInstanceBatchHolderMap.hpp>
+#include <rendering/Deferred.hpp>
+#include <rendering/DefaultFormats.hpp>
+#include <rendering/PlaceholderData.hpp>
+#include <rendering/FinalPass.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -25,9 +30,12 @@
 #include <audio/AudioManager.hpp>
 
 #include <core/system/StackDump.hpp>
+#include <core/system/SystemEvent.hpp>
 
 #include <core/threading/Threads.hpp>
 #include <core/threading/TaskSystem.hpp>
+
+#include <core/utilities/DeferredScope.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -42,6 +50,8 @@
 
 #include <Game.hpp>
 
+#define HYP_LOG_FRAMES_PER_SECOND
+
 namespace hyperion {
 
 using renderer::FillMode;
@@ -55,6 +65,96 @@ SafeDeleter             *g_safe_deleter = nullptr;
 
 /* \brief Should the swapchain be rebuilt on the next frame? */
 static bool g_should_recreate_swapchain = false;
+
+class RenderThread final : public Thread<Scheduler>
+{
+public:
+    RenderThread(const RC<AppContext> &app_context)
+        : Thread(ThreadName::THREAD_RENDER, ThreadPriorityValue::HIGHEST),
+          m_app_context(app_context),
+          m_is_running(false)
+    {
+    }
+
+    // Overrides Start() to not create a thread object. Runs the render loop on the main thread.
+    bool Start()
+    {
+        AssertThrow(m_is_running.Exchange(true, MemoryOrder::ACQUIRE_RELEASE) == false);
+
+        // Must be current thread
+        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
+        SetCurrentThreadObject(this);
+        m_scheduler.SetOwnerThread(GetID());
+
+        (*this)();
+
+        return true;
+    }
+
+    void Stop()
+    {
+        m_is_running.Set(false, MemoryOrder::RELEASE);
+    }
+
+    HYP_FORCE_INLINE bool IsRunning() const
+        { return m_is_running.Get(MemoryOrder::ACQUIRE); }
+
+private:
+    virtual void operator()() override
+    {
+        AssertThrow(m_app_context != nullptr);
+        AssertThrow(m_app_context->GetGame() != nullptr);
+
+        SystemEvent event;
+
+#ifdef HYP_LOG_FRAMES_PER_SECOND
+        uint32 num_frames = 0;
+        float delta_time_accum = 0.0f;
+
+        GameCounter counter;
+#endif
+    
+        Queue<Scheduler::ScheduledTask> tasks;
+
+        while (m_is_running.Get(MemoryOrder::RELAXED)) {
+            // input manager stuff
+            while (m_app_context->PollEvent(event)) {
+                m_app_context->GetGame()->PushEvent(std::move(event));
+            }
+
+#ifdef HYP_LOG_FRAMES_PER_SECOND
+            counter.NextTick();
+            delta_time_accum += counter.delta;
+            num_frames++;
+
+            if (delta_time_accum >= 1.0f) {
+                DebugLog(
+                    LogType::Debug,
+                    "Render FPS: %f\n",
+                    1.0f / (delta_time_accum / float(num_frames))
+                );
+
+                delta_time_accum = 0.0f;
+                num_frames = 0;
+            }
+#endif
+
+            if (uint32 num_enqueued = m_scheduler.NumEnqueued()) {
+                m_scheduler.AcceptAll(tasks);
+
+                while (tasks.Any()) {
+                    tasks.Pop().Execute();
+                }
+            }
+
+            g_engine->RenderNextFrame(m_app_context->GetGame());
+        }
+    }
+
+    RC<AppContext>  m_app_context;
+    AtomicVar<bool> m_is_running;
+};
 
 #pragma region Render commands
 
@@ -95,6 +195,8 @@ struct RENDER_COMMAND(RecreateSwapchain) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
+#pragma region Engine
+
 const Handle<Engine> &Engine::GetInstance()
 {
     return g_engine;
@@ -108,17 +210,6 @@ Engine::Engine()
 Engine::~Engine()
 {
     AssertThrowMsg(m_instance == nullptr, "Engine instance must be destroyed before Engine object is destroyed");
-}
-
-HYP_API bool Engine::InitializeGame(Game *game)
-{
-    AssertThrow(game != nullptr);
-
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN, "Must be on main thread to initialize game instance");
-
-    game->Init_Internal();
-
-    return true;
 }
 
 void Engine::FindTextureFormatDefaults()
@@ -170,18 +261,19 @@ void Engine::FindTextureFormatDefaults()
 HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 {
     HYP_SCOPE;
-
-    const HypClass *memory_streamed_data_class = MemoryStreamedData::GetClass();
-    AssertThrow(memory_streamed_data_class->GetParent() == StreamedData::GetClass());
-
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
     AssertThrow(!m_is_initialized);
+    m_is_initialized = true;
 
-    Threads::SetCurrentThreadPriority(ThreadPriorityValue::HIGHEST);
+    HYP_DEFER({
+        m_is_initialized = false;
+    });
 
     AssertThrow(app_context != nullptr);
     m_app_context = app_context;
+
+    m_render_thread = MakeUnique<RenderThread>(m_app_context);
 
     m_app_context->GetMainWindow()->OnWindowSizeChanged.Bind([this](Vec2i new_window_size)
     {
@@ -200,14 +292,14 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     m_instance = MakeUnique<Instance>();
     
 #ifdef HYP_DEBUG_MODE
-    constexpr bool use_debug_layers = true;
+    constexpr bool use_debug_layers = false;// true;
 #else
     constexpr bool use_debug_layers = false;
 #endif
 
     HYPERION_ASSERT_RESULT(m_instance->Initialize(*app_context, use_debug_layers));
     
-    m_global_descriptor_table = MakeRenderObject<DescriptorTable>(*renderer::g_static_descriptor_table_decl);
+    m_global_descriptor_table = MakeRenderObject<DescriptorTable>(renderer::GetStaticDescriptorTableDeclaration());
 
     // Update app configuration to reflect device, after instance is created (e.g RT is not supported)
     m_app_context->UpdateConfigurationOverrides();
@@ -243,6 +335,8 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     if (m_app_context->GetArguments()["Profile"]) {
         StartProfilerConnectionThread();
     }
+
+    m_entity_instance_batch_holder_map = MakeUnique<EntityInstanceBatchHolderMap>();
 
     for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // Global
@@ -293,14 +387,14 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("FinalOutputTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
 
         // Scene
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ScenesBuffer"), m_render_data->scenes.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("LightsBuffer"), m_render_data->lights.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ObjectsBuffer"), m_render_data->objects.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("CamerasBuffer"), m_render_data->cameras.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("EnvGridsBuffer"), m_render_data->env_grids.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("EnvProbesBuffer"), m_render_data->env_probes.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("CurrentEnvProbe"), m_render_data->env_probes.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ShadowMapsBuffer"), m_render_data->shadow_map_data.GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ScenesBuffer"), m_render_data->scenes->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("LightsBuffer"), m_render_data->lights->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ObjectsBuffer"), m_render_data->objects->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("CamerasBuffer"), m_render_data->cameras->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("EnvGridsBuffer"), m_render_data->env_grids->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("EnvProbesBuffer"), m_render_data->env_probes->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("CurrentEnvProbe"), m_render_data->env_probes->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ShadowMapsBuffer"), m_render_data->shadow_map_data->GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("SHGridBuffer"), GetRenderData()->spherical_harmonics_grid.sh_grid_buffer);
 
         for (uint shadow_map_index = 0; shadow_map_index < max_shadow_maps; shadow_map_index++) {
@@ -318,9 +412,9 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("VoxelGridTexture"), GetPlaceholderData()->GetImageView3D1x1x1R8());
 
         // Object
-        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("MaterialsBuffer"), m_render_data->materials.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("SkeletonsBuffer"), m_render_data->skeletons.GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("EntityInstanceBatchesBuffer"), m_render_data->entity_instance_batches.GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("MaterialsBuffer"), m_render_data->materials->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("SkeletonsBuffer"), m_render_data->skeletons->GetBuffer(frame_index));
+        // m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("EntityInstanceBatchesBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(EntityInstanceBatch)));
 
         // Material
 #ifdef HYP_FEATURES_BINDLESS_TEXTURES
@@ -358,24 +452,34 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     
     HYP_SYNC_RENDER();
 
-    m_is_render_loop_active = true;
-    m_is_initialized = true;
+    AssertThrowMsg(m_app_context->GetGame() != nullptr, "Game not set on AppContext!");
+    m_app_context->GetGame()->Init_Internal();
+
+    // RenderThread::Start() is blocking, runs until exit
+    AssertThrowMsg(m_render_thread->Start(), "Failed to start render thread!");
+}
+
+bool Engine::IsRenderLoopActive() const
+{
+    return m_render_thread != nullptr
+        && m_render_thread->IsRunning();
 }
 
 void Engine::RequestStop()
 {
-    m_is_render_loop_active = false;
-    //m_stop_requested.Set(true, MemoryOrder::RELAXED);
+    if (m_render_thread != nullptr) {
+        if (m_render_thread->IsRunning()) {
+            m_render_thread->Stop();
+        }
+    }
 }
 
 void Engine::FinalizeStop()
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(ThreadName::THREAD_MAIN);
 
     m_is_shutting_down.Set(true, MemoryOrder::SEQUENTIAL);
-    m_is_render_loop_active = false;
 
     HYP_LOG(Engine, LogLevel::INFO, "Stopping all engine processes");
 
@@ -414,6 +518,8 @@ void Engine::FinalizeStop()
 
     m_final_pass.Reset();
 
+    m_entity_instance_batch_holder_map.Reset();
+
     m_render_data->Destroy();
 
     HYPERION_ASSERT_RESULT(m_global_descriptor_table->Destroy(m_instance->GetDevice()));
@@ -426,19 +532,15 @@ void Engine::FinalizeStop()
     RemoveAllEnqueuedRenderObjectsNow<renderer::Platform::CURRENT>(/* force */true);
 
     HYPERION_ASSERT_RESULT(m_instance->GetDevice()->Wait());
-
     HYPERION_ASSERT_RESULT(m_instance->Destroy());
+
+    m_render_thread->Join();
+    m_render_thread.Reset();
 }
 
 HYP_API void Engine::RenderNextFrame(Game *game)
 {
     HYP_PROFILE_BEGIN;
-
-    // if (m_stop_requested.Get(MemoryOrder::RELAXED)) {
-    //     FinalizeStop();
-
-    //     return;
-    // }
 
     Result frame_result = GetGPUInstance()->GetFrameHandler()->PrepareFrame(
         GetGPUInstance()->GetDevice(),
@@ -448,7 +550,6 @@ HYP_API void Engine::RenderNextFrame(Game *game)
     if (!frame_result) {
         m_crash_handler.HandleGPUCrash(frame_result);
 
-        m_is_render_loop_active = false;
         RequestStop();
 
         return;
@@ -551,7 +652,7 @@ void Engine::PreFrameUpdate(Frame *frame)
 
     g_safe_deleter->PerformEnqueuedDeletions();
 
-    ResetRenderState(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_SCENE | RENDER_STATE_CAMERA);
+    ResetRenderState(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_ACTIVE_LIGHT | RENDER_STATE_SCENE | RENDER_STATE_CAMERA);
 }
 
 void Engine::ResetRenderState(RenderStateMask mask)
@@ -563,16 +664,11 @@ void Engine::UpdateBuffersAndDescriptors(uint32 frame_index)
 {
     HYP_SCOPE;
 
-    m_render_data->scenes.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->cameras.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->objects.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->materials.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->skeletons.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->lights.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->shadow_map_data.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->env_probes.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->env_grids.UpdateBuffer(m_instance->GetDevice(), frame_index);
-    m_render_data->entity_instance_batches.UpdateBuffer(m_instance->GetDevice(), frame_index);
+    m_render_data->UpdateBuffers(frame_index);
+
+    for (auto &it : m_entity_instance_batch_holder_map->GetItems()) {
+        it.second->UpdateBuffer(m_instance->GetDevice(), frame_index);
+    }
 }
 
 void Engine::RenderDeferred(Frame *frame)
@@ -581,15 +677,18 @@ void Engine::RenderDeferred(Frame *frame)
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    m_deferred_renderer->Render(frame, render_state.GetScene().render_environment);
+    m_deferred_renderer->Render(frame, render_state.GetScene().render_environment.Get());
 }
 
-// GlobalDescriptorSetManager
+#pragma endregion Engine
+
+#pragma region GlobalDescriptorSetManager
+
 GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
 {
     Mutex::Guard guard(m_mutex);
 
-    for (auto &it : renderer::g_static_descriptor_table_decl->GetElements()) {
+    for (auto &it : renderer::GetStaticDescriptorTableDeclaration().GetElements()) {
         renderer::DescriptorSetLayout layout(it);
 
         DescriptorSetRef ref = layout.CreateDescriptorSet();
@@ -721,5 +820,7 @@ DescriptorSetRef GlobalDescriptorSetManager::GetDescriptorSet(Name name) const
 
     return DescriptorSetRef { };
 }
+
+#pragma endregion GlobalDescriptorSetManager
 
 } // namespace hyperion

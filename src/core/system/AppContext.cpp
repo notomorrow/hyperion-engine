@@ -169,9 +169,9 @@ SDLAppContext::~SDLAppContext()
     SDL_Quit();
 }
 
-UniquePtr<ApplicationWindow> SDLAppContext::CreateSystemWindow(WindowOptions window_options)
+RC<ApplicationWindow> SDLAppContext::CreateSystemWindow(WindowOptions window_options)
 {
-    UniquePtr<SDLApplicationWindow> window = MakeUnique<SDLApplicationWindow>(window_options.title.Data(), window_options.size);
+    RC<SDLApplicationWindow> window = MakeRefCountedPtr<SDLApplicationWindow>(window_options.title, window_options.size);
     window->Initialize(window_options);
 
     return window;
@@ -220,8 +220,11 @@ bool SDLAppContext::GetVkExtensions(Array<const char *> &out_extensions) const
 #pragma region AppContext
 
 AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
-    : m_configuration("app")
+    : m_configuration("app"),
+      m_game(nullptr)
 {
+    m_input_manager = CreateObject<InputManager>();
+
     m_name = std::move(name);
 
     if (m_name.Empty()) {
@@ -236,7 +239,7 @@ AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
         json::JSONString config_args_string = config_args.ToString();
         Array<String> config_args_string_split = config_args_string.Split(' ');
 
-        ArgParse arg_parse(g_default_arg_parse_definitions);
+        ArgParse arg_parse { g_default_arg_parse_definitions };
         ArgParse::ParseResult parse_result = arg_parse.Parse(arguments.GetCommand(), config_args_string_split);
 
         if (parse_result) { 
@@ -253,6 +256,16 @@ AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
 
 AppContext::~AppContext() = default;
 
+Game *AppContext::GetGame() const
+{
+    return m_game;
+}
+
+void AppContext::SetGame(Game *game)
+{
+    m_game = game;
+}
+
 const CommandLineArguments &AppContext::GetArguments() const
 {
     AssertThrow(m_arguments != nullptr);
@@ -260,9 +273,10 @@ const CommandLineArguments &AppContext::GetArguments() const
     return *m_arguments;
 }
 
-void AppContext::SetMainWindow(UniquePtr<ApplicationWindow> &&window)
+void AppContext::SetMainWindow(const RC<ApplicationWindow> &window)
 {
-    m_main_window = std::move(window);
+    m_main_window = window;
+    m_input_manager->SetWindow(m_main_window.Get());
 
     OnCurrentWindowChanged(m_main_window.Get());
 }
