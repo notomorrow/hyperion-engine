@@ -1,0 +1,80 @@
+/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
+#include <editor/EditorProject.hpp>
+
+#include <util/profiling/ProfileScope.hpp>
+
+#include <asset/Assets.hpp>
+#include <asset/serialization/fbom/FBOMWriter.hpp>
+#include <asset/serialization/fbom/FBOMReader.hpp>
+
+#include <core/utilities/DeferredScope.hpp>
+
+#include <scene/Scene.hpp>
+#include <scene/camera/Camera.hpp>
+
+namespace hyperion {
+
+EditorProject::EditorProject()
+    : m_last_saved_time(~0ull)
+{
+    m_scene = CreateObject<Scene>(nullptr, CreateObject<Camera>());
+}
+
+EditorProject::~EditorProject()
+{
+}
+
+bool EditorProject::IsSaved() const
+{
+    return uint64(m_last_saved_time) != ~0ull;
+}
+
+void EditorProject::Close()
+{
+    HYP_SCOPE;
+}
+
+Result<void> EditorProject::Save()
+{
+    if (m_filepath.Any()) {
+        return Save(m_filepath);
+    }
+
+    return Save(AssetManager::GetInstance()->GetBasePath() / "projects" / m_uuid.ToString() + ".hyp");
+}
+
+Result<void> EditorProject::Save(const FilePath &filepath)
+{
+    HYP_SCOPE;
+
+    if (filepath.Any()) {
+        m_filepath = filepath;
+    }
+
+    if (m_filepath.Empty()) {
+        return HYP_MAKE_ERROR(Error, "No filepath set");
+    }
+
+    const Time previous_last_saved_time = m_last_saved_time;
+    m_last_saved_time = Time::Now();
+
+    FileByteWriter byte_writer(m_filepath);
+
+    HYP_DEFER({
+        byte_writer.Close();
+    });
+
+    fbom::FBOMWriter writer { fbom::FBOMWriterConfig { } };
+    writer.Append(*this);
+
+    if (auto err = writer.Emit(&byte_writer)) {
+        m_last_saved_time = previous_last_saved_time;
+
+        return HYP_MAKE_ERROR(Error, "Failed to write project to disk");
+    }
+
+    return { };
+}
+
+} // namespace hyperion
