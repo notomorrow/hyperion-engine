@@ -4,6 +4,7 @@
 #include <editor/EditorDelegates.hpp>
 #include <editor/EditorCamera.hpp>
 #include <editor/EditorTask.hpp>
+#include <editor/EditorProject.hpp>
 
 #include <scene/Scene.hpp>
 
@@ -44,6 +45,8 @@
 #include <rendering/UIRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/subsystems/ScreenCapture.hpp>
+
+#include <rendering/Camera.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -140,19 +143,64 @@ void GenerateLightmapsEditorTask::Tick_Impl(float delta)
 
 #ifdef HYP_EDITOR
 
-EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const Handle<Scene> &scene, const Handle<Camera> &camera, const RC<UIStage> &ui_stage)
+EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIStage> &ui_stage)
     : m_app_context(app_context),
-      m_scene(scene),
-      m_camera(camera),
       m_ui_stage(ui_stage),
       m_editor_camera_enabled(false),
       m_should_cancel_next_click(false)
 {
     m_editor_delegates = new EditorDelegates();
+
+    OnProjectOpened.Bind([this](EditorProject *project)
+    {
+        const Handle<Scene> &project_scene = project->GetScene();
+        AssertThrow(project_scene.IsValid());
+
+        GetWorld()->AddScene(project_scene);
+
+        m_scene = project_scene;
+
+        m_camera = project_scene->GetCamera();
+        AssertThrow(InitObject(m_camera));
+
+        // m_camera->GetRenderResources().EnqueueBind();
+
+        m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
+        m_scene->GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
+
+    }).Detach();
+
+    OnProjectClosing.Bind([this](EditorProject *project)
+    {
+        const Handle<Scene> &project_scene = project->GetScene();
+        
+        if (project_scene.IsValid()) {
+            GetWorld()->RemoveScene(project_scene);
+
+            // @TODO Remove camera controller
+
+            project_scene->GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
+            
+
+            if (m_camera) {
+                // m_camera->GetRenderResources().EnqueueUnbind();
+
+                m_camera.Reset();
+            }
+
+            m_scene.Reset();
+        }
+    }).Detach();
 }
 
 EditorSubsystem::~EditorSubsystem()
 {
+    if (m_current_project) {
+        m_current_project->Close();
+
+        m_current_project.Reset();
+    }
+
     delete m_editor_delegates;
 }
 
@@ -160,8 +208,7 @@ void EditorSubsystem::Initialize()
 {
     HYP_SCOPE;
 
-    m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
-    m_scene->GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
+    NewProject();
 
     const Vec2i window_size = m_app_context->GetMainWindow()->GetDimensions();
 
@@ -708,6 +755,8 @@ void EditorSubsystem::InitDetailView()
 
 RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
 {
+    HYP_SCOPE;
+
     const FilePath serialized_file_directory = AssetManager::GetInstance()->GetBasePath() / "data" / "fonts";
     const FilePath serialized_file_path = serialized_file_directory / "Roboto.hyp";
 
@@ -751,8 +800,39 @@ RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
     return atlas;
 }
 
+
+void EditorSubsystem::NewProject()
+{
+    OpenProject(MakeRefCountedPtr<EditorProject>());
+}
+
+void EditorSubsystem::OpenProject(const RC<EditorProject> &project)
+{
+    HYP_SCOPE;
+
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    if (project == m_current_project) {
+        return;
+    }
+
+    if (m_current_project != nullptr) {
+        OnProjectClosing(m_current_project.Get());
+
+        m_current_project->Close();
+    }
+
+    if (project) {
+        m_current_project = project;
+
+        OnProjectOpened(m_current_project.Get());
+    }
+}
+
 void EditorSubsystem::AddTask(const RC<IEditorTask> &task)
 {
+    HYP_SCOPE;
+
     if (!task) {
         return;
     }

@@ -77,6 +77,7 @@ struct HYP_API TimeDiff
     int64   milliseconds;
 };
 
+HYP_STRUCT(Serialize="bitwise")
 class HYP_API Time
 {
 public:

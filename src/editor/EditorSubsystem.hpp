@@ -33,6 +33,7 @@ class UIObject;
 class FontAtlas;
 class EditorDelegates;
 class EditorSubsystem;
+class EditorProject;
 
 namespace sys {
 class AppContext;
@@ -95,7 +96,7 @@ class HYP_API EditorSubsystem : public Subsystem
     HYP_OBJECT_BODY(EditorSubsystem);
 
 public:
-    EditorSubsystem(const RC<AppContext> &app_context, const Handle<Scene> &scene, const Handle<Camera> &camera, const RC<UIStage> &ui_stage);
+    EditorSubsystem(const RC<AppContext> &app_context, const RC<UIStage> &ui_stage);
     virtual ~EditorSubsystem() override;
 
     virtual void Initialize() override;
@@ -121,6 +122,16 @@ public:
         { return m_action_stack.Get(); }
 
     HYP_METHOD()
+    HYP_FORCE_INLINE const RC<EditorProject> &GetCurrentProject() const
+        { return m_current_project; }
+
+    HYP_METHOD()
+    void NewProject();
+
+    HYP_METHOD()
+    void OpenProject(const RC<EditorProject> &project);
+
+    HYP_METHOD()
     void AddTask(const RC<IEditorTask> &task);
 
     HYP_METHOD()
@@ -134,6 +145,9 @@ public:
         { return m_editor_delegates; }
 
     Delegate<void, const NodeProxy &, const NodeProxy &>    OnFocusedNodeChanged;
+
+    Delegate<void, EditorProject *>                         OnProjectClosing;
+    Delegate<void, EditorProject *>                         OnProjectOpened;
 
 private:
     void CreateEditorUI();
@@ -153,6 +167,8 @@ private:
     RC<UIStage>                                                         m_ui_stage;
 
     OwningRC<EditorActionStack>                                         m_action_stack;
+
+    RC<EditorProject>                                                   m_current_project;
 
     FixedArray<Array<RunningEditorTask>, ThreadType::THREAD_TYPE_MAX>   m_tasks_by_thread_type;
 
