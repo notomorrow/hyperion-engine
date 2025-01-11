@@ -2,6 +2,7 @@
 #include <editor/EditorObjectProperties.hpp>
 #include <editor/EditorDelegates.hpp>
 #include <editor/EditorSubsystem.hpp>
+#include <editor/EditorProject.hpp>
 
 #include <rendering/Texture.hpp>
 #include <rendering/RenderEnvironment.hpp>
@@ -135,12 +136,17 @@ void HyperionEditor::Init()
     HYP_BREAKPOINT;
 #endif
 
-    g_engine->GetWorld()->AddSubsystem<EditorSubsystem>(
+    EditorSubsystem *editor_subsystem = g_engine->GetWorld()->AddSubsystem<EditorSubsystem>(
         GetAppContext(),
-        GetScene(),
-        GetScene()->GetCamera(),
         GetUIStage()
     );
+
+    m_scene = editor_subsystem->GetScene();
+
+    editor_subsystem->OnProjectOpened.Bind([this](EditorProject *project)
+    {
+        m_scene = project->GetScene();
+    }).Detach();
 
     // fbom::FBOMDeserializedObject obj;
     // fbom::FBOMReader reader({});

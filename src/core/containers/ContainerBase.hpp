@@ -293,7 +293,6 @@ public:
     }
 
     template <class ConstIterator>
-    [[nodiscard]]
     KeyType IndexOf(ConstIterator iter) const
     {
         static_assert(Container::is_contiguous, "Container must be contiguous to perform IndexOf()");

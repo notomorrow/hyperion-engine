@@ -165,14 +165,10 @@ public:
         PushConstantData push_constant = { }
     ) const;
 
-    void ExecuteDrawCalls(
-        Frame *frame,
-        const Handle<Camera> &camera,
-        const Bitset &bucket_bits,
-        const CullData *cull_data = nullptr,
-        PushConstantData push_constant = { }
-    ) const;
+    /*! \brief Perform a full reset, when this is not needed anymore. */
+    void Reset();
 
+protected:
     void ExecuteDrawCalls(
         Frame *frame,
         const Handle<Camera> &camera,
@@ -182,10 +178,6 @@ public:
         PushConstantData push_constant = { }
     ) const;
 
-    /*! \brief Perform a full reset, when this is not needed anymore. */
-    void Reset();
-
-protected:
     Handle<Camera>                  m_camera;
     WeakHandle<RenderEnvironment>   m_render_environment;
     RC<EntityDrawCollection>        m_draw_collection;

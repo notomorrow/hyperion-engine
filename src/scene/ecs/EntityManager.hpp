@@ -132,9 +132,9 @@ public:
     template <class SystemType>
     HYP_FORCE_INLINE bool HasSystem() const
     {
-        const TypeID id = TypeID::ForType<SystemType>();
+        static const TypeID type_id = TypeID::ForType<SystemType>();
 
-        return m_systems.Find(id) != m_systems.End();
+        return m_systems.Find(type_id) != m_systems.End();
     }
 
     /*! \brief Adds a System to the SystemExecutionGroup.
@@ -166,9 +166,9 @@ public:
     template <class SystemType>
     bool RemoveSystem()
     {
-        const TypeID id = TypeID::ForType<SystemType>();
+        static const TypeID type_id = TypeID::ForType<SystemType>();
 
-        return m_systems.Erase(id);
+        return m_systems.Erase(type_id);
     }
 
     /*! \brief Start processing all Systems in the SystemExecutionGroup.
@@ -371,7 +371,6 @@ public:
 
     static bool IsValidComponentType(TypeID component_type_id);
 
-
     /*! \brief Gets the thread mask of the thread that owns this EntityManager.
      *
      *  \return The thread mask.
@@ -533,16 +532,18 @@ public:
 
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
-        
-        AssertThrowMsg(it->second.HasComponent<Component>(), "Entity does not have component");
 
-        const TypeID component_type_id = TypeID::ForType<Component>();
-        const ComponentID component_id = it->second.GetComponentID<Component>();
+        const Optional<ComponentID> component_id_opt = it->second.TryGetComponentID<Component>();
+        AssertThrowMsg(component_id_opt.HasValue(), "Entity does not have component");
+
+        static const TypeID component_type_id = TypeID::ForType<Component>();
 
         auto component_container_it = m_containers.Find(component_type_id);
         AssertThrowMsg(component_container_it != m_containers.End(), "Component container does not exist");
 
-        return static_cast<ComponentContainer<Component> &>(*component_container_it->second).GetComponent(component_id);
+        HYP_MT_CHECK_READ(component_container_it->second->GetDataRaceDetector());
+
+        return static_cast<ComponentContainer<Component> &>(*component_container_it->second).GetComponent(*component_id_opt);
     }
 
     template <class Component>
@@ -571,19 +572,22 @@ public:
             return nullptr;
         }
 
-        const TypeID component_type_id = TypeID::ForType<Component>();
-        const ComponentID component_id = it->second.GetComponentID<Component>();
+        static const TypeID component_type_id = TypeID::ForType<Component>();
+
+        const Optional<ComponentID> component_id_opt = it->second.TryGetComponentID<Component>();
+
+        if (!component_id_opt) {
+            return nullptr;
+        }
 
         auto component_container_it = m_containers.Find(component_type_id);
         if (component_container_it == m_containers.End()) {
             return nullptr;
         }
 
-        if (!component_container_it->second->HasComponent(component_id)) {
-            return nullptr;
-        }
+        HYP_MT_CHECK_READ(component_container_it->second->GetDataRaceDetector());
 
-        return &static_cast<ComponentContainer<Component> &>(*component_container_it->second).GetComponent(component_id);
+        return &static_cast<ComponentContainer<Component> &>(*component_container_it->second).GetComponent(*component_id_opt);
     }
 
     template <class Component>
@@ -613,17 +617,17 @@ public:
 
         auto it = m_entities.Find(entity);
         AssertThrowMsg(it != m_entities.End(), "Entity does not exist");
+
+        const Optional<ComponentID> component_id_opt = it->second.TryGetComponentID(component_type_id);
         
-        if (!it->second.HasComponent(component_type_id)) {
+        if (!component_id_opt) {
             return AnyRef::Empty();
         }
-
-        const ComponentID component_id = it->second.GetComponentID(component_type_id);
 
         auto component_container_it = m_containers.Find(component_type_id);
         AssertThrowMsg(component_container_it != m_containers.End(), "Component container does not exist");
 
-        return component_container_it->second->TryGetComponent(component_id);
+        return component_container_it->second->TryGetComponent(*component_id_opt);
     }
 
     /*! \brief Gets a component using the dynamic type ID.
@@ -681,7 +685,8 @@ public:
         // @TODO: Replace the component if it already exists
         AssertThrowMsg(component_it == it->second.components.End(), "Entity already has component of type %s", TypeNameWithoutNamespace<Component>().Data());
 
-        const TypeID component_type_id = TypeID::ForType<Component>();
+        static const TypeID component_type_id = TypeID::ForType<Component>();
+
         const Pair<ComponentID, Component &> component_insert_result = GetContainer<Component>().AddComponent(std::move(component));
 
         it->second.components.Set<Component>(component_insert_result.first);
@@ -850,8 +855,10 @@ public:
 
     void Initialize();
 
-    void BeginUpdate(GameCounter::TickUnit delta);
-    void EndUpdate();
+    void BeginAsyncUpdate(GameCounter::TickUnit delta);
+    void EndAsyncUpdate();
+
+    void FlushCommandQueue(GameCounter::TickUnit delta);
 
     void PushCommand(EntityManagerCommandProc &&command)
         { m_command_queue.Push(std::move(command)); }

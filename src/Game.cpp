@@ -70,7 +70,7 @@ void Game::Init_Internal()
     );
 
     InitObject(camera);
-    camera->GetRenderResources().EnqueueBind();
+    // camera->GetRenderResources().EnqueueBind();
 
     m_scene = CreateObject<Scene>(
         SceneFlags::HAS_TLAS // default it to having a top level acceleration structure for RT
@@ -299,6 +299,11 @@ void Game::OnFrameBegin(Frame *frame)
 
     g_engine->GetRenderState()->AdvanceFrameCounter();
     g_engine->GetRenderState()->BindScene(m_scene.Get());
+
+    // temp
+    if (m_scene.IsValid() && m_scene->IsReady()) {
+        g_engine->GetRenderState()->BindCamera(m_scene->GetCamera().Get());
+    }
 }
 
 void Game::OnFrameEnd(Frame *frame)
@@ -308,6 +313,11 @@ void Game::OnFrameEnd(Frame *frame)
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     g_engine->GetRenderState()->UnbindScene();
+
+    // temp
+    if (m_scene.IsValid() && m_scene->IsReady()) {
+        g_engine->GetRenderState()->UnbindCamera(m_scene->GetCamera().Get());
+    }
 }
 
 } // namespace hyperion

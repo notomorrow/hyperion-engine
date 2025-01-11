@@ -158,13 +158,13 @@ protected:
 
     EntityManager                                               &m_entity_manager;
 
-    Array<TypeID>                                               m_component_type_ids;
-    Array<ComponentInfo>                                        m_component_infos;
-
 private:
     void SetWorld(World *world);
 
     FlatSet<WeakHandle<Entity>>                                 m_initialized_entities;
+
+    Array<TypeID>                                               m_component_type_ids;
+    Array<ComponentInfo>                                        m_component_infos;
 };
 
 /*! \brief A System is a class that operates on a set of components.

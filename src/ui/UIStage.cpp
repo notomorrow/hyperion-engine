@@ -628,12 +628,6 @@ UIEventHandlerResult UIStage::OnInputEvent(
             for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
                 const RC<UIObject> &ui_object = *it;
 
-                HYP_LOG(UI, LogLevel::DEBUG, "\tMOUSE DOWN Ray hit: {}", ui_object->GetName());
-            }
-
-            for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
-                const RC<UIObject> &ui_object = *it;
-
                 if (!first_hit) {
                     first_hit = ui_object.Get();
                 }
@@ -784,8 +778,6 @@ UIEventHandlerResult UIStage::OnInputEvent(
                 // } else {
                 //     first_hit = ui_object;
                 // }
-
-                HYP_LOG(UI, LogLevel::DEBUG, "Scroll UIObject {}", ui_object->GetName());
 
                 event_handler_result |= ui_object->OnScroll(MouseEvent {
                     .input_manager      = input_manager,

@@ -66,6 +66,11 @@ EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadID thread_id, EnumF
         // disable bits that are already enabled
         access_flags &= ~m_preallocated_states[index].access;
 
+        // If no access flags will be changed, return now (don't overwrite state)
+        if (access_flags == DataAccessFlags::ACCESS_NONE) {
+            return DataAccessFlags::ACCESS_NONE;
+        }
+
         m_preallocated_states[index].access |= access_flags;
         m_preallocated_states[index].state = state;
     } else {
@@ -86,14 +91,15 @@ EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadID thread_id, EnumF
         // disable bits that are already enabled
         access_flags &= ~it->access;
 
+        // If no access flags will be changed, return now (don't overwrite state)
+        if (access_flags == DataAccessFlags::ACCESS_NONE) {
+            return DataAccessFlags::ACCESS_NONE;
+        }
+
         it->access |= access_flags;
         it->state = state;
 
         index = (it - m_dynamic_states.Begin()) + num_preallocated_states;
-    }
-
-    if (access_flags == DataAccessFlags::ACCESS_NONE) {
-        return DataAccessFlags::ACCESS_NONE;
     }
 
     if (index == ~0u) {

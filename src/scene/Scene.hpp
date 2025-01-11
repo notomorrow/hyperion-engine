@@ -210,14 +210,7 @@ public:
     
     void Init();
 
-    /*! \brief Update the scene, including all entities, lights, etc.
-        This is to be called from the GAME thread.
-        You will not likely need to call this manually, as it is called
-        by the World, unless you are using a Scene as a non-world scene.
-        * @param delta The delta time since the last update.
-    */
-    void BeginUpdate(GameCounter::TickUnit delta);
-    void EndUpdate();
+    void Update(GameCounter::TickUnit delta);
 
     RenderCollector::CollectionResult CollectEntities(
         RenderCollector &render_collector, 
@@ -243,10 +236,9 @@ public:
     bool AddToWorld(World *world);
     bool RemoveFromWorld();
     
-
-private:
     void EnqueueRenderUpdates();
 
+private:
     Name                            m_name;
 
     ThreadID                        m_owner_thread_id;

@@ -478,14 +478,10 @@ void EntityManager::NotifySystemsOfEntityRemoved(ID<Entity> entity, const TypeMa
     }
 }
 
-void EntityManager::BeginUpdate(GameCounter::TickUnit delta)
+void EntityManager::BeginAsyncUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_mask);
-    
-    if (m_command_queue.HasUpdates()) {
-        m_command_queue.Execute(*this, delta);
-    }
     
     TaskBatch *root_task_batch = nullptr;
 
@@ -513,13 +509,23 @@ void EntityManager::BeginUpdate(GameCounter::TickUnit delta)
     }
 }
 
-void EntityManager::EndUpdate()
+void EntityManager::EndAsyncUpdate()
 {
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_mask);
 
     for (SystemExecutionGroup &system_execution_group : m_system_execution_groups) {
         system_execution_group.FinishProcessing();
+    }
+}
+
+void EntityManager::FlushCommandQueue(GameCounter::TickUnit delta)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(m_owner_thread_mask);
+    
+    if (m_command_queue.HasUpdates()) {
+        m_command_queue.Execute(*this, delta);
     }
 }
 

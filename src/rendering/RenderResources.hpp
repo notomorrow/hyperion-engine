@@ -50,6 +50,13 @@ public:
     /*! \brief Waits (blocking) until all operations on this RenderResources are complete and the RenderResources is no longer being used. */
     virtual void WaitForCompletion() override final;
 
+    /*! \brief Performs an operation on the render thread if the resources are initialized,
+     *  otherwise executes it immediately on the calling thread. Initialization on the render thread will not begin until at least the end of the given proc,
+     *  so it is safe to use this method on any thread.
+     *  \param proc The operation to perform.
+     *  \param force_render_thread If true, the operation will be performed on the render thread regardless of initialization state. */
+    void Execute(Proc<void> &&proc, bool force_render_thread = false);
+
     virtual ResourceMemoryPoolHandle GetPoolHandle() const override final
     {
         return m_pool_handle;
@@ -80,13 +87,6 @@ protected:
     virtual GPUBufferHolderBase *GetGPUBufferHolder() const { return nullptr; }
 
     virtual Name GetTypeName() const override = 0;
-
-    /*! \brief Performs an operation on the render thread if the resources are initialized,
-     *  otherwise executes it immediately on the calling thread. Initialization on the render thread will not begin until at least the end of the given proc,
-     *  so it is safe to use this method on any thread.
-     *  \param proc The operation to perform.
-     *  \param force_render_thread If true, the operation will be performed on the render thread regardless of initialization state. */
-    void Execute(Proc<void> &&proc, bool force_render_thread = false);
 
     void SetNeedsUpdate();
 

@@ -18,7 +18,13 @@ namespace hyperion {
 EditorProject::EditorProject()
     : m_last_saved_time(~0ull)
 {
-    m_scene = CreateObject<Scene>(nullptr, CreateObject<Camera>());
+    Handle<Camera> camera = CreateObject<Camera>();
+    camera->SetFlags(CameraFlags::MATCH_WINDOW_SIZE);
+    camera->SetFOV(70.0f);
+    camera->SetNear(0.01f);
+    camera->SetFar(30000.0f);
+
+    m_scene = CreateObject<Scene>(nullptr, camera);
 }
 
 EditorProject::~EditorProject()

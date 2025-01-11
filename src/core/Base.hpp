@@ -126,13 +126,23 @@ protected:
         );
     }
 
+    void AddDelegateHandler(Name name, DelegateHandler &&delegate_handler)
+    {
+        m_delegate_handlers.Add(name, std::move(delegate_handler));
+    }
+
     void AddDelegateHandler(DelegateHandler &&delegate_handler)
     {
-        m_delegate_handlers.PushBack(std::move(delegate_handler));
+        m_delegate_handlers.Add(std::move(delegate_handler));
+    }
+
+    bool RemoveDelegateHandler(WeakName name)
+    {
+        return m_delegate_handlers.Remove(name);
     }
     
-    AtomicVar<uint16>           m_init_state;
-    Array<DelegateHandler>      m_delegate_handlers;
+    AtomicVar<uint16>   m_init_state;
+    DelegateHandlerSet  m_delegate_handlers;
 };
 
 } // namespace hyperion
