@@ -161,7 +161,7 @@ TaskThread *TaskThreadPool::GetNextTaskThread()
                     return static_cast<TaskThread *>(current_thread_object);  // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
                 }
 
-                HYP_LOG(Tasks, LogLevel::WARNING, "Maximum spins reached in GetNextTaskThread -- all task threads busy");
+                HYP_LOG(Tasks, Warning, "Maximum spins reached in GetNextTaskThread -- all task threads busy");
 
                 return task_thread;
             }

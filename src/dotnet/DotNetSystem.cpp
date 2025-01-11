@@ -70,19 +70,19 @@ static Optional<FilePath> FindAssemblyFilePath(const FilePath &base_path, const 
     FilePath filepath = FilePath::Current() / path;
 
     if (!filepath.Exists()) {
-        HYP_LOG(DotNET, LogLevel::WARNING, "Failed to load .NET assembly at path: {}. Trying next path...", filepath);
+        HYP_LOG(DotNET, Warning, "Failed to load .NET assembly at path: {}. Trying next path...", filepath);
 
         filepath = base_path / path;
     }
     
     if (!filepath.Exists()) {
-        HYP_LOG(DotNET, LogLevel::WARNING, "Failed to load .NET assembly at path: {}. Trying next path...", filepath);
+        HYP_LOG(DotNET, Warning, "Failed to load .NET assembly at path: {}. Trying next path...", filepath);
 
         filepath = GetBasePath() / "scripts" / "bin" / path;
     }
     
     if (!filepath.Exists()) {
-        HYP_LOG(DotNET, LogLevel::ERR, "Failed to load .NET assembly at path: {}. Could not locate an assembly for {}.", filepath, path);
+        HYP_LOG(DotNET, Error, "Failed to load .NET assembly at path: {}. Could not locate an assembly for {}.", filepath, path);
 
         return { };
     }
@@ -108,7 +108,7 @@ public:
     virtual ~DotNetImpl() override
     {
         if (!ShutdownDotNetRuntime()) {
-            HYP_LOG(DotNET, LogLevel::ERR, "Failed to shutdown .NET runtime");
+            HYP_LOG(DotNET, Error, "Failed to shutdown .NET runtime");
         }
     }
 
@@ -189,7 +189,7 @@ public:
 
             Assembly *assembly = it->second.Get();
 
-            HYP_LOG(DotNET, LogLevel::DEBUG, "Loading assembly {} from native side...", entry.first);
+            HYP_LOG(DotNET, Debug, "Loading assembly {} from native side...", entry.first);
 
             // Initialize all core assemblies
             int result = m_initialize_assembly_fptr(
@@ -203,7 +203,7 @@ public:
                 HYP_FAIL("Failed to load core assembly %s: Got error code %d", entry.first.Data(), result);
             }
 
-            HYP_LOG(DotNET, LogLevel::DEBUG, "Loaded assembly {} from native side", entry.first);
+            HYP_LOG(DotNET, Debug, "Loaded assembly {} from native side", entry.first);
         }
     }
 
@@ -225,7 +225,7 @@ public:
         );
 
         if (result != int(LoadAssemblyResult::OK)) {
-            HYP_LOG(DotNET, LogLevel::ERR, "Failed to load assembly {}: Got error code {}", path, result);
+            HYP_LOG(DotNET, Error, "Failed to load assembly {}: Got error code {}", path, result);
 
             return nullptr;
         }
@@ -244,7 +244,7 @@ public:
             return false;
         }
 
-        HYP_LOG(DotNET, LogLevel::INFO, "Unloading assembly...");
+        HYP_LOG(DotNET, Info, "Unloading assembly...");
 
         int32 result;
         m_unload_assembly_fptr(&assembly_guid, &result);
@@ -267,12 +267,12 @@ public:
         void *load_assembly_and_get_function_pointer_fptr = nullptr;
 
         if (m_get_delegate_fptr(m_cxt, hdt_load_assembly_and_get_function_pointer, &load_assembly_and_get_function_pointer_fptr) != 0) {
-            HYP_LOG(DotNET, LogLevel::ERR, "Failed to get delegate: Failed to get function pointer");
+            HYP_LOG(DotNET, Error, "Failed to get delegate: Failed to get function pointer");
 
             return nullptr;
         }
 
-        HYP_LOG(DotNET, LogLevel::INFO, "Loading .NET assembly: {}\tType Name: {}\tMethod Name: {}", assembly_path, type_name, method_name);
+        HYP_LOG(DotNET, Info, "Loading .NET assembly: {}\tType Name: {}\tMethod Name: {}", assembly_path, type_name, method_name);
 
         void *delegate_ptr = nullptr;
         
@@ -280,7 +280,7 @@ public:
         bool result = load_assembly_and_get_function_pointer(assembly_path, type_name, method_name, delegate_type_name, nullptr, &delegate_ptr) == 0;
 
         if (!result) {
-            HYP_LOG(DotNET, LogLevel::ERR, "Failed to get delegate: Failed to load assembly and get function pointer");
+            HYP_LOG(DotNET, Error, "Failed to get delegate: Failed to load assembly and get function pointer");
 
             return nullptr;
         }
@@ -328,7 +328,7 @@ private:
             return false;
         }
 
-        HYP_LOG(DotNET, LogLevel::DEBUG, "Loading hostfxr from: {}", &buffer[0]);
+        HYP_LOG(DotNET, Debug, "Loading hostfxr from: {}", &buffer[0]);
 
         // Load hostfxr and get desired exports
         m_dll = DynamicLibrary::Load(buffer);
@@ -341,7 +341,7 @@ private:
         m_get_delegate_fptr = (hostfxr_get_runtime_delegate_fn)m_dll->GetFunction("hostfxr_get_runtime_delegate");
         m_close_fptr = (hostfxr_close_fn)m_dll->GetFunction("hostfxr_close");
 
-        HYP_LOG(DotNET, LogLevel::DEBUG, "Loaded hostfxr functions");
+        HYP_LOG(DotNET, Debug, "Loaded hostfxr functions");
 
         return m_init_fptr && m_get_delegate_fptr && m_close_fptr;
     }
@@ -350,7 +350,7 @@ private:
     {
         AssertThrow(m_cxt == nullptr);
 
-        HYP_LOG(DotNET, LogLevel::DEBUG, "Initializing .NET runtime");
+        HYP_LOG(DotNET, Debug, "Initializing .NET runtime");
 
         
         PlatformString runtime_config_path;
@@ -364,12 +364,12 @@ private:
 #endif
 
         if (m_init_fptr(runtime_config_path.Data(), nullptr, &m_cxt) != 0) {
-            HYP_LOG(DotNET, LogLevel::ERR, "Failed to initialize .NET runtime");
+            HYP_LOG(DotNET, Error, "Failed to initialize .NET runtime");
 
             return false;
         }
 
-        HYP_LOG(DotNET, LogLevel::DEBUG, "Initialized .NET runtime");
+        HYP_LOG(DotNET, Debug, "Initialized .NET runtime");
 
         return true;
     }
@@ -378,12 +378,12 @@ private:
     {
         AssertThrow(m_cxt != nullptr);
 
-        HYP_LOG(DotNET, LogLevel::DEBUG, "Shutting down .NET runtime");
+        HYP_LOG(DotNET, Debug, "Shutting down .NET runtime");
 
         m_close_fptr(m_cxt);
         m_cxt = nullptr;
 
-        HYP_LOG(DotNET, LogLevel::DEBUG, "Shut down .NET runtime");
+        HYP_LOG(DotNET, Debug, "Shut down .NET runtime");
 
         return true;
     }
@@ -458,13 +458,13 @@ DotNetSystem::~DotNetSystem() = default;
 bool DotNetSystem::EnsureInitialized() const
 {
     if (!IsEnabled()) {
-        HYP_LOG(DotNET, LogLevel::ERR, "DotNetSystem not enabled, cannot load/unload assemblies");
+        HYP_LOG(DotNET, Error, "DotNetSystem not enabled, cannot load/unload assemblies");
 
         return false;
     }
 
     if (!IsInitialized()) {
-        HYP_LOG(DotNET, LogLevel::ERR, "DotNetSystem not initialized, call Initialize() before attempting to load/unload assemblies");
+        HYP_LOG(DotNET, Error, "DotNetSystem not initialized, call Initialize() before attempting to load/unload assemblies");
 
         return false;
     }

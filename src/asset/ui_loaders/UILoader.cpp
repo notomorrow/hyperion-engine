@@ -219,7 +219,7 @@ static Optional<Color> ParseColor(const String &str)
 
             const long value = std::strtol(substr.Data(), nullptr, 16);
 
-            HYP_LOG(UI, LogLevel::DEBUG, "substr: {}, value: {}", substr, value);
+            HYP_LOG(UI, Debug, "substr: {}, value: {}", substr, value);
 
             if (uint32(value) >= 256) {
                 return { };
@@ -398,7 +398,7 @@ public:
                 if (Optional<UIObjectSize> parsed_size = ParseUIObjectSize(it->second); parsed_size.HasValue()) {
                     size = *parsed_size;
                 } else {
-                    HYP_LOG(Assets, LogLevel::WARNING, "UI object has invalid size property: {}", it->second);
+                    HYP_LOG(Assets, Warning, "UI object has invalid size property: {}", it->second);
                 }
             }
 
@@ -442,7 +442,7 @@ public:
                 if (Optional<UIObjectSize> parsed_size = ParseUIObjectSize(it->second); parsed_size.HasValue()) {
                     ui_object->SetInnerSize(*parsed_size);
                 } else {
-                    HYP_LOG(Assets, LogLevel::WARNING, "UI object has invalid inner size property: {}", it->second);
+                    HYP_LOG(Assets, Warning, "UI object has invalid inner size property: {}", it->second);
                 }
             }
 
@@ -450,7 +450,7 @@ public:
                 if (Optional<UIObjectSize> parsed_size = ParseUIObjectSize(it->second); parsed_size.HasValue()) {
                     ui_object->SetMaxSize(*parsed_size);
                 } else {
-                    HYP_LOG(Assets, LogLevel::WARNING, "UI object has invalid max size property: {}", it->second);
+                    HYP_LOG(Assets, Warning, "UI object has invalid max size property: {}", it->second);
                 }
             }
 
@@ -458,9 +458,9 @@ public:
                 if (Optional<Color> parsed_color = ParseColor(it->second); parsed_color.HasValue()) {
                     ui_object->SetBackgroundColor(*parsed_color);
 
-                    HYP_LOG(Assets, LogLevel::DEBUG, "Parsed color {} : {}", it->second, *parsed_color);
+                    HYP_LOG(Assets, Debug, "Parsed color {} : {}", it->second, *parsed_color);
                 } else {
-                    HYP_LOG(Assets, LogLevel::WARNING, "UI object has invalid background color property: {}", it->second);
+                    HYP_LOG(Assets, Warning, "UI object has invalid background color property: {}", it->second);
                 }
             }
 
@@ -468,7 +468,7 @@ public:
                 if (Optional<Color> parsed_color = ParseColor(it->second); parsed_color.HasValue()) {
                     ui_object->SetTextColor(*parsed_color);
                 } else {
-                    HYP_LOG(Assets, LogLevel::WARNING, "UI object has invalid text color property: {}", it->second);
+                    HYP_LOG(Assets, Warning, "UI object has invalid text color property: {}", it->second);
                 }
             }
 
@@ -476,7 +476,7 @@ public:
                 if (Optional<float> parsed_float = ParseFloat(it->second); parsed_float.HasValue()) {
                     ui_object->SetTextSize(*parsed_float);
                 } else {
-                    HYP_LOG(Assets, LogLevel::WARNING, "UI object has invalid text size property: {}", it->second);
+                    HYP_LOG(Assets, Warning, "UI object has invalid text size property: {}", it->second);
                 }
             }
 
@@ -542,7 +542,7 @@ public:
                         continue;
                     }
 
-                    HYP_LOG(Assets, LogLevel::WARNING, "Unknown event attribute: {}", attribute.first);
+                    HYP_LOG(Assets, Warning, "Unknown event attribute: {}", attribute.first);
                 } else if (!g_standard_ui_object_attributes.Contains(attribute_name_upper)) {
                     const String attribute_name_lower = attribute.first.ToLower();
 
@@ -561,7 +561,7 @@ public:
                             HypProperty *hyp_property = dynamic_cast<HypProperty *>(&*member_it);
 
                             if (!hyp_property || !hyp_property->CanDeserialize()) {
-                                HYP_LOG(Assets, LogLevel::ERR, "Cannot set HypClass property: {}", member_it->GetName());
+                                HYP_LOG(Assets, Error, "Cannot set HypClass property: {}", member_it->GetName());
 
                                 continue;
                             }
@@ -570,7 +570,7 @@ public:
                             json::ParseResult json_parse_result = ParseJSON(attribute.second, data);
 
                             if (!json_parse_result.ok) {
-                                HYP_LOG(Assets, LogLevel::ERR, "Failed to parse JSON \"{}\": {}", attribute.second, json_parse_result.message);
+                                HYP_LOG(Assets, Error, "Failed to parse JSON \"{}\": {}", attribute.second, json_parse_result.message);
 
                                 continue;
                             }
@@ -604,7 +604,7 @@ public:
                     LastObject()->SetScriptComponent(std::move(script_component));
                 }
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "Script node missing assembly or class attribute");
+                HYP_LOG(Assets, Warning, "Script node missing assembly or class attribute");
             }
         }
     }
@@ -622,7 +622,7 @@ public:
 
             // must always have one object in stack.
             if (m_ui_object_stack.Size() <= 1) {
-                HYP_LOG(Assets, LogLevel::WARNING, "Invalid UI object structure");
+                HYP_LOG(Assets, Warning, "Invalid UI object structure");
 
                 return;
             }
@@ -660,7 +660,7 @@ LoadedAsset UILoader::LoadAsset(LoaderState &state) const
     auto sax_result = parser.Parse(&state.stream);
 
     if (!sax_result) {
-        HYP_LOG(Assets, LogLevel::WARNING, "Failed to parse UI stage: {}", sax_result.message);
+        HYP_LOG(Assets, Warning, "Failed to parse UI stage: {}", sax_result.message);
 
         return { { LoaderResult::Status::ERR, sax_result.message } };
     }

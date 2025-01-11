@@ -711,7 +711,7 @@ protected:
 #ifdef HYP_DEBUG_MODE
                 HYP_FAIL("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 #else
-                HYP_LOG(Tasks, LogLevel::WARNING, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
+                HYP_LOG(Tasks, Warning, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 
                 Base::Await_Internal();
 #endif
@@ -786,7 +786,7 @@ public:
 #ifdef HYP_DEBUG_MODE
                 HYP_FAIL("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 #else
-                HYP_LOG(Tasks, LogLevel::WARNING, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
+                HYP_LOG(Tasks, Warning, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 
                 Base::Await_Internal();
 #endif
@@ -850,7 +850,7 @@ protected:
 #ifdef HYP_DEBUG_MODE
                 HYP_FAIL("Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 #else
-                HYP_LOG(Tasks, LogLevel::WARNING, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
+                HYP_LOG(Tasks, Warning, "Task was destroyed before it was completed. Waiting on task to complete. Create a fire-and-forget task to prevent this.");
 
                 Base::Await_Internal();
 #endif

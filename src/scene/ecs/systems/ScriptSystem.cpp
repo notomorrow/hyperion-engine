@@ -33,7 +33,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
 
         for (auto [entity, script_component] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos())) {
             if (ANSIStringView(script.assembly_path) == ANSIStringView(script_component.script.assembly_path)) {
-                HYP_LOG(Script, LogLevel::INFO, "ScriptSystem: Reloading script for entity #{}", entity.Value());
+                HYP_LOG(Script, Info, "ScriptSystem: Reloading script for entity #{}", entity.Value());
 
                 // Reload the script
                 script_component.flags |= ScriptComponentFlags::RELOADING;
@@ -48,7 +48,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
 
                 script_component.flags &= ~ScriptComponentFlags::RELOADING;
 
-                HYP_LOG(Script, LogLevel::INFO, "ScriptSystem: Script reloaded for entity #{}", entity.Value());
+                HYP_LOG(Script, Info, "ScriptSystem: Script reloaded for entity #{}", entity.Value());
             }
         }
     }));
@@ -131,10 +131,10 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
 
     if (UniquePtr<dotnet::Assembly> assembly = dotnet::DotNetSystem::GetInstance().LoadAssembly(assembly_path.Data())) {
         if (dotnet::Class *class_ptr = assembly->GetClassObjectHolder().FindClassByName(script_component.script.class_name)) {
-            HYP_LOG(Script, LogLevel::INFO, "ScriptSystem::OnEntityAdded: Loaded class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
+            HYP_LOG(Script, Info, "ScriptSystem::OnEntityAdded: Loaded class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
 
             if (!class_ptr->HasParentClass("Script")) {
-                HYP_LOG(Script, LogLevel::ERR, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", script_component.script.class_name, script_component.script.assembly_path);
+                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", script_component.script.class_name, script_component.script.assembly_path);
 
                 return;
             }
@@ -144,7 +144,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
             if (!(script_component.flags & ScriptComponentFlags::BEFORE_INIT_CALLED)) {
                 if (dotnet::Method *before_init_method_ptr = class_ptr->GetMethod("BeforeInit")) {
                     HYP_NAMED_SCOPE("Call BeforeInit() on script component");
-                    HYP_LOG(Script, LogLevel::INFO, "Calling BeforeInit() on script component");
+                    HYP_LOG(Script, Info, "Calling BeforeInit() on script component");
 
                     AssertThrow(GetEntityManager().GetScene() != nullptr);
                     AssertThrow(GetEntityManager().GetScene()->GetWorld() != nullptr);
@@ -162,7 +162,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
             if (!(script_component.flags & ScriptComponentFlags::INIT_CALLED)) {
                 if (dotnet::Method *init_method_ptr = class_ptr->GetMethod("Init")) {
                     HYP_NAMED_SCOPE("Call Init() on script component");
-                    HYP_LOG(Script, LogLevel::INFO, "Calling Init() on script component");
+                    HYP_LOG(Script, Info, "Calling Init() on script component");
 
                     script_component.object.InvokeMethod<void, dotnet::Object *>(
                         init_method_ptr,
@@ -178,13 +178,13 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
     }
 
     if (!script_component.assembly) {
-        HYP_LOG(Script, LogLevel::ERR, "ScriptSystem::OnEntityAdded: Failed to load assembly '{}'", script_component.script.assembly_path);
+        HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to load assembly '{}'", script_component.script.assembly_path);
 
         return;
     }
 
     if (!script_component.object.IsValid()) {
-        HYP_LOG(Script, LogLevel::ERR, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
+        HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
 
         return;
     }

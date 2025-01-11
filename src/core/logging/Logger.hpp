@@ -134,12 +134,12 @@ static constexpr auto LogLevelToString()
     }
 }
 
-template <LogLevel Level, auto FunctionNameString, auto FormatString, class... Args>
+template <LogCategory Category, auto FunctionNameString, auto FormatString, class... Args>
 static inline void Log_Internal(Logger &logger, const LogChannel &channel, Args &&... args)
 {
     static const auto prefix_static_string = containers::helpers::Concat<
         StaticString("["),
-        LogLevelToString< Level >(),
+        LogLevelToString< Category.GetLevel() >(),
         StaticString("] "),
         FunctionNameString,
         StaticString(": ")
@@ -159,14 +159,14 @@ static inline void Log_Internal(Logger &logger, const LogChannel &channel, Args 
 
 struct LogOnceHelper
 {
-    template <auto LogOnceFileName, int32 LogOnceLineNumber, auto LogOnceFunctionName, LogLevel LogOnceLogLevel, auto LogOnceFormatString, class... LogOnceArgTypes>
+    template <auto LogOnceFileName, int32 LogOnceLineNumber, auto LogOnceFunctionName, LogCategory Category, auto LogOnceFormatString, class... LogOnceArgTypes>
     static void ExecuteLogOnce(Logger &logger, const LogChannel &channel, LogOnceArgTypes &&... args)
     {
         static struct LogOnceHelper_Impl
         {
             LogOnceHelper_Impl(Logger &logger, const LogChannel &channel, LogOnceArgTypes &&... args)
             {
-                Log_Internal< LogOnceLogLevel, LogOnceFunctionName, LogOnceFormatString >(logger, channel, std::forward<LogOnceArgTypes>(args)...);
+                Log_Internal< Category, LogOnceFunctionName, LogOnceFormatString >(logger, channel, std::forward<LogOnceArgTypes>(args)...);
             }
         } impl { logger, channel, std::forward<LogOnceArgTypes>(args)... };
     }
@@ -179,6 +179,7 @@ struct LogOnceHelper
 using logging::Logger;
 using logging::LogChannel;
 using logging::LogLevel;
+using logging::LogCategory;
 
 } // namespace hyperion
 
@@ -196,9 +197,9 @@ using logging::LogLevel;
     #undef HYP_LOG_ONCE
 #endif
 
-#define HYP_LOG_ONCE(channel, level, fmt, ...) \
+#define HYP_LOG_ONCE(channel, category, fmt, ...) \
     do { \
-        ::hyperion::logging::detail::LogOnceHelper::ExecuteLogOnce< HYP_STATIC_STRING(__FILE__), __LINE__, HYP_PRETTY_FUNCTION_NAME, level, HYP_STATIC_STRING(fmt) >(hyperion::logging::GetLogger(), hyperion::Log_##channel, ##__VA_ARGS__); \
+        ::hyperion::logging::detail::LogOnceHelper::ExecuteLogOnce< HYP_STATIC_STRING(__FILE__), __LINE__, HYP_PRETTY_FUNCTION_NAME, hyperion::logging::category(), HYP_STATIC_STRING(fmt) >(hyperion::logging::GetLogger(), hyperion::Log_##channel, ##__VA_ARGS__); \
     } while (0)
 
 #endif

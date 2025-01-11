@@ -717,7 +717,7 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
         return;
     }
 
-    // HYP_LOG(Rendering, LogLevel::DEBUG, "Rendering {} draw calls in {} batches", draw_state.GetDrawCalls().Size(), num_batches);
+    // HYP_LOG(Rendering, Debug, "Rendering {} draw calls in {} batches", draw_state.GetDrawCalls().Size(), num_batches);
 
     ParallelForEach(divided_draw_calls, num_batches, pool,
         [&](Span<const DrawCall> draw_calls, uint index, uint)

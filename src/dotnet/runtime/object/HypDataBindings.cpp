@@ -295,7 +295,7 @@ HYP_EXPORT int8 HypData_GetHypObject(const HypData *hyp_data, dotnet::ObjectRefe
     }
 
     if (hyp_data->IsNull()) {
-        HYP_LOG(Object, LogLevel::ERR, "Cannot get HypObject from null HypData");
+        HYP_LOG(Object, Error, "Cannot get HypObject from null HypData");
 
         return false;
     }
@@ -303,7 +303,7 @@ HYP_EXPORT int8 HypData_GetHypObject(const HypData *hyp_data, dotnet::ObjectRefe
     const HypClass *hyp_class = GetClass(hyp_data->GetTypeID());
 
     if (!hyp_class) {
-        HYP_LOG(Object, LogLevel::ERR, "No HypClass defined for TypeID {}", hyp_data->GetTypeID().Value());
+        HYP_LOG(Object, Error, "No HypClass defined for TypeID {}", hyp_data->GetTypeID().Value());
 
         return false;
     }
@@ -321,7 +321,7 @@ HYP_EXPORT int8 HypData_GetHypObject(const HypData *hyp_data, dotnet::ObjectRefe
         return true;
     }
 
-    HYP_LOG(Object, LogLevel::ERR, "Failed to get managed object for instance of HypClass {}", hyp_class->GetName());
+    HYP_LOG(Object, Error, "Failed to get managed object for instance of HypClass {}", hyp_class->GetName());
 
     return false;
 }
@@ -415,13 +415,13 @@ HYP_EXPORT int8 HypData_SetHypStruct(HypData *hyp_data, const HypClass *hyp_clas
     }
 
     if (!hyp_class->IsStructType()) {
-        HYP_LOG(Object, LogLevel::ERR, "HypClass {} is not a struct type", hyp_class->GetName());
+        HYP_LOG(Object, Error, "HypClass {} is not a struct type", hyp_class->GetName());
 
         return false;
     }
 
     if (size != hyp_class->GetSize()) {
-        HYP_LOG(Object, LogLevel::ERR, "Given a buffer size of {} but HypClass {} has a size of {}",
+        HYP_LOG(Object, Error, "Given a buffer size of {} but HypClass {} has a size of {}",
             size, hyp_class->GetName(), hyp_class->GetSize());
 
         return false;

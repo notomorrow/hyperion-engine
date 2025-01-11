@@ -134,7 +134,7 @@ public:
 
     void IterateRequests()
     {
-        HYP_LOG(Profile, LogLevel::INFO, "Iterate requests ({})", m_requests.Size());
+        HYP_LOG(Profile, Info, "Iterate requests ({})", m_requests.Size());
 
         Threads::AssertOnThread(m_thread.GetID());
 
@@ -176,7 +176,7 @@ public:
         Threads::AssertOnThread(m_thread.GetID());
 
         if (m_endpoint_url.Empty()) {
-            HYP_LOG(Profile, LogLevel::ERR, "Profiler connection endpoint URL not set, cannot start connection.");
+            HYP_LOG(Profile, Error, "Profiler connection endpoint URL not set, cannot start connection.");
 
             return false;
         }
@@ -189,12 +189,12 @@ public:
         Task<net::HTTPResponse> start_request = net::HTTPRequest(m_endpoint_url + "/start", json::JSONValue(std::move(object)), net::HTTPMethod::POST)
             .Send();
 
-        HYP_LOG(Profile, LogLevel::INFO, "Waiting for profiler connection request to finish");
+        HYP_LOG(Profile, Info, "Waiting for profiler connection request to finish");
 
         net::HTTPResponse &response = start_request.Await();
 
         if (!response.IsSuccess()) {
-            HYP_LOG(Profile, LogLevel::ERR, "Failed to connect to profiler connection endpoint! Status code: {}", response.GetStatusCode());
+            HYP_LOG(Profile, Error, "Failed to connect to profiler connection endpoint! Status code: {}", response.GetStatusCode());
 
             return false;
         }
@@ -207,12 +207,12 @@ public:
         Threads::AssertOnThread(m_thread.GetID());
 
         if (m_endpoint_url.Empty()) {
-            HYP_LOG(Profile, LogLevel::WARNING, "Profiler connection endpoint URL not set, cannot submit results.");
+            HYP_LOG(Profile, Warning, "Profiler connection endpoint URL not set, cannot submit results.");
 
             return;
         }
 
-        HYP_LOG(Profile, LogLevel::INFO, "Submitting profiler results to trace server...");
+        HYP_LOG(Profile, Info, "Submitting profiler results to trace server...");
 
         json::JSONObject object;
 

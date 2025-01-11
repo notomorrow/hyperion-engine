@@ -102,7 +102,7 @@ void HyperionEditor::Init()
 #if 0
 #if 1
     const HypClass *cls = GetClass<LightComponent>();
-    HYP_LOG(Editor, LogLevel::INFO, "my class: {}", cls->GetName());
+    HYP_LOG(Editor, Info, "my class: {}", cls->GetName());
 
     LightComponent light_component;
     light_component.light = CreateObject<Light>(LightType::POINT, Vec3f { 0.0f, 1.0f, 0.0f }, Color{}, 1.0f, 100.0f);
@@ -110,27 +110,27 @@ void HyperionEditor::Init()
     if (HypProperty *property = cls->GetProperty("Light")) {
         // property->Set(light_component, CreateObject<Light>(LightType::POINT, Vec3f { 0.0f, 1.0f, 0.0f }, Color{}, 1.0f, 100.0f));
 
-        HYP_LOG(Editor, LogLevel::INFO, "LightComponent Light: {}", property->Get(light_component).ToString());
+        HYP_LOG(Editor, Info, "LightComponent Light: {}", property->Get(light_component).ToString());
 
         if (const HypClass *light_class = property->GetHypClass()) {
             AssertThrow(property->GetTypeID() == TypeID::ForType<Light>());
-            HYP_LOG(Editor, LogLevel::INFO, "light_class: {}", light_class->GetName());
+            HYP_LOG(Editor, Info, "light_class: {}", light_class->GetName());
             HypProperty *light_radius_property = light_class->GetProperty("radius");
             AssertThrow(light_radius_property != nullptr);
 
             light_radius_property->Set(property->Get(light_component), 123.4f);
         }
 
-        HYP_LOG(Editor, LogLevel::INFO, "LightComponent Light: {}", property->Get<Handle<Light>>(light_component)->GetRadius());
+        HYP_LOG(Editor, Info, "LightComponent Light: {}", property->Get<Handle<Light>>(light_component)->GetRadius());
     }
 #endif
 
     // if (HypProperty *property = cls->GetProperty(NAME("VertexAttributes"))) {
-    //     HYP_LOG(Core, LogLevel::INFO, "Mesh Vertex Attributes: {}", property->getter.Invoke(m).Get<VertexAttributeSet>().flag_mask);
+    //     HYP_LOG(Core, Info, "Mesh Vertex Attributes: {}", property->getter.Invoke(m).Get<VertexAttributeSet>().flag_mask);
     // }
 
     // if (HypProperty *property = cls->GetProperty(NAME("VertexAttributes"))) {
-    //     HYP_LOG(Core, LogLevel::INFO, "Mesh Vertex Attributes: {}", property->getter.Invoke(m).Get<VertexAttributeSet>().flag_mask);
+    //     HYP_LOG(Core, Info, "Mesh Vertex Attributes: {}", property->getter.Invoke(m).Get<VertexAttributeSet>().flag_mask);
     // }
 
     HYP_BREAKPOINT;
@@ -388,7 +388,7 @@ void HyperionEditor::Init()
     // batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     // batch->Add("house", "models/house.obj");
 
-    HYP_LOG(Editor, LogLevel::DEBUG, "Loading assets, scene ID = {}", GetScene()->GetID().Value());
+    HYP_LOG(Editor, Debug, "Loading assets, scene ID = {}", GetScene()->GetID().Value());
 
     Handle<Entity> root_entity = GetScene()->GetEntityManager()->AddEntity();
     GetScene()->GetRoot()->SetEntity(root_entity);

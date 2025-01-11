@@ -482,7 +482,7 @@ void EnvProbe::Render(Frame *frame)
     AssertReady();
 
     if (IsControlledByEnvGrid()) {
-        HYP_LOG(EnvProbe, LogLevel::WARNING, "EnvProbe #{} is controlled by an EnvGrid, but Render() is being called!", GetID().Value());
+        HYP_LOG(EnvProbe, Warning, "EnvProbe #{} is controlled by an EnvGrid, but Render() is being called!", GetID().Value());
 
         return;
     }
@@ -509,7 +509,7 @@ void EnvProbe::Render(Frame *frame)
 
         if (it != env_probes.End()) {
             if (!it->second.HasValue()) {
-                HYP_LOG(EnvProbe, LogLevel::WARNING, "Env Probe #{} (type: {}) has no value set for texture slot!",
+                HYP_LOG(EnvProbe, Warning, "Env Probe #{} (type: {}) has no value set for texture slot!",
                     GetID().Value(), GetEnvProbeType());
 
                 return;
@@ -525,7 +525,7 @@ void EnvProbe::Render(Frame *frame)
         }
 
         if (probe_index == ~0u) {
-            HYP_LOG(EnvProbe, LogLevel::WARNING, "Env Probe #{} (type: {}) not found in render state bound env probe IDs",
+            HYP_LOG(EnvProbe, Warning, "Env Probe #{} (type: {}) not found in render state bound env probe IDs",
                 GetID().Value(), GetEnvProbeType());
 
             return;
@@ -547,7 +547,7 @@ void EnvProbe::Render(Frame *frame)
         }
 
         if (!light_render_resources_handle) {
-            HYP_LOG(EnvProbe, LogLevel::WARNING, "No directional light found for Sky EnvProbe #{}", GetID().Value());
+            HYP_LOG(EnvProbe, Warning, "No directional light found for Sky EnvProbe #{}", GetID().Value());
         }
     }
 
@@ -666,19 +666,19 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
 
     if (IsControlledByEnvGrid()) {
         if (probe_index.GetProbeIndex() >= max_bound_ambient_probes) {
-            HYP_LOG(EnvProbe, LogLevel::WARNING, "Probe index ({}) out of range of max bound ambient probes", probe_index.GetProbeIndex());
+            HYP_LOG(EnvProbe, Warning, "Probe index ({}) out of range of max bound ambient probes", probe_index.GetProbeIndex());
         }
 
         set_texture = false;
     } else if (IsReflectionProbe() || IsSkyProbe()) {
         if (probe_index.GetProbeIndex() >= max_bound_reflection_probes) {
-            HYP_LOG(EnvProbe, LogLevel::WARNING, "Probe index ({}) out of range of max bound reflection probes", probe_index.GetProbeIndex());
+            HYP_LOG(EnvProbe, Warning, "Probe index ({}) out of range of max bound reflection probes", probe_index.GetProbeIndex());
 
             set_texture = false;
         }
     } else if (IsShadowProbe()) {
         if (probe_index.GetProbeIndex() >= max_bound_point_shadow_maps) {
-            HYP_LOG(EnvProbe, LogLevel::WARNING, "Probe index ({}) out of range of max bound shadow map probes", probe_index.GetProbeIndex());
+            HYP_LOG(EnvProbe, Warning, "Probe index ({}) out of range of max bound shadow map probes", probe_index.GetProbeIndex());
 
             set_texture = false;
         }

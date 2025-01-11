@@ -22,7 +22,7 @@ HYP_API IUIDataSourceElementFactory *GetEditorUIDataSourceElementFactory(TypeID 
         }
 
         if (!factory) {
-            HYP_LOG(Editor, LogLevel::WARNING, "No factory registered for TypeID {}", type_id.Value());
+            HYP_LOG(Editor, Warning, "No factory registered for TypeID {}", type_id.Value());
 
             return nullptr;
         }

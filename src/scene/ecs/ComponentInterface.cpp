@@ -27,7 +27,7 @@ void ComponentInterfaceRegistry::Initialize()
 {
     AssertThrowMsg(!m_is_initialized, "Component interface registry already initialized!");
 
-    HYP_LOG(ECS, LogLevel::DEBUG, "Initializing ComponentInterface registry with {} factories", m_factories.Size());
+    HYP_LOG(ECS, Debug, "Initializing ComponentInterface registry with {} factories", m_factories.Size());
 
     for (auto &it : m_factories) {
         m_interfaces.Set(it.first, it.second());
@@ -49,7 +49,7 @@ void ComponentInterfaceRegistry::Shutdown()
 
 void ComponentInterfaceRegistry::Register(TypeID type_id, ANSIStringView type_name, ComponentInterface(*fptr)())
 {
-    HYP_LOG(ECS, LogLevel::INFO, "Register Component '{}', TypeID: {}", type_name, type_id.Value());
+    HYP_LOG(ECS, Info, "Register Component '{}', TypeID: {}", type_name, type_id.Value());
 
     m_factories.Set(type_id, fptr);
 }

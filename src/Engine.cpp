@@ -278,7 +278,7 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 
     m_app_context->GetMainWindow()->OnWindowSizeChanged.Bind([this](Vec2i new_window_size)
     {
-        HYP_LOG(Engine, LogLevel::INFO, "Resize window to {}", new_window_size);
+        HYP_LOG(Engine, Info, "Resize window to {}", new_window_size);
 
         PUSH_RENDER_COMMAND(RecreateSwapchain);
     }).Detach();
@@ -485,7 +485,7 @@ void Engine::FinalizeStop()
 
     m_is_shutting_down.Set(true, MemoryOrder::SEQUENTIAL);
 
-    HYP_LOG(Engine, LogLevel::INFO, "Stopping all engine processes");
+    HYP_LOG(Engine, Info, "Stopping all engine processes");
 
     m_delegates.OnShutdown();
 
@@ -508,11 +508,11 @@ void Engine::FinalizeStop()
     m_world.Reset();
 
     if (TaskSystem::GetInstance().IsRunning()) { // Stop task system
-        HYP_LOG(Tasks, LogLevel::INFO, "Stopping task system");
+        HYP_LOG(Tasks, Info, "Stopping task system");
 
         TaskSystem::GetInstance().Stop();
 
-        HYP_LOG(Tasks, LogLevel::INFO, "Task system stopped");
+        HYP_LOG(Tasks, Info, "Task system stopped");
     }
 
     m_deferred_renderer->Destroy();
@@ -564,7 +564,7 @@ HYP_API void Engine::RenderNextFrame(Game *game)
     Frame *frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
 
     if (g_should_recreate_swapchain) {
-        HYP_LOG(Rendering, LogLevel::INFO, "Recreating swapchain - New size: {}",
+        HYP_LOG(Rendering, Info, "Recreating swapchain - New size: {}",
             Vec2i(GetGPUInstance()->GetSwapchain()->extent));
 
         GetDelegates().OnBeforeSwapchainRecreated();
@@ -697,7 +697,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
         DescriptorSetRef ref = layout.CreateDescriptorSet();
         AssertThrow(ref.IsValid());
 
-        HYP_LOG(Engine, LogLevel::DEBUG, "Num elements for descriptor set {}: {}", ref.GetName(), ref->GetLayout().GetElements().Size());
+        HYP_LOG(Engine, Debug, "Num elements for descriptor set {}: {}", ref.GetName(), ref->GetLayout().GetElements().Size());
         HYP_BREAKPOINT;
 
         // Init with placeholder data
@@ -781,7 +781,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
                 break;
             }
             default:
-                HYP_LOG(Engine, LogLevel::ERR, "Unhandled descriptor type %d", layout_it.second.type);
+                HYP_LOG(Engine, Error, "Unhandled descriptor type %d", layout_it.second.type);
                 break;
             }
         }

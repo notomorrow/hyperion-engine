@@ -174,7 +174,7 @@ DescriptorSetLayout<Platform::VULKAN>::DescriptorSetLayout(const DescriptorSetDe
                 continue;
             }
 
-            // HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Set element {}.{}[{}] (slot: {}, count: {}, size: {}, is_dynamic: {})",
+            // HYP_LOG(RenderingBackend, Debug, "Set element {}.{}[{}] (slot: {}, count: {}, size: {}, is_dynamic: {})",
             //     decl_ptr->name, descriptor.name, descriptor_index, int(descriptor.slot),
             //     descriptor.count, descriptor.size, descriptor.is_dynamic);
 

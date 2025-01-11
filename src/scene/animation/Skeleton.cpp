@@ -216,7 +216,7 @@ void Skeleton::AddAnimation(const Handle<Animation> &animation)
         track->SetBone(FindBone(track->GetDesc().bone_name));
 
         if (!track->GetBone()) {
-            HYP_LOG(Animation, LogLevel::WARNING, "Skeleton could not find bone with name '{}'", track->GetDesc().bone_name);
+            HYP_LOG(Animation, Warning, "Skeleton could not find bone with name '{}'", track->GetDesc().bone_name);
         }
     }
 

@@ -219,7 +219,7 @@ void DataRaceDetector::LogDataRace(uint64 readers_mask, uint64 writers_mask) con
         }
     }
 
-    HYP_LOG(DataRaceDetector, LogLevel::ERR, "Data race detected: Current thread: {}, Writer threads: {}, Reader threads: {}",
+    HYP_LOG(DataRaceDetector, Error, "Data race detected: Current thread: {}, Writer threads: {}, Reader threads: {}",
         ThreadID::Current().name,
         writer_threads_string,
         reader_threads_string);

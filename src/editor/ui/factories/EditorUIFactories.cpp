@@ -80,7 +80,7 @@ public:
             IUIDataSourceElementFactory *factory = GetEditorUIDataSourceElementFactory(getter_result.GetTypeID());
             
             if (!factory) {
-                HYP_LOG(Editor, LogLevel::WARNING, "No factory registered for TypeID {} when creating UI element for attribute \"{}\"", getter_result.GetTypeID().Value(), it.first);
+                HYP_LOG(Editor, Warning, "No factory registered for TypeID {} when creating UI element for attribute \"{}\"", getter_result.GetTypeID().Value(), it.first);
 
                 continue;
             }
@@ -88,7 +88,7 @@ public:
             RC<UIObject> element = factory->CreateUIObject(parent, getter_result);
             AssertThrow(element != nullptr);
 
-            HYP_LOG(Editor, LogLevel::DEBUG, "Element for attribute \"{}\": {}\tsize: {}", it.first, GetClass(element.GetTypeID())->GetName(), element->GetActualSize());
+            HYP_LOG(Editor, Debug, "Element for attribute \"{}\": {}\tsize: {}", it.first, GetClass(element.GetTypeID())->GetName(), element->GetActualSize());
             
             panel->AddChildUIObject(element);
 
@@ -440,7 +440,7 @@ public:
 
             add_entity_button->OnClick.Bind([world = Handle<World>(parent->GetWorld()), node_weak = context->node](...) -> UIEventHandlerResult
             {
-                HYP_LOG(Editor, LogLevel::DEBUG, "Add Entity clicked");
+                HYP_LOG(Editor, Debug, "Add Entity clicked");
 
                 if (RC<Node> node_rc = node_weak.Lock()) {
                     world->GetSubsystem<EditorSubsystem>()->GetActionStack()->Push(MakeRefCountedPtr<FunctionalEditorAction>(
@@ -453,7 +453,7 @@ public:
                                     Scene *scene = node_rc->GetScene();
 
                                     if (!scene) {
-                                        HYP_LOG(Editor, LogLevel::ERR, "GetScene() returned null for Node with name \"{}\", cannot add Entity", node_rc->GetName());
+                                        HYP_LOG(Editor, Error, "GetScene() returned null for Node with name \"{}\", cannot add Entity", node_rc->GetName());
 
                                         return;
                                     }
@@ -475,7 +475,7 @@ public:
                     return UIEventHandlerResult::STOP_BUBBLING;
                 }
 
-                HYP_LOG(Editor, LogLevel::ERR, "Cannot add Entity to Node, Node reference could not be obtained");
+                HYP_LOG(Editor, Error, "Cannot add Entity to Node, Node reference could not be obtained");
 
                 return UIEventHandlerResult::ERR;
             }).Detach();
@@ -488,7 +488,7 @@ public:
         EntityManager *entity_manager = EntityManager::GetEntityToEntityManagerMap().GetEntityManager(entity);
 
         if (!entity_manager) {
-            HYP_LOG(Editor, LogLevel::ERR, "No EntityManager found for entity #{}", entity.GetID().Value());
+            HYP_LOG(Editor, Error, "No EntityManager found for entity #{}", entity.GetID().Value());
             
             return nullptr;
         }
@@ -498,7 +498,7 @@ public:
             Optional<const TypeMap<ComponentID> &> all_components = entity_manager->GetAllComponents(entity);
 
             if (!all_components.HasValue()) {
-                HYP_LOG(Editor, LogLevel::ERR, "No component map found for Entity #{}", entity.GetID().Value());
+                HYP_LOG(Editor, Error, "No component map found for Entity #{}", entity.GetID().Value());
 
                 return nullptr;
             }
@@ -511,7 +511,7 @@ public:
                 const ComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(component_type_id);
 
                 if (!component_interface) {
-                    HYP_LOG(Editor, LogLevel::ERR, "No ComponentInterface registered for component with TypeID {}", component_type_id.Value());
+                    HYP_LOG(Editor, Error, "No ComponentInterface registered for component with TypeID {}", component_type_id.Value());
 
                     continue;
                 }
@@ -524,7 +524,7 @@ public:
                 IUIDataSourceElementFactory *factory = GetEditorUIDataSourceElementFactory(component_type_id);
 
                 if (!factory) {
-                    HYP_LOG(Editor, LogLevel::ERR, "No editor UI component factory registered for component of type \"{}\"", component_interface->GetTypeName());
+                    HYP_LOG(Editor, Error, "No editor UI component factory registered for component of type \"{}\"", component_interface->GetTypeName());
 
                     continue;
                 }
@@ -535,7 +535,7 @@ public:
                 HypData component_hyp_data;
 
                 if (!component_container->TryGetComponent(it.second, component_hyp_data)) {
-                    HYP_LOG(Editor, LogLevel::ERR, "Failed to get component of type \"{}\" with ID {} for Entity #{}", component_interface->GetTypeName(), it.second, entity.GetID().Value());
+                    HYP_LOG(Editor, Error, "Failed to get component of type \"{}\" with ID {} for Entity #{}", component_interface->GetTypeName(), it.second, entity.GetID().Value());
 
                     continue;
                 }
@@ -606,7 +606,7 @@ public:
         add_component_button->SetText("Add Component");
         add_component_button->OnClick.Bind([stage_weak = parent->GetStage()->WeakRefCountedPtrFromThis()](...)
         {
-            HYP_LOG(Editor, LogLevel::DEBUG, "Add Component clicked");
+            HYP_LOG(Editor, Debug, "Add Component clicked");
 
             if (RC<UIStage> stage = stage_weak.Lock().Cast<UIStage>()) {
                 auto loaded_ui_asset = AssetManager::GetInstance()->Load<RC<UIObject>>("ui/dialog/Component.Add.ui.xml");
@@ -621,7 +621,7 @@ public:
                     }
                 }
 
-                HYP_LOG(Editor, LogLevel::ERR, "Failed to load add component ui dialog! Error: {}", loaded_ui_asset.result.message);
+                HYP_LOG(Editor, Error, "Failed to load add component ui dialog! Error: {}", loaded_ui_asset.result.message);
 
                 return UIEventHandlerResult::ERR;
 
@@ -716,7 +716,7 @@ public:
         RC<Node> node_rc = value.node.Lock();
         
         if (!node_rc) {
-            HYP_LOG(Editor, LogLevel::ERR, "Node reference is invalid, cannot create UI element for property \"{}\"", value.title);
+            HYP_LOG(Editor, Error, "Node reference is invalid, cannot create UI element for property \"{}\"", value.title);
 
             return nullptr;
         }
@@ -724,7 +724,7 @@ public:
         IUIDataSourceElementFactory *factory = GetEditorUIDataSourceElementFactory(value.property->GetTypeID());
 
         if (!factory) {
-            HYP_LOG(Editor, LogLevel::ERR, "No factory registered for TypeID {} when creating UI element for property \"{}\"", value.property->GetTypeID().Value(), value.title);
+            HYP_LOG(Editor, Error, "No factory registered for TypeID {} when creating UI element for property \"{}\"", value.property->GetTypeID().Value(), value.title);
 
             return nullptr;
         }

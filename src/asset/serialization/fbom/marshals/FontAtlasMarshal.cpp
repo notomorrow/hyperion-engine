@@ -102,7 +102,7 @@ public:
 
             if (is_main_atlas) {
                 if (main_atlas_found) {
-                    HYP_LOG(Serialization, LogLevel::WARNING, "Multiple atlases would be set to main atlas");
+                    HYP_LOG(Serialization, Warning, "Multiple atlases would be set to main atlas");
 
                     is_main_atlas = false;
                 } else {

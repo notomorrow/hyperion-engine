@@ -81,7 +81,7 @@ LoadedAsset AssetLoader::Load(AssetManager &asset_manager, const String &path) c
 
         if (!path.Open(reader)) {
             // could not open... try next path
-            HYP_LOG(Assets, LogLevel::WARNING, "Could not open file at path: {}, trying next path...", path);
+            HYP_LOG(Assets, Warning, "Could not open file at path: {}, trying next path...", path);
 
             continue;
         }

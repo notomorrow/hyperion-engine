@@ -207,7 +207,7 @@ void HypClass::Initialize()
         AssertThrowMsg(m_parent != nullptr, "Invalid parent class: %s", m_parent_name.LookupString());
     }
 
-    HYP_LOG(Object, LogLevel::INFO, "Initializing HypClass \"{}\"", m_name);
+    HYP_LOG(Object, Info, "Initializing HypClass \"{}\"", m_name);
 
     // Build properties from `Property=` attributes on methods and fields
     Array<Pair<String, Array<IHypMember *>>> properties_to_build;
@@ -245,7 +245,7 @@ void HypClass::Initialize()
             m_properties.PushBack(property_ptr);
             m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
 
-            HYP_LOG(Object, LogLevel::DEBUG, "Built property \"{}\" on HypClass \"{}\" from field", property_ptr->GetName(), m_name);
+            HYP_LOG(Object, Debug, "Built property \"{}\" on HypClass \"{}\" from field", property_ptr->GetName(), m_name);
 
             continue;
         }
@@ -271,7 +271,7 @@ void HypClass::Initialize()
             m_properties.PushBack(property_ptr);
             m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
 
-            HYP_LOG(Object, LogLevel::DEBUG, "Built property \"{}\" on HypClass \"{}\" from methods", property_ptr->GetName(), m_name);
+            HYP_LOG(Object, Debug, "Built property \"{}\" on HypClass \"{}\" from methods", property_ptr->GetName(), m_name);
 
             continue;
         }
@@ -460,13 +460,13 @@ dotnet::Class *HypClass::GetManagedClass() const
 bool HypClass::GetManagedObjectFromObjectInitializer(const IHypObjectInitializer *object_initializer, dotnet::ObjectReference &out_object_reference)
 {
     if (!object_initializer) {
-        HYP_LOG(Object, LogLevel::ERR, "Could not get managed object for instance of HypClass; No object initializer");
+        HYP_LOG(Object, Error, "Could not get managed object for instance of HypClass; No object initializer");
 
         return false;
     }
 
     if (!object_initializer->GetManagedObject()) {
-        HYP_LOG(Object, LogLevel::ERR, "Could not get managed object for instance of HypClass; No managed object assigned");
+        HYP_LOG(Object, Error, "Could not get managed object for instance of HypClass; No managed object assigned");
 
         return false;
     }

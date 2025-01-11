@@ -26,7 +26,7 @@ LoadedAsset FBOMModelLoader::LoadAsset(LoaderState &state) const
     
     HypData result;
 
-    HYP_LOG(Assets, LogLevel::DEBUG, "Begin loading serialized object at {}", state.filepath);
+    HYP_LOG(Assets, Debug, "Begin loading serialized object at {}", state.filepath);
 
     if (fbom::FBOMResult err = reader.LoadFromFile(state.filepath, result)) {
         return { { LoaderResult::Status::ERR, err.message } };

@@ -67,7 +67,7 @@ void INIFile::Parse()
             }
 
             if (section_name.Empty()) {
-                HYP_LOG(INI, LogLevel::WARNING, "Empty section name");
+                HYP_LOG(INI, Warning, "Empty section name");
             }
 
             sections.PushBack(Pair<String, Section> { std::move(section_name), { } });
@@ -83,7 +83,7 @@ void INIFile::Parse()
         }
 
         if (split.Size() < 2) {
-            HYP_LOG(INI, LogLevel::WARNING, "Line is not in required format (key = value): {}", line_trimmed);
+            HYP_LOG(INI, Warning, "Line is not in required format (key = value): {}", line_trimmed);
 
             continue;
         }

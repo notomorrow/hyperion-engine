@@ -129,7 +129,7 @@ IFBOMSerializable *FBOMReader::FBOMStaticDataIndexMap::GetOrInitializeElement(FB
 
     if (!element.IsInitialized()) {
         if (FBOMResult err = element.Initialize(reader)) {
-            HYP_LOG(Serialization, LogLevel::ERR, "Error initializing static data element at index {}: {}", index, err.message);
+            HYP_LOG(Serialization, Error, "Error initializing static data element at index {}: {}", index, err.message);
 
             return nullptr;
         }
@@ -262,7 +262,7 @@ FBOMResult FBOMReader::Deserialize(BufferedReader &reader, FBOMObject &out)
     }
 
     if (library.object_data.Size() > 1) {
-        HYP_LOG(Serialization, LogLevel::WARNING, "Loaded libary contains more than one object when attempting to load a single object. The first object will be used.");
+        HYP_LOG(Serialization, Warning, "Loaded libary contains more than one object when attempting to load a single object. The first object will be used.");
     }
 
     if (!library.TryGet(0, out)) {

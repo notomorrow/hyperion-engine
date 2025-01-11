@@ -179,7 +179,7 @@ bool Configuration::LoadFromDefinitionsFile()
             const INIFile::Value &option_value = option_it.second;
 
             if (option_name == CONFIG_NONE || option_name >= CONFIG_MAX) {
-                HYP_LOG(Config, LogLevel::WARNING, "{}: Unknown config option", option_it.first);
+                HYP_LOG(Config, Warning, "{}: Unknown config option", option_it.first);
 
                 continue;
             }

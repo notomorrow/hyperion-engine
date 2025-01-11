@@ -224,7 +224,7 @@ bool Ray::TestTriangleList(
     bool intersected = false;
     
     if (indices.Size() % 3 != 0) {
-        HYP_LOG(Math, LogLevel::WARNING, "Cannot perform raytest on triangle list because number of indices ({}) was not divisible by 3", indices.Size());
+        HYP_LOG(Math, Warning, "Cannot perform raytest on triangle list because number of indices ({}) was not divisible by 3", indices.Size());
 
         return false;
     }

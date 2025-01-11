@@ -208,7 +208,7 @@ void UIStage::Init()
         if (font_atlas_asset.IsOK()) {
             m_default_font_atlas = font_atlas_asset.Result();
         } else {
-            HYP_LOG(UI, LogLevel::ERR, "Failed to load default font atlas! Error was: {}", font_atlas_asset.result.message);
+            HYP_LOG(UI, Error, "Failed to load default font atlas! Error was: {}", font_atlas_asset.result.message);
         }
     }
 
@@ -388,7 +388,7 @@ void UIStage::SetFocusedObject(const RC<UIObject> &ui_object)
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_id);
 
-    HYP_LOG(UI, LogLevel::DEBUG, "Set focused UIObject to: {}", ui_object != nullptr ? *ui_object->GetName() : "<none>");
+    HYP_LOG(UI, Debug, "Set focused UIObject to: {}", ui_object != nullptr ? *ui_object->GetName() : "<none>");
 
     RC<UIObject> current_focused_ui_object = m_focused_object.Lock();
 
@@ -523,7 +523,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
             first_hit = nullptr;
 
-            // HYP_LOG(UI, LogLevel::DEBUG, "Ray test results: {}", ray_test_results.Size());
+            // HYP_LOG(UI, Debug, "Ray test results: {}", ray_test_results.Size());
 
             for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
                 if (const RC<UIObject> &ui_object = *it) {
@@ -554,7 +554,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
                     BoundingBoxComponent &bounding_box_component = ui_object->GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(ui_object->GetEntity());
 
-                    HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}, Depth: {}",
+                    HYP_LOG(UI, Debug, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}, Depth: {}",
                         GetClass(ui_object.GetTypeID())->GetName(),
                         ui_object->GetName(),
                         ui_object->GetText(),
@@ -567,7 +567,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     // AssertThrow(mesh_component != nullptr);
                     // AssertThrow(mesh_component->proxy != nullptr);
 
-                    // HYP_LOG(UI, LogLevel::DEBUG, "Mouse hover on {}: {} (name: {}), Material ID: {} (dynamic: {}), proxy material id: #{}, Entity ID: {}",
+                    // HYP_LOG(UI, Debug, "Mouse hover on {}: {} (name: {}), Material ID: {} (dynamic: {}), proxy material id: #{}, Entity ID: {}",
                     //     ::hyperion::GetClass(ui_object.GetTypeID())->GetName(),
                     //     uint64(ui_object->GetID()),
                     //     ui_object->GetName(),
@@ -588,7 +588,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
             if (ray_test_results_it == ray_test_results.End()) {
                 if (RC<UIObject> ui_object = it->Lock()) {
-                    // HYP_LOG(UI, LogLevel::DEBUG, "Mouse leave on {}: {}, Material ID: {}",
+                    // HYP_LOG(UI, Debug, "Mouse leave on {}: {}, Material ID: {}",
                     //     ::hyperion::GetClass(ui_object.GetTypeID())->GetName(),
                     //     ui_object->GetName(),
                     //     ui_object->GetMaterial()->GetID().Value());
@@ -604,7 +604,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                         .is_down            = false
                     });
                 } else {
-                    HYP_LOG(UI, LogLevel::WARNING, "Focused element has been destroyed");
+                    HYP_LOG(UI, Warning, "Focused element has been destroyed");
                 }
 
                 it = m_hovered_ui_objects.Erase(it);
@@ -697,14 +697,14 @@ UIEventHandlerResult UIStage::OnInputEvent(
                 is_clicked = true;
             }
 
-            HYP_LOG(UI, LogLevel::DEBUG, "\tMOUSE UP Ray hit: {}\t Click: {}", ui_object->GetName(), is_clicked);
+            HYP_LOG(UI, Debug, "\tMOUSE UP Ray hit: {}\t Click: {}", ui_object->GetName(), is_clicked);
         }
 
         for (auto it = ray_test_results.Begin(); it != ray_test_results.End(); ++it) {
             const RC<UIObject> &ui_object = *it;
 
             if (m_mouse_button_pressed_states.Contains(ui_object)) {
-                HYP_LOG(UI, LogLevel::DEBUG, "Mouse click on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}",
+                HYP_LOG(UI, Debug, "Mouse click on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}",
                     GetClass(ui_object.GetTypeID())->GetName(),
                     ui_object->GetName(),
                     ui_object->GetText(),
@@ -724,7 +724,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                 event_handler_result |= result;
 
                 if (result & UIEventHandlerResult::ERR) {
-                    HYP_LOG(UI, LogLevel::ERR, "OnClick returned error: {}", result.GetMessage().GetOr("<No message>"));
+                    HYP_LOG(UI, Error, "OnClick returned error: {}", result.GetMessage().GetOr("<No message>"));
 
                     break;
                 }

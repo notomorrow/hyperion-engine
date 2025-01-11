@@ -77,7 +77,7 @@ HypObjectInitializerGuardBase::HypObjectInitializerGuardBase(const HypClass *hyp
         }
 
         while (hyp_classes.Any()) {
-            // HYP_LOG(Object, LogLevel::DEBUG, "Push hypclass {}, address {}", hyp_classes.Front()->GetName(), address);
+            // HYP_LOG(Object, Debug, "Push hypclass {}, address {}", hyp_classes.Front()->GetName(), address);
             g_contexts.Push({ hyp_classes.Pop(), address });
 
 #ifndef HYP_DEBUG_MODE
@@ -100,7 +100,7 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
 
     if (!(GetCurrentHypObjectInitializerFlags() & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION)) {
         if (dotnet::Class *managed_class = hyp_class->GetManagedClass()) {
-            // HYP_LOG(Object, LogLevel::DEBUG, "Create new managed {} for address {}", hyp_class->GetName(), address);
+            // HYP_LOG(Object, Debug, "Create new managed {} for address {}", hyp_class->GetName(), address);
 
             managed_object = managed_class->NewObject(hyp_class, address);
         }
@@ -209,7 +209,7 @@ HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer,
             initializer_contexts_string += HYP_FORMAT("\t{}\t\t{}\n", hyp_class->GetName(), context->address);
         }
 
-        HYP_LOG(Object, LogLevel::ERR, "Initialization context stack:\n{}", initializer_contexts_string);
+        HYP_LOG(Object, Error, "Initialization context stack:\n{}", initializer_contexts_string);
 
         HYP_FAIL("HypObject \"%s\" being initialized incorrectly -- must be initialized using CreateObject<T> if the object is using Handle<T>, or RC<T>::Construct / MakeRefCountedPtr otherwise!",
             hyp_class->GetName().LookupString());

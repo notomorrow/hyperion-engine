@@ -165,12 +165,12 @@ void Game::RequestStop()
 
     // Stop game thread and wait for it to finish
     if (m_game_thread != nullptr) {
-        HYP_LOG(GameThread, LogLevel::DEBUG, "Stopping game thread");
+        HYP_LOG(GameThread, Debug, "Stopping game thread");
 
         m_game_thread->Stop();
 
         while (m_game_thread->IsRunning()) {
-            HYP_LOG(GameThread, LogLevel::DEBUG, "Waiting for game thread to stop");
+            HYP_LOG(GameThread, Debug, "Waiting for game thread to stop");
 
             Threads::Sleep(1);
         }

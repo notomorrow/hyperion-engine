@@ -206,7 +206,7 @@ public:
             indentation_string += "  ";
         }
 
-        HYP_LOG(Lightmap, LogLevel::DEBUG, "{}Node {} (AABB: {}, {} triangles)", indentation_string, node->IsLeafNode() ? "(leaf)" : "(parent)", node->GetAABB(), node->m_triangles.Size());
+        HYP_LOG(Lightmap, Debug, "{}Node {} (AABB: {}, {} triangles)", indentation_string, node->IsLeafNode() ? "(leaf)" : "(parent)", node->GetAABB(), node->m_triangles.Size());
 
         for (const UniquePtr<LightmapBVHNode> &node : node->m_children) {
             DebugLogBVHNode(node.Get(), depth + 1);
@@ -656,7 +656,7 @@ public:
         uint32 num_threads = g_engine->GetAppContext()->GetConfiguration().Get("lightmapper.threads").ToUInt32(4);
         num_threads = MathUtil::Clamp(num_threads, 1u, 128u);
 
-        HYP_LOG(Lightmap, LogLevel::INFO, "Tracing lightmap rays using {} threads", num_threads);
+        HYP_LOG(Lightmap, Info, "Tracing lightmap rays using {} threads", num_threads);
 
         CreateThreads<LightmapTaskThread>(NAME("LightmapperTracingThread"), num_threads);
     }
@@ -701,7 +701,7 @@ void LightmapJob::Start()
                 return;
             }
 
-            HYP_LOG(Lightmap, LogLevel::INFO, "Lightmap job {}: Enqueue task to build UV map", m_uuid);
+            HYP_LOG(Lightmap, Info, "Lightmap job {}: Enqueue task to build UV map", m_uuid);
 
             m_build_uv_map_task = TaskSystem::GetInstance().Enqueue([this]() -> Result<LightmapUVMap>
             {
@@ -735,7 +735,7 @@ void LightmapJob::Process()
 {
     AssertThrow(IsRunning());
 
-    HYP_LOG(Lightmap, LogLevel::INFO, "Processing lightmap job {}", m_uuid);
+    HYP_LOG(Lightmap, Info, "Processing lightmap job {}", m_uuid);
 
     if (!m_uv_map.HasValue()) {
         // wait for uv map to finish building
@@ -744,7 +744,7 @@ void LightmapJob::Process()
         AssertThrow(m_build_uv_map_task.IsValid());
 
         if (!m_build_uv_map_task.IsCompleted()) {
-            HYP_LOG(Lightmap, LogLevel::INFO, "Lightmap job {}: Waiting on UV map to finish building", m_uuid);
+            HYP_LOG(Lightmap, Info, "Lightmap job {}: Waiting on UV map to finish building", m_uuid);
 
             return;
         } else {
@@ -765,7 +765,7 @@ void LightmapJob::Process()
                 // start our thread pool for tracing rays
                 m_task_thread_pool->Start();
             } else {
-                HYP_LOG(Lightmap, LogLevel::ERR, "Failed to build UV map for lightmap job {}", m_uuid);
+                HYP_LOG(Lightmap, Error, "Failed to build UV map for lightmap job {}", m_uuid);
 
                 // Mark as ready to stop further processing
                 Stop();
@@ -777,7 +777,7 @@ void LightmapJob::Process()
         return;
     }
 
-    HYP_LOG(Lightmap, LogLevel::INFO, "Processing lightmap job {} ({} current tasks, {} current rays)",
+    HYP_LOG(Lightmap, Info, "Processing lightmap job {} ({} current tasks, {} current rays)",
         m_uuid, m_current_tasks.Size(), m_current_rays.Size());
 
     if (m_current_tasks.Any()) {
@@ -807,7 +807,7 @@ void LightmapJob::Process()
     case LightmapTraceMode::LIGHTMAP_TRACE_MODE_CPU:
         GatherRays(max_ray_hits_cpu, m_current_rays);
 
-        HYP_LOG(Lightmap, LogLevel::INFO, "Lightmap job {}: Found {} rays", m_uuid, m_current_rays.Size());
+        HYP_LOG(Lightmap, Info, "Lightmap job {}: Found {} rays", m_uuid, m_current_rays.Size());
 
         if (m_current_rays.Empty()) {
             Stop();
@@ -818,7 +818,7 @@ void LightmapJob::Process()
         TraceRaysOnCPU(m_current_rays, LIGHTMAP_SHADING_TYPE_IRRADIANCE);
         TraceRaysOnCPU(m_current_rays, LIGHTMAP_SHADING_TYPE_RADIANCE);
 
-        HYP_LOG(Lightmap, LogLevel::INFO, "Lightmap job {}: Found {} more tasks", m_uuid, m_current_tasks.Size());
+        HYP_LOG(Lightmap, Info, "Lightmap job {}: Found {} more tasks", m_uuid, m_current_tasks.Size());
 
         if (m_current_tasks.Empty()) {
             Stop();
@@ -850,7 +850,7 @@ void LightmapJob::Process()
 
 void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
 {
-    HYP_LOG(Lightmap, LogLevel::INFO, "Gathering rays for lightmap job {}", m_uuid);
+    HYP_LOG(Lightmap, Info, "Gathering rays for lightmap job {}", m_uuid);
 
     Optional<Pair<ID<Mesh>, StreamedDataRef<StreamedMeshData>>> streamed_mesh_data_refs { };
 
@@ -858,7 +858,7 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
 
     while (ray_index < max_ray_hits) {
         if (m_texel_index >= m_texel_indices.Size() * num_multisamples) {
-            HYP_LOG(Lightmap, LogLevel::INFO, "Lightmap job {}: stopping gathering, texel index = {}, texel_indices count = {}", m_uuid, m_texel_index, m_texel_indices.Size());
+            HYP_LOG(Lightmap, Info, "Lightmap job {}: stopping gathering, texel index = {}, texel_indices count = {}", m_uuid, m_texel_index, m_texel_indices.Size());
 
             break;
         }
@@ -877,7 +877,7 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
         const Handle<Mesh> &mesh = uv.mesh;
 
         if (!mesh.IsValid()) {
-            HYP_LOG(Lightmap, LogLevel::WARNING, "Lightmap job {}: Mesh at texel index {} is not valid, skipping", m_uuid, m_texel_index);
+            HYP_LOG(Lightmap, Warning, "Lightmap job {}: Mesh at texel index {} is not valid, skipping", m_uuid, m_texel_index);
 
             ++m_texel_index;
 
@@ -885,7 +885,7 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
         }
 
         if (!mesh->GetStreamedMeshData()) {
-            HYP_LOG(Lightmap, LogLevel::WARNING, "Lightmap job {}: Mesh {} does not have streamed mesh data set, skipping", m_uuid, mesh->GetName());
+            HYP_LOG(Lightmap, Warning, "Lightmap job {}: Mesh {} does not have streamed mesh data set, skipping", m_uuid, mesh->GetName());
 
             ++m_texel_index;
 
@@ -950,7 +950,7 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
         ++ray_index;
     }
 
-    HYP_LOG(Lightmap, LogLevel::INFO, "Lightmap job {}: Gathered {} rays", m_uuid, ray_index);
+    HYP_LOG(Lightmap, Info, "Lightmap job {}: Gathered {} rays", m_uuid, ray_index);
 }
 
 void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits, LightmapShadingType shading_type)
@@ -995,7 +995,7 @@ void LightmapJob::TraceSingleRayOnCPU(const LightmapRay &ray, LightmapRayHitPayl
     LightmapTopLevelAccelerationStructure *acceleration_structure = GetAccelerationStructure();
 
     if (!acceleration_structure) {
-        HYP_LOG(Lightmap, LogLevel::WARNING, "No CPU acceleration structure set while tracing on CPU, cannot perform trace");
+        HYP_LOG(Lightmap, Warning, "No CPU acceleration structure set while tracing on CPU, cannot perform trace");
 
         return;
     }
@@ -1145,7 +1145,7 @@ void LightmapJob::TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShading
             hit.color = bounces[0].radiance;
 
             if (MathUtil::IsNaN(hit.color) || !MathUtil::IsFinite(hit.color)) {
-                HYP_LOG_ONCE(Lightmap, LogLevel::WARNING, "NaN or infinite color detected while tracing rays");
+                HYP_LOG_ONCE(Lightmap, Warning, "NaN or infinite color detected while tracing rays");
 
                 hit.color = Vec4f(0.0f);
             }
@@ -1228,7 +1228,7 @@ void Lightmapper::PerformLightmapping()
     AssertThrowMsg(m_num_jobs.Get(MemoryOrder::ACQUIRE) == 0, "Cannot initialize lightmap renderer -- jobs currently running!");
 
     // Build jobs
-    HYP_LOG(Lightmap, LogLevel::INFO, "Building graph for lightmapper");
+    HYP_LOG(Lightmap, Info, "Building graph for lightmapper");
 
     EntityManager &mgr = *m_scene->GetEntityManager();
 
@@ -1237,20 +1237,20 @@ void Lightmapper::PerformLightmapping()
 
     for (auto [entity_id, mesh_component, transform_component, bounding_box_component] : mgr.GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(DataAccessFlags::ACCESS_READ)) {
         if (!mesh_component.mesh.IsValid()) {
-            HYP_LOG(Lightmap, LogLevel::INFO, "Skip entity with invalid mesh on MeshComponent");
+            HYP_LOG(Lightmap, Info, "Skip entity with invalid mesh on MeshComponent");
 
             continue;
         }
 
         if (!mesh_component.material.IsValid()) {
-            HYP_LOG(Lightmap, LogLevel::INFO, "Skip entity with invalid material on MeshComponent");
+            HYP_LOG(Lightmap, Info, "Skip entity with invalid material on MeshComponent");
 
             continue;
         }
 
         // Only process opaque and translucent materials
         if (mesh_component.material->GetBucket() != BUCKET_OPAQUE && mesh_component.material->GetBucket() != BUCKET_TRANSLUCENT) {
-            HYP_LOG(Lightmap, LogLevel::INFO, "Skip entity with bucket that is not opaque or translucent");
+            HYP_LOG(Lightmap, Info, "Skip entity with bucket that is not opaque or translucent");
 
             continue;
         }
@@ -1260,7 +1260,7 @@ void Lightmapper::PerformLightmapping()
             BLASComponent *blas_component = mgr.TryGetComponent<BLASComponent>(entity_id);
 
             if (!blas_component || !blas_component->blas) {
-                HYP_LOG(Lightmap, LogLevel::INFO, "Skipping entity #{} because it has no bottom level acceleration structure attached", entity_id.Value());
+                HYP_LOG(Lightmap, Info, "Skipping entity #{} because it has no bottom level acceleration structure attached", entity_id.Value());
 
                 continue;
             }
@@ -1292,7 +1292,7 @@ void Lightmapper::PerformLightmapping()
 
         if (ideal_triangles_per_job != 0 && num_triangles != 0 && num_triangles + element.mesh->NumIndices() / 3 > ideal_triangles_per_job) {
             if (end_index - start_index != 0) {
-                HYP_LOG(Lightmap, LogLevel::INFO, "Adding lightmap job for {} entities", end_index - start_index);
+                HYP_LOG(Lightmap, Info, "Adding lightmap job for {} entities", end_index - start_index);
 
                 UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, end_index, std::move(acceleration_structure)));
 
@@ -1316,19 +1316,19 @@ void Lightmapper::PerformLightmapping()
             ));
         }
 
-        HYP_LOG(Lightmap, LogLevel::INFO, "Add Entity (#{}) to be processed for lightmap", element.entity.GetID().Value());
+        HYP_LOG(Lightmap, Info, "Add Entity (#{}) to be processed for lightmap", element.entity.GetID().Value());
 
         num_triangles += element.mesh->NumIndices() / 3;
     }
 
     if (end_index - start_index != 0) {
-        HYP_LOG(Lightmap, LogLevel::INFO, "Adding final lightmap job for {} entities", end_index - start_index);
+        HYP_LOG(Lightmap, Info, "Adding final lightmap job for {} entities", end_index - start_index);
 
         UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, end_index, std::move(acceleration_structure)));
 
         AddJob(std::move(job));
     } else {
-        HYP_LOG(Lightmap, LogLevel::INFO, "Skipping adding lightmap job, no entities to process");
+        HYP_LOG(Lightmap, Info, "Skipping adding lightmap job, no entities to process");
     }
 }
 
@@ -1340,7 +1340,7 @@ void Lightmapper::Update(GameCounter::TickUnit delta)
         return;
     }
 
-    HYP_LOG(Lightmap, LogLevel::INFO, "Processing {} lightmap jobs...", num_jobs);
+    HYP_LOG(Lightmap, Info, "Processing {} lightmap jobs...", num_jobs);
 
     Mutex::Guard guard(m_queue_mutex);
 
@@ -1361,7 +1361,7 @@ void Lightmapper::Update(GameCounter::TickUnit delta)
 
 void Lightmapper::HandleCompletedJob(LightmapJob *job)
 {
-    HYP_LOG(Lightmap, LogLevel::DEBUG, "Tracing completed for lightmapping job {}...", job->GetUUID());
+    HYP_LOG(Lightmap, Debug, "Tracing completed for lightmapping job {}...", job->GetUUID());
 
     const LightmapUVMap &uv_map = job->GetUVMap();
 

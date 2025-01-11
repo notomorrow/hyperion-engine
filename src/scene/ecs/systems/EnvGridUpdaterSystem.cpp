@@ -44,11 +44,11 @@ void EnvGridUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
     }
 
     if (!world_aabb.IsValid()) {
-        HYP_LOG(EnvGrid, LogLevel::WARNING, "EnvGridUpdaterSystem::OnEntityAdded: Entity #{} has invalid bounding box", entity.GetID().Value());
+        HYP_LOG(EnvGrid, Warning, "EnvGridUpdaterSystem::OnEntityAdded: Entity #{} has invalid bounding box", entity.GetID().Value());
     }
 
     if (!(GetEntityManager().GetScene()->GetFlags() & (SceneFlags::NON_WORLD | SceneFlags::DETACHED))) {
-        HYP_LOG(EnvGrid, LogLevel::DEBUG, "Adding EnvGrid render component to scene {}", GetEntityManager().GetScene()->GetName());
+        HYP_LOG(EnvGrid, Debug, "Adding EnvGrid render component to scene {}", GetEntityManager().GetScene()->GetName());
 
         env_grid_component.env_grid = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<EnvGrid>(
             Name::Unique("env_grid_renderer"),

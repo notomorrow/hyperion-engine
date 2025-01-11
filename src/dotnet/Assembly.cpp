@@ -21,7 +21,7 @@ Assembly::Assembly()
 Assembly::~Assembly()
 {
     if (!Unload()) {
-        HYP_LOG(DotNET, LogLevel::WARNING, "Failed to unload assembly");
+        HYP_LOG(DotNET, Warning, "Failed to unload assembly");
     }
 }
 
@@ -66,7 +66,7 @@ Class *ClassHolder::NewClass(const HypClass *hyp_class, int32 type_hash, const c
     auto it = m_class_objects.Find(type_hash);
 
     if (it != m_class_objects.End()) {
-        HYP_LOG(DotNET, LogLevel::WARNING, "Class {} already exists in class holder!", type_name);
+        HYP_LOG(DotNET, Warning, "Class {} already exists in class holder!", type_name);
 
         return it->second.Get();
     }

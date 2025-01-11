@@ -64,7 +64,7 @@ void RenderResourcesBase::Claim()
             {
                 HYP_NAMED_SCOPE("Initializing RenderResources - Initialization");
 
-                HYP_LOG(RenderResources, LogLevel::INFO, "Initializing RenderResources of type {}", render_resources->GetTypeName());
+                HYP_LOG(RenderResources, Info, "Initializing RenderResources of type {}", render_resources->GetTypeName());
                     
                 // Wait for pre-init to complete
                 render_resources->m_pre_init_semaphore.Acquire();
@@ -291,7 +291,7 @@ void RenderResourcesBase::WaitForCompletion()
 {
     HYP_SCOPE;
 
-    HYP_LOG(RenderResources, LogLevel::DEBUG, "Waiting for completion of RenderResources with pool index {} from thread {}", m_pool_handle.index, Threads::CurrentThreadID().name);
+    HYP_LOG(RenderResources, Debug, "Waiting for completion of RenderResources with pool index {} from thread {}", m_pool_handle.index, Threads::CurrentThreadID().name);
 
     if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
         // Wait for any threads that are using this RenderResources pre-initialization to stop
@@ -303,7 +303,7 @@ void RenderResourcesBase::WaitForCompletion()
         if (!m_completion_semaphore.IsInSignalState()) {
             HYP_NAMED_SCOPE("Waiting for RenderResources tasks to complete on Render Thread");
 
-            HYP_LOG(RenderResources, LogLevel::DEBUG, "Waiting for RenderResources tasks to complete on Render Thread");
+            HYP_LOG(RenderResources, Debug, "Waiting for RenderResources tasks to complete on Render Thread");
             
             HYP_SYNC_RENDER();
         

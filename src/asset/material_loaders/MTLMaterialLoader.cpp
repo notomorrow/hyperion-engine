@@ -130,7 +130,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             if (tokens.Size() >= 2) {
                 name = tokens[1];
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: material arg name missing");
+                HYP_LOG(Assets, Warning, "OBJ material loader: material arg name missing");
             }
 
             AddMaterial(library, name);
@@ -154,7 +154,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
         if (tokens[0] == "ns") {
             if (tokens.Size() < 2) {
-                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: spec value missing");
+                HYP_LOG(Assets, Warning, "OBJ material loader: spec value missing");
 
                 return;
             }
@@ -170,7 +170,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
         if (tokens[0] == "illum") {
             if (tokens.Size() < 2) {
-                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: illum value missing");
+                HYP_LOG(Assets, Warning, "OBJ material loader: illum value missing");
 
                 return;
             }
@@ -199,7 +199,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             if (tokens.Size() >= 2) {
                 name = tokens.Back();
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: texture arg name missing");
+                HYP_LOG(Assets, Warning, "OBJ material loader: texture arg name missing");
             }
 
             LastMaterial(library).textures.PushBack(TextureDef {
@@ -210,7 +210,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             return;
         }
 
-        HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: Unable to parse mtl material line: {}", trimmed);
+        HYP_LOG(Assets, Warning, "OBJ material loader: Unable to parse mtl material line: {}", trimmed);
     });
 
     Handle<MaterialGroup> material_group_handle = CreateObject<MaterialGroup>();
@@ -287,7 +287,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
 
         for (auto &it : item.textures) {
             if (!loaded_textures[it.name].IsOK()) {
-                HYP_LOG(Assets, LogLevel::WARNING, "OBJ material loader: Texture {} could not be used because it could not be loaded!", it.name);
+                HYP_LOG(Assets, Warning, "OBJ material loader: Texture {} could not be used because it could not be loaded!", it.name);
 
                 continue;
             }

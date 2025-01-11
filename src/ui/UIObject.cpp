@@ -168,7 +168,7 @@ UIObject::UIObject()
 
 UIObject::~UIObject()
 {
-    HYP_LOG(UI, LogLevel::DEBUG, "Destroying UIObject with name: {}", GetName());
+    HYP_LOG(UI, Debug, "Destroying UIObject with name: {}", GetName());
 
     // Remove the entity from the entity manager
     if (const Handle<Entity> &entity = GetEntity()) {
@@ -1131,21 +1131,21 @@ void UIObject::AddChildUIObject(const RC<UIObject> &ui_object)
     const NodeProxy &node = GetNode();
 
     if (!node) {
-        HYP_LOG(UI, LogLevel::ERR, "Parent UI object has no attachable node: {}", GetName());
+        HYP_LOG(UI, Error, "Parent UI object has no attachable node: {}", GetName());
 
         return;
     }
 
     if (NodeProxy child_node = ui_object->GetNode()) {
         if (child_node->GetParent() != nullptr && !child_node->Remove()) {
-            HYP_LOG(UI, LogLevel::ERR, "Failed to remove child node '{}' from current parent {}", child_node->GetName(), child_node->GetParent()->GetName());
+            HYP_LOG(UI, Error, "Failed to remove child node '{}' from current parent {}", child_node->GetName(), child_node->GetParent()->GetName());
 
             return;
         }
 
         node->AddChild(child_node);
     } else {
-        HYP_LOG(UI, LogLevel::ERR, "Child UI object '{}' has no attachable node", ui_object->GetName());
+        HYP_LOG(UI, Error, "Child UI object '{}' has no attachable node", ui_object->GetName());
 
         return;
     }
@@ -1198,21 +1198,21 @@ bool UIObject::RemoveChildUIObject(UIObject *ui_object)
                         return true;
                     }
 
-                    HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent: Parent UIObject {} did not have the child object in its children array!", ui_object->GetName(), parent_ui_object->GetName());
+                    HYP_LOG(UI, Error, "Failed to remove UIObject {} from parent: Parent UIObject {} did not have the child object in its children array!", ui_object->GetName(), parent_ui_object->GetName());
 
                     return false;
                 } else {
                     return parent_ui_object->RemoveChildUIObject(ui_object);
                 }
             } else {
-                HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent: Parent node ({}) had no UIComponent!", ui_object->GetName(), parent_node->GetName());
+                HYP_LOG(UI, Error, "Failed to remove UIObject {} from parent: Parent node ({}) had no UIComponent!", ui_object->GetName(), parent_node->GetName());
 
                 return false;
             }
         }
     }
 
-    HYP_LOG(UI, LogLevel::ERR, "Failed to remove UIObject {} from parent!", ui_object->GetName());
+    HYP_LOG(UI, Error, "Failed to remove UIObject {} from parent!", ui_object->GetName());
 
     return false;
 }
@@ -1237,7 +1237,7 @@ int UIObject::RemoveAllChildUIObjects()
         // num_removed = int(m_child_ui_objects.Size());
 
         for (const RC<UIObject> &child_ui_object : m_child_ui_objects) {
-            HYP_LOG(UI, LogLevel::DEBUG, "Remove child {} from {} -- {} refs", child_ui_object->GetName(), GetName(), child_ui_object.GetRefCountData_Internal()->UseCount_Strong());
+            HYP_LOG(UI, Debug, "Remove child {} from {} -- {} refs", child_ui_object->GetName(), GetName(), child_ui_object.GetRefCountData_Internal()->UseCount_Strong());
         }
 
         // m_child_ui_objects.Clear();
@@ -2090,7 +2090,7 @@ void UIObject::UpdateMaterial(bool update_children)
     if (!current_material.IsValid() || current_material->GetRenderAttributes() != material_attributes || current_material->GetTextures() != material_textures || current_material->GetParameters() != material_parameters) {
         // need to get a new Material if attributes have changed
         Handle<Material> new_material = CreateMaterial();
-        HYP_LOG(UI, LogLevel::DEBUG, "Creating new material for UI object (static): {} #{}", GetName(), new_material.GetID().Value());
+        HYP_LOG(UI, Debug, "Creating new material for UI object (static): {} #{}", GetName(), new_material.GetID().Value());
 
         mesh_component->material = std::move(new_material);
         mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
@@ -2109,7 +2109,7 @@ void UIObject::UpdateMaterial(bool update_children)
         } else {
             new_material = current_material->Clone();
 
-            HYP_LOG(UI, LogLevel::DEBUG, "Cloning material for UI object (dynamic): {} #{}", GetName(), new_material.GetID().Value());
+            HYP_LOG(UI, Debug, "Cloning material for UI object (dynamic): {} #{}", GetName(), new_material.GetID().Value());
 
             mesh_component->material = new_material;
             mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;

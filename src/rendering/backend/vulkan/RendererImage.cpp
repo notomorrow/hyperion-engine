@@ -169,13 +169,13 @@ RendererResult ImagePlatformImpl<Platform::VULKAN>::Create(
     }
 
     if (is_blended) {
-        HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Image requires blending, enabling format flag...");
+        HYP_LOG(RenderingBackend, Debug, "Image requires blending, enabling format flag...");
 
         vk_format_features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
     }
 
     if (is_cubemap) {
-        HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Creating cubemap, enabling VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag.");
+        HYP_LOG(RenderingBackend, Debug, "Creating cubemap, enabling VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT flag.");
 
         vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
@@ -214,12 +214,12 @@ RendererResult ImagePlatformImpl<Platform::VULKAN>::Create(
         }
 
         for (auto &fix : potential_fixes) {
-            HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Attempting fix '{}'...\n", fix.first);
+            HYP_LOG(RenderingBackend, Debug, "Attempting fix '{}'...\n", fix.first);
 
             RendererResult fix_result = fix.second();
 
             if (!fix_result) {
-                HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Fix '{}' failed: {}", fix.first, fix_result.GetError().GetMessage());
+                HYP_LOG(RenderingBackend, Debug, "Fix '{}' failed: {}", fix.first, fix_result.GetError().GetMessage());
 
                 continue;
             }
@@ -228,12 +228,12 @@ RendererResult ImagePlatformImpl<Platform::VULKAN>::Create(
             if ((format_support_result = device->GetFeatures().GetImageFormatProperties(
                 vk_format, vk_image_type, tiling, usage_flags, vk_image_create_flags, &vk_image_format_properties))) {
                 
-                HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Fix '{}' succeeded.\n", fix.first);
+                HYP_LOG(RenderingBackend, Debug, "Fix '{}' succeeded.\n", fix.first);
 
                 break;
             }
 
-            HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Fix '{}' failed: {}", fix.first, format_support_result.GetError().GetMessage());
+            HYP_LOG(RenderingBackend, Debug, "Fix '{}' failed: {}", fix.first, format_support_result.GetError().GetMessage());
         }
 
         HYPERION_BUBBLE_ERRORS(format_support_result);
@@ -350,7 +350,7 @@ void ImagePlatformImpl<Platform::VULKAN>::InsertBarrier(
     if (handle == VK_NULL_HANDLE) {
         HYP_LOG(
             RenderingBackend,
-            LogLevel::WARNING,
+            Warning,
             "Attempt to insert a resource barrier but image was not defined"
         );
 
@@ -401,7 +401,7 @@ void ImagePlatformImpl<Platform::VULKAN>::InsertSubResourceBarrier(
     if (handle == VK_NULL_HANDLE) {
         HYP_LOG(
             RenderingBackend,
-            LogLevel::DEBUG,
+            Debug,
             "Attempt to insert a resource barrier but image was not defined"
         );
 

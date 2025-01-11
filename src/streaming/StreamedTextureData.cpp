@@ -47,13 +47,13 @@ StreamedTextureData::StreamedTextureData(StreamedDataState initial_state, Textur
             fbom::FBOMWriter serializer { fbom::FBOMWriterConfig { } };
             
             if (fbom::FBOMResult err = serializer.Append(*m_texture_data)) {
-                HYP_LOG(Streaming, LogLevel::ERR, "Failed to write streamed data: {}", err.message);
+                HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
                 return false;
             }
 
             if (fbom::FBOMResult err = serializer.Emit(&writer)) {
-                HYP_LOG(Streaming, LogLevel::ERR, "Failed to write streamed data: {}", err.message);
+                HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
                 return false;
             }
@@ -134,7 +134,7 @@ void StreamedTextureData::LoadTextureData(const ByteBuffer &byte_buffer) const
     HypData value;
 
     if (fbom::FBOMResult err = deserializer.Deserialize(reader, value)) {
-        HYP_LOG(Streaming, LogLevel::WARNING, "StreamedTextureData: Error deserializing texture data: {}", err.message);
+        HYP_LOG(Streaming, Warning, "StreamedTextureData: Error deserializing texture data: {}", err.message);
         return;
     }
 

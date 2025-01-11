@@ -27,7 +27,7 @@ void TickableEditorTask::Commit()
             if (RC<IEditorTask> task = weak_this.Lock().CastUnsafe<TickableEditorTask>()) {
                 task->Process();
             } else {
-                HYP_LOG(Editor, LogLevel::WARNING, "EditorTask was destroyed before it could be processed");
+                HYP_LOG(Editor, Warning, "EditorTask was destroyed before it could be processed");
             }
         }, TaskEnqueueFlags::FIRE_AND_FORGET);
     }

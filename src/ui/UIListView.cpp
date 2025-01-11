@@ -225,7 +225,7 @@ bool UIListView::RemoveChildUIObject(UIObject *ui_object)
             return true;
         }
 
-        HYP_LOG(UI, LogLevel::WARNING, "Failed to directly remove UIObject {} from ListView {}", ui_object->GetName(), GetName());
+        HYP_LOG(UI, Warning, "Failed to directly remove UIObject {} from ListView {}", ui_object->GetName(), GetName());
     }
 
     return UIObject::RemoveChildUIObject(ui_object);
@@ -311,14 +311,14 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase *data_source)
             }
         }
 
-        HYP_LOG(UI, LogLevel::WARNING, "Failed to remove list view item with data source element UUID {}", element->GetUUID());
+        HYP_LOG(UI, Warning, "Failed to remove list view item with data source element UUID {}", element->GetUUID());
     });
 
     m_data_source_on_element_update_handler = data_source->OnElementUpdate.Bind([this, data_source](UIDataSourceBase *data_source_ptr, UIDataSourceElement *element, UIDataSourceElement *parent)
     {
         HYP_NAMED_SCOPE("Update element from data source in list view");
 
-        HYP_LOG(UI, LogLevel::INFO, "Updating element {}", element->GetUUID().ToString());
+        HYP_LOG(UI, Info, "Updating element {}", element->GetUUID().ToString());
 
         if (const UIListViewItem *list_view_item = FindListViewItem(element->GetUUID())) {
             if (RC<UIObject> ui_object = list_view_item->GetInnerElement()->GetChildUIObject(0)) {
@@ -330,10 +330,10 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase *data_source)
                 // temp; sanity check
                 AssertThrow(FindListViewItem(element->GetUUID()) != nullptr);
             } else {
-                HYP_LOG(UI, LogLevel::ERR, "Failed to update element {}; No UIObject child at index 0", element->GetUUID().ToString());
+                HYP_LOG(UI, Error, "Failed to update element {}; No UIObject child at index 0", element->GetUUID().ToString());
             }
         } else {
-            HYP_LOG(UI, LogLevel::WARNING, "Failed to update list view item with data source element UUID {}", element->GetUUID());
+            HYP_LOG(UI, Warning, "Failed to update list view item with data source element UUID {}", element->GetUUID());
         }
     });
 }
@@ -421,7 +421,7 @@ void UIListView::AddDataSourceElement(UIDataSourceBase *data_source, UIDataSourc
 
             return;
         } else {
-            HYP_LOG(UI, LogLevel::WARNING, "Parent list view item not found, no list view item with data source element UUID {}", parent->GetUUID().ToString());
+            HYP_LOG(UI, Warning, "Parent list view item not found, no list view item with data source element UUID {}", parent->GetUUID().ToString());
         }
     }
 

@@ -187,7 +187,7 @@ void FontAtlas::Render()
     AssertThrow(m_face != nullptr);
 
     if ((m_symbol_list.Size() / s_symbol_columns) > s_symbol_rows) {
-        HYP_LOG(Font, LogLevel::WARNING, "Symbol list size is greater than the allocated font atlas!");
+        HYP_LOG(Font, Warning, "Symbol list size is greater than the allocated font atlas!");
     }
 
     m_glyph_metrics.Clear();
@@ -200,7 +200,7 @@ void FontAtlas::Render()
             MathUtil::Ceil<float, int>(float(m_cell_dimensions.y) * scale)
         };
 
-        HYP_LOG(Font, LogLevel::INFO, "Rendering font atlas for pixel size {}", scaled_extent.y);
+        HYP_LOG(Font, Info, "Rendering font atlas for pixel size {}", scaled_extent.y);
 
         Handle<Texture> texture = CreateObject<Texture>(TextureDesc {
             ImageType::TEXTURE_TYPE_2D,
@@ -306,7 +306,7 @@ void FontAtlas::WriteToBuffer(uint pixel_size, ByteBuffer &buffer) const
     Handle<Texture> atlas = m_atlas_textures.GetAtlasForPixelSize(pixel_size);
 
     if (!atlas.IsValid()) {
-        HYP_LOG(Font, LogLevel::ERR, "Failed to get atlas for pixel size {}", pixel_size);
+        HYP_LOG(Font, Error, "Failed to get atlas for pixel size {}", pixel_size);
 
         return;
     }
@@ -386,7 +386,7 @@ Bitmap<1> FontAtlas::GenerateBitmap(uint pixel_size) const
     Handle<Texture> atlas = m_atlas_textures.GetAtlasForPixelSize(pixel_size);
 
     if (!atlas.IsValid()) {
-        HYP_LOG(Font, LogLevel::ERR, "Failed to get atlas for pixel size {}", pixel_size);
+        HYP_LOG(Font, Error, "Failed to get atlas for pixel size {}", pixel_size);
 
         return { };
     }

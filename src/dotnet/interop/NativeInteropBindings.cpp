@@ -72,7 +72,7 @@ HYP_EXPORT bool NativeInterop_VerifyEngineVersion(uint32 assembly_engine_version
     const uint32 engine_version_major_minor = engine_version & mask;
 
     if ((assembly_engine_version & mask) != engine_version_major_minor) {
-        HYP_LOG(DotNET, LogLevel::ERR, "Assembly engine version mismatch: Assembly version: {}.{}.{}, Engine version: {}.{}.{}",
+        HYP_LOG(DotNET, Error, "Assembly engine version mismatch: Assembly version: {}.{}.{}, Engine version: {}.{}.{}",
             (assembly_engine_version >> 16u) & 0xffu,
             (assembly_engine_version >> 8u) & 0xffu,
             assembly_engine_version & 0xffu,
@@ -129,7 +129,7 @@ HYP_EXPORT void ManagedClass_Create(ManagedGuid *assembly_guid, ClassHolder *cla
     AssertThrow(assembly_guid != nullptr);
     AssertThrow(class_holder != nullptr);
 
-    HYP_LOG(DotNET, LogLevel::INFO, "Registering .NET managed class {}", type_name);
+    HYP_LOG(DotNET, Info, "Registering .NET managed class {}", type_name);
 
     Class *class_object = class_holder->NewClass(hyp_class, type_hash, type_name, type_size, type_id, parent_class, flags);
 
@@ -182,7 +182,7 @@ HYP_EXPORT void ManagedClass_AddMethod(ManagedClass *managed_class, const char *
     AttributeSet attributes = InternManagedAttributeHolder(managed_attribute_holder_ptr);
 
     if (managed_class->class_object->HasMethod(method_name)) {
-        HYP_LOG(DotNET, LogLevel::ERR, "Class '{}' already has a method named '{}'!", managed_class->class_object->GetName(), method_name);
+        HYP_LOG(DotNET, Error, "Class '{}' already has a method named '{}'!", managed_class->class_object->GetName(), method_name);
 
         return;
     }
@@ -204,7 +204,7 @@ HYP_EXPORT void ManagedClass_AddProperty(ManagedClass *managed_class, const char
     AttributeSet attributes = InternManagedAttributeHolder(managed_attribute_holder_ptr);
 
     if (managed_class->class_object->HasProperty(property_name)) {
-        HYP_LOG(DotNET, LogLevel::ERR, "Class '{}' already has a property named '{}'!", managed_class->class_object->GetName(), property_name);
+        HYP_LOG(DotNET, Error, "Class '{}' already has a property named '{}'!", managed_class->class_object->GetName(), property_name);
 
         return;
     }

@@ -123,7 +123,7 @@ void UITabView::Init()
 void UITabView::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (ui_object->GetType() != UIObjectType::TAB) {
-        HYP_LOG(UI, LogLevel::WARNING, "UITabView::AddChildUIObject() called with a UIObject that is not a UITab");
+        HYP_LOG(UI, Warning, "UITabView::AddChildUIObject() called with a UIObject that is not a UITab");
 
         return;
     }
@@ -134,7 +134,7 @@ void UITabView::AddChildUIObject(const RC<UIObject> &ui_object)
     });
 
     if (it != m_tabs.End()) {
-        HYP_LOG(UI, LogLevel::WARNING, "UITabView::AddChildUIObject() called with a UITab that is already in the tab view");
+        HYP_LOG(UI, Warning, "UITabView::AddChildUIObject() called with a UITab that is already in the tab view");
 
         return;
     }

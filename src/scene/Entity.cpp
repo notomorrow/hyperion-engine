@@ -15,7 +15,7 @@ HYP_DEFINE_LOG_SUBCHANNEL(Entity, Scene);
 
 Entity::Entity()
 {
-    HYP_LOG(Entity, LogLevel::DEBUG, "Creating Entity with ID #{}", GetID().Value());
+    HYP_LOG(Entity, Debug, "Creating Entity with ID #{}", GetID().Value());
 }
 
 Entity::~Entity()
@@ -30,13 +30,13 @@ Entity::~Entity()
     {
         HYP_NAMED_SCOPE("Remove Entity from EntityManager (task)");
 
-        HYP_LOG(Entity, LogLevel::DEBUG, "Removing Entity #{} from EntityManager on thread '{}'", id.Value(), Threads::CurrentThreadID().name);
+        HYP_LOG(Entity, Debug, "Removing Entity #{} from EntityManager on thread '{}'", id.Value(), Threads::CurrentThreadID().name);
 
         entity_manager->RemoveEntity(id);
     });
 
     if (!success.Await()) {
-        HYP_LOG(Entity, LogLevel::ERR, "Failed to remove Entity with ID #{} from EntityManager", id.Value());
+        HYP_LOG(Entity, Error, "Failed to remove Entity with ID #{} from EntityManager", id.Value());
     }
 }
 

@@ -71,7 +71,7 @@ LoadedAsset FontAtlasLoader::LoadAsset(LoaderState &state) const
 
                 if (is_main_atlas) {
                     if (main_atlas_found) {
-                        HYP_LOG(Assets, LogLevel::WARNING, "Multiple elements detected as main atlas");
+                        HYP_LOG(Assets, Warning, "Multiple elements detected as main atlas");
 
                         is_main_atlas = false;
                     } else {

@@ -66,7 +66,7 @@ void UIMenuItem::AddChildUIObject(const RC<UIObject> &ui_object)
     });
 
     if (it != m_menu_items.End()) {
-        HYP_LOG(UI, LogLevel::WARNING, "UIMenuItem::AddChildUIObject() called with a UIMenuItem that is already in the menu item");
+        HYP_LOG(UI, Warning, "UIMenuItem::AddChildUIObject() called with a UIMenuItem that is already in the menu item");
 
         return;
     }
@@ -75,7 +75,7 @@ void UIMenuItem::AddChildUIObject(const RC<UIObject> &ui_object)
 
     UpdateDropDownMenu();
 
-    HYP_LOG(UI, LogLevel::INFO, "Add child UI object with name {} to menu item", ui_object->GetName());
+    HYP_LOG(UI, Info, "Add child UI object with name {} to menu item", ui_object->GetName());
 }
 
 bool UIMenuItem::RemoveChildUIObject(UIObject *ui_object)
@@ -142,7 +142,7 @@ void UIMenuItem::UpdateDropDownMenu()
 
         m_drop_down_menu->AddChildUIObject(menu_item);
 
-        HYP_LOG(UI, LogLevel::DEBUG, "Menu item {} size: {}", menu_item->GetName(), menu_item->GetActualSize());
+        HYP_LOG(UI, Debug, "Menu item {} size: {}", menu_item->GetName(), menu_item->GetActualSize());
         
         offset += { 0, menu_item->GetActualSize().y };
     }
@@ -312,7 +312,7 @@ void UIMenuBar::SetSelectedMenuItemIndex(uint32 index)
 void UIMenuBar::AddChildUIObject(const RC<UIObject> &ui_object)
 {
     if (ui_object->GetType() != UIObjectType::MENU_ITEM) {
-        HYP_LOG(UI, LogLevel::WARNING, "UIMenuBar::AddChildUIObject() called with a UIObject that is not a UIMenuItem");
+        HYP_LOG(UI, Warning, "UIMenuBar::AddChildUIObject() called with a UIObject that is not a UIMenuItem");
 
         return;
     }
@@ -323,7 +323,7 @@ void UIMenuBar::AddChildUIObject(const RC<UIObject> &ui_object)
     });
 
     if (it != m_menu_items.End()) {
-        HYP_LOG(UI, LogLevel::WARNING, "UIMenuBar::AddChildUIObject() called with a UIMenuItem that is already in the menu bar");
+        HYP_LOG(UI, Warning, "UIMenuBar::AddChildUIObject() called with a UIMenuItem that is already in the menu bar");
 
         return;
     }
@@ -361,12 +361,12 @@ void UIMenuBar::AddChildUIObject(const RC<UIObject> &ui_object)
     menu_item->OnClick.RemoveAll();
     menu_item->OnClick.Bind([this, name](const MouseEvent &data) -> UIEventHandlerResult
     {
-        HYP_LOG(UI, LogLevel::DEBUG, "OnClick item with name {}", name);
+        HYP_LOG(UI, Debug, "OnClick item with name {}", name);
 
         if (data.mouse_buttons == MouseButtonState::LEFT) {
             const uint32 menu_item_index = GetMenuItemIndex(name);
 
-            HYP_LOG(UI, LogLevel::DEBUG, "Menu item index for item with name {}: {}", name, menu_item_index);
+            HYP_LOG(UI, Debug, "Menu item index for item with name {}: {}", name, menu_item_index);
 
             if (GetSelectedMenuItemIndex() == menu_item_index) {
                 SetSelectedMenuItemIndex(~0u);
@@ -376,7 +376,7 @@ void UIMenuBar::AddChildUIObject(const RC<UIObject> &ui_object)
                 SetSelectedMenuItemIndex(menu_item_index);
             }
 
-            HYP_LOG(UI, LogLevel::DEBUG, "Container size {}", m_container->GetActualSize());
+            HYP_LOG(UI, Debug, "Container size {}", m_container->GetActualSize());
         }
 
         return UIEventHandlerResult::STOP_BUBBLING;

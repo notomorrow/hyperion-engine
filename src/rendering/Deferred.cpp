@@ -1129,7 +1129,7 @@ void ReflectionProbePass::Render(Frame *frame)
 
                 for (const ID<EnvProbe> env_probe_id : env_probes) {
                     if (num_rendered_env_probes >= max_bound_reflection_probes) {
-                        HYP_LOG(Rendering, LogLevel::WARNING, "Attempting to render too many reflection probes.");
+                        HYP_LOG(Rendering, Warning, "Attempting to render too many reflection probes.");
 
                         break;
                     }
@@ -1146,7 +1146,7 @@ void ReflectionProbePass::Render(Frame *frame)
                             scene_descriptor_set_index
                         );
 
-                    // HYP_LOG(Rendering, LogLevel::DEBUG, "ReflectionProbePass: Render reflection probe #{}, type: {}", env_probe_id.Value(), uint32(env_probe_type));
+                    // HYP_LOG(Rendering, Debug, "ReflectionProbePass: Render reflection probe #{}, type: {}", env_probe_id.Value(), uint32(env_probe_type));
 
                     m_full_screen_quad->Render(cmd);
 
@@ -1252,7 +1252,7 @@ void DeferredRenderer::Create()
         } else if (gi_mode_string == "sh") {
             irradiance_mode = EnvGridPassMode::IRRADIANCE;
         } else {
-            HYP_LOG(Config, LogLevel::WARNING, "Unknown EnvGrid GI mode \"{}\"; falling back to \"sh\"", gi_mode_string);
+            HYP_LOG(Config, Warning, "Unknown EnvGrid GI mode \"{}\"; falling back to \"sh\"", gi_mode_string);
 
             irradiance_mode = EnvGridPassMode::IRRADIANCE;
         }

@@ -47,13 +47,13 @@ StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData mes
             fbom::FBOMWriter serializer { fbom::FBOMWriterConfig { } };
             
             if (fbom::FBOMResult err = serializer.Append(*m_mesh_data)) {
-                HYP_LOG(Streaming, LogLevel::ERR, "Failed to write streamed data: {}", err.message);
+                HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
                 return false;
             }
 
             if (fbom::FBOMResult err = serializer.Emit(&writer)) {
-                HYP_LOG(Streaming, LogLevel::ERR, "Failed to write streamed data: {}", err.message);
+                HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
                 return false;
             }
@@ -139,18 +139,18 @@ void StreamedMeshData::LoadMeshData(const ByteBuffer &byte_buffer) const
     HypData value;
 
     if (fbom::FBOMResult err = deserializer.Deserialize(reader, value)) {
-        HYP_LOG(Streaming, LogLevel::WARNING, "StreamedMeshData: Error deserializing mesh data: {}", err.message);
+        HYP_LOG(Streaming, Warning, "StreamedMeshData: Error deserializing mesh data: {}", err.message);
         return;
     }
 
     m_mesh_data = value.Get<MeshData>();
 
     if (m_mesh_data->vertices.Size() != m_num_vertices) {
-        HYP_LOG(Streaming, LogLevel::WARNING, "StreamedMeshData: Vertex count mismatch! Expected {} vertices, but loaded data has {} vertices", m_num_vertices, m_mesh_data->vertices.Size());
+        HYP_LOG(Streaming, Warning, "StreamedMeshData: Vertex count mismatch! Expected {} vertices, but loaded data has {} vertices", m_num_vertices, m_mesh_data->vertices.Size());
     }
 
     if (m_mesh_data->indices.Size() != m_num_indices) {
-        HYP_LOG(Streaming, LogLevel::WARNING, "StreamedMeshData: Index count mismatch! Expected {} indices, but loaded data has {} indices", m_num_indices, m_mesh_data->indices.Size());
+        HYP_LOG(Streaming, Warning, "StreamedMeshData: Index count mismatch! Expected {} indices, but loaded data has {} indices", m_num_indices, m_mesh_data->indices.Size());
     }
 }
 

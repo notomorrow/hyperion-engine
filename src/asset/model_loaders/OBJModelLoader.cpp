@@ -120,7 +120,7 @@ Vector GetIndexedVertexProperty(int64 vertex_index, const Array<Vector> &vectors
         : int64(vectors.Size()) + vertex_index;
 
     if (vertex_absolute < 0 || vertex_absolute >= int64(vectors.Size())) {
-        HYP_LOG(Assets, LogLevel::WARNING, "Vertex index of {} (absolute: {}) is out of bounds ({})",
+        HYP_LOG(Assets, Warning, "Vertex index of {} (absolute: {}) is out of bounds ({})",
             vertex_index, vertex_absolute, vectors.Size());
 
         return Vector();
@@ -184,7 +184,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
             }
 
             if (tokens.Size() > 5) {
-                HYP_LOG(Assets, LogLevel::WARNING, "Faces with more than 4 vertices are not supported by the OBJ model loader");
+                HYP_LOG(Assets, Warning, "Faces with more than 4 vertices are not supported by the OBJ model loader");
             }
 
             /* Performs simple triangulation on quad faces */
@@ -242,7 +242,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
 
         if (tokens[0] == "usemtl") {
             if (tokens.Size() == 1) {
-                HYP_LOG(Assets, LogLevel::WARNING, "Cannot set obj model material -- no material provided");
+                HYP_LOG(Assets, Warning, "Cannot set obj model material -- no material provided");
 
                 return;
             }
@@ -256,7 +256,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState &state)
             return;
         }
 
-        HYP_LOG(Assets, LogLevel::WARNING, "Unable to parse obj model line: {}", trimmed);
+        HYP_LOG(Assets, Warning, "Unable to parse obj model line: {}", trimmed);
     });
 
     return model;
@@ -285,7 +285,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
         if (material_library_asset.IsOK()) {
             material_library = material_library_asset.Result();
         } else {
-            HYP_LOG(Assets, LogLevel::WARNING, "Obj model loader: Could not load material library at {}: {}", material_library_path, material_library_asset.result.message);
+            HYP_LOG(Assets, Warning, "Obj model loader: Could not load material library at {}: {}", material_library_path, material_library_asset.result.message);
         }
     }
 
@@ -339,7 +339,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             }
         } else {
             /* mesh does not have faces defined */
-            HYP_LOG(Assets, LogLevel::WARNING, "Obj model loader: Mesh does not have any faces defined; skipping.");
+            HYP_LOG(Assets, Warning, "Obj model loader: Mesh does not have any faces defined; skipping.");
 
             continue;
         }
@@ -366,7 +366,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             if (material_library->Has(obj_mesh.material)) {
                 material = material_library->Get(obj_mesh.material)->Clone();
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "OBJ model loader: Material '{}' could not be found in material library", obj_mesh.material);
+                HYP_LOG(Assets, Warning, "OBJ model loader: Material '{}' could not be found in material library", obj_mesh.material);
             }
         }
 

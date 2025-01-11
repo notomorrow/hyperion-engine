@@ -91,7 +91,7 @@ public:
             }
         }
 
-        // HYP_LOG(Serialization, LogLevel::INFO, "Serialized shader '{}' with properties:", in_object.definition.name);
+        // HYP_LOG(Serialization, Info, "Serialized shader '{}' with properties:", in_object.definition.name);
 
         // String properties_string;
 
@@ -99,7 +99,7 @@ public:
         //     properties_string += "\t" + property.name + "\n";
         // }
 
-        // HYP_LOG(Serialization, LogLevel::INFO, "\t{}", properties_string);
+        // HYP_LOG(Serialization, Info, "\t{}", properties_string);
 
         return { FBOMResult::FBOM_OK };
     }
@@ -257,7 +257,7 @@ public:
                 if (compiled_shader_opt.HasValue()) {
                     batch.compiled_shaders.PushBack(*compiled_shader_opt);
                 } else {
-                    HYP_LOG(Serialization, LogLevel::ERR, "Failed to deserialize CompiledShader instance");
+                    HYP_LOG(Serialization, Error, "Failed to deserialize CompiledShader instance");
                 }
             }
         }

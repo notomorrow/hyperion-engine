@@ -376,7 +376,7 @@ void ShadowPass::Render(Frame *frame)
 
     { // Render each shadow map as needed
         if (m_rerender_semaphore->IsInSignalState()) {
-            HYP_LOG(Shadows, LogLevel::DEBUG, "Rerendering static objects for shadow map");
+            HYP_LOG(Shadows, Debug, "Rerendering static objects for shadow map");
 
             m_render_collector_statics->CollectDrawCalls(
                 frame,
@@ -627,7 +627,7 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
     needs_statics_rerender |= statics_collection_result.NeedsUpdate();
 
     if (needs_statics_rerender) {
-        HYP_LOG(Shadows, LogLevel::DEBUG, "statics collection result: {}, {}, {}", statics_collection_result.num_added_entities, statics_collection_result.num_removed_entities, statics_collection_result.num_changed_entities);
+        HYP_LOG(Shadows, Debug, "statics collection result: {}, {}, {}", statics_collection_result.num_added_entities, statics_collection_result.num_removed_entities, statics_collection_result.num_changed_entities);
         
         m_cached_view_matrix = m_camera->GetViewMatrix();
 

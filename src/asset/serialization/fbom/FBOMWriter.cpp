@@ -208,7 +208,7 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter *out)
             object_copy.SetIsExternal(false);
 
             if (FBOMResult err = serializer.Append(object_copy)) {
-                HYP_LOG(Serialization, LogLevel::ERR, "Failed to write external object: {}", err.message);
+                HYP_LOG(Serialization, Error, "Failed to write external object: {}", err.message);
 
                 any_errors.Set(true, MemoryOrder::RELAXED);
 
@@ -219,7 +219,7 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter *out)
         MemoryByteWriter byte_writer;
 
         if (FBOMResult err = serializer.Emit(&byte_writer, /* write_header */ false)) {
-            HYP_LOG(Serialization, LogLevel::ERR, "Failed to write external object: {}", err.message);
+            HYP_LOG(Serialization, Error, "Failed to write external object: {}", err.message);
 
             any_errors.Set(true, MemoryOrder::RELAXED);
 
