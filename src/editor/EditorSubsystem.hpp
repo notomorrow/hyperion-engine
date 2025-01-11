@@ -150,9 +150,11 @@ public:
     Delegate<void, EditorProject *>                         OnProjectOpened;
 
 private:
-    void CreateEditorUI();
+    void LoadEditorUIDefinitions();
+    
     void CreateHighlightNode();
 
+    void InitViewport();
     void InitSceneOutline();
     void InitDetailView();
     

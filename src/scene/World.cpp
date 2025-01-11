@@ -6,6 +6,8 @@
 #include <editor/EditorSubsystem.hpp>
 #endif
 
+#include <scene/ecs/EntityManager.hpp>
+
 #include <scene/world_grid/WorldGridSubsystem.hpp>
 
 #include <core/threading/Threads.hpp>
@@ -21,8 +23,11 @@
 #include <core/logging/LogChannels.hpp>
 
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/World.hpp>
 
 #include <util/profiling/ProfileScope.hpp>
+
+#include <Engine.hpp>
 
 namespace hyperion {
 
@@ -31,7 +36,7 @@ namespace hyperion {
 World::World()
     : HypObject(),
       m_detached_scenes(this),
-      m_has_scene_updates(false)
+      m_render_resources(nullptr)
 {
     AddSubsystem<WorldGridSubsystem>();
 }
@@ -59,6 +64,14 @@ World::~World()
     }
 
     m_physics_world.Teardown();
+
+    if (m_render_resources != nullptr) {
+        m_render_resources->Unclaim();
+
+        FreeResource(m_render_resources);
+
+        m_render_resources = nullptr;
+    }
 }
     
 void World::Init()
@@ -66,6 +79,19 @@ void World::Init()
     if (IsInitCalled()) {
         return;
     }
+
+    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
+    {
+        if (m_render_resources != nullptr) {
+            m_render_resources->Unclaim();
+
+            FreeResource(m_render_resources);
+
+            m_render_resources = nullptr;
+        }
+    }));
+
+    m_render_resources = AllocateResource<WorldRenderResources>(this);
 
     for (auto &it : m_subsystems) {
         it.second->Initialize();
@@ -81,36 +107,22 @@ void World::Init()
         }
     }
 
-    UpdatePendingScenes();
+    // Add the now initialized scenes to the render resources
+    // Note: call before Claim() so execution can happen inline and doesn't defer to the render thread.
+    m_render_resources->Execute([this]()
+    {
+        for (const Handle<Scene> &scene : m_scenes) {
+            m_render_resources->GetRenderCollectorContainer().AddScene(scene.Get());
+        }
+    }, /* force_render_thread */ false);
+
+    m_render_resources->Claim();
     
     HypObject::Init();
 
     m_physics_world.Init();
 
     SetReady(true);
-}
-
-void World::UpdatePendingScenes()
-{
-    HYP_SCOPE;
-
-    Mutex::Guard guard(m_scene_update_mutex);
-
-    for (const WeakHandle<Scene> &scene_weak : m_scenes_pending_removal) {
-        m_render_collector_container.RemoveScene(scene_weak.GetID());
-    }
-
-    m_scenes_pending_removal.Clear();
-
-    for (const WeakHandle<Scene> &scene_weak : m_scenes_pending_addition) {
-        if (Handle<Scene> scene = scene_weak.Lock()) {
-            m_render_collector_container.AddScene(scene.Get());
-        }
-    }
-
-    m_scenes_pending_addition.Clear();
-
-    m_has_scene_updates.Set(false, MemoryOrder::RELEASE);
 }
 
 void World::Update(GameCounter::TickUnit delta)
@@ -123,10 +135,6 @@ void World::Update(GameCounter::TickUnit delta)
     m_game_state.delta_time = delta;
 
     m_physics_world.Tick(delta);
-
-    if (m_has_scene_updates.Get(MemoryOrder::ACQUIRE)) {
-        UpdatePendingScenes();
-    }
 
     Array<Task<void>> update_subsystem_tasks;
     update_subsystem_tasks.Reserve(m_subsystems.Size());
@@ -156,20 +164,34 @@ void World::Update(GameCounter::TickUnit delta)
         task.Await();
     }
 
+    Array<EntityManager *> entity_managers;
+    entity_managers.Reserve(m_scenes.Size());
+
     for (uint32 index = 0; index < m_scenes.Size(); index++) {
-        if (!m_scenes[index].IsValid()) {
+        const Handle<Scene> &scene = m_scenes[index];
+
+        if (!scene.IsValid()) {
             continue;
         }
 
-        if (m_scenes[index]->IsNonWorldScene()) {
-            continue;
+        // sanity checks
+        AssertThrow(scene->GetWorld() == this);
+        AssertThrow(!(scene->GetFlags() & SceneFlags::DETACHED));
+
+        if (!scene->IsNonWorldScene()) {
+            if (const Handle<RenderEnvironment> &render_environment = scene->GetEnvironment()) {
+                HYP_NAMED_SCOPE_FMT("Update RenderEnvironment for Scene with ID #{}", scene->GetID().Value());
+
+                render_environment->Update(delta);
+            }
         }
 
-        if (const Handle<RenderEnvironment> &render_environment = m_scenes[index]->GetEnvironment()) {
-            HYP_NAMED_SCOPE_FMT("Update RenderEnvironment for Scene with ID #{}", m_scenes[index]->GetID().Value());
+        scene->Update(delta);
 
-            render_environment->Update(delta);
-        }
+        EntityManager &entity_manager = *scene->GetEntityManager();
+        entity_manager.FlushCommandQueue(delta);
+
+        entity_managers.PushBack(&entity_manager);
     }
 
 #ifdef HYP_WORLD_ASYNC_SCENE_UPDATES
@@ -177,21 +199,21 @@ void World::Update(GameCounter::TickUnit delta)
     collect_entities_tasks.Reserve(m_scenes.Size());
 #endif
 
-    for (uint32 index = 0; index < m_scenes.Size(); index++) {
-        HYP_NAMED_SCOPE("Begin scene updates");
+    // Ensure Scene::Update() and EntityManager::FlushCommandQueue() or called on all scenes before we kickoff async updates for their entity managers.
+    for (EntityManager *entity_manager : entity_managers) {
+        HYP_NAMED_SCOPE("Call BeginAsyncUpdate on EntityManager");
 
-        const Handle<Scene> &scene = m_scenes[index];
-        AssertThrow(scene.IsValid());
+        entity_manager->BeginAsyncUpdate(delta);
+    }
 
-        // sanity checks
-        AssertThrow(scene->GetWorld() == this);
-        AssertThrow(!(scene->GetFlags() & SceneFlags::DETACHED));
+    for (EntityManager *entity_manager : entity_managers) {
+        HYP_NAMED_SCOPE("Call EndAsyncUpdate on EntityManager");
 
-        scene->BeginUpdate(delta);
+        entity_manager->EndAsyncUpdate();
     }
 
     for (uint32 index = 0; index < m_scenes.Size(); index++) {
-        HYP_NAMED_SCOPE("End scene updates");
+        HYP_NAMED_SCOPE("Scene entity collection");
 
         const Handle<Scene> &scene = m_scenes[index];
         AssertThrow(scene.IsValid());
@@ -199,7 +221,7 @@ void World::Update(GameCounter::TickUnit delta)
         // sanity check
         AssertThrow(scene->GetWorld() == this);
 
-        scene->EndUpdate();
+        scene->EnqueueRenderUpdates();
 
         if (scene->IsNonWorldScene()) {
             continue;
@@ -214,7 +236,7 @@ void World::Update(GameCounter::TickUnit delta)
             // sanity check
             AssertThrow(scene->GetWorld() == this);
 
-            RenderCollector &render_collector = m_render_collector_container.GetRenderCollectorForScene(scene->GetID());
+            RenderCollector &render_collector = m_render_resources->GetRenderCollectorContainer().GetRenderCollectorForScene(scene->GetID());
 
             scene->CollectEntities(render_collector, scene->GetCamera());
         }));
@@ -222,7 +244,7 @@ void World::Update(GameCounter::TickUnit delta)
         // sanity check
         AssertThrow(scene->GetWorld() == this);
 
-        RenderCollector &render_collector = m_render_collector_container.GetRenderCollectorForScene(scene->GetID());
+        RenderCollector &render_collector = m_render_resources->GetRenderCollectorContainer().GetRenderCollectorForScene(scene->GetID());
 
         scene->CollectEntities(render_collector, scene->GetCamera());
 #endif
@@ -235,32 +257,6 @@ void World::Update(GameCounter::TickUnit delta)
 #endif
 
     m_game_state.game_time += delta;
-}
-
-void World::PreRender(Frame *frame)
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
-
-    AssertReady();
-}
-
-void World::Render(Frame *frame)
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
-
-    AssertReady();
-
-    const uint32 num_render_collectors = m_render_collector_container.NumRenderCollectors();
-
-    for (uint32 i = 0; i < num_render_collectors; i++) {
-        if (const WeakHandle<RenderEnvironment> &render_environment = m_render_collector_container.GetRenderCollectorAtIndex(i)->GetRenderEnvironment()) {
-            render_environment.GetUnsafe()->RenderSubsystems(frame);
-        }
-    }
 }
 
 Subsystem *World::AddSubsystem(TypeID type_id, RC<Subsystem> &&subsystem)
@@ -397,16 +393,16 @@ void World::AddScene(const Handle<Scene> &scene)
         for (auto &it : m_subsystems) {
             it.second->OnSceneAttached(scene);
         }
+
+        m_render_resources->Execute([this, scene_weak = scene.ToWeak()]()
+        {
+            if (Handle<Scene> scene = scene_weak.Lock()) {
+                m_render_resources->GetRenderCollectorContainer().AddScene(scene.Get());
+            }
+        });
     }
 
     m_scenes.PushBack(scene);
-
-    Mutex::Guard guard(m_scene_update_mutex);
-
-    m_scenes_pending_removal.Erase(scene);
-    m_scenes_pending_addition.Insert(scene);
-
-    m_has_scene_updates.Set(true, MemoryOrder::RELEASE);
 }
 
 void World::RemoveScene(const WeakHandle<Scene> &scene_weak)
@@ -432,16 +428,18 @@ void World::RemoveScene(const WeakHandle<Scene> &scene_weak)
         }
 
         m_scenes.Erase(it);
+
+        m_render_resources->Execute([this, scene_weak]()
+        {
+            if (!scene_weak.IsValid()) {
+                return;
+            }
+
+            m_render_resources->GetRenderCollectorContainer().RemoveScene(scene_weak.GetID());
+        });
     }
 
     scene->SetWorld(nullptr);
-
-    Mutex::Guard guard(m_scene_update_mutex);
-
-    m_scenes_pending_addition.Erase(scene);
-    m_scenes_pending_removal.Insert(scene);
-
-    m_has_scene_updates.Set(true, MemoryOrder::RELEASE);
 }
 
 const Handle<Scene> &World::GetSceneByName(Name name) const

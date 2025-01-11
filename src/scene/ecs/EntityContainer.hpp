@@ -30,7 +30,7 @@ struct EntityData
         return components.Contains(component_type_id);
     }
 
-    template <class ... Components>
+    template <class... Components>
     HYP_FORCE_INLINE bool HasComponents() const
     {
         return (HasComponent<Components>() && ...);
@@ -45,6 +45,29 @@ struct EntityData
     HYP_FORCE_INLINE ComponentID GetComponentID(TypeID component_type_id) const
     {
         return components.At(component_type_id);
+    }
+
+    template <class Component>
+    HYP_FORCE_INLINE Optional<ComponentID> TryGetComponentID() const
+    {
+        auto it = components.Find<Component>();
+
+        if (it == components.End()) {
+            return { };
+        }
+
+        return it->second;
+    }
+
+    HYP_FORCE_INLINE Optional<ComponentID> TryGetComponentID(TypeID component_type_id) const
+    {
+        auto it = components.Find(component_type_id);
+
+        if (it == components.End()) {
+            return { };
+        }
+        
+        return it->second;
     }
 };
 

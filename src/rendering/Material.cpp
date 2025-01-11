@@ -654,8 +654,6 @@ void MaterialCache::Add(const Handle<Material> &material)
     hc.Add(material->GetParameters().GetHashCode());
     hc.Add(material->GetTextures().GetHashCode());
 
-    HYP_LOG(Material, LogLevel::WARNING, "Adding material with hash {} to material cache", hc.Value());
-
     m_map.Set(hc, material);
 }
 
@@ -714,7 +712,7 @@ Handle<Material> MaterialCache::GetOrCreate(
 
         if (it != m_map.End()) {
             if (Handle<Material> handle = it->second.Lock()) {
-                HYP_LOG(Material, LogLevel::INFO, "Reusing material with hash {} from material cache", hc.Value());
+                HYP_LOG(Material, LogLevel::DEBUG, "Reusing material with hash {} from material cache", hc.Value());
 
                 return handle;
             }
@@ -733,8 +731,6 @@ Handle<Material> MaterialCache::GetOrCreate(
     );
 
     AssertThrow(!handle->IsDynamic());
-
-    HYP_LOG(Material, LogLevel::INFO, "Adding material with hash {} to material cache", hc.Value());
 
     InitObject(handle);
 

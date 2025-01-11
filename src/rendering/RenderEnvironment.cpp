@@ -86,14 +86,10 @@ RenderEnvironment::~RenderEnvironment()
     if (m_has_rt_radiance) {
         m_rt_radiance->Destroy();
         m_rt_radiance.Reset();
-
-        m_has_rt_radiance = false;
     }
 
     if (m_has_ddgi_probes) {
         m_ddgi.Destroy();
-
-        m_has_ddgi_probes = false;
     }
 
     m_enabled_render_subsystems = { };

@@ -284,13 +284,13 @@ NodeProxy Scene::FindNodeByName(UTF8StringView name) const
     return m_root_node_proxy->FindChildByName(name);
 }
 
-void Scene::BeginUpdate(GameCounter::TickUnit delta)
+void Scene::Update(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_id);
 
     AssertReady();
-    
+
     {
         HYP_NAMED_SCOPE("Update octree");
 
@@ -313,22 +313,6 @@ void Scene::BeginUpdate(GameCounter::TickUnit delta)
             m_mutation_state |= DataMutationState::DIRTY;
         }
     }
-
-    m_entity_manager->BeginUpdate(delta);
-
-    m_previous_delta = delta;
-}
-
-void Scene::EndUpdate()
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
-    
-    AssertReady();
-
-    m_entity_manager->EndUpdate();
-
-    EnqueueRenderUpdates();
 }
 
 RenderCollector::CollectionResult Scene::CollectEntities(

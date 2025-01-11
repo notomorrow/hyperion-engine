@@ -517,20 +517,6 @@ void RenderCollector::ExecuteDrawCalls(
 void RenderCollector::ExecuteDrawCalls(
     Frame *frame,
     const Handle<Camera> &camera,
-    const Bitset &bucket_bits,
-    const CullData *cull_data,
-    PushConstantData push_constant
-) const
-{
-    AssertThrow(camera.IsValid());
-    AssertThrowMsg(camera->GetFramebuffer().IsValid(), "Camera has no Framebuffer is attached");
-
-    ExecuteDrawCalls(frame, camera, camera->GetFramebuffer(), bucket_bits, cull_data, push_constant);
-}
-
-void RenderCollector::ExecuteDrawCalls(
-    Frame *frame,
-    const Handle<Camera> &camera,
     const FramebufferRef &framebuffer,
     const Bitset &bucket_bits,
     const CullData *cull_data,

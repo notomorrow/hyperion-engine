@@ -12,6 +12,7 @@
 #include <rendering/DefaultFormats.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/FinalPass.hpp>
+#include <rendering/World.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -600,17 +601,19 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 
     PreFrameUpdate(frame);
     
-    m_world->PreRender(frame);
+    m_world->GetRenderResources().PreRender(frame);
 
     game->OnFrameBegin(frame);
 
-    m_world->Render(frame);
+    m_world->GetRenderResources().Render(frame);
 
     RenderDeferred(frame);
 
     m_final_pass->Render(frame);
 
     HYPERION_ASSERT_RESULT(frame->EndCapture(GetGPUInstance()->GetDevice()));
+
+    m_world->GetRenderResources().PostRender(frame);
 
     UpdateBuffersAndDescriptors((GetGPUInstance()->GetFrameHandler()->GetCurrentFrameIndex()));
 

@@ -12,6 +12,8 @@
 
 #include <core/system/AppContext.hpp>
 
+#include <core/utilities/Result.hpp>
+
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
@@ -140,6 +142,8 @@ Camera::Camera()
 Camera::Camera(int width, int height)
     : HypObject(),
       m_name(Name::Unique("Camera_")),
+      m_flags(CameraFlags::NONE),
+      m_match_window_size_ratio(1.0f),
       m_fov(50.0f),
       m_width(width),
       m_height(height),
@@ -161,6 +165,8 @@ Camera::Camera(int width, int height)
 Camera::Camera(float fov, int width, int height, float _near, float _far)
     : HypObject(),
       m_name(Name::Unique("Camera_")),
+      m_flags(CameraFlags::NONE),
+      m_match_window_size_ratio(1.0f),
       m_fov(fov),
       m_width(width),
       m_height(height),
@@ -178,6 +184,8 @@ Camera::Camera(float fov, int width, int height, float _near, float _far)
 Camera::Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far)
     : HypObject(),
       m_name(Name::Unique("Camera_")),
+      m_flags(CameraFlags::NONE),
+      m_match_window_size_ratio(1.0f),
       m_fov(0.0f),
       m_width(width),
       m_height(height),
@@ -208,11 +216,9 @@ Camera::~Camera()
     }
 
     SafeRelease(std::move(m_framebuffer));
-
-    // Sync render commands to prevent dangling pointers to this
-    HYP_SYNC_RENDER();
 }
 
+HYP_DISABLE_OPTIMIZATION;
 void Camera::Init()
 {
     if (IsInitCalled()) {
@@ -220,6 +226,50 @@ void Camera::Init()
     }
 
     HypObject::Init();
+
+    if (m_flags & CameraFlags::MATCH_WINDOW_SIZE) {
+        auto InitMatchWindowSize = [this]() -> Result<>
+        {
+            const RC<AppContext> &app_context = g_engine->GetAppContext();
+
+            if (!app_context) {
+                return HYP_MAKE_ERROR(Error, "No valid app context!");
+            }
+
+            if (!app_context->GetMainWindow()) {
+                return HYP_MAKE_ERROR(Error, "No main window set!");
+            }
+
+            const Vec2i window_size = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(app_context->GetMainWindow()->GetDimensions()) * m_match_window_size_ratio)), Vec2i::One());
+
+            m_width = window_size.x;
+            m_height = window_size.y;
+
+            RemoveDelegateHandler(NAME("HandleWindowSizeChanged"));
+
+            AddDelegateHandler(NAME("HandleWindowSizeChanged"), app_context->GetMainWindow()->OnWindowSizeChanged.Bind([this](Vec2i window_size)
+            {
+                HYP_NAMED_SCOPE("Update Camera size based on window size");
+
+                Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+                window_size = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(window_size) * m_match_window_size_ratio)), Vec2i::One());
+
+                m_width = window_size.x;
+                m_height = window_size.y;
+
+                HYP_LOG(Camera, LogLevel::DEBUG, "Camera window size (change): {}", window_size);
+            }, /* require_current_thread */ true));
+
+            HYP_LOG(Camera, LogLevel::DEBUG, "Camera window size: {}", window_size);
+
+            return { };
+        };
+
+        if (auto match_window_size_result = InitMatchWindowSize(); match_window_size_result.HasError()) {
+            HYP_LOG(Camera, LogLevel::ERR, "Camera with MATCH_WINDOW_SIZE flag cannot match window size: {}", match_window_size_result.GetError().GetMessage());
+        }
+    }
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
     {
@@ -256,6 +306,7 @@ void Camera::Init()
 
     SetReady(true);
 }
+HYP_ENABLE_OPTIMIZATION;
 
 void Camera::AddCameraController(const RC<CameraController> &camera_controller)
 {
@@ -461,6 +512,8 @@ Vec2f Camera::GetPixelSize() const
 void Camera::Update(GameCounter::TickUnit dt)
 {
     HYP_SCOPE;
+
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
     AssertReady();
 

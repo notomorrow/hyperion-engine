@@ -13,78 +13,11 @@
 #include <physics/PhysicsWorld.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
-#include <rendering/RenderCollection.hpp>
 
 namespace hyperion {
 
+class WorldRenderResources;
 class EditorDelegates;
-
-class RenderCollectorContainer
-{
-public:
-    static constexpr uint32 max_scenes = 128;
-
-    RenderCollectorContainer()
-        : m_num_render_collectors { 0u }
-    {
-    }
-
-    RenderCollectorContainer(const RenderCollectorContainer &other)                   = delete;
-    RenderCollectorContainer &operator=(RenderCollectorContainer &other)              = delete;
-    RenderCollectorContainer(RenderCollectorContainer &&other) noexcept               = delete;
-    RenderCollectorContainer &operator=(RenderCollectorContainer &&other) noexcept    = delete;
-    ~RenderCollectorContainer()                                                  = default;
-
-    uint32 NumRenderCollectors() const
-        { return m_num_render_collectors.Get(MemoryOrder::ACQUIRE); }
-
-    void AddScene(const Scene *scene)
-    {
-        AssertThrow(scene != nullptr);
-        AssertThrowMsg(scene->GetCamera().IsValid(), "Cannot acquire RenderCollector for Scene with no Camera attached.");
-
-        const uint32 scene_index = scene->GetID().ToIndex();
-        AssertThrow(scene_index < max_scenes);
-
-        RenderCollector &render_collector = m_render_collectors_by_id_index[scene_index];
-        render_collector.SetCamera(scene->GetCamera());
-
-        if (scene->IsNonWorldScene()) {
-            render_collector.SetRenderEnvironment(WeakHandle<RenderEnvironment> { });
-        } else {
-            render_collector.SetRenderEnvironment(scene->GetEnvironment());
-        }
-
-        const uint32 render_collector_index = m_num_render_collectors.Increment(1u, MemoryOrder::ACQUIRE_RELEASE);
-        m_render_collectors[render_collector_index] = &render_collector;
-    }
-
-    void RemoveScene(ID<Scene> id)
-    {
-        AssertThrow(id.IsValid());
-        
-        m_num_render_collectors.Decrement(1u, MemoryOrder::RELEASE);
-
-        RenderCollector &render_collector = m_render_collectors_by_id_index[id.ToIndex()];
-        render_collector.SetCamera(Handle<Camera>::empty);
-        render_collector.SetRenderEnvironment(WeakHandle<RenderEnvironment> { });
-        render_collector.Reset();
-    }
-
-    RenderCollector &GetRenderCollectorForScene(ID<Scene> scene_id)
-        { return m_render_collectors_by_id_index[scene_id.ToIndex()]; }
-
-    const RenderCollector &GetRenderCollectorForScene(ID<Scene> scene_id) const
-        { return m_render_collectors_by_id_index[scene_id.ToIndex()]; }
-
-    RenderCollector *GetRenderCollectorAtIndex(uint index) const
-        { return m_render_collectors[index]; }
-
-private:
-    FixedArray<RenderCollector *, max_scenes>   m_render_collectors;
-    FixedArray<RenderCollector, max_scenes>     m_render_collectors_by_id_index;
-    AtomicVar<uint32>                           m_num_render_collectors;
-};
 
 struct DetachedScenesContainer
 {
@@ -170,6 +103,9 @@ public:
     World &operator=(World &&other) noexcept    = delete;
     ~World();
 
+    HYP_FORCE_INLINE WorldRenderResources &GetRenderResources() const
+        { return *m_render_resources; }
+
     /*! \brief Get the placeholder Scene, used for Entities that are not attached to a Scene.
      *  This version of the function allows the caller to specify the thread the Scene uses for entity management.
      *  If the Scene does not exist for the given thread mask, it will be created.
@@ -191,12 +127,6 @@ public:
 
     HYP_FORCE_INLINE const PhysicsWorld &GetPhysicsWorld() const
         { return m_physics_world; }
-
-    HYP_FORCE_INLINE RenderCollectorContainer &GetRenderCollectorContainer()
-        { return m_render_collector_container; }
-
-    HYP_FORCE_INLINE const RenderCollectorContainer &GetRenderCollectorContainer() const
-        { return m_render_collector_container; }
 
     template <class T, class... Args>
     HYP_FORCE_INLINE T *AddSubsystem(Args &&... args)
@@ -246,31 +176,21 @@ public:
      * The main logic loop of the engine happens here. Each Scene in the World is updated,
      * and within each Scene, each Entity, etc. */
     void Update(GameCounter::TickUnit delta);
-
-    /*! \brief Perform any necessary render thread specific updates to the World. */
-    void PreRender(Frame *frame);
-    void Render(Frame *frame);
     
     Delegate<void, World *, GameStateMode>  OnGameStateChange;
 
 private:
-    void UpdatePendingScenes();
-
     PhysicsWorld                            m_physics_world;
-    RenderCollectorContainer                m_render_collector_container;
 
     DetachedScenesContainer                 m_detached_scenes;
 
     Array<Handle<Scene>>                    m_scenes;
-    FlatSet<WeakHandle<Scene>>              m_scenes_pending_removal;
-    FlatSet<WeakHandle<Scene>>              m_scenes_pending_addition;
 
     TypeMap<RC<Subsystem>>                  m_subsystems;
 
-    AtomicVar<bool>                         m_has_scene_updates { false };
-    Mutex                                   m_scene_update_mutex;
-
     GameState                               m_game_state;
+
+    WorldRenderResources                    *m_render_resources;
 };
 
 } // namespace hyperion

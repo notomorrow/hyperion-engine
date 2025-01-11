@@ -151,7 +151,7 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
 {
     m_editor_delegates = new EditorDelegates();
 
-    OnProjectOpened.Bind([this](EditorProject *project)
+    OnProjectOpened.BindOwned(this, [this](EditorProject *project)
     {
         const Handle<Scene> &project_scene = project->GetScene();
         AssertThrow(project_scene.IsValid());
@@ -160,17 +160,17 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
 
         m_scene = project_scene;
 
-        m_camera = project_scene->GetCamera();
+        m_camera = m_scene->GetCamera();
         AssertThrow(InitObject(m_camera));
-
-        // m_camera->GetRenderResources().EnqueueBind();
 
         m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
         m_scene->GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
 
+        // Reinitialize viewport
+        InitViewport();
     }).Detach();
 
-    OnProjectClosing.Bind([this](EditorProject *project)
+    OnProjectClosing.BindOwned(this, [this](EditorProject *project)
     {
         const Handle<Scene> &project_scene = project->GetScene();
         
@@ -179,12 +179,11 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
 
             // @TODO Remove camera controller
 
+            project_scene->GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
+
             project_scene->GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
-            
 
             if (m_camera) {
-                // m_camera->GetRenderResources().EnqueueUnbind();
-
                 m_camera.Reset();
             }
 
@@ -208,14 +207,13 @@ void EditorSubsystem::Initialize()
 {
     HYP_SCOPE;
 
+    LoadEditorUIDefinitions();
+
     NewProject();
 
-    const Vec2i window_size = m_app_context->GetMainWindow()->GetDimensions();
+    InitSceneOutline();
+    InitDetailView();
 
-    RC<ScreenCaptureRenderSubsystem> screen_capture_component = m_scene->GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), Vec2u(window_size));
-    m_scene_texture = screen_capture_component->GetTexture();
-
-    CreateEditorUI();
     CreateHighlightNode();
 
     if (Handle<AssetCollector> base_asset_collector = g_asset_manager->GetBaseAssetCollector()) {
@@ -231,14 +229,24 @@ void EditorSubsystem::Initialize()
     {
         asset_collector->StopWatching();
     });
+
+    g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript &script)
+    {
+        DebugLog(LogType::Debug, "Script state changed: now is %u\n", script.state);
+    }).Detach();
 }
 
 void EditorSubsystem::Shutdown()
 {
     HYP_SCOPE;
 
-    m_scene->GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
-    m_scene->GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
+    if (m_current_project != nullptr) {
+        OnProjectClosing(m_current_project.Get());
+
+        m_current_project->Close();
+
+        m_current_project.Reset();
+    }
 }
 
 void EditorSubsystem::Update(GameCounter::TickUnit delta)
@@ -263,169 +271,43 @@ void EditorSubsystem::OnSceneDetached(const Handle<Scene> &scene)
     HYP_SCOPE;
 }
 
-void EditorSubsystem::CreateEditorUI()
+void EditorSubsystem::LoadEditorUIDefinitions()
 {
     RC<FontAtlas> font_atlas = CreateFontAtlas();
     m_ui_stage->SetDefaultFontAtlas(font_atlas);
 
-    if (auto loaded_ui_asset = AssetManager::GetInstance()->Load<RC<UIObject>>("ui/Editor.Main.ui.xml"); loaded_ui_asset.IsOK()) {
-        RC<UIStage> loaded_ui = loaded_ui_asset.Result().Cast<UIStage>();
-        AssertThrowMsg(loaded_ui != nullptr, "Failed to load editor UI");
+    auto loaded_ui_asset = AssetManager::GetInstance()->Load<RC<UIObject>>("ui/Editor.Main.ui.xml");
+    AssertThrowMsg(loaded_ui_asset.IsOK(), "Failed to load editor UI definitions!");
+    
+    RC<UIStage> loaded_ui = loaded_ui_asset.Result().Cast<UIStage>();
+    AssertThrowMsg(loaded_ui != nullptr, "Failed to load editor UI");
 
-        loaded_ui->SetOwnerThreadID(ThreadID::Current());
-        loaded_ui->SetDefaultFontAtlas(font_atlas);
+    loaded_ui->SetOwnerThreadID(ThreadID::Current());
+    loaded_ui->SetDefaultFontAtlas(font_atlas);
 
-        if (RC<UIObject> scene_image_object = loaded_ui->FindChildUIObject(NAME("Scene_Image"))) {
-            RC<UIImage> ui_image = scene_image_object.Cast<UIImage>();
-            
-            if (ui_image != nullptr) {
-                ui_image->OnClick.Bind([this](const MouseEvent &event)
-                {
-                    HYP_LOG(Editor, LogLevel::DEBUG, "Click at : {}", event.position);
+    GetUIStage()->AddChildUIObject(loaded_ui);
 
-                    if (m_should_cancel_next_click) {
-                        return UIEventHandlerResult::STOP_BUBBLING;
-                    }
+    // test generate lightmap
+    if (RC<UIObject> generate_lightmaps_button = loaded_ui->FindChildUIObject(NAME("Generate_Lightmaps_Button"))) {
 
-                    if (m_camera->GetCameraController()->GetInputHandler()->OnClick(event)) {
-                        return UIEventHandlerResult::STOP_BUBBLING;
-                    }
+        generate_lightmaps_button->OnClick.RemoveAll(this);
+        generate_lightmaps_button->OnClick.BindOwned(this, [this](...)
+        {
+            HYP_LOG(Editor, LogLevel::INFO, "Generate lightmaps clicked!");
 
-                    const Vec4f mouse_world = m_camera->TransformScreenToWorld(event.position);
+            AddTask(MakeRefCountedPtr<GenerateLightmapsEditorTask>(GetWorld()->HandleFromThis(), m_scene));
 
-                    const Vec4f ray_direction = mouse_world.Normalized();
+            // LightmapperSubsystem *lightmapper_subsystem = GetWorld()->GetSubsystem<LightmapperSubsystem>();
 
-                    const Ray ray { m_camera->GetTranslation(), ray_direction.GetXYZ() };
-                    RayTestResults results;
+            // if (!lightmapper_subsystem) {
+            //     lightmapper_subsystem = GetWorld()->AddSubsystem<LightmapperSubsystem>();
+            // }
 
-                    if (m_scene->GetOctree().TestRay(ray, results)) {
-                        for (const RayHit &hit : results) {
-                            if (ID<Entity> entity = ID<Entity>(hit.id)) {
-                                HYP_LOG(Editor, LogLevel::INFO, "Hit: {}", entity.Value());
+            // Task<void> *generate_lightmaps_task = lightmapper_subsystem->GenerateLightmaps(m_scene);
 
-                                if (NodeLinkComponent *node_link_component = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(entity)) {
-                                    if (RC<Node> node = node_link_component->node.Lock()) {
-                                        SetFocusedNode(NodeProxy(node));
-
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        return UIEventHandlerResult::STOP_BUBBLING;
-                    }
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->OnMouseDrag.Bind([this, ui_image = ui_image.Get()](const MouseEvent &event)
-                {
-                    m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
-
-                    // prevent click being triggered on release once mouse has been dragged
-                    m_should_cancel_next_click = true;
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->OnMouseMove.Bind([this, ui_image = ui_image.Get()](const MouseEvent &event)
-                {
-                    m_camera->GetCameraController()->GetInputHandler()->OnMouseMove(event);
-
-                    if (event.input_manager->IsMouseLocked()) {
-                        const Vec2f position = ui_image->GetAbsolutePosition();
-                        const Vec2i size = ui_image->GetActualSize();
-                        const Vec2i window_size = { m_camera->GetWidth(), m_camera->GetHeight() };
-
-                        // Set mouse position to previous position to keep it stationary while rotating
-                        event.input_manager->SetMousePosition(Vec2i(position + event.previous_position * Vec2f(size)));
-                    }
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->OnMouseDown.Bind([this, ui_image_weak = ui_image.ToWeak()](const MouseEvent &event)
-                {
-                    HYP_LOG(Editor, LogLevel::DEBUG, "Mouse down on UI image, computed depth: {}", ui_image_weak.Lock()->GetComputedDepth());
-                    
-                    m_camera->GetCameraController()->GetInputHandler()->OnMouseDown(event);
-
-                    m_should_cancel_next_click = false;
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->OnMouseUp.Bind([this](const MouseEvent &event)
-                {
-                    m_camera->GetCameraController()->GetInputHandler()->OnMouseUp(event);
-
-                    m_should_cancel_next_click = false;
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->OnKeyDown.Bind([this](const KeyboardEvent &event)
-                {
-                    if (m_camera->GetCameraController()->GetInputHandler()->OnKeyDown(event)) {
-                        return UIEventHandlerResult::STOP_BUBBLING;
-                    }
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->OnGainFocus.Bind([this](const MouseEvent &event)
-                {
-                    m_editor_camera_enabled = true;
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->OnLoseFocus.Bind([this](const MouseEvent &event)
-                {
-                    m_editor_camera_enabled = false;
-
-                    return UIEventHandlerResult::OK;
-                }).Detach();
-
-                ui_image->SetTexture(m_scene_texture);
-            }
-        } else {
-            HYP_FAIL("Failed to find Scene_Image element");
-        }
-        
-        GetUIStage()->AddChildUIObject(loaded_ui);
-
-        // test generate lightmap
-        if (RC<UIObject> generate_lightmaps_button = loaded_ui->FindChildUIObject(NAME("Generate_Lightmaps_Button"))) {
-
-            generate_lightmaps_button->OnClick.RemoveAll();
-            generate_lightmaps_button->OnClick.Bind([this](...)
-            {
-                HYP_LOG(Editor, LogLevel::INFO, "Generate lightmaps clicked!");
-
-                AddTask(MakeRefCountedPtr<GenerateLightmapsEditorTask>(GetWorld()->HandleFromThis(), m_scene));
-
-                // LightmapperSubsystem *lightmapper_subsystem = GetWorld()->GetSubsystem<LightmapperSubsystem>();
-
-                // if (!lightmapper_subsystem) {
-                //     lightmapper_subsystem = GetWorld()->AddSubsystem<LightmapperSubsystem>();
-                // }
-
-                // Task<void> *generate_lightmaps_task = lightmapper_subsystem->GenerateLightmaps(m_scene);
-
-                return UIEventHandlerResult::OK;
-            }).Detach();
-        }
-
-        InitSceneOutline();
-        InitDetailView();
+            return UIEventHandlerResult::OK;
+        }).Detach();
     }
-
-    g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript &script)
-    {
-        DebugLog(LogType::Debug, "Script state changed: now is %u\n", script.state);
-    }).Detach();
 }
 
 void EditorSubsystem::CreateHighlightNode()
@@ -484,6 +366,142 @@ void EditorSubsystem::CreateHighlightNode()
     m_highlight_node->SetEntity(entity);
 }
 
+void EditorSubsystem::InitViewport()
+{
+    AssertThrow(m_scene.IsValid());
+
+    if (RC<UIObject> scene_image_object = GetUIStage()->FindChildUIObject(NAME("Scene_Image"))) {
+        RC<UIImage> ui_image = scene_image_object.Cast<UIImage>();
+        AssertThrow(ui_image != nullptr);
+
+        const Vec2i viewport_size = MathUtil::Max(m_scene->GetCamera()->GetDimensions(), Vec2i::One());
+
+        m_scene_texture.Reset();
+
+        RC<ScreenCaptureRenderSubsystem> screen_capture_component = m_scene->GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), Vec2u(viewport_size));
+        m_scene_texture = screen_capture_component->GetTexture();
+        AssertThrow(m_scene_texture.IsValid());
+        
+        ui_image->OnClick.RemoveAll(this);
+        ui_image->OnClick.BindOwned(this, [this](const MouseEvent &event)
+        {
+            HYP_LOG(Editor, LogLevel::DEBUG, "Click at : {}", event.position);
+
+            if (m_should_cancel_next_click) {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            if (m_camera->GetCameraController()->GetInputHandler()->OnClick(event)) {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            const Vec4f mouse_world = m_camera->TransformScreenToWorld(event.position);
+
+            const Vec4f ray_direction = mouse_world.Normalized();
+
+            const Ray ray { m_camera->GetTranslation(), ray_direction.GetXYZ() };
+            RayTestResults results;
+
+            if (m_scene->GetOctree().TestRay(ray, results)) {
+                for (const RayHit &hit : results) {
+                    if (ID<Entity> entity = ID<Entity>(hit.id)) {
+                        HYP_LOG(Editor, LogLevel::INFO, "Hit: {}", entity.Value());
+
+                        if (NodeLinkComponent *node_link_component = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(entity)) {
+                            if (RC<Node> node = node_link_component->node.Lock()) {
+                                SetFocusedNode(NodeProxy(node));
+
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->OnMouseDrag.RemoveAll(this);
+        ui_image->OnMouseDrag.BindOwned(this, [this, ui_image = ui_image.Get()](const MouseEvent &event)
+        {
+            m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
+
+            // prevent click being triggered on release once mouse has been dragged
+            m_should_cancel_next_click = true;
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->OnMouseMove.RemoveAll(this);
+        ui_image->OnMouseMove.BindOwned(this, [this, ui_image = ui_image.Get()](const MouseEvent &event)
+        {
+            m_camera->GetCameraController()->GetInputHandler()->OnMouseMove(event);
+
+            if (event.input_manager->IsMouseLocked()) {
+                const Vec2f position = ui_image->GetAbsolutePosition();
+                const Vec2i size = ui_image->GetActualSize();
+
+                // Set mouse position to previous position to keep it stationary while rotating
+                event.input_manager->SetMousePosition(Vec2i(position + event.previous_position * Vec2f(size)));
+            }
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->OnMouseDown.RemoveAll(this);
+        ui_image->OnMouseDown.BindOwned(this, [this, ui_image_weak = ui_image.ToWeak()](const MouseEvent &event)
+        {
+            m_camera->GetCameraController()->GetInputHandler()->OnMouseDown(event);
+
+            m_should_cancel_next_click = false;
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->OnMouseUp.RemoveAll(this);
+        ui_image->OnMouseUp.BindOwned(this, [this](const MouseEvent &event)
+        {
+            m_camera->GetCameraController()->GetInputHandler()->OnMouseUp(event);
+
+            m_should_cancel_next_click = false;
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->OnKeyDown.RemoveAll(this);
+        ui_image->OnKeyDown.BindOwned(this, [this](const KeyboardEvent &event)
+        {
+            if (m_camera->GetCameraController()->GetInputHandler()->OnKeyDown(event)) {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->OnGainFocus.RemoveAll(this);
+        ui_image->OnGainFocus.BindOwned(this, [this](const MouseEvent &event)
+        {
+            m_editor_camera_enabled = true;
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->OnLoseFocus.RemoveAll(this);
+        ui_image->OnLoseFocus.BindOwned(this, [this](const MouseEvent &event)
+        {
+            m_editor_camera_enabled = false;
+
+            return UIEventHandlerResult::OK;
+        }).Detach();
+
+        ui_image->SetTexture(m_scene_texture);
+    } else {
+        HYP_FAIL("Failed to find Scene_Image element");
+    }
+}
+
 void EditorSubsystem::InitSceneOutline()
 {
     RC<UIListView> list_view = GetUIStage()->FindChildUIObject(NAME("Scene_Outline_ListView")).Cast<UIListView>();
@@ -493,7 +511,8 @@ void EditorSubsystem::InitSceneOutline()
     
     list_view->SetDataSource(MakeRefCountedPtr<UIDataSource>(TypeWrapper<Weak<Node>> { }));
     
-    list_view->OnSelectedItemChange.Bind([this, list_view_weak = list_view.ToWeak()](UIListViewItem *list_view_item)
+    list_view->OnSelectedItemChange.RemoveAll(this);
+    list_view->OnSelectedItemChange.BindOwned(this, [this, list_view_weak = list_view.ToWeak()](UIListViewItem *list_view_item)
     {
         RC<UIListView> list_view = list_view_weak.Lock();
 
@@ -599,7 +618,8 @@ void EditorSubsystem::InitSceneOutline()
        }
     });
 
-    m_scene->GetRoot()->GetDelegates()->OnChildAdded.Bind([this, list_view_weak = list_view.ToWeak()](Node *node, bool)
+    m_scene->GetRoot()->GetDelegates()->OnChildAdded.RemoveAll(this);
+    m_scene->GetRoot()->GetDelegates()->OnChildAdded.BindOwned(this, [this, list_view_weak = list_view.ToWeak()](Node *node, bool)
     {
         AssertThrow(node != nullptr);
 
@@ -632,7 +652,8 @@ void EditorSubsystem::InitSceneOutline()
         }
     }).Detach();
 
-    m_scene->GetRoot()->GetDelegates()->OnChildRemoved.Bind([list_view_weak = list_view.ToWeak()](Node *node, bool)
+    m_scene->GetRoot()->GetDelegates()->OnChildRemoved.RemoveAll(this);
+    m_scene->GetRoot()->GetDelegates()->OnChildRemoved.BindOwned(this, [list_view_weak = list_view.ToWeak()](Node *node, bool)
     {
         if (!node || (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE)) {
             return;
@@ -657,7 +678,8 @@ void EditorSubsystem::InitDetailView()
 
     list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
 
-    OnFocusedNodeChanged.Bind([this, hyp_class = Node::Class(), list_view_weak = list_view.ToWeak()](const NodeProxy &node, const NodeProxy &previous_node)
+    OnFocusedNodeChanged.RemoveAll(this);
+    OnFocusedNodeChanged.BindOwned(this, [this, hyp_class = Node::Class(), list_view_weak = list_view.ToWeak()](const NodeProxy &node, const NodeProxy &previous_node)
     {
         m_editor_delegates->RemoveNodeWatcher(NAME("DetailView"));
 

@@ -11,6 +11,14 @@ namespace Hyperion
         Orthographic = 2
     }
 
+    [HypClassBinding(Name="CameraFlags")]
+    [Flags]
+    public enum CameraFlags : uint
+    {
+        None = 0x0,
+        MatchWindowSize = 0x1
+    }
+
     [HypClassBinding(Name="Camera")]
     public class Camera : HypObject
     {

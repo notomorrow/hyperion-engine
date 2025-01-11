@@ -66,9 +66,11 @@ protected:
 
 /*! \brief A class that represents a result that can either be a value or an error.
  *  The value and error types are specified by the template parameters.
- *  The error type defaults to Error if not specified.
- */
-template <class T, class ErrorType = Error>
+ *  The error type defaults to Error if not specified. */
+template <class T = void, class ErrorType = Error>
+class Result;
+
+template <class T, class ErrorType>
 class Result
 {
 public:

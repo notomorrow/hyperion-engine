@@ -10,6 +10,8 @@
 #include <core/memory/UniquePtr.hpp>
 #include <core/memory/RefCountedPtr.hpp>
 
+#include <core/utilities/EnumFlags.hpp>
+
 #include <core/object/HypObject.hpp>
 
 #include <math/Vector3.hpp>
@@ -39,6 +41,15 @@ enum class CameraProjectionMode : uint32
     PERSPECTIVE     = 1,
     ORTHOGRAPHIC    = 2
 };
+
+HYP_ENUM()
+enum class CameraFlags : uint32
+{
+    NONE                = 0x0,
+    MATCH_WINDOW_SIZE   = 0x1
+};
+
+HYP_MAKE_ENUM_FLAGS(CameraFlags)
 
 struct CameraCommand
 {
@@ -212,6 +223,22 @@ public:
     HYP_FORCE_INLINE void SetName(Name name)
         { m_name = name; }
 
+    HYP_METHOD(Property="Flags", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE EnumFlags<CameraFlags> GetFlags() const
+        { return m_flags; }
+
+    HYP_METHOD(Property="Flags", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE void SetFlags(EnumFlags<CameraFlags> flags)
+        { m_flags = flags; }
+
+    HYP_METHOD(Property="MatchWindowSizeRatio", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE float GetMatchWindowSizeRatio() const
+        { return m_match_window_size_ratio; }
+
+    HYP_METHOD(Property="MatchWindowSizeRatio", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE void SetMatchWindowSizeRatio(float match_window_size_ratio)
+        { m_match_window_size_ratio = match_window_size_ratio; }
+
     HYP_FORCE_INLINE CameraRenderResources &GetRenderResources() const
         { return *m_render_resources; }
 
@@ -287,6 +314,14 @@ public:
     HYP_FORCE_INLINE void SetHeight(int height)
         { m_height = height; }
 
+    HYP_METHOD(Property="Dimensions")
+    HYP_FORCE_INLINE Vec2i GetDimensions() const
+        { return Vec2i { m_width, m_height }; }
+
+    HYP_METHOD(Property="Dimensions")
+    HYP_FORCE_INLINE void SetDimensions(Vec2i dimensions)
+        { m_width = dimensions.x; m_height = dimensions.y; }
+
     HYP_METHOD(Property="Near", Serialize=true, Editor=true)
     HYP_FORCE_INLINE float GetNear() const
         { return m_near; }
@@ -308,27 +343,37 @@ public:
     HYP_FORCE_INLINE float GetFOV() const
         { return m_fov; }
 
+    // perspective only
+    HYP_METHOD(Property="FOV", Serialize=true, Editor=true)
+    HYP_FORCE_INLINE void SetFOV(float fov)
+        { m_fov = fov; }
+
     // ortho only
     HYP_METHOD(Property="Left", Serialize=true, Editor=true)
     HYP_FORCE_INLINE float GetLeft() const
         { return m_left; }
 
+    // ortho only
     HYP_METHOD(Property="Left", Serialize=true, Editor=true)
     HYP_FORCE_INLINE void SetLeft(float left)
         { m_left = left; }
 
+    // ortho only
     HYP_METHOD(Property="Right", Serialize=true, Editor=true)
     HYP_FORCE_INLINE float GetRight() const
         { return m_right; }
 
+    // ortho only
     HYP_METHOD(Property="Right", Serialize=true, Editor=true)
     HYP_FORCE_INLINE void SetRight(float right)
         { m_right = right; }
 
+    // ortho only
     HYP_METHOD(Property="Bottom", Serialize=true, Editor=true)
     HYP_FORCE_INLINE float GetBottom() const
         { return m_bottom; }
 
+    // ortho only
     HYP_METHOD(Property="Bottom", Serialize=true, Editor=true)
     HYP_FORCE_INLINE void SetBottom(float bottom)
         { m_bottom = bottom; }
@@ -337,10 +382,12 @@ public:
     HYP_FORCE_INLINE float GetTop() const
         { return m_top; }
         
+    // ortho only
     HYP_METHOD(Property="Top", Serialize=true, Editor=true)
     HYP_FORCE_INLINE void SetTop(float top)
         { m_top = top; }
 
+    // ortho only
     HYP_METHOD(Property="Translation", Serialize=true, Editor=true)
     HYP_FORCE_INLINE const Vec3f &GetTranslation() const
         { return m_translation; }
@@ -450,6 +497,10 @@ protected:
     void UpdateViewProjectionMatrix();
 
     Name                        m_name;
+
+    EnumFlags<CameraFlags>      m_flags;
+
+    float                       m_match_window_size_ratio;
 
     Array<RC<CameraController>> m_camera_controllers;
 
