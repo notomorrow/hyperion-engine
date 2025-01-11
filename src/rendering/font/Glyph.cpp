@@ -55,13 +55,13 @@ void Glyph::LoadMetrics()
 
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale))) {
-        HYP_LOG(Font, LogLevel::ERR, "Error setting pixel size for font face!");
+        HYP_LOG(Font, Error, "Error setting pixel size for font face!");
 
         return;
     }
 
     if (FT_Load_Glyph(m_face->GetFace(), m_index, FT_LOAD_DEFAULT | FT_LOAD_COLOR | FT_PIXEL_MODE_GRAY)) {
-        HYP_LOG(Font, LogLevel::ERR, "Error loading glyph from font face!");
+        HYP_LOG(Font, Error, "Error loading glyph from font face!");
 
         return;
     }
@@ -77,13 +77,13 @@ void Glyph::Render()
 
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale))) {
-        HYP_LOG(Font, LogLevel::ERR, "Error setting pixel size for font face!");
+        HYP_LOG(Font, Error, "Error setting pixel size for font face!");
 
         return;
     }
 
     if (FT_Load_Glyph(m_face->GetFace(), m_index, FT_LOAD_DEFAULT | FT_LOAD_COLOR | FT_LOAD_RENDER | FT_PIXEL_MODE_GRAY)) {
-        HYP_LOG(Font, LogLevel::ERR, "Error loading glyph from font face!");
+        HYP_LOG(Font, Error, "Error loading glyph from font face!");
 
         return;
     }

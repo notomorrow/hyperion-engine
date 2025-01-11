@@ -262,7 +262,7 @@ AppContext::AppContext(ANSIString name, const CommandLineArguments &arguments)
         if (parse_result.HasValue()) { 
             new_arguments = MakeUnique<CommandLineArguments>(CommandLineArguments::Merge(*parse_result, arguments));
         } else {
-            HYP_LOG(AppContext, LogLevel::ERR, "Failed to parse config command line value \"{}\":\n\t{}", config_args_string, parse_result.GetError().GetMessage());
+            HYP_LOG(AppContext, Error, "Failed to parse config command line value \"{}\":\n\t{}", config_args_string, parse_result.GetError().GetMessage());
         }
     }
 

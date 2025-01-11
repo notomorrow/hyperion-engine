@@ -79,7 +79,7 @@ public:
             m_model.texcoords.PushBack(Vec2f(x, y));
         } else if (name == "face") {
             if (attributes.Size() != 3) {
-                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: `face` tag expected to have 3 attributes.");
+                HYP_LOG(Assets, Warning, "Ogre XML parser: `face` tag expected to have 3 attributes.");
             }
             
             FlatMap<String, uint32> face_elements;
@@ -114,7 +114,7 @@ public:
         } else if (name == "vertex") {
             /* no-op */
         }  else {
-            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: No handler for '{}' tag", name);
+            HYP_LOG(Assets, Warning, "Ogre XML parser: No handler for '{}' tag", name);
         }
     }
 
@@ -142,7 +142,7 @@ void BuildVertices(OgreXMLModel &model)
         if (i < model.positions.Size()) {
             position = model.positions[i];
         } else {
-            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Vertex index ({}) out of bounds ({})", i, model.positions.Size());
+            HYP_LOG(Assets, Warning, "Ogre XML parser: Vertex index ({}) out of bounds ({})", i, model.positions.Size());
 
             continue;
         }
@@ -151,7 +151,7 @@ void BuildVertices(OgreXMLModel &model)
             if (i < model.normals.Size()) {
                 normal = model.normals[i];
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Normal index ({}) out of bounds ({})", i, model.normals.Size());
+                HYP_LOG(Assets, Warning, "Ogre XML parser: Normal index ({}) out of bounds ({})", i, model.normals.Size());
             }
         }
 
@@ -159,7 +159,7 @@ void BuildVertices(OgreXMLModel &model)
             if (i < model.texcoords.Size()) {
                 texcoord = model.texcoords[i];
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Texcoord index ({}) out of bounds ({})", i, model.texcoords.Size());
+                HYP_LOG(Assets, Warning, "Ogre XML parser: Texcoord index ({}) out of bounds ({})", i, model.texcoords.Size());
             }
         }
 
@@ -172,7 +172,7 @@ void BuildVertices(OgreXMLModel &model)
 
             for (SizeType j = 0; j < bone_assignments.Size(); j++) {
                 if (j == 4) {
-                    HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Attempt to add more than 4 bone assignments");
+                    HYP_LOG(Assets, Warning, "Ogre XML parser: Attempt to add more than 4 bone assignments");
 
                     break;
                 }
@@ -216,13 +216,13 @@ LoadedAsset OgreXMLModelLoader::LoadAsset(LoaderState &state) const
         if (skeleton_asset.IsOK()) {
             skeleton = skeleton_asset.Result();
         } else {
-            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Could not load skeleton at {}", skeleton_path);
+            HYP_LOG(Assets, Warning, "Ogre XML parser: Could not load skeleton at {}", skeleton_path);
         }
     }
 
     for (SubMesh &sub_mesh : model.submeshes) {
         if (sub_mesh.indices.Empty()) {
-            HYP_LOG(Assets, LogLevel::INFO, "Ogre XML parser: Skipping submesh with empty indices");
+            HYP_LOG(Assets, Info, "Ogre XML parser: Skipping submesh with empty indices");
 
             continue;
         }

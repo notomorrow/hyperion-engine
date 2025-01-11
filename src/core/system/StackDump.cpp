@@ -119,7 +119,7 @@ StackDump::StackDump(uint32 depth, uint32 offset)
 // Implementation of global LogStackTrace() function from Defines.hpp
 HYP_API void LogStackTrace(int depth)
 {
-    HYP_LOG(StackTrace, LogLevel::DEBUG, "Stack trace:\n\n{}", sys::StackDump(depth, 1).ToString());
+    HYP_LOG(StackTrace, Debug, "Stack trace:\n\n{}", sys::StackDump(depth, 1).ToString());
 }
 
 } // namespace hyperion

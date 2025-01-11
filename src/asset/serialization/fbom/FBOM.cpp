@@ -37,7 +37,7 @@ void FBOM::RegisterLoader(TypeID type_id, ANSIStringView name, UniquePtr<FBOMMar
 {
     AssertThrow(marshal != nullptr);
 
-    HYP_LOG(Serialization, LogLevel::INFO, "Registered FBOM loader {}", name);
+    HYP_LOG(Serialization, Info, "Registered FBOM loader {}", name);
 
     m_marshals.Set(type_id, Pair<ANSIString, UniquePtr<FBOMMarshalerBase>> { name, std::move(marshal) });
 }

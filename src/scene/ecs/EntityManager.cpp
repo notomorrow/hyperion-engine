@@ -258,7 +258,7 @@ Handle<Entity> EntityManager::AddEntity()
     
     Handle<Entity> entity { memory };
 
-    HYP_LOG(ECS, LogLevel::DEBUG, "Add entity #{} to entity manager {}", entity.GetID().Value(), (void *)this);
+    HYP_LOG(ECS, Debug, "Add entity #{} to entity manager {}", entity.GetID().Value(), (void *)this);
     GetEntityToEntityManagerMap().Add(entity.GetID(), this);
 
     m_entities.AddEntity(entity);
@@ -315,7 +315,7 @@ bool EntityManager::RemoveEntity(ID<Entity> id)
         }
     }
     
-    HYP_LOG(ECS, LogLevel::DEBUG, "Remove entity #{} from entity manager {}", id.Value(), (void *)this);
+    HYP_LOG(ECS, Debug, "Remove entity #{} from entity manager {}", id.Value(), (void *)this);
     GetEntityToEntityManagerMap().Remove(id);
 
     m_entities.Erase(it);
@@ -340,7 +340,7 @@ void EntityManager::MoveEntity(const Handle<Entity> &entity, EntityManager &othe
 
     AssertThrow(entity.IsValid());
 
-    HYP_LOG(ECS, LogLevel::DEBUG, "Moving Entity #{} from EntityManager {} to {}", entity.GetID().Value(), (void *)this, (void *)&other);
+    HYP_LOG(ECS, Debug, "Moving Entity #{} from EntityManager {} to {}", entity.GetID().Value(), (void *)this, (void *)&other);
 
     // Threads::AssertOnThread(m_owner_thread_mask);
 

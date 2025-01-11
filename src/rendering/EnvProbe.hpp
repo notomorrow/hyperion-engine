@@ -44,11 +44,11 @@ enum EnvProbeBindingSlot : uint
     ENV_PROBE_BINDING_SLOT_MAX
 };
 
-enum EnvProbeType : uint
+enum EnvProbeType : uint32
 {
-    ENV_PROBE_TYPE_INVALID = uint(-1),
+    ENV_PROBE_TYPE_INVALID      = uint32(-1),
 
-    ENV_PROBE_TYPE_REFLECTION = 0,
+    ENV_PROBE_TYPE_REFLECTION   = 0,
     ENV_PROBE_TYPE_SKY,
     ENV_PROBE_TYPE_SHADOW,
 

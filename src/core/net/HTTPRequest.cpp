@@ -214,7 +214,7 @@ Task<HTTPResponse> HTTPRequest::Send()
             // Perform the request
             CURLcode res = curl_easy_perform(curl);
             if (res != CURLE_OK) {
-                HYP_LOG(Net, LogLevel::ERR, "curl_easy_perform() failed: {}", curl_easy_strerror(res));
+                HYP_LOG(Net, Error, "curl_easy_perform() failed: {}", curl_easy_strerror(res));
             }
 
             // Get the response code
@@ -228,14 +228,14 @@ Task<HTTPResponse> HTTPRequest::Send()
             return response;
 
         } else {
-            HYP_LOG(Net, LogLevel::ERR, "curl_easy_init() failed");
+            HYP_LOG(Net, Error, "curl_easy_init() failed");
 
             response.OnComplete(-1);
 
             return response;
         }
 #else
-        HYP_LOG(Net, LogLevel::ERR, "No HTTP request implementation available");
+        HYP_LOG(Net, Error, "No HTTP request implementation available");
 
         response.OnComplete(-1);
 

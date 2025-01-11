@@ -102,7 +102,7 @@ void GenerateLightmapsEditorTask::Process()
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
-    HYP_LOG(Editor, LogLevel::INFO, "Generating lightmaps");
+    HYP_LOG(Editor, Info, "Generating lightmaps");
 
     LightmapperSubsystem *lightmapper_subsystem = m_world->GetSubsystem<LightmapperSubsystem>();
     
@@ -293,7 +293,7 @@ void EditorSubsystem::LoadEditorUIDefinitions()
         generate_lightmaps_button->OnClick.RemoveAll(this);
         generate_lightmaps_button->OnClick.BindOwned(this, [this](...)
         {
-            HYP_LOG(Editor, LogLevel::INFO, "Generate lightmaps clicked!");
+            HYP_LOG(Editor, Info, "Generate lightmaps clicked!");
 
             AddTask(MakeRefCountedPtr<GenerateLightmapsEditorTask>(GetWorld()->HandleFromThis(), m_scene));
 
@@ -385,7 +385,7 @@ void EditorSubsystem::InitViewport()
         ui_image->OnClick.RemoveAll(this);
         ui_image->OnClick.BindOwned(this, [this](const MouseEvent &event)
         {
-            HYP_LOG(Editor, LogLevel::DEBUG, "Click at : {}", event.position);
+            HYP_LOG(Editor, Debug, "Click at : {}", event.position);
 
             if (m_should_cancel_next_click) {
                 return UIEventHandlerResult::STOP_BUBBLING;
@@ -405,7 +405,7 @@ void EditorSubsystem::InitViewport()
             if (m_scene->GetOctree().TestRay(ray, results)) {
                 for (const RayHit &hit : results) {
                     if (ID<Entity> entity = ID<Entity>(hit.id)) {
-                        HYP_LOG(Editor, LogLevel::INFO, "Hit: {}", entity.Value());
+                        HYP_LOG(Editor, Info, "Hit: {}", entity.Value());
 
                         if (NodeLinkComponent *node_link_component = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(entity)) {
                             if (RC<Node> node = node_link_component->node.Lock()) {
@@ -520,7 +520,7 @@ void EditorSubsystem::InitSceneOutline()
             return UIEventHandlerResult::ERR;
         }
 
-        HYP_LOG(Editor, LogLevel::DEBUG, "Selected item changed: {}", list_view_item != nullptr ? list_view_item->GetName() : Name());
+        HYP_LOG(Editor, Debug, "Selected item changed: {}", list_view_item != nullptr ? list_view_item->GetName() : Name());
 
         if (!list_view_item) {
             SetFocusedNode(NodeProxy::empty);
@@ -562,7 +562,7 @@ void EditorSubsystem::InitSceneOutline()
 
     m_editor_delegates->AddNodeWatcher(NAME("SceneView"), m_scene->GetRoot().Get(), { Node::Class()->GetProperty(NAME("Name")), 1 }, [this, hyp_class = GetClass<Node>(), list_view_weak = list_view.ToWeak()](Node *node, const HypProperty *property)
     {
-       HYP_LOG(Editor, LogLevel::DEBUG, "Property changed for Node {}: {}", node->GetName(), property->GetName());
+       HYP_LOG(Editor, Debug, "Property changed for Node {}: {}", node->GetName(), property->GetName());
 
        // Update name in list view
        // @TODO: Ensure game thread
@@ -627,7 +627,7 @@ void EditorSubsystem::InitSceneOutline()
             return;
         }
 
-        HYP_LOG(Editor, LogLevel::DEBUG, "Node added: {}", node->GetName());
+        HYP_LOG(Editor, Debug, "Node added: {}", node->GetName());
 
         RC<UIListView> list_view = list_view_weak.Lock();
 
@@ -692,12 +692,12 @@ void EditorSubsystem::InitDetailView()
         list_view->SetDataSource(nullptr);
 
         if (!node.IsValid()) {
-            HYP_LOG(Editor, LogLevel::DEBUG, "Focused node is invalid!");
+            HYP_LOG(Editor, Debug, "Focused node is invalid!");
 
             return;
         }
 
-        HYP_LOG(Editor, LogLevel::DEBUG, "Focused node: {}", node->GetName());
+        HYP_LOG(Editor, Debug, "Focused node: {}", node->GetName());
 
         list_view->SetDataSource(MakeRefCountedPtr<UIDataSource>(TypeWrapper<EditorNodePropertyRef> { }));
 
@@ -732,7 +732,7 @@ void EditorSubsystem::InitDetailView()
                 node_property_ref.description = attr.GetString();
             }
 
-            HYP_LOG(Editor, LogLevel::DEBUG, "Push property {} (title: {}) to data source", it.first, node_property_ref.title);
+            HYP_LOG(Editor, Debug, "Push property {} (title: {}) to data source", it.first, node_property_ref.title);
 
             data_source->Push(UUID(), HypData(std::move(node_property_ref)));
         }
@@ -741,14 +741,14 @@ void EditorSubsystem::InitDetailView()
 
         m_editor_delegates->AddNodeWatcher(NAME("DetailView"), m_focused_node.Get(), {}, Proc<void, Node *, const HypProperty *> { [this, hyp_class = Node::Class(), list_view_weak](Node *node, const HypProperty *property)
         {
-            HYP_LOG(Editor, LogLevel::DEBUG, "(detail) Node property changed: {}", property->GetName());
+            HYP_LOG(Editor, Debug, "(detail) Node property changed: {}", property->GetName());
 
             // Update name in list view
 
             RC<UIListView> list_view = list_view_weak.Lock();
 
             if (!list_view) {
-                HYP_LOG(Editor, LogLevel::ERR, "Failed to get strong reference to list view!");
+                HYP_LOG(Editor, Error, "Failed to get strong reference to list view!");
 
                 return;
             }
@@ -801,7 +801,7 @@ RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
     auto font_face_asset = AssetManager::GetInstance()->Load<RC<FontFace>>("fonts/Roboto/Roboto-Regular.ttf");
 
     if (!font_face_asset.IsOK()) {
-        HYP_LOG(Editor, LogLevel::ERR, "Failed to load font face!");
+        HYP_LOG(Editor, Error, "Failed to load font face!");
 
         return nullptr;
     }

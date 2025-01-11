@@ -70,13 +70,13 @@ public:
                 }
 
                 if (component_interface->GetClass() != nullptr && component_interface->GetClass()->GetAttribute("serialize") == false) {
-                    HYP_LOG(Serialization, LogLevel::INFO, "HypClass for component '{}' has the Serialize attribute set to false; skipping", component_interface->GetTypeName());
+                    HYP_LOG(Serialization, Info, "HypClass for component '{}' has the Serialize attribute set to false; skipping", component_interface->GetTypeName());
 
                     continue;
                 }
 
                 if (serialized_components.Contains(component_type_id)) {
-                    HYP_LOG(Serialization, LogLevel::WARNING, "Entity has multiple components of the type {}", component_interface->GetTypeName());
+                    HYP_LOG(Serialization, Warning, "Entity has multiple components of the type {}", component_interface->GetTypeName());
 
                     continue;
                 }
@@ -86,7 +86,7 @@ public:
                 FBOMMarshalerBase *marshal = FBOM::GetInstance().GetMarshal(component_type_id);
 
                 if (!marshal) {
-                    HYP_LOG(Serialization, LogLevel::WARNING, "Cannot serialize component with type name {} and TypeID {} - No marshal registered", component_interface->GetTypeName(), component_type_id.Value());
+                    HYP_LOG(Serialization, Warning, "Cannot serialize component with type name {} and TypeID {} - No marshal registered", component_interface->GetTypeName(), component_type_id.Value());
 
                     continue;
                 }
@@ -157,13 +157,13 @@ public:
             const ComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(subobject_type_id);
 
             if (!component_interface) {
-                HYP_LOG(Serialization, LogLevel::WARNING, "No ComponentInterface registered for component with TypeID {} (serialized object type name: {})", subobject_type_id.Value(), subobject.GetType().name);
+                HYP_LOG(Serialization, Warning, "No ComponentInterface registered for component with TypeID {} (serialized object type name: {})", subobject_type_id.Value(), subobject.GetType().name);
 
                 continue;
             }
 
             if (component_interface->GetClass() != nullptr && component_interface->GetClass()->GetAttribute("serialize") == false) {
-                HYP_LOG(Serialization, LogLevel::INFO, "HypClass for component '{}' has the Serialize attribute set to false; skipping", component_interface->GetTypeName());
+                HYP_LOG(Serialization, Info, "HypClass for component '{}' has the Serialize attribute set to false; skipping", component_interface->GetTypeName());
 
                 continue;
             }
@@ -175,7 +175,7 @@ public:
             }
 
             if (entity_manager->HasComponent(subobject_type_id, entity)) {
-                HYP_LOG(Serialization, LogLevel::WARNING, "Entity already has component '{}'", component_interface->GetTypeName());
+                HYP_LOG(Serialization, Warning, "Entity already has component '{}'", component_interface->GetTypeName());
 
                 continue;
             }

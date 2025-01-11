@@ -205,7 +205,7 @@ void UIGrid::SetNumColumns(int num_columns)
 {
     m_num_columns = num_columns;
 
-    HYP_LOG(UI, LogLevel::DEBUG, "Set num columns for grid {} to {}", GetName(), num_columns);
+    HYP_LOG(UI, Debug, "Set num columns for grid {} to {}", GetName(), num_columns);
 
     ForEachChildUIObject_Proc([this](UIObject *ui_object)
     {
@@ -447,7 +447,7 @@ void UIGrid::SetDataSource_Internal(UIDataSourceBase *data_source)
                         element->GetValue()
                     );
                 } else {
-                    HYP_LOG(UI, LogLevel::ERR, "Failed to update element {}; No UIObject child at index 0", element->GetUUID().ToString());
+                    HYP_LOG(UI, Error, "Failed to update element {}; No UIObject child at index 0", element->GetUUID().ToString());
                 }
             }
         }

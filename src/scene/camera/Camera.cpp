@@ -258,16 +258,16 @@ void Camera::Init()
                 m_width = window_size.x;
                 m_height = window_size.y;
 
-                HYP_LOG(Camera, LogLevel::DEBUG, "Camera window size (change): {}", window_size);
+                HYP_LOG(Camera, Debug, "Camera window size (change): {}", window_size);
             }, /* require_current_thread */ true));
 
-            HYP_LOG(Camera, LogLevel::DEBUG, "Camera window size: {}", window_size);
+            HYP_LOG(Camera, Debug, "Camera window size: {}", window_size);
 
             return { };
         };
 
         if (auto match_window_size_result = InitMatchWindowSize(); match_window_size_result.HasError()) {
-            HYP_LOG(Camera, LogLevel::ERR, "Camera with MATCH_WINDOW_SIZE flag cannot match window size: {}", match_window_size_result.GetError().GetMessage());
+            HYP_LOG(Camera, Error, "Camera with MATCH_WINDOW_SIZE flag cannot match window size: {}", match_window_size_result.GetError().GetMessage());
         }
     }
 

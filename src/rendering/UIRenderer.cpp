@@ -191,11 +191,11 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
                     render_group->AddFramebuffer(bucket_framebuffer);
                 }
 
-                HYP_LOG(UI, LogLevel::DEBUG, "Create render group {} (#{})", attributes.GetHashCode().Value(), render_group.GetID().Value());
+                HYP_LOG(UI, Debug, "Create render group {} (#{})", attributes.GetHashCode().Value(), render_group.GetID().Value());
 
 #ifdef HYP_DEBUG_MODE
                 if (!render_group.IsValid()) {
-                    HYP_LOG(UI, LogLevel::ERR, "Render group not valid for attribute set {}!", attributes.GetHashCode().Value());
+                    HYP_LOG(UI, Error, "Render group not valid for attribute set {}!", attributes.GetHashCode().Value());
 
                     continue;
                 }
@@ -209,7 +209,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
 
         collection->RemoveEmptyProxyGroups();
 
-        HYP_LOG(UI, LogLevel::DEBUG, "Rebuild UI render collection; using {} render groups", collection->NumRenderGroups());
+        HYP_LOG(UI, Debug, "Rebuild UI render collection; using {} render groups", collection->NumRenderGroups());
     }
 
     bool RemoveRenderProxy(RenderProxyList &proxy_list, ID<Entity> entity)
@@ -350,7 +350,7 @@ RenderCollector::CollectionResult UIRenderCollector::PushUpdatesToRenderThread(c
                 added_proxies[i] = *added_proxies_ptrs[i];
             }
 
-            HYP_LOG(UI, LogLevel::DEBUG, "Rendering update\n\t{} added\n\t{} removed\n\t{} changed", added_proxies_ptrs.Size(), removed_proxies.Size(), changed_proxies.Size());
+            HYP_LOG(UI, Debug, "Rendering update\n\t{} added\n\t{} removed\n\t{} changed", added_proxies_ptrs.Size(), removed_proxies.Size(), changed_proxies.Size());
 
             PUSH_RENDER_COMMAND(
                 RebuildProxyGroups_UI,
@@ -442,7 +442,7 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame) const
         });
     }
 
-    // HYP_LOG(UI, LogLevel::DEBUG, " UI rendering {} render groups", iterators.Size());
+    // HYP_LOG(UI, Debug, " UI rendering {} render groups", iterators.Size());
 
     for (SizeType index = 0; index < iterators.Size(); index++) {
         const auto &it = *iterators[index];

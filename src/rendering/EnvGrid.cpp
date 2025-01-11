@@ -190,7 +190,7 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
             AssertThrow(grid != nullptr);
 
             if (this->updates.Empty()) {
-                HYP_LOG(EnvGrid, LogLevel::WARNING, "Pushed update command with zero updates, redundant command invocation");
+                HYP_LOG(EnvGrid, Warning, "Pushed update command with zero updates, redundant command invocation");
             }
         }
 
@@ -298,7 +298,7 @@ void EnvGrid::Init()
 {
     HYP_SCOPE;
 
-    HYP_LOG(EnvGrid, LogLevel::DEBUG, "Init EnvGrid {}", (void *)this);
+    HYP_LOG(EnvGrid, Debug, "Init EnvGrid {}", (void *)this);
 
     Handle<Scene> scene = GetParent()->GetScene()->HandleFromThis();
     AssertThrow(scene.IsValid());
@@ -553,7 +553,7 @@ void EnvGrid::OnRender(Frame *frame)
                         break;
                     }
                 } else {
-                    HYP_LOG(EnvGrid, LogLevel::WARNING, "EnvProbe #{} out of range of max bound env probes (position: {}, world position: {}",
+                    HYP_LOG(EnvGrid, Warning, "EnvProbe #{} out of range of max bound env probes (position: {}, world position: {}",
                         probe->GetID().Value(), binding_index.position, probe->GetProxy().world_position);
                 }
 

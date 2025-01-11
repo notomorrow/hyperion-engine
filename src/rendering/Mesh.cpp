@@ -657,7 +657,7 @@ void Mesh::CalculateNormals(bool weighted)
     HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
 
     if (!m_streamed_mesh_data) {
-        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before mesh data is set!");
+        HYP_LOG(Mesh, Warning, "Cannot calculate normals before mesh data is set!");
 
         return;
     }
@@ -666,7 +666,7 @@ void Mesh::CalculateNormals(bool weighted)
     MeshData mesh_data = ref->GetMeshData();
 
     if (mesh_data.indices.Empty()) {
-        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before indices are generated!");
+        HYP_LOG(Mesh, Warning, "Cannot calculate normals before indices are generated!");
 
         return;
     }
@@ -805,7 +805,7 @@ void Mesh::CalculateTangents()
     HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
 
     if (!m_streamed_mesh_data) {
-        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate normals before mesh data is set!");
+        HYP_LOG(Mesh, Warning, "Cannot calculate normals before mesh data is set!");
 
         return;
     }
@@ -889,7 +889,7 @@ void Mesh::InvertNormals()
     HYP_MT_CHECK_RW(m_data_race_detector, "Streamed mesh data");
 
     if (!m_streamed_mesh_data) {
-        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot invert normals before mesh data is set!");
+        HYP_LOG(Mesh, Warning, "Cannot invert normals before mesh data is set!");
 
         return;
     }
@@ -910,7 +910,7 @@ void Mesh::CalculateAABB()
     HYP_MT_CHECK_READ(m_data_race_detector, "Streamed mesh data");
 
     if (!m_streamed_mesh_data) {
-        HYP_LOG(Mesh, LogLevel::WARNING, "Cannot calculate Mesh bounds before mesh data is set!");
+        HYP_LOG(Mesh, Warning, "Cannot calculate Mesh bounds before mesh data is set!");
 
         return;
     }

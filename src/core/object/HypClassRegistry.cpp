@@ -89,7 +89,7 @@ void HypClassRegistry::RegisterClass(TypeID type_id, HypClass *hyp_class)
     HYP_MT_CHECK_RW(m_data_race_detector);
     AssertThrowMsg(!m_is_initialized, "Cannot register class - HypClassRegistry instance already initialized");
 
-    HYP_LOG(Object, LogLevel::INFO, "Register class {}", hyp_class->GetName());
+    HYP_LOG(Object, Info, "Register class {}", hyp_class->GetName());
 
     const auto it = m_registered_classes.Find(type_id);
     AssertThrowMsg(it == m_registered_classes.End(), "Class already registered for type: %s", *hyp_class->GetName());
@@ -102,7 +102,7 @@ void HypClassRegistry::RegisterManagedClass(dotnet::Class *managed_class, const 
     AssertThrow(managed_class != nullptr);
     AssertThrow(hyp_class != nullptr);
 
-    HYP_LOG(Object, LogLevel::INFO, "Register managed class for {} on thread {}", hyp_class->GetName(), Threads::CurrentThreadID().name);
+    HYP_LOG(Object, Info, "Register managed class for {} on thread {}", hyp_class->GetName(), Threads::CurrentThreadID().name);
 
     Mutex::Guard guard(m_managed_classes_mutex);
 
@@ -117,7 +117,7 @@ void HypClassRegistry::RegisterManagedClass(dotnet::Class *managed_class, const 
                 size_attribute_value.GetInt(),
                 managed_class->GetSize());
         } else {
-            HYP_LOG(Object, LogLevel::WARNING, "HypClass {} is missing \"Size\" attribute, cannot validate size of managed object matches", hyp_class->GetName());
+            HYP_LOG(Object, Warning, "HypClass {} is missing \"Size\" attribute, cannot validate size of managed object matches", hyp_class->GetName());
         }
 
         // @TODO Validate fields all match
@@ -130,7 +130,7 @@ void HypClassRegistry::UnregisterManagedClass(dotnet::Class *managed_class)
 {
     AssertThrow(managed_class != nullptr);
 
-    HYP_LOG(Object, LogLevel::INFO, "Unregister managed class {} on thread {}", managed_class->GetName(), Threads::CurrentThreadID().name);
+    HYP_LOG(Object, Info, "Unregister managed class {} on thread {}", managed_class->GetName(), Threads::CurrentThreadID().name);
 
     Mutex::Guard guard(m_managed_classes_mutex);
 
@@ -182,7 +182,7 @@ namespace detail {
     
 HypClassRegistrationBase::HypClassRegistrationBase(TypeID type_id, HypClass *hyp_class)
 {
-    HYP_LOG(Object, LogLevel::DEBUG, "HypClassRegistrationBase constructor for type: {}", hyp_class->GetName());
+    HYP_LOG(Object, Debug, "HypClassRegistrationBase constructor for type: {}", hyp_class->GetName());
 
     HypClassRegistry::GetInstance().RegisterClass(type_id, hyp_class);
 }

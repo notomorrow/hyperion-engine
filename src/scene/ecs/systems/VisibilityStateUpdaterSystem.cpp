@@ -42,12 +42,12 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
                 visibility_state_component.visibility_state = octant->GetVisibilityState().Get();
             }
 
-            HYP_LOG(Octree, LogLevel::DEBUG, "Inserted entity #{} into octree, inserted at {}, {}", entity.GetID().Value(), visibility_state_component.octant_id.GetIndex(), visibility_state_component.octant_id.GetDepth());
+            HYP_LOG(Octree, Debug, "Inserted entity #{} into octree, inserted at {}, {}", entity.GetID().Value(), visibility_state_component.octant_id.GetIndex(), visibility_state_component.octant_id.GetDepth());
         } else {
-            HYP_LOG(Octree, LogLevel::WARNING, "Failed to insert entity #{} into octree: {}", entity.GetID().Value(), insert_result.first.message);
+            HYP_LOG(Octree, Warning, "Failed to insert entity #{} into octree: {}", entity.GetID().Value(), insert_result.first.message);
         }
     } else {
-        HYP_LOG(Octree, LogLevel::WARNING, "Entity #{} has invalid bounding box, skipping octree insertion", entity.GetID().Value());
+        HYP_LOG(Octree, Warning, "Entity #{} has invalid bounding box, skipping octree insertion", entity.GetID().Value());
     }
 
     visibility_state_component.last_aabb_hash = bounding_box_component.world_aabb.GetHashCode();
@@ -65,7 +65,7 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
     const Octree::Result remove_result = octree.Remove(entity);
 
     if (!remove_result) {
-        HYP_LOG(Octree, LogLevel::WARNING,  "Failed to remove entity {} from octree: {}", entity.Value(), remove_result.message);
+        HYP_LOG(Octree, Warning,  "Failed to remove entity {} from octree: {}", entity.Value(), remove_result.message);
     }
 
     visibility_state_component.octant_id = OctantID::Invalid();
@@ -110,7 +110,7 @@ void VisibilityStateUpdaterSystem::Process(GameCounter::TickUnit delta)
                     visibility_state_component.visibility_state = octant->GetVisibilityState().Get();
                 }
 
-                HYP_LOG(Octree, LogLevel::DEBUG, "Inserted entity {} into octree, inserted at {}, {}", entity_id.Value(), visibility_state_component.octant_id.GetIndex(), visibility_state_component.octant_id.GetDepth());
+                HYP_LOG(Octree, Debug, "Inserted entity {} into octree, inserted at {}, {}", entity_id.Value(), visibility_state_component.octant_id.GetIndex(), visibility_state_component.octant_id.GetDepth());
             }
 
             continue;
@@ -124,7 +124,7 @@ void VisibilityStateUpdaterSystem::Process(GameCounter::TickUnit delta)
             const Octree::InsertResult update_result = octree.Update(entity_id, bounding_box_component.world_aabb, force_entry_invalidation);
 
             if (!update_result.first) {
-                HYP_LOG(Octree, LogLevel::WARNING, "Failed to update entity {} in octree: {}", entity_id.Value(), update_result.first.message);
+                HYP_LOG(Octree, Warning, "Failed to update entity {} in octree: {}", entity_id.Value(), update_result.first.message);
 
                 continue;
             }

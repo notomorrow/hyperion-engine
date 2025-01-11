@@ -36,7 +36,7 @@ void ReflectionProbeUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
     }
 
     if (!world_aabb.IsValid()) {
-        HYP_LOG(EnvProbe, LogLevel::WARNING, "Entity #{} has invalid bounding box", entity.GetID().Value());
+        HYP_LOG(EnvProbe, Warning, "Entity #{} has invalid bounding box", entity.GetID().Value());
     }
 
     if (!(GetEntityManager().GetScene()->GetFlags() & (SceneFlags::NON_WORLD | SceneFlags::DETACHED))) {

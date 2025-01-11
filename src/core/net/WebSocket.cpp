@@ -70,12 +70,12 @@ WebSocket::WebSocket(const String &url)
     {
         HYP_SCOPE;
 
-        HYP_LOG(Net, LogLevel::INFO, "WebSocket thread started");
+        HYP_LOG(Net, Info, "WebSocket thread started");
 
         WebSocketThreadProc();
     }, TaskEnqueueFlags::FIRE_AND_FORGET);
 #else
-    HYP_LOG(Net, LogLevel::ERR, "cURL is not enabled in this build");
+    HYP_LOG(Net, Error, "cURL is not enabled in this build");
 #endif
 }
 
@@ -112,7 +112,7 @@ void WebSocket::WebSocketThreadProc()
 {
     HYP_SCOPE;
 
-    HYP_LOG(Net, LogLevel::INFO, "WebSocket thread started");
+    HYP_LOG(Net, Info, "WebSocket thread started");
 
     CURL *curl = curl_easy_init();
 
@@ -196,9 +196,9 @@ void WebSocket::WebSocketThreadProc()
         CURLcode res = curl_easy_perform(curl);
 
         if (res != CURLE_OK) {
-            HYP_LOG(Net, LogLevel::ERR, "cURL error: {}", curl_easy_strerror(res));
+            HYP_LOG(Net, Error, "cURL error: {}", curl_easy_strerror(res));
         } else {
-            HYP_LOG(Net, LogLevel::INFO, "cURL request successful");
+            HYP_LOG(Net, Info, "cURL request successful");
 
             WebSocketMain(curl);
         }

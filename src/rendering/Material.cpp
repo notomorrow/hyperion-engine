@@ -100,7 +100,7 @@ void MaterialRenderResources::Update()
             const uint32 texture_index = uint32(Material::TextureSet::EnumToOrdinal(it.first));
 
             if (texture_index >= max_bound_textures) {
-                HYP_LOG(Material, LogLevel::WARNING, "Texture index {} is out of bounds of max bound textures ({})", texture_index, max_bound_textures);
+                HYP_LOG(Material, Warning, "Texture index {} is out of bounds of max bound textures ({})", texture_index, max_bound_textures);
 
                 continue;
             }
@@ -343,7 +343,7 @@ void Material::Init()
         }
 
         if (!m_shader.IsValid()) {
-            HYP_LOG(Material, LogLevel::ERR, "Failed to create shader for material with ID #{} (name: {})", GetID().Value(), GetName());
+            HYP_LOG(Material, Error, "Failed to create shader for material with ID #{} (name: {})", GetID().Value(), GetName());
         }
     }
 
@@ -373,7 +373,7 @@ void Material::EnqueueRenderUpdates()
     AssertReady();
 
     if (!m_mutation_state.IsDirty()) {
-        HYP_LOG_ONCE(Material, LogLevel::WARNING, "EnqueueRenderUpdates called on material with ID #{} (name: {}) that is not dirty", GetID().Value(), GetName());
+        HYP_LOG_ONCE(Material, Warning, "EnqueueRenderUpdates called on material with ID #{} (name: {}) that is not dirty", GetID().Value(), GetName());
 
         return;
     }
@@ -423,7 +423,7 @@ void Material::EnqueueRenderUpdates()
 void Material::SetShader(const ShaderRef &shader)
 {
     if (IsStatic()) {
-        HYP_LOG(Material, LogLevel::WARNING, "Setting shader on static material with ID #{} (name: {})", GetID().Value(), GetName());
+        HYP_LOG(Material, Warning, "Setting shader on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     if (m_shader == shader) {
@@ -452,7 +452,7 @@ void Material::SetShader(const ShaderRef &shader)
 void Material::SetParameter(MaterialKey key, const Parameter &value)
 {
     if (IsStatic()) {
-        HYP_LOG(Material, LogLevel::WARNING, "Setting parameter on static material with ID #{} (name: {})", GetID().Value(), GetName());
+        HYP_LOG(Material, Warning, "Setting parameter on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     if (m_parameters[key] == value) {
@@ -469,7 +469,7 @@ void Material::SetParameter(MaterialKey key, const Parameter &value)
 void Material::SetParameters(const ParameterTable &parameters)
 {
     if (IsStatic()) {
-        HYP_LOG(Material, LogLevel::WARNING, "Setting parameters on static material with ID #{} (name: {})", GetID().Value(), GetName());
+        HYP_LOG(Material, Warning, "Setting parameters on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     m_parameters = parameters;
@@ -482,7 +482,7 @@ void Material::SetParameters(const ParameterTable &parameters)
 void Material::ResetParameters()
 {
     if (IsStatic()) {
-        HYP_LOG(Material, LogLevel::WARNING, "Resetting parameters on static material with ID #{} (name: {})", GetID().Value(), GetName());
+        HYP_LOG(Material, Warning, "Resetting parameters on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     m_parameters = DefaultParameters();
@@ -495,7 +495,7 @@ void Material::ResetParameters()
 void Material::SetTexture(MaterialTextureKey key, const Handle<Texture> &texture)
 {
     if (IsStatic()) {
-        HYP_LOG(Material, LogLevel::WARNING, "Setting texture on static material with ID #{} (name: {})", GetID().Value(), GetName());
+        HYP_LOG(Material, Warning, "Setting texture on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     if (m_textures[key] == texture) {
@@ -521,7 +521,7 @@ void Material::SetTextureAtIndex(uint index, const Handle<Texture> &texture)
 void Material::SetTextures(const TextureSet &textures)
 {
     if (IsStatic()) {
-        HYP_LOG(Material, LogLevel::WARNING, "Setting textures on static material with ID #{} (name: {})", GetID().Value(), GetName());
+        HYP_LOG(Material, Warning, "Setting textures on static material with ID #{} (name: {})", GetID().Value(), GetName());
     }
 
     if (m_textures == textures) {
@@ -712,7 +712,7 @@ Handle<Material> MaterialCache::GetOrCreate(
 
         if (it != m_map.End()) {
             if (Handle<Material> handle = it->second.Lock()) {
-                HYP_LOG(Material, LogLevel::DEBUG, "Reusing material with hash {} from material cache", hc.Value());
+                HYP_LOG(Material, Debug, "Reusing material with hash {} from material cache", hc.Value());
 
                 return handle;
             }
@@ -908,7 +908,7 @@ void MaterialDescriptorSetManager::EnqueueRemoveMaterial(const WeakHandle<Materi
         return;
     }
 
-    HYP_LOG(Material, LogLevel::DEBUG, "EnqueueRemove material with ID {} from thread {}", material.GetID().Value(), Threads::CurrentThreadID().name);
+    HYP_LOG(Material, Debug, "EnqueueRemove material with ID {} from thread {}", material.GetID().Value(), Threads::CurrentThreadID().name);
 
     Mutex::Guard guard(m_pending_mutex);
     

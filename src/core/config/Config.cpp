@@ -67,7 +67,7 @@ bool ConfigurationDataStore::Read(json::JSONValue &out_value) const
     json::ParseResult parse_result = json::JSON::Parse(String(reader.ReadBytes().ToByteView()));
 
     if (!parse_result.ok) {
-        HYP_LOG(Config, LogLevel::WARNING, "Invalid JSON in configuration file at {}: {}", config_path, parse_result.message);
+        HYP_LOG(Config, Warning, "Invalid JSON in configuration file at {}: {}", config_path, parse_result.message);
 
         return false;
     }
@@ -98,13 +98,13 @@ ConfigurationTable::ConfigurationTable(const String &config_name)
       m_root_object(json::JSONObject()),
       m_cached_hash_code(m_root_object.GetHashCode())
 {
-    HYP_LOG(Config, LogLevel::DEBUG, "Reading from configuration {}", config_name);
+    HYP_LOG(Config, Debug, "Reading from configuration {}", config_name);
 
     // try to read from config file
     if (m_data_store->Read(m_root_object)) {
         m_cached_hash_code = m_root_object.GetHashCode();
     } else {
-        HYP_LOG(Config, LogLevel::INFO, "Configuration could not be read: {}", m_data_store->GetFilePath());
+        HYP_LOG(Config, Info, "Configuration could not be read: {}", m_data_store->GetFilePath());
     }
 }
 

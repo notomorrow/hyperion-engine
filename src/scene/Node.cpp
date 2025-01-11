@@ -233,7 +233,7 @@ Node &Node::operator=(Node &&other) noexcept
 
 Node::~Node()
 {
-    HYP_LOG(Node, LogLevel::DEBUG, "Node destructor for {}, entity = {}", m_name, m_entity.GetID().Value());
+    HYP_LOG(Node, Debug, "Node destructor for {}, entity = {}", m_name, m_entity.GetID().Value());
 
     RemoveAllChildren();
     SetEntity(Handle<Entity>::empty);
@@ -386,7 +386,7 @@ NodeProxy Node::AddChild(const NodeProxy &node)
     }
 
     if (node->GetParent() != nullptr) {
-        HYP_LOG(Node, LogLevel::WARNING, "Attaching node {} to {} when it already has a parent node ({}). Node will be detached from parent.",
+        HYP_LOG(Node, Warning, "Attaching node {} to {} when it already has a parent node ({}). Node will be detached from parent.",
             node->GetName(), GetName(), node->GetParent()->GetName());
 
         AssertThrowMsg(node->Remove(), "Node %s could not be detached from parent", node->GetName().Data());
@@ -570,7 +570,7 @@ NodeProxy Node::Select(UTF8StringView selector) const
             ++buffer_index;
 
             if (buffer_index == std::size(buffer)) {
-                HYP_LOG(Node, LogLevel::WARNING, "Node search string too long, must be within buffer size limit of {}",
+                HYP_LOG(Node, Warning, "Node search string too long, must be within buffer size limit of {}",
                     std::size(buffer));
 
                 return NodeProxy::empty;

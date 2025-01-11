@@ -25,7 +25,7 @@ public:
     {
         const Node &in_object = in.Get<Node>();
 
-        HYP_LOG(Serialization, LogLevel::DEBUG, "Serializing Node with name '{}'...", in_object.GetName());
+        HYP_LOG(Serialization, Debug, "Serializing Node with name '{}'...", in_object.GetName());
 
         if (in_object.GetFlags() & NodeFlags::TRANSIENT) {
             return { FBOMResult::FBOM_ERR, "Cannot serialize Node: TRANSIENT flag is set" };
@@ -47,7 +47,7 @@ public:
             }
         }
 
-        HYP_LOG(Serialization, LogLevel::DEBUG, "Serialization completed for Node with name '{}'", in_object.GetName());
+        HYP_LOG(Serialization, Debug, "Serialization completed for Node with name '{}'", in_object.GetName());
 
         return { FBOMResult::FBOM_OK };
     }

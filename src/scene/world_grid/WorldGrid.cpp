@@ -182,7 +182,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                 const auto patch_generation_task_it = m_state.patch_generation_tasks.Find(patch_info.coord);
 
                 if (patch_generation_task_it == m_state.patch_generation_tasks.End()) {
-                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Generation task for patch at {} no longer in map, must have been removed. Skipping.", patch_info.coord);
+                    HYP_LOG(WorldGrid, Warning, "Generation task for patch at {} no longer in map, must have been removed. Skipping.", patch_info.coord);
 
                     continue;
                 }
@@ -190,11 +190,11 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                 if (patch_generation_task_it->second.IsCompleted()) {
                     m_state.patch_generation_tasks.Erase(patch_generation_task_it);
                 } else {
-                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Generation task for patch at {} is not completed. Skipping.", patch_info.coord);
+                    HYP_LOG(WorldGrid, Warning, "Generation task for patch at {} is not completed. Skipping.", patch_info.coord);
                 }
             }
 
-            HYP_LOG(WorldGrid, LogLevel::INFO, "Adding generated patch at {}", patch_info.coord);
+            HYP_LOG(WorldGrid, Info, "Adding generated patch at {}", patch_info.coord);
 
             Handle<Entity> patch_entity;
 
@@ -204,7 +204,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                 auto it = m_state.patches.Find(patch_info.coord);
 
                 if (it == m_state.patches.End()) {
-                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch at {} was not found when updating entity", patch_info.coord);
+                    HYP_LOG(WorldGrid, Warning, "Patch at {} was not found when updating entity", patch_info.coord);
 
                     continue;
                 }
@@ -217,7 +217,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
             // @TODO: what should happen if this is hit before the entity is created?
 
             if (!patch_entity.IsValid()) {
-                HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch entity at {} was not found when updating entity", patch_info.coord);
+                HYP_LOG(WorldGrid, Warning, "Patch entity at {} was not found when updating entity", patch_info.coord);
 
                 continue;
             }
@@ -269,7 +269,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
         switch (update.state) {
         case WorldGridPatchState::WAITING:
         {
-            HYP_LOG(WorldGrid, LogLevel::INFO, "Add patch at {}", update.coord);
+            HYP_LOG(WorldGrid, Info, "Add patch at {}", update.coord);
 
             const WorldGridPatchInfo initial_patch_info {
                 .extent     = m_params.patch_size,
@@ -323,7 +323,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                 // Add BoundingBoxComponent
                 mgr.AddComponent<BoundingBoxComponent>(patch_entity, BoundingBoxComponent { });
 
-                HYP_LOG(WorldGrid, LogLevel::INFO, "Patch entity at {} added", patch_info.coord);
+                HYP_LOG(WorldGrid, Info, "Patch entity at {} added", patch_info.coord);
 
                 {
                     Mutex::Guard guard(state.patches_mutex);
@@ -344,7 +344,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                 auto it = m_state.patch_generation_tasks.Find(initial_patch_info.coord);
 
                 if (it != m_state.patch_generation_tasks.End()) {
-                    HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch generation at {} already in progress", initial_patch_info.coord);
+                    HYP_LOG(WorldGrid, Warning, "Patch generation at {} already in progress", initial_patch_info.coord);
                 } else {
                     // add task to generation queue
                     Task<void> generation_task = TaskSystem::GetInstance().Enqueue([patch_info = initial_patch_info, &shared_queue = m_state.patch_generation_queue_shared, plugin = std::move(plugin)]()
@@ -355,20 +355,20 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                         shared_queue.queue.Push(plugin->CreatePatch(patch_info).ToRefCountedPtr());
                         shared_queue.has_updates.Set(true, MemoryOrder::RELEASE);
 
-                        HYP_LOG(WorldGrid, LogLevel::INFO, "Patch generation at {} completed on thread {}", patch_info.coord, Threads::CurrentThreadID().name);
+                        HYP_LOG(WorldGrid, Info, "Patch generation at {} completed on thread {}", patch_info.coord, Threads::CurrentThreadID().name);
                     });
                     
                     m_state.patch_generation_tasks.Insert(initial_patch_info.coord, std::move(generation_task));
                 }
             } else {
-                HYP_LOG(WorldGrid, LogLevel::WARNING, "No main plugin found to generate patch at {}", initial_patch_info.coord);
+                HYP_LOG(WorldGrid, Warning, "No main plugin found to generate patch at {}", initial_patch_info.coord);
             }
 
             break;
         }
         case WorldGridPatchState::UNLOADING:
         {
-            HYP_LOG(WorldGrid, LogLevel::INFO, "Unloading patch at {}", update.coord);
+            HYP_LOG(WorldGrid, Info, "Unloading patch at {}", update.coord);
 
             { // remove associated tasks
                 const auto patch_generation_task_it = m_state.patch_generation_tasks.Find(update.coord);
@@ -377,7 +377,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                     Task<void> &patch_generation_task = patch_generation_task_it->second;
 
                     if (!patch_generation_task.Cancel()) {
-                        HYP_LOG(WorldGrid, LogLevel::WARNING, "Failed to cancel patch generation task at {}", update.coord);
+                        HYP_LOG(WorldGrid, Warning, "Failed to cancel patch generation task at {}", update.coord);
 
                         patch_generation_task.Await();
                     }
@@ -395,7 +395,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                     const auto patches_it = m_state.patches.Find(update.coord);
 
                     if (patches_it != m_state.patches.End()) {
-                        HYP_LOG(WorldGrid, LogLevel::INFO, "Patch entity at {} found when unloading", update.coord);
+                        HYP_LOG(WorldGrid, Info, "Patch entity at {} found when unloading", update.coord);
 
                         patch_entity = std::move(patches_it->second.entity);
 
@@ -421,13 +421,13 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                             }
                         }
 
-                        HYP_LOG(WorldGrid, LogLevel::INFO, "Patch entity at {} removed (Entity ID : {}), usecount strong: {}, weak: {}", update.coord, entity.GetID().Value(), weak_node.GetRefCountData_Internal()->UseCount_Strong(), weak_node.GetRefCountData_Internal()->UseCount_Weak());
+                        HYP_LOG(WorldGrid, Info, "Patch entity at {} removed (Entity ID : {}), usecount strong: {}, weak: {}", update.coord, entity.GetID().Value(), weak_node.GetRefCountData_Internal()->UseCount_Strong(), weak_node.GetRefCountData_Internal()->UseCount_Weak());
 
                         // weak_node.GetRefCountData_Internal()->GetRefTrackData([](const auto &ref_track_data)
                         // {
-                        //     HYP_LOG(WorldGrid, LogLevel::DEBUG, "RefTrackData: {} refs", ref_track_data.Size());
+                        //     HYP_LOG(WorldGrid, Debug, "RefTrackData: {} refs", ref_track_data.Size());
                         //     for (auto &it : ref_track_data) {
-                        //         HYP_LOG(WorldGrid, LogLevel::DEBUG, "\n\tAddress : {}\n\tStack Trace: {}\n\tCount: {}", it.first, it.second.stack_trace, it.second.count);
+                        //         HYP_LOG(WorldGrid, Debug, "\n\tAddress : {}\n\tStack Trace: {}\n\tCount: {}", it.first, it.second.stack_trace, it.second.count);
                         //     }
                         // });
                     });
@@ -454,7 +454,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
             //     const ID<Entity> patch_entity = patch_desc->entity;
 
             //     if (!patch_entity.IsValid()) {
-            //         HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch entity at {} was not found when updating state", update.coord);
+            //         HYP_LOG(WorldGrid, Warning, "Patch entity at {} was not found when updating state", update.coord);
 
             //         return;
             //     }
@@ -507,7 +507,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
             const auto it = m_state.patches.Find(coord);
 
             if (it == m_state.patches.End()) {
-                HYP_LOG(WorldGrid, LogLevel::WARNING, "Patch at {} was not found when unloading", coord);
+                HYP_LOG(WorldGrid, Warning, "Patch at {} was not found when unloading", coord);
 
                 continue;
             }
@@ -519,7 +519,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
             case WorldGridPatchState::UNLOADING:
                 break;
             default:
-                HYP_LOG(WorldGrid, LogLevel::INFO, "Patch {} no longer in range, unloading", patch_info.coord);
+                HYP_LOG(WorldGrid, Info, "Patch {} no longer in range, unloading", patch_info.coord);
 
                 // Start unloading
                 m_state.PushUpdate({

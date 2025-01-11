@@ -28,7 +28,7 @@ SystemMessageBox::SystemMessageBox(
     m_buttons(std::move(buttons))
 {
     if (m_buttons.Size() > 3) {
-        HYP_LOG(Core, LogLevel::WARNING, "MessageBox does not support > 3 buttons");
+        HYP_LOG(Core, Warning, "MessageBox does not support > 3 buttons");
 
         m_buttons.Resize(3);
     }
@@ -75,7 +75,7 @@ SystemMessageBox &SystemMessageBox::Text(const String &text)
 SystemMessageBox &SystemMessageBox::Button(const String &text, Proc<void> &&on_click)
 {
     if (m_buttons.Size() >= 3) {
-        HYP_LOG(Core, LogLevel::WARNING, "MessageBox does not support > 3 buttons");
+        HYP_LOG(Core, Warning, "MessageBox does not support > 3 buttons");
 
         return *this;
     }
@@ -97,7 +97,7 @@ void SystemMessageBox::Show() const
 
     if (m_buttons.Any()) {
         if (button_index < 0 || button_index >= m_buttons.Size()) {
-            HYP_LOG(Core, LogLevel::WARNING, "MessageBox Show() returned invalid index: {}, {} buttons", button_index, m_buttons.Size());
+            HYP_LOG(Core, Warning, "MessageBox Show() returned invalid index: {}, {} buttons", button_index, m_buttons.Size());
 
             return;
         }

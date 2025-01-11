@@ -92,7 +92,7 @@ public:
             if (!m_skeleton.bones.Empty()) {
                 m_skeleton.bones.Back().binding_translation = Vector3(x, y, z);
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML skeleton parser: Attempt to add position when no bones exist yet");
+                HYP_LOG(Assets, Warning, "Ogre XML skeleton parser: Attempt to add position when no bones exist yet");
             }
         } else if (name == "rotation") {
             m_binding_angles.Push(StringUtil::Parse<float>(attributes.At("angle")));
@@ -108,7 +108,7 @@ public:
             if (child_bone != nullptr) {
                 child_bone->parent_name = std::move(parent_name);
             } else {
-                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML skeleton parser: Attempt to set child bone '{}' to parent '{}' but child bone does not exist yet", child_name, parent_name);
+                HYP_LOG(Assets, Warning, "Ogre XML skeleton parser: Attempt to set child bone '{}' to parent '{}' but child bone does not exist yet", child_name, parent_name);
             }
         } else if (name == "animation") {
             m_skeleton.animations.PushBack({
@@ -138,10 +138,10 @@ public:
             const auto axis = Vector3(x, y, z).Normalized();
 
             if (m_element_tags.Empty()) {
-                HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML skeleton loader: Attempt to set rotation axis but no prior elements found");
+                HYP_LOG(Assets, Warning, "Ogre XML skeleton loader: Attempt to set rotation axis but no prior elements found");
             } else if (m_element_tags.Top() == "rotate") { /* keyframe */
                 if (m_keyframe_angles.Empty()) {
-                    HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML skeleton loader: Attempt to set keyframe rotation axis but no angle was set prior");
+                    HYP_LOG(Assets, Warning, "Ogre XML skeleton loader: Attempt to set keyframe rotation axis but no angle was set prior");
                 } else {
                     LastKeyframe().rotation = Quaternion(axis, m_keyframe_angles.Top()).Invert();
 
@@ -149,10 +149,10 @@ public:
                 }
             } else if (m_element_tags.Top() == "rotation") { /* bone binding pose */
                 if (m_binding_angles.Empty()) {
-                    HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML skeleton loader: Attempt to set bond binding rotation but no binding angles were set prior");
+                    HYP_LOG(Assets, Warning, "Ogre XML skeleton loader: Attempt to set bond binding rotation but no binding angles were set prior");
                 } else {
                     if (m_skeleton.bones.Empty()) {
-                        HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML skeleton loader: Attempt to set bone binding rotation but no bones were found");
+                        HYP_LOG(Assets, Warning, "Ogre XML skeleton loader: Attempt to set bone binding rotation but no bones were found");
                     } else {
                         m_skeleton.bones.Back().binding_rotation = Quaternion(axis, m_binding_angles.Top());
                     }
@@ -213,9 +213,9 @@ LoadedAsset OgreXMLSkeletonLoader::LoadAsset(LoaderState &state) const
                 continue;
             }
 
-            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Parent bone '{}' not found in skeleton at this stage", item.parent_name);
+            HYP_LOG(Assets, Warning, "Ogre XML parser: Parent bone '{}' not found in skeleton at this stage", item.parent_name);
         } else if (skeleton_handle->GetRootBone() != nullptr) {
-            HYP_LOG(Assets, LogLevel::WARNING, "Ogre XML parser: Attempt to set root bone to node '{}' but it has already been set", item.name);
+            HYP_LOG(Assets, Warning, "Ogre XML parser: Attempt to set root bone to node '{}' but it has already been set", item.name);
         } else {
             skeleton_handle->SetRootBone(bone);
         }

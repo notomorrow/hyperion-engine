@@ -33,7 +33,7 @@ UITextbox::UITextbox()
         const bool ctrl = event_data.input_manager->IsCtrlDown();
 
         if (KeyCodeToChar(event_data.key_code, shift, alt, ctrl, key_char)) {
-            HYP_LOG(UI, LogLevel::INFO, "Textbox keydown: char = {}", key_char);
+            HYP_LOG(UI, Info, "Textbox keydown: char = {}", key_char);
 
             const String &text = GetText();
 
@@ -126,10 +126,10 @@ void UITextbox::UpdateCursor()
             m_cursor_element = CreateUIObject<UIPanel>(NAME("TextboxCursor"), Vec2i { 0, 0 }, UIObjectSize({ 1, UIObjectSize::PIXEL }, { 90, UIObjectSize::PERCENT }));
             m_cursor_element->SetBackgroundColor(Vec4f { 0, 0, 0, 1 }); // black
 
-            HYP_LOG(UI, LogLevel::DEBUG, "Textbox size before adding cursor element {}, inner size: {}, parent size: {}, cursor size: {}", GetActualSize(), GetActualInnerSize(), GetParentUIObject()->GetActualSize(), m_cursor_element->GetActualSize());
+            HYP_LOG(UI, Debug, "Textbox size before adding cursor element {}, inner size: {}, parent size: {}, cursor size: {}", GetActualSize(), GetActualInnerSize(), GetParentUIObject()->GetActualSize(), m_cursor_element->GetActualSize());
             UIObject::AddChildUIObject(m_cursor_element);
 
-            HYP_LOG(UI, LogLevel::DEBUG, "Textbox size after adding cursor element {}, inner size: {}, parent size: {}, cursor size: {}", GetActualSize(), GetActualInnerSize(), GetParentUIObject()->GetActualSize(), m_cursor_element->GetActualSize());
+            HYP_LOG(UI, Debug, "Textbox size after adding cursor element {}, inner size: {}, parent size: {}, cursor size: {}", GetActualSize(), GetActualInnerSize(), GetParentUIObject()->GetActualSize(), m_cursor_element->GetActualSize());
         }
     } else {
         if (m_cursor_element != nullptr) {

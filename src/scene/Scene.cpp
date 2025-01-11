@@ -123,7 +123,7 @@ Scene::Scene(
 
 Scene::~Scene()
 {
-    HYP_LOG(Scene, LogLevel::DEBUG, "Destroy scene with ID {} (name: {}) from thread : {}", GetID().Value(), m_name, ThreadID::Current().name);
+    HYP_LOG(Scene, Debug, "Destroy scene with ID {} (name: {}) from thread : {}", GetID().Value(), m_name, ThreadID::Current().name);
     
     m_octree.SetEntityManager(nullptr);
     m_octree.Clear();
@@ -343,7 +343,7 @@ RenderCollector::CollectionResult Scene::CollectEntities(
 
             if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                HYP_LOG(Scene, LogLevel::DEBUG, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
+                HYP_LOG(Scene, Debug, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
                     entity_id.Value(), camera_id.Value());
 #endif
 
@@ -395,7 +395,7 @@ RenderCollector::CollectionResult Scene::CollectDynamicEntities(
 
             if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                HYP_LOG(Scene, LogLevel::DEBUG, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
+                HYP_LOG(Scene, Debug, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
                     entity_id.Value(), camera_id.Value());
 #endif
 
@@ -450,7 +450,7 @@ RenderCollector::CollectionResult Scene::CollectStaticEntities(
 
             if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot)) {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                HYP_LOG(Scene, LogLevel::DEBUG, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
+                HYP_LOG(Scene, Debug, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
                     entity_id.Value(), camera_id.Value());
 #endif
 

@@ -18,11 +18,14 @@
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
+#include <rendering/Camera.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
 #include <scene/Scene.hpp>
+
 #include <scene/camera/Camera.hpp>
+
 #include <scene/animation/Skeleton.hpp>
 
 #include <util/profiling/ProfileScope.hpp>
@@ -133,7 +136,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         Handle<RenderGroup> &render_group = collection->GetProxyGroups()[pass_type][attributes];
 
         if (!render_group.IsValid()) {
-            HYP_LOG(RenderCollection, LogLevel::DEBUG, "Creating RenderGroup for attributes:\n"
+            HYP_LOG(RenderCollection, Debug, "Creating RenderGroup for attributes:\n"
                 "\tVertex Attributes: {}\n"
                 "\tBucket: {}\n"
                 "\tShader Definition: {}  {}\n"
@@ -246,7 +249,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             AssertThrow(RemoveRenderProxy(proxy_list, entity, attributes, pass_type));
         }
 
-        HYP_LOG(RenderCollection, LogLevel::DEBUG, "Added Proxies: {}\nRemoved Proxies: {}\nChanged Proxies: {}",
+        HYP_LOG(RenderCollection, Debug, "Added Proxies: {}\nRemoved Proxies: {}\nChanged Proxies: {}",
             proxy_list.GetAddedEntities().Count(),
             proxy_list.GetRemovedEntities().Count(),
             proxy_list.GetChangedEntities().Count());
@@ -355,10 +358,22 @@ RenderCollector::RenderCollector()
 RenderCollector::RenderCollector(const Handle<Camera> &camera)
     : m_camera(camera)
 {
+    if (InitObject(m_camera)) {
+        m_camera_resource_handle = m_camera->GetRenderResources();
+    }
 }
 
 RenderCollector::~RenderCollector()
 {
+}
+
+void RenderCollector::SetCamera(const Handle<Camera> &camera)
+{
+    m_camera = camera;
+
+    if (InitObject(m_camera)) {
+        m_camera_resource_handle = m_camera->GetRenderResources();
+    }
 }
 
 RenderCollector::CollectionResult RenderCollector::PushUpdatesToRenderThread(const FramebufferRef &framebuffer, const Optional<RenderableAttributeSet> &override_attributes)

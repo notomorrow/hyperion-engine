@@ -53,7 +53,7 @@ public:
         HYP_SCOPE;
 
         if (!m_mesh.IsValid()) {
-            HYP_LOG(TerrainWorldGridPlugin, LogLevel::ERR, "Terrain mesh is invalid");
+            HYP_LOG(TerrainWorldGridPlugin, Error, "Terrain mesh is invalid");
 
             return;
         }
@@ -379,7 +379,7 @@ void TerrainWorldGridPlugin::Initialize()
 {
     HYP_SCOPE;
 
-    HYP_LOG(TerrainWorldGridPlugin, LogLevel::INFO, "Initializing TerrainWorldGridPlugin");
+    HYP_LOG(TerrainWorldGridPlugin, Info, "Initializing TerrainWorldGridPlugin");
 
     Threads::AssertOnThread(ThreadName::THREAD_MAIN | ThreadName::THREAD_GAME);
 
@@ -409,7 +409,7 @@ void TerrainWorldGridPlugin::Shutdown()
 {
     HYP_SCOPE;
 
-    HYP_LOG(TerrainWorldGridPlugin, LogLevel::INFO, "Shutting down TerrainWorldGridPlugin");
+    HYP_LOG(TerrainWorldGridPlugin, Info, "Shutting down TerrainWorldGridPlugin");
 }
 
 void TerrainWorldGridPlugin::Update(GameCounter::TickUnit delta)

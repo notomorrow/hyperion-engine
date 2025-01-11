@@ -55,7 +55,7 @@ RendererResult AsyncCompute<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
     m_is_supported = device->GetQueueFamilyIndices().compute_family.HasValue();
 
     if (!m_is_supported) {
-        HYP_LOG(RenderingBackend, LogLevel::WARNING, "Dedicated compute queue not supported, using graphics queue for compute operations");
+        HYP_LOG(RenderingBackend, Warning, "Dedicated compute queue not supported, using graphics queue for compute operations");
         
         queue = &device->GetGraphicsQueue();
     }

@@ -221,7 +221,7 @@ MemoryStreamedData::MemoryStreamedData(HashCode hash_code, StreamedDataState ini
         && m_load_from_memory_proc.IsValid();
 
     if (should_load_unpaged) {
-        HYP_LOG(Streaming, LogLevel::INFO, "StreamedData with hash code {} is not in data store, loading from memory before unpaging", hash_code.Value());
+        HYP_LOG(Streaming, Info, "StreamedData with hash code {} is not in data store, loading from memory before unpaging", hash_code.Value());
     }
 
     if (initial_state == StreamedDataState::LOADED || should_load_unpaged) {
@@ -320,7 +320,7 @@ const ByteBuffer &MemoryStreamedData::Load_Internal() const
                     return *m_byte_buffer;
                 }
 
-                HYP_LOG(Streaming, LogLevel::WARNING, "Failed to load streamed data with hash code {} from memory", m_hash_code.Value());
+                HYP_LOG(Streaming, Warning, "Failed to load streamed data with hash code {} from memory", m_hash_code.Value());
             }
             
             m_byte_buffer.Unset();

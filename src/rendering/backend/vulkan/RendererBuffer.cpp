@@ -27,7 +27,7 @@ static uint FindMemoryType(Device<Platform::VULKAN> *device, uint vk_type_filter
 
     for (uint i = 0; i < mem_properties.memoryTypeCount; i++) {
         if ((vk_type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & vk_memory_property_flags) == vk_memory_property_flags) {
-            HYP_LOG(RenderingBackend, LogLevel::DEBUG, "Found Memory type {}", i);
+            HYP_LOG(RenderingBackend, Debug, "Found Memory type {}", i);
             return i;
         }
     }
@@ -111,7 +111,7 @@ VkPipelineStageFlags GetVkShaderStageMask(ResourceState state, bool src, ShaderM
     case ResourceState::PRE_INITIALIZED:
     case ResourceState::COMMON:
         if (!src) {
-            HYP_LOG(RenderingBackend, LogLevel::WARNING, "Attempt to get shader stage mask for resource state but `src` was set to false. Falling back to all commands.");
+            HYP_LOG(RenderingBackend, Warning, "Attempt to get shader stage mask for resource state but `src` was set to false. Falling back to all commands.");
 
             return VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         }
@@ -459,7 +459,7 @@ void GPUBuffer<Platform::VULKAN>::Read(Device<Platform::VULKAN> *device, SizeTyp
     if (m_platform_impl.mapping == nullptr) {
         m_platform_impl.Map(device);
 
-        HYP_LOG(RenderingBackend, LogLevel::WARNING, "Attempt to Read() from buffer but data has not been mapped previously");
+        HYP_LOG(RenderingBackend, Warning, "Attempt to Read() from buffer but data has not been mapped previously");
     }
 
     Memory::MemCpy(out_ptr, m_platform_impl.mapping, count);
@@ -546,7 +546,7 @@ void GPUBuffer<Platform::VULKAN>::InsertBarrier(
 ) const
 {
     if (!IsCreated()) {
-        HYP_LOG(RenderingBackend, LogLevel::WARNING, "Attempt to insert a resource barrier but buffer was not created");
+        HYP_LOG(RenderingBackend, Warning, "Attempt to insert a resource barrier but buffer was not created");
 
         return;
     }
@@ -581,7 +581,7 @@ void GPUBuffer<Platform::VULKAN>::InsertBarrier(
 ) const
 {
     if (!IsCreated()) {
-        HYP_LOG(RenderingBackend, LogLevel::WARNING, "Attempt to insert a resource barrier but buffer was not created");
+        HYP_LOG(RenderingBackend, Warning, "Attempt to insert a resource barrier but buffer was not created");
 
         return;
     }
@@ -616,13 +616,13 @@ void GPUBuffer<Platform::VULKAN>::CopyFrom(
 )
 {
     if (!IsCreated()) {
-        HYP_LOG(RenderingBackend, LogLevel::WARNING, "Attempt to copy from buffer but dst buffer was not created");
+        HYP_LOG(RenderingBackend, Warning, "Attempt to copy from buffer but dst buffer was not created");
 
         return;
     }
 
     if (!src_buffer->IsCreated()) {
-        HYP_LOG(RenderingBackend, LogLevel::WARNING, "Attempt to copy from buffer but src buffer was not created");
+        HYP_LOG(RenderingBackend, Warning, "Attempt to copy from buffer but src buffer was not created");
 
         return;
     }
@@ -665,7 +665,7 @@ template <>
 RendererResult GPUBuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device, SizeType size, SizeType alignment)
 {
     if (IsCreated()) {
-        HYP_LOG(RenderingBackend, LogLevel::WARNING, "Create() called on a buffer that has not been destroyed!\n"
+        HYP_LOG(RenderingBackend, Warning, "Create() called on a buffer that has not been destroyed!\n"
             "\tYou should explicitly call Destroy() on the object before reallocating it.\n"
             "\tTo prevent memory leaks, calling Destroy() before allocating the memory...");
 

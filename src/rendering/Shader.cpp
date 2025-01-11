@@ -65,7 +65,7 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
             if (EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetProperties())) {
                 return shader;
             } else {
-                HYP_LOG(Shader, LogLevel::ERR,
+                HYP_LOG(Shader, Error,
                     "Loaded shader from cache (Name: {}, Properties: {}) does not contain the requested properties!\n\tRequested: {}",
                     definition.GetName(),
                     shader->GetCompiledShader()->GetProperties().ToString(),
@@ -110,11 +110,11 @@ ShaderRef ShaderManagerSystem::GetOrCreate(const ShaderDefinition &definition)
             definition.GetProperties().GetHashCode().Value()
         );
 
-        HYP_LOG(Shader, LogLevel::DEBUG, "Creating shader '{}'", definition.GetName());
+        HYP_LOG(Shader, Debug, "Creating shader '{}'", definition.GetName());
 
         shader = MakeRenderObject<Shader>(MakeRefCountedPtr<CompiledShader>(std::move(compiled_shader)));
 
-        HYP_LOG(Shader, LogLevel::DEBUG, "Shader '{}' created", definition.GetName());
+        HYP_LOG(Shader, Debug, "Shader '{}' created", definition.GetName());
 
 #ifdef HYP_DEBUG_MODE
         AssertThrow(EnsureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));

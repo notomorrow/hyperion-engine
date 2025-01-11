@@ -550,13 +550,13 @@ void Texture::Readback() const
 Vec4f Texture::Sample(Vec2f uv) const
 {
     if (!IsReady()) {
-        HYP_LOG_ONCE(Texture, LogLevel::WARNING, "Texture is not ready, cannot sample");
+        HYP_LOG_ONCE(Texture, Warning, "Texture is not ready, cannot sample");
 
         return Vec4f::Zero();
     }
 
     if (GetType() != ImageType::TEXTURE_TYPE_2D) {
-        HYP_LOG_ONCE(Texture, LogLevel::WARNING, "Unsupported texture type for sampling directly: {}", GetType());
+        HYP_LOG_ONCE(Texture, Warning, "Unsupported texture type for sampling directly: {}", GetType());
 
         return Vec4f::Zero();
     }
@@ -564,12 +564,12 @@ Vec4f Texture::Sample(Vec2f uv) const
     const RC<StreamedTextureData> &streamed_data = m_image->GetStreamedData();
 
     if (!streamed_data) {
-        HYP_LOG_ONCE(Texture, LogLevel::WARNING, "Texture does not have streamed data present, attempting readback...");
+        HYP_LOG_ONCE(Texture, Warning, "Texture does not have streamed data present, attempting readback...");
 
         Readback();
 
         if (!streamed_data) {
-            HYP_LOG_ONCE(Texture, LogLevel::WARNING, "Texture readback failed. Sample will return zero.");
+            HYP_LOG_ONCE(Texture, Warning, "Texture readback failed. Sample will return zero.");
 
             return Vec4f::Zero();
         }
@@ -579,7 +579,7 @@ Vec4f Texture::Sample(Vec2f uv) const
     const TextureData &texture_data = ref->GetTextureData();
 
     if (texture_data.buffer.Size() == 0) {
-        HYP_LOG_ONCE(Texture, LogLevel::WARNING, "Texture buffer is empty");
+        HYP_LOG_ONCE(Texture, Warning, "Texture buffer is empty");
 
         return Vec4f::Zero();
     }
@@ -592,7 +592,7 @@ Vec4f Texture::Sample(Vec2f uv) const
     const uint32 bytes_per_pixel = renderer::NumBytes(texture_data.desc.format);
 
     if (bytes_per_pixel != 1) {
-        HYP_LOG_ONCE(Texture, LogLevel::WARNING, "Unsupported bytes per pixel: {}", bytes_per_pixel);
+        HYP_LOG_ONCE(Texture, Warning, "Unsupported bytes per pixel: {}", bytes_per_pixel);
 
         return Vec4f::Zero();
     }
@@ -602,7 +602,7 @@ Vec4f Texture::Sample(Vec2f uv) const
     const uint32 index = coord.y * texture_data.desc.extent.x * bytes_per_pixel * num_components + coord.x * bytes_per_pixel * num_components;
 
     if (index >= texture_data.buffer.Size()) {
-        HYP_LOG(Texture, LogLevel::WARNING, "Index out of bounds, index: {}, buffer size: {}, x: {}, y: {}, width: {}, height: {}", index, texture_data.buffer.Size(),
+        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, x: {}, y: {}, width: {}, height: {}", index, texture_data.buffer.Size(),
             coord.x, coord.y, texture_data.desc.extent.x, texture_data.desc.extent.y);
 
         return Vec4f::Zero();
@@ -620,7 +620,7 @@ Vec4f Texture::Sample(Vec2f uv) const
     case 4:
         return Vec4f(float(data[0]) / 255.0f, float(data[1]) / 255.0f, float(data[2]) / 255.0f, float(data[3]) / 255.0f);
     default: // should never happen
-        HYP_LOG(Texture, LogLevel::ERR, "Unsupported number of components: {}", num_components);
+        HYP_LOG(Texture, Error, "Unsupported number of components: {}", num_components);
 
         return Vec4f::Zero();
     }

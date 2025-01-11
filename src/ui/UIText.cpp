@@ -269,7 +269,7 @@ void UIText::UpdateTextAABB()
         m_text_aabb_with_bearing = CalculateTextAABB(*font_atlas, m_text, parent_bounds, text_size, true);
         m_text_aabb_without_bearing = CalculateTextAABB(*font_atlas, m_text, parent_bounds, text_size, false);
     } else {
-        HYP_LOG_ONCE(UI, LogLevel::WARNING, "No font atlas for UIText {}", GetName());
+        HYP_LOG_ONCE(UI, Warning, "No font atlas for UIText {}", GetName());
     }
 }
 
@@ -289,7 +289,7 @@ void UIText::UpdateRenderData()
         return;
     }
 
-    HYP_LOG(UI, LogLevel::DEBUG, "Update render data for text '{}'", GetText());
+    HYP_LOG(UI, Debug, "Update render data for text '{}'", GetText());
 
     if (const RC<FontAtlas> &font_atlas = GetFontAtlasOrDefault()) {
         const float text_size = GetTextSize();
@@ -297,7 +297,7 @@ void UIText::UpdateRenderData()
         m_current_font_atlas_texture = font_atlas->GetAtlasTextures().GetAtlasForPixelSize(text_size);
 
         if (!m_current_font_atlas_texture.IsValid()) {
-            HYP_LOG_ONCE(UI, LogLevel::WARNING, "No font atlas texture for text size {}", text_size);
+            HYP_LOG_ONCE(UI, Warning, "No font atlas texture for text size {}", text_size);
         }
 
         UpdateMaterial(false);
@@ -316,7 +316,7 @@ void UIText::UpdateMeshData_Internal()
     const RC<FontAtlas> &font_atlas = GetFontAtlasOrDefault();
 
     if (!font_atlas) {
-        HYP_LOG_ONCE(UI, LogLevel::WARNING, "No font atlas, cannot update text mesh data");
+        HYP_LOG_ONCE(UI, Warning, "No font atlas, cannot update text mesh data");
 
         return;
     }
@@ -388,14 +388,14 @@ bool UIText::Repaint_Internal()
     Vec2i size = GetActualSize();
 
     if (size.x * size.y <= 0) {
-        HYP_LOG_ONCE(UI, LogLevel::WARNING, "Cannot repaint UI text for element: {}, size <= zero", GetName());
+        HYP_LOG_ONCE(UI, Warning, "Cannot repaint UI text for element: {}, size <= zero", GetName());
 
         return false;
     }
 
     size = MathUtil::Max(size, Vec2i::One());
 
-    HYP_LOG(UI, LogLevel::DEBUG, "Repaint text '{}', {}", GetText(), m_text_aabb_without_bearing);
+    HYP_LOG(UI, Debug, "Repaint text '{}', {}", GetText(), m_text_aabb_without_bearing);
 
     return true;
 }

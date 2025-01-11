@@ -31,7 +31,7 @@ PointLightShadowRenderer::~PointLightShadowRenderer() = default;
 void PointLightShadowRenderer::Init()
 {
     if (!InitObject(m_light)) {
-        HYP_LOG(Shadows, LogLevel::WARNING, "Point shadow renderer attached to invalid Light");
+        HYP_LOG(Shadows, Warning, "Point shadow renderer attached to invalid Light");
 
         return;
     }
@@ -95,7 +95,7 @@ void PointLightShadowRenderer::OnRender(Frame *frame)
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     if (!m_env_probe.IsValid() || !m_light.IsValid()) {
-        HYP_LOG(Shadows, LogLevel::WARNING, "Point shadow renderer attached to invalid Light or EnvProbe");
+        HYP_LOG(Shadows, Warning, "Point shadow renderer attached to invalid Light or EnvProbe");
 
         return;
     }

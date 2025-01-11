@@ -64,12 +64,12 @@ EditorActionFactoryRegistrationBase::~EditorActionFactoryRegistrationBase()
 // {
 //     virtual void Execute_Internal() override
 //     {
-//         HYP_LOG(Editor, LogLevel::DEBUG, "Generate lightmaps - not yet implemented");
+//         HYP_LOG(Editor, Debug, "Generate lightmaps - not yet implemented");
 //     }
 
 //     virtual void Undo_Internal() override
 //     {
-//         HYP_LOG(Editor, LogLevel::DEBUG, "Undo generate lightmaps - not yet implemented");
+//         HYP_LOG(Editor, Debug, "Undo generate lightmaps - not yet implemented");
 //     }
 // };
 

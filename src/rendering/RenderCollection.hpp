@@ -5,12 +5,14 @@
 
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/ArrayMap.hpp>
+
 #include <core/threading/Threads.hpp>
+
+#include <core/memory/resource/Resource.hpp>
+
 #include <core/ID.hpp>
 
 #include <math/Transform.hpp>
-
-#include <scene/camera/Camera.hpp>
 
 #include <rendering/DrawProxy.hpp>
 #include <rendering/RenderableAttributes.hpp>
@@ -116,8 +118,7 @@ public:
     HYP_FORCE_INLINE const Handle<Camera> &GetCamera() const
         { return m_camera; }
 
-    HYP_FORCE_INLINE void SetCamera(const Handle<Camera> &camera)
-        { m_camera = camera; }
+    void SetCamera(const Handle<Camera> &camera);
 
     HYP_FORCE_INLINE const WeakHandle<RenderEnvironment> &GetRenderEnvironment() const
         { return m_render_environment; }
@@ -181,6 +182,8 @@ protected:
     Handle<Camera>                  m_camera;
     WeakHandle<RenderEnvironment>   m_render_environment;
     RC<EntityDrawCollection>        m_draw_collection;
+
+    ResourceHandle                  m_camera_resource_handle;
 };
 
 } // namespace hyperion

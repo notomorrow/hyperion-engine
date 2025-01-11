@@ -124,7 +124,7 @@ public:
             return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Unknown error; method missing on class"));
         }
 
-        HYP_LOG(UI, LogLevel::ERR, "Failed to call method {} for UI object with name: {}", m_method_name, m_ui_object->GetName());
+        HYP_LOG(UI, Error, "Failed to call method {} for UI object with name: {}", m_method_name, m_ui_object->GetName());
 
         return UIEventHandlerResult(UIEventHandlerResult::ERR, HYP_STATIC_MESSAGE("Unknown error; failed to call method"));
     }
