@@ -25,20 +25,20 @@ namespace hyperion {
  */
 template <class Container, class Lambda>
 HYP_FORCE_INLINE
-static inline void ForEachInBatches(Container &container, uint num_batches, Lambda &&lambda)
+static inline void ForEachInBatches(Container &container, uint32 num_batches, Lambda &&lambda)
 {
     static_assert(Container::is_contiguous, "Container must be contiguous to use ForEachInBatches");
 
-    const uint num_items = container.Size();
-    const uint items_per_batch = (num_items + num_batches - 1) / num_batches;
+    const uint32 num_items = container.Size();
+    const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
 
     auto *data_ptr = container.Data();
 
-    for (uint batch_index = 0; batch_index < num_batches; batch_index++) {
-        const uint offset_index = batch_index * items_per_batch;
-        const uint max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+    for (uint32 batch_index = 0; batch_index < num_batches; batch_index++) {
+        const uint32 offset_index = batch_index * items_per_batch;
+        const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
 
-        for (uint i = offset_index; i < max_index; ++i) {
+        for (uint32 i = offset_index; i < max_index; ++i) {
             lambda(*(data_ptr + i), i, batch_index);
         }
     }
@@ -54,15 +54,15 @@ static inline void ForEachInBatches(Container &container, uint num_batches, Lamb
 template <class Container, class Lambda>
 static inline void ForEachPermutation(Container &container, Lambda &&lambda)
 {
-    Array<uint> indices;
+    Array<uint32> indices;
 
-    for (uint i = 0; i < uint(container.Size()); i++) {
-        const uint num_combinations = (1u << i);
+    for (uint32 i = 0; i < uint32(container.Size()); i++) {
+        const uint32 num_combinations = (1u << i);
 
-        for (uint k = 0; k < num_combinations; k++) {
+        for (uint32 k = 0; k < num_combinations; k++) {
             indices.Clear();
 
-            for (uint j = 0; j < i; j++) {
+            for (uint32 j = 0; j < i; j++) {
                 if ((k & (1u << j)) != (1u << j)) {
                     continue;
                 }
@@ -104,7 +104,7 @@ static inline void ParallelForEach(Container &container, TaskThreadPool &pool, L
 /*! \brief Perform a parallel foreach within the given task thread pool \ref{pool} and using \ref{num_batches} batches. */
 template <class Container, class Lambda>
 HYP_FORCE_INLINE
-static inline void ParallelForEach(Container &container, uint num_batches, TaskThreadPool &pool, Lambda &&lambda)
+static inline void ParallelForEach(Container &container, uint32 num_batches, TaskThreadPool &pool, Lambda &&lambda)
 {
     TaskSystem::GetInstance().ParallelForEach(
         pool,

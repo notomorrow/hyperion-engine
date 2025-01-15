@@ -92,11 +92,11 @@ class RenderState : public HypObject<RenderState>
     HYP_OBJECT_BODY(RenderState);
 
 public:
-    Stack<RenderBinding<Scene>>                                                             scene_bindings;
+    Array<SceneRenderResources *>                                                           scene_bindings;
     Array<CameraRenderResources *>                                                          camera_bindings;
     FixedArray<Array<TResourceHandle<LightRenderResources>>, uint32(LightType::MAX)>        bound_lights;
     Stack<TResourceHandle<LightRenderResources>>                                            light_bindings;
-    FixedArray<ArrayMap<ID<EnvProbe>, Optional<uint>>, ENV_PROBE_TYPE_MAX>                  bound_env_probes; // map to texture slot
+    FixedArray<ArrayMap<ID<EnvProbe>, Optional<uint32>>, ENV_PROBE_TYPE_MAX>                  bound_env_probes; // map to texture slot
     ID<EnvGrid>                                                                             bound_env_grid;
     Stack<ID<EnvProbe>>                                                                     env_probe_bindings;
     uint32                                                                                  frame_counter = ~0u;
@@ -164,29 +164,19 @@ public:
     HYP_FORCE_INLINE void BindScene(const Scene *scene)
     {
         if (scene == nullptr) {
-            scene_bindings.Push(RenderBinding<Scene>::empty);
+            scene_bindings.PushBack(nullptr);
         } else {
-            scene_bindings.Push(RenderBinding<Scene> {
-                scene->GetID(),
-                scene->GetEnvironment(),
-                &scene->GetRenderCollector(),
-                scene->GetProxy()
-            });
+            scene_bindings.PushBack(&scene->GetRenderResources());
         }
     }
 
-    HYP_FORCE_INLINE void UnbindScene()
-    {
-        if (scene_bindings.Any()) {
-            scene_bindings.Pop();
-        }
-    }
+    void UnbindScene(const Scene *scene);
 
-    HYP_FORCE_INLINE const RenderBinding<Scene> &GetScene() const
+    HYP_FORCE_INLINE SceneRenderResources *GetActiveScene() const
     {
         return scene_bindings.Empty()
-            ? RenderBinding<Scene>::empty
-            : scene_bindings.Top();
+            ? nullptr
+            : scene_bindings.Back();
     }
 
     void BindCamera(Camera *camera);
@@ -235,7 +225,7 @@ public:
     }
 
 private:
-    FixedArray<uint, ENV_PROBE_BINDING_SLOT_MAX>    m_env_probe_texture_slot_counters { };
+    FixedArray<uint32, ENV_PROBE_BINDING_SLOT_MAX>    m_env_probe_texture_slot_counters { };
 };
 
 } // namespace hyperion

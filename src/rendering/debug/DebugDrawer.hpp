@@ -30,7 +30,7 @@ namespace hyperion {
 class Engine;
 class DebugDrawer;
 
-enum class DebugDrawShape : uint
+enum class DebugDrawShape : uint32
 {
     SPHERE,
     BOX,
@@ -39,7 +39,7 @@ enum class DebugDrawShape : uint
     MAX
 };
 
-enum class DebugDrawType : uint
+enum class DebugDrawType : uint32
 {
     DEFAULT,
 
@@ -108,7 +108,7 @@ private:
     ShaderRef                                           m_shader;
     Handle<RenderGroup>                                 m_render_group;
 
-    FixedArray<Handle<Mesh>, uint(DebugDrawShape::MAX)> m_shapes;
+    FixedArray<Handle<Mesh>, uint32(DebugDrawShape::MAX)> m_shapes;
     Array<DebugDrawCommand>                             m_draw_commands;
     Array<DebugDrawCommand>                             m_draw_commands_pending_addition;
     AtomicVar<uint32>                                   m_num_draw_commands_pending_addition { 0 };

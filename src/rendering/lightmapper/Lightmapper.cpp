@@ -72,8 +72,8 @@ struct RENDER_COMMAND(LightmapTraceRaysOnGPU) : renderer::RenderCommand
     {
         Frame *frame = g_engine->GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
 
-        const uint frame_index = frame->GetFrameIndex();
-        const uint previous_frame_index = (frame_index + max_frames_in_flight - 1) % max_frames_in_flight;
+        const uint32 frame_index = frame->GetFrameIndex();
+        const uint32 previous_frame_index = (frame_index + max_frames_in_flight - 1) % max_frames_in_flight;
 
         const RC<LightmapPathTracer> &path_tracer_radiance = job->GetParams().params.Get<LightmapJobGPUParams>().path_tracer_radiance;
         const RC<LightmapPathTracer> &path_tracer_irradiance = job->GetParams().params.Get<LightmapJobGPUParams>().path_tracer_irradiance;
@@ -331,7 +331,7 @@ private:
         const Matrix4 &model_matrix = transform.GetMatrix();
         const Matrix4 normal_matrix = model_matrix.Inverted().Transpose();
 
-        for (uint i = 0; i < mesh_data.indices.Size(); i += 3) {
+        for (uint32 i = 0; i < mesh_data.indices.Size(); i += 3) {
             Triangle triangle {
                 mesh_data.vertices[mesh_data.indices[i + 0]],
                 mesh_data.vertices[mesh_data.indices[i + 1]],
@@ -432,7 +432,7 @@ LightmapPathTracer::~LightmapPathTracer()
 
 void LightmapPathTracer::CreateUniformBuffer()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         m_uniform_buffers[frame_index] = MakeRenderObject<GPUBuffer>(UniformBuffer());
 
         PUSH_RENDER_COMMAND(CreateLightmapPathTracerUniformBuffer, m_uniform_buffers[frame_index]);
@@ -443,7 +443,7 @@ void LightmapPathTracer::Create()
 {
     CreateUniformBuffer();
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         DeferCreate(
             m_hits_buffers[frame_index],
             g_engine->GetGPUDevice(),
@@ -475,7 +475,7 @@ void LightmapPathTracer::Create()
 
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -535,7 +535,7 @@ void LightmapPathTracer::UpdateUniforms(Frame *frame, uint32 ray_offset)
     m_uniform_buffers[frame->GetFrameIndex()]->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
 }
 
-void LightmapPathTracer::ReadHitsBuffer(LightmapHitsBuffer *ptr, uint frame_index)
+void LightmapPathTracer::ReadHitsBuffer(LightmapHitsBuffer *ptr, uint32 frame_index)
 {
     m_hits_buffers[frame_index]->Read(
         g_engine->GetGPUDevice(),
@@ -551,8 +551,12 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
-    const uint previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
+    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -570,7 +574,7 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
         Array<float> ray_float_data;
         ray_float_data.Resize(rays.Size() * 8);
 
-        for (uint i = 0; i < rays.Size(); i++) {
+        for (uint32 i = 0; i < rays.Size(); i++) {
             ray_float_data[i * 8 + 0] = rays[i].ray.position.x;
             ray_float_data[i * 8 + 1] = rays[i].ray.position.y;
             ray_float_data[i * 8 + 2] = rays[i].ray.position.z;
@@ -603,7 +607,7 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -757,7 +761,7 @@ void LightmapJob::Process()
                 m_texel_indices.Reserve(m_uv_map->uvs.Size());
 
                 for (const auto &it : m_uv_map->mesh_to_uv_indices) {
-                    for (uint i = 0; i < it.second.Size(); i++) {
+                    for (uint32 i = 0; i < it.second.Size(); i++) {
                         m_texel_indices.PushBack(it.second[i]);
                     }
                 }
@@ -848,13 +852,13 @@ void LightmapJob::Process()
     }
 }
 
-void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
+void LightmapJob::GatherRays(uint32 max_ray_hits, Array<LightmapRay> &out_rays)
 {
     HYP_LOG(Lightmap, Info, "Gathering rays for lightmap job {}", m_uuid);
 
     Optional<Pair<ID<Mesh>, StreamedDataRef<StreamedMeshData>>> streamed_mesh_data_refs { };
 
-    uint ray_index = 0;
+    uint32 ray_index = 0;
 
     while (ray_index < max_ray_hits) {
         if (m_texel_index >= m_texel_indices.Size() * num_multisamples) {
@@ -863,7 +867,7 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
             break;
         }
 
-        const uint uv_index = m_texel_indices[m_texel_index % m_texel_indices.Size()];
+        const uint32 uv_index = m_texel_indices[m_texel_index % m_texel_indices.Size()];
         
         AssertThrowMsg(
             uv_index < m_uv_map->uvs.Size(),
@@ -953,9 +957,9 @@ void LightmapJob::GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays)
     HYP_LOG(Lightmap, Info, "Lightmap job {}: Gathered {} rays", m_uuid, ray_index);
 }
 
-void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits, LightmapShadingType shading_type)
+void LightmapJob::IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint32 num_hits, LightmapShadingType shading_type)
 {
-    for (uint i = 0; i < num_hits; i++) {
+    for (uint32 i = 0; i < num_hits; i++) {
         const LightmapRay &ray = rays[i];
         const LightmapHit &hit = hits[i];
 
@@ -1051,7 +1055,7 @@ void LightmapJob::TraceSingleRayOnCPU(const LightmapRay &ray, LightmapRayHitPayl
 
 void LightmapJob::TraceRaysOnCPU(const Array<LightmapRay> &rays, LightmapShadingType shading_type)
 {
-    m_current_tasks.Concat(TaskSystem::GetInstance().ParallelForEach_Async(*m_task_thread_pool, rays, [this, shading_type](const LightmapRay &first_ray, uint index, uint batch_index)
+    m_current_tasks.Concat(TaskSystem::GetInstance().ParallelForEach_Async(*m_task_thread_pool, rays, [this, shading_type](const LightmapRay &first_ray, uint32 index, uint32 batch_index)
     {
         uint32 seed = (uint32)rand();//index * m_texel_index;
 
@@ -1374,8 +1378,8 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
     //     Bitmap<4, float> bitmap_dilated = bitmap;
 
     //     // Dilate lightmap
-    //     for (uint x = 0; x < bitmap.GetWidth(); x++) {
-    //         for (uint y = 0; y < bitmap.GetHeight(); y++) {
+    //     for (uint32 x = 0; x < bitmap.GetWidth(); x++) {
+    //         for (uint32 y = 0; y < bitmap.GetHeight(); y++) {
     //             Vec3f color = bitmap.GetPixel(x, y);
     //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x - 1, y - 1));
     //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x, y - 1));
@@ -1395,16 +1399,16 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
     //     // Apply bilateral blur
     //     Bitmap<4, float> bitmap_blurred = bitmap;
 
-    //     for (uint x = 0; x < bitmap.GetWidth(); x++) {
-    //         for (uint y = 0; y < bitmap.GetHeight(); y++) {
+    //     for (uint32 x = 0; x < bitmap.GetWidth(); x++) {
+    //         for (uint32 y = 0; y < bitmap.GetHeight(); y++) {
     //             Vec3f color = Vec3f(0.0f);
 
     //             float total_weight = 0.0f;
 
     //             for (int dx = -1; dx <= 1; dx++) {
     //                 for (int dy = -1; dy <= 1; dy++) {
-    //                     const uint nx = x + dx;
-    //                     const uint ny = y + dy;
+    //                     const uint32 nx = x + dx;
+    //                     const uint32 ny = y + dy;
 
     //                     if (nx >= bitmap.GetWidth() || ny >= bitmap.GetHeight()) {
     //                         continue;
@@ -1430,13 +1434,13 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
     // }
     
     // Temp; write to rgb8 bitmap
-    uint num = rand() % 150;
+    uint32 num = rand() % 150;
     bitmaps[0].Write("lightmap_" + String::ToString(num) + "_radiance.bmp");
     bitmaps[1].Write("lightmap_" + String::ToString(num) + "_irradiance.bmp");
 
     FixedArray<Handle<Texture>, 2> textures;
 
-    for (uint i = 0; i < 2; i++) {
+    for (uint32 i = 0; i < 2; i++) {
         RC<StreamedTextureData> streamed_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
             TextureDesc {
                 ImageType::TEXTURE_TYPE_2D,

@@ -5,6 +5,7 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderCollection.hpp>
+#include <rendering/Scene.hpp>
 
 #include <math/MathUtil.hpp>
 
@@ -50,7 +51,7 @@ void EnvGridUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
     if (!(GetEntityManager().GetScene()->GetFlags() & (SceneFlags::NON_WORLD | SceneFlags::DETACHED))) {
         HYP_LOG(EnvGrid, Debug, "Adding EnvGrid render component to scene {}", GetEntityManager().GetScene()->GetName());
 
-        env_grid_component.env_grid = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<EnvGrid>(
+        env_grid_component.env_grid = GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->AddRenderSubsystem<EnvGrid>(
             Name::Unique("env_grid_renderer"),
             EnvGridOptions {
                 env_grid_component.env_grid_type,
@@ -69,7 +70,7 @@ void EnvGridUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
     EnvGridComponent &env_grid_component = GetEntityManager().GetComponent<EnvGridComponent>(entity);
 
     if (env_grid_component.env_grid != nullptr) {
-        GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderSubsystem<EnvGrid>(env_grid_component.env_grid->GetName());
+        GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<EnvGrid>(env_grid_component.env_grid->GetName());
 
         env_grid_component.env_grid = nullptr;
     }

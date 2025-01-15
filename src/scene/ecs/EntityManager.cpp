@@ -72,7 +72,7 @@ void EntityManagerCommandQueue::Execute(EntityManager &mgr, GameCounter::TickUni
         return;
     }
     
-    const uint current_buffer_index = m_buffer_index.Get(MemoryOrder::ACQUIRE);
+    const uint32 current_buffer_index = m_buffer_index.Get(MemoryOrder::ACQUIRE);
 
     EntityManagerCommandBuffer &buffer = m_command_buffers[current_buffer_index];
 

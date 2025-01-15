@@ -19,10 +19,10 @@ struct Quad
 {
     Vertex vertices[4];
 
-    constexpr Vertex &operator[](uint index)
+    constexpr Vertex &operator[](uint32 index)
         { return vertices[index]; }
 
-    constexpr const Vertex &operator[](uint index) const
+    constexpr const Vertex &operator[](uint32 index) const
         { return vertices[index]; }
 };
 
@@ -57,9 +57,9 @@ struct VoxelGrid
     {
         voxels.Resize(size.x * size.y * size.z);
 
-        for (uint x = 0; x < size.x; x++) {
-            for (uint y = 0; y < size.y; y++) {
-                for (uint z = 0; z < size.z; z++) {
+        for (uint32 x = 0; x < size.x; x++) {
+            for (uint32 y = 0; y < size.y; y++) {
+                for (uint32 z = 0; z < size.z; z++) {
                     voxels[GetIndex(x, y, z)] = Voxel {
                         BoundingBox {
                             Vec3f(float(x), float(y), float(z)) * voxel_size,
@@ -77,20 +77,20 @@ struct VoxelGrid
     VoxelGrid &operator=(VoxelGrid &&other) noexcept    = default;
     ~VoxelGrid()                                        = default;
 
-    uint GetIndex(uint x, uint y, uint z) const
+    uint32 GetIndex(uint32 x, uint32 y, uint32 z) const
         { return (x * size.y * size.z) + (y * size.z) + z; }
 
-    const Voxel &GetVoxel(uint x, uint y, uint z) const
+    const Voxel &GetVoxel(uint32 x, uint32 y, uint32 z) const
     {
-        const uint index = GetIndex(x, y, z);
+        const uint32 index = GetIndex(x, y, z);
         AssertThrowMsg(index < voxels.Size(), "Voxel index out of bounds");
 
         return voxels[index];
     }
 
-    void SetVoxel(uint x, uint y, uint z, VoxelData data)
+    void SetVoxel(uint32 x, uint32 y, uint32 z, VoxelData data)
     {
-        const uint index = GetIndex(x, y, z);
+        const uint32 index = GetIndex(x, y, z);
         AssertThrowMsg(index < voxels.Size(), "Voxel index out of bounds");
 
         voxels[index].filled = true;
@@ -107,7 +107,7 @@ class HYP_API MeshBuilder
 public:
     static Handle<Mesh> Quad(Topology topology = Topology::TRIANGLES);
     static Handle<Mesh> Cube();
-    static Handle<Mesh> NormalizedCubeSphere(uint num_divisions);
+    static Handle<Mesh> NormalizedCubeSphere(uint32 num_divisions);
 
     static Handle<Mesh> ApplyTransform(const Mesh *mesh, const Transform &transform);
     static Handle<Mesh> Merge(const Mesh *a, const Mesh *b, const Transform &a_transform, const Transform &b_transform);

@@ -35,7 +35,7 @@ struct ShaderObject
     }
 };
 
-enum ShaderModuleType : uint
+enum ShaderModuleType : uint32
 {
     UNSET = 0,
 
@@ -124,7 +124,7 @@ public:
         HashCode hc;
 
         for (const ShaderModule<PLATFORM> &shader_module : m_shader_modules) {
-            hc.Add(uint(shader_module.type));
+            hc.Add(uint32(shader_module.type));
             hc.Add(shader_module.spirv.GetHashCode());
         }
 

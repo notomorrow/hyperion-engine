@@ -31,7 +31,7 @@ namespace hyperion {
 class EncoderDataQueue
 {
 public:
-    static constexpr uint max_queue_size = 5;
+    static constexpr uint32 max_queue_size = 5;
 
     EncoderDataQueue()                                              = default;
     EncoderDataQueue(const EncoderDataQueue &other)                 = delete;
@@ -44,7 +44,7 @@ public:
     {
         std::lock_guard guard(m_mutex);
 
-        if constexpr (max_queue_size != uint(-1)) {
+        if constexpr (max_queue_size != uint32(-1)) {
             while (m_queue.Size() >= max_queue_size) {
                 m_queue.Pop();
                 m_size.Decrement(1, MemoryOrder::RELAXED);
@@ -66,12 +66,12 @@ public:
     }
 
     HYP_FORCE_INLINE
-    uint Size() const
+    uint32 Size() const
         { return m_size.Get(MemoryOrder::RELAXED); }
 
 private:
     Queue<ByteBuffer>  m_queue;
-    AtomicVar<uint>    m_size;
+    AtomicVar<uint32>    m_size;
     std::mutex         m_mutex;
 };
 
@@ -104,7 +104,7 @@ struct GStreamerUserData
     EncoderDataQueue    *in_queue;
     EncoderDataQueue    *out_queue;
 
-    uint                source_id;
+    uint32              source_id;
     GSourceFunc         push_data_callback;
 
     uint64              timestamp;
@@ -347,7 +347,7 @@ protected:
     UniquePtr<EncoderDataQueue>     m_out_queue;
     GStreamerUserData               m_custom_data;
 
-    void                            (*m_feed_data_callback)(GstElement *, guint, GStreamerUserData *);
+    void                            (*m_feed_data_callback)(GstElement *, guint32, GStreamerUserData *);
     GstFlowReturn                   (*m_recv_data_callback)(GstElement *, GStreamerUserData *);
 };
 

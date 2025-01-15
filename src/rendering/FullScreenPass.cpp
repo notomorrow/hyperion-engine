@@ -36,7 +36,7 @@ struct RENDER_COMMAND(CreateCommandBuffers) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        for (uint i = 0; i < max_frames_in_flight; i++) {
+        for (uint32 i = 0; i < max_frames_in_flight; i++) {
 #ifdef HYP_VULKAN
             command_buffers[i]->GetPlatformImpl().command_pool = g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[0];
 #endif
@@ -158,7 +158,7 @@ void FullScreenPass::SetShader(const ShaderRef &shader)
     m_shader = shader;
 }
 
-const AttachmentRef &FullScreenPass::GetAttachment(uint attachment_index) const
+const AttachmentRef &FullScreenPass::GetAttachment(uint32 attachment_index) const
 {
     AssertThrow(m_framebuffer.IsValid());
 
@@ -219,7 +219,7 @@ void FullScreenPass::CreateCommandBuffers()
 {
     HYP_SCOPE;
 
-    for (uint i = 0; i < max_frames_in_flight; i++) {
+    for (uint32 i = 0; i < max_frames_in_flight; i++) {
         m_command_buffers[i] = MakeRenderObject<CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
     }
 
@@ -315,10 +315,14 @@ void FullScreenPass::CreateDescriptors()
 {
 }
 
-void FullScreenPass::Record(uint frame_index)
+void FullScreenPass::Record(uint32 frame_index)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -339,7 +343,7 @@ void FullScreenPass::Record(uint frame_index)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -373,7 +377,7 @@ void FullScreenPass::Begin(Frame *frame)
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     auto *command_buffer = m_command_buffers[frame_index].Get();
 
@@ -387,7 +391,7 @@ void FullScreenPass::End(Frame *frame)
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     auto *command_buffer = m_command_buffers[frame_index].Get();
     command_buffer->End(g_engine->GetGPUDevice());

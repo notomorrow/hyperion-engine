@@ -240,7 +240,7 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
     
     {
         if (!texture_names_to_path.Empty()) {
-            uint num_enqueued = 0;
+            uint32 num_enqueued = 0;
             String paths_string;
 
             RC<AssetBatch> textures_batch = state.asset_manager->CreateBatch();

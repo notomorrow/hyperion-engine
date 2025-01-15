@@ -30,9 +30,9 @@ struct RTCStreamDestination
 
 struct RTCStreamParams
 {
-    uint samples_per_second = 60;
+    uint32 samples_per_second = 60;
 
-    uint GetSampleDuration() const
+    uint32 GetSampleDuration() const
     {
         return 1000 * 1000 / samples_per_second;
     }

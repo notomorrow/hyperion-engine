@@ -57,7 +57,7 @@ static String BuildDescriptorTableDefines(const DescriptorUsageSet &descriptor_u
 
     // Generate descriptor table defines
     for (const DescriptorSetDeclaration &descriptor_set_declaration : descriptor_table.GetElements()) {
-        const uint set_index = descriptor_table.GetDescriptorSetIndex(descriptor_set_declaration.name);
+        const uint32 set_index = descriptor_table.GetDescriptorSetIndex(descriptor_set_declaration.name);
         AssertThrow(set_index != -1);
 
         descriptor_table_defines += "#define HYP_DESCRIPTOR_SET_INDEX_" + String(descriptor_set_declaration.name.LookupString()) + " " + String::ToString(set_index) + "\n";
@@ -73,8 +73,8 @@ static String BuildDescriptorTableDefines(const DescriptorUsageSet &descriptor_u
 
         for (const Array<DescriptorDeclaration> &descriptor_declarations : descriptor_set_declaration_ptr->slots) {
             for (const DescriptorDeclaration &descriptor_declaration : descriptor_declarations) {
-                const uint flat_index = descriptor_set_declaration_ptr->CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
-                AssertThrow(flat_index != uint(-1));
+                const uint32 flat_index = descriptor_set_declaration_ptr->CalculateFlatIndex(descriptor_declaration.slot, descriptor_declaration.name);
+                AssertThrow(flat_index != uint32(-1));
 
                 descriptor_table_defines += "\t#define HYP_DESCRIPTOR_INDEX_" + String(descriptor_set_declaration_ptr->name.LookupString()) + "_" + descriptor_declaration.name.LookupString() + " " + String::ToString(flat_index) + "\n";
             }
@@ -822,7 +822,7 @@ static void ForEachPermutation(
 // #endif
 
     if (parallel) {
-        ParallelForEach(all_combinations, [&callback](const Array<ShaderProperty> &properties, uint, uint)
+        ParallelForEach(all_combinations, [&callback](const Array<ShaderProperty> &properties, uint32, uint32)
         {
             callback(ShaderProperties(properties));
         });
@@ -960,7 +960,7 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTable() const
             );
 
             if (!descriptor_set_declaration) {
-                const uint set_index = uint(table.GetElements().Size());
+                const uint32 set_index = uint32(table.GetElements().Size());
 
                 table.AddDescriptorSetDeclaration(DescriptorSetDeclaration(set_index, static_descriptor_set_declaration->name, true));
             }
@@ -969,7 +969,7 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTable() const
         }
 
         if (!descriptor_set_declaration) {
-            const uint set_index = uint(table.GetElements().Size());
+            const uint32 set_index = uint32(table.GetElements().Size());
 
             descriptor_set_declaration = table.AddDescriptorSetDeclaration(DescriptorSetDeclaration(set_index, descriptor_usage.set_name));
         }
@@ -1022,7 +1022,7 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties &properties)
 #if defined(HYP_VULKAN) && HYP_VULKAN
     properties.Set(ShaderProperty("HYP_VULKAN", false));
 
-    constexpr uint vulkan_version = HYP_VULKAN_API_VERSION;
+    constexpr uint32 vulkan_version = HYP_VULKAN_API_VERSION;
 
     switch (vulkan_version) {
     case VK_API_VERSION_1_1:
@@ -1360,7 +1360,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
     std::mutex results_mutex;
 
     // Compile all shaders ahead of time
-    ParallelForEach(bundles, [&](auto &bundle, uint, uint)
+    ParallelForEach(bundles, [&](auto &bundle, uint32, uint32)
     {
         if (bundle.HasRTShaders() && !supports_rt_shaders) {
             HYP_LOG(
@@ -1503,7 +1503,7 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(
 
     int last_attribute_location = -1;
 
-    for (uint line_index = 0; line_index < lines.Size();) {
+    for (uint32 line_index = 0; line_index < lines.Size();) {
         const String line = lines[line_index++].Trimmed();
 
         switch (phase) {
@@ -1951,8 +1951,8 @@ bool ShaderCompiler::CompileBundle(
     std::mutex compiled_shaders_mutex;
     std::mutex error_messages_mutex;
 
-    AtomicVar<uint> num_compiled_permutations { 0u };
-    AtomicVar<uint> num_errored_permutations { 0u };
+    AtomicVar<uint32> num_compiled_permutations { 0u };
+    AtomicVar<uint32> num_errored_permutations { 0u };
 
     auto BuildVertexAttributeSet = [](const Array<VertexAttributeDefinition> &definitions) -> VertexAttributeSet
     {

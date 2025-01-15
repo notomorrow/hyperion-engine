@@ -48,7 +48,7 @@ public:
     
     FixedArray<Vec3f, 8> GetCorners() const;
 
-    Vec3f GetCorner(uint index) const;
+    Vec3f GetCorner(uint32 index) const;
     
     HYP_FORCE_INLINE Vec3f GetCenter() const
         { return (max + min) * 0.5f; }

@@ -21,7 +21,7 @@ class FontFace
 {
 public:
     using WChar = uint32;
-    using GlyphIndex = uint;
+    using GlyphIndex = uint32;
 
     FontFace()                                                          = default;
 

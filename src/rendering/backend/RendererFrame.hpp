@@ -37,7 +37,7 @@ class Frame
 public:
     static constexpr PlatformType platform = PLATFORM;
     
-    static Frame TemporaryFrame(CommandBufferRef<PLATFORM> command_buffer, uint frame_index = 0)
+    static Frame TemporaryFrame(CommandBufferRef<PLATFORM> command_buffer, uint32 frame_index = 0)
     {
         Frame frame;
         frame.m_command_buffer = std::move(command_buffer);
@@ -46,7 +46,7 @@ public:
     }
 
     explicit Frame();
-    Frame(uint frame_index);
+    Frame(uint32 frame_index);
     Frame(const Frame &other) = delete;
     Frame &operator=(const Frame &other) = delete;
     Frame(Frame &&other) noexcept;
@@ -58,7 +58,7 @@ public:
     HYP_FORCE_INLINE const FenceRef<PLATFORM> &GetFence() const
         { return m_queue_submit_fence; }
 
-    HYP_FORCE_INLINE uint GetFrameIndex() const
+    HYP_FORCE_INLINE uint32 GetFrameIndex() const
         { return m_frame_index; }
     
     HYP_FORCE_INLINE const CommandBufferRef<PLATFORM> &GetCommandBuffer() const
@@ -82,7 +82,7 @@ public:
     CommandBufferRef<PLATFORM>  m_command_buffer;
 
 private:
-    uint                m_frame_index;
+    uint32              m_frame_index;
     SemaphoreChain      m_present_semaphores;
     FenceRef<PLATFORM>  m_queue_submit_fence;
 };

@@ -42,7 +42,7 @@ public:
     static constexpr PlatformType platform = Platform::VULKAN;
     
     RenderPass(RenderPassStage stage, RenderPassMode mode);
-    RenderPass(RenderPassStage stage, RenderPassMode mode, uint num_multiview_layers);
+    RenderPass(RenderPassStage stage, RenderPassMode mode, uint32 num_multiview_layers);
     RenderPass(const RenderPass &other) = delete;
     RenderPass &operator=(const RenderPass &other) = delete;
     ~RenderPass();
@@ -59,7 +59,7 @@ public:
     bool IsMultiview() const
         { return m_num_multiview_layers != 0; }
 
-    uint NumMultiviewLayers() const
+    uint32 NumMultiviewLayers() const
         { return m_num_multiview_layers; }
 
     void AddAttachment(AttachmentRef<Platform::VULKAN> attachment);
@@ -73,7 +73,7 @@ public:
     RendererResult Create(Device<Platform::VULKAN> *device);
     RendererResult Destroy(Device<Platform::VULKAN> *device);
 
-    void Begin(CommandBuffer<Platform::VULKAN> *cmd, Framebuffer<Platform::VULKAN> *framebuffer, uint frame_index);
+    void Begin(CommandBuffer<Platform::VULKAN> *cmd, Framebuffer<Platform::VULKAN> *framebuffer, uint32 frame_index);
     void End(CommandBuffer<Platform::VULKAN> *cmd);
 
 private:
@@ -84,7 +84,7 @@ private:
 
     RenderPassStage                         m_stage;
     RenderPassMode                          m_mode;
-    uint                                    m_num_multiview_layers;
+    uint32                                  m_num_multiview_layers;
 
     Vec4f                                   m_clear_color;
 

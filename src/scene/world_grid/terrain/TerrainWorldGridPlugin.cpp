@@ -165,7 +165,7 @@ const FixedArray<Pair<int, int>, 8> TerrainErosion::offsets {
 
 void TerrainErosion::Erode(TerrainHeightData &height_data)
 {
-    for (uint iteration = 0; iteration < num_iterations; iteration++) {
+    for (uint32 iteration = 0; iteration < num_iterations; iteration++) {
         for (int z = 1; z < height_data.patch_info.extent.z - 2; z++) {
             for (int x = 1; x < height_data.patch_info.extent.x - 2; x++) {
                 TerrainHeight &height_info = height_data.heights[height_data.GetHeightIndex(x, z)];
@@ -254,7 +254,7 @@ void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator
             const float x_offset = float(x + (m_height_data.patch_info.coord.x * int(m_height_data.patch_info.extent.x - 1))) / float(m_height_data.patch_info.extent.x);
             const float z_offset = float(z + (m_height_data.patch_info.coord.y * int(m_height_data.patch_info.extent.z - 1))) / float(m_height_data.patch_info.extent.z);
 
-            const uint index = m_height_data.GetHeightIndex(x, z);
+            const uint32 index = m_height_data.GetHeightIndex(x, z);
 
             m_height_data.heights[index] = TerrainHeight {
                 .height         = noise_combinator.GetNoise(Vec2f(x_offset, z_offset)),
@@ -295,10 +295,10 @@ Array<Vertex> TerrainMeshBuilder::BuildVertices() const
     Array<Vertex> vertices;
     vertices.Resize(m_height_data.patch_info.extent.x * m_height_data.patch_info.extent.z);
 
-    uint i = 0;
+    uint32 i = 0;
 
-    for (uint z = 0; z < m_height_data.patch_info.extent.z; z++) {
-        for (uint x = 0; x < m_height_data.patch_info.extent.x; x++) {
+    for (uint32 z = 0; z < m_height_data.patch_info.extent.z; z++) {
+        for (uint32 x = 0; x < m_height_data.patch_info.extent.x; x++) {
             const Vec3f position = Vec3f { float(x), m_height_data.heights[i].height, float(z) } * m_height_data.patch_info.scale;
 
             const Vec2f texcoord(
@@ -318,18 +318,18 @@ Array<uint32> TerrainMeshBuilder::BuildIndices() const
     Array<uint32> indices;
     indices.Resize(6 * (m_height_data.patch_info.extent.x - 1) * (m_height_data.patch_info.extent.z - 1));
 
-    uint pitch = m_height_data.patch_info.extent.x;
-    uint row = 0;
+    uint32 pitch = m_height_data.patch_info.extent.x;
+    uint32 row = 0;
 
-    uint i0 = row;
-    uint i1 = row + 1;
-    uint i2 = pitch + i1;
-    uint i3 = pitch + row;
+    uint32 i0 = row;
+    uint32 i1 = row + 1;
+    uint32 i2 = pitch + i1;
+    uint32 i3 = pitch + row;
 
-    uint i = 0;
+    uint32 i = 0;
 
-    for (uint z = 0; z < m_height_data.patch_info.extent.z - 1; z++) {
-        for (uint x = 0; x < m_height_data.patch_info.extent.x - 1; x++) {
+    for (uint32 z = 0; z < m_height_data.patch_info.extent.z - 1; z++) {
+        for (uint32 x = 0; x < m_height_data.patch_info.extent.x - 1; x++) {
             indices[i++] = i0;
             indices[i++] = i2;
             indices[i++] = i1;

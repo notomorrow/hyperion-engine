@@ -39,10 +39,10 @@ LoadedAsset FontAtlasLoader::LoadAsset(LoaderState &state) const
     FontAtlasTextureSet texture_set;
 
     if (auto atlases_value = json_value["atlases"]; atlases_value.IsObject()) {
-        uint main_value_key;
+        uint32 main_value_key;
 
         if (auto main_value = atlases_value["main"]; main_value.IsNumber() || main_value.IsString()) {
-            main_value_key = uint(main_value.ToNumber());
+            main_value_key = uint32(main_value.ToNumber());
         } else {
             return { { LoaderResult::Status::ERR, "Failed to read 'atlases.main' integer" } };
         }
@@ -61,10 +61,10 @@ LoadedAsset FontAtlasLoader::LoadAsset(LoaderState &state) const
                     return { { LoaderResult::Status::ERR, HYP_FORMAT("Failed to load bitmap texture: {}", it.second.ToString()) } };
                 }
                 
-                uint key_value;
+                uint32 key_value;
 
                 if (!StringUtil::Parse(it.first, &key_value)) {
-                    return { { LoaderResult::Status::ERR, HYP_FORMAT("Invalid key for font atlas: {} is not able to be parsed as uint", it.first) } };
+                    return { { LoaderResult::Status::ERR, HYP_FORMAT("Invalid key for font atlas: {} is not able to be parsed as uint32", it.first) } };
                 }
 
                 bool is_main_atlas = key_value == main_value_key;

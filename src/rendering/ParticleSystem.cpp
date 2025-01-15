@@ -64,7 +64,7 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        static constexpr uint seed = 0xff;
+        static constexpr uint32 seed = 0xff;
 
         SimplexNoiseGenerator noise_generator(seed);
         auto noise_map = noise_generator.CreateBitmap(128, 128, 1024.0f);
@@ -185,8 +185,8 @@ struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderComm
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            for (uint i = 0; i < uint(command_buffers[frame_index].Size()); i++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            for (uint32 i = 0; i < uint32(command_buffers[frame_index].Size()); i++) {
                 AssertThrow(command_buffers[frame_index][i].IsValid());
 
 #ifdef HYP_VULKAN
@@ -277,7 +277,7 @@ void ParticleSpawner::CreateRenderGroup()
 
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("ParticleDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -321,7 +321,7 @@ void ParticleSpawner::CreateComputePipelines()
 
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("UpdateParticlesDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -353,7 +353,7 @@ ParticleSystem::ParticleSystem()
 
 ParticleSystem::~ParticleSystem()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         for (auto &command_buffer : m_command_buffers[frame_index]) {
             SafeRelease(std::move(command_buffer));
         }
@@ -404,8 +404,8 @@ void ParticleSystem::CreateBuffers()
 
 void ParticleSystem::CreateCommandBuffers()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        for (uint i = 0; i < num_async_rendering_command_buffers; i++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 i = 0; i < num_async_rendering_command_buffers; i++) {
             m_command_buffers[frame_index][i] = MakeRenderObject<CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
         }
     }
@@ -419,6 +419,10 @@ void ParticleSystem::UpdateParticles(Frame *frame)
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -498,7 +502,7 @@ void ParticleSystem::UpdateParticles(Frame *frame)
                     NAME("Scene"),
                     {
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                             { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -535,18 +539,22 @@ void ParticleSystem::Render(Frame *frame)
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     AssertReady();
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
-    FixedArray<uint, num_async_rendering_command_buffers> command_buffers_recorded_states { };
+    FixedArray<uint32, num_async_rendering_command_buffers> command_buffers_recorded_states { };
     
     ForEachInBatches(
         m_particle_spawners.GetItems(),
         num_async_rendering_command_buffers,
-        [this, &command_buffers_recorded_states, camera_index, frame_index](const Handle<ParticleSpawner> &particle_spawner, uint index, uint batch_index) {
+        [this, &command_buffers_recorded_states, scene_index, camera_index, frame_index](const Handle<ParticleSpawner> &particle_spawner, uint32 index, uint32 batch_index) {
             const GraphicsPipelineRef &pipeline = particle_spawner->GetRenderGroup()->GetPipeline();
 
             m_command_buffers[frame_index][batch_index]->Record(
@@ -564,7 +572,7 @@ void ParticleSystem::Render(Frame *frame)
                             {
                                 NAME("Scene"),
                                 {
-                                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -586,10 +594,10 @@ void ParticleSystem::Render(Frame *frame)
         }
     );
 
-    const uint num_recorded_command_buffers = command_buffers_recorded_states.Sum();
+    const uint32 num_recorded_command_buffers = command_buffers_recorded_states.Sum();
 
     // submit all command buffers
-    for (uint i = 0; i < num_recorded_command_buffers; i++) {
+    for (uint32 i = 0; i < num_recorded_command_buffers; i++) {
         m_command_buffers[frame_index][i]
             ->SubmitSecondary(frame->GetCommandBuffer());
     }

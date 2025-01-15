@@ -51,7 +51,7 @@ public:
     PostFXPass(
         const ShaderRef &shader,
         PostProcessingStage stage,
-        uint effect_index,
+        uint32 effect_index,
         InternalFormat image_format = InternalFormat::RGB8_SRGB
     );
 
@@ -65,12 +65,12 @@ public:
     HYP_FORCE_INLINE PostProcessingStage GetStage() const
         { return m_stage; }
 
-    HYP_FORCE_INLINE uint GetEffectIndex() const
+    HYP_FORCE_INLINE uint32 GetEffectIndex() const
         { return m_effect_index; }
 
 protected:
     PostProcessingStage m_stage;
-    uint                m_effect_index;
+    uint32              m_effect_index;
 };
 
 class HYP_API PostProcessingEffect
@@ -78,7 +78,7 @@ class HYP_API PostProcessingEffect
 public:
     PostProcessingEffect(
         PostProcessingStage stage,
-        uint effect_index,
+        uint32 effect_index,
         InternalFormat image_format = InternalFormat::RGBA16F//RGBA8_SRGB
     );
     PostProcessingEffect(const PostProcessingEffect &other) = delete;
@@ -111,7 +111,7 @@ public:
     virtual void OnAdded() = 0;
     virtual void OnRemoved() = 0;
 
-    virtual void RenderEffect(Frame *frame, uint slot);
+    virtual void RenderEffect(Frame *frame, uint32 slot);
 
 protected:
     virtual ShaderRef CreateShader() = 0;
@@ -126,7 +126,7 @@ private:
 class HYP_API PostProcessing
 {
 public:
-    static constexpr uint max_effects_per_stage = sizeof(uint32) * CHAR_BIT;
+    static constexpr uint32 max_effects_per_stage = sizeof(uint32) * CHAR_BIT;
 
     enum DefaultEffectIndices
     {
@@ -188,12 +188,12 @@ private:
 
         std::lock_guard guard(m_effects_mutex);
 
-        const auto it = m_effects_pending_addition[uint(stage)].Find<EffectClass>();
+        const auto it = m_effects_pending_addition[uint32(stage)].Find<EffectClass>();
 
-        if (it != m_effects_pending_addition[uint(stage)].End()) {
+        if (it != m_effects_pending_addition[uint32(stage)].End()) {
             it->second = std::move(effect);
         } else {
-            m_effects_pending_addition[uint(stage)].Set<EffectClass>(std::move(effect));
+            m_effects_pending_addition[uint32(stage)].Set<EffectClass>(std::move(effect));
         }
 
         m_effects_updated.Set(true, MemoryOrder::RELEASE);
@@ -206,7 +206,7 @@ private:
 
         Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-        auto &effects = m_effects[uint(stage)];
+        auto &effects = m_effects[uint32(stage)];
 
         auto it = effects.Find<EffectClass>();
 

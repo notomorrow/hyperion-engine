@@ -71,7 +71,6 @@ layout(push_constant) uniform ObjectVisibilityData
 {
     uint batch_offset;
     uint num_instances;
-    uint scene_id;
     uvec2 depth_pyramid_dimensions;
 } push_constants;
 

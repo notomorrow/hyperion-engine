@@ -54,7 +54,7 @@ struct RENDER_COMMAND(SetDDGIDescriptors) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                 ->SetElement(NAME("DDGIUniforms"), uniform_buffer);
 
@@ -80,7 +80,7 @@ struct RENDER_COMMAND(UnsetDDGIDescriptors) : renderer::RenderCommand
     virtual RendererResult operator()() override
     {   
         // remove result image from global descriptor set
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                 ->SetElement(NAME("DDGIIrradianceTexture"), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
 
@@ -218,7 +218,7 @@ void DDGI::CreatePipelines()
     const DescriptorTableDeclaration raytracing_pipeline_descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
     DescriptorTableRef raytracing_pipeline_descriptor_table = MakeRenderObject<DescriptorTable>(raytracing_pipeline_descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = raytracing_pipeline_descriptor_table->GetDescriptorSet(NAME("DDGIDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -262,7 +262,7 @@ void DDGI::CreatePipelines()
 
         DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("DDGIDescriptorSet"), frame_index);
             AssertThrow(descriptor_set != nullptr);
 
@@ -395,7 +395,7 @@ void DDGI::ApplyTLASUpdates(RTUpdateStateFlags flags)
         return;
     }
     
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = m_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DDGIDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -447,6 +447,10 @@ void DDGI::RenderProbes(Frame *frame)
 
     UpdateUniforms(frame);
 
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
+
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
@@ -474,7 +478,7 @@ void DDGI::RenderProbes(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -499,6 +503,10 @@ void DDGI::RenderProbes(Frame *frame)
 void DDGI::ComputeIrradiance(Frame *frame)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -525,7 +533,7 @@ void DDGI::ComputeIrradiance(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -552,7 +560,7 @@ void DDGI::ComputeIrradiance(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }

@@ -136,7 +136,7 @@ public:
     HYP_FORCE_INLINE void AddGeometry(AccelerationGeometryRef<PLATFORM> geometry)
         { m_geometries.PushBack(std::move(geometry)); SetNeedsRebuildFlag(); }
 
-    HYP_API void RemoveGeometry(uint index);
+    HYP_API void RemoveGeometry(uint32 index);
 
     /*! \brief Remove the geometry from the internal list of Nodes and set a flag that the
      * structure needs to be rebuilt. Will not automatically rebuild.
@@ -239,11 +239,11 @@ private:
     std::vector<uint32> GetPrimitiveCounts() const;
 
     RendererResult CreateOrRebuildInstancesBuffer(Instance<PLATFORM> *instance);
-    RendererResult UpdateInstancesBuffer(Instance<PLATFORM> *instance, uint first, uint last);
+    RendererResult UpdateInstancesBuffer(Instance<PLATFORM> *instance, uint32 first, uint32 last);
     
     RendererResult CreateMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
     RendererResult UpdateMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
-    RendererResult UpdateMeshDescriptionsBuffer(Instance<PLATFORM> *instance, uint first, uint last);
+    RendererResult UpdateMeshDescriptionsBuffer(Instance<PLATFORM> *instance, uint32 first, uint32 last);
     RendererResult RebuildMeshDescriptionsBuffer(Instance<PLATFORM> *instance);
 
     Array<BLASRef<PLATFORM>>    m_blas;

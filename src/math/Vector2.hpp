@@ -19,7 +19,7 @@ namespace detail {
 template <class T>
 struct alignas(alignof(T) * 2) HYP_API Vec2
 {
-    static constexpr uint size = 2;
+    static constexpr uint32 size = 2;
 
     using Type = T;
 
@@ -74,10 +74,10 @@ struct alignas(alignof(T) * 2) HYP_API Vec2
     Vec2 &operator*=(int i)
         { x *= i; y *= i; return *this; }
 
-    constexpr Vec2 operator*(uint u) const
+    constexpr Vec2 operator*(uint32 u) const
         { return Vec2 { Type(x * u), Type(y * u) }; }
 
-    Vec2 &operator*=(uint u)
+    Vec2 &operator*=(uint32 u)
         { x *= u; y *= u; return *this; }
 
     constexpr Vec2 operator*(float f) const
@@ -92,10 +92,10 @@ struct alignas(alignof(T) * 2) HYP_API Vec2
     Vec2 &operator/=(int i)
         { x /= i; y /= i; return *this; }
 
-    constexpr Vec2 operator/(uint u) const
+    constexpr Vec2 operator/(uint32 u) const
         { return Vec2 { Type(x / u), Type(y / u) }; }
 
-    Vec2 &operator/=(uint u)
+    Vec2 &operator/=(uint32 u)
         { x /= u; y /= u; return *this; }
 
     constexpr Vec2 operator/(float f) const
@@ -202,7 +202,7 @@ struct alignas(alignof(float) * 2) HYP_API Vec2<float>
 public:
     using Type = float;
 
-    static constexpr uint size = 2;
+    static constexpr uint32 size = 2;
 
     union {
         struct { float x, y; };
@@ -271,10 +271,10 @@ public:
     Vec2 &operator*=(int i)
         { x *= i; y *= i; return *this; }
 
-    constexpr Vec2 operator*(uint u) const
+    constexpr Vec2 operator*(uint32 u) const
         { return Vec2 { Type(x * u), Type(y * u) }; }
 
-    Vec2 &operator*=(uint u)
+    Vec2 &operator*=(uint32 u)
         { x *= u; y *= u; return *this; }
 
     constexpr Vec2 operator*(float f) const
@@ -295,10 +295,10 @@ public:
     Vec2 &operator/=(int i)
         { x /= i; y /= i; return *this; }
 
-    constexpr Vec2 operator/(uint u) const
+    constexpr Vec2 operator/(uint32 u) const
         { return Vec2 { Type(x / u), Type(y / u) }; }
 
-    Vec2 &operator/=(uint u)
+    Vec2 &operator/=(uint32 u)
         { x /= u; y /= u; return *this; }
 
     constexpr Vec2 operator/(float f) const
@@ -383,7 +383,7 @@ using Vec2 = math::Vec2<T>;
 
 using Vec2f = Vec2<float>;
 using Vec2i = Vec2<int>;
-using Vec2u = Vec2<uint>;
+using Vec2u = Vec2<uint32>;
 
 static_assert(sizeof(Vec2f) == 8);
 static_assert(sizeof(Vec2i) == 8);

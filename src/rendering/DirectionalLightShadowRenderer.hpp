@@ -79,7 +79,7 @@ public:
     HYP_FORCE_INLINE uint32 GetShadowMapIndex() const
         { return m_shadow_map_index; }
 
-    HYP_FORCE_INLINE void SetShadowMapIndex(uint index)
+    HYP_FORCE_INLINE void SetShadowMapIndex(uint32 index)
     {
         m_shadow_map_index = index;
 

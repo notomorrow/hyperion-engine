@@ -329,7 +329,7 @@ public:
     void UnlockTransform();
 
     /*! \brief Calculate the depth of the Node relative to the root Node. */
-    uint CalculateDepth() const;
+    uint32 CalculateDepth() const;
 
     HYP_FORCE_INLINE Weak<Node> ToWeak() const
         { return Weak<Node>(static_cast<const RC<Node> &>(*this)); }

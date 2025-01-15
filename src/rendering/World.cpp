@@ -2,6 +2,7 @@
 
 #include <rendering/World.hpp>
 #include <rendering/Camera.hpp>
+#include <rendering/Scene.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
 #include <util/profiling/ProfileScope.hpp>
@@ -34,7 +35,7 @@ void RenderCollectorContainer::AddScene(const Scene *scene)
     if (scene->IsNonWorldScene()) {
         render_collector.SetRenderEnvironment(WeakHandle<RenderEnvironment> { });
     } else {
-        render_collector.SetRenderEnvironment(scene->GetEnvironment());
+        render_collector.SetRenderEnvironment(scene->GetRenderResources().GetEnvironment());
     }
 
     const uint32 render_collector_index = m_num_render_collectors.Increment(1u, MemoryOrder::ACQUIRE_RELEASE);
@@ -64,6 +65,45 @@ WorldRenderResources::WorldRenderResources(World *world)
 
 WorldRenderResources::~WorldRenderResources() = default;
 
+void WorldRenderResources::AddScene(const Handle<Scene> &scene)
+{
+    HYP_SCOPE;
+
+    if (!scene.IsValid()) {
+        return;
+    }
+
+    Execute([this, scene_weak = scene.ToWeak()]()
+    {
+        if (Handle<Scene> scene = scene_weak.Lock()) {
+            m_render_collector_container.AddScene(scene.Get());
+
+            m_bound_scenes.PushBack(TResourceHandle(scene->GetRenderResources()));
+        }
+    });          
+}
+
+void WorldRenderResources::RemoveScene(const WeakHandle<Scene> &scene_weak)
+{
+    HYP_SCOPE;
+
+    Execute([this, scene_weak]()
+    {
+        if (Handle<Scene> scene = scene_weak.Lock()) {
+            m_render_collector_container.RemoveScene(scene.GetID());
+
+            auto bound_scenes_it = m_bound_scenes.FindIf([&scene](const TResourceHandle<SceneRenderResources> &item)
+            {
+                return item == scene->GetRenderResources();
+            });
+
+            if (bound_scenes_it != m_bound_scenes.End()) {
+                m_bound_scenes.Erase(bound_scenes_it);
+            }
+        }
+    });
+}
+
 void WorldRenderResources::Initialize()
 {
     HYP_SCOPE;
@@ -72,6 +112,9 @@ void WorldRenderResources::Initialize()
 void WorldRenderResources::Destroy()
 {
     HYP_SCOPE;
+
+    m_bound_cameras.Clear();
+    m_bound_scenes.Clear();
 }
 
 void WorldRenderResources::Update()

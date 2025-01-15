@@ -58,17 +58,17 @@ static constexpr uint32 max_env_grids = (1ull * 1024ull * 1024ull) / sizeof(EnvG
 
 struct EnvProbeCollection
 {
-    uint                                                    num_probes = 0;
-    FixedArray<uint, max_bound_ambient_probes * 2>          indirect_indices = { 0 };
+    uint32                                                  num_probes = 0;
+    FixedArray<uint32, max_bound_ambient_probes * 2>        indirect_indices = { 0 };
     FixedArray<Handle<EnvProbe>, max_bound_ambient_probes>  probes = { };
 
     // Must be called on init, before render thread starts using probes too
     // returns the index
-    uint AddProbe(Handle<EnvProbe> probe)
+    uint32 AddProbe(Handle<EnvProbe> probe)
     {
         AssertThrow(num_probes < max_bound_ambient_probes);
 
-        const uint index = num_probes++;
+        const uint32 index = num_probes++;
 
         probes[index] = std::move(probe);
         indirect_indices[index] = index;
@@ -77,7 +77,7 @@ struct EnvProbeCollection
         return index;
     }
 
-    void AddProbe(uint index, Handle<EnvProbe> probe)
+    void AddProbe(uint32 index, Handle<EnvProbe> probe)
     {
         AssertThrow(index < max_bound_ambient_probes);
 
@@ -88,7 +88,7 @@ struct EnvProbeCollection
         indirect_indices[max_bound_ambient_probes + index] = index;
     }
 
-    void SetProbeIndexOnGameThread(uint index, uint new_index)
+    void SetProbeIndexOnGameThread(uint32 index, uint32 new_index)
     {
         AssertThrow(index < max_bound_ambient_probes);
         AssertThrow(new_index < max_bound_ambient_probes);
@@ -96,16 +96,16 @@ struct EnvProbeCollection
         indirect_indices[index] = new_index;
     }
 
-    HYP_FORCE_INLINE uint GetEnvProbeIndexOnGameThread(uint index) const
+    HYP_FORCE_INLINE uint32 GetEnvProbeIndexOnGameThread(uint32 index) const
         { return indirect_indices[index]; }
 
-    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeDirect(uint index) const
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeDirect(uint32 index) const
         { return probes[index]; }
 
-    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnGameThread(uint index) const
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnGameThread(uint32 index) const
         { return probes[indirect_indices[index]]; }
 
-    void SetProbeIndexOnRenderThread(uint index, uint new_index)
+    void SetProbeIndexOnRenderThread(uint32 index, uint32 new_index)
     {
         AssertThrow(index < max_bound_ambient_probes);
         AssertThrow(new_index < max_bound_ambient_probes);
@@ -113,10 +113,10 @@ struct EnvProbeCollection
         indirect_indices[max_bound_ambient_probes + index] = new_index;
     }
 
-    HYP_FORCE_INLINE uint GetEnvProbeIndexOnRenderThread(uint index) const
+    HYP_FORCE_INLINE uint32 GetEnvProbeIndexOnRenderThread(uint32 index) const
         { return indirect_indices[max_bound_ambient_probes + index]; }
     
-    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnRenderThread(uint index) const
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnRenderThread(uint32 index) const
         { return probes[indirect_indices[max_bound_ambient_probes + index]]; }
 };
 
@@ -218,7 +218,7 @@ private:
     EnvProbeCollection          m_env_probe_collection;
 
     EnvGridShaderData           m_shader_data;
-    uint                        m_current_probe_index;
+    uint32                      m_current_probe_index;
 
     ComputePipelineRef          m_clear_sh;
     ComputePipelineRef          m_compute_sh;
@@ -240,7 +240,7 @@ private:
     Array<ImageViewRef>         m_voxel_grid_mips;
     Array<DescriptorTableRef>   m_generate_voxel_grid_mipmaps_descriptor_tables;
 
-    Queue<uint>                 m_next_render_indices;
+    Queue<uint32>                 m_next_render_indices;
 };
 
 } // namespace hyperion

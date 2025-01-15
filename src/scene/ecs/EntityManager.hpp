@@ -185,7 +185,7 @@ private:
     UniquePtr<TaskBatch>            m_task_batch;
 };
 
-using EntityListenerID = uint;
+using EntityListenerID = uint32;
 
 struct EntityListener
 {
@@ -262,8 +262,8 @@ private:
 
     EnumFlags<EntityManagerCommandQueueFlags>   m_flags;
     FixedArray<EntityManagerCommandBuffer, 2>   m_command_buffers;
-    AtomicVar<uint>                             m_buffer_index { 0 };
-    AtomicVar<uint>                             m_count { 0 };
+    AtomicVar<uint32>                             m_buffer_index { 0 };
+    AtomicVar<uint32>                             m_count { 0 };
     std::condition_variable                     m_condition_variable;
 };
 

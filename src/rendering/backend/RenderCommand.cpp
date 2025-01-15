@@ -19,7 +19,7 @@ RenderScheduler RenderCommands::scheduler = { };
 std::mutex RenderCommands::mtx = std::mutex();
 std::condition_variable RenderCommands::flushed_cv = std::condition_variable();
 
-uint RenderCommands::buffer_index = 0;
+uint32 RenderCommands::buffer_index = 0;
 
 // // Note: double buffering is currently disabled as it is causing some issues with textures not being
 // // initalized when they are first added to a material's descriptor set.
@@ -71,7 +71,7 @@ RendererResult RenderCommands::Flush()
     // in the locked section.
     std::unique_lock lock(mtx);
 
-    const uint buffer_index = RenderCommands::buffer_index;
+    const uint32 buffer_index = RenderCommands::buffer_index;
 
     scheduler.AcceptAll(commands);
     scheduler.m_num_enqueued.Decrement(commands.Size(), MemoryOrder::RELEASE);
@@ -154,7 +154,7 @@ void RenderCommands::SwapBuffers()
     buffer_index = (buffer_index + 1) & 1;
 }
 
-void RenderCommands::Rewind(uint buffer_index)
+void RenderCommands::Rewind(uint32 buffer_index)
 {
     // all items in the cache must have had destructor called on them already.
 

@@ -54,8 +54,8 @@ struct LightmapRay
 {
     Ray         ray;
     ID<Mesh>    mesh_id;
-    uint        triangle_index;
-    uint        texel_index;
+    uint32      triangle_index;
+    uint32      texel_index;
 
     HYP_FORCE_INLINE bool operator==(const LightmapRay &other) const
     {
@@ -69,8 +69,8 @@ struct LightmapRay
         { return !(*this == other); }
 };
 
-constexpr uint max_ray_hits_gpu = 512 * 512;
-constexpr uint max_ray_hits_cpu = 128 * 128;
+constexpr uint32 max_ray_hits_gpu = 512 * 512;
+constexpr uint32 max_ray_hits_cpu = 128 * 128;
 
 struct alignas(16) LightmapHit
 {
@@ -115,7 +115,7 @@ public:
 
     void Create();
     
-    void ReadHitsBuffer(LightmapHitsBuffer *ptr, uint frame_index);
+    void ReadHitsBuffer(LightmapHitsBuffer *ptr, uint32 frame_index);
     void Trace(Frame *frame, const Array<LightmapRay> &rays, uint32 ray_offset);
 
 private:
@@ -157,7 +157,7 @@ class HYP_API LightmapJob
 public:
     friend struct RenderCommand_LightmapTraceRaysOnGPU;
 
-    static constexpr uint num_multisamples = 1;
+    static constexpr uint32 num_multisamples = 1;
 
     LightmapJob(LightmapJobParams &&params);
     LightmapJob(const LightmapJob &other)                   = delete;
@@ -187,17 +187,17 @@ public:
     HYP_FORCE_INLINE uint32 GetTexelIndex() const
         { return m_texel_index; }
 
-    HYP_FORCE_INLINE const Array<uint> &GetTexelIndices() const
+    HYP_FORCE_INLINE const Array<uint32> &GetTexelIndices() const
         { return m_texel_indices; }
 
-    HYP_FORCE_INLINE void GetPreviousFrameRays(uint frame_index, Array<LightmapRay> &out_rays) const
+    HYP_FORCE_INLINE void GetPreviousFrameRays(uint32 frame_index, Array<LightmapRay> &out_rays) const
     {
         Mutex::Guard guard(m_previous_frame_rays_mutex);
 
         out_rays = m_previous_frame_rays[frame_index];
     }
         
-    HYP_FORCE_INLINE void SetPreviousFrameRays(uint frame_index, const Array<LightmapRay> &rays)
+    HYP_FORCE_INLINE void SetPreviousFrameRays(uint32 frame_index, const Array<LightmapRay> &rays)
     {
         Mutex::Guard guard(m_previous_frame_rays_mutex);
 
@@ -208,14 +208,14 @@ public:
 
     void Process();
 
-    void GatherRays(uint max_ray_hits, Array<LightmapRay> &out_rays);
+    void GatherRays(uint32 max_ray_hits, Array<LightmapRay> &out_rays);
 
     /*! \brief Integrate ray hits into the lightmap.
      *  \param rays The rays that were traced.
      *  \param hits The hits to integrate.
      *  \param num_hits The number of hits (must be the same as the number of rays).
      */
-    void IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint num_hits, LightmapShadingType shading_type);
+    void IntegrateRayHits(const LightmapRay *rays, const LightmapHit *hits, uint32 num_hits, LightmapShadingType shading_type);
     
     bool IsCompleted() const;
 
@@ -246,7 +246,7 @@ private:
 
     UUID                                                    m_uuid;
 
-    Array<uint>                                             m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
+    Array<uint32>                                             m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
 
     Array<LightmapRay>                                      m_current_rays;
 
@@ -259,7 +259,7 @@ private:
     UniquePtr<LightmapTaskThreadPool>                       m_task_thread_pool;
 
     Semaphore<int32>                                        m_running_semaphore;
-    uint                                                    m_texel_index;
+    uint32                                                  m_texel_index;
 };
 
 class HYP_API Lightmapper
@@ -306,7 +306,7 @@ private:
 
     Queue<UniquePtr<LightmapJob>>               m_queue;
     Mutex                                       m_queue_mutex;
-    AtomicVar<uint>                             m_num_jobs;
+    AtomicVar<uint32>                             m_num_jobs;
 
     Array<LightmapElement>                      m_lightmap_elements;
     HashMap<Handle<Entity>, LightmapElement *>  m_all_elements_map;

@@ -16,7 +16,7 @@ namespace renderer {
 namespace platform {
 
 template <>
-FrameHandler<Platform::VULKAN>::FrameHandler(uint num_frames, NextImageFunction next_image)
+FrameHandler<Platform::VULKAN>::FrameHandler(uint32 num_frames, NextImageFunction next_image)
     : m_next_image(next_image),
       m_acquired_image_index(0),
       m_current_frame_index(0)
@@ -29,7 +29,7 @@ RendererResult FrameHandler<Platform::VULKAN>::CreateFrames(
     DeviceQueue<Platform::VULKAN> *queue
 )
 {
-    for (uint i = 0; i < m_frames.Size(); i++) {
+    for (uint32 i = 0; i < m_frames.Size(); i++) {
         VkCommandPool pool = queue->command_pools[0];
         AssertThrow(pool != VK_NULL_HANDLE);
         

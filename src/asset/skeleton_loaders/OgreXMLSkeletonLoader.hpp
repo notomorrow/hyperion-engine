@@ -21,7 +21,7 @@ public:
         struct BoneData
         {
             String      name;
-            uint        id;
+            uint32      id;
 
             String      parent_name;
             Vector3     binding_translation;

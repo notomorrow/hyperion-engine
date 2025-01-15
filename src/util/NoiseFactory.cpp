@@ -14,12 +14,12 @@ NoiseGenerator::NoiseGenerator(NoiseGenerationType type, Seed seed)
 {
 }
 
-Bitmap<1> NoiseGenerator::CreateBitmap(uint width, uint height, float scale)
+Bitmap<1> NoiseGenerator::CreateBitmap(uint32 width, uint32 height, float scale)
 {
     Bitmap<1> bitmap(width, height);
     
-    for (uint x = 0; x < width; x++) {
-        for (uint y = 0; y < height; y++) {
+    for (uint32 x = 0; x < width; x++) {
+        for (uint32 y = 0; y < height; y++) {
             const auto noise_value = GetNoise(Vector2(static_cast<float>(x), static_cast<float>(y)) * scale);
             bitmap.GetPixel(x, y).SetR(static_cast<float>(noise_value) * 0.5f + 0.5f);
         }

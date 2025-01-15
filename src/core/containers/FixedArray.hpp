@@ -283,7 +283,7 @@ public:
 namespace detail {
 
 template <class T, SizeType Sz>
-class FixedArrayImpl : public ContainerBase<FixedArrayImpl<T, Sz>, uint>
+class FixedArrayImpl : public ContainerBase<FixedArrayImpl<T, Sz>, uint32>
 {
 public:
     T *ptr;
@@ -317,7 +317,7 @@ template <class T, SizeType N>
 using FixedArray = containers::FixedArray<T, N>;
 
 template <class T, SizeType N>
-constexpr uint ArraySize(const FixedArray<T, N> &)
+constexpr uint32 ArraySize(const FixedArray<T, N> &)
 {
     return N;
 }

@@ -213,7 +213,7 @@ public:
     TaskThread *GetNextTaskThread();
 
 protected:
-    AtomicVar<uint>                 m_cycle { 0u };
+    AtomicVar<uint32>                 m_cycle { 0u };
     Array<UniquePtr<TaskThread>>    m_threads;
     ThreadMask                      m_thread_mask;
 

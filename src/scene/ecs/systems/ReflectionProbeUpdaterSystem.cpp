@@ -6,6 +6,7 @@
 #include <rendering/EnvProbe.hpp>
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
+#include <rendering/Scene.hpp>
 
 #include <math/MathUtil.hpp>
 
@@ -40,7 +41,7 @@ void ReflectionProbeUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
     }
 
     if (!(GetEntityManager().GetScene()->GetFlags() & (SceneFlags::NON_WORLD | SceneFlags::DETACHED))) {
-        reflection_probe_component.reflection_probe_renderer = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<ReflectionProbeRenderer>(
+        reflection_probe_component.reflection_probe_renderer = GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->AddRenderSubsystem<ReflectionProbeRenderer>(
             Name::Unique("reflection_probe"),
             world_aabb
         );
@@ -54,7 +55,7 @@ void ReflectionProbeUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
     ReflectionProbeComponent &reflection_probe_component = GetEntityManager().GetComponent<ReflectionProbeComponent>(entity);
 
     if (reflection_probe_component.reflection_probe_renderer != nullptr) {
-        GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderSubsystem<ReflectionProbeRenderer>(reflection_probe_component.reflection_probe_renderer->GetName());
+        GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<ReflectionProbeRenderer>(reflection_probe_component.reflection_probe_renderer->GetName());
 
         reflection_probe_component.reflection_probe_renderer = nullptr;
     }

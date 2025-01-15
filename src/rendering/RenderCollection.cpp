@@ -285,14 +285,14 @@ RenderProxyList &EntityDrawCollection::GetProxyList(ThreadType thread_type)
 {
     AssertThrowMsg(uint32(thread_type) <= ThreadType::THREAD_TYPE_RENDER, "Invalid thread for calling method");
 
-    return m_proxy_lists[uint(thread_type)];
+    return m_proxy_lists[uint32(thread_type)];
 }
 
 const RenderProxyList &EntityDrawCollection::GetProxyList(ThreadType thread_type) const
 {
     AssertThrowMsg(uint32(thread_type) <= ThreadType::THREAD_TYPE_RENDER, "Invalid thread for calling method");
 
-    return m_proxy_lists[uint(thread_type)];
+    return m_proxy_lists[uint32(thread_type)];
 }
 
 void EntityDrawCollection::ClearProxyGroups()
@@ -465,7 +465,7 @@ void RenderCollector::CollectDrawCalls(
         for (auto &it : render_groups_by_attributes) {
             const RenderableAttributeSet &attributes = it.first;
 
-            const Bucket bucket = bucket_bits.Test(uint(attributes.GetMaterialAttributes().bucket)) ? attributes.GetMaterialAttributes().bucket : BUCKET_INVALID;
+            const Bucket bucket = bucket_bits.Test(uint32(attributes.GetMaterialAttributes().bucket)) ? attributes.GetMaterialAttributes().bucket : BUCKET_INVALID;
 
             if (bucket == BUCKET_INVALID) {
                 continue;
@@ -479,7 +479,7 @@ void RenderCollector::CollectDrawCalls(
         TaskSystem::GetInstance().ParallelForEach(
             TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER),
             iterators,
-            [this](IteratorType it, uint, uint)
+            [this](IteratorType it, uint32, uint32)
             {
                 Handle<RenderGroup> &render_group = it->second;
                 AssertThrow(render_group.IsValid());
@@ -547,7 +547,7 @@ void RenderCollector::ExecuteDrawCalls(
     AssertThrowMsg(camera.IsValid(), "Cannot render with invalid Camera");
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     if (framebuffer) {
         framebuffer->BeginCapture(command_buffer, frame_index);
@@ -562,7 +562,7 @@ void RenderCollector::ExecuteDrawCalls(
 
             const Bucket bucket = attributes.GetMaterialAttributes().bucket;
 
-            if (!bucket_bits.Test(uint(bucket))) {
+            if (!bucket_bits.Test(uint32(bucket))) {
                 continue;
             }
 

@@ -33,7 +33,7 @@ public:
 
     void CreateShader();
     virtual void Create() override;
-    virtual void Record(uint frame_index) override;
+    virtual void Record(uint32 frame_index) override;
     virtual void Render(Frame *frame) override;
 };
 
@@ -63,7 +63,7 @@ public:
 
     virtual void Create() override;
 
-    virtual void Record(uint frame_index) override;
+    virtual void Record(uint32 frame_index) override;
     virtual void Render(Frame *frame) override;
 
 private:

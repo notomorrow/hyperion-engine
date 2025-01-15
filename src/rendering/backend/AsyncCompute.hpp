@@ -68,7 +68,7 @@ public:
         const ComputePipelineRef<PLATFORM> &ref,
         const Vec3u &extent,
         const DescriptorTableRef<PLATFORM> &descriptor_table,
-        const ArrayMap<Name, ArrayMap<Name, uint>> &offsets = { }
+        const ArrayMap<Name, ArrayMap<Name, uint32>> &offsets = { }
     ) const;
 
 private:

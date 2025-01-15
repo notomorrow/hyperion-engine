@@ -15,7 +15,7 @@ enum class AccelerationStructureType
     TOP_LEVEL
 };
 
-using RTUpdateStateFlags = uint;
+using RTUpdateStateFlags = uint32;
 
 enum RTUpdateStateFlagBits : RTUpdateStateFlags
 {
@@ -26,7 +26,7 @@ enum RTUpdateStateFlagBits : RTUpdateStateFlags
     RT_UPDATE_STATE_FLAGS_UPDATE_TRANSFORM              = 0x8
 };
 
-using AccelerationStructureFlags = uint;
+using AccelerationStructureFlags = uint32;
 
 enum AccelerationStructureFlagBits : AccelerationStructureFlags
 {

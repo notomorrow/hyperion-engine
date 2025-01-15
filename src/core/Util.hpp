@@ -258,8 +258,8 @@ struct TypeWrapper
 };
 
 /*! \brief Size of an array literal (Hyperion equivalent of std::size) */
-template <class T, uint N>
-constexpr uint ArraySize(const T (&)[N])
+template <class T, uint32 N>
+constexpr uint32 ArraySize(const T (&)[N])
 {
     return N;
 }

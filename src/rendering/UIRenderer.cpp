@@ -394,7 +394,7 @@ void UIRenderCollector::CollectDrawCalls(Frame *frame)
     TaskSystem::GetInstance().ParallelForEach(
         TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER),
         iterators,
-        [this](IteratorType it, uint, uint)
+        [this](IteratorType it, uint32, uint32)
         {
             Handle<RenderGroup> &render_group = it->second;
             AssertThrow(render_group.IsValid());
@@ -413,7 +413,7 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame) const
     AssertThrow(m_draw_collection != nullptr);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     AssertThrowMsg(m_camera.IsValid(), "Cannot render with invalid Camera");
 
@@ -569,7 +569,7 @@ void UIRenderer::OnRender(Frame *frame)
     m_render_collector.CollectDrawCalls(frame);
     m_render_collector.ExecuteDrawCalls(frame);
 
-    g_engine->GetRenderState()->UnbindScene();
+    g_engine->GetRenderState()->UnbindScene(m_ui_stage->GetScene());
 }
 
 #pragma endregion UIRenderer

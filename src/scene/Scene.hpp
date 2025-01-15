@@ -37,6 +37,7 @@ class World;
 class Scene;
 class EntityManager;
 class WorldGrid;
+class SceneRenderResources;
 
 struct FogParams
 {
@@ -96,6 +97,9 @@ public:
     Scene(const Scene &other)               = delete;
     Scene &operator=(const Scene &other)    = delete;
     ~Scene();
+
+    HYP_FORCE_INLINE SceneRenderResources &GetRenderResources() const
+        { return *m_render_resources; }
 
     /*! \brief Get the thread ID that owns this Scene. */
     HYP_FORCE_INLINE ThreadID GetOwnerThreadID() const
@@ -178,9 +182,6 @@ public:
     HYP_FORCE_INLINE const Octree &GetOctree() const
         { return m_octree; }
 
-    HYP_FORCE_INLINE const Handle<RenderEnvironment> &GetEnvironment() const
-        { return m_environment; }
-
     HYP_METHOD()
     HYP_FORCE_INLINE bool IsAttachedToWorld() const
         { return m_world != nullptr; }
@@ -250,8 +251,6 @@ private:
     Handle<Camera>                  m_camera;
     RenderCollector                 m_render_collector;
 
-    Handle<RenderEnvironment>       m_environment;
-
     FogParams                       m_fog_params;
 
     NodeProxy                       m_root_node_proxy;
@@ -270,6 +269,8 @@ private:
     mutable DataMutationState       m_mutation_state;
 
     SceneDrawProxy                  m_proxy;
+
+    SceneRenderResources            *m_render_resources;
 };
 
 } // namespace hyperion

@@ -41,7 +41,7 @@ public:
     HYP_FORCE_INLINE const ImageViewPlatformImpl<PLATFORM> &GetPlatformImpl() const
         { return m_platform_impl; }
     
-    HYP_FORCE_INLINE uint NumFaces() const
+    HYP_FORCE_INLINE uint32 NumFaces() const
         { return m_num_faces; }
 
     HYP_API bool IsCreated() const;
@@ -49,10 +49,10 @@ public:
     HYP_API RendererResult Create(
         Device<PLATFORM> *device,
         const Image<PLATFORM> *image,
-        uint mipmap_layer,
-        uint num_mipmaps,
-        uint face_layer,
-        uint num_faces
+        uint32 mipmap_layer,
+        uint32 num_mipmaps,
+        uint32 face_layer,
+        uint32 num_faces
     );
 
     HYP_API RendererResult Create(
@@ -65,7 +65,7 @@ public:
 private:
     ImageViewPlatformImpl<PLATFORM> m_platform_impl;
 
-    uint                            m_num_faces;
+    uint32                          m_num_faces;
 };
 
 } // namespace platform

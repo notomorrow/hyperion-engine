@@ -83,7 +83,7 @@ private:
 class HYP_API Logger
 {
 public:
-    static constexpr uint max_channels = 64;
+    static constexpr uint32 max_channels = 64;
 
     static Logger &GetInstance();
 

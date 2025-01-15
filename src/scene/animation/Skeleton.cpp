@@ -140,7 +140,7 @@ Bone *Skeleton::FindBone(UTF8StringView name) const
 uint32 Skeleton::FindBoneIndex(UTF8StringView name) const
 {
     if (!m_root_bone) {
-        return uint(-1);
+        return uint32(-1);
     }
 
     uint32 index = 0;

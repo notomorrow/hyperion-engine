@@ -395,7 +395,7 @@ inline u32char char8to32(const char *str, SizeType max = sizeof(u32char))
     union { u32char ret; char ret_bytes[sizeof(u32char)]; };
     ret = 0;
 
-    hyperion::uint i = 0;
+    hyperion::uint32 i = 0;
 
     const unsigned char ch = (unsigned char)str[0];
 

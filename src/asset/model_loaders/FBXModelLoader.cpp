@@ -61,7 +61,7 @@ struct FBXObject
     Array<FBXProperty>          properties;
     Array<UniquePtr<FBXObject>> children;
 
-    const FBXProperty &GetProperty(uint index) const
+    const FBXProperty &GetProperty(uint32 index) const
     {
         if (index >= properties.Size()) {
             return FBXProperty::empty;
@@ -71,7 +71,7 @@ struct FBXObject
     }
 
     template <class T>
-    bool GetFBXPropertyValue(uint index, T &out) const
+    bool GetFBXPropertyValue(uint32 index, T &out) const
     {
         out = { };
 
@@ -644,7 +644,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             count_node.GetFBXPropertyValue<int32>(0, num_definitions);
         }
 
-        for (uint index = 0; index < uint(num_definitions); ++index) {
+        for (uint32 index = 0; index < uint32(num_definitions); ++index) {
 
         }
 
@@ -758,9 +758,9 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                 }
 #endif
 
-                const uint bone_index = skeleton->FindBoneIndex(limb_node->name);
+                const uint32 bone_index = skeleton->FindBoneIndex(limb_node->name);
 
-                if (bone_index == uint(-1)) {
+                if (bone_index == uint32(-1)) {
                     HYP_LOG(Assets, Warning, "LimbNode with id {}: Bone with name {} not found in Skeleton",
                         cluster->limb_id, limb_node->name);
 
@@ -945,7 +945,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
                     for (SizeType index = 0; index < num_vertices; ++index) {
                         Vector3 position;
 
-                        for (uint sub_index = 0; sub_index < 3; ++sub_index) {
+                        for (uint32 sub_index = 0; sub_index < 3; ++sub_index) {
                             const auto &array_elements = vertices_property.array_elements[(index * 3) + SizeType(sub_index)];
 
                             union { float float_value; double double_value; };

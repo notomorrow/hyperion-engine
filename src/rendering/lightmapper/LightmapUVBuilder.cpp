@@ -16,9 +16,9 @@ Bitmap<4, float> LightmapUVMap::ToBitmapRadiance() const
 
     Bitmap<4, float> bitmap(width, height);
 
-    for (uint x = 0; x < width; x++) {
-        for (uint y = 0; y < height; y++) {
-            const uint index = x + y * width;
+    for (uint32 x = 0; x < width; x++) {
+        for (uint32 y = 0; y < height; y++) {
+            const uint32 index = x + y * width;
 
             bitmap.GetPixelAtIndex(index).SetRGBA({
                 uvs[index].radiance.x,
@@ -38,9 +38,9 @@ Bitmap<4, float> LightmapUVMap::ToBitmapIrradiance() const
 
     Bitmap<4, float> bitmap(width, height);
 
-    for (uint x = 0; x < width; x++) {
-        for (uint y = 0; y < height; y++) {
-            const uint index = x + y * width;
+    for (uint32 x = 0; x < width; x++) {
+        for (uint32 y = 0; y < height; y++) {
+            const uint32 index = x + y * width;
 
             bitmap.GetPixelAtIndex(index).SetRGBA({
                 uvs[index].irradiance.x,
@@ -169,17 +169,17 @@ Result<LightmapUVMap> LightmapUVBuilder::Build()
     uv_map.height = atlas->height;
     uv_map.uvs.Resize(atlas->width * atlas->height);
 
-    for (uint mesh_index = 0; mesh_index < atlas->meshCount; mesh_index++) {
+    for (uint32 mesh_index = 0; mesh_index < atlas->meshCount; mesh_index++) {
         AssertThrow(mesh_index < m_mesh_data.Size());
 
         const xatlas::Mesh &atlas_mesh = atlas->meshes[mesh_index];
         
-        for (uint i = 0; i < atlas_mesh.indexCount; i += 3) {
+        for (uint32 i = 0; i < atlas_mesh.indexCount; i += 3) {
             bool skip = false;
             int atlas_index = -1;
-            FixedArray<Pair<uint, Vec2i>, 3> verts;
+            FixedArray<Pair<uint32, Vec2i>, 3> verts;
 
-            for (uint j = 0; j < 3; j++) {
+            for (uint32 j = 0; j < 3; j++) {
                 // Get UV coordinates for each edge
                 const xatlas::Vertex &v = atlas_mesh.vertexArray[atlas_mesh.indexArray[i + j]];
 
@@ -227,7 +227,7 @@ Result<LightmapUVMap> LightmapUVBuilder::Build()
                         continue;
                     }
 
-                    const uint index = (point.x + atlas->width) % atlas->width
+                    const uint32 index = (point.x + atlas->width) % atlas->width
                         + (atlas->height - point.y + atlas->height) % atlas->height * atlas->width;
 
                     uv_map.uvs[index] = {
@@ -257,7 +257,7 @@ Result<LightmapUVMap> LightmapUVBuilder::Build()
         new_mesh_data.vertices.Resize(atlas->meshes[mesh_index].vertexCount);
         new_mesh_data.indices.Resize(atlas->meshes[mesh_index].indexCount);
 
-        for (uint j = 0; j < atlas->meshes[mesh_index].indexCount; j++) {
+        for (uint32 j = 0; j < atlas->meshes[mesh_index].indexCount; j++) {
             new_mesh_data.indices[j] = atlas->meshes[mesh_index].indexArray[j];
 
             new_mesh_data.vertices[new_mesh_data.indices[j]] = ref->GetMeshData().vertices[atlas->meshes[mesh_index].vertexArray[atlas->meshes[mesh_index].indexArray[j]].xref];

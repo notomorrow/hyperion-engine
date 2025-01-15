@@ -233,7 +233,7 @@ bool Configuration::SaveToDefinitionsFile()
 
     String str_result = "[Default]\n";
 
-    for (uint index = CONFIG_NONE + 1; index < CONFIG_MAX; index++) {
+    for (uint32 index = CONFIG_NONE + 1; index < CONFIG_MAX; index++) {
         const Option &option = m_variables[index];
 
         if (!(option.GetFlags() & OptionFlags::SAVE)) {

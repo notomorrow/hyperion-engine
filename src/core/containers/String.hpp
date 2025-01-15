@@ -461,7 +461,7 @@ public:
 
         String out;
 
-        uint i = 0;
+        uint32 i = 0;
         int j = -6;
 
         for (auto &&c : bytes) {
@@ -524,7 +524,7 @@ public:
 
         Array<ubyte> out;
 
-        uint i = 0;
+        uint32 i = 0;
         int j = -8;
 
         for (auto &&c : in) {

@@ -24,6 +24,7 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/World.hpp>
+#include <rendering/Scene.hpp>
 
 #include <util/profiling/ProfileScope.hpp>
 
@@ -179,7 +180,7 @@ void World::Update(GameCounter::TickUnit delta)
         AssertThrow(!(scene->GetFlags() & SceneFlags::DETACHED));
 
         if (!scene->IsNonWorldScene()) {
-            if (const Handle<RenderEnvironment> &render_environment = scene->GetEnvironment()) {
+            if (const Handle<RenderEnvironment> &render_environment = scene->GetRenderResources().GetEnvironment()) {
                 HYP_NAMED_SCOPE_FMT("Update RenderEnvironment for Scene with ID #{}", scene->GetID().Value());
 
                 render_environment->Update(delta);
@@ -236,7 +237,7 @@ void World::Update(GameCounter::TickUnit delta)
             // sanity check
             AssertThrow(scene->GetWorld() == this);
 
-            RenderCollector &render_collector = m_render_resources->GetRenderCollectorContainer().GetRenderCollectorForScene(scene->GetID());
+            RenderCollector &render_collector = m_render_resources->GetRenderCollectorForScene(scene->GetID());
 
             scene->CollectEntities(render_collector, scene->GetCamera());
         }));
@@ -244,7 +245,7 @@ void World::Update(GameCounter::TickUnit delta)
         // sanity check
         AssertThrow(scene->GetWorld() == this);
 
-        RenderCollector &render_collector = m_render_resources->GetRenderCollectorContainer().GetRenderCollectorForScene(scene->GetID());
+        RenderCollector &render_collector = m_render_resources->GetRenderCollectorForScene(scene->GetID());
 
         scene->CollectEntities(render_collector, scene->GetCamera());
 #endif
@@ -394,12 +395,7 @@ void World::AddScene(const Handle<Scene> &scene)
             it.second->OnSceneAttached(scene);
         }
 
-        m_render_resources->Execute([this, scene_weak = scene.ToWeak()]()
-        {
-            if (Handle<Scene> scene = scene_weak.Lock()) {
-                m_render_resources->GetRenderCollectorContainer().AddScene(scene.Get());
-            }
-        });
+        m_render_resources->AddScene(scene);
     }
 
     m_scenes.PushBack(scene);
@@ -429,14 +425,7 @@ void World::RemoveScene(const WeakHandle<Scene> &scene_weak)
 
         m_scenes.Erase(it);
 
-        m_render_resources->Execute([this, scene_weak]()
-        {
-            if (!scene_weak.IsValid()) {
-                return;
-            }
-
-            m_render_resources->GetRenderCollectorContainer().RemoveScene(scene_weak.GetID());
-        });
+        m_render_resources->RemoveScene(scene_weak);
     }
 
     scene->SetWorld(nullptr);

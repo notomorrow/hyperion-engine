@@ -47,7 +47,7 @@ static bool ResizeBuffer(
 
 static bool ResizeIndirectDrawCommandsBuffer(
     Frame *frame,
-    uint num_draw_commands,
+    uint32 num_draw_commands,
     const GPUBufferRef &indirect_buffer,
     const GPUBufferRef &staging_buffer
 )
@@ -108,7 +108,7 @@ static bool ResizeIndirectDrawCommandsBuffer(
 
 static bool ResizeInstancesBuffer(
     Frame *frame,
-    uint num_object_instances,
+    uint32 num_object_instances,
     const GPUBufferRef &instance_buffer,
     const GPUBufferRef &staging_buffer
 )
@@ -137,8 +137,8 @@ static bool ResizeIfNeeded(
     const FixedArray<GPUBufferRef, max_frames_in_flight> &indirect_buffers,
     const FixedArray<GPUBufferRef, max_frames_in_flight> &instance_buffers,
     const FixedArray<GPUBufferRef, max_frames_in_flight> &staging_buffers,
-    uint num_draw_commands,
-    uint num_object_instances,
+    uint32 num_draw_commands,
+    uint32 num_object_instances,
     uint8 dirty_bits
 )
 {
@@ -177,7 +177,7 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers) : renderer::RenderCommand
         instance_buffers(instance_buffers),
         staging_buffers(staging_buffers)
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             AssertThrow(this->indirect_buffers[frame_index].IsValid());
             AssertThrow(this->instance_buffers[frame_index].IsValid());
             AssertThrow(this->staging_buffers[frame_index].IsValid());
@@ -197,7 +197,7 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers) : renderer::RenderCommand
 
         commands.Push([this](const CommandBufferRef &command_buffer) -> RendererResult
         {
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 Frame frame = Frame::TemporaryFrame(command_buffer, frame_index);
 
                 if (!ResizeIndirectDrawCommandsBuffer(&frame, IndirectDrawState::initial_count, indirect_buffers[frame_index], staging_buffers[frame_index])) {
@@ -225,7 +225,7 @@ IndirectDrawState::IndirectDrawState()
       m_dirty_bits(0x3)
 {
     // Allocate used buffers so they can be set in descriptor sets
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         m_indirect_buffers[frame_index] = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::INDIRECT_ARGS_BUFFER);
         m_instance_buffers[frame_index] = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STORAGE_BUFFER);
         m_staging_buffers[frame_index] = MakeRenderObject<GPUBuffer>(renderer::GPUBufferType::STAGING_BUFFER);
@@ -297,7 +297,7 @@ void IndirectDrawState::UpdateBufferData(Frame *frame, bool *out_was_resized)
 {
     // assume render thread
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     if ((*out_was_resized = ResizeIfNeeded(
         frame,
@@ -390,7 +390,7 @@ void IndirectRenderer::Create()
     GPUBufferHolderBase *entity_instance_batches = m_draw_call_collection->GetImpl()->GetEntityInstanceBatchHolder();
     const SizeType batch_sizeof = m_draw_call_collection->GetImpl()->GetBatchSizeOf();
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -449,7 +449,11 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -487,9 +491,6 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
 
     //     m_cached_cull_data_updated_bits &= ~(1u << frame_index);
     // }
-    
-    const ID<Scene> scene_id = g_engine->GetRenderState()->GetScene().id;
-    const uint scene_index = scene_id.ToIndex();
 
     m_object_visibility->GetDescriptorTable()->Bind(
         frame,
@@ -498,7 +499,7 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -516,13 +517,11 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
     {
         uint32  batch_offset;
         uint32  num_instances;
-        uint32  scene_id;
         Vec2u   depth_pyramid_dimensions;
     } push_constants;
 
     push_constants.batch_offset = 0;
     push_constants.num_instances = num_instances;
-    push_constants.scene_id = scene_id.Value();
     push_constants.depth_pyramid_dimensions = g_engine->GetDeferredRenderer()->GetDepthPyramidRenderer()->GetExtent();
 
     m_object_visibility->SetPushConstants(&push_constants, sizeof(push_constants));
@@ -541,7 +540,7 @@ void IndirectRenderer::RebuildDescriptors(Frame *frame)
 {
     HYP_SCOPE;
     
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     const DescriptorTableRef &descriptor_table = m_object_visibility->GetDescriptorTable();
 

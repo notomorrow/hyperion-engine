@@ -27,19 +27,19 @@ constexpr uint8 engine_patch_version = HYP_VERSION_PATCH;
 constexpr uint32 engine_version = (engine_major_version << 16) | (engine_minor_version << 8) | engine_patch_version;
 constexpr uint64 engine_binary_magic_number = (uint64(0x505948) << 32) | engine_version;
 
-constexpr uint max_frames_in_flight = 2;
-constexpr uint num_async_rendering_command_buffers = 4;
-constexpr uint num_async_compute_command_buffers = 1;
+constexpr uint32 max_frames_in_flight = 2;
+constexpr uint32 num_async_rendering_command_buffers = 4;
+constexpr uint32 num_async_compute_command_buffers = 1;
 
-constexpr uint max_bound_reflection_probes = 16;
-constexpr uint max_bound_ambient_probes = 4096;
-constexpr uint max_bound_point_shadow_maps = 16;
-constexpr uint max_bound_environment_maps = 1;
-constexpr uint max_bound_textures = 16;
+constexpr uint32 max_bound_reflection_probes = 16;
+constexpr uint32 max_bound_ambient_probes = 4096;
+constexpr uint32 max_bound_point_shadow_maps = 16;
+constexpr uint32 max_bound_environment_maps = 1;
+constexpr uint32 max_bound_textures = 16;
 
-constexpr uint max_bindless_resources = 4096;
+constexpr uint32 max_bindless_resources = 4096;
 
-constexpr uint num_gbuffer_textures = 8;
+constexpr uint32 num_gbuffer_textures = 8;
 
 // perform occlusion culling using indirect draw
 constexpr bool use_draw_indirect = true;

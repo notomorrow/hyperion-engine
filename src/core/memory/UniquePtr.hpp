@@ -417,7 +417,7 @@ public:
     /*! \brief Constructs a new RefCountedPtr from this object.
         The value held within this UniquePtr will be unset,
         the RefCountedPtr taking over management of the pointer. */
-    template <class CountType = std::atomic<uint>>
+    template <class CountType = AtomicVar<uint32>>
     HYP_NODISCARD HYP_FORCE_INLINE RefCountedPtr<T, CountType> ToRefCountedPtr()
     {
         RefCountedPtr<T, CountType> rc;
@@ -611,7 +611,7 @@ public:
 
         \returns A reference counted pointer to the value held in this UniquePtr.
     */
-    template <class CountType = std::atomic<uint>>
+    template <class CountType = AtomicVar<uint32>>
     HYP_NODISCARD HYP_FORCE_INLINE RefCountedPtr<void, CountType> ToRefCountedPtr()
     {
         RefCountedPtr<void, CountType> rc;

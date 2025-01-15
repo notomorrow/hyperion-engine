@@ -297,7 +297,7 @@ TaskBatch *TaskSystem::EnqueueBatch(TaskBatch *batch)
 
     TaskThreadPool *pool = batch->pool != nullptr
         ? batch->pool
-        : m_pools[uint(TaskThreadPoolName::THREAD_POOL_GENERIC)].Get();
+        : m_pools[uint32(TaskThreadPoolName::THREAD_POOL_GENERIC)].Get();
 
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
     HYP_MT_CHECK_RW(batch->data_race_detector);

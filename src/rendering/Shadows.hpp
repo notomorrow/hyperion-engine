@@ -9,7 +9,7 @@
 
 namespace hyperion {
 
-enum class ShadowMode : uint
+enum class ShadowMode : uint32
 {
     STANDARD,
     PCF,

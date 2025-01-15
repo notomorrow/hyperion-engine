@@ -15,7 +15,7 @@ HYP_EXPORT void RefCountedPtr_Get(uintptr_t ctrl_block, ValueStorage<HypData> *o
 {
     AssertThrow(out_hyp_data != nullptr);
 
-    auto *ref_count_data = reinterpret_cast<typename memory::RefCountedPtrBase<std::atomic<uint>>::RefCountDataType *>(ctrl_block);
+    auto *ref_count_data = reinterpret_cast<typename memory::RefCountedPtrBase<AtomicVar<uint32>>::RefCountDataType *>(ctrl_block);
     AssertThrow(ref_count_data != nullptr);
 
     RC<void> rc;
@@ -26,7 +26,7 @@ HYP_EXPORT void RefCountedPtr_Get(uintptr_t ctrl_block, ValueStorage<HypData> *o
 
 HYP_EXPORT uint32 RefCountedPtr_IncRef(uintptr_t ctrl_block)
 {
-    auto *ref_count_data = reinterpret_cast<typename memory::RefCountedPtrBase<std::atomic<uint>>::RefCountDataType *>(ctrl_block);
+    auto *ref_count_data = reinterpret_cast<typename memory::RefCountedPtrBase<AtomicVar<uint32>>::RefCountDataType *>(ctrl_block);
     AssertThrow(ref_count_data != nullptr);
 
     return ref_count_data->IncRefCount_Strong();
@@ -34,7 +34,7 @@ HYP_EXPORT uint32 RefCountedPtr_IncRef(uintptr_t ctrl_block)
 
 HYP_EXPORT uint32 RefCountedPtr_DecRef(uintptr_t ctrl_block)
 {
-    auto *ref_count_data = reinterpret_cast<typename memory::RefCountedPtrBase<std::atomic<uint>>::RefCountDataType *>(ctrl_block);
+    auto *ref_count_data = reinterpret_cast<typename memory::RefCountedPtrBase<AtomicVar<uint32>>::RefCountDataType *>(ctrl_block);
     AssertThrow(ref_count_data != nullptr);
 
     return ref_count_data->DecRefCount_Strong();
@@ -42,7 +42,7 @@ HYP_EXPORT uint32 RefCountedPtr_DecRef(uintptr_t ctrl_block)
 
 HYP_EXPORT uint32 WeakRefCountedPtr_IncRef(uintptr_t ctrl_block)
 {
-    auto *ref_count_data = reinterpret_cast<typename memory::WeakRefCountedPtrBase<std::atomic<uint>>::RefCountDataType *>(ctrl_block);
+    auto *ref_count_data = reinterpret_cast<typename memory::WeakRefCountedPtrBase<AtomicVar<uint32>>::RefCountDataType *>(ctrl_block);
     AssertThrow(ref_count_data != nullptr);
 
     return ref_count_data->IncRefCount_Weak();
@@ -50,7 +50,7 @@ HYP_EXPORT uint32 WeakRefCountedPtr_IncRef(uintptr_t ctrl_block)
 
 HYP_EXPORT uint32 WeakRefCountedPtr_DecRef(uintptr_t ctrl_block)
 {
-    auto *ref_count_data = reinterpret_cast<typename memory::WeakRefCountedPtrBase<std::atomic<uint>>::RefCountDataType *>(ctrl_block);
+    auto *ref_count_data = reinterpret_cast<typename memory::WeakRefCountedPtrBase<AtomicVar<uint32>>::RefCountDataType *>(ctrl_block);
     AssertThrow(ref_count_data != nullptr);
 
     return ref_count_data->DecRefCount_Weak();
@@ -58,7 +58,7 @@ HYP_EXPORT uint32 WeakRefCountedPtr_DecRef(uintptr_t ctrl_block)
 
 HYP_EXPORT uint32 WeakRefCountedPtr_Lock(uintptr_t ctrl_block)
 {
-    auto *ref_count_data = reinterpret_cast<typename memory::WeakRefCountedPtrBase<std::atomic<uint>>::RefCountDataType *>(ctrl_block);
+    auto *ref_count_data = reinterpret_cast<typename memory::WeakRefCountedPtrBase<AtomicVar<uint32>>::RefCountDataType *>(ctrl_block);
     AssertThrow(ref_count_data != nullptr);
 
     if (ref_count_data->value == nullptr) {

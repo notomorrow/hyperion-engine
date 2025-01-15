@@ -97,7 +97,7 @@ Frustum &Frustum::SetFromViewProjectionMatrix(const Matrix4 &view_proj)
 
     const Matrix4 clip_to_world = view_proj.Inverted();
 
-    for (uint i = 0; i < 8; i++) {
+    for (uint32 i = 0; i < 8; i++) {
         Vec4f corner = clip_to_world * frustucorners_ndc[i];
         corner /= corner.w;
 
@@ -107,7 +107,7 @@ Frustum &Frustum::SetFromViewProjectionMatrix(const Matrix4 &view_proj)
     return *this;
 }
 
-Vec3f Frustum::GetIntersectionPoint(uint plane_index_0, uint plane_index_1, uint plane_index_2) const
+Vec3f Frustum::GetIntersectionPoint(uint32 plane_index_0, uint32 plane_index_1, uint32 plane_index_2) const
 {
     const Vec4f planes[3] = { GetPlane(plane_index_0), GetPlane(plane_index_1), GetPlane(plane_index_2) };
 

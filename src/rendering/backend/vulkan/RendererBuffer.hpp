@@ -45,7 +45,7 @@ struct GPUBufferPlatformImpl<Platform::VULKAN>
 // class GPUMemory<Platform::VULKAN>
 // {
 // public:
-//     static uint FindMemoryType(Device<Platform::VULKAN> *device, uint vk_type_filter, VkMemoryPropertyFlags properties);
+//     static uint32 FindMemoryType(Device<Platform::VULKAN> *device, uint32 vk_type_filter, VkMemoryPropertyFlags properties);
 
 //     HYP_API GPUMemory();
 
@@ -63,10 +63,10 @@ struct GPUBufferPlatformImpl<Platform::VULKAN>
 //     void SetResourceState(ResourceState new_state)
 //         { resource_state = new_state; }
 
-//     void SetID(uint id)
+//     void SetID(uint32 id)
 //         { m_id = id; }
 
-//     uint GetID() const
+//     uint32 GetID() const
 //         { return m_id; }
 
 //     bool IsCreated() const
@@ -97,10 +97,10 @@ struct GPUBufferPlatformImpl<Platform::VULKAN>
 //     HYP_API void Create();
 //     HYP_API void Destroy();
 
-//     uint                    m_id;
+//     uint32                  m_id;
 //     bool                    m_is_created;
 
-//     uint                    sharing_mode;
+//     uint32                  sharing_mode;
 //     mutable void            *map;
 //     mutable ResourceState   resource_state;
 // };

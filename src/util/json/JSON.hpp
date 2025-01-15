@@ -110,7 +110,7 @@ struct HYP_API JSONSubscriptWrapper<const JSONValue>
     const JSONObject &AsObject() const;
     JSONObject ToObject() const;
 
-    JSONSubscriptWrapper<const JSONValue> operator[](uint index) const;
+    JSONSubscriptWrapper<const JSONValue> operator[](uint32 index) const;
     JSONSubscriptWrapper<const JSONValue> operator[](UTF8StringView key) const;
 
     /*! \brief Get a value within the JSON object using a path (e.g. "key1.key2.key3").
@@ -205,8 +205,8 @@ struct HYP_API JSONSubscriptWrapper<JSONValue>
     const JSONObject &AsObject() const;
     JSONObject ToObject() const;
 
-    JSONSubscriptWrapper<JSONValue> operator[](uint index);
-    JSONSubscriptWrapper<const JSONValue> operator[](uint index) const;
+    JSONSubscriptWrapper<JSONValue> operator[](uint32 index);
+    JSONSubscriptWrapper<const JSONValue> operator[](uint32 index) const;
     JSONSubscriptWrapper<JSONValue> operator[](UTF8StringView key);
     JSONSubscriptWrapper<const JSONValue> operator[](UTF8StringView key) const;
 
@@ -625,10 +625,10 @@ public:
         return JSONObject();
     }
 
-    HYP_FORCE_INLINE JSONSubscriptWrapper<JSONValue> operator[](uint index)
+    HYP_FORCE_INLINE JSONSubscriptWrapper<JSONValue> operator[](uint32 index)
         { return JSONSubscriptWrapper<JSONValue>(this)[index]; }
 
-    HYP_FORCE_INLINE JSONSubscriptWrapper<const JSONValue> operator[](uint index) const
+    HYP_FORCE_INLINE JSONSubscriptWrapper<const JSONValue> operator[](uint32 index) const
         { return JSONSubscriptWrapper<const JSONValue>(this)[index]; }
 
     HYP_FORCE_INLINE JSONSubscriptWrapper<JSONValue> operator[](UTF8StringView key)

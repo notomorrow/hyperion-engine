@@ -8,6 +8,7 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
+#include <rendering/Scene.hpp>
 
 #include <math/MathUtil.hpp>
 
@@ -32,7 +33,7 @@ void ShadowMapUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
 
     switch (light_component.light->GetLightType()) {
     case LightType::DIRECTIONAL:
-        shadow_map_component.render_subsystem = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<DirectionalLightShadowRenderer>(
+        shadow_map_component.render_subsystem = GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->AddRenderSubsystem<DirectionalLightShadowRenderer>(
             Name::Unique("shadow_map_renderer_directional"),
             shadow_map_component.resolution,
             shadow_map_component.mode
@@ -40,7 +41,7 @@ void ShadowMapUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
 
         break;
     case LightType::POINT:
-        shadow_map_component.render_subsystem = GetEntityManager().GetScene()->GetEnvironment()->AddRenderSubsystem<PointLightShadowRenderer>(
+        shadow_map_component.render_subsystem = GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->AddRenderSubsystem<PointLightShadowRenderer>(
             Name::Unique("shadow_map_renderer_point"),
             light_component.light,
             shadow_map_component.resolution
@@ -68,11 +69,11 @@ void ShadowMapUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
     if (shadow_map_component.render_subsystem) {
         switch (light_component.light->GetLightType()) {
         case LightType::DIRECTIONAL:
-            GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderSubsystem<DirectionalLightShadowRenderer>(shadow_map_component.render_subsystem->GetName());
+            GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<DirectionalLightShadowRenderer>(shadow_map_component.render_subsystem->GetName());
 
             break;
         case LightType::POINT:
-            GetEntityManager().GetScene()->GetEnvironment()->RemoveRenderSubsystem<PointLightShadowRenderer>(shadow_map_component.render_subsystem->GetName());
+            GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<PointLightShadowRenderer>(shadow_map_component.render_subsystem->GetName());
 
             break;
         default:

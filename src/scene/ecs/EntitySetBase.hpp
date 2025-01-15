@@ -13,7 +13,7 @@ namespace hyperion {
 
 class Entity;
 
-using EntitySetTypeID = uint;
+using EntitySetTypeID = uint32;
 
 class EntitySetBase;
 class ComponentContainerBase;
@@ -22,7 +22,7 @@ class ComponentContainerBase;
 
 struct EntitySetIDGeneratorBase
 {
-    static inline std::atomic<uint> counter { 0u };
+    static inline std::atomic<uint32> counter { 0u };
 };
 
 template <class... Components>

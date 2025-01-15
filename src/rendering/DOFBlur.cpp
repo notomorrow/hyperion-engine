@@ -65,7 +65,7 @@ void DOFBlur::Render(Frame *frame)
 
     push_constants.dimension = m_extent;
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
 
     FixedArray<FullScreenPass *, 2> directional_passes {

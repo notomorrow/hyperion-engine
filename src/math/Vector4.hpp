@@ -27,7 +27,7 @@ struct alignas(alignof(T) * 4) HYP_API Vec4
 
     using Type = T;
 
-    static constexpr uint size = 4;
+    static constexpr uint32 size = 4;
 
     union {
         struct { Type x, y, z, w; };
@@ -270,7 +270,7 @@ struct alignas(alignof(float) * 4) HYP_API Vec4<float>
 
     using Type = float;
 
-    static constexpr uint size = 4;
+    static constexpr uint32 size = 4;
 
     union {
         struct { Type x, y, z, w; };
@@ -530,11 +530,11 @@ using Vec4 = math::Vec4<T>;
 
 using Vec4f = Vec4<float>;
 using Vec4i = Vec4<int>;
-using Vec4u = Vec4<uint>;
+using Vec4u = Vec4<uint32>;
 
 static_assert(sizeof(Vec4f) == sizeof(float) * 4, "sizeof(Vec4f) must be equal to sizeof(float) * 4");
 static_assert(sizeof(Vec4i) == sizeof(int) * 4, "sizeof(Vec4i) must be equal to sizeof(int) * 4");
-static_assert(sizeof(Vec4u) == sizeof(uint) * 4, "sizeof(Vec4u) must be equal to sizeof(uint) * 4");
+static_assert(sizeof(Vec4u) == sizeof(uint32) * 4, "sizeof(Vec4u) must be equal to sizeof(uint32) * 4");
 
 template <class T>
 inline constexpr bool is_vec4 = false;

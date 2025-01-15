@@ -43,6 +43,7 @@
 #include <core/logging/LogChannels.hpp>
 
 #include <rendering/UIRenderer.hpp>
+#include <rendering/Scene.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/subsystems/ScreenCapture.hpp>
 
@@ -159,12 +160,13 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
         GetWorld()->AddScene(project_scene);
 
         m_scene = project_scene;
+        AssertThrow(InitObject(m_scene));
 
         m_camera = m_scene->GetCamera();
         AssertThrow(InitObject(m_camera));
 
         m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
-        m_scene->GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
+        m_scene->GetRenderResources().GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
 
         // Reinitialize viewport
         InitViewport();
@@ -179,9 +181,9 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
 
             // @TODO Remove camera controller
 
-            project_scene->GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
+            project_scene->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
 
-            project_scene->GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
+            project_scene->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
 
             if (m_camera) {
                 m_camera.Reset();
@@ -378,7 +380,7 @@ void EditorSubsystem::InitViewport()
 
         m_scene_texture.Reset();
 
-        RC<ScreenCaptureRenderSubsystem> screen_capture_component = m_scene->GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), Vec2u(viewport_size));
+        RC<ScreenCaptureRenderSubsystem> screen_capture_component = m_scene->GetRenderResources().GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), Vec2u(viewport_size));
         m_scene_texture = screen_capture_component->GetTexture();
         AssertThrow(m_scene_texture.IsValid());
         

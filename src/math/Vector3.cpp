@@ -115,13 +115,13 @@ int math::detail::Vec3<int>::Min() const
 }
 
 template<>
-uint math::detail::Vec3<uint>::Max() const
+uint32 math::detail::Vec3<uint32>::Max() const
 {
     return MathUtil::Max(x, MathUtil::Max(y, z));
 }
 
 template<>
-uint math::detail::Vec3<uint>::Min() const
+uint32 math::detail::Vec3<uint32>::Min() const
 {
     return MathUtil::Min(x, MathUtil::Min(y, z));
 }
@@ -251,7 +251,7 @@ std::ostream &operator<<(std::ostream &out, const math::detail::Vec3<int> &vec) 
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const math::detail::Vec3<uint> &vec) // output
+std::ostream &operator<<(std::ostream &out, const math::detail::Vec3<uint32> &vec) // output
 {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
     return out;

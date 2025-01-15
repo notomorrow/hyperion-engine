@@ -60,7 +60,7 @@ template <>
 RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance);
 
 template <>
-RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last);
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint32 first, uint32 last);
 
 template <>
 RendererResult BottomLevelAccelerationStructure<Platform::VULKAN>::Rebuild(Instance<Platform::VULKAN> *instance, RTUpdateStateFlags &out_update_state_flags);
@@ -506,7 +506,7 @@ RendererResult AccelerationStructure<Platform::VULKAN>::Destroy(Device<Platform:
 }
 
 template <>
-void AccelerationStructure<Platform::VULKAN>::RemoveGeometry(uint index)
+void AccelerationStructure<Platform::VULKAN>::RemoveGeometry(uint32 index)
 {
     const auto it = m_geometries.Begin() + index;
 
@@ -749,7 +749,7 @@ RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::CreateOrRebuildI
 }
 
 template <>
-RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateInstancesBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateInstancesBuffer(Instance<Platform::VULKAN> *instance, uint32 first, uint32 last)
 {
     if (last == first) {
         HYPERION_RETURN_OK; 
@@ -764,7 +764,7 @@ RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateInstancesB
     Array<VkAccelerationStructureInstanceKHR> instances;
     instances.Resize(last - first);
 
-    for (uint i = first; i < last; i++) {
+    for (uint32 i = first; i < last; i++) {
         const BLASRef<Platform::VULKAN> &blas = m_blas[i];
         AssertThrow(blas != nullptr);
 
@@ -826,11 +826,11 @@ RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::CreateMeshDescri
 template <>
 RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance)
 {
-    return UpdateMeshDescriptionsBuffer(instance, 0u, uint(m_blas.Size()));
+    return UpdateMeshDescriptionsBuffer(instance, 0u, uint32(m_blas.Size()));
 }
 
 template <>
-RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint first, uint last)
+RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescriptionsBuffer(Instance<Platform::VULKAN> *instance, uint32 first, uint32 last)
 {
     AssertThrow(m_mesh_descriptions_buffer != nullptr);
     AssertThrow(m_mesh_descriptions_buffer->Size() >= sizeof(MeshDescription) * m_blas.Size());
@@ -847,7 +847,7 @@ RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateMeshDescri
     Array<MeshDescription> mesh_descriptions;
     mesh_descriptions.Resize(last - first);
 
-    for (uint i = first; i < last; i++) {
+    for (uint32 i = first; i < last; i++) {
         const BLASRef<Platform::VULKAN> &blas = m_blas[i];
 
         MeshDescription &mesh_description = mesh_descriptions[i - first];
@@ -908,9 +908,9 @@ RendererResult TopLevelAccelerationStructure<Platform::VULKAN>::UpdateStructure(
         return Rebuild(instance, out_update_state_flags);
     }
 
-    Range<uint> dirty_range { };
+    Range<uint32> dirty_range { };
 
-    for (uint i = 0; i < uint(m_blas.Size()); i++) {
+    for (uint32 i = 0; i < uint32(m_blas.Size()); i++) {
         const BLASRef<Platform::VULKAN> &blas = m_blas[i];
         AssertThrow(blas != nullptr);
 

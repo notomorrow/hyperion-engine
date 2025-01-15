@@ -106,12 +106,12 @@ Scene::Scene(
     m_world(world),
     m_camera(std::move(camera)),
     m_root_node_proxy(MakeRefCountedPtr<Node>("<ROOT>", Handle<Entity>::empty, Transform::identity, this)),
-    m_environment(CreateObject<RenderEnvironment>(this)),
     m_is_audio_listener(false),
     m_entity_manager(MakeRefCountedPtr<EntityManager>(owner_thread_id.GetMask(), this)),
     m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
     m_previous_delta(0.01667f),
-    m_mutation_state(DataMutationState::DIRTY)
+    m_mutation_state(DataMutationState::DIRTY),
+    m_render_resources(nullptr)
 {
     // Disable command execution if not on game thread
     if (!(m_owner_thread_id & ThreadName::THREAD_GAME)) {
@@ -129,7 +129,6 @@ Scene::~Scene()
     m_octree.Clear();
 
     m_camera.Reset();
-    m_environment.Reset();
 
     if (m_root_node_proxy.IsValid()) {
         m_root_node_proxy->SetScene(nullptr);
@@ -140,6 +139,12 @@ Scene::~Scene()
     entity_manager.Reset();
 
     SafeRelease(std::move(m_tlas));
+
+    if (m_render_resources != nullptr) {
+        FreeResource(m_render_resources);
+
+        m_render_resources = nullptr;
+    }
 
     HYP_SYNC_RENDER();
 }
@@ -154,7 +159,11 @@ void Scene::Init()
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
     {
-        m_environment.Reset();
+        if (m_render_resources != nullptr) {
+            FreeResource(m_render_resources);
+
+            m_render_resources = nullptr;
+        }
     }));
 
     InitObject(m_camera);
@@ -177,6 +186,8 @@ void Scene::Init()
     m_entity_manager->AddSystem<PhysicsSystem>();
     m_entity_manager->AddSystem<ScriptSystem>();
 
+    m_render_resources = AllocateResource<SceneRenderResources>(this);
+
     if (!IsNonWorldScene()) {
         if (m_flags & SceneFlags::HAS_TLAS) {
             if (!m_tlas) {
@@ -187,11 +198,9 @@ void Scene::Init()
                 }
             }
         }
-        
-        InitObject(m_environment);
 
         if (m_tlas) {
-            m_environment->SetTLAS(m_tlas);
+            m_render_resources->GetEnvironment()->SetTLAS(m_tlas);
         }
     }
 
@@ -477,66 +486,17 @@ void Scene::EnqueueRenderUpdates()
 {
     HYP_SCOPE;
 
-    struct RENDER_COMMAND(UpdateSceneRenderData) : renderer::RenderCommand
-    {
-        ID<Scene>               id;
-        BoundingBox             aabb;
-        GameCounter::TickUnit   game_time;
-        FogParams               fog_params;
-        RenderEnvironment       *render_environment;
-        SceneDrawProxy          &draw_proxy;
-
-        RENDER_COMMAND(UpdateSceneRenderData)(
-            ID<Scene> id,
-            const BoundingBox &aabb,
-            GameCounter::TickUnit game_time,
-            const FogParams &fog_params,
-            RenderEnvironment *render_environment,
-            SceneDrawProxy &draw_proxy
-        ) : id(id),
-            aabb(aabb),
-            game_time(game_time),
-            fog_params(fog_params),
-            render_environment(render_environment),
-            draw_proxy(draw_proxy)
-        {
-        }
-
-        virtual ~RENDER_COMMAND(UpdateSceneRenderData)() override = default;
-
-        virtual RendererResult operator()() override
-        {
-            const uint frame_counter = render_environment->GetFrameCounter();
-
-            draw_proxy.frame_counter = frame_counter;
-
-            SceneShaderData shader_data { };
-            shader_data.aabb_max = Vec4f(aabb.max, 1.0f);
-            shader_data.aabb_min = Vec4f(aabb.min, 1.0f);
-            shader_data.fog_params = Vec4f(float(fog_params.color.Packed()), fog_params.start_distance, fog_params.end_distance, 0.0f);
-            shader_data.game_time = game_time;
-            shader_data.frame_counter = frame_counter;
-            shader_data.enabled_render_subsystems_mask = render_environment->GetEnabledRenderSubsystemsMask();
-            
-            g_engine->GetRenderData()->scenes->Set(id.ToIndex(), shader_data);
-
-            HYPERION_RETURN_OK;
-        }
-    };
-
     AssertReady();
 
     AssertThrow(m_world != nullptr);
 
-    PUSH_RENDER_COMMAND(
-        UpdateSceneRenderData, 
-        GetID(),
-        m_root_node_proxy.GetWorldAABB(),
-        m_world->GetGameState().game_time,
-        m_fog_params,
-        m_environment.Get(),
-        m_proxy
-    );
+    SceneShaderData shader_data { };
+    shader_data.aabb_max = Vec4f(m_root_node_proxy.GetWorldAABB().max, 1.0f);
+    shader_data.aabb_min = Vec4f(m_root_node_proxy.GetWorldAABB().min, 1.0f);
+    shader_data.fog_params = Vec4f(float(m_fog_params.color.Packed()), m_fog_params.start_distance, m_fog_params.end_distance, 0.0f);
+    shader_data.game_time = m_world->GetGameState().game_time;
+
+    m_render_resources->SetBufferData(shader_data);
 
     m_mutation_state = DataMutationState::CLEAN;
 }
@@ -563,7 +523,7 @@ bool Scene::CreateTLAS()
     DeferCreate(m_tlas, g_engine->GetGPUDevice(), g_engine->GetGPUInstance());
 
     if (IsReady()) {
-        m_environment->SetTLAS(m_tlas);
+        m_render_resources->GetEnvironment()->SetTLAS(m_tlas);
     }
 
     m_flags |= SceneFlags::HAS_TLAS;

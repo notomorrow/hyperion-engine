@@ -55,9 +55,9 @@ public:
     HYP_FORCE_INLINE InternalFormat GetFormat() const
         { return m_image_format; }
 
-    const AttachmentRef &GetAttachment(uint attachment_index) const;
+    const AttachmentRef &GetAttachment(uint32 attachment_index) const;
 
-    HYP_FORCE_INLINE const CommandBufferRef &GetCommandBuffer(uint index) const
+    HYP_FORCE_INLINE const CommandBufferRef &GetCommandBuffer(uint32 index) const
         { return m_command_buffers[index]; }
 
     HYP_FORCE_INLINE const FramebufferRef &GetFramebuffer() const
@@ -104,7 +104,7 @@ public:
     virtual void Create();
 
     virtual void Render(Frame *frame);
-    virtual void Record(uint frame_index);
+    virtual void Record(uint32 frame_index);
 
     void Begin(Frame *frame);
     void End(Frame *frame);

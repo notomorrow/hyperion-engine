@@ -69,14 +69,14 @@ public:
      * 
      * \return The index of the selected tab.
      */
-    HYP_FORCE_INLINE uint GetSelectedTabIndex() const
+    HYP_FORCE_INLINE uint32 GetSelectedTabIndex() const
         { return m_selected_tab_index; }
 
     /*! \brief Sets the selected tab by index.
      * 
      * \param index The index of the tab.
      */
-    void SetSelectedTabIndex(uint index);
+    void SetSelectedTabIndex(uint32 index);
 
     HYP_FORCE_INLINE const Array<RC<UITab>> &GetTabs() const
         { return m_tabs; }
@@ -101,7 +101,7 @@ public:
      * \param name The name of the tab.
      * \return The index of the tab.
      */
-    uint GetTabIndex(Name name) const;
+    uint32 GetTabIndex(Name name) const;
 
     /*! \brief Remove a tab by name.
      * 
@@ -122,7 +122,7 @@ private:
 
     Array<RC<UITab>>    m_tabs;
 
-    uint                m_selected_tab_index;
+    uint32              m_selected_tab_index;
 };
 
 #pragma endregion UITabView

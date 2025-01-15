@@ -74,8 +74,8 @@ protected:
     void WakeUpOwnerThread();
     bool WaitForTasks(std::unique_lock<std::mutex> &lock);
 
-    uint                    m_id_counter = 0;
-    AtomicVar<uint>         m_num_enqueued { 0 };
+    uint32                  m_id_counter = 0;
+    AtomicVar<uint32>         m_num_enqueued { 0 };
     AtomicVar<bool>         m_stop_requested { false };
 
     mutable std::mutex      m_mutex;
@@ -197,7 +197,7 @@ public:
     Scheduler &operator=(Scheduler &&other) noexcept    = delete;
     virtual ~Scheduler() override                       = default;
 
-    HYP_FORCE_INLINE uint NumEnqueued() const
+    HYP_FORCE_INLINE uint32 NumEnqueued() const
         { return m_num_enqueued.Get(MemoryOrder::ACQUIRE); }
 
     HYP_FORCE_INLINE const Array<ScheduledTask> &GetEnqueuedTasks() const
@@ -240,7 +240,7 @@ public:
      *  called from a non-owner thread.
      *  \internal Used by TaskSystem to enqueue batches of tasks.
      *  \param executor_ptr The TaskExecutor to execute (owned by the caller)
-     *  \param atomic_counter A pointer to an atomic uint variable that is incremented upon completion.
+     *  \param atomic_counter A pointer to an atomic uint32 variable that is incremented upon completion.
      *  \param callback A callback to be executed after the task is completed. */
     virtual TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr) override
     {

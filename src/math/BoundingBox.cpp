@@ -34,9 +34,9 @@ FixedArray<Vec3f, 8> BoundingBox::GetCorners() const
     };
 }
 
-Vec3f BoundingBox::GetCorner(uint index) const
+Vec3f BoundingBox::GetCorner(uint32 index) const
 {
-    const uint mask = 1u << index;
+    const uint32 mask = 1u << index;
 
     return {
         MathUtil::Lerp(min.x, max.x, int((mask & 1) != 0)),
@@ -58,7 +58,7 @@ void BoundingBox::SetCorners(const FixedArray<Vec3f, 8> &corners)
     min = corners[0];
     max = corners[0];
 
-    for (uint i = 1; i < 8; ++i) {
+    for (uint32 i = 1; i < 8; ++i) {
         min = Vec3f::Min(min, corners[i]);
         max = Vec3f::Max(max, corners[i]);
     }

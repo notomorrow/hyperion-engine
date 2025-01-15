@@ -109,12 +109,12 @@ struct RENDER_COMMAND(CreateMipImageView) : renderer::RenderCommand
 {
     ImageRef        src_image;
     ImageViewRef    mip_image_view;
-    uint            mip_level;
+    uint32          mip_level;
 
     RENDER_COMMAND(CreateMipImageView)(
         ImageRef src_image,
         ImageViewRef mip_image_view,
-        uint mip_level
+        uint32 mip_level
     ) : src_image(std::move(src_image)),
         mip_image_view(std::move(mip_image_view)),
         mip_level(mip_level)
@@ -174,7 +174,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
 
             ImageRef &dst_image = m_image;
 
-            for (uint mip_level = 0; mip_level < uint(m_mip_image_views.Size()); mip_level++) {
+            for (uint32 mip_level = 0; mip_level < uint32(m_mip_image_views.Size()); mip_level++) {
                 RC<FullScreenPass> &pass = m_passes[mip_level];
                 AssertThrow(pass != nullptr);
 
@@ -299,7 +299,7 @@ public:
             ShaderProperties()
         );
 
-        for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
+        for (uint32 mip_level = 0; mip_level < num_mip_levels; mip_level++) {
             renderer::DescriptorTableDeclaration descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
             DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);

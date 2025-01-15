@@ -27,7 +27,7 @@ struct alignas(alignof(T) * 4) HYP_API Vec3
 {
     friend std::ostream &operator<<(std::ostream &out, const Vec3 &vec);
 
-    static constexpr uint size = 3;
+    static constexpr uint32 size = 3;
     
     using Type = T;
 
@@ -223,7 +223,7 @@ struct alignas(alignof(float) * 4) HYP_API Vec3<float>
 {
     friend std::ostream &operator<<(std::ostream &out, const Vec3 &vec);
 
-    static constexpr uint size = 3;
+    static constexpr uint32 size = 3;
     
     using Type = float;
 
@@ -431,7 +431,7 @@ template <class T>
 using Vec3 = math::Vec3<T>;
 
 using Vec3i = Vec3<int>;
-using Vec3u = Vec3<uint>;
+using Vec3u = Vec3<uint32>;
 using Vec3f = Vec3<float>;
 
 template <class T>

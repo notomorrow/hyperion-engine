@@ -13,6 +13,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/World.hpp>
+#include <rendering/Scene.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -342,10 +343,10 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 
     m_entity_instance_batch_holder_map = MakeUnique<EntityInstanceBatchHolderMap>();
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // Global
 
-        for (uint i = 0; i < num_gbuffer_textures; i++) {
+        for (uint32 i = 0; i < num_gbuffer_textures; i++) {
             m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("GBufferTextures"), i, GetPlaceholderData()->GetImageView2D1x1R8());
         }
 
@@ -401,15 +402,15 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ShadowMapsBuffer"), m_render_data->shadow_map_data->GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("SHGridBuffer"), GetRenderData()->spherical_harmonics_grid.sh_grid_buffer);
 
-        for (uint shadow_map_index = 0; shadow_map_index < max_shadow_maps; shadow_map_index++) {
+        for (uint32 shadow_map_index = 0; shadow_map_index < max_shadow_maps; shadow_map_index++) {
             m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("ShadowMapTextures"), shadow_map_index, GetPlaceholderData()->GetImageView2D1x1R8());
         }
 
-        for (uint shadow_map_index = 0; shadow_map_index < max_bound_point_shadow_maps; shadow_map_index++) {
+        for (uint32 shadow_map_index = 0; shadow_map_index < max_bound_point_shadow_maps; shadow_map_index++) {
             m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("PointLightShadowMapTextures"), shadow_map_index, GetPlaceholderData()->GetImageViewCube1x1R8());
         }
 
-        for (uint i = 0; i < max_bound_reflection_probes; i++) {
+        for (uint32 i = 0; i < max_bound_reflection_probes; i++) {
             m_global_descriptor_table->GetDescriptorSet(NAME("Scene"), frame_index)->SetElement(NAME("EnvProbeTextures"), i, GetPlaceholderData()->GetImageViewCube1x1R8());
         }
 
@@ -422,12 +423,12 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 
         // Material
 #ifdef HYP_FEATURES_BINDLESS_TEXTURES
-        for (uint texture_index = 0; texture_index < max_bindless_resources; texture_index++) {
+        for (uint32 texture_index = 0; texture_index < max_bindless_resources; texture_index++) {
             m_global_descriptor_table->GetDescriptorSet(NAME("Material"), frame_index)
                 ->SetElement(NAME("Textures"), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
         }
 #else
-        for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+        for (uint32 texture_index = 0; texture_index < max_bound_textures; texture_index++) {
             m_global_descriptor_table->GetDescriptorSet(NAME("Material"), frame_index)
                 ->SetElement(NAME("Textures"), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
         }
@@ -680,7 +681,7 @@ void Engine::RenderDeferred(Frame *frame)
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    m_deferred_renderer->Render(frame, m_render_state->GetScene().render_environment.Get());
+    m_deferred_renderer->Render(frame, m_render_state->GetActiveScene()->GetEnvironment().Get());
 }
 
 #pragma endregion Engine
@@ -705,9 +706,9 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
             switch (layout_it.second.type) {
             case renderer::DescriptorSetElementType::UNIFORM_BUFFER: // Fallthrough
             case renderer::DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC: {
-                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.LookupString());
+                AssertThrowMsg(layout_it.second.size != uint32(-1), "No size set for descriptor %s", layout_it.first.LookupString());
 
-                for (uint i = 0; i < layout_it.second.count; i++) {
+                for (uint32 i = 0; i < layout_it.second.count; i++) {
                     ref->SetElement(
                         layout_it.first,
                         i,
@@ -724,9 +725,9 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
             }
             case renderer::DescriptorSetElementType::STORAGE_BUFFER: // Fallthrough
             case renderer::DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC: {
-                AssertThrowMsg(layout_it.second.size != uint(-1), "No size set for descriptor %s", layout_it.first.LookupString());
+                AssertThrowMsg(layout_it.second.size != uint32(-1), "No size set for descriptor %s", layout_it.first.LookupString());
 
-                for (uint i = 0; i < layout_it.second.count; i++) {
+                for (uint32 i = 0; i < layout_it.second.count; i++) {
                     ref->SetElement(
                         layout_it.first,
                         i,
@@ -743,7 +744,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
             }
             case renderer::DescriptorSetElementType::IMAGE: {
                 // @TODO: Differentiate between 2D, 3D, and Cubemap
-                for (uint i = 0; i < layout_it.second.count; i++) {
+                for (uint32 i = 0; i < layout_it.second.count; i++) {
                     ref->SetElement(
                         layout_it.first,
                         i,
@@ -755,7 +756,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
             }
             case renderer::DescriptorSetElementType::IMAGE_STORAGE: {
                 // @TODO: Differentiate between 2D, 3D, and Cubemap
-                for (uint i = 0; i < layout_it.second.count; i++) {
+                for (uint32 i = 0; i < layout_it.second.count; i++) {
                     ref->SetElement(
                         layout_it.first,
                         i,
@@ -766,7 +767,7 @@ GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
                 break;
             }
             case renderer::DescriptorSetElementType::SAMPLER: {
-                for (uint i = 0; i < layout_it.second.count; i++) {
+                for (uint32 i = 0; i < layout_it.second.count; i++) {
                     ref->SetElement(
                         layout_it.first,
                         i,

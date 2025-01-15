@@ -312,7 +312,7 @@ void Game::OnFrameEnd(Frame *frame)
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    g_engine->GetRenderState()->UnbindScene();
+    g_engine->GetRenderState()->UnbindScene(m_scene.Get());
 
     // temp
     if (m_scene.IsValid() && m_scene->IsReady()) {
