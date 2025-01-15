@@ -384,12 +384,7 @@ void DeferredPass::Record(uint32 frame_index)
     static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
-    AssertThrow(scene_index != ~0u);
-
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
-    uint32 camera_index = camera_render_resources.GetBufferIndex();
-    AssertThrow(camera_index != ~0u);
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
     
     const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
@@ -465,9 +460,9 @@ void DeferredPass::Record(uint32 frame_index)
                             cmd,
                             render_group->GetPipeline(),
                             {
-                                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
-                                { NAME("LightsBuffer"), ShaderDataOffset<LightShaderData>(light_render_resources.GetBufferIndex()) },
+                                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
+                                { NAME("LightsBuffer"), ShaderDataOffset<LightShaderData>(&light_render_resources) },
                                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid_index) },
                                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(shadow_probe_index) }
                             },
@@ -705,12 +700,7 @@ void EnvGridPass::Render(Frame *frame)
     const uint32 env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
-    AssertThrow(scene_index != ~0u);
-
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
-    uint32 camera_index = camera_render_resources.GetBufferIndex();
-    AssertThrow(camera_index != ~0u);
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     GetFramebuffer()->BeginCapture(frame->GetCommandBuffer(), frame_index);
 
@@ -779,8 +769,8 @@ void EnvGridPass::Render(Frame *frame)
                     cmd,
                     m_render_group->GetPipeline(),
                     {
-                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                         { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid_index) }
                     },
                     scene_descriptor_set_index
@@ -1024,12 +1014,7 @@ void ReflectionProbePass::Render(Frame *frame)
     const uint32 frame_index = frame->GetFrameIndex();
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
-    AssertThrow(scene_index != ~0u);
-
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
-    uint32 camera_index = camera_render_resources.GetBufferIndex();
-    AssertThrow(camera_index != ~0u);
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     // Sky renders first
     static const FixedArray<EnvProbeType, ApplyReflectionProbeMode::MAX> reflection_probe_types {
@@ -1078,8 +1063,8 @@ void ReflectionProbePass::Render(Frame *frame)
                         {
                             NAME("Scene"),
                             {
-                                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
+                                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) }
                             }
                         }
                     }
@@ -1147,8 +1132,8 @@ void ReflectionProbePass::Render(Frame *frame)
                             cmd,
                             render_group->GetPipeline(),
                             {
-                                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_id.ToIndex()) }
                             },
                             scene_descriptor_set_index
@@ -1419,12 +1404,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     const uint32 frame_index = frame->GetFrameIndex();
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
-    AssertThrow(scene_index != ~0u);
-
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
-    uint32 camera_index = camera_render_resources.GetBufferIndex();
-    AssertThrow(camera_index != ~0u);
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     const bool is_render_environment_ready = environment && environment->IsReady();
 
@@ -1648,8 +1628,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
                 {
                     NAME("Scene"),
                     {
-                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                         { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                         { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
                     }

@@ -23,6 +23,12 @@ public:
     
     // is raytracing supported by the current platform?
     static bool IsRaytracingSupported();
+
+    // use indirect rendering for draw calls - allows occlusion culling to be done on the GPU
+    static bool IsIndirectRenderingEnabled();
+
+    // use parallel rendering for draw calls
+    static bool IsParallelRenderingEnabled();
 };
 
 } // namespace renderer

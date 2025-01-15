@@ -555,12 +555,7 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
     const uint32 previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
-    AssertThrow(scene_index != ~0u);
-
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
-    uint32 camera_index = camera_render_resources.GetBufferIndex();
-    AssertThrow(camera_index != ~0u);
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
     
     /*m_hits_buffers[previous_frame_index]->Read(
         g_engine->GetGPUDevice(),
@@ -607,8 +602,8 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
                 }

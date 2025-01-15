@@ -26,5 +26,15 @@ bool RenderConfig::IsRaytracingSupported()
     return g_engine->GetGPUDevice()->GetFeatures().IsRaytracingSupported();
 }
 
+bool RenderConfig::IsIndirectRenderingEnabled()
+{
+    return true;
+}
+
+bool RenderConfig::IsParallelRenderingEnabled()
+{
+    return true;
+}
+
 } // namespace renderer
 } // namespace hyperion

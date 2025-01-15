@@ -258,6 +258,15 @@ void RenderGroup::Init()
         }
     }));
 
+    // If parallel rendering is globally disabled, disable it for this RenderGroup
+    if (!renderer::RenderConfig::IsParallelRenderingEnabled()) {
+        m_flags &= ~RenderGroupFlags::PARALLEL_RENDERING;
+    }
+
+    if (!renderer::RenderConfig::IsIndirectRenderingEnabled()) {
+        m_flags &= ~RenderGroupFlags::INDIRECT_RENDERING;
+    }
+
     CreateIndirectRenderer();
     CreateCommandBuffers();
     CreateGraphicsPipeline();
@@ -469,8 +478,10 @@ void RenderGroup::CollectDrawCalls()
 void RenderGroup::PerformOcclusionCulling(Frame *frame, const CullData *cull_data)
 {
     HYP_SCOPE;
+    
+    static const bool is_indirect_rendering_enabled = renderer::RenderConfig::IsIndirectRenderingEnabled();
 
-    if constexpr (!use_draw_indirect) {
+    if (!is_indirect_rendering_enabled) {
         return;
     }
 
@@ -533,20 +544,9 @@ static HYP_FORCE_INLINE void RenderAll(
     }
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
-    AssertThrow(scene_index != ~0u);
-
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
-    const uint32 camera_index = camera_render_resources.GetBufferIndex();
-    AssertThrow(camera_index != ~0u);
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     const uint32 frame_index = frame->GetFrameIndex();
-
-    TaskThreadPool &pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
-
-    const uint32 num_batches = use_parallel_rendering
-        ? MathUtil::Min(pool.NumThreads(), num_async_rendering_command_buffers)
-        : 1u;
 
     const uint32 global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
     const DescriptorSetRef &global_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index);
@@ -582,8 +582,8 @@ static HYP_FORCE_INLINE void RenderAll(
             frame->GetCommandBuffer(),
             pipeline,
             {
-                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
             },
@@ -701,12 +701,7 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
     const DescriptorSetRef &instancing_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Instancing"), frame_index);
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
-    AssertThrow(scene_index != ~0u);
-    
-    const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
-    const uint32 camera_index = camera_render_resources.GetBufferIndex();
-    AssertThrow(camera_index != ~0u);
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     if (divided_draw_calls.Size() == 1) {
         RenderAll<IsIndirect>(
@@ -746,8 +741,8 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
                         secondary,
                         pipeline,
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                             { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
                         },
