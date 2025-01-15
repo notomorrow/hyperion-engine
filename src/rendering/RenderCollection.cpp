@@ -21,6 +21,7 @@
 #include <rendering/Camera.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/RenderConfig.hpp>
 
 #include <scene/Scene.hpp>
 
@@ -249,10 +250,10 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             AssertThrow(RemoveRenderProxy(proxy_list, entity, attributes, pass_type));
         }
 
-        HYP_LOG(RenderCollection, Debug, "Added Proxies: {}\nRemoved Proxies: {}\nChanged Proxies: {}",
-            proxy_list.GetAddedEntities().Count(),
-            proxy_list.GetRemovedEntities().Count(),
-            proxy_list.GetChangedEntities().Count());
+        // HYP_LOG(RenderCollection, Debug, "Added Proxies: {}\nRemoved Proxies: {}\nChanged Proxies: {}",
+        //     proxy_list.GetAddedEntities().Count(),
+        //     proxy_list.GetRemovedEntities().Count(),
+        //     proxy_list.GetChangedEntities().Count());
 
         proxy_list.Advance(RenderProxyListAdvanceAction::PERSIST);
         
@@ -457,6 +458,8 @@ void RenderCollector::CollectDrawCalls(
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
+    static const bool is_indirect_rendering_enabled = renderer::RenderConfig::IsIndirectRenderingEnabled();
+
     using IteratorType = FlatMap<RenderableAttributeSet, Handle<RenderGroup>>::Iterator;
 
     Array<IteratorType> iterators;
@@ -496,7 +499,7 @@ void RenderCollector::CollectDrawCalls(
         }
     }
 
-    if (use_draw_indirect && cull_data != nullptr) {
+    if (is_indirect_rendering_enabled && cull_data != nullptr) {
         for (SizeType index = 0; index < iterators.Size(); index++) {
             (*iterators[index]).second->PerformOcclusionCulling(frame, cull_data);
         }
@@ -541,6 +544,8 @@ void RenderCollector::ExecuteDrawCalls(
     HYP_SCOPE;
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+
+    static const bool is_indirect_rendering_enabled = renderer::RenderConfig::IsIndirectRenderingEnabled();
     
     AssertThrow(m_draw_collection != nullptr);
 
@@ -572,7 +577,7 @@ void RenderCollector::ExecuteDrawCalls(
                 render_group->GetPipeline()->SetPushConstants(push_constant.Data(), push_constant.Size());
             }
 
-            if (use_draw_indirect && cull_data != nullptr) {
+            if (is_indirect_rendering_enabled && cull_data != nullptr) {
                 render_group->PerformRenderingIndirect(frame);
             } else {
                 render_group->PerformRendering(frame);

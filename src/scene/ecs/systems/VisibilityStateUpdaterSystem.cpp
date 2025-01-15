@@ -42,9 +42,13 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
                 visibility_state_component.visibility_state = octant->GetVisibilityState().Get();
             }
 
+#ifdef HYP_OCTREE_DEBUG
             HYP_LOG(Octree, Debug, "Inserted entity #{} into octree, inserted at {}, {}", entity.GetID().Value(), visibility_state_component.octant_id.GetIndex(), visibility_state_component.octant_id.GetDepth());
+#endif
         } else {
+#ifdef HYP_OCTREE_DEBUG
             HYP_LOG(Octree, Warning, "Failed to insert entity #{} into octree: {}", entity.GetID().Value(), insert_result.first.message);
+#endif
         }
     } else {
         HYP_LOG(Octree, Warning, "Entity #{} has invalid bounding box, skipping octree insertion", entity.GetID().Value());

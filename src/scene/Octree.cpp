@@ -175,7 +175,7 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
     HYP_SCOPE;
 
     if (octant_id == OctantID::Invalid()) {
-#if HYP_OCTREE_DEBUG
+#ifdef HYP_OCTREE_DEBUG
         HYP_LOG(Octree, Warning,
             "Invalid octant id {}:{}: Octant is invalid",
             octant_id.GetDepth(), octant_id.GetIndex());
@@ -189,7 +189,7 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
     }
 
     if (octant_id.depth <= m_octant_id.depth) {
-#if HYP_OCTREE_DEBUG
+#ifdef HYP_OCTREE_DEBUG
         HYP_LOG(Octree, Warning,
             "Octant id {}:{} is not a child of {}:{}: Octant is not deep enough",
             octant_id.GetDepth(), octant_id.GetIndex(),
@@ -205,7 +205,7 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
         const uint8 index = octant_id.GetIndex(depth);
 
         if (!current || !current->IsDivided()) {
-#if HYP_OCTREE_DEBUG
+#ifdef HYP_OCTREE_DEBUG
             HYP_DEBUG(Octree, Warning,
                 "Octant id {}:{} is not a child of {}:{}: Octant {}:{} is not divided",
                 octant_id.GetDepth(), octant_id.GetIndex(),
@@ -607,7 +607,7 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
             // have to rebuild, invalidating child octants.
             // which we have a Contains() check for child entries walking upwards
 
-#if HYP_OCTREE_DEBUG
+#ifdef HYP_OCTREE_DEBUG
             HYP_LOG(Octree, Debug,
                 "In root, but does not contain entry aabb, so rebuilding octree. {}",
                 id.Value());
@@ -628,12 +628,11 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
         }
 
         // not root
-#if HYP_OCTREE_DEBUG
+#ifdef HYP_OCTREE_DEBUG
         HYP_LOG(Octree, Debug,
             "Moving entity #{} into the closest fitting (or root) parent",
             id.Value());
 #endif
-
 
         Optional<InsertResult> parent_insert_result;
 
@@ -678,7 +677,7 @@ Octree::InsertResult Octree::Move(ID<Entity> id, const BoundingBox &aabb, bool a
         // have to _manually_ call Move() which will go to the above branch for the parent octant,
         // this invalidating `this`
 
-#if HYP_OCTREE_DEBUG
+#ifdef HYP_OCTREE_DEBUG
         HYP_LOG(Octree, Debug,
             "In child, no parents contain AABB so calling Move() on last valid octant (root). This will invalidate `this`.. {}",
             id.Value());
@@ -1108,11 +1107,6 @@ void Octree::CalculateVisibility(const Handle<Camera> &camera)
 
     if (frustum.ContainsAABB(m_aabb)) {
         UpdateVisibilityState(camera, m_visibility_state->GetSnapshot(camera.GetID()).validity_marker);
-    } else {
-        HYP_LOG(Octree, Debug,
-            "Camera frustum for camera #{} does not contain octree aabb {} - {}.",
-            camera->GetID().Value(),
-            m_aabb.GetMin(), m_aabb.GetMax());
     }
 }
 

@@ -30,7 +30,7 @@ Entity::~Entity()
     {
         HYP_NAMED_SCOPE("Remove Entity from EntityManager (task)");
 
-        HYP_LOG(Entity, Debug, "Removing Entity #{} from EntityManager on thread '{}'", id.Value(), Threads::CurrentThreadID().name);
+        // HYP_LOG(Entity, Debug, "Removing Entity #{} from EntityManager on thread '{}'", id.Value(), Threads::CurrentThreadID().name);
 
         entity_manager->RemoveEntity(id);
     });

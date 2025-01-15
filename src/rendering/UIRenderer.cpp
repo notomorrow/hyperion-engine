@@ -208,8 +208,6 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
         }
 
         collection->RemoveEmptyProxyGroups();
-
-        HYP_LOG(UI, Debug, "Rebuild UI render collection; using {} render groups", collection->NumRenderGroups());
     }
 
     bool RemoveRenderProxy(RenderProxyList &proxy_list, ID<Entity> entity)
@@ -349,8 +347,6 @@ RenderCollector::CollectionResult UIRenderCollector::PushUpdatesToRenderThread(c
                 // Copy the proxy to be added on the render thread
                 added_proxies[i] = *added_proxies_ptrs[i];
             }
-
-            HYP_LOG(UI, Debug, "Rendering update\n\t{} added\n\t{} removed\n\t{} changed", added_proxies_ptrs.Size(), removed_proxies.Size(), changed_proxies.Size());
 
             PUSH_RENDER_COMMAND(
                 RebuildProxyGroups_UI,

@@ -25,17 +25,25 @@
 
 namespace hyperion {
 
+class RenderResourcesBase;
+
 template <class T>
 struct ShaderDataOffset
 {
     static_assert(IsPODType<T>, "T must be POD to use with ShaderDataOffset");
 
-    constexpr ShaderDataOffset(uint32 index)
+    ShaderDataOffset(uint32 index)
         : index(index)
     {
     }
 
-    constexpr HYP_FORCE_INLINE operator uint32() const
+    template <class RenderResourceType>
+    ShaderDataOffset(const RenderResourceType *render_resource)
+        : index(render_resource != nullptr ? render_resource->GetBufferIndex() : ~0u)
+    {
+    }
+
+    HYP_FORCE_INLINE operator uint32() const
     {
         AssertDebugMsg(index != ~0u, "Index was ~0u when converting to uint32");
 

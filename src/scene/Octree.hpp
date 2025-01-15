@@ -22,7 +22,7 @@
 
 #include <Types.hpp>
 
-// #define HYP_OCTREE_DEBUG 1
+// #define HYP_OCTREE_DEBUG
 
 namespace hyperion {
 

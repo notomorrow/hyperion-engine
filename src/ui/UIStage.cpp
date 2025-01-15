@@ -554,27 +554,14 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
                     BoundingBoxComponent &bounding_box_component = ui_object->GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(ui_object->GetEntity());
 
-                    HYP_LOG(UI, Debug, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}, Depth: {}",
-                        GetClass(ui_object.GetTypeID())->GetName(),
-                        ui_object->GetName(),
-                        ui_object->GetText(),
-                        ui_object->GetActualSize(),
-                        ui_object->GetActualInnerSize(),
-                        ui_object->GetActualSizeClamped(),
-                        ui_object->GetComputedDepth());
-
-                    // MeshComponent *mesh_component = ui_object->GetNode()->GetScene()->GetEntityManager()->TryGetComponent<MeshComponent>(ui_object->GetEntity());
-                    // AssertThrow(mesh_component != nullptr);
-                    // AssertThrow(mesh_component->proxy != nullptr);
-
-                    // HYP_LOG(UI, Debug, "Mouse hover on {}: {} (name: {}), Material ID: {} (dynamic: {}), proxy material id: #{}, Entity ID: {}",
-                    //     ::hyperion::GetClass(ui_object.GetTypeID())->GetName(),
-                    //     uint64(ui_object->GetID()),
+                    // HYP_LOG(UI, Debug, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}, Depth: {}",
+                    //     GetClass(ui_object.GetTypeID())->GetName(),
                     //     ui_object->GetName(),
-                    //     ui_object->GetMaterial()->GetID().Value(),
-                    //     ui_object->GetMaterial()->IsDynamic(),
-                    //     mesh_component->proxy->material.GetID().Value(),
-                    //     ui_object->GetEntity().Value());
+                    //     ui_object->GetText(),
+                    //     ui_object->GetActualSize(),
+                    //     ui_object->GetActualInnerSize(),
+                    //     ui_object->GetActualSizeClamped(),
+                    //     ui_object->GetComputedDepth());
 
                     if (mouse_hover_event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {
                         break;

@@ -350,11 +350,11 @@ void HyperionEditor::Init()
         sun
     });
 
-    m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sun_entity, ShadowMapComponent {
-        .mode       = ShadowMode::PCF,
-        .radius     = 35.0f,
-        .resolution = { 2048, 2048 }
-    });
+    // m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sun_entity, ShadowMapComponent {
+    //     .mode       = ShadowMode::PCF,
+    //     .radius     = 35.0f,
+    //     .resolution = { 2048, 2048 }
+    // });
 
 
     // Add Skybox
@@ -382,6 +382,7 @@ void HyperionEditor::Init()
         skydome_node.SetName("Sky");
     }
 
+#if 1
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
     batch->Add("test_model", "models/sponza/sponza.obj");
@@ -488,6 +489,7 @@ void HyperionEditor::Init()
     }).Detach();
 
     batch->LoadAsync();
+#endif
 
 #else
     HypData loaded_scene_data;
