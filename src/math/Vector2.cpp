@@ -110,13 +110,13 @@ int math::detail::Vec2<int>::Min() const
 }
 
 template<>
-uint math::detail::Vec2<uint>::Max() const
+uint32 math::detail::Vec2<uint32>::Max() const
 {
     return MathUtil::Max(x, y);
 }
 
 template<>
-uint math::detail::Vec2<uint>::Min() const
+uint32 math::detail::Vec2<uint32>::Min() const
 {
     return MathUtil::Min(x, y);
 }
@@ -136,7 +136,7 @@ std::ostream &operator<<(std::ostream &out, const Vec2<int> &vec) // output
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const Vec2<uint> &vec) // output
+std::ostream &operator<<(std::ostream &out, const Vec2<uint32> &vec) // output
 {
     out << "[" << vec.x << ", " << vec.y << "]";
     return out;

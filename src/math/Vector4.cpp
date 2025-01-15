@@ -44,13 +44,13 @@ int math::detail::Vec4<int>::Min() const
 }
 
 template<>
-uint math::detail::Vec4<uint>::Max() const
+uint32 math::detail::Vec4<uint32>::Max() const
 {
     return MathUtil::Max(x, MathUtil::Max(y, MathUtil::Max(z, w)));
 }
 
 template<>
-uint math::detail::Vec4<uint>::Min() const
+uint32 math::detail::Vec4<uint32>::Min() const
 {
     return MathUtil::Min(x, MathUtil::Min(y, MathUtil::Min(z, w)));
 }
@@ -144,7 +144,7 @@ Vec4<int> math::detail::Vec4<int>::Max(const Vec4<int> &a, const Vec4<int> &b)
 }
 
 template <>
-Vec4<uint> math::detail::Vec4<uint>::Abs(const Vec4<uint> &vec)
+Vec4<uint32> math::detail::Vec4<uint32>::Abs(const Vec4<uint32> &vec)
 {
     return {
         MathUtil::Abs(vec.x),
@@ -155,7 +155,7 @@ Vec4<uint> math::detail::Vec4<uint>::Abs(const Vec4<uint> &vec)
 }
 
 template <>
-Vec4<uint> math::detail::Vec4<uint>::Min(const Vec4<uint> &a, const Vec4<uint> &b)
+Vec4<uint32> math::detail::Vec4<uint32>::Min(const Vec4<uint32> &a, const Vec4<uint32> &b)
 {
     return {
         MathUtil::Min(a.x, b.x),
@@ -166,7 +166,7 @@ Vec4<uint> math::detail::Vec4<uint>::Min(const Vec4<uint> &a, const Vec4<uint> &
 }
 
 template <>
-Vec4<uint> math::detail::Vec4<uint>::Max(const Vec4<uint> &a, const Vec4<uint> &b)
+Vec4<uint32> math::detail::Vec4<uint32>::Max(const Vec4<uint32> &a, const Vec4<uint32> &b)
 {
     return {
         MathUtil::Max(a.x, b.x),
@@ -243,7 +243,7 @@ std::ostream &operator<<(std::ostream &out, const Vec4<int> &vec) // output
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const Vec4<uint> &vec) // output
+std::ostream &operator<<(std::ostream &out, const Vec4<uint32> &vec) // output
 {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << "]";
     return out;

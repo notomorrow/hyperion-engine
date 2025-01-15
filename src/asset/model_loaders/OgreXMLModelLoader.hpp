@@ -24,7 +24,7 @@ public:
 
         struct BoneAssignment
         {
-            uint    index;
+            uint32  index;
             float   weight;
         };
 
@@ -37,7 +37,7 @@ public:
         Array<Vertex>                           vertices;
 
         Array<SubMesh>                          submeshes;
-        FlatMap<uint, Array<BoneAssignment>>    bone_assignments;
+        FlatMap<uint32, Array<BoneAssignment>>  bone_assignments;
 
         String                                  skeleton_name;
     };

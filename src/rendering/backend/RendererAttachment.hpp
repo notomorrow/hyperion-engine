@@ -97,14 +97,14 @@ public:
     HYP_FORCE_INLINE void SetBlendFunction(const BlendFunction &blend_function)
         { m_blend_function = blend_function; }
 
-    HYP_FORCE_INLINE uint GetBinding() const
+    HYP_FORCE_INLINE uint32 GetBinding() const
         { return m_binding; }
     
-    HYP_FORCE_INLINE void SetBinding(uint binding)
+    HYP_FORCE_INLINE void SetBinding(uint32 binding)
         { m_binding = binding; }
 
     HYP_FORCE_INLINE bool HasBinding() const 
-        { return m_binding != MathUtil::MaxSafeValue<uint>(); }
+        { return m_binding != MathUtil::MaxSafeValue<uint32>(); }
 
     HYP_FORCE_INLINE bool AllowBlending() const
         { return m_allow_blending; }
@@ -130,7 +130,7 @@ private:
 
     BlendFunction                       m_blend_function;
 
-    uint                                m_binding = MathUtil::MaxSafeValue<uint>();
+    uint32                              m_binding = MathUtil::MaxSafeValue<uint32>();
 
     bool                                m_allow_blending = true;
 };

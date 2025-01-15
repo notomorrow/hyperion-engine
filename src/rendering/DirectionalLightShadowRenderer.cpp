@@ -30,7 +30,7 @@ using renderer::RenderPassMode;
 using renderer::LoadOperation;
 using renderer::StoreOperation;
 
-static const InternalFormat shadow_map_formats[uint(ShadowMode::MAX)] = {
+static const InternalFormat shadow_map_formats[uint32(ShadowMode::MAX)] = {
     InternalFormat::R32F,   // STANDARD
     InternalFormat::R32F,   // PCF
     InternalFormat::R32F,   // CONTACT_HARDENED
@@ -41,11 +41,11 @@ static const InternalFormat shadow_map_formats[uint(ShadowMode::MAX)] = {
 
 struct RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet) : renderer::RenderCommand
 {
-    uint            shadow_map_index;
+    uint32          shadow_map_index;
     ImageViewRef    shadow_map_image_view;
 
     RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet)(
-        uint shadow_map_index,
+        uint32 shadow_map_index,
         ImageViewRef shadow_map_image_view
     ) : shadow_map_index(shadow_map_index),
         shadow_map_image_view(std::move(shadow_map_image_view))
@@ -57,7 +57,7 @@ struct RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet) : renderer::RenderComma
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index)
                 ->SetElement(NAME("ShadowMapTextures"), shadow_map_index, shadow_map_image_view);
         }
@@ -68,10 +68,10 @@ struct RENDER_COMMAND(SetShadowMapInGlobalDescriptorSet) : renderer::RenderComma
 
 struct RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet) : renderer::RenderCommand
 {
-    uint    shadow_map_index;
+    uint32  shadow_map_index;
 
     RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet)(
-        uint shadow_map_index
+        uint32 shadow_map_index
     ) : shadow_map_index(shadow_map_index)
     {
     }
@@ -80,7 +80,7 @@ struct RENDER_COMMAND(UnsetShadowMapInGlobalDescriptorSet) : renderer::RenderCom
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index)
                 ->SetElement(NAME("ShadowMapTextures"), shadow_map_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
         }
@@ -192,7 +192,7 @@ ShadowPass::ShadowPass(
     RenderCollector *render_collector_statics,
     RenderCollector *render_collector_dynamics,
     RerenderShadowsSemaphore *rerender_semaphore
-) : FullScreenPass(shadow_map_formats[uint(shadow_mode)], extent),
+) : FullScreenPass(shadow_map_formats[uint32(shadow_mode)], extent),
     m_parent_scene(parent_scene),
     m_shadow_mode(shadow_mode),
     m_shadow_map_index(~0u),
@@ -305,7 +305,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
 
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("CombineShadowMapsDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -330,7 +330,7 @@ void ShadowPass::CreateComputePipelines()
 
     // have to create descriptor sets specifically for compute shader,
     // holding framebuffer attachment image (src), and our final shadowmap image (dst)
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("BlurShadowMapDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -426,7 +426,7 @@ void ShadowPass::Render(Frame *frame)
         }
     }
 
-    g_engine->GetRenderState()->UnbindScene();
+    g_engine->GetRenderState()->UnbindScene(m_parent_scene.Get());
 
     { // Combine static and dynamic shadow maps
         const AttachmentRef &attachment = m_combine_shadow_maps_pass->GetFramebuffer()->GetAttachment(0);

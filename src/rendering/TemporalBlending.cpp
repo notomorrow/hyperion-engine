@@ -115,7 +115,7 @@ void TemporalBlending::Create()
         const ImageViewRef &velocity_texture = g_engine->GetDeferredRenderer()->GetGBuffer()->GetBucket(Bucket::BUCKET_OPAQUE)
             .GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView();
 
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             m_descriptor_table->GetDescriptorSet(NAME("TemporalBlendingDescriptorSet"), frame_index)
                 ->SetElement(NAME("VelocityImage"), velocity_texture);
         }
@@ -177,15 +177,15 @@ ShaderProperties TemporalBlending::GetShaderProperties() const
         shader_properties.Set("OUTPUT_RGBA32F");
         break;
     default:
-        AssertThrowMsg(false, "Unsupported format for temporal blending: %u\n", uint(m_image_format));
+        AssertThrowMsg(false, "Unsupported format for temporal blending: %u\n", uint32(m_image_format));
 
         break;
     }
 
     static const String feedback_strings[] = { "LOW", "MEDIUM", "HIGH" };
 
-    shader_properties.Set("TEMPORAL_BLEND_TECHNIQUE_" + String::ToString(uint(m_technique)));
-    shader_properties.Set("FEEDBACK_" + feedback_strings[MathUtil::Min(uint(m_feedback), ArraySize(feedback_strings) - 1)]);
+    shader_properties.Set("TEMPORAL_BLEND_TECHNIQUE_" + String::ToString(uint32(m_technique)));
+    shader_properties.Set("FEEDBACK_" + feedback_strings[MathUtil::Min(uint32(m_feedback), ArraySize(feedback_strings) - 1)]);
 
     return shader_properties;
 }
@@ -231,7 +231,7 @@ void TemporalBlending::CreateDescriptorSets()
         &m_history_texture
     };
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         if (m_input_framebuffer.IsValid()) {
             AssertThrowMsg(m_input_framebuffer->GetAttachmentMap().Size() != 0, "No attachment refs on input framebuffer!");
         }
@@ -286,6 +286,10 @@ void TemporalBlending::Render(Frame *frame)
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
+
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
@@ -325,7 +329,7 @@ void TemporalBlending::Render(Frame *frame)
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) }
                 }
             }

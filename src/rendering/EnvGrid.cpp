@@ -38,7 +38,7 @@ static const Vec2u sh_probe_dimensions { 16, 16 };
 static const uint32 sh_num_levels = MathUtil::Max(1u, uint32(MathUtil::FastLog2(sh_num_samples.Max()) + 1));
 static const bool sh_parallel_reduce = false;
 
-static const uint max_queued_probes_for_render = 4;
+static const uint32 max_queued_probes_for_render = 4;
 
 static const InternalFormat ambient_probe_format = InternalFormat::R10G10B10A2;
 
@@ -72,9 +72,9 @@ static EnvProbeIndex GetProbeBindingIndex(const Vec3f &probe_position, const Bou
 
     EnvProbeIndex calculated_probe_index = invalid_probe_index;
 
-    if (probe_index_at_point >= 0 && uint(probe_index_at_point) < max_bound_ambient_probes) {
+    if (probe_index_at_point >= 0 && uint32(probe_index_at_point) < max_bound_ambient_probes) {
         calculated_probe_index = EnvProbeIndex(
-            Vec3u { uint(diff_units.x), uint(diff_units.y), uint(diff_units.z) },
+            Vec3u { uint32(diff_units.x), uint32(diff_units.y), uint32(diff_units.z) },
             grid_density
         );
     }
@@ -122,7 +122,7 @@ struct RENDER_COMMAND(SetElementInGlobalDescriptorSet) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             if (value.Is<GPUBufferRef>()) {
                 g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(set_name, frame_index)
                     ->SetElement(element_name, value.Get<GPUBufferRef>());
@@ -181,9 +181,9 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
     struct RENDER_COMMAND(UpdateEnvProbeAABBsInGrid) : renderer::RenderCommand
     {
         EnvGrid     *grid;
-        Array<uint> updates;
+        Array<uint32> updates;
 
-        RENDER_COMMAND(UpdateEnvProbeAABBsInGrid)(EnvGrid *grid, Array<uint> &&updates)
+        RENDER_COMMAND(UpdateEnvProbeAABBsInGrid)(EnvGrid *grid, Array<uint32> &&updates)
             : grid(grid),
               updates(std::move(updates))
         {
@@ -196,7 +196,7 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
 
         virtual RendererResult operator()() override
         {
-            for (uint update_index = 0; update_index < uint(updates.Size()); update_index++) {
+            for (uint32 update_index = 0; update_index < uint32(updates.Size()); update_index++) {
                 grid->m_env_probe_collection.SetProbeIndexOnRenderThread(update_index, updates[update_index]);
             }
 
@@ -234,12 +234,12 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
         m_camera->SetTranslation(m_aabb.GetCenter());
     }
 
-    Array<uint> updates;
+    Array<uint32> updates;
     updates.Resize(m_env_probe_collection.num_probes);
 
-    for (uint x = 0; x < m_options.density.x; x++) {
-        for (uint y = 0; y < m_options.density.y; y++) {
-            for (uint z = 0; z < m_options.density.z; z++) {
+    for (uint32 x = 0; x < m_options.density.x; x++) {
+        for (uint32 y = 0; y < m_options.density.y; y++) {
+            for (uint32 z = 0; z < m_options.density.z; z++) {
                 const Vec3i coord { int(x), int(y), int(z) };
                 const Vec3i scrolled_coord = coord + position_snapped;
 
@@ -283,7 +283,7 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
     }
 
     if (updates.Any()) {
-        for (uint update_index = 0; update_index < uint(updates.Size()); update_index++) {
+        for (uint32 update_index = 0; update_index < uint32(updates.Size()); update_index++) {
             AssertThrow(update_index < m_env_probe_collection.num_probes);
             AssertThrow(updates[update_index] < m_env_probe_collection.num_probes);
 
@@ -360,7 +360,7 @@ void EnvGrid::Init()
     }
 
     {
-        for (uint index = 0; index < ArraySize(m_shader_data.probe_indices); index++) {
+        for (uint32 index = 0; index < ArraySize(m_shader_data.probe_indices); index++) {
             m_shader_data.probe_indices[index] = invalid_probe_index.GetProbeIndex();
         }
 
@@ -448,7 +448,7 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
         true // skip frustum culling, until Camera supports multiple frustums.
     );
 
-    for (uint index = 0; index < m_env_probe_collection.num_probes; index++) {
+    for (uint32 index = 0; index < m_env_probe_collection.num_probes; index++) {
         // Don't worry about using the indirect index
         const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(index);
         AssertThrow(probe.IsValid());
@@ -472,7 +472,7 @@ void EnvGrid::OnRender(Frame *frame)
 
     m_shader_data.enabled_indices_mask = { 0, 0, 0, 0 };
 
-    for (uint index = 0; index < ArraySize(m_shader_data.probe_indices); index++) {
+    for (uint32 index = 0; index < ArraySize(m_shader_data.probe_indices); index++) {
         const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeOnRenderThread(index);
 
         // @TODO: Set enabled_indices_mask properly
@@ -482,7 +482,7 @@ void EnvGrid::OnRender(Frame *frame)
 
     if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.debug.env_grid_probes").ToBool()) {
         // Debug draw
-        for (uint index = 0; index < m_env_probe_collection.num_probes; index++) {
+        for (uint32 index = 0; index < m_env_probe_collection.num_probes; index++) {
             const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(index);
 
             if (!probe.IsValid()) {
@@ -508,11 +508,11 @@ void EnvGrid::OnRender(Frame *frame)
 
         const Vec3f &camera_position = active_camera.GetBufferData().camera_position.GetXYZ();
 
-        Array<Pair<uint, float>> indices_distances;
+        Array<Pair<uint32, float>> indices_distances;
         indices_distances.Reserve(16);
 
-        for (uint i = 0; i < m_env_probe_collection.num_probes; i++) {
-            const uint index = (m_current_probe_index + i) % m_env_probe_collection.num_probes;
+        for (uint32 i = 0; i < m_env_probe_collection.num_probes; i++) {
+            const uint32 index = (m_current_probe_index + i) % m_env_probe_collection.num_probes;
             const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeOnRenderThread(index);
 
             if (probe.IsValid()) {// && probe->NeedsRender()) {
@@ -529,8 +529,8 @@ void EnvGrid::OnRender(Frame *frame)
 
         if (indices_distances.Any()) {
             for (const auto &it : indices_distances) {
-                const uint found_index = it.first;
-                const uint indirect_index = m_env_probe_collection.GetEnvProbeIndexOnRenderThread(found_index);
+                const uint32 found_index = it.first;
+                const uint32 indirect_index = m_env_probe_collection.GetEnvProbeIndexOnRenderThread(found_index);
 
                 const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(indirect_index);
                 AssertThrow(probe.IsValid());
@@ -620,7 +620,7 @@ void EnvGrid::CreateVoxelGridData()
 
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
         DescriptorSetRef descriptor_set = descriptor_table->GetDescriptorSet(NAME("VoxelizeProbeDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
@@ -672,10 +672,10 @@ void EnvGrid::CreateVoxelGridData()
 
         renderer::DescriptorTableDeclaration generate_voxel_grid_mipmaps_descriptor_table_decl = generate_voxel_grid_mipmaps_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
-        const uint num_voxel_grid_mip_levels = m_voxel_grid_texture->GetImage()->NumMipmaps();
+        const uint32 num_voxel_grid_mip_levels = m_voxel_grid_texture->GetImage()->NumMipmaps();
         m_voxel_grid_mips.Resize(num_voxel_grid_mip_levels);
 
-        for (uint mip_level = 0; mip_level < num_voxel_grid_mip_levels; mip_level++) {
+        for (uint32 mip_level = 0; mip_level < num_voxel_grid_mip_levels; mip_level++) {
             m_voxel_grid_mips[mip_level] = MakeRenderObject<ImageView>();
 
             DeferCreate(
@@ -689,7 +689,7 @@ void EnvGrid::CreateVoxelGridData()
             // create descriptor sets for mip generation.
             DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(generate_voxel_grid_mipmaps_descriptor_table_decl);
 
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 const DescriptorSetRef &mip_descriptor_set = descriptor_table->GetDescriptorSet(NAME("GenerateMipmapDescriptorSet"), frame_index);
                 AssertThrow(mip_descriptor_set != nullptr);
 
@@ -725,7 +725,7 @@ void EnvGrid::CreateSHData()
 
     m_sh_tiles_buffers.Resize(sh_num_levels);
 
-    for (uint i = 0; i < sh_num_levels; i++) {
+    for (uint32 i = 0; i < sh_num_levels; i++) {
         m_sh_tiles_buffers[i] = MakeRenderObject<GPUBuffer>(GPUBufferType::STORAGE_BUFFER);
 
         DeferCreate(
@@ -749,10 +749,10 @@ void EnvGrid::CreateSHData()
 
     m_compute_sh_descriptor_tables.Resize(sh_num_levels);
     
-    for (uint i = 0; i < sh_num_levels; i++) {
+    for (uint32 i = 0; i < sh_num_levels; i++) {
         m_compute_sh_descriptor_tables[i] = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &compute_sh_descriptor_set = m_compute_sh_descriptor_tables[i]->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frame_index);
             AssertThrow(compute_sh_descriptor_set != nullptr);
 
@@ -884,8 +884,10 @@ void EnvGrid::RenderEnvProbe(
         struct alignas(128) { uint32 env_probe_index; } push_constants;
         push_constants.env_probe_index = probe.GetID().ToIndex();
 
+        const Scene *scene = GetParent()->GetScene();
+
         g_engine->GetRenderState()->SetActiveEnvProbe(probe.GetID());
-        g_engine->GetRenderState()->BindScene(GetParent()->GetScene());
+        g_engine->GetRenderState()->BindScene(scene);
 
         m_render_collector.CollectDrawCalls(
             frame,
@@ -900,7 +902,7 @@ void EnvGrid::RenderEnvProbe(
             &push_constants
         );
 
-        g_engine->GetRenderState()->UnbindScene();
+        g_engine->GetRenderState()->UnbindScene(scene);
         g_engine->GetRenderState()->UnsetActiveEnvProbe();
     }
 
@@ -937,6 +939,10 @@ void EnvGrid::ComputeSH(
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(probe_index);//GetEnvProbeOnRenderThread(probe_index);
     AssertThrow(probe.IsValid());
@@ -989,7 +995,7 @@ void EnvGrid::ComputeSH(
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
@@ -1015,7 +1021,7 @@ void EnvGrid::ComputeSH(
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
@@ -1026,7 +1032,7 @@ void EnvGrid::ComputeSH(
 
     // Parallel reduce
     if (sh_parallel_reduce) {
-        for (uint i = 1; i < sh_num_levels; i++) {
+        for (uint32 i = 1; i < sh_num_levels; i++) {
             g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
                 frame,
                 m_sh_tiles_buffers[i - 1],
@@ -1065,7 +1071,7 @@ void EnvGrid::ComputeSH(
                     {
                         NAME("Scene"),
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                             { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
@@ -1076,7 +1082,7 @@ void EnvGrid::ComputeSH(
         }
     }
 
-    const uint finalize_sh_buffer_index = sh_parallel_reduce ? sh_num_levels - 1 : 0;
+    const uint32 finalize_sh_buffer_index = sh_parallel_reduce ? sh_num_levels - 1 : 0;
 
     // Finalize - build into final buffer
     g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
@@ -1102,7 +1108,7 @@ void EnvGrid::ComputeSH(
             {
                 NAME("Scene"),
                 {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(probe.GetID().ToIndex()) }
@@ -1277,7 +1283,7 @@ void EnvGrid::VoxelizeProbe(
             uint32  mip_level;
         } push_constant_data;
 
-        for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
+        for (uint32 mip_level = 0; mip_level < num_mip_levels; mip_level++) {
             const Vec3u prev_mip_extent = mip_extent;
 
             mip_extent.x = MathUtil::Max(1u, voxel_image_extent.x >> mip_level);

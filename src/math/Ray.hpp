@@ -21,7 +21,7 @@ struct Triangle;
 class RayTestResults;
 struct RayHit;
 
-using RayHitID = uint;
+using RayHitID = uint32;
 
 HYP_STRUCT(Size=32, Serialize="bitwise")
 struct HYP_API Ray

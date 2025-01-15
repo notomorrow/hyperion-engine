@@ -15,7 +15,7 @@ namespace hyperion {
 
 #pragma region AssetBatch
 
-void AssetBatch::LoadAsync(uint num_batches)
+void AssetBatch::LoadAsync(uint32 num_batches)
 {
     HYP_SCOPE;
 
@@ -28,23 +28,23 @@ void AssetBatch::LoadAsync(uint num_batches)
     // partition each proc
     AssertThrow(m_procs.Size() == m_enqueued_assets->Size());
 
-    const uint num_items = uint(m_procs.Size());
+    const uint32 num_items = uint32(m_procs.Size());
 
     num_batches = MathUtil::Max(num_batches, 1u);
     num_batches = MathUtil::Min(num_batches, num_items);
 
-    const uint items_per_batch = num_items / num_batches;
+    const uint32 items_per_batch = num_items / num_batches;
 
-    for (uint batch_index = 0; batch_index < num_batches; batch_index++) {
-        const uint offset_index = batch_index * items_per_batch;
+    for (uint32 batch_index = 0; batch_index < num_batches; batch_index++) {
+        const uint32 offset_index = batch_index * items_per_batch;
 
-        const uint max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+        const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
         AssertThrow(max_index >= offset_index);
 
         Array<UniquePtr<ProcessAssetFunctorBase>> batch_procs;
         batch_procs.Reserve(max_index - offset_index);
 
-        for (uint i = offset_index; i < max_index; ++i) {
+        for (uint32 i = offset_index; i < max_index; ++i) {
             AssertThrow(i < m_procs.Size());
             AssertThrow(m_procs[i] != nullptr);
             batch_procs.PushBack(std::move(m_procs[i]));

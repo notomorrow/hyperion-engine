@@ -35,7 +35,7 @@ struct RENDER_COMMAND(SetDepthPyramidInGlobalDescriptorSet) : renderer::RenderCo
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                 ->SetElement(NAME("DepthPyramidResult"), depth_pyramid_image_view);
         }
@@ -50,7 +50,7 @@ struct RENDER_COMMAND(UnsetDepthPyramidInGlobalDescriptorSet) : renderer::Render
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                 ->SetElement(NAME("DepthPyramidResult"), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
         }
@@ -127,12 +127,12 @@ void DepthPyramidRenderer::Create()
         m_depth_pyramid_view = MakeRenderObject<ImageView>();
         m_depth_pyramid_view->Create(g_engine->GetGPUDevice(), m_depth_pyramid);
 
-        const uint num_mip_levels = m_depth_pyramid->NumMipmaps();
+        const uint32 num_mip_levels = m_depth_pyramid->NumMipmaps();
 
         m_depth_pyramid_mips.Clear();
         m_depth_pyramid_mips.Reserve(num_mip_levels);
 
-        for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
+        for (uint32 mip_level = 0; mip_level < num_mip_levels; mip_level++) {
             ImageViewRef mip_image_view = MakeRenderObject<ImageView>();
 
             HYPERION_ASSERT_RESULT(mip_image_view->Create(
@@ -161,12 +161,12 @@ void DepthPyramidRenderer::Create()
             m_mip_descriptor_tables.PushFront(DescriptorTableRef { });
         }
 
-        for (uint mip_level = 0; mip_level < num_mip_levels; mip_level++) {
+        for (uint32 mip_level = 0; mip_level < num_mip_levels; mip_level++) {
             DescriptorTableRef &descriptor_table = m_mip_descriptor_tables[mip_level];
 
             const auto SetDescriptorSetElements = [&]()
             {
-                for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+                for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                     const DescriptorSetRef &depth_pyramid_descriptor_set = descriptor_table->GetDescriptorSet(NAME("DepthPyramidDescriptorSet"), frame_index);
                     AssertThrow(depth_pyramid_descriptor_set != nullptr);
 
@@ -193,7 +193,7 @@ void DepthPyramidRenderer::Create()
             } else {
                 SetDescriptorSetElements();
 
-                for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+                for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                     HYPERION_ASSERT_RESULT(descriptor_table->Update(g_engine->GetGPUDevice(), frame_index));
                 }
             }
@@ -241,7 +241,7 @@ void DepthPyramidRenderer::Render(Frame *frame)
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     DebugMarker marker(command_buffer, "Depth pyramid generation");
 
@@ -253,7 +253,7 @@ void DepthPyramidRenderer::Render(Frame *frame)
     uint32 mip_width = image_extent.x,
         mip_height = image_extent.y;
 
-    for (uint mip_level = 0; mip_level < num_depth_pyramid_mip_levels; mip_level++) {
+    for (uint32 mip_level = 0; mip_level < num_depth_pyramid_mip_levels; mip_level++) {
         // level 0 == write just-rendered depth image into mip 0
 
         // put the mip into writeable state

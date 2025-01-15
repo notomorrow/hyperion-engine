@@ -127,7 +127,7 @@ Handle<Mesh> MeshBuilder::Cube()
     return mesh;
 }
 
-Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint num_divisions)
+Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 num_divisions)
 {
     const float step = 1.0f / float(num_divisions);
 
@@ -324,10 +324,10 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(VoxelGrid voxel_grid)
 {
     Handle<Mesh> mesh;
 
-    for (uint x = 0; x < voxel_grid.size.x; x++) {
-        for (uint y = 0; y < voxel_grid.size.y; y++) {
-            for (uint z = 0; z < voxel_grid.size.z; z++) {
-                uint index = voxel_grid.GetIndex(x, y, z);
+    for (uint32 x = 0; x < voxel_grid.size.x; x++) {
+        for (uint32 y = 0; y < voxel_grid.size.y; y++) {
+            for (uint32 z = 0; z < voxel_grid.size.z; z++) {
+                uint32 index = voxel_grid.GetIndex(x, y, z);
 
                 if (!voxel_grid.voxels[index].filled) {
                     continue;

@@ -69,7 +69,7 @@ void RenderObjectDeleter<Platform::CURRENT>::RemoveAllNow(bool force)
 
     { // init atomic vars
         DeletionQueueBase **queue = queues.Data();
-        for (uint queue_index = 0; *queue; ++queue_index, ++queue) {
+        for (uint32 queue_index = 0; *queue; ++queue_index, ++queue) {
             queue_num_items[queue_index] = &(*queue)->num_items;
         }
     }

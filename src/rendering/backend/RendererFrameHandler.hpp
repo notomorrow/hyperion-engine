@@ -37,9 +37,9 @@ class FrameHandler
 public:
     static constexpr PlatformType platform = PLATFORM;
     
-    using NextImageFunction = std::add_pointer_t<RendererResult(Device<PLATFORM> *device, Swapchain<PLATFORM> *swapchain, Frame<PLATFORM> *frame, uint *image_index)>;
+    using NextImageFunction = std::add_pointer_t<RendererResult(Device<PLATFORM> *device, Swapchain<PLATFORM> *swapchain, Frame<PLATFORM> *frame, uint32 *image_index)>;
 
-    FrameHandler(uint num_frames, NextImageFunction next_image);
+    FrameHandler(uint32 num_frames, NextImageFunction next_image);
     FrameHandler(const FrameHandler &other)                 = delete;
     FrameHandler &operator=(const FrameHandler &other)      = delete;
     FrameHandler(FrameHandler &&other) noexcept             = delete;
@@ -49,10 +49,10 @@ public:
     HYP_FORCE_INLINE const FrameRef<PLATFORM> &GetCurrentFrame() const
         { return m_frames[m_current_frame_index]; }
 
-    HYP_FORCE_INLINE uint GetAcquiredImageIndex() const
+    HYP_FORCE_INLINE uint32 GetAcquiredImageIndex() const
         { return m_acquired_image_index; }
 
-    HYP_FORCE_INLINE uint GetCurrentFrameIndex() const
+    HYP_FORCE_INLINE uint32 GetCurrentFrameIndex() const
         { return m_current_frame_index; }
 
     /* Used to acquire a new image from the provided next_image function.
@@ -69,8 +69,8 @@ public:
 private:
     FixedArray<FrameRef<PLATFORM>, max_frames_in_flight>    m_frames;
     NextImageFunction                                       m_next_image;
-    uint                                                    m_acquired_image_index;
-    uint                                                    m_current_frame_index;
+    uint32                                                  m_acquired_image_index;
+    uint32                                                  m_current_frame_index;
 };
 
 } // namespace platform

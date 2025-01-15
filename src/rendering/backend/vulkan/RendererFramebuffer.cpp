@@ -17,7 +17,7 @@ namespace platform {
 template <>
 RendererResult AttachmentMap<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
 {
-    for (KeyValuePair<uint, AttachmentDef<Platform::VULKAN>> &it : attachments) {
+    for (KeyValuePair<uint32, AttachmentDef<Platform::VULKAN>> &it : attachments) {
         AttachmentDef<Platform::VULKAN> &def = it.second;
 
         AssertThrow(def.image.IsValid());
@@ -39,7 +39,7 @@ RendererResult AttachmentMap<Platform::VULKAN>::Create(Device<Platform::VULKAN> 
 template <>
 RendererResult AttachmentMap<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *device, Vec2u new_size)
 {
-    for (KeyValuePair<uint, AttachmentDef<Platform::VULKAN>> &it : attachments) {
+    for (KeyValuePair<uint32, AttachmentDef<Platform::VULKAN>> &it : attachments) {
         AttachmentDef<Platform::VULKAN> &def = it.second;
 
         AssertThrow(def.image.IsValid());
@@ -81,7 +81,7 @@ RendererResult AttachmentMap<Platform::VULKAN>::Resize(Device<Platform::VULKAN> 
 
     commands.Push([&](const CommandBufferRef<Platform::VULKAN> &command_buffer) -> RendererResult
     {
-        for (KeyValuePair<uint, AttachmentDef<Platform::VULKAN>> &it : attachments) {
+        for (KeyValuePair<uint32, AttachmentDef<Platform::VULKAN>> &it : attachments) {
             AttachmentDef<Platform::VULKAN> &def = it.second;
 
             def.image->InsertBarrier(command_buffer, ResourceState::SHADER_RESOURCE);
@@ -102,7 +102,7 @@ Framebuffer<Platform::VULKAN>::Framebuffer(
     Vec2u extent,
     RenderPassStage stage,
     RenderPassMode render_pass_mode,
-    uint num_multiview_layers
+    uint32 num_multiview_layers
 ) : m_platform_impl { this, VK_NULL_HANDLE },
     m_extent(extent),
     m_render_pass(MakeRenderObject<RenderPass<Platform::VULKAN>>(stage, render_pass_mode, num_multiview_layers))
@@ -112,7 +112,7 @@ Framebuffer<Platform::VULKAN>::Framebuffer(
 template <>
 Framebuffer<Platform::VULKAN>::~Framebuffer()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         AssertThrowMsg(m_platform_impl.handles[frame_index] == VK_NULL_HANDLE, "Expected framebuffer to have been destroyed");
     }
 }
@@ -144,7 +144,7 @@ RendererResult Framebuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *d
     Array<VkImageView> attachment_image_views;
     attachment_image_views.Reserve(m_attachment_map.attachments.Size());
 
-    uint num_layers = 1;
+    uint32 num_layers = 1;
     
     for (const auto &it : m_attachment_map.attachments) {
         AssertThrow(it.second.attachment != nullptr);
@@ -162,7 +162,7 @@ RendererResult Framebuffer<Platform::VULKAN>::Create(Device<Platform::VULKAN> *d
     framebuffer_create_info.height = m_extent.y;
     framebuffer_create_info.layers = num_layers;
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         HYPERION_VK_CHECK(vkCreateFramebuffer(
             device->GetDevice(),
             &framebuffer_create_info,
@@ -181,7 +181,7 @@ RendererResult Framebuffer<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *
         HYPERION_RETURN_OK;
     }
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         if (m_platform_impl.handles[frame_index] != VK_NULL_HANDLE) {
             vkDestroyFramebuffer(device->GetDevice(), m_platform_impl.handles[frame_index], nullptr);
             m_platform_impl.handles[frame_index] = VK_NULL_HANDLE;
@@ -210,7 +210,7 @@ RendererResult Framebuffer<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *d
 
     HYPERION_BUBBLE_ERRORS(m_attachment_map.Resize(device, new_size));
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         if (m_platform_impl.handles[frame_index] != VK_NULL_HANDLE) {
             vkDestroyFramebuffer(device->GetDevice(), m_platform_impl.handles[frame_index], nullptr);
             m_platform_impl.handles[frame_index] = VK_NULL_HANDLE;
@@ -220,7 +220,7 @@ RendererResult Framebuffer<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *d
     Array<VkImageView> attachment_image_views;
     attachment_image_views.Reserve(m_attachment_map.attachments.Size());
 
-    uint num_layers = 1;
+    uint32 num_layers = 1;
     
     for (const auto &it : m_attachment_map.attachments) {
         AssertThrow(it.second.attachment != nullptr);
@@ -238,7 +238,7 @@ RendererResult Framebuffer<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *d
     framebuffer_create_info.height = new_size.y;
     framebuffer_create_info.layers = num_layers;
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         HYPERION_VK_CHECK(vkCreateFramebuffer(
             device->GetDevice(),
             &framebuffer_create_info,
@@ -251,7 +251,7 @@ RendererResult Framebuffer<Platform::VULKAN>::Resize(Device<Platform::VULKAN> *d
 }
 
 template <>
-bool Framebuffer<Platform::VULKAN>::RemoveAttachment(uint binding)
+bool Framebuffer<Platform::VULKAN>::RemoveAttachment(uint32 binding)
 {
     const auto it = m_attachment_map.attachments.Find(binding);
 
@@ -267,13 +267,13 @@ bool Framebuffer<Platform::VULKAN>::RemoveAttachment(uint binding)
 }
 
 template <>
-void Framebuffer<Platform::VULKAN>::BeginCapture(CommandBuffer<Platform::VULKAN> *command_buffer, uint frame_index)
+void Framebuffer<Platform::VULKAN>::BeginCapture(CommandBuffer<Platform::VULKAN> *command_buffer, uint32 frame_index)
 {
     m_render_pass->Begin(command_buffer, this, frame_index);
 }
 
 template <>
-void Framebuffer<Platform::VULKAN>::EndCapture(CommandBuffer<Platform::VULKAN> *command_buffer, uint frame_index)
+void Framebuffer<Platform::VULKAN>::EndCapture(CommandBuffer<Platform::VULKAN> *command_buffer, uint32 frame_index)
 {
     m_render_pass->End(command_buffer);
 }

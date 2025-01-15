@@ -35,7 +35,7 @@ namespace dotnet {
 class Object;
 } // namespace dotnet
 
-using ComponentFlags = uint;
+using ComponentFlags = uint32;
 
 template <class T>
 struct ComponentInitInfo

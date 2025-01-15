@@ -93,7 +93,7 @@ template <>
 class DescriptorSetManager<Platform::VULKAN>
 {
 public:
-    static constexpr uint max_descriptor_sets = 4096;
+    static constexpr uint32 max_descriptor_sets = 4096;
 
     DescriptorSetManager();
     DescriptorSetManager(const DescriptorSetManager &other)                 = delete;

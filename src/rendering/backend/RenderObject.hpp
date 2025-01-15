@@ -114,7 +114,7 @@ public:
         HYP_FORCE_INLINE void IncRefStrong()
             { ref_count_strong.Increment(1, MemoryOrder::RELAXED); }
 
-        HYP_FORCE_INLINE uint DecRefStrong()
+        HYP_FORCE_INLINE uint32 DecRefStrong()
         {
             AssertThrow(GetRefCountStrong() != 0);
 
@@ -125,19 +125,19 @@ public:
                 has_value = false;
             }
 
-            return uint(count) - 1;
+            return uint32(count) - 1;
         }
 
         HYP_FORCE_INLINE void IncRefWeak()
             { ref_count_weak.Increment(1, MemoryOrder::RELAXED); }
 
-        HYP_FORCE_INLINE uint DecRefWeak()
+        HYP_FORCE_INLINE uint32 DecRefWeak()
         {
             AssertThrow(GetRefCountWeak() != 0);
 
             const uint16 count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE);
 
-            return uint(count) - 1;
+            return uint32(count) - 1;
         }
 
         HYP_FORCE_INLINE T &Get()
@@ -163,11 +163,11 @@ public:
 
     ~RenderObjectContainer() = default;
 
-    HYP_FORCE_INLINE uint NextIndex()
+    HYP_FORCE_INLINE uint32 NextIndex()
     {
         using RenderObjectDefinitionType = RenderObjectDefinition<T, PLATFORM>;
 
-        const uint index = m_id_generator.NextID() - 1;
+        const uint32 index = m_id_generator.NextID() - 1;
 
         AssertThrowMsg(
             index < RenderObjectDefinitionType::max_size,
@@ -179,40 +179,40 @@ public:
         return index;
     }
 
-    HYP_FORCE_INLINE void IncRefStrong(uint index)
+    HYP_FORCE_INLINE void IncRefStrong(uint32 index)
         { m_data[index].IncRefStrong(); }
 
-    HYP_FORCE_INLINE void DecRefStrong(uint index)
+    HYP_FORCE_INLINE void DecRefStrong(uint32 index)
     {
         if (m_data[index].DecRefStrong() == 0 && m_data[index].GetRefCountWeak() == 0) {
             m_id_generator.FreeID(index + 1);
         }
     }
 
-    HYP_FORCE_INLINE void IncRefWeak(uint index)
+    HYP_FORCE_INLINE void IncRefWeak(uint32 index)
         { m_data[index].IncRefWeak(); }
 
-    HYP_FORCE_INLINE void DecRefWeak(uint index)
+    HYP_FORCE_INLINE void DecRefWeak(uint32 index)
     {
         if (m_data[index].DecRefWeak() == 0 && m_data[index].GetRefCountStrong() == 0) {
             m_id_generator.FreeID(index + 1);
         }
     }
 
-    HYP_FORCE_INLINE uint16 GetRefCountStrong(uint index)
+    HYP_FORCE_INLINE uint16 GetRefCountStrong(uint32 index)
         { return m_data[index].GetRefCountStrong(); }
 
-    HYP_FORCE_INLINE uint16 GetRefCountWeak(uint index)
+    HYP_FORCE_INLINE uint16 GetRefCountWeak(uint32 index)
         { return m_data[index].GetRefCountWeak(); }
 
-    HYP_FORCE_INLINE T &Get(uint index)
+    HYP_FORCE_INLINE T &Get(uint32 index)
         { return m_data[index].Get(); }
     
     template <class... Args>
-    HYP_FORCE_INLINE void ConstructAtIndex(uint index, Args &&... args)
+    HYP_FORCE_INLINE void ConstructAtIndex(uint32 index, Args &&... args)
         { m_data[index].Construct(std::forward<Args>(args)...); }
 
-    HYP_FORCE_INLINE Name GetDebugName(uint index) const
+    HYP_FORCE_INLINE Name GetDebugName(uint32 index) const
     {
 #ifdef HYP_DEBUG_MODE
         return m_debug_names[index];
@@ -221,7 +221,7 @@ public:
 #endif
     }
 
-    HYP_FORCE_INLINE void SetDebugName(uint index, Name name)
+    HYP_FORCE_INLINE void SetDebugName(uint32 index, Name name)
     {
 #ifdef HYP_DEBUG_MODE
         m_debug_names[index] = name;
@@ -276,7 +276,7 @@ public:
     {
         auto &container = GetRenderObjectContainer<T>();
 
-        const uint index = container.NextIndex();
+        const uint32 index = container.NextIndex();
 
         container.ConstructAtIndex(
             index,
@@ -308,7 +308,7 @@ public:
 
     static const RenderObjectHandle_Strong &Null();
 
-    static RenderObjectHandle_Strong FromIndex(uint index)
+    static RenderObjectHandle_Strong FromIndex(uint32 index)
     {
         RenderObjectHandle_Strong handle;
         handle.index = index;
@@ -467,7 +467,7 @@ public:
         return hc;
     }
 
-    uint index;
+    uint32 index;
 };
 
 template <class T, PlatformType PLATFORM>
@@ -496,7 +496,7 @@ public:
     
     static const RenderObjectHandle_Weak unset;
 
-    static RenderObjectHandle_Weak FromIndex(uint index)
+    static RenderObjectHandle_Weak FromIndex(uint32 index)
     {
         RenderObjectHandle_Weak handle;
         handle.index = index;
@@ -601,7 +601,7 @@ public:
         index = 0;
     }
 
-    uint index;
+    uint32 index;
 };
 
 template <class T, PlatformType PLATFORM>
@@ -767,7 +767,7 @@ struct DeletionQueueBase
 template <renderer::PlatformType PLATFORM>
 struct RenderObjectDeleter
 {
-    static constexpr uint       initial_cycles_remaining = max_frames_in_flight + 1;
+    static constexpr uint32     initial_cycles_remaining = max_frames_in_flight + 1;
     static constexpr SizeType   max_queues = 63;
 
     static FixedArray<DeletionQueueBase *, max_queues + 1>  queues;
@@ -778,7 +778,7 @@ struct RenderObjectDeleter
     {
         using Base = DeletionQueueBase;
 
-        static constexpr uint initial_cycles_remaining = max_frames_in_flight + 1;
+        static constexpr uint32 initial_cycles_remaining = max_frames_in_flight + 1;
 
         Array<Pair<renderer::RenderObjectHandle_Strong<T, PLATFORM>, uint8>>    items;
         Queue<renderer::RenderObjectHandle_Strong<T, PLATFORM>>                 to_delete;

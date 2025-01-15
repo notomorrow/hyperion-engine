@@ -76,7 +76,7 @@ static void AddOwnedAttachment(
 }
 
 static void AddSharedAttachment(
-    uint binding,
+    uint32 binding,
     FramebufferRef &framebuffer
 )
 {
@@ -191,9 +191,9 @@ const AttachmentRef &GBuffer::GBufferBucket::GetGBufferAttachment(GBufferResourc
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     AssertThrow(framebuffer != nullptr);
-    AssertThrow(uint(resource_name) < uint(GBUFFER_RESOURCE_MAX));
+    AssertThrow(uint32(resource_name) < uint32(GBUFFER_RESOURCE_MAX));
 
-    return framebuffer->GetAttachment(uint(resource_name));
+    return framebuffer->GetAttachment(uint32(resource_name));
 }
 
 void GBuffer::GBufferBucket::CreateFramebuffer(Vec2u resolution)
@@ -238,14 +238,14 @@ void GBuffer::GBufferBucket::CreateFramebuffer(Vec2u resolution)
         // opaque creates the main non-color gbuffer attachments,
         // which will be shared with other renderable buckets
         if (bucket == BUCKET_OPAQUE) {
-            for (uint i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
+            for (uint32 i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
                 const InternalFormat format = GetImageFormat(GBufferResourceName(i));
 
                 AddOwnedAttachment(i, format, framebuffer, framebuffer_extent);
             }
         } else {
             // add the attachments shared with opaque bucket
-            for (uint i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
+            for (uint32 i = 1; i < GBUFFER_RESOURCE_MAX; i++) {
                 AddSharedAttachment(i, framebuffer);
             }
         }

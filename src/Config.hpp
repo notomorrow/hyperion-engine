@@ -191,12 +191,12 @@ public:
 
     HYP_FORCE_INLINE Option &Get(OptionName option)
     {
-        return m_variables[uint(option)];
+        return m_variables[uint32(option)];
     }
 
     HYP_FORCE_INLINE const Option &Get(OptionName option) const
     {
-        return m_variables[uint(option)];
+        return m_variables[uint32(option)];
     }
 
     bool LoadFromDefinitionsFile();

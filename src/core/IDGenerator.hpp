@@ -46,7 +46,7 @@ struct IDGenerator
 
     ~IDGenerator()                                          = default;
 
-    uint NextID()
+    uint32 NextID()
     {
         uint32 current_num_free_indices;
         

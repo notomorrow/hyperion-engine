@@ -348,7 +348,7 @@ public:
 
 private:
     void ResetEntriesHash();
-    void RebuildEntriesHash(uint level = 0);
+    void RebuildEntriesHash(uint32 level = 0);
 
     void ClearInternal(Array<Entry> &out_entries);
     void Clear(Array<Entry> &out_entries);
@@ -397,7 +397,7 @@ private:
     RC<EntityManager>                                   m_entity_manager;
     
     Array<Entry>                                        m_entries;
-    FixedArray<HashCode, 1u << uint(EntityTag::MAX)>    m_entry_hashes;
+    FixedArray<HashCode, 1u << uint32(EntityTag::MAX)>    m_entry_hashes;
     Octree                                              *m_parent;
     BoundingBox                                         m_aabb;
     FixedArray<Octant, 8>                               m_octants;
@@ -405,7 +405,7 @@ private:
     OctreeState                                         *m_state;
     RC<VisibilityState>                                 m_visibility_state;
     OctantID                                            m_octant_id;
-    uint                                                m_invalidation_marker;
+    uint32                                              m_invalidation_marker;
 };
 
 } // namespace hyperion

@@ -20,12 +20,12 @@ namespace platform {
 
 #pragma region Helpers
 
-static uint FindMemoryType(Device<Platform::VULKAN> *device, uint vk_type_filter, VkMemoryPropertyFlags vk_memory_property_flags)
+static uint32 FindMemoryType(Device<Platform::VULKAN> *device, uint32 vk_type_filter, VkMemoryPropertyFlags vk_memory_property_flags)
 {
     VkPhysicalDeviceMemoryProperties mem_properties;
     vkGetPhysicalDeviceMemoryProperties(device->GetPhysicalDevice(), &mem_properties);
 
-    for (uint i = 0; i < mem_properties.memoryTypeCount; i++) {
+    for (uint32 i = 0; i < mem_properties.memoryTypeCount; i++) {
         if ((vk_type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & vk_memory_property_flags) == vk_memory_property_flags) {
             HYP_LOG(RenderingBackend, Debug, "Found Memory type {}", i);
             return i;
@@ -293,7 +293,7 @@ VmaAllocationCreateFlags GetVkAllocationCreateFlags(GPUBufferType type)
 //       allocation(VK_NULL_HANDLE),
 //       m_is_created(false)
 // {
-//     static uint allocations = 0;
+//     static uint32 allocations = 0;
 
 //     m_id = allocations++;
 // }

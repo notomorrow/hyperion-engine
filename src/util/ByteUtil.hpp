@@ -82,7 +82,7 @@ public:
      *  \param alignment The alignment to use.
      *  \return The value aligned to the specified alignment. */
     template <class T>
-    static inline constexpr T AlignAs(T value, uint alignment)
+    static inline constexpr T AlignAs(T value, uint32 alignment)
     {
         return ((value + alignment - 1) / alignment) * alignment;
     }
@@ -90,7 +90,7 @@ public:
     /*! \brief Gets the index of the lowest set bit in a 64-bit integer.
      *  \param bits The bits to get the index of the lowest set bit of.
      *  \return The index of the lowest set bit in the bits. */
-    static uint LowestSetBitIndex(uint64 bits);
+    static uint32 LowestSetBitIndex(uint64 bits);
 
     /*! \brief Counts the number of bits set in a 64-bit integer.
      *  \param value The value to count the bits of.
@@ -111,7 +111,7 @@ static HYP_FORCE_INLINE To BitCast(const From &from)
     return ValueStorage<To>(&from).Get();
 }
 
-#define FOR_EACH_BIT(_num, _iter) for (uint64 num = (_num), _iter = ByteUtil::LowestSetBitIndex(num); _iter != uint(-1); num &= ~(uint64(1) << _iter))
+#define FOR_EACH_BIT(_num, _iter) for (uint64 num = (_num), _iter = ByteUtil::LowestSetBitIndex(num); _iter != uint32(-1); num &= ~(uint64(1) << _iter))
 
 } // namespace hyperion
 

@@ -30,10 +30,10 @@ struct AttachmentMap
 {
     static constexpr PlatformType platform = PLATFORM;
     
-    using Iterator = typename FlatMap<uint, AttachmentDef<PLATFORM>>::Iterator;
-    using ConstIterator = typename FlatMap<uint, AttachmentDef<PLATFORM>>::ConstIterator;
+    using Iterator = typename FlatMap<uint32, AttachmentDef<PLATFORM>>::Iterator;
+    using ConstIterator = typename FlatMap<uint32, AttachmentDef<PLATFORM>>::ConstIterator;
 
-    FlatMap<uint, AttachmentDef<PLATFORM>>  attachments;
+    FlatMap<uint32, AttachmentDef<PLATFORM>>  attachments;
 
     ~AttachmentMap()
     {
@@ -55,7 +55,7 @@ struct AttachmentMap
     HYP_FORCE_INLINE SizeType Size() const
         { return attachments.Size(); }
 
-    HYP_FORCE_INLINE const AttachmentRef<PLATFORM> &GetAttachment(uint binding) const
+    HYP_FORCE_INLINE const AttachmentRef<PLATFORM> &GetAttachment(uint32 binding) const
     {
         const auto it = attachments.Find(binding);
 
@@ -73,7 +73,7 @@ struct AttachmentMap
 
         AssertThrowMsg(attachment->HasBinding(), "Attachment must have a binding");
 
-        const uint binding = attachment->GetBinding();
+        const uint32 binding = attachment->GetBinding();
         AssertThrowMsg(!attachments.Contains(binding), "Attachment already exists at binding: %u", binding);
 
         attachments.Set(
@@ -86,7 +86,7 @@ struct AttachmentMap
     }
 
     HYP_FORCE_INLINE void AddAttachment(
-        uint binding,
+        uint32 binding,
         Vec2u extent,
         InternalFormat format,
         ImageType type,
@@ -137,7 +137,7 @@ public:
         Vec2u extent,
         RenderPassStage stage = RenderPassStage::SHADER,
         RenderPassMode render_pass_mode = RenderPassMode::RENDER_PASS_INLINE,
-        uint num_multiview_layers = 0
+        uint32 num_multiview_layers = 0
     );
 
     Framebuffer(const Framebuffer &other)               = delete;
@@ -166,7 +166,7 @@ public:
         { m_attachment_map.AddAttachment(attachment); }
 
     HYP_FORCE_INLINE void AddAttachment(
-        uint binding,
+        uint32 binding,
         InternalFormat format,
         ImageType type,
         RenderPassStage stage,
@@ -185,9 +185,9 @@ public:
         );
     }
 
-    HYP_API bool RemoveAttachment(uint binding);
+    HYP_API bool RemoveAttachment(uint32 binding);
 
-    HYP_FORCE_INLINE const AttachmentRef<PLATFORM> &GetAttachment(uint binding) const
+    HYP_FORCE_INLINE const AttachmentRef<PLATFORM> &GetAttachment(uint32 binding) const
         { return m_attachment_map.GetAttachment(binding); }
 
     HYP_FORCE_INLINE const AttachmentMap<PLATFORM> &GetAttachmentMap() const
@@ -200,8 +200,8 @@ public:
 
     HYP_API RendererResult Resize(Device<PLATFORM> *device, Vec2u new_size);
 
-    HYP_API void BeginCapture(CommandBuffer<PLATFORM> *command_buffer, uint frame_index);
-    HYP_API void EndCapture(CommandBuffer<PLATFORM> *command_buffer, uint frame_index);
+    HYP_API void BeginCapture(CommandBuffer<PLATFORM> *command_buffer, uint32 frame_index);
+    HYP_API void EndCapture(CommandBuffer<PLATFORM> *command_buffer, uint32 frame_index);
 
 private:
     FramebufferPlatformImpl<PLATFORM>   m_platform_impl;

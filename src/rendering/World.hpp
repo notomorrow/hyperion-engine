@@ -16,6 +16,7 @@
 #include <core/threading/AtomicVar.hpp>
 
 #include <core/ID.hpp>
+#include <core/Handle.hpp>
 
 #include <Types.hpp>
 
@@ -24,6 +25,7 @@ namespace hyperion {
 class World;
 class Scene;
 class CameraRenderResources;
+class SceneRenderResources;
 
 class RenderCollectorContainer
 {
@@ -53,7 +55,7 @@ public:
     const RenderCollector &GetRenderCollectorForScene(ID<Scene> scene_id) const
         { return m_render_collectors_by_id_index[scene_id.ToIndex()]; }
 
-    RenderCollector *GetRenderCollectorAtIndex(uint index) const
+    RenderCollector *GetRenderCollectorAtIndex(uint32 index) const
         { return m_render_collectors[index]; }
 
 private:
@@ -77,6 +79,15 @@ public:
     HYP_FORCE_INLINE const RenderCollectorContainer &GetRenderCollectorContainer() const
         { return m_render_collector_container; }
 
+    HYP_FORCE_INLINE RenderCollector &GetRenderCollectorForScene(ID<Scene> scene_id)
+        { return m_render_collector_container.GetRenderCollectorForScene(scene_id); }
+
+    HYP_FORCE_INLINE const RenderCollector &GetRenderCollectorForScene(ID<Scene> scene_id) const
+        { return m_render_collector_container.GetRenderCollectorForScene(scene_id); }
+
+    void AddScene(const Handle<Scene> &scene);
+    void RemoveScene(const WeakHandle<Scene> &scene_weak);
+
     void PreRender(renderer::Frame *frame);
     void PostRender(renderer::Frame *frame);
     void Render(renderer::Frame *frame);
@@ -94,6 +105,7 @@ protected:
 private:
     World                                           *m_world;
     Array<TResourceHandle<CameraRenderResources>>   m_bound_cameras;
+    Array<TResourceHandle<SceneRenderResources>>    m_bound_scenes;
     RenderCollectorContainer                        m_render_collector_container;
 };
 

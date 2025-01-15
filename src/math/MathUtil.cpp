@@ -26,7 +26,7 @@ Vec3f MathUtil::RandomInHemisphere(Vec3f rnd, Vec3f n)
     return v * float(Sign(v.Dot(n.Normalize())));
 }
 
-Vec2f MathUtil::VogelDisk(uint sample_index, uint num_samples, float phi)
+Vec2f MathUtil::VogelDisk(uint32 sample_index, uint32 num_samples, float phi)
 {
     constexpr float golden_angle = 2.4f;
 

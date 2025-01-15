@@ -167,7 +167,7 @@ public:
 
     /*! \brief Begin loading this batch asynchronously. Note that
         you may not add any more tasks to be loaded once you call this method. */
-    HYP_API void LoadAsync(uint num_batches = MathUtil::MaxSafeValue<uint>());
+    HYP_API void LoadAsync(uint32 num_batches = MathUtil::MaxSafeValue<uint32>());
     
     HYP_API AssetMap AwaitResults();
     HYP_API AssetMap ForceLoad();

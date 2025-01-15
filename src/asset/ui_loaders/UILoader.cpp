@@ -186,7 +186,7 @@ static Vec2i ParseVec2i(const String &str)
 
     Array<String> split = str.Split(' ');
 
-    for (uint i = 0; i < split.Size() && i < result.size; i++) {
+    for (uint32 i = 0; i < split.Size() && i < result.size; i++) {
         split[i] = split[i].Trimmed();
 
         result[i] = StringUtil::Parse<int32>(split[i]);

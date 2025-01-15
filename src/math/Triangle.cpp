@@ -22,9 +22,9 @@ Triangle::Triangle(const Vec3f &v0, const Vec3f &v1, const Vec3f &v2)
 Vertex &Triangle::Closest(const Vec3f &vec)
 {
     float distances[3];
-    uint shortest_index = 0;
+    uint32 shortest_index = 0;
 
-    for (uint i = 0; i < 3; i++) {
+    for (uint32 i = 0; i < 3; i++) {
         distances[i] = points[i].GetPosition().DistanceSquared(vec);
 
         if (i != 0) {

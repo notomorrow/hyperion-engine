@@ -132,7 +132,7 @@ private:
 
     void BindDescriptorSets(
         CommandBuffer *command_buffer,
-        uint scene_index
+        uint32 scene_index
     );
 
     EnumFlags<RenderGroupFlags>                         m_flags;
@@ -158,7 +158,7 @@ private:
     // multiple times in a single pass, only running into issues if you
     // try to call it more than num_async_rendering_command_buffers
     // (or if parallel rendering is enabled, more than the number of task threads available (usually 2))
-    uint                                                m_command_buffer_index = 0u;
+    uint32                                              m_command_buffer_index = 0u;
 
     DrawCallCollection                                  m_draw_state;
 

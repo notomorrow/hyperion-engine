@@ -172,7 +172,7 @@ template <>
 void CommandBuffer<Platform::VULKAN>::BindVertexBuffer(const GPUBuffer<Platform::VULKAN> *buffer)
 {
     AssertThrow(buffer != nullptr);
-    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_VERTEX_BUFFER, "Not a vertex buffer! Got buffer type: %u", uint(buffer->GetBufferType()));
+    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_VERTEX_BUFFER, "Not a vertex buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
     
     const VkBuffer vertex_buffers[] = { buffer->GetPlatformImpl().handle };
     static const VkDeviceSize offsets[] = { 0 };
@@ -184,7 +184,7 @@ template <>
 void CommandBuffer<Platform::VULKAN>::BindIndexBuffer(const GPUBuffer<Platform::VULKAN> *buffer, DatumType datum_type)
 {
     AssertThrow(buffer != nullptr);
-    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_INDEX_BUFFER, "Not an index buffer! Got buffer type: %u", uint(buffer->GetBufferType()));
+    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_INDEX_BUFFER, "Not an index buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
     
     vkCmdBindIndexBuffer(
         m_platform_impl.command_buffer,

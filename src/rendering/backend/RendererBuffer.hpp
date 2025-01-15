@@ -18,7 +18,7 @@
 namespace hyperion {
 namespace renderer {
 
-enum class ResourceState : uint
+enum class ResourceState : uint32
 {
     UNDEFINED,
     PRE_INITIALIZED,
@@ -344,7 +344,7 @@ public:
     using UseFunction = std::function<RendererResult(Context &context)>;
 
     static constexpr time_t hold_time = 1000;
-    static constexpr uint gc_threshold = 5; /* run every 5 Use() calls */
+    static constexpr uint32 gc_threshold = 5; /* run every 5 Use() calls */
 
     /*! \brief Use the staging buffer pool. GC will not run until after the given function
      * is called, and the staging buffers created will not be able to be reused.
@@ -361,7 +361,7 @@ private:
     StagingBuffer *FindStagingBuffer(SizeType size);
 
     std::vector<StagingBufferRecord> m_staging_buffers;
-    uint use_calls = 0;
+    uint32 use_calls = 0;
 };
 
 } // namespace renderer

@@ -99,7 +99,7 @@ FontAtlasTextureSet::~FontAtlasTextureSet()
     }
 }
 
-void FontAtlasTextureSet::AddAtlas(uint pixel_size, Handle<Texture> texture, bool is_main_atlas)
+void FontAtlasTextureSet::AddAtlas(uint32 pixel_size, Handle<Texture> texture, bool is_main_atlas)
 {
     if (is_main_atlas) {
         AssertThrowMsg(!main_atlas.IsValid(), "Main atlas already set");
@@ -116,7 +116,7 @@ void FontAtlasTextureSet::AddAtlas(uint pixel_size, Handle<Texture> texture, boo
     }
 }
 
-Handle<Texture> FontAtlasTextureSet::GetAtlasForPixelSize(uint pixel_size) const
+Handle<Texture> FontAtlasTextureSet::GetAtlasForPixelSize(uint32 pixel_size) const
 {
     auto it = atlases.Find(pixel_size);
 
@@ -167,15 +167,15 @@ FontAtlas::FontAtlas(RC<FontFace> face)
 FontAtlas::SymbolList FontAtlas::GetDefaultSymbolList()
 {
     // first renderable symbol
-    static constexpr uint char_range_start = 33; // !
+    static constexpr uint32 char_range_start = 33; // !
 
     // highest symbol in the ascii table
-    static constexpr uint char_range_end = 126; // ~ + 1
+    static constexpr uint32 char_range_end = 126; // ~ + 1
 
     SymbolList symbol_list;
     symbol_list.Reserve(char_range_end - char_range_start + 1);
 
-    for (uint ch = char_range_start; ch <= char_range_end; ch++) {
+    for (uint32 ch = char_range_start; ch <= char_range_end; ch++) {
         symbol_list.PushBack(ch);
     }
 
@@ -301,7 +301,7 @@ Optional<Glyph::Metrics> FontAtlas::GetGlyphMetrics(FontFace::WChar symbol) cons
     return m_glyph_metrics[index];
 }
 
-void FontAtlas::WriteToBuffer(uint pixel_size, ByteBuffer &buffer) const
+void FontAtlas::WriteToBuffer(uint32 pixel_size, ByteBuffer &buffer) const
 {
     Handle<Texture> atlas = m_atlas_textures.GetAtlasForPixelSize(pixel_size);
 
@@ -381,7 +381,7 @@ void FontAtlas::WriteToBuffer(uint pixel_size, ByteBuffer &buffer) const
     HYP_SYNC_RENDER();
 }
 
-Bitmap<1> FontAtlas::GenerateBitmap(uint pixel_size) const
+Bitmap<1> FontAtlas::GenerateBitmap(uint32 pixel_size) const
 {
     Handle<Texture> atlas = m_atlas_textures.GetAtlasForPixelSize(pixel_size);
 
@@ -408,7 +408,7 @@ json::JSONValue FontAtlas::GenerateMetadataJSON(const String &output_directory) 
     json::JSONObject atlases_value;
     json::JSONObject pixel_sizes_value;
 
-    uint main_atlas_key = uint(-1);
+    uint32 main_atlas_key = uint32(-1);
 
     for (const auto &it : m_atlas_textures.atlases) {
         if (!it.second.IsValid()) {

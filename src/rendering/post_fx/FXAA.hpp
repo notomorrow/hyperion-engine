@@ -12,7 +12,7 @@ class HYP_API FXAAEffect : public PostProcessingEffect
 {
 public:
     static constexpr PostProcessingStage stage = POST_PROCESSING_STAGE_POST_SHADING;
-    static constexpr uint index = 0;
+    static constexpr uint32 index = 0;
 
     FXAAEffect();
     virtual ~FXAAEffect() override;

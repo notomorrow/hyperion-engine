@@ -36,13 +36,13 @@ struct HYP_API Frustum
     HYP_FORCE_INLINE const FixedArray<Vec4f, 6> &GetPlanes() const
         { return planes; }
 
-    HYP_FORCE_INLINE Vec4f &GetPlane(uint index)
+    HYP_FORCE_INLINE Vec4f &GetPlane(uint32 index)
         { return planes[index]; }
 
-    HYP_FORCE_INLINE const Vec4f &GetPlane(uint index) const
+    HYP_FORCE_INLINE const Vec4f &GetPlane(uint32 index) const
         { return planes[index]; }
 
-    HYP_FORCE_INLINE const Vec3f &GetCorner(uint index) const
+    HYP_FORCE_INLINE const Vec3f &GetCorner(uint32 index) const
         { return corners[index]; }
 
     HYP_FORCE_INLINE const FixedArray<Vec3f, 8> &GetCorners() const
@@ -52,7 +52,7 @@ struct HYP_API Frustum
     bool ContainsBoundingSphere(const BoundingSphere &sphere) const;
 
     Frustum &SetFromViewProjectionMatrix(const Matrix4 &view_proj);
-    Vec3f GetIntersectionPoint(uint plane_index_0, uint plane_index_1, uint plane_index_2) const;
+    Vec3f GetIntersectionPoint(uint32 plane_index_0, uint32 plane_index_1, uint32 plane_index_2) const;
 };
 
 } // namespace hyperion

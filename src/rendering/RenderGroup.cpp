@@ -98,8 +98,8 @@ struct RENDER_COMMAND(CreateGraphicsPipeline) : renderer::RenderCommand
         pipeline->SetRenderPass(render_pass);
         pipeline->SetFramebuffers(framebuffers);
 
-        for (uint i = 0; i < max_frames_in_flight; i++) {
-            for (uint j = 0; j < uint(command_buffers[i].Size()); j++) {
+        for (uint32 i = 0; i < max_frames_in_flight; i++) {
+            for (uint32 j = 0; j < uint32(command_buffers[i].Size()); j++) {
                 if (!command_buffers[i][j].IsValid()) {
                     continue;
                 }
@@ -173,7 +173,7 @@ RenderGroup::~RenderGroup()
     SafeRelease(std::move(m_fbos));
 
     if (m_command_buffers != nullptr) {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             SafeRelease(std::move((*m_command_buffers)[frame_index]));
         }
 
@@ -250,7 +250,7 @@ void RenderGroup::Init()
         SafeRelease(std::move(m_pipeline));
 
         if (m_command_buffers != nullptr) {
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 SafeRelease(std::move((*m_command_buffers)[frame_index]));
             }
 
@@ -282,7 +282,7 @@ void RenderGroup::CreateCommandBuffers()
     if (m_flags & RenderGroupFlags::PARALLEL_RENDERING) {
         m_command_buffers = MakeUnique<AsyncCommandBuffers>();
 
-        for (uint i = 0; i < max_frames_in_flight; i++) {
+        for (uint32 i = 0; i < max_frames_in_flight; i++) {
             for (CommandBufferRef &command_buffer : (*m_command_buffers)[i]) {
                 command_buffer = MakeRenderObject<CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
             }
@@ -322,7 +322,7 @@ void RenderGroup::CreateGraphicsPipeline()
         descriptor_table.SetName(CreateNameFromDynamicString(ANSIString("DescriptorTable_") + m_shader->GetCompiledShader()->GetName().LookupString()));
 
         // Setup instancing buffers if "Instancing" descriptor set exists
-        const uint instancing_descriptor_set_index = descriptor_table->GetDescriptorSetIndex(NAME("Instancing"));
+        const uint32 instancing_descriptor_set_index = descriptor_table->GetDescriptorSetIndex(NAME("Instancing"));
 
         if (instancing_descriptor_set_index != ~0u) {
             for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -532,35 +532,37 @@ static HYP_FORCE_INLINE void RenderAll(
         return;
     }
 
-    const ID<Scene> scene_id = g_engine->GetRenderState()->GetScene().id;
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     const uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     TaskThreadPool &pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
 
-    const uint num_batches = use_parallel_rendering
+    const uint32 num_batches = use_parallel_rendering
         ? MathUtil::Min(pool.NumThreads(), num_async_rendering_command_buffers)
         : 1u;
 
-    const uint global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+    const uint32 global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
     const DescriptorSetRef &global_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index);
 
-    const uint scene_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 scene_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
     const DescriptorSetRef &scene_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index);
     
-    const uint material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
+    const uint32 material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
     const DescriptorSetRef &material_descriptor_set = use_bindless_textures
         ? pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Material"), frame_index)
         : DescriptorSetRef::unset;
     
-    const uint entity_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Object"));
+    const uint32 entity_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Object"));
     const DescriptorSetRef &entity_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Object"), frame_index);
 
-    const uint instancing_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
+    const uint32 instancing_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
     const DescriptorSetRef &instancing_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Instancing"), frame_index);
     
     for (const DrawCall &draw_call : draw_state.GetDrawCalls()) {
@@ -580,7 +582,7 @@ static HYP_FORCE_INLINE void RenderAll(
             frame->GetCommandBuffer(),
             pipeline,
             {
-                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                 { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -654,7 +656,7 @@ template <bool IsIndirect>
 static HYP_FORCE_INLINE void RenderAll_Parallel(
     Frame *frame,
     const RenderGroup::AsyncCommandBuffers &command_buffers,
-    uint &command_buffer_index,
+    uint32 &command_buffer_index,
     const GraphicsPipelineRef &pipeline,
     IndirectRenderer *indirect_renderer,
     Array<Span<const DrawCall>> &divided_draw_calls,
@@ -669,38 +671,38 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
         return;
     }
 
-    const ID<Scene> scene_id = g_engine->GetRenderState()->GetScene().id;
-
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     TaskThreadPool &pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
 
-    const uint num_batches = MathUtil::Min(pool.NumThreads(), num_async_rendering_command_buffers);
+    const uint32 num_batches = MathUtil::Min(pool.NumThreads(), num_async_rendering_command_buffers);
     
     GetDividedDrawCalls(draw_state.GetDrawCalls().ToSpan(), num_async_rendering_command_buffers, divided_draw_calls);
 
     // rather than using a single integer, we have to set states in a fixed array
     // because otherwise we'd need to use an atomic integer
-    FixedArray<uint, num_async_rendering_command_buffers> command_buffers_recorded_states { };
+    FixedArray<uint32, num_async_rendering_command_buffers> command_buffers_recorded_states { };
 
-    const uint global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+    const uint32 global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
     const DescriptorSetRef &global_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index);
 
-    const uint scene_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 scene_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
     const DescriptorSetRef &scene_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Scene"), frame_index);
     
-    const uint material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
+    const uint32 material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
     const DescriptorSetRef &material_descriptor_set = use_bindless_textures
         ? pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Material"), frame_index)
         : DescriptorSetRef::unset;
     
-    const uint entity_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Object"));
+    const uint32 entity_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Object"));
     const DescriptorSetRef &entity_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Object"), frame_index);
 
-    const uint instancing_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
+    const uint32 instancing_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
     const DescriptorSetRef &instancing_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Instancing"), frame_index);
 
-    // AtomicVar<uint32> num_rendered_objects { 0u };
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
     
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     const uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -720,7 +722,7 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
     // HYP_LOG(Rendering, Debug, "Rendering {} draw calls in {} batches", draw_state.GetDrawCalls().Size(), num_batches);
 
     ParallelForEach(divided_draw_calls, num_batches, pool,
-        [&](Span<const DrawCall> draw_calls, uint index, uint)
+        [&](Span<const DrawCall> draw_calls, uint32 index, uint32)
         {
             if (!draw_calls) {
                 return;
@@ -744,7 +746,7 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
                         secondary,
                         pipeline,
                         {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(g_engine->GetRenderState()->GetScene().id.ToIndex()) },
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_index) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_index) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
                             { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
@@ -823,15 +825,15 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
     );
     
 
-    const uint num_recorded_command_buffers = command_buffers_recorded_states.Sum();
+    const uint32 num_recorded_command_buffers = command_buffers_recorded_states.Sum();
 
     // submit all command buffers
-    for (uint i = 0; i < num_recorded_command_buffers; i++) {
+    for (uint32 i = 0; i < num_recorded_command_buffers; i++) {
         command_buffers[frame_index][i]
             ->SubmitSecondary(frame->GetCommandBuffer());
     }
 
-    command_buffer_index = (command_buffer_index + num_recorded_command_buffers) % uint(command_buffers.Size());
+    command_buffer_index = (command_buffer_index + num_recorded_command_buffers) % uint32(command_buffers.Size());
 }
 
 void RenderGroup::PerformRendering(Frame *frame)

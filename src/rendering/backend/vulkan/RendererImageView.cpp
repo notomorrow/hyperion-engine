@@ -19,10 +19,10 @@ RendererResult ImageViewPlatformImpl<Platform::VULKAN>::Create(
     VkFormat format,
     VkImageAspectFlags aspect_flags,
     VkImageViewType view_type,
-    uint mipmap_layer,
-    uint num_mipmaps,
-    uint face_layer,
-    uint num_faces
+    uint32 mipmap_layer,
+    uint32 num_mipmaps,
+    uint32 face_layer,
+    uint32 num_faces
 )
 {
     self->m_num_faces = num_faces;
@@ -116,10 +116,10 @@ template <>
 RendererResult ImageView<Platform::VULKAN>::Create(
     Device<Platform::VULKAN> *device,
     const Image<Platform::VULKAN> *image,
-    uint mipmap_layer,
-    uint num_mipmaps,
-    uint face_layer,
-    uint num_faces
+    uint32 mipmap_layer,
+    uint32 num_mipmaps,
+    uint32 face_layer,
+    uint32 num_faces
 )
 {
     AssertThrow(image != nullptr);

@@ -116,14 +116,14 @@ Matrix4 Matrix4::Orthographic(float l, float r, float b, float t, float n, float
     return mat;
 }
 
-Matrix4 Matrix4::Jitter(uint index, uint width, uint height, Vec4f &out_jitter)
+Matrix4 Matrix4::Jitter(uint32 index, uint32 width, uint32 height, Vec4f &out_jitter)
 {
     static const HaltonSequence halton;
 
     Matrix4 offset_matrix;
 
-    const uint frame_counter = index;
-    const uint halton_index = frame_counter % HaltonSequence::size;
+    const uint32 frame_counter = index;
+    const uint32 halton_index = frame_counter % HaltonSequence::size;
 
     Vec2f jitter = halton.sequence[halton_index];
     Vec2f previous_jitter;
@@ -485,7 +485,7 @@ Quaternion Matrix4::ExtractRotation() const
     return Quaternion(*this);
 }
 
-Vec4f Matrix4::GetColumn(uint index) const
+Vec4f Matrix4::GetColumn(uint32 index) const
 {
     return {
         rows[0][index],

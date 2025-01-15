@@ -56,7 +56,7 @@ public:
     virtual ~DeferredPass() override;
 
     virtual void Create() override;
-    virtual void Record(uint frame_index) override;
+    virtual void Record(uint32 frame_index) override;
     virtual void Render(Frame *frame) override;
 
 protected:
@@ -72,8 +72,8 @@ private:
 
     const DeferredPassMode                                  m_mode;
 
-    FixedArray<ShaderRef, uint(LightType::MAX)>             m_direct_light_shaders;
-    FixedArray<Handle<RenderGroup>, uint(LightType::MAX)>   m_direct_light_render_groups;
+    FixedArray<ShaderRef, uint32(LightType::MAX)>             m_direct_light_shaders;
+    FixedArray<Handle<RenderGroup>, uint32(LightType::MAX)>   m_direct_light_render_groups;
 
     Handle<Texture>                                         m_ltc_matrix_texture;
     Handle<Texture>                                         m_ltc_brdf_texture;
@@ -99,7 +99,7 @@ public:
         { return m_temporal_blending.Get(); }
 
     virtual void Create() override;
-    virtual void Record(uint frame_index) override;
+    virtual void Record(uint32 frame_index) override;
     virtual void Render(Frame *frame) override;
 
 protected:
@@ -139,7 +139,7 @@ public:
     virtual ~ReflectionProbePass() override;
     
     virtual void Create() override;
-    virtual void Record(uint frame_index) override;
+    virtual void Record(uint32 frame_index) override;
     virtual void Render(Frame *frame) override;
 
 private:

@@ -17,7 +17,7 @@ RenderPass<Platform::VULKAN>::RenderPass(RenderPassStage stage, RenderPassMode m
 {
 }
 
-RenderPass<Platform::VULKAN>::RenderPass(RenderPassStage stage, RenderPassMode mode, uint num_multiview_layers)
+RenderPass<Platform::VULKAN>::RenderPass(RenderPassStage stage, RenderPassMode mode, uint32 num_multiview_layers)
     : m_stage(stage),
       m_mode(mode),
       m_handle(VK_NULL_HANDLE),
@@ -109,7 +109,7 @@ RendererResult RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *de
     subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass_description.pDepthStencilAttachment = nullptr;
 
-    uint next_binding = 0;
+    uint32 next_binding = 0;
 
     for (const AttachmentRef<Platform::VULKAN> &attachment : m_render_pass_attachments) {
         if (!attachment->HasBinding()) { // no binding has manually been set so we make one
@@ -165,7 +165,7 @@ RendererResult RenderPass<Platform::VULKAN>::Create(Device<Platform::VULKAN> *de
     multiview_info.correlationMaskCount = 1;
 
     if (IsMultiview()) {
-        for (uint i = 0; i < m_num_multiview_layers; i++) {
+        for (uint32 i = 0; i < m_num_multiview_layers; i++) {
             multiview_view_mask |= 1 << i;
             multiview_correlation_mask |= 1 << i;
         }
@@ -190,7 +190,7 @@ RendererResult RenderPass<Platform::VULKAN>::Destroy(Device<Platform::VULKAN> *d
     return result;
 }
 
-void RenderPass<Platform::VULKAN>::Begin(CommandBuffer<Platform::VULKAN> *cmd, Framebuffer<Platform::VULKAN> *framebuffer, uint frame_index)
+void RenderPass<Platform::VULKAN>::Begin(CommandBuffer<Platform::VULKAN> *cmd, Framebuffer<Platform::VULKAN> *framebuffer, uint32 frame_index)
 {
     AssertThrow(framebuffer != nullptr && framebuffer->GetPlatformImpl().handles[frame_index] != nullptr);
 

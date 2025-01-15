@@ -52,7 +52,7 @@ enum RenderCommandExecuteStage : uint32
 constexpr SizeType max_render_command_types = 128;
 constexpr SizeType render_command_cache_size_bytes = 1 << 16;
 
-using RenderCommandFunc = void(*)(void * /*ptr */, uint /* buffer_index */);
+using RenderCommandFunc = void(*)(void * /*ptr */, uint32 /* buffer_index */);
 
 template <class T>
 struct RenderCommandList
@@ -62,10 +62,10 @@ struct RenderCommandList
         static constexpr SizeType render_command_cache_size = MathUtil::Max(render_command_cache_size_bytes / sizeof(T), 1);
 
         FixedArray<ValueStorage<T>, render_command_cache_size> storage;
-        uint index = 0;
+        uint32 index = 0;
 
         HYP_FORCE_INLINE bool IsFull() const
-            { return index >= uint(render_command_cache_size); }
+            { return index >= uint32(render_command_cache_size); }
 
         static_assert(render_command_cache_size >= 8, "Render command storage size is too large; runtime performance would be impacted due to needing to allocate more blocks to compensate.");
     };
@@ -89,7 +89,7 @@ struct RenderCommandList
 
     ~RenderCommandList() = default;
 
-    HYP_FORCE_INLINE void *AllocCommand(uint buffer_index)
+    HYP_FORCE_INLINE void *AllocCommand(uint32 buffer_index)
     {
         // always guaranteed to have at least 1 block
         auto &blocks_buffer = blocks[buffer_index];
@@ -105,7 +105,7 @@ struct RenderCommandList
         return last_block->storage.Data() + command_index;
     }
 
-    HYP_FORCE_INLINE void Rewind(uint buffer_index)
+    HYP_FORCE_INLINE void Rewind(uint32 buffer_index)
     {
         auto &blocks_buffer = blocks[buffer_index];
         // Note: all items must have been destructed,
@@ -117,7 +117,7 @@ struct RenderCommandList
         blocks_buffer.Front().index = 0;
     }
     
-    static void RewindFunc(void *ptr, uint buffer_index)
+    static void RewindFunc(void *ptr, uint32 buffer_index)
     {
         static_cast<RenderCommandList *>(ptr)->Rewind(buffer_index);
     }
@@ -186,7 +186,7 @@ private:
 
     static std::mutex                                                   mtx;
     static std::condition_variable                                      flushed_cv;
-    static uint                                                         buffer_index;
+    static uint32                                                       buffer_index;
 
     static RenderScheduler                                              scheduler;
 
@@ -259,7 +259,7 @@ public:
 
 private:
     template <class T>
-    HYP_FORCE_INLINE static void *Alloc(uint buffer_index)
+    HYP_FORCE_INLINE static void *Alloc(uint32 buffer_index)
     {
         struct Data
         {
@@ -306,7 +306,7 @@ private:
     }
 
     static void SwapBuffers();
-    static void Rewind(uint buffer_index);
+    static void Rewind(uint32 buffer_index);
 };
 
 } // namespace renderer

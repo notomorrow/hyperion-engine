@@ -35,8 +35,8 @@ static inline Extent2D ReshapeExtent(Extent3D extent)
         factors.End(),
         [](auto a, auto b)
         {
-            const uint a_diff = MathUtil::Abs(a[0] - a[1]);
-            const uint b_diff = MathUtil::Abs(b[0] - b[1]);
+            const uint32 a_diff = MathUtil::Abs(a[0] - a[1]);
+            const uint32 b_diff = MathUtil::Abs(b[0] - b[1]);
 
             return a_diff < b_diff;
         }
@@ -48,7 +48,7 @@ static inline Extent2D ReshapeExtent(Extent3D extent)
 
     const auto most_balanced_pair = factors[0];
 
-    return Extent2D { uint(most_balanced_pair[0]), uint(most_balanced_pair[1]) };
+    return Extent2D { uint32(most_balanced_pair[0]), uint32(most_balanced_pair[1]) };
 }
 
 } // namespace hyperion

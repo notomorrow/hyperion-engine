@@ -79,7 +79,7 @@ struct RENDER_COMMAND(SetDeferredResultInGlobalDescriptorSet) : renderer::Render
 
     virtual RendererResult operator()() override
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                 ->SetElement(NAME("DeferredResult"), result_image_view);
         }
@@ -194,7 +194,7 @@ void DeferredPass::Create()
 
 void DeferredPass::CreateShader()
 {
-    static const FixedArray<ShaderProperties, uint(LightType::MAX)> light_type_properties {
+    static const FixedArray<ShaderProperties, uint32(LightType::MAX)> light_type_properties {
         ShaderProperties { { "LIGHT_TYPE_DIRECTIONAL" } },
         ShaderProperties { { "LIGHT_TYPE_POINT" } },
         ShaderProperties { { "LIGHT_TYPE_SPOT" } },
@@ -212,7 +212,7 @@ void DeferredPass::CreateShader()
 
         break;
     case DeferredPassMode::DIRECT_LIGHTING:
-        for (uint i = 0; i < uint(LightType::MAX); i++) {
+        for (uint32 i = 0; i < uint32(LightType::MAX); i++) {
             ShaderProperties shader_properties = GetDeferredShaderProperties();
             shader_properties.Merge(light_type_properties[i]);
 
@@ -299,7 +299,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
         InitObject(m_ltc_brdf_texture);
     }
 
-    for (uint i = 0; i < uint(LightType::MAX); i++) {
+    for (uint32 i = 0; i < uint32(LightType::MAX); i++) {
         ShaderRef &shader = m_direct_light_shaders[i];
         AssertThrow(shader.IsValid());
 
@@ -307,7 +307,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("DeferredDirectDescriptorSet"), frame_index);
             AssertThrow(descriptor_set.IsValid());
             
@@ -348,7 +348,7 @@ void DeferredPass::Resize_Internal(Vec2u new_size)
 
 void DeferredPass::AddToGlobalDescriptorSet()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         switch (m_mode) {
         case DeferredPassMode::INDIRECT_LIGHTING:
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
@@ -366,7 +366,7 @@ void DeferredPass::AddToGlobalDescriptorSet()
     }
 }
 
-void DeferredPass::Record(uint frame_index)
+void DeferredPass::Record(uint32 frame_index)
 {
     HYP_SCOPE;
 
@@ -383,6 +383,10 @@ void DeferredPass::Record(uint frame_index)
 
     static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
 
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
+
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
     AssertThrow(camera_index != ~0u);
@@ -394,19 +398,18 @@ void DeferredPass::Record(uint frame_index)
         m_render_group->GetPipeline()->GetRenderPass(),
         [&](CommandBuffer *cmd)
         {
-            const uint scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
-            const uint env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
+            const uint32 env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
 
             // render with each light
-            for (uint light_type_index = 0; light_type_index < uint(LightType::MAX); light_type_index++) {
+            for (uint32 light_type_index = 0; light_type_index < uint32(LightType::MAX); light_type_index++) {
                 const LightType light_type = LightType(light_type_index);
 
                 const Handle<RenderGroup> &render_group = m_direct_light_render_groups[light_type_index];
 
-                const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-                const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
-                const uint material_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
-                const uint deferred_direct_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("DeferredDirectDescriptorSet"));
+                const uint32 global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+                const uint32 scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+                const uint32 material_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
+                const uint32 deferred_direct_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("DeferredDirectDescriptorSet"));
 
                 render_group->GetPipeline()->SetPushConstants(
                     m_push_constant_data.Data(),
@@ -451,7 +454,7 @@ void DeferredPass::Record(uint frame_index)
 
                     // We'll use the EnvProbe slot to bind whatever EnvProbe
                     // is used for the light's shadow map (if applicable)
-                    uint shadow_probe_index = 0;
+                    uint32 shadow_probe_index = 0;
 
                     if (buffer_data.shadow_map_index != ~0u && light_type == LightType::POINT) {
                         shadow_probe_index = buffer_data.shadow_map_index;
@@ -616,7 +619,7 @@ void EnvGridPass::CreateRenderTextureToScreenPass()
     const renderer::DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -650,7 +653,7 @@ void EnvGridPass::CreateTemporalBlending()
 
 void EnvGridPass::AddToGlobalDescriptorSet()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         switch (m_mode) {
         case EnvGridPassMode::RADIANCE:
             AssertThrow(m_temporal_blending->GetResultTexture()->GetImageView().IsValid());
@@ -687,7 +690,7 @@ void EnvGridPass::Resize_Internal(Vec2u new_size)
     AddToGlobalDescriptorSet();
 }
 
-void EnvGridPass::Record(uint frame_index)
+void EnvGridPass::Record(uint32 frame_index)
 {
 }
 
@@ -697,10 +700,13 @@ void EnvGridPass::Render(Frame *frame)
 
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
-    const uint scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
-    const uint env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
+    const uint32 env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -750,8 +756,8 @@ void EnvGridPass::Render(Frame *frame)
         m_render_group->GetPipeline()->GetRenderPass(),
         [&](CommandBuffer *cmd)
         {
-            const uint global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-            const uint scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+            const uint32 global_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+            const uint32 scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
             m_render_group->GetPipeline()->SetPushConstants(
                 m_push_constant_data.Data(),
@@ -917,8 +923,8 @@ void ReflectionProbePass::CreateCommandBuffers()
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    for (uint i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             m_command_buffers[i][frame_index] = MakeRenderObject<CommandBuffer>(renderer::CommandBufferType::COMMAND_BUFFER_SECONDARY);
 
 #ifdef HYP_VULKAN
@@ -962,7 +968,7 @@ void ReflectionProbePass::CreateRenderTextureToScreenPass()
     const DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -983,7 +989,7 @@ void ReflectionProbePass::CreateRenderTextureToScreenPass()
 
 void ReflectionProbePass::AddToGlobalDescriptorSet()
 {
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
             ->SetElement(NAME("ReflectionProbeResultTexture"), GetAttachment(0)->GetImageView());
     }
@@ -1006,7 +1012,7 @@ void ReflectionProbePass::Resize_Internal(Vec2u new_size)
     AddToGlobalDescriptorSet();
 }
 
-void ReflectionProbePass::Record(uint frame_index)
+void ReflectionProbePass::Record(uint32 frame_index)
 {
 }
 
@@ -1017,7 +1023,9 @@ void ReflectionProbePass::Render(Frame *frame)
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    const uint32 scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -1036,7 +1044,7 @@ void ReflectionProbePass::Render(Frame *frame)
 
     FixedArray<Pair<Handle<RenderGroup> *, Array<ID<EnvProbe>>>, ApplyReflectionProbeMode::MAX> pass_ptrs;
 
-    for (uint mode_index = ApplyReflectionProbeMode::DEFAULT; mode_index < ApplyReflectionProbeMode::MAX; mode_index++) {
+    for (uint32 mode_index = ApplyReflectionProbeMode::DEFAULT; mode_index < ApplyReflectionProbeMode::MAX; mode_index++) {
         pass_ptrs[mode_index] = {
             &m_render_groups[mode_index],
             { }
@@ -1087,9 +1095,9 @@ void ReflectionProbePass::Render(Frame *frame)
         m_is_first_frame = false;
     }
     
-    uint num_rendered_env_probes = 0;
+    uint32 num_rendered_env_probes = 0;
 
-    for (uint reflection_probe_type_index = 0; reflection_probe_type_index < ArraySize(reflection_probe_types); reflection_probe_type_index++) {
+    for (uint32 reflection_probe_type_index = 0; reflection_probe_type_index < ArraySize(reflection_probe_types); reflection_probe_type_index++) {
         const EnvProbeType env_probe_type = reflection_probe_types[reflection_probe_type_index];
         const ApplyReflectionProbeMode mode = reflection_probe_modes[reflection_probe_type_index];
 
@@ -1116,8 +1124,8 @@ void ReflectionProbePass::Render(Frame *frame)
                 );
                 render_group->GetPipeline()->Bind(cmd);
 
-                const uint global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-                const uint scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+                const uint32 global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+                const uint32 scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
                 render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                     ->Bind(
@@ -1211,11 +1219,11 @@ void DeferredRenderer::Create()
             m_opaque_fbo = m_gbuffer->GetBucket(Bucket::BUCKET_OPAQUE).GetFramebuffer();
             m_translucent_fbo = m_gbuffer->GetBucket(Bucket::BUCKET_TRANSLUCENT).GetFramebuffer();
 
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-                uint element_index = 0;
+            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+                uint32 element_index = 0;
 
                 // not including depth texture here (hence the - 1)
-                for (uint attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
+                for (uint32 attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++) {
                     g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                         ->SetElement(NAME("GBufferTextures"), element_index++, m_opaque_fbo->GetAttachment(attachment_index)->GetImageView());
                 }
@@ -1317,7 +1325,7 @@ void DeferredRenderer::CreateDescriptorSets()
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     
     // set global gbuffer data
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
             ->SetElement(NAME("GBufferMipChain"), m_mip_chain->GetImageView());
 
@@ -1407,9 +1415,12 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     CommandBuffer *primary = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
-    
-    const uint scene_index = g_engine->GetRenderState()->GetScene().id.ToIndex();
+
+    const uint32 frame_index = frame->GetFrameIndex();
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    uint32 scene_index = scene_render_resources != nullptr ? scene_render_resources->GetBufferIndex() : ~0u;
+    AssertThrow(scene_index != ~0u);
 
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
     uint32 camera_index = camera_render_resources.GetBufferIndex();
@@ -1674,7 +1685,7 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
     CommandBuffer *primary = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     const ImageRef &mipmapped_result = m_mip_chain->GetImage();
     AssertThrow(mipmapped_result.IsValid());
@@ -1718,7 +1729,7 @@ void DeferredRenderer::ApplyCameraJitter()
 
     Vec4f jitter = Vec4f::Zero();
 
-    const uint frame_counter = g_engine->GetRenderState()->frame_counter + 1;
+    const uint32 frame_counter = g_engine->GetRenderState()->frame_counter + 1;
 
     CameraShaderData &buffer_data = g_engine->GetRenderData()->cameras->Get<CameraShaderData>(camera_buffer_index);
 
@@ -1749,9 +1760,9 @@ void DeferredRenderer::CollectDrawCalls(Frame *frame)
     WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
-    const uint num_render_collectors = render_collector_container.NumRenderCollectors();
+    const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_collectors; index++) {
+    for (uint32 index = 0; index < num_render_collectors; index++) {
         render_collector_container.GetRenderCollectorAtIndex(index)->CollectDrawCalls(
             frame,
             Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_SKYBOX) | (1 << BUCKET_TRANSLUCENT)),
@@ -1767,9 +1778,9 @@ void DeferredRenderer::RenderSkybox(Frame *frame)
     WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
-    const uint num_render_collectors = render_collector_container.NumRenderCollectors();
+    const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_collectors; index++) {
+    for (uint32 index = 0; index < num_render_collectors; index++) {
         render_collector_container.GetRenderCollectorAtIndex(index)->ExecuteDrawCalls(
             frame,
             nullptr,
@@ -1786,9 +1797,9 @@ void DeferredRenderer::RenderOpaqueObjects(Frame *frame)
     WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
-    const uint num_render_collectors = render_collector_container.NumRenderCollectors();
+    const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_collectors; index++) {
+    for (uint32 index = 0; index < num_render_collectors; index++) {
         render_collector_container.GetRenderCollectorAtIndex(index)->ExecuteDrawCalls(
             frame,
             nullptr,
@@ -1805,9 +1816,9 @@ void DeferredRenderer::RenderTranslucentObjects(Frame *frame)
     WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
-    const uint num_render_collectors = render_collector_container.NumRenderCollectors();
+    const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();
 
-    for (uint index = 0; index < num_render_collectors; index++) {
+    for (uint32 index = 0; index < num_render_collectors; index++) {
         render_collector_container.GetRenderCollectorAtIndex(index)->ExecuteDrawCalls(
             frame,
             nullptr,

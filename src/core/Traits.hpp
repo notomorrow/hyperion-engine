@@ -129,12 +129,12 @@ struct FunctionTraits<R(Args...)>
     using ArgTypes = Tuple<Args...>;
     using ThisType = void;
 
-    static constexpr uint num_args = sizeof...(Args);
+    static constexpr uint32 num_args = sizeof...(Args);
     static constexpr bool is_member_function = false;
     static constexpr bool is_functor = false;
     static constexpr bool is_function_pointer = false;
 
-    template <uint N>
+    template <uint32 N>
     struct Arg
     {
         static_assert(N < num_args, "Invalid argument index");

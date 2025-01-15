@@ -77,7 +77,7 @@ void MaterialRenderResources::Update()
 
     auto SetMaterialTexture = [](const Handle<Material> &material, uint32 texture_index, const Handle<Texture> &texture)
     {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const DescriptorSetRef &descriptor_set = g_engine->GetMaterialDescriptorSetManager().GetDescriptorSet(material.GetID(), frame_index);
             AssertThrow(descriptor_set != nullptr);
 
@@ -378,7 +378,7 @@ void Material::EnqueueRenderUpdates()
         return;
     }
 
-    static const uint num_bound_textures = MathUtil::Min(
+    static const uint32 num_bound_textures = MathUtil::Min(
         max_textures,
         g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures()
             ? max_bindless_resources
@@ -388,7 +388,7 @@ void Material::EnqueueRenderUpdates()
     Array<ID<Texture>> bound_texture_ids;
     bound_texture_ids.Resize(num_bound_textures);
 
-    for (uint i = 0; i < num_bound_textures; i++) {
+    for (uint32 i = 0; i < num_bound_textures; i++) {
         if (const Handle<Texture> &texture = m_textures.ValueAt(i)) {
             bound_texture_ids[i] = texture->GetID();
         }
@@ -513,7 +513,7 @@ void Material::SetTexture(MaterialTextureKey key, const Handle<Texture> &texture
     }
 }
 
-void Material::SetTextureAtIndex(uint index, const Handle<Texture> &texture)
+void Material::SetTextureAtIndex(uint32 index, const Handle<Texture> &texture)
 {
     return SetTexture(m_textures.KeyAt(index), texture);
 }
@@ -562,7 +562,7 @@ const Handle<Texture> &Material::GetTexture(MaterialTextureKey key) const
     return m_textures.Get(key);
 }
 
-const Handle<Texture> &Material::GetTextureAtIndex(uint index) const
+const Handle<Texture> &Material::GetTextureAtIndex(uint32 index) const
 {
     return GetTexture(m_textures.KeyAt(index));
 }
@@ -786,7 +786,7 @@ void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
 
     const DescriptorSetRef invalid_descriptor_set = layout.CreateDescriptorSet();
     
-    for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+    for (uint32 texture_index = 0; texture_index < max_bound_textures; texture_index++) {
         invalid_descriptor_set->SetElement(NAME("Textures"), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
     }
 
@@ -795,7 +795,7 @@ void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
     m_material_descriptor_sets.Set(WeakHandle<Material> {}, { invalid_descriptor_set, invalid_descriptor_set });
 }
 
-const DescriptorSetRef &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> id, uint frame_index) const
+const DescriptorSetRef &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> id, uint32 frame_index) const
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
 
@@ -821,17 +821,17 @@ FixedArray<DescriptorSetRef, max_frames_in_flight> MaterialDescriptorSetManager:
 
     FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         descriptor_sets[frame_index] = MakeRenderObject<DescriptorSet>(layout);
 
-        for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+        for (uint32 texture_index = 0; texture_index < max_bound_textures; texture_index++) {
             descriptor_sets[frame_index]->SetElement(NAME("Textures"), texture_index, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
         }
     }
 
     // if on render thread, initialize and add immediately
     if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_ASSERT_RESULT(descriptor_sets[frame_index]->Create(g_engine->GetGPUDevice()));
         }
 
@@ -863,10 +863,10 @@ FixedArray<DescriptorSetRef, max_frames_in_flight> MaterialDescriptorSetManager:
 
     FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         descriptor_sets[frame_index] = layout.CreateDescriptorSet();
 
-        for (uint texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+        for (uint32 texture_index = 0; texture_index < max_bound_textures; texture_index++) {
             if (texture_index < textures.Size()) {
                 const Handle<Texture> &texture = textures[texture_index];
 
@@ -883,7 +883,7 @@ FixedArray<DescriptorSetRef, max_frames_in_flight> MaterialDescriptorSetManager:
 
     // if on render thread, initialize and add immediately
     if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_ASSERT_RESULT(descriptor_sets[frame_index]->Create(g_engine->GetGPUDevice()));
         }
 
@@ -966,7 +966,7 @@ void MaterialDescriptorSetManager::RemoveMaterial(ID<Material> id)
     const auto material_descriptor_sets_it = m_material_descriptor_sets.FindAs(id);
 
     if (material_descriptor_sets_it != m_material_descriptor_sets.End()) {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             SafeRelease(std::move(material_descriptor_sets_it->second[frame_index]));
         }
 
@@ -982,7 +982,7 @@ void MaterialDescriptorSetManager::SetNeedsDescriptorSetUpdate(const Handle<Mate
 
     Mutex::Guard guard(m_descriptor_sets_to_update_mutex);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const auto it = m_descriptor_sets_to_update[frame_index].FindAs(material);
 
         if (it != m_descriptor_sets_to_update[frame_index].End()) {
@@ -1004,7 +1004,7 @@ void MaterialDescriptorSetManager::UpdatePendingDescriptorSets(Frame *frame)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     if (!m_pending_addition_flag.Get(MemoryOrder::ACQUIRE)) {
         return;
@@ -1016,7 +1016,7 @@ void MaterialDescriptorSetManager::UpdatePendingDescriptorSets(Frame *frame)
         const auto material_descriptor_sets_it = m_material_descriptor_sets.FindAs(*it);
 
         if (material_descriptor_sets_it != m_material_descriptor_sets.End()) {
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 SafeRelease(std::move(material_descriptor_sets_it->second[frame_index]));
             }
 
@@ -1027,7 +1027,7 @@ void MaterialDescriptorSetManager::UpdatePendingDescriptorSets(Frame *frame)
     }
 
     for (auto it = m_pending_addition.Begin(); it != m_pending_addition.End();) {
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             AssertThrow(it->second[frame_index].IsValid());
 
             HYPERION_ASSERT_RESULT(it->second[frame_index]->Create(g_engine->GetGPUDevice()));
@@ -1045,9 +1045,9 @@ void MaterialDescriptorSetManager::Update(Frame *frame)
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
-    const uint descriptor_sets_to_update_flag = m_descriptor_sets_to_update_flag.Get(MemoryOrder::ACQUIRE);
+    const uint32 descriptor_sets_to_update_flag = m_descriptor_sets_to_update_flag.Get(MemoryOrder::ACQUIRE);
 
     if (descriptor_sets_to_update_flag & (1u << frame_index)) {
         Mutex::Guard guard(m_descriptor_sets_to_update_mutex);

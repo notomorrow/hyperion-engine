@@ -11,7 +11,7 @@
 
 namespace hyperion::renderer {
 
-enum class DeviceQueueType : uint
+enum class DeviceQueueType : uint32
 {
     GRAPHICS,
     COMPUTE,

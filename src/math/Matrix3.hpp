@@ -61,10 +61,10 @@ public:
     float &At(int i, int j);
 #pragma endregion deprecated
 
-    HYP_FORCE_INLINE constexpr Vec3f &operator[](uint row)
+    HYP_FORCE_INLINE constexpr Vec3f &operator[](uint32 row)
         { return rows[row]; }
 
-    HYP_FORCE_INLINE constexpr const Vec3f &operator[](uint row) const
+    HYP_FORCE_INLINE constexpr const Vec3f &operator[](uint32 row) const
         { return rows[row]; }
 
     static Matrix3 Zeros();

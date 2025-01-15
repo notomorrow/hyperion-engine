@@ -4,6 +4,7 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
+#include <rendering/Scene.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -279,6 +280,7 @@ void RenderEnvironment::RenderSubsystems(Frame *frame)
     }
 
     AssertThrow(m_scene != nullptr);
+    AssertThrow(m_scene->IsReady());
 
     if (const TLASRef &tlas = m_scene->GetTLAS()) {
         RTUpdateStateFlags update_state_flags = renderer::RT_UPDATE_STATE_FLAGS_NONE;
@@ -302,29 +304,34 @@ void RenderEnvironment::AddRenderSubsystem(TypeID type_id, const RC<RenderSubsys
 {
     struct RENDER_COMMAND(AddRenderSubsystem) : renderer::RenderCommand
     {
-        RenderEnvironment       &render_environment;
-        TypeID                  type_id;
-        RC<RenderSubsystem> render_subsystem;
+        WeakHandle<RenderEnvironment>   render_environment_weak;
+        TypeID                          type_id;
+        RC<RenderSubsystem>             render_subsystem;
 
-        RENDER_COMMAND(AddRenderSubsystem)(RenderEnvironment &render_environment, TypeID type_id, const RC<RenderSubsystem> &render_subsystem)
-            : render_environment(render_environment),
+        RENDER_COMMAND(AddRenderSubsystem)(const WeakHandle<RenderEnvironment> &render_environment_weak, TypeID type_id, const RC<RenderSubsystem> &render_subsystem)
+            : render_environment_weak(render_environment_weak),
               type_id(type_id),
               render_subsystem(render_subsystem)
         {
-            AssertThrow(render_subsystem != nullptr);
         }
         
         virtual ~RENDER_COMMAND(AddRenderSubsystem)() override = default;
 
         virtual RendererResult operator()() override
         {
+            Handle<RenderEnvironment> render_environment = render_environment_weak.Lock();
+            
+            if (!render_environment) {
+                return HYP_MAKE_ERROR(RendererError, "RenderEnvironment is null");
+            }
+
             const Name name = render_subsystem->GetName();
 
-            Mutex::Guard guard(render_environment.m_render_subsystems_mutex);
+            Mutex::Guard guard(render_environment->m_render_subsystems_mutex);
 
-            const auto components_it = render_environment.m_render_subsystems.Find(type_id);
+            const auto components_it = render_environment->m_render_subsystems.Find(type_id);
 
-            if (components_it != render_environment.m_render_subsystems.End()) {
+            if (components_it != render_environment->m_render_subsystems.End()) {
                 const auto name_it = components_it->second.Find(name);
 
                 AssertThrowMsg(
@@ -335,11 +342,11 @@ void RenderEnvironment::AddRenderSubsystem(TypeID type_id, const RC<RenderSubsys
 
                 components_it->second.Set(name, std::move(render_subsystem));
             } else {
-                render_environment.m_render_subsystems.Set(type_id, { { name, std::move(render_subsystem) } });
+                render_environment->m_render_subsystems.Set(type_id, { { name, std::move(render_subsystem) } });
             }
 
-            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER);
-            render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME);
+            render_environment->AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER);
+            render_environment->AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME);
 
             HYPERION_RETURN_OK;
         }
@@ -349,19 +356,19 @@ void RenderEnvironment::AddRenderSubsystem(TypeID type_id, const RC<RenderSubsys
 
     render_subsystem->SetParent(this);
 
-    PUSH_RENDER_COMMAND(AddRenderSubsystem, *this, type_id, render_subsystem);
+    PUSH_RENDER_COMMAND(AddRenderSubsystem, WeakHandleFromThis(), type_id, render_subsystem);
 }
 
 void RenderEnvironment::RemoveRenderSubsystem(TypeID type_id, Name name)
 {
     struct RENDER_COMMAND(RemoveRenderSubsystem) : renderer::RenderCommand
     {
-        RenderEnvironment       &render_environment;
-        TypeID                  type_id;
-        Name                    name;
+        WeakHandle<RenderEnvironment>   render_environment_weak;
+        TypeID                          type_id;
+        Name                            name;
 
-        RENDER_COMMAND(RemoveRenderSubsystem)(RenderEnvironment &render_environment, TypeID type_id, Name name)
-            : render_environment(render_environment),
+        RENDER_COMMAND(RemoveRenderSubsystem)(const WeakHandle<RenderEnvironment> &render_environment_weak, TypeID type_id, Name name)
+            : render_environment_weak(render_environment_weak),
               type_id(type_id),
               name(name)
         {
@@ -371,13 +378,19 @@ void RenderEnvironment::RemoveRenderSubsystem(TypeID type_id, Name name)
 
         virtual RendererResult operator()() override
         {
-            Mutex::Guard guard(render_environment.m_render_subsystems_mutex);
+            Handle<RenderEnvironment> render_environment = render_environment_weak.Lock();
+            
+            if (!render_environment) {
+                return HYP_MAKE_ERROR(RendererError, "RenderEnvironment is null");
+            }
 
-            const auto components_it = render_environment.m_render_subsystems.Find(type_id);
+            Mutex::Guard guard(render_environment->m_render_subsystems_mutex);
 
-            if (components_it != render_environment.m_render_subsystems.End()) {
-                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER);
-                render_environment.AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME);
+            const auto components_it = render_environment->m_render_subsystems.Find(type_id);
+
+            if (components_it != render_environment->m_render_subsystems.End()) {
+                render_environment->AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_RENDER);
+                render_environment->AddUpdateMarker(RENDER_ENVIRONMENT_UPDATES_RENDER_SUBSYSTEMS, ThreadType::THREAD_TYPE_GAME);
 
                 if (name.IsValid()) {
                     const auto name_it = components_it->second.Find(name);
@@ -404,7 +417,7 @@ void RenderEnvironment::RemoveRenderSubsystem(TypeID type_id, Name name)
                 }
 
                 if (components_it->second.Empty()) {
-                    render_environment.m_render_subsystems.Erase(components_it);
+                    render_environment->m_render_subsystems.Erase(components_it);
                 }
             }
 
@@ -412,7 +425,7 @@ void RenderEnvironment::RemoveRenderSubsystem(TypeID type_id, Name name)
         }
     };
 
-    PUSH_RENDER_COMMAND(RemoveRenderSubsystem, *this, type_id, name);
+    PUSH_RENDER_COMMAND(RemoveRenderSubsystem, WeakHandleFromThis(), type_id, name);
 }
 
 void RenderEnvironment::InitializeRT()

@@ -24,10 +24,10 @@ struct ImageViewPlatformImpl<Platform::VULKAN>
         VkFormat format,
         VkImageAspectFlags aspect_flags,
         VkImageViewType view_type,
-        uint mipmap_layer,
-        uint num_mipmaps,
-        uint face_layer,
-        uint num_faces
+        uint32 mipmap_layer,
+        uint32 num_mipmaps,
+        uint32 face_layer,
+        uint32 num_faces
     );
 
     RendererResult Destroy(Device<Platform::VULKAN> *device);

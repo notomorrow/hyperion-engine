@@ -32,7 +32,7 @@ PostFXPass::PostFXPass(
 PostFXPass::PostFXPass(
     const ShaderRef &shader,
     PostProcessingStage stage,
-    uint effect_index,
+    uint32 effect_index,
     InternalFormat image_format
 ) : FullScreenPass(
         shader,
@@ -62,7 +62,7 @@ void PostFXPass::CreateDescriptors()
             ? NAME("PostFXPreStack")
             : NAME("PostFXPostStack");
 
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                 ->SetElement(descriptor_name, m_effect_index, m_framebuffer->GetAttachment(0)->GetImageView());
         }
@@ -71,7 +71,7 @@ void PostFXPass::CreateDescriptors()
 
 PostProcessingEffect::PostProcessingEffect(
     PostProcessingStage stage,
-    uint effect_index,
+    uint32 effect_index,
     InternalFormat image_format
 ) : m_pass(
         nullptr,
@@ -93,7 +93,7 @@ void PostProcessingEffect::Init()
     m_pass.Create();
 }
 
-void PostProcessingEffect::RenderEffect(Frame *frame, uint slot)
+void PostProcessingEffect::RenderEffect(Frame *frame, uint32 slot)
 {
     struct alignas(128)
     {
@@ -115,7 +115,7 @@ void PostProcessing::Create()
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    for (uint stage_index = 0; stage_index < 2; stage_index++) {
+    for (uint32 stage_index = 0; stage_index < 2; stage_index++) {
         for (auto &effect : m_effects[stage_index]) {
             AssertThrow(effect.second != nullptr);
 
@@ -137,13 +137,13 @@ void PostProcessing::Destroy()
     {
         std::lock_guard guard(m_effects_mutex);
 
-        for (uint stage_index = 0; stage_index < 2; stage_index++) {
+        for (uint32 stage_index = 0; stage_index < 2; stage_index++) {
             m_effects_pending_addition[stage_index].Clear();
             m_effects_pending_removal[stage_index].Clear();
         }
     }
 
-    for (uint stage_index = 0; stage_index < 2; stage_index++) {
+    for (uint32 stage_index = 0; stage_index < 2; stage_index++) {
         for (auto &it : m_effects[stage_index]) {
             AssertThrow(it.second != nullptr);
 
@@ -206,7 +206,7 @@ PostProcessingUniforms PostProcessing::GetUniforms() const
 {
     PostProcessingUniforms post_processing_uniforms { };
 
-    for (uint stage_index = 0; stage_index < 2; stage_index++) {
+    for (uint32 stage_index = 0; stage_index < 2; stage_index++) {
         auto &effects = m_effects[stage_index];
 
         post_processing_uniforms.effect_counts[stage_index] = uint32(effects.Size());
@@ -246,7 +246,7 @@ void PostProcessing::CreateUniformBuffer()
         &post_processing_uniforms
     );
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
             ->SetElement(NAME("PostProcessingUniforms"), m_uniform_buffer);
     }
@@ -256,9 +256,9 @@ void PostProcessing::RenderPre(Frame *frame) const
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    uint index = 0;
+    uint32 index = 0;
 
-    for (auto &it : m_effects[uint(POST_PROCESSING_STAGE_PRE_SHADING)]) {
+    for (auto &it : m_effects[uint32(POST_PROCESSING_STAGE_PRE_SHADING)]) {
         auto &effect = it.second;
 
         effect->RenderEffect(frame, index);
@@ -271,9 +271,9 @@ void PostProcessing::RenderPost(Frame *frame) const
 {
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    uint index = 0;
+    uint32 index = 0;
 
-    for (auto &it : m_effects[uint(POST_PROCESSING_STAGE_POST_SHADING)]) {
+    for (auto &it : m_effects[uint32(POST_PROCESSING_STAGE_POST_SHADING)]) {
         auto &effect = it.second;
 
         effect->RenderEffect(frame, index);

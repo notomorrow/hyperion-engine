@@ -55,7 +55,7 @@ struct RENDER_COMMAND(SetUITexture) : renderer::RenderCommand
             const DescriptorTableRef &descriptor_table = final_pass.m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable();
             AssertThrow(descriptor_table.IsValid());
 
-            for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
                 const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
                 AssertThrow(descriptor_set != nullptr);
 
@@ -124,7 +124,7 @@ void CompositePass::Create()
     ));
 }
 
-void CompositePass::Record(uint frame_index)
+void CompositePass::Record(uint32 frame_index)
 {
     FullScreenPass::Record(frame_index);
 }
@@ -134,7 +134,7 @@ void CompositePass::Render(Frame *frame)
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
     
-    uint frame_index = frame->GetFrameIndex();
+    uint32 frame_index = frame->GetFrameIndex();
 
     GetFramebuffer()->BeginCapture(frame->GetCommandBuffer(), frame_index);
 
@@ -197,7 +197,7 @@ void FinalPass::Create()
 
     m_composite_pass.Create();
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
             ->SetElement(NAME("FinalOutputTexture"), m_composite_pass.GetAttachment(0)->GetImageView());
     }
@@ -207,7 +207,7 @@ void FinalPass::Create()
     ShaderRef shader = g_shader_manager->GetOrCreate(NAME("Blit"));
     AssertThrow(shader.IsValid());
 
-    uint iteration = 0;
+    uint32 iteration = 0;
 
     for (const ImageRef &image_ref : g_engine->GetGPUInstance()->GetSwapchain()->GetImages()) {
         FramebufferRef fbo = MakeRenderObject<Framebuffer>(
@@ -271,7 +271,7 @@ void FinalPass::Create()
     const renderer::DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -311,7 +311,7 @@ void FinalPass::Resize_Internal(Vec2u new_size)
     }
 }
 
-void FinalPass::Record(uint frame_index)
+void FinalPass::Record(uint32 frame_index)
 {
 }
 
@@ -320,10 +320,10 @@ void FinalPass::Render(Frame *frame)
     HYP_SCOPE;
     Threads::AssertOnThread(ThreadName::THREAD_RENDER);
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     const GraphicsPipelineRef &pipeline = m_render_group->GetPipeline();
-    const uint acquired_image_index = g_engine->GetGPUInstance()->GetFrameHandler()->GetAcquiredImageIndex();
+    const uint32 acquired_image_index = g_engine->GetGPUInstance()->GetFrameHandler()->GetAcquiredImageIndex();
 
     m_composite_pass.Record(frame->GetFrameIndex());
     m_composite_pass.Render(frame);

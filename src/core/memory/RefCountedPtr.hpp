@@ -33,7 +33,7 @@ extern HYP_API bool IsInstanceOfHypClass(const HypClass *hyp_class, const void *
 
 namespace memory {
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 class EnableRefCountedPtrFromThis;
 
 template <class T, class CountType>
@@ -57,7 +57,6 @@ class RefCountedPtrBase;
 
 namespace detail {
 
-
 template <class CountType>
 struct RefCountData
 {
@@ -68,11 +67,11 @@ struct RefCountData
     void        (*dtor)(void *);
 
     RefCountData()
+        : strong_count(0),
+          weak_count(0)
     {
         value = nullptr;
         type_id = TypeID::Void();
-        strong_count = 0;
-        weak_count = 0;
         dtor = nullptr;
     }
     
@@ -86,8 +85,8 @@ struct RefCountData
 #ifdef HYP_DEBUG_MODE
     HYP_FORCE_INLINE void EnsureUninitialized() const
     {
-        AssertThrow(this->strong_count == 0);
-        AssertThrow(this->weak_count == 0);
+        AssertThrow(UseCount_Strong() == 0);
+        AssertThrow(UseCount_Weak() == 0);
     }
 #endif
 
@@ -99,7 +98,7 @@ struct RefCountData
         if constexpr (std::is_integral_v<CountType>) {
             return ++strong_count;
         } else {
-            return strong_count.fetch_add(1, std::memory_order_relaxed) + 1;
+            return strong_count.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
         }
     }
     
@@ -108,7 +107,7 @@ struct RefCountData
         if constexpr (std::is_integral_v<CountType>) {
             return ++weak_count;
         } else {
-            return weak_count.fetch_add(1, std::memory_order_relaxed) + 1;
+            return weak_count.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
         }
     }
 
@@ -117,7 +116,7 @@ struct RefCountData
         if constexpr (std::is_integral_v<CountType>) {
             return --strong_count;
         } else {
-            return strong_count.fetch_sub(1, std::memory_order_acq_rel) - 1;
+            return strong_count.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
         }
     }
 
@@ -126,7 +125,7 @@ struct RefCountData
         if constexpr (std::is_integral_v<CountType>) {
             return --weak_count;
         } else {
-            return weak_count.fetch_sub(1, std::memory_order_acq_rel) - 1;
+            return weak_count.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
         }
     }
 
@@ -135,7 +134,7 @@ struct RefCountData
         if constexpr (std::is_integral_v<CountType>) {
             return strong_count;
         } else {
-            return strong_count.load(std::memory_order_acquire);
+            return strong_count.Get(MemoryOrder::ACQUIRE);
         }
     }
 
@@ -144,7 +143,7 @@ struct RefCountData
         if constexpr (std::is_integral_v<CountType>) {
             return weak_count;
         } else {
-            return weak_count.load(std::memory_order_acquire);
+            return weak_count.Get(MemoryOrder::ACQUIRE);
         }
     }
 
@@ -199,7 +198,7 @@ struct RefCountData
     {
 #ifdef HYP_DEBUG_MODE
         AssertThrow(value != nullptr);
-        AssertThrow(strong_count == 0);
+        AssertThrow(UseCount_Strong() == 0);
 #endif
 
         void *current_value = value;
@@ -1016,7 +1015,7 @@ public:
 };
 
 // weak ref counters
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 class WeakRefCountedPtr : public WeakRefCountedPtrBase<CountType>
 {
     friend class RefCountedPtr<T, CountType>;
@@ -1249,7 +1248,7 @@ public:
  *  T must be a subclass of EnableRefCountedPtrFromThis<T> to use this class.
  * 
  *  \note Reassigning the OwningRefCountedPtr will reassign the underlying T object, meaning all RC<T> will continue pointing to the current data - be careful. */
-template <class T, class CountType = std::atomic<uint>, typename = std::enable_if_t<std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>>>
+template <class T, class CountType = AtomicVar<uint32>, typename = std::enable_if_t<std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>>>
 class OwningRefCountedPtr
 {
     HYP_FORCE_INLINE detail::RefCountData<CountType> *GetRefCountData_Internal() const
@@ -1496,7 +1495,7 @@ private:
 /*! \brief Helper struct to convert raw pointers to RefCountedPtrs.
  *  For internal use only. */
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 HYP_FORCE_INLINE RefCountedPtr<T, CountType> ToRefCountedPtr(T *ptr)
 {
     static_assert(std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>, "T must derive EnableRefCountedPtrFromThisBase<CountType>");
@@ -1512,7 +1511,7 @@ HYP_FORCE_INLINE RefCountedPtr<T, CountType> ToRefCountedPtr(T *ptr)
     }
 }
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 HYP_FORCE_INLINE RefCountedPtr<const T, CountType> ToRefCountedPtr(const T *ptr)
 {
     static_assert(std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>, "T must derive EnableRefCountedPtrFromThisBase<CountType>");
@@ -1530,7 +1529,7 @@ HYP_FORCE_INLINE RefCountedPtr<const T, CountType> ToRefCountedPtr(const T *ptr)
 
 /*! \brief Helper struct to convert raw pointers to WeakRefCountedPtrs.
  *  For internal use only. */
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 HYP_FORCE_INLINE WeakRefCountedPtr<T, CountType> ToWeakRefCountedPtr(T *ptr)
 {
     static_assert(std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>, "T must derive EnableRefCountedPtrFromThisBase<CountType>");
@@ -1546,7 +1545,7 @@ HYP_FORCE_INLINE WeakRefCountedPtr<T, CountType> ToWeakRefCountedPtr(T *ptr)
     }
 }
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 HYP_FORCE_INLINE WeakRefCountedPtr<const T, CountType> ToWeakRefCountedPtr(const T *ptr)
 {
     static_assert(std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, T>, "T must derive EnableRefCountedPtrFromThisBase<CountType>");
@@ -1599,7 +1598,7 @@ private:
     }
 };
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 struct MakeRefCountedPtrHelper
 {
     template <class... Args>
@@ -1611,25 +1610,25 @@ struct MakeRefCountedPtrHelper
 
 } // namespace memory
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 using Weak = memory::WeakRefCountedPtr<T, CountType>; 
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 using RC = memory::RefCountedPtr<T, CountType>;
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 using OwningRC = memory::OwningRefCountedPtr<T, CountType>;
 
 template <class T, class... Args>
 HYP_FORCE_INLINE RC<T> MakeRefCountedPtr(Args &&... args)
 {
-    return memory::MakeRefCountedPtrHelper<T, std::atomic<uint>>::template MakeRefCountedPtr(std::forward<Args>(args)...);
+    return memory::MakeRefCountedPtrHelper<T, AtomicVar<uint32>>::template MakeRefCountedPtr(std::forward<Args>(args)...);
 }
 
-template <class CountType = std::atomic<uint>>
+template <class CountType = AtomicVar<uint32>>
 using EnableRefCountedPtrFromThisBase = memory::EnableRefCountedPtrFromThisBase<CountType>;
 
-template <class T, class CountType = std::atomic<uint>>
+template <class T, class CountType = AtomicVar<uint32>>
 using EnableRefCountedPtrFromThis = memory::EnableRefCountedPtrFromThis<T, CountType>;
 
 using memory::ToRefCountedPtr;

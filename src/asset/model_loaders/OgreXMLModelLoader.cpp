@@ -41,7 +41,7 @@ public:
         return m_model.submeshes.Back();
     }
 
-    void AddBoneAssignment(uint vertex_index, BoneAssignment &&bone_assignment)
+    void AddBoneAssignment(uint32 vertex_index, BoneAssignment &&bone_assignment)
     {
         m_model.bone_assignments[vertex_index].PushBack(std::move(bone_assignment));
     }
@@ -134,7 +134,7 @@ void BuildVertices(OgreXMLModel &model)
     Array<Vertex> vertices;
     vertices.Resize(model.positions.Size());
 
-    for (uint i = 0; i < vertices.Size(); i++) {
+    for (uint32 i = 0; i < vertices.Size(); i++) {
         Vec3f position;
         Vec3f normal;
         Vec2f texcoord;

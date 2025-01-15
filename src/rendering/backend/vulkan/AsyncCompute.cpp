@@ -80,7 +80,7 @@ RendererResult AsyncCompute<Platform::VULKAN>::Submit(Device<Platform::VULKAN> *
 {
     HYP_SCOPE;
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     HYPERION_BUBBLE_ERRORS(m_command_buffers[frame_index]->End(device));
 
@@ -94,7 +94,7 @@ RendererResult AsyncCompute<Platform::VULKAN>::PrepareForFrame(Device<Platform::
 {
     HYP_SCOPE;
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
     
     HYPERION_BUBBLE_ERRORS(WaitForFence(device, frame));
 
@@ -108,7 +108,7 @@ RendererResult AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VUL
 {
     HYP_SCOPE;
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     RendererResult result = m_fences[frame_index]->WaitForGPU(device);
 
@@ -130,7 +130,7 @@ void AsyncCompute<Platform::VULKAN>::InsertBarrier(
 {
     HYP_SCOPE;
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     buffer->InsertBarrier(m_command_buffers[frame_index], resource_state, ShaderModuleType::COMPUTE);
 }
@@ -144,7 +144,7 @@ void AsyncCompute<Platform::VULKAN>::Dispatch(
 {
     HYP_SCOPE;
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     ref->Bind(m_command_buffers[frame_index]);
     ref->Dispatch(m_command_buffers[frame_index], extent);
@@ -156,12 +156,12 @@ void AsyncCompute<Platform::VULKAN>::Dispatch(
     const ComputePipelineRef<Platform::VULKAN> &ref,
     const Vec3u &extent,
     const DescriptorTableRef<Platform::VULKAN> &descriptor_table,
-    const ArrayMap<Name, ArrayMap<Name, uint>> &offsets
+    const ArrayMap<Name, ArrayMap<Name, uint32>> &offsets
 ) const
 {
     HYP_SCOPE;
 
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     descriptor_table->Bind<ComputePipelineRef<Platform::VULKAN>>(
         m_command_buffers[frame_index],

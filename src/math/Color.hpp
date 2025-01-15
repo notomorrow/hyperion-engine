@@ -81,7 +81,7 @@ public:
     HYP_FORCE_INLINE Color &SetAlpha(float alpha)
         { bytes[3] = static_cast<ubyte>(alpha * 255.0f); return *this; }
     
-    HYP_FORCE_INLINE constexpr float operator[](uint index) const
+    HYP_FORCE_INLINE constexpr float operator[](uint32 index) const
         { return float(bytes[index]) / 255.0f; }
     
     Color operator+(const Color &other) const;

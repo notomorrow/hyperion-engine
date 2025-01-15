@@ -90,7 +90,7 @@ static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, con
 {
     FixedArray<Matrix4, 6> view_matrices;
 
-    for (uint i = 0; i < 6; i++) {
+    for (uint32 i = 0; i < 6; i++) {
         view_matrices[i] = Matrix4::LookAt(
             origin,
             origin + Texture::cubemap_directions[i].first,
@@ -496,7 +496,7 @@ void EnvProbe::Render(Frame *frame)
     AssertThrow(m_texture.IsValid());
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     RendererResult result;
 
@@ -516,7 +516,7 @@ void EnvProbe::Render(Frame *frame)
             }
 
             // don't care about position in grid if it is not controlled by one.
-            // set it such that the uint value of probe_index
+            // set it such that the uint32 value of probe_index
             // would be the held value.
             probe_index = EnvProbeIndex(
                 Vec3u { 0, 0, it->second.Get() },
@@ -573,7 +573,7 @@ void EnvProbe::Render(Frame *frame)
         );
 
         g_engine->GetRenderState()->UnbindCamera(m_camera.Get());
-        g_engine->GetRenderState()->UnbindScene();
+        g_engine->GetRenderState()->UnbindScene(m_parent_scene.Get());
 
         if (light_render_resources_handle != nullptr) {
             g_engine->GetRenderState()->UnsetActiveLight();
@@ -617,7 +617,7 @@ void EnvProbe::UpdateRenderData(bool set_texture)
         AssertThrow(m_grid_slot != ~0u);
     }
 
-    const uint texture_slot = IsControlledByEnvGrid() ? ~0u : m_bound_index.GetProbeIndex();
+    const uint32 texture_slot = IsControlledByEnvGrid() ? ~0u : m_bound_index.GetProbeIndex();
 
     { // build proxy flags
         const EnumFlags<ShadowFlags> shadow_flags = IsShadowProbe() ? ShadowFlags::VSM : ShadowFlags::NONE;
@@ -640,7 +640,7 @@ void EnvProbe::UpdateRenderData(bool set_texture)
         AssertThrow(texture_slot != ~0u);
         AssertThrow(m_texture.IsValid());
 
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             switch (GetEnvProbeType()) {
             case ENV_PROBE_TYPE_REFLECTION:
             case ENV_PROBE_TYPE_SKY: // fallthrough

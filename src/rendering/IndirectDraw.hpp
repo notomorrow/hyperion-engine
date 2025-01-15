@@ -46,18 +46,18 @@ struct DrawCommandData
 class IndirectDrawState
 {
 public:
-    static constexpr uint batch_size = 256u;
-    static constexpr uint initial_count = batch_size;
+    static constexpr uint32 batch_size = 256u;
+    static constexpr uint32 initial_count = batch_size;
     // should sizes be scaled up to the next power of 2?
     static constexpr bool use_next_pow2_size = true;
 
     IndirectDrawState();
     ~IndirectDrawState();
 
-    HYP_FORCE_INLINE const GPUBufferRef &GetInstanceBuffer(uint frame_index) const
+    HYP_FORCE_INLINE const GPUBufferRef &GetInstanceBuffer(uint32 frame_index) const
         { return m_instance_buffers[frame_index]; }
 
-    HYP_FORCE_INLINE const GPUBufferRef &GetIndirectBuffer(uint frame_index) const
+    HYP_FORCE_INLINE const GPUBufferRef &GetIndirectBuffer(uint32 frame_index) const
         { return m_indirect_buffers[frame_index]; }
 
     HYP_FORCE_INLINE const Array<ObjectInstance> &GetInstances() const

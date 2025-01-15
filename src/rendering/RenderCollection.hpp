@@ -49,9 +49,9 @@ class RenderEnvironment;
 
 using renderer::PushConstantData;
 
-enum PassType : uint
+enum PassType : uint32
 {
-    PASS_TYPE_INVALID = uint(-1),
+    PASS_TYPE_INVALID = uint32(-1),
     PASS_TYPE_SKYBOX = 0,
     PASS_TYPE_OPAQUE,
     PASS_TYPE_TRANSLUCENT,
@@ -61,7 +61,7 @@ enum PassType : uint
 
 constexpr PassType BucketToPassType(Bucket bucket)
 {
-    constexpr const PassType pass_type_per_bucket[uint(BUCKET_MAX)] = {
+    constexpr const PassType pass_type_per_bucket[uint32(BUCKET_MAX)] = {
         PASS_TYPE_INVALID,     // BUCKET_SWAPCHAIN
         PASS_TYPE_INVALID,     // BUCKET_RESERVED0
         PASS_TYPE_INVALID,     // BUCKET_RESERVED1
@@ -71,7 +71,7 @@ constexpr PassType BucketToPassType(Bucket bucket)
         PASS_TYPE_UI           // BUCKET_UI
     };
 
-    return pass_type_per_bucket[uint(bucket)];
+    return pass_type_per_bucket[uint32(bucket)];
 }
 
 class EntityDrawCollection

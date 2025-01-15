@@ -41,7 +41,7 @@ struct RENDER_COMMAND(SetTemporalAAResultInGlobalDescriptorSet) : renderer::Rend
             ? result_texture->GetImageView()
             : g_engine->GetPlaceholderData()->GetImageView2D1x1R8();
 
-        for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
                 ->SetElement(NAME("TAAResultTexture"), result_texture_view);
         }
@@ -146,7 +146,7 @@ void TemporalAA::CreateComputePipelines()
         &m_history_texture
     };
 
-    for (uint frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         // create descriptor sets for depth pyramid generation.
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("TemporalAADescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
@@ -187,9 +187,7 @@ void TemporalAA::Render(Frame *frame)
     HYP_NAMED_SCOPE("Temporal AA");
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
-    const uint frame_index = frame->GetFrameIndex();
-
-    const auto &scene = g_engine->GetRenderState()->GetScene().scene;
+    const uint32 frame_index = frame->GetFrameIndex();
     
     const CameraRenderResources &camera_render_resources = g_engine->GetRenderState()->GetActiveCamera();
 

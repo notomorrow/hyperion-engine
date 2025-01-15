@@ -190,7 +190,7 @@ void UITabView::UpdateSize_Internal(bool update_children)
     UpdateTabSizes();
 }
 
-void UITabView::SetSelectedTabIndex(uint index)
+void UITabView::SetSelectedTabIndex(uint32 index)
 {
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
@@ -252,7 +252,7 @@ RC<UITab> UITabView::AddTab(Name name, const String &title)
     {
         if (data.mouse_buttons == MouseButtonState::LEFT)
         {
-            const uint tab_index = GetTabIndex(name);
+            const uint32 tab_index = GetTabIndex(name);
 
             SetSelectedTabIndex(tab_index);
 
@@ -288,7 +288,7 @@ RC<UITab> UITabView::GetTab(Name name) const
     return nullptr;
 }
 
-uint UITabView::GetTabIndex(Name name) const
+uint32 UITabView::GetTabIndex(Name name) const
 {
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 

@@ -633,12 +633,12 @@ public:
     /*! \brief Calculate the depth of the Node relative to the root Node.
      * \returns The depth of the Node relative to the root Node. If the Node has no parent, 0 is returned. */
     HYP_METHOD()
-    uint CalculateDepth() const;
+    uint32 CalculateDepth() const;
 
     /*! \brief Calculate the index of this Node in its parent's child list.
      * \returns The index of this Node in its parent's child list. If the Node has no parent, -1 is returned. */
     HYP_METHOD()
-    uint FindSelfIndex() const;
+    uint32 FindSelfIndex() const;
 
     bool TestRay(const Ray &ray, RayTestResults &out_results) const;
 

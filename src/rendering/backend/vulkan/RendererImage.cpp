@@ -244,7 +244,7 @@ RendererResult ImagePlatformImpl<Platform::VULKAN>::Create(
     //         DebugLog(
     //             LogType::Error,
     //             "Device does not support the format %u with requested tiling %d and format features %d\n",
-    //             static_cast<uint>(format),
+    //             static_cast<uint32>(format),
     //             static_cast<int>(m_internal_info.tiling),
     //             static_cast<int>(format_features)
     //         );
@@ -785,7 +785,7 @@ RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device,
         });
 
         // copy from staging to image
-        const uint32 buffer_offset_step = uint(m_size) / texture_data.desc.num_faces;
+        const uint32 buffer_offset_step = uint32(m_size) / texture_data.desc.num_faces;
 
         AssertThrowMsg(m_size % buffer_offset_step == 0, "Invalid image size");
         AssertThrowMsg(m_size / buffer_offset_step == texture_data.desc.num_faces, "Invalid image size");
@@ -1107,7 +1107,7 @@ void Image<Platform::VULKAN>::CopyFromBuffer(
             
     // copy from staging to image
     const auto num_faces = NumFaces();
-    const auto buffer_offset_step = uint(m_size) / num_faces;
+    const auto buffer_offset_step = uint32(m_size) / num_faces;
 
     for (uint32 i = 0; i < num_faces; i++) {
         VkBufferImageCopy region { };
@@ -1149,7 +1149,7 @@ void Image<Platform::VULKAN>::CopyToBuffer(
             
     // copy from staging to image
     const auto num_faces = NumFaces();
-    const auto buffer_offset_step = uint(m_size) / num_faces;
+    const auto buffer_offset_step = uint32(m_size) / num_faces;
 
     for (uint32 i = 0; i < num_faces; i++) {
         VkBufferImageCopy region { };

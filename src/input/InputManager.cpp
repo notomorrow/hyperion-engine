@@ -241,7 +241,7 @@ EnumFlags<MouseButtonState> InputManager::GetButtonStates() const
 {
     EnumFlags<MouseButtonState> state = MouseButtonState::NONE;
 
-    for (uint i = 0; i < NUM_MOUSE_BUTTONS; i++) {
+    for (uint32 i = 0; i < NUM_MOUSE_BUTTONS; i++) {
         if (m_input_state.mouse_button_states[i]) {
             state |= MouseButtonState(1u << i);
         }

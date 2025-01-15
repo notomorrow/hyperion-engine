@@ -24,16 +24,16 @@ class Texture;
 struct HYP_API FontAtlasTextureSet
 {
     Handle<Texture>                 main_atlas;
-    FlatMap<uint, Handle<Texture>>  atlases;
+    FlatMap<uint32, Handle<Texture>>  atlases;
 
     ~FontAtlasTextureSet();
 
     HYP_FORCE_INLINE const Handle<Texture> &GetMainAtlas() const
         { return main_atlas; }
     
-    Handle<Texture> GetAtlasForPixelSize(uint pixel_size) const;
+    Handle<Texture> GetAtlasForPixelSize(uint32 pixel_size) const;
 
-    void AddAtlas(uint pixel_size, Handle<Texture> texture, bool is_main_atlas = false);
+    void AddAtlas(uint32 pixel_size, Handle<Texture> texture, bool is_main_atlas = false);
 };
 
 class FontAtlas
@@ -74,8 +74,8 @@ public:
 
     HYP_API Optional<Glyph::Metrics> GetGlyphMetrics(FontFace::WChar symbol) const;
 
-    HYP_API void WriteToBuffer(uint pixel_size, ByteBuffer &buffer) const;
-    HYP_API Bitmap<1> GenerateBitmap(uint pixel_size) const;
+    HYP_API void WriteToBuffer(uint32 pixel_size, ByteBuffer &buffer) const;
+    HYP_API Bitmap<1> GenerateBitmap(uint32 pixel_size) const;
     HYP_API json::JSONValue GenerateMetadataJSON(const String &output_directory) const;
 
 private:

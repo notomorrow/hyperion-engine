@@ -34,12 +34,12 @@ class RenderSubsystem : public EnableRefCountedPtrFromThis<RenderSubsystem>
     HYP_OBJECT_BODY(RenderSubsystem);
 
 public:
-    using Index = uint;
+    using Index = uint32;
 
     friend class RenderEnvironment;
 
     /*! \param render_frame_slicing Number of frames to wait between render calls */
-    RenderSubsystem(Name name, uint render_frame_slicing = 0)
+    RenderSubsystem(Name name, uint32 render_frame_slicing = 0)
         : m_name(name),
           m_render_frame_slicing(MathUtil::NextMultiple(render_frame_slicing, max_frames_in_flight)),
           m_render_frame_slicing_counter(0),
@@ -135,8 +135,8 @@ protected:
     virtual void OnComponentIndexChanged(Index new_index, Index prev_index) = 0;
 
     Name                    m_name;
-    const uint              m_render_frame_slicing; // amount of frames to wait between render calls
-    uint                    m_render_frame_slicing_counter;
+    const uint32            m_render_frame_slicing; // amount of frames to wait between render calls
+    uint32                  m_render_frame_slicing_counter;
     Index                   m_index;
     RenderEnvironment       *m_parent;
 

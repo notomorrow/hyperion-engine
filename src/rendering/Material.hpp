@@ -140,8 +140,8 @@ class HYP_API Material : public HypObject<Material>
     HYP_PROPERTY(ID, &Material::GetID, { { "serialize", false } });
 
 public:
-    static constexpr uint max_parameters = 32u;
-    static constexpr uint max_textures = 32u;
+    static constexpr uint32 max_parameters = 32u;
+    static constexpr uint32 max_textures = 32u;
 
     friend class MaterialRenderResources;
 
@@ -275,17 +275,17 @@ public:
         HYP_FORCE_INLINE bool IsFloatType() const
             { return type >= MATERIAL_PARAMETER_TYPE_FLOAT && type <= MATERIAL_PARAMETER_TYPE_FLOAT4; }
 
-        HYP_FORCE_INLINE uint Size() const
+        HYP_FORCE_INLINE uint32 Size() const
         {
             if (type == MATERIAL_PARAMETER_TYPE_NONE) {
                 return 0u;
             }
 
             if (type >= MATERIAL_PARAMETER_TYPE_INT) {
-                return uint(type - MATERIAL_PARAMETER_TYPE_INT) + 1;
+                return uint32(type - MATERIAL_PARAMETER_TYPE_INT) + 1;
             }
 
-            return uint(type);
+            return uint32(type);
         }
 
         HYP_FORCE_INLINE void Copy(uint8 *dst) const
@@ -479,7 +479,7 @@ public:
      *  Otherwise, it will be initialized when the Material is initialized.
      *  \param index The index to set the texture in
      *  \param texture The Texture handle to set. */
-    void SetTextureAtIndex(uint index, const Handle<Texture> &texture);
+    void SetTextureAtIndex(uint32 index, const Handle<Texture> &texture);
 
     /*! \brief Sets all textures on this Material to the given TextureSet.
      *  If the Material has already been initialized, the Textures are initialized.
@@ -503,7 +503,7 @@ public:
      *  index. If no Texture was set, nullptr is returned.
      *  \param index The index of the texture to find
      *  \return Handle for the found Texture, or an empty Handle if not found. */
-    const Handle<Texture> &GetTextureAtIndex(uint index) const;
+    const Handle<Texture> &GetTextureAtIndex(uint32 index) const;
 
     /*! \brief Get the bucket for this Material.
      *  \return The bucket for this Material. */
@@ -752,7 +752,7 @@ public:
      *   \param frame_index The frame index to get the descriptor set for
      *   \returns The descriptor set for the given material and frame index or nullptr if not found
      */
-    const DescriptorSetRef &GetDescriptorSet(ID<Material> id, uint frame_index) const;
+    const DescriptorSetRef &GetDescriptorSet(ID<Material> id, uint32 frame_index) const;
 
     /*! \brief Add a material to the manager. This will create a descriptor set for
      *  the material and add it to the manager. Usable from any thread.
@@ -807,7 +807,7 @@ private:
 
     FixedArray<Array<WeakHandle<Material>>, max_frames_in_flight>                           m_descriptor_sets_to_update;
     Mutex                                                                                   m_descriptor_sets_to_update_mutex;
-    AtomicVar<uint>                                                                         m_descriptor_sets_to_update_flag;
+    AtomicVar<uint32>                                                                         m_descriptor_sets_to_update_flag;
 };
 
 } // namespace hyperion

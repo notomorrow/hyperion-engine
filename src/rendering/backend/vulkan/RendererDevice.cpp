@@ -460,7 +460,7 @@ RendererResult Device<Platform::VULKAN>::Create(const std::set<uint32> &required
         DeviceQueue<Platform::VULKAN> *queues_with_command_buffers[] = { &m_queue_graphics, &m_queue_transfer, &m_queue_compute };
 
         for (auto &it : queues_with_command_buffers) {
-            for (uint command_buffer_index = 0; command_buffer_index < it->command_pools.Size(); command_buffer_index++) {
+            for (uint32 command_buffer_index = 0; command_buffer_index < it->command_pools.Size(); command_buffer_index++) {
                 uint32 family_index = 0;
 
                 switch (it->type) {

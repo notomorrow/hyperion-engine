@@ -4,7 +4,7 @@
 
 namespace hyperion {
 
-uint ByteUtil::LowestSetBitIndex(uint64 bits)
+uint32 ByteUtil::LowestSetBitIndex(uint64 bits)
 {
 #ifdef HYP_CLANG_OR_GCC
     const int bit_index = __builtin_ffsll(bits) - 1;
@@ -15,7 +15,7 @@ uint ByteUtil::LowestSetBitIndex(uint64 bits)
     #error "ByteUtil::LowestSetBitIndex() not implemented for this platform"
 #endif
 
-    return uint(bit_index);
+    return uint32(bit_index);
 }
 
 uint64 ByteUtil::BitCount(uint64 value)

@@ -335,7 +335,7 @@ void NodeProxy::UnlockTransform()
     }
 }
 
-uint NodeProxy::CalculateDepth() const
+uint32 NodeProxy::CalculateDepth() const
 {
     if (Node *node = Get()) {
         return node->CalculateDepth();

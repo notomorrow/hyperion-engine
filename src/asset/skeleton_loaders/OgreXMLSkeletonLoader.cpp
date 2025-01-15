@@ -78,7 +78,7 @@ public:
     {
         if (name == "bone") {
             String bone_name = attributes.At("name");
-            const uint id = StringUtil::Parse<uint>(attributes.At("id"));
+            const uint32 id = StringUtil::Parse<uint32>(attributes.At("id"));
 
             m_skeleton.bones.PushBack({
                 .name = std::move(bone_name),

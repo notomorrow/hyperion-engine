@@ -35,9 +35,9 @@ enum class EnvProbeFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(EnvProbeFlags);
 
-enum EnvProbeBindingSlot : uint
+enum EnvProbeBindingSlot : uint32
 {
-    ENV_PROBE_BINDING_SLOT_INVALID          = uint(-1),
+    ENV_PROBE_BINDING_SLOT_INVALID          = uint32(-1),
 
     ENV_PROBE_BINDING_SLOT_CUBEMAP          = 0,
     ENV_PROBE_BINDING_SLOT_SHADOW_CUBEMAP   = 1,
@@ -117,13 +117,13 @@ struct EnvProbeIndex
             + position.z;
     }
 
-    HYP_FORCE_INLINE bool operator<(uint value) const
+    HYP_FORCE_INLINE bool operator<(uint32 value) const
         { return GetProbeIndex() < value; }
 
-    HYP_FORCE_INLINE bool operator==(uint value) const
+    HYP_FORCE_INLINE bool operator==(uint32 value) const
         { return GetProbeIndex() == value; }
 
-    HYP_FORCE_INLINE bool operator!=(uint value) const
+    HYP_FORCE_INLINE bool operator!=(uint32 value) const
         { return GetProbeIndex() != value; }
 
     HYP_FORCE_INLINE bool operator<(const EnvProbeIndex &other) const

@@ -51,7 +51,7 @@ public:
     double GetNoise(const Vec3f &xyz) const
         { return GetNoise(xyz.x, xyz.y, xyz.z); }
 
-    Bitmap<1> CreateBitmap(uint width, uint height, float scale = 1.0f);
+    Bitmap<1> CreateBitmap(uint32 width, uint32 height, float scale = 1.0f);
 
 protected:
     Seed m_seed;

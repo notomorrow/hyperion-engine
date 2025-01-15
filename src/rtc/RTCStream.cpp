@@ -35,7 +35,7 @@ void RTCStream::SendSample(const RTCStreamDestination &destination)
         return;
     }
 
-    uint num_samples = 0;
+    uint32 num_samples = 0;
 
     while (auto sample = m_encoder->PullData()) {
         for (const RC<RTCTrack> &track : destination.tracks) {

@@ -470,7 +470,7 @@ struct alignas(16) MeshDescription
     uint32 num_vertices;
 };
 
-using ImageSubResourceFlagBits = uint;
+using ImageSubResourceFlagBits = uint32;
 
 enum ImageSubResourceFlags : ImageSubResourceFlagBits
 {

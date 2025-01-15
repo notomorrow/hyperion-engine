@@ -33,7 +33,7 @@ public:
     static Matrix4 Scaling(const Vec3f &scaling);
     static Matrix4 Perspective(float fov, int w, int h, float n, float f);
     static Matrix4 Orthographic(float l, float r, float b, float t, float n, float f);
-    static Matrix4 Jitter(uint index, uint width, uint height, Vec4f &out_jitter);
+    static Matrix4 Jitter(uint32 index, uint32 width, uint32 height, Vec4f &out_jitter);
     static Matrix4 LookAt(const Vec3f &dir, const Vec3f &up);
     static Matrix4 LookAt(const Vec3f &pos, const Vec3f &target, const Vec3f &up);
 
@@ -74,17 +74,17 @@ public:
     Vec3f ExtractTransformScale() const;
     Quaternion ExtractRotation() const;
 
-    Vec4f GetColumn(uint index) const;
+    Vec4f GetColumn(uint32 index) const;
 
     HYP_FORCE_INLINE bool operator==(const Matrix4 &other) const
         { return &values[0] == &other.values[0] || !std::memcmp(values, other.values, std::size(values) * sizeof(values[0])); }
 
     HYP_FORCE_INLINE bool operator!=(const Matrix4 &other) const { return !operator==(other); }
 
-    HYP_FORCE_INLINE constexpr Vec4f &operator[](uint row)
+    HYP_FORCE_INLINE constexpr Vec4f &operator[](uint32 row)
         { return rows[row]; }
 
-    HYP_FORCE_INLINE constexpr const Vec4f &operator[](uint row) const
+    HYP_FORCE_INLINE constexpr const Vec4f &operator[](uint32 row) const
         { return rows[row]; }
 
     static Matrix4 Zeros();

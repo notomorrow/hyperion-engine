@@ -117,9 +117,9 @@ thread_local IThread *g_current_thread = nullptr;
 
 // @TODO heirarchical thread IDs so task thread ids can be derived from the main thread id
 #ifdef HYP_ENABLE_THREAD_ID
-thread_local ThreadID g_current_thread_id = ThreadID { uint(THREAD_MAIN), HYP_NAME_UNSAFE(MainThread) };
+thread_local ThreadID g_current_thread_id = ThreadID { uint32(THREAD_MAIN), HYP_NAME_UNSAFE(MainThread) };
 #else
-static const ThreadID g_current_thread_id = ThreadID { uint(THREAD_MAIN), HYP_NAME_UNSAFE(MainThread) };
+static const ThreadID g_current_thread_id = ThreadID { uint32(THREAD_MAIN), HYP_NAME_UNSAFE(MainThread) };
 #endif
 
 static void SetCurrentThreadID(ThreadID id)
@@ -271,7 +271,7 @@ ThreadID Threads::CurrentThreadID()
 
 ThreadType Threads::CurrentThreadType()
 {
-    const uint thread_id = Threads::CurrentThreadID().value;
+    const uint32 thread_id = Threads::CurrentThreadID().value;
 
     return thread_id == THREAD_GAME ? THREAD_TYPE_GAME
         : (thread_id == THREAD_RENDER ? THREAD_TYPE_RENDER : THREAD_TYPE_INVALID);

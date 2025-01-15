@@ -318,10 +318,10 @@ struct alignas(16) Vertex
     HYP_FORCE_INLINE int GetNumIndices() const
         { return num_indices; }
 
-    HYP_FORCE_INLINE const FixedArray<uint, MAX_BONE_INDICES> &GetBoneIndices() const
+    HYP_FORCE_INLINE const FixedArray<uint32, MAX_BONE_INDICES> &GetBoneIndices() const
         { return bone_indices; }
 
-    HYP_FORCE_INLINE void SetBoneIndices(const FixedArray<uint, MAX_BONE_INDICES> &indices)
+    HYP_FORCE_INLINE void SetBoneIndices(const FixedArray<uint32, MAX_BONE_INDICES> &indices)
     {
         num_indices = 0;
 
@@ -361,7 +361,7 @@ struct alignas(16) Vertex
             Memory::MemCpy(ptr, &texcoord1, sizeof(float) * 2);
             break;
         case VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES:
-            Memory::MemCpy(ptr, bone_indices.Data(), sizeof(uint) * MAX_BONE_INDICES);
+            Memory::MemCpy(ptr, bone_indices.Data(), sizeof(uint32) * MAX_BONE_INDICES);
             break;
         case VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS:
             Memory::MemCpy(ptr, bone_weights.Data(), sizeof(float) * MAX_BONE_WEIGHTS);
@@ -417,7 +417,7 @@ struct alignas(16) Vertex
     FixedArray<float, MAX_BONE_WEIGHTS> bone_weights;
 
     HYP_FIELD(Property="BoneIndices", Serialize=true)
-    FixedArray<uint, MAX_BONE_INDICES>  bone_indices;
+    FixedArray<uint32, MAX_BONE_INDICES>  bone_indices;
 
     HYP_FIELD(Property="NumIndices", Serialize=true)
     uint8                               num_indices;

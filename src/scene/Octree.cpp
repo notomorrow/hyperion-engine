@@ -154,10 +154,10 @@ void Octree::InitOctants()
 
     const Vec3f divided_aabb_dimensions = m_aabb.GetExtent() / 2.0f;
 
-    for (uint x = 0; x < 2; x++) {
-        for (uint y = 0; y < 2; y++) {
-            for (uint z = 0; z < 2; z++) {
-                const uint index = 4 * x + 2 * y + z;
+    for (uint32 x = 0; x < 2; x++) {
+        for (uint32 y = 0; y < 2; y++) {
+            for (uint32 z = 0; z < 2; z++) {
+                const uint32 index = 4 * x + 2 * y + z;
 
                 m_octants[index] = {
                     .aabb = BoundingBox(
@@ -201,7 +201,7 @@ Octree *Octree::GetChildOctant(OctantID octant_id)
 
     Octree *current = this;
 
-    for (uint depth = m_octant_id.depth + 1; depth <= octant_id.depth; depth++) {
+    for (uint32 depth = m_octant_id.depth + 1; depth <= octant_id.depth; depth++) {
         const uint8 index = octant_id.GetIndex(depth);
 
         if (!current || !current->IsDivided()) {
@@ -1142,7 +1142,7 @@ void Octree::ResetEntriesHash()
     m_entry_hashes = { };
 }
 
-void Octree::RebuildEntriesHash(uint level)
+void Octree::RebuildEntriesHash(uint32 level)
 {
     HYP_SCOPE;
 
@@ -1160,13 +1160,13 @@ void Octree::RebuildEntriesHash(uint level)
             tags = m_entity_manager->GetTags(item.entity);
         }
 
-        for (uint i = 0; i < uint(tags.Size()); i++) {
-            const uint num_combinations = (1u << i);
+        for (uint32 i = 0; i < uint32(tags.Size()); i++) {
+            const uint32 num_combinations = (1u << i);
 
-            for (uint k = 0; k < num_combinations; k++) {
+            for (uint32 k = 0; k < num_combinations; k++) {
                 uint32 mask = (1u << (uint32(tags[i]) - 1));
 
-                for (uint j = 0; j < i; j++) {
+                for (uint32 j = 0; j < i; j++) {
                     if ((k & (1u << j)) != (1u << j)) {
                         continue;
                     }
@@ -1192,7 +1192,7 @@ void Octree::RebuildEntriesHash(uint level)
 
     // Update parent to include this
     if (m_parent) {
-        for (uint i = 0; i < uint(m_entry_hashes.Size()); i++) {
+        for (uint32 i = 0; i < uint32(m_entry_hashes.Size()); i++) {
             m_parent->m_entry_hashes[i].Add(m_entry_hashes[i]);
         }
     }

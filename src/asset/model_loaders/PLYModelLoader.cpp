@@ -25,7 +25,7 @@ PLYModelLoader::PLYType PLYModelLoader::StringToPLYType(const String &str)
         return PLYType::PLY_TYPE_DOUBLE;
     } else if (str == "int") {
         return PLYType::PLY_TYPE_INT;
-    } else if (str == "uint") {
+    } else if (str == "uint32") {
         return PLYType::PLY_TYPE_UINT;
     } else if (str == "short") {
         return PLYType::PLY_TYPE_SHORT;
@@ -116,7 +116,7 @@ PLYModel PLYModelLoader::LoadModel(LoaderState &state)
             AssertThrowMsg(split.Size() >= 3, "Invalid model header -- `element` declaration should have at least 3 elements");
 
             if (split[1] == "vertex") {
-                const uint num_vertices = StringUtil::Parse<uint>(split[2].Data());
+                const uint32 num_vertices = StringUtil::Parse<uint32>(split[2].Data());
 
                 model.vertices.Resize(num_vertices);
             }

@@ -932,9 +932,9 @@ void Node::RefreshEntityTransform()
     }
 }
 
-uint Node::CalculateDepth() const
+uint32 Node::CalculateDepth() const
 {
-    uint depth = 0;
+    uint32 depth = 0;
 
     Node *parent = m_parent_node;
 
@@ -946,7 +946,7 @@ uint Node::CalculateDepth() const
     return depth;
 }
 
-uint Node::FindSelfIndex() const
+uint32 Node::FindSelfIndex() const
 {
     if (m_parent_node == nullptr) {
         return ~0u;
@@ -958,7 +958,7 @@ uint Node::FindSelfIndex() const
         return 0;
     }
 
-    return uint(it - m_parent_node->GetChildren().Begin());
+    return uint32(it - m_parent_node->GetChildren().Begin());
 }
 
 bool Node::TestRay(const Ray &ray, RayTestResults &out_results) const
