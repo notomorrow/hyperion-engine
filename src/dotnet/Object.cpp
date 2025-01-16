@@ -72,12 +72,12 @@ void Object::Reset()
     m_object_flags = ObjectFlags::NONE;
 }
 
-void Object::InvokeMethod_Internal(const Method *method_ptr, void **args_vptr, void *return_value_vptr)
+void Object::InvokeMethod_Internal(const Method *method_ptr, HypData *args_hyp_data, HypData *out_return_hyp_data)
 {
     AssertThrow(IsValid());
 
     m_class_ptr->EnsureLoaded();
-    m_class_ptr->GetClassHolder()->GetInvokeMethodFunction()(method_ptr->GetGuid(), m_object_reference.guid, args_vptr, return_value_vptr);
+    m_class_ptr->GetClassHolder()->GetInvokeMethodFunction()(method_ptr->GetGuid(), m_object_reference.guid, args_hyp_data, out_return_hyp_data);
 }
 
 const Method *Object::GetMethod(UTF8StringView method_name) const

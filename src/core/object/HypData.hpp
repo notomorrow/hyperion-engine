@@ -8,8 +8,6 @@
 #include <core/ID.hpp>
 #include <core/Handle.hpp>
 
-#include <core/object/HypObject.hpp>
-
 #include <core/containers/String.hpp>
 
 #include <core/utilities/TypeID.hpp>
@@ -93,6 +91,7 @@ struct HypData
         float,
         double,
         bool,
+        void *,
         IDBase,
         AnyHandle,
         RC<void>,
@@ -108,6 +107,7 @@ struct HypData
         || std::is_same_v<T, char>
         || std::is_same_v<T, float> || std::is_same_v<T, double>
         || std::is_same_v<T, bool>
+        || std::is_same_v<T, void *>
         
         /*! All ID<T> are stored as IDBase */
         || std::is_base_of_v<IDBase, T>
@@ -466,6 +466,73 @@ struct HypDataHelper<T, std::enable_if_t<std::is_enum_v<T>>> : HypDataHelper<std
     HYP_FORCE_INLINE void Set(HypData &hyp_data, T value) const
     {
         HypDataHelper<std::underlying_type_t<T>>::Set(hyp_data, static_cast<std::underlying_type_t<T>>(value));
+    }
+};
+
+/* void pointer specialization - only meant for runtime, non-serializable. */
+template <>
+struct HypDataHelperDecl<void *> {};
+
+template <>
+struct HypDataHelper<void *>
+{
+    using StorageType = void *;
+    using ConvertibleFrom = Tuple<AnyRef, AnyHandle, RC<void>>;
+
+    HYP_FORCE_INLINE bool Is(void *value) const
+    {
+        // should never be hit
+        HYP_NOT_IMPLEMENTED();
+    }
+
+    HYP_FORCE_INLINE bool Is(const AnyRef &value) const
+    {
+        return true;
+    }
+
+    HYP_FORCE_INLINE bool Is(const AnyHandle &value) const
+    {
+        return true;
+    }
+
+    HYP_FORCE_INLINE bool Is(const RC<void> &value) const
+    {
+        return true;
+    }
+
+    HYP_FORCE_INLINE constexpr void *Get(void *value) const
+    {
+        return value;
+    }
+
+    HYP_FORCE_INLINE void *Get(const AnyRef &value) const
+    {
+        return value.GetPointer();
+    }
+
+    HYP_FORCE_INLINE void *Get(const AnyHandle &value) const
+    {
+        return value.ToRef().GetPointer();
+    }
+
+    HYP_FORCE_INLINE void *Get(const RC<void> &value) const
+    {
+        return value.Get();
+    }
+
+    HYP_FORCE_INLINE void Set(HypData &hyp_data, void *value) const
+    {
+        hyp_data.value.Set<void *>(value);
+    }
+
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const HypData &data, fbom::FBOMData &out)
+    {
+        return { fbom::FBOMResult::FBOM_ERR, "Cannot serialize a user pointer!" };
+    }
+
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    {
+        return { fbom::FBOMResult::FBOM_ERR, "Cannot deserialize a user pointer!" };
     }
 };
 

@@ -13,6 +13,8 @@
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
+#include <core/object/HypData.hpp>
+
 #include <dotnet/Method.hpp>
 #include <dotnet/Property.hpp>
 #include <dotnet/Attribute.hpp>
@@ -21,6 +23,7 @@
 #include <dotnet/interop/ManagedGuid.hpp>
 
 namespace hyperion {
+
 class HypClass;
 
 enum class ManagedClassFlags : uint32
@@ -338,28 +341,37 @@ public:
     template <class ReturnType, class... Args>
     ReturnType InvokeStaticMethod(UTF8StringView method_name, Args &&... args)
     {
-        static_assert(std::is_void_v<ReturnType> || std::is_trivial_v<ReturnType>, "Return type must be trivial to be used in interop");
-        static_assert(std::is_void_v<ReturnType> || std::is_object_v<ReturnType>, "Return type must be either a value type or a pointer type to be used in interop (no references)");
-
         auto it = m_methods.FindAs(method_name);
         AssertThrowMsg(it != m_methods.End(), "Method not found");
 
         const Method &method_object = it->second;
+        const Method *method_ptr = &method_object;
 
-        void *args_vptr[] = { &args... };
+        if constexpr (sizeof...(args) != 0) {
+            HypData args_hyp_data[] = { HypData(std::forward<Args>(args))... };
 
-        if constexpr (std::is_void_v<ReturnType>) {
-            InvokeStaticMethod_Internal(&method_object, args_vptr, nullptr);
+            if constexpr (std::is_void_v<ReturnType>) {
+                InvokeStaticMethod_Internal(method_ptr, &args_hyp_data[0], nullptr);
+            } else {
+                HypData return_hyp_data;
+                InvokeStaticMethod_Internal(method_ptr, &args_hyp_data[0], &return_hyp_data);
+
+                return std::move(return_hyp_data.Get<ReturnType>());
+            }
         } else {
-            ValueStorage<ReturnType> return_value_storage;
-            InvokeStaticMethod_Internal(&method_object, args_vptr, return_value_storage.GetPointer());
+            if constexpr (std::is_void_v<ReturnType>) {
+                InvokeStaticMethod_Internal(method_ptr, nullptr, nullptr);
+            } else {
+                HypData return_hyp_data;
+                InvokeStaticMethod_Internal(method_ptr, nullptr, &return_hyp_data);
 
-            return std::move(return_value_storage.Get());
+                return std::move(return_hyp_data.Get<ReturnType>());
+            }
         }
     }
 
 private:
-    void InvokeStaticMethod_Internal(const Method *method_ptr, void **args_vptr, void *return_value_vptr);
+    void InvokeStaticMethod_Internal(const Method *method_ptr, HypData *args_hyp_data, HypData *out_return_hyp_data);
 
     String                          m_name;
     uint32                          m_size;

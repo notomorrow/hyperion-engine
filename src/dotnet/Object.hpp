@@ -10,6 +10,8 @@
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
+#include <core/object/HypData.hpp>
+
 #include <core/ID.hpp>
 
 #include <dotnet/Helpers.hpp>
@@ -75,7 +77,7 @@ public:
     template <class ReturnType, class... Args>
     ReturnType InvokeMethod(const Method *method_ptr, Args &&... args)
     {
-        return InvokeMethod_CheckArgs<ReturnType>(method_ptr, detail::TransformArgument<NormalizedType<Args>>{}(args)...);
+        return InvokeMethod_CheckArgs<ReturnType>(method_ptr, std::forward<Args>(args)...);
     }
 
     template <class ReturnType, class... Args>
@@ -86,39 +88,36 @@ public:
         const Method *method_ptr = GetMethod(method_name);
         AssertThrowMsg(method_ptr != nullptr, "Method %s not found", method_name.Data());
 
-        return InvokeMethod_CheckArgs<ReturnType>(method_ptr, detail::TransformArgument<NormalizedType<Args>>{}(args)...);
+        return InvokeMethod_CheckArgs<ReturnType>(method_ptr, std::forward<Args>(args)...);
     }
 
 private:
     const Method *GetMethod(UTF8StringView method_name) const;
 
-    void InvokeMethod_Internal(const Method *method_ptr, void **args_vptr, void *return_value_vptr);
+    void InvokeMethod_Internal(const Method *method_ptr, HypData *args_hyp_data, HypData *out_return_hyp_data);
 
     template <class ReturnType, class... Args>
-    ReturnType InvokeMethod_CheckArgs(const Method *method_ptr, Args... args)
+    ReturnType InvokeMethod_CheckArgs(const Method *method_ptr, Args &&... args)
     {
-        static_assert(std::is_void_v<ReturnType> || std::is_trivially_copyable_v<ReturnType>, "Return type must be trivially copyable to be used in interop");
-        static_assert(std::is_void_v<ReturnType> || std::is_object_v<ReturnType>, "Return type must be either a value type or a pointer type to be used in interop (no references)");
-
         if constexpr (sizeof...(args) != 0) {
-            void *args_vptr[] = { &args... };
+            HypData args_hyp_data[] = { HypData(std::forward<Args>(args))... };
 
             if constexpr (std::is_void_v<ReturnType>) {
-                InvokeMethod_Internal(method_ptr, args_vptr, nullptr);
+                InvokeMethod_Internal(method_ptr, &args_hyp_data[0], nullptr);
             } else {
-                ValueStorage<ReturnType> return_value_storage;
-                InvokeMethod_Internal(method_ptr, args_vptr, return_value_storage.GetPointer());
+                HypData return_hyp_data;
+                InvokeMethod_Internal(method_ptr, &args_hyp_data[0], &return_hyp_data);
 
-                return std::move(return_value_storage.Get());
+                return std::move(return_hyp_data.Get<ReturnType>());
             }
         } else {
             if constexpr (std::is_void_v<ReturnType>) {
                 InvokeMethod_Internal(method_ptr, nullptr, nullptr);
             } else {
-                ValueStorage<ReturnType> return_value_storage;
-                InvokeMethod_Internal(method_ptr, nullptr, return_value_storage.GetPointer());
+                HypData return_hyp_data;
+                InvokeMethod_Internal(method_ptr, nullptr, &return_hyp_data);
 
-                return std::move(return_value_storage.Get());
+                return std::move(return_hyp_data.Get<ReturnType>());
             }
         }
     }

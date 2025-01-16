@@ -20,6 +20,7 @@ namespace hyperion {
 
 namespace dotnet {
 class Object;
+class Class;
 } // namespace dotnet
 
 class HypClass;
@@ -61,6 +62,23 @@ private:
 
     // Pointer to the header of the object, holding container, index and ref counts
     HypObjectHeader *m_header;
+};
+
+class IHypObjectInitializer
+{
+public:
+    virtual ~IHypObjectInitializer() = default;
+
+    virtual TypeID GetTypeID() const = 0;
+
+    virtual const HypClass *GetClass() const = 0;
+
+    virtual dotnet::Class *GetManagedClass() const = 0;
+
+    virtual void SetManagedObject(dotnet::Object &&managed_object) = 0;
+    virtual dotnet::Object *GetManagedObject() const = 0;
+
+    virtual void FixupPointer(void *_this, IHypObjectInitializer *ptr) = 0;
 };
 
 template <class T, class T2 = void>

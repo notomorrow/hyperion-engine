@@ -164,10 +164,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
                     HYP_NAMED_SCOPE("Call Init() on script component");
                     HYP_LOG(Script, Info, "Calling Init() on script component");
 
-                    script_component.object.InvokeMethod<void, dotnet::Object *>(
-                        init_method_ptr,
-                        entity->GetManagedObject()
-                    );
+                    script_component.object.InvokeMethod<void>(init_method_ptr, entity);
 
                     script_component.flags |= ScriptComponentFlags::INIT_CALLED;
                 }

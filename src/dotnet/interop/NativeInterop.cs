@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace Hyperion
 {
-    public delegate void InvokeMethodDelegate(Guid managedMethodGuid, Guid thisObjectGuid, IntPtr paramsPtr, IntPtr outPtr);
+    public delegate void InvokeMethodDelegate(Guid managedMethodGuid, Guid thisObjectGuid, IntPtr argsHypDataPtr, IntPtr outReturnHypDataPtr);
     public delegate void InitializeObjectCallbackDelegate(IntPtr contextPtr, IntPtr objectPtr, uint objectSize);
     public delegate void AddObjectToCacheDelegate(IntPtr objectWrapperPtr, out IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr);
 
@@ -103,9 +103,9 @@ namespace Hyperion
                     }
                 }
             }
-            catch (Exception err)
+            catch (Exception ex)
             {
-                Logger.Log(LogType.Error, "Error loading assembly: {0}", err);
+                Logger.Log(LogType.Error, "Error loading assembly: {0}", ex);
 
                 return (int)LoadAssemblyResult.UnknownError;
             }
@@ -140,9 +140,9 @@ namespace Hyperion
                     AssemblyCache.Instance.Remove(assemblyGuid);
                 }
             }
-            catch (Exception err)
+            catch (Exception ex)
             {
-                Logger.Log(LogType.Error, "Error unloading assembly: {0}", err);
+                Logger.Log(LogType.Error, "Error unloading assembly: {0}", ex);
 
                 result = false;
             }
@@ -471,11 +471,11 @@ namespace Hyperion
             return managedClass.ClassObjectPtr;
         }
 
-        private static unsafe void HandleParameters(IntPtr paramsPtr, MethodInfo methodInfo, out object?[] parameters)
+        private static unsafe void HandleParameters(IntPtr argsHypDataPtr, MethodInfo methodInfo, out object[] parameters)
         {
             int numParams = methodInfo.GetParameters().Length;
 
-            if (numParams == 0 || paramsPtr == IntPtr.Zero)
+            if (numParams == 0 || argsHypDataPtr == IntPtr.Zero)
             {
                 parameters = Array.Empty<object>();
 
@@ -488,25 +488,30 @@ namespace Hyperion
 
             for (int i = 0; i < numParams; i++)
             {
-                Type paramType = methodInfo.GetParameters()[i].ParameterType;
+                // params is stored as HypData*, 
+                IntPtr paramAddress = argsHypDataPtr + paramsOffset;
+                paramsOffset += sizeof(HypDataBuffer);
 
-                // params is stored as void**
-                IntPtr paramAddress = Marshal.ReadIntPtr(paramsPtr, paramsOffset);
-                paramsOffset += IntPtr.Size;
-
-                MarshalHelpers.MarshalInObject(paramAddress, paramType, out parameters[i]);
+                try
+                {
+                    parameters[i] = (object)((HypDataBuffer*)paramAddress)->GetValue();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Failed to get parameter value at index: " + i + " for method: " + methodInfo.Name + " from " + methodInfo.DeclaringType.Name, ex);
+                }
             }
         }
 
-        public static unsafe void InvokeMethod(Guid managedMethodGuid, Guid thisObjectGuid, IntPtr paramsPtr, IntPtr outPtr)
+        public static unsafe void InvokeMethod(Guid managedMethodGuid, Guid thisObjectGuid, IntPtr argsHypDataPtr, IntPtr outReturnHypDataPtr)
         {
             MethodInfo methodInfo = BasicCache<MethodInfo>.Instance.Get(managedMethodGuid);
 
             Type returnType = methodInfo.ReturnType;
             Type thisType = methodInfo.DeclaringType;
 
-            object[]? parameters = null;
-            HandleParameters(paramsPtr, methodInfo, out parameters);
+            object[]? parameters;
+            HandleParameters(argsHypDataPtr, methodInfo, out parameters);
 
             object? thisObject = null;
 
@@ -520,12 +525,19 @@ namespace Hyperion
                 }
             }
 
+            if (returnType == typeof(void))
+            {
+                methodInfo.Invoke(thisObject, parameters);
+
+                return;
+            }
+
             object? returnValue = methodInfo.Invoke(thisObject, parameters);
 
-            MarshalHelpers.MarshalOutObject(outPtr, returnType, returnValue);
+            ((HypDataBuffer*)outReturnHypDataPtr)->SetValue(returnValue);
         }
 
-        public static unsafe void InvokeGetter(Guid managedPropertyGuid, Guid thisObjectGuid, IntPtr paramsPtr, IntPtr outPtr)
+        public static unsafe void InvokeGetter(Guid managedPropertyGuid, Guid thisObjectGuid, IntPtr argsHypDataPtr, IntPtr outReturnHypDataPtr)
         {
             PropertyInfo propertyInfo = BasicCache<PropertyInfo>.Instance.Get(managedPropertyGuid);
 
@@ -541,10 +553,10 @@ namespace Hyperion
 
             object? returnValue = propertyInfo.GetValue((object)thisObject);
 
-            MarshalHelpers.MarshalOutObject(outPtr, returnType, returnValue);
+            ((HypDataBuffer*)outReturnHypDataPtr)->SetValue(returnValue);
         }
 
-        public static unsafe void InvokeSetter(Guid managedPropertyGuid, Guid thisObjectGuid, IntPtr paramsPtr, IntPtr outPtr)
+        public static unsafe void InvokeSetter(Guid managedPropertyGuid, Guid thisObjectGuid, IntPtr argsHypDataPtr, IntPtr outReturnHypDataPtr)
         {
             PropertyInfo propertyInfo = BasicCache<PropertyInfo>.Instance.Get(managedPropertyGuid);
 
@@ -558,8 +570,7 @@ namespace Hyperion
                 throw new Exception("Failed to get target from GUID: " + thisObjectGuid);
             }
 
-            object? value = null;
-            MarshalHelpers.MarshalInObject(paramsPtr, propertyInfo.PropertyType, out value);
+            object? value = ((HypDataBuffer*)argsHypDataPtr)->GetValue();
 
             propertyInfo.SetValue((object)thisObject, value);
         }

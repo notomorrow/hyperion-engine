@@ -58,6 +58,11 @@ namespace Hyperion
         [FieldOffset(0)]
         [MarshalAs(UnmanagedType.U8)]
         public Name valueName;
+
+        // pointer type
+        [FieldOffset(0)]
+        [MarshalAs(UnmanagedType.I8)]
+        public IntPtr valueIntPtr;
         
         [FieldOffset(0)]
         public ObjectReference objectReference;
@@ -69,9 +74,17 @@ namespace Hyperion
     ///  Destructor needs to be called manually (HypData_Destruct)
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Size = 32)]
-    internal unsafe struct HypDataBuffer
+    public unsafe struct HypDataBuffer
     {
         private fixed byte buffer[32];
+
+        /// <summary>
+        /// Destructs the underlying HypData object. This needs to be called manually and may only be called on a valid HypData object.
+        /// </summary>
+        public void Destruct()
+        {
+            HypData_Destruct(ref this);
+        }
 
         public TypeID TypeID
         {
@@ -161,6 +174,12 @@ namespace Hyperion
             if (value is bool)
             {
                 HypData_SetBool(ref this, (bool)value);
+                return;
+            }
+
+            if (value is IntPtr)
+            {
+                HypData_SetIntPtr(ref this, (IntPtr)value);
                 return;
             }
 
@@ -399,6 +418,11 @@ namespace Hyperion
                 return value.valueBool;
             }
 
+            if (HypData_GetIntPtr(ref this, true, out value.valueIntPtr))
+            {
+                return value.valueIntPtr;
+            }
+
             if (HypData_GetID(ref this, out value.valueId))
             {
                 return new IDBase(value.valueId);
@@ -541,6 +565,10 @@ namespace Hyperion
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool HypData_GetBool([In] ref HypDataBuffer hypData, [MarshalAs(UnmanagedType.I1)] bool strict, [Out] out bool outValue);
 
+        [DllImport("hyperion", EntryPoint = "HypData_GetIntPtr")]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool HypData_GetIntPtr([In] ref HypDataBuffer hypData, [MarshalAs(UnmanagedType.I1)] bool strict, [Out] out IntPtr outValue);
+
         [DllImport("hyperion", EntryPoint = "HypData_GetArray")]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool HypData_GetArray([In] ref HypDataBuffer hypData, [Out] out IntPtr outArrayPtr, [Out] out uint outArraySize);
@@ -612,6 +640,10 @@ namespace Hyperion
         [DllImport("hyperion", EntryPoint = "HypData_IsBool")]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool HypData_IsBool([In] ref HypDataBuffer hypData, [MarshalAs(UnmanagedType.I1)] bool strict);
+
+        [DllImport("hyperion", EntryPoint = "HypData_IsIntPtr")]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool HypData_IsIntPtr([In] ref HypDataBuffer hypData, [MarshalAs(UnmanagedType.I1)] bool strict);
 
         [DllImport("hyperion", EntryPoint = "HypData_IsArray")]
         [return: MarshalAs(UnmanagedType.I1)]
@@ -685,6 +717,10 @@ namespace Hyperion
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool HypData_SetBool([In] ref HypDataBuffer hypData, bool value);
 
+        [DllImport("hyperion", EntryPoint = "HypData_SetIntPtr")]
+        [return: MarshalAs(UnmanagedType.I1)]
+        internal static extern bool HypData_SetIntPtr([In] ref HypDataBuffer hypData, IntPtr value);
+
         [DllImport("hyperion", EntryPoint = "HypData_SetArray")]
         [return: MarshalAs(UnmanagedType.I1)]
         internal static extern bool HypData_SetArray([In] ref HypDataBuffer hypData, [In] IntPtr arrayPtr, uint arraySize);
@@ -729,7 +765,7 @@ namespace Hyperion
             }
         }
 
-        internal HypData(HypDataBuffer data)
+        public HypData(HypDataBuffer data)
         {
             _data = data;
         }
@@ -738,7 +774,7 @@ namespace Hyperion
         {
             if (!_disposed)
             {
-                HypDataBuffer.HypData_Destruct(ref _data);
+                _data.Destruct();
                 _disposed = true;
             }
         }
@@ -764,7 +800,7 @@ namespace Hyperion
             }
         }
 
-        internal ref HypDataBuffer Buffer
+        public ref HypDataBuffer Buffer
         {
             get
             {
