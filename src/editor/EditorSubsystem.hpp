@@ -34,6 +34,7 @@ class FontAtlas;
 class EditorDelegates;
 class EditorSubsystem;
 class EditorProject;
+class EditorDebugOverlayBase;
 
 namespace sys {
 class AppContext;
@@ -138,6 +139,9 @@ public:
     void SetFocusedNode(const NodeProxy &focused_node);
 
     HYP_METHOD()
+    void AddDebugOverlay(const RC<EditorDebugOverlayBase> &debug_overlay);
+
+    HYP_METHOD()
     HYP_FORCE_INLINE const NodeProxy &GetFocusedNode() const
         { return m_focused_node; }
 
@@ -162,6 +166,7 @@ private:
 
     void UpdateCamera(GameCounter::TickUnit delta);
     void UpdateTasks(GameCounter::TickUnit delta);
+    void UpdateDebugOverlays(GameCounter::TickUnit delta);
 
     RC<AppContext>                                                      m_app_context;
     Handle<Scene>                                                       m_scene;
@@ -185,6 +190,8 @@ private:
     bool                                                                m_should_cancel_next_click;
 
     EditorDelegates                                                     *m_editor_delegates;
+
+    Array<RC<EditorDebugOverlayBase>>                                   m_debug_overlays;
 };
 
 } // namespace hyperion

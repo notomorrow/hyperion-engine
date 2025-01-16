@@ -19,7 +19,7 @@ HYP_DECLARE_LOG_CHANNEL(Streaming);
 
 RC<StreamedTextureData> StreamedTextureData::FromTextureData(TextureData texture_data)
 {
-    return RC<StreamedTextureData>::Construct(std::move(texture_data));
+    return MakeRefCountedPtr<StreamedTextureData>(std::move(texture_data));
 }
 
 StreamedTextureData::StreamedTextureData(StreamedDataState initial_state, TextureData texture_data)

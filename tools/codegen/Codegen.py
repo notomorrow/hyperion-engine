@@ -320,7 +320,7 @@ class CodegenClassBuilder:
             self.metadata.get(hyp_class.name).update({ "last_modified": hyp_class.last_modified })
 
 class HypMemberDefinition:
-    def __init__(self, member_type: int, name: str, attributes: 'list[tuple[str, str, int]]'=[], method_return_type: 'str | None'=None, method_args: 'list[tuple[str, str, str]]'=None, is_const_method: bool=False, property_args: 'list[str] | None'=None):
+    def __init__(self, member_type: int, name: str, attributes: 'list[tuple[str, str, int]]'=[], method_return_type: 'tuple[str, str] | None'=None, method_args: 'list[tuple[str, str, str]]'=None, is_const_method: bool=False, property_args: 'list[str] | None'=None):
         self.member_type = member_type
         self.name = name
         self.attributes = attributes
@@ -359,10 +359,10 @@ class HypMemberDefinition:
         return self.member_type == HypMemberType.CONSTANT
     
     @property
-    def return_type(self):
+    def return_type(self) -> 'tuple[str, str]':
         if self.is_method:
             if self.method_return_type is None:
-                return 'void'
+                return ('void', 'void')
             
             return self.method_return_type
         
@@ -581,7 +581,7 @@ class HypClassDefinition:
 
                         is_const_method = member.const
 
-                        return_type = state.class_builder.map_type_with_context(member.return_type)
+                        return_type: 'tuple[str, str]' = (state.class_builder.map_type_with_context(member.return_type), member.return_type.format())
 
                         args: 'list[tuple[str, str, str]]' = []
 
@@ -594,14 +594,6 @@ class HypClassDefinition:
                                 continue
 
                             args.append((param_type, param_name, param.type.format_decl(param.name)))
-
-                        # if isinstance(return_type, Reference):
-                        #     return_type = return_type.ref_to
-
-                        # if isinstance(return_type, Pointer):
-                        #     return_type = return_type.ptr_to
-
-                        # return_type
 
                         self.members.append(HypMemberDefinition(member_type, member_name, attributes=inner_args, method_return_type=return_type, method_args=args, is_const_method=is_const_method))
                     else:

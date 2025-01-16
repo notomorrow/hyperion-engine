@@ -173,7 +173,7 @@ public:
             priority,
             NoiseGeneratorInstance {
                 .mode       = mode,
-                .generator  = UniquePtr<NoiseGeneratorType>::Construct(m_seed),
+                .generator  = MakeUnique<NoiseGeneratorType>(m_seed),
                 .multiplier = multiplier,
                 .bias       = bias,
                 .scaling    = scaling

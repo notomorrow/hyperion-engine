@@ -8,7 +8,7 @@ LoadedAsset FontFaceLoader::LoadAsset(LoaderState &state) const
 {
     FontEngine &font_engine = FontEngine::GetInstance();
 
-    RC<FontFace> font_face = RC<FontFace>::Construct(
+    RC<FontFace> font_face = MakeRefCountedPtr<FontFace>(
         font_engine.GetFontBackend(),
         state.filepath
     );

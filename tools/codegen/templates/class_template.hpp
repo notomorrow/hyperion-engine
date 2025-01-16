@@ -25,6 +25,9 @@ ${start_macro_names[hyp_class.class_type]}(${hyp_class.name}${(f", NAME(\"{hyp_c
     <% s = "" %> \
     % for i in range(0, len(hyp_class.members)):
         <% member = hyp_class.members[i] %> \
+        % if member.is_method and member.has_attribute("Scriptable"):
+            <% continue %> \
+        % endif
         <% attributes = ("Span<const HypClassAttribute> { { " + ', '.join([f"HypClassAttribute(\"{name.lower()}\", {format_attribute_value(value, attr_type)})" for name, value, attr_type in member.attributes]) + " } }") if len(member.attributes) > 0 else '' %> \
         % if member.member_type == HypMemberType.FIELD:
             <% s += f"HypField(NAME(HYP_STR({member.name})), &Type::{member.name}, offsetof(Type, {member.name}){', ' + attributes if len(member.attributes) > 0 else ''})" %> \
@@ -50,8 +53,9 @@ ${end_macro_names[hyp_class.class_type]}
         % if member.is_method and member.has_attribute("Scriptable"):
             <% method_args_string_sig = ', '.join([f"{cpp_decl}" for arg_type, arg_name, cpp_decl in member.args]) if len(member.args) > 0 else "" %> \
             <% method_args_string_call = ', '.join([f"{arg_name}" for arg_type, arg_name, cpp_decl in member.args]) if len(member.args) > 0 else "" %> \
+            <% method_return_type = member.return_type[1] %> \
 
-            % if member.method_return_type == "void":
+            % if method_return_type == "void":
 ${f"void {hyp_class.name}::{member.name}({method_args_string_sig})" + (" const" if member.is_const_method else "")}
 ${"{"}
 ${"    if (dotnet::Object *managed_object = GetManagedObject()) {"}
@@ -65,12 +69,12 @@ ${""}
 ${f"    {member.name}_Impl({method_args_string_call});"}
 ${"}"}
             % else:
-${f"{member.method_return_type} {hyp_class.name}::{member.name}({method_args_string_sig})" + (" const" if member.is_const_method else "")}
+${f"{method_return_type} {hyp_class.name}::{member.name}({method_args_string_sig})" + (" const" if member.is_const_method else "")}
 ${"{"}
 ${"    if (dotnet::Object *managed_object = GetManagedObject()) {"}
 ${f"        constexpr HashCode hash_code = HashCode::GetHashCode(\"{member.name}\");"}
 ${f"        if (dotnet::Method *method_ptr = managed_object->GetClass()->GetMethodByHash(hash_code)) {{"}
-${f"            return managed_object->InvokeMethod<{member.method_return_type}>(method_ptr{(', ' + method_args_string_call) if len(method_args_string_call) > 0 else ''});"}
+${f"            return managed_object->InvokeMethod<{method_return_type}>(method_ptr{(', ' + method_args_string_call) if len(method_args_string_call) > 0 else ''});"}
 ${"        }"}
 ${"    }"}
 ${""}

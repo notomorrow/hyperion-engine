@@ -19,7 +19,7 @@
       "enabled": false
     },
     "taa": {
-      "enabled": true
+      "enabled": false
     },
     "debug": {
       "ssr": false,
@@ -48,7 +48,7 @@
   },
   "app": {
     "name": "HyperionEditor",
-    "args": "-ResX=1280 -ResY=720 -Profile -TraceURL=http://localhost:8000/trace"
+    "args": "-ResX=1280 -ResY=720 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
     "ideal_triangles_per_job": 4096,

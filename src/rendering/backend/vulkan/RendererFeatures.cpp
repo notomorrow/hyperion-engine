@@ -39,7 +39,7 @@ void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
                 ? nullptr
                 : m_features_chain.Back().Get();
 
-            m_features_chain.PushBack(UniquePtr<VkBaseOutStructure>::Construct(new T(next_feature)));
+            m_features_chain.PushBack(MakeUnique<VkBaseOutStructure>(new T(next_feature)));
 
             if (chain_top != nullptr) {
                 chain_top->pNext = m_features_chain.Back().Get();

@@ -161,7 +161,7 @@ public:
             auto it = m_per_thread_values.Find(current_thread_id);
 
             if (it == m_per_thread_values.End()) {
-                it = m_per_thread_values.Insert(current_thread_id, UniquePtr<Array<json::JSONValue>>::Construct()).first;
+                it = m_per_thread_values.Insert(current_thread_id, MakeUnique<Array<json::JSONValue>>()).first;
             }
 
             json_values_array = it->second.Get();

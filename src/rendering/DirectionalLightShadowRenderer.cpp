@@ -492,7 +492,7 @@ DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, Vec2u 
 {
     m_camera = CreateObject<Camera>(m_resolution.x, m_resolution.y);
     m_camera->SetName(NAME("DirectionalLightShadowRendererCamera"));
-    m_camera->AddCameraController(RC<OrthoCameraController>::Construct());
+    m_camera->AddCameraController(MakeRefCountedPtr<OrthoCameraController>());
 
     CreateShader();
 }
