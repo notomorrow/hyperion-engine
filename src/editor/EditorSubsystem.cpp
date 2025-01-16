@@ -6,6 +6,8 @@
 #include <editor/EditorTask.hpp>
 #include <editor/EditorProject.hpp>
 
+#include <editor/ui/debug/EditorDebugOverlay.hpp>
+
 #include <scene/Scene.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
@@ -261,6 +263,7 @@ void EditorSubsystem::Update(GameCounter::TickUnit delta)
 
     UpdateCamera(delta);
     UpdateTasks(delta);
+    UpdateDebugOverlays(delta);
 }
 
 void EditorSubsystem::OnSceneAttached(const Handle<Scene> &scene)
@@ -961,8 +964,25 @@ void EditorSubsystem::SetFocusedNode(const NodeProxy &focused_node)
     OnFocusedNodeChanged(m_focused_node, previous_focused_node);
 }
 
+void EditorSubsystem::AddDebugOverlay(const RC<EditorDebugOverlayBase> &debug_overlay)
+{
+    HYP_SCOPE;
+
+    if (!debug_overlay) {
+        return;
+    }
+
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    debug_overlay->Initialize(m_ui_stage.Get());
+
+    m_debug_overlays.PushBack(debug_overlay);
+}
+
 void EditorSubsystem::UpdateCamera(GameCounter::TickUnit delta)
 {
+    HYP_SCOPE;
+
     static constexpr float speed = 15.0f;
 
     if (!m_editor_camera_enabled) {
@@ -995,6 +1015,8 @@ void EditorSubsystem::UpdateCamera(GameCounter::TickUnit delta)
 
 void EditorSubsystem::UpdateTasks(GameCounter::TickUnit delta)
 {
+    HYP_SCOPE;
+
     for (uint32 thread_type_index = 0; thread_type_index < m_tasks_by_thread_type.Size(); thread_type_index++) {
         auto &tasks = m_tasks_by_thread_type[thread_type_index];
 
@@ -1017,6 +1039,19 @@ void EditorSubsystem::UpdateTasks(GameCounter::TickUnit delta)
                 ++it;
             }
         }
+    }
+}
+
+void EditorSubsystem::UpdateDebugOverlays(GameCounter::TickUnit delta)
+{
+    HYP_SCOPE;
+
+    for (const RC<EditorDebugOverlayBase> &debug_overlay : m_debug_overlays) {
+        if (!debug_overlay->IsEnabled()) {
+            continue;
+        }
+        
+        debug_overlay->Update();
     }
 }
 

@@ -189,7 +189,7 @@ public:
             TypeID::ForType<Loader>(),
             TypeID::ForType<ResultType>(),
             FlatSet<String>(format_strings.Begin(), format_strings.End()),
-            UniquePtr<Loader>::Construct()
+            MakeUnique<Loader>()
         });
 
         m_functor_factories.Set<Loader>([](const String &key, const String &path, AssetBatchCallbacks *callbacks_ptr) -> UniquePtr<ProcessAssetFunctorBase>

@@ -79,7 +79,7 @@ void NullRTCServer::Stop()
 
 RC<RTCClient> NullRTCServer::CreateClient(String id)
 {
-    RC<RTCClient> client = RC<NullRTCClient>::Construct(id, this);
+    RC<RTCClient> client = MakeRefCountedPtr<NullRTCClient>(id, this);
     m_client_list.Add(id, client);
 
     return client;
@@ -197,7 +197,7 @@ void LibDataChannelRTCServer::Stop()
 
 RC<RTCClient> LibDataChannelRTCServer::CreateClient(String id)
 {
-    RC<RTCClient> client = RC<LibDataChannelRTCClient>::Construct(id, this);
+    RC<RTCClient> client = MakeRefCountedPtr<LibDataChannelRTCClient>(id, this);
     m_client_list.Add(id, client);
 
     return client;
@@ -214,7 +214,7 @@ void LibDataChannelRTCServer::SendToSignallingServer(ByteBuffer bytes)
         return;
     }
 
-    m_thread->GetScheduler().Enqueue([this, byte_buffer = RC<ByteBuffer>::Construct(std::move(bytes))]() mutable
+    m_thread->GetScheduler().Enqueue([this, byte_buffer = MakeRefCountedPtr<ByteBuffer>(std::move(bytes))]() mutable
     {
         rtc::binary bin;
         bin.resize(byte_buffer->Size());

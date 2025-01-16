@@ -19,7 +19,7 @@ HYP_DECLARE_LOG_CHANNEL(Streaming);
 
 RC<StreamedMeshData> StreamedMeshData::FromMeshData(MeshData mesh_data)
 {
-    return RC<StreamedMeshData>::Construct(std::move(mesh_data));
+    return MakeRefCountedPtr<StreamedMeshData>(std::move(mesh_data));
 }
 
 StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData mesh_data)

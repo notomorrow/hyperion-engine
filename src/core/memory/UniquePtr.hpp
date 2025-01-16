@@ -404,7 +404,7 @@ public:
     {
         static_assert(std::is_convertible_v<std::add_pointer_t<Ty>, std::add_pointer_t<T>>, "Ty must be convertible to T!");
 
-        return (*this = UniquePtr<Ty>::Construct(std::forward<Args>(args)...));
+        return (*this = MakeUnique<Ty>(std::forward<Args>(args)...));
     }
 
     /*! \brief Releases the ptr to be managed externally.

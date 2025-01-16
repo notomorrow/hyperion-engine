@@ -159,7 +159,7 @@ public:
     {
         const PostProcessingStage stage = EffectClass::stage;
 
-        AddEffectInternal(stage, UniquePtr<EffectClass>::Construct(std::forward<Args>(args)...));
+        AddEffectInternal(stage, MakeUnique<EffectClass>(std::forward<Args>(args)...));
     }
 
     /*! \brief Get an effect added to the list of effects to be applied BEFORE deferred rendering happens */

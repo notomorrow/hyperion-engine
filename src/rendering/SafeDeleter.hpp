@@ -141,7 +141,7 @@ public:
     {
         Mutex::Guard guard(m_render_resource_deletion_mutex);
         
-        m_deletion_entries.PushBack(UniquePtr<DeletionEntry<T>>::Construct(std::move(resource)));
+        m_deletion_entries.PushBack(MakeUnique<DeletionEntry<T>>(std::move(resource)));
 
         m_num_deletion_entries.Increment(1, MemoryOrder::RELEASE);
     }

@@ -66,7 +66,7 @@ void UIStage::SetSurfaceSize(Vec2i surface_size)
     if (m_scene.IsValid() && m_scene->GetCamera().IsValid()) {
         m_scene->GetCamera()->SetWidth(surface_size.x);
         m_scene->GetCamera()->SetHeight(surface_size.y);
-        m_scene->GetCamera()->AddCameraController(RC<OrthoCameraController>::Construct(
+        m_scene->GetCamera()->AddCameraController(MakeRefCountedPtr<OrthoCameraController>(
             0.0f, -float(surface_size.x),
             0.0f, float(surface_size.y),
             float(min_depth), float(max_depth)
@@ -118,7 +118,7 @@ void UIStage::SetScene(const Handle<Scene> &scene)
     }
 
     if (!new_scene->GetCamera()->HasActiveCameraController()) {
-        new_scene->GetCamera()->AddCameraController(RC<OrthoCameraController>::Construct(
+        new_scene->GetCamera()->AddCameraController(MakeRefCountedPtr<OrthoCameraController>(
             0.0f, -float(m_surface_size.x),
             0.0f, float(m_surface_size.y),
             float(min_depth), float(max_depth)
@@ -190,7 +190,7 @@ void UIStage::Init()
             m_surface_size = Vec2i(size);
 
             if (m_scene.IsValid()) {
-                m_scene->GetCamera()->AddCameraController(RC<OrthoCameraController>::Construct(
+                m_scene->GetCamera()->AddCameraController(MakeRefCountedPtr<OrthoCameraController>(
                     0.0f, -float(m_surface_size.x),
                     0.0f, float(m_surface_size.y),
                     float(min_depth), float(max_depth)
@@ -221,7 +221,7 @@ void UIStage::Init()
 
     m_scene->SetName(CreateNameFromDynamicString(ANSIString(GetName().LookupString()) + "_Scene"));
 
-    m_scene->GetCamera()->AddCameraController(RC<OrthoCameraController>::Construct(
+    m_scene->GetCamera()->AddCameraController(MakeRefCountedPtr<OrthoCameraController>(
         0.0f, -float(m_surface_size.x),
         0.0f, float(m_surface_size.y),
         float(min_depth), float(max_depth)

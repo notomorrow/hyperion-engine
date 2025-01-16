@@ -582,7 +582,7 @@ static bool GetFBXObjectInMapping(FlatMap<FBXObjectID, FBXNodeMapping> &mapping,
 //     if (Handle<Entity> &entity = node->GetEntity()) {
 //         entity->SetSkeleton(skeleton);
 
-//         g_engine->GetComponents().Add<AnimationController>(entity, UniquePtr<AnimationController>::Construct());
+//         g_engine->GetComponents().Add<AnimationController>(entity, MakeUnique<AnimationController>());
 //     }
 
 //     for (auto &child : node->GetChildren()) {

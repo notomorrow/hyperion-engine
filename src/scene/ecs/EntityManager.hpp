@@ -819,7 +819,7 @@ public:
         auto entity_sets_it = m_entity_sets.Find(type_id);
 
         if (entity_sets_it == m_entity_sets.End()) {
-            auto entity_sets_insert_result = m_entity_sets.Set(type_id, UniquePtr<EntitySet<Components...>>::Construct(
+            auto entity_sets_insert_result = m_entity_sets.Set(type_id, MakeUnique<EntitySet<Components...>>(
                 m_entities,
                 GetContainer<Components>()...
             ));

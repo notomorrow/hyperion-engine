@@ -20,7 +20,7 @@ void SkySystem::OnEntityAdded(const Handle<Entity> &entity)
     SkyComponent &sky_component = GetEntityManager().GetComponent<SkyComponent>(entity);
 
     if (!sky_component.render_subsystem) {
-        sky_component.render_subsystem = GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->AddRenderSubsystem<SkydomeRenderer>(Name::Unique("sky_renderer"));
+        sky_component.render_subsystem = GetScene()->GetRenderResources().GetEnvironment()->AddRenderSubsystem<SkydomeRenderer>(Name::Unique("sky_renderer"));
     }
     
     MeshComponent *mesh_component = GetEntityManager().TryGetComponent<MeshComponent>(entity);
@@ -65,7 +65,7 @@ void SkySystem::OnEntityRemoved(ID<Entity> entity)
     MeshComponent &mesh_component = GetEntityManager().GetComponent<MeshComponent>(entity);
 
     if (sky_component.render_subsystem) {
-        GetEntityManager().GetScene()->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<SkydomeRenderer>(sky_component.render_subsystem->GetName());
+        GetScene()->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<SkydomeRenderer>(sky_component.render_subsystem->GetName());
 
         sky_component.render_subsystem = nullptr;
     }

@@ -95,8 +95,9 @@ void SkydomeRenderer::OnUpdate(GameCounter::TickUnit delta)
     AssertThrow(m_virtual_scene.IsValid());
     AssertThrow(m_env_probe.IsValid());
 
-    m_env_probe->SetNeedsUpdate(true);
-    m_env_probe->SetNeedsRender(true);
+    if (!m_env_probe->NeedsUpdate()) {
+        return;
+    }
     
     m_env_probe->Update(delta);
 }
@@ -106,6 +107,10 @@ void SkydomeRenderer::OnRender(Frame *frame)
     AssertThrow(m_env_probe.IsValid());
 
     if (!m_env_probe->IsReady()) {
+        return;
+    }
+
+    if (!m_env_probe->NeedsRender()) {
         return;
     }
 
