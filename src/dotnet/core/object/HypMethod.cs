@@ -178,7 +178,7 @@ namespace Hyperion
 
             for (int i = 0; i < numArgs; i++)
             {
-                HypDataBuffer.HypData_Destruct(ref hypDataArgsBuffers[i]);
+                hypDataArgsBuffers[i].Destruct();
             }
 
             return new HypData(resultBuffer);

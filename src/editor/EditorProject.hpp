@@ -9,6 +9,7 @@
 
 #include <core/memory/RefCountedPtr.hpp>
 
+#include <core/object/HypObject.hpp>
 #include <core/object/HypClassUtils.hpp>
 
 #include <core/utilities/UUID.hpp>

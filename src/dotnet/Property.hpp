@@ -8,6 +8,8 @@
 
 #include <core/utilities/StringView.hpp>
 
+#include <core/object/HypData.hpp>
+
 #include <dotnet/Helpers.hpp>
 #include <dotnet/Attribute.hpp>
 
@@ -52,20 +54,21 @@ public:
     template <class ReturnType>
     ReturnType InvokeGetter(const Object *object_ptr)
     {
-        ValueStorage<ReturnType> result_storage;
-        InvokeGetter_Internal(object_ptr, result_storage.GetPointer());
-        return std::move(result_storage.Get());
+        HypData return_hyp_data;
+        InvokeGetter_Internal(object_ptr, &return_hyp_data);
+        return std::move(return_hyp_data.Get<ReturnType>());
     }
 
     template <class PropertyType>
     void InvokeSetter(const Object *object_ptr, PropertyType &&value)
     {
-        return InvokeSetter_Internal(object_ptr, detail::TransformArgument<PropertyType>{}(std::forward<PropertyType>(value)));
+        HypData value_hyp_data(detail::TransformArgument<PropertyType>{}(std::forward<PropertyType>(value)));
+        return InvokeSetter_Internal(object_ptr, &value_hyp_data);
     }
 
 private:
-    void InvokeGetter_Internal(const Object *object_ptr, void *return_value_vptr);
-    void InvokeSetter_Internal(const Object *object_ptr, void *value_vptr);
+    void InvokeGetter_Internal(const Object *object_ptr, HypData *out_return_hyp_data);
+    void InvokeSetter_Internal(const Object *object_ptr, HypData *value_hyp_data);
 
     ManagedGuid     m_guid;
     AttributeSet    m_attributes;

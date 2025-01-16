@@ -22,7 +22,7 @@ namespace Hyperion
 
         private IntPtr ptr;
 
-        internal HypClass(IntPtr ptr)
+        public HypClass(IntPtr ptr)
         {
             this.ptr = ptr;
         }

@@ -4,6 +4,7 @@
 #define HYPERION_CORE_HYP_CLASS_HPP
 
 #include <core/object/HypClassRegistry.hpp>
+#include <core/object/HypObjectFwd.hpp>
 #include <core/object/HypObjectEnums.hpp>
 #include <core/object/HypData.hpp>
 #include <core/object/HypMemberFwd.hpp>

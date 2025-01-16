@@ -40,23 +40,6 @@ extern HYP_API dotnet::Class *GetHypClassManagedClass(const HypClass *hyp_class)
 extern HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer, TypeID type_id, const HypClass *hyp_class, const void *address);
 extern HYP_API void CleanupHypObjectInitializer(const HypClass *hyp_class, dotnet::Object *managed_object_ptr);
 
-class IHypObjectInitializer
-{
-public:
-    virtual ~IHypObjectInitializer() = default;
-
-    virtual TypeID GetTypeID() const = 0;
-
-    virtual const HypClass *GetClass() const = 0;
-
-    virtual dotnet::Class *GetManagedClass() const = 0;
-
-    virtual void SetManagedObject(dotnet::Object &&managed_object) = 0;
-    virtual dotnet::Object *GetManagedObject() const = 0;
-
-    virtual void FixupPointer(void *_this, IHypObjectInitializer *ptr) = 0;
-};
-
 template <class T>
 class HypObjectInitializer final : public IHypObjectInitializer
 {

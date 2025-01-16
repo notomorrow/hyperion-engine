@@ -11,6 +11,7 @@
 namespace hyperion {
 
 class HypClass;
+struct HypData;
 
 namespace dotnet {
 
@@ -23,7 +24,7 @@ class ClassHolder
 public:
     friend class Assembly;
 
-    using InvokeMethodFunction = void(*)(ManagedGuid, ManagedGuid, void **, void *);
+    using InvokeMethodFunction = void(*)(ManagedGuid, ManagedGuid, HypData *, HypData *);
 
     ClassHolder(Assembly *owner_assembly);
     ClassHolder(const ClassHolder &)                = delete;

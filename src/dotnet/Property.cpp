@@ -7,24 +7,24 @@
 
 namespace hyperion::dotnet {
 
-void Property::InvokeGetter_Internal(const Object *object_ptr, void *return_value_vptr)
+void Property::InvokeGetter_Internal(const Object *object_ptr, HypData *out_return_hyp_data)
 {
     AssertThrow(object_ptr != nullptr);
     AssertThrow(object_ptr->GetClass() != nullptr);
 
     object_ptr->GetClass()->EnsureLoaded();
 
-    object_ptr->GetClass()->GetClassHolder()->GetInvokeGetterFunction()(m_guid, object_ptr->GetObjectReference().guid, nullptr, return_value_vptr);
+    object_ptr->GetClass()->GetClassHolder()->GetInvokeGetterFunction()(m_guid, object_ptr->GetObjectReference().guid, nullptr, out_return_hyp_data);
 }
 
-void Property::InvokeSetter_Internal(const Object *object_ptr, void *value_vptr)
+void Property::InvokeSetter_Internal(const Object *object_ptr, HypData *value_hyp_data)
 {
     AssertThrow(object_ptr != nullptr);
     AssertThrow(object_ptr->GetClass() != nullptr);
 
     object_ptr->GetClass()->EnsureLoaded();
 
-    object_ptr->GetClass()->GetClassHolder()->GetInvokeSetterFunction()(m_guid, object_ptr->GetObjectReference().guid, &value_vptr, nullptr);
+    object_ptr->GetClass()->GetClassHolder()->GetInvokeSetterFunction()(m_guid, object_ptr->GetObjectReference().guid, value_hyp_data, nullptr);
 }
 
 } // namespace hyperion::dotnet

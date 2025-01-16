@@ -120,7 +120,7 @@ namespace Hyperion
 
             T? value = (T?)hypDataBuffer.GetValue();
 
-            HypDataBuffer.HypData_Destruct(ref hypDataBuffer);
+            hypDataBuffer.Destruct();
 
             return value;
         }
