@@ -356,6 +356,10 @@ public:
                 HypData return_hyp_data;
                 InvokeStaticMethod_Internal(method_ptr, &args_hyp_data[0], &return_hyp_data);
 
+                if (return_hyp_data.IsNull()) {
+                    return ReturnType();
+                }
+
                 return std::move(return_hyp_data.Get<ReturnType>());
             }
         } else {
@@ -364,6 +368,10 @@ public:
             } else {
                 HypData return_hyp_data;
                 InvokeStaticMethod_Internal(method_ptr, nullptr, &return_hyp_data);
+
+                if (return_hyp_data.IsNull()) {
+                    return ReturnType();
+                }
 
                 return std::move(return_hyp_data.Get<ReturnType>());
             }

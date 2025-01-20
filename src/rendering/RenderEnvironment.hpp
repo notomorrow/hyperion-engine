@@ -41,9 +41,12 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
     RENDER_ENVIRONMENT_UPDATES_THREAD_MASK          = 0x10 // use mask shifted by ThreadType value to issue unique updates for a specific thread
 };
 
+HYP_CLASS()
 class HYP_API RenderEnvironment : public HypObject<RenderEnvironment>
 {
     using RenderSubsystemPendingRemovalEntry = Pair<TypeID, Name>;
+
+    HYP_OBJECT_BODY(RenderEnvironment);
 
 public:
     RenderEnvironment();

@@ -160,6 +160,67 @@ struct HypObjectInitializerGuard : HypObjectInitializerGuardBase
     }
 };
 
+class HypObjectPtr
+{
+public:
+    HypObjectPtr()
+        : m_ptr(nullptr),
+          m_hyp_class(nullptr)
+    {
+    }
+
+    HypObjectPtr(std::nullptr_t)
+        : m_ptr(nullptr),
+          m_hyp_class(nullptr)
+    {
+    }
+
+    template <class T, typename = std::enable_if_t< IsHypObject<T>::value > >
+    HypObjectPtr(T *ptr)
+        : m_ptr(ptr),
+          m_hyp_class(GetHypClass(TypeID::ForType<T>()))
+    {
+    }
+
+    HypObjectPtr(const HypObjectPtr &other)                 = default;
+    HypObjectPtr &operator=(const HypObjectPtr &other)      = default;
+    HypObjectPtr(HypObjectPtr &&other) noexcept             = default;
+    HypObjectPtr &operator=(HypObjectPtr &&other) noexcept  = default;
+    ~HypObjectPtr()                                         = default;
+
+    HYP_FORCE_INLINE explicit operator bool() const
+        { return m_ptr != nullptr && m_hyp_class != nullptr; }
+
+    HYP_FORCE_INLINE bool operator!() const
+        { return !m_ptr || !m_hyp_class; }
+
+    HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
+        { return m_ptr == nullptr; }
+
+    HYP_FORCE_INLINE bool operator==(const HypObjectPtr &other) const
+        { return m_ptr == other.m_ptr && m_hyp_class == other.m_hyp_class; }
+
+    HYP_FORCE_INLINE bool operator!=(const HypObjectPtr &other) const
+        { return m_ptr != other.m_ptr || m_hyp_class != other.m_hyp_class; }
+
+    HYP_FORCE_INLINE bool IsValid() const
+        { return m_ptr != nullptr && m_hyp_class != nullptr; }
+
+    HYP_FORCE_INLINE const HypClass *GetClass() const
+        { return m_hyp_class; }
+
+    HYP_API const IHypObjectInitializer *GetObjectInitializer() const;
+
+private:
+    HYP_API const HypClass *GetHypClass(TypeID type_id) const;
+
+    void            *m_ptr;
+    const HypClass  *m_hyp_class;
+};
+
+HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count);
+HYP_API void HypObject_OnDecRefCount_Strong(HypObjectPtr ptr, uint32 count);
+
 namespace detail {
 
 template <class T, class T2>

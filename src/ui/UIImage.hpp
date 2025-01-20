@@ -41,7 +41,6 @@ public:
 
 protected:
     virtual MaterialAttributes GetMaterialAttributes() const override;
-    virtual Material::ParameterTable GetMaterialParameters() const override;
     virtual Material::TextureSet GetMaterialTextures() const override;
 
     Handle<Texture> m_texture;

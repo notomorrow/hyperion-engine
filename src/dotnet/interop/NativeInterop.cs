@@ -8,7 +8,8 @@ namespace Hyperion
 {
     public delegate void InvokeMethodDelegate(Guid managedMethodGuid, Guid thisObjectGuid, IntPtr argsHypDataPtr, IntPtr outReturnHypDataPtr);
     public delegate void InitializeObjectCallbackDelegate(IntPtr contextPtr, IntPtr objectPtr, uint objectSize);
-    public delegate void AddObjectToCacheDelegate(IntPtr objectWrapperPtr, out IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr);
+    public delegate void AddObjectToCacheDelegate(IntPtr objectWrapperPtr, out IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr, bool weak);
+    public delegate bool SetObjectReferenceTypeDelegate(IntPtr objectReferencePtr, bool weak);
 
     internal enum LoadAssemblyResult : int
     {
@@ -86,6 +87,7 @@ namespace Hyperion
                 NativeInterop_SetInvokeSetterFunction(ref assemblyGuid, classHolderPtr, Marshal.GetFunctionPointerForDelegate<InvokeMethodDelegate>(InvokeSetter));
 
                 NativeInterop_SetAddObjectToCacheFunction(Marshal.GetFunctionPointerForDelegate<AddObjectToCacheDelegate>(AddObjectToCache));
+                NativeInterop_SetSetObjectReferenceTypeFunction(Marshal.GetFunctionPointerForDelegate<SetObjectReferenceTypeDelegate>(SetObjectReferenceType));
 
                 Type[] types = assembly.GetExportedTypes();
 
@@ -521,7 +523,7 @@ namespace Hyperion
 
                 if (thisObject == null)
                 {
-                    throw new Exception("Failed to get target from GUID: " + thisObjectGuid);
+                    throw new Exception("Failed to invoke method " + methodInfo.Name + " from " + methodInfo.DeclaringType.Name + " on target from GUID: " + thisObjectGuid);
                 }
             }
 
@@ -580,7 +582,7 @@ namespace Hyperion
         /// as it is intended for objects that are already handled by the .NET runtime,
         /// with no dotnet::Object instance in C++.
         /// </summary>
-        public static unsafe void AddObjectToCache(IntPtr objectWrapperPtr, out IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr)
+        public static unsafe void AddObjectToCache(IntPtr objectWrapperPtr, out IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr, bool weak)
         {
             ref ObjectWrapper objectWrapperRef = ref Unsafe.AsRef<ObjectWrapper>((void*)objectWrapperPtr);
             ref ObjectReference objectReferenceRef = ref Unsafe.AsRef<ObjectReference>((void*)outObjectReferencePtr);
@@ -613,7 +615,7 @@ namespace Hyperion
             Guid objectGuid = Guid.NewGuid();
 
             // reassign ref
-            objectReferenceRef = ManagedObjectCache.Instance.AddObject(assemblyGuid, objectGuid, obj, keepAlive: false, gcHandle: null);
+            objectReferenceRef = ManagedObjectCache.Instance.AddObject(assemblyGuid, objectGuid, obj, keepAlive: !weak, gcHandle: null);
         }
 
         public static void FreeObject(ObjectReference obj)
@@ -622,6 +624,18 @@ namespace Hyperion
             {
                 throw new Exception("Failed to remove object from cache: " + obj.guid);
             }
+        }
+
+        public static unsafe bool SetObjectReferenceType(IntPtr objectReferencePtr, bool weak)
+        {
+            ref ObjectReference objectReferenceRef = ref Unsafe.AsRef<ObjectReference>((void*)objectReferencePtr);
+
+            if (weak)
+            {
+                return ManagedObjectCache.Instance.MakeWeakReference(objectReferenceRef.guid);
+            }
+
+            return ManagedObjectCache.Instance.MakeStrongReference(objectReferenceRef.guid);
         }
 
         [DllImport("hyperion", EntryPoint = "ManagedClass_Create")]
@@ -647,5 +661,8 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "NativeInterop_SetAddObjectToCacheFunction")]
         private static extern void NativeInterop_SetAddObjectToCacheFunction(IntPtr addObjectToCachePtr);
+
+        [DllImport("hyperion", EntryPoint = "NativeInterop_SetSetObjectReferenceTypeFunction")]
+        private static extern void NativeInterop_SetSetObjectReferenceTypeFunction(IntPtr setObjectReferenceTypePtr);
     }
 }

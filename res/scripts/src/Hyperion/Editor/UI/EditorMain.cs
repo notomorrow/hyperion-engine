@@ -33,6 +33,62 @@ namespace FooBar
         }
     }
 
+    public class TestEditorDebugOverlay : EditorDebugOverlayBase
+    {
+        public TestEditorDebugOverlay()
+        {
+        }
+
+        public override UIObject CreateUIObject(UIObject spawnParent)
+        {
+            return spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 100), UIObjectSize.Pixel));
+        }
+
+        public override Name GetName()
+        {
+            return new Name("TestEditorDebugOverlay");
+        }
+
+        public override bool IsEnabled()
+        {
+            return true;
+        }
+
+        public override void Update()
+        {
+            Logger.Log(LogType.Info, "Update TestEditorDebugOverlay");
+        }
+    }
+
+    public class TestEditorDebugOverlay2 : EditorDebugOverlayBase
+    {
+        public TestEditorDebugOverlay2()
+        {
+        }
+
+        public override UIObject CreateUIObject(UIObject spawnParent)
+        {
+            var image = spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay2"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 50), UIObjectSize.Pixel));
+            image.SetBackgroundColor(new Color(1.0f, 0.0f, 0.0f, 1.0f));
+            return image;
+        }
+
+        public override Name GetName()
+        {
+            return new Name("TestEditorDebugOverlay2");
+        }
+
+        public override bool IsEnabled()
+        {
+            return true;
+        }
+
+        public override void Update()
+        {
+            Logger.Log(LogType.Info, "Update TestEditorDebugOverlay2");
+        }
+    }
+
     public class EditorMain : UIEventHandler
     {
         public override void Init(Entity entity)
@@ -45,8 +101,14 @@ namespace FooBar
             Logger.Log(LogType.Info, "OnPlayStart");
 
             var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+            // test
+            editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
+            editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
+
             var firstPersonCameraController = new FirstPersonCameraController();
             editorSubsystem.GetScene().GetCamera().AddCameraController(firstPersonCameraController);
+
             firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
         }
 

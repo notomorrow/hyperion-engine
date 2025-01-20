@@ -57,14 +57,71 @@ class RefCountedPtrBase;
 
 namespace detail {
 
+template <class T, class RefCountDataType>
+static inline uint32 IncRefCount_Impl(RefCountDataType &ref_count_data, bool weak)
+{
+    uint32 count_value;
+
+    if (!weak) {
+        if constexpr (std::is_integral_v<typename RefCountDataType::Count>) {
+            count_value = ++ref_count_data.strong_count;
+        } else {
+            count_value = ref_count_data.strong_count.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+        }
+        
+        if constexpr (IsHypObject<T>::value) {
+            HypObject_OnIncRefCount_Strong(static_cast<T *>(ref_count_data.value), count_value);
+        }
+    } else {
+        if constexpr (std::is_integral_v<typename RefCountDataType::Count>) {
+            count_value = ++ref_count_data.weak_count;
+        } else {
+            count_value = ref_count_data.weak_count.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+        }
+    }
+
+    return count_value;
+}
+
+template <class T, class RefCountDataType>
+static inline uint32 DecRefCount_Impl(RefCountDataType &ref_count_data, bool weak)
+{
+    uint32 count_value;
+
+    if (!weak) {
+        if constexpr (std::is_integral_v<typename RefCountDataType::Count>) {
+            count_value = --ref_count_data.strong_count;
+        } else {
+            count_value = ref_count_data.strong_count.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
+        }
+        
+        if constexpr (IsHypObject<T>::value) {
+            HypObject_OnDecRefCount_Strong(static_cast<T *>(ref_count_data.value), count_value);
+        }
+    } else {
+        if constexpr (std::is_integral_v<typename RefCountDataType::Count>) {
+            count_value = --ref_count_data.weak_count;
+        } else {
+            count_value = ref_count_data.weak_count.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
+        }
+    }
+
+    return count_value;
+}
+
 template <class CountType>
 struct RefCountData
 {
+    using Count = CountType;
+
     void        *value;
     TypeID      type_id;
-    CountType   strong_count;
-    CountType   weak_count;
+    Count       strong_count;
+    Count       weak_count;
     void        (*dtor)(void *);
+
+    uint32      (*inc_ref_count)(RefCountData &_this, bool weak);
+    uint32      (*dec_ref_count)(RefCountData &_this, bool weak);
 
     RefCountData()
         : strong_count(0),
@@ -73,6 +130,8 @@ struct RefCountData
         value = nullptr;
         type_id = TypeID::Void();
         dtor = nullptr;
+        inc_ref_count = nullptr;
+        dec_ref_count = nullptr;
     }
     
 #ifdef HYP_DEBUG_MODE
@@ -95,43 +154,27 @@ struct RefCountData
     
     HYP_FORCE_INLINE uint32 IncRefCount_Strong()
     {
-        if constexpr (std::is_integral_v<CountType>) {
-            return ++strong_count;
-        } else {
-            return strong_count.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
-        }
+        return inc_ref_count(*this, false);
     }
     
     HYP_FORCE_INLINE uint32 IncRefCount_Weak()
     {
-        if constexpr (std::is_integral_v<CountType>) {
-            return ++weak_count;
-        } else {
-            return weak_count.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
-        }
+        return inc_ref_count(*this, true);
     }
 
     HYP_FORCE_INLINE uint32 DecRefCount_Strong()
     {
-        if constexpr (std::is_integral_v<CountType>) {
-            return --strong_count;
-        } else {
-            return strong_count.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
-        }
+        return dec_ref_count(*this, false);
     }
 
     HYP_FORCE_INLINE uint32 DecRefCount_Weak()
     {
-        if constexpr (std::is_integral_v<CountType>) {
-            return --weak_count;
-        } else {
-            return weak_count.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) - 1;
-        }
+        return dec_ref_count(*this, true);
     }
 
     HYP_FORCE_INLINE uint32 UseCount_Strong() const
     {
-        if constexpr (std::is_integral_v<CountType>) {
+        if constexpr (std::is_integral_v<Count>) {
             return strong_count;
         } else {
             return strong_count.Get(MemoryOrder::ACQUIRE);
@@ -140,7 +183,7 @@ struct RefCountData
 
     HYP_FORCE_INLINE uint32 UseCount_Weak() const
     {
-        if constexpr (std::is_integral_v<CountType>) {
+        if constexpr (std::is_integral_v<Count>) {
             return weak_count;
         } else {
             return weak_count.Get(MemoryOrder::ACQUIRE);
@@ -155,7 +198,7 @@ struct RefCountData
         static_assert(!std::is_void_v<T>, "Cannot initialize RefCountedPtr data with void pointer");
 
         // Setup weak ptr for EnableRefCountedPtrFromThis
-        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, Normalized>) {
+        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<Count>, Normalized>) {
 #ifdef HYP_DEBUG_MODE
             // Should already be set up from InitWeak() call.
             AssertThrow(value == ptr);
@@ -175,6 +218,8 @@ struct RefCountData
         // Override type_id, dtor for derived types
         type_id = TypeID::ForType<Normalized>();
         dtor = &Memory::Delete<Normalized>;
+        inc_ref_count = &IncRefCount_Impl<T, RefCountData>;
+        dec_ref_count = &DecRefCount_Impl<T, RefCountData>;
     }
 
     template <class T>
@@ -182,16 +227,18 @@ struct RefCountData
     {
         using Normalized = NormalizedType<T>;
 
-        static_assert(std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, Normalized>, "T must derive EnableRefCountedPtrFromThis<T, CountType> to use this method");
+        static_assert(std::is_base_of_v<EnableRefCountedPtrFromThisBase<Count>, Normalized>, "T must derive EnableRefCountedPtrFromThis<T, CountType> to use this method");
 
         value = ptr;
 
         // Override type_id, dtor for derived types
         type_id = TypeID::ForType<Normalized>();
         dtor = &Memory::Delete<Normalized>;
+        inc_ref_count = &IncRefCount_Impl<T, RefCountData>;
+        dec_ref_count = &DecRefCount_Impl<T, RefCountData>;
 
         // Weak count will be incremented - set to 1 on construction
-        ptr->EnableRefCountedPtrFromThisBase<CountType>::weak.SetRefCountData_Internal(this, true);
+        ptr->EnableRefCountedPtrFromThisBase<Count>::weak.SetRefCountData_Internal(this, true);
     }
 
     void Destruct()
@@ -206,6 +253,9 @@ struct RefCountData
 
         void (*current_dtor)(void *) = dtor;
         dtor = nullptr;
+
+        inc_ref_count = nullptr;
+        dec_ref_count = nullptr;
 
         type_id = TypeID::Void();
 
@@ -327,15 +377,13 @@ public:
         DecRefCount();
     }
     
-    template <class Ty>
-    HYP_FORCE_INLINE void Reset(Ty *ptr)
+    template <class T>
+    HYP_FORCE_INLINE void Reset(T *ptr)
     {
-        using TyN = NormalizedType<Ty>;
-
         DecRefCount();
 
         if (ptr) {
-            if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, TyN>) {
+            if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<CountType>, NormalizedType<T>>) {
                 // T has EnableRefCountedPtrFromThisBase as a base class -- share the RefCountData and just increment the refcount
 
                 m_ref = ptr->template EnableRefCountedPtrFromThisBase<CountType>::weak.GetRefCountData_Internal();
@@ -348,8 +396,8 @@ public:
                 m_ref = new RefCountDataType;
             }
 
-            if (m_ref->IncRefCount_Strong() == 1) {
-                m_ref->template Init<TyN>(ptr);
+            if (detail::IncRefCount_Impl<NormalizedType<T>, RefCountDataType>(*m_ref, /* weak */ false) == 1) {
+                m_ref->template Init<NormalizedType<T>>(ptr);
             }
         }
     }

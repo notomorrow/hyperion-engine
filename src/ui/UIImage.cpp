@@ -12,6 +12,7 @@ namespace hyperion {
 UIImage::UIImage()
     : UIObject(UIObjectType::IMAGE)
 {
+    SetBackgroundColor(Color(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void UIImage::Init()
@@ -47,13 +48,6 @@ MaterialAttributes UIImage::GetMaterialAttributes() const
     //     .cull_faces         = FaceCullMode::BACK,
     //     .flags              = MaterialAttributeFlags::NONE
     // };
-}
-
-Material::ParameterTable UIImage::GetMaterialParameters() const
-{
-    return Material::ParameterTable {
-        { Material::MATERIAL_KEY_ALBEDO, Vec4f { 1.0f, 1.0f, 1.0f, 1.0f } }
-    };
 }
 
 Material::TextureSet UIImage::GetMaterialTextures() const

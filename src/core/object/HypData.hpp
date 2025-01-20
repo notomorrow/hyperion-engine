@@ -16,6 +16,7 @@
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/Pair.hpp>
 #include <core/utilities/EnumFlags.hpp>
+#include <core/utilities/Result.hpp>
 
 #include <core/memory/Any.hpp>
 #include <core/memory/RefCountedPtr.hpp>
@@ -161,6 +162,9 @@ struct HypData
 
     HYP_FORCE_INLINE TypeID GetTypeID() const
         { return ToRef().GetTypeID(); }
+
+    HYP_FORCE_INLINE void Reset()
+        { value.Reset(); }
 
     HYP_FORCE_INLINE AnyRef ToRef()
     {
@@ -1158,6 +1162,7 @@ struct HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 };
+
 
 template <int StringType>
 struct HypDataHelperDecl<containers::detail::String<StringType>> {};

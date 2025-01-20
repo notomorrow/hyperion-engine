@@ -233,8 +233,6 @@ Node &Node::operator=(Node &&other) noexcept
 
 Node::~Node()
 {
-    HYP_LOG(Node, Debug, "Node destructor for {}, entity = {}", m_name, m_entity.GetID().Value());
-
     RemoveAllChildren();
     SetEntity(Handle<Entity>::empty);
 }

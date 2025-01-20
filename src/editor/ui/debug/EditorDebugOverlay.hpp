@@ -27,6 +27,10 @@ public:
     EditorDebugOverlayBase();
     virtual ~EditorDebugOverlayBase();
 
+    HYP_METHOD()
+    HYP_FORCE_INLINE const RC<UIObject> &GetUIObject() const
+        { return m_ui_object; }
+
     void Initialize(UIObject *spawn_parent);
 
     HYP_METHOD(Scriptable)

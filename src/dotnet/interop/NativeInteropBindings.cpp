@@ -50,7 +50,7 @@ static AttributeSet InternManagedAttributeHolder(ManagedAttributeHolder *managed
             MakeUnique<Object>(
                 managed_attribute_holder_ptr->managed_attributes_ptr[i].class_ptr,
                 managed_attribute_holder_ptr->managed_attributes_ptr[i].object_reference,
-                ObjectFlags::WEAK_REFERENCE // weak reference needed so Object destructor does not try to release it
+                ObjectFlags::CREATED_FROM_MANAGED
             )
         });
     }
@@ -109,19 +109,21 @@ HYP_EXPORT void NativeInterop_SetInvokeSetterFunction(ManagedGuid *assembly_guid
 
 HYP_EXPORT void NativeInterop_SetAddObjectToCacheFunction(AddObjectToCacheFunction add_object_to_cache_fptr)
 {
-    DotNetSystem::GetInstance().SetAddObjectToCacheFunction(add_object_to_cache_fptr);
+    DotNetSystem::GetInstance().GetGlobalFunctions().add_object_to_cache_function = add_object_to_cache_fptr;
 }
 
-HYP_EXPORT void NativeInterop_AddObjectToCache(void *ptr, Class **out_class_object_ptr, ObjectReference *out_object_reference)
+HYP_EXPORT void NativeInterop_SetSetObjectReferenceTypeFunction(SetObjectReferenceTypeFunction set_object_reference_type_function)
+{
+    DotNetSystem::GetInstance().GetGlobalFunctions().set_object_reference_type_function = set_object_reference_type_function;
+}
+
+HYP_EXPORT void NativeInterop_AddObjectToCache(void *ptr, Class **out_class_object_ptr, ObjectReference *out_object_reference, int8 weak)
 {
     AssertThrow(ptr != nullptr);
     AssertThrow(out_class_object_ptr != nullptr);
     AssertThrow(out_object_reference != nullptr);
     
-    AddObjectToCacheFunction fptr = DotNetSystem::GetInstance().GetAddObjectToCacheFunction();
-    AssertThrowMsg(fptr != nullptr, "AddObjectToCache function pointer not set!");
-
-    fptr(ptr, out_class_object_ptr, out_object_reference);
+    DotNetSystem::GetInstance().GetGlobalFunctions().add_object_to_cache_function(ptr, out_class_object_ptr, out_object_reference, weak);
 }
 
 HYP_EXPORT void ManagedClass_Create(ManagedGuid *assembly_guid, ClassHolder *class_holder, const HypClass *hyp_class, int32 type_hash, const char *type_name, uint32 type_size, TypeID type_id, Class *parent_class, uint32 flags, ManagedClass *out_managed_class)

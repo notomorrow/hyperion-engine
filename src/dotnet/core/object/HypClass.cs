@@ -27,7 +27,7 @@ namespace Hyperion
             this.ptr = ptr;
         }
 
-        internal IntPtr Address
+        public IntPtr Address
         {
             get
             {

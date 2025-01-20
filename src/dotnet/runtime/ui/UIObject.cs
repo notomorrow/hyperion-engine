@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
+    [HypClassBinding(Name="UIObjectType")]
     public enum UIObjectType : uint
     {
         Unknown = ~0u,
@@ -27,6 +28,7 @@ namespace Hyperion
         Window = 18
     }
 
+    [HypClassBinding(Name="UIObjectScrollbarOrientation")]
     [Flags]
     public enum UIObjectScrollbarOrientation : byte
     {
@@ -34,7 +36,7 @@ namespace Hyperion
         Horizontal = 0x1,
         Vertical = 0x2
     }
-
+    [HypClassBinding(Name="UIEventHandlerResult")]
     [StructLayout(LayoutKind.Explicit, Size=16, Pack=8)]
     public struct UIEventHandlerResult
     {
@@ -144,6 +146,7 @@ namespace Hyperion
         private static extern IntPtr UIEventHandlerResult_GetFunctionName(ref UIEventHandlerResult result);
     }
 
+    [HypClassBinding(Name="UIObjectAlignment")]
     public enum UIObjectAlignment : uint
     {
         TopLeft = 0,
@@ -240,5 +243,17 @@ namespace Hyperion
         public UIObject()
         {
         }
+
+        public T Spawn<T>(Name name, Vec2i position, UIObjectSize size) where T : UIObject
+        {
+            HypData hypData = new HypData(null);
+
+            UIObject_Spawn(NativeAddress, HypClass.GetClass(typeof(T)).Address, ref name, ref position, ref size, out hypData.Buffer);
+
+            return (T)hypData.GetValue();
+        }
+
+        [DllImport("hyperion", EntryPoint="UIObject_Spawn")]
+        private static extern void UIObject_Spawn([In] IntPtr spawnParentPtr, [In] IntPtr hypClassPtr, [In] ref Name name, [In] ref Vec2i position, [In] ref UIObjectSize size, [Out] out HypDataBuffer outHypData);
     }
 }

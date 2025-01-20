@@ -12,6 +12,9 @@
 
 #include <core/object/HypData.hpp>
 
+#include <core/threading/AtomicVar.hpp>
+#include <core/threading/Semaphore.hpp>
+
 #include <core/ID.hpp>
 
 #include <dotnet/Helpers.hpp>
@@ -24,8 +27,8 @@ namespace hyperion {
 
 enum class ObjectFlags : uint32
 {
-    NONE            = 0x0,
-    WEAK_REFERENCE  = 0x1
+    NONE                    = 0x0,
+    CREATED_FROM_MANAGED    = 0x1
 };
 
 HYP_MAKE_ENUM_FLAGS(ObjectFlags)
@@ -41,7 +44,7 @@ class Property;
 
 /*! \brief A move-only object that represents a managed object in the .NET runtime.
  *  By default, the managed object this Object is associated with will be allowed to be released by the .NET runtime upon this object's destruction.
- *  To allow the managed object to live beyond the lifetime of this object, use the ObjectFlags::WEAK_REFERENCE flag.
+ *  To allow the managed object to live beyond the lifetime of this object, use the ObjectFlags::CREATED_FROM_MANAGED flag.
  * 
  *  \details To create a new Object, use the Class::NewObject method.
  * */
@@ -57,7 +60,7 @@ public:
     Object(Object &&other) noexcept;
     Object &operator=(Object &&other) noexcept;
 
-    // Destructor frees the managed object
+    // Destructor frees the managed object unless CREATED_FROM_MANAGED is set.
     ~Object();
 
     HYP_FORCE_INLINE Class *GetClass() const
@@ -66,13 +69,22 @@ public:
     HYP_FORCE_INLINE const ObjectReference &GetObjectReference() const
         { return m_object_reference; }
 
+    HYP_FORCE_INLINE ObjectFlags GetObjectFlags() const
+        { return m_object_flags; }
+
     HYP_FORCE_INLINE bool IsValid() const
         { return m_object_reference.guid.IsValid(); }
 
     /*! \brief Reset the Object to an invalid state.
-     *  This will free the managed object if it is still alive unless the ObjectFlags::WEAK_REFERENCE flag is set.
+     *  This will free the managed object if it is still alive unless the ObjectFlags::CREATED_FROM_MANAGED flag is set.
      * */
     void Reset();
+
+    /*! \brief Set whether or not the managed object should be kept in memory (not garbage collected)
+     *  Defaults to alive for an object created from the unmanaged side. For objects created from the managed runtime,
+     *  use this method to allow it to persist beyond the initial scope.
+     *  \param keep_alive Whether or not to allow the object to exist in memory persistently */
+    bool SetKeepAlive(bool keep_alive);
 
     template <class ReturnType, class... Args>
     ReturnType InvokeMethod(const Method *method_ptr, Args &&... args)
@@ -108,6 +120,10 @@ private:
                 HypData return_hyp_data;
                 InvokeMethod_Internal(method_ptr, &args_hyp_data[0], &return_hyp_data);
 
+                if (return_hyp_data.IsNull()) {
+                    return ReturnType();
+                }
+
                 return std::move(return_hyp_data.Get<ReturnType>());
             }
         } else {
@@ -116,6 +132,10 @@ private:
             } else {
                 HypData return_hyp_data;
                 InvokeMethod_Internal(method_ptr, nullptr, &return_hyp_data);
+
+                if (return_hyp_data.IsNull()) {
+                    return ReturnType();
+                }
 
                 return std::move(return_hyp_data.Get<ReturnType>());
             }

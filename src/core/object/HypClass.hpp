@@ -260,6 +260,8 @@ public:
     HYP_FORCE_INLINE const HypClass *GetParent() const
         { return m_parent; }
 
+    bool HasParent(const HypClass *parent_hyp_class) const;
+
     virtual SizeType GetSize() const = 0;
 
     HYP_FORCE_INLINE IHypObjectInitializer *GetObjectInitializer(void *object_ptr) const

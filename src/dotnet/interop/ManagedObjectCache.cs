@@ -12,6 +12,7 @@ namespace Hyperion
         public Guid assemblyGuid;
         public WeakReference weakReference;
         public GCHandle gcHandle;
+        public GCHandle? gcHandleStrong;
 
         public StoredManagedObject(Guid objectGuid, Guid assemblyGuid, object obj, bool keepAlive, GCHandle? gcHandle)
         {
@@ -24,20 +25,49 @@ namespace Hyperion
             }
             else
             {
-                // @FIXME: Would present an issue if we:
-                // 1) create an object from C# side (creates 1 weak reference to the unmanaged object)
-                // 2) reference the object from C++ side (creates 1 strong reference to the unmanaged object)
-                // 3) delete the object from C# side, removing it from the cache (removes the weak reference to the managed object)
-                // 4) attempt to access the managed object from C++ side (the weak reference is gone, so the managed object is collected)
-                this.gcHandle = GCHandle.Alloc(obj, keepAlive ? GCHandleType.Normal : GCHandleType.Weak);
+                // Create initial weak handle
+                this.gcHandle = GCHandle.Alloc(obj, GCHandleType.Weak);
             }
 
             this.weakReference = new WeakReference(obj);
+
+            // If keepAlive is true, create a strong handle that can be used
+            // to ensure the managed object exists as long as the unmanged object does.
+            if (keepAlive)
+            {
+                gcHandleStrong = GCHandle.Alloc(obj, GCHandleType.Normal);
+            }
         }
 
         public void Dispose()
         {
             gcHandle.Free();
+            gcHandleStrong?.Free();
+        }
+
+        public void MakeStrongReference()
+        {
+            object? obj = weakReference.Target;
+
+            if (obj == null)
+            {
+                throw new Exception("Failed to create strong reference, weak reference target returned null!");
+            }
+
+            gcHandleStrong = GCHandle.Alloc(obj, GCHandleType.Normal);
+        }
+
+        public void MakeWeakReference()
+        {
+            gcHandleStrong?.Free();
+        }
+
+        public object? Value
+        {
+            get
+            {
+                return weakReference.Target;
+            }
         }
 
         public ObjectReference ToObjectReference()
@@ -88,7 +118,7 @@ namespace Hyperion
             {
                 if (objects.ContainsKey(guid))
                 {
-                    return objects[guid].weakReference.Target;
+                    return objects[guid].Value;
                 }
             }
 
@@ -103,6 +133,36 @@ namespace Hyperion
                 {
                     objects[guid].Dispose();
                     objects.Remove(guid);
+                    
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        public bool MakeStrongReference(Guid guid)
+        {
+            lock (lockObject)
+            {
+                if (objects.ContainsKey(guid))
+                {
+                    objects[guid].MakeStrongReference();
+                    
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        public bool MakeWeakReference(Guid guid)
+        {
+            lock (lockObject)
+            {
+                if (objects.ContainsKey(guid))
+                {
+                    objects[guid].MakeWeakReference();
                     
                     return true;
                 }

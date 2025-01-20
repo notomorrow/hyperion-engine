@@ -3,6 +3,7 @@
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
 #include <dotnet/Assembly.hpp>
+#include <dotnet/DotNetSystem.hpp>
 
 namespace hyperion::dotnet {
 
@@ -60,7 +61,7 @@ Object::~Object()
 void Object::Reset()
 {
     if (IsValid()) {
-        if (!(m_object_flags & ObjectFlags::WEAK_REFERENCE)) {
+        if (!(m_object_flags & ObjectFlags::CREATED_FROM_MANAGED)) {
             m_class_ptr->EnsureLoaded();
 
             m_class_ptr->GetFreeObjectFunction()(m_object_reference);
@@ -112,6 +113,11 @@ const Property *Object::GetProperty(UTF8StringView property_name) const
     }
 
     return &it->second;
+}
+
+bool Object::SetKeepAlive(bool keep_alive)
+{
+    return DotNetSystem::GetInstance().GetGlobalFunctions().set_object_reference_type_function(&m_object_reference, !keep_alive);
 }
 
 } // namespace hyperion::dotnet

@@ -448,8 +448,7 @@ DotNetSystem &DotNetSystem::GetInstance()
 }
 
 DotNetSystem::DotNetSystem()
-    : m_is_initialized(false),
-      m_add_object_to_cache_fptr(nullptr)
+    : m_is_initialized(false)
 {
 }
 
