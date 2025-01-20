@@ -23,8 +23,6 @@ namespace Hyperion
         public Name(string nameString, bool weak = false)
         {
             // try to find the name in the cache
-            Logger.Log(LogType.Info, "Name: {0}", nameString);
-            Logger.Log(LogType.Info, "nameCache: {0}", nameCache);
             if (nameCache.TryGetValue(nameString, out Name cachedName))
             {
                 this = cachedName;

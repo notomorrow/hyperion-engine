@@ -791,6 +791,8 @@ UIEventHandlerResult UIStage::OnInputEvent(
         RC<UIObject> ui_object = m_focused_object.Lock();
 
         while (ui_object != nullptr) {
+            HYP_LOG(UI, Debug, "OnKeyDown for {}", ui_object->GetName());
+
             event_handler_result |= ui_object->OnKeyDown(KeyboardEvent {
                 .input_manager  = input_manager,
                 .key_code       = key_code

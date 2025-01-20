@@ -142,6 +142,9 @@ public:
     void AddDebugOverlay(const RC<EditorDebugOverlayBase> &debug_overlay);
 
     HYP_METHOD()
+    bool RemoveDebugOverlay(Name name);
+
+    HYP_METHOD()
     HYP_FORCE_INLINE const NodeProxy &GetFocusedNode() const
         { return m_focused_node; }
 
@@ -161,6 +164,7 @@ private:
     void InitViewport();
     void InitSceneOutline();
     void InitDetailView();
+    void InitDebugOverlays();
     
     RC<FontAtlas> CreateFontAtlas();
 
@@ -192,6 +196,7 @@ private:
     EditorDelegates                                                     *m_editor_delegates;
 
     Array<RC<EditorDebugOverlayBase>>                                   m_debug_overlays;
+    RC<UIObject>                                                        m_debug_overlay_ui_object;
 };
 
 } // namespace hyperion

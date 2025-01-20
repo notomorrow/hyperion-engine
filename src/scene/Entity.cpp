@@ -13,10 +13,7 @@ namespace hyperion {
 
 HYP_DEFINE_LOG_SUBCHANNEL(Entity, Scene);
 
-Entity::Entity()
-{
-    HYP_LOG(Entity, Debug, "Creating Entity with ID #{}", GetID().Value());
-}
+Entity::Entity() = default;
 
 Entity::~Entity()
 {
@@ -29,8 +26,6 @@ Entity::~Entity()
     Task<bool> success = EntityManager::GetEntityToEntityManagerMap().PerformActionWithEntity(id, [](EntityManager *entity_manager, ID<Entity> id)
     {
         HYP_NAMED_SCOPE("Remove Entity from EntityManager (task)");
-
-        // HYP_LOG(Entity, Debug, "Removing Entity #{} from EntityManager on thread '{}'", id.Value(), Threads::CurrentThreadID().name);
 
         entity_manager->RemoveEntity(id);
     });

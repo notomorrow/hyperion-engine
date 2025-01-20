@@ -45,9 +45,18 @@ HYP_EXPORT void HypData_GetTypeID(const HypData *hyp_data, TypeID *out_type_id)
 
 HYP_EXPORT int8 HypData_IsNull(const HypData *hyp_data)
 {
-    AssertThrow(hyp_data != nullptr);
-
+    if (!hyp_data) {
+        return true;
+    }
+    
     return hyp_data->IsNull();
+}
+
+HYP_EXPORT void HypData_Reset(HypData *hyp_data)
+{
+    if (hyp_data) {
+        hyp_data->Reset();
+    }
 }
 
 #define HYP_DEFINE_HYPDATA_GET(type, name) \

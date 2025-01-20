@@ -154,6 +154,15 @@ IDBase HypObjectBase::GetID_Internal() const
 
 #pragma region HypObjectPtr
 
+HYP_API const IHypObjectInitializer *HypObjectPtr::GetObjectInitializer() const
+{
+    if (!m_hyp_class || !m_ptr) {
+        return nullptr;
+    }
+
+    return m_hyp_class->GetObjectInitializer(m_ptr);
+}
+
 HYP_API const HypClass *HypObjectPtr::GetHypClass(TypeID type_id) const
 {
     const HypClass *hyp_class = ::hyperion::GetClass(type_id);
@@ -270,6 +279,44 @@ HYP_API dotnet::Class *GetHypClassManagedClass(const HypClass *hyp_class)
     AssertThrow(hyp_class != nullptr);
 
     return hyp_class->GetManagedClass();
+}
+
+HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count)
+{
+    if (const IHypObjectInitializer *initializer = ptr.GetObjectInitializer()) {
+        if (dotnet::Object *object = initializer->GetManagedObject()) {
+            // Only care about objects that were created from managed side
+            if (!(object->GetObjectFlags() & ObjectFlags::CREATED_FROM_MANAGED)) {
+                return;
+            }
+
+            // Make strong on first reference other than the one created from managed side.
+            if (count != 2) {
+                return;
+            }
+
+            AssertThrow(object->SetKeepAlive(true));
+        }
+    }
+}
+
+HYP_API void HypObject_OnDecRefCount_Strong(HypObjectPtr ptr, uint32 count)
+{
+    if (const IHypObjectInitializer *initializer = ptr.GetObjectInitializer()) {
+        if (dotnet::Object *object = initializer->GetManagedObject()) {
+            // Only care about objects that were created from managed side
+            if (!(object->GetObjectFlags() & ObjectFlags::CREATED_FROM_MANAGED)) {
+                return;
+            }
+
+            // Make weak when only ref remaining is the creator
+            if (count != 1) {
+                return;
+            }
+
+            AssertThrow(object->SetKeepAlive(false));
+        }
+    }
 }
 
 } // namespace hyperion

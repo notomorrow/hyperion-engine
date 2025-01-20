@@ -157,8 +157,11 @@ struct EnvProbeDrawProxy
     uint64                      visibility_bits; // bitmask indicating if EnvProbe is visible to cameras by camera ID
 };
 
+HYP_CLASS()
 class HYP_API EnvProbe : public HypObject<EnvProbe>
 {
+    HYP_OBJECT_BODY(EnvProbe);
+
 public:
     friend struct RENDER_COMMAND(UpdateEnvProbeDrawProxy);
     friend struct RENDER_COMMAND(DestroyCubemapRenderPass);

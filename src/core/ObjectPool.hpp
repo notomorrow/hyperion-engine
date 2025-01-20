@@ -107,24 +107,10 @@ struct HypObjectHeader
         { return ref_count_weak.Get(MemoryOrder::ACQUIRE); }
 
     HYP_FORCE_INLINE void IncRefStrong()
-    {
-#ifdef HYP_DEBUG_MODE
-        uint32 count = ref_count_strong.Increment(1, MemoryOrder::RELAXED);
-        AssertThrow(count < UINT32_MAX);
-#else
-        ref_count_strong.Increment(1, MemoryOrder::RELAXED)
-#endif
-    }
+        { container->IncRefStrong(this); }
 
     HYP_FORCE_INLINE void IncRefWeak()
-    {
-#ifdef HYP_DEBUG_MODE
-        uint32 count = ref_count_weak.Increment(1, MemoryOrder::RELAXED);
-        AssertThrow(count < UINT32_MAX);
-#else
-        ref_count_weak.Increment(1, MemoryOrder::RELAXED);
-#endif
-    }
+        { container->IncRefWeak(this); }
 
     HYP_FORCE_INLINE void DecRefStrong()
         { container->DecRefStrong(this); }
@@ -172,6 +158,20 @@ struct HypObjectMemory final : HypObjectHeader
         return ptr;
     }
 
+    uint32 IncRefStrong()
+    {
+        const uint32 count = ref_count_strong.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+
+        HypObject_OnIncRefCount_Strong(HypObjectPtr(GetPointer()), count);
+
+        return count;
+    }
+
+    uint32 IncRefWeak()
+    {
+        return ref_count_weak.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+    }
+
     uint32 DecRefStrong()
     {
         uint32 count;
@@ -193,6 +193,8 @@ struct HypObjectMemory final : HypObjectHeader
         }
 
         AssertDebug(count != 0);
+
+        HypObject_OnDecRefCount_Strong(HypObjectPtr(GetPointer()), count - 1);
 
         return count - 1;
     }
@@ -302,12 +304,12 @@ public:
 
     virtual void IncRefStrong(HypObjectHeader *ptr) override
     {
-        static_cast<HypObjectMemory *>(ptr)->IncRefStrong();
+        static_cast<HypObjectMemory *>(ptr)->HypObjectMemory::IncRefStrong();
     }
 
     virtual void IncRefWeak(HypObjectHeader *ptr) override
     {
-        static_cast<HypObjectMemory *>(ptr)->IncRefWeak();
+        static_cast<HypObjectMemory *>(ptr)->HypObjectMemory::IncRefWeak();
     }
 
     virtual void DecRefStrong(HypObjectHeader *ptr) override

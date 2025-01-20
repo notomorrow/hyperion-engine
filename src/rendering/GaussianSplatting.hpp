@@ -5,6 +5,8 @@
 
 #include <core/threading/Threads.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <math/Vector3.hpp>
 #include <math/BoundingBox.hpp>
 
@@ -38,9 +40,11 @@ struct GaussianSplattingModelData
     Transform                       transform;
 };
 
-class HYP_API GaussianSplattingInstance
-    : public HypObject<GaussianSplattingInstance>
+HYP_CLASS()
+class HYP_API GaussianSplattingInstance : public HypObject<GaussianSplattingInstance>
 {
+    HYP_OBJECT_BODY(GaussianSplattingInstance);
+
 public:
     enum SortStage
     {
@@ -100,9 +104,11 @@ private:
     Array<float32>                  m_cpu_distances;
 };
 
-class HYP_API GaussianSplatting
-    : public HypObject<GaussianSplatting>
+HYP_CLASS()
+class HYP_API GaussianSplatting : public HypObject<GaussianSplatting>
 {
+    HYP_OBJECT_BODY(GaussianSplatting);
+
 public:
     GaussianSplatting();
     GaussianSplatting(const GaussianSplatting &other) = delete;

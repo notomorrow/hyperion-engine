@@ -66,6 +66,8 @@
 #include <util/profiling/ProfileScope.hpp>
 #include <util/MeshBuilder.hpp>
 
+
+
 namespace hyperion {
 
 HYP_DEFINE_LOG_CHANNEL(Editor);
@@ -144,6 +146,9 @@ void GenerateLightmapsEditorTask::Tick_Impl(float delta)
 
 #pragma region EditorSubsystem
 
+// temp
+#define HYP_EDITOR
+
 #ifdef HYP_EDITOR
 
 EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIStage> &ui_stage)
@@ -217,6 +222,7 @@ void EditorSubsystem::Initialize()
 
     InitSceneOutline();
     InitDetailView();
+    InitDebugOverlays();
 
     CreateHighlightNode();
 
@@ -780,6 +786,28 @@ void EditorSubsystem::InitDetailView()
     }).Detach();
 }
 
+void EditorSubsystem::InitDebugOverlays()
+{
+    HYP_SCOPE;
+
+    m_debug_overlay_ui_object = GetUIStage()->CreateUIObject<UIListView>(NAME("DebugOverlay"), Vec2i::Zero(), UIObjectSize(100, UIObjectSize::PERCENT));
+    m_debug_overlay_ui_object->SetDepth(1);
+    m_debug_overlay_ui_object->SetBackgroundColor(Color(0.0f, 0.0f, 0.0f, 0.0f));
+    m_debug_overlay_ui_object->SetAcceptsFocus(false);
+
+    for (const RC<EditorDebugOverlayBase> &debug_overlay : m_debug_overlays) {
+        debug_overlay->Initialize(m_debug_overlay_ui_object.Get());
+
+        if (const RC<UIObject> &ui_object = debug_overlay->GetUIObject()) {
+            m_debug_overlay_ui_object->AddChildUIObject(ui_object);
+        }
+    }
+
+    if (RC<UIImage> scene_image = GetUIStage()->FindChildUIObject(NAME("Scene_Image")).Cast<UIImage>()) {
+        scene_image->AddChildUIObject(m_debug_overlay_ui_object);
+    }
+}
+
 RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
 {
     HYP_SCOPE;
@@ -974,9 +1002,50 @@ void EditorSubsystem::AddDebugOverlay(const RC<EditorDebugOverlayBase> &debug_ov
 
     Threads::AssertOnThread(ThreadName::THREAD_GAME);
 
-    debug_overlay->Initialize(m_ui_stage.Get());
+    auto it = m_debug_overlays.FindIf([name = debug_overlay->GetName()](const auto &item)
+    {
+        return item->GetName() == name;
+    });
+
+    if (it != m_debug_overlays.End()) {
+        return;
+    }
 
     m_debug_overlays.PushBack(debug_overlay);
+
+    if (m_debug_overlay_ui_object != nullptr) {
+        debug_overlay->Initialize(m_ui_stage.Get());
+
+        if (const RC<UIObject> &ui_object = debug_overlay->GetUIObject()) {
+            m_debug_overlay_ui_object->AddChildUIObject(ui_object);
+        }
+    }
+}
+
+bool EditorSubsystem::RemoveDebugOverlay(Name name)
+{
+    HYP_SCOPE;
+
+    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+
+    auto it = m_debug_overlays.FindIf([name](const auto &item)
+    {
+        return item->GetName() == name;
+    });
+
+    if (it == m_debug_overlays.End()) {
+        return false;
+    }
+
+    if (m_debug_overlay_ui_object != nullptr) {
+        if (const RC<UIObject> &ui_object = (*it)->GetUIObject()) {
+            m_debug_overlay_ui_object->RemoveChildUIObject(ui_object);
+        }
+    }
+
+    m_debug_overlays.Erase(it);
+
+    return true;
 }
 
 void EditorSubsystem::UpdateCamera(GameCounter::TickUnit delta)

@@ -168,8 +168,6 @@ UIObject::UIObject()
 
 UIObject::~UIObject()
 {
-    HYP_LOG(UI, Debug, "Destroying UIObject with name: {}", GetName());
-
     // Remove the entity from the entity manager
     if (const Handle<Entity> &entity = GetEntity()) {
         Scene *scene = GetScene();
@@ -2654,6 +2652,49 @@ void UIObject::Repaint()
 bool UIObject::Repaint_Internal()
 {
     return true;
+}
+
+RC<UIObject> UIObject::CreateUIObject(const HypClass *hyp_class, Name name, Vec2i position, UIObjectSize size)
+{
+    HYP_SCOPE;
+    
+    if (!hyp_class) {
+        return nullptr;
+    }
+
+    AssertThrowMsg(hyp_class->HasParent(UIObject::Class()), "Cannot spawn instance of class that is not a subclass of UIObject");
+
+    Threads::AssertOnThread(m_owner_thread_id);
+
+    HypData ui_object_hyp_data;
+    hyp_class->CreateInstance(ui_object_hyp_data);
+
+    RC<UIObject> ui_object = ui_object_hyp_data.Get<RC<UIObject>>();
+
+    // AssertThrow(IsInit());
+    AssertThrow(GetNode().IsValid());
+
+    if (!name.IsValid()) {
+        name = CreateNameFromDynamicString(ANSIString("Unnamed_") + hyp_class->GetName().LookupString());
+    }
+
+    NodeProxy node_proxy(MakeRefCountedPtr<Node>(name.LookupString()));
+    // Set it to ignore parent scale so size of the UI object is not affected by the parent
+    node_proxy->SetFlags(node_proxy->GetFlags() | NodeFlags::IGNORE_PARENT_SCALE);
+
+    UIStage *stage = GetStage();
+
+    ui_object->m_spawn_parent = WeakRefCountedPtrFromThis();
+    ui_object->m_stage = stage;
+
+    ui_object->SetNodeProxy(node_proxy);
+    ui_object->SetName(name);
+    ui_object->SetPosition(position);
+    ui_object->SetSize(size);
+
+    ui_object->Init();
+
+    return std::move(ui_object);
 }
 
 #pragma endregion UIObject

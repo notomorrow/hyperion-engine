@@ -476,6 +476,25 @@ bool HypClass::GetManagedObjectFromObjectInitializer(const IHypObjectInitializer
     return true;
 }
 
+bool HypClass::HasParent(const HypClass *parent_hyp_class) const
+{
+    if (!parent_hyp_class) {
+        return false;
+    }
+
+    const HypClass *current = this;
+
+    while (current != nullptr) {
+        if (current->m_parent == parent_hyp_class) {
+            return true;
+        }
+
+        current = current->m_parent;
+    }
+
+    return false;
+}
+
 #pragma endregion HypClass
 
 } // namespace hyperion

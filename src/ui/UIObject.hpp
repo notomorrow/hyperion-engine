@@ -51,6 +51,7 @@ struct UIObjectInstanceData
     Vec4f   texcoords;
 };
 
+HYP_ENUM()
 enum class UIObjectType : uint32
 {
     UNKNOWN             = ~0u,
@@ -77,6 +78,7 @@ enum class UIObjectType : uint32
 
 HYP_MAKE_ENUM_FLAGS(UIObjectType)
 
+HYP_STRUCT()
 struct alignas(8) UIEventHandlerResult
 {
     enum Value : uint32
@@ -184,6 +186,7 @@ struct alignas(8) UIEventHandlerResult
 
 static_assert(sizeof(UIEventHandlerResult) == 16, "sizeof(UIEventHandlerResult) must match C# struct size");
 
+HYP_ENUM()
 enum class UIObjectAlignment : uint32
 {
     TOP_LEFT        = 0,
@@ -195,6 +198,7 @@ enum class UIObjectAlignment : uint32
     BOTTOM_RIGHT    = 4
 };
 
+HYP_ENUM()
 enum class UIObjectFocusState : uint32
 {
     NONE    = 0x0,
@@ -206,6 +210,7 @@ enum class UIObjectFocusState : uint32
 
 HYP_MAKE_ENUM_FLAGS(UIObjectFocusState)
 
+HYP_ENUM()
 enum class UIObjectBorderFlags : uint32
 {
     NONE    = 0x0,
@@ -218,12 +223,14 @@ enum class UIObjectBorderFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(UIObjectBorderFlags)
 
+HYP_ENUM()
 enum class UIObjectIterationResult : uint8
 {
     CONTINUE = 0,
     STOP
 };
 
+HYP_ENUM()
 enum class UIObjectUpdateType : uint32
 {
     NONE                                = 0x0,
@@ -247,6 +254,7 @@ enum class UIObjectUpdateType : uint32
 
 HYP_MAKE_ENUM_FLAGS(UIObjectUpdateType)
 
+HYP_ENUM()
 enum class UIObjectScrollbarOrientation : uint8
 {
     NONE        = 0x0,
@@ -385,6 +393,7 @@ struct UIObjectSize
 
 static_assert(sizeof(UIObjectSize) == 16, "sizeof(UIObjectSize) must be 16 bytes to match C# struct size");
 
+HYP_ENUM()
 enum class UIObjectUpdateSizeFlags : uint32
 {
     NONE                = 0x0,
@@ -503,7 +512,9 @@ public:
     UIObject &operator=(UIObject &&other) noexcept  = delete;
     virtual ~UIObject();
 
+    HYP_METHOD()
     virtual void Init();
+
     virtual void Update(GameCounter::TickUnit delta) final;
 
     HYP_FORCE_INLINE const UIObjectID &GetID() const
@@ -1005,6 +1016,16 @@ public:
     /*! \internal */
     void ForEachChildUIObject_Proc(ProcRef<UIObjectIterationResult, UIObject *> proc, bool deep = true) const;
 
+    /*! \brief Spawn a new UIObject with the given HypClass \ref{hyp_class}. The object will not be attached to the current UIStage.
+     *  The object will not be named. To name the object, use the other CreateUIObject overload.
+     * 
+     *  \param hyp_class The HypClass associated with the UIObject type you wish to spawn.
+     *  \param name The name of the UIObject.
+     *  \param position The position of the UI object.
+     *  \param size The size of the UI object.
+     *  \return A handle to the created UI object. */
+    HYP_NODISCARD RC<UIObject> CreateUIObject(const HypClass *hyp_class, Name name, Vec2i position, UIObjectSize size);
+
     /*! \brief Spawn a new UIObject of type T. The object will not be attached to the current UIStage.
      *  The object will not be named. To name the object, use the other CreateUIObject overload.
      * 
@@ -1240,7 +1261,6 @@ private:
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a derived class of UIObject");
 
         RC<UIObject> ui_object = MakeRefCountedPtr<T>();
-        AssertThrow(ui_object.GetTypeID() == TypeID::ForType<T>());
 
         UIStage *stage = GetStage();
 

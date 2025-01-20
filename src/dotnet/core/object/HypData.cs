@@ -108,6 +108,7 @@ namespace Hyperion
         {
             if (value == null)
             {
+                HypData_Reset(ref this);
                 return;
             }
 
@@ -513,6 +514,9 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "HypData_Destruct")]
         internal static extern void HypData_Destruct([In] ref HypDataBuffer hypData);
+
+        [DllImport("hyperion", EntryPoint = "HypData_Reset")]
+        internal static extern void HypData_Reset([In] ref HypDataBuffer hypData);
 
         [DllImport("hyperion", EntryPoint = "HypData_GetTypeID")]
         internal static extern void HypData_GetTypeID([In] ref HypDataBuffer hypData, [Out] out TypeID typeId);

@@ -4,7 +4,10 @@
 #define HYPERION_PARTICLE_SYSTEM_HPP
 
 #include <Constants.hpp>
+
 #include <core/containers/ThreadSafeContainer.hpp>
+
+#include <core/object/HypObject.hpp>
 
 #include <math/Vector3.hpp>
 #include <math/BoundingBox.hpp>
@@ -34,9 +37,11 @@ struct ParticleSpawnerParams
     bool            has_physics = false;
 };
 
-class HYP_API ParticleSpawner
-    : public HypObject<ParticleSpawner>
+HYP_CLASS()
+class HYP_API ParticleSpawner : public HypObject<ParticleSpawner>
 {
+    HYP_OBJECT_BODY(ParticleSpawner);
+
 public:
     ParticleSpawner();
     ParticleSpawner(const ParticleSpawnerParams &params);
@@ -81,8 +86,11 @@ private:
     Bitmap<1>               m_noise_map;
 };
 
+HYP_CLASS()
 class HYP_API ParticleSystem : public HypObject<ParticleSystem>
 {
+    HYP_OBJECT_BODY(ParticleSystem);
+
 public:
     ParticleSystem();
     ParticleSystem(const ParticleSystem &other)             = delete;

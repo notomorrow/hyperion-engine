@@ -25,11 +25,18 @@ class DotNetImpl;
 
 } // namespace detail
 
-using AddObjectToCacheFunction = void(*)(void *ptr, Class **out_class_object_ptr, ObjectReference *out_object_reference);
+using AddObjectToCacheFunction = void(*)(void *ptr, Class **out_class_object_ptr, ObjectReference *out_object_reference, int8 is_weak);
+using SetObjectReferenceTypeFunction = int8(*)(ObjectReference *object_reference, int8 is_weak);
 
 class DotNetSystem
 {
 public:
+    struct GlobalFunctions
+    {
+        AddObjectToCacheFunction        add_object_to_cache_function = nullptr;
+        SetObjectReferenceTypeFunction  set_object_reference_type_function = nullptr;
+    };
+
     static DotNetSystem &GetInstance();
 
     DotNetSystem();
@@ -40,14 +47,14 @@ public:
     DotNetSystem &operator=(DotNetSystem &&) noexcept   = delete;
     ~DotNetSystem();
 
+    HYP_FORCE_INLINE GlobalFunctions &GetGlobalFunctions()
+        { return m_global_functions; }
+
+    HYP_FORCE_INLINE const GlobalFunctions &GetGlobalFunctions() const
+        { return m_global_functions; }
+
     UniquePtr<Assembly> LoadAssembly(const char *path) const;
     bool UnloadAssembly(ManagedGuid guid) const;
-
-    HYP_FORCE_INLINE AddObjectToCacheFunction GetAddObjectToCacheFunction() const
-        { return m_add_object_to_cache_fptr; }
-
-    HYP_FORCE_INLINE void SetAddObjectToCacheFunction(AddObjectToCacheFunction add_object_to_cache_fptr)
-        { m_add_object_to_cache_fptr = add_object_to_cache_fptr; }
 
     bool IsEnabled() const;
 
@@ -62,7 +69,7 @@ private:
     bool                        m_is_initialized;
     RC<detail::DotNetImplBase>  m_impl;
 
-    AddObjectToCacheFunction    m_add_object_to_cache_fptr;
+    GlobalFunctions             m_global_functions;
 };
 
 } // namespace dotnet
