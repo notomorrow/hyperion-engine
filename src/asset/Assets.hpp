@@ -49,6 +49,7 @@ enum AssetLoadFlagBits : AssetLoadFlags
     ASSET_LOAD_FLAGS_CACHE_WRITE    = 0x2
 };
 
+HYP_STRUCT()
 struct AssetLoaderDefinition
 {
     const StringView<StringType::ANSI>  name;
@@ -101,10 +102,14 @@ public:
 
     HYP_API ~AssetCollector();
 
-    HYP_METHOD()
+    HYP_METHOD(Property="BasePath", Serialize=true)
     HYP_FORCE_INLINE const FilePath &GetBasePath() const
         { return m_base_path; }
 
+    HYP_METHOD(Property="BasePath", Serialize=true)
+    HYP_FORCE_INLINE void SetBasePath(const FilePath &base_path)
+        { m_base_path = base_path; }
+    
     HYP_METHOD()
     HYP_API void NotifyAssetChanged(const FilePath &path, AssetChangeType change_type);
 
@@ -128,7 +133,7 @@ private:
     void StopWatching_Impl() { }
     void OnAssetChanged_Impl(const FilePath &path, AssetChangeType change_type) { }
 
-    FilePath                                            m_base_path;
+    FilePath    m_base_path;
 };
 
 HYP_CLASS()
@@ -161,6 +166,8 @@ public:
 
     HYP_METHOD()
     Handle<AssetCollector> GetBaseAssetCollector() const;
+
+    void ForEachAssetCollector(const ProcRef<void, const Handle<AssetCollector> &> &callback) const;
 
     HYP_METHOD()
     void AddAssetCollector(const Handle<AssetCollector> &asset_collector);
@@ -215,7 +222,7 @@ public:
         //     return cache_pool->Get(path);
         // }
 
-        const AssetLoaderDefinition *loader_definition = GetLoader(path, TypeID::ForType<Normalized>());
+        const AssetLoaderDefinition *loader_definition = GetLoaderDefinition(path, TypeID::ForType<Normalized>());
 
         if (!loader_definition) {
             return Asset<NormalizedType<T>> {
@@ -228,6 +235,8 @@ public:
 
         return Asset<NormalizedType<T>>(loader->Load(*this, path));
     }
+
+    HYP_API const AssetLoaderDefinition *GetLoaderDefinition(const FilePath &path, TypeID desired_type_id = TypeID::Void());
 
     HYP_API RC<AssetBatch> CreateBatch();
 
@@ -248,8 +257,6 @@ private:
     /*! \internal Called from AssetBatch on LoadAsync() */
     HYP_API void AddPendingBatch(const RC<AssetBatch> &batch);
 
-    HYP_API const AssetLoaderDefinition *GetLoader(const FilePath &path, TypeID desired_type_id = TypeID::Void());
-
     HYP_API UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(TypeID loader_type_id, const String &key, const String &path, AssetBatchCallbacks *callbacks_ptr);
 
     template <class Loader>
@@ -258,7 +265,7 @@ private:
 
     UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(const String &key, const String &path, AssetBatchCallbacks *callbacks_ptr)
     {
-        const AssetLoaderDefinition *loader_definition = GetLoader(path);
+        const AssetLoaderDefinition *loader_definition = GetLoaderDefinition(path);
 
         if (!loader_definition) {
             DebugLog(LogType::Error, "No registered loader for path: %s\n", path.Data());

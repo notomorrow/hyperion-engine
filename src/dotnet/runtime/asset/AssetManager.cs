@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Hyperion;
 
 namespace Hyperion
 {
@@ -96,5 +97,31 @@ namespace Hyperion
                     .GetValue();
             }
         }
+
+        public ManagedAsset<T> Load<T>(string path)
+        {
+            HypClass? hypClass = HypClass.TryGetClass<T>();
+
+            if (hypClass == null)
+            {
+                throw new Exception("Failed to get HypClass for type: " + typeof(T).Name + ", cannot load asset!");
+            }
+
+            IntPtr loaderDefinitionPtr = AssetManager_GetLoaderDefinition(NativeAddress, path, ((HypClass)hypClass).TypeID);
+
+            if (loaderDefinitionPtr == IntPtr.Zero)
+            {
+                throw new Exception("Failed to get loader definition for path: " + path + ", cannot load asset!");
+            }
+
+            return new ManagedAsset<T>(AssetManager_Load(NativeAddress, loaderDefinitionPtr, path));
+        }
+
+        [DllImport("hyperion", EntryPoint = "AssetManager_GetLoaderDefinition")]
+        private static extern IntPtr AssetManager_GetLoaderDefinition([In] IntPtr assetManagerPtr, [MarshalAs(UnmanagedType.LPStr)] string path, TypeID desiredTypeID);
+
+        [DllImport("hyperion", EntryPoint = "AssetManager_Load")]
+        private static extern IntPtr AssetManager_Load([In] IntPtr assetManagerPtr, [In] IntPtr loaderDefinitionPtr, [MarshalAs(UnmanagedType.LPStr)] string path);
+
     }
 }

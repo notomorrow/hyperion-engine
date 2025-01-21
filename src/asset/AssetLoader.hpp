@@ -7,6 +7,8 @@
 
 #include <core/memory/Any.hpp>
 
+#include <core/object/HypData.hpp>
+
 #include <core/utilities/Optional.hpp>
 
 #include <core/logging/LoggerFwd.hpp>
@@ -26,7 +28,7 @@ HYP_DECLARE_LOG_CHANNEL(Assets);
 
 class AssetManager;
 
-using AssetValue = Any;
+using AssetValue = HypData;
 
 template <class T>
 struct AssetLoaderWrapper;
@@ -57,7 +59,7 @@ struct LoadedAsset
     template <class T, typename = std::enable_if_t< !std::is_same_v<T, AssetValue> > >
     LoadedAsset(LoaderResult result, T &&value)
         : result(std::move(result)),
-          value(Any(std::forward<T>(value)))
+          value(std::forward<T>(value))
     {
     }
 
@@ -65,7 +67,7 @@ struct LoadedAsset
     LoadedAsset &operator=(const LoadedAsset &other)        = delete;
     LoadedAsset(LoadedAsset &&other) noexcept               = default;
     LoadedAsset &operator=(LoadedAsset &&other) noexcept    = default;
-    ~LoadedAsset()                                          = default;
+    virtual ~LoadedAsset()                                  = default;
 
     HYP_FORCE_INLINE operator bool() const
         { return IsOK(); }
@@ -74,7 +76,7 @@ struct LoadedAsset
         { return result.status == LoaderResult::Status::OK; }
 
     template <class T>
-    HYP_NODISCARD HYP_FORCE_INLINE typename SerializationWrapper<T>::Type ExtractAs()
+    HYP_NODISCARD HYP_FORCE_INLINE auto &ExtractAs()
     {
         return static_cast<Asset<T> *>(this)->Result();
     }
@@ -90,7 +92,7 @@ struct LoadedAsset
 };
 
 template <class T>
-struct Asset : LoadedAsset
+struct Asset final : LoadedAsset
 {
     using Type = typename SerializationWrapper<T>::Type;
 
@@ -141,7 +143,9 @@ struct Asset : LoadedAsset
         return *this;
     }
 
-    HYP_FORCE_INLINE decltype(auto) Result()
+    virtual ~Asset() override                   = default;
+
+    HYP_FORCE_INLINE auto &Result()
     {
         AssertThrowMsg(IsOK() && value.Is<typename SerializationWrapper<Type>::Type>(), "Asset did not load successfully");
 
@@ -179,7 +183,6 @@ private:
 public:
     static constexpr bool is_handle = has_opaque_handle_defined<T>;
 
-    using ResultType = Any;
     using CastedType = std::conditional_t<is_handle, Handle<T>, Optional<T &>>;
 
     AssetLoaderBase &loader;
@@ -207,7 +210,6 @@ template <class T>
 struct AssetLoaderWrapper<RC<T>>
 {
 public:
-    using ResultType = Any;
     using CastedType = RC<T>;
 
     AssetLoaderBase &loader;
@@ -226,20 +228,19 @@ public:
 template <>
 struct AssetLoaderWrapper<Node>
 {
-    using ResultType = Any;
     using CastedType = NodeProxy;
 
     AssetLoaderBase &loader;
 
     HYP_DEPRECATED static inline CastedType ExtractAssetValue(AssetValue &value)
     {
-        NodeProxy *result = value.TryGet<NodeProxy>();
+        auto result = value.TryGet<NodeProxy>();
 
         if (!result) {
             return CastedType { };
         }
 
-        if (result->IsValid()) {
+        if (*result) {
             (*result)->SetScene(nullptr); 
         }
 

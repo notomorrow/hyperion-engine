@@ -34,7 +34,7 @@ struct SerializationWrapper
         }
     }
 
-    static void OnPostLoad(Type &value) { }
+    static void OnPostLoad(const Type &value) { }
 };
 
 template <class T>
@@ -55,7 +55,7 @@ struct SerializationWrapper<RC<T>>
         return *value;
     }
 
-    static void OnPostLoad(Type &value) { }
+    static void OnPostLoad(const Type &value) { }
 };
 
 template <class T>
@@ -68,7 +68,7 @@ struct SerializationWrapper<Node>
 
     HYP_API static Node &Unwrap(const Type &value);
 
-    HYP_API static void OnPostLoad(Type &value);
+    HYP_API static void OnPostLoad(const Type &value);
 };
 
 template <>

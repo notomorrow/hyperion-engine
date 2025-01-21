@@ -643,13 +643,13 @@ void SampleStreamer::Init()
 #endif
 
         if (results["cart"]) {
-            auto cart = results["cart"].ExtractAs<Node>();
+            auto cart = NodeProxy(results["cart"].ExtractAs<Node>());
             cart.Scale(1.5f);
             cart.SetName("cart");
         }
         
         if (results["test_model"]) {
-            auto node = results["test_model"].ExtractAs<Node>();
+            auto node = NodeProxy(results["test_model"].ExtractAs<Node>());
             //node.Scale(3.0f);
             node.Scale(0.0125f);
             node.SetName("test_model");

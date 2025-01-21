@@ -492,16 +492,16 @@ struct AnyHandle final
 {
     using IDType = IDBase;
 
-    TypeID          type_id;
     HypObjectHeader *ptr;
+    TypeID          type_id;
 
 public:
     HYP_API explicit AnyHandle(HypObjectBase *hyp_object_ptr);
 
     template <class T, typename = std::enable_if_t<std::is_base_of_v<HypObjectBase, T> && !std::is_same_v<HypObjectBase, T>>>
     explicit AnyHandle(T *ptr)
-        : type_id(TypeID::ForType<T>()),
-          ptr(ptr != nullptr ? ptr->GetObjectHeader_Internal() : nullptr)
+        : ptr(ptr != nullptr ? ptr->GetObjectHeader_Internal() : nullptr),
+          type_id(TypeID::ForType<T>())
     {
         if (IsValid()) {
             ptr->IncRefStrong();
@@ -510,8 +510,8 @@ public:
 
     template <class T>
     AnyHandle(const Handle<T> &handle)
-        : type_id(TypeID::ForType<T>()),
-          ptr(handle.ptr)
+        : ptr(handle.ptr),
+          type_id(TypeID::ForType<T>())
     {
         if (handle.IsValid()) {
             ptr->IncRefStrong();
@@ -520,8 +520,8 @@ public:
 
     template <class T>
     AnyHandle(Handle<T> &&handle)
-        : type_id(TypeID::ForType<T>()),
-          ptr(handle.ptr)
+        : ptr(handle.ptr),
+          type_id(TypeID::ForType<T>())
     {
         handle.ptr = nullptr;
     }
@@ -602,6 +602,26 @@ public:
         }
 
         return Handle<T>(ptr);
+    }
+
+    template <class T>
+    HYP_NODISCARD HYP_FORCE_INLINE operator Handle<T> &()
+    {
+        if (!type_id || type_id != TypeID::ForType<T>()) {
+            return { };
+        }
+
+        return *reinterpret_cast<Handle<T> *>(this);
+    }
+
+    template <class T>
+    HYP_NODISCARD HYP_FORCE_INLINE operator const Handle<T> &() const
+    {
+        if (!type_id || type_id != TypeID::ForType<T>()) {
+            return { };
+        }
+
+        return *reinterpret_cast<const Handle<T> *>(this);
     }
 
     HYP_API AnyRef ToRef() const;

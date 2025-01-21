@@ -20,6 +20,7 @@
 namespace hyperion {
 
 class Scene;
+class AssetCollector;
 
 HYP_CLASS()
 class HYP_API EditorProject : public EnableRefCountedPtrFromThis<EditorProject>
@@ -57,6 +58,13 @@ public:
     HYP_FORCE_INLINE void SetLastSavedTime(Time last_saved_time)
         { m_last_saved_time = last_saved_time; }
 
+    HYP_METHOD(Property="AssetCollectors", Serialize=true)
+    HYP_FORCE_INLINE const Array<Handle<AssetCollector>> &GetAssetCollectors() const
+        { return m_owned_asset_collectors; }
+
+    HYP_METHOD(Property="AssetCollectors", Serialize=true)
+    void SetAssetCollectors(const Array<Handle<AssetCollector>> &asset_collectors);
+
     HYP_METHOD()
     bool IsSaved() const;
 
@@ -67,12 +75,15 @@ public:
     void Close();
 
 private:
-    UUID            m_uuid;
-    Time            m_last_saved_time;
+    UUID                            m_uuid;
+    Time                            m_last_saved_time;
 
-    FilePath        m_filepath;
+    FilePath                        m_filepath;
 
-    Handle<Scene>   m_scene;
+    Handle<Scene>                   m_scene;
+
+    Array<Handle<AssetCollector>>   m_non_owned_asset_collectors;
+    Array<Handle<AssetCollector>>   m_owned_asset_collectors;
 };
 
 } // namespace hyperion

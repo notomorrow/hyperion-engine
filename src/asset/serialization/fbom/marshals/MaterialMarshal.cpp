@@ -166,7 +166,7 @@ public:
         for (auto &subobject : *in.nodes) {
             if (subobject.GetType().IsOrExtends("Texture")) {
                 if (texture_index < std::size(texture_keys)) {
-                    if (Optional<Handle<Texture>> texture_opt = subobject.m_deserialized_object->TryGet<Handle<Texture>>()) {
+                    if (Optional<const Handle<Texture> &> texture_opt = subobject.m_deserialized_object->TryGet<Handle<Texture>>()) {
                         textures.Set(
                             MaterialTextureKey(texture_keys[texture_index]), 
                             *texture_opt
