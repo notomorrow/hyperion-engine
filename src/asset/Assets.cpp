@@ -142,6 +142,17 @@ void AssetManager::SetBasePath(const FilePath &base_path)
     OnBaseAssetCollectorChanged(asset_collector);
 }
 
+void AssetManager::ForEachAssetCollector(const ProcRef<void, const Handle<AssetCollector> &> &callback) const
+{
+    HYP_SCOPE;
+
+    Mutex::Guard guard(m_asset_collectors_mutex);
+
+    for (const Handle<AssetCollector> &asset_collector : m_asset_collectors) {
+        callback(asset_collector);
+    }
+}
+
 void AssetManager::AddAssetCollector(const Handle<AssetCollector> &asset_collector)
 {
     if (!asset_collector.IsValid()) {
@@ -221,7 +232,7 @@ void AssetManager::RegisterDefaultLoaders()
     Register<UILoader, RC<UIObject>>();
 }
 
-const AssetLoaderDefinition *AssetManager::GetLoader(const FilePath &path, TypeID desired_type_id)
+const AssetLoaderDefinition *AssetManager::GetLoaderDefinition(const FilePath &path, TypeID desired_type_id)
 {
     HYP_SCOPE;
 

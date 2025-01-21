@@ -56,7 +56,6 @@ namespace FooBar
 
         public override void Update()
         {
-            Logger.Log(LogType.Info, "Update TestEditorDebugOverlay");
         }
     }
 
@@ -85,7 +84,6 @@ namespace FooBar
 
         public override void Update()
         {
-            Logger.Log(LogType.Info, "Update TestEditorDebugOverlay2");
         }
     }
 

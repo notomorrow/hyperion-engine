@@ -736,9 +736,14 @@ struct HypDataHelper<Handle<T>> : HypDataHelper<AnyHandle>
         return value.GetTypeID() == TypeID::ForType<T>();
     }
 
-    HYP_FORCE_INLINE Handle<T> Get(const AnyHandle &value) const
+    HYP_FORCE_INLINE Handle<T> &Get(AnyHandle &value) const
     {
-        return value.Cast<T>();
+        return *reinterpret_cast<Handle<T> *>(&value);
+    }
+
+    HYP_FORCE_INLINE const Handle<T> &Get(const AnyHandle &value) const
+    {
+        return *reinterpret_cast<const Handle<T> *>(&value);
     }
 
     HYP_FORCE_INLINE void Set(HypData &hyp_data, const Handle<T> &value) const
@@ -861,9 +866,14 @@ struct HypDataHelper<RC<T>, std::enable_if_t< !std::is_void_v<T> >> : HypDataHel
         return value.Is<T>();
     }
 
-    HYP_FORCE_INLINE RC<T> Get(const RC<void> &value) const
+    HYP_FORCE_INLINE RC<T> &Get(RC<void> &value) const
     {
-        return value.template Cast<T>();
+        return *reinterpret_cast<RC<T> *>(&value);
+    }
+
+    HYP_FORCE_INLINE const RC<T> &Get(const RC<void> &value) const
+    {
+        return *reinterpret_cast<const RC<T> *>(&value);
     }
 
     HYP_FORCE_INLINE void Set(HypData &hyp_data, const RC<T> &value) const
@@ -927,6 +937,11 @@ struct HypDataHelper<AnyRef>
     {
         // should never be hit
         HYP_NOT_IMPLEMENTED();
+    }
+
+    HYP_FORCE_INLINE AnyRef &Get(AnyRef &value) const
+    {
+        return value;
     }
 
     HYP_FORCE_INLINE const AnyRef &Get(const AnyRef &value) const

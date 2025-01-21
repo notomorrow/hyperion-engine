@@ -50,8 +50,6 @@ void VisibilityStateUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
             HYP_LOG(Octree, Warning, "Failed to insert entity #{} into octree: {}", entity.GetID().Value(), insert_result.first.message);
 #endif
         }
-    } else {
-        HYP_LOG(Octree, Warning, "Entity #{} has invalid bounding box, skipping octree insertion", entity.GetID().Value());
     }
 
     visibility_state_component.last_aabb_hash = bounding_box_component.world_aabb.GetHashCode();

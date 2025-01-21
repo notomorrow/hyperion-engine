@@ -446,7 +446,7 @@ void HyperionEditor::Init()
 #endif
 
         if (auto &zombie_asset = results["zombie"]; zombie_asset.IsOK()) {
-            auto zombie = zombie_asset.ExtractAs<Node>();
+            auto zombie = NodeProxy(zombie_asset.ExtractAs<Node>());
             zombie.Scale(0.25f);
             zombie.Translate(Vec3f(0, 2.0f, -1.0f));
             auto zombie_entity = zombie[0].GetEntity();
