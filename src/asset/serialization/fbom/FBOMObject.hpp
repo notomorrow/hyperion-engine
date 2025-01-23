@@ -168,20 +168,6 @@ public:
     HYP_FORCE_INLINE FBOMObject &SetProperty(ANSIStringView key, double value)
         { return SetProperty(key, FBOMDouble(), sizeof(double), &value); }
 
-    // template <class T, typename = typename std::enable_if_t< !std::is_pointer_v<NormalizedType<T> > && !std::is_fundamental_v<NormalizedType<T> > > >
-    // FBOMObject &SetProperty(ANSIStringView key, const T &in)
-    // {
-    //     FBOMObject subobject;
-
-    //     if (FBOMResult err = Serialize(in, subobject)) {
-    //         AssertThrowMsg(false, "Failed to serialize object: %s", *err.message);
-
-    //         return *this;
-    //     }
-
-    //     return SetProperty(key, FBOMData::FromObject(std::move(subobject)));
-    // }
-
     const FBOMData &operator[](ANSIStringView key) const;
 
     /*! \brief Add a child object to this object node.

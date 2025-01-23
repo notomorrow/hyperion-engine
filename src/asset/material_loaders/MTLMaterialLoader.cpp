@@ -216,7 +216,6 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
     Handle<MaterialGroup> material_group_handle = CreateObject<MaterialGroup>();
 
     HashMap<String, String> texture_names_to_path;
-    FlatSet<String> unique_paths;
 
     for (const auto &item : library.materials) {
         for (const auto &it : item.textures) {
@@ -229,7 +228,6 @@ LoadedAsset MTLMaterialLoader::LoadAsset(LoaderState &state) const
             ).c_str());
 
             texture_names_to_path[it.name] = texture_path;
-            unique_paths.Insert(texture_path);
         }
     }
 

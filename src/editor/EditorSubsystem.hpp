@@ -30,6 +30,7 @@ class Texture;
 class InputManager;
 class UIStage;
 class UIObject;
+class UIListView;
 class FontAtlas;
 class EditorDelegates;
 class EditorSubsystem;
@@ -163,6 +164,7 @@ private:
 
     void InitViewport();
     void InitSceneOutline();
+    void InitContentBrowser();
     void InitDetailView();
     void InitDebugOverlays();
     
@@ -171,6 +173,8 @@ private:
     void UpdateCamera(GameCounter::TickUnit delta);
     void UpdateTasks(GameCounter::TickUnit delta);
     void UpdateDebugOverlays(GameCounter::TickUnit delta);
+
+    void AddPackageToContentBrowser(const Handle<AssetPackage> &package, bool nested);
 
     RC<AppContext>                                                      m_app_context;
     Handle<Scene>                                                       m_scene;
@@ -197,6 +201,10 @@ private:
 
     Array<RC<EditorDebugOverlayBase>>                                   m_debug_overlays;
     RC<UIObject>                                                        m_debug_overlay_ui_object;
+
+    RC<UIListView>                                                      m_content_browser_directory_list;
+
+    DelegateHandlerSet                                                  m_delegate_handlers;
 };
 
 } // namespace hyperion

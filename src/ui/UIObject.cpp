@@ -2266,7 +2266,7 @@ void UIObject::SetNodeProxy(NodeProxy node_proxy)
     }
 }
 
-const NodeTag &UIObject::GetNodeTag(Name key) const
+const NodeTag &UIObject::GetNodeTag(WeakName key) const
 {
     static const NodeTag empty_tag { };
 
@@ -2277,14 +2277,14 @@ const NodeTag &UIObject::GetNodeTag(Name key) const
     return empty_tag;
 }
 
-void UIObject::SetNodeTag(Name key, const NodeTag &tag)
+void UIObject::SetNodeTag(NodeTag &&tag)
 {
     if (m_node_proxy.IsValid()) {
-        m_node_proxy->AddTag(key, tag);
+        m_node_proxy->AddTag(std::move(tag));
     }
 }
 
-bool UIObject::HasNodeTag(Name key) const
+bool UIObject::HasNodeTag(WeakName key) const
 {
     if (m_node_proxy.IsValid()) {
         return m_node_proxy->HasTag(key);
@@ -2293,7 +2293,7 @@ bool UIObject::HasNodeTag(Name key) const
     return false;
 }
 
-bool UIObject::RemoveNodeTag(Name key)
+bool UIObject::RemoveNodeTag(WeakName key)
 {
     if (m_node_proxy.IsValid()) {
         return m_node_proxy->RemoveTag(key);

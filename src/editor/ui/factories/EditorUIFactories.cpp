@@ -3,6 +3,7 @@
 #include <editor/EditorSubsystem.hpp>
 
 #include <asset/Assets.hpp>
+#include <asset/AssetRegistry.hpp>
 
 #include <scene/Node.hpp>
 #include <scene/World.hpp>
@@ -104,7 +105,6 @@ public:
 };
 
 HYP_DEFINE_UI_ELEMENT_FACTORY(HypData, HypDataUIDataSourceElementFactory);
-
 
 
 template <int StringType>
@@ -795,5 +795,26 @@ public:
 };
 
 HYP_DEFINE_UI_ELEMENT_FACTORY(EditorNodePropertyRef, EditorNodePropertyFactory);
+
+class AssetPackageUIDataSourceElementFactory : public UIDataSourceElementFactory<AssetPackage, AssetPackageUIDataSourceElementFactory>
+{
+public:
+    RC<UIObject> Create(UIObject *parent, const AssetPackage &value) const
+    {
+        RC<UIText> text = parent->CreateUIObject<UIText>();
+        text->SetText(value.GetName().LookupString());
+
+        parent->SetNodeTag(NodeTag(NAME("AssetPackage"), value.HandleFromThis()));
+
+        return text;
+    }
+
+    void Update(UIObject *ui_object, const AssetPackage &value) const
+    {
+        ui_object->SetText(value.GetName().LookupString());
+    }
+};
+
+HYP_DEFINE_UI_ELEMENT_FACTORY(AssetPackage, AssetPackageUIDataSourceElementFactory);
 
 } // namespace hyperion

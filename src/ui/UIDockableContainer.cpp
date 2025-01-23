@@ -55,11 +55,15 @@ void UIDockableContainer::AddChildUIObject(const RC<UIObject> &ui_object)
 
     UIDockableItemPosition position = UIDockableItemPosition::CENTER;
 
-    if (const NodeTag &side_node_tag = ui_object->GetNodeTag(NAME("side")); side_node_tag.IsValid()) {
-        const auto it = g_dockable_item_position_map.Find(side_node_tag.ToString());
-    
-        if (it != g_dockable_item_position_map.End()) {
-            position = it->second;
+    if (const NodeTag &side_node_tag = ui_object->GetNodeTag("side"); side_node_tag.IsValid()) {
+        Optional<const String &> side_opt = side_node_tag.data.TryGet<String>();
+
+        if (side_opt.HasValue()) {
+            const auto it = g_dockable_item_position_map.Find(*side_opt);
+        
+            if (it != g_dockable_item_position_map.End()) {
+                position = it->second;
+            }
         }
     }
 

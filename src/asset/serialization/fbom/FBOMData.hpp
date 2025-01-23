@@ -50,6 +50,9 @@ class JSONValue;
 
 struct HypData;
 
+template <class T, class T2>
+struct HypDataHelper;
+
 enum class FBOMDataFlags
 {
     NONE        = 0x0,

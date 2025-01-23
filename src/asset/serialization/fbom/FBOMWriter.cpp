@@ -202,6 +202,10 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter *out)
         FBOMWriter serializer { FBOMWriterConfig { } };
 
         for (const FBOMObject &object : library.object_data) {
+            const FBOMExternalObjectInfo *external_object_info = object.GetExternalObjectInfo();
+            AssertThrow(external_object_info != nullptr);
+            AssertThrow(external_object_info->IsLinked());
+
             FBOMObject object_copy(object);
 
             // unset to stop recursion
@@ -278,8 +282,6 @@ void FBOMWriter::AddExternalObjects(FBOMObject &object)
         AssertThrow(!external_object_info->IsLinked());
 
         m_write_stream->AddToObjectLibrary(object);
-
-        return;
     }
 
     for (SizeType index = 0; index < object.nodes->Size(); index++) {
@@ -428,10 +430,6 @@ FBOMResult FBOMWriter::Write(ByteWriter *out, const FBOMObject &object, UniqueID
     if (object.IsExternal()) {
         // defer writing it. instead we pass the object into our external data,
         // which we will later be write
-        const FBOMExternalObjectInfo *external_object_info = object.GetExternalObjectInfo();
-        AssertThrow(external_object_info != nullptr);
-        AssertThrow(external_object_info->IsLinked());
-
         return FBOMResult::FBOM_OK;
     }
 

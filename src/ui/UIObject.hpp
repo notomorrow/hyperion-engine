@@ -927,10 +927,10 @@ public:
     BoundingBox GetWorldAABB() const;
     BoundingBox GetLocalAABB() const;
 
-    const NodeTag &GetNodeTag(Name key) const;
-    void SetNodeTag(Name key, const NodeTag &tag);
-    bool HasNodeTag(Name key) const;
-    bool RemoveNodeTag(Name key);
+    const NodeTag &GetNodeTag(WeakName key) const;
+    void SetNodeTag(NodeTag &&tag);
+    bool HasNodeTag(WeakName key) const;
+    bool RemoveNodeTag(WeakName key);
 
     /*! \brief The default event handler result which is combined with the results of bound event handlers, if the result is equal to OK.
      *  E.g UIButton could return OK if the button was clicked, and the default event handler result could be set to STOP_BUBBLING so that the event does not propagate to objects behind it. */
@@ -1027,7 +1027,16 @@ public:
     HYP_NODISCARD RC<UIObject> CreateUIObject(const HypClass *hyp_class, Name name, Vec2i position, UIObjectSize size);
 
     /*! \brief Spawn a new UIObject of type T. The object will not be attached to the current UIStage.
-     *  The object will not be named. To name the object, use the other CreateUIObject overload.
+     * 
+     *  \tparam T The type of UI object to create. Must be a derived class of UIObject.
+     *  \return A handle to the created UI object. */
+    template <class T>
+    HYP_NODISCARD RC<T> CreateUIObject()
+    {
+        return CreateUIObject<T>(Name::Invalid(), Vec2i::Zero(), UIObjectSize(UIObjectSize::AUTO));
+    }
+
+    /*! \brief Spawn a new UIObject of type T. The object will not be attached to the current UIStage.
      * 
      *  \tparam T The type of UI object to create. Must be a derived class of UIObject.
      *  \param position The position of the UI object.

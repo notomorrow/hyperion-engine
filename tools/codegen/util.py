@@ -45,7 +45,8 @@ CXX_TO_CSHARP_TYPE_MAPPING = {
     'NodeProxy': ('Node', False),
     'Node': ('Node', False),
     'Name': ('Name', False),
-    'WeakName': ('Name', False)
+    'WeakName': ('Name', False),
+    'AnyHandle': ('object', True),
 }
 
 ### Parse a c++ member function declaration (may contain body)

@@ -56,11 +56,11 @@ class FinalPass;
 class PlaceholderData;
 class RenderThread;
 
-extern Handle<Engine>       g_engine;
+extern Handle<Engine> g_engine;
 extern Handle<AssetManager> g_asset_manager;
-extern ShaderManagerSystem  *g_shader_manager;
-extern MaterialCache        *g_material_system;
-extern SafeDeleter          *g_safe_deleter;
+extern ShaderManagerSystem *g_shader_manager;
+extern MaterialCache *g_material_system;
+extern SafeDeleter *g_safe_deleter;
 
 struct DebugMarker
 {

@@ -18,6 +18,7 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 
 #include <asset/Assets.hpp>
+#include <asset/AssetRegistry.hpp>
 #include <asset/serialization/fbom/FBOMReader.hpp>
 #include <asset/serialization/fbom/FBOMWriter.hpp>
 
@@ -175,6 +176,21 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
         m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
         m_scene->GetRenderResources().GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
 
+        m_delegate_handlers.Remove(NAME("OnPackageAdded"));
+
+        if (m_content_browser_directory_list && m_content_browser_directory_list->GetDataSource()) {
+            m_content_browser_directory_list->GetDataSource()->Clear();
+
+            for (const Handle<AssetPackage> &package : project->GetAssetRegistry()->GetPackages()) {
+                AddPackageToContentBrowser(package, true);
+            }
+
+            m_delegate_handlers.Add(NAME("OnPackageAdded"), project->GetAssetRegistry()->OnPackageAdded.Bind([this](const Handle<AssetPackage> &package)
+            {
+                AddPackageToContentBrowser(package, false);
+            }));
+        }
+
         // Reinitialize viewport
         InitViewport();
     }).Detach();
@@ -198,6 +214,12 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
 
             m_scene.Reset();
         }
+
+        m_delegate_handlers.Remove(NAME("OnPackageAdded"));
+
+        if (m_content_browser_directory_list && m_content_browser_directory_list->GetDataSource()) {
+            m_content_browser_directory_list->GetDataSource()->Clear();
+        }
     }).Detach();
 }
 
@@ -218,6 +240,8 @@ void EditorSubsystem::Initialize()
 
     LoadEditorUIDefinitions();
 
+    InitContentBrowser();
+
     NewProject();
 
     InitSceneOutline();
@@ -229,16 +253,6 @@ void EditorSubsystem::Initialize()
     if (Handle<AssetCollector> base_asset_collector = g_asset_manager->GetBaseAssetCollector()) {
         base_asset_collector->StartWatching();
     }
-
-    g_asset_manager->OnAssetCollectorAdded.Bind([](const Handle<AssetCollector> &asset_collector)
-    {
-        asset_collector->StartWatching();
-    });
-
-    g_asset_manager->OnAssetCollectorRemoved.Bind([](const Handle<AssetCollector> &asset_collector)
-    {
-        asset_collector->StopWatching();
-    });
 
     g_engine->GetScriptingService()->OnScriptStateChanged.Bind([](const ManagedScript &script)
     {
@@ -808,6 +822,49 @@ void EditorSubsystem::InitDebugOverlays()
     }
 }
 
+void EditorSubsystem::InitContentBrowser()
+{
+    HYP_SCOPE;
+
+    m_content_browser_directory_list = GetUIStage()->FindChildUIObject("ContentBrowser_Directory_List").Cast<UIListView>();
+    AssertThrow(m_content_browser_directory_list != nullptr);
+
+    m_content_browser_directory_list->SetDataSource(MakeRefCountedPtr<UIDataSource>(TypeWrapper<AssetPackage> { }));
+
+    m_delegate_handlers.Remove(NAME("SelectContentDirectory"));
+    m_delegate_handlers.Add(NAME("SelectContentDirectory"), m_content_browser_directory_list->OnSelectedItemChange.Bind([this](UIListViewItem *list_view_item)
+    {
+        if (list_view_item != nullptr) {
+            if (const NodeTag &asset_package_tag = list_view_item->GetNodeTag("AssetPackage"); asset_package_tag.IsValid()) {
+                if (const Handle<AssetPackage> &asset_package = asset_package_tag.data.Get<Handle<AssetPackage>>()) {
+                    // @TODO Set as selected asset package in the content browser.
+
+                    HYP_BREAKPOINT;
+                }
+            }
+        }
+
+        HYP_BREAKPOINT;
+    }));
+}
+
+void EditorSubsystem::AddPackageToContentBrowser(const Handle<AssetPackage> &package, bool nested)
+{
+    if (UIDataSourceBase *data_source = m_content_browser_directory_list->GetDataSource()) {
+        Handle<AssetPackage> parent_package = package->GetParentPackage().Lock();
+
+        UUID parent_package_uuid = parent_package.IsValid() ? parent_package->GetUUID() : UUID::Invalid();
+
+        data_source->Push(package->GetUUID(), HypData(package), parent_package_uuid);
+    }
+
+    if (nested) {
+        for (const Handle<AssetPackage> &subpackage : package->GetSubpackages()) {
+            AddPackageToContentBrowser(subpackage, true);
+        }
+    }
+}
+
 RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
 {
     HYP_SCOPE;
@@ -859,6 +916,13 @@ RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
 void EditorSubsystem::NewProject()
 {
     OpenProject(MakeRefCountedPtr<EditorProject>());
+
+    // test
+    if (auto res = m_current_project->Save()) {
+
+    } else {
+        HYP_FAIL("Failed to save project : %s", res.GetError().GetMessage().Data());
+    }
 }
 
 void EditorSubsystem::OpenProject(const RC<EditorProject> &project)

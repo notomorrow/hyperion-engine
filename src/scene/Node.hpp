@@ -5,6 +5,7 @@
 
 #include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
+#include <core/containers/HashSet.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
 
@@ -59,115 +60,66 @@ HYP_MAKE_ENUM_FLAGS(NodeFlags)
 HYP_STRUCT()
 struct NodeTag
 {
-    using ValueType = Variant<String, UUID, Name, int32, uint32, float, double, bool>;
-
     HYP_FIELD()
-    ValueType   value;
+    Name    name;
+    
+    HYP_FIELD()
+    HypData data;
 
-    NodeTag() = default;
+    NodeTag()                                   = default;
 
-    explicit NodeTag(const String &value)
-        : value(value)
+    NodeTag(Name name, HypData &&data)
+        : name(name),
+          data(std::move(data))
     {
     }
 
-    explicit NodeTag(const UUID &value)
-        : value(value)
+    template <class T>
+    NodeTag(Name name, T &&value)
+        : name(name),
+          data(std::forward<T>(value))
     {
     }
 
-    explicit NodeTag(Name value)
-        : value(value)
-    {
-    }
-
-    explicit NodeTag(int32 value)
-        : value(value)
-    {
-    }
-
-    explicit NodeTag(uint32 value)
-        : value(value)
-    {
-    }
-
-    explicit NodeTag(float value)
-        : value(value)
-    {
-    }
-
-    explicit NodeTag(double value)
-        : value(value)
-    {
-    }
-
-    explicit NodeTag(bool value)
-        : value(value)
-    {
-    }
-
-    NodeTag(const NodeTag &other)
-        : value(other.value)
-    {
-    }
-
-    NodeTag &operator=(const NodeTag &other)
-    {
-        value = other.value;
-
-        return *this;
-    }
+    NodeTag(const NodeTag &other)               = delete;
+    NodeTag &operator=(const NodeTag &other)    = delete;
 
     NodeTag(NodeTag &&other) noexcept
-        : value(std::move(other.value))
+        : name(std::move(other.name)),
+          data(std::move(other.data))
     {
     }
 
     NodeTag &operator=(NodeTag &&other) noexcept
     {
-        value = std::move(other.value);
+        if (this == &other) {
+            return *this;
+        }
+
+        name = std::move(other.name);
+        data = std::move(other.data);
 
         return *this;
     }
 
-    HYP_FORCE_INLINE bool operator==(const NodeTag &other) const
-    {
-        return value == other.value;
-    }
-
-    template <typename T>
-    HYP_FORCE_INLINE bool operator==(const T &other) const
-    {
-        return value.GetTypeID() == TypeID::ForType<NormalizedType<T>>()
-            && value.Get<NormalizedType<T>>() == other;
-    }
-
-    HYP_FORCE_INLINE bool operator!=(const NodeTag &other) const
-    {
-        return value != other.value;
-    }
-
-    template <typename T>
-    HYP_FORCE_INLINE bool operator!=(const T &other) const
-    {
-        return value.GetTypeID() != TypeID::ForType<NormalizedType<T>>()
-            || value.Get<NormalizedType<T>>() != other;
-    }
-
-    HYP_FORCE_INLINE explicit operator bool() const
-        { return value.HasValue(); }
-
-    HYP_FORCE_INLINE bool operator!() const
-        { return !value.HasValue(); }
-
     HYP_FORCE_INLINE bool IsValid() const
-        { return value.HasValue(); }
+        { return data.IsValid(); }
 
-    HYP_FORCE_INLINE HashCode GetHashCode() const
-        { return value.GetHashCode(); }
+    // HYP_FORCE_INLINE bool operator==(const NodeTag &other) const
+    // {
+    //     return name == other.name && data == other.data;
+    // }
 
-    String ToString() const;
+    // HYP_FORCE_INLINE bool operator!=(const NodeTag &other) const
+    // {
+    //     return name != other.name || data != other.data;
+    // }
 };
+
+constexpr WeakName NodeTag_KeyByFunction(const NodeTag &tag)
+{
+    return tag.name;
+}
 
 HYP_CLASS()
 class HYP_API Node : public EnableRefCountedPtrFromThis<Node>
@@ -254,6 +206,8 @@ public:
     };
 
     using NodeList = Array<NodeProxy>;
+
+    using NodeTagSet = HashSet<NodeTag, &NodeTag_KeyByFunction>;
 
     enum class Type : uint32
     {
@@ -658,23 +612,26 @@ public:
     HYP_FORCE_INLINE Delegates *GetDelegates() const
         { return m_delegates.Get(); }
 
-    /*! \brief Get all tags of this Node. */
-    HYP_FORCE_INLINE const FlatMap<Name, NodeTag> &GetTags() const
+    HYP_FORCE_INLINE const NodeTagSet &GetTags() const
         { return m_tags; }
 
     /*! \brief Add a tag to this Node. */
-    void AddTag(Name key, const NodeTag &value);
+    void AddTag(NodeTag &&value);
 
-    /*! \brief Remove a tag from this Node. */
-    bool RemoveTag(Name key);
+    /*! \brief Remove a tag from this Node.
+     *  \param key The key the tag
+     *  \returns Whether the tag with the given key was successfully removed or not */
+    bool RemoveTag(WeakName key);
 
     /*! \brief Get a tag from this Node.
-     *  \returns The tag with the given name. If the tag does not exist, an empty NodeTag is returned */
-    const NodeTag &GetTag(Name key) const;
+     *  \param key The key the tag
+     *  \returns The tag with the given key. If the tag does not exist, an empty NodeTag is returned */
+    const NodeTag &GetTag(WeakName key) const;
 
     /*! \brief Check if this Node has a tag with the given name.
+     *  \param key The key the tag
      *  \returns True if the tag exists, false otherwise. */
-    bool HasTag(Name key) const;
+    bool HasTag(WeakName key) const;
 
     /*! \brief Get a NodeProxy for this Node. Increments the reference count of the Node's underlying reference count. */
     HYP_FORCE_INLINE NodeProxy GetProxy()
@@ -741,7 +698,7 @@ protected:
 
     UniquePtr<Delegates>        m_delegates;
 
-    FlatMap<Name, NodeTag>      m_tags;
+    NodeTagSet                  m_tags;
 
     UUID                        m_uuid;
 };

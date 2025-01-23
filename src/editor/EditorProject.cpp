@@ -5,6 +5,7 @@
 #include <util/profiling/ProfileScope.hpp>
 
 #include <asset/Assets.hpp>
+#include <asset/AssetRegistry.hpp>
 #include <asset/serialization/fbom/FBOMWriter.hpp>
 #include <asset/serialization/fbom/FBOMReader.hpp>
 
@@ -18,10 +19,8 @@ namespace hyperion {
 EditorProject::EditorProject()
     : m_last_saved_time(~0ull)
 {
-    AssetManager::GetInstance()->ForEachAssetCollector([this](const Handle<AssetCollector> &asset_collector)
-    {
-        m_non_owned_asset_collectors.PushBack(asset_collector);
-    });
+    m_asset_registry = CreateObject<AssetRegistry>();
+    InitObject(m_asset_registry);
 
     Handle<Camera> camera = CreateObject<Camera>();
     camera->SetFlags(CameraFlags::MATCH_WINDOW_SIZE);
@@ -34,24 +33,6 @@ EditorProject::EditorProject()
 
 EditorProject::~EditorProject()
 {
-    for (const Handle<AssetCollector> &asset_collector : m_owned_asset_collectors) {
-        AssetManager::GetInstance()->RemoveAssetCollector(asset_collector);
-    }
-}
-
-void EditorProject::SetAssetCollectors(const Array<Handle<AssetCollector>> &asset_collectors)
-{
-    HYP_SCOPE;
-
-    for (const Handle<AssetCollector> &asset_collector : m_owned_asset_collectors) {
-        AssetManager::GetInstance()->RemoveAssetCollector(asset_collector);
-    }
-
-    m_owned_asset_collectors = asset_collectors;
-
-    for (const Handle<AssetCollector> &asset_collector : m_owned_asset_collectors) {
-        AssetManager::GetInstance()->AddAssetCollector(asset_collector);
-    }
 }
 
 bool EditorProject::IsSaved() const
@@ -70,7 +51,7 @@ Result<void> EditorProject::Save()
         return Save(m_filepath);
     }
 
-    return Save(AssetManager::GetInstance()->GetBasePath() / "projects" / m_uuid.ToString() + ".hyp");
+    return Save(AssetManager::GetInstance()->GetBasePath() / "projects" / m_uuid.ToString() + ".hypproj");
 }
 
 Result<void> EditorProject::Save(const FilePath &filepath)
@@ -87,6 +68,12 @@ Result<void> EditorProject::Save(const FilePath &filepath)
 
     const Time previous_last_saved_time = m_last_saved_time;
     m_last_saved_time = Time::Now();
+
+    const FilePath directory = m_filepath.BasePath();
+
+    if (!directory.Exists() && directory.MkDir() != 0) {
+        return HYP_MAKE_ERROR(Error, "Failed to create directory");
+    }
 
     FileByteWriter byte_writer(m_filepath);
 

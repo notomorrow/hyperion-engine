@@ -9,6 +9,8 @@
 #include <core/Handle.hpp>
 
 #include <core/containers/String.hpp>
+#include <core/containers/HashMap.hpp>
+#include <core/containers/HashSet.hpp>
 
 #include <core/utilities/TypeID.hpp>
 #include <core/utilities/Variant.hpp>
@@ -157,6 +159,9 @@ struct HypData
 
     ~HypData()                                      = default;
 
+    HYP_FORCE_INLINE bool IsValid() const
+        { return value.IsValid(); }
+
     HYP_FORCE_INLINE bool IsNull() const
         { return !ToRef().HasValue(); }
 
@@ -170,7 +175,7 @@ struct HypData
     {
         HYP_SCOPE;
 
-        if (!value.IsValid()) {
+        if (!IsValid()) {
             return AnyRef();
         }
 
@@ -289,6 +294,26 @@ struct HypData
 
         return result_value;
     }
+
+    template <class T>
+    static fbom::FBOMResult Serialize(T &&value, fbom::FBOMData &out)
+    {
+        return HypDataHelper<NormalizedType<T>>::Serialize(value, out);
+    }
+
+    template <class T>
+    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, T &out)
+    {
+        HypData out_data;
+
+        if (fbom::FBOMResult err = HypDataHelper<NormalizedType<T>>::Deserialize(data, out_data)) {
+            return err;
+        }
+
+        out = std::move(out_data.Get<T>());
+
+        return { };
+    }
 };
 
 #pragma region HypDataMarshalHelper
@@ -315,8 +340,6 @@ struct HypDataMarshalHelper
         if (fbom::FBOMResult err = marshal->Serialize(ConstAnyRef(value), object)) {
             return err;
         }
-
-        object.m_deserialized_object.Emplace(value);
 
         out_data = fbom::FBOMData::FromObject(std::move(object));
 
@@ -407,9 +430,9 @@ struct HypDataHelper<T, std::enable_if_t<std::is_fundamental_v<T>>>
         hyp_data.value.Set<T>(value);
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const HypData &data, fbom::FBOMData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(T value, fbom::FBOMData &out)
     {
-        out = fbom::FBOMData(data.value.Get<T>());
+        out = fbom::FBOMData(value);
 
         return fbom::FBOMResult::FBOM_OK;
     }
@@ -471,6 +494,26 @@ struct HypDataHelper<T, std::enable_if_t<std::is_enum_v<T>>> : HypDataHelper<std
     {
         HypDataHelper<std::underlying_type_t<T>>::Set(hyp_data, static_cast<std::underlying_type_t<T>>(value));
     }
+
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(T value, fbom::FBOMData &out)
+    {
+        out = fbom::FBOMData(static_cast<std::underlying_type_t<T>>(value));
+
+        return fbom::FBOMResult::FBOM_OK;
+    }
+
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    {
+        std::underlying_type_t<T> value;
+
+        if (fbom::FBOMResult err = data.Read(&value)) {
+            return err;
+        }
+
+        out = HypData(value);
+
+        return fbom::FBOMResult::FBOM_OK;
+    }
 };
 
 /* void pointer specialization - only meant for runtime, non-serializable. */
@@ -529,7 +572,7 @@ struct HypDataHelper<void *>
         hyp_data.value.Set<void *>(value);
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const HypData &data, fbom::FBOMData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(void *value, fbom::FBOMData &out)
     {
         return { fbom::FBOMResult::FBOM_ERR, "Cannot serialize a user pointer!" };
     }
@@ -599,9 +642,9 @@ struct HypDataHelper<IDBase>
         hyp_data.value.Set<IDBase>(value);
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(IDBase value, fbom::FBOMData &out_data)
     {
-        out_data = fbom::FBOMData::FromStruct<IDBase>(hyp_data.Get<IDBase>());
+        out_data = fbom::FBOMData::FromStruct<IDBase>(value);
 
         return fbom::FBOMResult::FBOM_OK;
     }
@@ -689,24 +732,21 @@ struct HypDataHelper<AnyHandle>
         hyp_data.value.Set<AnyHandle>(std::move(value));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const AnyHandle &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-
-        const AnyHandle &value = hyp_data.Get<AnyHandle>();
-
-        const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(value.GetTypeID());
-
-        if (!marshal) {
-            HYP_BREAKPOINT;
-            return fbom::FBOMResult { fbom::FBOMResult::FBOM_ERR, "No marshal defined for handle type" };
-        }
-
+        
         if (!value.IsValid()) {
             // unset
             out_data = fbom::FBOMData();
 
             return fbom::FBOMResult::FBOM_OK;
+        }
+
+        const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(value.GetTypeID());
+
+        if (!marshal) {
+            return fbom::FBOMResult { fbom::FBOMResult::FBOM_ERR, "No marshal defined for handle type" };
         }
 
         fbom::FBOMObject object;
@@ -715,9 +755,36 @@ struct HypDataHelper<AnyHandle>
             return err;
         }
 
-        object.m_deserialized_object.Emplace(std::move(value));
-
         out_data = fbom::FBOMData::FromObject(std::move(object));
+
+        return fbom::FBOMResult::FBOM_OK;
+    }
+
+    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    {
+        HYP_SCOPE;
+
+        if (!data) {
+            out = HypData(AnyHandle { });
+
+            return fbom::FBOMResult::FBOM_OK;
+        }
+
+        const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(data.GetType().GetNativeTypeID());
+
+        if (!marshal) {
+            return fbom::FBOMResult { fbom::FBOMResult::FBOM_ERR, "No marshal defined for handle type" };
+        }
+
+        fbom::FBOMObject object;
+
+        if (fbom::FBOMResult err = data.ReadObject(object)) {
+            return err;
+        }
+
+        if (fbom::FBOMResult err = marshal->Deserialize(object, out)) {
+            return err;
+        }
 
         return fbom::FBOMResult::FBOM_OK;
     }
@@ -822,11 +889,9 @@ struct HypDataHelper<RC<void>>
         hyp_data.value.Set<RC<void>>(std::move(value));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const RC<void> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-
-        const RC<void> &value = hyp_data.Get<RC<void>>();
 
         const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(value.GetTypeID());
 
@@ -846,8 +911,6 @@ struct HypDataHelper<RC<void>>
         if (fbom::FBOMResult err = marshal->Serialize(value.ToRef(), object)) {
             return err;
         }
-
-        object.m_deserialized_object.Emplace(std::move(value));
 
         out_data = fbom::FBOMData::FromObject(std::move(object));
 
@@ -959,11 +1022,9 @@ struct HypDataHelper<AnyRef>
         hyp_data.value.Set<AnyRef>(std::move(value));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const AnyRef &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        const AnyRef &value = hyp_data.Get<AnyRef>();
 
         const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(value.GetTypeID());
 
@@ -983,8 +1044,6 @@ struct HypDataHelper<AnyRef>
         if (fbom::FBOMResult err = marshal->Serialize(value, object)) {
             return err;
         }
-
-        object.m_deserialized_object.Emplace(std::move(value));
 
         out_data = fbom::FBOMData::FromObject(std::move(object));
 
@@ -1145,11 +1204,9 @@ struct HypDataHelper<Any>
         hyp_data.value.Set<Any>(std::move(value));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const Any &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &value = hyp_data.Get<Any>();
 
         const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(value.GetTypeID());
 
@@ -1169,8 +1226,6 @@ struct HypDataHelper<Any>
         if (fbom::FBOMResult err = marshal->Serialize(value.ToRef(), object)) {
             return err;
         }
-
-        object.m_deserialized_object.Emplace(std::move(value));
 
         out_data = fbom::FBOMData::FromObject(std::move(object));
 
@@ -1212,19 +1267,13 @@ struct HypDataHelper<containers::detail::String<StringType>> : HypDataHelper<Any
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<containers::detail::String<StringType>>(std::move(value)));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const containers::detail::String<StringType> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &value = hyp_data.Get<Any>();
 
-        if (auto string_opt = hyp_data.TryGet<containers::detail::String<StringType>>()) {
-            out_data = fbom::FBOMData::FromString(*string_opt);
+        out_data = fbom::FBOMData::FromString(value);
 
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize string - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -1310,19 +1359,13 @@ struct HypDataHelper<Name> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<ANSIString>(value.LookupString()));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const Name &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &value = hyp_data.Get<Any>();
 
-        if (auto name_opt = hyp_data.TryGet<Name>()) {
-            out_data = fbom::FBOMData::FromString(ANSIString(name_opt->LookupString()));
+        out_data = fbom::FBOMData::FromString(ANSIString(value.LookupString()));
 
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize name string - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -1375,19 +1418,11 @@ struct HypDataHelper<Array<T, NumInlineBytes>, std::enable_if_t<!std::is_const_v
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<Array<T, NumInlineBytes>>(std::move(value)));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const Array<T, NumInlineBytes> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &any_value = hyp_data.Get<Any>();
-        
-        Array<T, NumInlineBytes> *array_ptr = any_value.TryGet<Array<T, NumInlineBytes>>();
 
-        if (!array_ptr) {
-            return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize array - HypData is not expected array type" };
-        }
-
-        const SizeType size = array_ptr->Size();
+        const SizeType size = value.Size();
 
         if (size == 0) {
             // If size is empty, serialize a placeholder value to get the element type
@@ -1400,7 +1435,7 @@ struct HypDataHelper<Array<T, NumInlineBytes>, std::enable_if_t<!std::is_const_v
         elements.Resize(size);
 
         for (SizeType i = 0; i < size; i++) {
-            if (fbom::FBOMResult err = HypDataHelper<T>::Serialize(HypData((*array_ptr)[i]), elements[i])) {
+            if (fbom::FBOMResult err = HypDataHelper<T>::Serialize(value[i], elements[i])) {
                 return err;
             }
         }
@@ -1432,7 +1467,7 @@ struct HypDataHelper<Array<T, NumInlineBytes>, std::enable_if_t<!std::is_const_v
                 return err;
             }
 
-            result.PushBack(element.Get<T>());
+            result.PushBack(std::move(element.Get<T>()));
         }
 
         HypDataHelper<Array<T, NumInlineBytes>>{}.Set(out, std::move(result));
@@ -1469,17 +1504,9 @@ struct HypDataHelper<FixedArray<T, Size>, std::enable_if_t<!std::is_const_v<T>>>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<FixedArray<T, Size>>(std::move(value)));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const FixedArray<T, Size> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &value = hyp_data.Get<Any>();
-        
-        FixedArray<T, Size> *array_ptr = value.TryGet<FixedArray<T, Size>>();
-
-        if (!array_ptr) {
-            return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize array - HypData is not expected array type" };
-        }
 
         if (Size == 0) {
             // If size is empty, serialize a placeholder value to get the element type
@@ -1492,7 +1519,7 @@ struct HypDataHelper<FixedArray<T, Size>, std::enable_if_t<!std::is_const_v<T>>>
         elements.Resize(Size);
 
         for (SizeType i = 0; i < Size; i++) {
-            if (fbom::FBOMResult err = HypDataHelper<T>::Serialize(HypData((*array_ptr)[i]), elements[i])) {
+            if (fbom::FBOMResult err = HypDataHelper<T>::Serialize(value[i], elements[i])) {
                 return err;
             }
         }
@@ -1525,7 +1552,7 @@ struct HypDataHelper<FixedArray<T, Size>, std::enable_if_t<!std::is_const_v<T>>>
                 return err;
             }
 
-            result[i] = element.Get<T>();
+            result[i] = std::move(element.Get<T>());
         }
 
         HypDataHelper<FixedArray<T, Size>>{}.Set(out, std::move(result));
@@ -1555,6 +1582,62 @@ struct HypDataHelper<T[Size], std::enable_if_t<!std::is_const_v<T>>> : HypDataHe
     HYP_FORCE_INLINE void Set(HypData &hyp_data, const T (&value)[Size]) const
     {
         HypDataHelper<FixedArray<T, Size>>::Set(hyp_data, MakeFixedArray(value));
+    }
+
+    static fbom::FBOMResult Serialize(const T (&value)[Size], fbom::FBOMData &out_data)
+    {
+        HYP_SCOPE;
+
+        if (Size == 0) {
+            // If size is empty, serialize a placeholder value to get the element type
+            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(detail::HypDataPlaceholderSerializedType<T>::Get()));
+
+            return fbom::FBOMResult::FBOM_OK;
+        }
+
+        Array<fbom::FBOMData> elements;
+        elements.Resize(Size);
+
+        for (SizeType i = 0; i < Size; i++) {
+            if (fbom::FBOMResult err = HypDataHelper<T>::Serialize(value[i], elements[i])) {
+                return err;
+            }
+        }
+
+        out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(elements[0].GetType(), std::move(elements)));
+
+        return fbom::FBOMResult::FBOM_OK;
+    }
+
+    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    {
+        HYP_SCOPE;
+        
+        fbom::FBOMArray array { fbom::FBOMUnset() };
+
+        if (fbom::FBOMResult err = data.ReadArray(array)) {
+            return err;
+        }
+
+        if (Size != array.Size()) {
+            return { fbom::FBOMResult::FBOM_ERR, "Failed to deserialize array - size does not match expected size" };
+        }
+
+        FixedArray<T, Size> result;
+
+        for (SizeType i = 0; i < Size; i++) {
+            HypData element;
+
+            if (fbom::FBOMResult err = HypDataHelper<T>::Deserialize(array.GetElement(i), element)) {
+                return err;
+            }
+
+            result[i] = std::move(element.Get<T>());
+        }
+
+        HypDataHelper<FixedArray<T, Size>>{}.Set(out, std::move(result));
+
+        return { fbom::FBOMResult::FBOM_OK };
     }
 };
 
@@ -1586,26 +1669,18 @@ struct HypDataHelper<Pair<K, V>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<Pair<K, V>>(std::move(value)));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const Pair<K, V> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &value = hyp_data.Get<Any>();
-        
-        Pair<K, V> *pair_ptr = value.TryGet<Pair<K, V>>();
-
-        if (!pair_ptr) {
-            return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize pair - HypData is not expected type" };
-        }
 
         fbom::FBOMData first_data;
         fbom::FBOMData second_data;
 
-        if (fbom::FBOMResult err = HypDataHelper<K>::Serialize(HypData(pair_ptr->first), first_data)) {
+        if (fbom::FBOMResult err = HypDataHelper<K>::Serialize(value.first, first_data)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = HypDataHelper<V>::Serialize(HypData(pair_ptr->second), second_data)) {
+        if (fbom::FBOMResult err = HypDataHelper<V>::Serialize(value.second, second_data)) {
             return err;
         }
         
@@ -1673,19 +1748,11 @@ struct HypDataHelper<HashMap<K, V>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<HashMap<K, V>>(std::move(value)));
     }
 
-    static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    static fbom::FBOMResult Serialize(const HashMap<K, V> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &any_value = hyp_data.Get<Any>();
-        
-        HashMap<K, V> *hash_map_ptr = any_value.TryGet<HashMap<K, V>>();
 
-        if (!hash_map_ptr) {
-            return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize HashMap - HypData is not expected type" };
-        }
-
-        const SizeType size = hash_map_ptr->Size();
+        const SizeType size = value.Size();
 
         if (size == 0) {
             // If size is empty, serialize a placeholder value to get the element type
@@ -1699,10 +1766,10 @@ struct HypDataHelper<HashMap<K, V>> : HypDataHelper<Any>
 
         uint32 element_index = 0;
         
-        for (const Pair<K, V> &pair : *hash_map_ptr) {
+        for (const Pair<K, V> &pair : value) {
             fbom::FBOMData &element = elements.EmplaceBack();
 
-            if (fbom::FBOMResult err = HypDataHelper<Pair<K, V>>::Serialize(HypData(pair), element)) {
+            if (fbom::FBOMResult err = HypDataHelper<Pair<K, V>>::Serialize(pair, element)) {
                 return err;
             }
         }
@@ -1733,10 +1800,99 @@ struct HypDataHelper<HashMap<K, V>> : HypDataHelper<Any>
                 return err;
             }
 
-            result.Insert(element.Get<Pair<K, V>>());
+            result.Insert(std::move(element.Get<Pair<K, V>>()));
         }
 
         HypDataHelper<HashMap<K, V>>{}.Set(out, std::move(result));
+
+        return { fbom::FBOMResult::FBOM_OK };
+    }
+};
+
+template <class ValueType, auto KeyByFunction>
+struct HypDataHelperDecl<HashSet<ValueType, KeyByFunction>> {};
+
+template <class ValueType, auto KeyByFunction>
+struct HypDataHelper<HashSet<ValueType, KeyByFunction>> : HypDataHelper<Any>
+{
+    using ConvertibleFrom = Tuple<>;
+
+    HYP_FORCE_INLINE bool Is(const Any &value) const
+    {
+        return value.Is<HashSet<ValueType, KeyByFunction>>();
+    }
+
+    HYP_FORCE_INLINE HashSet<ValueType, KeyByFunction> &Get(const Any &value) const
+    {
+        return value.Get<HashSet<ValueType, KeyByFunction>>();
+    }
+
+    HYP_FORCE_INLINE void Set(HypData &hyp_data, const HashSet<ValueType, KeyByFunction> &value) const
+    {
+        HypDataHelper<Any>::Set(hyp_data, Any::Construct<HashSet<ValueType, KeyByFunction>>(value));
+    }
+
+    HYP_FORCE_INLINE void Set(HypData &hyp_data, HashSet<ValueType, KeyByFunction> &&value) const
+    {
+        HypDataHelper<Any>::Set(hyp_data, Any::Construct<HashSet<ValueType, KeyByFunction>>(std::move(value)));
+    }
+
+    static fbom::FBOMResult Serialize(const HashSet<ValueType, KeyByFunction> &value, fbom::FBOMData &out_data)
+    {
+        HYP_SCOPE;
+
+        const SizeType size = value.Size();
+
+        if (size == 0) {
+            // If size is empty, serialize a placeholder value to get the element type
+            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(detail::HypDataPlaceholderSerializedType<ValueType>::Get()));
+
+            return fbom::FBOMResult::FBOM_OK;
+        }
+
+        Array<fbom::FBOMData> elements;
+        elements.Reserve(size);
+
+        uint32 element_index = 0;
+        
+        for (const ValueType &value : value) {
+            fbom::FBOMData &element = elements.EmplaceBack();
+
+            if (fbom::FBOMResult err = HypDataHelper<ValueType>::Serialize(value, element)) {
+                return err;
+            }
+        }
+
+        out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(elements[0].GetType(), std::move(elements)));
+
+        return fbom::FBOMResult::FBOM_OK;
+    }
+
+    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    {
+        HYP_SCOPE;
+        
+        fbom::FBOMArray array { fbom::FBOMUnset() };
+
+        if (fbom::FBOMResult err = data.ReadArray(array)) {
+            return err;
+        }
+
+        const SizeType size = array.Size();
+
+        HashSet<ValueType, KeyByFunction> result;
+
+        for (SizeType i = 0; i < size; i++) {
+            HypData element;
+
+            if (fbom::FBOMResult err = HypDataHelper<ValueType>::Deserialize(array.GetElement(i), element)) {
+                return err;
+            }
+
+            result.Insert(std::move(element.Get<ValueType>()));
+        }
+
+        HypDataHelper<HashSet<ValueType, KeyByFunction>>{}.Set(out, std::move(result));
 
         return { fbom::FBOMResult::FBOM_OK };
     }
@@ -1786,19 +1942,13 @@ struct HypDataHelper<math::detail::Vec2<T>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::detail::Vec2<T>>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::detail::Vec2<T> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
-        
-        Any &value = hyp_data.Get<Any>();
 
-        if (math::detail::Vec2<T> *ptr = value.TryGet<math::detail::Vec2<T>>()) {
-            out_data = fbom::FBOMData(*ptr);
+        out_data = fbom::FBOMData(value);
 
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize Vector type - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -1843,19 +1993,13 @@ struct HypDataHelper<math::detail::Vec3<T>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::detail::Vec3<T>>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::detail::Vec3<T> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
         
-        Any &value = hyp_data.Get<Any>();
+        out_data = fbom::FBOMData(value);
 
-        if (math::detail::Vec3<T> *ptr = value.TryGet<math::detail::Vec3<T>>()) {
-            out_data = fbom::FBOMData(*ptr);
-
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize Vector type - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -1902,19 +2046,13 @@ struct HypDataHelper<math::detail::Vec4<T>> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::detail::Vec4<T>>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::detail::Vec4<T> &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
         
-        Any &value = hyp_data.Get<Any>();
+        out_data = fbom::FBOMData(value);
 
-        if (math::detail::Vec4<T> *ptr = value.TryGet<math::detail::Vec4<T>>()) {
-            out_data = fbom::FBOMData(*ptr);
-
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize Vector type - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -1961,19 +2099,13 @@ struct HypDataHelper<Matrix3> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<Matrix3>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const Matrix3 &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
         
-        Any &value = hyp_data.Get<Any>();
+        out_data = fbom::FBOMData(value);
 
-        if (Matrix3 *ptr = value.TryGet<Matrix3>()) {
-            out_data = fbom::FBOMData(*ptr);
-
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize Matrix3 - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -2020,19 +2152,13 @@ struct HypDataHelper<Matrix4> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<Matrix4>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const Matrix4 &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
         
-        Any &value = hyp_data.Get<Any>();
+        out_data = fbom::FBOMData(value);
 
-        if (Matrix4 *ptr = value.TryGet<Matrix4>()) {
-            out_data = fbom::FBOMData(*ptr);
-
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize Matrix4 - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -2079,19 +2205,13 @@ struct HypDataHelper<Quaternion> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<Quaternion>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const Quaternion &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
         
-        Any &value = hyp_data.Get<Any>();
+        out_data = fbom::FBOMData(value);
 
-        if (Quaternion *ptr = value.TryGet<Quaternion>()) {
-            out_data = fbom::FBOMData(*ptr);
-
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize Quaternion - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -2138,19 +2258,13 @@ struct HypDataHelper<ByteBuffer> : HypDataHelper<Any>
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<ByteBuffer>(std::move(value)));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(HypData &&hyp_data, fbom::FBOMData &out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const ByteBuffer &value, fbom::FBOMData &out_data)
     {
         HYP_SCOPE;
         
-        Any &value = hyp_data.Get<Any>();
+        out_data = fbom::FBOMData::FromByteBuffer(value);
 
-        if (ByteBuffer *ptr = value.TryGet<ByteBuffer>()) {
-            out_data = fbom::FBOMData::FromByteBuffer(*ptr);
-
-            return fbom::FBOMResult::FBOM_OK;
-        }
-
-        return { fbom::FBOMResult::FBOM_ERR, "Failed to serialize ByteBuffer - HypData is not expected type" };
+        return fbom::FBOMResult::FBOM_OK;
     }
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
@@ -2243,6 +2357,27 @@ struct HypDataHelper<T, std::enable_if_t<!HypData::can_store_directly<T> && !imp
         HypDataHelper<Any>::Set(hyp_data, Any::Construct<T>(std::move(value)));
     }
 
+    static fbom::FBOMResult Serialize(const T &value, fbom::FBOMData &out_data)
+    {
+        HYP_SCOPE;
+
+        const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(TypeID::ForType<NormalizedType<T>>());
+
+        if (!marshal) {
+            return fbom::FBOMResult { fbom::FBOMResult::FBOM_ERR, "No marshal registered for type" };
+        }
+
+        fbom::FBOMObject object;
+
+        if (fbom::FBOMResult err = marshal->Serialize(ConstAnyRef(value), object)) {
+            return err;
+        }
+
+        out_data = fbom::FBOMData::FromObject(std::move(object));
+
+        return fbom::FBOMResult::FBOM_OK;
+    }
+
     static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
@@ -2317,7 +2452,7 @@ struct HypDataPlaceholderSerializedType
             
             fbom::FBOMData placeholder_data;
 
-            if (fbom::FBOMResult err = HypDataHelper<T>::Serialize(HypData(T { }), placeholder_data)) {
+            if (fbom::FBOMResult err = HypDataHelper<T>::Serialize(T { }, placeholder_data)) {
                 HYP_FAIL("Failed to serialize placeholder data for type %s: %s", TypeName<T>().Data(), *err.message);
             }
 

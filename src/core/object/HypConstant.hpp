@@ -49,7 +49,7 @@ public:
             {
                 fbom::FBOMData out;
 
-                if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(HypData(value), out)) {
+                if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(value, out)) {
                     HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                 }
 

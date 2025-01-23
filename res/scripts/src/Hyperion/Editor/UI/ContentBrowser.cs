@@ -13,7 +13,7 @@ namespace FooBar
         }
 
         [UIEvent(AllowNested = true)]
-        public void ImportContentClicked()
+        public void ImportClicked()
         {
             Logger.Log(LogType.Info, "Import content clicked");
         }
