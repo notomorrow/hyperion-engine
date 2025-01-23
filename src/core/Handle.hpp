@@ -488,6 +488,8 @@ struct WeakHandle final
     }
 };
 
+/*! \brief A dynamic Handle type. Type is stored at runtime.
+ *  An AnyHandle is able to be punned to a Handle<T> permitted that T is the actual type of the held object */
 struct AnyHandle final
 {
     using IDType = IDBase;
@@ -497,6 +499,12 @@ struct AnyHandle final
 
 public:
     HYP_API explicit AnyHandle(HypObjectBase *hyp_object_ptr);
+
+    AnyHandle()
+        : ptr(nullptr),
+          type_id(TypeID::Void())
+    {
+    }
 
     template <class T, typename = std::enable_if_t<std::is_base_of_v<HypObjectBase, T> && !std::is_same_v<HypObjectBase, T>>>
     explicit AnyHandle(T *ptr)

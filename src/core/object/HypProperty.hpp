@@ -69,7 +69,7 @@ struct HypPropertyGetter
           {
               fbom::FBOMData out;
 
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(HypData((static_cast<const TargetType *>(target.ToRef().GetPointer())->*MemFn)()), out)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize((static_cast<const TargetType *>(target.ToRef().GetPointer())->*MemFn)(), out)) {
                   HYP_FAIL("Failed to serialize data: %s", err.message.Data());
               }
 
@@ -90,7 +90,7 @@ struct HypPropertyGetter
           {
               fbom::FBOMData out;
 
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(HypData((static_cast<const TargetType *>(target.ToRef().GetPointer())->*MemFn)()), out)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize((static_cast<const TargetType *>(target.ToRef().GetPointer())->*MemFn)(), out)) {
                   HYP_FAIL("Failed to serialize data: %s", err.message.Data());
               }
 
@@ -110,7 +110,7 @@ struct HypPropertyGetter
           {   
               fbom::FBOMData out;
 
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(HypData(fnptr(static_cast<const TargetType *>(target.ToRef().GetPointer()))), out)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(fnptr(static_cast<const TargetType *>(target.ToRef().GetPointer())), out)) {
                   HYP_FAIL("Failed to serialize data: %s", err.message.Data());
               }
 
@@ -131,7 +131,7 @@ struct HypPropertyGetter
           {   
               fbom::FBOMData out;
 
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(HypData(fnptr()), out)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(fnptr(), out)) {
                   HYP_FAIL("Failed to serialize data: %s", err.message.Data());
               }
 
@@ -151,7 +151,7 @@ struct HypPropertyGetter
           {   
               fbom::FBOMData out;
 
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Serialize(HypData(static_cast<const TargetType *>(target.ToRef().GetPointer())->*member), out)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Serialize(static_cast<const TargetType *>(target.ToRef().GetPointer())->*member, out)) {
                   HYP_FAIL("Failed to serialize data: %s", err.message.Data());
               }
 

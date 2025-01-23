@@ -380,7 +380,7 @@ void UIListView::AddDataSourceElement(UIDataSourceBase *data_source, UIDataSourc
     });
 
     RC<UIListViewItem> list_view_item = CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-    list_view_item->GetNode()->AddTag(NAME("DataSourceElementUUID"), NodeTag(element->GetUUID()));
+    list_view_item->SetNodeTag(NodeTag(NAME("DataSourceElementUUID"), element->GetUUID()));
     list_view_item->SetDataSourceElementUUID(element->GetUUID());
     
     list_view_item->OnClick.Bind([this, list_view_item_weak = list_view_item.ToWeak()](const MouseEvent &event) -> UIEventHandlerResult

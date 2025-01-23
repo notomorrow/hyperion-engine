@@ -223,7 +223,7 @@ public:
                 } else {
                     fbom::FBOMData out;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(HypData(detail::CallHypMethod<decltype(fn), ReturnType, TargetType *, ArgTypes...>(fn, arg_ptrs)), out)) {
+                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(detail::CallHypMethod<decltype(fn), ReturnType, TargetType *, ArgTypes...>(fn, arg_ptrs), out)) {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
 
@@ -303,7 +303,7 @@ public:
                 } else {
                     fbom::FBOMData out;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(HypData(detail::CallHypMethod<decltype(fn), ReturnType, TargetType *, ArgTypes...>(fn, arg_ptrs)), out)) {
+                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(detail::CallHypMethod<decltype(fn), ReturnType, TargetType *, ArgTypes...>(fn, arg_ptrs), out)) {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
 

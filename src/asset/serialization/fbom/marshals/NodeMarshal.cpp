@@ -37,6 +37,16 @@ public:
 
         out.SetProperty("Type", uint32(in_object.GetType()));
 
+        {
+            FBOMData tags_data;
+
+            if (FBOMResult err = HypData::Serialize(in_object.GetTags(), tags_data)) {
+                return err;
+            }
+
+            out.SetProperty("Tags", std::move(tags_data));
+        }
+
         for (const NodeProxy &child : in_object.GetChildren()) {
             if (!child.IsValid() || (child->GetFlags() & NodeFlags::TRANSIENT)) {
                 continue;
@@ -60,6 +70,12 @@ public:
             return err;
         }
 
+        Node::NodeTagSet tags;
+
+        if (FBOMResult err = HypData::Deserialize(in.GetProperty("Tags"), tags)) {
+            return err;
+        }
+
         NodeProxy node;
         
         const HypClass *node_hyp_class = Node::Class();
@@ -80,6 +96,10 @@ public:
 
         if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(in, node_hyp_class, AnyRef(*node))) {
             return err;
+        }
+        
+        for (NodeTag &tag : tags) {
+            node->AddTag(std::move(tag));
         }
 
         for (FBOMObject &subobject : *in.nodes) {

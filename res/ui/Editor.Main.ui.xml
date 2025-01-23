@@ -57,7 +57,7 @@
                 <Tab name="Assets_Tab" text="Assets">
                     <Script assembly="Hyperion.Editor.UI.dll" class="ContentBrowser" />
                     <Panel size="100% 35" padding="0 2">
-                        <Button size="50 fill" onclick="ImportContentClicked">
+                        <Button size="50 fill" onclick="ImportClicked">
                             Import
                         </Button>
                     </Panel>
@@ -67,7 +67,7 @@
                             <GridColumn size="auto 100%" colsize="2" padding="1">
                                 <Grid size="100%" backgroundColor="#101012">
                                     <GridRow name="Browse_Heading" size="100% 35" backgroundColor="#000000">
-                                        <Text textSize="12" originAlignment="center" parentAlignment="center">Folders</Text>
+                                        <Text textSize="12" originAlignment="center" parentAlignment="center">Library</Text>
                                     </GridRow>
                                     <GridRow size="100% fill">
                                         <GridColumn size="auto 100%">

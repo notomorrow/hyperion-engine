@@ -33,43 +33,6 @@ namespace hyperion {
 
 #pragma region NodeTag
 
-String NodeTag::ToString() const
-{
-    if (value.GetTypeID() == TypeID::ForType<String>()) {
-        return value.Get<String>();
-    }
-
-    if (value.GetTypeID() == TypeID::ForType<UUID>()) {
-        return value.Get<UUID>().ToString();
-    }
-
-    if (value.GetTypeID() == TypeID::ForType<Name>()) {
-        return value.Get<Name>().LookupString();
-    }
-
-    if (value.GetTypeID() == TypeID::ForType<int32>()) {
-        return HYP_FORMAT("{}", value.Get<int32>());
-    }
-
-    if (value.GetTypeID() == TypeID::ForType<uint32>()) {
-        return HYP_FORMAT("{}", value.Get<uint32>());
-    }
-
-    if (value.GetTypeID() == TypeID::ForType<float>()) {
-        return HYP_FORMAT("{}", value.Get<float>());
-    }
-
-    if (value.GetTypeID() == TypeID::ForType<double>()) {
-        return HYP_FORMAT("{}", value.Get<double>());
-    }
-
-    if (value.GetTypeID() == TypeID::ForType<bool>()) {
-        return value.Get<bool>() ? "true" : "false";
-    }
-
-    return String::empty;   
-}
-
 #pragma endregion NodeTag
 
 #pragma region Node
@@ -1066,18 +1029,24 @@ NodeProxy Node::FindChildByUUID(const UUID &uuid) const
     return NodeProxy::empty;
 }
 
-void Node::AddTag(Name key, const NodeTag &value)
+void Node::AddTag(NodeTag &&value)
 {
-    m_tags.Set(key, value);
+    HYP_SCOPE;
+
+    m_tags.Set(std::move(value));
 }
 
-bool Node::RemoveTag(Name key)
+bool Node::RemoveTag(WeakName key)
 {
+    HYP_SCOPE;
+
     return m_tags.Erase(key);
 }
 
-const NodeTag &Node::GetTag(Name key) const
+const NodeTag &Node::GetTag(WeakName key) const
 {
+    HYP_SCOPE;
+
     static const NodeTag empty_tag = NodeTag();
 
     const auto it = m_tags.Find(key);
@@ -1086,11 +1055,13 @@ const NodeTag &Node::GetTag(Name key) const
         return empty_tag;
     }
 
-    return it->second;
+    return *it;
 }
 
-bool Node::HasTag(Name key) const
+bool Node::HasTag(WeakName key) const
 {
+    HYP_SCOPE;
+
     return m_tags.Contains(key);
 }
 

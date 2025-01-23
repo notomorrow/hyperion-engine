@@ -73,39 +73,6 @@ public:
     }
 
     template <class T, typename = std::enable_if_t< !std::is_base_of_v< detail::AnyBase, T > > >
-    Any(const T &value)
-        : m_type_id(TypeID::ForType<NormalizedType<T>>()),
-          m_ptr(new NormalizedType<T>(value)),
-          m_dtor(&Memory::Delete<NormalizedType<T>>)
-    {
-    }
-
-    template <class T, typename = std::enable_if_t< !std::is_base_of_v< detail::AnyBase, T > > >
-    Any &operator=(const T &value)
-    {
-        const TypeID new_type_id = TypeID::ForType<NormalizedType<T>>();
-        
-        if constexpr (std::is_copy_assignable_v<NormalizedType<T>>) {
-            if (m_type_id == new_type_id) {
-                // types are same, call copy assignment operator.
-                *static_cast<T *>(m_ptr) = value;
-
-                return *this;
-            }
-        }
-
-        if (HasValue()) {
-            m_dtor(m_ptr);
-        }
-
-        m_type_id = new_type_id;
-        m_ptr = new NormalizedType<T>(value);
-        m_dtor = &Memory::Delete<NormalizedType<T>>;
-
-        return *this;
-    }
-
-    template <class T, typename = std::enable_if_t< !std::is_base_of_v< detail::AnyBase, T > > >
     Any(T &&value) noexcept
         : m_type_id(TypeID::ForType<NormalizedType<T>>()),
           m_ptr(new NormalizedType<T>(std::forward<NormalizedType<T>>(value))),
@@ -121,7 +88,7 @@ public:
         if constexpr (std::is_move_assignable_v<NormalizedType<T>>) {
             if (m_type_id == new_type_id) {
                 // types are same, call move assignment operator
-                *static_cast<NormalizedType<T> *>(m_ptr) = std::move(value);
+                *static_cast<NormalizedType<T> *>(m_ptr) = std::forward<T>(value);
 
                 return *this;
             }
@@ -132,7 +99,7 @@ public:
         }
 
         m_type_id = new_type_id;
-        m_ptr = new NormalizedType<T>(std::move(value));
+        m_ptr = new NormalizedType<T>(std::forward<T>(value));
         m_dtor = &Memory::Delete<NormalizedType<T>>;
 
         return *this;

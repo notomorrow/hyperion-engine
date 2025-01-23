@@ -584,7 +584,7 @@ public:
                     }
 
                     // Finally, if not found, set node tag
-                    ui_object->SetNodeTag(CreateNameFromDynamicString(attribute_name_lower), NodeTag(attribute.second));
+                    ui_object->SetNodeTag(NodeTag(CreateNameFromDynamicString(attribute_name_lower), attribute.second));
                 }
             }
 
