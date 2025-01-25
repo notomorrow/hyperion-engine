@@ -33,6 +33,13 @@ UIPanel::UIPanel()
 {
 }
 
+void UIPanel::OnAttached_Internal(UIObject *parent)
+{
+    HYP_SCOPE;
+
+    UIObject::OnAttached_Internal(parent);
+}
+
 void UIPanel::SetIsScrollEnabled(UIObjectScrollbarOrientation orientation, bool is_scroll_enabled)
 {
     HYP_SCOPE;
@@ -40,9 +47,9 @@ void UIPanel::SetIsScrollEnabled(UIObjectScrollbarOrientation orientation, bool 
     if (Bitset bitset { uint64(uint8(orientation)) }; bitset.Count() != 1) {
         for (Bitset::BitIndex bit_index : bitset) {
             SetIsScrollEnabled(UIObjectScrollbarOrientation(Bitset::GetBitMask(bit_index)), is_scroll_enabled);
-            
-            return;
         }
+
+        return;
     }
 
     m_is_scroll_enabled[orientation] = is_scroll_enabled;
@@ -57,9 +64,9 @@ void UIPanel::SetScrollbarVisible(UIObjectScrollbarOrientation orientation, bool
     if (Bitset bitset { uint64(uint8(orientation)) }; bitset.Count() != 1) {
         for (Bitset::BitIndex bit_index : bitset) {
             SetScrollbarVisible(UIObjectScrollbarOrientation(Bitset::GetBitMask(bit_index)), visible);
-            
-            return;
         }
+            
+        return;
     }
 
     RC<UIObject> *scrollbar = nullptr;
@@ -85,26 +92,24 @@ void UIPanel::SetScrollbarVisible(UIObjectScrollbarOrientation orientation, bool
 
     if (visible) {
         // If scrollbar UIObject already exists and we are enabling scroll then return early
-        if (*scrollbar != nullptr) {
-            return;
+        if (!*scrollbar) {
+            RC<UIPanel> new_scrollbar = CreateUIObject<UIPanel>(Vec2i { 0, 0 }, scrollbar_size);
+            new_scrollbar->SetAffectsParentSize(false);
+            new_scrollbar->SetIsPositionAbsolute(true);
+            new_scrollbar->SetIsScrollEnabled(UIObjectScrollbarOrientation::ALL, false);
+            new_scrollbar->SetAcceptsFocus(false);
+            new_scrollbar->SetParentAlignment(scrollbar_alignment);
+            new_scrollbar->SetOriginAlignment(scrollbar_alignment);
+
+            *scrollbar = std::move(new_scrollbar);
         }
 
-        RC<UIPanel> new_scrollbar = CreateUIObject<UIPanel>(Vec2i { 0, 0 }, scrollbar_size);
-        new_scrollbar->SetAffectsParentSize(false);
-        new_scrollbar->SetIsPositionAbsolute(true);
-        new_scrollbar->SetIsScrollEnabled(UIObjectScrollbarOrientation::ALL, false);
-        new_scrollbar->SetAcceptsFocus(false);
-        new_scrollbar->SetParentAlignment(scrollbar_alignment);
-        new_scrollbar->SetOriginAlignment(scrollbar_alignment);
-
-        *scrollbar = std::move(new_scrollbar);
+        UIObject::AddChildUIObject(*scrollbar);
 
         UpdateScrollbarSize(orientation);
         UpdateScrollbarThumbPosition(orientation);
-
-        UIObject::AddChildUIObject(*scrollbar);
     } else {
-        if (*scrollbar != nullptr) {
+        if (*scrollbar) {
             UIObject::RemoveChildUIObject(scrollbar->Get());
             scrollbar->Reset();
         }
@@ -124,34 +129,7 @@ void UIPanel::UpdateSize_Internal(bool update_children)
 
     UIObject::UpdateSize_Internal(update_children);
 
-    const bool is_width_greater = GetActualInnerSize().x > GetActualSize().x;
-    const bool is_height_greater = GetActualInnerSize().y > GetActualSize().y;
-
-    if (m_is_scroll_enabled & UIObjectScrollbarOrientation::HORIZONTAL) {
-        if (is_width_greater) {
-            if (m_horizontal_scrollbar == nullptr) {
-                SetScrollbarVisible(UIObjectScrollbarOrientation::HORIZONTAL, true);
-            } else {
-                UpdateScrollbarSize(UIObjectScrollbarOrientation::HORIZONTAL);
-                UpdateScrollbarThumbPosition(UIObjectScrollbarOrientation::HORIZONTAL);
-            }
-        } else {
-            SetScrollbarVisible(UIObjectScrollbarOrientation::HORIZONTAL, false);
-        }
-    }
-
-    if (m_is_scroll_enabled & UIObjectScrollbarOrientation::VERTICAL) {
-        if (is_height_greater) {
-            if (m_vertical_scrollbar == nullptr) {
-                SetScrollbarVisible(UIObjectScrollbarOrientation::VERTICAL, true);
-            } else {
-                UpdateScrollbarSize(UIObjectScrollbarOrientation::VERTICAL);
-                UpdateScrollbarThumbPosition(UIObjectScrollbarOrientation::VERTICAL);
-            }
-        } else {
-            SetScrollbarVisible(UIObjectScrollbarOrientation::VERTICAL, false);
-        }
-    }
+    UpdateScrollbarSizes();
 }
 
 void UIPanel::OnScrollOffsetUpdate_Internal(Vec2f delta)
@@ -205,6 +183,40 @@ UIEventHandlerResult UIPanel::HandleScroll(const MouseEvent &event_data)
 
     // allow parent to scroll
     return UIEventHandlerResult::OK;
+}
+
+void UIPanel::UpdateScrollbarSizes()
+{
+    HYP_SCOPE;
+
+    const bool is_width_greater = GetActualInnerSize().x > GetActualSize().x;
+    const bool is_height_greater = GetActualInnerSize().y > GetActualSize().y;
+
+    if (m_is_scroll_enabled & UIObjectScrollbarOrientation::HORIZONTAL) {
+        if (is_width_greater) {
+            if (m_horizontal_scrollbar == nullptr) {
+                SetScrollbarVisible(UIObjectScrollbarOrientation::HORIZONTAL, true);
+            } else {
+                UpdateScrollbarSize(UIObjectScrollbarOrientation::HORIZONTAL);
+                UpdateScrollbarThumbPosition(UIObjectScrollbarOrientation::HORIZONTAL);
+            }
+        } else {
+            SetScrollbarVisible(UIObjectScrollbarOrientation::HORIZONTAL, false);
+        }
+    }
+
+    if (m_is_scroll_enabled & UIObjectScrollbarOrientation::VERTICAL) {
+        if (is_height_greater) {
+            if (m_vertical_scrollbar == nullptr) {
+                SetScrollbarVisible(UIObjectScrollbarOrientation::VERTICAL, true);
+            } else {
+                UpdateScrollbarSize(UIObjectScrollbarOrientation::VERTICAL);
+                UpdateScrollbarThumbPosition(UIObjectScrollbarOrientation::VERTICAL);
+            }
+        } else {
+            SetScrollbarVisible(UIObjectScrollbarOrientation::VERTICAL, false);
+        }
+    }
 }
 
 void UIPanel::UpdateScrollbarSize(UIObjectScrollbarOrientation orientation)

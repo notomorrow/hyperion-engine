@@ -12,7 +12,6 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/types.h>
 #include <fcntl.h>
 
 #endif

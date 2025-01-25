@@ -32,7 +32,7 @@ struct StaticArray
     template <auto OtherStaticArray>
     constexpr auto Concat() const
     {
-        static_assert(std::is_same_v<decltype(OtherStaticArray)::HeldType, HeldType>, "Held types differ, cannot concat static arrays");
+        static_assert(std::is_same_v<typename decltype(OtherStaticArray)::HeldType, HeldType>, "Held types differ, cannot concat static arrays");
 
         if constexpr (Size == 0 && decltype(OtherStaticArray)::size == 0) {
             return StaticArray<T, 0> { };
@@ -45,14 +45,14 @@ struct StaticArray
         }
     }
 
-    [[nodiscard]] constexpr Iterator Begin() { return items.begin(); }
-    [[nodiscard]] constexpr Iterator End() { return items.end(); }
-    [[nodiscard]] constexpr ConstIterator Begin() const { return items.begin(); }
-    [[nodiscard]] constexpr ConstIterator End() const { return items.end(); }
-    [[nodiscard]] constexpr Iterator begin() { return items.begin(); }
-    [[nodiscard]] constexpr Iterator end() { return items.end(); }
-    [[nodiscard]] constexpr ConstIterator begin() const  { return items.begin(); }
-    [[nodiscard]] constexpr ConstIterator end() const { return items.end(); }
+    constexpr Iterator Begin() { return items.begin(); }
+    constexpr Iterator End() { return items.end(); }
+    constexpr ConstIterator Begin() const { return items.begin(); }
+    constexpr ConstIterator End() const { return items.end(); }
+    constexpr Iterator begin() { return items.begin(); }
+    constexpr Iterator end() { return items.end(); }
+    constexpr ConstIterator begin() const  { return items.begin(); }
+    constexpr ConstIterator end() const { return items.end(); }
 
     /// impl
     template <auto OtherStaticArray, SizeType ... Indices>

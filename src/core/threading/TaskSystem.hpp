@@ -44,6 +44,7 @@ enum TaskThreadPoolName : uint32
 {
     THREAD_POOL_GENERIC,
     THREAD_POOL_RENDER,
+    THREAD_POOL_BACKGROUND,
     THREAD_POOL_MAX
 };
 

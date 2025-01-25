@@ -21,8 +21,9 @@ struct TaskThreadPoolInfo
 };
 
 static const FlatMap<TaskThreadPoolName, TaskThreadPoolInfo> g_thread_pool_info {
-    { TaskThreadPoolName::THREAD_POOL_GENERIC,  { 4u, ThreadPriorityValue::NORMAL } },
-    { TaskThreadPoolName::THREAD_POOL_RENDER,   { 2u, ThreadPriorityValue::HIGHEST } }
+    { TaskThreadPoolName::THREAD_POOL_GENERIC,      { 4u, ThreadPriorityValue::NORMAL } },
+    { TaskThreadPoolName::THREAD_POOL_RENDER,       { 2u, ThreadPriorityValue::HIGHEST } },
+    { TaskThreadPoolName::THREAD_POOL_BACKGROUND,   { 2u, ThreadPriorityValue::LOW } }
 };
 
 #pragma region TaskBatch

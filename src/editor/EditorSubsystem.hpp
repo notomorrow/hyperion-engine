@@ -36,6 +36,7 @@ class EditorDelegates;
 class EditorSubsystem;
 class EditorProject;
 class EditorDebugOverlayBase;
+class AssetPackage;
 
 namespace sys {
 class AppContext;
@@ -175,6 +176,7 @@ private:
     void UpdateDebugOverlays(GameCounter::TickUnit delta);
 
     void AddPackageToContentBrowser(const Handle<AssetPackage> &package, bool nested);
+    void SetSelectedPackage(const Handle<AssetPackage> &package);
 
     RC<AppContext>                                                      m_app_context;
     Handle<Scene>                                                       m_scene;
@@ -203,6 +205,7 @@ private:
     RC<UIObject>                                                        m_debug_overlay_ui_object;
 
     RC<UIListView>                                                      m_content_browser_directory_list;
+    Handle<AssetPackage>                                                m_selected_package;
 
     DelegateHandlerSet                                                  m_delegate_handlers;
 };

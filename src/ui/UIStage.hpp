@@ -115,11 +115,10 @@ public:
     void SetDefaultFontAtlas(RC<FontAtlas> font_atlas);
 
     /*! \brief Get the UI object that is currently focused. If no object is focused, returns nullptr.
-     *  \note Because the focused object is a weak reference, a lock is required to access the object.
      *  \return The focused UI object. */
     HYP_METHOD()
-    HYP_FORCE_INLINE RC<UIObject> GetFocusedObject() const
-        { return m_focused_object.Lock(); }
+    HYP_FORCE_INLINE const RC<UIObject> &GetFocusedObject() const
+        { return m_focused_object; }
 
     UIEventHandlerResult OnInputEvent(
         InputManager *input_manager,
@@ -168,7 +167,7 @@ private:
     FlatSet<Weak<UIObject>>                         m_hovered_ui_objects;
     HashMap<KeyCode, Array<Weak<UIObject>>>         m_keyed_down_objects;
 
-    Weak<UIObject>                                  m_focused_object;
+    RC<UIObject>                                    m_focused_object;
 
     DelegateHandler                                 m_on_current_window_changed_handler;
 };

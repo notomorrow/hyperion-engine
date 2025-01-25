@@ -109,19 +109,19 @@ struct CommandLineArgumentDefinitions
 
     Array<CommandLineArgumentDefinition>   definitions;
 
-    CommandLineArgumentDefinitions()                                                   = default;
+    CommandLineArgumentDefinitions()                                                            = default;
     CommandLineArgumentDefinitions(const Array<CommandLineArgumentDefinition> &definitions)
         : definitions(definitions)
     {
     }
 
-    CommandLineArgumentDefinitions(const CommandLineArgumentDefinitions &other)                   = default;
-    CommandLineArgumentDefinitions &operator=(const CommandLineArgumentDefinitions &other)        = default;
+    CommandLineArgumentDefinitions(const CommandLineArgumentDefinitions &other)                 = default;
+    CommandLineArgumentDefinitions &operator=(const CommandLineArgumentDefinitions &other)      = default;
 
-    CommandLineArgumentDefinitions(CommandLineArgumentDefinitions &&other) noexcept               = default;
-    CommandLineArgumentDefinitions &operator=(CommandLineArgumentDefinitions &&other) noexcept    = default;
+    CommandLineArgumentDefinitions(CommandLineArgumentDefinitions &&other) noexcept             = default;
+    CommandLineArgumentDefinitions &operator=(CommandLineArgumentDefinitions &&other) noexcept  = default;
 
-    ~CommandLineArgumentDefinitions()                                                  = default;
+    ~CommandLineArgumentDefinitions()                                                           = default;
 
     // Add an argument - may be a string, int, float, bool.
     HYP_API CommandLineArgumentDefinitions &Add(

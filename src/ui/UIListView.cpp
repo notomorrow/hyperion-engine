@@ -54,7 +54,7 @@ void UIListViewItem::AddChildUIObject(const RC<UIObject> &ui_object)
         return;
     }
     
-    if (ui_object->GetType() == UIObjectType::LIST_VIEW_ITEM) {
+    if (ui_object->IsInstanceOf<UIListViewItem>()) {
         if (!m_expanded_element) {
             m_expanded_element = CreateUIObject<UIListView>(Vec2i { 10, m_inner_element->GetActualSize().y }, UIObjectSize({ 100, UIObjectSize::FILL }, { 0, UIObjectSize::AUTO }));
             m_expanded_element->SetIsVisible(m_is_expanded);
@@ -78,7 +78,7 @@ bool UIListViewItem::RemoveChildUIObject(UIObject *ui_object)
         return false;
     }
 
-    if (ui_object->GetType() == UIObjectType::LIST_VIEW_ITEM) {
+    if (ui_object->IsInstanceOf<UIListViewItem>()) {
         if (!m_expanded_element) {
             return false;
         }
@@ -175,7 +175,7 @@ void UIListView::AddChildUIObject(const RC<UIObject> &ui_object)
         return;
     }
 
-    if (ui_object->GetType() == UIObjectType::LIST_VIEW_ITEM) {
+    if (ui_object->IsInstanceOf<UIListViewItem>()) {
         m_list_view_items.PushBack(ui_object.Cast<UIListViewItem>());
 
         UIObject::AddChildUIObject(ui_object);
@@ -187,8 +187,6 @@ void UIListView::AddChildUIObject(const RC<UIObject> &ui_object)
 
         UIObject::AddChildUIObject(list_view_item);
     }
-
-    UpdateSize(false);
 }
 
 bool UIListView::RemoveChildUIObject(UIObject *ui_object)
@@ -235,9 +233,9 @@ void UIListView::UpdateSize_Internal(bool update_children)
 {
     HYP_SCOPE;
 
-    UIPanel::UpdateSize_Internal(update_children);
-
     UpdateLayout();
+
+    UIPanel::UpdateSize_Internal(update_children);
 }
 
 void UIListView::UpdateLayout()
@@ -249,8 +247,6 @@ void UIListView::UpdateLayout()
     }
 
     int y_offset = 0;
-
-    const Vec2i actual_size = GetActualSize();
 
     for (SizeType i = 0; i < m_list_view_items.Size(); i++) {
         UIObject *list_view_item = m_list_view_items[i];
@@ -353,7 +349,7 @@ UIListViewItem *UIListView::FindListViewItem(const UIObject *parent_object, cons
 
     parent_object->ForEachChildUIObject_Proc([&data_source_element_uuid, &result_ptr](UIObject *object)
     {
-        if (object->GetType() == UIObjectType::LIST_VIEW_ITEM && object->GetDataSourceElementUUID() == data_source_element_uuid) {
+        if (object->IsInstanceOf<UIListViewItem>() && object->GetDataSourceElementUUID() == data_source_element_uuid) {
             result_ptr = static_cast<UIListViewItem *>(object);
 
             return UIObjectIterationResult::STOP;
@@ -410,7 +406,7 @@ void UIListView::AddDataSourceElement(UIDataSourceBase *data_source, UIDataSourc
     }).Detach();
 
     // create UIObject for the element and add it to the list view
-    list_view_item->AddChildUIObject(data_source->GetElementFactory()->CreateUIObject(GetStage(), element->GetValue()));
+    list_view_item->AddChildUIObject(data_source->GetElementFactory()->CreateUIObject(list_view_item, element->GetValue()));
 
     if (parent) {
         // Child element - Find the parent

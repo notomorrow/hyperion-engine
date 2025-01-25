@@ -109,7 +109,9 @@ void UIDockableContainer::UpdateSize_Internal(bool update_children)
 
     UIPanel::UpdateSize_Internal(update_children);
 
-    UpdateLayout();
+    if (update_children) {
+        UpdateLayout();
+    }
 }
 
 void UIDockableContainer::UpdateLayout()

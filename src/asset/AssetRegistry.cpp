@@ -48,9 +48,31 @@ void AssetPackage::Init()
 
 AssetRegistry::AssetRegistry()
 {
-    m_packages.Insert({ CreateObject<AssetPackage>(NAME("Media")) });
-    m_packages.Insert({ CreateObject<AssetPackage>(NAME("Source")) });
-    m_packages.Insert({ CreateObject<AssetPackage>(NAME("Config")) });
+    const auto AddPackage = [this](Name name, WeakName parent_package_name = Name::Invalid())
+    {
+        Handle<AssetPackage> package = CreateObject<AssetPackage>(name);
+
+        if (parent_package_name.IsValid()) {
+            auto parent_package_it = m_packages.Find(parent_package_name);
+            AssertThrowMsg(parent_package_it != m_packages.End(), "No package with name '%s' found", Name(parent_package_name).LookupString());
+
+            package->m_parent_package = *parent_package_it;
+            
+            (*parent_package_it)->m_subpackages.Insert(std::move(package));
+
+            return;
+        }
+
+        m_packages.Insert(std::move(package));
+    };
+
+    AddPackage(NAME("Media"));
+    AddPackage(NAME("Textures"), "Media");
+    AddPackage(NAME("Models"), "Media");
+    AddPackage(NAME("Materials"), "Media");
+    
+    AddPackage(NAME("Scripts"));
+    AddPackage(NAME("Config"));
 }
 
 void AssetRegistry::Init()

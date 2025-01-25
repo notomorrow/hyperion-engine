@@ -274,7 +274,7 @@ void UIGrid::Init()
 
 void UIGrid::AddChildUIObject(const RC<UIObject> &ui_object)
 {
-    if (ui_object->GetType() == UIObjectType::GRID_ROW) {
+    if (ui_object->IsInstanceOf<UIGridRow>()) {
         RC<UIGridRow> row = ui_object->RefCountedPtrFromThis().CastUnsafe<UIGridRow>();
         row->SetNumColumns(m_num_columns);
 
@@ -385,13 +385,13 @@ void UIGrid::SetDataSource_Internal(UIDataSourceBase *data_source)
         row->SetDataSourceElementUUID(element->GetUUID());
 
         // add new columns
-        for (SizeType i = 0; i < m_num_columns; i++) {
+        for (int i = 0; i < m_num_columns; i++) {
             AssertThrow(GetStage() != nullptr);
 
             RC<UIGridColumn> column = row->AddColumn();
             AssertThrow(column != nullptr);
 
-            RC<UIObject> object = data_source_ptr->GetElementFactory()->CreateUIObject(GetStage(), element->GetValue());
+            RC<UIObject> object = data_source_ptr->GetElementFactory()->CreateUIObject(column, element->GetValue());
             AssertThrow(object != nullptr);
 
             column->AddChildUIObject(object);

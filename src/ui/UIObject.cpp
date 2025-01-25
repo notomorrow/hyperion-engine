@@ -297,6 +297,8 @@ void UIObject::OnAttached_Internal(UIObject *parent)
 
         UpdateComputedDepth();
 
+        SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, true);
+        SetDeferredUpdate(UIObjectUpdateType::UPDATE_CLAMPED_SIZE, true);
         SetDeferredUpdate(UIObjectUpdateType::UPDATE_MESH_DATA, true);
         SetDeferredUpdate(UIObjectUpdateType::UPDATE_COMPUTED_VISIBILITY, true);
     }
@@ -508,24 +510,20 @@ void UIObject::UpdateSize(bool update_children)
     UpdateSize_Internal(update_children);
 
     if (AffectsParentSize()) {
-        UIObject *parent = GetParentUIObject();
+        ForEachParentUIObject([](UIObject *parent)
+        {
+            if (!parent->UseAutoSizing()) {
+                return UIObjectIterationResult::STOP;
+            }
 
-        if (parent != nullptr && parent->UseAutoSizing()) {
-            ForEachParentUIObject([](UIObject *parent)
-            {
-                if (!parent->UseAutoSizing()) {
-                    return UIObjectIterationResult::STOP;
-                }
+            parent->SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, /* update_children */ false);
 
-                parent->SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, /* update_children */ false);
+            if (!parent->AffectsParentSize()) {
+                return UIObjectIterationResult::STOP;
+            }
 
-                if (!parent->AffectsParentSize()) {
-                    return UIObjectIterationResult::STOP;
-                }
-
-                return UIObjectIterationResult::CONTINUE;
-            });
-        }
+            return UIObjectIterationResult::CONTINUE;
+        });
     }
 
     SetDeferredUpdate(UIObjectUpdateType::UPDATE_COMPUTED_VISIBILITY, true);
@@ -1026,7 +1024,7 @@ void UIObject::UpdateComputedVisibility(bool update_children)
     bool computed_visibility = m_computed_visibility;
 
     // If the object is visible and has a stage (or if this is a UIStage), consider it
-    const bool has_stage = m_stage != nullptr || InstanceClass() == UIStage::Class();
+    const bool has_stage = m_stage != nullptr || IsInstanceOf<UIStage>();
 
     if (IsVisible() && has_stage) {
         if (UIObject *parent_ui_object = GetParentUIObject()) {
@@ -1746,7 +1744,7 @@ void UIObject::ComputeActualSize(const UIObjectSize &in_size, Vec2i &actual_size
     } else if (m_stage != nullptr) {
         self_padding = GetPadding();
         parent_size = m_stage->GetSurfaceSize();
-    } else if (InstanceClass() == UIStage::Class()) {
+    } else if (IsInstanceOf<UIStage>()) {
         actual_size = static_cast<UIStage *>(this)->GetSurfaceSize();
     } else {
         return;

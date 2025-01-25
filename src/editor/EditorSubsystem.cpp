@@ -147,9 +147,6 @@ void GenerateLightmapsEditorTask::Tick_Impl(float delta)
 
 #pragma region EditorSubsystem
 
-// temp
-#define HYP_EDITOR
-
 #ifdef HYP_EDITOR
 
 EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIStage> &ui_stage)
@@ -448,8 +445,7 @@ void EditorSubsystem::InitViewport()
             return UIEventHandlerResult::OK;
         }).Detach();
 
-        ui_image->OnMouseDrag.RemoveAll(this);
-        ui_image->OnMouseDrag.BindOwned(this, [this, ui_image = ui_image.Get()](const MouseEvent &event)
+        m_delegate_handlers.Add(ui_image->OnMouseDrag.Bind([this, ui_image = ui_image.Get()](const MouseEvent &event)
         {
             m_camera->GetCameraController()->GetInputHandler()->OnMouseDrag(event);
 
@@ -457,10 +453,9 @@ void EditorSubsystem::InitViewport()
             m_should_cancel_next_click = true;
 
             return UIEventHandlerResult::OK;
-        }).Detach();
+        }));
 
-        ui_image->OnMouseMove.RemoveAll(this);
-        ui_image->OnMouseMove.BindOwned(this, [this, ui_image = ui_image.Get()](const MouseEvent &event)
+        m_delegate_handlers.Add(ui_image->OnMouseMove.Bind([this, ui_image = ui_image.Get()](const MouseEvent &event)
         {
             m_camera->GetCameraController()->GetInputHandler()->OnMouseMove(event);
 
@@ -473,53 +468,56 @@ void EditorSubsystem::InitViewport()
             }
 
             return UIEventHandlerResult::OK;
-        }).Detach();
+        }));
 
-        ui_image->OnMouseDown.RemoveAll(this);
-        ui_image->OnMouseDown.BindOwned(this, [this, ui_image_weak = ui_image.ToWeak()](const MouseEvent &event)
+        m_delegate_handlers.Add(ui_image->OnMouseDown.Bind([this, ui_image_weak = ui_image.ToWeak()](const MouseEvent &event)
         {
             m_camera->GetCameraController()->GetInputHandler()->OnMouseDown(event);
 
             m_should_cancel_next_click = false;
 
             return UIEventHandlerResult::OK;
-        }).Detach();
+        }));
 
-        ui_image->OnMouseUp.RemoveAll(this);
-        ui_image->OnMouseUp.BindOwned(this, [this](const MouseEvent &event)
+        m_delegate_handlers.Add(ui_image->OnMouseUp.Bind([this](const MouseEvent &event)
         {
             m_camera->GetCameraController()->GetInputHandler()->OnMouseUp(event);
 
             m_should_cancel_next_click = false;
 
             return UIEventHandlerResult::OK;
-        }).Detach();
+        }));
 
-        ui_image->OnKeyDown.RemoveAll(this);
-        ui_image->OnKeyDown.BindOwned(this, [this](const KeyboardEvent &event)
+        m_delegate_handlers.Add(ui_image->OnKeyDown.Bind([this](const KeyboardEvent &event)
         {
+            HYP_LOG(Editor, Info, "KeyDown: {}", (uint32)event.key_code);
+            // On escape press, stop simulating if we're currently simulating
+            if (event.key_code == KeyCode::ESC && GetWorld()->GetGameState().IsSimulating()) {
+                GetWorld()->StopSimulating();
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
             if (m_camera->GetCameraController()->GetInputHandler()->OnKeyDown(event)) {
                 return UIEventHandlerResult::STOP_BUBBLING;
             }
 
             return UIEventHandlerResult::OK;
-        }).Detach();
+        }));
 
-        ui_image->OnGainFocus.RemoveAll(this);
-        ui_image->OnGainFocus.BindOwned(this, [this](const MouseEvent &event)
+        m_delegate_handlers.Add(ui_image->OnGainFocus.Bind([this](const MouseEvent &event)
         {
             m_editor_camera_enabled = true;
 
             return UIEventHandlerResult::OK;
-        }).Detach();
+        }));
 
-        ui_image->OnLoseFocus.RemoveAll(this);
-        ui_image->OnLoseFocus.BindOwned(this, [this](const MouseEvent &event)
+        m_delegate_handlers.Add(ui_image->OnLoseFocus.Bind([this](const MouseEvent &event)
         {
             m_editor_camera_enabled = false;
 
             return UIEventHandlerResult::OK;
-        }).Detach();
+        }));
 
         ui_image->SetTexture(m_scene_texture);
     } else {
@@ -818,7 +816,7 @@ void EditorSubsystem::InitDebugOverlays()
     }
 
     if (RC<UIImage> scene_image = GetUIStage()->FindChildUIObject(NAME("Scene_Image")).Cast<UIImage>()) {
-        scene_image->AddChildUIObject(m_debug_overlay_ui_object);
+        // scene_image->AddChildUIObject(m_debug_overlay_ui_object);
     }
 }
 
@@ -837,19 +835,21 @@ void EditorSubsystem::InitContentBrowser()
         if (list_view_item != nullptr) {
             if (const NodeTag &asset_package_tag = list_view_item->GetNodeTag("AssetPackage"); asset_package_tag.IsValid()) {
                 if (const Handle<AssetPackage> &asset_package = asset_package_tag.data.Get<Handle<AssetPackage>>()) {
-                    // @TODO Set as selected asset package in the content browser.
+                    SetSelectedPackage(asset_package);
 
-                    HYP_BREAKPOINT;
+                    return;
                 }
             }
         }
 
-        HYP_BREAKPOINT;
+        SetSelectedPackage(Handle<AssetPackage>::empty);
     }));
 }
 
 void EditorSubsystem::AddPackageToContentBrowser(const Handle<AssetPackage> &package, bool nested)
 {
+    HYP_SCOPE;
+
     if (UIDataSourceBase *data_source = m_content_browser_directory_list->GetDataSource()) {
         Handle<AssetPackage> parent_package = package->GetParentPackage().Lock();
 
@@ -863,6 +863,17 @@ void EditorSubsystem::AddPackageToContentBrowser(const Handle<AssetPackage> &pac
             AddPackageToContentBrowser(subpackage, true);
         }
     }
+}
+
+void EditorSubsystem::SetSelectedPackage(const Handle<AssetPackage> &package)
+{
+    HYP_SCOPE;
+
+    if (m_selected_package == package) {
+        return;
+    }
+
+    m_selected_package = package;
 }
 
 RC<FontAtlas> EditorSubsystem::CreateFontAtlas()

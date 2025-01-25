@@ -388,19 +388,17 @@ void UIStage::SetFocusedObject(const RC<UIObject> &ui_object)
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_id);
 
-    HYP_LOG(UI, Debug, "Set focused UIObject to: {}", ui_object != nullptr ? *ui_object->GetName() : "<none>");
+    if (ui_object == m_focused_object) {
+        return;
+    }
 
-    RC<UIObject> current_focused_ui_object = m_focused_object.Lock();
+    RC<UIObject> current_focused_ui_object = m_focused_object;
 
     // Be sure to set the focused object to nullptr before calling Blur() to prevent infinite recursion
     // due to Blur() calling SetFocusedObject() again.
     m_focused_object.Reset();
 
     if (current_focused_ui_object != nullptr) {
-        if (current_focused_ui_object == ui_object) {
-            return;
-        }
-
         // Only blur children if 
         const bool should_blur_children = ui_object == nullptr || !ui_object->IsOrHasParent(current_focused_ui_object);
 
@@ -408,6 +406,10 @@ void UIStage::SetFocusedObject(const RC<UIObject> &ui_object)
     }
 
     m_focused_object = ui_object;
+
+    if (UIObject *parent_stage = GetClosestParentUIObject(UIObjectType::STAGE)) {
+        static_cast<UIStage *>(parent_stage)->SetFocusedObject(ui_object);
+    }
 }
 
 void UIStage::ComputeActualSize(const UIObjectSize &in_size, Vec2i &out_actual_size, UpdateSizePhase phase, bool is_inner)
@@ -554,14 +556,16 @@ UIEventHandlerResult UIStage::OnInputEvent(
 
                     BoundingBoxComponent &bounding_box_component = ui_object->GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(ui_object->GetEntity());
 
-                    // HYP_LOG(UI, Debug, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, Size clamped: {}, Depth: {}",
-                    //     GetClass(ui_object.GetTypeID())->GetName(),
-                    //     ui_object->GetName(),
-                    //     ui_object->GetText(),
-                    //     ui_object->GetActualSize(),
-                    //     ui_object->GetActualInnerSize(),
-                    //     ui_object->GetActualSizeClamped(),
-                    //     ui_object->GetComputedDepth());
+                    HYP_LOG(UI, Debug, "Mouse hover on {}: {}, Text: {}, Size: {}, Inner size: {}, Node AABB: {}, USes autosizing: {}, Size clamped: {}, Depth: {}",
+                        GetClass(ui_object.GetTypeID())->GetName(),
+                        ui_object->GetName(),
+                        ui_object->GetText(),
+                        ui_object->GetActualSize(),
+                        ui_object->GetActualInnerSize(),
+                        ui_object->GetNode()->GetWorldAABB().GetExtent(),
+                        ui_object->UseAutoSizing(),
+                        ui_object->GetActualSizeClamped(),
+                        ui_object->GetComputedDepth());
 
                     if (mouse_hover_event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {
                         break;
@@ -788,7 +792,9 @@ UIEventHandlerResult UIStage::OnInputEvent(
     {
         const KeyCode key_code = event.GetNormalizedKeyCode();
 
-        RC<UIObject> ui_object = m_focused_object.Lock();
+        HYP_LOG(UI, Debug, "OnKeyDown: {}, m_focused_object = {} for stage {}", uint32(key_code), m_focused_object != nullptr ? *m_focused_object->GetName() : "<none>", (void *)this);
+
+        RC<UIObject> ui_object = m_focused_object;
 
         while (ui_object != nullptr) {
             HYP_LOG(UI, Debug, "OnKeyDown for {}", ui_object->GetName());
