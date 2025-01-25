@@ -89,9 +89,16 @@ namespace FooBar
 
     public class EditorMain : UIEventHandler
     {
+        FirstPersonCameraController? firstPersonCameraController;
+
         public override void Init(Entity entity)
         {
             base.Init(entity);
+
+            // // test
+            // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+            // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
+            // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
         }
 
         public override void OnPlayStart()
@@ -100,11 +107,7 @@ namespace FooBar
 
             var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-            // test
-            editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
-            editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
-
-            var firstPersonCameraController = new FirstPersonCameraController();
+            firstPersonCameraController = new FirstPersonCameraController();
             editorSubsystem.GetScene().GetCamera().AddCameraController(firstPersonCameraController);
 
             firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
@@ -113,6 +116,19 @@ namespace FooBar
         public override void OnPlayStop()
         {
             Logger.Log(LogType.Info, "OnPlayStop");
+
+            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+            if (!editorSubsystem.GetScene().GetCamera().RemoveCameraController(firstPersonCameraController))
+            {
+                Logger.Log(LogType.Error, "Failed to remove camera controller!");
+
+                return;
+            }
+
+            firstPersonCameraController = null;
+
+            Logger.Log(LogType.Info, "Camera controller removed");
         }
 
         public UIEventHandlerResult SimulateClicked()
