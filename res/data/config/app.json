@@ -19,7 +19,7 @@
       "enabled": false
     },
     "taa": {
-      "enabled": false
+      "enabled": true
     },
     "debug": {
       "ssr": false,

@@ -109,9 +109,9 @@ void SkydomeRenderer::OnRender(Frame *frame)
         return;
     }
 
-    if (!m_env_probe->NeedsRender()) {
-        return;
-    }
+    // if (!m_env_probe->NeedsRender()) {
+    //     return;
+    // }
 
     m_env_probe->Render(frame);
 

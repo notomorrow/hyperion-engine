@@ -164,8 +164,8 @@ class HYP_API NullStreamedData final : public StreamedData
     HYP_OBJECT_BODY(NullStreamedData);
 
 public:
-    NullStreamedData()                                          = default;
-    virtual ~NullStreamedData() override                        = default;
+    NullStreamedData()                      = default;
+    virtual ~NullStreamedData() override    = default;
 
     StreamedDataRef<NullStreamedData> AcquireRef()
         { return { RefCountedPtrFromThis().CastUnsafe<NullStreamedData>() }; }

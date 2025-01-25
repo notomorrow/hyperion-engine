@@ -356,7 +356,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                         shared_queue.has_updates.Set(true, MemoryOrder::RELEASE);
 
                         HYP_LOG(WorldGrid, Info, "Patch generation at {} completed on thread {}", patch_info.coord, Threads::CurrentThreadID().name);
-                    });
+                    }, TaskThreadPoolName::THREAD_POOL_BACKGROUND);
                     
                     m_state.patch_generation_tasks.Insert(initial_patch_info.coord, std::move(generation_task));
                 }

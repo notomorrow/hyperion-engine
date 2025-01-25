@@ -705,7 +705,7 @@ void LightmapJob::Start()
             m_build_uv_map_task = TaskSystem::GetInstance().Enqueue([this]() -> Result<LightmapUVMap>
             {
                 return BuildUVMap();
-            });
+            }, TaskThreadPoolName::THREAD_POOL_BACKGROUND);
         }
     });
 }

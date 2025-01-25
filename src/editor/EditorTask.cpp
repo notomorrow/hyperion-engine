@@ -42,7 +42,7 @@ void LongRunningEditorTask::Commit()
     m_task = TaskSystem::GetInstance().Enqueue([this]()
     {
         Process();
-    });
+    }, TaskThreadPoolName::THREAD_POOL_BACKGROUND);
 }
 
 void LongRunningEditorTask::Cancel_Impl()

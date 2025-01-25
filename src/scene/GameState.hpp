@@ -24,6 +24,14 @@ struct GameState
 
     HYP_FIELD()
     float           game_time = 0.0;
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsEditor() const
+        { return mode == GameStateMode::EDITOR; }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsSimulating() const
+        { return mode == GameStateMode::SIMULATING; }
 };
 
 } // namespace hyperion

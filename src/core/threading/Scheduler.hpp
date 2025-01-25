@@ -75,7 +75,7 @@ protected:
     bool WaitForTasks(std::unique_lock<std::mutex> &lock);
 
     uint32                  m_id_counter = 0;
-    AtomicVar<uint32>         m_num_enqueued { 0 };
+    AtomicVar<uint32>       m_num_enqueued { 0 };
     AtomicVar<bool>         m_stop_requested { false };
 
     mutable std::mutex      m_mutex;

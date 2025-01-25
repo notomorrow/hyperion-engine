@@ -52,6 +52,8 @@ public:
     virtual void Init() override;
 
 protected:
+    virtual void OnAttached_Internal(UIObject *parent) override;
+
     virtual void UpdateSize_Internal(bool update_children) override;
 
     virtual void OnScrollOffsetUpdate_Internal(Vec2f delta) override;
@@ -63,6 +65,7 @@ protected:
 private:
     void SetScrollbarVisible(UIObjectScrollbarOrientation orientation, bool visible);
 
+    void UpdateScrollbarSizes();
     void UpdateScrollbarSize(UIObjectScrollbarOrientation orientation);
     void UpdateScrollbarThumbPosition(UIObjectScrollbarOrientation orientation);
 

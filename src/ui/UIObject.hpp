@@ -601,6 +601,11 @@ public:
     HYP_FORCE_INLINE Vec2i GetActualInnerSize() const
         { return m_actual_inner_size; }
 
+    HYP_FORCE_INLINE bool UseAutoSizing() const
+    {
+        return (GetSize().GetAllFlags() | GetInnerSize().GetAllFlags() | GetMaxSize().GetAllFlags()) & UIObjectSize::AUTO;
+    }
+
     /*! \brief Get the scroll offset (in pixels) of the UI object.
      *  \return The scroll offset of the UI object */
     HYP_METHOD()
@@ -1118,11 +1123,6 @@ public:
 protected:
     RC<UIObject> GetClosestParentUIObject_Proc(const ProcRef<bool, UIObject *> &proc) const;
     RC<UIObject> GetClosestSpawnParent_Proc(const ProcRef<bool, UIObject *> &proc) const;
-
-    HYP_FORCE_INLINE bool UseAutoSizing() const
-    {
-        return (GetSize().GetAllFlags() | GetInnerSize().GetAllFlags() | GetMaxSize().GetAllFlags()) & UIObjectSize::AUTO;
-    }
 
     HYP_FORCE_INLINE void SetReceivesUpdate(bool receives_update)
         { m_receives_update = receives_update; }

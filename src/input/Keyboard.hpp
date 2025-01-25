@@ -82,6 +82,8 @@ enum class KeyCode : uint16
     ARROW_LEFT = 80,
     ARROW_DOWN = 81,
     ARROW_UP = 82,
+
+    ESC = 27
 };
 
 HYP_API bool KeyCodeToChar(KeyCode key_code, bool shift, bool alt, bool ctrl, char &out_char);
