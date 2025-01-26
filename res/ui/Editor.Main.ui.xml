@@ -64,7 +64,7 @@
                     
                     <Grid size="100% fill" position="0 35" padding="0 2" cols="12" backgroundColor="#000000">
                         <GridRow size="100%">
-                            <GridColumn size="auto 100%" colsize="2" padding="1">
+                            <GridColumn size="100%" colsize="2" padding="1">
                                 <Grid size="100%" backgroundColor="#101012">
                                     <GridRow name="Browse_Heading" size="100% 35" backgroundColor="#000000">
                                         <Text textSize="12" originAlignment="center" parentAlignment="center">Library</Text>
@@ -78,8 +78,12 @@
                                 </Grid>
                             </GridColumn>
                             <GridColumn size="auto 100%" colsize="10" padding="1">
-                                <Panel name="ContentBrowser_Directory_Contents_Panel" size="100%" backgroundColor="#101012" padding="5">
+                                <Panel name="ContentBrowser_Contents_Empty" size="100%" backgroundColor="#101012" visible="false">
+                                    <Text textSize="12" originAlignment="center" parentAlignment="center">No assets found</Text>
                                 </Panel>
+
+                                <Grid name="ContentBrowser_Contents" size="100%" cols="6" backgroundColor="#101012" padding="5" innerSize="100% auto">
+                                </Grid>
                             </GridColumn>
                         </GridRow>
                     </Grid>
