@@ -57,7 +57,7 @@
                 <Tab name="Assets_Tab" text="Assets">
                     <Script assembly="Hyperion.Editor.UI.dll" class="ContentBrowser" />
                     <Panel size="100% 35" padding="0 2">
-                        <Button size="50 fill" onclick="ImportClicked">
+                        <Button name="ContentBrowser_Import_Button" size="50 fill">
                             Import
                         </Button>
                     </Panel>

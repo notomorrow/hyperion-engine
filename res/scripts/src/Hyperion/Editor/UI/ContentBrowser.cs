@@ -3,19 +3,22 @@ using System;
 using System.IO;
 using Hyperion;
 
-namespace FooBar
+namespace Hyperion
 {
-    public class ContentBrowser : UIEventHandler
+    namespace Editor
     {
-        public override void Init(Entity entity)
+        public class ContentBrowser : UIEventHandler
         {
-            base.Init(entity);
-        }
+            public override void Init(Entity entity)
+            {
+                base.Init(entity);
+            }
 
-        [UIEvent(AllowNested = true)]
-        public void ImportClicked()
-        {
-            Logger.Log(LogType.Info, "Import content clicked");
+            [UIEvent(AllowNested = true)]
+            public void ImportClicked()
+            {
+                Logger.Log(LogType.Info, "Import content clicked");
+            }
         }
     }
 }
