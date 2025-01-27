@@ -3,250 +3,247 @@ using System;
 using System.IO;
 using Hyperion;
 
-namespace FooBar
+namespace Hyperion
 {
-    // temp
-    class TestDataSource : UIDataSource
+    namespace Editor
     {
-
-    }
-
-    public class TestEditorTask : LongRunningEditorTask
-    {
-        public TestEditorTask()
+        public class TestEditorTask : LongRunningEditorTask
         {
-        }
-
-        public override void Cancel()
-        {
-            Logger.Log(LogType.Info, "Cancel task");
-        }
-
-        public override bool IsCompleted()
-        {
-            return false;
-        }
-
-        public override void Process()
-        {
-            Logger.Log(LogType.Info, "Process task! testing");
-        }
-    }
-
-    public class TestEditorDebugOverlay : EditorDebugOverlayBase
-    {
-        public TestEditorDebugOverlay()
-        {
-        }
-
-        public override UIObject CreateUIObject(UIObject spawnParent)
-        {
-            return spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 100), UIObjectSize.Pixel));
-        }
-
-        public override Name GetName()
-        {
-            return new Name("TestEditorDebugOverlay");
-        }
-
-        public override bool IsEnabled()
-        {
-            return true;
-        }
-
-        public override void Update()
-        {
-        }
-    }
-
-    public class TestEditorDebugOverlay2 : EditorDebugOverlayBase
-    {
-        public TestEditorDebugOverlay2()
-        {
-        }
-
-        public override UIObject CreateUIObject(UIObject spawnParent)
-        {
-            var image = spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay2"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 50), UIObjectSize.Pixel));
-            image.SetBackgroundColor(new Color(1.0f, 0.0f, 0.0f, 1.0f));
-            return image;
-        }
-
-        public override Name GetName()
-        {
-            return new Name("TestEditorDebugOverlay2");
-        }
-
-        public override bool IsEnabled()
-        {
-            return true;
-        }
-
-        public override void Update()
-        {
-        }
-    }
-
-    public class EditorMain : UIEventHandler
-    {
-        FirstPersonCameraController? firstPersonCameraController;
-
-        public override void Init(Entity entity)
-        {
-            base.Init(entity);
-
-            // // test
-            // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-            // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
-            // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
-        }
-
-        public override void OnPlayStart()
-        {
-            Logger.Log(LogType.Info, "OnPlayStart");
-
-            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-
-            firstPersonCameraController = new FirstPersonCameraController();
-            editorSubsystem.GetScene().GetCamera().AddCameraController(firstPersonCameraController);
-
-            firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
-        }
-
-        public override void OnPlayStop()
-        {
-            Logger.Log(LogType.Info, "OnPlayStop");
-
-            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-
-            if (!editorSubsystem.GetScene().GetCamera().RemoveCameraController(firstPersonCameraController))
+            public TestEditorTask()
             {
-                Logger.Log(LogType.Error, "Failed to remove camera controller!");
-
-                return;
             }
 
-            firstPersonCameraController = null;
+            public override void Cancel()
+            {
+                Logger.Log(LogType.Info, "Cancel task");
+            }
 
-            Logger.Log(LogType.Info, "Camera controller removed");
+            public override bool IsCompleted()
+            {
+                return false;
+            }
+
+            public override void Process()
+            {
+                Logger.Log(LogType.Info, "Process task! testing");
+            }
         }
 
-        public UIEventHandlerResult SimulateClicked()
+        public class TestEditorDebugOverlay : EditorDebugOverlayBase
         {
-            // Test: Force GC
-            GC.Collect();
-
-            World world = Scene.GetWorld();
-            
-            if (world.GetGameState().Mode == GameStateMode.Simulating)
+            public TestEditorDebugOverlay()
             {
-                Logger.Log(LogType.Info, "Stop simulation");
-
-                world.StopSimulating();
-                return UIEventHandlerResult.Ok;
             }
 
-            Logger.Log(LogType.Info, "Start simulation");
-
-            world.StartSimulating();
-
-            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-
-            if (editorSubsystem == null)
+            public override UIObject CreateUIObject(UIObject spawnParent)
             {
-                Logger.Log(LogType.Error, "EditorSubsystem not found");
-
-                return UIEventHandlerResult.Error;
+                return spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 100), UIObjectSize.Pixel));
             }
 
-            return UIEventHandlerResult.Ok;
+            public override Name GetName()
+            {
+                return new Name("TestEditorDebugOverlay");
+            }
+
+            public override bool IsEnabled()
+            {
+                return true;
+            }
+
+            public override void Update()
+            {
+            }
         }
 
-        public UIEventHandlerResult UndoClicked()
+        public class TestEditorDebugOverlay2 : EditorDebugOverlayBase
         {
-            Logger.Log(LogType.Info, "Undo clicked");
-
-            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-
-            if (editorSubsystem == null)
+            public TestEditorDebugOverlay2()
             {
-                Logger.Log(LogType.Error, "EditorSubsystem not found");
-
-                return UIEventHandlerResult.Error;
             }
 
-            if (!editorSubsystem.GetActionStack().CanUndo())
+            public override UIObject CreateUIObject(UIObject spawnParent)
             {
-                Logger.Log(LogType.Info, "Cannot undo, stack is empty");
-
-                return UIEventHandlerResult.Ok;
+                var image = spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay2"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 50), UIObjectSize.Pixel));
+                image.SetBackgroundColor(new Color(1.0f, 0.0f, 0.0f, 1.0f));
+                return image;
             }
 
-            editorSubsystem.GetActionStack().Undo();
+            public override Name GetName()
+            {
+                return new Name("TestEditorDebugOverlay2");
+            }
 
-            return UIEventHandlerResult.Ok;
+            public override bool IsEnabled()
+            {
+                return true;
+            }
+
+            public override void Update()
+            {
+            }
         }
 
-        public UIEventHandlerResult RedoClicked()
+        public class EditorMain : UIEventHandler
         {
-            Logger.Log(LogType.Info, "Redo clicked");
+            FirstPersonCameraController? firstPersonCameraController;
 
-            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-
-            if (editorSubsystem == null)
+            public override void Init(Entity entity)
             {
-                Logger.Log(LogType.Error, "EditorSubsystem not found");
-                
-                return UIEventHandlerResult.Error;
+                base.Init(entity);
+
+                // // test
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
+                // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
             }
 
-            if (!editorSubsystem.GetActionStack().CanRedo())
+            public override void OnPlayStart()
             {
-                Logger.Log(LogType.Info, "Cannot redo, stack is empty");
+                Logger.Log(LogType.Info, "OnPlayStart");
 
-                return UIEventHandlerResult.Ok;
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                firstPersonCameraController = new FirstPersonCameraController();
+                editorSubsystem.GetScene().GetCamera().AddCameraController(firstPersonCameraController);
+
+                firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
             }
 
-            editorSubsystem.GetActionStack().Redo();
-
-            return UIEventHandlerResult.Ok;
-        }
-
-        public UIEventHandlerResult AddNodeClicked()
-        {
-            var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-
-            if (editorSubsystem == null)
+            public override void OnPlayStop()
             {
-                Logger.Log(LogType.Error, "EditorSubsystem not found");
+                Logger.Log(LogType.Info, "OnPlayStop");
 
-                return UIEventHandlerResult.Ok;
-            }
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-            var node = new Node();
-            node.SetName("New Node");
-
-            editorSubsystem.GetActionStack().Push(new EditorAction(
-                new Name("AddNewNode"),
-                () =>
+                if (!editorSubsystem.GetScene().GetCamera().RemoveCameraController(firstPersonCameraController))
                 {
-                    editorSubsystem.GetScene().GetRoot().AddChild(node);
-                    editorSubsystem.SetFocusedNode(node);
-                },
-                () =>
-                {
-                    node.Remove();
+                    Logger.Log(LogType.Error, "Failed to remove camera controller!");
 
-                    if (editorSubsystem.GetFocusedNode() == node)
-                    {
-                        editorSubsystem.SetFocusedNode(null);
-                    }
+                    return;
                 }
-            ));
 
-            // @TODO Focus on node in scene view
+                firstPersonCameraController = null;
 
-            return UIEventHandlerResult.Ok;
+                Logger.Log(LogType.Info, "Camera controller removed");
+            }
+
+            public UIEventHandlerResult SimulateClicked()
+            {
+                // Test: Force GC
+                GC.Collect();
+
+                World world = Scene.GetWorld();
+                
+                if (world.GetGameState().Mode == GameStateMode.Simulating)
+                {
+                    Logger.Log(LogType.Info, "Stop simulation");
+
+                    world.StopSimulating();
+                    return UIEventHandlerResult.Ok;
+                }
+
+                Logger.Log(LogType.Info, "Start simulation");
+
+                world.StartSimulating();
+
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                return UIEventHandlerResult.Ok;
+            }
+
+            public UIEventHandlerResult UndoClicked()
+            {
+                Logger.Log(LogType.Info, "Undo clicked");
+
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                if (!editorSubsystem.GetActionStack().CanUndo())
+                {
+                    Logger.Log(LogType.Info, "Cannot undo, stack is empty");
+
+                    return UIEventHandlerResult.Ok;
+                }
+
+                editorSubsystem.GetActionStack().Undo();
+
+                return UIEventHandlerResult.Ok;
+            }
+
+            public UIEventHandlerResult RedoClicked()
+            {
+                Logger.Log(LogType.Info, "Redo clicked");
+
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                    
+                    return UIEventHandlerResult.Error;
+                }
+
+                if (!editorSubsystem.GetActionStack().CanRedo())
+                {
+                    Logger.Log(LogType.Info, "Cannot redo, stack is empty");
+
+                    return UIEventHandlerResult.Ok;
+                }
+
+                editorSubsystem.GetActionStack().Redo();
+
+                return UIEventHandlerResult.Ok;
+            }
+
+            public UIEventHandlerResult AddNodeClicked()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Ok;
+                }
+
+                var node = new Node();
+                node.SetName("New Node");
+
+                editorSubsystem.GetActionStack().Push(new EditorAction(
+                    new Name("AddNewNode"),
+                    () =>
+                    {
+                        editorSubsystem.GetScene().GetRoot().AddChild(node);
+                        editorSubsystem.SetFocusedNode(node);
+                    },
+                    () =>
+                    {
+                        node.Remove();
+
+                        if (editorSubsystem.GetFocusedNode() == node)
+                        {
+                            editorSubsystem.SetFocusedNode(null);
+                        }
+                    }
+                ));
+
+                // @TODO Focus on node in scene view
+
+                return UIEventHandlerResult.Ok;
+            }
         }
     }
 }
