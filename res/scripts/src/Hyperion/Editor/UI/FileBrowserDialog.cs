@@ -9,11 +9,85 @@ namespace Hyperion
     namespace Editor
     {
         [HypClassBinding(IsDynamic = true)]
-        public struct FileInfo
+        public unsafe struct FileInfo
         {
-            public string Name { get; set; }
-            public string Path { get; set; }
-            public bool IsDirectory { get; set; }
+            private fixed byte name[2048];
+            private fixed byte path[4096];
+            private bool isDirectory;
+
+            public string Name
+            {
+                get
+                {
+                    fixed (byte* namePtr = name)
+                    {
+                        return new string((sbyte*)namePtr);
+                    }
+                }
+                set
+                {
+                    fixed (byte* namePtr = name)
+                    {
+                        for (int i = 0; i < 2048; i++)
+                        {
+                            name[i] = 0;
+                        }
+
+                        for (int i = 0; i < value.Length; i++)
+                        {
+                            if (i == 2047)
+                            {
+                                break;
+                            }
+
+                            name[i] = (byte)value[i];
+                        }
+                    }
+                }
+            }
+
+            public string Path
+            {
+                get
+                {
+                    fixed (byte* pathPtr = path)
+                    {
+                        return new string((sbyte*)pathPtr);
+                    }
+                }
+                set
+                {
+                    fixed (byte* pathPtr = path)
+                    {
+                        for (int i = 0; i < 4096; i++)
+                        {
+                            path[i] = 0;
+                        }
+
+                        for (int i = 0; i < value.Length; i++)
+                        {
+                            if (i == 4095)
+                            {
+                                break;
+                            }
+
+                            path[i] = (byte)value[i];
+                        }
+                    }
+                }
+            }
+
+            public bool IsDirectory
+            {
+                get
+                {
+                    return isDirectory;
+                }
+                set
+                {
+                    isDirectory = value;
+                }
+            }
         }
 
         public class FileInfoUIElementFactory : UIElementFactoryBase
@@ -22,18 +96,21 @@ namespace Hyperion
             {
                 FileInfo fileInfo = (FileInfo)value;
 
-                UIText text = parent.Spawn<UIText>();
-                text.SetText(fileInfo.Name.ToString());
+                UIButton button = parent.Spawn<UIButton>(new Name("Button"));
+                button.SetSize(new UIObjectSize(100, UIObjectSizeFlags.Percent, 100, UIObjectSizeFlags.Percent));
+                button.SetText(fileInfo.Name);
+                button.SetBorderRadius(0);
+                button.SetBackgroundColor(new Color(0));
                 
-                return text;
+                return button;
             }
 
             public override void UpdateUIObject(UIObject uiObject, object value, object context)
             {
                 FileInfo fileInfo = (FileInfo)value;
 
-                UIText text = (UIText)uiObject;
-                text.SetText(fileInfo.Name.ToString());
+                UIButton button = (UIButton)uiObject;
+                button.SetText(fileInfo.Name);
             }
         }
 

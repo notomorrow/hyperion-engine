@@ -20,6 +20,6 @@
     <Panel name="File_Browser_Dialog_NoData_Panel" size="100% fill" position="0 30" visible="false">
         <Label text="This directory is empty." />
     </Panel>
-    <Grid name="File_Browser_Dialog_Contents" size="100% fill" position="0 30" cols="2" backgroundColor="#101012" padding="5" innerSize="100% auto" OnInit="OnInit">
+    <Grid name="File_Browser_Dialog_Contents" size="100% fill" position="0 30" cols="3" backgroundColor="#101012" padding="5" innerSize="100% auto" OnInit="OnInit">
     </Grid>
 </Window>
