@@ -90,6 +90,14 @@ namespace Hyperion
             }
         }
 
+        public class TempClass
+        {
+            public void Invoke()
+            {
+                Logger.Log(LogType.Info, "Invoked");
+            }
+        }
+
         public class FileInfoUIElementFactory : UIElementFactoryBase
         {
             public override UIObject CreateUIObject(UIObject parent, object value, object context)
@@ -101,6 +109,13 @@ namespace Hyperion
                 button.SetText(fileInfo.Name);
                 button.SetBorderRadius(0);
                 button.SetBackgroundColor(new Color(0));
+
+                // Testing
+                HypField? onAttachedField = button.HypClass.GetField(new Name("OnAttached", weak: true));
+                Assert.Throw(onAttachedField != null);
+                IntPtr onAttachedFieldAddress = button.NativeAddress + (IntPtr)((HypField)onAttachedField).Offset;
+                ScriptableDelegate del = new ScriptableDelegate(onAttachedFieldAddress);
+                del.Bind(new TempClass());
                 
                 return button;
             }
