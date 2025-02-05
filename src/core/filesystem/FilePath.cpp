@@ -23,13 +23,9 @@
 namespace hyperion {
 namespace filesystem {
 
-int FilePath::MkDir() const
+bool FilePath::MkDir() const
 {
-#if HYP_WINDOWS
-    return ::_mkdir(Data());
-#else
-    return ::mkdir(Data(), 0755);
-#endif
+    return Exists() || std::filesystem::create_directories(Data());
 }
 
 HYP_API String FilePath::GetExtension() const

@@ -58,13 +58,16 @@ public:
         const FilePath &working_directory,
         const FilePath &source_directory,
         const FilePath &cxx_output_directory,
-        const FilePath &csharp_output_directory
+        const FilePath &csharp_output_directory,
+        const HashSet<FilePath> &exclude_directories
     ) : m_driver(std::move(driver))
     {
         m_analyzer.SetWorkingDirectory(working_directory);
         m_analyzer.SetSourceDirectory(source_directory);
         m_analyzer.SetCXXOutputDirectory(cxx_output_directory);
         m_analyzer.SetCSharpOutputDirectory(csharp_output_directory);
+
+        m_analyzer.SetExcludeDirectories(exclude_directories);
 
         m_analyzer.SetGlobalDefines(GetGlobalDefines());
         m_analyzer.SetIncludePaths(GetIncludePaths());
@@ -158,6 +161,17 @@ private:
 
         IterateFilesAndSubdirectories = [&](const FilePath &dir)
         {
+            for (const String &exclude_dir : m_analyzer.GetExcludeDirectories()) {
+                const FilePath exclude_dir_relative = FilePath(FileSystem::RelativePath(exclude_dir.Data(), m_analyzer.GetSourceDirectory().Data()).c_str());
+                const FilePath relative_path = FilePath(FileSystem::RelativePath(dir.Data(), m_analyzer.GetSourceDirectory().Data()).c_str());
+
+                if (relative_path.StartsWith(exclude_dir_relative)) {
+                    HYP_LOG(BuildTool, Info, "Excluding directory: {}", dir);
+
+                    return;
+                }
+            }
+
             Array<Module *> local_modules;
             
             for (const FilePath &file : dir.GetAllFilesInDirectory()) {
@@ -297,18 +311,30 @@ int main(int argc, char **argv)
             .Add("SourceDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING)
             .Add("CXXOutputDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING)
             .Add("CSharpOutputDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING)
+            .Add("ExcludeDirectories", "e", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING, json::JSONArray())
             .Add("Mode", "m", "", CommandLineArgumentFlags::NONE, Array<String> { "ParseHeaders" }, String("ParseHeaders"))
     };
 
     if (auto parse_result = arg_parse.Parse(argc, argv)) {
         TaskSystem::GetInstance().Start();
 
+        HashSet<FilePath> exclude_directories;
+
+        if (parse_result.GetValue().Contains("ExcludeDirectories")) {
+            const json::JSONArray &exclude_directories_json = parse_result.GetValue()["ExcludeDirectories"].AsArray();
+
+            for (const json::JSONValue &value : exclude_directories_json) {
+                exclude_directories.Insert(value.ToString());
+            }
+        }
+
         buildtool::HypBuildTool build_tool {
             MakeUnique<ClangDriver>(),
             FilePath(parse_result.GetValue()["WorkingDirectory"].AsString()),
             FilePath(parse_result.GetValue()["SourceDirectory"].AsString()),
             FilePath(parse_result.GetValue()["CXXOutputDirectory"].AsString()),
-            FilePath(parse_result.GetValue()["CSharpOutputDirectory"].AsString())
+            FilePath(parse_result.GetValue()["CSharpOutputDirectory"].AsString()),
+            exclude_directories
         };
         
         Result<void> res = build_tool.Run();

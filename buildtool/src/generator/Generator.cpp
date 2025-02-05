@@ -5,10 +5,14 @@
 #include <analyzer/Analyzer.hpp>
 #include <analyzer/Module.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <asset/ByteWriter.hpp>
 
 namespace hyperion {
 namespace buildtool {
+
+HYP_DECLARE_LOG_CHANNEL(BuildTool);
     
 Result<void> GeneratorBase::Generate(const Analyzer &analyzer, const Module &mod) const
 {
@@ -20,11 +24,13 @@ Result<void> GeneratorBase::Generate(const Analyzer &analyzer, const Module &mod
 
     const FilePath base_path = output_file_path.BasePath();
 
-    if (!base_path.Exists()) {
+    if (!base_path.IsDirectory()) {
         base_path.MkDir();
     }
 
-    if (!base_path.Exists()) {
+    if (!base_path.IsDirectory()) {
+        HYP_LOG(BuildTool, Error, "Failed to create output directory: {}", base_path);
+
         return HYP_MAKE_ERROR(Error, "Failed to create output directory");
     }
 

@@ -56,6 +56,12 @@ public:
     HYP_FORCE_INLINE void SetCSharpOutputDirectory(const FilePath &csharp_output_directory)
         { m_csharp_output_directory = csharp_output_directory; }
 
+    HYP_FORCE_INLINE const HashSet<FilePath> &GetExcludeDirectories() const
+        { return m_exclude_directories; }
+
+    HYP_FORCE_INLINE void SetExcludeDirectories(const HashSet<FilePath> &exclude_directories)
+        { m_exclude_directories = exclude_directories; }
+
     HYP_FORCE_INLINE const AnalyzerState &GetState() const
         { return m_state; }
 
@@ -90,6 +96,9 @@ private:
     FilePath                    m_source_directory;
     FilePath                    m_cxx_output_directory;
     FilePath                    m_csharp_output_directory;
+
+    HashSet<FilePath>           m_exclude_directories;
+
     AnalyzerState               m_state;
     Array<UniquePtr<Module>>    m_modules;
     mutable Mutex               m_mutex;
