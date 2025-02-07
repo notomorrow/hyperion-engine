@@ -36,11 +36,7 @@ layout(push_constant) uniform PushConstants
 
 void main()
 {
-    const uvec2 pixel_coord = gl_GlobalInvocationID.xy;
-    
-    if (any(greaterThanEqual(pixel_coord, dimensions))) {
-        return;
-    }
+    const uvec2 pixel_coord = gl_GlobalInvocationID.xy % dimensions;
 
     const vec2 uv = (vec2(pixel_coord) + 0.5) / vec2(dimensions);
 
@@ -107,8 +103,6 @@ void main()
     vec4 result = TemporalLuminanceResolve(color, YCoCgToRGB(clipped));
 
 #endif
-
-    result = any(isnan(result)) ? vec4(0.0, 1.0, 0.0, 1.0) : result;
 
     imageStore(output_image, clamp(ivec2(pixel_coord), ivec2(0.0), ivec2(dimensions - 1)), result);
 }

@@ -77,8 +77,6 @@ void main()
         return;
     }
 
-    vec3 irradiance = vec3(0.0);
-
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, v_texcoord).r;
     const vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, v_texcoord)));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
