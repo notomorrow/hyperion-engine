@@ -110,7 +110,6 @@ void main(void)
     if (alpha > HYP_FMATH_EPSILON) {
         roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
         roughness = clamp(roughness, 0.001, 0.999);
-        const float perceptual_roughness = sqrt(roughness);
 
         const float gloss = 1.0 - roughness;
         const float cone_angle = RoughnessToConeAngle(roughness) * 0.5;

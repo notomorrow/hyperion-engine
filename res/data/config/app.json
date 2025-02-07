@@ -1,7 +1,11 @@
 {
   "rendering": {
     "ssr": {
-      "quality": "low",
+      "num_iterations": 64,
+      "eye_fade": [0.980000, 0.990000],
+      "ray_step": 0.650000,
+      "screen_edge_fade": [0.960000, 0.990000],
+      "quality": 1,
       "roughness_scattering": true,
       "enabled": false,
       "cone_tracing": true
@@ -22,12 +26,12 @@
       "enabled": true
     },
     "debug": {
-      "ssr": false,
-      "hbao": false,
-      "hbil": false,
       "env_grid_probes": false,
       "reflection_probes": false,
+      "ssr": false,
       "reflections": false,
+      "hbil": false,
+      "hbao": false,
       "irradiance": false
     },
     "hbil": {
@@ -38,8 +42,8 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false,
-        "mode": "sh"
+        "mode": "sh",
+        "enabled": false
       }
     },
     "hbao": {
@@ -51,8 +55,8 @@
     "args": "-ResX=1280 -ResY=720 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
-    "ideal_triangles_per_job": 4096,
     "gpu": false,
-    "threads": 16
+    "threads": 16,
+    "ideal_triangles_per_job": 4096
   }
 }
