@@ -1,0 +1,115 @@
+
+#version 450
+
+#extension GL_GOOGLE_include_directive : require
+
+#define WORKGROUP_SIZE 32
+
+layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
+
+#include "../include/defines.inc"
+#include "../include/shared.inc"
+#include "../include/noise.inc"
+#include "../include/Octahedron.glsl"
+
+HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InColorImage) uniform textureCube color_texture;
+HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InNormalsImage) uniform textureCube normals_texture;
+HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InDepthImage) uniform textureCube depth_texture;
+
+HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
+
+HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutImage, format = rgba8) uniform image2D out_image;
+
+layout(push_constant) uniform PushConstant
+{
+    uvec4 probe_grid_position;
+    uvec4 dimension_per_probe;
+    uvec4 probe_offset_coord;
+};
+
+vec2 NormalizeOctahedralCoord(uvec2 local_coord)
+{
+    return (vec2(local_coord) + vec2(0.5)) * (vec2(2.0) / vec2(dimension_per_probe)) - vec2(1.0);
+}
+
+struct ConvolveResult
+{
+    vec3 color;
+    vec2 dist_dist2;
+};
+
+ConvolveResult ConvoleProbe(uvec2 local_coord)
+{
+    const int num_samples = 1024;
+    const float lobe_size = 1.0;
+
+    const vec2 oct_coord = NormalizeOctahedralCoord(local_coord);
+    const vec3 dir = DecodeOctahedralCoord(oct_coord);
+
+    vec3 sum_radiance = vec3(0.0);
+    vec2 sum_distance = vec2(0.0);
+
+    uint seed = (probe_grid_position.w + local_coord.x + local_coord.y) * 0x9e3779b9u;
+
+    for (int i = 0; i < num_samples; i++) {
+        // vec2 hammersley = Hammersley(i, num_samples);
+
+        vec3 offset = RandomInSphere(vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed)));
+        vec3 sample_dir = normalize(dir + vec3(lobe_size) * offset);
+
+        vec3 radiance = TextureCube(sampler_linear, color_texture, sample_dir).rgb;
+        sum_radiance += radiance;
+
+        sum_distance += TextureCube(sampler_linear, depth_texture, sample_dir).rg;
+
+        // float phi = hammersley.y * 2.0 * HYP_FMATH_PI;
+        // float cos_theta = hammersley.x * 2.0 - 1.0;
+        // float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+        // vec3 dir = vec3(
+        //     cos(phi) * sin_theta,
+        //     sin(phi) * sin_theta,
+        //     cos_theta
+        // );
+
+        // vec3 dir = CosWeightedRandomHemisphereDirectionHammersley(i, num_samples, d);
+
+        // if (dot(d, dir) > 0.0) {
+        //     float cosine_weight = max(dot(d, dir), 0.0);
+        //     float cosine_weight2 = cosine_weight * cosine_weight;
+
+        //     vec3 radiance = TextureCube(sampler_linear, color_texture, dir).rgb;
+        //     sum_radiance += radiance * cosine_weight;
+
+        //     float dist = TextureCube(sampler_linear, depth_texture, dir).r;
+        //     float dist2 = dist * dist;
+
+        //     sum_distance += dist2 * cosine_weight2;
+        //     sum_square_distance += dist2 * cosine_weight2 * cosine_weight2;
+        // }
+    }
+
+    ConvolveResult result;
+    result.color = sum_radiance / float(num_samples);
+    result.dist_dist2 = sum_distance / float(num_samples);
+    // result.dist_dist2 = vec2(sum_distance, sum_square_distance) / float(num_samples * 0.5);
+
+    return result;
+}
+
+void main(void)
+{
+    const uvec2 local_coord = uvec2(gl_GlobalInvocationID.xy);
+
+    if (any(greaterThanEqual(local_coord, dimension_per_probe.xy))) {
+        return;
+    }
+
+    ConvolveResult convole_result = ConvoleProbe(local_coord);
+
+    const uvec2 coord = probe_offset_coord.xy + local_coord;
+
+    // test
+    imageStore(out_image, ivec2(coord), vec4(convole_result.color, 1.0));
+}

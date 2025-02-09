@@ -41,6 +41,7 @@ HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi;
 HYP_DESCRIPTOR_SRV(Global, TAAResultTexture) uniform texture2D temporal_aa_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_result;
 
+HYP_DESCRIPTOR_SRV(Scene, LightFieldTexture) uniform texture2D light_field_texture;
 // HYP_DESCRIPTOR_SRV(Scene, EnvGridProbeDataTexture) uniform texture2D env_grid_probe_data;
 HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
 
@@ -79,6 +80,7 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, depth_pyramid, v_texcoord0).rgb;
     
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
+    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_texture, v_texcoord0).rgb;
 
     // out_color.rgb = vec3(float(is_sky));
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture_translucent, v_texcoord0).rgb;
