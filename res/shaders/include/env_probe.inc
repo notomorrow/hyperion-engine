@@ -31,24 +31,27 @@ struct EnvProbe
     uvec2 _pad2;
 
     ivec4 position_in_grid;
-    ivec4 offset;
+    ivec4 _pad4;
     uvec4 _pad5;
 };
 
 struct EnvGrid
 {
-    uvec4 probe_indices[HYP_MAX_BOUND_AMBIENT_PROBES / 4];
+    uvec4   probe_indices[HYP_MAX_BOUND_AMBIENT_PROBES / 4];
 
-    vec4 center;
-    vec4 aabb_extent;
-    vec4 aabb_max;
-    vec4 aabb_min;
+    vec4    center;
+    vec4    aabb_extent;
+    vec4    aabb_max;
+    vec4    aabb_min;
 
-    uvec4 density;
-    uvec4 enabled_indices_mask;
+    uvec4   density;
+    uvec4   enabled_indices_mask;
 
-    vec4 voxel_grid_aabb_max;
-    vec4 voxel_grid_aabb_min;
+    vec4    voxel_grid_aabb_max;
+    vec4    voxel_grid_aabb_min;
+
+    ivec2   light_field_image_dimensions;
+    ivec2   light_field_probe_dimensions;
 };
 
 struct SH9
@@ -63,24 +66,6 @@ struct SH9
 #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
 #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
 #define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
-
-// int GetLocalEnvProbeIndex(in EnvGrid env_grid, vec3 world_position)
-// {
-//     const vec3 grid_center = (env_grid.aabb_max.xyz + env_grid.aabb_min.xyz) * 0.5;
-//     const vec3 grid_aabb_extent = (env_grid.aabb_max.xyz - env_grid.aabb_min.xyz);
-//     const uvec3 grid_size = env_grid.density.xyz;
-
-//     const vec3 size_of_probe = grid_aabb_extent / vec3(grid_size);
-//     const ivec3 position_units = ivec3(world_position / size_of_probe + (vec3(grid_size) * 0.5));
-//     const ivec3 position_offset = position_units % ivec3(grid_size);
-
-//     int probe_index_at_point = (int(position_offset.x) * int(grid_size.y) * int(grid_size.z))
-//         + (int(position_offset.y) * int(grid_size.z))
-//         + int(position_offset.z);
-
-//     return probe_index_at_point;
-// }
-
 
 int GetLocalEnvProbeIndex(in EnvGrid env_grid, vec3 world_position)
 {

@@ -17,7 +17,6 @@ layout(location=11) in flat uint v_object_index;
 layout(location=12) in flat vec3 v_env_probe_extent;
 layout(location=13) in flat uint v_cube_face_index;
 layout(location=14) in vec2 v_cube_face_uv;
-layout(location=15) in vec4 v_view_space_position;
 
 // #ifndef MODE_SHADOWS
 layout(location=0) out vec4 output_color;
@@ -253,7 +252,7 @@ void main()
 #endif
 
 #ifdef WRITE_NORMALS
-    output_normals = PackNormalVec2(v_normal);
+    output_normals = PackNormalVec2(N);
 #endif
 
 #ifdef WRITE_MOMENTS

@@ -501,4 +501,22 @@ vec3 GetCubemapCoord(uint face, vec2 uv)
     return dir;
 }
 
+uint GetCubemapFaceIndex(vec3 dir)
+{
+    uint face = 0u;
+    float ax = abs(dir.x);
+    float ay = abs(dir.y);
+    float az = abs(dir.z);
+
+    if (ay > ax && ay > az) {
+        face = (dir.y < 0.0) ? 3u : 2u;
+    } else if (az > ax && az > ay) {
+        face = (dir.z < 0.0) ? 5u : 4u;
+    } else {
+        face = (dir.x < 0.0) ? 1u : 0u;
+    }
+
+    return face;
+}
+
 #endif

@@ -16,7 +16,6 @@ layout(location=11) out flat uint v_object_index;
 layout(location=12) out flat vec3 v_env_probe_extent;
 layout(location=13) out flat uint v_cube_face_index;
 layout(location=14) out vec2 v_cube_face_uv;
-layout(location=15) out vec4 v_view_space_position;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -127,8 +126,6 @@ void main()
 
     mat4 projection_matrix = camera.projection;
     mat4 view_matrix = current_env_probe.face_view_matrices[gl_ViewIndex];
-
-    v_view_space_position = view_matrix * position;
 
     v_object_index = OBJECT_INDEX;
 
