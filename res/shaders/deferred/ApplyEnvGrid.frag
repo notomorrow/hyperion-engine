@@ -44,6 +44,9 @@ HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBu
 HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
 HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
 
+HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
+HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
+
 #include "./DeferredLighting.glsl"
 
 #if defined(MODE_RADIANCE) || defined (MODE_IRRADIANCE_VOXEL)
@@ -101,7 +104,7 @@ void main()
 #endif
 
 #if defined(MODE_IRRADIANCE)
-    irradiance = CalculateEnvProbeIrradiance(P, N);
+    irradiance = CalculateEnvGridIrradiance(P, N, V);
 
     color_output = vec4(irradiance, 1.0);
 #elif defined(MODE_RADIANCE)

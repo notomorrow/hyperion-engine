@@ -16,7 +16,6 @@ layout(location=11) out flat uint v_object_index;
 layout(location=12) out flat vec3 v_env_probe_extent;
 layout(location=13) out flat uint v_cube_face_index;
 layout(location=14) out vec2 v_cube_face_uv;
-layout(location=15) out vec4 v_view_space_position;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -97,24 +96,19 @@ void main()
     vec4 position;
     mat4 normal_matrix;
 
-    // if (object.bucket == HYP_OBJECT_BUCKET_SKYBOX) {
-    //     position = vec4((a_position * 150.0) + camera.position.xyz, 1.0);
-    //     normal_matrix = transpose(inverse(object.model_matrix));
-    // } else {
 #ifdef VERTEX_SKINNING_ENABLED
-        if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
-            mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
+    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
+        mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
-            position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
-            normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
-        } else {
+        position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
+        normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
+    } else {
 #endif
-            position = object.model_matrix * vec4(a_position, 1.0);
-            normal_matrix = transpose(inverse(object.model_matrix));
+        position = object.model_matrix * vec4(a_position, 1.0);
+        normal_matrix = transpose(inverse(object.model_matrix));
 #ifdef VERTEX_SKINNING_ENABLED
-        }
+    }
 #endif
-    // }
 
     v_position = position.xyz;
     v_normal = (normal_matrix * vec4(a_normal, 0.0)).xyz;
@@ -127,8 +121,6 @@ void main()
 
     mat4 projection_matrix = camera.projection;
     mat4 view_matrix = current_env_probe.face_view_matrices[gl_ViewIndex];
-
-    v_view_space_position = view_matrix * position;
 
     v_object_index = OBJECT_INDEX;
 

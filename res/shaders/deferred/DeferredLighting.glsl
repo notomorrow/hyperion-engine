@@ -4,6 +4,7 @@
 #include "../include/shared.inc"
 #include "../include/brdf.inc"
 #include "../include/tonemap.inc"
+#include "../include/Octahedron.glsl"
 
 #define DEFERRED_FLAGS_SSR_ENABLED         0x1
 #define DEFERRED_FLAGS_VCT_ENABLED         0x2
@@ -133,7 +134,55 @@ float[9] ProjectSHBands(vec3 N)
     return bands;
 }
 
-vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
+ivec2 GetEnvProbeLightFieldOffset(ivec3 probe_grid_position)
+{
+    return ivec2(
+        (env_grid.light_field_probe_dimensions.x + 2) * (float(probe_grid_position.x) * float(env_grid.density.y) + float(probe_grid_position.y)),
+        (env_grid.light_field_probe_dimensions.y + 2) * float(probe_grid_position.z)
+    );
+}
+
+vec3 SampleEnvProbe_SH(uint env_probe_index, vec3 N)
+{
+    SH9 sh9;
+
+    const int storage_index = env_probes[env_probe_index].position_in_grid.w * 9;
+
+    for (int i = 0; i < 9; i++) {
+        sh9.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
+    }
+
+    return SphericalHarmonicsSample(sh9, N);
+}
+
+vec3 SampleEnvProbe_LightField(uint env_probe_index, vec3 N, vec3 V)
+{
+    // testing
+    vec3 R = reflect(-V, N);
+
+    vec2 oct_coord = EncodeOctahedralCoord(-N) * 0.5 + 0.5;
+    oct_coord *= vec2(env_grid.light_field_probe_dimensions) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+
+    ivec2 offset_coord = GetEnvProbeLightFieldOffset(env_probes[env_probe_index].position_in_grid.xyz);
+    vec2 offset_uv = vec2(offset_coord) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+
+    vec2 uv = offset_uv + oct_coord;
+
+    vec4 color = Texture2D(sampler_nearest, light_field_color_texture, uv);
+
+    return color.rgb;
+}
+
+vec3 SampleEnvProbe(uint env_probe_index, vec3 N, vec3 V)
+{
+#if 0 // @TODO refactor
+    return SampleEnvProbe_SH(env_probe_index, N);
+#else
+    return SampleEnvProbe_LightField(env_probe_index, N, V);
+#endif
+}
+
+vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
 {
     int base_probe_index_at_point = int(GetLocalEnvProbeIndex(env_grid, P));
 
@@ -148,13 +197,9 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
     }
 
     const vec3 size_of_probe = env_grid.aabb_extent.xyz / vec3(env_grid.density.xyz);
-
     const vec3 base_probe_position = env_probes[base_probe_index].world_position.xyz;
 
-    const vec3 alpha = clamp((P - base_probe_position) / size_of_probe, vec3(0.0), vec3(1.0)); //clamp(abs((P - base_probe_position) / size_of_probe * 0.5), vec3(0.0), vec3(1.0));
-    // const vec3 alpha = vec3(1.0) - clamp(distance(P, base_probe_position) / size_of_probe * 0.5, vec3(0.0), vec3(1.0)); //clamp(abs((P - base_probe_position) / size_of_probe * 0.5), vec3(0.0), vec3(1.0));
-    
-    SH9 sh9;
+    const vec3 alpha = clamp((P - base_probe_position) / size_of_probe, vec3(0.0), vec3(1.0));
 
     vec3 total_irradiance = vec3(0.0);
     float total_weight = 0.0;
@@ -181,55 +226,9 @@ vec3 CalculateEnvProbeIrradiance(vec3 P, vec3 N)
         vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
         float weight = trilinear.x * trilinear.y * trilinear.z;
 
-        const int storage_index = env_probes[neighbor_probe_index].position_in_grid.w * 9;
-
-        for (int j = 0; j < 9; j++) {
-            sh9.values[j] = sh_grid_buffer[min(storage_index + j, SH_GRID_BUFFER_SIZE - 1)].rgb;
-        }
-
-        total_irradiance += SphericalHarmonicsSample(sh9, N) * weight;
+        total_irradiance += SampleEnvProbe(neighbor_probe_index, N, V) * weight;
         total_weight += weight;
     }
-
-    // const uint probe_index = GET_GRID_PROBE_INDEX(probe_index_at_point);
-
-
-
-    // if (probe_index != ~0u) {
-    //     EnvProbe probe = env_probes[probe_index];
-    //     const int storage_index = probe.position_in_grid.w * 9;
-
-    //     for (int i = 0; i < 9; i++) {
-    //         sh9.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
-    //     }
-
-    //     irradiance += SphericalHarmonicsSample(sh9, N);
-
-    //     return 1.0;
-    // }
-
-    const vec3 debug_colors[16] = {
-        vec3(1.0, 0.0, 0.0),
-        vec3(0.0, 1.0, 0.0),
-        vec3(0.0, 0.0, 1.0),
-        vec3(1.0, 1.0, 0.0),
-        vec3(1.0, 0.0, 1.0),
-        vec3(0.0, 1.0, 1.0),
-        vec3(1.0, 1.0, 1.0),
-        vec3(0.5, 0.0, 0.0),
-        vec3(0.0, 0.5, 0.0),
-        vec3(0.0, 0.0, 0.5),
-        vec3(0.5, 0.5, 0.0),
-        vec3(0.5, 0.0, 0.5),
-        vec3(0.0, 0.5, 0.5),
-        vec3(0.5, 0.5, 0.5),
-        vec3(0.25, 0.0, 0.0),
-        vec3(0.0, 0.25, 0.0)
-    };
-
-    // return debug_colors[base_probe_index % 16];
-
-    // return UINT_TO_VEC4(base_probe_index).rgb;
 
     return total_irradiance / max(total_weight, 0.0001);
 }

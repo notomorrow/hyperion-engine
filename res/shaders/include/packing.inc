@@ -2,8 +2,8 @@
 #define HYP_PACKING
 
 //#define HYP_PACK_NORMALS 1
-#define HYP_NORMAL_PACKING_0
-//#define HYP_NORMAL_PACKING_1
+// #define HYP_NORMAL_PACKING_0
+#define HYP_NORMAL_PACKING_1
 //#define HYP_NORMAL_PACKING_2
 
 vec2 PackNormalVec2(vec3 n)
