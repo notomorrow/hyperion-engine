@@ -147,8 +147,6 @@ void main()
     float transmission = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_TRANSMISSION);
     const float alpha_threshold = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ALPHA_THRESHOLD);
 
-    const float perceptual_roughness = sqrt(roughness);
-
     const float normal_map_intensity = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_NORMAL_MAP_INTENSITY);
     
     vec2 texcoord = v_texcoord0 * CURRENT_MATERIAL.uv_scale;
