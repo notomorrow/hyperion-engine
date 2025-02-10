@@ -86,7 +86,7 @@ void main()
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
 
-    const float lod = float(12.0) * roughness * (2.0 - roughness);
+    const float lod = HYP_FMATH_SQR(roughness) * 12.0;
 
     vec4 ibl = vec4(0.0);
 

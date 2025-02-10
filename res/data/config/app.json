@@ -32,7 +32,7 @@
       "reflections": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": true
+      "irradiance": false
     },
     "hbil": {
       "enabled": false
