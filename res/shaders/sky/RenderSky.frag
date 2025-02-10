@@ -17,7 +17,6 @@ layout(location=11) in flat uint v_object_index;
 layout(location=12) in flat vec3 v_env_probe_extent;
 layout(location=13) in flat uint v_cube_face_index;
 layout(location=14) in vec2 v_cube_face_uv;
-layout(location=15) in vec4 v_view_space_position;
 
 layout(location=0) out vec4 output_color;
 
@@ -33,7 +32,6 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #include "../include/env_probe.inc"
 #include "../include/tonemap.inc"
 #include "../include/noise.inc"
-#include "../include/Octahedron.glsl"
 #include "../include/object.inc"
 #include "../include/packing.inc"
 

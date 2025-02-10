@@ -14,6 +14,7 @@ struct Scene
     uint enabled_render_subsystems_mask;
     float _pad0;
 
+    // @TODO light_indices, num_bound_lights (max 16) here
     mat4 _pad1;
     mat4 _pad2;
     mat4 _pad3;

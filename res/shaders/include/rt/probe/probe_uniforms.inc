@@ -3,11 +3,6 @@
 
 #include "../../defines.inc"
 
-#define PARAM_PROBE_DISTANCE 0
-#define PARAM_NUM_RAYS_PER_PROBE 1
-#define PARAM_FLAGS 2
-#define PARAM_NUM_BOUND_LIGHTS 3
-
 #define PROBE_SYSTEM_FLAGS_NONE 0x0
 #define PROBE_SYSTEM_FLAGS_FIRST_RUN 0x1
 
