@@ -97,6 +97,8 @@ void LightRenderResources::UpdateBufferData()
         ? m_material_render_resources_handle->GetBufferIndex()
         : ~0u;
 
+    // GetGPUBufferHolder()->Set(m_buffer_index, m_buffer_data);
+
     *static_cast<LightShaderData *>(m_buffer_address) = m_buffer_data;
 
     GetGPUBufferHolder()->MarkDirty(m_buffer_index);
@@ -395,6 +397,7 @@ BoundingSphere Light::GetBoundingSphere() const
 
 namespace renderer {
 
+HYP_DESCRIPTOR_SSBO(Scene, CurrentLight, 1, sizeof(LightShaderData), true);
 HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer, 1, sizeof(LightShaderData), false);
 
 } // namespace renderer

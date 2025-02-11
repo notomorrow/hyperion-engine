@@ -326,7 +326,7 @@ vec3 CosWeightedRandomHemisphereDirectionHammersley(uint sample_index, uint num_
 // Hammersley sequence
 vec2 Hammersley(uint i, uint N)
 {
-    return vec2(float(i) + 0.5 / float(N), VanDerCorpus(i + 1u));
+    return vec2(float(i) / float(N), VanDerCorpus(i + 1u));
 }
 
 vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)

@@ -6,6 +6,9 @@
 #define NUM_SAMPLES_X 8
 #define NUM_SAMPLES_Y 8
 
+#define HYP_SAMPLER_NEAREST sampler_nearest
+#define HYP_SAMPLER_LINEAR sampler_linear
+
 struct SHTile
 {
     vec4 coeffs_weights[9];
@@ -21,22 +24,36 @@ layout(local_size_x = 6, local_size_y = 4, local_size_z = 4) in;
 layout(local_size_x = 1) in;
 #endif
 
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
 #include "../include/tonemap.inc"
-
-#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/packing.inc"
 #include "../include/env_probe.inc"
+#include "../include/scene.inc"
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
 HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
 
-HYP_DESCRIPTOR_SRV(ComputeSHDescriptorSet, InCubemap) uniform textureCube cubemap;
+HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[16]; };
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
+HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight { Light light; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+
+#include "../include/shadows.inc"
+
+HYP_DESCRIPTOR_SRV(ComputeSHDescriptorSet, InColorCubemap) uniform textureCube cubemap_color;
+HYP_DESCRIPTOR_SRV(ComputeSHDescriptorSet, InNormalsCubemap) uniform textureCube cubemap_normals;
+HYP_DESCRIPTOR_SRV(ComputeSHDescriptorSet, InDepthCubemap) uniform textureCube cubemap_depth;
+
 HYP_DESCRIPTOR_SSBO(ComputeSHDescriptorSet, InputSHTilesBuffer) buffer InputSHTilesBuffer { SHTile sh_tiles[]; };
 HYP_DESCRIPTOR_SSBO(ComputeSHDescriptorSet, OutputSHTilesBuffer) buffer OutputSHTilesBuffer { SHTile sh_tiles_output[]; };
 
@@ -45,6 +62,7 @@ layout(push_constant) uniform PushConstant
     uvec4   probe_grid_position;
     uvec4   cubemap_dimensions;
     uvec4   level_dimensions;
+    vec4    world_position;
 };
 
 #if defined(MODE_BUILD_COEFFICIENTS) || defined(MODE_CLEAR)
@@ -136,6 +154,38 @@ float[27] ProjectOntoSH9Color(vec3 dir, vec3 color)
     return sh_colors;
 }
 
+vec4 SampleSky(vec3 dir)
+{
+    if (current_env_probe.texture_index != ~0u) {
+        uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+
+        return TextureCube(sampler_linear, env_probe_textures[probe_texture_index], dir);
+    }
+
+    return vec4(0.0);
+}
+
+vec4 CalculateDirectLighting(in vec3 P, in vec3 N, in vec3 V)
+{
+    if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
+        return vec4(0.0);
+    }
+
+    const vec4 light_color = vec4(UINT_TO_VEC4(light.color_encoded).rgb, 1.0);
+
+    vec3 L = normalize(light.position_intensity.xyz);
+
+    float NdotL = max(0.0001, dot(N, L));
+
+    float shadow = 1.0;
+
+    if (light.shadow_map_index != ~0u) {
+        shadow = GetShadowStandard(light.shadow_map_index, P, vec2(0.0), NdotL);
+    }
+
+    return light_color * NdotL * shadow * light.position_intensity.w;
+}
+
 #ifdef MODE_REDUCE
 // shared memory (per face) at the final reduce stage
 shared vec4 shared_memory[9][6];
@@ -193,13 +243,23 @@ void main(void)
     
     const vec3 dir = MapXYSToDirection(face_index, sample_point);
 
-    // vec4 environment_map_sample = TextureCube(sampler_linear, environment_maps[0], dir);
-    vec4 cubemap_sample = TextureCube(sampler_nearest, cubemap, dir);
-    // cubemap_sample.rgb = pow(cubemap_sample.rgb, vec3(2.2));
+    vec4 sky = SampleSky(dir);
 
-    // vec4 combined_sample = environment_map_sample * (1.0 - cubemap_sample.a) + (vec4(cubemap_sample.rgb, 1.0) * cubemap_sample.a);
+    vec4 albedo = TextureCube(sampler_nearest, cubemap_color, dir);
+    vec3 normal = normalize(UnpackNormalVec2(TextureCube(sampler_nearest, cubemap_normals, dir).rg));
+    vec2 dist_dist2 = TextureCube(sampler_nearest, cubemap_depth, dir).rg;
 
-    float sh_values[27] = ProjectOntoSH9Color(dir, cubemap_sample.rgb);
+    vec4 position = vec4(world_position.xyz + dir * dist_dist2.r, 1.0);
+
+    vec4 indirect = SampleSky(normal);
+    vec4 irradiance = indirect * albedo * 0.25;
+
+    vec4 radiance = CalculateDirectLighting(position.xyz, normal, -dir) * albedo;
+    radiance = mix(radiance, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
+
+    vec4 color = irradiance + radiance;
+
+    float sh_values[27] = ProjectOntoSH9Color(dir, color.rgb);
 
     float temp = 1.0 + sample_point.x * sample_point.x + sample_point.y * sample_point.y;
     float weight = 4.0 / (sqrt(temp) * temp);

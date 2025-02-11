@@ -26,13 +26,13 @@
       "enabled": true
     },
     "debug": {
-      "env_grid_probes": false,
+      "env_grid_probes": true,
       "reflection_probes": false,
       "ssr": false,
       "reflections": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false
+      "irradiance": true
     },
     "hbil": {
       "enabled": false
