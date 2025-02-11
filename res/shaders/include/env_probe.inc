@@ -45,13 +45,12 @@ struct EnvGrid
     vec4    aabb_min;
 
     uvec4   density;
-    uvec4   enabled_indices_mask;
 
     vec4    voxel_grid_aabb_max;
     vec4    voxel_grid_aabb_min;
 
     ivec2   light_field_image_dimensions;
-    ivec2   light_field_probe_dimensions;
+    ivec2   irradiance_octahedron_size;
 };
 
 struct SH9
@@ -65,7 +64,6 @@ struct SH9
 
 #define GET_GRID_PROBE_INDEX(index) (env_grid.probe_indices[index >> 2][index & 3])
 #define GET_GRID_PROBE(index) (env_probes[env_grid.probe_indices[index >> 2][index & 3]])
-#define IS_GRID_PROBE_ENABLED(index) bool(env_grid.enabled_indices_mask[(index) / 32] & (1u << ((index) & 31)))
 
 int GetLocalEnvProbeIndex(in EnvGrid env_grid, vec3 world_position)
 {

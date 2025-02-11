@@ -137,9 +137,20 @@ float[9] ProjectSHBands(vec3 N)
 ivec2 GetEnvProbeLightFieldOffset(ivec3 probe_grid_position)
 {
     return ivec2(
-        (env_grid.light_field_probe_dimensions.x + 2) * (float(probe_grid_position.x) * float(env_grid.density.y) + float(probe_grid_position.y)),
-        (env_grid.light_field_probe_dimensions.y + 2) * float(probe_grid_position.z)
+        (env_grid.irradiance_octahedron_size.x + 2) * (float(probe_grid_position.x) * float(env_grid.density.y) + float(probe_grid_position.y)) + 1,
+        (env_grid.irradiance_octahedron_size.y + 2) * float(probe_grid_position.z) + 1
     );
+}
+
+vec2 GetEnvProbeLightFieldUV(ivec3 probe_grid_position, vec3 N)
+{
+    vec2 oct_coord = EncodeOctahedralCoord(normalize(N)) * 0.5 + 0.5;
+    oct_coord *= vec2(env_grid.irradiance_octahedron_size) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+
+    ivec2 offset_coord = GetEnvProbeLightFieldOffset(probe_grid_position);
+    vec2 offset_uv = vec2(offset_coord) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+
+    return offset_uv + oct_coord;
 }
 
 vec3 SampleEnvProbe_SH(uint env_probe_index, vec3 N)
@@ -155,30 +166,22 @@ vec3 SampleEnvProbe_SH(uint env_probe_index, vec3 N)
     return SphericalHarmonicsSample(sh9, N);
 }
 
-vec3 SampleEnvProbe_LightField(uint env_probe_index, vec3 N, vec3 V)
+vec3 SampleEnvProbe_LightField(uint env_probe_index, vec3 N)
 {
-    // testing
-    vec3 R = reflect(-V, N);
-
-    vec2 oct_coord = EncodeOctahedralCoord(-N) * 0.5 + 0.5;
-    oct_coord *= vec2(env_grid.light_field_probe_dimensions) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
-
-    ivec2 offset_coord = GetEnvProbeLightFieldOffset(env_probes[env_probe_index].position_in_grid.xyz);
-    vec2 offset_uv = vec2(offset_coord) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
-
-    vec2 uv = offset_uv + oct_coord;
-
-    vec4 color = Texture2D(sampler_nearest, light_field_color_texture, uv);
+    vec2 uv = GetEnvProbeLightFieldUV(env_probes[env_probe_index].position_in_grid.xyz, N);
+    vec4 color = Texture2D(sampler_linear, light_field_color_texture, uv);
 
     return color.rgb;
 }
 
-vec3 SampleEnvProbe(uint env_probe_index, vec3 N, vec3 V)
+vec3 SampleEnvProbe(uint env_probe_index, vec3 N)
 {
-#if 0 // @TODO refactor
+#if ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_SH
     return SampleEnvProbe_SH(env_probe_index, N);
+#elif ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
+    return SampleEnvProbe_LightField(env_probe_index, N);
 #else
-    return SampleEnvProbe_LightField(env_probe_index, N, V);
+    return vec3(0.0);
 #endif
 }
 
@@ -224,9 +227,31 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
         }
 
         vec3 trilinear = mix(vec3(1.0) - alpha, alpha, vec3(offset));
-        float weight = trilinear.x * trilinear.y * trilinear.z;
+        float weight = 1.0;
 
-        total_irradiance += SampleEnvProbe(neighbor_probe_index, N, V) * weight;
+        vec3 probe_to_point = P - env_probes[neighbor_probe_index].world_position.xyz;
+        float distance_to_probe = length(probe_to_point);
+        vec3 dir = normalize(-probe_to_point);
+
+#if ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
+        // backface test
+        weight *= max(0.05, dot(N, dir));
+
+        vec2 uv = GetEnvProbeLightFieldUV(env_probes[neighbor_probe_index].position_in_grid.xyz, -dir);
+        vec2 depths = Texture2DLod(sampler_linear, light_field_depth_texture, uv, 0.0).rg;
+
+        float mean = depths.x;
+        float variance = abs(depths.y - HYP_FMATH_SQR(mean));
+
+        float chebyshev = variance / (variance + HYP_FMATH_SQR(max(distance_to_probe - mean, 0.0)));
+        chebyshev = max(chebyshev * chebyshev * chebyshev, 0.0);
+        weight *= (distance_to_probe <= mean) ? 1.0 : max(chebyshev, 0.0); // mix(chebyshev, 1.0, step(distance_to_probe, mean));
+        weight = max(0.0001, weight);
+#endif
+
+        weight *= trilinear.x * trilinear.y * trilinear.z;
+
+        total_irradiance += SampleEnvProbe(neighbor_probe_index, N) * weight;
         total_weight += weight;
     }
 
