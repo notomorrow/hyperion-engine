@@ -139,15 +139,15 @@ ConvolveResult ConvoleProbe(uvec2 local_coord)
 
         // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
 
-        // vec4 irradiance = albedo * SampleSky(normal) * 0.1;
+        vec4 irradiance = albedo * SampleSky(normal) * 0.1;
 
-        // vec4 radiance = vec4(0.0);
+        vec4 radiance = vec4(0.0);
         
-        // for (uint j = 0; j < num_bound_lights; j++) {
-        //     uint light_index = light_indices[j / 4][j % 4];
+        for (uint j = 0; j < num_bound_lights; j++) {
+            uint light_index = light_indices[j / 4][j % 4];
 
-        //     radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
-        // }
+            radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
+        }
 
         vec4 color = albedo;//mix(irradiance + radiance * albedo, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
         sum_radiance += color;

@@ -63,41 +63,41 @@ void main(void)
     switch (side) {
     case 0:
     {
-        CopyPixel(ivec2(pixel_index, 0), ivec2(pixel_index, -1));
+        CopyPixel(ivec2(pixel_index, 0), ivec2(dimension_per_probe.x - pixel_index - 1, -1));
 
-        if (pixel_index == 0) {
-            CopyPixel(ivec2(0, 0), ivec2(-1, -1));
-        }
+        // if (pixel_index == 0) {
+        //     CopyPixel(ivec2(0, 0), ivec2(-1, -1));
+        // }
 
         break;
     }
     case 1:
     {
-        CopyPixel(ivec2(0, pixel_index), ivec2(-1, pixel_index));
+        CopyPixel(ivec2(0, pixel_index), ivec2(-1, dimension_per_probe.y - pixel_index - 1));
 
-        if (pixel_index == 0) {
-            CopyPixel(ivec2(0, dimension_per_probe.y - 1), ivec2(-1, dimension_per_probe.y));
-        }
+        // if (pixel_index == 0) {
+        //     CopyPixel(ivec2(0, dimension_per_probe.y - 1), ivec2(-1, dimension_per_probe.y));
+        // }
 
         break;
     }
     case 2:
     {
-        CopyPixel(ivec2(pixel_index, dimension_per_probe.y - 1), ivec2(pixel_index, dimension_per_probe.y));
+        CopyPixel(ivec2(pixel_index, dimension_per_probe.y - 1), ivec2(dimension_per_probe.x - pixel_index - 1, dimension_per_probe.y));
 
-        if (pixel_index == 0) {
-            CopyPixel(ivec2(dimension_per_probe.x - 1, dimension_per_probe.y - 1), ivec2(dimension_per_probe.x, dimension_per_probe.y));
-        }
+        // if (pixel_index == 0) {
+        //     CopyPixel(ivec2(dimension_per_probe.x - 1, dimension_per_probe.y - 1), ivec2(dimension_per_probe.x, dimension_per_probe.y));
+        // }
 
         break;
     }
     case 3:
     {
-        CopyPixel(ivec2(dimension_per_probe.x - 1, pixel_index), ivec2(dimension_per_probe.x, pixel_index));
+        CopyPixel(ivec2(dimension_per_probe.x - 1, pixel_index), ivec2(dimension_per_probe.x, dimension_per_probe.y - pixel_index - 1));
 
-        if (pixel_index == 0) {
-            CopyPixel(ivec2(dimension_per_probe.x - 1, 0), ivec2(dimension_per_probe.x, -1));
-        }
+        // if (pixel_index == 0) {
+        //     CopyPixel(ivec2(dimension_per_probe.x - 1, 0), ivec2(dimension_per_probe.x, -1));
+        // }
 
         break;
     }
