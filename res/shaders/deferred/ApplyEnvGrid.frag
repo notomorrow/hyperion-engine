@@ -35,6 +35,12 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer Sce
 #include "../include/brdf.inc"
 #include "../include/aabb.inc"
 
+#define ENV_GRID_IRRADIANCE_MODE_SH 0
+#define ENV_GRID_IRRADIANCE_MODE_VOXEL 1
+#define ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD 2
+
+#define ENV_GRID_IRRADIANCE_MODE ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
+
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 #define HYP_DEFERRED_NO_SSR // temp
 
@@ -49,7 +55,7 @@ HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_
 
 #include "./DeferredLighting.glsl"
 
-#if defined(MODE_RADIANCE) || defined (MODE_IRRADIANCE_VOXEL)
+#if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
 {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
@@ -71,7 +77,7 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {
-#if defined(MODE_RADIANCE) || defined(MODE_IRRADIANCE_VOXEL)
+#if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
     // Checkerboard rendering
     uvec2 screen_resolution = uvec2(camera.dimensions.xy);
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution) - 1.0);
@@ -90,11 +96,11 @@ void main()
     const mat4 inverse_view = inverse(camera.view);
 
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, v_texcoord).r;
-    const vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_ws_normals_texture, v_texcoord)));
+    const vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_ws_normals_texture, v_texcoord));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, v_texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
 
-#if defined(MODE_RADIANCE) || defined(MODE_IRRADIANCE_VOXEL)
+#if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
 
@@ -104,16 +110,16 @@ void main()
 #endif
 
 #if defined(MODE_IRRADIANCE)
+#if ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
+    irradiance = ComputeVoxelIrradiance(P, N, pixel_coord, screen_resolution, scene.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb).rgb;
+#else
     irradiance = CalculateEnvGridIrradiance(P, N, V);
+#endif
 
     color_output = vec4(irradiance, 1.0);
 #elif defined(MODE_RADIANCE)
     vec4 radiance = ComputeVoxelRadiance(P, N, V, roughness, pixel_coord, screen_resolution, scene.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb);
 
     color_output = radiance;
-#elif defined(MODE_IRRADIANCE_VOXEL)
-    irradiance = ComputeVoxelIrradiance(P, N, pixel_coord, screen_resolution, scene.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb).rgb;
-
-    color_output = vec4(irradiance, 1.0);
 #endif
 }

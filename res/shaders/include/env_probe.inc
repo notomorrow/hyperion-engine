@@ -51,7 +51,7 @@ struct EnvGrid
     vec4    voxel_grid_aabb_min;
 
     ivec2   light_field_image_dimensions;
-    ivec2   light_field_probe_dimensions;
+    ivec2   irradiance_octahedron_size;
 };
 
 struct SH9

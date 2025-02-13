@@ -9,6 +9,9 @@ layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
+#define HYP_SAMPLER_NEAREST sampler_nearest
+#define HYP_SAMPLER_LINEAR sampler_linear
+
 #include "../include/defines.inc"
 #include "../include/shared.inc"
 #include "../include/noise.inc"
@@ -18,6 +21,11 @@ layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 #include "../include/Octahedron.glsl"
 #include "../include/brdf.inc"
 
+HYP_DESCRIPTOR_CBUFF(Global, SphereSamplesBuffer) uniform SphereSamplesBuffer
+{
+    vec4 sphere_samples[4096];
+};
+
 HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InColorImage) uniform textureCube color_texture;
 HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InNormalsImage) uniform textureCube normals_texture;
 HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InDepthImage) uniform textureCube depth_texture;
@@ -25,8 +33,8 @@ HYP_DESCRIPTOR_SRV(LightFieldProbeDescriptorSet, InDepthImage) uniform textureCu
 HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SAMPLER(LightFieldProbeDescriptorSet, SamplerNearest) uniform sampler sampler_nearest;
 
-HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutColorImage, format = rgba8) uniform image2D out_color_image;
-HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutDepthsImage, format = rg16f) uniform image2D out_depths_image;
+HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutColorImage, format = rgba16f) uniform image2D out_color_image;
+HYP_DESCRIPTOR_UAV(LightFieldProbeDescriptorSet, OutDepthImage, format = rg16f) uniform image2D out_depth_image;
 
 HYP_DESCRIPTOR_CBUFF(LightFieldProbeDescriptorSet, UniformBuffer) uniform UniformBuffer
 {
@@ -49,6 +57,12 @@ HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBu
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
 HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
+
+HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[16]; };
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
+HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
+
+#include "../include/shadows.inc"
 
 vec2 NormalizeOctahedralCoord(uvec2 local_coord)
 {
@@ -84,50 +98,59 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
 
     float NdotL = max(0.0001, dot(N, L));
 
-    return albedo * min(NdotL, 0.2);
+    float shadow = 1.0;
+
+    if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index != ~0u) {
+        shadow = GetShadowStandard(lights[light_index].shadow_map_index, P, vec2(0.0), NdotL);
+    }
+
+    return light_color * NdotL * shadow * lights[light_index].position_intensity.w;
 }
 
 ConvolveResult ConvoleProbe(uvec2 local_coord)
 {
-    const int num_samples = 1024;
-    const float lobe_size = 0.95;
+    const int num_samples = 256;//1024;
+    const float lobe_size = 0.96;
 
     const vec2 oct_coord = NormalizeOctahedralCoord(local_coord);
-    const vec3 dir = -DecodeOctahedralCoord(oct_coord);
+    const vec3 dir = DecodeOctahedralCoord(oct_coord);
 
     vec4 sum_radiance = vec4(0.0);
     vec2 sum_distance = vec2(0.0);
 
     uint seed = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * 1000 + probe_grid_position.w * 1000000;
 
-    const uint face_index = GetCubemapFaceIndex(dir);
-    vec3 face_normal = GetCubemapCoord(face_index, vec2(0.0));
-
     for (int i = 0; i < num_samples; i++) {
-        vec3 offset = RandomInSphere(vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed)));
+        vec3 offset = sphere_samples[i % 4096].xyz;
         vec3 sample_dir = normalize(dir + vec3(lobe_size) * offset);
 
         vec4 sky = SampleSky(sample_dir);
 
-        vec3 normal = normalize(UnpackNormalVec2(TextureCube(sampler_linear, normals_texture, sample_dir).rg));
+        vec3 normal = normalize(UnpackNormalVec2(TextureCube(sampler_nearest, normals_texture, sample_dir).rg));
 
-        vec2 dist_dist2 = TextureCube(sampler_linear, depth_texture, sample_dir).rg;
+        vec2 dist_dist2 = TextureCube(sampler_nearest, depth_texture, sample_dir).rg;
         sum_distance += dist_dist2;
 
         vec4 position = vec4(env_probes[probe_grid_position.w].world_position.xyz + sample_dir * dist_dist2.r, 1.0);
 
+        // Non-accurate lighting calculation for simplicity
+
         vec4 albedo = TextureCube(sampler_linear, color_texture, sample_dir);
 
-        vec4 radiance = vec4(0.0);
+        // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
+
+        // vec4 irradiance = albedo * SampleSky(normal) * 0.1;
+
+        // vec4 radiance = vec4(0.0);
         
-        for (uint j = 0; j < num_bound_lights; j++) {
-            uint light_index = light_indices[j / 4][j % 4];
+        // for (uint j = 0; j < num_bound_lights; j++) {
+        //     uint light_index = light_indices[j / 4][j % 4];
 
-            radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
-        }
+        //     radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
+        // }
 
-        radiance = mix(radiance, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
-        sum_radiance += radiance;
+        vec4 color = albedo;//mix(irradiance + radiance * albedo, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
+        sum_radiance += color;
     }
 
     ConvolveResult result;
@@ -139,17 +162,17 @@ ConvolveResult ConvoleProbe(uvec2 local_coord)
 
 void main(void)
 {
-    const uvec2 local_coord = uvec2(gl_GlobalInvocationID.xy);
 
-    if (any(greaterThanEqual(local_coord, dimension_per_probe.xy))) {
+    if (any(greaterThanEqual(gl_GlobalInvocationID.xy, dimension_per_probe.xy))) {
         return;
     }
 
+    const uvec2 local_coord = gl_GlobalInvocationID.xy;
+    
     ConvolveResult convolve_result = ConvoleProbe(local_coord);
 
     const uvec2 coord = probe_offset_coord.xy + local_coord;
 
     imageStore(out_color_image, ivec2(coord), convolve_result.color);
-    imageStore(out_depths_image, ivec2(coord), vec4(convolve_result.dist_dist2, 0.0, 1.0));
-    // imageStore(out_image, ivec2(coord), vec4(vec3(probe_grid_position.xyz) / vec3(6, 4, 6), 1.0));// convolve_result.color);
+    imageStore(out_depth_image, ivec2(coord), vec4(convolve_result.dist_dist2, 0.0, 1.0));
 }

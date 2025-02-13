@@ -43,7 +43,7 @@ HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
     ShadowMap shadow_map_data[16];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, LightsBuffer) readonly buffer LightsBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
 {
     Light light;
 };

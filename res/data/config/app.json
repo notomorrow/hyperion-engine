@@ -32,7 +32,7 @@
       "reflections": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false
+      "irradiance": true
     },
     "hbil": {
       "enabled": false
@@ -43,7 +43,7 @@
       },
       "gi": {
         "mode": "sh",
-        "enabled": false
+        "enabled": true
       }
     },
     "hbao": {

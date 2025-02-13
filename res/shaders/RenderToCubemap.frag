@@ -51,12 +51,6 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 #define HYP_CUBEMAP_AMBIENT 0.05
 
-#ifdef MODE_AMBIENT
-    // #define LIGHTING
-    // #define SHADOWS
-    // #define TONEMAP
-#endif
-
 #ifdef MODE_REFLECTION
     #define LIGHTING
     #define SHADOWS
@@ -91,7 +85,7 @@ HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, LightsBuffer) readonly buffer LightsBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
 {
     Light light;
 };
