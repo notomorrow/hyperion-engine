@@ -3,8 +3,8 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define NUM_SAMPLES_X 8
-#define NUM_SAMPLES_Y 8
+#define NUM_SAMPLES_X 16
+#define NUM_SAMPLES_Y 16
 
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
@@ -17,7 +17,7 @@ struct SHTile
 // #define PARALLEL_REDUCE
 
 #if defined(MODE_BUILD_COEFFICIENTS) || defined(MODE_CLEAR)
-layout(local_size_x = 1, local_size_y = 16, local_size_z = 16) in;
+layout(local_size_x = NUM_SAMPLES_X, local_size_y = NUM_SAMPLES_Y) in;
 #elif defined(MODE_REDUCE)
 layout(local_size_x = 6, local_size_y = 4, local_size_z = 4) in;
 #elif defined(MODE_FINALIZE)
@@ -35,6 +35,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "../include/packing.inc"
 #include "../include/env_probe.inc"
 #include "../include/scene.inc"
+#include "../include/Octahedron.glsl"
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
 HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
@@ -66,34 +67,34 @@ layout(push_constant) uniform PushConstant
 };
 
 #if defined(MODE_BUILD_COEFFICIENTS) || defined(MODE_CLEAR)
-#define CURRENT_TILE sh_tiles[(face_index * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_index.x * NUM_SAMPLES_Y) + sample_index.y]
+#define CURRENT_TILE sh_tiles[(sample_index.x * NUM_SAMPLES_Y) + sample_index.y]
 #endif
 
 vec3 MapXYSToDirection(uint face_index, vec2 uv) {
     vec3 dir = vec3(0.0);
 
     float u = uv.x;
-    float v = -uv.y;
+    float v = uv.y;
 
     // +x, -x, +y, -y, +z, -z
     switch (face_index) {
     case 0:
-        dir = normalize(vec3(1.0, v, -u));
+        dir = normalize(vec3(1.0, -v, -u));
         break;
     case 1:
-        dir = normalize(vec3(-1.0, v, u));
+        dir = normalize(vec3(-1.0, -v, u));
         break;
     case 2:
-        dir = normalize(vec3(u, 1.0, -v));
+        dir = normalize(vec3(u, 1.0, v));
         break;
     case 3:
-        dir = normalize(vec3(u, -1.0, v));
+        dir = normalize(vec3(u, -1.0, -v));
         break;
     case 4:
-        dir = normalize(vec3(u, v, 1.0));
+        dir = normalize(vec3(u, -v, 1.0));
         break;
     case 5:
-        dir = normalize(vec3(-u, v, -1.0));
+        dir = normalize(vec3(u, -v, -1.0));
         break;
     }
 
@@ -194,60 +195,30 @@ shared vec4 shared_memory[9][6];
 void main(void)
 {
 #ifdef MODE_CLEAR
-    const int face_index = int(gl_GlobalInvocationID.x);
-
-    if (face_index >= 6) {
-        return;
-    }
-
-    const ivec2 sample_index = ivec2(gl_GlobalInvocationID.yz);
-
-    if (any(greaterThanEqual(sample_index, ivec2(NUM_SAMPLES_X, NUM_SAMPLES_Y)))) {
-        return;
-    }
+    const uvec2 sample_index = uvec2(gl_GlobalInvocationID.xy);
 
     for (int i = 0; i < 9; i++) {
         CURRENT_TILE.coeffs_weights[i] = vec4(0.0);
     }
 
+    // @TODO Optimize this
     if (all(equal(gl_GlobalInvocationID.xyz, ivec3(0)))) {
         for (int i = 0; i < 9; i++) {
             sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] = vec4(0.0);
         }
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
-    const int face_index = int(gl_GlobalInvocationID.x);
+    const uvec2 sample_index = uvec2(gl_GlobalInvocationID.xy);
 
-    if (face_index >= 6) {
-        return;
-    }
-
-    const ivec2 sample_index = ivec2(gl_GlobalInvocationID.yz);
-
-    if (any(greaterThanEqual(sample_index, ivec2(NUM_SAMPLES_X, NUM_SAMPLES_Y)))) {
-        return;
-    }
-
-    const ivec2 size_per_sample = ivec2(cubemap_dimensions.xy) / ivec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
-
-    // middle of this part of the face
-    const ivec2 sample_coord = ivec2(vec2(size_per_sample * sample_index) + (vec2(size_per_sample) * 0.5));
-
-    const vec2 texel_size = vec2(1.0) / vec2(cubemap_dimensions.xy);
-
-    // +0.5 to sample in the middle of the texel
-    const vec2 uv = vec2((vec2(sample_coord) + 0.5) * texel_size);
-
-    // [-1, 1] range
+    const vec2 uv = (vec2(sample_index) + 0.5) / vec2(NUM_SAMPLES_X, NUM_SAMPLES_Y);
     const vec2 sample_point = uv * 2.0 - 1.0;
-    
-    const vec3 dir = MapXYSToDirection(face_index, sample_point);
+    const vec3 dir = normalize(DecodeOctahedralCoord(uv));
 
     vec4 sky = SampleSky(dir);
 
-    vec4 albedo = TextureCube(sampler_nearest, cubemap_color, dir);
-    vec3 normal = normalize(UnpackNormalVec2(TextureCube(sampler_nearest, cubemap_normals, dir).rg));
-    vec2 dist_dist2 = TextureCube(sampler_nearest, cubemap_depth, dir).rg;
+    vec4 albedo = TextureCube(sampler_linear, cubemap_color, dir);
+    vec3 normal = normalize(UnpackNormalVec2(TextureCube(sampler_linear, cubemap_normals, dir).rg));
+    vec2 dist_dist2 = TextureCube(sampler_linear, cubemap_depth, dir).rg;
 
     vec4 position = vec4(world_position.xyz + dir * dist_dist2.r, 1.0);
 
@@ -257,7 +228,7 @@ void main(void)
     vec4 radiance = CalculateDirectLighting(position.xyz, normal, -dir) * albedo;
     radiance = mix(radiance, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
 
-    vec4 color = irradiance + radiance;
+    vec4 color = vec4(CalculateDirectLighting(position.xyz, normal, -dir).rgb, 1.0);//irradiance + radiance;
 
     float sh_values[27] = ProjectOntoSH9Color(dir, color.rgb);
 
@@ -330,17 +301,15 @@ void main(void)
         sh_result[i] = vec3(0.0);
     }
 
-    for (int face = 0; face < 6; ++face) {
-        for (int sample_x = 0; sample_x < NUM_SAMPLES_X; ++sample_x) {
-            for (int sample_y = 0; sample_y < NUM_SAMPLES_Y; ++sample_y) {
-                for (int i = 0; i < 9; i++) {
-                    const vec3 coeff = sh_tiles[(face * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].rgb;
-                    const float weight = sh_tiles[(face * NUM_SAMPLES_X * NUM_SAMPLES_Y) + (sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].a;
+    for (int sample_x = 0; sample_x < NUM_SAMPLES_X; ++sample_x) {
+        for (int sample_y = 0; sample_y < NUM_SAMPLES_Y; ++sample_y) {
+            for (int i = 0; i < 9; i++) {
+                const vec3 coeff = sh_tiles[(sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].rgb;
+                const float weight = sh_tiles[(sample_x * NUM_SAMPLES_Y) + sample_y].coeffs_weights[i].a;
 
-                    sh_result[i] += coeff;
+                sh_result[i] += coeff;
 
-                    total_weight += weight;
-                }
+                total_weight += weight;
             }
         }
     }

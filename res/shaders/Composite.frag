@@ -81,7 +81,7 @@ void main()
     // out_color.rgb = Texture2D(HYP_SAMPLER_NEAREST, depth_pyramid, v_texcoord0).rgb;
     
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, reflection_probes_texture, v_texcoord0).rgb;
-    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_color_texture, v_texcoord0).rgb;
+    // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, light_field_depth_texture, v_texcoord0).rgb;
 
     // out_color.rgb = vec3(float(is_sky));
     // out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, gbuffer_albedo_texture_translucent, v_texcoord0).rgb;
