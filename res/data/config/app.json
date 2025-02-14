@@ -7,7 +7,7 @@
       "screen_edge_fade": [0.960000, 0.990000],
       "quality": 1,
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": true
     },
     "rt": {
@@ -26,13 +26,13 @@
       "enabled": true
     },
     "debug": {
-      "env_grid_probes": true,
-      "reflection_probes": false,
+      "env_grid_probes": false,
+      "reflection_probes": true,
       "ssr": false,
       "reflections": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": true
+      "irradiance": false
     },
     "hbil": {
       "enabled": false
