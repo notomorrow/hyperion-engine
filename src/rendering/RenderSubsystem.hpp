@@ -51,7 +51,7 @@ public:
 
     RenderSubsystem(const RenderSubsystem &other)               = delete;
     RenderSubsystem &operator=(const RenderSubsystem &other)    = delete;
-    virtual ~RenderSubsystem()                                      = default;
+    virtual ~RenderSubsystem()                                  = default;
 
     HYP_FORCE_INLINE Name GetName() const
         { return m_name; }
@@ -67,7 +67,7 @@ public:
 
     void SetComponentIndex(Index index)
     {
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
         if (index == m_index) {
             return;
@@ -77,35 +77,35 @@ public:
 
         m_index = index;
 
-        if (m_is_initialized.Get(MemoryOrder::ACQUIRE) & ThreadName::THREAD_RENDER) {
+        if (m_is_initialized.Get(MemoryOrder::ACQUIRE) & g_render_thread) {
             OnComponentIndexChanged(index, prev_index);
         }
     }
 
-    HYP_FORCE_INLINE bool IsInitialized(ThreadName thread_name = ThreadName::THREAD_RENDER) const
-        { return m_is_initialized.Get(MemoryOrder::ACQUIRE) & thread_name; }
+    HYP_FORCE_INLINE bool IsInitialized(const StaticThreadID &thread_id = g_render_thread) const
+        { return m_is_initialized.Get(MemoryOrder::ACQUIRE) & thread_id; }
     
     /*! \brief Init the component. Called on the RENDER thread when the RenderSubsystem is added to the RenderEnvironment */
     void ComponentInit()
     {
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
-        AssertThrow(!(m_is_initialized.Get(MemoryOrder::ACQUIRE) & ThreadName::THREAD_RENDER));
+        AssertThrow(!(m_is_initialized.Get(MemoryOrder::ACQUIRE) & g_render_thread));
 
         Init();
 
-        m_is_initialized.BitOr(ThreadName::THREAD_RENDER, MemoryOrder::RELEASE);
+        m_is_initialized.BitOr(uint32(g_render_thread), MemoryOrder::RELEASE);
     }
 
     /*! \brief Update data for the component. Called from GAME thread. */
     void ComponentUpdate(GameCounter::TickUnit delta)
     {
-        Threads::AssertOnThread(ThreadName::THREAD_GAME);
+        Threads::AssertOnThread(g_game_thread);
 
-        if (!(m_is_initialized.Get(MemoryOrder::ACQUIRE) & ThreadName::THREAD_GAME)) {
+        if (!(m_is_initialized.Get(MemoryOrder::ACQUIRE) & g_game_thread)) {
             InitGame();
 
-            m_is_initialized.BitOr(ThreadName::THREAD_GAME, MemoryOrder::RELEASE);
+            m_is_initialized.BitOr(uint32(g_game_thread), MemoryOrder::RELEASE);
         }
 
         OnUpdate(delta);
@@ -114,9 +114,9 @@ public:
     /*! \brief Perform rendering. Called from RENDER thread. */
     void ComponentRender(Frame *frame)
     {
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
-        AssertThrow(m_is_initialized.Get(MemoryOrder::ACQUIRE) & ThreadName::THREAD_RENDER);
+        AssertThrow(m_is_initialized.Get(MemoryOrder::ACQUIRE) & g_render_thread);
 
         if (m_render_frame_slicing == 0 || m_render_frame_slicing_counter++ % m_render_frame_slicing == 0) {
             OnRender(frame);

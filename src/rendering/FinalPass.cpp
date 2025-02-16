@@ -132,7 +132,7 @@ void CompositePass::Record(uint32 frame_index)
 void CompositePass::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     uint32 frame_index = frame->GetFrameIndex();
 
@@ -190,7 +190,7 @@ void FinalPass::SetUITexture(Handle<Texture> texture)
 void FinalPass::Create()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     m_extent = g_engine->GetGPUInstance()->GetSwapchain()->extent;
     m_image_format = g_engine->GetGPUInstance()->GetSwapchain()->image_format;
@@ -302,7 +302,7 @@ void FinalPass::Create()
 void FinalPass::Resize_Internal(Vec2u new_size)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     FullScreenPass::Resize_Internal(new_size);
 
@@ -318,7 +318,7 @@ void FinalPass::Record(uint32 frame_index)
 void FinalPass::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
 

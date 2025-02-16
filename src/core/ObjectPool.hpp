@@ -38,7 +38,6 @@ class ObjectContainer;
 class IObjectContainer;
 
 struct HypObjectHeader;
-
 class HypClass;
 
 class IObjectContainer
@@ -224,7 +223,7 @@ struct HypObjectMemory final : HypObjectHeader
         return count - 1;
     }
 
-    T *Release()
+    HYP_NODISCARD T *Release()
     {
         T *ptr = reinterpret_cast<T *>(bytes);
 
@@ -413,7 +412,7 @@ public:
         return m_pool.GetIDGenerator();
     }
 
-private:
+// private:
     MemoryPoolType  m_pool;
     HypObjectMemory m_default_object;
 };

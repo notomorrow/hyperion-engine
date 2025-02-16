@@ -958,7 +958,7 @@ void SampleStreamer::Logic(GameCounter::TickUnit delta)
                             }
                         }
                     }
-                });
+                }).Detach();
 
                 client->CreateDataChannel(HYP_NAME(ping-pong));
 

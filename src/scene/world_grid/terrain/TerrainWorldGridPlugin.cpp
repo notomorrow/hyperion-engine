@@ -240,14 +240,7 @@ TerrainMeshBuilder::TerrainMeshBuilder(const WorldGridPatchInfo &patch_info)
 
 void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_TASK);
-
-    DebugLog(
-        LogType::Debug,
-        "Generate Terrain mesh at coord [%d, %d]\n",
-        m_height_data.patch_info.coord.x,
-        m_height_data.patch_info.coord.y
-    );
+    Threads::AssertOnThread(ThreadCategory::THREAD_CATEGORY_TASK);
 
     for (int z = 0; z < int(m_height_data.patch_info.extent.z); z++) {
         for (int x = 0; x < int(m_height_data.patch_info.extent.x); x++) {
@@ -272,7 +265,7 @@ void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator &noise_combinator
 
 Handle<Mesh> TerrainMeshBuilder::BuildMesh() const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(ThreadCategory::THREAD_CATEGORY_TASK);
 
     Array<Vertex> vertices = BuildVertices();
     Array<Mesh::Index> indices = BuildIndices();
@@ -379,9 +372,9 @@ void TerrainWorldGridPlugin::Initialize()
 {
     HYP_SCOPE;
 
-    HYP_LOG(TerrainWorldGridPlugin, Info, "Initializing TerrainWorldGridPlugin");
+    HYP_LOG(TerrainWorldGridPlugin, Debug, "Initializing TerrainWorldGridPlugin");
 
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN | ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     m_material = CreateObject<Material>(NAME("terrain_material"));
     m_material->SetBucket(BUCKET_OPAQUE);

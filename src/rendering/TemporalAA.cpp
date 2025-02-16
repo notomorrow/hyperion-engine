@@ -83,7 +83,7 @@ void TemporalAA::Create()
     g_engine->GetDeferredRenderer()->GetGBuffer()->OnGBufferResolutionChanged.Bind([this](...)
     {
         HYP_SCOPE;
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
         if (!m_is_initialized) {
             return;

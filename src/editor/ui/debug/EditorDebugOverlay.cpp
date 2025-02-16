@@ -24,7 +24,7 @@ EditorDebugOverlayBase::~EditorDebugOverlayBase()
 
 void EditorDebugOverlayBase::Initialize(UIObject *spawn_parent)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
     AssertThrow(spawn_parent != nullptr);
 
     m_ui_object = CreateUIObject(spawn_parent);
@@ -39,7 +39,7 @@ RC<UIObject> EditorDebugOverlayBase::CreateUIObject_Impl(UIObject *spawn_parent)
 
 void EditorDebugOverlayBase::Update_Impl()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 }
 
 #pragma endregion EditorDebugOverlayBase

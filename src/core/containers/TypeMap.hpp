@@ -26,6 +26,9 @@ public:
 
     using KeyValuePairType = typename Map::KeyValuePairType;
 
+    using KeyType = TypeID;
+    using ValueType = KeyValuePairType;
+
     using InsertResult = typename Map::InsertResult;
 
     using Iterator = typename Map::Iterator;
@@ -163,6 +166,17 @@ public:
 
     HYP_FORCE_INLINE const Value &AtIndex(SizeType index) const
         { return m_map.AtIndex(index).second; }
+
+    HYP_FORCE_INLINE Value &operator[](TypeID type_id)
+    {
+        const auto it = Find(type_id);
+
+        if (it == m_map.End()) {
+            return m_map.Set(type_id, Value()).first->second;
+        }
+
+        return it->second;
+    }
 
     HYP_FORCE_INLINE bool Contains(TypeID type_id) const
         { return m_map.Contains(type_id); }

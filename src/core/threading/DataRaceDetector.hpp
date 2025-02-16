@@ -5,8 +5,7 @@
 
 #include <core/Defines.hpp>
 
-#include <core/threading/Thread.hpp>
-#include <core/threading/Threads.hpp>
+#include <core/threading/ThreadID.hpp>
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
 
@@ -16,8 +15,6 @@
 
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/Array.hpp>
-
-#include <math/MathUtil.hpp>
 
 #include <Types.hpp>
 
@@ -36,11 +33,16 @@ HYP_MAKE_ENUM_FLAGS(DataAccessFlags)
 namespace threading {
 
 #ifdef HYP_ENABLE_MT_CHECK
+
+struct SuppressDataRaceDetectorContext
+{
+};
+
 class HYP_API DataRaceDetector
 {
     struct ThreadAccessState;
     
-    static constexpr SizeType num_preallocated_states = MathUtil::FastLog2_Pow2(uint64(ThreadName::THREAD_STATIC));
+    static constexpr SizeType num_preallocated_states = g_max_static_thread_ids;
 
     static const FixedArray<ThreadAccessState, num_preallocated_states> &GetPreallocatedStates();
 
@@ -54,17 +56,8 @@ public:
     class DataAccessScope
     {
     public:
-        DataAccessScope(EnumFlags<DataAccessFlags> flags, const DataRaceDetector &detector, const DataAccessState &state = { })
-            : m_detector(const_cast<DataRaceDetector &>(detector)),
-              m_thread_id(ThreadID::Current())
-        {
-            m_flags = m_detector.AddAccess(m_thread_id, flags, state);
-        }
-
-        ~DataAccessScope()
-        {
-            m_detector.RemoveAccess(m_thread_id, m_flags);
-        }
+        DataAccessScope(EnumFlags<DataAccessFlags> flags, const DataRaceDetector &detector, const DataAccessState &state = { });
+        ~DataAccessScope();
 
     private:
         EnumFlags<DataAccessFlags>  m_flags;
@@ -104,8 +97,9 @@ private:
 
     struct ThreadAccessState
     {
-        ThreadID                    thread_id = ThreadID::Invalid();
+        ThreadID                    thread_id;
         EnumFlags<DataAccessFlags>  access = DataAccessFlags::ACCESS_NONE;
+        uint32                      original_index = ~0u;
         DataAccessState             state;
     };
 
@@ -126,6 +120,12 @@ public:
     class DataAccessScope { };
 };
 
+#endif
+
+#ifdef HYP_ENABLE_MT_CHECK
+    #define HYP_DECLARE_MT_CHECK(_data_race_detector) DataRaceDetector _data_race_detector
+#else
+    #define HYP_DECLARE_MT_CHECK(_data_race_detector)
 #endif
 
 } // namespace threading

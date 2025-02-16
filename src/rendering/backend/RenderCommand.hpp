@@ -35,7 +35,7 @@ enum RenderCommandExecuteStage : uint32
 /*! \brief Pushes a render command to the render command queue. This is a wrapper around RenderCommands::Push.
  *  If called from the render thread, the command is executed immediately. */
 #define PUSH_RENDER_COMMAND(name, ...) \
-    if (::hyperion::Threads::IsOnThread(::hyperion::ThreadName::THREAD_RENDER)) { \
+    if (::hyperion::Threads::IsOnThread(::hyperion::g_render_thread)) { \
         const ::hyperion::RendererResult command_result = RENDER_COMMAND(name)(__VA_ARGS__).Call(); \
         AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.GetError().GetErrorCode(), command_result.GetError().GetMessage().Data()); \
     } else { \
@@ -44,7 +44,7 @@ enum RenderCommandExecuteStage : uint32
 
 /*! \brief If not on the render thread, waits for the render thread to finish executing all render commands. */
 #define HYP_SYNC_RENDER(...) \
-    if (!::hyperion::Threads::IsOnThread(::hyperion::ThreadName::THREAD_RENDER)) { \
+    if (!::hyperion::Threads::IsOnThread(::hyperion::g_render_thread)) { \
         ::hyperion::renderer::RenderCommands::Wait(); \
     }
 
@@ -206,7 +206,7 @@ public:
     {
         static_assert(std::is_base_of_v<RenderCommand, T>, "T must derive RenderCommand");
 
-        Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(~g_render_thread);
 
         std::unique_lock lock(mtx);
 

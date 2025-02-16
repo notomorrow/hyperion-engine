@@ -73,7 +73,6 @@ struct SSRRendererConfig : public ConfigBase<SSRRendererConfig>
     }
 };
 
-
 class SSRRenderer
 {
 public:

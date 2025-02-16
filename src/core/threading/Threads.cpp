@@ -4,122 +4,92 @@
 #include <core/threading/TaskSystem.hpp>
 #include <core/threading/Mutex.hpp>
 
+#include <core/containers/HashSet.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 namespace hyperion {
 
+HYP_API const StaticThreadID g_main_thread = StaticThreadID(NAME("Main"));
+HYP_API const StaticThreadID g_render_thread = g_main_thread;
+
+HYP_API const StaticThreadID g_game_thread = StaticThreadID(NAME("Game"));
+
 namespace threading {
 
-static constexpr uint32 g_static_thread_index_max = MathUtil::FastLog2_Pow2(((~(THREAD_STATIC >> 1)) & THREAD_STATIC));
-
-struct StaticThreadMap
+static const ThreadID &ThreadSet_KeyBy(IThread *thread)
 {
-    StaticThreadMap(const FlatMap<ThreadName, Pair<ThreadID, IThread *>> &map)
-    {
-        for (const auto &it : map) {
-            const uint32 thread_index = MathUtil::FastLog2_Pow2(it.first);
-            AssertThrow(thread_index < threads.Size());
+    return thread->GetID();
+}
 
-            threads[thread_index] = it.second;
+class ThreadMap
+{
+public:
+    using ThreadSetType = HashSet<IThread *, &ThreadSet_KeyBy>;
+
+    ThreadMap()                                     = default;
+
+    ThreadMap(const ThreadSetType &threads)
+        : m_threads(threads)
+    {
+    }
+
+    ThreadMap(const ThreadMap &other)               = delete;
+    ThreadMap &operator=(const ThreadMap &other)    = delete;
+
+    IThread *Get(const ThreadID &thread_id)
+    {
+        Mutex::Guard guard(m_mutex);
+
+        auto it = m_threads.Find(thread_id);
+
+        if (it == m_threads.End()) {
+            return nullptr;
         }
-    }
 
-    ThreadID GetThreadID(ThreadName thread_name)
-    {
-        const uint32 thread_index = MathUtil::FastLog2_Pow2(thread_name);
-        AssertThrow(thread_index < threads.Size());
-
-        return threads[thread_index].first;
-    }
-
-    IThread *Get(ThreadID thread_id)
-    {
-        AssertThrow(!thread_id.IsDynamic());
-
-        return threads[MathUtil::FastLog2_Pow2(thread_id.value)].second;
+        return *it;
     }
 
     void Add(IThread *thread)
     {
         AssertThrow(thread != nullptr);
-        AssertThrow(!thread->GetID().IsDynamic());
 
-        threads[MathUtil::FastLog2_Pow2(thread->GetID())].second = thread;
+        Mutex::Guard guard(m_mutex);
+
+        m_threads.Set(thread);
     }
 
-    bool Remove(ThreadID thread_id)
+    bool Remove(const ThreadID &thread_id)
     {
-        AssertThrow(!thread_id.IsDynamic());
+        Mutex::Guard guard(m_mutex);
 
-        threads[MathUtil::FastLog2_Pow2(thread_id.value)].second = nullptr;
+        auto it = m_threads.Find(thread_id);
+
+        if (it == m_threads.End()) {
+            return false;
+        }
+
+        m_threads.Erase(it);
 
         return true;
     }
 
-    FixedArray<Pair<ThreadID, IThread *>, g_static_thread_index_max>    threads;
+private:
+    ThreadSetType   m_threads;
+    Mutex           m_mutex;
 };
 
-struct DynamicThreadMap
-{
-    IThread *Get(ThreadID thread_id)
-    {
-        AssertThrow(thread_id.IsDynamic());
 
-        Mutex::Guard guard(mutex);
-
-        return threads[thread_id];
-    }
-
-    void Add(IThread *thread)
-    {
-        AssertThrow(thread != nullptr);
-        AssertThrow(thread->GetID().IsDynamic());
-
-        Mutex::Guard guard(mutex);
-
-        threads[thread->GetID()] = thread;
-    }
-
-    bool Remove(ThreadID thread_id)
-    {
-        AssertThrow(thread_id.IsDynamic());
-
-        Mutex::Guard guard(mutex);
-
-        return threads.Erase(thread_id);
-    }
-
-    FlatMap<ThreadID, IThread *>    threads;
-    Mutex                           mutex;
-};
-
-static StaticThreadMap g_static_thread_map = StaticThreadMap({
-    { THREAD_MAIN,      Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_MAIN),         HYP_NAME_UNSAFE(MainThread) }, nullptr } },
-    { THREAD_GAME,      Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_GAME),         HYP_NAME_UNSAFE(GameThread) }, nullptr } },
-    { THREAD_RESERVED0, Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_RESERVED0),    HYP_NAME_UNSAFE(ReservedThread0) }, nullptr } },
-    { THREAD_TASK_0,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_0),       HYP_NAME_UNSAFE(TaskThread0) }, nullptr } },
-    { THREAD_TASK_1,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_1),       HYP_NAME_UNSAFE(TaskThread1) }, nullptr } },
-    { THREAD_TASK_2,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_2),       HYP_NAME_UNSAFE(TaskThread2) }, nullptr } },
-    { THREAD_TASK_3,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_3),       HYP_NAME_UNSAFE(TaskThread3) }, nullptr } },
-    { THREAD_TASK_4,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_4),       HYP_NAME_UNSAFE(TaskThread4) }, nullptr } },
-    { THREAD_TASK_5,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_5),       HYP_NAME_UNSAFE(TaskThread5) }, nullptr } },
-    { THREAD_TASK_6,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_6),       HYP_NAME_UNSAFE(TaskThread6) }, nullptr } },
-    { THREAD_TASK_7,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_7),       HYP_NAME_UNSAFE(TaskThread7) }, nullptr } },
-    { THREAD_TASK_8,    Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_TASK_8),       HYP_NAME_UNSAFE(TaskThread8) }, nullptr } },
-    { THREAD_RESERVED1, Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_RESERVED1),    HYP_NAME_UNSAFE(ReservedThread1) }, nullptr } },
-    { THREAD_RESERVED2, Pair<ThreadID, IThread *> { ThreadID { uint32(THREAD_RESERVED2),    HYP_NAME_UNSAFE(ReservedThread2) }, nullptr } }
-});
-
-static DynamicThreadMap g_dynamic_thread_map = { };
+static ThreadMap g_static_thread_map = { };
+static ThreadMap g_dynamic_thread_map = { };
 
 thread_local IThread *g_current_thread = nullptr;
 
-// @TODO heirarchical thread IDs so task thread ids can be derived from the main thread id
 #ifdef HYP_ENABLE_THREAD_ID
-thread_local ThreadID g_current_thread_id = ThreadID { uint32(THREAD_MAIN), HYP_NAME_UNSAFE(MainThread) };
+thread_local ThreadID g_current_thread_id = g_main_thread;
 #else
-static const ThreadID g_current_thread_id = ThreadID { uint32(THREAD_MAIN), HYP_NAME_UNSAFE(MainThread) };
+static const ThreadID g_current_thread_id = g_main_thread;
 #endif
 
 static void SetCurrentThreadID(ThreadID id)
@@ -131,32 +101,26 @@ static void SetCurrentThreadID(ThreadID id)
 #ifdef HYP_WINDOWS
     HRESULT set_thread_result = SetThreadDescription(
         GetCurrentThread(),
-        &HYP_UTF8_TOWIDE(id.name.LookupString())[0]
+        &HYP_UTF8_TOWIDE(id.GetName().LookupString())[0]
     );
 
     if (FAILED(set_thread_result)) {
-        HYP_LOG(Threading, Error, "Failed to set Win32 thread name for thread {}", id.name);
+        HYP_LOG(Threading, Error, "Failed to set Win32 thread name for thread {}", id.GetName());
     }
 #elif defined(HYP_MACOS)
-    pthread_setname_np(id.name.LookupString());
+    pthread_setname_np(id.GetName().LookupString());
 #elif defined(HYP_LINUX)
-    pthread_setname_np(pthread_self(), id.name.LookupString());
+    pthread_setname_np(pthread_self(), id.GetName().LookupString());
 #endif
 }
 
-IThread *Threads::GetThread(ThreadID thread_id)
+IThread *Threads::GetThread(const ThreadID &thread_id)
 {
     if (thread_id.IsDynamic()) {
         return g_dynamic_thread_map.Get(thread_id);
     } else {
         return g_static_thread_map.Get(thread_id);
     }
-
-    // if (!(THREAD_TASK & thread_id.GetMask())) {
-    //     return nullptr;
-    // }
-
-    // return TaskSystem::GetInstance().GetTaskThread(thread_id);
 }
 
 IThread *Threads::CurrentThreadObject()
@@ -187,11 +151,11 @@ void Threads::AssertOnThread(ThreadMask mask, const char *message)
     const ThreadID current_thread_id = g_current_thread_id;
 
     AssertThrowMsg(
-        (mask & current_thread_id.value),
+        mask & current_thread_id.GetMask(),
         "Expected current thread to be in mask %u, but got %u (%s). Message: %s",
         mask,
-        current_thread_id.value,
-        current_thread_id.name.LookupString(),
+        current_thread_id.GetMask(),
+        current_thread_id.GetName().LookupString(),
         message ? message : "(no message)"
     );
 
@@ -209,11 +173,9 @@ void Threads::AssertOnThread(const ThreadID &thread_id, const char *message)
 
     AssertThrowMsg(
         thread_id == current_thread_id,
-        "Expected current thread to be %u (%s), but got %u (%s). Message: %s",
-        thread_id.value,
-        thread_id.name.LookupString(),
-        current_thread_id.value,
-        current_thread_id.name.LookupString(),
+        "Expected current thread to be %s, but got %s. Message: %s",
+        thread_id.GetName().LookupString(),
+        current_thread_id.GetName().LookupString(),
         message ? message : "(no message)"
     );
 #else
@@ -224,17 +186,15 @@ void Threads::AssertOnThread(const ThreadID &thread_id, const char *message)
 
 bool Threads::IsThreadInMask(const ThreadID &thread_id, ThreadMask mask)
 {
-    if (mask & thread_id.value) {
-        return true;
-    }
-
-    return false;
+    return mask & thread_id.GetMask();
 }
 
 bool Threads::IsOnThread(ThreadMask mask)
 {
 #ifdef HYP_ENABLE_THREAD_ID
-    if (mask & g_current_thread_id.value) {
+    const ThreadID &current_thread_id = g_current_thread_id;
+
+    if (mask & current_thread_id.GetMask()) {
         return true;
     }
 
@@ -259,22 +219,35 @@ bool Threads::IsOnThread(const ThreadID &thread_id)
     return false;
 }
 
-ThreadID Threads::GetStaticThreadID(ThreadName thread_name)
-{
-    return g_static_thread_map.GetThreadID(thread_name);
-}
-
-ThreadID Threads::CurrentThreadID()
+const ThreadID &Threads::CurrentThreadID()
 {
     return g_current_thread_id;
 }
 
 ThreadType Threads::CurrentThreadType()
 {
-    const uint32 thread_id = Threads::CurrentThreadID().value;
+    const ThreadID &thread_id = Threads::CurrentThreadID();
 
-    return thread_id == THREAD_GAME ? THREAD_TYPE_GAME
-        : (thread_id == THREAD_RENDER ? THREAD_TYPE_RENDER : THREAD_TYPE_INVALID);
+    if (thread_id == g_game_thread) {
+        return THREAD_TYPE_GAME;
+    }
+
+    if (thread_id == g_render_thread) {
+        return THREAD_TYPE_RENDER;
+    }
+
+    switch (thread_id.GetCategory()) {
+    case THREAD_CATEGORY_TASK:
+        return THREAD_TYPE_TASK;
+    default:
+        if (thread_id.IsDynamic()) {
+            return THREAD_TYPE_DYNAMIC;
+        }
+
+        break;
+    }
+
+    return THREAD_TYPE_INVALID;
 }
 
 void Threads::SetCurrentThreadPriority(ThreadPriorityValue priority)

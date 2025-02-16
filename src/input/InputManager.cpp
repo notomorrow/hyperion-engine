@@ -64,7 +64,7 @@ InputManager::~InputManager()
 
 void InputManager::CheckEvent(SystemEvent *event)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_INPUT);
+    Threads::AssertOnThread(g_game_thread);
 
     switch (event->GetType()) {
     case SystemEventType::EVENT_KEYDOWN:
@@ -149,7 +149,7 @@ InputMouseLockScope InputManager::AcquireMouseLock()
 
 void InputManager::SetIsMouseLocked(bool is_mouse_locked)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_INPUT);
+    Threads::AssertOnThread(g_game_thread);
 
     if (m_is_mouse_locked == is_mouse_locked) {
         return;
@@ -182,7 +182,7 @@ void InputManager::SetMousePosition(Vec2i position)
 
 void InputManager::UpdateMousePosition()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_INPUT);
+    Threads::AssertOnThread(g_game_thread);
     
     if (!m_window) {
         return;
@@ -194,8 +194,6 @@ void InputManager::UpdateMousePosition()
 
 void InputManager::UpdateWindowSize(Vec2i new_size)
 {
-    //Threads::AssertOnThread(ThreadName::THREAD_INPUT);
-    
     if (!m_window) {
         return;
     }

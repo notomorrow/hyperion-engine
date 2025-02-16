@@ -26,17 +26,24 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer ScenesBuffer
     Scene scene;
 };
 
-HYP_DESCRIPTOR_SRV(RenderTextureToScreenDescriptorSet, InTexture) uniform texture2D src_image;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SRV(MergeHalfResTexturesDescriptorSet, InTexture) uniform texture2D src_image;
+
+HYP_DESCRIPTOR_CBUFF(MergeHalfResTexturesDescriptorSet, UniformBuffer) uniform UniformBuffer
+{
+    uvec2   dimensions;
+};
 
 void main()
 {
-    vec2 texcoord = v_texcoord;
+    vec2 texcoord_a = v_texcoord * 0.5;
+    vec2 texcoord_b = texcoord_a + vec2(0.5, 0.0);
 
-#ifdef HALFRES
-    // map texcoords to previous frame's output coords
-    texcoord = (texcoord * 0.5) + vec2(0.5 * float((scene.frame_counter - 1) & 1), 0.0);
-#endif
+    uvec2 pixel_coord = uvec2(v_texcoord * (vec2(dimensions) - 1.0));
+    const uint pixel_index = pixel_coord.y * dimensions.x + pixel_coord.x;
 
-    color_output = Texture2D(sampler_nearest, src_image, texcoord);
+    vec4 color_a = Texture2D(sampler_nearest, src_image, texcoord_a);
+    vec4 color_b = Texture2D(sampler_nearest, src_image, texcoord_b);
+    
+    color_output = mix(color_a, color_b, float(pixel_index & 1));
 }

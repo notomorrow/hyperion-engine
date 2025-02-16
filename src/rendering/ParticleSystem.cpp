@@ -347,7 +347,7 @@ void ParticleSpawner::CreateComputePipelines()
 
 ParticleSystem::ParticleSystem()
     : HypObject(),
-      m_particle_spawners(ThreadName::THREAD_RENDER),
+      m_particle_spawners(g_render_thread),
       m_counter(0u)
 {
 }
@@ -418,7 +418,7 @@ void ParticleSystem::UpdateParticles(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     AssertReady();
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
@@ -532,7 +532,7 @@ void ParticleSystem::Render(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     AssertReady();
 
     const uint32 frame_index = frame->GetFrameIndex();

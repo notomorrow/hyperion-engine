@@ -66,7 +66,7 @@ struct HYP_API ProfileScope
 
     #define HYP_PROFILE_BEGIN \
         ProfileScope::ResetForCurrentThread(); \
-        HYP_NAMED_SCOPE(*Threads::CurrentThreadID().name)
+        HYP_NAMED_SCOPE(*Threads::CurrentThreadID().GetName())
 
 #else
     #define HYP_NAMED_SCOPE(...)

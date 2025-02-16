@@ -778,6 +778,12 @@ bool ConfigurationTable::SetHypClassFields(const HypClass *hyp_class, const void
     AnyRef target_ref(hyp_class->GetTypeID(), const_cast<void *>(ptr));
     HypData target_hyp_data = HypData(target_ref);
 
+    if (!JSONToObject(GetSubobject().AsObject(), hyp_class, target_hyp_data)) {
+        HYP_LOG(Config, Error, "Failed to deserialize JSON to instance of HypClass \"{}\"", hyp_class->GetName());
+
+        return false;
+    }
+
     json::JSONObject json_object;
 
     if (ObjectToJSON(hyp_class, target_hyp_data, json_object)) {

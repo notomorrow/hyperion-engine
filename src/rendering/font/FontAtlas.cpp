@@ -254,7 +254,7 @@ void FontAtlas::Render()
         RenderGlyphs(i, false);
     }
 
-    if (!Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
+    if (!Threads::IsOnThread(g_render_thread)) {
         // Sync render commands if not on render thread (render commands are executed inline if on render thread)
         HYP_SYNC_RENDER();
     }

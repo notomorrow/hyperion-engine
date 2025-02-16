@@ -26,7 +26,7 @@ HYP_API void InitializeAppContext(const RC<AppContext> &app_context, Game *game)
     AssertThrow(game != nullptr);
     game->SetAppContext(app_context);
 
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+    Threads::AssertOnThread(g_main_thread);
 
     AssertThrowMsg(g_engine.IsValid(), "Engine is null!");
 
@@ -35,6 +35,8 @@ HYP_API void InitializeAppContext(const RC<AppContext> &app_context, Game *game)
 
 HYP_API void InitializeEngine(const FilePath &base_path)
 {
+    Threads::AssertOnThread(g_main_thread);
+    
     HypClassRegistry::GetInstance().Initialize();
 
     dotnet::DotNetSystem::GetInstance().Initialize(base_path);
@@ -54,7 +56,7 @@ HYP_API void InitializeEngine(const FilePath &base_path)
 
 HYP_API void DestroyEngine()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+    Threads::AssertOnThread(g_main_thread);
 
     AssertThrowMsg(
         g_engine != nullptr,

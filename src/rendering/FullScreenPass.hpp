@@ -119,10 +119,17 @@ public:
     void End(Frame *frame);
 
 protected:
-    void CreateQuad();
-
     virtual bool UsesTemporalBlending() const
         { return false; }
+
+    virtual bool ShouldRenderHalfRes() const
+        { return false; }
+
+    virtual const ImageViewRef &GetFinalImageView() const;
+
+    virtual const ImageViewRef &GetPreviousFrameColorImageView() const;
+
+    void CreateQuad();
 
     virtual void Resize_Internal(Vec2u new_size);
 
@@ -144,10 +151,25 @@ protected:
     UniquePtr<TemporalBlending>                         m_temporal_blending;
     Handle<Texture>                                     m_previous_texture;
 
+    bool                                                m_is_first_frame;
+
 private:
     void CreateTemporalBlending();
+    void CreateRenderTextureToScreenPass();
+    void CreatePreviousTexture();
+    void CreateMergeHalfResTexturesPass();
+
+    void RenderPreviousTextureToScreen(Frame *frame);
+    void CopyResultToPreviousTexture(Frame *frame);
+
+    void MergeHalfResTextures(Frame *frame);
 
     bool                                                m_is_initialized;
+
+    UniquePtr<FullScreenPass>                           m_render_texture_to_screen_pass;
+
+    // Used for half-res rendering
+    UniquePtr<FullScreenPass>                           m_merge_half_res_textures_pass;
 };
 } // namespace hyperion
 

@@ -46,9 +46,9 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer Sce
 
 #include "../include/env_probe.inc"
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
 HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
 
 HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -56,7 +56,7 @@ HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_
 #include "./DeferredLighting.glsl"
 
 #if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
-HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
 	ivec4 scrambling_tile[128 * 128 * 8 / 4];
@@ -80,7 +80,7 @@ void main()
 #if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
     // Checkerboard rendering
     uvec2 screen_resolution = uvec2(camera.dimensions.xy);
-    uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution) - 1.0);
+    uvec2 pixel_coord = uvec2(v_texcoord * (vec2(screen_resolution) - 1.0));
     const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
 
     if (bool(((pixel_coord.x & 1) ^ (pixel_coord.y & 1) ^ (scene.frame_counter & 1))))

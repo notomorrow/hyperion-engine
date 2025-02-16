@@ -12,12 +12,12 @@ BindlessStorage::~BindlessStorage() = default;
 
 void BindlessStorage::Create()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 }
 
 void BindlessStorage::Destroy()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         for (const auto &it : m_resources) {
@@ -31,7 +31,7 @@ void BindlessStorage::Destroy()
 
 void BindlessStorage::AddResource(ID<Texture> id, const ImageViewRef &image_view)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (!id.IsValid()) {
         return;
@@ -53,7 +53,7 @@ void BindlessStorage::AddResource(ID<Texture> id, const ImageViewRef &image_view
 
 void BindlessStorage::RemoveResource(ID<Texture> id)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (!id.IsValid()) {
         return;

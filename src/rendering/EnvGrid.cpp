@@ -196,7 +196,7 @@ EnvGrid::~EnvGrid()
 void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     struct RENDER_COMMAND(UpdateEnvProbeAABBsInGrid) : renderer::RenderCommand
     {
@@ -424,7 +424,7 @@ void EnvGrid::Init()
 // called from game thread
 void EnvGrid::InitGame()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 }
 
 void EnvGrid::OnRemoved()
@@ -477,7 +477,7 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     Octree const *octree = &GetParent()->GetScene()->GetOctree();
     octree->GetFittingOctant(m_aabb, octree);
@@ -522,7 +522,7 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
 void EnvGrid::OnRender(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const CameraRenderResources &active_camera = g_engine->GetRenderState()->GetActiveCamera();
 

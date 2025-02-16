@@ -14,20 +14,20 @@
 namespace hyperion {
 
 EditorDelegates::EditorDelegates()
-    : m_scheduler(Threads::GetStaticThreadID(ThreadName::THREAD_GAME))
+    : m_scheduler(g_game_thread)
 {
 }
 
 void EditorDelegates::AddNodeWatcher(Name watcher_key, Node *root_node, Span<const HypProperty> properties_to_watch, Proc<void, Node *, const HypProperty *> &&proc)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertThrow(root_node != nullptr);
 
     NodeWatcher &node_watcher = m_node_watchers.EmplaceBack(watcher_key, NodeWatcher { }).second;
     node_watcher.root_node = root_node->WeakRefCountedPtrFromThis();
-    node_watcher.OnChange.Bind(std::move(proc), ThreadName::THREAD_GAME).Detach();
+    node_watcher.OnChange.Bind(std::move(proc), g_game_thread).Detach();
 
     for (const HypProperty &property : properties_to_watch) {
         node_watcher.properties_to_watch.Insert(&property);
@@ -37,7 +37,7 @@ void EditorDelegates::AddNodeWatcher(Name watcher_key, Node *root_node, Span<con
 int EditorDelegates::RemoveNodeWatchers(WeakName watcher_key)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     int num_removed = 0;
 
@@ -93,7 +93,7 @@ void EditorDelegates::OnNodeUpdate(Node *node, const HypProperty *property)
         }
     };
 
-    if (Threads::IsOnThread(ThreadName::THREAD_GAME)) {
+    if (Threads::IsOnThread(g_game_thread)) {
         Impl();
     } else {
         m_scheduler.Enqueue(Impl, TaskEnqueueFlags::FIRE_AND_FORGET);
@@ -104,7 +104,7 @@ void EditorDelegates::Update()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     Queue<Scheduler::ScheduledTask> tasks;
 

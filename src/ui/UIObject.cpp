@@ -110,14 +110,7 @@ Handle<Mesh> UIObject::GetQuadMesh()
     return UIObjectQuadMeshHelper::GetQuadMesh();
 }
 
-// @TODO: Refactor UIObject to hold an array of RC<UIObject> for child elements,
-// and iterate over that instead of constantly using the EntityManager and having to Lock()
-// the Weak<UIObject> that UIComponent holds.
-
-// OR: Rather than using Weak<UIObject> at all, we just store the raw UIObject pointer on UIComponent,
-// and the destructor for UIObject will set it to nullptr.
-
-UIObject::UIObject(UIObjectType type, ThreadID owner_thread_id)
+UIObject::UIObject(UIObjectType type, const ThreadID &owner_thread_id)
     : m_type(type),
       m_owner_thread_id(owner_thread_id.IsValid() ? owner_thread_id : Threads::CurrentThreadID()),
       m_stage(nullptr),
@@ -170,7 +163,7 @@ UIObject::UIObject()
 
 UIObject::~UIObject()
 {
-    // Remove the entity from the entity manager
+    // Unset the UIObject pointer on the UIComponent
     if (const Handle<Entity> &entity = GetEntity()) {
         Scene *scene = GetScene();
 
@@ -182,7 +175,11 @@ UIObject::~UIObject()
         }
     }
 
-    m_node_proxy.Reset();
+    if (m_node_proxy.IsValid()) {
+        m_node_proxy->SetEntity(Handle<Entity>::empty);
+
+        m_node_proxy.Reset();
+    }
 }
 
 void UIObject::Init()
@@ -1238,8 +1235,6 @@ int UIObject::RemoveAllChildUIObjects()
             HYP_LOG(UI, Debug, "Remove child {} from {} -- {} refs", child_ui_object->GetName(), GetName(), child_ui_object.GetRefCountData_Internal()->UseCount_Strong());
         }
 
-        // m_child_ui_objects.Clear();
-
         Array<UIObject *> children = GetChildUIObjects(false);
 
         for (UIObject *child : children) {
@@ -1248,6 +1243,8 @@ int UIObject::RemoveAllChildUIObjects()
             }
         }
     }
+
+    HYP_LOG(UI, Debug, "Removed {} children from {} -- {} objects remaining", num_removed, GetName(), GetChildUIObjects(false).Size());
 
     if (num_removed > 0 && UseAutoSizing()) {
         UpdateSize();

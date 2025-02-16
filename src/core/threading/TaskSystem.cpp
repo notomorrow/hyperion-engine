@@ -14,17 +14,7 @@ namespace hyperion {
 
 namespace threading {
 
-struct TaskThreadPoolInfo
-{
-    uint32              num_task_threads = 0u;
-    ThreadPriorityValue priority = ThreadPriorityValue::NORMAL;
-};
-
-static const FlatMap<TaskThreadPoolName, TaskThreadPoolInfo> g_thread_pool_info {
-    { TaskThreadPoolName::THREAD_POOL_GENERIC,      { 4u, ThreadPriorityValue::NORMAL } },
-    { TaskThreadPoolName::THREAD_POOL_RENDER,       { 2u, ThreadPriorityValue::HIGHEST } },
-    { TaskThreadPoolName::THREAD_POOL_BACKGROUND,   { 2u, ThreadPriorityValue::LOW } }
-};
+extern const FlatMap<TaskThreadPoolName, UniquePtr<TaskThreadPool>(*)(void)> g_thread_pool_factories;
 
 #pragma region TaskBatch
 
@@ -39,7 +29,7 @@ void TaskBatch::AwaitCompletion()
         // Sanity check - ensure not awaiting from a thread we depend on for processing any of the tasks
         // If we get here, we're probably currently on a task thread, and have a circular dependency chain.
         // Consider breaking up task dependencies.
-        const ThreadID current_thread_id = ThreadID::Current();
+        const ThreadID &current_thread_id = ThreadID::Current();
 
         for (const TaskRef &task_ref : task_refs) {
             AssertThrow(task_ref.assigned_scheduler != nullptr);
@@ -50,6 +40,11 @@ void TaskBatch::AwaitCompletion()
     }
 
     semaphore.Acquire();
+
+    // ensure dependent batches are also completed
+    if (next_batch != nullptr) {
+        next_batch->AwaitCompletion();
+    }
 }
 
 #pragma endregion TaskBatch
@@ -131,12 +126,12 @@ void TaskThreadPool::Stop(Array<TaskThread *> &out_task_threads)
 
 TaskThread *TaskThreadPool::GetNextTaskThread()
 {
-    static constexpr uint32 max_spins = 40;
+    static constexpr uint32 max_spins = 16;
 
     const uint32 num_threads_in_pool = uint32(m_threads.Size());
 
     const ThreadID current_thread_id = Threads::CurrentThreadID();
-    const bool is_on_task_thread = m_thread_mask & current_thread_id;
+    const bool is_on_task_thread = (m_thread_mask & current_thread_id.GetMask()) != 0;
 
     IThread *current_thread_object = Threads::CurrentThreadObject();
 
@@ -175,29 +170,55 @@ TaskThread *TaskThreadPool::GetNextTaskThread()
 
 ThreadID TaskThreadPool::CreateTaskThreadID(Name base_name, uint32 thread_index)
 {
-    return ThreadID::CreateDynamicThreadID(CreateNameFromDynamicString(HYP_FORMAT("{}_{}", base_name, thread_index)));
+    return ThreadID(CreateNameFromDynamicString(HYP_FORMAT("{}_{}", base_name, thread_index)), THREAD_CATEGORY_TASK);
 }
 
 #pragma endregion TaskThreadPool
 
 #pragma region GenericTaskThreadPool
 
-GenericTaskThreadPool::GenericTaskThreadPool(const Array<Pair<ThreadID, ThreadPriorityValue>> &thread_ids)
-    : TaskThreadPool()
+class GenericTaskThreadPool final : public TaskThreadPool
 {
-    m_threads.Resize(thread_ids.Size());
-
-    for (SizeType i = 0; i < thread_ids.Size(); i++) {
-        const Pair<ThreadID, ThreadPriorityValue> &pair = thread_ids[i];
-
-        m_threads[i] = MakeUnique<TaskThread>(pair.first, pair.second);
-        m_thread_mask |= pair.first;
+public:
+    GenericTaskThreadPool(uint32 num_task_threads, ThreadPriorityValue priority)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), NAME("GenericTask"), num_task_threads)
+    {
     }
-}
 
-GenericTaskThreadPool::~GenericTaskThreadPool() = default;
+    virtual ~GenericTaskThreadPool() override = default;
+};
 
 #pragma endregion GenericTaskThreadPool
+
+#pragma region RenderTaskThreadPool
+
+class RenderTaskThreadPool final : public TaskThreadPool
+{
+public:
+    RenderTaskThreadPool(uint32 num_task_threads, ThreadPriorityValue priority)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), NAME("RenderTask"), num_task_threads)
+    {
+    }
+
+    virtual ~RenderTaskThreadPool() override = default;
+};
+
+#pragma endregion RenderTaskThreadPool
+
+#pragma region BackgroundTaskThreadPool
+
+class BackgroundTaskThreadPool final : public TaskThreadPool
+{
+public:
+    BackgroundTaskThreadPool(uint32 num_task_threads, ThreadPriorityValue priority)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), NAME("BackgroundTask"), num_task_threads)
+    {
+    }
+
+    virtual ~BackgroundTaskThreadPool() override = default;
+};
+
+#pragma endregion RenderTaskThreadPool
 
 #pragma region TaskSystem
 
@@ -210,35 +231,20 @@ TaskSystem &TaskSystem::GetInstance()
 
 TaskSystem::TaskSystem()
 {
-    ThreadMask mask = THREAD_TASK_0;
-
     m_pools.Reserve(THREAD_POOL_MAX);
 
     for (uint32 i = 0; i < THREAD_POOL_MAX; i++) {
         const TaskThreadPoolName pool_name { i };
 
-        auto thread_pool_info_it = g_thread_pool_info.Find(pool_name);
+        auto thread_pool_factories_it = g_thread_pool_factories.Find(pool_name);
 
         AssertThrowMsg(
-            thread_pool_info_it != g_thread_pool_info.End(),
-            "TaskThreadPoolName for %u not found in g_thread_pool_info",
+            thread_pool_factories_it != g_thread_pool_factories.End(),
+            "TaskThreadPoolName for %u not found in g_thread_pool_factories",
             i
         );
 
-        const TaskThreadPoolInfo &task_thread_pool_info = thread_pool_info_it->second;
-
-        Array<Pair<ThreadID, ThreadPriorityValue>> thread_ids;
-        thread_ids.Resize(task_thread_pool_info.num_task_threads);
-
-        for (auto &pair : thread_ids) {
-            AssertThrow(THREAD_TASK & mask);
-
-            pair = { Threads::GetStaticThreadID(ThreadName(mask)), task_thread_pool_info.priority };
-            mask <<= 1;
-        }
-
-        // Create new GenericTaskThreadPool
-        m_pools.PushBack(MakeUnique<GenericTaskThreadPool>(thread_ids));
+        m_pools.PushBack(thread_pool_factories_it->second());
     }
 }
 
@@ -356,6 +362,12 @@ TaskThread *TaskSystem::GetNextTaskThread(TaskThreadPool &pool)
 }
 
 #pragma endregion TaskSystem
+
+const FlatMap<TaskThreadPoolName, UniquePtr<TaskThreadPool>(*)(void)> g_thread_pool_factories {
+    { TaskThreadPoolName::THREAD_POOL_GENERIC,    +[]() -> UniquePtr<TaskThreadPool> { return MakeUnique<GenericTaskThreadPool>(4, ThreadPriorityValue::HIGH); } },
+    { TaskThreadPoolName::THREAD_POOL_RENDER,     +[]() -> UniquePtr<TaskThreadPool> { return MakeUnique<RenderTaskThreadPool>(4, ThreadPriorityValue::HIGHEST); } },
+    { TaskThreadPoolName::THREAD_POOL_BACKGROUND, +[]() -> UniquePtr<TaskThreadPool> { return MakeUnique<BackgroundTaskThreadPool>(2, ThreadPriorityValue::LOW); } }
+};
 
 } // namespace threading
 } // namespace hyperion

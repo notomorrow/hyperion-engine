@@ -327,14 +327,14 @@ void RenderGroup::CreateGraphicsPipeline()
 
 void RenderGroup::ClearProxies()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     m_render_proxies.Clear();
 }
 
 void RenderGroup::AddRenderProxy(const RenderProxy &render_proxy)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     AssertDebug(render_proxy.mesh.IsValid());
     AssertDebug(render_proxy.mesh->IsReady());
@@ -346,7 +346,7 @@ void RenderGroup::AddRenderProxy(const RenderProxy &render_proxy)
 
 bool RenderGroup::RemoveRenderProxy(ID<Entity> entity)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const auto it = m_render_proxies.Find(entity);
 
@@ -361,7 +361,7 @@ bool RenderGroup::RemoveRenderProxy(ID<Entity> entity)
 
 typename FlatMap<ID<Entity>, const RenderProxy *>::Iterator RenderGroup::RemoveRenderProxy(typename FlatMap<ID<Entity>, const RenderProxy *>::ConstIterator iterator)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     return m_render_proxies.Erase(iterator);
 }
@@ -379,7 +379,7 @@ void RenderGroup::CollectDrawCalls()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_render_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     AssertReady();
 
@@ -447,7 +447,7 @@ void RenderGroup::PerformOcclusionCulling(Frame *frame, const CullData *cull_dat
 
     AssertThrow((m_flags & (RenderGroupFlags::INDIRECT_RENDERING | RenderGroupFlags::OCCLUSION_CULLING)) == (RenderGroupFlags::INDIRECT_RENDERING | RenderGroupFlags::OCCLUSION_CULLING));
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(cull_data != nullptr);
 
@@ -801,7 +801,7 @@ void RenderGroup::PerformRendering(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     AssertReady();
 
     // Temp
@@ -837,7 +837,7 @@ void RenderGroup::PerformRenderingIndirect(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     AssertReady();
 
     AssertThrow(m_flags & RenderGroupFlags::INDIRECT_RENDERING);

@@ -502,7 +502,7 @@ EnvGridPass::~EnvGridPass()
 
 void EnvGridPass::Create()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     CreateShader();
 
@@ -664,7 +664,7 @@ void EnvGridPass::Render(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -835,7 +835,7 @@ void ReflectionProbePass::CreatePipeline()
 void ReflectionProbePass::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     // Default pass type (non parallax corrected)
 
@@ -883,7 +883,7 @@ void ReflectionProbePass::CreatePipeline(const RenderableAttributeSet &renderabl
 void ReflectionProbePass::CreateCommandBuffers()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     for (uint32 i = 0; i < ApplyReflectionProbeMode::MAX; i++) {
         for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -954,7 +954,7 @@ void ReflectionProbePass::CreateTemporalBlending()
     m_temporal_blending = MakeUnique<TemporalBlending>(
         m_framebuffer->GetExtent(),
         InternalFormat::RGBA8,
-        TemporalBlendTechnique::TECHNIQUE_2,
+        TemporalBlendTechnique::TECHNIQUE_1,
         TemporalBlendFeedback::LOW,
         m_framebuffer
     );
@@ -997,7 +997,7 @@ void ReflectionProbePass::Record(uint32 frame_index)
 void ReflectionProbePass::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -1181,7 +1181,7 @@ void DeferredRenderer::Create()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(!m_is_initialized);
 
@@ -1191,7 +1191,7 @@ void DeferredRenderer::Create()
         auto InitializeGBufferFramebuffers = [this]()
         {
             HYP_SCOPE;
-            Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+            Threads::AssertOnThread(g_render_thread);
 
             m_opaque_fbo = m_gbuffer->GetBucket(Bucket::BUCKET_OPAQUE).GetFramebuffer();
             m_translucent_fbo = m_gbuffer->GetBucket(Bucket::BUCKET_TRANSLUCENT).GetFramebuffer();
@@ -1223,7 +1223,7 @@ void DeferredRenderer::Create()
         m_gbuffer->OnGBufferResolutionChanged.Bind([this, InitializeGBufferFramebuffers](...)
         {
             InitializeGBufferFramebuffers();
-        }).Detach();
+        }, g_render_thread).Detach();
     }
 
     m_env_grid_radiance_pass = MakeUnique<EnvGridPass>(EnvGridPassMode::RADIANCE);
@@ -1257,7 +1257,7 @@ void DeferredRenderer::Create()
 
     InitObject(m_mip_chain);
 
-    m_hbao = MakeUnique<HBAO>();
+    m_hbao = MakeUnique<HBAO>(HBAOConfig::FromConfig());
     m_hbao->Create();
 
     CreateBlueNoiseBuffer();
@@ -1286,7 +1286,7 @@ void DeferredRenderer::CreateDescriptorSets()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     // set global gbuffer data
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
@@ -1299,7 +1299,7 @@ void DeferredRenderer::CreateCombinePass()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     ShaderRef shader = g_shader_manager->GetOrCreate(
         NAME("DeferredCombine"),
@@ -1321,7 +1321,7 @@ void DeferredRenderer::Destroy()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     m_depth_pyramid_renderer.Reset();
 
@@ -1358,7 +1358,7 @@ void DeferredRenderer::Resize(Vec2u new_size)
 {
     HYP_SCOPE;
     
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (!m_is_initialized) {
         return;
@@ -1371,7 +1371,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     CommandBuffer *primary = frame->GetCommandBuffer();
 
@@ -1636,7 +1636,7 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     CommandBuffer *primary = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();
@@ -1672,7 +1672,7 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
 void DeferredRenderer::ApplyCameraJitter()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     static const float jitter_scale = 0.25f;
 
@@ -1700,7 +1700,7 @@ void DeferredRenderer::CreateBlueNoiseBuffer()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     static_assert(sizeof(BlueNoiseBuffer::sobol_256spp_256d) == sizeof(BlueNoise::sobol_256spp_256d));
     static_assert(sizeof(BlueNoiseBuffer::scrambling_tile) == sizeof(BlueNoise::scrambling_tile));
@@ -1726,7 +1726,7 @@ void DeferredRenderer::CreateSphereSamplesBuffer()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     GPUBufferRef sphere_samples_buffer = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
     HYPERION_ASSERT_RESULT(sphere_samples_buffer->Create(g_engine->GetGPUDevice(), sizeof(Vec4f) * 4096));

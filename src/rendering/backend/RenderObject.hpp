@@ -718,12 +718,6 @@ static inline void DeferCreate(RefType ref, Args &&... args)
         return;
     }
 
-    // // If we are already on the render thread, create the object immediately.
-    // if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
-    //     HYPERION_ASSERT_RESULT(ref->Create(std::forward<Args>(args)...));
-    //     return;
-    // }
-
     PUSH_RENDER_COMMAND(CreateRenderObject, std::move(ref), std::forward<Args>(args)...);
 }
 
@@ -795,7 +789,7 @@ struct RenderObjectDeleter
 
         virtual void Iterate() override
         {
-            Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+            Threads::AssertOnThread(g_render_thread);
 
             if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0) {
                 return;
@@ -830,7 +824,7 @@ struct RenderObjectDeleter
 
         virtual int32 RemoveAllNow(bool force) override
         {
-            Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+            Threads::AssertOnThread(g_render_thread);
 
             if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0) {
                 return 0;

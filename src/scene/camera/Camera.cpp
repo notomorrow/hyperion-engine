@@ -100,7 +100,7 @@ void CameraController::SetIsMouseLockRequested(bool mouse_lock_requested)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     if (mouse_lock_requested == m_mouse_lock_requested) {
         return;
@@ -250,7 +250,7 @@ void Camera::Init()
             {
                 HYP_NAMED_SCOPE("Update Camera size based on window size");
 
-                Threads::AssertOnThread(ThreadName::THREAD_GAME);
+                Threads::AssertOnThread(g_game_thread);
 
                 window_size = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(window_size) * m_match_window_size_ratio)), Vec2i::One());
 
@@ -314,7 +314,7 @@ void Camera::AddCameraController(const RC<CameraController> &camera_controller)
         return;
     }
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     if (m_camera_controllers.Contains(camera_controller)) {
         return;
@@ -346,7 +346,7 @@ bool Camera::RemoveCameraController(const RC<CameraController> &camera_controlle
         return false;
     }
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     auto it = m_camera_controllers.Find(camera_controller);
 
@@ -557,7 +557,7 @@ void Camera::Update(GameCounter::TickUnit dt)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertReady();
 

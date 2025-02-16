@@ -367,7 +367,7 @@ void LightmapPathTracer::ReadHitsBuffer(LightmapHitsBuffer *ptr, uint32 frame_in
 void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uint32 ray_offset)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
     const uint32 previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
@@ -469,16 +469,19 @@ class LightmapTaskThreadPool : public TaskThreadPool
 {
 public:
     LightmapTaskThreadPool()
+        : TaskThreadPool(TypeWrapper<LightmapTaskThread>(), NAME("LightmapperTracingThread"), NumThreadsToCreate())
     {
-        uint32 num_threads = g_engine->GetAppContext()->GetConfiguration().Get("lightmapper.threads").ToUInt32(4);
-        num_threads = MathUtil::Clamp(num_threads, 1u, 128u);
-
-        HYP_LOG(Lightmap, Info, "Tracing lightmap rays using {} threads", num_threads);
-
-        CreateThreads<LightmapTaskThread>(NAME("LightmapperTracingThread"), num_threads);
+        HYP_LOG(Lightmap, Info, "Tracing lightmap rays using {} threads", m_threads.Size());
     }
 
     virtual ~LightmapTaskThreadPool() override = default;
+
+private:
+    static uint32 NumThreadsToCreate()
+    {
+        uint32 num_threads = g_engine->GetAppContext()->GetConfiguration().Get("lightmapper.threads").ToUInt32(4);
+        return MathUtil::Clamp(num_threads, 1u, 128u);
+    }
 };
 
 #pragma endregion LightmapTaskThreadPool

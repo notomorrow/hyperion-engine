@@ -32,10 +32,10 @@ void RenderCollectorContainer::AddScene(const Scene *scene)
     RenderCollector &render_collector = m_render_collectors_by_id_index[scene_index];
     render_collector.SetCamera(scene->GetCamera());
 
-    if (scene->IsNonWorldScene()) {
-        render_collector.SetRenderEnvironment(WeakHandle<RenderEnvironment> { });
-    } else {
+    if (scene->IsForegroundScene()) {
         render_collector.SetRenderEnvironment(scene->GetRenderResources().GetEnvironment());
+    } else {
+        render_collector.SetRenderEnvironment(WeakHandle<RenderEnvironment> { });
     }
 
     const uint32 render_collector_index = m_num_render_collectors.Increment(1u, MemoryOrder::ACQUIRE_RELEASE);
@@ -138,7 +138,7 @@ void WorldRenderResources::PreRender(renderer::Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 num_render_collectors = m_render_collector_container.NumRenderCollectors();
 
@@ -155,7 +155,7 @@ void WorldRenderResources::PostRender(renderer::Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     m_bound_cameras.Clear();
 }
@@ -164,7 +164,7 @@ void WorldRenderResources::Render(renderer::Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 num_render_collectors = m_render_collector_container.NumRenderCollectors();
 

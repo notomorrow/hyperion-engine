@@ -105,8 +105,7 @@ void UIStage::SetScene(const Handle<Scene> &scene)
         new_scene = CreateObject<Scene>(
             nullptr,
             CreateObject<Camera>(),
-            m_owner_thread_id,
-            SceneFlags::NON_WORLD
+            m_owner_thread_id
         );
     }
 
@@ -213,7 +212,7 @@ void UIStage::Init()
         nullptr,
         CreateObject<Camera>(),
         m_owner_thread_id,
-        SceneFlags::NON_WORLD
+        SceneFlags::FOREGROUND | SceneFlags::UI
     );
 
     m_scene->SetName(CreateNameFromDynamicString(ANSIString(GetName().LookupString()) + "_Scene"));
@@ -258,9 +257,6 @@ void UIStage::Update_Internal(GameCounter::TickUnit delta)
     Threads::AssertOnThread(m_owner_thread_id);
 
     UIObject::Update_Internal(delta);
-
-    // m_scene->BeginUpdate(delta);
-    // m_scene->EndUpdate();
 
     for (auto &it : m_mouse_button_pressed_states) {
         it.second.held_time += delta;
@@ -471,8 +467,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                             .position           = ui_object->TransformScreenCoordsToRelative(mouse_position),
                             .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                             .absolute_position  = mouse_position,
-                            .mouse_buttons      = mouse_buttons,
-                            .is_down            = true
+                            .mouse_buttons      = mouse_buttons
                         });
 
                         if (mouse_drag_event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {
@@ -510,8 +505,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                             .position           = ui_object->TransformScreenCoordsToRelative(mouse_position),
                             .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                             .absolute_position  = mouse_position,
-                            .mouse_buttons      = mouse_buttons,
-                            .is_down            = false
+                            .mouse_buttons      = mouse_buttons
                         });
 
                         if (mouse_move_event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {
@@ -546,8 +540,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                         .position           = ui_object->TransformScreenCoordsToRelative(mouse_position),
                         .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                         .absolute_position  = mouse_position,
-                        .mouse_buttons      = mouse_buttons,
-                        .is_down            = false
+                        .mouse_buttons      = mouse_buttons
                     });
 
                     BoundingBoxComponent &bounding_box_component = ui_object->GetScene()->GetEntityManager()->GetComponent<BoundingBoxComponent>(ui_object->GetEntity());
@@ -582,8 +575,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                         .position           = ui_object->TransformScreenCoordsToRelative(mouse_position),
                         .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                         .absolute_position  = mouse_position,
-                        .mouse_buttons      = event.GetMouseButtons(),
-                        .is_down            = false
+                        .mouse_buttons      = event.GetMouseButtons()
                     });
                 } else {
                     HYP_LOG(UI, Warning, "Focused element has been destroyed");
@@ -647,8 +639,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     .position           = ui_object->TransformScreenCoordsToRelative(mouse_position),
                     .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                     .absolute_position  = mouse_position,
-                    .mouse_buttons      = mouse_button_pressed_states_it->second.mouse_buttons,
-                    .is_down            = true
+                    .mouse_buttons      = mouse_button_pressed_states_it->second.mouse_buttons
                 });
 
                 event_handler_result |= on_mouse_down_result;
@@ -689,8 +680,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     .position           = ui_object->TransformScreenCoordsToRelative(mouse_position),
                     .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                     .absolute_position  = mouse_position,
-                    .mouse_buttons      = event.GetMouseButtons(),
-                    .is_down            = false
+                    .mouse_buttons      = event.GetMouseButtons()
                 });
 
                 event_handler_result |= result;
@@ -717,8 +707,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     .position           = ui_object->TransformScreenCoordsToRelative(mouse_position),
                     .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                     .absolute_position  = mouse_position,
-                    .mouse_buttons      = it.second.mouse_buttons,
-                    .is_down            = false
+                    .mouse_buttons      = it.second.mouse_buttons
                 });
             }
         }
@@ -757,8 +746,7 @@ UIEventHandlerResult UIStage::OnInputEvent(
                     .previous_position  = ui_object->TransformScreenCoordsToRelative(previous_mouse_position),
                     .absolute_position  = mouse_position,
                     .mouse_buttons      = event.GetMouseButtons(),
-                    .wheel              = Vec2i { wheel_x, wheel_y },
-                    .is_down            = false
+                    .wheel              = Vec2i { wheel_x, wheel_y }
                 });
 
                 if (event_handler_result & UIEventHandlerResult::STOP_BUBBLING) {

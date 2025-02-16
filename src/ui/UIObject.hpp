@@ -493,7 +493,7 @@ protected:
         AFTER_CHILDREN
     };
 
-    UIObject(UIObjectType type, ThreadID owner_thread_id = ThreadID::Invalid());
+    UIObject(UIObjectType type, const ThreadID &owner_thread_id = ThreadID::invalid);
 
 public:
     friend class UIRenderer;

@@ -54,7 +54,7 @@ void RenderState::UnbindScene(const Scene *scene)
     AssertThrow(scene != nullptr);
     AssertThrow(scene->IsReady());
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     SceneRenderResources *scene_render_resources = &scene->GetRenderResources();
 
@@ -75,7 +75,7 @@ void RenderState::BindCamera(Camera *camera)
     AssertThrow(camera != nullptr);
     AssertThrow(camera->IsReady());
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     // Allow multiple of the same so we can always override the topmost camera
     camera_bindings.PushBack(&camera->GetRenderResources());
@@ -86,7 +86,7 @@ void RenderState::UnbindCamera(Camera *camera)
     AssertThrow(camera != nullptr);
     AssertThrow(camera->IsReady());
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     CameraRenderResources *camera_render_resources = &camera->GetRenderResources();
 
@@ -104,7 +104,7 @@ void RenderState::UnbindCamera(Camera *camera)
 
 const CameraRenderResources &RenderState::GetActiveCamera() const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     static const CameraRenderResources empty { nullptr };
 
@@ -118,7 +118,7 @@ void RenderState::BindLight(Light *light)
     AssertThrow(light != nullptr);
     AssertThrow(light->IsReady());
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     auto &array = bound_lights[uint32(light->GetLightType())];
 
@@ -139,7 +139,7 @@ void RenderState::UnbindLight(Light *light)
     AssertThrow(light != nullptr);
     AssertThrow(light->IsReady());
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     auto &array = bound_lights[uint32(light->GetLightType())];
 
@@ -155,7 +155,7 @@ void RenderState::UnbindLight(Light *light)
 
 const TResourceHandle<LightRenderResources> &RenderState::GetActiveLight() const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     static const TResourceHandle<LightRenderResources> empty;
 
@@ -166,14 +166,14 @@ const TResourceHandle<LightRenderResources> &RenderState::GetActiveLight() const
 
 void RenderState::SetActiveLight(LightRenderResources &light_render_resources)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     light_bindings.Push(TResourceHandle(light_render_resources));
 }
 
 void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     constexpr EnvProbeBindingSlot binding_slots[ENV_PROBE_TYPE_MAX] = {
         ENV_PROBE_BINDING_SLOT_CUBEMAP,         // reflection
@@ -225,7 +225,7 @@ void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 
 void RenderState::UnbindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     // @FIXME: There's currently a bug where if an EnvProbe is unbound and then after several EnvProbes are bound, the
     // counter keeps increasing and the slot is never reused. This is because the counter is never reset.

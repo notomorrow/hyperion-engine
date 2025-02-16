@@ -48,13 +48,13 @@ TemporalBlending::TemporalBlending(
     const Vec2u &extent,
     TemporalBlendTechnique technique,
     TemporalBlendFeedback feedback,
-    const FixedArray<ImageViewRef, max_frames_in_flight> &input_image_views
+    const ImageViewRef &input_image_view
 ) : TemporalBlending(
         extent,
         InternalFormat::RGBA8,
         technique,
         feedback,
-        input_image_views
+        input_image_view
     )
 {
 }
@@ -80,12 +80,12 @@ TemporalBlending::TemporalBlending(
     InternalFormat image_format,
     TemporalBlendTechnique technique,
     TemporalBlendFeedback feedback,
-    const FixedArray<ImageViewRef, max_frames_in_flight> &input_image_views
+    const ImageViewRef &input_image_view
 ) : m_extent(extent),
     m_image_format(image_format),
     m_technique(technique),
     m_feedback(feedback),
-    m_input_image_views(input_image_views),
+    m_input_image_view(input_image_view),
     m_blending_frame_counter(0),
     m_is_initialized(false)
 {
@@ -141,7 +141,7 @@ void TemporalBlending::Resize(Vec2u new_size)
 
 void TemporalBlending::Resize_Internal(Vec2u new_size)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (m_extent == new_size) {
         return;
@@ -238,9 +238,9 @@ void TemporalBlending::CreateDescriptorSets()
             AssertThrowMsg(m_input_framebuffer->GetAttachmentMap().Size() != 0, "No attachment refs on input framebuffer!");
         }
 
-        const ImageViewRef input_image_view = m_input_framebuffer.IsValid()
+        const ImageViewRef &input_image_view = m_input_framebuffer.IsValid()
             ? m_input_framebuffer->GetAttachment(0)->GetImageView()
-            : m_input_image_views[frame_index];
+            : m_input_image_view;
 
         AssertThrow(input_image_view != nullptr);
 
@@ -286,7 +286,7 @@ void TemporalBlending::CreateComputePipelines()
 void TemporalBlending::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
     const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();

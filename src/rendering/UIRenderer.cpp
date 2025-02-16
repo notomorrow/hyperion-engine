@@ -322,7 +322,7 @@ RenderCollector::CollectionResult UIRenderCollector::PushUpdatesToRenderThread(c
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
     AssertThrow(m_draw_collection != nullptr);
 
     RenderProxyList &proxy_list = m_draw_collection->GetProxyList(ThreadType::THREAD_TYPE_GAME);
@@ -373,7 +373,7 @@ RenderCollector::CollectionResult UIRenderCollector::PushUpdatesToRenderThread(c
 void UIRenderCollector::CollectDrawCalls(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     using IteratorType = FlatMap<RenderableAttributeSet, Handle<RenderGroup>>::Iterator;
 
@@ -408,7 +408,7 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame) const
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     AssertThrow(m_draw_collection != nullptr);
 
@@ -486,7 +486,7 @@ void UIRenderer::Init()
 
     m_on_gbuffer_resolution_changed_handle = g_engine->GetDelegates().OnAfterSwapchainRecreated.Bind([this]()
     {
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
         SafeRelease(std::move(m_framebuffer));
         g_engine->GetFinalPass()->SetUITexture(Handle<Texture>::empty);
@@ -507,7 +507,7 @@ void UIRenderer::Init()
 void UIRenderer::CreateFramebuffer()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const Vec2i surface_size = Vec2i(g_engine->GetAppContext()->GetMainWindow()->GetDimensions());
 

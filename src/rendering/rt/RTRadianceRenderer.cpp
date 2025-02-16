@@ -347,10 +347,7 @@ void RTRadianceRenderer::CreateTemporalBlending()
         IsPathTracer()
             ? TemporalBlendFeedback::HIGH
             : TemporalBlendFeedback::LOW,
-        FixedArray<ImageViewRef, max_frames_in_flight> {
-            m_texture->GetImageView(),
-            m_texture->GetImageView(),
-        }
+        m_texture->GetImageView()
     );
 
     m_temporal_blending->Create();

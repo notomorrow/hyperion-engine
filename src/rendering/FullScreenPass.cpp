@@ -23,6 +23,11 @@ namespace hyperion {
 using renderer::CommandBufferType;
 using renderer::FillMode;
 
+struct MergeHalfResTexturesUniforms
+{
+    Vec2u   dimensions;
+};
+
 #pragma region Render commands
 
 struct RENDER_COMMAND(CreateCommandBuffers) : renderer::RenderCommand
@@ -109,7 +114,8 @@ FullScreenPass::FullScreenPass(
     m_image_format(image_format),
     m_extent(extent),
     m_blend_function(BlendFunction::None()),
-    m_is_initialized(false)
+    m_is_initialized(false),
+    m_is_first_frame(true)
 {
 }
 
@@ -131,6 +137,47 @@ FullScreenPass::~FullScreenPass()
     }
 }
 
+const ImageViewRef &FullScreenPass::GetFinalImageView() const
+{
+    if (UsesTemporalBlending()) {
+        AssertThrow(m_temporal_blending != nullptr);
+
+        return m_temporal_blending->GetResultTexture()->GetImageView();
+    }
+
+    if (ShouldRenderHalfRes()) {
+        return m_merge_half_res_textures_pass->GetFinalImageView();
+    }
+
+    const AttachmentRef &color_attachment = GetAttachment(0);
+
+    if (!color_attachment.IsValid()) {
+        return ImageViewRef::Null();
+    }
+
+    return color_attachment->GetImageView();
+}
+
+const ImageViewRef &FullScreenPass::GetPreviousFrameColorImageView() const
+{
+    // If we're rendering at half res, we use the same image we render to but at an offset.
+    if (ShouldRenderHalfRes()) {
+        const AttachmentRef &color_attachment = GetAttachment(0);
+
+        if (!color_attachment.IsValid()) {
+            return ImageViewRef::Null();
+        }
+
+        return color_attachment->GetImageView();
+    }
+
+    if (m_previous_texture.IsValid()) {
+        return m_previous_texture->GetImageView();
+    }
+
+    return ImageViewRef::Null();
+}
+
 void FullScreenPass::Create()
 {
     HYP_SCOPE;
@@ -145,9 +192,11 @@ void FullScreenPass::Create()
     CreateQuad();
     CreateCommandBuffers();
     CreateFramebuffer();
-    CreatePipeline();
+    CreateMergeHalfResTexturesPass();
+    CreateRenderTextureToScreenPass();
     CreateTemporalBlending();
     CreateDescriptors();
+    CreatePipeline();
 
     m_is_initialized = true;
 }
@@ -181,7 +230,7 @@ void FullScreenPass::Resize(Vec2u new_size)
 void FullScreenPass::Resize_Internal(Vec2u new_size)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (m_extent == new_size) {
         return;
@@ -206,8 +255,14 @@ void FullScreenPass::Resize_Internal(Vec2u new_size)
     SafeRelease(std::move(m_framebuffer));
     m_temporal_blending.Reset();
 
+    m_render_group.Reset();
+
     CreateFramebuffer();
+    CreateMergeHalfResTexturesPass();
+    CreateRenderTextureToScreenPass();
     CreateTemporalBlending();
+    CreateDescriptors();
+    CreatePipeline();
 }
 
 void FullScreenPass::CreateQuad()
@@ -238,7 +293,6 @@ void FullScreenPass::CreateFramebuffer()
     HYP_SCOPE;
 
     if (m_extent.x * m_extent.y == 0) {
-        // TODO: Make non render-thread dependent
         m_extent = g_engine->GetGPUInstance()->GetSwapchain()->extent;
     }
 
@@ -260,7 +314,7 @@ void FullScreenPass::CreateFramebuffer()
     AttachmentRef attachment = MakeRenderObject<Attachment>(
         attachment_image,
         renderer::RenderPassStage::SHADER,
-        renderer::LoadOperation::CLEAR,
+        ShouldRenderHalfRes() ? renderer::LoadOperation::LOAD : renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE
     );
 
@@ -328,13 +382,18 @@ void FullScreenPass::CreateTemporalBlending()
     m_temporal_blending = MakeUnique<TemporalBlending>(
         m_extent,
         InternalFormat::RGBA8,
-        TemporalBlendTechnique::TECHNIQUE_1,
+        TemporalBlendTechnique::TECHNIQUE_3,
         TemporalBlendFeedback::LOW,
-        m_framebuffer
+        ShouldRenderHalfRes()
+            ? m_merge_half_res_textures_pass->GetFinalImageView()
+            : GetAttachment(0)->GetImageView()
     );
 
     m_temporal_blending->Create();
+}
 
+void FullScreenPass::CreatePreviousTexture()
+{
     // Create previous image
     m_previous_texture = CreateObject<Texture>(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
@@ -348,6 +407,99 @@ void FullScreenPass::CreateTemporalBlending()
     InitObject(m_previous_texture);
 }
 
+void FullScreenPass::CreateRenderTextureToScreenPass()
+{
+    HYP_SCOPE;
+
+    if (!UsesTemporalBlending()) {
+        return;
+    }
+
+    if (!ShouldRenderHalfRes()) {
+        CreatePreviousTexture();
+    }
+
+    // Create render texture to screen pass.
+    // this is used to render the previous frame's result to the screen,
+    // so we can blend it with the current frame's result (checkerboarded)
+
+    ShaderProperties shader_properties;
+
+    if (ShouldRenderHalfRes()) {
+        shader_properties.Set("HALFRES");
+    }
+
+    ShaderRef render_texture_to_screen_shader = g_shader_manager->GetOrCreate(NAME("RenderTextureToScreen"), shader_properties);
+    AssertThrow(render_texture_to_screen_shader.IsValid());
+
+    const DescriptorTableDeclaration descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
+
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(NAME("InTexture"), GetPreviousFrameColorImageView());
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+    m_render_texture_to_screen_pass = MakeUnique<FullScreenPass>(
+        render_texture_to_screen_shader,
+        std::move(descriptor_table),
+        m_image_format,
+        m_extent
+    );
+
+    m_render_texture_to_screen_pass->Create();
+}
+
+void FullScreenPass::CreateMergeHalfResTexturesPass()
+{
+    HYP_SCOPE;
+
+    if (!ShouldRenderHalfRes()) {
+        return;
+    }
+
+    GPUBufferRef merge_half_res_textures_uniform_buffer;
+
+    { // Create uniform buffer
+        MergeHalfResTexturesUniforms uniforms;
+        uniforms.dimensions = m_extent;
+
+        merge_half_res_textures_uniform_buffer = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
+        HYPERION_ASSERT_RESULT(merge_half_res_textures_uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(uniforms)));
+
+        merge_half_res_textures_uniform_buffer->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
+    }
+
+    ShaderRef merge_half_res_textures_shader = g_shader_manager->GetOrCreate(NAME("MergeHalfResTextures"));
+    AssertThrow(merge_half_res_textures_shader.IsValid());
+
+    const DescriptorTableDeclaration descriptor_table_decl = merge_half_res_textures_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
+    DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
+
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("MergeHalfResTexturesDescriptorSet"), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(NAME("InTexture"), GetAttachment(0)->GetImageView());
+        descriptor_set->SetElement(NAME("UniformBuffer"), merge_half_res_textures_uniform_buffer);
+    }
+
+    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+
+    m_merge_half_res_textures_pass = MakeUnique<FullScreenPass>(
+        merge_half_res_textures_shader,
+        std::move(descriptor_table),
+        m_image_format,
+        m_extent
+    );
+
+    m_merge_half_res_textures_pass->Create();
+}
+
 void FullScreenPass::CreateDescriptors()
 {
 }
@@ -355,7 +507,7 @@ void FullScreenPass::CreateDescriptors()
 void FullScreenPass::Record(uint32 frame_index)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
     const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
@@ -365,7 +517,15 @@ void FullScreenPass::Record(uint32 frame_index)
     command_buffer->Begin(g_engine->GetGPUDevice(), m_render_group->GetPipeline()->GetRenderPass());
 
     m_render_group->GetPipeline()->SetPushConstants(m_push_constant_data.Data(), m_push_constant_data.Size());
-    m_render_group->GetPipeline()->Bind(command_buffer);
+    
+    if (ShouldRenderHalfRes()) {
+        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+        const Vec2i viewport_extent = Vec2i(m_framebuffer->GetExtent()) / 2;
+
+        m_render_group->GetPipeline()->Bind(command_buffer, viewport_offset, viewport_extent);
+    } else {
+        m_render_group->GetPipeline()->Bind(command_buffer);
+    }
 
     m_render_group->GetPipeline()->GetDescriptorTable()->Bind<GraphicsPipelineRef>(
         command_buffer,
@@ -389,48 +549,215 @@ void FullScreenPass::Record(uint32 frame_index)
     command_buffer->End(g_engine->GetGPUDevice());
 }
 
+void FullScreenPass::RenderPreviousTextureToScreen(Frame *frame)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
+    const uint32 frame_index = frame->GetFrameIndex();
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+
+    AssertThrow(m_render_texture_to_screen_pass != nullptr);
+
+    m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->Record(
+        g_engine->GetGPUInstance()->GetDevice(),
+        m_render_group->GetPipeline()->GetRenderPass(),
+        [&](CommandBuffer *cmd)
+        {
+            if (ShouldRenderHalfRes()) {
+                const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+                const Vec2i viewport_extent = Vec2i(m_framebuffer->GetExtent()) / 2;
+
+                // render previous frame's result to screen
+                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->Bind(cmd, viewport_offset, viewport_extent);
+            } else {
+                // render previous frame's result to screen
+                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->Bind(cmd);
+            }
+            
+            m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable()->Bind<GraphicsPipelineRef>(
+                cmd,
+                frame_index,
+                m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
+                {
+                    {
+                        NAME("Scene"),
+                        {
+                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) }
+                        }
+                    }
+                }
+            );
+
+            m_full_screen_quad->Render(cmd);
+
+            HYPERION_RETURN_OK;
+        });
+
+    HYPERION_ASSERT_RESULT(m_render_texture_to_screen_pass->GetCommandBuffer(frame_index)->SubmitSecondary(frame->GetCommandBuffer()));
+}
+
+void FullScreenPass::CopyResultToPreviousTexture(Frame *frame)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
+    const uint32 frame_index = frame->GetFrameIndex();
+
+    AssertThrow(m_previous_texture.IsValid());
+
+    const ImageRef &src_image = m_framebuffer->GetAttachment(0)->GetImage();
+    const ImageRef &dst_image = m_previous_texture->GetImage();
+
+    src_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_SRC);
+    dst_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::COPY_DST);
+
+    dst_image->Blit(
+        frame->GetCommandBuffer(),
+        src_image
+    );
+
+    src_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    dst_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+}
+
+void FullScreenPass::MergeHalfResTextures(Frame *frame)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
+    const uint32 frame_index = frame->GetFrameIndex();
+
+    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+
+    AssertThrow(m_merge_half_res_textures_pass != nullptr);
+
+    m_merge_half_res_textures_pass->Record(frame_index);
+    m_merge_half_res_textures_pass->Render(frame);
+
+    // m_merge_half_res_textures_pass->GetCommandBuffer(frame_index)->Record(
+    //     g_engine->GetGPUInstance()->GetDevice(),
+    //     m_render_group->GetPipeline()->GetRenderPass(),
+    //     [&](CommandBuffer *cmd)
+    //     {
+    //         m_merge_half_res_textures_pass->GetRenderGroup()->GetPipeline()->Bind(cmd);
+            
+    //         m_merge_half_res_textures_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable()->Bind<GraphicsPipelineRef>(
+    //             cmd,
+    //             frame_index,
+    //             m_merge_half_res_textures_pass->GetRenderGroup()->GetPipeline(),
+    //             {
+    //                 {
+    //                     NAME("Scene"),
+    //                     {
+    //                         { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
+    //                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) }
+    //                     }
+    //                 }
+    //             }
+    //         );
+
+    //         m_full_screen_quad->Render(cmd);
+
+    //         HYPERION_RETURN_OK;
+    //     });
+
+    // HYPERION_ASSERT_RESULT(m_merge_half_res_textures_pass->GetCommandBuffer(frame_index)->SubmitSecondary(frame->GetCommandBuffer()));
+}
+
 void FullScreenPass::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
-    const auto frame_index = frame->GetFrameIndex();
+    const uint32 frame_index = frame->GetFrameIndex();
 
     m_framebuffer->BeginCapture(frame->GetCommandBuffer(), frame_index);
+
+    // render previous frame's result to screen
+    if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr) {
+        RenderPreviousTextureToScreen(frame);
+    }
 
     const CommandBufferRef &secondary_command_buffer = m_command_buffers[frame_index];
     HYPERION_ASSERT_RESULT(secondary_command_buffer->SubmitSecondary(frame->GetCommandBuffer()));
 
     m_framebuffer->EndCapture(frame->GetCommandBuffer(), frame_index);
+
+    if (ShouldRenderHalfRes()) {
+        MergeHalfResTextures(frame);
+    }
+
+    if (UsesTemporalBlending()) {
+        if (!ShouldRenderHalfRes()) {
+            CopyResultToPreviousTexture(frame);
+        }
+
+        m_temporal_blending->Render(frame);
+    }
+
+    m_is_first_frame = false;
 }
 
 void FullScreenPass::Begin(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    auto *command_buffer = m_command_buffers[frame_index].Get();
+    const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
     command_buffer->Begin(g_engine->GetGPUDevice(), m_render_group->GetPipeline()->GetRenderPass());
 
-    m_render_group->GetPipeline()->Bind(command_buffer);
+    if (ShouldRenderHalfRes()) {
+        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+        const Vec2i viewport_extent = Vec2i(m_framebuffer->GetExtent()) / 2;
+
+        m_render_group->GetPipeline()->Bind(command_buffer, viewport_offset, viewport_extent);
+    } else {
+        m_render_group->GetPipeline()->Bind(command_buffer);
+    }
 }
 
 void FullScreenPass::End(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    auto *command_buffer = m_command_buffers[frame_index].Get();
+    const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
     command_buffer->End(g_engine->GetGPUDevice());
 
     m_framebuffer->BeginCapture(frame->GetCommandBuffer(), frame_index);
+
+    // render previous frame's result to screen
+    if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr) {
+        RenderPreviousTextureToScreen(frame);
+    }
+    
     HYPERION_ASSERT_RESULT(command_buffer->SubmitSecondary(frame->GetCommandBuffer()));
+
     m_framebuffer->EndCapture(frame->GetCommandBuffer(), frame_index);
+
+    if (ShouldRenderHalfRes()) {
+        MergeHalfResTextures(frame);
+    }
+
+    if (UsesTemporalBlending()) {
+        if (!ShouldRenderHalfRes()) {
+            CopyResultToPreviousTexture(frame);
+        }
+
+        m_temporal_blending->Render(frame);
+    }
+
+    m_is_first_frame = false;
 }
 
 } // namespace hyperion

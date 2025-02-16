@@ -5,6 +5,8 @@
 
 #include <scene/animation/Skeleton.hpp>
 
+#include <scene/Scene.hpp>
+
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/Skeleton.hpp>
 #include <rendering/Mesh.hpp>
@@ -63,6 +65,13 @@ struct RENDER_COMMAND(UpdateEntityDrawData) : renderer::RenderCommand
 
 #pragma endregion Render commands
 
+
+
+EnumFlags<SceneFlags> RenderProxyUpdaterSystem::GetRequiredSceneFlags() const
+{
+    return SceneFlags::NONE;
+}
+
 void RenderProxyUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
 {
     SystemBase::OnEntityAdded(entity);
@@ -115,7 +124,7 @@ void RenderProxyUpdaterSystem::Process(GameCounter::TickUnit delta)
 
         // Update MeshComponent's proxy
         *mesh_component.proxy = RenderProxy {
-            Handle<Entity>(entity_id),
+            WeakHandle<Entity>(entity_id),
             mesh_component.mesh,
             mesh_component.material,
             mesh_component.skeleton,

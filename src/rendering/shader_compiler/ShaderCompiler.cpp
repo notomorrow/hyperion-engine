@@ -1,6 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
-#include <util/shader_compiler/ShaderCompiler.hpp>
+#include <rendering/shader_compiler/ShaderCompiler.hpp>
 #include <util/ini/INIFile.hpp>
 #include <core/filesystem/FsUtil.hpp>
 #include <core/json/JSON.hpp>
@@ -636,8 +636,6 @@ static ByteBuffer CompileToSPIRV(
             HandleType(type, descriptor_usage->type);
             descriptor_usage->type.size = uniform_block.size;
         }
-
-        HYP_LOG(ShaderCompiler, Debug, "Uniform {} type : {}", uniform_block.name.data(), uniform_block.getType()->getTypeName().data());
     }
 
     ByteBuffer shader_module(glslang_program_SPIRV_get_size(program) * sizeof(uint32));
@@ -1361,7 +1359,7 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
     const bool supports_rt_shaders = renderer::RenderConfig::IsRaytracingSupported();
 
     HashMap<Bundle *, bool> results;
-    std::mutex results_mutex;
+    Mutex results_mutex;
 
     // Compile all shaders ahead of time
     ParallelForEach(bundles, [&](auto &bundle, uint32, uint32)
@@ -1387,9 +1385,9 @@ bool ShaderCompiler::LoadShaderDefinitions(bool precompile_shaders)
             CompiledShader compiled_shader;
             bool result = GetCompiledShader(bundle.name, properties, compiled_shader);
 
-            results_mutex.lock();
+            Mutex::Guard guard(results_mutex);
             results[&bundle] = result;
-            results_mutex.unlock();
+            
         }, false);//true);
     });
 
@@ -1445,7 +1443,7 @@ ShaderCompiler::ProcessResult ShaderCompiler::ProcessShaderSource(
         Array<String> preprocess_error_messages;
         const bool preprocess_result = PreprocessShaderSource(type, language, BuildPreamble(properties), source, filename, preprocessed_source, preprocess_error_messages);
 
-        result.errors.Concat(preprocess_error_messages.Map([](const String &error_message)
+        result.errors.Concat(Map(preprocess_error_messages, [](const String &error_message)
         {
             return ProcessError { error_message };
         }));
@@ -1855,7 +1853,7 @@ bool ShaderCompiler::CompileBundle(
         });
     }
 
-    if (Threads::IsOnThread(ThreadName::THREAD_TASK)) {
+    if (Threads::IsOnThread(ThreadCategory::THREAD_CATEGORY_TASK)) {
         // run on this thread if we are already in a task thread
         task_batch.ExecuteBlocking();
     } else {
@@ -1951,9 +1949,9 @@ bool ShaderCompiler::CompileBundle(
     // update versions to include vertex attribute properties
     bundle.versions = final_properties;
 
-    std::mutex fs_mutex;
-    std::mutex compiled_shaders_mutex;
-    std::mutex error_messages_mutex;
+    Mutex fs_mutex;
+    Mutex compiled_shaders_mutex;
+    Mutex error_messages_mutex;
 
     AtomicVar<uint32> num_compiled_permutations { 0u };
     AtomicVar<uint32> num_errored_permutations { 0u };
@@ -2068,14 +2066,9 @@ bool ShaderCompiler::CompileBundle(
                     );
 
 
-                    error_messages_mutex.lock();
+                    Mutex::Guard guard(error_messages_mutex);
 
-                    out.error_messages.Concat(process_result.errors.Map([](const ProcessError &error) -> String
-                    {
-                        return error.error_message;
-                    }));
-
-                    error_messages_mutex.unlock();
+                    out.error_messages.Concat(Map(process_result.errors, &ProcessError::error_message));
 
                     any_files_errored.Set(true, MemoryOrder::RELAXED);
 
@@ -2152,9 +2145,8 @@ bool ShaderCompiler::CompileBundle(
                     properties.GetHashCode().Value()
                 );
 
-                error_messages_mutex.lock();
+                Mutex::Guard guard(error_messages_mutex);
                 out.error_messages.Concat(std::move(error_messages));
-                error_messages_mutex.unlock();
 
                 any_files_errored.Set(true, MemoryOrder::RELAXED);
 
@@ -2197,9 +2189,8 @@ bool ShaderCompiler::CompileBundle(
         num_compiled_permutations.Increment(uint32(!any_files_errored.Get(MemoryOrder::RELAXED) && any_files_compiled.Get(MemoryOrder::RELAXED)), MemoryOrder::RELAXED);
         num_errored_permutations.Increment(uint32(any_files_errored.Get(MemoryOrder::RELAXED)), MemoryOrder::RELAXED);
 
-        compiled_shaders_mutex.lock();
+        Mutex::Guard guard(compiled_shaders_mutex);
         out.compiled_shaders.PushBack(std::move(compiled_shader));
-        compiled_shaders_mutex.unlock();
     }, true);
 
     if (num_errored_permutations.Get(MemoryOrder::RELAXED)) {

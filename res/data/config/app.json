@@ -3,11 +3,11 @@
     "ssr": {
       "num_iterations": 64,
       "eye_fade": [0.990000, 0.999000],
-      "ray_step": 3.20000,
+      "ray_step": 3.200000,
       "screen_edge_fade": [0.960000, 0.990000],
       "quality": 1,
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": false
     },
     "rt": {
@@ -23,7 +23,7 @@
       "enabled": false
     },
     "taa": {
-      "enabled": true
+      "enabled": false
     },
     "debug": {
       "env_grid_probes": false,
@@ -47,6 +47,9 @@
       }
     },
     "hbao": {
+      "radius": 2.500000,
+      "use_temporal_blending": false,
+      "power": 0.800000,
       "enabled": false
     }
   },

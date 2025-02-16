@@ -202,7 +202,7 @@ private:
     {
         static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
 
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
         auto &effects = m_effects[uint32(stage)];
 

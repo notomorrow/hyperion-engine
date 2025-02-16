@@ -58,7 +58,7 @@ RendererResult RenderCommands::Flush()
 
     HYP_NAMED_SCOPE("Flush render commands");
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     Array<RenderCommand *> commands;
 
@@ -143,7 +143,7 @@ void RenderCommands::Wait()
         return;
     }
 
-    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(~g_render_thread);
 
     std::unique_lock lock(mtx);
     flushed_cv.wait(lock, [] { return RenderCommands::Count() == 0; });

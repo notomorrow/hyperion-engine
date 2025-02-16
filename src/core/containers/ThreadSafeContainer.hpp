@@ -23,7 +23,7 @@ public:
     using Iterator = typename Array<Handle<T>>::Iterator;
     using ConstIterator = typename Array<Handle<T>>::ConstIterator;
 
-    ThreadSafeContainer(ThreadName owner_thread)
+    ThreadSafeContainer(const ThreadID &owner_thread)
         : m_owner_thread(owner_thread)
     {
     }
@@ -163,7 +163,7 @@ public:
     HYP_DEF_STL_ITERATOR(m_owned_items);
 
 private:
-    ThreadName          m_owner_thread;
+    ThreadID            m_owner_thread;
     Array<Handle<T>>    m_owned_items;
     Array<Handle<T>>    m_items_pending_addition;
     Array<ID<T>>        m_items_pending_removal;

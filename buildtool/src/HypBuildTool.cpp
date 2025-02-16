@@ -42,12 +42,13 @@ class WorkerThreadPool : public TaskThreadPool
 {
 public:
     WorkerThreadPool()
+        : TaskThreadPool(TypeWrapper<WorkerThread>(), NAME("BuildTool_WorkerThread"), 4)
     {
-        CreateThreads<WorkerThread>(NAME("BuildTool_WorkerThread"), 4);
     }
 
     virtual ~WorkerThreadPool() override = default;
 };
+
 class HypBuildTool
 {
 public:
@@ -266,7 +267,7 @@ private:
 
     void WaitWhileTaskRunning(const Task<void> &task)
     {
-        Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+        Threads::AssertOnThread(g_main_thread);
 
         AssertThrow(task.IsValid());
 

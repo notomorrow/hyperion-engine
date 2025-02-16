@@ -30,6 +30,10 @@ Result<void> CSharpModuleGenerator::Generate_Internal(const Analyzer &analyzer, 
     for (const Pair<String, HypClassDefinition> &pair : mod.GetHypClasses()) {
         const HypClassDefinition &hyp_class = pair.second;
 
+        if (const HypClassAttributeValue &attr = hyp_class.GetAttribute("NoScriptBindings"); attr.GetBool()) {
+            continue;
+        }
+
         writer.WriteString(HYP_FORMAT("    public static class {}Extensions\n", hyp_class.name));
         writer.WriteString("    {\n");
 
@@ -40,7 +44,7 @@ Result<void> CSharpModuleGenerator::Generate_Internal(const Analyzer &analyzer, 
                 continue;
             }
 
-            if (const HypClassAttributeValue &no_script_bindings_attribute_value = member.GetAttribute("NoScriptBindings"); no_script_bindings_attribute_value.GetBool()) {
+            if (const HypClassAttributeValue &attr = member.GetAttribute("NoScriptBindings"); attr.GetBool()) {
                 // skip generating script bindings for this
                 continue;
             }

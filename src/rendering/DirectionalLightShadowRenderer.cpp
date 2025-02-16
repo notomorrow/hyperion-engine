@@ -360,7 +360,7 @@ void ShadowPass::Create()
 
 void ShadowPass::Render(Frame *frame)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const ImageRef &framebuffer_image = GetFramebuffer()->GetAttachment(0)->GetImage();
 
@@ -534,14 +534,14 @@ void DirectionalLightShadowRenderer::Init()
 // called from game thread
 void DirectionalLightShadowRenderer::InitGame()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 }
 
 void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertThrow(m_shader.IsValid());
 
@@ -657,7 +657,7 @@ void DirectionalLightShadowRenderer::OnRender(Frame *frame)
 {
     HYP_SCOPE;
     
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(m_shadow_pass != nullptr);
 

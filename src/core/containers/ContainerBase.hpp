@@ -16,52 +16,79 @@
 namespace hyperion {
 
 template <auto KeyByFunction>
-struct KeyByFunctionInvoker;
+struct MapFunction;
 
 template <class TargetType, class ReturnType, ReturnType(TargetType::*func)()>
-struct KeyByFunctionInvoker<func>
+struct MapFunction<func>
 {
     using Type = decltype(func);
 
-    constexpr ReturnType operator()(TargetType &value) const
+    constexpr decltype(auto) operator()(TargetType &value) const
     {
         return (value.*func)();
     }
 
-    constexpr ReturnType operator()(const TargetType &value) const
+    constexpr decltype(auto) operator()(const TargetType &value) const
     {
         return (value.*func)();
     }
 };
 
 template <class TargetType, class ReturnType, ReturnType(TargetType::*func)() const>
-struct KeyByFunctionInvoker<func>
+struct MapFunction<func>
 {
     using Type = decltype(func);
 
-    constexpr ReturnType operator()(const TargetType &value) const
+    constexpr decltype(auto) operator()(const TargetType &value) const
     {
         return (value.*func)();
     }
 };
 
-template <class TargetType, class ReturnType, ReturnType(*func)(TargetType &)>
-struct KeyByFunctionInvoker<func>
+template <class TargetType, class ReturnType, ReturnType TargetType::*member>
+struct MapFunction<member>
+{
+    using Type = decltype(member);
+
+    constexpr decltype(auto) operator()(TargetType &value) const
+    {
+        return value.*member;
+    }
+
+    constexpr decltype(auto) operator()(const TargetType &value) const
+    {
+        return value.*member;
+    }
+};
+
+template <class TargetType, class ReturnType, ReturnType(*func)(TargetType)>
+struct MapFunction<func>
 {
     using Type = decltype(func);
 
-    constexpr ReturnType operator()(TargetType &value) const
+    constexpr decltype(auto) operator()(const TargetType &value) const
+    {
+        return func(value);
+    }
+};
+
+template <class TargetType, class ReturnType, ReturnType(*func)(TargetType &)>
+struct MapFunction<func>
+{
+    using Type = decltype(func);
+
+    constexpr decltype(auto) operator()(TargetType &value) const
     {
         return func(value);
     }
 };
 
 template <class TargetType, class ReturnType, ReturnType(*func)(const TargetType &)>
-struct KeyByFunctionInvoker<func>
+struct MapFunction<func>
 {
     using Type = decltype(func);
 
-    constexpr ReturnType operator()(const TargetType &value) const
+    constexpr decltype(auto) operator()(const TargetType &value) const
     {
         return func(value);
     }

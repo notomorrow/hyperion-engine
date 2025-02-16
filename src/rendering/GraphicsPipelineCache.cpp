@@ -16,7 +16,7 @@
 #include <core/utilities/DeferredScope.hpp>
 
 // For CompiledShader
-#include <util/shader_compiler/ShaderCompiler.hpp>
+#include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #include <Engine.hpp>
 
@@ -99,14 +99,14 @@ void GraphicsPipelineCache::Initialize()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 }
 
 void GraphicsPipelineCache::Destroy()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     Mutex::Guard guard(m_mutex);
 

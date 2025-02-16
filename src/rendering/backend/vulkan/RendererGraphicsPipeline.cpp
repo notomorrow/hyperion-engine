@@ -179,14 +179,13 @@ GraphicsPipeline<Platform::VULKAN>::~GraphicsPipeline()
 }
 
 template <>
-void GraphicsPipeline<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *cmd)
+void GraphicsPipeline<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *cmd, Vec2i viewport_offset, Vec2i viewport_extent)
 {
-    if (m_framebuffers.Any()) {
-        Viewport viewport;
-        viewport.position = Vec2i::Zero();
-        viewport.extent = Vec2i(m_framebuffers[0]->GetExtent());
-        m_platform_impl.UpdateViewport(cmd, viewport);
-    }
+    Viewport viewport;
+    viewport.position = viewport_offset;
+    viewport.extent = viewport_extent;
+
+    m_platform_impl.UpdateViewport(cmd, viewport);
 
     vkCmdBindPipeline(
         cmd->GetPlatformImpl().command_buffer,
@@ -204,6 +203,19 @@ void GraphicsPipeline<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *c
             m_push_constants.Data()
         );
     }
+}
+
+template <>
+void GraphicsPipeline<Platform::VULKAN>::Bind(CommandBuffer<Platform::VULKAN> *cmd)
+{
+    Vec2i viewport_offset = Vec2i::Zero();
+    Vec2i viewport_extent = Vec2i::One();
+
+    if (m_framebuffers.Any()) {
+        viewport_extent = Vec2i(m_framebuffers[0]->GetExtent());
+    }
+
+    Bind(cmd, viewport_offset, viewport_extent);
 }
 
 template <>

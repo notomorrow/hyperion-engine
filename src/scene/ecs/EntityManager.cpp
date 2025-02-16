@@ -20,7 +20,10 @@
 namespace hyperion {
 
 // if the number of systems in a group is less than this value, they will be executed sequentially
-static const uint32 systems_execution_parallel_threshold = 3;
+static const double g_system_execution_group_lag_spike_threshold = 50.0;
+static const uint32 g_entity_manager_command_queue_warning_size = 8192;
+
+#define HYP_SYSTEMS_PARALLEL_EXECUTION
 
 #pragma region EntityManagerCommandQueue
 
@@ -62,6 +65,15 @@ void EntityManagerCommandQueue::Push(EntityManagerCommandProc &&command)
 
     buffer.commands.Push(std::move(command));
     m_count.Increment(1, MemoryOrder::RELEASE);
+
+    if (buffer.commands.Size() >= g_entity_manager_command_queue_warning_size) {
+        HYP_LOG(ECS, Warning, "EntityManager command queue has grown past warning threshold size of ({} >= {}). This may indicate FlushCommandQueue() is not being called which would be a memory leak.",
+            buffer.commands.Size(), g_entity_manager_command_queue_warning_size);
+
+#ifdef HYP_DEBUG_MODE
+        HYP_BREAKPOINT;
+#endif
+    }
 }
 
 void EntityManagerCommandQueue::Execute(EntityManager &mgr, GameCounter::TickUnit delta)
@@ -128,7 +140,7 @@ Task<bool> EntityToEntityManagerMap::PerformActionWithEntity(ID<Entity> id, void
         task_executor->Fulfill(true);
     };
     
-    if (entity_manager->GetOwnerThreadMask() & Threads::CurrentThreadID()) {
+    if (entity_manager->GetOwnerThreadMask() & Threads::CurrentThreadID().GetValue()) {
         // Mutex must not be locked when callback() is called - the callback could perform
         // actions that directly or undirectly require re-locking the mutex.
         // Instead, unlock the mutex once we are sure the EntityManager will not be deleted before using it
@@ -166,7 +178,7 @@ EntityManager::EntityManager(ThreadMask owner_thread_mask, Scene *scene, EnumFla
       m_world(scene != nullptr ? scene->GetWorld() : nullptr),
       m_scene(scene),
       m_flags(flags),
-      m_command_queue((owner_thread_mask & ThreadName::THREAD_GAME) ? EntityManagerCommandQueueFlags::EXEC_COMMANDS : EntityManagerCommandQueueFlags::NONE),
+      m_command_queue(Threads::IsThreadInMask(g_game_thread, owner_thread_mask) ? EntityManagerCommandQueueFlags::EXEC_COMMANDS : EntityManagerCommandQueueFlags::NONE),
       m_is_initialized(false)
 {
     AssertThrow(scene != nullptr);
@@ -484,28 +496,38 @@ void EntityManager::BeginAsyncUpdate(GameCounter::TickUnit delta)
     Threads::AssertOnThread(m_owner_thread_mask);
     
     TaskBatch *root_task_batch = nullptr;
+    TaskBatch *last_task_batch = nullptr;
 
     // Prepare task dependencies
     for (SizeType index = 0; index < m_system_execution_groups.Size(); index++) {
         SystemExecutionGroup &system_execution_group = m_system_execution_groups[index];
 
+        TaskBatch *current_task_batch = system_execution_group.GetTaskBatch();
+
         if (!root_task_batch) {
-            root_task_batch = system_execution_group.GetTaskBatch();
+            root_task_batch = current_task_batch;
         }
 
-        system_execution_group.GetTaskBatch()->ResetState();
+        current_task_batch->ResetState();
 
         // Add tasks to batches before kickoff
         system_execution_group.StartProcessing(delta);
 
-        if (index != 0) {
-            m_system_execution_groups[index - 1].GetTaskBatch()->next_batch = m_system_execution_groups[index].GetTaskBatch();
+        if (last_task_batch != nullptr) {
+            if (current_task_batch->num_enqueued > 0) {
+                last_task_batch->next_batch = current_task_batch;
+                last_task_batch = current_task_batch;
+            }
+        } else {
+            last_task_batch = current_task_batch;
         }
     }
 
     // Kickoff first task
-    if (root_task_batch) {
+    if (root_task_batch != nullptr && (root_task_batch->num_enqueued > 0 || root_task_batch->next_batch != nullptr)) {
+#ifdef HYP_SYSTEMS_PARALLEL_EXECUTION
         TaskSystem::GetInstance().EnqueueBatch(root_task_batch);
+#endif
     }
 }
 
@@ -517,6 +539,21 @@ void EntityManager::EndAsyncUpdate()
     for (SystemExecutionGroup &system_execution_group : m_system_execution_groups) {
         system_execution_group.FinishProcessing();
     }
+
+#ifdef HYP_DEBUG_MODE
+    for (SystemExecutionGroup &system_execution_group : m_system_execution_groups) {
+        const PerformanceClock &performance_clock = system_execution_group.GetPerformanceClock();
+        const double elapsed_time_ms = performance_clock.Elapsed() / 1000.0;
+
+        if (elapsed_time_ms >= g_system_execution_group_lag_spike_threshold) {
+            HYP_LOG(ECS, Warning, "SystemExecutionGroup spike detected: {} ms", elapsed_time_ms);
+
+            for (const auto &it : system_execution_group.GetPerformanceClocks()) {
+                HYP_LOG(ECS, Debug, "\tSystem {} performance: {}", it.first->GetName(), it.second.Elapsed() / 1000.0);
+            }
+        }
+    }
+#endif
 }
 
 void EntityManager::FlushCommandQueue(GameCounter::TickUnit delta)
@@ -546,19 +583,54 @@ void SystemExecutionGroup::StartProcessing(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
+#ifdef HYP_DEBUG_MODE
+    m_performance_clock.Start();
+
     for (auto &it : m_systems) {
-        m_task_batch->AddTask([system = it.second.Get(), delta]
+        SystemBase *system = it.second.Get();
+
+        m_performance_clocks.Set(system, PerformanceClock());
+    }
+#endif
+
+    for (auto &it : m_systems) {
+        SystemBase *system = it.second.Get();
+
+        if (system->GetInitializedEntities().Empty()) {
+            continue;
+        }
+
+        m_task_batch->AddTask([this, system, delta]
         {
             HYP_NAMED_SCOPE_FMT("Processing system {}", system->GetName());
 
+#ifdef HYP_DEBUG_MODE
+            PerformanceClock &performance_clock = m_performance_clocks[system];
+            performance_clock.Start();
+#endif
+
             system->Process(delta);
+
+#ifdef HYP_DEBUG_MODE
+            performance_clock.Stop();
+#endif
         });
     }
 }
 
 void SystemExecutionGroup::FinishProcessing()
 {
-    m_task_batch->AwaitCompletion();
+    if (m_task_batch->num_enqueued != 0 || m_task_batch->next_batch != nullptr) {
+#ifdef HYP_SYSTEMS_PARALLEL_EXECUTION
+        m_task_batch->AwaitCompletion();
+#else
+        m_task_batch->ExecuteBlocking(/* execute_dependent_batches */ true);
+#endif
+    }
+
+#ifdef HYP_DEBUG_MODE
+    m_performance_clock.Stop();
+#endif
 }
 
 #pragma endregion SystemExecutionGroup

@@ -55,7 +55,7 @@ void Game::Init_Internal()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+    Threads::AssertOnThread(g_main_thread);
 
     AssertThrowMsg(m_game_thread == nullptr, "Game thread already initialized!");
     m_game_thread = MakeUnique<GameThread>();
@@ -78,7 +78,7 @@ void Game::Init_Internal()
     // camera->GetRenderResources().EnqueueBind();
 
     m_scene = CreateObject<Scene>(
-        SceneFlags::HAS_TLAS // default it to having a top level acceleration structure for RT
+        SceneFlags::FOREGROUND | SceneFlags::HAS_TLAS // default it to having a top level acceleration structure for RT
     );
 
     m_scene->SetName(NAME("Scene_Main"));
@@ -99,7 +99,7 @@ void Game::Init_Internal()
         g_engine->GetWorld()->AddScene(m_scene);
         InitObject(m_scene);
         
-        m_ui_stage.Emplace(Threads::GetStaticThreadID(ThreadName::THREAD_GAME));
+        m_ui_stage.Emplace(g_game_thread);
 
         // Call Init method (overridden)
         Init();
@@ -133,7 +133,7 @@ void Game::Init()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     m_ui_stage->Init();
 
@@ -166,7 +166,7 @@ void Game::RequestStop()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(~ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(~g_game_thread);
 
     // Stop game thread and wait for it to finish
     if (m_game_thread != nullptr) {
@@ -190,7 +190,7 @@ void Game::HandleEvent(SystemEvent &&event)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_INPUT);
+    Threads::AssertOnThread(g_game_thread);
 
     if (!m_app_context->GetInputManager().IsValid()) {
         return;
@@ -205,7 +205,7 @@ void Game::PushEvent(SystemEvent &&event)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+    Threads::AssertOnThread(g_main_thread);
 
     if (event.GetType() == SystemEventType::EVENT_SHUTDOWN) {
         RequestStop();
@@ -225,7 +225,7 @@ void Game::OnInputEvent(const SystemEvent &event)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_INPUT);
+    Threads::AssertOnThread(g_game_thread);
     
     // forward to UI
     if (m_ui_stage->OnInputEvent(m_app_context->GetInputManager().Get(), event) & UIEventHandlerResult::STOP_BUBBLING) {
@@ -300,7 +300,7 @@ void Game::OnFrameBegin(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     g_engine->GetRenderState()->AdvanceFrameCounter();
     g_engine->GetRenderState()->BindScene(m_scene.Get());
@@ -315,7 +315,7 @@ void Game::OnFrameEnd(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     g_engine->GetRenderState()->UnbindScene(m_scene.Get());
 

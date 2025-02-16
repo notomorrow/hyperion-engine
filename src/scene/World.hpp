@@ -21,57 +21,33 @@ class EditorDelegates;
 
 struct DetachedScenesContainer
 {
-    World                                                                                   *world;
-    FixedArray<Handle<Scene>, MathUtil::FastLog2_Pow2(uint64(ThreadName::THREAD_STATIC))>   static_thread_scenes;
-    HashMap<ThreadID, Handle<Scene>>                                                        dynamic_thread_scenes;
-    Mutex                                                                                   dynamic_thread_scenes_mutex;
+    World                               *world;
+    HashMap<ThreadID, Handle<Scene>>    scenes;
+    Mutex                               mutex;
 
     DetachedScenesContainer(World *world)
         : world(world)
     {
-        for (uint64 i = 0; i < static_thread_scenes.Size(); i++) {
-            const uint64 thread_name_value = 1ull << i;
-            const ThreadName thread_name = ThreadName(thread_name_value);
-
-            const ThreadID thread_id = Threads::GetStaticThreadID(thread_name);
-
-            if (!thread_id.IsValid()) {
-                continue;
-            }
-
-            AssertThrow(!thread_id.IsDynamic());
-
-            static_thread_scenes[i] = CreateSceneForThread(thread_id);
-        }
     }
 
-    const Handle<Scene> &GetDetachedScene(ThreadID thread_id)
+    const Handle<Scene> &GetDetachedScene(const ThreadID &thread_id)
     {
-        if (thread_id.IsDynamic()) {
-            Mutex::Guard guard(dynamic_thread_scenes_mutex);
+        Mutex::Guard guard(mutex);
 
-            auto it = dynamic_thread_scenes.Find(thread_id);
+        auto it = scenes.Find(thread_id);
 
-            if (it == dynamic_thread_scenes.End()) {
-                it = dynamic_thread_scenes.Insert({
-                    thread_id,
-                    CreateSceneForThread(thread_id)
-                }).first;
-            }
-
-            return it->second;
+        if (it == scenes.End()) {
+            it = scenes.Insert({
+                thread_id,
+                CreateSceneForThread(thread_id)
+            }).first;
         }
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrow(MathUtil::IsPowerOfTwo(thread_id.value));
-        AssertThrow(MathUtil::FastLog2_Pow2(thread_id.value) < static_thread_scenes.Size());
-#endif
-
-        return static_thread_scenes[MathUtil::FastLog2_Pow2(thread_id.value)];
+        return it->second;
     }
 
 private:
-    Handle<Scene> CreateSceneForThread(ThreadID thread_id)
+    Handle<Scene> CreateSceneForThread(const ThreadID &thread_id)
     {
         Handle<Scene> scene = CreateObject<Scene>(
             world,
@@ -80,7 +56,7 @@ private:
             SceneFlags::DETACHED
         );
 
-        scene->SetName(CreateNameFromDynamicString(ANSIString("DetachedSceneForThread_") + *thread_id.name));
+        scene->SetName(CreateNameFromDynamicString(ANSIString("DetachedSceneForThread_") + *thread_id.GetName()));
         
         InitObject(scene);
 
@@ -107,18 +83,10 @@ public:
     /*! \brief Get the placeholder Scene, used for Entities that are not attached to a Scene.
      *  This version of the function allows the caller to specify the thread the Scene uses for entity management.
      *  If the Scene does not exist for the given thread mask, it will be created.
-     *\param thread_name The thread the Scene should be associated with.
-     * \return The handle for the detached Scene for the given thread.
-     */
-    const Handle<Scene> &GetDetachedScene(ThreadName thread_name = ThreadName::THREAD_GAME);
-
-    /*! \brief Get the placeholder Scene, used for Entities that are not attached to a Scene.
-     *  This version of the function allows the caller to specify the thread the Scene uses for entity management.
-     *  If the Scene does not exist for the given thread mask, it will be created.
      *\param thread_id The thread the Scene should be associated with.
      * \return The handle for the detached Scene for the given thread.
      */
-    const Handle<Scene> &GetDetachedScene(ThreadID thread_id);
+    const Handle<Scene> &GetDetachedScene(const ThreadID &thread_id);
 
     HYP_FORCE_INLINE PhysicsWorld &GetPhysicsWorld()
         { return m_physics_world; }

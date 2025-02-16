@@ -70,7 +70,7 @@ const GraphicsPipelineRef &DebugDrawerRenderGroupProxy::GetGraphicsPipeline() co
 void DebugDrawerRenderGroupProxy::Bind(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     CommandBuffer *command_buffer = GetCommandBuffer(frame);
     AssertThrow(command_buffer != nullptr);
@@ -195,7 +195,7 @@ void DebugDrawer::Create()
 void DebugDrawer::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (m_num_draw_commands_pending_addition.Get(MemoryOrder::ACQUIRE) != 0) {
         UpdateDrawCommands();

@@ -56,7 +56,7 @@ void PointLightShadowRenderer::Init()
 // called from game thread
 void PointLightShadowRenderer::InitGame()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertThrow(m_env_probe.IsValid());
 }
@@ -74,7 +74,7 @@ void PointLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertThrow(m_env_probe.IsValid());
     AssertThrow(m_light.IsValid());
@@ -93,7 +93,7 @@ void PointLightShadowRenderer::OnRender(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (!m_env_probe.IsValid() || !m_light.IsValid()) {
         HYP_LOG(Shadows, Warning, "Point shadow renderer attached to invalid Light or EnvProbe");
