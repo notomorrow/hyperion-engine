@@ -64,7 +64,7 @@ void WorldGridSubsystem::Update(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     for (const UniquePtr<WorldGrid> &world_grid : m_world_grids) {
         world_grid->Update(delta);
@@ -75,7 +75,7 @@ void WorldGridSubsystem::OnSceneAttached(const Handle<Scene> &scene)
 {
     HYP_SCOPE;
 
-    if (!(scene->GetFlags() & (SceneFlags::NON_WORLD | SceneFlags::DETACHED))) {
+    if (scene->IsForegroundScene()) {
         UniquePtr<WorldGrid> &world_grid = m_world_grids.PushBack(MakeUnique<WorldGrid>(
             WorldGridParams { },
             scene
@@ -89,7 +89,7 @@ void WorldGridSubsystem::OnSceneDetached(const Handle<Scene> &scene)
 {
     HYP_SCOPE;
 
-    if (!(scene->GetFlags() & (SceneFlags::NON_WORLD | SceneFlags::DETACHED))) {
+    if (scene->IsForegroundScene()) {
         auto it = m_world_grids.FindIf([&scene](const UniquePtr<WorldGrid> &world_grid)
         {
             return world_grid->GetScene() == scene;

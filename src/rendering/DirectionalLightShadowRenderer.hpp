@@ -5,7 +5,6 @@
 
 #include <core/utilities/EnumFlags.hpp>
 
-#include <core/threading/ThreadSignal.hpp>
 #include <core/threading/Semaphore.hpp>
 
 #include <core/object/HypObject.hpp>

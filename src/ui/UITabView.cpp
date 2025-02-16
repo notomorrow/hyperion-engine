@@ -105,7 +105,7 @@ UITabView::UITabView()
 
 void UITabView::Init()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     UIPanel::Init();
 
@@ -192,7 +192,7 @@ void UITabView::UpdateSize_Internal(bool update_children)
 
 void UITabView::SetSelectedTabIndex(uint32 index)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     if (index == m_selected_tab_index) {
         return;
@@ -241,7 +241,7 @@ void UITabView::SetSelectedTabIndex(uint32 index)
 
 RC<UITab> UITabView::AddTab(Name name, const String &title)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     RC<UITab> tab = CreateUIObject<UITab>(name, Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::PIXEL }, { 30, UIObjectSize::PIXEL }));
     tab->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
@@ -277,7 +277,7 @@ RC<UITab> UITabView::AddTab(Name name, const String &title)
 
 RC<UITab> UITabView::GetTab(Name name) const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     for (const RC<UITab> &tab : m_tabs) {
         if (tab->GetName() == name) {
@@ -290,7 +290,7 @@ RC<UITab> UITabView::GetTab(Name name) const
 
 uint32 UITabView::GetTabIndex(Name name) const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     for (SizeType i = 0; i < m_tabs.Size(); i++) {
         if (m_tabs[i]->GetName() == name) {
@@ -303,7 +303,7 @@ uint32 UITabView::GetTabIndex(Name name) const
 
 bool UITabView::RemoveTab(Name name)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     const auto it = m_tabs.FindIf([name](const RC<UITab> &tab)
     {

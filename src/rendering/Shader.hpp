@@ -10,7 +10,7 @@
 
 #include <rendering/backend/RenderObject.hpp>
 
-#include <util/shader_compiler/ShaderCompiler.hpp>
+#include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #include <HashCode.hpp>
 
@@ -58,7 +58,7 @@ private:
 
         ShaderWeakRef       shader;
         AtomicVar<State>    state = State::UNLOADED;
-        ThreadID            loading_thread_id = ThreadID::Invalid();
+        ThreadID            loading_thread_id;
     };
 
     HashMap<ShaderDefinition, RC<ShaderMapEntry>>   m_map;

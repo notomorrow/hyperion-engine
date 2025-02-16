@@ -58,7 +58,7 @@ public:
                     continue;
                 }
 
-                if (!property->CanGet() || !property->CanSet()) {
+                if (!property->CanGet()) {
                     continue;
                 }
 
@@ -680,7 +680,7 @@ public:
         RC<UIGridRow> components_grid_container_content_row = components_grid_container->AddRow();
         RC<UIGridColumn> components_grid_container_content_column = components_grid_container_content_row->AddColumn();
 
-        if (entity_manager->GetOwnerThreadMask() & Threads::CurrentThreadID()) {
+        if (entity_manager->GetOwnerThreadMask() & Threads::CurrentThreadID().GetValue()) {
             components_grid_container_content_column->AddChildUIObject(CreateComponentsGrid());
         } else {
             HYP_NAMED_SCOPE("Awaiting async component UI element creation");
@@ -776,6 +776,8 @@ public:
 
     void Update(UIObject *ui_object, const EditorNodePropertyRef &value) const
     {
+        // @TODO Implement
+
         RC<Node> node_rc = value.node.Lock();
         AssertThrow(node_rc != nullptr);
 

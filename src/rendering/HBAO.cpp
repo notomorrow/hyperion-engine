@@ -12,30 +12,44 @@
 
 #include <system/AppContext.hpp>
 
+#include <math/Vector2.hpp>
+
 #include <core/profiling/ProfileScope.hpp>
+
+#include <core/logging/Logger.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
 
+HYP_DECLARE_LOG_CHANNEL(Rendering);
+HYP_DEFINE_LOG_SUBCHANNEL(HBAO, Rendering);
+
+struct HBAOUniforms
+{
+    Vec2u   dimension;
+    float   radius;
+    float   power;
+};
+
 #pragma region Render commands
 
-struct RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet) : renderer::RenderCommand
+struct RENDER_COMMAND(AddHBAOResultToGlobalDescriptorSet) : renderer::RenderCommand
 {
-    FixedArray<ImageViewRef, max_frames_in_flight> pass_image_views;
+    ImageViewRef    image_view;
 
-    RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)(FixedArray<ImageViewRef, max_frames_in_flight> &&pass_image_views)
-        : pass_image_views(std::move(pass_image_views))
+    RENDER_COMMAND(AddHBAOResultToGlobalDescriptorSet)(const ImageViewRef &image_view)
+        : image_view(image_view)
     {
     }
 
-    virtual ~RENDER_COMMAND(AddHBAOFinalImagesToGlobalDescriptorSet)() override = default;
+    virtual ~RENDER_COMMAND(AddHBAOResultToGlobalDescriptorSet)() override = default;
 
     virtual RendererResult operator()() override
     {
         for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
-                ->SetElement(NAME("SSAOResultTexture"), pass_image_views[frame_index]);
+                ->SetElement(NAME("SSAOResultTexture"), image_view);
         }
 
         HYPERION_RETURN_OK;
@@ -63,17 +77,51 @@ struct RENDER_COMMAND(RemoveHBAODescriptors) : renderer::RenderCommand
     }
 };
 
+struct RENDER_COMMAND(CreateHBAOUniformBuffer) : renderer::RenderCommand
+{
+    HBAOUniforms    uniforms;
+    GPUBufferRef    uniform_buffer;
+
+    RENDER_COMMAND(CreateHBAOUniformBuffer)(
+        const HBAOUniforms &uniforms,
+        const GPUBufferRef &uniform_buffer
+    ) : uniforms(uniforms),
+        uniform_buffer(uniform_buffer)
+    {
+        AssertThrow(uniforms.dimension.x * uniforms.dimension.y != 0);
+
+        AssertThrow(this->uniform_buffer != nullptr);
+    }
+
+    virtual ~RENDER_COMMAND(CreateHBAOUniformBuffer)() override = default;
+
+    virtual RendererResult operator()() override
+    {
+        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(
+            g_engine->GetGPUDevice(),
+            sizeof(uniforms)
+        ));
+
+        uniform_buffer->Copy(
+            g_engine->GetGPUDevice(),
+            sizeof(uniforms),
+            &uniforms
+        );
+
+        HYPERION_RETURN_OK;
+    }
+};
+
 #pragma endregion Render commands
 
-HBAO::HBAO()
-    : FullScreenPass(InternalFormat::RGBA8)
+HBAO::HBAO(HBAOConfig &&config)
+    : FullScreenPass(InternalFormat::RGBA8),
+      m_config(std::move(config))
 {
 }
 
 HBAO::~HBAO()
 {
-    m_temporal_blending.Reset();
-
     PUSH_RENDER_COMMAND(RemoveHBAODescriptors);
 }
 
@@ -84,22 +132,15 @@ void HBAO::Create()
     ShaderProperties shader_properties;
     shader_properties.Set("HBIL_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
 
-    m_shader = g_shader_manager->GetOrCreate(
-        NAME("HBAO"),
-        shader_properties
-    );
+    if (ShouldRenderHalfRes()) {
+        shader_properties.Set("HALFRES");
+    }
+
+    m_shader = g_shader_manager->GetOrCreate(NAME("HBAO"), shader_properties);
 
     FullScreenPass::Create();
 
-    CreateTemporalBlending();
-
-    PUSH_RENDER_COMMAND(
-        AddHBAOFinalImagesToGlobalDescriptorSet,
-        FixedArray<ImageViewRef, max_frames_in_flight> {
-            m_temporal_blending ? m_temporal_blending->GetResultTexture()->GetImageView() : GetAttachment(0)->GetImageView(),
-            m_temporal_blending ? m_temporal_blending->GetResultTexture()->GetImageView() : GetAttachment(0)->GetImageView()
-        }
-    );
+    PUSH_RENDER_COMMAND(AddHBAOResultToGlobalDescriptorSet, GetFinalImageView());
 }
 
 void HBAO::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
@@ -109,6 +150,14 @@ void HBAO::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
     renderer::DescriptorTableDeclaration descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable();
 
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
+    
+    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("HBAODescriptorSet"), frame_index);
+        AssertThrow(descriptor_set != nullptr);
+
+        descriptor_set->SetElement(NAME("UniformBuffer"), m_uniform_buffer);
+    }
+    
     DeferCreate(descriptor_table, g_engine->GetGPUDevice());
 
     m_descriptor_table = descriptor_table;
@@ -125,38 +174,32 @@ void HBAO::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
     InitObject(m_render_group);
 }
 
-void HBAO::CreateTemporalBlending()
+void HBAO::CreateDescriptors()
 {
-    HYP_SCOPE;
+    CreateUniformBuffers();
+}
 
-    m_temporal_blending = MakeUnique<TemporalBlending>(
-        GetFramebuffer()->GetExtent(),
-        InternalFormat::RGBA8,
-        TemporalBlendTechnique::TECHNIQUE_3,
-        TemporalBlendFeedback::LOW,
-        GetFramebuffer()
-    );
+void HBAO::CreateUniformBuffers()
+{
+    HBAOUniforms uniforms { };
+    uniforms.dimension = ShouldRenderHalfRes() ? m_extent / 2 : m_extent;
+    uniforms.radius = m_config.radius;
+    uniforms.power = m_config.power;
 
-    m_temporal_blending->Create();
+    m_uniform_buffer = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
+
+    PUSH_RENDER_COMMAND(CreateHBAOUniformBuffer, uniforms, m_uniform_buffer);
 }
 
 void HBAO::Resize_Internal(Vec2u new_size)
 {
     HYP_SCOPE;
 
+    SafeRelease(std::move(m_uniform_buffer));
+
     FullScreenPass::Resize_Internal(new_size);
 
-    m_temporal_blending.Reset();
-
-    CreateTemporalBlending();
-
-    PUSH_RENDER_COMMAND(
-        AddHBAOFinalImagesToGlobalDescriptorSet,
-        FixedArray<ImageViewRef, max_frames_in_flight> {
-            m_temporal_blending ? m_temporal_blending->GetResultTexture()->GetImageView() : GetAttachment(0)->GetImageView(),
-            m_temporal_blending ? m_temporal_blending->GetResultTexture()->GetImageView() : GetAttachment(0)->GetImageView()
-        }
-    );
+    PUSH_RENDER_COMMAND(AddHBAOResultToGlobalDescriptorSet, GetFinalImageView());
 }
 
 void HBAO::Record(uint32 frame_index)
@@ -166,7 +209,7 @@ void HBAO::Record(uint32 frame_index)
 void HBAO::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
@@ -175,14 +218,6 @@ void HBAO::Render(Frame *frame)
     const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     {
-        struct alignas(128)
-        {
-            Vec2u   dimension;
-        } push_constants;
-
-        push_constants.dimension = m_extent;
-
-        GetRenderGroup()->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
         Begin(frame);
 
         Frame temporary_frame = Frame::TemporaryFrame(GetCommandBuffer(frame_index), frame_index);
@@ -204,8 +239,6 @@ void HBAO::Render(Frame *frame)
         GetQuadMesh()->Render(GetCommandBuffer(frame_index));
         End(frame);
     }
-    
-    m_temporal_blending->Render(frame);
 }
 
 } // namespace hyperion

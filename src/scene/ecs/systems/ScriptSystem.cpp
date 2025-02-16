@@ -27,7 +27,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
 {
     m_delegate_handlers.Add(NAME("OnScriptStateChanged"), g_engine->GetScriptingService()->OnScriptStateChanged.Bind([this](const ManagedScript &script)
     {
-        Threads::AssertOnThread(ThreadName::THREAD_GAME);
+        Threads::AssertOnThread(g_game_thread);
 
         if (!(script.state & uint32(CompiledScriptState::COMPILED))) {
             return;
@@ -58,7 +58,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
     if (World *world = GetWorld()) {
         m_delegate_handlers.Add(NAME("OnGameStateChange"), world->OnGameStateChange.Bind([this](World *world, GameStateMode game_state_mode)
         {
-            Threads::AssertOnThread(ThreadName::THREAD_GAME);
+            Threads::AssertOnThread(g_game_thread);
 
             const GameStateMode previous_game_state_mode = world->GetGameState().mode;
 
@@ -68,7 +68,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
 
     m_delegate_handlers.Add(NAME("OnWorldChange"), OnWorldChanged.Bind([this](World *new_world, World *previous_world)
     {
-        Threads::AssertOnThread(ThreadName::THREAD_GAME);
+        Threads::AssertOnThread(g_game_thread);
 
         // Remove previous OnGameStateChange handler
         m_delegate_handlers.Remove(NAME("OnGameStateChange"));
@@ -87,7 +87,7 @@ ScriptSystem::ScriptSystem(EntityManager &entity_manager)
             // Add new handler for the new world's game state changing
             m_delegate_handlers.Add(NAME("OnGameStateChange"), new_world->OnGameStateChange.Bind([this](World *world, GameStateMode game_state_mode)
             {
-                Threads::AssertOnThread(ThreadName::THREAD_GAME);
+                Threads::AssertOnThread(g_game_thread);
 
                 const GameStateMode previous_game_state_mode = world->GetGameState().mode;
 
@@ -101,10 +101,12 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
 {
     SystemBase::OnEntityAdded(entity);
 
+    
+    World *world = GetWorld();
     ScriptComponent &script_component = GetEntityManager().GetComponent<ScriptComponent>(entity);
 
     if (script_component.flags & ScriptComponentFlags::INITIALIZED) {
-        if (GetWorld()->GetGameState().mode == GameStateMode::SIMULATING) {
+        if (world != nullptr && world->GetGameState().mode == GameStateMode::SIMULATING) {
             CallScriptMethod("OnPlayStart", script_component);
         }
 
@@ -148,9 +150,6 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
                     HYP_NAMED_SCOPE("Call BeforeInit() on script component");
                     HYP_LOG(Script, Info, "Calling BeforeInit() on script component");
 
-                    AssertThrow(GetEntityManager().GetScene() != nullptr);
-                    AssertThrow(GetEntityManager().GetScene()->GetWorld() != nullptr);
-
                     script_component.object.InvokeMethod<void>(
                         before_init_method_ptr,
                         GetWorld(),
@@ -191,7 +190,7 @@ void ScriptSystem::OnEntityAdded(const Handle<Entity> &entity)
     script_component.flags |= ScriptComponentFlags::INITIALIZED;
 
     // Call OnPlayStart on first init if we're currently simulating
-    if (GetWorld()->GetGameState().mode == GameStateMode::SIMULATING) {
+    if (world != nullptr && world->GetGameState().mode == GameStateMode::SIMULATING) {
         CallScriptMethod("OnPlayStart", script_component);
     }
 }
@@ -200,14 +199,15 @@ void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
+    World *world = GetWorld();
+
     ScriptComponent &script_component = GetEntityManager().GetComponent<ScriptComponent>(entity);
 
     if (!(script_component.flags & ScriptComponentFlags::INITIALIZED)) {
         return;
-
     }
     // If we're simulating while the script is removed, call OnPlayStop so OnPlayStart never gets double called
-    if (GetWorld()->GetGameState().mode == GameStateMode::SIMULATING) {
+    if (world != nullptr && world->GetGameState().mode == GameStateMode::SIMULATING) {
         CallScriptMethod("OnPlayStop", script_component);
     }
 
@@ -229,8 +229,14 @@ void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
 
 void ScriptSystem::Process(GameCounter::TickUnit delta)
 {
+    World *world = GetWorld();
+
+    if (!world) {
+        return;
+    }
+
     // Only update scripts if we're in simulation mode
-    if (GetWorld()->GetGameState().mode != GameStateMode::SIMULATING) {
+    if (world->GetGameState().mode != GameStateMode::SIMULATING) {
         return;
     }
 

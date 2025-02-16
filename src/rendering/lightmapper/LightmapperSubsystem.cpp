@@ -24,19 +24,19 @@ LightmapperSubsystem::LightmapperSubsystem()
 
 void LightmapperSubsystem::Initialize()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 }
 
 void LightmapperSubsystem::Shutdown()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     m_lightmappers.Clear();
 }
 
 void LightmapperSubsystem::Update(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     for (auto it = m_tasks.Begin(); it != m_tasks.End();) {
         if (it->IsCompleted()) {
@@ -63,13 +63,13 @@ void LightmapperSubsystem::Update(GameCounter::TickUnit delta)
 
 Task<void> *LightmapperSubsystem::GenerateLightmaps(const Handle<Scene> &scene)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     if (!scene.IsValid()) {
         return nullptr;
     }
 
-    if (scene->IsNonWorldScene()) {
+    if (!scene->IsForegroundScene()) {
         return nullptr;
     }
 

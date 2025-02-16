@@ -16,10 +16,10 @@ HYP_DECLARE_LOG_CHANNEL(Editor);
 
 void TickableEditorTask::Commit()
 {
-    if (Threads::IsOnThread(ThreadName::THREAD_GAME)) {
+    if (Threads::IsOnThread(g_game_thread)) {
         Process();
     } else {
-        IThread *game_thread = Threads::GetThread(ThreadName::THREAD_GAME);
+        IThread *game_thread = Threads::GetThread(g_game_thread);
         AssertThrow(game_thread != nullptr);
 
         game_thread->GetScheduler().Enqueue([weak_this = WeakRefCountedPtrFromThis()]()

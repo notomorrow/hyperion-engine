@@ -62,6 +62,8 @@
 
 namespace hyperion {
 
+HYP_DEFINE_LOG_SUBCHANNEL(RenderThread, Rendering);
+
 using renderer::FillMode;
 using renderer::GPUBufferType;
 
@@ -78,7 +80,7 @@ class RenderThread final : public Thread<Scheduler>
 {
 public:
     RenderThread(const RC<AppContext> &app_context)
-        : Thread(ThreadName::THREAD_RENDER, ThreadPriorityValue::HIGHEST),
+        : Thread(g_render_thread, ThreadPriorityValue::HIGHEST),
           m_app_context(app_context),
           m_is_running(false)
     {
@@ -90,7 +92,7 @@ public:
         AssertThrow(m_is_running.Exchange(true, MemoryOrder::ACQUIRE_RELEASE) == false);
 
         // Must be current thread
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
         SetCurrentThreadObject(this);
         m_scheduler.SetOwnerThread(GetID());
@@ -137,11 +139,7 @@ private:
             num_frames++;
 
             if (delta_time_accum >= 1.0f) {
-                DebugLog(
-                    LogType::Debug,
-                    "Render FPS: %f\n",
-                    1.0f / (delta_time_accum / float(num_frames))
-                );
+                HYP_LOG(RenderThread, Debug, "Render thread ticks per second: {}", 1.0f / (delta_time_accum / float(num_frames)));
 
                 delta_time_accum = 0.0f;
                 num_frames = 0;
@@ -222,7 +220,7 @@ Engine::~Engine()
 
 void Engine::FindTextureFormatDefaults()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const Device *device = m_instance->GetDevice();
 
@@ -269,7 +267,7 @@ void Engine::FindTextureFormatDefaults()
 HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+    Threads::AssertOnThread(g_main_thread);
 
     AssertThrow(!m_is_initialized);
     m_is_initialized = true;
@@ -504,7 +502,7 @@ void Engine::RequestStop()
 void Engine::FinalizeStop()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+    Threads::AssertOnThread(g_main_thread);
 
     m_is_shutting_down.Set(true, MemoryOrder::SEQUENTIAL);
 
@@ -672,7 +670,7 @@ void Engine::PreFrameUpdate(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     // Add/remove pending descriptor sets before flushing render commands or updating buffers and descriptor sets.
     // otherwise we'll have an issue when render commands expect the descriptor sets to be there.
@@ -707,7 +705,7 @@ void Engine::RenderDeferred(Frame *frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     m_deferred_renderer->Render(frame, m_render_state->GetActiveScene()->GetEnvironment().Get());
 }
@@ -823,7 +821,7 @@ GlobalDescriptorSetManager::~GlobalDescriptorSetManager() = default;
 
 void GlobalDescriptorSetManager::Initialize(Engine *engine)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     Mutex::Guard guard(m_mutex);
 

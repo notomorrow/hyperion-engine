@@ -96,7 +96,7 @@ public:
         HYP_MT_CHECK_RW(data_race_detector);
 #endif
 
-        executors.EmplaceBack(std::move(executor));
+        executors.PushBack(std::move(executor));
 
         ++num_enqueued;
 
@@ -154,8 +154,13 @@ protected:
     TaskThreadPool();
     TaskThreadPool(Array<UniquePtr<TaskThread>> &&threads);
 
+    TaskThreadPool(Name base_name, uint32 num_threads)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), base_name, num_threads)
+    {
+    }
+
     template <class TaskThreadType>
-    void CreateThreads(Name base_name, uint32 num_threads)
+    TaskThreadPool(TypeWrapper<TaskThreadType>, Name base_name, uint32 num_threads)
     {
         static_assert(std::is_base_of_v<TaskThread, TaskThreadType>, "TaskThreadType must be a subclass of TaskThread");
 
@@ -220,13 +225,6 @@ protected:
 
 private:
     static ThreadID CreateTaskThreadID(Name base_name, uint32 thread_index);
-};
-
-class HYP_API GenericTaskThreadPool final : public TaskThreadPool
-{
-public:
-    GenericTaskThreadPool(const Array<Pair<ThreadID, ThreadPriorityValue>> &thread_ids);
-    virtual ~GenericTaskThreadPool() override;
 };
 
 class TaskSystem

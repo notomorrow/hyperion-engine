@@ -183,7 +183,7 @@ public:
         static_assert(std::is_base_of_v<AssetLoaderBase, Loader>,
             "Loader must be a derived class of AssetLoaderBase!");
 
-        // Threads::AssertOnThread(ThreadName::THREAD_GAME);
+        // Threads::AssertOnThread(g_game_thread);
 
         const FixedArray<String, sizeof...(formats)> format_strings {
             String(formats)...

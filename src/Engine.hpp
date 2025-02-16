@@ -20,7 +20,7 @@
 
 #include <rendering/CrashHandler.hpp>
 
-#include <util/shader_compiler/ShaderCompiler.hpp>
+#include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #include <Types.hpp>
 
@@ -230,8 +230,6 @@ public:
     HYP_API void RenderNextFrame(Game *game);
     HYP_API void RequestStop();
 
-    ShaderCompiler m_shader_compiler;
-
     AtomicVar<bool> m_stop_requested;
 
     void FinalizeStop();
@@ -249,6 +247,8 @@ private:
     UniquePtr<RenderThread>                                 m_render_thread;
     
     UniquePtr<Instance>                                     m_instance;
+
+    ShaderCompiler                                          m_shader_compiler;
 
     UniquePtr<PlaceholderData>                              m_placeholder_data;
 

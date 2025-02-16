@@ -25,6 +25,8 @@
 
 #include <core/object/HypObject.hpp>
 
+#include <core/profiling/PerformanceClock.hpp>
+
 #include <core/Handle.hpp>
 #include <core/ID.hpp>
 
@@ -88,6 +90,14 @@ public:
 
     HYP_FORCE_INLINE TaskBatch *GetTaskBatch() const
         { return m_task_batch.Get(); }
+
+#ifdef HYP_DEBUG_MODE
+    HYP_FORCE_INLINE const PerformanceClock &GetPerformanceClock() const
+        { return m_performance_clock; }
+
+    HYP_FORCE_INLINE const FlatMap<SystemBase *, PerformanceClock> &GetPerformanceClocks() const
+        { return m_performance_clocks; }
+#endif
 
     /*! \brief Checks if the SystemExecutionGroup is valid for the given System.
      *
@@ -157,6 +167,20 @@ public:
         return insert_result.first->second.Get();
     }
 
+    template <class SystemType>
+    SystemType *GetSystem() const
+    {
+        static const TypeID type_id = TypeID::ForType<SystemType>();
+
+        const auto it = m_systems.Find(type_id);
+
+        if (it == m_systems.End()) {
+            return nullptr;
+        }
+
+        return static_cast<SystemType *>(it->second.Get());
+    }
+
     /*! \brief Removes a System from the SystemExecutionGroup.
      *
      *  \tparam SystemType The type of the System to remove.
@@ -181,8 +205,13 @@ public:
     void FinishProcessing();
 
 private:
-    TypeMap<UniquePtr<SystemBase>>  m_systems;
-    UniquePtr<TaskBatch>            m_task_batch;
+    TypeMap<UniquePtr<SystemBase>>          m_systems;
+    UniquePtr<TaskBatch>                    m_task_batch;
+
+#ifdef HYP_DEBUG_MODE
+    PerformanceClock                        m_performance_clock;
+    FlatMap<SystemBase *, PerformanceClock> m_performance_clocks;
+#endif
 };
 
 using EntityListenerID = uint32;
@@ -847,10 +876,28 @@ public:
         return static_cast<EntitySet<Components...> &>(*entity_sets_it->second);
     }
 
+    template <class SystemType>
+    HYP_FORCE_INLINE SystemType *AddSystem(UniquePtr<SystemType> &&system)
+    {
+        return AddSystemToExecutionGroup(std::move(system));
+    }
+
     template <class SystemType, class... Args>
     HYP_FORCE_INLINE SystemType *AddSystem(Args &&... args)
     {
         return AddSystemToExecutionGroup(MakeUnique<SystemType>(*this, std::forward<Args>(args)...));
+    }
+
+    template <class SystemType>
+    HYP_FORCE_INLINE SystemType *GetSystem() const
+    {
+        for (const SystemExecutionGroup &system_execution_group : m_system_execution_groups) {
+            if (SystemType *system = system_execution_group.GetSystem<SystemType>()) {
+                return system;
+            }
+        }
+
+        return nullptr;
     }
 
     void Initialize();

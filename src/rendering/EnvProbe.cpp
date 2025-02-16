@@ -392,7 +392,7 @@ void EnvProbe::EnqueueUnbind() const
 
 void EnvProbe::Update(GameCounter::TickUnit delta)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
     AssertReady();
 
     // Check if octree has changes, and we need to re-render.
@@ -480,7 +480,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
 void EnvProbe::Render(Frame *frame)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     AssertReady();
 
     if (IsControlledByEnvGrid()) {
@@ -610,7 +610,7 @@ void EnvProbe::Render(Frame *frame)
 
 void EnvProbe::UpdateRenderData(bool set_texture)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     AssertReady();
 
     AssertThrow(m_bound_index.GetProbeIndex() != ~0u);
@@ -689,7 +689,7 @@ void EnvProbe::BindToIndex(const EnvProbeIndex &probe_index)
     m_bound_index = probe_index;
 
     if (IsReady()) {
-        if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
+        if (Threads::IsOnThread(g_render_thread)) {
             UpdateRenderData(set_texture);
         } else {
             struct RENDER_COMMAND(UpdateEnvProbeRenderData) : renderer::RenderCommand

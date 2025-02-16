@@ -289,7 +289,7 @@ void AssetManager::Update(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     uint32 num_pending_batches;
 

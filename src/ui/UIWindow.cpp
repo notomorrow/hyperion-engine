@@ -31,7 +31,7 @@ void UIWindow::Init()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     UIPanel::Init();
 

@@ -254,17 +254,6 @@ void Light::Init()
     EnqueueRenderUpdates();
 }
 
-#if 0
-void Light::EnqueueBind() const
-{
-    Threads::AssertOnThread(~ThreadName::THREAD_RENDER);
-
-    AssertReady();
-
-    PUSH_RENDER_COMMAND(BindLight, m_id);
-}
-#endif
-
 void Light::EnqueueUnbind() const
 {
     AssertReady();

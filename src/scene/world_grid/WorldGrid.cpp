@@ -148,7 +148,8 @@ void WorldGrid::Shutdown()
 void WorldGrid::Update(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     AssertThrow(m_is_initialized);
 
@@ -225,7 +226,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
             // Initialize patch entity on game thread
             entity_manager->PushCommand([&state = m_state, coord = patch_info.coord, patch = std::move(patch), scene, patch_entity](EntityManager &mgr, GameCounter::TickUnit delta) mutable
             {
-                Threads::AssertOnThread(ThreadName::THREAD_GAME);
+                Threads::AssertOnThread(g_game_thread);
 
                 patch->InitializeEntity(scene, patch_entity);
             });
@@ -292,7 +293,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
             // add command to create the entity
             entity_manager->PushCommand([&root_node = m_root_node, &state = m_state, &params = m_params, patch_info = initial_patch_info](EntityManager &mgr, GameCounter::TickUnit delta)
             {
-                Threads::AssertOnThread(ThreadName::THREAD_GAME);
+                Threads::AssertOnThread(g_game_thread);
 
                 NodeProxy patch_node(MakeRefCountedPtr<Node>());
                 patch_node->SetFlags(NodeFlags::TRANSIENT);
@@ -355,7 +356,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
                         shared_queue.queue.Push(plugin->CreatePatch(patch_info).ToRefCountedPtr());
                         shared_queue.has_updates.Set(true, MemoryOrder::RELEASE);
 
-                        HYP_LOG(WorldGrid, Info, "Patch generation at {} completed on thread {}", patch_info.coord, Threads::CurrentThreadID().name);
+                        HYP_LOG(WorldGrid, Info, "Patch generation at {} completed on thread {}", patch_info.coord, Threads::CurrentThreadID().GetName());
                     }, TaskThreadPoolName::THREAD_POOL_BACKGROUND);
                     
                     m_state.patch_generation_tasks.Insert(initial_patch_info.coord, std::move(generation_task));
@@ -446,7 +447,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
             // // Push command to update patch state
             // entity_manager->PushCommand([&state = m_state, update](EntityManager &mgr, GameCounter::TickUnit delta)
             // {
-            //     Threads::AssertOnThread(ThreadName::THREAD_GAME);
+            //     Threads::AssertOnThread(g_game_thread);
 
             //     const WorldGridPatchDesc *patch_desc = state.GetPatchDesc(update.coord);
             //     AssertThrow(patch_desc != nullptr);
@@ -553,7 +554,7 @@ void WorldGrid::Update(GameCounter::TickUnit delta)
 
 void WorldGrid::AddPlugin(int priority, RC<WorldGridPlugin> &&plugin)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertThrow(plugin != nullptr);
 

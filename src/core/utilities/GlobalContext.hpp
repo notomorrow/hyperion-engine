@@ -8,7 +8,6 @@
 
 #include <core/memory/UniquePtr.hpp>
 
-#include <core/threading/Mutex.hpp>
 #include <core/threading/Thread.hpp>
 
 #include <core/Defines.hpp>
@@ -50,7 +49,7 @@ public:
         auto it = m_context_holders.Find<T>();
 
         if (it == m_context_holders.End()) {
-            it = m_context_holders.Set<T>(MakeUnique<GlobalContextHolder<T>>());
+            it = m_context_holders.Set<T>(MakeUnique<GlobalContextHolder<T>>()).first;
         }
 
         return *static_cast<GlobalContextHolder<T> *>(it->second.Get());
@@ -64,12 +63,8 @@ private:
 template <class ContextType>
 class GlobalContextHolder final : public IGlobalContextHolder
 {
-private:
-    GlobalContextHolder() = default;
-
 public:
-    friend class GlobalContextRegistry;
-
+    GlobalContextHolder()                                                   = default;
     GlobalContextHolder(const GlobalContextHolder &other)                   = delete;
     GlobalContextHolder &operator=(const GlobalContextHolder &other)        = delete;
     GlobalContextHolder(GlobalContextHolder &&other) noexcept               = delete;
@@ -130,19 +125,31 @@ struct GlobalContextScope
     }
 };
 
-template <class ContextType, class FunctionType, class ReturnType>
-static inline ReturnType UseGlobalContext(FunctionType &&func)
+template <class ContextType>
+static inline bool IsGlobalContextActive()
 {
-    GlobalContextHolder<ContextType> &holder = &GlobalContextHolder<ContextType>::GetInstance();
-    AssertThrow(holder.Size() != 0);
+    GlobalContextHolder<ContextType> &holder = GlobalContextHolder<ContextType>::GetInstance();
 
-    return func(holder.Current());
+    return holder.Size() != 0;
+}
+
+template <class ContextType>
+static inline ContextType *GetGlobalContext()
+{
+    GlobalContextHolder<ContextType> &holder = GlobalContextHolder<ContextType>::GetInstance();
+
+    if (holder.Size() != 0) {
+        return &holder.Current();
+    }
+
+    return nullptr;
 }
 
 } // namespace utilities
 
 using utilities::GlobalContextScope;
-using utilities::UseGlobalContext;
+using utilities::IsGlobalContextActive;
+using utilities::GetGlobalContext;
 
 } // namespace hyperion
 

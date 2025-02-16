@@ -51,7 +51,7 @@ void ReflectionProbeRenderer::Init()
 // called from game thread
 void ReflectionProbeRenderer::InitGame()
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertThrow(m_env_probe.IsValid());
     m_env_probe->EnqueueBind();
@@ -82,7 +82,7 @@ void ReflectionProbeRenderer::OnUpdate(GameCounter::TickUnit delta)
 
 void ReflectionProbeRenderer::OnRender(Frame *frame)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     m_env_probe->Render(frame);
 

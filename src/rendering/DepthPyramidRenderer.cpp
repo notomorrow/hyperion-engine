@@ -87,12 +87,12 @@ DepthPyramidRenderer::~DepthPyramidRenderer()
 void DepthPyramidRenderer::Create()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     auto CreateDepthPyramidResources = [this]()
     {
         HYP_NAMED_SCOPE("Create depth pyramid resources");
-        Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+        Threads::AssertOnThread(g_render_thread);
 
         m_depth_attachment = g_engine->GetDeferredRenderer()->GetGBuffer()->GetBucket(BUCKET_OPAQUE).GetFramebuffer()->GetAttachment(GBUFFER_RESOURCE_MAX - 1);
         AssertThrow(m_depth_attachment.IsValid());
@@ -238,7 +238,7 @@ Vec2u DepthPyramidRenderer::GetExtent() const
 void DepthPyramidRenderer::Render(Frame *frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();

@@ -4,6 +4,8 @@
 #include <core/object/HypClass.hpp>
 #include <core/object/HypEnum.hpp>
 
+#include <core/threading/ThreadID.hpp>
+
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
@@ -102,7 +104,7 @@ void HypClassRegistry::RegisterManagedClass(dotnet::Class *managed_class, const 
     AssertThrow(managed_class != nullptr);
     AssertThrow(hyp_class != nullptr);
 
-    HYP_LOG(Object, Info, "Register managed class for {} on thread {}", hyp_class->GetName(), Threads::CurrentThreadID().name);
+    HYP_LOG(Object, Info, "Register managed class for {} on thread {}", hyp_class->GetName(), ThreadID::Current().GetName());
 
     Mutex::Guard guard(m_managed_classes_mutex);
 
@@ -130,7 +132,7 @@ void HypClassRegistry::UnregisterManagedClass(dotnet::Class *managed_class)
 {
     AssertThrow(managed_class != nullptr);
 
-    HYP_LOG(Object, Info, "Unregister managed class {} on thread {}", managed_class->GetName(), Threads::CurrentThreadID().name);
+    HYP_LOG(Object, Info, "Unregister managed class {} on thread {}", managed_class->GetName(), ThreadID::Current().GetName());
 
     Mutex::Guard guard(m_managed_classes_mutex);
 

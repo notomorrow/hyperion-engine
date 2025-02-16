@@ -98,6 +98,7 @@ public:
     HYP_API RendererResult Destroy(Device<PLATFORM> *device);
     
     HYP_API void Bind(CommandBuffer<PLATFORM> *cmd);
+    HYP_API void Bind(CommandBuffer<PLATFORM> *cmd, Vec2i viewport_offset, Vec2i viewport_extent);
 
 protected:
     RendererResult Rebuild(Device<PLATFORM> *device);

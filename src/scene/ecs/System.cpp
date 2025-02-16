@@ -7,6 +7,11 @@
 
 namespace hyperion {
 
+EnumFlags<SceneFlags> SystemBase::GetRequiredSceneFlags() const
+{
+    return SceneFlags::FOREGROUND;
+}
+
 Scene *SystemBase::GetScene() const
 {
     return m_entity_manager.GetScene();

@@ -54,22 +54,22 @@
 namespace hyperion {
 
 Scene::Scene()
-    : Scene(nullptr, Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), { })
+    : Scene(nullptr, Handle<Camera>::empty, g_game_thread, { })
 {
 }
     
 Scene::Scene(EnumFlags<SceneFlags> flags)
-    : Scene(nullptr, Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
+    : Scene(nullptr, Handle<Camera>::empty, g_game_thread, flags)
 {
 }
     
 Scene::Scene(World *world, EnumFlags<SceneFlags> flags)
-    : Scene(world, Handle<Camera>::empty, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
+    : Scene(world, Handle<Camera>::empty, g_game_thread, flags)
 {
 }
 
 Scene::Scene(World *world, const Handle<Camera> &camera, EnumFlags<SceneFlags> flags)
-    : Scene(world, camera, Threads::GetStaticThreadID(ThreadName::THREAD_GAME), flags)
+    : Scene(world, camera, g_game_thread, flags)
 {
 }
 
@@ -92,7 +92,7 @@ Scene::Scene(
     m_render_resources(nullptr)
 {
     // Disable command execution if not on game thread
-    if (!(m_owner_thread_id & ThreadName::THREAD_GAME)) {
+    if (m_owner_thread_id != g_game_thread) {
         m_entity_manager->GetCommandQueue().SetFlags(m_entity_manager->GetCommandQueue().GetFlags() & ~EntityManagerCommandQueueFlags::EXEC_COMMANDS);
     }
 
@@ -101,7 +101,7 @@ Scene::Scene(
 
 Scene::~Scene()
 {
-    HYP_LOG(Scene, Debug, "Destroy scene with ID {} (name: {}) from thread : {}", GetID().Value(), m_name, ThreadID::Current().name);
+    HYP_LOG(Scene, Debug, "Destroy scene with ID {} (name: {}) from thread : {}", GetID().Value(), m_name, ThreadID::Current().GetName());
     
     m_octree.SetEntityManager(nullptr);
     m_octree.Clear();
@@ -149,25 +149,25 @@ void Scene::Init()
 
     m_entity_manager->Initialize();
 
-    m_entity_manager->AddSystem<WorldAABBUpdaterSystem>();
-    m_entity_manager->AddSystem<EntityMeshDirtyStateSystem>();
-    m_entity_manager->AddSystem<RenderProxyUpdaterSystem>();
-    m_entity_manager->AddSystem<LightVisibilityUpdaterSystem>();
-    m_entity_manager->AddSystem<ShadowMapUpdaterSystem>();
-    m_entity_manager->AddSystem<VisibilityStateUpdaterSystem>();
-    m_entity_manager->AddSystem<EnvGridUpdaterSystem>();
-    m_entity_manager->AddSystem<ReflectionProbeUpdaterSystem>();
-    m_entity_manager->AddSystem<AnimationSystem>();
-    m_entity_manager->AddSystem<SkySystem>();
-    m_entity_manager->AddSystem<AudioSystem>();
-    m_entity_manager->AddSystem<BLASUpdaterSystem>();
-    m_entity_manager->AddSystem<BVHUpdaterSystem>();
-    m_entity_manager->AddSystem<PhysicsSystem>();
-    m_entity_manager->AddSystem<ScriptSystem>();
+    AddSystemIfApplicable<WorldAABBUpdaterSystem>();
+    AddSystemIfApplicable<EntityMeshDirtyStateSystem>();
+    AddSystemIfApplicable<RenderProxyUpdaterSystem>();
+    AddSystemIfApplicable<LightVisibilityUpdaterSystem>();
+    AddSystemIfApplicable<ShadowMapUpdaterSystem>();
+    AddSystemIfApplicable<VisibilityStateUpdaterSystem>();
+    AddSystemIfApplicable<EnvGridUpdaterSystem>();
+    AddSystemIfApplicable<ReflectionProbeUpdaterSystem>();
+    AddSystemIfApplicable<AnimationSystem>();
+    AddSystemIfApplicable<SkySystem>();
+    AddSystemIfApplicable<AudioSystem>();
+    AddSystemIfApplicable<BLASUpdaterSystem>();
+    AddSystemIfApplicable<BVHUpdaterSystem>();
+    AddSystemIfApplicable<PhysicsSystem>();
+    AddSystemIfApplicable<ScriptSystem>();
 
     m_render_resources = AllocateResource<SceneRenderResources>(this);
 
-    if (!IsNonWorldScene()) {
+    if (IsForegroundScene()) {
         if (m_flags & SceneFlags::HAS_TLAS) {
             if (!m_tlas) {
                 if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool()) {
@@ -195,7 +195,7 @@ void Scene::SetOwnerThreadID(ThreadID owner_thread_id)
     m_owner_thread_id = owner_thread_id;
     m_entity_manager->SetOwnerThreadMask(owner_thread_id.GetMask());
 
-    if (m_owner_thread_id & ThreadName::THREAD_GAME) {
+    if (m_owner_thread_id == g_game_thread) {
         m_entity_manager->GetCommandQueue().SetFlags(m_entity_manager->GetCommandQueue().GetFlags() | EntityManagerCommandQueueFlags::EXEC_COMMANDS);
     } else {
         m_entity_manager->GetCommandQueue().SetFlags(m_entity_manager->GetCommandQueue().GetFlags() & ~EntityManagerCommandQueueFlags::EXEC_COMMANDS);
@@ -305,6 +305,10 @@ void Scene::Update(GameCounter::TickUnit delta)
             m_mutation_state |= DataMutationState::DIRTY;
         }
     }
+
+    if (IsForegroundScene()) {
+        m_entity_manager->FlushCommandQueue(delta);
+    }
 }
 
 RenderCollector::CollectionResult Scene::CollectEntities(
@@ -316,7 +320,7 @@ RenderCollector::CollectionResult Scene::CollectEntities(
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     if (!camera.IsValid()) {
         return { };
@@ -324,7 +328,7 @@ RenderCollector::CollectionResult Scene::CollectEntities(
 
     const ID<Camera> camera_id = camera.GetID();
 
-    const VisibilityStateSnapshot &visibility_state_snapshot = m_octree.GetVisibilityState()->GetSnapshot(camera_id);
+    const VisibilityStateSnapshot visibility_state_snapshot = m_octree.GetVisibilityState().GetSnapshot(camera_id);
 
     for (auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component] : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ)) {
         if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)) {
@@ -367,7 +371,7 @@ RenderCollector::CollectionResult Scene::CollectDynamicEntities(
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     if (!camera.IsValid()) {
         return { };
@@ -375,7 +379,7 @@ RenderCollector::CollectionResult Scene::CollectDynamicEntities(
 
     const ID<Camera> camera_id = camera.GetID();
     
-    const VisibilityStateSnapshot &visibility_state_snapshot = m_octree.GetVisibilityState()->GetSnapshot(camera_id);
+    const VisibilityStateSnapshot visibility_state_snapshot = m_octree.GetVisibilityState().GetSnapshot(camera_id);
 
     for (auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component, _] : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ)) {
         if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)) {
@@ -419,7 +423,7 @@ RenderCollector::CollectionResult Scene::CollectStaticEntities(
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     if (!camera.IsValid()) {
         // if camera is invalid, update without adding any entities
@@ -431,7 +435,7 @@ RenderCollector::CollectionResult Scene::CollectStaticEntities(
 
     const ID<Camera> camera_id = camera.GetID();
     
-    const VisibilityStateSnapshot &visibility_state_snapshot = m_octree.GetVisibilityState()->GetSnapshot(camera_id);
+    const VisibilityStateSnapshot visibility_state_snapshot = m_octree.GetVisibilityState().GetSnapshot(camera_id);
 
     for (auto [entity_id, mesh_component, transform_component, bounding_box_component, visibility_state_component, _] : m_entity_manager->GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ)) {
         if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)) {
@@ -471,13 +475,9 @@ void Scene::EnqueueRenderUpdates()
 
     AssertReady();
 
-    AssertThrow(m_world != nullptr);
-
     SceneShaderData shader_data { };
-    shader_data.aabb_max = Vec4f(m_root_node_proxy.GetWorldAABB().max, 1.0f);
-    shader_data.aabb_min = Vec4f(m_root_node_proxy.GetWorldAABB().min, 1.0f);
     shader_data.fog_params = Vec4f(float(m_fog_params.color.Packed()), m_fog_params.start_distance, m_fog_params.end_distance, 0.0f);
-    shader_data.game_time = m_world->GetGameState().game_time;
+    shader_data.game_time = m_world != nullptr ? m_world->GetGameState().game_time : 0.0f;
 
     m_render_resources->SetBufferData(shader_data);
 
@@ -488,7 +488,7 @@ bool Scene::CreateTLAS()
 {
     HYP_SCOPE;
 
-    AssertThrowMsg(!IsNonWorldScene(), "Can only create TLAS for world scenes");
+    AssertThrowMsg(IsForegroundScene(), "Can only create TLAS for foreground");
     AssertIsInitCalled();
 
     if (m_tlas) {
@@ -536,7 +536,7 @@ bool Scene::AddToWorld(World *world)
 {
     HYP_SCOPE;
     
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertReady();
 
@@ -558,7 +558,7 @@ bool Scene::AddToWorld(World *world)
 bool Scene::RemoveFromWorld()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertReady();
 
@@ -569,6 +569,20 @@ bool Scene::RemoveFromWorld()
     m_world->RemoveScene(WeakHandleFromThis());
 
     return true;
+}
+
+template <class SystemType>
+void Scene::AddSystemIfApplicable()
+{
+    UniquePtr<SystemType> system = MakeUnique<SystemType>(*m_entity_manager);
+
+    const EnumFlags<SceneFlags> required_scene_flags = system->GetRequiredSceneFlags();
+
+    if (required_scene_flags != SceneFlags::NONE && !(required_scene_flags & m_flags)) {
+        return;
+    }
+
+    m_entity_manager->AddSystem(std::move(system));
 }
 
 } // namespace hyperion

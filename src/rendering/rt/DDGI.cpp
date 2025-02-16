@@ -444,7 +444,7 @@ void DDGI::UpdateUniforms(Frame *frame)
 
 void DDGI::RenderProbes(Frame *frame)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     UpdateUniforms(frame);
 
@@ -498,7 +498,7 @@ void DDGI::RenderProbes(Frame *frame)
 
 void DDGI::ComputeIrradiance(Frame *frame)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
     const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();

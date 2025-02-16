@@ -289,9 +289,9 @@ void RenderResourcesBase::WaitForCompletion()
 {
     HYP_SCOPE;
 
-    HYP_LOG(RenderResources, Debug, "Waiting for completion of RenderResources with pool index {} from thread {}", m_pool_handle.index, Threads::CurrentThreadID().name);
+    HYP_LOG(RenderResources, Debug, "Waiting for completion of RenderResources with pool index {} from thread {}", m_pool_handle.index, Threads::CurrentThreadID().GetName());
 
-    if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
+    if (Threads::IsOnThread(g_render_thread)) {
         // Wait for any threads that are using this RenderResources pre-initialization to stop
         m_pre_init_semaphore.Acquire();
 
@@ -319,7 +319,7 @@ void RenderResourcesBase::AcquireBufferIndex()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(m_buffer_index == ~0u);
 
@@ -336,7 +336,7 @@ void RenderResourcesBase::ReleaseBufferIndex()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(m_buffer_index != ~0u);
 

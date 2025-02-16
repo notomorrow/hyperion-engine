@@ -41,7 +41,7 @@ public:
         const Vec2u &extent,
         TemporalBlendTechnique technique,
         TemporalBlendFeedback feedback,
-        const FixedArray<ImageViewRef, max_frames_in_flight> &input_image_views
+        const ImageViewRef &input_image_view
     );
 
     TemporalBlending(
@@ -57,7 +57,7 @@ public:
         InternalFormat image_format,
         TemporalBlendTechnique technique,
         TemporalBlendFeedback feedback,
-        const FixedArray<ImageViewRef, max_frames_in_flight> &input_image_views
+        const ImageViewRef &input_image_view
     );
 
     TemporalBlending(const TemporalBlending &other) = delete;
@@ -102,7 +102,7 @@ private:
     ComputePipelineRef                              m_perform_blending;
     DescriptorTableRef                              m_descriptor_table;
 
-    FixedArray<ImageViewRef, max_frames_in_flight>  m_input_image_views;
+    ImageViewRef                                    m_input_image_view;
     FramebufferRef                                  m_input_framebuffer;
 
     Handle<Texture>                                 m_result_texture;

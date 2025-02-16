@@ -3,7 +3,14 @@
 #include <scene/ecs/systems/WorldAABBUpdaterSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
+#include <scene/Scene.hpp>
+
 namespace hyperion {
+
+EnumFlags<SceneFlags> WorldAABBUpdaterSystem::GetRequiredSceneFlags() const
+{
+    return SceneFlags::NONE;
+}
 
 void WorldAABBUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
 {

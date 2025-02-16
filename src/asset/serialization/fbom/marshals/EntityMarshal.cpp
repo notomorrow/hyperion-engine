@@ -108,7 +108,7 @@ public:
             }
         };
 
-        if (entity_manager->GetOwnerThreadMask() & Threads::CurrentThreadID()) {
+        if (entity_manager->GetOwnerThreadMask() & Threads::CurrentThreadID().GetValue()) {
             SerializeEntityAndComponents();
         } else {
             HYP_NAMED_SCOPE("Awaiting async entity and component serialization");

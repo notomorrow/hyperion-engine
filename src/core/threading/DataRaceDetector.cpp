@@ -5,6 +5,8 @@
 #include <core/containers/String.hpp>
 #include <core/containers/Bitset.hpp>
 
+#include <core/utilities/GlobalContext.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -15,6 +17,31 @@ namespace threading {
 
 #ifdef HYP_ENABLE_MT_CHECK
 
+#pragma region DataAccessScope
+
+DataRaceDetector::DataAccessScope::DataAccessScope(EnumFlags<DataAccessFlags> flags, const DataRaceDetector &detector, const DataAccessState &state)
+    : m_detector(const_cast<DataRaceDetector &>(detector)),
+      m_thread_id(ThreadID::Current())
+{
+    // Check if we should suppress data race detection
+    if (IsGlobalContextActive<SuppressDataRaceDetectorContext>()) {
+        m_flags = 0;
+
+        return;
+    }
+
+    m_flags = m_detector.AddAccess(m_thread_id, flags, state);
+}
+
+DataRaceDetector::DataAccessScope::~DataAccessScope()
+{
+    m_detector.RemoveAccess(m_thread_id, m_flags);
+}
+
+#pragma endregion DataAccessScope
+
+#pragma region DataRaceDetector
+
 const FixedArray<DataRaceDetector::ThreadAccessState, DataRaceDetector::num_preallocated_states> &DataRaceDetector::GetPreallocatedStates()
 {
     static const struct PreallocatedThreadAccessStates
@@ -24,16 +51,8 @@ const FixedArray<DataRaceDetector::ThreadAccessState, DataRaceDetector::num_prea
         PreallocatedThreadAccessStates()
         {
             for (SizeType i = 0; i < DataRaceDetector::num_preallocated_states; i++) {
-                const uint64 thread_name_value = 1ull << i;
-                const ThreadName thread_name = ThreadName(thread_name_value);
-                const ThreadID thread_id = Threads::GetStaticThreadID(thread_name);
-
-                if (!thread_id.IsValid()) {
-                    continue;
-                }
-
-                AssertThrow(!thread_id.IsDynamic());
-
+                const StaticThreadID thread_id = StaticThreadID(i);
+                
                 data[i] = DataRaceDetector::ThreadAccessState { thread_id, DataAccessFlags::ACCESS_NONE };
             }
         }
@@ -59,9 +78,9 @@ EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadID thread_id, EnumF
 
     uint32 index = ~0u;
 
-    if (!thread_id.IsDynamic()) {
+    if (thread_id.IsStatic()) {
         // ensure no writer from other thread
-        index = MathUtil::FastLog2_Pow2(thread_id.value);
+        index = static_cast<const StaticThreadID &>(thread_id).GetStaticThreadIndex();
         
         // disable bits that are already enabled
         access_flags &= ~m_preallocated_states[index].access;
@@ -84,6 +103,7 @@ EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadID thread_id, EnumF
         if (it == m_dynamic_states.End()) {
             ThreadAccessState &thread_access_state = m_dynamic_states.EmplaceBack();
             thread_access_state.thread_id = thread_id;
+            thread_access_state.original_index = uint32(m_dynamic_states.Size() - 1);
 
             it = &thread_access_state;
         }
@@ -100,6 +120,9 @@ EnumFlags<DataAccessFlags> DataRaceDetector::AddAccess(ThreadID thread_id, EnumF
         it->state = state;
 
         index = (it - m_dynamic_states.Begin()) + num_preallocated_states;
+
+        // debugging; temp
+        AssertThrow(index - num_preallocated_states < m_dynamic_states.Size());
     }
 
     if (index == ~0u) {
@@ -143,9 +166,9 @@ void DataRaceDetector::RemoveAccess(ThreadID thread_id, EnumFlags<DataAccessFlag
     uint32 index = ~0u;
     EnumFlags<DataAccessFlags> flags = DataAccessFlags::ACCESS_NONE;
 
-    if (!thread_id.IsDynamic()) {
+    if (thread_id.IsStatic()) {
         // ensure no writer from other thread
-        index = MathUtil::FastLog2_Pow2(thread_id.value);
+        index = static_cast<const StaticThreadID &>(thread_id).GetStaticThreadIndex();
 
         flags = m_preallocated_states[index].access;
         m_preallocated_states[index].access &= ~access_flags;
@@ -161,7 +184,7 @@ void DataRaceDetector::RemoveAccess(ThreadID thread_id, EnumFlags<DataAccessFlag
             return;
         }
 
-        index = (it - m_dynamic_states.Begin()) + num_preallocated_states;
+        index = it->original_index + num_preallocated_states;
         flags = it->access;
 
         // remove if no longer needed (all used flags removed)
@@ -198,9 +221,9 @@ void DataRaceDetector::LogDataRace(uint64 readers_mask, uint64 writers_mask) con
 
         for (SizeType i = 0; i < reader_thread_ids.Size(); i++) {
             if (i == 0) {
-                reader_threads_string = HYP_FORMAT("{} (at: {}, message: {})", reader_thread_ids[i].first.name, reader_thread_ids[i].second.current_function, reader_thread_ids[i].second.message);
+                reader_threads_string = HYP_FORMAT("{} (at: {}, message: {})", reader_thread_ids[i].first.GetName(), reader_thread_ids[i].second.current_function, reader_thread_ids[i].second.message);
             } else {
-                reader_threads_string = HYP_FORMAT("{}, {} (at: {}, message: {})", reader_threads_string, reader_thread_ids[i].first.name, reader_thread_ids[i].second.current_function, reader_thread_ids[i].second.message);
+                reader_threads_string = HYP_FORMAT("{}, {} (at: {}, message: {})", reader_threads_string, reader_thread_ids[i].first.GetName(), reader_thread_ids[i].second.current_function, reader_thread_ids[i].second.message);
             }
         }
     }
@@ -212,15 +235,15 @@ void DataRaceDetector::LogDataRace(uint64 readers_mask, uint64 writers_mask) con
 
         for (SizeType i = 0; i < writer_thread_ids.Size(); i++) {
             if (i == 0) {
-                writer_threads_string = HYP_FORMAT("{} (at: {}, message: {})", writer_thread_ids[i].first.name, writer_thread_ids[i].second.current_function, writer_thread_ids[i].second.message);
+                writer_threads_string = HYP_FORMAT("{} (at: {}, message: {})", writer_thread_ids[i].first.GetName(), writer_thread_ids[i].second.current_function, writer_thread_ids[i].second.message);
             } else {
-                writer_threads_string = HYP_FORMAT("{}, {} (at: {}, message: {})", writer_threads_string, writer_thread_ids[i].first.name, writer_thread_ids[i].second.current_function, writer_thread_ids[i].second.message);
+                writer_threads_string = HYP_FORMAT("{}, {} (at: {}, message: {})", writer_threads_string, writer_thread_ids[i].first.GetName(), writer_thread_ids[i].second.current_function, writer_thread_ids[i].second.message);
             }
         }
     }
 
     HYP_LOG(DataRaceDetector, Error, "Data race detected: Current thread: {}, Writer threads: {}, Reader threads: {}",
-        ThreadID::Current().name,
+        ThreadID::Current().GetName(),
         writer_threads_string,
         reader_threads_string);
 }
@@ -255,6 +278,8 @@ void DataRaceDetector::GetThreadIDs(uint64 readers_mask, uint64 writers_mask, Ar
         }
     }
 }
+
+#pragma endregion DataRaceDetector
 
 #endif // HYP_ENABLE_MT_CHECK
 

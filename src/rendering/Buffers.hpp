@@ -322,23 +322,20 @@ public:
                 break;
             }
 
-            uint32 index = block_index * Base::num_elements_per_block;
+            const uint32 index = block_index * Base::num_elements_per_block;
 
-            uint32 offset = (range_start > index)
+            SizeType offset = (range_start > index)
                 ? range_start
                 : index;
 
-            uint32 count = (range_end < index + Base::num_elements_per_block)
-                ? range_end - offset
-                : Base::num_elements_per_block - offset;
-
-            // uint32 offset = index;
-            // uint32 count = MathUtil::Min(range_end - index, Base::num_elements_per_block);
+            SizeType count = (range_end < index + Base::num_elements_per_block)
+                ? range_end - (offset - index)
+                : Base::num_elements_per_block - (offset - index);
 
             // sanity checks
             AssertThrow(offset - index < begin_it->elements.Size());
 
-            AssertThrowMsg((offset + count) * sizeof(StructType) <= buffer->Size(),
+            AssertThrowMsg(count <= int64(buffer->Size() / sizeof(StructType)) - int64(offset),
                 "Buffer does not have enough space for the current number of elements! Buffer size = %llu, Required size = %llu",
                 buffer->Size(),
                 (offset + count) * sizeof(StructType));
@@ -359,9 +356,7 @@ private:
     FixedArray<Range<uint32>, 2>    m_dirty_ranges;
 
 protected:
-#ifdef HYP_ENABLE_MT_CHECK
-    DataRaceDetector                m_data_race_detector;
-#endif
+    HYP_DECLARE_MT_CHECK(m_data_race_detector);
 };
 
 template <class StructType, GPUBufferType BufferType>

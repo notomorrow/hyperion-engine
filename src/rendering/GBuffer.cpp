@@ -42,7 +42,7 @@ static void AddOwnedAttachment(
 )
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
     
     if (extent == Vec2u::Zero()) {
         extent = g_engine->GetGPUInstance()->GetSwapchain()->extent;
@@ -81,7 +81,7 @@ static void AddSharedAttachment(
 )
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const FramebufferRef &opaque_framebuffer = g_engine->GetDeferredRenderer()->GetGBuffer()->GetBucket(BUCKET_OPAQUE).GetFramebuffer();
     AssertThrowMsg(opaque_framebuffer.IsValid(), "GBuffer framebuffers added in wrong order");
@@ -106,7 +106,7 @@ static void AddSharedAttachment(
 static InternalFormat GetImageFormat(GBufferResourceName resource)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     InternalFormat color_format = InternalFormat::NONE;
 
@@ -140,7 +140,7 @@ GBuffer::GBuffer()
 void GBuffer::Create()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     m_resolution = g_engine->GetGPUInstance()->GetSwapchain()->extent;
 
@@ -152,7 +152,7 @@ void GBuffer::Create()
 void GBuffer::Destroy()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     for (auto &bucket : m_buckets) {
         bucket.Destroy();
@@ -162,7 +162,7 @@ void GBuffer::Destroy()
 void GBuffer::Resize(Vec2u resolution)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     for (GBufferBucket &bucket : m_buckets) {
         bucket.Resize(resolution);
@@ -188,7 +188,7 @@ GBuffer::GBufferBucket::~GBufferBucket()
 const AttachmentRef &GBuffer::GBufferBucket::GetGBufferAttachment(GBufferResourceName resource_name) const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(framebuffer != nullptr);
     AssertThrow(uint32(resource_name) < uint32(GBUFFER_RESOURCE_MAX));
@@ -199,7 +199,7 @@ const AttachmentRef &GBuffer::GBufferBucket::GetGBufferAttachment(GBufferResourc
 void GBuffer::GBufferBucket::CreateFramebuffer(Vec2u resolution)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     renderer::RenderPassMode mode = renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER;
 
@@ -257,7 +257,7 @@ void GBuffer::GBufferBucket::CreateFramebuffer(Vec2u resolution)
 void GBuffer::GBufferBucket::Destroy()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     SafeRelease(std::move(framebuffer));
 }
@@ -265,7 +265,7 @@ void GBuffer::GBufferBucket::Destroy()
 void GBuffer::GBufferBucket::Resize(Vec2u resolution)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     Vec2u framebuffer_extent = resolution;
 

@@ -32,7 +32,8 @@
 
 namespace hyperion {
 
-#define HYP_WORLD_ASYNC_SCENE_UPDATES
+// #define HYP_WORLD_ASYNC_SUBSYSTEM_UPDATES
+// #define HYP_WORLD_ASYNC_SCENE_UPDATES
 
 World::World()
     : HypObject(),
@@ -129,7 +130,7 @@ void World::Init()
 void World::Update(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertReady();
 
@@ -137,6 +138,7 @@ void World::Update(GameCounter::TickUnit delta)
 
     m_physics_world.Tick(delta);
 
+#ifdef HYP_WORLD_ASYNC_SUBSYSTEM_UPDATES
     Array<Task<void>> update_subsystem_tasks;
     update_subsystem_tasks.Reserve(m_subsystems.Size());
 
@@ -145,7 +147,7 @@ void World::Update(GameCounter::TickUnit delta)
             continue;
         }
 
-        update_subsystem_tasks.PushBack(TaskSystem::GetInstance().Enqueue([this, subsystem = it.second.Get(), delta]
+        update_subsystem_tasks.PushBack(TaskSystem::GetInstance().Enqueue([subsystem = it.second.Get(), delta]
         {
             HYP_NAMED_SCOPE_FMT("Update subsystem: {}", subsystem->InstanceClass()->GetName());
 
@@ -165,6 +167,13 @@ void World::Update(GameCounter::TickUnit delta)
         task.Await();
     }
 
+    update_subsystem_tasks.Clear();
+#else
+    for (auto &it : m_subsystems) {
+        it.second->Update(delta);
+    }
+#endif
+
     Array<EntityManager *> entity_managers;
     entity_managers.Reserve(m_scenes.Size());
 
@@ -179,7 +188,7 @@ void World::Update(GameCounter::TickUnit delta)
         AssertThrow(scene->GetWorld() == this);
         AssertThrow(!(scene->GetFlags() & SceneFlags::DETACHED));
 
-        if (!scene->IsNonWorldScene()) {
+        if (scene->IsForegroundScene()) {
             if (const Handle<RenderEnvironment> &render_environment = scene->GetRenderResources().GetEnvironment()) {
                 HYP_NAMED_SCOPE_FMT("Update RenderEnvironment for Scene with ID #{}", scene->GetID().Value());
 
@@ -189,10 +198,7 @@ void World::Update(GameCounter::TickUnit delta)
 
         scene->Update(delta);
 
-        EntityManager &entity_manager = *scene->GetEntityManager();
-        entity_manager.FlushCommandQueue(delta);
-
-        entity_managers.PushBack(&entity_manager);
+        entity_managers.PushBack(scene->GetEntityManager().Get());
     }
 
 #ifdef HYP_WORLD_ASYNC_SCENE_UPDATES
@@ -224,7 +230,7 @@ void World::Update(GameCounter::TickUnit delta)
 
         scene->EnqueueRenderUpdates();
 
-        if (scene->IsNonWorldScene()) {
+        if (!scene->IsForegroundScene() || (scene->GetFlags() & SceneFlags::UI)) {
             continue;
         }
 
@@ -271,9 +277,7 @@ Subsystem *World::AddSubsystem(TypeID type_id, RC<Subsystem> &&subsystem)
     // If World is already initialized, ensure that the call is made on the correct thread
     // otherwise, it is safe to call this function from the World constructor (main thread)
     if (IsInitCalled()) {
-        Threads::AssertOnThread(ThreadName::THREAD_GAME);
-    } else {
-        Threads::AssertOnThread(ThreadName::THREAD_MAIN);
+        Threads::AssertOnThread(g_game_thread);
     }
 
     subsystem->SetWorld(this);
@@ -302,7 +306,7 @@ Subsystem *World::GetSubsystem(TypeID type_id) const
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     const auto it = m_subsystems.Find(type_id);
 
@@ -317,7 +321,7 @@ Subsystem *World::GetSubsystemByName(WeakName name) const
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     const auto it = m_subsystems.FindIf([name](const Pair<TypeID, RC<Subsystem>> &item)
     {
@@ -344,7 +348,7 @@ Subsystem *World::GetSubsystemByName(WeakName name) const
 void World::StartSimulating()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     if (m_game_state.mode == GameStateMode::SIMULATING) {
         return;
@@ -360,7 +364,7 @@ void World::StartSimulating()
 void World::StopSimulating()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
     
     if (m_game_state.mode != GameStateMode::SIMULATING) {
         return;
@@ -376,7 +380,7 @@ void World::StopSimulating()
 void World::AddScene(const Handle<Scene> &scene)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     if (!scene.IsValid()) {
         return;
@@ -404,7 +408,7 @@ void World::AddScene(const Handle<Scene> &scene)
 bool World::RemoveScene(const WeakHandle<Scene> &scene_weak)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     typename Array<Handle<Scene>>::Iterator it = m_scenes.FindAs(scene_weak);
     
@@ -435,7 +439,7 @@ bool World::HasScene(ID<Scene> scene_id) const
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     return m_scenes.FindIf([scene_id](const Handle<Scene> &scene)
     {
@@ -447,7 +451,7 @@ const Handle<Scene> &World::GetSceneByName(Name name) const
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    Threads::AssertOnThread(g_game_thread);
 
     const auto it = m_scenes.FindIf([name](const Handle<Scene> &scene)
     {
@@ -457,16 +461,7 @@ const Handle<Scene> &World::GetSceneByName(Name name) const
     return it != m_scenes.End() ? *it : Handle<Scene>::empty;
 }
 
-const Handle<Scene> &World::GetDetachedScene(ThreadName thread_name)
-{
-    const ThreadID thread_id = Threads::GetStaticThreadID(thread_name);
-
-    Threads::AssertOnThread(thread_id);
-
-    return GetDetachedScene(thread_id);
-}
-
-const Handle<Scene> &World::GetDetachedScene(ThreadID thread_id)
+const Handle<Scene> &World::GetDetachedScene(const ThreadID &thread_id)
 {
     return m_detached_scenes.GetDetachedScene(thread_id);
 }

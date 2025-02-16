@@ -434,7 +434,7 @@ void IndirectRenderer::Destroy()
 void IndirectRenderer::PushDrawCallsToIndirectState()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_render_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     for (DrawCall &draw_call : m_draw_call_collection->GetDrawCalls()) {
         DrawCommandData draw_command_data;
@@ -447,7 +447,7 @@ void IndirectRenderer::PushDrawCallsToIndirectState()
 void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &cull_data)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();

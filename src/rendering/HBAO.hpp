@@ -6,20 +6,41 @@
 #include <rendering/TemporalBlending.hpp>
 #include <rendering/FullScreenPass.hpp>
 
+#include <rendering/backend/RenderObject.hpp>
+
+#include <core/config/Config.hpp>
+
+#include <core/object/HypObject.hpp>
+
 #include <core/functional/Delegate.hpp>
 
 namespace hyperion {
 
-class Engine;
+HYP_STRUCT(ConfigName="app", ConfigPath="rendering.hbao")
+struct HBAOConfig : public ConfigBase<HBAOConfig>
+{
+    HYP_FIELD()
+    float   radius = 2.5f;
 
-struct RenderCommand_AddHBAOFinalImagesToGlobalDescriptorSet;
+    HYP_FIELD()
+    float   power = 0.8f;
+
+    HYP_FIELD()
+    bool    use_temporal_blending = false;
+
+    virtual ~HBAOConfig() override = default;
+
+    bool Validate() const
+    {
+        return radius > 0.0f
+            && power > 0.0f;
+    }
+};
 
 class HBAO final : public FullScreenPass
 {
 public:
-    friend struct RenderCommand_AddHBAOFinalImagesToGlobalDescriptorSet;
-
-    HBAO();
+    HBAO(HBAOConfig &&config);
     HBAO(const HBAO &other)             = delete;
     HBAO &operator=(const HBAO &other)  = delete;
     virtual ~HBAO() override;
@@ -30,14 +51,23 @@ public:
     virtual void Render(Frame *frame) override;
 
 protected:
+    virtual bool UsesTemporalBlending() const override
+        { return m_config.use_temporal_blending; }
+
+    virtual bool ShouldRenderHalfRes() const override
+        { return true; }
+
+    virtual void CreateDescriptors() override;
     virtual void CreatePipeline(const RenderableAttributeSet &renderable_attributes) override;
 
     virtual void Resize_Internal(Vec2u new_size) override;
 
 private:
-    void CreateTemporalBlending();
+    void CreateUniformBuffers();
 
-    UniquePtr<TemporalBlending> m_temporal_blending;
+    HBAOConfig                  m_config;
+
+    GPUBufferRef                m_uniform_buffer;
 };
 
 } // namespace hyperion

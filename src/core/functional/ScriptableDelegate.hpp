@@ -43,7 +43,7 @@ public:
 
     virtual ~ScriptableDelegate() override                              = default;
 
-    virtual DelegateHandler BindManaged(dotnet::Object &&delegate_object) override
+    HYP_NODISCARD virtual DelegateHandler BindManaged(dotnet::Object &&delegate_object) override
     {
         return Delegate<ReturnType, Args...>::Bind([object = std::move(delegate_object)]<class... ArgTypes>(ArgTypes &&... args) mutable -> ReturnType
         {
@@ -59,81 +59,6 @@ public:
     HYP_FORCE_INLINE ReturnType operator()(ArgTypes &&... args) const
         { return const_cast<ScriptableDelegate *>(this)->Broadcast(std::forward<ArgTypes>(args)...); }
 };
-
-// template <class ReturnType, class... Args>
-// class ScriptableDelegate final : public IScriptableDelegate
-// {
-// public:
-//     using ProcType = Proc<ReturnType, Args...>;
-
-//     ScriptableDelegate()                                                = default;
-//     ScriptableDelegate(const ScriptableDelegate &other)                 = delete;
-//     ScriptableDelegate &operator=(const ScriptableDelegate &other)      = delete;
-
-//     ScriptableDelegate(ScriptableDelegate &&other) noexcept
-//         : m_delegate(std::move(other.m_delegate))
-//     {
-//     }
-
-//     ScriptableDelegate &operator=(ScriptableDelegate &&other) noexcept  = delete;
-
-//     virtual ~ScriptableDelegate() override                               = default;
-
-//     HYP_FORCE_INLINE bool operator!() const
-//         { return !AnyBound(); }
-
-//     HYP_FORCE_INLINE explicit operator bool() const
-//         { return AnyBound(); }
-
-//     virtual bool AnyBound() const override
-//         { return m_delegate.AnyBound(); }
-
-//     DelegateHandler BindOwned(const void *owner, ProcType &&proc, bool require_current_thread = false)
-//     {
-//         return m_delegate.BindOwned(owner, std::move(proc), require_current_thread);
-//     }
-
-//     DelegateHandler Bind(ProcType &&proc, bool require_current_thread = false)
-//     {
-//         return m_delegate.Bind(std::move(proc), require_current_thread);
-//     }
-
-//     DelegateHandler Bind(ProcType &&proc, ThreadID calling_thread_id, const void *owner = nullptr)
-//     {
-//         return m_delegate.Bind(std::move(proc), calling_thread_id, owner);
-//     }
-
-//     virtual DelegateHandler BindManaged(dotnet::Object &&delegate_object) override
-//     {
-//         return m_delegate.Bind(MakeRefCountedPtr<ProcType>([object = std::move(delegate_object)]<class... ArgTypes>(ArgTypes &&... args) mutable -> ReturnType
-//         {
-//             return object.InvokeMethodByName<ReturnType>("Invoke", std::forward<ArgTypes>(args)...);
-//         }));
-//     }
-
-//     virtual int RemoveAll(bool thread_safe = true) override
-//         { return m_delegate.RemoveAll(thread_safe); }
-
-//     virtual int RemoveAll(const void *owner, bool thread_safe = true) override
-//         { return m_delegate.RemoveAll(owner, thread_safe); }
-
-//     virtual bool Remove(const DelegateHandler &handler) override
-//         { return m_delegate.Remove(handler); }
-
-//     virtual bool Remove(uint32 id) override
-//         { return m_delegate.Remove(id); }
-
-//     template <class... ArgTypes>
-//     ReturnType Broadcast(ArgTypes &&... args)
-//         { return m_delegate.Broadcast(std::forward<ArgTypes>(args)...); }
-
-//     template <class... ArgTypes>
-//     HYP_FORCE_INLINE ReturnType operator()(ArgTypes &&... args) const
-//         { return const_cast<ScriptableDelegate *>(this)->Broadcast(std::forward<ArgTypes>(args)...); }
-
-// private:
-//     Delegate<ReturnType, Args...>   m_delegate;
-// };
 
 } // namespace functional
 

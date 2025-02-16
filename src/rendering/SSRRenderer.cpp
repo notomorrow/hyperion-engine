@@ -23,7 +23,7 @@ static constexpr bool use_temporal_blending = true;
 
 static constexpr InternalFormat ssr_format = InternalFormat::RGBA16F;
 
-struct SSRParams
+struct SSRUniforms
 {
     Vec4u   dimensions;
     float   ray_step,
@@ -41,16 +41,16 @@ struct SSRParams
 
 struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
 {
-    SSRParams       params;
+    SSRUniforms     uniforms;
     GPUBufferRef    uniform_buffer;
 
     RENDER_COMMAND(CreateSSRUniformBuffer)(
-        const SSRParams &params,
-        GPUBufferRef uniform_buffer
-    ) : params(params),
-        uniform_buffer(std::move(uniform_buffer))
+        const SSRUniforms &uniforms,
+        const GPUBufferRef &uniform_buffer
+    ) : uniforms(uniforms),
+        uniform_buffer(uniform_buffer)
     {
-        AssertThrow(params.dimensions.x * params.dimensions.y != 0);
+        AssertThrow(uniforms.dimensions.x * uniforms.dimensions.y != 0);
 
         AssertThrow(this->uniform_buffer != nullptr);
     }
@@ -59,15 +59,18 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
+        DebugLog(LogType::Debug, "Sizeof(SSRUniforms) = %u\n", sizeof(SSRUniforms));
+        
         HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(
             g_engine->GetGPUDevice(),
-            sizeof(params)
+            sizeof(uniforms)
         ));
-
+        
+        DebugLog(LogType::Debug, "Size of buffer = %u\n",uniform_buffer->Size());
         uniform_buffer->Copy(
             g_engine->GetGPUDevice(),
-            sizeof(params),
-            &params
+            sizeof(uniforms),
+            &uniforms
         );
 
         HYPERION_RETURN_OK;
@@ -197,10 +200,7 @@ void SSRRenderer::Create()
             InternalFormat::RGBA8,
             TemporalBlendTechnique::TECHNIQUE_1,
             TemporalBlendFeedback::MEDIUM,
-            FixedArray<ImageViewRef, 2> {
-                m_image_outputs[1]->GetImageView(),
-                m_image_outputs[1]->GetImageView()
-            }
+            m_image_outputs[1]->GetImageView()
         );
 
         m_temporal_blending->Create();
@@ -248,21 +248,21 @@ ShaderProperties SSRRenderer::GetShaderProperties() const
 
 void SSRRenderer::CreateUniformBuffers()
 {
-    SSRParams params { };
-    params.dimensions = Vec4u(m_config.extent, 0, 0);
-    params.ray_step = m_config.ray_step;
-    params.num_iterations = m_config.num_iterations;
-    params.max_ray_distance = 1000.0f;
-    params.distance_bias = 0.01f;
-    params.offset = 0.001f;
-    params.eye_fade_start = m_config.eye_fade.x;
-    params.eye_fade_end = m_config.eye_fade.y;
-    params.screen_edge_fade_start = m_config.screen_edge_fade.x;
-    params.screen_edge_fade_end = m_config.screen_edge_fade.y;
+    SSRUniforms uniforms { };
+    uniforms.dimensions = Vec4u(m_config.extent, 0, 0);
+    uniforms.ray_step = m_config.ray_step;
+    uniforms.num_iterations = m_config.num_iterations;
+    uniforms.max_ray_distance = 1000.0f;
+    uniforms.distance_bias = 0.01f;
+    uniforms.offset = 0.001f;
+    uniforms.eye_fade_start = m_config.eye_fade.x;
+    uniforms.eye_fade_end = m_config.eye_fade.y;
+    uniforms.screen_edge_fade_start = m_config.screen_edge_fade.x;
+    uniforms.screen_edge_fade_end = m_config.screen_edge_fade.y;
 
     m_uniform_buffer = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
     
-    PUSH_RENDER_COMMAND(CreateSSRUniformBuffer, params, m_uniform_buffer);
+    PUSH_RENDER_COMMAND(CreateSSRUniformBuffer, uniforms, m_uniform_buffer);
 }
 
 void SSRRenderer::CreateComputePipelines()
@@ -282,7 +282,7 @@ void SSRRenderer::CreateComputePipelines()
         AssertThrow(descriptor_set != nullptr);
 
         descriptor_set->SetElement(NAME("UVImage"), m_image_outputs[0]->GetImageView());
-        descriptor_set->SetElement(NAME("SSRParams"), m_uniform_buffer);
+        descriptor_set->SetElement(NAME("UniformBuffer"), m_uniform_buffer);
     }
 
     DeferCreate(write_uvs_shader_descriptor_table, g_engine->GetGPUDevice());
@@ -308,7 +308,7 @@ void SSRRenderer::CreateComputePipelines()
 
         descriptor_set->SetElement(NAME("UVImage"), m_image_outputs[0]->GetImageView());
         descriptor_set->SetElement(NAME("SampleImage"), m_image_outputs[1]->GetImageView());
-        descriptor_set->SetElement(NAME("SSRParams"), m_uniform_buffer);
+        descriptor_set->SetElement(NAME("UniformBuffer"), m_uniform_buffer);
     }
 
     DeferCreate(sample_gbuffer_shader_descriptor_table, g_engine->GetGPUDevice());

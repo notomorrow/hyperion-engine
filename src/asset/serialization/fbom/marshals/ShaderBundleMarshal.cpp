@@ -2,7 +2,7 @@
 
 #include <asset/serialization/fbom/FBOM.hpp>
 
-#include <util/shader_compiler/ShaderCompiler.hpp>
+#include <rendering/shader_compiler/ShaderCompiler.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>

@@ -34,7 +34,7 @@ class ProfilerConnectionThread final : public Thread<Scheduler, ProfilerConnecti
 {
 public:
     ProfilerConnectionThread()
-        : Thread(Name::Unique("ProfilerConnectionThread"), ThreadPriorityValue::LOWEST),
+        : Thread(ThreadID(Name::Unique("ProfilerConnectionThread")), ThreadPriorityValue::LOWEST),
           m_is_running { false },
           m_stop_requested { false }
     {
@@ -224,7 +224,7 @@ public:
 
             for (KeyValuePair<ThreadID, UniquePtr<json::JSONArray>> &it : m_per_thread_values) {
                 json::JSONObject group_object;
-                group_object["name"] = json::JSONString(it.first.name.LookupString());
+                group_object["name"] = json::JSONString(it.first.GetName().LookupString());
                 group_object["values"] = std::move(*it.second); // move it so it clears current values
                 groups_array.PushBack(std::move(group_object));
             }
@@ -239,7 +239,6 @@ public:
 
 private:
     ProfilerConnectionParams                        m_params;
-    DataRaceDetector                                m_data_race_detector;
 
     UUID                                            m_trace_id;
     ProfilerConnectionThread                        m_thread;
@@ -248,8 +247,8 @@ private:
     mutable Mutex                                   m_values_mutex;
 
     Array<Task<HTTPResponse>>                       m_requests;
-
-
+    
+    HYP_DECLARE_MT_CHECK(m_data_race_detector);
 };
 
 HYP_API void StartProfilerConnectionThread(const ProfilerConnectionParams &params)

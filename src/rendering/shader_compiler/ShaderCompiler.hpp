@@ -6,6 +6,8 @@
 #include <core/Name.hpp>
 #include <core/Defines.hpp>
 
+#include <core/threading/Mutex.hpp>
+
 #include <core/containers/HeapArray.hpp>
 
 #include <math/Vertex.hpp>
@@ -17,16 +19,6 @@
 
 #include <HashCode.hpp>
 #include <Types.hpp>
-
-#include <mutex>
-
-namespace hyperion {
-namespace json {
-
-class JSONValue;
-
-} // namespace json
-} // namespace hyperion
 
 namespace hyperion {
 
@@ -1113,7 +1105,7 @@ public:
 
     bool Get(Name name, CompiledShaderBatch &out) const
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         const auto it = m_compiled_shaders.Find(name);
 
@@ -1128,7 +1120,7 @@ public:
 
     bool GetShaderInstance(Name name, uint64 version_hash, CompiledShader &out) const
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         const auto it = m_compiled_shaders.Find(name);
 
@@ -1152,28 +1144,28 @@ public:
 
     void Set(Name name, const CompiledShaderBatch &batch)
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         m_compiled_shaders.Set(name, batch);
     }
 
     void Set(Name name, CompiledShaderBatch &&batch)
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         m_compiled_shaders.Set(name, std::move(batch));
     }
 
     void Remove(Name name)
     {
-        std::lock_guard guard(m_mutex);
+        Mutex::Guard guard(m_mutex);
 
         m_compiled_shaders.Erase(name);
     }
 
 private:
     HashMap<Name, CompiledShaderBatch>  m_compiled_shaders;
-    mutable std::mutex                  m_mutex;
+    mutable Mutex                       m_mutex;
 };
 
 

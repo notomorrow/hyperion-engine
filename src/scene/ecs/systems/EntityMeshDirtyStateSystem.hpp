@@ -7,6 +7,7 @@
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
+
 #include <rendering/RenderProxy.hpp>
 
 namespace hyperion {
@@ -24,6 +25,8 @@ public:
     }
 
     virtual ~EntityMeshDirtyStateSystem() override = default;
+
+    virtual EnumFlags<SceneFlags> GetRequiredSceneFlags() const override;
 
     virtual void OnEntityAdded(const Handle<Entity> &entity) override;
     virtual void OnEntityRemoved(ID<Entity> entity) override;

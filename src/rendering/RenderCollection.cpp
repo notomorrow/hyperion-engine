@@ -278,7 +278,7 @@ void EntityDrawCollection::ClearProxyGroups()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     // Do not fully clear, keep the attribs around so that we can have memory reserved for each slot,
     // as well as render groups.
@@ -293,7 +293,7 @@ void EntityDrawCollection::RemoveEmptyProxyGroups()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     for (auto &render_groups_by_attributes : GetProxyGroups()) {
         for (auto it = render_groups_by_attributes.Begin(); it != render_groups_by_attributes.End();) {
@@ -310,7 +310,7 @@ void EntityDrawCollection::RemoveEmptyProxyGroups()
 
 uint32 EntityDrawCollection::NumRenderGroups() const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     uint32 count = 0;
 
@@ -361,7 +361,7 @@ RenderCollector::CollectionResult RenderCollector::PushUpdatesToRenderThread(con
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
     AssertThrow(m_draw_collection != nullptr);
 
     RenderProxyList &proxy_list = m_draw_collection->GetProxyList(ThreadType::THREAD_TYPE_GAME);
@@ -419,7 +419,7 @@ void RenderCollector::PushEntityToRender(
     const RenderProxy &proxy
 )
 {
-    Threads::AssertOnThread(ThreadName::THREAD_GAME | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     AssertThrow(entity.IsValid());
     AssertThrow(proxy.mesh.IsValid());
@@ -436,7 +436,7 @@ void RenderCollector::CollectDrawCalls(
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (bucket_bits.Count() == 0) {
         return;
@@ -529,7 +529,7 @@ void RenderCollector::ExecuteDrawCalls(
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     static const bool is_indirect_rendering_enabled = renderer::RenderConfig::IsIndirectRenderingEnabled();
     
@@ -641,7 +641,7 @@ void RenderCollector::Reset()
     HYP_NAMED_SCOPE("RenderCollector Reset");
 
     AssertThrow(m_draw_collection != nullptr);
-    // Threads::AssertOnThread(ThreadName::THREAD_GAME);
+    // Threads::AssertOnThread(g_game_thread);
 
     // perform full clear
     *m_draw_collection = { };

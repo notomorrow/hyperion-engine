@@ -3,6 +3,8 @@
 #include <scene/ecs/systems/EntityMeshDirtyStateSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
+#include <scene/Scene.hpp>
+
 #include <rendering/Material.hpp>
 #include <rendering/Mesh.hpp>
 #include <rendering/BVH.hpp>
@@ -10,6 +12,11 @@
 #include <rendering/backend/RenderCommand.hpp>
 
 namespace hyperion {
+
+EnumFlags<SceneFlags> EntityMeshDirtyStateSystem::GetRequiredSceneFlags() const
+{
+    return SceneFlags::NONE;
+}
 
 void EntityMeshDirtyStateSystem::OnEntityAdded(const Handle<Entity> &entity)
 {

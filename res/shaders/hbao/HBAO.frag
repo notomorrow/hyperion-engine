@@ -6,7 +6,7 @@
 
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 texcoord;
+layout(location=2) in vec2 v_texcoord;
 layout(location=0) out vec4 color_output;
 
 #include "../include/defines.inc"
@@ -25,28 +25,27 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "../include/gbuffer.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer ScenesBuffer
 {
     Scene scene;
 };
 
-layout(push_constant) uniform PushConstant
+HYP_DESCRIPTOR_CBUFF(HBAODescriptorSet, UniformBuffer) uniform UniformBuffer
 {
-    uvec2 dimension;
-    float temporal_blending_factor;
+    uvec2   dimension;
+    float   radius;
+    float   power;
 };
 
 #include "../include/Temporal.glsl"
 
 #define HYP_HBAO_NUM_CIRCLES 4
 #define HYP_HBAO_NUM_SLICES 2
-#define HYP_HBAO_RADIUS 1.65
-#define HYP_HBAO_POWER 0.9
 
 float fov_rad = HYP_FMATH_DEG2RAD(camera.fov);
 float tan_half_fov = tan(fov_rad * 0.5);
@@ -109,7 +108,7 @@ vec2 RotateDirection(vec2 uv, vec2 cos_sin)
 
 float Falloff(float dist_sqr)
 {
-    return dist_sqr * (-1.0 / HYP_FMATH_SQR(HYP_HBAO_RADIUS)) + 1.0;
+    return dist_sqr * (-1.0 / HYP_FMATH_SQR(radius)) + 1.0;
 }
 
 vec2 CalculateImpact(vec2 theta_0, vec2 theta_1, float nx, float ny)
@@ -150,7 +149,7 @@ void TraceAO_New(vec2 uv, out float occlusion)
 
     const float camera_distance = P.z;
     const vec2 texel_size = vec2(1.0) / vec2(dimension);
-    const float step_radius = max((projected_scale * HYP_HBAO_RADIUS) / max(camera_distance, HYP_FMATH_EPSILON), float(HYP_HBAO_NUM_SLICES)) / float(HYP_HBAO_NUM_SLICES + 1);
+    const float step_radius = max((projected_scale * radius) / max(camera_distance, HYP_FMATH_EPSILON), float(HYP_HBAO_NUM_SLICES)) / float(HYP_HBAO_NUM_SLICES + 1);
 
     occlusion = 0.0;
 
@@ -203,7 +202,7 @@ void TraceAO_New(vec2 uv, out float occlusion)
                 vec3 dt = GetPosition(new_uv.zw, depth_1) - P;
 
                 const vec2 len = vec2(length(ds), length(dt));
-                const vec2 dist = len / HYP_HBAO_RADIUS;
+                const vec2 dist = len / radius;
                 ds /= len.x; dt /= len.y;
 
                 const vec2 DdotD = vec2(dot(ds, ds), dot(dt, dt));
@@ -253,7 +252,7 @@ void TraceAO_New(vec2 uv, out float occlusion)
         occlusion += slice_ao.x + slice_ao.y;
     }
 
-    occlusion = 1.0 - saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / HYP_HBAO_POWER));
+    occlusion = 1.0 - saturate(pow(occlusion / float(HYP_HBAO_NUM_CIRCLES * HYP_HBAO_NUM_SLICES), 1.0 / power));
     occlusion *= 1.0 / (1.0 - ANGLE_BIAS);
 
 #ifdef HBIL_ENABLED
@@ -264,6 +263,8 @@ void TraceAO_New(vec2 uv, out float occlusion)
 
 void main()
 {
+    vec2 texcoord = v_texcoord;
+
     vec4 values;
     float occlusion;
 

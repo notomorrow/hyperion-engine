@@ -34,6 +34,11 @@ class Object;
 
 namespace functional {
 
+class IDelegate;
+
+template <class ReturnType, class... Args>
+class Delegate;
+
 class DelegateHandler;
 
 namespace detail {
@@ -95,6 +100,12 @@ struct DelegateHandlerData
 
     HYP_API ~DelegateHandlerData();
 
+    HYP_FORCE_INLINE uint32 GetID() const
+        { return id; }
+
+    HYP_FORCE_INLINE void *GetDelegate() const
+        { return delegate; }
+
     HYP_API void Reset();
     HYP_API void Detach(DelegateHandler &&delegate_handler);
 
@@ -115,8 +126,7 @@ template <class ProcType>
 struct DelegateHandlerProc
 {
     RC<ProcType>    proc;
-    ThreadID        calling_thread_id = ThreadID::Invalid();
-    const void      *owner = nullptr;
+    ThreadID        calling_thread_id;
 
     IThread *GetCallingThread() const
     {
@@ -141,6 +151,8 @@ class DelegateHandler
 public:
     template <class ReturnType, class... Args>
     friend class Delegate;
+
+    friend class DelegateHandlerSet;
 
     DelegateHandler()                                               = default;
 
@@ -271,6 +283,28 @@ public:
         return true;
     }
 
+    /*! \brief Remove all delegate handlers that are bound to the given \ref{delegate}
+     *  \returns The number of delegate handlers that were removed. */
+    template <class ReturnType, class... Args>
+    HYP_FORCE_INLINE int Remove(Delegate<ReturnType, Args...> *delegate)
+    {
+        Array<DelegateHandler> delegate_handlers;
+
+        for (auto it =  m_delegate_handlers.Begin(); it != m_delegate_handlers.End();) {
+            if (it->second.m_data != nullptr && it->second.m_data->delegate == delegate) {
+                delegate_handlers.PushBack(std::move(it->second));
+
+                it = m_delegate_handlers.Erase(it);
+
+                continue;
+            }
+
+            ++it;
+        }
+
+        return int(delegate_handlers.Size());
+    }
+
     HYP_FORCE_INLINE Iterator Find(WeakName name)
         { return m_delegate_handlers.FindAs(name); }
 
@@ -299,7 +333,6 @@ public:
     virtual bool Remove(uint32 id) = 0;
     virtual bool Remove(const DelegateHandler &handler) = 0;
     virtual int RemoveAll(bool thread_safe = true) = 0;
-    virtual int RemoveAll(const void *owner, bool thread_safe = true) = 0;
 };
 
 /*! \brief A Delegate object that can be used to bind handler functions to be called when a broadcast is sent.
@@ -357,20 +390,6 @@ public:
 #endif
     }
 
-    /*! \brief Bind a Proc<> to the Delegate. Provide an owner pointer for bookkeeping to track the object that "owns" the delegate handler.
-     *  Allows for easier removal of delegate handlers via the owner pointer. The bound function will always be called on the thread that Bind() is called from if \ref{require_current_thread} is set to true.
-     *  \note The handler will be removed when the last reference to the returned DelegateHandler is removed.
-     *  This makes it easy to manage resource cleanup, as you can store the DelegateHandler as a class member and when the object is destroyed, the handler will be removed from the Delegate.
-     *
-     *  \param owner The owner pointer.
-     *  \param proc The Proc to bind.
-     *  \param require_current_thread Should the delegate handler function be called on the current thread?
-     *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
-    DelegateHandler BindOwned(const void *owner, ProcType &&proc, bool require_current_thread = false)
-    {
-        return Bind(std::move(proc), require_current_thread ? ThreadID::Current() : ThreadID::Invalid(), owner);
-    }
-
     /*! \brief Bind a Proc<> to the Delegate. The bound function will always be called on the thread that Bind() is called from if \ref{require_current_thread} is set to true.
      *  \note The handler will be removed when the last reference to the returned DelegateHandler is removed.
      *  This makes it easy to manage resource cleanup, as you can store the DelegateHandler as a class member and when the object is destroyed, the handler will be removed from the Delegate.
@@ -378,9 +397,9 @@ public:
      *  \param proc The Proc to bind.
      *  \param require_current_thread Should the delegate handler function be called on the current thread?
      *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
-    DelegateHandler Bind(ProcType &&proc, bool require_current_thread = false)
+    HYP_NODISCARD DelegateHandler Bind(ProcType &&proc, bool require_current_thread = false)
     {
-        return Bind(std::move(proc), require_current_thread ? ThreadID::Current() : ThreadID::Invalid());
+        return Bind(std::move(proc), require_current_thread ? ThreadID::Current() : ThreadID::invalid);
     }
 
     /*! \brief Bind a Proc<> to the Delegate.
@@ -389,9 +408,8 @@ public:
      *
      *  \param proc The Proc to bind.
      *  \param calling_thread_id The thread to call the bound function on.
-     *  \param owner An optional pointer for bookkeeping to track the object that "owns" the delegate. Allows for easier removal of delegate handlers via the owner pointer.
      *  \return  A reference counted DelegateHandler object that can be used to remove the handler from the Delegate. */
-    DelegateHandler Bind(ProcType &&proc, ThreadID calling_thread_id, const void *owner = nullptr)
+    HYP_NODISCARD DelegateHandler Bind(ProcType &&proc, const ThreadID &calling_thread_id)
     {
 #ifdef HYP_DELEGATE_THREAD_SAFE
         Mutex::Guard guard(m_mutex);
@@ -399,7 +417,7 @@ public:
 
         const uint32 id = m_id_counter++;
 
-        m_procs.Insert({ id, detail::DelegateHandlerProc<ProcType> { MakeRefCountedPtr<ProcType>(std::move(proc)), calling_thread_id, owner } });
+        m_procs.Insert({ id, detail::DelegateHandlerProc<ProcType> { MakeRefCountedPtr<ProcType>(std::move(proc)), calling_thread_id } });
 
 #ifdef HYP_DELEGATE_THREAD_SAFE
         m_num_procs.Increment(1, MemoryOrder::RELEASE);
@@ -413,33 +431,9 @@ public:
      *  \return The number of handlers removed. */
     virtual int RemoveAll(bool thread_safe = true) override
     {
-        return RemoveAll(nullptr, thread_safe);
-    }
-
-    /*! \brief Remove all bound handlers from the Delegate.
-     *  \param owner If not nullptr, uses this pointer to only remove delegate handlers where the owner matches this.
-     *  \param thread_safe If true, locks mutex before performing any critical operations to the delegate.
-     *  \return The number of handlers removed. */
-    virtual int RemoveAll(const void *owner, bool thread_safe = true) override
-    {
-        const auto ResetImpl = [this, owner]() -> int
+        const auto ResetImpl = [this]() -> int
         {
-            SizeType num_removed = 0;
-
-            if (owner != nullptr) {
-                for (auto it = m_procs.Begin(); it != m_procs.End();) {
-                    if (it->second.owner == owner) {
-                        it = m_procs.Erase(it);
-                        ++num_removed;
-                    } else {
-                        ++it;
-                    }
-                }
-
-                return int(num_removed);
-            }
-
-            num_removed = m_procs.Size();
+            SizeType num_removed = m_procs.Size();
             m_procs.Clear();
             m_id_counter = 0;
 

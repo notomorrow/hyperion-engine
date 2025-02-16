@@ -130,7 +130,6 @@ class HYP_API TaskExecutorBase : public ITaskExecutor
 public:
     TaskExecutorBase()
         : m_id(TaskID::Invalid()),
-          m_initiator_thread_id(ThreadID::Invalid()),
           m_assigned_scheduler(nullptr)
     {
         // set semaphore to initial value of 1 (one task)
@@ -181,11 +180,11 @@ public:
     HYP_FORCE_INLINE void SetTaskID(TaskID id)
         { m_id = id; }
 
-    HYP_FORCE_INLINE ThreadID GetInitiatorThreadID() const
+    HYP_FORCE_INLINE const ThreadID &GetInitiatorThreadID() const
         { return m_initiator_thread_id; }
 
     /*! \internal This function is used by the Scheduler to set the initiator thread ID. */
-    HYP_FORCE_INLINE void SetInitiatorThreadID(ThreadID initiator_thread_id)
+    HYP_FORCE_INLINE void SetInitiatorThreadID(const ThreadID &initiator_thread_id)
         { m_initiator_thread_id = initiator_thread_id; }
 
     HYP_FORCE_INLINE SchedulerBase *GetAssignedScheduler() const

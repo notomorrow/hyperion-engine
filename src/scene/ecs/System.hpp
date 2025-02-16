@@ -4,10 +4,12 @@
 #define HYPERION_ECS_SYSTEM_HPP
 
 #include <core/containers/Array.hpp>
+#include <core/containers/HashSet.hpp>
 
 #include <core/utilities/TypeID.hpp>
 #include <core/utilities/Tuple.hpp>
 #include <core/utilities/StringView.hpp>
+#include <core/utilities/EnumFlags.hpp>
 
 #include <core/functional/Delegate.hpp>
 
@@ -22,6 +24,8 @@ namespace hyperion {
 class EntityManager;
 class Scene;
 
+enum class SceneFlags : uint32;
+
 class HYP_API SystemBase
 {
 public:
@@ -31,8 +35,15 @@ public:
 
     virtual ANSIStringView GetName() const = 0;
 
+    virtual TypeID GetTypeID() const = 0;
+
+    virtual EnumFlags<SceneFlags> GetRequiredSceneFlags() const;
+
     HYP_FORCE_INLINE bool IsEntityInitialized(ID<Entity> entity) const
-        { return m_initialized_entities.Contains(entity); }
+        { return m_initialized_entities.FindAs(entity) != m_initialized_entities.End(); }
+
+    HYP_FORCE_INLINE const HashSet<WeakHandle<Entity>> &GetInitializedEntities() const
+        { return m_initialized_entities; }
 
     virtual bool AllowParallelExecution() const
         { return true; }
@@ -161,7 +172,7 @@ protected:
 private:
     void SetWorld(World *world);
 
-    FlatSet<WeakHandle<Entity>>                                 m_initialized_entities;
+    HashSet<WeakHandle<Entity>>                                 m_initialized_entities;
 
     Array<TypeID>                                               m_component_type_ids;
     Array<ComponentInfo>                                        m_component_infos;
@@ -196,6 +207,14 @@ public:
     {
         return ANSIStringView(TypeNameHelper<Derived, true>::value);
     }
+
+    virtual TypeID GetTypeID() const override final
+    {
+        return TypeID::ForType<Derived>();
+    }
+
+    virtual EnumFlags<SceneFlags> GetRequiredSceneFlags() const override
+        { return SystemBase::GetRequiredSceneFlags(); }
 
     virtual void Process(GameCounter::TickUnit delta) override = 0;
 };

@@ -3,7 +3,10 @@
 #ifndef HYPERION_THREAD_HPP
 #define HYPERION_THREAD_HPP
 
+#include <core/threading/ThreadID.hpp>
+
 #include <core/threading/AtomicVar.hpp>
+
 #include <core/utilities/Tuple.hpp>
 #include <core/utilities/StringView.hpp>
 
@@ -17,12 +20,9 @@
 
 namespace hyperion {
 namespace threading {
-
+    
 class SchedulerBase;
 class Scheduler;
-
-using ThreadMask = uint32;
-enum ThreadName : ThreadMask;
 
 enum class ThreadPriorityValue
 {
@@ -32,75 +32,6 @@ enum class ThreadPriorityValue
     HIGH,
     HIGHEST
 };
-
-// @TODO Implement "synthetic" thread IDs to trace which thread tasks are being queued from
-// e.g Render thread enqueues a few render tasks, the tasks execute on task threads but can have a synthetic task thread id
-// that combines render thread ID + the respective task thread ID.
-
-struct ThreadID
-{
-    static const ThreadID invalid;
-
-    HYP_API static ThreadID Current();
-    HYP_API static ThreadID CreateDynamicThreadID(Name name);
-    HYP_API static ThreadID Invalid();
-
-    uint32  value;
-    Name    name;
-
-    ThreadID()                                      = default;
-
-    ThreadID(uint32 value, Name name)
-        : value(value),
-          name(name)
-    {
-    }
-
-    HYP_API ThreadID(ThreadName thread_name);
-
-    ThreadID(const ThreadID &other)                 = default;
-    ThreadID &operator=(const ThreadID &other)      = default;
-    ThreadID(ThreadID &&other) noexcept             = default;
-    ThreadID &operator=(ThreadID &&other) noexcept  = default;
-    ~ThreadID()                                     = default;
-
-    HYP_FORCE_INLINE bool operator==(const ThreadID &other) const
-        { return value == other.value; }
-
-    HYP_FORCE_INLINE bool operator!=(const ThreadID &other) const
-        { return value != other.value; }
-
-    HYP_FORCE_INLINE bool operator<(const ThreadID &other) const
-        { return value < other.value; }
-
-    /*! \brief Get the inverted value of this thread ID, for use as a mask.
-     * This is useful for selecting all threads except the one with this ID.
-     * \warning This is not valid for dynamic thread IDs. */
-    HYP_FORCE_INLINE uint32 operator~() const
-        { return ~value; }
-
-    HYP_FORCE_INLINE operator uint32() const
-        { return value; }
-    
-    /*! \brief Check if this thread ID is a dynamic thread ID.
-     *  \returns True if this is a dynamic thread ID, false otherwise. */
-    HYP_API bool IsDynamic() const;
-
-    /*! \brief Get the mask for this thread ID. For static thread IDs, this is the same as the value.
-     *  For dynamic thread IDs, this is the THREAD_DYNAMIC mask.
-     *  \returns The relevant mask for this thread ID. */ 
-    HYP_API ThreadMask GetMask() const;
-
-    HYP_API bool IsValid() const;
-
-    HYP_FORCE_INLINE HashCode GetHashCode() const
-    {
-        return HashCode::GetHashCode(value);
-    }
-};
-
-static_assert(std::is_trivially_destructible_v<ThreadID>,
-    "ThreadID must be trivially destructible! Otherwise thread_local current_thread_id var may  be generated using a wrapper function.");
 
 class IThread
 {
@@ -124,8 +55,6 @@ template <class Scheduler, class... Args>
 class Thread : public IThread
 {
 public:
-    // Dynamic thread
-    Thread(Name dynamic_thread_name, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
     Thread(const ThreadID &id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
     Thread(const Thread &other)                 = delete;
     Thread &operator=(const Thread &other)      = delete;
@@ -165,14 +94,6 @@ protected:
 private:
     std::thread                 *m_thread;
 };
-
-template <class Scheduler, class ...Args>
-Thread<Scheduler, Args...>::Thread(Name dynamic_thread_name, ThreadPriorityValue priority)
-    : m_id(ThreadID::CreateDynamicThreadID(dynamic_thread_name)),
-      m_priority(priority),
-      m_thread(nullptr)
-{
-}
 
 template <class Scheduler, class ...Args>
 Thread<Scheduler, Args...>::Thread(const ThreadID &id, ThreadPriorityValue priority)
@@ -249,7 +170,6 @@ bool Thread<Scheduler, Args...>::CanJoin() const
 
 using threading::IThread;
 using threading::Thread;
-using threading::ThreadID;
 using threading::ThreadPriorityValue;
 
 } // namespace hyperion

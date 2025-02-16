@@ -798,7 +798,7 @@ void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
 
 const DescriptorSetRef &MaterialDescriptorSetManager::GetDescriptorSet(ID<Material> id, uint32 frame_index) const
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER | ThreadName::THREAD_TASK);
+    Threads::AssertOnThread(g_render_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     const auto it = m_material_descriptor_sets.FindAs(id);
 
@@ -831,7 +831,7 @@ FixedArray<DescriptorSetRef, max_frames_in_flight> MaterialDescriptorSetManager:
     }
 
     // if on render thread, initialize and add immediately
-    if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
+    if (Threads::IsOnThread(g_render_thread)) {
         for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_ASSERT_RESULT(descriptor_sets[frame_index]->Create(g_engine->GetGPUDevice()));
         }
@@ -883,7 +883,7 @@ FixedArray<DescriptorSetRef, max_frames_in_flight> MaterialDescriptorSetManager:
     }
 
     // if on render thread, initialize and add immediately
-    if (Threads::IsOnThread(ThreadName::THREAD_RENDER)) {
+    if (Threads::IsOnThread(g_render_thread)) {
         for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             HYPERION_ASSERT_RESULT(descriptor_sets[frame_index]->Create(g_engine->GetGPUDevice()));
         }
@@ -909,7 +909,7 @@ void MaterialDescriptorSetManager::EnqueueRemoveMaterial(const WeakHandle<Materi
         return;
     }
 
-    HYP_LOG(Material, Debug, "EnqueueRemove material with ID {} from thread {}", material.GetID().Value(), Threads::CurrentThreadID().name);
+    HYP_LOG(Material, Debug, "EnqueueRemove material with ID {} from thread {}", material.GetID().Value(), Threads::CurrentThreadID().GetName());
 
     Mutex::Guard guard(m_pending_mutex);
     
@@ -935,7 +935,7 @@ void MaterialDescriptorSetManager::EnqueueRemoveMaterial(const WeakHandle<Materi
 
 void MaterialDescriptorSetManager::RemoveMaterial(ID<Material> id)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     if (!id.IsValid()) {
         return;
@@ -1003,7 +1003,7 @@ void MaterialDescriptorSetManager::Initialize()
 
 void MaterialDescriptorSetManager::UpdatePendingDescriptorSets(Frame *frame)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -1044,7 +1044,7 @@ void MaterialDescriptorSetManager::UpdatePendingDescriptorSets(Frame *frame)
 
 void MaterialDescriptorSetManager::Update(Frame *frame)
 {
-    Threads::AssertOnThread(ThreadName::THREAD_RENDER);
+    Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
 
