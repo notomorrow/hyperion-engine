@@ -43,7 +43,7 @@
       },
       "gi": {
         "mode": "sh",
-        "enabled": true
+        "enabled": false
       }
     },
     "hbao": {
