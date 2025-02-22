@@ -77,32 +77,23 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {
-    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height) / 2;
-    uvec2 pixel_coord = uvec2(v_texcoord * (vec2(screen_resolution) - 1.0));
-
-// #if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
-//     // Checkerboard rendering
-//     const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
-
-//     if (bool(((pixel_coord.x & 1) ^ (pixel_coord.y & 1) ^ (scene.frame_counter & 1))))
-//     {
-//         color_output = vec4(0.0);
-//         return;
-//     }
-// #endif
+    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
+    vec2 pixel_size = 1.0 / vec2(screen_resolution);
+    vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
+    uvec2 pixel_coord = uvec2(texcoord * (vec2(screen_resolution) - 1.0) + 0.5);
 
     vec3 irradiance = vec3(0.0);
 
     const mat4 inverse_proj = inverse(camera.projection);
     const mat4 inverse_view = inverse(camera.view);
 
-    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, v_texcoord).r;
-    const vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_ws_normals_texture, v_texcoord));
-    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, v_texcoord, depth).xyz;
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
+    const vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_ws_normals_texture, texcoord));
+    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
 
 #if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
-    const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
+    const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); 
     const float roughness = material.r;
 
     AABB voxel_grid_aabb;
@@ -123,4 +114,7 @@ void main()
 
     color_output = radiance;
 #endif
+
+    // //debugging checkerboarding
+    // color_output = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), float(scene.frame_counter & 1));
 }
