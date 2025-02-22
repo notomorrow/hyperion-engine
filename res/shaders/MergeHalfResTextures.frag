@@ -27,6 +27,8 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer ScenesBuffer
 };
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+
 HYP_DESCRIPTOR_SRV(MergeHalfResTexturesDescriptorSet, InTexture) uniform texture2D src_image;
 
 HYP_DESCRIPTOR_CBUFF(MergeHalfResTexturesDescriptorSet, UniformBuffer) uniform UniformBuffer
@@ -40,10 +42,9 @@ void main()
     vec2 texcoord_b = texcoord_a + vec2(0.5, 0.0);
 
     uvec2 pixel_coord = uvec2(v_texcoord * (vec2(dimensions) - 1.0));
-    const uint pixel_index = pixel_coord.y * dimensions.x + pixel_coord.x;
+    uint checkerboard = (pixel_coord.x & 1) ^ (pixel_coord.y & 1);
 
-    vec4 color_a = Texture2D(sampler_nearest, src_image, texcoord_a);
-    vec4 color_b = Texture2D(sampler_nearest, src_image, texcoord_b);
+    vec2 texcoord = mix(texcoord_a, texcoord_b, float(checkerboard));
     
-    color_output = mix(color_a, color_b, float(pixel_index & 1));
+    color_output = Texture2D(sampler_linear, src_image, texcoord);
 }

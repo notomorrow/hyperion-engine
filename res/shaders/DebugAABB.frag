@@ -124,7 +124,16 @@ void main() {
 
         const vec3 R = reflect(-V, N);
 
-        ApplyReflectionProbe(env_probes[v_probe_id - 1], v_position.xyz, R, 0.0, ibl);
+        ApplyReflectionProbe(
+            env_probes[v_probe_id - 1].texture_index,
+            env_probes[v_probe_id - 1].world_position.xyz,
+            env_probes[v_probe_id - 1].aabb_min.xyz,
+            env_probes[v_probe_id - 1].aabb_max.xyz,
+            v_position.xyz,
+            R,
+            0.0,
+            ibl
+        );
 
         gbuffer_albedo.rgb = ibl.rgb;
     }

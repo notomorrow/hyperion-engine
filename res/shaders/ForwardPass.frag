@@ -249,7 +249,16 @@ void main()
             Fd = gbuffer_albedo.rgb * irradiance * (1.0 - E) * ao;
 
 // #ifdef REFLECTION_PROBE_ENABLED
-            ibl = CalculateReflectionProbe(current_env_probe, P, N, R, camera.position.xyz, roughness);
+            ibl = CalculateReflectionProbe(
+                current_env_probe.texture_index,
+                current_env_probe.world_position.xyz,
+                current_env_probe.aabb_min.xyz,
+                current_env_probe.aabb_max.xyz,
+                P, N, R,
+                camera.position.xyz,
+                roughness
+            );
+            
             ibl.a = saturate(ibl.a);
 // #endif
 
