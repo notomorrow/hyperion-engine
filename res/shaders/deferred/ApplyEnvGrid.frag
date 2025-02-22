@@ -77,18 +77,19 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {
-#if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
-    // Checkerboard rendering
-    uvec2 screen_resolution = uvec2(camera.dimensions.xy);
+    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height) / 2;
     uvec2 pixel_coord = uvec2(v_texcoord * (vec2(screen_resolution) - 1.0));
-    const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
 
-    if (bool(((pixel_coord.x & 1) ^ (pixel_coord.y & 1) ^ (scene.frame_counter & 1))))
-    {
-        color_output = vec4(0.0);
-        return;
-    }
-#endif
+// #if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
+//     // Checkerboard rendering
+//     const uint pixel_index = pixel_coord.y * screen_resolution.x + pixel_coord.x;
+
+//     if (bool(((pixel_coord.x & 1) ^ (pixel_coord.y & 1) ^ (scene.frame_counter & 1))))
+//     {
+//         color_output = vec4(0.0);
+//         return;
+//     }
+// #endif
 
     vec3 irradiance = vec3(0.0);
 

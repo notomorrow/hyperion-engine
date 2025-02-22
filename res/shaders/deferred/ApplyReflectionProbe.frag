@@ -63,19 +63,12 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 1
+#define SAMPLE_COUNT 4
 
 void main()
 {
-    // Skip every other pixel for radiance
-    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
+    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height) / 2;
     uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution - 1) + 0.5);
-
-    if (bool(((pixel_coord.x & 1) ^ (pixel_coord.y & 1) ^ (scene.frame_counter & 1))))
-    {
-        color_output = vec4(0.0);
-        return;
-    }
 
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, v_texcoord).r;
     const vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, v_texcoord)));
@@ -86,7 +79,7 @@ void main()
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
     const float roughness = material.r;
 
-    const float lod = HYP_FMATH_SQR(roughness) * 12.0;
+    const float lod = HYP_FMATH_SQR(roughness) * 9.0;
 
     vec4 ibl = vec4(0.0);
 
@@ -96,22 +89,30 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
+    float phi = InterleavedGradientNoise((v_texcoord * vec2(screen_resolution) - 0.5));
+        //SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1);
+
     for (int i = 0; i < SAMPLE_COUNT; i++) {
-        vec2 blue_noise_sample = vec2(
-            SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), SAMPLE_COUNT * 2, i * 2),
-            SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), SAMPLE_COUNT * 2, i * 2 + 1)
-        );
+        vec2 rnd = VogelDisk(i, SAMPLE_COUNT, phi);
 
-        // vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 16) * 1.618;
-        // vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
-
-        vec3 H = ImportanceSampleGGX(blue_noise_sample, N, roughness);
+        vec3 H = ImportanceSampleGGX(rnd, N, roughness);
         H = tangent * H.x + bitangent * H.y + N * H.z;
 
         const vec3 dir = normalize(2.0 * dot(V, H) * H - V);
 
         vec4 sample_ibl = vec4(0.0);
-        ApplyReflectionProbe(current_env_probe, P, dir, lod, sample_ibl);
+
+        ApplyReflectionProbe(
+            current_env_probe.texture_index,
+            current_env_probe.world_position.xyz,
+            current_env_probe.aabb_min.xyz,
+            current_env_probe.aabb_max.xyz,
+            P,
+            dir,
+            lod,
+            sample_ibl
+        );
+
         ibl += sample_ibl;
     }
 

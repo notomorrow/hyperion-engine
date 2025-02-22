@@ -97,18 +97,19 @@ vec4 EnvProbeSample(
 }
 
 vec3 EnvProbeCoordParallaxCorrected(
-    EnvProbe env_probe,
-    vec3 world, vec3 R
+    vec3 probe_world_position,
+    vec3 aabb_min, vec3 aabb_max,
+    vec3 P, vec3 R
 )
 {
-    vec3 rbmax = (env_probe.aabb_max.xyz - world) / R;
-    vec3 rbmin = (env_probe.aabb_min.xyz - world) / R;
+    vec3 rbmax = (aabb_max - P) / R;
+    vec3 rbmin = (aabb_min - P) / R;
     vec3 rbminmax = max(rbmax, rbmin);
 
     float correction = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
 
-    vec3 box = world + R * correction;
-    return box - env_probe.world_position.xyz;
+    vec3 box = P + R * correction;
+    return box - probe_world_position;
 }
 
 vec4 EnvProbeSampleParallaxCorrected(

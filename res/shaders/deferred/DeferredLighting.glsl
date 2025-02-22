@@ -260,22 +260,18 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
 
 #endif
 
-void ApplyReflectionProbe(in EnvProbe probe, vec3 P, vec3 R, float lod, inout vec4 ibl)
+void ApplyReflectionProbe(uint probe_texture_index, vec3 probe_world_position, vec3 aabb_min, vec3 aabb_max, vec3 P, vec3 R, float lod, inout vec4 ibl)
 {
     ibl = vec4(0.0);
 
-    if (probe.texture_index == ~0u) {
-        return;
-    }
-    
-    const uint probe_texture_index = max(0, min(probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+    probe_texture_index = min(probe_texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1);
 
-    const vec3 extent = (probe.aabb_max.xyz - probe.aabb_min.xyz);
-    const vec3 center = (probe.aabb_max.xyz + probe.aabb_min.xyz) * 0.5;
+    const vec3 extent = (aabb_max - aabb_min);
+    const vec3 center = (aabb_max + aabb_min) * 0.5;
     const vec3 diff = P - center;
 
 #ifdef ENV_PROBE_PARALLAX_CORRECTED
-    R = EnvProbeCoordParallaxCorrected(probe, P, R);
+    R = EnvProbeCoordParallaxCorrected(probe_world_position, aabb_min, aabb_max, P, R);
 #endif
 
     ibl = EnvProbeSample(
@@ -290,7 +286,7 @@ vec4 CalculateReflectionProbe(in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 ca
 {
     vec4 ibl = vec4(0.0);
 
-    const float lod = HYP_FMATH_SQR(roughness) * 12.0;
+    const float lod = HYP_FMATH_SQR(roughness) * 9.0;
 
 #ifndef ENV_PROBE_PARALLAX_CORRECTED
     // ENV_PROBE_PARALLAX_CORRECTED is not statically defined, we need to use flags on the EnvProbe struct
@@ -298,11 +294,11 @@ vec4 CalculateReflectionProbe(in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 ca
     const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
 
     if (is_parallax_corrected) {
-        R = EnvProbeCoordParallaxCorrected(probe, P, R);
+        R = EnvProbeCoordParallaxCorrected(probe.world_position.xyz, probe.aabb_min.xyz, probe.aabb_max.xyz, P, R);
     }
 #endif
 
-    ApplyReflectionProbe(probe, P, R, lod, ibl);
+    ApplyReflectionProbe(probe.texture_index, probe.world_position.xyz, probe.aabb_min.xyz, probe.aabb_max.xyz, P, R, lod, ibl);
 
     return ibl;
 }
