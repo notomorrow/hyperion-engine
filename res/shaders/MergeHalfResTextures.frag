@@ -38,7 +38,7 @@ HYP_DESCRIPTOR_CBUFF(MergeHalfResTexturesDescriptorSet, UniformBuffer) uniform U
 
 void main()
 {
-    vec2 texcoord_a = v_texcoord * 0.5;
+    vec2 texcoord_a = v_texcoord * vec2(0.5, 1.0);
     vec2 texcoord_b = texcoord_a + vec2(0.5, 0.0);
 
     uvec2 pixel_coord = uvec2(v_texcoord * (vec2(dimensions) - 1.0));
@@ -46,5 +46,5 @@ void main()
 
     vec2 texcoord = mix(texcoord_a, texcoord_b, float(checkerboard));
     
-    color_output = Texture2D(sampler_linear, src_image, texcoord);
+    color_output = Texture2D(sampler_nearest, src_image, texcoord);
 }

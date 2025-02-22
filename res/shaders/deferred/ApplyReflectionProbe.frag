@@ -63,20 +63,22 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 4
+#define SAMPLE_COUNT 2
 
 void main()
 {
-    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height) / 2;
-    uvec2 pixel_coord = uvec2(v_texcoord * vec2(screen_resolution - 1) + 0.5);
+    uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
+    vec2 pixel_size = 1.0 / vec2(screen_resolution);
+    vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
+    uvec2 pixel_coord = uvec2(texcoord * (vec2(screen_resolution) - 1.0) + 0.5);
 
-    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, v_texcoord).r;
-    const vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, v_texcoord)));
-    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), v_texcoord, depth).xyz;
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
+    const vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord)));
+    const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
     const vec3 R = normalize(reflect(-V, N));
 
-    const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, v_texcoord); 
+    const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); 
     const float roughness = material.r;
 
     const float lod = HYP_FMATH_SQR(roughness) * 9.0;
@@ -89,7 +91,7 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
-    float phi = InterleavedGradientNoise((v_texcoord * vec2(screen_resolution) - 0.5));
+    float phi = InterleavedGradientNoise((texcoord * vec2(screen_resolution) - 0.5));
         //SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1);
 
     for (int i = 0; i < SAMPLE_COUNT; i++) {

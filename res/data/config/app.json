@@ -27,7 +27,7 @@
     },
     "debug": {
       "env_grid_probes": false,
-      "reflection_probes": true,
+      "reflection_probes": false,
       "ssr": false,
       "reflections": false,
       "hbil": false,
@@ -42,7 +42,6 @@
         "enabled": false
       },
       "gi": {
-        "mode": "sh",
         "enabled": true
       }
     },
