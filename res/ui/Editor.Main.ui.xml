@@ -33,7 +33,7 @@
                         <Button size="50 fill" onclick="AddNodeClicked">
                             Add
                         </Button>
-                        <Textbox name="Scene_Outline_Filter" size="fill auto" position="50 0" text="Filter objects"></Textbox>
+                        <Textbox name="Scene_Outline_Filter" size="fill auto" position="50 0" placeholder="Filter..."></Textbox>
                     </Panel>
                     <ListView name="Scene_Outline_ListView" position="0 35" size="100% fill" textSize="12" />
                 </Tab>
