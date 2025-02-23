@@ -113,7 +113,7 @@ void main()
     const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, uv, 0.0).r;
     const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
     const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
-    const float roughness = 0.015;//material_data.r;
+    const float roughness = material_data.r;
     const float perceptual_roughness = sqrt(roughness);
     const float metalness = material_data.g;
 
