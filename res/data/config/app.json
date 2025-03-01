@@ -18,9 +18,9 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
       "enabled": false
@@ -32,7 +32,8 @@
       "reflections": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false
+      "irradiance": false,
+      "path_tracer": false
     },
     "hbil": {
       "enabled": false
@@ -42,7 +43,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       }
     },
     "hbao": {
@@ -54,7 +55,7 @@
   },
   "app": {
     "name": "HyperionEditor",
-    "args": "-ResX=1280 -ResY=720 -Profile=false -TraceURL=http://localhost:8000/trace"
+    "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
     "gpu": false,
