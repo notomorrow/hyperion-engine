@@ -147,7 +147,7 @@ void main()
 #endif
 
 #ifdef HBIL_ENABLED
-    CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
+    CalculateHBILIrradiance(deferred_params, ssao_data, irradiance) * 3.5;
 #endif
 
     // vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
