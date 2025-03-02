@@ -262,7 +262,7 @@ void main()
 
     // @FIXME
 
-    if (closest_light_index != ~0u) {
+    /*if (closest_light_index != ~0u) {
         const Light light = HYP_GET_LIGHT(closest_light_index);
 
         payload.distance = closest_light_dist;
@@ -274,7 +274,7 @@ void main()
         payload.roughness = 0.0;
 
         return;
-    }
+    }*/
 
     payload.emissive = vec4(0.0);
     payload.throughput = material_color;
