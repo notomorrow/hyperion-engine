@@ -18,9 +18,9 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": false
@@ -30,10 +30,10 @@
       "reflection_probes": false,
       "ssr": false,
       "reflections": false,
+      "path_tracer": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false,
-      "path_tracer": false
+      "irradiance": false
     },
     "hbil": {
       "enabled": false
