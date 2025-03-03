@@ -350,7 +350,7 @@ void main()
        lm_radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
     }
 
-    gbuffer_albedo = lm_irradiance;//(irradiance + radiance) * gbuffer_albedo;
+    gbuffer_albedo = lm_radiance;//(irradiance + radiance) * gbuffer_albedo;
     gbuffer_albedo.a = 0.0;
 
     gbuffer_normals = EncodeNormal(N);
