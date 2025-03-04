@@ -339,7 +339,7 @@ void main()
 #ifdef LIGHTMAP_BAKE
     // temp; just set it to albedo color (needs to have lighting calculated)
     gbuffer_albedo.a = 1.0; // force all objects in the baked texture to be fully opaque
-#else
+#elif 0 // temp
     // TEMP testing lightmaps
 
     vec4 lm_irradiance = vec4(0.0);
@@ -356,6 +356,7 @@ void main()
     gbuffer_albedo = lm_radiance;//(irradiance + radiance) * gbuffer_albedo;
     gbuffer_albedo.a = 0.0;
 #endif
+    gbuffer_albedo.a = 1.0; // temp
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
