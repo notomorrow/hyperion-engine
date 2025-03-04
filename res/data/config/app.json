@@ -58,7 +58,7 @@
     "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
-    "gpu": true,
+    "path_tracing": false,
     "threads": 16,
     "ideal_triangles_per_job": 4096
   }
