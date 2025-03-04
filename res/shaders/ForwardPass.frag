@@ -336,7 +336,10 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
-
+#ifdef LIGHTMAP_BAKE
+    // temp; just set it to albedo color (needs to have lighting calculated)
+    gbuffer_albedo.a = 1.0; // force all objects in the baked texture to be fully opaque
+#else
     // TEMP testing lightmaps
 
     vec4 lm_irradiance = vec4(0.0);
@@ -352,6 +355,7 @@ void main()
 
     gbuffer_albedo = lm_radiance;//(irradiance + radiance) * gbuffer_albedo;
     gbuffer_albedo.a = 0.0;
+#endif
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
