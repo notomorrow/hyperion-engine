@@ -65,8 +65,8 @@ struct LightmapRay
         { return !(*this == other); }
 };
 
-constexpr uint32 max_ray_hits_gpu = 512 * 512;
-constexpr uint32 max_ray_hits_cpu = 16 * 16;
+constexpr SizeType max_ray_hits_gpu = 512 * 512;
+constexpr SizeType max_ray_hits_cpu = 16 * 16;
 
 struct alignas(16) LightmapHit
 {
@@ -154,7 +154,7 @@ class HYP_API LightmapJob
 public:
     friend struct RenderCommand_LightmapTraceRaysOnGPU;
 
-    static constexpr uint32 num_multisamples = 1;
+    static constexpr uint32 num_multisamples = 4;
 
     LightmapJob(LightmapJobParams &&params);
     LightmapJob(const LightmapJob &other)                   = delete;
@@ -187,7 +187,7 @@ public:
     HYP_FORCE_INLINE const Array<uint32> &GetTexelIndices() const
         { return m_texel_indices; }
 
-    HYP_FORCE_INLINE void GetPreviousFrameRays(uint32 frame_index, Array<LightmapRay> &out_rays) const
+    HYP_FORCE_INLINE void GetPreviousFrameRays(uint32 frame_index, Span<const LightmapRay> &out_rays) const
     {
         Mutex::Guard guard(m_previous_frame_rays_mutex);
 

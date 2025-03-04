@@ -94,11 +94,11 @@ struct RENDER_COMMAND(LightmapTraceRaysOnGPU) : renderer::RenderCommand
 
         {
             // Read ray hits from last time this frame was rendered
-            Array<LightmapRay> previous_rays;
+            Span<const LightmapRay> previous_rays;
             job->GetPreviousFrameRays(frame_index, previous_rays);
             
             // Read previous frame hits into CPU buffer
-            if (previous_rays.Any()) {
+            if (previous_rays.Size() != 0) {
                 // @NOTE Use heap allocation to avoid stack overflow (max_ray_hits_gpu * sizeof(LightmapHit) > 1MB)
                 UniquePtr<LightmapHitsBuffer> hits_buffer = MakeUnique<LightmapHitsBuffer>();
 
@@ -107,12 +107,6 @@ struct RENDER_COMMAND(LightmapTraceRaysOnGPU) : renderer::RenderCommand
 
                 path_tracer_irradiance->ReadHitsBuffer(hits_buffer.Get(), frame_index);
                 job->IntegrateRayHits(previous_rays.Data(), hits_buffer->hits.Data(), previous_rays.Size(), LIGHTMAP_SHADING_TYPE_IRRADIANCE);
-
-
-                //// DEBUGGING
-                //for (SizeType i = 0; i < hits_buffer->hits.Size(); i++) {
-                //    AssertThrow(MathUtil::ApproxEqual(hits_buffer->hits[i].color.GetXYZ(), Vec3f(float(i), 0, 0)));//previous_rays[i].ray.position));
-                //}
             }
 
             ray_offset = job->GetTexelIndex() % MathUtil::Max(job->GetTexelIndices().Size(), 1u);
@@ -312,19 +306,21 @@ void LightmapPathTracer::CreateUniformBuffer()
 
 void LightmapPathTracer::Create()
 {
+    AssertThrow(m_tlas != nullptr);
+
     CreateUniformBuffer();
 
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         DeferCreate(
             m_hits_buffers[frame_index],
             g_engine->GetGPUDevice(),
-            sizeof(LightmapHitsBuffer)
+            sizeof(LightmapHit) * max_ray_hits_gpu
         );
 
         DeferCreate(
             m_rays_buffers[frame_index],
             g_engine->GetGPUDevice(),
-            sizeof(Vec4f) * 2
+            sizeof(Vec4f) * 2 * max_ray_hits_gpu
         );
     }
 
@@ -440,7 +436,7 @@ void LightmapPathTracer::Trace(Frame *frame, const Array<LightmapRay> &rays, uin
         Array<float> ray_float_data;
         ray_float_data.Resize(rays.Size() * 8);
 
-        for (uint32 i = 0; i < rays.Size(); i++) {
+        for (SizeType i = 0; i < rays.Size(); i++) {
             ray_float_data[i * 8 + 0] = rays[i].ray.position.x;
             ray_float_data[i * 8 + 1] = rays[i].ray.position.y;
             ray_float_data[i * 8 + 2] = rays[i].ray.position.z;
@@ -652,7 +648,21 @@ void LightmapJob::Process()
     
     m_current_rays.Clear();
 
-    if (m_texel_index >= m_texel_indices.Size() * num_multisamples) {
+    bool has_previous_frame_rays = false;
+
+    if (m_params.trace_mode == LIGHTMAP_TRACE_MODE_GPU) {
+        Mutex::Guard guard(m_previous_frame_rays_mutex);
+
+        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+            if (m_previous_frame_rays[frame_index].Any()) {
+                has_previous_frame_rays = true;
+
+                break;
+            }
+        }
+    }
+
+    if (!has_previous_frame_rays && m_texel_index >= m_texel_indices.Size() * num_multisamples) {
         Stop();
 
         return;
@@ -680,16 +690,6 @@ void LightmapJob::Process()
         break;
     case LightmapTraceMode::LIGHTMAP_TRACE_MODE_GPU:
     {
-        { // Check if we can stop
-            Mutex::Guard guard(m_previous_frame_rays_mutex);
-
-            if (m_previous_frame_rays.Empty()) {
-                Stop();
-
-                return;
-            }
-        }
-
         GatherRays(max_ray_hits_gpu, m_current_rays);
 
         PUSH_RENDER_COMMAND(LightmapTraceRaysOnGPU, this, std::move(m_current_rays));
@@ -1349,19 +1349,19 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
     for (LightmapElement &element : job->GetElements()) {
         bool is_new_material = false;
 
-        element.material = element.material.IsValid() ? element.material->Clone() : CreateObject<Material>();
-        is_new_material = true;
+        //element.material = element.material.IsValid() ? element.material->Clone() : CreateObject<Material>();
+        //is_new_material = true;
 
-        // if (!element.material) {
-        //     // @TODO: Set to default material
-        //     continue;
-        // }
+        if (!element.material) {
+            // @TODO: Set to default material
+            continue;
+        }
 
-        // if (!element.material->IsDynamic()) {
-        //     element.material = element.material->Clone();
+        if (!element.material->IsDynamic()) {
+            element.material = element.material->Clone();
 
-        //     is_new_material = true;
-        // }
+            is_new_material = true;
+        }
         
         // temp; not thread safe
         element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, textures[0]);
