@@ -12,8 +12,9 @@
 #include <rendering/DefaultFormats.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/FinalPass.hpp>
-#include <rendering/World.hpp>
-#include <rendering/Scene.hpp>
+#include <rendering/RenderWorld.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderMaterial.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/ShaderManager.hpp>
 #include <rendering/RenderState.hpp>
@@ -26,6 +27,7 @@
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RenderConfig.hpp>
 
 #include <asset/Assets.hpp>
 
@@ -438,17 +440,17 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         // m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("EntityInstanceBatchesBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(EntityInstanceBatch)));
 
         // Material
-#ifdef HYP_FEATURES_BINDLESS_TEXTURES
-        for (uint32 texture_index = 0; texture_index < max_bindless_resources; texture_index++) {
-            m_global_descriptor_table->GetDescriptorSet(NAME("Material"), frame_index)
-                ->SetElement(NAME("Textures"), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
+        if (renderer::RenderConfig::IsBindlessSupported()) {
+            for (uint32 texture_index = 0; texture_index < max_bindless_resources; texture_index++) {
+                m_global_descriptor_table->GetDescriptorSet(NAME("Material"), frame_index)
+                    ->SetElement(NAME("Textures"), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
+            }
+        } else {
+            for (uint32 texture_index = 0; texture_index < max_bound_textures; texture_index++) {
+                m_global_descriptor_table->GetDescriptorSet(NAME("Material"), frame_index)
+                    ->SetElement(NAME("Textures"), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
+            }
         }
-#else
-        for (uint32 texture_index = 0; texture_index < max_bound_textures; texture_index++) {
-            m_global_descriptor_table->GetDescriptorSet(NAME("Material"), frame_index)
-                ->SetElement(NAME("Textures"), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
-        }
-#endif
     }
 
     // m_global_descriptor_set_manager.Initialize(this);
@@ -629,11 +631,11 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 
     PreFrameUpdate(frame);
     
-    m_world->GetRenderResources().PreRender(frame);
+    m_world->GetRenderResource().PreRender(frame);
 
     game->OnFrameBegin(frame);
 
-    m_world->GetRenderResources().Render(frame);
+    m_world->GetRenderResource().Render(frame);
 
     RenderDeferred(frame);
 
@@ -641,7 +643,7 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 
     HYPERION_ASSERT_RESULT(frame->EndCapture(GetGPUInstance()->GetDevice()));
 
-    m_world->GetRenderResources().PostRender(frame);
+    m_world->GetRenderResource().PostRender(frame);
 
     UpdateBuffersAndDescriptors((GetGPUInstance()->GetFrameHandler()->GetCurrentFrameIndex()));
 

@@ -30,6 +30,7 @@ class HYP_API SystemBase
 {
 public:
     friend class EntityManager;
+    friend class SystemExecutionGroup;
 
     virtual ~SystemBase() = default;
 
@@ -38,12 +39,6 @@ public:
     virtual TypeID GetTypeID() const = 0;
 
     virtual EnumFlags<SceneFlags> GetRequiredSceneFlags() const;
-
-    HYP_FORCE_INLINE bool IsEntityInitialized(ID<Entity> entity) const
-        { return m_initialized_entities.FindAs(entity) != m_initialized_entities.End(); }
-
-    HYP_FORCE_INLINE const HashSet<WeakHandle<Entity>> &GetInitializedEntities() const
-        { return m_initialized_entities; }
 
     virtual bool AllowParallelExecution() const
         { return true; }
@@ -136,16 +131,10 @@ public:
 
     virtual void OnEntityAdded(const Handle<Entity> &entity)
     {
-        m_initialized_entities.Insert(entity.ToWeak());
     }
 
     virtual void OnEntityRemoved(ID<Entity> entity)
     {
-        auto it = m_initialized_entities.FindAs(entity);
-        
-        if (it != m_initialized_entities.End()) {
-            m_initialized_entities.Erase(it);
-        }
     }
 
     virtual void Process(GameCounter::TickUnit delta) = 0;
@@ -162,6 +151,19 @@ protected:
     HYP_FORCE_INLINE EntityManager &GetEntityManager()
         { return m_entity_manager; }
 
+    /*! \brief Set a Proc<void> to be called once after the System has processed.
+     *  The Proc<void> will be called on the EntityManager's owner thread and will not be parallelized, ensuring proper synchronization.
+     *  After the Proc<void> has been called, it will be reset.
+     *
+     *  \param proc The Proc<void> to call after the System has processed.
+     */
+    void AfterProcess(Proc<void> &&proc)
+    {
+        AssertThrowMsg(!m_after_process_proc.IsValid(), "After process proc already set!");
+
+        m_after_process_proc = std::move(proc);
+    }
+
     Scene *GetScene() const;
     World *GetWorld() const;
 
@@ -176,6 +178,8 @@ private:
 
     Array<TypeID>                                               m_component_type_ids;
     Array<ComponentInfo>                                        m_component_infos;
+
+    Proc<void>                                                  m_after_process_proc;
 };
 
 /*! \brief A System is a class that operates on a set of components.

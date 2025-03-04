@@ -10,16 +10,17 @@
 #include <core/object/HypObject.hpp>
 
 #include <rendering/FullScreenPass.hpp>
-#include <rendering/Light.hpp>
 #include <rendering/RenderSubsystem.hpp>
 #include <rendering/RenderCollection.hpp>
 #include <rendering/Shadows.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
-#include <math/BoundingBox.hpp>
+#include <core/math/BoundingBox.hpp>
 
 #include <scene/Scene.hpp>
+#include <scene/Light.hpp>
+
 #include <scene/camera/Camera.hpp>
 
 #include <Types.hpp>

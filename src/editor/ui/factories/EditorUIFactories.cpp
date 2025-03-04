@@ -508,7 +508,7 @@ public:
             for (const auto &it : *all_components) {
                 const TypeID component_type_id = it.first;
 
-                const ComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(component_type_id);
+                const IComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(component_type_id);
 
                 if (!component_interface) {
                     HYP_LOG(Editor, Error, "No ComponentInterface registered for component with TypeID {}", component_type_id.Value());
@@ -776,23 +776,23 @@ public:
 
     void Update(UIObject *ui_object, const EditorNodePropertyRef &value) const
     {
-        // @TODO Implement
+        // @TODO Implement without recreating the UI element
 
-        RC<Node> node_rc = value.node.Lock();
-        AssertThrow(node_rc != nullptr);
+        // RC<Node> node_rc = value.node.Lock();
+        // AssertThrow(node_rc != nullptr);
 
-        UIElementFactoryBase *factory = GetEditorUIElementFactory(value.property->GetTypeID());
-        AssertThrow(factory != nullptr);
+        // UIElementFactoryBase *factory = GetEditorUIElementFactory(value.property->GetTypeID());
+        // AssertThrow(factory != nullptr);
 
-        RC<UIPanel> content = ui_object->FindChildUIObject(WeakName("PropertyPanel_Content")).Cast<UIPanel>();
-        AssertThrow(content != nullptr);
+        // RC<UIPanel> content = ui_object->FindChildUIObject(WeakName("PropertyPanel_Content")).Cast<UIPanel>();
+        // AssertThrow(content != nullptr);
         
-        content->RemoveAllChildUIObjects();
+        // content->RemoveAllChildUIObjects();
 
-        RC<UIObject> element = factory->CreateUIObject(ui_object, value.property->Get(HypData(node_rc)), AnyRef(const_cast<EditorNodePropertyRef &>(value)));
-        AssertThrow(element != nullptr);
+        // RC<UIObject> element = factory->CreateUIObject(ui_object, value.property->Get(HypData(node_rc)), AnyRef(const_cast<EditorNodePropertyRef &>(value)));
+        // AssertThrow(element != nullptr);
 
-        content->AddChildUIObject(element);
+        // content->AddChildUIObject(element);
     }
 };
 

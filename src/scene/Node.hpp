@@ -25,9 +25,9 @@
 #include <scene/NodeProxy.hpp>
 #include <scene/ecs/EntityTag.hpp>
 
-#include <math/Transform.hpp>
-#include <math/Ray.hpp>
-#include <math/BoundingBox.hpp>
+#include <core/math/Transform.hpp>
+#include <core/math/Ray.hpp>
+#include <core/math/BoundingBox.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>
@@ -338,7 +338,7 @@ public:
      *  \param node The Node to be added as achild of this Node
      *  \returns The added Node */
     HYP_METHOD()
-    NodeProxy AddChild(const NodeProxy &node = NodeProxy::empty);
+    NodeProxy AddChild(const NodeProxy &node = { });
 
     /*! \brief Remove a child using the given iterator (i.e from FindChild())
      *  \param iter The iterator from this Node's child list

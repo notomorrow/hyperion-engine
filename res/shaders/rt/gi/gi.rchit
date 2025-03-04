@@ -202,6 +202,7 @@ void main()
     }
 
     vec3 direct_lighting = vec3(0.0);
+    vec3 indirect_lighting = vec3(0.2);
 
     for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
@@ -229,7 +230,7 @@ void main()
         direct_lighting += local_light;
     }
 
-    payload.color = vec4((material_color.rgb * direct_lighting * HYP_FMATH_ONE_OVER_PI), material_color.a);
+    payload.color = vec4((material_color.rgb * direct_lighting) + (material_color.rgb * indirect_lighting), material_color.a);
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);

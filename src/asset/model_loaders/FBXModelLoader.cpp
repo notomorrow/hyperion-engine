@@ -3,6 +3,8 @@
 #include <asset/model_loaders/FBXModelLoader.hpp>
 
 #include <scene/Entity.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
 
 #include <scene/animation/Bone.hpp>
 #include <scene/animation/Skeleton.hpp>
@@ -14,8 +16,9 @@
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
+#include <core/algorithm/AnyOf.hpp>
+
+#include <core/functional/Proc.hpp>
 
 #include <core/filesystem/FsUtil.hpp>
 
@@ -51,7 +54,8 @@ struct FBXProperty
 
     explicit operator bool() const
     {
-        return value.IsValid() || array_elements.Any([](const FBXPropertyValue &item) { return item.IsValid(); });
+        return value.IsValid()
+            || AnyOf(array_elements, &FBXPropertyValue::IsValid);
     }
 };
 
@@ -1234,7 +1238,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
     bool found_first_bone = false;
 
-    std::function<void(FBXNode::Type, FBXNode &, Node *)> BuildNodes;
+    Proc<void, FBXNode::Type, FBXNode &, Node *> BuildNodes;
 
     BuildNodes = [&](FBXNode::Type type, FBXNode &node, Node *parent_node)
     {
@@ -1251,13 +1255,9 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
             node_proxy = NodeProxy(MakeRefCountedPtr<Node>());
         } else if (node.type == FBXNode::Type::LIMB_NODE) {
             Transform binding_transform;
-            binding_transform.SetTranslation(Vector3(
-                node.local_bind_matrix.GetColumn(3)[0],
-                node.local_bind_matrix.GetColumn(3)[1],
-                node.local_bind_matrix.GetColumn(3)[2]
-            ));
-            binding_transform.SetRotation(Quaternion(node.local_bind_matrix));
-            binding_transform.SetScale(node.local_bind_matrix.ExtractTransformScale());
+            binding_transform.SetTranslation(node.local_bind_matrix.ExtractTranslation());
+            binding_transform.SetRotation(node.local_bind_matrix.ExtractRotation());
+            binding_transform.SetScale(node.local_bind_matrix.ExtractScale());
 
             RC<Bone> bone = MakeRefCountedPtr<Bone>();
             bone->SetBindingTransform(binding_transform);
@@ -1357,7 +1357,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
         }
     };
 
-    std::function<void(FBXNode &)> ApplyLocalBindPose;
+    Proc<void, FBXNode &> ApplyLocalBindPose;
 
     ApplyLocalBindPose = [&](FBXNode &node)
     {
@@ -1410,7 +1410,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
     ApplyBindPoses();
     CalculateLocalBindPoses();
 
-    std::function<void(FBXNode &)> BuildLimbNodes;
+    Proc<void, FBXNode &> BuildLimbNodes;
 
     BuildLimbNodes = [&](FBXNode &node)
     {
@@ -1433,7 +1433,7 @@ LoadedAsset FBXModelLoader::LoadAsset(LoaderState &state) const
 
 #if 0
 
-    std::function<FBXNode *(FBXNode &)> FindFirstLimbNode;
+    Proc<FBXNode *, FBXNode &> FindFirstLimbNode;
 
     FindFirstLimbNode = [&](FBXNode &node) -> FBXNode *
     {

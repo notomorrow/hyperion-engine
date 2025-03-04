@@ -2,7 +2,7 @@
 
 #include <asset/ui_loaders/UILoader.hpp>
 
-#include <asset/serialization/fbom/FBOM.hpp>
+#include <core/serialization/fbom/FBOM.hpp>
 
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
@@ -32,6 +32,9 @@
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/String.hpp>
 
+#include <core/algorithm/Map.hpp>
+#include <core/algorithm/FindIf.hpp>
+
 #include <core/object/HypClass.hpp>
 #include <core/object/HypData.hpp>
 #include <core/object/HypProperty.hpp>
@@ -43,7 +46,7 @@
 
 #include <core/Name.hpp>
 
-#include <math/Vector2.hpp>
+#include <core/math/Vector2.hpp>
 
 #include <algorithm>
 
@@ -228,6 +231,7 @@ static Optional<Color> ParseColor(const String &str)
             values[value_index] = uint8(value);
         }
     } else {
+        auto fn = FunctionWrapper<String(String::*)() const>(&String::Trimmed);
 
         // Parse rgba if csv
         Array<String> split = Map(str.Split(','), &String::Trimmed);

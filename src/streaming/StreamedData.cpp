@@ -14,94 +14,13 @@
 
 namespace hyperion {
 
-#pragma region StreamedDataRefBase
-
-StreamedDataRefBase::StreamedDataRefBase(RC<StreamedData> &&owner)
-    : m_owner(std::move(owner))
-{
-    LoadStreamedData();
-}
-
-StreamedDataRefBase::StreamedDataRefBase(const StreamedDataRefBase &other)
-    : m_owner(other.m_owner)
-{
-    LoadStreamedData();
-}
-
-StreamedDataRefBase &StreamedDataRefBase::operator=(const StreamedDataRefBase &other)
-{
-    if (this == &other) {
-        return *this;
-    }
-
-    UnpageStreamedData();
-
-    m_owner = other.m_owner;
-
-    LoadStreamedData();
-
-    return *this;
-}
-
-StreamedDataRefBase::StreamedDataRefBase(StreamedDataRefBase &&other) noexcept
-    : m_owner(std::move(other.m_owner))
-{
-}
-
-StreamedDataRefBase &StreamedDataRefBase::operator=(StreamedDataRefBase &&other) noexcept
-{
-    if (this == &other) {
-        return *this;
-    }
-
-    UnpageStreamedData();
-
-    m_owner = std::move(other.m_owner);
-
-    return *this;
-}
-
-StreamedDataRefBase::~StreamedDataRefBase()
-{
-    UnpageStreamedData();
-}
-
-void StreamedDataRefBase::LoadStreamedData()
-{
-    if (!m_owner) {
-        return;
-    }
-
-    m_owner->m_use_count.Increment(1, MemoryOrder::RELAXED);
-    (void)m_owner->Load();
-}
-
-void StreamedDataRefBase::UnpageStreamedData()
-{
-    if (!m_owner) {
-        return;
-    }
-
-    const int use_count = m_owner->m_use_count.Decrement(1, MemoryOrder::ACQUIRE_RELEASE);
-
-#ifdef HYP_DEBUG_MODE
-    AssertThrowMsg(use_count > 0, "Use count should never be less than 1");
-#endif
-
-    if (use_count == 1) {
-        m_owner->Unpage();
-    }
-}
-
-#pragma endregion StreamedDataRefBase
-
 #pragma region StreamedData
 
 StreamedData::StreamedData(StreamedDataState initial_state)
 {
     switch (initial_state) {
     case StreamedDataState::LOADED:
-        m_use_count.Set(1, MemoryOrder::RELAXED);
+        ClaimWithoutInitialize();
 
         break;
     default:
@@ -110,68 +29,60 @@ StreamedData::StreamedData(StreamedDataState initial_state)
     }
 }
 
-bool StreamedData::IsInMemory() const
+void StreamedData::Initialize()
 {
-    m_loading_semaphore.Acquire();
-    m_pre_init_semaphore.Produce(1);
-
-    bool result = IsInMemory_Internal();
-
-    m_pre_init_semaphore.Release(1);
-
-    return result;
+    (void)Load_Internal();
 }
 
-bool StreamedData::IsNull() const
+void StreamedData::Destroy()
 {
-    m_loading_semaphore.Acquire();
-    m_pre_init_semaphore.Produce(1);
+    Unpage_Internal();
+}
 
-    bool result = IsNull_Internal();
+void StreamedData::Update()
+{
+}
 
-    m_pre_init_semaphore.Release(1);
+bool StreamedData::IsInMemory() const
+{
+    bool result = false;
+
+    const_cast<StreamedData *>(this)->Execute([this, &result]()
+    {
+        result = IsInMemory_Internal();
+    });
 
     return result;
 }
 
 const ByteBuffer &StreamedData::Load() const
 {
-    HYP_NAMED_SCOPE("Load streamed data");
+    const ByteBuffer *buffer = nullptr;
 
-    m_pre_init_semaphore.Acquire();
-    m_loading_semaphore.Acquire();
-
-    const ByteBuffer *buffer_ptr = &GetByteBuffer();
-
-    m_loading_semaphore.Produce(1, [this, &buffer_ptr]()
+    const_cast<StreamedData *>(this)->Execute([this, &buffer]()
     {
-        buffer_ptr = &Load_Internal();
+        if (IsInMemory_Internal()) {
+            buffer = &GetByteBuffer();
+
+            return;
+        }
+
+        HYP_NAMED_SCOPE("Load streamed data");
+        
+        buffer = &Load_Internal();
     });
 
-    m_loading_semaphore.Release(1);
-
-    AssertDebug(buffer_ptr != nullptr);
-
-    return *buffer_ptr;
+    return *buffer;
 }
 
 void StreamedData::Unpage()
 {
-    if (!IsInMemory()) {
-        return;
-    }
-
-    HYP_NAMED_SCOPE("Unpage streamed data");
-
-    m_pre_init_semaphore.Acquire();
-    m_loading_semaphore.Acquire();
-    
-    m_loading_semaphore.Produce(1, [this]()
+    Execute([this]()
     {
+        HYP_NAMED_SCOPE("Unpage streamed data");
+
         Unpage_Internal();
     });
-
-    m_loading_semaphore.Release(1);
 }
 
 const ByteBuffer &StreamedData::GetByteBuffer() const
@@ -184,11 +95,6 @@ const ByteBuffer &StreamedData::GetByteBuffer() const
 #pragma endregion StreamedData
 
 #pragma region NullStreamedData
-
-bool NullStreamedData::IsNull_Internal() const
-{
-    return true;
-}
 
 bool NullStreamedData::IsInMemory_Internal() const
 {
@@ -284,11 +190,6 @@ MemoryStreamedData &MemoryStreamedData::operator=(MemoryStreamedData &&other) no
     return *this;
 }
 
-bool MemoryStreamedData::IsNull_Internal() const
-{
-    return false;
-}
-
 bool MemoryStreamedData::IsInMemory_Internal() const
 {
     return m_byte_buffer.HasValue();
@@ -301,10 +202,15 @@ void MemoryStreamedData::Unpage_Internal()
     }
 
     // Enqueue task to write file to disk
-    TaskSystem::GetInstance().Enqueue([byte_buffer = std::move(*m_byte_buffer), hash_code = m_hash_code, data_store_resource_handle = TResourceHandle<DataStore>(*m_data_store)]
-    {
-        data_store_resource_handle->Write(String::ToString(hash_code.Value()), byte_buffer);
-    }, TaskThreadPoolName::THREAD_POOL_BACKGROUND, TaskEnqueueFlags::FIRE_AND_FORGET);
+    TaskSystem::GetInstance().Enqueue(
+        HYP_STATIC_MESSAGE("Write streamed data to disk"),
+        [byte_buffer = std::move(*m_byte_buffer), hash_code = m_hash_code, data_store_resource_handle = TResourceHandle<DataStore>(*m_data_store)]
+        {
+            data_store_resource_handle->Write(String::ToString(hash_code.Value()), byte_buffer);
+        },
+        TaskThreadPoolName::THREAD_POOL_BACKGROUND,
+        TaskEnqueueFlags::FIRE_AND_FORGET
+    );
 
     m_byte_buffer.Unset();
 }

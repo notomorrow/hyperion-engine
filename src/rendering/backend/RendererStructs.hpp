@@ -7,8 +7,8 @@
 #include <core/memory/ByteBuffer.hpp>
 #include <core/Defines.hpp>
 #include <util/EnumOptions.hpp>
-#include <math/Extent.hpp>
-#include <math/Vector2.hpp>
+#include <core/math/Extent.hpp>
+#include <core/math/Vector2.hpp>
 #include <Types.hpp>
 #include <HashCode.hpp>
 
@@ -18,8 +18,7 @@ using ImageFlags = uint32;
 
 enum ImageFlagBits : ImageFlags
 {
-    IMAGE_FLAGS_NONE            = 0x0,
-    IMAGE_FLAGS_KEEP_IMAGE_DATA = 0x1
+    IMAGE_FLAGS_NONE            = 0x0
 };
 
 enum class ImageType : uint32
@@ -352,35 +351,26 @@ enum class StencilOp : uint8
     DECREMENT
 };
 
+HYP_STRUCT()
 struct StencilFunction
 {
-    StencilOp           pass_op;
-    StencilOp           fail_op;
-    StencilOp           depth_fail_op;
-    StencilCompareOp    compare_op;
-    uint8               mask;
-    uint8               value;
+    HYP_FIELD()
+    StencilOp           pass_op = StencilOp::KEEP;
 
-    StencilFunction()
-        : StencilFunction(StencilOp::KEEP, StencilOp::REPLACE, StencilOp::REPLACE, StencilCompareOp::ALWAYS, 0x0, 0x1)
-    {
-    }
+    HYP_FIELD()
+    StencilOp           fail_op = StencilOp::REPLACE;
 
-    StencilFunction(StencilOp pass_op, StencilOp fail_op, StencilOp depth_fail_op, StencilCompareOp compare_op, uint8 mask, uint8 value)
-        : pass_op(pass_op),
-          fail_op(fail_op),
-          depth_fail_op(depth_fail_op),
-          compare_op(compare_op),
-          mask(mask),
-          value(value)
-    {
-    }
+    HYP_FIELD()
+    StencilOp           depth_fail_op = StencilOp::REPLACE;
 
-    StencilFunction(const StencilFunction &other)                   = default;
-    StencilFunction &operator=(const StencilFunction &other)        = default;
-    StencilFunction(StencilFunction &&other) noexcept               = default;
-    StencilFunction &operator=(StencilFunction &&other) noexcept    = default;
-    ~StencilFunction()                                              = default;
+    HYP_FIELD()
+    StencilCompareOp    compare_op = StencilCompareOp::ALWAYS;
+
+    HYP_FIELD()
+    uint8               mask = 0x0;
+
+    HYP_FIELD()
+    uint8               value = 0x1;
 
     HYP_FORCE_INLINE bool operator==(const StencilFunction &other) const = default;
     HYP_FORCE_INLINE bool operator!=(const StencilFunction &other) const = default;
@@ -389,7 +379,7 @@ struct StencilFunction
         { return Memory::MemCmp(this, &other, sizeof(StencilFunction)) < 0; }
 
     HYP_FORCE_INLINE bool IsSet() const
-        { return mask != 0; }
+        { return mask != 0x0; }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
         { return HashCode::GetHashCode(value); }
@@ -449,10 +439,10 @@ struct PushConstantData
 #error Unsupported rendering backend
 #endif
 
-#include <math/Vector2.hpp>
-#include <math/Vector3.hpp>
-#include <math/Vector4.hpp>
-#include <math/Matrix4.hpp>
+#include <core/math/Vector2.hpp>
+#include <core/math/Vector3.hpp>
+#include <core/math/Vector4.hpp>
+#include <core/math/Matrix4.hpp>
 
 #include <Types.hpp>
 
@@ -539,6 +529,7 @@ using renderer::WrapMode;
 using renderer::TextureMode;
 using renderer::TextureData;
 using renderer::TextureDesc;
+using renderer::StencilFunction;
 
 } // namespace hyperion
 

@@ -3,16 +3,19 @@
 #include <rendering/HBAO.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/Scene.hpp>
-#include <rendering/Camera.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderMesh.hpp>
+#include <rendering/RenderCamera.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderState.hpp>
 
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
+#include <scene/Mesh.hpp>
+
 #include <system/AppContext.hpp>
 
-#include <math/Vector2.hpp>
+#include <core/math/Vector2.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -214,8 +217,8 @@ void HBAO::Render(Frame *frame)
     const uint32 frame_index = frame->GetFrameIndex();
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     {
         Begin(frame);
@@ -236,7 +239,7 @@ void HBAO::Render(Frame *frame)
             }
         );
         
-        GetQuadMesh()->Render(GetCommandBuffer(frame_index));
+        GetQuadMesh()->GetRenderResource().Render(GetCommandBuffer(frame_index));
         End(frame);
     }
 }

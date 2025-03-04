@@ -6,13 +6,16 @@
 #include <scene/animation/Skeleton.hpp>
 
 #include <scene/Scene.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
 
 #include <rendering/ShaderGlobals.hpp>
-#include <rendering/Skeleton.hpp>
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
+#include <rendering/RenderSkeleton.hpp>
+#include <rendering/RenderMaterial.hpp>
 
 #include <rendering/backend/RenderCommand.hpp>
+
+#include <core/containers/HashSet.hpp>
 
 #include <core/utilities/Format.hpp>
 
@@ -51,8 +54,8 @@ struct RENDER_COMMAND(UpdateEntityDrawData) : renderer::RenderCommand
                 .world_aabb_max         = Vec4f(proxy.aabb.max, 1.0f),
                 .world_aabb_min         = Vec4f(proxy.aabb.min, 1.0f),
                 .entity_index           = proxy.entity.GetID().ToIndex(),
-                .material_index         = proxy.material.IsValid() ? proxy.material->GetRenderResources().GetBufferIndex() : ~0u,
-                .skeleton_index         = proxy.skeleton.IsValid() ? proxy.skeleton->GetRenderResources().GetBufferIndex() : ~0u,
+                .material_index         = proxy.material.IsValid() ? proxy.material->GetRenderResource().GetBufferIndex() : ~0u,
+                .skeleton_index         = proxy.skeleton.IsValid() ? proxy.skeleton->GetRenderResource().GetBufferIndex() : ~0u,
                 .bucket                 = proxy.material.IsValid() ? proxy.material->GetRenderAttributes().bucket : BUCKET_INVALID,
                 .flags                  = proxy.skeleton.IsValid() ? ENTITY_GPU_FLAG_HAS_SKELETON : ENTITY_GPU_FLAG_NONE,
                 .user_data              = proxy.user_data.ReinterpretAs<EntityUserData>()
@@ -64,8 +67,6 @@ struct RENDER_COMMAND(UpdateEntityDrawData) : renderer::RenderCommand
 };
 
 #pragma endregion Render commands
-
-
 
 EnumFlags<SceneFlags> RenderProxyUpdaterSystem::GetRequiredSceneFlags() const
 {
@@ -97,7 +98,7 @@ void RenderProxyUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
         });
     }
 
-    mesh_component.flags |= MESH_COMPONENT_FLAG_DIRTY;
+    GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
 }
 
 void RenderProxyUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
@@ -109,13 +110,10 @@ void RenderProxyUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
 
 void RenderProxyUpdaterSystem::Process(GameCounter::TickUnit delta)
 {
+    HashSet<ID<Entity>> updated_entity_ids;
     Array<RC<RenderProxy>> render_proxies;
 
-    for (auto [entity_id, mesh_component, transform_component, bounding_box_component] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos())) {
-        if (!(mesh_component.flags & MESH_COMPONENT_FLAG_DIRTY)) {
-            continue;
-        }
-
+    for (auto [entity_id, mesh_component, transform_component, bounding_box_component, _] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_RENDER_PROXY>>().GetScopedView(GetComponentInfos())) {
         HYP_NAMED_SCOPE_FMT("Update draw data for entity #{}", entity_id.Value());
 
         const uint32 render_proxy_version = mesh_component.proxy != nullptr
@@ -139,10 +137,19 @@ void RenderProxyUpdaterSystem::Process(GameCounter::TickUnit delta)
         render_proxies.PushBack(mesh_component.proxy);
 
         if (mesh_component.previous_model_matrix == transform_component.transform.GetMatrix()) {
-            mesh_component.flags &= ~MESH_COMPONENT_FLAG_DIRTY;
+            updated_entity_ids.Insert(entity_id);
         } else {
             mesh_component.previous_model_matrix = transform_component.transform.GetMatrix();
         }
+    }
+
+    if (updated_entity_ids.Any()) {
+        AfterProcess([this, entity_ids = std::move(updated_entity_ids)]()
+        {
+            for (const ID<Entity> &entity_id : entity_ids) {
+                GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entity_id);
+            }
+        });
     }
 
     if (render_proxies.Any()) {

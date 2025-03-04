@@ -4,7 +4,7 @@
 
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/DirectionalLightShadowRenderer.hpp>
-#include <rendering/Scene.hpp>
+#include <rendering/RenderScene.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
@@ -71,7 +71,7 @@ RenderEnvironment::RenderEnvironment(Scene *scene)
       m_current_enabled_render_subsystems_mask(0),
       m_next_enabled_render_subsystems_mask(0),
       m_ddgi({
-          .aabb = {{-25.0f, -5.0f, -25.0f}, {25.0f, 30.0f, 25.0f}}
+          .aabb = {{-50.0f, -5.0f, -50.0f}, {50.0f, 60.0f, 50.0f}}
       }),
       m_has_rt_radiance(false),
       m_has_ddgi_probes(false),

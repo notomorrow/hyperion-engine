@@ -27,6 +27,7 @@ add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 
 add_definitions(-DHYP_VULKAN=1)
 add_definitions(-DHYP_BUILDTOOL=1)
+add_definitions(-DHYP_STATICALLY_LINKED=1)
 
 set(CMAKE_BUILD_PARALLEL_LEVEL 8)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYP_ROOT_DIR=\\\"${CMAKE_CURRENT_LIST_DIR}\\\"")
@@ -50,8 +51,8 @@ endif()
 
 # link with shared library hyperion
 add_subdirectory(${CMAKE_SOURCE_DIR}/../src/core ${CMAKE_BINARY_DIR}/../core)
-target_link_libraries(${BUILD_NAME} hyperion-core)
 add_dependencies(${BUILD_NAME} hyperion-core)
+target_link_libraries(${BUILD_NAME} hyperion-core)
 
 # copy the hyperion dll to the executable directory
 # add_custom_command(TARGET ${BUILD_NAME} POST_BUILD

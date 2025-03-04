@@ -14,6 +14,8 @@
 #include <rendering/backend/RenderConfig.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
+#include <scene/Mesh.hpp>
+
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/UIComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
@@ -241,14 +243,14 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
             const ID<Entity> entity = it.first;
             const RenderProxy &proxy = it.second;
 
-            proxy.UnclaimRenderResources();
+            proxy.UnclaimRenderResource();
 
             // Remove it, then add it back (changed proxies will be included in the added proxies list)
             AssertThrow(RemoveRenderProxy(proxy_list, entity));
         }
 
         for (RenderProxy &proxy : added_proxies) {
-            proxy.ClaimRenderResources();
+            proxy.ClaimRenderResource();
 
             proxy_list.Add(proxy.entity.GetID(), std::move(proxy));
         }
@@ -257,7 +259,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI) : renderer::RenderCommand
             const RenderProxy *proxy = proxy_list.GetProxyForEntity(entity);
             AssertThrow(proxy != nullptr);
 
-            proxy->UnclaimRenderResources();
+            proxy->UnclaimRenderResource();
 
             proxy_list.MarkToRemove(entity);
         }
@@ -392,6 +394,7 @@ void UIRenderCollector::CollectDrawCalls(Frame *frame)
     }
 
     TaskSystem::GetInstance().ParallelForEach(
+        HYP_STATIC_MESSAGE("UIRenderCollector::CollectDrawCalls"),
         TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER),
         iterators,
         [this](IteratorType it, uint32, uint32)
@@ -564,12 +567,12 @@ void UIRenderer::OnRender(Frame *frame)
 {
     HYP_SCOPE;
 
-    g_engine->GetRenderState()->BindScene(m_ui_stage->GetScene());
+    g_engine->GetRenderState()->SetActiveScene(m_ui_stage->GetScene());
 
     m_render_collector.CollectDrawCalls(frame);
     m_render_collector.ExecuteDrawCalls(frame);
 
-    g_engine->GetRenderState()->UnbindScene(m_ui_stage->GetScene());
+    g_engine->GetRenderState()->UnsetActiveScene();
 }
 
 #pragma endregion UIRenderer

@@ -6,9 +6,9 @@
 
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
-#include <asset/serialization/fbom/FBOMWriter.hpp>
-#include <asset/serialization/fbom/FBOMReader.hpp>
-#include <asset/serialization/fbom/FBOMDeserializedObject.hpp>
+#include <core/serialization/fbom/FBOMWriter.hpp>
+#include <core/serialization/fbom/FBOMReader.hpp>
+#include <core/serialization/fbom/FBOMDeserializedObject.hpp>
 
 #include <core/utilities/DeferredScope.hpp>
 
@@ -36,7 +36,7 @@ EditorProject::EditorProject(Name name)
     camera->SetNear(0.01f);
     camera->SetFar(30000.0f);
 
-    m_scene = CreateObject<Scene>(nullptr, camera, SceneFlags::FOREGROUND);
+    m_scene = CreateObject<Scene>(nullptr, camera, SceneFlags::FOREGROUND | SceneFlags::HAS_TLAS);
 }
 
 EditorProject::~EditorProject()

@@ -4,22 +4,20 @@
 
 #include <core/threading/Threads.hpp>
 
-#include <core/logging/LogChannels.hpp>
-#include <core/logging/Logger.hpp>
-
 #include <core/object/HypClass.hpp>
 #include <core/object/HypProperty.hpp>
 #include <core/object/HypField.hpp>
 #include <core/object/HypConstant.hpp>
 
+#include <core/algorithm/FindIf.hpp>
+
 #include <core/utilities/Format.hpp>
 
-#include <system/AppContext.hpp>
+#include <core/io/ByteWriter.hpp>
+#include <core/io/BufferedByteReader.hpp>
 
-#include <asset/ByteWriter.hpp>
-#include <asset/BufferedByteReader.hpp>
-
-#include <Engine.hpp>
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
 
 namespace hyperion {
 namespace config {
@@ -801,14 +799,6 @@ bool ConfigurationTable::SetHypClassFields(const HypClass *hyp_class, const void
 
 
 #pragma endregion ConfigurationTable
-
-HYP_API const ConfigurationTable &GetGlobalConfigurationTable()
-{
-    AssertThrow(g_engine.IsValid());
-    AssertThrow(g_engine->GetAppContext() != nullptr);
-
-    return g_engine->GetAppContext()->GetConfiguration();
-}
 
 } // namespace config
 } // namespace hyperion

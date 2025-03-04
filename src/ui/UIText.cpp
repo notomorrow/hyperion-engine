@@ -4,7 +4,7 @@
 #include <ui/UIStage.hpp>
 
 #include <rendering/ShaderGlobals.hpp>
-#include <rendering/Texture.hpp>
+#include <rendering/RenderTexture.hpp>
 
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RenderConfig.hpp>
@@ -18,8 +18,8 @@
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 
-#include <math/Vector3.hpp>
-#include <math/Quaternion.hpp>
+#include <core/math/Vector3.hpp>
+#include <core/math/Quaternion.hpp>
 
 #include <core/logging/Logger.hpp>
 
@@ -380,7 +380,7 @@ void UIText::UpdateMeshData_Internal()
     mesh_component.instance_data.SetBufferData(2, instance_offsets.Data(), instance_offsets.Size());
     mesh_component.instance_data.SetBufferData(3, instance_sizes.Data(), instance_sizes.Size());
 
-    mesh_component.flags |= MESH_COMPONENT_FLAG_DIRTY;
+    GetScene()->GetEntityManager()->AddTag<EntityTag::UPDATE_RENDER_PROXY>(GetEntity());
 }
 
 bool UIText::Repaint_Internal()

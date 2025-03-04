@@ -832,27 +832,27 @@ void Node::UpdateWorldTransform(bool update_child_transforms)
 
     const Transform transform_before = m_world_transform;
 
-    if (m_parent_node != nullptr && !(m_flags & NodeFlags::IGNORE_PARENT_TRANSFORM)) {
-        m_world_transform = m_parent_node->GetWorldTransform() * m_local_transform;
-    } else if (m_parent_node != nullptr) {
-        m_world_transform = m_local_transform;
+    Transform world_transform = m_local_transform;
+
+    if (m_parent_node != nullptr) {
+        world_transform = m_parent_node->GetWorldTransform() * m_local_transform;
         
-        if (!(m_flags & NodeFlags::IGNORE_PARENT_TRANSLATION)) {
-            m_world_transform.GetTranslation() = (m_local_transform.GetTranslation() + m_parent_node->GetWorldTransform().GetTranslation());
+        if (m_flags & NodeFlags::IGNORE_PARENT_TRANSFORM) {
+            if (m_flags & NodeFlags::IGNORE_PARENT_TRANSLATION) {
+                world_transform.GetTranslation() = m_local_transform.GetTranslation();
+            }
+    
+            if (m_flags & NodeFlags::IGNORE_PARENT_ROTATION) {
+                world_transform.GetRotation() = m_local_transform.GetRotation();
+            }
+    
+            if (m_flags & NodeFlags::IGNORE_PARENT_SCALE) {
+                world_transform.GetScale() = m_local_transform.GetScale();
+            }
         }
-
-        if (!(m_flags & NodeFlags::IGNORE_PARENT_ROTATION)) {
-            m_world_transform.GetRotation() = (m_local_transform.GetRotation() * m_parent_node->GetWorldTransform().GetRotation());
-        }
-
-        if (!(m_flags & NodeFlags::IGNORE_PARENT_SCALE)) {
-            m_world_transform.GetScale() = (m_local_transform.GetScale() * m_parent_node->GetWorldTransform().GetScale());
-        }
-
-        m_world_transform.UpdateMatrix();
-    } else {
-        m_world_transform = m_local_transform;
     }
+
+    m_world_transform = world_transform;
 
     if (m_world_transform == transform_before) {
         return;
@@ -915,6 +915,11 @@ void Node::RefreshEntityTransform()
                 m_world_transform
             });
         }
+
+        m_scene->GetEntityManager()->AddTags<
+            EntityTag::UPDATE_AABB,
+            EntityTag::UPDATE_LIGHT_TRANSFORM
+        >(m_entity);
     } else {
         SetEntityAABB(BoundingBox::Empty());
     }
@@ -979,20 +984,43 @@ bool Node::TestRay(const Ray &ray, RayTestResults &out_results, bool use_bvh) co
     if (ray.TestAABB(world_aabb)) {
         if (m_entity.IsValid()) {
             BVHNode *bvh = nullptr;
+            Matrix4 model_matrix = Matrix4::Identity();
 
             if (use_bvh && m_scene && m_scene->GetEntityManager()) {
                 if (BVHComponent *bvh_component = m_scene->GetEntityManager()->TryGetComponent<BVHComponent>(m_entity.GetID())) {
                     bvh = &bvh_component->bvh;
                 }
+                
+                if (TransformComponent *transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity.GetID())) {
+                    model_matrix = transform_component->transform.GetMatrix();
+                }
             }
 
             if (bvh) {
-                RayTestResults bvh_results = bvh->TestRay(ray);
+                const Ray local_space_ray = model_matrix.Inverted() * ray;
 
-                if (bvh_results.Any()) {
-                    for (RayHit &hit : bvh_results) {
+                RayTestResults local_bvh_results = bvh->TestRay(local_space_ray);
+
+                if (local_bvh_results.Any()) {
+                    const Matrix4 normal_matrix = model_matrix.Transposed().Inverted();
+
+                    RayTestResults bvh_results;
+
+                    for (RayHit hit : local_bvh_results) {
                         hit.id = m_entity.GetID().Value();
                         hit.user_data = nullptr;
+                        
+                        Vec4f transformed_normal = normal_matrix * Vec4f(hit.normal, 0.0f);
+                        hit.normal = transformed_normal.GetXYZ().Normalized();
+
+                        Vec4f transformed_position = model_matrix * Vec4f(hit.hitpoint, 1.0f);
+                        transformed_position /= transformed_position.w;
+
+                        hit.hitpoint = transformed_position.GetXYZ();
+
+                        hit.distance = (hit.hitpoint - ray.position).Length();
+
+                        bvh_results.AddHit(hit);
                     }
 
                     out_results.Merge(std::move(bvh_results));

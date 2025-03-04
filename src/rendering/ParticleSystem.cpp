@@ -7,16 +7,19 @@
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/Scene.hpp>
-#include <rendering/Camera.hpp>
-#include <rendering/EnvGrid.hpp>
-#include <rendering/EnvProbe.hpp>
-#include <rendering/PlaceholderData.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderCamera.hpp>
+#include <rendering/RenderProbe.hpp>
 #include <rendering/RenderState.hpp>
+#include <rendering/RenderMesh.hpp>
+#include <rendering/PlaceholderData.hpp>
+#include <rendering/EnvGrid.hpp>
 
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
+
+#include <scene/Mesh.hpp>
 
 #include <core/object/HypClassUtils.hpp>
 
@@ -24,7 +27,7 @@
 
 #include <core/util/ForEach.hpp>
 
-#include <math/MathUtil.hpp>
+#include <core/math/MathUtil.hpp>
 
 #include <util/MeshBuilder.hpp>
 #include <util/NoiseFactory.hpp>
@@ -159,7 +162,7 @@ struct RENDER_COMMAND(CreateParticleSystemBuffers) : renderer::RenderCommand
         ));
 
         IndirectDrawCommand empty_draw_command { };
-        quad_mesh->PopulateIndirectDrawCommand(empty_draw_command);
+        quad_mesh->GetRenderResource().PopulateIndirectDrawCommand(empty_draw_command);
 
         // copy zeros to buffer
         staging_buffer->Copy(
@@ -384,7 +387,7 @@ void ParticleSystem::Init()
     InitObject(m_quad_mesh);
 
     // Allow Render() to be called directly without a RenderGroup
-    m_quad_mesh->SetPersistentRenderResourcesEnabled(true);
+    m_quad_mesh->SetPersistentRenderResourceEnabled(true);
 
     CreateBuffers();
     CreateCommandBuffers();
@@ -421,8 +424,8 @@ void ParticleSystem::UpdateParticles(Frame *frame)
     Threads::AssertOnThread(g_render_thread);
     AssertReady();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     if (m_particle_spawners.GetItems().Empty()) {
         if (m_particle_spawners.HasUpdatesPending()) {
@@ -537,8 +540,8 @@ void ParticleSystem::Render(Frame *frame)
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     FixedArray<uint32, num_async_rendering_command_buffers> command_buffers_recorded_states { };
     
@@ -572,7 +575,7 @@ void ParticleSystem::Render(Frame *frame)
                         }
                     );
 
-                    m_quad_mesh->RenderIndirect(
+                    m_quad_mesh->GetRenderResource().RenderIndirect(
                         secondary,
                         particle_spawner->GetIndirectBuffer().Get()
                     );

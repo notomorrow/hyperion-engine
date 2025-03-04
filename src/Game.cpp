@@ -1,10 +1,10 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <Game.hpp>
+#include <GameThread.hpp>
 
 #include <asset/Assets.hpp>
 
-#include <core/threading/GameThread.hpp>
 #include <core/threading/Threads.hpp>
 
 #include <system/SystemEvent.hpp>
@@ -16,7 +16,7 @@
 
 #include <scene/camera/Camera.hpp>
 
-#include <rendering/Camera.hpp>
+#include <rendering/RenderCamera.hpp>
 #include <rendering/RenderState.hpp>
 
 #include <dotnet/DotNetSystem.hpp>
@@ -75,7 +75,7 @@ void Game::Init_Internal()
     );
 
     InitObject(camera);
-    // camera->GetRenderResources().EnqueueBind();
+    // camera->GetRenderResource().EnqueueBind();
 
     m_scene = CreateObject<Scene>(
         SceneFlags::FOREGROUND | SceneFlags::HAS_TLAS // default it to having a top level acceleration structure for RT
@@ -84,26 +84,30 @@ void Game::Init_Internal()
     m_scene->SetName(NAME("Scene_Main"));
     m_scene->SetCamera(camera);
 
-    m_game_thread->GetScheduler().Enqueue([this]() -> void
-    {
-        if (m_managed_game_info.HasValue()) {
-            if ((m_managed_assembly = dotnet::DotNetSystem::GetInstance().LoadAssembly(m_managed_game_info->assembly_name.Data()))) {
-                if (dotnet::Class *class_ptr = m_managed_assembly->GetClassObjectHolder().FindClassByName(m_managed_game_info->class_name.Data())) {
-                    m_managed_game_object = class_ptr->NewObject();
+    m_game_thread->GetScheduler().Enqueue(
+        HYP_STATIC_MESSAGE("Initialize game"),
+        [this]() -> void
+        {
+            if (m_managed_game_info.HasValue()) {
+                if ((m_managed_assembly = dotnet::DotNetSystem::GetInstance().LoadAssembly(m_managed_game_info->assembly_name.Data()))) {
+                    if (dotnet::Class *class_ptr = m_managed_assembly->GetClassObjectHolder().FindClassByName(m_managed_game_info->class_name.Data())) {
+                        m_managed_game_object = class_ptr->NewObject();
+                    }
                 }
             }
-        }
 
-        m_scene->SetIsAudioListener(true);
+            m_scene->SetIsAudioListener(true);
 
-        g_engine->GetWorld()->AddScene(m_scene);
-        InitObject(m_scene);
-        
-        m_ui_stage.Emplace(g_game_thread);
+            g_engine->GetWorld()->AddScene(m_scene);
+            InitObject(m_scene);
+            
+            m_ui_stage.Emplace(g_game_thread);
 
-        // Call Init method (overridden)
-        Init();
-    }, TaskEnqueueFlags::FIRE_AND_FORGET);
+            // Call Init method (overridden)
+            Init();
+        },
+        TaskEnqueueFlags::FIRE_AND_FORGET
+    );
 
     m_game_thread->Start(this);
 
@@ -214,10 +218,14 @@ void Game::PushEvent(SystemEvent &&event)
     }
 
     if (m_game_thread->IsRunning()) {
-        m_game_thread->GetScheduler().Enqueue([this, event = std::move(event)]() mutable -> void
-        {
-            HandleEvent(std::move(event));
-        }, TaskEnqueueFlags::FIRE_AND_FORGET);
+        m_game_thread->GetScheduler().Enqueue(
+            HYP_STATIC_MESSAGE("HandleEvent"),
+            [this, event = std::move(event)]() mutable -> void
+            {
+                HandleEvent(std::move(event));
+            },
+            TaskEnqueueFlags::FIRE_AND_FORGET
+        );
     }
 }
 
@@ -303,7 +311,7 @@ void Game::OnFrameBegin(Frame *frame)
     Threads::AssertOnThread(g_render_thread);
 
     g_engine->GetRenderState()->AdvanceFrameCounter();
-    g_engine->GetRenderState()->BindScene(m_scene.Get());
+    g_engine->GetRenderState()->SetActiveScene(m_scene.Get());
 
     // temp
     if (m_scene.IsValid() && m_scene->IsReady()) {
@@ -317,7 +325,7 @@ void Game::OnFrameEnd(Frame *frame)
 
     Threads::AssertOnThread(g_render_thread);
 
-    g_engine->GetRenderState()->UnbindScene(m_scene.Get());
+    g_engine->GetRenderState()->UnsetActiveScene();
 
     // temp
     if (m_scene.IsValid() && m_scene->IsReady()) {

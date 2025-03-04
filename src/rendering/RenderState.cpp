@@ -1,8 +1,9 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/RenderState.hpp>
-#include <rendering/Camera.hpp>
-#include <rendering/EnvProbe.hpp>
+#include <rendering/RenderCamera.hpp>
+#include <rendering/RenderProbe.hpp>
+#include <rendering/RenderLight.hpp>
 
 #include <rendering/backend/RendererFramebuffer.hpp>
 
@@ -44,19 +45,19 @@ void RenderState::Init()
     } default_camera_initializer;
 
     // Ensure the default camera is always set
-    camera_bindings.PushBack(&default_camera_initializer.camera->GetRenderResources());
+    camera_bindings.PushBack(&default_camera_initializer.camera->GetRenderResource());
 
     SetReady(true);
 }
 
-void RenderState::UnbindScene(const Scene *scene)
+/*void RenderState::UnbindScene(const Scene *scene)
 {
     AssertThrow(scene != nullptr);
     AssertThrow(scene->IsReady());
 
     Threads::AssertOnThread(g_render_thread);
 
-    SceneRenderResources *scene_render_resources = &scene->GetRenderResources();
+    SceneRenderResource *scene_render_resources = &scene->GetRenderResource();
 
     for (auto it = scene_bindings.Begin(); it != scene_bindings.End();) {
         if ((*it) == scene_render_resources) {
@@ -68,7 +69,7 @@ void RenderState::UnbindScene(const Scene *scene)
             ++it;
         }
     }
-}
+}*/
 
 void RenderState::BindCamera(Camera *camera)
 {
@@ -78,7 +79,7 @@ void RenderState::BindCamera(Camera *camera)
     Threads::AssertOnThread(g_render_thread);
     
     // Allow multiple of the same so we can always override the topmost camera
-    camera_bindings.PushBack(&camera->GetRenderResources());
+    camera_bindings.PushBack(&camera->GetRenderResource());
 }
 
 void RenderState::UnbindCamera(Camera *camera)
@@ -88,7 +89,7 @@ void RenderState::UnbindCamera(Camera *camera)
 
     Threads::AssertOnThread(g_render_thread);
 
-    CameraRenderResources *camera_render_resources = &camera->GetRenderResources();
+    CameraRenderResource *camera_render_resources = &camera->GetRenderResource();
 
     for (auto it = camera_bindings.Begin(); it != camera_bindings.End();) {
         if ((*it) == camera_render_resources) {
@@ -102,11 +103,11 @@ void RenderState::UnbindCamera(Camera *camera)
     }
 }
 
-const CameraRenderResources &RenderState::GetActiveCamera() const
+const CameraRenderResource &RenderState::GetActiveCamera() const
 {
     Threads::AssertOnThread(g_render_thread);
 
-    static const CameraRenderResources empty { nullptr };
+    static const CameraRenderResource empty { nullptr };
 
     return camera_bindings.Any()
         ? *camera_bindings.Back()
@@ -122,15 +123,15 @@ void RenderState::BindLight(Light *light)
 
     auto &array = bound_lights[uint32(light->GetLightType())];
 
-    auto it = array.FindIf([light](const TResourceHandle<LightRenderResources> &item)
+    auto it = array.FindIf([light](const TResourceHandle<LightRenderResource> &item)
     {
         return item->GetLight() == light;
     });
 
     if (it != array.End()) {
-        *it = TResourceHandle(light->GetRenderResources());
+        *it = TResourceHandle<LightRenderResource>(light->GetRenderResource());
     } else {
-        array.PushBack(TResourceHandle(light->GetRenderResources()));
+        array.PushBack(TResourceHandle<LightRenderResource>(light->GetRenderResource()));
     }
 }
 
@@ -143,7 +144,7 @@ void RenderState::UnbindLight(Light *light)
 
     auto &array = bound_lights[uint32(light->GetLightType())];
 
-    auto it = array.FindIf([light](const TResourceHandle<LightRenderResources> &item)
+    auto it = array.FindIf([light](const TResourceHandle<LightRenderResource> &item)
     {
         return item->GetLight() == light;
     });
@@ -153,22 +154,22 @@ void RenderState::UnbindLight(Light *light)
     }
 }
 
-const TResourceHandle<LightRenderResources> &RenderState::GetActiveLight() const
+const TResourceHandle<LightRenderResource> &RenderState::GetActiveLight() const
 {
     Threads::AssertOnThread(g_render_thread);
 
-    static const TResourceHandle<LightRenderResources> empty;
+    static const TResourceHandle<LightRenderResource> empty;
 
     return light_bindings.Any()
         ? light_bindings.Top()
         : empty;
 }
 
-void RenderState::SetActiveLight(LightRenderResources &light_render_resources)
+void RenderState::SetActiveLight(LightRenderResource &light_render_resources)
 {
     Threads::AssertOnThread(g_render_thread);
 
-    light_bindings.Push(TResourceHandle(light_render_resources));
+    light_bindings.Push(TResourceHandle<LightRenderResource>(light_render_resources));
 }
 
 void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)

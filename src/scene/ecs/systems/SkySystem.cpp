@@ -3,11 +3,12 @@
 #include <scene/ecs/systems/SkySystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
+
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/Shader.hpp>
-#include <rendering/Material.hpp>
-#include <rendering/Mesh.hpp>
-#include <rendering/Scene.hpp>
+#include <rendering/RenderScene.hpp>
 #include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 
 #include <util/MeshBuilder.hpp>
@@ -21,7 +22,7 @@ void SkySystem::OnEntityAdded(const Handle<Entity> &entity)
     SkyComponent &sky_component = GetEntityManager().GetComponent<SkyComponent>(entity);
 
     if (!sky_component.render_subsystem) {
-        sky_component.render_subsystem = GetScene()->GetRenderResources().GetEnvironment()->AddRenderSubsystem<SkydomeRenderer>(Name::Unique("sky_renderer"));
+        sky_component.render_subsystem = GetScene()->GetRenderResource().GetEnvironment()->AddRenderSubsystem<SkydomeRenderer>(Name::Unique("sky_renderer"));
     }
     
     MeshComponent *mesh_component = GetEntityManager().TryGetComponent<MeshComponent>(entity);
@@ -35,7 +36,7 @@ void SkySystem::OnEntityAdded(const Handle<Entity> &entity)
         // mesh_component.mesh->InvertNormals();
         InitObject(mesh_component->mesh);
 
-        mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
+        GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
     }
 
     if (!mesh_component->material) {
@@ -54,7 +55,7 @@ void SkySystem::OnEntityAdded(const Handle<Entity> &entity)
 
         mesh_component->material = std::move(material);
 
-        mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
+        GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
     }
 }
 
@@ -66,7 +67,7 @@ void SkySystem::OnEntityRemoved(ID<Entity> entity)
     MeshComponent &mesh_component = GetEntityManager().GetComponent<MeshComponent>(entity);
 
     if (sky_component.render_subsystem) {
-        GetScene()->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<SkydomeRenderer>(sky_component.render_subsystem->GetName());
+        GetScene()->GetRenderResource().GetEnvironment()->RemoveRenderSubsystem<SkydomeRenderer>(sky_component.render_subsystem->GetName());
 
         sky_component.render_subsystem = nullptr;
     }

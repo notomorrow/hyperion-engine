@@ -4,7 +4,7 @@
 #include <scene/animation/Bone.hpp>
 #include <scene/animation/Animation.hpp>
 
-#include <rendering/Skeleton.hpp>
+#include <rendering/RenderSkeleton.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/backend/RendererResult.hpp>
 
@@ -37,10 +37,10 @@ Skeleton::Skeleton(const RC<Bone> &root_bone)
 
 Skeleton::~Skeleton()
 {
-    if (m_render_resources != nullptr) {
-        FreeResource(m_render_resources);
+    if (m_render_resource != nullptr) {
+        FreeResource(m_render_resource);
 
-        m_render_resources = nullptr;
+        m_render_resource = nullptr;
     }
 
     if (m_root_bone) {
@@ -60,14 +60,14 @@ void Skeleton::Init()
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
     {
-        if (m_render_resources != nullptr) {
-            FreeResource(m_render_resources);
+        if (m_render_resource != nullptr) {
+            FreeResource(m_render_resource);
 
-            m_render_resources = nullptr;
+            m_render_resource = nullptr;
         }
     }));
 
-    m_render_resources = AllocateResource<SkeletonRenderResources>(this);
+    m_render_resource = AllocateResource<SkeletonRenderResource>(this);
 
     m_mutation_state |= DataMutationState::DIRTY;
     
@@ -102,7 +102,7 @@ void Skeleton::Update(GameCounter::TickUnit)
             }
         }
 
-        m_render_resources->SetBufferData(shader_data);
+        m_render_resource->SetBufferData(shader_data);
     }
     
     m_mutation_state = DataMutationState::CLEAN;

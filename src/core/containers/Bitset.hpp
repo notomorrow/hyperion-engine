@@ -6,7 +6,7 @@
 #include <core/containers/Array.hpp>
 #include <core/utilities/FormatFwd.hpp>
 
-#include <math/MathUtil.hpp>
+#include <core/math/MathUtil.hpp>
 
 #include <Types.hpp>
 
@@ -283,7 +283,7 @@ private:
         }
     }
 
-    Array<BlockType, 64>    m_blocks;
+    Array<BlockType, InlineAllocator<16>>   m_blocks;
 };
 
 } // namespace containers

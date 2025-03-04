@@ -2,16 +2,19 @@
 
 #include <asset/model_loaders/OBJModelLoader.hpp>
 
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
-
+#include <scene/Mesh.hpp>
 #include <scene/World.hpp>
+#include <scene/Material.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
+
+#include <core/containers/HashMap.hpp>
+
+#include <core/algorithm/AnyOf.hpp>
 
 #include <core/logging/Logger.hpp>
 
@@ -62,7 +65,7 @@ static void AddMesh(OBJModel &model, const String &name, const String &material)
     String unique_name(name);
     int counter = 0;
 
-    while (model.meshes.Any([&unique_name](const OBJMesh &obj_mesh) { return obj_mesh.name == unique_name; })) {
+    while (AnyOf(model.meshes, [&unique_name](const OBJMesh &obj_mesh) { return obj_mesh.name == unique_name; })) {
         unique_name = name + String::ToString(++counter);
     }
 
@@ -300,9 +303,11 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
         Array<Mesh::Index> indices;
         indices.Reserve(obj_mesh.indices.Size());
 
-        FlatMap<OBJIndex, Mesh::Index> index_map;
+        HashMap<OBJIndex, Mesh::Index> index_map;
 
         const bool has_indices = !obj_mesh.indices.Empty();
+
+        BoundingBox mesh_aabb = BoundingBox::Empty();
 
         if (has_indices) {
             for (const OBJIndex &obj_index : obj_mesh.indices) {
@@ -320,6 +325,8 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
 
                 if (has_vertices) {
                     vertex.SetPosition(GetIndexedVertexProperty(obj_index.vertex, model.positions));
+
+                    mesh_aabb = mesh_aabb.Union(vertex.GetPosition());
                 }
 
                 if (has_normals) {
@@ -342,6 +349,15 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             HYP_LOG(Assets, Warning, "Obj model loader: Mesh does not have any faces defined; skipping.");
 
             continue;
+        }
+
+        const Vec3f mesh_aabb_min = mesh_aabb.GetMin();
+        const Vec3f mesh_aabb_center = mesh_aabb.GetCenter();
+
+        // offset all vertices by the AABB's center,
+        // we will apply the transformation to the entity's transform component
+        for (Vertex &vertex : vertices) {
+            vertex.SetPosition(vertex.GetPosition() - mesh_aabb_center);
         }
 
         Handle<Mesh> mesh = CreateObject<Mesh>(
@@ -413,10 +429,9 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState &state, OBJModel &model)
             }
         );
 
-        NodeProxy node(MakeRefCountedPtr<Node>(obj_mesh.name));
+        NodeProxy node = top->AddChild(NodeProxy(MakeRefCountedPtr<Node>(obj_mesh.name)));
         node->SetEntity(entity);
-        
-        top->AddChild(std::move(node));
+        node->SetLocalTranslation(mesh_aabb_center);
     }
 
     return { { LoaderResult::Status::OK }, top };

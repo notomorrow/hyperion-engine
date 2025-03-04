@@ -6,7 +6,7 @@
 #include <core/utilities/Variant.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
-#include <core/containers/FlatMap.hpp>
+#include <core/containers/HashMap.hpp>
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
 
@@ -175,18 +175,16 @@ public:
 
 class HYP_API Configuration
 {
-    static const FlatMap<OptionName, String> option_name_strings;
-
 public:
     Configuration();
     ~Configuration() = default;
 
-    HYP_FORCE_INLINE Option &Get(OptionName option)
+    HYP_FORCE_INLINE HYP_DEPRECATED Option &Get(OptionName option)
     {
         return m_variables[uint32(option)];
     }
 
-    HYP_FORCE_INLINE const Option &Get(OptionName option) const
+    HYP_FORCE_INLINE HYP_DEPRECATED const Option &Get(OptionName option) const
     {
         return m_variables[uint32(option)];
     }

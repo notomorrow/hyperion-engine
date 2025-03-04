@@ -7,13 +7,14 @@
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
+
 #include <scene/Scene.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
 
-#include <math/Vertex.hpp>
+#include <core/math/Vertex.hpp>
 
-#include <rendering/Mesh.hpp>
-#include <rendering/Material.hpp>
-#include <rendering/Texture.hpp>
+#include <rendering/RenderTexture.hpp>
 
 #include <asset/Assets.hpp>
 
@@ -80,7 +81,6 @@ public:
         if (patch_mesh_component) {
             patch_mesh_component->mesh = m_mesh;
             patch_mesh_component->material = m_material;
-            patch_mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
         } else {
             // Add MeshComponent to patch entity
             entity_manager->AddComponent<MeshComponent>(entity, MeshComponent {
@@ -88,6 +88,8 @@ public:
                 .material   = m_material
             });
         }
+
+        entity_manager->AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
     }
 
     virtual void Update(GameCounter::TickUnit delta) override
@@ -288,10 +290,10 @@ Array<Vertex> TerrainMeshBuilder::BuildVertices() const
     Array<Vertex> vertices;
     vertices.Resize(m_height_data.patch_info.extent.x * m_height_data.patch_info.extent.z);
 
-    uint32 i = 0;
+    int i = 0;
 
-    for (uint32 z = 0; z < m_height_data.patch_info.extent.z; z++) {
-        for (uint32 x = 0; x < m_height_data.patch_info.extent.x; x++) {
+    for (int z = 0; z < m_height_data.patch_info.extent.z; z++) {
+        for (int x = 0; x < m_height_data.patch_info.extent.x; x++) {
             const Vec3f position = Vec3f { float(x), m_height_data.heights[i].height, float(z) } * m_height_data.patch_info.scale;
 
             const Vec2f texcoord(
@@ -309,9 +311,9 @@ Array<Vertex> TerrainMeshBuilder::BuildVertices() const
 Array<uint32> TerrainMeshBuilder::BuildIndices() const
 {
     Array<uint32> indices;
-    indices.Resize(6 * (m_height_data.patch_info.extent.x - 1) * (m_height_data.patch_info.extent.z - 1));
+    indices.Resize(SizeType(6 * (m_height_data.patch_info.extent.x - 1) * (m_height_data.patch_info.extent.z - 1)));
 
-    uint32 pitch = m_height_data.patch_info.extent.x;
+    uint32 pitch = uint32(m_height_data.patch_info.extent.x);
     uint32 row = 0;
 
     uint32 i0 = row;

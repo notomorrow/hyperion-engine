@@ -8,7 +8,7 @@
 
 #include <util/MeshBuilder.hpp>
 
-#include <math/MathUtil.hpp>
+#include <core/math/MathUtil.hpp>
 
 #include <scene/World.hpp>
 
@@ -21,7 +21,7 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 
-#include <rendering/Texture.hpp>
+#include <rendering/RenderTexture.hpp>
 #include <rendering/font/FontAtlas.hpp>
 
 #include <system/AppContext.hpp>

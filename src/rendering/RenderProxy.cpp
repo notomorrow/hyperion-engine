@@ -1,9 +1,12 @@
-#include <rendering/RenderProxy.hpp>
 #include <rendering/SafeDeleter.hpp>
-#include <rendering/Skeleton.hpp>
-#include <rendering/Material.hpp>
+#include <rendering/RenderProxy.hpp>
+#include <rendering/RenderMaterial.hpp>
+#include <rendering/RenderMesh.hpp>
+#include <rendering/RenderSkeleton.hpp>
 
 #include <scene/Entity.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
 
 #include <scene/animation/Skeleton.hpp>
 
@@ -15,33 +18,33 @@ extern HYP_API SafeDeleter *g_safe_deleter;
 
 #pragma region RenderProxy
 
-void RenderProxy::ClaimRenderResources() const
+void RenderProxy::ClaimRenderResource() const
 {
     if (material.IsValid()) {
-        material->GetRenderResources().Claim();
+        material->GetRenderResource().Claim();
     }
 
     if (mesh.IsValid()) {
-        mesh->GetRenderResources().Claim();
+        mesh->GetRenderResource().Claim();
     }
 
     if (skeleton.IsValid()) {
-        skeleton->GetRenderResources().Claim();
+        skeleton->GetRenderResource().Claim();
     }
 }
 
-void RenderProxy::UnclaimRenderResources() const
+void RenderProxy::UnclaimRenderResource() const
 {
     if (material.IsValid()) {
-        material->GetRenderResources().Unclaim();
+        material->GetRenderResource().Unclaim();
     }
 
     if (mesh.IsValid()) {
-        mesh->GetRenderResources().Unclaim();
+        mesh->GetRenderResource().Unclaim();
     }
 
     if (skeleton.IsValid()) {
-        skeleton->GetRenderResources().Unclaim();
+        skeleton->GetRenderResource().Unclaim();
     }
 }
 

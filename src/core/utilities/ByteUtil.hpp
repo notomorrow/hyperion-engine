@@ -3,8 +3,8 @@
 #ifndef HYPERION_BYTE_UTIL_HPP
 #define HYPERION_BYTE_UTIL_HPP
 
-#include <math/MathUtil.hpp>
-#include <math/Vector4.hpp>
+#include <core/math/MathUtil.hpp>
+#include <core/math/Vector4.hpp>
 
 #include <Types.hpp>
 
@@ -97,9 +97,6 @@ public:
      *  \param value The value to count the bits of.
      *  \return The number of bits set in the value. */
     static uint64 BitCount(uint64 value);
-    
-    HYP_FORCE_INLINE static constexpr uint32 MaskToBitIndex(uint64 mask)
-        { return MathUtil::FastLog2_Pow2(mask); }
 };
 
 /*! \brief Converts a value of type \ref{To} to a value of type \ref{From}.

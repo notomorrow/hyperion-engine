@@ -7,13 +7,12 @@
 #include <core/object/HypObject.hpp>
 
 #include <rendering/PostFX.hpp>
-#include <rendering/Light.hpp>
 #include <rendering/RenderSubsystem.hpp>
-#include <rendering/EnvProbe.hpp>
+#include <rendering/RenderProbe.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
-#include <math/BoundingBox.hpp>
+#include <core/math/BoundingBox.hpp>
 
 namespace hyperion {
 

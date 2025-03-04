@@ -6,10 +6,12 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
 #include <rendering/EnvGrid.hpp>
-#include <rendering/EnvProbe.hpp>
-#include <rendering/Scene.hpp>
-#include <rendering/Camera.hpp>
-#include <rendering/World.hpp>
+#include <rendering/RenderProbe.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderCamera.hpp>
+#include <rendering/RenderWorld.hpp>
+#include <rendering/RenderMaterial.hpp>
+#include <rendering/RenderLight.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/RenderState.hpp>
@@ -26,6 +28,8 @@
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
 #include <scene/World.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -358,8 +362,8 @@ void DeferredPass::Record(uint32 frame_index)
 
     static const bool use_bindless_textures = g_engine->GetGPUDevice()->GetFeatures().SupportsBindlessTextures();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
     
     const CommandBufferRef &command_buffer = m_command_buffers[frame_index];
 
@@ -416,8 +420,8 @@ void DeferredPass::Record(uint32 frame_index)
 
                 const auto &lights = g_engine->GetRenderState()->bound_lights[uint32(light_type)];
 
-                for (const TResourceHandle<LightRenderResources> &it : lights) {
-                    LightRenderResources &light_render_resources = *it;
+                for (const TResourceHandle<LightRenderResource> &it : lights) {
+                    LightRenderResource &light_render_resources = *it;
                     AssertThrow(light_render_resources.GetBufferIndex() != ~0u);
 
                     const LightShaderData &buffer_data = light_render_resources.GetBufferData();
@@ -446,13 +450,13 @@ void DeferredPass::Record(uint32 frame_index)
                     
                     // Bind material descriptor set (for area lights)
                     if (material_descriptor_set_index != ~0u && !use_bindless_textures && light_render_resources.GetMaterial().IsValid()) {
-                        const DescriptorSetRef &material_descriptor_set = light_render_resources.GetMaterial()->GetRenderResources().GetDescriptorSets()[frame_index];
+                        const DescriptorSetRef &material_descriptor_set = light_render_resources.GetMaterial()->GetRenderResource().GetDescriptorSets()[frame_index];
                         AssertThrow(material_descriptor_set != nullptr);
 
                         material_descriptor_set->Bind(cmd, render_group->GetPipeline(), material_descriptor_set_index);
                     }
 
-                    m_full_screen_quad->Render(cmd);
+                    m_full_screen_quad->GetRenderResource().Render(cmd);
                 }
             }
 
@@ -585,8 +589,8 @@ void EnvGridPass::Render(Frame *frame)
 
     const uint32 env_grid_index = g_engine->GetRenderState()->bound_env_grid.ToIndex();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     GetFramebuffer()->BeginCapture(frame->GetCommandBuffer(), frame_index);
 
@@ -633,7 +637,7 @@ void EnvGridPass::Render(Frame *frame)
             scene_descriptor_set_index
         );
 
-    m_full_screen_quad->Render(command_buffer);
+    m_full_screen_quad->GetRenderResource().Render(command_buffer);
 
     command_buffer->End(g_engine->GetGPUDevice());
 
@@ -800,8 +804,8 @@ void ReflectionProbePass::Render(Frame *frame)
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     // Sky renders first
     static const FixedArray<EnvProbeType, ApplyReflectionProbeMode::MAX> reflection_probe_types {
@@ -899,7 +903,7 @@ void ReflectionProbePass::Render(Frame *frame)
                     scene_descriptor_set_index
                 );
 
-            m_full_screen_quad->Render(command_buffer);
+            m_full_screen_quad->GetRenderResource().Render(command_buffer);
 
             ++num_rendered_env_probes;
         }
@@ -1138,8 +1142,8 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     const bool is_render_environment_ready = environment && environment->IsReady();
 
@@ -1372,7 +1376,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
             }
         );
 
-        m_combine_pass->GetQuadMesh()->Render(m_combine_pass->GetCommandBuffer(frame_index));
+        m_combine_pass->GetQuadMesh()->GetRenderResource().Render(m_combine_pass->GetCommandBuffer(frame_index));
         m_combine_pass->End(frame);
     }
 
@@ -1429,7 +1433,7 @@ void DeferredRenderer::GenerateMipChain(Frame *frame, Image *src_image)
     src_image->InsertBarrier(primary, renderer::ResourceState::SHADER_RESOURCE);
 }
 
-// @TODO Move to CameraRenderResources
+// @TODO Move to CameraRenderResource
 void DeferredRenderer::ApplyCameraJitter()
 {
     HYP_SCOPE;
@@ -1437,7 +1441,7 @@ void DeferredRenderer::ApplyCameraJitter()
 
     static const float jitter_scale = 0.25f;
 
-    const CameraRenderResources &active_camera = g_engine->GetRenderState()->GetActiveCamera();
+    const CameraRenderResource &active_camera = g_engine->GetRenderState()->GetActiveCamera();
 
     const uint32 camera_buffer_index = active_camera.GetBufferIndex();
     AssertThrow(camera_buffer_index != ~0u);
@@ -1520,7 +1524,7 @@ void DeferredRenderer::CollectDrawCalls(Frame *frame)
 {
     HYP_SCOPE;
 
-    WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
+    WorldRenderResource &world_render_resources = g_engine->GetWorld()->GetRenderResource();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
     const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();
@@ -1538,7 +1542,7 @@ void DeferredRenderer::RenderSkybox(Frame *frame)
 {
     HYP_SCOPE;
 
-    WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
+    WorldRenderResource &world_render_resources = g_engine->GetWorld()->GetRenderResource();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
     const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();
@@ -1557,7 +1561,7 @@ void DeferredRenderer::RenderOpaqueObjects(Frame *frame)
 {
     HYP_SCOPE;
 
-    WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
+    WorldRenderResource &world_render_resources = g_engine->GetWorld()->GetRenderResource();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
     const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();
@@ -1576,7 +1580,7 @@ void DeferredRenderer::RenderTranslucentObjects(Frame *frame)
 {
     HYP_SCOPE;
 
-    WorldRenderResources &world_render_resources = g_engine->GetWorld()->GetRenderResources();
+    WorldRenderResource &world_render_resources = g_engine->GetWorld()->GetRenderResource();
     RenderCollectorContainer &render_collector_container = world_render_resources.GetRenderCollectorContainer();
 
     const uint32 num_render_collectors = render_collector_container.NumRenderCollectors();

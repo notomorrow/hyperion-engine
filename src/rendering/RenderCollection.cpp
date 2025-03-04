@@ -1,5 +1,28 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
+#include <rendering/RenderCollection.hpp>
+#include <rendering/RenderGroup.hpp>
+#include <rendering/RenderProxy.hpp>
+#include <rendering/ShaderGlobals.hpp>
+#include <rendering/GBuffer.hpp>
+#include <rendering/Deferred.hpp>
+#include <rendering/RenderCamera.hpp>
+#include <rendering/RenderState.hpp>
+
+#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RendererGraphicsPipeline.hpp>
+#include <rendering/backend/RenderConfig.hpp>
+
+#include <scene/Scene.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
+
+#include <scene/camera/Camera.hpp>
+
+#include <scene/animation/Skeleton.hpp>
+
+#include <core/profiling/ProfileScope.hpp>
+
 #include <core/containers/Array.hpp>
 
 #include <core/utilities/UniqueID.hpp>
@@ -11,27 +34,6 @@
 #include <core/logging/Logger.hpp>
 
 #include <core/Util.hpp>
-
-#include <rendering/RenderCollection.hpp>
-#include <rendering/RenderGroup.hpp>
-#include <rendering/RenderProxy.hpp>
-#include <rendering/ShaderGlobals.hpp>
-#include <rendering/GBuffer.hpp>
-#include <rendering/Deferred.hpp>
-#include <rendering/Camera.hpp>
-#include <rendering/RenderState.hpp>
-
-#include <rendering/backend/RendererFrame.hpp>
-#include <rendering/backend/RendererGraphicsPipeline.hpp>
-#include <rendering/backend/RenderConfig.hpp>
-
-#include <scene/Scene.hpp>
-
-#include <scene/camera/Camera.hpp>
-
-#include <scene/animation/Skeleton.hpp>
-
-#include <core/profiling/ProfileScope.hpp>
 
 #include <Engine.hpp>
 
@@ -215,13 +217,13 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         proxy_list.Reserve(added_proxies.Size());
 
         // @TODO For changed proxies it would be more efficient
-        // to update the RenderResources rather than Destroy + Recreate.
+        // to update the RenderResource rather than Destroy + Recreate.
 
         for (const auto &it : changed_proxies) {
             const ID<Entity> entity = it.first;
             const RenderProxy &proxy = it.second;
 
-            proxy.UnclaimRenderResources();
+            proxy.UnclaimRenderResource();
 
             const Handle<Mesh> &mesh = proxy.mesh;
             AssertThrow(mesh.IsValid());
@@ -237,7 +239,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         }
 
         for (RenderProxy &proxy : added_proxies) {
-            proxy.ClaimRenderResources();
+            proxy.ClaimRenderResource();
 
             const Handle<Mesh> &mesh = proxy.mesh;
             AssertThrow(mesh.IsValid());
@@ -256,7 +258,7 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
             const RenderProxy *proxy = proxy_list.GetProxyForEntity(entity);
             AssertThrow(proxy != nullptr);
 
-            proxy->UnclaimRenderResources();
+            proxy->UnclaimRenderResource();
 
             const RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy);
             const Bucket bucket = attributes.GetMaterialAttributes().bucket;
@@ -346,7 +348,7 @@ RenderCollector::RenderCollector(const Handle<Camera> &camera)
     : m_camera(camera)
 {
     if (InitObject(m_camera)) {
-        m_camera_resource_handle = m_camera->GetRenderResources();
+        m_camera_resource_handle = m_camera->GetRenderResource();
     }
 }
 
@@ -359,7 +361,7 @@ void RenderCollector::SetCamera(const Handle<Camera> &camera)
     m_camera = camera;
 
     if (InitObject(m_camera)) {
-        m_camera_resource_handle = m_camera->GetRenderResources();
+        m_camera_resource_handle = m_camera->GetRenderResource();
     } else {
         m_camera_resource_handle.Reset();
     }
@@ -474,6 +476,7 @@ void RenderCollector::CollectDrawCalls(
 
     if (do_parallel_collection && iterators.Size() > 1) {
         TaskSystem::GetInstance().ParallelForEach(
+            HYP_STATIC_MESSAGE("RenderCollector::CollectDrawCalls"),
             TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER),
             iterators,
             [this](IteratorType it, uint32, uint32)

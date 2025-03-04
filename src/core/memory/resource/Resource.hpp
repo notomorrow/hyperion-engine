@@ -25,6 +25,11 @@ class IResourceMemoryPool;
 template <class T>
 class ResourceMemoryPool;
 
+template <class T>
+struct ResourceMemoryPoolInitInfo : MemoryPoolInitInfo
+{
+};
+
 struct ResourceMemoryPoolHandle
 {
     uint32  index = ~0u;
@@ -42,8 +47,6 @@ class IResource
 public:
     virtual ~IResource() = default;
 
-    virtual Name GetTypeName() const = 0;
-
     virtual bool IsNull() const = 0;
 
     virtual int Claim() = 0;
@@ -55,6 +58,84 @@ public:
     virtual void SetPoolHandle(ResourceMemoryPoolHandle pool_handle) = 0;
 };
 
+/*! \brief Basic abstract implementation of IResource, using reference counting to manage the lifetime of the underlying resources. */
+class HYP_API ResourceBase : public IResource
+{
+protected:
+    using PreInitSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::detail::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+    using InitSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_POSITIVE, threading::detail::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_POSITIVE>>;
+    using CompletionSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::detail::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+
+public:
+    ResourceBase();
+
+    ResourceBase(const ResourceBase &other)                 = delete;
+    ResourceBase &operator=(const ResourceBase &other)      = delete;
+
+    ResourceBase(ResourceBase &&other) noexcept;
+    ResourceBase &operator=(ResourceBase &&other) noexcept  = delete;
+
+    virtual ~ResourceBase() override;
+
+    virtual bool IsNull() const override final
+        { return false; }
+
+    virtual int Claim() override final;
+    virtual int Unclaim() override final;
+    virtual void WaitForCompletion() override final;
+
+    virtual ResourceMemoryPoolHandle GetPoolHandle() const override final
+        { return m_pool_handle; }
+
+    virtual void SetPoolHandle(ResourceMemoryPoolHandle pool_handle) override final
+        { m_pool_handle = pool_handle; }
+
+    /*! \brief Performs an operation on the owner thread if the resources are initialized,
+     *  otherwise executes it immediately on the calling thread. Initialization on the owner thread will not begin until at least the end of the given proc,
+     *  so it is safe to use this method on any thread.
+     *  \param proc The operation to perform.
+     *  \param force_owner_thread If true, the operation will be performed on the owner thread regardless of initialization state. */
+    void Execute(Proc<void> &&proc, bool force_owner_thread = false);
+
+#ifdef HYP_DEBUG_MODE
+    HYP_FORCE_INLINE uint32 GetUseCount() const
+        { return m_ref_count.Get(MemoryOrder::SEQUENTIAL); }
+#endif
+
+protected:
+    int ClaimWithoutInitialize();
+
+    HYP_FORCE_INLINE bool IsInitialized() const
+        { return m_is_initialized; }
+
+    virtual IThread *GetOwnerThread() const
+        { return nullptr; }
+
+    virtual bool CanExecuteInline() const;
+    virtual void FlushScheduledTasks();
+    virtual void EnqueueOp(Proc<void> &&proc);
+
+    virtual void Initialize() = 0;
+    virtual void Destroy() = 0;
+    virtual void Update() = 0;
+
+    void SetNeedsUpdate();
+
+private:
+    bool                        m_is_initialized;
+
+    AtomicVar<int16>            m_ref_count;
+    AtomicVar<int16>            m_update_counter;
+
+    InitSemaphore               m_init_semaphore;
+    PreInitSemaphore            m_pre_init_semaphore;
+    CompletionSemaphore         m_completion_semaphore;
+
+    ResourceMemoryPoolHandle    m_pool_handle;
+    
+    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+};
+
 class IResourceMemoryPool
 {
 public:
@@ -64,12 +145,12 @@ public:
 extern HYP_API IResourceMemoryPool *GetOrCreateResourceMemoryPool(TypeID type_id, UniquePtr<IResourceMemoryPool>(*create_fn)(void));
 
 template <class T>
-class ResourceMemoryPool final : private MemoryPool<ValueStorage<T>>, public IResourceMemoryPool
+class ResourceMemoryPool final : private MemoryPool<ValueStorage<T>, ResourceMemoryPoolInitInfo<T>>, public IResourceMemoryPool
 {
 public:
     static_assert(std::is_base_of_v<IResource, T>, "T must be a subclass of IResource");
 
-    using Base = MemoryPool<ValueStorage<T>>;
+    using Base = MemoryPool<ValueStorage<T>, ResourceMemoryPoolInitInfo<T>>;
 
     static ResourceMemoryPool<T> *GetInstance()
     {
@@ -108,7 +189,7 @@ public:
         ptr->WaitForCompletion();
 
         const ResourceMemoryPoolHandle pool_handle = ptr->GetPoolHandle();
-        AssertThrow(pool_handle);
+        AssertThrowMsg(pool_handle, "Resource has no pool handle set - the resource was likely not allocated using the pool");
 
         // Invoke the destructor
         ValueStorage<T> &element = Base::GetElement(pool_handle.index);
@@ -233,24 +314,24 @@ public:
     HYP_FORCE_INLINE IResource &operator*() const
         { return *resource; }
 
-private:
+protected:
     IResource   *resource;
 };
 
-template <class T>
-class TResourceHandle
+template <class ResourceType>
+class TResourceHandle : public ResourceHandle
 {
 public:
-    TResourceHandle()   = default;
+    TResourceHandle() = default;
 
+    template <class T, typename = std::enable_if_t< (std::is_same_v<NormalizedType<T>, ResourceType> || std::is_base_of_v<ResourceType, NormalizedType<T>>) && (std::is_base_of_v<IResource, NormalizedType<T>>) > >
     TResourceHandle(T &resource)
-        : handle(resource)
+        : ResourceHandle(static_cast<IResource &>(resource))
     {
-        static_assert(std::is_base_of_v<IResource, T>, "T must be a subclass of IResource");
     }
 
     TResourceHandle(const TResourceHandle &other)
-        : handle(other.handle)
+        : ResourceHandle(static_cast<const ResourceHandle &>(other))
     {
     }
 
@@ -260,13 +341,13 @@ public:
             return *this;
         }
 
-        handle = other.handle;
+        ResourceHandle::operator=(static_cast<const ResourceHandle &>(other));
 
         return *this;
     }
 
     TResourceHandle(TResourceHandle &&other) noexcept
-        : handle(std::move(other.handle))
+        : ResourceHandle(static_cast<ResourceHandle &&>(std::move(other)))
     {
     }
 
@@ -276,73 +357,38 @@ public:
             return *this;
         }
 
-        handle = std::move(other.handle);
+        ResourceHandle::operator=(static_cast<ResourceHandle &&>(std::move(other)));
 
         return *this;
     }
 
     ~TResourceHandle()  = default;
 
-    HYP_FORCE_INLINE void Reset()
+    HYP_FORCE_INLINE ResourceType *Get() const
     {
-        handle.Reset();
-    }
-
-    HYP_FORCE_INLINE explicit operator bool() const
-    {
-        // Check if the handle is not null and not the null resource.
-        return bool(handle);
-    }
-
-    HYP_FORCE_INLINE operator ResourceHandle &() &
-        { return handle; }
-
-    HYP_FORCE_INLINE operator const ResourceHandle &() const &
-        { return handle; }
-
-    HYP_FORCE_INLINE operator ResourceHandle &&() &&
-        { return std::move(handle); }
-
-    HYP_FORCE_INLINE bool operator!() const
-        { return !handle; }
-
-    HYP_FORCE_INLINE bool operator==(const TResourceHandle &other) const
-        { return handle == other.handle; }
-
-    HYP_FORCE_INLINE bool operator!=(const TResourceHandle &other) const
-        { return handle != other.handle; }
-
-    HYP_FORCE_INLINE T *Get() const
-    {
-        IResource &ptr = *handle;
-
-        if (ptr.IsNull()) {
+        if (resource->IsNull()) {
             return nullptr;
         }
 
-        // can safely cast to T since we know it's not NullResource
-        return static_cast<T *>(&ptr);
+        // can safely cast to ResourceType since we know it's not NullResource
+        return static_cast<ResourceType *>(resource);
     }
 
-    HYP_FORCE_INLINE T *operator->() const
+    HYP_FORCE_INLINE ResourceType *operator->() const
     {
         return Get();
     }
 
-    HYP_FORCE_INLINE T &operator*() const
+    HYP_FORCE_INLINE ResourceType &operator*() const
     {
-        T *ptr = Get();
+        ResourceType *ptr = Get();
 
         if (!ptr) {
             HYP_FAIL("Dereferenced null resource handle");
         }
 
-        // can safely cast to T since we know it's not null
         return *ptr;
     }
-
-private:
-    ResourceHandle  handle;
 };
 
 } // namespace hyperion

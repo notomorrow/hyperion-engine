@@ -16,13 +16,6 @@
 
 namespace hyperion {
 
-// @TODO Thread local / static initializer stack for each HypObjectInitializer
-// first call for the type (base) initializes a pointer (maybe from a table or inline?)
-// subsequent calls will see the ptr already exists and update it..
-
-// maybe before constructor gets called we set the actual target HypClass ptr on a stack somewhere
-// and we don't use NewObject until that matches?
-
 struct HypObjectInitializerContext
 {
     const HypClass  *hyp_class = nullptr;
@@ -187,6 +180,11 @@ HYP_API void CheckHypObjectInitializer(const IHypObjectInitializer *initializer,
     AssertThrow(address != nullptr);
 #endif
 
+    // If allocation method is NONE we don't require the guard; skip this check.
+    if (hyp_class->GetAllocationMethod() == HypClassAllocationMethod::NONE) {
+        return;
+    }
+
     Stack<HypObjectInitializerContext> &contexts = g_contexts;
 
     bool valid = false;
@@ -259,8 +257,7 @@ HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *
 
 HYP_API void CleanupHypObjectInitializer(const HypClass *hyp_class, dotnet::Object *managed_object_ptr)
 {
-    // No cleanup on the managed object needed if we have a parent class - parent class will manage it
-    if (managed_object_ptr != nullptr) {// && hyp_class->GetParent() == nullptr) {
+    if (managed_object_ptr != nullptr) {
         managed_object_ptr->Reset();
     }
 }

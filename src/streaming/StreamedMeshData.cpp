@@ -2,12 +2,12 @@
 
 #include <streaming/StreamedMeshData.hpp>
 
-#include <asset/serialization/fbom/FBOMMarshaler.hpp>
-#include <asset/serialization/fbom/FBOMWriter.hpp>
-#include <asset/serialization/fbom/FBOMReader.hpp>
+#include <core/serialization/fbom/FBOMMarshaler.hpp>
+#include <core/serialization/fbom/FBOMWriter.hpp>
+#include <core/serialization/fbom/FBOMReader.hpp>
 
-#include <asset/ByteWriter.hpp>
-#include <asset/BufferedByteReader.hpp>
+#include <core/io/ByteWriter.hpp>
+#include <core/io/BufferedByteReader.hpp>
 
 #include <core/object/HypData.hpp>
 
@@ -24,19 +24,20 @@ RC<StreamedMeshData> StreamedMeshData::FromMeshData(MeshData mesh_data)
 
 StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData mesh_data)
     : StreamedData(initial_state),
+      m_streamed_data(nullptr),
       m_num_vertices(mesh_data.vertices.Size()),
       m_num_indices(mesh_data.indices.Size())
 {
     switch (initial_state) {
     case StreamedDataState::NONE:
-        m_streamed_data.EmplaceAs<NullStreamedData>();
+        m_streamed_data = MakeRefCountedPtr<NullStreamedData>();
 
         break;
     case StreamedDataState::LOADED: // fallthrough
     case StreamedDataState::UNPAGED:
         m_mesh_data.Set(std::move(mesh_data));
 
-        m_streamed_data.EmplaceAs<MemoryStreamedData>(m_mesh_data->GetHashCode(), StreamedDataState::UNPAGED, [this](HashCode hc, ByteBuffer &out) -> bool
+        m_streamed_data = MakeRefCountedPtr<MemoryStreamedData>(m_mesh_data->GetHashCode(), StreamedDataState::UNPAGED, [this](HashCode hc, ByteBuffer &out) -> bool
         {
             if (!m_mesh_data) {
                 return false;
@@ -84,10 +85,12 @@ StreamedMeshData::StreamedMeshData(MeshData &&mesh_data)
 {
 }
 
-bool StreamedMeshData::IsNull_Internal() const
+StreamedMeshData::~StreamedMeshData()
 {
-    return m_streamed_data == nullptr
-        || m_streamed_data->IsNull();
+    if (m_streamed_data != nullptr) {
+        m_streamed_data->WaitForCompletion();
+        m_streamed_data.Reset();
+    }
 }
 
 bool StreamedMeshData::IsInMemory_Internal() const

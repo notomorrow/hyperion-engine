@@ -2,13 +2,13 @@
 
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/DrawCall.hpp>
-#include <rendering/Mesh.hpp>
+#include <rendering/RenderMesh.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
-#include <rendering/Scene.hpp>
-#include <rendering/Camera.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderCamera.hpp>
 #include <rendering/EnvGrid.hpp>
-#include <rendering/EnvProbe.hpp>
+#include <rendering/RenderProbe.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderState.hpp>
 
@@ -16,7 +16,9 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
-#include <math/MathUtil.hpp>
+#include <scene/Mesh.hpp>
+
+#include <core/math/MathUtil.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -277,7 +279,7 @@ void IndirectDrawState::PushDrawCall(const DrawCall &draw_call, DrawCommandData 
         m_draw_commands.Resize(m_num_draw_commands);
     }
 
-    draw_call.mesh->PopulateIndirectDrawCommand(m_draw_commands[draw_command_index]);
+    draw_call.mesh_render_resource->PopulateIndirectDrawCommand(m_draw_commands[draw_command_index]);
     
     m_dirty_bits |= 0x3;
 }
@@ -452,8 +454,8 @@ void IndirectRenderer::ExecuteCullShaderInBatches(Frame *frame, const CullData &
     const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index).IsValid());
     AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index)->Size() != 0);

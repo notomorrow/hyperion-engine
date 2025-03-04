@@ -9,8 +9,6 @@
 
 #include <core/Defines.hpp>
 
-#include <math/MathUtil.hpp>
-
 #include <Types.hpp>
 
 #include <algorithm>
@@ -38,7 +36,7 @@ class FixedArray
 public:
     static constexpr bool is_contiguous = true;
 
-    T m_values[MathUtil::Max(Sz, 1)];
+    T m_values[Sz > 1 ? Sz : 1];
 
     using Iterator = T *;
     using ConstIterator = const T *;
@@ -96,13 +94,6 @@ public:
         return false;
     }
 
-    template <class Function>
-    HYP_FORCE_INLINE FixedArray Map(Function &&fn) const
-    {
-        const containers::detail::FixedArrayImpl<const T, Sz> impl(&m_values[0]);
-        return impl.Map(std::forward<Function>(fn));
-    }
-
     HYP_FORCE_INLINE bool Contains(const T &value) const
     {
         const containers::detail::FixedArrayImpl<const T, Sz> impl(&m_values[0]);
@@ -126,24 +117,6 @@ public:
 
     HYP_FORCE_INLINE constexpr bool Any() const
         { return Sz != 0; }
-        
-    template <class Lambda>
-    HYP_FORCE_INLINE bool Any(Lambda &&lambda) const
-    {
-        if constexpr (Sz == 0) {
-            return false;
-        } else {
-            const containers::detail::FixedArrayImpl<const T, Sz> impl(&m_values[0]);
-            return impl.Any(std::forward<Lambda>(lambda));
-        }
-    }
-
-    template <class Lambda>
-    HYP_FORCE_INLINE bool Every(Lambda &&lambda) const
-    {
-        const containers::detail::FixedArrayImpl<const T, Sz> impl(&m_values[0]);
-        return impl.Every(std::forward<Lambda>(lambda));
-    }
 
     HYP_FORCE_INLINE auto Sum() const
     {
@@ -174,15 +147,6 @@ public:
         } else {
             const containers::detail::FixedArrayImpl<const T, Sz> impl(&m_values[0]);
             return impl.IndexOf(iter);
-        }
-    }
-
-    template <class TaskSystem, class Lambda>
-    HYP_FORCE_INLINE void ParallelForEach(TaskSystem &task_system, Lambda &&lambda) const
-    {
-        if constexpr (Sz != 0) {
-            const containers::detail::FixedArrayImpl<const T, Sz> impl(&m_values[0]);
-            impl.ParallelForEach(task_system, std::forward<Lambda>(lambda));
         }
     }
 

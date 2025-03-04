@@ -3,7 +3,9 @@
 #include <scene/ecs/systems/BVHUpdaterSystem.hpp>
 #include <scene/ecs/EntityManager.hpp>
 
-#include <rendering/Mesh.hpp>
+#include <scene/Mesh.hpp>
+
+#include <core/containers/HashSet.hpp>
 
 #include <core/logging/Logger.hpp>
 
@@ -26,12 +28,12 @@ void BVHUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
         return;
     }
 
-    if (mesh_component.mesh->BuildBVH(transform_component.transform.GetMatrix(), bvh_component.bvh, /* max_depth */ 3)) {
+    if (mesh_component.mesh->BuildBVH(bvh_component.bvh, /* max_depth */ 3)) {
         HYP_LOG(BVH, Info, "Built BVH for Mesh #{} (name: \"{}\")",
             mesh_component.mesh->GetID().Value(),
             mesh_component.mesh->GetName());
-
-        bvh_component.transform_hash_code = transform_component.transform.GetHashCode();
+            
+        GetEntityManager().RemoveTag<EntityTag::UPDATE_BVH>(entity);
     } else {
         HYP_LOG(BVH, Warning, "Failed to calculate BVH for Mesh #{} (name: \"{}\")",
             mesh_component.mesh->GetID().Value(),
@@ -46,26 +48,33 @@ void BVHUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
 
 void BVHUpdaterSystem::Process(GameCounter::TickUnit delta)
 {
-    for (auto [entity_id, bvh_component, mesh_component, transform_component] : GetEntityManager().GetEntitySet<BVHComponent, MeshComponent, TransformComponent>().GetScopedView(GetComponentInfos())) {
-        const HashCode transform_hash_code = transform_component.transform.GetHashCode();
+    HashSet<ID<Entity>> updated_entity_ids;
 
-        if (!bvh_component.bvh.IsValid() || transform_hash_code != bvh_component.transform_hash_code) {
-            if (!mesh_component.mesh.IsValid()) {
-                continue;
-            }
-
-            if (mesh_component.mesh->BuildBVH(transform_component.transform.GetMatrix(), bvh_component.bvh, /* max_depth */ 3)) {
-                HYP_LOG(BVH, Info, "Built BVH for Mesh #{} (name: \"{}\")",
-                    mesh_component.mesh->GetID().Value(),
-                    mesh_component.mesh->GetName());
-
-                bvh_component.transform_hash_code = transform_hash_code;
-            } else {
-                HYP_LOG(BVH, Warning, "Failed to calculate BVH for Mesh #{} (name: \"{}\")",
-                    mesh_component.mesh->GetID().Value(),
-                    mesh_component.mesh->GetName());
-            }
+    for (auto [entity_id, bvh_component, mesh_component, transform_component, _] : GetEntityManager().GetEntitySet<BVHComponent, MeshComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_BVH>>().GetScopedView(GetComponentInfos())) {
+        if (!mesh_component.mesh.IsValid()) {
+            continue;
         }
+
+        if (mesh_component.mesh->BuildBVH(bvh_component.bvh, /* max_depth */ 3)) {
+            HYP_LOG(BVH, Info, "Built BVH for Mesh #{} (name: \"{}\")",
+                mesh_component.mesh->GetID().Value(),
+                mesh_component.mesh->GetName());
+
+            updated_entity_ids.Insert(entity_id);
+        } else {
+            HYP_LOG(BVH, Warning, "Failed to calculate BVH for Mesh #{} (name: \"{}\")",
+                mesh_component.mesh->GetID().Value(),
+                mesh_component.mesh->GetName());
+        }
+    }
+
+    if (updated_entity_ids.Any()) {
+        AfterProcess([this, entity_ids = std::move(updated_entity_ids)]()
+        {
+            for (const ID<Entity> &entity_id : entity_ids) {
+                GetEntityManager().RemoveTag<EntityTag::UPDATE_BVH>(entity_id);
+            }
+        });
     }
 }
 

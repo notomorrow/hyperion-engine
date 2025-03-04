@@ -22,10 +22,13 @@
 #include <scene/ecs/components/BLASComponent.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
 
+#include <scene/Mesh.hpp>
+#include <scene/Light.hpp>
+
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/PointLightShadowRenderer.hpp>
-#include <rendering/Scene.hpp>
-#include <rendering/Mesh.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderMesh.hpp>
 
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererImage.hpp>
@@ -43,7 +46,7 @@
 
 #include <Game.hpp>
 
-#include <asset/ByteWriter.hpp>
+#include <core/io/ByteWriter.hpp>
 #include <asset/AssetBatch.hpp>
 #include <asset/Assets.hpp>
 
@@ -69,8 +72,8 @@
 #include <rtc/RTCClient.hpp>
 #include <rtc/RTCDataChannel.hpp>
 
-#include <math/Triangle.hpp>
-#include <math/Matrix3.hpp>
+#include <core/math/Triangle.hpp>
+#include <core/math/Matrix3.hpp>
 
 SampleStreamer::SampleStreamer()
     : Game(ManagedGameInfo {
@@ -362,7 +365,7 @@ void SampleStreamer::Init()
 
     // Used for RTC streaming or for editor view.
     // Has a performance impact due to copying the framebuffer.
-    auto streaming_capture_component = m_scene->GetRenderResources().GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(HYP_NAME(StreamingCapture), Vec2u(window_size));
+    auto streaming_capture_component = m_scene->GetRenderResource().GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(HYP_NAME(StreamingCapture), Vec2u(window_size));
 
     if (false) {
         auto terrain_node = m_scene->GetRoot()->AddChild();
@@ -639,7 +642,7 @@ void SampleStreamer::Init()
 
             GetScene()->GetRoot()->AddChild(node);
 
-            m_scene->GetRenderResources().GetEnvironment()->AddRenderSubsystem<ReflectionProbeRenderer>(
+            m_scene->GetRenderResource().GetEnvironment()->AddRenderSubsystem<ReflectionProbeRenderer>(
                 HYP_NAME(ReflectionProbe0),
                 node.GetWorldAABB()
             );
@@ -852,7 +855,7 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
             }
         }
 
-        uint camera_definition_index = 0;
+        uint32 camera_definition_index = 0;
 
         RC<CameraTrack> camera_track = RC<CameraTrack>::Construct();
         camera_track->SetDuration(60.0);
@@ -871,7 +874,7 @@ void SampleStreamer::HandleCompletedAssetBatch(Name name, const RC<AssetBatch> &
         auto gaussian_splatting_instance = CreateObject<GaussianSplattingInstance>(std::move(gaussian_splatting_model));
         InitObject(gaussian_splatting_instance);
 
-        m_scene->GetRenderResources().GetEnvironment()->GetGaussianSplatting()->SetGaussianSplattingInstance(std::move(gaussian_splatting_instance));
+        m_scene->GetRenderResource().GetEnvironment()->GetGaussianSplatting()->SetGaussianSplattingInstance(std::move(gaussian_splatting_instance));
     }
 }
 
@@ -1199,11 +1202,11 @@ Optional<Vec3f> SampleStreamer::GetWorldRay(const Vec2f &screen_position) const
                         continue;
                     }
 
-                    auto ref = streamed_mesh_data->AcquireRef();
+                    ResourceHandle resource_handle(*streamed_mesh_data);
 
                     ray.TestTriangleList(
-                        ref->GetMeshData().vertices,
-                        ref->GetMeshData().indices,
+                        streamed_mesh_data->GetMeshData().vertices,
+                        streamed_mesh_data->GetMeshData().indices,
                         transform_component->transform,
                         entity_id.Value(),
                         triangle_mesh_results
@@ -1229,7 +1232,7 @@ void SampleStreamer::OnFrameEnd(Frame *frame)
     }
 
     if (m_rtc_stream) {
-        const ScreenCaptureRenderSubsystem *screen_capture = m_scene->GetRenderResources().GetEnvironment()->GetRenderSubsystem<ScreenCaptureRenderSubsystem>(HYP_NAME(StreamingCapture));
+        const ScreenCaptureRenderSubsystem *screen_capture = m_scene->GetRenderResource().GetEnvironment()->GetRenderSubsystem<ScreenCaptureRenderSubsystem>(HYP_NAME(StreamingCapture));
 
         if (screen_capture) {
             const GPUBufferRef &gpu_buffer_ref = screen_capture->GetBuffer();

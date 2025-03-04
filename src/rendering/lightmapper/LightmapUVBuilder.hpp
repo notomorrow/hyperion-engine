@@ -11,9 +11,9 @@
 
 #include <core/Handle.hpp>
 
-#include <math/Transform.hpp>
-#include <math/Matrix4.hpp>
-#include <math/BoundingBox.hpp>
+#include <core/math/Transform.hpp>
+#include <core/math/Matrix4.hpp>
+#include <core/math/BoundingBox.hpp>
 
 #include <util/img/Bitmap.hpp>
 
@@ -39,36 +39,38 @@ struct LightmapUVBuilderParams
 
 struct LightmapMeshData
 {
-    Handle<Mesh>    mesh;
+    Handle<Mesh>                    mesh;
+    Handle<Material>                material;
 
-    Matrix4         transform;
+    Matrix4                         transform;
 
-    Array<float>    vertex_positions;
-    Array<float>    vertex_normals;
-    Array<float>    vertex_uvs;
+    Array<float, DynamicAllocator>  vertex_positions;
+    Array<float, DynamicAllocator>  vertex_normals;
+    Array<float, DynamicAllocator>  vertex_uvs;
 
-    Array<uint32>   indices;
+    Array<uint32, DynamicAllocator> indices;
 
-    Array<Vec2f>    lightmap_uvs;
+    Array<Vec2f, DynamicAllocator>  lightmap_uvs;
 };
 
 struct LightmapUV
 {
-    Handle<Mesh>    mesh;
-    Matrix4         transform = Matrix4::identity;
-    uint32          triangle_index = ~0u;
-    Vec3f           barycentric_coords = Vec3f::Zero();
-    Vec2f           lightmap_uv = Vec2f::Zero();
-    Vec4f           radiance = Vec4f::Zero();
-    Vec4f           irradiance = Vec4f::Zero();
+    Handle<Mesh>        mesh;
+    Handle<Material>    material;
+    Matrix4             transform = Matrix4::identity;
+    uint32              triangle_index = ~0u;
+    Vec3f               barycentric_coords = Vec3f::Zero();
+    Vec2f               lightmap_uv = Vec2f::Zero();
+    Vec4f               radiance = Vec4f::Zero();
+    Vec4f               irradiance = Vec4f::Zero();
 };
 
 struct LightmapUVMap
 {
-    uint32                          width = 0;
-    uint32                          height = 0;
-    Array<LightmapUV>               uvs;
-    HashMap<ID<Mesh>, Array<uint32>>  mesh_to_uv_indices;
+    uint32                              width = 0;
+    uint32                              height = 0;
+    Array<LightmapUV>                   uvs;
+    HashMap<ID<Mesh>, Array<uint32>>    mesh_to_uv_indices;
     
     /*! \brief Write the UV map radiance data to RGBA32F format. */
     Bitmap<4, float> ToBitmapRadiance() const;

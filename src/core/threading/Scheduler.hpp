@@ -9,6 +9,9 @@
 
 #include <core/utilities/Optional.hpp>
 #include <core/utilities/EnumFlags.hpp>
+#include <core/utilities/StaticMessage.hpp>
+
+#include <core/algorithm/AnyOf.hpp>
 
 #include <core/threading/SchedulerFwd.hpp>
 #include <core/threading/AtomicVar.hpp>
@@ -55,7 +58,7 @@ public:
 
     virtual void Await(TaskID id) = 0;
 
-    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr) = 0;
+    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr, const StaticMessage &debug_name = StaticMessage()) = 0;
 
     virtual bool Dequeue(TaskID id) = 0;
     
@@ -71,7 +74,11 @@ protected:
     {
     }
 
-    void WakeUpOwnerThread();
+    void WakeUpOwnerThread()
+    {
+        m_has_tasks.notify_all();
+    }
+
     bool WaitForTasks(std::unique_lock<std::mutex> &lock);
 
     uint32                  m_id_counter = 0;
@@ -105,6 +112,8 @@ public:
         // Callback to be executed after the task is completed
         OnTaskCompletedCallback     callback;
 
+        StaticMessage               debug_name;
+
         ScheduledTask()                                         = default;
 
         ScheduledTask(const ScheduledTask &other)               = delete;
@@ -115,7 +124,8 @@ public:
               owns_executor(other.owns_executor),
               semaphore(other.semaphore),
               task_executed(other.task_executed),
-              callback(std::move(other.callback))
+              callback(std::move(other.callback)),
+              debug_name(std::move(other.debug_name))
         {
             other.executor = nullptr;
             other.owns_executor = false;
@@ -138,6 +148,7 @@ public:
             semaphore = other.semaphore;
             task_executed = other.task_executed;
             callback = std::move(other.callback);
+            debug_name = std::move(other.debug_name);
 
             other.executor = nullptr;
             other.owns_executor = false;
@@ -204,16 +215,28 @@ public:
         { return m_queue; }
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
-     *  called from a non-owner thread. 
-     *  \param fn The function to execute */
-    template <class Lambda>
-    auto Enqueue(Lambda &&fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Lambda>::ReturnType>
+     *  called from a non-owner thread.
+     *  \param fn The function to execute
+     *  \param flags Flags to control the behavior of the task - see TaskEnqueueFlags */
+    template <class Function>
+    auto Enqueue(Function &&fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
-        using ReturnType = typename FunctionTraits<Lambda>::ReturnType;
+        return Enqueue(HYP_STATIC_MESSAGE("<no debug name>"), std::forward<Function>(fn), flags);
+    }
+
+    /*! \brief Enqueue a function to be executed on the owner thread. This is to be
+     *  called from a non-owner thread.
+     *  \param debug_name A StaticMessage instance containing the name of the task (for debugging)
+     *  \param fn The function to execute
+     *  \param flags Flags to control the behavior of the task - see TaskEnqueueFlags */
+    template <class Function>
+    auto Enqueue(const StaticMessage &debug_name, Function &&fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
+    {
+        using ReturnType = typename FunctionTraits<Function>::ReturnType;
 
         std::unique_lock lock(m_mutex);
 
-        TaskExecutorInstance<ReturnType> *executor = new TaskExecutorInstance<ReturnType>(std::forward<Lambda>(fn));
+        TaskExecutorInstance<ReturnType> *executor = new TaskExecutorInstance<ReturnType>(std::forward<Function>(fn));
 
         ScheduledTask scheduled_task;
         scheduled_task.executor = executor;
@@ -221,6 +244,7 @@ public:
         scheduled_task.semaphore = &executor->GetSemaphore();
         scheduled_task.task_executed = &m_task_executed;
         scheduled_task.callback = &executor->GetCallbackChain();
+        scheduled_task.debug_name = debug_name;
 
         Enqueue_Internal(std::move(scheduled_task));
 
@@ -241,8 +265,9 @@ public:
      *  \internal Used by TaskSystem to enqueue batches of tasks.
      *  \param executor_ptr The TaskExecutor to execute (owned by the caller)
      *  \param atomic_counter A pointer to an atomic uint32 variable that is incremented upon completion.
-     *  \param callback A callback to be executed after the task is completed. */
-    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr) override
+     *  \param callback A callback to be executed after the task is completed.
+     *  \param debug_name A StaticMessage instance containing the name of the task (for debugging) */
+    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase *executor_ptr, SemaphoreType *semaphore, OnTaskCompletedCallback &&callback = nullptr, const StaticMessage &debug_name = StaticMessage()) override
     {
         std::unique_lock lock(m_mutex);
 
@@ -252,6 +277,7 @@ public:
         scheduled_task.semaphore = semaphore;
         scheduled_task.task_executed = &m_task_executed;
         scheduled_task.callback = std::move(callback);
+        scheduled_task.debug_name = debug_name;
 
         Enqueue_Internal(std::move(scheduled_task));
 
@@ -271,16 +297,21 @@ public:
 
         std::unique_lock lock(m_mutex);
 
-        if (!m_queue.Any() || !m_queue.Any([id](const auto &item) { return item.executor->GetTaskID() == id; })) {
+        if (m_queue.Empty()) {
+            return;
+        }
+
+        if (!AnyOf(m_queue, [id](const auto &item) { return item.executor->GetTaskID() == id; })) {
             return;
         }
 
         m_task_executed.wait(lock, [this, id]
         {
-            return !m_queue.Any() || !m_queue.Any([id](const auto &item)
-            {
-                return item.executor->GetTaskID() == id;
-            });
+            if (m_queue.Empty()) {
+                return true;
+            }
+
+            return !AnyOf(m_queue, [id](const auto &item) { return item.executor->GetTaskID() == id; });
         });
     }
     
@@ -349,7 +380,7 @@ public:
     {
         std::unique_lock lock(m_mutex);
 
-        return m_queue.Any([thread_id](const ScheduledTask &item)
+        return AnyOf(m_queue, [thread_id](const ScheduledTask &item)
         {
             return item.executor->GetInitiatorThreadID() == thread_id;
         });

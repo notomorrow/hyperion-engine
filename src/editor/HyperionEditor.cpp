@@ -4,12 +4,13 @@
 #include <editor/EditorSubsystem.hpp>
 #include <editor/EditorProject.hpp>
 
-#include <rendering/Texture.hpp>
+#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvironment.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
 #include <scene/World.hpp>
+#include <scene/Light.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
@@ -33,8 +34,8 @@
 
 #include <asset/AssetBatch.hpp>
 #include <asset/Assets.hpp>
-#include <asset/serialization/fbom/FBOMWriter.hpp>
-#include <asset/serialization/fbom/FBOMReader.hpp>
+#include <core/serialization/fbom/FBOMWriter.hpp>
+#include <core/serialization/fbom/FBOMReader.hpp>
 
 #include <ui/UIObject.hpp>
 #include <ui/UIText.hpp>
@@ -70,6 +71,11 @@
 
 #include <HyperionEngine.hpp>
 
+// temp
+#include <unordered_set>
+#include <set>
+#include <list>
+
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
@@ -90,6 +96,278 @@ HyperionEditor::~HyperionEditor()
 void HyperionEditor::Init()
 {
     Game::Init();
+
+    struct TestStruct
+    {
+        int a = 0;
+        float b = 0.0f;
+        double c = 0.0;
+        String str = "Hello World";
+
+        bool operator==(const TestStruct &other) const
+        {
+            return a == other.a && b == other.b && c == other.c && str == other.str;
+        }
+
+        bool operator!=(const TestStruct &other) const
+        {
+            return !(*this == other);
+        }
+
+        bool operator<(const TestStruct &other) const
+        {
+            if (a < other.a) {
+                return true;
+            }
+
+            if (a == other.a) {
+                if (b < other.b) {
+                    return true;
+                }
+
+                if (b == other.b) {
+                    if (c < other.c) {
+                        return true;
+                    }
+
+                    if (c == other.c) {
+                        return str < other.str;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        HashCode GetHashCode() const
+        {
+            HashCode hc;
+            hc.Add(a);
+            hc.Add(b);
+            hc.Add(c);
+            hc.Add(str);
+
+            return hc;
+        }
+    };
+#if 0
+    constexpr int n = 1540;
+
+    // testing hashset vs flatset
+    Profile profile1([]()
+    {
+        HashSet<HashCode> hash_set;
+
+        for (int i = n; i >= 0; --i) {
+            hash_set.Insert(TestStruct { i / 2 }.GetHashCode());
+        }
+
+        // for (uint32 i = 0; i < 30; ++i) {
+        //     auto it = hash_set.Find(TestStruct { int(i) }.GetHashCode());
+
+        //     if (it != hash_set.End()) {
+        //         volatile int i = 0;
+        //         i += it->Value();
+        //     }
+        // }
+
+        for (auto &it : hash_set) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    Profile profile2([]()
+    {
+        Array<HashCode> ary;
+
+        for (int i = n; i >= 0; --i) {
+            auto it = std::find(ary.begin(), ary.end(), TestStruct { (i / 2) }.GetHashCode());
+
+            if (it == ary.end()) {
+                ary.PushBack(TestStruct { i / 2 }.GetHashCode());
+            }
+        }
+
+        // for (uint32 i = 0; i < 30; ++i) {
+        //     auto it = ary.Find(TestStruct { int(i) }.GetHashCode());
+
+        //     if (it != ary.end()) {
+        //         volatile int i = 0;
+        //         i += it->Value();
+        //     }
+        // }
+        
+        for (auto &it : ary) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    Profile profile3([]()
+    {
+        std::unordered_set<HashCode> set;
+
+        for (int i = n; i >= 0; --i) {
+            set.insert(TestStruct { i / 2 }.GetHashCode());
+        }
+
+        // for (uint32 i = 0; i < 30; ++i) {
+        //     auto it = set.find(TestStruct { int(i) }.GetHashCode());
+
+        //     if (it != set.end()) {
+        //         volatile int i = 0;
+        //         i += it->Value();
+        //     }
+        // }
+
+        for (auto &it : set) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    Profile profile4([]()
+    {
+        std::set<HashCode> set;
+
+        for (int i = n; i >= 0; --i) {
+            set.insert(TestStruct { i / 2 }.GetHashCode());
+        }
+
+        // for (uint32 i = 0; i < 30; ++i) {
+        //     auto it = set.find(TestStruct { int(i) }.GetHashCode());
+
+        //     if (it != set.end()) {
+        //         volatile int i = 0;
+        //         i += it->Value();
+        //     }
+        // }
+
+        for (auto &it : set) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    Profile profile5([]()
+    {
+        std::vector<HashCode> vec;
+
+        for (int i = n; i >= 0; --i) {
+            auto it = std::find(vec.begin(), vec.end(), TestStruct { (i / 2) }.GetHashCode());
+
+            if (it == vec.end()) {
+                vec.push_back(TestStruct { i / 2 }.GetHashCode());
+            }
+        }
+
+        // for (uint32 i = 0; i < 30; ++i) {
+        //     auto it = std::find(vec.begin(), vec.end(), TestStruct { int(i) }.GetHashCode());
+
+        //     if (it != vec.end()) {
+        //         volatile int i = 0;
+        //         i += it->Value();
+        //     }
+        // }
+
+        for (auto &it : vec) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    Profile profile6([]()
+    {
+        LinkedList<HashCode> list;
+
+        for (int i = n; i >= 0; --i) {
+            auto it = std::find(list.begin(), list.end(), TestStruct { (i / 2) }.GetHashCode());
+
+            if (it == list.end()) {
+                list.PushBack(TestStruct { i / 2 }.GetHashCode());
+            }
+        }
+
+        // for (uint32 i = 0; i < 30; ++i) {
+        //     auto it = std::find(vec.begin(), vec.end(), TestStruct { int(i) }.GetHashCode());
+
+        //     if (it != vec.end()) {
+        //         volatile int i = 0;
+        //         i += it->Value();
+        //     }
+        // }
+
+        for (auto &it : list) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    Profile profile7([]()
+    {
+        FlatSet<HashCode> flat_set;
+
+        for (int i = n; i >= 0; --i) {
+            flat_set.Insert(TestStruct { i / 2 }.GetHashCode());
+        }
+
+        // for (uint32 i = 0; i < 30; ++i) {
+        //     auto it = flat_set.Find(TestStruct { int(i) }.GetHashCode());
+
+        //     if (it != flat_set.End()) {
+        //         volatile int i = 0;
+        //         i += it->Value();
+        //     }
+        // }
+
+        for (auto &it : flat_set) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    Profile profile8([]()
+    {
+        std::list<HashCode> list;
+
+        for (int i = n; i >= 0; --i) {
+            auto it = std::find(list.begin(), list.end(), TestStruct { (i / 2) }.GetHashCode());
+
+            if (it == list.end()) {
+                list.push_back(TestStruct { i / 2 }.GetHashCode());
+            }
+        }
+
+        for (auto &it : list) {
+            volatile int i = 0;
+            i += it.Value();
+        }
+    });
+
+    auto results = Profile::RunInterleved({
+        &profile1,
+        &profile2,
+        &profile3,
+        &profile4,
+        &profile5,
+        &profile6,
+        &profile7,
+        &profile8
+    }, 10, 10);
+
+    HYP_LOG(Editor, Debug, "Profile results:");
+    HYP_LOG(Editor, Debug, "HashSet: {}", results[0]);
+    HYP_LOG(Editor, Debug, "Array: {}", results[1]);
+    HYP_LOG(Editor, Debug, "std::unordered_set: {}", results[2]);
+    HYP_LOG(Editor, Debug, "std::set: {}", results[3]);
+    HYP_LOG(Editor, Debug, "std::vector: {}", results[4]);
+    HYP_LOG(Editor, Debug, "LinkedList: {}", results[5]);
+    HYP_LOG(Editor, Debug, "FlatSet: {}", results[6]);
+    HYP_LOG(Editor, Debug, "std::list: {}", results[7]);
+
+    HYP_BREAKPOINT;
+#endif
 
 #if 1
     EditorSubsystem *editor_subsystem = g_engine->GetWorld()->AddSubsystem<EditorSubsystem>(
@@ -250,8 +528,8 @@ void HyperionEditor::Init()
 #if 1
     // temp
     RC<AssetBatch> batch = AssetManager::GetInstance()->CreateBatch();
-    batch->Add("test_model", "models/sponza/sponza.obj");
-    // batch->Add("test_model", "models/pica_pica/pica_pica.obj");
+    //batch->Add("test_model", "models/sponza/sponza.obj");
+    batch->Add("test_model", "models/pica_pica/pica_pica.obj");
     // batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     // batch->Add("house", "models/house.obj");
 
@@ -270,8 +548,8 @@ void HyperionEditor::Init()
 #if 1
         NodeProxy node = results["test_model"].ExtractAs<Node>();
 
-        // node.Scale(10.0f);
-        node.Scale(0.05f);
+        node.Scale(3.0f);
+       // node->Scale(0.05f);
         node.SetName("test_model");
         node.LockTransform();
 
@@ -327,6 +605,7 @@ void HyperionEditor::Init()
             NodeProxy reflection_probe_node = m_scene->GetRoot()->AddChild();
             reflection_probe_node.SetEntity(reflection_probe_entity);
             reflection_probe_node.SetName("ReflectionProbeTest");
+            reflection_probe_node->SetLocalTranslation(Vec3f(0.0f, 6.0f, 0.0f));
         }
 
 #endif
@@ -420,7 +699,7 @@ void HyperionEditor::Init()
             json::JSONArray components_json;
 
             for (const KeyValuePair<TypeID, ComponentID> &it : *all_components) {
-                const ComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(it.first);
+                const IComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(it.first);
 
                 json::JSONObject component_json;
                 component_json["type"] = component_interface->GetTypeName();

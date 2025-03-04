@@ -9,9 +9,9 @@
 #include <core/containers/Bitset.hpp>
 #include <core/containers/FlatMap.hpp>
 
-#include <math/Transform.hpp>
-#include <math/BoundingBox.hpp>
-#include <math/Matrix4.hpp>
+#include <core/math/Transform.hpp>
+#include <core/math/BoundingBox.hpp>
+#include <core/math/Matrix4.hpp>
 
 #include <rendering/RenderableAttributes.hpp>
 
@@ -28,16 +28,16 @@ struct MeshInstanceData
     static constexpr uint32 max_buffers = 8;
 
     HYP_FIELD(Property="NumInstances", Serialize=true)
-    uint32                          num_instances = 0;
+    uint32                                  num_instances = 0;
 
     HYP_FIELD(Property="Buffers", Serialize=true)
-    Array<Array<ubyte>, 0>          buffers;
+    Array<Array<ubyte>, DynamicAllocator>   buffers;
 
     HYP_FIELD(Property="BufferStructSizes", Serialize=true)
-    FixedArray<uint32, max_buffers> buffer_struct_sizes;
+    FixedArray<uint32, max_buffers>         buffer_struct_sizes;
 
     HYP_FIELD(Property="BufferStructAlignments", Serialize=true)
-    FixedArray<uint32, max_buffers> buffer_struct_alignments;
+    FixedArray<uint32, max_buffers>         buffer_struct_alignments;
 
     HYP_FORCE_INLINE bool operator==(const MeshInstanceData &other) const
     {
@@ -104,8 +104,8 @@ struct RenderProxy
     HYP_FORCE_INLINE uint32 NumInstances() const
         { return MathUtil::Max(instance_data.NumInstances(), 1); }
 
-    void ClaimRenderResources() const;
-    void UnclaimRenderResources() const;
+    void ClaimRenderResource() const;
+    void UnclaimRenderResource() const;
 
     bool operator==(const RenderProxy &other) const
     {

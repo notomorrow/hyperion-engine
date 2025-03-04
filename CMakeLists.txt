@@ -21,16 +21,36 @@ else()
     message(FATAL_ERROR "Unsupported platform")
 endif()
 
-# run HypBuildTool before configuring
-execute_process(
-    COMMAND tools/scripts/RunHypBuildTool.sh
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    RESULT_VARIABLE HYP_BUILD_TOOL_RESULT
-)
+string(TOLOWER ${HYP_PLATFORM_NAME} HYP_PLATFORM_NAME_LOWER)
 
-if(NOT ${HYP_BUILD_TOOL_RESULT} EQUAL 0)
-    message(FATAL_ERROR "HypBuildTool failed with exit code ${HYP_BUILD_TOOL_RESULT}")
-endif()
+function(RunHypBuildTool)
+    if(WIN32)
+        set(HYP_BUILD_TOOL_RUN_SCRIPT_PATH "${CMAKE_SOURCE_DIR}/tools/scripts/RunHypBuildTool.bat")
+        set(HYP_BUILD_TOOL_BUILD_SCRIPT_PATH "${CMAKE_SOURCE_DIR}/tools/scripts/BuildHypBuildTool.bat")
+    else()
+        set(HYP_BUILD_TOOL_RUN_SCRIPT_PATH "${CMAKE_SOURCE_DIR}/tools/scripts/RunHypBuildTool.sh")
+        set(HYP_BUILD_TOOL_BUILD_SCRIPT_PATH "${CMAKE_SOURCE_DIR}/tools/scripts/BuildHypBuildTool.sh")
+    endif()
+
+    message(STATUS "Running HypBuildTool: ${HYP_BUILD_TOOL_RUN_SCRIPT_PATH}")
+
+    if(NOT EXISTS ${HYP_BUILD_TOOL_RUN_SCRIPT_PATH})
+        message(FATAL_ERROR "RunHypBuildTool script not found in tools/scripts! Expected path: ${HYP_BUILD_TOOL_RUN_SCRIPT_PATH}")
+    endif()
+    
+    execute_process(
+        COMMAND ${HYP_BUILD_TOOL_RUN_SCRIPT_PATH}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        RESULT_VARIABLE HYP_BUILD_TOOL_RESULT
+    )
+
+    if(NOT HYP_BUILD_TOOL_RESULT EQUAL 0)
+        message(FATAL_ERROR "HypBuildTool failed with exit code: ${HYP_BUILD_TOOL_RESULT}")
+    endif()
+endfunction()
+
+# run HypBuildTool before configuring
+RunHypBuildTool()
 
 # set HYP_BUILD_TYPE
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -57,7 +77,7 @@ if(MSVC)
     if (DEFINED CMAKE_TOOLCHAIN_FILE)
         message(STATUS "Using CMake toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
     else()
-        message(SEND_ERROR "CMake toolchain file not specified -- should be set to vcpkg cmake file! \
+        message(STATUS "CMake toolchain file not specified -- should be set to vcpkg cmake file! \
             If you don't have vcpkg set up, download vcpkg from Microsoft and set the `-DCMAKE_TOOLCHAIN_FILE` CMake argument to \
             `<vcpkg root path>/scripts/buildsystems/vcpkg.cmake`.")
     endif()
@@ -72,27 +92,28 @@ if(MSVC)
     # no exceptions
     add_definitions("/D_HAS_EXCEPTIONS=0")
 
+    # add_definitions("/constexpr:depth1024")
+
     if(HYP_DEBUG_MODE)
         message(STATUS "Generating PDB for Hyperion library")
 
-        set(CMAKE_CXX_FLAGS_RELEASE "/Zc:preprocessor /O2 /MD /Zi")
+        set(CMAKE_CXX_FLAGS_RELEASE "/Zc:preprocessor /O2 /MD /Zi /constexpr:depth1024")
         set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
         set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG")
     else()
-        set(CMAKE_CXX_FLAGS_RELEASE "/Zc:preprocessor /O2 /MD")
+        set(CMAKE_CXX_FLAGS_RELEASE "/Zc:preprocessor /O2 /MD /constexpr:depth1024")
     endif()
 else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+
     # no exceptions
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
 
     # for full template backtrace
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=0")
 
-    # if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fomit-frame-pointer")
-    # else()
-    #     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fsanitize=address")
-    # endif()
+    # # address sanitizer and other debugging utilities
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 endif()
 
 set(HYP_VERSION_MAJOR 1)
@@ -167,7 +188,7 @@ file(MAKE_DIRECTORY ${CSHARP_PROJECTS_DIR})
 set(HYP_SCRIPTS_BIN_DIR "${CMAKE_SOURCE_DIR}/res/scripts/bin")
 file(MAKE_DIRECTORY ${HYP_SCRIPTS_BIN_DIR})
 
-set(HYP_GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+set(HYP_GENERATED_DIR "${CMAKE_SOURCE_DIR}/build/generated")
 
 add_definitions(-DHYP_EDITOR=1)
 
@@ -179,55 +200,105 @@ add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYP_ROOT_DIR=\\\"${CMAKE_CURRENT_LIST_DIR}\\\"")
 
-function(collect_sources BASE_DIR SRC_FILES SUB_LIBRARIES)
-    file(GLOB_RECURSE ALL_FILES
-        "${BASE_DIR}/*.cpp"
-        "${BASE_DIR}/*.cxx"
-        "${BASE_DIR}/*.cc"
-        "${BASE_DIR}/*.c"
-        "${BASE_DIR}/*.mm"
-        "${BASE_DIR}/*.m"
-        "${BASE_DIR}/*.h"
-        "${BASE_DIR}/*.hpp"
-        "${BASE_DIR}/*.hxx"
-    )
+# function(collect_sources BASE_DIR SRC_FILES SUB_LIBRARIES)
+#     file(GLOB_RECURSE ALL_FILES
+#         "${BASE_DIR}/*.cpp"
+#         "${BASE_DIR}/*.cxx"
+#         "${BASE_DIR}/*.cc"
+#         "${BASE_DIR}/*.c"
+#         "${BASE_DIR}/*.mm"
+#         "${BASE_DIR}/*.m"
+#         "${BASE_DIR}/*.h"
+#         "${BASE_DIR}/*.hpp"
+#         "${BASE_DIR}/*.hxx"
+#     )
+# 
+#     set(FINAL_FILES "")
+# 
+#     foreach(FILE ${ALL_FILES})
+#         get_filename_component(DIR ${FILE} DIRECTORY)
+#         
+#         # Check if CMakeLists.txt exists in this directory
+#         if(EXISTS "${DIR}/CMakeLists.txt")
+#             # Skip adding files and instead add subdirectory
+#             string(FIND "${SUBDIRS}" "${DIR}" FOUND)
+#             if(${FOUND} EQUAL -1)
+#                 list(APPEND SUBDIRS "${DIR}")
+#             endif()
+#         else()
+#             message(STATUS "Adding source file to main library: ${FILE}")
+#             list(APPEND FINAL_FILES "${FILE}")
+#         endif()
+#     endforeach()
+# 
+#     set(${SRC_FILES} ${FINAL_FILES} PARENT_SCOPE)
+# 
+#     set(LOCAL_SUB_LIBRARIES "")
+# 
+#     # Add subdirectories
+#     foreach(SUBDIR ${SUBDIRS})
+#         message(STATUS "Adding subdirectory: ${SUBDIR} to sources")
+# 
+#         # the subfolder must contain a library with the name hyperion-<subfolder>
+# 
+#         set(SUBDIR_BASENAME "")
+#         string(REGEX MATCH "([^/]+)$" SUBDIR_BASENAME ${SUBDIR})
+# 
+#         add_subdirectory(${SUBDIR} ${CMAKE_BINARY_DIR}/${SUBDIR_BASENAME})
+# 
+#         list(APPEND LOCAL_SUB_LIBRARIES "hyperion-${SUBDIR_BASENAME}")
+#     endforeach()
+# 
+#     set(${SUB_LIBRARIES} ${LOCAL_SUB_LIBRARIES} PARENT_SCOPE)
+# endfunction()
 
-    set(FINAL_FILES "")
 
-    foreach(FILE ${ALL_FILES})
-        get_filename_component(DIR ${FILE} DIRECTORY)
-        
-        # Check if CMakeLists.txt exists in this directory
-        if(EXISTS "${DIR}/CMakeLists.txt")
-            # Skip adding files and instead add subdirectory
-            string(FIND "${SUBDIRS}" "${DIR}" FOUND)
-            if(${FOUND} EQUAL -1)
-                list(APPEND SUBDIRS "${DIR}")
-            endif()
-        else()
-            list(APPEND FINAL_FILES "${FILE}")
+function(collect_sources_and_modules dir out_sources out_modules)
+    set(local_sources "")
+    set(local_modules "")
+
+    # if the directory is system/platform/<platform not equal to HYP_PLATFORM_NAME>, skip it
+    if(${dir} MATCHES "src/system/platform/.*" AND NOT ${dir} MATCHES "src/system/platform/${HYP_PLATFORM_NAME_LOWER}")
+        message(STATUS "Skipping platform directory: ${dir}")
+        return()
+    endif()
+
+    # If this directory has a CMakeLists.txt, consider it a module and skip recursion.
+    if(EXISTS "${dir}/CMakeLists.txt")
+        # the subfolder must contain a library with the name hyperion-<subfolder>
+ 
+        set(subdir_basename "")
+        string(REGEX MATCH "([^/]+)$" subdir_basename ${dir})
+
+        message(STATUS "Adding subdirectory as module: ${subdir_basename}")
+
+        add_subdirectory(${dir} ${CMAKE_BINARY_DIR}/${subdir_basename})
+
+        list(APPEND local_modules "hyperion-${subdir_basename}")
+
+        set(${out_sources} "${local_sources}" PARENT_SCOPE)
+        set(${out_modules} "${local_modules}" PARENT_SCOPE)
+
+        return()
+    endif()
+
+    file(GLOB current_sources RELATIVE ${CMAKE_SOURCE_DIR} 
+         "${dir}/*.cpp" "${dir}/*.cxx" "${dir}/*.cc" "${dir}/*.c" "${dir}/*.mm" "${dir}/*.m")
+    list(APPEND local_sources ${current_sources})
+
+    message(STATUS "Adding sources from ${dir}: ${current_sources}")
+
+    file(GLOB children LIST_DIRECTORIES true "${dir}/*")
+    foreach(child ${children})
+        if(IS_DIRECTORY "${child}")
+            collect_sources_and_modules("${child}" child_sources child_modules)
+            list(APPEND local_sources ${child_sources})
+            list(APPEND local_modules ${child_modules})
         endif()
     endforeach()
 
-    set(${SRC_FILES} ${FINAL_FILES} PARENT_SCOPE)
-
-    set(LOCAL_SUB_LIBRARIES "")
-
-    # Add subdirectories
-    foreach(SUBDIR ${SUBDIRS})
-        message(STATUS "Adding subdirectory: ${SUBDIR} to sources")
-
-        # the subfolder must contain a library with the name hyperion-<subfolder>
-
-        set(SUBDIR_BASENAME "")
-        string(REGEX MATCH "([^/]+)$" SUBDIR_BASENAME ${SUBDIR})
-
-        add_subdirectory(${SUBDIR} ${CMAKE_BINARY_DIR}/${SUBDIR_BASENAME})
-
-        list(APPEND LOCAL_SUB_LIBRARIES "hyperion-${SUBDIR_BASENAME}")
-    endforeach()
-
-    set(${SUB_LIBRARIES} ${LOCAL_SUB_LIBRARIES} PARENT_SCOPE)
+    set(${out_sources} "${local_sources}" PARENT_SCOPE)
+    set(${out_modules} "${local_modules}" PARENT_SCOPE)
 endfunction()
 
 # if (${HYP_PLATFORM_NAME} STREQUAL "Mac")
@@ -238,9 +309,9 @@ endfunction()
 # endif()
 
 set(SUB_LIBRARIES "")
-collect_sources(${CMAKE_SOURCE_DIR}/src SOURCES SUB_LIBRARIES)
+collect_sources_and_modules(${CMAKE_SOURCE_DIR}/src SOURCES SUB_LIBRARIES)
+#collect_sources(${CMAKE_SOURCE_DIR}/src SOURCES SUB_LIBRARIES)
 
-string(TOLOWER ${HYP_PLATFORM_NAME} HYP_PLATFORM_NAME_LOWER)
 
 file(GLOB_RECURSE PLATFORM_FILES "src/system/platform/**/*")
 foreach(PLATFORM_FILE ${PLATFORM_FILES})
@@ -298,26 +369,6 @@ if(Bullet_FOUND)
     )
 endif()
 
-if(APPLE)
-    set(CURL_LIBRARY /opt/homebrew/opt/curl/lib/libcurl.dylib)
-    set(CURL_INCLUDE_DIR /opt/homebrew/opt/curl/include)
-endif()
-
-find_package(CURL)
-# include_directories(${CURL_INCLUDE_DIR})
-# link_directories(${CURL_LIBRARY})
-
-# message(STATUS "CURL found, linking to it: ${CURL_LIBRARIES}\nInclude directories: ${CURL_INCLUDE_DIRS}")
-
-if(CURL_FOUND)
-    message(STATUS "CURL found at ${CURL_INCLUDE_DIRS}")
-
-    add_definitions(-DHYP_CURL=1)
-
-    include_directories(${CURL_INCLUDE_DIRS})
-    set(COMMON_LIBRARIES ${COMMON_LIBRARIES} ${CURL_LIBRARIES})
-endif()
-
 if (${NATIVE})
 
     # if glslang folder exists, link with it.
@@ -332,18 +383,6 @@ if (${NATIVE})
             ${COMMON_LIBRARIES}
             glslang
             SPIRV
-        )
-    endif()
-
-    if(EXISTS "${CMAKE_SOURCE_DIR}/submodules/zlib/CMakeLists.txt")
-        add_definitions(-DHYP_ZLIB=1)
-    
-        include_directories(submodules/zlib PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/zlib")
-        add_subdirectory(submodules/zlib)
-    
-        set(COMMON_LIBRARIES
-            ${COMMON_LIBRARIES}
-            zlibstatic
         )
     endif()
 
@@ -514,42 +553,12 @@ include_directories(
 # set HYP_BUILD_LIBRARY just for this library (so DLL exports are correct)
 add_definitions(-DHYP_BUILD_LIBRARY=1)
 
-# find python executable
-find_program(PYTHON_EXECUTABLE_PATH NAMES python3 python)
-
-if(NOT PYTHON_EXECUTABLE_PATH)
-    message(FATAL_ERROR "Python executable not found on the system")
-else()
-    message(STATUS "Python executable path: ${PYTHON_EXECUTABLE_PATH}")
-endif()
-
-# function(generate_reflection_library)
-#     # execute on build
-#     add_custom_command(
-#         OUTPUT ${CMAKE_SOURCE_DIR}/generated_files.txt
-#         COMMAND ${BINARY_DIR}/hyperion-buildtool --WorkingDirectory=${CMAKE_SOURCE_DIR} --SourceDirectory=${CMAKE_SOURCE_DIR}/src --CXXOutputDirectory=${CMAKE_SOURCE_DIR}/src/generated --CSharpOutputDirectory=${CMAKE_SOURCE_DIR}/src/dotnet/runtime/gen --ExcludeDirectories=${CMAKE_SOURCE_DIR}/src/generated --ExcludeDirectories=${CMAKE_SOURCE_DIR}/src/core
-#         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-#         COMMENT "Running Hyperion Build Tool"
-#     )
-#     add_custom_target(reflection-codegen DEPENDS ${CMAKE_SOURCE_DIR}/generated_files.txt)
-# endfunction()
-
-# generate_reflection_library()
-
-# remove codegen output folder
-file(REMOVE_RECURSE ${CMAKE_SOURCE_DIR}/generated)
-
-# # execute codegen script on configure
-# execute_process(
-#     COMMAND ${PYTHON_EXECUTABLE_PATH} ${CMAKE_SOURCE_DIR}/tools/codegen --output ${HYP_GENERATED_DIR}
-#     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-# )
-
 file(GLOB_RECURSE REFLECTION_GENERATED_SOURCES "${HYP_GENERATED_DIR}/*.cpp")
-
-# message(STATUS "Running Python codegen script - output directory: ${HYP_GENERATED_DIR}")
+message(STATUS "Reflection generated sources directory: ${HYP_GENERATED_DIR}")
 
 foreach(GENERATED_SOURCE ${REFLECTION_GENERATED_SOURCES})
+    message(STATUS "Adding generated source file: ${GENERATED_SOURCE}")
+
     set(SOURCES ${SOURCES} ${GENERATED_SOURCE})
 endforeach()
 
@@ -561,6 +570,11 @@ endforeach()
     add_library(${BUILD_NAME} SHARED ${SOURCES} ${HEADERS})
 # endif()
 
+if(MSVC)
+    # Allow multiprocess building with MSVC
+    target_compile_options(${BUILD_NAME} PRIVATE "/MP")
+endif()
+
 set(COMMON_LIBRARIES
     ${COMMON_LIBRARIES}
     ${CMAKE_THREADS_LIBS_INIT}
@@ -571,7 +585,8 @@ set(COMMON_LIBRARIES
 
 message(STATUS "Sub-libraries: ${SUB_LIBRARIES}")
 
-target_link_libraries(${BUILD_NAME} PUBLIC ${COMMON_LIBRARIES} ${SUB_LIBRARIES})
+target_link_libraries(${BUILD_NAME} PUBLIC ${COMMON_LIBRARIES})
+target_link_libraries(${BUILD_NAME} PRIVATE ${SUB_LIBRARIES})
 
 function(create_csharp_library output_name csharp_sources)
     # make a directory for the .csproj file

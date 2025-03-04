@@ -10,6 +10,7 @@
 
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
+#include <scene/Mesh.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/NodeLinkComponent.hpp>
@@ -24,8 +25,8 @@
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
 
-#include <asset/serialization/fbom/FBOMReader.hpp>
-#include <asset/serialization/fbom/FBOMWriter.hpp>
+#include <core/serialization/fbom/FBOMReader.hpp>
+#include <core/serialization/fbom/FBOMWriter.hpp>
 
 #include <ui/UIObject.hpp>
 #include <ui/UIStage.hpp>
@@ -50,13 +51,12 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
-#include <rendering/Scene.hpp>
-#include <rendering/Mesh.hpp>
+#include <rendering/RenderScene.hpp>
 #include <rendering/UIRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
 #include <rendering/subsystems/ScreenCapture.hpp>
 
-#include <rendering/Camera.hpp>
+#include <rendering/RenderCamera.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -64,7 +64,7 @@
 #include <rendering/lightmapper/LightmapperSubsystem.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
-#include <math/MathUtil.hpp>
+#include <core/math/MathUtil.hpp>
 
 #include <scripting/ScriptingService.hpp>
 
@@ -204,10 +204,20 @@ void EditorManipulationWidgetBase::Initialize()
         material_attributes.flags &= ~(MaterialAttributeFlags::DEPTH_WRITE | MaterialAttributeFlags::DEPTH_TEST);
         material_attributes.bucket = Bucket::BUCKET_TRANSLUCENT;
 
+        // testing
+        material_attributes.stencil_function = StencilFunction {
+            .pass_op        = StencilOp::REPLACE,
+            .fail_op        = StencilOp::REPLACE,
+            .depth_fail_op  = StencilOp::REPLACE,
+            .compare_op     = StencilCompareOp::ALWAYS,
+            .mask           = 0xff,
+            .value          = 0x1
+        };
+
         mesh_component->material = MaterialCache::GetInstance()->CreateMaterial(material_attributes, material_parameters);
         mesh_component->material->SetIsDynamic(true);
 
-        mesh_component->flags |= MESH_COMPONENT_FLAG_DIRTY;
+        entity_manager.AddTag<EntityTag::UPDATE_RENDER_PROXY>(child->GetEntity().GetID());
 
         child->AddTag(NodeTag(NAME("TransformWidgetElementColor"), HypData(Vec4f(mesh_component->material->GetParameter(Material::MATERIAL_KEY_ALBEDO)))));
 
@@ -489,7 +499,7 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
         m_scene = project_scene;
         AssertThrow(InitObject(m_scene));
 
-        /*{ // Ensure nodes with entities have BVH for ray testing on mouse click
+        { // Ensure nodes with entities have BVH for ray testing on mouse click
             for (Node *child : m_scene->GetRoot()->GetDescendants()) {
                 child->SetFlags(child->GetFlags() | NodeFlags::BUILD_BVH);
             }
@@ -502,13 +512,13 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
                     child->SetFlags(child->GetFlags() | NodeFlags::BUILD_BVH);
                 }
             }));
-        }*/
+        }
 
         m_camera = m_scene->GetCamera();
         AssertThrow(InitObject(m_camera));
 
         m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
-        m_scene->GetRenderResources().GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
+        m_scene->GetRenderResource().GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
 
         m_delegate_handlers.Remove("OnPackageAdded");
 
@@ -546,6 +556,12 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
         // Shutdown to reinitialize widget holder after project is opened
         m_manipulation_widget_holder.Shutdown();
 
+        m_focused_node.Reset();
+
+        if (m_highlight_node.IsValid()) {
+            m_highlight_node->Remove();
+        }
+
         const Handle<Scene> &project_scene = project->GetScene();
         
         if (project_scene.IsValid()) {
@@ -553,9 +569,9 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
 
             // @TODO Remove camera controller
 
-            project_scene->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
+            project_scene->GetRenderResource().GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
 
-            project_scene->GetRenderResources().GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
+            project_scene->GetRenderResource().GetEnvironment()->RemoveRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"));
 
             if (m_camera) {
                 m_camera.Reset();
@@ -736,6 +752,7 @@ void EditorSubsystem::LoadEditorUIDefinitions()
 void EditorSubsystem::CreateHighlightNode()
 {
     m_highlight_node = NodeProxy(MakeRefCountedPtr<Node>("Editor_Highlight"));
+    m_highlight_node->SetFlags(m_highlight_node->GetFlags() | NodeFlags::HIDE_IN_SCENE_OUTLINE);
 
     const Handle<Entity> entity = m_scene->GetEntityManager()->AddEntity();
 
@@ -748,10 +765,19 @@ void EditorSubsystem::CreateHighlightNode()
                 NAME("Forward"),
                 ShaderProperties(mesh->GetVertexAttributes())
             },
-            .bucket = Bucket::BUCKET_TRANSLUCENT
+            .bucket = Bucket::BUCKET_TRANSLUCENT,
+            // .flags = MaterialAttributeFlags::NONE, // temp
+            .stencil_function = StencilFunction {
+                .pass_op        = StencilOp::REPLACE,
+                .fail_op        = StencilOp::KEEP,
+                .depth_fail_op  = StencilOp::KEEP,
+                .compare_op     = StencilCompareOp::NOT_EQUAL,
+                .mask           = 0xff,
+                .value          = 0x1
+            }
         },
         {
-            { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f) },
+            { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f, 1.0f, 0.0f, 1.0f) },
             { Material::MATERIAL_KEY_ROUGHNESS, 0.0f },
             { Material::MATERIAL_KEY_METALNESS, 0.0f }
         }
@@ -801,7 +827,7 @@ void EditorSubsystem::InitViewport()
 
         m_scene_texture.Reset();
 
-        RC<ScreenCaptureRenderSubsystem> screen_capture_component = m_scene->GetRenderResources().GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), Vec2u(viewport_size));
+        RC<ScreenCaptureRenderSubsystem> screen_capture_component = m_scene->GetRenderResource().GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), Vec2u(viewport_size));
         m_scene_texture = screen_capture_component->GetTexture();
         AssertThrow(m_scene_texture.IsValid());
         
@@ -1553,46 +1579,47 @@ void EditorSubsystem::AddTask(const RC<IEditorTask> &task)
     RunningEditorTask &running_task = m_tasks_by_thread_type[thread_type].EmplaceBack(task);
 
     RC<UIMenuItem> tasks_menu_item = m_ui_stage->FindChildUIObject(NAME("Tasks_MenuItem")).Cast<UIMenuItem>();
-    AssertThrow(tasks_menu_item != nullptr);
 
-    if (UIObjectSpawnContext context { tasks_menu_item }) {
-        RC<UIGrid> task_grid = context.CreateUIObject<UIGrid>(NAME("Task_Grid"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-        task_grid->SetNumColumns(12);
+    if (tasks_menu_item != nullptr) {
+        if (UIObjectSpawnContext context { tasks_menu_item }) {
+            RC<UIGrid> task_grid = context.CreateUIObject<UIGrid>(NAME("Task_Grid"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+            task_grid->SetNumColumns(12);
 
-        RC<UIGridRow> task_grid_row = task_grid->AddRow();
-        task_grid_row->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
+            RC<UIGridRow> task_grid_row = task_grid->AddRow();
+            task_grid_row->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
 
-        RC<UIGridColumn> task_grid_column_left = task_grid_row->AddColumn();
-        task_grid_column_left->SetColumnSize(8);
-        task_grid_column_left->AddChildUIObject(running_task.CreateUIObject(m_ui_stage));
+            RC<UIGridColumn> task_grid_column_left = task_grid_row->AddColumn();
+            task_grid_column_left->SetColumnSize(8);
+            task_grid_column_left->AddChildUIObject(running_task.CreateUIObject(m_ui_stage));
 
-        RC<UIGridColumn> task_grid_column_right = task_grid_row->AddColumn();
-        task_grid_column_right->SetColumnSize(4);
+            RC<UIGridColumn> task_grid_column_right = task_grid_row->AddColumn();
+            task_grid_column_right->SetColumnSize(4);
 
-        RC<UIButton> cancel_button = context.CreateUIObject<UIButton>(NAME("Task_Cancel"), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-        cancel_button->SetText("Cancel");
-        cancel_button->OnClick.Bind([task_weak = task.ToWeak()](...)
-        {
-            if (RC<IEditorTask> task = task_weak.Lock()) {
-                task->Cancel();
+            RC<UIButton> cancel_button = context.CreateUIObject<UIButton>(NAME("Task_Cancel"), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+            cancel_button->SetText("Cancel");
+            cancel_button->OnClick.Bind([task_weak = task.ToWeak()](...)
+            {
+                if (RC<IEditorTask> task = task_weak.Lock()) {
+                    task->Cancel();
+                }
+
+                return UIEventHandlerResult::OK;
+            }).Detach();
+            task_grid_column_right->AddChildUIObject(cancel_button);
+
+            running_task.m_ui_object = task_grid;
+
+            tasks_menu_item->AddChildUIObject(task_grid);
+
+            // testing
+            Handle<Texture> dummy_icon_texture;
+
+            if (auto dummy_icon_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/editor/icons/loading.png")) {
+                dummy_icon_texture = dummy_icon_texture_asset.Result();
             }
 
-            return UIEventHandlerResult::OK;
-        }).Detach();
-        task_grid_column_right->AddChildUIObject(cancel_button);
-
-        running_task.m_ui_object = task_grid;
-
-        tasks_menu_item->AddChildUIObject(task_grid);
-
-        // testing
-        Handle<Texture> dummy_icon_texture;
-
-        if (auto dummy_icon_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/editor/icons/loading.png")) {
-            dummy_icon_texture = dummy_icon_texture_asset.Result();
+            tasks_menu_item->SetIconTexture(dummy_icon_texture);
         }
-
-        tasks_menu_item->SetIconTexture(dummy_icon_texture);
     }
 
     // For long running tasks, enqueues the task in the scheduler
@@ -1631,14 +1658,18 @@ void EditorSubsystem::SetFocusedNode(const NodeProxy &focused_node)
 
     m_focused_node = focused_node;
 
-    // m_highlight_node.Remove();
+    m_highlight_node.Remove();
 
     if (m_focused_node.IsValid()) {
         // @TODO watch for transform changes and update the highlight node
 
         // m_focused_node->AddChild(m_highlight_node);
+        m_scene->GetRoot()->AddChild(m_highlight_node);
         m_highlight_node->SetWorldScale(m_focused_node->GetWorldAABB().GetExtent() * 0.5f);
         m_highlight_node->SetWorldTranslation(m_focused_node->GetWorldTranslation());
+
+        HYP_LOG(Editor, Debug, "Set focused node: {}\t{}", m_focused_node->GetName(), m_focused_node->GetWorldTranslation());
+        HYP_LOG(Editor, Debug, "Set highlight node translation: {}", m_highlight_node->GetWorldTranslation());
 
         if (m_manipulation_widget_holder.GetSelectedManipulationMode() == EditorManipulationMode::NONE) {
             m_manipulation_widget_holder.SetSelectedManipulationMode(EditorManipulationMode::TRANSLATE);
@@ -1723,21 +1754,25 @@ void EditorSubsystem::UpdateTasks(GameCounter::TickUnit delta)
         for (auto it = tasks.Begin(); it != tasks.End();) {
             auto &task = it->GetTask();
 
-            // Can only tick tasks that run on the game thread
-            if (task->GetRunnableThreadType() == ThreadType::THREAD_TYPE_GAME) {
-                task->Tick(delta);
-            }
-
-            if (task->IsCompleted()) {
-                // Remove the UIObject for the task from this stage
-                if (const RC<UIObject> &task_ui_object = it->GetUIObject()) {
-                    task_ui_object->RemoveFromParent();
+            if (task->IsCommitted()) {
+                // Can only tick tasks that run on the game thread
+                if (task->GetRunnableThreadType() == ThreadType::THREAD_TYPE_GAME) {
+                    task->Tick(delta);
                 }
 
-                it = tasks.Erase(it);
-            } else {
-                ++it;
+                if (task->IsCompleted()) {
+                    // Remove the UIObject for the task from this stage
+                    if (const RC<UIObject> &task_ui_object = it->GetUIObject()) {
+                        task_ui_object->RemoveFromParent();
+                    }
+
+                    it = tasks.Erase(it);
+
+                    continue;
+                }
             }
+
+            ++it;
         }
     }
 }

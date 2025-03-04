@@ -275,5 +275,8 @@ void main()
     //     return;
     // }
 
+    // debug
+    color = vec4(normal, 1.0);
+
     imageStore(image, storage_coord, color);
 }

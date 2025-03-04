@@ -13,13 +13,12 @@
 
 #include <core/Defines.hpp>
 
-#include <rendering/DrawProxy.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/Platform.hpp>
 
-#include <math/Matrix4.hpp>
+#include <core/math/Matrix4.hpp>
 
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -274,7 +273,7 @@ class GPUBufferHolderMemoryPool final : public MemoryPool<StructType>
 public:
     using Base = MemoryPool<StructType>;
 
-    GPUBufferHolderMemoryPool(uint32 initial_count = 16 * Base::num_elements_per_block)
+    GPUBufferHolderMemoryPool(uint32 initial_count = Base::InitInfo::num_initial_elements)
         : Base(initial_count, /* create_initial_blocks */ true, /* block_init_ctx */ nullptr)
     {
     }
@@ -329,8 +328,8 @@ public:
                 : index;
 
             SizeType count = (range_end < index + Base::num_elements_per_block)
-                ? range_end - (offset - index)
-                : Base::num_elements_per_block - (offset - index);
+                ? range_end - offset
+                : Base::num_elements_per_block - offset;
 
             // sanity checks
             AssertThrow(offset - index < begin_it->elements.Size());

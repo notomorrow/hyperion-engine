@@ -8,12 +8,11 @@ namespace hyperion {
 
 enum class HypClassAllocationMethod : uint8
 {
-    NONE = 0,
+    INVALID         = uint8(-1),
     
-    OBJECT_POOL_HANDLE,
-    REF_COUNTED_PTR,
-
-    DEFAULT = OBJECT_POOL_HANDLE
+    NONE            = 0,
+    HANDLE          = 1,
+    REF_COUNTED_PTR = 2
 };
 
 } // namespace hyperion

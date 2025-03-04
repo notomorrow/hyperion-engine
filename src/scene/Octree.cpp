@@ -6,8 +6,11 @@
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/BVHComponent.hpp>
+#include <scene/ecs/components/TransformComponent.hpp>
 
 #include <scene/camera/Camera.hpp>
+
+#include <core/algorithm/Every.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -136,7 +139,7 @@ bool Octree::EmptyDeep(int depth, uint8 octant_mask) const
     }
 
     if (depth != 0) {
-        return m_octants.Every([depth, octant_mask](const Octant &octant)
+        return Every(m_octants, [depth, octant_mask](const Octant &octant)
         {
             if (octant_mask & (1u << octant.octree->m_octant_id.GetIndex())) {
                 return octant.octree->EmptyDeep(depth - 1);
@@ -335,6 +338,8 @@ void Octree::Clear()
                 visibility_state_component->octant_id = OctantID::Invalid();
                 visibility_state_component->visibility_state = nullptr;
             }
+
+            m_entity_manager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entry.entity.GetID());
         }
     }
 
@@ -834,6 +839,8 @@ Octree::InsertResult Octree::Rebuild()
                     .visibility_state   = nullptr
                 });
             }
+
+            m_entity_manager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(it.entity.GetID());
         }
     }
 
@@ -875,6 +882,8 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox &new_aabb)
                     .visibility_state   = nullptr
                 });
             }
+
+            m_entity_manager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(it.entity.GetID());
         }
     }
 
@@ -1181,12 +1190,42 @@ bool Octree::TestRay(const Ray &ray, RayTestResults &out_results, bool use_bvh) 
 
                     // If the entity has a BVH associated with it, use that instead of the AABB for more accuracy
                     if (BVHComponent *bvh_component = m_entity_manager->TryGetComponent<BVHComponent>(entry.entity.GetID())) {
-                        RayTestResults bvh_results = bvh_component->bvh.TestRay(ray);
+                        Matrix4 model_matrix = Matrix4::Identity();
+                        Matrix4 normal_matrix = Matrix4::Identity();
 
-                        if (bvh_results.Any()) {
-                            for (RayHit &hit : bvh_results) {
+                        Ray local_space_ray = ray;
+
+                        if (TransformComponent *transform_component = m_entity_manager->TryGetComponent<TransformComponent>(entry.entity.GetID())) {
+                            model_matrix = transform_component->transform.GetMatrix();
+                            normal_matrix = model_matrix.Transposed().Inverted();
+                            
+                            local_space_ray = model_matrix.Inverted() * ray;
+                        }
+
+                        HYP_LOG(Octree, Debug, "Testing ray against BVH for entity #{}", entry.entity.GetID().Value());
+                        HYP_LOG(Octree, Debug, "Ray: origin: {}, direction: {}", ray.position, ray.direction);
+                        HYP_LOG(Octree, Debug, "Local space ray: origin: {}, direction: {}", local_space_ray.position, local_space_ray.direction);
+
+                        RayTestResults local_bvh_results = bvh_component->bvh.TestRay(local_space_ray);
+
+                        if (local_bvh_results.Any()) {
+                            RayTestResults bvh_results;
+
+                            for (RayHit hit : local_bvh_results) {
                                 hit.id = entry.entity.GetID().Value();
                                 hit.user_data = nullptr;
+
+                                Vec4f transformed_normal = normal_matrix * Vec4f(hit.normal, 0.0f);
+                                hit.normal = transformed_normal.GetXYZ().Normalized();
+
+                                Vec4f transformed_position = model_matrix * Vec4f(hit.hitpoint, 1.0f);
+                                transformed_position /= transformed_position.w;
+
+                                hit.hitpoint = transformed_position.GetXYZ();
+
+                                hit.distance = (hit.hitpoint - ray.position).Length();
+
+                                bvh_results.AddHit(hit);
                             }
                             
                             out_results.Merge(std::move(bvh_results));

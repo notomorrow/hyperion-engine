@@ -838,6 +838,8 @@ protected:
     void Reset()
     {
         if (m_owns_executor) {
+            delete m_executor;
+        } else {
             // Wait for the task to complete when not in debug mode
             if (IsValid() && !IsCompleted()) {
 #ifdef HYP_DEBUG_MODE
@@ -846,8 +848,6 @@ protected:
                 Base::Await_Internal();
 #endif
             }
-
-            delete m_executor;
         }
 
         m_executor = nullptr;
@@ -962,7 +962,7 @@ struct TaskAwaitAll_Impl<Task<void>>
         Array<int> called_states;
         called_states.Resize(tasks.Size());
 
-        Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE> semaphore(tasks.Size());
+        Semaphore<int, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE> semaphore(int(tasks.Size()));
 
         while ((completion_states | bound_states).Count() != tasks.Size()) {
             for (SizeType i = 0; i < tasks.Size(); ++i) {

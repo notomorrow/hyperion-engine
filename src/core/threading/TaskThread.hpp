@@ -6,7 +6,7 @@
 #include <core/threading/Thread.hpp>
 #include <core/threading/Scheduler.hpp>
 #include <core/containers/Queue.hpp>
-#include <math/MathUtil.hpp>
+#include <core/math/MathUtil.hpp>
 #include <GameCounter.hpp>
 #include <core/Defines.hpp>
 
@@ -15,9 +15,9 @@
 namespace hyperion {
 namespace threading {
 
-struct ThreadID;
+class ThreadID;
 
-class TaskThread : public Thread<Scheduler>
+class HYP_API TaskThread : public Thread<Scheduler>
 {
 public:
     TaskThread(const ThreadID &thread_id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);

@@ -3,12 +3,12 @@
 #ifndef HYPERION_ECS_BOUNDING_BOX_COMPONENT_HPP
 #define HYPERION_ECS_BOUNDING_BOX_COMPONENT_HPP
 
-#include <math/BoundingBox.hpp>
+#include <core/math/BoundingBox.hpp>
 #include <HashCode.hpp>
 
 namespace hyperion {
 
-HYP_STRUCT(Component, Editor=false)
+HYP_STRUCT(Component, Size=64, Editor=false)
 struct BoundingBoxComponent
 {
     HYP_FIELD(Property="LocalAABB", Serialize=true)
@@ -16,9 +16,6 @@ struct BoundingBoxComponent
 
     HYP_FIELD(Property="WorldAABB", Serialize=true)
     BoundingBox world_aabb;
-
-    HYP_FIELD()
-    HashCode    transform_hash_code;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {

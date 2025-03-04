@@ -14,7 +14,7 @@
 
 #include <core/Defines.hpp>
 
-#include <math/MathUtil.hpp>
+#include <core/math/MathUtil.hpp>
 
 #include <util/UTF8.hpp>
 
@@ -28,6 +28,16 @@
 
 namespace hyperion {
 namespace threading {
+
+HYP_API void RegisterThread(const ThreadID &id, IThread *thread)
+{
+    Threads::RegisterThread(id, thread);
+}
+
+HYP_API void UnregisterThread(const ThreadID &id)
+{
+    Threads::UnregisterThread(id);
+}
 
 HYP_API void SetCurrentThreadObject(IThread *thread)
 {

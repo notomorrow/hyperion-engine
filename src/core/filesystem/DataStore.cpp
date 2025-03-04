@@ -10,7 +10,7 @@
 
 #include <core/utilities/Time.hpp>
 
-#include <asset/ByteWriter.hpp>
+#include <core/io/ByteWriter.hpp>
 #include <asset/Assets.hpp>
 
 namespace hyperion {
@@ -63,12 +63,17 @@ int DataStoreBase::Unclaim()
     {
         m_shutdown_semaphore.Produce(1);
 
-        TaskSystem::GetInstance().Enqueue([this]()
-        {
-            DiscardOldFiles();
+        TaskSystem::GetInstance().Enqueue(
+            HYP_STATIC_MESSAGE("DiscardOldFiles on DataStoreBase::Unclaim"),
+            [this]()
+            {
+                DiscardOldFiles();
 
-            m_shutdown_semaphore.Release(1);
-        }, TaskThreadPoolName::THREAD_POOL_BACKGROUND, TaskEnqueueFlags::FIRE_AND_FORGET);
+                m_shutdown_semaphore.Release(1);
+            },
+            TaskThreadPoolName::THREAD_POOL_BACKGROUND,
+            TaskEnqueueFlags::FIRE_AND_FORGET
+        );
     });
 }
 

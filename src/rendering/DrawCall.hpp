@@ -27,8 +27,10 @@ struct RenderProxy;
 struct DrawCommandData;
 class IndirectDrawState;
 class GPUBufferHolderBase;
-
 struct MeshInstanceData;
+class MeshRenderResource;
+class MaterialRenderResource;
+class SkeletonRenderResource;
 
 extern HYP_API EntityInstanceBatchHolderMap *GetEntityInstanceBatchHolderMap();
 
@@ -58,17 +60,17 @@ struct DrawCallID
 
     uint64  value;
 
-    DrawCallID()
+    constexpr DrawCallID()
         : value(0)
     {
     }
 
-    DrawCallID(ID<Mesh> mesh_id)
+    constexpr DrawCallID(ID<Mesh> mesh_id)
         : value(mesh_id.Value())
     {
     }
 
-    DrawCallID(ID<Mesh> mesh_id, ID<Material> material_id)
+    constexpr DrawCallID(ID<Mesh> mesh_id, ID<Material> material_id)
         : value(uint64(mesh_id.Value()) | (uint64(material_id.Value()) << 32))
     {
     }
@@ -91,16 +93,16 @@ struct DrawCallID
 
 struct DrawCall
 {
-    DrawCallID          id;
-    EntityInstanceBatch *batch = nullptr;
-    uint32              draw_command_index = 0;
+    DrawCallID              id;
+    EntityInstanceBatch     *batch = nullptr;
+    uint32                  draw_command_index = 0;
 
-    Mesh                *mesh = nullptr;
-    Material            *material = nullptr;
-    Skeleton            *skeleton = nullptr;
+    MeshRenderResource      *mesh_render_resource = nullptr;
+    MaterialRenderResource  *material_render_resource = nullptr;
+    SkeletonRenderResource  *skeleton_render_resource = nullptr;
 
-    uint32              entity_id_count = 0;
-    ID<Entity>          entity_ids[max_entities_per_instance_batch];
+    uint32                  entity_id_count = 0;
+    ID<Entity>              entity_ids[max_entities_per_instance_batch];
 };
 
 class IDrawCallCollectionImpl
@@ -139,10 +141,10 @@ public:
     HYP_FORCE_INLINE RenderGroup *GetRenderGroup() const
         { return m_render_group; }
 
-    HYP_FORCE_INLINE Array<DrawCall, 4096> &GetDrawCalls()
+    HYP_FORCE_INLINE Array<DrawCall, InlineAllocator<16>> &GetDrawCalls()
         { return m_draw_calls; }
 
-    HYP_FORCE_INLINE const Array<DrawCall, 4096> &GetDrawCalls() const
+    HYP_FORCE_INLINE const Array<DrawCall, InlineAllocator<16>> &GetDrawCalls() const
         { return m_draw_calls; }
 
     void PushDrawCallToBatch(EntityInstanceBatch *batch, DrawCallID id, const RenderProxy &render_proxy);
@@ -157,14 +159,14 @@ private:
     *  Otherwise, zero will be returned. */
     uint32 PushEntityToBatch(DrawCall &draw_call, ID<Entity> entity, const MeshInstanceData &mesh_instance_data, uint32 num_instances, uint32 instance_data_offset);
 
-    IDrawCallCollectionImpl             *m_impl;
+    IDrawCallCollectionImpl                 *m_impl;
 
-    RenderGroup                         *m_render_group;
+    RenderGroup                             *m_render_group;
 
-    Array<DrawCall, 4096>               m_draw_calls;
+    Array<DrawCall, InlineAllocator<16>>    m_draw_calls;
 
     // Map from draw call ID to index in draw_calls
-    HashMap<uint64, Array<SizeType>>    m_index_map;
+    HashMap<uint64, Array<SizeType>>        m_index_map;
 };
 
 template <class EntityInstanceBatchType>

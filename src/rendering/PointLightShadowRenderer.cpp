@@ -2,11 +2,13 @@
 
 #include <rendering/PointLightShadowRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/Light.hpp>
-#include <rendering/EnvProbe.hpp>
+#include <rendering/RenderProbe.hpp>
+#include <rendering/RenderLight.hpp>
 #include <rendering/RenderState.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
+
+#include <scene/Light.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -101,7 +103,7 @@ void PointLightShadowRenderer::OnRender(Frame *frame)
         return;
     }
 
-    LightRenderResources &light_render_resources = m_light->GetRenderResources();
+    LightRenderResource &light_render_resources = m_light->GetRenderResource();
 
     if (light_render_resources.GetVisibilityBits().Test(GetParent()->GetScene()->GetCamera().GetID().ToIndex())) {
         if (!m_last_visibility_state) {

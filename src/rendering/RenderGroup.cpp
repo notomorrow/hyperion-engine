@@ -3,11 +3,14 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/GBuffer.hpp>
-#include <rendering/Scene.hpp>
-#include <rendering/Camera.hpp>
-#include <rendering/Skeleton.hpp>
-#include <rendering/EnvGrid.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderCamera.hpp>
+#include <rendering/RenderMesh.hpp>
+#include <rendering/RenderMaterial.hpp>
+#include <rendering/RenderSkeleton.hpp>
+#include <rendering/RenderLight.hpp>
 #include <rendering/RenderProxy.hpp>
+#include <rendering/EnvGrid.hpp>
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/RenderState.hpp>
 #include <rendering/GraphicsPipelineCache.hpp>
@@ -17,6 +20,9 @@
 #include <rendering/backend/RenderConfig.hpp>
 
 #include <scene/Entity.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
+
 #include <scene/animation/Skeleton.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -340,6 +346,7 @@ void RenderGroup::AddRenderProxy(const RenderProxy &render_proxy)
     AssertDebug(render_proxy.mesh->IsReady());
 
     AssertDebug(render_proxy.material.IsValid());
+    AssertDebug(render_proxy.material->IsReady());
 
     m_render_proxies.Set(render_proxy.entity.GetID(), &render_proxy);
 }
@@ -396,10 +403,11 @@ void RenderGroup::CollectDrawCalls()
     for (const auto &it : m_render_proxies) {
         const RenderProxy *render_proxy = it.second;
 
-        AssertDebug(render_proxy->material.IsValid());
-
         AssertDebug(render_proxy->mesh.IsValid());
-        AssertDebugMsg(render_proxy->mesh->IsReady(), "Mesh #%u is not ready", render_proxy->mesh->GetID().Value());
+        AssertDebugMsg(render_proxy->mesh->IsReady(), "Mesh #%u is not ready", render_proxy->mesh.GetID().Value());
+
+        AssertDebug(render_proxy->material.IsValid());
+        AssertDebugMsg(render_proxy->material->IsReady(), "Material #%u is not ready", render_proxy->material.GetID().Value());
 
         DrawCallID draw_call_id;
 
@@ -503,9 +511,9 @@ static HYP_FORCE_INLINE void RenderAll(
         return;
     }
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<LightRenderResources> &light_render_resources = g_engine->GetRenderState()->GetActiveLight();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<LightRenderResource> &light_render_resources = g_engine->GetRenderState()->GetActiveLight();
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -566,8 +574,8 @@ static HYP_FORCE_INLINE void RenderAll(
                     frame->GetCommandBuffer(),
                     pipeline,
                     {
-                        { NAME("MaterialsBuffer"), ShaderDataOffset<MaterialShaderData>(draw_call.material != nullptr ? draw_call.material->GetRenderResources().GetBufferIndex() : 0) },
-                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton != nullptr ? draw_call.skeleton->GetRenderResources().GetBufferIndex() : 0) }
+                        { NAME("MaterialsBuffer"), ShaderDataOffset<MaterialShaderData>(draw_call.material_render_resource != nullptr ? draw_call.material_render_resource->GetBufferIndex() : 0) },
+                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton_render_resource != nullptr ? draw_call.skeleton_render_resource->GetBufferIndex() : 0) }
                     },
                     entity_descriptor_set_index
                 );
@@ -576,7 +584,7 @@ static HYP_FORCE_INLINE void RenderAll(
                     frame->GetCommandBuffer(),
                     pipeline,
                     {
-                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton != nullptr ? draw_call.skeleton->GetRenderResources().GetBufferIndex() : 0) }
+                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton_render_resource != nullptr ? draw_call.skeleton_render_resource->GetBufferIndex() : 0) }
                     },
                     entity_descriptor_set_index
                 );
@@ -596,20 +604,20 @@ static HYP_FORCE_INLINE void RenderAll(
 
         // Bind material descriptor set
         if (material_descriptor_set_index != ~0u && !use_bindless_textures) {
-            const DescriptorSetRef &material_descriptor_set = draw_call.material->GetRenderResources().GetDescriptorSets()[frame_index];
+            const DescriptorSetRef &material_descriptor_set = draw_call.material_render_resource->GetDescriptorSets()[frame_index];
             AssertThrow(material_descriptor_set.IsValid());
 
             material_descriptor_set->Bind(frame->GetCommandBuffer(), pipeline, material_descriptor_set_index);
         }
 
         if constexpr (IsIndirect) {
-            draw_call.mesh->RenderIndirect(
+            draw_call.mesh_render_resource->RenderIndirect(
                 frame->GetCommandBuffer(),
                 indirect_renderer->GetDrawState().GetIndirectBuffer(frame_index).Get(),
                 draw_call.draw_command_index * uint32(sizeof(IndirectDrawCommand))
             );
         } else {
-            draw_call.mesh->Render(frame->GetCommandBuffer(), batch->num_entities);
+            draw_call.mesh_render_resource->Render(frame->GetCommandBuffer(), batch->num_entities);
         }
     }
 }
@@ -662,9 +670,9 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
     const uint32 instancing_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Instancing"));
     const DescriptorSetRef &instancing_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Instancing"), frame_index);
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<LightRenderResources> &light_render_resources = g_engine->GetRenderState()->GetActiveLight();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<LightRenderResource> &light_render_resources = g_engine->GetRenderState()->GetActiveLight();
 
     if (divided_draw_calls.Size() == 1) {
         RenderAll<IsIndirect>(
@@ -679,7 +687,11 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
 
     // HYP_LOG(Rendering, Debug, "Rendering {} draw calls in {} batches", draw_state.GetDrawCalls().Size(), num_batches);
 
-    ParallelForEach(divided_draw_calls, num_batches, pool,
+    TaskSystem::GetInstance().ParallelForEach(
+        HYP_STATIC_MESSAGE("RenderAll_Parallel"),
+        pool,
+        num_batches,
+        divided_draw_calls,
         [&](Span<const DrawCall> draw_calls, uint32 index, uint32)
         {
             if (!draw_calls) {
@@ -728,8 +740,8 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
                                     secondary,
                                     pipeline,
                                     {
-                                        { NAME("MaterialsBuffer"), ShaderDataOffset<MaterialShaderData>(draw_call.material != nullptr ? draw_call.material->GetRenderResources().GetBufferIndex() : 0) },
-                                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton != nullptr ? draw_call.skeleton->GetRenderResources().GetBufferIndex() : 0) }
+                                        { NAME("MaterialsBuffer"), ShaderDataOffset<MaterialShaderData>(draw_call.material_render_resource != nullptr ? draw_call.material_render_resource->GetBufferIndex() : 0) },
+                                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton_render_resource != nullptr ? draw_call.skeleton_render_resource->GetBufferIndex() : 0) }
                                     },
                                     entity_descriptor_set_index
                                 );
@@ -738,7 +750,7 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
                                     secondary,
                                     pipeline,
                                     {
-                                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton != nullptr ? draw_call.skeleton->GetRenderResources().GetBufferIndex() : 0) }
+                                        { NAME("SkeletonsBuffer"), ShaderDataOffset<SkeletonShaderData>(draw_call.skeleton_render_resource != nullptr ? draw_call.skeleton_render_resource->GetBufferIndex() : 0) }
                                     },
                                     entity_descriptor_set_index
                                 );
@@ -758,20 +770,20 @@ static HYP_FORCE_INLINE void RenderAll_Parallel(
 
                         // Bind material descriptor set
                         if (material_descriptor_set_index != ~0u && !use_bindless_textures) {
-                            const DescriptorSetRef &material_descriptor_set = draw_call.material->GetRenderResources().GetDescriptorSets()[frame_index];
+                            const DescriptorSetRef &material_descriptor_set = draw_call.material_render_resource->GetDescriptorSets()[frame_index];
                             AssertThrow(material_descriptor_set.IsValid());
 
                             material_descriptor_set->Bind(secondary, pipeline, material_descriptor_set_index);
                         }
 
                         if constexpr (IsIndirect) {
-                            draw_call.mesh->RenderIndirect(
+                            draw_call.mesh_render_resource->RenderIndirect(
                                 secondary,
                                 indirect_renderer->GetDrawState().GetIndirectBuffer(frame_index).Get(),
                                 draw_call.draw_command_index * uint32(sizeof(IndirectDrawCommand))
                             );
                         } else {
-                            draw_call.mesh->Render(secondary, entity_instance_batch->num_entities);
+                            draw_call.mesh_render_resource->Render(secondary, entity_instance_batch->num_entities);
                         }
                     }
 

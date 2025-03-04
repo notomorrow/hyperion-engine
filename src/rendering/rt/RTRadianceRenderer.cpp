@@ -3,12 +3,13 @@
 #include <rendering/rt/RTRadianceRenderer.hpp>
 #include <rendering/rt/DDGI.hpp>
 #include <rendering/ShaderGlobals.hpp>
-#include <rendering/Scene.hpp>
-#include <rendering/Camera.hpp>
-#include <rendering/EnvGrid.hpp>
-#include <rendering/EnvProbe.hpp>
-#include <rendering/PlaceholderData.hpp>
+#include <rendering/RenderScene.hpp>
+#include <rendering/RenderCamera.hpp>
+#include <rendering/RenderProbe.hpp>
+#include <rendering/RenderLight.hpp>
 #include <rendering/RenderState.hpp>
+#include <rendering/EnvGrid.hpp>
+#include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
 #include <rendering/backend/RendererBuffer.hpp>
@@ -181,8 +182,8 @@ void RTRadianceRenderer::Render(Frame *frame)
 {
     UpdateUniforms(frame);
 
-    const SceneRenderResources *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResources *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
+    const SceneRenderResource *scene_render_resources = g_engine->GetRenderState()->GetActiveScene();
+    const CameraRenderResource *camera_render_resources = &g_engine->GetRenderState()->GetActiveCamera();
 
     m_raytracing_pipeline->Bind(frame->GetCommandBuffer());
 
@@ -343,10 +344,10 @@ void RTRadianceRenderer::CreateTemporalBlending()
         InternalFormat::RGBA8,
         IsPathTracer()
             ? TemporalBlendTechnique::TECHNIQUE_4 // progressive blending
-            : TemporalBlendTechnique::TECHNIQUE_2,
+            : TemporalBlendTechnique::TECHNIQUE_3,
         IsPathTracer()
             ? TemporalBlendFeedback::HIGH
-            : TemporalBlendFeedback::LOW,
+            : TemporalBlendFeedback::MEDIUM,
         m_texture->GetImageView()
     );
 

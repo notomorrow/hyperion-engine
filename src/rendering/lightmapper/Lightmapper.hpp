@@ -18,8 +18,8 @@
 #include <core/utilities/UUID.hpp>
 #include <core/utilities/Result.hpp>
 
-#include <math/Triangle.hpp>
-#include <math/Ray.hpp>
+#include <core/math/Triangle.hpp>
+#include <core/math/Ray.hpp>
 
 #include <scene/Scene.hpp>
 
@@ -29,7 +29,7 @@
 
 namespace hyperion {
 
-static constexpr int max_bounces_cpu = 2;
+static constexpr int max_bounces_cpu = 1;
 
 struct LightmapHitsBuffer;
 class LightmapTaskThreadPool;
@@ -65,8 +65,8 @@ struct LightmapRay
         { return !(*this == other); }
 };
 
-constexpr uint32 max_ray_hits_gpu = 512 * 512;
-constexpr uint32 max_ray_hits_cpu = 128 * 128;
+constexpr SizeType max_ray_hits_gpu = 512 * 512;
+constexpr SizeType max_ray_hits_cpu = 16 * 16;
 
 struct alignas(16) LightmapHit
 {
@@ -142,6 +142,7 @@ struct LightmapJobCPUParams
 struct LightmapJobParams
 {
     LightmapTraceMode                                   trace_mode;
+    RC<LightmapTaskThreadPool>                          thread_pool;
     Handle<Scene>                                       scene;
     Span<LightmapElement>                               elements_view;
     HashMap<Handle<Entity>, LightmapElement *>          *all_elements_map;
@@ -153,7 +154,7 @@ class HYP_API LightmapJob
 public:
     friend struct RenderCommand_LightmapTraceRaysOnGPU;
 
-    static constexpr uint32 num_multisamples = 1;
+    static constexpr uint32 num_multisamples = 4;
 
     LightmapJob(LightmapJobParams &&params);
     LightmapJob(const LightmapJob &other)                   = delete;
@@ -186,7 +187,7 @@ public:
     HYP_FORCE_INLINE const Array<uint32> &GetTexelIndices() const
         { return m_texel_indices; }
 
-    HYP_FORCE_INLINE void GetPreviousFrameRays(uint32 frame_index, Array<LightmapRay> &out_rays) const
+    HYP_FORCE_INLINE void GetPreviousFrameRays(uint32 frame_index, Span<const LightmapRay> &out_rays) const
     {
         Mutex::Guard guard(m_previous_frame_rays_mutex);
 
@@ -242,7 +243,7 @@ private:
 
     UUID                                                    m_uuid;
 
-    Array<uint32>                                             m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
+    Array<uint32>                                           m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
 
     Array<LightmapRay>                                      m_current_rays;
 
@@ -252,7 +253,6 @@ private:
     Optional<LightmapUVMap>                                 m_uv_map;
     Task<Result<LightmapUVMap>>                             m_build_uv_map_task;
     Array<Task<void>>                                       m_current_tasks;
-    UniquePtr<LightmapTaskThreadPool>                       m_task_thread_pool;
 
     Semaphore<int32>                                        m_running_semaphore;
     uint32                                                  m_texel_index;
@@ -294,6 +294,8 @@ private:
     void HandleCompletedJob(LightmapJob *job);
 
     LightmapTraceMode                           m_trace_mode;
+
+    RC<LightmapTaskThreadPool>                  m_thread_pool;
 
     Handle<Scene>                               m_scene;
 

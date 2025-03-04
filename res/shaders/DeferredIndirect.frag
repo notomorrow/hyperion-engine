@@ -143,7 +143,7 @@ void main()
 #endif
 
 #ifdef RT_GI_ENABLED
-    irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb;
+    irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb * 3.5;
 #endif
 
 #ifdef HBIL_ENABLED

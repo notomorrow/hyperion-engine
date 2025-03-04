@@ -6,6 +6,10 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/ContainerBase.hpp>
 
+#include <core/functional/FunctionWrapper.hpp>
+
+#include <core/memory/allocator/Allocator.hpp>
+
 #include <HashCode.hpp>
 
 namespace hyperion {
@@ -18,7 +22,7 @@ struct HashSetElement
 {
     HashSetElement      *next = nullptr;
     HashCode::ValueType hash_code;
-    Value           value;
+    Value               value;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
         { return hash_code; }
@@ -27,6 +31,8 @@ struct HashSetElement
 template <class Value, auto KeyBy>
 struct HashSetBucket
 {
+    static constexpr FunctionWrapper<decltype(KeyBy)> key_by_fn { KeyBy };
+
     struct ConstIterator;
 
     struct Iterator
@@ -92,8 +98,8 @@ struct HashSetBucket
             { return element != other.element; }
     };
     
-    HashSetElement<Value, KeyBy>   *head = nullptr;
-    HashSetElement<Value, KeyBy>   *tail = nullptr;
+    HashSetElement<Value, KeyBy>    *head = nullptr;
+    HashSetElement<Value, KeyBy>    *tail = nullptr;
     
     Iterator Push(HashSetElement<Value, KeyBy> *element)
     {
@@ -114,7 +120,7 @@ struct HashSetBucket
     Iterator Find(const TFindAsType &value)
     {
         for (auto it = head; it != nullptr; it = it->next) {
-            if (MapFunction<KeyBy>()(it->value) == value) {
+            if (key_by_fn(it->value) == value) {
                 return Iterator { this, it };
             }
         }
@@ -126,7 +132,7 @@ struct HashSetBucket
     ConstIterator Find(const TFindAsType &value) const
     {
        for (auto it = head; it != nullptr; it = it->next) {
-            if (MapFunction<KeyBy>()(it->value) == value) {
+            if (key_by_fn(it->value) == value) {
                 return ConstIterator { this, it };
             }
         }
@@ -149,13 +155,17 @@ struct HashSetBucket
 
 } // namespace detail
 
-template <class Value, auto KeyBy = &KeyBy_Identity<Value>>
-class HashSet : public ContainerBase<HashSet<Value, KeyBy>, decltype(std::declval<MapFunction<KeyBy>>()(std::declval<Value>()))>
-{
+template <class Value, auto KeyBy = &KeyBy_Identity<Value>, class AllocatorType = DynamicAllocator>
+class HashSet : public ContainerBase<HashSet<Value, KeyBy, AllocatorType>, decltype(std::declval<FunctionWrapper<decltype(KeyBy)>>()(std::declval<Value>()))>
+{   
     static constexpr bool is_contiguous = false;
 
     static constexpr SizeType initial_bucket_size = 16;
     static constexpr double desired_load_factor = 0.75;
+
+    static constexpr FunctionWrapper<decltype(KeyBy)> key_by_fn { KeyBy };
+
+    using HashSetBucketArray = Array<detail::HashSetBucket<Value, KeyBy>, InlineAllocator<initial_bucket_size>>;
 
     template <class IteratorType>
     static inline void AdvanceIteratorBucket(IteratorType &iter)
@@ -180,17 +190,16 @@ class HashSet : public ContainerBase<HashSet<Value, KeyBy>, decltype(std::declva
     }
 
 public:
-
-    using KeyType = decltype(std::declval<MapFunction<KeyBy>>()(std::declval<Value>()));
+    using KeyType = decltype(std::declval<FunctionWrapper<decltype(KeyBy)>>()(std::declval<Value>()));
     using ValueType = Value;
 
-    using Base = ContainerBase<HashSet<Value, KeyBy>, KeyType>;
+    using Base = ContainerBase<HashSet<Value, KeyBy, AllocatorType>, KeyType>;
 
     struct ConstIterator;
 
     struct Iterator
     {
-        HashSet                                                             *hash_set;
+        HashSet                                                 *hash_set;
         typename detail::HashSetBucket<Value, KeyBy>::Iterator  bucket_iter;
 
         Iterator(HashSet *hash_set, typename detail::HashSetBucket<Value, KeyBy>::Iterator bucket_iter)
@@ -459,7 +468,7 @@ public:
 
 private:
     HYP_FORCE_INLINE static HashCode GetHashCode(const Value &value)
-        { return HashCode::GetHashCode(MapFunction<KeyBy>()(value)); }
+        { return HashCode::GetHashCode(key_by_fn(value)); }
 
     void CheckAndRebuildBuckets();
 
@@ -469,19 +478,19 @@ private:
     HYP_FORCE_INLINE const detail::HashSetBucket<Value, KeyBy> *GetBucketForHash(HashCode::ValueType hash) const
         { return &m_buckets[hash % m_buckets.Size()]; }
 
-    Array<detail::HashSetBucket<Value, KeyBy>, initial_bucket_size * sizeof(detail::HashSetBucket<Value, KeyBy>)> m_buckets;
-    SizeType m_size;
+    HashSetBucketArray  m_buckets;
+    SizeType            m_size;
 };
 
-template <class Value, auto KeyBy>
-HashSet<Value, KeyBy>::HashSet()
+template <class Value, auto KeyBy, class AllocatorType>
+HashSet<Value, KeyBy, AllocatorType>::HashSet()
     : m_size(0)
 {
     m_buckets.Resize(initial_bucket_size);
 }
 
-template <class Value, auto KeyBy>
-HashSet<Value, KeyBy>::HashSet(const HashSet &other)
+template <class Value, auto KeyBy, class AllocatorType>
+HashSet<Value, KeyBy, AllocatorType>::HashSet(const HashSet &other)
     : m_size(other.m_size)
 {
     m_buckets.Resize(other.m_buckets.Size());
@@ -490,24 +499,30 @@ HashSet<Value, KeyBy>::HashSet(const HashSet &other)
         const auto &bucket = other.m_buckets[bucket_index];
 
         for (auto it = bucket.head; it != nullptr; it = it->next) {
-            m_buckets[bucket_index].Push(new detail::HashSetElement<Value, KeyBy> {
+            detail::HashSetElement<Value, KeyBy> *ptr = static_cast<detail::HashSetElement<Value, KeyBy> *>(AllocatorType().Allocate(sizeof(detail::HashSetElement<Value, KeyBy>)));
+
+            new (ptr) detail::HashSetElement<Value, KeyBy> {
                 nullptr,
                 it->hash_code,
                 it->value
-            });
+            };
+
+            m_buckets[bucket_index].Push(ptr);
         }
     }
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::operator=(const HashSet &other) -> HashSet &
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::operator=(const HashSet &other) -> HashSet &
 {
     for (auto buckets_it = m_buckets.Begin(); buckets_it != m_buckets.End(); ++buckets_it) {
         for (auto element_it = buckets_it->head; element_it != nullptr;) {
             auto *head = element_it;
             auto *next = head->next;
 
-            delete head;
+            head->~HashSetElement<Value, KeyBy>();
+
+            AllocatorType().Free(head);
 
             element_it = next;
         }
@@ -522,19 +537,23 @@ auto HashSet<Value, KeyBy>::operator=(const HashSet &other) -> HashSet &
         const auto &bucket = other.m_buckets[bucket_index];
 
         for (auto it = bucket.head; it != nullptr; it = it->next) {
-            m_buckets[bucket_index].Push(new detail::HashSetElement<Value, KeyBy> {
+            detail::HashSetElement<Value, KeyBy> *ptr = static_cast<detail::HashSetElement<Value, KeyBy> *>(AllocatorType().Allocate(sizeof(detail::HashSetElement<Value, KeyBy>)));
+
+            new (ptr) detail::HashSetElement<Value, KeyBy> {
                 nullptr,
                 it->hash_code,
                 it->value
-            });
+            };
+
+            m_buckets[bucket_index].Push(ptr);
         }
     }
 
     return *this;
 }
 
-template <class Value, auto KeyBy>
-HashSet<Value, KeyBy>::HashSet(HashSet &&other) noexcept
+template <class Value, auto KeyBy, class AllocatorType>
+HashSet<Value, KeyBy, AllocatorType>::HashSet(HashSet &&other) noexcept
     : m_buckets(std::move(other.m_buckets)),
       m_size(other.m_size)
 {
@@ -542,8 +561,8 @@ HashSet<Value, KeyBy>::HashSet(HashSet &&other) noexcept
     other.m_size = 0;
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::operator=(HashSet &&other) noexcept -> HashSet &
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::operator=(HashSet &&other) noexcept -> HashSet &
 {
     m_buckets = std::move(other.m_buckets);
     other.m_buckets.Resize(initial_bucket_size);
@@ -554,23 +573,25 @@ auto HashSet<Value, KeyBy>::operator=(HashSet &&other) noexcept -> HashSet &
     return *this;
 }
 
-template <class Value, auto KeyBy>
-HashSet<Value, KeyBy>::~HashSet()
+template <class Value, auto KeyBy, class AllocatorType>
+HashSet<Value, KeyBy, AllocatorType>::~HashSet()
 {
     for (auto buckets_it = m_buckets.Begin(); buckets_it != m_buckets.End(); ++buckets_it) {
         for (auto element_it = buckets_it->head; element_it != nullptr;) {
             auto *head = element_it;
             auto *next = head->next;
 
-            delete head;
+            head->~HashSetElement<Value, KeyBy>();
+
+            AllocatorType().Free(head);
 
             element_it = next;
         }
     }
 }
 
-template <class Value, auto KeyBy>
-void HashSet<Value, KeyBy>::Reserve(SizeType size)
+template <class Value, auto KeyBy, class AllocatorType>
+void HashSet<Value, KeyBy, AllocatorType>::Reserve(SizeType size)
 {
     const SizeType new_bucket_count = SizeType(MathUtil::Ceil(double(size) / MaxLoadFactor()));
 
@@ -578,7 +599,7 @@ void HashSet<Value, KeyBy>::Reserve(SizeType size)
         return;
     }
 
-    Array<detail::HashSetBucket<Value, KeyBy>, initial_bucket_size * sizeof(detail::HashSetBucket<Value, KeyBy>)> new_buckets;
+    HashSetBucketArray new_buckets;
     new_buckets.Resize(new_bucket_count);
 
     for (auto &bucket : m_buckets) {
@@ -597,8 +618,8 @@ void HashSet<Value, KeyBy>::Reserve(SizeType size)
     m_buckets = std::move(new_buckets);
 }
 
-template <class Value, auto KeyBy>
-void HashSet<Value, KeyBy>::CheckAndRebuildBuckets()
+template <class Value, auto KeyBy, class AllocatorType>
+void HashSet<Value, KeyBy, AllocatorType>::CheckAndRebuildBuckets()
 {
     // Check load factor, if currently load factor is greater than `load_factor`, then rehash so that the load factor becomes <= `load_factor` constant.
 
@@ -609,8 +630,8 @@ void HashSet<Value, KeyBy>::CheckAndRebuildBuckets()
     Reserve(Size() * 2);
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::Find(const KeyType &value) -> Iterator
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::Find(const KeyType &value) -> Iterator
 {
     const HashCode::ValueType hash_code = HashCode::GetHashCode(value).Value();
     detail::HashSetBucket<Value, KeyBy> *bucket = GetBucketForHash(hash_code);
@@ -624,8 +645,8 @@ auto HashSet<Value, KeyBy>::Find(const KeyType &value) -> Iterator
     return Iterator(this, it);
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::Find(const KeyType &value) const -> ConstIterator
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::Find(const KeyType &value) const -> ConstIterator
 {
     const HashCode::ValueType hash_code = HashCode::GetHashCode(value).Value();
     const detail::HashSetBucket<Value, KeyBy> *bucket = GetBucketForHash(hash_code);
@@ -639,8 +660,8 @@ auto HashSet<Value, KeyBy>::Find(const KeyType &value) const -> ConstIterator
     return ConstIterator(this, it);
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::Erase(ConstIterator iter) -> Iterator
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::Erase(ConstIterator iter) -> Iterator
 {
     if (iter == End()) {
         return End();
@@ -668,13 +689,15 @@ auto HashSet<Value, KeyBy>::Erase(ConstIterator iter) -> Iterator
 
     Iterator next_iterator(this, typename detail::HashSetBucket<Value, KeyBy>::Iterator { const_cast<detail::HashSetBucket<Value, KeyBy> *>(iter.bucket_iter.bucket), iter.bucket_iter.element->next });
 
-    delete iter.bucket_iter.element;
+    iter.bucket_iter.element->~HashSetElement<Value, KeyBy>();
+
+    AllocatorType().Free(const_cast<void *>(static_cast<const void *>(iter.bucket_iter.element)));
 
     return next_iterator;
 }
 
-template <class Value, auto KeyBy>
-bool HashSet<Value, KeyBy>::Erase(const KeyType &value)
+template <class Value, auto KeyBy, class AllocatorType>
+bool HashSet<Value, KeyBy, AllocatorType>::Erase(const KeyType &value)
 {
     const Iterator it = Find(value);
 
@@ -687,14 +710,14 @@ bool HashSet<Value, KeyBy>::Erase(const KeyType &value)
     return true;
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::Set(const Value &value) -> InsertResult
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::Set(const Value &value) -> InsertResult
 {
     const HashCode::ValueType hash_code = GetHashCode(value).Value();
 
     detail::HashSetBucket<Value, KeyBy> *bucket = GetBucketForHash(hash_code);
 
-    auto it = bucket->Find(MapFunction<KeyBy>()(value));
+    auto it = bucket->Find(key_by_fn(value));
 
     Iterator insert_it(this, it);
 
@@ -703,11 +726,15 @@ auto HashSet<Value, KeyBy>::Set(const Value &value) -> InsertResult
 
         return InsertResult { insert_it, false };
     } else {
-        insert_it.bucket_iter = bucket->Push(new detail::HashSetElement<Value, KeyBy> {
+        detail::HashSetElement<Value, KeyBy> *ptr = static_cast<detail::HashSetElement<Value, KeyBy> *>(AllocatorType().Allocate(sizeof(detail::HashSetElement<Value, KeyBy>)));
+
+        new (ptr) detail::HashSetElement<Value, KeyBy> {
             nullptr,
             hash_code,
             value
-        });
+        };
+        
+        insert_it.bucket_iter = bucket->Push(ptr);
 
         m_size++;
 
@@ -717,14 +744,14 @@ auto HashSet<Value, KeyBy>::Set(const Value &value) -> InsertResult
     }
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::Set(Value &&value) -> InsertResult
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::Set(Value &&value) -> InsertResult
 {
     const HashCode::ValueType hash_code = GetHashCode(value).Value();
 
     detail::HashSetBucket<Value, KeyBy> *bucket = GetBucketForHash(hash_code);
 
-    auto it = bucket->Find(MapFunction<KeyBy>()(value));
+    auto it = bucket->Find(key_by_fn(value));
 
     Iterator insert_it(this, it);
 
@@ -733,11 +760,15 @@ auto HashSet<Value, KeyBy>::Set(Value &&value) -> InsertResult
 
         return InsertResult { insert_it, false };
     } else {
-        insert_it.bucket_iter = bucket->Push(new detail::HashSetElement<Value, KeyBy> {
+        detail::HashSetElement<Value, KeyBy> *ptr = static_cast<detail::HashSetElement<Value, KeyBy> *>(AllocatorType().Allocate(sizeof(detail::HashSetElement<Value, KeyBy>)));
+
+        new (ptr) detail::HashSetElement<Value, KeyBy> {
             nullptr,
             hash_code,
             std::move(value)
-        });
+        };
+
+        insert_it.bucket_iter = bucket->Push(ptr);
 
         m_size++;
 
@@ -747,8 +778,8 @@ auto HashSet<Value, KeyBy>::Set(Value &&value) -> InsertResult
     }
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::Insert(const Value &value) -> InsertResult
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::Insert(const Value &value) -> InsertResult
 {
     // Have to rehash before any insertion, so we don't invalidate the iterator or bucket pointer.
     CheckAndRebuildBuckets();
@@ -757,7 +788,7 @@ auto HashSet<Value, KeyBy>::Insert(const Value &value) -> InsertResult
 
     detail::HashSetBucket<Value, KeyBy> *bucket = GetBucketForHash(hash_code);
 
-    auto it = bucket->Find(MapFunction<KeyBy>()(value));
+    auto it = bucket->Find(key_by_fn(value));
 
     Iterator insert_it(this, it);
 
@@ -765,19 +796,23 @@ auto HashSet<Value, KeyBy>::Insert(const Value &value) -> InsertResult
         return InsertResult { insert_it, false };
     }
 
-    insert_it.bucket_iter = bucket->Push(new detail::HashSetElement<Value, KeyBy> {
+    detail::HashSetElement<Value, KeyBy> *ptr = static_cast<detail::HashSetElement<Value, KeyBy> *>(AllocatorType().Allocate(sizeof(detail::HashSetElement<Value, KeyBy>)));
+
+    new (ptr) detail::HashSetElement<Value, KeyBy> {
         nullptr,
         hash_code,
         value
-    });
+    };
+
+    insert_it.bucket_iter = bucket->Push(ptr);
     
     m_size++;
 
     return InsertResult { insert_it, true };
 }
 
-template <class Value, auto KeyBy>
-auto HashSet<Value, KeyBy>::Insert(Value &&value) -> InsertResult
+template <class Value, auto KeyBy, class AllocatorType>
+auto HashSet<Value, KeyBy, AllocatorType>::Insert(Value &&value) -> InsertResult
 {
     // Have to rehash before any insertion, so we don't invalidate the iterator or bucket pointer.
     CheckAndRebuildBuckets();
@@ -786,7 +821,7 @@ auto HashSet<Value, KeyBy>::Insert(Value &&value) -> InsertResult
 
     detail::HashSetBucket<Value, KeyBy> *bucket = GetBucketForHash(hash_code);
 
-    auto it = bucket->Find(MapFunction<KeyBy>()(value));
+    auto it = bucket->Find(key_by_fn(value));
 
     Iterator insert_it(this, it);
 
@@ -794,26 +829,31 @@ auto HashSet<Value, KeyBy>::Insert(Value &&value) -> InsertResult
         return InsertResult { insert_it, false };
     }
 
-    insert_it.bucket_iter = bucket->Push(new detail::HashSetElement<Value, KeyBy> {
+    detail::HashSetElement<Value, KeyBy> *ptr = static_cast<detail::HashSetElement<Value, KeyBy> *>(AllocatorType().Allocate(sizeof(detail::HashSetElement<Value, KeyBy>)));
+
+    new (ptr) detail::HashSetElement<Value, KeyBy> {
         nullptr,
         hash_code,
         std::move(value)
-    });
-    
+    };
+
+    insert_it.bucket_iter = bucket->Push(ptr);
     m_size++;
 
     return InsertResult { insert_it, true };
 }
 
-template <class Value, auto KeyBy>
-void HashSet<Value, KeyBy>::Clear()
+template <class Value, auto KeyBy, class AllocatorType>
+void HashSet<Value, KeyBy, AllocatorType>::Clear()
 {
     for (auto buckets_it = m_buckets.Begin(); buckets_it != m_buckets.End(); ++buckets_it) {
         for (auto element_it = buckets_it->head; element_it != nullptr;) {
             auto *head = element_it;
             auto *next = head->next;
+            
+            head->~HashSetElement<Value, KeyBy>();
 
-            delete head;
+            AllocatorType().Free(head);
 
             element_it = next;
         }

@@ -2,12 +2,12 @@
 
 #include <streaming/StreamedTextureData.hpp>
 
-#include <asset/serialization/fbom/FBOMMarshaler.hpp>
-#include <asset/serialization/fbom/FBOMWriter.hpp>
-#include <asset/serialization/fbom/FBOMReader.hpp>
+#include <core/serialization/fbom/FBOMMarshaler.hpp>
+#include <core/serialization/fbom/FBOMWriter.hpp>
+#include <core/serialization/fbom/FBOMReader.hpp>
 
-#include <asset/ByteWriter.hpp>
-#include <asset/BufferedByteReader.hpp>
+#include <core/io/ByteWriter.hpp>
+#include <core/io/BufferedByteReader.hpp>
 
 #include <core/object/HypData.hpp>
 
@@ -82,12 +82,6 @@ StreamedTextureData::StreamedTextureData(const TextureData &texture_data)
 StreamedTextureData::StreamedTextureData(TextureData &&texture_data)
     : StreamedTextureData(StreamedDataState::LOADED, std::move(texture_data))
 {
-}
-
-bool StreamedTextureData::IsNull_Internal() const
-{
-    return m_streamed_data == nullptr
-        || m_streamed_data->IsNull();
 }
 
 bool StreamedTextureData::IsInMemory_Internal() const
