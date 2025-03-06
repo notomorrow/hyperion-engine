@@ -130,7 +130,5 @@ void main() {
         | (uint(bucket == HYP_OBJECT_BUCKET_SKYBOX) * OBJECT_MASK_SKY)
         | (uint(bucket == HYP_OBJECT_BUCKET_UI) * OBJECT_MASK_UI);
 
-    gl_Position = vec4(v_texcoord1.xy * 2.0 - 1.0, 0.0, 1.0);
-
-    // gl_Position = v_position_ndc;
+    gl_Position = v_position_ndc;
 } 
