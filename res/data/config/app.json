@@ -59,11 +59,11 @@
   },
   "lightmapper": {
     "trace_mode": 1,
-    "irradiance": false,
+    "irradiance": true,
     "radiance": true,
     "num_samples": 1,
     "num_threads_per_job": 4,
-    "max_rays_per_frame": 100000,
+    "max_rays_per_frame": 10000,
     "ideal_triangles_per_job": 4096
   }
 }
