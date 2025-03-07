@@ -58,7 +58,7 @@
     "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
-    "trace_mode": 1,
+    "trace_mode": 0,
     "irradiance": true,
     "radiance": true,
     "num_samples": 1,
