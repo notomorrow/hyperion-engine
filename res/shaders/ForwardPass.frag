@@ -336,6 +336,8 @@ void main()
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
 
+    uint mask = v_object_mask;
+
 #ifdef LIGHTMAP_BAKE
     // temp; just set it to albedo color (needs to have lighting calculated)
     gbuffer_albedo.a = 1.0; // force all objects in the baked texture to be fully opaque
@@ -347,20 +349,23 @@ void main()
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP)) {
         lm_irradiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+
+        mask |= OBJECT_MASK_LIGHTMAP_IRRADIANCE;
     }
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP)) {
-       lm_radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+        lm_radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+
+        mask |= OBJECT_MASK_LIGHTMAP_RADIANCE;
     }
 
     gbuffer_albedo = (lm_irradiance + lm_radiance) * gbuffer_albedo;
-    gbuffer_albedo.a = 0.0;
 #endif
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
-    gbuffer_mask = UINT_TO_VEC4(v_object_mask);
+    gbuffer_mask = UINT_TO_VEC4(mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);
 }

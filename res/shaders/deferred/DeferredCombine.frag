@@ -26,6 +26,7 @@ HYP_DESCRIPTOR_SRV(Global, DeferredDirectResultTexture) uniform texture2D deferr
 #include "../include/shared.inc"
 #include "../include/defines.inc"
 #include "../include/gbuffer.inc"
+#include "../include/object.inc"
 
 #include "../include/scene.inc"
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
@@ -113,11 +114,11 @@ void RefractionSolidSphere(
 
 void main()
 {
-    vec4 lit_result = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
-    lit_result.a = 1.0;
+    vec4 deferred_result = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
+    deferred_result.a = 1.0;
 
-    vec4 forward_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, texcoord);
-    vec3 albedo = forward_result.rgb;
+    vec4 translucent_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, texcoord);
+    vec4 gbuffer_albedo = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, texcoord);
 
     vec4 material = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_material_texture, texcoord);
     const float roughness = material.r;
@@ -147,32 +148,12 @@ void main()
     const float LdotH = max(0.0001, dot(L, H));
     const float HdotV = max(0.0001, dot(H, V));
 
-    // vec4 result = vec4(
-    //     (direct_lighting.rgb * direct_lighting.a) + (indirect_lighting.rgb * (1.0 - direct_lighting.a)),
-    //     1.0
-    // );
+    // @TODO: Merge reflection probes + SSR into one shader, so we can apply reflections to lightmapped objects
 
-    // initialize result with skybox color and opaque lit object result, based on mask (0x10 is sky)
-    vec4 result = mix(lit_result, forward_result, bvec4(bool(object_mask & 0x10)));
-    // // blend lit result with translucent and similar objects
-    result = mix(result, forward_result, forward_result.a);//bvec3(bool(object_mask & (0x04 | 0x02 | 0x08))));
+    deferred_result = mix(deferred_result, gbuffer_albedo, bvec4(bool(object_mask & OBJECT_MASK_LIGHTMAP)));
 
-    // if (bool(object_mask & (0x02 | 0x400)) && !bool(object_mask & 0x10)) {
-    // } else {
-    //     result.rgb += forward_result.rgb * forward_result.a;
-    // }
-
-    // result.rgb = forward_result.aaa;
-
-    // result.rgb = (forward_result.rgb * forward_result.a) + (result.rgb * (1.0 - forward_result.a));
-
-    // result.rgb = forward_result.aaa;
-    // result.rgb = forward_lit_result.rgb;
-    // result.rgb = vec3(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord).rgb);//  DecodeNormal(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_normals_texture, texcoord));
+    vec4 result = mix(deferred_result, translucent_result, bvec4(bool(object_mask & (OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT))));
     result.a = 1.0;
 
     color_output = result;
-
-    // color_output.rgb = forward_result.rgb;
-    color_output.a = 1.0;
 }
