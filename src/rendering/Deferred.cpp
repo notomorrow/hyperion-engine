@@ -239,7 +239,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
 
         ByteBuffer ltc_matrix_data(sizeof(s_ltc_matrix), s_ltc_matrix);
 
-        RC<StreamedTextureData> streamed_matrix_data = MakeRefCountedPtr<StreamedTextureData>(
+        m_ltc_matrix_texture = CreateObject<Texture>(MakeRefCountedPtr<StreamedTextureData>(
             TextureData {
                 TextureDesc {
                     ImageType::TEXTURE_TYPE_2D,
@@ -251,15 +251,13 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
                 },
                 std::move(ltc_matrix_data)
             }
-        );
-
-        m_ltc_matrix_texture = CreateObject<Texture>(std::move(streamed_matrix_data));
+        ));
 
         InitObject(m_ltc_matrix_texture);
 
         ByteBuffer ltc_brdf_data(sizeof(s_ltc_brdf), s_ltc_brdf);
 
-        RC<StreamedTextureData> streamed_brdf_data = MakeRefCountedPtr<StreamedTextureData>(
+        m_ltc_brdf_texture = CreateObject<Texture>(MakeRefCountedPtr<StreamedTextureData>(
             TextureData {
                 TextureDesc {
                     ImageType::TEXTURE_TYPE_2D,
@@ -271,9 +269,7 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet &renderable_attri
                 },
                 std::move(ltc_brdf_data)
             }
-        );
-
-        m_ltc_brdf_texture = CreateObject<Texture>(std::move(streamed_brdf_data));
+        ));
 
         InitObject(m_ltc_brdf_texture);
     }
@@ -1370,7 +1366,7 @@ void DeferredRenderer::Render(Frame *frame, RenderEnvironment *environment)
                         { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                         { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
-                        { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
+                        { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().GetID().ToIndex()) }
                     }
                 }
             }

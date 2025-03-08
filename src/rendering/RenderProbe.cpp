@@ -17,7 +17,7 @@
 
 namespace hyperion {
 
-static const InternalFormat reflection_probe_format = InternalFormat::RGBA16F;
+static const InternalFormat reflection_probe_format = InternalFormat::RGBA8;
 static const InternalFormat shadow_probe_format = InternalFormat::RG32F;
 
 static FixedArray<Matrix4, 6> CreateCubemapMatrices(const BoundingBox &aabb, const Vec3f &origin);
@@ -46,12 +46,12 @@ struct RENDER_COMMAND(UpdateEnvProbeDrawProxy) : renderer::RenderCommand
 
 struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
 {
-    EnvProbeType    env_probe_type;
-    ID<EnvProbe>    id;
+    EnvProbeType            env_probe_type;
+    WeakHandle<EnvProbe>    probe_weak;
 
-    RENDER_COMMAND(BindEnvProbe)(EnvProbeType env_probe_type, ID<EnvProbe> id)
+    RENDER_COMMAND(BindEnvProbe)(EnvProbeType env_probe_type, const WeakHandle<EnvProbe> &probe_weak)
         : env_probe_type(env_probe_type),
-          id(id)
+          probe_weak(probe_weak)
     {
     }
 
@@ -59,7 +59,13 @@ struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        g_engine->GetRenderState()->BindEnvProbe(env_probe_type, id);
+        Handle<EnvProbe> probe = probe_weak.Lock();
+
+        if (!probe.IsValid()) {
+            HYPERION_RETURN_OK;
+        }
+
+        g_engine->GetRenderState()->BindEnvProbe(env_probe_type, probe);
 
         HYPERION_RETURN_OK;
     }
@@ -67,12 +73,12 @@ struct RENDER_COMMAND(BindEnvProbe) : renderer::RenderCommand
 
 struct RENDER_COMMAND(UnbindEnvProbe) : renderer::RenderCommand
 {
-    EnvProbeType    env_probe_type;
-    ID<EnvProbe>    id;
+    EnvProbeType            env_probe_type;
+    WeakHandle<EnvProbe>    probe_weak;
 
-    RENDER_COMMAND(UnbindEnvProbe)(EnvProbeType env_probe_type, ID<EnvProbe> id)
+    RENDER_COMMAND(UnbindEnvProbe)(EnvProbeType env_probe_type, const WeakHandle<EnvProbe> &probe_weak)
         : env_probe_type(env_probe_type),
-          id(id)
+          probe_weak(probe_weak)
     {
     }
 
@@ -80,7 +86,13 @@ struct RENDER_COMMAND(UnbindEnvProbe) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        g_engine->GetRenderState()->UnbindEnvProbe(env_probe_type, id);
+        Handle<EnvProbe> probe = probe_weak.Lock();
+
+        if (!probe.IsValid()) {
+            HYPERION_RETURN_OK;
+        }
+
+        g_engine->GetRenderState()->UnbindEnvProbe(env_probe_type, probe->GetID());
 
         HYPERION_RETURN_OK;
     }
@@ -378,7 +390,7 @@ void EnvProbe::EnqueueBind() const
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
-        PUSH_RENDER_COMMAND(BindEnvProbe, GetEnvProbeType(), GetID());
+        PUSH_RENDER_COMMAND(BindEnvProbe, GetEnvProbeType(), WeakHandleFromThis());
     }
 }
 
@@ -387,7 +399,7 @@ void EnvProbe::EnqueueUnbind() const
     AssertReady();
 
     if (!IsControlledByEnvGrid()) {
-        PUSH_RENDER_COMMAND(UnbindEnvProbe, GetEnvProbeType(), GetID());
+        PUSH_RENDER_COMMAND(UnbindEnvProbe, GetEnvProbeType(), WeakHandleFromThis());
     }
 }
 
@@ -505,12 +517,12 @@ void EnvProbe::Render(Frame *frame)
 
     EnvProbeIndex probe_index;
 
-    const auto &env_probes = g_engine->GetRenderState()->bound_env_probes[GetEnvProbeType()];
+    const auto &bound_env_probes = g_engine->GetRenderState()->bound_env_probes[GetEnvProbeType()];
 
     {
-        const auto it = env_probes.Find(GetID());
+        const auto it = bound_env_probes.FindAs(GetID());
 
-        if (it != env_probes.End()) {
+        if (it != bound_env_probes.End()) {
             if (!it->second.HasValue()) {
                 HYP_LOG(EnvProbe, Warning, "Env Probe #{} (type: {}) has no value set for texture slot!",
                     GetID().Value(), GetEnvProbeType());
@@ -555,7 +567,7 @@ void EnvProbe::Render(Frame *frame)
     }
 
     {
-        g_engine->GetRenderState()->SetActiveEnvProbe(GetID());
+        g_engine->GetRenderState()->SetActiveEnvProbe(HandleFromThis());
 
         if (light_render_resources_handle != nullptr) {
             g_engine->GetRenderState()->SetActiveLight(**light_render_resources_handle);

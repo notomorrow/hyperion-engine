@@ -554,7 +554,7 @@ void Camera::Update(GameCounter::TickUnit dt)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_game_thread);
 
     AssertReady();
 

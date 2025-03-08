@@ -101,6 +101,7 @@ static inline constexpr uint32 NumBytes(InternalFormat format)
     case InternalFormat::BGR8_SRGB:
     case InternalFormat::RGBA8:
     case InternalFormat::RGBA8_SRGB:
+    case InternalFormat::R10G10B10A2:
     case InternalFormat::BGRA8:
     case InternalFormat::BGRA8_SRGB:
         return 1;
@@ -117,7 +118,6 @@ static inline constexpr uint32 NumBytes(InternalFormat format)
     case InternalFormat::R32_:
     case InternalFormat::RG16_:
     case InternalFormat::R11G11B10F:
-    case InternalFormat::R10G10B10A2:
     case InternalFormat::DEPTH_24:
     case InternalFormat::DEPTH_32F:
         return 4;
@@ -457,7 +457,7 @@ public:
                 min_filter_mode,
                 mag_filter_mode,
                 WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-                1, 1
+                1
             }
         )
     {
@@ -525,7 +525,7 @@ public:
             min_filter_mode,
             mag_filter_mode,
             WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-            1, 1
+            1
         })   
     {
     }
@@ -675,7 +675,7 @@ public:
                 FilterMode::TEXTURE_FILTER_NEAREST,
                 FilterMode::TEXTURE_FILTER_NEAREST,
                 WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-                1, 1
+                1
             }
         )
     {
@@ -696,7 +696,7 @@ public:
                 min_filter_mode,
                 mag_filter_mode,
                 WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
-                1, 1
+                1
             }
         )
     {

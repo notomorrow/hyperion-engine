@@ -25,9 +25,9 @@ public:
         const Texture &in_object = in.Get<Texture>();
 
         if (in_object.GetImage()->HasAssignedImageData()) {
-            ResourceHandle resource_handle(*in_object.GetImage()->GetStreamedData());
+            ResourceHandle resource_handle(*in_object.GetStreamedTextureData());
             
-            const TextureData &texture_data = in_object.GetImage()->GetStreamedData()->GetTextureData();
+            const TextureData &texture_data = in_object.GetStreamedTextureData()->GetTextureData();
 
             out.AddChild(texture_data);
         } else {

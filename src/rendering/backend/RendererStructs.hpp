@@ -147,9 +147,6 @@ struct TextureDesc
     HYP_FIELD(Serialize, Property="NumLayers")
     uint32          num_layers = 1;
 
-    HYP_FIELD(Serialize, Property="NumFaces")
-    uint32          num_faces = 1;
-
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
@@ -160,7 +157,6 @@ struct TextureDesc
         hc.Add(filter_mode_mag);
         hc.Add(wrap_mode);
         hc.Add(num_layers);
-        hc.Add(num_faces);
 
         return hc;
     }

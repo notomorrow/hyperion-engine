@@ -7,6 +7,8 @@
 
 #include <core/memory/UniquePtr.hpp>
 
+#include <core/memory/resource/Resource.hpp>
+
 #include <core/containers/FixedArray.hpp>
 
 #include <core/utilities/Pair.hpp>
@@ -29,6 +31,8 @@
 
 namespace hyperion {
 
+class StreamedTextureData;
+
 HYP_CLASS()
 class HYP_API Texture : public HypObject<Texture>
 {
@@ -39,18 +43,11 @@ public:
 
     Texture();
 
-    Texture(
-        ImageRef image,
-        ImageViewRef image_view
-    );
+    Texture(const ImageRef &image, const ImageViewRef &image_view);
 
     Texture(const TextureDesc &texture_desc);
-    Texture(const RC<StreamedTextureData> &streamed_data);
-    Texture(RC<StreamedTextureData> &&streamed_data);
 
-    Texture(
-        Image &&image
-    );
+    Texture(const RC<StreamedTextureData> &streamed_texture_data);
 
     Texture(const Texture &other)                   = delete;
     Texture &operator=(const Texture &other)        = delete;
@@ -64,10 +61,18 @@ public:
     HYP_FORCE_INLINE Name GetName() const
         { return m_name; }
 
-
     HYP_METHOD(Property="Name", Serialize=true, Editor=true)
     HYP_FORCE_INLINE void SetName(Name name)
         { m_name = name; }
+
+    HYP_METHOD(Property="StreamedTextureData")
+    HYP_FORCE_INLINE const RC<StreamedTextureData> &GetStreamedTextureData() const
+        { return m_streamed_texture_data; }
+
+    /*! \brief Set streamed data for the image. If the image has already been created, no updates will occur. */
+    HYP_METHOD(Property="StreamedTextureData")
+    HYP_FORCE_INLINE void SetStreamedTextureData(const RC<StreamedTextureData> &streamed_texture_data)
+        { m_streamed_texture_data = streamed_texture_data; }
     
     HYP_FORCE_INLINE const ImageRef &GetImage() const
         { return m_image; }
@@ -82,7 +87,7 @@ public:
         { return GetTextureDesc().type; }
 
     HYP_FORCE_INLINE uint32 NumFaces() const
-        { return GetTextureDesc().num_faces; }
+        { return m_image->NumFaces(); }
 
     HYP_FORCE_INLINE bool IsTextureCube() const
         { return m_image->IsTextureCube(); }
@@ -120,17 +125,19 @@ public:
      *  Ensure that the image is not being used in other threads before calling this method.
      * 
      *  The texture data will be copied to the CPU and the image will have its StreamedTextureData recreated. */
-    void Readback() const;
+    void Readback();
 
-    Vec4f Sample(Vec3f uvw, uint32 face_index) const;
-    Vec4f Sample2D(Vec2f uv) const;
-    Vec4f SampleCube(Vec3f direction) const;
+    Vec4f Sample(Vec3f uvw, uint32 face_index);
+    Vec4f Sample2D(Vec2f uv);
+    Vec4f SampleCube(Vec3f direction);
 
 protected:
-    Name            m_name;
+    Name                    m_name;
 
-    ImageRef        m_image;
-    ImageViewRef    m_image_view;
+    RC<StreamedTextureData> m_streamed_texture_data;
+
+    ImageRef                m_image;
+    ImageViewRef            m_image_view;
 };
 
 class HYP_API Texture2D : public Texture

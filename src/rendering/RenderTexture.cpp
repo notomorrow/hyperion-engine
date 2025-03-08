@@ -23,7 +23,6 @@
 
 namespace hyperion {
 
-
 class Texture;
 class TextureMipmapRenderer;
 
@@ -366,7 +365,8 @@ private:
 
 #pragma region Texture
 
-Texture::Texture() : Texture(TextureDesc {
+Texture::Texture()
+    : Texture(TextureDesc {
         ImageType::TEXTURE_TYPE_2D,
         InternalFormat::RGBA8,
         Vec3u { 1, 1, 1 },
@@ -377,50 +377,24 @@ Texture::Texture() : Texture(TextureDesc {
 {
 }
 
+Texture::Texture(const ImageRef &image, const ImageViewRef &image_view)
+    : m_image(image),
+      m_image_view(image_view)
+{
+}
+
 Texture::Texture(const TextureDesc &texture_desc)
-    : Texture(renderer::Image(texture_desc))
+    : m_streamed_texture_data(MakeRefCountedPtr<StreamedTextureData>(TextureData { texture_desc })),
+      m_image(MakeRenderObject<Image>(m_streamed_texture_data)),
+      m_image_view(MakeRenderObject<ImageView>())
 {
 }
 
-Texture::Texture(const RC<StreamedTextureData> &streamed_data)
-    : Texture(renderer::Image(streamed_data))
+Texture::Texture(const RC<StreamedTextureData> &streamed_texture_data)
+    : m_streamed_texture_data(streamed_texture_data),
+      m_image(MakeRenderObject<Image>(streamed_texture_data)),
+      m_image_view(MakeRenderObject<ImageView>())
 {
-}
-
-Texture::Texture(RC<StreamedTextureData> &&streamed_data)
-    : Texture(renderer::Image(std::move(streamed_data)))
-{
-}
-
-Texture::Texture(
-    ImageRef image,
-    ImageViewRef image_view
-) : HypObject(),
-    m_image(std::move(image)),
-    m_image_view(std::move(image_view))
-{
-    AssertThrowMsg(m_image.IsValid(), "Image must be valid");
-    AssertThrowMsg(m_image_view.IsValid(), "ImageView must be valid");
-
-    const Vec3u extent = m_image->GetTextureDesc().extent;
-    AssertThrow(extent.x <= 32768);
-    AssertThrow(extent.y <= 32768);
-    AssertThrow(extent.z <= 32768);
-}
-
-Texture::Texture(
-    Image &&image
-) : HypObject(),
-    m_image(MakeRenderObject<Image>(std::move(image))),
-    m_image_view(MakeRenderObject<ImageView>())
-{
-    AssertThrowMsg(m_image.IsValid(), "Image must be valid");
-    AssertThrowMsg(m_image_view.IsValid(), "ImageView must be valid");
-
-    const Vec3u extent = m_image->GetTextureDesc().extent;
-    AssertThrow(extent.x <= 32768);
-    AssertThrow(extent.y <= 32768);
-    AssertThrow(extent.z <= 32768);
 }
 
 Texture::~Texture()
@@ -472,7 +446,7 @@ void Texture::GenerateMipmaps()
     mipmap_renderer.Destroy();
 }
 
-void Texture::Readback() const
+void Texture::Readback()
 {
     AssertReady();
 
@@ -480,10 +454,12 @@ void Texture::Readback() const
     {
         ImageRef    image;
         ByteBuffer  &result_byte_buffer;
+        TextureDesc &texture_desc;
 
-        RENDER_COMMAND(Texture_Readback)(const ImageRef &image, ByteBuffer &result_byte_buffer)
+        RENDER_COMMAND(Texture_Readback)(const ImageRef &image, ByteBuffer &result_byte_buffer, TextureDesc &texture_desc)
             : image(image),
-              result_byte_buffer(result_byte_buffer)
+              result_byte_buffer(result_byte_buffer),
+              texture_desc(texture_desc)
         {
         }
 
@@ -503,16 +479,15 @@ void Texture::Readback() const
 
             commands.Push([this, &gpu_buffer](const CommandBufferRef &command_buffer)
             {
+                const renderer::ResourceState previous_resource_state = image->GetResourceState();
+
                 image->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
 
                 gpu_buffer->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
-
-                image->CopyToBuffer(
-                    command_buffer,
-                    gpu_buffer
-                );
-
+                image->CopyToBuffer(command_buffer, gpu_buffer);
                 gpu_buffer->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
+
+                image->InsertBarrier(command_buffer, previous_resource_state);
 
                 HYPERION_RETURN_OK;
             });
@@ -526,91 +501,116 @@ void Texture::Readback() const
             result_byte_buffer.SetSize(gpu_buffer->Size());
             gpu_buffer->Read(g_engine->GetGPUDevice(), result_byte_buffer.Size(), result_byte_buffer.Data());
 
-            SafeRelease(std::move(gpu_buffer));
+            gpu_buffer->Destroy(g_engine->GetGPUDevice());
+
+            texture_desc = image->GetTextureDesc();
 
             HYPERION_RETURN_OK;
         }
     };
 
     ByteBuffer result_byte_buffer;
+    TextureDesc texture_desc;
 
-    PUSH_RENDER_COMMAND(Texture_Readback, m_image, result_byte_buffer);
+    PUSH_RENDER_COMMAND(Texture_Readback, m_image, result_byte_buffer, texture_desc);
     HYP_SYNC_RENDER();
 
-    // sanity check -- temp
     const SizeType expected = m_image->GetByteSize();
     const SizeType real = result_byte_buffer.Size();
+
     AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
 
-    RC<StreamedTextureData> streamed_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-        GetTextureDesc(),
+    SetStreamedTextureData(MakeRefCountedPtr<StreamedTextureData>(TextureData {
+        texture_desc,
         std::move(result_byte_buffer)
-    });
-
-    m_image->SetStreamedData(streamed_data);
+    }));
 }
 
-Vec4f Texture::Sample(Vec3f uvw, uint32 face_index) const
+Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
 {
     if (!IsReady()) {
-        HYP_LOG_ONCE(Texture, Warning, "Texture is not ready, cannot sample");
+        HYP_LOG(Texture, Warning, "Texture is not ready, cannot sample");
 
         return Vec4f::Zero();
     }
 
-    const RC<StreamedTextureData> &streamed_data = m_image->GetStreamedData();
+    if (face_index >= m_image->NumFaces()) {
+        HYP_LOG(Texture, Warning, "Face index out of bounds: {} >= {}", face_index, m_image->NumFaces());
 
-    if (!streamed_data) {
-        HYP_LOG_ONCE(Texture, Warning, "Texture does not have streamed data present, attempting readback...");
+        return Vec4f::Zero();
+    }
+
+    if (!GetStreamedTextureData()) {
+        HYP_LOG(Texture, Warning, "Texture does not have streamed data present, attempting readback...");
 
         Readback();
 
-        if (!streamed_data) {
-            HYP_LOG_ONCE(Texture, Warning, "Texture readback failed. Sample will return zero.");
+        if (!GetStreamedTextureData()) {
+            HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
 
             return Vec4f::Zero();
         }
     }
 
-    ResourceHandle resource_handle(*streamed_data);
+    TResourceHandle<StreamedTextureData> resource_handle(*GetStreamedTextureData());
 
-    const TextureData &texture_data = streamed_data->GetTextureData();
+    const TextureData *texture_data = &resource_handle->GetTextureData();
 
-    if (texture_data.buffer.Size() == 0) {
-        HYP_LOG_ONCE(Texture, Warning, "Texture buffer is empty");
+    if (texture_data->buffer.Size() == 0) {
+        HYP_LOG(Texture, Warning, "Texture buffer is empty; forcing readback.");
 
-        return Vec4f::Zero();
+        resource_handle.Reset();
+
+        Readback();
+
+        if (!GetStreamedTextureData()) {
+            HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
+
+            return Vec4f::Zero();
+        }
+
+        resource_handle = TResourceHandle<StreamedTextureData>(*GetStreamedTextureData());
+
+        texture_data = &resource_handle->GetTextureData();
+
+        if (texture_data->buffer.Size() == 0) {
+            HYP_LOG(Texture, Warning, "Texture buffer is still empty after readback; sample will return zero.");
+
+            return Vec4f::Zero();
+        }
     }
 
     const Vec3u coord = {
-        uint32(uvw.x * (texture_data.desc.extent.x - 1)),
-        uint32(uvw.y * (texture_data.desc.extent.y - 1)),
-        uint32(uvw.z * (texture_data.desc.extent.z - 1))
+        uint32(uvw.x * float(texture_data->desc.extent.x - 1) + 0.5f),
+        uint32(uvw.y * float(texture_data->desc.extent.y - 1) + 0.5f),
+        uint32(uvw.z * float(texture_data->desc.extent.z - 1) + 0.5f)
     };
 
-    const uint32 bytes_per_pixel = renderer::NumBytes(texture_data.desc.format);
+    const uint32 bytes_per_pixel = renderer::NumBytes(texture_data->desc.format);
 
     if (bytes_per_pixel != 1) {
-        HYP_LOG_ONCE(Texture, Warning, "Unsupported bytes per pixel: {}", bytes_per_pixel);
+        HYP_LOG(Texture, Warning, "Unsupported bytes per pixel to use with Sample(): {}", bytes_per_pixel);
+
+        HYP_BREAKPOINT;
 
         return Vec4f::Zero();
     }
 
     const uint32 num_components = renderer::NumComponents(m_image->GetTextureFormat());
 
-    const uint32 index = face_index * (texture_data.desc.extent.x * texture_data.desc.extent.y * bytes_per_pixel * num_components)
-        + coord.z * (texture_data.desc.extent.x * texture_data.desc.extent.y * bytes_per_pixel * num_components)
-        + coord.y * (texture_data.desc.extent.x * bytes_per_pixel * num_components)
+    const uint32 index = face_index * (texture_data->desc.extent.x * texture_data->desc.extent.y * texture_data->desc.extent.z * bytes_per_pixel * num_components)
+        + coord.z * (texture_data->desc.extent.x * texture_data->desc.extent.y * bytes_per_pixel * num_components)
+        + coord.y * (texture_data->desc.extent.x * bytes_per_pixel * num_components)
         + coord.x * bytes_per_pixel * num_components;
 
-    if (index >= texture_data.buffer.Size()) {
-        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, texture_data.buffer.Size(),
-            coord, texture_data.desc.extent, texture_data.desc.num_faces);
+    if (index >= texture_data->buffer.Size()) {
+        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, texture_data->buffer.Size(),
+            coord, texture_data->desc.extent, NumFaces());
 
         return Vec4f::Zero();
     }
 
-    const ubyte *data = texture_data.buffer.Data() + index;
+    const ubyte *data = texture_data->buffer.Data() + index;
 
     switch (num_components) {
     case 1:
@@ -628,10 +628,10 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index) const
     }
 }
 
-Vec4f Texture::Sample2D(Vec2f uv) const
+Vec4f Texture::Sample2D(Vec2f uv)
 {
     if (GetType() != ImageType::TEXTURE_TYPE_2D) {
-        HYP_LOG_ONCE(Texture, Warning, "Unsupported texture type to use with Sample2D(): {}", GetType());
+        HYP_LOG(Texture, Warning, "Unsupported texture type to use with Sample2D(): {}", GetType());
 
         return Vec4f::Zero();
     }
@@ -639,58 +639,54 @@ Vec4f Texture::Sample2D(Vec2f uv) const
     return Sample(Vec3f { uv.x, uv.y, 0.0f }, 0);
 }
 
-Vec4f Texture::SampleCube(Vec3f direction) const
+/// https://www.gamedev.net/forums/topic/687535-implementing-a-cube-map-lookup-function/5337472/
+Vec4f Texture::SampleCube(Vec3f direction)
 {
     if (GetType() != ImageType::TEXTURE_TYPE_CUBEMAP) {
-        HYP_LOG_ONCE(Texture, Warning, "Unsupported texture type to use with SampleCube(): {}", GetType());
+        HYP_LOG(Texture, Warning, "Unsupported texture type to use with SampleCube(): {}", GetType());
 
         return Vec4f::Zero();
     }
 
     Vec3f abs_dir = MathUtil::Abs(direction);
     uint32 face_index = 0;
-    float ma, sc, tc;
 
-    // Determine which of the 3 axes has the greatest absolute value
-    if (abs_dir.x > abs_dir.y && abs_dir.x > abs_dir.z) {
-        ma = abs_dir.x;
-        if (direction.x > 0.0f) {
-            face_index = 0; // +X face
-            sc = -direction.z;
-            tc =  direction.y;
+    float mag;
+    Vec2f uv;
+
+    if (abs_dir.z >= abs_dir.x && abs_dir.z >= abs_dir.y) {
+        mag = abs_dir.z;
+
+        if (direction.z < 0.0f) {
+            face_index = 5;
+            uv = Vec2f(-direction.x, -direction.y);
         } else {
-            face_index = 1; // -X face
-            sc =  direction.z;
-            tc =  direction.y;
+            face_index = 4;
+            uv = Vec2f(direction.x, -direction.y);
         }
-    } else if (abs_dir.y > abs_dir.z) {
-        ma = abs_dir.y;
-        if (direction.y > 0.0f) {
-            face_index = 2; // +Y face
-            sc =  direction.x;
-            tc = -direction.z;
+    } else if (abs_dir.y >= abs_dir.x) {
+        mag = abs_dir.y;
+
+        if (direction.y < 0.0f) {
+            face_index = 3;
+            uv = Vec2f(direction.x, -direction.z);
         } else {
-            face_index = 3; // -Y face
-            sc =  direction.x;
-            tc =  direction.z;
+            face_index = 2;
+            uv = Vec2f(direction.x, direction.z);
         }
     } else {
-        ma = abs_dir.z;
-        if (direction.z > 0.0f) {
-            face_index = 4; // +Z face
-            sc =  direction.x;
-            tc =  direction.y;
+        mag = abs_dir.x;
+
+        if (direction.x < 0.0f) {
+            face_index = 1;
+            uv = Vec2f(direction.z, -direction.y);
         } else {
-            face_index = 5; // -Z face
-            sc = -direction.x;
-            tc =  direction.y;
+            face_index = 0;
+            uv = Vec2f(-direction.z, -direction.y);
         }
     }
 
-    float s = 0.5f * (sc / ma + 1.0f);
-    float t = 0.5f * (tc / ma + 1.0f);
-
-    return Sample(Vec3f { s, t, 0.0f }, face_index);
+    return Sample(Vec3f { uv / mag * 0.5f + 0.5f, 0.0f }, face_index);
 }
 
 #pragma endregion Texture

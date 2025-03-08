@@ -287,15 +287,15 @@ public:
     {
         ui_object->FindChildUIObject(NAME("QuaternionPanel_Roll_Value"))
             .Cast<UITextbox>()
-            ->SetText(HYP_FORMAT("{}", value.Roll()));
+            ->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Roll())));
 
         ui_object->FindChildUIObject(NAME("QuaternionPanel_Pitch_Value"))
             .Cast<UITextbox>()
-            ->SetText(HYP_FORMAT("{}", value.Pitch()));
+            ->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Pitch())));
 
         ui_object->FindChildUIObject(NAME("QuaternionPanel_Yaw_Value"))
             .Cast<UITextbox>()
-            ->SetText(HYP_FORMAT("{}", value.Yaw()));
+            ->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Yaw())));
     }
 };
 

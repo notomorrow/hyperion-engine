@@ -330,6 +330,12 @@ public:
     HYP_FORCE_INLINE bool Empty() const
         { return m_size == 0; }
 
+    HYP_FORCE_INLINE ValueType &Front()
+        { AssertDebug(m_size != 0); return *Begin(); }
+
+    HYP_FORCE_INLINE const ValueType &Front() const
+        { AssertDebug(m_size != 0); return *Begin(); }
+
     HYP_FORCE_INLINE bool operator==(const HashSet &other) const = delete;
     HYP_FORCE_INLINE bool operator!=(const HashSet &other) const = delete;
 

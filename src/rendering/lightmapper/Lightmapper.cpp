@@ -712,7 +712,7 @@ void LightmapGPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resources) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resources) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(g_engine->GetRenderState()->bound_env_grid.ToIndex()) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().ToIndex()) }
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(g_engine->GetRenderState()->GetActiveEnvProbe().GetID().ToIndex()) }
                 }
             }
         }
@@ -820,44 +820,71 @@ void LightmapCPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
 
     m_num_tracing_tasks.Increment(rays.Size(), MemoryOrder::RELEASE);
 
-    Handle<Texture> env_probe_texture;
-    ID<EnvProbe> env_probe_id = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const Handle<EnvProbe> &env_probe = g_engine->GetRenderState()->GetActiveEnvProbe();
 
-    if (env_probe_id.IsValid()) {
-        Handle<EnvProbe> env_probe { env_probe_id };
-        AssertThrow(env_probe.IsValid());
+    if (env_probe.IsValid()) {
         AssertThrow(env_probe->IsReady());
 
-        env_probe_texture = env_probe->GetTexture();
+        // prepare env probe texture to be sampled on the CPU in the tasks
+        env_probe->GetTexture()->Readback();
     }
+        // // testing
+        // for (uint32 face_index = 0; face_index < env_probe_texture->NumFaces(); face_index++) {
+        //     Bitmap<4> test_bitmap(env_probe_texture->GetExtent().x, env_probe_texture->GetExtent().y);
 
-    Array<Task<void>> tasks = TaskSystem::GetInstance().ParallelForEach_Async(m_thread_pool, rays, [this, job, env_probe_texture](const LightmapRay &first_ray, uint32 index, uint32 batch_index)
+        //     for (uint32 x = 0; x < env_probe_texture->GetExtent().x; x++) {
+        //         for (uint32 y = 0; y < env_probe_texture->GetExtent().y; y++) {
+        //             Vec2f uv = Vec2f(x, y) / Vec2f(env_probe_texture->GetExtent().GetXY());
+
+        //             Vec4f env_probe_sample = env_probe_texture->Sample(Vec3f(uv, 0.0f), face_index);
+
+        //             test_bitmap.SetPixel(x, y, env_probe_sample);
+        //         }
+        //     }
+
+        //     test_bitmap.Write(HYP_FORMAT("env_probe_test__{}.bmp", face_index).Data());
+        // }
+
+        // HYP_BREAKPOINT;
+    // }
+
+    Array<Task<void>> tasks = TaskSystem::GetInstance().ParallelForEach_Async(m_thread_pool, rays, [this, job, env_probe](const LightmapRay &first_ray, uint32 index, uint32 batch_index)
     {
         HYP_DEFER({ m_num_tracing_tasks.Decrement(1, MemoryOrder::RELEASE); });
 
-        { // debugging
-            const LightmapUVMap &uv_map = job->GetUVMap();
+        Handle<Texture> env_probe_texture;
 
-            AssertThrowMsg(
-                first_ray.texel_index < uv_map.uvs.Size(),
-                "Texel index (%llu) out of range of UV map (size: %llu)",
-                first_ray.texel_index,
-                uv_map.uvs.Size()
-            );
+        if (env_probe.IsValid()) {
+            AssertThrow(env_probe->IsReady());
 
-            const LightmapUV &uv = uv_map.uvs[first_ray.texel_index];
-
-            if (!uv.material) {
-                return;
-            }
-
-            const Vec4f color = Vec4f(uv.material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
-
-            LightmapHit &hit = m_hits_buffer[index];
-            hit.color = Vec4f(first_ray.ray.direction, 1.0f);//color;
-
-            return;
+            env_probe_texture = env_probe->GetTexture();
         }
+
+        // HYP_LOG(Lightmap, Info, "(task) EnvProbeTexture = #{}", env_probe_texture.GetID().Value());
+
+        // { // debugging
+        //     const LightmapUVMap &uv_map = job->GetUVMap();
+
+        //     AssertThrowMsg(
+        //         first_ray.texel_index < uv_map.uvs.Size(),
+        //         "Texel index (%llu) out of range of UV map (size: %llu)",
+        //         first_ray.texel_index,
+        //         uv_map.uvs.Size()
+        //     );
+
+        //     const LightmapUV &uv = uv_map.uvs[first_ray.texel_index];
+
+        //     if (!uv.material) {
+        //         return;
+        //     }
+
+        //     const Vec4f color = Vec4f(uv.material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
+
+        //     LightmapHit &hit = m_hits_buffer[index];
+        //     hit.color = color;
+
+        //     return;
+        // }
 
         uint32 seed = (uint32)rand();//index * m_texel_index;
 
@@ -876,6 +903,14 @@ void LightmapCPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
         }
 
         Vec3f origin = first_ray.ray.position + direction * 0.001f;
+
+        // Vec4f sky_color;
+
+        // if (env_probe_texture.IsValid()) {
+        //     Vec4f env_probe_sample = env_probe_texture->SampleCube(direction);
+
+        //     sky_color = env_probe_sample;
+        // }
 
         for (int bounce_index = 0; bounce_index < max_bounces_cpu; bounce_index++) {
             LightmapRay bounce_ray = first_ray;
@@ -903,13 +938,13 @@ void LightmapCPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
                 AssertThrow(bounce_index < bounces.Size());
 
                 // @TODO Sample environment map
-                const Vec3f normal = bounce_index == 0 ? first_ray.ray.direction : bounces[bounce_index - 1].normal;
+                const Vec3f normal = bounce_ray.ray.direction;
 
-                // if (env_probe_texture.IsValid()) {
-                //     Vec4f env_probe_sample = env_probe_texture->SampleCube(normal);
+                if (env_probe_texture.IsValid()) {
+                    Vec4f env_probe_sample = env_probe_texture->SampleCube(direction);
 
-                //     payload.emissive += env_probe_sample;
-                // }
+                    payload.emissive += env_probe_sample;
+                }
 
                 // // testing!! @FIXME
                 // const Vec3f L = Vec3f(-0.4f, 0.65f, 0.1f).Normalize();
@@ -958,9 +993,7 @@ void LightmapCPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
         LightmapHit &hit = m_hits_buffer[index];
 
         if (num_bounces != 0) {
-            hit.color = bounces[0].throughput;
-            // hit.color = Vec4f(first_ray.ray.direction * 0.5f + 0.5f, 1.0f); // debug
-            // hit.color = Vec4f(bounces[0].throughput.GetXYZ(), 1.0f); // debugging
+            hit.color = bounces[0].radiance;
 
             if (MathUtil::IsNaN(hit.color) || !MathUtil::IsFinite(hit.color)) {
                 HYP_LOG_ONCE(Lightmap, Warning, "NaN or infinite color detected while tracing rays");
@@ -1637,7 +1670,7 @@ LightmapJobParams Lightmapper::CreateLightmapJobParams(SizeType start_index, Siz
     LightmapJobParams job_params {
         &m_config,
         m_scene,
-        m_lightmap_elements.ToSpan().Slice(start_index, end_index),
+        m_lightmap_elements.ToSpan().Slice(start_index, end_index - start_index),
         &m_all_elements_map,
         acceleration_structure
     };
@@ -1711,6 +1744,10 @@ void Lightmapper::PerformLightmapping()
     AssertThrow(m_acceleration_structure == nullptr);
     m_acceleration_structure = MakeUnique<LightmapTopLevelAccelerationStructure>();
 
+    if (m_lightmap_elements.Empty()) {
+        return;
+    }
+
     for (LightmapElement &element : m_lightmap_elements) {
         BVHComponent *bvh_component = mgr.TryGetComponent<BVHComponent>(element.entity);
 
@@ -1725,23 +1762,19 @@ void Lightmapper::PerformLightmapping()
     }
 
     uint32 num_triangles = 0;
+    SizeType start_index = 0;
 
-    SizeType start_index;
-    SizeType end_index;
-
-    for (start_index = 0, end_index = 0; end_index < m_lightmap_elements.Size(); end_index++) {
-        LightmapElement &element = m_lightmap_elements[end_index];
+    for (SizeType index = 0; index < m_lightmap_elements.Size(); index++) {
+        LightmapElement &element = m_lightmap_elements[index];
 
         m_all_elements_map.Set(element.entity, &element);
 
         if (ideal_triangles_per_job != 0 && num_triangles != 0 && num_triangles + element.mesh->NumIndices() / 3 > ideal_triangles_per_job) {
-            if (end_index - start_index != 0) {
-                UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, end_index, m_acceleration_structure.Get()));
+            UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, index + 1, m_acceleration_structure.Get()));
 
-                start_index = end_index;
+            start_index = index + 1;
 
-                AddJob(std::move(job));
-            }
+            AddJob(std::move(job));
 
             num_triangles = 0;
         }
@@ -1749,8 +1782,8 @@ void Lightmapper::PerformLightmapping()
         num_triangles += element.mesh->NumIndices() / 3;
     }
 
-    if (end_index - start_index != 0) {
-        UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, end_index, m_acceleration_structure.Get()));
+    if (start_index < m_lightmap_elements.Size() - 1) {
+        UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, m_lightmap_elements.Size(), m_acceleration_structure.Get()));
 
         AddJob(std::move(job));
     }
@@ -1779,7 +1812,7 @@ void Lightmapper::Update(GameCounter::TickUnit delta)
 
 void Lightmapper::HandleCompletedJob(LightmapJob *job)
 {
-    HYP_LOG(Lightmap, Debug, "Tracing completed for lightmapping job {}...", job->GetUUID());
+    HYP_LOG(Lightmap, Debug, "Tracing completed for lightmapping job {} ({} elements)", job->GetUUID(), job->GetElements().Size());
 
     const LightmapUVMap &uv_map = job->GetUVMap();
 
@@ -1855,7 +1888,7 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
     FixedArray<Handle<Texture>, 2> textures;
 
     for (uint32 i = 0; i < 2; i++) {
-        RC<StreamedTextureData> streamed_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
+        Handle<Texture> texture = CreateObject<Texture>(MakeRefCountedPtr<StreamedTextureData>(TextureData {
             TextureDesc {
                 ImageType::TEXTURE_TYPE_2D,
                 InternalFormat::RGBA32F,
@@ -1865,9 +1898,8 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
                 WrapMode::TEXTURE_WRAP_REPEAT
             },
             ByteBuffer(bitmaps[i].GetUnpackedFloats().ToByteView())
-        });
+        }));
 
-        Handle<Texture> texture = CreateObject<Texture>(std::move(streamed_data));
         InitObject(texture);
 
         textures[i] = std::move(texture);
@@ -1876,19 +1908,21 @@ void Lightmapper::HandleCompletedJob(LightmapJob *job)
     for (LightmapElement &element : job->GetElements()) {
         bool is_new_material = false;
 
-        //element.material = element.material.IsValid() ? element.material->Clone() : CreateObject<Material>();
-        //is_new_material = true;
+        element.material = element.material.IsValid() ? element.material->Clone() : CreateObject<Material>();
+        is_new_material = true;
 
-        if (!element.material) {
-            // @TODO: Set to default material
-            continue;
-        }
+        HYP_LOG(Lightmap, Debug, "Setting material #{} on Entity #{}", element.material.GetID().Value(), element.entity.GetID().Value());
 
-        if (!element.material->IsDynamic()) {
-            element.material = element.material->Clone();
+        // if (!element.material) {
+        //     // @TODO: Set to default material
+        //     continue;
+        // }
 
-            is_new_material = true;
-        }
+        // if (!element.material->IsDynamic()) {
+        //     element.material = element.material->Clone();
+
+        //     is_new_material = true;
+        // }
         
         // temp; not thread safe
         element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, textures[0]);

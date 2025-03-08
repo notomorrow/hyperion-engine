@@ -88,7 +88,7 @@ struct RenderBinding<Scene>
 };
 
 template <class RenderResourceType>
-struct RenderResourceState_StackBased
+struct RenderResourceState_StackContext
 {
     Stack<TResourceHandle<RenderResourceType>>  stack;
 
@@ -114,8 +114,8 @@ struct RenderResourceState_StackBased
     }
 };
 
-template <class RenderResourceType>
-struct RenderResourceState_PoolBased
+template <class RenderResourceType, SizeType MaxSize = SizeType(-1)>
+struct RenderResourceState_PoolContext
 {
     HashSet<RenderResourceType *>   elements;
 
@@ -138,7 +138,9 @@ template <class RenderResourceType>
 struct RenderResourceState;
 
 template <>
-struct RenderResourceState<SceneRenderResource> : RenderResourceState_StackBased<SceneRenderResource>, RenderResourceState_PoolBased<SceneRenderResource>
+struct RenderResourceState<SceneRenderResource>
+    : RenderResourceState_StackContext<SceneRenderResource>,
+      RenderResourceState_PoolContext<SceneRenderResource>
 {
 };
 
@@ -149,14 +151,14 @@ class RenderState : public HypObject<RenderState>
     HYP_OBJECT_BODY(RenderState);
 
 public:
-    Array<SceneRenderResource *>                                                    bound_scenes;
     Stack<TResourceHandle<SceneRenderResource>>                                     scene_bindings;
     Array<CameraRenderResource *>                                                   camera_bindings;
     FixedArray<Array<TResourceHandle<LightRenderResource>>, uint32(LightType::MAX)> bound_lights;
     Stack<TResourceHandle<LightRenderResource>>                                     light_bindings;
-    FixedArray<ArrayMap<ID<EnvProbe>, Optional<uint32>>, ENV_PROBE_TYPE_MAX>        bound_env_probes; // map to texture slot
+    FixedArray<HashMap<Handle<EnvProbe>, Optional<uint32>>, ENV_PROBE_TYPE_MAX>     bound_env_probes; // map to texture slot
     ID<EnvGrid>                                                                     bound_env_grid;
-    Stack<ID<EnvProbe>>                                                             env_probe_bindings;
+    Stack<Handle<EnvProbe>>                                                         env_probe_bindings;
+    
     uint32                                                                          frame_counter = ~0u;
 
     HYP_API RenderState();
@@ -171,8 +173,8 @@ public:
     HYP_FORCE_INLINE void AdvanceFrameCounter()
         { ++frame_counter; }
 
-    HYP_FORCE_INLINE void SetActiveEnvProbe(ID<EnvProbe> id)
-        { env_probe_bindings.Push(id); }
+    HYP_FORCE_INLINE void SetActiveEnvProbe(const Handle<EnvProbe> &env_probe)
+        { env_probe_bindings.Push(env_probe); }
 
     HYP_FORCE_INLINE void UnsetActiveEnvProbe()
     {
@@ -181,8 +183,8 @@ public:
         }
     }
 
-    HYP_FORCE_INLINE ID<EnvProbe> GetActiveEnvProbe() const
-        { return env_probe_bindings.Any() ? env_probe_bindings.Top() : ID<EnvProbe>(); }
+    HYP_FORCE_INLINE const Handle<EnvProbe> &GetActiveEnvProbe() const
+        { return env_probe_bindings.Any() ? env_probe_bindings.Top() : Handle<EnvProbe>::empty; }
 
     HYP_FORCE_INLINE void BindEnvGrid(ID<EnvGrid> id)
     {
@@ -247,7 +249,7 @@ public:
 
     const CameraRenderResource &GetActiveCamera() const;
 
-    void BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id);
+    void BindEnvProbe(EnvProbeType type, const Handle<EnvProbe> &probe);
     void UnbindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id);
 
     void ResetStates(RenderStateMask mask)

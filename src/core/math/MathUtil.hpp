@@ -384,7 +384,7 @@ public:
     
     template <class T>
     HYP_FORCE_INLINE static constexpr HYP_ENABLE_IF(!is_math_vector_v<T>, T) Abs(T a)
-        { return a > T(0) ? a : -a; }
+        { return a >= T(0) ? a : -a; }
     
     template <class T>
     HYP_FORCE_INLINE static constexpr HYP_ENABLE_IF(is_math_vector_v<T>, T) Abs(const T &a)

@@ -172,9 +172,13 @@ void RenderState::SetActiveLight(LightRenderResource &light_render_resources)
     light_bindings.Push(TResourceHandle<LightRenderResource>(light_render_resources));
 }
 
-void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
+void RenderState::BindEnvProbe(EnvProbeType type, const Handle<EnvProbe> &probe)
 {
     Threads::AssertOnThread(g_render_thread);
+
+    if (!probe.IsValid()) {
+        return;
+    }
 
     constexpr EnvProbeBindingSlot binding_slots[ENV_PROBE_TYPE_MAX] = {
         ENV_PROBE_BINDING_SLOT_CUBEMAP,         // reflection
@@ -188,16 +192,9 @@ void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
         max_bound_point_shadow_maps     // ENV_PROBE_BINDING_SLOT_SHADOW_CUBEMAP
     };
 
-    const auto it = bound_env_probes[type].Find(probe_id);
+    const auto it = bound_env_probes[type].Find(probe);
 
     if (it != bound_env_probes[type].End()) {
-        DebugLog(
-            LogType::Info,
-            "Probe #%u (type: %u) already bound, skipping.\n",
-            probe_id.Value(),
-            uint32(type)
-        );
-
         return;
     }
 
@@ -217,7 +214,7 @@ void RenderState::BindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
     }
 
     bound_env_probes[type].Insert(
-        probe_id,
+        probe,
         binding_slot != ENV_PROBE_BINDING_SLOT_INVALID
             ? Optional<uint32>(m_env_probe_texture_slot_counters[uint32(binding_slot)]++)
             : Optional<uint32>()
@@ -233,7 +230,13 @@ void RenderState::UnbindEnvProbe(EnvProbeType type, ID<EnvProbe> probe_id)
 
     AssertThrow(type < ENV_PROBE_TYPE_MAX);
 
-    bound_env_probes[type].Erase(probe_id);
+    auto it = bound_env_probes[type].FindAs(probe_id);
+
+    if (it == bound_env_probes[type].End()) {
+        return;
+    }
+
+    bound_env_probes[type].Erase(it);
 }
 
 } // namespace hyperion

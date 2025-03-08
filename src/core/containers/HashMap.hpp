@@ -16,10 +16,10 @@ namespace detail {
 template <class Key, class Value>
 struct HashMapElement
 {
-    HashMapElement                 *next = nullptr;
+    HashMapElement              *next = nullptr;
     HashCode::ValueType         hash_code;
 
-    Pair<Key, Value>    pair;
+    KeyValuePair<Key, Value>    pair;
 
     /*! \brief Implement GetHashCode() so GetHashCode() of the entire HashMap can be used. */
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -36,10 +36,10 @@ struct HashMapBucket
         HashMapBucket<Key, Value>  *bucket;
         HashMapElement<Key, Value> *element;
 
-        HYP_FORCE_INLINE Pair<Key, Value> *operator->() const
+        HYP_FORCE_INLINE KeyValuePair<Key, Value> *operator->() const
             { return &element->pair; }
 
-        HYP_FORCE_INLINE Pair<Key, Value> &operator*() const
+        HYP_FORCE_INLINE KeyValuePair<Key, Value> &operator*() const
             { return element->pair; }
 
         HYP_FORCE_INLINE Iterator &operator++()
@@ -69,10 +69,10 @@ struct HashMapBucket
         const HashMapBucket<Key, Value>     *bucket;
         const HashMapElement<Key, Value>    *element;
 
-        HYP_FORCE_INLINE const Pair<Key, Value> *operator->() const
+        HYP_FORCE_INLINE const KeyValuePair<Key, Value> *operator->() const
             { return &element->pair; }
 
-        HYP_FORCE_INLINE const Pair<Key, Value> &operator*() const
+        HYP_FORCE_INLINE const KeyValuePair<Key, Value> &operator*() const
             { return element->pair; }
 
         HYP_FORCE_INLINE ConstIterator &operator++()
@@ -244,13 +244,13 @@ public:
         Iterator &operator=(Iterator &other) &noexcept  = default;
         ~Iterator()                                     = default;
         
-        HYP_FORCE_INLINE Pair<Key, Value> *operator->() const
+        HYP_FORCE_INLINE KeyValuePairType *operator->() const
             {  return bucket_iter.operator->(); }
         
-        HYP_FORCE_INLINE Pair<Key, Value> &operator*()
+        HYP_FORCE_INLINE KeyValuePairType &operator*()
             {  return bucket_iter.operator*(); }
         
-        HYP_FORCE_INLINE const Pair<Key, Value> &operator*() const
+        HYP_FORCE_INLINE const KeyValuePairType &operator*() const
             {  return bucket_iter.operator*(); }
         
         HYP_FORCE_INLINE Iterator &operator++()
@@ -302,10 +302,10 @@ public:
         ConstIterator &operator=(ConstIterator &other) &noexcept    = default;
         ~ConstIterator()                                            = default;
         
-        HYP_FORCE_INLINE const Pair<Key, Value> *operator->() const
+        HYP_FORCE_INLINE const KeyValuePairType *operator->() const
             {  return bucket_iter.operator->(); }
         
-        HYP_FORCE_INLINE const Pair<Key, Value> &operator*() const
+        HYP_FORCE_INLINE const KeyValuePairType &operator*() const
             {  return bucket_iter.operator*(); }
         
         HYP_FORCE_INLINE ConstIterator &operator++()
@@ -379,6 +379,12 @@ public:
 
     HYP_FORCE_INLINE bool Empty() const
         { return m_size == 0; }
+
+    HYP_FORCE_INLINE ValueType &Front()
+        { AssertDebug(m_size != 0); return *Begin(); }
+
+    HYP_FORCE_INLINE const ValueType &Front() const
+        { AssertDebug(m_size != 0); return *Begin(); }
 
     HYP_FORCE_INLINE bool operator==(const HashMap &other) const
     {
@@ -492,8 +498,8 @@ public:
     InsertResult Insert(const Key &key, Value &&value);
     InsertResult Insert(Key &&key, const Value &value);
     InsertResult Insert(Key &&key, Value &&value);
-    InsertResult Insert(const Pair<Key, Value> &pair);
-    InsertResult Insert(Pair<Key, Value> &&pair);
+    InsertResult Insert(const KeyValuePairType &pair);
+    InsertResult Insert(KeyValuePairType &&pair);
 
     template <class... Args>
     HYP_FORCE_INLINE InsertResult Emplace(const Key &key, Args &&...args)
@@ -509,7 +515,7 @@ public:
     HashMap &Merge(const OtherContainerType &other)
     {
         for (const auto &item : other) {
-            Set_Internal(Pair<Key, Value>(item));
+            Set_Internal(KeyValuePairType(item));
         }
 
         return *this;
@@ -566,8 +572,8 @@ private:
     HYP_FORCE_INLINE const detail::HashMapBucket<Key, Value> *GetBucketForHash(HashCode::ValueType hash) const
         { return &m_buckets[hash % m_buckets.Size()]; }
 
-    InsertResult Set_Internal(Pair<Key, Value> &&pair);
-    InsertResult Insert_Internal(Pair<Key, Value> &&pair);
+    InsertResult Set_Internal(KeyValuePairType &&pair);
+    InsertResult Insert_Internal(KeyValuePairType &&pair);
 
     HashMapBucketArray  m_buckets;
     SizeType            m_size;
@@ -828,7 +834,7 @@ bool HashMap<Key, Value>::Erase(const Key &key)
 }
 
 template <class Key, class Value>
-auto HashMap<Key, Value>::Set_Internal(Pair<Key, Value> &&pair) -> InsertResult
+auto HashMap<Key, Value>::Set_Internal(KeyValuePairType &&pair) -> InsertResult
 {
     const HashCode::ValueType hash_code = HashCode::GetHashCode(pair.first).Value();
 
@@ -858,7 +864,7 @@ auto HashMap<Key, Value>::Set_Internal(Pair<Key, Value> &&pair) -> InsertResult
 }
 
 template <class Key, class Value>
-auto HashMap<Key, Value>::Insert_Internal(Pair<Key, Value> &&pair) -> InsertResult
+auto HashMap<Key, Value>::Insert_Internal(KeyValuePairType &&pair) -> InsertResult
 {
     // Have to rehash before any insertion, so we don't invalidate the iterator or bucket pointer.
     CheckAndRebuildBuckets();
@@ -889,7 +895,7 @@ auto HashMap<Key, Value>::Insert_Internal(Pair<Key, Value> &&pair) -> InsertResu
 template <class Key, class Value>
 auto HashMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResult
 {
-    return Set_Internal(Pair<Key, Value> {
+    return Set_Internal(KeyValuePairType {
         key,
         value
     });
@@ -898,7 +904,7 @@ auto HashMap<Key, Value>::Set(const Key &key, const Value &value) -> InsertResul
 template <class Key, class Value>
 auto HashMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
 {
-    return Set_Internal(Pair<Key, Value> {
+    return Set_Internal(KeyValuePairType {
         key,
         std::move(value)
     });
@@ -907,7 +913,7 @@ auto HashMap<Key, Value>::Set(const Key &key, Value &&value) -> InsertResult
 template <class Key, class Value>
 auto HashMap<Key, Value>::Set(Key &&key, const Value &value) -> InsertResult
 {
-    return Set_Internal(Pair<Key, Value> {
+    return Set_Internal(KeyValuePairType {
         std::move(key),
         value
     });
@@ -916,7 +922,7 @@ auto HashMap<Key, Value>::Set(Key &&key, const Value &value) -> InsertResult
 template <class Key, class Value>
 auto HashMap<Key, Value>::Set(Key &&key, Value &&value) -> InsertResult
 {
-    return Set_Internal(Pair<Key, Value> {
+    return Set_Internal(KeyValuePairType {
         std::move(key),
         std::move(value)
     });
@@ -925,7 +931,7 @@ auto HashMap<Key, Value>::Set(Key &&key, Value &&value) -> InsertResult
 template <class Key, class Value>
 auto HashMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertResult
 {
-    return Insert_Internal(Pair<Key, Value> {
+    return Insert_Internal(KeyValuePairType {
         key,
         value
     });
@@ -934,7 +940,7 @@ auto HashMap<Key, Value>::Insert(const Key &key, const Value &value) -> InsertRe
 template <class Key, class Value>
 auto HashMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 {
-    return Insert_Internal(Pair<Key, Value> {
+    return Insert_Internal(KeyValuePairType {
         key,
         std::move(value)
     });
@@ -943,7 +949,7 @@ auto HashMap<Key, Value>::Insert(const Key &key, Value &&value) -> InsertResult
 template <class Key, class Value>
 auto HashMap<Key, Value>::Insert(Key &&key, const Value &value) -> InsertResult
 {
-    return Insert_Internal(Pair<Key, Value> {
+    return Insert_Internal(KeyValuePairType {
         std::move(key),
         value
     });
@@ -952,20 +958,20 @@ auto HashMap<Key, Value>::Insert(Key &&key, const Value &value) -> InsertResult
 template <class Key, class Value>
 auto HashMap<Key, Value>::Insert(Key &&key, Value &&value) -> InsertResult
 {
-    return Insert_Internal(Pair<Key, Value> {
+    return Insert_Internal(KeyValuePairType {
         std::move(key),
         std::move(value)
     });
 }
 
 template <class Key, class Value>
-auto HashMap<Key, Value>::Insert(const Pair<Key, Value> &pair) -> InsertResult
+auto HashMap<Key, Value>::Insert(const KeyValuePairType &pair) -> InsertResult
 {
-    return Insert_Internal(Pair<Key, Value>(pair));
+    return Insert_Internal(KeyValuePairType(pair));
 }
 
 template <class Key, class Value>
-auto HashMap<Key, Value>::Insert(Pair<Key, Value> &&pair) -> InsertResult
+auto HashMap<Key, Value>::Insert(KeyValuePairType &&pair) -> InsertResult
 {
     return Insert_Internal(std::move(pair));
 }

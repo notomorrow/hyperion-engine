@@ -26,16 +26,14 @@ static constexpr InternalFormat g_glyph_texture_format = InternalFormat::RGBA8;
 
 Handle<Texture> GlyphImageData::CreateTexture() const
 {
-    RC<StreamedTextureData> streamed_texture_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
+    return CreateObject<Texture>(MakeRefCountedPtr<StreamedTextureData>(TextureData {
         TextureDesc {
             ImageType::TEXTURE_TYPE_2D,
             g_glyph_texture_format,
             Vec3u { uint32(dimensions.x), uint32(dimensions.y), 1 }
         },
         byte_buffer
-    });
-
-    return CreateObject<Texture>(std::move(streamed_texture_data));
+    }));
 }
 
 #pragma endregion GlyphImageData

@@ -43,15 +43,17 @@ RendererResult ImagePlatformImpl<Platform::VULKAN>::ConvertTo32BPP(
 {
     constexpr uint8 new_bpp = 4;
 
+    const uint32 num_faces = self->NumFaces();
+
     const TextureDesc &current_desc = self->GetTextureDesc();
 
     const uint32 size = self->m_size;
-    const uint32 face_offset_step = size / current_desc.num_faces;
+    const uint32 face_offset_step = size / num_faces;
 
     const uint8 bpp = self->m_bpp;
 
-    const uint32 new_size = current_desc.num_faces * new_bpp * current_desc.extent.x * current_desc.extent.y * current_desc.extent.z;
-    const uint32 new_face_offset_step = new_size / current_desc.num_faces;
+    const uint32 new_size = num_faces * new_bpp * current_desc.extent.x * current_desc.extent.y * current_desc.extent.z;
+    const uint32 new_face_offset_step = new_size / num_faces;
     
     const InternalFormat new_format = FormatChangeNumComponents(current_desc.format, new_bpp);
 
@@ -64,7 +66,7 @@ RendererResult ImagePlatformImpl<Platform::VULKAN>::ConvertTo32BPP(
 
         ByteBuffer new_byte_buffer(new_size);
 
-        for (uint32 i = 0; i < current_desc.num_faces; i++) {
+        for (uint32 i = 0; i < num_faces; i++) {
             ImageUtil::ConvertBPP(
                 current_desc.extent.x, current_desc.extent.y, current_desc.extent.z,
                 bpp, new_bpp,
@@ -73,21 +75,20 @@ RendererResult ImagePlatformImpl<Platform::VULKAN>::ConvertTo32BPP(
             );
         }
 
+        self->m_texture_desc = TextureDesc {
+            current_desc.type,
+            new_format,
+            current_desc.extent,
+            current_desc.filter_mode_min,
+            current_desc.filter_mode_mag,
+            current_desc.wrap_mode,
+            current_desc.num_layers
+        };
+
         self->m_streamed_data.Emplace(TextureData {
-            TextureDesc {
-                current_desc.type,
-                new_format,
-                current_desc.extent,
-                current_desc.filter_mode_min,
-                current_desc.filter_mode_mag,
-                current_desc.wrap_mode,
-                current_desc.num_layers,
-                current_desc.num_faces
-            },
+            self->m_texture_desc,
             std::move(new_byte_buffer)
         });
-
-        self->m_texture_desc = self->m_streamed_data->GetTextureDesc();
     }
 
     self->m_bpp = new_bpp;
@@ -479,34 +480,27 @@ void ImagePlatformImpl<Platform::VULKAN>::SetSubResourceState(const ImageSubReso
 #pragma region Image
 
 template <>
-Image<Platform::VULKAN>::Image(
-    const TextureDesc &texture_desc
-) : m_platform_impl { this },
-    m_texture_desc(texture_desc),
-    m_is_blended(false),
-    m_is_rw_texture(false),
-    m_is_attachment_texture(false),
-    m_bpp(NumComponents(GetBaseFormat(texture_desc.format))),
-    m_flags(IMAGE_FLAGS_NONE)
+Image<Platform::VULKAN>::Image(const TextureDesc &texture_desc)
+    : m_platform_impl { this },
+      m_texture_desc(texture_desc),
+      m_is_blended(false),
+      m_is_rw_texture(false),
+      m_is_attachment_texture(false),
+      m_bpp(NumComponents(GetBaseFormat(texture_desc.format))),
+      m_flags(IMAGE_FLAGS_NONE)
 {
     m_size = GetByteSize();
-
-    m_streamed_data.Emplace(TextureData {
-        m_texture_desc,
-        ByteBuffer()
-    });
 }
 
 template <>
-Image<Platform::VULKAN>::Image(
-    const RC<StreamedTextureData> &streamed_data
-) : m_platform_impl { this },
-    m_streamed_data(streamed_data),
-    m_is_blended(false),
-    m_is_rw_texture(false),
-    m_is_attachment_texture(false),
-    m_bpp(0),
-    m_flags(IMAGE_FLAGS_NONE)
+Image<Platform::VULKAN>::Image(const RC<StreamedTextureData> &streamed_data)
+    : m_platform_impl { this },
+      m_streamed_data(streamed_data),
+      m_is_blended(false),
+      m_is_rw_texture(false),
+      m_is_attachment_texture(false),
+      m_bpp(0),
+      m_flags(IMAGE_FLAGS_NONE)
 {
     AssertThrow(m_streamed_data != nullptr);
 
@@ -731,7 +725,8 @@ RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device,
     };
 
     SingleTimeCommands<Platform::VULKAN> commands { device };
-    StagingBuffer<Platform::VULKAN> staging_buffer;
+
+    GPUBufferRef<Platform::VULKAN> staging_buffer;
 
     if (HasAssignedImageData()) {
         ResourceHandle resource_handle(*m_streamed_data);
@@ -746,9 +741,10 @@ RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device,
         );
 
         AssertThrowMsg(m_size % m_bpp == 0, "Invalid image size");
-        AssertThrowMsg((m_size / m_bpp) % texture_data.desc.num_faces == 0, "Invalid image size");
+        AssertThrowMsg((m_size / m_bpp) % NumFaces() == 0, "Invalid image size");
 
-        HYPERION_PASS_ERRORS(staging_buffer.Create(device, m_size), result);
+        staging_buffer = MakeRenderObject<GPUBuffer<Platform::VULKAN>>(GPUBufferType::STAGING_BUFFER);
+        HYPERION_PASS_ERRORS(staging_buffer->Create(device, m_size), result);
 
         if (!result) {
             HYPERION_IGNORE_ERRORS(Destroy(device));
@@ -756,7 +752,7 @@ RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device,
             return result;            
         }
 
-        staging_buffer.Copy(device, m_size, texture_data.buffer.Data());
+        staging_buffer->Copy(device, m_size, texture_data.buffer.Data());
 
         commands.Push([&](const CommandBufferRef<Platform::VULKAN> &command_buffer)
         {
@@ -770,32 +766,32 @@ RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device,
         });
 
         // copy from staging to image
-        const uint32 buffer_offset_step = uint32(m_size) / texture_data.desc.num_faces;
+        const uint32 buffer_offset_step = uint32(m_size) / NumFaces();
 
         AssertThrowMsg(m_size % buffer_offset_step == 0, "Invalid image size");
-        AssertThrowMsg(m_size / buffer_offset_step == texture_data.desc.num_faces, "Invalid image size");
+        AssertThrowMsg(m_size / buffer_offset_step == NumFaces(), "Invalid image size");
 
-        for (uint32 i = 0; i < texture_data.desc.num_faces; i++) {
-            commands.Push([this, &staging_buffer, &image_info, i, buffer_offset_step](const CommandBufferRef<Platform::VULKAN> &command_buffer)
+        for (uint32 face_index = 0; face_index < NumFaces(); face_index++) {
+            commands.Push([this, &staging_buffer, &image_info, face_index, buffer_offset_step](const CommandBufferRef<Platform::VULKAN> &command_buffer)
             {
-                const uint32 buffer_size = staging_buffer.GetPlatformImpl().size;
+                const uint32 buffer_size = staging_buffer->Size();
                 const uint32 buffer_offset_step_ = buffer_offset_step;
                 const uint32 total_size = m_size;
 
                 VkBufferImageCopy region { };
-                region.bufferOffset = i * buffer_offset_step;
+                region.bufferOffset = face_index * buffer_offset_step;
                 region.bufferRowLength = 0;
                 region.bufferImageHeight = 0;
                 region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 region.imageSubresource.mipLevel = 0;
-                region.imageSubresource.baseArrayLayer = i;
+                region.imageSubresource.baseArrayLayer = face_index;
                 region.imageSubresource.layerCount = 1;
                 region.imageOffset = { 0, 0, 0 };
                 region.imageExtent = image_info.extent;
 
                 vkCmdCopyBufferToImage(
                     command_buffer->GetPlatformImpl().command_buffer,
-                    staging_buffer.GetPlatformImpl().handle,
+                    staging_buffer->GetPlatformImpl().handle,
                     m_platform_impl.handle,
                     GetVkImageLayout(m_platform_impl.GetResourceState()),
                     1,
@@ -817,6 +813,9 @@ RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device,
                 return GenerateMipmaps(device, command_buffer);
             });
         }
+
+        // Release streamed data for the image (will still be held on Texture)
+        m_streamed_data.Reset();
     }
 
     /* Transition from whatever the previous layout state was to our destination state */
@@ -834,14 +833,7 @@ RendererResult Image<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device,
     // execute command stack
     HYPERION_PASS_ERRORS(commands.Execute(), result);
 
-    if (HasAssignedImageData()) {
-        if (result) {
-            // destroy staging buffer
-            HYPERION_PASS_ERRORS(staging_buffer.Destroy(device), result);
-        } else {
-            HYPERION_IGNORE_ERRORS(staging_buffer.Destroy(device));
-        }
-    }
+    SafeRelease(std::move(staging_buffer));
 
     return result;
 }
@@ -1129,17 +1121,17 @@ void Image<Platform::VULKAN>::CopyToBuffer(
         | (flags & IMAGE_SUB_RESOURCE_FLAGS_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
             
     // copy from staging to image
-    const auto num_faces = NumFaces();
-    const auto buffer_offset_step = uint32(m_size) / num_faces;
+    const uint32 num_faces = NumFaces();
+    const uint32 buffer_offset_step = uint32(m_size) / num_faces;
 
-    for (uint32 i = 0; i < num_faces; i++) {
+    for (uint32 face_index = 0; face_index < num_faces; face_index++) {
         VkBufferImageCopy region { };
-        region.bufferOffset = i * buffer_offset_step;
+        region.bufferOffset = face_index * buffer_offset_step;
         region.bufferRowLength = 0;
         region.bufferImageHeight = 0;
         region.imageSubresource.aspectMask = aspect_flag_bits;
         region.imageSubresource.mipLevel = 0;
-        region.imageSubresource.baseArrayLayer = i;
+        region.imageSubresource.baseArrayLayer = face_index;
         region.imageSubresource.layerCount = 1;
         region.imageOffset = { 0, 0, 0 };
         region.imageExtent = VkExtent3D { m_texture_desc.extent.x, m_texture_desc.extent.y, m_texture_desc.extent.z };
