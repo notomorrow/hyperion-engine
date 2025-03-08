@@ -84,7 +84,7 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 #define RAY_OFFSET 0.005
 #define NUM_SAMPLES 1
-#define NUM_BOUNCES 2
+#define NUM_BOUNCES 3
 
 // uncomment to see the actual object colors
 //#define DEBUG_TEST
