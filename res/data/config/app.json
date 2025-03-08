@@ -20,7 +20,7 @@
       "gi": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
       "enabled": false
@@ -59,11 +59,11 @@
   },
   "lightmapper": {
     "num_threads_per_job": 4,
-    "num_samples": 1,
+    "num_samples": 16,
     "ideal_triangles_per_job": 4096,
-    "trace_mode": 1,
+    "trace_mode": 0,
     "radiance": true,
-    "max_rays_per_frame": 10000,
+    "max_rays_per_frame": 100000,
     "irradiance": true
   }
 }

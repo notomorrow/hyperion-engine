@@ -75,12 +75,15 @@ struct RENDER_COMMAND(LightmapRender) : renderer::RenderCommand
 {
     LightmapJob         *job;
     Array<LightmapRay>  rays;
+    uint32              ray_offset;
 
     RENDER_COMMAND(LightmapRender)(
         LightmapJob *job,
-        Array<LightmapRay> &&rays
+        Array<LightmapRay> &&rays,
+        uint32 ray_offset
     ) : job(job),
-        rays(std::move(rays))
+        rays(std::move(rays)),
+        ray_offset(ray_offset)
     {
         job->m_num_concurrent_rendering_tasks.Increment(1, MemoryOrder::RELEASE);
     }
@@ -96,8 +99,6 @@ struct RENDER_COMMAND(LightmapRender) : renderer::RenderCommand
 
         const uint32 frame_index = frame->GetFrameIndex();
         const uint32 previous_frame_index = (frame_index + max_frames_in_flight - 1) % max_frames_in_flight;
-
-        uint32 ray_offset = 0;
 
         {
             // Read ray hits from last time this frame was rendered
@@ -117,8 +118,6 @@ struct RENDER_COMMAND(LightmapRender) : renderer::RenderCommand
                     job->IntegrateRayHits(previous_rays, hits_buffer, lightmap_renderer->GetShadingType());
                 }
             }
-
-            ray_offset = job->GetTexelIndex() % MathUtil::Max(job->GetTexelIndices().Size(), 1u);
 
             job->SetPreviousFrameRays(rays);
         }
@@ -1450,6 +1449,8 @@ void LightmapJob::Process()
 
     GatherRays(max_rays, rays);
 
+    const uint32 ray_offset = uint32(m_texel_index % (m_texel_indices.Size() * m_params.config->num_samples));
+
     for (ILightmapRenderer *lightmap_renderer : m_params.renderers) {
         AssertThrow(lightmap_renderer != nullptr);
 
@@ -1465,7 +1466,7 @@ void LightmapJob::Process()
         m_last_logged_percentage = percentage;
     }
 
-    PUSH_RENDER_COMMAND(LightmapRender, this, std::move(rays));
+    PUSH_RENDER_COMMAND(LightmapRender, this, std::move(rays), ray_offset);
 }
 
 void LightmapJob::GatherRays(uint32 max_ray_hits, Array<LightmapRay> &out_rays)
@@ -1591,10 +1592,10 @@ void LightmapJob::IntegrateRayHits(Span<const LightmapRay> rays, Span<const Ligh
 
         switch (shading_type) {
         case LightmapShadingType::RADIANCE:
-            uv.radiance += Vec4f(hit.color.GetXYZ(), 1.0f);
+            uv.radiance += Vec4f(hit.color.GetXYZ(), 1.0f); //= Vec4f(MathUtil::Lerp(uv.radiance.GetXYZ() * uv.radiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f);
             break;
         case LightmapShadingType::IRRADIANCE:
-            uv.irradiance = Vec4f(hit.color.GetXYZ(), 1.0f);
+            uv.irradiance += Vec4f(hit.color.GetXYZ(), 1.0f); //= Vec4f(MathUtil::Lerp(uv.irradiance.GetXYZ() * uv.irradiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f); //
             break;
         }
     }

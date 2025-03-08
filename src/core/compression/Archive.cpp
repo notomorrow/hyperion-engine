@@ -115,7 +115,7 @@ Archive &Archive::operator=(Archive &&other) noexcept
 
 Archive::~Archive() = default;
 
-ArchiveResult Archive::Decompress(ByteBuffer &out_buffer) const
+Result<void> Archive::Decompress(ByteBuffer &out_buffer) const
 {
 #ifdef HYP_ZLIB
     out_buffer.SetSize(m_uncompressed_size);
@@ -127,20 +127,20 @@ ArchiveResult Archive::Decompress(ByteBuffer &out_buffer) const
     const unsigned long decompressed_size_before = decompressed_size;
 
     if (uncompress2(out_buffer.Data(), &decompressed_size, m_compressed_buffer.Data(), &compressed_size) != Z_OK) {
-        return { ArchiveResult::ARCHIVE_ERR, "Failed to decompress: zlib returned an error" };
+        return HYP_MAKE_ERROR(Error, "Failed to decompress: zlib returned an error");
     }
 
     if (compressed_size != compressed_size_before) {
-        return { ArchiveResult::ARCHIVE_ERR, "Compressed data size was incorrect" };
+        return HYP_MAKE_ERROR(Error, "Compressed data size was incorrect");
     }
 
     if (decompressed_size != decompressed_size_before) {
-        return { ArchiveResult::ARCHIVE_ERR, "Decompressed data size was incorrect" };
+        return HYP_MAKE_ERROR(Error, "Decompressed data size was incorrect");
     }
 
-    return { ArchiveResult::ARCHIVE_OK };
+    return { };
 #else
-    return { ArchiveResult::ARCHIVE_ERR, "zlib not linked, cannot decompress" };
+    return HYP_MAKE_ERROR(Error, "zlib not linked, cannot decompress");
 #endif
 }
 

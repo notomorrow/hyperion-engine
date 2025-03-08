@@ -597,7 +597,7 @@ FBOMResult FBOMWriter::Write(ByteWriter *out, const FBOMData &data, UniqueID id,
 
             // Write compressed data
             ArchiveBuilder archive_builder;
-            archive_builder.Append(byte_buffer);
+            archive_builder.Append(std::move(byte_buffer));
 
             if (FBOMResult err = WriteArchive(out, archive_builder.Build())) {
                 return err;
