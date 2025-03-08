@@ -20,7 +20,7 @@
       "gi": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": false
@@ -58,12 +58,12 @@
     "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
   },
   "lightmapper": {
-    "trace_mode": 0,
-    "irradiance": true,
-    "radiance": true,
-    "num_samples": 1,
     "num_threads_per_job": 4,
+    "num_samples": 1,
+    "ideal_triangles_per_job": 4096,
+    "trace_mode": 1,
+    "radiance": true,
     "max_rays_per_frame": 10000,
-    "ideal_triangles_per_job": 4096
+    "irradiance": true
   }
 }

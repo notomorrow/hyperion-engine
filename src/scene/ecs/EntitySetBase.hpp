@@ -27,6 +27,8 @@ public:
     EntitySetBase &operator=(EntitySetBase &&other) noexcept    = delete;
     virtual ~EntitySetBase()                                    = default;
 
+    virtual SizeType Size() const = 0;
+
     /*! \brief Checks if an Entity's components are valid for this EntitySet.
      *
      *  \param entity The Entity to check.

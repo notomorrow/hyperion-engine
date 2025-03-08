@@ -6,6 +6,7 @@
 
 #include <asset/Assets.hpp>
 #include <asset/AssetRegistry.hpp>
+
 #include <core/serialization/fbom/FBOMWriter.hpp>
 #include <core/serialization/fbom/FBOMReader.hpp>
 #include <core/serialization/fbom/FBOMDeserializedObject.hpp>
@@ -13,6 +14,10 @@
 #include <core/utilities/DeferredScope.hpp>
 
 #include <scene/Scene.hpp>
+
+#include <scene/ecs/EntityManager.hpp>
+#include <scene/ecs/components/CameraComponent.hpp>
+
 #include <scene/camera/Camera.hpp>
 
 namespace hyperion {
@@ -37,6 +42,16 @@ EditorProject::EditorProject(Name name)
     camera->SetFar(30000.0f);
 
     m_scene = CreateObject<Scene>(nullptr, camera, SceneFlags::FOREGROUND | SceneFlags::HAS_TLAS);
+
+    NodeProxy camera_node = m_scene->GetRoot()->AddChild();
+    camera_node->SetName("Camera");
+    
+    Handle<Entity> camera_entity = m_scene->GetEntityManager()->AddEntity();
+    m_scene->GetEntityManager()->AddComponent<CameraComponent>(camera_entity, CameraComponent {
+        camera
+    });
+
+    camera_node->SetEntity(camera_entity);
 }
 
 EditorProject::~EditorProject()

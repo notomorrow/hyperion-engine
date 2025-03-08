@@ -305,6 +305,8 @@ public:
     template <EntityTag... Tags>
     HYP_FORCE_INLINE HashCode GetEntryListHash() const
     {
+        static_assert(((uint32(Tags) < uint32(EntityTag::DESCRIPTOR_MAX)) && ...), "All tags must have a value < EntityTag::DESCRIPTOR_MAX");
+
         const uint32 mask = ((Tags == EntityTag::NONE ? 0 : (1u << (uint32(Tags) - 1))) | ...);
 
         return HashCode(m_entry_hashes[mask])
@@ -353,6 +355,8 @@ public:
     bool TestRay(const Ray &ray, RayTestResults &out_results, bool use_bvh = true) const;
 
 private:
+    static constexpr uint32 num_entry_hashes = 1u << uint32(EntityTag::DESCRIPTOR_MAX);
+
     void ResetEntriesHash();
     void RebuildEntriesHash(uint32 level = 0);
 
@@ -390,18 +394,18 @@ private:
 
     void UpdateVisibilityState(const Handle<Camera> &camera, uint16 validity_marker);
 
-    RC<EntityManager>                                   m_entity_manager;
+    RC<EntityManager>                       m_entity_manager;
     
-    EntrySet                                            m_entries;
-    FixedArray<HashCode, 1u << uint32(EntityTag::MAX)>  m_entry_hashes;
-    Octree                                              *m_parent;
-    BoundingBox                                         m_aabb;
-    FixedArray<Octant, 8>                               m_octants;
-    bool                                                m_is_divided;
-    OctreeState                                         *m_state;
-    VisibilityState                                     m_visibility_state;
-    OctantID                                            m_octant_id;
-    uint32                                              m_invalidation_marker;
+    EntrySet                                m_entries;
+    FixedArray<HashCode, num_entry_hashes>  m_entry_hashes;
+    Octree                                  *m_parent;
+    BoundingBox                             m_aabb;
+    FixedArray<Octant, 8>                   m_octants;
+    bool                                    m_is_divided;
+    OctreeState                             *m_state;
+    VisibilityState                         m_visibility_state;
+    OctantID                                m_octant_id;
+    uint32                                  m_invalidation_marker;
 };
 
 } // namespace hyperion

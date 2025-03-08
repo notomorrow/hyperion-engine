@@ -77,12 +77,15 @@ class Scene;
 class HYP_API SystemExecutionGroup
 {
 public:
-    SystemExecutionGroup();
+    SystemExecutionGroup(bool requires_game_thread = false);
     SystemExecutionGroup(const SystemExecutionGroup &)                  = delete;
     SystemExecutionGroup &operator=(const SystemExecutionGroup &)       = delete;
     SystemExecutionGroup(SystemExecutionGroup &&) noexcept              = default;
     SystemExecutionGroup &operator=(SystemExecutionGroup &&) noexcept   = default;
     ~SystemExecutionGroup();
+
+    HYP_FORCE_INLINE bool RequiresGameThread() const
+        { return m_requires_game_thread; }
 
     HYP_FORCE_INLINE TypeMap<UniquePtr<SystemBase>> &GetSystems()
         { return m_systems; }
@@ -107,9 +110,13 @@ public:
      *
      *  \return True if the SystemExecutionGroup is valid for the given System, false otherwise.
      */
-    bool IsValidForExecutionGroup(const SystemBase *system_ptr) const
+    bool IsValidForSystem(const SystemBase *system_ptr) const
     {
         AssertThrow(system_ptr != nullptr);
+
+        if (system_ptr->RequiresGameThread() && !RequiresGameThread()) {
+            return false;
+        }
 
         const Array<TypeID> &component_type_ids = system_ptr->GetComponentTypeIDs();
 
@@ -159,7 +166,7 @@ public:
     SystemBase *AddSystem(UniquePtr<SystemType> &&system_ptr)
     {
         AssertThrow(system_ptr != nullptr);
-        AssertThrowMsg(IsValidForExecutionGroup(system_ptr.Get()), "System is not valid for this SystemExecutionGroup");
+        AssertThrowMsg(IsValidForSystem(system_ptr.Get()), "System is not valid for this SystemExecutionGroup");
 
         auto it = m_systems.Find<SystemType>();
         AssertThrowMsg(it == m_systems.End(), "System already exists");
@@ -204,9 +211,11 @@ public:
     void StartProcessing(GameCounter::TickUnit delta);
 
     /*! \brief Waits on all processing tasks to complete */
-    void FinishProcessing();
+    void FinishProcessing(bool execute_blocking = false);
 
 private:
+    bool                                    m_requires_game_thread;
+
     TypeMap<UniquePtr<SystemBase>>          m_systems;
     UniquePtr<TaskBatch>                    m_task_batch;
 
@@ -519,7 +528,7 @@ public:
     HYP_FORCE_INLINE Array<EntityTag> GetTags(ID<Entity> entity) const
     {
         Array<EntityTag> tags;
-        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), tags);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), tags);
 
         return tags;
     }
@@ -527,7 +536,7 @@ public:
     HYP_FORCE_INLINE uint32 GetTagsMask(ID<Entity> entity) const
     {
         uint32 mask = 0;
-        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::MAX) - 2>(), mask);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), mask);
 
         return mask;
     }
@@ -967,8 +976,8 @@ private:
         SystemType *ptr = nullptr;
 
         if ((m_flags & EntityManagerFlags::PARALLEL_SYSTEM_EXECUTION) && system_ptr->AllowParallelExecution()) {
-            for (auto &system_execution_group : m_system_execution_groups) {
-                if (system_execution_group.IsValidForExecutionGroup(system_ptr.Get())) {
+            for (SystemExecutionGroup &system_execution_group : m_system_execution_groups) {
+                if (system_execution_group.IsValidForSystem(system_ptr.Get())) {
                     ptr = static_cast<SystemType *>(system_execution_group.AddSystem<SystemType>(std::move(system_ptr)));
 
                     break;
@@ -977,7 +986,9 @@ private:
         }
 
         if (!ptr) {
-            ptr = static_cast<SystemType *>(m_system_execution_groups.EmplaceBack().AddSystem<SystemType>(std::move(system_ptr)));
+            SystemExecutionGroup &system_execution_group = m_system_execution_groups.EmplaceBack(system_ptr->RequiresGameThread());
+            
+            ptr = static_cast<SystemType *>(system_execution_group.AddSystem<SystemType>(std::move(system_ptr)));
         }
 
         // @TODO Notify the system of all entities that have the components it needs
@@ -1012,7 +1023,10 @@ private:
     mutable Mutex                                                           m_entity_sets_mutex;
     TypeMap<HashSet<TypeID>>                                                m_component_entity_sets;
     EntityManagerCommandQueue                                               m_command_queue;
+
     Array<SystemExecutionGroup>                                             m_system_execution_groups;
+
+    SystemExecutionGroup                                                    *m_root_synchronous_execution_group;
 
     HashMap<SystemBase *, HashSet<WeakHandle<Entity>>>                      m_system_entity_map;
     mutable Mutex                                                           m_system_entity_map_mutex;

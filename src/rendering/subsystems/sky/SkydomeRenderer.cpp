@@ -6,6 +6,7 @@
 #include <scene/World.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
+#include <scene/ecs/components/CameraComponent.hpp>
 
 #include <core/threading/Scheduler.hpp>
 
@@ -28,10 +29,7 @@ SkydomeRenderer::SkydomeRenderer(Name name, Vec2u dimensions)
             FilterMode::TEXTURE_FILTER_LINEAR
         }
     );
-}
 
-void SkydomeRenderer::Init()
-{
     InitObject(m_cubemap);
 
     m_camera = CreateObject<Camera>(
@@ -48,12 +46,26 @@ void SkydomeRenderer::Init()
     m_virtual_scene = CreateObject<Scene>(nullptr, m_camera);
     m_virtual_scene->SetName(Name::Unique("SkydomeRendererScene"));
 
+    NodeProxy camera_node = m_virtual_scene->GetRoot()->AddChild();
+    camera_node->SetName("SkydomeRendererCamera");
+    
+    Handle<Entity> camera_entity = m_virtual_scene->GetEntityManager()->AddEntity();
+    m_virtual_scene->GetEntityManager()->AddComponent<CameraComponent>(camera_entity, CameraComponent {
+        m_camera
+    });
+
+    camera_node->SetEntity(camera_entity);
+
     m_env_probe = CreateObject<EnvProbe>(
         m_virtual_scene,
         BoundingBox(Vec3f(-1000.0f), Vec3f(1000.0f)),
         m_dimensions,
         ENV_PROBE_TYPE_SKY
     );
+}
+
+void SkydomeRenderer::Init()
+{
 }
 
 void SkydomeRenderer::InitGame()

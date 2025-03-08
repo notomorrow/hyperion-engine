@@ -136,7 +136,7 @@ public:
         { return HashCode(); }
 
 private:
-    HYP_API void SetIsMouseLocked(bool is_mouse_locked);
+    void SetIsMouseLocked(bool is_mouse_locked);
 
     void UpdateMousePosition();
     void UpdateWindowSize(Vec2i new_size);

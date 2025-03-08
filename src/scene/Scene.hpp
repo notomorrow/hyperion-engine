@@ -254,13 +254,9 @@ private:
 
     TLASRef                     m_tlas;
 
-    Matrix4                     m_last_view_projection_matrix;
-
     bool                        m_is_audio_listener;
 
     GameCounter::TickUnit       m_previous_delta;
-                                 
-    mutable DataMutationState   m_mutation_state;
 
     SceneDrawProxy              m_proxy;
 

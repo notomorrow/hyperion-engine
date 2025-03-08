@@ -119,6 +119,9 @@ public:
     EntitySet &operator=(EntitySet &&other) noexcept    = delete;
     virtual ~EntitySet() override                       = default;
 
+    virtual SizeType Size() const override
+        { return m_elements.Size(); }
+
     /*! \brief Gets the elements array of this set.
      *  The elements array contains the entities in this set and the corresponding component IDs.
      *

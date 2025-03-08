@@ -4,11 +4,14 @@
 #include <scene/World.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
+
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/LightComponent.hpp>
+
+#include <scene/ecs/systems/CameraSystem.hpp>
 #include <scene/ecs/systems/VisibilityStateUpdaterSystem.hpp>
 #include <scene/ecs/systems/RenderProxyUpdaterSystem.hpp>
 #include <scene/ecs/systems/EntityMeshDirtyStateSystem.hpp>
@@ -88,7 +91,6 @@ Scene::Scene(
     m_entity_manager(MakeRefCountedPtr<EntityManager>(owner_thread_id.GetMask(), this)),
     m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
     m_previous_delta(0.01667f),
-    m_mutation_state(DataMutationState::DIRTY),
     m_render_resource(nullptr)
 {
     // Disable command execution if not on game thread
@@ -149,6 +151,7 @@ void Scene::Init()
 
     m_entity_manager->Initialize();
 
+    AddSystemIfApplicable<CameraSystem>();
     AddSystemIfApplicable<WorldAABBUpdaterSystem>();
     AddSystemIfApplicable<EntityMeshDirtyStateSystem>();
     AddSystemIfApplicable<RenderProxyUpdaterSystem>();
@@ -293,18 +296,13 @@ void Scene::Update(GameCounter::TickUnit delta)
         m_octree.NextVisibilityState();
     }
 
-    if (m_camera.IsValid()) {
-        HYP_NAMED_SCOPE("Update camera and calculate visibility");
+    // if (m_camera.IsValid()) {
+    //     HYP_NAMED_SCOPE("Update camera and calculate visibility");
 
-        m_camera->Update(delta);
+    //     m_camera->Update(delta);
 
-        m_octree.CalculateVisibility(m_camera);
-
-        if (m_camera->GetViewProjectionMatrix() != m_last_view_projection_matrix) {
-            m_last_view_projection_matrix = m_camera->GetViewProjectionMatrix();
-            m_mutation_state |= DataMutationState::DIRTY;
-        }
-    }
+    //     m_octree.CalculateVisibility(m_camera);
+    // }
 
     if (IsForegroundScene()) {
         m_entity_manager->FlushCommandQueue(delta);
@@ -480,8 +478,6 @@ void Scene::EnqueueRenderUpdates()
     shader_data.game_time = m_world != nullptr ? m_world->GetGameState().game_time : 0.0f;
 
     m_render_resource->SetBufferData(shader_data);
-
-    m_mutation_state = DataMutationState::CLEAN;
 }
 
 bool Scene::CreateTLAS()

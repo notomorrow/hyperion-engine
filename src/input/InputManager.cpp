@@ -149,8 +149,6 @@ InputMouseLockScope InputManager::AcquireMouseLock()
 
 void InputManager::SetIsMouseLocked(bool is_mouse_locked)
 {
-    Threads::AssertOnThread(g_game_thread);
-
     if (m_is_mouse_locked == is_mouse_locked) {
         return;
     }

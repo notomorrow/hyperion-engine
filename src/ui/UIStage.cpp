@@ -16,6 +16,8 @@
 #include <scene/camera/PerspectiveCamera.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
+
+#include <scene/ecs/components/CameraComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
@@ -102,23 +104,28 @@ void UIStage::SetScene(const Handle<Scene> &scene)
     }
 
     if (!new_scene.IsValid()) {
-        new_scene = CreateObject<Scene>(
-            nullptr,
-            CreateObject<Camera>(),
-            m_owner_thread_id
-        );
-    }
-
-    if (!new_scene->GetCamera().IsValid()) {
-        new_scene->SetCamera(CreateObject<Camera>());
-    }
-
-    if (!new_scene->GetCamera()->HasActiveCameraController()) {
-        new_scene->GetCamera()->AddCameraController(MakeRefCountedPtr<OrthoCameraController>(
+        Handle<Camera> camera = CreateObject<Camera>();
+        camera->AddCameraController(MakeRefCountedPtr<OrthoCameraController>(
             0.0f, -float(m_surface_size.x),
             0.0f, float(m_surface_size.y),
             float(min_depth), float(max_depth)
         ));
+
+        new_scene = CreateObject<Scene>(
+            nullptr,
+            camera,
+            m_owner_thread_id
+        );
+
+        NodeProxy camera_node = new_scene->GetRoot()->AddChild();
+        camera_node->SetName("UICamera");
+        
+        Handle<Entity> camera_entity = new_scene->GetEntityManager()->AddEntity();
+        m_scene->GetEntityManager()->AddComponent<CameraComponent>(camera_entity, CameraComponent {
+            camera
+        });
+
+        camera_node->SetEntity(camera_entity);
     }
     
     NodeProxy current_root_node;

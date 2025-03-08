@@ -3,22 +3,20 @@
 #ifndef HYPERION_ECS_CAMERA_COMPONENT_HPP
 #define HYPERION_ECS_CAMERA_COMPONENT_HPP
 
-#include <core/memory/RefCountedPtr.hpp>
+#include <core/Handle.hpp>
 
 #include <HashCode.hpp>
 
 namespace hyperion {
 
 class CameraController;
+class Camera;
 
 HYP_STRUCT(Component, Label="Camera Component")
 struct CameraComponent
 {
-    HYP_FIELD(Property="CameraController", Serialize=true, Editor=true)
-    Handle<Camera>          camera;
-
-    HYP_FIELD(Property="CameraController", Serialize=true, Editor=true)
-    RC<CameraController>    camera_controller;
+    HYP_FIELD(Property="Camera", Serialize=true, Editor=true)
+    Handle<Camera>  camera;
 };
 
 } // namespace hyperion

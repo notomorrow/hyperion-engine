@@ -191,6 +191,7 @@ EntityManager::EntityManager(ThreadMask owner_thread_mask, Scene *scene, EnumFla
       m_scene(scene),
       m_flags(flags),
       m_command_queue(Threads::IsThreadInMask(g_game_thread, owner_thread_mask) ? EntityManagerCommandQueueFlags::EXEC_COMMANDS : EntityManagerCommandQueueFlags::NONE),
+      m_root_synchronous_execution_group(nullptr),
       m_is_initialized(false)
 {
     AssertThrow(scene != nullptr);
@@ -751,6 +752,8 @@ void EntityManager::BeginAsyncUpdate(GameCounter::TickUnit delta)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_mask);
+
+    m_root_synchronous_execution_group = nullptr;
     
     TaskBatch *root_task_batch = nullptr;
     TaskBatch *last_task_batch = nullptr;
@@ -761,14 +764,24 @@ void EntityManager::BeginAsyncUpdate(GameCounter::TickUnit delta)
 
         TaskBatch *current_task_batch = system_execution_group.GetTaskBatch();
 
-        if (!root_task_batch) {
-            root_task_batch = current_task_batch;
-        }
-
         current_task_batch->ResetState();
 
         // Add tasks to batches before kickoff
         system_execution_group.StartProcessing(delta);
+
+        if (system_execution_group.RequiresGameThread()) {
+            if (m_root_synchronous_execution_group != nullptr) {
+                m_root_synchronous_execution_group->GetTaskBatch()->next_batch = current_task_batch;
+            } else {
+                m_root_synchronous_execution_group = &system_execution_group;
+            }
+
+            continue;
+        }
+
+        if (!root_task_batch) {
+            root_task_batch = current_task_batch;
+        }
 
         if (last_task_batch != nullptr) {
             if (current_task_batch->num_enqueued > 0) {
@@ -792,6 +805,12 @@ void EntityManager::EndAsyncUpdate()
 {
     HYP_SCOPE;
     Threads::AssertOnThread(m_owner_thread_mask);
+
+    if (m_root_synchronous_execution_group != nullptr) {
+        m_root_synchronous_execution_group->FinishProcessing(/* execute_blocking */ true);
+        
+        m_root_synchronous_execution_group = nullptr;
+    }
 
     for (SystemExecutionGroup &system_execution_group : m_system_execution_groups) {
         system_execution_group.FinishProcessing();
@@ -846,8 +865,9 @@ bool EntityManager::IsEntityInitializedForSystem(SystemBase *system, ID<Entity> 
 
 #pragma region SystemExecutionGroup
 
-SystemExecutionGroup::SystemExecutionGroup()
-    : m_task_batch(MakeUnique<TaskBatch>())
+SystemExecutionGroup::SystemExecutionGroup(bool requires_game_thread)
+    : m_requires_game_thread(requires_game_thread),
+      m_task_batch(MakeUnique<TaskBatch>())
 {
 }
 
@@ -893,10 +913,14 @@ void SystemExecutionGroup::StartProcessing(GameCounter::TickUnit delta)
     }
 }
 
-void SystemExecutionGroup::FinishProcessing()
+void SystemExecutionGroup::FinishProcessing(bool execute_blocking)
 {
 #ifdef HYP_SYSTEMS_PARALLEL_EXECUTION
-    m_task_batch->AwaitCompletion();
+    if (execute_blocking) {
+        m_task_batch->ExecuteBlocking(/* execute_dependent_batches */ true);
+    } else {
+        m_task_batch->AwaitCompletion();
+    }
 #else
     m_task_batch->ExecuteBlocking(/* execute_dependent_batches */ true);
 #endif

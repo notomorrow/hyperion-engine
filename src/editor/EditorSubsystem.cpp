@@ -1195,6 +1195,14 @@ void EditorSubsystem::InitSceneOutline()
         }
     };
 
+    for (Node *node : m_scene->GetRoot()->GetDescendants()) {
+        if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE) {
+            continue;
+        }
+
+        AddNodeToSceneOutline(list_view, node);
+    }
+
     m_delegate_handlers.Remove(&m_scene->GetRoot()->GetDelegates()->OnChildAdded);
     m_delegate_handlers.Add(m_scene->GetRoot()->GetDelegates()->OnChildAdded.Bind([this, list_view_weak = list_view.ToWeak()](Node *node, bool)
     {
@@ -1203,8 +1211,6 @@ void EditorSubsystem::InitSceneOutline()
         if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE) {
             return;
         }
-
-        HYP_LOG(Editor, Debug, "Node added: {}", node->GetName());
 
         RC<UIListView> list_view = list_view_weak.Lock();
 

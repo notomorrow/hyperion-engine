@@ -43,6 +43,9 @@ public:
     virtual bool AllowParallelExecution() const
         { return true; }
 
+    virtual bool RequiresGameThread() const
+        { return false; }
+
     /*! \brief Returns the TypeIDs of the components this System operates on.
      *  To be used by the EntityManager in order to properly order the Systems based on their dependencies.
      *
