@@ -93,8 +93,6 @@ void main()
     
     vec3 result = vec3(0.0);
 
-    bool perform_lighting = albedo.a > 0.0;
-
     vec3 N = normalize(normal);
     vec3 V = normalize(camera.position.xyz - position.xyz);
     vec3 R = normalize(reflect(-V, N));
@@ -164,8 +162,6 @@ void main()
     vec3 spec = (ibl * mix(dfg.xxx, dfg.yyy, F0)) * energy_compensation;
 
     result = kD * (irradiance * albedo.rgb / HYP_FMATH_PI) + spec;//Fd + Fr;
-
-    result = mix(albedo.rgb, result, bvec3(perform_lighting));
 
 #ifdef PATHTRACER
     result = CalculatePathTracing(deferred_params, texcoord).rgb;
