@@ -625,8 +625,8 @@ FBOMResult FBOMReader::ReadData(BufferedReader *reader, FBOMData &out_data)
                 return { FBOMResult::FBOM_ERR, "Cannot decompress archive because the Archive feature is not enabled" };
             }
 
-            if (ArchiveResult err = archive.Decompress(byte_buffer)) {
-                return { FBOMResult::FBOM_ERR, err.message.Data() };
+            if (Result<void> result = archive.Decompress(byte_buffer); result.HasError()) {
+                return { FBOMResult::FBOM_ERR, result.GetError().GetMessage() };
             }
         } else {
             // Read bytebuffer of raw data
@@ -701,8 +701,8 @@ FBOMResult FBOMReader::ReadArray(BufferedReader *reader, FBOMArray &out_array)
                 return { FBOMResult::FBOM_ERR, "Cannot decompress archive because the Archive feature is not enabled" };
             }
 
-            if (ArchiveResult err = archive.Decompress(byte_buffer)) {
-                return { FBOMResult::FBOM_ERR, err.message.Data() };
+            if (Result<void> result = archive.Decompress(byte_buffer); result.HasError()) {
+                return { FBOMResult::FBOM_ERR, result.GetError().GetMessage() };
             }
 
             compressed_data_reader = BufferedReader(MakeRefCountedPtr<MemoryBufferedReaderSource>(byte_buffer.ToByteView()));
@@ -988,8 +988,8 @@ FBOMResult FBOMReader::ReadArchive(const ByteBuffer &in_buffer, ByteBuffer &out_
         return { FBOMResult::FBOM_ERR, "Cannot decompress archive because the Archive feature is not enabled" };
     }
 
-    if (ArchiveResult err = archive.Decompress(out_buffer)) {
-        return { FBOMResult::FBOM_ERR, err.message.Data() };
+    if (Result<void> result = archive.Decompress(out_buffer); result.HasError()) {
+        return { FBOMResult::FBOM_ERR, result.GetError().GetMessage() };
     }
 
     return FBOMResult::FBOM_OK;
