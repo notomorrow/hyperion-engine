@@ -60,6 +60,7 @@ HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { En
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
 HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SRV(Global, ReflectionProbeResultTexture) uniform texture2D reflections_texture;
 
 HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -148,9 +149,33 @@ void main()
     const float LdotH = max(0.0001, dot(L, H));
     const float HdotV = max(0.0001, dot(H, V));
 
-    // @TODO: Merge reflection probes + SSR into one shader, so we can apply reflections to lightmapped objects
+    // apply reflections to lightmapped objects
+    if (bool(object_mask & OBJECT_MASK_LIGHTMAP)) {
+        vec3 ibl = vec3(0.0);
+        vec3 F = vec3(0.0);
 
-    deferred_result = mix(deferred_result, gbuffer_albedo, bvec4(bool(object_mask & OBJECT_MASK_LIGHTMAP)));
+        float NdotV = max(0.0001, dot(N, V));
+
+        const vec3 diffuse_color = CalculateDiffuseColor(gbuffer_albedo.rgb, metalness);
+        const vec3 F0 = CalculateF0(gbuffer_albedo.rgb, metalness);
+
+        F = CalculateFresnelTerm(F0, roughness, NdotV);
+        const vec3 kD = (vec3(1.0) - F) * (1.0 - metalness);
+
+        const float perceptual_roughness = sqrt(roughness);
+        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
+        const vec3 E = CalculateE(F0, dfg);
+        const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
+    
+        vec4 reflections_color = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord);
+        ibl = ibl * (1.0 - reflections_color.a) + (reflections_color.rgb * reflections_color.a);
+
+        vec3 spec = (ibl * mix(dfg.xxx, dfg.yyy, F0)) * energy_compensation;
+
+        vec4 gbuffer_albedo_lightmap = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_lightmap_texture, texcoord);
+
+        deferred_result = (gbuffer_albedo * gbuffer_albedo_lightmap) + vec4(spec, 0.0);
+    }
 
     vec4 result = mix(deferred_result, translucent_result, bvec4(bool(object_mask & (OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT))));
     result.a = 1.0;
