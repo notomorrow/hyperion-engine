@@ -21,12 +21,11 @@ HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
 HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
 HYP_DESCRIPTOR_SRV(Global, EnvGridRadianceResultTexture) uniform texture2D env_grid_radiance_texture;
 HYP_DESCRIPTOR_SRV(Global, EnvGridIrradianceResultTexture) uniform texture2D env_grid_irradiance_texture;
-HYP_DESCRIPTOR_SRV(Global, ReflectionProbeResultTexture) uniform texture2D reflection_probes_texture;
+HYP_DESCRIPTOR_SRV(Global, ReflectionProbeResultTexture) uniform texture2D reflections_texture;
 
 #include "include/env_probe.inc"
 HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
@@ -122,10 +121,8 @@ void main()
     const vec3 E = CalculateE(F0, dfg);
     const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-#ifdef REFLECTION_PROBE_ENABLED
-    vec4 reflection_probes_color = Texture2D(HYP_SAMPLER_NEAREST, reflection_probes_texture, texcoord);
-    ibl.rgb = ibl * (1.0 - reflection_probes_color.a) + (reflection_probes_color.rgb * reflection_probes_color.a);
-#endif
+    vec4 reflections_color = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord);
+    ibl = ibl * (1.0 - reflections_color.a) + (reflections_color.rgb * reflections_color.a);
 
     vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
     ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb * env_grid_radiance.a);
@@ -134,10 +131,6 @@ void main()
 
 #ifdef RT_REFLECTIONS_ENABLED
     CalculateRaytracingReflection(deferred_params, texcoord, ibl);
-#endif
-
-#ifdef SSR_ENABLED
-    CalculateScreenSpaceReflection(deferred_params, texcoord, depth, ibl);
 #endif
 
 #ifdef RT_GI_ENABLED

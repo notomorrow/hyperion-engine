@@ -61,7 +61,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvPr
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = scalar) buffer HitsBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = std430) buffer HitsBuffer
 {
     vec4    hits[512 * 512];
 };
@@ -72,7 +72,7 @@ struct LightmapRay
     vec4    direction;
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = scalar) readonly buffer RaysBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = std430) readonly buffer RaysBuffer
 {
     LightmapRay ray_data[512 * 512];
 };
@@ -83,8 +83,8 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 };
 
 #define RAY_OFFSET 0.005
-#define NUM_SAMPLES 4
-#define NUM_BOUNCES 4
+#define NUM_SAMPLES 1
+#define NUM_BOUNCES 2
 
 // uncomment to see the actual object colors
 //#define DEBUG_TEST
@@ -112,7 +112,7 @@ void main()
     vec3 tangent;
     vec3 bitangent;
 
-    vec4 radiance = vec4(0.0, 0.0, 0.0, 0.0);
+    vec4 radiance = vec4(0.0);
 
     uint ray_seed = InitRandomSeed(((rt_radiance_uniforms.ray_offset + ray_index) * 2), ((rt_radiance_uniforms.ray_offset + ray_index) * 2) + 1);
 
@@ -243,7 +243,7 @@ void main()
 
             if (payload.distance < 0.0) {
                 const float cos_theta = max(dot(normal, normalize(light.position_intensity.xyz)), 0.0);
-                emissive += vec4(cos_theta);
+                emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
             }
         }
 

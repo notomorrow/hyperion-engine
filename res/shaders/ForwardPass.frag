@@ -23,7 +23,7 @@ layout(location=16) in flat uint v_object_mask;
 layout(location=0) out vec4 gbuffer_albedo;
 layout(location=1) out vec4 gbuffer_normals;
 layout(location=2) out vec4 gbuffer_material;
-layout(location=3) out vec4 gbuffer_tangents;
+layout(location=3) out vec4 gbuffer_albedo_lightmap;
 layout(location=4) out vec2 gbuffer_velocity;
 layout(location=5) out vec4 gbuffer_mask;
 layout(location=6) out vec4 gbuffer_ws_normals;
@@ -248,7 +248,6 @@ void main()
 
             Fd = gbuffer_albedo.rgb * irradiance * (1.0 - E) * ao;
 
-// #ifdef REFLECTION_PROBE_ENABLED
             ibl = CalculateReflectionProbe(
                 current_env_probe,
                 P, N, R,
@@ -257,11 +256,6 @@ void main()
             );
             
             ibl.a = saturate(ibl.a);
-// #endif
-
-// #ifdef SSR_ENABLED
-//             CalculateScreenSpaceReflection(deferred_params, texcoord, depth, reflections);
-// #endif
 
             // vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
             // specular_ao *= energy_compensation;
@@ -342,29 +336,20 @@ void main()
     // temp; just set it to albedo color (needs to have lighting calculated)
     gbuffer_albedo.a = 1.0; // force all objects in the baked texture to be fully opaque
 #else // temp
-    // TEMP testing lightmaps
-
     vec4 lm_irradiance = vec4(0.0);
     vec4 lm_radiance = vec4(0.0);
 
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP)) {
-        lm_irradiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
+    mask |= (OBJECT_MASK_LIGHTMAP_IRRADIANCE * uint(HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP)));
+    mask |= (OBJECT_MASK_LIGHTMAP_RADIANCE * uint(HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP)));
 
-        mask |= OBJECT_MASK_LIGHTMAP_IRRADIANCE;
-    }
+    lm_irradiance = mix(lm_irradiance, SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y)), bvec4(bool(mask & OBJECT_MASK_LIGHTMAP_IRRADIANCE)));
+    lm_radiance = mix(lm_radiance, SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y)), bvec4(bool(mask & OBJECT_MASK_LIGHTMAP_RADIANCE)));
 
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP)) {
-        lm_radiance = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y));
-
-        mask |= OBJECT_MASK_LIGHTMAP_RADIANCE;
-    }
-
-    gbuffer_albedo = (lm_irradiance + lm_radiance) * gbuffer_albedo;
+    gbuffer_albedo_lightmap = (lm_irradiance + lm_radiance) * float(bool(mask & OBJECT_MASK_LIGHTMAP));
 #endif
 
     gbuffer_normals = EncodeNormal(N);
     gbuffer_material = vec4(roughness, metalness, transmission, ao);
-    gbuffer_tangents = vec4(PackNormalVec2(v_tangent), PackNormalVec2(v_bitangent));
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);

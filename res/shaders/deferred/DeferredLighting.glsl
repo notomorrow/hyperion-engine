@@ -6,7 +6,6 @@
 #include "../include/tonemap.inc"
 #include "../include/Octahedron.glsl"
 
-#define DEFERRED_FLAGS_SSR_ENABLED         0x1
 #define DEFERRED_FLAGS_VCT_ENABLED         0x2
 #define DEFERRED_FLAGS_ENV_PROBE_ENABLED   0x4
 #define DEFERRED_FLAGS_HBAO_ENABLED        0x8
@@ -303,25 +302,6 @@ vec4 CalculateReflectionProbe(in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 ca
     return ibl;
 }
 
-#endif
-
-#ifndef HYP_DEFERRED_NO_SSR
-#ifdef SSR_ENABLED
-void CalculateScreenSpaceReflection(DeferredParams deferred_params, vec2 uv, float depth, inout vec3 reflections)
-{
-    const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_SSR_ENABLED);
-
-    // if (!enabled || depth > 0.999) {
-    //     return;
-    // }
-
-    vec4 screen_space_reflections = Texture2D(sampler_linear, ssr_result, uv);
-    screen_space_reflections.a = saturate(screen_space_reflections.a * float(enabled));
-    // screen_space_reflections.rgb = pow(screen_space_reflections.rgb, vec3(2.2));
-    // screen_space_reflections.rgb = ReverseTonemapReinhardSimple(screen_space_reflections.rgb);
-    reflections = mix(reflections, screen_space_reflections.rgb, screen_space_reflections.a);
-}
-#endif
 #endif
 
 #ifndef HYP_DEFERRED_NO_RT_RADIANCE
