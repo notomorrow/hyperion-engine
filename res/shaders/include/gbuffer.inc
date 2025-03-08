@@ -25,7 +25,7 @@
 #define gbuffer_albedo_texture HYP_GBUFFER_TEXTURE(0)
 #define gbuffer_normals_texture HYP_GBUFFER_TEXTURE(1)
 #define gbuffer_material_texture HYP_GBUFFER_TEXTURE(2)
-#define gbuffer_tangents_texture HYP_GBUFFER_TEXTURE(3)
+#define gbuffer_albedo_lightmap_texture HYP_GBUFFER_TEXTURE(3)
 #define gbuffer_velocity_texture HYP_GBUFFER_TEXTURE(4)
 #define gbuffer_mask_texture HYP_GBUFFER_TEXTURE(5)
 #define gbuffer_ws_normals_texture HYP_GBUFFER_TEXTURE(6)

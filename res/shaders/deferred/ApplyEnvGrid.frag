@@ -42,7 +42,6 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer Sce
 #define ENV_GRID_IRRADIANCE_MODE ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD //ENV_GRID_IRRADIANCE_MODE_SH
 
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
-#define HYP_DEFERRED_NO_SSR // temp
 
 #include "../include/env_probe.inc"
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };

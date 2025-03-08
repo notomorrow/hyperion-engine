@@ -42,7 +42,6 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 #define HYP_DEFERRED_NO_RT_RADIANCE
-#define HYP_DEFERRED_NO_SSR
 #define HYP_DEFERRED_NO_ENV_GRID
 
 #include "../include/env_probe.inc"
@@ -63,7 +62,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 2
+#define SAMPLE_COUNT 4
 
 void main()
 {
