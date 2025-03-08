@@ -11,6 +11,8 @@
 
 #include <core/containers/FixedArray.hpp>
 
+#include <core/threading/Mutex.hpp>
+
 #include <core/utilities/Pair.hpp>
 
 #include <core/object/HypObject.hpp>
@@ -71,8 +73,7 @@ public:
 
     /*! \brief Set streamed data for the image. If the image has already been created, no updates will occur. */
     HYP_METHOD(Property="StreamedTextureData")
-    HYP_FORCE_INLINE void SetStreamedTextureData(const RC<StreamedTextureData> &streamed_texture_data)
-        { m_streamed_texture_data = streamed_texture_data; }
+    void SetStreamedTextureData(const RC<StreamedTextureData> &streamed_texture_data);
     
     HYP_FORCE_INLINE const ImageRef &GetImage() const
         { return m_image; }
@@ -132,12 +133,17 @@ public:
     Vec4f SampleCube(Vec3f direction);
 
 protected:
+    /*! \brief Readback() implementation, without locking mutex. */
+    void Readback_Internal();
+
     Name                    m_name;
 
     RC<StreamedTextureData> m_streamed_texture_data;
 
     ImageRef                m_image;
     ImageViewRef            m_image_view;
+
+    Mutex                   m_readback_mutex;
 };
 
 class HYP_API Texture2D : public Texture

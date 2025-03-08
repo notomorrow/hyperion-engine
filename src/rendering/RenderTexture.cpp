@@ -436,6 +436,13 @@ void Texture::Init()
     SetReady(true);
 }
 
+void Texture::SetStreamedTextureData(const RC<StreamedTextureData> &streamed_texture_data)
+{
+    Mutex::Guard guard(m_readback_mutex);
+
+    m_streamed_texture_data = streamed_texture_data;
+}
+
 void Texture::GenerateMipmaps()
 {
     AssertReady();
@@ -447,6 +454,13 @@ void Texture::GenerateMipmaps()
 }
 
 void Texture::Readback()
+{
+    Mutex::Guard guard(m_readback_mutex);
+
+    Readback_Internal();
+}
+
+void Texture::Readback_Internal()
 {
     AssertReady();
 
@@ -520,10 +534,10 @@ void Texture::Readback()
 
     AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
 
-    SetStreamedTextureData(MakeRefCountedPtr<StreamedTextureData>(TextureData {
+    m_streamed_texture_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
         texture_desc,
         std::move(result_byte_buffer)
-    }));
+    });
 }
 
 Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
@@ -534,51 +548,59 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
         return Vec4f::Zero();
     }
 
-    if (face_index >= m_image->NumFaces()) {
-        HYP_LOG(Texture, Warning, "Face index out of bounds: {} >= {}", face_index, m_image->NumFaces());
+    if (face_index >= NumFaces()) {
+        HYP_LOG(Texture, Warning, "Face index out of bounds: {} >= {}", face_index, NumFaces());
 
         return Vec4f::Zero();
     }
 
-    if (!GetStreamedTextureData()) {
-        HYP_LOG(Texture, Warning, "Texture does not have streamed data present, attempting readback...");
+    // keep reference alive in case m_streamed_texture_data changes outside of the mutex lock.
+    RC<StreamedTextureData> streamed_texture_data;
+    TResourceHandle<StreamedTextureData> resource_handle;
 
-        Readback();
+    {
+        Mutex::Guard guard(m_readback_mutex);
 
-        if (!GetStreamedTextureData()) {
-            HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
+        if (!m_streamed_texture_data) {
+            HYP_LOG(Texture, Warning, "Texture does not have streamed data present, attempting readback...");
 
-            return Vec4f::Zero();
+            Readback_Internal();
+
+            if (!m_streamed_texture_data) {
+                HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
+
+                return Vec4f::Zero();
+            }
         }
-    }
 
-    TResourceHandle<StreamedTextureData> resource_handle(*GetStreamedTextureData());
+        resource_handle = TResourceHandle<StreamedTextureData>(*m_streamed_texture_data);
+
+        if (resource_handle->GetTextureData().buffer.Size() == 0) {
+            HYP_LOG(Texture, Warning, "Texture buffer is empty; forcing readback.");
+
+            resource_handle.Reset();
+
+            Readback_Internal();
+
+            if (!m_streamed_texture_data) {
+                HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
+
+                return Vec4f::Zero();
+            }
+
+            resource_handle = TResourceHandle<StreamedTextureData>(*m_streamed_texture_data);
+
+            if (resource_handle->GetTextureData().buffer.Size() == 0) {
+                HYP_LOG(Texture, Warning, "Texture buffer is still empty after readback; sample will return zero.");
+
+                return Vec4f::Zero();
+            }
+        }
+
+        streamed_texture_data = m_streamed_texture_data;
+    }
 
     const TextureData *texture_data = &resource_handle->GetTextureData();
-
-    if (texture_data->buffer.Size() == 0) {
-        HYP_LOG(Texture, Warning, "Texture buffer is empty; forcing readback.");
-
-        resource_handle.Reset();
-
-        Readback();
-
-        if (!GetStreamedTextureData()) {
-            HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
-
-            return Vec4f::Zero();
-        }
-
-        resource_handle = TResourceHandle<StreamedTextureData>(*GetStreamedTextureData());
-
-        texture_data = &resource_handle->GetTextureData();
-
-        if (texture_data->buffer.Size() == 0) {
-            HYP_LOG(Texture, Warning, "Texture buffer is still empty after readback; sample will return zero.");
-
-            return Vec4f::Zero();
-        }
-    }
 
     const Vec3u coord = {
         uint32(uvw.x * float(texture_data->desc.extent.x - 1) + 0.5f),
@@ -596,7 +618,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
         return Vec4f::Zero();
     }
 
-    const uint32 num_components = renderer::NumComponents(m_image->GetTextureFormat());
+    const uint32 num_components = renderer::NumComponents(texture_data->desc.format);
 
     const uint32 index = face_index * (texture_data->desc.extent.x * texture_data->desc.extent.y * texture_data->desc.extent.z * bytes_per_pixel * num_components)
         + coord.z * (texture_data->desc.extent.x * texture_data->desc.extent.y * bytes_per_pixel * num_components)
