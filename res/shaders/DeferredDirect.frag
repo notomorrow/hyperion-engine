@@ -36,6 +36,7 @@ HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_
 #include "include/shared.inc"
 #include "include/gbuffer.inc"
 #include "include/material.inc"
+#include "include/object.inc"
 
 #include "include/scene.inc"
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
@@ -114,7 +115,7 @@ void main()
     const float roughness = material.r;
     const float metalness = material.g;
 
-    bool perform_lighting = albedo.a > 0.0;
+    bool perform_lighting = !bool(mask & (OBJECT_MASK_LIGHTMAP | OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT));
     vec4 result = vec4(0.0);
 
     if (perform_lighting)
