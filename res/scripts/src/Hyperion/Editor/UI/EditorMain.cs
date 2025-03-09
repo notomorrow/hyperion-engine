@@ -127,6 +127,40 @@ namespace Hyperion
                 Logger.Log(LogType.Info, "Camera controller removed");
             }
 
+            public UIEventHandlerResult SaveClicked()
+            {
+                Logger.Log(LogType.Info, "Save clicked");
+
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+
+                if (currentProject == null)
+                {
+                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                Result saveResult = currentProject.Save();
+
+                if (!saveResult.IsValid)
+                {
+                    Logger.Log(LogType.Error, "Failed to save project");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                return UIEventHandlerResult.Ok;
+            }
+
             public UIEventHandlerResult SimulateClicked()
             {
                 // Test: Force GC
