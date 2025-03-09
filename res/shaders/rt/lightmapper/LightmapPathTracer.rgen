@@ -83,8 +83,8 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 };
 
 #define RAY_OFFSET 0.005
-#define NUM_SAMPLES 1
-#define NUM_BOUNCES 3
+#define NUM_SAMPLES 4
+#define NUM_BOUNCES 4
 
 // uncomment to see the actual object colors
 //#define DEBUG_TEST
@@ -174,7 +174,7 @@ void main()
                     }
 
                     const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
-                    bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                    bounces[bounce_index].emissive += /*UINT_TO_VEC4(light.color_encoded) **/ vec4(1.0) * light.position_intensity.w * cos_theta;
                 }
 
                 ++num_bounces;
@@ -183,12 +183,12 @@ void main()
             }
             
             vec3 hit_position = origin + direction * payload.distance;
-            origin = hit_position + payload.normal * RAY_OFFSET;
 
             direction = normalize(RandomInHemisphere(
                 vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
                 payload.normal
             ));
+            origin = hit_position + direction * RAY_OFFSET;
 
             /*ComputeOrthonormalBasis(payload.normal, tangent, bitangent);
 
@@ -221,7 +221,7 @@ void main()
         }
 
 #ifdef DEBUG_TEST
-        radiance += num_bounces > 0 ? bounces[0].throughput : vec4(0.0);
+        radiance = num_bounces > 0 ? bounces[0].throughput : vec4(0.0);
 #else
         radiance += num_bounces > 0 ? bounces[0].radiance : vec4(0.0);
 #endif
@@ -239,11 +239,13 @@ void main()
 
             payload.distance = -1.0;
 
-            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, normalize(light.position_intensity.xyz), tmax, 0);
+            const vec3 L = normalize(light.position_intensity.xyz);
+
+            traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, L, tmax, 0);
 
             if (payload.distance < 0.0) {
-                const float cos_theta = max(dot(normal, normalize(light.position_intensity.xyz)), 0.0);
-                emissive += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
+                const float cos_theta = max(dot(normal, L), 0.0);
+                emissive += /*UINT_TO_VEC4(light.color_encoded) **/ vec4(1.0) * light.position_intensity.w * cos_theta;
             }
         }
 
