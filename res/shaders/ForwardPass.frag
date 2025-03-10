@@ -132,6 +132,13 @@ HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 
 void main()
 {
+    // debugging gpu crash
+    if (object.material_index >= HYP_MAX_MATERIALS) {
+        gbuffer_albedo = vec4(1.0, 0.0, 1.0, 1.0);
+
+        return;
+    }
+
     vec3 view_vector = normalize(v_camera_position - v_position);
     vec3 N = normalize(v_normal);
     const vec3 ws_normals = N;
@@ -335,7 +342,7 @@ void main()
 #ifdef LIGHTMAP_BAKE
     // temp; just set it to albedo color (needs to have lighting calculated)
     gbuffer_albedo.a = 1.0; // force all objects in the baked texture to be fully opaque
-#else // temp
+#elif 0 // temp
     vec4 lm_irradiance = vec4(0.0);
     vec4 lm_radiance = vec4(0.0);
 
