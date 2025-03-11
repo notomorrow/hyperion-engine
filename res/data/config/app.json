@@ -20,7 +20,7 @@
       "gi": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": false
