@@ -228,7 +228,7 @@ public:
                 }
             };
 
-            m_deserialize_proc = [mem_fn](Span<HypData> args, const fbom::FBOMData &data) -> void
+            m_deserialize_proc = [mem_fn](fbom::FBOMLoadContext &context, Span<HypData> args, const fbom::FBOMData &data) -> void
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes));
 
@@ -237,7 +237,7 @@ public:
 
                     HypData value;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(data, value)) {
+                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(context, data, value)) {
                         HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
                     }
 
@@ -308,7 +308,7 @@ public:
                 }
             };
 
-            m_deserialize_proc = [mem_fn](Span<HypData> args, const fbom::FBOMData &data) -> void
+            m_deserialize_proc = [mem_fn](fbom::FBOMLoadContext &context, Span<HypData> args, const fbom::FBOMData &data) -> void
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes));
 
@@ -317,7 +317,7 @@ public:
 
                     HypData value;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(data, value)) {
+                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(context, data, value)) {
                         HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
                     }
 
@@ -383,13 +383,13 @@ public:
         return true;
     }
 
-    virtual bool Deserialize(HypData &target, const fbom::FBOMData &data) const override
+    virtual bool Deserialize(fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &data) const override
     {
         if (!m_deserialize_proc.IsValid()) {
             return false;
         }
 
-        m_deserialize_proc(Span<HypData>(&target, 1), data);
+        m_deserialize_proc(context, Span<HypData>(&target, 1), data);
 
         return true;
     }
@@ -431,17 +431,17 @@ public:
     }
 
 private:
-    Name                                                m_name;
-    TypeID                                              m_return_type_id;
-    TypeID                                              m_target_type_id;
-    Array<HypMethodParameter>                           m_params;
-    EnumFlags<HypMethodFlags>                           m_flags;
-    HypClassAttributeSet                                m_attributes;
+    Name                                                                        m_name;
+    TypeID                                                                      m_return_type_id;
+    TypeID                                                                      m_target_type_id;
+    Array<HypMethodParameter>                                                   m_params;
+    EnumFlags<HypMethodFlags>                                                   m_flags;
+    HypClassAttributeSet                                                        m_attributes;
 
-    Proc<HypData, HypData **, SizeType>                 m_proc;
-    Proc<HypData, const Array<HypData *> &>             m_proc_array;
-    Proc<fbom::FBOMData, Span<HypData>>                 m_serialize_proc;
-    Proc<void, Span<HypData>, const fbom::FBOMData &>   m_deserialize_proc;
+    Proc<HypData, HypData **, SizeType>                                         m_proc;
+    Proc<HypData, const Array<HypData *> &>                                     m_proc_array;
+    Proc<fbom::FBOMData, Span<HypData>>                                         m_serialize_proc;
+    Proc<void, fbom::FBOMLoadContext &, Span<HypData>, const fbom::FBOMData &>  m_deserialize_proc;
 };
 
 #undef HYP_METHOD_MEMBER_FN_WRAPPER

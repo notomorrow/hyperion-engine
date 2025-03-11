@@ -57,6 +57,7 @@ class FBOMReader;
 class FBOMWriter;
 class FBOMArray;
 class FBOMData;
+struct FBOMLoadContext;
 
 struct FBOMWriteStream
 {
@@ -151,10 +152,10 @@ private:
     FBOMResult WriteDataAttributes(ByteWriter *out, EnumFlags<FBOMDataAttributes> attributes) const;
     FBOMResult WriteDataAttributes(ByteWriter *out, EnumFlags<FBOMDataAttributes> attributes, FBOMDataLocation location) const;
 
-    FBOMResult WriteExternalObjects(ByteWriter *out);
+    FBOMResult WriteExternalObjects(ByteWriter *out, const FilePath &base_path, const FilePath &external_path);
     
-    void BuildStaticData();
-    void AddExternalObjects(FBOMObject &);
+    FBOMResult BuildStaticData(FBOMLoadContext &context);
+    FBOMResult AddExternalObjects(FBOMLoadContext &context, FBOMObject &object);
 
     FBOMResult WriteHeader(ByteWriter *out);
     FBOMResult WriteStaticData(ByteWriter *out);
@@ -164,10 +165,10 @@ private:
     void AddObjectData(const FBOMObject &, UniqueID id);
     void AddObjectData(FBOMObject &&, UniqueID id);
     
-    UniqueID AddStaticData(const FBOMType &);
-    UniqueID AddStaticData(const FBOMObject &);
-    UniqueID AddStaticData(const FBOMData &);
-    UniqueID AddStaticData(const FBOMArray &);
+    UniqueID AddStaticData(FBOMLoadContext &context, const FBOMType &);
+    UniqueID AddStaticData(FBOMLoadContext &context, const FBOMObject &);
+    UniqueID AddStaticData(FBOMLoadContext &context, const FBOMData &);
+    UniqueID AddStaticData(FBOMLoadContext &context, const FBOMArray &);
 
     UniqueID AddStaticData(UniqueID id, FBOMStaticData &&static_data);
 

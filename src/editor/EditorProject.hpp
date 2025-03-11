@@ -94,7 +94,7 @@ public:
     Result SaveAs(FilePath filepath);
 
     HYP_METHOD(Scriptable)
-    Name GetNextDefaultProjectName() const;
+    Name GetNextDefaultProjectName(const String &default_project_name) const;
 
     static TResult<RC<EditorProject>> Load(const FilePath &filepath);
 
@@ -102,7 +102,7 @@ public:
     void Close();
 
 private:
-    Name GetNextDefaultProjectName_Impl() const;
+    Name GetNextDefaultProjectName_Impl(const String &default_project_name) const;
 
     UUID                            m_uuid;
 

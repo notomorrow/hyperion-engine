@@ -124,7 +124,7 @@ public:
         return result;
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         // bool is_valid = false;
 
@@ -143,21 +143,21 @@ public:
 
         Handle<Entity> entity = entity_manager->AddEntity();
 
-        for (FBOMObject &subobject : *in.nodes) {
-            const TypeID subobject_type_id = subobject.GetType().GetNativeTypeID();
+        for (const FBOMObject &child : in.GetChildren()) {
+            const TypeID child_type_id = child.GetType().GetNativeTypeID();
 
-            if (!subobject_type_id) {
+            if (!child_type_id) {
                 continue;
             }
 
-            if (!entity_manager->IsValidComponentType(subobject_type_id)) {
+            if (!entity_manager->IsValidComponentType(child_type_id)) {
                 continue;
             }
             
-            const IComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(subobject_type_id);
+            const IComponentInterface *component_interface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(child_type_id);
 
             if (!component_interface) {
-                HYP_LOG(Serialization, Warning, "No ComponentInterface registered for component with TypeID {} (serialized object type name: {})", subobject_type_id.Value(), subobject.GetType().name);
+                HYP_LOG(Serialization, Warning, "No ComponentInterface registered for component with TypeID {} (serialized object type name: {})", child_type_id.Value(), child.GetType().name);
 
                 continue;
             }
@@ -168,17 +168,17 @@ public:
 
             HYP_NAMED_SCOPE_FMT("Deserializing component '{}'", component_interface->GetTypeName());
 
-            if (!subobject.m_deserialized_object) {
+            if (!child.m_deserialized_object) {
                 return { FBOMResult::FBOM_ERR, HYP_FORMAT("No deserialized object found for component '{}'", component_interface->GetTypeName()) };
             }
 
-            if (entity_manager->HasComponent(subobject_type_id, entity)) {
+            if (entity_manager->HasComponent(child_type_id, entity)) {
                 HYP_LOG(Serialization, Warning, "Entity already has component '{}'", component_interface->GetTypeName());
 
                 continue;
             }
 
-            entity_manager->AddComponent(entity, subobject.m_deserialized_object->ToRef());
+            entity_manager->AddComponent(entity, child.m_deserialized_object->ToRef());
         }
 
         out = HypData(entity);

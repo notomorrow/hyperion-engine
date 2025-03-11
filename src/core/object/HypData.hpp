@@ -350,11 +350,11 @@ struct HypData
     }
 
     template <class T>
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, T &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, T &out)
     {
         HypData out_data;
 
-        if (fbom::FBOMResult err = HypDataHelper<NormalizedType<T>>::Deserialize(data, out_data)) {
+        if (fbom::FBOMResult err = HypDataHelper<NormalizedType<T>>::Deserialize(context, data, out_data)) {
             return err;
         }
 
@@ -419,7 +419,7 @@ struct HypDataMarshalHelper
     }
 
     template <class T>
-    static inline fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static inline fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         const fbom::FBOMMarshalerBase *marshal = fbom::FBOM::GetInstance().GetMarshal(TypeID::ForType<T>());
 
@@ -433,11 +433,11 @@ struct HypDataMarshalHelper
 
         fbom::FBOMObject object;
 
-        if (fbom::FBOMResult err = data.ReadObject(object)) {
+        if (fbom::FBOMResult err = data.ReadObject(context, object)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = marshal->Deserialize(object, out)) {
+        if (fbom::FBOMResult err = marshal->Deserialize(context, object, out)) {
             return err;
         }
 
@@ -509,7 +509,7 @@ struct HypDataHelper<T, std::enable_if_t<std::is_fundamental_v<T>>>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         T value;
 
@@ -574,7 +574,7 @@ struct HypDataHelper<T, std::enable_if_t<std::is_enum_v<T>>> : HypDataHelper<std
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         std::underlying_type_t<T> value;
 
@@ -649,7 +649,7 @@ struct HypDataHelper<void *>
         return { fbom::FBOMResult::FBOM_ERR, "Cannot serialize a user pointer!" };
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         return { fbom::FBOMResult::FBOM_ERR, "Cannot deserialize a user pointer!" };
     }
@@ -721,7 +721,7 @@ struct HypDataHelper<IDBase>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         IDBase value;
         
@@ -832,7 +832,7 @@ struct HypDataHelper<AnyHandle>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
 
@@ -850,11 +850,11 @@ struct HypDataHelper<AnyHandle>
 
         fbom::FBOMObject object;
 
-        if (fbom::FBOMResult err = data.ReadObject(object)) {
+        if (fbom::FBOMResult err = data.ReadObject(context, object)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = marshal->Deserialize(object, out)) {
+        if (fbom::FBOMResult err = marshal->Deserialize(context, object, out)) {
             return err;
         }
 
@@ -895,7 +895,7 @@ struct HypDataHelper<Handle<T>> : HypDataHelper<AnyHandle>
         HypDataHelper<AnyHandle>::Set(hyp_data, AnyHandle(std::move(value)));
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
 
@@ -914,11 +914,11 @@ struct HypDataHelper<Handle<T>> : HypDataHelper<AnyHandle>
 
         fbom::FBOMObject object;
 
-        if (fbom::FBOMResult err = data.ReadObject(object)) {
+        if (fbom::FBOMResult err = data.ReadObject(context, object)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = marshal->Deserialize(object, out)) {
+        if (fbom::FBOMResult err = marshal->Deserialize(context, object, out)) {
             return err;
         }
 
@@ -1021,7 +1021,7 @@ struct HypDataHelper<RC<T>, std::enable_if_t< !std::is_void_v<T> >> : HypDataHel
         HypDataHelper<RC<void>>::Set(hyp_data, std::move(value));
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -1039,11 +1039,11 @@ struct HypDataHelper<RC<T>, std::enable_if_t< !std::is_void_v<T> >> : HypDataHel
 
         fbom::FBOMObject object;
 
-        if (fbom::FBOMResult err = data.ReadObject(object)) {
+        if (fbom::FBOMResult err = data.ReadObject(context, object)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = marshal->Deserialize(object, out)) {
+        if (fbom::FBOMResult err = marshal->Deserialize(context, object, out)) {
             return err;
         }
 
@@ -1184,7 +1184,7 @@ struct HypDataHelper<T *, std::enable_if_t< !is_const_pointer<T *> && !std::is_s
         HypDataHelper<AnyRef>::Set(hyp_data, AnyRef(TypeID::ForType<T>(), value));
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -1202,11 +1202,11 @@ struct HypDataHelper<T *, std::enable_if_t< !is_const_pointer<T *> && !std::is_s
 
         fbom::FBOMObject object;
 
-        if (fbom::FBOMResult err = data.ReadObject(object)) {
+        if (fbom::FBOMResult err = data.ReadObject(context, object)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = marshal->Deserialize(object, out)) {
+        if (fbom::FBOMResult err = marshal->Deserialize(context, object, out)) {
             return err;
         }
 
@@ -1348,7 +1348,7 @@ struct HypDataHelper<containers::detail::String<StringType>> : HypDataHelper<Any
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         containers::detail::String<StringType> result;
 
@@ -1440,7 +1440,7 @@ struct HypDataHelper<Name> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         ANSIString result;
 
@@ -1517,13 +1517,13 @@ struct HypDataHelper<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
         fbom::FBOMArray array { fbom::FBOMUnset() };
 
-        if (fbom::FBOMResult err = data.ReadArray(array)) {
+        if (fbom::FBOMResult err = data.ReadArray(context, array)) {
             return err;
         }
 
@@ -1535,7 +1535,7 @@ struct HypDataHelper<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<
         for (SizeType i = 0; i < size; i++) {
             HypData element;
 
-            if (fbom::FBOMResult err = HypDataHelper<T>::Deserialize(array.GetElement(i), element)) {
+            if (fbom::FBOMResult err = HypDataHelper<T>::Deserialize(context, array.GetElement(i), element)) {
                 return err;
             }
 
@@ -1601,13 +1601,13 @@ struct HypDataHelper<FixedArray<T, Size>, std::enable_if_t<!std::is_const_v<T>>>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
         fbom::FBOMArray array { fbom::FBOMUnset() };
 
-        if (fbom::FBOMResult err = data.ReadArray(array)) {
+        if (fbom::FBOMResult err = data.ReadArray(context, array)) {
             return err;
         }
 
@@ -1620,7 +1620,7 @@ struct HypDataHelper<FixedArray<T, Size>, std::enable_if_t<!std::is_const_v<T>>>
         for (SizeType i = 0; i < Size; i++) {
             HypData element;
 
-            if (fbom::FBOMResult err = HypDataHelper<T>::Deserialize(array.GetElement(i), element)) {
+            if (fbom::FBOMResult err = HypDataHelper<T>::Deserialize(context, array.GetElement(i), element)) {
                 return err;
             }
 
@@ -1681,13 +1681,13 @@ struct HypDataHelper<T[Size], std::enable_if_t<!std::is_const_v<T>>> : HypDataHe
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
         fbom::FBOMArray array { fbom::FBOMUnset() };
 
-        if (fbom::FBOMResult err = data.ReadArray(array)) {
+        if (fbom::FBOMResult err = data.ReadArray(context, array)) {
             return err;
         }
 
@@ -1700,7 +1700,7 @@ struct HypDataHelper<T[Size], std::enable_if_t<!std::is_const_v<T>>> : HypDataHe
         for (SizeType i = 0; i < Size; i++) {
             HypData element;
 
-            if (fbom::FBOMResult err = HypDataHelper<T>::Deserialize(array.GetElement(i), element)) {
+            if (fbom::FBOMResult err = HypDataHelper<T>::Deserialize(context, array.GetElement(i), element)) {
                 return err;
             }
 
@@ -1765,24 +1765,24 @@ struct HypDataHelper<Pair<K, V>> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
         fbom::FBOMObject object;
 
-        if (fbom::FBOMResult err = data.ReadObject(object)) {
+        if (fbom::FBOMResult err = data.ReadObject(context, object)) {
             return err;
         }
 
         HypData first;
         HypData second;
 
-        if (fbom::FBOMResult err = HypDataHelper<K>::Deserialize(object.GetProperty("Key"), first)) {
+        if (fbom::FBOMResult err = HypDataHelper<K>::Deserialize(context, object.GetProperty("Key"), first)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = HypDataHelper<V>::Deserialize(object.GetProperty("Value"), second)) {
+        if (fbom::FBOMResult err = HypDataHelper<V>::Deserialize(context, object.GetProperty("Value"), second)) {
             return err;
         }
 
@@ -1851,13 +1851,13 @@ struct HypDataHelper<HashMap<K, V>> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
         fbom::FBOMArray array { fbom::FBOMUnset() };
 
-        if (fbom::FBOMResult err = data.ReadArray(array)) {
+        if (fbom::FBOMResult err = data.ReadArray(context, array)) {
             return err;
         }
 
@@ -1868,7 +1868,7 @@ struct HypDataHelper<HashMap<K, V>> : HypDataHelper<Any>
         for (SizeType i = 0; i < size; i++) {
             HypData element;
 
-            if (fbom::FBOMResult err = HypDataHelper<Pair<K, V>>::Deserialize(array.GetElement(i), element)) {
+            if (fbom::FBOMResult err = HypDataHelper<Pair<K, V>>::Deserialize(context, array.GetElement(i), element)) {
                 return err;
             }
 
@@ -1940,13 +1940,13 @@ struct HypDataHelper<HashSet<ValueType, KeyByFunction>> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
         fbom::FBOMArray array { fbom::FBOMUnset() };
 
-        if (fbom::FBOMResult err = data.ReadArray(array)) {
+        if (fbom::FBOMResult err = data.ReadArray(context, array)) {
             return err;
         }
 
@@ -1957,7 +1957,7 @@ struct HypDataHelper<HashSet<ValueType, KeyByFunction>> : HypDataHelper<Any>
         for (SizeType i = 0; i < size; i++) {
             HypData element;
 
-            if (fbom::FBOMResult err = HypDataHelper<ValueType>::Deserialize(array.GetElement(i), element)) {
+            if (fbom::FBOMResult err = HypDataHelper<ValueType>::Deserialize(context, array.GetElement(i), element)) {
                 return err;
             }
 
@@ -2023,7 +2023,7 @@ struct HypDataHelper<math::detail::Vec2<T>> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         math::detail::Vec2<T> result;
 
@@ -2074,7 +2074,7 @@ struct HypDataHelper<math::detail::Vec3<T>> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -2127,7 +2127,7 @@ struct HypDataHelper<math::detail::Vec4<T>> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -2180,7 +2180,7 @@ struct HypDataHelper<Matrix3> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -2233,7 +2233,7 @@ struct HypDataHelper<Matrix4> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -2286,7 +2286,7 @@ struct HypDataHelper<Quaternion> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -2339,7 +2339,7 @@ struct HypDataHelper<ByteBuffer> : HypDataHelper<Any>
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -2450,7 +2450,7 @@ struct HypDataHelper<T, std::enable_if_t<!HypData::can_store_directly<T> && !imp
         return fbom::FBOMResult::FBOM_OK;
     }
 
-    static fbom::FBOMResult Deserialize(const fbom::FBOMData &data, HypData &out)
+    static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext &context, const fbom::FBOMData &data, HypData &out)
     {
         HYP_SCOPE;
         
@@ -2468,11 +2468,11 @@ struct HypDataHelper<T, std::enable_if_t<!HypData::can_store_directly<T> && !imp
 
         fbom::FBOMObject object;
 
-        if (fbom::FBOMResult err = data.ReadObject(object)) {
+        if (fbom::FBOMResult err = data.ReadObject(context, object)) {
             return err;
         }
 
-        if (fbom::FBOMResult err = marshal->Deserialize(object, out)) {
+        if (fbom::FBOMResult err = marshal->Deserialize(context, object, out)) {
             return err;
         }
 

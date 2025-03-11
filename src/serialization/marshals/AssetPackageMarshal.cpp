@@ -44,19 +44,19 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         Handle<AssetPackage> asset_package_handle = CreateObject<AssetPackage>();
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(in, AssetPackage::Class(), AnyRef(*asset_package_handle))) {
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, AssetPackage::Class(), AnyRef(*asset_package_handle))) {
             return err;
         }
 
         AssetPackageSet packages;
 
-        for (FBOMObject &subobject : *in.nodes) {
-            if (subobject.GetType().IsOrExtends("AssetPackage")) {
-                const Handle<AssetPackage> &asset_package = subobject.m_deserialized_object->Get<Handle<AssetPackage>>();
+        for (const FBOMObject &child : in.GetChildren()) {
+            if (child.GetType().IsOrExtends("AssetPackage")) {
+                const Handle<AssetPackage> &asset_package = child.m_deserialized_object->Get<Handle<AssetPackage>>();
 
                 if (!asset_package) {
                     continue;

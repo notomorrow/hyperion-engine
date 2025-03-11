@@ -59,6 +59,9 @@ void RenderProxyList::Reserve(SizeType capacity)
 
 RenderProxyEntityMap::Iterator RenderProxyList::Add(ID<Entity> entity, RenderProxy &&proxy)
 {
+    AssertDebug(proxy.mesh.IsValid());
+    AssertDebug(proxy.material.IsValid());
+
     RenderProxyEntityMap::Iterator iter = m_proxies.End();
 
     AssertThrowMsg(!m_next_entities.Test(entity.ToIndex()), "Entity #%u already marked to be added for this iteration!", entity.Value());

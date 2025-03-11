@@ -139,15 +139,17 @@ class FileByteWriter : public ByteWriter
 {
 public:
     FileByteWriter(const FilePath &filepath)
+        : m_filepath(filepath),
+          m_file(fopen(filepath.Data(), "wb"))
     {
-        m_file = fopen(filepath.Data(), "wb");
     }
 
     FileByteWriter(const FileByteWriter &other)             = delete;
     FileByteWriter &operator=(const FileByteWriter &other)  = delete;
 
     FileByteWriter(FileByteWriter &&other) noexcept
-        : m_file(other.m_file)
+        : m_filepath(std::move(other.m_filepath)),
+          m_file(other.m_file)
     {
         other.m_file = nullptr;
     }
@@ -161,6 +163,8 @@ public:
         if (m_file != nullptr) {
             fclose(m_file);
         }
+
+        m_filepath = std::move(other.m_filepath);
 
         m_file = other.m_file;
         other.m_file = nullptr;
@@ -197,8 +201,12 @@ public:
     bool IsOpen() const
         { return m_file != nullptr; }
 
+    HYP_FORCE_INLINE const FilePath &GetFilePath() const
+        { return m_filepath; }
+
 private:
-    FILE    *m_file;
+    FilePath    m_filepath;
+    FILE        *m_file;
 
     virtual void WriteBytes(const char *ptr, SizeType size) override
     {

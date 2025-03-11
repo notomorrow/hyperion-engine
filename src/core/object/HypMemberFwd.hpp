@@ -20,6 +20,7 @@ struct HypData;
 namespace fbom {
 
 class FBOMData;
+struct FBOMLoadContext;
 
 } // namespace fbom
 
@@ -51,7 +52,7 @@ public:
     virtual bool CanDeserialize() const = 0;
 
     virtual bool Serialize(Span<HypData> args, fbom::FBOMData &out) const = 0;
-    virtual bool Deserialize(HypData &target, const fbom::FBOMData &value) const = 0;
+    virtual bool Deserialize(fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &value) const = 0;
 
     virtual const HypClassAttributeSet &GetAttributes() const = 0;
     virtual const HypClassAttributeValue &GetAttribute(ANSIStringView key) const = 0;

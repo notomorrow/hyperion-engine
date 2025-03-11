@@ -23,16 +23,16 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         TextureData result;
 
-        const auto desc_it = in.nodes->FindIf([](const FBOMObject &item)
+        const auto desc_it = in.GetChildren().FindIf([](const FBOMObject &item)
         {
             return item.GetType().IsOrExtends("TextureDesc");
         });
 
-        if (desc_it == in.nodes->End()) {
+        if (desc_it == in.GetChildren().End()) {
             return { FBOMResult::FBOM_ERR, "No TextureDesc child object on TextureData" };
         }
 

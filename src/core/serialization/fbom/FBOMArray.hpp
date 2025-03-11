@@ -20,7 +20,7 @@
 namespace hyperion {
 namespace fbom {
 
-class HYP_API FBOMArray final : public IFBOMSerializable
+class HYP_API FBOMArray final : public FBOMSerializableBase
 {
 public:
     FBOMArray(const FBOMType &element_type);
@@ -41,6 +41,7 @@ public:
     FBOMArray &AddElement(const FBOMData &value);
     FBOMArray &AddElement(FBOMData &&value);
     
+    FBOMData &GetElement(SizeType index);
     const FBOMData &GetElement(SizeType index) const;
     const FBOMData *TryGetElement(SizeType index) const;
 

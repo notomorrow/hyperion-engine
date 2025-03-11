@@ -53,7 +53,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         FontAtlasTextureSet result;
 
@@ -65,7 +65,7 @@ public:
 
         FBOMArray atlas_array { FBOMUnset() };
 
-        if (FBOMResult err = in.GetProperty("Atlases").ReadArray(atlas_array)) {
+        if (FBOMResult err = in.GetProperty("Atlases").ReadArray(context, atlas_array)) {
             return err;
         }
 
@@ -76,7 +76,7 @@ public:
 
             FBOMObject object;
 
-            if (FBOMResult err = element.ReadObject(object)) {
+            if (FBOMResult err = element.ReadObject(context, object)) {
                 return err;
             }
 
@@ -90,7 +90,7 @@ public:
 
             FBOMObject texture_object;
 
-            if (FBOMResult err = object.GetProperty("Texture").ReadObject(texture_object)) {
+            if (FBOMResult err = object.GetProperty("Texture").ReadObject(context, texture_object)) {
                 return err;
             }
 
@@ -156,11 +156,11 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         FBOMObject atlas_textures_object;
 
-        if (FBOMResult err = in.GetProperty("AtlasTextures").ReadObject(atlas_textures_object)) {
+        if (FBOMResult err = in.GetProperty("AtlasTextures").ReadObject(context, atlas_textures_object)) {
             return err;
         }
 
@@ -173,7 +173,7 @@ public:
         FBOMType glyph_metrics_struct_type = FBOMStruct::Create<Glyph::Metrics>();
         FBOMArray glyph_metrics_array { FBOMUnset() };
 
-        if (FBOMResult err = in.GetProperty("GlyphMetrics").ReadArray(glyph_metrics_array)) {
+        if (FBOMResult err = in.GetProperty("GlyphMetrics").ReadArray(context, glyph_metrics_array)) {
             return err;
         }
 
@@ -192,7 +192,7 @@ public:
 
         FBOMArray symbol_list_array { FBOMUInt32() };
 
-        if (FBOMResult err = in.GetProperty("SymbolList").ReadArray(symbol_list_array)) {
+        if (FBOMResult err = in.GetProperty("SymbolList").ReadArray(context, symbol_list_array)) {
             return err;
         }
 

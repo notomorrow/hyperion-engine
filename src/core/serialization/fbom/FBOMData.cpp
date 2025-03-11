@@ -43,7 +43,8 @@ FBOMData::FBOMData(const FBOMType &type, ByteBuffer &&byte_buffer, EnumFlags<FBO
 }
 
 FBOMData::FBOMData(const FBOMData &other)
-    : type(other.type),
+    : FBOMSerializableBase(static_cast<const FBOMSerializableBase &>(other)),
+      type(other.type),
       bytes(other.bytes),
       m_flags(other.m_flags),
       m_deserialized_object(other.m_deserialized_object)
@@ -52,6 +53,12 @@ FBOMData::FBOMData(const FBOMData &other)
 
 FBOMData &FBOMData::operator=(const FBOMData &other)
 {
+    if (this == &other) {
+        return *this;
+    }
+
+    FBOMSerializableBase::operator=(static_cast<const FBOMSerializableBase &>(other));
+
     type = other.type;
     bytes = other.bytes;
     m_flags = other.m_flags;
@@ -61,7 +68,8 @@ FBOMData &FBOMData::operator=(const FBOMData &other)
 }
 
 FBOMData::FBOMData(FBOMData &&other) noexcept
-    : bytes(std::move(other.bytes)),
+    : FBOMSerializableBase(static_cast<FBOMSerializableBase &&>(std::move(other))),
+      bytes(std::move(other.bytes)),
       type(std::move(other.type)),
       m_flags(other.m_flags),
       m_deserialized_object(std::move(other.m_deserialized_object))
@@ -72,6 +80,12 @@ FBOMData::FBOMData(FBOMData &&other) noexcept
 
 FBOMData &FBOMData::operator=(FBOMData &&other) noexcept
 {
+    if (this == &other) {
+        return *this;
+    }
+
+    FBOMSerializableBase::operator=(static_cast<FBOMSerializableBase &&>(std::move(other)));
+
     bytes = std::move(other.bytes);
     type = std::move(other.type);
     m_flags = other.m_flags;
@@ -87,7 +101,7 @@ FBOMData::~FBOMData()
 {
 }
 
-FBOMResult FBOMData::ReadObject(FBOMObject &out_object) const
+FBOMResult FBOMData::ReadObject(FBOMLoadContext &context, FBOMObject &out_object) const
 {
     if (!IsObject()) {
         return { FBOMResult::FBOM_ERR, "Not an object" };
@@ -98,11 +112,11 @@ FBOMResult FBOMData::ReadObject(FBOMObject &out_object) const
     FBOMReader deserializer(FBOMReaderConfig { });
 
     // return deserializer.Deserialize(byte_reader, out_object);
-    if (FBOMResult err = deserializer.ReadObject(&byte_reader, out_object, nullptr)) {
+    if (FBOMResult err = deserializer.ReadObject(context, &byte_reader, out_object, nullptr)) {
         return err;
     }
 
-    return { FBOMResult::FBOM_OK };
+    return {};
 }
 
 FBOMData FBOMData::FromObject(const FBOMObject &object, bool keep_native_object)
@@ -151,7 +165,7 @@ FBOMData FBOMData::FromObject(FBOMObject &&object, bool keep_native_object)
     return value;
 }
 
-FBOMResult FBOMData::ReadArray(FBOMArray &out_array) const
+FBOMResult FBOMData::ReadArray(FBOMLoadContext &context, FBOMArray &out_array) const
 {
     if (!IsArray()) {
         return { FBOMResult::FBOM_ERR, "Not an array" };
@@ -159,8 +173,8 @@ FBOMResult FBOMData::ReadArray(FBOMArray &out_array) const
 
     BufferedReader byte_reader(MakeRefCountedPtr<MemoryBufferedReaderSource>(bytes.ToByteView()));
     
-    FBOMReader deserializer { FBOMReaderConfig { } };
-    return deserializer.ReadArray(&byte_reader, out_array);
+    FBOMReader deserializer(FBOMReaderConfig { });
+    return deserializer.ReadArray(context, &byte_reader, out_array);
 }
 
 FBOMData FBOMData::FromArray(const FBOMArray &array)
@@ -228,7 +242,7 @@ void FBOMData::SetBytes(SizeType count, const void *data)
     bytes.SetData(count, data);
 }
 
-FBOMResult FBOMData::ToJSON(json::JSONValue &out_json) const
+FBOMResult FBOMData::ToJSON(FBOMLoadContext &context, json::JSONValue &out_json) const
 {
     if (IsInt8()) {
         int8 value;
@@ -377,7 +391,7 @@ FBOMResult FBOMData::ToJSON(json::JSONValue &out_json) const
     if (IsArray()) {
         FBOMArray array { FBOMUnset() };
 
-        if (FBOMResult err = ReadArray(array)) {
+        if (FBOMResult err = ReadArray(context, array)) {
             return err;
         }
 
@@ -386,7 +400,7 @@ FBOMResult FBOMData::ToJSON(json::JSONValue &out_json) const
         for (SizeType i = 0; i < array.Size(); i++) {
             json::JSONValue element_json;
 
-            if (FBOMResult err = array.GetElement(i).ToJSON(element_json)) {
+            if (FBOMResult err = array.GetElement(i).ToJSON(context, element_json)) {
                 return err;
             }
 
@@ -401,7 +415,7 @@ FBOMResult FBOMData::ToJSON(json::JSONValue &out_json) const
     if (IsObject()) {
         FBOMObject object;
 
-        if (FBOMResult err = ReadObject(object)) {
+        if (FBOMResult err = ReadObject(context, object)) {
             return err;
         }
 
@@ -410,7 +424,7 @@ FBOMResult FBOMData::ToJSON(json::JSONValue &out_json) const
         for (const auto &it : object.GetProperties()) {
             json::JSONValue value_json;
 
-            if (FBOMResult err = it.second.ToJSON(value_json)) {
+            if (FBOMResult err = it.second.ToJSON(context, value_json)) {
                 return err;
             }
 

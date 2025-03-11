@@ -35,6 +35,16 @@ struct FBOMResult
 
     HYP_FORCE_INLINE bool IsOK() const
         { return value == FBOM_OK; }
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        HashCode hc;
+
+        hc.Add(value);
+        hc.Add(message);
+
+        return hc;
+    }
 };
 
 } // namespace hyperion::fbom

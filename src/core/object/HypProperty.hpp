@@ -204,9 +204,9 @@ struct HypPropertyGetter
 
 struct HypPropertySetter
 {
-    Proc<void, HypData &, const HypData &>          set_proc;
-    Proc<void, HypData &, const fbom::FBOMData &>   deserialize_proc;
-    HypPropertyTypeInfo                             type_info;
+    Proc<void, HypData &, const HypData &>                                  set_proc;
+    Proc<void, fbom::FBOMLoadContext &, HypData &, const fbom::FBOMData &>  deserialize_proc;
+    HypPropertyTypeInfo                                                     type_info;
 
     HypPropertySetter() = default;
 
@@ -220,11 +220,11 @@ struct HypPropertySetter
                   (static_cast<TargetType *>(target.ToRef().GetPointer())->*MemFn)(value.Get<NormalizedType<ValueType>>());
               }
           }),
-          deserialize_proc([MemFn](HypData &target, const fbom::FBOMData &data) -> void
+          deserialize_proc([MemFn](fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &data) -> void
           {
               HypData value;
 
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Deserialize(data, value)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Deserialize(context, data, value)) {
                   HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
               }
 
@@ -248,11 +248,11 @@ struct HypPropertySetter
                   fnptr(static_cast<TargetType *>(target.ToRef().GetPointer()), value.Get<NormalizedType<ValueType>>());
               }
           }),
-          deserialize_proc([fnptr](HypData &target, const fbom::FBOMData &data) -> void
+          deserialize_proc([fnptr](fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &data) -> void
           {
               HypData value;
     
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Deserialize(data, value)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Deserialize(context, data, value)) {
                   HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
               }
     
@@ -276,11 +276,11 @@ struct HypPropertySetter
                   static_cast<TargetType *>(target.ToRef().GetPointer())->*member = value.Get<NormalizedType<ValueType>>();
               }
           }),
-          deserialize_proc([member](HypData &target, const fbom::FBOMData &data) -> void
+          deserialize_proc([member](fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &data) -> void
           {
               HypData value;
         
-              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Deserialize(data, value)) {
+              if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ValueType>>::Deserialize(context, data, value)) {
                   HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
               }
 
@@ -317,7 +317,7 @@ struct HypPropertySetter
         set_proc(target, value);
     }
 
-    void Deserialize(HypData &target, const fbom::FBOMData &value) const
+    void Deserialize(fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &value) const
     {
         AssertThrow(IsValid());
         AssertThrow(!target.IsNull());
@@ -331,7 +331,7 @@ struct HypPropertySetter
         );
 #endif
 
-        deserialize_proc(target, value);
+        deserialize_proc(context, target, value);
     }
 };
 
@@ -442,13 +442,13 @@ public:
         return true;
     }
 
-    virtual bool Deserialize(HypData &target, const fbom::FBOMData &serialized_value) const override
+    virtual bool Deserialize(fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &serialized_value) const override
     {
         if (!CanDeserialize()) {
             return false;
         }
 
-        m_setter.Deserialize(target, serialized_value);
+        m_setter.Deserialize(context, target, serialized_value);
 
         return true;
     }

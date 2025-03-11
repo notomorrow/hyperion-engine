@@ -12,46 +12,34 @@
 namespace hyperion::fbom {
 
 FBOMObject::FBOMObject()
-    : m_object_type(FBOMBaseObjectType()),
-      nodes(new FBOMNodeHolder())
+    : m_object_type(FBOMBaseObjectType())
 {
 }
 
 FBOMObject::FBOMObject(const FBOMType &loader_type)
-    : m_object_type(loader_type),
-      nodes(new FBOMNodeHolder())
+    : m_object_type(loader_type)
 {
     AssertThrowMsg(loader_type.IsOrExtends(FBOMBaseObjectType()), "Expected type to be an object type, got %s", loader_type.ToString().Data());
 }
 
 FBOMObject::FBOMObject(const FBOMObject &other)
     : m_object_type(other.m_object_type),
-      nodes(nullptr),
+      m_children(other.m_children),
       properties(other.properties),
       m_deserialized_object(other.m_deserialized_object),
       m_external_info(other.m_external_info),
       m_unique_id(other.m_unique_id)
 {
-    if (other.nodes) {
-        nodes = new FBOMNodeHolder(*other.nodes);
-    } else {
-        nodes = new FBOMNodeHolder();
-    }
 }
 
 FBOMObject &FBOMObject::operator=(const FBOMObject &other)
 {
-    if (nodes) {
-        if (other.nodes) {
-            *nodes = *other.nodes;
-        } else {
-            nodes->Clear();
-        }
-    } else {
-        nodes = new FBOMNodeHolder(*other.nodes);
+    if (this == &other) {
+        return *this;
     }
 
     m_object_type = other.m_object_type;
+    m_children = other.m_children;
     properties = other.properties;
     m_deserialized_object = other.m_deserialized_object;
     m_external_info = other.m_external_info;
@@ -62,24 +50,22 @@ FBOMObject &FBOMObject::operator=(const FBOMObject &other)
 
 FBOMObject::FBOMObject(FBOMObject &&other) noexcept
     : m_object_type(std::move(other.m_object_type)),
-      nodes(other.nodes),
+      m_children(std::move(other.m_children)),
       properties(std::move(other.properties)),
       m_deserialized_object(std::move(other.m_deserialized_object)),
       m_external_info(std::move(other.m_external_info)),
       m_unique_id(std::move(other.m_unique_id))
 {
-    other.nodes = nullptr;
 }
 
 FBOMObject &FBOMObject::operator=(FBOMObject &&other) noexcept
 {
-    if (nodes) {
-        nodes->Clear();
+    if (this == &other) {
+        return *this;
     }
 
-    std::swap(nodes, other.nodes);
-
     m_object_type = std::move(other.m_object_type);
+    m_children = std::move(other.m_children);
     properties = std::move(other.properties);
     m_deserialized_object = std::move(other.m_deserialized_object);
     m_external_info = std::move(other.m_external_info);
@@ -88,12 +74,7 @@ FBOMObject &FBOMObject::operator=(FBOMObject &&other) noexcept
     return *this;
 }
 
-FBOMObject::~FBOMObject()
-{
-    if (nodes) {
-        delete nodes;
-    }
-}
+FBOMObject::~FBOMObject() = default;
 
 bool FBOMObject::HasProperty(ANSIStringView key) const
 {
@@ -164,15 +145,26 @@ const FBOMData &FBOMObject::operator[](ANSIStringView key) const
 
 void FBOMObject::AddChild(FBOMObject &&object)
 {
-    nodes->PushBack(std::move(object));
+    m_children.PushBack(std::move(object));
 }
 
 FBOMResult FBOMObject::Visit(UniqueID id, FBOMWriter *writer, ByteWriter *out, EnumFlags<FBOMDataAttributes> attributes) const
 {
+    if (IsExternal()) {
+        if (GetExternalObjectInfo()->IsLinked()) {
+            // make sure the EXT_REF_PLACEHOLDER bit is not set if the external data properties is already set.
+            // we don't want to end up having it set to empty.
+            attributes &= ~FBOMDataAttributes::EXT_REF_PLACEHOLDER;
+        } else {
+            // Set the EXT_REF_PLACEHOLDER flag so when we iterate properties and children, we can update them
+            attributes |= FBOMDataAttributes::EXT_REF_PLACEHOLDER;
+        }
+    }
+
     return writer->Write(out, *this, id, attributes);
 }
 
-FBOMResult FBOMObject::Deserialize(TypeID type_id, const FBOMObject &in, HypData &out)
+FBOMResult FBOMObject::Deserialize(FBOMLoadContext &context, TypeID type_id, const FBOMObject &in, HypData &out)
 {
     FBOMMarshalerBase *marshal = GetMarshal(type_id);
     
@@ -183,29 +175,25 @@ FBOMResult FBOMObject::Deserialize(TypeID type_id, const FBOMObject &in, HypData
         };
     }
 
-    return marshal->Deserialize(in, out);
+    return marshal->Deserialize(context, in, out);
 }
 
 HashCode FBOMObject::GetHashCode() const
 {
     HashCode hc;
 
-    // if (IsExternal()) {
-    //     hc.Add(m_external_info->GetHashCode());
-    // } else {
-        hc.Add(m_object_type.GetHashCode());
+    hc.Add(m_object_type.GetHashCode());
 
-        for (const auto &it : properties) {
-            hc.Add(it.first.GetHashCode());
-            hc.Add(it.second.GetHashCode());
-        }
+    for (const auto &it : properties) {
+        hc.Add(it.first.GetHashCode());
+        hc.Add(it.second.GetHashCode());
+    }
 
-        hc.Add(nodes->Size());
+    hc.Add(m_children.Size());
 
-        for (const FBOMObject &subobject : *nodes) {
-            hc.Add(subobject.GetHashCode());
-        }
-    // }
+    for (const FBOMObject &child : m_children) {
+        hc.Add(child.GetHashCode());
+    }
 
     return hc;
 }
@@ -227,14 +215,14 @@ String FBOMObject::ToString(bool deep) const
         ss << ", ";
     }
 
-    ss << " }, nodes: [ ";
+    ss << " }, children: [ ";
 
     if (deep) {
-        for (auto &subobject : *nodes) {
-            ss << subobject.ToString(deep);
+        for (const FBOMObject &child : m_children) {
+            ss << child.ToString(deep);
         }
     } else {
-        ss << nodes->Size();
+        ss << m_children.Size();
     }
 
     ss << " ] ";

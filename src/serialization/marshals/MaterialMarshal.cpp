@@ -13,6 +13,8 @@
 
 #include <scene/Material.hpp>
 
+#include <rendering/RenderTexture.hpp>
+
 #include <rendering/backend/RendererShader.hpp>
 
 #include <HyperionEngine.hpp>
@@ -61,21 +63,25 @@ public:
         
         out.SetProperty("Parameters", FBOMData::FromArray(std::move(params_array)));
 
-        uint32 texture_keys[Material::max_textures];
-        Memory::MemSet(&texture_keys[0], 0, sizeof(texture_keys));
+        FixedArray<uint32, Material::max_textures> texture_keys = { 0 };
 
-        // for (SizeType i = 0, texture_index = 0; i < in_object.GetTextures().Size(); i++) {
-        //     const Material::TextureKey key = in_object.GetTextures().KeyAt(i);
-        //     const Handle<Texture> &value = in_object.GetTextures().ValueAt(i);
+        for (SizeType i = 0, texture_index = 0; i < in_object.GetTextures().Size(); i++) {
+            if (texture_index >= texture_keys.Size()) {
+                break;
+            }
 
-        //     if (value) {
-        //         if (FBOMResult err = out.AddChild(*value)) {
-        //             return err;
-        //         }
+            const MaterialTextureKey key = in_object.GetTextures().KeyAt(i);
+            const Handle<Texture> &value = in_object.GetTextures().ValueAt(i);
 
-        //         texture_keys[texture_index++] = uint32(key);
-        //     }
-        // }
+            if (value.IsValid()) {
+                HYP_LOG(Serialization, Debug, "Serializing texture key: {} for material {}", uint32(key), in_object.GetName());
+                if (FBOMResult err = out.AddChild(*value, FBOMObjectSerializeFlags::EXTERNAL)) {
+                    return err;
+                }
+
+                texture_keys[texture_index++] = uint32(key);
+            }
+        }
 
         if (const ShaderRef &shader = in_object.GetShader()) {
             if (shader.IsValid()) {
@@ -85,15 +91,15 @@ public:
 
         out.SetProperty(
             "TextureKeys",
-            FBOMSequence(FBOMUInt32(), ArraySize(texture_keys)),
-            ArraySize(texture_keys) * sizeof(uint32),
+            FBOMSequence(FBOMUInt32(), texture_keys.Size()),
+            texture_keys.ByteSize(),
             &texture_keys[0]
         );
 
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         MaterialAttributes attributes;
         Material::ParameterTable parameters = Material::DefaultParameters();
@@ -101,7 +107,7 @@ public:
 
         FBOMObject attributes_object;
 
-        if (FBOMResult err = in.GetProperty("Attributes").ReadObject(attributes_object)) {
+        if (FBOMResult err = in.GetProperty("Attributes").ReadObject(context, attributes_object)) {
             return err;
         }
 
@@ -112,7 +118,7 @@ public:
 
         FBOMArray params_array { FBOMUnset() };
 
-        if (FBOMResult err = in.GetProperty("Parameters").ReadArray(params_array)) {
+        if (FBOMResult err = in.GetProperty("Parameters").ReadArray(context, params_array)) {
             return err;
         }
 
@@ -122,7 +128,7 @@ public:
             if (const FBOMData &element = params_array.GetElement(i)) {
                 FBOMObject param_object;
 
-                if (FBOMResult err = element.ReadObject(param_object)) {
+                if (FBOMResult err = element.ReadObject(context, param_object)) {
                     return err;
                 }
 
@@ -150,10 +156,9 @@ public:
             }
         }
 
-        uint32 texture_keys[Material::max_textures];
-        Memory::MemSet(&texture_keys[0], 0, sizeof(texture_keys));
+        FixedArray<uint32, Material::max_textures> texture_keys { 0 };
 
-        if (FBOMResult err = in.GetProperty("TextureKeys").ReadElements(FBOMUInt32(), std::size(texture_keys), &texture_keys[0])) {
+        if (FBOMResult err = in.GetProperty("TextureKeys").ReadElements(FBOMUInt32(), texture_keys.Size(), &texture_keys[0])) {
             return err;
         }
 
@@ -164,10 +169,10 @@ public:
             ShaderProperties(static_mesh_vertex_attributes)
         );
 
-        for (auto &subobject : *in.nodes) {
-            if (subobject.GetType().IsOrExtends("Texture")) {
-                if (texture_index < std::size(texture_keys)) {
-                    if (Optional<const Handle<Texture> &> texture_opt = subobject.m_deserialized_object->TryGet<Handle<Texture>>()) {
+        for (const FBOMObject &child : in.GetChildren()) {
+            if (child.GetType().IsOrExtends("Texture")) {
+                if (texture_index < texture_keys.Size()) {
+                    if (Optional<const Handle<Texture> &> texture_opt = child.m_deserialized_object->TryGet<Handle<Texture>>()) {
                         textures.Set(
                             MaterialTextureKey(texture_keys[texture_index]), 
                             *texture_opt
@@ -182,7 +187,7 @@ public:
         Handle<Material> material_handle = g_material_system->GetOrCreate(attributes, parameters, textures);
         material_handle->SetShader(std::move(shader));
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(in, Material::Class(), AnyRef(*material_handle))) {
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Material::Class(), AnyRef(*material_handle))) {
             return err;
         }
 

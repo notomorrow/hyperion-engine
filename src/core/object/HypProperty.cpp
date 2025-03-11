@@ -54,9 +54,9 @@ HypProperty HypProperty::MakeHypProperty(const HypField *field)
     {
         field->Set(target, value);
     };
-    result.m_setter.deserialize_proc = [field](HypData &target, const fbom::FBOMData &value) -> void
+    result.m_setter.deserialize_proc = [field](fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &value) -> void
     {
-        field->Deserialize(target, value);
+        field->Deserialize(context, target, value);
     };
 
     result.m_original_member = field;
@@ -147,9 +147,9 @@ HypProperty HypProperty::MakeHypProperty(const HypMethod *getter, const HypMetho
         {
             setter->Invoke(Array<HypData *> { &target, const_cast<HypData *>(&value) });
         };
-        result.m_setter.deserialize_proc = [setter](HypData &target, const fbom::FBOMData &value) -> void
+        result.m_setter.deserialize_proc = [setter](fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &value) -> void
         {
-            AssertThrow(setter->Deserialize(target, value));
+            AssertThrow(setter->Deserialize(context, target, value));
         };
         result.m_original_member = setter;
     }

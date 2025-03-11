@@ -16,6 +16,10 @@ namespace dotnet {
 class Class;
 } // namespace dotnet
 
+namespace fbom {
+struct FBOMLoadContext;
+} // namespace fbom
+
 class HypStruct : public HypClass
 {
 public:
@@ -45,7 +49,7 @@ public:
     virtual bool ToHypData(ByteView memory, void *, HypData &out_hyp_data) const override = 0;
 
     virtual fbom::FBOMResult SerializeStruct(ConstAnyRef value, fbom::FBOMObject &out) const = 0;
-    virtual fbom::FBOMResult DeserializeStruct(const fbom::FBOMObject &in, HypData &out) const = 0;
+    virtual fbom::FBOMResult DeserializeStruct(fbom::FBOMLoadContext &context, const fbom::FBOMObject &in, HypData &out) const = 0;
 
 protected:
     virtual IHypObjectInitializer *GetObjectInitializer_Internal(void *object_ptr) const override
@@ -152,7 +156,7 @@ public:
         return { fbom::FBOMResult::FBOM_ERR, "Type does not have an associated marshal class registered, and is not marked as bitwise serializable" };
     }
 
-    virtual fbom::FBOMResult DeserializeStruct(const fbom::FBOMObject &in, HypData &out) const override
+    virtual fbom::FBOMResult DeserializeStruct(fbom::FBOMLoadContext &context, const fbom::FBOMObject &in, HypData &out) const override
     {
         HYP_SCOPE;
 
@@ -165,7 +169,7 @@ public:
             : nullptr;
 
         if (marshal) {
-            if (fbom::FBOMResult err = marshal->Deserialize(in, out)) {
+            if (fbom::FBOMResult err = marshal->Deserialize(context, in, out)) {
                 return err;
             }
 

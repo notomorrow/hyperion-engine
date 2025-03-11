@@ -51,24 +51,36 @@ struct FBOMObjectLibrary
         return true;
     }
 
-    uint32 Put(const FBOMObject &object)
+    void Put(FBOMObject &object)
     {
         const uint32 next_index = uint32(object_data.Size());
+
+        FBOMExternalObjectInfo *external_object_info = object.GetExternalObjectInfo();
+        AssertThrow(external_object_info != nullptr);
+        AssertThrow(!external_object_info->IsLinked());
+
+        external_object_info->index = next_index;
+        external_object_info->library_id = uuid;
+
         object_data.Resize(next_index + 1);
 
         object_data[next_index] = object;
-
-        return next_index;
     }
 
-    uint32 Put(FBOMObject &&object)
+    void Put(FBOMObject &&object)
     {
         const uint32 next_index = uint32(object_data.Size());
+
+        FBOMExternalObjectInfo *external_object_info = object.GetExternalObjectInfo();
+        AssertThrow(external_object_info != nullptr);
+        AssertThrow(!external_object_info->IsLinked());
+
+        external_object_info->index = next_index;
+        external_object_info->library_id = uuid;
+
         object_data.Resize(next_index + 1);
 
         object_data[next_index] = std::move(object);
-
-        return next_index;
     }
 
     // uint32 Put(FBOMData &&data)

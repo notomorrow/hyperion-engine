@@ -108,7 +108,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         uint64 global_descriptor_table_version = -1;
 
@@ -204,9 +204,9 @@ public:
             }
         }
 
-        for (auto &it : *in.nodes) {
-            if (it.GetType().GetNativeTypeID() == TypeID::ForType<DescriptorUsage>()) {
-                compiled_shader.descriptor_usages.Add(it.m_deserialized_object->Get<DescriptorUsage>());
+        for (const FBOMObject &child : in.GetChildren()) {
+            if (child.GetType().GetNativeTypeID() == TypeID::ForType<DescriptorUsage>()) {
+                compiled_shader.descriptor_usages.Add(child.m_deserialized_object->Get<DescriptorUsage>());
             }
         }
 
@@ -243,13 +243,13 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         CompiledShaderBatch batch;
 
-        for (FBOMObject &subobject : *in.nodes) {
-            if (subobject.GetType().IsOrExtends("CompiledShader")) {
-                Optional<CompiledShader &> compiled_shader_opt = subobject.m_deserialized_object->TryGet<CompiledShader>();
+        for (const FBOMObject &child : in.GetChildren()) {
+            if (child.GetType().IsOrExtends("CompiledShader")) {
+                Optional<CompiledShader &> compiled_shader_opt = child.m_deserialized_object->TryGet<CompiledShader>();
 
                 if (compiled_shader_opt.HasValue()) {
                     batch.compiled_shaders.PushBack(*compiled_shader_opt);

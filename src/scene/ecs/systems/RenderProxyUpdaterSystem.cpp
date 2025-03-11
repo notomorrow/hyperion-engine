@@ -84,19 +84,21 @@ void RenderProxyUpdaterSystem::OnEntityAdded(const Handle<Entity> &entity)
     InitObject(mesh_component.skeleton);
 
     if (!mesh_component.proxy) {
-        mesh_component.proxy.Emplace(RenderProxy {
-            entity,
-            mesh_component.mesh,
-            mesh_component.material,
-            mesh_component.skeleton,
-            Matrix4::Identity(),
-            Matrix4::Identity(),
-            BoundingBox::Empty(),
-            mesh_component.user_data,
-            mesh_component.instance_data,
-            /* version */ 0
-        });
+        mesh_component.proxy.Emplace();
     }
+
+    *mesh_component.proxy = RenderProxy {
+        entity,
+        mesh_component.mesh,
+        mesh_component.material,
+        mesh_component.skeleton,
+        Matrix4::Identity(),
+        Matrix4::Identity(),
+        BoundingBox::Empty(),
+        mesh_component.user_data,
+        mesh_component.instance_data,
+        /* version */ 0
+    };
 
     GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
 }

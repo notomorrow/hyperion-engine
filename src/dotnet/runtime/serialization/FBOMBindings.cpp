@@ -5,6 +5,7 @@
 #include <core/serialization/fbom/FBOMBaseTypes.hpp>
 #include <core/serialization/fbom/FBOMData.hpp>
 #include <core/serialization/fbom/FBOMObject.hpp>
+#include <core/serialization/fbom/FBOMLoadContext.hpp>
 
 using namespace hyperion;
 using namespace fbom;
@@ -181,12 +182,13 @@ FBOM_TYPE_GET_SET_FUNCTIONS(Vec3u, Vec3u, Vec3u)
 FBOM_TYPE_GET_SET_FUNCTIONS(Vec4u, Vec4u, Vec4u)
 FBOM_TYPE_GET_SET_FUNCTIONS(Quat4f, Quaternion, Quaternion)
 
-HYP_EXPORT bool FBOMData_GetObject(FBOMData *data, FBOMObject *out_ptr)
+HYP_EXPORT bool FBOMData_GetObject(FBOMLoadContext *context, FBOMData *data, FBOMObject *out_ptr)
 {
+    AssertThrow(context != nullptr);
     AssertThrow(data != nullptr);
     AssertThrow(out_ptr != nullptr);
 
-    if (auto err = data->ReadObject(*out_ptr)) {
+    if (auto err = data->ReadObject(*context, *out_ptr)) {
         return false;
     }
 

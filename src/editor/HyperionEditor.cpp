@@ -129,7 +129,7 @@ void HyperionEditor::Init()
     env_grid_node.SetName("EnvGrid2");
 #endif
 
-    //return;
+    // return;
 
     if (false) { // add test area light
         Handle<Light> light = CreateObject<Light>(

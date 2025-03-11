@@ -26,6 +26,8 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
+static const String g_default_project_name = "UntitledProject";
+
 EditorProject::EditorProject()
     : EditorProject(Name::Invalid())
 {
@@ -94,7 +96,7 @@ Result EditorProject::SaveAs(FilePath filepath)
     HYP_SCOPE;
 
     if (!m_name.IsValid()) {
-        m_name = GetNextDefaultProjectName();
+        m_name = GetNextDefaultProjectName(g_default_project_name);
     }
 
     if (!m_name.IsValid()) {
@@ -266,7 +268,7 @@ TResult<RC<EditorProject>> EditorProject::Load(const FilePath &filepath)
     return project;
 }
 
-Name EditorProject::GetNextDefaultProjectName_Impl() const
+Name EditorProject::GetNextDefaultProjectName_Impl(const String &default_project_name) const
 {
     return Name::Invalid();
 }

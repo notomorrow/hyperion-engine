@@ -5,6 +5,7 @@
 #include <core/serialization/fbom/FBOMMarshaler.hpp>
 #include <core/serialization/fbom/FBOMWriter.hpp>
 #include <core/serialization/fbom/FBOMReader.hpp>
+#include <core/serialization/fbom/FBOMLoadContext.hpp>
 
 #include <core/io/ByteWriter.hpp>
 #include <core/io/BufferedByteReader.hpp>
@@ -136,12 +137,13 @@ void StreamedMeshData::LoadMeshData(const ByteBuffer &byte_buffer) const
     if (!reader.IsOpen()) {
         return;
     }
-
-    fbom::FBOMReader deserializer { fbom::FBOMReaderConfig { } };
     
     HypData value;
 
-    if (fbom::FBOMResult err = deserializer.Deserialize(reader, value)) {
+    fbom::FBOMReader deserializer { fbom::FBOMReaderConfig { } };
+    fbom::FBOMLoadContext context;
+
+    if (fbom::FBOMResult err = deserializer.Deserialize(context, reader, value)) {
         HYP_LOG(Streaming, Warning, "StreamedMeshData: Error deserializing mesh data: {}", err.message);
         return;
     }

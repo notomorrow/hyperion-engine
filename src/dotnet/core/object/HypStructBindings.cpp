@@ -62,7 +62,7 @@ public:
         HYP_NOT_IMPLEMENTED();
     }
 
-    virtual fbom::FBOMResult DeserializeStruct(const fbom::FBOMObject &in, HypData &out) const override
+    virtual fbom::FBOMResult DeserializeStruct(fbom::FBOMLoadContext &context, const fbom::FBOMObject &in, HypData &out) const override
     {
         HYP_NOT_IMPLEMENTED();
     }
