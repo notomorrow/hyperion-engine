@@ -2,6 +2,7 @@
 
 #include <core/serialization/fbom/FBOMReader.hpp>
 #include <core/serialization/fbom/FBOMArray.hpp>
+#include <core/serialization/fbom/FBOMLoadContext.hpp>
 #include <core/serialization/fbom/FBOM.hpp>
 
 #include <core/io/BufferedByteReader.hpp>
@@ -39,7 +40,7 @@ namespace fbom {
 
 #pragma region FBOMStaticDataIndexMap
 
-FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *reader)
+FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMLoadContext &context, FBOMReader *reader)
 {
     AssertThrow(reader != nullptr);
 
@@ -62,7 +63,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     {
         ptr = MakeUnique<FBOMObject>();
 
-        if (FBOMResult err = reader->ReadObject(&byte_reader, *static_cast<FBOMObject *>(ptr.Get()), nullptr)) {
+        if (FBOMResult err = reader->ReadObject(context, &byte_reader, *static_cast<FBOMObject *>(ptr.Get()), nullptr)) {
             ptr.Reset();
             
             return err;
@@ -74,7 +75,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     {
         ptr = MakeUnique<FBOMType>();
 
-        if (FBOMResult err = reader->ReadObjectType(&byte_reader, *static_cast<FBOMType *>(ptr.Get()))) {
+        if (FBOMResult err = reader->ReadObjectType(context, &byte_reader, *static_cast<FBOMType *>(ptr.Get()))) {
             ptr.Reset();
             
             return err;
@@ -86,7 +87,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     {
         ptr = MakeUnique<FBOMData>();
 
-        if (FBOMResult err = reader->ReadData(&byte_reader, *static_cast<FBOMData *>(ptr.Get()))) {
+        if (FBOMResult err = reader->ReadData(context, &byte_reader, *static_cast<FBOMData *>(ptr.Get()))) {
             ptr.Reset();
 
             return err;
@@ -100,7 +101,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     {
         ptr = MakeUnique<FBOMArray>(FBOMUnset());
 
-        if (FBOMResult err = reader->ReadArray(&byte_reader, *static_cast<FBOMArray *>(ptr.Get()))) {
+        if (FBOMResult err = reader->ReadArray(context, &byte_reader, *static_cast<FBOMArray *>(ptr.Get()))) {
             ptr.Reset();
 
             return err;
@@ -115,7 +116,7 @@ FBOMResult FBOMReader::FBOMStaticDataIndexMap::Element::Initialize(FBOMReader *r
     return { FBOMResult::FBOM_OK };
 }
 
-IFBOMSerializable *FBOMReader::FBOMStaticDataIndexMap::GetOrInitializeElement(FBOMReader *reader, SizeType index)
+FBOMSerializableBase *FBOMReader::FBOMStaticDataIndexMap::GetOrInitializeElement(FBOMLoadContext &context, FBOMReader *reader, SizeType index)
 {
     if (index >= elements.Size()) {
         return nullptr;
@@ -128,7 +129,7 @@ IFBOMSerializable *FBOMReader::FBOMStaticDataIndexMap::GetOrInitializeElement(FB
     }
 
     if (!element.IsInitialized()) {
-        if (FBOMResult err = element.Initialize(reader)) {
+        if (FBOMResult err = element.Initialize(context, reader)) {
             HYP_LOG(Serialization, Error, "Error initializing static data element at index {}: {}", index, err.message);
 
             return nullptr;
@@ -188,7 +189,7 @@ FBOMReader::FBOMReader(const FBOMReaderConfig &config)
 
 FBOMReader::~FBOMReader() = default;
 
-FBOMResult FBOMReader::Deserialize(BufferedReader &reader, FBOMObjectLibrary &out, bool read_header)
+FBOMResult FBOMReader::Deserialize(FBOMLoadContext &context, BufferedReader &reader, FBOMObjectLibrary &out, bool read_header)
 {
     if (reader.Eof()) {
         return { FBOMResult::FBOM_ERR, "Stream not open" };
@@ -235,25 +236,25 @@ FBOMResult FBOMReader::Deserialize(BufferedReader &reader, FBOMObjectLibrary &ou
     while (!reader.Eof()) {
         command = PeekCommand(&reader);
 
-        if (FBOMResult err = Handle(&reader, command, &root)) {
+        if (FBOMResult err = Handle(context, &reader, command, &root)) {
             return err;
         }
     }
 
-    if (root.nodes->Empty()) {
+    if (root.GetChildren().Empty()) {
         return { FBOMResult::FBOM_ERR, "No object added to root" };
     }
 
-    out.object_data = std::move(static_cast<Array<FBOMObject> &&>(*root.nodes));
+    out.object_data = std::move(root.m_children);
 
     return { FBOMResult::FBOM_OK };
 }
 
-FBOMResult FBOMReader::Deserialize(BufferedReader &reader, FBOMObject &out)
+FBOMResult FBOMReader::Deserialize(FBOMLoadContext &context, BufferedReader &reader, FBOMObject &out)
 {
     FBOMObjectLibrary library;
 
-    if (FBOMResult err = Deserialize(reader, library)) {
+    if (FBOMResult err = Deserialize(context, reader, library)) {
         return err;
     }
 
@@ -272,7 +273,7 @@ FBOMResult FBOMReader::Deserialize(BufferedReader &reader, FBOMObject &out)
     return { FBOMResult::FBOM_OK };
 }
 
-FBOMResult FBOMReader::Deserialize(const FBOMObject &in, HypData &out)
+FBOMResult FBOMReader::Deserialize(FBOMLoadContext &context, const FBOMObject &in, HypData &out)
 {
     const FBOMMarshalerBase *marshal = GetMarshalForType(in.m_object_type);
 
@@ -280,40 +281,44 @@ FBOMResult FBOMReader::Deserialize(const FBOMObject &in, HypData &out)
         return { FBOMResult::FBOM_ERR, HYP_FORMAT("Marshal class not registered object type {}", in.m_object_type.name) };
     }
 
-    if (FBOMResult err = marshal->Deserialize(in, out)) {
+    if (FBOMResult err = marshal->Deserialize(context, in, out)) {
         return err;
     }
 
     return { FBOMResult::FBOM_OK };
 }
 
-FBOMResult FBOMReader::Deserialize(BufferedReader &reader, HypData &out)
+FBOMResult FBOMReader::Deserialize(FBOMLoadContext &context, BufferedReader &reader, HypData &out)
 {
     FBOMObject obj;
 
-    if (FBOMResult err = Deserialize(reader, obj)) {
+    if (FBOMResult err = Deserialize(context, reader, obj)) {
         return err;
     }
 
-    return Deserialize(obj, out);
+    return Deserialize(context, obj, out);
 }
 
-FBOMResult FBOMReader::LoadFromFile(const String &path, FBOMObjectLibrary &out)
+FBOMResult FBOMReader::LoadFromFile(FBOMLoadContext &context, const String &path, FBOMObjectLibrary &out)
 {
     // Include our root dir as part of the path
     if (m_config.base_path.Empty()) {
         m_config.base_path = FileSystem::RelativePath(StringUtil::BasePath(path.Data()), FileSystem::CurrentPath()).c_str();
     }
 
-    const FilePath read_path { FileSystem::Join(m_config.base_path.Data(), FilePath(path).Basename().Data()).c_str()};
+    FilePath read_path = FilePath(path);
+    
+    if (!read_path.Exists()) {
+        read_path = FilePath { FileSystem::Join(FileSystem::CurrentPath(), m_config.base_path.Data(), FilePath(path).Basename().Data()).c_str()};
+    }
 
     if (!read_path.Exists()) {
-        return { FBOMResult::FBOM_ERR, "File does not exist" };
+        return { FBOMResult::FBOM_ERR, HYP_FORMAT("File does not exist: {}", read_path) };
     }
 
     BufferedReader reader(MakeRefCountedPtr<FileBufferedReaderSource>(read_path));
 
-    return Deserialize(reader, out);
+    return Deserialize(context, reader, out);
 }
 
 FBOMResult FBOMReader::LoadFromFile(const String &path, FBOMObject &out)
@@ -323,15 +328,21 @@ FBOMResult FBOMReader::LoadFromFile(const String &path, FBOMObject &out)
         m_config.base_path = FileSystem::RelativePath(StringUtil::BasePath(path.Data()), FileSystem::CurrentPath()).c_str();
     }
 
-    const FilePath read_path { FileSystem::Join(m_config.base_path.Data(), FilePath(path).Basename().Data()).c_str()};
+    FilePath read_path = FilePath(path);
+    
+    if (!read_path.Exists()) {
+        read_path = FilePath { FileSystem::Join(FileSystem::CurrentPath(), m_config.base_path.Data(), FilePath(path).Basename().Data()).c_str()};
+    }
 
     if (!read_path.Exists()) {
-        return { FBOMResult::FBOM_ERR, "File does not exist" };
+        return { FBOMResult::FBOM_ERR, HYP_FORMAT("File does not exist: {}", read_path) };
     }
 
     BufferedReader reader(MakeRefCountedPtr<FileBufferedReaderSource>(read_path));
 
-    return Deserialize(reader, out);
+    FBOMLoadContext context;
+
+    return Deserialize(context, reader, out);
 }
 
 FBOMResult FBOMReader::LoadFromFile(const String &path, HypData &out)
@@ -403,11 +414,11 @@ FBOMMarshalerBase *FBOMReader::GetMarshalForType(const FBOMType &type) const
     return FBOM::GetInstance().GetMarshal(type.name);
 }
 
-FBOMResult FBOMReader::RequestExternalObject(UUID library_id, uint32 index, FBOMObject &out_object)
+FBOMResult FBOMReader::RequestExternalObject(FBOMLoadContext &context, UUID library_id, uint32 index, FBOMObject &out_object)
 {
-    const auto it = m_config.external_data_cache.Find(library_id);
+    const auto it = context.object_libraries.Find(library_id);
 
-    if (it != m_config.external_data_cache.End()) {
+    if (it != context.object_libraries.End()) {
         if (!it->second.TryGet(index, out_object)) {
             return { FBOMResult::FBOM_ERR, "Object not found in library" };
         }
@@ -443,7 +454,7 @@ FBOMResult FBOMReader::ReadDataAttributes(BufferedReader *reader, EnumFlags<FBOM
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMReader::ReadObjectType(BufferedReader *reader, FBOMType &out_type)
+FBOMResult FBOMReader::ReadObjectType(FBOMLoadContext &context, BufferedReader *reader, FBOMType &out_type)
 {
     out_type = FBOMUnset();
 
@@ -464,7 +475,7 @@ FBOMResult FBOMReader::ReadObjectType(BufferedReader *reader, FBOMType &out_type
         CheckEndianness(has_parent);
 
         if (has_parent) {
-            if (FBOMResult err = ReadObjectType(reader, parent_type)) {
+            if (FBOMResult err = ReadObjectType(context, reader, parent_type)) {
                 return err;
             }
 
@@ -505,7 +516,7 @@ FBOMResult FBOMReader::ReadObjectType(BufferedReader *reader, FBOMType &out_type
         reader->Read(&offset);
         CheckEndianness(offset);
 
-        IFBOMSerializable *element = m_static_data_index_map.GetOrInitializeElement(this, offset);
+        FBOMSerializableBase *element = m_static_data_index_map.GetOrInitializeElement(context, this, offset);
 
         if (FBOMType *as_type = dynamic_cast<FBOMType *>(element)) {
             out_type = *as_type;
@@ -533,7 +544,7 @@ FBOMResult FBOMReader::ReadObjectType(BufferedReader *reader, FBOMType &out_type
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMReader::ReadObjectLibrary(BufferedReader *reader, FBOMObjectLibrary &out_library)
+FBOMResult FBOMReader::ReadObjectLibrary(FBOMLoadContext &context, BufferedReader *reader, FBOMObjectLibrary &out_library)
 {
     if (FBOMResult err = Eat(reader, FBOM_OBJECT_LIBRARY_START)) {
         return err;
@@ -566,22 +577,27 @@ FBOMResult FBOMReader::ReadObjectLibrary(BufferedReader *reader, FBOMObjectLibra
 
         FBOMReader deserializer(m_config);
 
-        if (FBOMResult err = deserializer.Deserialize(byte_reader, out_library, /* read_header */ false)) {
+        if (FBOMResult err = deserializer.Deserialize(context, byte_reader, out_library, /* read_header */ false)) {
             return err;
         }
     } else if (flags & uint8(FBOMObjectLibraryFlags::LOCATION_EXTERNAL)) {
         // read file with UUID as name
 
-        String base_path = m_config.base_path;
-
-        if (base_path.Empty()) {
-            base_path = FilePath::Current();
+        // Read the relative path string
+        String relative_path;
+        if (FBOMResult err = ReadString(reader, relative_path)) {
+            return err;
         }
 
-        const String ref_path(FileSystem::Join(FileSystem::CurrentPath(), base_path.Data(), out_library.uuid.ToString().Data()).data());
-        const String relative_path(FileSystem::RelativePath(std::string(ref_path.Data()), FileSystem::CurrentPath()).data());
+        FilePath base_path = FilePath::Current();
 
-        if (FBOMResult err = FBOMReader(m_config).LoadFromFile(ref_path, out_library)) {
+        if (m_config.base_path.Any()) {
+            base_path = m_config.base_path;
+        }
+
+        const FilePath combined_path = base_path / relative_path / (out_library.uuid.ToString() + ".hyp");
+
+        if (FBOMResult err = FBOMReader(m_config).LoadFromFile(context, combined_path, out_library)) {
             return err;
         }
     }
@@ -593,7 +609,7 @@ FBOMResult FBOMReader::ReadObjectLibrary(BufferedReader *reader, FBOMObjectLibra
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMReader::ReadData(BufferedReader *reader, FBOMData &out_data)
+FBOMResult FBOMReader::ReadData(FBOMLoadContext &context, BufferedReader *reader, FBOMData &out_data)
 {
     EnumFlags<FBOMDataAttributes> attributes;
     FBOMDataLocation location;
@@ -605,7 +621,7 @@ FBOMResult FBOMReader::ReadData(BufferedReader *reader, FBOMData &out_data)
     if (location == FBOMDataLocation::LOC_INPLACE) {
         FBOMType object_type;
         
-        if (FBOMResult err = ReadObjectType(reader, object_type)) {
+        if (FBOMResult err = ReadObjectType(context, reader, object_type)) {
             return err;
         }
 
@@ -648,7 +664,7 @@ FBOMResult FBOMReader::ReadData(BufferedReader *reader, FBOMData &out_data)
         reader->Read(&offset);
         CheckEndianness(offset);
 
-        IFBOMSerializable *element = m_static_data_index_map.GetOrInitializeElement(this, offset);
+        FBOMSerializableBase *element = m_static_data_index_map.GetOrInitializeElement(context, this, offset);
 
         if (FBOMData *as_data = dynamic_cast<FBOMData *>(element)) {
             out_data = *as_data;
@@ -662,7 +678,7 @@ FBOMResult FBOMReader::ReadData(BufferedReader *reader, FBOMData &out_data)
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMReader::ReadArray(BufferedReader *reader, FBOMArray &out_array)
+FBOMResult FBOMReader::ReadArray(FBOMLoadContext &context, BufferedReader *reader, FBOMArray &out_array)
 {
     EnumFlags<FBOMDataAttributes> attributes;
     FBOMDataLocation location;
@@ -680,7 +696,7 @@ FBOMResult FBOMReader::ReadArray(BufferedReader *reader, FBOMArray &out_array)
         // read array element type
         FBOMType element_type;
         
-        if (FBOMResult err = ReadObjectType(reader, element_type)) {
+        if (FBOMResult err = ReadObjectType(context, reader, element_type)) {
             return err;
         }
 
@@ -735,7 +751,7 @@ FBOMResult FBOMReader::ReadArray(BufferedReader *reader, FBOMArray &out_array)
         reader->Read(&offset);
         CheckEndianness(offset);
 
-        IFBOMSerializable *element = m_static_data_index_map.GetOrInitializeElement(this, offset);
+        FBOMSerializableBase *element = m_static_data_index_map.GetOrInitializeElement(context, this, offset);
 
         if (FBOMArray *as_array = dynamic_cast<FBOMArray *>(element)) {
             out_array = *as_array;
@@ -757,11 +773,11 @@ FBOMResult FBOMReader::ReadArray(BufferedReader *reader, FBOMArray &out_array)
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMReader::ReadPropertyName(BufferedReader *reader, Name &out_property_name)
+FBOMResult FBOMReader::ReadPropertyName(FBOMLoadContext &context, BufferedReader *reader, Name &out_property_name)
 {
     FBOMData name_data;
 
-    if (FBOMResult err = ReadData(reader, name_data)) {
+    if (FBOMResult err = ReadData(context, reader, name_data)) {
         return err;
     }
 
@@ -784,7 +800,7 @@ FBOMResult FBOMReader::ReadPropertyName(BufferedReader *reader, Name &out_proper
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object, FBOMObject *root)
+FBOMResult FBOMReader::ReadObject(FBOMLoadContext &context, BufferedReader *reader, FBOMObject &out_object, FBOMObject *root)
 {
     if (FBOMResult err = Eat(reader, FBOM_OBJECT_START)) {
         return err;
@@ -814,7 +830,7 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object
         reader->Read(&offset);
         CheckEndianness(offset);
 
-        IFBOMSerializable *element = m_static_data_index_map.GetOrInitializeElement(this, offset);
+        FBOMSerializableBase *element = m_static_data_index_map.GetOrInitializeElement(context, this, offset);
 
         if (FBOMObject *as_object = dynamic_cast<FBOMObject *>(element)) {
             out_object = *as_object;
@@ -829,7 +845,7 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object
         // read string of "type" - loader to use
         FBOMType object_type;
         
-        if (FBOMResult err = ReadObjectType(reader, object_type)) {
+        if (FBOMResult err = ReadObjectType(context, reader, object_type)) {
             return err;
         }
 
@@ -844,11 +860,11 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object
             {
                 FBOMObject subobject;
 
-                if (FBOMResult err = ReadObject(reader, subobject, root)) {
+                if (FBOMResult err = ReadObject(context, reader, subobject, root)) {
                     return err;
                 }
 
-                out_object.nodes->PushBack(std::move(subobject));
+                out_object.AddChild(std::move(subobject));
 
                 break;
             }
@@ -859,7 +875,7 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object
                         // call deserializer function, writing into deserialized object
                         out_object.m_deserialized_object.Emplace();
 
-                        if (FBOMResult err = Deserialize(out_object, *out_object.m_deserialized_object)) {
+                        if (FBOMResult err = Deserialize(context, out_object, *out_object.m_deserialized_object)) {
                             out_object.m_deserialized_object.Reset();
 
                             return err;
@@ -886,7 +902,7 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object
 
                 FBOMData data;
 
-                if (FBOMResult err = ReadData(reader, data)) {
+                if (FBOMResult err = ReadData(context, reader, data)) {
                     return err;
                 }
 
@@ -922,7 +938,10 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object
         reader->Read(&flags);
         CheckEndianness(flags);
 
-        if (FBOMResult err = RequestExternalObject(library_id, object_index, out_object)) {
+        if (FBOMResult err = RequestExternalObject(context, library_id, object_index, out_object)) {
+            HYP_LOG(Serialization, Error, "Error requesting external object (library: {}, index: {}): {}",
+                library_id.ToString(), object_index, err.message);
+
             return err;
         }
 
@@ -930,6 +949,10 @@ FBOMResult FBOMReader::ReadObject(BufferedReader *reader, FBOMObject &out_object
     }
     default:
         return FBOMResult(FBOMResult::FBOM_ERR, "Unknown object location type!");
+    }
+
+    if (attributes & FBOMDataAttributes::EXT_REF_PLACEHOLDER) {
+        out_object.SetIsExternal(true);
     }
 
     // if (unique_id != uint64(object.m_unique_id)) {
@@ -1006,7 +1029,7 @@ FBOMResult FBOMReader::ReadRawData(BufferedReader *reader, SizeType count, ByteB
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMReader::Handle(BufferedReader *reader, FBOMCommand command, FBOMObject *root)
+FBOMResult FBOMReader::Handle(FBOMLoadContext &context, BufferedReader *reader, FBOMCommand command, FBOMObject *root)
 {
     AssertThrow(root != nullptr);
 
@@ -1015,11 +1038,11 @@ FBOMResult FBOMReader::Handle(BufferedReader *reader, FBOMCommand command, FBOMO
     {
         FBOMObject object;
 
-        if (FBOMResult err = ReadObject(reader, object, root)) {
+        if (FBOMResult err = ReadObject(context, reader, object, root)) {
             return err;
         }
         
-        root->nodes->PushBack(std::move(object));
+        root->AddChild(std::move(object));
 
         break;
     }
@@ -1103,11 +1126,15 @@ FBOMResult FBOMReader::Handle(BufferedReader *reader, FBOMCommand command, FBOMO
     {
         FBOMObjectLibrary library;
 
-        if (FBOMResult err = ReadObjectLibrary(reader, library)) {
+        if (FBOMResult err = ReadObjectLibrary(context, reader, library)) {
+            HYP_LOG(Serialization, Error, "Error reading object library: {}", err.message);
+
             return err;
         }
 
-        m_config.external_data_cache.Set(library.uuid, std::move(library));
+        HYP_LOG(Serialization, Debug, "Loaded object library with UUID: {}", library.uuid.ToString());
+
+        context.object_libraries.Set(library.uuid, std::move(library));
 
         break;
     }

@@ -112,7 +112,7 @@ public:
         return true;
     }
 
-    virtual bool Deserialize(HypData &target, const fbom::FBOMData &data) const override
+    virtual bool Deserialize(fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &data) const override
     {
         return false;
     }

@@ -23,6 +23,7 @@ namespace hyperion::fbom {
 
 class FBOM;
 class FBOMObject;
+struct FBOMLoadContext;
 
 class FBOMMarshalerBase
 {
@@ -33,7 +34,7 @@ public:
     virtual TypeID GetTypeID() const = 0;
 
     virtual FBOMResult Serialize(ConstAnyRef in, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const = 0;
+    virtual FBOMResult Deserialize(FBOMLoadContext &context, const FBOMObject &in, HypData &out) const = 0;
 };
 
 template <class T>
@@ -87,7 +88,7 @@ public:
     }
 
     virtual FBOMResult Serialize(const T &in, FBOMObject &out) const = 0;
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override = 0;
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override = 0;
 };
 
 template <class T>
@@ -95,7 +96,7 @@ class FBOMMarshaler : public FBOMObjectMarshalerBase<T>
 {
 public:
     virtual FBOMResult Serialize(const T &in, FBOMObject &out) const override;
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override;
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override;
 };
 
 #define HYP_DEFINE_MARSHAL(T, MarshalType) \

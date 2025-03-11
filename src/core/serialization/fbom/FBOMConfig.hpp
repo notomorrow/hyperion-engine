@@ -41,7 +41,6 @@ struct FBOMReaderConfig : public IFBOMConfig
 {
     bool                                continue_on_external_load_error = false;
     String                              base_path;
-    FlatMap<UUID, FBOMObjectLibrary>    external_data_cache;
 
     virtual ~FBOMReaderConfig() override = default;
 

@@ -76,11 +76,14 @@ struct FBOMExternalObjectInfo
     }
 };
 
-class HYP_API FBOMObject final : public IFBOMSerializable
+class HYP_API FBOMObject final : public FBOMSerializableBase
 {
 public:
+    friend class FBOMReader;
+    friend class FBOMWriter;
+
     FBOMType                            m_object_type;
-    FBOMNodeHolder                      *nodes;
+    Array<FBOMObject, DynamicAllocator> m_children;
     FlatMap<ANSIString, FBOMData>       properties;
     RC<HypData>                         m_deserialized_object;
     Optional<FBOMExternalObjectInfo>    m_external_info;
@@ -114,6 +117,12 @@ public:
 
     HYP_FORCE_INLINE const FBOMType &GetType() const
         { return m_object_type; }
+
+    HYP_FORCE_INLINE const Array<FBOMObject, DynamicAllocator> &GetChildren() const
+        { return m_children; }
+
+    HYP_FORCE_INLINE FlatMap<ANSIString, FBOMData> &GetProperties()
+        { return properties; }
 
     HYP_FORCE_INLINE const FlatMap<ANSIString, FBOMData> &GetProperties() const
         { return properties; }
@@ -220,12 +229,12 @@ public:
         return object;
     }
 
-    static FBOMResult Deserialize(TypeID type_id, const FBOMObject &in, HypData &out);
+    static FBOMResult Deserialize(FBOMLoadContext &context, TypeID type_id, const FBOMObject &in, HypData &out);
 
     template <class T, typename = std::enable_if_t< !std::is_same_v< FBOMObject, NormalizedType<T> > > >
-    static FBOMResult Deserialize(const FBOMObject &in, HypData &out)
+    static FBOMResult Deserialize(FBOMLoadContext &context, const FBOMObject &in, HypData &out)
     {
-        return detail::FBOMObjectSerialize_Impl<T>{}.Deserialize(in, out);
+        return detail::FBOMObjectSerialize_Impl<T>{}.Deserialize(context, in, out);
     }
 
     template <class T, typename = std::enable_if_t< !std::is_same_v< FBOMObject, NormalizedType<T> > > >
@@ -330,7 +339,7 @@ struct FBOMObjectSerialize_Impl<T, std::enable_if_t< !std::is_same_v< FBOMObject
         return FBOMResult::FBOM_OK;
     }
 
-    FBOMResult Deserialize(const FBOMObject &in, HypData &out)
+    FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out)
     {
         FBOMMarshalerBase *marshal = FBOMObject::GetMarshal<T>();
         
@@ -338,7 +347,7 @@ struct FBOMObjectSerialize_Impl<T, std::enable_if_t< !std::is_same_v< FBOMObject
             return { FBOMResult::FBOM_ERR, "No registered marshal class for type" };
         }
 
-        if (FBOMResult err = marshal->Deserialize(in, out)) {
+        if (FBOMResult err = marshal->Deserialize(context, in, out)) {
             HYP_FAIL("Failed to deserialize object: %s", *err.message);
         }
 

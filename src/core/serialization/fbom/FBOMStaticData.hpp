@@ -53,7 +53,7 @@ struct FBOMStaticData
     } type;
 
     int64                           offset;
-    UniquePtr<IFBOMSerializable>    data;
+    UniquePtr<FBOMSerializableBase>    data;
     EnumFlags<FBOMStaticDataFlags>  flags;
 
     FBOMStaticData()

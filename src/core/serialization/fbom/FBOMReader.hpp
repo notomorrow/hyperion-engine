@@ -60,6 +60,7 @@ class FBOMWriter;
 class FBOMArray;
 class FBOMData;
 class FBOMMarshalerBase;
+class FBOMLoadContext;
 
 class FBOMReader
 {
@@ -74,21 +75,20 @@ public:
     HYP_FORCE_INLINE const FBOMReaderConfig &GetConfig() const
         { return m_config; }
 
-    FBOMResult Deserialize(BufferedReader &reader, FBOMObjectLibrary &out, bool read_header = true);
-    FBOMResult Deserialize(BufferedReader &reader, FBOMObject &out);
-    FBOMResult Deserialize(const FBOMObject &in, HypData &out);
-    FBOMResult Deserialize(BufferedReader &reader, HypData &out);
+    FBOMResult Deserialize(FBOMLoadContext &context, BufferedReader &reader, FBOMObjectLibrary &out, bool read_header = true);
+    FBOMResult Deserialize(FBOMLoadContext &context, BufferedReader &reader, FBOMObject &out);
+    FBOMResult Deserialize(FBOMLoadContext &context, const FBOMObject &in, HypData &out);
+    FBOMResult Deserialize(FBOMLoadContext &context, BufferedReader &reader, HypData &out);
 
-    FBOMResult LoadFromFile(const String &path, FBOMObjectLibrary &out);
     FBOMResult LoadFromFile(const String &path, FBOMObject &out);
     FBOMResult LoadFromFile(const String &path, HypData &out);
 
-    FBOMResult ReadObject(BufferedReader *, FBOMObject &out_object, FBOMObject *root);
-    FBOMResult ReadObjectType(BufferedReader *, FBOMType &out_type);
-    FBOMResult ReadObjectLibrary(BufferedReader *, FBOMObjectLibrary &out_library);
-    FBOMResult ReadData(BufferedReader *, FBOMData &out_data);
-    FBOMResult ReadArray(BufferedReader *, FBOMArray &out_array);
-    FBOMResult ReadPropertyName(BufferedReader *, Name &out_property_name);
+    FBOMResult ReadObject(FBOMLoadContext &context, BufferedReader *reader, FBOMObject &out_object, FBOMObject *root);
+    FBOMResult ReadObjectType(FBOMLoadContext &context, BufferedReader *reader, FBOMType &out_type);
+    FBOMResult ReadObjectLibrary(FBOMLoadContext &context, BufferedReader *reader, FBOMObjectLibrary &out_library);
+    FBOMResult ReadData(FBOMLoadContext &context, BufferedReader *reader, FBOMData &out_data);
+    FBOMResult ReadArray(FBOMLoadContext &context, BufferedReader *reader, FBOMArray &out_array);
+    FBOMResult ReadPropertyName(FBOMLoadContext &context, BufferedReader *reader, Name &out_property_name);
 
 private:
     struct FBOMStaticDataIndexMap
@@ -98,7 +98,7 @@ private:
             FBOMStaticData::Type            type = FBOMStaticData::FBOM_STATIC_DATA_NONE;
             SizeType                        offset = 0;
             SizeType                        size = 0;
-            UniquePtr<IFBOMSerializable>    ptr;
+            UniquePtr<FBOMSerializableBase>    ptr;
 
             HYP_FORCE_INLINE bool IsValid() const
                 { return type != FBOMStaticData::FBOM_STATIC_DATA_NONE && size != 0; }
@@ -106,7 +106,7 @@ private:
             HYP_FORCE_INLINE bool IsInitialized() const
                 { return ptr != nullptr; }
 
-            FBOMResult Initialize(FBOMReader *reader);
+            FBOMResult Initialize(FBOMLoadContext &context, FBOMReader *reader);
         };
 
         Array<Element>  elements;
@@ -116,7 +116,7 @@ private:
             elements.Resize(size);
         }
 
-        IFBOMSerializable *GetOrInitializeElement(FBOMReader *reader, SizeType index);
+        FBOMSerializableBase *GetOrInitializeElement(FBOMLoadContext &context, FBOMReader *reader, SizeType index);
         void SetElementDesc(SizeType index, FBOMStaticData::Type type, SizeType offset, SizeType size);
     };
 
@@ -134,7 +134,7 @@ private:
 
     FBOMMarshalerBase *GetMarshalForType(const FBOMType &type) const;
 
-    FBOMResult RequestExternalObject(UUID library_id, uint32 index, FBOMObject &out_object);
+    FBOMResult RequestExternalObject(FBOMLoadContext &context, UUID library_id, uint32 index, FBOMObject &out_object);
 
     FBOMCommand NextCommand(BufferedReader *);
     FBOMCommand PeekCommand(BufferedReader *);
@@ -172,7 +172,9 @@ private:
         return FBOMResult::FBOM_OK;
     }
 
-    FBOMResult Handle(BufferedReader *, FBOMCommand, FBOMObject *root);
+    FBOMResult LoadFromFile(FBOMLoadContext &context, const String &path, FBOMObjectLibrary &out);
+
+    FBOMResult Handle(FBOMLoadContext &context, BufferedReader *reader, FBOMCommand command, FBOMObject *root);
 
 public:
     FBOMReaderConfig        m_config;

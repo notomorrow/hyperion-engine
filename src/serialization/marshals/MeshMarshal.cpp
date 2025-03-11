@@ -44,7 +44,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         Topology topology = Topology::TRIANGLES;
 
@@ -60,12 +60,12 @@ public:
 
         RC<StreamedMeshData> streamed_mesh_data;
 
-        const auto mesh_data_it = in.nodes->FindIf([](const FBOMObject &item)
+        const auto mesh_data_it = in.GetChildren().FindIf([](const FBOMObject &item)
         {
             return item.GetType().IsOrExtends("MeshData");
         });
 
-        if (mesh_data_it != in.nodes->End()) {
+        if (mesh_data_it != in.GetChildren().End()) {
             streamed_mesh_data.EmplaceAs<StreamedMeshData>(mesh_data_it->m_deserialized_object->Get<MeshData>());
         }
 
@@ -75,7 +75,7 @@ public:
             vertex_attributes
         );
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(in, Mesh::Class(), AnyRef(*mesh_handle))) {
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Mesh::Class(), AnyRef(*mesh_handle))) {
             return err;
         }
 

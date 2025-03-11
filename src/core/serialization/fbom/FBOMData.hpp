@@ -55,8 +55,9 @@ struct HypDataHelper;
 
 enum class FBOMDataFlags
 {
-    NONE        = 0x0,
-    COMPRESSED  = 0x1
+    NONE                = 0x0,
+    COMPRESSED          = 0x1,
+    EXT_REF_PLACEHOLDER = 0x2
 };
 
 HYP_MAKE_ENUM_FLAGS(FBOMDataFlags)
@@ -66,6 +67,7 @@ namespace fbom {
 class FBOMObject;
 class FBOMArray;
 struct FBOMDeserializedObject;
+struct FBOMLoadContext;
 
 template <class FBOMData, class T, class FBOMTypeClass, class T2 = void>
 struct FBOMDataTypeOps;
@@ -156,7 +158,7 @@ struct FBOMDataTypeOps<FBOMData, T, FBOMTypeClass, std::enable_if_t< std::is_fun
     }
 };
 
-class HYP_API FBOMData final : public IFBOMSerializable
+class HYP_API FBOMData final : public FBOMSerializableBase
 {
 public:
     FBOMData(EnumFlags<FBOMDataFlags> flags = FBOMDataFlags::NONE);
@@ -298,7 +300,7 @@ public:
 #pragma endregion String
 
 #pragma region JSON
-    FBOMResult ToJSON(json::JSONValue &out_json) const;
+    FBOMResult ToJSON(FBOMLoadContext &context, json::JSONValue &out_json) const;
 
     static FBOMData FromJSON(const json::JSONValue &json_value);
 
@@ -456,7 +458,7 @@ public:
     HYP_FORCE_INLINE bool IsObject() const
         { return type.IsOrExtends(FBOMBaseObjectType()); }
 
-    FBOMResult ReadObject(FBOMObject &out_object) const;
+    FBOMResult ReadObject(FBOMLoadContext &context, FBOMObject &out_object) const;
     
     static FBOMData FromObject(const FBOMObject &object, bool keep_native_object = true);
     static FBOMData FromObject(FBOMObject &&object, bool keep_native_object = true);
@@ -467,7 +469,7 @@ public:
     HYP_FORCE_INLINE bool IsArray() const
         { return type.IsOrExtends(FBOMArrayType()); }
 
-    FBOMResult ReadArray(FBOMArray &out_array) const;
+    FBOMResult ReadArray(FBOMLoadContext &context, FBOMArray &out_array) const;
     
     static FBOMData FromArray(const FBOMArray &array);
 #pragma endregion Array

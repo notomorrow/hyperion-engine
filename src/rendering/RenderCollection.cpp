@@ -414,7 +414,9 @@ void RenderCollector::PushEntityToRender(
     Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     AssertThrow(entity.IsValid());
+    
     AssertThrow(proxy.mesh.IsValid());
+    AssertThrow(proxy.material.IsValid());
 
     RenderProxyList &proxy_list = m_draw_collection->GetProxyList(ThreadType::THREAD_TYPE_GAME);
     proxy_list.Add(entity, RenderProxy(proxy));

@@ -519,7 +519,7 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context, const RC<UIS
         AssertThrowMsg(InitObject(m_camera), "Failed to initialize editor camera for scene %s", *m_scene->GetName());
 
         // // @TODO: Don't serialize the editor camera controller
-        // m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
+        m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
 
         m_scene->GetRenderResource().GetEnvironment()->AddRenderSubsystem<UIRenderer>(NAME("EditorUIRenderer"), m_ui_stage);
 
@@ -652,13 +652,13 @@ void EditorSubsystem::Initialize()
 
     NewProject();
 
-    /*auto result = EditorProject::Load(g_asset_manager->GetBasePath() / "projects" / "UntitledProject1");
+    // auto result = EditorProject::Load(g_asset_manager->GetBasePath() / "projects" / "UntitledProject1");
 
-    if (!result) {
-        HYP_BREAKPOINT;
-    }
+    // if (!result) {
+    //     HYP_BREAKPOINT;
+    // }
 
-    OpenProject(*result);*/
+    // OpenProject(*result);
 
     InitDetailView();
     InitDebugOverlays();

@@ -8,21 +8,19 @@ namespace Hyperion
     {
         private static LogChannel logChannel = LogChannel.ByName("Editor");
 
-        public Name GetNextDefaultProjectName()
+        public Name GetNextDefaultProjectName(string defaultProjectName)
         {
             string projectsDirectory = this.GetProjectsDirectory();
-            string[] filesInProjectsDirectory = Array.Empty<string>();
+            string[] directories = Array.Empty<string>();
 
             try
             {
-                filesInProjectsDirectory = System.IO.Directory.GetFiles(projectsDirectory);
+                directories = System.IO.Directory.GetDirectories(projectsDirectory);
             }
             catch (Exception e)
             {
                 Logger.Log(logChannel, LogType.Error, "Failed to get files in projects directory: " + e.Message);
             }
-
-            string defaultProjectName = "UntitledProject";
 
             for (int i = 1; i < int.MaxValue; i++)
             {
@@ -30,11 +28,15 @@ namespace Hyperion
 
                 bool projectNameExists = false;
 
-                foreach (string file in filesInProjectsDirectory)
+                foreach (string directory in directories)
                 {
-                    if (file == projectName)
+                    // get basename of dir without extension
+                    string basename = System.IO.Path.GetFileNameWithoutExtension(directory);
+
+                    if (basename.Equals(projectName, StringComparison.OrdinalIgnoreCase))
                     {
                         projectNameExists = true;
+
                         break;
                     }
                 }

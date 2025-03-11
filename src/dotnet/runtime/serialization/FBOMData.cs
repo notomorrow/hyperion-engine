@@ -55,32 +55,6 @@ namespace Hyperion
             }
         }
 
-        public FBOMData? this[string key]
-        {
-            get
-            {
-                FBOMObject? asObject = GetObject();
-
-                if (asObject == null)
-                {
-                    throw new Exception("Data is not subscriptable");
-                }
-
-                return asObject[key];
-            }
-            set
-            {
-                FBOMObject? asObject = GetObject();
-
-                if (asObject == null)
-                {
-                    throw new Exception("Data is not subscriptable");
-                }
-
-                asObject[key] = value;
-            }
-        }
-
         public byte? GetUInt8()
         {
             byte value;
@@ -420,11 +394,11 @@ namespace Hyperion
             return data;
         }
 
-        public FBOMObject? GetObject()
+        public FBOMObject? GetObject(FBOMLoadContext context)
         {
             FBOMObject value = new FBOMObject();
 
-            if (FBOMData_GetObject(this.ptr, value.ptr))
+            if (FBOMData_GetObject(context.Address, this.ptr, value.ptr))
             {
                 return value;
             }
@@ -566,7 +540,7 @@ namespace Hyperion
         private static extern void FBOMData_SetQuaternion(IntPtr dataPtr, [In] ref Quaternion value);
 
         [DllImport("hyperion", EntryPoint = "FBOMData_GetObject")]
-        private static extern bool FBOMData_GetObject(IntPtr dataPtr, [Out] IntPtr ptr);
+        private static extern bool FBOMData_GetObject(IntPtr contextPtr, IntPtr dataPtr, [Out] IntPtr ptr);
 
         [DllImport("hyperion", EntryPoint = "FBOMData_SetObject")]
         private static extern void FBOMData_SetObject(IntPtr dataPtr, [In] IntPtr ptr);

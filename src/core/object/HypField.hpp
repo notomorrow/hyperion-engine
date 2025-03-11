@@ -126,7 +126,7 @@ public:
                 }
             };
 
-            m_deserialize_proc = [member](HypData &target_data, const fbom::FBOMData &data) -> Result
+            m_deserialize_proc = [member](fbom::FBOMLoadContext &context, HypData &target_data, const fbom::FBOMData &data) -> Result
             {
                 if constexpr (!std::is_copy_assignable_v<NormalizedType<FieldType>> && !std::is_array_v<NormalizedType<FieldType>>) {
                     return HYP_MAKE_ERROR(Error, "Cannot deserialize non-copy-assignable field");
@@ -144,7 +144,7 @@ public:
 
                     HypData value;
         
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<FieldType>>::Deserialize(data, value)) {
+                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<FieldType>>::Deserialize(context, data, value)) {
                         return HYP_MAKE_ERROR(Error, "Failed to deserialize data: {}", err.message);
                     }
 
@@ -232,13 +232,13 @@ public:
         return true;
     }
 
-    virtual bool Deserialize(HypData &target, const fbom::FBOMData &data) const override
+    virtual bool Deserialize(fbom::FBOMLoadContext &context, HypData &target, const fbom::FBOMData &data) const override
     {
         if (!CanDeserialize()) {
             return false;
         }
 
-        return bool(m_deserialize_proc(target, data));
+        return bool(m_deserialize_proc(context, target, data));
     }
     
     virtual const HypClassAttributeSet &GetAttributes() const override
@@ -280,19 +280,19 @@ public:
     }
 
 private:
-    Name                                                    m_name;
-    TypeID                                                  m_type_id;
-    TypeID                                                  m_target_type_id;
-    uint32                                                  m_offset;
-    uint32                                                  m_size;
+    Name                                                                        m_name;
+    TypeID                                                                      m_type_id;
+    TypeID                                                                      m_target_type_id;
+    uint32                                                                      m_offset;
+    uint32                                                                      m_size;
 
-    HypClassAttributeSet                                    m_attributes;
+    HypClassAttributeSet                                                        m_attributes;
 
-    Proc<HypData, const HypData &>                          m_get_proc;
-    Proc<void, HypData &, const HypData &>                  m_set_proc;
+    Proc<HypData, const HypData &>                                              m_get_proc;
+    Proc<void, HypData &, const HypData &>                                      m_set_proc;
 
-    Proc<fbom::FBOMData, const HypData &>                   m_serialize_proc;
-    Proc<Result, HypData &, const fbom::FBOMData &>   m_deserialize_proc;
+    Proc<fbom::FBOMData, const HypData &>                                       m_serialize_proc;
+    Proc<Result, fbom::FBOMLoadContext &, HypData &, const fbom::FBOMData &>    m_deserialize_proc;
 };
 
 } // namespace hyperion

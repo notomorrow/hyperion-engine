@@ -128,6 +128,11 @@ FBOMArray &FBOMArray::AddElement(FBOMData &&value)
     return *this;
 }
 
+FBOMData &FBOMArray::GetElement(SizeType index)
+{
+    return const_cast<FBOMData &>(static_cast<const FBOMArray *>(this)->GetElement(index));
+}
+
 const FBOMData &FBOMArray::GetElement(SizeType index) const
 {
     // invalid result

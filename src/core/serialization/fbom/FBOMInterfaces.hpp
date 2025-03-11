@@ -9,6 +9,8 @@
 #include <core/utilities/UniqueID.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
+#include <core/memory/RefCountedPtr.hpp>
+
 #include <core/containers/String.hpp>
 
 #include <core/Defines.hpp>
@@ -21,11 +23,20 @@ namespace fbom {
 
 class FBOMWriter;
 class FBOMReader;
+class FBOMLoadContext;
 
-class IFBOMSerializable
+class FBOMSerializableBase
 {
 public:
-    virtual ~IFBOMSerializable() = default;
+    friend class FBOMReader;
+    friend class FBOMWriter;
+
+    FBOMSerializableBase()                                              = default;
+    FBOMSerializableBase(const FBOMSerializableBase &)                  = default;
+    FBOMSerializableBase &operator=(const FBOMSerializableBase &)       = default;
+    FBOMSerializableBase(FBOMSerializableBase &&) noexcept              = default;
+    FBOMSerializableBase &operator=(FBOMSerializableBase &&) noexcept   = default;
+    virtual ~FBOMSerializableBase()                                     = default;
 
     virtual FBOMResult Visit(UniqueID id, FBOMWriter *writer, ByteWriter *out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const = 0;
     

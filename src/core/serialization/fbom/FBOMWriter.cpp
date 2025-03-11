@@ -3,11 +3,13 @@
 #include <core/serialization/fbom/FBOMWriter.hpp>
 #include <core/serialization/fbom/FBOMReader.hpp>
 #include <core/serialization/fbom/FBOMArray.hpp>
+#include <core/serialization/fbom/FBOMLoadContext.hpp>
 #include <core/serialization/fbom/FBOM.hpp>
 
 #include <core/io/ByteWriter.hpp>
 
 #include <core/containers/Stack.hpp>
+#include <core/containers/HashSet.hpp>
 
 #include <core/compression/Archive.hpp>
 
@@ -96,11 +98,10 @@ void FBOMWriteStream::AddToObjectLibrary(FBOMObject &object)
         library_ptr = &m_object_libraries.EmplaceBack();
     }
 
-    const uint32 index = library_ptr->Put(object);
-    // const uint32 index = library_ptr->Put(std::move(object_data));
+    library_ptr->Put(object);
 
-    external_object_info->library_id = library_ptr->uuid;
-    external_object_info->index = index;
+    // sanity check
+    AssertThrow(external_object_info->IsLinked());
 }
 
 #pragma endregion FBOMWriteStream
@@ -158,11 +159,25 @@ FBOMResult FBOMWriter::Append(FBOMObject &&object)
 
 FBOMResult FBOMWriter::Emit(ByteWriter *out, bool write_header)
 {
+    // Choose a base path to write external objects to
+    FilePath external_path = FilePath::Current() / "external";
+    FilePath base_path = FilePath::Current();
+
+    if (FileByteWriter *file_byte_writer = dynamic_cast<FileByteWriter *>(out)) {
+        base_path = file_byte_writer->GetFilePath().BasePath();
+        // @TODO Use a config property instead of `file_byte_writer->GetFilePath()` - so resaving an object doesn't change the path
+        external_path = FilePath(file_byte_writer->GetFilePath().StripExtension() + "_external");
+    }
+
     if (FBOMResult err = m_write_stream->m_last_result) {
         return err;
     }
 
-    BuildStaticData();
+    FBOMLoadContext context;
+
+    if (FBOMResult err = BuildStaticData(context)) {
+        return err;
+    }
 
     if (write_header) {
         if (FBOMResult err = WriteHeader(out)) {
@@ -170,7 +185,7 @@ FBOMResult FBOMWriter::Emit(ByteWriter *out, bool write_header)
         }
     }
     
-    if (FBOMResult err = WriteExternalObjects(out)) {
+    if (FBOMResult err = WriteExternalObjects(out, base_path, external_path)) {
         return err;
     }
 
@@ -187,17 +202,41 @@ FBOMResult FBOMWriter::Emit(ByteWriter *out, bool write_header)
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter *out)
+HYP_DISABLE_OPTIMIZATION;
+
+FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter *out, const FilePath &base_path, const FilePath &external_path)
 {
-    if (m_write_stream->m_object_libraries.Any()) {
-        DebugLog(LogType::Debug, "Writing %u external library files\n", m_write_stream->m_object_libraries.Size());
+    if (m_write_stream->m_object_libraries.Empty()) {
+        // No external objects to write
+        return { FBOMResult::FBOM_OK };
     }
 
-    AtomicVar<bool> any_errors = false;
+    if (!base_path.IsDirectory()) {
+        return { FBOMResult::FBOM_ERR, "Base path is not a directory" };
+    }
 
-    Mutex mtx;
+    if (!external_path.Exists() && !external_path.MkDir()) {
+        return { FBOMResult::FBOM_ERR, "Failed to create external directory" };
+    }
 
-    TaskSystem::GetInstance().ParallelForEach(m_write_stream->m_object_libraries, [out, &any_errors, &mtx, write_stream = m_write_stream.Get()](const FBOMObjectLibrary &library, uint32, uint32)
+    if (!external_path.IsDirectory()) {
+        return { FBOMResult::FBOM_ERR, "External path is not a directory" };
+    }
+
+    HashSet<FBOMResult> errors;
+
+    // Mutex to lock while writing to the output stream
+    Mutex output_mutex;
+    Mutex errors_mutex;
+
+    auto AddError = [&errors, &errors_mutex](FBOMResult err)
+    {
+        Mutex::Guard guard(errors_mutex);
+
+        errors.Insert(err);
+    };
+
+    TaskSystem::GetInstance().ParallelForEach(m_write_stream->m_object_libraries, [&](const FBOMObjectLibrary &library, uint32, uint32)
     {
         FBOMWriter serializer { FBOMWriterConfig { } };
 
@@ -212,69 +251,96 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter *out)
             object_copy.SetIsExternal(false);
 
             if (FBOMResult err = serializer.Append(object_copy)) {
-                HYP_LOG(Serialization, Error, "Failed to write external object: {}", err.message);
-
-                any_errors.Set(true, MemoryOrder::RELAXED);
+                AddError(err);
 
                 return;
             }
         }
 
-        MemoryByteWriter byte_writer;
+        const FBOMObjectLibraryFlags flags = FBOMObjectLibraryFlags::LOCATION_EXTERNAL;
 
-        if (FBOMResult err = serializer.Emit(&byte_writer, /* write_header */ false)) {
-            HYP_LOG(Serialization, Error, "Failed to write external object: {}", err.message);
+        MemoryByteWriter buffered_output;
 
-            any_errors.Set(true, MemoryOrder::RELAXED);
+        buffered_output.Write<uint8>(FBOM_OBJECT_LIBRARY_START);
 
-            return;
+        buffered_output.Write<UUID>(library.uuid);
+        buffered_output.Write<uint8>(uint8(flags));
+
+        if (flags & FBOMObjectLibraryFlags::LOCATION_INLINE) {
+            MemoryByteWriter byte_writer;
+
+            if (FBOMResult err = serializer.Emit(&byte_writer, /* write_header */ false)) {
+                AddError(err);
+
+                return;
+            }
+
+            ByteBuffer buffer = std::move(byte_writer.GetBuffer());
+
+            // write size of buffer
+            buffered_output.Write<uint64>(buffer.Size());
+
+            // write actual buffer data
+            buffered_output.Write(buffer.Data(), buffer.Size());
+        } else if (flags & FBOMObjectLibraryFlags::LOCATION_EXTERNAL) {
+            // write to external file
+            
+            const FilePath filepath = external_path / (library.uuid.ToString() + ".hyp");
+            const FilePath relative_path = FilePath::Relative(filepath, base_path).BasePath();
+
+            HYP_LOG(Serialization, Debug, "Writing external object library to relative: {}", relative_path);
+
+            FileByteWriter byte_writer { filepath };
+
+            if (FBOMResult err = serializer.Emit(&byte_writer, /* write_header */ true)) {
+                AddError(err);
+
+                return;
+            }
+
+            buffered_output.WriteString(relative_path, BYTE_WRITER_FLAGS_WRITE_SIZE);
+        } else {
+            HYP_UNREACHABLE();
         }
 
-        ByteBuffer buffer = std::move(byte_writer.GetBuffer());
+        buffered_output.Write<uint8>(FBOM_OBJECT_LIBRARY_END);
 
-        Mutex::Guard guard(mtx);
+        // Pipe the buffered data into the output stream
+        {
+            Mutex::Guard guard(output_mutex);
 
-        out->Write<uint8>(FBOM_OBJECT_LIBRARY_START);
-
-        out->Write<UUID>(library.uuid);
-
-        out->Write<uint8>(uint8(FBOMObjectLibraryFlags::LOCATION_INLINE));
-
-        // write size of buffer
-        out->Write<uint64>(buffer.Size());
-
-        // write actual buffer data
-        out->Write(buffer.Data(), buffer.Size());
-
-        out->Write<uint8>(FBOM_OBJECT_LIBRARY_END);
+            out->Write(buffered_output.GetBuffer().Data(), buffered_output.GetBuffer().Size());
+        }
     });
 
-    return any_errors.Get(MemoryOrder::RELAXED)
-        ? FBOMResult::FBOM_ERR
-        : FBOMResult::FBOM_OK;
+    return errors.Any() ? errors.Front() : FBOMResult::FBOM_OK;
 }
 
-void FBOMWriter::BuildStaticData()
+FBOMResult FBOMWriter::BuildStaticData(FBOMLoadContext &context)
 {
     m_write_stream->LockObjectDataWriting();
 
     for (FBOMObject &object : m_write_stream->m_object_data) {
-        AddExternalObjects(object);
+        if (FBOMResult err = AddExternalObjects(context, object)) {
+            return err;
+        }
     }
 
     for (const FBOMObject &object : m_write_stream->m_object_data) {
         // will be added as static data by other instance when it is written
         if (object.IsExternal()) {
-            return;
+            continue;
         }
         
-        AddStaticData(object);
+        AddStaticData(context, object);
     }
 
     m_write_stream->UnlockObjectDataWriting();
+
+    return { };
 }
 
-void FBOMWriter::AddExternalObjects(FBOMObject &object)
+FBOMResult FBOMWriter::AddExternalObjects(FBOMLoadContext &context, FBOMObject &object)
 {
     if (object.IsExternal()) {
         FBOMExternalObjectInfo *external_object_info = object.GetExternalObjectInfo();
@@ -284,12 +350,71 @@ void FBOMWriter::AddExternalObjects(FBOMObject &object)
         m_write_stream->AddToObjectLibrary(object);
     }
 
-    for (SizeType index = 0; index < object.nodes->Size(); index++) {
-        FBOMObject &subobject = object.nodes->Get(index);
+    Proc<FBOMResult, FBOMLoadContext &, FBOMData &> AddNestedExternalObjects;
 
-        AddExternalObjects(subobject);
+    AddNestedExternalObjects = [this, &AddNestedExternalObjects](FBOMLoadContext &context, FBOMData &data) -> FBOMResult
+    {
+        if (data.IsObject()) {
+            FBOMObject subobject;
+
+            if (FBOMResult err = data.ReadObject(context, subobject)) {
+                return err;
+            }
+
+            // debugging
+            bool is_external = subobject.IsExternal();
+
+            if (FBOMResult err = AddExternalObjects(context, subobject)) {
+                return err;
+            }
+
+            // debugging
+            if (is_external) {
+                AssertThrow(subobject.GetExternalObjectInfo() != nullptr);
+                AssertThrow(subobject.GetExternalObjectInfo()->IsLinked());
+            }
+
+            data = FBOMData::FromObject(subobject);
+        } else if (data.IsArray()) {
+            FBOMArray array { fbom::FBOMUnset() };
+
+            if (FBOMResult err = data.ReadArray(context, array)) {
+                return err;
+            }
+
+            for (SizeType index = 0; index < array.Size(); index++) {
+                FBOMData &element = array.GetElement(index);
+
+                if (FBOMResult err = AddNestedExternalObjects(context, element)) {
+                    return err;
+                }
+            }
+
+            data = FBOMData::FromArray(std::move(array));
+        }
+
+        return { };
+    };
+
+    for (Pair<ANSIString, FBOMData> &it : object.GetProperties()) {
+        const ANSIString &property_name = it.first;
+        FBOMData &data = it.second;
+
+        if (FBOMResult err = AddNestedExternalObjects(context, data)) {
+            return err;
+        }
     }
+
+    for (FBOMObject &child : object.m_children) {
+        if (FBOMResult err = AddExternalObjects(context, child)) {
+            return err;
+        }
+    }
+
+    return { };
 }
+
+HYP_ENABLE_OPTIMIZATION;
 
 FBOMResult FBOMWriter::WriteStaticData(ByteWriter *out)
 {
@@ -427,20 +552,21 @@ FBOMResult FBOMWriter::Write(ByteWriter *out, const FBOMObject &object, UniqueID
 {
     AssertThrow(uint64(id) != 0);
 
-    if (object.IsExternal()) {
-        // defer writing it. instead we pass the object into our external data,
-        // which we will later be write
-        return FBOMResult::FBOM_OK;
-    }
-
     out->Write<uint8>(FBOM_OBJECT_START);
     out->Write<uint64>(id);
 
     const FBOMStaticData *static_data_ptr;
     const FBOMExternalObjectInfo *external_object_info_ptr;
 
-    const FBOMDataLocation data_location = m_write_stream->GetDataLocation(id, &static_data_ptr, &external_object_info_ptr);
+    FBOMDataLocation data_location = FBOMDataLocation::INVALID;
     
+    if (object.IsExternal() && object.GetExternalObjectInfo()->IsLinked()) {
+        data_location = FBOMDataLocation::LOC_EXT_REF;
+        external_object_info_ptr = object.GetExternalObjectInfo();
+    } else {
+        data_location = m_write_stream->GetDataLocation(id, &static_data_ptr, &external_object_info_ptr);
+    }
+
     if (FBOMResult err = WriteDataAttributes(out, attributes, data_location)) {
         return err;
     }
@@ -458,6 +584,7 @@ FBOMResult FBOMWriter::Write(ByteWriter *out, const FBOMObject &object, UniqueID
         if (FBOMResult err = object.m_object_type.Visit(this, out)) {
             return err;
         }
+
         // add all properties
         for (const auto &it : object.properties) {
             EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE;
@@ -477,8 +604,8 @@ FBOMResult FBOMWriter::Write(ByteWriter *out, const FBOMObject &object, UniqueID
             }
         }
 
-        for (FBOMObject &subobject : *object.nodes) {
-            if (FBOMResult err = subobject.Visit(this, out)) {
+        for (const FBOMObject &child : object.m_children) {
+            if (FBOMResult err = child.Visit(this, out)) {
                 return err;
             }
         }
@@ -829,16 +956,16 @@ UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData &&static_data)
     return id;
 }
 
-UniqueID FBOMWriter::AddStaticData(const FBOMType &type)
+UniqueID FBOMWriter::AddStaticData(FBOMLoadContext &context, const FBOMType &type)
 {
     if (type.extends != nullptr) {
-        AddStaticData(*type.extends);
+        AddStaticData(context, *type.extends);
     }
 
     return AddStaticData(FBOMStaticData(type));
 }
 
-UniqueID FBOMWriter::AddStaticData(const FBOMObject &object)
+UniqueID FBOMWriter::AddStaticData(FBOMLoadContext &context, const FBOMObject &object)
 {
     // for (SizeType index = 0; index < object.nodes->Size(); index++) {
     //     FBOMObject &subobject = object.nodes->Get(index);
@@ -851,32 +978,32 @@ UniqueID FBOMWriter::AddStaticData(const FBOMObject &object)
     //     AddStaticData(prop.second);
     // }
 
-    AddStaticData(object.GetType());
+    AddStaticData(context, object.GetType());
 
     return AddStaticData(FBOMStaticData(object));
 }
 
-UniqueID FBOMWriter::AddStaticData(const FBOMArray &array)
+UniqueID FBOMWriter::AddStaticData(FBOMLoadContext &context, const FBOMArray &array)
 {
     return AddStaticData(FBOMStaticData(array));
 }
 
-UniqueID FBOMWriter::AddStaticData(const FBOMData &data)
+UniqueID FBOMWriter::AddStaticData(FBOMLoadContext &context, const FBOMData &data)
 {
     UniqueID id = UniqueID::Invalid();
 
-    AddStaticData(data.GetType());
+    AddStaticData(context, data.GetType());
 
     if (data.IsObject()) {
         FBOMObject object;
-        AssertThrowMsg(data.ReadObject(object).value == FBOMResult::FBOM_OK, "Invalid object, cannot write to stream");
+        AssertThrowMsg(data.ReadObject(context, object).value == FBOMResult::FBOM_OK, "Invalid object, cannot write to stream");
 
-        AddStaticData(object);
+        AddStaticData(context, object);
     } else if (data.IsArray()) {
         FBOMArray array { FBOMUnset() };
-        AssertThrowMsg(data.ReadArray(array).value == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
+        AssertThrowMsg(data.ReadArray(context, array).value == FBOMResult::FBOM_OK, "Invalid array, cannot write to stream");
 
-        AddStaticData(array);
+        AddStaticData(context, array);
     } else {
         HYP_FAIL("Unhandled container type");
     }

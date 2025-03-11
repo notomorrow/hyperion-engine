@@ -3,6 +3,7 @@
 #include <asset/ui_loaders/UILoader.hpp>
 
 #include <core/serialization/fbom/FBOM.hpp>
+#include <core/serialization/fbom/FBOMLoadContext.hpp>
 
 #include <dotnet/DotNetSystem.hpp>
 #include <dotnet/Class.hpp>
@@ -335,7 +336,7 @@ static Optional<UIObjectSize> ParseUIObjectSize(const String &str)
     return { };
 }
 
-static json::ParseResult ParseJSON(const String &str, fbom::FBOMData &out_data)
+static json::ParseResult ParseJSON(fbom::FBOMLoadContext &context, const String &str, fbom::FBOMData &out_data)
 {
     // Read string as JSON
     json::ParseResult parse_result = json::JSON::Parse(str);
@@ -562,8 +563,9 @@ public:
                         });
 
                         if (member_it != member_list.End()) {
+                            fbom::FBOMLoadContext context;
                             fbom::FBOMData data;
-                            json::ParseResult json_parse_result = ParseJSON(attribute.second, data);
+                            json::ParseResult json_parse_result = ParseJSON(context, attribute.second, data);
 
                             if (!json_parse_result.ok) {
                                 // Set data as string if JSON parsing failed
@@ -583,7 +585,7 @@ public:
                                     continue;
                                 }
 
-                                hyp_field->Deserialize(target_value, data);
+                                hyp_field->Deserialize(context, target_value, data);
 
                                 break;
                             }
@@ -597,7 +599,7 @@ public:
                                     continue;
                                 }
 
-                                hyp_property->Deserialize(target_value, data);
+                                hyp_property->Deserialize(context, target_value, data);
 
                                 break;
                             }

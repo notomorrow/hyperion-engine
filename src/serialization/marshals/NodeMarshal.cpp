@@ -62,7 +62,7 @@ public:
         return { FBOMResult::FBOM_OK };
     }
 
-    virtual FBOMResult Deserialize(const FBOMObject &in, HypData &out) const override
+    virtual FBOMResult Deserialize(fbom::FBOMLoadContext &context, const FBOMObject &in, HypData &out) const override
     {
         Node::Type node_type = Node::Type::NODE;
 
@@ -72,7 +72,7 @@ public:
 
         Node::NodeTagSet tags;
 
-        if (FBOMResult err = HypData::Deserialize(in.GetProperty("Tags"), tags)) {
+        if (FBOMResult err = HypData::Deserialize(context, in.GetProperty("Tags"), tags)) {
             return err;
         }
 
@@ -90,7 +90,7 @@ public:
             return { FBOMResult::FBOM_ERR, "Unsupported node type" }; 
         }
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(in, node->InstanceClass(), AnyRef(*node))) {
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, node->InstanceClass(), AnyRef(*node))) {
             return err;
         }
         
@@ -98,9 +98,9 @@ public:
             node->AddTag(std::move(tag));
         }
 
-        for (FBOMObject &subobject : *in.nodes) {
-            if (subobject.GetType().IsOrExtends("Node")) {
-                node->AddChild(subobject.m_deserialized_object->Get<NodeProxy>());
+        for (const FBOMObject &child : in.GetChildren()) {
+            if (child.GetType().IsOrExtends("Node")) {
+                node->AddChild(child.m_deserialized_object->Get<NodeProxy>());
             }
         }
 
