@@ -89,7 +89,11 @@ void main()
     const vec3 position = ReconstructWorldSpacePositionFromDepth(projection_inverse, view_inverse, uv, depth).xyz;
     const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
     const float roughness = material_data.r;
-    const float perceptual_roughness = sqrt(roughness);
+
+    if (roughness > rt_radiance_uniforms.min_roughness) {
+        imageStore(image, storage_coord, vec4(0.0));
+        return;
+    }
 
     const vec3 V = normalize(camera.position.xyz - position);
     const vec3 R = normalize(reflect(-V, normal));
@@ -147,7 +151,8 @@ void main()
         color += hit.payload.color;
     }
 
-    color.a = 1.0;
+    // interpolate alpha based on roughness compared to minimum roughness needed for reflection
+    color.a = 1.0 - smoothstep(0.0, rt_radiance_uniforms.min_roughness, roughness);
 
     imageStore(image, storage_coord, color);
 }

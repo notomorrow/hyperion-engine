@@ -68,7 +68,8 @@ void main()
 {
     uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
     vec2 pixel_size = 1.0 / vec2(screen_resolution);
-    vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
+    //vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
+    vec2 texcoord = v_texcoord;
     uvec2 pixel_coord = uvec2(texcoord * (vec2(screen_resolution) - 1.0) + 0.5);
 
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
