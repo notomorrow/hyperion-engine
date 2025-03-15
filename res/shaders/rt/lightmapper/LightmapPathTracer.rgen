@@ -61,7 +61,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvPr
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = std430) buffer HitsBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, HitsBuffer, standard = std140) buffer HitsBuffer
 {
     vec4    hits[512 * 512];
 };
@@ -72,7 +72,7 @@ struct LightmapRay
     vec4    direction;
 };
 
-HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = std430) readonly buffer RaysBuffer
+HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, RaysBuffer, standard = std140) readonly buffer RaysBuffer
 {
     LightmapRay ray_data[512 * 512];
 };
@@ -82,9 +82,16 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
     RTRadianceUniforms  rt_radiance_uniforms;
 };
 
+#ifdef MODE_IRRADIANCE
 #define RAY_OFFSET 0.005
-#define NUM_SAMPLES 4
 #define NUM_BOUNCES 4
+
+#define NUM_SAMPLES 4
+#else
+#define RAY_OFFSET 0.0005
+#define NUM_BOUNCES 1
+#define NUM_SAMPLES 1
+#endif
 
 // uncomment to see the actual object colors
 //#define DEBUG_TEST

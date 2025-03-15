@@ -144,10 +144,10 @@ ivec2 GetEnvProbeLightFieldOffset(ivec3 probe_grid_position)
 vec2 GetEnvProbeLightFieldUV(ivec3 probe_grid_position, vec3 N)
 {
     vec2 oct_coord = EncodeOctahedralCoord(normalize(N)) * 0.5 + 0.5;
-    oct_coord *= vec2(env_grid.irradiance_octahedron_size) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+    oct_coord *= vec2(env_grid.irradiance_octahedron_size + 2) / vec2(env_grid.light_field_image_dimensions);
 
     ivec2 offset_coord = GetEnvProbeLightFieldOffset(probe_grid_position);
-    vec2 offset_uv = vec2(offset_coord) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+    vec2 offset_uv = vec2(offset_coord) / vec2(env_grid.light_field_image_dimensions);
 
     return offset_uv + oct_coord;
 }
@@ -184,6 +184,7 @@ vec3 SampleEnvProbe(uint env_probe_index, vec3 N)
 #endif
 }
 
+// @TODO: Optimize me - entire EnvProbe object being copied with each struct member being copied as a separate instruction.
 vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
 {
     int base_probe_index_at_point = int(GetLocalEnvProbeIndex(env_grid, P));
@@ -232,6 +233,8 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
         float distance_to_probe = length(probe_to_point);
         vec3 dir = normalize(-probe_to_point);
 
+        vec3 color = vec3(0.0);
+
 #if ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
         // backface test
         weight *= max(0.05, dot(N, dir));
@@ -250,7 +253,9 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
 
         weight *= trilinear.x * trilinear.y * trilinear.z;
 
-        total_irradiance += SampleEnvProbe(neighbor_probe_index, N) * weight;
+        color = SampleEnvProbe(neighbor_probe_index, N);
+
+        total_irradiance += color * weight;
         total_weight += weight;
     }
 

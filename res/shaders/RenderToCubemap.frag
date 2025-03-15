@@ -54,7 +54,9 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #ifdef MODE_REFLECTION
     #define LIGHTING
     #define SHADOWS
-    // #define TONEMAP
+#endif
+
+#ifdef MODE_AMBIENT
 #endif
 
 #ifdef TONEMAP
