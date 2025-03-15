@@ -3,7 +3,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define WORKGROUP_SIZE 32
+#define WORKGROUP_SIZE 8
 
 layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 
@@ -63,6 +63,8 @@ HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shado
 HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
 
 #include "../include/shadows.inc"
+
+#define LIGHTING
 
 vec2 NormalizeOctahedralCoord(uvec2 local_coord)
 {
@@ -135,9 +137,10 @@ vec4 ConvoleProbe(uvec2 local_coord)
 
         vec4 albedo = TextureCube(sampler_linear, color_texture, sample_dir);
 
+#ifdef LIGHTING
         // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
 
-        vec4 irradiance = albedo * 0.2;
+        vec4 irradiance = albedo * 0.1;
 
         vec4 radiance = vec4(0.0);
         
@@ -147,7 +150,11 @@ vec4 ConvoleProbe(uvec2 local_coord)
             radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
         }
 
-        vec4 color = irradiance + radiance * albedo;//mix(irradiance + radiance * albedo, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
+        vec4 color = mix(irradiance + radiance * albedo, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
+#else
+        vec4 color = albedo;
+#endif
+
         sum_radiance += color;
     }
 

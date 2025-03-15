@@ -170,6 +170,9 @@ void main()
         vec4 reflections_color = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord);
         ibl = ibl * (1.0 - reflections_color.a) + (reflections_color.rgb * reflections_color.a);
 
+        vec4 rt_radiance = Texture2D(HYP_SAMPLER_NEAREST, rt_radiance_final, texcoord);
+        ibl = ibl * (1.0 - rt_radiance.a) + (rt_radiance.rgb * rt_radiance.a);
+
         vec3 spec = (ibl * mix(dfg.xxx, dfg.yyy, F0)) * energy_compensation;
 
         vec4 gbuffer_albedo_lightmap = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_lightmap_texture, texcoord);
