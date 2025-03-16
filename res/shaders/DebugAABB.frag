@@ -57,13 +57,14 @@ HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_
 HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
 
+#include "include/object.inc"
+
 #ifdef IMMEDIATE_MODE
 
 #include "include/brdf.inc"
 #include "deferred/DeferredLighting.glsl"
 
 #else
-#include "include/object.inc"
 
 HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
@@ -114,7 +115,7 @@ void main() {
 
 #ifdef IMMEDIATE_MODE
     gbuffer_albedo = vec4(v_color.rgb, 1.0);
-    gbuffer_mask = UINT_TO_VEC4(0x400);
+    gbuffer_mask = UINT_TO_VEC4(OBJECT_MASK_DEBUG);
 
     if (v_probe_id != 0 && v_probe_type == ENV_PROBE_TYPE_REFLECTION) {
         const vec3 N = normal;
