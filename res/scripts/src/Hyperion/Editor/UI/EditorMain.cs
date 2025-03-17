@@ -92,9 +92,9 @@ namespace Hyperion
                 base.Init(entity);
 
                 // // test
-                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-                // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
-                // editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
+                editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
             }
 
             public override void OnPlayStart()
