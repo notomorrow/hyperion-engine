@@ -19,17 +19,17 @@ HYP_DESCRIPTOR_SRV(Global, DepthPyramidResult) uniform texture2D depth_pyramid;
 #include "../include/scene.inc"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object entities[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer ScenesBuffer
 {
     Scene scene;
 };
@@ -101,7 +101,7 @@ float GetDepthAtTexel(vec2 texcoord, int mip)
 void main()
 {
     const uint id = gl_GlobalInvocationID.x;
-    const uint index = id;//push_constants.batch_offset + id;
+    const uint index = id;
 
     if (id >= push_constants.num_instances) {
         return;
