@@ -28,6 +28,8 @@ HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SRV(Global, DeferredDirectResultTexture) uniform texture2D deferred_direct_texture;
+HYP_DESCRIPTOR_SRV(Global, DeferredResult) uniform texture2D gbuffer_deferred_result;
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
@@ -115,8 +117,10 @@ void main(void)
         roughness = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord).r;
         roughness = clamp(roughness, 0.001, 0.999);
 
+        const float perceptual_roughness = sqrt(roughness);
+
         const float gloss = 1.0 - roughness;
-        const float cone_angle = RoughnessToConeAngle(roughness) * 0.5;
+        const float cone_angle = RoughnessToConeAngle(perceptual_roughness) * 0.5;
 
         const float trace_size = float(max(ssr_params.dimension.x, ssr_params.dimension.y));
         const float max_mip_level = 9.0;
@@ -136,6 +140,8 @@ void main(void)
 
         vec4 accum_color = vec4(0.0);
 
+        vec2 velocity = Texture2D(sampler_nearest, gbuffer_velocity_texture, texcoord).xy;
+
 #ifdef CONE_TRACING
         for (int i = 0; i < 14; i++) {
             const float opposite_length = IsoscelesTriangleOpposite(adjacent_length, cone_angle);
@@ -143,12 +149,14 @@ void main(void)
             const vec2 sample_position = texcoord + adjacent_unit * (adjacent_length - incircle_size);
 
             const float mip_level = clamp(log2(/*current_radius*/ incircle_size * max(ssr_image_dimensions.x, ssr_image_dimensions.y)), 0.0, max_mip_level);
+
+            vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_mip_chain, clamp(hit_uv - velocity, vec2(0.0), vec2(1.0)), mip_level);
 #else
             const float current_radius = length((hit_uv - texcoord) * vec2(ssr_params.dimension.xy)) * tan(cone_angle);
             const float mip_level = clamp(log2(current_radius), 0.0, max_mip_level);
-#endif
 
-            vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_mip_chain, hit_uv, mip_level);
+            vec4 current_reflection_sample = Texture2DLod(sampler_linear, gbuffer_deferred_result, clamp(hit_uv - velocity, vec2(0.0), vec2(1.0)), mip_level);
+#endif
 
 #ifdef CONE_TRACING
             current_reflection_sample.rgb *= vec3(gloss_multiplier);

@@ -202,7 +202,7 @@ void main()
     }
 
     vec3 direct_lighting = vec3(0.0);
-    vec3 indirect_lighting = vec3(0.2);
+    vec3 indirect_lighting = vec3(0.02);
 
     for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
         const Light light = HYP_GET_LIGHT(light_index);
