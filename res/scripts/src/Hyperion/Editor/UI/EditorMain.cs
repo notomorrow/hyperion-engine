@@ -1,6 +1,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using Hyperion;
 
 namespace Hyperion
@@ -29,30 +30,53 @@ namespace Hyperion
             }
         }
 
-        public class TestEditorDebugOverlay : EditorDebugOverlayBase
+        public class FPSCounterDebugOverlay : EditorDebugOverlayBase
         {
-            public TestEditorDebugOverlay()
+            private static readonly List<KeyValuePair<int, Color>> fpsColors = new List<KeyValuePair<int, Color>>
             {
+                new KeyValuePair<int, Color>(30, new Color(1.0f, 0.0f, 0.0f, 1.0f)),
+                new KeyValuePair<int, Color>(60, new Color(1.0f, 1.0f, 0.0f, 1.0f)),
+                new KeyValuePair<int, Color>(int.MaxValue, new Color(0.0f, 1.0f, 0.0f, 1.0f))
+            };
+
+            private UIText? tpsTextElement;
+            private UIText? fpsTextElement;
+            private float deltaAccumGame = 0.0f;
+            private int numTicksGame = 0;
+            private World world;
+
+            public FPSCounterDebugOverlay(World world)
+            {
+                this.world = world;
             }
 
             public override UIObject CreateUIObject(UIObject spawnParent)
             {
-                var panel = spawnParent.Spawn<UIPanel>(new Name("TestEditorDebugOverlay"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 100), UIObjectSize.Pixel));
-                panel.SetBackgroundColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                var panel = spawnParent.Spawn<UIPanel>(new Name("FPSCounterDebugOverlay_Panel"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                panel.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
 
-                var text = panel.Spawn<UIText>(new Name("TestEditorDebugOverlayText"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
-                text.SetText("Test Editor Debug Overlay");
-                text.SetTextSize(16);
-                text.SetTextColor(new Color(0.0f, 0.0f, 0.0f, 1.0f));
+                UIText fpsTextElement = panel.Spawn<UIText>(new Name("FPSCounterDebugOverlay_FPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                fpsTextElement.SetText("Render:");
+                fpsTextElement.SetTextSize(10);
+                fpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                panel.AddChildUIObject(fpsTextElement);
 
-                panel.AddChildUIObject(text);
+                this.fpsTextElement = fpsTextElement;
+
+                UIText tpsTextElement = panel.Spawn<UIText>(new Name("FPSCounterDebugOverlay_TPS"), new Vec2i(400, 0), new UIObjectSize(UIObjectSize.Auto));
+                tpsTextElement.SetText("Game:");
+                tpsTextElement.SetTextSize(10);
+                tpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                panel.AddChildUIObject(tpsTextElement);
+
+                this.tpsTextElement = tpsTextElement;
 
                 return panel;
             }
 
             public override Name GetName()
             {
-                return new Name("TestEditorDebugOverlay");
+                return new Name("FPSCounterDebugOverlay");
             }
 
             public override bool IsEnabled()
@@ -60,8 +84,47 @@ namespace Hyperion
                 return true;
             }
 
-            public override void Update()
+            public override void Update(float delta)
             {
+                deltaAccumGame += delta;
+                numTicksGame++;
+
+                if (deltaAccumGame >= 1.0f)
+                {
+                    if (tpsTextElement != null)
+                    {
+                        int ticksPerSecondGame = (int)(1.0f / (deltaAccumGame / (float)numTicksGame));
+
+                        ((UIText)tpsTextElement).SetText(string.Format("Game: {0} ticks/sec", ticksPerSecondGame));
+                        tpsTextElement.SetTextColor(GetFPSColor(ticksPerSecondGame));
+                    }
+
+                    deltaAccumGame = 0.0f;
+                    numTicksGame = 0;
+                }
+
+                if (fpsTextElement != null)
+                {
+                    var renderStats = world.GetRenderStats();
+
+                    ((UIText)fpsTextElement).SetText(string.Format("Render: {0} frames/sec, {1:0.00} ms/frame (avg: {2:0.00}, min: {3:0.00}, max: {4:0.00})",
+                        (int)renderStats.framesPerSecond, renderStats.millisecondsPerFrame,
+                        renderStats.millisecondsPerFrameAvg, renderStats.millisecondsPerFrameMin, renderStats.millisecondsPerFrameMax));
+                    fpsTextElement.SetTextColor(GetFPSColor((int)renderStats.framesPerSecond));
+                }
+            }
+
+            private static Color GetFPSColor(int fps)
+            {
+                for (int i = 0; i < fpsColors.Count; i++)
+                {
+                    if (fps <= fpsColors[i].Key)
+                    {
+                        return fpsColors[i].Value;
+                    }
+                }
+
+                return fpsColors[fpsColors.Count - 1].Value;
             }
         }
 
@@ -88,7 +151,7 @@ namespace Hyperion
                 return true;
             }
 
-            public override void Update()
+            public override void Update(float delta)
             {
             }
         }
@@ -103,8 +166,16 @@ namespace Hyperion
 
                 // // test
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-                editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay());
+                editorSubsystem.AddDebugOverlay(new FPSCounterDebugOverlay(World));
                 editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
+            }
+
+            public override void Destroy()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                editorSubsystem.RemoveDebugOverlay(new Name("TestEditorDebugOverlay", weak: true));
+                editorSubsystem.RemoveDebugOverlay(new Name("TestEditorDebugOverlay2", weak: true));
             }
 
             public override void OnPlayStart()
