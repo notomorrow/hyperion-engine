@@ -23,7 +23,7 @@
       "enabled": false
     },
     "taa": {
-      "enabled": true
+      "enabled": false
     },
     "debug": {
       "env_grid_probes": false,
