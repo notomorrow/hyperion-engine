@@ -153,6 +153,7 @@ void main(void)
 
     const vec4 material_info = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
     const float roughness = material_info.r;
+    const float perceptual_roughness = sqrt(roughness);
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
 
     if (depth > 0.99999) {
@@ -184,7 +185,7 @@ void main(void)
     vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
-    vec3 H = ImportanceSampleGGX(rnd, N, roughness);
+    vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
     H = tangent * H.x + bitangent * H.y + N * H.z;
 
     vec3 ray_direction = reflect(-V, normalize((view * vec4(H, 0.0)).xyz));
