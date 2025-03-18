@@ -22,7 +22,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
-HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba8) uniform image2D image;
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba16f) uniform image2D image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -72,7 +72,7 @@ void main()
 {
     const ivec2 resolution = rt_radiance_uniforms.output_image_resolution;
     
-    const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(scene.frame_counter & 1);
+    const int pixel_index = int(gl_LaunchIDEXT.x);//int(gl_LaunchIDEXT.x * 2) + int(scene.frame_counter & 1);
 
     const ivec2 storage_coord = ivec2(
         pixel_index % resolution.x,
@@ -95,12 +95,14 @@ void main()
         return;
     }
 
+    const float perceptual_roughness = sqrt(roughness);
+
     const vec3 V = normalize(camera.position.xyz - position);
     const vec3 R = normalize(reflect(-V, normal));
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
-    const float tmin = 0.25;
+    const float tmin = 0.05;
     const float tmax = 10000.0;
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), scene.frame_counter % 256);
@@ -126,7 +128,7 @@ void main()
     vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
-    vec3 H = ImportanceSampleGGX(rnd, normal, roughness);
+    vec3 H = ImportanceSampleGGX(rnd, normal, perceptual_roughness);
     H = tangent * H.x + bitangent * H.y + normal * H.z;
 
     direction = H;
