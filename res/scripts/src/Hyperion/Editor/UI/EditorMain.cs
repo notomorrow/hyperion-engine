@@ -37,7 +37,17 @@ namespace Hyperion
 
             public override UIObject CreateUIObject(UIObject spawnParent)
             {
-                return spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 100), UIObjectSize.Pixel));
+                var panel = spawnParent.Spawn<UIPanel>(new Name("TestEditorDebugOverlay"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 100), UIObjectSize.Pixel));
+                panel.SetBackgroundColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+
+                var text = panel.Spawn<UIText>(new Name("TestEditorDebugOverlayText"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                text.SetText("Test Editor Debug Overlay");
+                text.SetTextSize(16);
+                text.SetTextColor(new Color(0.0f, 0.0f, 0.0f, 1.0f));
+
+                panel.AddChildUIObject(text);
+
+                return panel;
             }
 
             public override Name GetName()
