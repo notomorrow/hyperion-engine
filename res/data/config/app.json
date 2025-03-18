@@ -3,7 +3,7 @@
     "ssr": {
       "num_iterations": 64,
       "eye_fade": [0.980000, 0.999000],
-      "ray_step": 1.000000,
+      "ray_step": 1,
       "screen_edge_fade": [0.980000, 0.990000],
       "quality": 1,
       "roughness_scattering": true,
@@ -12,7 +12,7 @@
     },
     "rt": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "path_tracer": {
         "enabled": false
@@ -20,13 +20,13 @@
       "gi": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": true
     },
     "debug": {
-      "env_grid_probes": true,
+      "env_grid_probes": false,
       "reflection_probes": false,
       "ssr": false,
       "reflections": false,
