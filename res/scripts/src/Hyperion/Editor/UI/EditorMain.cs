@@ -57,7 +57,7 @@ namespace Hyperion
 
                 UIText fpsTextElement = panel.Spawn<UIText>(new Name("FPSCounterDebugOverlay_FPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 fpsTextElement.SetText("Render:");
-                fpsTextElement.SetTextSize(10);
+                fpsTextElement.SetTextSize(12);
                 fpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 panel.AddChildUIObject(fpsTextElement);
 
@@ -65,7 +65,7 @@ namespace Hyperion
 
                 UIText tpsTextElement = panel.Spawn<UIText>(new Name("FPSCounterDebugOverlay_TPS"), new Vec2i(400, 0), new UIObjectSize(UIObjectSize.Auto));
                 tpsTextElement.SetText("Game:");
-                tpsTextElement.SetTextSize(10);
+                tpsTextElement.SetTextSize(12);
                 tpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 panel.AddChildUIObject(tpsTextElement);
 
