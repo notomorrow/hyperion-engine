@@ -180,7 +180,7 @@ void main()
     }
 
     if (is_visible) {
-        const uint instance_index = atomicAdd(indirect_draw_commands[draw_command_index].instance_count, 1u);
+        const uint instance_index = atomicAdd(indirect_draw_commands[draw_command_index].instance_count, 1u);//entity_instance_batches[object_instance.batch_index].num_entities);
 
         if (instance_index < MAX_ENTITIES_PER_INSTANCE_BATCH) {
             atomicExchange(

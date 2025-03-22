@@ -40,7 +40,9 @@ namespace Hyperion
             };
 
             private UIText? tpsTextElement;
+            private UIText? memoryUsageTextElement;
             private UIText? fpsTextElement;
+            private UIText? countersTextElement;
             private float deltaAccumGame = 0.0f;
             private int numTicksGame = 0;
             private World world;
@@ -52,24 +54,52 @@ namespace Hyperion
 
             public override UIObject CreateUIObject(UIObject spawnParent)
             {
-                var panel = spawnParent.Spawn<UIPanel>(new Name("FPSCounterDebugOverlay_Panel"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                UIListView panel = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_Panel"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 0, UIObjectSize.Auto));
                 panel.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
 
-                UIText fpsTextElement = panel.Spawn<UIText>(new Name("FPSCounterDebugOverlay_FPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                UIListView renderListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_RenderListView"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 15, UIObjectSize.Pixel));
+                renderListView.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
+                renderListView.SetOrientation(UIListViewOrientation.Horizontal);
+
+                UIText fpsTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_FPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 fpsTextElement.SetText("Render:");
                 fpsTextElement.SetTextSize(12);
                 fpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                panel.AddChildUIObject(fpsTextElement);
-
+                fpsTextElement.SetPadding(new Vec2i(5, 5));
+                renderListView.AddChildUIObject(fpsTextElement);
                 this.fpsTextElement = fpsTextElement;
 
-                UIText tpsTextElement = panel.Spawn<UIText>(new Name("FPSCounterDebugOverlay_TPS"), new Vec2i(400, 0), new UIObjectSize(UIObjectSize.Auto));
+                UIText countersTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_Counters"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                countersTextElement.SetText("draw calls: 0, Tris: 0");
+                countersTextElement.SetTextSize(12);
+                countersTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                countersTextElement.SetPadding(new Vec2i(5, 5));
+                renderListView.AddChildUIObject(countersTextElement);
+                this.countersTextElement = countersTextElement;
+
+                panel.AddChildUIObject(renderListView);
+
+                UIListView gameListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_GameListView"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 15, UIObjectSize.Pixel));
+                gameListView.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
+                gameListView.SetOrientation(UIListViewOrientation.Horizontal);
+
+                UIText tpsTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_TPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 tpsTextElement.SetText("Game:");
                 tpsTextElement.SetTextSize(12);
                 tpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                panel.AddChildUIObject(tpsTextElement);
-
+                tpsTextElement.SetPadding(new Vec2i(5, 5));
+                gameListView.AddChildUIObject(tpsTextElement);
                 this.tpsTextElement = tpsTextElement;
+
+                UIText memoryUsageTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_MemoryUsage"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                memoryUsageTextElement.SetText(".NET Memory Usage: 0 MB");
+                memoryUsageTextElement.SetTextSize(12);
+                memoryUsageTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                memoryUsageTextElement.SetPadding(new Vec2i(5, 5));
+                gameListView.AddChildUIObject(memoryUsageTextElement);
+                this.memoryUsageTextElement = memoryUsageTextElement;
+
+                panel.AddChildUIObject(gameListView);
 
                 return panel;
             }
@@ -99,18 +129,31 @@ namespace Hyperion
                         tpsTextElement.SetTextColor(GetFPSColor(ticksPerSecondGame));
                     }
 
+                    if (memoryUsageTextElement != null)
+                    {
+                        long memoryUsage = GC.GetTotalMemory(false) / 1024 / 1024;
+
+                        ((UIText)memoryUsageTextElement).SetText(string.Format(".NET Memory Usage: {0} MB", memoryUsage));
+                    }
+
                     deltaAccumGame = 0.0f;
                     numTicksGame = 0;
                 }
 
+                var renderStats = world.GetRenderStats();
+
                 if (fpsTextElement != null)
                 {
-                    var renderStats = world.GetRenderStats();
-
                     ((UIText)fpsTextElement).SetText(string.Format("Render: {0} frames/sec, {1:0.00} ms/frame (avg: {2:0.00}, min: {3:0.00}, max: {4:0.00})",
                         (int)renderStats.framesPerSecond, renderStats.millisecondsPerFrame,
                         renderStats.millisecondsPerFrameAvg, renderStats.millisecondsPerFrameMin, renderStats.millisecondsPerFrameMax));
                     fpsTextElement.SetTextColor(GetFPSColor((int)renderStats.framesPerSecond));
+                }
+
+                if (countersTextElement != null)
+                {
+                    ((UIText)countersTextElement).SetText(string.Format("draw calls: {0}, Tris: {1}",
+                        renderStats.counts.drawCalls, renderStats.counts.triangles));
                 }
             }
 
@@ -132,6 +175,11 @@ namespace Hyperion
         {
             public TestEditorDebugOverlay2()
             {
+            }
+
+            ~TestEditorDebugOverlay2()
+            {
+                Logger.Log(LogType.Debug, "TestEditorDebugOverlay2 destructed");
             }
 
             public override UIObject CreateUIObject(UIObject spawnParent)
