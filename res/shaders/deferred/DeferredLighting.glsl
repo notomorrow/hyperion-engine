@@ -318,14 +318,14 @@ vec4 CalculatePathTracing(DeferredParams deferred_params, vec2 uv)
 #endif
 
 #ifdef RT_REFLECTIONS_ENABLED
-void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inout vec3 reflections)
+void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inout vec4 reflections)
 {
     const bool enabled = bool(deferred_params.flags & DEFERRED_FLAGS_RT_RADIANCE_ENABLED);
 
     vec4 rt_radiance = Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
     rt_radiance *= float(enabled);
 
-    reflections = mix(reflections, rt_radiance.rgb, rt_radiance.a);
+    reflections = reflections * (1.0 - rt_radiance.a) + (vec4(rt_radiance.rgb, 1.0) * rt_radiance.a);
 }
 #endif
 #endif
