@@ -62,7 +62,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 4
+#define SAMPLE_COUNT 1
 
 void main()
 {
@@ -120,8 +120,16 @@ void main()
     }
 #else
 
+    vec2 blue_noise_sample = vec2(
+        SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 0),
+        SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1)
+    );
+
+    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
+    const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
+
     for (int i = 0; i < SAMPLE_COUNT; i++) {
-        vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
+        // vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
 
         vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
         H = tangent * H.x + bitangent * H.y + N * H.z;

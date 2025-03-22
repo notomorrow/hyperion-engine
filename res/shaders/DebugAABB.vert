@@ -13,8 +13,8 @@ layout(location=15) out flat uint v_object_index;
 
 #ifdef IMMEDIATE_MODE
 layout(location=16) out vec4 v_color;
-layout(location=17) out flat uint v_probe_id;
-layout(location=18) out flat uint v_probe_type;
+layout(location=17) out flat uint v_env_probe_index;
+layout(location=18) out flat uint v_env_probe_type;
 #endif
 
 HYP_ATTRIBUTE(0) vec3 a_position;
@@ -43,8 +43,8 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(DebugDrawerDescriptorSet, ImmediateDrawsBuffer, size
     mat4 model_matrix;
 
     uint color_packed;
-    uint probe_type;
-    uint probe_id;
+    uint env_probe_type;
+    uint env_probe_index;
     uint _pad2;
 };
 
@@ -89,12 +89,12 @@ void main()
     v_object_index = ~0u; // unused
     v_color = UINT_TO_VEC4(color_packed);
 
-    v_probe_id = probe_id;
-    v_probe_type = probe_type;
+    v_env_probe_type = env_probe_type;
+    v_env_probe_index = env_probe_index;
 
-    if (probe_id != 0 && probe_type == ENV_PROBE_TYPE_AMBIENT)
+    if (env_probe_index != ~0u && env_probe_type == ENV_PROBE_TYPE_AMBIENT)
     {
-        const int storage_index = env_probes[probe_id - 1].position_in_grid.w * 9;
+        const int storage_index = env_probes[env_probe_index].position_in_grid.w * 9;
 
         SH9 sh9;
 

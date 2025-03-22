@@ -16,8 +16,8 @@ layout(location=12) in vec4 v_previous_position_ndc;
 layout(location=15) in flat uint v_object_index;
 #ifdef IMMEDIATE_MODE
 layout(location=16) in vec4 v_color;
-layout(location=17) in flat uint v_probe_id;
-layout(location=18) in flat uint v_probe_type;
+layout(location=17) in flat uint v_env_probe_index;
+layout(location=18) in flat uint v_env_probe_type;
 #endif
 
 layout(location=0) out vec4 gbuffer_albedo;
@@ -117,7 +117,7 @@ void main() {
     gbuffer_albedo = vec4(v_color.rgb, 1.0);
     gbuffer_mask = UINT_TO_VEC4(OBJECT_MASK_DEBUG);
 
-    if (v_probe_id != 0 && v_probe_type == ENV_PROBE_TYPE_REFLECTION) {
+    if (v_env_probe_index != ~0u && v_env_probe_type == ENV_PROBE_TYPE_REFLECTION) {
         const vec3 N = normal;
         const vec3 V = normalize(camera.position.xyz - v_position.xyz);
 
@@ -126,10 +126,10 @@ void main() {
         const vec3 R = reflect(-V, N);
 
         ApplyReflectionProbe(
-            env_probes[v_probe_id - 1].texture_index,
-            env_probes[v_probe_id - 1].world_position.xyz,
-            env_probes[v_probe_id - 1].aabb_min.xyz,
-            env_probes[v_probe_id - 1].aabb_max.xyz,
+            env_probes[v_env_probe_index].texture_index,
+            env_probes[v_env_probe_index].world_position.xyz,
+            env_probes[v_env_probe_index].aabb_min.xyz,
+            env_probes[v_env_probe_index].aabb_max.xyz,
             v_position.xyz,
             R,
             0.0,
