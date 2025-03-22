@@ -38,22 +38,29 @@ HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, ProbeRayData) buffer ProbeRayDataBuffer
     ProbeRayData probe_rays[];
 };
 
+HYP_DESCRIPTOR_SSBO(DDGIDescriptorSet, LightsBuffer) readonly buffer LightsBuffer
+{
+    Light lights[];
+};
+
 #include "../../include/rt/probe/shared.inc"
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer SceneBuffer
 {
     Scene scene;
 };
 
 HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer, size = 131072) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer, size = 147456) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe, size = 512) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 
-#define MAX_RECURSION 2
+#define HYP_GET_LIGHT(index) \
+    lights[probe_system.light_indices[(index / 4)][index % 4]]
+
 #define RAY_OFFSET 1.0
 #define NUM_SAMPLES 1
 
@@ -80,7 +87,7 @@ void main()
     
     uint flags = gl_RayFlagsOpaqueEXT;
     uint mask = 0xff;
-    float tmin = 0.01;
+    float tmin = 0.2;
     float tmax = 10000.0;
     
     payload.color = vec4(0.0);
@@ -100,6 +107,19 @@ void main()
             uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
 
             ray_data.color = TextureCube(sampler_linear, env_probe_textures[probe_texture_index], direction);
+        }
+
+        for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
+            const Light light = HYP_GET_LIGHT(light_index);
+
+            if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL) {
+                continue;
+            }
+
+            const vec3 L = normalize(light.position_intensity.xyz);
+
+            const float cos_theta = max(dot(direction, L), 0.0);
+            ray_data.color += UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w * cos_theta;
         }
     }
 

@@ -80,11 +80,14 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
+#define DDGI_MULTIPLIER 1.5
+
 void main()
 {
     vec4 albedo = Texture2D(sampler_nearest, gbuffer_albedo_texture, texcoord);
     uint mask = VEC4_TO_UINT(Texture2D(sampler_nearest, gbuffer_mask_texture, texcoord));
     vec3 normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord));
+    vec3 ws_normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_ws_normals_texture, texcoord));
 
     float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
@@ -121,40 +124,40 @@ void main()
     const vec3 E = CalculateE(F0, dfg);
     const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-    vec4 reflections_color = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord);
-    ibl = ibl * (1.0 - reflections_color.a) + (reflections_color.rgb * reflections_color.a);
+    ibl = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord).rgb;
 
     vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
-    ibl = ibl * (1.0 - env_grid_radiance.a) + (env_grid_radiance.rgb * env_grid_radiance.a);
+    reflections = reflections * (1.0 - env_grid_radiance.a) + (vec4(env_grid_radiance.rgb, 1.0) * env_grid_radiance.a);
 
     irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_GRID_MULTIPLIER;
 
 #ifdef RT_REFLECTIONS_ENABLED
-    CalculateRaytracingReflection(deferred_params, texcoord, ibl);
+    CalculateRaytracingReflection(deferred_params, texcoord, reflections);
 #endif
 
 #ifdef RT_GI_ENABLED
-    irradiance += DDGISampleIrradiance(position.xyz, N, V).rgb * 3.5;
+    irradiance += DDGISampleIrradiance(position.xyz, ws_normal, V).rgb * DDGI_MULTIPLIER;
 #endif
 
 #ifdef HBIL_ENABLED
     CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 #endif
 
-    // vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
+    vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
 
-    // vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
-    // specular_ao *= energy_compensation;
+    vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
+    specular_ao *= energy_compensation;
 
-    // vec3 Fr = ibl * E * specular_ao;
+    vec3 Fr = ibl * E * specular_ao;
 
-    // vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
-    // Fd *= multibounce;
-    // Fr *= multibounce;
+    vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
+    Fd *= multibounce;
+    Fr *= multibounce;
 
-    vec3 spec = (ibl * mix(dfg.xxx, dfg.yyy, F0)) * energy_compensation;
+    reflections.rgb *= specular_ao;
+    Fr = Fr * (1.0 - reflections.a) + (E * reflections.rgb);
 
-    result = kD * (irradiance * albedo.rgb / HYP_FMATH_PI) + spec;//Fd + Fr;
+    result = Fd + Fr;
 
 #ifdef PATHTRACER
     result = CalculatePathTracing(deferred_params, texcoord).rgb;

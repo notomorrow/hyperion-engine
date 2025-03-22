@@ -70,7 +70,7 @@ void main()
     vec2 pixel_size = 1.0 / vec2(screen_resolution);
     //vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
     vec2 texcoord = v_texcoord;
-    uvec2 pixel_coord = uvec2(texcoord * (vec2(screen_resolution) - 1.0) + 0.5);
+    uvec2 pixel_coord = uvec2(texcoord * vec2(screen_resolution) - 0.5);
 
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
     const vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord)));
@@ -80,8 +80,9 @@ void main()
 
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); 
     const float roughness = material.r;
+    const float perceptual_roughness = sqrt(roughness);
 
-    const float lod = HYP_FMATH_SQR(roughness) * 9.0;
+    const float lod = float(9.0) * roughness * (2.0 - roughness);
 
     vec4 ibl = vec4(0.0);
 
@@ -91,8 +92,8 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
-    float phi = InterleavedGradientNoise((texcoord * vec2(screen_resolution) - 0.5));
-        //SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1);
+#if 1
+    float phi = InterleavedGradientNoise(vec2(pixel_coord));
 
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         vec2 rnd = VogelDisk(i, SAMPLE_COUNT, phi);
@@ -117,6 +118,32 @@ void main()
 
         ibl += sample_ibl;
     }
+#else
+
+    for (int i = 0; i < SAMPLE_COUNT; i++) {
+        vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
+
+        vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
+        H = tangent * H.x + bitangent * H.y + N * H.z;
+
+        vec3 dir = normalize(2.0 * dot(V, H) * H - V);
+
+        vec4 sample_ibl = vec4(0.0);
+
+        ApplyReflectionProbe(
+            current_env_probe.texture_index,
+            current_env_probe.world_position.xyz,
+            current_env_probe.aabb_min.xyz,
+            current_env_probe.aabb_max.xyz,
+            P,
+            dir,
+            lod,
+            sample_ibl
+        );
+
+        ibl += sample_ibl;
+    }
+#endif
 
     color_output = ibl * (1.0 / float(SAMPLE_COUNT));
 }
