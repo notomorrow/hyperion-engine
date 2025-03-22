@@ -1,13 +1,13 @@
 {
   "rendering": {
     "ssr": {
-      "num_iterations": 64,
+      "num_iterations": 128,
       "eye_fade": [0.980000, 0.999000],
-      "ray_step": 1,
+      "ray_step": 0.1,
       "screen_edge_fade": [0.980000, 0.990000],
-      "quality": 2,
+      "quality": 1,
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": false
     },
     "rt": {
@@ -20,10 +20,10 @@
       "gi": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
-      "enabled": false
+      "enabled": true
     },
     "debug": {
       "env_grid_probes": false,
@@ -43,7 +43,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       }
     },
     "hbao": {

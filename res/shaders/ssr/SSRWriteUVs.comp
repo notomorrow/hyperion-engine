@@ -169,7 +169,7 @@ void main(void)
 
     vec3 tangent;
     vec3 bitangent;
-    ComputeOrthonormalBasis(N, tangent, bitangent);
+    ComputeOrthonormalBasis(view_space_normal, tangent, bitangent);
 
     const vec2 texel_size = vec2(1.0) / vec2(ssr_params.dimension.xy);
     const float texel_size_max = max(texel_size.x, texel_size.y);
@@ -185,12 +185,12 @@ void main(void)
     vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
-    vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
-    H = tangent * H.x + bitangent * H.y + N * H.z;
+    vec3 H = ImportanceSampleGGX(rnd, view_space_normal, perceptual_roughness);
+    H = tangent * H.x + bitangent * H.y + view_space_normal * H.z;
 
-    vec3 ray_direction = reflect(-V, normalize((view * vec4(H, 0.0)).xyz));
+    vec3 ray_direction = reflect(-V, H);
 
-    ray_origin = P + ray_direction * 0.01;
+    ray_origin = P + ray_direction * 1.25;
 #else
     vec3 ray_direction = reflect(-V, view_space_normal);
 #endif

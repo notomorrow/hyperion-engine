@@ -83,7 +83,7 @@ namespace Hyperion
 
                 panel.AddChildUIObject(renderListView);
 
-                UIListView gameListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_GameListView"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 15, UIObjectSize.Pixel));
+                UIListView gameListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_GameListView"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 0, UIObjectSize.Auto));
                 gameListView.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
                 gameListView.SetOrientation(UIListViewOrientation.Horizontal);
 
