@@ -18,7 +18,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       },
       "enabled": true
     },
@@ -43,7 +43,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       }
     },
     "hbao": {
