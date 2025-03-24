@@ -62,7 +62,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 4
+#define SAMPLE_COUNT 1
 
 void main()
 {
@@ -92,7 +92,7 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
-#if 0
+#if 1
     float phi = InterleavedGradientNoise(vec2(pixel_coord));
 
     for (int i = 0; i < SAMPLE_COUNT; i++) {
