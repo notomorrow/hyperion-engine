@@ -110,12 +110,7 @@ namespace Hyperion
                 button.SetBorderRadius(0);
                 button.SetBackgroundColor(new Color(0));
 
-                // Testing
-                HypField? onAttachedField = button.HypClass.GetField(new Name("OnAttached", weak: true));
-                Assert.Throw(onAttachedField != null);
-                IntPtr onAttachedFieldAddress = button.NativeAddress + (IntPtr)((HypField)onAttachedField).Offset;
-                ScriptableDelegate del = new ScriptableDelegate(onAttachedFieldAddress);
-                del.Bind(new TempClass());
+                button.GetOnAttachedDelegate().Bind(new TempClass());
                 
                 return button;
             }
