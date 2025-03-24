@@ -13,7 +13,7 @@
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_MULTIPLIER 1.0
-#define ENV_GRID_MULTIPLIER 3.1415
+#define ENV_GRID_MULTIPLIER 5.0
 
 struct DeferredParams
 {
@@ -143,8 +143,16 @@ ivec2 GetEnvProbeLightFieldOffset(ivec3 probe_grid_position)
 
 vec2 GetEnvProbeLightFieldUV(ivec3 probe_grid_position, vec3 N)
 {
+    // vec2 oct_coord = EncodeOctahedralCoord(normalize(N)) * 0.5 + 0.5;
+    // oct_coord *= vec2(env_grid.irradiance_octahedron_size - 1) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+
+    // ivec2 offset_coord = GetEnvProbeLightFieldOffset(probe_grid_position);
+    // vec2 offset_uv = vec2(offset_coord) / vec2(env_grid.light_field_image_dimensions - ivec2(2));
+
+    // return offset_uv + oct_coord;
+
     vec2 oct_coord = EncodeOctahedralCoord(normalize(N)) * 0.5 + 0.5;
-    oct_coord *= vec2(env_grid.irradiance_octahedron_size + 2) / vec2(env_grid.light_field_image_dimensions);
+    oct_coord *= vec2(env_grid.irradiance_octahedron_size) / vec2(env_grid.light_field_image_dimensions);
 
     ivec2 offset_coord = GetEnvProbeLightFieldOffset(probe_grid_position);
     vec2 offset_uv = vec2(offset_coord) / vec2(env_grid.light_field_image_dimensions);
