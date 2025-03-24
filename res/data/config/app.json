@@ -33,7 +33,7 @@
       "path_tracer": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false
+      "irradiance": true
     },
     "hbil": {
       "enabled": false
