@@ -38,7 +38,7 @@ HYP_DESCRIPTOR_UAV(VoxelizeProbeDescriptorSet, OutVoxelGridImage, format = rgba8
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer { EnvGrid env_grid; };
 
-HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
 
 layout(push_constant) uniform PushConstant
 {
@@ -79,7 +79,7 @@ void DoPixel(uint _unused, uvec3 coord)
 
 void DoPixel(uint probe_index, uvec3 coord)
 {
-    EnvProbe env_probe = env_probes[probe_index % HYP_MAX_ENV_PROBES];
+    EnvProbe env_probe = env_probes[probe_index];
 
     ivec3 voxel_storage_position;
 
