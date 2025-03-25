@@ -27,7 +27,7 @@ HYP_DESCRIPTOR_UAV(VoxelizeProbeDescriptorSet, OutVoxelGridImage, format = rgba8
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer { EnvGrid env_grid; };
 
-HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[HYP_MAX_ENV_PROBES]; };
+HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
 
 layout(push_constant) uniform PushConstant
 {
@@ -45,7 +45,7 @@ void main(void)
 {
     const uint probe_index = probe_grid_position.w;
 
-    EnvProbe env_probe = env_probes[probe_index % HYP_MAX_ENV_PROBES];
+    EnvProbe env_probe = env_probes[probe_index];
 
     const ivec3 size_of_probe_in_voxel_grid = ivec3(voxel_texture_dimensions) / ivec3(env_grid.density.xyz);
 
