@@ -333,7 +333,7 @@ void CalculateRaytracingReflection(DeferredParams deferred_params, vec2 uv, inou
     vec4 rt_radiance = Texture2DLod(sampler_linear, rt_radiance_final, uv, 0.0);
     rt_radiance *= float(enabled);
 
-    reflections = reflections * (1.0 - rt_radiance.a) + (vec4(rt_radiance.rgb, 1.0) * rt_radiance.a);
+    reflections = reflections * (1.0 - rt_radiance.a) + vec4(rt_radiance.rgb, 1.0) * rt_radiance.a;
 }
 #endif
 #endif

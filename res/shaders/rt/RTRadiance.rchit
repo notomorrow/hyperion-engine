@@ -206,9 +206,9 @@ void main()
         metalness = metalness_sample;
     }
 
-    const float ambient = 0.02;
+    const float ambient = 0.2;
 
-    vec4 indirect_lighting = material_color * vec4(vec3(1.0 - metalness) * vec3(ambient), 1.0);
+    vec4 indirect_lighting = material_color * (1.0 - metalness) * ambient;
 
     vec4 direct_lighting = vec4(0.0);
 
@@ -233,7 +233,7 @@ void main()
             local_light *= GetShadowStandard(light.shadow_map_index, position.xyz);
         }
 
-        direct_lighting += material_color * vec4(local_light.rgb, 1.0);
+        direct_lighting += material_color * local_light;
     }
     
     payload.color = indirect_lighting + direct_lighting;

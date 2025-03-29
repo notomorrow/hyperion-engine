@@ -12,15 +12,15 @@
     },
     "rt": {
       "reflections": {
-        "enabled": false
+        "enabled": true
       },
       "path_tracer": {
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
       "enabled": false
