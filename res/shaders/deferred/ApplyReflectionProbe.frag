@@ -154,4 +154,5 @@ void main()
 #endif
 
     color_output = ibl * (1.0 / float(SAMPLE_COUNT));
+    color_output.a = 1.0;
 }

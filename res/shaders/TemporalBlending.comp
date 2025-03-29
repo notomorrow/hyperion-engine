@@ -11,7 +11,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 #ifndef OUTPUT_FORMAT
     #if defined(OUTPUT_RGBA8)
         #define OUTPUT_FORMAT rgba8
-        // #define TEMPORAL_BLENDING_REVERSE_TONEMAP;//TEMPORAL_BLENDING_GAMMA_CORRECTION
+        #define TEMPORAL_BLENDING_GAMMA_CORRECTION
     #elif defined(OUTPUT_RGBA16F)
         #define OUTPUT_FORMAT rgba16f
     #elif defined(OUTPUT_RGBA32F)
@@ -53,7 +53,7 @@ HYP_DESCRIPTOR_UAV(TemporalBlendingDescriptorSet, OutImage, format = rgba16f) un
 #include "./include/shared.inc"
 #include "./include/scene.inc"
 
-#define TEMPORAL_BLENDING_USE_YCoCg
+//#define TEMPORAL_BLENDING_USE_YCoCg
 
 #if TEMPORAL_BLEND_TECHNIQUE == 0
     #undef ADJUST_COLOR_HDR
@@ -64,12 +64,12 @@ HYP_DESCRIPTOR_UAV(TemporalBlendingDescriptorSet, OutImage, format = rgba16f) un
 #include "./include/Temporal.glsl"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer SceneBuffer
 {
     Scene scene;
 };
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CameraShaderData
 {
     Camera camera;
 };
