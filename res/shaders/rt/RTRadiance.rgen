@@ -22,7 +22,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #define HYP_SAMPLER_LINEAR sampler_linear
 
 HYP_DESCRIPTOR_ACCELERATION_STRUCTURE(RTRadianceDescriptorSet, TLAS) uniform accelerationStructureEXT tlas;
-HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba16f) uniform image2D image;
+HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba8) uniform image2D image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -32,6 +32,7 @@ HYP_DESCRIPTOR_UAV(RTRadianceDescriptorSet, OutputImage, format = rgba16f) unifo
 #include "../include/packing.inc"
 #include "../include/noise.inc"
 #include "../include/brdf.inc"
+#include "../include/env_probe.inc"
 
 /// Blue noise
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
@@ -56,6 +57,12 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CameraShaderData
     Camera camera;
 };
 
+HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+
 #include "../include/rt/RTRadiance.inc"
 #include "../include/rt/payload.inc"
 
@@ -66,7 +73,7 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
 
 layout(location = 0) rayPayloadEXT RayPayload payload;
 #define RAY_OFFSET 0.25
-#define NUM_SAMPLES 1
+#define NUM_SAMPLES 4
 
 void main() 
 {
@@ -90,10 +97,10 @@ void main()
     const vec4 material_data = Texture2DLod(sampler_nearest, gbuffer_material_texture, uv, 0.0);
     const float roughness = material_data.r;
 
-    // if (roughness > rt_radiance_uniforms.min_roughness) {
-    //     imageStore(image, storage_coord, vec4(0.0));
-    //     return;
-    // }
+    if (roughness > rt_radiance_uniforms.min_roughness) {
+        imageStore(image, storage_coord, vec4(0.0));
+        return;
+    }
 
     const float perceptual_roughness = sqrt(roughness);
 
@@ -102,7 +109,7 @@ void main()
 
     const uint flags = gl_RayFlagsOpaqueEXT;
     const uint mask = 0xff;
-    const float tmin = 0.05;
+    const float tmin = 0.01;
     const float tmax = 10000.0;
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), scene.frame_counter % 256);
@@ -114,11 +121,6 @@ void main()
     vec3 tangent;
     vec3 bitangent;
     ComputeOrthonormalBasis(normal, tangent, bitangent);
-
-    //const float r1 = RandomFloat(ray_seed);
-    //const float r2 = RandomFloat(ray_seed);
-
-    //vec3 H = ImportanceSampleGTR2(perceptual_roughness, r1, r2);
 
     vec2 blue_noise_sample = vec2(
         SampleBlueNoise(storage_coord.x, storage_coord.y, 0, 0),
@@ -134,8 +136,22 @@ void main()
     direction = H;
     direction = reflect(-V, direction);
 
+    // direction = normalize(RandomInHemisphere(
+    //     vec3(RandomFloat(ray_seed), RandomFloat(ray_seed), RandomFloat(ray_seed)),
+    //     normal
+    // ));
+    // direction = reflect(-V, direction);
+
     vec3 origin = position + direction * RAY_OFFSET;
-        
+
+    // // Sample env probe in direction of normal
+    // payload.irradiance = vec4(0.0);
+    // if (current_env_probe.texture_index != ~0u) {
+    //     uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+
+    //     payload.irradiance += TextureCubeLod(sampler_linear, env_probe_textures[probe_texture_index], normal, 9.0);
+    // }
+    
     traceRayEXT(tlas, flags, mask, 0, 0, 0, origin, tmin, direction, tmax, 0);
 
     if (payload.distance < 0.0) {
@@ -153,8 +169,10 @@ void main()
         color += hit.payload.color;
     }
 
+    color = clamp(color, vec4(0.0), vec4(1.0));
+
     // interpolate alpha based on roughness compared to minimum roughness needed for reflection
-    //color.a *= 1.0 - smoothstep(0.0, rt_radiance_uniforms.min_roughness, roughness);
+    color.a = 1.0 - (roughness / rt_radiance_uniforms.min_roughness);
 
     imageStore(image, storage_coord, color);
 }
