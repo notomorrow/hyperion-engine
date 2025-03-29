@@ -102,7 +102,6 @@ void main()
     float ao = 1.0;
     vec3 irradiance = vec3(0.0);
     vec4 reflections = vec4(0.0);
-    vec3 ibl = vec3(0.0);
     vec3 F = vec3(0.0);
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, v_texcoord0);
@@ -124,7 +123,7 @@ void main()
     const vec3 E = CalculateE(F0, dfg);
     const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-    ibl = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord).rgb;
+    reflections = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord);
 
     vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
     reflections = reflections * (1.0 - env_grid_radiance.a) + (vec4(env_grid_radiance.rgb, 1.0) * env_grid_radiance.a);
@@ -148,7 +147,7 @@ void main()
     vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
     specular_ao *= energy_compensation;
 
-    vec3 Fr = ibl * E * specular_ao;
+    vec3 Fr = vec3(1.0);
 
     vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
     Fd *= multibounce;
@@ -162,7 +161,7 @@ void main()
 #ifdef PATHTRACER
     result = CalculatePathTracing(deferred_params, texcoord).rgb;
 #elif defined(DEBUG_REFLECTIONS)
-    result = ibl.rgb;
+    result = reflections.rgb;
 #elif defined(DEBUG_IRRADIANCE)
     result = irradiance.rgb;
 #endif
