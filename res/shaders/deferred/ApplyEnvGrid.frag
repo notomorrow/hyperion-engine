@@ -39,7 +39,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer Sce
 #define ENV_GRID_IRRADIANCE_MODE_VOXEL 1
 #define ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD 2
 
-#define ENV_GRID_IRRADIANCE_MODE ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD //ENV_GRID_IRRADIANCE_MODE_SH
+#define ENV_GRID_IRRADIANCE_MODE ENV_GRID_IRRADIANCE_MODE_SH // ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
 
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 
@@ -78,7 +78,8 @@ void main()
 {
     uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
     vec2 pixel_size = 1.0 / vec2(screen_resolution);
-    vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
+    vec2 texcoord = v_texcoord;
+    // vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
     uvec2 pixel_coord = uvec2(texcoord * (vec2(screen_resolution) - 1.0) + 0.5);
 
     vec3 irradiance = vec3(0.0);
