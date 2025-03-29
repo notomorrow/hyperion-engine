@@ -33,7 +33,10 @@
       "path_tracer": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false
+      "irradiance": false,
+      "debug_drawer": {
+        "enabled": true
+      }
     },
     "hbil": {
       "enabled": false

@@ -80,7 +80,7 @@ void main()
     vec2 pixel_size = 1.0 / vec2(screen_resolution);
     vec2 texcoord = v_texcoord;
     // vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
-    uvec2 pixel_coord = uvec2(texcoord * (vec2(screen_resolution) - 1.0) + 0.5);
+    uvec2 pixel_coord = uvec2(texcoord * vec2(screen_resolution) - 0.5);
 
     vec3 irradiance = vec3(0.0);
 
