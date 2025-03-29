@@ -35,12 +35,6 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer, size = 256) readonly buffer Sce
 #include "../include/brdf.inc"
 #include "../include/aabb.inc"
 
-#define ENV_GRID_IRRADIANCE_MODE_SH 0
-#define ENV_GRID_IRRADIANCE_MODE_VOXEL 1
-#define ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD 2
-
-#define ENV_GRID_IRRADIANCE_MODE ENV_GRID_IRRADIANCE_MODE_SH // ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
-
 #define HYP_DEFERRED_NO_RT_RADIANCE // temp
 
 #include "../include/env_probe.inc"
@@ -54,7 +48,7 @@ HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_
 
 #include "./DeferredLighting.glsl"
 
-#if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
+#if defined(MODE_RADIANCE) || defined(IRRADIANCE_MODE_VOXEL)
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
@@ -92,7 +86,7 @@ void main()
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse_proj, inverse_view, texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
 
-#if defined(MODE_RADIANCE) || ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
+#if defined(MODE_RADIANCE) || defined(IRRADIANCE_MODE_VOXEL)
     const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); 
     const float roughness = material.r;
 
@@ -102,7 +96,7 @@ void main()
 #endif
 
 #if defined(MODE_IRRADIANCE)
-#if ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_VOXEL
+#if defined(IRRADIANCE_MODE_VOXEL)
     irradiance = ComputeVoxelIrradiance(P, N, pixel_coord, screen_resolution, scene.frame_counter, ivec3(env_grid.density.xyz), voxel_grid_aabb).rgb;
 #else
     irradiance = CalculateEnvGridIrradiance(P, N, V);
