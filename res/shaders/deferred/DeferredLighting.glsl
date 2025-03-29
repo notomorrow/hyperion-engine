@@ -183,9 +183,9 @@ vec3 SampleEnvProbe_LightField(uint env_probe_index, vec3 N)
 
 vec3 SampleEnvProbe(uint env_probe_index, vec3 N)
 {
-#if ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_SH
+#if defined(IRRADIANCE_MODE_SH)
     return SampleEnvProbe_SH(env_probe_index, N);
-#elif ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
+#elif defined(IRRADIANCE_MODE_LIGHT_FIELD)
     return SampleEnvProbe_LightField(env_probe_index, N);
 #else
     return vec3(0.0);
@@ -243,7 +243,7 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
 
         vec3 color = vec3(0.0);
 
-#if ENV_GRID_IRRADIANCE_MODE == ENV_GRID_IRRADIANCE_MODE_LIGHT_FIELD
+#ifdef IRRADIANCE_MODE_LIGHT_FIELD
         // backface test
         weight *= max(0.05, dot(N, dir));
 
