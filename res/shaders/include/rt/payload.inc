@@ -4,7 +4,7 @@ struct RayPayload
 	float distance;
 	vec3 normal;
 	float roughness;
-#if defined(PATHTRACER) || defined(LIGHTMAPPER)
+#if defined(PATHTRACER) || defined(LIGHTMAPPER) || defined(DDGI)
 	vec4 throughput;
 	vec4 emissive;
 	vec4 beta;

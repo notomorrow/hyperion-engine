@@ -7,12 +7,12 @@
       "screen_edge_fade": [0.980000, 0.990000],
       "quality": 1,
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": false
     },
     "rt": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "path_tracer": {
         "enabled": false
@@ -27,7 +27,7 @@
     },
     "debug": {
       "env_grid_probes": false,
-      "reflection_probes": false,
+      "reflection_probes": true,
       "ssr": false,
       "reflections": false,
       "path_tracer": false,
@@ -46,7 +46,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       }
     },
     "hbao": {

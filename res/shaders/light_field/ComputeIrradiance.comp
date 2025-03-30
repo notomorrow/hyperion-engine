@@ -112,7 +112,7 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
 vec4 ConvoleProbe(uvec2 local_coord)
 {
     const int num_samples = 1024;
-    const float lobe_size = 0.1;
+    const float lobe_size = 0.98;
 
     const vec2 oct_coord = NormalizeOctahedralCoord(local_coord);
     const vec3 dir = DecodeOctahedralCoord(oct_coord);
@@ -137,7 +137,7 @@ vec4 ConvoleProbe(uvec2 local_coord)
 
 #ifdef LIGHTING
         // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
-        vec4 irradiance = SampleSky(normal) * albedo * 0.1;
+        vec4 irradiance = SampleSky(normal) * albedo * 0.02;
 
         vec4 radiance = vec4(0.0);
         

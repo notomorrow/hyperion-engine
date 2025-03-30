@@ -181,7 +181,7 @@ void main()
                     }
 
                     const float cos_theta = max(dot(direction, normalize(light.position_intensity.xyz)), 0.0);
-                    bounces[bounce_index].emissive += /*UINT_TO_VEC4(light.color_encoded) **/ vec4(1.0) * light.position_intensity.w * cos_theta;
+                    bounces[bounce_index].emissive += UINT_TO_VEC4(light.color_encoded) * vec4(1.0) * light.position_intensity.w * cos_theta;
                 }
 
                 ++num_bounces;

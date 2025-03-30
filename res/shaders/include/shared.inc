@@ -187,7 +187,7 @@ vec4 TextureCube(sampler samp, textureCube tex, vec3 texcoord)
 
 vec4 TextureCubeLod(sampler samp, textureCube tex, vec3 texcoord, float lod)
 {
-    return texture(samplerCube(tex, samp), texcoord, lod);
+    return textureLod(samplerCube(tex, samp), texcoord, lod);
 }
 
 #endif
