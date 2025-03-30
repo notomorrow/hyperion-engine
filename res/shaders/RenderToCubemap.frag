@@ -49,12 +49,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/packing.inc"
 #include "include/brdf.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.05
-
-#ifdef MODE_AMBIENT
-    // #define LIGHTING
-    // #define SHADOWS
-#endif
+#define HYP_CUBEMAP_AMBIENT 0.025
 
 #ifdef MODE_REFLECTION
     #define LIGHTING
@@ -105,7 +100,7 @@ HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 #endif
 #else
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer MaterialsBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 {
     Material material;
 };
@@ -233,7 +228,7 @@ void main()
         direct_lighting += direct_component * (light_color.rgb * NdotL * shadow * light.position_intensity.w * attenuation);
     }
 
-    output_color.rgb += indirect_lighting + direct_lighting;
+    output_color.rgb = indirect_lighting + direct_lighting;
 #else
     output_color.rgb = albedo.rgb;
 

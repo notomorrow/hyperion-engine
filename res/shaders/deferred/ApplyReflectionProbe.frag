@@ -82,7 +82,7 @@ void main()
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
-    const float lod = float(9.0) * roughness * (2.0 - roughness);
+    const float lod = HYP_FMATH_SQR(roughness) * 12.0;//float(9.0) * roughness * (2.0 - roughness);
 
     vec4 ibl = vec4(0.0);
 
