@@ -5,6 +5,8 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_buffer_reference : require
 
+#define DDGI
+
 #define HYP_NO_CUBEMAP
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
@@ -230,7 +232,8 @@ void main()
         direct_lighting += local_light;
     }
 
-    payload.color = vec4((material_color.rgb * direct_lighting) + (material_color.rgb * indirect_lighting), material_color.a);
+    payload.throughput = material_color;//vec4((material_color.rgb * direct_lighting) + (material_color.rgb * indirect_lighting), material_color.a);
+    payload.emissive = vec4(0.0);
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;
     payload.roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
