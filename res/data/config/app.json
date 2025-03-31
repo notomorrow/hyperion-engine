@@ -12,20 +12,23 @@
     },
     "rt": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "path_tracer": {
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": false
     },
     "debug": {
+      "debug_drawer": {
+        "enabled": true
+      },
       "env_grid_probes": false,
       "reflection_probes": true,
       "ssr": false,
@@ -33,10 +36,7 @@
       "path_tracer": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false,
-      "debug_drawer": {
-        "enabled": true
-      }
+      "irradiance": false
     },
     "hbil": {
       "enabled": false
@@ -46,7 +46,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       }
     },
     "hbao": {
