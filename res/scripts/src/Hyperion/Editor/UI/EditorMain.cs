@@ -50,10 +50,6 @@ namespace Hyperion
             public FPSCounterDebugOverlay(World world)
             {
                 this.world = world;
-
-                Logger.Log(LogType.Debug, "Engine.Instance = {0}", Engine.Instance);
-                Logger.Log(LogType.Debug, "Engine.Instance.GetWorld() = {0}", Engine.Instance.GetWorld());
-                Logger.Log(LogType.Debug, "Engine.Instance.GetDefaultWorld() = {0}", Engine.Instance.GetDefaultWorld());
             }
 
             public override UIObject CreateUIObject(UIObject spawnParent)

@@ -62,7 +62,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 8
+#define SAMPLE_COUNT 1
 
 void main()
 {
@@ -82,7 +82,7 @@ void main()
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
-    const float lod = HYP_FMATH_SQR(roughness) * 12.0;//float(9.0) * roughness * (2.0 - roughness);
+    const float lod = float(12.0) * roughness * (2.0 - roughness);
 
     vec4 ibl = vec4(0.0);
 
@@ -154,5 +154,4 @@ void main()
 #endif
 
     color_output = ibl * (1.0 / float(SAMPLE_COUNT));
-    color_output.a = 1.0;
 }

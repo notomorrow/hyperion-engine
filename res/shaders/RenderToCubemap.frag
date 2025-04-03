@@ -49,18 +49,14 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/packing.inc"
 #include "include/brdf.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.025
+#define HYP_CUBEMAP_AMBIENT 0.1
 
 #ifdef MODE_REFLECTION
     #define LIGHTING
     #define SHADOWS
 #endif
 
-#ifdef TONEMAP
-    #include "include/tonemap.inc"
-#endif
-
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
+HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 {
     ShadowMap shadow_map_data[16];
 };
@@ -122,8 +118,6 @@ void main()
     vec3 N = normalize(v_normal);
     vec3 R = reflect(-V, N);
 
-    const float min_extent = min(abs(v_env_probe_extent.x), min(abs(v_env_probe_extent.y), abs(v_env_probe_extent.z))) * 0.5;
-
     vec4 albedo = CURRENT_MATERIAL.albedo;
 
     vec2 texcoord = v_texcoord0 * CURRENT_MATERIAL.uv_scale;
@@ -176,7 +170,7 @@ void main()
 #endif
 
 #ifdef LIGHTING
-    const vec4 light_color = unpackUnorm4x8(light.color_encoded);
+    vec4 light_color = UINT_TO_VEC4(light.color_encoded);
 
     const vec3 H = normalize(L + V);
 
@@ -225,7 +219,7 @@ void main()
 
         vec3 direct_component = diffuse + specular * energy_compensation;
 
-        direct_lighting += direct_component * (light_color.rgb * NdotL * shadow * light.position_intensity.w * attenuation);
+        direct_lighting += direct_component * (light_color.rgb * NdotL * shadow * attenuation * light.position_intensity.w);
     }
 
     output_color.rgb = indirect_lighting + direct_lighting;
@@ -235,10 +229,6 @@ void main()
     #ifdef SHADOWS
         output_color.rgb *= shadow;
     #endif
-#endif
-
-#ifdef TONEMAP
-    output_color.rgb = pow(output_color.rgb, vec3(1.0 / 2.2));
 #endif
 
     output_color.a = 1.0;

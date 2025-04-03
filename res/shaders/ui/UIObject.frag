@@ -79,10 +79,9 @@ void main()
     vec4 ui_color = CURRENT_MATERIAL.albedo;
 
     if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
-        // ivec2 texture_size = textureSize(sampler2D(GET_TEXTURE(MATERIAL_TEXTURE_ALBEDO_map), texture_sampler), 0);
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
         
-        ui_color *= albedo_texture;
+        ui_color = albedo_texture;
     }
     
     // rounded corners
