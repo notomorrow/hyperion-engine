@@ -30,7 +30,7 @@
         "enabled": true
       },
       "env_grid_probes": false,
-      "reflection_probes": true,
+      "reflection_probes": false,
       "ssr": false,
       "reflections": false,
       "path_tracer": false,

@@ -182,6 +182,9 @@ void main()
 
     vec4 result = mix(deferred_result, translucent_result, bvec4(bool(object_mask & (OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT | OBJECT_MASK_DEBUG))));
     result.a = 1.0;
-
     color_output = result;
+
+    // // temp
+    // color_output = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
+
 }
