@@ -171,39 +171,6 @@ namespace Hyperion
             }
         }
 
-        public class TestEditorDebugOverlay2 : EditorDebugOverlayBase
-        {
-            public TestEditorDebugOverlay2()
-            {
-            }
-
-            ~TestEditorDebugOverlay2()
-            {
-                Logger.Log(LogType.Debug, "TestEditorDebugOverlay2 destructed");
-            }
-
-            public override UIObject CreateUIObject(UIObject spawnParent)
-            {
-                var image = spawnParent.Spawn<UIImage>(new Name("TestEditorDebugOverlay2"), new Vec2i(0, 0), new UIObjectSize(new Vec2i(100, 50), UIObjectSize.Pixel));
-                image.SetBackgroundColor(new Color(1.0f, 0.0f, 0.0f, 1.0f));
-                return image;
-            }
-
-            public override Name GetName()
-            {
-                return new Name("TestEditorDebugOverlay2");
-            }
-
-            public override bool IsEnabled()
-            {
-                return true;
-            }
-
-            public override void Update(float delta)
-            {
-            }
-        }
-
         public class EditorMain : UIEventHandler
         {
             FirstPersonCameraController? firstPersonCameraController;
@@ -215,7 +182,6 @@ namespace Hyperion
                 // // test
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
                 editorSubsystem.AddDebugOverlay(new FPSCounterDebugOverlay(World));
-                editorSubsystem.AddDebugOverlay(new TestEditorDebugOverlay2());
             }
 
             public override void Destroy()
@@ -223,7 +189,6 @@ namespace Hyperion
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
                 editorSubsystem.RemoveDebugOverlay(new Name("TestEditorDebugOverlay", weak: true));
-                editorSubsystem.RemoveDebugOverlay(new Name("TestEditorDebugOverlay2", weak: true));
             }
 
             public override void OnPlayStart()
