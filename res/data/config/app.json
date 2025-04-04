@@ -12,15 +12,15 @@
     },
     "rt": {
       "reflections": {
-        "enabled": true
+        "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       },
       "path_tracer": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": false
@@ -61,12 +61,12 @@
     "name": "HyperionEditor"
   },
   "lightmapper": {
-    "radiance": true,
-    "max_rays_per_frame": 100000,
-    "ideal_triangles_per_job": 4096,
-    "trace_mode": 0,
     "num_threads_per_job": 4,
-    "irradiance": true,
-    "num_samples": 32
+    "num_samples": 32,
+    "ideal_triangles_per_job": 4096,
+    "radiance": true,
+    "trace_mode": 0,
+    "max_rays_per_frame": 100000,
+    "irradiance": true
   }
 }
