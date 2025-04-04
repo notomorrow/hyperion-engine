@@ -12,15 +12,15 @@
     },
     "rt": {
       "reflections": {
-        "enabled": false
+        "enabled": true
+      },
+      "gi": {
+        "enabled": true
       },
       "path_tracer": {
         "enabled": false
       },
-      "gi": {
-        "enabled": false
-      },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
       "enabled": false
@@ -46,7 +46,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       }
     },
     "hbao": {
@@ -57,16 +57,16 @@
     }
   },
   "app": {
-    "name": "HyperionEditor",
-    "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace"
+    "args": "-ResX=1920 -ResY=1080 -Profile=false -TraceURL=http://localhost:8000/trace",
+    "name": "HyperionEditor"
   },
   "lightmapper": {
-    "num_threads_per_job": 4,
-    "num_samples": 32,
-    "ideal_triangles_per_job": 4096,
-    "trace_mode": 0,
     "radiance": true,
     "max_rays_per_frame": 100000,
-    "irradiance": true
+    "ideal_triangles_per_job": 4096,
+    "trace_mode": 0,
+    "num_threads_per_job": 4,
+    "irradiance": true,
+    "num_samples": 32
   }
 }
