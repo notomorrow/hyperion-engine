@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-<Panel name="Main_Panel" position="0 0" size="100%">
+<Panel name="Main_Panel" position="0 0" size="100%" textSize="12">
     <Script assembly="Hyperion.Editor.UI.dll" class="EditorMain" />
-    <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" textSize="12" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
+    <MenuBar name="Main_MenuBar" position="0 0" size="100% 25" originAlignment="topleft" parentAlignment="topleft" padding="5 2" depth="1">
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New"></MenuItem>
             <MenuItem name="Open_MenuItem" text="Open"></MenuItem>
@@ -17,7 +17,7 @@
         <MenuItem name="Test_MenuItem" text="Test" size="auto 100%"></MenuItem>
     </MenuBar>
 
-    <Panel name="Main_Toolbar" position="0 25" size="100% 40" textSize="10">
+    <Panel name="Main_Toolbar" position="0 25" size="100% 40">
         <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="10">
             Build Lightmaps
         </Button>
@@ -34,7 +34,7 @@
                         </Button>
                         <Textbox name="Scene_Outline_Filter" size="fill auto" position="50 0" placeholder="Filter..."></Textbox>
                     </Panel>
-                    <ListView name="Scene_Outline_ListView" position="0 35" size="100% fill" textSize="12" />
+                    <ListView name="Scene_Outline_ListView" position="0 35" size="100% fill" />
                 </Tab>
             </TabView>
         </Panel>
@@ -42,7 +42,7 @@
         <Panel name="Right_Panel" size="200 100%" padding="5 0" side="right">
             <TabView size="100% 25" size="100%">
                 <Tab name="Details_Tab" text="Properties">
-                    <ListView name="Detail_View_ListView" position="0 0" size="100% fill" textSize="12" />
+                    <ListView name="Detail_View_ListView" position="0 0" size="100% fill" />
                 </Tab>
             </TabView>
         </Panel>
@@ -66,11 +66,11 @@
                             <GridColumn size="100%" colsize="2" padding="1">
                                 <Grid size="100%" backgroundColor="#101012">
                                     <GridRow name="Browse_Heading" size="100% 35" backgroundColor="#000000">
-                                        <Text textSize="12" originAlignment="center" parentAlignment="center">Library</Text>
+                                        <Text originAlignment="center" parentAlignment="center">Library</Text>
                                     </GridRow>
                                     <GridRow size="100% fill">
                                         <GridColumn size="auto 100%">
-                                            <ListView name="ContentBrowser_Directory_List" size="100%" textSize="12">
+                                            <ListView name="ContentBrowser_Directory_List" size="100%">
                                             </ListView>
                                         </GridColumn>
                                     </GridRow>
@@ -78,7 +78,7 @@
                             </GridColumn>
                             <GridColumn size="auto 100%" colsize="10" padding="1">
                                 <Panel name="ContentBrowser_Contents_Empty" size="100%" backgroundColor="#101012" visible="false">
-                                    <Text textSize="12" originAlignment="center" parentAlignment="center">No assets found</Text>
+                                    <Text originAlignment="center" parentAlignment="center">No assets found</Text>
                                 </Panel>
 
                                 <Grid name="ContentBrowser_Contents" size="100%" cols="6" backgroundColor="#101012" padding="5" innerSize="100% auto">
