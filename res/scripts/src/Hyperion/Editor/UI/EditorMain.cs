@@ -175,17 +175,48 @@ namespace Hyperion
         {
             FirstPersonCameraController? firstPersonCameraController;
 
+            Scene? testScene;
+
             public override void Init(Entity entity)
             {
                 base.Init(entity);
+
+                Logger.Log(LogType.Info, "EditorMain Init");
+
+                testScene = new Scene();
+                testScene.SetName(new Name("TestScene"));
+                testScene.SetFlags(SceneFlags.Foreground);
+
+                Camera camera = new Camera();
+                camera.SetName(new Name("TestCamera"));
+
+                firstPersonCameraController = new FirstPersonCameraController();
+                // firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
+                camera.AddCameraController(firstPersonCameraController);
+
+                var cameraNode = new Node();
+                cameraNode.SetName("TestCameraNode");
+
+                var cameraEntity = testScene.GetEntityManager().AddEntity();
+                testScene.GetEntityManager().AddComponent<CameraComponent>(cameraEntity, new CameraComponent { Camera = camera });
+                cameraNode.SetEntity(cameraEntity);
+
+                testScene.GetRoot().AddChild(cameraNode);
 
                 // // test
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
                 editorSubsystem.AddDebugOverlay(new FPSCounterDebugOverlay(World));
             }
 
+            ~EditorMain()
+            {
+                Logger.Log(LogType.Info, "EditorMain finalizer");
+            }
+
             public override void Destroy()
             {
+                Logger.Log(LogType.Info, "EditorMain Destroy()");
+
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
                 editorSubsystem.RemoveDebugOverlay(new Name("TestEditorDebugOverlay", weak: true));
@@ -196,11 +227,14 @@ namespace Hyperion
                 Logger.Log(LogType.Info, "OnPlayStart");
 
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                editorSubsystem.GetScene().RemoveFromWorld();
 
-                firstPersonCameraController = new FirstPersonCameraController();
-                editorSubsystem.GetScene().GetCamera().AddCameraController(firstPersonCameraController);
+                // firstPersonCameraController = new FirstPersonCameraController();
+                // editorSubsystem.GetScene().GetPrimaryCamera().AddCameraController(firstPersonCameraController);
 
-                firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
+                // firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
+                ((Scene)testScene).GetRoot().AddChild(editorSubsystem.GetScene().GetRoot());
+                ((Scene)testScene).AddToWorld(World);
             }
 
             public override void OnPlayStop()
@@ -209,12 +243,17 @@ namespace Hyperion
 
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (!editorSubsystem.GetScene().GetCamera().RemoveCameraController(firstPersonCameraController))
-                {
-                    Logger.Log(LogType.Error, "Failed to remove camera controller!");
+                ((Scene)testScene).RemoveFromWorld();
+                editorSubsystem.GetScene().SetRoot(((Scene)testScene).GetRoot().GetChild(0));
 
-                    return;
-                }
+                editorSubsystem.GetScene().AddToWorld(World);
+
+                // if (!editorSubsystem.GetScene().GetPrimaryCamera().RemoveCameraController(firstPersonCameraController))
+                // {
+                //     Logger.Log(LogType.Error, "Failed to remove camera controller!");
+
+                //     return;
+                // }
 
                 firstPersonCameraController = null;
 
