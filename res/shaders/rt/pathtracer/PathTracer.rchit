@@ -215,9 +215,6 @@ void main()
     if (material_index != ~0u) {
         material = materials[material_index];
     }
-
-    const uint32_t entity_index = mesh_description.entity_index;
-    const Object entity = entities[entity_index];
     
     material_color = material.albedo;
 
