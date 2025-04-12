@@ -145,7 +145,6 @@ void main()
         payload.throughput = vec4(1.0); // multiplied be albedo when sampled after bake
         payload.emissive = vec4(0.0);
         payload.triangle_index = ~0u;
-        payload.entity_index = ~0u;
         payload.normal = normal;
 
 #ifdef MODE_IRRADIANCE
