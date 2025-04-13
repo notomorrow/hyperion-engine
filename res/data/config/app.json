@@ -15,12 +15,12 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       },
       "path_tracer": {
         "enabled": false
       },
-      "enabled": false
+      "enabled": true
     },
     "taa": {
       "enabled": false
@@ -36,7 +36,7 @@
       "path_tracer": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": false
+      "irradiance": true
     },
     "hbil": {
       "enabled": false
@@ -46,7 +46,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       }
     },
     "hbao": {
