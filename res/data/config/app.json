@@ -12,7 +12,7 @@
     },
     "rt": {
       "reflections": {
-        "enabled": false
+        "enabled": true
       },
       "gi": {
         "enabled": true
@@ -32,11 +32,11 @@
       "env_grid_probes": false,
       "reflection_probes": false,
       "ssr": false,
-      "reflections": false,
+      "reflections": true,
       "path_tracer": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": true
+      "irradiance": false
     },
     "hbil": {
       "enabled": false
