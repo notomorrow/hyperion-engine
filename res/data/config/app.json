@@ -20,7 +20,7 @@
       "path_tracer": {
         "enabled": false
       },
-      "enabled": true
+      "enabled": false
     },
     "taa": {
       "enabled": false
@@ -36,7 +36,7 @@
       "path_tracer": false,
       "hbil": false,
       "hbao": false,
-      "irradiance": true
+      "irradiance": false
     },
     "hbil": {
       "enabled": false
