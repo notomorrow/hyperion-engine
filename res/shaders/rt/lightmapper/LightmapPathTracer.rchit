@@ -198,9 +198,6 @@ void main()
     if (material_index != ~0u) {
         material = materials[material_index];
     }
-
-    const uint32_t entity_index = mesh_description.entity_index;
-    const Object entity = entities[entity_index];
     
     material_color = material.albedo;
 
@@ -267,7 +264,6 @@ void main()
 
         payload.distance = closest_light_dist;
         payload.emissive = vec4(UINT_TO_VEC4(light.color_encoded) * light.position_intensity.w);
-        payload.entity_index = ~0u;
         payload.triangle_index = ~0u;
         payload.barycentric_coords = vec3(0.0);
         payload.normal = normal;
@@ -278,7 +274,6 @@ void main()
 
     payload.emissive = vec4(0.0);
     payload.throughput = material_color;
-    payload.entity_index = entity_index;
     payload.triangle_index = gl_PrimitiveID;
     payload.barycentric_coords = barycentric_coords;
     payload.distance = gl_HitTEXT;
