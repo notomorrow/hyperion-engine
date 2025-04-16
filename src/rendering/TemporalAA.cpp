@@ -10,6 +10,9 @@
 #include <rendering/RenderTexture.hpp>
 #include <rendering/SafeDeleter.hpp>
 
+#include <rendering/rhi/RHICommandList.hpp>
+
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
@@ -111,10 +114,11 @@ void TemporalAA::CreateImages()
         Vec3u { m_extent.x, m_extent.y, 1 },
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        1,
+        ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
     });
     
-    m_result_texture->SetIsRWTexture(true);
     InitObject(m_result_texture);
 
     m_result_texture->SetPersistentRenderResourceEnabled(true);
@@ -125,10 +129,11 @@ void TemporalAA::CreateImages()
         Vec3u { m_extent.x, m_extent.y, 1 },
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        1,
+        ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
     });
 
-    m_history_texture->SetIsRWTexture(true);
     InitObject(m_history_texture);
 
     m_history_texture->SetPersistentRenderResourceEnabled(true);
@@ -173,36 +178,29 @@ void TemporalAA::CreateComputePipelines()
         descriptor_set->SetElement(NAME("OutColorImage"), (*textures[frame_index % 2])->GetRenderResource().GetImageView());
     }
 
-    DeferCreate(
-        descriptor_table,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(descriptor_table);
 
     m_compute_taa = MakeRenderObject<ComputePipeline>(
         shader,
         descriptor_table
     );
 
-    DeferCreate(
-        m_compute_taa,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(m_compute_taa);
 }
 
-void TemporalAA::Render(Frame *frame)
+void TemporalAA::Render(IFrame *frame)
 {
     HYP_NAMED_SCOPE("Temporal AA");
 
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();
     
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
 
     const ImageRef &active_image = frame->GetFrameIndex() % 2 == 0
         ? m_result_texture->GetRenderResource().GetImage()
         : m_history_texture->GetRenderResource().GetImage();
 
-    active_image->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(active_image, renderer::ResourceState::UNORDERED_ACCESS);
 
     struct alignas(128) {
         Vec2u   dimensions;
@@ -215,23 +213,29 @@ void TemporalAA::Render(Frame *frame)
 
     push_constants.dimensions = m_extent;
     push_constants.depth_texture_dimensions = Vec2u { depth_texture_dimensions.x, depth_texture_dimensions.y };
-    push_constants.camera_near_far = Vec2f { camera_render_resource->GetBufferData().camera_near, camera_render_resource->GetBufferData().camera_far };
+    push_constants.camera_near_far = Vec2f { camera_resource_handle->GetBufferData().camera_near, camera_resource_handle->GetBufferData().camera_far };
 
     m_compute_taa->SetPushConstants(&push_constants, sizeof(push_constants));
-    m_compute_taa->Bind(command_buffer);
+    
+    frame->GetCommandList().Add<BindComputePipeline>(m_compute_taa);
 
-    m_compute_taa->GetDescriptorTable()->Bind(frame, m_compute_taa, { });
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_compute_taa->GetDescriptorTable(),
+        m_compute_taa,
+        ArrayMap<Name, ArrayMap<Name, uint32>> { },
+        frame_index
+    );
 
-    m_compute_taa->Dispatch(
-        command_buffer,
+    frame->GetCommandList().Add<DispatchCompute>(
+        m_compute_taa,
         Vec3u {
             (m_extent.x + 7) / 8,
             (m_extent.y + 7) / 8,
             1
         }
     );
-    
-    active_image->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+
+    frame->GetCommandList().Add<InsertBarrier>(active_image, renderer::ResourceState::SHADER_RESOURCE);
 }
 
 } // namespace hyperion

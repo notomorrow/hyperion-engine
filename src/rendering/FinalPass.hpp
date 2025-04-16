@@ -33,10 +33,6 @@ public:
 
     void CreateShader();
     virtual void Create() override;
-    virtual void Record(uint32 frame_index) override;
-    virtual void Render(Frame *frame) override;
-    virtual void RenderToFramebuffer(Frame *frame, const FramebufferRef &framebuffer) override
-        { HYP_NOT_IMPLEMENTED(); }
 };
 
 class HYP_API FinalPass final : public FullScreenPass
@@ -44,7 +40,7 @@ class HYP_API FinalPass final : public FullScreenPass
 public:
     friend struct RENDER_COMMAND(SetUILayerImageView);
 
-    FinalPass();
+    FinalPass(ISwapchain *swapchain);
     FinalPass(const FinalPass &other)               = delete;
     FinalPass &operator=(const FinalPass &other)    = delete;
     virtual ~FinalPass() override;
@@ -56,13 +52,14 @@ public:
 
     virtual void Create() override;
 
-    virtual void Record(uint32 frame_index) override;
-    virtual void Render(Frame *frame) override;
-    virtual void RenderToFramebuffer(Frame *frame, const FramebufferRef &framebuffer) override
+    virtual void Render(IFrame *frame) override;
+    virtual void RenderToFramebuffer(IFrame *frame, const FramebufferRef &framebuffer) override
         { HYP_NOT_IMPLEMENTED(); }
 
 private:
     virtual void Resize_Internal(Vec2u new_size) override;
+
+    ISwapchain                  *m_swapchain;
 
     UniquePtr<CompositePass>    m_composite_pass;
     ImageRef                    m_last_frame_image;

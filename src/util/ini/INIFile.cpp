@@ -11,8 +11,6 @@
 
 namespace hyperion {
 
-HYP_DEFINE_LOG_SUBCHANNEL(INI, Core);
-
 const INIFile::Element INIFile::Element::empty = { };
 
 INIFile::INIFile(const FilePath &path)
@@ -67,7 +65,7 @@ void INIFile::Parse()
             }
 
             if (section_name.Empty()) {
-                HYP_LOG(INI, Warning, "Empty section name");
+                HYP_LOG(Core, Warning, "Empty section name in INI");
             }
 
             sections.PushBack(Pair<String, Section> { std::move(section_name), { } });
@@ -83,7 +81,7 @@ void INIFile::Parse()
         }
 
         if (split.Size() < 2) {
-            HYP_LOG(INI, Warning, "Line is not in required format (key = value): {}", line_trimmed);
+            HYP_LOG(Core, Warning, "Line is not in required format (key = value): {}", line_trimmed);
 
             continue;
         }
@@ -98,45 +96,37 @@ void INIFile::Parse()
         // split value by commas
         Value value;
 
-        for (auto &item : split[1].Split(',')) {
+        for (String &item : split[1].Split(',')) {
             String item_trimmed = item.Trimmed();
 
             Element element;
 
+            // read sub-elements
+            int parentheses_depth = 0;
+            String sub_element_name;
+
             for (SizeType index = 0; index < item_trimmed.Size(); index++) {
                 if (std::isspace(item_trimmed[index])) {
+                    if (sub_element_name.Any()) {
+                        element.sub_elements.PushBack(std::move(sub_element_name));
+                        sub_element_name.Clear();
+                    }
+
                     continue;
                 }
-
-                // read sub-elements
+                
                 if (item_trimmed[index] == '(') {
-                    ++index;
+                    ++parentheses_depth;
+                } else if (item_trimmed[index] == ')') {
+                    --parentheses_depth;
 
-                    String working_name;
-
-                    while (index < item_trimmed.Size()) {
-                        if (std::isspace(item_trimmed[index])) {
-                            if (working_name.Any()) {
-                                element.sub_elements.PushBack(std::move(working_name));
-                            }
-
-                            ++index;
-                            continue;
-                        }
-
-                        if (item_trimmed[index] == ')') {
-                            ++index;
-                            break;
-                        }
-
-                        working_name += item_trimmed[index];
-
-                        ++index;
+                    if (parentheses_depth == 0 && sub_element_name.Any()) {
+                        DebugLog(LogType::Debug, "Add subelement %s", sub_element_name.Data());
+                        element.sub_elements.PushBack(std::move(sub_element_name));
+                        sub_element_name.Clear();
                     }
-
-                    if (working_name.Any()) {
-                        element.sub_elements.PushBack(std::move(working_name));
-                    }
+                } else if (parentheses_depth > 0) {
+                    sub_element_name += item_trimmed[index];
                 } else if (item_trimmed[index] == '=') {
                     ++index;
 

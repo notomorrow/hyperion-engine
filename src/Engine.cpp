@@ -9,7 +9,6 @@
 #include <rendering/GBuffer.hpp>
 #include <rendering/GPUBufferHolderMap.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/DefaultFormats.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/FinalPass.hpp>
 #include <rendering/RenderWorld.hpp>
@@ -27,6 +26,8 @@
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererDevice.hpp>
+#include <rendering/backend/RendererSwapchain.hpp>
+#include <rendering/backend/RendererFrameHandler.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 
 #include <asset/Assets.hpp>
@@ -68,8 +69,6 @@
 
 namespace hyperion {
 
-HYP_DEFINE_LOG_SUBCHANNEL(RenderThread, Rendering);
-
 using renderer::FillMode;
 using renderer::GPUBufferType;
 
@@ -78,6 +77,17 @@ Handle<AssetManager> g_asset_manager { };
 ShaderManager *g_shader_manager = nullptr;
 MaterialCache *g_material_system = nullptr;
 SafeDeleter *g_safe_deleter = nullptr;
+IRenderingAPI *g_rendering_api = nullptr;
+
+namespace renderer {
+static struct GlobalDescriptorSetsDeclarations
+{
+    GlobalDescriptorSetsDeclarations()
+    {
+#include <rendering/inl/DescriptorSets.inl>
+    }
+} g_global_descriptor_sets_declarations;
+} // namespace renderer
 
 class RenderThread final : public Thread<Scheduler>
 {
@@ -163,7 +173,7 @@ struct RENDER_COMMAND(RecreateSwapchain) : renderer::RenderCommand
         Handle<Engine> engine = engine_weak.Lock();
 
         if (!engine) {
-            HYP_LOG(RenderThread, Warning, "Engine was destroyed before swapchain could be recreated");
+            HYP_LOG(Rendering, Warning, "Engine was destroyed before swapchain could be recreated");
             HYPERION_RETURN_OK;
         }
 
@@ -191,46 +201,6 @@ Engine::Engine()
 
 Engine::~Engine()
 {
-    AssertThrowMsg(m_instance == nullptr, "Engine instance must be destroyed before Engine object is destroyed");
-}
-
-void Engine::FindTextureFormatDefaults()
-{
-    Threads::AssertOnThread(g_render_thread);
-
-    const Device *device = m_instance->GetDevice();
-
-    m_texture_format_defaults.Set(
-        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_COLOR,
-        device->GetFeatures().FindSupportedFormat(
-            { { InternalFormat::RGBA8, InternalFormat::R10G10B10A2, InternalFormat::RGBA16F } },
-            renderer::ImageSupportType::SRV
-        )
-    );
-
-    m_texture_format_defaults.Set(
-        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_DEPTH,
-        device->GetFeatures().FindSupportedFormat(
-            { { InternalFormat::DEPTH_32F, InternalFormat::DEPTH_24, InternalFormat::DEPTH_16 } },
-            renderer::ImageSupportType::DEPTH
-        )
-    );
-
-    m_texture_format_defaults.Set(
-        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_NORMALS,
-        device->GetFeatures().FindSupportedFormat(
-            { { InternalFormat::RGBA16F, InternalFormat::RGBA32F, InternalFormat::RGBA8 } },
-            renderer::ImageSupportType::SRV
-        )
-    );
-
-    m_texture_format_defaults.Set(
-        TextureFormatDefault::TEXTURE_FORMAT_DEFAULT_STORAGE,
-        device->GetFeatures().FindSupportedFormat(
-            { { InternalFormat::RGBA16F } },
-            renderer::ImageSupportType::UAV
-        )
-    );
 }
 
 HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
@@ -261,27 +231,23 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
     
     RenderObjectDeleter<renderer::Platform::CURRENT>::Initialize();
 
-    m_crash_handler.Initialize();
-
     TaskSystem::GetInstance().Start();
 
-    AssertThrow(m_instance == nullptr);
-    m_instance = MakeUnique<Instance>();
-    
-#ifdef HYP_DEBUG_MODE
-    constexpr bool use_debug_layers = false;//true;
-#else
-    constexpr bool use_debug_layers = false;
-#endif
+    AssertThrow(g_rendering_api != nullptr);
+    HYPERION_ASSERT_RESULT(g_rendering_api->Initialize(*app_context));
 
-    HYPERION_ASSERT_RESULT(m_instance->Initialize(*app_context, use_debug_layers));
+    g_rendering_api->GetOnSwapchainRecreatedDelegate().Bind([this](ISwapchain *swapchain)
+    {
+        m_deferred_renderer->Resize(swapchain->GetExtent());
+
+        m_final_pass = MakeUnique<FinalPass>(swapchain);
+        m_final_pass->Create();
+    }).Detach();
     
     m_global_descriptor_table = MakeRenderObject<DescriptorTable>(renderer::GetStaticDescriptorTableDeclaration());
 
     // Update app configuration to reflect device, after instance is created (e.g RT is not supported)
     m_app_context->UpdateConfigurationOverrides();
-
-    FindTextureFormatDefaults();
 
     m_configuration.SetToDefaultConfiguration();
     m_configuration.LoadFromDefinitionsFile();
@@ -336,9 +302,9 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("GBufferDepthTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("GBufferMipChain"), GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("BlueNoiseBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(BlueNoiseBuffer), true /* exact size */));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("BlueNoiseBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GPUBufferType::STORAGE_BUFFER, sizeof(BlueNoiseBuffer), true /* exact size */));
 
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("SphereSamplesBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::CONSTANT_BUFFER, sizeof(Vec4f) * 4096, true /* exact size */));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("SphereSamplesBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GPUBufferType::CONSTANT_BUFFER, sizeof(Vec4f) * 4096, true /* exact size */));
 
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DeferredResult"), GetPlaceholderData()->GetImageView2D1x1R8());
 
@@ -350,7 +316,7 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("PostFXPostStack"), 1, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("PostFXPostStack"), 2, GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("PostFXPostStack"), 3, GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("PostProcessingUniforms"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::CONSTANT_BUFFER, sizeof(PostProcessingUniforms), true /* exact size */));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("PostProcessingUniforms"), GetPlaceholderData()->GetOrCreateBuffer(GPUBufferType::CONSTANT_BUFFER, sizeof(PostProcessingUniforms), true /* exact size */));
 
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("SSAOResultTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("SSRResultTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
@@ -365,7 +331,7 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DepthPyramidResult"), GetPlaceholderData()->GetImageView2D1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DDGIUniforms"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::CONSTANT_BUFFER, sizeof(DDGIUniforms), true /* exact size */));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DDGIUniforms"), GetPlaceholderData()->GetOrCreateBuffer(GPUBufferType::CONSTANT_BUFFER, sizeof(DDGIUniforms), true /* exact size */));
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DDGIIrradianceTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DDGIDepthTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
 
@@ -408,10 +374,9 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
         // Object
         m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("MaterialsBuffer"), m_render_data->materials->GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("SkeletonsBuffer"), m_render_data->skeletons->GetBuffer(frame_index));
-        // m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("EntityInstanceBatchesBuffer"), GetPlaceholderData()->GetOrCreateBuffer(GetGPUDevice(), GPUBufferType::STORAGE_BUFFER, sizeof(EntityInstanceBatch)));
 
         // Material
-        if (renderer::RenderConfig::IsBindlessSupported()) {
+        if (g_rendering_api->GetRenderConfig().IsBindlessSupported()) {
             for (uint32 texture_index = 0; texture_index < max_bindless_resources; texture_index++) {
                 m_global_descriptor_table->GetDescriptorSet(NAME("Material"), frame_index)
                     ->SetElement(NAME("Textures"), texture_index, GetPlaceholderData()->GetImageView2D1x1R8());
@@ -426,7 +391,7 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 
     // m_global_descriptor_set_manager.Initialize(this);
 
-    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Create(m_instance->GetDevice()));
+    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Create());
 
     m_material_descriptor_set_manager = MakeUnique<MaterialDescriptorSetManager>();
     m_material_descriptor_set_manager->Initialize();
@@ -436,10 +401,10 @@ HYP_API void Engine::Initialize(const RC<AppContext> &app_context)
 
     AssertThrowMsg(AudioManager::GetInstance()->Initialize(), "Failed to initialize audio device");
 
-    m_deferred_renderer = MakeUnique<DeferredRenderer>();
+    m_deferred_renderer = MakeUnique<DeferredRenderer>(g_rendering_api->GetSwapchain());
     m_deferred_renderer->Create();
 
-    m_final_pass = MakeUnique<FinalPass>();
+    m_final_pass = MakeUnique<FinalPass>(g_rendering_api->GetSwapchain());
     m_final_pass->Create();
 
     m_debug_drawer = MakeUnique<DebugDrawer>();
@@ -538,17 +503,12 @@ void Engine::FinalizeStop()
 
     m_render_data->Destroy();
 
-    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Destroy(m_instance->GetDevice()));
+    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Destroy());
 
     m_placeholder_data->Destroy();
 
-    HYPERION_ASSERT_RESULT(m_instance->GetDevice()->Wait());
-
     g_safe_deleter->ForceDeleteAll();
     RemoveAllEnqueuedRenderObjectsNow<renderer::Platform::CURRENT>(/* force */true);
-
-    HYPERION_ASSERT_RESULT(m_instance->GetDevice()->Wait());
-    HYPERION_ASSERT_RESULT(m_instance->Destroy());
 
     m_render_thread->Join();
     m_render_thread.Reset();
@@ -564,58 +524,7 @@ HYP_API void Engine::RenderNextFrame(Game *game)
     OnRenderStatsUpdated(m_render_stats);
 #endif
 
-    RendererResult frame_result = GetGPUInstance()->GetFrameHandler()->PrepareFrame(
-        GetGPUInstance()->GetDevice(),
-        GetGPUInstance()->GetSwapchain(),
-        m_should_recreate_swapchain
-    );
-
-    Frame *frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
-
-    if (m_should_recreate_swapchain) {
-        m_should_recreate_swapchain = false;
-
-        GetDelegates().OnBeforeSwapchainRecreated();
-
-        HYPERION_ASSERT_RESULT(GetGPUDevice()->Wait());
-        HYPERION_ASSERT_RESULT(GetGPUInstance()->RecreateSwapchain());
-        HYPERION_ASSERT_RESULT(GetGPUDevice()->Wait());
-
-        HYPERION_ASSERT_RESULT(GetGPUInstance()->GetFrameHandler()->GetCurrentFrame()->RecreateFence(
-            GetGPUInstance()->GetDevice()
-        ));
-
-        // Need to prepare frame again now that swapchain has been recreated.
-        HYPERION_ASSERT_RESULT(GetGPUInstance()->GetFrameHandler()->PrepareFrame(
-            GetGPUInstance()->GetDevice(),
-            GetGPUInstance()->GetSwapchain(),
-            m_should_recreate_swapchain
-        ));
-
-        AssertThrow(!m_should_recreate_swapchain);
-
-        m_deferred_renderer->Resize(GetGPUInstance()->GetSwapchain()->extent);
-
-        m_final_pass = MakeUnique<FinalPass>();
-        m_final_pass->Create();
-
-        //m_final_pass->Resize(GetGPUInstance()->GetSwapchain()->extent);
-
-        frame = GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
-
-        GetDelegates().OnAfterSwapchainRecreated();
-    }
-
-    if (!frame_result) {
-        m_crash_handler.HandleGPUCrash(frame_result);
-
-        RequestStop();
-
-        return;
-    }
-
-    HYPERION_ASSERT_RESULT(GetGPUDevice()->GetAsyncCompute()->PrepareForFrame(GetGPUDevice(), frame));
-    HYPERION_ASSERT_RESULT(frame->BeginCapture(GetGPUInstance()->GetDevice()));
+    IFrame *frame = g_rendering_api->PrepareNextFrame();
 
     PreFrameUpdate(frame);
     
@@ -629,31 +538,21 @@ HYP_API void Engine::RenderNextFrame(Game *game)
 
     m_final_pass->Render(frame);
 
-    HYPERION_ASSERT_RESULT(frame->EndCapture(GetGPUInstance()->GetDevice()));
-
     m_world->GetRenderResource().PostRender(frame);
-
-    UpdateBuffersAndDescriptors((GetGPUInstance()->GetFrameHandler()->GetCurrentFrameIndex()));
 
     game->OnFrameEnd(frame);
 
-    frame_result = frame->Submit(&GetGPUDevice()->GetGraphicsQueue());
-
-    if (!frame_result) {
-        m_crash_handler.HandleGPUCrash(frame_result);
-
-        RequestStop();
-
-        return;
+    for (auto &it : m_gpu_buffer_holder_map->GetItems()) {
+        it.second->UpdateBufferSize(frame->GetFrameIndex());
+        it.second->UpdateBufferData(frame->GetFrameIndex());
     }
 
-    HYPERION_ASSERT_RESULT(GetGPUDevice()->GetAsyncCompute()->Submit(GetGPUDevice(), frame));
+    m_global_descriptor_table->Update(frame->GetFrameIndex());
 
-    GetGPUInstance()->GetFrameHandler()->PresentFrame(&GetGPUDevice()->GetGraphicsQueue(), GetGPUInstance()->GetSwapchain());
-    GetGPUInstance()->GetFrameHandler()->NextFrame();
+    g_rendering_api->PresentFrame(frame);
 }
 
-void Engine::PreFrameUpdate(Frame *frame)
+void Engine::PreFrameUpdate(IFrame *frame)
 {
     HYP_SCOPE;
 
@@ -664,11 +563,9 @@ void Engine::PreFrameUpdate(Frame *frame)
     m_material_descriptor_set_manager->UpdatePendingDescriptorSets(frame);
     m_material_descriptor_set_manager->Update(frame);
 
-    HYPERION_ASSERT_RESULT(m_global_descriptor_table->Update(m_instance->GetDevice(), frame->GetFrameIndex()));
+    HYPERION_ASSERT_RESULT(renderer::RenderCommands::Flush());
 
     m_deferred_renderer->GetPostProcessing().PerformUpdates();
-
-    HYPERION_ASSERT_RESULT(renderer::RenderCommands::Flush());
 
     RenderObjectDeleter<renderer::Platform::CURRENT>::Iterate();
 
@@ -678,17 +575,7 @@ void Engine::PreFrameUpdate(Frame *frame)
     m_render_state->AdvanceFrameCounter();
 }
 
-void Engine::UpdateBuffersAndDescriptors(uint32 frame_index)
-{
-    HYP_SCOPE;
-
-    for (auto &it : m_gpu_buffer_holder_map->GetItems()) {
-        bool was_resized = false;
-        it.second->UpdateBuffer(m_instance->GetDevice(), frame_index, was_resized);
-    }
-}
-
-void Engine::RenderDeferred(Frame *frame)
+void Engine::RenderDeferred(IFrame *frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -703,143 +590,5 @@ void Engine::RenderDeferred(Frame *frame)
 }
 
 #pragma endregion Engine
-
-#pragma region GlobalDescriptorSetManager
-
-GlobalDescriptorSetManager::GlobalDescriptorSetManager(Engine *engine)
-{
-    Mutex::Guard guard(m_mutex);
-
-    for (auto &it : renderer::GetStaticDescriptorTableDeclaration().GetElements()) {
-        renderer::DescriptorSetLayout layout(it);
-
-        DescriptorSetRef ref = layout.CreateDescriptorSet();
-        AssertThrow(ref.IsValid());
-
-        // Init with placeholder data
-        for (const auto &layout_it : ref->GetLayout().GetElements()) {
-            switch (layout_it.second.type) {
-            case renderer::DescriptorSetElementType::UNIFORM_BUFFER: // Fallthrough
-            case renderer::DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC: {
-                AssertThrowMsg(layout_it.second.size != uint32(-1), "No size set for descriptor %s", layout_it.first.LookupString());
-
-                for (uint32 i = 0; i < layout_it.second.count; i++) {
-                    ref->SetElement(
-                        layout_it.first,
-                        i,
-                        engine->GetPlaceholderData()->GetOrCreateBuffer(
-                            engine->GetGPUDevice(),
-                            renderer::GPUBufferType::CONSTANT_BUFFER,
-                            layout_it.second.size,
-                            true // exact_size
-                        )
-                    );
-                }
-
-                break;
-            }
-            case renderer::DescriptorSetElementType::STORAGE_BUFFER: // Fallthrough
-            case renderer::DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC: {
-                AssertThrowMsg(layout_it.second.size != uint32(-1), "No size set for descriptor %s", layout_it.first.LookupString());
-
-                for (uint32 i = 0; i < layout_it.second.count; i++) {
-                    ref->SetElement(
-                        layout_it.first,
-                        i,
-                        engine->GetPlaceholderData()->GetOrCreateBuffer(
-                            engine->GetGPUDevice(),
-                            renderer::GPUBufferType::STORAGE_BUFFER,
-                            layout_it.second.size,
-                            true // exact_size
-                        )
-                    );
-                }
-
-                break;
-            }
-            case renderer::DescriptorSetElementType::IMAGE: {
-                // @TODO: Differentiate between 2D, 3D, and Cubemap
-                for (uint32 i = 0; i < layout_it.second.count; i++) {
-                    ref->SetElement(
-                        layout_it.first,
-                        i,
-                        engine->GetPlaceholderData()->GetImageView2D1x1R8()
-                    );
-                }
-
-                break;
-            }
-            case renderer::DescriptorSetElementType::IMAGE_STORAGE: {
-                // @TODO: Differentiate between 2D, 3D, and Cubemap
-                for (uint32 i = 0; i < layout_it.second.count; i++) {
-                    ref->SetElement(
-                        layout_it.first,
-                        i,
-                        engine->GetPlaceholderData()->GetImageView2D1x1R8Storage()
-                    );
-                }
-
-                break;
-            }
-            case renderer::DescriptorSetElementType::SAMPLER: {
-                for (uint32 i = 0; i < layout_it.second.count; i++) {
-                    ref->SetElement(
-                        layout_it.first,
-                        i,
-                        engine->GetPlaceholderData()->GetSamplerNearest()
-                    );
-                }
-
-                break;
-            }
-            case renderer::DescriptorSetElementType::TLAS: {
-                // Do nothing, must be manually set.
-                break;
-            }
-            default:
-                HYP_LOG(Engine, Error, "Unhandled descriptor type %d", layout_it.second.type);
-                break;
-            }
-        }
-
-        m_descriptor_sets.Insert(it.name, std::move(ref));
-    }
-}
-
-GlobalDescriptorSetManager::~GlobalDescriptorSetManager() = default;
-
-void GlobalDescriptorSetManager::Initialize(Engine *engine)
-{
-    Threads::AssertOnThread(g_render_thread);
-
-    Mutex::Guard guard(m_mutex);
-
-    for (auto &it : m_descriptor_sets) {
-        HYPERION_ASSERT_RESULT(it.second->Create(engine->GetGPUDevice()));
-    }
-}
-
-void GlobalDescriptorSetManager::AddDescriptorSet(Name name, const DescriptorSetRef &ref)
-{
-    Mutex::Guard guard(m_mutex);
-
-    const auto insert_result = m_descriptor_sets.Insert(name, std::move(ref));
-    AssertThrowMsg(insert_result.second, "Failed to insert descriptor set, item %s already exists", name.LookupString());
-}
-
-DescriptorSetRef GlobalDescriptorSetManager::GetDescriptorSet(Name name) const
-{
-    Mutex::Guard guard(m_mutex);
-
-    auto it = m_descriptor_sets.Find(name);
-
-    if (it != m_descriptor_sets.End()) {
-        return it->second;
-    }
-
-    return DescriptorSetRef { };
-}
-
-#pragma endregion GlobalDescriptorSetManager
 
 } // namespace hyperion

@@ -8,6 +8,8 @@
 
 #include <core/memory/resource/Resource.hpp>
 
+#include <core/threading/DataRaceDetector.hpp>
+
 #include <core/ID.hpp>
 
 #include <core/math/Transform.hpp>
@@ -22,19 +24,6 @@
 #include <rendering/backend/RenderObject.hpp>
 
 #include <Types.hpp>
-
-namespace hyperion::renderer {
-
-namespace platform {
-
-template <PlatformType PLATFORM>
-class Frame;
-
-} // namespace platform
-
-using Frame = platform::Frame<Platform::CURRENT>;
-
-} // namespace hyperion::renderer
 
 namespace hyperion {
 
@@ -94,6 +83,15 @@ public:
     RenderCollector &operator=(RenderCollector &&other) noexcept  = default;
     ~RenderCollector();
 
+    HYP_FORCE_INLINE const RC<EntityDrawCollection> &GetDrawCollection() const
+        { return m_draw_collection; }
+
+    HYP_FORCE_INLINE const Optional<RenderableAttributeSet> &GetOverrideAttributes() const
+        { return m_override_attributes; }
+
+    HYP_FORCE_INLINE void SetOverrideAttributes(const Optional<RenderableAttributeSet> &override_attributes)
+        { m_override_attributes = override_attributes; }
+
     /*! \brief Pushes an entity to the RenderCollector.
      *  \param entity The entity the proxy is used for
      *  \param proxy A RenderProxy associated with the entity
@@ -102,39 +100,40 @@ public:
 
     /*! \brief Creates RenderGroups needed for rendering the Entity objects.
      *  Call after calling CollectEntities() on Scene. */
-    CollectionResult PushUpdatesToRenderThread(
-        const Handle<Camera> &camera = Handle<Camera>::empty,
-        const Optional<RenderableAttributeSet> &override_attributes = { }
-    );
+    CollectionResult PushUpdatesToRenderThread(const Handle<Camera> &camera = Handle<Camera>::empty);
 
     void CollectDrawCalls(
-        Frame *frame,
+        IFrame *frame,
         const Bitset &bucket_bits,
         const CullData *cull_data
     );
 
     void ExecuteDrawCalls(
-        Frame *frame,
-        const CameraRenderResource &camera_render_resource,
+        IFrame *frame,
+        const TResourceHandle<CameraRenderResource> &camera_resource_handle,
         const Bitset &bucket_bits,
         const CullData *cull_data = nullptr,
         PushConstantData push_constant = { }
     ) const;
 
     void ExecuteDrawCalls(
-        Frame *frame,
-        const CameraRenderResource &camera_render_resource,
+        IFrame *frame,
+        const TResourceHandle<CameraRenderResource> &camera_resource_handle,
         const FramebufferRef &framebuffer,
         const Bitset &bucket_bits,
         const CullData *cull_data = nullptr,
         PushConstantData push_constant = { }
     ) const;
 
-    /*! \brief Perform a full reset, when this is not needed anymore. */
-    void Reset();
+    /*! \brief Perform a full reset, when this is not needed anymore. Not thread safe, so ensure there will be no overlap of usage of this object when calling this. */
+    void ClearState();
 
 protected:
-    RC<EntityDrawCollection>        m_draw_collection;
+
+    RC<EntityDrawCollection>            m_draw_collection;
+    Optional<RenderableAttributeSet>    m_override_attributes;
+
+    HYP_DECLARE_MT_CHECK(m_data_race_detector);
 };
 
 } // namespace hyperion

@@ -9,6 +9,9 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
 
+#include <rendering/rhi/RHICommandList.hpp>
+
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 
@@ -66,17 +69,10 @@ struct RENDER_COMMAND(CreateSSRUniformBuffer) : renderer::RenderCommand
     {
         DebugLog(LogType::Debug, "Sizeof(SSRUniforms) = %u\n", sizeof(SSRUniforms));
         
-        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(
-            g_engine->GetGPUDevice(),
-            sizeof(uniforms)
-        ));
+        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(sizeof(uniforms)));
         
         DebugLog(LogType::Debug, "Size of buffer = %u\n",uniform_buffer->Size());
-        uniform_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            sizeof(uniforms),
-            &uniforms
-        );
+        uniform_buffer->Copy(sizeof(uniforms), &uniforms);
 
         HYPERION_RETURN_OK;
     }
@@ -154,10 +150,11 @@ void SSRRenderer::Create()
         Vec3u(m_config.extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        1,
+        ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
     });
 
-    m_uvs_texture->SetIsRWTexture(true);
     InitObject(m_uvs_texture);
 
     m_uvs_texture->SetPersistentRenderResourceEnabled(true);
@@ -168,10 +165,11 @@ void SSRRenderer::Create()
         Vec3u(m_config.extent, 1),
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        1,
+        ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
     });
 
-    m_sampled_result_texture->SetIsRWTexture(true);
     InitObject(m_sampled_result_texture);
 
     m_sampled_result_texture->SetPersistentRenderResourceEnabled(true);
@@ -276,14 +274,14 @@ void SSRRenderer::CreateComputePipelines()
         descriptor_set->SetElement(NAME("UniformBuffer"), m_uniform_buffer);
     }
 
-    DeferCreate(write_uvs_shader_descriptor_table, g_engine->GetGPUDevice());
+    DeferCreate(write_uvs_shader_descriptor_table);
 
     m_write_uvs = MakeRenderObject<ComputePipeline>(
         g_shader_manager->GetOrCreate(NAME("SSRWriteUVs"), shader_properties),
         write_uvs_shader_descriptor_table
     );
 
-    DeferCreate(m_write_uvs, g_engine->GetGPUDevice());
+    DeferCreate(m_write_uvs);
 
     // Sample pass
 
@@ -302,14 +300,14 @@ void SSRRenderer::CreateComputePipelines()
         descriptor_set->SetElement(NAME("UniformBuffer"), m_uniform_buffer);
     }
 
-    DeferCreate(sample_gbuffer_shader_descriptor_table, g_engine->GetGPUDevice());
+    DeferCreate(sample_gbuffer_shader_descriptor_table);
 
     m_sample_gbuffer = MakeRenderObject<ComputePipeline>(
         sample_gbuffer_shader,
         sample_gbuffer_shader_descriptor_table
     );
 
-    DeferCreate(m_sample_gbuffer, g_engine->GetGPUDevice());
+    DeferCreate(m_sample_gbuffer);
 
     PUSH_RENDER_COMMAND(
         CreateSSRDescriptors,
@@ -317,73 +315,78 @@ void SSRRenderer::CreateComputePipelines()
     );
 }
 
-void SSRRenderer::Render(Frame *frame)
+void SSRRenderer::Render(IFrame *frame)
 {
     HYP_NAMED_SCOPE("Screen Space Reflections");
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
 
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();
 
     /* ========== BEGIN SSR ========== */
-    DebugMarker begin_ssr_marker(command_buffer, "Begin SSR");
-
     const uint32 total_pixels_in_image = m_config.extent.Volume();
 
     const uint32 num_dispatch_calls = (total_pixels_in_image + 255) / 256;
 
     // PASS 1 -- write UVs
 
-    m_uvs_texture->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(m_uvs_texture->GetRenderResource().GetImage(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_write_uvs->Bind(command_buffer);
+    frame->GetCommandList().Add<BindComputePipeline>(m_write_uvs);
 
-    m_write_uvs->GetDescriptorTable()->Bind(
-        frame,
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_write_uvs->GetDescriptorTable(),
         m_write_uvs,
-        {
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) }
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) }
                 }
             }
-        }
+        },
+        frame_index
     );
 
-    m_write_uvs->Dispatch(command_buffer, Vec3u { num_dispatch_calls, 1, 1 });
+    frame->GetCommandList().Add<DispatchCompute>(
+        m_write_uvs,
+        Vec3u { num_dispatch_calls, 1, 1 }
+    );
 
     // transition the UV image back into read state
-    m_uvs_texture->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+    frame->GetCommandList().Add<InsertBarrier>(m_uvs_texture->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
 
     // PASS 2 - sample textures
 
     // put sample image in writeable state
-    m_sampled_result_texture->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(m_sampled_result_texture->GetRenderResource().GetImage(), renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_sample_gbuffer->Bind(command_buffer);
+    frame->GetCommandList().Add<BindComputePipeline>(m_sample_gbuffer);
 
-    m_sample_gbuffer->GetDescriptorTable()->Bind(
-        frame,
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_sample_gbuffer->GetDescriptorTable(),
         m_sample_gbuffer,
-        {
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) }
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) }
                 }
             }
-        }
+        },
+        frame_index
     );
 
-    m_sample_gbuffer->Dispatch(command_buffer, Vec3u { num_dispatch_calls, 1, 1 });
+    frame->GetCommandList().Add<DispatchCompute>(
+        m_sample_gbuffer,
+        Vec3u { num_dispatch_calls, 1, 1 }
+    );
 
     // transition sample image back into read state
-    m_sampled_result_texture->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+    frame->GetCommandList().Add<InsertBarrier>(m_sampled_result_texture->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
 
     if (use_temporal_blending && m_temporal_blending != nullptr) {
         m_temporal_blending->Render(frame);

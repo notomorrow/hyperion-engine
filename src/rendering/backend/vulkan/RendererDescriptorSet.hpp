@@ -20,6 +20,22 @@
 
 namespace hyperion {
 namespace renderer {
+
+struct VulkanDescriptorSetLayoutWrapper;
+
+struct VulkanDescriptorElementInfo
+{
+    uint32              binding;
+    uint32              index;
+    VkDescriptorType    descriptor_type;
+
+    union {
+        VkDescriptorBufferInfo                          buffer_info;
+        VkDescriptorImageInfo                           image_info;
+        VkWriteDescriptorSetAccelerationStructureKHR    acceleration_structure_info;
+    };
+};
+
 namespace platform {
 
 template <PlatformType PLATFORM>
@@ -49,8 +65,6 @@ class RaytracingPipeline;
 template <PlatformType PLATFORM>
 class CommandBuffer;
 
-struct VulkanDescriptorSetLayoutWrapper;
-
 template <>
 struct DescriptorSetElementTypeInfo<Platform::VULKAN, GPUBuffer<Platform::VULKAN>>
 {
@@ -79,41 +93,18 @@ struct DescriptorSetElementTypeInfo<Platform::VULKAN, TopLevelAccelerationStruct
     static constexpr uint32 mask = (1u << uint32(DescriptorSetElementType::TLAS));
 };
 
-template <>
-struct DescriptorSetPlatformImpl<Platform::VULKAN>
+struct DescriptorSetElementCachedValue
 {
-    DescriptorSet<Platform::VULKAN>         *self = nullptr;
-    VkDescriptorSet                         handle = VK_NULL_HANDLE;
-    RC<VulkanDescriptorSetLayoutWrapper>    vk_layout_wrapper;
-
-    VkDescriptorSetLayout GetVkDescriptorSetLayout() const;
+    VulkanDescriptorElementInfo info;
 };
 
 template <>
-class DescriptorSetManager<Platform::VULKAN>
+struct DescriptorSetPlatformImpl<Platform::VULKAN>
 {
-public:
-    static constexpr uint32 max_descriptor_sets = 4096;
-
-    DescriptorSetManager();
-    DescriptorSetManager(const DescriptorSetManager &other)                 = delete;
-    DescriptorSetManager &operator=(const DescriptorSetManager &other)      = delete;
-    DescriptorSetManager(DescriptorSetManager &&other) noexcept             = delete;
-    DescriptorSetManager &operator=(DescriptorSetManager &&other) noexcept  = delete;
-    ~DescriptorSetManager();
-
-    RendererResult Create(Device<Platform::VULKAN> *device);
-    RendererResult Destroy(Device<Platform::VULKAN> *device);
-
-    RendererResult CreateDescriptorSet(Device<Platform::VULKAN> *device, const RC<VulkanDescriptorSetLayoutWrapper> &layout, VkDescriptorSet &out_vk_descriptor_set);
-    RendererResult DestroyDescriptorSet(Device<Platform::VULKAN> *device, VkDescriptorSet vk_descriptor_set);
-
-    RC<VulkanDescriptorSetLayoutWrapper> GetOrCreateVkDescriptorSetLayout(Device<Platform::VULKAN> *device, const DescriptorSetLayout<Platform::VULKAN> &layout);
-
-private:
-    HashMap<HashCode, Weak<VulkanDescriptorSetLayoutWrapper>>   m_vk_descriptor_set_layouts;
-
-    VkDescriptorPool                                            m_vk_descriptor_pool;
+    DescriptorSet<Platform::VULKAN>                         *self = nullptr;
+    VkDescriptorSet                                         handle = VK_NULL_HANDLE;
+    HashMap<Name, Array<DescriptorSetElementCachedValue>>   cached_elements;
+    RC<VulkanDescriptorSetLayoutWrapper>                    vk_layout_wrapper;
 };
 
 } // namespace platform

@@ -355,15 +355,25 @@ bool UIGrid::RemoveChildUIObject(UIObject *ui_object)
         return false;
     }
     
-    for (SizeType i = 0; i < m_rows.Size(); i++) {
-        if (m_rows[i] == ui_object) {
-            AssertThrow(UIObject::RemoveChildUIObject(ui_object));
+    if (ui_object->IsInstanceOf<UIGridRow>()) {
+        bool removed = false;
 
-            m_rows.EraseAt(i);
+        UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
 
+        for (auto it = m_rows.Begin(); it != m_rows.End();) {
+            if (it->Get() == static_cast<UIGridRow *>(ui_object)) {
+                AssertThrow(UIObject::RemoveChildUIObject(ui_object));
+
+                it = m_rows.Erase(it);
+
+                removed = true;
+            } else {
+                ++it;
+            }
+        }
+
+        if (removed) {
             UpdateSize(false);
-
-            return true;
         }
     }
 
@@ -410,7 +420,7 @@ void UIGrid::SetDataSource_Internal(UIDataSourceBase *data_source)
     {
         HYP_NAMED_SCOPE("Add element from data source to grid view");
 
-        AddChildUIObject(data_source_ptr->GetElementFactory()->CreateUIObject(this, element->GetValue(), { }));
+        AddChildUIObject(data_source_ptr->CreateUIObject(this, element->GetValue(), { }));
     });
 
     m_data_source_on_element_remove_handler = data_source->OnElementRemove.Bind([this](UIDataSourceBase *data_source_ptr, UIDataSourceElement *element, UIDataSourceElement *parent)

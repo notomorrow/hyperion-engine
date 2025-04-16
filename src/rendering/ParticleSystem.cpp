@@ -16,6 +16,9 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/EnvGrid.hpp>
 
+#include <rendering/rhi/RHICommandList.hpp>
+
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -27,7 +30,7 @@
 
 #include <core/threading/Threads.hpp>
 
-#include <core/util/ForEach.hpp>
+#include <core/utilities/ForEach.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -75,38 +78,19 @@ struct RENDER_COMMAND(CreateParticleSpawnerBuffers) : renderer::RenderCommand
         SimplexNoiseGenerator noise_generator(seed);
         auto noise_map = noise_generator.CreateBitmap(128, 128, 1024.0f);
 
-        HYPERION_BUBBLE_ERRORS(particle_buffer->Create(
-            g_engine->GetGPUDevice(),
-            params.max_particles * sizeof(ParticleShaderData)
-        ));
-
-        HYPERION_BUBBLE_ERRORS(indirect_buffer->Create(
-            g_engine->GetGPUDevice(),
-            sizeof(IndirectDrawCommand)
-        ));
-
-        HYPERION_BUBBLE_ERRORS(noise_buffer->Create(
-            g_engine->GetGPUDevice(),
-            noise_map.GetByteSize() * sizeof(float)
-        ));
+        HYPERION_BUBBLE_ERRORS(particle_buffer->Create(params.max_particles * sizeof(ParticleShaderData)));
+        HYPERION_BUBBLE_ERRORS(indirect_buffer->Create(sizeof(IndirectDrawCommand)));
+        HYPERION_BUBBLE_ERRORS(noise_buffer->Create(noise_map.GetByteSize() * sizeof(float)));
 
         // copy zeroes into particle buffer
         // if we don't do this, garbage values could be in the particle buffer,
         // meaning we'd get some crazy high lifetimes
-        particle_buffer->Memset(
-            g_engine->GetGPUDevice(),
-            particle_buffer->Size(),
-            0x0
-        );
+        particle_buffer->Memset(particle_buffer->Size(), 0);
 
         // copy bytes into noise buffer
         Array<float> unpacked_floats = noise_map.GetUnpackedFloats();
 
-        noise_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            unpacked_floats.ByteSize(),
-            unpacked_floats.Data()
-        );
+        noise_buffer->Copy(unpacked_floats.ByteSize(), unpacked_floats.Data());
 
         // don't need it anymore
         noise_map = Bitmap<1>();
@@ -158,50 +142,13 @@ struct RENDER_COMMAND(CreateParticleSystemBuffers) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(staging_buffer->Create(
-            g_engine->GetGPUDevice(),
-            sizeof(IndirectDrawCommand)
-        ));
+        HYPERION_BUBBLE_ERRORS(staging_buffer->Create(sizeof(IndirectDrawCommand)));
 
         IndirectDrawCommand empty_draw_command { };
         quad_mesh->GetRenderResource().PopulateIndirectDrawCommand(empty_draw_command);
 
         // copy zeros to buffer
-        staging_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            sizeof(IndirectDrawCommand),
-            &empty_draw_command
-        );
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(CreateParticleSystemCommandBuffers) : renderer::RenderCommand
-{
-    FixedArray<FixedArray<CommandBufferRef, num_async_rendering_command_buffers>, max_frames_in_flight> command_buffers;
-
-    RENDER_COMMAND(CreateParticleSystemCommandBuffers)(
-        FixedArray<FixedArray<CommandBufferRef, num_async_rendering_command_buffers>, max_frames_in_flight> command_buffers
-    ) : command_buffers(std::move(command_buffers))
-    {
-    }
-
-    virtual ~RENDER_COMMAND(CreateParticleSystemCommandBuffers)() override = default;
-
-    virtual RendererResult operator()() override
-    {
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-            for (uint32 i = 0; i < uint32(command_buffers[frame_index].Size()); i++) {
-                AssertThrow(command_buffers[frame_index][i].IsValid());
-
-#ifdef HYP_VULKAN
-                command_buffers[frame_index][i]->GetPlatformImpl().command_pool = g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[i];
-#endif
-
-                HYPERION_BUBBLE_ERRORS(command_buffers[frame_index][i]->Create(g_engine->GetGPUInstance()->GetDevice()));
-            }
-        }
+        staging_buffer->Copy(sizeof(IndirectDrawCommand), &empty_draw_command);
 
         HYPERION_RETURN_OK;
     }
@@ -293,7 +240,7 @@ void ParticleSpawner::CreateRenderGroup()
             : g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
     }
 
-    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+    DeferCreate(descriptor_table);
 
     m_render_group = CreateObject<RenderGroup>(
         m_shader,
@@ -336,14 +283,14 @@ void ParticleSpawner::CreateComputePipelines()
         descriptor_set->SetElement(NAME("NoiseBuffer"), m_noise_buffer);
     }
 
-    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+    DeferCreate(descriptor_table);
 
     m_update_particles = MakeRenderObject<ComputePipeline>(
         update_particles_shader,
         descriptor_table
     );
 
-    DeferCreate(m_update_particles, g_engine->GetGPUDevice());
+    DeferCreate(m_update_particles);
 }
 
 #pragma endregion ParticleSpawner
@@ -359,12 +306,6 @@ ParticleSystem::ParticleSystem()
 
 ParticleSystem::~ParticleSystem()
 {
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        for (auto &command_buffer : m_command_buffers[frame_index]) {
-            SafeRelease(std::move(command_buffer));
-        }
-    }
-
     SafeRelease(std::move(m_staging_buffer));
 
     m_quad_mesh.Reset();
@@ -392,7 +333,6 @@ void ParticleSystem::Init()
     m_quad_mesh->SetPersistentRenderResourceEnabled(true);
 
     CreateBuffers();
-    CreateCommandBuffers();
 
     SetReady(true);
 }
@@ -408,18 +348,7 @@ void ParticleSystem::CreateBuffers()
     );
 }
 
-void ParticleSystem::CreateCommandBuffers()
-{
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        for (uint32 i = 0; i < num_async_rendering_command_buffers; i++) {
-            m_command_buffers[frame_index][i] = MakeRenderObject<CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
-        }
-    }
-
-    PUSH_RENDER_COMMAND(CreateParticleSystemCommandBuffers, m_command_buffers);
-}
-
-void ParticleSystem::UpdateParticles(Frame *frame)
+void ParticleSystem::UpdateParticles(IFrame *frame)
 {
     HYP_SCOPE;
 
@@ -427,8 +356,8 @@ void ParticleSystem::UpdateParticles(Frame *frame)
     AssertReady();
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<EnvProbeRenderResource> &env_probe_render_resource = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<EnvProbeRenderResource> &env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
     EnvGrid *env_grid = g_engine->GetRenderState()->GetActiveEnvGrid();
 
     if (m_particle_spawners.GetItems().Empty()) {
@@ -439,10 +368,7 @@ void ParticleSystem::UpdateParticles(Frame *frame)
         return;
     }
 
-    m_staging_buffer->InsertBarrier(
-        frame->GetCommandBuffer(),
-        renderer::ResourceState::COPY_SRC
-    );
+    frame->GetCommandList().Add<InsertBarrier>(m_staging_buffer, renderer::ResourceState::COPY_SRC);
 
     for (auto &spawner : m_particle_spawners) {
         const SizeType max_particles = spawner->GetParams().max_particles;
@@ -450,20 +376,20 @@ void ParticleSystem::UpdateParticles(Frame *frame)
         AssertThrow(spawner->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
         AssertThrow(spawner->GetParticleBuffer()->Size() >= sizeof(ParticleShaderData) * max_particles);
 
-        spawner->GetIndirectBuffer()->InsertBarrier(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<InsertBarrier>(
+            spawner->GetIndirectBuffer(),
             renderer::ResourceState::COPY_DST
         );
 
         // copy zeros to buffer (to reset instance count)
-        spawner->GetIndirectBuffer()->CopyFrom(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<CopyBuffer>(
             m_staging_buffer,
+            spawner->GetIndirectBuffer(),
             sizeof(IndirectDrawCommand)
         );
 
-        spawner->GetIndirectBuffer()->InsertBarrier(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<InsertBarrier>(
+            spawner->GetIndirectBuffer(),
             renderer::ResourceState::INDIRECT_ARG
         );
 
@@ -495,33 +421,35 @@ void ParticleSystem::UpdateParticles(Frame *frame)
 
         spawner->GetComputePipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
 
-        spawner->GetComputePipeline()->Bind(frame->GetCommandBuffer());
+        frame->GetCommandList().Add<BindComputePipeline>(spawner->GetComputePipeline());
 
-        spawner->GetComputePipeline()->GetDescriptorTable()->Bind(
-            frame,
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            spawner->GetComputePipeline()->GetDescriptorTable(),
             spawner->GetComputePipeline(),
+            ArrayMap<Name, ArrayMap<Name, uint32>> 
             {
                 {
                     NAME("Scene"),
                     {
                         {
                             { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid ? env_grid->GetComponentIndex() : 0) },
-                            { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                            { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle.Get(), 0) }
                         }
                     }
                 }
-            }
+            },
+            frame->GetFrameIndex()
         );
 
-        spawner->GetComputePipeline()->Dispatch(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<DispatchCompute>(
+            spawner->GetComputePipeline(),
             Vec3u { uint32((max_particles + 255) / 256), 1, 1 }
         );
 
-        spawner->GetIndirectBuffer()->InsertBarrier(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<InsertBarrier>(
+            spawner->GetIndirectBuffer(),
             renderer::ResourceState::INDIRECT_ARG
         );
     }
@@ -535,7 +463,7 @@ void ParticleSystem::UpdateParticles(Frame *frame)
     }
 }
 
-void ParticleSystem::Render(Frame *frame)
+void ParticleSystem::Render(IFrame *frame)
 {
     HYP_SCOPE;
 
@@ -545,63 +473,33 @@ void ParticleSystem::Render(Frame *frame)
     const uint32 frame_index = frame->GetFrameIndex();
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<EnvProbeRenderResource> &env_probe_render_resource = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<EnvProbeRenderResource> &env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
     EnvGrid *env_grid = g_engine->GetRenderState()->GetActiveEnvGrid();
 
-    FixedArray<uint32, num_async_rendering_command_buffers> command_buffers_recorded_states { };
-    
-    ForEachInBatches(
-        m_particle_spawners.GetItems(),
-        num_async_rendering_command_buffers,
-        [this, &command_buffers_recorded_states, scene_render_resource, camera_render_resource, &env_probe_render_resource, env_grid, frame_index](const Handle<ParticleSpawner> &particle_spawner, uint32 index, uint32 batch_index) {
-            const GraphicsPipelineRef &pipeline = particle_spawner->GetRenderGroup()->GetPipeline();
+    for (const Handle<ParticleSpawner> &particle_spawner : m_particle_spawners.GetItems()) {
+        const GraphicsPipelineRef &pipeline = particle_spawner->GetRenderGroup()->GetPipeline();
 
-            m_command_buffers[frame_index][batch_index]->Record(
-                g_engine->GetGPUDevice(),
-                pipeline->GetRenderPass(),
-                [&](CommandBuffer *secondary)
+        frame->GetCommandList().Add<BindGraphicsPipeline>(pipeline);
+
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            pipeline->GetDescriptorTable(),
+            pipeline,
+            ArrayMap<Name, ArrayMap<Name, uint32>> {
                 {
-                    pipeline->Bind(secondary);
-
-                    pipeline->GetDescriptorTable()->Bind(
-                        secondary,
-                        frame_index,
-                        pipeline,
-                        {
-                            {
-                                NAME("Scene"),
-                                {
-                                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
-                                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid ? env_grid->GetComponentIndex() : 0) },
-                                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
-                                }
-                            }
-                        }
-                    );
-
-                    m_quad_mesh->GetRenderResource().RenderIndirect(
-                        secondary,
-                        particle_spawner->GetIndirectBuffer().Get()
-                    );
-
-                    HYPERION_RETURN_OK;
+                    NAME("Scene"),
+                    {
+                        { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
+                        { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid ? env_grid->GetComponentIndex() : 0) },
+                        { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle.Get(), 0) }
+                    }
                 }
-            );
+            },
+            frame_index
+        );
 
-            command_buffers_recorded_states[batch_index] = 1u;
-
-            return IterationResult::CONTINUE;
-        }
-    );
-
-    const uint32 num_recorded_command_buffers = command_buffers_recorded_states.Sum();
-
-    // submit all command buffers
-    for (uint32 i = 0; i < num_recorded_command_buffers; i++) {
-        m_command_buffers[frame_index][i]
-            ->SubmitSecondary(frame->GetCommandBuffer());
+        m_quad_mesh->GetRenderResource().RenderIndirect(frame->GetCommandList(), particle_spawner->GetIndirectBuffer());
     }
 }
 

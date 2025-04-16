@@ -45,8 +45,8 @@ public:
         const Optional<RenderableAttributeSet> &override_attributes = { }
     );
 
-    void CollectDrawCalls(Frame *frame);
-    void ExecuteDrawCalls(Frame *frame, const CameraRenderResource &camera_render_resource, const FramebufferRef &framebuffer) const;
+    void CollectDrawCalls(IFrame *frame);
+    void ExecuteDrawCalls(IFrame *frame, const TResourceHandle<CameraRenderResource> &camera_resource_handle, const FramebufferRef &framebuffer) const;
 
 private:
     Array<Pair<ID<Entity>, int>>    m_proxy_depths;
@@ -77,22 +77,22 @@ private:
     virtual void InitGame() override; // init on game thread
     virtual void OnRemoved() override;
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
-    virtual void OnRender(Frame *frame) override;
+    virtual void OnRender(IFrame *frame) override;
 
     virtual void OnComponentIndexChanged(RenderSubsystem::Index new_index, RenderSubsystem::Index prev_index) override
         { AssertThrowMsg(false, "Not permitted!"); }
 
     void CreateFramebuffer();
 
-    RC<UIStage>         m_ui_stage;
+    RC<UIStage>                             m_ui_stage;
 
-    FramebufferRef      m_framebuffer;
-    ShaderRef           m_shader;
-    UIRenderCollector   m_render_collector;
+    FramebufferRef                          m_framebuffer;
+    ShaderRef                               m_shader;
+    UIRenderCollector                       m_render_collector;
 
-    ResourceHandle      m_camera_resource_handle;
+    TResourceHandle<CameraRenderResource>   m_camera_resource_handle;
 
-    DelegateHandler     m_on_gbuffer_resolution_changed_handle;
+    DelegateHandler                         m_on_gbuffer_resolution_changed_handle;
 };
 
 } // namespace hyperion

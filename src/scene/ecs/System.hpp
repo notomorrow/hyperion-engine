@@ -38,13 +38,17 @@ public:
 
     virtual TypeID GetTypeID() const = 0;
 
-    virtual EnumFlags<SceneFlags> GetRequiredSceneFlags() const;
+    virtual bool ShouldCreateForScene(Scene *scene) const
+        { return true; }
 
     virtual bool AllowParallelExecution() const
         { return true; }
 
     virtual bool RequiresGameThread() const
         { return false; }
+
+    virtual bool AllowUpdate() const
+        { return true; }
 
     /*! \brief Returns the TypeIDs of the components this System operates on.
      *  To be used by the EntityManager in order to properly order the Systems based on their dependencies.
@@ -219,9 +223,6 @@ public:
     {
         return TypeID::ForType<Derived>();
     }
-
-    virtual EnumFlags<SceneFlags> GetRequiredSceneFlags() const override
-        { return SystemBase::GetRequiredSceneFlags(); }
 
     virtual void Process(GameCounter::TickUnit delta) override = 0;
 };

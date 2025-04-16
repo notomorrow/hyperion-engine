@@ -21,12 +21,16 @@ enum class EntityTag : uint32
 
     UI,    /* associated with a UIObject */
 
+    CAMERA,
+    CAMERA_PRIMARY,
+
     DESCRIPTOR_MAX, // Maximum value used for things like Octree entry hashes.
 
     UI_OBJECT_VISIBLE = DESCRIPTOR_MAX,
 
     UPDATE_AABB,
     UPDATE_BVH,
+    UPDATE_BLAS,
     UPDATE_LIGHT_TRANSFORM,
     UPDATE_RENDER_PROXY,
     UPDATE_VISIBILITY_STATE,

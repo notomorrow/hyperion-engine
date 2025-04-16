@@ -38,6 +38,8 @@ struct HypObjectHeader;
 template <class T>
 struct HypObjectMemory;
 
+class ManagedObjectResource;
+
 enum class HypClassFlags : uint32;
 
 extern HYP_API const HypClass *GetClass(TypeID type_id);
@@ -79,7 +81,9 @@ public:
 
     virtual dotnet::Class *GetManagedClass() const = 0;
 
-    virtual void SetManagedObject(dotnet::Object *managed_object) = 0;
+    virtual void SetManagedObjectResource(ManagedObjectResource *managed_object_resource) = 0;
+    virtual ManagedObjectResource *GetManagedObjectResource() const = 0;
+    
     virtual dotnet::Object *GetManagedObject() const = 0;
 
     virtual void FixupPointer(void *_this, IHypObjectInitializer *ptr) = 0;
@@ -139,8 +143,8 @@ struct HypObjectInitializerGuardBase
     HYP_API HypObjectInitializerGuardBase(const HypClass *hyp_class, void *address);
     HYP_API ~HypObjectInitializerGuardBase();
 
-    const HypClass              *hyp_class;
-    void                        *address;
+    const HypClass  *hyp_class;
+    void            *address;
 
 #ifdef HYP_DEBUG_MODE
     ThreadID        initializer_thread_id;
@@ -229,7 +233,7 @@ public:
     HYP_FORCE_INLINE void *GetPointer() const
         { return m_ptr; }
 
-    HYP_API const IHypObjectInitializer *GetObjectInitializer() const;
+    HYP_API IHypObjectInitializer *GetObjectInitializer() const;
 
     HYP_API uint32 GetRefCount_Strong() const;
 
@@ -245,6 +249,8 @@ private:
 
 HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count);
 HYP_API void HypObject_OnDecRefCount_Strong(HypObjectPtr ptr, uint32 count);
+HYP_API void HypObject_OnIncRefCount_Weak(HypObjectPtr ptr, uint32 count);
+HYP_API void HypObject_OnDecRefCount_Weak(HypObjectPtr ptr, uint32 count);
 
 namespace detail {
 

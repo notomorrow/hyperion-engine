@@ -55,8 +55,8 @@ public:
     RenderEnvironment &operator=(const RenderEnvironment &other)    = delete;
     ~RenderEnvironment();
 
-    const TLASRef &GetTLAS() const
-        { return m_tlas; }
+    const FixedArray<TLASRef, max_frames_in_flight> &GetTopLevelAccelerationStructures() const
+        { return m_top_level_acceleration_structures; }
 
     const Handle<ParticleSystem> &GetParticleSystem() const
         { return m_particle_system; }
@@ -218,10 +218,10 @@ public:
     void Init();
     void Update(GameCounter::TickUnit delta);
 
-    void RenderRTRadiance(Frame *frame);
-    void RenderDDGIProbes(Frame *frame);
+    void RenderRTRadiance(IFrame *frame);
+    void RenderDDGIProbes(IFrame *frame);
 
-    void RenderSubsystems(Frame *frame);
+    void RenderSubsystems(IFrame *frame);
 
 private:
     HYP_FORCE_INLINE void AddUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type)
@@ -256,10 +256,10 @@ private:
     void AddRenderSubsystem(TypeID type_id, const RC<RenderSubsystem> &render_subsystem);
     void RemoveRenderSubsystem(TypeID type_id, const HypClass *hyp_class, Name name);
 
-    void ApplyTLASUpdates(Frame *frame, RTUpdateStateFlags flags);
+    void ApplyTLASUpdates(IFrame *frame, RTUpdateStateFlags flags);
 
     void InitializeRT();
-    bool CreateTLAS();
+    bool CreateTopLevelAccelerationStructures();
 
     AtomicVar<RenderEnvironmentUpdates>                                 m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
 
@@ -278,7 +278,7 @@ private:
     bool                                                                m_has_rt_radiance;
     bool                                                                m_has_ddgi_probes;
     bool                                                                m_rt_initialized;
-    TLASRef                                                             m_tlas;
+    FixedArray<TLASRef, max_frames_in_flight>                           m_top_level_acceleration_structures;
     
     uint32                                                              m_frame_counter;
 };

@@ -15,7 +15,7 @@
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/UUID.hpp>
 
-#include <core/util/ForEach.hpp>
+#include <core/utilities/ForEach.hpp>
 
 #include <scene/Node.hpp>
 #include <scene/NodeProxy.hpp>
@@ -510,6 +510,8 @@ public:
     friend class UIStage;
     friend struct UILockedUpdatesScope;
 
+    static constexpr int scrollbar_size = 15;
+
     UIObject();
     UIObject(const UIObject &other)                 = delete;
     UIObject &operator=(const UIObject &other)      = delete;
@@ -624,11 +626,11 @@ public:
 
     HYP_METHOD()
     virtual int GetVerticalScrollbarSize() const
-        { return 20; }
+        { return scrollbar_size; }
 
     HYP_METHOD()
     virtual int GetHorizontalScrollbarSize() const
-        { return 20; }
+        { return scrollbar_size; }
 
     HYP_METHOD()
     virtual bool CanScroll(UIObjectScrollbarOrientation orientation) const
@@ -761,6 +763,11 @@ public:
     HYP_METHOD(Property="BackgroundColor")
     void SetBackgroundColor(const Color &background_color);
 
+    /*! \brief Get the blended background color of the UI object, including its parents. Blends RGB components until alpha adds up to 1.0.
+     *  \note Images and other objects that use a texture will not be blended, only the background color.
+     *  \return The blended background color of the UI object */
+    Color ComputeBlendedBackgroundColor() const;
+
     /*! \brief Get the text color of the UI object
      * \return The text color of the UI object */
     HYP_METHOD(Property="TextColor")
@@ -769,7 +776,7 @@ public:
     /*! \brief Set the text color of the UI object
      *  \param text_color The text color of the UI object */
     HYP_METHOD(Property="TextColor")
-    void SetTextColor(const Color &text_color);
+    virtual void SetTextColor(const Color &text_color);
 
     /*! \brief Gets the text to render.
      * 
@@ -1090,13 +1097,13 @@ public:
         UIObjectSize size
     )
     {
-        Threads::AssertOnThread(m_owner_thread_id);
+        AssertOnOwnerThread();
 
         // AssertThrow(IsInit());
         AssertThrow(GetNode().IsValid());
 
         if (!name.IsValid()) {
-            name = CreateNameFromDynamicString(ANSIString("Unnamed_") + TypeNameHelper<T, true>::value.Data());
+            name = Name::Unique(ANSIString("Unnamed_") + TypeNameHelper<T, true>::value.Data());
         }
 
         NodeProxy node_proxy(MakeRefCountedPtr<Node>(name.LookupString()));
@@ -1176,6 +1183,13 @@ public:
     ScriptableDelegate<UIEventHandlerResult>                        OnTextChange;
 
 protected:
+    HYP_FORCE_INLINE void AssertOnOwnerThread() const
+    {
+        if (Scene *scene = GetScene()) {
+            Threads::AssertOnThread(scene->GetOwnerThreadID());
+        }
+    }
+
     RC<UIObject> GetClosestParentUIObject_Proc(const ProcRef<bool(UIObject *)> &proc) const;
     RC<UIObject> GetClosestSpawnParent_Proc(const ProcRef<bool(UIObject *)> &proc) const;
 
@@ -1198,6 +1212,8 @@ protected:
     virtual void OnComputedVisibilityChange_Internal() { }
 
     void UpdateComputedDepth(bool update_children = true);
+
+    void UpdateComputedTextSize();
 
     /*! \brief Sets the NodeProxy for this UIObject.
      *  \internal To be called internally from UIStage */
@@ -1261,8 +1277,6 @@ protected:
 
     Name                            m_name;
 
-    ThreadID                        m_owner_thread_id;
-
     Vec2i                           m_position;
     Vec2f                           m_offset_position;
     bool                            m_is_position_absolute;
@@ -1302,8 +1316,6 @@ protected:
 
     String                          m_text;
 
-    float                           m_text_size;
-
     RC<UIDataSourceBase>            m_data_source;
     DelegateHandler                 m_data_source_on_change_handler;
     DelegateHandler                 m_data_source_on_element_add_handler;
@@ -1330,6 +1342,11 @@ private:
         ui_object->m_spawn_parent = WeakRefCountedPtrFromThis();
         ui_object->m_stage = stage;
 
+        // Small optimization so UpdateComputedTextSize() doesn't need to be called when attached.
+        // Computed text size is based on spawn parent rather than the node it's attached to,
+        // so we can set it right here.
+        ui_object->m_computed_text_size = m_computed_text_size;
+
         ui_object->SetNodeProxy(node_proxy);
         ui_object->SetName(name);
 
@@ -1352,9 +1369,6 @@ private:
     template <class Lambda>
     void ForEachParentUIObject(Lambda &&lambda) const;
 
-    // For UIStage only.
-    void SetAllChildUIObjectsStage(UIStage *stage);
-
     void SetEntityAABB(const BoundingBox &aabb);
 
     void UpdateClampedSize(bool update_children = true);
@@ -1374,6 +1388,9 @@ private:
     bool                                    m_computed_visibility;
 
     int                                     m_computed_depth;
+
+    float                                   m_text_size;
+    float                                   m_computed_text_size;
     
     bool                                    m_accepts_focus;
 

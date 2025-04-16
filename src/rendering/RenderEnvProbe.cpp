@@ -8,6 +8,9 @@
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/Shadows.hpp>
 
+#include <rendering/backend/RenderingAPI.hpp>
+#include <rendering/backend/RendererFrame.hpp>
+
 #include <scene/Texture.hpp>
 
 #include <core/logging/LogChannels.hpp>
@@ -44,22 +47,19 @@ EnvProbeRenderResource::EnvProbeRenderResource(EnvProbe *env_probe)
       m_buffer_data { },
       m_texture_slot(~0u)
 {
-    if (m_env_probe->GetParentScene().IsValid()) {
-        AssertThrow(m_env_probe->GetParentScene()->IsReady());
-
-        m_scene_resource_handle = ResourceHandle(m_env_probe->GetParentScene()->GetRenderResource());
-    }
-
     if (!m_env_probe->IsControlledByEnvGrid()) {
         CreateShader();
         CreateFramebuffer();
         CreateTexture();
 
-        AssertThrow(m_env_probe->GetCamera().IsValid());
-
-        m_env_probe->GetCamera()->GetRenderResource().SetFramebuffer(m_framebuffer);
-
-        m_camera_resource_handle = ResourceHandle(m_env_probe->GetCamera()->GetRenderResource());
+        m_render_collector.SetOverrideAttributes(RenderableAttributeSet(
+            MeshAttributes { },
+            MaterialAttributes {
+                .shader_definition  = m_shader->GetCompiledShader()->GetDefinition(),
+                .blend_function     = BlendFunction::AlphaBlending(),
+                .cull_faces         = FaceCullMode::NONE
+            }
+        ));
     }
 }
 
@@ -101,7 +101,25 @@ void EnvProbeRenderResource::SetBufferData(const EnvProbeShaderData &buffer_data
     });
 }
 
-void EnvProbeRenderResource::SetSceneResourceHandle(ResourceHandle &&scene_resource_handle)
+void EnvProbeRenderResource::SetCameraResourceHandle(TResourceHandle<CameraRenderResource> &&camera_resource_handle)
+{
+    HYP_SCOPE;
+
+    Execute([this, camera_resource_handle = std::move(camera_resource_handle)]()
+    {
+        if (m_camera_resource_handle) {
+            m_camera_resource_handle->SetFramebuffer(nullptr);
+        }
+
+        m_camera_resource_handle = std::move(camera_resource_handle);
+
+        if (m_camera_resource_handle) {
+            m_camera_resource_handle->SetFramebuffer(m_framebuffer);
+        }
+    });
+}
+
+void EnvProbeRenderResource::SetSceneResourceHandle(TResourceHandle<SceneRenderResource> &&scene_resource_handle)
 {
     HYP_SCOPE;
 
@@ -152,7 +170,7 @@ void EnvProbeRenderResource::CreateFramebuffer()
     m_framebuffer = MakeRenderObject<Framebuffer>(
         m_env_probe->GetDimensions(),
         renderer::RenderPassStage::SHADER,
-        renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER,
+        renderer::RenderPassMode::RENDER_PASS_INLINE,
         6
     );
 
@@ -181,14 +199,14 @@ void EnvProbeRenderResource::CreateFramebuffer()
 
     m_framebuffer->AddAttachment(
         1,
-        g_engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
+        g_rendering_api->GetDefaultFormat(renderer::DefaultImageFormatType::DEPTH),
         ImageType::TEXTURE_TYPE_CUBEMAP,
         renderer::RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE
     );
 
-    DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
+    DeferCreate(m_framebuffer);
 }
 
 void EnvProbeRenderResource::CreateTexture()
@@ -294,6 +312,8 @@ void EnvProbeRenderResource::Initialize_Internal()
 void EnvProbeRenderResource::Destroy_Internal()
 {
     HYP_SCOPE;
+
+    m_render_collector.ClearState();
 }
 
 void EnvProbeRenderResource::Update_Internal()
@@ -375,7 +395,7 @@ void EnvProbeRenderResource::BindToIndex(const EnvProbeIndex &probe_index)
     }, /* force_owner_thread */ true);
 }
 
-void EnvProbeRenderResource::Render(Frame *frame)
+void EnvProbeRenderResource::Render(IFrame *frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -390,14 +410,15 @@ void EnvProbeRenderResource::Render(Frame *frame)
         return;
     }
 
+    if (!m_scene_resource_handle || !m_camera_resource_handle) {
+        return;
+    }
+
     HYP_LOG(EnvProbe, Debug, "Rendering EnvProbe #{} (type: {})", m_env_probe->GetID().Value(), m_env_probe->GetEnvProbeType());
 
     AssertThrow(m_texture.IsValid());
 
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();
-
-    RendererResult result;
 
     EnvProbeIndex probe_index;
 
@@ -417,8 +438,6 @@ void EnvProbeRenderResource::Render(Frame *frame)
     );
 
     BindToIndex(probe_index);
-
-    CameraRenderResource &camera_render_resource = static_cast<CameraRenderResource &>(*m_camera_resource_handle);
     
     TResourceHandle<LightRenderResource> *light_render_resource_handle = nullptr;
 
@@ -440,14 +459,12 @@ void EnvProbeRenderResource::Render(Frame *frame)
         g_engine->GetRenderState()->SetActiveEnvProbe(TResourceHandle<EnvProbeRenderResource>(*this));
 
         if (light_render_resource_handle != nullptr) {
-            g_engine->GetRenderState()->SetActiveLight(**light_render_resource_handle);
+            g_engine->GetRenderState()->SetActiveLight(*light_render_resource_handle);
         }
 
-        if (m_scene_resource_handle) {
-            g_engine->GetRenderState()->SetActiveScene(static_cast<SceneRenderResource &>(*m_scene_resource_handle).GetScene());
-        }
+        g_engine->GetRenderState()->SetActiveScene(m_scene_resource_handle->GetScene());
 
-        g_engine->GetRenderState()->BindCamera(camera_render_resource.GetCamera());
+        g_engine->GetRenderState()->BindCamera(m_camera_resource_handle);
 
         m_render_collector.CollectDrawCalls(
             frame,
@@ -457,15 +474,13 @@ void EnvProbeRenderResource::Render(Frame *frame)
 
         m_render_collector.ExecuteDrawCalls(
             frame,
-            camera_render_resource,
+            m_camera_resource_handle,
             Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_TRANSLUCENT))
         );
 
-        g_engine->GetRenderState()->UnbindCamera(camera_render_resource.GetCamera());
+        g_engine->GetRenderState()->UnbindCamera(m_camera_resource_handle.Get());
 
-        if (m_scene_resource_handle) {
-            g_engine->GetRenderState()->UnsetActiveScene();
-        }
+        g_engine->GetRenderState()->UnsetActiveScene();
 
         if (light_render_resource_handle != nullptr) {
             g_engine->GetRenderState()->UnsetActiveLight();
@@ -476,22 +491,17 @@ void EnvProbeRenderResource::Render(Frame *frame)
 
     const ImageRef &framebuffer_image = m_framebuffer->GetAttachment(0)->GetImage();
 
-    framebuffer_image->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
-    m_texture->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
+    frame->GetCommandList().Add<InsertBarrier>(framebuffer_image, renderer::ResourceState::COPY_SRC);
+    frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), renderer::ResourceState::COPY_DST);
 
-    m_texture->GetRenderResource().GetImage()->Blit(command_buffer, framebuffer_image);
+    frame->GetCommandList().Add<Blit>(framebuffer_image, m_texture->GetRenderResource().GetImage());
 
     if (m_texture->HasMipmaps()) {
-        HYPERION_PASS_ERRORS(
-            m_texture->GetRenderResource().GetImage()->GenerateMipmaps(g_engine->GetGPUDevice(), command_buffer),
-            result
-        );
+        frame->GetCommandList().Add<GenerateMipmaps>(m_texture->GetRenderResource().GetImage());
     }
 
-    framebuffer_image->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
-    m_texture->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
-
-    HYPERION_ASSERT_RESULT(result);
+    frame->GetCommandList().Add<InsertBarrier>(framebuffer_image, renderer::ResourceState::SHADER_RESOURCE);
+    frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
 
     // Temp; refactor
     m_env_probe->SetNeedsRender(false);

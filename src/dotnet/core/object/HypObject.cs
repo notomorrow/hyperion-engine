@@ -59,6 +59,9 @@ namespace Hyperion
 #if DEBUG
                     if (!objectReference.IsValid)
                     {
+                        Console.WriteLine("Failed to add object to cache");
+                        Console.Out.Flush();
+
                         gcHandle.Free();
                         throw new Exception("Failed to add object to cache");
                     }
@@ -67,11 +70,10 @@ namespace Hyperion
                     _hypClassPtr = hypClass.Address;
                     
                     HypObject_Initialize(_hypClassPtr, classObjectPtr, ref objectReference, out _nativeAddress);
-
-#if DEBUG
-                    HypObject_Verify(_hypClassPtr, _nativeAddress, objectReferencePtr);
-#endif
                 }
+
+                Console.WriteLine("Created HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);
+                Console.Out.Flush();
 
                 gcHandle.Free();
             }
@@ -86,20 +88,7 @@ namespace Hyperion
                 {
                     throw new Exception("Native address is null - object is not correctly initialized");
                 }
-
-#if DEBUG
-                HypObject_Verify(_hypClassPtr, _nativeAddress, IntPtr.Zero);
-#endif
-
-                // HypObject_Initialize() will increment the reference count for objects created from managed, so we need to increment it here manually
-                // if (HypClass.IsReferenceCounted)
-                //     HypObject_IncRef(_hypClassPtr, _nativeAddress, false);
             }
-
-#if DEBUG
-            if (HypClass.IsReferenceCounted)
-                Assert.Throw(HypObject_GetRefCount_Strong(_hypClassPtr, _nativeAddress) == 1, "Strong reference must be 1 after creation");
-#endif
             
             // Logger.Log(LogType.Debug, "Created HypObject of type " + GetType().Name + ", _hypClassPtr: " + _hypClassPtr + ", _nativeAddress: " + _nativeAddress);
         }
@@ -110,6 +99,8 @@ namespace Hyperion
 
             if (IsValid)
             {
+                Logger.Log(LogType.Debug, $"Finalizing HypObject of type {HypClass.Name} at address 0x{(long)NativeAddress:X}");
+
                 if (HypClass.IsReferenceCounted)
                 {
 #if DEBUG
@@ -134,7 +125,7 @@ namespace Hyperion
                     HypObject_DecRef(_hypClassPtr, _nativeAddress, false);
                 }
 
-                GC.SuppressFinalize(this);
+                // GC.SuppressFinalize(this);
             }
 
             _hypClassPtr = IntPtr.Zero;
@@ -226,9 +217,6 @@ namespace Hyperion
         
         [DllImport("hyperion", EntryPoint = "HypObject_Initialize")]
         private static extern void HypObject_Initialize([In] IntPtr hypClassPtr, [In] IntPtr classObjectPtr, [In] ref ObjectReference objectReference, [Out] out IntPtr outInstancePtr);
-
-        [DllImport("hyperion", EntryPoint = "HypObject_Verify")]
-        private static extern void HypObject_Verify([In] IntPtr hypClassPtr, [In] IntPtr nativeAddress, [In] IntPtr objectReferencePtr);
 
         [DllImport("hyperion", EntryPoint = "HypObject_GetRefCount_Strong")]
         private static extern uint HypObject_GetRefCount_Strong([In] IntPtr hypClassPtr, [In] IntPtr nativeAddress);

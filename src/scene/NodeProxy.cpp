@@ -32,7 +32,7 @@ NodeProxyChildren::ConstIterator NodeProxyChildren::End() const
     return ConstIterator { node, node ? node->GetChildren().Size() : 0 };
 }
 
-NodeProxy &NodeProxyChildren::Iterator::operator*()
+const NodeProxy &NodeProxyChildren::Iterator::operator*() const
 {
     AssertThrow(node != nullptr && index < node->GetChildren().Size());
 
@@ -46,7 +46,7 @@ const NodeProxy &NodeProxyChildren::ConstIterator::operator*() const
     return node->GetChildren()[index];
 }
 
-NodeProxy *NodeProxyChildren::Iterator::operator->()
+const NodeProxy *NodeProxyChildren::Iterator::operator->() const
 {
     return &const_cast<Node *>(node)->GetChildren()[index];
 }
@@ -184,13 +184,11 @@ NodeProxy NodeProxy::AddChild(const NodeProxy &node)
     return Get()->AddChild(node);
 }
 
-bool NodeProxy::Remove()
+void NodeProxy::Remove()
 {
     if (Node *node = Get()) {
-        return node->Remove();
+        node->Remove();
     }
-    
-    return false;
 }
 
 const Transform &NodeProxy::GetLocalTransform() const

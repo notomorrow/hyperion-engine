@@ -14,6 +14,7 @@
 
 #include <rendering/font/FontAtlas.hpp>
 
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RenderConfig.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
@@ -334,7 +335,7 @@ RenderCollector::CollectionResult UIRenderCollector::PushUpdatesToRenderThread(c
     return collection_result;
 }
 
-void UIRenderCollector::CollectDrawCalls(Frame *frame)
+void UIRenderCollector::CollectDrawCalls(IFrame *frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -369,7 +370,7 @@ void UIRenderCollector::CollectDrawCalls(Frame *frame)
     );
 }
 
-void UIRenderCollector::ExecuteDrawCalls(Frame *frame, const CameraRenderResource &camera_render_resource, const FramebufferRef &framebuffer) const
+void UIRenderCollector::ExecuteDrawCalls(IFrame *frame, const TResourceHandle<CameraRenderResource> &camera_resource_handle, const FramebufferRef &framebuffer) const
 {
     HYP_SCOPE;
 
@@ -377,14 +378,13 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame, const CameraRenderResourc
     
     AssertThrow(m_draw_collection != nullptr);
 
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();
 
     if (framebuffer.IsValid()) {
-        framebuffer->BeginCapture(command_buffer, frame_index);
+        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, frame_index);
     }
 
-    g_engine->GetRenderState()->BindCamera(camera_render_resource.GetCamera());
+    g_engine->GetRenderState()->BindCamera(camera_resource_handle);
 
     using IteratorType = FlatMap<RenderableAttributeSet, Handle<RenderGroup>>::ConstIterator;
     Array<IteratorType> iterators;
@@ -424,10 +424,10 @@ void UIRenderCollector::ExecuteDrawCalls(Frame *frame, const CameraRenderResourc
         render_group->PerformRendering(frame);
     }
 
-    g_engine->GetRenderState()->UnbindCamera(camera_render_resource.GetCamera());
+    g_engine->GetRenderState()->UnbindCamera(camera_resource_handle.Get());
     
     if (framebuffer.IsValid()) {
-        framebuffer->EndCapture(command_buffer, frame_index);
+        frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frame_index);
     }
 }
 
@@ -489,14 +489,13 @@ void UIRenderSubsystem::Init()
         PUSH_RENDER_COMMAND(CreateUIRenderSubsystemFramebuffer, subsystem);
     });
 
-    PUSH_RENDER_COMMAND(CreateUIRenderSubsystemFramebuffer, RefCountedPtrFromThis().CastUnsafe<UIRenderSubsystem>());
-
     AssertThrow(m_ui_stage != nullptr);
-    AssertThrow(m_ui_stage->GetScene() != nullptr);
-    AssertThrow(m_ui_stage->GetScene()->GetCamera().IsValid());
-    AssertThrow(m_ui_stage->GetScene()->GetCamera()->IsReady());
+    AssertThrow(m_ui_stage->GetCamera().IsValid());
+    AssertThrow(m_ui_stage->GetCamera()->IsReady());
 
-    m_camera_resource_handle = ResourceHandle(m_ui_stage->GetScene()->GetCamera()->GetRenderResource());
+    m_camera_resource_handle = TResourceHandle<CameraRenderResource>(m_ui_stage->GetCamera()->GetRenderResource());
+
+    PUSH_RENDER_COMMAND(CreateUIRenderSubsystemFramebuffer, RefCountedPtrFromThis().CastUnsafe<UIRenderSubsystem>());
 }
 
 // called from game thread
@@ -515,16 +514,14 @@ void UIRenderSubsystem::OnUpdate(GameCounter::TickUnit delta)
     // do nothing
 }
 
-void UIRenderSubsystem::OnRender(Frame *frame)
+void UIRenderSubsystem::OnRender(IFrame *frame)
 {
     HYP_SCOPE;
-
-    CameraRenderResource &camera_render_resource = static_cast<CameraRenderResource &>(*m_camera_resource_handle);
 
     g_engine->GetRenderState()->SetActiveScene(m_ui_stage->GetScene());
 
     m_render_collector.CollectDrawCalls(frame);
-    m_render_collector.ExecuteDrawCalls(frame, camera_render_resource, m_framebuffer);
+    m_render_collector.ExecuteDrawCalls(frame, m_camera_resource_handle, m_framebuffer);
 
     g_engine->GetRenderState()->UnsetActiveScene();
 }
@@ -539,7 +536,7 @@ void UIRenderSubsystem::CreateFramebuffer()
     m_framebuffer = g_engine->GetDeferredRenderer()->GetGBuffer()->GetBucket(Bucket::BUCKET_UI).GetFramebuffer();
     AssertThrow(m_framebuffer.IsValid());
 
-    m_ui_stage->GetScene()->GetCamera()->GetRenderResource().SetFramebuffer(m_framebuffer);
+    m_camera_resource_handle->SetFramebuffer(m_framebuffer);
 
     m_ui_stage->GetScene()->GetEntityManager()->PushCommand([ui_stage = m_ui_stage, framebuffer = m_framebuffer, surface_size](EntityManager &mgr, GameCounter::TickUnit delta)
     {

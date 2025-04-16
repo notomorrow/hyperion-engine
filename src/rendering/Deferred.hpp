@@ -56,8 +56,7 @@ public:
     virtual ~DeferredPass() override;
 
     virtual void Create() override;
-    virtual void Record(uint32 frame_index) override;
-    virtual void Render(Frame *frame) override;
+    virtual void Render(IFrame *frame) override;
 
 protected:
     void CreateShader();
@@ -104,9 +103,8 @@ public:
     virtual ~EnvGridPass() override;
 
     virtual void Create() override;
-    virtual void Record(uint32 frame_index) override;
-    virtual void Render(Frame *frame) override;
-    virtual void RenderToFramebuffer(Frame *frame, const FramebufferRef &framebuffer) override
+    virtual void Render(IFrame *frame) override;
+    virtual void RenderToFramebuffer(IFrame *frame, const FramebufferRef &framebuffer) override
         { HYP_NOT_IMPLEMENTED(); }
 
 protected:
@@ -145,9 +143,8 @@ public:
     virtual ~ReflectionsPass() override;
     
     virtual void Create() override;
-    virtual void Record(uint32 frame_index) override;
-    virtual void Render(Frame *frame) override;
-    virtual void RenderToFramebuffer(Frame *frame, const FramebufferRef &framebuffer) override
+    virtual void Render(IFrame *frame) override;
+    virtual void RenderToFramebuffer(IFrame *frame, const FramebufferRef &framebuffer) override
         { HYP_NOT_IMPLEMENTED(); }
 
 private:
@@ -159,7 +156,6 @@ private:
         
     virtual void CreatePipeline() override;
     virtual void CreatePipeline(const RenderableAttributeSet &renderable_attributes) override;
-    virtual void CreateCommandBuffers() override;
 
     bool ShouldRenderSSR() const;
 
@@ -170,7 +166,6 @@ private:
     virtual void Resize_Internal(Vec2u new_size) override;
 
     FixedArray<Handle<RenderGroup>, ApplyReflectionProbeMode::MAX>                                  m_render_groups;
-    FixedArray<FixedArray<CommandBufferRef, max_frames_in_flight>, ApplyReflectionProbeMode::MAX>   m_command_buffers;
 
     UniquePtr<SSRRenderer>                                                                          m_ssr_renderer;
 
@@ -182,7 +177,7 @@ private:
 class DeferredRenderer
 {
 public:
-    DeferredRenderer();
+    DeferredRenderer(ISwapchain *swapchain);
     DeferredRenderer(const DeferredRenderer &other)             = delete;
     DeferredRenderer &operator=(const DeferredRenderer &other)  = delete;
     ~DeferredRenderer();
@@ -214,7 +209,7 @@ public:
     void Create();
     void Destroy();
     
-    void Render(Frame *frame, RenderEnvironment *environment);
+    void Render(IFrame *frame, RenderEnvironment *environment);
 
     void Resize(Vec2u new_size);
 
@@ -228,13 +223,13 @@ private:
     void CreateCombinePass();
     void CreateDescriptorSets();
 
-    void CollectDrawCalls(Frame *frame);
+    void CollectDrawCalls(IFrame *frame);
 
-    void RenderSkybox(Frame *frame);
-    void RenderOpaqueObjects(Frame *frame);
-    void RenderTranslucentObjects(Frame *frame);
+    void RenderSkybox(IFrame *frame);
+    void RenderOpaqueObjects(IFrame *frame);
+    void RenderTranslucentObjects(IFrame *frame);
 
-    void GenerateMipChain(Frame *frame, Image *image);
+    void GenerateMipChain(IFrame *frame, const ImageRef &image);
 
     UniquePtr<GBuffer>                                  m_gbuffer;
 

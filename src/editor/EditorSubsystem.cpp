@@ -67,6 +67,8 @@
 #include <rendering/lightmapper/LightmapperSubsystem.hpp>
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
 
+#include <console/ui/ConsoleUI.hpp>
+
 #include <core/math/MathUtil.hpp>
 
 #include <dotnet/Class.hpp>
@@ -518,7 +520,7 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context)
             }));
         }
 
-        m_camera = m_scene->GetCamera();
+        m_camera = m_scene->GetPrimaryCamera();
         AssertThrowMsg(InitObject(m_camera), "Failed to initialize editor camera for scene %s", *m_scene->GetName());
 
         // // @TODO: Don't serialize the editor camera controller
@@ -545,6 +547,13 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context)
         InitSceneOutline();
 
         m_manipulation_widget_holder.Initialize();
+
+        m_delegate_handlers.Remove("OnRootNodeChanged");
+        m_delegate_handlers.Add(NAME("OnRootNodeChanged"), m_scene->OnRootNodeChanged.Bind([this](const NodeProxy &new_root, const NodeProxy &prev_root)
+        {
+            // Reinitialize scene outline when the root node changes.
+            InitSceneOutline();
+        }));
 
         m_delegate_handlers.Add(NAME("OnGameStateChange"), GetWorld()->OnGameStateChange.Bind([this](World *world, GameStateMode game_state_mode)
         {
@@ -600,9 +609,7 @@ EditorSubsystem::EditorSubsystem(const RC<AppContext> &app_context)
 
         if (prev_widget.GetManipulationMode() != EditorManipulationMode::NONE) {
             if (prev_widget.GetNode().IsValid() && prev_widget.GetNode()->GetScene() == m_scene.Get()) {
-                if (!prev_widget.GetNode()->Remove()) {
-                    HYP_LOG(Editor, Warning, "Failed to remove manipulation widget node from scene");
-                }
+                prev_widget.GetNode()->Remove();
             }
 
             prev_widget.UpdateWidget(NodeProxy::empty);
@@ -653,13 +660,13 @@ void EditorSubsystem::Initialize()
 
     NewProject();
 
-    /*auto result = EditorProject::Load(g_asset_manager->GetBasePath() / "projects" / "UntitledProject2");
+    // auto result = EditorProject::Load(g_asset_manager->GetBasePath() / "projects" / "UntitledProject612");
 
-    if (!result) {
-        HYP_BREAKPOINT;
-    }
+    // if (!result) {
+    //     HYP_BREAKPOINT;
+    // }
 
-    OpenProject(*result);*/
+    // OpenProject(*result);
 
     InitDetailView();
     InitDebugOverlays();
@@ -736,7 +743,6 @@ void EditorSubsystem::LoadEditorUIDefinitions()
     RC<UIStage> loaded_ui = loaded_ui_asset->Result().Cast<UIStage>();
     AssertThrowMsg(loaded_ui != nullptr, "Failed to load editor UI");
 
-    loaded_ui->SetOwnerThreadID(ThreadID::Current());
     loaded_ui->SetDefaultFontAtlas(font_atlas);
 
     ui_subsystem->GetUIStage()->AddChildUIObject(loaded_ui);
@@ -841,7 +847,13 @@ void EditorSubsystem::InitViewport()
         RC<UIImage> ui_image = scene_image_object.Cast<UIImage>();
         AssertThrow(ui_image != nullptr);
 
-        const Vec2i viewport_size = MathUtil::Max(m_scene->GetCamera()->GetDimensions(), Vec2i::One());
+        Vec2i viewport_size = Vec2i { 1024, 1024 };
+
+        const Handle<Camera> &primary_camera = m_scene->GetPrimaryCamera();
+
+        if (primary_camera.IsValid()) {
+            viewport_size = MathUtil::Max(primary_camera->GetDimensions(), Vec2i::One());
+        }
 
         m_scene_texture.Reset();
 
@@ -1044,6 +1056,16 @@ void EditorSubsystem::InitViewport()
             return UIEventHandlerResult::OK;
         }));
 
+        m_delegate_handlers.Remove(&ui_image->OnKeyUp);
+        m_delegate_handlers.Add(ui_image->OnKeyUp.Bind([this](const KeyboardEvent &event)
+        {
+            if (m_camera->GetCameraController()->GetInputHandler()->OnKeyUp(event)) {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
+            return UIEventHandlerResult::OK;
+        }));
+
         m_delegate_handlers.Remove(&ui_image->OnGainFocus);
         m_delegate_handlers.Add(ui_image->OnGainFocus.Bind([this](const MouseEvent &event)
         {
@@ -1061,6 +1083,8 @@ void EditorSubsystem::InitViewport()
         }));
 
         ui_image->SetTexture(m_scene_texture);
+
+        InitConsole();
     } else {
         HYP_FAIL("Failed to find Scene_Image element");
     }
@@ -1075,7 +1099,6 @@ void EditorSubsystem::InitSceneOutline()
     AssertThrow(list_view != nullptr);
 
     list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-    
     list_view->SetDataSource(MakeRefCountedPtr<UIDataSource>(TypeWrapper<Weak<Node>> { }));
     
     m_delegate_handlers.Remove(&list_view->OnSelectedItemChange);
@@ -1128,7 +1151,6 @@ void EditorSubsystem::InitSceneOutline()
     }));
 
     m_editor_delegates->RemoveNodeWatchers("SceneView");
-
     m_editor_delegates->AddNodeWatcher(NAME("SceneView"), m_scene->GetRoot().Get(), { Node::Class()->GetProperty(NAME("Name")), 1 }, [this, hyp_class = GetClass<Node>(), list_view_weak = list_view.ToWeak()](Node *node, const HypProperty *property)
     {
        // Update name in list view
@@ -1162,31 +1184,31 @@ void EditorSubsystem::InitSceneOutline()
            return;
        }
 
-       if (UIDataSourceBase *data_source = list_view->GetDataSource()) {
-           const UIDataSourceElement *data_source_element = data_source->Get(node->GetUUID());
+    //    if (UIDataSourceBase *data_source = list_view->GetDataSource()) {
+    //        const UIDataSourceElement *data_source_element = data_source->Get(node->GetUUID());
 
-           if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE) {
-               if (!data_source_element) {
-                   return;
-               }
+    //        if (node->GetFlags() & NodeFlags::HIDE_IN_SCENE_OUTLINE) {
+    //            if (!data_source_element) {
+    //                return;
+    //            }
 
-               data_source->Remove(node->GetUUID());
-           } else {
-               if (data_source_element) {
-                   return;
-               }
+    //            data_source->Remove(node->GetUUID());
+    //        } else {
+    //            if (data_source_element) {
+    //                return;
+    //            }
 
-               Weak<Node> editor_node_weak = node->WeakRefCountedPtrFromThis();
+    //            Weak<Node> editor_node_weak = node->WeakRefCountedPtrFromThis();
 
-               UUID parent_node_uuid = UUID::Invalid();
+    //            UUID parent_node_uuid = UUID::Invalid();
 
-               if (Node *parent_node = node->GetParent(); parent_node && !parent_node->IsRoot()) {
-                   parent_node_uuid = parent_node->GetUUID();
-               }
+    //            if (Node *parent_node = node->GetParent(); parent_node && !parent_node->IsRoot()) {
+    //                parent_node_uuid = parent_node->GetUUID();
+    //            }
 
-               data_source->Push(node->GetUUID(), HypData(std::move(editor_node_weak)), parent_node_uuid);
-           }
-       }
+    //            data_source->Push(node->GetUUID(), HypData(std::move(editor_node_weak)), parent_node_uuid);
+    //        }
+    //    }
     });
 
     static const auto AddNodeToSceneOutline = [](const RC<UIListView> &list_view, Node *node)
@@ -1294,8 +1316,6 @@ void EditorSubsystem::InitDetailView()
             return;
         }
 
-        HYP_LOG(Editor, Debug, "Focused node: {}", node->GetName());
-
         list_view->SetDataSource(MakeRefCountedPtr<UIDataSource>(TypeWrapper<EditorNodePropertyRef> { }));
 
         UIDataSourceBase *data_source = list_view->GetDataSource();
@@ -1332,8 +1352,6 @@ void EditorSubsystem::InitDetailView()
             if (const HypClassAttributeValue &attr = it.second->GetAttribute("description")) {
                 node_property_ref.description = attr.GetString();
             }
-
-            HYP_LOG(Editor, Debug, "Push property {} (title: {}) to data source", it.first, node_property_ref.title);
 
             data_source->Push(UUID(), HypData(std::move(node_property_ref)));
         }
@@ -1392,6 +1410,33 @@ void EditorSubsystem::InitDebugOverlays()
 
     if (RC<UIImage> scene_image = ui_subsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image")).Cast<UIImage>()) {
         scene_image->AddChildUIObject(m_debug_overlay_ui_object);
+    }
+}
+
+void EditorSubsystem::InitConsole()
+{
+    HYP_SCOPE;
+
+    UISubsystem *ui_subsystem = GetWorld()->GetSubsystem<UISubsystem>();
+    AssertThrow(ui_subsystem != nullptr);
+
+    RC<UIObject> console_ui = ui_subsystem->GetUIStage()->FindChildUIObject(NAME("Console"));
+    if (console_ui != nullptr) {
+        console_ui->RemoveFromParent();
+    }
+
+    console_ui = ui_subsystem->GetUIStage()->CreateUIObject<ConsoleUI>(NAME("Console"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::FILL }, { 100, UIObjectSize::PIXEL }));
+    AssertThrow(console_ui != nullptr);
+    
+    console_ui->SetDepth(150);
+
+    if (RC<UIObject> scene_image_object = ui_subsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image"))) {
+        RC<UIImage> scene_image = scene_image_object.Cast<UIImage>();
+        AssertThrow(scene_image != nullptr);
+
+        scene_image->AddChildUIObject(console_ui);
+    } else {
+        HYP_FAIL("Failed to find Scene_Image element; cannot add console UI");
     }
 }
 

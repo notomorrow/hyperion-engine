@@ -21,9 +21,14 @@ public:
           m_size(size),
           m_destruct_function(destruct_function)
     {
+        // @TODO Register the ManagedClass (dotnet::Class) for this. We need the assembly.
+        HypClassRegistry::GetInstance().RegisterClass(type_id, this);
     }
 
-    virtual ~DynamicHypStructInstance() override = default;
+    virtual ~DynamicHypStructInstance() override
+    {
+        HypClassRegistry::GetInstance().UnregisterClass(this);
+    }
 
     virtual SizeType GetSize() const override
     {
@@ -74,11 +79,6 @@ public:
 
 protected:
     virtual void CreateInstance_Internal(HypData &out) const override
-    {
-        HYP_NOT_IMPLEMENTED_VOID();
-    }
-
-    virtual void CreateInstance_Internal(HypData &out, UniquePtr<dotnet::Object> &&managed_object) const override
     {
         HYP_NOT_IMPLEMENTED_VOID();
     }

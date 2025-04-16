@@ -13,9 +13,15 @@
 #include <core/object/HypClassRegistry.hpp>
 #include <core/threading/Threads.hpp>
 
+#include <console/ConsoleCommandManager.hpp>
+
 #include <system/MessageBox.hpp>
 
 #include <rendering/SafeDeleter.hpp>
+
+#ifdef HYP_VULKAN
+#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#endif
 
 #include <Game.hpp>
 
@@ -40,8 +46,8 @@ HYP_API void InitializeEngine(const FilePath &base_path)
     Threads::SetCurrentThreadID(g_main_thread);
     
     HypClassRegistry::GetInstance().Initialize();
-
     dotnet::DotNetSystem::GetInstance().Initialize(base_path);
+    ConsoleCommandManager::GetInstance().Initialize();
 
     g_engine = CreateObject<Engine>();
     InitObject(g_engine);
@@ -52,6 +58,12 @@ HYP_API void InitializeEngine(const FilePath &base_path)
     g_shader_manager = new ShaderManager;
     g_material_system = new MaterialCache;
     g_safe_deleter = new SafeDeleter;
+
+#ifdef HYP_VULKAN
+    g_rendering_api = new renderer::VulkanRenderingAPI();
+#else
+    #error Unsupported rendering backend
+#endif
 
     ComponentInterfaceRegistry::GetInstance().Initialize();
 }
@@ -69,6 +81,7 @@ HYP_API void DestroyEngine()
 
     dotnet::DotNetSystem::GetInstance().Shutdown();
     ComponentInterfaceRegistry::GetInstance().Shutdown();
+    ConsoleCommandManager::GetInstance().Shutdown();
 
     g_asset_manager.Reset();
 
@@ -79,6 +92,9 @@ HYP_API void DestroyEngine()
     g_material_system = nullptr;
 
     g_engine.Reset();
+
+    delete g_rendering_api;
+    g_rendering_api = nullptr;
 }
 
 } // namespace hyperion

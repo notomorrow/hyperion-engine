@@ -11,11 +11,28 @@ uint32 ByteUtil::LowestSetBitIndex(uint64 bits)
     const int bit_index = __builtin_ffsll(bits) - 1;
 #elif defined(HYP_MSVC)
     unsigned long bit_index = 0;
-    _BitScanForward64(&bit_index, bits);
+    if (!_BitScanForward64(&bit_index, bits)) {
+        return uint32(-1);
+    }
 #else
     #error "ByteUtil::LowestSetBitIndex() not implemented for this platform"
 #endif
 
+    return uint32(bit_index);
+}
+
+uint32 ByteUtil::HighestSetBitIndex(uint64 bits)
+{
+#ifdef HYP_CLANG_OR_GCC
+    const int bit_index = 63 - __builtin_clzll(bits);
+#elif defined(HYP_MSVC)
+    unsigned long bit_index = 0;
+    if (!_BitScanReverse64(&bit_index, bits)) {
+        return uint32(-1);
+    }
+#else
+    #error "ByteUtil::HighestSetBitIndex() not implemented for this platform"
+#endif
     return uint32(bit_index);
 }
 

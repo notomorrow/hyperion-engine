@@ -45,6 +45,12 @@ struct ShaderDataOffset
     {
     }
 
+    template <class RenderResourceType, typename = std::enable_if_t<!std::is_pointer_v<NormalizedType<RenderResourceType>> && !std::is_integral_v<NormalizedType<RenderResourceType>>>>
+    ShaderDataOffset(const RenderResourceType &render_resource)
+        : index(render_resource.GetBufferIndex())
+    {
+    }
+
     HYP_FORCE_INLINE operator uint32() const
     {
         AssertDebugMsg(index != invalid_index, "Index was ~0u when converting to uint32");
@@ -536,9 +542,9 @@ public:
 
     HYP_API bool IsCreated() const;
 
-    HYP_API RendererResult Create(Device<PLATFORM> *device);
-    HYP_API RendererResult Destroy(Device<PLATFORM> *device);
-    HYP_API RendererResult Update(Device<PLATFORM> *device);
+    HYP_API RendererResult Create();
+    HYP_API RendererResult Destroy();
+    HYP_API void Update();
 
     bool HasElement(Name name) const;
 
@@ -699,12 +705,6 @@ private:
     HashMap<Name, DescriptorSetElement<PLATFORM>>   m_elements;
 };
 
-template <PlatformType PLATFORM>
-class DescriptorSetManager
-{
-public:
-};
-
 } // namespace platform
 
 } // namespace renderer
@@ -774,7 +774,7 @@ public:
     /*! \brief Create all descriptor sets in the table
         \param device The device to create the descriptor sets on
         \return The result of the operation */
-    RendererResult Create(Device<PLATFORM> *device)
+    RendererResult Create()
     {
         RendererResult result;
 
@@ -792,7 +792,7 @@ public:
                     continue;
                 }
 
-                result = set->Create(device);
+                result = set->Create();
 
                 if (!result) {
                     return result;
@@ -806,7 +806,7 @@ public:
     /*! \brief Safely release all descriptor sets in the table
         \param device The device to destroy the descriptor sets on
         \return The result of the operation */
-    RendererResult Destroy(Device<PLATFORM> *device)
+    RendererResult Destroy()
     {
         for (auto &it : m_sets) {
             SafeRelease(std::move(it));
@@ -821,7 +821,7 @@ public:
         \param device The device to update the descriptor sets on
         \param frame_index The index of the frame to update the descriptor sets for
         \return The result of the operation */
-    RendererResult Update(Device<PLATFORM> *device, uint32 frame_index)
+    void Update(uint32 frame_index)
     {
         for (const DescriptorSetRef<PLATFORM> &set : m_sets[frame_index]) {
             const Name descriptor_set_name = set->GetLayout().GetName();
@@ -834,29 +834,8 @@ public:
                 continue;
             }
 
-            const RendererResult set_result = set->Update(device);
-
-            if (!set_result) {
-                return set_result;
-            }
+            set->Update();
         }
-
-        return { };
-    }
-
-    HYP_FORCE_INLINE void Bind(Frame<PLATFORM> *frame, const GraphicsPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>> &offsets)
-    {
-        Bind<GraphicsPipelineRef<PLATFORM>>(frame->GetCommandBuffer(), frame->GetFrameIndex(), pipeline, offsets);
-    }
-
-    HYP_FORCE_INLINE void Bind(Frame<PLATFORM> *frame, const ComputePipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>> &offsets) const
-    {
-        Bind<ComputePipelineRef<PLATFORM>>(frame->GetCommandBuffer(), frame->GetFrameIndex(), pipeline, offsets);
-    }
-
-    HYP_FORCE_INLINE void Bind(Frame<PLATFORM> *frame, const RaytracingPipelineRef<PLATFORM> &pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>> &offsets) const
-    {
-        Bind<RaytracingPipelineRef<PLATFORM>>(frame->GetCommandBuffer(), frame->GetFrameIndex(), pipeline, offsets);
     }
 
     /*! \brief Bind all descriptor sets in the table
@@ -900,7 +879,6 @@ private:
 using DescriptorSet = platform::DescriptorSet<Platform::CURRENT>;
 using DescriptorSetElement = platform::DescriptorSetElement<Platform::CURRENT>;
 using DescriptorSetLayout = platform::DescriptorSetLayout<Platform::CURRENT>;
-using DescriptorSetManager = platform::DescriptorSetManager<Platform::CURRENT>;
 using DescriptorTable = platform::DescriptorTable<Platform::CURRENT>;
 
 } // namespace renderer

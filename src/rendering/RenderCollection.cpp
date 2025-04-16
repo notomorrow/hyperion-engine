@@ -11,6 +11,7 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
 
+#include <rendering/backend/RenderingAPI.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RenderConfig.hpp>
@@ -26,8 +27,6 @@
 #include <core/profiling/ProfileScope.hpp>
 
 #include <core/containers/Array.hpp>
-
-#include <core/utilities/UniqueID.hpp>
 
 #include <core/threading/Threads.hpp>
 #include <core/threading/TaskSystem.hpp>
@@ -255,16 +254,16 @@ struct RENDER_COMMAND(RebuildProxyGroups) : renderer::RenderCommand
         }
 #endif
 
-        for (ID<Entity> entity : removed_proxies) {
-            const RenderProxy *proxy = proxy_list.GetProxyForEntity(entity);
-            AssertThrow(proxy != nullptr);
+        for (ID<Entity> entity_id : removed_proxies) {
+            const RenderProxy *proxy = proxy_list.GetProxyForEntity(entity_id);
+            AssertThrowMsg(proxy != nullptr, "Proxy is missing for Entity #%u", entity_id.Value());
 
             proxy->UnclaimRenderResource();
 
             const RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy);
             const Bucket bucket = attributes.GetMaterialAttributes().bucket;
 
-            AssertThrow(RemoveRenderProxy(proxy_list, entity, attributes, bucket));
+            AssertThrow(RemoveRenderProxy(proxy_list, entity_id, attributes, bucket));
         }
 
         for (RenderProxy &proxy : added_proxies) {
@@ -356,33 +355,15 @@ RenderCollector::RenderCollector()
 {
 }
 
-RenderCollector::~RenderCollector()
-{
-    // Clear out all render proxies from the draw collection on destruction
-    if (m_draw_collection != nullptr) {
-        Array<ID<Entity>> entity_ids;
+RenderCollector::~RenderCollector() = default;
 
-        RenderProxyList &proxy_list = m_draw_collection->GetProxyList(ThreadType::THREAD_TYPE_GAME);
-        proxy_list.GetAllEntities(entity_ids);
-
-        PUSH_RENDER_COMMAND(
-            RebuildProxyGroups,
-            m_draw_collection,
-            Array<RenderProxy *>(),
-            std::move(entity_ids),
-            Handle<Camera>::empty,
-            Optional<RenderableAttributeSet>()
-        );
-    }
-
-    HYP_SYNC_RENDER(); // Prevent dangling references to this from render commands
-}
-
-RenderCollector::CollectionResult RenderCollector::PushUpdatesToRenderThread(const Handle<Camera> &camera, const Optional<RenderableAttributeSet> &override_attributes)
+RenderCollector::CollectionResult RenderCollector::PushUpdatesToRenderThread(const Handle<Camera> &camera)
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+
+    HYP_MT_CHECK_READ(m_data_race_detector);
+
     AssertThrow(m_draw_collection != nullptr);
 
     RenderProxyList &proxy_list = m_draw_collection->GetProxyList(ThreadType::THREAD_TYPE_GAME);
@@ -406,7 +387,7 @@ RenderCollector::CollectionResult RenderCollector::PushUpdatesToRenderThread(con
                 std::move(added_proxy_ptrs),
                 std::move(removed_proxies),
                 camera,
-                override_attributes
+                m_override_attributes
             );
         }
     }
@@ -416,12 +397,11 @@ RenderCollector::CollectionResult RenderCollector::PushUpdatesToRenderThread(con
     return collection_result;
 }
 
-void RenderCollector::PushEntityToRender(
-    ID<Entity> entity,
-    const RenderProxy &proxy
-)
+void RenderCollector::PushEntityToRender(ID<Entity> entity, const RenderProxy &proxy)
 {
     Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+
+    HYP_MT_CHECK_READ(m_data_race_detector);
 
     AssertThrow(entity.IsValid());
     
@@ -433,20 +413,21 @@ void RenderCollector::PushEntityToRender(
 }
 
 void RenderCollector::CollectDrawCalls(
-    Frame *frame,
+    IFrame *frame,
     const Bitset &bucket_bits,
     const CullData *cull_data
 )
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(g_render_thread);
 
     if (bucket_bits.Count() == 0) {
         return;
     }
 
-    static const bool is_indirect_rendering_enabled = renderer::RenderConfig::IsIndirectRenderingEnabled();
+    HYP_MT_CHECK_READ(m_data_race_detector);
+
+    static const bool is_indirect_rendering_enabled = g_rendering_api->GetRenderConfig().IsIndirectRenderingEnabled();
 
     using IteratorType = FlatMap<RenderableAttributeSet, Handle<RenderGroup>>::Iterator;
 
@@ -502,22 +483,22 @@ void RenderCollector::CollectDrawCalls(
 }
 
 void RenderCollector::ExecuteDrawCalls(
-    Frame *frame,
-    const CameraRenderResource &camera_render_resource,
+    IFrame *frame,
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle,
     const Bitset &bucket_bits,
     const CullData *cull_data,
     PushConstantData push_constant
 ) const
 {
-    const FramebufferRef &framebuffer = camera_render_resource.GetFramebuffer();
+    const FramebufferRef &framebuffer = camera_resource_handle->GetFramebuffer();
     AssertThrowMsg(framebuffer, "Camera has no Framebuffer attached");
 
-    ExecuteDrawCalls(frame, camera_render_resource, framebuffer, bucket_bits, cull_data, push_constant);
+    ExecuteDrawCalls(frame, camera_resource_handle, framebuffer, bucket_bits, cull_data, push_constant);
 }
 
 void RenderCollector::ExecuteDrawCalls(
-    Frame *frame,
-    const CameraRenderResource &camera_render_resource,
+    IFrame *frame,
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle,
     const FramebufferRef &framebuffer,
     const Bitset &bucket_bits,
     const CullData *cull_data,
@@ -525,14 +506,14 @@ void RenderCollector::ExecuteDrawCalls(
 ) const
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(g_render_thread);
 
-    static const bool is_indirect_rendering_enabled = renderer::RenderConfig::IsIndirectRenderingEnabled();
+    HYP_MT_CHECK_READ(m_data_race_detector);
+
+    static const bool is_indirect_rendering_enabled = g_rendering_api->GetRenderConfig().IsIndirectRenderingEnabled();
     
     AssertThrow(m_draw_collection != nullptr);
 
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
     const uint32 frame_index = frame->GetFrameIndex();
 
     if (bucket_bits.Count() == 0) {
@@ -550,10 +531,10 @@ void RenderCollector::ExecuteDrawCalls(
         }
 
         if (framebuffer) {
-            framebuffer->BeginCapture(command_buffer, frame_index);
+            frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, frame_index);
         }
 
-        g_engine->GetRenderState()->BindCamera(camera_render_resource.GetCamera());
+        g_engine->GetRenderState()->BindCamera(camera_resource_handle);
 
         for (const auto &it : render_groups_by_attributes) {
             const RenderableAttributeSet &attributes = it.first;
@@ -572,10 +553,10 @@ void RenderCollector::ExecuteDrawCalls(
             }
         }
 
-        g_engine->GetRenderState()->UnbindCamera(camera_render_resource.GetCamera());
+        g_engine->GetRenderState()->UnbindCamera(camera_resource_handle.Get());
 
         if (framebuffer) {
-            framebuffer->EndCapture(command_buffer, frame_index);
+            frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frame_index);
         }
     } else {
         bool all_empty = false;
@@ -593,10 +574,10 @@ void RenderCollector::ExecuteDrawCalls(
         }
 
         if (framebuffer) {
-            framebuffer->BeginCapture(command_buffer, frame_index);
+            frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, frame_index);
         }
 
-        g_engine->GetRenderState()->BindCamera(camera_render_resource.GetCamera());
+        g_engine->GetRenderState()->BindCamera(camera_resource_handle);
 
         for (const auto &render_groups_by_attributes : m_draw_collection->GetProxyGroups()) {
             for (const auto &it : render_groups_by_attributes) {
@@ -623,23 +604,43 @@ void RenderCollector::ExecuteDrawCalls(
             }
         }
 
-        g_engine->GetRenderState()->UnbindCamera(camera_render_resource.GetCamera());
+        g_engine->GetRenderState()->UnbindCamera(camera_resource_handle.Get());
 
         if (framebuffer) {
-            framebuffer->EndCapture(command_buffer, frame_index);
+            frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frame_index);
         }
     }
 }
 
-void RenderCollector::Reset()
+void RenderCollector::ClearState()
 {
-    HYP_NAMED_SCOPE("RenderCollector Reset");
+    HYP_SCOPE;
 
-    AssertThrow(m_draw_collection != nullptr);
-    // Threads::AssertOnThread(g_game_thread);
+    HYP_MT_CHECK_RW(m_data_race_detector);
 
-    // perform full clear
-    *m_draw_collection = { };
+    if (m_draw_collection != nullptr) {
+        HYP_LOG(RenderCollection, Debug, "Clearing RenderCollector state");
+
+        RenderProxyList &proxy_list = m_draw_collection->GetProxyList(ThreadType::THREAD_TYPE_GAME);
+        Array<ID<Entity>> entity_ids;
+
+        for (Bitset::BitIndex bit_index : proxy_list.GetEntities()) {
+            entity_ids.PushBack(ID<Entity>::FromIndex(bit_index));
+        }
+
+        PUSH_RENDER_COMMAND(
+            RebuildProxyGroups,
+            m_draw_collection,
+            Array<RenderProxy *>(),
+            std::move(entity_ids),
+            Handle<Camera>::empty,
+            m_override_attributes
+        );
+
+        HYP_SYNC_RENDER();
+    }
+
+    m_draw_collection = MakeRefCountedPtr<EntityDrawCollection>();
 }
 
 #pragma endregion RenderCollector

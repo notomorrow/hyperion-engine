@@ -13,6 +13,8 @@
 
 #include <rendering/debug/DebugDrawer.hpp>
 
+#include <rendering/backend/RendererFrame.hpp>
+#include <rendering/backend/RenderingAPI.hpp>
 #include <rendering/backend/AsyncCompute.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
@@ -34,7 +36,6 @@
 namespace hyperion {
 
 using renderer::Image;
-using renderer::StorageImage;
 using renderer::ImageView;
 
 #pragma region Globals
@@ -222,7 +223,7 @@ EnvGrid::EnvGrid(Name name, const Handle<Scene> &parent_scene, EnvGridOptions op
 
 EnvGrid::~EnvGrid()
 {
-    SafeRelease(std::move(m_ambient_shader));
+    SafeRelease(std::move(m_shader));
 
     SafeRelease(std::move(m_framebuffer));
 
@@ -244,6 +245,7 @@ EnvGrid::~EnvGrid()
 
     SafeRelease(std::move(m_compute_irradiance));
     SafeRelease(std::move(m_compute_filtered_depth));
+    SafeRelease(std::move(m_copy_border_texels));
 }
 
 void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
@@ -451,7 +453,16 @@ void EnvGrid::Init()
     CameraRenderResource &camera_resource = m_camera->GetRenderResource();
     camera_resource.SetFramebuffer(m_framebuffer);
     
-    m_camera_resource_handle = ResourceHandle(camera_resource);
+    m_camera_resource_handle = TResourceHandle<CameraRenderResource>(camera_resource);
+
+    m_render_collector.SetOverrideAttributes(RenderableAttributeSet(
+        MeshAttributes { },
+        MaterialAttributes {
+            .shader_definition  = m_shader->GetCompiledShader()->GetDefinition(),
+            .cull_faces         = FaceCullMode::BACK
+        }
+    ));
+
 
     g_engine->GetRenderState()->BindEnvGrid(this);
 }
@@ -470,23 +481,25 @@ void EnvGrid::OnRemoved()
 
     m_camera_resource_handle.Reset();
     m_camera.Reset();
-    m_render_collector.Reset();
-    m_ambient_shader.Reset();
+    m_shader.Reset();
+
+    m_render_collector.ClearState();
 
     if (m_options.type == EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD) {
-        PUSH_RENDER_COMMAND(
-            SetElementInGlobalDescriptorSet,
-            NAME("Scene"),
-            NAME("LightFieldColorTexture"),
-            g_engine->GetPlaceholderData()->GetImageView2D1x1R8()
-        );
+        // temp commented out
+        // PUSH_RENDER_COMMAND(
+        //     SetElementInGlobalDescriptorSet,
+        //     NAME("Scene"),
+        //     NAME("LightFieldColorTexture"),
+        //     g_engine->GetPlaceholderData()->GetImageView2D1x1R8()
+        // );
 
-        PUSH_RENDER_COMMAND(
-            SetElementInGlobalDescriptorSet,
-            NAME("Scene"),
-            NAME("LightFieldDepthTexture"),
-            g_engine->GetPlaceholderData()->GetImageView2D1x1R8()
-        );
+        // PUSH_RENDER_COMMAND(
+        //     SetElementInGlobalDescriptorSet,
+        //     NAME("Scene"),
+        //     NAME("LightFieldDepthTexture"),
+        //     g_engine->GetPlaceholderData()->GetImageView2D1x1R8()
+        // );
     }
 
     if (m_options.flags & EnvGridFlags::USE_VOXEL_GRID) {
@@ -518,12 +531,12 @@ void EnvGrid::OnUpdate(GameCounter::TickUnit delta)
     Threads::AssertOnThread(g_game_thread);
 }
 
-void EnvGrid::OnRender(Frame *frame)
+void EnvGrid::OnRender(IFrame *frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
 
-    const CameraRenderResource &active_camera = g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
 
     const BoundingBox grid_aabb = m_aabb;
 
@@ -564,7 +577,7 @@ void EnvGrid::OnRender(Frame *frame)
         // update probe positions in grid, choose next to render.
         AssertThrow(m_current_probe_index < m_env_probe_collection.num_probes);
 
-        const Vec3f &camera_position = active_camera.GetBufferData().camera_position.GetXYZ();
+        const Vec3f &camera_position = camera_resource_handle->GetBufferData().camera_position.GetXYZ();
 
         Array<Pair<uint32, float>> indices_distances;
         indices_distances.Reserve(16);
@@ -653,10 +666,11 @@ void EnvGrid::CreateVoxelGridData()
             voxel_grid_dimensions,
             FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP,
             FilterMode::TEXTURE_FILTER_LINEAR,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            1,
+            ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
         }
     );
-
-    m_voxel_grid_texture->SetIsRWTexture(true);
 
     InitObject(m_voxel_grid_texture);
 
@@ -699,7 +713,7 @@ void EnvGrid::CreateVoxelGridData()
         AssertThrow(m_voxel_grid_texture->GetRenderResource().GetImageView() != nullptr);
     }
 
-    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+    DeferCreate(descriptor_table);
 
     { // Compute shader to clear the voxel grid at a specific position
         m_clear_voxels = MakeRenderObject<ComputePipeline>(
@@ -707,7 +721,7 @@ void EnvGrid::CreateVoxelGridData()
             descriptor_table
         );
 
-        DeferCreate(m_clear_voxels, g_engine->GetGPUDevice());
+        DeferCreate(m_clear_voxels);
     }
 
     { // Compute shader to voxelize a probe into voxel grid
@@ -716,7 +730,7 @@ void EnvGrid::CreateVoxelGridData()
             descriptor_table
         );
 
-        DeferCreate(m_voxelize_probe, g_engine->GetGPUDevice());
+        DeferCreate(m_voxelize_probe);
     }
 
     { // Compute shader to 'offset' the voxel grid
@@ -725,7 +739,7 @@ void EnvGrid::CreateVoxelGridData()
             descriptor_table
         );
 
-        DeferCreate(m_offset_voxel_grid, g_engine->GetGPUDevice());
+        DeferCreate(m_offset_voxel_grid);
     }
 
     { // Compute shader to generate mipmaps for voxel grid
@@ -742,7 +756,6 @@ void EnvGrid::CreateVoxelGridData()
 
             DeferCreate(
                 m_voxel_grid_mips[mip_level],
-                g_engine->GetGPUDevice(),
                 m_voxel_grid_texture->GetRenderResource().GetImage(),
                 mip_level, 1,
                 0, m_voxel_grid_texture->GetRenderResource().GetImage()->NumFaces()
@@ -765,7 +778,7 @@ void EnvGrid::CreateVoxelGridData()
                 mip_descriptor_set->SetElement(NAME("OutputTexture"), m_voxel_grid_mips[mip_level]);
             }
 
-            DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+            DeferCreate(descriptor_table);
 
             m_generate_voxel_grid_mipmaps_descriptor_tables.PushBack(std::move(descriptor_table));
         }
@@ -775,7 +788,7 @@ void EnvGrid::CreateVoxelGridData()
             m_generate_voxel_grid_mipmaps_descriptor_tables[0]
         );
 
-        DeferCreate(m_generate_voxel_grid_mipmaps, g_engine->GetGPUDevice());
+        DeferCreate(m_generate_voxel_grid_mipmaps);
     }
 }
 
@@ -792,7 +805,7 @@ void EnvGrid::CreateSphericalHarmonicsData()
 
         DeferCreate(
             m_sh_tiles_buffers[i],
-            g_engine->GetGPUDevice(), sizeof(SHTile) * (sh_num_tiles.x >> i) * (sh_num_tiles.y >> i)
+            sizeof(SHTile) * (sh_num_tiles.x >> i) * (sh_num_tiles.y >> i)
         );
     }
 
@@ -830,7 +843,7 @@ void EnvGrid::CreateSphericalHarmonicsData()
             }
         }
 
-        DeferCreate(m_compute_sh_descriptor_tables[i], g_engine->GetGPUDevice());
+        DeferCreate(m_compute_sh_descriptor_tables[i]);
     }
 
     m_clear_sh = MakeRenderObject<ComputePipeline>(
@@ -838,28 +851,28 @@ void EnvGrid::CreateSphericalHarmonicsData()
         m_compute_sh_descriptor_tables[0]
     );
 
-    DeferCreate(m_clear_sh, g_engine->GetGPUDevice());
+    DeferCreate(m_clear_sh);
 
     m_compute_sh = MakeRenderObject<ComputePipeline>(
         shaders[1],
         m_compute_sh_descriptor_tables[0]
     );
 
-    DeferCreate(m_compute_sh, g_engine->GetGPUDevice());
+    DeferCreate(m_compute_sh);
 
     m_reduce_sh = MakeRenderObject<ComputePipeline>(
         shaders[2],
         m_compute_sh_descriptor_tables[0]
     );
 
-    DeferCreate(m_reduce_sh, g_engine->GetGPUDevice());
+    DeferCreate(m_reduce_sh);
 
     m_finalize_sh = MakeRenderObject<ComputePipeline>(
         shaders[3],
         m_compute_sh_descriptor_tables[0]
     );
 
-    DeferCreate(m_finalize_sh, g_engine->GetGPUDevice());
+    DeferCreate(m_finalize_sh);
 }
 
 void EnvGrid::CreateLightFieldData()
@@ -879,11 +892,12 @@ void EnvGrid::CreateLightFieldData()
                 1
             },
             FilterMode::TEXTURE_FILTER_LINEAR,
-            FilterMode::TEXTURE_FILTER_LINEAR
+            FilterMode::TEXTURE_FILTER_LINEAR,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            1,
+            ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
         }
     );
-
-    m_irradiance_texture->SetIsRWTexture(true);
 
     InitObject(m_irradiance_texture);
 
@@ -907,11 +921,12 @@ void EnvGrid::CreateLightFieldData()
                 1
             },
             FilterMode::TEXTURE_FILTER_LINEAR,
-            FilterMode::TEXTURE_FILTER_LINEAR
+            FilterMode::TEXTURE_FILTER_LINEAR,
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            1,
+            ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
         }
     );
-
-    m_depth_texture->SetIsRWTexture(true);
 
     InitObject(m_depth_texture);
 
@@ -929,7 +944,6 @@ void EnvGrid::CreateLightFieldData()
 
         DeferCreate(
             light_field_uniforms,
-            g_engine->GetGPUDevice(),
             sizeof(LightFieldUniforms)
         );
 
@@ -971,10 +985,10 @@ void EnvGrid::CreateLightFieldData()
             descriptor_set->SetElement(NAME("OutDepthImage"), m_depth_texture->GetRenderResource().GetImageView());
         }
 
-        DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+        DeferCreate(descriptor_table);
 
         pipeline = MakeRenderObject<ComputePipeline>(shader, descriptor_table);
-        DeferCreate(pipeline, g_engine->GetGPUDevice());
+        DeferCreate(pipeline);
     }
 }
 
@@ -988,12 +1002,12 @@ void EnvGrid::CreateShader()
         "WRITE_MOMENTS"
     });
 
-    m_ambient_shader = g_shader_manager->GetOrCreate(
+    m_shader = g_shader_manager->GetOrCreate(
         NAME("RenderToCubemap"),
         shader_properties
     );
 
-    AssertThrow(m_ambient_shader.IsValid());
+    AssertThrow(m_shader.IsValid());
 }
 
 void EnvGrid::CreateFramebuffer()
@@ -1003,7 +1017,7 @@ void EnvGrid::CreateFramebuffer()
     m_framebuffer = MakeRenderObject<Framebuffer>(
         framebuffer_dimensions,
         renderer::RenderPassStage::SHADER,
-        renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER,
+        renderer::RenderPassMode::RENDER_PASS_INLINE,
         6
     );
 
@@ -1041,26 +1055,22 @@ void EnvGrid::CreateFramebuffer()
 
     m_framebuffer->AddAttachment(
         3,
-        g_engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
+        g_rendering_api->GetDefaultFormat(renderer::DefaultImageFormatType::DEPTH),
         ImageType::TEXTURE_TYPE_CUBEMAP,
         renderer::RenderPassStage::SHADER,
         renderer::LoadOperation::CLEAR,
         renderer::StoreOperation::STORE
     );
 
-    DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
+    DeferCreate(m_framebuffer);
 }
 
-void EnvGrid::RenderEnvProbe(Frame *frame, uint32 probe_index)
+void EnvGrid::RenderEnvProbe(IFrame *frame, uint32 probe_index)
 {
     HYP_SCOPE;
 
     const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(probe_index);
     AssertThrow(probe.IsValid());
-
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
-
-    CameraRenderResource &camera_render_resource = static_cast<CameraRenderResource &>(*m_camera_resource_handle);
 
     // Bind a directional light
     TResourceHandle<LightRenderResource> *light_render_resource_handle = nullptr;
@@ -1071,7 +1081,7 @@ void EnvGrid::RenderEnvProbe(Frame *frame, uint32 probe_index)
         if (directional_lights.Any()) {
             light_render_resource_handle = &directional_lights[0];
 
-            g_engine->GetRenderState()->SetActiveLight(**light_render_resource_handle);
+            g_engine->GetRenderState()->SetActiveLight(*light_render_resource_handle);
         }
     }
 
@@ -1086,7 +1096,7 @@ void EnvGrid::RenderEnvProbe(Frame *frame, uint32 probe_index)
 
     m_render_collector.ExecuteDrawCalls(
         frame,
-        camera_render_resource,
+        m_camera_resource_handle,
         Bitset((1 << BUCKET_OPAQUE)),
         nullptr
     );
@@ -1131,7 +1141,7 @@ void EnvGrid::RenderEnvProbe(Frame *frame, uint32 probe_index)
     probe->SetNeedsRender(false);
 }
 
-void EnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics(Frame *frame, const Handle<EnvProbe> &probe)
+void EnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics(IFrame *frame, const Handle<EnvProbe> &probe)
 {
     HYP_SCOPE;
 
@@ -1143,9 +1153,9 @@ void EnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics(Frame *frame, const H
     const AttachmentRef &normals_attachment = m_framebuffer->GetAttachment(1);
     const AttachmentRef &depth_attachment = m_framebuffer->GetAttachment(2);
 
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const TResourceHandle<EnvProbeRenderResource> &env_probe_render_resource = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<EnvProbeRenderResource> &env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
 
     // Bind a directional light
     TResourceHandle<LightRenderResource> *light_render_resource_handle = nullptr;
@@ -1189,75 +1199,81 @@ void EnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics(Frame *frame, const H
         descriptor_set_ref->GetDescriptorSet(NAME("ComputeSHDescriptorSet"), frame->GetFrameIndex())
             ->SetElement(NAME("InDepthCubemap"), depth_attachment->GetImageView());
 
-        descriptor_set_ref->Update(g_engine->GetGPUDevice(), frame->GetFrameIndex());
+        descriptor_set_ref->Update(frame->GetFrameIndex());
     }
 
-    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
-        frame,
-        m_sh_tiles_buffers[0],
-        renderer::ResourceState::UNORDERED_ACCESS
-    );
-
-    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(frame,
-        g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer,
-        renderer::ResourceState::UNORDERED_ACCESS
-    );
-
     m_clear_sh->SetPushConstants(&push_constants, sizeof(push_constants));
-
-    g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
-        frame,
-        m_clear_sh,
-        Vec3u { 1, 1, 1 },
-        m_compute_sh_descriptor_tables[0],
-        {
-            {
-                NAME("Scene"),
-                {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
-                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
-                    { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle != nullptr ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
-                }
-            }
-        }
-    );
-
-    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
-        frame,
-        m_sh_tiles_buffers[0],
-        renderer::ResourceState::UNORDERED_ACCESS
-    );
-
     m_compute_sh->SetPushConstants(&push_constants, sizeof(push_constants));
 
-    g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
-        frame,
-        m_compute_sh,
-        Vec3u { 1, 1, 1 },
+    RHICommandList &async_compute_command_list = g_rendering_api->GetAsyncCompute()->GetCommandList(frame->GetFrameIndex());
+
+    async_compute_command_list.Add<InsertBarrier>(
+        m_sh_tiles_buffers[0],
+        renderer::ResourceState::UNORDERED_ACCESS,
+        renderer::ShaderModuleType::COMPUTE
+    );
+
+    async_compute_command_list.Add<InsertBarrier>(
+        g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer,
+        renderer::ResourceState::UNORDERED_ACCESS,
+        renderer::ShaderModuleType::COMPUTE
+    );
+
+    async_compute_command_list.Add<BindDescriptorTable>(
         m_compute_sh_descriptor_tables[0],
-        {
+        m_clear_sh,
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
-                    { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle != nullptr ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                    { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) }
                 }
             }
-        }
+        },
+        frame->GetFrameIndex()
     );
+
+    async_compute_command_list.Add<BindComputePipeline>(m_clear_sh);
+    async_compute_command_list.Add<DispatchCompute>(m_clear_sh, Vec3u { 1, 1, 1 });
+
+    async_compute_command_list.Add<InsertBarrier>(
+        m_sh_tiles_buffers[0],
+        renderer::ResourceState::UNORDERED_ACCESS,
+        renderer::ShaderModuleType::COMPUTE
+    );
+
+    async_compute_command_list.Add<BindDescriptorTable>(
+        m_compute_sh_descriptor_tables[0],
+        m_compute_sh,
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
+            {
+                NAME("Scene"),
+                {
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
+                    { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) }
+                }
+            }
+        },
+        frame->GetFrameIndex()
+    );
+
+    async_compute_command_list.Add<BindComputePipeline>(m_compute_sh);
+    async_compute_command_list.Add<DispatchCompute>(m_compute_sh, Vec3u { 1, 1, 1 });
 
     // Parallel reduce
     if (sh_parallel_reduce) {
         for (uint32 i = 1; i < sh_num_levels; i++) {
-            g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
-                frame,
+            async_compute_command_list.Add<InsertBarrier>(
                 m_sh_tiles_buffers[i - 1],
-                renderer::ResourceState::UNORDERED_ACCESS
+                renderer::ResourceState::UNORDERED_ACCESS,
+                renderer::ShaderModuleType::COMPUTE
             );
             
             const Vec2u prev_dimensions {
@@ -1283,71 +1299,75 @@ void EnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics(Frame *frame, const H
 
             m_reduce_sh->SetPushConstants(&push_constants, sizeof(push_constants));
 
-            g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
-                frame,
-                m_reduce_sh,
-                Vec3u { 1, (next_dimensions.x + 3) / 4, (next_dimensions.y + 3) / 4 },
+            async_compute_command_list.Add<BindDescriptorTable>(
                 m_compute_sh_descriptor_tables[i - 1],
-                {
+                m_reduce_sh,
+                ArrayMap<Name, ArrayMap<Name, uint32>> {
                     {
                         NAME("Scene"),
                         {
                             { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
-                            { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle != nullptr ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
-                            { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                            { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
+                            { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) }
                         }
                     }
-                }
+                },
+                frame->GetFrameIndex()
             );
+
+            async_compute_command_list.Add<BindComputePipeline>(m_reduce_sh);
+            async_compute_command_list.Add<DispatchCompute>(m_reduce_sh, Vec3u { 1, (next_dimensions.x + 3) / 4, (next_dimensions.y + 3) / 4 });
         }
     }
 
     const uint32 finalize_sh_buffer_index = sh_parallel_reduce ? sh_num_levels - 1 : 0;
 
     // Finalize - build into final buffer
-    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
-        frame,
+    async_compute_command_list.Add<InsertBarrier>(
         m_sh_tiles_buffers[finalize_sh_buffer_index],
-        renderer::ResourceState::UNORDERED_ACCESS
+        renderer::ResourceState::UNORDERED_ACCESS,
+        renderer::ShaderModuleType::COMPUTE
     );
 
-    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
-        frame,
+    async_compute_command_list.Add<InsertBarrier>(
         g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer,
-        renderer::ResourceState::UNORDERED_ACCESS
+        renderer::ResourceState::UNORDERED_ACCESS,
+        renderer::ShaderModuleType::COMPUTE
     );
 
     m_finalize_sh->SetPushConstants(&push_constants, sizeof(push_constants));
 
-    g_engine->GetGPUDevice()->GetAsyncCompute()->Dispatch(
-        frame,
-        m_finalize_sh,
-        Vec3u { 1, 1, 1 },
+    async_compute_command_list.Add<BindDescriptorTable>(
         m_compute_sh_descriptor_tables[finalize_sh_buffer_index],
-        {
+        m_finalize_sh,
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
-                    { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle != nullptr ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                    { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light_render_resource_handle ? (*light_render_resource_handle)->GetBufferIndex() : 0) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) }
                 }
             }
-        }
+        },
+        frame->GetFrameIndex()
     );
 
-    g_engine->GetGPUDevice()->GetAsyncCompute()->InsertBarrier(
-        frame,
+    async_compute_command_list.Add<BindComputePipeline>(m_finalize_sh);
+    async_compute_command_list.Add<DispatchCompute>(m_finalize_sh, Vec3u { 1, 1, 1 });
+
+    async_compute_command_list.Add<InsertBarrier>(
         g_engine->GetRenderData()->spherical_harmonics_grid.sh_grid_buffer,
-        renderer::ResourceState::UNORDERED_ACCESS
+        renderer::ResourceState::UNORDERED_ACCESS,
+        renderer::ShaderModuleType::COMPUTE
     );
 }
 
-void EnvGrid::ComputeEnvProbeIrradiance_LightField(Frame *frame, const Handle<EnvProbe> &probe)
+void EnvGrid::ComputeEnvProbeIrradiance_LightField(IFrame *frame, const Handle<EnvProbe> &probe)
 {
     HYP_SCOPE;
 
@@ -1395,37 +1415,41 @@ void EnvGrid::ComputeEnvProbeIrradiance_LightField(Frame *frame, const Handle<En
 
         uniforms.num_bound_lights = num_bound_lights;
 
-        m_uniform_buffers[frame->GetFrameIndex()]->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
+        m_uniform_buffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
     }
 
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
 
     // Used for sky
-    const TResourceHandle<EnvProbeRenderResource> &env_probe_render_resource = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const TResourceHandle<EnvProbeRenderResource> &env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
 
-    m_irradiance_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_irradiance_texture->GetRenderResource().GetImage(),
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
 
-    m_compute_irradiance->Bind(frame->GetCommandBuffer());
-    
-    m_compute_irradiance->GetDescriptorTable()->Bind(
-        frame,
+    frame->GetCommandList().Add<BindComputePipeline>(m_compute_irradiance);
+
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_compute_irradiance->GetDescriptorTable(),
         m_compute_irradiance,
-        {
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) }
                 }
             }
-        }
+        },
+        frame->GetFrameIndex()
     );
 
-    m_compute_irradiance->Dispatch(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<DispatchCompute>(
+        m_compute_irradiance, 
         Vec3u {
             (irradiance_octahedron_size + 7) / 8,
             (irradiance_octahedron_size + 7) / 8,
@@ -1433,26 +1457,27 @@ void EnvGrid::ComputeEnvProbeIrradiance_LightField(Frame *frame, const Handle<En
         }
     );
 
-    m_compute_filtered_depth->Bind(frame->GetCommandBuffer());
-    
-    m_compute_filtered_depth->GetDescriptorTable()->Bind(
-        frame,
+    frame->GetCommandList().Add<BindComputePipeline>(m_compute_filtered_depth);
+
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_compute_filtered_depth->GetDescriptorTable(),
         m_compute_filtered_depth,
-        {
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) }
                 }
             }
-        }
+        },
+        frame->GetFrameIndex()
     );
 
-    m_compute_filtered_depth->Dispatch(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<DispatchCompute>(
+        m_compute_filtered_depth, 
         Vec3u {
             (irradiance_octahedron_size + 7) / 8,
             (irradiance_octahedron_size + 7) / 8,
@@ -1460,39 +1485,46 @@ void EnvGrid::ComputeEnvProbeIrradiance_LightField(Frame *frame, const Handle<En
         }
     );
 
-    m_depth_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_depth_texture->GetRenderResource().GetImage(),
+        renderer::ResourceState::UNORDERED_ACCESS
+    );
 
-    m_copy_border_texels->Bind(frame->GetCommandBuffer());
-    
-    m_copy_border_texels->GetDescriptorTable()->Bind(
-        frame,
+    frame->GetCommandList().Add<BindComputePipeline>(m_copy_border_texels);
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_copy_border_texels->GetDescriptorTable(),
         m_copy_border_texels,
-        {
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) }
                 }
             }
-        }
+        },
+        frame->GetFrameIndex()
     );
 
-    m_copy_border_texels->Dispatch(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<DispatchCompute>(
+        m_copy_border_texels,
         Vec3u { ((irradiance_octahedron_size * 4) + 255) / 256, 1, 1 }
     );
 
-    m_irradiance_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
-    m_depth_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_irradiance_texture->GetRenderResource().GetImage(),
+        renderer::ResourceState::SHADER_RESOURCE
+    );
+
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_irradiance_texture->GetRenderResource().GetImage(),
+        renderer::ResourceState::SHADER_RESOURCE
+    );
 }
 
-void EnvGrid::OffsetVoxelGrid(
-    Frame *frame,
-    Vec3i offset
-)
+void EnvGrid::OffsetVoxelGrid(IFrame *frame, Vec3i offset)
 {
     HYP_SCOPE;
 
@@ -1509,35 +1541,42 @@ void EnvGrid::OffsetVoxelGrid(
 
     push_constants.offset = { offset.x, offset.y, offset.z, 0 };
 
-    m_voxel_grid_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
     m_offset_voxel_grid->SetPushConstants(&push_constants, sizeof(push_constants));
 
-    m_offset_voxel_grid->Bind(frame->GetCommandBuffer());
-    
-    m_offset_voxel_grid->GetDescriptorTable()->Bind(
-        frame,
-        m_offset_voxel_grid,
-        {
-            {
-                NAME("VoxelizeProbeDescriptorSet"),
-                {
-                    { NAME("EnvGridBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) }
-                }
-            }
-        }
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_voxel_grid_texture->GetRenderResource().GetImage(),
+        renderer::ResourceState::UNORDERED_ACCESS
     );
 
-    m_offset_voxel_grid->Dispatch(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<BindComputePipeline>(m_offset_voxel_grid);
+
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_offset_voxel_grid->GetDescriptorTable(),
+        m_offset_voxel_grid,
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
+            {
+                NAME("Scene"),
+                {
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) }
+                }
+            }
+        },
+        frame->GetFrameIndex()
+    );
+
+    frame->GetCommandList().Add<DispatchCompute>(
+        m_offset_voxel_grid,
         (m_voxel_grid_texture->GetRenderResource().GetImage()->GetExtent() + Vec3u(7)) / Vec3u(8)
     );
 
-    m_voxel_grid_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_voxel_grid_texture->GetRenderResource().GetImage(),
+        renderer::ResourceState::SHADER_RESOURCE
+    );
 }
 
 void EnvGrid::VoxelizeProbe(
-    Frame *frame,
+    IFrame *frame,
     uint32 probe_index
 )
 {
@@ -1574,66 +1613,80 @@ void EnvGrid::VoxelizeProbe(
     push_constants.cubemap_dimensions = Vec4u(cubemap_dimensions, 0);
     push_constants.world_position = probe->GetRenderResource().GetBufferData().world_position;
 
-    color_image->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+    frame->GetCommandList().Add<InsertBarrier>(
+        color_image,
+        renderer::ResourceState::SHADER_RESOURCE
+    );
 
     if (false) {   // Clear our voxel grid at the start of each probe
-        m_voxel_grid_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
         m_clear_voxels->SetPushConstants(&push_constants, sizeof(push_constants));
 
-        m_clear_voxels->Bind(frame->GetCommandBuffer());
-
-        m_clear_voxels->GetDescriptorTable()->Bind(
-            frame,
-            m_clear_voxels,
-            {
-                {
-                    NAME("VoxelizeProbeDescriptorSet"),
-                    {
-                        { NAME("EnvGridBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) }
-                    }
-                }
-            }
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_voxel_grid_texture->GetRenderResource().GetImage(),
+            renderer::ResourceState::UNORDERED_ACCESS
         );
 
-        m_clear_voxels->Dispatch(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<BindComputePipeline>(m_clear_voxels);
+
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            m_clear_voxels->GetDescriptorTable(),
+            m_clear_voxels,
+            ArrayMap<Name, ArrayMap<Name, uint32>> {
+                {
+                    NAME("Scene"),
+                    {
+                        { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) }
+                    }
+                }
+            },
+            frame->GetFrameIndex()
+        );
+
+        frame->GetCommandList().Add<DispatchCompute>(
+            m_clear_voxels,
             (probe_voxel_extent + Vec3u(7)) / Vec3u(8)
         );
     }
 
     { // Voxelize probe
-        m_voxel_grid_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::UNORDERED_ACCESS);
-
         m_voxelize_probe->SetPushConstants(&push_constants, sizeof(push_constants));
-        m_voxelize_probe->Bind(frame->GetCommandBuffer());
 
-        m_voxelize_probe->GetDescriptorTable()->Bind(
-            frame,
-            m_voxelize_probe,
-            {
-                {
-                    NAME("VoxelizeProbeDescriptorSet"),
-                    {
-                        { NAME("EnvGridBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) }
-                    }
-                }
-            }
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_voxel_grid_texture->GetRenderResource().GetImage(),
+            renderer::ResourceState::UNORDERED_ACCESS
         );
 
-        m_voxelize_probe->Dispatch(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<BindComputePipeline>(m_voxelize_probe);
+
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            m_voxelize_probe->GetDescriptorTable(),
+            m_voxelize_probe,
+            ArrayMap<Name, ArrayMap<Name, uint32>> {
+                {
+                    NAME("Scene"),
+                    {
+                        { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(GetComponentIndex()) }
+                    }
+                }
+            },
+            frame->GetFrameIndex()
+        );
+
+        frame->GetCommandList().Add<DispatchCompute>(
+            m_voxelize_probe,
             Vec3u {
-                (cubemap_dimensions.x + 31) / 32,
-                (cubemap_dimensions.y + 31) / 32,
-                1
+                (probe_voxel_extent.x + 31) / 32,
+                (probe_voxel_extent.y + 31) / 32,
+                (probe_voxel_extent.z + 31) / 32
             }
         );
     }
 
     { // Generate mipmaps for the voxel grid
-
-        m_voxel_grid_texture->GetRenderResource().GetImage()->InsertBarrier(frame->GetCommandBuffer(), renderer::ResourceState::SHADER_RESOURCE);
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_voxel_grid_texture->GetRenderResource().GetImage(),
+            renderer::ResourceState::SHADER_RESOURCE
+        );
 
         const uint32 num_mip_levels = m_voxel_grid_texture->GetRenderResource().GetImage()->NumMipmaps();
 
@@ -1660,39 +1713,40 @@ void EnvGrid::VoxelizeProbe(
 
             if (mip_level != 0) {
                 // put the mip into writeable state
-                m_voxel_grid_texture->GetRenderResource().GetImage()->InsertSubResourceBarrier(
-                    frame->GetCommandBuffer(),
-                    renderer::ImageSubResource { .base_mip_level = mip_level },
-                    renderer::ResourceState::UNORDERED_ACCESS
+                frame->GetCommandList().Add<InsertBarrier>(
+                    m_voxel_grid_texture->GetRenderResource().GetImage(),
+                    renderer::ResourceState::UNORDERED_ACCESS,
+                    renderer::ImageSubResource { .base_mip_level = mip_level }
                 );
             }
 
-            m_generate_voxel_grid_mipmaps_descriptor_tables[mip_level]->Bind(
-                frame,
+            frame->GetCommandList().Add<BindDescriptorTable>(
+                m_generate_voxel_grid_mipmaps_descriptor_tables[mip_level],
                 m_generate_voxel_grid_mipmaps,
-                { }
+                ArrayMap<Name, ArrayMap<Name, uint32>> { },
+                frame->GetFrameIndex()
             );
 
             m_generate_voxel_grid_mipmaps->SetPushConstants(&push_constant_data, sizeof(push_constant_data));
 
-            m_generate_voxel_grid_mipmaps->Bind(frame->GetCommandBuffer());
+            frame->GetCommandList().Add<BindComputePipeline>(m_generate_voxel_grid_mipmaps);
 
-            // dispatch to generate this mip level
-            m_generate_voxel_grid_mipmaps->Dispatch(
-                frame->GetCommandBuffer(),
+            frame->GetCommandList().Add<DispatchCompute>(
+                m_generate_voxel_grid_mipmaps,
                 (mip_extent + Vec3u(7)) / Vec3u(8)
             );
 
             // put this mip into readable state
-            m_voxel_grid_texture->GetRenderResource().GetImage()->InsertSubResourceBarrier(
-                frame->GetCommandBuffer(),
-                renderer::ImageSubResource { .base_mip_level = mip_level },
-                renderer::ResourceState::SHADER_RESOURCE
+            frame->GetCommandList().Add<InsertBarrier>(
+                m_voxel_grid_texture->GetRenderResource().GetImage(),
+                renderer::ResourceState::SHADER_RESOURCE,
+                renderer::ImageSubResource { .base_mip_level = mip_level }
             );
         }
 
         // all mip levels have been transitioned into this state
-        m_voxel_grid_texture->GetRenderResource().GetImage()->SetResourceState(
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_voxel_grid_texture->GetRenderResource().GetImage(),
             renderer::ResourceState::SHADER_RESOURCE
         );
     }

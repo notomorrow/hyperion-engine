@@ -11,7 +11,7 @@ struct RayPayload
 #endif
 #ifdef LIGHTMAPPER
 	vec3 barycentric_coords;
-	uint entity_index;
+	uint _pad0;
 	uint triangle_index;
 #endif
 };

@@ -38,7 +38,6 @@ enum class LightmapTraceMode : int
 {
     GPU_PATH_TRACING = 0,
     CPU_PATH_TRACING,
-    RASTERIZATION,
 
     MAX
 };
@@ -164,8 +163,8 @@ public:
 
     virtual void Create() = 0;
     virtual void UpdateRays(Span<const LightmapRay> rays) = 0;
-    virtual void ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_hits) = 0;
-    virtual void Render(Frame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset) = 0;
+    virtual void ReadHitsBuffer(IFrame *frame, Span<LightmapHit> out_hits) = 0;
+    virtual void Render(IFrame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset) = 0;
 };
 
 struct LightmapJobParams

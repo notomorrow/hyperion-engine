@@ -302,18 +302,23 @@ using namespace buildtool;
 
 int main(int argc, char **argv)
 {
-    CommandLineParser arg_parse {
-        CommandLineArgumentDefinitions()
-            .Add("WorkingDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING)
-            .Add("SourceDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING)
-            .Add("CXXOutputDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING)
-            .Add("CSharpOutputDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING)
-            .Add("ExcludeDirectories", "", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING)
-            .Add("ExcludeFiles", "", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING)
-            .Add("Mode", "m", "", CommandLineArgumentFlags::NONE, Array<String> { "ParseHeaders" }, String("ParseHeaders"))
-    };
+    static const CommandLineArgumentDefinitions definitions = []()
+    {
+        CommandLineArgumentDefinitions result;
+        result.Add("WorkingDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING);
+        result.Add("SourceDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING);
+        result.Add("CXXOutputDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING);
+        result.Add("CSharpOutputDirectory", "", "", CommandLineArgumentFlags::REQUIRED, CommandLineArgumentType::STRING);
+        result.Add("ExcludeDirectories", "", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING);
+        result.Add("ExcludeFiles", "", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING);
+        result.Add("Mode", "m", "", CommandLineArgumentFlags::NONE, Array<String> { "ParseHeaders" }, String("ParseHeaders"));
 
-    if (auto parse_result = arg_parse.Parse(argc, argv)) {
+        return result;
+    }();
+
+    CommandLineParser command_line_parser { &definitions };
+
+    if (auto parse_result = command_line_parser.Parse(argc, argv)) {
         TaskSystem::GetInstance().Start();
 
         const FilePath working_directory = FilePath(parse_result.GetValue()["WorkingDirectory"].AsString());

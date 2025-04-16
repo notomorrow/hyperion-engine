@@ -1,6 +1,4 @@
-﻿#include "SampleStreamer.hpp"
-
-#include <editor/HyperionEditor.hpp>
+﻿#include <editor/HyperionEditor.hpp>
 
 #include <system/App.hpp>
 
@@ -65,10 +63,9 @@ int main(int argc, char **argv)
     signal(SIGSEGV, HandleSignal);
 
     HyperionEditor editor;
-    // SampleStreamer editor;
     App app;
 
-    CommandLineParser arg_parse { DefaultCommandLineArgumentDefinitions() };
+    CommandLineParser arg_parse { &DefaultCommandLineArgumentDefinitions() };
     auto parse_result = arg_parse.Parse(argc, argv);
 
     if (parse_result.HasValue()) {

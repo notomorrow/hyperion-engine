@@ -38,7 +38,6 @@ struct ImagePlatformImpl<Platform::VULKAN>
     bool                                        is_handle_owned = true;
 
     RendererResult ConvertTo32BPP(
-        Device<Platform::VULKAN> *device,
         const TextureData *in_texture_data,
         VkImageType image_type,
         VkImageCreateFlags image_create_flags,
@@ -47,17 +46,9 @@ struct ImagePlatformImpl<Platform::VULKAN>
         UniquePtr<TextureData> &out_texture_data
     );
 
-    RendererResult Create(
-        Device<Platform::VULKAN> *device,
-        const TextureData *in_texture_data,
-        VkImageLayout initial_layout,
-        VkImageCreateInfo *out_image_info,
-        UniquePtr<TextureData> &out_texture_data
-    );
+    RendererResult Create(VkImageLayout initial_layout);
 
-    RendererResult Destroy(
-        Device<Platform::VULKAN> *device
-    );
+    RendererResult Destroy();
 
     ResourceState GetResourceState() const
         { return resource_state; }
@@ -70,19 +61,22 @@ struct ImagePlatformImpl<Platform::VULKAN>
     void InsertBarrier(
         CommandBuffer<Platform::VULKAN> *command_buffer,
         ResourceState new_state,
+        ShaderModuleType shader_module_type,
         ImageSubResourceFlagBits flags = ImageSubResourceFlags::IMAGE_SUB_RESOURCE_FLAGS_COLOR
     );
 
     void InsertBarrier(
         CommandBuffer<Platform::VULKAN> *command_buffer,
         const ImageSubResource &sub_resource,
-        ResourceState new_state
+        ResourceState new_state,
+        ShaderModuleType shader_module_type
     );
 
     void InsertSubResourceBarrier(
         CommandBuffer<Platform::VULKAN> *command_buffer,
         const ImageSubResource &sub_resource,
-        ResourceState new_state
+        ResourceState new_state,
+        ShaderModuleType shader_module_type
     );
 };
 

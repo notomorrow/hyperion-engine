@@ -12,7 +12,6 @@ void main()
 {
     payload.emissive = vec4(0.0);
     payload.throughput = vec4(0.0);
-    payload.entity_index = ~0u;
     payload.triangle_index = ~0u;
     payload.barycentric_coords = vec3(0.0);
     payload.distance = -1.0f;

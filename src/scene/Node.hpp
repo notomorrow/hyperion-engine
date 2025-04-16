@@ -353,7 +353,7 @@ public:
 
     /*! \brief Remove this node from the parent Node's list of child Nodes. */
     HYP_METHOD()
-    bool Remove();
+    void Remove();
 
     HYP_METHOD()
     void RemoveAllChildren();
@@ -395,11 +395,6 @@ public:
      * \param name The string to compare with the child Node's name
      * \returns The resulting iterator */
     NodeList::ConstIterator FindChild(const char *name) const;
-
-    /*! \brief Get the child Nodes of this Node.
-     *  \returns Array of child Nodes */
-    HYP_FORCE_INLINE NodeList &GetChildren()
-        { return m_child_nodes; }
 
     /*! \brief Get the child Nodes of this Node.
      *  \returns Array of child Nodes */
@@ -655,8 +650,12 @@ public:
         hc.Add(m_world_transform);
         hc.Add(m_entity);
 
-        for (auto &child : m_child_nodes) {
-            hc.Add(child);
+        for (const NodeProxy &child : m_child_nodes) {
+            if (!child.IsValid()) {
+                continue;
+            }
+
+            hc.Add(*child);
         }
 
         return hc;

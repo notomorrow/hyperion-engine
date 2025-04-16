@@ -9,8 +9,10 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
 
+#include <rendering/backend/RenderingAPI.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererShader.hpp>
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/threading/TaskSystem.hpp>
@@ -109,8 +111,8 @@ struct RENDER_COMMAND(CreateShadowMapImage) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(shadow_map_image->Create(g_engine->GetGPUDevice()));
-        HYPERION_BUBBLE_ERRORS(shadow_map_image_view->Create(g_engine->GetGPUDevice(), shadow_map_image));
+        HYPERION_BUBBLE_ERRORS(shadow_map_image->Create());
+        HYPERION_BUBBLE_ERRORS(shadow_map_image_view->Create(shadow_map_image));
 
         HYPERION_RETURN_OK;
     }
@@ -133,8 +135,8 @@ struct RENDER_COMMAND(DestroyShadowPassData) : renderer::RenderCommand
     {
         RendererResult result;
 
-        HYPERION_PASS_ERRORS(shadow_map_image->Destroy(g_engine->GetGPUDevice()), result);
-        HYPERION_PASS_ERRORS(shadow_map_image_view->Destroy(g_engine->GetGPUDevice()), result);
+        HYPERION_PASS_ERRORS(shadow_map_image->Destroy(), result);
+        HYPERION_PASS_ERRORS(shadow_map_image_view->Destroy(), result);
 
         return result;
     }
@@ -191,7 +193,7 @@ struct RENDER_COMMAND(UpdateShadowMapRenderData) : renderer::RenderCommand
 
 ShadowPass::ShadowPass(
     const Handle<Scene> &parent_scene,
-    const ResourceHandle &camera_resource_handle,
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle,
     const ShaderRef &shader,
     ShadowMode shadow_mode,
     Vec2u extent, 
@@ -237,7 +239,7 @@ void ShadowPass::CreateFramebuffer()
     m_framebuffer = MakeRenderObject<Framebuffer>(
         GetExtent(),
         RenderPassStage::SHADER,
-        RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
+        RenderPassMode::RENDER_PASS_INLINE
     );
 
     // depth, depth^2 texture (for variance shadow map)
@@ -255,14 +257,14 @@ void ShadowPass::CreateFramebuffer()
     // standard depth texture
     m_framebuffer->AddAttachment(
         1,
-        g_engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
+        g_rendering_api->GetDefaultFormat(renderer::DefaultImageFormatType::DEPTH),
         ImageType::TEXTURE_TYPE_2D,
         RenderPassStage::SHADER,
         LoadOperation::CLEAR,
         StoreOperation::STORE
     );
 
-    DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
+    DeferCreate(m_framebuffer);
 }
 
 void ShadowPass::CreateDescriptors()
@@ -293,10 +295,10 @@ void ShadowPass::CreateShadowMap()
             Vec3u { GetExtent().x, GetExtent().y, 1 },
             FilterMode::TEXTURE_FILTER_NEAREST,
             FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+            1,
+            ImageFormatCapabilities::STORAGE | ImageFormatCapabilities::SAMPLED
         });
-
-        texture->SetIsRWTexture(true);
 
         InitObject(texture);
 
@@ -321,7 +323,7 @@ void ShadowPass::CreateCombineShadowMapsPass()
         descriptor_set->SetElement(NAME("InTexture"), m_shadow_map_dynamics->GetRenderResource().GetImageView());
     }
 
-    DeferCreate(descriptor_table, g_engine->GetGPUInstance()->GetDevice());
+    DeferCreate(descriptor_table);
 
     m_combine_shadow_maps_pass = MakeUnique<FullScreenPass>(shader, descriptor_table, GetFormat(), GetExtent());
     m_combine_shadow_maps_pass->Create();
@@ -346,14 +348,14 @@ void ShadowPass::CreateComputePipelines()
         descriptor_set->SetElement(NAME("OutputTexture"), m_shadow_map_all->GetRenderResource().GetImageView());
     }
 
-    DeferCreate(descriptor_table, g_engine->GetGPUInstance()->GetDevice());
+    DeferCreate(descriptor_table);
 
     m_blur_shadow_map_pipeline = MakeRenderObject<ComputePipeline>(
         blur_shadow_map_shader,
         descriptor_table
     );
 
-    DeferCreate(m_blur_shadow_map_pipeline, g_engine->GetGPUInstance()->GetDevice());
+    DeferCreate(m_blur_shadow_map_pipeline);
 }
 
 void ShadowPass::Create()
@@ -363,10 +365,20 @@ void ShadowPass::Create()
     CreateDescriptors();
     CreateCombineShadowMapsPass();
     CreateComputePipelines();
-    CreateCommandBuffers();
+
+    const RenderableAttributeSet override_attributes(
+        MeshAttributes { },
+        MaterialAttributes {
+            .shader_definition  = m_shader->GetCompiledShader()->GetDefinition(),
+            .cull_faces         = m_shadow_mode == ShadowMode::VSM ? FaceCullMode::BACK : FaceCullMode::FRONT
+        }
+    );
+
+    m_render_collector_statics->SetOverrideAttributes(override_attributes);
+    m_render_collector_dynamics->SetOverrideAttributes(override_attributes);
 }
 
-void ShadowPass::Render(Frame *frame)
+void ShadowPass::Render(IFrame *frame)
 {
     Threads::AssertOnThread(g_render_thread);
 
@@ -374,15 +386,11 @@ void ShadowPass::Render(Frame *frame)
         return;
     }
 
-    CameraRenderResource &camera_render_resource = static_cast<CameraRenderResource &>(*m_camera_resource_handle);
-
     const ImageRef &framebuffer_image = GetFramebuffer()->GetAttachment(0)->GetImage();
 
     if (framebuffer_image == nullptr) {
         return;
     }
-
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
 
     AssertThrow(m_parent_scene.IsValid());
 
@@ -400,19 +408,19 @@ void ShadowPass::Render(Frame *frame)
 
             m_render_collector_statics->ExecuteDrawCalls(
                 frame,
-                camera_render_resource,
+                m_camera_resource_handle,
                 Bitset((1 << BUCKET_OPAQUE)),
                 nullptr
             );
 
             // copy static framebuffer image
-            framebuffer_image->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
-            m_shadow_map_statics->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
+            frame->GetCommandList().Add<InsertBarrier>(framebuffer_image, renderer::ResourceState::COPY_SRC);
+            frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_statics->GetRenderResource().GetImage(), renderer::ResourceState::COPY_DST);
 
-            m_shadow_map_statics->GetRenderResource().GetImage()->Blit(command_buffer, framebuffer_image);
+            frame->GetCommandList().Add<Blit>(framebuffer_image, m_shadow_map_statics->GetRenderResource().GetImage());
 
-            framebuffer_image->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
-            m_shadow_map_statics->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+            frame->GetCommandList().Add<InsertBarrier>(framebuffer_image, renderer::ResourceState::SHADER_RESOURCE);
+            frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_statics->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
 
             m_rerender_semaphore->Release(1);
         }
@@ -426,19 +434,19 @@ void ShadowPass::Render(Frame *frame)
 
             m_render_collector_dynamics->ExecuteDrawCalls(
                 frame,
-                camera_render_resource,
+                m_camera_resource_handle,
                 Bitset((1 << BUCKET_OPAQUE)),
                 nullptr
             );
 
             // copy dynamic framebuffer image
-            framebuffer_image->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
-            m_shadow_map_dynamics->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
+            frame->GetCommandList().Add<InsertBarrier>(framebuffer_image, renderer::ResourceState::COPY_SRC);
+            frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_dynamics->GetRenderResource().GetImage(), renderer::ResourceState::COPY_DST);
 
-            m_shadow_map_dynamics->GetRenderResource().GetImage()->Blit(command_buffer, framebuffer_image);
+            frame->GetCommandList().Add<Blit>(framebuffer_image, m_shadow_map_dynamics->GetRenderResource().GetImage());
 
-            framebuffer_image->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
-            m_shadow_map_dynamics->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+            frame->GetCommandList().Add<InsertBarrier>(framebuffer_image, renderer::ResourceState::SHADER_RESOURCE);
+            frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_dynamics->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
         }
     }
 
@@ -448,20 +456,18 @@ void ShadowPass::Render(Frame *frame)
         const AttachmentRef &attachment = m_combine_shadow_maps_pass->GetFramebuffer()->GetAttachment(0);
         AssertThrow(attachment.IsValid());
 
-        m_combine_shadow_maps_pass->Record(frame->GetFrameIndex());
         m_combine_shadow_maps_pass->Render(frame);
 
         // Copy combined shadow map to the final shadow map
-        attachment->GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_SRC);
-        m_shadow_map_all->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::COPY_DST);
+        frame->GetCommandList().Add<InsertBarrier>(attachment->GetImage(), renderer::ResourceState::COPY_SRC);
+        frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_all->GetRenderResource().GetImage(), renderer::ResourceState::COPY_DST);
 
-        m_shadow_map_all->GetRenderResource().GetImage()->Blit(
-            command_buffer,
-            attachment->GetImage()
-        );
+        // copy the image
+        frame->GetCommandList().Add<Blit>(attachment->GetImage(), m_shadow_map_all->GetRenderResource().GetImage());
 
-        attachment->GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
-        m_shadow_map_dynamics->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+        // put the images back into a state for reading
+        frame->GetCommandList().Add<InsertBarrier>(attachment->GetImage(), renderer::ResourceState::SHADER_RESOURCE);
+        frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_all->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
     }
 
     if (m_shadow_mode == ShadowMode::VSM) {
@@ -475,16 +481,21 @@ void ShadowPass::Render(Frame *frame)
         m_blur_shadow_map_pipeline->SetPushConstants(&push_constants, sizeof(push_constants));
 
         // blur the image using compute shader
-        m_blur_shadow_map_pipeline->Bind(command_buffer);
+        frame->GetCommandList().Add<BindComputePipeline>(m_blur_shadow_map_pipeline);
 
         // bind descriptor set containing info needed to blur
-        m_blur_shadow_map_pipeline->GetDescriptorTable()->Bind(frame, m_blur_shadow_map_pipeline, { });
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            m_blur_shadow_map_pipeline->GetDescriptorTable(),
+            m_blur_shadow_map_pipeline,
+            ArrayMap<Name, ArrayMap<Name, uint32>> { },
+            frame->GetFrameIndex()
+        );
 
         // put our shadow map in a state for writing
-        m_shadow_map_all->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::UNORDERED_ACCESS);
+        frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_all->GetRenderResource().GetImage(), renderer::ResourceState::UNORDERED_ACCESS);
 
-        m_blur_shadow_map_pipeline->Dispatch(
-            command_buffer,
+        frame->GetCommandList().Add<DispatchCompute>(
+            m_blur_shadow_map_pipeline,
             Vec3u {
                 (m_framebuffer->GetWidth() + 7) / 8,
                 (m_framebuffer->GetHeight() + 7) / 8,
@@ -493,7 +504,7 @@ void ShadowPass::Render(Frame *frame)
         );
 
         // put shadow map back into readable state
-        m_shadow_map_all->GetRenderResource().GetImage()->InsertBarrier(command_buffer, renderer::ResourceState::SHADER_RESOURCE);
+        frame->GetCommandList().Add<InsertBarrier>(m_shadow_map_all->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
     }
 }
 
@@ -519,9 +530,6 @@ DirectionalLightShadowRenderer::DirectionalLightShadowRenderer(Name name, const 
 DirectionalLightShadowRenderer::~DirectionalLightShadowRenderer()
 {
     m_shadow_pass.Reset();
-
-    m_render_collector_statics.Reset();
-    m_render_collector_dynamics.Reset();
 }
 
 // called from render thread
@@ -531,7 +539,7 @@ void DirectionalLightShadowRenderer::Init()
 
     m_shadow_pass = MakeUnique<ShadowPass>(
         m_parent_scene,
-        ResourceHandle(m_camera->GetRenderResource()),
+        TResourceHandle<CameraRenderResource>(m_camera->GetRenderResource()),
         m_shader,
         m_shadow_mode,
         m_resolution,
@@ -564,14 +572,6 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
     Octree &octree = m_parent_scene->GetOctree();
     octree.CalculateVisibility(m_camera);
 
-    RenderableAttributeSet renderable_attribute_set(
-        MeshAttributes { },
-        MaterialAttributes {
-            .shader_definition  = m_shader->GetCompiledShader()->GetDefinition(),
-            .cull_faces         = m_shadow_mode == ShadowMode::VSM ? FaceCullMode::BACK : FaceCullMode::FRONT
-        }
-    );
-
     // Render data update
     EnumFlags<ShadowFlags> flags = ShadowFlags::NONE;
 
@@ -594,8 +594,7 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
     {
         return m_parent_scene->CollectStaticEntities(
             m_render_collector_statics,
-            m_camera,
-            renderable_attribute_set
+            m_camera
         );
     });
 
@@ -603,21 +602,18 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
     {
         m_parent_scene->CollectDynamicEntities(
             m_render_collector_dynamics,
-            m_camera,
-            renderable_attribute_set
+            m_camera
         );
     });
 #else
     RenderCollector::CollectionResult statics_collection_result = m_parent_scene->CollectStaticEntities(
         m_render_collector_statics,
-        m_camera,
-        renderable_attribute_set
+        m_camera
     );
 
     m_parent_scene->CollectDynamicEntities(
         m_render_collector_dynamics,
-        m_camera,
-        renderable_attribute_set
+        m_camera
     );
 #endif
 
@@ -668,7 +664,7 @@ void DirectionalLightShadowRenderer::OnUpdate(GameCounter::TickUnit delta)
     );
 }
 
-void DirectionalLightShadowRenderer::OnRender(Frame *frame)
+void DirectionalLightShadowRenderer::OnRender(IFrame *frame)
 {
     HYP_SCOPE;
     

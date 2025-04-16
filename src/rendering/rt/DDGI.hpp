@@ -119,8 +119,8 @@ public:
     const Array<Probe> &GetProbes() const
         { return m_probes; }
 
-    void SetTLAS(const TLASRef &tlas)
-        { m_tlas = tlas; }
+    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, max_frames_in_flight> &top_level_acceleration_structures)
+        { m_top_level_acceleration_structures = top_level_acceleration_structures; }
 
     HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
 
@@ -136,14 +136,14 @@ public:
     HYP_API void Init();
     HYP_API void Destroy();
 
-    HYP_API void RenderProbes(Frame *frame);
-    HYP_API void ComputeIrradiance(Frame *frame);
+    HYP_API void RenderProbes(IFrame *frame);
+    HYP_API void ComputeIrradiance(IFrame *frame);
 
 private:
     void CreatePipelines();
     void CreateUniformBuffer();
     void CreateStorageBuffers();
-    void UpdateUniforms(Frame *frame);
+    void UpdateUniforms(IFrame *frame);
 
     DDGIInfo                                    m_grid_info;
     Array<Probe>                                m_probes;
@@ -167,7 +167,7 @@ private:
     ImageRef                                    m_depth_image;
     ImageViewRef                                m_depth_image_view;
 
-    TLASRef                                     m_tlas;
+    FixedArray<TLASRef, max_frames_in_flight>   m_top_level_acceleration_structures;
 
     DDGIUniforms                                m_uniforms;
 

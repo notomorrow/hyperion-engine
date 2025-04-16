@@ -191,9 +191,6 @@ void main()
     if (material_index != ~0u) {
         material = materials[material_index];
     }
-
-    const uint32_t entity_index = mesh_description.entity_index;
-    const Object entity = entities[entity_index];
     
     material_color = material.albedo;
 
@@ -203,36 +200,7 @@ void main()
         material_color *= albedo_texture;
     }
 
-    vec3 direct_lighting = vec3(0.0);
-    vec3 indirect_lighting = vec3(0.02);
-
-    for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
-        const Light light = HYP_GET_LIGHT(light_index);
-
-        // Only support point and directional lights for DDGI.
-        if (light.type != HYP_LIGHT_TYPE_DIRECTIONAL && light.type != HYP_LIGHT_TYPE_POINT) {
-            continue;
-        }
-
-        const vec3 L = CalculateLightDirection(light, position);
-        const float NdotL = max(dot(normal, L), 0.00001);
-        
-        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(position.xyz, light.position_intensity.xyz, light.radius)
-            : 1.0;
-
-        vec3 local_light = vec3(NdotL) * UINT_TO_VEC4(light.color_encoded).rgb;
-
-        local_light *= light.position_intensity.w * attenuation;
-
-        if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-            local_light *= GetShadowStandard(probe_system.shadow_map_index, position.xyz, vec2(0.0), NdotL);
-        }
-
-        direct_lighting += local_light;
-    }
-
-    payload.throughput = material_color;//vec4((material_color.rgb * direct_lighting) + (material_color.rgb * indirect_lighting), material_color.a);
+    payload.throughput = material_color;
     payload.emissive = vec4(0.0);
     payload.distance = gl_RayTminEXT + gl_HitTEXT;
     payload.normal = normal;

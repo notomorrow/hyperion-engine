@@ -7,12 +7,25 @@
 #include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RenderObject.hpp>
+
+#include <rendering/rhi/RHICommandList.hpp>
+
 #include <core/Defines.hpp>
 
 #include <Types.hpp>
 
 namespace hyperion {
 namespace renderer {
+
+class IFrame
+{
+public:
+    virtual ~IFrame() = default;
+
+    virtual uint32 GetFrameIndex() const = 0;
+    virtual RHICommandList &GetCommandList() = 0;
+    virtual const RHICommandList &GetCommandList() const = 0;
+};
 
 namespace platform {
 
@@ -32,37 +45,40 @@ template <PlatformType PLATFORM>
 struct DeviceQueue;
 
 template <PlatformType PLATFORM>
-class Frame
+class Frame final : public IFrame
 {
 public:
     static constexpr PlatformType platform = PLATFORM;
     
-    static Frame TemporaryFrame(CommandBufferRef<PLATFORM> command_buffer, uint32 frame_index = 0)
+    static FrameRef<PLATFORM> TemporaryFrame(uint32 frame_index = 0)
     {
-        Frame frame;
-        frame.m_command_buffer = std::move(command_buffer);
-        frame.m_frame_index = frame_index;
+        FrameRef<PLATFORM> frame = MakeRenderObject<Frame<PLATFORM>>();
+        frame->m_frame_index = frame_index;
         return frame;
     }
 
     explicit Frame();
     Frame(uint32 frame_index);
-    Frame(const Frame &other) = delete;
-    Frame &operator=(const Frame &other) = delete;
-    Frame(Frame &&other) noexcept;
-    ~Frame();
+    Frame(const Frame &other)                   = delete;
+    Frame &operator=(const Frame &other)        = delete;
+    Frame(Frame &&other) noexcept               = delete;
+    Frame &operator=(Frame &&other) noexcept    = delete;
+    virtual ~Frame() override;
 
-    RendererResult Create(Device<PLATFORM> *device, CommandBufferRef<PLATFORM> cmd);
-    RendererResult Destroy(Device<PLATFORM> *device);
+    RendererResult Create();
+    RendererResult Destroy();
+
+    virtual uint32 GetFrameIndex() const override
+        { return m_frame_index; }
+    
+    virtual RHICommandList &GetCommandList() override
+        { return m_command_list; }
+    
+    virtual const RHICommandList &GetCommandList() const override
+        { return m_command_list; }
 
     HYP_FORCE_INLINE const FenceRef<PLATFORM> &GetFence() const
         { return m_queue_submit_fence; }
-
-    HYP_FORCE_INLINE uint32 GetFrameIndex() const
-        { return m_frame_index; }
-    
-    HYP_FORCE_INLINE const CommandBufferRef<PLATFORM> &GetCommandBuffer() const
-        { return m_command_buffer; }
 
     HYP_FORCE_INLINE SemaphoreChain &GetPresentSemaphores()
         { return m_present_semaphores; }
@@ -70,21 +86,13 @@ public:
     HYP_FORCE_INLINE const SemaphoreChain &GetPresentSemaphores() const
         { return m_present_semaphores; }
 
-    /* Start recording into the command buffer */
-    RendererResult BeginCapture(Device<PLATFORM> *device);
-    /* Stop recording into the command buffer */
-    RendererResult EndCapture(Device<PLATFORM> *device);
-    /* Submit command buffer to the given queue */
-    RendererResult Submit(DeviceQueue<PLATFORM> *queue);
-
-    RendererResult RecreateFence(Device<PLATFORM> *device);
-    
-    CommandBufferRef<PLATFORM>  m_command_buffer;
+    RendererResult RecreateFence();
 
 private:
     uint32              m_frame_index;
     SemaphoreChain      m_present_semaphores;
     FenceRef<PLATFORM>  m_queue_submit_fence;
+    RHICommandList      m_command_list;
 };
 
 } // namespace platform

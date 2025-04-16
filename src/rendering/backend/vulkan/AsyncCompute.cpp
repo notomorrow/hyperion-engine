@@ -9,17 +9,27 @@
 #include <rendering/backend/RendererDescriptorSet.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 
+#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
-namespace hyperion::renderer {
+namespace hyperion {
 
+extern IRenderingAPI *g_rendering_api;
+
+namespace renderer {
 namespace platform {
 
+static inline VulkanRenderingAPI *GetRenderingAPI()
+{
+    return static_cast<VulkanRenderingAPI *>(g_rendering_api);
+}
+
 template <>
-RendererResult AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame);
+RendererResult AsyncCompute<Platform::VULKAN>::WaitForFence(Frame<Platform::VULKAN> *frame);
 
 template <>
 AsyncCompute<Platform::VULKAN>::AsyncCompute()
@@ -44,20 +54,20 @@ AsyncCompute<Platform::VULKAN>::~AsyncCompute()
 }
 
 template <>
-RendererResult AsyncCompute<Platform::VULKAN>::Create(Device<Platform::VULKAN> *device)
+RendererResult AsyncCompute<Platform::VULKAN>::Create()
 {
     HYP_SCOPE;
 
-    AssertThrow(device->GetQueueFamilyIndices().IsComplete());
+    AssertThrow(GetRenderingAPI()->GetDevice()->GetQueueFamilyIndices().IsComplete());
 
-    DeviceQueue<Platform::VULKAN> *queue = &device->GetComputeQueue();
+    DeviceQueue<Platform::VULKAN> *queue = &GetRenderingAPI()->GetDevice()->GetComputeQueue();
 
-    m_is_supported = device->GetQueueFamilyIndices().compute_family.HasValue();
+    m_is_supported = GetRenderingAPI()->GetDevice()->GetQueueFamilyIndices().compute_family.HasValue();
 
     if (!m_is_supported) {
         HYP_LOG(RenderingBackend, Warning, "Dedicated compute queue not supported, using graphics queue for compute operations");
         
-        queue = &device->GetGraphicsQueue();
+        queue = &GetRenderingAPI()->GetDevice()->GetGraphicsQueue();
     }
     
     for (CommandBufferRef<Platform::VULKAN> &command_buffer : m_command_buffers) {
@@ -65,115 +75,64 @@ RendererResult AsyncCompute<Platform::VULKAN>::Create(Device<Platform::VULKAN> *
 
         command_buffer->GetPlatformImpl().command_pool = queue->command_pools[0];
 
-        HYPERION_BUBBLE_ERRORS(command_buffer->Create(device));
+        HYPERION_BUBBLE_ERRORS(command_buffer->Create());
     }
     
     for (FenceRef<Platform::VULKAN> &fence : m_fences) {
-        HYPERION_BUBBLE_ERRORS(fence->Create(device));
+        HYPERION_BUBBLE_ERRORS(fence->Create());
     }
 
     HYPERION_RETURN_OK;
 }
 
 template <>
-RendererResult AsyncCompute<Platform::VULKAN>::Submit(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
+RendererResult AsyncCompute<Platform::VULKAN>::Submit(Frame<Platform::VULKAN> *frame)
 {
     HYP_SCOPE;
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    HYPERION_BUBBLE_ERRORS(m_command_buffers[frame_index]->End(device));
+    RHICommandList &command_list = m_command_lists[frame_index];
 
-    DeviceQueue<Platform::VULKAN> &compute_queue = device->GetComputeQueue();
+    HYPERION_BUBBLE_ERRORS(m_command_buffers[frame_index]->Begin());
+    command_list.Execute(m_command_buffers[frame_index]);
+    HYPERION_BUBBLE_ERRORS(m_command_buffers[frame_index]->End());
+
+    DeviceQueue<Platform::VULKAN> &compute_queue = GetRenderingAPI()->GetDevice()->GetComputeQueue();
 
     return m_command_buffers[frame_index]->SubmitPrimary(&compute_queue, m_fences[frame_index], nullptr);
 }
 
 template <>
-RendererResult AsyncCompute<Platform::VULKAN>::PrepareForFrame(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
+RendererResult AsyncCompute<Platform::VULKAN>::PrepareForFrame(Frame<Platform::VULKAN> *frame)
 {
     HYP_SCOPE;
 
     const uint32 frame_index = frame->GetFrameIndex();
     
-    HYPERION_BUBBLE_ERRORS(WaitForFence(device, frame));
-
-    HYPERION_BUBBLE_ERRORS(m_command_buffers[frame_index]->Begin(device));
+    HYPERION_BUBBLE_ERRORS(WaitForFence(frame));
 
     HYPERION_RETURN_OK;
 }
 
 template <>
-RendererResult AsyncCompute<Platform::VULKAN>::WaitForFence(Device<Platform::VULKAN> *device, Frame<Platform::VULKAN> *frame)
+RendererResult AsyncCompute<Platform::VULKAN>::WaitForFence(Frame<Platform::VULKAN> *frame)
 {
     HYP_SCOPE;
 
     const uint32 frame_index = frame->GetFrameIndex();
 
-    RendererResult result = m_fences[frame_index]->WaitForGPU(device);
+    RendererResult result = m_fences[frame_index]->WaitForGPU();
 
     if (!result) {
         return result;
     }
 
-    HYPERION_PASS_ERRORS(m_fences[frame_index]->Reset(device), result);
+    HYPERION_PASS_ERRORS(m_fences[frame_index]->Reset(), result);
 
     return result;
 }
 
-template <>
-void AsyncCompute<Platform::VULKAN>::InsertBarrier(
-    Frame<Platform::VULKAN> *frame,
-    const GPUBufferRef<Platform::VULKAN> &buffer,
-    ResourceState resource_state
-) const
-{
-    HYP_SCOPE;
-
-    const uint32 frame_index = frame->GetFrameIndex();
-
-    buffer->InsertBarrier(m_command_buffers[frame_index], resource_state, ShaderModuleType::COMPUTE);
-}
-
-template <>
-void AsyncCompute<Platform::VULKAN>::Dispatch(
-    Frame<Platform::VULKAN> *frame,
-    const ComputePipelineRef<Platform::VULKAN> &ref,
-    const Vec3u &extent
-) const
-{
-    HYP_SCOPE;
-
-    const uint32 frame_index = frame->GetFrameIndex();
-
-    ref->Bind(m_command_buffers[frame_index]);
-    ref->Dispatch(m_command_buffers[frame_index], extent);
-}
-
-template <>
-void AsyncCompute<Platform::VULKAN>::Dispatch(
-    Frame<Platform::VULKAN> *frame,
-    const ComputePipelineRef<Platform::VULKAN> &ref,
-    const Vec3u &extent,
-    const DescriptorTableRef<Platform::VULKAN> &descriptor_table,
-    const ArrayMap<Name, ArrayMap<Name, uint32>> &offsets
-) const
-{
-    HYP_SCOPE;
-
-    const uint32 frame_index = frame->GetFrameIndex();
-
-    descriptor_table->Bind<ComputePipelineRef<Platform::VULKAN>>(
-        m_command_buffers[frame_index],
-        frame_index,
-        ref,
-        offsets
-    );
-
-    ref->Bind(m_command_buffers[frame_index]);
-    ref->Dispatch(m_command_buffers[frame_index], extent);
-}
-
 } // namespace platform
-
-} // namespace hyperion::renderer
+} // namespace renderer
+} // namespace hyperion

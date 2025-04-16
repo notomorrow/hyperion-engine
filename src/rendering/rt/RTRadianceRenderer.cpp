@@ -13,6 +13,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererResult.hpp>
 
@@ -90,8 +91,8 @@ struct RENDER_COMMAND(CreateRTRadianceUniformBuffers) : renderer::RenderCommand
         for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
             const GPUBufferRef &uniform_buffer = uniform_buffers[frame_index];
 
-            HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms)));
-            uniform_buffer->Memset(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms), 0x0);
+            HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(sizeof(RTRadianceUniforms)));
+            uniform_buffer->Memset(sizeof(RTRadianceUniforms), 0x0);
         }
 
         HYPERION_RETURN_OK;
@@ -113,11 +114,6 @@ RTRadianceRenderer::~RTRadianceRenderer()
 
 void RTRadianceRenderer::Create()
 {
-    AssertThrowMsg(
-        m_tlas.IsValid(),
-        "Invalid TLAS provided"
-    );
-
     CreateImages();
     CreateUniformBuffer();
     CreateTemporalBlending();
@@ -140,7 +136,7 @@ void RTRadianceRenderer::Destroy()
     HYP_SYNC_RENDER();
 }
 
-void RTRadianceRenderer::UpdateUniforms(Frame *frame)
+void RTRadianceRenderer::UpdateUniforms(IFrame *frame)
 {
     RTRadianceUniforms uniforms { };
 
@@ -169,7 +165,7 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 
     uniforms.num_bound_lights = num_bound_lights;
 
-    m_uniform_buffers[frame->GetFrameIndex()]->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
+    m_uniform_buffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
 
     if (m_updates[frame->GetFrameIndex()]) {
         const DescriptorSetRef &descriptor_set = m_raytracing_pipeline->GetDescriptorTable()
@@ -177,65 +173,62 @@ void RTRadianceRenderer::UpdateUniforms(Frame *frame)
 
         AssertThrow(descriptor_set.IsValid());
 
-        HYPERION_ASSERT_RESULT(descriptor_set->Update(g_engine->GetGPUDevice()));
+        descriptor_set->Update();
 
         m_updates[frame->GetFrameIndex()] = RT_RADIANCE_UPDATES_NONE;
     }
 }
 
-void RTRadianceRenderer::Render(Frame *frame)
+void RTRadianceRenderer::Render(IFrame *frame)
 {
     UpdateUniforms(frame);
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<EnvProbeRenderResource> &env_probe_render_resource = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<EnvProbeRenderResource> &env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
     EnvGrid *env_grid = g_engine->GetRenderState()->GetActiveEnvGrid();
 
-    m_raytracing_pipeline->Bind(frame->GetCommandBuffer());
-
-    m_raytracing_pipeline->GetDescriptorTable()->Bind(
-        frame,
+    frame->GetCommandList().Add<BindRaytracingPipeline>(m_raytracing_pipeline);
+    
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_raytracing_pipeline->GetDescriptorTable(),
         m_raytracing_pipeline,
-        {
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid ? env_grid->GetComponentIndex() : 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle.Get(), 0) }
                 }
             }
-        }
+        },
+        frame->GetFrameIndex()
     );
 
-    m_texture->GetRenderResource().GetImage()->InsertBarrier(
-        frame->GetCommandBuffer(),
-        ResourceState::UNORDERED_ACCESS
-    );
+    frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), ResourceState::UNORDERED_ACCESS);
 
     const Vec3u image_extent = m_texture->GetRenderResource().GetImage()->GetExtent();
 
     const SizeType num_pixels = image_extent.Volume();
     //const SizeType half_num_pixels = num_pixels / 2;
 
-    m_raytracing_pipeline->TraceRays(
-        g_engine->GetGPUDevice(),
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<TraceRays>(
+        m_raytracing_pipeline,
         Vec3u { uint32(num_pixels), 1, 1 }
     );
 
-    m_texture->GetRenderResource().GetImage()->InsertBarrier(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_texture->GetRenderResource().GetImage(),
         ResourceState::SHADER_RESOURCE
     );
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
-    if (IsPathTracer() && camera_render_resource->GetBufferData().view != m_previous_view_matrix) {
+    if (IsPathTracer() && camera_resource_handle->GetBufferData().view != m_previous_view_matrix) {
         m_temporal_blending->ResetProgressiveBlending();
 
-        m_previous_view_matrix = camera_render_resource->GetBufferData().view;
+        m_previous_view_matrix = camera_resource_handle->GetBufferData().view;
     }
 
     m_temporal_blending->Render(frame);
@@ -249,10 +242,11 @@ void RTRadianceRenderer::CreateImages()
         Vec3u { m_extent.x, m_extent.y, 1 },
         FilterMode::TEXTURE_FILTER_NEAREST,
         FilterMode::TEXTURE_FILTER_NEAREST,
-        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE
+        WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE,
+        1,
+        ImageFormatCapabilities::SAMPLED | ImageFormatCapabilities::STORAGE
     });
 
-    m_texture->SetIsRWTexture(true);
     InitObject(m_texture);
 
     m_texture->SetPersistentRenderResourceEnabled(true);
@@ -282,12 +276,12 @@ void RTRadianceRenderer::ApplyTLASUpdates(RTUpdateStateFlags flags)
 
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE) {
             // update acceleration structure in descriptor set
-            descriptor_set->SetElement(NAME("TLAS"), m_tlas);
+            descriptor_set->SetElement(NAME("TLAS"), m_top_level_acceleration_structures[frame_index]);
         }
 
         if (flags & renderer::RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS) {
             // update mesh descriptions buffer in descriptor set
-            descriptor_set->SetElement(NAME("MeshDescriptionsBuffer"), m_tlas->GetMeshDescriptionsBuffer());
+            descriptor_set->SetElement(NAME("MeshDescriptionsBuffer"), m_top_level_acceleration_structures[frame_index]->GetMeshDescriptionsBuffer());
         }
 
         m_updates[frame_index] |= RT_RADIANCE_UPDATES_TLAS;
@@ -309,11 +303,13 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        AssertThrow(m_top_level_acceleration_structures[frame_index] != nullptr);
+
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
-        descriptor_set->SetElement(NAME("TLAS"), m_tlas);
-        descriptor_set->SetElement(NAME("MeshDescriptionsBuffer"), m_tlas->GetMeshDescriptionsBuffer());
+        descriptor_set->SetElement(NAME("TLAS"), m_top_level_acceleration_structures[frame_index]);
+        descriptor_set->SetElement(NAME("MeshDescriptionsBuffer"), m_top_level_acceleration_structures[frame_index]->GetMeshDescriptionsBuffer());
 
         descriptor_set->SetElement(NAME("OutputImage"), m_texture->GetRenderResource().GetImageView());
         
@@ -322,20 +318,14 @@ void RTRadianceRenderer::CreateRaytracingPipeline()
         descriptor_set->SetElement(NAME("RTRadianceUniforms"), m_uniform_buffers[frame_index]);
     }
 
-    DeferCreate(
-        descriptor_table,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(descriptor_table);
 
     m_raytracing_pipeline = MakeRenderObject<RaytracingPipeline>(
         m_shader,
         descriptor_table
     );
 
-    DeferCreate(
-        m_raytracing_pipeline,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(m_raytracing_pipeline);
 
     PUSH_RENDER_COMMAND(
         SetRTRadianceImageInGlobalDescriptorSet,

@@ -36,7 +36,7 @@ void CameraRenderResource::Initialize_Internal()
     UpdateBufferData();
 
     if (m_framebuffer.IsValid()) {
-        DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
+        DeferCreate(m_framebuffer);
     }
 }
 
@@ -91,7 +91,7 @@ void CameraRenderResource::SetFramebuffer(const FramebufferRef &framebuffer)
         m_framebuffer = framebuffer;
 
         if (IsInitialized() && m_framebuffer.IsValid()) {
-            DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
+            DeferCreate(m_framebuffer);
         }
     });
 }
@@ -102,7 +102,7 @@ void CameraRenderResource::EnqueueBind()
 
     Execute([this]()
     {
-        g_engine->GetRenderState()->BindCamera(GetCamera());
+        g_engine->GetRenderState()->BindCamera(TResourceHandle<CameraRenderResource>(*this));
     }, /* force_render_thread */ true);
 }
 
@@ -112,7 +112,7 @@ void CameraRenderResource::EnqueueUnbind()
 
     Execute([this]()
     {
-        g_engine->GetRenderState()->UnbindCamera(GetCamera());
+        g_engine->GetRenderState()->UnbindCamera(this);
     }, /* force_render_thread */ true);
 }
 

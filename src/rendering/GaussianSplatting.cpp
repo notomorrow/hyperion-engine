@@ -11,6 +11,9 @@
 #include <rendering/RenderState.hpp>
 #include <rendering/RenderMesh.hpp>
 
+#include <rendering/rhi/RHICommandList.hpp>
+
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
@@ -88,23 +91,15 @@ struct RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers) : renderer::Render
         const SizeType num_points = model->points.Size();
 
         HYPERION_BUBBLE_ERRORS(splat_buffer->Create(
-           g_engine->GetGPUDevice(),
            num_points * sizeof(GaussianSplattingInstanceShaderData)
         ));
 
-        splat_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            splat_buffer->Size(),
-            model->points.Data()
-        );
+        splat_buffer->Copy(splat_buffer->Size(), model->points.Data());
 
         const SizeType indices_buffer_size = MathUtil::NextPowerOf2(num_points) * sizeof(GaussianSplatIndex);
         const SizeType distances_buffer_size = ByteUtil::AlignAs(num_points * sizeof(float32), sizeof(Vec4f));
 
-        HYPERION_BUBBLE_ERRORS(splat_indices_buffer->Create(
-           g_engine->GetGPUDevice(),
-           indices_buffer_size
-        ));
+        HYPERION_BUBBLE_ERRORS(splat_indices_buffer->Create(indices_buffer_size));
 
         // Set default indices
         GaussianSplatIndex *indices_buffer_data = new GaussianSplatIndex[indices_buffer_size / sizeof(GaussianSplatIndex)];
@@ -127,11 +122,7 @@ struct RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers) : renderer::Render
             };
         }
 
-        splat_indices_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            splat_indices_buffer->Size(),
-            indices_buffer_data
-        );
+        splat_indices_buffer->Copy(splat_indices_buffer->Size(), indices_buffer_data);
 
         // Discard the data we used for initially setting up the buffers
         delete[] indices_buffer_data;
@@ -141,21 +132,9 @@ struct RENDER_COMMAND(CreateGaussianSplattingInstanceBuffers) : renderer::Render
             model->transform.GetMatrix()
         };
 
-        HYPERION_BUBBLE_ERRORS(scene_buffer->Create(
-           g_engine->GetGPUDevice(),
-           sizeof(GaussianSplattingSceneShaderData)
-        ));
-
-        scene_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            sizeof(GaussianSplattingSceneShaderData),
-            &gaussian_splatting_scene_shader_data
-        );
-
-        HYPERION_BUBBLE_ERRORS(indirect_buffer->Create(
-            g_engine->GetGPUDevice(),
-            sizeof(IndirectDrawCommand)
-        ));
+        HYPERION_BUBBLE_ERRORS(scene_buffer->Create(sizeof(GaussianSplattingSceneShaderData)));
+        scene_buffer->Copy(sizeof(GaussianSplattingSceneShaderData), &gaussian_splatting_scene_shader_data);
+        HYPERION_BUBBLE_ERRORS(indirect_buffer->Create(sizeof(IndirectDrawCommand)));
 
         HYPERION_RETURN_OK;
     }
@@ -178,48 +157,13 @@ struct RENDER_COMMAND(CreateGaussianSplattingIndirectBuffers) : renderer::Render
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(staging_buffer->Create(
-            g_engine->GetGPUDevice(),
-            sizeof(IndirectDrawCommand)
-        ));
+        HYPERION_BUBBLE_ERRORS(staging_buffer->Create(sizeof(IndirectDrawCommand)));
 
         IndirectDrawCommand empty_draw_command { };
         quad_mesh->GetRenderResource().PopulateIndirectDrawCommand(empty_draw_command);
 
         // copy zeros to buffer
-        staging_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            sizeof(IndirectDrawCommand),
-            &empty_draw_command
-        );
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(CreateGaussianSplattingCommandBuffers) : renderer::RenderCommand
-{
-    FixedArray<CommandBufferRef, max_frames_in_flight> command_buffers;
-
-    RENDER_COMMAND(CreateGaussianSplattingCommandBuffers)(
-        FixedArray<CommandBufferRef, max_frames_in_flight> command_buffers
-    ) : command_buffers(command_buffers)
-    {
-    }
-
-    virtual ~RENDER_COMMAND(CreateGaussianSplattingCommandBuffers)() override = default;
-
-    virtual RendererResult operator()() override
-    {
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-#ifdef HYP_VULKAN
-            command_buffers[frame_index]->GetPlatformImpl().command_pool = g_engine->GetGPUDevice()->GetGraphicsQueue().command_pools[0];
-#endif
-
-            HYPERION_BUBBLE_ERRORS(command_buffers[frame_index]->Create(
-                g_engine->GetGPUInstance()->GetDevice()
-            ));
-        }
+        staging_buffer->Copy(sizeof(IndirectDrawCommand), &empty_draw_command);
 
         HYPERION_RETURN_OK;
     }
@@ -274,7 +218,7 @@ void GaussianSplattingInstance::Init()
     SetReady(true);
 }
 
-void GaussianSplattingInstance::Record(Frame *frame)
+void GaussianSplattingInstance::Record(IFrame *frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -282,7 +226,7 @@ void GaussianSplattingInstance::Record(Frame *frame)
     AssertThrow(IsReady());
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
 
     const uint32 num_points = static_cast<uint32>(m_model->points.Size());
 
@@ -300,29 +244,30 @@ void GaussianSplattingInstance::Record(Frame *frame)
             sizeof(update_splats_distances_push_constants)
         );
 
-        m_update_splat_distances->Bind(frame->GetCommandBuffer());
+        frame->GetCommandList().Add<BindComputePipeline>(m_update_splat_distances);
 
-        m_update_splat_distances->GetDescriptorTable()->Bind(
-            frame,
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            m_update_splat_distances->GetDescriptorTable(),
             m_update_splat_distances,
-            {
+            ArrayMap<Name, ArrayMap<Name, uint32>> {
                 {
                     NAME("Scene"),
                     {
                         { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) }
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) }
                     }
                 }
-            }
+            },
+            frame->GetFrameIndex()
         );
 
-        m_update_splat_distances->Dispatch(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<DispatchCompute>(
+            m_update_splat_distances,
             Vec3u { uint32((num_points + 255) / 256), 1, 1 }
         );
 
-        m_splat_indices_buffer->InsertBarrier(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_splat_indices_buffer,
             renderer::ResourceState::UNORDERED_ACCESS
         );
     }
@@ -344,7 +289,7 @@ void GaussianSplattingInstance::Record(Frame *frame)
         );
 
         // Copy the cpu sorted indices over
-        m_splat_indices_buffer->Copy(g_engine->GetGPUDevice(), MathUtil::Min(m_splat_indices_buffer->Size(), m_cpu_sorted_indices.Size() * sizeof(m_cpu_sorted_indices[0])), m_cpu_sorted_indices.Data());
+        m_splat_indices_buffer->Copy(MathUtil::Min(m_splat_indices_buffer->Size(), m_cpu_sorted_indices.Size() * sizeof(m_cpu_sorted_indices[0])), m_cpu_sorted_indices.Data());
     }
 #else
     { // Sort splats
@@ -366,11 +311,10 @@ void GaussianSplattingInstance::Record(Frame *frame)
 
         sort_splats_push_constants.num_points = num_points;
 
-        m_splat_indices_buffer->InsertBarrier(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_splat_indices_buffer,
             renderer::ResourceState::UNORDERED_ACCESS
         );
-
 
         static constexpr uint32 max_workgroup_size = 512;
         uint32 workgroup_size_x = 1;
@@ -389,36 +333,37 @@ void GaussianSplattingInstance::Record(Frame *frame)
         AssertThrow(h < num_sortable_elements);
         AssertThrow(h % 2 == 0);
 
-        auto DoPass = [this, frame, scene_render_resource, &camera_render_resource, pc = sort_splats_push_constants, workgroup_count](BitonicSortStage stage, uint32 h) mutable
+        auto DoPass = [this, frame, scene_render_resource, &camera_resource_handle, pc = sort_splats_push_constants, workgroup_count](BitonicSortStage stage, uint32 h) mutable
         {
             pc.stage = uint32(stage);
             pc.h = h;
 
             m_sort_splats->SetPushConstants(&pc, sizeof(pc));
 
-            m_sort_splats->Bind(frame->GetCommandBuffer());
+            frame->GetCommandList().Add<BindComputePipeline>(m_sort_splats);
 
-            m_sort_stage_descriptor_tables[SORT_STAGE_FIRST]->Bind(
-                frame,
+            frame->GetCommandList().Add<BindDescriptorTable>(
+                m_sort_splats->GetDescriptorTable(),
                 m_sort_splats,
-                {
+                ArrayMap<Name, ArrayMap<Name, uint32>> {
                     {
                         NAME("Scene"),
                         {
                             { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) }
+                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) }
                         }
                     }
-                }
+                },
+                frame->GetFrameIndex()
             );
 
-            m_sort_splats->Dispatch(
-                frame->GetCommandBuffer(),
+            frame->GetCommandList().Add<DispatchCompute>(
+                m_sort_splats,
                 Vec3u { workgroup_count, 1, 1 }
             );
 
-            m_splat_indices_buffer->InsertBarrier(
-                frame->GetCommandBuffer(),
+            frame->GetCommandList().Add<InsertBarrier>(
+                m_splat_indices_buffer,
                 renderer::ResourceState::UNORDERED_ACCESS
             );
         };
@@ -454,29 +399,30 @@ void GaussianSplattingInstance::Record(Frame *frame)
             sizeof(update_splats_push_constants)
         );
 
-        m_update_splats->Bind(frame->GetCommandBuffer());
-
-        m_update_splats->GetDescriptorTable()->Bind(
-            frame,
+        frame->GetCommandList().Add<BindComputePipeline>(m_update_splats);
+        
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            m_update_splats->GetDescriptorTable(),
             m_update_splats,
-            {
+            ArrayMap<Name, ArrayMap<Name, uint32>> {
                 {
                     NAME("Scene"),
                     {
                         { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) }
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) }
                     }
                 }
-            }
+            },
+            frame->GetFrameIndex()
         );
 
-        m_update_splats->Dispatch(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<DispatchCompute>(
+            m_update_splats,
             Vec3u { uint32((num_points + 255) / 256), 1, 1 }
         );
 
-        m_indirect_buffer->InsertBarrier(
-            frame->GetCommandBuffer(),
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_indirect_buffer,
             renderer::ResourceState::INDIRECT_ARG
         );
     }
@@ -519,10 +465,7 @@ void GaussianSplattingInstance::CreateRenderGroup()
         descriptor_set->SetElement(NAME("GaussianSplattingSceneShaderData"), m_scene_buffer);
     }
 
-    DeferCreate(
-        descriptor_table,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(descriptor_table);
 
     m_render_group = CreateObject<RenderGroup>(
         m_shader,
@@ -555,9 +498,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         base_properties
     );
 
-    DescriptorTableRef update_splats_descriptor_table = MakeRenderObject<DescriptorTable>(
-        update_splats_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable()
-    );
+    DescriptorTableRef update_splats_descriptor_table = MakeRenderObject<DescriptorTable>(update_splats_shader->GetCompiledShader()->GetDescriptorUsages().BuildDescriptorTable());
 
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
         const DescriptorSetRef &descriptor_set = update_splats_descriptor_table->GetDescriptorSet(NAME("UpdateSplatsDescriptorSet"), frame_index);
@@ -569,20 +510,14 @@ void GaussianSplattingInstance::CreateComputePipelines()
         descriptor_set->SetElement(NAME("GaussianSplattingSceneShaderData"), m_scene_buffer);
     }
 
-    DeferCreate(
-        update_splats_descriptor_table,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(update_splats_descriptor_table);
 
     m_update_splats = MakeRenderObject<ComputePipeline>(
         update_splats_shader,
         update_splats_descriptor_table
     );
 
-    DeferCreate(
-        m_update_splats,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(m_update_splats);
 
     // UpdateDistances
 
@@ -604,20 +539,14 @@ void GaussianSplattingInstance::CreateComputePipelines()
         descriptor_set->SetElement(NAME("GaussianSplattingSceneShaderData"), m_scene_buffer);
     }
 
-    DeferCreate(
-        update_splat_distances_descriptor_table,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(update_splat_distances_descriptor_table);
 
     m_update_splat_distances = MakeRenderObject<ComputePipeline>(
         update_splat_distances_shader,
         update_splat_distances_descriptor_table
     );
 
-    DeferCreate(
-        m_update_splat_distances,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(m_update_splat_distances);
 
     // SortSplats
 
@@ -642,10 +571,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
             descriptor_set->SetElement(NAME("GaussianSplattingSceneShaderData"), m_scene_buffer);
         }
 
-        DeferCreate(
-            sort_splats_descriptor_table,
-            g_engine->GetGPUDevice()
-        );
+        DeferCreate(sort_splats_descriptor_table);
 
         m_sort_stage_descriptor_tables[sort_stage_index] = std::move(sort_splats_descriptor_table);
     }
@@ -655,10 +581,7 @@ void GaussianSplattingInstance::CreateComputePipelines()
         m_sort_stage_descriptor_tables[0]
     );
 
-    DeferCreate(
-        m_sort_splats,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(m_sort_splats);
 }
 
 GaussianSplatting::GaussianSplatting()
@@ -673,7 +596,6 @@ GaussianSplatting::~GaussianSplatting()
         m_gaussian_splatting_instance.Reset();
 
         SafeRelease(std::move(m_staging_buffer));
-        SafeRelease(std::move(m_command_buffers));
     }
 }
 
@@ -691,7 +613,6 @@ void GaussianSplatting::Init()
         m_gaussian_splatting_instance.Reset();
 
         SafeRelease(std::move(m_staging_buffer));
-        SafeRelease(std::move(m_command_buffers));
     }));
 
     static const Array<Vertex> vertices = {
@@ -718,7 +639,6 @@ void GaussianSplatting::Init()
     InitObject(m_gaussian_splatting_instance);
 
     CreateBuffers();
-    CreateCommandBuffers();
 
     SetReady(true);
 }
@@ -742,18 +662,7 @@ void GaussianSplatting::CreateBuffers()
     );
 }
 
-void GaussianSplatting::CreateCommandBuffers()
-{
-    for (uint32 frame_index = 0; frame_index < static_cast<uint32>(m_command_buffers.Size()); frame_index++) {
-        m_command_buffers[frame_index] = MakeRenderObject<CommandBuffer>(CommandBufferType::COMMAND_BUFFER_SECONDARY);
-    }
-
-    PUSH_RENDER_COMMAND(CreateGaussianSplattingCommandBuffers,
-        m_command_buffers
-    );
-}
-
-void GaussianSplatting::UpdateSplats(Frame *frame)
+void GaussianSplatting::UpdateSplats(IFrame *frame)
 {
     Threads::AssertOnThread(g_render_thread);
     AssertReady();
@@ -764,32 +673,31 @@ void GaussianSplatting::UpdateSplats(Frame *frame)
 
     AssertThrow(m_gaussian_splatting_instance->GetIndirectBuffer()->Size() == sizeof(IndirectDrawCommand));
 
-    m_staging_buffer->InsertBarrier(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_staging_buffer,
         renderer::ResourceState::COPY_SRC
     );
 
-    m_gaussian_splatting_instance->GetIndirectBuffer()->InsertBarrier(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_gaussian_splatting_instance->GetIndirectBuffer(),
         renderer::ResourceState::COPY_DST
     );
-
-    // copy zeros to buffer (to reset instance count)
-    m_gaussian_splatting_instance->GetIndirectBuffer()->CopyFrom(
-        frame->GetCommandBuffer(),
+    
+    frame->GetCommandList().Add<CopyBuffer>(
         m_staging_buffer,
+        m_gaussian_splatting_instance->GetIndirectBuffer(),
         sizeof(IndirectDrawCommand)
     );
 
-    m_gaussian_splatting_instance->GetIndirectBuffer()->InsertBarrier(
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<InsertBarrier>(
+        m_gaussian_splatting_instance->GetIndirectBuffer(),
         renderer::ResourceState::INDIRECT_ARG
     );
 
     m_gaussian_splatting_instance->Record(frame);
 }
 
-void GaussianSplatting::Render(Frame *frame)
+void GaussianSplatting::Render(IFrame *frame)
 {
     AssertReady();
     Threads::AssertOnThread(g_render_thread);
@@ -799,44 +707,33 @@ void GaussianSplatting::Render(Frame *frame)
     }
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
 
     const uint32 frame_index = frame->GetFrameIndex();
 
     const GraphicsPipelineRef &pipeline = m_gaussian_splatting_instance->GetRenderGroup()->GetPipeline();
 
-    m_command_buffers[frame_index]->Record(
-        g_engine->GetGPUDevice(),
-        pipeline->GetRenderPass(),
-        [&](CommandBuffer *secondary)
-        {
-            pipeline->Bind(secondary);
+    frame->GetCommandList().Add<BindGraphicsPipeline>(pipeline);
 
-            m_gaussian_splatting_instance->GetRenderGroup()->GetPipeline()->GetDescriptorTable()->Bind(
-                secondary,
-                frame_index,
-                pipeline,
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_gaussian_splatting_instance->GetRenderGroup()->GetPipeline()->GetDescriptorTable(),
+        pipeline,
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
+            {
+                NAME("Scene"),
                 {
-                    {
-                        NAME("Scene"),
-                        {
-                            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) }
-                        }
-                    }
+                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) }
                 }
-            );
-
-            m_quad_mesh->GetRenderResource().RenderIndirect(
-                secondary,
-                m_gaussian_splatting_instance->GetIndirectBuffer().Get()
-            );
-
-            HYPERION_RETURN_OK;
-        }
+            }
+        },
+        frame_index
     );
 
-    m_command_buffers[frame_index]->SubmitSecondary(frame->GetCommandBuffer());
+    m_quad_mesh->GetRenderResource().RenderIndirect(
+        frame->GetCommandList(),
+        m_gaussian_splatting_instance->GetIndirectBuffer()
+    );
 }
 
 } // namespace hyperion

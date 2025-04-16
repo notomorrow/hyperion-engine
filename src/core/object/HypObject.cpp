@@ -79,10 +79,15 @@ HypObjectInitializerGuardBase::HypObjectInitializerGuardBase(const HypClass *hyp
 #endif
         }
     }
+
+    // Push NONE to prevent our current flags from polluting allocations that happen in the constructor
+    PushHypObjectInitializerFlags(HypObjectInitializerFlags::NONE);
 }
 
 HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
 {
+    PopHypObjectInitializerFlags();
+
     if (!hyp_class) {
         return;
     }
@@ -90,22 +95,13 @@ HypObjectInitializerGuardBase::~HypObjectInitializerGuardBase()
     IHypObjectInitializer *initializer = hyp_class->GetObjectInitializer(address);
     AssertThrow(initializer != nullptr);
 
-    dotnet::Object *managed_object = nullptr;
+    ManagedObjectResource *managed_object_resource = nullptr;
 
     if (!(GetCurrentHypObjectInitializerFlags() & HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION) && !hyp_class->IsAbstract()) {
         if (dotnet::Class *managed_class = hyp_class->GetManagedClass()) {
-            if (hyp_class->IsReferenceCounted()) {
-                // Increment reference count for the managed object (it is responsible for decrementing the ref count)
-                initializer->IncRef(hyp_class->GetAllocationMethod(), address, /* weak */ false);
-            }
+            managed_object_resource = AllocateResource<ManagedObjectResource>(HypObjectPtr(hyp_class, address));
 
-            managed_object = managed_class->NewObject(hyp_class, address);
-
-            if (!managed_object) {
-                HYP_FAIL("Failed to create managed object for HypClass %s", hyp_class->GetName().LookupString());
-            }
-
-            initializer->SetManagedObject(managed_object);
+            initializer->SetManagedObjectResource(managed_object_resource);
         }
     }
 
@@ -199,7 +195,7 @@ HYP_API void HypObjectPtr::DecRef(bool weak)
 }
 HYP_ENABLE_OPTIMIZATION;
 
-HYP_API const IHypObjectInitializer *HypObjectPtr::GetObjectInitializer() const
+HYP_API IHypObjectInitializer *HypObjectPtr::GetObjectInitializer() const
 {
     if (!m_hyp_class || !m_ptr) {
         return nullptr;
@@ -300,13 +296,6 @@ HYP_API void InitHypObjectInitializer(IHypObjectInitializer *initializer, void *
     } while (parent_initializer != nullptr);
 }
 
-HYP_API void CleanupHypObjectInitializer(const HypClass *hyp_class, dotnet::Object *managed_object_ptr)
-{
-    if (managed_object_ptr != nullptr) {
-        delete managed_object_ptr;
-    }
-}
-
 HYP_API HypClassAllocationMethod GetHypClassAllocationMethod(const HypClass *hyp_class)
 {
     AssertThrow(hyp_class != nullptr);
@@ -323,10 +312,10 @@ HYP_API dotnet::Class *GetHypClassManagedClass(const HypClass *hyp_class)
 
 HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count)
 {
-    if (const IHypObjectInitializer *initializer = ptr.GetObjectInitializer()) {
-        if (dotnet::Object *object = initializer->GetManagedObject()) {
-            if (count == 2) {
-                AssertThrow(object->SetKeepAlive(true));
+    if (IHypObjectInitializer *initializer = ptr.GetObjectInitializer()) {
+        if (count > 1) {
+            if (ManagedObjectResource *managed_object_resource = initializer->GetManagedObjectResource()) {
+                managed_object_resource->Claim();
             }
         }
     }
@@ -335,12 +324,20 @@ HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count)
 HYP_API void HypObject_OnDecRefCount_Strong(HypObjectPtr ptr, uint32 count)
 {
     if (const IHypObjectInitializer *initializer = ptr.GetObjectInitializer()) {
-        if (dotnet::Object *object = initializer->GetManagedObject()) {
-            if (count == 1) {
-                AssertThrow(object->SetKeepAlive(false));
+        if (count >= 1) {
+            if (ManagedObjectResource *managed_object_resource = initializer->GetManagedObjectResource()) {
+                managed_object_resource->Unclaim();
             }
         }
     }
+}
+
+HYP_API void HypObject_OnIncRefCount_Weak(HypObjectPtr ptr, uint32 count)
+{
+}
+
+HYP_API void HypObject_OnDecRefCount_Weak(HypObjectPtr ptr, uint32 count)
+{
 }
 
 } // namespace hyperion

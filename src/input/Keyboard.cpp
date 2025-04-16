@@ -2,10 +2,14 @@
 
 #include <input/Keyboard.hpp>
 
+#include <core/debug/Debug.hpp>
+
 namespace hyperion {
 
 HYP_API bool KeyCodeToChar(KeyCode key_code, bool shift, bool alt, bool ctrl, char &out_char)
 {
+    DebugLog(LogType::Debug, "KeyCodeToChar: key_code = %u\n", uint32(key_code));
+
     if (uint32(key_code) >= uint32(KeyCode::KEY_A) && uint32(key_code) <= uint32(KeyCode::KEY_Z)) {
         out_char = char(uint32(key_code) - uint32(KeyCode::KEY_A)) + (shift ? 'A' : 'a');
         return true;
@@ -20,24 +24,44 @@ HYP_API bool KeyCodeToChar(KeyCode key_code, bool shift, bool alt, bool ctrl, ch
         return true;
     }
 
-    switch (key_code) {
-    case KeyCode::SPACE:
+    switch ((int)key_code) {
+    case (int)' ':
         out_char = ' ';
         return true;
-
-    case KeyCode::PERIOD:
-        out_char = '.';
+    case (int)'`':
+        out_char = shift ? '~' : '`';
         return true;
-
-    case KeyCode::RETURN:
+    case (int)',':
+        out_char = shift ? '<' : ',';
+        return true;
+    case (int)'.':
+        out_char = shift ? '>' : '.';
+        return true;
+    case (int)'/':
+        out_char = shift ? '?' : '/';
+        return true;
+    case (int)';':
+        out_char = shift ? ':' : ';';
+        return true;
+    case (int)'\'':
+        out_char = shift ? '"' : '\'';
+        return true;
+    case (int)'-':
+        out_char = shift ? '_' : '-';
+        return true;
+    case (int)'=':
+        out_char = shift ? '+' : '=';
+        return true;
+    case (int)'\r':
         out_char = '\n';
         return true;
-
-    case KeyCode::TAB:
+    case (int)'\n':
+        out_char = '\n';
+        return true;
+    case (int)'\t':
         out_char = '\t';
         return true;
-
-    case KeyCode::BACKSPACE:
+    case (int)'\b':
         out_char = '\b';
         return true;
 

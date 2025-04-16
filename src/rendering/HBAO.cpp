@@ -9,6 +9,7 @@
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/RenderState.hpp>
 
+#include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
 #include <scene/Mesh.hpp>
@@ -26,7 +27,6 @@
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
-HYP_DEFINE_LOG_SUBCHANNEL(HBAO, Rendering);
 
 struct HBAOUniforms
 {
@@ -100,16 +100,8 @@ struct RENDER_COMMAND(CreateHBAOUniformBuffer) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(
-            g_engine->GetGPUDevice(),
-            sizeof(uniforms)
-        ));
-
-        uniform_buffer->Copy(
-            g_engine->GetGPUDevice(),
-            sizeof(uniforms),
-            &uniforms
-        );
+        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(sizeof(uniforms)));
+        uniform_buffer->Copy(sizeof(uniforms), &uniforms);
 
         HYPERION_RETURN_OK;
     }
@@ -161,7 +153,7 @@ void HBAO::CreatePipeline(const RenderableAttributeSet &renderable_attributes)
         descriptor_set->SetElement(NAME("UniformBuffer"), m_uniform_buffer);
     }
     
-    DeferCreate(descriptor_table, g_engine->GetGPUDevice());
+    DeferCreate(descriptor_table);
 
     m_descriptor_table = descriptor_table;
 
@@ -205,41 +197,35 @@ void HBAO::Resize_Internal(Vec2u new_size)
     PUSH_RENDER_COMMAND(AddHBAOResultToGlobalDescriptorSet, GetFinalImageView());
 }
 
-void HBAO::Record(uint32 frame_index)
-{
-}
-
-void HBAO::Render(Frame *frame)
+void HBAO::Render(IFrame *frame)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
 
     const uint32 frame_index = frame->GetFrameIndex();
-    const CommandBufferRef &command_buffer = frame->GetCommandBuffer();
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
 
     {
         Begin(frame);
 
-        Frame temporary_frame = Frame::TemporaryFrame(GetCommandBuffer(frame_index), frame_index);
-        
-        GetRenderGroup()->GetPipeline()->GetDescriptorTable()->Bind(
-            &temporary_frame,
+        frame->GetCommandList().Add<BindDescriptorTable>(
+            GetRenderGroup()->GetPipeline()->GetDescriptorTable(),
             GetRenderGroup()->GetPipeline(),
-            {
+            ArrayMap<Name, ArrayMap<Name, uint32>> {
                 {
                     NAME("Scene"),
                     {
                         { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) }
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) }
                     }
                 }
-            }
+            },
+            frame_index
         );
         
-        GetQuadMesh()->GetRenderResource().Render(GetCommandBuffer(frame_index));
+        GetQuadMesh()->GetRenderResource().Render(frame->GetCommandList());
         End(frame);
     }
 }

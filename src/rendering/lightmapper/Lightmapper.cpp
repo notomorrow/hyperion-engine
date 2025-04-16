@@ -15,6 +15,8 @@
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RenderConfig.hpp>
+#include <rendering/backend/RendererFrameHandler.hpp>
+#include <rendering/backend/RendererSwapchain.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -36,7 +38,6 @@
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
-#include <scene/ecs/components/BLASComponent.hpp>
 #include <scene/ecs/components/BVHComponent.hpp>
 
 #include <core/threading/TaskSystem.hpp>
@@ -73,8 +74,8 @@ struct RENDER_COMMAND(CreateLightmapGPUPathTracerUniformBuffer) : renderer::Rend
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms)));
-        uniform_buffer->Memset(g_engine->GetGPUDevice(), sizeof(RTRadianceUniforms), 0x0);
+        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create(sizeof(RTRadianceUniforms)));
+        uniform_buffer->Memset(sizeof(RTRadianceUniforms), 0x0);
 
         HYPERION_RETURN_OK;
     }
@@ -104,7 +105,7 @@ struct RENDER_COMMAND(LightmapRender) : renderer::RenderCommand
 
     virtual RendererResult operator()() override
     {
-        Frame *frame = g_engine->GetGPUInstance()->GetFrameHandler()->GetCurrentFrame();
+        IFrame *frame = g_rendering_api->GetCurrentFrame();
 
         const uint32 frame_index = frame->GetFrameIndex();
         const uint32 previous_frame_index = (frame_index + max_frames_in_flight - 1) % max_frames_in_flight;
@@ -167,7 +168,7 @@ struct RENDER_COMMAND(LightmapRender) : renderer::RenderCommand
 void LightmapperConfig::PostLoadCallback()
 {
     if (trace_mode == LightmapTraceMode::GPU_PATH_TRACING) {
-        if (!renderer::RenderConfig::IsRaytracingSupported()) {
+        if (!g_rendering_api->GetRenderConfig().IsRaytracingSupported()) {
             trace_mode = LightmapTraceMode::CPU_PATH_TRACING;
 
             HYP_LOG(Lightmap, Warning, "GPU path tracing is not supported on this device. Falling back to CPU path tracing.");
@@ -460,12 +461,12 @@ public:
 
     virtual void Create() override;
     virtual void UpdateRays(Span<const LightmapRay> rays) override;
-    virtual void ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_hits) override;
-    virtual void Render(Frame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset) override;
+    virtual void ReadHitsBuffer(IFrame *frame, Span<LightmapHit> out_hits) override;
+    virtual void Render(IFrame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset) override;
 
 private:
     void CreateUniformBuffer();
-    void UpdateUniforms(Frame *frame, uint32 ray_offset);
+    void UpdateUniforms(IFrame *frame, uint32 ray_offset);
 
     Handle<Scene>                                       m_scene;
     LightmapShadingType                                 m_shading_type;
@@ -506,7 +507,7 @@ LightmapGPUPathTracer::~LightmapGPUPathTracer()
 void LightmapGPUPathTracer::CreateUniformBuffer()
 {
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        m_uniform_buffers[frame_index] = MakeRenderObject<GPUBuffer>(UniformBuffer());
+        m_uniform_buffers[frame_index] = MakeRenderObject<GPUBuffer>(GPUBufferType::CONSTANT_BUFFER);
 
         PUSH_RENDER_COMMAND(CreateLightmapGPUPathTracerUniformBuffer, m_uniform_buffers[frame_index]);
     }
@@ -519,23 +520,12 @@ void LightmapGPUPathTracer::Create()
     AssertThrow(m_scene->GetWorld() != nullptr);
     AssertThrow(m_scene->GetWorld()->IsReady());
 
-    const TLASRef &tlas = m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetTLAS();
-    AssertThrow(tlas != nullptr);
-
     CreateUniformBuffer();
 
-    DeferCreate(
-        m_hits_buffer_gpu,
-        g_engine->GetGPUDevice(),
-        sizeof(LightmapHit) * (512 * 512)
-    );
+    DeferCreate(m_hits_buffer_gpu, sizeof(LightmapHit) * (512 * 512));
 
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        DeferCreate(
-            m_rays_buffers[frame_index],
-            g_engine->GetGPUDevice(),
-            sizeof(Vec4f) * 2 * (512 * 512)
-        );
+        DeferCreate(m_rays_buffers[frame_index], sizeof(Vec4f) * 2 * (512 * 512));
     }
 
     ShaderProperties shader_properties;
@@ -559,6 +549,9 @@ void LightmapGPUPathTracer::Create()
     DescriptorTableRef descriptor_table = MakeRenderObject<DescriptorTable>(descriptor_table_decl);
 
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+        const TLASRef &tlas = m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetTopLevelAccelerationStructures()[frame_index];
+        AssertThrow(tlas != nullptr);
+
         const DescriptorSetRef &descriptor_set = descriptor_table->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame_index);
         AssertThrow(descriptor_set != nullptr);
 
@@ -573,23 +566,17 @@ void LightmapGPUPathTracer::Create()
         descriptor_set->SetElement(NAME("RTRadianceUniforms"), m_uniform_buffers[frame_index]);
     }
 
-    DeferCreate(
-        descriptor_table,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(descriptor_table);
 
     m_raytracing_pipeline = MakeRenderObject<RaytracingPipeline>(
         shader,
         descriptor_table
     );
 
-    DeferCreate(
-        m_raytracing_pipeline,
-        g_engine->GetGPUDevice()
-    );
+    DeferCreate(m_raytracing_pipeline);
 }
 
-void LightmapGPUPathTracer::UpdateUniforms(Frame *frame, uint32 ray_offset)
+void LightmapGPUPathTracer::UpdateUniforms(IFrame *frame, uint32 ray_offset)
 {
     RTRadianceUniforms uniforms { };
     Memory::MemSet(&uniforms, 0, sizeof(uniforms));
@@ -615,55 +602,50 @@ void LightmapGPUPathTracer::UpdateUniforms(Frame *frame, uint32 ray_offset)
 
     uniforms.num_bound_lights = num_bound_lights;
 
-    m_uniform_buffers[frame->GetFrameIndex()]->Copy(g_engine->GetGPUDevice(), sizeof(uniforms), &uniforms);
+    m_uniform_buffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
 }
 
 void LightmapGPUPathTracer::UpdateRays(Span<const LightmapRay> rays)
 {
 }
 
-void LightmapGPUPathTracer::ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_hits)
+void LightmapGPUPathTracer::ReadHitsBuffer(IFrame *frame, Span<LightmapHit> out_hits)
 {
     // @TODO Some kind of function like WaitForFrameToComplete to ensure that the hits buffer is not being written to in the current frame.
 
     const GPUBufferRef &hits_buffer = m_hits_buffer_gpu;
 
     GPUBufferRef staging_buffer = MakeRenderObject<GPUBuffer>(GPUBufferType::STAGING_BUFFER);
-    HYPERION_ASSERT_RESULT(staging_buffer->Create(g_engine->GetGPUDevice(), out_hits.Size() * sizeof(LightmapHit)));
-    staging_buffer->Memset(g_engine->GetGPUDevice(), out_hits.Size() * sizeof(LightmapHit), 0);
-    staging_buffer->SetResourceState(renderer::ResourceState::COPY_DST);
+    HYPERION_ASSERT_RESULT(staging_buffer->Create(out_hits.Size() * sizeof(LightmapHit)));
+    staging_buffer->Memset(out_hits.Size() * sizeof(LightmapHit), 0);
 
-    renderer::SingleTimeCommands commands { g_engine->GetGPUDevice() };
+    renderer::SingleTimeCommands commands;
 
-    commands.Push([&](CommandBuffer *cmd)
+    commands.Push([&](RHICommandList &cmd)
     {
         const renderer::ResourceState previous_resource_state = hits_buffer->GetResourceState();
 
         // put src image in state for copying from
-        hits_buffer->InsertBarrier(cmd, renderer::ResourceState::COPY_SRC);
+        cmd.Add<InsertBarrier>(hits_buffer, renderer::ResourceState::COPY_SRC);
 
         // put dst buffer in state for copying to
-        staging_buffer->InsertBarrier(cmd, renderer::ResourceState::COPY_DST);
-        staging_buffer->CopyFrom(cmd, hits_buffer, out_hits.Size() * sizeof(LightmapHit));
-        staging_buffer->InsertBarrier(cmd, renderer::ResourceState::COPY_SRC);
+        cmd.Add<InsertBarrier>(staging_buffer, renderer::ResourceState::COPY_DST);
 
-        hits_buffer->InsertBarrier(cmd, previous_resource_state);
+        cmd.Add<CopyBuffer>(staging_buffer, hits_buffer, out_hits.Size() * sizeof(LightmapHit));
 
-        HYPERION_RETURN_OK;
+        cmd.Add<InsertBarrier>(staging_buffer, renderer::ResourceState::COPY_SRC);
+
+        cmd.Add<InsertBarrier>(hits_buffer, previous_resource_state);
     });
 
     HYPERION_ASSERT_RESULT(commands.Execute());
 
-    staging_buffer->Read(
-        g_engine->GetGPUDevice(),
-        sizeof(LightmapHit) * out_hits.Size(),
-        out_hits.Data()
-    );
+    staging_buffer->Read(sizeof(LightmapHit) * out_hits.Size(), out_hits.Data());
 
-    HYPERION_ASSERT_RESULT(staging_buffer->Destroy(g_engine->GetGPUDevice()));
+    HYPERION_ASSERT_RESULT(staging_buffer->Destroy());
 }
 
-void LightmapGPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset)
+void LightmapGPUPathTracer::Render(IFrame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -672,8 +654,8 @@ void LightmapGPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
     const uint32 previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const CameraRenderResource *camera_render_resource = &g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<EnvProbeRenderResource> &env_probe_render_resource = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<EnvProbeRenderResource> &env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
     EnvGrid *env_grid = g_engine->GetRenderState()->GetActiveEnvGrid();
 
     UpdateUniforms(frame, ray_offset);
@@ -689,8 +671,8 @@ void LightmapGPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
         
         bool rays_buffer_resized = false;
 
-        HYPERION_ASSERT_RESULT(m_rays_buffers[frame->GetFrameIndex()]->EnsureCapacity(g_engine->GetGPUDevice(), ray_data.ByteSize(), &rays_buffer_resized));
-        m_rays_buffers[frame->GetFrameIndex()]->Copy(g_engine->GetGPUDevice(), ray_data.ByteSize(), ray_data.Data());
+        HYPERION_ASSERT_RESULT(m_rays_buffers[frame->GetFrameIndex()]->EnsureCapacity(ray_data.ByteSize(), &rays_buffer_resized));
+        m_rays_buffers[frame->GetFrameIndex()]->Copy(ray_data.ByteSize(), ray_data.Data());
         
         if (rays_buffer_resized) {
             m_raytracing_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex())
@@ -699,8 +681,8 @@ void LightmapGPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
 
         bool hits_buffer_resized = false;
 
-        /*HYPERION_ASSERT_RESULT(m_hits_buffers[frame->GetFrameIndex()]->EnsureCapacity(g_engine->GetGPUDevice(), rays.Size() * sizeof(LightmapHit), &hits_buffer_resized));
-        m_hits_buffers[frame->GetFrameIndex()]->Memset(g_engine->GetGPUDevice(), rays.Size() * sizeof(LightmapHit), 0);
+        /*HYPERION_ASSERT_RESULT(m_hits_buffers[frame->GetFrameIndex()]->EnsureCapacity(rays.Size() * sizeof(LightmapHit), &hits_buffer_resized));
+        m_hits_buffers[frame->GetFrameIndex()]->Memset(rays.Size() * sizeof(LightmapHit), 0);
 
         if (hits_buffer_resized) {
             m_raytracing_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex())
@@ -708,43 +690,37 @@ void LightmapGPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const Li
         }*/
 
         if (rays_buffer_resized || hits_buffer_resized) {
-            HYPERION_ASSERT_RESULT(m_raytracing_pipeline->GetDescriptorTable()->Update(g_engine->GetGPUDevice(), frame->GetFrameIndex()));
+            m_raytracing_pipeline->GetDescriptorTable()->Update(frame->GetFrameIndex());
         }
     }
-    
-    m_raytracing_pipeline->Bind(frame->GetCommandBuffer());
 
-    m_raytracing_pipeline->GetDescriptorTable()->Bind(
-        frame,
+    frame->GetCommandList().Add<BindRaytracingPipeline>(m_raytracing_pipeline);
+
+    frame->GetCommandList().Add<BindDescriptorTable>(
+        m_raytracing_pipeline->GetDescriptorTable(),
         m_raytracing_pipeline,
-        {
+        ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
                 NAME("Scene"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(camera_render_resource) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid ? env_grid->GetComponentIndex() : 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource ? env_probe_render_resource->GetBufferIndex() : 0) }
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle.Get(), 0) }
                 }
             }
-        }
+        },
+        frame->GetFrameIndex()
     );
 
-    m_hits_buffer_gpu->InsertBarrier(
-        frame->GetCommandBuffer(),
-        renderer::ResourceState::UNORDERED_ACCESS
-    );
+    frame->GetCommandList().Add<InsertBarrier>(m_hits_buffer_gpu, renderer::ResourceState::UNORDERED_ACCESS);
 
-    m_raytracing_pipeline->TraceRays(
-        g_engine->GetGPUDevice(),
-        frame->GetCommandBuffer(),
+    frame->GetCommandList().Add<TraceRays>(
+        m_raytracing_pipeline,
         Vec3u { uint32(rays.Size()), 1, 1 }
     );
 
-    m_hits_buffer_gpu->InsertBarrier(
-        frame->GetCommandBuffer(),
-        renderer::ResourceState::UNORDERED_ACCESS
-    );
+    frame->GetCommandList().Add<InsertBarrier>(m_hits_buffer_gpu, renderer::ResourceState::UNORDERED_ACCESS);
 }
 
 #pragma endregion LightmapGPUPathTracer
@@ -770,8 +746,8 @@ public:
 
     virtual void Create() override;
     virtual void UpdateRays(Span<const LightmapRay> rays) override;
-    virtual void ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_hits) override;
-    virtual void Render(Frame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset) override;
+    virtual void ReadHitsBuffer(IFrame *frame, Span<LightmapHit> out_hits) override;
+    virtual void Render(IFrame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset) override;
 
 private:
     void TraceSingleRayOnCPU(LightmapJob *job, const LightmapRay &ray, LightmapRayHitPayload &out_payload);
@@ -809,7 +785,7 @@ void LightmapCPUPathTracer::UpdateRays(Span<const LightmapRay> rays)
 {
 }
 
-void LightmapCPUPathTracer::ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_hits)
+void LightmapCPUPathTracer::ReadHitsBuffer(IFrame *frame, Span<LightmapHit> out_hits)
 {
     Threads::AssertOnThread(g_render_thread);
     
@@ -821,7 +797,7 @@ void LightmapCPUPathTracer::ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_h
     Memory::MemCpy(out_hits.Data(), m_hits_buffer.Data(), m_hits_buffer.ByteSize());
 }
 
-void LightmapCPUPathTracer::Render(Frame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset)
+void LightmapCPUPathTracer::Render(IFrame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset)
 {
     Threads::AssertOnThread(g_render_thread);
 
@@ -1091,224 +1067,6 @@ void LightmapCPUPathTracer::TraceSingleRayOnCPU(LightmapJob *job, const Lightmap
 }
 
 #pragma endregion LightmapCPUPathTracer
-
-#pragma region LightmapRasterizer
-
-class HYP_API LightmapRasterizer : public ILightmapRenderer
-{
-public:
-    LightmapRasterizer(const Handle<Scene> &scene, LightmapShadingType shading_type);
-    LightmapRasterizer(const LightmapRasterizer &other)                 = delete;
-    LightmapRasterizer &operator=(const LightmapRasterizer &other)      = delete;
-    LightmapRasterizer(LightmapRasterizer &&other) noexcept             = delete;
-    LightmapRasterizer &operator=(LightmapRasterizer &&other) noexcept  = delete;
-    virtual ~LightmapRasterizer() override;
-
-    virtual uint32 MaxRaysPerFrame() const override
-        { return 1; }
-
-    virtual LightmapShadingType GetShadingType() const override
-        { return m_shading_type; }
-
-    virtual void Create() override;
-    virtual void UpdateRays(Span<const LightmapRay> rays) override;
-    virtual void ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_hits) override;
-    virtual void Render(Frame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset) override;
-
-private:
-    using RenderSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::detail::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
-
-    void CreateUniformBuffer();
-    void UpdateUniforms(Frame *frame, uint32 ray_offset);
-
-    Handle<Scene>           m_scene;
-    LightmapShadingType     m_shading_type;
-
-    Handle<Camera>          m_camera;
-    ResourceHandle          m_camera_resource_handle;
-
-    FramebufferRef          m_framebuffer;
-    ShaderRef               m_shader;
-    RenderCollector         m_render_collector;
-
-    RenderSemaphore         m_render_semaphore;
-};
-
-LightmapRasterizer::LightmapRasterizer(const Handle<Scene> &scene, LightmapShadingType shading_type)
-    : m_scene(scene),
-      m_shading_type(shading_type)
-{
-}
-
-LightmapRasterizer::~LightmapRasterizer()
-{
-}
-
-void LightmapRasterizer::Create()
-{
-    constexpr Vec2i dimensions { 32, 32 };
-
-    // Framebuffer
-    {
-        m_framebuffer = MakeRenderObject<Framebuffer>(
-            Vec2u(dimensions),
-            renderer::RenderPassStage::SHADER,
-            renderer::RenderPassMode::RENDER_PASS_SECONDARY_COMMAND_BUFFER
-        );
-
-        constexpr InternalFormat format = InternalFormat::RGBA8;
-
-        AttachmentRef color_attachment = m_framebuffer->AddAttachment(
-            0,
-            format,
-            ImageType::TEXTURE_TYPE_2D,
-            renderer::RenderPassStage::SHADER,
-            renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE
-        );
-
-        m_framebuffer->AddAttachment(
-            1,
-            g_engine->GetDefaultFormat(TEXTURE_FORMAT_DEFAULT_DEPTH),
-            ImageType::TEXTURE_TYPE_2D,
-            renderer::RenderPassStage::SHADER,
-            renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE
-        );
-
-        DeferCreate(m_framebuffer, g_engine->GetGPUDevice());
-    }
-
-    { // Shader (enforce forward lighting)
-        m_shader = g_shader_manager->GetOrCreate({
-            NAME("Forward"),
-            ShaderProperties(static_mesh_vertex_attributes, { "LIGHTMAP_BAKE" })
-        });
-
-        AssertThrow(m_shader != nullptr);
-    }
-
-    { // Camera
-        m_camera = CreateObject<Camera>(
-            90.0f,
-            -dimensions.x, dimensions.y,
-            0.001f, 1000.0f
-        );
-
-        m_camera->SetName(Name::Unique("LightmapRasterizerCamera"));
-
-        InitObject(m_camera);
-
-        CameraRenderResource &camera_render_resource = m_camera->GetRenderResource();
-        camera_render_resource.SetFramebuffer(m_framebuffer);
-        
-        m_camera_resource_handle = ResourceHandle(camera_render_resource);
-    }
-}
-
-void LightmapRasterizer::UpdateRays(Span<const LightmapRay> rays)
-{
-    if (rays.Size() == 0) {
-        return;
-    }
-
-    AssertThrow(m_scene.IsValid());
-
-    // wait for it to reach zero (all rendering tasks completed)
-    m_render_semaphore.Acquire();
-
-    m_camera->SetViewMatrix(Matrix4::LookAt(
-        rays[0].ray.position,
-        rays[0].ray.direction,
-        rays[0].ray.direction.Cross(Vec3f(0.0f, 1.0f, 0.0f))
-    ));
-    
-    m_camera->Update(0.016f);
-
-    // Compute visible objects
-    m_scene->GetOctree().CalculateVisibility(m_camera);
-
-    m_scene->CollectStaticEntities(
-        m_render_collector,
-        m_camera,
-        RenderableAttributeSet(
-            MeshAttributes { },
-            MaterialAttributes {
-                .shader_definition  = m_shader->GetCompiledShader()->GetDefinition(),
-                .cull_faces         = FaceCullMode::BACK
-            }
-        )
-    );
-}
-
-void LightmapRasterizer::ReadHitsBuffer(Frame *frame, Span<LightmapHit> out_hits)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
-
-    if (out_hits.Size() != 1) {
-        return;
-    }
-
-    const ImageRef &image = m_framebuffer->GetAttachment(0)->GetImage();
-
-    ByteBuffer byte_buffer = image->ReadBack(g_engine->GetGPUDevice(), g_engine->GetGPUInstance());
-    AssertThrow(byte_buffer.Size() == image->GetByteSize());
-
-    Bitmap<4> bitmap(m_framebuffer->GetWidth(), m_framebuffer->GetHeight());
-    bitmap.SetPixels(byte_buffer);
-    
-    const float pixel_size = float(1.0f) / float(bitmap.GetWidth() * bitmap.GetHeight());
-
-    Vec4f avg = Vec4f(0.0f);
-
-    for (uint32 x = 0; x < bitmap.GetWidth(); x++) {
-        for (uint32 y = 0; y < bitmap.GetHeight(); y++) {
-            const auto &pixel = bitmap.GetPixel(x, y);
-
-            avg += pixel.GetRGBA() * pixel_size;
-        }
-    }
-
-    out_hits[0].color = avg;
-}
-
-void LightmapRasterizer::Render(Frame *frame, LightmapJob *job, Span<const LightmapRay> rays, uint32 ray_offset)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
-
-    m_render_semaphore.Produce();
-
-    const uint32 frame_index = frame->GetFrameIndex();
-    const uint32 previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
-
-    CameraRenderResource &camera_render_resource = static_cast<CameraRenderResource &>(*m_camera_resource_handle);
-
-    g_engine->GetRenderState()->SetActiveScene(m_scene.Get());
-    g_engine->GetRenderState()->BindCamera(camera_render_resource.GetCamera());
-
-    // Render the scene from the given texel
-
-    m_render_collector.CollectDrawCalls(
-        frame,
-        Bitset(1 << BUCKET_OPAQUE),
-        nullptr
-    );
-
-    m_render_collector.ExecuteDrawCalls(
-        frame,
-        camera_render_resource,
-        Bitset(1 << BUCKET_OPAQUE)
-    );
-
-    g_engine->GetRenderState()->UnbindCamera(camera_render_resource.GetCamera());
-    g_engine->GetRenderState()->UnsetActiveScene();
-
-    m_render_semaphore.Release();
-}
-
-#pragma endregion LightmapRasterizer
 
 #pragma region LightmapJob
 
@@ -1655,9 +1413,6 @@ Lightmapper::Lightmapper(LightmapperConfig &&config, const Handle<Scene> &scene)
         case LightmapTraceMode::CPU_PATH_TRACING:
             lightmap_renderer.EmplaceAs<LightmapCPUPathTracer>(m_scene, LightmapShadingType(i));
             break;
-        case LightmapTraceMode::RASTERIZATION:
-            lightmap_renderer.EmplaceAs<LightmapRasterizer>(m_scene, LightmapShadingType(i));
-            break;
         default:
             HYP_UNREACHABLE();
         }
@@ -1756,15 +1511,10 @@ void Lightmapper::PerformLightmapping()
             continue;
         }
 
-        // GPU path tracing mode requires a raytracing BLAS to be attached
-        if (m_config.trace_mode == LightmapTraceMode::GPU_PATH_TRACING) {
-            BLASComponent *blas_component = mgr.TryGetComponent<BLASComponent>(entity_id);
+        if (!mesh_component.raytracing_data) {
+            HYP_LOG(Lightmap, Info, "Skipping entity #{} because it has no raytracing data set", entity_id.Value());
 
-            if (!blas_component || !blas_component->blas) {
-                HYP_LOG(Lightmap, Info, "Skipping entity #{} because it has no bottom level acceleration structure attached", entity_id.Value());
-
-                continue;
-            }
+            continue;
         }
 
         Handle<Entity> entity { entity_id };

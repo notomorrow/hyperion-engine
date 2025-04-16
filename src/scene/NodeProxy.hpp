@@ -45,8 +45,8 @@ struct HYP_API NodeProxyChildren
         HYP_FORCE_INLINE bool operator!=(const Iterator &other) const
             { return node != other.node || index != other.index; }
 
-        NodeProxy &operator*();
-        NodeProxy *operator->();
+        const NodeProxy &operator*() const;
+        const NodeProxy *operator->() const;
 
         HYP_FORCE_INLINE Iterator &operator++()
         {
@@ -234,9 +234,8 @@ public:
     NodeProxy AddChild(const NodeProxy &node);
 
     /*! \brief If the Node is present and attached to a parent Node,
-        detaches it from that Node.
-        \returns Whether or not the Node was removed from its parent. If no Node is present, returns false. */
-    bool Remove();
+        detaches it from that Node. */
+    void Remove();
 
     /*! \returns The local-space translation, scale, rotation of this Node. */
     const Transform &GetLocalTransform() const;
