@@ -132,13 +132,6 @@ HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 
 void main()
 {
-    // debugging gpu crash
-    //if (object.material_index >= HYP_MAX_MATERIALS) {
-    //    gbuffer_albedo = vec4(1.0, 0.0, 1.0, 1.0);
-
-     //   return;
-    //}
-
     vec3 view_vector = normalize(v_camera_position - v_position);
     vec3 N = normalize(v_normal);
     const vec3 ws_normals = N;
