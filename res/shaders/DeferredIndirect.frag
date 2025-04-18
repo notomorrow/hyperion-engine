@@ -22,6 +22,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi_result;
+HYP_DESCRIPTOR_SRV(Global, SSGIResultTexture) uniform texture2D ssgi_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
 HYP_DESCRIPTOR_SRV(Global, EnvGridRadianceResultTexture) uniform texture2D env_grid_radiance_texture;
 HYP_DESCRIPTOR_SRV(Global, EnvGridIrradianceResultTexture) uniform texture2D env_grid_irradiance_texture;
@@ -124,12 +125,15 @@ void main()
     const vec3 E = CalculateE(F0, dfg);
     const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
-    reflections = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord);
+    ibl = Texture2D(HYP_SAMPLER_LINEAR, reflections_texture, texcoord).rgb;
 
-    vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_NEAREST, env_grid_radiance_texture, texcoord);
+    vec4 env_grid_radiance = Texture2D(HYP_SAMPLER_LINEAR, env_grid_radiance_texture, texcoord);
     reflections = reflections * (1.0 - env_grid_radiance.a) + (vec4(env_grid_radiance.rgb, 1.0) * env_grid_radiance.a);
 
-    irradiance += Texture2D(HYP_SAMPLER_NEAREST, env_grid_irradiance_texture, texcoord).rgb * ENV_GRID_MULTIPLIER;
+    irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance_texture, texcoord).rgb * ENV_GRID_MULTIPLIER;
+
+    const vec4 ssgi = Texture2D(HYP_SAMPLER_LINEAR, ssgi_result, v_texcoord0);
+    irradiance = irradiance * (1.0 - ssgi.a) + (ssgi.rgb * ssgi.a);
 
 #ifdef RT_REFLECTIONS_ENABLED
     CalculateRaytracingReflection(deferred_params, texcoord, reflections);
@@ -149,10 +153,6 @@ void main()
     specular_ao *= energy_compensation;
 
     vec3 Fr = ibl * E * specular_ao;
-
-    vec3 multibounce = GTAOMultiBounce(ao, albedo.rgb);
-    Fd *= multibounce;
-    Fr *= multibounce;
 
     reflections.rgb *= specular_ao;
     Fr = Fr * (1.0 - reflections.a) + (E * reflections.rgb);

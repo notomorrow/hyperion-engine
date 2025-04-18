@@ -133,6 +133,7 @@ void main()
         vec3 T = normalize(tangent);
         vec3 B = normalize(bitangent);
         vec3 V = normalize(camera.position.xyz - position.xyz);
+        vec3 H = vec3(0.0);
 
         const float NdotV = max(0.000001, dot(N, V));
     
@@ -149,7 +150,7 @@ void main()
         L -= position.xyz * float(min(light.type, 1));
         L = normalize(L);
 
-        const vec3 H = normalize(L + V);
+        H = normalize(L + V);
 
         const float NdotL = max(0.000001, dot(N, L));
         const float LdotH = max(0.000001, dot(L, H));
@@ -243,9 +244,9 @@ void main()
         }
 #endif
 
-        const float D = CalculateDistributionTerm(roughness, NdotH);
-        const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
-        const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
+        const float D = DistributionGGX(N, H, roughness);
+        const float G = V_SmithGGXCorrelated(roughness, NdotV, NdotL);
+        const vec4 F = SchlickFresnel(F0, F90, HdotV);
 
         const vec4 dfg = CalculateDFG(F, roughness, NdotV);
         const vec4 E = CalculateE(F0, dfg);
