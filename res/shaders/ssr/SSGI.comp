@@ -1,0 +1,298 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "ssr_header.inc"
+#include "../include/noise.inc"
+#include "../include/brdf.inc"
+#include "../include/env_probe.inc"
+
+HYP_DESCRIPTOR_UAV(SSGIDescriptorSet, OutImage, format = rgba8) uniform writeonly image2D out_image;
+HYP_DESCRIPTOR_CBUFF(SSGIDescriptorSet, UniformBuffer) uniform UniformBuffer
+{
+	uvec4 dimension;
+	float ray_step;
+	float num_iterations;
+	float max_ray_distance;
+	float distance_bias;
+	float offset;
+	float eye_fade_start;
+	float eye_fade_end;
+	float screen_edge_fade_start;
+	float screen_edge_fade_end;
+
+    uint num_bound_lights;
+    uvec4 light_indices[4];
+} ssr_params;
+
+HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Global, DeferredResult) uniform texture2D gbuffer_deferred_result;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
+{
+	ivec4 sobol_256spp_256d[256 * 256 / 4];
+	ivec4 scrambling_tile[128 * 128 * 8 / 4];
+	ivec4 ranking_tile[128 * 128 * 8 / 4];
+};
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer SceneBuffer
+{
+    Scene scene;
+};
+
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CameraShaderData
+{
+    Camera camera;
+};
+
+HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+
+HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
+HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[16]; };
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
+HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../include/gbuffer.inc"
+#include "../include/BlueNoise.glsl"
+#include "../include/shadows.inc"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+#define NUM_RAYS 8
+#define EVAL_LIGHTING
+
+mat4 view = camera.view;
+mat4 proj = camera.projection;
+mat4 inverse_proj = inverse(proj);
+mat4 inverse_view = inverse(view);
+
+bool TraceRays(
+    vec3 ray_origin,
+    vec3 ray_direction,
+    out vec2 hit_uv,
+    out vec4 hit_view_space_position,
+    out float hit_depth,
+    out float num_iterations
+)
+{
+    bool intersect = false;
+    num_iterations = 0.0;
+    hit_uv = vec2(0.0);
+    hit_depth = 1.0;
+    hit_view_space_position = vec4(0.0);
+
+    vec3 ray_step = ssr_params.ray_step * normalize(ray_direction);
+    vec3 marching_position = ray_origin;
+    float depth_from_screen;
+    float step_delta;
+
+    int i = 0;
+
+    // @TODO Use hi-z buffer instead of fixed step
+
+    for (; i < ssr_params.num_iterations; i++) {
+        marching_position += ray_step;
+
+        hit_uv = GetProjectedPositionFromView(proj, marching_position);
+        hit_depth = Texture2D(sampler_nearest, gbuffer_depth_texture, hit_uv).r;
+        hit_view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_uv, hit_depth);
+
+        step_delta = marching_position.z - hit_view_space_position.z;
+
+        intersect = step_delta > 0.0;
+        num_iterations += 1.0;
+
+        if (intersect) {
+            break;
+        }
+    }
+
+    if (intersect) {
+        // binary search
+        for (; i < ssr_params.num_iterations; i++) {
+            ray_step *= 0.5;
+            marching_position = marching_position - ray_step * sign(step_delta);
+
+            hit_uv = GetProjectedPositionFromView(proj, marching_position);
+            hit_depth = Texture2D(sampler_nearest, gbuffer_depth_texture, hit_uv).r;
+            hit_view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_uv, hit_depth);
+            
+            step_delta = abs(marching_position.z) - hit_view_space_position.z;
+
+            if (abs(step_delta) < ssr_params.distance_bias) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+float CalculateAlpha(
+    float num_iterations,
+    vec2 hit_uv,
+    vec3 ray_direction
+)
+{
+    float alpha = 1.0;
+    // Fade ray hits that approach the maximum iterations
+    alpha *= 1.0 - (num_iterations / ssr_params.num_iterations);
+
+    // Fade ray hits that approach the screen edge
+    vec2 hit_uv_ndc = hit_uv * 2.0 - 1.0;
+    float max_dimension = saturate(max(abs(hit_uv_ndc.x), abs(hit_uv_ndc.y)));
+    alpha *= 1.0 - max(0.0, max_dimension - ssr_params.screen_edge_fade_start) / (1.0 - ssr_params.screen_edge_fade_end);
+
+    // alpha = 1.0 - smoothstep(0.02, 0.99, max_dimension);
+
+    return alpha;
+}
+
+vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec3 N)
+{
+    if (lights[light_index].type != HYP_LIGHT_TYPE_DIRECTIONAL) {
+        return vec4(0.0);
+    }
+
+    const vec4 light_color = vec4(UINT_TO_VEC4(lights[light_index].color_encoded).rgb, 1.0);
+
+    vec3 L = normalize(lights[light_index].position_intensity.xyz);
+
+    float NdotL = max(0.0001, dot(N, L));
+
+    float shadow = 1.0;
+
+    if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index != ~0u) {
+        shadow = GetShadowStandard(lights[light_index].shadow_map_index, P, vec2(0.0), NdotL);
+    }
+
+    return light_color * NdotL * shadow * lights[light_index].position_intensity.w;
+}
+
+vec4 SampleSky(vec3 dir)
+{
+    if (current_env_probe.texture_index != ~0u) {
+        uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+
+        return TextureCube(sampler_linear, env_probe_textures[probe_texture_index], dir);
+    }
+
+    return vec4(0.0);
+}
+
+void main(void)
+{
+    const uint pixel_index = gl_GlobalInvocationID.x;
+    const uvec2 coord = uvec2(
+        pixel_index % ssr_params.dimension.x,
+        pixel_index / ssr_params.dimension.x
+    );
+
+    if (any(greaterThanEqual(coord, ssr_params.dimension.xy))) {
+        return;
+    }
+
+    const vec2 texcoord = saturate((vec2(coord) + 0.5) / (vec2(ssr_params.dimension.xy)));
+
+    const vec4 material_info = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord);
+    const float roughness = material_info.r;
+    const float perceptual_roughness = sqrt(roughness);
+    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
+
+    const vec3 N = DecodeNormal(Texture2D(sampler_nearest, gbuffer_ws_normals_texture, texcoord));
+    const vec3 view_space_normal = normalize((view * vec4(N, 0.0)).xyz);
+
+    vec4 accum_result = vec4(0.0);
+
+    const float blue_noise_scale = float(scene.frame_counter % 256) * 1.618;
+
+
+    if (depth > 0.99999) {
+        imageStore(out_image, ivec2(coord), vec4(0.0));
+        return;
+    }
+    
+    const vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
+    const vec3 V = normalize(vec3(0.0) - P);
+
+    const vec2 velocity = Texture2D(sampler_linear, gbuffer_velocity_texture, texcoord).xy;
+
+    vec3 tangent;
+    vec3 bitangent;
+    ComputeOrthonormalBasis(view_space_normal, tangent, bitangent);
+
+    vec2 hit_uv;
+    vec4 hit_view_space_position;
+    float hit_depth;
+    float num_iterations;
+
+    float phi = InterleavedGradientNoise(vec2(coord));
+
+    for (int i = 0; i < NUM_RAYS; i++) {
+        const vec2 blue_noise_sample = vec2(
+            SampleBlueNoise(int(coord.x), int(coord.y), 0, i * 2),
+            SampleBlueNoise(int(coord.x), int(coord.y), 0, i * 2 + 1)
+        );
+
+        const vec2 blue_noise_scaled = blue_noise_sample + blue_noise_scale;
+        const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
+
+        // vec2 rnd = VogelDisk(i, NUM_RAYS, phi);
+        
+        const vec3 d = SampleCosineWeightedHemisphere(rnd);
+
+        const vec3 ray_direction = tangent * d.x + bitangent * d.y + view_space_normal * d.z;
+        const vec3 ray_origin = P + ray_direction * 0.25;
+
+        //discard if the ray is pointing directly towards the camera
+        const bool intersects = TraceRays(ray_origin, ray_direction, hit_uv, hit_view_space_position, hit_depth, num_iterations);
+
+        if (intersects) {
+            if (hit_depth < 1.0) {
+                float alpha = CalculateAlpha(num_iterations, hit_uv, ray_direction);
+
+                if (alpha > HYP_FMATH_EPSILON) {
+                    vec2 sample_uv = saturate(hit_uv);
+                    
+#ifdef EVAL_LIGHTING
+                    vec4 hit_albedo = Texture2D(sampler_linear, gbuffer_albedo_texture, sample_uv);
+
+                    vec3 hit_normal = DecodeNormal(Texture2D(sampler_nearest, gbuffer_ws_normals_texture, sample_uv));
+
+                    vec4 hit_position = inverse_view * hit_view_space_position;
+                    hit_position /= hit_position.w;
+                    
+                    // Evaluate lighting at hit point
+                    vec4 radiance = vec4(0.0);
+                    
+                    for (uint j = 0; j < ssr_params.num_bound_lights; j++) {
+                        uint light_index = ssr_params.light_indices[j / 4][j % 4];
+
+                        radiance += CalculateDirectLighting(light_index, hit_albedo, hit_position.xyz, hit_normal);
+                    }
+
+                    vec4 gi = radiance * hit_albedo * alpha;
+#else
+                    vec4 gi = Texture2D(sampler_linear, gbuffer_deferred_result, sample_uv);
+#endif
+
+                    accum_result += gi;
+
+                    continue;
+                }
+            }
+
+            const vec3 world_space_ray_direction = (inverse_view * vec4(ray_direction, 0.0)).xyz;
+            accum_result += SampleSky(world_space_ray_direction);
+        }
+    }
+
+    accum_result *= (1.0 / float(NUM_RAYS));
+
+    imageStore(out_image, ivec2(coord), accum_result);
+}

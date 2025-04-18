@@ -38,6 +38,7 @@ HYP_DESCRIPTOR_SRV(Global, DeferredIndirectResultTexture) uniform texture2D defe
 HYP_DESCRIPTOR_SRV(Global, DeferredDirectResultTexture) uniform texture2D deferred_direct_texture;
 HYP_DESCRIPTOR_SRV(Global, DeferredResult) uniform texture2D gbuffer_deferred_result;
 HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
+HYP_DESCRIPTOR_SRV(Global, SSGIResultTexture) uniform texture2D ssgi_result;
 HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi;
 HYP_DESCRIPTOR_SRV(Global, TAAResultTexture) uniform texture2D temporal_aa_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_result;
@@ -68,6 +69,8 @@ void main()
 
 #if defined(DEBUG_SSR)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, v_texcoord0).rgb;
+#elif defined(DEBUG_SSGI)
+    out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssgi_result, v_texcoord0).rgb;
 #elif defined(DEBUG_HBAO)
     out_color.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi, v_texcoord0).aaa;
 #elif defined(DEBUG_HBIL)

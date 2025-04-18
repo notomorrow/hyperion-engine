@@ -10,6 +10,10 @@
       "enabled": false,
       "cone_tracing": false
     },
+    "ssgi": {
+      "enabled": true,
+      "quality": 1
+    },
     "rt": {
       "reflections": {
         "enabled": false
@@ -32,6 +36,7 @@
       "env_grid_probes": false,
       "reflection_probes": false,
       "ssr": false,
+      "ssgi": false,
       "reflections": false,
       "path_tracer": false,
       "hbil": false,
@@ -46,7 +51,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       }
     },
     "hbao": {

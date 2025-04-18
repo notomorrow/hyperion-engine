@@ -68,19 +68,16 @@ vec3 RandomInHemisphere(vec3 rand, vec3 n)
     return v * sign(dot(v, n));
 }
 
-vec3 RandomInHemisphereCosineWeighted(vec3 rand, vec3 n) {
-    float r = rand.x * 0.5 + 0.5;
-    float angle = (rand.y + 1.0) * HYP_FMATH_PI;
-    float sr = sqrt(r);
-    vec2 p = vec2(sr * cos(angle), sr * sin(angle));
+vec3 SampleCosineWeightedHemisphere(vec2 Xi)
+{
+    float r = sqrt(Xi.x);
+    float phi = 6.28318530718 * Xi.y;
 
-    vec3 ph = vec3(p.xy, sqrt(1.0 - p*p));
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+    float z = sqrt(1.0 - r * r);
 
-    vec3 tangent = normalize(rand);
-    vec3 bitangent = cross(tangent, n);
-    tangent = cross(bitangent, n);
-
-    return tangent * ph.x + bitangent * ph.y + n * ph.z;
+    return vec3(x, y, z);
 }
 
 // Generates a seed for a random number generator from 2 inputs plus a backoff
