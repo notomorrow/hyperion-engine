@@ -9,29 +9,23 @@
 layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
-layout(location=4) in vec3 v_tangent;
-layout(location=5) in vec3 v_bitangent;
 layout(location=7) in flat vec3 v_camera_position;
-layout(location=8) in mat3 v_tbn_matrix;
 layout(location=11) in flat uint v_object_index;
 layout(location=12) in flat vec3 v_env_probe_extent;
 layout(location=13) in flat uint v_cube_face_index;
-layout(location=14) in vec2 v_cube_face_uv;
 
-// #ifndef MODE_SHADOWS
 layout(location=0) out vec4 output_color;
-#ifdef WRITE_NORMALS
-layout(location=1) out vec2 output_normals;
-#ifdef WRITE_MOMENTS
-layout(location=2) out vec2 output_moments;
-#endif
 
+#ifdef WRITE_NORMALS
+    layout(location=1) out vec4 output_normals;
+    #ifdef WRITE_MOMENTS
+        layout(location=2) out vec4 output_moments;
+    #endif
 #else
-#ifdef WRITE_MOMENTS
-layout(location=1) out vec2 output_moments;
+    #ifdef WRITE_MOMENTS
+        layout(location=1) out vec4 output_moments;
+    #endif
 #endif
-#endif
-// #endif
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
@@ -50,11 +44,6 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/brdf.inc"
 
 #define HYP_CUBEMAP_AMBIENT 0.025
-
-#ifdef MODE_REFLECTION
-    #define LIGHTING
-    #define SHADOWS
-#endif
 
 HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 {
@@ -196,7 +185,7 @@ void main()
         indirect_lighting = Fd;
     }
 
-    if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL) { // direct (temp light type check)
+    { // direct
         const float D = CalculateDistributionTerm(roughness, NdotH);
         const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
         const vec3 F = CalculateFresnelTerm(F0, roughness, LdotH);
@@ -235,10 +224,10 @@ void main()
 #endif
 
 #ifdef WRITE_NORMALS
-    output_normals = PackNormalVec2(N);
+    output_normals = vec4(PackNormalVec2(N), 0.0, 0.0);
 #endif
 
 #ifdef WRITE_MOMENTS
-    output_moments = moments;
+    output_moments = vec4(moments, 0.0, 0.0);
 #endif
 }

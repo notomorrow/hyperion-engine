@@ -24,7 +24,7 @@ HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
 
 #include "include/env_probe.inc"
-HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
 HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
@@ -244,9 +244,9 @@ void main()
         }
 #endif
 
-        const float D = DistributionGGX(N, H, roughness);
-        const float G = V_SmithGGXCorrelated(roughness, NdotV, NdotL);
-        const vec4 F = SchlickFresnel(F0, F90, HdotV);
+        const float D = CalculateDistributionTerm(roughness, NdotH);
+        const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
+        const vec4 F = CalculateFresnelTerm(F0, roughness, LdotH);
 
         const vec4 dfg = CalculateDFG(F, roughness, NdotV);
         const vec4 E = CalculateE(F0, dfg);

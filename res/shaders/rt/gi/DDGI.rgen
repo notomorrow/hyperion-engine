@@ -22,6 +22,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #include "../../include/shared.inc"
 #include "../../include/noise.inc"
 #include "../../include/env_probe.inc"
+#include "../../include/Octahedron.glsl"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -52,7 +53,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer SceneBuffer
     Scene scene;
 };
 
-HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform textureCube env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
 HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
@@ -129,7 +130,7 @@ void main()
             if (current_env_probe.texture_index != ~0u) {
                 uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
 
-                bounces[bounce_index].emissive += TextureCube(sampler_linear, env_probe_textures[probe_texture_index], direction);
+                bounces[bounce_index].emissive += Texture2D(sampler_linear, env_probe_textures[probe_texture_index], EncodeOctahedralCoord(direction) * 0.5 + 0.5);
             }
             
             for (uint light_index = 0; light_index < probe_system.num_bound_lights; light_index++) {
