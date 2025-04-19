@@ -10,10 +10,6 @@
       "enabled": false,
       "cone_tracing": false
     },
-    "ssgi": {
-      "enabled": true,
-      "quality": 1
-    },
     "rt": {
       "reflections": {
         "enabled": false
@@ -31,15 +27,15 @@
     },
     "debug": {
       "debug_drawer": {
-        "enabled": true
+        "enabled": false
       },
       "env_grid_probes": false,
       "reflection_probes": false,
       "ssr": false,
-      "ssgi": false,
-      "reflections": false,
+      "reflections": true,
       "path_tracer": false,
       "hbil": false,
+      "ssgi": false,
       "hbao": false,
       "irradiance": false
     },
@@ -54,11 +50,15 @@
         "enabled": false
       }
     },
+    "ssgi": {
+      "quality": 1,
+      "enabled": true
+    },
     "hbao": {
-      "radius": 2.500000,
+      "radius": 5,
       "use_temporal_blending": false,
       "power": 0.800000,
-      "enabled": false
+      "enabled": true
     }
   },
   "app": {
@@ -67,11 +67,11 @@
   },
   "lightmapper": {
     "num_threads_per_job": 4,
-    "num_samples": 32,
+    "num_samples": 4,
     "ideal_triangles_per_job": 4096,
-    "radiance": true,
+    "radiance": false,
     "trace_mode": 0,
-    "max_rays_per_frame": 100000,
+    "max_rays_per_frame": 250000,
     "irradiance": true
   }
 }

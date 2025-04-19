@@ -8,14 +8,10 @@
 layout(location=0) out vec3 v_position;
 layout(location=1) out vec3 v_normal;
 layout(location=2) out vec2 v_texcoord0;
-layout(location=4) out vec3 v_tangent;
-layout(location=5) out vec3 v_bitangent;
 layout(location=7) out flat vec3 v_camera_position;
-layout(location=8) out mat3 v_tbn_matrix;
 layout(location=11) out flat uint v_object_index;
 layout(location=12) out flat vec3 v_env_probe_extent;
 layout(location=13) out flat uint v_cube_face_index;
-layout(location=14) out vec2 v_cube_face_uv;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -115,10 +111,6 @@ void main()
     v_texcoord0 = vec2(a_texcoord0.x, 1.0 - a_texcoord0.y);
     v_camera_position = camera.position.xyz;
 
-    v_tangent = normalize(normal_matrix * vec4(a_tangent, 0.0)).xyz;
-    v_bitangent = normalize(normal_matrix * vec4(a_bitangent, 0.0)).xyz;
-    v_tbn_matrix = mat3(v_tangent, v_bitangent, v_normal);
-
     mat4 projection_matrix = camera.projection;
     mat4 view_matrix = current_env_probe.face_view_matrices[gl_ViewIndex];
 
@@ -129,5 +121,4 @@ void main()
     gl_Position = projection_matrix * view_matrix * position;
 
     v_cube_face_index = gl_ViewIndex;
-    v_cube_face_uv = gl_Position.xy * 0.5 + 0.5;
 }
