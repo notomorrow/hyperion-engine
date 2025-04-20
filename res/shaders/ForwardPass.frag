@@ -51,7 +51,6 @@ HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
 HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
 
 HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -332,10 +331,6 @@ void main()
 
     uint mask = v_object_mask;
 
-#ifdef LIGHTMAP_BAKE
-    // temp; just set it to albedo color (needs to have lighting calculated)
-    gbuffer_albedo.a = 1.0; // force all objects in the baked texture to be fully opaque
-#else
     vec4 lm_irradiance = vec4(0.0);
     vec4 lm_radiance = vec4(0.0);
 
@@ -346,10 +341,9 @@ void main()
     lm_radiance = mix(lm_radiance, SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x, 1.0 - v_texcoord1.y)), bvec4(bool(mask & OBJECT_MASK_LIGHTMAP_RADIANCE)));
 
     gbuffer_albedo_lightmap = (lm_irradiance + lm_radiance) * float(bool(mask & OBJECT_MASK_LIGHTMAP));
-#endif
 
     gbuffer_normals = EncodeNormal(N);
-    gbuffer_material = vec4(0.001, metalness, transmission, ao);
+    gbuffer_material = vec4(roughness, metalness, transmission, ao);
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);

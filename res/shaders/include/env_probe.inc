@@ -16,23 +16,22 @@
 
 struct EnvProbe
 {
-    mat4 face_view_matrices[6];
+    mat4    face_view_matrices[6];
 
-    vec4 aabb_max;
-    vec4 aabb_min;
-    vec4 world_position;
+    vec4    aabb_max;
+    vec4    aabb_min;
+    vec4    world_position;
 
-    uint texture_index;
-    uint flags;
-    float camera_near;
-    float camera_far;
+    uint    texture_index;
+    uint    flags;
+    float   camera_near;
+    float   camera_far;
 
-    uvec2 dimensions;
-    uvec2 _pad2;
+    uvec2   dimensions;
+    uvec2   visibility_bits;
+    ivec4   position_in_grid;
 
-    ivec4 position_in_grid;
-    ivec4 _pad4;
-    uvec4 _pad5;
+    vec4    sh[9];
 };
 
 struct EnvGrid
