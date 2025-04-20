@@ -32,7 +32,6 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #ifdef IMMEDIATE_MODE
 
-HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
 HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
 
 HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
@@ -94,12 +93,10 @@ void main()
 
     if (env_probe_index != ~0u && env_probe_type == ENV_PROBE_TYPE_AMBIENT)
     {
-        const int storage_index = env_probes[env_probe_index].position_in_grid.w * 9;
-
         SH9 sh9;
 
-        for (int j = 0; j < 9; j++) {
-            sh9.values[j] = sh_grid_buffer[min(storage_index + j, SH_GRID_BUFFER_SIZE - 1)].rgb;
+        for (int i = 0; i < 9; i++) {
+            sh9.values[i] = env_probes[env_probe_index].sh[i].rgb;
         }
 
         v_color = vec4(SphericalHarmonicsSample(sh9, a_normal), 1.0);

@@ -164,10 +164,8 @@ vec3 SampleEnvProbe_SH(uint env_probe_index, vec3 N)
 {
     SH9 sh9;
 
-    const int storage_index = env_probes[env_probe_index].position_in_grid.w * 9;
-
     for (int i = 0; i < 9; i++) {
-        sh9.values[i] = sh_grid_buffer[min(storage_index + i, SH_GRID_BUFFER_SIZE - 1)].rgb;
+        sh9.values[i] = env_probes[env_probe_index].sh[i].rgb;
     }
 
     return SphericalHarmonicsSample(sh9, N);
