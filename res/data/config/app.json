@@ -7,7 +7,7 @@
       "screen_edge_fade": [0.980000, 0.990000],
       "quality": 1,
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": false
     },
     "rt": {
@@ -32,7 +32,7 @@
       "env_grid_probes": false,
       "reflection_probes": false,
       "ssr": false,
-      "reflections": true,
+      "reflections": false,
       "path_tracer": false,
       "hbil": false,
       "ssgi": false,
@@ -47,18 +47,18 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       }
     },
     "ssgi": {
-      "quality": 1,
-      "enabled": true
+      "quality": 0,
+      "enabled": false
     },
     "hbao": {
       "radius": 5,
       "use_temporal_blending": false,
       "power": 0.800000,
-      "enabled": true
+      "enabled": false
     }
   },
   "app": {

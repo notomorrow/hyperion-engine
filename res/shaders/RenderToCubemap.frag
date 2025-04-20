@@ -224,10 +224,10 @@ void main()
 #endif
 
 #ifdef WRITE_NORMALS
-    output_normals = vec4(PackNormalVec2(N), 0.0, 0.0);
+    output_normals = vec4(PackNormalVec2(N), 0.0, 1.0);//vec4(1.0, 1.0, 0.0, 1.0);
 #endif
 
 #ifdef WRITE_MOMENTS
-    output_moments = vec4(moments, 0.0, 0.0);
+    output_moments = vec4(moments, 0.0, 1.0);
 #endif
 }

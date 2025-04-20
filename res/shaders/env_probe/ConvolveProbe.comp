@@ -44,7 +44,6 @@ HYP_DESCRIPTOR_CBUFF(ConvolveProbeDescriptorSet, UniformBuffer) uniform UniformB
 };
 
 HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) readonly buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
 HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
@@ -124,20 +123,18 @@ vec4 ConvolveProbe(uvec2 local_coord)
         vec4 position = vec4(world_position.xyz + sample_dir * dist_dist2.r, 1.0);
 
 #ifdef LIGHTING
-
         // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
-        // vec4 irradiance = SampleSky(normal) * albedo * 0.25;
+        vec4 irradiance = SampleSky(normal) * albedo * 0.25;
 
-        // vec4 radiance = vec4(0.0);
+        vec4 radiance = vec4(0.0);
         
-        // for (uint j = 0; j < num_bound_lights; j++) {
-        //     uint light_index = light_indices[j / 4][j % 4];
+        for (uint j = 0; j < num_bound_lights; j++) {
+            uint light_index = light_indices[j / 4][j % 4];
 
-        //     radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
-        // }
+            radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
+        }
 
-        // @FIXME: Normals is not being rendered properly
-        vec4 color = vec4(TextureCube(sampler_nearest, normals_texture, sample_dir).rg, 0.0, 1.0);//vec4(vec3(normal.xyz * 0.5 + 0.5), 1.0);//radiance * albedo;
+        vec4 color = irradiance + radiance * albedo;
 #else
         vec4 color = albedo;
 #endif
