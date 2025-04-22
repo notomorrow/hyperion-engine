@@ -6,13 +6,27 @@
 
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
+#include "../include/defines.inc"
+
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+
+#ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
 HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+#else
+HYP_DESCRIPTOR_SRV(Global, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
+#endif
+
 HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 
 #include "../include/shared.inc"
-#include "../include/defines.inc"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/scene.inc"
