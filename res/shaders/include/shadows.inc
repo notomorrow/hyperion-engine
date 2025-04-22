@@ -62,7 +62,7 @@ vec3 GetShadowCoord(uint index, vec3 pos)
 float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 {
     const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + offset);
+    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy + offset, float(index)));
     const float shadow_depth = shadow_sample.r;
 
     float bias = HYP_SHADOW_BIAS;
@@ -78,7 +78,7 @@ float GetShadowStandard(uint index, vec3 pos, vec2 offset, float NdotL)
 float GetShadowStandard(uint index, vec3 pos)
 {
     const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy);
+    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy, float(index)));
     const float shadow_depth = shadow_sample.r;
 
     const float bias = HYP_SHADOW_BIAS;
@@ -184,7 +184,7 @@ float GetShadowPCF(uint index, vec3 pos, vec2 texcoord, vec2 screen_dimensions, 
 #define HYP_FETCH_SHADOW(iter_index) \
     {                                \
         shadow_coords[iter_index] = GetShadowCoord(iter_index, pos); \
-        shadow_samples[iter_index] = Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[iter_index], vogel_##iter_index * shadow_filter_size); \
+        shadow_samples[iter_index] = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(vogel_##iter_index * shadow_filter_size, float(iter_index))); \
     }
 
 #define HYP_DO_SHADOW(iter_index) \
@@ -284,7 +284,7 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
 #endif
 
     const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 moments = Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[index], coord.xy);
+    const vec4 moments = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy, float(index)));
 
     float d = coord.z - moments.x;
     float p = step(coord.z, moments.x + bias);
@@ -300,7 +300,7 @@ float GetShadowVariance(uint index, vec3 pos, float NdotL)
 
 #if 0
     const vec3 coord = GetShadowCoord(index, pos);
-    const vec4 shadow_sample = Texture2D(HYP_SAMPLER_LINEAR, shadow_maps[index], coord.xy);
+    const vec4 shadow_sample = texture(sampler2DArray(shadow_maps, HYP_SAMPLER_LINEAR), vec3(coord.xy, float(index)));
     const float moment = shadow_sample.r;
 
     if (coord.z <= moment) {
@@ -389,10 +389,10 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_
 #define HYP_DO_SHADOW_PENUMBRA(iter_index0, iter_index1, iter_index2, iter_index3) \
     { \
         vec4 blocker_samples = vec4( \
-            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index0 * /*shadow_pcf_kernel[iter_index0] **/ penumbra_filter_size)).r, \
-            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index1 * /*shadow_pcf_kernel[iter_index1] **/ penumbra_filter_size)).r, \
-            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index2 * /*shadow_pcf_kernel[iter_index2] **/ penumbra_filter_size)).r, \
-            Texture2D(HYP_SAMPLER_NEAREST, shadow_maps[index], coord.xy + (vogel_##iter_index3 * /*shadow_pcf_kernel[iter_index3] **/ penumbra_filter_size)).r \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy + (vogel_##iter_index0 * /*shadow_pcf_kernel[iter_index0] **/ penumbra_filter_size), float(iter_index0))).r, \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy + (vogel_##iter_index1 * /*shadow_pcf_kernel[iter_index1] **/ penumbra_filter_size), float(iter_index1))).r, \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy + (vogel_##iter_index2 * /*shadow_pcf_kernel[iter_index2] **/ penumbra_filter_size), float(iter_index2))).r, \
+            texture(sampler2DArray(shadow_maps, HYP_SAMPLER_NEAREST), vec3(coord.xy + (vogel_##iter_index3 * /*shadow_pcf_kernel[iter_index3] **/ penumbra_filter_size), float(iter_index3))).r \
         ); \
         vec4 are_samples_blocking = vec4(lessThan(blocker_samples, vec4(shadow_map_depth))); \
         total_blocker_depth += dot(blocker_samples * are_samples_blocking, vec4(1.0)); \
