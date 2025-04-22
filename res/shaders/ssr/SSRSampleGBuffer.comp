@@ -2,6 +2,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "ssr_header.inc"
+#include "../include/defines.inc"
 
 HYP_DESCRIPTOR_UAV(SSRDescriptorSet, UVImage, format = rgba16f) uniform readonly image2D ssr_uv_image;
 HYP_DESCRIPTOR_UAV(SSRDescriptorSet, SampleImage, format = rgba16f) uniform writeonly image2D ssr_sample;
@@ -23,7 +24,19 @@ HYP_DESCRIPTOR_CBUFF(SSRDescriptorSet, UniformBuffer) uniform UniformBuffer
     float _pad2;
 } ssr_params;
 
+#ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
 HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+#else
+HYP_DESCRIPTOR_SRV(Global, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
+HYP_DESCRIPTOR_SRV(Global, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
+#endif
+
 HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;

@@ -34,7 +34,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 /* Shadows */
 
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[HYP_MAX_SHADOW_MAPS];
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 
 HYP_DESCRIPTOR_UAV(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
 {
