@@ -70,7 +70,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
     Light light;
 };
 
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
+HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
 
 #define HYP_DEFERRED_NO_REFRACTION

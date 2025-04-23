@@ -11,8 +11,10 @@ layout(location=0) in vec3 v_position;
 layout(location=1) in vec3 v_normal;
 layout(location=2) in vec2 v_texcoord0;
 
+#ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
 HYP_DESCRIPTOR_SRV(Global, PostFXPreStack, count = 4) uniform texture2D effects_pre_stack[4];
 HYP_DESCRIPTOR_SRV(Global, PostFXPostStack, count = 4) uniform texture2D effects_post_stack[4];
+#endif
 
 HYP_DESCRIPTOR_CBUFF(Global, PostProcessingUniforms, size = 32) uniform PostProcessingUniforms {
     uvec2 effect_counts;
@@ -61,7 +63,6 @@ HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_pr
 HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
 // HYP_DESCRIPTOR_SRV(Scene, EnvGridProbeDataTexture) uniform texture2D env_grid_probe_data;
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapTextures, count = 16) uniform texture2D shadow_maps[16];
 
 layout(location=0) out vec4 out_color;
 
