@@ -54,7 +54,7 @@ HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_
 HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
 
 #ifdef SHADOWS
-    #include "include/shadows.inc"
+#include "include/shadows.inc"
 #endif
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
