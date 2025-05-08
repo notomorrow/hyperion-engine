@@ -7,7 +7,7 @@
       "screen_edge_fade": [0.980000, 0.990000],
       "quality": 1,
       "roughness_scattering": true,
-      "enabled": true,
+      "enabled": false,
       "cone_tracing": false
     },
     "rt": {
@@ -47,7 +47,7 @@
         "enabled": false
       },
       "gi": {
-        "enabled": true
+        "enabled": false
       }
     },
     "ssgi": {
