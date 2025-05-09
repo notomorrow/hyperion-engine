@@ -43,12 +43,12 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer, size = 512) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer, size = 512) uniform CamerasBuffer
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
@@ -127,8 +127,7 @@ void main() {
     const uint bucket = object.bucket;
     v_object_mask = (uint(bucket == HYP_OBJECT_BUCKET_OPAQUE) * OBJECT_MASK_OPAQUE)
         | (uint(bucket == HYP_OBJECT_BUCKET_TRANSLUCENT) * OBJECT_MASK_TRANSLUCENT)
-        | (uint(bucket == HYP_OBJECT_BUCKET_SKYBOX) * OBJECT_MASK_SKY)
-        | (uint(bucket == HYP_OBJECT_BUCKET_UI) * OBJECT_MASK_UI);
+        | (uint(bucket == HYP_OBJECT_BUCKET_SKYBOX) * OBJECT_MASK_SKY);
 
     gl_Position = v_position_ndc;
 } 

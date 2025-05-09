@@ -32,12 +32,12 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #ifdef IMMEDIATE_MODE
 
-HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
 
-HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
-HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
+HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
+HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(DebugDrawerDescriptorSet, ImmediateDrawsBuffer, size = 80) readonly buffer ImmediateDrawsBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(DebugDrawerDescriptorSet, ImmediateDrawsBuffer, standard = scalar) readonly buffer ImmediateDrawsBuffer
 {
     mat4 model_matrix;
 
@@ -51,7 +51,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(DebugDrawerDescriptorSet, ImmediateDrawsBuffer, size
 #define PREV_MODEL_MATRIX (model_matrix)
 #else
 #include "include/object.inc"
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
@@ -66,7 +66,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly bu
 #endif
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };

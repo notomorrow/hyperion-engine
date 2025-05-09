@@ -25,12 +25,12 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 
 #include "../include/UIObject.glsl"
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };

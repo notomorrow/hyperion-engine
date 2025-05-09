@@ -4,7 +4,7 @@
 #include "noise.inc"
 #include "aabb.inc"
 
-#define HYP_SHADOW_BIAS 0.0001
+#define HYP_SHADOW_BIAS 0.01
 #define HYP_SHADOW_VARIABLE_BIAS 1
 #define HYP_SHADOW_PENUMBRA_MIN 0.01
 #define HYP_SHADOW_PENUMBRA_MAX 8.0
@@ -469,7 +469,7 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_
 
 #ifdef HYP_ENV_PROBE_GLSL
 
-float GetPointShadowVariance(uint texture_index, vec3 world_to_light)
+float GetPointShadowVariance(uint texture_index, vec3 world_to_light, float NdotL)
 {
     const vec2 moments = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).rg;
     const float current_depth = length(world_to_light);
@@ -482,23 +482,31 @@ float GetPointShadowVariance(uint texture_index, vec3 world_to_light)
     return max(p, p_max);
 }
 
-float GetPointShadowStandard(uint texture_index, vec3 world_to_light)
+float GetPointShadowStandard(uint texture_index, vec3 world_to_light, float NdotL)
 {
-    const float shadow_depth = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).r;
+    const float shadow_depth = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_NEAREST), vec4(world_to_light, float(texture_index))).r;
     const float current_depth = length(world_to_light);
 
     float bias = HYP_SHADOW_BIAS;
 
-    return max(step(current_depth - 0.001, shadow_depth), 0.0);
+#ifdef HYP_SHADOW_VARIABLE_BIAS
+    bias *= tan(acos(NdotL));
+    bias = clamp(bias, 0.0, 0.005);
+#endif
+
+    return max(step(current_depth - bias, shadow_depth), 0.0);
 }
 
-float GetPointShadow(uint texture_index, uint flags, vec3 world_to_light)
+float GetPointShadow(uint index, vec3 world_to_light, float NdotL)
 {
+    uint layer_index = shadow_map_data[index].layer_index;
+    uint flags = shadow_map_data[index].flags;
+    
     switch (flags & SHADOW_FLAGS_TYPE_MASK) {
     case SHADOW_FLAGS_VSM:
-        return GetPointShadowVariance(texture_index, world_to_light);
+        return GetPointShadowVariance(layer_index, world_to_light, NdotL);
     default:
-        return GetPointShadowStandard(texture_index, world_to_light);
+        return GetPointShadowStandard(layer_index, world_to_light, NdotL);
     }
 }
 

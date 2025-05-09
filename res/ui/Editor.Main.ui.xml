@@ -18,10 +18,25 @@
     </MenuBar>
 
     <Panel name="Main_Toolbar" position="0 25" size="100% 40">
-        <Button name="Generate_Lightmaps_Button" size="auto 35" onclick="GenerateLightmaps" depth="10">
-            Build Lightmaps
-        </Button>
-        <Button name="Simulate_Button" size="auto 35" position="125 0" onclick="SimulateClicked" text="Simulate" depth="10"></Button>
+        <MenuBar name="Tools_MenuBar" position="0 0" size="auto 100%" depth="10">
+            <MenuItem name="Add_MenuItem" text="Add" size="auto 100%" backgroundColor="#101012" borderRadius="5">
+                <MenuItem name="EmptyNode_MenuItem" text="Empty node"></MenuItem>
+                <MenuItem name="Light_MenuItem" text="Light">
+                    <MenuItem name="PointLight_MenuItem" text="Point light" onclick="AddPointLight"></MenuItem>
+                    <MenuItem name="DirectionalLight_MenuItem" text="Directional light" onclick="AddDirectionalLight"></MenuItem>
+                    <MenuItem name="SpotLight_MenuItem" text="Spot light" onclick="AddSpotLight"></MenuItem>
+                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangular area light" onclick="AddAreaRectLight"></MenuItem>
+                </MenuItem>
+            </MenuItem>
+
+            <MenuItem name="Generate_Lightmaps_Button" size="auto 100%" onclick="GenerateLightmaps" backgroundColor="#101012" borderRadius="5" depth="10">
+                Build Lightmaps
+            </MenuItem>
+
+            <MenuItem name="Simulate_Button" size="auto 100%" onclick="SimulateClicked" backgroundColor="#101012" borderRadius="5" depth="10">
+                Simulate
+            </MenuItem>
+        </MenuBar>
     </Panel>
 
     <DockableContainer name="Dockable_Container" position="0 75" size="100% fill">
@@ -29,10 +44,7 @@
             <TabView size="100% 25" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
                     <Panel size="100% 35" padding="0 2">
-                        <Button size="50 fill" onclick="AddNodeClicked">
-                            Add
-                        </Button>
-                        <Textbox name="Scene_Outline_Filter" size="fill auto" position="50 0" placeholder="Filter..."></Textbox>
+                        <Textbox name="Scene_Outline_Filter" size="fill auto" placeholder="Filter..."></Textbox>
                     </Panel>
                     <ListView name="Scene_Outline_ListView" position="0 35" size="100% fill" />
                 </Tab>

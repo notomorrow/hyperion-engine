@@ -33,9 +33,9 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 /* Shadows */
 
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 {
     ShadowMap shadow_map_data[];
 };
@@ -68,7 +68,7 @@ struct PackedVertex
 layout(buffer_reference, scalar) readonly buffer PackedVertexBuffer { float vertices[]; };
 layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 indices[]; };
 
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object entities[];
 };
@@ -93,7 +93,7 @@ HYP_DESCRIPTOR_CBUFF(RTRadianceDescriptorSet, RTRadianceUniforms) uniform RTRadi
     RTRadianceUniforms rt_radiance_uniforms;
 };
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
 {
     Camera camera;
 };
