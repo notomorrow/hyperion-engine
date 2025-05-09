@@ -62,7 +62,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer ScenesBuffer
 
 HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 {
-    ShadowMap shadow_map_data[16];
+    ShadowMap shadow_map_data[];
 };
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
@@ -228,11 +228,11 @@ void main()
         vec4 light_color = UINT_TO_VEC4(light.color_encoded);
 
 #ifdef LIGHT_TYPE_POINT
-        if (current_env_probe.texture_index != ~0u) {
+        if (light.shadow_map_index != ~0u) {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
-            const uint shadow_flags = current_env_probe.flags >> 3;
+            const uint shadow_flags = shadow_map_data[light.shadow_map_index].flags >> 3;
 
-            shadow = GetPointShadow(current_env_probe.texture_index, shadow_flags, world_to_light);
+            shadow = GetPointShadow(shadow_map_data[light.shadow_map_index].layer_index, shadow_flags, world_to_light);
         }
 #elif defined(LIGHT_TYPE_DIRECTIONAL)
         if (light.shadow_map_index != ~0u) {

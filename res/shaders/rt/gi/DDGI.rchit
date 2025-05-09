@@ -41,9 +41,9 @@ HYP_DESCRIPTOR_CBUFF(DDGIDescriptorSet, DDGIUniforms) uniform DDGIUniformBuffer
 
 HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer, size = 4096) readonly buffer ShadowMapsBuffer
+HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 {
-    ShadowMap shadow_map_data[HYP_MAX_SHADOW_MAPS];
+    ShadowMap shadow_map_data[];
 };
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
