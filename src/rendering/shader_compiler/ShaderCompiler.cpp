@@ -1898,8 +1898,15 @@ bool ShaderCompiler::CompileBundle(
         // run on this thread if we are already in a task thread
         task_batch.ExecuteBlocking();
     } else {
-        TaskSystem::GetInstance().EnqueueBatch(&task_batch);
-        task_batch.AwaitCompletion();
+        // Hack fix: task threads that are currently enqueueing RenderCommands can cause a deadlock,
+        // if we are waiting on tasks to complete from the render thread.
+
+        if (Threads::IsOnThread(g_render_thread)) {
+            task_batch.ExecuteBlocking();
+        } else {
+            TaskSystem::GetInstance().EnqueueBatch(&task_batch);
+            task_batch.AwaitCompletion();
+        }
     }
 
     Array<ProcessError> all_process_errors;

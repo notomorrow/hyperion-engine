@@ -814,7 +814,7 @@ void LightmapCPUPathTracer::Render(FrameBase *frame, LightmapJob *job, Span<cons
         AssertThrow(env_probe->IsReady());
 
         // prepare env probe texture to be sampled on the CPU in the tasks
-        env_probe->GetRenderResource().GetTexture()->Readback();
+        env_probe->GetRenderResource().GetPrefilteredEnvMap()->Readback();
     }
         // // testing
         // for (uint32 face_index = 0; face_index < env_probe_texture->NumFaces(); face_index++) {
@@ -845,7 +845,7 @@ void LightmapCPUPathTracer::Render(FrameBase *frame, LightmapJob *job, Span<cons
         if (env_probe.IsValid()) {
             AssertThrow(env_probe->IsReady());
 
-            env_probe_texture = env_probe->GetRenderResource().GetTexture();
+            env_probe_texture = env_probe->GetRenderResource().GetPrefilteredEnvMap();
         }
 
         // HYP_LOG(Lightmap, Info, "(task) EnvProbeTexture = #{}", env_probe_texture.GetID().Value());

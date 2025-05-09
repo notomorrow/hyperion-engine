@@ -22,93 +22,32 @@ class CameraRenderResource;
 class SceneRenderResource;
 class ShadowMapRenderResource;
 
+struct EnvProbeSphericalHarmonics
+{
+    Vec4f   values[9];
+};
+
 struct EnvProbeShaderData
 {
-    Matrix4 face_view_matrices[6];
+    Matrix4                     face_view_matrices[6];
 
-    Vec4f   aabb_max;
-    Vec4f   aabb_min;
-    Vec4f   world_position;
+    Vec4f                       aabb_max;
+    Vec4f                       aabb_min;
+    Vec4f                       world_position;
 
-    uint32  texture_index;
-    uint32  flags;
-    float   camera_near;
-    float   camera_far;
+    uint32                      texture_index;
+    uint32                      flags;
+    float                       camera_near;
+    float                       camera_far;
 
-    Vec2u   dimensions;
-    uint64  visibility_bits;
-    Vec4i   position_in_grid;
+    Vec2u                       dimensions;
+    uint64                      visibility_bits;
+    Vec4i                       position_in_grid;
 
-    Vec4f   sh[9];
+    EnvProbeSphericalHarmonics  sh;
 };
 
 static constexpr uint32 max_env_probes = (32ull * 1024ull * 1024ull) / sizeof(EnvProbeShaderData);
-
-struct EnvProbeIndex
-{
-    Vec3u   position;
-    Vec3u   grid_size;
-
-    // defaults such that GetProbeIndex() == ~0u
-    // because (~0u * 0 * 0) + (~0u * 0) + ~0u == ~0u
-    EnvProbeIndex()
-        : position { ~0u, ~0u, ~0u },
-          grid_size { 0, 0, 0 }
-    {
-    }
-
-    EnvProbeIndex(const Vec3u &position, const Vec3u &grid_size)
-        : position(position),
-          grid_size(grid_size)
-    {
-    }
-
-    EnvProbeIndex(const EnvProbeIndex &other)                   = default;
-    EnvProbeIndex &operator=(const EnvProbeIndex &other)        = default;
-    EnvProbeIndex(EnvProbeIndex &&other) noexcept               = default;
-    EnvProbeIndex &operator=(EnvProbeIndex &&other) noexcept    = default;
-    ~EnvProbeIndex()                                            = default;
-
-    HYP_FORCE_INLINE uint32 GetProbeIndex() const
-    {
-        return (position.x * grid_size.y * grid_size.z)
-            + (position.y * grid_size.z)
-            + position.z;
-    }
-
-    HYP_FORCE_INLINE bool operator<(uint32 value) const
-        { return GetProbeIndex() < value; }
-
-    HYP_FORCE_INLINE bool operator==(uint32 value) const
-        { return GetProbeIndex() == value; }
-
-    HYP_FORCE_INLINE bool operator!=(uint32 value) const
-        { return GetProbeIndex() != value; }
-
-    HYP_FORCE_INLINE bool operator<(const EnvProbeIndex &other) const
-        { return GetProbeIndex() < other.GetProbeIndex(); }
-
-    HYP_FORCE_INLINE bool operator==(const EnvProbeIndex &other) const
-        { return GetProbeIndex() == other.GetProbeIndex(); }
-
-    HYP_FORCE_INLINE bool operator!=(const EnvProbeIndex &other) const
-        { return GetProbeIndex() != other.GetProbeIndex(); }
-
-    HYP_FORCE_INLINE HashCode GetHashCode() const
-    {
-        HashCode hc;
-        hc.Add(GetProbeIndex());
-
-        return hc;
-    }
-};
-
-enum class EnvProbeConvolveMode : uint8
-{
-    NONE = 0,
-    IRRADIANCE_MAP,
-    PREFILTERED_ENV_MAP
-};
 
 class EnvProbeRenderResource final : public RenderResourceBase
 {
@@ -125,6 +64,11 @@ public:
         { return m_texture_slot; }
 
     void SetTextureSlot(uint32 texture_slot);
+
+    HYP_FORCE_INLINE const Vec4i &GetPositionInGrid() const
+        { return m_position_in_grid; }
+
+    void SetPositionInGrid(const Vec4i &position_in_grid);
 
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE const EnvProbeShaderData &GetBufferData() const
@@ -153,8 +97,8 @@ public:
     HYP_FORCE_INLINE const RenderCollector &GetRenderCollector() const
         { return m_render_collector; }
 
-    HYP_FORCE_INLINE const Handle<Texture> &GetTexture() const
-        { return m_texture; }
+    HYP_FORCE_INLINE const Handle<Texture> &GetPrefilteredEnvMap() const
+        { return m_prefiltered_env_map; }
 
     HYP_FORCE_INLINE const FramebufferRef &GetFramebuffer() const
         { return m_framebuffer; }
@@ -162,13 +106,11 @@ public:
     HYP_FORCE_INLINE const ShaderRef &GetShader() const
         { return m_shader; }
 
-    void UpdateRenderData(bool set_texture = false);
-    void UpdateRenderData(
-        uint32 texture_slot,
-        uint32 grid_slot,
-        const Vec3u &grid_size
-    );
+    HYP_FORCE_INLINE const EnvProbeSphericalHarmonics &GetSphericalHarmonics() const
+        { return m_spherical_harmonics; }
 
+    void SetSphericalHarmonics(const EnvProbeSphericalHarmonics &spherical_harmonics);
+    
     void EnqueueBind();
     void EnqueueUnbind();
 
@@ -184,15 +126,15 @@ protected:
 private:
     void CreateShader();
     void CreateFramebuffer();
-    void CreateTexture();
     
-    void BindToIndex(const EnvProbeIndex &probe_index);
     void UpdateBufferData();
+
+    void SetEnvProbeTexture();
     
     bool ShouldComputePrefilteredEnvMap() const;
-    bool ShouldComputeIrradianceMap() const;
-    void Convolve(FrameBase *frame, EnvProbeConvolveMode convolve_mode);
+    void ComputePrefilteredEnvMap(FrameBase *frame);
 
+    bool ShouldComputeSphericalHarmonics() const;
     void ComputeSH(FrameBase *frame);
 
     EnvProbe                                    *m_env_probe;
@@ -201,19 +143,16 @@ private:
 
     uint32                                      m_texture_slot;
 
-    EnvProbeIndex                               m_bound_index;
+    Vec4i                                       m_position_in_grid;
 
     RenderCollector                             m_render_collector;
 
-    Handle<Texture>                             m_texture;
     FramebufferRef                              m_framebuffer;
     ShaderRef                                   m_shader;
 
-    ImageRef                                    m_irradiance_image;
-    ImageViewRef                                m_irradiance_image_view;
+    Handle<Texture>                             m_prefiltered_env_map;
 
-    ImageRef                                    m_prefiltered_image;
-    ImageViewRef                                m_prefiltered_image_view;
+    EnvProbeSphericalHarmonics                  m_spherical_harmonics;
 
     TResourceHandle<CameraRenderResource>       m_camera_resource_handle;
     TResourceHandle<SceneRenderResource>        m_scene_resource_handle;

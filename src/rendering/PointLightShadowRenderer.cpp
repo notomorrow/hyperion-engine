@@ -51,7 +51,7 @@ void PointLightShadowRenderer::Init()
 
     ShadowMapRenderResource *shadow_map_render_resource = m_parent_scene->GetWorld()->GetRenderResource().GetShadowMapManager()->AllocateShadowMap(
         ShadowMapType::POINT_SHADOW_MAP,
-        ShadowMapFilterMode::STANDARD,
+        ShadowMapFilterMode::VSM,
         m_extent
     );
     AssertThrowMsg(shadow_map_render_resource != nullptr, "Failed to allocate shadow map");

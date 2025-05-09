@@ -77,7 +77,7 @@ struct EnvProbeCollection
     // Must be called in EnvGrid::Init(), before probes are used from the render thread.
     void AddProbe(uint32 index, const Handle<EnvProbe> &env_probe);
 
-    HYP_FORCE_INLINE void SetProbeIndexOnGameThread(uint32 index, uint32 new_index)
+    HYP_FORCE_INLINE void SetIndexOnGameThread(uint32 index, uint32 new_index)
     {
         AssertThrow(index < max_bound_ambient_probes);
         AssertThrow(new_index < max_bound_ambient_probes);
@@ -85,7 +85,7 @@ struct EnvProbeCollection
         indirect_indices[index] = new_index;
     }
 
-    HYP_FORCE_INLINE uint32 GetEnvProbeIndexOnGameThread(uint32 index) const
+    HYP_FORCE_INLINE uint32 GetIndexOnGameThread(uint32 index) const
         { return indirect_indices[index]; }
 
     HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeDirect(uint32 index) const
@@ -94,7 +94,7 @@ struct EnvProbeCollection
     HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnGameThread(uint32 index) const
         { return env_probes[indirect_indices[index]]; }
 
-    HYP_FORCE_INLINE void SetProbeIndexOnRenderThread(uint32 index, uint32 new_index)
+    HYP_FORCE_INLINE void SetIndexOnRenderThread(uint32 index, uint32 new_index)
     {
         AssertThrow(index < max_bound_ambient_probes);
         AssertThrow(new_index < max_bound_ambient_probes);
@@ -102,7 +102,7 @@ struct EnvProbeCollection
         indirect_indices[max_bound_ambient_probes + index] = new_index;
     }
 
-    HYP_FORCE_INLINE uint32 GetEnvProbeIndexOnRenderThread(uint32 index) const
+    HYP_FORCE_INLINE uint32 GetIndexOnRenderThread(uint32 index) const
         { return indirect_indices[max_bound_ambient_probes + index]; }
     
     HYP_FORCE_INLINE const Handle<EnvProbe> &GetEnvProbeOnRenderThread(uint32 index) const

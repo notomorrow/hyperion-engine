@@ -34,6 +34,64 @@
 #include <Engine.hpp>
 
 namespace hyperion {
+struct EnvProbeGridIndex
+{
+    Vec3u   position;
+    Vec3u   grid_size;
+
+    // defaults such that GetProbeIndex() == ~0u
+    // because (~0u * 0 * 0) + (~0u * 0) + ~0u == ~0u
+    EnvProbeGridIndex()
+        : position { ~0u, ~0u, ~0u },
+          grid_size { 0, 0, 0 }
+    {
+    }
+
+    EnvProbeGridIndex(const Vec3u &position, const Vec3u &grid_size)
+        : position(position),
+          grid_size(grid_size)
+    {
+    }
+
+    EnvProbeGridIndex(const EnvProbeGridIndex &other)                   = default;
+    EnvProbeGridIndex &operator=(const EnvProbeGridIndex &other)        = default;
+    EnvProbeGridIndex(EnvProbeGridIndex &&other) noexcept               = default;
+    EnvProbeGridIndex &operator=(EnvProbeGridIndex &&other) noexcept    = default;
+    ~EnvProbeGridIndex()                                                = default;
+
+    HYP_FORCE_INLINE uint32 GetProbeIndex() const
+    {
+        return (position.x * grid_size.y * grid_size.z)
+            + (position.y * grid_size.z)
+            + position.z;
+    }
+
+    HYP_FORCE_INLINE bool operator<(uint32 value) const
+        { return GetProbeIndex() < value; }
+
+    HYP_FORCE_INLINE bool operator==(uint32 value) const
+        { return GetProbeIndex() == value; }
+
+    HYP_FORCE_INLINE bool operator!=(uint32 value) const
+        { return GetProbeIndex() != value; }
+
+    HYP_FORCE_INLINE bool operator<(const EnvProbeGridIndex &other) const
+        { return GetProbeIndex() < other.GetProbeIndex(); }
+
+    HYP_FORCE_INLINE bool operator==(const EnvProbeGridIndex &other) const
+        { return GetProbeIndex() == other.GetProbeIndex(); }
+
+    HYP_FORCE_INLINE bool operator!=(const EnvProbeGridIndex &other) const
+        { return GetProbeIndex() != other.GetProbeIndex(); }
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        HashCode hc;
+        hc.Add(GetProbeIndex());
+
+        return hc;
+    }
+};
 
 #pragma region Globals
 
@@ -51,7 +109,7 @@ static const Vec3u voxel_grid_dimensions { 256, 256, 256 };
 static const InternalFormat voxel_grid_format = InternalFormat::RGBA8;
 
 static const Vec2u framebuffer_dimensions { 256, 256 };
-static const EnvProbeIndex invalid_probe_index = EnvProbeIndex();
+static const EnvProbeGridIndex invalid_probe_index = EnvProbeGridIndex();
 
 const InternalFormat light_field_color_format = InternalFormat::RGBA8;
 const InternalFormat light_field_depth_format = InternalFormat::RG16F;
@@ -74,7 +132,7 @@ static Vec2u GetProbeDimensions(EnvGridType env_grid_type)
     }
 }
 
-static EnvProbeIndex GetProbeBindingIndex(const Vec3f &probe_position, const BoundingBox &grid_aabb, const Vec3u &grid_density)
+static EnvProbeGridIndex GetProbeBindingIndex(const Vec3f &probe_position, const BoundingBox &grid_aabb, const Vec3u &grid_density)
 {
     const Vec3f diff = probe_position - grid_aabb.GetCenter();
     const Vec3f pos_clamped = (diff / grid_aabb.GetExtent()) + Vec3f(0.5f);
@@ -84,10 +142,10 @@ static EnvProbeIndex GetProbeBindingIndex(const Vec3f &probe_position, const Bou
         + (int(diff_units.y) * int(grid_density.z))
         + int(diff_units.z);
 
-    EnvProbeIndex calculated_probe_index = invalid_probe_index;
+    EnvProbeGridIndex calculated_probe_index = invalid_probe_index;
 
     if (probe_index_at_point >= 0 && uint32(probe_index_at_point) < max_bound_ambient_probes) {
-        calculated_probe_index = EnvProbeIndex(
+        calculated_probe_index = EnvProbeGridIndex(
             Vec3u { uint32(diff_units.x), uint32(diff_units.y), uint32(diff_units.z) },
             grid_density
         );
@@ -269,7 +327,7 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
         virtual RendererResult operator()() override
         {
             for (uint32 update_index = 0; update_index < uint32(updates.Size()); update_index++) {
-                grid->m_env_probe_collection.SetProbeIndexOnRenderThread(update_index, updates[update_index]);
+                grid->m_env_probe_collection.SetIndexOnRenderThread(update_index, updates[update_index]);
             }
 
             HYPERION_RETURN_OK;
@@ -359,7 +417,7 @@ void EnvGrid::SetCameraData(const BoundingBox &aabb, const Vec3f &position)
             AssertThrow(update_index < m_env_probe_collection.num_probes);
             AssertThrow(updates[update_index] < m_env_probe_collection.num_probes);
 
-            m_env_probe_collection.SetProbeIndexOnGameThread(update_index, updates[update_index]);
+            m_env_probe_collection.SetIndexOnGameThread(update_index, updates[update_index]);
         }
 
         PUSH_RENDER_COMMAND(UpdateEnvProbeAABBsInGrid, this, std::move(updates));
@@ -598,22 +656,25 @@ void EnvGrid::OnRender(FrameBase *frame)
         if (indices_distances.Any()) {
             for (const auto &it : indices_distances) {
                 const uint32 found_index = it.first;
-                const uint32 indirect_index = m_env_probe_collection.GetEnvProbeIndexOnRenderThread(found_index);
+                const uint32 indirect_index = m_env_probe_collection.GetIndexOnRenderThread(found_index);
 
                 const Handle<EnvProbe> &probe = m_env_probe_collection.GetEnvProbeDirect(indirect_index);
                 AssertThrow(probe.IsValid());
 
                 const Vec3f world_position = probe->GetRenderResource().GetBufferData().world_position.GetXYZ();
 
-                const EnvProbeIndex binding_index = GetProbeBindingIndex(world_position, grid_aabb, m_options.density);
+                const EnvProbeGridIndex binding_index = GetProbeBindingIndex(world_position, grid_aabb, m_options.density);
 
                 if (binding_index != invalid_probe_index) {
                     if (m_next_render_indices.Size() < max_queued_probes_for_render) {
-                        probe->GetRenderResource().UpdateRenderData(
-                            ~0u,
-                            indirect_index,
-                            m_options.density
-                        );
+                        const Vec4i position_in_grid = Vec4i {
+                            int32(indirect_index % m_options.density.x),
+                            int32((indirect_index % (m_options.density.x * m_options.density.y)) / m_options.density.x),
+                            int32(indirect_index / (m_options.density.x * m_options.density.y)),
+                            int32(indirect_index)
+                        };
+
+                        probe->GetRenderResource().SetPositionInGrid(position_in_grid);
 
                         // render this probe in the next frame, since the data will have been updated on the gpu on start of the frame
                         m_next_render_indices.Push(indirect_index);
@@ -1366,13 +1427,11 @@ void EnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase *frame, con
         {
             HYP_NAMED_SCOPE("EnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics - Buffer readback");
 
-            // Copy the GPU buffer data back to the CPU-side buffer after SH has been computed.
-            g_engine->GetRenderData()->env_probes->ReadbackElement(frame->GetFrameIndex(), resource_handle->GetBufferIndex());
+            EnvProbeShaderData readback_buffer;
 
-            const EnvProbeShaderData &data = *static_cast<const EnvProbeShaderData *>(resource_handle->GetBufferAddress());
-            for (int i = 0; i < 9; i++) {
-                HYP_LOG(EnvGrid, Debug, "SH Coefficients for Probe {} on Frame {}: [{}]: {}", resource_handle->GetEnvProbe()->GetID().ToIndex(), frame->GetFrameIndex(), i, data.sh[i]);
-            }
+            g_engine->GetRenderData()->env_probes->ReadbackElement(frame->GetFrameIndex(), resource_handle->GetBufferIndex(), &readback_buffer);
+
+            resource_handle->SetSphericalHarmonics(readback_buffer.sh);
 
             delete delegate_handle;
         }

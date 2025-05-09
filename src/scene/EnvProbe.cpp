@@ -97,7 +97,7 @@ EnvProbe::EnvProbe(
     m_aabb(aabb),
     m_dimensions(dimensions),
     m_env_probe_type(env_probe_type),
-    m_camera_near(0.001f),
+    m_camera_near(0.1f),
     m_camera_far(aabb.GetRadius()),
     m_needs_update(true),
     m_needs_render_counter(0),
@@ -280,9 +280,12 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
         } else if (IsSkyProbe()) {
             octant_hash_code = m_parent_scene->GetOctree().GetOctantID().GetHashCode()
                 .Add(m_parent_scene->GetOctree().GetEntryListHash<EntityTag::LIGHT>());
+        } else {
+            octant_hash_code = m_parent_scene->GetOctree().GetOctantID().GetHashCode()
+                .Add(m_parent_scene->GetOctree().GetEntryListHash<EntityTag::NONE>());
         }
 
-        if (m_octant_hash_code == octant_hash_code && octant_hash_code != HashCode(0)) {
+        if (m_octant_hash_code == octant_hash_code && octant_hash_code.Value() != 0) {
             return;
         }
 

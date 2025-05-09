@@ -142,6 +142,11 @@ void main()
     reflections = reflections * (1.0 - env_grid_radiance.a) + (vec4(env_grid_radiance.rgb, 1.0) * env_grid_radiance.a);
 
     irradiance += Texture2D(HYP_SAMPLER_LINEAR, env_grid_irradiance_texture, texcoord).rgb * ENV_GRID_MULTIPLIER;
+    // SH9 sh9;
+    // for (int i = 0; i < 9; i++) {
+    //     sh9.values[i] = current_env_probe.sh[i].rgb;
+    // }
+    // irradiance += SphericalHarmonicsSample(sh9, ws_normal) * ENV_GRID_MULTIPLIER;
 
     const vec4 ssgi = Texture2D(HYP_SAMPLER_LINEAR, ssgi_result, v_texcoord0);
     irradiance = irradiance * (1.0 - ssgi.a) + (ssgi.rgb * ssgi.a);

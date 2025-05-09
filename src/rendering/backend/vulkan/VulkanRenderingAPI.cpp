@@ -420,7 +420,7 @@ RendererResult VulkanRenderingAPI::Initialize(AppContext &app_context)
     m_default_formats.Set(
         DefaultImageFormatType::DEPTH,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
-            { { InternalFormat::DEPTH_32F, InternalFormat::DEPTH_24, InternalFormat::DEPTH_16 } },
+            { { InternalFormat::DEPTH_24, InternalFormat::DEPTH_32F, InternalFormat::DEPTH_16 } },
             ImageSupportType::DEPTH
         )
     );

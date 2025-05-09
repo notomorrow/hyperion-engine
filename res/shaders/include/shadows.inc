@@ -484,22 +484,22 @@ float GetPointShadowVariance(uint texture_index, vec3 world_to_light)
 
 float GetPointShadowStandard(uint texture_index, vec3 world_to_light)
 {
-    const float shadow_depth = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).r;
+    const float shadow_depth = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_NEAREST), vec4(world_to_light, float(texture_index))).r;
     const float current_depth = length(world_to_light);
 
     float bias = HYP_SHADOW_BIAS;
 
-    return max(step(current_depth - 0.001, shadow_depth), 0.0);
+    return max(step(current_depth - HYP_SHADOW_BIAS, shadow_depth), 0.0);
 }
 
 float GetPointShadow(uint texture_index, uint flags, vec3 world_to_light)
 {
-    switch (flags & SHADOW_FLAGS_TYPE_MASK) {
-    case SHADOW_FLAGS_VSM:
+    // switch (flags & SHADOW_FLAGS_TYPE_MASK) {
+    // case SHADOW_FLAGS_VSM:
         return GetPointShadowVariance(texture_index, world_to_light);
-    default:
-        return GetPointShadowStandard(texture_index, world_to_light);
-    }
+    // default:
+    //     return GetPointShadowStandard(texture_index, world_to_light);
+    // }
 }
 
 #endif

@@ -118,8 +118,6 @@ void LightVisibilityUpdaterSystem::Process(GameCounter::TickUnit delta)
                 light_component.light->SetPosition(transform_component.transform.GetTranslation());
             }
 
-            HYP_LOG(Scene, Debug, "Updating light transform for entity #{}", entity_id.Value());
-
             updated_entity_ids.Insert(entity_id);
         }
 

@@ -168,7 +168,7 @@ void HyperionEditor::Init()
 
 #if 1
 
-    #if 0// point light test
+    #if 1// point light test
 
     const Vec3f positions[] = {
         Vec3f(0.0f, 5.5f, 2.0f),
@@ -193,7 +193,7 @@ void HyperionEditor::Init()
         );
 
         NodeProxy point_light_node = m_scene->GetRoot()->AddChild();
-        point_light_node.SetName("point_light_node");
+        point_light_node.SetName(HYP_FORMAT("point_light_node_{}", i));
 
         auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
         point_light_node.SetEntity(point_light_entity);
@@ -234,7 +234,7 @@ void HyperionEditor::Init()
     m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sun_entity, ShadowMapComponent {
         .mode       = ShadowMapFilterMode::PCF,
         .radius     = 80.0f,
-        .resolution = { 2048, 2048 }
+        .resolution = { 1024, 1024 }
     });
     #endif
 
