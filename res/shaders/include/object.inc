@@ -59,8 +59,8 @@ struct EntityInstanceBatch
 #define GET_OBJECT_BUCKET(obj) \
     ((uint((obj).bucket == HYP_OBJECT_BUCKET_OPAQUE) * (OBJECT_MASK_OPAQUE)) \
         | (uint((obj).bucket == HYP_OBJECT_BUCKET_TRANSLUCENT) * (OBJECT_MASK_TRANSLUCENT)) \
-        | (uint((obj).bucket == HYP_OBJECT_BUCKET_SKYBOX) * (OBJECT_MASK_SKY)) \
-        | (uint((obj).bucket == HYP_OBJECT_BUCKET_UI) * (OBJECT_MASK_UI)))
+        | (uint((obj).bucket == HYP_OBJECT_BUCKET_DEBUG) * (OBJECT_MASK_DEBUG)) \
+        | (uint((obj).bucket == HYP_OBJECT_BUCKET_SKYBOX) * (OBJECT_MASK_SKY)))
 
 #ifdef VERTEX_SHADER
     #define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])

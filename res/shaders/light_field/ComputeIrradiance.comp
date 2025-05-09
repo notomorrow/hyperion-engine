@@ -51,14 +51,14 @@ HYP_DESCRIPTOR_CBUFF(LightFieldProbeDescriptorSet, UniformBuffer) uniform Unifor
     uvec4 light_indices[4];
 };
 
-HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
-HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[]; };
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
+HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[]; };
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #include "../include/shadows.inc"
 #include "../include/Octahedron.glsl"

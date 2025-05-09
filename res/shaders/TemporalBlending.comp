@@ -64,17 +64,17 @@ HYP_DESCRIPTOR_UAV(TemporalBlendingDescriptorSet, OutImage, format = rgba16f) un
 #include "./include/Temporal.glsl"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer SceneBuffer
 {
     Scene scene;
 };
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D depth_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferDepthTexture) uniform texture2D depth_texture;
 
 layout(push_constant) uniform PushConstant {
     uvec2   output_dimensions;

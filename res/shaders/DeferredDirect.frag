@@ -14,35 +14,35 @@ layout(location=0) out vec4 output_color;
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
-HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(Scene, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
 #else
-HYP_DESCRIPTOR_SRV(Global, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
-HYP_DESCRIPTOR_SRV(Global, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
-HYP_DESCRIPTOR_SRV(Global, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
-HYP_DESCRIPTOR_SRV(Global, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
-HYP_DESCRIPTOR_SRV(Global, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
-HYP_DESCRIPTOR_SRV(Global, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
-HYP_DESCRIPTOR_SRV(Global, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
-HYP_DESCRIPTOR_SRV(Global, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
+HYP_DESCRIPTOR_SRV(Scene, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
 #endif
 
-HYP_DESCRIPTOR_SRV(Global, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
-HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(Scene, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(Scene, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-HYP_DESCRIPTOR_SRV(Global, SSRResultTexture) uniform texture2D ssr_result;
-HYP_DESCRIPTOR_SRV(Global, SSAOResultTexture) uniform texture2D ssao_gi_result;
+HYP_DESCRIPTOR_SRV(Scene, SSRResultTexture) uniform texture2D ssr_result;
+HYP_DESCRIPTOR_SRV(Scene, SSAOResultTexture) uniform texture2D ssao_gi_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
 
 #include "include/env_probe.inc"
-HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
-HYP_DESCRIPTOR_SRV(Scene, LightFieldColorTexture) uniform texture2D light_field_color_texture;
-HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
+HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
+HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
 
 #include "include/shared.inc"
 #include "include/gbuffer.inc"
@@ -50,28 +50,28 @@ HYP_DESCRIPTOR_SRV(Scene, LightFieldDepthTexture) uniform texture2D light_field_
 #include "include/object.inc"
 
 #include "include/scene.inc"
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
 {
     Scene scene;
 };
 
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 {
     ShadowMap shadow_map_data[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentLight) readonly buffer CurrentLight
 {
     Light light;
 };
 
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #define HYP_DEFERRED_NO_REFRACTION
 #include "./deferred/DeferredLighting.glsl"
@@ -90,7 +90,7 @@ HYP_DESCRIPTOR_SRV(DeferredDirectDescriptorSet, LTCBRDFTexture) uniform texture2
 
 HYP_DESCRIPTOR_SSBO(DeferredDirectDescriptorSet, MaterialsBuffer) readonly buffer MaterialsBuffer
 {
-    Material materials[HYP_MAX_MATERIALS];
+    Material materials[];
 };
 
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
@@ -230,9 +230,8 @@ void main()
 #ifdef LIGHT_TYPE_POINT
         if (light.shadow_map_index != ~0u) {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
-            const uint shadow_flags = shadow_map_data[light.shadow_map_index].flags >> 3;
 
-            shadow = GetPointShadow(shadow_map_data[light.shadow_map_index].layer_index, shadow_flags, world_to_light);
+            shadow = GetPointShadow(light.shadow_map_index, world_to_light, NdotL);
         }
 #elif defined(LIGHT_TYPE_DIRECTIONAL)
         if (light.shadow_map_index != ~0u) {

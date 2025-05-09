@@ -85,7 +85,6 @@ struct ShadowMap
 
     vec4 _pad3; vec4 _pad4;
     vec4 _pad5; vec4 _pad6;
-    vec4 _pad7;
 };
 
 vec3 CalculateLightDirection(Light light, in vec3 world_position)

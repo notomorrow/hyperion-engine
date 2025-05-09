@@ -43,33 +43,29 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/packing.inc"
 #include "include/brdf.inc"
 
-#define HYP_CUBEMAP_AMBIENT 0.025
+#define HYP_CUBEMAP_AMBIENT 0.005
 
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 {
     ShadowMap shadow_map_data[];
 };
 
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
-
-#ifdef SHADOWS
-#include "include/shadows.inc"
-#endif
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
 {
     EnvProbe current_env_probe;
 };
 
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentLight) readonly buffer CurrentLight
 {
     Light light;
 };
@@ -140,86 +136,9 @@ void main()
     const float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
     const float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
 
-#if defined(LIGHTING) || defined(SHADOWS)
-    vec3 L = light.position_intensity.xyz;
-    L -= v_position.xyz * float(min(light.type, 1));
-    L = normalize(L);
-
-    float NdotL = max(0.0001, dot(N, L));
-#endif
-
     vec4 previous_value = vec4(0.0);
 
-    float shadow = 1.0;
-
-#ifdef SHADOWS
-    if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
-        shadow = GetShadowStandard(light.shadow_map_index, v_position.xyz, vec2(0.0), NdotL);
-    }
-#endif
-
-#ifdef LIGHTING
-    vec4 light_color = UINT_TO_VEC4(light.color_encoded);
-
-    const vec3 H = normalize(L + V);
-
-    const float NdotV = max(HYP_FMATH_EPSILON, dot(N, V));
-    const float NdotH = max(HYP_FMATH_EPSILON, dot(N, H));
-    const float LdotH = max(HYP_FMATH_EPSILON, dot(L, H));
-    const float HdotV = max(HYP_FMATH_EPSILON, dot(H, V));
-
-    const vec3 F0 = CalculateF0(albedo.rgb, metalness);
-    vec3 F90 = vec3(clamp(dot(F0, vec3(50.0 * 0.33)), 0.0, 1.0));
-
-    vec3 indirect_lighting = vec3(0.0);
-    vec3 direct_lighting = vec3(0.0);
-
-    { // indirect
-        const vec3 F = CalculateFresnelTerm(F0, roughness, NdotV);
-        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
-        const vec3 E = CalculateE(F0, dfg);
-        const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
-
-        vec3 Fd = albedo.rgb * vec3(HYP_CUBEMAP_AMBIENT) * (1.0 - E);
-
-        indirect_lighting = Fd;
-    }
-
-    { // direct
-        const float D = CalculateDistributionTerm(roughness, NdotH);
-        const float G = CalculateGeometryTerm(NdotL, NdotV, HdotV, NdotH);
-        const vec3 F = CalculateFresnelTerm(F0, roughness, LdotH);
-
-        const vec3 dfg = CalculateDFG(F, roughness, NdotV);
-        const vec3 E = CalculateE(F0, dfg);
-        const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
-
-        const vec3 diffuse_color = CalculateDiffuseColor(albedo.rgb, metalness);
-        const vec3 specular_lobe = D * G * F;
-
-        vec3 specular = specular_lobe;
-
-        const float attenuation = light.type == HYP_LIGHT_TYPE_POINT
-            ? GetSquareFalloffAttenuation(v_position, light.position_intensity.xyz, light.radius)
-            : 1.0;
-
-        vec3 diffuse_lobe = diffuse_color * (1.0 / HYP_FMATH_PI);
-        vec3 diffuse = diffuse_lobe;
-
-        vec3 direct_component = diffuse + specular * energy_compensation;
-
-        direct_lighting += direct_component * (light_color.rgb * NdotL * shadow * attenuation * light.position_intensity.w);
-    }
-
-    output_color.rgb = indirect_lighting + direct_lighting;
-#else
     output_color.rgb = albedo.rgb;
-
-    #ifdef SHADOWS
-        output_color.rgb *= shadow;
-    #endif
-#endif
-
     output_color.a = 1.0;
 #endif
 

@@ -37,16 +37,15 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "../include/scene.inc"
 #include "../include/Octahedron.glsl"
 
-HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Scene, EnvProbesBuffer) buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_SSBO(Scene, SHGridBuffer) buffer SHGridBuffer { vec4 sh_grid_buffer[SH_GRID_BUFFER_SIZE]; };
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) buffer EnvProbesBuffer { EnvProbe env_probes[]; };
 
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[]; };
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[]; };
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight { Light light; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentLight) readonly buffer CurrentLight { Light light; };
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
 #include "../include/shadows.inc"
 #include "../include/Octahedron.glsl"
@@ -156,6 +155,7 @@ float[27] ProjectOntoSH9Color(vec3 dir, vec3 color)
     return sh_colors;
 }
 
+#ifdef LIGHTING
 vec4 SampleSky(vec3 dir)
 {
     if (current_env_probe.texture_index != ~0u) {
@@ -187,6 +187,7 @@ vec4 CalculateDirectLighting(in vec3 P, in vec3 N, in vec3 V)
 
     return light_color * NdotL * shadow * light.position_intensity.w;
 }
+#endif
 
 #ifdef MODE_REDUCE
 // shared memory (per face) at the final reduce stage
@@ -206,7 +207,6 @@ void main(void)
     if (all(equal(gl_GlobalInvocationID.xyz, ivec3(0)))) {
         for (int i = 0; i < 9; i++) {
             env_probes[env_probe_index].sh[i] = vec4(0.0);
-            // sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] = vec4(0.0);
         }
     }
 #elif defined(MODE_BUILD_COEFFICIENTS)
@@ -216,9 +216,9 @@ void main(void)
     const vec2 sample_point = uv * 2.0 - 1.0;
     const vec3 dir = normalize(DecodeOctahedralCoord(uv));
 
-    vec4 sky = SampleSky(dir);
-
     vec4 albedo = TextureCube(sampler_linear, cubemap_color, dir);
+
+#ifdef LIGHTING
     vec3 normal = normalize(UnpackNormalVec2(TextureCube(sampler_nearest, cubemap_normals, dir).rg));
     vec2 dist_dist2 = TextureCube(sampler_nearest, cubemap_depth, dir).rg;
 
@@ -228,9 +228,13 @@ void main(void)
     vec4 irradiance = indirect * albedo * 0.25;
 
     vec4 radiance = CalculateDirectLighting(position.xyz, normal, -dir) * albedo;
+    vec4 sky = SampleSky(dir);
     // radiance = mix(radiance, sky, step(HYP_FLOAT_MAX, dist_dist2.r));
 
     vec4 color = irradiance + radiance;
+#else
+    vec4 color = albedo;
+#endif
 
     float sh_values[27] = ProjectOntoSH9Color(dir, color.rgb);
 
@@ -286,7 +290,6 @@ void main(void)
     for (int face_index = 0; face_index < 6; face_index++) {
         for (int i = 0; i < 9; i++) {
             env_probes[env_probe_index].sh[i] += sh_tiles[face_index * 9 + i].coeffs_weights[i];
-            // sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] += sh_tiles[face_index].coeffs_weights[i];
         }
     }
 
@@ -294,10 +297,6 @@ void main(void)
         float weight = env_probes[env_probe_index].sh[i].a;
 
         env_probes[env_probe_index].sh[i] *= (4.0 * HYP_FMATH_PI) / max(weight, 0.0001);
-
-        // float weight = sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)].a;
-    
-        // sh_grid_buffer[min(probe_grid_position.w * 9 + i, SH_GRID_BUFFER_SIZE - 1)] *= (4.0 * HYP_FMATH_PI) / max(weight, 0.0001);
     }
 #else
     float total_weight = 0.0;
