@@ -7,7 +7,7 @@
       "screen_edge_fade": [0.980000, 0.990000],
       "quality": 1,
       "roughness_scattering": true,
-      "enabled": false,
+      "enabled": true,
       "cone_tracing": false
     },
     "rt": {
@@ -47,12 +47,12 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       }
     },
     "ssgi": {
       "quality": 0,
-      "enabled": false
+      "enabled": true
     },
     "hbao": {
       "radius": 5,

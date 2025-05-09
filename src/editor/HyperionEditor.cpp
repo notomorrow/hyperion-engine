@@ -168,14 +168,18 @@ void HyperionEditor::Init()
 
 #if 1
 
-    #if 1// point light test
+    #if 0// point light test
 
     const Vec3f positions[] = {
-        Vec3f(0.0f, 5.5f, 2.0f)
+        Vec3f(0.0f, 5.5f, 2.0f),
+        Vec3f(30.0f, 5.5f, 0.0f),
+        Vec3f(-30.0f, 5.5f, 0.0f),
     };
 
     const Color colors[] = {
-        Color(1.0f, 0.0f, 0.0f)
+        Color(1.0f, 0.0f, 0.0f),
+        Color(0.0f, 1.0f, 0.0f),
+        Color(0.0f, 0.0f, 1.0f)
     };
 
     // add pointlight (Test)
