@@ -43,13 +43,13 @@ HYP_DESCRIPTOR_CBUFF(ConvolveProbeDescriptorSet, UniformBuffer) uniform UniformB
     uvec4   light_indices[4];
 };
 
-HYP_DESCRIPTOR_SRV(Scene, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
 
-HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
-HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[]; };
-HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
+HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
+HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[]; };
+HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
+HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #include "../include/shadows.inc"
 #include "../include/Octahedron.glsl"
@@ -88,9 +88,9 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
         shadow = GetShadowStandard(lights[light_index].shadow_map_index, P, vec2(0.0), NdotL);
     }
 
-    return vec4(vec3(NdotL * shadow), 1.0);
+    // return vec4(vec3(NdotL * shadow), 1.0);
 
-    // return light_color * NdotL * shadow * lights[light_index].position_intensity.w;
+    return vec4((light_color * NdotL * shadow * lights[light_index].position_intensity.w).rgb, 1.0);
 }
 
 vec4 ConvolveProbe(uvec2 local_coord)
@@ -106,6 +106,8 @@ vec4 ConvolveProbe(uvec2 local_coord)
     const vec3 dir = normalize(DecodeOctahedralCoord(oct_coord));
 
     vec4 sum_radiance = vec4(0.0);
+
+    uint seed = uint(gl_GlobalInvocationID.x) * uint(gl_GlobalInvocationID.y);
 
     for (int i = 0; i < num_samples; i++) {
 #if defined(MODE_IRRADIANCE)
@@ -124,7 +126,10 @@ vec4 ConvolveProbe(uvec2 local_coord)
 
 #ifdef LIGHTING
         // Sample the sky in the direction of the normal to get a rough approximation of indirect lighting.
-        vec4 irradiance = SampleSky(normal) * albedo * 0.25;
+        vec3 rnd = vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed));
+        vec3 irradiance_dir = RandomInHemisphere(rnd, normal);
+
+        vec4 irradiance = SampleSky(irradiance_dir) * albedo * 0.1;
 
         vec4 radiance = vec4(0.0);
         

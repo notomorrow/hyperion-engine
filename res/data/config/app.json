@@ -1,43 +1,34 @@
 {
   "rendering": {
-    "ssr": {
-      "num_iterations": 128,
-      "eye_fade": [0.980000, 0.999000],
-      "ray_step": 0.100000,
-      "screen_edge_fade": [0.980000, 0.990000],
-      "quality": 1,
-      "roughness_scattering": true,
-      "enabled": false,
-      "cone_tracing": false
+    "debug": {
+      "debug_drawer": {
+        "enabled": true
+      },
+      "env_grid_probes": false,
+      "reflection_probes": false,
+      "ssr": false,
+      "reflections": true,
+      "hbil": false,
+      "ssgi": false,
+      "hbao": false,
+      "irradiance": false
     },
     "rt": {
+      "path_tracing": {
+        "enabled": false
+      },
       "reflections": {
+        "extent": [1024, 1024],
+        "path_tracing": false,
         "enabled": false
       },
       "gi": {
-        "enabled": false
-      },
-      "path_tracer": {
         "enabled": false
       },
       "enabled": false
     },
     "taa": {
       "enabled": false
-    },
-    "debug": {
-      "debug_drawer": {
-        "enabled": false
-      },
-      "env_grid_probes": false,
-      "reflection_probes": false,
-      "ssr": false,
-      "reflections": false,
-      "path_tracer": false,
-      "hbil": false,
-      "ssgi": false,
-      "hbao": false,
-      "irradiance": false
     },
     "hbil": {
       "enabled": false
@@ -47,18 +38,28 @@
         "enabled": false
       },
       "gi": {
-        "enabled": false
+        "enabled": true
       }
-    },
-    "ssgi": {
-      "quality": 0,
-      "enabled": false
     },
     "hbao": {
       "radius": 5,
       "use_temporal_blending": false,
       "power": 0.800000,
       "enabled": false
+    },
+    "ssgi": {
+      "quality": 0,
+      "enabled": false
+    },
+    "ssr": {
+      "num_iterations": 128,
+      "eye_fade": [0.980000, 0.999000],
+      "ray_step": 0.100000,
+      "screen_edge_fade": [0.980000, 0.990000],
+      "quality": 1,
+      "roughness_scattering": true,
+      "enabled": true,
+      "cone_tracing": false
     }
   },
   "app": {
