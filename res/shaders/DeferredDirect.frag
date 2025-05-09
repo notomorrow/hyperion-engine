@@ -71,7 +71,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
 };
 
 HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
+HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #define HYP_DEFERRED_NO_REFRACTION
 #include "./deferred/DeferredLighting.glsl"
@@ -228,7 +228,7 @@ void main()
         vec4 light_color = UINT_TO_VEC4(light.color_encoded);
 
 #ifdef LIGHT_TYPE_POINT
-        if (light.shadow_map_index != ~0u && current_env_probe.texture_index != ~0u) {
+        if (current_env_probe.texture_index != ~0u) {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
             const uint shadow_flags = current_env_probe.flags >> 3;
 

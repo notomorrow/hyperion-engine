@@ -51,7 +51,7 @@ HYP_DESCRIPTOR_SSBO(Scene, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 };
 
 HYP_DESCRIPTOR_SRV(Scene, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
-HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapTextures, count = 16) uniform textureCube point_shadow_maps[16];
+HYP_DESCRIPTOR_SRV(Scene, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
 #ifdef SHADOWS
 #include "include/shadows.inc"
@@ -224,7 +224,7 @@ void main()
 #endif
 
 #ifdef WRITE_NORMALS
-    output_normals = vec4(PackNormalVec2(N), 0.0, 1.0);//vec4(1.0, 1.0, 0.0, 1.0);
+    output_normals = vec4(PackNormalVec2(N), 0.0, 1.0);
 #endif
 
 #ifdef WRITE_MOMENTS
