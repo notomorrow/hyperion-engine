@@ -226,6 +226,26 @@ void UIMenuItem::UpdateSubItemsDropDownMenu()
     m_sub_items_drop_down_menu->SetDepth(100);
     m_sub_items_drop_down_menu->Focus();
 
+    m_sub_items_drop_down_menu->OnClick.RemoveAllDetached();
+    m_sub_items_drop_down_menu->OnClick.Bind([weak_this = WeakRefCountedPtrFromThis()](const MouseEvent &data) -> UIEventHandlerResult
+    {
+        RC<UIMenuItem> menu_item = weak_this.Lock().CastUnsafe<UIMenuItem>();
+
+        if (!menu_item) {
+            return UIEventHandlerResult::OK;
+        }
+
+        RC<UIMenuBar> menu_bar = menu_item->GetClosestSpawnParent<UIMenuBar>();
+
+        if (!menu_bar) {
+            return UIEventHandlerResult::OK;
+        }
+
+        menu_bar->SetSelectedMenuItemIndex(~0u);
+
+        return UIEventHandlerResult::STOP_BUBBLING;
+    }).Detach();
+
     GetStage()->AddChildUIObject(m_sub_items_drop_down_menu);
 }
 
@@ -249,6 +269,10 @@ void UIMenuItem::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_stat
     UIObject::SetFocusState_Internal(focus_state);
 
     if ((previous_focus_state & (UIObjectFocusState::HOVER | UIObjectFocusState::TOGGLED | UIObjectFocusState::PRESSED)) != (focus_state & (UIObjectFocusState::HOVER | UIObjectFocusState::TOGGLED | UIObjectFocusState::PRESSED))) {
+        if (!(GetFocusState() & UIObjectFocusState::TOGGLED)) {
+            SetSelectedSubItem(nullptr);
+        }
+
         UpdateMaterial(false);
     }
 }
@@ -458,18 +482,25 @@ void UIMenuBar::AddChildUIObject(const RC<UIObject> &ui_object)
     }).Detach();
 
     // Mouse click: toggle selected menu item index
-    menu_item->OnClick.RemoveAllDetached();
-    menu_item->OnClick.Bind([this, name](const MouseEvent &data) -> UIEventHandlerResult
+    // menu_item->OnClick.RemoveAllDetached();
+
+    menu_item->OnClick.Bind([weak_this = WeakRefCountedPtrFromThis(), name](const MouseEvent &data) -> UIEventHandlerResult
     {
+        RC<UIMenuBar> menu_bar = weak_this.Lock().CastUnsafe<UIMenuBar>();
+        
+        if (!menu_bar) {
+            return UIEventHandlerResult::OK;
+        }
+
         if (data.mouse_buttons == MouseButtonState::LEFT) {
-            const uint32 menu_item_index = GetMenuItemIndex(name);
+            const uint32 menu_item_index = menu_bar->GetMenuItemIndex(name);
 
-            if (GetSelectedMenuItemIndex() == menu_item_index) {
-                SetSelectedMenuItemIndex(~0u);
+            if (menu_bar->GetSelectedMenuItemIndex() == menu_item_index) {
+                menu_bar->SetSelectedMenuItemIndex(~0u);
 
-                m_container->Blur();
+                menu_bar->m_container->Blur();
             } else {
-                SetSelectedMenuItemIndex(menu_item_index);
+                menu_bar->SetSelectedMenuItemIndex(menu_item_index);
             }
         }
 

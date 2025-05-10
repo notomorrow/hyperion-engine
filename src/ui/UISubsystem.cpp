@@ -80,6 +80,8 @@ void UISubsystem::Update(GameCounter::TickUnit delta)
                 return;
             }
 
+            // @TODO Include a way to determine the parent tree of the UI Object because some objects will
+            // have the same depth but should be rendered in a different order.
             render_collector.PushEntityToRender(entity, *mesh_component.proxy, ui_object->GetComputedDepth());
         }, /* only_visible */ true);
 

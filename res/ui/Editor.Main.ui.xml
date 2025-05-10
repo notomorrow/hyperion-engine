@@ -22,10 +22,10 @@
             <MenuItem name="Add_MenuItem" text="Add" size="auto 100%" backgroundColor="#101012" borderRadius="5">
                 <MenuItem name="EmptyNode_MenuItem" text="Empty node"></MenuItem>
                 <MenuItem name="Light_MenuItem" text="Light">
-                    <MenuItem name="PointLight_MenuItem" text="Point light"></MenuItem>
-                    <MenuItem name="DirectionalLight_MenuItem" text="Directional light"></MenuItem>
-                    <MenuItem name="SpotLight_MenuItem" text="Spot light"></MenuItem>
-                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangular area light"></MenuItem>
+                    <MenuItem name="PointLight_MenuItem" text="Point light" onclick="AddPointLight"></MenuItem>
+                    <MenuItem name="DirectionalLight_MenuItem" text="Directional light" onclick="AddDirectionalLight"></MenuItem>
+                    <MenuItem name="SpotLight_MenuItem" text="Spot light" onclick="AddSpotLight"></MenuItem>
+                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangular area light" onclick="AddAreaRectLight"></MenuItem>
                 </MenuItem>
             </MenuItem>
 

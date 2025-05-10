@@ -2,6 +2,7 @@
 
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
+#include <scene/Light.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/EntityTag.hpp>
@@ -60,6 +61,71 @@
 
 namespace hyperion {
 
+#pragma region SceneValidation
+
+static SceneValidationResult MergeSceneValidationResults(
+    const SceneValidationResult &result_a,
+    const SceneValidationResult &result_b
+)
+{
+    SceneValidationResult result;
+
+    if (result_a.HasError()) {
+        result = result_a;
+    }
+
+    if (result_b.HasError()) {
+        if (result.HasError()) {
+            result = HYP_MAKE_ERROR(SceneValidationError, "{}\n{}", result_a.GetError().GetMessage(), result_b.GetError().GetMessage());
+        } else {
+            result = result_b;
+        }
+    }
+
+    return result;
+}
+
+static SceneValidationResult ValidateSceneLights(const Scene *scene)
+{
+    auto ValidateMultipleDirectionalLights = [](const Scene *scene) -> SceneValidationResult
+    {
+        int num_directional_lights = 0;
+
+        for (auto [entity_id, light_component] : scene->GetEntityManager()->GetEntitySet<LightComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT)) {
+            if (!light_component.light.IsValid()) {
+                continue;
+            }
+
+            if (light_component.light->GetLightType() == LightType::DIRECTIONAL) {
+                ++num_directional_lights;
+            }
+        }
+
+        if (num_directional_lights > 1) {
+            return HYP_MAKE_ERROR(SceneValidationError, "Multiple directional lights found in scene");
+        }
+
+        return { };
+    };
+
+    SceneValidationResult result;
+    result = MergeSceneValidationResults(result, ValidateMultipleDirectionalLights(scene));
+
+    return result;
+}
+
+SceneValidationResult SceneValidation::ValidateScene(const Scene *scene)
+{
+    SceneValidationResult result;
+    result = MergeSceneValidationResults(result, ValidateSceneLights(scene));
+
+    return result;
+}
+
+#pragma endregion SceneValidation
+
+#pragma region Scene
+
 Scene::Scene()
     : Scene(nullptr, g_game_thread, { })
 {
@@ -83,7 +149,6 @@ Scene::Scene(
     m_flags(flags),
     m_owner_thread_id(owner_thread_id),
     m_world(world),
-    m_root_node_proxy(MakeRefCountedPtr<Node>("<ROOT>", Handle<Entity>::empty, Transform::identity, this)),
     m_is_audio_listener(false),
     m_entity_manager(MakeRefCountedPtr<EntityManager>(owner_thread_id, this)),
     m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
@@ -95,7 +160,7 @@ Scene::Scene(
         m_entity_manager->GetCommandQueue().SetFlags(m_entity_manager->GetCommandQueue().GetFlags() & ~EntityManagerCommandQueueFlags::EXEC_COMMANDS);
     }
 
-    m_root_node_proxy->SetScene(this);
+    SetRoot(MakeRefCountedPtr<Node>("<ROOT>", Handle<Entity>::empty, Transform::identity, this));
 }
 
 Scene::~Scene()
@@ -457,6 +522,10 @@ void Scene::SetRoot(const NodeProxy &root)
         return;
     }
 
+#ifdef HYP_DEBUG_MODE
+    RemoveDelegateHandler(NAME("ValidateScene"));
+#endif
+
     NodeProxy prev_root = m_root_node_proxy;
 
     if (prev_root.IsValid() && prev_root->GetScene() == this) {
@@ -467,6 +536,23 @@ void Scene::SetRoot(const NodeProxy &root)
 
     if (m_root_node_proxy.IsValid()) {
         m_root_node_proxy->SetScene(this);
+
+#ifdef HYP_DEBUG_MODE
+        AddDelegateHandler(NAME("ValidateScene"), m_root_node_proxy->GetDelegates()->OnChildAdded.Bind([weak_this = WeakHandleFromThis()](Node *, bool)
+        {
+            Handle<Scene> scene = weak_this.Lock();
+
+            if (!scene.IsValid()) {
+                return;
+            }
+
+            SceneValidationResult validation_result = SceneValidation::ValidateScene(scene.Get());
+
+            if (validation_result.HasError()) {
+                HYP_LOG(Scene, Error, "Scene validation failed: {}", validation_result.GetError().GetMessage());
+            }
+        }));
+#endif
     }
 
     OnRootNodeChanged(m_root_node_proxy, prev_root);
@@ -507,6 +593,25 @@ bool Scene::RemoveFromWorld()
     return true;
 }
 
+String Scene::GetUniqueNodeName(UTF8StringView base_name) const
+{
+    String unique_name = base_name;
+    int counter = 1;
+
+    // Return base_name directly if it's not already used.
+    if (!FindNodeByName(unique_name).IsValid()) {
+        return unique_name;
+    }
+    
+    // Otherwise, append an increasing counter until a unique name is found.
+    while (FindNodeByName(unique_name).IsValid()) {
+        unique_name = HYP_FORMAT("{}{}", base_name, counter);
+        ++counter;
+    }
+    
+    return unique_name;
+}
+
 template <class SystemType>
 void Scene::AddSystemIfApplicable()
 {
@@ -518,5 +623,7 @@ void Scene::AddSystemIfApplicable()
 
     m_entity_manager->AddSystem(std::move(system));
 }
+
+#pragma endregion Scene
 
 } // namespace hyperion

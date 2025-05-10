@@ -329,8 +329,8 @@ void HyperionEditor::Init()
             m_scene->GetEntityManager()->AddComponent<TransformComponent>(reflection_probe_entity, TransformComponent { });
 
             m_scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(reflection_probe_entity, BoundingBoxComponent {
-                m_scene->GetRoot()->GetWorldAABB(),
-                m_scene->GetRoot()->GetWorldAABB()
+                node->GetWorldAABB() * 1.01f,
+                node->GetWorldAABB() * 1.01f
             });
 
             m_scene->GetEntityManager()->AddComponent<ReflectionProbeComponent>(reflection_probe_entity, ReflectionProbeComponent { });
@@ -338,7 +338,7 @@ void HyperionEditor::Init()
             NodeProxy reflection_probe_node = m_scene->GetRoot()->AddChild();
             reflection_probe_node.SetEntity(reflection_probe_entity);
             reflection_probe_node.SetName("ReflectionProbeTest");
-            reflection_probe_node->SetLocalTranslation(Vec3f(0.0f, 3.0f, 0.0f));
+            reflection_probe_node->SetLocalTranslation(Vec3f(0.0f, 4.0f, 0.0f));
         }
 
 #endif

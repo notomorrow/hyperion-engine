@@ -124,7 +124,9 @@ VulkanImage::~VulkanImage()
 }
 
 bool VulkanImage::IsCreated() const
-    { return m_handle != VK_NULL_HANDLE; }
+{
+    return m_handle != VK_NULL_HANDLE;
+}
 
 RendererResult VulkanImage::GenerateMipmaps(CommandBufferBase *command_buffer)
 {

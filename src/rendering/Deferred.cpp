@@ -406,8 +406,11 @@ void DeferredPass::Render(FrameBase *frame)
             );
             
             // Bind material descriptor set (for area lights)
-            if (material_descriptor_set_index != ~0u && !use_bindless_textures && light_render_resource.GetMaterial().IsValid()) {
-                const DescriptorSetRef &material_descriptor_set = light_render_resource.GetMaterial()->GetRenderResource().GetDescriptorSets()[frame->GetFrameIndex()];
+            if (material_descriptor_set_index != ~0u && !use_bindless_textures) {
+                const DescriptorSetRef &material_descriptor_set = light_render_resource.GetMaterial().IsValid()
+                    ? light_render_resource.GetMaterial()->GetRenderResource().GetDescriptorSets()[frame->GetFrameIndex()]
+                    : g_engine->GetMaterialDescriptorSetManager()->GetInvalidMaterialDescriptorSet();
+        
                 AssertThrow(material_descriptor_set != nullptr);
 
                 frame->GetCommandList().Add<BindDescriptorSet>(

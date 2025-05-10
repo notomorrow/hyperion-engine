@@ -90,7 +90,7 @@ HYP_DESCRIPTOR_SRV(DeferredDirectDescriptorSet, LTCBRDFTexture) uniform texture2
 
 HYP_DESCRIPTOR_SSBO(DeferredDirectDescriptorSet, MaterialsBuffer) readonly buffer MaterialsBuffer
 {
-    Material materials[HYP_MAX_MATERIALS];
+    Material materials[];
 };
 
 HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];

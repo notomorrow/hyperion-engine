@@ -81,7 +81,6 @@ struct RenderBinding<Scene>
     ID<Scene>                   id;
     Handle<RenderEnvironment>   render_environment;
     const RenderCollector       *render_collector = nullptr;
-    SceneDrawProxy              scene;
 
     HYP_FORCE_INLINE explicit operator bool() const
         { return bool(id); }
