@@ -18,21 +18,26 @@ layout(location=0) out vec4 color_output;
 #include "../include/tonemap.inc"
 #include "../include/noise.inc"
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer, size = 512) uniform CamerasBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
 {
     Scene scene;
 };
 
-HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer, size = 1310720) readonly buffer BlueNoiseBuffer
+HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 {
 	ivec4 sobol_256spp_256d[256 * 256 / 4];
 	ivec4 scrambling_tile[128 * 128 * 8 / 4];
 	ivec4 ranking_tile[128 * 128 * 8 / 4];
+};
+
+HYP_DESCRIPTOR_CBUFF(Global, SphereSamplesBuffer) uniform SphereSamplesBuffer
+{
+    vec4 sphere_samples[4096];
 };
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
@@ -84,13 +89,13 @@ void main()
     vec2 texcoord = v_texcoord;
     uvec2 pixel_coord = uvec2(texcoord * vec2(screen_resolution) - 0.5);
 
-    const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
-    const vec3 N = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, texcoord)));
+    const float depth = Texture2DLod(sampler_nearest, gbuffer_depth_texture, texcoord, 0.0).r;
+    const vec3 N = normalize(DecodeNormal(Texture2DLod(sampler_nearest, gbuffer_normals_texture, texcoord, 0.0)));
     const vec3 P = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth).xyz;
     const vec3 V = normalize(camera.position.xyz - P);
     const vec3 R = normalize(reflect(-V, N));
 
-    const vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); 
+    const vec4 material = Texture2DLod(sampler_nearest, gbuffer_material_texture, texcoord, 0.0); 
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
@@ -104,7 +109,7 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
-#if 0
+#if 1
     float phi = InterleavedGradientNoise(vec2(pixel_coord));
 
     for (int i = 0; i < SAMPLE_COUNT; i++) {
@@ -143,8 +148,8 @@ void main()
     for (int i = 0; i < SAMPLE_COUNT; i++) {
         vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
 
-        vec3 H = ImportanceSampleGGX(rnd, N, perceptual_roughness);
-        H = tangent * H.x + bitangent * H.y + N * H.z;
+        vec3 H = ImportanceSampleGGX(rnd, N, roughness);
+        H = normalize(tangent * H.x + bitangent * H.y + N * H.z);
 
         vec3 dir = normalize(2.0 * dot(V, H) * H - V);
 
