@@ -142,7 +142,7 @@ void main()
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
     
     vec3 H = ImportanceSampleGGX(rnd, normal, perceptual_roughness);
-    H = tangent * H.x + bitangent * H.y + normal * H.z;
+    H = normalize(tangent * H.x + bitangent * H.y + normal * H.z);
 
     direction = H;
     direction = reflect(-V, direction);
