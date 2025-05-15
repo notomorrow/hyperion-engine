@@ -88,8 +88,6 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
         shadow = GetShadowStandard(lights[light_index].shadow_map_index, P, vec2(0.0), NdotL);
     }
 
-    // return vec4(vec3(NdotL * shadow), 1.0);
-
     return vec4((light_color * NdotL * shadow * lights[light_index].position_intensity.w).rgb, 1.0);
 }
 
@@ -129,7 +127,7 @@ vec4 ConvolveProbe(uvec2 local_coord)
         vec3 rnd = vec3(RandomFloat(seed), RandomFloat(seed), RandomFloat(seed));
         vec3 irradiance_dir = RandomInHemisphere(rnd, normal);
 
-        vec4 irradiance = SampleSky(irradiance_dir) * albedo * 0.1;
+        vec4 irradiance = SampleSky(irradiance_dir) * albedo * 0.25;
 
         vec4 radiance = vec4(0.0);
         
