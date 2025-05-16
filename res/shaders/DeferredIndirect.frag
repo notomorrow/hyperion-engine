@@ -115,7 +115,6 @@ void main()
     vec3 irradiance = vec3(0.0);
     vec4 reflections = vec4(0.0);
     vec3 ibl = vec3(0.0);
-    vec3 F = vec3(0.0);
 
     const vec4 ssao_data = Texture2D(HYP_SAMPLER_NEAREST, ssao_gi_result, v_texcoord0);
     ao = min(mix(1.0, ssao_data.a, bool(deferred_params.flags & DEFERRED_FLAGS_HBAO_ENABLED)), material.a);
@@ -123,18 +122,10 @@ void main()
     const float roughness = material.r;
     const float metalness = material.g;
 
-    float NdotV = max(0.0001, dot(N, V));
 
     const vec3 diffuse_color = CalculateDiffuseColor(albedo.rgb, metalness);
-    const vec3 F0 = CalculateF0(albedo.rgb, metalness);
-
-    F = CalculateFresnelTerm(F0, roughness, NdotV);
-    const vec3 kD = (vec3(1.0) - F) * (1.0 - metalness);
 
     const float perceptual_roughness = sqrt(roughness);
-    const vec3 dfg = CalculateDFG(F, roughness, NdotV);
-    const vec3 E = CalculateE(F0, dfg);
-    const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
 
     reflections = Texture2D(HYP_SAMPLER_LINEAR, reflections_texture, texcoord);
 
@@ -163,9 +154,16 @@ void main()
     CalculateHBILIrradiance(deferred_params, ssao_data, irradiance);
 #endif
 
+    const float NdotV = max(0.0001, dot(N, V));
+    const vec3 F0 = CalculateF0(albedo.rgb, metalness);
+    const vec3 F = CalculateFresnelTerm(F0, roughness, NdotV);
+    const vec3 dfg = CalculateDFG(F, roughness, NdotV);
+    const vec3 E = CalculateE(F0, dfg);
     vec3 Fd = diffuse_color.rgb * irradiance * (1.0 - E) * ao;
 
     vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
+
+    const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
     specular_ao *= energy_compensation;
 
     vec3 Fr = ibl * E * specular_ao;

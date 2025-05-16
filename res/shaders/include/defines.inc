@@ -65,9 +65,10 @@
 
 #define HYP_OBJECT_BUCKET_NONE          0
 #define HYP_OBJECT_BUCKET_OPAQUE        1
-#define HYP_OBJECT_BUCKET_TRANSLUCENT   2
-#define HYP_OBJECT_BUCKET_SKYBOX        3
-#define HYP_OBJECT_BUCKET_DEBUG         4
+#define HYP_OBJECT_BUCKET_LIGHTMAP      2
+#define HYP_OBJECT_BUCKET_TRANSLUCENT   3
+#define HYP_OBJECT_BUCKET_SKYBOX        4
+#define HYP_OBJECT_BUCKET_DEBUG         5
 
 #define HYP_FMATH_SQR(num)     ((num)*(num))
 #define HYP_FMATH_CUBE(num)    ((num)*(num)*(num))

@@ -19,28 +19,31 @@
 
     <Panel name="Main_Toolbar" position="0 25" size="100% 40">
         <MenuBar name="Tools_MenuBar" position="0 0" size="auto 100%" depth="10">
-            <MenuItem name="Add_MenuItem" text="Add" size="auto 100%" backgroundColor="#101012" borderRadius="5">
+            <MenuItem name="Add_MenuItem" text="Add" size="auto 100%" backgroundColor="#000000" borderRadius="5">
                 <MenuItem name="EmptyNode_MenuItem" text="Empty node"></MenuItem>
                 <MenuItem name="Light_MenuItem" text="Light">
-                    <MenuItem name="PointLight_MenuItem" text="Point light" onclick="AddPointLight"></MenuItem>
-                    <MenuItem name="DirectionalLight_MenuItem" text="Directional light" onclick="AddDirectionalLight"></MenuItem>
-                    <MenuItem name="SpotLight_MenuItem" text="Spot light" onclick="AddSpotLight"></MenuItem>
-                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangular area light" onclick="AddAreaRectLight"></MenuItem>
+                    <MenuItem name="PointLight_MenuItem" text="Point Light" onclick="AddPointLight"></MenuItem>
+                    <MenuItem name="DirectionalLight_MenuItem" text="Directional Light" onclick="AddDirectionalLight"></MenuItem>
+                    <MenuItem name="SpotLight_MenuItem" text="Spot Light" onclick="AddSpotLight"></MenuItem>
+                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangle Area Light" onclick="AddAreaRectLight"></MenuItem>
+                </MenuItem>
+                <MenuItem name="ReflectionProbe" text="Reflection Probe" onclick="AddReflectionProbe"></MenuItem>
+            </MenuItem>
+
+            <MenuItem name="Build_MenuItem" size="auto 100%" text="Build" backgroundColor="#000000" borderRadius="5">
+                <MenuItem name="Generate_Lightmaps_Button" onclick="GenerateLightmaps">
+                    Generate Lightmaps
                 </MenuItem>
             </MenuItem>
 
-            <MenuItem name="Generate_Lightmaps_Button" size="auto 100%" onclick="GenerateLightmaps" backgroundColor="#101012" borderRadius="5" depth="10">
-                Build Lightmaps
-            </MenuItem>
-
-            <MenuItem name="Simulate_Button" size="auto 100%" onclick="SimulateClicked" backgroundColor="#101012" borderRadius="5" depth="10">
+            <MenuItem name="Simulate_Button" size="auto 100%" onclick="SimulateClicked" backgroundColor="#000000" borderRadius="5">
                 Simulate
             </MenuItem>
         </MenuBar>
     </Panel>
 
     <DockableContainer name="Dockable_Container" position="0 75" size="100% fill">
-        <Panel name="Left_Panel" size="200 100%" padding="5 0" side="left">
+        <Panel name="Left_Panel" size="200 100%" padding="5 0" tag:side="left">
             <TabView size="100% 25" size="100%">
                 <Tab name="Scene_Tab" text="Scene">
                     <Panel size="100% 35" padding="0 2">
@@ -51,7 +54,7 @@
             </TabView>
         </Panel>
         
-        <Panel name="Right_Panel" size="200 100%" padding="5 0" side="right">
+        <Panel name="Right_Panel" size="200 100%" padding="5 0" tag:side="right">
             <TabView size="100% 25" size="100%">
                 <Tab name="Details_Tab" text="Properties">
                     <ListView name="Detail_View_ListView" position="0 0" size="100% fill" />
@@ -59,11 +62,11 @@
             </TabView>
         </Panel>
 
-        <Panel name="Main_Content" size="100%" side="center">
+        <Panel name="Main_Content" size="100%" tag:side="center">
             <Image name="Scene_Image" size="100%" />
         </Panel>
 
-        <Panel name="Bottom_Panel" size="100% 200" padding="5 5" side="bottom">
+        <Panel name="Bottom_Panel" size="100% 200" padding="5 5" tag:side="bottom">
             <TabView name="Bottom_Panel_TabView" size="100%">
                 <Tab name="Assets_Tab" text="Assets">
                     <Script assembly="Hyperion.Editor.UI.dll" class="ContentBrowser" />
