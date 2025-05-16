@@ -7,7 +7,7 @@
       "env_grid_probes": false,
       "reflection_probes": false,
       "ssr": false,
-      "reflections": false,
+      "reflections": true,
       "hbil": false,
       "ssgi": false,
       "hbao": false,

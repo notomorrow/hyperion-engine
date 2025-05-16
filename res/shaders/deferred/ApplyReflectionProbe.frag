@@ -79,7 +79,7 @@ layout(push_constant) uniform PushConstant
     DeferredParams deferred_params;
 };
 
-#define SAMPLE_COUNT 1
+#define SAMPLE_COUNT 4
 
 void main()
 {
@@ -99,7 +99,7 @@ void main()
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
-    const float lod = float(12.0) * roughness * (2.0 - roughness);
+    const float lod = HYP_FMATH_SQR(perceptual_roughness) * 12.0;
 
     vec4 ibl = vec4(0.0);
 
@@ -109,7 +109,7 @@ void main()
     vec3 bitangent;
     ComputeOrthonormalBasis(N, tangent, bitangent);
 
-#if 1
+#if 0
     float phi = InterleavedGradientNoise(vec2(pixel_coord));
 
     for (int i = 0; i < SAMPLE_COUNT; i++) {
@@ -149,9 +149,9 @@ void main()
         vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
 
         vec3 H = ImportanceSampleGGX(rnd, N, roughness);
-        H = normalize(tangent * H.x + bitangent * H.y + N * H.z);
+        H = tangent * H.x + bitangent * H.y + N * H.z;
 
-        vec3 dir = normalize(2.0 * dot(V, H) * H - V);
+        const vec3 dir = normalize(2.0 * dot(V, H) * H - V);
 
         vec4 sample_ibl = vec4(0.0);
 

@@ -31,7 +31,6 @@ HYP_DESCRIPTOR_SRV(Scene, GBufferDepthTexture) uniform texture2D gbuffer_depth_t
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-HYP_DESCRIPTOR_SRV(Scene, SSRResultTexture) uniform texture2D ssr_result;
 HYP_DESCRIPTOR_SRV(Scene, SSAOResultTexture) uniform texture2D ssao_gi_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
 
