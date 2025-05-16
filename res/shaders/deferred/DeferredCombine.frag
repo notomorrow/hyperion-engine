@@ -38,7 +38,6 @@ HYP_DESCRIPTOR_SRV(Scene, TAAResultTexture) uniform texture2D temporal_aa_result
 HYP_DESCRIPTOR_SRV(Scene, SSRResultTexture) uniform texture2D ssr_result;
 HYP_DESCRIPTOR_SRV(Scene, SSAOResultTexture) uniform texture2D ssao_gi;
 HYP_DESCRIPTOR_SRV(Scene, DeferredIndirectResultTexture) uniform texture2D deferred_indirect_lighting;
-HYP_DESCRIPTOR_SRV(Scene, DeferredDirectResultTexture) uniform texture2D deferred_direct_lighting;
 
 HYP_DESCRIPTOR_CBUFF(Scene, PostProcessingUniforms) uniform PostProcessingUniforms {
     uvec2 effect_counts;
