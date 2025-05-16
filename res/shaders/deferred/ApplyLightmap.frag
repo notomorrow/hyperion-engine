@@ -6,9 +6,7 @@
 
 #include "../include/defines.inc"
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 texcoord;
+layout(location=1) in vec2 texcoord;
 layout(location=0) out vec4 color_output;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -102,55 +100,14 @@ HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-layout(push_constant) uniform DeferredCombineData
-{
-    uvec2 image_dimensions;
-    uint _pad0;
-    uint _pad1;
-    DeferredParams deferred_params;
-};
-
-#if 0
-struct Refraction
-{
-    vec3 position;
-    vec3 direction;
-};
-
-float ApplyIORToRoughness(float ior, float roughness)
-{
-    return roughness * clamp(ior * 2.0 - 2.0, 0.0, 1.0);
-}
-
-void RefractionSolidSphere(
-    vec3 P, vec3 N, vec3 V, float eta_ir,
-    out Refraction out_refraction
-)
-{
-    const float thickness = 0.8;
-
-    const vec3 R = refract(-V, N, eta_ir);
-    float NdotR = dot(N, R);
-    float d = thickness * -NdotR;
-
-    Refraction refraction;
-    refraction.position = vec3(P + R * d);
-    vec3 n1 = normalize(NdotR * R - N * 0.5);
-    refraction.direction = refract(R, n1, eta_ir);
-
-    out_refraction = refraction;
-}
-#endif
 
 void main()
 {
-    vec4 deferred_result = Texture2D(HYP_SAMPLER_NEAREST, deferred_indirect_lighting, texcoord);
-    deferred_result.a = 1.0;
+    vec4 result = vec4(0.0);
 
-    vec4 translucent_result = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture_translucent, texcoord);
-    vec4 gbuffer_albedo = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, texcoord);
-
+    vec4 albedo = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_texture, texcoord);
     vec4 material = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_material_texture, texcoord);
+
     const float roughness = material.r;
     const float metalness = material.g;
     const float transmission = material.b;
@@ -168,16 +125,6 @@ void main()
 
     const uint object_mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
 
-    vec3 L = light.position_intensity.xyz;
-    L -= P * float(min(light.type, 1));
-    L = normalize(L);
-
-    const vec3 H = normalize(L + V);
-    const float NdotL = max(0.0001, dot(N, L));
-    const float NdotH = max(0.0001, dot(N, H));
-    const float LdotH = max(0.0001, dot(L, H));
-    const float HdotV = max(0.0001, dot(H, V));
-
     // apply reflections to lightmapped objects
     if (bool(object_mask & OBJECT_MASK_LIGHTMAP)) {
         vec3 ibl = vec3(0.0);
@@ -185,8 +132,8 @@ void main()
 
         float NdotV = max(0.0001, dot(N, V));
 
-        const vec3 diffuse_color = CalculateDiffuseColor(gbuffer_albedo.rgb, metalness);
-        const vec3 F0 = CalculateF0(gbuffer_albedo.rgb, metalness);
+        const vec3 diffuse_color = CalculateDiffuseColor(albedo.rgb, metalness);
+        const vec3 F0 = CalculateF0(albedo.rgb, metalness);
 
         F = CalculateFresnelTerm(F0, roughness, NdotV);
         const vec3 kD = (vec3(1.0) - F) * (1.0 - metalness);
@@ -204,27 +151,10 @@ void main()
 
         vec3 spec = (ibl * mix(dfg.xxx, dfg.yyy, F0)) * energy_compensation;
 
-        vec4 gbuffer_albedo_lightmap = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_lightmap_texture, texcoord);
+        vec4 lightmap = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_albedo_lightmap_texture, texcoord);
 
-        deferred_result = (gbuffer_albedo * gbuffer_albedo_lightmap) + vec4(spec, 0.0);
+        result = (albedo * lightmap) + vec4(spec, 0.0);
     }
 
-    // vec4 result = mix(deferred_result, translucent_result, bvec4(bool(object_mask & (OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT | OBJECT_MASK_DEBUG))));
-    vec4 result = deferred_result * (1.0 - translucent_result.a) + (translucent_result * translucent_result.a);
-    result.a = 1.0;
     color_output = result;
-
-    color_output = SampleLastEffectInChain(HYP_STAGE_POST, texcoord, color_output);
-
-    color_output = vec4(Tonemap(color_output.rgb), 1.0);
-
-#if defined(DEBUG_SSR)
-    color_output.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssr_result, texcoord).rgb;
-#elif defined(DEBUG_SSGI)
-    color_output.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssgi_result, texcoord).rgb;
-#elif defined(DEBUG_HBAO)
-    color_output.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi, texcoord).aaa;
-#elif defined(DEBUG_HBIL)
-    color_output.rgb = Texture2D(HYP_SAMPLER_LINEAR, ssao_gi, texcoord).rgb;
-#endif
 }
