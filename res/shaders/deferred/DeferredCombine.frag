@@ -210,7 +210,8 @@ void main()
         deferred_result = (gbuffer_albedo * gbuffer_albedo_lightmap) + vec4(spec, 0.0);
     }
 
-    vec4 result = mix(deferred_result, translucent_result, bvec4(bool(object_mask & (OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT | OBJECT_MASK_DEBUG))));
+    // vec4 result = mix(deferred_result, translucent_result, bvec4(bool(object_mask & (OBJECT_MASK_SKY | OBJECT_MASK_TRANSLUCENT | OBJECT_MASK_DEBUG))));
+    vec4 result = deferred_result * (1.0 - translucent_result.a) + (translucent_result * translucent_result.a);
     result.a = 1.0;
     color_output = result;
 
