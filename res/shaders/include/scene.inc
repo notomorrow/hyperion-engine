@@ -83,8 +83,8 @@ struct ShadowMap
     uint    layer_index; // atlas index, also used for point light shadow map index
     uint    flags;
 
+    vec4 _pad1; vec4 _pad2;
     vec4 _pad3; vec4 _pad4;
-    vec4 _pad5; vec4 _pad6;
 };
 
 vec3 CalculateLightDirection(Light light, in vec3 world_position)

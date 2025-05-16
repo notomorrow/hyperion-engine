@@ -467,8 +467,6 @@ float GetShadowContactHardened(uint index, vec3 pos, vec2 texcoord, vec2 screen_
     return shadowness;
 }
 
-#ifdef HYP_ENV_PROBE_GLSL
-
 float GetPointShadowVariance(uint texture_index, vec3 world_to_light, float NdotL)
 {
     const vec2 moments = texture(samplerCubeArray(point_shadow_maps, HYP_SAMPLER_LINEAR), vec4(world_to_light, float(texture_index))).rg;
@@ -509,8 +507,6 @@ float GetPointShadow(uint index, vec3 world_to_light, float NdotL)
         return GetPointShadowStandard(layer_index, world_to_light, NdotL);
     }
 }
-
-#endif
 
 float GetShadow(uint index, vec3 position, vec2 texcoord, vec2 screen_dimensions, float NdotL)
 {
