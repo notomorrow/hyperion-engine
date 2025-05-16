@@ -20,8 +20,8 @@
 #define HYP_SAMPLER_LINEAR sampler_linear
 #endif
 
+#ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
 #define HYP_GBUFFER_TEXTURE(index) (gbuffer_textures[index])
-
 #define gbuffer_albedo_texture HYP_GBUFFER_TEXTURE(0)
 #define gbuffer_normals_texture HYP_GBUFFER_TEXTURE(1)
 #define gbuffer_material_texture HYP_GBUFFER_TEXTURE(2)
@@ -30,5 +30,6 @@
 #define gbuffer_mask_texture HYP_GBUFFER_TEXTURE(5)
 #define gbuffer_ws_normals_texture HYP_GBUFFER_TEXTURE(6)
 #define gbuffer_albedo_texture_translucent HYP_GBUFFER_TEXTURE(NUM_GBUFFER_TEXTURES - 1)
+#endif
 
 #endif

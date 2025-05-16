@@ -27,6 +27,7 @@ class Engine;
 class Camera;
 class Material;
 class MaterialRenderResource;
+class ShadowMapRenderResource;
 
 struct LightShaderData
 {
@@ -49,8 +50,9 @@ struct LightShaderData
     uint32  material_index;
     uint32  _pad2;
 
-    Vec4u   pad3;
-    Vec4u   pad4;
+    Vec4f   aabb_min;
+    Vec4f   aabb_max;
+
     Vec4u   pad5;
 };
 
@@ -81,13 +83,10 @@ public:
     HYP_FORCE_INLINE const LightShaderData &GetBufferData() const
         { return m_buffer_data; }
 
-    void SetVisibilityBits(const Bitset &visibility_bits);
-    
-    /*! \note Only to be called from render thread or render task */
-    HYP_FORCE_INLINE const Bitset &GetVisibilityBits() const
-        { return m_visibility_bits; }
+    HYP_FORCE_INLINE const TResourceHandle<ShadowMapRenderResource> &GetShadowMapResourceHandle() const
+        { return m_shadow_map_render_resource_handle; }
 
-    void EnqueueUnbind();
+    void SetShadowMapResourceHandle(TResourceHandle<ShadowMapRenderResource> &&shadow_map_render_resource_handle);
 
 protected:
     virtual void Initialize_Internal() override;
@@ -99,11 +98,11 @@ protected:
 private:
     void UpdateBufferData();
 
-    Light                                   *m_light;
-    Bitset                                  m_visibility_bits;
-    Handle<Material>                        m_material;
-    TResourceHandle<MaterialRenderResource> m_material_render_resource_handle;
-    LightShaderData                         m_buffer_data;
+    Light                                       *m_light;
+    Handle<Material>                            m_material;
+    TResourceHandle<MaterialRenderResource>     m_material_render_resource_handle;
+    TResourceHandle<ShadowMapRenderResource>    m_shadow_map_render_resource_handle;
+    LightShaderData                             m_buffer_data;
 };
 
 } // namespace hyperion

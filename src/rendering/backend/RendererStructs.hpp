@@ -52,9 +52,15 @@ enum class DefaultImageFormatType
 
 enum class ImageType : uint32
 {
+    TEXTURE_TYPE_INVALID = uint32(-1),
+
     TEXTURE_TYPE_2D = 0,
     TEXTURE_TYPE_3D = 1,
-    TEXTURE_TYPE_CUBEMAP = 2
+    TEXTURE_TYPE_CUBEMAP = 2,
+    TEXTURE_TYPE_2D_ARRAY = 3,
+    TEXTURE_TYPE_CUBEMAP_ARRAY = 4,
+
+    TEXTURE_TYPE_MAX
 };
 
 enum class BaseFormat : uint32
@@ -400,12 +406,17 @@ struct TextureDesc
         { return type == ImageType::TEXTURE_TYPE_CUBEMAP; }
 
     HYP_FORCE_INLINE bool IsPanorama() const
-        { return type == ImageType::TEXTURE_TYPE_2D
+    {
+        return type == ImageType::TEXTURE_TYPE_2D
             && extent.x == extent.y * 2
-            && extent.z == 1; }
+            && extent.z == 1;
+    }
 
-    HYP_FORCE_INLINE bool IsTextureArray() const
-        { return !IsTextureCube() && num_layers > 1; }
+    HYP_FORCE_INLINE bool IsTexture2DArray() const
+        { return type == ImageType::TEXTURE_TYPE_2D_ARRAY; }
+
+    HYP_FORCE_INLINE bool IsTextureCubeArray() const
+        { return type == ImageType::TEXTURE_TYPE_CUBEMAP_ARRAY; }
 
     HYP_FORCE_INLINE bool IsTexture3D() const
         { return type == ImageType::TEXTURE_TYPE_3D; }
@@ -415,11 +426,13 @@ struct TextureDesc
 
     HYP_FORCE_INLINE uint32 NumFaces() const
     {
-        return IsTextureCube()
-            ? 6
-            : IsTextureArray()
-                ? num_layers
-                : 1;
+        const uint32 num_array_layers = num_layers;
+
+        if (IsTextureCube() || IsTextureCubeArray()) {
+            return 6 * num_array_layers;
+        }
+
+        return num_array_layers;
     }
 
     HYP_FORCE_INLINE uint32 GetByteSize() const
@@ -749,6 +762,11 @@ enum ImageSubResourceFlags : ImageSubResourceFlagBits
     IMAGE_SUB_RESOURCE_FLAGS_STENCIL = 1 << 2
 };
 
+static inline uint64 GetImageSubResourceKey(uint32 base_array_layer, uint32 base_mip_level)
+{
+    return (uint64(base_array_layer) << 32) | (uint64(base_mip_level));
+}
+
 /* images */
 struct ImageSubResource
 {
@@ -767,6 +785,11 @@ struct ImageSubResource
             && num_levels == other.num_levels;
     }
 
+    uint64 GetSubResourceKey() const
+    {
+        return GetImageSubResourceKey(base_array_layer, base_mip_level);
+    }
+
     HashCode GetHashCode() const
     {
         HashCode hc;
@@ -782,8 +805,8 @@ struct ImageSubResource
 
 struct Viewport
 {
-    Vec2i   position;
     Vec2i   extent;
+    Vec2i   position;
 
     HYP_FORCE_INLINE explicit operator bool() const
         { return position != Vec2i::Zero() || extent != Vec2i::Zero(); }
@@ -810,6 +833,7 @@ using renderer::TextureData;
 using renderer::TextureDesc;
 using renderer::ResourceState;
 using renderer::StencilFunction;
+using renderer::Viewport;
 
 } // namespace hyperion
 

@@ -85,17 +85,6 @@ VkFormat ToVkFormat(InternalFormat fmt)
     AssertThrowMsg(false, "Unhandled texture format case %d", int(fmt));
 }
 
-VkImageType ToVkType(ImageType type)
-{
-    switch (type) {
-    case ImageType::TEXTURE_TYPE_2D: return VK_IMAGE_TYPE_2D;
-    case ImageType::TEXTURE_TYPE_3D: return VK_IMAGE_TYPE_3D;
-    case ImageType::TEXTURE_TYPE_CUBEMAP: return VK_IMAGE_TYPE_2D;
-    }
-
-    AssertThrowMsg(false, "Unhandled texture type case %d", int(type));
-}
-
 VkFilter ToVkFilter(FilterMode filter_mode)
 {
     switch (filter_mode) {
@@ -134,19 +123,21 @@ VkImageAspectFlags ToVkImageAspect(InternalFormat internal_format)
         : VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-VkImageViewType ToVkImageViewType(ImageType type, bool is_array)
+VkImageType ToVkImageType(ImageType type)
 {
-    if (is_array) {
-        switch (type) {
-        case ImageType::TEXTURE_TYPE_2D:
-            return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        case ImageType::TEXTURE_TYPE_CUBEMAP:
-            return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-        default:
-            HYP_FAIL("Unhandled texture type case %d", int(type));
-        }
+    switch (type) {
+    case ImageType::TEXTURE_TYPE_2D: return VK_IMAGE_TYPE_2D;
+    case ImageType::TEXTURE_TYPE_3D: return VK_IMAGE_TYPE_3D;
+    case ImageType::TEXTURE_TYPE_CUBEMAP: return VK_IMAGE_TYPE_2D;
+    case ImageType::TEXTURE_TYPE_2D_ARRAY: return VK_IMAGE_TYPE_2D;
+    case ImageType::TEXTURE_TYPE_CUBEMAP_ARRAY: return VK_IMAGE_TYPE_2D;
+    default:
+        HYP_FAIL("Unhandled texture type case %d", int(type));
     }
+}
 
+VkImageViewType ToVkImageViewType(ImageType type)
+{
     switch (type) {
     case ImageType::TEXTURE_TYPE_2D:
         return VK_IMAGE_VIEW_TYPE_2D;
@@ -154,6 +145,10 @@ VkImageViewType ToVkImageViewType(ImageType type, bool is_array)
         return VK_IMAGE_VIEW_TYPE_3D;
     case ImageType::TEXTURE_TYPE_CUBEMAP:
         return VK_IMAGE_VIEW_TYPE_CUBE;
+    case ImageType::TEXTURE_TYPE_2D_ARRAY:
+        return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    case ImageType::TEXTURE_TYPE_CUBEMAP_ARRAY:
+        return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
     default:
         HYP_FAIL("Unhandled texture type case %d", int(type));
     }

@@ -134,7 +134,7 @@ struct RENDER_COMMAND(CreateTexture) : renderer::RenderCommand
             }
 
             if (!image_view->IsCreated()) {
-                HYPERION_BUBBLE_ERRORS(image_view->Create(image.Get()));
+                HYPERION_BUBBLE_ERRORS(image_view->Create());
             }
             
             if (g_rendering_api->GetRenderConfig().IsBindlessSupported()) {
@@ -174,32 +174,6 @@ struct RENDER_COMMAND(DestroyTexture) : renderer::RenderCommand
         }
 
         HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(CreateMipImageView) : renderer::RenderCommand
-{
-    ImageRef        src_image;
-    ImageViewRef    mip_image_view;
-    uint32          mip_level;
-
-    RENDER_COMMAND(CreateMipImageView)(
-        ImageRef src_image,
-        ImageViewRef mip_image_view,
-        uint32 mip_level
-    ) : src_image(std::move(src_image)),
-        mip_image_view(std::move(mip_image_view)),
-        mip_level(mip_level)
-    {
-    }
-
-    virtual RendererResult operator()() override
-    {
-        return mip_image_view->Create(
-            src_image.Get(),
-            mip_level, 1,
-            0, src_image->NumFaces()
-        );
     }
 };
 
@@ -270,7 +244,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
                     FrameRef temp_frame = g_rendering_api->MakeFrame(0);
 
                     pass->GetRenderGroup()->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
-                    pass->Begin(temp_frame);
+                    pass->Begin(temp_frame, nullptr);
 
                     temp_frame->GetCommandList().Add<BindDescriptorTable>(
                         pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable(),
@@ -280,7 +254,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels) : renderer::RenderCommand
                     );
                     
                     pass->GetQuadMesh()->GetRenderResource().Render(temp_frame->GetCommandList());
-                    pass->End(temp_frame);
+                    pass->End(temp_frame, nullptr);
 
                     cmd.Concat(std::move(temp_frame->GetCommandList()));
 
@@ -380,8 +354,8 @@ public:
             const uint32 mip_width = MathUtil::Max(1u, extent.x >> mip_level);
             const uint32 mip_height = MathUtil::Max(1u, extent.y >> mip_level);
 
-            ImageViewRef mip_image_view = g_rendering_api->MakeImageView();
-            PUSH_RENDER_COMMAND(CreateMipImageView, m_image, mip_image_view, mip_level);
+            ImageViewRef mip_image_view = g_rendering_api->MakeImageView(m_image, mip_level, 1, 0, m_image->NumFaces());
+            DeferCreate(mip_image_view);
 
             const DescriptorSetRef &generate_mipmaps_descriptor_set = descriptor_table->GetDescriptorSet(NAME("GenerateMipmapsDescriptorSet"), 0);
             AssertThrow(generate_mipmaps_descriptor_set != nullptr);
@@ -395,7 +369,8 @@ public:
                     shader,
                     descriptor_table,
                     m_image->GetTextureFormat(),
-                    Vec2u { mip_width, mip_height }
+                    Vec2u { mip_width, mip_height },
+                    nullptr
                 );
 
                 pass->Create();
@@ -439,7 +414,7 @@ private:
 TextureRenderResource::TextureRenderResource(Texture *texture)
     : m_texture(texture),
       m_image(g_rendering_api->MakeImage(texture->GetTextureDesc())),
-      m_image_view(g_rendering_api->MakeImageView())
+      m_image_view(g_rendering_api->MakeImageView(m_image))
 {
 }
 
@@ -522,6 +497,21 @@ void TextureRenderResource::Readback(ByteBuffer &out_byte_buffer)
         gpu_buffer->Read(out_byte_buffer.Size(), out_byte_buffer.Data());
 
         gpu_buffer->Destroy();
+    }, /* force_owner_thread */ true);
+}
+
+void TextureRenderResource::Resize(const Vec3u &extent)
+{
+    HYP_SCOPE;
+
+    Execute([this, extent]()
+    {
+        HYPERION_ASSERT_RESULT(m_image->Resize(extent));
+
+        if (m_image_view->IsCreated()) {
+            m_image_view->Destroy();
+            HYPERION_ASSERT_RESULT(m_image_view->Create());
+        }
     }, /* force_owner_thread */ true);
 }
 

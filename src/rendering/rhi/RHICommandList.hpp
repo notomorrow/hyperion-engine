@@ -6,6 +6,7 @@
 #include <core/memory/MemoryPool.hpp>
 
 #include <core/utilities/ValueStorage.hpp>
+#include <core/utilities/Variant.hpp>
 
 #include <core/containers/TypeMap.hpp>
 
@@ -20,6 +21,12 @@
 #include <rendering/backend/RendererBuffer.hpp>
 #include <rendering/backend/RendererCommandBuffer.hpp>
 #include <rendering/backend/RenderObject.hpp>
+
+// #define HYP_RHI_COMMAND_STACK_TRACE
+
+#ifdef HYP_RHI_COMMAND_STACK_TRACE
+#include <core/debug/StackDump.hpp>
+#endif
 
 namespace hyperion {
 
@@ -58,6 +65,10 @@ public:
 
 private:
     RHICommandPoolHandle    m_pool_handle;
+
+#ifdef HYP_RHI_COMMAND_STACK_TRACE
+    FixedArray<char, 1024>  m_stack_trace;
+#endif
 };
 
 template <class RHICommandType>
@@ -82,6 +93,11 @@ public:
 
         command_storage->Construct(std::forward<Args>(args)...);
         command_storage->Get().m_pool_handle = { static_cast<RHICommandMemoryPoolBase *>(this), index };
+
+#ifdef HYP_RHI_COMMAND_STACK_TRACE
+        std::strncpy(command_storage->Get().m_stack_trace.Data(), StackDump(5).ToString().Data(), command_storage->Get().m_stack_trace.Size() - 1);
+        command_storage->Get().m_stack_trace[command_storage->Get().m_stack_trace.Size() - 1] = '\0';
+#endif
 
         return &command_storage->Get();
     }
@@ -276,39 +292,46 @@ private:
 class BindDescriptorSet final : public RHICommandBase
 {
 public:
-    BindDescriptorSet(const DescriptorSetRef &descriptor_set, const GraphicsPipelineRef &graphics_pipeline, const ArrayMap<Name, uint32> &offsets, uint32 bind_index)
+    BindDescriptorSet(const DescriptorSetRef &descriptor_set, const GraphicsPipelineRef &pipeline, const ArrayMap<Name, uint32> &offsets, uint32 bind_index)
         : m_descriptor_set(descriptor_set),
-          m_graphics_pipeline(graphics_pipeline),
+          m_pipeline(pipeline),
           m_offsets(offsets),
           m_bind_index(bind_index)
     {
+        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index");
     }
 
-    BindDescriptorSet(const DescriptorSetRef &descriptor_set, const ComputePipelineRef &compute_pipeline, const ArrayMap<Name, uint32> &offsets, uint32 bind_index)
+    BindDescriptorSet(const DescriptorSetRef &descriptor_set, const ComputePipelineRef &pipeline, const ArrayMap<Name, uint32> &offsets, uint32 bind_index)
         : m_descriptor_set(descriptor_set),
-          m_compute_pipeline(compute_pipeline),
+          m_pipeline(pipeline),
           m_offsets(offsets),
           m_bind_index(bind_index)
     {
+        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index");
+    }
+
+    BindDescriptorSet(const DescriptorSetRef &descriptor_set, const RaytracingPipelineRef &pipeline, const ArrayMap<Name, uint32> &offsets, uint32 bind_index)
+        : m_descriptor_set(descriptor_set),
+          m_pipeline(pipeline),
+          m_offsets(offsets),
+          m_bind_index(bind_index)
+    {
+        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index");
     }
 
     virtual void Execute(const CommandBufferRef &cmd) override
     {
-        if (m_graphics_pipeline) {
-            m_descriptor_set->Bind(cmd, m_graphics_pipeline, m_offsets, m_bind_index);
-        } else if (m_compute_pipeline) {
-            m_descriptor_set->Bind(cmd, m_compute_pipeline, m_offsets, m_bind_index);
-        } else {
-            AssertThrowMsg(false, "No pipeline bound to descriptor set");
-        }
+        m_pipeline.Visit([this, &cmd](const auto &pipeline)
+        {
+            m_descriptor_set->Bind(cmd, pipeline, m_offsets, m_bind_index);
+        });
     }
 
 private:
-    DescriptorSetRef        m_descriptor_set;
-    GraphicsPipelineRef     m_graphics_pipeline;
-    ComputePipelineRef      m_compute_pipeline;
-    ArrayMap<Name, uint32>  m_offsets;
-    uint32                  m_bind_index;
+    DescriptorSetRef                                                        m_descriptor_set;
+    Variant<GraphicsPipelineRef, ComputePipelineRef, RaytracingPipelineRef> m_pipeline;
+    ArrayMap<Name, uint32>                                                  m_offsets;
+    uint32                                                                  m_bind_index;
 };
 
 
@@ -361,6 +384,7 @@ private:
     uint32                                  m_frame_index;
 };
 
+HYP_DISABLE_OPTIMIZATION;
 class InsertBarrier final : public RHICommandBase
 {
 public:
@@ -392,7 +416,7 @@ public:
             m_buffer->InsertBarrier(cmd, m_state, m_shader_module_type);
         } else if (m_image) {
             if (m_sub_resource) {
-                m_image->InsertSubResourceBarrier(cmd, *m_sub_resource, m_state, m_shader_module_type);
+                m_image->InsertBarrier(cmd, *m_sub_resource, m_state, m_shader_module_type);
             } else {
                 m_image->InsertBarrier(cmd, m_state, m_shader_module_type);
             }
@@ -406,6 +430,7 @@ private:
     Optional<renderer::ImageSubResource>    m_sub_resource;
     renderer::ShaderModuleType              m_shader_module_type;
 };
+HYP_ENABLE_OPTIMIZATION;
 
 class Blit final : public RHICommandBase
 {
@@ -416,9 +441,19 @@ public:
     {
     }
 
-    Blit(const ImageRef &src_image, const ImageRef &dst_image, uint32 src_mip, uint32 dst_mip, uint32 src_face, uint32 dst_face)
+    Blit(const ImageRef &src_image, const ImageRef &dst_image, const Rect<uint32> &src_rect, const Rect<uint32> &dst_rect)
         : m_src_image(src_image),
           m_dst_image(dst_image),
+          m_src_rect(src_rect),
+          m_dst_rect(dst_rect)
+    {
+    }
+
+    Blit(const ImageRef &src_image, const ImageRef &dst_image, const Rect<uint32> &src_rect, const Rect<uint32> &dst_rect, uint32 src_mip, uint32 dst_mip, uint32 src_face, uint32 dst_face)
+        : m_src_image(src_image),
+          m_dst_image(dst_image),
+          m_src_rect(src_rect),
+          m_dst_rect(dst_rect),
           m_mip_face_info(MipFaceInfo { src_mip, dst_mip, src_face, dst_face })
     {
     }
@@ -428,9 +463,17 @@ public:
         if (m_mip_face_info) {
             MipFaceInfo info = *m_mip_face_info;
 
-            m_dst_image->Blit(cmd, m_src_image, info.src_mip, info.dst_mip, info.src_face, info.dst_face);
+            if (m_src_rect && m_dst_rect) {
+                m_dst_image->Blit(cmd, m_src_image, *m_src_rect, *m_dst_rect, info.src_mip, info.dst_mip, info.src_face, info.dst_face);
+            } else {
+                m_dst_image->Blit(cmd, m_src_image, info.src_mip, info.dst_mip, info.src_face, info.dst_face);
+            }
         } else {
-            m_dst_image->Blit(cmd, m_src_image);
+            if (m_src_rect && m_dst_rect) {
+                m_dst_image->Blit(cmd, m_src_image, *m_src_rect, *m_dst_rect);
+            } else {
+                m_dst_image->Blit(cmd, m_src_image);
+            }
         }
     }
 
@@ -445,6 +488,9 @@ private:
 
     ImageRef                m_src_image;
     ImageRef                m_dst_image;
+
+    Optional<Rect<uint32>>  m_src_rect;
+    Optional<Rect<uint32>>  m_dst_rect;
 
     Optional<MipFaceInfo>   m_mip_face_info;
 };

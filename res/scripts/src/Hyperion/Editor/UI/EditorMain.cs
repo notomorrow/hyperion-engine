@@ -325,6 +325,148 @@ namespace Hyperion
                 return UIEventHandlerResult.Ok;
             }
 
+            public UIEventHandlerResult AddPointLight()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                var light = new Light();
+                light.SetLightType(LightType.Point);
+                light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
+                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                light.SetRadius(30.0f);
+                light.SetIntensity(20.0f);
+
+                var lightEntity = editorSubsystem.GetScene().GetEntityManager().AddEntity();
+
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                    Light = light
+                });
+
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent {
+                });
+
+                var lightNode = new Node();
+                lightNode.SetName(editorSubsystem.GetScene().GetUniqueNodeName("PointLight"));
+                lightNode.SetEntity(lightEntity);
+                lightNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+
+                editorSubsystem.GetScene().GetRoot().AddChild(lightNode);
+
+                return UIEventHandlerResult.Ok;
+            }
+
+            public UIEventHandlerResult AddDirectionalLight()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                var light = new Light();
+                light.SetLightType(LightType.Directional);
+                light.SetPosition(new Vec3f(-0.5f, 0.5f, 0.0f).Normalize());
+                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                light.SetIntensity(5.0f);
+
+                var lightEntity = editorSubsystem.GetScene().GetEntityManager().AddEntity();
+
+                var lightNode = new Node();
+                lightNode.SetName(editorSubsystem.GetScene().GetUniqueNodeName("DirectionalLight"));
+                lightNode.SetEntity(lightEntity);
+                lightNode.SetWorldTranslation(new Vec3f(-0.5f, 0.5f, 0.0f).Normalize());
+
+                editorSubsystem.GetScene().GetRoot().AddChild(lightNode);
+
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                    Light = light
+                });
+
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent {
+                });
+
+                return UIEventHandlerResult.Ok;
+            }
+
+            public UIEventHandlerResult AddSpotLight()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                var light = new Light();
+                light.SetLightType(LightType.Spot);
+                light.SetPosition(new Vec3f(0.0f, 0.0f, 0.0f));
+                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                light.SetRadius(10.0f);
+                light.SetIntensity(5.0f);
+                light.SetSpotAngles(new Vec2f(30.0f * MathF.PI / 180.0f, 60.0f * MathF.PI / 180.0f));
+
+                var lightEntity = editorSubsystem.GetScene().GetEntityManager().AddEntity();
+
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                    Light = light
+                });
+
+                var lightNode = new Node();
+                lightNode.SetName(editorSubsystem.GetScene().GetUniqueNodeName("SpotLight"));
+                lightNode.SetEntity(lightEntity);
+                lightNode.SetWorldTranslation(new Vec3f(0.0f, 0.0f, 0.0f));
+
+                editorSubsystem.GetScene().GetRoot().AddChild(lightNode);
+
+                return UIEventHandlerResult.Ok;
+            }
+
+            public UIEventHandlerResult AddAreaRectLight()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                var light = new Light();
+                light.SetLightType(LightType.AreaRect);
+                light.SetPosition(new Vec3f(0.0f, 0.0f, 0.0f));
+                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                light.SetIntensity(5.0f);
+                light.SetAreaSize(new Vec2f(2.0f, 2.0f));
+
+                var lightEntity = editorSubsystem.GetScene().GetEntityManager().AddEntity();
+
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                    Light = light
+                });
+
+                var lightNode = new Node();
+                lightNode.SetName(editorSubsystem.GetScene().GetUniqueNodeName("AreaRectLight"));
+                lightNode.SetEntity(lightEntity);
+                lightNode.SetWorldTranslation(new Vec3f(0.0f, 0.0f, 0.0f));
+
+                editorSubsystem.GetScene().GetRoot().AddChild(lightNode);
+
+                return UIEventHandlerResult.Ok;
+            }
+
             public UIEventHandlerResult UndoClicked()
             {
                 Logger.Log(LogType.Info, "Undo clicked");

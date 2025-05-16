@@ -2,6 +2,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "ssr_header.inc"
+#include "../include/defines.inc"
 #include "../include/noise.inc"
 #include "../include/brdf.inc"
 
@@ -24,8 +25,13 @@ HYP_DESCRIPTOR_CBUFF(SSRDescriptorSet, UniformBuffer) uniform UniformBuffer
     float _pad2;
 } ssr_params;
 
-HYP_DESCRIPTOR_SRV(Global, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
-HYP_DESCRIPTOR_SRV(Global, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
+HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
+HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(SSRDescriptorSet, DeferredResult) uniform texture2D gbuffer_deferred_result;
+
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
@@ -35,12 +41,12 @@ HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 	ivec4 ranking_tile[128 * 128 * 8 / 4];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, ScenesBuffer) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer SceneBuffer
 {
     Scene scene;
 };
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Scene, CamerasBuffer) uniform CameraShaderData
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
 {
     Camera camera;
 };

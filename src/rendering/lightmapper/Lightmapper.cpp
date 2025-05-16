@@ -10,8 +10,8 @@
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvProbe.hpp>
+#include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderCollection.hpp>
-#include <rendering/EnvGrid.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RenderConfig.hpp>
@@ -580,24 +580,35 @@ void LightmapGPUPathTracer::UpdateUniforms(FrameBase *frame, uint32 ray_offset)
 
     uniforms.ray_offset = ray_offset;
 
-    const uint32 max_bound_lights = MathUtil::Min(g_engine->GetRenderState()->NumBoundLights(), ArraySize(uniforms.light_indices));
-    uint32 num_bound_lights = 0;
+    // const uint32 max_bound_lights = MathUtil::Min(g_engine->GetRenderState()->NumBoundLights(), ArraySize(uniforms.light_indices));
+    // uint32 num_bound_lights = 0;
 
-    for (uint32 light_type = 0; light_type < uint32(LightType::MAX); light_type++) {
-        if (num_bound_lights >= max_bound_lights) {
-            break;
-        }
+    // for (uint32 light_type = 0; light_type < uint32(LightType::MAX); light_type++) {
+    //     if (num_bound_lights >= max_bound_lights) {
+    //         break;
+    //     }
 
-        for (const auto &it : g_engine->GetRenderState()->bound_lights[light_type]) {
-            if (num_bound_lights >= max_bound_lights) {
-                break;
-            }
+    //     for (const auto &it : g_engine->GetRenderState()->bound_lights[light_type]) {
+    //         if (num_bound_lights >= max_bound_lights) {
+    //             break;
+    //         }
 
-            uniforms.light_indices[num_bound_lights++] = it->GetBufferIndex();
-        }
-    }
+    //         uniforms.light_indices[num_bound_lights++] = it->GetBufferIndex();
+    //     }
+    // }
 
-    uniforms.num_bound_lights = num_bound_lights;
+    // uniforms.num_bound_lights = num_bound_lights;
+
+    // FIXME: Lights are now stored per-view.
+    // We don't have a View for Lightmapper since it is for the entire WorldRenderResource it is indirectly attached to.
+    // We'll need to find a way to get the lights for the current view.
+    // Ideas: 
+    // a) create a View for the Lightmapper and use that to get the lights. It will need to collect the lights on the Game thread so we'll need to add some kind of System to do that.
+    // b) add a function to the SceneRenderResource to get all the lights in the scene and use that to get the lights for the current view. This has a drawback that we will always have some LightRenderResource active when it could be inactive if it is not in any view.
+    // OR: We can just use the lights in the current view and ignore the rest. This is a bit of a hack but it will work for now.
+    HYP_NOT_IMPLEMENTED();
+
+    uniforms.num_bound_lights = 0;
 
     m_uniform_buffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
 }
@@ -651,9 +662,9 @@ void LightmapGPUPathTracer::Render(FrameBase *frame, LightmapJob *job, Span<cons
     const uint32 previous_frame_index = (frame->GetFrameIndex() + max_frames_in_flight - 1) % max_frames_in_flight;
 
     const SceneRenderResource *scene_render_resource = g_engine->GetRenderState()->GetActiveScene();
-    const TResourceHandle<CameraRenderResource> &camera_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<EnvProbeRenderResource> &env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
-    EnvGrid *env_grid = g_engine->GetRenderState()->GetActiveEnvGrid();
+    const TResourceHandle<CameraRenderResource> &camera_render_resource_handle = g_engine->GetRenderState()->GetActiveCamera();
+    const TResourceHandle<EnvProbeRenderResource> &env_probe_render_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
+    const TResourceHandle<EnvGridRenderResource> &env_grid_render_resource_handle = g_engine->GetRenderState()->GetActiveEnvGrid();
 
     UpdateUniforms(frame, ray_offset);
 
@@ -698,12 +709,12 @@ void LightmapGPUPathTracer::Render(FrameBase *frame, LightmapJob *job, Span<cons
         m_raytracing_pipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             {
-                NAME("Scene"),
+                NAME("Global"),
                 {
                     { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(scene_render_resource) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) },
-                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid ? env_grid->GetComponentIndex() : 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle.Get(), 0) }
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_render_resource_handle) },
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid_render_resource_handle.Get(), 0) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_render_resource_handle.Get(), 0) }
                 }
             }
         },
@@ -721,7 +732,6 @@ void LightmapGPUPathTracer::Render(FrameBase *frame, LightmapJob *job, Span<cons
 }
 
 #pragma endregion LightmapGPUPathTracer
-
 
 #pragma region LightmapCPUPathTracer
 
@@ -814,7 +824,7 @@ void LightmapCPUPathTracer::Render(FrameBase *frame, LightmapJob *job, Span<cons
         AssertThrow(env_probe->IsReady());
 
         // prepare env probe texture to be sampled on the CPU in the tasks
-        env_probe->GetRenderResource().GetTexture()->Readback();
+        env_probe->GetRenderResource().GetPrefilteredEnvMap()->Readback();
     }
         // // testing
         // for (uint32 face_index = 0; face_index < env_probe_texture->NumFaces(); face_index++) {
@@ -845,34 +855,8 @@ void LightmapCPUPathTracer::Render(FrameBase *frame, LightmapJob *job, Span<cons
         if (env_probe.IsValid()) {
             AssertThrow(env_probe->IsReady());
 
-            env_probe_texture = env_probe->GetRenderResource().GetTexture();
+            env_probe_texture = env_probe->GetRenderResource().GetPrefilteredEnvMap();
         }
-
-        // HYP_LOG(Lightmap, Info, "(task) EnvProbeTexture = #{}", env_probe_texture.GetID().Value());
-
-        // { // debugging
-        //     const LightmapUVMap &uv_map = job->GetUVMap();
-
-        //     AssertThrowMsg(
-        //         first_ray.texel_index < uv_map.uvs.Size(),
-        //         "Texel index (%llu) out of range of UV map (size: %llu)",
-        //         first_ray.texel_index,
-        //         uv_map.uvs.Size()
-        //     );
-
-        //     const LightmapUV &uv = uv_map.uvs[first_ray.texel_index];
-
-        //     if (!uv.material) {
-        //         return;
-        //     }
-
-        //     const Vec4f color = Vec4f(uv.material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
-
-        //     LightmapHit &hit = m_hits_buffer[index];
-        //     hit.color = color;
-
-        //     return;
-        // }
 
         uint32 seed = (uint32)rand();//index * m_texel_index;
 

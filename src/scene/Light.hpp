@@ -277,26 +277,6 @@ public:
         m_mutation_state |= DataMutationState::DIRTY;
     }
 
-    /*! \brief Get the shadow map index for the light. This is used when sampling shadow maps for the particular light.
-     *
-     *  \return The shadow map index. */
-    HYP_FORCE_INLINE uint32 GetShadowMapIndex() const
-        { return m_shadow_map_index; }
-
-    /*! \brief Set the shadow map index for the light. This is used when sampling shadow maps for the particular light.
-     *
-     * \param shadow_map_index The shadow map index to set.
-     */
-    HYP_FORCE_INLINE void SetShadowMapIndex(uint32 shadow_map_index)
-    {
-        if (shadow_map_index == m_shadow_map_index) {
-            return;
-        }
-
-        m_shadow_map_index = shadow_map_index;
-        m_mutation_state |= DataMutationState::DIRTY;
-    }
-
     /*! \brief Get the material  for the light. Used for area lights.
      *
      *  \return The material handle associated with the Light. */
@@ -309,20 +289,6 @@ public:
      *  \param material The material to set for this Light. */
     HYP_METHOD(Property="Material", Serialize=true, Editor=true)
     void SetMaterial(Handle<Material> material);
-
-    /*! \brief Check if the light is set as visible to the camera.
-     *
-     * \param camera_id The camera to check visibility for.
-     * \return True if the light is visible, false otherwise.
-     */
-    bool IsVisible(ID<Camera> camera_id) const;
-
-    /*! \brief Set the visibility of the light to the camera.
-     *
-     * \param camera_id The camera to set visibility for.
-     * \param is_visible True if the light is visible, false otherwise.
-     */
-    void SetIsVisible(ID<Camera> camera_id, bool is_visible);
 
     HYP_METHOD()
     BoundingBox GetAABB() const;
@@ -343,7 +309,6 @@ protected:
     float                       m_radius;
     float                       m_falloff;
     Vec2f                       m_spot_angles;
-    uint32                      m_shadow_map_index;
     Handle<Material>            m_material;
 
 private:
@@ -351,115 +316,7 @@ private:
 
     mutable DataMutationState   m_mutation_state;
 
-    Bitset                      m_visibility_bits;
-
     LightRenderResource         *m_render_resource;
-};
-
-class HYP_API DirectionalLight : public Light
-{
-public:
-    static constexpr float default_intensity = 10.0f;
-
-    DirectionalLight(
-        Vec3f direction,
-        Color color,
-        float intensity = default_intensity
-    ) : Light(
-            LightType::DIRECTIONAL,
-            direction,
-            color,
-            intensity,
-            0.0f
-        )
-    {
-    }
-
-    HYP_FORCE_INLINE const Vec3f &GetDirection() const
-        { return GetPosition(); }
-
-    HYP_FORCE_INLINE void SetDirection(Vec3f direction)
-        { SetPosition(direction); }
-};
-
-class HYP_API PointLight : public Light
-{
-public:
-    static constexpr float default_intensity = 5.0f;
-    static constexpr float default_radius = 15.0f;
-
-    PointLight(
-        Vec3f position,
-        Color color,
-        float intensity = default_intensity,
-        float radius = default_radius
-    ) : Light(
-            LightType::POINT,
-            position,
-            color,
-            intensity,
-            radius
-        )
-    {
-    }
-};
-
-class HYP_API SpotLight : public Light
-{
-public:
-    static constexpr float default_intensity = 5.0f;
-    static constexpr float default_radius = 15.0f;
-    static constexpr float default_outer_angle = 45.0f;
-    static constexpr float default_inner_angle = 30.0f;
-
-    SpotLight(
-        Vec3f position,
-        Vec3f direction,
-        Color color,
-        float intensity = default_intensity,
-        float radius = default_radius,
-        Vec2f angles = { default_outer_angle, default_inner_angle }
-    ) : Light(
-            LightType::SPOT,
-            position,
-            direction,
-            Vec2f(0.0f, 0.0f),
-            color,
-            intensity,
-            radius
-        )
-    {
-        SetSpotAngles(angles);
-    }
-
-    HYP_FORCE_INLINE const Vec3f &GetDirection() const
-        { return GetNormal(); }
-
-    HYP_FORCE_INLINE void SetDirection(const Vec3f &direction)
-        { SetNormal(direction); }
-};
-
-class HYP_API RectangleLight : public Light
-{
-public:
-    RectangleLight(
-        Vec3f position,
-        Vec3f normal,
-        Vec2f area_size,
-        Color color,
-        float intensity = 1.0f,
-        float distance = 1.0f
-    ) : Light(
-            LightType::AREA_RECT,
-            position,
-            normal,
-            area_size,
-            color,
-            intensity,
-            distance
-        )
-    {
-    }
 };
 
 } // namespace hyperion

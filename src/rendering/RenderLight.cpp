@@ -2,6 +2,7 @@
 
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderMaterial.hpp>
+#include <rendering/RenderShadowMap.hpp>
 #include <rendering/RenderState.hpp>
 #include <rendering/ShaderGlobals.hpp>
 #include <rendering/SafeDeleter.hpp>
@@ -24,31 +25,6 @@
 
 namespace hyperion {
 
-#pragma region Render commands
-
-struct RENDER_COMMAND(UnbindLight) : renderer::RenderCommand
-{
-    WeakHandle<Light>   light_weak;
-
-    RENDER_COMMAND(UnbindLight)(const WeakHandle<Light> &light_weak)
-        : light_weak(light_weak)
-    {
-    }
-
-    virtual ~RENDER_COMMAND(UnbindLight)() override = default;
-
-    virtual RendererResult operator()() override
-    {
-        if (Handle<Light> light = light_weak.Lock()) {
-            g_engine->GetRenderState()->UnbindLight(&light->GetRenderResource());
-        }
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-#pragma endregion Render commands
-
 #pragma region LightRenderResource
 
 LightRenderResource::LightRenderResource(Light *light)
@@ -60,9 +36,9 @@ LightRenderResource::LightRenderResource(Light *light)
 LightRenderResource::LightRenderResource(LightRenderResource &&other) noexcept
     : RenderResourceBase(static_cast<RenderResourceBase &&>(other)),
       m_light(other.m_light),
-      m_visibility_bits(std::move(other.m_visibility_bits)),
       m_material(std::move(other.m_material)),
       m_material_render_resource_handle(std::move(other.m_material_render_resource_handle)),
+      m_shadow_map_render_resource_handle(std::move(other.m_shadow_map_render_resource_handle)),
       m_buffer_data(std::move(other.m_buffer_data))
 {
     other.m_light = nullptr;
@@ -85,16 +61,8 @@ void LightRenderResource::Destroy_Internal()
 void LightRenderResource::Update_Internal()
 {
     HYP_SCOPE;
-}
 
-void LightRenderResource::EnqueueUnbind()
-{
-    HYP_SCOPE;
-
-    Execute([this]()
-    {
-        g_engine->GetRenderState()->UnbindLight(this);
-    }, /* force_render_thread */ true);
+    UpdateBufferData();
 }
 
 GPUBufferHolderBase *LightRenderResource::GetGPUBufferHolder() const
@@ -106,14 +74,20 @@ void LightRenderResource::UpdateBufferData()
 {
     HYP_SCOPE;
 
+    LightShaderData *buffer_data = static_cast<LightShaderData *>(m_buffer_address);
+
+    *buffer_data = m_buffer_data;
+
     // override material buffer index
-    m_buffer_data.material_index = m_material_render_resource_handle
+    buffer_data->material_index = m_material_render_resource_handle
         ? m_material_render_resource_handle->GetBufferIndex()
         : ~0u;
 
-    // GetGPUBufferHolder()->Set(m_buffer_index, m_buffer_data);
-
-    *static_cast<LightShaderData *>(m_buffer_address) = m_buffer_data;
+    if (m_shadow_map_render_resource_handle) {
+        buffer_data->shadow_map_index = m_shadow_map_render_resource_handle->GetBufferIndex();
+    } else {
+        buffer_data->shadow_map_index = ~0u;
+    }
 
     GetGPUBufferHolder()->MarkDirty(m_buffer_index);
 }
@@ -146,41 +120,44 @@ void LightRenderResource::SetBufferData(const LightShaderData &buffer_data)
     {
         m_buffer_data = buffer_data;
 
+        if (m_shadow_map_render_resource_handle) {
+            m_buffer_data.shadow_map_index = m_shadow_map_render_resource_handle->GetBufferIndex();
+        } else {
+            m_buffer_data.shadow_map_index = ~0u;
+        }
+
         if (IsInitialized()) {
-            UpdateBufferData();
+            SetNeedsUpdate();
         }
     });
 }
 
-void LightRenderResource::SetVisibilityBits(const Bitset &visibility_bits)
+void LightRenderResource::SetShadowMapResourceHandle(TResourceHandle<ShadowMapRenderResource> &&shadow_map_render_resource_handle)
 {
     HYP_SCOPE;
 
-    Execute([this, visibility_bits]()
+    Execute([this, shadow_map_render_resource_handle = std::move(shadow_map_render_resource_handle)]()
     {
-        const SizeType previous_count = m_visibility_bits.Count();
-        const SizeType new_count = visibility_bits.Count();
+        m_shadow_map_render_resource_handle = std::move(shadow_map_render_resource_handle);
 
-        m_visibility_bits = visibility_bits;
-
-        if (previous_count != new_count) {
-            if (previous_count == 0) {
-                // May cause Initialize() to be called due to Claim() being called when binding a light.
-                g_engine->GetRenderState()->BindLight(TResourceHandle<LightRenderResource>(*this));
-            } else if (new_count == 0) {
-                // May cause Destroy() to be called due to Unclaim() being called.
-                g_engine->GetRenderState()->UnbindLight(this);
-            }
+        if (m_shadow_map_render_resource_handle) {
+            m_buffer_data.shadow_map_index = m_shadow_map_render_resource_handle->GetBufferIndex();
+        } else {
+            m_buffer_data.shadow_map_index = ~0u;
         }
-    }, /* force_render_thread */ true);
+
+        if (IsInitialized()) {
+            SetNeedsUpdate();
+        }
+    });
 }
 
 #pragma endregion LightRenderResource
 
 namespace renderer {
 
-HYP_DESCRIPTOR_SSBO(Scene, CurrentLight, 1, sizeof(LightShaderData), true);
-HYP_DESCRIPTOR_SSBO(Scene, LightsBuffer, 1, sizeof(LightShaderData), false);
+HYP_DESCRIPTOR_SSBO(Global, CurrentLight, 1, sizeof(LightShaderData), true);
+HYP_DESCRIPTOR_SSBO(Global, LightsBuffer, 1, sizeof(LightShaderData), false);
 
 } // namespace renderer
 

@@ -69,6 +69,11 @@ public:
         return true;
     }
 
+    virtual bool IsDynamicDescriptorIndexingSupported() const override
+    {
+        return false;//m_rendering_api->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
+    }
+
 private:
     VulkanRenderingAPI  *m_rendering_api;
 };
@@ -125,6 +130,10 @@ public:
             if (element.IsBindless()) {
                 descriptor_count = max_bindless_resources;
             }
+            
+            //if (descriptor_count > 1 && !m_device->GetFeatures().SupportsDynamicDescriptorIndexing()) {
+            //    return HYP_MAKE_ERROR(RendererError, "Device does not support descriptor indexing, cannot create descriptor set with element {} that uses an array of elements", 0, name);
+            //}
 
             VkDescriptorSetLayoutBinding binding { };
             binding.descriptorCount = descriptor_count;
@@ -274,11 +283,6 @@ RendererResult VulkanDescriptorSetManager::Destroy(platform::Device<Platform::VU
     return result;
 }
 
-Delegate<void, FrameBase *> &VulkanRenderingAPI::GetOnFrameEndDelegate()
-{
-    return m_on_frame_end_delegates[m_instance->GetSwapchain()->GetCurrentFrameIndex()];
-}
-
 RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(platform::Device<Platform::VULKAN> *device, const VulkanDescriptorSetLayoutWrapperRef &layout, VkDescriptorSet &out_vk_descriptor_set)
 {
     AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
@@ -386,12 +390,6 @@ RendererResult VulkanRenderingAPI::Initialize(AppContext &app_context)
     m_instance = new platform::Instance<Platform::VULKAN>();
     HYPERION_BUBBLE_ERRORS(m_instance->Initialize(app_context, g_use_debug_layers));
 
-    m_instance->GetSwapchain()->SetFrameEndCallback([this](FrameBase *frame)
-    {
-        m_on_frame_end_delegates[frame->GetFrameIndex()](frame);
-        m_on_frame_end_delegates[frame->GetFrameIndex()].RemoveAllDetached();
-    });
-
     m_crash_handler.Initialize();
 
     HYPERION_BUBBLE_ERRORS(m_descriptor_set_manager->Create(m_instance->GetDevice()));
@@ -411,7 +409,7 @@ RendererResult VulkanRenderingAPI::Initialize(AppContext &app_context)
     m_default_formats.Set(
         DefaultImageFormatType::DEPTH,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
-            { { InternalFormat::DEPTH_32F, InternalFormat::DEPTH_24, InternalFormat::DEPTH_16 } },
+            { { InternalFormat::DEPTH_24, InternalFormat::DEPTH_32F, InternalFormat::DEPTH_16 } },
             ImageSupportType::DEPTH
         )
     );
@@ -522,7 +520,10 @@ void VulkanRenderingAPI::PresentFrame(FrameBase *frame)
 
 DescriptorSetRef VulkanRenderingAPI::MakeDescriptorSet(const DescriptorSetLayout &layout)
 {
-    return MakeRenderObject<VulkanDescriptorSet>(layout);
+    DescriptorSetDeclaration decl_copy = layout.GetDeclaration();
+    decl_copy.is_template = false;
+
+    return MakeRenderObject<VulkanDescriptorSet>(DescriptorSetLayout(decl_copy));
 }
 
 DescriptorTableRef VulkanRenderingAPI::MakeDescriptorTable(const DescriptorTableDeclaration &decl)
@@ -601,9 +602,14 @@ ImageRef VulkanRenderingAPI::MakeImage(const TextureDesc &texture_desc)
     return MakeRenderObject<VulkanImage>(texture_desc);
 }
 
-ImageViewRef VulkanRenderingAPI::MakeImageView()
+ImageViewRef VulkanRenderingAPI::MakeImageView(const ImageRef &image)
 {
-    return MakeRenderObject<VulkanImageView>();
+    return MakeRenderObject<VulkanImageView>(VulkanImageRef(image));
+}
+
+ImageViewRef VulkanRenderingAPI::MakeImageView(const ImageRef &image, uint32 mip_index, uint32 num_mips, uint32 face_index, uint32 num_faces)
+{
+    return MakeRenderObject<VulkanImageView>(VulkanImageRef(image), mip_index, num_mips, face_index, num_faces);
 }
 
 SamplerRef VulkanRenderingAPI::MakeSampler(FilterMode filter_mode_min, FilterMode filter_mode_mag, WrapMode wrap_mode)
@@ -647,8 +653,8 @@ BLASRef VulkanRenderingAPI::MakeBLAS(
 )
 {
     return MakeRenderObject<VulkanBLAS>(
-        packed_vertices_buffer,
-        packed_indices_buffer,
+        VulkanGPUBufferRef(packed_vertices_buffer),
+        VulkanGPUBufferRef(packed_indices_buffer),
         material,
         transform
     );
@@ -693,14 +699,12 @@ QueryImageCapabilitiesResult VulkanRenderingAPI::QueryImageCapabilities(const Te
     const bool is_srgb = texture_desc.IsSRGB();
     const bool is_blended = texture_desc.image_format_capabilities[ImageFormatCapabilities::BLENDED];
 
-    const bool is_cubemap = texture_desc.IsTextureCube();
-
     const bool has_mipmaps = texture_desc.HasMipmaps();
     const uint32 num_mipmaps = texture_desc.NumMipmaps();
     const uint32 num_faces = texture_desc.NumFaces();
 
     VkFormat vk_format = helpers::ToVkFormat(format);
-    VkImageType vk_image_type = helpers::ToVkType(type);
+    VkImageType vk_image_type = helpers::ToVkImageType(type);
     VkImageCreateFlags vk_image_create_flags = 0;
     VkFormatFeatureFlags vk_format_features = 0;
     VkImageFormatProperties vk_image_format_properties { };
@@ -744,7 +748,7 @@ QueryImageCapabilitiesResult VulkanRenderingAPI::QueryImageCapabilities(const Te
         vk_format_features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
     }
 
-    if (is_cubemap) {
+    if (texture_desc.IsTextureCube() || texture_desc.IsTextureCubeArray()) {
         vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 

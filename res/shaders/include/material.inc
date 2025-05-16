@@ -46,7 +46,7 @@ struct Material
 #define MATERIAL_ALPHA_DISCARD         0.25
 
 #define HAS_TEXTURE(mat, index) \
-    (((mat).texture_usage & (1 << index)) != 0)
+    bool(((mat).texture_usage & (1 << index)))
 
 #define GET_TEXTURE(mat, index) \
     textures[(mat).texture_indices[(index) / 4][(index) % 4]]

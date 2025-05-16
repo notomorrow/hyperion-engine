@@ -58,11 +58,11 @@ struct Light
     vec4    normal;                 // for area lights
 
     vec2    spot_angles;            // for spot lights (x = outer, y = inner)
-    uint    material_index;            // for area lights - ~0u == no material
+    uint    material_index;         // for area lights - ~0u == no material
     uint    _pad2;
 
-    uvec4   _pad3;
-    uvec4   _pad4;
+    vec4    aabb_min;
+    vec4    aabb_max;
     uvec4   _pad5;
 };
 
@@ -73,18 +73,18 @@ struct Light
 
 struct ShadowMap
 {
-    mat4 projection;
-    mat4 view;
-    vec4 aabb_max;
-    vec4 aabb_min;
+    mat4    projection;
+    mat4    view;
+    vec4    aabb_max;
+    vec4    aabb_min;
 
-    uvec2 dimensions;
-    uint flags;
-    float _pad2;
+    vec4    dimensions_scale; // xy = slice dimensions in pixels, zw = slice dimensions relative to the atlas dimensions
+    vec2    offset_uv;
+    uint    layer_index; // atlas index, also used for point light shadow map index
+    uint    flags;
 
     vec4 _pad3; vec4 _pad4;
     vec4 _pad5; vec4 _pad6;
-    vec4 _pad7;
 };
 
 vec3 CalculateLightDirection(Light light, in vec3 world_position)

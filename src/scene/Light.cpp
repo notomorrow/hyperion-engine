@@ -46,7 +46,6 @@ Light::Light(
     m_radius(radius),
     m_falloff(1.0f),
     m_spot_angles(Vec2f::Zero()),
-    m_shadow_map_index(~0u),
     m_mutation_state(DataMutationState::CLEAN),
     m_render_resource(nullptr)
 {
@@ -70,7 +69,6 @@ Light::Light(
     m_radius(radius),
     m_falloff(1.0f),
     m_spot_angles(Vec2f::Zero()),
-    m_shadow_map_index(~0u),
     m_mutation_state(DataMutationState::CLEAN),
     m_render_resource(nullptr)
 {
@@ -120,22 +118,24 @@ void Light::EnqueueRenderUpdates()
         return;
     }
 
+    const BoundingBox aabb = GetAABB();
+
     LightShaderData buffer_data {
         .light_id           = GetID().Value(),
         .light_type         = uint32(m_type),
         .color_packed       = uint32(m_color),
         .radius             = m_radius,
         .falloff            = m_falloff,
-        .shadow_map_index   = m_shadow_map_index,
         .area_size          = m_area_size,
         .position_intensity = Vec4f(m_position, m_intensity),
         .normal             = Vec4f(m_normal, 0.0f),
         .spot_angles        = m_spot_angles,
-        .material_index     = ~0u // set later
+        .material_index     = ~0u, // set later
+        .aabb_min           = Vec4f(aabb.min, 1.0f),
+        .aabb_max           = Vec4f(aabb.max, 1.0f)
     };
 
     m_render_resource->SetBufferData(buffer_data);
-    m_render_resource->SetVisibilityBits(m_visibility_bits);
 
     m_mutation_state = DataMutationState::CLEAN;
 }
@@ -153,22 +153,6 @@ void Light::SetMaterial(Handle<Material> material)
 
         m_render_resource->SetMaterial(m_material);
 
-        m_mutation_state |= DataMutationState::DIRTY;
-    }
-}
-
-bool Light::IsVisible(ID<Camera> camera_id) const
-{
-    return m_visibility_bits.Test(camera_id.ToIndex());
-}
-
-void Light::SetIsVisible(ID<Camera> camera_id, bool is_visible)
-{
-    const bool previous_value = m_visibility_bits.Test(camera_id.ToIndex());
-
-    m_visibility_bits.Set(camera_id.ToIndex(), is_visible);
-
-    if (is_visible != previous_value && IsInitCalled()) {
         m_mutation_state |= DataMutationState::DIRTY;
     }
 }

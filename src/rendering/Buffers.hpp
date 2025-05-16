@@ -112,18 +112,6 @@ struct alignas(256) EntityShaderData
 
 static_assert(sizeof(EntityShaderData) == 256);
 
-struct alignas(256) ShadowShaderData
-{
-    Matrix4 projection;
-    Matrix4 view;
-    Vec4f   aabb_max;
-    Vec4f   aabb_min;
-    Vec2u   dimensions;
-    uint32  flags;
-};
-
-static_assert(sizeof(ShadowShaderData) == 256);
-
 struct alignas(16) ImmediateDrawShaderData
 {
     Matrix4 transform;
@@ -140,13 +128,6 @@ struct alignas(256) SH9Buffer
 };
 
 static_assert(sizeof(SH9Buffer) == 256);
-
-struct alignas(256) SHGridBuffer
-{
-    Vec4f   color_values[max_probes_in_sh_grid_buffer * 9];
-};
-
-// static_assert(sizeof(SHGridBuffer) == 9216);
 
 struct alignas(16) EnvGridProbeDataBuffer
 {
@@ -191,9 +172,6 @@ struct alignas(16) RTRadianceUniforms
 /* max number of entities, based on size in mb */
 static const SizeType max_entities = (32ull * 1024ull * 1024ull) / sizeof(EntityShaderData);
 static const SizeType max_entities_bytes = max_entities * sizeof(EntityShaderData);
-/* max number of shadow maps, based on size in kb */
-static const SizeType max_shadow_maps = (4ull * 1024ull) / sizeof(ShadowShaderData);
-static const SizeType max_shadow_maps_bytes = max_shadow_maps * sizeof(ShadowShaderData);
 
 class GPUBufferHolderBase
 {
@@ -232,8 +210,9 @@ public:
     /*! \brief Copy an element from the GPU back to the CPU side buffer.
      * \param frame_index The index of the frame to copy the element from.
      * \param index The index of the element to copy.
+     * \param dst The destination pointer to copy the element to.
      */
-    virtual void ReadbackElement(uint32 frame_index, uint32 index) = 0;
+    virtual void ReadbackElement(uint32 frame_index, uint32 index, void *dst) = 0;
 
     virtual uint32 AcquireIndex(void **out_element_ptr = nullptr) = 0;
     virtual void ReleaseIndex(uint32 index) = 0;
@@ -415,11 +394,11 @@ public:
         m_pool.MarkDirty(index);
     }
 
-    virtual void ReadbackElement(uint32 frame_index, uint32 index) override
+    virtual void ReadbackElement(uint32 frame_index, uint32 index, void *dst) override
     {
         AssertThrowMsg(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = %u, Size = %u", index, m_pool.NumAllocatedElements());
 
-        m_buffers[frame_index]->Read(sizeof(StructType) * index, sizeof(StructType), &m_pool.GetElement(index));
+        m_buffers[frame_index]->Read(sizeof(StructType) * index, sizeof(StructType), dst);
     }
 
     HYP_FORCE_INLINE uint32 AcquireIndex(StructType **out_element_ptr)

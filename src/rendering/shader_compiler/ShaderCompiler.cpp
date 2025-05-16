@@ -243,7 +243,6 @@ static TBuiltInResource DefaultResources()
     };
 }
 
-
 static bool PreprocessShaderSource(
     ShaderModuleType type,
     ShaderLanguage language,
@@ -659,6 +658,21 @@ static ByteBuffer CompileToSPIRV(
 
 #else
 
+static bool PreprocessShaderSource(
+    ShaderModuleType type,
+    ShaderLanguage language,
+    String preamble,
+    String source,
+    String filename,
+    String &out_preprocessed_source,
+    Array<String> &out_error_messages
+)
+{
+    out_preprocessed_source = source;
+
+    return true;
+}
+
 static ByteBuffer CompileToSPIRV(
     ShaderModuleType type,
     ShaderLanguage language,
@@ -970,7 +984,7 @@ DescriptorTableDeclaration DescriptorUsageSet::BuildDescriptorTable() const
             if (!descriptor_set_declaration) {
                 const uint32 set_index = uint32(table.GetElements().Size());
 
-                table.AddDescriptorSetDeclaration(DescriptorSetDeclaration(set_index, static_descriptor_set_declaration->name, true));
+                table.AddDescriptorSetDeclaration(DescriptorSetDeclaration(set_index, static_descriptor_set_declaration->name, true, static_descriptor_set_declaration->is_template));
             }
 
             continue;
@@ -1050,6 +1064,20 @@ void ShaderCompiler::GetPlatformSpecificProperties(ShaderProperties &properties)
 #elif defined(HYP_DX12) && HYP_DX12
     properties.Set(ShaderProperty("DX12", false));
 #endif
+
+#if defined(HYP_WINDOWS)
+    properties.Set(ShaderProperty("HYP_WINDOWS", false));
+#elif defined(HYP_LINUX)
+    properties.Set(ShaderProperty("HYP_LINUX", false));
+#elif defined(HYP_MACOS)
+    properties.Set(ShaderProperty("HYP_MACOS", false));
+#elif defined(HYP_IOS)
+    properties.Set(ShaderProperty("HYP_IOS", false));
+#endif
+
+    if (g_rendering_api->GetRenderConfig().IsDynamicDescriptorIndexingSupported()) {
+        properties.Set(ShaderProperty("HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING", false));
+    }
 
     if (g_rendering_api->GetRenderConfig().IsBindlessSupported()) {
         properties.Set(ShaderProperty("HYP_FEATURES_BINDLESS_TEXTURES", false));
@@ -1870,8 +1898,15 @@ bool ShaderCompiler::CompileBundle(
         // run on this thread if we are already in a task thread
         task_batch.ExecuteBlocking();
     } else {
-        TaskSystem::GetInstance().EnqueueBatch(&task_batch);
-        task_batch.AwaitCompletion();
+        // Hack fix: task threads that are currently enqueueing RenderCommands can cause a deadlock,
+        // if we are waiting on tasks to complete from the render thread.
+
+        if (Threads::IsOnThread(g_render_thread)) {
+            task_batch.ExecuteBlocking();
+        } else {
+            TaskSystem::GetInstance().EnqueueBatch(&task_batch);
+            task_batch.AwaitCompletion();
+        }
     }
 
     Array<ProcessError> all_process_errors;

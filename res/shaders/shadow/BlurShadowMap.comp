@@ -16,30 +16,37 @@ HYP_DESCRIPTOR_UAV(BlurShadowMapDescriptorSet, OutputTexture, format = rg32f) un
 
 layout(push_constant) uniform BlurShadowMapData
 {
-    uvec3 image_dimensions;
+    uvec2   image_dimensions;
+    uvec2   dimensions;
+    uvec2   offset;
 };
 
 void main(void)
 {
-    const ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-	const vec2 texcoord = vec2(coord) / vec2(image_dimensions);
+    const ivec2 local_coord = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 absolute_coord = ivec2(offset) + local_coord;
+
+    vec2 texcoord = vec2(absolute_coord) / vec2(image_dimensions);
 
     const float radius = 2.5;
-
     vec2 result = vec2(0.0);
+
+    const vec2 slice_min = vec2(offset);
+    const vec2 slice_max = vec2(offset + dimensions) - vec2(1.0);
 
     for (int x = -1; x <= 1; ++x) {
         for (int y = -1; y <= 1; ++y) {
-            vec2 offset_coord = vec2(x, y);
+            vec2 offset_coord = vec2(x, y) * radius;
 
-            vec2 offset_texcoord = offset_coord * radius / vec2(image_dimensions);
-            vec2 shadow_map_sample = Texture2D(src_sampler, src, saturate(texcoord + offset_texcoord)).rg;
+            vec2 sample_abs = vec2(absolute_coord) + offset_coord;
+            sample_abs = clamp(sample_abs, slice_min, slice_max);
 
-            result += shadow_map_sample;
+            vec2 sample_texcoord = sample_abs / vec2(image_dimensions);
+            vec2 sample_value = Texture2D(src_sampler, src, saturate(sample_texcoord)).rg;
+            result += sample_value;
         }
     }
 
     result /= 9.0;
-
-    imageStore(dst, coord, vec4(result, 0.0, 0.0));
+    imageStore(dst, absolute_coord, vec4(result, 0.0, 0.0));
 }

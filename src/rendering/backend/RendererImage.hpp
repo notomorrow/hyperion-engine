@@ -34,21 +34,6 @@ public:
     HYP_FORCE_INLINE ImageType GetType() const
         { return m_texture_desc.type; }
 
-    HYP_FORCE_INLINE bool IsTextureCube() const
-        { return m_texture_desc.IsTextureCube(); }
-
-    HYP_FORCE_INLINE bool IsPanorama() const
-        { return m_texture_desc.IsPanorama(); }
-
-    HYP_FORCE_INLINE bool IsTextureArray() const
-        { return m_texture_desc.IsTextureArray(); }
-
-    HYP_FORCE_INLINE bool IsTexture3D() const
-        { return m_texture_desc.IsTexture3D(); }
-
-    HYP_FORCE_INLINE bool IsTexture2D() const
-        { return m_texture_desc.IsTexture2D(); }
-
     HYP_FORCE_INLINE uint32 NumLayers() const
         { return m_texture_desc.num_layers; }
 
@@ -90,10 +75,15 @@ public:
 
     HYP_API virtual bool IsCreated() const = 0;
 
+    /*! \brief Returns true if the underlying GPU image is owned by this object. */
+    HYP_API virtual bool IsOwned() const = 0;
+
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Create(ResourceState initial_state) = 0;
     HYP_API virtual RendererResult Destroy() = 0;
 
+    HYP_API virtual RendererResult Resize(const Vec3u &extent) = 0;
+
     HYP_API virtual void InsertBarrier(
         CommandBufferBase *command_buffer,
         ResourceState new_state,
@@ -101,13 +91,6 @@ public:
     ) = 0;
 
     HYP_API virtual void InsertBarrier(
-        CommandBufferBase *command_buffer,
-        const ImageSubResource &sub_resource,
-        ResourceState new_state,
-        ShaderModuleType shader_module_type
-    ) = 0;
-
-    HYP_API virtual void InsertSubResourceBarrier(
         CommandBufferBase *command_buffer,
         const ImageSubResource &sub_resource,
         ResourceState new_state,
@@ -157,6 +140,8 @@ public:
         CommandBufferBase *command_buffer,
         GPUBufferBase *dst_buffer
     ) const = 0;
+
+    HYP_API virtual ImageViewRef MakeLayerImageView(uint32 layer_index) const = 0;
 
 protected:
     ImageBase()

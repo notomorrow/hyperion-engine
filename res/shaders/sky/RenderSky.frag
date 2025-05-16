@@ -37,17 +37,17 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentEnvProbe) readonly buffer CurrentEnvProbe
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
 {
     EnvProbe current_env_probe;
 };
 
-HYP_DESCRIPTOR_SSBO(Scene, ObjectsBuffer) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Scene, CurrentLight) readonly buffer CurrentLight
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentLight) readonly buffer CurrentLight
 {
     Light light;
 };
@@ -72,8 +72,6 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer
     #define CURRENT_MATERIAL material
 #endif
 #endif
-
-#define SUN_INTENSITY 32.0
 
 #define PLANET_RADIUS 6371e3
 #define ATMOSPHERE_RADIUS 6471e3
@@ -105,7 +103,7 @@ vec2 RaySphereIntersection(vec3 r0, vec3 rd, float sr)
     );
 }
 
-vec3 GetAtmosphere(vec3 ray_direction, vec3 light_direction)
+vec3 GetAtmosphere(vec3 ray_direction, vec3 light_direction, float sun_intensity)
 {
     const vec3 ray_origin = vec3(0.0, 6372e3, 0.0);
 
@@ -193,7 +191,7 @@ vec3 GetAtmosphere(vec3 ray_direction, vec3 light_direction)
     }
 
     // Calculate and return the final color.
-    return SUN_INTENSITY * (pRlh * RAYLEIGH_SCATTER_COEFF * total_rayleigh + pMie * MIE_SCATTER_COEFF * total_mie);
+    return sun_intensity * (pRlh * RAYLEIGH_SCATTER_COEFF * total_rayleigh + pMie * MIE_SCATTER_COEFF * total_mie);
 }
 
 void main()
@@ -214,7 +212,7 @@ void main()
         vec3 light_direction = normalize(light.position_intensity.xyz);
         vec3 ray_direction = normalize(v_position);
 
-        vec3 atmosphere = GetAtmosphere(ray_direction, light_direction);
+        vec3 atmosphere = GetAtmosphere(ray_direction, light_direction, light.position_intensity.w);
 
         sky_color = vec4(atmosphere, 1.0);
 #ifdef CUTOFF
@@ -225,7 +223,6 @@ void main()
 
     // exposure
     sky_color.rgb = 1.0 - exp(-1.0 * sky_color.rgb);
-    //sky_color.rgb = Tonemap(sky_color.rgb);
 
     output_color = sky_color;
 }

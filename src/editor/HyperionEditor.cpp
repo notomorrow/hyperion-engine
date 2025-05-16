@@ -25,7 +25,6 @@
 #include <scene/ecs/components/EnvGridComponent.hpp>
 #include <scene/ecs/components/ReflectionProbeComponent.hpp>
 #include <scene/ecs/components/RigidBodyComponent.hpp>
-#include <scene/ecs/components/BLASComponent.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
 #include <scene/ecs/ComponentInterface.hpp>
 
@@ -85,7 +84,7 @@ namespace editor {
 #pragma region HyperionEditor
 
 HyperionEditor::HyperionEditor()
-    : Game(ManagedGameInfo { "GameName.dll", "TestGame1" })
+    : Game()
 {
 }
 
@@ -122,7 +121,7 @@ void HyperionEditor::Init()
 
         Handle<Texture> dummy_light_texture;
 
-        if (auto dummy_light_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/dummy.jpg")) {
+        if (auto dummy_light_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/brdfLUT.png")) {
             dummy_light_texture = dummy_light_texture_asset->Result();
         }
 
@@ -169,29 +168,43 @@ void HyperionEditor::Init()
 
 #if 1
 
-    #if 0 // point light test
+    #if 0// point light test
+
+    const Vec3f positions[] = {
+        Vec3f(0.0f, 5.5f, 2.0f),
+        Vec3f(30.0f, 5.5f, 0.0f),
+        Vec3f(-30.0f, 5.5f, 0.0f),
+    };
+
+    const Color colors[] = {
+        Color(1.0f, 0.0f, 0.0f),
+        Color(0.0f, 1.0f, 0.0f),
+        Color(0.0f, 0.0f, 1.0f)
+    };
 
     // add pointlight (Test)
-    auto point_light = CreateObject<Light>(
-        LightType::POINT,
-        Vec3f(0.0f, 5.5f, 2.0f),
-        Color(0.0f, 1.0f, 0.0f),
-        30.0f,
-        50.0f
-    );
+    for (uint32 i = 0; i < std::size(positions); i++){
+        auto point_light = CreateObject<Light>(
+            LightType::POINT,
+            positions[i],
+            colors[i],
+            30.0f,
+            50.0f
+        );
 
-    NodeProxy point_light_node = m_scene->GetRoot()->AddChild();
-    point_light_node.SetName("point_light_node");
+        NodeProxy point_light_node = m_scene->GetRoot()->AddChild();
+        point_light_node.SetName(HYP_FORMAT("point_light_node_{}", i));
 
-    auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
-    point_light_node.SetEntity(point_light_entity);
-    point_light_node.SetWorldTranslation(Vec3f { 0.0f, 5.0f, 0.0f });
+        auto point_light_entity = m_scene->GetEntityManager()->AddEntity();
+        point_light_node.SetEntity(point_light_entity);
+        point_light_node.SetWorldTranslation(positions[i]);
 
-    m_scene->GetEntityManager()->AddComponent<LightComponent>(point_light_entity, LightComponent {
-        point_light
-    });
+        m_scene->GetEntityManager()->AddComponent<LightComponent>(point_light_entity, LightComponent {
+            point_light
+        });
 
-    m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(point_light_entity, ShadowMapComponent { });
+        m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(point_light_entity, ShadowMapComponent { });
+    }
 
     #endif
 
@@ -219,9 +232,9 @@ void HyperionEditor::Init()
     });
 
     m_scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sun_entity, ShadowMapComponent {
-        .mode       = ShadowMode::PCF,
+        .mode       = ShadowMapFilterMode::PCF,
         .radius     = 80.0f,
-        .resolution = { 2048, 2048 }
+        .resolution = { 1024, 1024 }
     });
     #endif
 
@@ -261,13 +274,6 @@ void HyperionEditor::Init()
 
     Handle<Entity> root_entity = GetScene()->GetEntityManager()->AddEntity();
     GetScene()->GetRoot()->SetEntity(root_entity);
-
-    GetScene()->GetEntityManager()->AddComponent<ScriptComponent>(root_entity, ScriptComponent {
-        {
-            .assembly_path  = "GameName.dll",
-            .class_name     = "FizzBuzzTest"
-        }
-    });
 
     batch->OnComplete.Bind([this](AssetMap &results)
     {
@@ -315,14 +321,6 @@ void HyperionEditor::Init()
         env_grid_node.SetEntity(env_grid_entity);
         env_grid_node.SetName("EnvGrid2");
 #endif
-        
-        for (auto &node : node.GetChildren()) {
-            if (auto child_entity = node.GetEntity()) {
-                // Add BLASComponent
-
-                m_scene->GetEntityManager()->AddComponent<BLASComponent>(child_entity, BLASComponent { });
-            }
-        }
 
         if (true) {
             // testing reflection capture
@@ -331,8 +329,8 @@ void HyperionEditor::Init()
             m_scene->GetEntityManager()->AddComponent<TransformComponent>(reflection_probe_entity, TransformComponent { });
 
             m_scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(reflection_probe_entity, BoundingBoxComponent {
-                m_scene->GetRoot()->GetWorldAABB(),
-                m_scene->GetRoot()->GetWorldAABB()
+                node->GetWorldAABB() * 1.01f,
+                node->GetWorldAABB() * 1.01f
             });
 
             m_scene->GetEntityManager()->AddComponent<ReflectionProbeComponent>(reflection_probe_entity, ReflectionProbeComponent { });
@@ -340,7 +338,7 @@ void HyperionEditor::Init()
             NodeProxy reflection_probe_node = m_scene->GetRoot()->AddChild();
             reflection_probe_node.SetEntity(reflection_probe_entity);
             reflection_probe_node.SetName("ReflectionProbeTest");
-            reflection_probe_node->SetLocalTranslation(Vec3f(0.0f, 3.0f, 0.0f));
+            reflection_probe_node->SetLocalTranslation(Vec3f(0.0f, 4.0f, 0.0f));
         }
 
 #endif
@@ -517,15 +515,11 @@ void HyperionEditor::OnInputEvent(const SystemEvent &event)
 
         if (sun) {
             sun->UnlockTransform();
-            sun->SetWorldTranslation((sun->GetWorldTranslation() + Vec3f { 0.1f, 0.0f, 0.0f }).Normalize());
+            sun->Rotate(Quaternion::AxisAngles(Vec3f(0.0f, 1.0f, 0.0f), 0.1f));
+            HYP_LOG(Editor, Info, "Sun rotation: {}", sun->GetWorldRotation());
             sun->LockTransform();
         }
     }
-}
-
-void HyperionEditor::OnFrameEnd(FrameBase *frame)
-{
-    Game::OnFrameEnd(frame);
 }
 
 #pragma endregion HyperionEditor

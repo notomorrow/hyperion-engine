@@ -6,25 +6,37 @@
 
 #include <core/object/HypClassUtils.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <util/MeshBuilder.hpp>
 
 #include <Engine.hpp>
 
 namespace hyperion {
 
-PostFXPass::PostFXPass(InternalFormat image_format)
-    : FullScreenPass(nullptr, image_format)
+HYP_DECLARE_LOG_CHANNEL(Rendering);
+
+PostFXPass::PostFXPass(InternalFormat image_format, GBuffer *gbuffer)
+    : PostFXPass(
+        nullptr,
+        POST_PROCESSING_STAGE_PRE_SHADING,
+        ~0u,
+        image_format,
+        gbuffer
+    )
 {
 }
 
 PostFXPass::PostFXPass(
     const ShaderRef &shader,
-    InternalFormat image_format
+    InternalFormat image_format,
+    GBuffer *gbuffer
 ) : PostFXPass(
         shader,
         POST_PROCESSING_STAGE_PRE_SHADING,
         ~0u,
-        image_format
+        image_format,
+        gbuffer
     )
 {
 }
@@ -33,10 +45,13 @@ PostFXPass::PostFXPass(
     const ShaderRef &shader,
     PostProcessingStage stage,
     uint32 effect_index,
-    InternalFormat image_format
+    InternalFormat image_format,
+    GBuffer *gbuffer
 ) : FullScreenPass(
         shader,
-        image_format
+        image_format,
+        Vec2u::Zero(),
+        gbuffer
     ),
     m_stage(stage),
     m_effect_index(effect_index)
@@ -52,30 +67,40 @@ void PostFXPass::CreateDescriptors()
     Threads::AssertOnThread(g_render_thread);
 
     if (m_effect_index == ~0u) {
-        DebugLog(LogType::Warn, "Effect index not set, skipping descriptor creation\n");
+        HYP_LOG(Rendering, Warning, "Effect index not set, skipping descriptor creation");
 
         return;
     }
-
-    const Name descriptor_name = m_stage == POST_PROCESSING_STAGE_PRE_SHADING
-        ? NAME("PostFXPreStack")
-        : NAME("PostFXPostStack");
-
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
-            ->SetElement(descriptor_name, m_effect_index, m_framebuffer->GetAttachment(0)->GetImageView());
+    
+    if (!g_rendering_api->GetRenderConfig().IsDynamicDescriptorIndexingSupported()) {
+        HYP_LOG(Rendering, Warning, "Creating post processing pass on a device that does not support dynamic descriptor indexing");
+        
+        return;
     }
+
+    // @TODO Reimplement
+
+    // const Name descriptor_name = m_stage == POST_PROCESSING_STAGE_PRE_SHADING
+    //     ? NAME("PostFXPreStack")
+    //     : NAME("PostFXPostStack");
+
+    // for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
+    //     g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
+    //         ->SetElement(descriptor_name, m_effect_index, m_framebuffer->GetAttachment(0)->GetImageView());
+    // }
 }
 
 PostProcessingEffect::PostProcessingEffect(
     PostProcessingStage stage,
     uint32 effect_index,
-    InternalFormat image_format
+    InternalFormat image_format,
+    GBuffer *gbuffer
 ) : m_pass(
         nullptr,
         stage,
         effect_index,
-        image_format
+        image_format,
+        gbuffer
     ),
     m_is_enabled(true)
 {
@@ -91,7 +116,7 @@ void PostProcessingEffect::Init()
     m_pass.Create();
 }
 
-void PostProcessingEffect::RenderEffect(FrameBase *frame, uint32 slot)
+void PostProcessingEffect::RenderEffect(FrameBase *frame, ViewRenderResource *view, uint32 slot)
 {
     struct alignas(128)
     {
@@ -102,7 +127,7 @@ void PostProcessingEffect::RenderEffect(FrameBase *frame, uint32 slot)
 
     m_pass.SetPushConstants(&push_constants, sizeof(push_constants));
     
-    m_pass.Render(frame);
+    m_pass.Render(frame, view);
 }
 
 PostProcessing::PostProcessing() = default;
@@ -237,14 +262,9 @@ void PostProcessing::CreateUniformBuffer()
     m_uniform_buffer = g_rendering_api->MakeGPUBuffer(renderer::GPUBufferType::CONSTANT_BUFFER, sizeof(post_processing_uniforms));
     HYPERION_ASSERT_RESULT(m_uniform_buffer->Create());
     m_uniform_buffer->Copy(sizeof(PostProcessingUniforms), &post_processing_uniforms);
-
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-        g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
-            ->SetElement(NAME("PostProcessingUniforms"), m_uniform_buffer);
-    }
 }
 
-void PostProcessing::RenderPre(FrameBase *frame) const
+void PostProcessing::RenderPre(FrameBase *frame, ViewRenderResource *view) const
 {
     Threads::AssertOnThread(g_render_thread);
 
@@ -253,13 +273,13 @@ void PostProcessing::RenderPre(FrameBase *frame) const
     for (auto &it : m_effects[uint32(POST_PROCESSING_STAGE_PRE_SHADING)]) {
         auto &effect = it.second;
 
-        effect->RenderEffect(frame, index);
+        effect->RenderEffect(frame, view, index);
 
         ++index;
     }
 }
 
-void PostProcessing::RenderPost(FrameBase *frame) const
+void PostProcessing::RenderPost(FrameBase *frame, ViewRenderResource *view) const
 {
     Threads::AssertOnThread(g_render_thread);
 
@@ -268,7 +288,7 @@ void PostProcessing::RenderPost(FrameBase *frame) const
     for (auto &it : m_effects[uint32(POST_PROCESSING_STAGE_POST_SHADING)]) {
         auto &effect = it.second;
 
-        effect->RenderEffect(frame, index);
+        effect->RenderEffect(frame, view, index);
 
         ++index;
     }
@@ -276,7 +296,7 @@ void PostProcessing::RenderPost(FrameBase *frame) const
 
 namespace renderer {
 
-HYP_DESCRIPTOR_CBUFF(Global, PostProcessingUniforms, 1, sizeof(PostProcessingUniforms), false);
+HYP_DESCRIPTOR_CBUFF(Scene, PostProcessingUniforms, 1, sizeof(PostProcessingUniforms), false);
 
 } // namespace renderer
 
