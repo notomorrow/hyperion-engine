@@ -467,6 +467,40 @@ namespace Hyperion
                 return UIEventHandlerResult.Ok;
             }
 
+            public UIEventHandlerResult AddReflectionProbe()
+            {
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                var envProbeEntity = editorSubsystem.GetScene().GetEntityManager().AddEntity();
+
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<ReflectionProbeComponent>(envProbeEntity, new ReflectionProbeComponent {
+                    Dimensions = new Vec2u(256, 256)
+                });
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<BoundingBoxComponent>(envProbeEntity, new BoundingBoxComponent {
+                    LocalAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f)),
+                    WorldAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f))
+                });
+                editorSubsystem.GetScene().GetEntityManager().AddComponent<TransformComponent>(envProbeEntity, new TransformComponent {
+                    Transform = new Transform()
+                });
+
+                var envProbeNode = new Node();
+                envProbeNode.SetName(editorSubsystem.GetScene().GetUniqueNodeName("ReflectionProbe"));
+                envProbeNode.SetEntity(envProbeEntity);
+                envProbeNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+
+                editorSubsystem.GetScene().GetRoot().AddChild(envProbeNode);
+
+                return UIEventHandlerResult.Ok;
+            }
+
             public UIEventHandlerResult UndoClicked()
             {
                 Logger.Log(LogType.Info, "Undo clicked");

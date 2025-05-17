@@ -22,11 +22,12 @@
             <MenuItem name="Add_MenuItem" text="Add" size="auto 100%" backgroundColor="#101012" borderRadius="5">
                 <MenuItem name="EmptyNode_MenuItem" text="Empty node"></MenuItem>
                 <MenuItem name="Light_MenuItem" text="Light">
-                    <MenuItem name="PointLight_MenuItem" text="Point light" onclick="AddPointLight"></MenuItem>
-                    <MenuItem name="DirectionalLight_MenuItem" text="Directional light" onclick="AddDirectionalLight"></MenuItem>
-                    <MenuItem name="SpotLight_MenuItem" text="Spot light" onclick="AddSpotLight"></MenuItem>
-                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangular area light" onclick="AddAreaRectLight"></MenuItem>
+                    <MenuItem name="PointLight_MenuItem" text="Point Light" onclick="AddPointLight"></MenuItem>
+                    <MenuItem name="DirectionalLight_MenuItem" text="Directional Light" onclick="AddDirectionalLight"></MenuItem>
+                    <MenuItem name="SpotLight_MenuItem" text="Spot Light" onclick="AddSpotLight"></MenuItem>
+                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangle Area Light" onclick="AddAreaRectLight"></MenuItem>
                 </MenuItem>
+                <MenuItem name="ReflectionProbe" text="Reflection Probe" onclick="AddReflectionProbe"></MenuItem>
             </MenuItem>
 
             <MenuItem name="Generate_Lightmaps_Button" size="auto 100%" onclick="GenerateLightmaps" backgroundColor="#101012" borderRadius="5" depth="10">

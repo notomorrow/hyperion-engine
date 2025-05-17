@@ -5,7 +5,7 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 
 layout(location=0) out vec3 v_position;
-layout(location=1) out vec2 v_texcoord0;
+layout(location=1) out vec2 v_texcoord;
 
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;
@@ -19,7 +19,7 @@ void main()
     vec4 position = vec4(a_position, 1.0);
 
     v_position = position.xyz;
-    v_texcoord0 = a_texcoord0;
+    v_texcoord = a_texcoord0;
 
     gl_Position = position;
 } 

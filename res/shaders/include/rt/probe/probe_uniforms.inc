@@ -23,10 +23,6 @@ struct DDGIUniforms
     uint _pad0, _pad1, _pad2;
 
     uvec4 light_indices[4];
-
-    //uvec4 params; // x = probe distance, y = num rays per probe, z = flags, w =  num bound lights
-
-    //float _pad0, _pad1, _pad2, _pad3;
 };
 
 struct ProbeRayData
