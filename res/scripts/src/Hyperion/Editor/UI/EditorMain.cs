@@ -60,46 +60,37 @@ namespace Hyperion
                 UIListView renderListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_RenderListView"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 15, UIObjectSize.Pixel));
                 renderListView.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
                 renderListView.SetOrientation(UIListViewOrientation.Horizontal);
+                renderListView.SetTextSize(8);
 
-                UIText fpsTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_FPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                UIText fpsTextElement = renderListView.Spawn<UIText>(new Name("FPSCounterDebugOverlay_FPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 fpsTextElement.SetText("Render:");
-                fpsTextElement.SetTextSize(12);
                 fpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 fpsTextElement.SetPadding(new Vec2i(5, 5));
                 renderListView.AddChildUIObject(fpsTextElement);
                 this.fpsTextElement = fpsTextElement;
 
-                UIText countersTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_Counters"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                UIText countersTextElement = renderListView.Spawn<UIText>(new Name("FPSCounterDebugOverlay_Counters"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 countersTextElement.SetText("draw calls: 0, Tris: 0");
-                countersTextElement.SetTextSize(12);
                 countersTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 countersTextElement.SetPadding(new Vec2i(5, 5));
                 renderListView.AddChildUIObject(countersTextElement);
                 this.countersTextElement = countersTextElement;
 
-                panel.AddChildUIObject(renderListView);
-
-                UIListView gameListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_GameListView"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 0, UIObjectSize.Auto));
-                gameListView.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
-                gameListView.SetOrientation(UIListViewOrientation.Horizontal);
-
-                UIText tpsTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_TPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                UIText tpsTextElement = renderListView.Spawn<UIText>(new Name("FPSCounterDebugOverlay_TPS"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 tpsTextElement.SetText("Game:");
-                tpsTextElement.SetTextSize(12);
                 tpsTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 tpsTextElement.SetPadding(new Vec2i(5, 5));
-                gameListView.AddChildUIObject(tpsTextElement);
+                renderListView.AddChildUIObject(tpsTextElement);
                 this.tpsTextElement = tpsTextElement;
 
-                UIText memoryUsageTextElement = spawnParent.Spawn<UIText>(new Name("FPSCounterDebugOverlay_MemoryUsage"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
+                UIText memoryUsageTextElement = renderListView.Spawn<UIText>(new Name("FPSCounterDebugOverlay_MemoryUsage"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 memoryUsageTextElement.SetText(".NET Memory Usage: 0 MB");
-                memoryUsageTextElement.SetTextSize(12);
                 memoryUsageTextElement.SetTextColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 memoryUsageTextElement.SetPadding(new Vec2i(5, 5));
-                gameListView.AddChildUIObject(memoryUsageTextElement);
+                renderListView.AddChildUIObject(memoryUsageTextElement);
                 this.memoryUsageTextElement = memoryUsageTextElement;
 
-                panel.AddChildUIObject(gameListView);
+                panel.AddChildUIObject(renderListView);
 
                 return panel;
             }
