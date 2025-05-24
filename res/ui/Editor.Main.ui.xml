@@ -20,23 +20,23 @@
     <Panel name="Main_Toolbar" position="0 25" size="100% 40">
         <MenuBar name="Tools_MenuBar" position="0 0" size="auto 100%" depth="10">
             <MenuItem name="Add_MenuItem" text="Add" size="auto 100%" backgroundColor="#000000" borderRadius="5">
-                <MenuItem name="EmptyNode_MenuItem" text="Empty node"></MenuItem>
+                <MenuItem name="Node_MenuItem" text="Node" OnClick="AddNode"></MenuItem>
                 <MenuItem name="Light_MenuItem" text="Light">
-                    <MenuItem name="PointLight_MenuItem" text="Point Light" onclick="AddPointLight"></MenuItem>
-                    <MenuItem name="DirectionalLight_MenuItem" text="Directional Light" onclick="AddDirectionalLight"></MenuItem>
-                    <MenuItem name="SpotLight_MenuItem" text="Spot Light" onclick="AddSpotLight"></MenuItem>
-                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangle Area Light" onclick="AddAreaRectLight"></MenuItem>
+                    <MenuItem name="PointLight_MenuItem" text="Point Light" OnClick="AddPointLight"></MenuItem>
+                    <MenuItem name="DirectionalLight_MenuItem" text="Directional Light" OnClick="AddDirectionalLight"></MenuItem>
+                    <MenuItem name="SpotLight_MenuItem" text="Spot Light" OnClick="AddSpotLight"></MenuItem>
+                    <MenuItem name="AreaRectLight_MenuItem" text="Rectangle Area Light" OnClick="AddAreaRectLight"></MenuItem>
                 </MenuItem>
-                <MenuItem name="ReflectionProbe" text="Reflection Probe" onclick="AddReflectionProbe"></MenuItem>
+                <MenuItem name="ReflectionProbe" text="Reflection Probe" OnClick="AddReflectionProbe"></MenuItem>
             </MenuItem>
 
             <MenuItem name="Build_MenuItem" size="auto 100%" text="Build" backgroundColor="#000000" borderRadius="5">
-                <MenuItem name="Generate_Lightmaps_Button" onclick="GenerateLightmaps">
+                <MenuItem name="Generate_Lightmaps_Button" OnClick="GenerateLightmaps">
                     Generate Lightmaps
                 </MenuItem>
             </MenuItem>
 
-            <MenuItem name="Simulate_Button" size="auto 100%" onclick="SimulateClicked" backgroundColor="#000000" borderRadius="5">
+            <MenuItem name="Simulate_Button" size="auto 100%" OnClick="SimulateClicked" backgroundColor="#000000" borderRadius="5">
                 Simulate
             </MenuItem>
         </MenuBar>
