@@ -5,12 +5,12 @@
         <MenuItem name="File_MenuItem" text="File" size="auto 100%">
             <MenuItem name="New_MenuItem" text="New"></MenuItem>
             <MenuItem name="Open_MenuItem" text="Open"></MenuItem>
-            <MenuItem name="Save_MenuItem" text="Save" onclick="SaveClicked"></MenuItem>
+            <MenuItem name="Save_MenuItem" text="Save" OnClick="SaveClicked"></MenuItem>
             <MenuItem name="Exit_MenuItem" text="Exit"></MenuItem>
         </MenuItem>
         <MenuItem name="Edit_MenuItem" text="Edit" size="auto 100%">
-            <MenuItem name="Undo_MenuItem" text="Undo" onclick="UndoClicked"></MenuItem>
-            <MenuItem name="Redo_MenuItem" text="Redo" onclick="RedoClicked"></MenuItem>
+            <MenuItem name="Undo_MenuItem" text="Undo" OnClick="UndoClicked" OnComputedVisibilityChange="UpdateUndoMenuItem"></MenuItem>
+            <MenuItem name="Redo_MenuItem" text="Redo" OnClick="RedoClicked" OnComputedVisibilityChange="UpdateRedoMenuItem"></MenuItem>
         </MenuItem>
         <MenuItem name="View_MenuItem" text="View" size="auto 100%"></MenuItem>
         <MenuItem name="Help_MenuItem" text="Help" size="auto 100%"></MenuItem>

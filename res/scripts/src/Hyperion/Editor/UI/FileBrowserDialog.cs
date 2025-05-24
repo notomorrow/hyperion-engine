@@ -90,14 +90,6 @@ namespace Hyperion
             }
         }
 
-        public class TempClass
-        {
-            public void Invoke()
-            {
-                Logger.Log(LogType.Info, "Invoked");
-            }
-        }
-
         public class FileInfoUIElementFactory : UIElementFactoryBase
         {
             public override UIObject CreateUIObject(UIObject parent, object value, object context)
@@ -109,8 +101,6 @@ namespace Hyperion
                 button.SetText(fileInfo.Name);
                 button.SetBorderRadius(0);
                 button.SetBackgroundColor(new Color(0));
-
-                button.GetOnAttachedDelegate().Bind(new TempClass());
                 
                 return button;
             }
