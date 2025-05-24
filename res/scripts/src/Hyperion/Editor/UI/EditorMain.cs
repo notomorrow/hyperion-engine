@@ -30,6 +30,7 @@ namespace Hyperion
             }
         }
 
+        
         public class FPSCounterDebugOverlay : EditorDebugOverlayBase
         {
             private static readonly List<KeyValuePair<int, Color>> fpsColors = new List<KeyValuePair<int, Color>>
@@ -200,25 +201,25 @@ namespace Hyperion
 
                 // Testing stuff
 
-                testScene = new Scene();
-                testScene.SetName(new Name("TestScene"));
-                testScene.SetFlags(SceneFlags.Foreground);
+                // testScene = new Scene();
+                // testScene.SetName(new Name("TestScene"));
+                // testScene.SetFlags(SceneFlags.Foreground);
 
-                Camera camera = new Camera();
-                camera.SetName(new Name("TestCamera"));
+                // Camera camera = new Camera();
+                // camera.SetName(new Name("TestCamera"));
 
-                firstPersonCameraController = new FirstPersonCameraController();
-                // firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
-                camera.AddCameraController(firstPersonCameraController);
+                // firstPersonCameraController = new FirstPersonCameraController();
+                // // firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
+                // camera.AddCameraController(firstPersonCameraController);
 
-                var cameraNode = new Node();
-                cameraNode.SetName("TestCameraNode");
+                // var cameraNode = new Node();
+                // cameraNode.SetName("TestCameraNode");
 
-                var cameraEntity = testScene.GetEntityManager().AddEntity();
-                testScene.GetEntityManager().AddComponent<CameraComponent>(cameraEntity, new CameraComponent { Camera = camera });
-                cameraNode.SetEntity(cameraEntity);
+                // var cameraEntity = testScene.GetEntityManager().AddEntity();
+                // testScene.GetEntityManager().AddComponent<CameraComponent>(cameraEntity, new CameraComponent { Camera = camera });
+                // cameraNode.SetEntity(cameraEntity);
 
-                testScene.GetRoot().AddChild(cameraNode);
+                // testScene.GetRoot().AddChild(cameraNode);
             }
 
             ~EditorMain()
@@ -546,9 +547,7 @@ namespace Hyperion
                         lightNode.Remove();
 
                         if (editorSubsystem.GetFocusedNode() == lightNode)
-                        {
                             editorSubsystem.SetFocusedNode(null, true);
-                        }
                     }
                 ));
 
@@ -607,9 +606,7 @@ namespace Hyperion
                         lightNode.Remove();
 
                         if (editorSubsystem.GetFocusedNode() == lightNode)
-                        {
                             editorSubsystem.SetFocusedNode(null, true);
-                        }
                     }
                 ));
 
@@ -667,9 +664,7 @@ namespace Hyperion
                         lightNode.Remove();
 
                         if (editorSubsystem.GetFocusedNode() == lightNode)
-                        {
                             editorSubsystem.SetFocusedNode(null, true);
-                        }
                     }
                 ));
 
@@ -726,9 +721,7 @@ namespace Hyperion
                         lightNode.Remove();
 
                         if (editorSubsystem.GetFocusedNode() == lightNode)
-                        {
                             editorSubsystem.SetFocusedNode(null, true);
-                        }
                     }
                 ));
 
@@ -785,9 +778,7 @@ namespace Hyperion
                         envProbeNode.Remove();
 
                         if (editorSubsystem.GetFocusedNode() == envProbeNode)
-                        {
                             editorSubsystem.SetFocusedNode(null, true);
-                        }
                     }
                 ));
 
@@ -862,7 +853,7 @@ namespace Hyperion
                 return UIEventHandlerResult.Ok;
             }
 
-            public UIEventHandlerResult AddNodeClicked()
+            public UIEventHandlerResult AddNode()
             {
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
@@ -897,9 +888,7 @@ namespace Hyperion
                         node.Remove();
 
                         if (editorSubsystem.GetFocusedNode() == node)
-                        {
                             editorSubsystem.SetFocusedNode(null, true);
-                        }
                     }
                 ));
 
