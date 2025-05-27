@@ -37,7 +37,7 @@ HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly buffer EntityInstanceBatchesBuffer
 {
-    EntityInstanceBatch_UI entity_instance_batch;
+    UIEntityInstanceBatch   entity_instance_batch;
 };
 
 #undef OBJECT_INDEX
