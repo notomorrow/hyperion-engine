@@ -26,7 +26,7 @@ struct UIObjectProperties
     UIObjectFocusState  focus_state;
 };
 
-struct EntityInstanceBatch_UI
+struct UIEntityInstanceBatch
 {
     EntityInstanceBatch batch;
     vec4                texcoords[MAX_ENTITIES_PER_INSTANCE_BATCH];
