@@ -6,15 +6,17 @@
 
 #include "include/defines.inc"
 
-layout(location=1) in vec3 v_position;
-layout(location=2) in vec2 v_texcoord0;
-layout(location=7) in flat vec3 v_camera_position;
-layout(location=15) in flat uint v_object_index;
+layout(location = 1) in vec3 v_position;
+layout(location = 2) in vec2 v_texcoord0;
+layout(location = 7) in flat vec3 v_camera_position;
+layout(location = 15) in flat uint v_object_index;
 
-layout(location=0) out vec4 output_shadow;
+layout(location = 0) out vec4 output_shadow;
 
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear)
+uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest)
+uniform sampler sampler_nearest;
 
 #define texture_sampler sampler_linear
 
@@ -26,29 +28,29 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer, size = 33554432) readonly buffer ObjectsBuffer
+HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
 
 #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
-HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer, size = 8388608) readonly buffer MaterialsBuffer
+HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 {
     Material materials[HYP_MAX_MATERIALS];
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL (materials[object.material_index])
+#define CURRENT_MATERIAL (materials[object.material_index])
 #endif
 #else
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer MaterialsBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 {
     Material material;
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL material
+#define CURRENT_MATERIAL material
 #endif
 #endif
 
@@ -67,10 +69,12 @@ void main()
     // }
 
 #if defined(HYP_SHADOW_SAMPLE_ALBEDO) && HYP_SHADOW_SAMPLE_ALBEDO
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))
+    {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
-        
-        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD) {
+
+        if (albedo_texture.a < MATERIAL_ALPHA_DISCARD)
+        {
             discard;
         }
     }

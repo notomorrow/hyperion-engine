@@ -4,14 +4,14 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout : require
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_screen_space_position;
-layout(location=2) in vec2 v_texcoord0;
-layout(location=3) in flat uint v_object_index;
-layout (location=4) in vec4 v_color;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec3 v_screen_space_position;
+layout(location = 2) in vec2 v_texcoord0;
+layout(location = 3) in flat uint v_object_index;
+layout(location = 4) in vec4 v_color;
 
-layout(location=0) out vec4 gbuffer_albedo;
-layout(location=5) out vec4 gbuffer_mask;
+layout(location = 0) out vec4 gbuffer_albedo;
+layout(location = 5) out vec4 gbuffer_mask;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
@@ -32,8 +32,10 @@ HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
     Object objects[HYP_MAX_ENTITIES];
 };
 
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear)
+uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest)
+uniform sampler sampler_nearest;
 
 #define texture_sampler sampler_linear
 
@@ -44,17 +46,17 @@ HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL (materials[object.material_index])
+#define CURRENT_MATERIAL (materials[object.material_index])
 #endif
 #else
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer, size = 128) readonly buffer MaterialsBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 {
     Material material;
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL material
+#define CURRENT_MATERIAL material
 #endif
 #endif
 
@@ -76,18 +78,19 @@ void main()
 
     vec4 ui_color = CURRENT_MATERIAL.albedo;
 
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))
+    {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, v_texcoord0);
-        
+
         ui_color *= albedo_texture;
     }
-    
+
     // rounded corners
     vec2 size = vec2(properties.size);
     vec2 position = v_texcoord0 * size;
 
     float roundedness = RoundedRectangle((size * 0.5) - position, size * 0.5, properties.border_radius);
-    
+
     float top = float((properties.border_flags & UOB_TOP) != 0u);
     float left = float((properties.border_flags & UOB_LEFT) != 0u);
     float bottom = float((properties.border_flags & UOB_BOTTOM) != 0u);
