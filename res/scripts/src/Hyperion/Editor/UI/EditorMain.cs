@@ -29,7 +29,6 @@ namespace Hyperion
                 Logger.Log(LogType.Info, "Process task! testing");
             }
         }
-
         
         public class FPSCounterDebugOverlay : EditorDebugOverlayBase
         {
@@ -492,6 +491,53 @@ namespace Hyperion
                 return UIEventHandlerResult.Ok;
             }
 
+            public UIEventHandlerResult GenerateLightmapsClicked()
+            {
+                Logger.Log(LogType.Info, "Generate Lightmaps clicked");
+
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+
+                if (currentProject == null)
+                {
+                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                Scene scene = currentProject.GetScene();
+
+                if (scene == null)
+                {
+                    Logger.Log(LogType.Error, "No scene loaded; cannot generate lightmaps");
+
+                    return UIEventHandlerResult.Error;
+                }
+
+                World world = scene.GetWorld();
+                Assert.Throw(world != null);
+
+                // @TODO: Allow building a bounding box in editor before starting the task.
+                BoundingBox lightmapVolumeAabb = new BoundingBox(new Vec3f(-20.0f, 0.0f, -20.0f), new Vec3f(20.0f, 25.0f, 20.0f));
+
+                GenerateLightmapsEditorTask generateLightmapsTask = new GenerateLightmapsEditorTask();
+                generateLightmapsTask.SetScene(scene);
+                generateLightmapsTask.SetWorld(world);
+                generateLightmapsTask.SetAABB(lightmapVolumeAabb);
+
+                editorSubsystem.AddTask(generateLightmapsTask);
+
+                return UIEventHandlerResult.Ok;
+            }
+
             public UIEventHandlerResult AddPointLight()
             {
                 Logger.Log(LogType.Info, "Add Point Light clicked");
@@ -523,11 +569,13 @@ namespace Hyperion
 
                 var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
 
-                currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent
+                {
                     Light = light
                 });
 
-                currentProject.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent {
+                currentProject.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent
+                {
                 });
 
                 var lightNode = new Node();

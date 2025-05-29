@@ -7,29 +7,31 @@
 
 #include "include/defines.inc"
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 v_texcoord0;
-layout(location=3) in vec2 v_texcoord1;
-layout(location=4) in vec3 v_tangent;
-layout(location=5) in vec3 v_bitangent;
-layout(location=7) in flat vec3 v_camera_position;
-layout(location=8) in mat3 v_tbn_matrix;
-layout(location=11) in vec4 v_position_ndc;
-layout(location=12) in vec4 v_previous_position_ndc;
-layout(location=15) in flat uint v_object_index;
-layout(location=16) in flat uint v_object_mask;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec3 v_normal;
+layout(location = 2) in vec2 v_texcoord0;
+layout(location = 3) in vec2 v_texcoord1;
+layout(location = 4) in vec3 v_tangent;
+layout(location = 5) in vec3 v_bitangent;
+layout(location = 7) in flat vec3 v_camera_position;
+layout(location = 8) in mat3 v_tbn_matrix;
+layout(location = 11) in vec4 v_position_ndc;
+layout(location = 12) in vec4 v_previous_position_ndc;
+layout(location = 15) in flat uint v_object_index;
+layout(location = 16) in flat uint v_object_mask;
 
-layout(location=0) out vec4 gbuffer_albedo;
-layout(location=1) out vec4 gbuffer_normals;
-layout(location=2) out vec4 gbuffer_material;
-layout(location=3) out vec4 gbuffer_albedo_lightmap;
-layout(location=4) out vec2 gbuffer_velocity;
-layout(location=5) out vec4 gbuffer_mask;
-layout(location=6) out vec4 gbuffer_ws_normals;
+layout(location = 0) out vec4 gbuffer_albedo;
+layout(location = 1) out vec4 gbuffer_normals;
+layout(location = 2) out vec4 gbuffer_material;
+layout(location = 3) out vec4 gbuffer_albedo_lightmap;
+layout(location = 4) out vec2 gbuffer_velocity;
+layout(location = 5) out vec4 gbuffer_mask;
+layout(location = 6) out vec4 gbuffer_ws_normals;
 
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear)
+uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest)
+uniform sampler sampler_nearest;
 
 #define texture_sampler sampler_linear
 
@@ -49,8 +51,14 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SRV(Scene, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
+{
+    EnvGrid env_grid;
+};
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
 
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -105,7 +113,7 @@ HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL (materials[object.material_index % HYP_MAX_MATERIALS])
+#define CURRENT_MATERIAL (materials[object.material_index % HYP_MAX_MATERIALS])
 #endif
 #else
 
@@ -115,7 +123,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer) readonly buffer MaterialsBu
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL material
+#define CURRENT_MATERIAL material
 #endif
 #endif
 
@@ -136,12 +144,12 @@ void main()
     const vec3 ws_normals = N;
     const vec3 P = v_position.xyz;
     const vec3 V = normalize(camera.position.xyz - P);
-    
+
     vec3 tangent_view = transpose(v_tbn_matrix) * view_vector;
     vec3 tangent_position = v_tbn_matrix * v_position;
-    
+
     gbuffer_albedo = CURRENT_MATERIAL.albedo;
-    
+
     float ao = 1.0;
     float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
     float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
@@ -149,25 +157,27 @@ void main()
     const float alpha_threshold = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ALPHA_THRESHOLD);
 
     const float normal_map_intensity = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_NORMAL_MAP_INTENSITY);
-    
+
     vec2 texcoord = v_texcoord0 * CURRENT_MATERIAL.uv_scale;
-    
+
 #if PARALLAX_ENABLED
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_PARALLAX_MAP)) {
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_PARALLAX_MAP))
+    {
         vec2 parallax_texcoord = ParallaxMappedTexCoords(
             CURRENT_MATERIAL.parallax_height,
             texcoord,
-            normalize(tangent_view)
-        );
-        
+            normalize(tangent_view));
+
         texcoord = parallax_texcoord;
     }
 #endif
 
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map)) {
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map))
+    {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
-        
-        if (albedo_texture.a < alpha_threshold) {
+
+        if (albedo_texture.a < alpha_threshold)
+        {
             discard;
         }
 
@@ -178,7 +188,8 @@ void main()
 
     vec4 normals_texture = vec4(0.0);
 
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_NORMAL_MAP)) {
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_NORMAL_MAP))
+    {
         normals_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_NORMAL_MAP, texcoord) * 2.0 - 1.0;
         normals_texture.xy *= normal_map_intensity;
         normals_texture.xyz = normalize(normals_texture.xyz);
@@ -212,7 +223,6 @@ void main()
         // gbuffer_albedo.rgb *= NdotL;
         // gbuffer_albedo.rgb *= light.position_intensity.w;
 
-
         vec3 Ft = vec3(0.0);
         vec3 Fr = vec3(0.0);
         vec3 Fd = vec3(0.0);
@@ -237,13 +247,12 @@ void main()
                 transmission, roughness,
                 vec4(0.0),
                 gbuffer_albedo,
-                vec3(ao)
-            );
+                vec3(ao));
 #endif
 
-// #ifdef ENV_GRID_ENABLED
+            // #ifdef ENV_GRID_ENABLED
             // CalculateEnvGridIrradiance(P, N, irradiance);
-// #endif
+            // #endif
 
             Fd = gbuffer_albedo.rgb * irradiance * (1.0 - E) * ao;
 
@@ -251,9 +260,8 @@ void main()
                 current_env_probe,
                 P, N, R,
                 camera.position.xyz,
-                roughness
-            );
-            
+                roughness);
+
             ibl.a = saturate(ibl.a);
 
             // vec3 specular_ao = vec3(SpecularAO_Lagarde(NdotV, ao, roughness));
@@ -272,7 +280,8 @@ void main()
         { // direct lighting
             float shadow = 1.0;
 
-            if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u) {
+            if (light.type == HYP_LIGHT_TYPE_DIRECTIONAL && light.shadow_map_index != ~0u)
+            {
                 shadow = GetShadow(light.shadow_map_index, P, texcoord, camera.dimensions.xy, NdotL);
             }
 
@@ -311,19 +320,22 @@ void main()
     }
 #endif
 
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP)) {
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP))
+    {
         float metalness_sample = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_METALNESS_MAP, texcoord).r;
-        
+
         metalness = metalness_sample;
     }
-    
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ROUGHNESS_MAP)) {
+
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ROUGHNESS_MAP))
+    {
         float roughness_sample = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ROUGHNESS_MAP, texcoord).r;
-        
+
         roughness = roughness_sample;
     }
-    
-    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_AO_MAP)) {
+
+    if (HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_AO_MAP))
+    {
         ao = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_AO_MAP, texcoord).r;
     }
 
