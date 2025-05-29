@@ -31,7 +31,7 @@
             </MenuItem>
 
             <MenuItem name="Build_MenuItem" size="auto 100%" text="Build" backgroundColor="#000000" borderRadius="5">
-                <MenuItem name="Generate_Lightmaps_Button" OnClick="GenerateLightmaps">
+                <MenuItem name="Generate_Lightmaps_Button" OnClick="GenerateLightmapsClicked">
                     Generate Lightmaps
                 </MenuItem>
             </MenuItem>

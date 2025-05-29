@@ -1,5 +1,29 @@
 {
   "rendering": {
+    "rt": {
+      "path_tracing": {
+        "enabled": false
+      },
+      "reflections": {
+        "enabled": false
+      },
+      "gi": {
+        "enabled": false
+      }
+    },
+    "ssr": {
+      "num_iterations": 128,
+      "eye_fade": [0.980000, 0.999000],
+      "ray_step": 0.100000,
+      "screen_edge_fade": [0.980000, 0.990000],
+      "quality": 1,
+      "roughness_scattering": true,
+      "enabled": true,
+      "cone_tracing": false
+    },
+    "taa": {
+      "enabled": false
+    },
     "debug": {
       "debug_drawer": {
         "enabled": true
@@ -13,53 +37,22 @@
       "hbao": false,
       "irradiance": false
     },
-    "rt": {
-      "path_tracing": {
-        "enabled": false
-      },
-      "reflections": {
-        "extent": [1024, 1024],
-        "path_tracing": false,
-        "enabled": false
-      },
-      "gi": {
-        "enabled": false
-      },
-      "enabled": false
-    },
-    "taa": {
-      "enabled": false
-    },
     "hbil": {
       "enabled": false
     },
     "env_grid": {
-      "reflections": {
-        "enabled": false
-      },
       "gi": {
         "enabled": true
+      },
+      "reflections": {
+        "enabled": false
       }
     },
     "hbao": {
-      "radius": 5,
-      "use_temporal_blending": false,
-      "power": 0.800000,
       "enabled": false
     },
     "ssgi": {
-      "quality": 0,
       "enabled": false
-    },
-    "ssr": {
-      "num_iterations": 128,
-      "eye_fade": [0.980000, 0.999000],
-      "ray_step": 0.100000,
-      "screen_edge_fade": [0.980000, 0.990000],
-      "quality": 1,
-      "roughness_scattering": true,
-      "enabled": true,
-      "cone_tracing": false
     }
   },
   "app": {
@@ -70,8 +63,8 @@
     "num_threads_per_job": 4,
     "num_samples": 1,
     "ideal_triangles_per_job": 4096,
-    "radiance": false,
     "trace_mode": 0,
+    "radiance": false,
     "max_rays_per_frame": 250000,
     "irradiance": true
   }
