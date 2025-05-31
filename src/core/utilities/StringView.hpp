@@ -467,9 +467,7 @@ public:
         return HashCode::GetHashCode(m_begin, m_end);
     }
 
-    HYP_DEF_STL_BEGIN_END(
-        m_begin,
-        m_end)
+    HYP_DEF_STL_BEGIN_END(m_begin, m_end)
 
 protected:
     constexpr StringView StrStr(const StringView& other) const

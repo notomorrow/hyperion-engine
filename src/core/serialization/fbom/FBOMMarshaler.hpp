@@ -19,7 +19,7 @@ namespace hyperion {
 struct HypData;
 } // namespace hyperion
 
-namespace hyperion::fbom {
+namespace hyperion::serialization {
 
 class FBOM;
 class FBOMObject;
@@ -89,7 +89,7 @@ public:
     }
 
     virtual FBOMResult Serialize(const T& in, FBOMObject& out) const = 0;
-    virtual FBOMResult Deserialize(fbom::FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override = 0;
+    virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override = 0;
 };
 
 template <class T>
@@ -97,14 +97,14 @@ class FBOMMarshaler : public FBOMObjectMarshalerBase<T>
 {
 public:
     virtual FBOMResult Serialize(const T& in, FBOMObject& out) const override;
-    virtual FBOMResult Deserialize(fbom::FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override;
+    virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override;
 };
 
 #define HYP_DEFINE_MARSHAL(T, MarshalType)                                                                           \
-    static ::hyperion::fbom::FBOMMarshalerRegistration<T, MarshalType> HYP_UNIQUE_NAME(marshal_registration) \
+    static ::hyperion::FBOMMarshalerRegistration<T, MarshalType> HYP_UNIQUE_NAME(marshal_registration) \
     {                                                                                                                \
     }
 
-} // namespace hyperion::fbom
+} // namespace hyperion::serialization
 
 #endif

@@ -117,10 +117,7 @@ public:
         const SizeType previous_size = m_size;
         const SizeType new_size = other.m_size;
 
-        if (previous_size != 0)
-        {
-            m_allocation.Free();
-        }
+        m_allocation.Free();
 
         if (new_size != 0)
         {
@@ -165,10 +162,7 @@ public:
         const SizeType previous_size = m_size;
         const SizeType new_size = other.m_size;
 
-        if (previous_size != 0)
-        {
-            m_allocation.Free();
-        }
+        m_allocation.Free();
 
         if (new_size != 0)
         {
@@ -378,10 +372,7 @@ public:
 
         const ubyte* data = Data();
 
-        for (SizeType index = offset; index < offset + count; index++)
-        {
-            out_values[index - offset] = data[index];
-        }
+        Memory::MemCpy(out_values, data + offset, count);
 
         return true;
     }
@@ -410,14 +401,7 @@ public:
 
         const ubyte* data = Data();
 
-        alignas(T) ubyte bytes[sizeof(T)];
-
-        for (SizeType index = offset; index < offset + count; index++)
-        {
-            bytes[index - offset] = data[index];
-        }
-
-        Memory::MemCpy(out, bytes, sizeof(T));
+        Memory::MemCpy(out, data + offset, count);
 
         return true;
     }

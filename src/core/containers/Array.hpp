@@ -52,8 +52,7 @@ struct ArrayDefaultAllocatorSelector<T, MaxInlineCapacityBytes, std::enable_if_t
     using Type = DynamicAllocator;
 };
 
-/*! \brief Array class with smart front removal and inline storage so small lists
-    do not require any heap allocation
+/*! \brief Array class with smart front removal and inline storage so small arrays do not require any heap allocation
     \details Average speed is about the same as std::vector in most cases
     \note will use a bit more memory than std::vector, partially because of inline storage in the class,
     and partially due to the front offset member, used to have fewer deallocations/shifting on PopFront(). */
@@ -612,9 +611,7 @@ public:
         return ConstByteView(reinterpret_cast<const ubyte*>(Data()) + offset, size * sizeof(T));
     }
 
-    HYP_DEF_STL_BEGIN_END(
-        GetBuffer() + m_start_offset,
-        GetBuffer() + m_size)
+    HYP_DEF_STL_BEGIN_END(GetBuffer() + m_start_offset, GetBuffer() + m_size)
 
 protected:
     HYP_FORCE_INLINE T* GetBuffer()

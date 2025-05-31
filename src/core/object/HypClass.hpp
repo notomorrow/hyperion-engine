@@ -31,10 +31,6 @@ class Object;
 struct ObjectReference;
 } // namespace dotnet
 
-namespace fbom {
-class FBOMData;
-} // namespace fbom
-
 class IResource;
 
 struct HypMember;

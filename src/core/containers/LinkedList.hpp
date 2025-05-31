@@ -323,9 +323,7 @@ public:
 
 #endif
 
-    HYP_DEF_STL_BEGIN_END(
-        { m_head },
-        { (Node*)nullptr })
+    HYP_DEF_STL_BEGIN_END({ m_head }, { (Node*)nullptr })
 
 private:
     Node* m_head;

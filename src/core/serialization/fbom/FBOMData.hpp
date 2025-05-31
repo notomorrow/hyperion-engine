@@ -68,7 +68,7 @@ enum class FBOMDataFlags
 
 HYP_MAKE_ENUM_FLAGS(FBOMDataFlags)
 
-namespace fbom {
+namespace serialization {
 
 class FBOMObject;
 class FBOMArray;
@@ -594,7 +594,7 @@ private:
     RC<HypData> m_deserialized_object;
 };
 
-} // namespace fbom
+} // namespace serialization
 } // namespace hyperion
 
 #undef FBOM_RETURN_OK

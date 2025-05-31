@@ -298,9 +298,7 @@ public:
         return m_delegate_handlers.Contains(name);
     }
 
-    HYP_DEF_STL_BEGIN_END(
-        m_delegate_handlers.Begin(),
-        m_delegate_handlers.End())
+    HYP_DEF_STL_BEGIN_END(m_delegate_handlers.Begin(), m_delegate_handlers.End())
 
 private:
     FlatMap<Name, DelegateHandler> m_delegate_handlers;

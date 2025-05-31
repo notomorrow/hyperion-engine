@@ -29,8 +29,6 @@ class StringView;
 
 namespace containers {
 
-using namespace utf;
-
 /*! \brief Dynamic string class that natively supports UTF-8, as well as UTF-16, UTF-32, wide chars and ANSI. */
 template <int TStringType>
 class String : Array<typename StringTypeImpl<TStringType>::CharType, InlineAllocator<64>>
@@ -830,9 +828,7 @@ public:
         return HashCode(::hyperion::FNV1::HashString(Data()));
     }
 
-    HYP_DEF_STL_BEGIN_END(
-        Base::Begin(),
-        Base::End() - 1)
+    HYP_DEF_STL_BEGIN_END(Base::Begin(), Base::End() - 1)
 
 protected:
     SizeType m_length;

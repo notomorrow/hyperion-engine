@@ -188,7 +188,7 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serialize_proc = [mem_fn](Span<HypData> args) -> fbom::FBOMData
+            m_serialize_proc = [mem_fn](Span<HypData> args) -> FBOMData
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes) + 1);
 
@@ -206,9 +206,9 @@ public:
                 }
                 else
                 {
-                    fbom::FBOMData out;
+                    FBOMData out;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -217,7 +217,7 @@ public:
                 }
             };
 
-            m_deserialize_proc = [mem_fn](fbom::FBOMLoadContext& context, Span<HypData> args, const fbom::FBOMData& data) -> void
+            m_deserialize_proc = [mem_fn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes));
 
@@ -227,7 +227,7 @@ public:
 
                     HypData value;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(context, data, value))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(context, data, value))
                     {
                         HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
                     }
@@ -282,7 +282,7 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serialize_proc = [mem_fn](Span<HypData> args) -> fbom::FBOMData
+            m_serialize_proc = [mem_fn](Span<HypData> args) -> FBOMData
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes) + 1);
 
@@ -300,9 +300,9 @@ public:
                 }
                 else
                 {
-                    fbom::FBOMData out;
+                    FBOMData out;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -311,7 +311,7 @@ public:
                 }
             };
 
-            m_deserialize_proc = [mem_fn](fbom::FBOMLoadContext& context, Span<HypData> args, const fbom::FBOMData& data) -> void
+            m_deserialize_proc = [mem_fn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes));
 
@@ -321,7 +321,7 @@ public:
 
                     HypData value;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(context, data, value))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<typename TupleElement<sizeof...(ArgTypes) - 1, ArgTypes...>::Type>>::Deserialize(context, data, value))
                     {
                         HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
                     }
@@ -409,7 +409,7 @@ public:
         return m_deserialize_proc.IsValid();
     }
 
-    virtual bool Serialize(Span<HypData> args, fbom::FBOMData& out) const override
+    virtual bool Serialize(Span<HypData> args, FBOMData& out) const override
     {
         if (!CanSerialize())
         {
@@ -421,7 +421,7 @@ public:
         return true;
     }
 
-    virtual bool Deserialize(fbom::FBOMLoadContext& context, HypData& target, const fbom::FBOMData& data) const override
+    virtual bool Deserialize(FBOMLoadContext& context, HypData& target, const FBOMData& data) const override
     {
         if (!m_deserialize_proc.IsValid())
         {
@@ -489,8 +489,8 @@ private:
 
     Proc<HypData(HypData**, SizeType)> m_proc;
 
-    Proc<fbom::FBOMData(Span<HypData>)> m_serialize_proc;
-    Proc<void(fbom::FBOMLoadContext&, Span<HypData>, const fbom::FBOMData&)> m_deserialize_proc;
+    Proc<FBOMData(Span<HypData>)> m_serialize_proc;
+    Proc<void(FBOMLoadContext&, Span<HypData>, const FBOMData&)> m_deserialize_proc;
 };
 
 #undef HYP_METHOD_MEMBER_FN_WRAPPER

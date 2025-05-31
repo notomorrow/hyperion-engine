@@ -23,9 +23,10 @@ class FixedArray;
 template <class T, SizeType Sz>
 class FixedArrayImpl;
 
-// #define FIXED_ARRAY_IMPL_METHOD(method_name, ...) \
-//     containers::FixedArrayImpl(&m_values[0]).method_name(__VA_ARGS__)
-
+/*! \brief FixedArray is a fixed-size array container that provides a contiguous block of memory for storing elements.
+ *  It is useful for scenarios where the size of the array is known at compile time and does not change.
+ *  \tparam T The type of elements stored in the fixed array.
+ *  \tparam Sz The size of the fixed array. */
 template <class T, SizeType Sz>
 class FixedArray
 {

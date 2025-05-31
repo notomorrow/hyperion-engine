@@ -286,14 +286,7 @@ public:
         }
     }
 
-    // HYP_DEF_STL_BEGIN_END(
-    //     Iterator(static_cast<std::conditional_t<std::is_const_v<std::remove_reference_t<decltype(*this)>>, const Base &, Base &>>(*this), 0),
-    //     Iterator(static_cast<std::conditional_t<std::is_const_v<std::remove_reference_t<decltype(*this)>>, const Base &, Base &>>(*this), Size())
-    // )
-
-    HYP_DEF_STL_BEGIN_END(
-        Iterator(static_cast<Base&>(*this), 0),
-        Iterator(static_cast<Base&>(*this), Size()));
+    HYP_DEF_STL_BEGIN_END(Iterator(static_cast<Base&>(*this), 0), Iterator(static_cast<Base&>(*this), Size()));
 };
 
 } // namespace hyperion
