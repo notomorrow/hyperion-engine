@@ -43,8 +43,6 @@ class FBOMObjectMarshalerBase;
 template <class T>
 class FBOMMarshaler;
 
-namespace detail {
-
 struct FBOMMarshalerRegistrationBase
 {
 protected:
@@ -59,8 +57,6 @@ struct FBOMMarshalerRegistration : FBOMMarshalerRegistrationBase
     {
     }
 };
-
-} // namespace detail
 
 template <class T>
 class FBOMObjectMarshalerBase : public FBOMMarshalerBase
@@ -105,7 +101,7 @@ public:
 };
 
 #define HYP_DEFINE_MARSHAL(T, MarshalType)                                                                           \
-    static ::hyperion::fbom::detail::FBOMMarshalerRegistration<T, MarshalType> HYP_UNIQUE_NAME(marshal_registration) \
+    static ::hyperion::fbom::FBOMMarshalerRegistration<T, MarshalType> HYP_UNIQUE_NAME(marshal_registration) \
     {                                                                                                                \
     }
 

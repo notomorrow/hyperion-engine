@@ -5,13 +5,9 @@
 
 namespace hyperion::fbom {
 
-namespace detail {
-
 FBOMMarshalerRegistrationBase::FBOMMarshalerRegistrationBase(TypeID type_id, ANSIStringView name, UniquePtr<FBOMMarshalerBase>&& marshal)
 {
     FBOM::GetInstance().RegisterLoader(type_id, name, std::move(marshal));
 }
-
-} // namespace detail
 
 } // namespace hyperion::fbom

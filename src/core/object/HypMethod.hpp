@@ -29,8 +29,6 @@ struct HypMethodParameter
     TypeID type_id;
 };
 
-namespace detail {
-
 #pragma region CallHypMethod
 
 template <class FunctionType, class ReturnType, class... ArgTypes, SizeType... Indices>
@@ -105,8 +103,6 @@ struct InitHypMethodParams_Tuple<ReturnType, ThisType, Tuple<ArgTypes...>>
 
 #pragma endregion InitHypMethodParams
 
-} // namespace detail
-
 enum class HypMethodFlags : uint32
 {
     NONE = 0x0,
@@ -115,8 +111,6 @@ enum class HypMethodFlags : uint32
 };
 
 HYP_MAKE_ENUM_FLAGS(HypMethodFlags)
-
-namespace detail {
 
 template <class FunctionType, class EnableIf = void>
 struct HypMethodHelper;
@@ -142,8 +136,6 @@ struct HypMethodHelper<FunctionType, std::enable_if_t<!FunctionTraits<FunctionTy
     static constexpr EnumFlags<HypMethodFlags> flags = HypMethodFlags::STATIC;
     static constexpr uint32 num_args = FunctionTraits<FunctionType>::num_args;
 };
-
-} // namespace detail
 
 #define HYP_METHOD_MEMBER_FN_WRAPPER(_mem_fn)                                                    \
     [_mem_fn]<class... InnerArgTypes>(TargetType* target, InnerArgTypes&&... args) -> ReturnType \
@@ -178,13 +170,13 @@ public:
 
                   if constexpr (std::is_void_v<ReturnType>)
                   {
-                      detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args);
+                      CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args);
 
                       return HypData();
                   }
                   else
                   {
-                      return HypData(detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args));
+                      return HypData(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args));
                   }
               })
     {
@@ -192,7 +184,7 @@ public:
         m_target_type_id = TypeID::ForType<NormalizedType<TargetType>>();
 
         m_params.Reserve(sizeof...(ArgTypes) + 1);
-        detail::InitHypMethodParams_Tuple<ReturnType, TargetType, Tuple<ArgTypes...>> {}(m_params);
+        InitHypMethodParams_Tuple<ReturnType, TargetType, Tuple<ArgTypes...>> {}(m_params);
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
@@ -216,7 +208,7 @@ public:
                 {
                     fbom::FBOMData out;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
+                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -248,7 +240,7 @@ public:
 
                     arg_ptrs[args.Size()] = &value;
 
-                    detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs);
+                    CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs);
                 }
                 else
                 {
@@ -272,13 +264,13 @@ public:
 
                   if constexpr (std::is_void_v<ReturnType>)
                   {
-                      detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args);
+                      CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args);
 
                       return HypData();
                   }
                   else
                   {
-                      return HypData(detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args));
+                      return HypData(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, args));
                   }
               })
     {
@@ -286,7 +278,7 @@ public:
         m_target_type_id = TypeID::ForType<NormalizedType<TargetType>>();
 
         m_params.Reserve(sizeof...(ArgTypes) + 1);
-        detail::InitHypMethodParams_Tuple<ReturnType, TargetType, Tuple<ArgTypes...>> {}(m_params);
+        InitHypMethodParams_Tuple<ReturnType, TargetType, Tuple<ArgTypes...>> {}(m_params);
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
@@ -310,7 +302,7 @@ public:
                 {
                     fbom::FBOMData out;
 
-                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
+                    if (fbom::FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -342,7 +334,7 @@ public:
 
                     arg_ptrs[args.Size()] = &value;
 
-                    detail::CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs);
+                    CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs);
                 }
                 else
                 {
@@ -364,13 +356,13 @@ public:
 
                   if constexpr (std::is_void_v<ReturnType>)
                   {
-                      detail::CallHypMethod<decltype(fn), ReturnType, ArgTypes...>(fn, args);
+                      CallHypMethod<decltype(fn), ReturnType, ArgTypes...>(fn, args);
 
                       return HypData();
                   }
                   else
                   {
-                      return HypData(detail::CallHypMethod<decltype(fn), ReturnType, ArgTypes...>(fn, args));
+                      return HypData(CallHypMethod<decltype(fn), ReturnType, ArgTypes...>(fn, args));
                   }
               })
     {
@@ -378,7 +370,7 @@ public:
         m_target_type_id = TypeID::Void();
 
         m_params.Reserve(sizeof...(ArgTypes));
-        detail::InitHypMethodParams_Tuple<ReturnType, void, Tuple<ArgTypes...>> {}(m_params);
+        InitHypMethodParams_Tuple<ReturnType, void, Tuple<ArgTypes...>> {}(m_params);
     }
 
     HypMethod(const HypMethod& other) = delete;

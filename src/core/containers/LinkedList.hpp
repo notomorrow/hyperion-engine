@@ -15,8 +15,6 @@
 namespace hyperion {
 
 namespace containers {
-namespace detail {
-
 template <class T>
 struct LinkedListNode
 {
@@ -25,12 +23,10 @@ struct LinkedListNode
     ValueStorage<T> value;
 };
 
-} // namespace detail
-
 template <class T>
 class LinkedList : public ContainerBase<LinkedList<T>, SizeType>
 {
-    using Node = containers::detail::LinkedListNode<T>;
+    using Node = containers::LinkedListNode<T>;
 
 public:
     static constexpr bool is_contiguous = false;

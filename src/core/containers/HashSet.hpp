@@ -17,8 +17,6 @@
 namespace hyperion {
 
 namespace containers {
-namespace detail {
-
 template <class Value>
 struct HashSetElement
 {
@@ -271,13 +269,11 @@ struct HashSetBucket
     }
 };
 
-} // namespace detail
-
-template <class Value, class ArrayAllocatorType = typename containers::detail::ArrayDefaultAllocatorSelector<Value, 32>::Type>
+template <class Value, class ArrayAllocatorType = typename containers::ArrayDefaultAllocatorSelector<Value, 32>::Type>
 struct HashTable_PooledNodeAllocator
 {
-    using Node = detail::HashSetElement<Value>;
-    using Bucket = detail::HashSetBucket<Value>;
+    using Node = HashSetElement<Value>;
+    using Bucket = HashSetBucket<Value>;
 
     Array<Node, ArrayAllocatorType> m_pool;
     Node* m_free_nodes_head = nullptr;
@@ -380,8 +376,8 @@ struct HashTable_PooledNodeAllocator
 template <class Value>
 struct HashTable_DynamicNodeAllocator
 {
-    using Node = detail::HashSetElement<Value>;
-    using Bucket = detail::HashSetBucket<Value>;
+    using Node = HashSetElement<Value>;
+    using Bucket = HashSetBucket<Value>;
 
     template <class... Args>
     HYP_FORCE_INLINE Node* Allocate(Args&&... args)
@@ -420,8 +416,8 @@ protected:
 
     static constexpr FunctionWrapper<decltype(KeyBy)> key_by_fn { KeyBy };
 
-    using Node = detail::HashSetElement<Value>;
-    using Bucket = detail::HashSetBucket<Value>;
+    using Node = HashSetElement<Value>;
+    using Bucket = HashSetBucket<Value>;
 
     using BucketArray = Array<Bucket, InlineAllocator<initial_bucket_size>>;
 

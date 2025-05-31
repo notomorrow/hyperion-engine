@@ -39,8 +39,6 @@ struct HypPropertyTypeInfo
     TypeID value_type_id; // for getter or setter: getter is param type, setter is return type
 };
 
-namespace detail {
-
 template <class T>
 using UnwrappedSerializationType = NormalizedType<typename SerializationWrapperReverseMapping<NormalizedType<T>>::Type>;
 
@@ -49,8 +47,6 @@ constexpr TypeID GetUnwrappedSerializationTypeID()
 {
     return TypeID::ForType<UnwrappedSerializationType<T>>();
 }
-
-} // namespace detail
 
 struct HypPropertyGetter
 {
@@ -79,7 +75,7 @@ struct HypPropertyGetter
               })
 
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ReturnType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ReturnType>();
     }
 
     template <class ReturnType, class TargetType>
@@ -100,7 +96,7 @@ struct HypPropertyGetter
                   return out;
               })
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ReturnType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ReturnType>();
     }
 
     template <class ReturnType, class TargetType>
@@ -121,7 +117,7 @@ struct HypPropertyGetter
                   return out;
               })
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ReturnType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ReturnType>();
     }
 
     // Special getter that takes no target. Used for Enums
@@ -143,7 +139,7 @@ struct HypPropertyGetter
                   return out;
               })
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ReturnType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ReturnType>();
     }
 
     template <class ValueType, class TargetType, typename = std::enable_if_t<!std::is_member_function_pointer_v<ValueType TargetType::*>>>
@@ -164,7 +160,7 @@ struct HypPropertyGetter
                   return out;
               })
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ValueType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ValueType>();
     }
 
     HYP_FORCE_INLINE explicit operator bool() const
@@ -250,7 +246,7 @@ struct HypPropertySetter
                   }
               })
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ValueType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ValueType>();
     }
 
     template <class ReturnType, class TargetType, class ValueType>
@@ -285,7 +281,7 @@ struct HypPropertySetter
                   }
               })
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ValueType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ValueType>();
     }
 
     template <class ValueType, class TargetType, typename = std::enable_if_t<!std::is_member_function_pointer_v<ValueType TargetType::*>>>
@@ -320,7 +316,7 @@ struct HypPropertySetter
                   }
               })
     {
-        type_info.value_type_id = detail::GetUnwrappedSerializationTypeID<ValueType>();
+        type_info.value_type_id = GetUnwrappedSerializationTypeID<ValueType>();
     }
 
     HYP_FORCE_INLINE explicit operator bool() const

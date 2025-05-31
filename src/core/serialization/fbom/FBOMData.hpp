@@ -301,7 +301,7 @@ public:
     }
 
     template <int TStringType>
-    HYP_FORCE_INLINE FBOMResult ReadString(containers::detail::String<TStringType>& str) const
+    HYP_FORCE_INLINE FBOMResult ReadString(containers::String<TStringType>& str) const
     {
         static_assert(TStringType == int(StringType::ANSI) || TStringType == int(StringType::UTF8), "String type must be ANSI or UTF8");
 
@@ -329,7 +329,7 @@ public:
     }
 
     template <int TStringType>
-    HYP_FORCE_INLINE static FBOMData FromString(const containers::detail::String<TStringType>& str)
+    HYP_FORCE_INLINE static FBOMData FromString(const containers::String<TStringType>& str)
     {
         return FromString(StringView<TStringType>(str));
     }
@@ -341,7 +341,7 @@ public:
     }
 
     template <int TStringType>
-    explicit FBOMData(const containers::detail::String<TStringType>& str)
+    explicit FBOMData(const containers::String<TStringType>& str)
         : FBOMData(FromString(str))
     {
     }

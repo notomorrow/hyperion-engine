@@ -55,8 +55,6 @@ struct HypDataHelper;
 template <class T, class T2 = void>
 struct HypDataHelperDecl;
 
-namespace detail {
-
 template <class T, class ConvertibleFromTuple>
 struct HypDataTypeChecker_Tuple;
 
@@ -69,11 +67,7 @@ struct HypDataGetReturnTypeHelper
     using Type = decltype(std::declval<HypDataHelper<T>>().Get(*std::declval<std::add_pointer_t<std::conditional_t<IsConst, std::add_const_t<T>, T>>>()));
 };
 
-} // namespace detail
-
 using HypDataSerializeFunction = fbom::FBOMResult (*)(const HypData& data, fbom::FBOMData& out);
-
-namespace detail {
 
 template <class T>
 struct DefaultHypDataSerializeFunction;
@@ -88,8 +82,6 @@ struct DefaultHypDataSerializeFunction<void>
         return { fbom::FBOMResult::FBOM_ERR, "No serialization function provided" };
     }
 };
-
-} // namespace detail
 
 /*! \brief A type-safe union that can store multiple different types of run-time data, abstracting away internal engine structures such as Handle<T>, RC<T>, etc.
  *  Providing a unified way of accessing the data via Get<T>() and TryGet<T>() methods.
@@ -145,7 +137,7 @@ struct HypData
     HypDataSerializeFunction serialize_function;
 
     HypData()
-        : serialize_function(&detail::DefaultHypDataSerializeFunction<void>::Serialize)
+        : serialize_function(&DefaultHypDataSerializeFunction<void>::Serialize)
     {
     }
 
@@ -165,7 +157,7 @@ struct HypData
         : value(std::move(other.value)),
           serialize_function(other.serialize_function)
     {
-        other.serialize_function = &detail::DefaultHypDataSerializeFunction<void>::Serialize;
+        other.serialize_function = &DefaultHypDataSerializeFunction<void>::Serialize;
     }
 
     HypData& operator=(HypData&& other) noexcept
@@ -177,7 +169,7 @@ struct HypData
 
         value = std::move(other.value);
         serialize_function = other.serialize_function;
-        other.serialize_function = &detail::DefaultHypDataSerializeFunction<void>::Serialize;
+        other.serialize_function = &DefaultHypDataSerializeFunction<void>::Serialize;
 
         return *this;
     }
@@ -259,15 +251,15 @@ struct HypData
 
             if (strict)
             {
-                return detail::HypDataTypeChecker_Tuple<T, Tuple<>> {}(value);
+                return HypDataTypeChecker_Tuple<T, Tuple<>> {}(value);
             }
 
-            return detail::HypDataTypeChecker_Tuple<T, typename HypDataHelper<T>::ConvertibleFrom> {}(value);
+            return HypDataTypeChecker_Tuple<T, typename HypDataHelper<T>::ConvertibleFrom> {}(value);
         }
     }
 
     template <class T>
-    HYP_FORCE_INLINE auto Get() -> std::conditional_t<std::is_same_v<T, HypData>, HypData&, typename detail::HypDataGetReturnTypeHelper<T, false>::Type>
+    HYP_FORCE_INLINE auto Get() -> std::conditional_t<std::is_same_v<T, HypData>, HypData&, typename HypDataGetReturnTypeHelper<T, false>::Type>
     {
         HYP_SCOPE;
 
@@ -277,11 +269,11 @@ struct HypData
         }
         else
         {
-            using ReturnType = typename detail::HypDataGetReturnTypeHelper<T, false>::Type;
+            using ReturnType = typename HypDataGetReturnTypeHelper<T, false>::Type;
 
             Optional<ReturnType> result_value;
 
-            detail::HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
+            HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
 
             AssertThrowMsg(getter_instance(value, result_value),
                 "Failed to invoke HypData Get method with T = %s - Mismatched types or T could not be converted to the held type (current TypeID = %u)",
@@ -293,7 +285,7 @@ struct HypData
     }
 
     template <class T>
-    HYP_FORCE_INLINE auto Get() const -> std::conditional_t<std::is_same_v<T, HypData>, const HypData&, typename detail::HypDataGetReturnTypeHelper<T, true>::Type>
+    HYP_FORCE_INLINE auto Get() const -> std::conditional_t<std::is_same_v<T, HypData>, const HypData&, typename HypDataGetReturnTypeHelper<T, true>::Type>
     {
         HYP_SCOPE;
 
@@ -303,11 +295,11 @@ struct HypData
         }
         else
         {
-            using ReturnType = typename detail::HypDataGetReturnTypeHelper<T, true>::Type;
+            using ReturnType = typename HypDataGetReturnTypeHelper<T, true>::Type;
 
             Optional<ReturnType> result_value;
 
-            detail::HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
+            HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
 
             AssertThrowMsg(getter_instance(value, result_value),
                 "Failed to invoke HypData Get method with T = %s - Mismatched types or T could not be converted to the held type (current TypeID = %u)",
@@ -319,7 +311,7 @@ struct HypData
     }
 
     template <class T>
-    HYP_FORCE_INLINE auto TryGet() -> Optional<std::conditional_t<std::is_same_v<T, HypData>, HypData&, typename detail::HypDataGetReturnTypeHelper<T, false>::Type>>
+    HYP_FORCE_INLINE auto TryGet() -> Optional<std::conditional_t<std::is_same_v<T, HypData>, HypData&, typename HypDataGetReturnTypeHelper<T, false>::Type>>
     {
         HYP_SCOPE;
 
@@ -329,11 +321,11 @@ struct HypData
         }
         else
         {
-            using ReturnType = typename detail::HypDataGetReturnTypeHelper<T, false>::Type;
+            using ReturnType = typename HypDataGetReturnTypeHelper<T, false>::Type;
 
             Optional<ReturnType> result_value;
 
-            detail::HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
+            HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
             getter_instance(value, result_value);
 
             return result_value;
@@ -341,7 +333,7 @@ struct HypData
     }
 
     template <class T>
-    HYP_FORCE_INLINE auto TryGet() const -> Optional<std::conditional_t<std::is_same_v<T, HypData>, const HypData&, typename detail::HypDataGetReturnTypeHelper<T, true>::Type>>
+    HYP_FORCE_INLINE auto TryGet() const -> Optional<std::conditional_t<std::is_same_v<T, HypData>, const HypData&, typename HypDataGetReturnTypeHelper<T, true>::Type>>
     {
         HYP_SCOPE;
 
@@ -351,11 +343,11 @@ struct HypData
         }
         else
         {
-            using ReturnType = typename detail::HypDataGetReturnTypeHelper<T, true>::Type;
+            using ReturnType = typename HypDataGetReturnTypeHelper<T, true>::Type;
 
             Optional<ReturnType> result_value;
 
-            detail::HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
+            HypDataGetter_Tuple<ReturnType, T, typename HypDataHelper<T>::ConvertibleFrom> getter_instance {};
             getter_instance(value, result_value);
 
             return result_value;
@@ -398,11 +390,9 @@ struct HypData
     void Set_Internal(T&& value)
     {
         this->value.Set<NormalizedType<T>>(std::forward<T>(value));
-        serialize_function = &detail::DefaultHypDataSerializeFunction<NormalizedType<T>>::Serialize;
+        serialize_function = &DefaultHypDataSerializeFunction<NormalizedType<T>>::Serialize;
     }
 };
-
-namespace detail {
 
 template <class T>
 struct DefaultHypDataSerializeFunction
@@ -417,8 +407,6 @@ struct DefaultHypDataSerializeFunction
         return {};
     }
 };
-
-} // namespace detail
 
 #pragma region HypDataMarshalHelper
 
@@ -485,10 +473,8 @@ struct HypDataMarshalHelper
 
 #pragma endregion HypDataMarshalHelper
 
-namespace detail {
 template <class T>
 struct HypDataPlaceholderSerializedType;
-} // namespace detail
 
 template <class T>
 struct HypDataHelperDecl<T, std::enable_if_t<std::is_fundamental_v<T>>>
@@ -1394,41 +1380,41 @@ struct HypDataHelper<Any>
 };
 
 template <int StringType>
-struct HypDataHelperDecl<containers::detail::String<StringType>>
+struct HypDataHelperDecl<containers::String<StringType>>
 {
 };
 
 template <int StringType>
-struct HypDataHelper<containers::detail::String<StringType>> : HypDataHelper<Any>
+struct HypDataHelper<containers::String<StringType>> : HypDataHelper<Any>
 {
     using ConvertibleFrom = Tuple<>;
 
     HYP_FORCE_INLINE bool Is(const Any& value) const
     {
-        return value.Is<containers::detail::String<StringType>>();
+        return value.Is<containers::String<StringType>>();
     }
 
-    HYP_FORCE_INLINE containers::detail::String<StringType>& Get(Any& value) const
+    HYP_FORCE_INLINE containers::String<StringType>& Get(Any& value) const
     {
-        return value.Get<containers::detail::String<StringType>>();
+        return value.Get<containers::String<StringType>>();
     }
 
-    HYP_FORCE_INLINE const containers::detail::String<StringType>& Get(const Any& value) const
+    HYP_FORCE_INLINE const containers::String<StringType>& Get(const Any& value) const
     {
-        return value.Get<containers::detail::String<StringType>>();
+        return value.Get<containers::String<StringType>>();
     }
 
-    HYP_FORCE_INLINE void Set(HypData& hyp_data, const containers::detail::String<StringType>& value) const
+    HYP_FORCE_INLINE void Set(HypData& hyp_data, const containers::String<StringType>& value) const
     {
-        HypDataHelper<Any>::Set(hyp_data, Any::Construct<containers::detail::String<StringType>>(value));
+        HypDataHelper<Any>::Set(hyp_data, Any::Construct<containers::String<StringType>>(value));
     }
 
-    HYP_FORCE_INLINE void Set(HypData& hyp_data, containers::detail::String<StringType>&& value) const
+    HYP_FORCE_INLINE void Set(HypData& hyp_data, containers::String<StringType>&& value) const
     {
-        HypDataHelper<Any>::Set(hyp_data, Any::Construct<containers::detail::String<StringType>>(std::move(value)));
+        HypDataHelper<Any>::Set(hyp_data, Any::Construct<containers::String<StringType>>(std::move(value)));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const containers::detail::String<StringType>& value, fbom::FBOMData& out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const containers::String<StringType>& value, fbom::FBOMData& out_data)
     {
         HYP_SCOPE;
 
@@ -1439,7 +1425,7 @@ struct HypDataHelper<containers::detail::String<StringType>> : HypDataHelper<Any
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext& context, const fbom::FBOMData& data, HypData& out)
     {
-        containers::detail::String<StringType> result;
+        containers::String<StringType> result;
 
         if (fbom::FBOMResult err = data.ReadString(result))
         {
@@ -1453,28 +1439,28 @@ struct HypDataHelper<containers::detail::String<StringType>> : HypDataHelper<Any
 };
 
 template <int StringType>
-struct HypDataHelperDecl<utilities::detail::StringView<StringType>>
+struct HypDataHelperDecl<utilities::StringView<StringType>>
 {
 };
 
 template <int StringType>
-struct HypDataHelper<utilities::detail::StringView<StringType>> : HypDataHelper<containers::detail::String<StringType>>
+struct HypDataHelper<utilities::StringView<StringType>> : HypDataHelper<containers::String<StringType>>
 {
-    using ConvertibleFrom = Tuple<containers::detail::String<StringType>>;
+    using ConvertibleFrom = Tuple<containers::String<StringType>>;
 
     HYP_FORCE_INLINE bool Is(const Any& value) const
     {
-        return HypDataHelper<containers::detail::String<StringType>>::Is(value);
+        return HypDataHelper<containers::String<StringType>>::Is(value);
     }
 
-    HYP_FORCE_INLINE utilities::detail::StringView<StringType> Get(const Any& value) const
+    HYP_FORCE_INLINE utilities::StringView<StringType> Get(const Any& value) const
     {
-        return HypDataHelper<containers::detail::String<StringType>>::Get(value);
+        return HypDataHelper<containers::String<StringType>>::Get(value);
     }
 
-    HYP_FORCE_INLINE void Set(HypData& hyp_data, const utilities::detail::StringView<StringType>& value) const
+    HYP_FORCE_INLINE void Set(HypData& hyp_data, const utilities::StringView<StringType>& value) const
     {
-        HypDataHelper<containers::detail::String<StringType>>::Set(hyp_data, value);
+        HypDataHelper<containers::String<StringType>>::Set(hyp_data, value);
     }
 };
 
@@ -1600,7 +1586,7 @@ struct HypDataHelper<Array<T, AllocatorType>, std::enable_if_t<!std::is_const_v<
         if (size == 0)
         {
             // If size is empty, serialize a placeholder value to get the element type
-            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(detail::HypDataPlaceholderSerializedType<T>::Get()));
+            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(HypDataPlaceholderSerializedType<T>::Get()));
 
             return fbom::FBOMResult::FBOM_OK;
         }
@@ -1692,7 +1678,7 @@ struct HypDataHelper<FixedArray<T, Size>, std::enable_if_t<!std::is_const_v<T>>>
         if (Size == 0)
         {
             // If size is empty, serialize a placeholder value to get the element type
-            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(detail::HypDataPlaceholderSerializedType<T>::Get()));
+            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(HypDataPlaceholderSerializedType<T>::Get()));
 
             return fbom::FBOMResult::FBOM_OK;
         }
@@ -1781,7 +1767,7 @@ struct HypDataHelper<T[Size], std::enable_if_t<!std::is_const_v<T>>> : HypDataHe
         if (Size == 0)
         {
             // If size is empty, serialize a placeholder value to get the element type
-            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(detail::HypDataPlaceholderSerializedType<T>::Get()));
+            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(HypDataPlaceholderSerializedType<T>::Get()));
 
             return fbom::FBOMResult::FBOM_OK;
         }
@@ -1963,7 +1949,7 @@ struct HypDataHelper<HashMap<K, V>> : HypDataHelper<Any>
         if (size == 0)
         {
             // If size is empty, serialize a placeholder value to get the element type
-            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(detail::HypDataPlaceholderSerializedType<Pair<K, V>>::Get()));
+            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(HypDataPlaceholderSerializedType<Pair<K, V>>::Get()));
 
             return fbom::FBOMResult::FBOM_OK;
         }
@@ -2060,7 +2046,7 @@ struct HypDataHelper<HashSet<ValueType, KeyByFunction>> : HypDataHelper<Any>
         if (size == 0)
         {
             // If size is empty, serialize a placeholder value to get the element type
-            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(detail::HypDataPlaceholderSerializedType<ValueType>::Get()));
+            out_data = fbom::FBOMData::FromArray(fbom::FBOMArray(HypDataPlaceholderSerializedType<ValueType>::Get()));
 
             return fbom::FBOMResult::FBOM_OK;
         }
@@ -2120,8 +2106,6 @@ struct HypDataHelper<HashSet<ValueType, KeyByFunction>> : HypDataHelper<Any>
 
 // fwd decl for math types
 namespace math {
-namespace detail {
-
 template <class T>
 struct Vec2;
 
@@ -2131,40 +2115,39 @@ struct Vec3;
 template <class T>
 struct Vec4;
 
-} // namespace detail
 } // namespace math
 
 template <class T>
-struct HypDataHelperDecl<math::detail::Vec2<T>>
+struct HypDataHelperDecl<math::Vec2<T>>
 {
 };
 
 template <class T>
-struct HypDataHelper<math::detail::Vec2<T>> : HypDataHelper<Any>
+struct HypDataHelper<math::Vec2<T>> : HypDataHelper<Any>
 {
     using ConvertibleFrom = Tuple<>;
 
     HYP_FORCE_INLINE bool Is(const Any& value) const
     {
-        return value.Is<math::detail::Vec2<T>>();
+        return value.Is<math::Vec2<T>>();
     }
 
-    HYP_FORCE_INLINE math::detail::Vec2<T>& Get(Any& value) const
+    HYP_FORCE_INLINE math::Vec2<T>& Get(Any& value) const
     {
-        return value.Get<math::detail::Vec2<T>>();
+        return value.Get<math::Vec2<T>>();
     }
 
-    HYP_FORCE_INLINE const math::detail::Vec2<T>& Get(const Any& value) const
+    HYP_FORCE_INLINE const math::Vec2<T>& Get(const Any& value) const
     {
-        return value.Get<math::detail::Vec2<T>>();
+        return value.Get<math::Vec2<T>>();
     }
 
-    HYP_FORCE_INLINE void Set(HypData& hyp_data, const math::detail::Vec2<T>& value) const
+    HYP_FORCE_INLINE void Set(HypData& hyp_data, const math::Vec2<T>& value) const
     {
-        HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::detail::Vec2<T>>(value));
+        HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::Vec2<T>>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::detail::Vec2<T>& value, fbom::FBOMData& out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::Vec2<T>& value, fbom::FBOMData& out_data)
     {
         HYP_SCOPE;
 
@@ -2175,7 +2158,7 @@ struct HypDataHelper<math::detail::Vec2<T>> : HypDataHelper<Any>
 
     HYP_FORCE_INLINE static fbom::FBOMResult Deserialize(fbom::FBOMLoadContext& context, const fbom::FBOMData& data, HypData& out)
     {
-        math::detail::Vec2<T> result;
+        math::Vec2<T> result;
 
         if (fbom::FBOMResult err = data.Read(&result))
         {
@@ -2189,36 +2172,36 @@ struct HypDataHelper<math::detail::Vec2<T>> : HypDataHelper<Any>
 };
 
 template <class T>
-struct HypDataHelperDecl<math::detail::Vec3<T>>
+struct HypDataHelperDecl<math::Vec3<T>>
 {
 };
 
 template <class T>
-struct HypDataHelper<math::detail::Vec3<T>> : HypDataHelper<Any>
+struct HypDataHelper<math::Vec3<T>> : HypDataHelper<Any>
 {
     using ConvertibleFrom = Tuple<>;
 
     HYP_FORCE_INLINE bool Is(const Any& value) const
     {
-        return value.Is<math::detail::Vec3<T>>();
+        return value.Is<math::Vec3<T>>();
     }
 
-    HYP_FORCE_INLINE math::detail::Vec3<T>& Get(Any& value) const
+    HYP_FORCE_INLINE math::Vec3<T>& Get(Any& value) const
     {
-        return value.Get<math::detail::Vec3<T>>();
+        return value.Get<math::Vec3<T>>();
     }
 
-    HYP_FORCE_INLINE const math::detail::Vec3<T>& Get(const Any& value) const
+    HYP_FORCE_INLINE const math::Vec3<T>& Get(const Any& value) const
     {
-        return value.Get<math::detail::Vec3<T>>();
+        return value.Get<math::Vec3<T>>();
     }
 
-    HYP_FORCE_INLINE void Set(HypData& hyp_data, const math::detail::Vec3<T>& value) const
+    HYP_FORCE_INLINE void Set(HypData& hyp_data, const math::Vec3<T>& value) const
     {
-        HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::detail::Vec3<T>>(value));
+        HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::Vec3<T>>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::detail::Vec3<T>& value, fbom::FBOMData& out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::Vec3<T>& value, fbom::FBOMData& out_data)
     {
         HYP_SCOPE;
 
@@ -2231,7 +2214,7 @@ struct HypDataHelper<math::detail::Vec3<T>> : HypDataHelper<Any>
     {
         HYP_SCOPE;
 
-        math::detail::Vec3<T> result;
+        math::Vec3<T> result;
 
         if (fbom::FBOMResult err = data.Read(&result))
         {
@@ -2245,36 +2228,36 @@ struct HypDataHelper<math::detail::Vec3<T>> : HypDataHelper<Any>
 };
 
 template <class T>
-struct HypDataHelperDecl<math::detail::Vec4<T>>
+struct HypDataHelperDecl<math::Vec4<T>>
 {
 };
 
 template <class T>
-struct HypDataHelper<math::detail::Vec4<T>> : HypDataHelper<Any>
+struct HypDataHelper<math::Vec4<T>> : HypDataHelper<Any>
 {
     using ConvertibleFrom = Tuple<>;
 
     HYP_FORCE_INLINE bool Is(const Any& value) const
     {
-        return value.Is<math::detail::Vec4<T>>();
+        return value.Is<math::Vec4<T>>();
     }
 
-    HYP_FORCE_INLINE math::detail::Vec4<T>& Get(Any& value) const
+    HYP_FORCE_INLINE math::Vec4<T>& Get(Any& value) const
     {
-        return value.Get<math::detail::Vec4<T>>();
+        return value.Get<math::Vec4<T>>();
     }
 
-    HYP_FORCE_INLINE const math::detail::Vec4<T>& Get(const Any& value) const
+    HYP_FORCE_INLINE const math::Vec4<T>& Get(const Any& value) const
     {
-        return value.Get<math::detail::Vec4<T>>();
+        return value.Get<math::Vec4<T>>();
     }
 
-    HYP_FORCE_INLINE void Set(HypData& hyp_data, const math::detail::Vec4<T>& value) const
+    HYP_FORCE_INLINE void Set(HypData& hyp_data, const math::Vec4<T>& value) const
     {
-        HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::detail::Vec4<T>>(value));
+        HypDataHelper<Any>::Set(hyp_data, Any::Construct<math::Vec4<T>>(value));
     }
 
-    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::detail::Vec4<T>& value, fbom::FBOMData& out_data)
+    HYP_FORCE_INLINE static fbom::FBOMResult Serialize(const math::Vec4<T>& value, fbom::FBOMData& out_data)
     {
         HYP_SCOPE;
 
@@ -2287,7 +2270,7 @@ struct HypDataHelper<math::detail::Vec4<T>> : HypDataHelper<Any>
     {
         HYP_SCOPE;
 
-        math::detail::Vec4<T> result;
+        math::Vec4<T> result;
 
         if (fbom::FBOMResult err = data.Read(&result))
         {
@@ -2788,8 +2771,6 @@ struct HypDataHelper<T, std::enable_if_t<!HypData::can_store_directly<T> && !imp
     }
 };
 
-namespace detail {
-
 #pragma region HypDataTypeChecker implementation
 
 template <class T>
@@ -2918,8 +2899,6 @@ struct HypDataGetter_Tuple<ReturnType, T, Tuple<ConvertibleFrom...>>
 };
 
 #pragma endregion HypDataGetter implementation
-
-} // namespace detail
 
 static_assert(sizeof(HypData) == 40, "sizeof(HypData) must match C# struct size");
 
