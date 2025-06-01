@@ -188,8 +188,6 @@ struct LightmapJobParams
     Handle<Scene> scene;
     Handle<LightmapVolume> volume;
 
-    uint32 element_index; // corresponds to element index in the lightmap volume
-
     Span<LightmapSubElement> sub_elements_view;
     HashMap<Handle<Entity>, LightmapSubElement*>* sub_elements_by_entity;
 
@@ -332,7 +330,6 @@ public:
 
 private:
     LightmapJobParams CreateLightmapJobParams(
-        uint32 element_index,
         SizeType start_index,
         SizeType end_index,
         LightmapTopLevelAccelerationStructure* acceleration_structure);

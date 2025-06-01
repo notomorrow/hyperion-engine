@@ -81,6 +81,11 @@ HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
+HYP_DESCRIPTOR_SSBO(Global, LightmapVolumesBuffer) readonly buffer LightmapVolumesBuffer
+{
+    LightmapVolume lightmap_volumes[];
+};
+
 #ifdef FORWARD_LIGHTING
 #include "include/brdf.inc"
 #include "deferred/DeferredLighting.glsl"

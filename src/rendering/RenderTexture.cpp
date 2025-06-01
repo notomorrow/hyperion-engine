@@ -469,7 +469,16 @@ void RenderTexture::Readback(ByteBuffer& out_byte_buffer)
 {
     HYP_SCOPE;
 
-    Execute([this, &out_byte_buffer]()
+    Task<Result> task;
+
+    if (!IsInitialized())
+    {
+        task.Fulfill(HYP_MAKE_ERROR(Error, "RenderTexture is not initialized, cannot readback texture data"));
+
+        return;
+    }
+
+    Execute([this, &out_byte_buffer, task_executor = task.Initialize()]()
         {
             Threads::AssertOnThread(g_render_thread);
 
@@ -493,14 +502,29 @@ void RenderTexture::Readback(ByteBuffer& out_byte_buffer)
                 });
 
             RendererResult result = commands.Execute();
-            AssertThrowMsg(!result.HasError(), "Failed to readback texture: %s", result.GetError().GetMessage().Data());
+
+            if (result.HasError())
+            {
+                task_executor->Fulfill(result.GetError());
+
+                return;
+            }
 
             out_byte_buffer.SetSize(gpu_buffer->Size());
             gpu_buffer->Read(out_byte_buffer.Size(), out_byte_buffer.Data());
 
             gpu_buffer->Destroy();
+
+            task_executor->Fulfill(Result());
         },
         /* force_owner_thread */ true);
+
+    Result result = task.Await();
+
+    if (result.HasError())
+    {
+        HYP_FAIL("Failed to readback texture! %s", result.GetError().GetMessage().Data());
+    }
 }
 
 void RenderTexture::Resize(const Vec3u& extent)

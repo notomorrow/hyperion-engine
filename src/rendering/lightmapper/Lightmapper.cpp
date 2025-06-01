@@ -32,7 +32,6 @@
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>
-#include <scene/ecs/components/LightmapElementComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
@@ -1049,6 +1048,8 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, LightmapJob* job, Span<cons
             });
     }
 
+    TaskSystem::GetInstance().EnqueueBatch(task_batch);
+
     job->AddTask(task_batch);
 }
 
@@ -1199,6 +1200,7 @@ void LightmapJob::Process()
     if (m_num_concurrent_rendering_tasks.Get(MemoryOrder::ACQUIRE) >= g_max_concurrent_rendering_tasks_per_job)
     {
         // Wait for current rendering tasks to complete before enqueueing new ones.
+
         return;
     }
 
@@ -1252,7 +1254,8 @@ void LightmapJob::Process()
             {
                 if (!task_batch->IsCompleted())
                 {
-                    // Wait for next call
+                    // Skip this call
+
                     return;
                 }
             }
@@ -1283,6 +1286,9 @@ void LightmapJob::Process()
         && m_texel_index >= m_texel_indices.Size() * m_params.config->num_samples
         && m_num_concurrent_rendering_tasks.Get(MemoryOrder::ACQUIRE) == 0)
     {
+        HYP_LOG(Lightmap, Debug, "Lightmap job {}: All texels processed ({} / {}), stopping",
+            m_uuid, m_texel_index, m_texel_indices.Size() * m_params.config->num_samples);
+
         Stop();
 
         return;
@@ -1526,7 +1532,6 @@ bool Lightmapper::IsComplete() const
 }
 
 LightmapJobParams Lightmapper::CreateLightmapJobParams(
-    uint32 element_index,
     SizeType start_index,
     SizeType end_index,
     LightmapTopLevelAccelerationStructure* acceleration_structure)
@@ -1535,7 +1540,6 @@ LightmapJobParams Lightmapper::CreateLightmapJobParams(
         &m_config,
         m_scene,
         m_volume,
-        element_index,
         m_sub_elements.ToSpan().Slice(start_index, end_index - start_index),
         &m_sub_elements_by_entity,
         acceleration_structure
@@ -1634,7 +1638,6 @@ void Lightmapper::PerformLightmapping()
         m_acceleration_structure->Add(&sub_element, &bvh_component->bvh);
     }
 
-    uint32 element_index = 0;
     uint32 num_triangles = 0;
     SizeType start_index = 0;
 
@@ -1646,13 +1649,12 @@ void Lightmapper::PerformLightmapping()
 
         if (ideal_triangles_per_job != 0 && num_triangles != 0 && num_triangles + sub_element.mesh->NumIndices() / 3 > ideal_triangles_per_job)
         {
-            UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(element_index, start_index, index + 1, m_acceleration_structure.Get()));
+            UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, index + 1, m_acceleration_structure.Get()));
 
             start_index = index + 1;
 
             AddJob(std::move(job));
 
-            ++element_index;
             num_triangles = 0;
         }
 
@@ -1661,7 +1663,7 @@ void Lightmapper::PerformLightmapping()
 
     if (start_index < m_sub_elements.Size() - 1)
     {
-        UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(element_index, start_index, m_sub_elements.Size(), m_acceleration_structure.Get()));
+        UniquePtr<LightmapJob> job = MakeUnique<LightmapJob>(CreateLightmapJobParams(start_index, m_sub_elements.Size(), m_acceleration_structure.Get()));
 
         AddJob(std::move(job));
     }
@@ -1700,114 +1702,19 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
     const LightmapUVMap& uv_map = job->GetUVMap();
 
-    Bitmap<4, float> radiance_bitmap = uv_map.ToBitmapRadiance();
-    Bitmap<4, float> irradiance_bitmap = uv_map.ToBitmapIrradiance();
+    // Bitmap<4, float> radiance_bitmap = uv_map.ToBitmapRadiance();
+    // Bitmap<4, float> irradiance_bitmap = uv_map.ToBitmapIrradiance();
 
-    // for (auto &bitmap : bitmaps) {
-    //     Bitmap<4, float> bitmap_dilated = bitmap;
-
-    //     // Dilate lightmap
-    //     for (uint32 x = 0; x < bitmap.GetWidth(); x++) {
-    //         for (uint32 y = 0; y < bitmap.GetHeight(); y++) {
-    //             Vec3f color = bitmap.GetPixel(x, y);
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x - 1, y - 1));
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x, y - 1));
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x + 1, y - 1));
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x - 1, y));
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x + 1, y));
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x - 1, y + 1));
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x, y + 1));
-    //             color = MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) > 0.0f ? color : Vec3f(bitmap.GetPixel(x + 1, y + 1));
-
-    //             bitmap_dilated.GetPixel(x, y) = color;
-    //         }
-    //     }
-
-    //     bitmap = bitmap_dilated;
-
-    //     // Apply bilateral blur
-    //     Bitmap<4, float> bitmap_blurred = bitmap;
-
-    //     for (uint32 x = 0; x < bitmap.GetWidth(); x++) {
-    //         for (uint32 y = 0; y < bitmap.GetHeight(); y++) {
-    //             Vec3f color = Vec3f(0.0f);
-
-    //             float total_weight = 0.0f;
-
-    //             for (int dx = -1; dx <= 1; dx++) {
-    //                 for (int dy = -1; dy <= 1; dy++) {
-    //                     const uint32 nx = x + dx;
-    //                     const uint32 ny = y + dy;
-
-    //                     if (nx >= bitmap.GetWidth() || ny >= bitmap.GetHeight()) {
-    //                         continue;
-    //                     }
-
-    //                     const Vec3f neighbor_color = bitmap.GetPixel(nx, ny);
-
-    //                     const float spatial_weight = MathUtil::Exp(-float(dx * dx + dy * dy) / (2.0f * 1.0f));
-    //                     const float color_weight = MathUtil::Exp(-(neighbor_color - bitmap.GetPixel(x, y)).LengthSquared() / (2.0f * 0.1f));
-
-    //                     const float weight = spatial_weight * color_weight;
-
-    //                     color += neighbor_color * weight;
-    //                     total_weight += weight;
-    //                 }
-    //             }
-
-    //             bitmap_blurred.GetPixel(x, y) = color / MathUtil::Max(total_weight, MathUtil::epsilon_f);
-    //         }
-    //     }
-
-    //     bitmap = bitmap_blurred;
-    // }
-
-    // Temp; write to rgb8 bitmap
-    uint32 num = rand() % 150;
-    radiance_bitmap.Write("lightmap_" + String::ToString(num) + "_radiance.bmp");
-    irradiance_bitmap.Write("lightmap_" + String::ToString(num) + "_irradiance.bmp");
-
-    Handle<Texture> irradiance_texture;
-    Handle<Texture> radiance_texture;
-
-    irradiance_texture = CreateObject<Texture>(TextureData {
-        TextureDesc {
-            ImageType::TEXTURE_TYPE_2D,
-            InternalFormat::RGBA32F,
-            Vec3u { uv_map.width, uv_map.height, 1 },
-            FilterMode::TEXTURE_FILTER_LINEAR,
-            FilterMode::TEXTURE_FILTER_LINEAR,
-            WrapMode::TEXTURE_WRAP_REPEAT },
-        ByteBuffer(irradiance_bitmap.GetUnpackedFloats().ToByteView()) });
-
-    InitObject(irradiance_texture);
-
-    radiance_texture = CreateObject<Texture>(TextureData {
-        TextureDesc {
-            ImageType::TEXTURE_TYPE_2D,
-            InternalFormat::RGBA32F,
-            Vec3u { uv_map.width, uv_map.height, 1 },
-            FilterMode::TEXTURE_FILTER_LINEAR,
-            FilterMode::TEXTURE_FILTER_LINEAR,
-            WrapMode::TEXTURE_WRAP_REPEAT },
-        ByteBuffer(radiance_bitmap.GetUnpackedFloats().ToByteView()) });
-
-    InitObject(radiance_texture);
+    // // Temp; write to rgb8 bitmap
+    // uint32 num = rand() % 150;
+    // radiance_bitmap.Write("lightmap_" + String::ToString(num) + "_radiance.bmp");
+    // irradiance_bitmap.Write("lightmap_" + String::ToString(num) + "_irradiance.bmp");
 
     LightmapElement element;
-    element.index = job->GetParams().element_index;
 
-    element.entries.PushBack(LightmapElementTextureEntry {
-        LightmapElementTextureType::RADIANCE,
-        radiance_texture });
-
-    element.entries.PushBack(LightmapElementTextureEntry {
-        LightmapElementTextureType::IRRADIANCE,
-        irradiance_texture });
-
-    if (!job->GetParams().volume->AddElement(std::move(element)))
+    if (!job->GetParams().volume->AddElement(uv_map, element))
     {
-        HYP_LOG(Lightmap, Error, "Failed to add LightmapElement with index {} to LightmapVolume", job->GetParams().element_index);
+        HYP_LOG(Lightmap, Error, "Failed to add LightmapElement to LightmapVolume");
 
         return;
     }
@@ -1834,37 +1741,69 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
         sub_element.material->SetBucket(BUCKET_LIGHTMAP);
 
-        // temp; not thread safe
-        sub_element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, radiance_texture);
-        sub_element.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, irradiance_texture);
+        // // temp - will instead be set in the lightmap volume
+        // sub_element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, radiance_texture);
+        // sub_element.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, irradiance_texture);
 
-        m_scene->GetEntityManager()->PushCommand([=, element_index = job->GetParams().element_index, volume = job->GetParams().volume, sub_element = sub_element, new_material = (is_new_material ? sub_element.material : Handle<Material>::empty)](EntityManager& mgr, GameCounter::TickUnit)
+        auto update_mesh_component = [entity_manager_weak = m_scene->GetEntityManager()->WeakRefCountedPtrFromThis(), element_index = element.index, volume = job->GetParams().volume, sub_element = sub_element, new_material = (is_new_material ? sub_element.material : Handle<Material>::empty)]()
+        {
+            RC<EntityManager> entity_manager = entity_manager_weak.Lock();
+
+            if (!entity_manager)
             {
-                const Handle<Entity>& entity = sub_element.entity;
+                HYP_LOG(Lightmap, Error, "Failed to lock EntityManager while updating lightmap element");
 
-                if (mgr.HasComponent<LightmapElementComponent>(entity))
-                {
-                    mgr.RemoveComponent<LightmapElementComponent>(entity);
-                }
+                return;
+            }
 
-                mgr.AddComponent<LightmapElementComponent>(entity, LightmapElementComponent { element_index, volume->GetUUID(), volume.ToWeak() });
+            const Handle<Entity>& entity = sub_element.entity;
+
+            if (entity_manager->HasComponent<MeshComponent>(entity))
+            {
+                MeshComponent& mesh_component = entity_manager->GetComponent<MeshComponent>(entity);
 
                 if (new_material.IsValid())
                 {
                     InitObject(new_material);
 
-                    if (MeshComponent* mesh_component = mgr.TryGetComponent<MeshComponent>(entity))
-                    {
-                        mesh_component->material = std::move(new_material);
-                    }
-                    else
-                    {
-                        mgr.AddComponent<MeshComponent>(entity, MeshComponent { sub_element.mesh, new_material });
-                    }
-
-                    mgr.AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
+                    mesh_component.material = std::move(new_material);
                 }
-            });
+
+                mesh_component.lightmap_volume = volume.ToWeak();
+                mesh_component.lightmap_element_index = element_index;
+                mesh_component.lightmap_volume_uuid = volume->GetUUID();
+            }
+            else
+            {
+                AssertThrow(new_material.IsValid());
+                InitObject(new_material);
+
+                MeshComponent mesh_component {};
+                mesh_component.mesh = sub_element.mesh;
+                mesh_component.material = new_material;
+                mesh_component.lightmap_volume = volume.ToWeak();
+                mesh_component.lightmap_element_index = element_index;
+                mesh_component.lightmap_volume_uuid = volume->GetUUID();
+
+                entity_manager->AddComponent<MeshComponent>(entity, std::move(mesh_component));
+            }
+
+            entity_manager->AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
+        };
+
+        if (Threads::IsOnThread(m_scene->GetEntityManager()->GetOwnerThreadID()))
+        {
+            // If we are on the same thread, we can update the mesh component immediately
+            update_mesh_component();
+        }
+        else
+        {
+            // Enqueue the update to be performed on the owner thread
+            IThread* thread = Threads::GetThread(m_scene->GetEntityManager()->GetOwnerThreadID());
+            AssertThrow(thread != nullptr);
+
+            thread->GetScheduler().Enqueue(std::move(update_mesh_component), TaskEnqueueFlags::FIRE_AND_FORGET);
+        }
     }
 
     m_queue.Pop();
