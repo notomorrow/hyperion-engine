@@ -54,6 +54,9 @@ struct ShadowMapAtlasElement
     // Point light shadow maps only: index of the cubemap in the texture array
     uint32 point_light_index = ~0u;
 
+    // Index of the element in the atlas
+    uint32 index = ~0u;
+
     // Offset in the atlas texture array, in uv space
     Vec2f offset_uv;
 
@@ -70,6 +73,7 @@ struct ShadowMapAtlasElement
     {
         return atlas_index == other.atlas_index
             && point_light_index == other.point_light_index
+            && index == other.index
             && offset_uv == other.offset_uv
             && offset_coords == other.offset_coords
             && dimensions == other.dimensions
@@ -80,6 +84,7 @@ struct ShadowMapAtlasElement
     {
         return atlas_index != other.atlas_index
             || point_light_index != other.point_light_index
+            || index != other.index
             || offset_uv != other.offset_uv
             || offset_coords != other.offset_coords
             || dimensions != other.dimensions

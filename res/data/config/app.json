@@ -65,7 +65,7 @@
     "ideal_triangles_per_job": 10000,
     "trace_mode": 0,
     "radiance": false,
-    "max_rays_per_frame": 250000,
+    "max_rays_per_frame": 2500,
     "irradiance": true
   }
 }

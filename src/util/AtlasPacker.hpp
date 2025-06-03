@@ -36,7 +36,14 @@ struct AtlasPacker
 
     ~AtlasPacker() = default;
 
-    bool AddElement(const Vec2u& element_dimensions, AtlasElement& out_element);
+    /*! \brief Adds an element to the atlas, if it will fit.
+     *  \param element_dimensions The dimensions of the element to add.
+     *  \param out_element The element that was added, with its offset, scale and other properties set.
+     *  \param shrink_to_fit If true, the dimensions element will be shrunk to fit the atlas if it doesn't fit. Aspect ratio will be maintained.
+     *  \param downscale_limit The lowest downscale ratio compared to `element_dimensions` to apply when shrinking the element to fit before giving up. (default: 0.25 = 25% of `element_dimensions`)
+     *  \return True if the element was added successfully, false otherwise.
+     */
+    bool AddElement(const Vec2u& element_dimensions, AtlasElement& out_element, bool shrink_to_fit = true, float downscale_limit = 0.25f);
     bool RemoveElement(const AtlasElement& element);
 
     void Clear();
@@ -54,37 +61,93 @@ AtlasPacker<AtlasElement>::AtlasPacker(const Vec2u& atlas_dimensions)
 }
 
 template <class AtlasElement>
-bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& element_dimensions, AtlasElement& out_element)
+bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& element_dimensions, AtlasElement& out_element, bool shrink_to_fit, float downscale_limit)
 {
-    int best_y = INT32_MAX;
-    int best_x = -1;
-    int best_index = -1;
-
-    for (SizeType i = 0; i < free_spaces.Size(); i++)
+    if (element_dimensions.x == 0 || element_dimensions.y == 0)
     {
-        Vec2u offset;
+        return false;
+    }
 
-        if (CalculateFitOffset(uint32(i), element_dimensions, offset))
+    auto try_add_element_to_skyline = [this, &out_element](const Vec2u& element_dimensions) -> bool
+    {
+        int best_y = INT32_MAX;
+        int best_x = -1;
+        int best_index = -1;
+
+        for (SizeType i = 0; i < free_spaces.Size(); i++)
         {
-            if (int(offset.y) < best_y)
+            Vec2u offset;
+
+            if (CalculateFitOffset(uint32(i), element_dimensions, offset))
             {
-                best_x = int(offset.x);
-                best_y = int(offset.y);
-                best_index = int(i);
+                if (int(offset.y) < best_y)
+                {
+                    best_x = int(offset.x);
+                    best_y = int(offset.y);
+                    best_index = int(i);
+                }
             }
+        }
+
+        if (best_index != -1)
+        {
+            out_element.index = elements.Size();
+            out_element.offset_coords = Vec2u { uint32(best_x), uint32(best_y) };
+            out_element.offset_uv = Vec2f(out_element.offset_coords) / Vec2f(atlas_dimensions - 1);
+            out_element.dimensions = element_dimensions;
+            out_element.scale = Vec2f(element_dimensions) / Vec2f(atlas_dimensions);
+
+            elements.PushBack(out_element);
+
+            AddSkylineNode(uint32(best_index), Vec2u { element_dimensions.x, 0 }, Vec2u { uint32(best_x), uint32(best_y) + element_dimensions.y });
+
+            return true;
+        }
+
+        return false;
+    };
+
+    if (element_dimensions.x <= atlas_dimensions.x && element_dimensions.y <= atlas_dimensions.y)
+    {
+        if (try_add_element_to_skyline(element_dimensions))
+        {
+            return true;
         }
     }
 
-    if (best_index != -1)
+    if (shrink_to_fit)
     {
-        out_element.offset_coords = Vec2u { uint32(best_x), uint32(best_y) };
-        out_element.offset_uv = Vec2f(out_element.offset_coords) / Vec2f(atlas_dimensions);
-        out_element.dimensions = element_dimensions;
-        out_element.scale = Vec2f(element_dimensions) / Vec2f(atlas_dimensions);
+        // Maintain ratio, shrink the element dimensions to attempt to fit it into the atlas
+        const float aspect_ratio = float(element_dimensions.x) / float(element_dimensions.y);
 
-        AddSkylineNode(uint32(best_index), Vec2u { element_dimensions.x, 0 }, Vec2u { uint32(best_x), uint32(best_y) + element_dimensions.y });
+        Vec2u new_dimensions = element_dimensions;
 
-        return true;
+        if (new_dimensions.x > atlas_dimensions.x || new_dimensions.y > atlas_dimensions.y)
+        {
+            if (new_dimensions.x > atlas_dimensions.x)
+            {
+                new_dimensions.x = atlas_dimensions.x;
+                new_dimensions.y = uint32(float(new_dimensions.x) / aspect_ratio);
+            }
+
+            if (new_dimensions.y > atlas_dimensions.y)
+            {
+                new_dimensions.y = atlas_dimensions.y;
+                new_dimensions.x = uint32(float(new_dimensions.y) * aspect_ratio);
+            }
+        }
+
+        do
+        {
+            if (try_add_element_to_skyline(new_dimensions))
+            {
+                return true;
+            }
+
+            // Reduce the dimensions by half each time until we reach the minimum downscale ratio
+            new_dimensions /= 2;
+        }
+        while ((Vec2f(new_dimensions) / Vec2f(element_dimensions)).Length() >= downscale_limit);
     }
 
     return false;

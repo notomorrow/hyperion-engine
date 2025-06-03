@@ -96,6 +96,8 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
         void InitFromRangeCopy(const T* begin, const T* end, SizeType offset = 0)
         {
+            AssertDebug(end >= begin);
+
             const SizeType count = end - begin;
 
             AssertDebug(capacity >= count + offset);
@@ -115,6 +117,8 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
         void InitFromRangeMove(T* begin, T* end, SizeType offset = 0)
         {
+            AssertDebug(end >= begin);
+
             const SizeType count = end - begin;
 
             AssertDebug(capacity >= count + offset);
@@ -255,6 +259,8 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         void InitFromRangeCopy(const T* begin, const T* end, SizeType offset = 0)
         {
+            AssertDebug(end >= begin);
+
             const SizeType count = end - begin;
 
             if (is_dynamic)
@@ -263,7 +269,6 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             }
             else
             {
-                AssertDebug(count <= Count);
                 AssertDebug(offset + count <= Count);
 
                 if constexpr (std::is_trivially_copy_constructible_v<T>)
@@ -283,6 +288,8 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         void InitFromRangeMove(T* begin, T* end, SizeType offset = 0)
         {
+            AssertDebug(end >= begin);
+
             const SizeType count = end - begin;
 
             if (is_dynamic)

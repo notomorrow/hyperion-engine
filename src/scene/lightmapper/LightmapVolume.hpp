@@ -135,11 +135,23 @@ public:
         return m_aabb;
     }
 
+    HYP_FORCE_INLINE const HashMap<LightmapElementTextureType, Handle<Texture>>& GetAtlasTextures() const
+    {
+        return m_atlas_textures;
+    }
+
+    HYP_FORCE_INLINE const LightmapVolumeAtlas& GetAtlas() const
+    {
+        return m_atlas;
+    }
+
     /*! \brief Add a LightmapElement to this volume. */
-    bool AddElement(const LightmapUVMap& uv_map, LightmapElement& out_element);
+    bool AddElement(const LightmapUVMap& uv_map, LightmapElement& out_element, bool shrink_to_fit = true, float downscale_limit = 0.1f);
 
     HYP_METHOD()
     const LightmapElement* GetElement(uint32 index) const;
+
+    bool BuildElementTextures(const LightmapUVMap& uv_map, uint32 index);
 
     void Init();
 
@@ -155,10 +167,7 @@ private:
     BoundingBox m_aabb;
 
     HYP_FIELD(Serialize = true)
-    Array<LightmapElement> m_elements;
-
-    HYP_FIELD(Serialize = true)
-    Array<Handle<Texture>> m_atlas_textures;
+    HashMap<LightmapElementTextureType, Handle<Texture>> m_atlas_textures;
     
     HYP_FIELD(Serialize = true)
     LightmapVolumeAtlas m_atlas;

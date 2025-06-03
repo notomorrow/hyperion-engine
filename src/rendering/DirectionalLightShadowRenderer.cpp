@@ -226,13 +226,13 @@ void ShadowPass::Render(FrameBase* frame, RenderView* view)
             m_view_statics_resource_handle->GetRenderCollector().CollectDrawCalls(
                 frame,
                 m_view_statics_resource_handle.Get(),
-                Bitset((1 << BUCKET_OPAQUE)),
+                Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_LIGHTMAP)),
                 nullptr);
 
             m_view_statics_resource_handle->GetRenderCollector().ExecuteDrawCalls(
                 frame,
                 m_view_statics_resource_handle.Get(),
-                Bitset((1 << BUCKET_OPAQUE)),
+                Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_LIGHTMAP)),
                 nullptr);
 
             // copy static framebuffer image
@@ -251,13 +251,13 @@ void ShadowPass::Render(FrameBase* frame, RenderView* view)
             m_view_dynamics_resource_handle->GetRenderCollector().CollectDrawCalls(
                 frame,
                 m_view_dynamics_resource_handle.Get(),
-                Bitset((1 << BUCKET_OPAQUE)),
+                Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_LIGHTMAP)),
                 nullptr);
 
             m_view_dynamics_resource_handle->GetRenderCollector().ExecuteDrawCalls(
                 frame,
                 m_view_dynamics_resource_handle.Get(),
-                Bitset((1 << BUCKET_OPAQUE)),
+                Bitset((1 << BUCKET_OPAQUE) | (1 << BUCKET_LIGHTMAP)),
                 nullptr);
 
             // copy dynamic framebuffer image

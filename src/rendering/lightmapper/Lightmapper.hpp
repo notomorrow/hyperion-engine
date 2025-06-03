@@ -145,6 +145,9 @@ struct LightmapRay
     }
 };
 
+static_assert(std::is_trivially_copy_constructible_v<LightmapRay>, "LightmapRay must be trivially copy constructible");
+static_assert(std::is_trivially_move_constructible_v<LightmapRay>, "LightmapRay must be trivially move constructible");
+
 struct LightmapHit
 {
     Vec4f color;
@@ -218,6 +221,16 @@ public:
         return m_uuid;
     }
 
+    HYP_FORCE_INLINE LightmapUVBuilder& GetUVBuilder()
+    {
+        return m_uv_builder;
+    }
+
+    HYP_FORCE_INLINE const LightmapUVBuilder& GetUVBuilder() const
+    {
+        return m_uv_builder;
+    }
+
     HYP_FORCE_INLINE LightmapUVMap& GetUVMap()
     {
         return *m_uv_map;
@@ -226,6 +239,11 @@ public:
     HYP_FORCE_INLINE const LightmapUVMap& GetUVMap() const
     {
         return *m_uv_map;
+    }
+
+    HYP_FORCE_INLINE uint32 GetElementIndex() const
+    {
+        return m_element_index;
     }
 
     HYP_FORCE_INLINE Scene* GetScene() const
@@ -263,7 +281,6 @@ public:
     }
 
     void Start();
-
     void Process();
 
     void GatherRays(uint32 max_ray_hits, Array<LightmapRay>& out_rays);
@@ -286,8 +303,6 @@ public:
 private:
     void Stop();
 
-    TResult<LightmapUVMap> BuildUVMap();
-
     LightmapJobParams m_params;
 
     UUID m_uuid;
@@ -297,8 +312,11 @@ private:
     Array<LightmapRay> m_previous_frame_rays;
     mutable Mutex m_previous_frame_rays_mutex;
 
+    LightmapUVBuilder m_uv_builder;
     Optional<LightmapUVMap> m_uv_map;
     Task<TResult<LightmapUVMap>> m_build_uv_map_task;
+
+    uint32 m_element_index;
 
     Array<TaskBatch*> m_current_tasks;
     mutable Mutex m_current_tasks_mutex;

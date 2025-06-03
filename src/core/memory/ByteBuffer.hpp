@@ -175,12 +175,12 @@ public:
                 m_allocation.Allocate(new_size);
                 m_allocation.InitFromRangeMove(other.Data(), other.Data() + new_size);
             }
-
-            other.m_allocation.SetToInitialState();
         }
 
         m_size = new_size;
         other.m_size = 0;
+
+        other.m_allocation.SetToInitialState();
 
         return *this;
     }

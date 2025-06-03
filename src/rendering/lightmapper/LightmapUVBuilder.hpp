@@ -44,13 +44,7 @@ struct LightmapMeshData
 
     Matrix4 transform;
 
-    Array<float, DynamicAllocator> vertex_positions;
-    Array<float, DynamicAllocator> vertex_normals;
-    Array<float, DynamicAllocator> vertex_uvs;
-
-    Array<uint32, DynamicAllocator> indices;
-
-    Array<Vec2f, DynamicAllocator> lightmap_uvs;
+    Array<float, DynamicAllocator> vertex_lightmap_uvs;
 };
 
 struct LightmapUV
@@ -67,10 +61,17 @@ struct LightmapUV
 
 struct LightmapUVMap
 {
+    // HashMap from mesh ID to an array of UV indices. Uses dynamic node allocation to reduce number of moves needed when adding or removing elements.
+    using MeshToUVIndicesMap = HashMap<ID<Mesh>, Array<uint32, DynamicAllocator>, HashTable_DynamicNodeAllocator<KeyValuePair<ID<Mesh>, Array<uint32, DynamicAllocator>>>>;
+
     uint32 width = 0;
     uint32 height = 0;
+
+    /// UVs in texture space with each entry corresponding to a texel in the lightmap.
     Array<LightmapUV> uvs;
-    FlatMap<ID<Mesh>, Array<uint32>> mesh_to_uv_indices;
+
+    // Mapping from mesh ID to the indices of the UVs that correspond to that mesh.
+    MeshToUVIndicesMap mesh_to_uv_indices;
 
     /*! \brief Write the UV map radiance data to RGBA32F format. */
     Bitmap<4, float> ToBitmapRadiance() const;
@@ -81,7 +82,48 @@ struct LightmapUVMap
 class LightmapUVBuilder
 {
 public:
+    LightmapUVBuilder() = default;
+
     LightmapUVBuilder(const LightmapUVBuilderParams& params);
+
+    LightmapUVBuilder(const LightmapUVBuilder& other)
+        : m_params(other.m_params),
+          m_mesh_data(other.m_mesh_data)
+    {
+    }
+
+    LightmapUVBuilder(LightmapUVBuilder&& other) noexcept
+        : m_params(std::move(other.m_params)),
+          m_mesh_data(std::move(other.m_mesh_data))
+    {
+    }
+
+    LightmapUVBuilder& operator=(const LightmapUVBuilder& other)
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        m_params = other.m_params;
+        m_mesh_data = other.m_mesh_data;
+
+        return *this;
+    }
+
+    LightmapUVBuilder& operator=(LightmapUVBuilder&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        m_params = std::move(other.m_params);
+        m_mesh_data = std::move(other.m_mesh_data);
+
+        return *this;
+    }
+
     ~LightmapUVBuilder() = default;
 
     HYP_FORCE_INLINE const Array<LightmapMeshData>& GetMeshData() const

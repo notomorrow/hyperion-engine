@@ -19,9 +19,7 @@
 namespace hyperion {
 
 LightmapVolume::LightmapVolume()
-    : m_render_resource(nullptr),
-      m_aabb(BoundingBox::Empty()),
-      m_atlas(Vec2u(4096, 4096))
+    : LightmapVolume(BoundingBox::Empty())
 {
 }
 
@@ -30,6 +28,10 @@ LightmapVolume::LightmapVolume(const BoundingBox& aabb)
       m_aabb(aabb),
       m_atlas(Vec2u(4096, 4096))
 {
+    m_atlas_textures = {
+        { LightmapElementTextureType::RADIANCE, Handle<Texture>::empty },
+        { LightmapElementTextureType::IRRADIANCE, Handle<Texture>::empty }
+    };
 }
 
 LightmapVolume::~LightmapVolume()
@@ -45,25 +47,50 @@ LightmapVolume::~LightmapVolume()
     }
 }
 
-bool LightmapVolume::AddElement(const LightmapUVMap& uv_map, LightmapElement& out_element)
+bool LightmapVolume::AddElement(const LightmapUVMap& uv_map, LightmapElement& out_element, bool shrink_to_fit, float downscale_limit)
 {
+    Threads::AssertOnThread(g_game_thread);
+
     const Vec2u element_dimensions = { uv_map.width, uv_map.height };
 
-    if (!m_atlas.AddElement(element_dimensions, out_element))
+    return m_atlas.AddElement(element_dimensions, out_element, shrink_to_fit, downscale_limit);
+}
+
+const LightmapElement* LightmapVolume::GetElement(uint32 index) const
+{
+    Threads::AssertOnThread(g_game_thread);
+
+    if (index >= m_atlas.elements.Size())
+    {
+        return nullptr;
+    }
+
+    return &m_atlas.elements[index];
+}
+
+bool LightmapVolume::BuildElementTextures(const LightmapUVMap& uv_map, uint32 index)
+{
+    Threads::AssertOnThread(g_game_thread);
+
+    if (index >= m_atlas.elements.Size())
     {
         return false;
     }
+
+    LightmapElement& element = m_atlas.elements[index];
+
+    const Vec2u element_dimensions = element.dimensions;
 
     FixedArray<Bitmap<4, float>, uint32(LightmapElementTextureType::MAX)> bitmaps = {
         uv_map.ToBitmapRadiance(),  /* RADIANCE */
         uv_map.ToBitmapIrradiance() /* IRRADIANCE */
     };
 
-    out_element.entries.Resize(uint32(LightmapElementTextureType::MAX));
+    element.entries.Resize(uint32(LightmapElementTextureType::MAX));
 
     for (uint32 i = 0; i < uint32(LightmapElementTextureType::MAX); i++)
     {
-        out_element.entries[i].type = LightmapElementTextureType(i);
+        element.entries[i].type = LightmapElementTextureType(i);
 
         Handle<Texture> texture = CreateObject<Texture>(TextureData {
             TextureDesc {
@@ -75,17 +102,13 @@ bool LightmapVolume::AddElement(const LightmapUVMap& uv_map, LightmapElement& ou
                 WrapMode::TEXTURE_WRAP_REPEAT },
             ByteBuffer(bitmaps[i].GetUnpackedFloats().ToByteView()) });
 
-        out_element.entries[i].texture = std::move(texture);
+        element.entries[i].texture = std::move(texture);
     }
-
-    out_element.index = m_elements.Size();
-
-    m_elements.PushBack(out_element);
 
     if (IsInitCalled())
     {
         // Initalize textures for the entries in the element
-        for (LightmapElementTextureEntry& entry : out_element.entries)
+        for (LightmapElementTextureEntry& entry : element.entries)
         {
             if (entry.texture.IsValid())
             {
@@ -97,18 +120,6 @@ bool LightmapVolume::AddElement(const LightmapUVMap& uv_map, LightmapElement& ou
     }
 
     return true;
-}
-
-const LightmapElement* LightmapVolume::GetElement(uint32 index) const
-{
-    Threads::AssertOnThread(g_game_thread);
-
-    if (index >= m_elements.Size())
-    {
-        return nullptr;
-    }
-
-    return &m_elements[index];
 }
 
 void LightmapVolume::Init()
@@ -133,7 +144,7 @@ void LightmapVolume::Init()
 
     m_render_resource = AllocateResource<RenderLightmapVolume>(this);
 
-    for (LightmapElement& element : m_elements)
+    for (LightmapElement& element : m_atlas.elements)
     {
         if (!element.IsValid())
         {
@@ -155,16 +166,18 @@ void LightmapVolume::UpdateAtlasTextures()
 {
     HYP_LOG(Lightmap, Debug, "Updating atlas textures for LightmapVolume {}", m_uuid);
 
-    Array<TResourceHandle<RenderTexture>> atlas_textures;
-    atlas_textures.Resize(uint32(LightmapElementTextureType::MAX));
+    Array<TResourceHandle<RenderTexture>> render_textures;
+    render_textures.Resize(uint32(LightmapElementTextureType::MAX));
 
-    m_atlas_textures.Resize(uint32(LightmapElementTextureType::MAX));
-
-    for (SizeType i = 0; i < m_atlas_textures.Size(); i++)
+    for (uint32 i = 0; i < uint32(LightmapElementTextureType::MAX); i++)
     {
-        if (!m_atlas_textures[i].IsValid())
+        LightmapElementTextureType texture_type = LightmapElementTextureType(i);
+
+        Handle<Texture>& atlas_texture = m_atlas_textures[texture_type];
+
+        if (!atlas_texture.IsValid())
         {
-            m_atlas_textures[i] = CreateObject<Texture>(TextureDesc {
+            atlas_texture = CreateObject<Texture>(TextureDesc {
                 ImageType::TEXTURE_TYPE_2D,
                 InternalFormat::RGBA8,
                 Vec3u { m_atlas.atlas_dimensions, 1 },
@@ -173,14 +186,14 @@ void LightmapVolume::UpdateAtlasTextures()
                 WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE });
         }
 
-        InitObject(m_atlas_textures[i]);
+        InitObject(atlas_texture);
 
-        atlas_textures[i] = TResourceHandle<RenderTexture>(m_atlas_textures[i]->GetRenderResource());
+        render_textures[i] = TResourceHandle<RenderTexture>(atlas_texture->GetRenderResource());
     }
 
     if (IsInitCalled())
     {
-        m_render_resource->BuildAtlasTextures(std::move(atlas_textures), m_elements);
+        m_render_resource->BuildAtlasTextures(std::move(render_textures), m_atlas.elements);
     }
 }
 

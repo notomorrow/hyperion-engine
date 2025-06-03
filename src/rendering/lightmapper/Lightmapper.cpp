@@ -846,32 +846,22 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, LightmapJob* job, Span<cons
     AssertThrowMsg(m_num_tracing_tasks.Get(MemoryOrder::ACQUIRE) == 0,
         "Trace is already in progress");
 
+    const TResourceHandle<RenderEnvProbe>& env_probe = g_engine->GetRenderState()->GetActiveEnvProbe();
+    Handle<Texture> env_probe_texture;
+
+    if (env_probe)
+    {
+        // prepare env probe texture to be sampled on the CPU in the tasks
+        env_probe->GetPrefilteredEnvMap()->Readback();
+        env_probe_texture = env_probe->GetPrefilteredEnvMap();
+    }
+
     m_hits_buffer.Resize(rays.Size());
 
     m_current_rays.Resize(rays.Size());
     Memory::MemCpy(m_current_rays.Data(), rays.Data(), m_current_rays.ByteSize());
 
     m_num_tracing_tasks.Increment(rays.Size(), MemoryOrder::RELEASE);
-
-    // // testing
-    // for (uint32 face_index = 0; face_index < env_probe_texture->NumFaces(); face_index++) {
-    //     Bitmap<4> test_bitmap(env_probe_texture->GetExtent().x, env_probe_texture->GetExtent().y);
-
-    //     for (uint32 x = 0; x < env_probe_texture->GetExtent().x; x++) {
-    //         for (uint32 y = 0; y < env_probe_texture->GetExtent().y; y++) {
-    //             Vec2f uv = Vec2f(x, y) / Vec2f(env_probe_texture->GetExtent().GetXY());
-
-    //             Vec4f env_probe_sample = env_probe_texture->Sample(Vec3f(uv, 0.0f), face_index);
-
-    //             test_bitmap.SetPixel(x, y, env_probe_sample);
-    //         }
-    //     }
-
-    //     test_bitmap.Write(HYP_FORMAT("env_probe_test__{}.bmp", face_index).Data());
-    // }
-
-    // HYP_BREAKPOINT;
-    // }
 
     TaskBatch* task_batch = new TaskBatch();
     task_batch->pool = &m_thread_pool;
@@ -882,30 +872,8 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, LightmapJob* job, Span<cons
 
     for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
     {
-        task_batch->AddTask([this, job, batch_index, items_per_batch, num_items](...)
+        task_batch->AddTask([this, job, batch_index, items_per_batch, num_items, env_probe_texture = env_probe_texture](...)
             {
-                const TResourceHandle<RenderEnvProbe>& env_render_probe = g_engine->GetRenderState()->GetActiveEnvProbe();
-                Handle<EnvProbe> env_probe;
-
-                if (env_render_probe)
-                {
-                    env_probe = env_render_probe->GetEnvProbe()->HandleFromThis();
-
-                    AssertThrow(env_probe->IsReady());
-
-                    // prepare env probe texture to be sampled on the CPU in the tasks
-                    env_probe->GetRenderResource().GetPrefilteredEnvMap()->Readback();
-                }
-
-                Handle<Texture> env_probe_texture;
-
-                if (env_probe.IsValid())
-                {
-                    AssertThrow(env_probe->IsReady());
-
-                    env_probe_texture = env_probe->GetRenderResource().GetPrefilteredEnvMap();
-                }
-
                 const uint32 offset_index = batch_index * items_per_batch;
                 const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
 
@@ -1130,6 +1098,7 @@ static constexpr uint32 g_max_concurrent_rendering_tasks_per_job = 1;
 
 LightmapJob::LightmapJob(LightmapJobParams&& params)
     : m_params(std::move(params)),
+      m_element_index(~0u),
       m_texel_index(0),
       m_last_logged_percentage(0),
       m_num_concurrent_rendering_tasks(0)
@@ -1164,7 +1133,9 @@ void LightmapJob::Start()
 
                 m_build_uv_map_task = TaskSystem::GetInstance().Enqueue([this]() -> TResult<LightmapUVMap>
                     {
-                        return BuildUVMap();
+                        m_uv_builder = LightmapUVBuilder { { m_params.sub_elements_view } };
+
+                        return m_uv_builder.Build();
                     },
                     TaskThreadPoolName::THREAD_POOL_BACKGROUND);
             }
@@ -1179,11 +1150,6 @@ void LightmapJob::Stop()
 bool LightmapJob::IsCompleted() const
 {
     return !m_running_semaphore.IsInSignalState();
-}
-
-TResult<LightmapUVMap> LightmapJob::BuildUVMap()
-{
-    return LightmapUVBuilder { { m_params.sub_elements_view } }.Build();
 }
 
 void LightmapJob::AddTask(TaskBatch* task_batch)
@@ -1223,16 +1189,29 @@ void LightmapJob::Process()
 
         if (m_uv_map.HasValue())
         {
+            LightmapElement element;
+            if (!m_params.volume->AddElement(*m_uv_map, element, /* shrink_to_fit */ true, /* downscale_limit */ 0.1f))
+            {
+                HYP_LOG(Lightmap, Error, "Failed to add LightmapElement to LightmapVolume");
+
+                Stop();
+
+                return;
+            }
+
+            m_element_index = element.index;
+            AssertThrow(m_element_index != ~0u);
+
             // Flatten texel indices, grouped by mesh IDs to prevent unnecessary loading/unloading
             m_texel_indices.Reserve(m_uv_map->uvs.Size());
 
             for (const auto& it : m_uv_map->mesh_to_uv_indices)
             {
-                for (uint32 i = 0; i < it.second.Size(); i++)
-                {
-                    m_texel_indices.PushBack(it.second[i]);
-                }
+                m_texel_indices.Concat(it.second);
             }
+
+            // Free up memory
+            m_uv_map->mesh_to_uv_indices.Clear();
         }
         else
         {
@@ -1702,25 +1681,64 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
     const LightmapUVMap& uv_map = job->GetUVMap();
 
-    // Bitmap<4, float> radiance_bitmap = uv_map.ToBitmapRadiance();
-    // Bitmap<4, float> irradiance_bitmap = uv_map.ToBitmapIrradiance();
-
     // // Temp; write to rgb8 bitmap
     // uint32 num = rand() % 150;
     // radiance_bitmap.Write("lightmap_" + String::ToString(num) + "_radiance.bmp");
     // irradiance_bitmap.Write("lightmap_" + String::ToString(num) + "_irradiance.bmp");
 
-    LightmapElement element;
+    const uint32 element_index = job->GetElementIndex();
 
-    if (!job->GetParams().volume->AddElement(uv_map, element))
+    if (!m_volume->BuildElementTextures(uv_map, element_index))
     {
-        HYP_LOG(Lightmap, Error, "Failed to add LightmapElement to LightmapVolume");
+        HYP_LOG(Lightmap, Error, "Failed to build LightmapElement textures for LightmapVolume, element index: {}", job->GetElementIndex());
 
         return;
     }
 
-    for (LightmapSubElement& sub_element : job->GetSubElements())
+    const LightmapElement* element = m_volume->GetElement(element_index);
+    AssertThrow(element != nullptr);
+
+    HYP_LOG(Lightmap, Debug, "Lightmap job {}: Building element with index {}, UV offset: {}, Scale: {}", job->GetUUID(), element_index,
+        element->offset_uv, element->scale);
+
+    for (SizeType sub_element_index = 0; sub_element_index < job->GetSubElements().Size(); sub_element_index++)
     {
+        LightmapSubElement& sub_element = job->GetSubElements()[sub_element_index];
+
+        auto update_mesh_data = [&]()
+        {
+            const Handle<Mesh>& mesh = sub_element.mesh;
+            AssertThrow(mesh.IsValid());
+
+            AssertThrow(sub_element_index < job->GetUVBuilder().GetMeshData().Size());
+
+            const LightmapMeshData& lightmap_mesh_data = job->GetUVBuilder().GetMeshData()[sub_element_index];
+            AssertThrow(lightmap_mesh_data.mesh == mesh);
+
+            ResourceHandle resource_handle(*mesh->GetStreamedMeshData());
+
+            MeshData new_mesh_data;
+            new_mesh_data.vertices = mesh->GetStreamedMeshData()->GetMeshData().vertices;
+            new_mesh_data.indices = mesh->GetStreamedMeshData()->GetMeshData().indices;
+
+            for (uint32 i = 0; i < new_mesh_data.indices.Size(); i++)
+            {
+                const uint32 index = new_mesh_data.indices[i];
+
+                Vec2f lightmap_uv = { lightmap_mesh_data.vertex_lightmap_uvs[index * 2 + 0], 1.0f - lightmap_mesh_data.vertex_lightmap_uvs[index * 2 + 1] };
+                lightmap_uv *= element->scale;
+                lightmap_uv += Vec2f(element->offset_uv.x, 1.0f - element->offset_uv.y);
+
+                new_mesh_data.vertices[index].SetTexCoord1(lightmap_uv);
+            }
+
+            resource_handle.Reset();
+
+            mesh->SetStreamedMeshData(MakeRefCountedPtr<StreamedMeshData>(std::move(new_mesh_data), resource_handle));
+        };
+
+        update_mesh_data();
+
         bool is_new_material = false;
 
         sub_element.material = sub_element.material.IsValid() ? sub_element.material->Clone() : CreateObject<Material>();
@@ -1741,11 +1759,37 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
 
         sub_element.material->SetBucket(BUCKET_LIGHTMAP);
 
-        // // temp - will instead be set in the lightmap volume
-        // sub_element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, radiance_texture);
-        // sub_element.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, irradiance_texture);
+        // // temp ; testing. - will instead be set in the lightmap volume
+        // Bitmap<4, float> radiance_bitmap = uv_map.ToBitmapRadiance();
+        // Bitmap<4, float> irradiance_bitmap = uv_map.ToBitmapIrradiance();
 
-        auto update_mesh_component = [entity_manager_weak = m_scene->GetEntityManager()->WeakRefCountedPtrFromThis(), element_index = element.index, volume = job->GetParams().volume, sub_element = sub_element, new_material = (is_new_material ? sub_element.material : Handle<Material>::empty)]()
+        // Handle<Texture> irradiance_texture = CreateObject<Texture>(TextureData {
+        //     TextureDesc {
+        //         ImageType::TEXTURE_TYPE_2D,
+        //         InternalFormat::RGBA32F,
+        //         Vec3u { uv_map.width, uv_map.height, 1 },
+        //         FilterMode::TEXTURE_FILTER_LINEAR,
+        //         FilterMode::TEXTURE_FILTER_LINEAR,
+        //         WrapMode::TEXTURE_WRAP_REPEAT },
+        //     ByteBuffer(irradiance_bitmap.GetUnpackedFloats().ToByteView()) });
+        // InitObject(irradiance_texture);
+
+        // Handle<Texture> radiance_texture = CreateObject<Texture>(TextureData {
+        //     TextureDesc {
+        //         ImageType::TEXTURE_TYPE_2D,
+        //         InternalFormat::RGBA32F,
+        //         Vec3u { uv_map.width, uv_map.height, 1 },
+        //         FilterMode::TEXTURE_FILTER_LINEAR,
+        //         FilterMode::TEXTURE_FILTER_LINEAR,
+        //         WrapMode::TEXTURE_WRAP_REPEAT },
+        //     ByteBuffer(radiance_bitmap.GetUnpackedFloats().ToByteView()) });
+        // InitObject(radiance_texture);
+
+        // @TEMP
+        sub_element.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, m_volume->GetAtlasTextures().Get(LightmapElementTextureType::IRRADIANCE).second);
+        sub_element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, m_volume->GetAtlasTextures().Get(LightmapElementTextureType::RADIANCE).second);
+
+        auto update_mesh_component = [entity_manager_weak = m_scene->GetEntityManager()->WeakRefCountedPtrFromThis(), element_index = job->GetElementIndex(), volume = m_volume, sub_element = sub_element, new_material = (is_new_material ? sub_element.material : Handle<Material>::empty)]()
         {
             RC<EntityManager> entity_manager = entity_manager_weak.Lock();
 

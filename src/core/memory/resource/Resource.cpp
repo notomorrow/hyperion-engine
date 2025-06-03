@@ -351,9 +351,7 @@ void ResourceBase::FlushScheduledTasks() const
 
 void ResourceBase::EnqueueOp(Proc<void()>&& proc)
 {
-    GetOwnerThread()->GetScheduler().Enqueue(
-        std::move(proc),
-        TaskEnqueueFlags::FIRE_AND_FORGET);
+    GetOwnerThread()->GetScheduler().Enqueue(std::move(proc), TaskEnqueueFlags::FIRE_AND_FORGET);
 }
 
 #pragma endregion ResourceBase
