@@ -1131,10 +1131,10 @@ void LightmapJob::Start()
 
                 HYP_LOG(Lightmap, Info, "Lightmap job {}: Enqueue task to build UV map", m_uuid);
 
+                m_uv_builder = LightmapUVBuilder { { m_params.sub_elements_view } };
+
                 m_build_uv_map_task = TaskSystem::GetInstance().Enqueue([this]() -> TResult<LightmapUVMap>
                     {
-                        m_uv_builder = LightmapUVBuilder { { m_params.sub_elements_view } };
-
                         return m_uv_builder.Build();
                     },
                     TaskThreadPoolName::THREAD_POOL_BACKGROUND);
@@ -1715,8 +1715,9 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
             const LightmapMeshData& lightmap_mesh_data = job->GetUVBuilder().GetMeshData()[sub_element_index];
             AssertThrow(lightmap_mesh_data.mesh == mesh);
 
+#if 0
             ResourceHandle resource_handle(*mesh->GetStreamedMeshData());
-
+            
             MeshData new_mesh_data;
             new_mesh_data.vertices = mesh->GetStreamedMeshData()->GetMeshData().vertices;
             new_mesh_data.indices = mesh->GetStreamedMeshData()->GetMeshData().indices;
@@ -1725,7 +1726,8 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
             {
                 const uint32 index = new_mesh_data.indices[i];
 
-                Vec2f lightmap_uv = { lightmap_mesh_data.vertex_lightmap_uvs[index * 2 + 0], 1.0f - lightmap_mesh_data.vertex_lightmap_uvs[index * 2 + 1] };
+                Vec2f lightmap_uv = lightmap_mesh_data.vertices[index].GetTexCoord1();
+                lightmap_uv.y = 1.0f - lightmap_uv.y; // Invert Y coordinate to match OpenGL texture coordinate system
                 lightmap_uv *= element->scale;
                 lightmap_uv += Vec2f(element->offset_uv.x, 1.0f - element->offset_uv.y);
 
@@ -1735,6 +1737,20 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
             resource_handle.Reset();
 
             mesh->SetStreamedMeshData(MakeRefCountedPtr<StreamedMeshData>(std::move(new_mesh_data), resource_handle));
+#endif
+            // MeshData new_mesh_data;
+            // new_mesh_data.vertices = lightmap_mesh_data.vertices;
+            // new_mesh_data.indices = lightmap_mesh_data.indices;
+
+            // for (uint32 i = 0; i < new_mesh_data.vertices.Size(); i++)
+            // {
+            //     Vec2f& lightmap_uv = new_mesh_data.vertices[i].texcoord1;
+            //     lightmap_uv *= element->scale;
+            //     lightmap_uv += Vec2f(element->offset_uv.x, 1.0f - element->offset_uv.y);
+            // }
+
+            // ResourceHandle resource_handle;
+            // mesh->SetStreamedMeshData(MakeRefCountedPtr<StreamedMeshData>(std::move(new_mesh_data), resource_handle));
         };
 
         update_mesh_data();

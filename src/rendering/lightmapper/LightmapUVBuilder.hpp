@@ -22,6 +22,7 @@ namespace hyperion {
 class Mesh;
 class Material;
 class Entity;
+struct Vertex;
 
 struct LightmapSubElement
 {
@@ -44,7 +45,8 @@ struct LightmapMeshData
 
     Matrix4 transform;
 
-    Array<float, DynamicAllocator> vertex_lightmap_uvs;
+    Array<Vertex> vertices;
+    Array<uint32> indices;
 };
 
 struct LightmapUV
@@ -136,6 +138,11 @@ public:
 private:
     LightmapUVBuilderParams m_params;
     Array<LightmapMeshData> m_mesh_data;
+    // Per element mesh data used for building the UV map
+    Array<Array<float>> m_mesh_vertex_positions;
+    Array<Array<float>> m_mesh_vertex_normals;
+    Array<Array<float>> m_mesh_vertex_uvs;
+    Array<Array<uint32>> m_mesh_indices;
 };
 
 } // namespace hyperion

@@ -84,25 +84,20 @@ struct alignas(Alignment) ValueStorage
 
     HYP_FORCE_INLINE T& Get() &
     {
-        return *reinterpret_cast<T*>(&data_buffer);
+        return *reinterpret_cast<T*>(&data_buffer[0]);
     }
 
     HYP_FORCE_INLINE const T& Get() const&
     {
-        return *reinterpret_cast<const T*>(&data_buffer);
+        return *reinterpret_cast<const T*>(&data_buffer[0]);
     }
 
-    HYP_FORCE_INLINE T Get() &&
-    {
-        return std::move(*reinterpret_cast<T*>(&data_buffer));
-    }
-
-    HYP_FORCE_INLINE void* GetPointer()
+    HYP_FORCE_INLINE void* GetPointer() &
     {
         return &data_buffer[0];
     }
 
-    HYP_FORCE_INLINE const void* GetPointer() const
+    HYP_FORCE_INLINE const void* GetPointer() const&
     {
         return &data_buffer[0];
     }
@@ -111,12 +106,6 @@ struct alignas(Alignment) ValueStorage
 template <>
 struct ValueStorage<void>
 {
-    ValueStorage() = default;
-    ValueStorage(const ValueStorage&) = default;
-    ValueStorage& operator=(const ValueStorage&) = default;
-    ValueStorage(ValueStorage&&) noexcept = default;
-    ValueStorage& operator=(ValueStorage&&) noexcept = default;
-    ~ValueStorage() = default;
 };
 
 template <class T, SizeType Count, SizeType Alignment = ValueStorageAlignment<T>::value, typename T2 = void>

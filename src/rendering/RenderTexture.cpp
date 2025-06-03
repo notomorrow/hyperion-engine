@@ -243,7 +243,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                     mip_width = MathUtil::Max(1u, extent.x >> (mip_level));
                     mip_height = MathUtil::Max(1u, extent.y >> (mip_level));
 
-                    struct alignas(128)
+                    struct
                     {
                         Vec4u dimensions;
                         Vec4u prev_dimensions;

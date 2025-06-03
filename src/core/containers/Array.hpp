@@ -200,7 +200,7 @@ public:
 
     Array(const Array& other);
 
-    template <class OtherAllocatorType>
+    template <class OtherAllocatorType, typename = std::enable_if_t<!std::is_same_v<OtherAllocatorType, AllocatorType>>>
     Array(const Array<T, OtherAllocatorType>& other)
         : Array()
     {
@@ -218,7 +218,7 @@ public:
 
     Array(Array&& other) noexcept;
 
-    template <class OtherAllocatorType>
+    template <class OtherAllocatorType, typename = std::enable_if_t<!std::is_same_v<OtherAllocatorType, AllocatorType>>>
     Array(Array<T, OtherAllocatorType>&& other)
         : Array()
     {
@@ -301,15 +301,17 @@ public:
         return Size() != 0;
     }
 
-    /*! \brief Returns the element at the given index. No bounds checking is performed. */
+    /*! \brief Returns the element at the given index. No bounds checking is performed in release mode. */
     HYP_FORCE_INLINE ValueType& operator[](KeyType index)
     {
+        AssertDebug(index >= 0 && index < Size());
         return GetBuffer()[m_start_offset + index];
     }
 
-    /*! \brief Returns the element at the given index. No bounds checking is performed. */
+    /*! \brief Returns the element at the given index. No bounds checking is performed in release mode. */
     HYP_FORCE_INLINE const ValueType& operator[](KeyType index) const
     {
+        AssertDebug(index >= 0 && index < Size());
         return GetBuffer()[m_start_offset + index];
     }
 
@@ -668,6 +670,11 @@ Array<T, AllocatorType>::Array(Array&& other) noexcept
         m_start_offset = other.m_start_offset;
 
         m_allocation.TakeOwnership(other.GetBuffer(), other.GetBuffer() + other.m_size);
+
+        other.m_allocation.SetToInitialState();
+
+        other.m_size = 0;
+        other.m_start_offset = 0;
     }
     else
     {
@@ -675,17 +682,10 @@ Array<T, AllocatorType>::Array(Array&& other) noexcept
         m_start_offset = 0;
 
         m_allocation.Allocate(m_size);
+        m_allocation.InitFromRangeMove(other.Begin(), other.End());
 
-        if (Size() != 0)
-        {
-            m_allocation.InitFromRangeMove(other.Begin(), other.End());
-        }
+        other.Clear();
     }
-
-    other.m_size = 0;
-    other.m_start_offset = 0;
-
-    other.m_allocation.SetToInitialState();
 }
 
 template <class T, class AllocatorType>
@@ -723,11 +723,7 @@ auto Array<T, AllocatorType>::operator=(Array&& other) noexcept -> Array&
         return *this;
     }
 
-    if (Size() != 0)
-    {
-        m_allocation.DestructInRange(m_start_offset, m_size);
-    }
-
+    m_allocation.DestructInRange(m_start_offset, m_size);
     m_allocation.Free();
 
     if (other.m_allocation.IsDynamic())
@@ -736,6 +732,11 @@ auto Array<T, AllocatorType>::operator=(Array&& other) noexcept -> Array&
         m_start_offset = other.m_start_offset;
 
         m_allocation.TakeOwnership(other.GetBuffer(), other.GetBuffer() + other.m_size);
+
+        other.m_allocation.SetToInitialState();
+
+        other.m_size = 0;
+        other.m_start_offset = 0;
     }
     else
     {
@@ -743,21 +744,10 @@ auto Array<T, AllocatorType>::operator=(Array&& other) noexcept -> Array&
         m_start_offset = 0;
 
         m_allocation.Allocate(m_size);
+        m_allocation.InitFromRangeMove(other.Begin(), other.End());
 
-        if (Size() != 0)
-        {
-            m_allocation.InitFromRangeMove(other.Begin(), other.End());
-
-            other.m_allocation.DestructInRange(other.m_start_offset, other.m_size);
-        }
-
-        other.m_allocation.Free();
+        other.Clear();
     }
-
-    other.m_size = 0;
-    other.m_start_offset = 0;
-
-    other.m_allocation.SetToInitialState();
 
     return *this;
 }
@@ -809,13 +799,9 @@ void Array<T, AllocatorType>::SetCapacity(SizeType capacity, SizeType offset)
     new_allocation.SetToInitialState();
     new_allocation.Allocate(capacity);
 
-    if (Size() != 0)
-    {
-        new_allocation.InitFromRangeMove(Begin(), End(), offset);
+    new_allocation.InitFromRangeMove(Begin(), End(), offset);
 
-        m_allocation.DestructInRange(m_start_offset, m_size);
-    }
-
+    m_allocation.DestructInRange(m_start_offset, m_size);
     m_allocation.Free();
 
     m_size -= m_start_offset;
@@ -1128,6 +1114,11 @@ auto Array<T, AllocatorType>::PushFront(ValueType&& value) -> ValueType&
 template <class T, class AllocatorType>
 void Array<T, AllocatorType>::Concat(const Array& other)
 {
+    if (this == &other)
+    {
+        return;
+    }
+
     if (other.Empty())
     {
         return;
@@ -1168,6 +1159,11 @@ void Array<T, AllocatorType>::Concat(const Array& other)
 template <class T, class AllocatorType>
 void Array<T, AllocatorType>::Concat(Array&& other)
 {
+    if (this == &other)
+    {
+        return;
+    }
+
     if (other.Empty())
     {
         return;

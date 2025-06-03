@@ -70,8 +70,18 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
                 return;
             }
 
-            buffer = static_cast<T*>(Memory::Allocate(count * sizeof(T)));
-            AssertDebug(buffer != nullptr);
+            static_assert(sizeof(T) % alignof(T) == 0, "Type T must be aligned to its size");
+
+            if constexpr (alignof(T) <= alignof(std::max_align_t))
+            {
+                // Use standard allocation if alignment is not greater than max alignment
+                buffer = static_cast<T*>(Memory::Allocate(count * sizeof(T)));
+            }
+            else
+            {
+                buffer = static_cast<T*>(HYP_ALLOC_ALIGNED(count * sizeof(T), alignof(T)));
+                AssertDebugMsg(buffer != nullptr, "Aligned allocation failed! Size: %zu, Alignment: %zu", count * sizeof(T), alignof(T));
+            }
 
             capacity = count;
         }
@@ -80,7 +90,14 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
         {
             if (buffer != nullptr)
             {
-                Memory::Free(buffer);
+                if constexpr (alignof(T) <= alignof(std::max_align_t))
+                {
+                    Memory::Free(buffer);
+                }
+                else
+                {
+                    HYP_FREE_ALIGNED(buffer);
+                }
 
                 SetToInitialState();
             }
@@ -89,6 +106,7 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
         void TakeOwnership(T* begin, T* end)
         {
             AssertDebug(buffer == nullptr);
+            AssertDebug(end >= begin);
 
             buffer = begin;
             capacity = end - begin;
@@ -102,7 +120,7 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
             AssertDebug(capacity >= count + offset);
 
-            if constexpr (std::is_trivially_copy_constructible_v<T>)
+            if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
             {
                 Memory::MemCpy(buffer + offset, begin, count * sizeof(T));
             }
@@ -123,7 +141,7 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
 
             AssertDebug(capacity >= count + offset);
 
-            if constexpr (std::is_trivially_move_constructible_v<T>)
+            if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
             {
                 Memory::MemCpy(buffer + offset, begin, count * sizeof(T));
             }
@@ -179,16 +197,6 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
             return capacity;
         }
     };
-
-    HYP_FORCE_INLINE void* Allocate(SizeType size)
-    {
-        return Memory::Allocate(size);
-    }
-
-    HYP_FORCE_INLINE void Free(void* ptr)
-    {
-        Memory::Free(ptr);
-    }
 };
 
 template <SizeType Count, class DynamicAllocatorType = DynamicAllocator>
@@ -271,7 +279,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             {
                 AssertDebug(offset + count <= Count);
 
-                if constexpr (std::is_trivially_copy_constructible_v<T>)
+                if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
                 {
                     Memory::MemCpy(storage.GetPointer() + offset, begin, count * sizeof(T));
                 }
@@ -300,7 +308,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
             {
                 AssertDebug(offset + count <= Count);
 
-                if constexpr (std::is_trivially_move_constructible_v<T>)
+                if constexpr (std::is_fundamental_v<T> || std::is_trivial_v<T>)
                 {
                     Memory::MemCpy(storage.GetPointer() + offset, begin, count * sizeof(T));
                 }
@@ -340,6 +348,11 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
                 AssertDebug(last_index <= Count);
                 AssertDebug(start_index <= last_index);
 
+                if constexpr (std::is_trivially_destructible_v<T>)
+                {
+                    return;
+                }
+
                 for (SizeType i = last_index; i > start_index;)
                 {
                     storage.GetPointer()[--i].~T();
@@ -349,6 +362,9 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         void SetToInitialState()
         {
+#ifdef HYP_DEBUG_MODE
+            buffer = nullptr; // to make debugging easier
+#endif
             storage = ValueStorageArray<T, Count>();
             is_dynamic = false;
         }

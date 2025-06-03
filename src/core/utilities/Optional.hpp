@@ -37,31 +37,16 @@ public:
     }
 
     template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
-    Optional(const Ty& value)
-        : m_has_value(true)
-    {
-        new (&m_storage.data_buffer) T(value);
-    }
-
-    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
-    Optional& operator=(const Ty& value)
-    {
-        Set(value);
-
-        return *this;
-    }
-
-    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
     Optional(Ty&& value) noexcept
         : m_has_value(true)
     {
-        new (&m_storage.data_buffer) T(std::move(value));
+        new (&m_storage.data_buffer) T(std::forward<Ty>(value));
     }
 
     template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
     Optional& operator=(Ty&& value) noexcept
     {
-        Set(std::move(value));
+        Set(std::forward<Ty>(value));
 
         return *this;
     }
@@ -100,9 +85,11 @@ public:
         if (other.m_has_value)
         {
             new (&m_storage.data_buffer) T(std::move(other.Get()));
-        }
 
-        other.m_has_value = false;
+            other.Get().~T(); // Explicitly destruct the moved-from value
+
+            other.m_has_value = false;
+        }
     }
 
     Optional& operator=(Optional&& other) noexcept
@@ -110,13 +97,15 @@ public:
         if (other.m_has_value)
         {
             Set(std::move(other.Get()));
+
+            other.Get().~T(); // Explicitly destruct the moved-from value
+
+            other.m_has_value = false;
         }
         else
         {
             Unset();
         }
-
-        other.m_has_value = false;
 
         return *this;
     }
@@ -272,52 +261,24 @@ public:
 
     HYP_FORCE_INLINE void Set(const T& value)
     {
-        if constexpr (std::is_copy_assignable_v<T>)
+        if (m_has_value)
         {
-            if (m_has_value)
-            {
-                Get() = value;
-            }
-            else
-            {
-                new (&m_storage.data_buffer) T(value);
-            }
+            Get().~T();
         }
-        else
-        {
-            if (m_has_value)
-            {
-                Get().~T();
-            }
 
-            new (&m_storage.data_buffer) T(value);
-        }
+        new (&m_storage.data_buffer) T(value);
 
         m_has_value = true;
     }
 
     HYP_FORCE_INLINE void Set(T&& value)
     {
-        if constexpr (std::is_move_assignable_v<T>)
+        if (m_has_value)
         {
-            if (m_has_value)
-            {
-                Get() = std::move(value);
-            }
-            else
-            {
-                new (&m_storage.data_buffer) T(std::move(value));
-            }
+            Get().~T();
         }
-        else
-        {
-            if (m_has_value)
-            {
-                Get().~T();
-            }
 
-            new (&m_storage.data_buffer) T(std::move(value));
-        }
+        new (&m_storage.data_buffer) T(std::move(value));
 
         m_has_value = true;
     }
@@ -393,7 +354,7 @@ public:
 private:
     ValueStorage<T> m_storage;
 
-    bool m_has_value;
+    bool m_has_value : 1;
 };
 
 template <class T>

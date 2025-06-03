@@ -323,7 +323,7 @@ void ShadowPass::Render(FrameBase* frame, RenderView* view)
 
     if (m_shadow_map_resource_handle->GetFilterMode() == ShadowMapFilterMode::VSM)
     {
-        struct alignas(128)
+        struct
         {
             Vec2u image_dimensions;
             Vec2u dimensions;

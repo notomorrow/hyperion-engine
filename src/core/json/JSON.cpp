@@ -279,12 +279,12 @@ JSONArray& JSONSubscriptWrapper<JSONValue>::AsArray() const
 
 const JSONArray& JSONSubscriptWrapper<JSONValue>::ToArray() const
 {
-    if (!value)
+    if (!value || !value->IsArray())
     {
         return g_empty_array.AsArray();
     }
 
-    return value->ToArray();
+    return value->AsArray();
 }
 
 JSONObject& JSONSubscriptWrapper<JSONValue>::AsObject() const
@@ -296,12 +296,12 @@ JSONObject& JSONSubscriptWrapper<JSONValue>::AsObject() const
 
 const JSONObject& JSONSubscriptWrapper<JSONValue>::ToObject() const
 {
-    if (!value)
+    if (!value || !value->IsObject())
     {
         return g_empty_object.AsObject();
     }
 
-    return value->ToObject();
+    return value->AsObject();
 }
 
 JSONSubscriptWrapper<JSONValue> JSONSubscriptWrapper<JSONValue>::operator[](uint32 index)
@@ -532,12 +532,12 @@ const JSONArray& JSONSubscriptWrapper<const JSONValue>::AsArray() const
 
 const JSONArray& JSONSubscriptWrapper<const JSONValue>::ToArray() const
 {
-    if (!value)
+    if (!value || !value->IsArray())
     {
         return g_empty_array.AsArray();
     }
 
-    return value->ToArray();
+    return value->AsArray();
 }
 
 const JSONObject& JSONSubscriptWrapper<const JSONValue>::AsObject() const
@@ -549,12 +549,12 @@ const JSONObject& JSONSubscriptWrapper<const JSONValue>::AsObject() const
 
 const JSONObject& JSONSubscriptWrapper<const JSONValue>::ToObject() const
 {
-    if (!value)
+    if (!value || !value->IsObject())
     {
         return g_empty_object.AsObject();
     }
 
-    return value->ToObject();
+    return value->AsObject();
 }
 
 JSONSubscriptWrapper<const JSONValue> JSONSubscriptWrapper<const JSONValue>::operator[](uint32 index) const

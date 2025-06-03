@@ -27,6 +27,54 @@ struct MeshData
     HYP_FIELD()
     Array<uint32> indices;
 
+    MeshData() = default;
+
+    MeshData(Array<Vertex>&& vertices, Array<uint32>&& indices)
+        : vertices(std::move(vertices)),
+          indices(std::move(indices))
+    {
+    }
+
+    MeshData(const Array<Vertex>& vertices, const Array<uint32>& indices)
+        : vertices(vertices),
+          indices(indices)
+    {
+    }
+
+    MeshData(const MeshData& other)
+        : vertices(other.vertices),
+          indices(other.indices)
+    {
+    }
+
+    MeshData(MeshData&& other) noexcept
+        : vertices(std::move(other.vertices)),
+          indices(std::move(other.indices))
+    {
+    }
+
+    MeshData& operator=(const MeshData& other)
+    {
+        if (this != &other)
+        {
+            vertices = other.vertices;
+            indices = other.indices;
+        }
+
+        return *this;
+    }
+
+    MeshData& operator=(MeshData&& other) noexcept
+    {
+        if (this != &other)
+        {
+            vertices = std::move(other.vertices);
+            indices = std::move(other.indices);
+        }
+
+        return *this;
+    }
+
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         // @FIXME: Find a better way to hash it without needing to hash the entire mesh data
@@ -89,6 +137,8 @@ private:
     SizeType m_num_indices;
 
     mutable Optional<MeshData> m_mesh_data;
+
+    HYP_DECLARE_MT_CHECK(m_data_race_detector);
 };
 
 } // namespace hyperion

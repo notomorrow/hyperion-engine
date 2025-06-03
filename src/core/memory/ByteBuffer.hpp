@@ -135,16 +135,20 @@ public:
     {
         m_allocation.SetToInitialState();
 
-        if (m_size != 0)
+        if (other.m_allocation.IsDynamic())
         {
-            if (other.m_allocation.IsDynamic())
-            {
-                m_allocation.TakeOwnership(other.Data(), other.Data() + m_size);
-            }
-            else
+            m_allocation.TakeOwnership(other.Data(), other.Data() + m_size);
+        }
+        else
+        {
+            if (m_size != 0)
             {
                 m_allocation.Allocate(m_size);
                 m_allocation.InitFromRangeMove(other.Data(), other.Data() + m_size);
+            }
+            else
+            {
+                other.m_allocation.Free();
             }
         }
 
@@ -164,16 +168,20 @@ public:
 
         m_allocation.Free();
 
-        if (new_size != 0)
+        if (other.m_allocation.IsDynamic())
         {
-            if (other.m_allocation.IsDynamic())
-            {
-                m_allocation.TakeOwnership(other.Data(), other.Data() + new_size);
-            }
-            else
+            m_allocation.TakeOwnership(other.Data(), other.Data() + new_size);
+        }
+        else
+        {
+            if (new_size != 0)
             {
                 m_allocation.Allocate(new_size);
                 m_allocation.InitFromRangeMove(other.Data(), other.Data() + new_size);
+            }
+            else
+            {
+                other.m_allocation.Free();
             }
         }
 

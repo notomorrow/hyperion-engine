@@ -911,7 +911,7 @@ void RenderView::Render(FrameBase* frame, RenderWorld* render_world)
             m_render_camera->ApplyJitter();
         }
 
-        struct alignas(128)
+        struct
         {
             uint32 flags;
             uint32 screen_width;
@@ -1104,7 +1104,7 @@ void RenderView::Render(FrameBase* frame, RenderWorld* render_world)
 
 #if 0
         {
-            struct alignas(128)
+            struct
             {
                 Vec2u   image_dimensions;
                 uint32  _pad0, _pad1;

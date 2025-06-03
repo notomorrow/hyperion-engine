@@ -306,7 +306,7 @@ void TemporalBlending::Render(FrameBase* frame, RenderView* view)
                                                ->GetImage()
                                                ->GetExtent();
 
-    struct alignas(128)
+    struct
     {
         Vec2u output_dimensions;
         Vec2u depth_texture_dimensions;

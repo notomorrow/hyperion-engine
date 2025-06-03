@@ -117,7 +117,7 @@ if(MSVC)
         set(CMAKE_CXX_FLAGS_RELEASE "/Zc:preprocessor /O2 /MD /constexpr:depth1024 /bigobj")
     endif()
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
     # no exceptions
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
