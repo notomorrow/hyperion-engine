@@ -138,6 +138,8 @@ public:
         if (other.m_allocation.IsDynamic())
         {
             m_allocation.TakeOwnership(other.Data(), other.Data() + m_size);
+
+            other.m_allocation.SetToInitialState();
         }
         else
         {
@@ -146,14 +148,9 @@ public:
                 m_allocation.Allocate(m_size);
                 m_allocation.InitFromRangeMove(other.Data(), other.Data() + m_size);
             }
-            else
-            {
-                other.m_allocation.Free();
-            }
         }
 
         other.m_size = 0;
-        other.m_allocation.SetToInitialState();
     }
 
     ByteBuffer& operator=(ByteBuffer&& other) noexcept
@@ -171,6 +168,8 @@ public:
         if (other.m_allocation.IsDynamic())
         {
             m_allocation.TakeOwnership(other.Data(), other.Data() + new_size);
+
+            other.m_allocation.SetToInitialState();
         }
         else
         {
@@ -179,16 +178,11 @@ public:
                 m_allocation.Allocate(new_size);
                 m_allocation.InitFromRangeMove(other.Data(), other.Data() + new_size);
             }
-            else
-            {
-                other.m_allocation.Free();
-            }
         }
 
         m_size = new_size;
-        other.m_size = 0;
 
-        other.m_allocation.SetToInitialState();
+        other.m_size = 0;
 
         return *this;
     }
@@ -279,8 +273,6 @@ public:
 
         if (count == 0)
         {
-            m_allocation.SetToInitialState();
-
             return;
         }
 

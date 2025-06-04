@@ -14,6 +14,7 @@
 #include <core/math/Transform.hpp>
 #include <core/math/Matrix4.hpp>
 #include <core/math/BoundingBox.hpp>
+#include <core/math/Vertex.hpp>
 
 #include <util/img/Bitmap.hpp>
 
@@ -22,7 +23,6 @@ namespace hyperion {
 class Mesh;
 class Material;
 class Entity;
-struct Vertex;
 
 struct LightmapSubElement
 {

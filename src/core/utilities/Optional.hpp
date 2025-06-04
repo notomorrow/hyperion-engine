@@ -32,7 +32,7 @@ public:
     {
         if (ptr != nullptr)
         {
-            new (&m_storage.data_buffer) T(*ptr);
+            m_storage.Construct(*ptr);
         }
     }
 
@@ -40,7 +40,7 @@ public:
     Optional(Ty&& value) noexcept
         : m_has_value(true)
     {
-        new (&m_storage.data_buffer) T(std::forward<Ty>(value));
+        m_storage.Construct(std::forward<Ty>(value));
     }
 
     template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
@@ -56,7 +56,7 @@ public:
     {
         if (m_has_value)
         {
-            new (&m_storage.data_buffer) T(other.Get());
+            m_storage.Construct(other.Get());
         }
     }
 
@@ -84,10 +84,9 @@ public:
     {
         if (other.m_has_value)
         {
-            new (&m_storage.data_buffer) T(std::move(other.Get()));
+            m_storage.Construct(std::move(other.Get()));
 
-            other.Get().~T(); // Explicitly destruct the moved-from value
-
+            other.m_storage.Destruct();
             other.m_has_value = false;
         }
     }
@@ -98,8 +97,7 @@ public:
         {
             Set(std::move(other.Get()));
 
-            other.Get().~T(); // Explicitly destruct the moved-from value
-
+            other.m_storage.Destruct();
             other.m_has_value = false;
         }
         else
@@ -114,7 +112,7 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
         }
     }
 
@@ -193,18 +191,25 @@ public:
         return nullptr;
     }
 
-    HYP_FORCE_INLINE T& Get()
+    HYP_FORCE_INLINE T& Get() &
     {
         AssertThrow(m_has_value);
 
-        return *static_cast<T*>(m_storage.GetPointer());
+        return m_storage.Get();
     }
 
-    HYP_FORCE_INLINE const T& Get() const
+    HYP_FORCE_INLINE const T& Get() const&
     {
         AssertThrow(m_has_value);
 
-        return *static_cast<const T*>(m_storage.GetPointer());
+        return m_storage.Get();
+    }
+
+    HYP_FORCE_INLINE T Get() &&
+    {
+        AssertThrow(m_has_value);
+
+        return std::move(m_storage.Get());
     }
 
     HYP_FORCE_INLINE const T& GetOr(const T& default_value) const&
@@ -263,11 +268,10 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
         }
 
-        new (&m_storage.data_buffer) T(value);
-
+        m_storage.Construct(value);
         m_has_value = true;
     }
 
@@ -275,11 +279,10 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
         }
 
-        new (&m_storage.data_buffer) T(std::move(value));
-
+        m_storage.Construct(std::move(value));
         m_has_value = true;
     }
 
@@ -288,7 +291,7 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
             m_has_value = false;
         }
     }
@@ -299,11 +302,11 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
         }
 
+        m_storage.Construct(std::forward<Args>(args)...);
         m_has_value = true;
-        new (&m_storage.data_buffer) T(std::forward<Args>(args)...);
     }
 
     HYP_FORCE_INLINE T* operator->()
@@ -354,7 +357,7 @@ public:
 private:
     ValueStorage<T> m_storage;
 
-    bool m_has_value : 1;
+    bool m_has_value;
 };
 
 template <class T>

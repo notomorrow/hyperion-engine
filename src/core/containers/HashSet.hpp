@@ -700,6 +700,26 @@ public:
         return Find(value) != End();
     }
 
+    template <class TFindAsType>
+    HYP_FORCE_INLINE SizeType Count(const TFindAsType& value) const
+    {
+        auto it = FindAs(value);
+
+        if (it == End())
+        {
+            return 0;
+        }
+
+        SizeType count = 0;
+
+        for (; it != End() && key_by_fn(*it) == value; ++it)
+        {
+            ++count;
+        }
+
+        return count;
+    }
+
     HYP_FORCE_INLINE Value& At(const KeyType& value)
     {
         auto it = Find(value);

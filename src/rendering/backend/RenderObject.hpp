@@ -768,6 +768,10 @@ protected:
         m_header->DecRefWeak();
     }
 
+#ifdef HYP_DEBUG_MODE
+public:
+#endif
+
     HYP_FORCE_INLINE RenderObjectHeaderBase* GetHeader_Internal() const
     {
         return m_header;

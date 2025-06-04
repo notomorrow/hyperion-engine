@@ -259,6 +259,26 @@ public:
             != static_cast<const Container*>(this)->End();
     }
 
+    /*! \brief Returns the number of elements matching the given value. */
+    template <class T>
+    SizeType Count(const T& value) const
+    {
+        SizeType count = 0;
+
+        const auto _begin = static_cast<const Container*>(this)->Begin();
+        const auto _end = static_cast<const Container*>(this)->End();
+
+        for (auto it = _begin; it != _end; ++it)
+        {
+            if (*it == value)
+            {
+                ++count;
+            }
+        }
+
+        return count;
+    }
+
     auto Sum() const
     {
         using HeldType = std::remove_const_t<std::remove_reference_t<decltype(*static_cast<const Container*>(this)->Begin())>>;

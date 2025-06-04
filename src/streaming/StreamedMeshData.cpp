@@ -18,7 +18,7 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Streaming);
 
-StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData mesh_data, ResourceHandle& out_resource_handle)
+StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData&& mesh_data, ResourceHandle& out_resource_handle)
     : StreamedDataBase(initial_state, out_resource_handle),
       m_streamed_data(nullptr),
       m_num_vertices(mesh_data.vertices.Size()),
@@ -87,7 +87,7 @@ StreamedMeshData::StreamedMeshData()
 }
 
 StreamedMeshData::StreamedMeshData(const MeshData& mesh_data, ResourceHandle& out_resource_handle)
-    : StreamedMeshData(StreamedDataState::LOADED, mesh_data, out_resource_handle)
+    : StreamedMeshData(StreamedDataState::LOADED, MeshData(mesh_data), out_resource_handle)
 {
 }
 

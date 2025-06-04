@@ -5,12 +5,13 @@
         "enabled": false
       },
       "reflections": {
+        "extent": [1024, 1024],
+        "path_tracing": false,
         "enabled": false
       },
       "gi": {
         "enabled": false
-      },
-      "enabled": false
+      }
     },
     "ssr": {
       "num_iterations": 128,

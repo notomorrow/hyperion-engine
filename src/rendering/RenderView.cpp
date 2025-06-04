@@ -396,6 +396,7 @@ void RenderView::CreateDescriptorSets()
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
     {
         DescriptorSetRef descriptor_set = g_rendering_api->MakeDescriptorSet(layout);
+        descriptor_set->SetDebugName(NAME_FMT("SceneViewDescriptorSet_{}", frame_index));
 
         if (g_rendering_api->GetRenderConfig().IsDynamicDescriptorIndexingSupported())
         {
@@ -531,8 +532,7 @@ void RenderView::CreateFinalPassDescriptorSet()
     const renderer::DescriptorSetLayout layout { decl };
 
     DescriptorSetRef descriptor_set = g_rendering_api->MakeDescriptorSet(layout);
-    AssertThrow(descriptor_set.IsValid());
-
+    descriptor_set->SetDebugName(NAME("FinalPassDescriptorSet"));
     descriptor_set->SetElement(NAME("InTexture"), input_image_view);
 
     DeferCreate(descriptor_set);

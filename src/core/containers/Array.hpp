@@ -66,7 +66,10 @@ public:
 
     static constexpr bool is_contiguous = true;
 
-private:
+    // Allow other Array types to access private members
+    template <class OtherT, class OtherAllocatorType>
+    friend class Array;
+
 protected:
     // on PushFront() we can pad the start with this number,
     // so when multiple successive calls to PushFront() happen,
@@ -204,16 +207,10 @@ public:
     Array(const Array<T, OtherAllocatorType>& other)
         : Array()
     {
-        const SizeType size = other.Size();
+        m_size = other.Size();
 
-        SetCapacity(size);
-
-        T* buffer = GetBuffer();
-
-        for (SizeType i = 0; i < size; i++)
-        {
-            Memory::Construct<T>(&buffer[m_size++], other.Data()[i]);
-        }
+        m_allocation.Allocate(m_size);
+        m_allocation.InitFromRangeCopy(other.Begin(), other.End());
     }
 
     Array(Array&& other) noexcept;
@@ -222,24 +219,44 @@ public:
     Array(Array<T, OtherAllocatorType>&& other)
         : Array()
     {
-        const SizeType size = other.Size();
-
-        SetCapacity(size);
-
-        T* buffer = GetBuffer();
-
-        for (SizeType i = 0; i < size; i++)
+        if (other.m_allocation.IsDynamic())
         {
-            Memory::Construct<T>(&buffer[m_size++], std::move(other.Data()[i]));
-        }
+            m_size = other.m_size;
+            m_start_offset = other.m_start_offset;
 
-        other.Clear();
+            m_allocation.TakeOwnership(other.GetBuffer(), other.GetBuffer() + other.m_size);
+
+            other.m_allocation.SetToInitialState();
+
+            other.m_size = 0;
+            other.m_start_offset = 0;
+        }
+        else
+        {
+            m_size = other.m_size - other.m_start_offset;
+            m_start_offset = 0;
+
+            m_allocation.Allocate(m_size);
+            m_allocation.InitFromRangeMove(other.Begin(), other.End());
+
+            other.Clear();
+        }
     }
 
     ~Array();
 
     Array& operator=(const Array& other);
     Array& operator=(Array&& other) noexcept;
+
+    HYP_FORCE_INLINE typename AllocatorType::template Allocation<T>& GetAllocation()
+    {
+        return m_allocation;
+    }
+
+    HYP_FORCE_INLINE const typename AllocatorType::template Allocation<T>& GetAllocation() const
+    {
+        return m_allocation;
+    }
 
     /*! \brief Returns the number of elements in the array. */
     HYP_FORCE_INLINE SizeType Size() const
@@ -941,11 +958,7 @@ void Array<T, AllocatorType>::ResizeZeroed(SizeType new_size)
 
     if (new_size > current_size)
     {
-        T* buffer = GetBuffer();
-
-        const SizeType diff = new_size - current_size;
-
-        Memory::MemSet(&buffer[m_size - diff], 0, sizeof(T) * diff);
+        Memory::MemSet(GetBuffer() + (current_size + m_start_offset), 0, sizeof(T) * (new_size - current_size));
     }
 }
 

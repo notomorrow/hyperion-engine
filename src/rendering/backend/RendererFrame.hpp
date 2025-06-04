@@ -48,12 +48,7 @@ public:
         return m_command_list;
     }
 
-    HYP_FORCE_INLINE void MarkDescriptorSetUsed(DescriptorSetBase* descriptor_set)
-    {
-        AssertThrow(descriptor_set != nullptr);
-
-        m_used_descriptor_sets.Insert(descriptor_set);
-    }
+    void MarkDescriptorSetUsed(DescriptorSetBase* descriptor_set);
 
     Delegate<void, FrameBase*> OnPresent;
     Delegate<void, FrameBase*> OnFrameEnd;
