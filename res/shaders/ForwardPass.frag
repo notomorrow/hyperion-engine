@@ -355,7 +355,7 @@ void main()
     mask |= (OBJECT_MASK_LIGHTMAP_RADIANCE * uint(HAS_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP)));
 
     lm_irradiance = mix(lm_irradiance, SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_IRRADIANCE_MAP, vec2(v_texcoord1)), bvec4(bool(mask & OBJECT_MASK_LIGHTMAP_IRRADIANCE)));
-    lm_radiance = mix(lm_radiance, SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1.x)), bvec4(bool(mask & OBJECT_MASK_LIGHTMAP_RADIANCE)));
+    lm_radiance = mix(lm_radiance, SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_RADIANCE_MAP, vec2(v_texcoord1)), bvec4(bool(mask & OBJECT_MASK_LIGHTMAP_RADIANCE)));
 
     gbuffer_albedo_lightmap = (lm_irradiance + lm_radiance) * float(bool(mask & OBJECT_MASK_LIGHTMAP));
 

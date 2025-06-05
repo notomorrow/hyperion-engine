@@ -18,8 +18,6 @@
 
 #include <core/config/Config.hpp>
 
-#include <core/math/Ray.hpp>
-
 #include <scene/Scene.hpp>
 
 #include <rendering/lightmapper/LightmapUVBuilder.hpp>
@@ -35,7 +33,7 @@ struct TaskBatch;
 using threading::TaskBatch;
 
 struct LightmapHitsBuffer;
-class LightmapTaskThreadPool;
+class LightmapThreadPool;
 class ILightmapAccelerationStructure;
 class LightmapJob;
 class LightmapVolume;
@@ -123,30 +121,6 @@ struct LightmapperConfig : public ConfigBase<LightmapperConfig>
         return valid;
     }
 };
-
-struct LightmapRay
-{
-    Ray ray;
-    ID<Mesh> mesh_id;
-    uint32 triangle_index;
-    uint32 texel_index;
-
-    HYP_FORCE_INLINE bool operator==(const LightmapRay& other) const
-    {
-        return ray == other.ray
-            && mesh_id == other.mesh_id
-            && triangle_index == other.triangle_index
-            && texel_index == other.texel_index;
-    }
-
-    HYP_FORCE_INLINE bool operator!=(const LightmapRay& other) const
-    {
-        return !(*this == other);
-    }
-};
-
-static_assert(std::is_trivially_copy_constructible_v<LightmapRay>, "LightmapRay must be trivially copy constructible");
-static_assert(std::is_trivially_move_constructible_v<LightmapRay>, "LightmapRay must be trivially move constructible");
 
 struct LightmapHit
 {
@@ -280,6 +254,11 @@ public:
         m_previous_frame_rays = rays;
     }
 
+    HYP_FORCE_INLINE const Result& GetResult() const
+    {
+        return m_result;
+    }
+
     void Start();
     void Process();
 
@@ -301,7 +280,24 @@ public:
     }
 
 private:
+    HYP_FORCE_INLINE bool HasRemainingTexels() const
+    {
+        return m_texel_index < m_texel_indices.Size() * m_params.config->num_samples;
+    }
+
+    /*! \brief Get the next texel index to process, advancing the teexl counter
+     *  \return The texel index
+     */
+    HYP_FORCE_INLINE uint32 NextTexel()
+    {
+        const uint32 current_texel_index = m_texel_indices[m_texel_index % m_texel_indices.Size()];
+        m_texel_index++;
+
+        return current_texel_index;
+    }
+
     void Stop();
+    void Stop(const Error& error);
 
     LightmapJobParams m_params;
 
@@ -327,6 +323,10 @@ private:
     double m_last_logged_percentage;
 
     AtomicVar<uint32> m_num_concurrent_rendering_tasks;
+
+    Array<ResourceHandle> m_resource_cache;
+
+    Result m_result;
 };
 
 class HYP_API Lightmapper

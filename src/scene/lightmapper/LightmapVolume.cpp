@@ -88,6 +88,8 @@ bool LightmapVolume::BuildElementTextures(const LightmapUVMap& uv_map, uint32 in
 
     element.entries.Resize(uint32(LightmapElementTextureType::MAX));
 
+    static const char* texture_type_names[uint32(LightmapElementTextureType::MAX)] = { "R", "I" };
+
     for (uint32 i = 0; i < uint32(LightmapElementTextureType::MAX); i++)
     {
         element.entries[i].type = LightmapElementTextureType(i);
@@ -101,6 +103,8 @@ bool LightmapVolume::BuildElementTextures(const LightmapUVMap& uv_map, uint32 in
                 FilterMode::TEXTURE_FILTER_LINEAR,
                 WrapMode::TEXTURE_WRAP_REPEAT },
             ByteBuffer(bitmaps[i].GetUnpackedFloats().ToByteView()) });
+
+        texture->SetName(NAME_FMT("LightmapVolumeTexture_{}_{}_{}", m_uuid, element.index, texture_type_names[i]));
 
         element.entries[i].texture = std::move(texture);
     }
@@ -166,6 +170,8 @@ void LightmapVolume::UpdateAtlasTextures()
 {
     HYP_LOG(Lightmap, Debug, "Updating atlas textures for LightmapVolume {}", m_uuid);
 
+    static const char* texture_type_names[uint32(LightmapElementTextureType::MAX)] = { "R", "I" };
+
     Array<TResourceHandle<RenderTexture>> render_textures;
     render_textures.Resize(uint32(LightmapElementTextureType::MAX));
 
@@ -184,6 +190,8 @@ void LightmapVolume::UpdateAtlasTextures()
                 FilterMode::TEXTURE_FILTER_LINEAR,
                 FilterMode::TEXTURE_FILTER_LINEAR,
                 WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE });
+
+            atlas_texture->SetName(NAME_FMT("LightmapVolumeAtlasTexture_{}_{}_{}", m_uuid, uint32(texture_type), texture_type_names[i]));
         }
 
         InitObject(atlas_texture);

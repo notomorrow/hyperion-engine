@@ -68,7 +68,7 @@ bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& element_dimensions, Atla
         return false;
     }
 
-    auto try_add_element_to_skyline = [this, &out_element](const Vec2u& element_dimensions) -> bool
+    auto try_add_element_to_skyline = [this, &out_element](const Vec2u& dim) -> bool
     {
         int best_y = INT32_MAX;
         int best_x = -1;
@@ -78,7 +78,7 @@ bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& element_dimensions, Atla
         {
             Vec2u offset;
 
-            if (CalculateFitOffset(uint32(i), element_dimensions, offset))
+            if (CalculateFitOffset(uint32(i), dim, offset))
             {
                 if (int(offset.y) < best_y)
                 {
@@ -94,12 +94,12 @@ bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& element_dimensions, Atla
             out_element.index = elements.Size();
             out_element.offset_coords = Vec2u { uint32(best_x), uint32(best_y) };
             out_element.offset_uv = Vec2f(out_element.offset_coords) / Vec2f(atlas_dimensions - 1);
-            out_element.dimensions = element_dimensions;
-            out_element.scale = Vec2f(element_dimensions) / Vec2f(atlas_dimensions);
+            out_element.dimensions = dim;
+            out_element.scale = Vec2f(dim) / Vec2f(atlas_dimensions);
 
             elements.PushBack(out_element);
 
-            AddSkylineNode(uint32(best_index), Vec2u { element_dimensions.x, 0 }, Vec2u { uint32(best_x), uint32(best_y) + element_dimensions.y });
+            AddSkylineNode(uint32(best_index), dim, Vec2u { uint32(best_x), uint32(best_y) });
 
             return true;
         }
@@ -191,13 +191,13 @@ void AtlasPacker<AtlasElement>::Clear()
 template <class AtlasElement>
 bool AtlasPacker<AtlasElement>::CalculateFitOffset(uint32 index, const Vec2u& dimensions, Vec2u& out_offset) const
 {
-    auto& space_offset = free_spaces[index].first;
-    auto& space_dimensions = free_spaces[index].second;
+    Vec2i space_offset = free_spaces[index].first;
+    Vec2i space_dimensions = free_spaces[index].second;
 
     const int x = space_offset.x;
-    int y = space_offset.y;
+    int y = space_offset.y + space_dimensions.y;
 
-    int remaining_width = space_dimensions.x;
+    int remaining_width = dimensions.x;
 
     if (x + dimensions.x > atlas_dimensions.x)
     {
@@ -206,16 +206,16 @@ bool AtlasPacker<AtlasElement>::CalculateFitOffset(uint32 index, const Vec2u& di
 
     for (uint32 i = index; i < free_spaces.Size() && remaining_width > 0; i++)
     {
-        const int node_y = space_offset.y;
+        int node_top_y = free_spaces[i].first.y + free_spaces[i].second.y;
 
-        y = MathUtil::Max(y, node_y);
+        y = MathUtil::Max(y, node_top_y);
 
         if (y + dimensions.y > atlas_dimensions.y)
         {
             return false;
         }
 
-        remaining_width -= space_dimensions.x;
+        remaining_width -= free_spaces[i].second.x;
     }
 
     out_offset = Vec2u { uint32(x), uint32(y) };
@@ -228,7 +228,7 @@ void AtlasPacker<AtlasElement>::AddSkylineNode(uint32 before_index, const Vec2u&
 {
     free_spaces.Insert(free_spaces.Begin() + before_index, { Vec2i(offset), Vec2i(dimensions) });
 
-    for (SizeType i = before_index + 1; i < free_spaces.Size(); i++)
+    for (SizeType i = before_index + 1; i < free_spaces.Size();)
     {
         auto& space_offset = free_spaces[i].first;
         auto& space_dimensions = free_spaces[i].second;
@@ -261,10 +261,13 @@ void AtlasPacker<AtlasElement>::AddSkylineNode(uint32 before_index, const Vec2u&
 template <class AtlasElement>
 void AtlasPacker<AtlasElement>::MergeSkyline()
 {
+    // Should never happen as we always add at least one free space, but this will make debugging easier
+    AssertThrow(free_spaces.Any());
+
     for (SizeType i = 0; i < free_spaces.Size() - 1;)
     {
-        int y0 = free_spaces[i].first.y;
-        int y1 = free_spaces[i + 1].first.y;
+        int y0 = free_spaces[i].first.y + free_spaces[i].second.y;
+        int y1 = free_spaces[i + 1].first.y + free_spaces[i + 1].second.y;
 
         if (y0 == y1)
         {

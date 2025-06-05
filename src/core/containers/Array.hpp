@@ -239,7 +239,11 @@ public:
             m_allocation.Allocate(m_size);
             m_allocation.InitFromRangeMove(other.Begin(), other.End());
 
-            other.Clear();
+            other.m_allocation.DestructInRange(other.m_start_offset, other.m_size);
+            other.m_allocation.Free();
+
+            other.m_size = 0;
+            other.m_start_offset = 0;
         }
     }
 
@@ -321,14 +325,16 @@ public:
     /*! \brief Returns the element at the given index. No bounds checking is performed in release mode. */
     HYP_FORCE_INLINE ValueType& operator[](KeyType index)
     {
-        AssertDebug(index >= 0 && index < Size());
+        AssertDebugMsg(index >= 0 && index < Size(), "Index out of bounds! Index: %d, Size: %d", index, Size());
+
         return GetBuffer()[m_start_offset + index];
     }
 
     /*! \brief Returns the element at the given index. No bounds checking is performed in release mode. */
     HYP_FORCE_INLINE const ValueType& operator[](KeyType index) const
     {
-        AssertDebug(index >= 0 && index < Size());
+        AssertDebugMsg(index >= 0 && index < Size(), "Index out of bounds! Index: %d, Size: %d", index, Size());
+
         return GetBuffer()[m_start_offset + index];
     }
 
@@ -701,7 +707,11 @@ Array<T, AllocatorType>::Array(Array&& other) noexcept
         m_allocation.Allocate(m_size);
         m_allocation.InitFromRangeMove(other.Begin(), other.End());
 
-        other.Clear();
+        other.m_allocation.DestructInRange(other.m_start_offset, other.m_size);
+        other.m_allocation.Free();
+
+        other.m_size = 0;
+        other.m_start_offset = 0;
     }
 }
 
@@ -763,7 +773,11 @@ auto Array<T, AllocatorType>::operator=(Array&& other) noexcept -> Array&
         m_allocation.Allocate(m_size);
         m_allocation.InitFromRangeMove(other.Begin(), other.End());
 
-        other.Clear();
+        other.m_allocation.DestructInRange(other.m_start_offset, other.m_size);
+        other.m_allocation.Free();
+
+        other.m_size = 0;
+        other.m_start_offset = 0;
     }
 
     return *this;
@@ -1213,7 +1227,11 @@ void Array<T, AllocatorType>::Concat(Array&& other)
         }
     }
 
-    other.Clear();
+    other.m_allocation.DestructInRange(other.m_start_offset, other.m_size);
+    other.m_allocation.Free();
+
+    other.m_size = 0;
+    other.m_start_offset = 0;
 }
 
 template <class T, class AllocatorType>

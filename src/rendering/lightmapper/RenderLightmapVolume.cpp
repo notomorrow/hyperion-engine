@@ -149,6 +149,19 @@ void RenderLightmapVolume::BuildAtlasTextures(Array<TResourceHandle<RenderTextur
                             const LightmapElement* element = element_texture_pair.first;
                             const TResourceHandle<RenderTexture>& render_texture = element_texture_pair.second;
 
+                            HYP_LOG(Lightmap, Debug, "Blitting element {} (name: {}) to atlas texture {} (dim: {}), at offset {}, dimensions {}",
+                                element->index,
+                                render_texture->GetTexture()->GetName(),
+                                atlas_texture->GetTexture()->GetName(),
+                                render_texture->GetImage()->GetExtent(),
+                                element->offset_coords,
+                                element->dimensions);
+
+                            AssertDebug(element->offset_coords.x < atlas_texture->GetImage()->GetExtent().x);
+                            AssertDebug(element->offset_coords.y < atlas_texture->GetImage()->GetExtent().y);
+                            AssertDebug(element->offset_coords.x + element->dimensions.x <= atlas_texture->GetImage()->GetExtent().x);
+                            AssertDebug(element->offset_coords.y + element->dimensions.y <= atlas_texture->GetImage()->GetExtent().y);
+
                             cmd.Add<InsertBarrier>(render_texture->GetImage(), renderer::ResourceState::COPY_SRC);
 
                             cmd.Add<Blit>(

@@ -69,6 +69,7 @@ RendererResult VulkanFrame::ResetFrameState()
 
     HYPERION_PASS_ERRORS(m_queue_submit_fence->Reset(), result);
 
+#ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
     for (DescriptorSetBase* descriptor_set : m_used_descriptor_sets)
     {
         auto it = descriptor_set->GetCurrentFrames().FindAs(this);
@@ -79,8 +80,7 @@ RendererResult VulkanFrame::ResetFrameState()
             descriptor_set->GetCurrentFrames().Erase(it);
         }
     }
-
-    HYP_LOG(RenderingBackend, Debug, "Used descriptor sets for frame {}: {}", m_frame_index, m_used_descriptor_sets.Size());
+#endif
 
     m_used_descriptor_sets.Clear();
 

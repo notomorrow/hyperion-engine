@@ -18,6 +18,8 @@
 
 #include <Types.hpp>
 
+// #define HYP_DEBUG_USED_DESCRIPTOR_SETS
+
 namespace hyperion {
 namespace renderer {
 

@@ -18,7 +18,9 @@ void FrameBase::MarkDescriptorSetUsed(DescriptorSetBase* descriptor_set)
 
     m_used_descriptor_sets.Insert(descriptor_set);
 
+#ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
     descriptor_set->GetCurrentFrames().Insert(WeakHandleFromThis());
+#endif
 }
 
 void FrameBase::UpdateUsedDescriptorSets()
@@ -38,7 +40,7 @@ void FrameBase::UpdateUsedDescriptorSets()
             continue;
         }
 
-#ifdef HYP_DEBUG_MODE
+#if defined(HYP_DEBUG_MODE) && defined(HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE)
         // Check to see if other frames are using the same descriptor set while we're updating them so we can assert an error if they are
         const SizeType count = descriptor_set->GetCurrentFrames().Size() - descriptor_set->GetCurrentFrames().Count(this);
 

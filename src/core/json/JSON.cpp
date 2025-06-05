@@ -1020,7 +1020,7 @@ JSONString JSONValue::ToString_Internal(bool representation, uint32 depth) const
 
     if (IsArray())
     {
-        const auto& as_array = AsArray();
+        const JSONArray& as_array = AsArray();
 
         String result = "[";
 
@@ -1041,13 +1041,14 @@ JSONString JSONValue::ToString_Internal(bool representation, uint32 depth) const
 
     if (IsObject())
     {
-        const auto& as_object = AsObject();
+        const JSONObject& as_object = AsObject();
 
-        Array<Pair<JSONString, JSONValue>> members;
+        Array<const KeyValuePair<JSONString, JSONValue>*> members;
+        members.Reserve(as_object.Size());
 
         for (const auto& member : as_object)
         {
-            members.PushBack({ member.first, member.second });
+            members.PushBack(&member);
         }
 
         const String indentation = GetIndentationString(depth);
@@ -1057,9 +1058,9 @@ JSONString JSONValue::ToString_Internal(bool representation, uint32 depth) const
 
         for (SizeType index = 0; index < members.Size(); index++)
         {
-            result += "\n" + property_indentation + "\"" + members[index].first.Escape() + "\": ";
+            result += "\n" + property_indentation + "\"" + members[index]->first.Escape() + "\": ";
 
-            result += members[index].second.ToString(true, depth + 1);
+            result += members[index]->second.ToString(true, depth + 1);
 
             if (index != members.Size() - 1)
             {

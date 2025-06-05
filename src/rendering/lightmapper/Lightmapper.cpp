@@ -9,6 +9,8 @@
 #include <rendering/RenderState.hpp>
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderWorld.hpp>
+#include <rendering/RenderMesh.hpp>
+#include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderCollection.hpp>
@@ -427,33 +429,33 @@ private:
 
 #pragma endregion LightmapAccelerationStructure
 
-#pragma region LightmapJobThread
+#pragma region LightmapperWorkerThread
 
-class LightmapTaskThread : public TaskThread
+class LightmapperWorkerThread : public TaskThread
 {
 public:
-    LightmapTaskThread(ThreadID id)
+    LightmapperWorkerThread(ThreadID id)
         : TaskThread(id)
     {
     }
 
-    virtual ~LightmapTaskThread() override = default;
+    virtual ~LightmapperWorkerThread() override = default;
 };
 
-#pragma endregion LightmapJobThread
+#pragma endregion LightmapperWorkerThread
 
-#pragma region LightmapTaskThreadPool
+#pragma region LightmapThreadPool
 
-class LightmapTaskThreadPool : public TaskThreadPool
+class LightmapThreadPool : public TaskThreadPool
 {
 public:
-    LightmapTaskThreadPool()
-        : TaskThreadPool(TypeWrapper<LightmapTaskThread>(), "LightmapperTask", NumThreadsToCreate())
+    LightmapThreadPool()
+        : TaskThreadPool(TypeWrapper<LightmapperWorkerThread>(), "LightmapperWorker", NumThreadsToCreate())
     {
         HYP_LOG(Lightmap, Info, "Tracing lightmap rays using {} threads", m_threads.Size());
     }
 
-    virtual ~LightmapTaskThreadPool() override = default;
+    virtual ~LightmapThreadPool() override = default;
 
 private:
     static uint32 NumThreadsToCreate()
@@ -463,7 +465,7 @@ private:
     }
 };
 
-#pragma endregion LightmapTaskThreadPool
+#pragma endregion LightmapThreadPool
 
 #pragma region LightmapGPUPathTracer
 
@@ -798,7 +800,7 @@ private:
 
     Array<LightmapRay, DynamicAllocator> m_current_rays;
 
-    LightmapTaskThreadPool m_thread_pool;
+    LightmapThreadPool m_thread_pool;
 
     AtomicVar<uint32> m_num_tracing_tasks;
 };
@@ -960,10 +962,9 @@ void LightmapCPUPathTracer::Render(FrameBase* frame, LightmapJob* job, Span<cons
 
                         if (m_shading_type == LightmapShadingType::IRRADIANCE)
                         {
-                            direction = MathUtil::RandomInHemisphere(
-                                Vec3f(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed)),
-                                payload.normal)
-                                            .Normalize();
+                            const Vec3f rnd = Vec3f(MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed), MathUtil::RandomFloat(seed));
+
+                            direction = MathUtil::RandomInHemisphere(rnd, payload.normal).Normalize();
                         }
                         else
                         {
@@ -1064,7 +1065,7 @@ void LightmapCPUPathTracer::TraceSingleRayOnCPU(LightmapJob* job, const Lightmap
 
         const LightmapSubElement& sub_element = *it->second;
 
-        const ID<Mesh> mesh_id = sub_element.mesh.GetID();
+        const ID<Mesh> mesh_id = sub_element.mesh->GetID();
 
         const Vec3f barycentric_coords = hit.barycentric_coords;
 
@@ -1074,12 +1075,18 @@ void LightmapCPUPathTracer::TraceSingleRayOnCPU(LightmapJob* job, const Lightmap
             + triangle.GetPoint(1).GetTexCoord0() * barycentric_coords.y
             + triangle.GetPoint(2).GetTexCoord0() * barycentric_coords.z;
 
-        const Vec4f color = Vec4f(sub_element.material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
+        Vec4f albedo = Vec4f(sub_element.material->GetParameter(Material::MATERIAL_KEY_ALBEDO));
 
-        // @TODO sample textures
+        // sample albedo texture, if present
+        if (const Handle<Texture>& albedo_texture = sub_element.material->GetTexture(MaterialTextureKey::ALBEDO_MAP))
+        {
+            Vec4f albedo_texture_color = albedo_texture->Sample2D(uv);
+
+            albedo *= albedo_texture_color;
+        }
 
         out_payload.emissive = Vec4f(0.0f);
-        out_payload.throughput = color;
+        out_payload.throughput = albedo;
         out_payload.barycentric_coords = barycentric_coords;
         out_payload.mesh_id = mesh_id;
         out_payload.triangle_index = hit.id;
@@ -1113,6 +1120,8 @@ LightmapJob::~LightmapJob()
 
         delete task_batch;
     }
+
+    m_resource_cache.Clear();
 }
 
 void LightmapJob::Start()
@@ -1127,6 +1136,30 @@ void LightmapJob::Start()
                     m_uv_map = LightmapUVMap {};
 
                     return;
+                }
+
+                if (m_params.config->trace_mode == LightmapTraceMode::CPU_PATH_TRACING)
+                {
+                    HYP_LOG(Lightmap, Info, "Lightmap job {}: Preloading sub-element cached resources", m_uuid);
+
+                    for (const LightmapSubElement& sub_element : m_params.sub_elements_view)
+                    {
+                        if (sub_element.mesh.IsValid() && sub_element.mesh->GetStreamedMeshData())
+                        {
+                            m_resource_cache.EmplaceBack(*sub_element.mesh->GetStreamedMeshData());
+                        }
+
+                        if (sub_element.material.IsValid())
+                        {
+                            for (const auto& it : sub_element.material->GetTextures())
+                            {
+                                if (it.second.IsValid() && it.second->GetStreamedTextureData())
+                                {
+                                    m_resource_cache.EmplaceBack(*it.second->GetStreamedTextureData());
+                                }
+                            }
+                        }
+                    }
                 }
 
                 HYP_LOG(Lightmap, Info, "Lightmap job {}: Enqueue task to build UV map", m_uuid);
@@ -1147,6 +1180,15 @@ void LightmapJob::Stop()
     m_running_semaphore.Release(1);
 }
 
+void LightmapJob::Stop(const Error& error)
+{
+    HYP_LOG(Lightmap, Error, "Lightmap job {} stopped with error: {}", m_uuid, error.GetMessage());
+
+    m_result = error;
+
+    Stop();
+}
+
 bool LightmapJob::IsCompleted() const
 {
     return !m_running_semaphore.IsInSignalState();
@@ -1162,6 +1204,7 @@ void LightmapJob::AddTask(TaskBatch* task_batch)
 void LightmapJob::Process()
 {
     AssertThrow(IsRunning());
+    AssertThrowMsg(!m_result.HasError(), "Unhandled error in lightmap job: %s", *m_result.GetError().GetMessage());
 
     if (m_num_concurrent_rendering_tasks.Get(MemoryOrder::ACQUIRE) >= g_max_concurrent_rendering_tasks_per_job)
     {
@@ -1179,22 +1222,29 @@ void LightmapJob::Process()
 
         if (!m_build_uv_map_task.IsCompleted())
         {
+            // return early so we don't block - we need to wait for build task to complete before processing
             return;
         }
 
-        if (TResult<LightmapUVMap>& uv_map_result = m_build_uv_map_task.Await())
+        if (TResult<LightmapUVMap>& uv_map_result = m_build_uv_map_task.Await(); uv_map_result.HasValue())
         {
             m_uv_map = std::move(*uv_map_result);
+        }
+        else
+        {
+            Stop(uv_map_result.GetError());
+
+            return;
         }
 
         if (m_uv_map.HasValue())
         {
             LightmapElement element;
+
             if (!m_params.volume->AddElement(*m_uv_map, element, /* shrink_to_fit */ true, /* downscale_limit */ 0.1f))
             {
-                HYP_LOG(Lightmap, Error, "Failed to add LightmapElement to LightmapVolume");
-
-                Stop();
+                Stop(HYP_MAKE_ERROR(Error, "Failed to add LightmapElement to LightmapVolume for lightmap job {}! Dimensions: {}, UV map size: {}",
+                    m_uuid, m_params.volume->GetAtlas().atlas_dimensions, Vec2u(m_uv_map->width, m_uv_map->height)));
 
                 return;
             }
@@ -1215,10 +1265,8 @@ void LightmapJob::Process()
         }
         else
         {
-            HYP_LOG(Lightmap, Error, "Failed to build UV map for lightmap job {}", m_uuid);
-
             // Mark as ready to stop further processing
-            Stop();
+            Stop(HYP_MAKE_ERROR(Error, "Failed to build UV map for lightmap job {}", m_uuid));
         }
 
         return;
@@ -1265,8 +1313,7 @@ void LightmapJob::Process()
         && m_texel_index >= m_texel_indices.Size() * m_params.config->num_samples
         && m_num_concurrent_rendering_tasks.Get(MemoryOrder::ACQUIRE) == 0)
     {
-        HYP_LOG(Lightmap, Debug, "Lightmap job {}: All texels processed ({} / {}), stopping",
-            m_uuid, m_texel_index, m_texel_indices.Size() * m_params.config->num_samples);
+        HYP_LOG(Lightmap, Debug, "Lightmap job {}: All texels processed ({} / {}), stopping", m_uuid, m_texel_index, m_texel_indices.Size() * m_params.config->num_samples);
 
         Stop();
 
@@ -1304,99 +1351,14 @@ void LightmapJob::Process()
 
 void LightmapJob::GatherRays(uint32 max_ray_hits, Array<LightmapRay>& out_rays)
 {
-    Optional<Pair<ID<Mesh>, TResourceHandle<StreamedMeshData>>> streamed_mesh_data_refs {};
-
-    uint32 ray_index = 0;
-
-    while (ray_index < max_ray_hits)
+    for (uint32 ray_index = 0; ray_index < max_ray_hits && HasRemainingTexels(); ++ray_index)
     {
-        if (m_texel_index >= m_texel_indices.Size() * m_params.config->num_samples)
-        {
-            break;
-        }
+        const uint32 texel_index = NextTexel();
 
-        const uint32 uv_index = m_texel_indices[m_texel_index % m_texel_indices.Size()];
+        LightmapRay ray = m_uv_map->uvs[texel_index].ray;
+        ray.texel_index = texel_index;
 
-        AssertThrowMsg(
-            uv_index < m_uv_map->uvs.Size(),
-            "UV index (%llu) out of range of UV map (size: %llu)",
-            uv_index,
-            m_uv_map->uvs.Size());
-
-        const LightmapUV& uv = m_uv_map->uvs[uv_index];
-
-        const Handle<Mesh>& mesh = uv.mesh;
-
-        if (!mesh.IsValid())
-        {
-            HYP_LOG(Lightmap, Warning, "Lightmap job {}: Mesh at texel index {} is not valid, skipping", m_uuid, m_texel_index);
-
-            ++m_texel_index;
-
-            continue;
-        }
-
-        if (!mesh->GetStreamedMeshData())
-        {
-            HYP_LOG(Lightmap, Warning, "Lightmap job {}: Mesh {} does not have streamed mesh data set, skipping", m_uuid, mesh->GetName());
-
-            ++m_texel_index;
-
-            continue;
-        }
-
-        if (!streamed_mesh_data_refs.HasValue() || streamed_mesh_data_refs->first != mesh.GetID())
-        {
-            streamed_mesh_data_refs.Set({ mesh.GetID(), TResourceHandle<StreamedMeshData>(*mesh->GetStreamedMeshData()) });
-        }
-
-        // Convert UV to world space
-        const MeshData& mesh_data = streamed_mesh_data_refs->second->GetMeshData();
-
-        AssertThrowMsg(
-            uv.triangle_index * 3 + 2 < mesh_data.indices.Size(),
-            "Triangle index (%u) out of range of mesh indices. Num Indices: %u",
-            uv.triangle_index,
-            mesh->NumIndices());
-
-        const Matrix4 normal_matrix = uv.transform.Inverted().Transpose();
-
-        const uint32 triangle_indices[3] = {
-            mesh_data.indices[uv.triangle_index * 3 + 0],
-            mesh_data.indices[uv.triangle_index * 3 + 1],
-            mesh_data.indices[uv.triangle_index * 3 + 2]
-        };
-
-        AssertThrow(triangle_indices[0] < mesh_data.vertices.Size());
-        AssertThrow(triangle_indices[1] < mesh_data.vertices.Size());
-        AssertThrow(triangle_indices[2] < mesh_data.vertices.Size());
-
-        const Vec3f vertex_positions[3] = {
-            uv.transform * mesh_data.vertices[triangle_indices[0]].position,
-            uv.transform * mesh_data.vertices[triangle_indices[1]].position,
-            uv.transform * mesh_data.vertices[triangle_indices[2]].position
-        };
-
-        const Vec3f vertex_normals[3] = {
-            mesh_data.vertices[triangle_indices[0]].normal,
-            mesh_data.vertices[triangle_indices[1]].normal,
-            mesh_data.vertices[triangle_indices[2]].normal
-        };
-
-        const Vec3f position = vertex_positions[0] * uv.barycentric_coords.x
-            + vertex_positions[1] * uv.barycentric_coords.y
-            + vertex_positions[2] * uv.barycentric_coords.z;
-
-        const Vec3f normal = (normal_matrix * Vec4f((vertex_normals[0] * uv.barycentric_coords.x + vertex_normals[1] * uv.barycentric_coords.y + vertex_normals[2] * uv.barycentric_coords.z), 0.0f)).GetXYZ().Normalize();
-
-        out_rays.PushBack(LightmapRay {
-            Ray { position, normal },
-            mesh.GetID(),
-            uv.triangle_index,
-            uv_index });
-
-        ++m_texel_index;
-        ++ray_index;
+        out_rays.PushBack(ray);
     }
 }
 
@@ -1404,18 +1366,12 @@ void LightmapJob::IntegrateRayHits(Span<const LightmapRay> rays, Span<const Ligh
 {
     AssertThrow(rays.Size() == hits.Size());
 
+    LightmapUVMap& uv_map = GetUVMap();
+
     for (SizeType i = 0; i < hits.Size(); i++)
     {
         const LightmapRay& ray = rays[i];
         const LightmapHit& hit = hits[i];
-
-        LightmapUVMap& uv_map = GetUVMap();
-
-        AssertThrowMsg(
-            ray.texel_index < uv_map.uvs.Size(),
-            "Texel index (%llu) out of range of UV map (size: %llu)",
-            ray.texel_index,
-            uv_map.uvs.Size());
 
         LightmapUV& uv = uv_map.uvs[ray.texel_index];
 
@@ -1427,6 +1383,8 @@ void LightmapJob::IntegrateRayHits(Span<const LightmapRay> rays, Span<const Ligh
         case LightmapShadingType::IRRADIANCE:
             uv.irradiance += Vec4f(hit.color.GetXYZ(), 1.0f); //= Vec4f(MathUtil::Lerp(uv.irradiance.GetXYZ() * uv.irradiance.w, hit.color.GetXYZ(), hit.color.w), 1.0f); //
             break;
+        default:
+            HYP_UNREACHABLE();
         }
     }
 }
@@ -1677,15 +1635,19 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
     HYP_SCOPE;
     Threads::AssertOnThread(g_game_thread);
 
+    if (job->GetResult().HasError())
+    {
+        HYP_LOG(Lightmap, Error, "Lightmap job {} failed with error: {}", job->GetUUID(), job->GetResult().GetError().GetMessage());
+
+        m_queue.Pop();
+        m_num_jobs.Decrement(1, MemoryOrder::RELEASE);
+
+        return;
+    }
+
     HYP_LOG(Lightmap, Debug, "Tracing completed for lightmapping job {} ({} subelements)", job->GetUUID(), job->GetSubElements().Size());
 
     const LightmapUVMap& uv_map = job->GetUVMap();
-
-    // // Temp; write to rgb8 bitmap
-    // uint32 num = rand() % 150;
-    // radiance_bitmap.Write("lightmap_" + String::ToString(num) + "_radiance.bmp");
-    // irradiance_bitmap.Write("lightmap_" + String::ToString(num) + "_irradiance.bmp");
-
     const uint32 element_index = job->GetElementIndex();
 
     if (!m_volume->BuildElementTextures(uv_map, element_index))
@@ -1715,42 +1677,20 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
             const LightmapMeshData& lightmap_mesh_data = job->GetUVBuilder().GetMeshData()[sub_element_index];
             AssertThrow(lightmap_mesh_data.mesh == mesh);
 
-#if 0
-            ResourceHandle resource_handle(*mesh->GetStreamedMeshData());
-            
             MeshData new_mesh_data;
-            new_mesh_data.vertices = mesh->GetStreamedMeshData()->GetMeshData().vertices;
-            new_mesh_data.indices = mesh->GetStreamedMeshData()->GetMeshData().indices;
+            new_mesh_data.vertices = lightmap_mesh_data.vertices;
+            new_mesh_data.indices = lightmap_mesh_data.indices;
 
-            for (uint32 i = 0; i < new_mesh_data.indices.Size(); i++)
+            for (uint32 i = 0; i < new_mesh_data.vertices.Size(); i++)
             {
-                const uint32 index = new_mesh_data.indices[i];
-
-                Vec2f lightmap_uv = lightmap_mesh_data.vertices[index].GetTexCoord1();
-                lightmap_uv.y = 1.0f - lightmap_uv.y; // Invert Y coordinate to match OpenGL texture coordinate system
+                Vec2f& lightmap_uv = new_mesh_data.vertices[i].texcoord1;
+                lightmap_uv.y = 1.0f - lightmap_uv.y; // Invert Y coordinate for lightmaps
                 lightmap_uv *= element->scale;
-                lightmap_uv += Vec2f(element->offset_uv.x, 1.0f - element->offset_uv.y);
-
-                new_mesh_data.vertices[index].SetTexCoord1(lightmap_uv);
+                lightmap_uv += Vec2f(element->offset_uv.x, element->offset_uv.y);
             }
 
-            resource_handle.Reset();
-
+            ResourceHandle resource_handle;
             mesh->SetStreamedMeshData(MakeRefCountedPtr<StreamedMeshData>(std::move(new_mesh_data), resource_handle));
-#endif
-            // MeshData new_mesh_data;
-            // new_mesh_data.vertices = lightmap_mesh_data.vertices;
-            // new_mesh_data.indices = lightmap_mesh_data.indices;
-
-            // for (uint32 i = 0; i < new_mesh_data.vertices.Size(); i++)
-            // {
-            //     Vec2f& lightmap_uv = new_mesh_data.vertices[i].texcoord1;
-            //     lightmap_uv *= element->scale;
-            //     lightmap_uv += Vec2f(element->offset_uv.x, 1.0f - element->offset_uv.y);
-            // }
-
-            // ResourceHandle resource_handle;
-            // mesh->SetStreamedMeshData(MakeRefCountedPtr<StreamedMeshData>(std::move(new_mesh_data), resource_handle));
         };
 
         update_mesh_data();
@@ -1760,50 +1700,42 @@ void Lightmapper::HandleCompletedJob(LightmapJob* job)
         sub_element.material = sub_element.material.IsValid() ? sub_element.material->Clone() : CreateObject<Material>();
         is_new_material = true;
 
-        HYP_LOG(Lightmap, Debug, "Setting material #{} on Entity #{}", sub_element.material.GetID().Value(), sub_element.entity.GetID().Value());
-
-        // if (!element.material) {
-        //     // @TODO: Set to default material
-        //     continue;
-        // }
-
-        // if (!element.material->IsDynamic()) {
-        //     element.material = element.material->Clone();
-
-        //     is_new_material = true;
-        // }
-
         sub_element.material->SetBucket(BUCKET_LIGHTMAP);
 
-        // // temp ; testing. - will instead be set in the lightmap volume
-        // Bitmap<4, float> radiance_bitmap = uv_map.ToBitmapRadiance();
-        // Bitmap<4, float> irradiance_bitmap = uv_map.ToBitmapIrradiance();
+#if 0
+        // temp ; testing. - will instead be set in the lightmap volume
+        Bitmap<4, float> radiance_bitmap = uv_map.ToBitmapRadiance();
+        Bitmap<4, float> irradiance_bitmap = uv_map.ToBitmapIrradiance();
 
-        // Handle<Texture> irradiance_texture = CreateObject<Texture>(TextureData {
-        //     TextureDesc {
-        //         ImageType::TEXTURE_TYPE_2D,
-        //         InternalFormat::RGBA32F,
-        //         Vec3u { uv_map.width, uv_map.height, 1 },
-        //         FilterMode::TEXTURE_FILTER_LINEAR,
-        //         FilterMode::TEXTURE_FILTER_LINEAR,
-        //         WrapMode::TEXTURE_WRAP_REPEAT },
-        //     ByteBuffer(irradiance_bitmap.GetUnpackedFloats().ToByteView()) });
-        // InitObject(irradiance_texture);
+        Handle<Texture> irradiance_texture = CreateObject<Texture>(TextureData {
+            TextureDesc {
+                ImageType::TEXTURE_TYPE_2D,
+                InternalFormat::RGBA32F,
+                Vec3u { uv_map.width, uv_map.height, 1 },
+                FilterMode::TEXTURE_FILTER_LINEAR,
+                FilterMode::TEXTURE_FILTER_LINEAR,
+                WrapMode::TEXTURE_WRAP_REPEAT },
+            ByteBuffer(irradiance_bitmap.GetUnpackedFloats().ToByteView()) });
+        InitObject(irradiance_texture);
 
-        // Handle<Texture> radiance_texture = CreateObject<Texture>(TextureData {
-        //     TextureDesc {
-        //         ImageType::TEXTURE_TYPE_2D,
-        //         InternalFormat::RGBA32F,
-        //         Vec3u { uv_map.width, uv_map.height, 1 },
-        //         FilterMode::TEXTURE_FILTER_LINEAR,
-        //         FilterMode::TEXTURE_FILTER_LINEAR,
-        //         WrapMode::TEXTURE_WRAP_REPEAT },
-        //     ByteBuffer(radiance_bitmap.GetUnpackedFloats().ToByteView()) });
-        // InitObject(radiance_texture);
+        Handle<Texture> radiance_texture = CreateObject<Texture>(TextureData {
+            TextureDesc {
+                ImageType::TEXTURE_TYPE_2D,
+                InternalFormat::RGBA32F,
+                Vec3u { uv_map.width, uv_map.height, 1 },
+                FilterMode::TEXTURE_FILTER_LINEAR,
+                FilterMode::TEXTURE_FILTER_LINEAR,
+                WrapMode::TEXTURE_WRAP_REPEAT },
+            ByteBuffer(radiance_bitmap.GetUnpackedFloats().ToByteView()) });
+        InitObject(radiance_texture);
 
+        sub_element.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, irradiance_texture);
+        sub_element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, radiance_texture);
+#else
         // @TEMP
         sub_element.material->SetTexture(MaterialTextureKey::IRRADIANCE_MAP, m_volume->GetAtlasTextures().Get(LightmapElementTextureType::IRRADIANCE).second);
         sub_element.material->SetTexture(MaterialTextureKey::RADIANCE_MAP, m_volume->GetAtlasTextures().Get(LightmapElementTextureType::RADIANCE).second);
+#endif
 
         auto update_mesh_component = [entity_manager_weak = m_scene->GetEntityManager()->WeakRefCountedPtrFromThis(), element_index = job->GetElementIndex(), volume = m_volume, sub_element = sub_element, new_material = (is_new_material ? sub_element.material : Handle<Material>::empty)]()
         {

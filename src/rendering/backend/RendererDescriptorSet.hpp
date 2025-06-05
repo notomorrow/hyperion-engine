@@ -30,6 +30,8 @@
 
 namespace hyperion {
 
+// #define HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
+
 class RenderResourceBase;
 
 enum class DescriptorSetDeclarationFlags : uint8
@@ -594,6 +596,7 @@ public:
         return m_elements;
     }
 
+#ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
     HYP_FORCE_INLINE HashSet<FrameWeakRef>& GetCurrentFrames()
     {
         return m_current_frames;
@@ -603,6 +606,7 @@ public:
     {
         return m_current_frames;
     }
+#endif
 
     HYP_API virtual bool IsCreated() const = 0;
 
@@ -772,7 +776,10 @@ protected:
 
     DescriptorSetLayout m_layout;
     HashMap<Name, DescriptorSetElement> m_elements;
+
+#ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
     HashSet<FrameWeakRef> m_current_frames; // frames that are currently using this descriptor set
+#endif
 };
 
 class DescriptorTableBase : public RenderObject<DescriptorTableBase>

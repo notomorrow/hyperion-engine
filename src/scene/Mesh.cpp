@@ -357,8 +357,6 @@ void Mesh::SetPersistentRenderResourceEnabled(bool enabled)
     }
 }
 
-HYP_DISABLE_OPTIMIZATION;
-
 void Mesh::CalculateNormals(bool weighted)
 {
     HYP_SCOPE;
@@ -534,8 +532,6 @@ void Mesh::CalculateNormals(bool weighted)
     m_streamed_mesh_data->WaitForFinalization();
     m_streamed_mesh_data.Emplace(std::move(mesh_data), m_streamed_mesh_data_resource_handle);
 }
-
-HYP_ENABLE_OPTIMIZATION;
 
 void Mesh::CalculateTangents()
 {

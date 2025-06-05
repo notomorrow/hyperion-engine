@@ -15,6 +15,7 @@
 #include <core/math/Matrix4.hpp>
 #include <core/math/BoundingBox.hpp>
 #include <core/math/Vertex.hpp>
+#include <core/math/Ray.hpp>
 
 #include <util/img/Bitmap.hpp>
 
@@ -49,6 +50,30 @@ struct LightmapMeshData
     Array<uint32> indices;
 };
 
+struct LightmapRay
+{
+    Ray ray;
+    ID<Mesh> mesh_id;
+    uint32 triangle_index;
+    uint32 texel_index;
+
+    HYP_FORCE_INLINE bool operator==(const LightmapRay& other) const
+    {
+        return ray == other.ray
+            && mesh_id == other.mesh_id
+            && triangle_index == other.triangle_index
+            && texel_index == other.texel_index;
+    }
+
+    HYP_FORCE_INLINE bool operator!=(const LightmapRay& other) const
+    {
+        return !(*this == other);
+    }
+};
+
+static_assert(std::is_trivially_copy_constructible_v<LightmapRay>, "LightmapRay must be trivially copy constructible");
+static_assert(std::is_trivially_move_constructible_v<LightmapRay>, "LightmapRay must be trivially move constructible");
+
 struct LightmapUV
 {
     Handle<Mesh> mesh;
@@ -59,6 +84,8 @@ struct LightmapUV
     Vec2f lightmap_uv = Vec2f::Zero();
     Vec4f radiance = Vec4f::Zero();
     Vec4f irradiance = Vec4f::Zero();
+
+    LightmapRay ray;
 };
 
 struct LightmapUVMap
@@ -83,48 +110,18 @@ struct LightmapUVMap
 
 class LightmapUVBuilder
 {
+    using MeshFloatDataArray = Array<float, DynamicAllocator>;
+    using MeshIndexArray = Array<uint32, DynamicAllocator>;
+
 public:
     LightmapUVBuilder() = default;
 
     LightmapUVBuilder(const LightmapUVBuilderParams& params);
 
-    LightmapUVBuilder(const LightmapUVBuilder& other)
-        : m_params(other.m_params),
-          m_mesh_data(other.m_mesh_data)
-    {
-    }
-
-    LightmapUVBuilder(LightmapUVBuilder&& other) noexcept
-        : m_params(std::move(other.m_params)),
-          m_mesh_data(std::move(other.m_mesh_data))
-    {
-    }
-
-    LightmapUVBuilder& operator=(const LightmapUVBuilder& other)
-    {
-        if (this == &other)
-        {
-            return *this;
-        }
-
-        m_params = other.m_params;
-        m_mesh_data = other.m_mesh_data;
-
-        return *this;
-    }
-
-    LightmapUVBuilder& operator=(LightmapUVBuilder&& other) noexcept
-    {
-        if (this == &other)
-        {
-            return *this;
-        }
-
-        m_params = std::move(other.m_params);
-        m_mesh_data = std::move(other.m_mesh_data);
-
-        return *this;
-    }
+    LightmapUVBuilder(const LightmapUVBuilder& other) = default;
+    LightmapUVBuilder(LightmapUVBuilder&& other) noexcept = default;
+    LightmapUVBuilder& operator=(const LightmapUVBuilder& other) = default;
+    LightmapUVBuilder& operator=(LightmapUVBuilder&& other) noexcept = default;
 
     ~LightmapUVBuilder() = default;
 
@@ -138,11 +135,12 @@ public:
 private:
     LightmapUVBuilderParams m_params;
     Array<LightmapMeshData> m_mesh_data;
+
     // Per element mesh data used for building the UV map
-    Array<Array<float>> m_mesh_vertex_positions;
-    Array<Array<float>> m_mesh_vertex_normals;
-    Array<Array<float>> m_mesh_vertex_uvs;
-    Array<Array<uint32>> m_mesh_indices;
+    Array<MeshFloatDataArray, DynamicAllocator> m_mesh_vertex_positions;
+    Array<MeshFloatDataArray, DynamicAllocator> m_mesh_vertex_normals;
+    Array<MeshFloatDataArray, DynamicAllocator> m_mesh_vertex_uvs;
+    Array<MeshIndexArray, DynamicAllocator> m_mesh_indices;
 };
 
 } // namespace hyperion

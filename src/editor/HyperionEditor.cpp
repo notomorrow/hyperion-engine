@@ -145,8 +145,9 @@ void HyperionEditor::Init()
             1.0f,
             1.0f);
 
-        using Foo = decltype(std::declval<Array<Vertex>>().GetAllocation());
         Handle<Texture> dummy_light_texture;
+
+        constexpr auto x = sizeof(Array<int>);
 
         if (auto dummy_light_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/brdfLUT.png"))
         {
