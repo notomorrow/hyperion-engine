@@ -65,9 +65,9 @@ HYP_DESCRIPTOR_SSBO(UpdateParticlesDescriptorSet, NoiseBuffer, standard = scalar
     float noise_values[HYP_PARTICLE_NOISE_MAP_SIZE];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
@@ -85,7 +85,8 @@ layout(push_constant) uniform ParticleSpawnerData
     float max_particles_sqrt;
     float delta_time;
     uint global_counter;
-} push_constants;
+}
+push_constants;
 
 vec3 GetNoiseValue()
 {
@@ -94,8 +95,7 @@ vec3 GetNoiseValue()
     const uvec3 indices = uvec3(
         (push_constants.global_counter + base_offset) % HYP_PARTICLE_NOISE_MAP_SIZE,
         (push_constants.global_counter + base_offset + 1u) % HYP_PARTICLE_NOISE_MAP_SIZE,
-        (push_constants.global_counter + base_offset + 2u) % HYP_PARTICLE_NOISE_MAP_SIZE
-    );
+        (push_constants.global_counter + base_offset + 2u) % HYP_PARTICLE_NOISE_MAP_SIZE);
 
     return vec3(noise_values[indices[0]], noise_values[indices[1]], noise_values[indices[2]]) * 2.0 - 1.0;
 }
@@ -105,7 +105,8 @@ void main()
     const uint id = gl_GlobalInvocationID.x;
     const uint index = id;
 
-    if (id >= push_constants.max_particles) {
+    if (id >= push_constants.max_particles)
+    {
         return;
     }
 
@@ -119,7 +120,7 @@ void main()
 
     vec3 noise_value = GetNoiseValue();
     vec3 random_direction = normalize(noise_value);
-    vec3 starting_velocity = random_direction;//vec3(1.0, 5.0, 1.0);// * (noise_value.y * push_constants.randomness);
+    vec3 starting_velocity = random_direction; // vec3(1.0, 5.0, 1.0);// * (noise_value.y * push_constants.randomness);
 
     vec3 starting_position = push_constants.origin.xyz;
 
@@ -135,7 +136,7 @@ void main()
 
     const float current_scale = particle.position.a;
     const float final_scale = particle.velocity.a;
-    const float starting_scale = push_constants.origin.a;//clamp(1.0 + (noise_value.z * push_constants.randomness), 0.01, 5.0);
+    const float starting_scale = push_constants.origin.a; // clamp(1.0 + (noise_value.z * push_constants.randomness), 0.01, 5.0);
     const float starting_final_scale = starting_scale * ((noise_value.y + 1.0) * push_constants.randomness);
     const float next_scale = mix(current_scale, final_scale, lifetime_ratio);
 
@@ -145,7 +146,7 @@ void main()
     particle.position.a = mix(starting_scale, next_scale, is_alive);
     particle.velocity.xyz = mix(starting_velocity, particle.velocity.xyz - (vec3(0, 9.81, 0) * push_constants.delta_time * has_gravity), is_alive);
     particle.velocity.a = mix(starting_final_scale, final_scale, is_alive);
-    
+
     lifetime = mix(starting_lifetime, lifetime - push_constants.delta_time, is_alive);
     particle.attributes.x = lifetime;
 
@@ -172,7 +173,8 @@ void main()
     vec4 position_world_space = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), particle_uv, depth);
     position_world_space /= position_world_space.w;
 
-    if (distance(position_world_space.xyz, particle.position.xyz) <= 1.0) {
+    if (distance(position_world_space.xyz, particle.position.xyz) <= 1.0)
+    {
         // has collision
         const vec3 normal = normalize(DecodeNormal(Texture2D(sampler_nearest, gbuffer_normals_texture, particle_uv)).xyz);
 
@@ -182,5 +184,5 @@ void main()
 
     instances[index] = particle;
 
-    atomicAdd(indirect_draw_command.instance_count, 1u);//uint(is_alive));
+    atomicAdd(indirect_draw_command.instance_count, 1u); // uint(is_alive));
 }

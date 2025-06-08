@@ -6,12 +6,12 @@
 
 #include "include/defines.inc"
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec2 v_texcoord0;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec2 v_texcoord0;
 
-layout(location=0) out vec4 output_color;
-layout(location=1) out vec4 output_normals;
-layout(location=2) out vec4 output_positions;
+layout(location = 0) out vec4 output_color;
+layout(location = 1) out vec4 output_normals;
+layout(location = 2) out vec4 output_positions;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -42,9 +42,18 @@ HYP_DESCRIPTOR_SRV(Scene, ReflectionProbeResultTexture) uniform texture2D reflec
 
 #include "include/env_probe.inc"
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
+{
+    EnvGrid env_grid;
+};
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
+{
+    EnvProbe current_env_probe;
+};
 
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -58,9 +67,9 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 #include "include/PhysicalCamera.inc"
@@ -104,13 +113,13 @@ void main()
     float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
     vec4 position = ReconstructWorldSpacePositionFromDepth(inverse(camera.projection), inverse(camera.view), texcoord, depth);
     vec4 material = Texture2D(sampler_nearest, gbuffer_material_texture, texcoord); /* r = roughness, g = metalness, b = ?, a = AO */
-    
+
     vec3 result = vec3(0.0);
 
     vec3 N = normalize(normal);
     vec3 V = normalize(camera.position.xyz - position.xyz);
     vec3 R = normalize(reflect(-V, N));
-    
+
     float ao = 1.0;
     vec3 irradiance = vec3(0.0);
     vec4 reflections = vec4(0.0);
@@ -121,7 +130,6 @@ void main()
 
     const float roughness = material.r;
     const float metalness = material.g;
-
 
     const vec3 diffuse_color = CalculateDiffuseColor(albedo.rgb, metalness);
 

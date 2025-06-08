@@ -4,19 +4,19 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : enable
 
-layout(location=0) out vec3 v_position;
-layout(location=1) out vec4 v_color;
-layout(location=2) out vec4 v_conic_radius;
-layout(location=3) out vec2 v_center_screen_position;
-layout(location=4) out vec2 v_quad_position;
-layout(location=5) out vec2 v_uv;
+layout(location = 0) out vec3 v_position;
+layout(location = 1) out vec4 v_color;
+layout(location = 2) out vec4 v_conic_radius;
+layout(location = 3) out vec2 v_center_screen_position;
+layout(location = 4) out vec2 v_quad_position;
+layout(location = 5) out vec2 v_uv;
 
-layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_texcoord0;
-layout (location = 3) in vec2 a_texcoord1;
-layout (location = 4) in vec3 a_tangent;
-layout (location = 5) in vec3 a_bitangent;
+layout(location = 0) in vec3 a_position;
+layout(location = 1) in vec3 a_normal;
+layout(location = 2) in vec2 a_texcoord0;
+layout(location = 3) in vec2 a_texcoord1;
+layout(location = 4) in vec3 a_tangent;
+layout(location = 5) in vec3 a_bitangent;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/scene.inc"
@@ -40,16 +40,15 @@ HYP_DESCRIPTOR_SSBO(GaussianSplattingDescriptorSet, SplatInstancesBuffer, standa
     GaussianSplatShaderData instances[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
 {
     Camera camera;
 };
-
 
 void CalcCovariance3D(mat3 rot, out vec3 sigma0, out vec3 sigma1)
 {
@@ -77,12 +76,11 @@ vec3 CalcCovariance2D(vec3 worldPos, vec3 cov3d0, vec3 cov3d1)
         focal / viewPos.z, 0.0, -(focal * viewPos.x) / (viewPos.z * viewPos.z), 0.0,
         0.0, focal / viewPos.z, -(focal * viewPos.y) / (viewPos.z * viewPos.z), 0.0,
         0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0
-    );
+        0.0, 0.0, 0.0, 0.0);
 
-    //view[0][3] = 0.0;
-    //view[1][3] = 0.0;
-    //view[2][3] = 0.0;
+    // view[0][3] = 0.0;
+    // view[1][3] = 0.0;
+    // view[2][3] = 0.0;
 
     mat4 W = transpose(view);
     mat4 T = W * J;
@@ -90,8 +88,7 @@ vec3 CalcCovariance2D(vec3 worldPos, vec3 cov3d0, vec3 cov3d1)
         cov3d0.x, cov3d0.y, cov3d0.z, 0.0,
         cov3d0.y, cov3d1.x, cov3d1.y, 0.0,
         cov3d0.z, cov3d1.y, cov3d1.z, 0.0,
-        0.0, 0.0, 0.0, 0.0
-    );
+        0.0, 0.0, 0.0, 0.0);
     mat4 cov = transpose(T) * transpose(V) * T;
 
     // Low pass filter to make each splat at least 1px size.
@@ -105,8 +102,7 @@ mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale, float scale_modifier)
     mat3 ms = mat3(
         exp(scale.x) * scale_modifier, 0.0, 0.0,
         0.0, exp(scale.y) * scale_modifier, 0.0,
-        0.0, 0.0, exp(scale.z) * scale_modifier
-    );
+        0.0, 0.0, exp(scale.z) * scale_modifier);
     float w = rot.w;
     float r = rot.w;
     float x = rot.x;
@@ -120,8 +116,7 @@ mat3 CalcMatrixFromRotationScale(vec4 rot, vec3 scale, float scale_modifier)
 
         1. - 2. * (y * y + z * z), 2. * (x * y - r * z), 2. * (x * z + r * y),
         2. * (x * y + r * z), 1. - 2. * (x * x + z * z), 2. * (y * z - r * x),
-        2. * (x * z - r * y), 2. * (y * z + r * x), 1. - 2. * (x * x + y * y)
-    );
+        2. * (x * z - r * y), 2. * (y * z + r * x), 1. - 2. * (x * x + y * y));
 
     return (ms * mr);
 }
@@ -155,8 +150,7 @@ void main()
     vec3 covariance_2d = CalcCovariance2D(
         world_position,
         covariance_3d_0,
-        covariance_3d_1
-    );
+        covariance_3d_1);
 
     float det = covariance_2d.x * covariance_2d.z - covariance_2d.y * covariance_2d.y;
 
@@ -174,12 +168,12 @@ void main()
     vec2 center_screen_position = (center_ndc_position.xy * 0.5 + 0.5) * camera.dimensions.xy;
 
     vec2 delta_screen_position = quad_position * radius * 2.0 / camera.dimensions.xy;
-    
+
     gl_Position = center_ndc_position + vec4(delta_screen_position, 0.0, 0.0);
 
-    v_color = instance.color; //vec4(vec3(splat_distances[instance_id >> 2][instance_id & 3], 0.0, 0.0), 1.0); ////
+    v_color = instance.color; // vec4(vec3(splat_distances[instance_id >> 2][instance_id & 3], 0.0, 0.0), 1.0); ////
     v_position = gl_Position.xyz;
     v_quad_position = quad_position;
     v_conic_radius = conic_radius;
     v_uv = vec2(quad_position * radius);
-} 
+}
