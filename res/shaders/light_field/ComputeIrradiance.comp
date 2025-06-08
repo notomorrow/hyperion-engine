@@ -163,7 +163,7 @@ vec4 ConvoleProbe(uvec2 local_coord)
             radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
         }
 
-        vec4 color = albedo; // irradiance + radiance * albedo;//mix(irradiance + radiance * albedo, SampleSky(sample_dir), step(HYP_FLOAT_MAX, dist_dist2.r));
+        vec4 color = irradiance + radiance * albedo; // mix(irradiance + radiance * albedo, SampleSky(sample_dir), step(HYP_FLOAT_MAX, dist_dist2.r));
 #else
         vec4 color = albedo;
 #endif
