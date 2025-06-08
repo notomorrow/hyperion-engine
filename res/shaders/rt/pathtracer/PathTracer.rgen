@@ -61,9 +61,9 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer Light
     Light lights[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
@@ -104,7 +104,7 @@ void main()
 {
     const ivec2 resolution = rt_radiance_uniforms.output_image_resolution;
     
-    const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(scene.frame_counter & 1);
+    const int pixel_index = int(gl_LaunchIDEXT.x * 2) + int(world_shader_data.frame_counter & 1);
     const ivec2 storage_coord = ivec2(
         pixel_index % resolution.x,
         pixel_index / resolution.x
@@ -135,7 +135,7 @@ void main()
     const float tmin = 0.1;
     const float tmax = 1000.0;
 
-    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), scene.frame_counter % 256);
+    uint ray_seed = InitRandomSeed(InitRandomSeed(gl_LaunchIDEXT.x * 2, gl_LaunchIDEXT.x * 2 + 1), world_shader_data.frame_counter % 256);
 
     vec4 color = vec4(0.0);
 

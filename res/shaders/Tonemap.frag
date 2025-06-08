@@ -6,10 +6,10 @@
 
 #include "./include/defines.inc"
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 texcoord;
-layout(location=0) out vec4 color_output;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec3 v_normal;
+layout(location = 2) in vec2 texcoord;
+layout(location = 0) out vec4 color_output;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -39,12 +39,14 @@ HYP_DESCRIPTOR_SRV(Scene, SSRResultTexture) uniform texture2D ssr_result;
 HYP_DESCRIPTOR_SRV(Scene, SSAOResultTexture) uniform texture2D ssao_gi;
 HYP_DESCRIPTOR_SRV(Scene, DeferredIndirectResultTexture) uniform texture2D deferred_indirect_lighting;
 
-HYP_DESCRIPTOR_CBUFF(Scene, PostProcessingUniforms) uniform PostProcessingUniforms {
+HYP_DESCRIPTOR_CBUFF(Scene, PostProcessingUniforms) uniform PostProcessingUniforms
+{
     uvec2 effect_counts;
     uvec2 last_enabled_indices;
     uvec2 masks;
     uvec2 _pad;
-} post_processing;
+}
+post_processing;
 
 #include "./include/shared.inc"
 #include "./include/gbuffer.inc"
@@ -63,13 +65,12 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
 
 void main()
 {

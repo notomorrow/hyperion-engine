@@ -23,9 +23,9 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
@@ -88,7 +88,7 @@ void main()
 {
     uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
     vec2 pixel_size = 1.0 / vec2(screen_resolution);
-    // vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
+    // vec2 texcoord = min(v_texcoord + (pixel_size * float(world_shader_data.frame_counter & 1)), vec2(1.0));
     vec2 texcoord = v_texcoord;
     uvec2 pixel_coord = uvec2(texcoord * vec2(screen_resolution) - 0.5);
 
@@ -145,7 +145,7 @@ void main()
     //     SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1)
     // );
 
-    // vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
+    // vec2 blue_noise_scaled = blue_noise_sample + float(world_shader_data.frame_counter % 256) * 1.618;
     // const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
 
     for (int i = 0; i < SAMPLE_COUNT; i++)

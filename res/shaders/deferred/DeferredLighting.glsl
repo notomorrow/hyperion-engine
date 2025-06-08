@@ -346,7 +346,7 @@ void IntegrateReflections(inout vec3 Fr, in vec4 reflections)
 
 void ApplyFog(in vec3 P, inout vec4 result)
 {
-    result = CalculateFogLinear(result, unpackUnorm4x8(uint(scene.fog_params.x)), P, camera.position.xyz, scene.fog_params.y, scene.fog_params.z);
+    result = CalculateFogLinear(result, unpackUnorm4x8(uint(world_shader_data.fog_params.x)), P, camera.position.xyz, world_shader_data.fog_params.y, world_shader_data.fog_params.z);
 }
 
 #endif

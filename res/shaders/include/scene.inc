@@ -3,21 +3,14 @@
 
 #include "defines.inc"
 
-struct Scene
+struct WorldShaderData
 {
-    vec4 aabb_max;
-    vec4 aabb_min;
     vec4 fog_params;
 
     float game_time;
     uint frame_counter;
-    uint enabled_render_subsystems_mask;
-    float _pad0;
-
-    // @TODO light_indices, num_bound_lights (max 16) here
-    mat4 _pad1;
-    mat4 _pad2;
-    mat4 _pad3;
+    uint _pad0;
+    uint _pad1;
 };
 
 struct Camera

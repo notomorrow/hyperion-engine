@@ -9,21 +9,22 @@
 HYP_DESCRIPTOR_UAV(SSRDescriptorSet, UVImage, format = rgba16f) uniform writeonly image2D ssr_uvs;
 HYP_DESCRIPTOR_CBUFF(SSRDescriptorSet, UniformBuffer) uniform UniformBuffer
 {
-	uvec4 dimension;
-	float ray_step;
-	float num_iterations;
-	float max_ray_distance;
-	float distance_bias;
-	float offset;
-	float eye_fade_start;
-	float eye_fade_end;
-	float screen_edge_fade_start;
-	float screen_edge_fade_end;
+    uvec4 dimension;
+    float ray_step;
+    float num_iterations;
+    float max_ray_distance;
+    float distance_bias;
+    float offset;
+    float eye_fade_start;
+    float eye_fade_end;
+    float screen_edge_fade_start;
+    float screen_edge_fade_end;
 
     float _pad0;
     float _pad1;
     float _pad2;
-} ssr_params;
+}
+ssr_params;
 
 HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
 HYP_DESCRIPTOR_SRV(SSRDescriptorSet, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
@@ -36,14 +37,14 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 {
-	ivec4 sobol_256spp_256d[256 * 256 / 4];
-	ivec4 scrambling_tile[128 * 128 * 8 / 4];
-	ivec4 ranking_tile[128 * 128 * 8 / 4];
+    ivec4 sobol_256spp_256d[256 * 256 / 4];
+    ivec4 scrambling_tile[128 * 128 * 8 / 4];
+    ivec4 ranking_tile[128 * 128 * 8 / 4];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
@@ -67,8 +68,7 @@ bool TraceRays(
     out vec2 hit_pixel,
     out vec3 hit_point,
     out float hit_weight,
-    out float num_iterations
-)
+    out float num_iterations)
 {
     bool intersect = false;
     num_iterations = 0.0;
@@ -85,7 +85,8 @@ bool TraceRays(
 
     int i = 0;
 
-    for (; i < ssr_params.num_iterations; i++) {
+    for (; i < ssr_params.num_iterations; i++)
+    {
         marching_position += ray_step;
 
         hit_pixel = GetProjectedPositionFromView(proj, marching_position);
@@ -96,23 +97,27 @@ bool TraceRays(
         intersect = step_delta > 0.0;
         num_iterations += 1.0;
 
-        if (intersect) {
+        if (intersect)
+        {
             break;
         }
     }
 
-    if (intersect) {
+    if (intersect)
+    {
         // binary search
-        for (; i < ssr_params.num_iterations; i++) {
+        for (; i < ssr_params.num_iterations; i++)
+        {
             ray_step *= 0.5;
             marching_position = marching_position - ray_step * sign(step_delta);
 
             hit_pixel = GetProjectedPositionFromView(proj, marching_position);
             view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_pixel, Texture2D(sampler_nearest, gbuffer_depth_texture, hit_pixel).r);
-            
+
             step_delta = abs(marching_position.z) - view_space_position.z;
 
-            if (abs(step_delta) < ssr_params.distance_bias) {
+            if (abs(step_delta) < ssr_params.distance_bias)
+            {
                 return true;
             }
         }
@@ -126,8 +131,7 @@ float CalculateAlpha(
     vec2 hit_pixel,
     vec3 hit_point,
     float dist,
-    vec3 ray_direction
-)
+    vec3 ray_direction)
 {
     float alpha = 1.0;
     // Fade ray hits that approach the maximum iterations
@@ -148,10 +152,10 @@ void main(void)
     const uint pixel_index = gl_GlobalInvocationID.x;
     const uvec2 coord = uvec2(
         pixel_index % ssr_params.dimension.x,
-        pixel_index / ssr_params.dimension.x
-    );
+        pixel_index / ssr_params.dimension.x);
 
-    if (any(greaterThanEqual(coord, ssr_params.dimension.xy))) {
+    if (any(greaterThanEqual(coord, ssr_params.dimension.xy)))
+    {
         return;
     }
 
@@ -162,7 +166,8 @@ void main(void)
     const float perceptual_roughness = sqrt(roughness);
     const float depth = Texture2D(sampler_nearest, gbuffer_depth_texture, texcoord).r;
 
-    if (depth > 0.99999) {
+    if (depth > 0.99999)
+    {
         imageStore(ssr_uvs, ivec2(coord), vec4(0.0));
         return;
     }
@@ -181,16 +186,15 @@ void main(void)
     const float texel_size_max = max(texel_size.x, texel_size.y);
 
     vec3 ray_origin;
-    
+
 #ifdef ROUGHNESS_SCATTERING
     vec2 blue_noise_sample = vec2(
         SampleBlueNoise(int(coord.x), int(coord.y), 0, 0),
-        SampleBlueNoise(int(coord.x), int(coord.y), 0, 1)
-    );
+        SampleBlueNoise(int(coord.x), int(coord.y), 0, 1));
 
-    vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
+    vec2 blue_noise_scaled = blue_noise_sample + float(world_shader_data.frame_counter % 256) * 1.618;
     const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
-    
+
     vec3 H = ImportanceSampleGGX(rnd, view_space_normal, roughness);
     H = tangent * H.x + bitangent * H.y + view_space_normal * H.z;
 
@@ -201,8 +205,9 @@ void main(void)
 
     ray_origin = P + ray_direction * 0.25;
 
-    //discard if the ray is pointing directly towards the camera
-    if (dot(ray_direction, -V) < 0.0) {
+    // discard if the ray is pointing directly towards the camera
+    if (dot(ray_direction, -V) < 0.0)
+    {
         imageStore(ssr_uvs, ivec2(coord), vec4(0.0));
         return;
     }

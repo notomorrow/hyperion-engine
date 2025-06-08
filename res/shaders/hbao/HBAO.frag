@@ -4,10 +4,10 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 v_texcoord;
-layout(location=0) out vec4 color_output;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec3 v_normal;
+layout(location = 2) in vec2 v_texcoord;
+layout(location = 0) out vec4 color_output;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
@@ -42,16 +42,16 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF(HBAODescriptorSet, UniformBuffer) uniform UniformBuffer
 {
-    uvec2   dimension;
-    float   radius;
-    float   power;
+    uvec2 dimension;
+    float radius;
+    float power;
 };
 
 #include "../include/Temporal.glsl"
@@ -112,8 +112,7 @@ vec2 RotateDirection(vec2 uv, vec2 cos_sin)
 {
     return vec2(
         uv.x * cos_sin.x - uv.y * cos_sin.y,
-        uv.x * cos_sin.y + uv.y * cos_sin.x
-    );
+        uv.x * cos_sin.y + uv.y * cos_sin.x);
 }
 
 #define ANGLE_BIAS 0.0
@@ -143,12 +142,12 @@ void TraceAO_New(vec2 uv, out float occlusion)
 #endif
 {
     uvec2 pixel_coord = uvec2(clamp(ivec2(uv * vec2(dimension) - 0.5), ivec2(0), ivec2(dimension) - 1));
-    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), scene.frame_counter % 256);
+    uint seed = InitRandomSeed(InitRandomSeed(pixel_coord.x, pixel_coord.y), world_shader_data.frame_counter % 256);
 
     const float projected_scale = float(dimension.y) / (tan_half_fov * 2.0);
 
-    const float temporal_offset = GetSpatialOffset(scene.frame_counter);
-    const float temporal_rotation = GetTemporalRotation(scene.frame_counter);
+    const float temporal_offset = GetSpatialOffset(world_shader_data.frame_counter);
+    const float temporal_rotation = GetTemporalRotation(world_shader_data.frame_counter);
 
     const float noise_offset = GetOffsets(uv);
     const float noise_direction = InterleavedGradientNoise(vec2(pixel_coord));
@@ -169,7 +168,8 @@ void TraceAO_New(vec2 uv, out float occlusion)
     light_color = vec4(0.0);
 #endif
 
-    for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++) {
+    for (int i = 0; i < HYP_HBAO_NUM_CIRCLES; i++)
+    {
         // float angle = (float(i) + noise_direction) / float(HYP_HBAO_NUM_CIRCLES) * 2.0 * HYP_FMATH_PI;//(float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
         float angle = (float(i) + noise_direction + ((temporal_rotation / 360.0))) * (HYP_FMATH_PI / float(HYP_HBAO_NUM_CIRCLES)) * 2.0;
 
@@ -177,7 +177,7 @@ void TraceAO_New(vec2 uv, out float occlusion)
         vec3 ray = normalize(vec3(ss_ray.xy * V.z, -dot(V.xy, ss_ray.xy)));
         const float nx = dot(ray, N);
         const float ny = -dot(N, V);
-        const float ctg_th0 = -nx/ny;
+        const float ctg_th0 = -nx / ny;
 
         vec2 cos_max_theta = vec2(ctg_th0 * inversesqrt(ctg_th0 * ctg_th0 + 1.0));
         vec2 max_theta = vec2(acos(cos_max_theta));
@@ -194,7 +194,8 @@ void TraceAO_New(vec2 uv, out float occlusion)
         vec4 slice_light[2] = { vec4(0.0), vec4(0.0) };
 #endif
 
-        for (int j = 0; j < HYP_HBAO_NUM_SLICES; j++) {
+        for (int j = 0; j < HYP_HBAO_NUM_SLICES; j++)
+        {
             vec2 uv_offset = (ss_ray * texel_size) * max(step_radius * (float(j) + ray_step), float(j + 1));
 
             vec4 new_uv = uv.xyxy + vec4(uv_offset, -uv_offset);
@@ -204,7 +205,8 @@ void TraceAO_New(vec2 uv, out float occlusion)
             const float max_dimension = min(1.0, max(abs(new_uv_ndc.x), abs(new_uv_ndc.y)));
             const float fade = 1.0 - saturate(max(0.0, max_dimension - 0.95) / (1.0 - 0.98));
 
-            if (all(lessThan(new_uv.xy, vec2(1.0))) && all(greaterThanEqual(new_uv.xy, vec2(0.0)))) {
+            if (all(lessThan(new_uv.xy, vec2(1.0))) && all(greaterThanEqual(new_uv.xy, vec2(0.0))))
+            {
                 new_uv = Saturate(new_uv);
 
                 float depth_0 = GetDepth(new_uv.xy);
@@ -215,7 +217,8 @@ void TraceAO_New(vec2 uv, out float occlusion)
 
                 const vec2 len = vec2(length(ds), length(dt));
                 const vec2 dist = len / radius;
-                ds /= len.x; dt /= len.y;
+                ds /= len.x;
+                dt /= len.y;
 
                 const vec2 DdotD = vec2(dot(ds, ds), dot(dt, dt));
                 const vec2 NdotD = vec2(dot(ds, N), dot(dt, N));
@@ -248,9 +251,9 @@ void TraceAO_New(vec2 uv, out float occlusion)
 #endif
 
                 slice_ao += vec2(
-                    (1.0 - dist.x * dist.x) * (NdotD.x - slice_ao.x),
-                    (1.0 - dist.y * dist.y) * (NdotD.y - slice_ao.y)
-                ) * condition * fade;
+                                (1.0 - dist.x * dist.x) * (NdotD.x - slice_ao.x),
+                                (1.0 - dist.y * dist.y) * (NdotD.y - slice_ao.y))
+                    * condition * fade;
 
                 cos_max_theta = mix(cos_max_theta, DdotV, condition);
                 max_theta = mix(max_theta, theta, condition);
