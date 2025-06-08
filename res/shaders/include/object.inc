@@ -8,39 +8,39 @@
 
 struct Object
 {
-    mat4    model_matrix;
-    mat4    previous_model_matrix;
-    
-    vec4    _pad0;
-    vec4    _pad1;
-    vec4    world_aabb_max;
-    vec4    world_aabb_min;
+    mat4 model_matrix;
+    mat4 previous_model_matrix;
 
-    uint    entity_index;
-    uint    _unused;
-    uint    material_index;
-    uint    skeleton_index;
+    vec4 _pad0;
+    vec4 _pad1;
+    vec4 world_aabb_max;
+    vec4 world_aabb_min;
 
-    uint    bucket;
-    uint    flags;
-    uint    _pad3;
-    uint    _pad4;
+    uint entity_index;
+    uint lightmap_volume_index;
+    uint material_index;
+    uint skeleton_index;
 
-    uvec4   user_data0;
-    uvec4   user_data1;
+    uint bucket;
+    uint flags;
+    uint _pad3;
+    uint _pad4;
+
+    uvec4 user_data0;
+    uvec4 user_data1;
 };
 
 #define MAX_ENTITIES_PER_INSTANCE_BATCH 60
 
 struct EntityInstanceBatch
 {
-    uint    batch_index;
-    uint    num_entities;
-    uint    _pad0;
-    uint    _pad1;
+    uint batch_index;
+    uint num_entities;
+    uint _pad0;
+    uint _pad1;
 
-    uvec4   indices[MAX_ENTITIES_PER_INSTANCE_BATCH / 4];
-    mat4    transforms[MAX_ENTITIES_PER_INSTANCE_BATCH];
+    uvec4 indices[MAX_ENTITIES_PER_INSTANCE_BATCH / 4];
+    mat4 transforms[MAX_ENTITIES_PER_INSTANCE_BATCH];
 };
 
 // can use up to 16 bits.
@@ -63,10 +63,10 @@ struct EntityInstanceBatch
         | (uint((obj).bucket == HYP_OBJECT_BUCKET_SKYBOX) * (OBJECT_MASK_SKY)))
 
 #ifdef VERTEX_SHADER
-    #define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
-    #define object (objects[OBJECT_INDEX])
+#define OBJECT_INDEX (entity_instance_batch.indices[gl_InstanceIndex >> 2][gl_InstanceIndex & 3])
+#define object (objects[OBJECT_INDEX])
 #elif defined(FRAGMENT_SHADER)
-    #define object (objects[v_object_index])
+#define object (objects[v_object_index])
 #endif
 
 #endif
