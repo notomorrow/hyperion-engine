@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Hyperion;
 
 namespace Hyperion
@@ -143,8 +144,17 @@ namespace Hyperion
 
                 if (countersTextElement != null)
                 {
-                    ((UIText)countersTextElement).SetText(string.Format("draw calls: {0}, Tris: {1}",
-                        renderStats.counts.drawCalls, renderStats.counts.triangles));
+                    StringBuilder sb = new StringBuilder();
+                    sb.AppendFormat("Draw calls: {0}", renderStats.counts[EngineRenderStatsCountType.DrawCalls]);
+                    sb.AppendFormat(", Tris: {0}", renderStats.counts[EngineRenderStatsCountType.Triangles]);
+                    sb.AppendFormat(", RenderGroups: {0}", renderStats.counts[EngineRenderStatsCountType.RenderGroups]);
+                    sb.AppendFormat(", Views: {0}", renderStats.counts[EngineRenderStatsCountType.Views]);
+                    sb.AppendFormat(", Scenes: {0}", renderStats.counts[EngineRenderStatsCountType.Scenes]);
+                    sb.AppendFormat(", Lights: {0}", renderStats.counts[EngineRenderStatsCountType.Lights]);
+                    sb.AppendFormat(", LightmapVolumes: {0}", renderStats.counts[EngineRenderStatsCountType.LightmapVolumes]);
+                    sb.AppendFormat(", EnvProbes: {0}", renderStats.counts[EngineRenderStatsCountType.EnvProbes]);
+
+                    ((UIText)countersTextElement).SetText(sb.ToString());
                 }
             }
 
