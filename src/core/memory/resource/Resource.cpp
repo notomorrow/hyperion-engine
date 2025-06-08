@@ -41,14 +41,17 @@ HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeID type_id, Uniqu
 
 ResourceBase::ResourceBase()
     : m_initialization_mask(0),
+      m_initialization_thread_id(ThreadID::Invalid()),
       m_update_counter(0)
 {
 }
 
 ResourceBase::ResourceBase(ResourceBase&& other) noexcept
     : m_initialization_mask(other.m_initialization_mask.Exchange(0, MemoryOrder::ACQUIRE_RELEASE)),
+      m_initialization_thread_id(other.m_initialization_thread_id),
       m_update_counter(other.m_update_counter.Exchange(0, MemoryOrder::ACQUIRE_RELEASE))
 {
+    other.m_initialization_thread_id = ThreadID::Invalid();
 }
 
 ResourceBase::~ResourceBase()
@@ -64,27 +67,28 @@ bool ResourceBase::IsInitialized() const
 
 int ResourceBase::IncRefNoInitialize()
 {
-    return m_ref_counter.Produce(1, [this](bool)
-        {
-            // loop until we have exclusive access.
-            uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE);
-            AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "ResourceBase::IncRefNoInitialize() called on a resource that is already initialized");
+    int count = m_ref_counter.Produce(1);
 
-            while (state & g_initialization_mask_read_mask)
-            {
-                state = m_initialization_mask.Get(MemoryOrder::ACQUIRE);
-                Threads::Sleep(0);
-            }
-        });
-}
-
-int ResourceBase::IncRef(int count)
-{
-    if (count <= 0)
+    if (count == 1)
     {
-        return 0;
+        // loop until we have exclusive access.
+        uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE);
+        AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "Attempted to initialize a resource that is already initialized");
+
+        while (state & g_initialization_mask_read_mask)
+        {
+            state = m_initialization_mask.Get(MemoryOrder::ACQUIRE);
+            Threads::Sleep(0);
+        }
+
+        m_initialization_thread_id = Threads::CurrentThreadID();
     }
 
+    return count;
+}
+
+int ResourceBase::IncRef()
+{
     IThread* owner_thread = GetOwnerThread();
 
     auto impl = [this]()
@@ -92,8 +96,9 @@ int ResourceBase::IncRef(int count)
         {
             HYP_NAMED_SCOPE("Initializing Resource - Initialization");
 
-            uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE);
-            AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "ResourceBase::IncRef() called on a resource that is already initialized");
+            uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE_RELEASE);
+            AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "Attempted to initialize a resource that is already initialized! Initialization thread id: %s (%u)",
+                m_initialization_thread_id.GetName().LookupString(), m_initialization_thread_id.GetValue());
 
             // loop until we have exclusive access.
             while (state & g_initialization_mask_read_mask)
@@ -103,6 +108,8 @@ int ResourceBase::IncRef(int count)
             }
 
             HYP_MT_CHECK_RW(m_data_race_detector);
+
+            m_initialization_thread_id = Threads::CurrentThreadID();
 
             Initialize();
         }
@@ -131,23 +138,21 @@ int ResourceBase::IncRef(int count)
     m_completion_semaphore.Produce(1);
     bool should_release = true;
 
-    int result = m_ref_counter.Produce(count, [this, owner_thread, &impl, &should_release](bool state)
+    int result = m_ref_counter.Produce(1);
+
+    if (result == 1)
+    {
+        should_release = false;
+
+        if (CanExecuteInline())
         {
-            AssertDebug(!state);
-
-            should_release = false;
-
-            if (!CanExecuteInline())
-            {
-                EnqueueOp(std::move(impl));
-
-                return;
-            }
-
             impl();
-        });
-
-    AssertDebug(result >= 0);
+        }
+        else
+        {
+            EnqueueOp(std::move(impl));
+        }
+    }
 
     if (should_release)
     {
@@ -163,8 +168,8 @@ int ResourceBase::DecRef()
     {
         HYP_NAMED_SCOPE("Destroying Resource");
 
-        uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE);
-        AssertDebugMsg(state & g_initialization_mask_initialized_bit, "ResourceBase::DecRef() called on a resource that is not initialized");
+        uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE_RELEASE);
+        AssertDebugMsg(state & g_initialization_mask_initialized_bit, "ResourceBase::DecRef() called on a resource that is not initialized!");
 
         // Wait till all reads are complete before we continue
         while (state & g_initialization_mask_read_mask)
@@ -180,12 +185,15 @@ int ResourceBase::DecRef()
 
         // DEBUGGING
         state = m_initialization_mask.Get(MemoryOrder::ACQUIRE);
-        AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "ResourceBase::DecRef() called on a resource that is still initialized");
+        AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "ResourceBase::DecRef() called on a resource that is still initialized! Initialization thread id: %s (%u)",
+            m_initialization_thread_id.GetName().LookupString(), m_initialization_thread_id.GetValue());
 
         {
             HYP_MT_CHECK_RW(m_data_race_detector);
 
             Destroy();
+
+            m_initialization_thread_id = ThreadID::Invalid();
         }
 
         // Done with destroying, we can now remove our read access
@@ -199,24 +207,22 @@ int ResourceBase::DecRef()
     m_completion_semaphore.Produce(1);
     bool should_release = true;
 
-    int result = m_ref_counter.Release(1, [this, &impl, &should_release](bool state)
+    int result = m_ref_counter.Release(1);
+
+    if (result == 0)
+    {
+        should_release = false;
+
+        if (CanExecuteInline())
         {
-            AssertDebug(state);
-
-            // Must be put into non-initialized state to destroy
-            should_release = false;
-
-            if (!CanExecuteInline())
-            {
-                EnqueueOp(std::move(impl));
-
-                return;
-            }
 
             impl();
-        });
-
-    AssertDebug(result >= 0);
+        }
+        else
+        {
+            EnqueueOp(std::move(impl));
+        }
+    }
 
     if (should_release)
     {
@@ -351,9 +357,7 @@ void ResourceBase::FlushScheduledTasks() const
 
 void ResourceBase::EnqueueOp(Proc<void()>&& proc)
 {
-    GetOwnerThread()->GetScheduler().Enqueue(
-        std::move(proc),
-        TaskEnqueueFlags::FIRE_AND_FORGET);
+    GetOwnerThread()->GetScheduler().Enqueue(std::move(proc), TaskEnqueueFlags::FIRE_AND_FORGET);
 }
 
 #pragma endregion ResourceBase
@@ -372,7 +376,7 @@ public:
         return true;
     }
 
-    virtual int IncRef(int count) override
+    virtual int IncRef() override
     {
         return 0;
     }

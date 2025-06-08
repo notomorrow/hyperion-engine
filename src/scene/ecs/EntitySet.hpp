@@ -254,9 +254,7 @@ public:
     }
 #endif
 
-    HYP_DEF_STL_BEGIN_END(
-        Iterator(*this, 0),
-        Iterator(*this, m_elements.Size()))
+    HYP_DEF_STL_BEGIN_END(Iterator(*this, 0), Iterator(*this, m_elements.Size()))
 
 private:
     Array<Element> m_elements;
@@ -291,7 +289,7 @@ struct EntitySetView
 
             for (SizeType i = 0; i < m_component_data_race_detectors.Size(); i++)
             {
-                m_component_data_access_scopes[i].Construct(data_access_flags, *m_component_data_race_detectors[i], DataRaceDetector::DataAccessState { current_function, message.Length() != 0 ? message : ANSIStringView(component_names[i]) });
+                m_component_data_access_scopes.ConstructElement(i, data_access_flags, *m_component_data_race_detectors[i], DataRaceDetector::DataAccessState { current_function, message.Length() != 0 ? message : ANSIStringView(component_names[i]) });
             }
         }
     }
@@ -327,7 +325,7 @@ struct EntitySetView
                     access_flags |= DataAccessFlags::ACCESS_WRITE;
                 }
 
-                m_component_data_access_scopes[i].Construct(access_flags, *m_component_data_race_detectors[i], DataRaceDetector::DataAccessState { current_function, message.Length() != 0 ? message : ANSIStringView(component_names[i]) });
+                m_component_data_access_scopes.ConstructElement(i, access_flags, *m_component_data_race_detectors[i], DataRaceDetector::DataAccessState { current_function, message.Length() != 0 ? message : ANSIStringView(component_names[i]) });
             }
         }
     }
@@ -350,15 +348,13 @@ struct EntitySetView
         {
             for (SizeType i = 0; i < m_component_data_access_scopes.Size(); i++)
             {
-                m_component_data_access_scopes[i].Destruct();
+                m_component_data_access_scopes.DestructElement(i);
             }
         }
 #endif
     }
 
-    HYP_DEF_STL_BEGIN_END(
-        entity_set.Begin(),
-        entity_set.End())
+    HYP_DEF_STL_BEGIN_END(entity_set.Begin(), entity_set.End())
 };
 
 } // namespace hyperion

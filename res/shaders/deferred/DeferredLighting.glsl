@@ -30,8 +30,7 @@ struct Refraction
 
 void RefractionSolidSphere(
     vec3 P, vec3 N, vec3 V, float eta_ir,
-    out Refraction out_refraction
-)
+    out Refraction out_refraction)
 {
     const float thickness = 0.8;
 
@@ -72,8 +71,7 @@ vec3 CalculateRefraction(
     vec3 F0, vec3 E,
     float transmission, float roughness,
     vec4 opaque_color, vec4 translucent_color,
-    vec3 brdf
-)
+    vec3 brdf)
 {
     // dimensions of mip chain image
     const uint max_dimension = max(image_dimensions.x, image_dimensions.y);
@@ -109,7 +107,6 @@ vec3 CalculateRefraction(
 
 #endif
 
-
 #ifndef HYP_DEFERRED_NO_ENV_PROBE
 
 #include "../include/env_probe.inc"
@@ -137,8 +134,7 @@ ivec2 GetEnvProbeLightFieldOffset(ivec3 probe_grid_position)
 {
     return ivec2(
         (env_grid.irradiance_octahedron_size.x + 2) * (float(probe_grid_position.x) * float(env_grid.density.y) + float(probe_grid_position.y)) + 1,
-        (env_grid.irradiance_octahedron_size.y + 2) * float(probe_grid_position.z) + 1
-    );
+        (env_grid.irradiance_octahedron_size.y + 2) * float(probe_grid_position.z) + 1);
 }
 
 vec2 GetEnvProbeLightFieldUV(ivec3 probe_grid_position, vec3 N)
@@ -164,7 +160,8 @@ vec3 SampleEnvProbe_SH(uint env_probe_index, vec3 N)
 {
     SH9 sh9;
 
-    for (int i = 0; i < 9; i++) {
+    for (int i = 0; i < 9; i++)
+    {
         sh9.values[i] = env_probes[env_probe_index].sh[i].rgb;
     }
 
@@ -195,13 +192,15 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
 {
     int base_probe_index_at_point = int(GetLocalEnvProbeIndex(env_grid, P));
 
-    if (base_probe_index_at_point < 0 || base_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
+    if (base_probe_index_at_point < 0 || base_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES)
+    {
         return vec3(0.0);
     }
 
     const uint base_probe_index = GET_GRID_PROBE_INDEX(base_probe_index_at_point);
 
-    if (base_probe_index == ~0u) {
+    if (base_probe_index == ~0u)
+    {
         return vec3(0.0);
     }
 
@@ -213,8 +212,9 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
     vec3 total_irradiance = vec3(0.0);
     float total_weight = 0.0;
 
-     // iterate over probe cage
-    for (int i = 0; i < 8; i++) {
+    // iterate over probe cage
+    for (int i = 0; i < 8; i++)
+    {
         ivec3 offset = ivec3(i, i >> 1, i >> 2) & ivec3(1);
 
         // Add (size_of_probe * 0.5) to bias it to ensure the correct probe is selected
@@ -222,13 +222,15 @@ vec3 CalculateEnvGridIrradiance(vec3 P, vec3 N, vec3 V)
 
         int neighbor_probe_index_at_point = int(GetLocalEnvProbeIndex(env_grid, neighbor_probe_position));
 
-        if (neighbor_probe_index_at_point < 0 || neighbor_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES) {
+        if (neighbor_probe_index_at_point < 0 || neighbor_probe_index_at_point >= HYP_MAX_BOUND_AMBIENT_PROBES)
+        {
             continue;
         }
 
         const uint neighbor_probe_index = GET_GRID_PROBE_INDEX(neighbor_probe_index_at_point);
 
-        if (neighbor_probe_index == ~0u) {
+        if (neighbor_probe_index == ~0u)
+        {
             continue;
         }
 
@@ -298,7 +300,8 @@ vec4 CalculateReflectionProbe(in EnvProbe probe, vec3 P, vec3 N, vec3 R, vec3 ca
     // at render time to determine if the probe is parallax corrected.
     const bool is_parallax_corrected = bool(probe.flags & HYP_ENV_PROBE_PARALLAX_CORRECTED);
 
-    if (is_parallax_corrected) {
+    if (is_parallax_corrected)
+    {
         R = EnvProbeCoordParallaxCorrected(probe.world_position.xyz, probe.aabb_min.xyz, probe.aabb_max.xyz, P, R);
     }
 #endif

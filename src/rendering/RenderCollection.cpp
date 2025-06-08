@@ -512,9 +512,6 @@ void RenderCollector::ExecuteDrawCalls(
             if (!m_parallel_rendering_state)
             {
                 m_parallel_rendering_state = new ParallelRenderingState();
-                HYP_LOG(RenderCollection, Debug,
-                    "Allocated new ParallelRenderingState: {}",
-                    (void*)m_parallel_rendering_state);
 
                 TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
 
@@ -533,10 +530,6 @@ void RenderCollector::ExecuteDrawCalls(
             if (!head->next)
             {
                 ParallelRenderingState* new_parallel_rendering_state = new ParallelRenderingState();
-
-                HYP_LOG(RenderCollection, Debug,
-                    "Allocated new ParallelRenderingState: {}",
-                    (void*)new_parallel_rendering_state);
 
                 TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
 
@@ -663,10 +656,6 @@ void RenderCollector::ExecuteDrawCalls(
     // Wait for all parallel rendering tasks to finish
     if (num_parallel_rendering_states != 0)
     {
-        HYP_LOG(RenderCollection, Debug,
-            "Waiting for {} parallel rendering task batches to finish",
-            num_parallel_rendering_states);
-
         ParallelRenderingState* state = m_parallel_rendering_state;
 
         while (num_parallel_rendering_states)

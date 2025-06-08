@@ -617,7 +617,7 @@ public:
 protected:
     virtual void Await_Internal() const;
 
-    void Reset()
+    virtual void Reset()
     {
         m_id = TaskID::Invalid();
         m_assigned_scheduler = nullptr;
@@ -759,6 +759,8 @@ public:
 protected:
     virtual void Await_Internal() const override
     {
+        // @TODO: Move semaphore to this - executor may be deleted for FIRE_AND_FORGET tasks as we don't own it.
+
         m_executor->GetSemaphore().Acquire();
 
 #ifdef HYP_DEBUG_MODE
@@ -767,7 +769,7 @@ protected:
 #endif
     }
 
-    void Reset()
+    virtual void Reset() override
     {
         if (m_owns_executor)
         {
@@ -902,7 +904,7 @@ protected:
 #endif
     }
 
-    void Reset()
+    virtual void Reset() override
     {
         if (m_owns_executor)
         {
@@ -933,8 +935,6 @@ private:
 };
 
 #pragma region AwaitAll
-
-namespace detail {
 
 template <class TaskType>
 struct TaskAwaitAll_Impl;
@@ -1111,12 +1111,10 @@ struct TaskAwaitAll_Impl<Task<void>>
     }
 };
 
-} // namespace detail
-
 template <class TaskType>
 decltype(auto) AwaitAll(Span<TaskType> tasks)
 {
-    return detail::TaskAwaitAll_Impl<TaskType> {}(tasks);
+    return TaskAwaitAll_Impl<TaskType> {}(tasks);
 }
 
 #pragma endregion AwaitAll

@@ -26,7 +26,6 @@
 #include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/TerrainComponent.hpp>
 #include <scene/ecs/components/EnvGridComponent.hpp>
 #include <scene/ecs/components/ReflectionProbeComponent.hpp>
 #include <scene/ecs/components/RigidBodyComponent.hpp>
@@ -106,6 +105,12 @@ void HyperionEditor::Init()
     g_engine->GetWorld()->AddSubsystem(editor_subsystem);
 
     m_scene = editor_subsystem->GetScene();
+
+    if (const Handle<WorldGrid>& world_grid = g_engine->GetWorld()->GetWorldGrid())
+    {
+        // Initialize the world grid subsystem
+        world_grid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>(m_scene));
+    }
 
     // Calculate memory pool usage
     Array<SizeType> memory_usage_per_pool;
@@ -240,7 +245,7 @@ void HyperionEditor::Init()
 #endif
 
     // Add Skybox
-    if (true)
+    if (false)
     {
         Handle<Entity> skybox_entity = m_scene->GetEntityManager()->AddEntity();
 
@@ -280,7 +285,7 @@ void HyperionEditor::Init()
 
                              GetScene()->GetRoot()->AddChild(node);
 
-#if 1
+#if 0
                              Handle<Entity> env_grid_entity = m_scene->GetEntityManager()->AddEntity();
 
                              m_scene->GetEntityManager()->AddComponent<TransformComponent>(env_grid_entity, TransformComponent {});
@@ -347,12 +352,12 @@ void HyperionEditor::Init()
 #if 0
         // testing serialization / deserialization
         FileByteWriter byte_writer("Scene2.hyp");
-        fbom::FBOMWriter writer { fbom::FBOMWriterConfig { } };
+        FBOMWriter writer { FBOMWriterConfig { } };
         writer.Append(*GetScene());
         auto write_err = writer.Emit(&byte_writer);
         byte_writer.Close();
 
-        if (write_err != fbom::FBOMResult::FBOM_OK) {
+        if (write_err != FBOMResult::FBOM_OK) {
             HYP_FAIL("Failed to save scene: %s", write_err.message.Data());
         }
 #endif
@@ -364,7 +369,7 @@ void HyperionEditor::Init()
 
 #elif 0
     HypData loaded_scene_data;
-    fbom::FBOMReader reader({});
+    FBOMReader reader({});
     if (auto err = reader.LoadFromFile("Scene2.hyp", loaded_scene_data))
     {
         HYP_FAIL("failed to load: %s", *err.message);
