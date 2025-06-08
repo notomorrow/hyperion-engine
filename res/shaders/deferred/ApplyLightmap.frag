@@ -6,8 +6,8 @@
 
 #include "../include/defines.inc"
 
-layout(location=1) in vec2 texcoord;
-layout(location=0) out vec4 color_output;
+layout(location = 1) in vec2 texcoord;
+layout(location = 0) out vec4 color_output;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -26,8 +26,10 @@ HYP_DESCRIPTOR_SRV(Scene, GBufferTranslucentTexture) uniform texture2D gbuffer_a
 
 HYP_DESCRIPTOR_SRV(Scene, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 HYP_DESCRIPTOR_SRV(Scene, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
-HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest)
+uniform sampler sampler_nearest;
+HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear)
+uniform sampler sampler_linear;
 
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
 
@@ -37,12 +39,14 @@ HYP_DESCRIPTOR_SRV(Scene, SSRResultTexture) uniform texture2D ssr_result;
 HYP_DESCRIPTOR_SRV(Scene, SSAOResultTexture) uniform texture2D ssao_gi;
 HYP_DESCRIPTOR_SRV(Scene, DeferredIndirectResultTexture) uniform texture2D deferred_indirect_lighting;
 
-HYP_DESCRIPTOR_CBUFF(Scene, PostProcessingUniforms) uniform PostProcessingUniforms {
+HYP_DESCRIPTOR_CBUFF(Scene, PostProcessingUniforms) uniform PostProcessingUniforms
+{
     uvec2 effect_counts;
     uvec2 last_enabled_indices;
     uvec2 masks;
     uvec2 _pad;
-} post_processing;
+}
+post_processing;
 
 #include "../include/shared.inc"
 #include "../include/gbuffer.inc"
@@ -84,9 +88,18 @@ HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCube
 
 #include "../include/env_probe.inc"
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
+{
+    EnvGrid env_grid;
+};
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
+{
+    EnvProbe current_env_probe;
+};
 HYP_DESCRIPTOR_SRV(Scene, ReflectionProbeResultTexture) uniform texture2D reflections_texture;
 
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
@@ -99,7 +112,6 @@ HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field
 // #define HYP_DEFERRED_NO_ENV_PROBE // temp
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
 
 void main()
 {
@@ -126,7 +138,8 @@ void main()
     const uint object_mask = VEC4_TO_UINT(Texture2D(HYP_SAMPLER_NEAREST, gbuffer_mask_texture, texcoord));
 
     // apply reflections to lightmapped objects
-    if (bool(object_mask & OBJECT_MASK_LIGHTMAP)) {
+    if (bool(object_mask & OBJECT_MASK_LIGHTMAP))
+    {
         vec3 ibl = vec3(0.0);
         vec3 F = vec3(0.0);
 
@@ -142,7 +155,7 @@ void main()
         const vec3 dfg = CalculateDFG(F, roughness, NdotV);
         const vec3 E = CalculateE(F0, dfg);
         const vec3 energy_compensation = CalculateEnergyCompensation(F0, dfg);
-    
+
         vec4 reflections_color = Texture2D(HYP_SAMPLER_NEAREST, reflections_texture, texcoord);
         ibl = ibl * (1.0 - reflections_color.a) + (reflections_color.rgb * reflections_color.a);
 
