@@ -43,9 +43,9 @@ HYP_DESCRIPTOR_SSBO(RTRadianceDescriptorSet, LightsBuffer) readonly buffer Light
     Light lights[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];

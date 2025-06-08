@@ -10,20 +10,21 @@
 HYP_DESCRIPTOR_UAV(SSGIDescriptorSet, OutImage, format = rgba8) uniform writeonly image2D out_image;
 HYP_DESCRIPTOR_CBUFF(SSGIDescriptorSet, UniformBuffer) uniform UniformBuffer
 {
-	uvec4 dimension;
-	float ray_step;
-	float num_iterations;
-	float max_ray_distance;
-	float distance_bias;
-	float offset;
-	float eye_fade_start;
-	float eye_fade_end;
-	float screen_edge_fade_start;
-	float screen_edge_fade_end;
+    uvec4 dimension;
+    float ray_step;
+    float num_iterations;
+    float max_ray_distance;
+    float distance_bias;
+    float offset;
+    float eye_fade_start;
+    float eye_fade_end;
+    float screen_edge_fade_start;
+    float screen_edge_fade_end;
 
     uint num_bound_lights;
     uvec4 light_indices[4];
-} ssr_params;
+}
+ssr_params;
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
 HYP_DESCRIPTOR_SRV(Scene, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
@@ -45,14 +46,14 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 {
-	ivec4 sobol_256spp_256d[256 * 256 / 4];
-	ivec4 scrambling_tile[128 * 128 * 8 / 4];
-	ivec4 ranking_tile[128 * 128 * 8 / 4];
+    ivec4 sobol_256spp_256d[256 * 256 / 4];
+    ivec4 scrambling_tile[128 * 128 * 8 / 4];
+    ivec4 ranking_tile[128 * 128 * 8 / 4];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
@@ -61,11 +62,23 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
 };
 
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
+{
+    EnvProbe current_env_probe;
+};
 
-HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer { Light lights[]; };
-HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer { ShadowMap shadow_map_data[]; };
+HYP_DESCRIPTOR_SSBO(Global, LightsBuffer) readonly buffer LightsBuffer
+{
+    Light lights[];
+};
+HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
+{
+    ShadowMap shadow_map_data[];
+};
 HYP_DESCRIPTOR_SRV(Global, ShadowMapsTextureArray) uniform texture2DArray shadow_maps;
 HYP_DESCRIPTOR_SRV(Global, PointLightShadowMapsTextureArray) uniform textureCubeArray point_shadow_maps;
 
@@ -90,8 +103,7 @@ bool TraceRays(
     out vec2 hit_uv,
     out vec4 hit_view_space_position,
     out float hit_depth,
-    out float num_iterations
-)
+    out float num_iterations)
 {
     bool intersect = false;
     num_iterations = 0.0;
@@ -108,7 +120,8 @@ bool TraceRays(
 
     // @TODO Use hi-z buffer instead of fixed step
 
-    for (; i < ssr_params.num_iterations; i++) {
+    for (; i < ssr_params.num_iterations; i++)
+    {
         marching_position += ray_step;
 
         hit_uv = GetProjectedPositionFromView(proj, marching_position);
@@ -120,24 +133,28 @@ bool TraceRays(
         intersect = step_delta > 0.0;
         num_iterations += 1.0;
 
-        if (intersect) {
+        if (intersect)
+        {
             break;
         }
     }
 
-    if (intersect) {
+    if (intersect)
+    {
         // binary search
-        for (; i < ssr_params.num_iterations; i++) {
+        for (; i < ssr_params.num_iterations; i++)
+        {
             ray_step *= 0.5;
             marching_position = marching_position - ray_step * sign(step_delta);
 
             hit_uv = GetProjectedPositionFromView(proj, marching_position);
             hit_depth = Texture2D(sampler_nearest, gbuffer_depth_texture, hit_uv).r;
             hit_view_space_position = ReconstructViewSpacePositionFromDepth(inverse_proj, hit_uv, hit_depth);
-            
+
             step_delta = abs(marching_position.z) - hit_view_space_position.z;
 
-            if (abs(step_delta) < ssr_params.distance_bias) {
+            if (abs(step_delta) < ssr_params.distance_bias)
+            {
                 return true;
             }
         }
@@ -149,8 +166,7 @@ bool TraceRays(
 float CalculateAlpha(
     float num_iterations,
     vec2 hit_uv,
-    vec3 ray_direction
-)
+    vec3 ray_direction)
 {
     float alpha = 1.0;
     // Fade ray hits that approach the maximum iterations
@@ -168,7 +184,8 @@ float CalculateAlpha(
 
 vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec3 N)
 {
-    if (lights[light_index].type != HYP_LIGHT_TYPE_DIRECTIONAL) {
+    if (lights[light_index].type != HYP_LIGHT_TYPE_DIRECTIONAL)
+    {
         return vec4(0.0);
     }
 
@@ -180,7 +197,8 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
 
     float shadow = 1.0;
 
-    if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index != ~0u) {
+    if (lights[light_index].type == HYP_LIGHT_TYPE_DIRECTIONAL && lights[light_index].shadow_map_index != ~0u)
+    {
         shadow = GetShadowStandard(lights[light_index].shadow_map_index, P, vec2(0.0), NdotL);
     }
 
@@ -189,7 +207,8 @@ vec4 CalculateDirectLighting(uint light_index, in vec4 albedo, in vec3 P, in vec
 
 vec4 SampleSky(vec3 dir)
 {
-    if (current_env_probe.texture_index != ~0u) {
+    if (current_env_probe.texture_index != ~0u)
+    {
         uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
 
         return Texture2D(sampler_linear, env_probe_textures[probe_texture_index], EncodeOctahedralCoord(normalize(dir)) * 0.5 + 0.5);
@@ -203,10 +222,10 @@ void main(void)
     const uint pixel_index = gl_GlobalInvocationID.x;
     const uvec2 coord = uvec2(
         pixel_index % ssr_params.dimension.x,
-        pixel_index / ssr_params.dimension.x
-    );
+        pixel_index / ssr_params.dimension.x);
 
-    if (any(greaterThanEqual(coord, ssr_params.dimension.xy))) {
+    if (any(greaterThanEqual(coord, ssr_params.dimension.xy)))
+    {
         return;
     }
 
@@ -222,14 +241,14 @@ void main(void)
 
     vec4 accum_result = vec4(0.0);
 
-    const float blue_noise_scale = float(scene.frame_counter % 256) * 1.618;
+    const float blue_noise_scale = float(world_shader_data.frame_counter % 256) * 1.618;
 
-
-    if (depth > 0.99999) {
+    if (depth > 0.99999)
+    {
         imageStore(out_image, ivec2(coord), vec4(0.0));
         return;
     }
-    
+
     const vec3 P = ReconstructViewSpacePositionFromDepth(inverse_proj, texcoord, depth).xyz;
     const vec3 V = normalize(vec3(0.0) - P);
 
@@ -246,32 +265,35 @@ void main(void)
 
     float phi = InterleavedGradientNoise(vec2(coord));
 
-    for (int i = 0; i < NUM_RAYS; i++) {
+    for (int i = 0; i < NUM_RAYS; i++)
+    {
         const vec2 blue_noise_sample = vec2(
             SampleBlueNoise(int(coord.x), int(coord.y), 0, i * 2),
-            SampleBlueNoise(int(coord.x), int(coord.y), 0, i * 2 + 1)
-        );
+            SampleBlueNoise(int(coord.x), int(coord.y), 0, i * 2 + 1));
 
         const vec2 blue_noise_scaled = blue_noise_sample + blue_noise_scale;
         const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
 
         // vec2 rnd = VogelDisk(i, NUM_RAYS, phi);
-        
+
         const vec3 d = SampleCosineWeightedHemisphere(rnd);
 
         const vec3 ray_direction = tangent * d.x + bitangent * d.y + view_space_normal * d.z;
         const vec3 ray_origin = P + ray_direction * 0.25;
 
-        //discard if the ray is pointing directly towards the camera
+        // discard if the ray is pointing directly towards the camera
         const bool intersects = TraceRays(ray_origin, ray_direction, hit_uv, hit_view_space_position, hit_depth, num_iterations);
 
-        if (intersects) {
-            if (hit_depth < 1.0) {
+        if (intersects)
+        {
+            if (hit_depth < 1.0)
+            {
                 float alpha = CalculateAlpha(num_iterations, hit_uv, ray_direction);
 
-                if (alpha > HYP_FMATH_EPSILON) {
+                if (alpha > HYP_FMATH_EPSILON)
+                {
                     vec2 sample_uv = saturate(hit_uv);
-                    
+
 #ifdef EVAL_LIGHTING
                     vec4 hit_albedo = Texture2D(sampler_linear, gbuffer_albedo_texture, sample_uv);
 
@@ -279,11 +301,12 @@ void main(void)
 
                     vec4 hit_position = inverse_view * hit_view_space_position;
                     hit_position /= hit_position.w;
-                    
+
                     // Evaluate lighting at hit point
                     vec4 radiance = vec4(0.0);
-                    
-                    for (uint j = 0; j < ssr_params.num_bound_lights; j++) {
+
+                    for (uint j = 0; j < ssr_params.num_bound_lights; j++)
+                    {
                         uint light_index = ssr_params.light_indices[j / 4][j % 4];
 
                         radiance += CalculateDirectLighting(light_index, hit_albedo, hit_position.xyz, hit_normal);

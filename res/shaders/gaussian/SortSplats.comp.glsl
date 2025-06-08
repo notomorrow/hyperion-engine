@@ -1,7 +1,7 @@
 #version 450
 
 #extension GL_GOOGLE_include_directive : require
-#extension GL_EXT_scalar_block_layout  : require
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
 #define WORKGROUP_SIZE_X 512
@@ -36,9 +36,9 @@ HYP_DESCRIPTOR_SSBO(SortSplatsDescriptorSet, SplatInstancesBuffer, standard = st
     GaussianSplatShaderData instances[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
@@ -56,7 +56,8 @@ layout(push_constant) uniform PushConstant
     uint num_points;
     uint stage;
     uint h;
-} push_constants;
+}
+push_constants;
 shared VALUE_TYPE shared_data[gl_WorkGroupSize.x * 2];
 
 #define READ_INDEX(idx) \
@@ -72,58 +73,60 @@ void GlobalCompareAndSwap(ivec2 idx)
     VALUE_TYPE left = READ_INDEX(idx.x);
     VALUE_TYPE right = READ_INDEX(idx.y);
 
-	if (COMPARE(left, right)) {
-		WRITE_INDEX(idx.x, right);
+    if (COMPARE(left, right))
+    {
+        WRITE_INDEX(idx.x, right);
         WRITE_INDEX(idx.y, left);
-	}
+    }
 }
 
 void LocalCompareAndSwap(ivec2 idx)
 {
-	if (COMPARE(shared_data[idx.x], shared_data[idx.y])) {
-		VALUE_TYPE tmp = shared_data[idx.x];
-		shared_data[idx.x] = shared_data[idx.y];
-		shared_data[idx.y] = tmp;
-	}
+    if (COMPARE(shared_data[idx.x], shared_data[idx.y]))
+    {
+        VALUE_TYPE tmp = shared_data[idx.x];
+        shared_data[idx.x] = shared_data[idx.y];
+        shared_data[idx.y] = tmp;
+    }
 }
 
 void BigFlip(in uint h)
 {
-	uint half_h = h >> 1;
+    uint half_h = h >> 1;
 
-	uint q = ((gl_GlobalInvocationID.x << 1) / h) * h;
-	uint x = q + (gl_GlobalInvocationID.x % half_h);
-	uint y = q + h - (gl_GlobalInvocationID.x % half_h) - 1; 
+    uint q = ((gl_GlobalInvocationID.x << 1) / h) * h;
+    uint x = q + (gl_GlobalInvocationID.x % half_h);
+    uint y = q + h - (gl_GlobalInvocationID.x % half_h) - 1;
 
-	GlobalCompareAndSwap(ivec2(x, y));
+    GlobalCompareAndSwap(ivec2(x, y));
 }
 
 void BigDisperse(in uint h)
 {
-	uint half_h = h >> 1;
+    uint half_h = h >> 1;
 
-	uint q = ((gl_GlobalInvocationID.x << 1) / h) * h;
-	uint x = q + (gl_GlobalInvocationID.x % (half_h));
-	uint y = q + (gl_GlobalInvocationID.x % (half_h)) + half_h;
+    uint q = ((gl_GlobalInvocationID.x << 1) / h) * h;
+    uint x = q + (gl_GlobalInvocationID.x % (half_h));
+    uint y = q + (gl_GlobalInvocationID.x % (half_h)) + half_h;
 
-	GlobalCompareAndSwap(ivec2(x, y));
+    GlobalCompareAndSwap(ivec2(x, y));
 }
 
 void LocalFlip(in uint h)
 {
     barrier();
-    
-    uint half_h = h >> 1; 
-    ivec2 indices = 
-        ivec2(h * ((gl_LocalInvocationID.x << 1) / h)) +
-        ivec2(gl_LocalInvocationID.x % half_h, h - 1 - (gl_LocalInvocationID.x % half_h));
-    
+
+    uint half_h = h >> 1;
+    ivec2 indices =
+        ivec2(h * ((gl_LocalInvocationID.x << 1) / h)) + ivec2(gl_LocalInvocationID.x % half_h, h - 1 - (gl_LocalInvocationID.x % half_h));
+
     LocalCompareAndSwap(indices);
 }
 
 void LocalDisperse(in uint h)
 {
-    for (; h > 1; h >>= 1) {
+    for (; h > 1; h >>= 1)
+    {
         barrier();
 
         uint half_h = h >> 1;
@@ -136,7 +139,8 @@ void LocalDisperse(in uint h)
 
 void LocalBMS(uint h)
 {
-    for (uint hh = 2; hh <= h; hh <<= 1) {
+    for (uint hh = 2; hh <= h; hh <<= 1)
+    {
         LocalFlip(hh);
         LocalDisperse(hh >> 1);
     }
@@ -144,18 +148,21 @@ void LocalBMS(uint h)
 
 void main()
 {
-    if (gl_GlobalInvocationID.x >= push_constants.num_points) {
+    if (gl_GlobalInvocationID.x >= push_constants.num_points)
+    {
         return;
     }
- 
+
     uint offset = (gl_WorkGroupSize.x << 1) * gl_WorkGroupID.x;
 
-    if (push_constants.stage <= STAGE_LOCAL_DISPERSE) {
+    if (push_constants.stage <= STAGE_LOCAL_DISPERSE)
+    {
         shared_data[gl_LocalInvocationID.x << 1] = READ_INDEX(offset + (gl_LocalInvocationID.x << 1));
         shared_data[(gl_LocalInvocationID.x << 1) + 1] = READ_INDEX(offset + (gl_LocalInvocationID.x << 1) + 1);
     }
 
-    switch (push_constants.stage) {
+    switch (push_constants.stage)
+    {
     case STAGE_LOCAL_BMS:
         LocalBMS(push_constants.h);
         break;
@@ -170,7 +177,8 @@ void main()
         break;
     }
 
-    if (push_constants.stage <= STAGE_LOCAL_DISPERSE) {
+    if (push_constants.stage <= STAGE_LOCAL_DISPERSE)
+    {
         barrier();
 
         WRITE_INDEX(offset + (gl_LocalInvocationID.x << 1), shared_data[gl_LocalInvocationID.x << 1]);
