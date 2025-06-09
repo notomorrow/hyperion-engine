@@ -9,27 +9,63 @@ namespace Hyperion
 {
     namespace Editor
     {
-        public class TestEditorTask : LongRunningEditorTask
+        public class CustomSystem : ScriptableSystem
         {
-            public TestEditorTask()
+            public CustomSystem()
             {
+                Logger.Log(LogType.Info, "CustomSystem constructor called");
             }
 
-            public override void Cancel()
+            protected override ComponentInfo[] GetComponentInfos()
             {
-                Logger.Log(LogType.Info, "Cancel task");
+                return new ComponentInfo[]
+                {
+                    new ComponentInfo(HypClass.GetClass<LightComponent>().TypeID, ComponentRWFlags.Read, true)
+                };
             }
 
-            public override bool IsCompleted()
+            public override bool AllowUpdate()
             {
                 return false;
             }
 
-            public override void Process()
+            public override void OnEntityAdded(Entity entity)
             {
-                Logger.Log(LogType.Info, "Process task! testing");
+                Logger.Log(LogType.Info, "CustomSystem OnEntityAdded called for entity: " + entity.ID);
+            }
+
+            public override void Init()
+            {
+                base.Init();
+                Logger.Log(LogType.Info, "CustomSystem Init called");
+            }
+
+            public override void Process(float delta)
+            {
             }
         }
+
+        public class TestEditorTask : LongRunningEditorTask
+            {
+                public TestEditorTask()
+                {
+                }
+
+                public override void Cancel()
+                {
+                    Logger.Log(LogType.Info, "Cancel task");
+                }
+
+                public override bool IsCompleted()
+                {
+                    return false;
+                }
+
+                public override void Process()
+                {
+                    Logger.Log(LogType.Info, "Process task! testing");
+                }
+            }
         
         public class FPSCounterDebugOverlay : EditorDebugOverlayBase
         {
@@ -240,10 +276,16 @@ namespace Hyperion
             {
                 Logger.Log(LogType.Info, "HandleProjectOpened invoked with project: " + project.GetName().ToString());
 
-                if (onActionStackStateChangeDelegate != null)
+                // test add custom system class...
+                if (project.GetScene() != null)
                 {
-                    onActionStackStateChangeDelegate.Remove();
+                    project.GetScene().GetEntityManager().AddSystem(new CustomSystem());
                 }
+
+                if (onActionStackStateChangeDelegate != null)
+                    {
+                        onActionStackStateChangeDelegate.Remove();
+                    }
 
                 onActionStackStateChangeDelegate = project.GetActionStack().GetOnStateChangeDelegate().Bind((EditorActionStackState state) =>
                 {
