@@ -53,10 +53,9 @@ class TaskSystem;
 
 using OnTaskBatchCompletedCallback = Proc<void()>;
 
-class TaskBatch
+struct TaskBatch
 {
-public:
-    TaskSemaphore semaphore;
+    TaskCompleteNotifier notifier;
     uint32 num_enqueued = 0;
 
     /*! \brief The priority / pool lane for which to place
@@ -83,7 +82,7 @@ public:
     /*! \brief Delegate that is called when the TaskBatch is complete (before next_batch has completed) */
     Delegate<void> OnComplete;
 
-    ~TaskBatch()
+    virtual ~TaskBatch()
     {
         AssertThrowMsg(IsCompleted(), "TaskBatch must be in completed state by the time the destructor is called!");
     }
@@ -97,10 +96,6 @@ public:
 #endif
 
         executors.PushBack(std::move(executor));
-
-        ++num_enqueued;
-
-        semaphore.Produce(1);
     }
 
     /*! \brief Check if all tasks in the batch have been completed. */
@@ -117,11 +112,10 @@ public:
         HYP_MT_CHECK_RW(data_race_detector);
 #endif
 
-        for (auto it = executors.Begin(); it != executors.End(); ++it)
+        for (auto& it : executors)
         {
-            it->Execute();
-
-            semaphore.Release(1);
+            it.Execute();
+            notifier.Release(1);
         }
 
         OnComplete();
@@ -140,7 +134,7 @@ public:
 
         AssertThrowMsg(IsCompleted(), "TaskBatch::ResetState() must be called after all tasks have been completed");
 
-        semaphore.SetValue(0);
+        notifier.Reset();
         num_enqueued = 0;
         executors.Clear();
         task_refs.Clear();
@@ -194,6 +188,11 @@ public:
     HYP_FORCE_INLINE uint32 NumThreads() const
     {
         return uint32(m_threads.Size());
+    }
+
+    HYP_FORCE_INLINE const Array<UniquePtr<TaskThread>>& GetThreads() const
+    {
+        return m_threads;
     }
 
     HYP_FORCE_INLINE uint32 GetProcessorAffinity() const

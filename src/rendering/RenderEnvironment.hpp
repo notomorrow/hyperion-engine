@@ -16,8 +16,6 @@
 
 #include <core/utilities/Pair.hpp>
 
-#include <core/object/HypObjectFwd.hpp>
-
 #include <core/math/MathUtil.hpp>
 #include <Constants.hpp>
 #include <Types.hpp>
@@ -25,7 +23,6 @@
 namespace hyperion {
 
 class Engine;
-class Scene;
 class RenderWorld;
 class RenderView;
 
@@ -46,13 +43,8 @@ enum RenderEnvironmentUpdateBits : RenderEnvironmentUpdates
     RENDER_ENVIRONMENT_UPDATES_THREAD_MASK = 0x10 // use mask shifted by ThreadType value to issue unique updates for a specific thread
 };
 
-// @TODO Move RenderEnvironment stuff to RenderScene
-
-HYP_CLASS()
-class HYP_API RenderEnvironment : public HypObject<RenderEnvironment>
+class HYP_API RenderEnvironment final
 {
-    HYP_OBJECT_BODY(RenderEnvironment);
-
 public:
     RenderEnvironment();
     RenderEnvironment(const RenderEnvironment& other) = delete;
@@ -242,18 +234,14 @@ public:
         return m_current_enabled_render_subsystems_mask;
     }
 
-    uint32 GetFrameCounter() const
-    {
-        return m_frame_counter;
-    }
+    void Initialize();
 
-    void Init();
     void Update(GameCounter::TickUnit delta);
 
-    void RenderRTRadiance(FrameBase* frame, RenderView* view);
-    void RenderDDGIProbes(FrameBase* frame);
+    void RenderRTRadiance(FrameBase* frame, const RenderSetup& render_setup);
+    void RenderDDGIProbes(FrameBase* frame, const RenderSetup& render_setup);
 
-    void RenderSubsystems(FrameBase* frame);
+    void RenderSubsystems(FrameBase* frame, const RenderSetup& render_setup);
 
 private:
     HYP_FORCE_INLINE void AddUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type)
@@ -311,8 +299,6 @@ private:
     bool m_has_ddgi_probes;
     bool m_rt_initialized;
     FixedArray<TLASRef, max_frames_in_flight> m_top_level_acceleration_structures;
-
-    uint32 m_frame_counter;
 };
 
 } // namespace hyperion

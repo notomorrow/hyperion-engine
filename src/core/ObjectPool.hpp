@@ -3,7 +3,6 @@
 #ifndef HYPERION_CORE_OBJECT_POOL_HPP
 #define HYPERION_CORE_OBJECT_POOL_HPP
 
-#include <core/IDGenerator.hpp>
 #include <core/ID.hpp>
 #include <core/Util.hpp>
 #include <core/Defines.hpp>
@@ -70,19 +69,12 @@ struct HypObjectHeader
     AtomicVar<uint32> ref_count_strong;
     AtomicVar<uint32> ref_count_weak;
 
-#ifdef HYP_DEBUG_MODE
-    AtomicVar<bool> has_value;
-#endif
-
     HypObjectHeader()
         : container(nullptr),
           index(~0u),
           ref_count_strong(0),
           ref_count_weak(0)
     {
-#ifdef HYP_DEBUG_MODE
-        has_value.Set(false, MemoryOrder::SEQUENTIAL);
-#endif
     }
 
     HypObjectHeader(const HypObjectHeader&) = delete;
@@ -139,7 +131,7 @@ struct HypObjectMemory final : HypObjectHeader
 {
     static_assert(std::is_base_of_v<HypObjectBase, T>, "T must be a subclass of HypObjectBase");
 
-    alignas(T) ubyte bytes[sizeof(T)];
+    ValueStorage<T> storage;
 
     HypObjectMemory() = default;
     HypObjectMemory(const HypObjectMemory&) = delete;
@@ -147,26 +139,6 @@ struct HypObjectMemory final : HypObjectHeader
     HypObjectMemory(HypObjectMemory&&) noexcept = delete;
     HypObjectMemory& operator=(HypObjectMemory&&) noexcept = delete;
     ~HypObjectMemory() = default;
-
-    template <class... Args>
-    T* Construct(Args&&... args)
-    {
-#ifdef HYP_DEBUG_MODE
-        AssertThrow(!has_value.Exchange(true, MemoryOrder::SEQUENTIAL));
-#endif
-
-        T* ptr = GetPointer();
-
-        // Note: don't use Memory::ConstructWithContext as we need to set the header pointer before HypObjectInitializerGuard destructs
-        HypObjectInitializerGuard<T> context { ptr };
-
-        // Set the object header to point to this
-        ptr->HypObjectBase::m_header = static_cast<HypObjectHeader*>(this);
-
-        Memory::Construct<T>(static_cast<void*>(ptr), std::forward<Args>(args)...);
-
-        return ptr;
-    }
 
     uint32 IncRefStrong()
     {
@@ -188,13 +160,6 @@ struct HypObjectMemory final : HypObjectHeader
 
         if ((count = ref_count_strong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
-#ifdef HYP_DEBUG_MODE
-            AssertThrow(has_value.Exchange(false, MemoryOrder::SEQUENTIAL));
-
-            AssertThrow(container != nullptr);
-            AssertThrow(index != ~0u);
-#endif
-
             // Increment weak reference count by 1 so any WeakHandleFromThis() calls in the destructor do not immediately cause FreeID() to be called.
             ref_count_weak.Increment(1, MemoryOrder::RELEASE);
 
@@ -204,10 +169,6 @@ struct HypObjectMemory final : HypObjectHeader
 
             if (ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
             {
-#ifdef HYP_DEBUG_MODE
-                AssertThrow(!has_value.Get(MemoryOrder::SEQUENTIAL));
-#endif
-
                 // Free the slot for this
                 container->ReleaseIndex(index);
             }
@@ -226,17 +187,8 @@ struct HypObjectMemory final : HypObjectHeader
 
         if ((count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
-#ifdef HYP_DEBUG_MODE
-            AssertThrow(container != nullptr);
-            AssertThrow(index != ~0u);
-#endif
-
             if (ref_count_strong.Get(MemoryOrder::ACQUIRE) == 0)
             {
-#ifdef HYP_DEBUG_MODE
-                AssertThrow(!has_value.Get(MemoryOrder::SEQUENTIAL));
-#endif
-
                 // Free the slot for this
                 container->ReleaseIndex(index);
             }
@@ -249,37 +201,24 @@ struct HypObjectMemory final : HypObjectHeader
 
     HYP_NODISCARD T* Release()
     {
-        T* ptr = reinterpret_cast<T*>(&bytes[0]);
-
-#ifdef HYP_DEBUG_MODE
-        AssertThrow(has_value.Get(MemoryOrder::SEQUENTIAL));
-
-        AssertThrow(container != nullptr);
-        AssertThrow(index != ~0u);
-#endif
+        T* ptr = storage.GetPointer();
 
         return ptr;
     }
 
     HYP_FORCE_INLINE T& Get()
     {
-        return *reinterpret_cast<T*>(&bytes[0]);
+        return storage.Get();
     }
 
     HYP_FORCE_INLINE T* GetPointer()
     {
-        return reinterpret_cast<T*>(&bytes[0]);
+        return storage.GetPointer();
     }
 
     HYP_FORCE_INLINE const T* GetPointer() const
     {
-        return reinterpret_cast<const T*>(&bytes[0]);
-    }
-
-    /*! \brief Gets the offset past the header (in bytes) of the memory of the actual object held by a HypObjectMemory<T>. */
-    HYP_FORCE_INLINE static constexpr uintptr_t GetAlignedOffset()
-    {
-        return ((sizeof(HypObjectHeader) + alignof(T) - 1) / alignof(T)) * alignof(T);
+        return storage.GetPointer();
     }
 };
 
@@ -307,9 +246,6 @@ public:
     ObjectContainer()
         : m_pool(2048, /* create_initial_blocks */ true, /* block_init_ctx */ this)
     {
-        // Initialize the default / null object
-        m_default_object.container = this;
-        m_default_object.index = ~0u;
     }
 
     ObjectContainer(const ObjectContainer& other) = delete;
@@ -331,15 +267,7 @@ public:
     HYP_NODISCARD HYP_FORCE_INLINE HypObjectMemory* Allocate()
     {
         HypObjectMemory* element;
-        uint32 index = m_pool.AcquireIndex(&element);
-
-#ifdef HYP_DEBUG_MODE // sanity checks
-        AssertThrow(uintptr_t(element->container) == uintptr_t(this));
-        AssertThrow(element->index == index);
-        AssertThrow(element->ref_count_strong.Get(MemoryOrder::ACQUIRE) == 0);
-        AssertThrow(element->ref_count_weak.Get(MemoryOrder::ACQUIRE) == 0);
-        AssertThrow(!element->has_value.Get(MemoryOrder::ACQUIRE));
-#endif
+        m_pool.AcquireIndex(&element);
 
         return element;
     }
@@ -407,7 +335,6 @@ public:
 
     // private:
     MemoryPoolType m_pool;
-    HypObjectMemory m_default_object;
 };
 
 class ObjectPool

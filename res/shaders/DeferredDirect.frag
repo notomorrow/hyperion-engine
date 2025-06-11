@@ -6,10 +6,10 @@
 
 #include "include/defines.inc"
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec2 v_texcoord0;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec2 v_texcoord0;
 
-layout(location=0) out vec4 output_color;
+layout(location = 0) out vec4 output_color;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -36,9 +36,18 @@ HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radianc
 
 #include "include/env_probe.inc"
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe { EnvProbe current_env_probe; };
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
+{
+    EnvGrid env_grid;
+};
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
+{
+    EnvProbe current_env_probe;
+};
 
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -54,9 +63,9 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_SSBO(Global, ShadowMapsBuffer) readonly buffer ShadowMapsBuffer
@@ -116,7 +125,7 @@ void main()
     float depth = Texture2D(HYP_SAMPLER_NEAREST, gbuffer_depth_texture, texcoord).r;
 
     vec4 view_space_position = ReconstructViewSpacePositionFromDepth(inverse(camera.projection), texcoord, depth);
-   
+
     vec4 position = inverse(camera.view) * view_space_position;
     position /= position.w;
 
@@ -146,7 +155,7 @@ void main()
         vec3 H = vec3(0.0);
 
         const float NdotV = max(0.000001, dot(N, V));
-    
+
         float ao = 1.0;
         float shadow = 1.0;
 
@@ -184,8 +193,7 @@ void main()
         const mat3 Minv = mat3(
             vec3(t1.x, 0.0, t1.y),
             vec3(0.0, 1.0, 0.0),
-            vec3(t1.z, 0.0, t1.w)
-        );
+            vec3(t1.z, 0.0, t1.w));
 
         const float half_width = light.area_size.x * 0.5;
         const float half_height = light.area_size.y * 0.5;
@@ -193,7 +201,7 @@ void main()
         vec3 light_tangent;
         vec3 light_bitangent;
         ComputeOrthonormalBasis(light.normal.xyz, light_tangent, light_bitangent);
-    
+
         const vec3 p0 = light.position_intensity.xyz - light_tangent * half_width - light_bitangent * half_height;
         const vec3 p1 = light.position_intensity.xyz + light_tangent * half_width - light_bitangent * half_height;
         const vec3 p2 = light.position_intensity.xyz + light_tangent * half_width + light_bitangent * half_height;
@@ -227,29 +235,31 @@ void main()
         vec4 light_color = UINT_TO_VEC4(light.color_encoded);
 
 #ifdef LIGHT_TYPE_POINT
-        if (light.shadow_map_index != ~0u) {
+        if (light.shadow_map_index != ~0u)
+        {
             const vec3 world_to_light = position.xyz - light.position_intensity.xyz;
 
             shadow = GetPointShadow(light.shadow_map_index, world_to_light, NdotL);
         }
 #elif defined(LIGHT_TYPE_DIRECTIONAL)
-        if (light.shadow_map_index != ~0u) {
+        if (light.shadow_map_index != ~0u)
+        {
             shadow = GetShadow(light.shadow_map_index, position.xyz, texcoord, camera.dimensions.xy, NdotL);
 
-// #ifdef LIGHT_RAYS_ENABLED
-//             const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
+            // #ifdef LIGHT_RAYS_ENABLED
+            //             const float linear_eye_depth = ViewDepth(depth, camera.near, camera.far);
 
-//             const float light_ray_attenuation = LightRays(
-//                 light.shadow_map_index,
-//                 texcoord,
-//                 L,
-//                 position.xyz,
-//                 camera.position.xyz,
-//                 depth
-//             );
+            //             const float light_ray_attenuation = LightRays(
+            //                 light.shadow_map_index,
+            //                 texcoord,
+            //                 L,
+            //                 position.xyz,
+            //                 camera.position.xyz,
+            //                 depth
+            //             );
 
-//             light_rays = vec4(light_color * light_ray_attenuation);
-// #endif
+            //             light_rays = vec4(light_color * light_ray_attenuation);
+            // #endif
         }
 #endif
 

@@ -386,11 +386,7 @@ RenderCollector::~RenderCollector()
     }
 }
 
-void RenderCollector::CollectDrawCalls(
-    FrameBase* frame,
-    RenderView* view,
-    const Bitset& bucket_bits,
-    const CullData* cull_data)
+void RenderCollector::CollectDrawCalls(FrameBase* frame, const RenderSetup& render_setup, const Bitset& bucket_bits)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -452,7 +448,7 @@ void RenderCollector::CollectDrawCalls(
         }
     }
 
-    if (is_indirect_rendering_enabled && cull_data != nullptr)
+    if (is_indirect_rendering_enabled && render_setup.view->GetCullData().depth_pyramid_image_view != nullptr)
     {
         for (SizeType index = 0; index < iterators.Size(); index++)
         {
@@ -461,32 +457,31 @@ void RenderCollector::CollectDrawCalls(
                 continue;
             }
 
-            (*iterators[index]).second->PerformOcclusionCulling(frame, view, cull_data);
+            (*iterators[index]).second->PerformOcclusionCulling(frame, render_setup);
         }
     }
 }
 
 void RenderCollector::ExecuteDrawCalls(
     FrameBase* frame,
-    RenderView* view,
+    const RenderSetup& render_setup,
     const Bitset& bucket_bits,
-    const CullData* cull_data,
     PushConstantData push_constant) const
 {
-    AssertThrow(view != nullptr);
+    AssertDebug(render_setup.IsValid());
+    AssertDebugMsg(render_setup.HasView(), "RenderSetup must have a View attached");
 
-    const FramebufferRef& framebuffer = view->GetCamera()->GetFramebuffer();
-    AssertThrowMsg(framebuffer, "Camera has no Framebuffer attached");
+    const FramebufferRef& framebuffer = render_setup.view->GetCamera()->GetFramebuffer();
+    AssertDebugMsg(framebuffer, "Camera has no Framebuffer attached");
 
-    ExecuteDrawCalls(frame, view, framebuffer, bucket_bits, cull_data, push_constant);
+    ExecuteDrawCalls(frame, render_setup, framebuffer, bucket_bits, push_constant);
 }
 
 void RenderCollector::ExecuteDrawCalls(
     FrameBase* frame,
-    RenderView* view,
+    const RenderSetup& render_setup,
     const FramebufferRef& framebuffer,
     const Bitset& bucket_bits,
-    const CullData* cull_data,
     PushConstantData push_constant) const
 {
     HYP_SCOPE;
@@ -494,9 +489,7 @@ void RenderCollector::ExecuteDrawCalls(
 
     HYP_MT_CHECK_READ(m_data_race_detector);
 
-    static const bool is_indirect_rendering_enabled = g_rendering_api->GetRenderConfig().IsIndirectRenderingEnabled();
-
-    AssertThrow(m_draw_collection != nullptr);
+    AssertDebug(m_draw_collection != nullptr);
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -512,9 +505,6 @@ void RenderCollector::ExecuteDrawCalls(
             if (!m_parallel_rendering_state)
             {
                 m_parallel_rendering_state = new ParallelRenderingState();
-                HYP_LOG(RenderCollection, Debug,
-                    "Allocated new ParallelRenderingState: {}",
-                    (void*)m_parallel_rendering_state);
 
                 TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
 
@@ -533,10 +523,6 @@ void RenderCollector::ExecuteDrawCalls(
             if (!head->next)
             {
                 ParallelRenderingState* new_parallel_rendering_state = new ParallelRenderingState();
-
-                HYP_LOG(RenderCollection, Debug,
-                    "Allocated new ParallelRenderingState: {}",
-                    (void*)new_parallel_rendering_state);
 
                 TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
 
@@ -642,14 +628,7 @@ void RenderCollector::ExecuteDrawCalls(
                 parallel_rendering_state = acquire_next_parallel_rendering_state();
             }
 
-            if (is_indirect_rendering_enabled && cull_data != nullptr && (render_group->GetFlags() & RenderGroupFlags::INDIRECT_RENDERING))
-            {
-                render_group->PerformRenderingIndirect(frame, view, parallel_rendering_state);
-            }
-            else
-            {
-                render_group->PerformRendering(frame, view, parallel_rendering_state);
-            }
+            render_group->PerformRendering(frame, render_setup, parallel_rendering_state);
 
             if (parallel_rendering_state != nullptr)
             {
@@ -663,17 +642,13 @@ void RenderCollector::ExecuteDrawCalls(
     // Wait for all parallel rendering tasks to finish
     if (num_parallel_rendering_states != 0)
     {
-        HYP_LOG(RenderCollection, Debug,
-            "Waiting for {} parallel rendering task batches to finish",
-            num_parallel_rendering_states);
-
         ParallelRenderingState* state = m_parallel_rendering_state;
 
         while (num_parallel_rendering_states)
         {
             AssertDebug(state != nullptr);
-
             AssertDebug(state->task_batch != nullptr);
+
             state->task_batch->AwaitCompletion();
 
             frame->GetCommandList().Concat(std::move(state->base_command_list));

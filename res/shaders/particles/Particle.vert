@@ -4,17 +4,17 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : enable
 
-layout(location=0) out vec3 v_position;
-layout(location=1) out vec3 v_normal;
-layout(location=2) out vec2 v_texcoord0;
-layout(location=3) out vec4 v_color;
+layout(location = 0) out vec3 v_position;
+layout(location = 1) out vec3 v_normal;
+layout(location = 2) out vec2 v_texcoord0;
+layout(location = 3) out vec4 v_color;
 
-layout (location = 0) in vec3 a_position;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_texcoord0;
-layout (location = 3) in vec2 a_texcoord1;
-layout (location = 4) in vec3 a_tangent;
-layout (location = 5) in vec3 a_bitangent;
+layout(location = 0) in vec3 a_position;
+layout(location = 1) in vec3 a_normal;
+layout(location = 2) in vec2 a_texcoord0;
+layout(location = 3) in vec2 a_texcoord1;
+layout(location = 4) in vec3 a_tangent;
+layout(location = 5) in vec3 a_bitangent;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/scene.inc"
@@ -28,9 +28,9 @@ HYP_DESCRIPTOR_SSBO(ParticleDescriptorSet, ParticlesBuffer, standard = std430) b
     ParticleShaderData instances[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
@@ -61,7 +61,7 @@ void main()
     const vec3 lookat_z = lookat_dir;
     const vec3 lookat_x = normalize(cross(vec3(0.0, 1.0, 0.0), lookat_dir));
     const vec3 lookat_y = normalize(cross(lookat_dir, lookat_x));
-    
+
     const mat4 lookat_matrix = {
         vec4(lookat_x, 0.0),
         vec4(lookat_y, 0.0),
@@ -75,4 +75,4 @@ void main()
     v_color = instance.color;
 
     gl_Position = camera.projection * camera.view * position;
-} 
+}

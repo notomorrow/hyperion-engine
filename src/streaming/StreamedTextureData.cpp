@@ -46,16 +46,16 @@ StreamedTextureData::StreamedTextureData(StreamedDataState initial_state, Textur
 
                 MemoryByteWriter writer;
 
-                fbom::FBOMWriter serializer { fbom::FBOMWriterConfig {} };
+                FBOMWriter serializer { FBOMWriterConfig {} };
 
-                if (fbom::FBOMResult err = serializer.Append(*m_texture_data))
+                if (FBOMResult err = serializer.Append(*m_texture_data))
                 {
                     HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
                     return false;
                 }
 
-                if (fbom::FBOMResult err = serializer.Emit(&writer))
+                if (FBOMResult err = serializer.Emit(&writer))
                 {
                     HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
@@ -80,12 +80,12 @@ StreamedTextureData::StreamedTextureData()
 }
 
 StreamedTextureData::StreamedTextureData(const TextureData& texture_data, ResourceHandle& out_resource_handle)
-    : StreamedTextureData(StreamedDataState::LOADED, texture_data, out_resource_handle)
+    : StreamedTextureData(texture_data.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, texture_data, out_resource_handle)
 {
 }
 
 StreamedTextureData::StreamedTextureData(TextureData&& texture_data, ResourceHandle& out_resource_handle)
-    : StreamedTextureData(StreamedDataState::LOADED, std::move(texture_data), out_resource_handle)
+    : StreamedTextureData(texture_data.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, std::move(texture_data), out_resource_handle)
 {
 }
 
@@ -119,7 +119,8 @@ void StreamedTextureData::LoadTextureData(const ByteBuffer& byte_buffer) const
 {
     m_texture_data.Unset();
 
-    BufferedReader reader(MakeRefCountedPtr<MemoryBufferedReaderSource>(byte_buffer.ToByteView()));
+    MemoryBufferedReaderSource source { byte_buffer.ToByteView() };
+    BufferedReader reader { &source };
 
     if (!reader.IsOpen())
     {
@@ -128,19 +129,32 @@ void StreamedTextureData::LoadTextureData(const ByteBuffer& byte_buffer) const
 
     HypData value;
 
-    fbom::FBOMReader deserializer { fbom::FBOMReaderConfig {} };
-    fbom::FBOMLoadContext context;
+    FBOMReader deserializer { FBOMReaderConfig {} };
+    FBOMLoadContext context;
 
-    if (fbom::FBOMResult err = deserializer.Deserialize(context, reader, value))
+    if (FBOMResult err = deserializer.Deserialize(context, reader, value))
     {
         HYP_LOG(Streaming, Warning, "StreamedTextureData: Error deserializing texture data for StreamedTextureData with hash: {}\tError: {}", GetDataHashCode().Value(), err.message);
         return;
     }
 
-    m_texture_data = value.Get<TextureData>();
+    TextureData& texture_data = value.Get<TextureData>();
 
-    m_texture_desc = m_texture_data->desc;
+    if (texture_data.buffer.Empty())
+    {
+        HYP_LOG(Streaming, Warning, "StreamedTextureData: Texture data buffer is empty for StreamedTextureData with hash: {}", GetDataHashCode().Value());
+
+        return;
+    }
+
+    m_texture_data = texture_data;
+    AssertThrow(m_texture_desc == m_texture_data->desc);
+
     m_buffer_size = m_texture_data->buffer.Size();
+
+    AssertThrowMsg(m_buffer_size == m_texture_desc.GetByteSize(),
+        "Buffer size mismatch for StreamedTextureData with hash: %llu. Expected: %u, Actual: %u",
+        GetDataHashCode().Value(), m_texture_desc.GetByteSize(), m_buffer_size);
 }
 
 const TextureData& StreamedTextureData::GetTextureData() const

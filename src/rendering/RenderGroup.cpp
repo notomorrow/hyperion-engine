@@ -9,6 +9,7 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderSkeleton.hpp>
+#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderProxy.hpp>
 #include <rendering/RenderView.hpp>
@@ -146,13 +147,6 @@ void RenderGroup::RemoveFramebuffer(const FramebufferRef& framebuffer)
 void RenderGroup::Init()
 {
     HYP_SCOPE;
-
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
         {
@@ -382,7 +376,7 @@ void RenderGroup::CollectDrawCalls()
     }
 }
 
-void RenderGroup::PerformOcclusionCulling(FrameBase* frame, RenderView* view, const CullData* cull_data)
+void RenderGroup::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
 
@@ -397,12 +391,7 @@ void RenderGroup::PerformOcclusionCulling(FrameBase* frame, RenderView* view, co
 
     Threads::AssertOnThread(g_render_thread);
 
-    AssertThrow(cull_data != nullptr);
-
-    m_indirect_renderer->ExecuteCullShaderInBatches(
-        frame,
-        view,
-        *cull_data);
+    m_indirect_renderer->ExecuteCullShaderInBatches(frame, render_setup);
 }
 
 static void GetDividedDrawCalls(Span<const DrawCall> draw_calls, uint32 num_batches, Array<Span<const DrawCall>>& out_divided_draw_calls)
@@ -438,7 +427,7 @@ static void GetDividedDrawCalls(Span<const DrawCall> draw_calls, uint32 num_batc
 template <bool IsIndirect>
 static void RenderAll(
     FrameBase* frame,
-    RenderView* view,
+    const RenderSetup& render_setup,
     const GraphicsPipelineRef& pipeline,
     IndirectRenderer* indirect_renderer,
     const DrawCallCollection& draw_state)
@@ -461,7 +450,7 @@ static void RenderAll(
     const uint32 global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
     const DescriptorSetRef& global_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index);
 
-    const uint32 scene_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 view_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
     const uint32 material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
     const DescriptorSetRef& material_descriptor_set = use_bindless_textures
@@ -484,28 +473,28 @@ static void RenderAll(
             global_descriptor_set,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) },
+                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_render_grid.Get(), 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(render_light.Get(), 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_render_probe.Get(), 0) } },
             global_descriptor_set_index);
     }
 
-    if (scene_descriptor_set_index != ~0u)
+    if (view_descriptor_set_index != ~0u)
     {
-        AssertThrow(view != nullptr);
+        AssertThrow(render_setup.HasView());
 
-        const DescriptorSetRef& scene_descriptor_set = view->GetDescriptorSets()[frame_index];
+        const DescriptorSetRef& view_descriptor_set = render_setup.view->GetDescriptorSets()[frame_index];
 
-        AssertThrowMsg(scene_descriptor_set.IsValid(), "Scene descriptor set is not valid but should be (shader: %s, scene descriptor set index: %u)",
-            pipeline->GetShader()->GetCompiledShader()->GetDefinition().GetName().LookupString(), scene_descriptor_set_index);
+        AssertThrowMsg(view_descriptor_set.IsValid(), "Scene descriptor set is not valid but should be (shader: %s, scene descriptor set index: %u)",
+            pipeline->GetShader()->GetCompiledShader()->GetDefinition().GetName().LookupString(), view_descriptor_set_index);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
-            scene_descriptor_set,
+            view_descriptor_set,
             pipeline,
             ArrayMap<Name, uint32> {},
-            scene_descriptor_set_index);
+            view_descriptor_set_index);
     }
 
     // Bind textures globally (bindless)
@@ -584,8 +573,8 @@ static void RenderAll(
             draw_call.render_mesh->Render(frame->GetCommandList(), entity_instance_batch ? entity_instance_batch->num_entities : 1);
         }
 
-        counts.num_draw_calls++;
-        counts.num_triangles += draw_call.render_mesh->NumIndices() / 3;
+        counts[ERS_DRAW_CALLS]++;
+        counts[ERS_TRIANGLES] += draw_call.render_mesh->NumIndices() / 3;
     }
 
     g_engine->GetRenderStatsCalculator().AddCounts(counts);
@@ -594,7 +583,7 @@ static void RenderAll(
 template <bool IsIndirect>
 static void RenderAll_Parallel(
     FrameBase* frame,
-    RenderView* view,
+    const RenderSetup& render_setup,
     const GraphicsPipelineRef& pipeline,
     IndirectRenderer* indirect_renderer,
     Array<Span<const DrawCall>>& divided_draw_calls,
@@ -621,7 +610,7 @@ static void RenderAll_Parallel(
     const uint32 global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
     const DescriptorSetRef& global_descriptor_set = pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index);
 
-    const uint32 scene_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 view_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
     const uint32 material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
 
     GetDividedDrawCalls(draw_state.GetDrawCalls().ToSpan(), num_async_rendering_command_buffers, divided_draw_calls);
@@ -636,28 +625,28 @@ static void RenderAll_Parallel(
             global_descriptor_set,
             pipeline,
             ArrayMap<Name, uint32> {
-                { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) },
+                { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
                 { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_render_grid.Get(), 0) },
                 { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(render_light.Get(), 0) },
                 { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_render_probe.Get(), 0) } },
             global_descriptor_set_index);
     }
 
-    if (scene_descriptor_set_index != ~0u)
+    if (view_descriptor_set_index != ~0u)
     {
-        AssertThrow(view != nullptr);
+        AssertThrow(render_setup.HasView());
 
-        const DescriptorSetRef& scene_descriptor_set = view->GetDescriptorSets()[frame_index];
+        const DescriptorSetRef& view_descriptor_set = render_setup.view->GetDescriptorSets()[frame_index];
 
-        AssertThrowMsg(scene_descriptor_set.IsValid(), "Scene descriptor set is not valid but should be (shader: %s, scene descriptor set index: %u)",
-            pipeline->GetShader()->GetCompiledShader()->GetDefinition().GetName().LookupString(), scene_descriptor_set_index);
+        AssertThrowMsg(view_descriptor_set.IsValid(), "Scene descriptor set is not valid but should be (shader: %s, scene descriptor set index: %u)",
+            pipeline->GetShader()->GetCompiledShader()->GetDefinition().GetName().LookupString(), view_descriptor_set_index);
 
         base_command_list.Add<BindDescriptorSet>(
-            scene_descriptor_set,
+            view_descriptor_set,
             pipeline,
             ArrayMap<Name, uint32> {},
-            scene_descriptor_set_index);
+            view_descriptor_set_index);
     }
 
     // Bind textures globally (bindless)
@@ -757,92 +746,85 @@ static void RenderAll_Parallel(
                     draw_call.render_mesh->Render(command_list, entity_instance_batch ? entity_instance_batch->num_entities : 1);
                 }
 
-                parallel_rendering_state->render_stats_counts[index].num_triangles += draw_call.render_mesh->NumIndices() / 3;
-                parallel_rendering_state->render_stats_counts[index].num_draw_calls++;
+                parallel_rendering_state->render_stats_counts[index][ERS_TRIANGLES] += draw_call.render_mesh->NumIndices() / 3;
+                parallel_rendering_state->render_stats_counts[index][ERS_DRAW_CALLS]++;
             }
         });
 
     TaskSystem::GetInstance().ParallelForEach_Batch(*parallel_rendering_state->task_batch, parallel_rendering_state->num_batches, divided_draw_calls, std::move(proc));
 }
 
-void RenderGroup::PerformRendering(FrameBase* frame, RenderView* view, ParallelRenderingState* parallel_rendering_state)
+void RenderGroup::PerformRendering(FrameBase* frame, const RenderSetup& render_setup, ParallelRenderingState* parallel_rendering_state)
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(g_render_thread);
     AssertReady();
+
+    AssertDebugMsg(render_setup.IsValid(), "RenderSetup must be valid for rendering");
+    AssertDebugMsg(render_setup.HasView(), "RenderSetup must have a valid RenderView for rendering");
 
     if (m_draw_state.GetDrawCalls().Empty())
     {
         return;
     }
 
-    if (m_flags & RenderGroupFlags::PARALLEL_RENDERING)
-    {
-        AssertDebug(parallel_rendering_state != nullptr);
+    static const bool is_indirect_rendering_enabled = g_rendering_api->GetRenderConfig().IsIndirectRenderingEnabled();
 
-        RenderAll_Parallel<false>(
-            frame,
-            view,
-            m_pipeline,
-            m_indirect_renderer.Get(),
-            m_divided_draw_calls,
-            m_draw_state,
-            parallel_rendering_state);
+    if (is_indirect_rendering_enabled && (m_flags & RenderGroupFlags::INDIRECT_RENDERING) && render_setup.view->GetCullData().depth_pyramid_image_view != nullptr)
+    {
+        if (m_flags & RenderGroupFlags::PARALLEL_RENDERING)
+        {
+            RenderAll_Parallel<true>(
+                frame,
+                render_setup,
+                m_pipeline,
+                m_indirect_renderer.Get(),
+                m_divided_draw_calls,
+                m_draw_state,
+                parallel_rendering_state);
+        }
+        else
+        {
+            RenderAll<true>(
+                frame,
+                render_setup,
+                m_pipeline,
+                m_indirect_renderer.Get(),
+                m_draw_state);
+        }
     }
     else
     {
-        RenderAll<false>(
-            frame,
-            view,
-            m_pipeline,
-            m_indirect_renderer.Get(),
-            m_draw_state);
+        if (m_flags & RenderGroupFlags::PARALLEL_RENDERING)
+        {
+            AssertDebug(parallel_rendering_state != nullptr);
+
+            RenderAll_Parallel<false>(
+                frame,
+                render_setup,
+                m_pipeline,
+                m_indirect_renderer.Get(),
+                m_divided_draw_calls,
+                m_draw_state,
+                parallel_rendering_state);
+        }
+        else
+        {
+            RenderAll<false>(
+                frame,
+                render_setup,
+                m_pipeline,
+                m_indirect_renderer.Get(),
+                m_draw_state);
+        }
     }
-}
 
-void RenderGroup::PerformRenderingIndirect(FrameBase* frame, RenderView* view, ParallelRenderingState* parallel_rendering_state)
-{
-    HYP_SCOPE;
+    EngineRenderStatsCounts counts;
+    counts[ERS_RENDER_GROUPS] = 1;
 
-    Threads::AssertOnThread(g_render_thread);
-    AssertReady();
-
-    AssertThrow(m_flags & RenderGroupFlags::INDIRECT_RENDERING);
-
-    if (m_draw_state.GetDrawCalls().Empty())
-    {
-        return;
-    }
-
-    if (m_flags & RenderGroupFlags::PARALLEL_RENDERING)
-    {
-        AssertDebug(parallel_rendering_state != nullptr);
-
-        RenderAll_Parallel<true>(
-            frame,
-            view,
-            m_pipeline,
-            m_indirect_renderer.Get(),
-            m_divided_draw_calls,
-            m_draw_state,
-            parallel_rendering_state);
-    }
-    else
-    {
-        RenderAll<true>(
-            frame,
-            view,
-            m_pipeline,
-            m_indirect_renderer.Get(),
-            m_draw_state);
-    }
+    g_engine->GetRenderStatsCalculator().AddCounts(counts);
 }
 
 #pragma endregion RenderGroup
-
-#pragma region RendererProxy
-
-#pragma endregion RendererProxy
 
 } // namespace hyperion

@@ -21,8 +21,9 @@ enum class EntityTag : uint32
 
     UI, /* associated with a UIObject */
 
-    CAMERA,
     CAMERA_PRIMARY,
+
+    LIGHTMAP_ELEMENT, /* Has an entry in a LightmapVolume - See MeshComponent lightmap_* fields */
 
     DESCRIPTOR_MAX, // Maximum value used for things like Octree entry hashes.
 

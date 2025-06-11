@@ -5,8 +5,6 @@
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 
-#include <rendering/backend/RendererFramebuffer.hpp>
-
 #include <scene/camera/Camera.hpp>
 
 #include <core/logging/Logger.hpp>
@@ -16,8 +14,6 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(Rendering);
 HYP_DEFINE_LOG_SUBCHANNEL(RenderState, Rendering);
 
-const RenderBinding<Scene> RenderBinding<Scene>::empty = {};
-
 RenderState::RenderState()
 {
 }
@@ -26,28 +22,6 @@ RenderState::~RenderState() = default;
 
 void RenderState::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
-
-    static const struct DefaultCameraInitializer
-    {
-        Handle<Camera> camera;
-
-        DefaultCameraInitializer()
-        {
-            camera = CreateObject<Camera>();
-            camera->SetName(Name::Unique("RenderState_DefaultCamera"));
-            InitObject(camera);
-        }
-    } default_camera_initializer;
-
-    // Ensure the default camera is always set
-    camera_bindings.PushBack(TResourceHandle<RenderCamera>(default_camera_initializer.camera->GetRenderResource()));
-
     SetReady(true);
 }
 

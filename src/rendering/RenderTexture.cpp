@@ -5,6 +5,7 @@
 #include <rendering/FullScreenPass.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderMesh.hpp>
+#include <rendering/Renderer.hpp>
 
 #include <rendering/rhi/RHICommandList.hpp>
 
@@ -36,8 +37,6 @@
 namespace hyperion {
 
 #pragma region Render commands
-
-HYP_DISABLE_OPTIMIZATION;
 
 struct RENDER_COMMAND(CreateTexture)
     : renderer::RenderCommand
@@ -79,8 +78,10 @@ struct RENDER_COMMAND(CreateTexture)
                     const TextureData& texture_data = streamed_texture_data_handle->GetTextureData();
                     const TextureDesc& texture_desc = streamed_texture_data_handle->GetTextureDesc();
 
-                    AssertThrow(texture_data.desc == texture_desc);
-                    AssertThrow(texture_data.buffer.Size() == texture_desc.GetByteSize());
+                    AssertThrowMsg(texture_data.buffer.Size() == texture_desc.GetByteSize(),
+                        "Streamed texture data buffer size mismatch in CreateTexture! Texture ID: %u, Texture name: %s, Expected: %u, Actual: %u (HashCode: %llu)",
+                        texture->GetID().Value(), texture->GetName().LookupString(),
+                        texture_desc.GetByteSize(), texture_data.buffer.Size(), streamed_texture_data_handle->GetDataHashCode().Value());
 
                     AssertThrowMsg(streamed_texture_data_handle->GetTextureData().buffer.Size() == streamed_texture_data_handle->GetBufferSize(),
                         "Streamed texture data buffer size mismatch! Expected: %u, Actual: %u (HashCode: %llu)",
@@ -127,9 +128,7 @@ struct RENDER_COMMAND(CreateTexture)
                     commands.Push([&](RHICommandList& cmd)
                         {
                             // Transition to initial state
-                            cmd.Add<InsertBarrier>(
-                                image,
-                                initial_state);
+                            cmd.Add<InsertBarrier>(image, initial_state);
                         });
 
                     if (RendererResult result = commands.Execute(); result.HasError())
@@ -153,8 +152,6 @@ struct RENDER_COMMAND(CreateTexture)
         HYPERION_RETURN_OK;
     }
 };
-
-HYP_ENABLE_OPTIMIZATION;
 
 struct RENDER_COMMAND(DestroyTexture)
     : renderer::RenderCommand
@@ -243,7 +240,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                     mip_width = MathUtil::Max(1u, extent.x >> (mip_level));
                     mip_height = MathUtil::Max(1u, extent.y >> (mip_level));
 
-                    struct alignas(128)
+                    struct
                     {
                         Vec4u dimensions;
                         Vec4u prev_dimensions;
@@ -258,7 +255,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                         FrameRef temp_frame = g_rendering_api->MakeFrame(0);
 
                         pass->GetRenderGroup()->GetPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
-                        pass->Begin(temp_frame, nullptr);
+                        pass->Begin(temp_frame, NullRenderSetup());
 
                         temp_frame->GetCommandList().Add<BindDescriptorTable>(
                             pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable(),
@@ -267,7 +264,7 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
                             temp_frame->GetFrameIndex());
 
                         pass->GetQuadMesh()->GetRenderResource().Render(temp_frame->GetCommandList());
-                        pass->End(temp_frame, nullptr);
+                        pass->End(temp_frame, NullRenderSetup());
 
                         cmd.Concat(std::move(temp_frame->GetCommandList()));
 
@@ -469,7 +466,16 @@ void RenderTexture::Readback(ByteBuffer& out_byte_buffer)
 {
     HYP_SCOPE;
 
-    Execute([this, &out_byte_buffer]()
+    Task<Result> task;
+
+    if (!IsInitialized())
+    {
+        task.Fulfill(HYP_MAKE_ERROR(Error, "RenderTexture is not initialized, cannot readback texture data"));
+
+        return;
+    }
+
+    Execute([this, &out_byte_buffer, promise = task.Promise()]()
         {
             Threads::AssertOnThread(g_render_thread);
 
@@ -493,14 +499,29 @@ void RenderTexture::Readback(ByteBuffer& out_byte_buffer)
                 });
 
             RendererResult result = commands.Execute();
-            AssertThrowMsg(!result.HasError(), "Failed to readback texture: %s", result.GetError().GetMessage().Data());
+
+            if (result.HasError())
+            {
+                promise->Fulfill(result.GetError());
+
+                return;
+            }
 
             out_byte_buffer.SetSize(gpu_buffer->Size());
             gpu_buffer->Read(out_byte_buffer.Size(), out_byte_buffer.Data());
 
             gpu_buffer->Destroy();
+
+            promise->Fulfill(Result());
         },
         /* force_owner_thread */ true);
+
+    Result result = task.Await();
+
+    if (result.HasError())
+    {
+        HYP_FAIL("Failed to readback texture! %s", result.GetError().GetMessage().Data());
+    }
 }
 
 void RenderTexture::Resize(const Vec3u& extent)

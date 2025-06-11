@@ -32,9 +32,9 @@ HYP_DESCRIPTOR_SSBO(UpdateDistancesDescriptorSet, SplatInstancesBuffer, standard
     GaussianSplatShaderData instances[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
@@ -42,15 +42,18 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-layout(push_constant) uniform PushConstant {
-    uint num_points;  
-} push_constants;
+layout(push_constant) uniform PushConstant
+{
+    uint num_points;
+}
+push_constants;
 
 void main()
 {
     const uint index = gl_GlobalInvocationID.x;
 
-    if (index >= push_constants.num_points) {
+    if (index >= push_constants.num_points)
+    {
         return;
     }
 
@@ -59,7 +62,7 @@ void main()
     vec3 camera_position = camera.position.xyz;
     vec3 splat_position = instance.position.xyz;
 
-    float dist = (camera.view * model_matrix * vec4(splat_position, 1.0)).z; //0.0;//distance(camera.position.xyz, splat_position);//
+    float dist = (camera.view * model_matrix * vec4(splat_position, 1.0)).z; // 0.0;//distance(camera.position.xyz, splat_position);//
 
     GaussianSplatIndex gaussian_splat_index;
     gaussian_splat_index.index = index;

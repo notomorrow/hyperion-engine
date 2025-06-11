@@ -56,7 +56,7 @@ public:
 
     virtual bool IsNull() const = 0;
 
-    virtual int IncRef(int count = 1) = 0;
+    virtual int IncRef() = 0;
     virtual int IncRefNoInitialize() = 0;
     virtual int DecRef() = 0;
 
@@ -76,8 +76,8 @@ public:
 class HYP_API ResourceBase : public IResource
 {
 protected:
-    using RefCounter = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::detail::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
-    using CompletionSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::detail::ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+    using RefCounter = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+    using CompletionSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
 
 public:
     ResourceBase();
@@ -100,7 +100,7 @@ public:
         return false;
     }
 
-    virtual int IncRef(int count = 1) override final;
+    virtual int IncRef() override final;
     virtual int DecRef() override final;
 
     /*! \brief Wait for all tasks to be completed. */
@@ -219,6 +219,7 @@ protected:
 
 private:
     AtomicVar<uint64> m_initialization_mask;
+    ThreadID m_initialization_thread_id; // thread that initialized this resource
 };
 
 class IResourceMemoryPool

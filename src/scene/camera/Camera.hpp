@@ -4,6 +4,7 @@
 #define HYPERION_CAMERA_HPP
 
 #include <core/Base.hpp>
+#include <core/Handle.hpp>
 
 #include <core/containers/Queue.hpp>
 
@@ -33,6 +34,7 @@ namespace hyperion {
 
 class Engine;
 class RenderCamera;
+class CameraStreamingVolume;
 
 HYP_ENUM()
 enum class CameraProjectionMode : uint32
@@ -97,7 +99,7 @@ struct CameraCommand
 class Camera;
 
 HYP_CLASS(Abstract)
-class HYP_API CameraController : public EnableRefCountedPtrFromThis<CameraController>
+class HYP_API CameraController : public HypObject<CameraController>
 {
     friend class Camera;
 
@@ -108,16 +110,13 @@ public:
     virtual ~CameraController() = default;
 
     HYP_METHOD(Property = "InputHandler")
-    HYP_FORCE_INLINE const RC<InputHandlerBase>& GetInputHandler() const
+    HYP_FORCE_INLINE const Handle<InputHandlerBase>& GetInputHandler() const
     {
         return m_input_handler;
     }
 
     HYP_METHOD(Property = "InputHandler")
-    HYP_FORCE_INLINE void SetInputHandler(const RC<InputHandlerBase>& input_handler)
-    {
-        m_input_handler = input_handler;
-    }
+    void SetInputHandler(const Handle<InputHandlerBase>& input_handler);
 
     HYP_METHOD(Property = "Camera")
     Camera* GetCamera() const
@@ -186,7 +185,7 @@ protected:
 
     Camera* m_camera;
 
-    RC<InputHandlerBase> m_input_handler;
+    Handle<InputHandlerBase> m_input_handler;
 
     CameraProjectionMode m_projection_mode;
 
@@ -212,6 +211,9 @@ public:
     virtual void UpdateLogic(double dt) override;
     virtual void UpdateViewMatrix() override;
     virtual void UpdateProjectionMatrix() override;
+
+private:
+    void Init() override;
 };
 
 class PerspectiveCameraController;
@@ -220,7 +222,7 @@ class FirstPersonCameraController;
 class FollowCameraController;
 
 HYP_CLASS()
-class HYP_API Camera : public HypObject<Camera>
+class HYP_API Camera final : public HypObject<Camera>
 {
     HYP_OBJECT_BODY(Camera);
 
@@ -235,7 +237,7 @@ public:
     Camera(int width, int height);
     Camera(float fov, int width, int height, float _near, float _far);
     Camera(int width, int height, float left, float right, float bottom, float top, float _near, float _far);
-    ~Camera();
+    ~Camera() override;
 
     HYP_METHOD(Property = "Name", Serialize = true, Editor = true)
     HYP_FORCE_INLINE Name GetName() const
@@ -279,17 +281,17 @@ public:
     }
 
     HYP_METHOD(Property = "CameraControllers", Serialize = true)
-    HYP_FORCE_INLINE const Array<RC<CameraController>>& GetCameraControllers() const
+    HYP_FORCE_INLINE const Array<Handle<CameraController>>& GetCameraControllers() const
     {
         return m_camera_controllers;
     }
 
     /*! \internal For serialization only. */
     HYP_METHOD(Property = "CameraControllers", Serialize = true)
-    void SetCameraControllers(const Array<RC<CameraController>>& camera_controllers);
+    void SetCameraControllers(const Array<Handle<CameraController>>& camera_controllers);
 
     HYP_METHOD()
-    HYP_FORCE_INLINE const RC<CameraController>& GetCameraController() const
+    HYP_FORCE_INLINE const Handle<CameraController>& GetCameraController() const
     {
         return m_camera_controllers.Back();
     }
@@ -301,10 +303,10 @@ public:
     }
 
     HYP_METHOD()
-    void AddCameraController(const RC<CameraController>& camera_controller);
+    void AddCameraController(const Handle<CameraController>& camera_controller);
 
     HYP_METHOD()
-    bool RemoveCameraController(const RC<CameraController>& camera_controller);
+    bool RemoveCameraController(const Handle<CameraController>& camera_controller);
 
     void SetToPerspectiveProjection(
         float fov, float _near, float _far)
@@ -518,6 +520,11 @@ public:
     HYP_METHOD()
     void Rotate(const Vec3f& axis, float radians);
 
+    HYP_FORCE_INLINE const Handle<CameraStreamingVolume>& GetStreamingVolume() const
+    {
+        return m_streaming_volume;
+    }
+
     HYP_METHOD(Property = "Frustum", Serialize = true, Editor = true)
     HYP_FORCE_INLINE const Frustum& GetFrustum() const
     {
@@ -593,9 +600,9 @@ public:
     void Update(GameCounter::TickUnit dt);
     void UpdateMatrices();
 
-    void Init();
-
 protected:
+    void Init() override;
+
     void UpdateViewMatrix();
     void UpdateProjectionMatrix();
     void UpdateViewProjectionMatrix();
@@ -606,7 +613,7 @@ protected:
 
     float m_match_window_size_ratio;
 
-    Array<RC<CameraController>> m_camera_controllers;
+    Array<Handle<CameraController>> m_camera_controllers;
 
     Vec3f m_translation, m_next_translation, m_direction, m_up;
     Matrix4 m_view_mat, m_proj_mat;
@@ -630,6 +637,8 @@ private:
     RenderCamera* m_render_resource;
 
     InputMouseLockScope m_mouse_lock_scope;
+
+    Handle<CameraStreamingVolume> m_streaming_volume;
 };
 
 } // namespace hyperion

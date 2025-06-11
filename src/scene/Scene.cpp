@@ -25,8 +25,6 @@
 #include <scene/ecs/systems/ScriptSystem.hpp>
 #include <scene/ecs/systems/ScenePrimaryCameraSystem.hpp>
 
-#include <scene/world_grid/WorldGridSubsystem.hpp>
-
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
@@ -51,7 +49,6 @@
 #include <Engine.hpp>
 
 // #define HYP_VISIBILITY_CHECK_DEBUG
-// #define HYP_DISABLE_VISIBILITY_CHECK
 
 namespace hyperion {
 
@@ -152,7 +149,7 @@ Scene::Scene(
       m_owner_thread_id(owner_thread_id),
       m_world(world),
       m_is_audio_listener(false),
-      m_entity_manager(MakeRefCountedPtr<EntityManager>(owner_thread_id, this)),
+      m_entity_manager(CreateObject<EntityManager>(owner_thread_id, this)),
       m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
       m_previous_delta(0.01667f),
       m_render_resource(nullptr)
@@ -189,16 +186,30 @@ Scene::~Scene()
     }
 
     // Move so destruction of components can check GetEntityManager() returns nullptr
-    RC<EntityManager> entity_manager = std::move(m_entity_manager);
-    entity_manager.Reset();
+    if (Handle<EntityManager> entity_manager = std::move(m_entity_manager))
+    {
+        if (Threads::IsOnThread(entity_manager->GetOwnerThreadID()))
+        {
+            // If we are on the same thread, we can safely shutdown the entity manager here:
+            entity_manager->Shutdown();
+        }
+        else
+        {
+            // have to enqueue a task to shut down the entity manager on its owner thread
+            Task<void> task = Threads::GetThread(entity_manager->GetOwnerThreadID())->GetScheduler().Enqueue([&entity_manager]()
+                {
+                    entity_manager->Shutdown();
+                });
+
+            // Wait for shut down to complete
+            task.Await();
+        }
+
+        entity_manager.Reset();
+    }
 
     if (m_render_resource != nullptr)
     {
-        if (m_world != nullptr && m_world->IsReady())
-        {
-            m_world->GetRenderResource().RemoveViewsForScene(HandleFromThis());
-        }
-
         FreeResource(m_render_resource);
 
         m_render_resource = nullptr;
@@ -207,22 +218,10 @@ Scene::~Scene()
 
 void Scene::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
-
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
         {
             if (m_render_resource != nullptr)
             {
-                if (m_world != nullptr && m_world->IsReady())
-                {
-                    m_world->GetRenderResource().RemoveViewsForScene(HandleFromThis());
-                }
-
                 FreeResource(m_render_resource);
 
                 m_render_resource = nullptr;
@@ -254,7 +253,7 @@ void Scene::Init()
     // (OnEntityAdded() calls on Systems may require this)
     SetReady(true);
 
-    m_entity_manager->Initialize();
+    InitObject(m_entity_manager);
 }
 
 void Scene::SetOwnerThreadID(ThreadID owner_thread_id)
@@ -319,24 +318,6 @@ void Scene::SetWorld(World* world)
     m_world = world;
 }
 
-WorldGrid* Scene::GetWorldGrid() const
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
-
-    if (!m_world)
-    {
-        return nullptr;
-    }
-
-    if (WorldGridSubsystem* world_grid_subsystem = m_world->GetSubsystem<WorldGridSubsystem>())
-    {
-        return world_grid_subsystem->GetWorldGrid(GetID());
-    }
-
-    return nullptr;
-}
-
 Handle<Node> Scene::FindNodeWithEntity(ID<Entity> entity) const
 {
     HYP_SCOPE;
@@ -388,19 +369,6 @@ void Scene::Update(GameCounter::TickUnit delta)
     {
         m_entity_manager->FlushCommandQueue(delta);
     }
-}
-
-void Scene::EnqueueRenderUpdates()
-{
-    HYP_SCOPE;
-
-    AssertReady();
-
-    SceneShaderData shader_data {};
-    shader_data.fog_params = Vec4f(float(m_fog_params.color.Packed()), m_fog_params.start_distance, m_fog_params.end_distance, 0.0f);
-    shader_data.game_time = m_world != nullptr ? m_world->GetGameState().game_time : 0.0f;
-
-    m_render_resource->SetBufferData(shader_data);
 }
 
 void Scene::SetRoot(const Handle<Node>& root)
@@ -515,14 +483,14 @@ String Scene::GetUniqueNodeName(UTF8StringView base_name) const
 template <class SystemType>
 void Scene::AddSystemIfApplicable()
 {
-    UniquePtr<SystemType> system = MakeUnique<SystemType>(*m_entity_manager);
+    Handle<SystemType> system = CreateObject<SystemType>(*m_entity_manager);
 
     if (!system->ShouldCreateForScene(this))
     {
         return;
     }
 
-    m_entity_manager->AddSystem(std::move(system));
+    m_entity_manager->AddSystem(system);
 }
 
 #pragma endregion Scene

@@ -840,7 +840,7 @@ void RenderEnvGrid::UpdateBufferData()
     GetGPUBufferHolder()->MarkDirty(m_buffer_index);
 }
 
-void RenderEnvGrid::Render(FrameBase* frame)
+void RenderEnvGrid::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -879,7 +879,9 @@ void RenderEnvGrid::Render(FrameBase* frame)
     // render enqueued probes
     while (m_next_render_indices.Any())
     {
-        RenderProbe(frame, m_next_render_indices.Pop());
+        const RenderSetup new_render_setup { render_setup.world, m_render_view.Get() };
+
+        RenderProbe(frame, new_render_setup, m_next_render_indices.Pop());
     }
 
     if (env_probe_collection.num_probes != 0)
@@ -959,9 +961,11 @@ void RenderEnvGrid::Render(FrameBase* frame)
     }
 }
 
-void RenderEnvGrid::RenderProbe(FrameBase* frame, uint32 probe_index)
+void RenderEnvGrid::RenderProbe(FrameBase* frame, const RenderSetup& render_setup, uint32 probe_index)
 {
     HYP_SCOPE;
+
+    AssertDebug(render_setup.IsValid());
 
     const EnvGridOptions& options = m_env_grid->GetOptions();
     const EnvProbeCollection& env_probe_collection = m_env_grid->GetEnvProbeCollection();
@@ -988,15 +992,13 @@ void RenderEnvGrid::RenderProbe(FrameBase* frame, uint32 probe_index)
 
     m_render_view->GetRenderCollector().CollectDrawCalls(
         frame,
-        m_render_view.Get(),
-        Bitset((1 << BUCKET_OPAQUE)),
-        nullptr);
+        render_setup,
+        Bitset((1 << BUCKET_OPAQUE)));
 
     m_render_view->GetRenderCollector().ExecuteDrawCalls(
         frame,
-        m_render_view.Get(),
-        Bitset((1 << BUCKET_OPAQUE)),
-        nullptr);
+        render_setup,
+        Bitset((1 << BUCKET_OPAQUE)));
 
     g_engine->GetRenderState()->UnsetActiveEnvProbe();
 
@@ -1075,7 +1077,7 @@ void RenderEnvGrid::ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* fram
 
     const Vec2u cubemap_dimensions = color_attachment->GetImage()->GetExtent().GetXY();
 
-    struct alignas(128)
+    struct
     {
         uint32 env_probe_index;
         Vec4u probe_grid_position;
@@ -1387,7 +1389,7 @@ void RenderEnvGrid::OffsetVoxelGrid(FrameBase* frame, Vec3i offset)
 
     AssertThrow(m_voxel_grid_texture.IsValid());
 
-    struct alignas(128)
+    struct
     {
         Vec4u probe_grid_position;
         Vec4u cubemap_dimensions;
@@ -1444,7 +1446,7 @@ void RenderEnvGrid::VoxelizeProbe(
     const ImageRef& color_image = m_framebuffer->GetAttachment(0)->GetImage();
     const Vec3u cubemap_dimensions = color_image->GetExtent();
 
-    struct alignas(128)
+    struct
     {
         Vec4u probe_grid_position;
         Vec4u voxel_texture_dimensions;
@@ -1525,7 +1527,7 @@ void RenderEnvGrid::VoxelizeProbe(
         const Vec3u voxel_image_extent = m_voxel_grid_texture->GetRenderResource().GetImage()->GetExtent();
         Vec3u mip_extent = voxel_image_extent;
 
-        struct alignas(128)
+        struct
         {
             Vec4u mip_dimensions;
             Vec4u prev_mip_dimensions;

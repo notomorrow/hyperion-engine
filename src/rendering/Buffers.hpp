@@ -9,8 +9,6 @@
 
 #include <core/utilities/Range.hpp>
 
-#include <core/IDGenerator.hpp>
-
 #include <core/Defines.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
@@ -100,7 +98,7 @@ struct EntityShaderData
     Vec4f world_aabb_min;
 
     uint32 entity_index;
-    uint32 _unused;
+    uint32 lightmap_volume_index;
     uint32 material_index;
     uint32 skeleton_index;
 

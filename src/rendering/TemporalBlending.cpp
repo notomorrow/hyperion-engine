@@ -6,6 +6,7 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderState.hpp>
@@ -285,17 +286,17 @@ void TemporalBlending::CreateComputePipelines()
     ShaderRef shader = g_shader_manager->GetOrCreate(NAME("TemporalBlending"), GetShaderProperties());
     AssertThrow(shader.IsValid());
 
-    m_perform_blending = g_rendering_api->MakeComputePipeline(
-        shader,
-        m_descriptor_table);
-
+    m_perform_blending = g_rendering_api->MakeComputePipeline(shader, m_descriptor_table);
     DeferCreate(m_perform_blending);
 }
 
-void TemporalBlending::Render(FrameBase* frame, RenderView* view)
+void TemporalBlending::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const ImageRef& active_image = frame->GetFrameIndex() % 2 == 0
         ? m_result_texture->GetRenderResource().GetImage()
@@ -309,7 +310,7 @@ void TemporalBlending::Render(FrameBase* frame, RenderView* view)
                                                ->GetImage()
                                                ->GetExtent();
 
-    struct alignas(128)
+    struct
     {
         Vec2u output_dimensions;
         Vec2u depth_texture_dimensions;
@@ -330,19 +331,19 @@ void TemporalBlending::Render(FrameBase* frame, RenderView* view)
         m_perform_blending,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) } } } },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) } } } },
         frame->GetFrameIndex());
 
-    const uint32 scene_descriptor_set_index = m_perform_blending->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 view_descriptor_set_index = m_perform_blending->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
-    if (view != nullptr && scene_descriptor_set_index != ~0u)
+    if (view_descriptor_set_index != ~0u)
     {
         frame->GetCommandList().Add<BindDescriptorSet>(
-            view->GetDescriptorSets()[frame->GetFrameIndex()],
+            render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
             m_perform_blending,
             ArrayMap<Name, uint32> {},
-            scene_descriptor_set_index);
+            view_descriptor_set_index);
     }
 
     frame->GetCommandList().Add<DispatchCompute>(

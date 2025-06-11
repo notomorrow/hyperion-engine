@@ -56,18 +56,18 @@ class RunningEditorTask
 public:
     friend class EditorSubsystem;
 
-    RunningEditorTask(const RC<EditorTaskBase>& task)
+    RunningEditorTask(const Handle<EditorTaskBase>& task)
         : m_task(task)
     {
     }
 
-    RunningEditorTask(const RC<EditorTaskBase>& task, const RC<UIObject>& ui_object)
+    RunningEditorTask(const Handle<EditorTaskBase>& task, const RC<UIObject>& ui_object)
         : m_task(task),
           m_ui_object(ui_object)
     {
     }
 
-    HYP_FORCE_INLINE const RC<EditorTaskBase>& GetTask() const
+    HYP_FORCE_INLINE const Handle<EditorTaskBase>& GetTask() const
     {
         return m_task;
     }
@@ -80,7 +80,7 @@ public:
     RC<UIObject> CreateUIObject(UIStage* ui_stage) const;
 
 private:
-    RC<EditorTaskBase> m_task;
+    Handle<EditorTaskBase> m_task;
     RC<UIObject> m_ui_object;
 };
 
@@ -336,7 +336,7 @@ class HYP_API EditorSubsystem : public Subsystem
     HYP_OBJECT_BODY(EditorSubsystem);
 
 public:
-    EditorSubsystem(const RC<AppContextBase>& app_context);
+    EditorSubsystem(const Handle<AppContextBase>& app_context);
     virtual ~EditorSubsystem() override;
 
     virtual void Initialize() override;
@@ -346,7 +346,7 @@ public:
     virtual void OnSceneAttached(const Handle<Scene>& scene) override;
     virtual void OnSceneDetached(const Handle<Scene>& scene) override;
 
-    HYP_FORCE_INLINE const RC<AppContextBase>& GetAppContext() const
+    HYP_FORCE_INLINE const Handle<AppContextBase>& GetAppContext() const
     {
         return m_app_context;
     }
@@ -380,7 +380,7 @@ public:
     void OpenProject(const Handle<EditorProject>& project);
 
     HYP_METHOD()
-    void AddTask(const RC<EditorTaskBase>& task);
+    void AddTask(const Handle<EditorTaskBase>& task);
 
     HYP_METHOD()
     void SetFocusedNode(const Handle<Node>& focused_node, bool should_select_in_outline = true);
@@ -440,7 +440,7 @@ private:
         return m_hovered_manipulation_widget.IsValid() && m_hovered_manipulation_widget_node.IsValid();
     }
 
-    RC<AppContextBase> m_app_context;
+    Handle<AppContextBase> m_app_context;
     Handle<Scene> m_scene;
     Handle<Camera> m_camera;
 

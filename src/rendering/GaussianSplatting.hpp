@@ -22,6 +22,7 @@ namespace hyperion {
 
 class Engine;
 class Texture;
+struct RenderSetup;
 
 struct alignas(16) GaussianSplattingPoint
 {
@@ -40,7 +41,7 @@ struct GaussianSplattingModelData
 };
 
 HYP_CLASS()
-class HYP_API GaussianSplattingInstance : public HypObject<GaussianSplattingInstance>
+class HYP_API GaussianSplattingInstance final : public HypObject<GaussianSplattingInstance>
 {
     HYP_OBJECT_BODY(GaussianSplattingInstance);
 
@@ -88,10 +89,11 @@ public:
         return m_sort_splats;
     }
 
-    void Init();
-    void Record(FrameBase* frame);
+    void Record(FrameBase* frame, const RenderSetup& render_setup);
 
 private:
+    void Init() override;
+
     void CreateBuffers();
     void CreateShader();
     void CreateRenderGroup();
@@ -116,7 +118,7 @@ private:
 };
 
 HYP_CLASS()
-class HYP_API GaussianSplatting : public HypObject<GaussianSplatting>
+class HYP_API GaussianSplatting final : public HypObject<GaussianSplatting>
 {
     HYP_OBJECT_BODY(GaussianSplatting);
 
@@ -133,13 +135,12 @@ public:
 
     void SetGaussianSplattingInstance(Handle<GaussianSplattingInstance> gaussian_splatting_instance);
 
-    void Init();
+    void UpdateSplats(FrameBase* frame, const RenderSetup& render_setup);
 
-    void UpdateSplats(FrameBase* frame);
-
-    void Render(FrameBase* frame);
+    void Render(FrameBase* frame, const RenderSetup& render_setup);
 
 private:
+    void Init() override;
     void CreateBuffers();
 
     Handle<Mesh> m_quad_mesh;

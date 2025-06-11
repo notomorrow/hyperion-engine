@@ -8,12 +8,11 @@
 
 #include <core/io/ByteWriter.hpp>
 
-#include <core/containers/Stack.hpp>
 #include <core/containers/HashSet.hpp>
 
 #include <core/compression/Archive.hpp>
 
-#include <core/utilities/ForEach.hpp>
+#include <core/threading/TaskSystem.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -22,7 +21,7 @@
 
 #include <algorithm>
 
-namespace hyperion::fbom {
+namespace hyperion::serialization {
 
 #pragma region FBOMWriteStream
 
@@ -1060,4 +1059,4 @@ UniqueID FBOMWriter::AddStaticData(FBOMLoadContext& context, const FBOMData& dat
 
 #pragma endregion FBOMWriter
 
-} // namespace hyperion::fbom
+} // namespace hyperion::serialization

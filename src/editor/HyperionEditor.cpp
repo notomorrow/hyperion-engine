@@ -26,7 +26,6 @@
 #include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/TerrainComponent.hpp>
 #include <scene/ecs/components/EnvGridComponent.hpp>
 #include <scene/ecs/components/ReflectionProbeComponent.hpp>
 #include <scene/ecs/components/RigidBodyComponent.hpp>
@@ -73,6 +72,8 @@
 
 #include <core/config/Config.hpp>
 
+#include <core/logging/Logger.hpp>
+
 #include <HyperionEngine.hpp>
 
 namespace hyperion {
@@ -107,6 +108,14 @@ void HyperionEditor::Init()
 
     m_scene = editor_subsystem->GetScene();
 
+    if (const Handle<WorldGrid>& world_grid = g_engine->GetWorld()->GetWorldGrid())
+    {
+        // // Initialize the world grid subsystem
+        // world_grid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
+
+        world_grid->AddLayer(CreateObject<TerrainWorldGridLayer>());
+    }
+
     // Calculate memory pool usage
     Array<SizeType> memory_usage_per_pool;
     CalculateMemoryPoolUsage(memory_usage_per_pool);
@@ -132,7 +141,7 @@ void HyperionEditor::Init()
         .has_physics = true });
     InitObject(test_particle_spawner);
 
-    m_scene->GetRenderResource().GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(test_particle_spawner);
+    m_scene->GetWorld()->GetRenderResource().GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(test_particle_spawner);
 
     if (false)
     { // add test area light
@@ -280,7 +289,7 @@ void HyperionEditor::Init()
 
                              GetScene()->GetRoot()->AddChild(node);
 
-#if 1
+#if 0
                              Handle<Entity> env_grid_entity = m_scene->GetEntityManager()->AddEntity();
 
                              m_scene->GetEntityManager()->AddComponent<TransformComponent>(env_grid_entity, TransformComponent {});
@@ -347,12 +356,12 @@ void HyperionEditor::Init()
 #if 0
         // testing serialization / deserialization
         FileByteWriter byte_writer("Scene2.hyp");
-        fbom::FBOMWriter writer { fbom::FBOMWriterConfig { } };
+        FBOMWriter writer { FBOMWriterConfig { } };
         writer.Append(*GetScene());
         auto write_err = writer.Emit(&byte_writer);
         byte_writer.Close();
 
-        if (write_err != fbom::FBOMResult::FBOM_OK) {
+        if (write_err != FBOMResult::FBOM_OK) {
             HYP_FAIL("Failed to save scene: %s", write_err.message.Data());
         }
 #endif
@@ -364,7 +373,7 @@ void HyperionEditor::Init()
 
 #elif 0
     HypData loaded_scene_data;
-    fbom::FBOMReader reader({});
+    FBOMReader reader({});
     if (auto err = reader.LoadFromFile("Scene2.hyp", loaded_scene_data))
     {
         HYP_FAIL("failed to load: %s", *err.message);
@@ -400,8 +409,8 @@ void HyperionEditor::Init()
             json::JSONObject entity_json_object;
             entity_json_object["id"] = entity->GetID().Value();
 
-            EntityManager* entity_manager = EntityManager::GetEntityToEntityManagerMap().GetEntityManager(entity);
-            AssertThrow(entity_manager != nullptr);
+            Handle<EntityManager> entity_manager = EntityManager::GetEntityToEntityManagerMap().GetEntityManager(entity);
+            AssertThrow(entity_manager.IsValid());
 
             Optional<const TypeMap<ComponentID>&> all_components = entity_manager->GetAllComponents(entity);
             AssertThrow(all_components.HasValue());

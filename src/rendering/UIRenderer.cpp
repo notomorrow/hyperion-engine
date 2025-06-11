@@ -10,8 +10,10 @@
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderState.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderWorld.hpp>
 #include <rendering/EngineRenderStats.hpp>
 #include <rendering/PlaceholderData.hpp>
+#include <rendering/Renderer.hpp>
 
 #include <rendering/font/FontAtlas.hpp>
 
@@ -25,6 +27,7 @@
 #include <scene/Mesh.hpp>
 #include <scene/View.hpp>
 #include <scene/Texture.hpp>
+#include <scene/World.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/UIComponent.hpp>
@@ -327,7 +330,7 @@ typename RenderProxyTracker::Diff UIRenderCollector::PushUpdatesToRenderThread(R
     return diff;
 }
 
-void UIRenderCollector::CollectDrawCalls(FrameBase* frame)
+void UIRenderCollector::CollectDrawCalls(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -358,10 +361,7 @@ void UIRenderCollector::CollectDrawCalls(FrameBase* frame)
         });
 }
 
-void UIRenderCollector::ExecuteDrawCalls(
-    FrameBase* frame,
-    RenderView* view,
-    const FramebufferRef& framebuffer) const
+void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer) const
 {
     HYP_SCOPE;
 
@@ -410,7 +410,7 @@ void UIRenderCollector::ExecuteDrawCalls(
         // Don't count draw calls for UI
         SuppressEngineRenderStatsScope suppress_render_stats_scope;
 
-        render_group->PerformRendering(frame, view, nullptr);
+        render_group->PerformRendering(frame, render_setup, nullptr);
     }
 
     if (framebuffer.IsValid())
@@ -487,8 +487,9 @@ void UIRenderSubsystem::Init()
     m_camera_resource_handle = TResourceHandle<RenderCamera>(m_ui_stage->GetCamera()->GetRenderResource());
 
     m_view = CreateObject<View>(ViewDesc {
+        .flags = ViewFlags::DEFAULT & ~ViewFlags::ALL_WORLD_SCENES,
         .viewport = Viewport { .extent = m_ui_stage->GetSurfaceSize(), .position = Vec2i::Zero() },
-        .scene = m_ui_stage->GetScene()->HandleFromThis(),
+        .scenes = { m_ui_stage->GetScene()->HandleFromThis() },
         .camera = m_ui_stage->GetCamera() });
     InitObject(m_view);
 
@@ -519,12 +520,14 @@ void UIRenderSubsystem::OnUpdate(GameCounter::TickUnit delta)
     // do nothing
 }
 
-void UIRenderSubsystem::OnRender(FrameBase* frame)
+void UIRenderSubsystem::OnRender(FrameBase* frame, const RenderSetup&)
 {
     HYP_SCOPE;
 
-    m_render_collector.CollectDrawCalls(frame);
-    m_render_collector.ExecuteDrawCalls(frame, m_render_view.Get(), m_framebuffer);
+    const RenderSetup render_setup { &g_engine->GetWorld()->GetRenderResource(), m_render_view.Get() };
+
+    m_render_collector.CollectDrawCalls(frame, render_setup);
+    m_render_collector.ExecuteDrawCalls(frame, render_setup, m_framebuffer);
 }
 
 void UIRenderSubsystem::CreateFramebuffer()

@@ -40,13 +40,14 @@ extern "C"
 
         {
             // Suppress default managed object creation
-            HypObjectInitializerFlagsGuard flags_guard(HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION);
+            GlobalContextScope scope(HypObjectInitializerContext { hyp_class, HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION });
 
             HypData value;
 
             // Set allow_abstract to true so we can use classes marked as "Abstract"
             // allowing the managed class to override methods of an abstract class
-            hyp_class->CreateInstance(value, /* allow_abstract */ true);
+            bool success = hyp_class->CreateInstance(value, /* allow_abstract */ true);
+            AssertThrowMsg(success, "Failed to create instance of HypClass '%s'", hyp_class->GetName().LookupString());
 
             ptr = HypObjectPtr(hyp_class, value.ToRef().GetPointer());
 

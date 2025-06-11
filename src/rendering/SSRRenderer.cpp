@@ -6,6 +6,7 @@
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderState.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
@@ -281,9 +282,12 @@ void SSRRenderer::CreateComputePipelines()
     DeferCreate(m_sample_gbuffer);
 }
 
-void SSRRenderer::Render(FrameBase* frame, RenderView* view)
+void SSRRenderer::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_NAMED_SCOPE("Screen Space Reflections");
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -303,24 +307,22 @@ void SSRRenderer::Render(FrameBase* frame, RenderView* view)
             m_write_uvs,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
-                    { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) } } } },
+                    { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) } } } },
             frame_index);
 
-        const uint32 scene_descriptor_set_index = m_write_uvs->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+        const uint32 view_descriptor_set_index = m_write_uvs->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
-        if (view != nullptr && scene_descriptor_set_index != ~0u)
+        if (view_descriptor_set_index != ~0u)
         {
             frame->GetCommandList().Add<BindDescriptorSet>(
-                view->GetDescriptorSets()[frame->GetFrameIndex()],
+                render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
                 m_write_uvs,
                 ArrayMap<Name, uint32> {},
-                scene_descriptor_set_index);
+                view_descriptor_set_index);
         }
 
-        frame->GetCommandList().Add<DispatchCompute>(
-            m_write_uvs,
-            Vec3u { num_dispatch_calls, 1, 1 });
+        frame->GetCommandList().Add<DispatchCompute>(m_write_uvs, Vec3u { num_dispatch_calls, 1, 1 });
 
         // transition the UV image back into read state
         frame->GetCommandList().Add<InsertBarrier>(m_uvs_texture->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
@@ -337,24 +339,22 @@ void SSRRenderer::Render(FrameBase* frame, RenderView* view)
             m_sample_gbuffer,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
-                    { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) } } } },
+                    { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                        { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) } } } },
             frame_index);
 
-        const uint32 scene_descriptor_set_index = m_sample_gbuffer->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+        const uint32 view_descriptor_set_index = m_sample_gbuffer->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
-        if (view != nullptr && scene_descriptor_set_index != ~0u)
+        if (view_descriptor_set_index != ~0u)
         {
             frame->GetCommandList().Add<BindDescriptorSet>(
-                view->GetDescriptorSets()[frame->GetFrameIndex()],
+                render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
                 m_sample_gbuffer,
                 ArrayMap<Name, uint32> {},
-                scene_descriptor_set_index);
+                view_descriptor_set_index);
         }
 
-        frame->GetCommandList().Add<DispatchCompute>(
-            m_sample_gbuffer,
-            Vec3u { num_dispatch_calls, 1, 1 });
+        frame->GetCommandList().Add<DispatchCompute>(m_sample_gbuffer, Vec3u { num_dispatch_calls, 1, 1 });
 
         // transition sample image back into read state
         frame->GetCommandList().Add<InsertBarrier>(m_sampled_result_texture->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
@@ -362,7 +362,7 @@ void SSRRenderer::Render(FrameBase* frame, RenderView* view)
 
     if (use_temporal_blending && m_temporal_blending != nullptr)
     {
-        m_temporal_blending->Render(frame, view);
+        m_temporal_blending->Render(frame, render_setup);
     }
 
     m_is_rendered = true;

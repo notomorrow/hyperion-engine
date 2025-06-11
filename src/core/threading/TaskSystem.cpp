@@ -20,11 +20,17 @@ extern const FlatMap<TaskThreadPoolName, UniquePtr<TaskThreadPool> (*)(void)> g_
 
 bool TaskBatch::IsCompleted() const
 {
-    return semaphore.IsInSignalState();
+    return notifier.IsInSignalState();
 }
 
 void TaskBatch::AwaitCompletion()
 {
+    if (num_enqueued < executors.Size())
+    {
+        HYP_FAIL("TaskBatch::AwaitCompletion() called before all tasks were enqueued! Expected %llu tasks, but only %u were enqueued.",
+            executors.Size(), num_enqueued);
+    }
+
     if (num_enqueued != 0)
     {
         // Sanity check - ensure not awaiting from a thread we depend on for processing any of the tasks
@@ -41,7 +47,7 @@ void TaskBatch::AwaitCompletion()
         }
     }
 
-    semaphore.Acquire();
+    notifier.Await();
 
     // ensure dependent batches are also completed
     if (next_batch != nullptr)
@@ -301,21 +307,21 @@ void TaskSystem::Stop()
 TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
 {
     AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
+
     AssertThrow(batch != nullptr);
+    AssertDebugMsg(batch->IsCompleted(), "TaskBatch::ResetState() must be called before enqueuing tasks");
 
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
     HYP_MT_CHECK_READ(batch->data_race_detector);
 #endif
 
-    // batch->num_completed.Set(0, MemoryOrder::SEQUENTIAL);
-    batch->semaphore.SetValue(batch->num_enqueued);
-
     TaskBatch* next_batch = batch->next_batch;
 
-    if (batch->num_enqueued == 0)
+    if (batch->executors.Empty())
     {
         // enqueue next batch immediately if it exists and no tasks are added to this batch
         batch->OnComplete();
+        batch->num_enqueued = 0;
 
         if (next_batch != nullptr)
         {
@@ -324,6 +330,9 @@ TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
 
         return batch;
     }
+
+    batch->num_enqueued = uint32(batch->executors.Size());
+    batch->notifier.SetTargetValue(batch->num_enqueued);
 
     TaskThreadPool* pool = nullptr;
 
@@ -342,20 +351,19 @@ TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
     HYP_MT_CHECK_RW(batch->data_race_detector);
 #endif
 
-    for (auto it = batch->executors.Begin(); it != batch->executors.End(); ++it)
+    for (TaskExecutorInstance<void>& executor : batch->executors)
     {
-        SizeType index = batch->executors.IndexOf(it);
-
         TaskThread* task_thread = pool->GetNextTaskThread();
         AssertThrow(task_thread != nullptr);
 
         const TaskID task_id = task_thread->GetScheduler().EnqueueTaskExecutor(
-            &(*it),
-            &batch->semaphore,
+            &executor,
+            &batch->notifier,
             next_batch != nullptr
-                ? OnTaskCompletedCallback([this, &OnComplete = batch->OnComplete, next_batch]()
+                ? OnTaskCompletedCallback([this, &on_complete = batch->OnComplete, next_batch]()
                       {
-                          OnComplete();
+                          on_complete();
+
                           EnqueueBatch(next_batch);
                       })
                 : OnTaskCompletedCallback(batch->OnComplete ? &batch->OnComplete : nullptr));

@@ -6,26 +6,26 @@
 
 #include "include/defines.inc"
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 v_texcoord0;
-layout(location=4) in vec3 v_tangent;
-layout(location=5) in vec3 v_bitangent;
-layout(location=11) in vec4 v_position_ndc;
-layout(location=12) in vec4 v_previous_position_ndc;
-layout(location=15) in flat uint v_object_index;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec3 v_normal;
+layout(location = 2) in vec2 v_texcoord0;
+layout(location = 4) in vec3 v_tangent;
+layout(location = 5) in vec3 v_bitangent;
+layout(location = 11) in vec4 v_position_ndc;
+layout(location = 12) in vec4 v_previous_position_ndc;
+layout(location = 15) in flat uint v_object_index;
 #ifdef IMMEDIATE_MODE
-layout(location=16) in vec4 v_color;
-layout(location=17) in flat uint v_env_probe_index;
-layout(location=18) in flat uint v_env_probe_type;
+layout(location = 16) in vec4 v_color;
+layout(location = 17) in flat uint v_env_probe_index;
+layout(location = 18) in flat uint v_env_probe_type;
 #endif
 
-layout(location=0) out vec4 gbuffer_albedo;
-layout(location=1) out vec4 gbuffer_normals;
-layout(location=2) out vec4 gbuffer_material;
-layout(location=4) out vec2 gbuffer_velocity;
-layout(location=5) out vec4 gbuffer_mask;
-layout(location=6) out vec4 gbuffer_ws_normals;
+layout(location = 0) out vec4 gbuffer_albedo;
+layout(location = 1) out vec4 gbuffer_normals;
+layout(location = 2) out vec4 gbuffer_material;
+layout(location = 4) out vec2 gbuffer_velocity;
+layout(location = 5) out vec4 gbuffer_mask;
+layout(location = 6) out vec4 gbuffer_ws_normals;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -44,14 +44,20 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer, size = 512) uniform CamerasB
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer, size = 256) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer { EnvGrid env_grid; };
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
+{
+    EnvGrid env_grid;
+};
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
 
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
 HYP_DESCRIPTOR_SRV(Global, LightFieldDepthTexture) uniform texture2D light_field_depth_texture;
@@ -87,7 +93,7 @@ HYP_DESCRIPTOR_SRV(Material, Textures) uniform texture2D textures[];
 #endif
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL (materials[object.material_index])
+#define CURRENT_MATERIAL (materials[object.material_index])
 #endif
 #else
 
@@ -97,15 +103,16 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer) readonly buffer MaterialsBu
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL material
+#define CURRENT_MATERIAL material
 #endif
 #endif
 
-void main() {
+void main()
+{
     vec3 normal = normalize(v_normal);
 
     vec2 velocity = vec2(((v_position_ndc.xy / v_position_ndc.w) * 0.5 + 0.5) - ((v_previous_position_ndc.xy / v_previous_position_ndc.w) * 0.5 + 0.5));
-    
+
     gbuffer_albedo = vec4(0.0, 1.0, 0.0, 1.0);
     gbuffer_normals = EncodeNormal(normal);
     gbuffer_material = vec4(0.0, 0.0, 0.0, 1.0);
@@ -116,7 +123,8 @@ void main() {
     gbuffer_albedo = vec4(v_color.rgb, 1.0);
     gbuffer_mask = UINT_TO_VEC4(OBJECT_MASK_TRANSLUCENT | OBJECT_MASK_DEBUG);
 
-    if (v_env_probe_index != ~0u && v_env_probe_type == ENV_PROBE_TYPE_REFLECTION) {
+    if (v_env_probe_index != ~0u && v_env_probe_type == ENV_PROBE_TYPE_REFLECTION)
+    {
         const vec3 N = normal;
         const vec3 V = normalize(camera.position.xyz - v_position.xyz);
 
@@ -132,8 +140,7 @@ void main() {
             v_position.xyz,
             R,
             0.0,
-            ibl
-        );
+            ibl);
 
         gbuffer_albedo.rgb = ibl.rgb;
     }

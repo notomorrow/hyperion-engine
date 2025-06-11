@@ -27,7 +27,7 @@ class AssetRegistry;
 class EditorActionStack;
 
 HYP_CLASS()
-class HYP_API EditorProject : public HypObject<EditorProject>
+class HYP_API EditorProject final : public HypObject<EditorProject>
 {
     HYP_OBJECT_BODY(EditorProject);
 
@@ -130,9 +130,9 @@ public:
     HYP_METHOD()
     void Close();
 
-    void Init();
-
 private:
+    void Init() override;
+
     Name GetNextDefaultProjectName_Impl(const String& default_project_name) const;
 
     UUID m_uuid;

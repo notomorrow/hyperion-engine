@@ -114,9 +114,9 @@ void PostProcessingEffect::Init()
     m_pass.Create();
 }
 
-void PostProcessingEffect::RenderEffect(FrameBase* frame, RenderView* view, uint32 slot)
+void PostProcessingEffect::RenderEffect(FrameBase* frame, const RenderSetup& render_setup, uint32 slot)
 {
-    struct alignas(128)
+    struct
     {
         uint32 current_effect_index_stage; // 31bits for index, 1 bit for stage
     } push_constants;
@@ -124,8 +124,7 @@ void PostProcessingEffect::RenderEffect(FrameBase* frame, RenderView* view, uint
     push_constants.current_effect_index_stage = (slot << 1) | uint32(m_pass.GetStage());
 
     m_pass.SetPushConstants(&push_constants, sizeof(push_constants));
-
-    m_pass.Render(frame, view);
+    m_pass.Render(frame, render_setup);
 }
 
 PostProcessing::PostProcessing() = default;
@@ -274,7 +273,7 @@ void PostProcessing::CreateUniformBuffer()
     m_uniform_buffer->Copy(sizeof(PostProcessingUniforms), &post_processing_uniforms);
 }
 
-void PostProcessing::RenderPre(FrameBase* frame, RenderView* view) const
+void PostProcessing::RenderPre(FrameBase* frame, const RenderSetup& render_setup) const
 {
     Threads::AssertOnThread(g_render_thread);
 
@@ -284,13 +283,13 @@ void PostProcessing::RenderPre(FrameBase* frame, RenderView* view) const
     {
         auto& effect = it.second;
 
-        effect->RenderEffect(frame, view, index);
+        effect->RenderEffect(frame, render_setup, index);
 
         ++index;
     }
 }
 
-void PostProcessing::RenderPost(FrameBase* frame, RenderView* view) const
+void PostProcessing::RenderPost(FrameBase* frame, const RenderSetup& render_setup) const
 {
     Threads::AssertOnThread(g_render_thread);
 
@@ -300,7 +299,7 @@ void PostProcessing::RenderPost(FrameBase* frame, RenderView* view) const
     {
         auto& effect = it.second;
 
-        effect->RenderEffect(frame, view, index);
+        effect->RenderEffect(frame, render_setup, index);
 
         ++index;
     }

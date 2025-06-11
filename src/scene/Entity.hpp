@@ -9,8 +9,6 @@
 
 namespace hyperion {
 
-class EntityManager;
-
 HYP_CLASS()
 class Entity final : public HypObject<Entity>
 {
@@ -19,6 +17,9 @@ class Entity final : public HypObject<Entity>
 public:
     HYP_API Entity();
     HYP_API virtual ~Entity() override;
+
+private:
+    void Init() override;
 };
 
 } // namespace hyperion

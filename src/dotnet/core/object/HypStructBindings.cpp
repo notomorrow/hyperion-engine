@@ -69,12 +69,12 @@ public:
         return true;
     }
 
-    virtual fbom::FBOMResult SerializeStruct(ConstAnyRef in, fbom::FBOMObject& out) const override
+    virtual FBOMResult SerializeStruct(ConstAnyRef in, FBOMObject& out) const override
     {
         HYP_NOT_IMPLEMENTED();
     }
 
-    virtual fbom::FBOMResult DeserializeStruct(fbom::FBOMLoadContext& context, const fbom::FBOMObject& in, HypData& out) const override
+    virtual FBOMResult DeserializeStruct(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
         HYP_NOT_IMPLEMENTED();
     }
@@ -84,9 +84,18 @@ protected:
     {
     }
 
-    virtual void CreateInstance_Internal(HypData& out) const override
+    virtual bool CreateInstance_Internal(HypData& out) const override
     {
-        HYP_NOT_IMPLEMENTED_VOID();
+        HYP_NOT_IMPLEMENTED();
+
+        return false;
+    }
+
+    virtual bool CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const override
+    {
+        HYP_NOT_IMPLEMENTED();
+
+        return false;
     }
 
     virtual HashCode GetInstanceHashCode_Internal(ConstAnyRef ref) const override

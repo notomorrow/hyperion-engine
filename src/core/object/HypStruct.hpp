@@ -16,9 +16,9 @@ namespace dotnet {
 class Class;
 } // namespace dotnet
 
-namespace fbom {
+namespace serialization {
 class FBOMLoadContext;
-} // namespace fbom
+} // namespace serialization
 
 class HypStruct : public HypClass
 {
@@ -49,8 +49,8 @@ public:
 
     virtual bool ToHypData(ByteView memory, HypData& out_hyp_data) const override = 0;
 
-    virtual fbom::FBOMResult SerializeStruct(ConstAnyRef value, fbom::FBOMObject& out) const = 0;
-    virtual fbom::FBOMResult DeserializeStruct(fbom::FBOMLoadContext& context, const fbom::FBOMObject& in, HypData& out) const = 0;
+    virtual FBOMResult SerializeStruct(ConstAnyRef value, FBOMObject& out) const = 0;
+    virtual FBOMResult DeserializeStruct(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const = 0;
 
 protected:
     virtual void FixupPointer(void* target, IHypObjectInitializer* new_initializer) const override
@@ -67,7 +67,8 @@ protected:
         return nullptr;
     }
 
-    virtual void CreateInstance_Internal(HypData& out) const override = 0;
+    virtual bool CreateInstance_Internal(HypData& out) const override = 0;
+    virtual bool CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const override = 0;
 
     virtual HashCode GetInstanceHashCode_Internal(ConstAnyRef ref) const override = 0;
 
@@ -159,93 +160,93 @@ public:
         }
     }
 
-    virtual fbom::FBOMResult SerializeStruct(ConstAnyRef in, fbom::FBOMObject& out) const override
+    virtual FBOMResult SerializeStruct(ConstAnyRef in, FBOMObject& out) const override
     {
         HYP_SCOPE;
         AssertThrow(in.Is<T>());
 
-        const fbom::FBOMMarshalerBase* marshal = (GetSerializationMode() & HypClassSerializationMode::USE_MARSHAL_CLASS)
-            ? fbom::FBOM::GetInstance().GetMarshal(TypeID::ForType<T>(), /* allow_fallback */ (GetSerializationMode() & HypClassSerializationMode::MEMBERWISE))
+        const FBOMMarshalerBase* marshal = (GetSerializationMode() & HypClassSerializationMode::USE_MARSHAL_CLASS)
+            ? FBOM::GetInstance().GetMarshal(TypeID::ForType<T>(), /* allow_fallback */ (GetSerializationMode() & HypClassSerializationMode::MEMBERWISE))
             : nullptr;
 
         if (marshal)
         {
-            if (fbom::FBOMResult err = marshal->Serialize(in, out))
+            if (FBOMResult err = marshal->Serialize(in, out))
             {
                 return err;
             }
 
-            return fbom::FBOMResult::FBOM_OK;
+            return FBOMResult::FBOM_OK;
         }
 
         if (GetSerializationMode() & HypClassSerializationMode::BITWISE)
         {
             if constexpr (std::is_abstract_v<T>)
             {
-                return { fbom::FBOMResult::FBOM_ERR, "Cannot use bitwise serialization with abstract type!" };
+                return { FBOMResult::FBOM_ERR, "Cannot use bitwise serialization with abstract type!" };
             }
             else
             {
-                fbom::FBOMData struct_data = fbom::FBOMData::FromStructUnchecked(in.Get<T>());
+                FBOMData struct_data = FBOMData::FromStructUnchecked(in.Get<T>());
 
-                fbom::FBOMObject struct_wrapper_object(fbom::FBOMObjectType(this));
+                FBOMObject struct_wrapper_object(FBOMObjectType(this));
                 struct_wrapper_object.SetProperty("StructData", std::move(struct_data));
 
                 out = std::move(struct_wrapper_object);
 
-                return { fbom::FBOMResult::FBOM_OK };
+                return { FBOMResult::FBOM_OK };
             }
         }
 
-        return { fbom::FBOMResult::FBOM_ERR, "Type does not have an associated marshal class registered, and is not marked as bitwise serializable" };
+        return { FBOMResult::FBOM_ERR, "Type does not have an associated marshal class registered, and is not marked as bitwise serializable" };
     }
 
-    virtual fbom::FBOMResult DeserializeStruct(fbom::FBOMLoadContext& context, const fbom::FBOMObject& in, HypData& out) const override
+    virtual FBOMResult DeserializeStruct(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
         HYP_SCOPE;
 
-        if (!in.GetType().Is(fbom::FBOMObjectType(this)))
+        if (!in.GetType().Is(FBOMObjectType(this)))
         {
-            return { fbom::FBOMResult::FBOM_ERR, "Cannot deserialize object into struct - type mismatch" };
+            return { FBOMResult::FBOM_ERR, "Cannot deserialize object into struct - type mismatch" };
         }
 
-        const fbom::FBOMMarshalerBase* marshal = (GetSerializationMode() & HypClassSerializationMode::USE_MARSHAL_CLASS)
-            ? fbom::FBOM::GetInstance().GetMarshal(TypeID::ForType<T>(), /* allow_fallback */ (GetSerializationMode() & HypClassSerializationMode::MEMBERWISE))
+        const FBOMMarshalerBase* marshal = (GetSerializationMode() & HypClassSerializationMode::USE_MARSHAL_CLASS)
+            ? FBOM::GetInstance().GetMarshal(TypeID::ForType<T>(), /* allow_fallback */ (GetSerializationMode() & HypClassSerializationMode::MEMBERWISE))
             : nullptr;
 
         if (marshal)
         {
-            if (fbom::FBOMResult err = marshal->Deserialize(context, in, out))
+            if (FBOMResult err = marshal->Deserialize(context, in, out))
             {
                 return err;
             }
 
-            return fbom::FBOMResult::FBOM_OK;
+            return FBOMResult::FBOM_OK;
         }
 
         if (GetSerializationMode() & HypClassSerializationMode::BITWISE)
         {
             if constexpr (std::is_abstract_v<T>)
             {
-                return { fbom::FBOMResult::FBOM_ERR, "Cannot use bitwise serialization with abstract type!" };
+                return { FBOMResult::FBOM_ERR, "Cannot use bitwise serialization with abstract type!" };
             }
             else
             {
                 // Read StructData property
                 T result {};
 
-                if (fbom::FBOMResult err = in.GetProperty("StructData").ReadStruct<T, /* CompileTimeChecked */ false>(&result))
+                if (FBOMResult err = in.GetProperty("StructData").ReadStruct<T, /* CompileTimeChecked */ false>(&result))
                 {
                     return err;
                 }
 
                 out = HypData(std::move(result));
 
-                return { fbom::FBOMResult::FBOM_OK };
+                return { FBOMResult::FBOM_OK };
             }
         }
 
-        return { fbom::FBOMResult::FBOM_ERR, "Type does not have an associated marshal class registered, and is not marked as bitwise serializable" };
+        return { FBOMResult::FBOM_ERR, "Type does not have an associated marshal class registered, and is not marked as bitwise serializable" };
     }
 
 protected:
@@ -269,16 +270,46 @@ protected:
         callback_wrapper_casted->GetCallback()(*static_cast<T*>(object_ptr));
     }
 
-    virtual void CreateInstance_Internal(HypData& out) const override
+    virtual bool CreateInstance_Internal(HypData& out) const override
     {
         if constexpr (std::is_default_constructible_v<T>)
         {
             out = HypData(T {});
+
+            return true;
         }
         else
         {
-            HYP_NOT_IMPLEMENTED_VOID();
+            return false;
         }
+    }
+
+    virtual bool CreateInstanceArray_Internal(Span<HypData> elements, HypData& out) const override
+    {
+        Array<T> array;
+        array.Reserve(elements.Size());
+
+        for (SizeType i = 0; i < elements.Size(); i++)
+        {
+            if (!elements[i].Is<T>())
+            {
+                return false;
+            }
+
+            array.PushBack(std::move(elements[i].Get<T>()));
+        }
+
+        out = HypData(std::move(array));
+
+        // debugging
+        AssertDebug(out.Is<Array<T>>());
+        AssertThrow(out.GetTypeID() == TypeID::ForType<Array<T>>());
+        DebugLog(LogType::Debug, "Created HypData for array type: %s from array with size %zu, TypeID: %u",
+            TypeNameWithoutNamespace<decltype(array)>().Data(),
+            out.Get<Array<T>>().Size(),
+            TypeID::ForType<decltype(array)>().Value());
+
+        return true;
     }
 
     virtual HashCode GetInstanceHashCode_Internal(ConstAnyRef ref) const override

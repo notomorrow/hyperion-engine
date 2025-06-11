@@ -23,6 +23,9 @@
 
 #include <asset/ui_loaders/UILoader.hpp>
 
+#include <core/threading/TaskSystem.hpp>
+#include <core/threading/TaskThread.hpp>
+
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
@@ -51,13 +54,6 @@ AssetCollector::~AssetCollector()
 
 void AssetCollector::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
-
     if (!m_base_path.Any())
     {
         m_base_path = FilePath::Current();
@@ -85,6 +81,36 @@ void AssetCollector::NotifyAssetChanged(const FilePath& path, AssetChangeType ch
 
 #pragma endregion AssetCollector
 
+#pragma region AssetManagerWorkerThread
+
+class AssetManagerWorkerThread : public TaskThread
+{
+public:
+    AssetManagerWorkerThread(ThreadID id)
+        : TaskThread(id, ThreadPriorityValue::NORMAL)
+    {
+    }
+
+    virtual ~AssetManagerWorkerThread() override = default;
+};
+
+#pragma endregion AssetManagerWorkerThread
+
+#pragma region AssetManagerThreadPool
+
+class AssetManagerThreadPool : public TaskThreadPool
+{
+public:
+    AssetManagerThreadPool()
+        : TaskThreadPool(TypeWrapper<AssetManagerWorkerThread>(), "AssetManagerWorker", 2)
+    {
+    }
+
+    virtual ~AssetManagerThreadPool() override = default;
+};
+
+#pragma endregion AssetManagerThreadPool
+
 #pragma region AssetManager
 
 const Handle<AssetManager>& AssetManager::GetInstance()
@@ -94,8 +120,23 @@ const Handle<AssetManager>& AssetManager::GetInstance()
 
 AssetManager::AssetManager()
     : m_asset_cache(MakeUnique<AssetCache>()),
+      m_thread_pool(MakeUnique<AssetManagerThreadPool>()),
       m_num_pending_batches { 0 }
 {
+}
+
+AssetManager::~AssetManager()
+{
+    if (m_thread_pool)
+    {
+        m_thread_pool->Stop();
+        m_thread_pool.Reset();
+    }
+}
+
+TaskThreadPool* AssetManager::GetThreadPool() const
+{
+    return m_thread_pool.Get();
 }
 
 FilePath AssetManager::GetBasePath() const
@@ -298,14 +339,20 @@ const AssetLoaderDefinition* AssetManager::GetLoaderDefinition(const FilePath& p
 
 void AssetManager::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
+    AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
+        {
+            if (m_thread_pool)
+            {
+                m_thread_pool->Stop();
+                m_thread_pool.Reset();
+            }
+        }));
 
     RegisterDefaultLoaders();
+
+    m_thread_pool->Start();
+
+    SetReady(true);
 }
 
 void AssetManager::Update(GameCounter::TickUnit delta)
@@ -319,6 +366,8 @@ void AssetManager::Update(GameCounter::TickUnit delta)
     if ((num_pending_batches = m_num_pending_batches.Get(MemoryOrder::ACQUIRE)) != 0)
     {
         HYP_NAMED_SCOPE_FMT("Update pending batches ({})", num_pending_batches);
+
+        /// \todo Set thread priorities based on number of pending batches
 
         Mutex::Guard guard(m_pending_batches_mutex);
 

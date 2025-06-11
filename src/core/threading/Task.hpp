@@ -36,10 +36,33 @@ HYP_MAKE_ENUM_FLAGS(TaskEnqueueFlags)
 namespace threading {
 
 class TaskThread;
-class TaskBatch;
+struct TaskBatch;
 class SchedulerBase;
+class TaskBase;
 
-using TaskSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>;
+class TaskCompleteNotifier final : public Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>
+{
+public:
+    /*! \brief Sets the number of tasks that need to be completed before the notifier is signalled.
+     *  This is typically called when the task batch is created, and the number of tasks is known.
+     */
+    void SetTargetValue(uint32 num_tasks)
+    {
+        Semaphore::SetValue(int32(num_tasks));
+    }
+
+    /*! \brief Resets the notifier to its initial state (no tasks) */
+    void Reset()
+    {
+        Semaphore::SetValue(0);
+    }
+
+    /*! \brief Waits for the task to be signalled as complete (when value is zero) */
+    void Await()
+    {
+        Semaphore::Acquire();
+    }
+};
 
 using OnTaskCompletedCallback = Proc<void()>;
 
@@ -150,8 +173,8 @@ public:
         : m_id(TaskID::Invalid()),
           m_assigned_scheduler(nullptr)
     {
-        // set semaphore to initial value of 1 (one task)
-        m_semaphore.Produce(1);
+        // set notifier to initial value of 1 (one task)
+        m_notifier.Produce(1);
     }
 
     TaskExecutorBase(const TaskExecutorBase& other) = delete;
@@ -161,7 +184,7 @@ public:
         : m_id(other.m_id),
           m_initiator_thread_id(other.m_initiator_thread_id),
           m_assigned_scheduler(other.m_assigned_scheduler),
-          m_semaphore(std::move(other.m_semaphore)),
+          m_notifier(std::move(other.m_notifier)),
           m_callback_chain(std::move(other.m_callback_chain))
     {
         other.m_id = {};
@@ -170,24 +193,6 @@ public:
     }
 
     TaskExecutorBase& operator=(TaskExecutorBase&& other) noexcept = delete;
-
-    // TaskExecutorBase &operator=(TaskExecutorBase &&other) noexcept
-    // {
-    //     if (this == &other) {
-    //         return *this;
-    //     }
-
-    //     m_id = other.m_id;
-    //     m_initiator_thread_id = other.m_initiator_thread_id;
-    //     m_assigned_scheduler = other.m_assigned_scheduler;
-    //     m_semaphore = std::move(other.m_semaphore);
-
-    //     other.m_id = {};
-    //     other.m_initiator_thread_id = {};
-    //     other.m_assigned_scheduler = nullptr;
-
-    //     return *this;
-    // }
 
     virtual ~TaskExecutorBase() override = default;
 
@@ -224,19 +229,19 @@ public:
         m_assigned_scheduler = assigned_scheduler;
     }
 
-    HYP_FORCE_INLINE TaskSemaphore& GetSemaphore()
+    HYP_FORCE_INLINE TaskCompleteNotifier& GetNotifier()
     {
-        return m_semaphore;
+        return m_notifier;
     }
 
-    HYP_FORCE_INLINE const TaskSemaphore& GetSemaphore() const
+    HYP_FORCE_INLINE const TaskCompleteNotifier& GetNotifier() const
     {
-        return m_semaphore;
+        return m_notifier;
     }
 
     virtual bool IsCompleted() const override final
     {
-        return m_semaphore.IsInSignalState();
+        return m_notifier.IsInSignalState();
     }
 
     virtual void Execute() = 0;
@@ -250,7 +255,7 @@ protected:
     TaskID m_id;
     ThreadID m_initiator_thread_id;
     SchedulerBase* m_assigned_scheduler;
-    TaskSemaphore m_semaphore;
+    TaskCompleteNotifier m_notifier;
 
     TaskCallbackChain m_callback_chain;
 };
@@ -376,37 +381,38 @@ protected:
 };
 
 template <class ReturnType>
-class ManuallyFulfilledTaskExecutorInstance final : public TaskExecutorInstance<ReturnType>
+class TaskFuture;
+
+template <class ReturnType>
+class TaskPromise final : public TaskExecutorInstance<ReturnType>
 {
 public:
     using Base = TaskExecutorInstance<ReturnType>;
 
-    ManuallyFulfilledTaskExecutorInstance()
-        : Base(static_cast<ReturnType (*)(void)>(nullptr))
+    TaskPromise(TaskBase* task)
+        : Base(static_cast<ReturnType (*)(void)>(nullptr)),
+          m_task(task)
     {
     }
 
-    ManuallyFulfilledTaskExecutorInstance(const ManuallyFulfilledTaskExecutorInstance& other) = delete;
-    ManuallyFulfilledTaskExecutorInstance& operator=(const ManuallyFulfilledTaskExecutorInstance& other) = delete;
+    TaskPromise(const TaskPromise& other) = delete;
+    TaskPromise& operator=(const TaskPromise& other) = delete;
 
-    ManuallyFulfilledTaskExecutorInstance(ManuallyFulfilledTaskExecutorInstance&& other) noexcept
-        : Base(static_cast<Base&&>(other))
+    TaskPromise(TaskPromise&& other) noexcept
+        : Base(static_cast<Base&&>(other)),
+          m_task(other.m_task)
     {
+        other.m_task = nullptr;
     }
 
-    ManuallyFulfilledTaskExecutorInstance& operator=(ManuallyFulfilledTaskExecutorInstance&& other) noexcept
+    TaskPromise& operator=(TaskPromise&& other) noexcept = delete;
+
+    virtual ~TaskPromise() override = default;
+
+    HYP_FORCE_INLINE TaskBase* GetTask() const
     {
-        if (this == &other)
-        {
-            return *this;
-        }
-
-        Base::operator=(static_cast<Base&&>(other));
-
-        return *this;
+        return m_task;
     }
-
-    virtual ~ManuallyFulfilledTaskExecutorInstance() override = default;
 
     void Fulfill(ReturnType&& value)
     {
@@ -416,7 +422,7 @@ public:
 
         TaskCallbackChain& callback_chain = Base::GetCallbackChain();
 
-        Base::GetSemaphore().Release(1);
+        Base::GetNotifier().Release(1);
 
         if (callback_chain)
         {
@@ -432,7 +438,7 @@ public:
 
         TaskCallbackChain& callback_chain = Base::GetCallbackChain();
 
-        Base::GetSemaphore().Release(1);
+        Base::GetNotifier().Release(1);
 
         if (callback_chain)
         {
@@ -444,41 +450,40 @@ protected:
     virtual void Execute() override final
     {
     }
+
+    TaskBase* m_task;
 };
 
 template <>
-class ManuallyFulfilledTaskExecutorInstance<void> final : public TaskExecutorInstance<void>
+class TaskPromise<void> final : public TaskExecutorInstance<void>
 {
 public:
     using Base = TaskExecutorInstance<void>;
 
-    ManuallyFulfilledTaskExecutorInstance()
-        : Base(static_cast<void (*)(void)>(nullptr))
+    TaskPromise(TaskBase* task)
+        : Base(static_cast<void (*)(void)>(nullptr)),
+          m_task(task)
     {
     }
 
-    ManuallyFulfilledTaskExecutorInstance(const ManuallyFulfilledTaskExecutorInstance& other) = delete;
-    ManuallyFulfilledTaskExecutorInstance& operator=(const ManuallyFulfilledTaskExecutorInstance& other) = delete;
+    TaskPromise(const TaskPromise& other) = delete;
+    TaskPromise& operator=(const TaskPromise& other) = delete;
 
-    ManuallyFulfilledTaskExecutorInstance(ManuallyFulfilledTaskExecutorInstance&& other) noexcept
-        : Base(static_cast<Base&&>(other))
+    TaskPromise(TaskPromise&& other) noexcept
+        : Base(static_cast<Base&&>(other)),
+          m_task(other.m_task)
     {
+        other.m_task = nullptr;
     }
 
-    ManuallyFulfilledTaskExecutorInstance& operator=(ManuallyFulfilledTaskExecutorInstance&& other) noexcept = delete;
+    TaskPromise& operator=(TaskPromise&& other) noexcept = delete;
 
-    // ManuallyFulfilledTaskExecutorInstance &operator=(ManuallyFulfilledTaskExecutorInstance &&other) noexcept
-    // {
-    //     if (this == &other) {
-    //         return *this;
-    //     }
+    virtual ~TaskPromise() override = default;
 
-    //     Base::operator=(static_cast<Base &&>(other));
-
-    //     return *this;
-    // }
-
-    virtual ~ManuallyFulfilledTaskExecutorInstance() override = default;
+    HYP_FORCE_INLINE TaskBase* GetTask() const
+    {
+        return m_task;
+    }
 
     void Fulfill()
     {
@@ -486,7 +491,7 @@ public:
 
         TaskCallbackChain& callback_chain = Base::GetCallbackChain();
 
-        Base::GetSemaphore().Release(1);
+        Base::GetNotifier().Release(1);
 
         if (callback_chain)
         {
@@ -498,6 +503,8 @@ protected:
     virtual void Execute() override final
     {
     }
+
+    TaskBase* m_task;
 };
 
 template <class ReturnType>
@@ -617,7 +624,7 @@ public:
 protected:
     virtual void Await_Internal() const;
 
-    void Reset()
+    virtual void Reset()
     {
         m_id = TaskID::Invalid();
         m_assigned_scheduler = nullptr;
@@ -694,16 +701,16 @@ public:
 
     /*! \brief Initialize the task without scheduling it.
      *  The task must be resolved with the \ref{Fulfill} method. */
-    ManuallyFulfilledTaskExecutorInstance<ReturnType>* Initialize()
+    TaskPromise<ReturnType>* Promise()
     {
         Reset();
 
         m_id = TaskID { ~0u };
 
-        m_executor = new ManuallyFulfilledTaskExecutorInstance<ReturnType>();
+        m_executor = new TaskPromise<ReturnType>(this);
         m_owns_executor = true;
 
-        return static_cast<ManuallyFulfilledTaskExecutorInstance<ReturnType>*>(m_executor);
+        return static_cast<TaskPromise<ReturnType>*>(m_executor);
     }
 
     template <class... ArgTypes>
@@ -711,7 +718,7 @@ public:
     {
         AssertThrowMsg(m_assigned_scheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
 
-        ManuallyFulfilledTaskExecutorInstance<ReturnType>* executor = Initialize();
+        TaskPromise<ReturnType>* executor = Promise();
 
         executor->Fulfill(ReturnType(std::forward<ArgTypes>(args)...));
     }
@@ -746,20 +753,12 @@ public:
         return std::move(m_executor->Result());
     }
 
-    /*! \brief Wait for the task to complete.
-     *  \note This function will block the current thread until the task is completed.
-     *  \returns The result of the task. */
-    HYP_FORCE_INLINE ReturnType Await() const&&
-    {
-        Await_Internal();
-
-        return m_executor->Result();
-    }
-
 protected:
     virtual void Await_Internal() const override
     {
-        m_executor->GetSemaphore().Acquire();
+        // @TODO: Move semaphore to this - executor may be deleted for FIRE_AND_FORGET tasks as we don't own it.
+
+        m_executor->GetNotifier().Await();
 
 #ifdef HYP_DEBUG_MODE
         // Sanity Check
@@ -767,7 +766,7 @@ protected:
 #endif
     }
 
-    void Reset()
+    virtual void Reset() override
     {
         if (m_owns_executor)
         {
@@ -865,23 +864,23 @@ public:
 
     /*! \brief Initialize the task without scheduling it.
      *  The task must be resolved with the \ref{Fulfill} method. */
-    ManuallyFulfilledTaskExecutorInstance<void>* Initialize()
+    TaskPromise<void>* Promise()
     {
         Reset();
 
         m_id = TaskID { ~0u };
 
-        m_executor = new ManuallyFulfilledTaskExecutorInstance<void>();
+        m_executor = new TaskPromise<void>(this);
         m_owns_executor = true;
 
-        return static_cast<ManuallyFulfilledTaskExecutorInstance<void>*>(m_executor);
+        return static_cast<TaskPromise<void>*>(m_executor);
     }
 
     void Fulfill()
     {
         AssertThrowMsg(m_assigned_scheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
 
-        ManuallyFulfilledTaskExecutorInstance<void>* executor = Initialize();
+        TaskPromise<void>* executor = Promise();
 
         executor->Fulfill();
     }
@@ -894,7 +893,7 @@ public:
 protected:
     virtual void Await_Internal() const override
     {
-        m_executor->GetSemaphore().Acquire();
+        m_executor->GetNotifier().Await();
 
 #ifdef HYP_DEBUG_MODE
         // Sanity Check
@@ -902,7 +901,7 @@ protected:
 #endif
     }
 
-    void Reset()
+    virtual void Reset() override
     {
         if (m_owns_executor)
         {
@@ -932,9 +931,135 @@ private:
     bool m_owns_executor;
 };
 
-#pragma region AwaitAll
+#if 0
+template <class ReturnType>
+class TaskFuture final
+{
+public:
+    friend class TaskPromise<ReturnType>;
+    friend class Task<ReturnType>;
 
-namespace detail {
+    ~TaskFuture()
+    {
+        if (m_task != nullptr)
+        {
+            delete m_task;
+        }
+    }
+
+    TaskFuture(const TaskFuture& other) = delete;
+    TaskFuture& operator=(const TaskFuture& other) = delete;
+
+    TaskFuture(TaskFuture&& other) noexcept
+        : m_task(other.m_task)
+    {
+        other.m_task = nullptr;
+    }
+
+    TaskFuture& operator=(TaskFuture&& other) noexcept
+    {
+        if (this == &other || m_task == other.m_task)
+        {
+            return *this;
+        }
+
+        AssertDebug(m_task != nullptr);
+
+        delete m_task;
+
+        m_task = other.m_task;
+        other.m_task = nullptr;
+
+        return *this;
+    }
+
+    ReturnType& Result() const&
+    {
+        AssertThrow(m_task != nullptr);
+
+        return m_task->Await();
+    }
+
+    ReturnType Result() &&
+    {
+        AssertThrow(m_task != nullptr);
+
+        ResultType result = std::move(*m_task).Await();
+
+        delete m_task;
+        m_task = nullptr;
+
+        return result;
+    }
+
+protected:
+    TaskFuture(Task<ReturnType>* task)
+        : m_task(task)
+    {
+    }
+
+    Task<ReturnType>* m_task;
+};
+
+template <>
+class TaskFuture<void> final
+{
+public:
+    friend class TaskPromise<void>;
+    friend class Task<void>;
+
+    ~TaskFuture()
+    {
+        if (m_task != nullptr)
+        {
+            delete m_task;
+        }
+    }
+
+    TaskFuture(const TaskFuture& other) = delete;
+    TaskFuture& operator=(const TaskFuture& other) = delete;
+
+    TaskFuture(TaskFuture&& other) noexcept
+        : m_task(other.m_task)
+    {
+        other.m_task = nullptr;
+    }
+
+    TaskFuture& operator=(TaskFuture&& other) noexcept
+    {
+        if (this == &other || m_task == other.m_task)
+        {
+            return *this;
+        }
+
+        AssertDebug(m_task != nullptr);
+
+        delete m_task;
+
+        m_task = other.m_task;
+        other.m_task = nullptr;
+
+        return *this;
+    }
+
+    void Result() const
+    {
+        AssertThrow(m_task != nullptr);
+
+        m_task->Await();
+    }
+
+protected:
+    TaskFuture(Task<void>* task)
+        : m_task(task)
+    {
+    }
+
+    Task<void>* m_task;
+};
+#endif
+
+#pragma region AwaitAll
 
 template <class TaskType>
 struct TaskAwaitAll_Impl;
@@ -1111,12 +1236,10 @@ struct TaskAwaitAll_Impl<Task<void>>
     }
 };
 
-} // namespace detail
-
 template <class TaskType>
 decltype(auto) AwaitAll(Span<TaskType> tasks)
 {
-    return detail::TaskAwaitAll_Impl<TaskType> {}(tasks);
+    return TaskAwaitAll_Impl<TaskType> {}(tasks);
 }
 
 #pragma endregion AwaitAll
@@ -1124,9 +1247,15 @@ decltype(auto) AwaitAll(Span<TaskType> tasks)
 } // namespace threading
 
 using threading::AwaitAll;
+using threading::ITaskExecutor;
 using threading::Task;
+using threading::TaskBase;
+using threading::TaskCallbackChain;
+using threading::TaskCompleteNotifier;
 using threading::TaskExecutorBase;
+using threading::TaskExecutorInstance;
 using threading::TaskID;
+using threading::TaskPromise;
 
 } // namespace hyperion
 

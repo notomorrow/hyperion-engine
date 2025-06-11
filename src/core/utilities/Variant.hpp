@@ -22,8 +22,6 @@
 namespace hyperion {
 
 namespace utilities {
-namespace detail {
-
 template <class VariantType>
 struct TypeIndexHelper;
 
@@ -53,11 +51,13 @@ struct VariantHelper<T, Ts...>
     static constexpr bool move_constructible = (std::is_move_constructible_v<T> && (std::is_move_constructible_v<Ts> && ...));
     static constexpr bool move_assignable = (std::is_move_assignable_v<T> && (std::is_move_assignable_v<Ts> && ...));
 
+    static constexpr TypeID this_type_id = TypeID::ForType<NormalizedType<T>>();
+
     static inline bool CopyAssign(TypeID type_id, void* dst, const void* src)
     {
         if constexpr (std::is_copy_assignable_v<T>)
         {
-            if (type_id == TypeID::ForType<NormalizedType<T>>())
+            if (type_id == this_type_id)
             {
                 *static_cast<NormalizedType<T>*>(dst) = *static_cast<const NormalizedType<T>*>(src);
 
@@ -72,7 +72,7 @@ struct VariantHelper<T, Ts...>
     {
         if constexpr (std::is_copy_constructible_v<T>)
         {
-            if (type_id == TypeID::ForType<NormalizedType<T>>())
+            if (type_id == this_type_id)
             {
                 Memory::Construct<NormalizedType<T>>(dst, *static_cast<const NormalizedType<T>*>(src));
 
@@ -85,7 +85,7 @@ struct VariantHelper<T, Ts...>
 
     static inline void MoveAssign(TypeID type_id, void* dst, void* src)
     {
-        if (type_id == TypeID::ForType<NormalizedType<T>>())
+        if (type_id == this_type_id)
         {
             *static_cast<NormalizedType<T>*>(dst) = std::move(*static_cast<NormalizedType<T>*>(src));
         }
@@ -97,7 +97,7 @@ struct VariantHelper<T, Ts...>
 
     static inline bool MoveConstruct(TypeID type_id, void* dst, void* src)
     {
-        if (type_id == TypeID::ForType<NormalizedType<T>>())
+        if (type_id == this_type_id)
         {
             Memory::Construct<NormalizedType<T>>(dst, std::move(*static_cast<NormalizedType<T>*>(src)));
 
@@ -111,7 +111,7 @@ struct VariantHelper<T, Ts...>
 
     static inline void Destruct(TypeID type_id, void* data)
     {
-        if (type_id == TypeID::ForType<NormalizedType<T>>())
+        if (type_id == this_type_id)
         {
             Memory::Destruct<NormalizedType<T>>(data);
         }
@@ -123,7 +123,7 @@ struct VariantHelper<T, Ts...>
 
     static inline bool Compare(TypeID type_id, const void* data, const void* other_data)
     {
-        if (type_id == TypeID::ForType<NormalizedType<T>>())
+        if (type_id == this_type_id)
         {
             return *static_cast<const NormalizedType<T>*>(data) == *static_cast<const NormalizedType<T>*>(other_data);
         }
@@ -135,7 +135,7 @@ struct VariantHelper<T, Ts...>
 
     static inline HashCode GetHashCode(TypeID type_id, const void* data)
     {
-        if (type_id == TypeID::ForType<NormalizedType<T>>())
+        if (type_id == this_type_id)
         {
             return HashCode::GetHashCode(*static_cast<const NormalizedType<T>*>(data));
         }
@@ -291,7 +291,7 @@ public:
     {
         static_assert(Helper::template holds_type<T> || resolution_failure<T>, "Type is not valid for the variant");
 
-        const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+        constexpr TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
         AssertThrow(Helper::CopyConstruct(type_id, m_storage.GetPointer(), std::addressof(value)));
 
@@ -304,7 +304,7 @@ public:
     {
         static_assert(Helper::template holds_type<T> || resolution_failure<T>, "Type is not valid for the variant");
 
-        const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+        constexpr TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
         AssertThrow(Helper::MoveConstruct(type_id, m_storage.GetPointer(), std::addressof(value)));
 
@@ -357,7 +357,9 @@ public:
     template <class T>
     HYP_FORCE_INLINE bool Is() const
     {
-        return CurrentTypeID() == TypeID::ForType<NormalizedType<T>>();
+        constexpr TypeID other_type_id = TypeID::ForType<NormalizedType<T>>();
+
+        return CurrentTypeID() == other_type_id;
     }
 
     HYP_FORCE_INLINE bool IsValid() const
@@ -456,7 +458,7 @@ public:
 
         m_current_index = invalid_type_index;
 
-        const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+        constexpr TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
         AssertThrowMsg(
             Helper::CopyConstruct(type_id, m_storage.GetPointer(), &value),
@@ -477,7 +479,7 @@ public:
 
         m_current_index = invalid_type_index;
 
-        const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+        constexpr TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
         AssertThrowMsg(
             Helper::MoveConstruct(type_id, m_storage.GetPointer(), &value),
@@ -498,7 +500,7 @@ public:
 
         m_current_index = invalid_type_index;
 
-        const TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+        constexpr TypeID type_id = TypeID::ForType<NormalizedType<T>>();
 
         Memory::Construct<NormalizedType<T>>(m_storage.GetPointer(), std::forward<Args>(args)...);
 
@@ -684,8 +686,6 @@ public:
     ~VariantHolder() = default;
 };
 
-} // namespace detail
-
 template <class... Types>
 struct Variant;
 
@@ -693,9 +693,9 @@ template <class VariantType, class FunctionType>
 static inline void Visit(VariantType&& variant, FunctionType&& fn);
 
 template <class... Types>
-struct Variant : private ConstructAssignmentTraits<true, utilities::detail::VariantHelper<Types...>::copy_constructible, utilities::detail::VariantHelper<Types...>::move_constructible, Variant<Types...>>
+struct Variant : private ConstructAssignmentTraits<true, utilities::VariantHelper<Types...>::copy_constructible, utilities::VariantHelper<Types...>::move_constructible, Variant<Types...>>
 {
-    static constexpr int invalid_type_index = utilities::detail::VariantBase<Types...>::invalid_type_index;
+    static constexpr int invalid_type_index = utilities::VariantBase<Types...>::invalid_type_index;
     static constexpr TypeID type_ids[sizeof...(Types)] { TypeID::ForType<Types>()... };
 
     // template <class ...Args>
@@ -905,7 +905,7 @@ struct Variant : private ConstructAssignmentTraits<true, utilities::detail::Vari
             return AnyRef();
         }
 
-        return AnyRef(m_holder.GetPointer(), m_holder.GetTypeID());
+        return AnyRef(m_holder.GetTypeID(), m_holder.GetPointer());
     }
 
     HYP_FORCE_INLINE ConstAnyRef ToRef() const
@@ -915,7 +915,7 @@ struct Variant : private ConstructAssignmentTraits<true, utilities::detail::Vari
             return ConstAnyRef();
         }
 
-        return ConstAnyRef(m_holder.GetPointer(), m_holder.GetTypeID());
+        return ConstAnyRef(m_holder.GetTypeID(), m_holder.GetPointer());
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -942,13 +942,11 @@ struct Variant : private ConstructAssignmentTraits<true, utilities::detail::Vari
     }
 
 private:
-    utilities::detail::VariantHolder<
-        utilities::detail::VariantHelper<Types...>::copy_constructible,
+    utilities::VariantHolder<
+        utilities::VariantHelper<Types...>::copy_constructible,
         Types...>
         m_holder;
 };
-
-namespace detail {
 
 #pragma region TypeIndex
 
@@ -1124,12 +1122,10 @@ struct VisitHelper<utilities::Variant<Types...>>
 
 #pragma endregion VisitHelper
 
-} // namespace detail
-
 template <class VariantType, class FunctionType>
 static inline void Visit(VariantType&& variant, FunctionType&& fn)
 {
-    detail::VisitHelper<NormalizedType<VariantType>> {}(std::forward<VariantType>(variant), std::forward<FunctionType>(fn));
+    VisitHelper<NormalizedType<VariantType>> {}(std::forward<VariantType>(variant), std::forward<FunctionType>(fn));
 }
 
 } // namespace utilities

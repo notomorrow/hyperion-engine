@@ -8,6 +8,7 @@
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderState.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderWorld.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/GBuffer.hpp>
@@ -209,9 +210,12 @@ void SSGI::CreateComputePipelines()
     DeferCreate(m_compute_pipeline);
 }
 
-void SSGI::Render(FrameBase* frame, RenderView* view)
+void SSGI::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_NAMED_SCOPE("Screen Space Global Illumination");
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     // Used for sky
     const TResourceHandle<RenderEnvProbe>& env_probe_resource_handle = g_engine->GetRenderState()->GetActiveEnvProbe();
@@ -220,7 +224,7 @@ void SSGI::Render(FrameBase* frame, RenderView* view)
 
     // Update uniform buffer data
     SSGIUniforms uniforms;
-    FillUniformBufferData(view, uniforms);
+    FillUniformBufferData(render_setup.view, uniforms);
     m_uniform_buffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
 
     const uint32 total_pixels_in_image = m_config.extent.Volume();
@@ -236,32 +240,30 @@ void SSGI::Render(FrameBase* frame, RenderView* view)
         m_compute_pipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe_resource_handle ? env_probe_resource_handle->GetBufferIndex() : 0) } } } },
         frame_index);
 
-    const uint32 scene_descriptor_set_index = m_compute_pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 view_descriptor_set_index = m_compute_pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
-    if (view != nullptr && scene_descriptor_set_index != ~0u)
+    if (view_descriptor_set_index != ~0u)
     {
         frame->GetCommandList().Add<BindDescriptorSet>(
-            view->GetDescriptorSets()[frame->GetFrameIndex()],
+            render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
             m_compute_pipeline,
             ArrayMap<Name, uint32> {},
-            scene_descriptor_set_index);
+            view_descriptor_set_index);
     }
 
-    frame->GetCommandList().Add<DispatchCompute>(
-        m_compute_pipeline,
-        Vec3u { num_dispatch_calls, 1, 1 });
+    frame->GetCommandList().Add<DispatchCompute>(m_compute_pipeline, Vec3u { num_dispatch_calls, 1, 1 });
 
     // transition sample image back into read state
     frame->GetCommandList().Add<InsertBarrier>(m_result_texture->GetRenderResource().GetImage(), renderer::ResourceState::SHADER_RESOURCE);
 
     if (use_temporal_blending && m_temporal_blending != nullptr)
     {
-        m_temporal_blending->Render(frame, view);
+        m_temporal_blending->Render(frame, render_setup);
     }
 
     m_is_rendered = true;

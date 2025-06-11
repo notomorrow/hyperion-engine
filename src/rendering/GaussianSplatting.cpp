@@ -7,9 +7,11 @@
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/RenderScene.hpp>
+#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderState.hpp>
 #include <rendering/RenderMesh.hpp>
+#include <rendering/Renderer.hpp>
 
 #include <rendering/rhi/RHICommandList.hpp>
 
@@ -190,13 +192,6 @@ GaussianSplattingInstance::~GaussianSplattingInstance()
 
 void GaussianSplattingInstance::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
-
     CreateBuffers();
     CreateShader();
     CreateRenderGroup();
@@ -219,7 +214,7 @@ void GaussianSplattingInstance::Init()
     SetReady(true);
 }
 
-void GaussianSplattingInstance::Record(FrameBase* frame)
+void GaussianSplattingInstance::Record(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -235,7 +230,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame)
 
     { // Update splat distances from camera before we sort
 
-        struct alignas(128)
+        struct
         {
             uint32 num_points;
         } update_splats_distances_push_constants;
@@ -253,7 +248,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame)
             m_update_splat_distances,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
-                    { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(render_scene) },
+                    { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) } } } },
             frame->GetFrameIndex());
 
@@ -291,7 +286,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame)
         constexpr uint32 block_size = 512;
         constexpr uint32 transpose_block_size = 16;
 
-        struct alignas(128)
+        struct
         {
             uint32 num_points;
             uint32 stage;
@@ -331,7 +326,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame)
         AssertThrow(h < num_sortable_elements);
         AssertThrow(h % 2 == 0);
 
-        auto do_pass = [this, frame, render_scene, &camera_resource_handle, pc = sort_splats_push_constants, workgroup_count](BitonicSortStage stage, uint32 h) mutable
+        auto do_pass = [this, frame, render_scene, &render_setup, &camera_resource_handle, pc = sort_splats_push_constants, workgroup_count](BitonicSortStage stage, uint32 h) mutable
         {
             pc.stage = uint32(stage);
             pc.h = h;
@@ -345,7 +340,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame)
                 m_sort_splats,
                 ArrayMap<Name, ArrayMap<Name, uint32>> {
                     { NAME("Global"),
-                        { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(render_scene) },
+                        { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
                             { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) } } } },
                 frame->GetFrameIndex());
 
@@ -384,7 +379,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame)
 #endif
     { // Update splats
 
-        struct alignas(128)
+        struct
         {
             uint32 num_points;
         } update_splats_push_constants;
@@ -402,7 +397,7 @@ void GaussianSplattingInstance::Record(FrameBase* frame)
             m_update_splats,
             ArrayMap<Name, ArrayMap<Name, uint32>> {
                 { NAME("Global"),
-                    { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(render_scene) },
+                    { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
                         { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) } } } },
             frame->GetFrameIndex());
 
@@ -581,13 +576,6 @@ GaussianSplatting::~GaussianSplatting()
 
 void GaussianSplatting::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
-
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
         {
             m_quad_mesh.Reset();
@@ -642,7 +630,7 @@ void GaussianSplatting::CreateBuffers()
         m_quad_mesh);
 }
 
-void GaussianSplatting::UpdateSplats(FrameBase* frame)
+void GaussianSplatting::UpdateSplats(FrameBase* frame, const RenderSetup& render_setup)
 {
     Threads::AssertOnThread(g_render_thread);
     AssertReady();
@@ -671,10 +659,10 @@ void GaussianSplatting::UpdateSplats(FrameBase* frame)
         m_gaussian_splatting_instance->GetIndirectBuffer(),
         renderer::ResourceState::INDIRECT_ARG);
 
-    m_gaussian_splatting_instance->Record(frame);
+    m_gaussian_splatting_instance->Record(frame, render_setup);
 }
 
-void GaussianSplatting::Render(FrameBase* frame)
+void GaussianSplatting::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     AssertReady();
     Threads::AssertOnThread(g_render_thread);
@@ -698,7 +686,7 @@ void GaussianSplatting::Render(FrameBase* frame)
         pipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(render_scene) },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*camera_resource_handle) } } } },
         frame_index);
 

@@ -15,6 +15,7 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderMaterial.hpp>
+#include <rendering/RenderTexture.hpp>
 #include <rendering/SafeDeleter.hpp>
 #include <rendering/ShaderManager.hpp>
 #include <rendering/RenderState.hpp>
@@ -32,12 +33,15 @@
 
 #include <asset/Assets.hpp>
 
+#include <streaming/StreamingManager.hpp>
+
 #include <core/profiling/ProfileScope.hpp>
 #include <core/filesystem/FsUtil.hpp>
 
 #include <util/MeshBuilder.hpp>
 
 #include <scene/World.hpp>
+#include <scene/Texture.hpp>
 
 #include <core/debug/StackDump.hpp>
 #include <system/SystemEvent.hpp>
@@ -74,6 +78,7 @@ using renderer::GPUBufferType;
 
 Handle<Engine> g_engine = {};
 Handle<AssetManager> g_asset_manager {};
+// Handle<StreamingManager> g_streaming_manager {};
 ShaderManager* g_shader_manager = nullptr;
 MaterialCache* g_material_system = nullptr;
 SafeDeleter* g_safe_deleter = nullptr;
@@ -92,7 +97,7 @@ static struct GlobalDescriptorSetsDeclarations
 class RenderThread final : public Thread<Scheduler>
 {
 public:
-    RenderThread(const RC<AppContextBase>& app_context)
+    RenderThread(const Handle<AppContextBase>& app_context)
         : Thread(g_render_thread, ThreadPriorityValue::HIGHEST),
           m_app_context(app_context),
           m_is_running(false)
@@ -157,7 +162,7 @@ private:
         }
     }
 
-    RC<AppContextBase> m_app_context;
+    Handle<AppContextBase> m_app_context;
     AtomicVar<bool> m_is_running;
 };
 
@@ -202,7 +207,6 @@ const Handle<Engine>& Engine::GetInstance()
 
 Engine::Engine()
     : m_is_shutting_down(false),
-      m_is_initialized(false),
       m_should_recreate_swapchain(false)
 {
 }
@@ -211,39 +215,35 @@ Engine::~Engine()
 {
 }
 
-HYP_API void Engine::Initialize(const RC<AppContextBase>& app_context)
+HYP_API void Engine::Init()
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_main_thread);
 
-    AssertThrow(!m_is_initialized);
-    m_is_initialized = true;
+    // Set ready to false after render thread stops running.
+    HYP_DEFER({ SetReady(false); });
 
-    HYP_DEFER({
-        m_is_initialized = false;
-    });
-
-    AssertThrow(app_context != nullptr);
-    m_app_context = app_context;
+    AssertThrowMsg(m_app_context != nullptr, "App context must be set before initializing the engine!");
 
     m_render_thread = MakeUnique<RenderThread>(m_app_context);
 
     AssertThrow(m_app_context->GetMainWindow() != nullptr);
 
-    m_app_context->GetMainWindow()->OnWindowSizeChanged.Bind([this](Vec2i new_window_size)
-                                                           {
-                                                               HYP_LOG(Engine, Info, "Resize window to {}", new_window_size);
+    // m_app_context->GetMainWindow()->OnWindowSizeChanged.Bind(
+    //                                                        [this](Vec2i new_window_size)
+    //                                                        {
+    //                                                            HYP_LOG(Engine, Info, "Resize window to {}", new_window_size);
 
-                                                               // m_final_pass->Resize(Vec2u(new_window_size));
-                                                           })
-        .Detach();
+    //                                                            // m_final_pass->Resize(Vec2u(new_window_size));
+    //                                                        })
+    //     .Detach();
 
     RenderObjectDeleter<renderer::Platform::current>::Initialize();
 
     TaskSystem::GetInstance().Start();
 
     AssertThrow(g_rendering_api != nullptr);
-    HYPERION_ASSERT_RESULT(g_rendering_api->Initialize(*app_context));
+    HYPERION_ASSERT_RESULT(g_rendering_api->Initialize(*m_app_context));
 
     g_rendering_api->GetOnSwapchainRecreatedDelegate().Bind([this](SwapchainBase* swapchain)
                                                           {
@@ -292,6 +292,8 @@ HYP_API void Engine::Initialize(const RC<AppContextBase>& app_context)
     SetGlobalStreamingThread(streaming_thread);
     streaming_thread->Start();
 
+    // g_streaming_manager->Start();
+
     // must start after net request thread
     if (m_app_context->GetArguments()["Profile"])
     {
@@ -303,7 +305,7 @@ HYP_API void Engine::Initialize(const RC<AppContextBase>& app_context)
     for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
     {
         // Global
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("ScenesBuffer"), GetRenderData()->scenes->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("WorldsBuffer"), GetRenderData()->worlds->GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("LightsBuffer"), GetRenderData()->lights->GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("CurrentLight"), GetRenderData()->lights->GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("ObjectsBuffer"), GetRenderData()->objects->GetBuffer(frame_index));
@@ -314,20 +316,22 @@ HYP_API void Engine::Initialize(const RC<AppContextBase>& app_context)
 
         for (uint32 i = 0; i < max_bound_reflection_probes; i++)
         {
-            m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("EnvProbeTextures"), i, g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+            m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("EnvProbeTextures"), i, GetPlaceholderData()->DefaultTexture2D->GetRenderResource().GetImageView());
         }
 
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("VoxelGridTexture"), g_engine->GetPlaceholderData()->GetImageView3D1x1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("VoxelGridTexture"), GetPlaceholderData()->GetImageView3D1x1x1R8());
 
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("LightFieldColorTexture"), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("LightFieldDepthTexture"), g_engine->GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("LightFieldColorTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("LightFieldDepthTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
 
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("BlueNoiseBuffer"), GPUBufferRef::Null());
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("SphereSamplesBuffer"), GPUBufferRef::Null());
 
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("ShadowMapsTextureArray"), g_engine->GetPlaceholderData()->GetImageView2D1x1R8Array());
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("PointLightShadowMapsTextureArray"), g_engine->GetPlaceholderData()->GetImageViewCube1x1R8Array());
-        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("ShadowMapsBuffer"), g_engine->GetRenderData()->shadow_map_data->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("ShadowMapsTextureArray"), GetPlaceholderData()->GetImageView2D1x1R8Array());
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("PointLightShadowMapsTextureArray"), GetPlaceholderData()->GetImageViewCube1x1R8Array());
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("ShadowMapsBuffer"), GetRenderData()->shadow_map_data->GetBuffer(frame_index));
+
+        m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("LightmapVolumesBuffer"), GetRenderData()->lightmap_volumes->GetBuffer(frame_index));
 
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DDGIUniforms"), GetPlaceholderData()->GetOrCreateBuffer(GPUBufferType::CONSTANT_BUFFER, sizeof(DDGIUniforms), true /* exact size */));
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("DDGIIrradianceTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
@@ -343,8 +347,8 @@ HYP_API void Engine::Initialize(const RC<AppContextBase>& app_context)
         m_global_descriptor_table->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("FinalOutputTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
 
         // Object
-        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("MaterialsBuffer"), m_render_data->materials->GetBuffer(frame_index));
-        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("SkeletonsBuffer"), m_render_data->skeletons->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("MaterialsBuffer"), GetRenderData()->materials->GetBuffer(frame_index));
+        m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("SkeletonsBuffer"), GetRenderData()->skeletons->GetBuffer(frame_index));
         m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("LightmapVolumeIrradianceTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
         m_global_descriptor_table->GetDescriptorSet(NAME("Object"), frame_index)->SetElement(NAME("LightmapVolumeRadianceTexture"), GetPlaceholderData()->GetImageView2D1x1R8());
 
@@ -382,10 +386,11 @@ HYP_API void Engine::Initialize(const RC<AppContextBase>& app_context)
     m_view->IncRef();
 
     m_world = CreateObject<World>();
-    InitObject(m_world);
 
     AssertThrowMsg(m_app_context->GetGame() != nullptr, "Game not set on AppContext!");
     m_app_context->GetGame()->Init_Internal();
+
+    SetReady(true);
 
     // RenderThread::Start() is blocking, runs until exit
     AssertThrowMsg(m_render_thread->Start(), "Failed to start render thread!");
@@ -491,6 +496,8 @@ void Engine::FinalizeStop()
 
     // must stop before net request thread
     StopProfilerConnectionThread();
+
+    // g_streaming_manager->Stop();
 
     if (RC<StreamingThread> streaming_thread = GetGlobalStreamingThread())
     {
@@ -612,7 +619,6 @@ void Engine::PreFrameUpdate(FrameBase* frame)
     g_safe_deleter->PerformEnqueuedDeletions();
 
     m_render_state->ResetStates(RENDER_STATE_ACTIVE_ENV_PROBE | RENDER_STATE_ACTIVE_LIGHT);
-    m_render_state->AdvanceFrameCounter();
 }
 
 #pragma endregion Engine

@@ -41,65 +41,12 @@ enum RenderStateMaskBits : RenderStateMask
     RENDER_STATE_ENV_PROBES = 0x8,
     RENDER_STATE_ACTIVE_ENV_PROBE = 0x10,
     RENDER_STATE_CAMERA = 0x20,
-    RENDER_STATE_FRAME_COUNTER = 0x40,
 
     RENDER_STATE_ALL = 0xFFFFFFFFu
 };
 
-// Basic render side binding, by default holding only ID of an object.
-template <class T>
-struct RenderBinding
-{
-    static const RenderBinding empty;
-
-    ID<T> id;
-
-    HYP_FORCE_INLINE explicit operator bool() const
-    {
-        return bool(id);
-    }
-
-    HYP_FORCE_INLINE explicit operator ID<T>() const
-    {
-        return id;
-    }
-
-    HYP_FORCE_INLINE bool operator==(const RenderBinding& other) const
-    {
-        return id == other.id;
-    }
-
-    HYP_FORCE_INLINE bool operator<(const RenderBinding& other) const
-    {
-        return id < other.id;
-    }
-
-    HYP_FORCE_INLINE bool operator==(ID<T> id) const
-    {
-        return this->id == id;
-    }
-};
-
-template <class T>
-const RenderBinding<T> RenderBinding<T>::empty = RenderBinding {};
-
-template <>
-struct RenderBinding<Scene>
-{
-    static const RenderBinding empty;
-
-    ID<Scene> id;
-    Handle<RenderEnvironment> render_environment;
-    const RenderCollector* render_collector = nullptr;
-
-    HYP_FORCE_INLINE explicit operator bool() const
-    {
-        return bool(id);
-    }
-};
-
 HYP_CLASS()
-class RenderState : public HypObject<RenderState>
+class RenderState final : public HypObject<RenderState>
 {
     HYP_OBJECT_BODY(RenderState);
 
@@ -111,21 +58,12 @@ public:
     Stack<TResourceHandle<RenderEnvProbe>> env_probe_bindings;
     FixedArray<Array<TResourceHandle<RenderEnvProbe>>, ENV_PROBE_TYPE_MAX> bound_env_probes;
 
-    uint32 frame_counter = ~0u;
-
     HYP_API RenderState();
     RenderState(const RenderState&) = delete;
     RenderState& operator=(const RenderState&) = delete;
     RenderState(RenderState&&) noexcept = delete;
     RenderState& operator=(RenderState&&) noexcept = delete;
     HYP_API ~RenderState();
-
-    HYP_API void Init();
-
-    HYP_FORCE_INLINE void AdvanceFrameCounter()
-    {
-        ++frame_counter;
-    }
 
     HYP_FORCE_INLINE void SetActiveEnvProbe(TResourceHandle<RenderEnvProbe>&& resource_handle)
     {
@@ -233,14 +171,11 @@ public:
         {
             env_probe_bindings = {};
         }
-
-        if (mask & RENDER_STATE_FRAME_COUNTER)
-        {
-            frame_counter = ~0u;
-        }
     }
 
 private:
+    HYP_API void Init() override;
+
     FixedArray<uint32, ENV_PROBE_BINDING_SLOT_MAX> m_env_probe_texture_slot_counters {};
 };
 

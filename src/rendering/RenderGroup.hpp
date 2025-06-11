@@ -32,6 +32,7 @@ class RenderCollector;
 class GPUBufferHolderBase;
 class IndirectRenderer;
 class RenderView;
+struct RenderSetup;
 
 enum class RenderGroupFlags : uint32
 {
@@ -48,7 +49,7 @@ HYP_MAKE_ENUM_FLAGS(RenderGroupFlags)
 struct ParallelRenderingState;
 
 HYP_CLASS()
-class HYP_API RenderGroup : public HypObject<RenderGroup>
+class HYP_API RenderGroup final : public HypObject<RenderGroup>
 {
     HYP_OBJECT_BODY(RenderGroup);
 
@@ -128,17 +129,13 @@ public:
     void CollectDrawCalls();
 
     /*! \brief Render objects using direct rendering, no occlusion culling is provided. */
-    void PerformRendering(FrameBase* frame, RenderView* view, ParallelRenderingState* parallel_rendering_state);
+    void PerformRendering(FrameBase* frame, const RenderSetup& render_setup, ParallelRenderingState* parallel_rendering_state);
 
-    /*! \brief Render objects using indirect rendering. The objects must have had the culling shader ran on them,
-     * using CollectDrawCalls(). */
-    void PerformRenderingIndirect(FrameBase* frame, RenderView* view, ParallelRenderingState* parallel_rendering_state);
-
-    void PerformOcclusionCulling(FrameBase* frame, RenderView* view, const CullData* cull_data);
-
-    void Init();
+    void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& render_setup);
 
 private:
+    void Init() override;
+    
     void CreateIndirectRenderer();
     void CreateGraphicsPipeline();
 

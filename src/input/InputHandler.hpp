@@ -18,7 +18,7 @@ namespace hyperion {
 struct InputState;
 
 HYP_CLASS(Abstract)
-class HYP_API InputHandlerBase : public EnableRefCountedPtrFromThis<InputHandlerBase>
+class HYP_API InputHandlerBase : public HypObject<InputHandlerBase>
 {
     HYP_OBJECT_BODY(InputHandlerBase);
 
@@ -91,7 +91,12 @@ public:
     NullInputHandler() = default;
     virtual ~NullInputHandler() override = default;
 
-protected:
+private:
+    void Init() override
+    {
+        SetReady(true);
+    }
+
     virtual bool OnKeyDown_Impl(const KeyboardEvent& evt) override
     {
         return false;

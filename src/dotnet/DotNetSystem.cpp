@@ -20,9 +20,9 @@
 #include <dotnet/Class.hpp>
 
 #ifdef HYP_DOTNET
-    #include <dotnetcore/hostfxr.h>
-    #include <dotnetcore/nethost.h>
-    #include <dotnetcore/coreclr_delegates.h>
+#include <dotnetcore/hostfxr.h>
+#include <dotnetcore/nethost.h>
+#include <dotnetcore/coreclr_delegates.h>
 #endif
 
 namespace hyperion {
@@ -41,8 +41,6 @@ enum class LoadAssemblyResult : int32
 };
 
 namespace dotnet {
-namespace detail {
-
 class DotNetImplBase
 {
 public:
@@ -51,6 +49,8 @@ public:
     virtual void Initialize(const FilePath& base_path) = 0;
     virtual RC<Assembly> LoadAssembly(const char* path) const = 0;
     virtual bool UnloadAssembly(ManagedGuid guid) const = 0;
+    virtual bool IsCoreAssembly(ManagedGuid guid) const = 0;
+    virtual bool IsCoreAssembly(const Assembly* assembly) const = 0;
 
     virtual void* GetDelegate(
         const TChar* assembly_path,
@@ -160,11 +160,11 @@ public:
 
         PlatformString interop_assembly_path_platform;
 
-    #ifdef HYP_WINDOWS
+#ifdef HYP_WINDOWS
         interop_assembly_path_platform = interop_assembly_path->ToWide();
-    #else
+#else
         interop_assembly_path_platform = *interop_assembly_path;
-    #endif
+#endif
 
         m_initialize_assembly_fptr = (InitializeAssemblyDelegate)GetDelegate(
             interop_assembly_path_platform.Data(),
@@ -202,14 +202,14 @@ public:
 
         for (const Pair<String, FilePath>& entry : core_assemblies)
         {
-            auto it = m_core_assemblies.Insert(entry.first, MakeRefCountedPtr<Assembly>()).first;
+            RC<Assembly> assembly = MakeRefCountedPtr<Assembly>(AssemblyFlags::CORE_ASSEMBLY);
 
-            Assembly* assembly = it->second.Get();
+            auto it = m_core_assemblies.Insert(entry.first, assembly).first;
 
             // Initialize all core assemblies
             int result = m_initialize_assembly_fptr(
                 &assembly->GetGuid(),
-                assembly,
+                assembly.Get(),
                 entry.second.Data(),
                 /* is_core_assembly */ 1);
 
@@ -249,13 +249,7 @@ public:
 
     virtual bool UnloadAssembly(ManagedGuid assembly_guid) const override
     {
-        const bool is_core_assembly = m_core_assemblies.FindIf([assembly_guid](const auto& it)
-                                          {
-                                              return Memory::MemCmp(&it.second->GetGuid(), &assembly_guid, sizeof(ManagedGuid)) == 0;
-                                          })
-            != m_core_assemblies.End();
-
-        if (is_core_assembly)
+        if (IsCoreAssembly(assembly_guid))
         {
             return false;
         }
@@ -266,6 +260,31 @@ public:
         m_unload_assembly_fptr(&assembly_guid, &result);
 
         return bool(result);
+    }
+
+    virtual bool IsCoreAssembly(ManagedGuid assembly_guid) const
+    {
+        if (!assembly_guid.IsValid())
+        {
+            return false;
+        }
+
+        auto it = m_core_assemblies.FindIf([assembly_guid](const auto& it)
+            {
+                return Memory::MemCmp(&it.second->GetGuid(), &assembly_guid, sizeof(ManagedGuid)) == 0;
+            });
+
+        return it != m_core_assemblies.End();
+    }
+
+    virtual bool IsCoreAssembly(const Assembly* assembly) const
+    {
+        if (!assembly)
+        {
+            return false;
+        }
+
+        return IsCoreAssembly(assembly->GetGuid());
     }
 
     virtual void* GetDelegate(
@@ -366,13 +385,13 @@ private:
 
         PlatformString runtime_config_path;
 
-    #ifdef HYP_WINDOWS
+#ifdef HYP_WINDOWS
         runtime_config_path = GetRuntimeConfigPath().ToWide();
 
         std::wcout << L".NET Runtime path = " << runtime_config_path.Data() << L"\n";
-    #else
+#else
         runtime_config_path = GetRuntimeConfigPath();
-    #endif
+#endif
 
         if (m_init_fptr(runtime_config_path.Data(), nullptr, &m_cxt) != 0)
         {
@@ -437,6 +456,16 @@ public:
         return false;
     }
 
+    virtual bool IsCoreAssembly(ManagedGuid guid) const override
+    {
+        return false;
+    }
+
+    virtual bool IsCoreAssembly(const Assembly* assembly) const override
+    {
+        return false;
+    }
+
     virtual void* GetDelegate(
         const TChar* assembly_path,
         const TChar* type_name,
@@ -448,8 +477,6 @@ public:
 };
 
 #endif
-
-} // namespace detail
 
 DotNetSystem& DotNetSystem::GetInstance()
 {
@@ -510,6 +537,18 @@ bool DotNetSystem::UnloadAssembly(ManagedGuid guid) const
     return m_impl->UnloadAssembly(guid);
 }
 
+bool DotNetSystem::IsCoreAssembly(const Assembly* assembly) const
+{
+    if (!EnsureInitialized())
+    {
+        return false;
+    }
+
+    HYP_NAMED_SCOPE("Check if .NET Assembly is Core Assembly");
+
+    return m_impl->IsCoreAssembly(assembly);
+}
+
 bool DotNetSystem::IsEnabled() const
 {
 #ifndef HYP_DOTNET
@@ -540,7 +579,7 @@ void DotNetSystem::Initialize(const FilePath& base_path)
 
     AssertThrow(m_impl == nullptr);
 
-    m_impl = MakeRefCountedPtr<detail::DotNetImpl>();
+    m_impl = MakeRefCountedPtr<DotNetImpl>();
     m_impl->Initialize(base_path);
 
     m_is_initialized = true;

@@ -2,6 +2,8 @@
 
 #include <scene/EnvProbe.hpp>
 #include <scene/View.hpp>
+#include <scene/World.hpp>
+#include <scene/Scene.hpp>
 
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderState.hpp>
@@ -139,13 +141,6 @@ EnvProbe::~EnvProbe()
 
 void EnvProbe::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
-
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
         {
             m_camera.Reset();
@@ -207,8 +202,9 @@ void EnvProbe::CreateView()
     }
 
     m_view = CreateObject<View>(ViewDesc {
+        .flags = ViewFlags::DEFAULT & ~ViewFlags::ALL_WORLD_SCENES,
         .viewport = Viewport { .extent = Vec2i(m_dimensions), .position = Vec2i::Zero() },
-        .scene = m_parent_scene,
+        .scenes = { m_parent_scene },
         .camera = m_camera,
         .entity_collection_flags = (OnlyCollectStaticEntities() ? ViewEntityCollectionFlags::COLLECT_STATIC : ViewEntityCollectionFlags::COLLECT_ALL) | ViewEntityCollectionFlags::SKIP_FRUSTUM_CULLING,
         .override_attributes = RenderableAttributeSet(
@@ -219,6 +215,11 @@ void EnvProbe::CreateView()
                 .cull_faces = FaceCullMode::NONE }) });
 
     InitObject(m_view);
+
+    // if (m_parent_scene.IsValid())
+    // {
+    //     m_parent_scene->GetWorld()->AddView(m_view);
+    // }
 }
 
 void EnvProbe::SetAABB(const BoundingBox& aabb)
@@ -263,31 +264,28 @@ void EnvProbe::SetParentScene(const Handle<Scene>& parent_scene)
         return;
     }
 
-    m_parent_scene = parent_scene;
-
     if (IsInitCalled())
     {
+        if (m_parent_scene.IsValid())
+        {
+            m_view->RemoveScene(m_parent_scene);
+            // m_parent_scene->GetWorld()->RemoveView(m_view);
+        }
+
         if (parent_scene.IsValid())
         {
-            InitObject(parent_scene);
-
-            CreateView();
-
-            if (m_view.IsValid())
-            {
-                m_render_resource->SetViewResourceHandle(TResourceHandle<RenderView>(m_view->GetRenderResource()));
-            }
+            m_view->AddScene(parent_scene);
+            // parent_scene->GetWorld()->AddView(m_view);
 
             m_render_resource->SetSceneResourceHandle(TResourceHandle<RenderScene>(parent_scene->GetRenderResource()));
         }
         else
         {
-            m_render_resource->SetViewResourceHandle(TResourceHandle<RenderView>());
             m_render_resource->SetSceneResourceHandle(TResourceHandle<RenderScene>());
-
-            m_view.Reset();
         }
     }
+
+    m_parent_scene = parent_scene;
 
     Invalidate();
 }
@@ -365,6 +363,9 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
         if (diff.NeedsUpdate() || m_octant_hash_code != octant_hash_code)
         {
+            HYP_LOG(EnvProbe, Debug, "EnvProbe #{} with AABB: {} has {} added, {} removed and {} changed entities", GetID().Value(), m_aabb,
+                diff.num_added, diff.num_removed, diff.num_changed);
+
             SetNeedsRender(true);
         }
 

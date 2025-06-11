@@ -12,11 +12,17 @@ namespace hyperion {
 
 SuppressEngineRenderStatsScope::SuppressEngineRenderStatsScope()
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
     g_engine->GetRenderStatsCalculator().Suppress();
 }
 
 SuppressEngineRenderStatsScope::~SuppressEngineRenderStatsScope()
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
     g_engine->GetRenderStatsCalculator().Unsuppress();
 }
 
@@ -26,17 +32,25 @@ SuppressEngineRenderStatsScope::~SuppressEngineRenderStatsScope()
 
 void EngineRenderStatsCalculator::AddCounts(const EngineRenderStatsCounts& counts)
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
     if (m_suppress_count > 0)
     {
         return;
     }
 
-    m_counts.num_draw_calls += counts.num_draw_calls;
-    m_counts.num_triangles += counts.num_triangles;
+    for (uint32 i = 0; i < ERS_MAX; ++i)
+    {
+        m_counts.counts[i] += counts.counts[i];
+    }
 }
 
 void EngineRenderStatsCalculator::AddSample(double delta)
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
     if (m_suppress_count > 0)
     {
         return;
@@ -49,6 +63,9 @@ void EngineRenderStatsCalculator::AddSample(double delta)
 
 void EngineRenderStatsCalculator::Advance(EngineRenderStats& render_stats)
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
     m_counter.NextTick();
     m_delta_accum += m_counter.delta;
 
@@ -75,11 +92,14 @@ void EngineRenderStatsCalculator::Advance(EngineRenderStats& render_stats)
         m_delta_accum = 0.0;
     }
 
-    m_counts = {};
+    Memory::MemSet(m_counts.counts, 0, sizeof(&m_counts.counts[0]) * ERS_MAX);
 }
 
 double EngineRenderStatsCalculator::CalculateFramesPerSecond() const
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
     if (m_num_samples == 0)
     {
         return 0.0;
@@ -98,6 +118,9 @@ double EngineRenderStatsCalculator::CalculateFramesPerSecond() const
 
 double EngineRenderStatsCalculator::CalculateMillisecondsPerFrame() const
 {
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_render_thread);
+
     if (m_num_samples == 0)
     {
         return 0.0;

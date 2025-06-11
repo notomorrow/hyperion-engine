@@ -26,7 +26,7 @@
 
 #include <Engine.hpp>
 
-namespace hyperion::fbom {
+namespace hyperion::serialization {
 
 template <>
 class FBOMMarshaler<Entity> : public FBOMObjectMarshalerBase<Entity>
@@ -42,9 +42,9 @@ public:
         //     return { FBOMResult::FBOM_OK };
         // }
 
-        EntityManager* entity_manager = EntityManager::GetEntityToEntityManagerMap().GetEntityManager(entity.GetID());
+        Handle<EntityManager> entity_manager = EntityManager::GetEntityToEntityManagerMap().GetEntityManager(entity.GetID());
 
-        if (!entity_manager)
+        if (!entity_manager.IsValid())
         {
             return { FBOMResult::FBOM_ERR, "Entity not attached to an EntityManager" };
         }
@@ -150,7 +150,7 @@ public:
         return result;
     }
 
-    virtual FBOMResult Deserialize(fbom::FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
+    virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
         // bool is_valid = false;
 
@@ -165,7 +165,7 @@ public:
         // }
 
         const Handle<Scene>& detached_scene = g_engine->GetDefaultWorld()->GetDetachedScene(ThreadID::Current());
-        const RC<EntityManager>& entity_manager = detached_scene->GetEntityManager();
+        const Handle<EntityManager>& entity_manager = detached_scene->GetEntityManager();
 
         Handle<Entity> entity = entity_manager->AddEntity();
 
@@ -285,4 +285,4 @@ HYP_DEFINE_MARSHAL(Entity, FBOMMarshaler<Entity>);
 
 // HYP_DEFINE_MARSHAL(ID<Entity>, FBOMMarshaler<ID<Entity>>);
 
-} // namespace hyperion::fbom
+} // namespace hyperion::serialization

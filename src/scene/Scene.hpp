@@ -79,7 +79,7 @@ public:
 };
 
 HYP_CLASS()
-class HYP_API Scene : public HypObject<Scene>
+class HYP_API Scene final : public HypObject<Scene>
 {
     friend class World;
     friend class UIStage;
@@ -163,7 +163,7 @@ public:
     void SetRoot(const Handle<Node>& root);
 
     HYP_METHOD()
-    HYP_FORCE_INLINE const RC<EntityManager>& GetEntityManager() const
+    HYP_FORCE_INLINE const Handle<EntityManager>& GetEntityManager() const
     {
         return m_entity_manager;
     }
@@ -215,10 +215,6 @@ public:
         m_is_audio_listener = is_audio_listener;
     }
 
-    WorldGrid* GetWorldGrid() const;
-
-    void Init();
-
     void Update(GameCounter::TickUnit delta);
 
     HYP_METHOD()
@@ -234,11 +230,11 @@ public:
     HYP_METHOD()
     String GetUniqueNodeName(UTF8StringView base_name) const;
 
-    void EnqueueRenderUpdates();
-
     Delegate<void, const Handle<Node>& /* new */, const Handle<Node>& /* prev */> OnRootNodeChanged;
 
 private:
+    void Init() override;
+
     template <class SystemType>
     void AddSystemIfApplicable();
 
@@ -256,7 +252,7 @@ private:
 
     FogParams m_fog_params;
 
-    RC<EntityManager> m_entity_manager;
+    Handle<EntityManager> m_entity_manager;
 
     Octree m_octree;
 

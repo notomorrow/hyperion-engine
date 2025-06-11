@@ -12,8 +12,6 @@
 namespace hyperion {
 namespace utilities {
 
-namespace detail {
-
 template <class T, typename IsReferenceType = void>
 class Optional;
 
@@ -34,36 +32,21 @@ public:
     {
         if (ptr != nullptr)
         {
-            new (&m_storage.data_buffer) T(*ptr);
+            m_storage.Construct(*ptr);
         }
-    }
-
-    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
-    Optional(const Ty& value)
-        : m_has_value(true)
-    {
-        new (&m_storage.data_buffer) T(value);
-    }
-
-    template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
-    Optional& operator=(const Ty& value)
-    {
-        Set(value);
-
-        return *this;
     }
 
     template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
     Optional(Ty&& value) noexcept
         : m_has_value(true)
     {
-        new (&m_storage.data_buffer) T(std::move(value));
+        m_storage.Construct(std::forward<Ty>(value));
     }
 
     template <class Ty, class = std::enable_if_t<std::is_convertible_v<Ty, T>>>
     Optional& operator=(Ty&& value) noexcept
     {
-        Set(std::move(value));
+        Set(std::forward<Ty>(value));
 
         return *this;
     }
@@ -73,7 +56,7 @@ public:
     {
         if (m_has_value)
         {
-            new (&m_storage.data_buffer) T(other.Get());
+            m_storage.Construct(other.Get());
         }
     }
 
@@ -101,10 +84,11 @@ public:
     {
         if (other.m_has_value)
         {
-            new (&m_storage.data_buffer) T(std::move(other.Get()));
-        }
+            m_storage.Construct(std::move(other.Get()));
 
-        other.m_has_value = false;
+            other.m_storage.Destruct();
+            other.m_has_value = false;
+        }
     }
 
     Optional& operator=(Optional&& other) noexcept
@@ -112,13 +96,14 @@ public:
         if (other.m_has_value)
         {
             Set(std::move(other.Get()));
+
+            other.m_storage.Destruct();
+            other.m_has_value = false;
         }
         else
         {
             Unset();
         }
-
-        other.m_has_value = false;
 
         return *this;
     }
@@ -127,7 +112,7 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
         }
     }
 
@@ -206,18 +191,25 @@ public:
         return nullptr;
     }
 
-    HYP_FORCE_INLINE T& Get()
+    HYP_FORCE_INLINE T& Get() &
     {
         AssertThrow(m_has_value);
 
-        return *static_cast<T*>(m_storage.GetPointer());
+        return m_storage.Get();
     }
 
-    HYP_FORCE_INLINE const T& Get() const
+    HYP_FORCE_INLINE const T& Get() const&
     {
         AssertThrow(m_has_value);
 
-        return *static_cast<const T*>(m_storage.GetPointer());
+        return m_storage.Get();
+    }
+
+    HYP_FORCE_INLINE T Get() &&
+    {
+        AssertThrow(m_has_value);
+
+        return std::move(m_storage.Get());
     }
 
     HYP_FORCE_INLINE const T& GetOr(const T& default_value) const&
@@ -274,53 +266,23 @@ public:
 
     HYP_FORCE_INLINE void Set(const T& value)
     {
-        if constexpr (std::is_copy_assignable_v<T>)
+        if (m_has_value)
         {
-            if (m_has_value)
-            {
-                Get() = value;
-            }
-            else
-            {
-                new (&m_storage.data_buffer) T(value);
-            }
-        }
-        else
-        {
-            if (m_has_value)
-            {
-                Get().~T();
-            }
-
-            new (&m_storage.data_buffer) T(value);
+            m_storage.Destruct();
         }
 
+        m_storage.Construct(value);
         m_has_value = true;
     }
 
     HYP_FORCE_INLINE void Set(T&& value)
     {
-        if constexpr (std::is_move_assignable_v<T>)
+        if (m_has_value)
         {
-            if (m_has_value)
-            {
-                Get() = std::move(value);
-            }
-            else
-            {
-                new (&m_storage.data_buffer) T(std::move(value));
-            }
-        }
-        else
-        {
-            if (m_has_value)
-            {
-                Get().~T();
-            }
-
-            new (&m_storage.data_buffer) T(std::move(value));
+            m_storage.Destruct();
         }
 
+        m_storage.Construct(std::move(value));
         m_has_value = true;
     }
 
@@ -329,7 +291,7 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
             m_has_value = false;
         }
     }
@@ -340,11 +302,11 @@ public:
     {
         if (m_has_value)
         {
-            Get().~T();
+            m_storage.Destruct();
         }
 
+        m_storage.Construct(std::forward<Args>(args)...);
         m_has_value = true;
-        new (&m_storage.data_buffer) T(std::forward<Args>(args)...);
     }
 
     HYP_FORCE_INLINE T* operator->()
@@ -653,10 +615,6 @@ public:
 private:
     typename std::remove_reference_t<T>* m_ptr;
 };
-
-} // namespace detail
-
-using detail::Optional;
 
 } // namespace utilities
 

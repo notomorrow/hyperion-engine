@@ -608,10 +608,10 @@ Handle<Node> TranslateEditorManipulationWidget::Load_Internal() const
             }
 
             FileByteWriter byte_writer(g_asset_manager->GetBasePath() / "models/editor/axis_arrows.hypmodel");
-            fbom::FBOMWriter writer { fbom::FBOMWriterConfig {} };
+            FBOMWriter writer { FBOMWriterConfig {} };
             writer.Append(*node);
 
-            fbom::FBOMResult write_err = writer.Emit(&byte_writer);
+            FBOMResult write_err = writer.Emit(&byte_writer);
 
             byte_writer.Close();
 
@@ -724,7 +724,7 @@ void EditorManipulationWidgetHolder::Shutdown()
 
 #ifdef HYP_EDITOR
 
-EditorSubsystem::EditorSubsystem(const RC<AppContextBase>& app_context)
+EditorSubsystem::EditorSubsystem(const Handle<AppContextBase>& app_context)
     : m_app_context(app_context),
       m_editor_camera_enabled(false),
       m_should_cancel_next_click(false),
@@ -769,7 +769,7 @@ EditorSubsystem::EditorSubsystem(const RC<AppContextBase>& app_context)
                            AssertThrowMsg(InitObject(m_camera), "Failed to initialize editor camera for scene %s", *m_scene->GetName());
 
                            // // @TODO: Don't serialize the editor camera controller
-                           m_camera->AddCameraController(MakeRefCountedPtr<EditorCameraController>());
+                           m_camera->AddCameraController(CreateObject<EditorCameraController>());
 
                            m_delegate_handlers.Remove("OnPackageAdded");
 
@@ -834,7 +834,7 @@ EditorSubsystem::EditorSubsystem(const RC<AppContextBase>& app_context)
 
                                 // @TODO Remove camera controller
 
-                                project_scene->GetRenderResource().GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
+                                GetWorld()->GetRenderResource().GetEnvironment()->RemoveRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"));
 
                                 if (m_camera)
                                 {
@@ -1136,9 +1136,8 @@ void EditorSubsystem::InitViewport()
         // Vec2i viewport_size = MathUtil::Max(scene_image_object->GetActualSize(), Vec2i::One());
 
         Handle<View> view = CreateObject<View>(ViewDesc {
-            .flags = ViewFlags::GBUFFER,
+            .flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER,
             .viewport = Viewport { .extent = viewport_size, .position = Vec2i::Zero() },
-            .scene = m_scene,
             .camera = primary_camera });
 
         InitObject(view);
@@ -1170,7 +1169,7 @@ void EditorSubsystem::InitViewport()
 
         m_scene_texture.Reset();
 
-        RC<ScreenCaptureRenderSubsystem> screen_capture_render_subsystem = m_scene->GetRenderResource().GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), TResourceHandle<RenderView>(view->GetRenderResource()));
+        RC<ScreenCaptureRenderSubsystem> screen_capture_render_subsystem = GetWorld()->GetRenderResource().GetEnvironment()->AddRenderSubsystem<ScreenCaptureRenderSubsystem>(NAME("EditorSceneCapture"), TResourceHandle<RenderView>(view->GetRenderResource()));
         m_screen_capture_render_subsystems.PushBack(screen_capture_render_subsystem);
 
         m_scene_texture = screen_capture_render_subsystem->GetTexture();
@@ -1207,7 +1206,7 @@ void EditorSubsystem::InitViewport()
                     {
                         for (const RayHit& hit : results)
                         {
-                            if (ID<Entity> entity = ID<Entity>(hit.id))
+                            if (ID<Entity> entity = ID<Entity>(IDBase { TypeID::ForType<Entity>(), hit.id }))
                             {
                                 if (NodeLinkComponent* node_link_component = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(entity))
                                 {
@@ -1306,7 +1305,7 @@ void EditorSubsystem::InitViewport()
                     {
                         for (const RayHit& ray_hit : results)
                         {
-                            ID<Entity> entity = ID<Entity>(ray_hit.id);
+                            ID<Entity> entity = ID<Entity>(IDBase { TypeID::ForType<Entity>(), ray_hit.id });
 
                             if (!entity.IsValid())
                             {
@@ -1633,7 +1632,7 @@ void EditorSubsystem::InitSceneOutline()
             //    }
         });
 
-    static const auto AddNodeToSceneOutline = [](const RC<UIListView>& list_view, Node* node)
+    static const auto add_node_to_scene_outline = [](const RC<UIListView>& list_view, Node* node)
     {
         AssertThrow(node != nullptr);
 
@@ -1669,7 +1668,7 @@ void EditorSubsystem::InitSceneOutline()
             continue;
         }
 
-        AddNodeToSceneOutline(list_view, node);
+        add_node_to_scene_outline(list_view, node);
     }
 
     m_delegate_handlers.Remove(&m_scene->GetRoot()->GetDelegates()->OnChildAdded);
@@ -1684,11 +1683,11 @@ void EditorSubsystem::InitSceneOutline()
 
             RC<UIListView> list_view = list_view_weak.Lock();
 
-            AddNodeToSceneOutline(list_view, node);
+            add_node_to_scene_outline(list_view, node);
 
             for (Node* child : node->GetDescendants())
             {
-                AddNodeToSceneOutline(list_view, child);
+                add_node_to_scene_outline(list_view, child);
             }
         }));
 
@@ -2152,9 +2151,9 @@ RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
     {
         HypData loaded_font_atlas_data;
 
-        fbom::FBOMReader reader({});
+        FBOMReader reader({});
 
-        if (fbom::FBOMResult err = reader.LoadFromFile(serialized_file_path, loaded_font_atlas_data))
+        if (FBOMResult err = reader.LoadFromFile(serialized_file_path, loaded_font_atlas_data))
         {
             HYP_FAIL("failed to load: %s", *err.message);
         }
@@ -2175,12 +2174,12 @@ RC<FontAtlas> EditorSubsystem::CreateFontAtlas()
     atlas->Render();
 
     FileByteWriter byte_writer { serialized_file_path };
-    fbom::FBOMWriter writer { fbom::FBOMWriterConfig {} };
+    FBOMWriter writer { FBOMWriterConfig {} };
     writer.Append(*atlas);
     auto write_err = writer.Emit(&byte_writer);
     byte_writer.Close();
 
-    if (write_err != fbom::FBOMResult::FBOM_OK)
+    if (write_err != FBOMResult::FBOM_OK)
     {
         HYP_FAIL("Failed to save font atlas: %s", write_err.message.Data());
     }
@@ -2219,7 +2218,7 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
     }
 }
 
-void EditorSubsystem::AddTask(const RC<EditorTaskBase>& task)
+void EditorSubsystem::AddTask(const Handle<EditorTaskBase>& task)
 {
     HYP_SCOPE;
 
@@ -2260,9 +2259,10 @@ void EditorSubsystem::AddTask(const RC<EditorTaskBase>& task)
 
             RC<UIButton> cancel_button = context.CreateUIObject<UIButton>(NAME("Task_Cancel"), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
             cancel_button->SetText("Cancel");
-            cancel_button->OnClick.Bind([task_weak = task.ToWeak()](...)
+            cancel_button->OnClick.Bind(
+                                      [task_weak = task.ToWeak()](...)
                                       {
-                                          if (RC<EditorTaskBase> task = task_weak.Lock())
+                                          if (Handle<EditorTaskBase> task = task_weak.Lock())
                                           {
                                               task->Cancel();
                                           }

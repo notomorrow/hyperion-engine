@@ -265,19 +265,22 @@ void DeferredPass::Resize_Internal(Vec2u new_size)
     FullScreenPass::Resize_Internal(new_size);
 }
 
-void DeferredPass::Render(FrameBase* frame, RenderView* view)
+void DeferredPass::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
 
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
+
     if (m_mode == DeferredPassMode::INDIRECT_LIGHTING)
     {
-        RenderToFramebuffer(frame, view, nullptr);
+        RenderToFramebuffer(frame, render_setup, nullptr);
 
         return;
     }
 
     // no lights bound, do not render direct shading at all
-    if (view->NumLights() == 0)
+    if (render_setup.view->NumLights() == 0)
     {
         return;
     }
@@ -295,7 +298,7 @@ void DeferredPass::Render(FrameBase* frame, RenderView* view)
         const Handle<RenderGroup>& render_group = m_direct_light_render_groups[light_type_index];
 
         const uint32 global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-        const uint32 scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+        const uint32 view_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
         const uint32 material_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
         const uint32 deferred_direct_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("DeferredDirectDescriptorSet"));
 
@@ -324,7 +327,7 @@ void DeferredPass::Render(FrameBase* frame, RenderView* view)
                 deferred_direct_descriptor_set_index);
         }
 
-        const auto& lights = view->GetLights(light_type);
+        const auto& lights = render_setup.view->GetLights(light_type);
 
         for (RenderLight* render_light : lights)
         {
@@ -332,25 +335,25 @@ void DeferredPass::Render(FrameBase* frame, RenderView* view)
                 render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame->GetFrameIndex()),
                 render_group->GetPipeline(),
                 ArrayMap<Name, uint32> {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) },
+                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_render_grid.Get(), 0) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_render_probe.Get(), 0) },
                     { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(*render_light) } },
                 global_descriptor_set_index);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
-                view->GetDescriptorSets()[frame->GetFrameIndex()],
+                render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
                 render_group->GetPipeline(),
                 ArrayMap<Name, uint32> {},
-                scene_descriptor_set_index);
+                view_descriptor_set_index);
 
             // Bind material descriptor set (for area lights)
             if (material_descriptor_set_index != ~0u && !use_bindless_textures)
             {
                 const DescriptorSetRef& material_descriptor_set = render_light->GetMaterial().IsValid()
                     ? render_light->GetMaterial()->GetRenderResource().GetDescriptorSets()[frame->GetFrameIndex()]
-                    : g_engine->GetMaterialDescriptorSetManager()->GetInvalidMaterialDescriptorSet();
+                    : g_engine->GetMaterialDescriptorSetManager()->GetInvalidMaterialDescriptorSet(frame->GetFrameIndex());
 
                 AssertThrow(material_descriptor_set != nullptr);
 
@@ -411,9 +414,9 @@ void TonemapPass::Resize_Internal(Vec2u new_size)
     FullScreenPass::Resize_Internal(new_size);
 }
 
-void TonemapPass::Render(FrameBase* frame, RenderView* view)
+void TonemapPass::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
-    FullScreenPass::Render(frame, view);
+    FullScreenPass::Render(frame, render_setup);
 }
 
 #pragma endregion TonemapPass
@@ -466,9 +469,9 @@ void LightmapPass::Resize_Internal(Vec2u new_size)
     FullScreenPass::Resize_Internal(new_size);
 }
 
-void LightmapPass::Render(FrameBase* frame, RenderView* view)
+void LightmapPass::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
-    FullScreenPass::Render(frame, view);
+    FullScreenPass::Render(frame, render_setup);
 }
 
 #pragma endregion LightmapPass
@@ -587,11 +590,13 @@ void EnvGridPass::Resize_Internal(Vec2u new_size)
     FullScreenPass::Resize_Internal(new_size);
 }
 
-void EnvGridPass::Render(FrameBase* frame, RenderView* view)
+void EnvGridPass::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
-
     Threads::AssertOnThread(g_render_thread);
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -603,7 +608,7 @@ void EnvGridPass::Render(FrameBase* frame, RenderView* view)
     // render previous frame's result to screen
     if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr)
     {
-        RenderPreviousTextureToScreen(frame, view);
+        RenderPreviousTextureToScreen(frame, render_setup);
     }
 
     const Handle<RenderGroup>& render_group = m_mode == EnvGridPassMode::RADIANCE
@@ -613,13 +618,13 @@ void EnvGridPass::Render(FrameBase* frame, RenderView* view)
     AssertThrow(render_group.IsValid());
 
     const uint32 global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-    const uint32 scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 view_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
     render_group->GetPipeline()->SetPushConstants(m_push_constant_data.Data(), m_push_constant_data.Size());
 
     if (ShouldRenderHalfRes())
     {
-        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (render_setup.world->GetBufferData().frame_counter & 1);
         const Vec2i viewport_extent = Vec2i(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
         frame->GetCommandList().Add<BindGraphicsPipeline>(render_group->GetPipeline(), viewport_offset, viewport_extent);
@@ -633,16 +638,16 @@ void EnvGridPass::Render(FrameBase* frame, RenderView* view)
         render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index),
         render_group->GetPipeline(),
         ArrayMap<Name, uint32> {
-            { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) },
+            { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+            { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
             { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(*env_render_grid) } },
         global_descriptor_set_index);
 
     frame->GetCommandList().Add<BindDescriptorSet>(
-        view->GetDescriptorSets()[frame_index],
+        render_setup.view->GetDescriptorSets()[frame_index],
         render_group->GetPipeline(),
         ArrayMap<Name, uint32> {},
-        scene_descriptor_set_index);
+        view_descriptor_set_index);
 
     m_full_screen_quad->GetRenderResource().Render(frame->GetCommandList());
 
@@ -650,17 +655,17 @@ void EnvGridPass::Render(FrameBase* frame, RenderView* view)
 
     if (ShouldRenderHalfRes())
     {
-        MergeHalfResTextures(frame, view);
+        MergeHalfResTextures(frame, render_setup);
     }
 
     if (UsesTemporalBlending())
     {
         if (!ShouldRenderHalfRes())
         {
-            CopyResultToPreviousTexture(frame, view);
+            CopyResultToPreviousTexture(frame, render_setup);
         }
 
-        m_temporal_blending->Render(frame, view);
+        m_temporal_blending->Render(frame, render_setup);
     }
 
     m_is_first_frame = false;
@@ -808,16 +813,19 @@ void ReflectionsPass::Resize_Internal(Vec2u new_size)
     }
 }
 
-void ReflectionsPass::Render(FrameBase* frame, RenderView* view)
+void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
     if (ShouldRenderSSR())
     {
-        m_ssr_renderer->Render(frame, view);
+        m_ssr_renderer->Render(frame, render_setup);
     }
 
     // Sky renders first
@@ -853,7 +861,7 @@ void ReflectionsPass::Render(FrameBase* frame, RenderView* view)
     // render previous frame's result to screen
     if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr)
     {
-        RenderPreviousTextureToScreen(frame, view);
+        RenderPreviousTextureToScreen(frame, render_setup);
     }
 
     uint32 num_rendered_env_probes = 0;
@@ -877,7 +885,7 @@ void ReflectionsPass::Render(FrameBase* frame, RenderView* view)
 
         if (ShouldRenderHalfRes())
         {
-            const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+            const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (render_setup.world->GetBufferData().frame_counter & 1);
             const Vec2i viewport_extent = Vec2i(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
             frame->GetCommandList().Add<BindGraphicsPipeline>(render_group->GetPipeline(), viewport_offset, viewport_extent);
@@ -888,7 +896,7 @@ void ReflectionsPass::Render(FrameBase* frame, RenderView* view)
         }
 
         const uint32 global_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-        const uint32 scene_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+        const uint32 view_descriptor_set_index = render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
         for (RenderEnvProbe* env_render_probe : env_render_probes)
         {
@@ -903,16 +911,16 @@ void ReflectionsPass::Render(FrameBase* frame, RenderView* view)
                 render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index),
                 render_group->GetPipeline(),
                 ArrayMap<Name, uint32> {
-                    { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) },
+                    { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_render_probe->GetBufferIndex()) } },
                 global_descriptor_set_index);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
-                view->GetDescriptorSets()[frame_index],
+                render_setup.view->GetDescriptorSets()[frame_index],
                 render_group->GetPipeline(),
                 ArrayMap<Name, uint32> {},
-                scene_descriptor_set_index);
+                view_descriptor_set_index);
 
             m_full_screen_quad->GetRenderResource().Render(frame->GetCommandList());
 
@@ -922,24 +930,24 @@ void ReflectionsPass::Render(FrameBase* frame, RenderView* view)
 
     if (ShouldRenderSSR())
     {
-        m_render_ssr_to_screen_pass->RenderToFramebuffer(frame, view, GetFramebuffer());
+        m_render_ssr_to_screen_pass->RenderToFramebuffer(frame, render_setup, GetFramebuffer());
     }
 
     frame->GetCommandList().Add<EndFramebuffer>(GetFramebuffer(), frame_index);
 
     if (ShouldRenderHalfRes())
     {
-        MergeHalfResTextures(frame, view);
+        MergeHalfResTextures(frame, render_setup);
     }
 
     if (UsesTemporalBlending())
     {
         if (!ShouldRenderHalfRes())
         {
-            CopyResultToPreviousTexture(frame, view);
+            CopyResultToPreviousTexture(frame, render_setup);
         }
 
-        m_temporal_blending->Render(frame, view);
+        m_temporal_blending->Render(frame, render_setup);
     }
 
     m_is_first_frame = false;

@@ -55,9 +55,9 @@ DataStoreBase::DataStoreBase(const String& prefix, DataStoreOptions options)
 {
 }
 
-int DataStoreBase::IncRef(int count)
+int DataStoreBase::IncRef()
 {
-    return m_ref_counter.Produce(count, [this](bool)
+    return m_ref_counter.Produce(1, [this](bool)
         {
             if (m_options.flags & DSF_WRITE)
             {
@@ -203,7 +203,16 @@ bool DataStoreBase::Read(const String& key, ByteBuffer& out_byte_buffer) const
         return false;
     }
 
-    BufferedByteReader reader(filepath);
+    FileBufferedReaderSource source { filepath };
+    BufferedByteReader reader { &source };
+
+    if (!reader.IsOpen())
+    {
+        HYP_LOG(DataStore, Warning, "Could not open file at path {} for reading", filepath);
+
+        return false;
+    }
+
     out_byte_buffer = reader.ReadBytes();
 
     return true;

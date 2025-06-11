@@ -1,7 +1,7 @@
 #version 450
 
 #extension GL_GOOGLE_include_directive : require
-#extension GL_EXT_scalar_block_layout  : require
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
 // #define PASSTHROUGH
@@ -9,17 +9,17 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 #ifndef OUTPUT_FORMAT
-    #if defined(OUTPUT_RGBA8)
-        #define OUTPUT_FORMAT rgba8
-        #define TEMPORAL_BLENDING_GAMMA_CORRECTION
-    #elif defined(OUTPUT_RGBA16F)
-        #define OUTPUT_FORMAT rgba16f
-    #elif defined(OUTPUT_RGBA32F)
-        #define OUTPUT_FORMAT rgba32f
-    #else
-        #define OUTPUT_FORMAT rgba8
-        // #define TEMPORAL_BLENDING_REVERSE_TONEMAP;//TEMPORAL_BLENDING_GAMMA_CORRECTION
-    #endif
+#if defined(OUTPUT_RGBA8)
+#define OUTPUT_FORMAT rgba8
+#define TEMPORAL_BLENDING_GAMMA_CORRECTION
+#elif defined(OUTPUT_RGBA16F)
+#define OUTPUT_FORMAT rgba16f
+#elif defined(OUTPUT_RGBA32F)
+#define OUTPUT_FORMAT rgba32f
+#else
+#define OUTPUT_FORMAT rgba8
+// #define TEMPORAL_BLENDING_REVERSE_TONEMAP;//TEMPORAL_BLENDING_GAMMA_CORRECTION
+#endif
 #endif
 
 HYP_DESCRIPTOR_SRV(TemporalBlendingDescriptorSet, InImage) uniform texture2D input_texture;
@@ -32,17 +32,17 @@ HYP_DESCRIPTOR_SAMPLER(TemporalBlendingDescriptorSet, SamplerNearest) uniform sa
 HYP_DESCRIPTOR_UAV(TemporalBlendingDescriptorSet, OutImage, format = rgba16f) uniform writeonly image2D output_image;
 
 #ifdef TEMPORAL_BLEND_TECHNIQUE_0
-    #define TEMPORAL_BLEND_TECHNIQUE 0
+#define TEMPORAL_BLEND_TECHNIQUE 0
 #elif defined(TEMPORAL_BLEND_TECHNIQUE_1)
-    #define TEMPORAL_BLEND_TECHNIQUE 1
+#define TEMPORAL_BLEND_TECHNIQUE 1
 #elif defined(TEMPORAL_BLEND_TECHNIQUE_2)
-    #define TEMPORAL_BLEND_TECHNIQUE 2
+#define TEMPORAL_BLEND_TECHNIQUE 2
 #elif defined(TEMPORAL_BLEND_TECHNIQUE_3)
-    #define TEMPORAL_BLEND_TECHNIQUE 3
+#define TEMPORAL_BLEND_TECHNIQUE 3
 #elif defined(TEMPORAL_BLEND_TECHNIQUE_4)
-    #define TEMPORAL_BLEND_TECHNIQUE 4 // progressive
+#define TEMPORAL_BLEND_TECHNIQUE 4 // progressive
 #else
-    #define TEMPORAL_BLEND_TECHNIQUE 3
+#define TEMPORAL_BLEND_TECHNIQUE 3
 #endif
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
@@ -53,20 +53,20 @@ HYP_DESCRIPTOR_UAV(TemporalBlendingDescriptorSet, OutImage, format = rgba16f) un
 #include "./include/shared.inc"
 #include "./include/scene.inc"
 
-//#define TEMPORAL_BLENDING_USE_YCoCg
+// #define TEMPORAL_BLENDING_USE_YCoCg
 
 #if TEMPORAL_BLEND_TECHNIQUE == 0
-    #undef ADJUST_COLOR_HDR
+#undef ADJUST_COLOR_HDR
 #elif TEMPORAL_BLEND_TECHNIQUE == 1
-    #define ADJUST_COLOR_HDR
+#define ADJUST_COLOR_HDR
 #endif
 
 #include "./include/Temporal.glsl"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer SceneBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
@@ -76,17 +76,19 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
 
 HYP_DESCRIPTOR_SRV(Scene, GBufferDepthTexture) uniform texture2D depth_texture;
 
-layout(push_constant) uniform PushConstant {
-    uvec2   output_dimensions;
-    uvec2   depth_texture_dimensions;
-    uint    blending_frame_counter;
+layout(push_constant) uniform PushConstant
+{
+    uvec2 output_dimensions;
+    uvec2 depth_texture_dimensions;
+    uint blending_frame_counter;
 };
 
 void main(void)
 {
     const uvec2 coord = gl_GlobalInvocationID.xy;
 
-    if (any(greaterThanEqual(coord, output_dimensions))) {
+    if (any(greaterThanEqual(coord, output_dimensions)))
+    {
         return;
     }
 
@@ -106,8 +108,7 @@ void main(void)
         camera.near,
         camera.far,
         velocity,
-        view_space_depth
-    );
+        view_space_depth);
 
 #ifdef PASSTHROUGH
     imageStore(output_image, clamp(ivec2(coord), ivec2(0), ivec2(output_dimensions) - 1), color);
@@ -145,13 +146,14 @@ void main(void)
     const vec2 ss_offset11 = min_max_support * vec2(texel_size.x, texel_size.y);
 
     const vec2 offsets[4] = vec2[](
-        -ss_offset11,// vec2(-1.0, 0.0),
-        -ss_offset01,// vec2(1.0, 0.0),
-        ss_offset01,// vec2(0.0, -1.0),
-        ss_offset11// vec2(0.0, 1.0)
+        -ss_offset11, // vec2(-1.0, 0.0),
+        -ss_offset01, // vec2(1.0, 0.0),
+        ss_offset01,  // vec2(0.0, -1.0),
+        ss_offset11   // vec2(0.0, 1.0)
     );
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++)
+    {
         vec4 c = ADJUST_COLOR_IN(Texture2D(sampler_linear, input_texture, uv + offsets[i]));
 
 #ifdef TEMPORAL_BLENDING_USE_YCoCg
@@ -202,8 +204,8 @@ void main(void)
 #elif TEMPORAL_BLEND_TECHNIQUE == 4
     vec4 previous_color = Texture2D(sampler_linear, prev_input_texture, uv);
 
-    //color.a = 1.0;
-    //previous_color.a = 1.0;
+    // color.a = 1.0;
+    // previous_color.a = 1.0;
 
     color = ADJUST_COLOR_IN(color);
     previous_color = ADJUST_COLOR_IN(previous_color);

@@ -139,9 +139,12 @@ void TemporalAA::CreateComputePipelines()
     DeferCreate(m_compute_taa);
 }
 
-void TemporalAA::Render(FrameBase* frame, RenderView* view)
+void TemporalAA::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_NAMED_SCOPE("Temporal AA");
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -151,7 +154,7 @@ void TemporalAA::Render(FrameBase* frame, RenderView* view)
 
     frame->GetCommandList().Add<InsertBarrier>(active_image, renderer::ResourceState::UNORDERED_ACCESS);
 
-    struct alignas(128)
+    struct
     {
         Vec2u dimensions;
         Vec2u depth_texture_dimensions;
@@ -165,7 +168,7 @@ void TemporalAA::Render(FrameBase* frame, RenderView* view)
 
     push_constants.dimensions = m_extent;
     push_constants.depth_texture_dimensions = Vec2u { depth_texture_dimensions.x, depth_texture_dimensions.y };
-    push_constants.camera_near_far = Vec2f { view->GetCamera()->GetBufferData().camera_near, view->GetCamera()->GetBufferData().camera_far };
+    push_constants.camera_near_far = Vec2f { render_setup.view->GetCamera()->GetBufferData().camera_near, render_setup.view->GetCamera()->GetBufferData().camera_far };
 
     m_compute_taa->SetPushConstants(&push_constants, sizeof(push_constants));
 
@@ -177,13 +180,7 @@ void TemporalAA::Render(FrameBase* frame, RenderView* view)
         ArrayMap<Name, ArrayMap<Name, uint32>> {},
         frame_index);
 
-    frame->GetCommandList().Add<DispatchCompute>(
-        m_compute_taa,
-        Vec3u {
-            (m_extent.x + 7) / 8,
-            (m_extent.y + 7) / 8,
-            1 });
-
+    frame->GetCommandList().Add<DispatchCompute>(m_compute_taa, Vec3u { (m_extent.x + 7) / 8, (m_extent.y + 7) / 8, 1 });
     frame->GetCommandList().Add<InsertBarrier>(active_image, renderer::ResourceState::SHADER_RESOURCE);
 }
 

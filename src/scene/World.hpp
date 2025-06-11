@@ -18,6 +18,7 @@ class RenderWorld;
 class EditorDelegates;
 struct EngineRenderStats;
 class View;
+class WorldGrid;
 
 struct DetachedScenesContainer
 {
@@ -63,7 +64,7 @@ private:
 };
 
 HYP_CLASS()
-class HYP_API World : public HypObject<World>
+class HYP_API World final : public HypObject<World>
 {
     HYP_OBJECT_BODY(World);
 
@@ -73,7 +74,7 @@ public:
     World& operator=(const World& other) = delete;
     World(World&& other) noexcept = delete;
     World& operator=(World&& other) noexcept = delete;
-    ~World();
+    ~World() override;
 
     HYP_FORCE_INLINE RenderWorld& GetRenderResource() const
     {
@@ -133,6 +134,12 @@ public:
     Subsystem* GetSubsystemByName(WeakName name) const;
 
     HYP_METHOD()
+    const Handle<WorldGrid>& GetWorldGrid() const
+    {
+        return m_world_grid;
+    }
+
+    HYP_METHOD()
     HYP_FORCE_INLINE const GameState& GetGameState() const
     {
         return m_game_state;
@@ -172,8 +179,6 @@ public:
         return m_views;
     }
 
-    void Init();
-
     /*! \brief Perform any necessary game thread specific updates to the World.
      * The main logic loop of the engine happens here. Each Scene in the World is updated,
      * and within each Scene, each Entity, etc. */
@@ -182,6 +187,8 @@ public:
     Delegate<void, World*, GameStateMode> OnGameStateChange;
 
 private:
+    void Init() override;
+
     PhysicsWorld m_physics_world;
 
     DetachedScenesContainer m_detached_scenes;
@@ -190,6 +197,8 @@ private:
     Array<Handle<View>> m_views;
 
     TypeMap<RC<Subsystem>> m_subsystems;
+
+    Handle<WorldGrid> m_world_grid;
 
     GameState m_game_state;
 

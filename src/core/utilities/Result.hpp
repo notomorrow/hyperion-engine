@@ -22,7 +22,9 @@ namespace utilities {
 // Will be needed to change Result to hold ptr to IError.
 // This is necessary for C# interop with Result.
 
-HYP_STRUCT()
+class IError;
+
+HYP_API extern const IError& GetNullError();
 
 class IError
 {
@@ -34,7 +36,6 @@ public:
 };
 
 HYP_STRUCT(Size = 128)
-
 class Error : public IError
 {
 public:
@@ -467,6 +468,7 @@ public:
 } // namespace utilities
 
 using utilities::Error;
+using utilities::GetNullError;
 using utilities::IError;
 using utilities::Result;
 using utilities::TResult;

@@ -6,16 +6,11 @@
 #include <core/functional/Proc.hpp>
 
 #include <core/containers/Array.hpp>
-#include <core/containers/FlatMap.hpp>
 
 #include <core/threading/Mutex.hpp>
 #include <core/threading/Threads.hpp>
 #include <core/threading/Task.hpp>
 #include <core/threading/Scheduler.hpp>
-
-#include <core/memory/RefCountedPtr.hpp>
-
-#include <core/IDGenerator.hpp>
 
 #include <core/Name.hpp>
 
@@ -37,8 +32,6 @@ template <class ReturnType, class... Args>
 class Delegate;
 
 class DelegateHandler;
-
-namespace detail {
 
 // Flag to set while deleting an entry - prevents read scopes from entering
 // the critical section while the entry is potentially being deleted.
@@ -90,13 +83,11 @@ struct DelegateHandlerEntry : DelegateHandlerEntryBase
     ProcType proc;
 };
 
-} // namespace detail
-
 struct DelegateHandler
 {
-    detail::DelegateHandlerEntryBase* entry;
+    DelegateHandlerEntryBase* entry;
     void* delegate;
-    void (*remove_fn)(void*, detail::DelegateHandlerEntryBase*);
+    void (*remove_fn)(void*, DelegateHandlerEntryBase*);
     void (*detach_fn)(void*, DelegateHandler&& delegate_handler);
 
     DelegateHandler()
@@ -107,7 +98,7 @@ struct DelegateHandler
     {
     }
 
-    DelegateHandler(detail::DelegateHandlerEntryBase* entry, void* delegate, void (*remove_fn)(void*, detail::DelegateHandlerEntryBase*), void (*detach_fn)(void*, DelegateHandler&& delegate_handler))
+    DelegateHandler(DelegateHandlerEntryBase* entry, void* delegate, void (*remove_fn)(void*, DelegateHandlerEntryBase*), void (*detach_fn)(void*, DelegateHandler&& delegate_handler))
         : entry(entry),
           delegate(delegate),
           remove_fn(remove_fn),
@@ -219,46 +210,46 @@ struct DelegateHandler
 };
 
 /*! \brief Stores a set of DelegateHandlers, intended to hold references to delegates and remove them upon destruction of the owner object. */
-class DelegateHandlerSet
+class DelegateHandlerSet : HashMap<Name, DelegateHandler, HashTable_DynamicNodeAllocator<KeyValuePair<Name, DelegateHandler>>>
 {
 public:
-    using Iterator = typename FlatMap<Name, DelegateHandler>::Iterator;
-    using ConstIterator = typename FlatMap<Name, DelegateHandler>::ConstIterator;
+    using HashMap::ConstIterator;
+    using HashMap::Iterator;
 
     HYP_FORCE_INLINE DelegateHandlerSet& Add(DelegateHandler&& delegate_handler)
     {
-        m_delegate_handlers.Insert({ Name::Unique("DelegateHandler_"), std::move(delegate_handler) });
+        HashMap::Insert({ Name::Unique("DelegateHandler_"), std::move(delegate_handler) });
         return *this;
     }
 
     HYP_FORCE_INLINE DelegateHandlerSet& Add(Name name, DelegateHandler&& delegate_handler)
     {
-        m_delegate_handlers.Insert({ name, std::move(delegate_handler) });
+        HashMap::Insert({ name, std::move(delegate_handler) });
         return *this;
     }
 
     HYP_FORCE_INLINE bool Remove(WeakName name)
     {
-        auto it = m_delegate_handlers.FindAs(name);
+        auto it = HashMap::FindAs(name);
 
-        if (it == m_delegate_handlers.End())
+        if (it == HashMap::End())
         {
             return false;
         }
 
-        m_delegate_handlers.Erase(it);
+        HashMap::Erase(it);
 
         return true;
     }
 
     HYP_FORCE_INLINE bool Remove(ConstIterator it)
     {
-        if (it == m_delegate_handlers.End())
+        if (it == HashMap::End())
         {
             return false;
         }
 
-        m_delegate_handlers.Erase(it);
+        HashMap::Erase(it);
 
         return true;
     }
@@ -270,13 +261,13 @@ public:
     {
         Array<DelegateHandler> delegate_handlers;
 
-        for (auto it = m_delegate_handlers.Begin(); it != m_delegate_handlers.End();)
+        for (auto it = HashMap::Begin(); it != HashMap::End();)
         {
             if (it->second.delegate == delegate)
             {
                 delegate_handlers.PushBack(std::move(it->second));
 
-                it = m_delegate_handlers.Erase(it);
+                it = HashMap::Erase(it);
 
                 continue;
             }
@@ -289,25 +280,20 @@ public:
 
     HYP_FORCE_INLINE Iterator Find(WeakName name)
     {
-        return m_delegate_handlers.FindAs(name);
+        return HashMap::FindAs(name);
     }
 
     HYP_FORCE_INLINE ConstIterator Find(WeakName name) const
     {
-        return m_delegate_handlers.FindAs(name);
+        return HashMap::FindAs(name);
     }
 
     HYP_FORCE_INLINE bool Contains(WeakName name) const
     {
-        return m_delegate_handlers.Contains(name);
+        return HashMap::FindAs(name) != HashMap::End();
     }
 
-    HYP_DEF_STL_BEGIN_END(
-        m_delegate_handlers.Begin(),
-        m_delegate_handlers.End())
-
-private:
-    FlatMap<Name, DelegateHandler> m_delegate_handlers;
+    HYP_DEF_STL_BEGIN_END(HashMap::Begin(), HashMap::End())
 };
 
 class IDelegate
@@ -321,7 +307,7 @@ public:
     virtual int RemoveAllDetached() = 0;
 
 protected:
-    virtual bool Remove(detail::DelegateHandlerEntryBase* entry) = 0;
+    virtual bool Remove(DelegateHandlerEntryBase* entry) = 0;
 };
 
 /*! \brief A Delegate object that can be used to bind handler functions to be called when a broadcast is sent.
@@ -336,8 +322,8 @@ public:
     using ProcType = Proc<ReturnType(Args...)>;
 
     Delegate()
-        : m_id_counter(0),
-          m_num_procs(0)
+        : m_num_procs(0),
+          m_id_counter(0)
     {
     }
 
@@ -407,7 +393,7 @@ public:
 
         Mutex::Guard guard(m_mutex);
 
-        detail::DelegateHandlerEntry<ProcType>* entry = m_procs.PushBack(new detail::DelegateHandlerEntry<ProcType>());
+        DelegateHandlerEntry<ProcType>* entry = m_procs.PushBack(new DelegateHandlerEntry<ProcType>());
         entry->index = m_id_counter++;
         entry->calling_thread_id = calling_thread_id;
         entry->proc = std::move(proc);
@@ -436,11 +422,11 @@ public:
 
         for (auto it = m_procs.Begin(); it != m_procs.End();)
         {
-            detail::DelegateHandlerEntry<ProcType>* current = *it;
+            DelegateHandlerEntry<ProcType>* current = *it;
 
             // set write mask, loop until we have exclusive access.
-            uint64 state = current->mask.BitOr(detail::g_write_flag, MemoryOrder::ACQUIRE);
-            while (state & detail::g_read_mask)
+            uint64 state = current->mask.BitOr(g_write_flag, MemoryOrder::ACQUIRE);
+            while (state & g_read_mask)
             {
                 state = current->mask.Get(MemoryOrder::ACQUIRE);
                 Threads::Sleep(0);
@@ -490,7 +476,7 @@ public:
     }
 
     /*! \brief Broadcast a message to all bound handlers.
-     *  \note The default return value can be changed by specializing the \ref{hyperion::functional::detail::ProcDefaultReturn} struct.
+     *  \note The default return value can be changed by specializing the \ref{hyperion::functional::ProcDefaultReturn} struct.
      *  \tparam ArgTypes The argument types to pass to the handlers.
      *  \param args The arguments to pass to the handlers.
      *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */
@@ -502,7 +488,7 @@ public:
             // If no handlers are bound, return a default constructed object or void
             if constexpr (!std::is_void_v<ReturnType>)
             {
-                return detail::ProcDefaultReturn<ReturnType>::Get();
+                return ProcDefaultReturn<ReturnType>::Get();
             }
             else
             {
@@ -520,11 +506,11 @@ public:
 
         for (auto it = m_procs.Begin(); it != m_procs.End();)
         {
-            detail::DelegateHandlerEntry<ProcType>* current = *it;
+            DelegateHandlerEntry<ProcType>* current = *it;
 
             // set write mask, loop until we have exclusive access.
-            uint64 state = current->mask.BitOr(detail::g_write_flag, MemoryOrder::ACQUIRE);
-            while (state & detail::g_read_mask)
+            uint64 state = current->mask.BitOr(g_write_flag, MemoryOrder::ACQUIRE);
+            while (state & g_read_mask)
             {
                 state = current->mask.Get(MemoryOrder::ACQUIRE);
                 Threads::Sleep(0);
@@ -545,7 +531,7 @@ public:
             current->mask.Increment(2, MemoryOrder::RELEASE);
 
             // Release write access
-            current->mask.BitAnd(~detail::g_write_flag, MemoryOrder::RELEASE);
+            current->mask.BitAnd(~g_write_flag, MemoryOrder::RELEASE);
 
             if constexpr (!std::is_void_v<ReturnType>)
             {
@@ -616,7 +602,7 @@ public:
             if (!result_constructed)
             {
                 // If no handlers were called (due to elements being removed), return a default constructed object
-                return detail::ProcDefaultReturn<ReturnType>::Get();
+                return ProcDefaultReturn<ReturnType>::Get();
             }
 
             ReturnType result = std::move(result_storage).Get();
@@ -627,7 +613,7 @@ public:
     }
 
     /*! \brief Call operator overload - alias method for Broadcast().
-     *  \note The default return value can be changed by specializing the \ref{hyperion::functional::detail::ProcDefaultReturn} struct.
+     *  \note The default return value can be changed by specializing the \ref{hyperion::functional::ProcDefaultReturn} struct.
      *  \tparam ArgTypes The argument types to pass to the handlers.
      *  \param args The arguments to pass to the handlers.
      *  \return The result returned from the final handler that was called, or a default constructed \ref{ReturnType} if no handlers were bound. */
@@ -638,7 +624,7 @@ public:
     }
 
 protected:
-    virtual bool Remove(detail::DelegateHandlerEntryBase* entry) override
+    virtual bool Remove(DelegateHandlerEntryBase* entry) override
     {
         if (!entry)
         {
@@ -646,7 +632,7 @@ protected:
         }
 
         uint64 state;
-        while (((state = entry->mask.Increment(2, MemoryOrder::ACQUIRE)) & detail::g_write_flag))
+        while (((state = entry->mask.Increment(2, MemoryOrder::ACQUIRE)) & g_write_flag))
         {
             entry->mask.Decrement(2, MemoryOrder::RELAXED);
             // wait for write flag to be released
@@ -660,7 +646,7 @@ protected:
         return true;
     }
 
-    static void RemoveDelegateHandlerCallback(void* delegate, detail::DelegateHandlerEntryBase* entry)
+    static void RemoveDelegateHandlerCallback(void* delegate, DelegateHandlerEntryBase* entry)
     {
         Delegate* delegate_casted = static_cast<Delegate*>(delegate);
 
@@ -682,7 +668,7 @@ protected:
         m_detached_handlers.PushBack(std::move(handler));
     }
 
-    DelegateHandler CreateDelegateHandler(detail::DelegateHandlerEntry<ProcType>* entry)
+    DelegateHandler CreateDelegateHandler(DelegateHandlerEntry<ProcType>* entry)
     {
         return DelegateHandler {
             entry,
@@ -692,15 +678,12 @@ protected:
         };
     }
 
-    Array<detail::DelegateHandlerEntry<ProcType>*, DynamicAllocator> m_procs;
-
-    AtomicVar<uint32> m_num_procs;
-    Mutex m_mutex;
-
-    uint32 m_id_counter;
-
+    Array<DelegateHandlerEntry<ProcType>*, DynamicAllocator> m_procs;
     Array<DelegateHandler, DynamicAllocator> m_detached_handlers;
     Mutex m_detached_handlers_mutex;
+    Mutex m_mutex;
+    AtomicVar<uint32> m_num_procs;
+    uint32 m_id_counter;
 };
 
 } // namespace functional

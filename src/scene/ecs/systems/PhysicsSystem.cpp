@@ -6,6 +6,8 @@
 #include <scene/Scene.hpp>
 #include <scene/World.hpp>
 
+#include <core/Handle.hpp>
+
 namespace hyperion {
 
 void PhysicsSystem::OnEntityAdded(const Handle<Entity>& entity)
@@ -50,7 +52,7 @@ void PhysicsSystem::OnEntityRemoved(ID<Entity> entity)
     }
 }
 
-void PhysicsSystem::Process(GameCounter::TickUnit delta)
+void PhysicsSystem::Process(float delta)
 {
     for (auto [entity_id, rigid_body_component, transform_component] : GetEntityManager().GetEntitySet<RigidBodyComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
     {

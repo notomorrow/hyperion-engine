@@ -4,6 +4,7 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderScene.hpp>
+#include <rendering/RenderWorld.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/RenderEnvProbe.hpp>
@@ -545,10 +546,13 @@ void FullScreenPass::CreateDescriptors()
 {
 }
 
-void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, RenderView* view)
+void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -556,7 +560,7 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, RenderView*
 
     if (ShouldRenderHalfRes())
     {
-        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (render_setup.world->GetBufferData().frame_counter & 1);
         const Vec2i viewport_extent = Vec2i(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
         // render previous frame's result to screen
@@ -576,25 +580,25 @@ void FullScreenPass::RenderPreviousTextureToScreen(FrameBase* frame, RenderView*
         m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) } } } },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) } } } },
         frame_index);
 
-    const uint32 scene_descriptor_set_index = m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 view_descriptor_set_index = m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
-    if (view != nullptr && scene_descriptor_set_index != ~0u)
+    if (view_descriptor_set_index != ~0u)
     {
         frame->GetCommandList().Add<BindDescriptorSet>(
-            view->GetDescriptorSets()[frame->GetFrameIndex()],
+            render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
             m_render_texture_to_screen_pass->GetRenderGroup()->GetPipeline(),
             ArrayMap<Name, uint32> {},
-            scene_descriptor_set_index);
+            view_descriptor_set_index);
     }
 
     m_full_screen_quad->GetRenderResource().Render(frame->GetCommandList());
 }
 
-void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, RenderView* view)
+void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -615,7 +619,7 @@ void FullScreenPass::CopyResultToPreviousTexture(FrameBase* frame, RenderView* v
     frame->GetCommandList().Add<InsertBarrier>(dst_image, renderer::ResourceState::SHADER_RESOURCE);
 }
 
-void FullScreenPass::MergeHalfResTextures(FrameBase* frame, RenderView* view)
+void FullScreenPass::MergeHalfResTextures(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
@@ -624,47 +628,53 @@ void FullScreenPass::MergeHalfResTextures(FrameBase* frame, RenderView* view)
 
     AssertThrow(m_merge_half_res_textures_pass != nullptr);
 
-    m_merge_half_res_textures_pass->Render(frame, view);
+    m_merge_half_res_textures_pass->Render(frame, render_setup);
 }
 
-void FullScreenPass::Render(FrameBase* frame, RenderView* view)
+void FullScreenPass::Render(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
     frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer, frame_index);
 
-    RenderToFramebuffer(frame, view, m_framebuffer);
+    RenderToFramebuffer(frame, render_setup, m_framebuffer);
 
     frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frame_index);
 
     if (ShouldRenderHalfRes())
     {
-        MergeHalfResTextures(frame, view);
+        MergeHalfResTextures(frame, render_setup);
     }
 
     if (UsesTemporalBlending())
     {
         if (!ShouldRenderHalfRes())
         {
-            CopyResultToPreviousTexture(frame, view);
+            CopyResultToPreviousTexture(frame, render_setup);
         }
 
-        m_temporal_blending->Render(frame, view);
+        m_temporal_blending->Render(frame, render_setup);
     }
 }
 
-void FullScreenPass::RenderToFramebuffer(FrameBase* frame, RenderView* view, const FramebufferRef& framebuffer)
+void FullScreenPass::RenderToFramebuffer(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
 
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
+
     // render previous frame's result to screen
     if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr)
     {
-        RenderPreviousTextureToScreen(frame, view);
+        RenderPreviousTextureToScreen(frame, render_setup);
     }
 
     const TResourceHandle<RenderEnvProbe>& env_render_probe = g_engine->GetRenderState()->GetActiveEnvProbe();
@@ -676,7 +686,7 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, RenderView* view, con
     {
         AssertThrowMsg(framebuffer != nullptr, "Framebuffer must be set before rendering to it, if rendering at half res");
 
-        const Vec2i viewport_offset = (Vec2i(framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+        const Vec2i viewport_offset = (Vec2i(framebuffer->GetExtent().x, 0) / 2) * (render_setup.world->GetBufferData().frame_counter & 1);
         const Vec2i viewport_extent = Vec2i(framebuffer->GetExtent().x / 2, framebuffer->GetExtent().y);
 
         frame->GetCommandList().Add<BindGraphicsPipeline>(
@@ -694,21 +704,21 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, RenderView* view, con
         m_render_group->GetPipeline(),
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("ScenesBuffer"), ShaderDataOffset<SceneShaderData>(*view->GetScene()) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*view->GetCamera()) },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
                     { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_render_grid.Get(), 0) },
                     { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_render_probe.Get(), 0) } } } },
         frame->GetFrameIndex());
 
-    const uint32 scene_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
+    const uint32 view_descriptor_set_index = m_render_group->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Scene"));
 
-    if (view != nullptr && scene_descriptor_set_index != ~0u)
+    if (view_descriptor_set_index != ~0u)
     {
         frame->GetCommandList().Add<BindDescriptorSet>(
-            view->GetDescriptorSets()[frame->GetFrameIndex()],
+            render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
             m_render_group->GetPipeline(),
             ArrayMap<Name, uint32> {},
-            scene_descriptor_set_index);
+            view_descriptor_set_index);
     }
 
     m_full_screen_quad->GetRenderResource().Render(frame->GetCommandList());
@@ -716,10 +726,13 @@ void FullScreenPass::RenderToFramebuffer(FrameBase* frame, RenderView* view, con
     m_is_first_frame = false;
 }
 
-void FullScreenPass::Begin(FrameBase* frame, RenderView* view)
+void FullScreenPass::Begin(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
@@ -727,7 +740,7 @@ void FullScreenPass::Begin(FrameBase* frame, RenderView* view)
 
     if (ShouldRenderHalfRes())
     {
-        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (g_engine->GetRenderState()->frame_counter & 1);
+        const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (render_setup.world->GetBufferData().frame_counter & 1);
         const Vec2i viewport_extent = Vec2i(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
         frame->GetCommandList().Add<BindGraphicsPipeline>(
@@ -741,34 +754,37 @@ void FullScreenPass::Begin(FrameBase* frame, RenderView* view)
     }
 }
 
-void FullScreenPass::End(FrameBase* frame, RenderView* view)
+void FullScreenPass::End(FrameBase* frame, const RenderSetup& render_setup)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_render_thread);
+
+    AssertDebug(render_setup.IsValid());
+    AssertDebug(render_setup.HasView());
 
     const uint32 frame_index = frame->GetFrameIndex();
 
     // render previous frame's result to screen
     if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr)
     {
-        RenderPreviousTextureToScreen(frame, view);
+        RenderPreviousTextureToScreen(frame, render_setup);
     }
 
     frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frame_index);
 
     if (ShouldRenderHalfRes())
     {
-        MergeHalfResTextures(frame, view);
+        MergeHalfResTextures(frame, render_setup);
     }
 
     if (UsesTemporalBlending())
     {
         if (!ShouldRenderHalfRes())
         {
-            CopyResultToPreviousTexture(frame, view);
+            CopyResultToPreviousTexture(frame, render_setup);
         }
 
-        m_temporal_blending->Render(frame, view);
+        m_temporal_blending->Render(frame, render_setup);
     }
 
     m_is_first_frame = false;

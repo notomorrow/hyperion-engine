@@ -4,12 +4,17 @@
 #define HYPERION_BACKEND_RENDERER_DESCRIPTOR_SET_HPP
 
 #include <core/Name.hpp>
+
 #include <core/utilities/Optional.hpp>
+
 #include <core/memory/RefCountedPtr.hpp>
+
 #include <core/containers/HashMap.hpp>
 #include <core/containers/ArrayMap.hpp>
 #include <core/containers/FixedArray.hpp>
+
 #include <core/utilities/Range.hpp>
+
 #include <core/Defines.hpp>
 
 #include <rendering/backend/Platform.hpp>
@@ -24,6 +29,8 @@
 #include <HashCode.hpp>
 
 namespace hyperion {
+
+// #define HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
 
 class RenderResourceBase;
 
@@ -73,6 +80,7 @@ struct ShaderDataOffset
 namespace renderer {
 
 struct DescriptorSetDeclaration;
+struct DescriptorTableDeclaration;
 
 enum class DescriptorSetElementType : uint32
 {
@@ -147,7 +155,7 @@ struct DescriptorSetLayoutElement
 
     HYP_FORCE_INLINE bool IsBindless() const
     {
-        return count == ~0u;
+        return count == uint32(-1);
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -176,7 +184,6 @@ enum DescriptorSlot : uint32
 };
 
 HYP_STRUCT()
-
 struct DescriptorDeclaration
 {
     using ConditionFunction = bool (*)();
@@ -219,7 +226,6 @@ struct DescriptorDeclaration
 };
 
 HYP_STRUCT()
-
 struct DescriptorSetDeclaration
 {
     HYP_FIELD(Property = "SetIndex", Serialize = true)
@@ -283,7 +289,6 @@ struct DescriptorSetDeclaration
 };
 
 HYP_STRUCT()
-
 struct DescriptorTableDeclaration
 {
     HYP_FIELD(Property = "Elements", Serialize = true)
@@ -589,10 +594,23 @@ public:
         return m_elements;
     }
 
+#ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
+    HYP_FORCE_INLINE HashSet<FrameWeakRef>& GetCurrentFrames()
+    {
+        return m_current_frames;
+    }
+
+    HYP_FORCE_INLINE const HashSet<FrameWeakRef>& GetCurrentFrames() const
+    {
+        return m_current_frames;
+    }
+#endif
+
     HYP_API virtual bool IsCreated() const = 0;
 
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Destroy() = 0;
+    HYP_API virtual void UpdateDirtyState(bool* out_is_dirty = nullptr) = 0;
     HYP_API virtual void Update() = 0;
     HYP_API virtual DescriptorSetRef Clone() const = 0;
 
@@ -756,6 +774,10 @@ protected:
 
     DescriptorSetLayout m_layout;
     HashMap<Name, DescriptorSetElement> m_elements;
+
+#ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
+    HashSet<FrameWeakRef> m_current_frames; // frames that are currently using this descriptor set
+#endif
 };
 
 class DescriptorTableBase : public RenderObject<DescriptorTableBase>

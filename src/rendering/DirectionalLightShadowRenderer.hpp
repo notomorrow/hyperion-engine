@@ -28,7 +28,7 @@
 
 namespace hyperion {
 
-using RerenderShadowsSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_POSITIVE, threading::detail::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_POSITIVE>>;
+using RerenderShadowsSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_POSITIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_POSITIVE>>;
 
 class RenderCamera;
 class RenderShadowMap;
@@ -73,9 +73,9 @@ public:
     virtual void CreateFramebuffer() override;
 
     virtual void Create() override;
-    virtual void Render(FrameBase* frame, RenderView* view) override;
+    virtual void Render(FrameBase* frame, const RenderSetup& render_setup) override;
 
-    virtual void RenderToFramebuffer(FrameBase* frame, RenderView* view, const FramebufferRef& framebuffer) override
+    virtual void RenderToFramebuffer(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer) override
     {
         HYP_NOT_IMPLEMENTED();
     }
@@ -89,8 +89,8 @@ private:
     TResourceHandle<RenderWorld> m_world_resource_handle;
     TResourceHandle<RenderCamera> m_camera_resource_handle;
     TResourceHandle<RenderShadowMap> m_shadow_map_resource_handle;
-    TResourceHandle<RenderView> m_view_statics_resource_handle;
-    TResourceHandle<RenderView> m_view_dynamics_resource_handle;
+    TResourceHandle<RenderView> m_render_view_statics;
+    TResourceHandle<RenderView> m_render_view_dynamics;
 
     Vec3f m_origin;
     RerenderShadowsSemaphore* m_rerender_semaphore;
@@ -148,7 +148,7 @@ private:
     virtual void Init() override;     // init on render thread
     virtual void InitGame() override; // init on game thread
     virtual void OnUpdate(GameCounter::TickUnit delta) override;
-    virtual void OnRender(FrameBase* frame) override;
+    virtual void OnRender(FrameBase* frame, const RenderSetup& render_setup) override;
     virtual void OnRemoved() override;
 
     void CreateShader();

@@ -31,6 +31,7 @@ struct ShaderGlobals
     void Create();
     void Destroy();
 
+    GPUBufferHolderBase* worlds;
     GPUBufferHolderBase* scenes;
     GPUBufferHolderBase* cameras;
     GPUBufferHolderBase* lights;
@@ -40,6 +41,7 @@ struct ShaderGlobals
     GPUBufferHolderBase* shadow_map_data;
     GPUBufferHolderBase* env_probes;
     GPUBufferHolderBase* env_grids;
+    GPUBufferHolderBase* lightmap_volumes;
 
     BindlessStorage textures;
 };

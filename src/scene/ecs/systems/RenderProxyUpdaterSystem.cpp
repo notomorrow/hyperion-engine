@@ -145,7 +145,7 @@ void RenderProxyUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
     }
 }
 
-void RenderProxyUpdaterSystem::Process(GameCounter::TickUnit delta)
+void RenderProxyUpdaterSystem::Process(float delta)
 {
     HashSet<ID<Entity>> updated_entity_ids;
     Array<RenderProxy*> render_proxy_ptrs;
@@ -172,6 +172,7 @@ void RenderProxyUpdaterSystem::Process(GameCounter::TickUnit delta)
 
             // Update MeshComponent's proxy
             // @TODO: Include RT info on RenderProxy, add a system that will update BLAS on the render thread.
+            // @TODO Add Lightmap volume info
             *mesh_component.proxy = RenderProxy {
                 WeakHandle<Entity>(entity_id),
                 mesh_component.mesh,

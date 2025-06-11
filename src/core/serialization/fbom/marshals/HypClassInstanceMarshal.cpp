@@ -16,7 +16,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-namespace hyperion::fbom {
+namespace hyperion::serialization {
 
 FBOMResult HypClassInstanceMarshal::Serialize(ConstAnyRef in, FBOMObject& out) const
 {
@@ -84,7 +84,7 @@ FBOMResult HypClassInstanceMarshal::Serialize(ConstAnyRef in, FBOMObject& out) c
 
             HYP_NAMED_SCOPE_FMT("Serializing member '{}' for HypClass '{}'", member.GetName(), hyp_class->GetName());
 
-            fbom::FBOMData data;
+            FBOMData data;
 
             if (!member.Serialize(Span<HypData>(&target_data, 1), data))
             {
@@ -107,7 +107,10 @@ FBOMResult HypClassInstanceMarshal::Deserialize(FBOMLoadContext& context, const 
         return { FBOMResult::FBOM_ERR, HYP_FORMAT("Cannot deserialize object using HypClassInstanceMarshal, serialized data with type '{}' (TypeID: {}) has no associated HypClass", in.GetType().name, in.GetType().GetNativeTypeID().Value()) };
     }
 
-    hyp_class->CreateInstance(out);
+    if (!hyp_class->CreateInstance(out))
+    {
+        return { FBOMResult::FBOM_ERR, HYP_FORMAT("Cannot deserialize object using HypClassInstanceMarshal, HypClass '{}' instance creation failed", hyp_class->GetName()) };
+    }
 
     if (hyp_class->GetSerializationMode() & HypClassSerializationMode::BITWISE)
     {
@@ -171,4 +174,4 @@ FBOMResult HypClassInstanceMarshal::Deserialize_Internal(FBOMLoadContext& contex
     return { FBOMResult::FBOM_OK };
 }
 
-} // namespace hyperion::fbom
+} // namespace hyperion::serialization

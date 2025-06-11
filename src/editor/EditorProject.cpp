@@ -66,16 +66,11 @@ EditorProject::~EditorProject()
 
 void EditorProject::Init()
 {
-    if (IsInitCalled())
-    {
-        return;
-    }
-
-    HypObject::Init();
-
     InitObject(m_asset_registry);
     InitObject(m_scene);
     InitObject(m_action_stack);
+
+    SetReady(true);
 }
 
 void EditorProject::SetScene(const Handle<Scene>& scene)
@@ -143,7 +138,7 @@ Result EditorProject::SaveAs(FilePath filepath)
         byte_writer.Close();
     });
 
-    fbom::FBOMWriter writer { fbom::FBOMWriterConfig {} };
+    FBOMWriter writer { FBOMWriterConfig {} };
     writer.Append(*this);
 
     if (auto err = writer.Emit(&byte_writer))
@@ -265,10 +260,10 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
         return HYP_MAKE_ERROR(Error, "Project file does not exist");
     }
 
-    fbom::FBOMObject project_object;
-    fbom::FBOMReader reader({});
+    FBOMObject project_object;
+    FBOMReader reader({});
 
-    if (fbom::FBOMResult err = reader.LoadFromFile(project_filepath, project_object))
+    if (FBOMResult err = reader.LoadFromFile(project_filepath, project_object))
     {
         return HYP_MAKE_ERROR(Error, "Failed to load project");
     }

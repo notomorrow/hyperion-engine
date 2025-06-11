@@ -4,10 +4,10 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec2 v_texcoord;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec2 v_texcoord;
 
-layout(location=0) out vec4 color_output;
+layout(location = 0) out vec4 color_output;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/defines.inc"
@@ -23,16 +23,16 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ScenesBuffer) readonly buffer ScenesBuffer
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
 {
-    Scene scene;
+    WorldShaderData world_shader_data;
 };
 
 HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
 {
-	ivec4 sobol_256spp_256d[256 * 256 / 4];
-	ivec4 scrambling_tile[128 * 128 * 8 / 4];
-	ivec4 ranking_tile[128 * 128 * 8 / 4];
+    ivec4 sobol_256spp_256d[256 * 256 / 4];
+    ivec4 scrambling_tile[128 * 128 * 8 / 4];
+    ivec4 ranking_tile[128 * 128 * 8 / 4];
 };
 
 HYP_DESCRIPTOR_CBUFF(Global, SphereSamplesBuffer) uniform SphereSamplesBuffer
@@ -63,7 +63,10 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
 #include "../include/env_probe.inc"
 HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
-HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
 {
     EnvProbe current_env_probe;
@@ -85,7 +88,7 @@ void main()
 {
     uvec2 screen_resolution = uvec2(deferred_params.screen_width, deferred_params.screen_height);
     vec2 pixel_size = 1.0 / vec2(screen_resolution);
-    // vec2 texcoord = min(v_texcoord + (pixel_size * float(scene.frame_counter & 1)), vec2(1.0));
+    // vec2 texcoord = min(v_texcoord + (pixel_size * float(world_shader_data.frame_counter & 1)), vec2(1.0));
     vec2 texcoord = v_texcoord;
     uvec2 pixel_coord = uvec2(texcoord * vec2(screen_resolution) - 0.5);
 
@@ -95,7 +98,7 @@ void main()
     const vec3 V = normalize(camera.position.xyz - P);
     const vec3 R = normalize(reflect(-V, N));
 
-    const vec4 material = Texture2DLod(sampler_nearest, gbuffer_material_texture, texcoord, 0.0); 
+    const vec4 material = Texture2DLod(sampler_nearest, gbuffer_material_texture, texcoord, 0.0);
     const float roughness = material.r;
     const float perceptual_roughness = sqrt(roughness);
 
@@ -112,7 +115,8 @@ void main()
 #if 0
     float phi = InterleavedGradientNoise(vec2(pixel_coord));
 
-    for (int i = 0; i < SAMPLE_COUNT; i++) {
+    for (int i = 0; i < SAMPLE_COUNT; i++)
+    {
         vec2 rnd = VogelDisk(i, SAMPLE_COUNT, phi);
 
         vec3 H = ImportanceSampleGGX(rnd, N, roughness);
@@ -130,8 +134,7 @@ void main()
             P,
             dir,
             lod,
-            sample_ibl
-        );
+            sample_ibl);
 
         ibl += sample_ibl;
     }
@@ -142,10 +145,11 @@ void main()
     //     SampleBlueNoise(int(pixel_coord.x), int(pixel_coord.y), 0, 1)
     // );
 
-    // vec2 blue_noise_scaled = blue_noise_sample + float(scene.frame_counter % 256) * 1.618;
+    // vec2 blue_noise_scaled = blue_noise_sample + float(world_shader_data.frame_counter % 256) * 1.618;
     // const vec2 rnd = fmod(blue_noise_scaled, vec2(1.0));
 
-    for (int i = 0; i < SAMPLE_COUNT; i++) {
+    for (int i = 0; i < SAMPLE_COUNT; i++)
+    {
         vec2 rnd = Hammersley(uint(i), uint(SAMPLE_COUNT));
 
         vec3 H = ImportanceSampleGGX(rnd, N, roughness);
@@ -163,8 +167,7 @@ void main()
             P,
             dir,
             lod,
-            sample_ibl
-        );
+            sample_ibl);
 
         ibl += sample_ibl;
     }

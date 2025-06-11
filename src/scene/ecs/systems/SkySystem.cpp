@@ -21,7 +21,7 @@
 namespace hyperion {
 
 SkySystem::SkySystem(EntityManager& entity_manager)
-    : System(entity_manager)
+    : SystemBase(entity_manager)
 {
 }
 
@@ -57,7 +57,7 @@ void SkySystem::OnEntityRemoved(ID<Entity> entity)
     }
 }
 
-void SkySystem::Process(GameCounter::TickUnit delta)
+void SkySystem::Process(float delta)
 {
     for (auto [entity_id, sky_component] : GetEntityManager().GetEntitySet<SkyComponent>().GetScopedView(GetComponentInfos()))
     {
@@ -79,13 +79,18 @@ void SkySystem::Process(GameCounter::TickUnit delta)
 
 void SkySystem::AddRenderSubsystemToEnvironment(EntityManager& mgr, const Handle<Entity>& entity, SkyComponent& sky_component, MeshComponent* mesh_component)
 {
+    if (!GetWorld())
+    {
+        return;
+    }
+
     if (sky_component.render_subsystem)
     {
-        GetScene()->GetRenderResource().GetEnvironment()->AddRenderSubsystem(sky_component.render_subsystem);
+        GetWorld()->GetRenderResource().GetEnvironment()->AddRenderSubsystem(sky_component.render_subsystem);
     }
     else
     {
-        sky_component.render_subsystem = GetScene()->GetRenderResource().GetEnvironment()->AddRenderSubsystem<SkydomeRenderer>(Name::Unique("sky_renderer"));
+        sky_component.render_subsystem = GetWorld()->GetRenderResource().GetEnvironment()->AddRenderSubsystem<SkydomeRenderer>(Name::Unique("sky_renderer"));
 
         Handle<Mesh> mesh = mesh_component ? mesh_component->mesh : Handle<Mesh>::empty;
         Handle<Material> material = mesh_component ? mesh_component->material : Handle<Material>::empty;
