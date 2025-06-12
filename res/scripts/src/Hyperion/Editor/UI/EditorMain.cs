@@ -94,7 +94,7 @@ namespace Hyperion
                 UIListView panel = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_Panel"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 0, UIObjectSize.Auto));
                 panel.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
 
-                UIListView renderListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_RenderListView"), new Vec2i(0, 0), new UIObjectSize(100, UIObjectSize.Percent, 15, UIObjectSize.Pixel));
+                UIListView renderListView = spawnParent.Spawn<UIListView>(new Name("FPSCounterDebugOverlay_RenderListView"), new Vec2i(0, 0), new UIObjectSize(UIObjectSize.Auto));
                 renderListView.SetBackgroundColor(new Color(0.0f, 0.0f, 0.0f, 0.0f));
                 renderListView.SetOrientation(UIListViewOrientation.Horizontal);
                 renderListView.SetTextSize(8);
@@ -276,16 +276,16 @@ namespace Hyperion
             {
                 Logger.Log(LogType.Info, "HandleProjectOpened invoked with project: " + project.GetName().ToString());
 
-                // test add custom system class...
-                if (project.GetScene() != null)
-                {
-                    project.GetScene().GetEntityManager().AddSystem(new CustomSystem());
-                }
+                // // test add custom system class...
+                // if (project.GetScene() != null)
+                // {
+                //     project.GetScene().GetEntityManager().AddSystem(new CustomSystem());
+                // }
 
                 if (onActionStackStateChangeDelegate != null)
-                    {
-                        onActionStackStateChangeDelegate.Remove();
-                    }
+                {
+                    onActionStackStateChangeDelegate.Remove();
+                }
 
                 onActionStackStateChangeDelegate = project.GetActionStack().GetOnStateChangeDelegate().Bind((EditorActionStackState state) =>
                 {
@@ -517,7 +517,7 @@ namespace Hyperion
                 // Test: Force GC
                 GC.Collect();
 
-                World world = Scene.GetWorld();
+                World world = this.World;
                 
                 if (world.GetGameState().Mode == GameStateMode.Simulating)
                 {
@@ -574,7 +574,7 @@ namespace Hyperion
                     return UIEventHandlerResult.Error;
                 }
 
-                World world = scene.GetWorld();
+                World world = this.World;
                 Assert.Throw(world != null);
 
                 // @TODO: Allow building a bounding box in editor before starting the task.
