@@ -277,15 +277,15 @@ namespace Hyperion
                 Logger.Log(LogType.Info, "HandleProjectOpened invoked with project: " + project.GetName().ToString());
 
                 // test add custom system class...
-                if (project.GetScene() != null)
-                {
-                    project.GetScene().GetEntityManager().AddSystem(new CustomSystem());
-                }
+                // if (project.GetScene() != null)
+                // {
+                //     project.GetScene().GetEntityManager().AddSystem(new CustomSystem());
+                // }
 
                 if (onActionStackStateChangeDelegate != null)
-                    {
-                        onActionStackStateChangeDelegate.Remove();
-                    }
+                {
+                    onActionStackStateChangeDelegate.Remove();
+                }
 
                 onActionStackStateChangeDelegate = project.GetActionStack().GetOnStateChangeDelegate().Bind((EditorActionStackState state) =>
                 {
