@@ -99,10 +99,17 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvP
     EnvProbe current_env_probe;
 };
 
+#ifdef INSTANCING
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
+#else
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
+{
+    Object object;
+};
+#endif
 
 // @TODO Refactor to use LightsBuffer instead
 

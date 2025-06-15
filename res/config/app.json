@@ -30,7 +30,6 @@
       },
       "env_grid_probes": false,
       "reflection_probes": false,
-      "ssr": false,
       "reflections": false,
       "hbil": false,
       "ssgi": false,

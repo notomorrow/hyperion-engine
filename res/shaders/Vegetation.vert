@@ -25,7 +25,6 @@ layout(location = 7) in vec4 a_bone_indices;
 
 #include "include/scene.inc"
 
-#define HYP_INSTANCING
 #include "include/object.inc"
 
 #include "include/Skeleton.glsl"

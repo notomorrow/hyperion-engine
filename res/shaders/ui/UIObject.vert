@@ -5,11 +5,13 @@
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_scalar_block_layout : enable
 
-layout (location=0) out vec3 v_position;
-layout (location=1) out vec3 v_screen_space_position;
-layout (location=2) out vec2 v_texcoord0;
-layout (location=3) out flat uint v_object_index;
-layout (location=4) out vec4 v_color;
+#define INSTANCING
+
+layout(location = 0) out vec3 v_position;
+layout(location = 1) out vec3 v_screen_space_position;
+layout(location = 2) out vec2 v_texcoord0;
+layout(location = 3) out flat uint v_object_index;
+layout(location = 4) out vec4 v_color;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -20,7 +22,6 @@ HYP_ATTRIBUTE(5) vec3 a_bitangent;
 
 #include "../include/scene.inc"
 
-#define HYP_INSTANCING
 #include "../include/object.inc"
 
 #include "../include/UIObject.glsl"
@@ -37,7 +38,7 @@ HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly buffer EntityInstanceBatchesBuffer
 {
-    UIEntityInstanceBatch   entity_instance_batch;
+    UIEntityInstanceBatch entity_instance_batch;
 };
 
 #undef OBJECT_INDEX
@@ -69,10 +70,9 @@ void main()
     // // scale texcoord based on the size diff - need to do this because the quad mesh is always 1x1
     vec4 instance_texcoords = entity_instance_batch.texcoords[gl_InstanceIndex];
 
-
     vec2 instance_texcoord_size = instance_texcoords.zw - instance_texcoords.xy;
     vec2 clamped_instance_texcoord_size = instance_texcoord_size * (clamped_size / size);
-    
+
     v_texcoord0 = instance_texcoords.xy - (clamped_offset / clamped_size * clamped_instance_texcoord_size) + (a_texcoord0 * clamped_instance_texcoord_size);
 
     v_color = vec4(1.0);
@@ -80,5 +80,4 @@ void main()
     v_object_index = OBJECT_INDEX;
 
     gl_Position = ndc_position;
-
-} 
+}

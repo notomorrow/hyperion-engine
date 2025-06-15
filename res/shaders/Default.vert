@@ -34,7 +34,6 @@ HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #include "include/scene.inc"
 
-#define HYP_INSTANCING
 #include "include/object.inc"
 
 #ifdef VERTEX_SKINNING_ENABLED
@@ -48,6 +47,8 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
+#ifdef INSTANCING
+
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
@@ -57,6 +58,15 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly bu
 {
     EntityInstanceBatch entity_instance_batch;
 };
+
+#else
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, CurrentObject) readonly buffer ObjectsBuffer
+{
+    Object object;
+};
+
+#endif
 
 #ifdef VERTEX_SKINNING_ENABLED
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, SkeletonsBuffer) readonly buffer SkeletonsBuffer
@@ -87,8 +97,11 @@ void main()
     vec4 previous_position;
     mat4 normal_matrix;
 
+#ifdef INSTANCING
     mat4 model_matrix = entity_instance_batch.transforms[gl_InstanceIndex] * object.model_matrix;
-    // @TODO: Previous transform for instances?
+#else
+    mat4 model_matrix = object.model_matrix;
+#endif
 
 #ifdef VERTEX_SKINNING_ENABLED
     if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
@@ -123,7 +136,9 @@ void main()
     v_position_ndc = (jitter_matrix * camera.projection) * camera.view * position;
     v_previous_position_ndc = (jitter_matrix * camera.projection) * camera.previous_view * previous_position;
 
+#ifdef INSTANCING
     v_object_index = OBJECT_INDEX;
+#endif
 
     const uint bucket = object.bucket;
     v_object_mask = (uint(bucket == HYP_OBJECT_BUCKET_OPAQUE) * OBJECT_MASK_OPAQUE)
