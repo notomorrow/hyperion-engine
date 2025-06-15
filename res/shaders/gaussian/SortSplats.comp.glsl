@@ -36,7 +36,7 @@ HYP_DESCRIPTOR_SSBO(SortSplatsDescriptorSet, SplatInstancesBuffer, standard = st
     GaussianSplatShaderData instances[];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
 {
     WorldShaderData world_shader_data;
 };
@@ -46,10 +46,10 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-#define STAGE_LOCAL_BMS         0
-#define STAGE_LOCAL_DISPERSE    1
-#define STAGE_BIG_FLIP          2
-#define STAGE_BIG_DISPERSE      3
+#define STAGE_LOCAL_BMS 0
+#define STAGE_LOCAL_DISPERSE 1
+#define STAGE_BIG_FLIP 2
+#define STAGE_BIG_DISPERSE 3
 
 layout(push_constant) uniform PushConstant
 {

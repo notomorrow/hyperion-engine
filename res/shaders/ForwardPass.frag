@@ -68,7 +68,7 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
 {
     WorldShaderData world_shader_data;
 };

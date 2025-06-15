@@ -51,7 +51,7 @@ HYP_DESCRIPTOR_SSBO(Global, BlueNoiseBuffer) readonly buffer BlueNoiseBuffer
     ivec4 ranking_tile[128 * 128 * 8 / 4];
 };
 
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, WorldsBuffer) readonly buffer WorldsBuffer
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
 {
     WorldShaderData world_shader_data;
 };
