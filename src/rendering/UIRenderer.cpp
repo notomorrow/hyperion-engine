@@ -179,10 +179,16 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI)
 
             if (!render_group.IsValid())
             {
+                ShaderDefinition shader_definition = attributes.GetShaderDefinition();
+                shader_definition.GetProperties().Set("INSTANCING");
+
+                ShaderRef shader = g_shader_manager->GetOrCreate(shader_definition);
+                AssertThrow(shader.IsValid());
+
                 // Create RenderGroup
                 // @NOTE: Parallel disabled for now as we don't have ParallelRenderingState for UI yet.
                 render_group = CreateObject<RenderGroup>(
-                    g_shader_manager->GetOrCreate(attributes.GetShaderDefinition()),
+                    shader,
                     attributes,
                     RenderGroupFlags::DEFAULT & ~(RenderGroupFlags::OCCLUSION_CULLING | RenderGroupFlags::INDIRECT_RENDERING | RenderGroupFlags::PARALLEL_RENDERING));
 
@@ -407,8 +413,8 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
         AssertThrow(render_group.IsValid());
 
-        // Don't count draw calls for UI
-        SuppressEngineRenderStatsScope suppress_render_stats_scope;
+        // // Don't count draw calls for UI
+        // SuppressEngineRenderStatsScope suppress_render_stats_scope;
 
         render_group->PerformRendering(frame, render_setup, nullptr);
     }

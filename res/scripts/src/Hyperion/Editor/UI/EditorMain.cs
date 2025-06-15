@@ -181,14 +181,24 @@ namespace Hyperion
                 if (countersTextElement != null)
                 {
                     StringBuilder sb = new StringBuilder();
-                    sb.AppendFormat("Draw calls: {0}", renderStats.counts[EngineRenderStatsCountType.DrawCalls]);
+                    sb.AppendFormat("DrawCalls: {0}", renderStats.counts[EngineRenderStatsCountType.DrawCalls]);
+
+                    if (renderStats.counts[EngineRenderStatsCountType.InstancedDrawCalls] > 0)
+                        sb.AppendFormat(", InstancedDrawCalls: {0}", renderStats.counts[EngineRenderStatsCountType.InstancedDrawCalls]);
+                        
                     sb.AppendFormat(", Tris: {0}", renderStats.counts[EngineRenderStatsCountType.Triangles]);
                     sb.AppendFormat(", RenderGroups: {0}", renderStats.counts[EngineRenderStatsCountType.RenderGroups]);
                     sb.AppendFormat(", Views: {0}", renderStats.counts[EngineRenderStatsCountType.Views]);
                     sb.AppendFormat(", Scenes: {0}", renderStats.counts[EngineRenderStatsCountType.Scenes]);
-                    sb.AppendFormat(", Lights: {0}", renderStats.counts[EngineRenderStatsCountType.Lights]);
-                    sb.AppendFormat(", LightmapVolumes: {0}", renderStats.counts[EngineRenderStatsCountType.LightmapVolumes]);
-                    sb.AppendFormat(", EnvProbes: {0}", renderStats.counts[EngineRenderStatsCountType.EnvProbes]);
+
+                    if (renderStats.counts[EngineRenderStatsCountType.Lights] > 0)
+                        sb.AppendFormat(", Lights: {0}", renderStats.counts[EngineRenderStatsCountType.Lights]);
+
+                    if (renderStats.counts[EngineRenderStatsCountType.LightmapVolumes] > 0)
+                        sb.AppendFormat(", LightmapVolumes: {0}", renderStats.counts[EngineRenderStatsCountType.LightmapVolumes]);
+
+                    if (renderStats.counts[EngineRenderStatsCountType.EnvProbes] > 0)
+                        sb.AppendFormat(", EnvProbes: {0}", renderStats.counts[EngineRenderStatsCountType.EnvProbes]);
 
                     ((UIText)countersTextElement).SetText(sb.ToString());
                 }
@@ -442,40 +452,40 @@ namespace Hyperion
 
             public override void OnPlayStart()
             {
-                Logger.Log(LogType.Info, "OnPlayStart");
+                // Logger.Log(LogType.Info, "OnPlayStart");
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-                editorSubsystem.GetScene().RemoveFromWorld();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // editorSubsystem.GetScene().RemoveFromWorld();
 
-                // firstPersonCameraController = new FirstPersonCameraController();
-                // editorSubsystem.GetScene().GetPrimaryCamera().AddCameraController(firstPersonCameraController);
+                // // firstPersonCameraController = new FirstPersonCameraController();
+                // // editorSubsystem.GetScene().GetPrimaryCamera().AddCameraController(firstPersonCameraController);
 
-                // firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
-                ((Scene)testScene).GetRoot().AddChild(editorSubsystem.GetScene().GetRoot());
-                ((Scene)testScene).AddToWorld(World);
+                // // firstPersonCameraController.SetMode(FirstPersonCameraControllerMode.MouseLocked);
+                // ((Scene)testScene).GetRoot().AddChild(editorSubsystem.GetScene().GetRoot());
+                // ((Scene)testScene).AddToWorld(World);
             }
 
             public override void OnPlayStop()
             {
-                Logger.Log(LogType.Info, "OnPlayStop");
+                // Logger.Log(LogType.Info, "OnPlayStop");
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                ((Scene)testScene).RemoveFromWorld();
-                editorSubsystem.GetScene().SetRoot(((Scene)testScene).GetRoot().GetChild(0));
+                // ((Scene)testScene).RemoveFromWorld();
+                // editorSubsystem.GetScene().SetRoot(((Scene)testScene).GetRoot().GetChild(0));
 
-                editorSubsystem.GetScene().AddToWorld(World);
+                // editorSubsystem.GetScene().AddToWorld(World);
 
-                // if (!editorSubsystem.GetScene().GetPrimaryCamera().RemoveCameraController(firstPersonCameraController))
-                // {
-                //     Logger.Log(LogType.Error, "Failed to remove camera controller!");
+                // // if (!editorSubsystem.GetScene().GetPrimaryCamera().RemoveCameraController(firstPersonCameraController))
+                // // {
+                // //     Logger.Log(LogType.Error, "Failed to remove camera controller!");
 
-                //     return;
-                // }
+                // //     return;
+                // // }
 
-                firstPersonCameraController = null;
+                // firstPersonCameraController = null;
 
-                Logger.Log(LogType.Info, "Camera controller removed");
+                // Logger.Log(LogType.Info, "Camera controller removed");
             }
 
             public UIEventHandlerResult SaveClicked()
@@ -547,45 +557,45 @@ namespace Hyperion
             {
                 Logger.Log(LogType.Info, "Generate Lightmaps clicked");
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                // if (editorSubsystem == null)
+                // {
+                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+                // if (currentProject == null)
+                // {
+                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                Scene scene = currentProject.GetScene();
+                // Scene scene = currentProject.GetScene();
 
-                if (scene == null)
-                {
-                    Logger.Log(LogType.Error, "No scene loaded; cannot generate lightmaps");
+                // if (scene == null)
+                // {
+                //     Logger.Log(LogType.Error, "No scene loaded; cannot generate lightmaps");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                World world = this.World;
-                Assert.Throw(world != null);
+                // World world = this.World;
+                // Assert.Throw(world != null);
 
-                // @TODO: Allow building a bounding box in editor before starting the task.
-                BoundingBox lightmapVolumeAabb = new BoundingBox(new Vec3f(-20.0f, 0.0f, -20.0f), new Vec3f(20.0f, 25.0f, 20.0f));
+                // // @TODO: Allow building a bounding box in editor before starting the task.
+                // BoundingBox lightmapVolumeAabb = new BoundingBox(new Vec3f(-20.0f, 0.0f, -20.0f), new Vec3f(20.0f, 25.0f, 20.0f));
 
-                GenerateLightmapsEditorTask generateLightmapsTask = new GenerateLightmapsEditorTask();
-                generateLightmapsTask.SetScene(scene);
-                generateLightmapsTask.SetWorld(world);
-                generateLightmapsTask.SetAABB(lightmapVolumeAabb);
+                // GenerateLightmapsEditorTask generateLightmapsTask = new GenerateLightmapsEditorTask();
+                // generateLightmapsTask.SetScene(scene);
+                // generateLightmapsTask.SetWorld(world);
+                // generateLightmapsTask.SetAABB(lightmapVolumeAabb);
 
-                editorSubsystem.AddTask(generateLightmapsTask);
+                // editorSubsystem.AddTask(generateLightmapsTask);
 
                 return UIEventHandlerResult.Ok;
             }
@@ -594,293 +604,293 @@ namespace Hyperion
             {
                 Logger.Log(LogType.Info, "Add Point Light clicked");
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                // if (editorSubsystem == null)
+                // {
+                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+                // if (currentProject == null)
+                // {
+                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                var light = new Light();
-                light.SetLightType(LightType.Point);
-                light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
-                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                light.SetRadius(30.0f);
-                light.SetIntensity(20.0f);
+                // var light = new Light();
+                // light.SetLightType(LightType.Point);
+                // light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
+                // light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                // light.SetRadius(30.0f);
+                // light.SetIntensity(20.0f);
 
-                var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
+                // var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
 
-                currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent
-                {
-                    Light = light
-                });
+                // currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent
+                // {
+                //     Light = light
+                // });
 
-                currentProject.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent
-                {
-                });
+                // currentProject.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent
+                // {
+                // });
 
-                var lightNode = new Node();
-                lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("PointLight"));
-                lightNode.SetEntity(lightEntity);
-                lightNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+                // var lightNode = new Node();
+                // lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("PointLight"));
+                // lightNode.SetEntity(lightEntity);
+                // lightNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
 
-                currentProject.GetActionStack().Push(new EditorAction(
-                    new Name("AddPointLight"),
-                    () =>
-                    {
-                        currentProject.GetScene().GetRoot().AddChild(lightNode);
-                        editorSubsystem.SetFocusedNode(lightNode, true);
-                    },
-                    () =>
-                    {
-                        lightNode.Remove();
+                // currentProject.GetActionStack().Push(new EditorAction(
+                //     new Name("AddPointLight"),
+                //     () =>
+                //     {
+                //         currentProject.GetScene().GetRoot().AddChild(lightNode);
+                //         editorSubsystem.SetFocusedNode(lightNode, true);
+                //     },
+                //     () =>
+                //     {
+                //         lightNode.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == lightNode)
-                            editorSubsystem.SetFocusedNode(null, true);
-                    }
-                ));
+                //         if (editorSubsystem.GetFocusedNode() == lightNode)
+                //             editorSubsystem.SetFocusedNode(null, true);
+                //     }
+                // ));
 
                 return UIEventHandlerResult.Ok;
             }
 
             public UIEventHandlerResult AddDirectionalLight()
             {
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                // if (editorSubsystem == null)
+                // {
+                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+                // if (currentProject == null)
+                // {
+                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                var light = new Light();
-                light.SetLightType(LightType.Directional);
-                light.SetPosition(new Vec3f(-0.5f, 0.5f, 0.0f).Normalize());
-                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                light.SetIntensity(5.0f);
+                // var light = new Light();
+                // light.SetLightType(LightType.Directional);
+                // light.SetPosition(new Vec3f(-0.5f, 0.5f, 0.0f).Normalize());
+                // light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                // light.SetIntensity(5.0f);
 
-                var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
+                // var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
 
-                currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
-                    Light = light
-                });
+                // currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                //     Light = light
+                // });
 
-                currentProject.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent {
-                });
+                // currentProject.GetScene().GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent {
+                // });
 
-                var lightNode = new Node();
-                lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("DirectionalLight"));
-                lightNode.SetEntity(lightEntity);
-                lightNode.SetWorldTranslation(new Vec3f(-0.5f, 0.5f, 0.0f).Normalize());
+                // var lightNode = new Node();
+                // lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("DirectionalLight"));
+                // lightNode.SetEntity(lightEntity);
+                // lightNode.SetWorldTranslation(new Vec3f(-0.5f, 0.5f, 0.0f).Normalize());
 
-                currentProject.GetActionStack().Push(new EditorAction(
-                    new Name("AddDirectionalLight"),
-                    () =>
-                    {
-                        currentProject.GetScene().GetRoot().AddChild(lightNode);
-                        editorSubsystem.SetFocusedNode(lightNode, true);
-                    },
-                    () =>
-                    {
-                        lightNode.Remove();
+                // currentProject.GetActionStack().Push(new EditorAction(
+                //     new Name("AddDirectionalLight"),
+                //     () =>
+                //     {
+                //         currentProject.GetScene().GetRoot().AddChild(lightNode);
+                //         editorSubsystem.SetFocusedNode(lightNode, true);
+                //     },
+                //     () =>
+                //     {
+                //         lightNode.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == lightNode)
-                            editorSubsystem.SetFocusedNode(null, true);
-                    }
-                ));
+                //         if (editorSubsystem.GetFocusedNode() == lightNode)
+                //             editorSubsystem.SetFocusedNode(null, true);
+                //     }
+                // ));
 
                 return UIEventHandlerResult.Ok;
             }
 
             public UIEventHandlerResult AddSpotLight()
             {
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                // if (editorSubsystem == null)
+                // {
+                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+                // if (currentProject == null)
+                // {
+                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                var light = new Light();
-                light.SetLightType(LightType.Spot);
-                light.SetPosition(new Vec3f(0.0f, 0.0f, 0.0f));
-                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                light.SetRadius(10.0f);
-                light.SetIntensity(5.0f);
-                light.SetSpotAngles(new Vec2f(30.0f * MathF.PI / 180.0f, 60.0f * MathF.PI / 180.0f));
+                // var light = new Light();
+                // light.SetLightType(LightType.Spot);
+                // light.SetPosition(new Vec3f(0.0f, 0.0f, 0.0f));
+                // light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                // light.SetRadius(10.0f);
+                // light.SetIntensity(5.0f);
+                // light.SetSpotAngles(new Vec2f(30.0f * MathF.PI / 180.0f, 60.0f * MathF.PI / 180.0f));
 
-                var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
+                // var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
 
-                currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
-                    Light = light
-                });
+                // currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                //     Light = light
+                // });
 
-                var lightNode = new Node();
-                lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("SpotLight"));
-                lightNode.SetEntity(lightEntity);
-                lightNode.SetWorldTranslation(new Vec3f(0.0f, 0.0f, 0.0f));
+                // var lightNode = new Node();
+                // lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("SpotLight"));
+                // lightNode.SetEntity(lightEntity);
+                // lightNode.SetWorldTranslation(new Vec3f(0.0f, 0.0f, 0.0f));
 
-                currentProject.GetActionStack().Push(new EditorAction(
-                    new Name("AddSpotLight"),
-                    () =>
-                    {
-                        currentProject.GetScene().GetRoot().AddChild(lightNode);
-                        editorSubsystem.SetFocusedNode(lightNode, true);
-                    },
-                    () =>
-                    {
-                        lightNode.Remove();
+                // currentProject.GetActionStack().Push(new EditorAction(
+                //     new Name("AddSpotLight"),
+                //     () =>
+                //     {
+                //         currentProject.GetScene().GetRoot().AddChild(lightNode);
+                //         editorSubsystem.SetFocusedNode(lightNode, true);
+                //     },
+                //     () =>
+                //     {
+                //         lightNode.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == lightNode)
-                            editorSubsystem.SetFocusedNode(null, true);
-                    }
-                ));
+                //         if (editorSubsystem.GetFocusedNode() == lightNode)
+                //             editorSubsystem.SetFocusedNode(null, true);
+                //     }
+                // ));
 
                 return UIEventHandlerResult.Ok;
             }
 
             public UIEventHandlerResult AddAreaRectLight()
             {
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                // if (editorSubsystem == null)
+                // {
+                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+                // if (currentProject == null)
+                // {
+                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                var light = new Light();
-                light.SetLightType(LightType.AreaRect);
-                light.SetPosition(new Vec3f(0.0f, 0.0f, 0.0f));
-                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                light.SetIntensity(5.0f);
-                light.SetAreaSize(new Vec2f(2.0f, 2.0f));
+                // var light = new Light();
+                // light.SetLightType(LightType.AreaRect);
+                // light.SetPosition(new Vec3f(0.0f, 0.0f, 0.0f));
+                // light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                // light.SetIntensity(5.0f);
+                // light.SetAreaSize(new Vec2f(2.0f, 2.0f));
 
-                var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
+                // var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
 
-                currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
-                    Light = light
-                });
+                // currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
+                //     Light = light
+                // });
 
-                var lightNode = new Node();
-                lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("AreaRectLight"));
-                lightNode.SetEntity(lightEntity);
-                lightNode.SetWorldTranslation(new Vec3f(0.0f, 0.0f, 0.0f));
+                // var lightNode = new Node();
+                // lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("AreaRectLight"));
+                // lightNode.SetEntity(lightEntity);
+                // lightNode.SetWorldTranslation(new Vec3f(0.0f, 0.0f, 0.0f));
 
-                currentProject.GetActionStack().Push(new EditorAction(
-                    new Name("AddAreaRectLight"),
-                    () =>
-                    {
-                        currentProject.GetScene().GetRoot().AddChild(lightNode);
-                        editorSubsystem.SetFocusedNode(lightNode, true);
-                    },
-                    () =>
-                    {
-                        lightNode.Remove();
+                // currentProject.GetActionStack().Push(new EditorAction(
+                //     new Name("AddAreaRectLight"),
+                //     () =>
+                //     {
+                //         currentProject.GetScene().GetRoot().AddChild(lightNode);
+                //         editorSubsystem.SetFocusedNode(lightNode, true);
+                //     },
+                //     () =>
+                //     {
+                //         lightNode.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == lightNode)
-                            editorSubsystem.SetFocusedNode(null, true);
-                    }
-                ));
+                //         if (editorSubsystem.GetFocusedNode() == lightNode)
+                //             editorSubsystem.SetFocusedNode(null, true);
+                //     }
+                // ));
 
                 return UIEventHandlerResult.Ok;
             }
 
             public UIEventHandlerResult AddReflectionProbe()
             {
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                // if (editorSubsystem == null)
+                // {
+                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+                // if (currentProject == null)
+                // {
+                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                    return UIEventHandlerResult.Error;
-                }
+                //     return UIEventHandlerResult.Error;
+                // }
 
-                var envProbeEntity = currentProject.GetScene().GetEntityManager().AddEntity();
+                // var envProbeEntity = currentProject.GetScene().GetEntityManager().AddEntity();
 
-                currentProject.GetScene().GetEntityManager().AddComponent<ReflectionProbeComponent>(envProbeEntity, new ReflectionProbeComponent {
-                    Dimensions = new Vec2u(256, 256)
-                });
-                currentProject.GetScene().GetEntityManager().AddComponent<BoundingBoxComponent>(envProbeEntity, new BoundingBoxComponent {
-                    LocalAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f)),
-                    WorldAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f))
-                });
-                currentProject.GetScene().GetEntityManager().AddComponent<TransformComponent>(envProbeEntity, new TransformComponent {
-                    Transform = new Transform()
-                });
+                // currentProject.GetScene().GetEntityManager().AddComponent<ReflectionProbeComponent>(envProbeEntity, new ReflectionProbeComponent {
+                //     Dimensions = new Vec2u(256, 256)
+                // });
+                // currentProject.GetScene().GetEntityManager().AddComponent<BoundingBoxComponent>(envProbeEntity, new BoundingBoxComponent {
+                //     LocalAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f)),
+                //     WorldAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f))
+                // });
+                // currentProject.GetScene().GetEntityManager().AddComponent<TransformComponent>(envProbeEntity, new TransformComponent {
+                //     Transform = new Transform()
+                // });
 
-                var envProbeNode = new Node();
-                envProbeNode.SetName(currentProject.GetScene().GetUniqueNodeName("ReflectionProbe"));
-                envProbeNode.SetEntity(envProbeEntity);
-                envProbeNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+                // var envProbeNode = new Node();
+                // envProbeNode.SetName(currentProject.GetScene().GetUniqueNodeName("ReflectionProbe"));
+                // envProbeNode.SetEntity(envProbeEntity);
+                // envProbeNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
 
-                currentProject.GetActionStack().Push(new EditorAction(
-                    new Name("AddReflectionProbe"),
-                    () =>
-                    {
-                        currentProject.GetScene().GetRoot().AddChild(envProbeNode);
-                        editorSubsystem.SetFocusedNode(envProbeNode, true);
-                    },
-                    () =>
-                    {
-                        envProbeNode.Remove();
+                // currentProject.GetActionStack().Push(new EditorAction(
+                //     new Name("AddReflectionProbe"),
+                //     () =>
+                //     {
+                //         currentProject.GetScene().GetRoot().AddChild(envProbeNode);
+                //         editorSubsystem.SetFocusedNode(envProbeNode, true);
+                //     },
+                //     () =>
+                //     {
+                //         envProbeNode.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == envProbeNode)
-                            editorSubsystem.SetFocusedNode(null, true);
-                    }
-                ));
+                //         if (editorSubsystem.GetFocusedNode() == envProbeNode)
+                //             editorSubsystem.SetFocusedNode(null, true);
+                //     }
+                // ));
 
                 return UIEventHandlerResult.Ok;
             }
@@ -955,44 +965,44 @@ namespace Hyperion
 
             public UIEventHandlerResult AddNode()
             {
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
+                // if (editorSubsystem == null)
+                // {
+                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                    return UIEventHandlerResult.Ok;
-                }
+                //     return UIEventHandlerResult.Ok;
+                // }
 
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot save");
+                // if (currentProject == null)
+                // {
+                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
 
-                    return UIEventHandlerResult.Ok;
-                }
+                //     return UIEventHandlerResult.Ok;
+                // }
 
-                var node = new Node();
-                node.SetName(new Name("New Node"));
+                // var node = new Node();
+                // node.SetName(new Name("New Node"));
 
-                currentProject.GetActionStack().Push(new EditorAction(
-                    new Name("AddNewNode"),
-                    () =>
-                    {
-                        currentProject.GetScene().GetRoot().AddChild(node);
-                        editorSubsystem.SetFocusedNode(node, true);
-                    },
-                    () =>
-                    {
-                        node.Remove();
+                // currentProject.GetActionStack().Push(new EditorAction(
+                //     new Name("AddNewNode"),
+                //     () =>
+                //     {
+                //         currentProject.GetScene().GetRoot().AddChild(node);
+                //         editorSubsystem.SetFocusedNode(node, true);
+                //     },
+                //     () =>
+                //     {
+                //         node.Remove();
 
-                        if (editorSubsystem.GetFocusedNode() == node)
-                            editorSubsystem.SetFocusedNode(null, true);
-                    }
-                ));
+                //         if (editorSubsystem.GetFocusedNode() == node)
+                //             editorSubsystem.SetFocusedNode(null, true);
+                //     }
+                // ));
 
-                // @TODO Focus on node in scene view
+                // // @TODO Focus on node in scene view
 
                 return UIEventHandlerResult.Ok;
             }

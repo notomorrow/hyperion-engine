@@ -28,10 +28,21 @@ uniform sampler sampler_nearest;
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
+#ifdef INSTANCING
+
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
 };
+
+#else
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, CurrentObject) readonly buffer ObjectsBuffer
+{
+    Object object;
+};
+
+#endif
 
 #ifdef HYP_USE_INDEXED_ARRAY_FOR_OBJECT_DATA
 HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialsBuffer

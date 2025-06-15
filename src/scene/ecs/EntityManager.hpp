@@ -387,7 +387,6 @@ public:
     }
 
     HYP_API void ForEachEntityManager(ProcRef<void(EntityManager*)> proc) const;
-    HYP_API Task<bool> PerformActionWithEntity(ID<Entity> entity_id, Proc<void(EntityManager*, ID<Entity>)>&& callback);
     HYP_API void PerformActionWithEntity_FireAndForget(ID<Entity> entity_id, Proc<void(EntityManager*, ID<Entity>)>&& callback);
 
 private:
@@ -395,6 +394,7 @@ private:
     mutable Mutex m_mutex;
 };
 
+/*! \brief The EntityManager is responsible for managing Entities, their components, and Systems within a Scene. */
 HYP_CLASS()
 class HYP_API EntityManager final : public HypObject<EntityManager>
 {

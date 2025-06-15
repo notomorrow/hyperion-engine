@@ -5,13 +5,13 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_multiview : require
 
-layout(location=0) out vec3 v_position;
-layout(location=1) out vec3 v_normal;
-layout(location=2) out vec2 v_texcoord0;
-layout(location=7) out flat vec3 v_camera_position;
-layout(location=11) out flat uint v_object_index;
-layout(location=12) out flat vec3 v_env_probe_extent;
-layout(location=13) out flat uint v_cube_face_index;
+layout(location = 0) out vec3 v_position;
+layout(location = 1) out vec3 v_normal;
+layout(location = 2) out vec2 v_texcoord0;
+layout(location = 7) out flat vec3 v_camera_position;
+layout(location = 11) out flat uint v_object_index;
+layout(location = 12) out flat vec3 v_env_probe_extent;
+layout(location = 13) out flat uint v_cube_face_index;
 
 HYP_ATTRIBUTE(0) vec3 a_position;
 HYP_ATTRIBUTE(1) vec3 a_normal;
@@ -23,14 +23,13 @@ HYP_ATTRIBUTE_OPTIONAL(6) vec4 a_bone_weights;
 HYP_ATTRIBUTE_OPTIONAL(7) vec4 a_bone_indices;
 
 #if defined(HYP_ATTRIBUTE_a_bone_weights) && defined(HYP_ATTRIBUTE_a_bone_indices)
-    #define VERTEX_SKINNING_ENABLED
+#define VERTEX_SKINNING_ENABLED
 #endif
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "include/scene.inc"
 
-#define HYP_INSTANCING
 #include "include/object.inc"
 #include "include/env_probe.inc"
 
@@ -52,6 +51,8 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvP
     EnvProbe current_env_probe;
 };
 
+#ifdef INSTANCING
+
 HYP_DESCRIPTOR_SSBO(Global, ObjectsBuffer) readonly buffer ObjectsBuffer
 {
     Object objects[HYP_MAX_ENTITIES];
@@ -62,6 +63,15 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Instancing, EntityInstanceBatchesBuffer) readonly bu
     EntityInstanceBatch entity_instance_batch;
 };
 
+#else
+
+HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, CurrentObject) readonly buffer ObjectsBuffer
+{
+    Object object;
+};
+
+#endif
+
 #ifdef VERTEX_SKINNING_ENABLED
 
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, SkeletonsBuffer) readonly buffer SkeletonsBuffer
@@ -71,34 +81,37 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, SkeletonsBuffer) readonly buffer SkeletonsBu
 
 mat4 CreateSkinningMatrix(ivec4 bone_indices, vec4 bone_weights)
 {
-	mat4 skinning = mat4(0.0);
+    mat4 skinning = mat4(0.0);
 
-	int index0 = min(bone_indices.x, HYP_MAX_BONES - 1);
-	skinning += bone_weights.x * skeleton.bones[index0];
-	int index1 = min(bone_indices.y, HYP_MAX_BONES - 1);
-	skinning += bone_weights.y * skeleton.bones[index1];
-	int index2 = min(bone_indices.z, HYP_MAX_BONES - 1);
-	skinning += bone_weights.z * skeleton.bones[index2];
-	int index3 = min(bone_indices.w, HYP_MAX_BONES - 1);
-	skinning += bone_weights.w * skeleton.bones[index3];
+    int index0 = min(bone_indices.x, HYP_MAX_BONES - 1);
+    skinning += bone_weights.x * skeleton.bones[index0];
+    int index1 = min(bone_indices.y, HYP_MAX_BONES - 1);
+    skinning += bone_weights.y * skeleton.bones[index1];
+    int index2 = min(bone_indices.z, HYP_MAX_BONES - 1);
+    skinning += bone_weights.z * skeleton.bones[index2];
+    int index3 = min(bone_indices.w, HYP_MAX_BONES - 1);
+    skinning += bone_weights.w * skeleton.bones[index3];
 
-	return skinning;
+    return skinning;
 }
 
 #endif
 
-void main() 
+void main()
 {
     vec4 position;
     mat4 normal_matrix;
 
 #ifdef VERTEX_SKINNING_ENABLED
-    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON)) {
+    if (bool(object.flags & ENTITY_GPU_FLAG_HAS_SKELETON))
+    {
         mat4 skinning_matrix = CreateSkinningMatrix(ivec4(a_bone_indices), a_bone_weights);
 
         position = object.model_matrix * skinning_matrix * vec4(a_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix * skinning_matrix));
-    } else {
+    }
+    else
+    {
 #endif
         position = object.model_matrix * vec4(a_position, 1.0);
         normal_matrix = transpose(inverse(object.model_matrix));
@@ -114,7 +127,9 @@ void main()
     mat4 projection_matrix = camera.projection;
     mat4 view_matrix = current_env_probe.face_view_matrices[gl_ViewIndex];
 
+#ifdef INSTANCING
     v_object_index = OBJECT_INDEX;
+#endif
 
     v_env_probe_extent = current_env_probe.aabb_max.xyz - current_env_probe.aabb_min.xyz;
 
