@@ -45,11 +45,11 @@
     <DockableContainer name="Dockable_Container" position="0 75" size="100% fill">
         <Panel name="Left_Panel" size="200 100%" padding="5 0" tag:side="left">
             <TabView size="100% 25" size="100%">
-                <Tab name="Scene_Tab" text="Scene">
+                <Tab name="Outline_Tab" text="World">
                     <Panel size="100% 35" padding="0 2">
-                        <Textbox name="Scene_Outline_Filter" size="fill auto" placeholder="Filter..."></Textbox>
+                        <Textbox name="Outline_Filter" size="fill auto" placeholder="Filter..."></Textbox>
                     </Panel>
-                    <ListView name="Scene_Outline_ListView" position="0 35" size="100% fill" />
+                    <ListView name="Outline_ListView" position="0 35" size="100% fill" />
                 </Tab>
             </TabView>
         </Panel>
