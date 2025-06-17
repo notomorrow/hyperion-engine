@@ -43,18 +43,18 @@ enum EnvProbeBindingSlot : uint32
 };
 
 HYP_ENUM()
-enum EnvProbeType : uint32
+enum class EnvProbeType : uint32
 {
-    ENV_PROBE_TYPE_INVALID = uint32(-1),
+    INVALID = uint32(-1),
 
-    ENV_PROBE_TYPE_REFLECTION = 0,
-    ENV_PROBE_TYPE_SKY,
-    ENV_PROBE_TYPE_SHADOW,
+    REFLECTION = 0,
+    SKY,
+    SHADOW,
 
     // These below types are controlled by EnvGrid
-    ENV_PROBE_TYPE_AMBIENT,
+    AMBIENT,
 
-    ENV_PROBE_TYPE_MAX
+    MAX
 };
 
 class EnvProbe;
@@ -202,8 +202,6 @@ public:
     HYP_DEPRECATED bool IsVisible(ID<Camera> camera_id) const;
     HYP_DEPRECATED void SetIsVisible(ID<Camera> camera_id, bool is_visible);
 
-    void EnqueueBind() const;
-    void EnqueueUnbind() const;
     void Update(GameCounter::TickUnit delta);
 
     uint32 m_grid_slot = ~0u; // temp

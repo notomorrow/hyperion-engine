@@ -17,6 +17,7 @@
 namespace hyperion {
 
 class EnvProbe;
+class RenderEnvProbe;
 class Texture;
 class RenderCamera;
 class RenderScene;
@@ -133,9 +134,6 @@ public:
 
     void SetSphericalHarmonics(const EnvProbeSphericalHarmonics& spherical_harmonics);
 
-    void EnqueueBind();
-    void EnqueueUnbind();
-
     void Render(FrameBase* frame, const RenderSetup& render_setup);
 
 protected:
@@ -151,13 +149,13 @@ private:
 
     void UpdateBufferData();
 
-    void SetEnvProbeTexture();
+    void SetEnvProbeTexture(uint32 texture_slot);
 
     bool ShouldComputePrefilteredEnvMap() const;
-    void ComputePrefilteredEnvMap(FrameBase* frame);
+    void ComputePrefilteredEnvMap(FrameBase* frame, const RenderSetup& render_setup);
 
     bool ShouldComputeSphericalHarmonics() const;
-    void ComputeSH(FrameBase* frame);
+    void ComputeSH(FrameBase* frame, const RenderSetup& render_setup);
 
     EnvProbe* m_env_probe;
 

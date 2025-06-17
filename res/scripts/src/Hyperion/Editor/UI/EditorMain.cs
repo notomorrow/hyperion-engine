@@ -327,107 +327,126 @@ namespace Hyperion
 
             public UIEventHandlerResult UpdateUndoMenuItem()
             {
-                Logger.Log(LogType.Info, "UpdateUndoMenuItem");
-
-                UIMenuItem? undoMenuItem = UIObject.GetStage().Find<UIMenuItem>(new Name("Undo_MenuItem", weak: true));
-
-                if (undoMenuItem == null)
+                try
                 {
-                    Logger.Log(LogType.Error, "Undo menu item not found");
-                    return UIEventHandlerResult.Error;
-                }
+                    Logger.Log(LogType.Info, "UpdateUndoMenuItem");
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                    UIMenuItem? undoMenuItem = UIObject.GetStage().Find<UIMenuItem>(new Name("Undo_MenuItem", weak: true));
 
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
-                    return UIEventHandlerResult.Error;
-                }
-
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
-
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot update undo menu item");
-                    return UIEventHandlerResult.Error;
-                }
-
-                string undoText = "Undo";
-
-                if (currentProject.GetActionStack().CanUndo())
-                {
-                    var editorAction = currentProject.GetActionStack().GetUndoAction();
-                    string actionUndoText = editorAction.GetName().ToString();
-
-                    if (actionUndoText.Length > 0)
+                    if (undoMenuItem == null)
                     {
-                        undoText = string.Format("Undo {0}", actionUndoText);
+                        Logger.Log(LogType.Error, "Undo menu item not found");
+                        return UIEventHandlerResult.Error;
                     }
 
-                    undoMenuItem.SetIsEnabled(true);
+                    var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                    if (editorSubsystem == null)
+                    {
+                        Logger.Log(LogType.Error, "EditorSubsystem not found");
+                        return UIEventHandlerResult.Error;
+                    }
+
+                    EditorProject currentProject = editorSubsystem.GetCurrentProject();
+
+                    if (currentProject == null)
+                    {
+                        Logger.Log(LogType.Error, "No project loaded; cannot update undo menu item");
+                        return UIEventHandlerResult.Error;
+                    }
+
+                    string undoText = "Undo";
+
+                    if (currentProject.GetActionStack().CanUndo())
+                    {
+                        var editorAction = currentProject.GetActionStack().GetUndoAction();
+                        Assert.Throw(editorAction != null, "Undo action should not be null");
+
+                        string actionUndoText = editorAction.GetName().ToString();
+
+                        if (actionUndoText.Length > 0)
+                        {
+                            undoText = string.Format("Undo {0}", actionUndoText);
+                        }
+
+                        undoMenuItem.SetIsEnabled(true);
+                    }
+                    else
+                    {
+                        undoText = "Can't Undo";
+
+                        undoMenuItem.SetIsEnabled(false);
+                    }
+
+                    undoMenuItem.SetText(undoText);
                 }
-                else
+                catch (Exception ex)
                 {
-                    undoText = "Can't Undo";
-
-                    undoMenuItem.SetIsEnabled(false);
+                    Logger.Log(LogType.Error, "Error updating undo menu item: " + ex.Message);
+                    return UIEventHandlerResult.Error;
                 }
-
-                undoMenuItem.SetText(undoText);
 
                 return UIEventHandlerResult.Ok;
             }
 
             public UIEventHandlerResult UpdateRedoMenuItem()
             {
-                UIMenuItem? redoMenuItem = UIObject.GetStage().Find<UIMenuItem>(new Name("Redo_MenuItem", weak: true));
-
-                if (redoMenuItem == null)
+                try
                 {
-                    Logger.Log(LogType.Error, "Redo menu item not found");
-                    return UIEventHandlerResult.Error;
-                }
+                    UIMenuItem? redoMenuItem = UIObject.GetStage().Find<UIMenuItem>(new Name("Redo_MenuItem", weak: true));
 
-                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
-
-                if (editorSubsystem == null)
-                {
-                    Logger.Log(LogType.Error, "EditorSubsystem not found");
-                    return UIEventHandlerResult.Error;
-                }
-
-                EditorProject currentProject = editorSubsystem.GetCurrentProject();
-
-                if (currentProject == null)
-                {
-                    Logger.Log(LogType.Error, "No project loaded; cannot update redo menu item");
-                    return UIEventHandlerResult.Error;
-                }
-
-                string redoText = "Redo";
-
-                if (currentProject.GetActionStack().CanRedo())
-                {
-                    var editorAction = currentProject.GetActionStack().GetRedoAction();
-                    
-                    string actionRedoText = editorAction.GetName().ToString();
-
-                    if (actionRedoText.Length > 0)
+                    if (redoMenuItem == null)
                     {
-                        redoText = string.Format("Redo {0}", actionRedoText);
+                        Logger.Log(LogType.Error, "Redo menu item not found");
+                        return UIEventHandlerResult.Error;
                     }
 
-                    redoMenuItem.SetIsEnabled(true);
+                    var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+
+                    if (editorSubsystem == null)
+                    {
+                        Logger.Log(LogType.Error, "EditorSubsystem not found");
+                        return UIEventHandlerResult.Error;
+                    }
+
+                    EditorProject currentProject = editorSubsystem.GetCurrentProject();
+
+                    if (currentProject == null)
+                    {
+                        Logger.Log(LogType.Error, "No project loaded; cannot update redo menu item");
+                        return UIEventHandlerResult.Error;
+                    }
+
+                    string redoText = "Redo";
+
+                    if (currentProject.GetActionStack().CanRedo())
+                    {
+                        var editorAction = currentProject.GetActionStack().GetRedoAction();
+                        Assert.Throw(editorAction != null, "Redo action should not be null");
+                        
+                        string actionRedoText = editorAction.GetName().ToString();
+
+                        if (actionRedoText.Length > 0)
+                        {
+                            redoText = string.Format("Redo {0}", actionRedoText);
+                        }
+
+                        redoMenuItem.SetIsEnabled(true);
+                    }
+                    else
+                    {
+                        redoText = "Can't Redo";
+
+                        redoMenuItem.SetIsEnabled(false);
+                    }
+
+                    redoMenuItem.SetText(redoText);
                 }
-                else
+                catch (Exception ex)
                 {
-                    redoText = "Can't Redo";
-
-                    redoMenuItem.SetIsEnabled(false);
+                    Logger.Log(LogType.Error, "Error updating redo menu item: " + ex.Message);
+                    return UIEventHandlerResult.Error;
                 }
-
-                redoMenuItem.SetText(redoText);
 
                 return UIEventHandlerResult.Ok;
             }

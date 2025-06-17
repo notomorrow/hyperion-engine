@@ -37,7 +37,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "include/env_probe.inc"
 #include "include/scene.inc"
 
-HYP_DESCRIPTOR_SRV(Scene, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(View, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer, size = 512) uniform CamerasBuffer
 {
@@ -49,7 +49,7 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, WorldsBuffer) uniform WorldsBuffer
     WorldShaderData world_shader_data;
 };
 
-HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(View, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
 {
     EnvGrid env_grid;

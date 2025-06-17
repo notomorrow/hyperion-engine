@@ -39,6 +39,10 @@
             <MenuItem name="Simulate_Button" size="auto 100%" OnClick="SimulateClicked" backgroundColor="#000000" borderRadius="5">
                 Simulate
             </MenuItem>
+
+            <MenuItem name="SetActiveScene_MenuItem" text="Active Scene: None" enabled="false" size="auto 100%" backgroundColor="#000000" borderRadius="5">
+                
+            </MenuItem>
         </MenuBar>
     </Panel>
 
@@ -46,7 +50,7 @@
         <Panel name="Left_Panel" size="200 100%" padding="5 0" tag:side="left">
             <TabView size="100% 25" size="100%">
                 <Tab name="Outline_Tab" text="World">
-                    <Panel size="100% 35" padding="0 2">
+                    <Panel position="0 0" size="100% 35" padding="0 2">
                         <Textbox name="Outline_Filter" size="fill auto" placeholder="Filter..."></Textbox>
                     </Panel>
                     <ListView name="Outline_ListView" position="0 35" size="100% fill" />

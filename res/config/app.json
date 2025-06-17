@@ -12,12 +12,19 @@
       }
     },
     "ssr": {
-      "num_iterations": 128,
+      "ConeTracing": false,
       "eye_fade": [0.980000, 0.999000],
       "ray_step": 0.100000,
-      "screen_edge_fade": [0.980000, 0.990000],
+      "NumIterations": 64,
+      "Quality": 2,
       "quality": 1,
+      "RayStep": 3.200000,
+      "RoughnessScattering": true,
+      "num_iterations": 128,
+      "screen_edge_fade": [0.980000, 0.990000],
+      "EyeFade": [0.980000, 0.990000],
       "roughness_scattering": true,
+      "ScreenEdgeFade": [0.960000, 0.990000],
       "enabled": true,
       "cone_tracing": false
     },
@@ -26,6 +33,7 @@
     },
     "debug": {
       "debug_drawer": {
+        "Enabled": true,
         "enabled": true
       },
       "env_grid_probes": false,

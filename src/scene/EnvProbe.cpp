@@ -9,8 +9,8 @@
 #include <rendering/RenderState.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderShadowMap.hpp>
 #include <rendering/ShaderGlobals.hpp>
-#include <rendering/Shadows.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
@@ -23,74 +23,12 @@
 
 namespace hyperion {
 
-#pragma region Render commands
-
-struct RENDER_COMMAND(BindEnvProbe)
-    : renderer::RenderCommand
-{
-    EnvProbeType env_probe_type;
-    WeakHandle<EnvProbe> probe_weak;
-
-    RENDER_COMMAND(BindEnvProbe)(EnvProbeType env_probe_type, const WeakHandle<EnvProbe>& probe_weak)
-        : env_probe_type(env_probe_type),
-          probe_weak(probe_weak)
-    {
-    }
-
-    virtual ~RENDER_COMMAND(BindEnvProbe)() override = default;
-
-    virtual RendererResult operator()() override
-    {
-        Handle<EnvProbe> probe = probe_weak.Lock();
-
-        if (!probe.IsValid())
-        {
-            HYPERION_RETURN_OK;
-        }
-
-        g_engine->GetRenderState()->BindEnvProbe(env_probe_type, TResourceHandle<RenderEnvProbe>(probe->GetRenderResource()));
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-struct RENDER_COMMAND(UnbindEnvProbe)
-    : renderer::RenderCommand
-{
-    EnvProbeType env_probe_type;
-    WeakHandle<EnvProbe> probe_weak;
-
-    RENDER_COMMAND(UnbindEnvProbe)(EnvProbeType env_probe_type, const WeakHandle<EnvProbe>& probe_weak)
-        : env_probe_type(env_probe_type),
-          probe_weak(probe_weak)
-    {
-    }
-
-    virtual ~RENDER_COMMAND(UnbindEnvProbe)() override = default;
-
-    virtual RendererResult operator()() override
-    {
-        Handle<EnvProbe> probe = probe_weak.Lock();
-
-        if (!probe.IsValid())
-        {
-            HYPERION_RETURN_OK;
-        }
-
-        g_engine->GetRenderState()->UnbindEnvProbe(env_probe_type, &probe->GetRenderResource());
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-#pragma endregion Render commands
-
 EnvProbe::EnvProbe()
     : EnvProbe(
           Handle<Scene> {},
           BoundingBox::Empty(),
           Vec2u { 1, 1 },
-          EnvProbeType::ENV_PROBE_TYPE_INVALID)
+          EnvProbeType::INVALID)
 {
 }
 
@@ -290,29 +228,6 @@ void EnvProbe::SetParentScene(const Handle<Scene>& parent_scene)
     Invalidate();
 }
 
-void EnvProbe::EnqueueBind() const
-{
-    AssertReady();
-
-    if (!IsControlledByEnvGrid())
-    {
-        PUSH_RENDER_COMMAND(BindEnvProbe, GetEnvProbeType(), WeakHandleFromThis());
-    }
-}
-
-void EnvProbe::EnqueueUnbind() const
-{
-    if (!IsReady())
-    {
-        return;
-    }
-
-    if (!IsControlledByEnvGrid())
-    {
-        PUSH_RENDER_COMMAND(UnbindEnvProbe, GetEnvProbeType(), WeakHandleFromThis());
-    }
-}
-
 void EnvProbe::Update(GameCounter::TickUnit delta)
 {
     Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -334,7 +249,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
                 if (!octree)
                 {
-                    HYP_LOG(EnvProbe, Warning, "No containing octant found for EnvProbe #{} with AABB: {}", GetID().Value(), m_aabb);
+                    HYP_LOG(EnvProbe, Warning, "No containing octant found for EnvProbe {} with AABB: {}", GetID(), m_aabb);
                 }
             }
 
@@ -363,7 +278,7 @@ void EnvProbe::Update(GameCounter::TickUnit delta)
 
         if (diff.NeedsUpdate() || m_octant_hash_code != octant_hash_code)
         {
-            HYP_LOG(EnvProbe, Debug, "EnvProbe #{} with AABB: {} has {} added, {} removed and {} changed entities", GetID().Value(), m_aabb,
+            HYP_LOG(EnvProbe, Debug, "EnvProbe {} with AABB: {} has {} added, {} removed and {} changed entities", GetID(), m_aabb,
                 diff.num_added, diff.num_removed, diff.num_changed);
 
             SetNeedsRender(true);

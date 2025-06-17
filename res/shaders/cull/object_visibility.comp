@@ -12,7 +12,7 @@ layout(local_size_x = 256) in;
 #include "./shared.inc"
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler depth_pyramid_sampler;
-HYP_DESCRIPTOR_SRV(Scene, DepthPyramidResult) uniform texture2D depth_pyramid;
+HYP_DESCRIPTOR_SRV(View, DepthPyramidResult) uniform texture2D depth_pyramid;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../include/object.inc"

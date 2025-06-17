@@ -74,7 +74,7 @@ HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CameraShaderData
     Camera camera;
 };
 
-HYP_DESCRIPTOR_SRV(Scene, GBufferDepthTexture) uniform texture2D depth_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferDepthTexture) uniform texture2D depth_texture;
 
 layout(push_constant) uniform PushConstant
 {

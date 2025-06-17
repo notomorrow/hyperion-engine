@@ -431,9 +431,6 @@ void DDGI::RenderProbes(FrameBase* frame, const RenderSetup& render_setup)
     UpdateUniforms(frame);
 
     const RenderScene* render_scene = g_engine->GetRenderState()->GetActiveScene();
-    const TResourceHandle<RenderCamera>& render_camera = g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<RenderEnvProbe>& env_render_probe = g_engine->GetRenderState()->GetActiveEnvProbe();
-    const TResourceHandle<RenderEnvGrid>& env_render_grid = g_engine->GetRenderState()->GetActiveEnvGrid();
 
     frame->GetCommandList().Add<InsertBarrier>(m_radiance_buffer, ResourceState::UNORDERED_ACCESS);
 
@@ -458,9 +455,9 @@ void DDGI::RenderProbes(FrameBase* frame, const RenderSetup& render_setup)
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_camera) },
-                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_render_grid.Get(), 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_render_probe.Get(), 0) } } } },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(render_setup.env_grid, 0) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(render_setup.env_probe, 0) } } } },
         frame->GetFrameIndex());
 
     frame->GetCommandList().Add<TraceRays>(
@@ -481,8 +478,6 @@ void DDGI::ComputeIrradiance(FrameBase* frame, const RenderSetup& render_setup)
 
     const RenderScene* render_scene = g_engine->GetRenderState()->GetActiveScene();
     const TResourceHandle<RenderCamera>& render_camera = g_engine->GetRenderState()->GetActiveCamera();
-    const TResourceHandle<RenderEnvProbe>& env_render_probe = g_engine->GetRenderState()->GetActiveEnvProbe();
-    const TResourceHandle<RenderEnvGrid>& env_render_grid = g_engine->GetRenderState()->GetActiveEnvGrid();
 
     const Vec3u probe_counts = m_grid_info.NumProbesPerDimension();
 
@@ -518,8 +513,8 @@ void DDGI::ComputeIrradiance(FrameBase* frame, const RenderSetup& render_setup)
             { NAME("Global"),
                 { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_camera) },
-                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_render_grid.Get(), 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_render_probe.Get(), 0) } } } },
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(render_setup.env_grid, 0) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(render_setup.env_probe, 0) } } } },
         frame->GetFrameIndex());
 
     frame->GetCommandList().Add<DispatchCompute>(
