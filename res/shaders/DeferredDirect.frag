@@ -11,6 +11,7 @@ layout(location = 1) in vec2 v_texcoord0;
 
 layout(location = 0) out vec4 output_color;
 
+#define HYP_DEFERRED_NO_ENV_GRID
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
@@ -39,14 +40,6 @@ HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_p
 HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
 {
     EnvProbe env_probes[];
-};
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
-{
-    EnvGrid env_grid;
-};
-HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
-{
-    EnvProbe current_env_probe;
 };
 
 HYP_DESCRIPTOR_SRV(Global, LightFieldColorTexture) uniform texture2D light_field_color_texture;
