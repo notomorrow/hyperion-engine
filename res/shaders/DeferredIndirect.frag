@@ -16,32 +16,32 @@ layout(location = 2) out vec4 output_positions;
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
-HYP_DESCRIPTOR_SRV(Scene, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
+HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
 #else
-HYP_DESCRIPTOR_SRV(Scene, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
-HYP_DESCRIPTOR_SRV(Scene, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
-HYP_DESCRIPTOR_SRV(Scene, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
-HYP_DESCRIPTOR_SRV(Scene, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
-HYP_DESCRIPTOR_SRV(Scene, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
-HYP_DESCRIPTOR_SRV(Scene, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
-HYP_DESCRIPTOR_SRV(Scene, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
-HYP_DESCRIPTOR_SRV(Scene, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
+HYP_DESCRIPTOR_SRV(View, GBufferAlbedoTexture) uniform texture2D gbuffer_albedo_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferNormalsTexture) uniform texture2D gbuffer_normals_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferMaterialTexture) uniform texture2D gbuffer_material_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferVelocityTexture) uniform texture2D gbuffer_velocity_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferLightmapTexture) uniform texture2D gbuffer_albedo_lightmap_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferMaskTexture) uniform texture2D gbuffer_mask_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferWSNormalsTexture) uniform texture2D gbuffer_ws_normals_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferTranslucentTexture) uniform texture2D gbuffer_albedo_texture_translucent;
 #endif
 
-HYP_DESCRIPTOR_SRV(Scene, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
-HYP_DESCRIPTOR_SRV(Scene, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
+HYP_DESCRIPTOR_SRV(View, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(View, GBufferDepthTexture) uniform texture2D gbuffer_depth_texture;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 
-HYP_DESCRIPTOR_SRV(Scene, SSAOResultTexture) uniform texture2D ssao_gi_result;
-HYP_DESCRIPTOR_SRV(Scene, SSGIResultTexture) uniform texture2D ssgi_result;
+HYP_DESCRIPTOR_SRV(View, SSAOResultTexture) uniform texture2D ssao_gi_result;
+HYP_DESCRIPTOR_SRV(View, SSGIResultTexture) uniform texture2D ssgi_result;
 HYP_DESCRIPTOR_SRV(Global, RTRadianceResultTexture) uniform texture2D rt_radiance_final;
-HYP_DESCRIPTOR_SRV(Scene, EnvGridRadianceResultTexture) uniform texture2D env_grid_radiance_texture;
-HYP_DESCRIPTOR_SRV(Scene, EnvGridIrradianceResultTexture) uniform texture2D env_grid_irradiance_texture;
-HYP_DESCRIPTOR_SRV(Scene, ReflectionProbeResultTexture) uniform texture2D reflections_texture;
+HYP_DESCRIPTOR_SRV(View, EnvGridRadianceResultTexture) uniform texture2D env_grid_radiance_texture;
+HYP_DESCRIPTOR_SRV(View, EnvGridIrradianceResultTexture) uniform texture2D env_grid_irradiance_texture;
+HYP_DESCRIPTOR_SRV(View, ReflectionProbeResultTexture) uniform texture2D reflections_texture;
 
 #include "include/env_probe.inc"
-HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(View, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
 {
     EnvProbe env_probes[];

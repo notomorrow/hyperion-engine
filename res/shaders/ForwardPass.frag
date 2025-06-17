@@ -48,9 +48,9 @@ uniform sampler sampler_nearest;
 #include "include/env_probe.inc"
 #include "include/gbuffer.inc"
 
-HYP_DESCRIPTOR_SRV(Scene, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
+HYP_DESCRIPTOR_SRV(View, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 
-HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(View, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
 {
     EnvGrid env_grid;
