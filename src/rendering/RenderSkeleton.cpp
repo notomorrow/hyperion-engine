@@ -2,13 +2,13 @@
 
 #include <rendering/RenderSkeleton.hpp>
 #include <rendering/Buffers.hpp>
-#include <rendering/ShaderGlobals.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -16,14 +16,14 @@ namespace hyperion {
 
 RenderSkeleton::RenderSkeleton(Skeleton* skeleton)
     : m_skeleton(skeleton),
-      m_buffer_data {}
+      m_bufferData {}
 {
 }
 
 RenderSkeleton::RenderSkeleton(RenderSkeleton&& other) noexcept
     : RenderResourceBase(static_cast<RenderResourceBase&&>(other)),
       m_skeleton(other.m_skeleton),
-      m_buffer_data(std::move(other.m_buffer_data))
+      m_bufferData(std::move(other.m_bufferData))
 {
     other.m_skeleton = nullptr;
 }
@@ -49,28 +49,28 @@ void RenderSkeleton::Update_Internal()
     HYP_SCOPE;
 }
 
-GPUBufferHolderBase* RenderSkeleton::GetGPUBufferHolder() const
+GpuBufferHolderBase* RenderSkeleton::GetGpuBufferHolder() const
 {
-    return g_engine->GetRenderData()->skeletons;
+    return g_renderGlobalState->gpuBuffers[GRB_SKELETONS];
 }
 
 void RenderSkeleton::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_buffer_index != ~0u);
+    AssertThrow(m_bufferIndex != ~0u);
 
-    *static_cast<SkeletonShaderData*>(m_buffer_address) = m_buffer_data;
-    GetGPUBufferHolder()->MarkDirty(m_buffer_index);
+    *static_cast<SkeletonShaderData*>(m_bufferAddress) = m_bufferData;
+    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
 }
 
-void RenderSkeleton::SetBufferData(const SkeletonShaderData& buffer_data)
+void RenderSkeleton::SetBufferData(const SkeletonShaderData& bufferData)
 {
     HYP_SCOPE;
 
-    Execute([this, buffer_data]()
+    Execute([this, bufferData]()
         {
-            m_buffer_data = buffer_data;
+            m_bufferData = bufferData;
 
             if (IsInitialized())
             {
@@ -81,9 +81,6 @@ void RenderSkeleton::SetBufferData(const SkeletonShaderData& buffer_data)
 
 #pragma endregion RenderSkeleton
 
-namespace renderer {
-
 HYP_DESCRIPTOR_SSBO(Object, SkeletonsBuffer, 1, sizeof(SkeletonShaderData), true);
 
-} // namespace renderer
 } // namespace hyperion

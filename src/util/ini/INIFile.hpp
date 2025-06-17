@@ -19,7 +19,7 @@ public:
 
         String name;
         String value;
-        Array<String> sub_elements;
+        Array<String> subElements;
     };
 
     struct Value
@@ -64,7 +64,7 @@ public:
 
     HYP_FORCE_INLINE bool IsValid() const
     {
-        return m_is_valid;
+        return m_isValid;
     }
 
     HYP_FORCE_INLINE const FilePath& GetFilePath() const
@@ -90,7 +90,7 @@ public:
 private:
     void Parse();
 
-    bool m_is_valid;
+    bool m_isValid;
     FilePath m_path;
 
     HashMap<String, Section> m_sections;

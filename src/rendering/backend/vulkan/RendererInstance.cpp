@@ -18,8 +18,6 @@
 
 #include <Types.hpp>
 
-#include <vector>
-#include <optional>
 #include <cstring>
 
 #ifdef HYP_IOS
@@ -33,7 +31,6 @@
 #endif
 
 namespace hyperion {
-namespace renderer {
 namespace platform {
 
 static VkPhysicalDevice PickPhysicalDevice(Span<VkPhysicalDevice> devices)
@@ -43,22 +40,22 @@ static VkPhysicalDevice PickPhysicalDevice(Span<VkPhysicalDevice> devices)
         return VK_NULL_HANDLE;
     }
 
-    Features::DeviceRequirementsResult device_requirements_result(
+    Features::DeviceRequirementsResult deviceRequirementsResult(
         Features::DeviceRequirementsResult::DEVICE_REQUIREMENTS_ERR,
         "No device found");
 
-    Features device_features;
+    Features deviceFeatures;
 
     /* Check for a discrete/dedicated GPU with geometry shaders */
     for (VkPhysicalDevice device : devices)
     {
-        device_features.SetPhysicalDevice(device);
+        deviceFeatures.SetPhysicalDevice(device);
 
-        if (device_features.IsDiscreteGpu())
+        if (deviceFeatures.IsDiscreteGpu())
         {
-            if ((device_requirements_result = device_features.SatisfiesMinimumRequirements()))
+            if ((deviceRequirementsResult = deviceFeatures.SatisfiesMinimumRequirements()))
             {
-                HYP_LOG(RenderingBackend, Info, "Select discrete device {}", device_features.GetDeviceName());
+                HYP_LOG(RenderingBackend, Info, "Select discrete device {}", deviceFeatures.GetDeviceName());
 
                 return device;
             }
@@ -68,74 +65,74 @@ static VkPhysicalDevice PickPhysicalDevice(Span<VkPhysicalDevice> devices)
     /* No discrete gpu found, look for a device which satisfies requirements */
     for (VkPhysicalDevice device : devices)
     {
-        device_features.SetPhysicalDevice(device);
+        deviceFeatures.SetPhysicalDevice(device);
 
-        if ((device_requirements_result = device_features.SatisfiesMinimumRequirements()))
+        if ((deviceRequirementsResult = deviceFeatures.SatisfiesMinimumRequirements()))
         {
-            HYP_LOG(RenderingBackend, Info, "Select non-discrete device {}", device_features.GetDeviceName());
+            HYP_LOG(RenderingBackend, Info, "Select non-discrete device {}", deviceFeatures.GetDeviceName());
 
             return device;
         }
     }
 
     VkPhysicalDevice device = devices[0];
-    device_features.SetPhysicalDevice(device);
+    deviceFeatures.SetPhysicalDevice(device);
 
-    device_requirements_result = device_features.SatisfiesMinimumRequirements();
+    deviceRequirementsResult = deviceFeatures.SatisfiesMinimumRequirements();
 
     HYP_LOG(RenderingBackend, Error, "No device found which satisfied the minimum requirements; selecting device {}.\nThe error message was: {}",
-        device_features.GetDeviceName(), device_requirements_result.message);
+        deviceFeatures.GetDeviceName(), deviceRequirementsResult.message);
 
     return device;
 }
 
 static Array<VkPhysicalDevice> EnumeratePhysicalDevices(VkInstance instance)
 {
-    uint32 device_count = 0;
+    uint32 deviceCount = 0;
 
-    vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
+    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
-    AssertThrowMsg(device_count != 0, "No devices with Vulkan support found! "
+    AssertThrowMsg(deviceCount != 0, "No devices with Vulkan support found! "
                                       "Please update your graphics drivers or install a Vulkan compatible device.\n");
 
     Array<VkPhysicalDevice> devices;
-    devices.Resize(device_count);
+    devices.Resize(deviceCount);
 
-    vkEnumeratePhysicalDevices(instance, &device_count, devices.Data());
+    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.Data());
 
     return devices;
 }
 
 // Returns supported vulkan debug layers
-static Array<const char*> CheckValidationLayerSupport(const Array<const char*>& requested_layers)
+static Array<const char*> CheckValidationLayerSupport(const Array<const char*>& requestedLayers)
 {
-    Array<const char*> supported_layers;
-    supported_layers.Reserve(requested_layers.Size());
+    Array<const char*> supportedLayers;
+    supportedLayers.Reserve(requestedLayers.Size());
 
-    uint32 layers_count;
-    vkEnumerateInstanceLayerProperties(&layers_count, nullptr);
+    uint32 layersCount;
+    vkEnumerateInstanceLayerProperties(&layersCount, nullptr);
 
-    Array<VkLayerProperties> available_layers;
-    available_layers.Resize(layers_count);
+    Array<VkLayerProperties> availableLayers;
+    availableLayers.Resize(layersCount);
 
-    vkEnumerateInstanceLayerProperties(&layers_count, available_layers.Data());
+    vkEnumerateInstanceLayerProperties(&layersCount, availableLayers.Data());
 
-    for (const char* request : requested_layers)
+    for (const char* request : requestedLayers)
     {
-        bool layer_found = false;
+        bool layerFound = false;
 
-        for (const auto& available_properties : available_layers)
+        for (const auto& availableProperties : availableLayers)
         {
-            if (!strcmp(available_properties.layerName, request))
+            if (!strcmp(availableProperties.layerName, request))
             {
-                layer_found = true;
+                layerFound = true;
                 break;
             }
         }
 
-        if (layer_found)
+        if (layerFound)
         {
-            supported_layers.PushBack(request);
+            supportedLayers.PushBack(request);
         }
         else
         {
@@ -143,7 +140,7 @@ static Array<const char*> CheckValidationLayerSupport(const Array<const char*>& 
         }
     }
 
-    return supported_layers;
+    return supportedLayers;
 }
 
 ExtensionMap Instance<Platform::vulkan>::GetExtensionMap()
@@ -163,18 +160,18 @@ ExtensionMap Instance<Platform::vulkan>::GetExtensionMap()
     };
 }
 
-void Instance<Platform::vulkan>::SetValidationLayers(Array<const char*> validation_layers)
+void Instance<Platform::vulkan>::SetValidationLayers(Array<const char*> validationLayers)
 {
-    this->validation_layers = std::move(validation_layers);
+    this->validationLayers = std::move(validationLayers);
 }
 
 #ifndef HYPERION_BUILD_RELEASE
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-    VkDebugUtilsMessageTypeFlagsEXT message_type,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data)
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+    void* userData)
 {
     LogType lt = LogType::Info;
 
@@ -197,7 +194,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     }
 
     DebugLogRaw(lt, "Vulkan: [%s, %d]:\n\t%s\n",
-        callback_data->pMessageIdName, callback_data->messageIdNumber, callback_data->pMessage);
+        callbackData->pMessageIdName, callbackData->messageIdNumber, callbackData->pMessage);
 
 #if HYP_ENABLE_BREAKPOINTS
     if (lt == LogType::RenError)
@@ -208,11 +205,11 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     return VK_FALSE;
 }
 
-static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* create_info, const VkAllocationCallbacks* callbacks, VkDebugUtilsMessengerEXT* debug_messenger)
+static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* createInfo, const VkAllocationCallbacks* callbacks, VkDebugUtilsMessengerEXT* debugMessenger)
 {
     if (auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT")))
     {
-        return func(instance, create_info, callbacks, debug_messenger);
+        return func(instance, createInfo, callbacks, debugMessenger);
     }
     else
     {
@@ -234,9 +231,9 @@ RendererResult Instance<Platform::vulkan>::SetupDebug()
 #endif
     };
 
-    Array<const char*> supported_layers = CheckValidationLayerSupport(layers);
+    Array<const char*> supportedLayers = CheckValidationLayerSupport(layers);
 
-    SetValidationLayers(std::move(supported_layers));
+    SetValidationLayers(std::move(supportedLayers));
 
     HYPERION_RETURN_OK;
 }
@@ -251,88 +248,88 @@ Instance<Platform::vulkan>::Instance()
 RendererResult Instance<Platform::vulkan>::SetupDebugMessenger()
 {
 #ifndef HYPERION_BUILD_RELEASE
-    VkDebugUtilsMessengerCreateInfoEXT messenger_info { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    messenger_info.messageSeverity = (VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT);
-    messenger_info.messageType = (VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT);
-    messenger_info.pfnUserCallback = &DebugCallback;
-    messenger_info.pUserData = nullptr;
+    VkDebugUtilsMessengerCreateInfoEXT messengerInfo { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+    messengerInfo.messageSeverity = (VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT);
+    messengerInfo.messageType = (VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT);
+    messengerInfo.pfnUserCallback = &DebugCallback;
+    messengerInfo.pUserData = nullptr;
 
-    HYPERION_VK_CHECK(CreateDebugUtilsMessengerEXT(m_instance, &messenger_info, nullptr, &this->debug_messenger));
+    HYPERION_VK_CHECK(CreateDebugUtilsMessengerEXT(m_instance, &messengerInfo, nullptr, &this->debugMessenger));
 
     DebugLog(LogType::Info, "Using Vulkan Debug Messenger\n");
 #endif
     HYPERION_RETURN_OK;
 }
 
-RendererResult Instance<Platform::vulkan>::Initialize(const AppContextBase& app_context, bool load_debug_layers)
+RendererResult Instance<Platform::vulkan>::Initialize(const AppContextBase& appContext, bool loadDebugLayers)
 {
     /* Set up our debug and validation layers */
-    if (load_debug_layers)
+    if (loadDebugLayers)
     {
         HYPERION_BUBBLE_ERRORS(SetupDebug());
     }
 
-    VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    app_info.pApplicationName = app_context.GetAppName().Data();
-    app_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
-    app_info.pEngineName = "HyperionEngine";
-    app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
+    VkApplicationInfo appInfo { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+    appInfo.pApplicationName = appContext.GetAppName().Data();
+    appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
+    appInfo.pEngineName = "HyperionEngine";
+    appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
     // Set target api version
-    app_info.apiVersion = HYP_VULKAN_API_VERSION;
+    appInfo.apiVersion = HYP_VULKAN_API_VERSION;
 
-    VkInstanceCreateInfo create_info { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
-    create_info.pApplicationInfo = &app_info;
-    create_info.enabledLayerCount = uint32(validation_layers.Size());
-    create_info.ppEnabledLayerNames = validation_layers.Data();
-    create_info.flags = 0;
+    VkInstanceCreateInfo createInfo { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+    createInfo.pApplicationInfo = &appInfo;
+    createInfo.enabledLayerCount = uint32(validationLayers.Size());
+    createInfo.ppEnabledLayerNames = validationLayers.Data();
+    createInfo.flags = 0;
 
 #if 0
 #if defined(HYP_APPLE) && HYP_APPLE
     // for vulkan sdk 1.3.216 and above, enumerate portability extension is required for
     // translation layers such as moltenvk.
-    create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 #endif
 
     // Setup Vulkan extensions
-    Array<const char*> extension_names;
+    Array<const char*> extensionNames;
 
-    if (!app_context.GetVkExtensions(extension_names))
+    if (!appContext.GetVkExtensions(extensionNames))
     {
         return HYP_MAKE_ERROR(RendererError, "Failed to load Vulkan extensions.");
     }
 
-    extension_names.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    extensionNames.PushBack(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 #if 0
 #if defined(HYP_APPLE) && HYP_APPLE && VK_HEADER_VERSION >= 216
     // add our enumeration extension to our instance extensions
-    extension_names.PushBack(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    extensionNames.PushBack(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 #endif
 
-    DebugLog(LogType::Debug, "Got %llu extensions:\n", extension_names.Size());
+    DebugLog(LogType::Debug, "Got %llu extensions:\n", extensionNames.Size());
 
-    for (const char* extension_name : extension_names)
+    for (const char* extensionName : extensionNames)
     {
-        DebugLog(LogType::Debug, "\t%s\n", extension_name);
+        DebugLog(LogType::Debug, "\t%s\n", extensionName);
     }
 
-    create_info.enabledExtensionCount = uint32(extension_names.Size());
-    create_info.ppEnabledExtensionNames = extension_names.Data();
+    createInfo.enabledExtensionCount = uint32(extensionNames.Size());
+    createInfo.ppEnabledExtensionNames = extensionNames.Data();
 
-    DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extension_names.Size());
+    DebugLog(LogType::Info, "Loading [%d] Instance extensions...\n", extensionNames.Size());
 
-    VkResult instance_result = vkCreateInstance(&create_info, nullptr, &m_instance);
+    VkResult instanceResult = vkCreateInstance(&createInfo, nullptr, &m_instance);
 
-    DebugLog(LogType::Info, "Instance result: %d\n", instance_result);
+    DebugLog(LogType::Info, "Instance result: %d\n", instanceResult);
     HYPERION_VK_CHECK_MSG(
-        instance_result,
+        instanceResult,
         "Failed to create Vulkan Instance!");
 
     /* Create our renderable surface from SDL */
-    AssertThrow(app_context.GetMainWindow() != nullptr);
-    m_surface = app_context.GetMainWindow()->CreateVkSurface(this);
+    AssertThrow(appContext.GetMainWindow() != nullptr);
+    m_surface = appContext.GetMainWindow()->CreateVkSurface(this);
 
     /* Find and set up an adequate GPU for rendering and presentation */
     HYPERION_BUBBLE_ERRORS(CreateDevice());
@@ -344,13 +341,13 @@ RendererResult Instance<Platform::vulkan>::Initialize(const AppContextBase& app_
     HYPERION_RETURN_OK;
 }
 
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* callbacks)
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* callbacks)
 {
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
 
     if (func != nullptr)
     {
-        func(instance, debug_messenger, callbacks);
+        func(instance, debugMessenger, callbacks);
     }
     else
     {
@@ -375,7 +372,7 @@ RendererResult Instance<Platform::vulkan>::Destroy()
     m_device = nullptr;
 
 #ifndef HYPERION_BUILD_RELEASE
-    DestroyDebugUtilsMessengerEXT(m_instance, this->debug_messenger, nullptr);
+    DestroyDebugUtilsMessengerEXT(m_instance, this->debugMessenger, nullptr);
 #endif
 
     vkDestroyInstance(m_instance, nullptr);
@@ -384,30 +381,30 @@ RendererResult Instance<Platform::vulkan>::Destroy()
     return result;
 }
 
-RendererResult Instance<Platform::vulkan>::CreateDevice(VkPhysicalDevice physical_device)
+RendererResult Instance<Platform::vulkan>::CreateDevice(VkPhysicalDevice physicalDevice)
 {
     /* If no physical device passed in, we select one */
-    if (physical_device == VK_NULL_HANDLE)
+    if (physicalDevice == VK_NULL_HANDLE)
     {
         Array<VkPhysicalDevice> devices = EnumeratePhysicalDevices(m_instance);
-        physical_device = PickPhysicalDevice(Span<VkPhysicalDevice>(devices.Begin(), devices.End()));
+        physicalDevice = PickPhysicalDevice(Span<VkPhysicalDevice>(devices.Begin(), devices.End()));
     }
 
-    m_device = new Device<Platform::vulkan>(physical_device, m_surface);
+    m_device = new Device<Platform::vulkan>(physicalDevice, m_surface);
     m_device->SetRequiredExtensions(GetExtensionMap());
 
-    const QueueFamilyIndices& family_indices = m_device->GetQueueFamilyIndices();
+    const QueueFamilyIndices& familyIndices = m_device->GetQueueFamilyIndices();
 
     /* Put into a set so we don't have any duplicate indices */
-    const std::set<uint32> required_queue_family_indices {
-        family_indices.graphics_family.Get(),
-        family_indices.transfer_family.Get(),
-        family_indices.present_family.Get(),
-        family_indices.compute_family.Get()
+    const std::set<uint32> requiredQueueFamilyIndices {
+        familyIndices.graphicsFamily.Get(),
+        familyIndices.transferFamily.Get(),
+        familyIndices.presentFamily.Get(),
+        familyIndices.computeFamily.Get()
     };
 
     /* Create a logical device to operate on */
-    HYPERION_BUBBLE_ERRORS(m_device->Create(required_queue_family_indices));
+    HYPERION_BUBBLE_ERRORS(m_device->Create(requiredQueueFamilyIndices));
 
     /* Get the internal queues from our device */
 
@@ -455,5 +452,5 @@ RendererResult Instance<Platform::vulkan>::RecreateSwapchain()
 }
 
 } // namespace platform
-} // namespace renderer
+
 } // namespace hyperion

@@ -37,32 +37,32 @@ public:
     UIListViewItem& operator=(UIListViewItem&& other) noexcept = delete;
     virtual ~UIListViewItem() override = default;
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
     bool HasSubItems() const;
 
     HYP_FORCE_INLINE bool IsExpanded() const
     {
-        return m_is_expanded;
+        return m_isExpanded;
     }
 
-    void SetIsExpanded(bool is_expanded);
+    void SetIsExpanded(bool isExpanded);
 
 protected:
     virtual void Init() override;
 
-    virtual void SetIsSelectedItem(bool is_selected_item);
+    virtual void SetIsSelectedItem(bool isSelectedItem);
 
-    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state) override;
+    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState) override;
 
     virtual Material::ParameterTable GetMaterialParameters() const override;
 
 private:
-    UIObject* m_expanded_element;
-    bool m_is_selected_item;
-    bool m_is_expanded;
-    Color m_initial_background_color;
+    UIObject* m_expandedElement;
+    bool m_isSelectedItem;
+    bool m_isExpanded;
+    Color m_initialBackgroundColor;
 };
 
 #pragma endregion UIListViewItem
@@ -86,25 +86,25 @@ public:
 
     HYP_FORCE_INLINE const WeakHandle<UIListViewItem>& GetSelectedItem() const
     {
-        return m_selected_item;
+        return m_selectedItem;
     }
 
     HYP_METHOD()
-    void SetSelectedItem(UIListViewItem* list_view_item);
+    void SetSelectedItem(UIListViewItem* listViewItem);
 
     HYP_METHOD()
     HYP_FORCE_INLINE int GetSelectedItemIndex() const
     {
-        if (!m_selected_item.IsValid())
+        if (!m_selectedItem.IsValid())
         {
             return -1;
         }
 
-        auto it = m_list_view_items.FindAs(m_selected_item.GetUnsafe());
+        auto it = m_listViewItems.FindAs(m_selectedItem.GetUnsafe());
 
-        if (it != m_list_view_items.End())
+        if (it != m_listViewItems.End())
         {
-            return int(it - m_list_view_items.Begin());
+            return int(it - m_listViewItems.Begin());
         }
 
         return -1;
@@ -115,7 +115,7 @@ public:
 
     HYP_FORCE_INLINE const Array<UIListViewItem*>& GetListViewItems() const
     {
-        return m_list_view_items;
+        return m_listViewItems;
     }
 
     HYP_METHOD(Property = "Orientation")
@@ -127,29 +127,29 @@ public:
     HYP_METHOD(Property = "Orientation")
     void SetOrientation(UIListViewOrientation orientation);
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
-    UIListViewItem* FindListViewItem(const UUID& data_source_element_uuid) const;
+    UIListViewItem* FindListViewItem(const UUID& dataSourceElementUuid) const;
 
     Delegate<void, UIListViewItem*> OnSelectedItemChange;
 
 protected:
     virtual void Init() override;
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
-    virtual void SetDataSource_Internal(UIDataSourceBase* data_source) override;
+    virtual void SetDataSource_Internal(UIDataSourceBase* dataSource) override;
 
     void UpdateLayout();
 
 private:
-    static UIListViewItem* FindListViewItem(const UIObject* parent_object, const UUID& data_source_element_uuid);
+    static UIListViewItem* FindListViewItem(const UIObject* parentObject, const UUID& dataSourceElementUuid);
 
-    void AddDataSourceElement(UIDataSourceBase* data_source, UIDataSourceElement* element, UIDataSourceElement* parent);
+    void AddDataSourceElement(UIDataSourceBase* dataSource, UIDataSourceElement* element, UIDataSourceElement* parent);
 
-    Array<UIListViewItem*> m_list_view_items;
-    WeakHandle<UIListViewItem> m_selected_item;
+    Array<UIListViewItem*> m_listViewItems;
+    WeakHandle<UIListViewItem> m_selectedItem;
 
     UIListViewOrientation m_orientation;
 };

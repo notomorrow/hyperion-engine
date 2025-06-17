@@ -32,17 +32,17 @@ enum PairArgTrait : PairArgTraits
 template <class First, class Second>
 struct PairHelper
 {
-    static constexpr bool default_constructible = (std::is_default_constructible_v<First> && (std::is_default_constructible_v<Second>));
-    static constexpr bool copy_constructible = (std::is_copy_constructible_v<First> && (std::is_copy_constructible_v<Second>));
-    static constexpr bool copy_assignable = (std::is_copy_assignable_v<First> && (std::is_copy_assignable_v<Second>));
-    static constexpr bool move_constructible = (std::is_move_constructible_v<First> && (std::is_move_constructible_v<Second>));
-    static constexpr bool move_assignable = (std::is_move_assignable_v<First> && (std::is_move_assignable_v<Second>));
+    static constexpr bool defaultConstructible = (std::is_default_constructible_v<First> && (std::is_default_constructible_v<Second>));
+    static constexpr bool copyConstructible = (std::is_copy_constructible_v<First> && (std::is_copy_constructible_v<Second>));
+    static constexpr bool copyAssignable = (std::is_copy_assignable_v<First> && (std::is_copy_assignable_v<Second>));
+    static constexpr bool moveConstructible = (std::is_move_constructible_v<First> && (std::is_move_constructible_v<Second>));
+    static constexpr bool moveAssignable = (std::is_move_assignable_v<First> && (std::is_move_assignable_v<Second>));
 };
 
 // template <PairArgTraits FirstTraits, PairArgTraits SecondTraits, class First, class Second>
 // struct PairBase :
 //     private ConstructAssignmentTraits<
-//         PairHelper<First, Second>::default_constructible,
+//         PairHelper<First, Second>::defaultConstructible,
 //         (FirstTraits & COPY_CONSTRUCTIBLE) && (SecondTraits & COPY_CONSTRUCTIBLE),
 //         (FirstTraits & MOVE_CONSTRUCTIBLE) && (SecondTraits & MOVE_CONSTRUCTIBLE),
 //         PairBase<FirstTraits, SecondTraits, First, Second>
@@ -54,7 +54,7 @@ struct PairHelper
 template <class First, class Second, typename T1 = void, typename T2 = void>
 struct Pair
 {
-    static_assert(resolution_failure<Pair>, "Invalid Pair traits");
+    static_assert(resolutionFailure<Pair>, "Invalid Pair traits");
 };
 
 template <class First, class Second>

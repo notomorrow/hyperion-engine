@@ -44,7 +44,7 @@ static Vector ReadVector(const Tokens& tokens, uint32 offset = 1)
 {
     Vector result { 0.0f };
 
-    int value_index = 0;
+    int valueIndex = 0;
 
     for (uint32 i = offset; i < tokens.Size(); i++)
     {
@@ -55,9 +55,9 @@ static Vector ReadVector(const Tokens& tokens, uint32 offset = 1)
             continue;
         }
 
-        result.values[value_index++] = float(std::atof(token.Data()));
+        result.values[valueIndex++] = float(std::atof(token.Data()));
 
-        if (value_index == std::size(result.values))
+        if (valueIndex == std::size(result.values))
         {
             break;
         }
@@ -68,18 +68,18 @@ static Vector ReadVector(const Tokens& tokens, uint32 offset = 1)
 
 static void AddMaterial(MaterialLibrary& library, const String& tag)
 {
-    String unique_tag(tag);
+    String uniqueTag(tag);
     int counter = 0;
 
-    while (AnyOf(library.materials, [&unique_tag](const MaterialDef& material_def)
+    while (AnyOf(library.materials, [&uniqueTag](const MaterialDef& materialDef)
         {
-            return material_def.tag == unique_tag;
+            return materialDef.tag == uniqueTag;
         }))
     {
-        unique_tag = tag + String::ToString(++counter);
+        uniqueTag = tag + String::ToString(++counter);
     }
 
-    library.materials.PushBack(MaterialDef { .tag = unique_tag });
+    library.materials.PushBack(MaterialDef { .tag = uniqueTag });
 }
 
 static auto& LastMaterial(MaterialLibrary& library)
@@ -92,30 +92,30 @@ static auto& LastMaterial(MaterialLibrary& library)
     return library.materials.Back();
 }
 
-static bool IsTransparencyModel(IlluminationModel illum_model)
+static bool IsTransparencyModel(IlluminationModel illumModel)
 {
-    return illum_model == ILLUM_TRANSPARENT_GLASS_RAYTRACED
-        || illum_model == ILLUM_TRANSPARENT_REFRACTION_RAYTRACED
-        || illum_model == ILLUM_TRANSPARENT_FRESNEL_REFRACTION_RAYTRACED
-        || illum_model == ILLUM_TRANSPARENT_REFLECTIVE_GLASS;
+    return illumModel == ILLUM_TRANSPARENT_GLASS_RAYTRACED
+        || illumModel == ILLUM_TRANSPARENT_REFRACTION_RAYTRACED
+        || illumModel == ILLUM_TRANSPARENT_FRESNEL_REFRACTION_RAYTRACED
+        || illumModel == ILLUM_TRANSPARENT_REFLECTIVE_GLASS;
 }
 
 AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.asset_manager != nullptr);
+    AssertThrow(state.assetManager != nullptr);
 
     MaterialLibrary library;
     library.filepath = state.filepath;
 
-    const FlatMap<String, TextureMapping> texture_keys {
-        Pair<String, TextureMapping> { "map_kd", TextureMapping { .key = MaterialTextureKey::ALBEDO_MAP, .srgb = true, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_bump", TextureMapping { .key = MaterialTextureKey::NORMAL_MAP, .srgb = false, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "bump", TextureMapping { .key = MaterialTextureKey::NORMAL_MAP, .srgb = false, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_ka", TextureMapping { .key = MaterialTextureKey::METALNESS_MAP, .srgb = false, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_ks", TextureMapping { .key = MaterialTextureKey::METALNESS_MAP, .srgb = false, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_ns", TextureMapping { .key = MaterialTextureKey::ROUGHNESS_MAP, .srgb = false, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_height", TextureMapping { .key = MaterialTextureKey::PARALLAX_MAP, .srgb = false, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } }, /* custom */
-        Pair<String, TextureMapping> { "map_ao", TextureMapping { .key = MaterialTextureKey::AO_MAP, .srgb = false, .filter_mode = FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP } }            /* custom */
+    const FlatMap<String, TextureMapping> textureKeys {
+        Pair<String, TextureMapping> { "map_kd", TextureMapping { .key = MaterialTextureKey::ALBEDO_MAP, .srgb = true, .filterMode = TFM_LINEAR_MIPMAP } },
+        Pair<String, TextureMapping> { "map_bump", TextureMapping { .key = MaterialTextureKey::NORMAL_MAP, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
+        Pair<String, TextureMapping> { "bump", TextureMapping { .key = MaterialTextureKey::NORMAL_MAP, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
+        Pair<String, TextureMapping> { "map_ka", TextureMapping { .key = MaterialTextureKey::METALNESS_MAP, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
+        Pair<String, TextureMapping> { "map_ks", TextureMapping { .key = MaterialTextureKey::METALNESS_MAP, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
+        Pair<String, TextureMapping> { "map_ns", TextureMapping { .key = MaterialTextureKey::ROUGHNESS_MAP, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
+        Pair<String, TextureMapping> { "map_height", TextureMapping { .key = MaterialTextureKey::PARALLAX_MAP, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } }, /* custom */
+        Pair<String, TextureMapping> { "map_ao", TextureMapping { .key = MaterialTextureKey::AO_MAP, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } }            /* custom */
     };
 
     Tokens tokens;
@@ -218,9 +218,9 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
                     return;
                 }
 
-                const int illum_model = StringUtil::Parse<int>(tokens[1].Data());
+                const int illumModel = StringUtil::Parse<int>(tokens[1].Data());
 
-                if (IsTransparencyModel(static_cast<IlluminationModel>(illum_model)))
+                if (IsTransparencyModel(static_cast<IlluminationModel>(illumModel)))
                 {
                     LastMaterial(library).parameters[Material::MATERIAL_KEY_TRANSMISSION] = ParameterDef {
                         .values = FixedArray<float, 4> { 0.95f, 0.0f, 0.0f, 0.0f }
@@ -231,9 +231,9 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
                 return;
             }
 
-            const auto texture_it = texture_keys.Find(tokens[0]);
+            const auto textureIt = textureKeys.Find(tokens[0]);
 
-            if (texture_it != texture_keys.end())
+            if (textureIt != textureKeys.end())
             {
                 String name;
 
@@ -247,65 +247,65 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
                 }
 
                 LastMaterial(library).textures.PushBack(TextureDef {
-                    .mapping = texture_it->second,
+                    .mapping = textureIt->second,
                     .name = name });
 
                 return;
             }
         });
 
-    Handle<MaterialGroup> material_group_handle = CreateObject<MaterialGroup>();
+    Handle<MaterialGroup> materialGroupHandle = CreateObject<MaterialGroup>();
 
-    HashMap<String, String> texture_names_to_path;
+    HashMap<String, String> textureNamesToPath;
 
     for (const auto& item : library.materials)
     {
         for (const auto& it : item.textures)
         {
-            const auto texture_path = String(FileSystem::Join(
+            const auto texturePath = String(FileSystem::Join(
                 FileSystem::RelativePath(
                     StringUtil::BasePath(library.filepath.Data()),
                     FileSystem::CurrentPath()),
                 it.name.Data())
                     .c_str());
 
-            texture_names_to_path[it.name] = texture_path;
+            textureNamesToPath[it.name] = texturePath;
         }
     }
 
-    HashMap<String, Handle<Texture>> texture_refs;
+    HashMap<String, Handle<Texture>> textureRefs;
 
-    AssetMap loaded_textures;
-    Array<String> all_filepaths;
+    AssetMap loadedTextures;
+    Array<String> allFilepaths;
 
     {
-        if (!texture_names_to_path.Empty())
+        if (!textureNamesToPath.Empty())
         {
-            uint32 num_enqueued = 0;
-            String paths_string;
+            uint32 numEnqueued = 0;
+            String pathsString;
 
-            RC<AssetBatch> textures_batch = state.asset_manager->CreateBatch();
+            RC<AssetBatch> texturesBatch = state.assetManager->CreateBatch();
 
-            for (auto& it : texture_names_to_path)
+            for (auto& it : textureNamesToPath)
             {
-                all_filepaths.PushBack(it.second);
+                allFilepaths.PushBack(it.second);
 
-                ++num_enqueued;
-                textures_batch->Add(
+                ++numEnqueued;
+                texturesBatch->Add(
                     it.first,
                     it.second);
-                if (paths_string.Any())
+                if (pathsString.Any())
                 {
-                    paths_string += ", ";
+                    pathsString += ", ";
                 }
 
-                paths_string += it.second;
+                pathsString += it.second;
             }
 
-            if (num_enqueued != 0)
+            if (numEnqueued != 0)
             {
-                textures_batch->LoadAsync();
-                loaded_textures = textures_batch->AwaitResults();
+                texturesBatch->LoadAsync();
+                loadedTextures = texturesBatch->AwaitResults();
             }
         }
     }
@@ -325,43 +325,43 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
                         return value > 0.0f;
                     }))
             {
-                attributes.blend_function = BlendFunction::AlphaBlending();
-                attributes.bucket = BUCKET_TRANSLUCENT;
+                attributes.blendFunction = BlendFunction::AlphaBlending();
+                attributes.bucket = RB_TRANSLUCENT;
             }
         }
 
         for (auto& it : item.textures)
         {
-            if (!loaded_textures[it.name].IsValid())
+            if (!loadedTextures[it.name].IsValid())
             {
                 HYP_LOG(Assets, Warning, "OBJ material loader: Texture {} could not be used because it could not be loaded!", it.name);
 
                 continue;
             }
 
-            Handle<Texture> texture = loaded_textures[it.name].ExtractAs<Texture>();
+            Handle<Texture> texture = loadedTextures[it.name].ExtractAs<Texture>();
             texture->SetName(CreateNameFromDynamicString(it.name.Data()));
 
-            TextureDesc texture_desc = texture->GetTextureDesc();
-            texture_desc.filter_mode_min = it.mapping.filter_mode;
-            texture_desc.filter_mode_mag = FilterMode::TEXTURE_FILTER_LINEAR;
+            TextureDesc textureDesc = texture->GetTextureDesc();
+            textureDesc.filterModeMin = it.mapping.filterMode;
+            textureDesc.filterModeMag = TFM_LINEAR;
 
             if (it.mapping.srgb)
             {
-                switch (texture_desc.format)
+                switch (textureDesc.format)
                 {
-                case InternalFormat::RGB8:
-                    texture_desc.format = InternalFormat::RGB8_SRGB;
+                case TF_RGB8:
+                    textureDesc.format = TF_RGB8_SRGB;
                     break;
-                case InternalFormat::RGBA8:
-                    texture_desc.format = InternalFormat::RGBA8_SRGB;
+                case TF_RGBA8:
+                    textureDesc.format = TF_RGBA8_SRGB;
                     break;
                 default:
                     break;
                 }
             }
 
-            texture->SetTextureDesc(texture_desc);
+            texture->SetTextureDesc(textureDesc);
 
             if (!InitObject(texture))
             {
@@ -379,10 +379,10 @@ AssetLoadResult MTLMaterialLoader::LoadAsset(LoaderState& state) const
             parameters,
             textures);
 
-        material_group_handle->Add(item.tag, std::move(material));
+        materialGroupHandle->Add(item.tag, std::move(material));
     }
 
-    return LoadedAsset { material_group_handle };
+    return LoadedAsset { materialGroupHandle };
 }
 
 } // namespace hyperion

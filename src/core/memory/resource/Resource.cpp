@@ -18,18 +18,18 @@ HYP_DEFINE_LOG_SUBCHANNEL(Resource, Memory);
 
 #pragma region Memory Pool
 
-static TypeMap<UniquePtr<IResourceMemoryPool>> g_resource_memory_pools;
-static Mutex g_resource_memory_pools_mutex;
+static TypeMap<UniquePtr<IResourceMemoryPool>> g_resourceMemoryPools;
+static Mutex g_resourceMemoryPoolsMutex;
 
-HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeID type_id, UniquePtr<IResourceMemoryPool> (*create_fn)(void))
+HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, UniquePtr<IResourceMemoryPool> (*createFn)(void))
 {
-    Mutex::Guard guard(g_resource_memory_pools_mutex);
+    Mutex::Guard guard(g_resourceMemoryPoolsMutex);
 
-    auto it = g_resource_memory_pools.Find(type_id);
+    auto it = g_resourceMemoryPools.Find(typeId);
 
-    if (it == g_resource_memory_pools.End())
+    if (it == g_resourceMemoryPools.End())
     {
-        it = g_resource_memory_pools.Set(type_id, create_fn()).first;
+        it = g_resourceMemoryPools.Set(typeId, createFn()).first;
     }
 
     return it->second.Get();
@@ -40,48 +40,48 @@ HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeID type_id, Uniqu
 #pragma region ResourceBase
 
 ResourceBase::ResourceBase()
-    : m_initialization_mask(0),
-      m_initialization_thread_id(ThreadID::Invalid()),
-      m_update_counter(0)
+    : m_initializationMask(0),
+      m_initializationThreadId(ThreadId::Invalid()),
+      m_updateCounter(0)
 {
 }
 
 ResourceBase::ResourceBase(ResourceBase&& other) noexcept
-    : m_initialization_mask(other.m_initialization_mask.Exchange(0, MemoryOrder::ACQUIRE_RELEASE)),
-      m_initialization_thread_id(other.m_initialization_thread_id),
-      m_update_counter(other.m_update_counter.Exchange(0, MemoryOrder::ACQUIRE_RELEASE))
+    : m_initializationMask(other.m_initializationMask.Exchange(0, MemoryOrder::ACQUIRE_RELEASE)),
+      m_initializationThreadId(other.m_initializationThreadId),
+      m_updateCounter(other.m_updateCounter.Exchange(0, MemoryOrder::ACQUIRE_RELEASE))
 {
-    other.m_initialization_thread_id = ThreadID::Invalid();
+    other.m_initializationThreadId = ThreadId::Invalid();
 }
 
 ResourceBase::~ResourceBase()
 {
     // Ensure that the resources are no longer being used
-    AssertThrowMsg(m_ref_counter.IsInSignalState(), "Resource destroyed while still in use, was WaitForFinalization() called?");
+    AssertThrowMsg(m_refCounter.IsInSignalState(), "Resource destroyed while still in use, was WaitForFinalization() called?");
 }
 
 bool ResourceBase::IsInitialized() const
 {
-    return m_initialization_mask.Get(MemoryOrder::ACQUIRE) & g_initialization_mask_initialized_bit;
+    return m_initializationMask.Get(MemoryOrder::ACQUIRE) & g_initializationMaskInitializedBit;
 }
 
 int ResourceBase::IncRefNoInitialize()
 {
-    int count = m_ref_counter.Produce(1);
+    int count = m_refCounter.Produce(1);
 
     if (count == 1)
     {
         // loop until we have exclusive access.
-        uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE);
-        AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "Attempted to initialize a resource that is already initialized");
+        uint64 state = m_initializationMask.BitOr(g_initializationMaskInitializedBit, MemoryOrder::ACQUIRE);
+        AssertDebugMsg(!(state & g_initializationMaskInitializedBit), "Attempted to initialize a resource that is already initialized");
 
-        while (state & g_initialization_mask_read_mask)
+        while (state & g_initializationMaskReadMask)
         {
-            state = m_initialization_mask.Get(MemoryOrder::ACQUIRE);
+            state = m_initializationMask.Get(MemoryOrder::ACQUIRE);
             Threads::Sleep(0);
         }
 
-        m_initialization_thread_id = Threads::CurrentThreadID();
+        m_initializationThreadId = Threads::CurrentThreadId();
     }
 
     return count;
@@ -89,27 +89,27 @@ int ResourceBase::IncRefNoInitialize()
 
 int ResourceBase::IncRef()
 {
-    ThreadBase* owner_thread = GetOwnerThread();
+    ThreadBase* ownerThread = GetOwnerThread();
 
     auto impl = [this]()
     {
         {
             HYP_NAMED_SCOPE("Initializing Resource - Initialization");
 
-            uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE_RELEASE);
-            AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "Attempted to initialize a resource that is already initialized! Initialization thread id: %s (%u)",
-                m_initialization_thread_id.GetName().LookupString(), m_initialization_thread_id.GetValue());
+            uint64 state = m_initializationMask.BitOr(g_initializationMaskInitializedBit, MemoryOrder::ACQUIRE_RELEASE);
+            AssertDebugMsg(!(state & g_initializationMaskInitializedBit), "Attempted to initialize a resource that is already initialized! Initialization thread id: %s (%u)",
+                m_initializationThreadId.GetName().LookupString(), m_initializationThreadId.GetValue());
 
             // loop until we have exclusive access.
-            while (state & g_initialization_mask_read_mask)
+            while (state & g_initializationMaskReadMask)
             {
-                state = m_initialization_mask.Get(MemoryOrder::ACQUIRE);
+                state = m_initializationMask.Get(MemoryOrder::ACQUIRE);
                 Threads::Sleep(0);
             }
 
-            HYP_MT_CHECK_RW(m_data_race_detector);
+            HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-            m_initialization_thread_id = Threads::CurrentThreadID();
+            m_initializationThreadId = Threads::CurrentThreadId();
 
             Initialize();
         }
@@ -118,31 +118,31 @@ int ResourceBase::IncRef()
             HYP_NAMED_SCOPE("Initializing Resource - Post-Initialization Update");
 
             // Perform any updates that were requested before initialization
-            int16 current_update_count = m_update_counter.Get(MemoryOrder::ACQUIRE);
+            int16 currentUpdateCount = m_updateCounter.Get(MemoryOrder::ACQUIRE);
 
-            while (current_update_count != 0)
+            while (currentUpdateCount != 0)
             {
-                AssertThrow(current_update_count > 0);
+                AssertThrow(currentUpdateCount > 0);
 
                 Update();
 
-                current_update_count = m_update_counter.Decrement(current_update_count, MemoryOrder::ACQUIRE_RELEASE) - current_update_count;
+                currentUpdateCount = m_updateCounter.Decrement(currentUpdateCount, MemoryOrder::ACQUIRE_RELEASE) - currentUpdateCount;
             }
         }
 
-        m_completion_semaphore.Release(1);
+        m_completionSemaphore.Release(1);
     };
 
     HYP_SCOPE;
 
-    m_completion_semaphore.Produce(1);
-    bool should_release = true;
+    m_completionSemaphore.Produce(1);
+    bool shouldRelease = true;
 
-    int result = m_ref_counter.Produce(1);
+    int result = m_refCounter.Produce(1);
 
     if (result == 1)
     {
-        should_release = false;
+        shouldRelease = false;
 
         if (CanExecuteInline())
         {
@@ -154,9 +154,9 @@ int ResourceBase::IncRef()
         }
     }
 
-    if (should_release)
+    if (shouldRelease)
     {
-        m_completion_semaphore.Release(1);
+        m_completionSemaphore.Release(1);
     }
 
     return result;
@@ -168,50 +168,50 @@ int ResourceBase::DecRef()
     {
         HYP_NAMED_SCOPE("Destroying Resource");
 
-        uint64 state = m_initialization_mask.BitOr(g_initialization_mask_initialized_bit, MemoryOrder::ACQUIRE_RELEASE);
-        AssertDebugMsg(state & g_initialization_mask_initialized_bit, "ResourceBase::DecRef() called on a resource that is not initialized!");
+        uint64 state = m_initializationMask.BitOr(g_initializationMaskInitializedBit, MemoryOrder::ACQUIRE_RELEASE);
+        AssertDebugMsg(state & g_initializationMaskInitializedBit, "ResourceBase::DecRef() called on a resource that is not initialized!");
 
         // Wait till all reads are complete before we continue
-        while (state & g_initialization_mask_read_mask)
+        while (state & g_initializationMaskReadMask)
         {
-            state = m_initialization_mask.Get(MemoryOrder::ACQUIRE);
+            state = m_initializationMask.Get(MemoryOrder::ACQUIRE);
             Threads::Sleep(0);
         }
 
         // While we still have the initialized bit set, add the read access, so Initialize doesn't happen while we are destroying
-        m_initialization_mask.Increment(2, MemoryOrder::RELEASE);
+        m_initializationMask.Increment(2, MemoryOrder::RELEASE);
         // Unset the initialized bit
-        m_initialization_mask.BitAnd(~g_initialization_mask_initialized_bit, MemoryOrder::RELEASE);
+        m_initializationMask.BitAnd(~g_initializationMaskInitializedBit, MemoryOrder::RELEASE);
 
         // DEBUGGING
-        state = m_initialization_mask.Get(MemoryOrder::ACQUIRE);
-        AssertDebugMsg(!(state & g_initialization_mask_initialized_bit), "ResourceBase::DecRef() called on a resource that is still initialized! Initialization thread id: %s (%u)",
-            m_initialization_thread_id.GetName().LookupString(), m_initialization_thread_id.GetValue());
+        state = m_initializationMask.Get(MemoryOrder::ACQUIRE);
+        AssertDebugMsg(!(state & g_initializationMaskInitializedBit), "ResourceBase::DecRef() called on a resource that is still initialized! Initialization thread id: %s (%u)",
+            m_initializationThreadId.GetName().LookupString(), m_initializationThreadId.GetValue());
 
         {
-            HYP_MT_CHECK_RW(m_data_race_detector);
+            HYP_MT_CHECK_RW(m_dataRaceDetector);
 
             Destroy();
 
-            m_initialization_thread_id = ThreadID::Invalid();
+            m_initializationThreadId = ThreadId::Invalid();
         }
 
         // Done with destroying, we can now remove our read access
-        m_initialization_mask.Decrement(2, MemoryOrder::RELEASE);
+        m_initializationMask.Decrement(2, MemoryOrder::RELEASE);
 
-        m_completion_semaphore.Release(1);
+        m_completionSemaphore.Release(1);
     };
 
     HYP_SCOPE;
 
-    m_completion_semaphore.Produce(1);
-    bool should_release = true;
+    m_completionSemaphore.Produce(1);
+    bool shouldRelease = true;
 
-    int result = m_ref_counter.Release(1);
+    int result = m_refCounter.Release(1);
 
     if (result == 0)
     {
-        should_release = false;
+        shouldRelease = false;
 
         if (CanExecuteInline())
         {
@@ -224,9 +224,9 @@ int ResourceBase::DecRef()
         }
     }
 
-    if (should_release)
+    if (shouldRelease)
     {
-        m_completion_semaphore.Release(1);
+        m_completionSemaphore.Release(1);
     }
 
     return result;
@@ -239,51 +239,51 @@ void ResourceBase::SetNeedsUpdate()
         HYP_NAMED_SCOPE("Applying Resource updates");
 
         {
-            HYP_MT_CHECK_READ(m_data_race_detector);
+            HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-            int16 current_count = m_update_counter.Get(MemoryOrder::ACQUIRE);
+            int16 currentCount = m_updateCounter.Get(MemoryOrder::ACQUIRE);
 
-            while (current_count != 0)
+            while (currentCount != 0)
             {
-                AssertDebug(current_count > 0);
+                AssertDebug(currentCount > 0);
 
-                HYP_MT_CHECK_RW(m_data_race_detector);
+                HYP_MT_CHECK_RW(m_dataRaceDetector);
 
                 Update();
 
-                current_count = m_update_counter.Decrement(current_count, MemoryOrder::ACQUIRE_RELEASE) - current_count;
+                currentCount = m_updateCounter.Decrement(currentCount, MemoryOrder::ACQUIRE_RELEASE) - currentCount;
             }
         }
 
-        m_completion_semaphore.Release(1);
+        m_completionSemaphore.Release(1);
     };
 
     HYP_SCOPE;
 
-    m_completion_semaphore.Produce(1);
+    m_completionSemaphore.Produce(1);
 
-    if (m_ref_counter.IsInSignalState())
+    if (m_refCounter.IsInSignalState())
     {
         // Check initialization state -- if it is not initialized, we increment the update counter
         // without waiting for the owner thread to finish
-        if (!(m_initialization_mask.Increment(2, MemoryOrder::ACQUIRE) & g_initialization_mask_initialized_bit))
+        if (!(m_initializationMask.Increment(2, MemoryOrder::ACQUIRE) & g_initializationMaskInitializedBit))
         {
-            m_update_counter.Increment(1, MemoryOrder::RELEASE);
+            m_updateCounter.Increment(1, MemoryOrder::RELEASE);
 
             // Remove our read access
-            m_initialization_mask.Decrement(2, MemoryOrder::RELAXED);
+            m_initializationMask.Decrement(2, MemoryOrder::RELAXED);
 
-            m_completion_semaphore.Release(1);
+            m_completionSemaphore.Release(1);
 
             // No work to be done yet since we aren't initialized.
             return;
         }
 
         // Remove our read access
-        m_initialization_mask.Decrement(2, MemoryOrder::RELAXED);
+        m_initializationMask.Decrement(2, MemoryOrder::RELAXED);
     }
 
-    m_update_counter.Increment(1, MemoryOrder::RELEASE);
+    m_updateCounter.Increment(1, MemoryOrder::RELEASE);
 
     if (!CanExecuteInline())
     {
@@ -301,7 +301,7 @@ void ResourceBase::WaitForTaskCompletion() const
 
     if (CanExecuteInline())
     {
-        if (!m_completion_semaphore.IsInSignalState())
+        if (!m_completionSemaphore.IsInSignalState())
         {
             if (GetOwnerThread() == nullptr)
             { // No owner thread is used to execute tasks on.
@@ -318,14 +318,14 @@ void ResourceBase::WaitForTaskCompletion() const
                 FlushScheduledTasks();
             }
 
-            AssertThrow(m_completion_semaphore.IsInSignalState());
+            AssertThrow(m_completionSemaphore.IsInSignalState());
         }
 
         return;
     }
 
     // Wait for tasks to complete on another thread
-    m_completion_semaphore.Acquire();
+    m_completionSemaphore.Acquire();
 }
 
 void ResourceBase::WaitForFinalization() const
@@ -334,22 +334,22 @@ void ResourceBase::WaitForFinalization() const
 
     WaitForTaskCompletion();
 
-    m_ref_counter.Acquire();
+    m_refCounter.Acquire();
 }
 
 bool ResourceBase::CanExecuteInline() const
 {
-    ThreadBase* owner_thread = GetOwnerThread();
+    ThreadBase* ownerThread = GetOwnerThread();
 
-    return owner_thread == nullptr || Threads::IsOnThread(owner_thread->GetID());
+    return ownerThread == nullptr || Threads::IsOnThread(ownerThread->Id());
 }
 
 void ResourceBase::FlushScheduledTasks() const
 {
-    ThreadBase* owner_thread = GetOwnerThread();
-    AssertThrow(owner_thread != nullptr);
+    ThreadBase* ownerThread = GetOwnerThread();
+    AssertThrow(ownerThread != nullptr);
 
-    owner_thread->GetScheduler().Flush([](auto& operation)
+    ownerThread->GetScheduler().Flush([](auto& operation)
         {
             operation.Execute();
         });
@@ -414,9 +414,9 @@ public:
 
 HYP_API IResource& GetNullResource()
 {
-    static NullResource null_resource;
+    static NullResource nullResource;
 
-    return null_resource;
+    return nullResource;
 }
 
 #pragma endregion NullResource

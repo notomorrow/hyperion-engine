@@ -3,12 +3,14 @@
 #include <scene/Octree.hpp>
 #include <scene/Entity.hpp>
 #include <scene/Node.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/BVH.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/BVHComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/NodeLinkComponent.hpp>
+#include <scene/ecs/components/MeshComponent.hpp>
 
 #include <scene/camera/Camera.hpp>
 
@@ -21,31 +23,31 @@
 
 namespace hyperion {
 
-Octree::Octree(const Handle<EntityManager>& entity_manager)
+Octree::Octree(const Handle<EntityManager>& entityManager)
     : OctreeBase(),
-      m_entity_manager(entity_manager)
+      m_entityManager(entityManager)
 {
 }
 
-Octree::Octree(const Handle<EntityManager>& entity_manager, const BoundingBox& aabb)
+Octree::Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb)
     : OctreeBase(aabb),
-      m_entity_manager(entity_manager)
+      m_entityManager(entityManager)
 {
 }
 
-Octree::Octree(const Handle<EntityManager>& entity_manager, const BoundingBox& aabb, Octree* parent, uint8 index)
+Octree::Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb, Octree* parent, uint8 index)
     : OctreeBase(aabb, parent, index),
-      m_entity_manager(entity_manager)
+      m_entityManager(entityManager)
 {
 }
 
 Octree::~Octree() = default;
 
-void Octree::SetEntityManager(const Handle<EntityManager>& entity_manager)
+void Octree::SetEntityManager(const Handle<EntityManager>& entityManager)
 {
     HYP_SCOPE;
 
-    m_entity_manager = entity_manager;
+    m_entityManager = entityManager;
 
     if (IsDivided())
     {
@@ -53,7 +55,7 @@ void Octree::SetEntityManager(const Handle<EntityManager>& entity_manager)
         {
             AssertThrow(octant.octree != nullptr);
 
-            static_cast<Octree*>(octant.octree.Get())->SetEntityManager(m_entity_manager);
+            static_cast<Octree*>(octant.octree.Get())->SetEntityManager(m_entityManager);
         }
     }
 }
@@ -65,39 +67,42 @@ void Octree::Clear()
     Array<Entry> entries;
     OctreeBase::Clear(entries, /* undivide */ true);
 
-    if (m_entity_manager)
+    if (m_entityManager)
     {
-        AssertThrow(Threads::IsOnThread(m_entity_manager->GetOwnerThreadID()));
+        AssertThrow(Threads::IsOnThread(m_entityManager->GetOwnerThreadId()));
 
         for (Entry& entry : entries)
         {
-            if (VisibilityStateComponent* visibility_state_component = m_entity_manager->TryGetComponent<VisibilityStateComponent>(entry.value.GetID()))
+            if (VisibilityStateComponent* visibilityStateComponent = m_entityManager->TryGetComponent<VisibilityStateComponent>(entry.value))
             {
-                visibility_state_component->octant_id = OctantID::Invalid();
-                visibility_state_component->visibility_state = nullptr;
+                visibilityStateComponent->octantId = OctantId::Invalid();
+                visibilityStateComponent->visibilityState = nullptr;
             }
 
-            m_entity_manager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entry.value.GetID());
+            m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entry.value);
         }
     }
 
     RebuildEntriesHash();
 }
 
-Octree::InsertResult Octree::Rebuild(const BoundingBox& new_aabb, bool allow_grow)
+Octree::InsertResult Octree::Rebuild(const BoundingBox& newAabb, bool allowGrow)
 {
-    Array<Entry> new_entries;
-    OctreeBase::Clear(new_entries, /* undivide */ true);
+    Array<Entry> newEntries;
+    OctreeBase::Clear(newEntries, /* undivide */ true);
 
-    m_aabb = new_aabb;
+    m_aabb = newAabb;
 
-    for (auto& it : new_entries)
+    for (auto& it : newEntries)
     {
+        Entity* entity = it.value;
+        AssertThrow(entity != nullptr);
+
         if (it.aabb.IsValid() && it.aabb.IsFinite())
         {
             if (IsRoot())
             {
-                AssertDebug(allow_grow);
+                AssertDebug(allowGrow);
 
                 m_aabb = m_aabb.Union(it.aabb);
             }
@@ -108,34 +113,31 @@ Octree::InsertResult Octree::Rebuild(const BoundingBox& new_aabb, bool allow_gro
             }
         }
 
-        auto insert_result = Insert(it.value, it.aabb, true /* allow rebuild */);
+        auto insertResult = Insert(entity, it.aabb, true /* allow rebuild */);
 
-        if (!insert_result.first)
+        if (!insertResult.first)
         {
-            return insert_result;
+            return insertResult;
         }
 
-        if (Handle<Entity> entity = it.value.Lock())
+        VisibilityStateComponent* visibilityStateComponent = m_entityManager->TryGetComponent<VisibilityStateComponent>(entity);
+
+        if (visibilityStateComponent)
         {
-            VisibilityStateComponent* visibility_state_component = m_entity_manager->TryGetComponent<VisibilityStateComponent>(entity);
-
-            if (visibility_state_component)
-            {
-                visibility_state_component->octant_id = insert_result.second;
-                visibility_state_component->visibility_state = nullptr;
-            }
-            else
-            {
-                m_entity_manager->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent { .octant_id = insert_result.second, .visibility_state = nullptr });
-            }
-
-            m_entity_manager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
+            visibilityStateComponent->octantId = insertResult.second;
+            visibilityStateComponent->visibilityState = nullptr;
         }
+        else
+        {
+            m_entityManager->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent { .octantId = insertResult.second, .visibilityState = nullptr });
+        }
+
+        m_entityManager->AddTag<EntityTag::UPDATE_VISIBILITY_STATE>(entity);
     }
 
     return {
         { OctreeBase::Result::OCTREE_OK },
-        m_octant_id
+        m_octantId
     };
 }
 
@@ -162,7 +164,7 @@ void Octree::NextVisibilityState()
 
     AssertThrow(IsRoot());
 
-    m_visibility_state.Next();
+    m_visibilityState.Next();
 }
 
 void Octree::CalculateVisibility(const Handle<Camera>& camera)
@@ -171,10 +173,10 @@ void Octree::CalculateVisibility(const Handle<Camera>& camera)
 
     AssertThrow(IsRoot());
 
-    UpdateVisibilityState(camera, m_visibility_state.validity_marker);
+    UpdateVisibilityState(camera, m_visibilityState.validityMarker);
 }
 
-void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity_marker)
+void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validityMarker)
 {
     if (!camera.IsValid())
     {
@@ -189,19 +191,19 @@ void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity
     }
 
     Octree* current = this;
-    uint8 child_index = uint8(-1);
+    uint8 childIndex = uint8(-1);
 
     while (true)
     {
         // Process current node.
-        current->m_visibility_state.validity_marker = validity_marker;
-        current->m_visibility_state.MarkAsValid(camera.GetID());
+        current->m_visibilityState.validityMarker = validityMarker;
+        current->m_visibilityState.MarkAsValid(camera.Id());
 
-        if (current->m_is_divided)
+        if (current->m_isDivided)
         {
             bool descended = false;
 
-            for (uint8 i = child_index + 1; i < 8; i++)
+            for (uint8 i = childIndex + 1; i < 8; i++)
             {
                 if (!frustum.ContainsAABB(current->m_octants[i].aabb))
                 {
@@ -209,7 +211,7 @@ void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity
                 }
 
                 current = static_cast<Octree*>(current->m_octants[i].octree.Get());
-                child_index = uint8(-1);
+                childIndex = uint8(-1);
 
                 descended = true;
 
@@ -226,7 +228,7 @@ void Octree::UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity
             break;
         }
 
-        child_index = current->m_octant_id.GetIndex();
+        childIndex = current->m_octantId.GetIndex();
         current = static_cast<Octree*>(current->m_parent);
     }
 }
@@ -235,7 +237,7 @@ void Octree::ResetEntriesHash()
 {
     HYP_SCOPE;
 
-    m_entry_hashes = {};
+    m_entryHashes = {};
 }
 
 void Octree::RebuildEntriesHash(uint32 level)
@@ -246,23 +248,21 @@ void Octree::RebuildEntriesHash(uint32 level)
 
     for (const Entry& entry : m_entries)
     {
-        const HashCode entry_hash_code = entry.GetHashCode();
-        m_entry_hashes[0].Add(entry_hash_code);
+        const HashCode entryHashCode = entry.GetHashCode();
+        m_entryHashes[0].Add(entryHashCode);
 
         Array<EntityTag> tags;
 
-        if (m_entity_manager)
+        if (m_entityManager)
         {
-            // @FIXME: Having issue here where entity is no longer part of this entitymanager.
-            // Must be getting moved to a different one.
-            tags = m_entity_manager->GetTags(entry.value.GetID());
+            tags = m_entityManager->GetSavableTags(entry.value);
         }
 
         for (uint32 i = 0; i < uint32(tags.Size()); i++)
         {
-            const uint32 num_combinations = (1u << i);
+            const uint32 numCombinations = (1u << i);
 
-            for (uint32 k = 0; k < num_combinations; k++)
+            for (uint32 k = 0; k < numCombinations; k++)
             {
                 uint32 mask = (1u << (uint32(tags[i]) - 1));
 
@@ -276,14 +276,14 @@ void Octree::RebuildEntriesHash(uint32 level)
                     mask |= (1u << (uint32(tags[j]) - 1));
                 }
 
-                AssertThrow(m_entry_hashes.Size() > mask);
+                AssertThrow(m_entryHashes.Size() > mask);
 
-                m_entry_hashes[mask].Add(entry_hash_code);
+                m_entryHashes[mask].Add(entryHashCode);
             }
         }
     }
 
-    if (m_is_divided)
+    if (m_isDivided)
     {
         for (const Octant& octant : m_octants)
         {
@@ -296,114 +296,115 @@ void Octree::RebuildEntriesHash(uint32 level)
     // Update parent's hash to include this octant's hash
     if (m_parent)
     {
-        for (uint32 i = 0; i < uint32(m_entry_hashes.Size()); i++)
+        for (uint32 i = 0; i < uint32(m_entryHashes.Size()); i++)
         {
-            static_cast<Octree*>(m_parent)->m_entry_hashes[i].Add(m_entry_hashes[i]);
+            static_cast<Octree*>(m_parent)->m_entryHashes[i].Add(m_entryHashes[i]);
         }
     }
 }
 
-bool Octree::TestRay(const Ray& ray, RayTestResults& out_results, bool use_bvh) const
+bool Octree::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) const
 {
     HYP_SCOPE;
 
-    bool has_hit = false;
+    bool hasHit = false;
 
     if (ray.TestAABB(m_aabb))
     {
         for (const Octree::Entry& entry : m_entries)
         {
-            RayTestResults aabb_result;
+            RayTestResults aabbResult;
 
-            if (use_bvh)
+            if (useBvh)
             {
-                if (m_entity_manager && entry.value.IsValid())
+                if (m_entityManager && entry.value != nullptr)
                 {
-                    if (!m_entity_manager->HasEntity(entry.value.GetID()))
+                    if (!m_entityManager->HasEntity(entry.value))
                     {
                         continue;
                     }
 
                     // If the entity has a BVH associated with it, use that instead of the AABB for more accuracy
-                    if (BVHComponent* bvh_component = m_entity_manager->TryGetComponent<BVHComponent>(entry.value.GetID()))
+                    if (MeshComponent* meshComponent = m_entityManager->TryGetComponent<MeshComponent>(entry.value);
+                        meshComponent && meshComponent->mesh && meshComponent->mesh->GetBVH().IsValid())
                     {
-                        Matrix4 model_matrix = Matrix4::Identity();
-                        Matrix4 normal_matrix = Matrix4::Identity();
+                        Matrix4 modelMatrix = Matrix4::Identity();
+                        Matrix4 normalMatrix = Matrix4::Identity();
 
-                        Ray local_space_ray = ray;
+                        Ray localSpaceRay = ray;
 
-                        if (TransformComponent* transform_component = m_entity_manager->TryGetComponent<TransformComponent>(entry.value.GetID()))
+                        if (TransformComponent* transformComponent = m_entityManager->TryGetComponent<TransformComponent>(entry.value))
                         {
-                            model_matrix = transform_component->transform.GetMatrix();
-                            normal_matrix = model_matrix.Transposed().Inverted();
+                            modelMatrix = transformComponent->transform.GetMatrix();
+                            normalMatrix = modelMatrix.Transposed().Inverted();
 
-                            local_space_ray = model_matrix.Inverted() * ray;
+                            localSpaceRay = modelMatrix.Inverted() * ray;
                         }
 
-                        RayTestResults local_bvh_results = bvh_component->bvh.TestRay(local_space_ray);
+                        RayTestResults localBvhResults = meshComponent->mesh->GetBVH().TestRay(localSpaceRay);
 
-                        if (local_bvh_results.Any())
+                        if (localBvhResults.Any())
                         {
-                            RayTestResults bvh_results;
+                            RayTestResults bvhResults;
 
-                            for (RayHit hit : local_bvh_results)
+                            for (RayHit hit : localBvhResults)
                             {
-                                hit.id = entry.value.GetID().Value();
-                                hit.user_data = nullptr;
+                                hit.id = entry.value->Id().Value();
+                                hit.userData = nullptr;
 
-                                Vec4f transformed_normal = normal_matrix * Vec4f(hit.normal, 0.0f);
-                                hit.normal = transformed_normal.GetXYZ().Normalized();
+                                Vec4f transformedNormal = normalMatrix * Vec4f(hit.normal, 0.0f);
+                                hit.normal = transformedNormal.GetXYZ().Normalized();
 
-                                Vec4f transformed_position = model_matrix * Vec4f(hit.hitpoint, 1.0f);
-                                transformed_position /= transformed_position.w;
+                                Vec4f transformedPosition = modelMatrix * Vec4f(hit.hitpoint, 1.0f);
+                                transformedPosition /= transformedPosition.w;
 
-                                hit.hitpoint = transformed_position.GetXYZ();
+                                hit.hitpoint = transformedPosition.GetXYZ();
 
                                 hit.distance = (hit.hitpoint - ray.position).Length();
 
-                                bvh_results.AddHit(hit);
+                                bvhResults.AddHit(hit);
                             }
 
-                            out_results.Merge(std::move(bvh_results));
+                            outResults.Merge(std::move(bvhResults));
 
-                            has_hit = true;
+                            hasHit = true;
                         }
 
                         continue;
                     }
                     else
                     {
-                        NodeLinkComponent* node_link_component = m_entity_manager->TryGetComponent<NodeLinkComponent>(entry.value.GetID());
-                        Handle<Node> node = node_link_component ? node_link_component->node.Lock() : nullptr;
+                        NodeLinkComponent* nodeLinkComponent = m_entityManager->TryGetComponent<NodeLinkComponent>(entry.value);
+                        Handle<Node> node = nodeLinkComponent ? nodeLinkComponent->node.Lock() : nullptr;
 
-                        HYP_LOG(Octree, Warning, "Entity #{} (node: {}) does not have a BVH component, using AABB instead", entry.value.GetID().Value(), node ? node->GetName() : NAME("<null>"));
+                        HYP_LOG(Octree, Warning, "Entity #{} (node: {}) does not have a BVH component, using AABB instead", entry.value->Id(), node ? node->GetName() : NAME("<null>"));
                     }
                 }
             }
 
-            if (ray.TestAABB(entry.aabb, entry.value.GetID().Value(), nullptr, aabb_result))
+            if (ray.TestAABB(entry.aabb, entry.value->Id().Value(), nullptr, aabbResult))
             {
-                out_results.Merge(std::move(aabb_result));
+                outResults.Merge(std::move(aabbResult));
 
-                has_hit = true;
+                hasHit = true;
             }
         }
 
-        if (m_is_divided)
+        if (m_isDivided)
         {
             for (const Octant& octant : m_octants)
             {
                 AssertThrow(octant.octree != nullptr);
 
-                if (static_cast<Octree*>(octant.octree.Get())->TestRay(ray, out_results))
+                if (static_cast<Octree*>(octant.octree.Get())->TestRay(ray, outResults))
                 {
-                    has_hit = true;
+                    hasHit = true;
                 }
             }
         }
     }
 
-    return has_hit;
+    return hasHit;
 }
 
 } // namespace hyperion

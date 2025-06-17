@@ -8,8 +8,6 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 class ComputePipelineBase : public RenderObject<ComputePipelineBase>
 {
 public:
@@ -17,12 +15,12 @@ public:
 
     HYP_FORCE_INLINE const DescriptorTableRef& GetDescriptorTable() const
     {
-        return m_descriptor_table;
+        return m_descriptorTable;
     }
 
-    HYP_FORCE_INLINE void SetDescriptorTable(const DescriptorTableRef& descriptor_table)
+    HYP_FORCE_INLINE void SetDescriptorTable(const DescriptorTableRef& descriptorTable)
     {
-        m_descriptor_table = descriptor_table;
+        m_descriptorTable = descriptorTable;
     }
 
     HYP_FORCE_INLINE const ShaderRef& GetShader() const
@@ -38,12 +36,12 @@ public:
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual void Bind(CommandBufferBase* command_buffer) = 0;
+    HYP_API virtual void Bind(CommandBufferBase* commandBuffer) = 0;
 
-    HYP_API virtual void Dispatch(CommandBufferBase* command_buffer, const Vec3u& group_size) const = 0;
+    HYP_API virtual void Dispatch(CommandBufferBase* commandBuffer, const Vec3u& groupSize) const = 0;
     HYP_API virtual void DispatchIndirect(
-        CommandBufferBase* command_buffer,
-        const GPUBufferRef& indirect_buffer,
+        CommandBufferBase* commandBuffer,
+        const GpuBufferRef& indirectBuffer,
         SizeType offset = 0) const = 0;
 
     // Deprecated - will be removed to decouple from vulkan
@@ -52,17 +50,16 @@ public:
 protected:
     ComputePipelineBase() = default;
 
-    ComputePipelineBase(const ShaderRef& shader, const DescriptorTableRef& descriptor_table)
+    ComputePipelineBase(const ShaderRef& shader, const DescriptorTableRef& descriptorTable)
         : m_shader(shader),
-          m_descriptor_table(descriptor_table)
+          m_descriptorTable(descriptorTable)
     {
     }
 
     ShaderRef m_shader;
-    DescriptorTableRef m_descriptor_table;
+    DescriptorTableRef m_descriptorTable;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

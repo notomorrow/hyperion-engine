@@ -24,14 +24,14 @@ public:
     HyperionEditor& operator=(HyperionEditor&& other) noexcept = delete;
     virtual ~HyperionEditor() override;
 
-    virtual void Logic(GameCounter::TickUnit delta) override;
+    virtual void Logic(float delta) override;
     virtual void OnInputEvent(const SystemEvent& event) override;
 
 protected:
     virtual void Init() override;
 
     HyperionEditorImpl* m_impl;
-    Handle<EditorSubsystem> m_editor_subsystem;
+    Handle<EditorSubsystem> m_editorSubsystem;
 };
 } // namespace editor
 

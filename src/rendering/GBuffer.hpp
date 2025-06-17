@@ -22,51 +22,42 @@ namespace hyperion {
 
 class Engine;
 
-using renderer::DefaultImageFormatType;
+using GBufferFormat = Variant<DefaultImageFormat, TextureFormat, Array<TextureFormat>>;
 
-using GBufferFormat = Variant<DefaultImageFormatType, InternalFormat, Array<InternalFormat>>;
-
-enum GBufferResourceName : uint32
+enum GBufferTargetName : uint32
 {
-    GBUFFER_RESOURCE_ALBEDO = 0,
-    GBUFFER_RESOURCE_NORMALS = 1,
-    GBUFFER_RESOURCE_MATERIAL = 2,
-    GBUFFER_RESOURCE_TANGENTS = 3,
-    GBUFFER_RESOURCE_VELOCITY = 4,
-    GBUFFER_RESOURCE_MASK = 5,
-    GBUFFER_RESOURCE_WS_NORMALS = 6,
-    GBUFFER_RESOURCE_DEPTH = 7,
+    GTN_ALBEDO = 0,
+    GTN_NORMALS,
+    GTN_MATERIAL,
+    GTN_TANGENTS,
+    GTN_VELOCITY,
+    GTN_MASK,
+    GTN_WS_NORMALS,
+    GTN_DEPTH,
 
-    GBUFFER_RESOURCE_MAX
+    GTN_MAX
 };
 
-static_assert(uint32(GBufferResourceName::GBUFFER_RESOURCE_MAX) == num_gbuffer_textures, "GBufferResourceName enum does not match num_gbuffer_textures");
-
-struct GBufferResource
-{
-    GBufferFormat format;
-};
+static_assert(GTN_MAX == numGbufferTargets, "GTN_MAX does not match numGbufferTargets");
 
 class GBuffer
 {
 public:
-    static const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> gbuffer_resources;
-
-    class GBufferBucket
+    class GBufferTarget
     {
         friend class GBuffer;
 
         GBuffer* m_gbuffer;
-        Bucket m_bucket;
+        RenderBucket m_bucket;
         FramebufferRef m_framebuffer;
 
     public:
-        GBufferBucket();
-        GBufferBucket(const GBufferBucket& other) = delete;
-        GBufferBucket& operator=(const GBufferBucket& other) = delete;
-        GBufferBucket(GBufferBucket&& other) noexcept = delete;
-        GBufferBucket& operator=(GBufferBucket&& other) noexcept = delete;
-        ~GBufferBucket();
+        GBufferTarget();
+        GBufferTarget(const GBufferTarget& other) = delete;
+        GBufferTarget& operator=(const GBufferTarget& other) = delete;
+        GBufferTarget(GBufferTarget&& other) noexcept = delete;
+        GBufferTarget& operator=(GBufferTarget&& other) noexcept = delete;
+        ~GBufferTarget();
 
         HYP_FORCE_INLINE GBuffer* GetGBuffer() const
         {
@@ -78,14 +69,14 @@ public:
             m_gbuffer = gbuffer;
         }
 
-        HYP_FORCE_INLINE Bucket GetBucket() const
+        HYP_FORCE_INLINE RenderBucket GetBucket() const
         {
             return m_bucket;
         }
 
-        HYP_FORCE_INLINE void SetBucket(Bucket bucket)
+        HYP_FORCE_INLINE void SetBucket(RenderBucket rb)
         {
-            m_bucket = bucket;
+            m_bucket = rb;
         }
 
         HYP_FORCE_INLINE const FramebufferRef& GetFramebuffer() const
@@ -98,7 +89,7 @@ public:
             m_framebuffer = framebuffer;
         }
 
-        AttachmentBase* GetGBufferAttachment(GBufferResourceName resource_name) const;
+        AttachmentBase* GetGBufferAttachment(GBufferTargetName resourceName) const;
     };
 
     GBuffer(Vec2u extent);
@@ -106,16 +97,25 @@ public:
     GBuffer& operator=(const GBuffer& other) = delete;
     GBuffer(GBuffer&& other) noexcept = delete;
     GBuffer& operator=(GBuffer&& other) noexcept = delete;
-    ~GBuffer() = default;
+    ~GBuffer();
 
-    HYP_FORCE_INLINE GBufferBucket& GetBucket(Bucket bucket)
+    HYP_FORCE_INLINE GBufferTarget& GetBucket(RenderBucket rb)
     {
-        return m_buckets[int(bucket) - 1];
+        AssertDebug(rb > RenderBucket::RB_NONE && rb < RenderBucket::RB_MAX);
+
+        return m_buckets[int(rb) - 1];
     }
 
-    HYP_FORCE_INLINE const GBufferBucket& GetBucket(Bucket bucket) const
+    HYP_FORCE_INLINE const GBufferTarget& GetBucket(RenderBucket rb) const
     {
-        return m_buckets[int(bucket) - 1];
+        AssertDebug(rb > RenderBucket::RB_NONE && rb < RenderBucket::RB_MAX);
+
+        return m_buckets[int(rb) - 1];
+    }
+
+    HYP_FORCE_INLINE const Array<FramebufferRef>& GetFramebuffers() const
+    {
+        return m_framebuffers;
     }
 
     HYP_FORCE_INLINE const Vec2u& GetExtent() const
@@ -124,16 +124,16 @@ public:
     }
 
     void Create();
-    void Destroy();
 
     void Resize(Vec2u resolution);
 
     Delegate<void, Vec2u> OnGBufferResolutionChanged;
 
 private:
-    FramebufferRef CreateFramebuffer(const FramebufferRef& opaque_framebuffer, Vec2u resolution, Bucket bucket);
+    void CreateBucketFramebuffers();
+    FramebufferRef CreateFramebuffer(const FramebufferRef& opaqueFramebuffer, Vec2u resolution, RenderBucket rb);
 
-    FixedArray<GBufferBucket, uint32(Bucket::BUCKET_MAX) - 1> m_buckets;
+    FixedArray<GBufferTarget, uint32(RB_MAX) - 1> m_buckets;
     Array<FramebufferRef> m_framebuffers;
 
     Vec2u m_extent;

@@ -10,7 +10,7 @@
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/UniqueID.hpp>
 #include <core/utilities/EnumFlags.hpp>
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 
 #include <HashCode.hpp>
 #include <Types.hpp>
@@ -21,7 +21,7 @@ namespace hyperion {
 
 class HypClass;
 
-extern HYP_API const HypClass* GetClass(TypeID);
+extern HYP_API const HypClass* GetClass(TypeId);
 
 enum class FBOMTypeFlags : uint8
 {
@@ -42,15 +42,15 @@ class HYP_API FBOMType : public FBOMSerializableBase
 public:
     ANSIString name;
     SizeType size;
-    TypeID type_id;
+    TypeId typeId;
     EnumFlags<FBOMTypeFlags> flags;
     FBOMType* extends;
 
     FBOMType();
-    FBOMType(const ANSIStringView& name, SizeType size, TypeID type_id);
-    FBOMType(const ANSIStringView& name, SizeType size, TypeID type_id, const FBOMType& extends);
-    FBOMType(const ANSIStringView& name, SizeType size, TypeID type_id, EnumFlags<FBOMTypeFlags> flags);
-    FBOMType(const ANSIStringView& name, SizeType size, TypeID type_id, EnumFlags<FBOMTypeFlags> flags, const FBOMType& extends);
+    FBOMType(const ANSIStringView& name, SizeType size, TypeId typeId);
+    FBOMType(const ANSIStringView& name, SizeType size, TypeId typeId, const FBOMType& extends);
+    FBOMType(const ANSIStringView& name, SizeType size, TypeId typeId, EnumFlags<FBOMTypeFlags> flags);
+    FBOMType(const ANSIStringView& name, SizeType size, TypeId typeId, EnumFlags<FBOMTypeFlags> flags, const FBOMType& extends);
     FBOMType(const FBOMType& other);
     FBOMType& operator=(const FBOMType& other);
     FBOMType(FBOMType&& other) noexcept;
@@ -59,12 +59,12 @@ public:
 
     FBOMType Extend(const FBOMType& object) const;
 
-    bool HasAnyFlagsSet(EnumFlags<FBOMTypeFlags> flags, bool include_parents = true) const;
+    bool HasAnyFlagsSet(EnumFlags<FBOMTypeFlags> flags, bool includeParents = true) const;
 
-    bool Is(const FBOMType& other, bool allow_unbounded = true, bool allow_void_type_id = true) const;
-    bool IsOrExtends(const ANSIStringView& name, bool allow_unbounded = true, bool allow_void_type_id = true) const;
-    bool IsOrExtends(const FBOMType& other, bool allow_unbounded = true, bool allow_void_type_id = true) const;
-    bool Extends(const FBOMType& other, bool allow_unbounded = true, bool allow_void_type_id = true) const;
+    bool IsType(const FBOMType& other, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
+    bool IsOrExtends(const ANSIStringView& name, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
+    bool IsOrExtends(const FBOMType& other, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
+    bool Extends(const FBOMType& other, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
 
     HYP_FORCE_INLINE bool IsUnbounded() const
     {
@@ -95,7 +95,7 @@ public:
     {
         return name == other.name
             && size == other.size
-            && type_id == other.type_id
+            && typeId == other.typeId
             && flags == other.flags
             && extends == other.extends;
     }
@@ -104,35 +104,35 @@ public:
     {
         return name != other.name
             || size != other.size
-            || type_id != other.type_id
+            || typeId != other.typeId
             || flags != other.flags
             || extends != other.extends;
     }
 
-    /*! \brief Get the C++ TypeID of this type object.
-     *  \note Not all types will give a valid TypeID, which is OK - not all types correspond
+    /*! \brief Get the C++ TypeId of this type object.
+     *  \note Not all types will give a valid TypeId, which is OK - not all types correspond
      *  directly to a C++ type. */
-    HYP_FORCE_INLINE TypeID GetNativeTypeID() const
+    HYP_FORCE_INLINE TypeId GetNativeTypeId() const
     {
-        return type_id;
+        return typeId;
     }
 
-    HYP_FORCE_INLINE bool HasNativeTypeID() const
+    HYP_FORCE_INLINE bool HasNativeTypeId() const
     {
-        return type_id != TypeID::Void();
+        return typeId != TypeId::Void();
     }
 
-    /*! \brief Gets a pointer to the HypClass that corresponds to the native TypeID for this type.
-     *  If there is no valid TypeID for this object, or the native type corresponding to the native TypeID for this object
+    /*! \brief Gets a pointer to the HypClass that corresponds to the native TypeId for this type.
+     *  If there is no valid TypeId for this object, or the native type corresponding to the native TypeId for this object
      *  does not have a corresponding HypClass, nullptr will be returned. */
     HYP_FORCE_INLINE const HypClass* GetHypClass() const
     {
-        if (!type_id)
+        if (!typeId)
         {
             return nullptr;
         }
 
-        return GetClass(type_id);
+        return GetClass(typeId);
     }
 
     FBOMResult Visit(FBOMWriter* writer, ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE) const
@@ -155,7 +155,7 @@ public:
 
         hc.Add(name);
         hc.Add(size);
-        hc.Add(type_id);
+        hc.Add(typeId);
 
         if (extends != nullptr)
         {

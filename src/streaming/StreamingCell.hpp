@@ -67,14 +67,14 @@ struct StreamingCellInfo
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(coord);
-        hash_code.Add(extent);
-        hash_code.Add(scale);
-        hash_code.Add(bounds);
+        hashCode.Add(coord);
+        hashCode.Add(extent);
+        hashCode.Add(scale);
+        hashCode.Add(bounds);
 
-        return hash_code;
+        return hashCode;
     }
 };
 
@@ -85,13 +85,13 @@ class HYP_API StreamingCell : public StreamableBase
 
 public:
     StreamingCell() = default;
-    StreamingCell(const StreamingCellInfo& cell_info);
+    StreamingCell(const StreamingCellInfo& cellInfo);
     virtual ~StreamingCell() override;
 
     HYP_METHOD()
     HYP_FORCE_INLINE const StreamingCellInfo& GetPatchInfo() const
     {
-        return m_cell_info;
+        return m_cellInfo;
     }
 
     HYP_METHOD(Scriptable)
@@ -101,7 +101,7 @@ protected:
     HYP_METHOD()
     virtual BoundingBox GetBoundingBox_Impl() const override
     {
-        return m_cell_info.bounds;
+        return m_cellInfo.bounds;
     }
 
     HYP_METHOD()
@@ -109,7 +109,7 @@ protected:
     {
     }
 
-    StreamingCellInfo m_cell_info;
+    StreamingCellInfo m_cellInfo;
 };
 
 } // namespace hyperion

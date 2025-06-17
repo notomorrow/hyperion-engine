@@ -6,6 +6,7 @@
 #include <core/serialization/fbom/marshals/HypClassInstanceMarshal.hpp>
 
 #include <core/object/HypData.hpp>
+#include <core/object/HypClass.hpp>
 
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
@@ -23,11 +24,11 @@ public:
 
     virtual FBOMResult Serialize(ConstAnyRef in, FBOMObject& out) const override
     {
-        const Node& in_object = in.Get<Node>();
+        const Node& inObject = in.Get<Node>();
 
-        HYP_LOG(Serialization, Debug, "Serializing Node with name '{}'...", in_object.GetName());
+        HYP_LOG(Serialization, Debug, "Serializing Node with name '{}'...", inObject.GetName());
 
-        if (in_object.GetFlags() & NodeFlags::TRANSIENT)
+        if (inObject.GetFlags() & NodeFlags::TRANSIENT)
         {
             return { FBOMResult::FBOM_ERR, "Cannot serialize Node: TRANSIENT flag is set" };
         }
@@ -37,20 +38,20 @@ public:
             return err;
         }
 
-        out.SetProperty("Type", uint32(in_object.GetType()));
+        out.SetProperty("Type", uint32(inObject.GetType()));
 
         {
-            FBOMData tags_data;
+            FBOMData tagsData;
 
-            if (FBOMResult err = HypData::Serialize(in_object.GetTags(), tags_data))
+            if (FBOMResult err = HypData::Serialize(inObject.GetTags(), tagsData))
             {
                 return err;
             }
 
-            out.SetProperty("Tags", std::move(tags_data));
+            out.SetProperty("Tags", std::move(tagsData));
         }
 
-        for (const Handle<Node>& child : in_object.GetChildren())
+        for (const Handle<Node>& child : inObject.GetChildren())
         {
             if (!child.IsValid() || (child->GetFlags() & NodeFlags::TRANSIENT))
             {
@@ -63,16 +64,16 @@ public:
             }
         }
 
-        HYP_LOG(Serialization, Debug, "Serialization completed for Node with name '{}'", in_object.GetName());
+        HYP_LOG(Serialization, Debug, "Serialization completed for Node with name '{}'", inObject.GetName());
 
         return { FBOMResult::FBOM_OK };
     }
 
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
-        Node::Type node_type = Node::Type::NODE;
+        Node::Type nodeType = Node::Type::NODE;
 
-        if (FBOMResult err = in.GetProperty("Type").ReadUInt32(&node_type))
+        if (FBOMResult err = in.GetProperty("Type").ReadUInt32(&nodeType))
         {
             return err;
         }
@@ -86,7 +87,7 @@ public:
 
         Handle<Node> node;
 
-        switch (node_type)
+        switch (nodeType)
         {
         case Node::Type::NODE:
             node = Handle<Node>(CreateObject<Node>());
@@ -98,6 +99,8 @@ public:
         default:
             return { FBOMResult::FBOM_ERR, "Unsupported node type" };
         }
+
+        HYP_LOG(Serialization, Debug, "Deserializing Node of type: {}", node->InstanceClass()->GetName());
 
         if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, node->InstanceClass(), AnyRef(*node)))
         {
@@ -113,7 +116,7 @@ public:
         {
             if (child.GetType().IsOrExtends("Node"))
             {
-                node->AddChild(child.m_deserialized_object->Get<Handle<Node>>());
+                node->AddChild(child.m_deserializedObject->Get<Handle<Node>>());
             }
         }
 

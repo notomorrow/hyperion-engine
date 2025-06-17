@@ -16,7 +16,7 @@
 
 #include <Types.hpp>
 
-namespace hyperion::renderer {
+namespace hyperion {
 
 enum ShaderModuleType : uint32;
 
@@ -27,80 +27,78 @@ public:
 
     HYP_FORCE_INLINE const TextureDesc& GetTextureDesc() const
     {
-        return m_texture_desc;
+        return m_textureDesc;
     }
 
     HYP_FORCE_INLINE ResourceState GetResourceState() const
     {
-        return m_resource_state;
+        return m_resourceState;
     }
 
-    HYP_FORCE_INLINE ImageType GetType() const
+    HYP_FORCE_INLINE TextureType GetType() const
     {
-        return m_texture_desc.type;
+        return m_textureDesc.type;
     }
 
     HYP_FORCE_INLINE uint32 NumLayers() const
     {
-        return m_texture_desc.num_layers;
+        return m_textureDesc.numLayers;
     }
 
     HYP_FORCE_INLINE uint32 NumFaces() const
     {
-        return m_texture_desc.NumFaces();
+        return m_textureDesc.NumFaces();
     }
 
-    HYP_FORCE_INLINE FilterMode GetMinFilterMode() const
+    HYP_FORCE_INLINE TextureFilterMode GetMinFilterMode() const
     {
-        return m_texture_desc.filter_mode_min;
+        return m_textureDesc.filterModeMin;
     }
 
-    HYP_FORCE_INLINE void SetMinFilterMode(FilterMode filter_mode)
+    HYP_FORCE_INLINE void SetMinFilterMode(TextureFilterMode filterMode)
     {
-        m_texture_desc.filter_mode_min = filter_mode;
+        m_textureDesc.filterModeMin = filterMode;
     }
 
-    HYP_FORCE_INLINE FilterMode GetMagFilterMode() const
+    HYP_FORCE_INLINE TextureFilterMode GetMagFilterMode() const
     {
-        return m_texture_desc.filter_mode_mag;
+        return m_textureDesc.filterModeMag;
     }
 
-    HYP_FORCE_INLINE void SetMagFilterMode(FilterMode filter_mode)
+    HYP_FORCE_INLINE void SetMagFilterMode(TextureFilterMode filterMode)
     {
-        m_texture_desc.filter_mode_mag = filter_mode;
+        m_textureDesc.filterModeMag = filterMode;
     }
 
     HYP_FORCE_INLINE const Vec3u& GetExtent() const
     {
-        return m_texture_desc.extent;
+        return m_textureDesc.extent;
     }
 
-    HYP_FORCE_INLINE InternalFormat GetTextureFormat() const
+    HYP_FORCE_INLINE TextureFormat GetTextureFormat() const
     {
-        return m_texture_desc.format;
+        return m_textureDesc.format;
     }
 
-    HYP_FORCE_INLINE void SetTextureFormat(InternalFormat format)
+    HYP_FORCE_INLINE void SetTextureFormat(TextureFormat format)
     {
-        m_texture_desc.format = format;
+        m_textureDesc.format = format;
     }
 
     HYP_FORCE_INLINE bool HasMipmaps() const
     {
-        return m_texture_desc.HasMipmaps();
+        return m_textureDesc.HasMipmaps();
     }
 
     HYP_FORCE_INLINE uint32 NumMipmaps() const
     {
-        return m_texture_desc.NumMipmaps();
+        return m_textureDesc.NumMipmaps();
     }
 
-    /*! \brief Returns the byte-size of the image. Note, it's possible no CPU-side memory exists
-        for the image data even if the result is non-zero. To check if any CPU-side bytes exist,
-        use HasAssignedImageData(). */
+    /*! \brief Returns the byte-size of the image, computed using the TextureDesc */
     HYP_FORCE_INLINE uint32 GetByteSize() const
     {
-        return m_texture_desc.GetByteSize();
+        return m_textureDesc.GetByteSize();
     }
 
     HYP_API virtual bool IsCreated() const = 0;
@@ -109,78 +107,78 @@ public:
     HYP_API virtual bool IsOwned() const = 0;
 
     HYP_API virtual RendererResult Create() = 0;
-    HYP_API virtual RendererResult Create(ResourceState initial_state) = 0;
+    HYP_API virtual RendererResult Create(ResourceState initialState) = 0;
     HYP_API virtual RendererResult Destroy() = 0;
 
     HYP_API virtual RendererResult Resize(const Vec3u& extent) = 0;
 
     HYP_API virtual void InsertBarrier(
-        CommandBufferBase* command_buffer,
-        ResourceState new_state,
-        ShaderModuleType shader_module_type) = 0;
+        CommandBufferBase* commandBuffer,
+        ResourceState newState,
+        ShaderModuleType shaderModuleType) = 0;
 
     HYP_API virtual void InsertBarrier(
-        CommandBufferBase* command_buffer,
-        const ImageSubResource& sub_resource,
-        ResourceState new_state,
-        ShaderModuleType shader_module_type) = 0;
+        CommandBufferBase* commandBuffer,
+        const ImageSubResource& subResource,
+        ResourceState newState,
+        ShaderModuleType shaderModuleType) = 0;
 
     HYP_API virtual RendererResult Blit(
-        CommandBufferBase* command_buffer,
+        CommandBufferBase* commandBuffer,
         const ImageBase* src) = 0;
 
     HYP_API virtual RendererResult Blit(
-        CommandBufferBase* command_buffer,
+        CommandBufferBase* commandBuffer,
         const ImageBase* src,
-        uint32 src_mip,
-        uint32 dst_mip,
-        uint32 src_face,
-        uint32 dst_face) = 0;
+        uint32 srcMip,
+        uint32 dstMip,
+        uint32 srcFace,
+        uint32 dstFace) = 0;
 
     HYP_API virtual RendererResult Blit(
-        CommandBufferBase* command_buffer,
+        CommandBufferBase* commandBuffer,
         const ImageBase* src,
-        Rect<uint32> src_rect,
-        Rect<uint32> dst_rect) = 0;
+        Rect<uint32> srcRect,
+        Rect<uint32> dstRect) = 0;
 
     HYP_API virtual RendererResult Blit(
-        CommandBufferBase* command_buffer,
+        CommandBufferBase* commandBuffer,
         const ImageBase* src,
-        Rect<uint32> src_rect,
-        Rect<uint32> dst_rect,
-        uint32 src_mip,
-        uint32 dst_mip,
-        uint32 src_face,
-        uint32 dst_face) = 0;
+        Rect<uint32> srcRect,
+        Rect<uint32> dstRect,
+        uint32 srcMip,
+        uint32 dstMip,
+        uint32 srcFace,
+        uint32 dstFace) = 0;
 
-    HYP_API virtual RendererResult GenerateMipmaps(CommandBufferBase* command_buffer) = 0;
+    HYP_API virtual RendererResult GenerateMipmaps(CommandBufferBase* commandBuffer) = 0;
 
     HYP_API virtual void CopyFromBuffer(
-        CommandBufferBase* command_buffer,
-        const GPUBufferBase* src_buffer) const = 0;
+        CommandBufferBase* commandBuffer,
+        const GpuBufferBase* srcBuffer) const = 0;
 
     HYP_API virtual void CopyToBuffer(
-        CommandBufferBase* command_buffer,
-        GPUBufferBase* dst_buffer) const = 0;
+        CommandBufferBase* commandBuffer,
+        GpuBufferBase* dstBuffer) const = 0;
 
-    HYP_API virtual ImageViewRef MakeLayerImageView(uint32 layer_index) const = 0;
+    HYP_API virtual ImageViewRef MakeLayerImageView(uint32 layerIndex) const = 0;
 
 protected:
     ImageBase()
-        : m_resource_state(ResourceState::UNDEFINED)
+        : m_resourceState(RS_UNDEFINED)
     {
     }
 
-    ImageBase(const TextureDesc& texture_desc)
-        : m_texture_desc(texture_desc),
-          m_resource_state(ResourceState::UNDEFINED)
+    ImageBase(const TextureDesc& textureDesc)
+        : m_textureDesc(textureDesc),
+          m_resourceState(RS_UNDEFINED)
     {
     }
 
-    TextureDesc m_texture_desc;
-    mutable ResourceState m_resource_state;
+    TextureDesc m_textureDesc;
+    mutable ResourceState m_resourceState;
 };
 
-} // namespace hyperion::renderer
+} // namespace hyperion
 
 #endif

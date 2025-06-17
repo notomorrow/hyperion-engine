@@ -66,7 +66,7 @@ public:
         Array<Vec2f> texcoords;
         Array<OBJMesh> meshes;
         String name;
-        String material_library;
+        String materialLibrary;
     };
 
     virtual ~OBJModelLoader() = default;

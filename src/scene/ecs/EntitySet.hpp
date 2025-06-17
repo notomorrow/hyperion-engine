@@ -17,7 +17,6 @@
 #include <scene/Entity.hpp>
 #include <scene/ecs/EntityContainer.hpp>
 #include <scene/ecs/ComponentContainer.hpp>
-#include <scene/ecs/EntitySetBase.hpp>
 
 #include <Types.hpp>
 
@@ -67,41 +66,72 @@ struct EntitySetIterator
         return !(*this == other);
     }
 
-    Tuple<ID<Entity>, Components&...> operator*()
+    Tuple<Entity*, Components&...> operator*()
     {
         const typename EntitySet<Components...>::Element& element = set.m_elements[index];
 
         return ConcatTuples(
-            MakeTuple(element.first),
-            GetComponents(element.second, std::make_index_sequence<sizeof...(Components)>()));
+            MakeTuple(element.template GetElement<0>()),
+            GetComponents(element.template GetElement<2>(), std::make_index_sequence<sizeof...(Components)>()));
     }
 
-    Tuple<ID<Entity>, const Components&...> operator*() const
+    Tuple<Entity*, const Components&...> operator*() const
     {
         return const_cast<EntitySetIterator*>(this)->operator*();
     }
 
-    Tuple<ID<Entity>, Components&...> operator->()
+    Tuple<Entity*, Components&...> operator->()
     {
         return **this;
     }
 
-    Tuple<ID<Entity>, const Components&...> operator->() const
+    Tuple<Entity*, const Components&...> operator->() const
     {
         return **this;
     }
 
 private:
     template <SizeType... Indices>
-    Tuple<Components&...> GetComponents(const FixedArray<ComponentID, sizeof...(Components)>& component_ids, std::index_sequence<Indices...>)
+    Tuple<Components&...> GetComponents(const FixedArray<ComponentId, sizeof...(Components)>& componentIds, std::index_sequence<Indices...>)
     {
         return Tuple<Components&...>(
-            set.m_component_containers.template GetElement<ComponentContainer<Components>&>().GetComponent(component_ids[Indices])...);
+            set.m_componentContainers.template GetElement<ComponentContainer<Components>&>().GetComponent(componentIds[Indices])...);
     }
 };
 
 template <class... Components>
 struct EntitySetView;
+
+class EntitySetBase
+{
+public:
+    EntitySetBase() = default;
+    EntitySetBase(const EntitySetBase& other) = delete;
+    EntitySetBase& operator=(const EntitySetBase& other) = delete;
+    EntitySetBase(EntitySetBase&& other) noexcept = delete;
+    EntitySetBase& operator=(EntitySetBase&& other) noexcept = delete;
+    virtual ~EntitySetBase() = default;
+
+    virtual SizeType Size() const = 0;
+
+    /*! \brief Checks if an Entity's components are valid for this EntitySet.
+     *
+     *  \param entity The Entity to check.
+     *
+     *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
+     */
+    virtual bool ValidForEntity(Entity* entity) const = 0;
+
+    /*! \brief Removes the given Entity from this EntitySet.
+     *
+     *  \param entity The Entity to remove.
+     */
+    virtual void RemoveEntity(Entity* entity) = 0;
+
+    /*! \brief To be used by the EntityManager
+        \note Do not call this function directly. */
+    virtual void OnEntityUpdated(Entity* entity) = 0;
+};
 
 /*! \brief A set of entities with a specific set of components.
  *
@@ -114,14 +144,14 @@ public:
     friend struct EntitySetIterator<Components...>;
     friend struct EntitySetView<Components...>;
 
-    using Element = Pair<ID<Entity>, FixedArray<ComponentID, sizeof...(Components)>>;
+    using Element = Tuple<Entity*, TypeId, FixedArray<ComponentId, sizeof...(Components)>>;
 
     using Iterator = EntitySetIterator<Components...>;
     using ConstIterator = EntitySetIterator<const Components...>;
 
-    EntitySet(EntityContainer& entities, ComponentContainer<Components>&... component_containers)
+    EntitySet(EntityContainer& entities, ComponentContainer<Components>&... componentContainers)
         : m_entities(entities),
-          m_component_containers(component_containers...)
+          m_componentContainers(componentContainers...)
     {
         for (auto it = m_entities.Begin(); it != m_entities.End(); ++it)
         {
@@ -163,50 +193,51 @@ public:
      *
      *  \param entity The Entity to remove.
      */
-    virtual void RemoveEntity(ID<Entity> entity) override
+    virtual void RemoveEntity(Entity* entity) override
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        const auto entity_element_it = m_elements.FindIf([&entity](const Element& element)
+        const auto entityElementIt = m_elements.FindIf([entity](const Element& element)
             {
-                return element.first == entity;
+                return element.template GetElement<0>() == entity;
             });
 
-        if (entity_element_it != m_elements.End())
+        if (entityElementIt != m_elements.End())
         {
-            m_elements.Erase(entity_element_it);
+            m_elements.Erase(entityElementIt);
         }
     }
 
     /*! \brief To be used by the EntityManager
         \note Do not call this function directly. */
-    virtual void OnEntityUpdated(ID<Entity> entity) override
+    virtual void OnEntityUpdated(Entity* entity) override
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        const auto entity_element_it = m_elements.FindIf([&entity](const Element& element)
+        const auto entityElementIt = m_elements.FindIf([entity](const Element& element)
             {
-                return element.first == entity;
+                return element.template GetElement<0>() == entity;
             });
 
         if (ValidForEntity(entity))
         {
-            if (entity_element_it != m_elements.End())
+            if (entityElementIt != m_elements.End())
             {
                 return;
             }
 
-            m_elements.PushBack({ entity,
-                { m_entities.GetEntityData(entity).template GetComponentID<Components>()... } });
+            EntityData& entityData = m_entities.GetEntityData(entity);
+
+            m_elements.EmplaceBack(entity, entityData.typeId, FixedArray<ComponentId, sizeof...(Components)> { entityData.template GetComponentId<Components>()... });
         }
         else
         {
-            if (entity_element_it == m_elements.End())
+            if (entityElementIt == m_elements.End())
             {
                 return;
             }
 
-            m_elements.Erase(entity_element_it);
+            m_elements.Erase(entityElementIt);
         }
     }
 
@@ -216,32 +247,32 @@ public:
      *
      *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
      */
-    virtual bool ValidForEntity(ID<Entity> entity) const override
+    virtual bool ValidForEntity(Entity* entity) const override
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         return m_entities.GetEntityData(entity).template HasComponents<Components...>();
     }
 
 #ifdef HYP_ENABLE_MT_CHECK
-    /*! \brief Get a scoped view of this EntitySet. The view will have its access determined by \ref{data_access_flags}.
+    /*! \brief Get a scoped view of this EntitySet. The view will have its access determined by \ref{dataAccessFlags}.
      *  \return A scoped view of this EntitySet.
      */
-    HYP_FORCE_INLINE EntitySetView<Components...> GetScopedView(EnumFlags<DataAccessFlags> data_access_flags, ANSIStringView current_function = "", ANSIStringView message = "")
+    HYP_FORCE_INLINE EntitySetView<Components...> GetScopedView(EnumFlags<DataAccessFlags> dataAccessFlags, ANSIStringView currentFunction = "", ANSIStringView message = "")
     {
-        return EntitySetView<Components...>(*this, data_access_flags, current_function, message);
+        return EntitySetView<Components...>(*this, dataAccessFlags, currentFunction, message);
     }
 
-    /*! \brief Get a scoped view of this EntitySet. The view will have its access determined by \ref{component_infos}.
-     *  \param component_infos The ComponentInfo objects to use for the view.
+    /*! \brief Get a scoped view of this EntitySet. The view will have its access determined by \ref{componentInfos}.
+     *  \param componentInfos The ComponentInfo objects to use for the view.
      *  \return A scoped view of this EntitySet.
      */
-    HYP_FORCE_INLINE EntitySetView<Components...> GetScopedView(const Array<ComponentInfo>& component_infos, ANSIStringView current_function = "", ANSIStringView message = "")
+    HYP_FORCE_INLINE EntitySetView<Components...> GetScopedView(const Array<ComponentInfo>& componentInfos, ANSIStringView currentFunction = "", ANSIStringView message = "")
     {
-        return EntitySetView<Components...>(*this, component_infos);
+        return EntitySetView<Components...>(*this, componentInfos);
     }
 #else
-    /*! \brief Get a scoped view of this EntitySet. The view will have its access determined by \ref{data_access_flags}.
+    /*! \brief Get a scoped view of this EntitySet. The view will have its access determined by \ref{dataAccessFlags}.
      *  \return A scoped view of this EntitySet.
      */
     template <class... Args>
@@ -260,9 +291,9 @@ private:
     Array<Element> m_elements;
 
     EntityContainer& m_entities;
-    Tuple<ComponentContainer<Components>&...> m_component_containers;
+    Tuple<ComponentContainer<Components>&...> m_componentContainers;
 
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };
 
 template <class... Components>
@@ -271,67 +302,67 @@ struct EntitySetView
     using Iterator = EntitySetIterator<Components...>;
     using ConstIterator = EntitySetIterator<const Components...>;
 
-    EntitySet<Components...>& entity_set;
+    EntitySet<Components...>& entitySet;
 
 #ifdef HYP_ENABLE_MT_CHECK
-    FixedArray<DataRaceDetector*, sizeof...(Components)> m_component_data_race_detectors;
-    ValueStorageArray<DataRaceDetector::DataAccessScope, sizeof...(Components)> m_component_data_access_scopes;
+    FixedArray<DataRaceDetector*, sizeof...(Components)> m_componentDataRaceDetectors;
+    ValueStorageArray<DataRaceDetector::DataAccessScope, sizeof...(Components)> m_componentDataAccessScopes;
 #endif
 
 #ifdef HYP_ENABLE_MT_CHECK
-    EntitySetView(EntitySet<Components...>& entity_set, EnumFlags<DataAccessFlags> data_access_flags, ANSIStringView current_function = "", ANSIStringView message = "")
-        : entity_set(entity_set),
-          m_component_data_race_detectors { &entity_set.m_component_containers.template GetElement<ComponentContainer<Components>&>().GetDataRaceDetector()... }
+    EntitySetView(EntitySet<Components...>& entitySet, EnumFlags<DataAccessFlags> dataAccessFlags, ANSIStringView currentFunction = "", ANSIStringView message = "")
+        : entitySet(entitySet),
+          m_componentDataRaceDetectors { &entitySet.m_componentContainers.template GetElement<ComponentContainer<Components>&>().GetDataRaceDetector()... }
     {
         if constexpr (sizeof...(Components) != 0)
         {
-            static const FixedArray<ANSIString, sizeof...(Components)> component_names = { TypeNameWithoutNamespace<Components>().Data()... };
+            static const FixedArray<ANSIString, sizeof...(Components)> componentNames = { TypeNameWithoutNamespace<Components>().Data()... };
 
-            for (SizeType i = 0; i < m_component_data_race_detectors.Size(); i++)
+            for (SizeType i = 0; i < m_componentDataRaceDetectors.Size(); i++)
             {
-                m_component_data_access_scopes.ConstructElement(i, data_access_flags, *m_component_data_race_detectors[i], DataRaceDetector::DataAccessState { current_function, message.Length() != 0 ? message : ANSIStringView(component_names[i]) });
+                m_componentDataAccessScopes.ConstructElement(i, dataAccessFlags, *m_componentDataRaceDetectors[i], DataRaceDetector::DataAccessState { currentFunction, message.Length() != 0 ? message : ANSIStringView(componentNames[i]) });
             }
         }
     }
 
-    EntitySetView(EntitySet<Components...>& entity_set, const Array<ComponentInfo>& component_infos, ANSIStringView current_function = "", ANSIStringView message = "")
-        : entity_set(entity_set),
-          m_component_data_race_detectors { &entity_set.m_component_containers.template GetElement<ComponentContainer<Components>&>().GetDataRaceDetector()... }
+    EntitySetView(EntitySet<Components...>& entitySet, const Array<ComponentInfo>& componentInfos, ANSIStringView currentFunction = "", ANSIStringView message = "")
+        : entitySet(entitySet),
+          m_componentDataRaceDetectors { &entitySet.m_componentContainers.template GetElement<ComponentContainer<Components>&>().GetDataRaceDetector()... }
     {
 
         if constexpr (sizeof...(Components) != 0)
         {
-            static const FixedArray<TypeID, sizeof...(Components)> component_type_ids = { TypeID::ForType<Components>()... };
-            static const FixedArray<ANSIString, sizeof...(Components)> component_names = { TypeNameWithoutNamespace<Components>().Data()... };
+            static const FixedArray<TypeId, sizeof...(Components)> componentTypeIds = { TypeId::ForType<Components>()... };
+            static const FixedArray<ANSIString, sizeof...(Components)> componentNames = { TypeNameWithoutNamespace<Components>().Data()... };
 
-            for (SizeType i = 0; i < m_component_data_race_detectors.Size(); i++)
+            for (SizeType i = 0; i < m_componentDataRaceDetectors.Size(); i++)
             {
-                auto component_infos_it = component_infos.FindIf([type_id = component_type_ids[i]](const ComponentInfo& info)
+                auto componentInfosIt = componentInfos.FindIf([typeId = componentTypeIds[i]](const ComponentInfo& info)
                     {
-                        return info.type_id == type_id;
+                        return info.typeId == typeId;
                     });
 
-                AssertThrowMsg(component_infos_it != component_infos.End(), "Component info not found for component with TypeID %u (%s)", component_type_ids[i].Value(), component_names[i].Data());
+                AssertThrowMsg(componentInfosIt != componentInfos.End(), "Component info not found for component with TypeId %u (%s)", componentTypeIds[i].Value(), componentNames[i].Data());
 
-                EnumFlags<DataAccessFlags> access_flags = DataAccessFlags::ACCESS_NONE;
+                EnumFlags<DataAccessFlags> accessFlags = DataAccessFlags::ACCESS_NONE;
 
-                if (component_infos_it->rw_flags & COMPONENT_RW_FLAGS_READ)
+                if (componentInfosIt->rwFlags & COMPONENT_RW_FLAGS_READ)
                 {
-                    access_flags |= DataAccessFlags::ACCESS_READ;
+                    accessFlags |= DataAccessFlags::ACCESS_READ;
                 }
 
-                if (component_infos_it->rw_flags & COMPONENT_RW_FLAGS_WRITE)
+                if (componentInfosIt->rwFlags & COMPONENT_RW_FLAGS_WRITE)
                 {
-                    access_flags |= DataAccessFlags::ACCESS_WRITE;
+                    accessFlags |= DataAccessFlags::ACCESS_WRITE;
                 }
 
-                m_component_data_access_scopes.ConstructElement(i, access_flags, *m_component_data_race_detectors[i], DataRaceDetector::DataAccessState { current_function, message.Length() != 0 ? message : ANSIStringView(component_names[i]) });
+                m_componentDataAccessScopes.ConstructElement(i, accessFlags, *m_componentDataRaceDetectors[i], DataRaceDetector::DataAccessState { currentFunction, message.Length() != 0 ? message : ANSIStringView(componentNames[i]) });
             }
         }
     }
 #else
-    EntitySetView(EntitySet<Components...>& entity_set, ...)
-        : entity_set(entity_set)
+    EntitySetView(EntitySet<Components...>& entitySet, ...)
+        : entitySet(entitySet)
     {
     }
 #endif
@@ -346,15 +377,15 @@ struct EntitySetView
 #ifdef HYP_ENABLE_MT_CHECK
         if constexpr (sizeof...(Components) != 0)
         {
-            for (SizeType i = 0; i < m_component_data_access_scopes.Size(); i++)
+            for (SizeType i = 0; i < m_componentDataAccessScopes.Size(); i++)
             {
-                m_component_data_access_scopes.DestructElement(i);
+                m_componentDataAccessScopes.DestructElement(i);
             }
         }
 #endif
     }
 
-    HYP_DEF_STL_BEGIN_END(entity_set.Begin(), entity_set.End())
+    HYP_DEF_STL_BEGIN_END(entitySet.Begin(), entitySet.End())
 };
 
 } // namespace hyperion

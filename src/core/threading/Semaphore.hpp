@@ -48,8 +48,8 @@ struct AtomicSemaphoreImpl
 
     mutable AtomicVar<CounterType> value;
 
-    AtomicSemaphoreImpl(CounterType initial_value)
-        : value(initial_value)
+    AtomicSemaphoreImpl(CounterType initialValue)
+        : value(initialValue)
     {
     }
 
@@ -93,11 +93,11 @@ struct AtomicSemaphoreImpl
         // When the callback has been called, we can revert back to the previous state
         while (true)
         {
-            CounterType current_value = value.Get(MemoryOrder::ACQUIRE);
+            CounterType currentValue = value.Get(MemoryOrder::ACQUIRE);
 
-            if (ShouldSignal<CounterType, Direction>(current_value))
+            if (ShouldSignal<CounterType, Direction>(currentValue))
             {
-                if (value.CompareExchangeWeak(current_value, current_value + (Direction == SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE ? 1 : -1), MemoryOrder::ACQUIRE_RELEASE))
+                if (value.CompareExchangeWeak(currentValue, currentValue + (Direction == SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE ? 1 : -1), MemoryOrder::ACQUIRE_RELEASE))
                 {
                     if (callback.IsValid())
                     {
@@ -113,82 +113,82 @@ struct AtomicSemaphoreImpl
         }
     }
 
-    CounterType Release(CounterType delta = 1, ProcRef<void(bool)> if_signal_state_changed_proc = ProcRef<void(bool)>(nullptr))
+    CounterType Release(CounterType delta = 1, ProcRef<void(bool)> ifSignalStateChangedProc = ProcRef<void(bool)>(nullptr))
     {
-        CounterType previous_value = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE);
-        CounterType current_value = previous_value - delta;
+        CounterType previousValue = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE);
+        CounterType currentValue = previousValue - delta;
 
-        if (if_signal_state_changed_proc.IsValid())
+        if (ifSignalStateChangedProc.IsValid())
         {
-            const bool should_signal_before = ShouldSignal<CounterType, Direction>(previous_value);
-            const bool should_signal_after = ShouldSignal<CounterType, Direction>(current_value);
+            const bool shouldSignalBefore = ShouldSignal<CounterType, Direction>(previousValue);
+            const bool shouldSignalAfter = ShouldSignal<CounterType, Direction>(currentValue);
 
-            if (should_signal_before != should_signal_after)
+            if (shouldSignalBefore != shouldSignalAfter)
             {
-                if_signal_state_changed_proc(should_signal_after);
+                ifSignalStateChangedProc(shouldSignalAfter);
             }
         }
 
-        return current_value;
+        return currentValue;
     }
 
-    CounterType Release(CounterType delta = 1, ProcRef<void()> if_signalled_proc = ProcRef<void()>(nullptr))
+    CounterType Release(CounterType delta = 1, ProcRef<void()> ifSignalledProc = ProcRef<void()>(nullptr))
     {
-        CounterType previous_value = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE);
-        CounterType current_value = previous_value - delta;
+        CounterType previousValue = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE);
+        CounterType currentValue = previousValue - delta;
 
-        if (if_signalled_proc.IsValid() && ShouldSignal<CounterType, Direction>(current_value))
+        if (ifSignalledProc.IsValid() && ShouldSignal<CounterType, Direction>(currentValue))
         {
-            if_signalled_proc();
+            ifSignalledProc();
         }
 
-        return current_value;
+        return currentValue;
     }
 
-    CounterType Produce(CounterType delta = 1, ProcRef<void(bool)> if_signal_state_changed_proc = ProcRef<void(bool)>(nullptr))
+    CounterType Produce(CounterType delta = 1, ProcRef<void(bool)> ifSignalStateChangedProc = ProcRef<void(bool)>(nullptr))
     {
-        CounterType previous_value = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE);
-        CounterType current_value = previous_value + delta;
+        CounterType previousValue = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE);
+        CounterType currentValue = previousValue + delta;
 
-        if (if_signal_state_changed_proc.IsValid())
+        if (ifSignalStateChangedProc.IsValid())
         {
-            const bool should_signal_before = ShouldSignal<CounterType, Direction>(previous_value);
-            const bool should_signal_after = ShouldSignal<CounterType, Direction>(current_value);
+            const bool shouldSignalBefore = ShouldSignal<CounterType, Direction>(previousValue);
+            const bool shouldSignalAfter = ShouldSignal<CounterType, Direction>(currentValue);
 
-            if (should_signal_before != should_signal_after)
+            if (shouldSignalBefore != shouldSignalAfter)
             {
-                if_signal_state_changed_proc(should_signal_after);
+                ifSignalStateChangedProc(shouldSignalAfter);
             }
         }
 
-        return current_value;
+        return currentValue;
     }
 
-    CounterType Produce(CounterType delta = 1, ProcRef<void()> if_signalled_proc = ProcRef<void()>(nullptr))
+    CounterType Produce(CounterType delta = 1, ProcRef<void()> ifSignalledProc = ProcRef<void()>(nullptr))
     {
-        CounterType previous_value = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE);
-        CounterType current_value = previous_value + delta;
+        CounterType previousValue = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE);
+        CounterType currentValue = previousValue + delta;
 
-        if (if_signalled_proc.IsValid() && ShouldSignal<CounterType, Direction>(current_value))
+        if (ifSignalledProc.IsValid() && ShouldSignal<CounterType, Direction>(currentValue))
         {
-            if_signalled_proc();
+            ifSignalledProc();
         }
 
-        return current_value;
+        return currentValue;
     }
 
-    void WaitForValue(T target_value) const
+    void WaitForValue(T targetValue) const
     {
         if constexpr (Direction == SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE)
         {
-            while (value.Get(MemoryOrder::ACQUIRE) >= target_value)
+            while (value.Get(MemoryOrder::ACQUIRE) >= targetValue)
             {
                 HYP_WAIT_IDLE();
             }
         }
         else if constexpr (Direction == SemaphoreDirection::WAIT_FOR_POSITIVE)
         {
-            while (value.Get(MemoryOrder::ACQUIRE) <= target_value)
+            while (value.Get(MemoryOrder::ACQUIRE) <= targetValue)
             {
                 HYP_WAIT_IDLE();
             }
@@ -204,9 +204,9 @@ struct AtomicSemaphoreImpl
         return value.Get(MemoryOrder::ACQUIRE);
     }
 
-    void SetValue(CounterType new_value)
+    void SetValue(CounterType newValue)
     {
-        value.Set(new_value, MemoryOrder::RELEASE);
+        value.Set(newValue, MemoryOrder::RELEASE);
     }
 
     bool IsInSignalState() const
@@ -224,8 +224,8 @@ struct ConditionVarSemaphoreImpl
     mutable std::condition_variable cv;
     mutable AtomicVar<CounterType> value;
 
-    ConditionVarSemaphoreImpl(CounterType initial_value)
-        : value(initial_value)
+    ConditionVarSemaphoreImpl(CounterType initialValue)
+        : value(initialValue)
     {
     }
 
@@ -271,11 +271,11 @@ struct ConditionVarSemaphoreImpl
 
         while (true)
         {
-            const CounterType current_value = value.Get(MemoryOrder::ACQUIRE);
+            const CounterType currentValue = value.Get(MemoryOrder::ACQUIRE);
 
-            if (ShouldSignal<CounterType, Direction>(current_value))
+            if (ShouldSignal<CounterType, Direction>(currentValue))
             {
-                if (value.CompareExchangeWeak(current_value, current_value + (Direction == SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE ? 1 : -1), MemoryOrder::ACQUIRE_RELEASE))
+                if (value.CompareExchangeWeak(currentValue, currentValue + (Direction == SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE ? 1 : -1), MemoryOrder::ACQUIRE_RELEASE))
                 {
                     if (callback.IsValid())
                     {
@@ -292,98 +292,98 @@ struct ConditionVarSemaphoreImpl
         }
     }
 
-    CounterType Release(CounterType delta = 1, ProcRef<void(bool)> if_signal_state_changed_proc = ProcRef<void(bool)>(nullptr))
+    CounterType Release(CounterType delta = 1, ProcRef<void(bool)> ifSignalStateChangedProc = ProcRef<void(bool)>(nullptr))
     {
         std::lock_guard<std::mutex> lock(mutex);
 
-        const CounterType previous_value = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE);
-        const CounterType new_value = previous_value - delta;
+        const CounterType previousValue = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE);
+        const CounterType newValue = previousValue - delta;
 
-        if (if_signal_state_changed_proc.IsValid())
+        if (ifSignalStateChangedProc.IsValid())
         {
-            const bool should_signal_before = ShouldSignal<CounterType, Direction>(previous_value);
-            const bool should_signal_after = ShouldSignal<CounterType, Direction>(new_value);
+            const bool shouldSignalBefore = ShouldSignal<CounterType, Direction>(previousValue);
+            const bool shouldSignalAfter = ShouldSignal<CounterType, Direction>(newValue);
 
-            if (should_signal_before != should_signal_after)
+            if (shouldSignalBefore != shouldSignalAfter)
             {
-                if_signal_state_changed_proc(should_signal_after);
+                ifSignalStateChangedProc(shouldSignalAfter);
             }
         }
 
         cv.notify_all();
 
-        return new_value;
+        return newValue;
     }
 
-    CounterType Release(CounterType delta = 1, ProcRef<void()> if_signalled_proc = ProcRef<void()>(nullptr))
+    CounterType Release(CounterType delta = 1, ProcRef<void()> ifSignalledProc = ProcRef<void()>(nullptr))
     {
         std::lock_guard<std::mutex> lock(mutex);
 
-        const CounterType new_value = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE) - delta;
+        const CounterType newValue = value.Decrement(delta, MemoryOrder::ACQUIRE_RELEASE) - delta;
 
-        if (if_signalled_proc.IsValid() && ShouldSignal<CounterType, Direction>(new_value))
+        if (ifSignalledProc.IsValid() && ShouldSignal<CounterType, Direction>(newValue))
         {
-            if_signalled_proc();
+            ifSignalledProc();
         }
 
         cv.notify_all();
 
-        return new_value;
+        return newValue;
     }
 
-    CounterType Produce(CounterType delta = 1, ProcRef<void(bool)> if_signal_state_changed_proc = ProcRef<void(bool)>(nullptr))
+    CounterType Produce(CounterType delta = 1, ProcRef<void(bool)> ifSignalStateChangedProc = ProcRef<void(bool)>(nullptr))
     {
         std::lock_guard<std::mutex> lock(mutex);
 
-        const CounterType previous_value = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE);
-        const CounterType new_value = previous_value + delta;
+        const CounterType previousValue = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE);
+        const CounterType newValue = previousValue + delta;
 
-        if (if_signal_state_changed_proc.IsValid())
+        if (ifSignalStateChangedProc.IsValid())
         {
-            const bool should_signal_before = ShouldSignal<CounterType, Direction>(previous_value);
-            const bool should_signal_after = ShouldSignal<CounterType, Direction>(new_value);
+            const bool shouldSignalBefore = ShouldSignal<CounterType, Direction>(previousValue);
+            const bool shouldSignalAfter = ShouldSignal<CounterType, Direction>(newValue);
 
-            if (should_signal_before != should_signal_after)
+            if (shouldSignalBefore != shouldSignalAfter)
             {
-                if_signal_state_changed_proc(should_signal_after);
+                ifSignalStateChangedProc(shouldSignalAfter);
             }
         }
 
         cv.notify_all();
 
-        return new_value;
+        return newValue;
     }
 
-    CounterType Produce(CounterType delta = 1, ProcRef<void()> if_signalled_proc = ProcRef<void()>(nullptr))
+    CounterType Produce(CounterType delta = 1, ProcRef<void()> ifSignalledProc = ProcRef<void()>(nullptr))
     {
         std::lock_guard<std::mutex> lock(mutex);
 
-        const CounterType new_value = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE) + delta;
+        const CounterType newValue = value.Increment(delta, MemoryOrder::ACQUIRE_RELEASE) + delta;
 
-        if (if_signalled_proc.IsValid() && ShouldSignal<CounterType, Direction>(new_value))
+        if (ifSignalledProc.IsValid() && ShouldSignal<CounterType, Direction>(newValue))
         {
-            if_signalled_proc();
+            ifSignalledProc();
         }
 
         cv.notify_all();
 
-        return new_value;
+        return newValue;
     }
 
-    void WaitForValue(T target_value) const
+    void WaitForValue(T targetValue) const
     {
         std::unique_lock<std::mutex> lock(mutex);
 
         if constexpr (Direction == SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE)
         {
-            while (value.Get(MemoryOrder::ACQUIRE) >= target_value)
+            while (value.Get(MemoryOrder::ACQUIRE) >= targetValue)
             {
                 cv.wait(lock);
             }
         }
         else if constexpr (Direction == SemaphoreDirection::WAIT_FOR_POSITIVE)
         {
-            while (value.Get(MemoryOrder::ACQUIRE) <= target_value)
+            while (value.Get(MemoryOrder::ACQUIRE) <= targetValue)
             {
                 cv.wait(lock);
             }
@@ -399,10 +399,10 @@ struct ConditionVarSemaphoreImpl
         return value.Get(MemoryOrder::ACQUIRE);
     }
 
-    void SetValue(CounterType new_value)
+    void SetValue(CounterType newValue)
     {
         std::lock_guard<std::mutex> lock(mutex);
-        value.Set(new_value, MemoryOrder::RELEASE);
+        value.Set(newValue, MemoryOrder::RELEASE);
         cv.notify_all();
     }
 
@@ -443,8 +443,8 @@ public:
         }
     };
 
-    Semaphore(CounterType initial_value = 0)
-        : m_impl(initial_value)
+    Semaphore(CounterType initialValue = 0)
+        : m_impl(initialValue)
     {
     }
 
@@ -470,14 +470,14 @@ public:
         m_impl.Acquire(callback);
     }
 
-    HYP_FORCE_INLINE CounterType Release(CounterType delta, ProcRef<void(bool)> if_signal_state_changed_proc)
+    HYP_FORCE_INLINE CounterType Release(CounterType delta, ProcRef<void(bool)> ifSignalStateChangedProc)
     {
-        return m_impl.Release(delta, if_signal_state_changed_proc);
+        return m_impl.Release(delta, ifSignalStateChangedProc);
     }
 
-    HYP_FORCE_INLINE CounterType Release(CounterType delta, ProcRef<void()> if_signalled_proc)
+    HYP_FORCE_INLINE CounterType Release(CounterType delta, ProcRef<void()> ifSignalledProc)
     {
-        return m_impl.Release(delta, if_signalled_proc);
+        return m_impl.Release(delta, ifSignalledProc);
     }
 
     HYP_FORCE_INLINE CounterType Release(CounterType delta = 1)
@@ -485,14 +485,14 @@ public:
         return m_impl.Release(delta, ProcRef<void()>(nullptr));
     }
 
-    HYP_FORCE_INLINE CounterType Produce(CounterType increment, ProcRef<void(bool)> if_signal_state_changed_proc)
+    HYP_FORCE_INLINE CounterType Produce(CounterType increment, ProcRef<void(bool)> ifSignalStateChangedProc)
     {
-        return m_impl.Produce(increment, if_signal_state_changed_proc);
+        return m_impl.Produce(increment, ifSignalStateChangedProc);
     }
 
-    HYP_FORCE_INLINE CounterType Produce(CounterType increment, ProcRef<void()> if_signalled_proc)
+    HYP_FORCE_INLINE CounterType Produce(CounterType increment, ProcRef<void()> ifSignalledProc)
     {
-        return m_impl.Produce(increment, if_signalled_proc);
+        return m_impl.Produce(increment, ifSignalledProc);
     }
 
     HYP_FORCE_INLINE CounterType Produce(CounterType increment = 1)
@@ -500,9 +500,9 @@ public:
         return m_impl.Produce(increment, ProcRef<void()>(nullptr));
     }
 
-    void WaitForValue(CounterType target_value) const
+    void WaitForValue(CounterType targetValue) const
     {
-        m_impl.WaitForValue(target_value);
+        m_impl.WaitForValue(targetValue);
     }
 
     HYP_FORCE_INLINE CounterType GetValue() const
@@ -524,8 +524,13 @@ private:
     Impl m_impl;
 };
 
+using AtomicSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+using ConditionVarSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
+
 } // namespace threading
 
+using threading::AtomicSemaphore;
+using threading::ConditionVarSemaphore;
 using threading::Semaphore;
 using threading::SemaphoreDirection;
 

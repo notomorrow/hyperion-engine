@@ -25,23 +25,26 @@ namespace hyperion {
 
 #pragma region DynamicHypClassInstance
 
-DynamicHypClassInstance::DynamicHypClassInstance(TypeID type_id, Name name, const HypClass* parent_class, dotnet::Class* class_ptr, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
-    : HypClass(type_id, name, -1, 0, Name::Invalid(), attributes, flags, members)
+DynamicHypClassInstance::DynamicHypClassInstance(TypeId typeId, Name name, const HypClass* parentClass, dotnet::Class* classPtr, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+    : HypClass(typeId, name, -1, 0, Name::Invalid(), attributes, flags, members)
 {
-    if (class_ptr != nullptr)
+    if (classPtr != nullptr)
     {
-        SetManagedClass(class_ptr->RefCountedPtrFromThis());
+        SetManagedClass(classPtr->RefCountedPtrFromThis());
     }
 
-    AssertThrowMsg(parent_class != nullptr, "Parent class cannot be null for DynamicHypClassInstance");
+    AssertThrowMsg(parentClass != nullptr, "Parent class cannot be null for DynamicHypClassInstance");
 
-    m_parent = parent_class;
-    m_parent_name = parent_class->GetName();
+    m_parent = parentClass;
+    m_parentName = parentClass->GetName();
 
     if (!m_parent->CanCreateInstance())
     {
         HYP_LOG(Object, Error, "DynamicHypClassInstance: Will be unable to create an instance of class {} because parent class {} cannot create instance", *m_name, *m_parent->GetName());
     }
+
+    m_size = m_parent->GetSize();
+    m_alignment = m_parent->GetAlignment();
 }
 
 DynamicHypClassInstance::~DynamicHypClassInstance()
@@ -62,25 +65,11 @@ HypClassAllocationMethod DynamicHypClassInstance::GetAllocationMethod() const
     return m_parent->GetAllocationMethod();
 }
 
-SizeType DynamicHypClassInstance::GetSize() const
+bool DynamicHypClassInstance::GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const
 {
     AssertThrow(m_parent != nullptr);
 
-    return m_parent->GetSize();
-}
-
-SizeType DynamicHypClassInstance::GetAlignment() const
-{
-    AssertThrow(m_parent != nullptr);
-
-    return m_parent->GetAlignment();
-}
-
-bool DynamicHypClassInstance::GetManagedObject(const void* object_ptr, dotnet::ObjectReference& out_object_reference) const
-{
-    AssertThrow(m_parent != nullptr);
-
-    const IHypObjectInitializer* initializer = m_parent->GetObjectInitializer(object_ptr);
+    const IHypObjectInitializer* initializer = m_parent->GetObjectInitializer(objectPtr);
     AssertThrow(initializer != nullptr);
 
     if (initializer->GetManagedObjectResource() == nullptr)
@@ -88,56 +77,56 @@ bool DynamicHypClassInstance::GetManagedObject(const void* object_ptr, dotnet::O
         return false;
     }
 
-    TResourceHandle<ManagedObjectResource> resource_handle(*initializer->GetManagedObjectResource());
+    TResourceHandle<ManagedObjectResource> resourceHandle(*initializer->GetManagedObjectResource());
 
-    if (!resource_handle->GetManagedObject()->IsValid())
+    if (!resourceHandle->GetManagedObject()->IsValid())
     {
         return false;
     }
 
-    out_object_reference = resource_handle->GetManagedObject()->GetObjectReference();
+    outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
 
     return true;
 }
 
 bool DynamicHypClassInstance::CanCreateInstance() const
 {
-    RC<dotnet::Class> managed_class = GetManagedClass();
+    RC<dotnet::Class> managedClass = GetManagedClass();
 
     return m_parent->CanCreateInstance()
-        && managed_class != nullptr
-        && !(managed_class->GetFlags() & ManagedClassFlags::ABSTRACT);
+        && managedClass != nullptr
+        && !(managedClass->GetFlags() & ManagedClassFlags::ABSTRACT);
 }
 
-bool DynamicHypClassInstance::ToHypData(ByteView memory, HypData& out_hyp_data) const
+bool DynamicHypClassInstance::ToHypData(ByteView memory, HypData& outHypData) const
 {
     AssertThrow(m_parent != nullptr);
 
-    return m_parent->ToHypData(memory, out_hyp_data);
+    return m_parent->ToHypData(memory, outHypData);
 }
 
-void DynamicHypClassInstance::FixupPointer(void* target, IHypObjectInitializer* new_initializer) const
+void DynamicHypClassInstance::FixupPointer(void* target, IHypObjectInitializer* newInitializer) const
 {
     // Do nothing - FixupObjectInitializerPointer() will just keep iterating up the chain
 }
 
-void DynamicHypClassInstance::PostLoad_Internal(void* object_ptr) const
+void DynamicHypClassInstance::PostLoad_Internal(void* objectPtr) const
 {
 }
 
-IHypObjectInitializer* DynamicHypClassInstance::GetObjectInitializer_Internal(void* object_ptr) const
+IHypObjectInitializer* DynamicHypClassInstance::GetObjectInitializer_Internal(void* objectPtr) const
 {
     AssertThrow(m_parent != nullptr);
 
-    return m_parent->GetObjectInitializer(object_ptr);
+    return m_parent->GetObjectInitializer(objectPtr);
 }
 
 bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
 {
     AssertThrow(m_parent != nullptr);
 
-    RC<dotnet::Class> managed_class = GetManagedClass();
-    AssertThrow(managed_class != nullptr);
+    RC<dotnet::Class> managedClass = GetManagedClass();
+    AssertThrow(managedClass != nullptr);
 
     { // suppress default managed object creation - we will create it ourselves
         GlobalContextScope scope(HypObjectInitializerContext { this, HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION });
@@ -145,7 +134,7 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
         {
             HypData value;
 
-            if (!m_parent->CreateInstance(value, /* allow_abstract */ true))
+            if (!m_parent->CreateInstance(value, /* allowAbstract */ true))
             {
                 return false;
             }
@@ -166,20 +155,20 @@ bool DynamicHypClassInstance::CreateInstance_Internal(HypData& out) const
         }
     }
 
-    void* target_address = out.ToRef().GetPointer();
-    AssertThrow(target_address != nullptr);
+    void* targetAddress = out.ToRef().GetPointer();
+    AssertThrow(targetAddress != nullptr);
 
-    IHypObjectInitializer* parent_initializer = m_parent->GetObjectInitializer(target_address);
-    AssertThrow(parent_initializer != nullptr);
+    IHypObjectInitializer* parentInitializer = m_parent->GetObjectInitializer(targetAddress);
+    AssertThrow(parentInitializer != nullptr);
 
-    DynamicHypObjectInitializer* new_initializer = new DynamicHypObjectInitializer(this, parent_initializer);
-    FixupObjectInitializerPointer(target_address, new_initializer);
+    DynamicHypObjectInitializer* newInitializer = new DynamicHypObjectInitializer(this, parentInitializer);
+    FixupObjectInitializerPointer(targetAddress, newInitializer);
 
-    ManagedObjectResource* managed_object_resource = AllocateResource<ManagedObjectResource>(HypObjectPtr(this, target_address), managed_class);
-    new_initializer->SetManagedObjectResource(managed_object_resource);
+    ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(HypObjectPtr(this, targetAddress), managedClass);
+    newInitializer->SetManagedObjectResource(managedObjectResource);
 
     // Create the managed object
-    managed_object_resource->IncRef();
+    managedObjectResource->IncRef();
 
     return true;
 }
@@ -216,122 +205,122 @@ extern "C"
             return nullptr;
         }
 
-        const WeakName weak_name(name);
+        const WeakName weakName(name);
 
-        return HypClassRegistry::GetInstance().GetClass(weak_name);
+        return HypClassRegistry::GetInstance().GetClass(weakName);
     }
 
-    HYP_EXPORT const HypClass* HypClass_GetClassByTypeID(const TypeID* type_id)
+    HYP_EXPORT const HypClass* HypClass_GetClassByTypeId(const TypeId* typeId)
     {
-        if (!type_id)
+        if (!typeId)
         {
             return nullptr;
         }
 
-        return HypClassRegistry::GetInstance().GetClass(*type_id);
+        return HypClassRegistry::GetInstance().GetClass(*typeId);
     }
 
-    HYP_EXPORT const HypClass* HypClass_GetClassForManagedClass(const dotnet::Class* managed_class)
+    HYP_EXPORT const HypClass* HypClass_GetClassForManagedClass(const dotnet::Class* managedClass)
     {
-        if (!managed_class)
+        if (!managedClass)
         {
             return nullptr;
         }
 
-        return managed_class->GetHypClass();
+        return managedClass->GetHypClass();
     }
 
-    HYP_EXPORT const HypClass* HypClass_GetClassByTypeHash(dotnet::Assembly* assembly, int32 type_hash)
+    HYP_EXPORT const HypClass* HypClass_GetClassByTypeHash(dotnet::Assembly* assembly, int32 typeHash)
     {
         AssertThrow(assembly != nullptr);
 
-        RC<dotnet::Class> managed_class = assembly->FindClassByTypeHash(type_hash);
+        RC<dotnet::Class> managedClass = assembly->FindClassByTypeHash(typeHash);
 
-        if (!managed_class)
+        if (!managedClass)
         {
             return nullptr;
         }
 
-        return managed_class->GetHypClass();
+        return managedClass->GetHypClass();
     }
 
-    HYP_EXPORT void HypClass_GetName(const HypClass* hyp_class, Name* out_name)
+    HYP_EXPORT void HypClass_GetName(const HypClass* hypClass, Name* outName)
     {
-        if (!hyp_class || !out_name)
+        if (!hypClass || !outName)
         {
             return;
         }
 
-        *out_name = hyp_class->GetName();
+        *outName = hypClass->GetName();
     }
 
-    HYP_EXPORT void HypClass_GetTypeID(const HypClass* hyp_class, TypeID* out_type_id)
+    HYP_EXPORT void HypClass_GetTypeId(const HypClass* hypClass, TypeId* outTypeId)
     {
-        if (!hyp_class || !out_type_id)
+        if (!hypClass || !outTypeId)
         {
             return;
         }
 
-        *out_type_id = hyp_class->GetTypeID();
+        *outTypeId = hypClass->GetTypeId();
     }
 
-    HYP_EXPORT uint32 HypClass_GetSize(const HypClass* hyp_class)
+    HYP_EXPORT uint32 HypClass_GetSize(const HypClass* hypClass)
     {
-        if (!hyp_class)
+        if (!hypClass)
         {
             return 0;
         }
 
-        return uint32(hyp_class->GetSize());
+        return uint32(hypClass->GetSize());
     }
 
-    HYP_EXPORT uint32 HypClass_GetFlags(const HypClass* hyp_class)
+    HYP_EXPORT uint32 HypClass_GetFlags(const HypClass* hypClass)
     {
-        if (!hyp_class)
+        if (!hypClass)
         {
             return 0;
         }
 
-        return uint32(hyp_class->GetFlags());
+        return uint32(hypClass->GetFlags());
     }
 
-    HYP_EXPORT uint8 HypClass_GetAllocationMethod(const HypClass* hyp_class)
+    HYP_EXPORT uint8 HypClass_GetAllocationMethod(const HypClass* hypClass)
     {
-        if (!hyp_class)
+        if (!hypClass)
         {
             return uint8(HypClassAllocationMethod::INVALID);
         }
 
-        return uint8(hyp_class->GetAllocationMethod());
+        return uint8(hypClass->GetAllocationMethod());
     }
 
-    HYP_EXPORT uint32 HypClass_GetAttributes(const HypClass* hyp_class, const void** out_attributes)
+    HYP_EXPORT uint32 HypClass_GetAttributes(const HypClass* hypClass, const void** outAttributes)
     {
-        if (!hyp_class || !out_attributes)
+        if (!hypClass || !outAttributes)
         {
             return 0;
         }
 
-        if (hyp_class->GetAttributes().Empty())
+        if (hypClass->GetAttributes().Empty())
         {
             return 0;
         }
 
-        *out_attributes = hyp_class->GetAttributes().Begin();
+        *outAttributes = hypClass->GetAttributes().Begin();
 
-        return (uint32)hyp_class->GetAttributes().Size();
+        return (uint32)hypClass->GetAttributes().Size();
     }
 
-    HYP_EXPORT const HypClassAttribute* HypClass_GetAttribute(const HypClass* hyp_class, const char* name)
+    HYP_EXPORT const HypClassAttribute* HypClass_GetAttribute(const HypClass* hypClass, const char* name)
     {
-        if (!hyp_class || !name)
+        if (!hypClass || !name)
         {
             return nullptr;
         }
 
-        auto it = hyp_class->GetAttributes().Find(name);
+        auto it = hypClass->GetAttributes().Find(name);
 
-        if (it == hyp_class->GetAttributes().End())
+        if (it == hypClass->GetAttributes().End())
         {
             return nullptr;
         }
@@ -339,128 +328,128 @@ extern "C"
         return it;
     }
 
-    HYP_EXPORT uint32 HypClass_GetProperties(const HypClass* hyp_class, const void** out_properties)
+    HYP_EXPORT uint32 HypClass_GetProperties(const HypClass* hypClass, const void** outProperties)
     {
-        if (!hyp_class || !out_properties)
+        if (!hypClass || !outProperties)
         {
             return 0;
         }
 
-        if (hyp_class->GetProperties().Empty())
+        if (hypClass->GetProperties().Empty())
         {
             return 0;
         }
 
-        *out_properties = hyp_class->GetProperties().Begin();
+        *outProperties = hypClass->GetProperties().Begin();
 
-        return (uint32)hyp_class->GetProperties().Size();
+        return (uint32)hypClass->GetProperties().Size();
     }
 
-    HYP_EXPORT HypProperty* HypClass_GetProperty(const HypClass* hyp_class, const Name* name)
+    HYP_EXPORT HypProperty* HypClass_GetProperty(const HypClass* hypClass, const Name* name)
     {
-        if (!hyp_class || !name)
+        if (!hypClass || !name)
         {
             return nullptr;
         }
 
-        return hyp_class->GetProperty(*name);
+        return hypClass->GetProperty(*name);
     }
 
-    HYP_EXPORT uint32 HypClass_GetMethods(const HypClass* hyp_class, const void** out_methods)
+    HYP_EXPORT uint32 HypClass_GetMethods(const HypClass* hypClass, const void** outMethods)
     {
-        if (!hyp_class || !out_methods)
+        if (!hypClass || !outMethods)
         {
             return 0;
         }
 
-        if (hyp_class->GetMethods().Empty())
+        if (hypClass->GetMethods().Empty())
         {
             return 0;
         }
 
-        *out_methods = hyp_class->GetMethods().Begin();
+        *outMethods = hypClass->GetMethods().Begin();
 
-        return (uint32)hyp_class->GetMethods().Size();
+        return (uint32)hypClass->GetMethods().Size();
     }
 
-    HYP_EXPORT HypMethod* HypClass_GetMethod(const HypClass* hyp_class, const Name* name)
+    HYP_EXPORT HypMethod* HypClass_GetMethod(const HypClass* hypClass, const Name* name)
     {
-        if (!hyp_class || !name)
+        if (!hypClass || !name)
         {
             return nullptr;
         }
 
-        return hyp_class->GetMethod(*name);
+        return hypClass->GetMethod(*name);
     }
 
-    HYP_EXPORT HypField* HypClass_GetField(const HypClass* hyp_class, const Name* name)
+    HYP_EXPORT HypField* HypClass_GetField(const HypClass* hypClass, const Name* name)
     {
-        if (!hyp_class || !name)
+        if (!hypClass || !name)
         {
             return nullptr;
         }
 
-        return hyp_class->GetField(*name);
+        return hypClass->GetField(*name);
     }
 
-    HYP_EXPORT uint32 HypClass_GetFields(const HypClass* hyp_class, const void** out_fields)
+    HYP_EXPORT uint32 HypClass_GetFields(const HypClass* hypClass, const void** outFields)
     {
-        if (!hyp_class || !out_fields)
+        if (!hypClass || !outFields)
         {
             return 0;
         }
 
-        if (hyp_class->GetFields().Empty())
+        if (hypClass->GetFields().Empty())
         {
             return 0;
         }
 
-        *out_fields = hyp_class->GetFields().Begin();
+        *outFields = hypClass->GetFields().Begin();
 
-        return (uint32)hyp_class->GetFields().Size();
+        return (uint32)hypClass->GetFields().Size();
     }
 
-    HYP_EXPORT HypConstant* HypClass_GetConstant(const HypClass* hyp_class, const Name* name)
+    HYP_EXPORT HypConstant* HypClass_GetConstant(const HypClass* hypClass, const Name* name)
     {
-        if (!hyp_class || !name)
+        if (!hypClass || !name)
         {
             return nullptr;
         }
 
-        return hyp_class->GetConstant(*name);
+        return hypClass->GetConstant(*name);
     }
 
-    HYP_EXPORT uint32 HypClass_GetConstants(const HypClass* hyp_class, const void** out_constants)
+    HYP_EXPORT uint32 HypClass_GetConstants(const HypClass* hypClass, const void** outConstants)
     {
-        if (!hyp_class || !out_constants)
+        if (!hypClass || !outConstants)
         {
             return 0;
         }
 
-        if (hyp_class->GetConstants().Empty())
+        if (hypClass->GetConstants().Empty())
         {
             return 0;
         }
 
-        *out_constants = hyp_class->GetConstants().Begin();
+        *outConstants = hypClass->GetConstants().Begin();
 
-        return (uint32)hyp_class->GetConstants().Size();
+        return (uint32)hypClass->GetConstants().Size();
     }
 
-    HYP_EXPORT HypClass* HypClass_CreateDynamicHypClass(const TypeID* type_id, const char* name, const HypClass* parent_hyp_class)
+    HYP_EXPORT HypClass* HypClass_CreateDynamicHypClass(const TypeId* typeId, const char* name, const HypClass* parentHypClass)
     {
-        AssertThrow(type_id != nullptr);
+        AssertThrow(typeId != nullptr);
         AssertThrow(name != nullptr);
-        AssertThrow(parent_hyp_class != nullptr);
+        AssertThrow(parentHypClass != nullptr);
 
-        return new DynamicHypClassInstance(*type_id, CreateNameFromDynamicString(name), parent_hyp_class, nullptr, Span<const HypClassAttribute>(), HypClassFlags::CLASS_TYPE | HypClassFlags::DYNAMIC, Span<HypMember>());
+        return new DynamicHypClassInstance(*typeId, CreateNameFromDynamicString(name), parentHypClass, nullptr, Span<const HypClassAttribute>(), HypClassFlags::CLASS_TYPE | HypClassFlags::DYNAMIC, Span<HypMember>());
     }
 
-    HYP_EXPORT void HypClass_DestroyDynamicHypClass(DynamicHypClassInstance* hyp_class)
+    HYP_EXPORT void HypClass_DestroyDynamicHypClass(DynamicHypClassInstance* hypClass)
     {
-        AssertThrow(hyp_class != nullptr);
+        AssertThrow(hypClass != nullptr);
 
-        delete hyp_class;
+        delete hypClass;
     }
 
 #pragma endregion HypClass

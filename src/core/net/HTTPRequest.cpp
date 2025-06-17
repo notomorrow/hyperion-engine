@@ -30,13 +30,13 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
 #pragma region HTTPResponse
 
 HTTPResponse::HTTPResponse()
-    : m_status_code(0)
+    : m_statusCode(0)
 {
 }
 
 HTTPResponse::HTTPResponse(HTTPResponse&& other) noexcept
     : m_body(std::move(other.m_body)),
-      m_status_code(other.m_status_code),
+      m_statusCode(other.m_statusCode),
       OnDataReceivedDelegate(std::move(other.OnDataReceivedDelegate)),
       OnCompleteDelegate(std::move(other.OnCompleteDelegate))
 {
@@ -61,13 +61,13 @@ void HTTPResponse::OnDataReceived(Span<char> data)
     OnDataReceivedDelegate(data);
 }
 
-void HTTPResponse::OnComplete(int status_code)
+void HTTPResponse::OnComplete(int statusCode)
 {
     HYP_SCOPE;
 
-    m_status_code = status_code;
+    m_statusCode = statusCode;
 
-    OnCompleteDelegate(m_status_code);
+    OnCompleteDelegate(m_statusCode);
 }
 
 Optional<json::JSONValue> HTTPResponse::ToJSON() const
@@ -81,14 +81,14 @@ Optional<json::JSONValue> HTTPResponse::ToJSON() const
         return {};
     }
 
-    const json::ParseResult parse_result = json::JSON::Parse(String(m_body.ToByteView()));
+    const json::ParseResult parseResult = json::JSON::Parse(String(m_body.ToByteView()));
 
-    if (!parse_result.ok)
+    if (!parseResult.ok)
     {
         return {};
     }
 
-    return parse_result.value;
+    return parseResult.value;
 }
 
 #pragma endregion HTTPResponse
@@ -104,17 +104,17 @@ HTTPRequest::HTTPRequest(const String& url, HTTPMethod method)
 HTTPRequest::HTTPRequest(const String& url, const json::JSONValue& body, HTTPMethod method)
     : m_url(url),
       m_method(method),
-      m_content_type("application/json")
+      m_contentType("application/json")
 {
-    const String body_string = body.ToString(true);
-    m_body = ByteBuffer(body_string.Size(), body_string.Data());
+    const String bodyString = body.ToString(true);
+    m_body = ByteBuffer(bodyString.Size(), bodyString.Data());
 }
 
 HTTPRequest::HTTPRequest(const HTTPRequest& other)
     : m_url(other.m_url),
       m_method(other.m_method),
       m_body(other.m_body),
-      m_content_type(other.m_content_type)
+      m_contentType(other.m_contentType)
 {
 }
 
@@ -125,7 +125,7 @@ HTTPRequest& HTTPRequest::operator=(const HTTPRequest& other)
         m_url = other.m_url;
         m_method = other.m_method;
         m_body = other.m_body;
-        m_content_type = other.m_content_type;
+        m_contentType = other.m_contentType;
     }
 
     return *this;
@@ -135,7 +135,7 @@ HTTPRequest::HTTPRequest(HTTPRequest&& other) noexcept
     : m_url(std::move(other.m_url)),
       m_method(other.m_method),
       m_body(std::move(other.m_body)),
-      m_content_type(std::move(other.m_content_type))
+      m_contentType(std::move(other.m_contentType))
 {
 }
 
@@ -146,7 +146,7 @@ HTTPRequest& HTTPRequest::operator=(HTTPRequest&& other) noexcept
         m_url = std::move(other.m_url);
         m_method = other.m_method;
         m_body = std::move(other.m_body);
-        m_content_type = std::move(other.m_content_type);
+        m_contentType = std::move(other.m_contentType);
     }
 
     return *this;
@@ -160,16 +160,16 @@ Task<HTTPResponse> HTTPRequest::Send()
 {
     HYP_SCOPE;
 
-    RC<NetRequestThread> net_request_thread = GetGlobalNetRequestThread();
+    RC<NetRequestThread> netRequestThread = GetGlobalNetRequestThread();
 
-    if (!net_request_thread)
+    if (!netRequestThread)
     {
         HYP_LOG(Net, Error, "No global NetRequestThread set!");
 
         return Task<HTTPResponse>();
     }
 
-    return net_request_thread->GetScheduler().Enqueue([url = m_url, content_type = m_content_type, body = m_body, method = m_method]() -> HTTPResponse
+    return netRequestThread->GetScheduler().Enqueue([url = m_url, contentType = m_contentType, body = m_body, method = m_method]() -> HTTPResponse
         {
             HYP_SCOPE;
 
@@ -191,9 +191,9 @@ Task<HTTPResponse> HTTPRequest::Send()
                 // set headers
                 struct curl_slist* headers = nullptr;
 
-                if (!content_type.Empty())
+                if (!contentType.Empty())
                 {
-                    headers = curl_slist_append(headers, HYP_FORMAT("Content-Type: {}", content_type).Data());
+                    headers = curl_slist_append(headers, HYP_FORMAT("Content-Type: {}", contentType).Data());
                 }
 
                 curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -233,12 +233,12 @@ Task<HTTPResponse> HTTPRequest::Send()
                 }
 
                 // Get the response code
-                long response_code = 0;
-                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+                long responseCode = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
                 curl_easy_cleanup(curl);
 
-                response.OnComplete(int(response_code));
+                response.OnComplete(int(responseCode));
 
                 return response;
             }

@@ -25,20 +25,21 @@ public:
             return err;
         }
 
-        const Mesh& in_object = in.Get<Mesh>();
+        const Mesh& inObject = in.Get<Mesh>();
 
-        out.SetProperty("Topology", uint32(in_object.GetTopology()));
-        out.SetProperty("Attributes", FBOMStruct::Create<VertexAttributeSet>(), sizeof(VertexAttributeSet), &in_object.GetVertexAttributes());
+        out.SetProperty("Topology", uint32(inObject.GetTopology()));
+        out.SetProperty("Attributes", FBOMStruct::Create<VertexAttributeSet>(), sizeof(VertexAttributeSet), &inObject.GetVertexAttributes());
 
-        StreamedMeshData* streamed_mesh_data = in_object.GetStreamedMeshData();
+        /// FIXME: StreamedMeshData is no longer HypObject
+        StreamedMeshData* streamedMeshData = inObject.GetStreamedMeshData();
 
-        if (streamed_mesh_data != nullptr)
+        if (streamedMeshData != nullptr)
         {
-            ResourceHandle resource_handle(*streamed_mesh_data);
+            ResourceHandle resourceHandle(*streamedMeshData);
 
-            const MeshData& mesh_data = streamed_mesh_data->GetMeshData();
+            const MeshData& meshData = streamedMeshData->GetMeshData();
 
-            if (FBOMResult err = out.AddChild(mesh_data))
+            if (FBOMResult err = out.AddChild(meshData))
             {
                 return err;
             }
@@ -49,46 +50,46 @@ public:
 
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
-        Topology topology = Topology::TRIANGLES;
+        Topology topology = TOP_TRIANGLES;
 
         if (FBOMResult err = in.GetProperty("Topology").ReadUInt32(&topology))
         {
             return err;
         }
 
-        VertexAttributeSet vertex_attributes;
+        VertexAttributeSet vertexAttributes;
 
-        if (FBOMResult err = in.GetProperty("Attributes").ReadStruct(&vertex_attributes))
+        if (FBOMResult err = in.GetProperty("Attributes").ReadStruct(&vertexAttributes))
         {
             return err;
         }
 
-        RC<StreamedMeshData> streamed_mesh_data;
-        ResourceHandle streamed_mesh_data_resource_handle;
+        RC<StreamedMeshData> streamedMeshData;
+        ResourceHandle streamedMeshDataResourceHandle;
 
-        const auto mesh_data_it = in.GetChildren().FindIf([](const FBOMObject& item)
+        const auto meshDataIt = in.GetChildren().FindIf([](const FBOMObject& item)
             {
                 return item.GetType().IsOrExtends("MeshData");
             });
 
-        if (mesh_data_it != in.GetChildren().End())
+        if (meshDataIt != in.GetChildren().End())
         {
-            streamed_mesh_data.EmplaceAs<StreamedMeshData>(mesh_data_it->m_deserialized_object->Get<MeshData>(), streamed_mesh_data_resource_handle);
+            streamedMeshData.EmplaceAs<StreamedMeshData>(meshDataIt->m_deserializedObject->Get<MeshData>(), streamedMeshDataResourceHandle);
         }
 
-        Handle<Mesh> mesh_handle = CreateObject<Mesh>(
-            std::move(streamed_mesh_data),
+        Handle<Mesh> meshHandle = CreateObject<Mesh>(
+            std::move(streamedMeshData),
             topology,
-            vertex_attributes);
+            vertexAttributes);
 
-        streamed_mesh_data_resource_handle.Reset();
+        streamedMeshDataResourceHandle.Reset();
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Mesh::Class(), AnyRef(*mesh_handle)))
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Mesh::Class(), AnyRef(*meshHandle)))
         {
             return err;
         }
 
-        out = HypData(std::move(mesh_handle));
+        out = HypData(std::move(meshHandle));
 
         return { FBOMResult::FBOM_OK };
     }

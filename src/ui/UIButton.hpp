@@ -35,7 +35,7 @@ public:
      */
     HYP_FORCE_INLINE const Handle<UIText>& GetTextElement() const
     {
-        return m_text_element;
+        return m_textElement;
     }
 
     virtual UIEventHandlerResult GetDefaultEventHandlerResult() const override
@@ -46,11 +46,11 @@ public:
 protected:
     virtual void Init() override;
 
-    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state) override;
+    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState) override;
 
     virtual Material::ParameterTable GetMaterialParameters() const override;
 
-    Handle<UIText> m_text_element;
+    Handle<UIText> m_textElement;
 };
 
 } // namespace hyperion

@@ -14,7 +14,7 @@ namespace hyperion {
 template <class Enum>
 struct EnumFlagsDecl
 {
-    static constexpr bool is_enum_flags = false;
+    static constexpr bool isEnumFlags = false;
 };
 
 template <class Enum>
@@ -25,11 +25,11 @@ struct EnumFlags
 
     struct SubscriptWrapper
     {
-        EnumFlags& enum_flags;
+        EnumFlags& enumFlags;
         EnumType flag;
 
-        constexpr SubscriptWrapper(EnumFlags& enum_flags, EnumType flag)
-            : enum_flags(enum_flags),
+        constexpr SubscriptWrapper(EnumFlags& enumFlags, EnumType flag)
+            : enumFlags(enumFlags),
               flag(flag)
         {
         }
@@ -46,28 +46,28 @@ struct EnumFlags
 
         constexpr HYP_FORCE_INLINE operator bool() const
         {
-            return bool(UnderlyingType(enum_flags.value & static_cast<UnderlyingType>(flag)));
+            return bool(UnderlyingType(enumFlags.value & static_cast<UnderlyingType>(flag)));
         }
 
         constexpr HYP_FORCE_INLINE bool operator==(bool value) const
         {
-            return bool(UnderlyingType(enum_flags.value & static_cast<UnderlyingType>(flag))) == value;
+            return bool(UnderlyingType(enumFlags.value & static_cast<UnderlyingType>(flag))) == value;
         }
 
         constexpr HYP_FORCE_INLINE bool operator!=(bool value) const
         {
-            return bool(UnderlyingType(enum_flags.value & static_cast<UnderlyingType>(flag))) != value;
+            return bool(UnderlyingType(enumFlags.value & static_cast<UnderlyingType>(flag))) != value;
         }
 
         constexpr HYP_FORCE_INLINE SubscriptWrapper& operator=(bool value)
         {
             if (value)
             {
-                enum_flags.value |= static_cast<UnderlyingType>(flag);
+                enumFlags.value |= static_cast<UnderlyingType>(flag);
             }
             else
             {
-                enum_flags.value &= ~static_cast<UnderlyingType>(flag);
+                enumFlags.value &= ~static_cast<UnderlyingType>(flag);
             }
 
             return *this;
@@ -248,7 +248,7 @@ struct EnumFlags
 
 // Unary ~
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 constexpr EnumFlags<Enum> operator~(Enum lhs)
 {
     return EnumFlags<Enum>(~static_cast<typename EnumFlags<Enum>::UnderlyingType>(lhs));
@@ -256,55 +256,55 @@ constexpr EnumFlags<Enum> operator~(Enum lhs)
 
 // Binary bitwise operators
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 constexpr EnumFlags<Enum> operator|(Enum lhs, EnumFlags<Enum> rhs)
 {
     return EnumFlags<Enum>(lhs) | rhs;
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 constexpr EnumFlags<Enum> operator|(Enum lhs, Enum rhs)
 {
     return EnumFlags<Enum>(lhs) | EnumFlags<Enum>(rhs);
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 EnumFlags<Enum>& operator|=(EnumFlags<Enum> lhs, Enum rhs)
 {
     return lhs |= EnumFlags<Enum>(rhs);
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 constexpr EnumFlags<Enum> operator&(Enum lhs, EnumFlags<Enum> rhs)
 {
     return EnumFlags<Enum>(lhs) & rhs;
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 constexpr EnumFlags<Enum> operator&(Enum lhs, Enum rhs)
 {
     return EnumFlags<Enum>(lhs) & EnumFlags<Enum>(rhs);
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 EnumFlags<Enum>& operator&=(EnumFlags<Enum> lhs, Enum rhs)
 {
     return lhs &= EnumFlags<Enum>(rhs);
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 constexpr EnumFlags<Enum> operator^(Enum lhs, EnumFlags<Enum> rhs)
 {
     return EnumFlags<Enum>(lhs) ^ rhs;
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 constexpr EnumFlags<Enum> operator^(Enum lhs, Enum rhs)
 {
     return EnumFlags<Enum>(lhs) ^ EnumFlags<Enum>(rhs);
 }
 
-template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::is_enum_flags>>
+template <class Enum, typename = std::enable_if_t<std::is_enum_v<Enum> && EnumFlagsDecl<Enum>::isEnumFlags>>
 EnumFlags<Enum>& operator^=(EnumFlags<Enum> lhs, Enum rhs)
 {
     return lhs ^= EnumFlags<Enum>(rhs);
@@ -332,7 +332,7 @@ struct MergeEnumFlags
     template <>                                     \
     struct EnumFlagsDecl<_enum>                     \
     {                                               \
-        static constexpr bool is_enum_flags = true; \
+        static constexpr bool isEnumFlags = true; \
     };                                              \
     }
 
@@ -340,7 +340,7 @@ struct MergeEnumFlags
     template <>                                     \
     struct ::hyperion::EnumFlagsDecl<_enum>         \
     {                                               \
-        static constexpr bool is_enum_flags = true; \
+        static constexpr bool isEnumFlags = true; \
     };
 
 #endif

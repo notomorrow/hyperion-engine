@@ -4,7 +4,8 @@
 #define HYPERION_STRING_VIEW_HPP
 
 #include <core/memory/Memory.hpp>
-#include <core/memory/ByteBuffer.hpp>
+
+#include <core/utilities/Span.hpp>
 
 #include <core/containers/StringFwd.hpp>
 
@@ -18,6 +19,16 @@
 
 namespace hyperion {
 namespace utilities {
+
+#define HYP_STRINGVIEW_ASSERT(cond) \
+    do                              \
+    {                               \
+        if (!HYP_UNLIKELY(cond))    \
+        {                           \
+            HYP_BREAKPOINT;         \
+        }                           \
+    }                               \
+    while (0)
 
 template <int TStringType>
 class StringView
@@ -34,21 +45,21 @@ public:
     template <int FirstStringType, int SecondStringType>
     friend constexpr bool operator==(const StringView<FirstStringType>& lhs, const StringView<SecondStringType>& rhs);
 
-    static constexpr bool is_contiguous = true;
-    static constexpr SizeType not_found = SizeType(-1);
-    static constexpr int string_type = TStringType;
+    static constexpr bool isContiguous = true;
+    static constexpr SizeType notFound = SizeType(-1);
+    static constexpr int stringType = TStringType;
 
-    static constexpr bool is_ansi = TStringType == StringType::ANSI;
-    static constexpr bool is_utf8 = TStringType == StringType::UTF8;
-    static constexpr bool is_utf16 = TStringType == StringType::UTF16;
-    static constexpr bool is_utf32 = TStringType == StringType::UTF32;
-    static constexpr bool is_wide = TStringType == StringType::WIDE_CHAR;
+    static constexpr bool isAnsi = TStringType == StringType::ANSI;
+    static constexpr bool isUtf8 = TStringType == StringType::UTF8;
+    static constexpr bool isUtf16 = TStringType == StringType::UTF16;
+    static constexpr bool isUtf32 = TStringType == StringType::UTF32;
+    static constexpr bool isWide = TStringType == StringType::WIDE_CHAR;
 
-    static_assert(!is_utf8 || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "UTF-8 Strings must have CharType equal to char or unsigned char");
-    static_assert(!is_ansi || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "ANSI Strings must have CharType equal to char or unsigned char");
-    static_assert(!is_utf16 || std::is_same_v<CharType, utf::u16char>, "UTF-16 Strings must have CharType equal to utf::u16char");
-    static_assert(!is_utf32 || std::is_same_v<CharType, utf::u32char>, "UTF-32 Strings must have CharType equal to utf::u32char");
-    static_assert(!is_wide || std::is_same_v<CharType, wchar_t>, "Wide Strings must have CharType equal to wchar_t");
+    static_assert(!isUtf8 || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "UTF-8 Strings must have CharType equal to char or unsigned char");
+    static_assert(!isAnsi || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "ANSI Strings must have CharType equal to char or unsigned char");
+    static_assert(!isUtf16 || std::is_same_v<CharType, utf::u16char>, "UTF-16 Strings must have CharType equal to utf::u16char");
+    static_assert(!isUtf32 || std::is_same_v<CharType, utf::u32char>, "UTF-32 Strings must have CharType equal to utf::u32char");
+    static_assert(!isWide || std::is_same_v<CharType, wchar_t>, "Wide Strings must have CharType equal to wchar_t");
 
 private:
     template <bool IsConst>
@@ -63,7 +74,7 @@ private:
 
         HYP_FORCE_INLINE WidestCharType operator*() const
         {
-            if constexpr (is_utf8)
+            if constexpr (isUtf8)
             {
                 return utf::Char8to32(ptr);
             }
@@ -75,7 +86,7 @@ private:
 
         HYP_FORCE_INLINE IteratorBase& operator++()
         {
-            if constexpr (is_utf8)
+            if constexpr (isUtf8)
             {
                 SizeType codepoints;
                 utf::Char8to32(ptr, sizeof(utf::u32char), codepoints);
@@ -92,7 +103,7 @@ private:
 
         HYP_FORCE_INLINE IteratorBase operator++(int) const
         {
-            if constexpr (is_utf8)
+            if constexpr (isUtf8)
             {
                 SizeType codepoints;
                 utf::Char8to32(ptr, sizeof(utf::u32char), codepoints);
@@ -147,7 +158,7 @@ public:
     constexpr StringView(const CharType (&str)[Sz])
         : m_begin(&str[0]),
           m_end(&str[0] + Sz),
-          m_length(utf::utf_strlen<CharType, is_utf8>(str))
+          m_length(utf::utfStrlen<CharType, isUtf8>(str))
     {
     }
 
@@ -157,7 +168,7 @@ public:
           m_length(0)
     {
         SizeType codepoints = 0;
-        m_length = utf::utf_strlen<CharType, is_utf8>(str, codepoints);
+        m_length = utf::utfStrlen<CharType, isUtf8>(str, codepoints);
         m_end = m_begin + codepoints;
     }
 
@@ -166,9 +177,9 @@ public:
           m_end(_end),
           m_length(0)
     {
-        if constexpr (is_utf8)
+        if constexpr (isUtf8)
         {
-            m_length = utf::utf8_strlen(_begin, _end);
+            m_length = utf::utf8Strlen(_begin, _end);
         }
         else
         {
@@ -180,21 +191,14 @@ public:
     // constexpr StringView(const StaticString<Sz> &str)
     //     : m_begin(str.Begin()),
     //       m_end(str.Begin() + Sz),
-    //       m_length(utf::utf_strlen< CharType, is_utf8 >(str.data))
+    //       m_length(utf::utfStrlen< CharType, isUtf8 >(str.data))
     // {
     // }
 
-    constexpr StringView(const ByteBuffer& byte_buffer)
-        : m_begin(reinterpret_cast<const CharType*>(byte_buffer.Data())),
-          m_end(reinterpret_cast<const CharType*>(byte_buffer.Data() + byte_buffer.Size())),
-          m_length(utf::utf_strlen<CharType, is_utf8>(reinterpret_cast<const CharType*>(byte_buffer.Data())))
-    {
-    }
-
-    constexpr StringView(ConstByteView byte_view)
-        : m_begin(reinterpret_cast<const CharType*>(byte_view.Data())),
-          m_end(reinterpret_cast<const CharType*>(byte_view.Data() + byte_view.Size())),
-          m_length(utf::utf_strlen<CharType, is_utf8>(reinterpret_cast<const CharType*>(byte_view.Data())))
+    constexpr StringView(ConstByteView byteView)
+        : m_begin(reinterpret_cast<const CharType*>(byteView.Data())),
+          m_end(reinterpret_cast<const CharType*>(byteView.Data() + byteView.Size())),
+          m_length(utf::utfStrlen<CharType, isUtf8>(reinterpret_cast<const CharType*>(byteView.Data())))
     {
     }
 
@@ -292,14 +296,11 @@ public:
     WidestCharType GetChar(SizeType index) const
     {
         const SizeType size = Size();
+        HYP_STRINGVIEW_ASSERT(index < size);
 
-#ifdef HYP_DEBUG_MODE
-        AssertThrow(index < size);
-#endif
-
-        if constexpr (is_utf8)
+        if constexpr (isUtf8)
         {
-            return utf::utf8_charat(reinterpret_cast<const utf::u8char*>(Data()), size, index);
+            return utf::utf8Charat(reinterpret_cast<const utf::u8char*>(Data()), size, index);
         }
         else
         {
@@ -310,23 +311,23 @@ public:
     /*! \brief Check if the string contains the given character. */
     HYP_FORCE_INLINE constexpr bool Contains(WidestCharType ch) const
     {
-        return ch != CharType { 0 } && FindFirstIndex(ch) != not_found;
+        return ch != CharType { 0 } && FindFirstIndex(ch) != notFound;
     }
 
     /*! \brief Check if the string contains the given substring. */
     HYP_FORCE_INLINE constexpr bool Contains(const StringView& substr) const
     {
-        return FindFirstIndex(substr) != not_found;
+        return FindFirstIndex(substr) != notFound;
     }
 
     /*! \brief Find the first occurrence of the character
      *  \param ch The character to search for.
-     *  \returns The index of the first occurrence of the character or not_found if it is not in the string. */
+     *  \returns The index of the first occurrence of the character or notFound if it is not in the string. */
     HYP_FORCE_INLINE constexpr SizeType FindFirstIndex(WidestCharType ch) const
     {
         if (ch == 0)
         {
-            return not_found;
+            return notFound;
         }
 
         SizeType chars = 0;
@@ -339,31 +340,31 @@ public:
             }
         }
 
-        return not_found;
+        return notFound;
     }
 
     /*! \brief Find the last occurrence of the character
      *  \param ch The character to search for.
-     *  \returns The index of the last occurrence of the character or not_found if it is not in the string. */
+     *  \returns The index of the last occurrence of the character or notFound if it is not in the string. */
     HYP_FORCE_INLINE constexpr SizeType FindLastIndex(WidestCharType ch) const
     {
         if (ch == 0)
         {
-            return not_found;
+            return notFound;
         }
 
         SizeType chars = 0;
-        SizeType last_index = not_found;
+        SizeType lastIndex = notFound;
 
         for (auto it = Begin(); it != End(); ++it, ++chars)
         {
             if (*it == ch)
             {
-                last_index = chars;
+                lastIndex = chars;
             }
         }
 
-        return last_index;
+        return lastIndex;
     }
 
     /*! \brief Find the first occurrence of the substring.
@@ -375,9 +376,9 @@ public:
 
         if (str.Size() != 0)
         {
-            if constexpr (is_utf8)
+            if constexpr (isUtf8)
             {
-                return utf::utf8_strlen(m_begin, str.m_begin);
+                return utf::utf8Strlen(m_begin, str.m_begin);
             }
             else
             {
@@ -385,7 +386,7 @@ public:
             }
         }
 
-        return not_found;
+        return notFound;
     }
 
     constexpr StringView Substr(SizeType first, SizeType last) const
@@ -393,73 +394,73 @@ public:
         first = MathUtil::Min(first, m_length);
         last = MathUtil::Min(MathUtil::Max(last, first), m_length);
 
-        SizeType first_byte_index = 0;
-        SizeType last_byte_index = 0;
-        SizeType new_length = 0;
+        SizeType firstByteIndex = 0;
+        SizeType lastByteIndex = 0;
+        SizeType newLength = 0;
 
-        if constexpr (is_utf8)
+        if constexpr (isUtf8)
         {
-            SizeType char_index = 0;
+            SizeType charIndex = 0;
 
-            while (char_index < first)
+            while (charIndex < first)
             {
-                const CharType c = m_begin[first_byte_index];
+                const CharType c = m_begin[firstByteIndex];
 
                 if (c >= 0 && c <= 127)
                 {
-                    first_byte_index += 1;
+                    firstByteIndex += 1;
                 }
                 else if ((c & 0xE0) == 0xC0)
                 {
-                    first_byte_index += 2;
+                    firstByteIndex += 2;
                 }
                 else if ((c & 0xF0) == 0xE0)
                 {
-                    first_byte_index += 3;
+                    firstByteIndex += 3;
                 }
                 else if ((c & 0xF8) == 0xF0)
                 {
-                    first_byte_index += 4;
+                    firstByteIndex += 4;
                 }
 
-                ++char_index;
+                ++charIndex;
             }
 
-            while (char_index < last)
+            while (charIndex < last)
             {
-                const CharType c = m_begin[first_byte_index + last_byte_index];
+                const CharType c = m_begin[firstByteIndex + lastByteIndex];
 
                 if (c >= 0 && c <= 127)
                 {
-                    last_byte_index += 1;
+                    lastByteIndex += 1;
                 }
                 else if ((c & 0xE0) == 0xC0)
                 {
-                    last_byte_index += 2;
+                    lastByteIndex += 2;
                 }
                 else if ((c & 0xF0) == 0xE0)
                 {
-                    last_byte_index += 3;
+                    lastByteIndex += 3;
                 }
                 else if ((c & 0xF8) == 0xF0)
                 {
-                    last_byte_index += 4;
+                    lastByteIndex += 4;
                 }
 
-                ++new_length;
-                ++char_index;
+                ++newLength;
+                ++charIndex;
             }
 
-            last_byte_index += first_byte_index;
+            lastByteIndex += firstByteIndex;
         }
         else
         {
-            first_byte_index = first;
-            last_byte_index = last;
-            new_length = last - first;
+            firstByteIndex = first;
+            lastByteIndex = last;
+            newLength = last - first;
         }
 
-        return StringView(m_begin + first_byte_index, m_begin + last_byte_index, new_length);
+        return StringView(m_begin + firstByteIndex, m_begin + lastByteIndex, newLength);
     }
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
@@ -472,42 +473,42 @@ public:
 protected:
     constexpr StringView StrStr(const StringView& other) const
     {
-        const SizeType this_size = Size();
-        const SizeType other_size = other.Size();
+        const SizeType thisSize = Size();
+        const SizeType otherSize = other.Size();
 
-        if (this_size < other_size)
+        if (thisSize < otherSize)
         {
             return StringView();
         }
 
-        for (SizeType offset = 0, other_offset = 0, temp_offset = 0; offset < this_size && m_begin[offset] != '\0'; offset++)
+        for (SizeType offset = 0, otherOffset = 0, tempOffset = 0; offset < thisSize && m_begin[offset] != '\0'; offset++)
         {
-            if (m_begin[offset] != other.m_begin[other_offset])
+            if (m_begin[offset] != other.m_begin[otherOffset])
             {
                 continue;
             }
 
-            temp_offset = offset;
+            tempOffset = offset;
 
             for (;;)
             {
-                if (other_offset >= other_size || other.m_begin[other_offset] == '\0')
+                if (otherOffset >= otherSize || other.m_begin[otherOffset] == '\0')
                 {
                     return { m_begin + offset, m_end };
                 }
 
-                if (temp_offset >= this_size || m_begin[temp_offset] == '\0')
+                if (tempOffset >= thisSize || m_begin[tempOffset] == '\0')
                 {
                     break;
                 }
 
-                if (m_begin[temp_offset++] != other.m_begin[other_offset++])
+                if (m_begin[tempOffset++] != other.m_begin[otherOffset++])
                 {
                     break;
                 }
             }
 
-            other_offset = 0;
+            otherOffset = 0;
         }
 
         return StringView();
@@ -532,7 +533,7 @@ constexpr bool operator<(const StringView<TStringType>& lhs, const StringView<TS
         return false;
     }
 
-    return utf::utf_strncmp<typename StringView<TStringType>::CharType, StringView<TStringType>::is_utf8>(lhs.Data(), rhs.Data(), MathUtil::Min(lhs.Length(), rhs.Length())) < 0;
+    return utf::utfStrncmp<typename StringView<TStringType>::CharType, StringView<TStringType>::isUtf8>(lhs.Data(), rhs.Data(), MathUtil::Min(lhs.Length(), rhs.Length())) < 0;
 }
 
 template <int TStringType>

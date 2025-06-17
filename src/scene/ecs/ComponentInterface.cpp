@@ -11,14 +11,14 @@
 
 namespace hyperion {
 
-HYP_API bool ComponentInterface_CreateInstance(const HypClass* hyp_class, HypData& out_hyp_data)
+HYP_API bool ComponentInterface_CreateInstance(const HypClass* hypClass, HypData& outHypData)
 {
-    if (!hyp_class || !hyp_class->CanCreateInstance())
+    if (!hypClass || !hypClass->CanCreateInstance())
     {
         return false;
     }
 
-    return hyp_class->CreateInstance(out_hyp_data);
+    return hypClass->CreateInstance(outHypData);
 }
 
 #pragma region ComponentInterfaceRegistry
@@ -31,37 +31,37 @@ ComponentInterfaceRegistry& ComponentInterfaceRegistry::GetInstance()
 }
 
 ComponentInterfaceRegistry::ComponentInterfaceRegistry()
-    : m_is_initialized(false)
+    : m_isInitialized(false)
 {
 }
 
 void ComponentInterfaceRegistry::Initialize()
 {
-    AssertThrowMsg(!m_is_initialized, "Component interface registry already initialized!");
+    AssertThrowMsg(!m_isInitialized, "Component interface registry already initialized!");
 
     for (auto& it : m_factories)
     {
         m_interfaces.Set(it.first, it.second());
     }
 
-    m_is_initialized = true;
+    m_isInitialized = true;
 }
 
 void ComponentInterfaceRegistry::Shutdown()
 {
-    if (!m_is_initialized)
+    if (!m_isInitialized)
     {
         return;
     }
 
     m_interfaces.Clear();
 
-    m_is_initialized = false;
+    m_isInitialized = false;
 }
 
-void ComponentInterfaceRegistry::Register(TypeID type_id, UniquePtr<IComponentInterface> (*fptr)())
+void ComponentInterfaceRegistry::Register(TypeId typeId, UniquePtr<IComponentInterface> (*fptr)())
 {
-    m_factories.Set(type_id, fptr);
+    m_factories.Set(typeId, fptr);
 }
 
 #pragma endregion ComponentInterfaceRegistry

@@ -15,8 +15,8 @@ HYP_DECLARE_LOG_CHANNEL(UI);
 #pragma region UITextbox
 
 UITextbox::UITextbox()
-    : m_text_element(nullptr),
-      m_character_index(0)
+    : m_textElement(nullptr),
+      m_characterIndex(0)
 {
     SetBorderRadius(2);
     SetPadding({ 5, 2 });
@@ -24,27 +24,27 @@ UITextbox::UITextbox()
     SetBackgroundColor(Vec4f::One());
 
     // For now
-    SetIsScrollEnabled(UIObjectScrollbarOrientation::ALL, false);
+    SetIsScrollEnabled(SA_ALL, false);
 
-    OnKeyDown.Bind([this](const KeyboardEvent& event_data) -> UIEventHandlerResult
+    OnKeyDown.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
                  {
                      // disable cursor blinking when typing
-                     m_cursor_blink_blend_var.SetValue(1.0f);
-                     m_cursor_blink_blend_var.SetTarget(1.0f);
+                     m_cursorBlinkBlendVar.SetValue(1.0f);
+                     m_cursorBlinkBlendVar.SetTarget(1.0f);
 
-                     switch (event_data.key_code)
+                     switch (eventData.keyCode)
                      {
                      case KeyCode::ARROW_LEFT:
-                         if (m_character_index > 0)
+                         if (m_characterIndex > 0)
                          {
-                             --m_character_index;
+                             --m_characterIndex;
                          }
 
                          return UIEventHandlerResult::STOP_BUBBLING;
                      case KeyCode::ARROW_RIGHT:
-                         if (m_character_index < uint32(GetText().Length()))
+                         if (m_characterIndex < uint32(GetText().Length()))
                          {
-                             ++m_character_index;
+                             ++m_characterIndex;
                          }
 
                          return UIEventHandlerResult::STOP_BUBBLING;
@@ -52,69 +52,69 @@ UITextbox::UITextbox()
                          break;
                      }
 
-                     char key_char;
+                     char keyChar;
 
-                     const bool shift = event_data.input_manager->IsShiftDown();
-                     const bool alt = event_data.input_manager->IsAltDown();
-                     const bool ctrl = event_data.input_manager->IsCtrlDown();
+                     const bool shift = eventData.inputManager->IsShiftDown();
+                     const bool alt = eventData.inputManager->IsAltDown();
+                     const bool ctrl = eventData.inputManager->IsCtrlDown();
 
-                     if (KeyCodeToChar(event_data.key_code, shift, alt, ctrl, key_char))
+                     if (KeyCodeToChar(eventData.keyCode, shift, alt, ctrl, keyChar))
                      {
                          const String& text = GetText();
 
-                         if (key_char == '\b')
+                         if (keyChar == '\b')
                          {
-                             if (m_character_index > 0)
+                             if (m_characterIndex > 0)
                              {
-                                 --m_character_index;
+                                 --m_characterIndex;
 
-                                 SetText(String(text.Substr(0, m_character_index)) + text.Substr(m_character_index + 1));
+                                 SetText(String(text.Substr(0, m_characterIndex)) + text.Substr(m_characterIndex + 1));
                              }
                          }
-                         else if (key_char == '\t')
+                         else if (keyChar == '\t')
                          {
                              // @TODO
                          }
-                         else if (key_char == '\n')
+                         else if (keyChar == '\n')
                          {
                              // @TODO
                          }
-                         else if (key_char == '\r')
+                         else if (keyChar == '\r')
                          {
                              // @TODO
                          }
-                         else if (key_char == '\f')
+                         else if (keyChar == '\f')
                          {
                              // @TODO
                          }
-                         else if (key_char == '\v')
+                         else if (keyChar == '\v')
                          {
                              // @TODO
                          }
-                         else if (key_char == '\a')
+                         else if (keyChar == '\a')
                          {
                              // @TODO
                          }
-                         else if (key_char == '\e')
+                         else if (keyChar == '\e')
                          {
                              // @TODO
                          }
-                         else if (key_char == '\x1b')
+                         else if (keyChar == '\x1b')
                          {
                              // @TODO
                          }
-                         else if (key_char != '\0')
+                         else if (keyChar != '\0')
                          {
-                             if (m_character_index > 0)
+                             if (m_characterIndex > 0)
                              {
-                                 SetText(String(text.Substr(0, m_character_index)) + key_char + text.Substr(m_character_index));
+                                 SetText(String(text.Substr(0, m_characterIndex)) + keyChar + text.Substr(m_characterIndex));
                              }
                              else
                              {
-                                 SetText(String::empty + key_char + text);
+                                 SetText(String::empty + keyChar + text);
                              }
 
-                             ++m_character_index;
+                             ++m_characterIndex;
                          }
                      }
 
@@ -122,7 +122,7 @@ UITextbox::UITextbox()
                  })
         .Detach();
 
-    OnKeyUp.Bind([this](const KeyboardEvent& event_data) -> UIEventHandlerResult
+    OnKeyUp.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
                {
                    return UIEventHandlerResult::STOP_BUBBLING;
                })
@@ -131,50 +131,50 @@ UITextbox::UITextbox()
 
 void UITextbox::Init()
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     UIPanel::Init();
 
     SetInnerSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT }));
     // SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
 
-    Handle<UIText> text_element = CreateUIObject<UIText>(NAME("TextboxText"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-    text_element->SetTextSize(12.0f);
+    Handle<UIText> textElement = CreateUIObject<UIText>(NAME("TextboxText"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+    textElement->SetTextSize(12.0f);
 
     UpdateTextColor();
 
-    // m_text_element->SetAffectsParentSize(false);
+    // m_textElement->SetAffectsParentSize(false);
 
-    UIObject::AddChildUIObject(text_element);
+    UIObject::AddChildUIObject(textElement);
 
-    m_text_element = text_element;
+    m_textElement = textElement;
 }
 
-void UITextbox::SetTextColor(const Color& text_color)
+void UITextbox::SetTextColor(const Color& textColor)
 {
-    UIPanel::SetTextColor(text_color);
+    UIPanel::SetTextColor(textColor);
 
     UpdateTextColor();
 }
 
 void UITextbox::SetText(const String& text)
 {
-    const bool was_displaying_placeholder = ShouldDisplayPlaceholder();
+    const bool wasDisplayingPlaceholder = ShouldDisplayPlaceholder();
 
     UIObject::SetText(text);
 
-    m_character_index = MathUtil::Min(m_character_index, uint32(text.Length()));
+    m_characterIndex = MathUtil::Min(m_characterIndex, uint32(text.Length()));
 
-    if (m_text_element)
+    if (m_textElement)
     {
-        const bool should_display_placeholder = ShouldDisplayPlaceholder();
+        const bool shouldDisplayPlaceholder = ShouldDisplayPlaceholder();
 
-        if (should_display_placeholder != was_displaying_placeholder)
+        if (shouldDisplayPlaceholder != wasDisplayingPlaceholder)
         {
             UpdateTextColor();
         }
 
-        m_text_element->SetText(should_display_placeholder ? m_placeholder : text);
+        m_textElement->SetText(shouldDisplayPlaceholder ? m_placeholder : text);
     }
 }
 
@@ -185,49 +185,49 @@ void UITextbox::SetPlaceholder(const String& placeholder)
     UpdateTextColor();
 }
 
-void UITextbox::Update_Internal(GameCounter::TickUnit delta)
+void UITextbox::Update_Internal(float delta)
 {
     UIPanel::Update_Internal(delta);
 
-    if (m_cursor_element != nullptr)
+    if (m_cursorElement != nullptr)
     {
-        constexpr double cursor_blink_speed = 2.5;
+        constexpr double cursorBlinkSpeed = 2.5;
 
         if (delta <= 0.167)
         {
-            if (!m_cursor_blink_blend_var.Advance(delta * cursor_blink_speed))
+            if (!m_cursorBlinkBlendVar.Advance(delta * cursorBlinkSpeed))
             {
-                m_cursor_blink_blend_var.SetTarget(1.0f - m_cursor_blink_blend_var.GetTarget());
+                m_cursorBlinkBlendVar.SetTarget(1.0f - m_cursorBlinkBlendVar.GetTarget());
             }
         }
 
         // animate cursor
-        m_cursor_element->SetBackgroundColor(Vec4f { 0, 0, 0, m_cursor_blink_blend_var.GetValue() });
+        m_cursorElement->SetBackgroundColor(Vec4f { 0, 0, 0, m_cursorBlinkBlendVar.GetValue() });
 
         // update cursor position
-        // Get pixel position of m_character_index
-        Vec2i character_position = Vec2i(m_text_element->GetCharacterOffset(m_character_index));
+        // Get pixel position of m_characterIndex
+        Vec2i characterPosition = Vec2i(m_textElement->GetCharacterOffset(m_characterIndex));
 
-        if (m_cursor_element->GetPosition() != character_position)
+        if (m_cursorElement->GetPosition() != characterPosition)
         {
-            m_cursor_element->SetPosition(character_position);
+            m_cursorElement->SetPosition(characterPosition);
         }
     }
 }
 
-void UITextbox::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state)
+void UITextbox::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState)
 {
-    const EnumFlags<UIObjectFocusState> previous_focus_state = GetFocusState();
+    const EnumFlags<UIObjectFocusState> previousFocusState = GetFocusState();
 
-    UIPanel::SetFocusState_Internal(focus_state);
+    UIPanel::SetFocusState_Internal(focusState);
 
-    if ((previous_focus_state & UIObjectFocusState::FOCUSED) != (focus_state & UIObjectFocusState::FOCUSED))
+    if ((previousFocusState & UIObjectFocusState::FOCUSED) != (focusState & UIObjectFocusState::FOCUSED))
     {
-        if (focus_state & UIObjectFocusState::FOCUSED)
+        if (focusState & UIObjectFocusState::FOCUSED)
         {
             const String& text = GetText();
 
-            m_character_index = uint32(text.Length());
+            m_characterIndex = uint32(text.Length());
         }
 
         UpdateCursor();
@@ -238,36 +238,36 @@ void UITextbox::UpdateCursor()
 {
     if (GetFocusState() & UIObjectFocusState::FOCUSED)
     {
-        if (m_cursor_element == nullptr)
+        if (m_cursorElement == nullptr)
         {
-            m_cursor_element = CreateUIObject<UIPanel>(NAME("TextboxCursor"), Vec2i { 0, 0 }, UIObjectSize({ 1, UIObjectSize::PIXEL }, { 90, UIObjectSize::PERCENT }));
-            m_cursor_element->SetBackgroundColor(Vec4f { 0, 0, 0, 1 }); // black
-            m_cursor_element->SetAffectsParentSize(false);
+            m_cursorElement = CreateUIObject<UIPanel>(NAME("TextboxCursor"), Vec2i { 0, 0 }, UIObjectSize({ 1, UIObjectSize::PIXEL }, { 90, UIObjectSize::PERCENT }));
+            m_cursorElement->SetBackgroundColor(Vec4f { 0, 0, 0, 1 }); // black
+            m_cursorElement->SetAffectsParentSize(false);
 
-            UIObject::AddChildUIObject(m_cursor_element);
+            UIObject::AddChildUIObject(m_cursorElement);
         }
     }
     else
     {
-        if (m_cursor_element != nullptr)
+        if (m_cursorElement != nullptr)
         {
-            UIObject::RemoveChildUIObject(m_cursor_element);
+            UIObject::RemoveChildUIObject(m_cursorElement);
 
-            m_cursor_element = nullptr;
+            m_cursorElement = nullptr;
         }
     }
 
-    m_cursor_blink_blend_var.SetValue(1.0f);
-    m_cursor_blink_blend_var.SetTarget(1.0f);
+    m_cursorBlinkBlendVar.SetValue(1.0f);
+    m_cursorBlinkBlendVar.SetTarget(1.0f);
 }
 
 Color UITextbox::GetPlaceholderTextColor() const
 {
-    // Vec4f background_color_rgba = Vec4f(ComputeBlendedBackgroundColor());
-    // background_color_rgba *= background_color_rgba.w;
-    // background_color_rgba.w = 1.0f;
+    // Vec4f backgroundColorRgba = Vec4f(ComputeBlendedBackgroundColor());
+    // backgroundColorRgba *= backgroundColorRgba.w;
+    // backgroundColorRgba.w = 1.0f;
 
-    // const float brightness = (0.299f * background_color_rgba.x) + (0.587f * background_color_rgba.y) + (0.114f * background_color_rgba.z);
+    // const float brightness = (0.299f * backgroundColorRgba.x) + (0.587f * backgroundColorRgba.y) + (0.114f * backgroundColorRgba.z);
 
     // if (brightness < 0.35f) {
     //     return Color(Vec4f { 1.0f, 1.0f, 1.0f, 0.8f });
@@ -280,20 +280,20 @@ Color UITextbox::GetPlaceholderTextColor() const
 
 void UITextbox::UpdateTextColor()
 {
-    if (!m_text_element)
+    if (!m_textElement)
     {
         return;
     }
 
     if (ShouldDisplayPlaceholder())
     {
-        m_text_element->SetText(m_placeholder);
-        m_text_element->SetTextColor(GetPlaceholderTextColor());
+        m_textElement->SetText(m_placeholder);
+        m_textElement->SetTextColor(GetPlaceholderTextColor());
     }
     else
     {
-        m_text_element->SetText(m_text);
-        m_text_element->SetTextColor(GetTextColor());
+        m_textElement->SetText(m_text);
+        m_textElement->SetTextColor(GetTextColor());
     }
 }
 

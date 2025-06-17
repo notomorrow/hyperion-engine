@@ -12,23 +12,23 @@
 namespace hyperion::serialization {
 
 FBOMObject::FBOMObject()
-    : m_object_type(FBOMBaseObjectType())
+    : m_objectType(FBOMBaseObjectType())
 {
 }
 
-FBOMObject::FBOMObject(const FBOMType& loader_type)
-    : m_object_type(loader_type)
+FBOMObject::FBOMObject(const FBOMType& loaderType)
+    : m_objectType(loaderType)
 {
-    AssertThrowMsg(loader_type.IsOrExtends(FBOMBaseObjectType()), "Expected type to be an object type, got %s", loader_type.ToString().Data());
+    AssertThrowMsg(loaderType.IsOrExtends(FBOMBaseObjectType()), "Expected type to be an object type, got %s", loaderType.ToString().Data());
 }
 
 FBOMObject::FBOMObject(const FBOMObject& other)
-    : m_object_type(other.m_object_type),
+    : m_objectType(other.m_objectType),
       m_children(other.m_children),
       properties(other.properties),
-      m_deserialized_object(other.m_deserialized_object),
-      m_external_info(other.m_external_info),
-      m_unique_id(other.m_unique_id)
+      m_deserializedObject(other.m_deserializedObject),
+      m_externalInfo(other.m_externalInfo),
+      m_uniqueId(other.m_uniqueId)
 {
 }
 
@@ -39,23 +39,23 @@ FBOMObject& FBOMObject::operator=(const FBOMObject& other)
         return *this;
     }
 
-    m_object_type = other.m_object_type;
+    m_objectType = other.m_objectType;
     m_children = other.m_children;
     properties = other.properties;
-    m_deserialized_object = other.m_deserialized_object;
-    m_external_info = other.m_external_info;
-    m_unique_id = other.m_unique_id;
+    m_deserializedObject = other.m_deserializedObject;
+    m_externalInfo = other.m_externalInfo;
+    m_uniqueId = other.m_uniqueId;
 
     return *this;
 }
 
 FBOMObject::FBOMObject(FBOMObject&& other) noexcept
-    : m_object_type(std::move(other.m_object_type)),
+    : m_objectType(std::move(other.m_objectType)),
       m_children(std::move(other.m_children)),
       properties(std::move(other.properties)),
-      m_deserialized_object(std::move(other.m_deserialized_object)),
-      m_external_info(std::move(other.m_external_info)),
-      m_unique_id(std::move(other.m_unique_id))
+      m_deserializedObject(std::move(other.m_deserializedObject)),
+      m_externalInfo(std::move(other.m_externalInfo)),
+      m_uniqueId(std::move(other.m_uniqueId))
 {
 }
 
@@ -66,12 +66,12 @@ FBOMObject& FBOMObject::operator=(FBOMObject&& other) noexcept
         return *this;
     }
 
-    m_object_type = std::move(other.m_object_type);
+    m_objectType = std::move(other.m_objectType);
     m_children = std::move(other.m_children);
     properties = std::move(other.properties);
-    m_deserialized_object = std::move(other.m_deserialized_object);
-    m_external_info = std::move(other.m_external_info);
-    m_unique_id = std::move(other.m_unique_id);
+    m_deserializedObject = std::move(other.m_deserializedObject);
+    m_externalInfo = std::move(other.m_externalInfo);
+    m_uniqueId = std::move(other.m_uniqueId);
 
     return *this;
 }
@@ -92,13 +92,13 @@ bool FBOMObject::HasProperty(ANSIStringView key) const
 
 const FBOMData& FBOMObject::GetProperty(ANSIStringView key) const
 {
-    static const FBOMData invalid_property_data {};
+    static const FBOMData invalidPropertyData {};
 
     auto it = properties.FindAs(key);
 
     if (it == properties.End())
     {
-        return invalid_property_data;
+        return invalidPropertyData;
     }
 
     return it->second;
@@ -115,15 +115,15 @@ FBOMObject& FBOMObject::SetProperty(ANSIStringView key, FBOMData&& data)
 {
     // sanity check
     // ANSIString str = key.LookupString();
-    // AssertThrowMsg(key.hash_code == str.GetHashCode().Value(),
+    // AssertThrowMsg(key.hashCode == str.GetHashCode().Value(),
     //     "Expected hash for %s (len: %u) (%llu) to equal hash of %s (len: %u) (%llu)",
     //     key.LookupString(),
     //     std::strlen(key.LookupString()),
-    //     key.hash_code,
+    //     key.hashCode,
     //     str.Data(),
     //     str.Size(),
     //     str.GetHashCode().Value());
-    // AssertThrow(key.hash_code == CreateNameFromDynamicString(str).hash_code);
+    // AssertThrow(key.hashCode == CreateNameFromDynamicString(str).hashCode);
 
     properties.Set(key, std::move(data));
 
@@ -173,9 +173,9 @@ FBOMResult FBOMObject::Visit(UniqueID id, FBOMWriter* writer, ByteWriter* out, E
     return writer->Write(out, *this, id, attributes);
 }
 
-FBOMResult FBOMObject::Deserialize(FBOMLoadContext& context, TypeID type_id, const FBOMObject& in, HypData& out)
+FBOMResult FBOMObject::Deserialize(FBOMLoadContext& context, TypeId typeId, const FBOMObject& in, HypData& out)
 {
-    FBOMMarshalerBase* marshal = GetMarshal(type_id);
+    FBOMMarshalerBase* marshal = GetMarshal(typeId);
 
     if (!marshal)
     {
@@ -192,7 +192,7 @@ HashCode FBOMObject::GetHashCode() const
 {
     HashCode hc;
 
-    hc.Add(m_object_type.GetHashCode());
+    hc.Add(m_objectType.GetHashCode());
 
     for (const auto& it : properties)
     {
@@ -214,7 +214,7 @@ String FBOMObject::ToString(bool deep) const
 {
     std::stringstream ss;
 
-    ss << m_object_type.ToString();
+    ss << m_objectType.ToString();
     ss << " { properties: { ";
     for (auto& prop : properties)
     {
@@ -252,9 +252,9 @@ String FBOMObject::ToString(bool deep) const
     return String(ss.str().data());
 }
 
-FBOMMarshalerBase* FBOMObject::GetMarshal(TypeID type_id)
+FBOMMarshalerBase* FBOMObject::GetMarshal(TypeId typeId)
 {
-    return FBOM::GetInstance().GetMarshal(type_id);
+    return FBOM::GetInstance().GetMarshal(typeId);
 }
 
 } // namespace hyperion::serialization

@@ -27,23 +27,22 @@ namespace utilities {
 template <class... Types>
 struct ClassTraits
 {
-    static constexpr bool default_constructible = (std::is_default_constructible_v<Types> && ...);
-    static constexpr bool copy_constructible = (std::is_copy_constructible_v<Types> && ...);
-    static constexpr bool copy_assignable = (std::is_copy_assignable_v<Types> && ...);
-    static constexpr bool move_constructible = (std::is_move_constructible_v<Types> && ...);
-    static constexpr bool move_assignable = (std::is_move_assignable_v<Types> && ...);
+    static constexpr bool defaultConstructible = (std::is_default_constructible_v<Types> && ...);
+    static constexpr bool copyConstructible = (std::is_copy_constructible_v<Types> && ...);
+    static constexpr bool copyAssignable = (std::is_copy_assignable_v<Types> && ...);
+    static constexpr bool moveConstructible = (std::is_move_constructible_v<Types> && ...);
+    static constexpr bool moveAssignable = (std::is_move_assignable_v<Types> && ...);
 
-    static constexpr EnumFlags<ClassTraitFlags> value = (default_constructible ? ClassTraitFlags::DEFAULT_CONSTRUCTIBLE : ClassTraitFlags::NONE)
-        | (copy_constructible ? ClassTraitFlags::COPY_CONSTRUCTIBLE : ClassTraitFlags::NONE)
-        | (copy_assignable ? ClassTraitFlags::COPY_ASSIGNABLE : ClassTraitFlags::NONE)
-        | (move_constructible ? ClassTraitFlags::MOVE_CONSTRUCTIBLE : ClassTraitFlags::NONE)
-        | (move_assignable ? ClassTraitFlags::MOVE_ASSIGNABLE : ClassTraitFlags::NONE);
+    static constexpr EnumFlags<ClassTraitFlags> value = (defaultConstructible ? ClassTraitFlags::DEFAULT_CONSTRUCTIBLE : ClassTraitFlags::NONE)
+        | (copyConstructible ? ClassTraitFlags::COPY_CONSTRUCTIBLE : ClassTraitFlags::NONE)
+        | (copyAssignable ? ClassTraitFlags::COPY_ASSIGNABLE : ClassTraitFlags::NONE)
+        | (moveConstructible ? ClassTraitFlags::MOVE_CONSTRUCTIBLE : ClassTraitFlags::NONE)
+        | (moveAssignable ? ClassTraitFlags::MOVE_ASSIGNABLE : ClassTraitFlags::NONE);
 };
 
 } // namespace utilities
 
-template <class... Types>
-using ClassTraits = utilities::ClassTraits;
+using utilities::ClassTraits;
 
 } // namespace hyperion
 

@@ -18,9 +18,9 @@ EditorActionFactoryRegistry& EditorActionFactoryRegistry::GetInstance()
     return instance;
 }
 
-IEditorActionFactory* EditorActionFactoryRegistry::GetFactoryByName(Name action_name) const
+IEditorActionFactory* EditorActionFactoryRegistry::GetFactoryByName(Name actionName) const
 {
-    const auto it = m_factories.Find(action_name);
+    const auto it = m_factories.Find(actionName);
 
     if (it == m_factories.End())
     {
@@ -30,22 +30,22 @@ IEditorActionFactory* EditorActionFactoryRegistry::GetFactoryByName(Name action_
     return it->second;
 }
 
-void EditorActionFactoryRegistry::RegisterFactory(Name action_name, IEditorActionFactory* factory)
+void EditorActionFactoryRegistry::RegisterFactory(Name actionName, IEditorActionFactory* factory)
 {
-    auto it = m_factories.Find(action_name);
-    AssertThrowMsg(it == m_factories.End(), "Editor action factory with name %s already registered", action_name.LookupString());
+    auto it = m_factories.Find(actionName);
+    AssertThrowMsg(it == m_factories.End(), "Editor action factory with name %s already registered", actionName.LookupString());
 
-    m_factories.Set(action_name, factory);
+    m_factories.Set(actionName, factory);
 }
 
 #pragma endregion EditorActionFactoryRegistry
 
 #pragma region EditorActionFactoryRegistrationBase
 
-EditorActionFactoryRegistrationBase::EditorActionFactoryRegistrationBase(Name action_name, IEditorActionFactory* factory)
+EditorActionFactoryRegistrationBase::EditorActionFactoryRegistrationBase(Name actionName, IEditorActionFactory* factory)
     : m_factory(factory)
 {
-    EditorActionFactoryRegistry::GetInstance().RegisterFactory(action_name, factory);
+    EditorActionFactoryRegistry::GetInstance().RegisterFactory(actionName, factory);
 }
 
 EditorActionFactoryRegistrationBase::~EditorActionFactoryRegistrationBase()

@@ -15,6 +15,7 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -22,7 +23,7 @@ namespace hyperion {
 class Texture;
 class TextureMipmapRenderer;
 
-const FixedArray<Pair<Vec3f, Vec3f>, 6> Texture::cubemap_directions = {
+const FixedArray<Pair<Vec3f, Vec3f>, 6> Texture::cubemapDirections = {
     Pair<Vec3f, Vec3f> { Vec3f { 1, 0, 0 }, Vec3f { 0, 1, 0 } },
     Pair<Vec3f, Vec3f> { Vec3f { -1, 0, 0 }, Vec3f { 0, 1, 0 } },
     Pair<Vec3f, Vec3f> { Vec3f { 0, 1, 0 }, Vec3f { 0, 0, -1 } },
@@ -35,56 +36,56 @@ const FixedArray<Pair<Vec3f, Vec3f>, 6> Texture::cubemap_directions = {
 
 Texture::Texture()
     : Texture(TextureDesc {
-          ImageType::TEXTURE_TYPE_2D,
-          InternalFormat::RGBA8,
+          TT_TEX2D,
+          TF_RGBA8,
           Vec3u { 1, 1, 1 },
-          FilterMode::TEXTURE_FILTER_NEAREST,
-          FilterMode::TEXTURE_FILTER_NEAREST,
-          WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE })
+          TFM_NEAREST,
+          TFM_NEAREST,
+          TWM_CLAMP_TO_EDGE })
 {
 }
 
-Texture::Texture(const TextureDesc& texture_desc)
-    : m_render_resource(nullptr),
-      m_texture_desc(texture_desc),
-      m_streamed_texture_data(MakeRefCountedPtr<StreamedTextureData>(TextureData { texture_desc }, m_streamed_texture_data_resource_handle))
+Texture::Texture(const TextureDesc& textureDesc)
+    : m_renderResource(nullptr),
+      m_textureDesc(textureDesc),
+      m_streamedTextureData(MakeRefCountedPtr<StreamedTextureData>(TextureData { textureDesc }, m_streamedTextureDataResourceHandle))
 {
 }
 
-Texture::Texture(const TextureData& texture_data)
-    : m_render_resource(nullptr),
-      m_texture_desc(texture_data.desc),
-      m_streamed_texture_data(MakeRefCountedPtr<StreamedTextureData>(texture_data, m_streamed_texture_data_resource_handle))
+Texture::Texture(const TextureData& textureData)
+    : m_renderResource(nullptr),
+      m_textureDesc(textureData.desc),
+      m_streamedTextureData(MakeRefCountedPtr<StreamedTextureData>(textureData, m_streamedTextureDataResourceHandle))
 {
 }
 
-Texture::Texture(const RC<StreamedTextureData>& streamed_texture_data)
-    : m_render_resource(nullptr),
-      m_texture_desc(streamed_texture_data != nullptr ? streamed_texture_data->GetTextureDesc() : TextureDesc {}),
-      m_streamed_texture_data(streamed_texture_data)
+Texture::Texture(const RC<StreamedTextureData>& streamedTextureData)
+    : m_renderResource(nullptr),
+      m_textureDesc(streamedTextureData != nullptr ? streamedTextureData->GetTextureDesc() : TextureDesc {}),
+      m_streamedTextureData(streamedTextureData)
 {
-    if (m_streamed_texture_data)
+    if (m_streamedTextureData)
     {
-        m_streamed_texture_data_resource_handle = ResourceHandle(*m_streamed_texture_data);
+        m_streamedTextureDataResourceHandle = ResourceHandle(*m_streamedTextureData);
     }
 }
 
 Texture::~Texture()
 {
-    m_render_persistent.Reset();
+    m_renderPersistent.Reset();
 
-    if (m_render_resource)
+    if (m_renderResource)
     {
-        FreeResource(m_render_resource);
-        m_render_resource = nullptr;
+        FreeResource(m_renderResource);
+        m_renderResource = nullptr;
     }
 
-    m_streamed_texture_data_resource_handle.Reset();
+    m_streamedTextureDataResourceHandle.Reset();
 
-    if (m_streamed_texture_data)
+    if (m_streamedTextureData)
     {
-        m_streamed_texture_data->WaitForFinalization();
-        m_streamed_texture_data.Reset();
+        m_streamedTextureData->WaitForFinalization();
+        m_streamedTextureData.Reset();
     }
 }
 
@@ -92,89 +93,89 @@ void Texture::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
         {
-            m_render_persistent.Reset();
+            m_renderPersistent.Reset();
 
-            if (m_render_resource)
+            if (m_renderResource)
             {
-                FreeResource(m_render_resource);
-                m_render_resource = nullptr;
+                FreeResource(m_renderResource);
+                m_renderResource = nullptr;
             }
 
-            m_streamed_texture_data_resource_handle.Reset();
+            m_streamedTextureDataResourceHandle.Reset();
 
-            if (m_streamed_texture_data)
+            if (m_streamedTextureData)
             {
-                m_streamed_texture_data->WaitForFinalization();
-                m_streamed_texture_data.Reset();
+                m_streamedTextureData->WaitForFinalization();
+                m_streamedTextureData.Reset();
             }
         }));
 
-    m_render_resource = AllocateResource<RenderTexture>(this);
+    m_renderResource = AllocateResource<RenderTexture>(this);
 
-    m_streamed_texture_data_resource_handle.Reset();
+    m_streamedTextureDataResourceHandle.Reset();
 
     SetReady(true);
 }
 
-void Texture::SetStreamedTextureData(const RC<StreamedTextureData>& streamed_texture_data)
+void Texture::SetStreamedTextureData(const RC<StreamedTextureData>& streamedTextureData)
 {
-    Mutex::Guard guard(m_readback_mutex);
+    Mutex::Guard guard(m_readbackMutex);
 
-    if (m_streamed_texture_data == streamed_texture_data)
+    if (m_streamedTextureData == streamedTextureData)
     {
         return;
     }
 
-    m_streamed_texture_data_resource_handle.Reset();
+    m_streamedTextureDataResourceHandle.Reset();
 
-    m_streamed_texture_data = streamed_texture_data;
+    m_streamedTextureData = streamedTextureData;
 
-    if (m_streamed_texture_data && IsInitCalled())
+    if (m_streamedTextureData && IsInitCalled())
     {
-        m_streamed_texture_data_resource_handle = ResourceHandle(*m_streamed_texture_data);
+        m_streamedTextureDataResourceHandle = ResourceHandle(*m_streamedTextureData);
     }
 
     // @TODO Reupload texture data if already initialized
 }
 
-void Texture::SetTextureDesc(const TextureDesc& texture_desc)
+void Texture::SetTextureDesc(const TextureDesc& textureDesc)
 {
-    Mutex::Guard guard(m_readback_mutex);
+    Mutex::Guard guard(m_readbackMutex);
 
-    if (m_texture_desc == texture_desc)
+    if (m_textureDesc == textureDesc)
     {
         return;
     }
 
-    m_texture_desc = texture_desc;
+    m_textureDesc = textureDesc;
 
     // Update streamed data
-    if (m_streamed_texture_data)
+    if (m_streamedTextureData)
     {
-        bool has_resource_handle = bool(m_streamed_texture_data_resource_handle);
+        bool hasResourceHandle = bool(m_streamedTextureDataResourceHandle);
 
-        ByteBuffer texture_data_buffer;
+        ByteBuffer textureDataBuffer;
 
-        if (!has_resource_handle)
+        if (!hasResourceHandle)
         {
-            m_streamed_texture_data_resource_handle = ResourceHandle(*m_streamed_texture_data);
+            m_streamedTextureDataResourceHandle = ResourceHandle(*m_streamedTextureData);
         }
 
-        texture_data_buffer = m_streamed_texture_data->GetTextureData().buffer;
+        textureDataBuffer = m_streamedTextureData->GetTextureData().buffer;
 
-        m_streamed_texture_data_resource_handle.Reset();
-        m_streamed_texture_data->WaitForFinalization();
+        m_streamedTextureDataResourceHandle.Reset();
+        m_streamedTextureData->WaitForFinalization();
 
         // Create a new StreamedTextureData, with the newly set TextureDesc.
-        m_streamed_texture_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-                                                                             m_texture_desc,
-                                                                             std::move(texture_data_buffer) },
-            m_streamed_texture_data_resource_handle);
+        m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
+                                                                           m_textureDesc,
+                                                                           std::move(textureDataBuffer) },
+            m_streamedTextureDataResourceHandle);
 
         // If we didn't need it before assume we don't need it now.
-        if (!has_resource_handle)
+        if (!hasResourceHandle)
         {
-            m_streamed_texture_data_resource_handle.Reset();
+            m_streamedTextureDataResourceHandle.Reset();
         }
     }
 
@@ -189,14 +190,14 @@ void Texture::GenerateMipmaps()
 {
     AssertReady();
 
-    m_render_resource->IncRef();
-    m_render_resource->RenderMipmaps();
-    m_render_resource->DecRef();
+    m_renderResource->IncRef();
+    m_renderResource->RenderMipmaps();
+    m_renderResource->DecRef();
 }
 
 void Texture::Readback()
 {
-    Mutex::Guard guard(m_readback_mutex);
+    Mutex::Guard guard(m_readbackMutex);
 
     Readback_Internal();
 }
@@ -205,38 +206,40 @@ void Texture::Readback_Internal()
 {
     AssertReady();
 
-    ByteBuffer result_byte_buffer;
-    m_render_resource->Readback(result_byte_buffer);
+    // ByteBuffer resultByteBuffer;
+    // m_renderResource->Readback(resultByteBuffer);
 
-    const SizeType expected = m_texture_desc.GetByteSize();
-    const SizeType real = result_byte_buffer.Size();
+    // const SizeType expected = m_textureDesc.GetByteSize();
+    // const SizeType real = resultByteBuffer.Size();
 
-    AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
+    // AssertThrowMsg(expected == real, "Failed to readback texture: expected size: %llu, got %llu", expected, real);
 
-    m_streamed_texture_data_resource_handle.Reset();
+    // m_streamedTextureDataResourceHandle.Reset();
 
-    m_streamed_texture_data = MakeRefCountedPtr<StreamedTextureData>(TextureData {
-                                                                         m_texture_desc,
-                                                                         std::move(result_byte_buffer) },
-        m_streamed_texture_data_resource_handle);
+    // m_streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(TextureData {
+    //                                                                    m_textureDesc,
+    //                                                                    std::move(resultByteBuffer) },
+    //     m_streamedTextureDataResourceHandle);
+
+    HYP_NOT_IMPLEMENTED();
 }
 
 void Texture::Resize(const Vec3u& extent)
 {
-    if (m_texture_desc.extent == extent)
+    if (m_textureDesc.extent == extent)
     {
         return;
     }
 
-    m_texture_desc.extent = extent;
+    m_textureDesc.extent = extent;
 
-    if (m_render_resource)
+    if (m_renderResource)
     {
-        m_render_resource->Resize(extent);
+        m_renderResource->Resize(extent);
     }
 }
 
-Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
+Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
 {
     if (!IsReady())
     {
@@ -245,27 +248,27 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
         return Vec4f::Zero();
     }
 
-    if (face_index >= NumFaces())
+    if (faceIndex >= NumFaces())
     {
-        HYP_LOG(Texture, Warning, "Face index out of bounds: {} >= {}", face_index, NumFaces());
+        HYP_LOG(Texture, Warning, "Face index out of bounds: {} >= {}", faceIndex, NumFaces());
 
         return Vec4f::Zero();
     }
 
-    // keep reference alive in case m_streamed_texture_data changes outside of the mutex lock.
-    RC<StreamedTextureData> streamed_texture_data;
-    TResourceHandle<StreamedTextureData> resource_handle;
+    // keep reference alive in case m_streamedTextureData changes outside of the mutex lock.
+    RC<StreamedTextureData> streamedTextureData;
+    TResourceHandle<StreamedTextureData> resourceHandle;
 
     {
-        Mutex::Guard guard(m_readback_mutex);
+        Mutex::Guard guard(m_readbackMutex);
 
-        if (!m_streamed_texture_data)
+        if (!m_streamedTextureData)
         {
             HYP_LOG(Texture, Warning, "Texture does not have streamed data present, attempting readback...");
 
             Readback_Internal();
 
-            if (!m_streamed_texture_data)
+            if (!m_streamedTextureData)
             {
                 HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
 
@@ -273,26 +276,26 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
             }
         }
 
-        resource_handle = TResourceHandle<StreamedTextureData>(*m_streamed_texture_data);
+        resourceHandle = TResourceHandle<StreamedTextureData>(*m_streamedTextureData);
 
-        if (resource_handle->GetTextureData().buffer.Size() == 0)
+        if (resourceHandle->GetTextureData().buffer.Size() == 0)
         {
             HYP_LOG(Texture, Warning, "Texture buffer is empty; forcing readback.");
 
-            resource_handle.Reset();
+            resourceHandle.Reset();
 
             Readback_Internal();
 
-            if (!m_streamed_texture_data)
+            if (!m_streamedTextureData)
             {
                 HYP_LOG(Texture, Warning, "Texture readback failed. Sample will return zero.");
 
                 return Vec4f::Zero();
             }
 
-            resource_handle = TResourceHandle<StreamedTextureData>(*m_streamed_texture_data);
+            resourceHandle = TResourceHandle<StreamedTextureData>(*m_streamedTextureData);
 
-            if (resource_handle->GetTextureData().buffer.Size() == 0)
+            if (resourceHandle->GetTextureData().buffer.Size() == 0)
             {
                 HYP_LOG(Texture, Warning, "Texture buffer is still empty after readback; sample will return zero.");
 
@@ -300,46 +303,46 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
             }
         }
 
-        streamed_texture_data = m_streamed_texture_data;
+        streamedTextureData = m_streamedTextureData;
     }
 
-    const TextureData* texture_data = &resource_handle->GetTextureData();
+    const TextureData* textureData = &resourceHandle->GetTextureData();
 
     const Vec3u coord = {
-        uint32(uvw.x * float(texture_data->desc.extent.x - 1) + 0.5f),
-        uint32(uvw.y * float(texture_data->desc.extent.y - 1) + 0.5f),
-        uint32(uvw.z * float(texture_data->desc.extent.z - 1) + 0.5f)
+        uint32(uvw.x * float(textureData->desc.extent.x - 1) + 0.5f),
+        uint32(uvw.y * float(textureData->desc.extent.y - 1) + 0.5f),
+        uint32(uvw.z * float(textureData->desc.extent.z - 1) + 0.5f)
     };
 
-    const uint32 bytes_per_pixel = renderer::NumBytes(texture_data->desc.format);
+    const uint32 bytesPerPixel = NumBytes(textureData->desc.format);
 
-    if (bytes_per_pixel != 1)
+    if (bytesPerPixel != 1)
     {
-        HYP_LOG(Texture, Warning, "Unsupported bytes per pixel to use with Sample(): {}", bytes_per_pixel);
+        HYP_LOG(Texture, Warning, "Unsupported bytes per pixel to use with Sample(): {}", bytesPerPixel);
 
         HYP_BREAKPOINT;
 
         return Vec4f::Zero();
     }
 
-    const uint32 num_components = renderer::NumComponents(texture_data->desc.format);
+    const uint32 numComponents = NumComponents(textureData->desc.format);
 
-    const uint32 index = face_index * (texture_data->desc.extent.x * texture_data->desc.extent.y * texture_data->desc.extent.z * bytes_per_pixel * num_components)
-        + coord.z * (texture_data->desc.extent.x * texture_data->desc.extent.y * bytes_per_pixel * num_components)
-        + coord.y * (texture_data->desc.extent.x * bytes_per_pixel * num_components)
-        + coord.x * bytes_per_pixel * num_components;
+    const uint32 index = faceIndex * (textureData->desc.extent.x * textureData->desc.extent.y * textureData->desc.extent.z * bytesPerPixel * numComponents)
+        + coord.z * (textureData->desc.extent.x * textureData->desc.extent.y * bytesPerPixel * numComponents)
+        + coord.y * (textureData->desc.extent.x * bytesPerPixel * numComponents)
+        + coord.x * bytesPerPixel * numComponents;
 
-    if (index >= texture_data->buffer.Size())
+    if (index >= textureData->buffer.Size())
     {
-        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, texture_data->buffer.Size(),
-            coord, texture_data->desc.extent, NumFaces());
+        HYP_LOG(Texture, Warning, "Index out of bounds, index: {}, buffer size: {}, coord: {}, dimensions: {}, num faces: {}", index, textureData->buffer.Size(),
+            coord, textureData->desc.extent, NumFaces());
 
         return Vec4f::Zero();
     }
 
-    const ubyte* data = texture_data->buffer.Data() + index;
+    const ubyte* data = textureData->buffer.Data() + index;
 
-    switch (num_components)
+    switch (numComponents)
     {
     case 1:
         return Vec4f(float(data[0]) / 255.0f);
@@ -350,7 +353,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
     case 4:
         return Vec4f(float(data[0]) / 255.0f, float(data[1]) / 255.0f, float(data[2]) / 255.0f, float(data[3]) / 255.0f);
     default: // should never happen
-        HYP_LOG(Texture, Error, "Unsupported number of components: {}", num_components);
+        HYP_LOG(Texture, Error, "Unsupported number of components: {}", numComponents);
 
         return Vec4f::Zero();
     }
@@ -358,7 +361,7 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 face_index)
 
 Vec4f Texture::Sample2D(Vec2f uv)
 {
-    if (GetType() != ImageType::TEXTURE_TYPE_2D)
+    if (GetType() != TT_TEX2D)
     {
         HYP_LOG(Texture, Warning, "Unsupported texture type to use with Sample2D(): {}", GetType());
 
@@ -371,66 +374,66 @@ Vec4f Texture::Sample2D(Vec2f uv)
 /// https://www.gamedev.net/forums/topic/687535-implementing-a-cube-map-lookup-function/5337472/
 Vec4f Texture::SampleCube(Vec3f direction)
 {
-    if (GetType() != ImageType::TEXTURE_TYPE_CUBEMAP)
+    if (GetType() != TT_CUBEMAP)
     {
         HYP_LOG(Texture, Warning, "Unsupported texture type to use with SampleCube(): {}", GetType());
 
         return Vec4f::Zero();
     }
 
-    Vec3f abs_dir = MathUtil::Abs(direction);
-    uint32 face_index = 0;
+    Vec3f absDir = MathUtil::Abs(direction);
+    uint32 faceIndex = 0;
 
     float mag;
     Vec2f uv;
 
-    if (abs_dir.z >= abs_dir.x && abs_dir.z >= abs_dir.y)
+    if (absDir.z >= absDir.x && absDir.z >= absDir.y)
     {
-        mag = abs_dir.z;
+        mag = absDir.z;
 
         if (direction.z < 0.0f)
         {
-            face_index = 5;
+            faceIndex = 5;
             uv = Vec2f(-direction.x, -direction.y);
         }
         else
         {
-            face_index = 4;
+            faceIndex = 4;
             uv = Vec2f(direction.x, -direction.y);
         }
     }
-    else if (abs_dir.y >= abs_dir.x)
+    else if (absDir.y >= absDir.x)
     {
-        mag = abs_dir.y;
+        mag = absDir.y;
 
         if (direction.y < 0.0f)
         {
-            face_index = 3;
+            faceIndex = 3;
             uv = Vec2f(direction.x, -direction.z);
         }
         else
         {
-            face_index = 2;
+            faceIndex = 2;
             uv = Vec2f(direction.x, direction.z);
         }
     }
     else
     {
-        mag = abs_dir.x;
+        mag = absDir.x;
 
         if (direction.x < 0.0f)
         {
-            face_index = 1;
+            faceIndex = 1;
             uv = Vec2f(direction.z, -direction.y);
         }
         else
         {
-            face_index = 0;
+            faceIndex = 0;
             uv = Vec2f(-direction.z, -direction.y);
         }
     }
 
-    return Sample(Vec3f { uv / mag * 0.5f + 0.5f, 0.0f }, face_index);
+    return Sample(Vec3f { uv / mag * 0.5f + 0.5f, 0.0f }, faceIndex);
 }
 
 void Texture::SetPersistentRenderResourceEnabled(bool enabled)
@@ -439,14 +442,14 @@ void Texture::SetPersistentRenderResourceEnabled(bool enabled)
 
     if (enabled)
     {
-        if (!m_render_persistent)
+        if (!m_renderPersistent)
         {
-            m_render_persistent = ResourceHandle(*m_render_resource);
+            m_renderPersistent = ResourceHandle(*m_renderResource);
         }
     }
     else
     {
-        m_render_persistent.Reset();
+        m_renderPersistent.Reset();
     }
 }
 

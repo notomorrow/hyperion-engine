@@ -187,6 +187,11 @@ public:
         return *this;
     }
 
+    HYP_FORCE_INLINE uint64 ToMilliseconds() const
+    {
+        return m_value;
+    }
+
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         return HashCode::GetHashCode(m_value);

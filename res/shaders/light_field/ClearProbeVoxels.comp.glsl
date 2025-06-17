@@ -9,7 +9,6 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
-#include "../include/tonemap.inc"
 #include "../include/brdf.inc"
 #include "../include/noise.inc"
 
@@ -25,9 +24,15 @@ HYP_DESCRIPTOR_SAMPLER(VoxelizeProbeDescriptorSet, SamplerNearest) uniform sampl
 
 HYP_DESCRIPTOR_UAV(VoxelizeProbeDescriptorSet, OutVoxelGridImage, format = rgba8) uniform image3D voxel_grid_image;
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer { EnvGrid env_grid; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer
+{
+    EnvGrid env_grid;
+};
 
-HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
 
 layout(push_constant) uniform PushConstant
 {
@@ -37,7 +42,7 @@ layout(push_constant) uniform PushConstant
 #ifdef MODE_OFFSET
     ivec4 offset;
 #else
-    vec4  world_position;
+    vec4 world_position;
 #endif
 };
 
@@ -66,12 +71,10 @@ void main(void)
 
     // ivec3 voxel_storage_position = ivec3(gl_GlobalInvocationID.xyz) + probe_voxel_grid_offset;
 
-    if (voxel_storage_position.x < 0 || voxel_storage_position.x >= voxel_texture_dimensions.x ||
-        voxel_storage_position.y < 0 || voxel_storage_position.y >= voxel_texture_dimensions.y ||
-        voxel_storage_position.z < 0 || voxel_storage_position.z >= voxel_texture_dimensions.z)
+    if (voxel_storage_position.x < 0 || voxel_storage_position.x >= voxel_texture_dimensions.x || voxel_storage_position.y < 0 || voxel_storage_position.y >= voxel_texture_dimensions.y || voxel_storage_position.z < 0 || voxel_storage_position.z >= voxel_texture_dimensions.z)
     {
         return;
     }
 
-    imageStore(voxel_grid_image, ivec3(voxel_storage_position), vec4(0.0));//vec4(UINT_TO_VEC4(probe_grid_position.w).rgb, 1.0));
+    imageStore(voxel_grid_image, ivec3(voxel_storage_position), vec4(0.0)); // vec4(UINT_TO_VEC4(probe_grid_position.w).rgb, 1.0));
 }

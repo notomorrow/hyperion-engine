@@ -20,7 +20,9 @@
 #include <asset/Assets.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 // #define HYP_GAME_THREAD_LOCKED 1
@@ -29,13 +31,13 @@ namespace hyperion {
 
 HYP_DEFINE_LOG_CHANNEL(GameThread);
 
-static constexpr float game_thread_target_ticks_per_second = 60.0f;
+static constexpr float gameThreadTargetTicksPerSecond = 120.0f;
 
-GameThread::GameThread(const Handle<AppContextBase>& app_context)
-    : Thread(g_game_thread, ThreadPriorityValue::HIGHEST),
-      m_app_context(app_context)
+GameThread::GameThread(const Handle<AppContextBase>& appContext)
+    : Thread(g_gameThread, ThreadPriorityValue::HIGHEST),
+      m_appContext(appContext)
 {
-    AssertThrow(m_app_context.IsValid());
+    AssertThrow(m_appContext.IsValid());
 }
 
 void GameThread::SetGame(const Handle<Game>& game)
@@ -50,7 +52,7 @@ void GameThread::SetGame(const Handle<Game>& game)
 
                 if (m_game.IsValid())
                 {
-                    m_game->SetAppContext(m_app_context);
+                    m_game->SetAppContext(m_appContext);
 
                     InitObject(m_game);
                 }
@@ -68,11 +70,11 @@ void GameThread::SetGame(const Handle<Game>& game)
 
 void GameThread::operator()()
 {
-    uint32 num_frames = 0;
-    float delta_time_accum = 0.0f;
+    uint32 numFrames = 0;
+    float deltaTimeAccum = 0.0f;
 
 #if HYP_GAME_THREAD_LOCKED
-    LockstepGameCounter counter(1.0f / game_thread_target_ticks_per_second);
+    LockstepGameCounter counter(1.0f / gameThreadTargetTicksPerSecond);
 #else
     GameCounter counter;
 #endif
@@ -82,7 +84,7 @@ void GameThread::operator()()
 
     if (m_game.IsValid())
     {
-        m_game->SetAppContext(m_app_context);
+        m_game->SetAppContext(m_appContext);
 
         InitObject(m_game);
     }
@@ -90,7 +92,7 @@ void GameThread::operator()()
     Queue<Scheduler::ScheduledTask> tasks;
     Array<SystemEvent> events;
 
-    while (!m_stop_requested.Get(MemoryOrder::RELAXED))
+    while (!m_stopRequested.Get(MemoryOrder::RELAXED))
     {
 #if HYP_GAME_THREAD_LOCKED
         if (counter.Waiting())
@@ -103,26 +105,26 @@ void GameThread::operator()()
 
         counter.NextTick();
 
-        delta_time_accum += counter.delta;
-        num_frames++;
+        deltaTimeAccum += counter.delta;
+        numFrames++;
 
-        if (delta_time_accum >= 1.0f)
+        if (deltaTimeAccum >= 1.0f)
         {
-            HYP_LOG(GameThread, Debug, "Game thread ticks per second: {}", 1.0f / (delta_time_accum / float(num_frames)));
+            HYP_LOG(GameThread, Debug, "Game thread ticks per second: {}", 1.0f / (deltaTimeAccum / float(numFrames)));
 
-            delta_time_accum = 0.0f;
-            num_frames = 0;
+            deltaTimeAccum = 0.0f;
+            numFrames = 0;
         }
 
         g_engine->GetDebugDrawer()->Update(counter.delta);
 
         AssetManager::GetInstance()->Update(counter.delta);
 
-        if (m_app_context->GetMainWindow()->GetInputEventSink().Poll(events))
+        if (m_appContext->GetMainWindow()->GetInputEventSink().Poll(events))
         {
             for (SystemEvent& event : events)
             {
-                m_app_context->GetInputManager()->CheckEvent(&event);
+                m_appContext->GetInputManager()->CheckEvent(&event);
 
                 if (m_game.IsValid())
                 {
@@ -133,7 +135,7 @@ void GameThread::operator()()
             events.Clear();
         }
 
-        if (uint32 num_enqueued = m_scheduler.NumEnqueued())
+        if (uint32 numEnqueued = m_scheduler.NumEnqueued())
         {
             m_scheduler.AcceptAll(tasks);
 
@@ -143,12 +145,14 @@ void GameThread::operator()()
             }
         }
 
-        if (!m_game.IsValid())
+        RenderApi_BeginFrame_GameThread();
+
+        if (m_game.IsValid())
         {
-            continue;
+            m_game->Update(counter.delta);
         }
 
-        m_game->Update(counter.delta);
+        RenderApi_EndFrame_GameThread();
     }
 
     // flush scheduler

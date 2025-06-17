@@ -36,10 +36,10 @@ public:
     virtual Name GetName() const;
 
     HYP_METHOD(Scriptable)
-    virtual void Execute();
+    virtual void Execute(EditorSubsystem* editorSubsystem, EditorProject* project);
 
     HYP_METHOD(Scriptable)
-    virtual void Revert();
+    virtual void Revert(EditorSubsystem* editorSubsystem, EditorProject* project);
 
 protected:
     virtual Name GetName_Impl() const
@@ -47,12 +47,12 @@ protected:
         HYP_PURE_VIRTUAL();
     }
 
-    virtual void Execute_Impl()
+    virtual void Execute_Impl(EditorSubsystem* editorSubsystem, EditorProject* project)
     {
         HYP_PURE_VIRTUAL();
     };
 
-    virtual void Revert_Impl()
+    virtual void Revert_Impl(EditorSubsystem* editorSubsystem, EditorProject* project)
     {
         HYP_PURE_VIRTUAL();
     }
@@ -60,8 +60,8 @@ protected:
 
 struct EditorActionFunctions
 {
-    Proc<void()> execute;
-    Proc<void()> revert;
+    Proc<void(EditorSubsystem* editorSubsystem, EditorProject* project)> execute;
+    Proc<void(EditorSubsystem* editorSubsystem, EditorProject* project)> revert;
 };
 
 HYP_CLASS()
@@ -72,10 +72,10 @@ class HYP_API FunctionalEditorAction : public EditorActionBase
 public:
     FunctionalEditorAction() = default;
 
-    FunctionalEditorAction(Name name, Proc<EditorActionFunctions()>&& get_state_proc)
+    FunctionalEditorAction(Name name, Proc<EditorActionFunctions()>&& getStateProc)
         : m_name(name),
-          m_get_state_proc(std::move(get_state_proc)),
-          m_get_state_proc_result(m_get_state_proc())
+          m_getStateProc(std::move(getStateProc)),
+          m_getStateProcResult(m_getStateProc())
     {
     }
 
@@ -86,21 +86,21 @@ public:
     }
 
     HYP_METHOD()
-    virtual void Execute() override final
+    virtual void Execute(EditorSubsystem* editorSubsystem, EditorProject* project) override final
     {
-        m_get_state_proc_result.execute();
+        m_getStateProcResult.execute(editorSubsystem, project);
     }
 
     HYP_METHOD()
-    virtual void Revert() override final
+    virtual void Revert(EditorSubsystem* editorSubsystem, EditorProject* project) override final
     {
-        m_get_state_proc_result.revert();
+        m_getStateProcResult.revert(editorSubsystem, project);
     }
 
 private:
     Name m_name;
-    Proc<EditorActionFunctions()> m_get_state_proc;
-    EditorActionFunctions m_get_state_proc_result;
+    Proc<EditorActionFunctions()> m_getStateProc;
+    EditorActionFunctions m_getStateProcResult;
 };
 
 class IEditorActionFactory;
@@ -110,8 +110,8 @@ class HYP_API EditorActionFactoryRegistry
 public:
     static EditorActionFactoryRegistry& GetInstance();
 
-    IEditorActionFactory* GetFactoryByName(Name action_name) const;
-    void RegisterFactory(Name action_name, IEditorActionFactory* factory);
+    IEditorActionFactory* GetFactoryByName(Name actionName) const;
+    void RegisterFactory(Name actionName, IEditorActionFactory* factory);
 
 private:
     HashMap<Name, IEditorActionFactory*> m_factories;
@@ -142,7 +142,7 @@ struct HYP_API EditorActionFactoryRegistrationBase
 protected:
     IEditorActionFactory* m_factory;
 
-    EditorActionFactoryRegistrationBase(Name action_name, IEditorActionFactory* factory);
+    EditorActionFactoryRegistrationBase(Name actionName, IEditorActionFactory* factory);
     ~EditorActionFactoryRegistrationBase();
 };
 
@@ -157,9 +157,9 @@ struct EditorActionFactoryRegistration : public EditorActionFactoryRegistrationB
 
 } // namespace hyperion
 
-#define HYP_DEFINE_EDITOR_ACTION(action_name)                                                                                    \
-    class EditorAction_##action_name;                                                                                            \
-    static ::hyperion::EditorActionFactoryRegistration<EditorAction_##action_name> EditorActionFactory_##action_name {}; \
-    class EditorAction_##action_name : public ::hyperion::EditorAction
+#define HYP_DEFINE_EDITOR_ACTION(actionName)                                                                                    \
+    class EditorAction_##actionName;                                                                                            \
+    static ::hyperion::EditorActionFactoryRegistration<EditorAction_##actionName> EditorActionFactory_##actionName {}; \
+    class EditorAction_##actionName : public ::hyperion::EditorAction
 
 #endif

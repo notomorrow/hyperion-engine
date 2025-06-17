@@ -16,7 +16,7 @@
 
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/RenderResource.hpp>
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RenderObject.hpp>
@@ -27,13 +27,9 @@
 
 namespace hyperion {
 
-using renderer::IndirectDrawCommand;
-using renderer::PackedVertex;
-using renderer::Topology;
-
 class Mesh;
 class Material;
-class RHICommandList;
+class CmdList;
 
 class RenderMesh final : public RenderResourceBase
 {
@@ -43,13 +39,13 @@ public:
     virtual ~RenderMesh() override;
 
     /*! \note Only to be called from render thread or render task */
-    HYP_FORCE_INLINE const GPUBufferRef& GetVertexBuffer() const
+    HYP_FORCE_INLINE const GpuBufferRef& GetVertexBuffer() const
     {
         return m_vbo;
     }
 
     /*! \note Only to be called from render thread or render task */
-    HYP_FORCE_INLINE const GPUBufferRef& GetIndexBuffer() const
+    HYP_FORCE_INLINE const GpuBufferRef& GetIndexBuffer() const
     {
         return m_ibo;
     }
@@ -57,14 +53,14 @@ public:
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE uint32 NumIndices() const
     {
-        return m_num_indices;
+        return m_numIndices;
     }
 
-    void SetVertexAttributes(const VertexAttributeSet& vertex_attributes);
-    void SetStreamedMeshData(const RC<StreamedMeshData>& streamed_mesh_data);
+    void SetVertexAttributes(const VertexAttributeSet& vertexAttributes);
+    void SetStreamedMeshData(const RC<StreamedMeshData>& streamedMeshData);
 
-    void Render(RHICommandList& cmd, uint32 num_instances = 1, uint32 instance_index = 0) const;
-    void RenderIndirect(RHICommandList& cmd, const GPUBufferRef& indirect_buffer, uint32 buffer_offset = 0) const;
+    void Render(CmdList& cmd, uint32 numInstances = 1, uint32 instanceIndex = 0) const;
+    void RenderIndirect(CmdList& cmd, const GpuBufferRef& indirectBuffer, uint32 bufferOffset = 0) const;
 
     void PopulateIndirectDrawCommand(IndirectDrawCommand& out);
 
@@ -80,21 +76,21 @@ private:
     Array<PackedVertex> BuildPackedVertices() const;
     Array<uint32> BuildPackedIndices() const;
 
-    static Array<float> BuildVertexBuffer(const VertexAttributeSet& vertex_attributes, const MeshData& mesh_data);
+    static Array<float> BuildVertexBuffer(const VertexAttributeSet& vertexAttributes, const MeshData& meshData);
 
     void UploadMeshData();
 
     Mesh* m_mesh;
 
-    VertexAttributeSet m_vertex_attributes;
+    VertexAttributeSet m_vertexAttributes;
 
-    RC<StreamedMeshData> m_streamed_mesh_data;
-    mutable ResourceHandle m_streamed_mesh_data_handle;
+    RC<StreamedMeshData> m_streamedMeshData;
+    mutable ResourceHandle m_streamedMeshDataHandle;
 
-    GPUBufferRef m_vbo;
-    GPUBufferRef m_ibo;
+    GpuBufferRef m_vbo;
+    GpuBufferRef m_ibo;
 
-    uint32 m_num_indices;
+    uint32 m_numIndices;
 };
 
 } // namespace hyperion

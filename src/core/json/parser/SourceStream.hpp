@@ -31,9 +31,9 @@ public:
 
     utf::u32char Peek() const;
     utf::u32char Next();
-    utf::u32char Next(int& pos_change);
+    utf::u32char Next(int& posChange);
     void GoBack(int n = 1);
-    void Read(char* ptr, SizeType num_bytes);
+    void Read(char* ptr, SizeType numBytes);
 
 private:
     const SourceFile* m_file;

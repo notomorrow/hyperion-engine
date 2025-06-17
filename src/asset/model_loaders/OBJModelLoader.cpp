@@ -21,15 +21,16 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Assets);
 
-constexpr bool create_obj_indices = true;
-constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
-constexpr bool load_materials = true;
+constexpr bool createObjIndices = true;
+constexpr bool meshPerMaterial = true; // set true to create a new mesh on each instance of 'use <mtllib>'
+constexpr bool loadMaterials = true;
 
 using Tokens = Array<String>;
 
@@ -42,7 +43,7 @@ static Vector ReadVector(const Tokens& tokens, SizeType offset = 1)
 {
     Vector result { 0.0f };
 
-    int value_index = 0;
+    int valueIndex = 0;
 
     for (SizeType i = offset; i < tokens.Size(); i++)
     {
@@ -53,9 +54,9 @@ static Vector ReadVector(const Tokens& tokens, SizeType offset = 1)
             continue;
         }
 
-        result.values[value_index++] = static_cast<typename Vector::Type>(std::atof(token.Data()));
+        result.values[valueIndex++] = static_cast<typename Vector::Type>(std::atof(token.Data()));
 
-        if (value_index == std::size(result.values))
+        if (valueIndex == std::size(result.values))
         {
             break;
         }
@@ -66,19 +67,19 @@ static Vector ReadVector(const Tokens& tokens, SizeType offset = 1)
 
 static void AddMesh(OBJModel& model, const String& name, const String& material)
 {
-    String unique_name(name);
+    String uniqueName(name);
     int counter = 0;
 
-    while (AnyOf(model.meshes, [&unique_name](const OBJMesh& obj_mesh)
+    while (AnyOf(model.meshes, [&uniqueName](const OBJMesh& objMesh)
         {
-            return obj_mesh.name == unique_name;
+            return objMesh.name == uniqueName;
         }))
     {
-        unique_name = name + String::ToString(++counter);
+        uniqueName = name + String::ToString(++counter);
     }
 
     model.meshes.PushBack(OBJMesh {
-        .name = unique_name,
+        .name = uniqueName,
         .material = material });
 }
 
@@ -94,8 +95,8 @@ static OBJMesh& LastMesh(OBJModel& model)
 
 static OBJIndex ParseOBJIndex(const String& token)
 {
-    OBJIndex obj_index { 0, 0, 0 };
-    SizeType token_index = 0;
+    OBJIndex objIndex { 0, 0, 0 };
+    SizeType tokenIndex = 0;
 
     const Array<String> parts = token.Split('/');
 
@@ -103,16 +104,16 @@ static OBJIndex ParseOBJIndex(const String& token)
     {
         if (!part.Empty())
         {
-            switch (token_index)
+            switch (tokenIndex)
             {
             case 0:
-                obj_index.vertex = StringUtil::Parse<int64>(part.Data()) - 1;
+                objIndex.vertex = StringUtil::Parse<int64>(part.Data()) - 1;
                 break;
             case 1:
-                obj_index.texcoord = StringUtil::Parse<int64>(part.Data()) - 1;
+                objIndex.texcoord = StringUtil::Parse<int64>(part.Data()) - 1;
                 break;
             case 2:
-                obj_index.normal = StringUtil::Parse<int64>(part.Data()) - 1;
+                objIndex.normal = StringUtil::Parse<int64>(part.Data()) - 1;
                 break;
             default:
                 // ??
@@ -120,28 +121,28 @@ static OBJIndex ParseOBJIndex(const String& token)
             }
         }
 
-        ++token_index;
+        ++tokenIndex;
     }
 
-    return obj_index;
+    return objIndex;
 }
 
 template <class Vector>
-Vector GetIndexedVertexProperty(int64 vertex_index, const Array<Vector>& vectors)
+Vector GetIndexedVertexProperty(int64 vertexIndex, const Array<Vector>& vectors)
 {
-    const int64 vertex_absolute = vertex_index >= 0
-        ? vertex_index
-        : int64(vectors.Size()) + vertex_index;
+    const int64 vertexAbsolute = vertexIndex >= 0
+        ? vertexIndex
+        : int64(vectors.Size()) + vertexIndex;
 
-    if (vertex_absolute < 0 || vertex_absolute >= int64(vectors.Size()))
+    if (vertexAbsolute < 0 || vertexAbsolute >= int64(vectors.Size()))
     {
         HYP_LOG(Assets, Warning, "Vertex index of {} (absolute: {}) is out of bounds ({})",
-            vertex_index, vertex_absolute, vectors.Size());
+            vertexIndex, vertexAbsolute, vectors.Size());
 
         return Vector();
     }
 
-    return vectors[vertex_absolute];
+    return vectors[vertexAbsolute];
 }
 
 OBJModel OBJModelLoader::LoadModel(LoaderState& state)
@@ -152,7 +153,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
     Tokens tokens;
     tokens.Reserve(5);
 
-    String active_material;
+    String activeMaterial;
 
     state.stream.ReadLines([&](const String& line, bool*)
         {
@@ -195,14 +196,14 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
 
             if (tokens[0] == "f")
             {
-                OBJMesh& last_mesh = LastMesh(model);
+                OBJMesh& lastMesh = LastMesh(model);
 
                 /* we don't support per-face material so we compromise by setting the mesh's material
                  * to the last 'usemtl' value when we hit the face command.
                  */
-                if (!active_material.Empty())
+                if (!activeMaterial.Empty())
                 {
-                    last_mesh.material = active_material;
+                    lastMesh.material = activeMaterial;
                 }
 
                 if (tokens.Size() > 5)
@@ -213,9 +214,9 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
                 /* Performs simple triangulation on quad faces */
                 for (int64 i = 0; i < int64(tokens.Size()) - 3; i++)
                 {
-                    last_mesh.indices.PushBack(ParseOBJIndex(tokens[1]));
-                    last_mesh.indices.PushBack(ParseOBJIndex(tokens[2 + i]));
-                    last_mesh.indices.PushBack(ParseOBJIndex(tokens[3 + i]));
+                    lastMesh.indices.PushBack(ParseOBJIndex(tokens[1]));
+                    lastMesh.indices.PushBack(ParseOBJIndex(tokens[2 + i]));
+                    lastMesh.indices.PushBack(ParseOBJIndex(tokens[3 + i]));
                 }
 
                 return;
@@ -241,19 +242,19 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
             {
                 if (tokens.Size() != 1)
                 {
-                    String material_library_name;
+                    String materialLibraryName;
 
                     for (SizeType i = 1; i < tokens.Size(); i++)
                     {
                         if (i != 1)
                         {
-                            material_library_name += ' ';
+                            materialLibraryName += ' ';
                         }
 
-                        material_library_name += tokens[i];
+                        materialLibraryName += tokens[i];
                     }
 
-                    model.material_library = material_library_name;
+                    model.materialLibrary = materialLibraryName;
                 }
 
                 return;
@@ -268,7 +269,7 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
                     name = tokens[1];
                 }
 
-                AddMesh(model, name, active_material);
+                AddMesh(model, name, activeMaterial);
 
                 return;
             }
@@ -282,11 +283,11 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
                     return;
                 }
 
-                active_material = tokens[1];
+                activeMaterial = tokens[1];
 
-                if constexpr (mesh_per_material)
+                if constexpr (meshPerMaterial)
                 {
-                    AddMesh(model, active_material, active_material);
+                    AddMesh(model, activeMaterial, activeMaterial);
                 }
 
                 return;
@@ -300,63 +301,63 @@ OBJModel OBJModelLoader::LoadModel(LoaderState& state)
 
 LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
 {
-    AssertThrow(state.asset_manager != nullptr);
+    AssertThrow(state.assetManager != nullptr);
 
     Handle<Node> top = CreateObject<Node>(CreateNameFromDynamicString(model.name));
 
-    Handle<MaterialGroup> material_library;
+    Handle<MaterialGroup> materialLibrary;
 
-    if (load_materials && !model.material_library.Empty())
+    if (loadMaterials && !model.materialLibrary.Empty())
     {
-        String material_library_path = String(FileSystem::RelativePath(
-            (String(StringUtil::BasePath(model.filepath.Data()).c_str()) + "/" + model.material_library).Data(),
+        String materialLibraryPath = String(FileSystem::RelativePath(
+            (String(StringUtil::BasePath(model.filepath.Data()).c_str()) + "/" + model.materialLibrary).Data(),
             FileSystem::CurrentPath())
                 .c_str());
 
-        if (!material_library_path.EndsWith(".mtl"))
+        if (!materialLibraryPath.EndsWith(".mtl"))
         {
-            material_library_path += ".mtl";
+            materialLibraryPath += ".mtl";
         }
 
-        auto material_library_asset = state.asset_manager->Load<MaterialGroup>(material_library_path);
+        auto materialLibraryAsset = state.assetManager->Load<MaterialGroup>(materialLibraryPath);
 
-        if (material_library_asset.HasValue())
+        if (materialLibraryAsset.HasValue())
         {
-            material_library = material_library_asset->Result();
+            materialLibrary = materialLibraryAsset->Result();
         }
         else
         {
-            HYP_LOG(Assets, Warning, "Obj model loader: Could not load material library at {}: {}", material_library_path, material_library_asset.GetError().GetMessage());
+            HYP_LOG(Assets, Warning, "Obj model loader: Could not load material library at {}: {}", materialLibraryPath, materialLibraryAsset.GetError().GetMessage());
         }
     }
 
-    const bool has_vertices = !model.positions.Empty(),
-               has_normals = !model.normals.Empty(),
-               has_texcoords = !model.texcoords.Empty();
+    const bool hasVertices = !model.positions.Empty(),
+               hasNormals = !model.normals.Empty(),
+               hasTexcoords = !model.texcoords.Empty();
 
-    for (OBJMesh& obj_mesh : model.meshes)
+    for (OBJMesh& objMesh : model.meshes)
     {
         Array<Vertex> vertices;
         vertices.Reserve(model.positions.Size());
 
         Array<Mesh::Index> indices;
-        indices.Reserve(obj_mesh.indices.Size());
+        indices.Reserve(objMesh.indices.Size());
 
-        HashMap<OBJIndex, Mesh::Index> index_map;
+        HashMap<OBJIndex, Mesh::Index> indexMap;
 
-        const bool has_indices = !obj_mesh.indices.Empty();
+        const bool hasIndices = !objMesh.indices.Empty();
 
-        BoundingBox mesh_aabb = BoundingBox::Empty();
+        BoundingBox meshAabb = BoundingBox::Empty();
 
-        if (has_indices)
+        if (hasIndices)
         {
-            for (const OBJIndex& obj_index : obj_mesh.indices)
+            for (const OBJIndex& objIndex : objMesh.indices)
             {
-                const auto it = index_map.Find(obj_index);
+                const auto it = indexMap.Find(objIndex);
 
-                if (create_obj_indices)
+                if (createObjIndices)
                 {
-                    if (it != index_map.End())
+                    if (it != indexMap.End())
                     {
                         indices.PushBack(it->second);
 
@@ -366,21 +367,21 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
 
                 Vertex vertex;
 
-                if (has_vertices)
+                if (hasVertices)
                 {
-                    vertex.SetPosition(GetIndexedVertexProperty(obj_index.vertex, model.positions));
+                    vertex.SetPosition(GetIndexedVertexProperty(objIndex.vertex, model.positions));
 
-                    mesh_aabb = mesh_aabb.Union(vertex.GetPosition());
+                    meshAabb = meshAabb.Union(vertex.GetPosition());
                 }
 
-                if (has_normals)
+                if (hasNormals)
                 {
-                    vertex.SetNormal(GetIndexedVertexProperty(obj_index.normal, model.normals));
+                    vertex.SetNormal(GetIndexedVertexProperty(objIndex.normal, model.normals));
                 }
 
-                if (has_texcoords)
+                if (hasTexcoords)
                 {
-                    vertex.SetTexCoord0(GetIndexedVertexProperty(obj_index.texcoord, model.texcoords));
+                    vertex.SetTexCoord0(GetIndexedVertexProperty(objIndex.texcoord, model.texcoords));
                 }
 
                 const uint32 index = uint32(vertices.Size());
@@ -388,7 +389,7 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
                 vertices.PushBack(vertex);
                 indices.PushBack(index);
 
-                index_map[obj_index] = index;
+                indexMap[objIndex] = index;
             }
         }
         else
@@ -397,24 +398,24 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
             continue;
         }
 
-        const Vec3f mesh_aabb_min = mesh_aabb.GetMin();
-        const Vec3f mesh_aabb_center = mesh_aabb.GetCenter();
+        const Vec3f meshAabbMin = meshAabb.GetMin();
+        const Vec3f meshAabbCenter = meshAabb.GetCenter();
 
         // offset all vertices by the AABB's center,
         // we will apply the transformation to the entity's transform component
         for (Vertex& vertex : vertices)
         {
-            vertex.SetPosition(vertex.GetPosition() - mesh_aabb_center);
+            vertex.SetPosition(vertex.GetPosition() - meshAabbCenter);
         }
 
         Handle<Mesh> mesh = CreateObject<Mesh>(
             vertices,
             indices,
-            Topology::TRIANGLES);
+            TOP_TRIANGLES);
 
-        mesh->SetName(CreateNameFromDynamicString(obj_mesh.name));
+        mesh->SetName(CreateNameFromDynamicString(objMesh.name));
 
-        if (!has_normals)
+        if (!hasNormals)
         {
             mesh->CalculateNormals();
         }
@@ -425,15 +426,15 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
 
         Handle<Material> material;
 
-        if (!obj_mesh.material.Empty() && material_library)
+        if (!objMesh.material.Empty() && materialLibrary)
         {
-            if (material_library->Has(obj_mesh.material))
+            if (materialLibrary->Has(objMesh.material))
             {
-                material = material_library->Get(obj_mesh.material);
+                material = materialLibrary->Get(objMesh.material);
             }
             else
             {
-                HYP_LOG(Assets, Warning, "OBJ model loader: Material '{}' could not be found in material library", obj_mesh.material);
+                HYP_LOG(Assets, Warning, "OBJ model loader: Material '{}' could not be found in material library", objMesh.material);
             }
         }
 
@@ -441,38 +442,26 @@ LoadedAsset OBJModelLoader::BuildModel(LoaderState& state, OBJModel& model)
         {
             material = MaterialCache::GetInstance()->GetOrCreate(
                 NAME("BasicOBJMaterial"),
-                { .shader_definition = ShaderDefinition {
+                { .shaderDefinition = ShaderDefinition {
                       NAME("Forward"),
                       ShaderProperties(mesh->GetVertexAttributes()) },
-                    .bucket = Bucket::BUCKET_OPAQUE },
+                    .bucket = RB_OPAQUE },
                 { { Material::MATERIAL_KEY_ALBEDO, Vec4f(1.0f) }, { Material::MATERIAL_KEY_ROUGHNESS, 0.65f }, { Material::MATERIAL_KEY_METALNESS, 0.0f } });
         }
 
         InitObject(material);
 
-        Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadID());
+        Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
 
         const Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
 
-        scene->GetEntityManager()->AddComponent<TransformComponent>(
-            entity,
-            TransformComponent {});
+        scene->GetEntityManager()->AddComponent<TransformComponent>(entity, TransformComponent {});
+        scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { mesh, material });
+        scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { mesh->GetAABB() });
 
-        scene->GetEntityManager()->AddComponent<MeshComponent>(
-            entity,
-            MeshComponent {
-                mesh,
-                material });
-
-        scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(
-            entity,
-            BoundingBoxComponent {
-                mesh->GetAABB() });
-
-        Handle<Node> node = top->AddChild(CreateObject<Node>(CreateNameFromDynamicString(obj_mesh.name)));
-        node->SetFlags(NodeFlags::BUILD_BVH);
+        Handle<Node> node = top->AddChild(CreateObject<Node>(CreateNameFromDynamicString(objMesh.name)));
         node->SetEntity(entity);
-        node->SetLocalTranslation(mesh_aabb_center);
+        node->SetLocalTranslation(meshAabbCenter);
     }
 
     return LoadedAsset { top };

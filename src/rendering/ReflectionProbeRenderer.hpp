@@ -2,8 +2,6 @@
 #ifndef HYPERION_REFLECTION_PROBE_HPP
 #define HYPERION_REFLECTION_PROBE_HPP
 
-#include <core/Base.hpp>
-
 #include <core/memory/resource/Resource.hpp>
 
 #include <core/math/BoundingBox.hpp>
@@ -16,17 +14,15 @@
 
 namespace hyperion {
 
-class RenderEnvProbe;
+#if 0
+class EnvProbe;
 
-HYP_CLASS()
 class HYP_API ReflectionProbeRenderer : public RenderSubsystem
 {
     HYP_OBJECT_BODY(ReflectionProbeRenderer);
 
 public:
-    ReflectionProbeRenderer(
-        Name name,
-        const TResourceHandle<RenderEnvProbe>& env_render_probe);
+    ReflectionProbeRenderer(Name name, const Handle<EnvProbe>& envProbe);
 
     ReflectionProbeRenderer(const ReflectionProbeRenderer& other) = delete;
     ReflectionProbeRenderer& operator=(const ReflectionProbeRenderer& other) = delete;
@@ -34,15 +30,12 @@ public:
 
 private:
     virtual void Init() override;
-    virtual void InitGame() override; // init on game thread
     virtual void OnRemoved() override;
-    virtual void OnUpdate(GameCounter::TickUnit delta) override;
-    virtual void OnRender(FrameBase* frame, const RenderSetup& render_setup) override;
+    virtual void OnUpdate(float delta) override;
 
-    TResourceHandle<RenderEnvProbe> m_env_render_probe;
-
-    bool m_last_visibility_state = false;
+    Handle<EnvProbe> m_envProbe;
 };
+#endif
 
 } // namespace hyperion
 

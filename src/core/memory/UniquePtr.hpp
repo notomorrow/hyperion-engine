@@ -5,10 +5,9 @@
 
 #include <core/Defines.hpp>
 
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 
 #include <core/memory/Memory.hpp>
-#include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/Any.hpp>
 
 #include <core/object/HypObjectFwd.hpp>
@@ -22,8 +21,8 @@ namespace hyperion {
 
 class HypClass;
 
-extern HYP_API const HypClass* GetClass(TypeID type_id);
-extern HYP_API bool IsInstanceOfHypClass(const HypClass* hyp_class, const void* ptr, TypeID type_id);
+extern HYP_API const HypClass* GetClass(TypeId typeId);
+extern HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
 
 namespace memory {
 
@@ -33,22 +32,22 @@ class UniquePtr;
 struct UniquePtrHolder
 {
     void* value;
-    TypeID type_id;
-    TypeID base_type_id;
+    TypeId typeId;
+    TypeId baseTypeId;
     void (*dtor)(void*);
 
     UniquePtrHolder()
         : value(nullptr),
-          type_id(TypeID::ForType<void>()),
-          base_type_id(TypeID::ForType<void>()),
+          typeId(TypeId::ForType<void>()),
+          baseTypeId(TypeId::ForType<void>()),
           dtor(nullptr)
     {
     }
 
     UniquePtrHolder(const UniquePtrHolder& other)
         : value(other.value),
-          type_id(other.type_id),
-          base_type_id(other.base_type_id),
+          typeId(other.typeId),
+          baseTypeId(other.baseTypeId),
           dtor(other.dtor)
     {
     }
@@ -61,8 +60,8 @@ struct UniquePtrHolder
         }
 
         value = other.value;
-        type_id = other.type_id;
-        base_type_id = other.base_type_id;
+        typeId = other.typeId;
+        baseTypeId = other.baseTypeId;
         dtor = other.dtor;
 
         return *this;
@@ -70,13 +69,13 @@ struct UniquePtrHolder
 
     UniquePtrHolder(UniquePtrHolder&& other) noexcept
         : value(other.value),
-          type_id(other.type_id),
-          base_type_id(other.base_type_id),
+          typeId(other.typeId),
+          baseTypeId(other.baseTypeId),
           dtor(other.dtor)
     {
         other.value = nullptr;
-        other.type_id = TypeID::ForType<void>();
-        other.base_type_id = TypeID::ForType<void>();
+        other.typeId = TypeId::ForType<void>();
+        other.baseTypeId = TypeId::ForType<void>();
         other.dtor = nullptr;
     }
 
@@ -88,13 +87,13 @@ struct UniquePtrHolder
         }
 
         value = other.value;
-        type_id = other.type_id;
-        base_type_id = other.base_type_id;
+        typeId = other.typeId;
+        baseTypeId = other.baseTypeId;
         dtor = other.dtor;
 
         other.value = nullptr;
-        other.type_id = TypeID::ForType<void>();
-        other.base_type_id = TypeID::ForType<void>();
+        other.typeId = TypeId::ForType<void>();
+        other.baseTypeId = TypeId::ForType<void>();
         other.dtor = nullptr;
 
         return *this;
@@ -105,8 +104,8 @@ struct UniquePtrHolder
     {
         value = Memory::AllocateAndConstruct<Derived>(std::forward<Args>(args)...);
         dtor = &Memory::DestructAndFree<Derived>;
-        type_id = TypeID::ForType<Derived>();
-        base_type_id = TypeID::ForType<Base>();
+        typeId = TypeId::ForType<Derived>();
+        baseTypeId = TypeId::ForType<Base>();
     }
 
     template <class Base, class Derived>
@@ -114,8 +113,8 @@ struct UniquePtrHolder
     {
         value = ptr;
         dtor = &Memory::DestructAndFree<Derived>;
-        type_id = TypeID::ForType<Derived>();
-        base_type_id = TypeID::ForType<Base>();
+        typeId = TypeId::ForType<Derived>();
+        baseTypeId = TypeId::ForType<Base>();
     }
 
     void Destruct()
@@ -191,9 +190,9 @@ public:
         return Get() != nullptr;
     }
 
-    HYP_FORCE_INLINE TypeID GetTypeID() const
+    HYP_FORCE_INLINE TypeId GetTypeId() const
     {
-        return m_holder.type_id;
+        return m_holder.typeId;
     }
 
     /*! \brief Destroys any currently held object.  */
@@ -235,9 +234,9 @@ protected:
     {
     }
 
-    HYP_FORCE_INLINE TypeID GetBaseTypeID() const
+    HYP_FORCE_INLINE TypeId GetBaseTypeId() const
     {
-        return m_holder.base_type_id;
+        return m_holder.baseTypeId;
     }
 
     UniquePtrHolder m_holder;
@@ -266,7 +265,7 @@ public:
 
     /*! \brief Takes ownership of ptr.
 
-        Ty may be a derived class of T, and the type ID of Ty will be stored, allowing
+        Ty may be a derived class of T, and the type Id of Ty will be stored, allowing
         for conversion back to UniquePtr<Ty> using Cast<Ty>().
 
         Do not delete the pointer passed to this,
@@ -369,7 +368,7 @@ public:
 
     /*! \brief Drops any currently held valeu and constructs a new value using \ref{value}.
 
-        Ty may be a derived class of T, and the type ID of Ty will be stored, allowing
+        Ty may be a derived class of T, and the type Id of Ty will be stored, allowing
         for conversion back to UniquePtr<Ty> using Cast<Ty>(). */
     template <class Ty>
     HYP_FORCE_INLINE void Set(Ty&& value)
@@ -385,7 +384,7 @@ public:
     /*! \brief Takes ownership of {ptr}, dropping the reference to the currently held value,
         if any.
 
-        Ty may be a derived class of T, and the type ID of Ty will be stored, allowing
+        Ty may be a derived class of T, and the type Id of Ty will be stored, allowing
         for conversion back to UniquePtr<Ty> using Cast<Ty>().
 
         Note, do not delete the ptr after passing it to Reset(), as it will be deleted
@@ -440,18 +439,6 @@ public:
         return static_cast<T*>(Base::Release());
     }
 
-    /*! \brief Constructs a new RefCountedPtr from this object.
-        The value held within this UniquePtr will be unset,
-        the RefCountedPtr taking over management of the pointer. */
-    template <class CountType = AtomicVar<uint32>>
-    HYP_NODISCARD HYP_FORCE_INLINE RefCountedPtr<T, CountType> ToRefCountedPtr()
-    {
-        RefCountedPtr<T, CountType> rc;
-        rc.Reset(Release());
-
-        return rc;
-    }
-
     /*! \brief Constructs a new UniquePtr<T> from the given arguments. */
     template <class... Args>
     HYP_NODISCARD HYP_FORCE_INLINE static UniquePtr Construct(Args&&... args)
@@ -480,13 +467,13 @@ public:
     template <class Ty>
     HYP_FORCE_INLINE bool Is() const
     {
-        constexpr TypeID type_id = TypeID::ForType<Ty>();
+        constexpr TypeId typeId = TypeId::ForType<Ty>();
 
         return std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>
             || std::is_same_v<Ty, void>
-            || GetTypeID() == type_id
-            || GetBaseTypeID() == type_id
-            || IsInstanceOfHypClass(GetClass(type_id), m_holder.value, GetTypeID());
+            || GetTypeId() == typeId
+            || GetBaseTypeId() == typeId
+            || IsA(GetClass(typeId), m_holder.value, GetTypeId());
     }
 
     /*! \brief Returns a boolean indicating whether the type of this UniquePtr is the same as the given type, or if the given type is a base class of the type of this UniquePtr.
@@ -539,7 +526,7 @@ public:
 
 /*! \brief A UniquePtr<void> cannot be constructed except for being moved from an existing
     UniquePtr<T>. This is because UniquePtr<T> may hold a derived pointer, while still being convertible to
-    the derived type. In order to maintain that functionality on UniquePtr<void>, we need to store the TypeID of T.
+    the derived type. In order to maintain that functionality on UniquePtr<void>, we need to store the TypeId of T.
     We would not be able to do that with UniquePtr<void>.*/
 // void pointer specialization
 template <>
@@ -557,8 +544,8 @@ public:
     explicit UniquePtr(Any&& value)
         : Base()
     {
-        Base::m_holder.type_id = value.m_type_id;
-        Base::m_holder.base_type_id = value.m_type_id;
+        Base::m_holder.typeId = value.m_typeId;
+        Base::m_holder.baseTypeId = value.m_typeId;
         Base::m_holder.value = value.m_ptr;
         Base::m_holder.dtor = value.m_dtor;
 
@@ -615,12 +602,12 @@ public:
     template <class Ty>
     HYP_FORCE_INLINE bool Is() const
     {
-        constexpr TypeID type_id = TypeID::ForType<Ty>();
+        constexpr TypeId typeId = TypeId::ForType<Ty>();
 
         return std::is_same_v<Ty, void>
-            || GetTypeID() == type_id
-            || GetBaseTypeID() == type_id
-            || IsInstanceOfHypClass(GetClass(type_id), m_holder.value, GetTypeID());
+            || GetTypeId() == typeId
+            || GetBaseTypeId() == typeId
+            || IsA(GetClass(typeId), m_holder.value, GetTypeId());
     }
 
     /*! \brief Attempts to cast the pointer directly to the given type.
@@ -644,31 +631,6 @@ public:
 
         return UniquePtr<Ty>();
     }
-
-    /*! \brief Constructs a new RefCountedPtr from this object.
-        The value held within this UniquePtr will be unset,
-        the RefCountedPtr taking over management of the pointer.
-
-        \returns A reference counted pointer to the value held in this UniquePtr.
-    */
-    template <class CountType = AtomicVar<uint32>>
-    HYP_NODISCARD HYP_FORCE_INLINE RefCountedPtr<void, CountType> ToRefCountedPtr()
-    {
-        RefCountedPtr<void, CountType> rc;
-
-        auto* ref_count_data = new typename RefCountedPtr<void, CountType>::RefCountedPtrBase::RefCountDataType;
-        ref_count_data->InitFromParams(
-            Base::m_holder.value,
-            Base::m_holder.type_id,
-            Base::m_holder.dtor);
-
-        (void)Base::Release();
-
-        // FIXME: For polymorphic types, will value point to the correct place?
-        rc.SetRefCountData_Internal(Base::m_holder.value, ref_count_data, /* inc_ref */ true);
-
-        return rc;
-    }
 };
 
 template <class T>
@@ -685,8 +647,6 @@ struct MakeUniqueHelper
 
 template <class T>
 using UniquePtr = memory::UniquePtr<T>;
-
-using AnyPtr = UniquePtr<void>;
 
 template <class T, class... Args>
 HYP_FORCE_INLINE UniquePtr<T> MakeUnique(Args&&... args)

@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
+    [HypClassBinding(Name = "LightType")]
     public enum LightType : uint
     {
         Directional = 0,
@@ -12,10 +13,15 @@ namespace Hyperion
     }
 
     [HypClassBinding(Name="Light")]
-    public class Light : HypObject
+    public class Light : Entity
     {
         public Light()
         {
+        }
+
+        ~Light()
+        {
+            Logger.Log(LogType.Warn, "Destroying Light with Id: {0}", this.Id);
         }
     }
 }

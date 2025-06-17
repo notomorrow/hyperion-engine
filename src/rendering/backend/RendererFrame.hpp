@@ -8,7 +8,7 @@
 #include <rendering/backend/RendererSemaphore.hpp>
 #include <rendering/backend/RenderObject.hpp>
 
-#include <rendering/rhi/RHICommandList.hpp>
+#include <rendering/rhi/CmdList.hpp>
 
 #include <core/Defines.hpp>
 
@@ -21,8 +21,6 @@
 // #define HYP_DEBUG_USED_DESCRIPTOR_SETS
 
 namespace hyperion {
-namespace renderer {
-
 class FrameBase : public RenderObject<FrameBase>
 {
 public:
@@ -37,36 +35,35 @@ public:
 
     HYP_FORCE_INLINE uint32 GetFrameIndex() const
     {
-        return m_frame_index;
+        return m_frameIndex;
     }
 
-    HYP_FORCE_INLINE RHICommandList& GetCommandList()
+    HYP_FORCE_INLINE CmdList& GetCommandList()
     {
-        return m_command_list;
+        return m_commandList;
     }
 
-    HYP_FORCE_INLINE const RHICommandList& GetCommandList() const
+    HYP_FORCE_INLINE const CmdList& GetCommandList() const
     {
-        return m_command_list;
+        return m_commandList;
     }
 
-    void MarkDescriptorSetUsed(DescriptorSetBase* descriptor_set);
+    void MarkDescriptorSetUsed(DescriptorSetBase* descriptorSet);
 
     Delegate<void, FrameBase*> OnPresent;
     Delegate<void, FrameBase*> OnFrameEnd;
 
 protected:
-    FrameBase(uint32 frame_index)
-        : m_frame_index(frame_index)
+    FrameBase(uint32 frameIndex)
+        : m_frameIndex(frameIndex)
     {
     }
 
-    uint32 m_frame_index;
-    RHICommandList m_command_list;
-    HashSet<DescriptorSetBase*> m_used_descriptor_sets;
+    uint32 m_frameIndex;
+    CmdList m_commandList;
+    HashSet<DescriptorSetBase*> m_usedDescriptorSets;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

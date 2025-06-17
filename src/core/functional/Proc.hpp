@@ -6,7 +6,10 @@
 #include <core/Defines.hpp>
 #include <core/Util.hpp>
 
+#include <core/debug/Debug.hpp>
+
 #include <core/memory/Memory.hpp>
+#include <core/utilities/ValueStorage.hpp>
 
 #include <Types.hpp>
 #include <Constants.hpp>
@@ -46,13 +49,13 @@ struct Proc_Impl;
 template <class MemoryType, class ReturnType, class... Args>
 struct Proc_Impl<ReturnType(Args...), MemoryType>
 {
-    ReturnType (*invoke_fn)(void*, Args&...);
-    void (*move_fn)(Proc_Impl*, Proc_Impl*);
-    void (*delete_fn)(void*);
+    ReturnType (*invokeFn)(void*, Args&...);
+    void (*moveFn)(Proc_Impl*, Proc_Impl*);
+    void (*deleteFn)(void*);
 
     union
     {
-        // For inline storage of functor objects - if move_fn is not nullptr, then this memory is used.
+        // For inline storage of functor objects - if moveFn is not nullptr, then this memory is used.
         MemoryType memory;
 
         // For heap-allocation or C function pointer
@@ -60,9 +63,9 @@ struct Proc_Impl<ReturnType(Args...), MemoryType>
     };
 
     Proc_Impl()
-        : invoke_fn(nullptr),
-          move_fn(nullptr),
-          delete_fn(nullptr)
+        : invokeFn(nullptr),
+          moveFn(nullptr),
+          deleteFn(nullptr)
     {
     }
 
@@ -70,24 +73,24 @@ struct Proc_Impl<ReturnType(Args...), MemoryType>
     Proc_Impl& operator=(const Proc_Impl& other) = delete;
 
     Proc_Impl(Proc_Impl&& other) noexcept
-        : move_fn(nullptr)
+        : moveFn(nullptr)
     {
-        std::swap(other.move_fn, move_fn);
+        std::swap(other.moveFn, moveFn);
 
-        if (move_fn != nullptr)
+        if (moveFn != nullptr)
         {
-            move_fn(&other, this);
+            moveFn(&other, this);
         }
         else
         {
             ptr = other.ptr;
         }
 
-        invoke_fn = other.invoke_fn;
-        other.invoke_fn = nullptr;
+        invokeFn = other.invokeFn;
+        other.invokeFn = nullptr;
 
-        delete_fn = other.delete_fn;
-        other.delete_fn = nullptr;
+        deleteFn = other.deleteFn;
+        other.deleteFn = nullptr;
     }
 
     Proc_Impl& operator=(Proc_Impl&& other) noexcept
@@ -97,50 +100,50 @@ struct Proc_Impl<ReturnType(Args...), MemoryType>
             return *this;
         }
 
-        void (*other_move_fn)(Proc_Impl*, Proc_Impl*) = nullptr;
-        std::swap(other.move_fn, other_move_fn);
+        void (*otherMoveFn)(Proc_Impl*, Proc_Impl*) = nullptr;
+        std::swap(other.moveFn, otherMoveFn);
 
-        if (delete_fn != nullptr)
+        if (deleteFn != nullptr)
         {
-            delete_fn(GetPointer());
+            deleteFn(GetPointer());
         }
 
-        if (other_move_fn != nullptr)
+        if (otherMoveFn != nullptr)
         {
-            other_move_fn(&other, this);
+            otherMoveFn(&other, this);
         }
         else
         {
             ptr = other.ptr;
         }
 
-        invoke_fn = other.invoke_fn;
-        other.invoke_fn = nullptr;
+        invokeFn = other.invokeFn;
+        other.invokeFn = nullptr;
 
-        move_fn = other_move_fn;
+        moveFn = otherMoveFn;
 
-        delete_fn = other.delete_fn;
-        other.delete_fn = nullptr;
+        deleteFn = other.deleteFn;
+        other.deleteFn = nullptr;
 
         return *this;
     }
 
     ~Proc_Impl()
     {
-        if (delete_fn != nullptr)
+        if (deleteFn != nullptr)
         {
-            delete_fn(GetPointer());
+            deleteFn(GetPointer());
         }
     }
 
     HYP_FORCE_INLINE bool IsInlineStorage() const
     {
-        return move_fn != nullptr;
+        return moveFn != nullptr;
     }
 
     HYP_FORCE_INLINE bool HasValue() const
     {
-        return invoke_fn != nullptr;
+        return invokeFn != nullptr;
     }
 
     HYP_FORCE_INLINE void* GetPointer()
@@ -152,14 +155,14 @@ struct Proc_Impl<ReturnType(Args...), MemoryType>
 
     HYP_FORCE_INLINE void Reset()
     {
-        if (delete_fn)
+        if (deleteFn)
         {
-            delete_fn(GetPointer());
+            deleteFn(GetPointer());
         }
 
-        invoke_fn = nullptr;
-        move_fn = nullptr;
-        delete_fn = nullptr;
+        invokeFn = nullptr;
+        moveFn = nullptr;
+        deleteFn = nullptr;
     }
 };
 
@@ -225,10 +228,10 @@ class ProcRef;
 template <class ReturnType, class... Args>
 class Proc<ReturnType(Args...)> : ProcBase
 {
-    static constexpr uint32 inline_storage_size_bytes = 256;
+    static constexpr uint32 inlineStorageSizeBytes = 256;
 
-    using InlineStorage = ValueStorageArray<char, inline_storage_size_bytes>;
-    using Impl = Proc_Impl<ReturnType(Args...), InlineStorage>;
+    using InlineStorageType = ValueStorageArray<char, inlineStorageSizeBytes>;
+    using Impl = Proc_Impl<ReturnType(Args...), InlineStorageType>;
 
 public:
     friend class ProcRef<ReturnType(Args...)>;
@@ -253,40 +256,40 @@ public:
 
         static_assert(!std::is_base_of_v<ProcBase, FuncNormalized>, "Object should not be ProcBase");
 
-        m_impl.invoke_fn = &Invoker<ReturnType, Args...>::template InvokeFn<FuncNormalized>;
-        m_impl.move_fn = nullptr;
+        m_impl.invokeFn = &Invoker<ReturnType, Args...>::template InvokeFn<FuncNormalized>;
+        m_impl.moveFn = nullptr;
 
-        if (sizeof(FuncNormalized) <= sizeof(InlineStorage))
+        if (sizeof(FuncNormalized) <= sizeof(InlineStorageType))
         {
-            m_impl.memory = InlineStorage();
+            m_impl.memory = InlineStorageType();
 
             void* ptr = &m_impl.memory;
-            const uintptr_t address_aligned = HYP_ALIGN_ADDRESS(ptr, alignof(FuncNormalized));
+            const uintptr_t addressAligned = HYP_ALIGN_ADDRESS(ptr, alignof(FuncNormalized));
 
-            if (address_aligned + sizeof(FuncNormalized) <= uintptr_t(ptr) + inline_storage_size_bytes)
+            if (addressAligned + sizeof(FuncNormalized) <= uintptr_t(ptr) + inlineStorageSizeBytes)
             {
-                Memory::Construct<FuncNormalized>(std::assume_aligned<alignof(FuncNormalized)>(reinterpret_cast<FuncNormalized*>(address_aligned)), std::forward<Func>(fn));
+                Memory::Construct<FuncNormalized>(std::assume_aligned<alignof(FuncNormalized)>(reinterpret_cast<FuncNormalized*>(addressAligned)), std::forward<Func>(fn));
 
-                m_impl.move_fn = [](Impl* src, Impl* dest)
+                m_impl.moveFn = [](Impl* src, Impl* dest)
                 {
-                    // Gauranteed that src is this - so we can safely get InlineStorage from src
+                    // Gauranteed that src is this - so we can safely get InlineStorageType from src
 
-                    dest->memory = InlineStorage();
+                    dest->memory = InlineStorageType();
 
-                    FuncNormalized* src_data = HYP_ALIGN_PTR_AS(&src->memory, FuncNormalized);
+                    FuncNormalized* srcData = HYP_ALIGN_PTR_AS(&src->memory, FuncNormalized);
 
                     // Dest would already have its memory destroyed or not yet constructed, so we can safely construct into it here.
-                    new (HYP_ALIGN_PTR_AS(&dest->memory, FuncNormalized)) FuncNormalized(std::move(*src_data));
+                    new (HYP_ALIGN_PTR_AS(&dest->memory, FuncNormalized)) FuncNormalized(std::move(*srcData));
 
-                    // Destruct the source data after moving it - now InlineStorage will not hold any valid data.
-                    src_data->~FuncNormalized();
+                    // Destruct the source data after moving it - now InlineStorageType will not hold any valid data.
+                    srcData->~FuncNormalized();
 
-                    // Proc_Impl handles setting the invoke_fn, move_fn, and delete_fn members after this is called.
+                    // Proc_Impl handles setting the invokeFn, moveFn, and deleteFn members after this is called.
                 };
 
                 if constexpr (!std::is_trivially_destructible_v<FuncNormalized>)
                 {
-                    m_impl.delete_fn = [](void* ptr)
+                    m_impl.deleteFn = [](void* ptr)
                     {
                         HYP_ALIGN_PTR_AS(ptr, FuncNormalized)->~FuncNormalized();
                     };
@@ -298,7 +301,7 @@ public:
 
         // Use heap allocation if the functor is too large for inline storage
         m_impl.ptr = Memory::AllocateAndConstruct<FuncNormalized>(std::forward<Func>(fn));
-        m_impl.delete_fn = &Memory::DestructAndFree<FuncNormalized>;
+        m_impl.deleteFn = &Memory::DestructAndFree<FuncNormalized>;
     }
 
     Proc(Proc* fn)
@@ -306,7 +309,7 @@ public:
     {
         if (fn != nullptr && fn->IsValid())
         {
-            m_impl.invoke_fn = &Invoker<ReturnType, Args...>::template InvokeFn<Proc>;
+            m_impl.invokeFn = &Invoker<ReturnType, Args...>::template InvokeFn<Proc>;
             m_impl.ptr = reinterpret_cast<void*>(fn);
         }
     }
@@ -321,7 +324,7 @@ public:
 
         if (fn != nullptr)
         {
-            m_impl.invoke_fn = &Invoker<ReturnType, Args...>::template InvokeFn<FuncNormalized>;
+            m_impl.invokeFn = &Invoker<ReturnType, Args...>::template InvokeFn<FuncNormalized>;
             m_impl.ptr = reinterpret_cast<void*>(fn);
         }
     }
@@ -372,7 +375,7 @@ public:
     {
         AssertDebug(m_impl.HasValue());
 
-        return m_impl.invoke_fn(m_impl.GetPointer(), args...);
+        return m_impl.invokeFn(m_impl.GetPointer(), args...);
     }
 
     /*! \brief Resets the Proc object, releasing any resources it may hold. \ref{IsValid} will return false after calling this function. */
@@ -391,7 +394,7 @@ class ProcRef<ReturnType(Args...)> : public ProcRefBase
 public:
     explicit ProcRef(std::nullptr_t)
         : m_ptr(nullptr),
-          m_invoke_fn(nullptr)
+          m_invokeFn(nullptr)
     {
     }
 
@@ -402,7 +405,7 @@ public:
         {
             m_ptr = const_cast<void*>(static_cast<const void*>(&proc));
 
-            m_invoke_fn = [](void* ptr, Args&... args) -> ReturnType
+            m_invokeFn = [](void* ptr, Args&... args) -> ReturnType
             {
                 const Proc<ReturnType(Args...)>& proc = *static_cast<const Proc<ReturnType(Args...)>*>(ptr);
                 AssertThrowMsg(proc.IsValid(), "Cannot invoke ProcRef referencing invalid Proc");
@@ -416,7 +419,7 @@ public:
     ProcRef(Callable&& callable)
         : m_ptr(const_cast<void*>(static_cast<const void*>(&callable)))
     {
-        m_invoke_fn = [](void* ptr, Args&... args) -> ReturnType
+        m_invokeFn = [](void* ptr, Args&... args) -> ReturnType
         {
             return (*static_cast<NormalizedType<Callable>*>(ptr))(args...);
         };
@@ -429,7 +432,7 @@ public:
         {
             m_ptr = reinterpret_cast<void*>(fn);
 
-            m_invoke_fn = [](void* ptr, Args&... args) -> ReturnType
+            m_invokeFn = [](void* ptr, Args&... args) -> ReturnType
             {
                 return (reinterpret_cast<ReturnType (*)(Args...)>(ptr))(args...);
             };
@@ -463,12 +466,12 @@ public:
 
     HYP_FORCE_INLINE ReturnType operator()(Args... args) const
     {
-        return m_invoke_fn(m_ptr, args...);
+        return m_invokeFn(m_ptr, args...);
     }
 
 private:
     void* m_ptr;
-    ReturnType (*m_invoke_fn)(void*, Args&...);
+    ReturnType (*m_invokeFn)(void*, Args&...);
 };
 
 // General specialization for when return type and args cannot be deduced (in the case of a lambda)

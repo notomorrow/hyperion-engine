@@ -2,7 +2,7 @@
 
 #include <rendering/backend/vulkan/RendererShader.hpp>
 #include <rendering/backend/vulkan/RendererDescriptorSet.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
@@ -14,20 +14,18 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 #pragma region CreateShaderStage
 
-VulkanShader::VulkanShader(const RC<CompiledShader>& compiled_shader)
-    : ShaderBase(compiled_shader),
-      m_entry_point_name("main")
+VulkanShader::VulkanShader(const RC<CompiledShader>& compiledShader)
+    : ShaderBase(compiledShader),
+      m_entryPointName("main")
 {
 }
 
@@ -37,52 +35,52 @@ VulkanShader::~VulkanShader()
 
 bool VulkanShader::IsCreated() const
 {
-    return m_vk_shader_stages.Size() != 0;
+    return m_vkShaderStages.Size() != 0;
 }
 
-RendererResult VulkanShader::AttachSubShader(ShaderModuleType type, const ShaderObject& shader_object)
+RendererResult VulkanShader::AttachSubShader(ShaderModuleType type, const ShaderObject& shaderObject)
 {
-    const ByteBuffer& spirv = shader_object.bytes;
+    const ByteBuffer& spirv = shaderObject.bytes;
 
-    VkShaderModuleCreateInfo create_info { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-    create_info.codeSize = spirv.Size();
-    create_info.pCode = reinterpret_cast<const uint32*>(spirv.Data());
+    VkShaderModuleCreateInfo createInfo { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+    createInfo.codeSize = spirv.Size();
+    createInfo.pCode = reinterpret_cast<const uint32*>(spirv.Data());
 
-    VkShaderModule shader_module;
+    VkShaderModule shaderModule;
 
-    HYPERION_VK_CHECK(vkCreateShaderModule(GetRenderingAPI()->GetDevice()->GetDevice(), &create_info, nullptr, &shader_module));
+    HYPERION_VK_CHECK(vkCreateShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), &createInfo, nullptr, &shaderModule));
 
-    m_shader_modules.PushBack(VulkanShaderModule(type, m_entry_point_name, spirv, shader_module));
+    m_shaderModules.PushBack(VulkanShaderModule(type, m_entryPointName, spirv, shaderModule));
 
-    std::sort(m_shader_modules.Begin(), m_shader_modules.End());
+    std::sort(m_shaderModules.Begin(), m_shaderModules.End());
 
     HYPERION_RETURN_OK;
 }
 
 RendererResult VulkanShader::AttachSubShaders()
 {
-    if (!m_compiled_shader)
+    if (!m_compiledShader)
     {
         return HYP_MAKE_ERROR(RendererError, "No compiled shader attached");
     }
 
-    if (!m_compiled_shader->IsValid())
+    if (!m_compiledShader->IsValid())
     {
         return HYP_MAKE_ERROR(RendererError, "Attached compiled shader is in invalid state");
     }
 
-    for (SizeType index = 0; index < m_compiled_shader->modules.Size(); index++)
+    for (SizeType index = 0; index < m_compiledShader->modules.Size(); index++)
     {
-        const ByteBuffer& byte_buffer = m_compiled_shader->modules[index];
+        const ByteBuffer& byteBuffer = m_compiledShader->modules[index];
 
-        if (byte_buffer.Empty())
+        if (byteBuffer.Empty())
         {
             continue;
         }
 
         HYPERION_BUBBLE_ERRORS(AttachSubShader(
             ShaderModuleType(index),
-            { byte_buffer }));
+            { byteBuffer }));
     }
 
     HYPERION_RETURN_OK;
@@ -90,17 +88,17 @@ RendererResult VulkanShader::AttachSubShaders()
 
 RendererResult VulkanShader::CreateShaderGroups()
 {
-    m_shader_groups.Clear();
+    m_shaderGroups.Clear();
 
-    for (SizeType i = 0; i < m_shader_modules.Size(); i++)
+    for (SizeType i = 0; i < m_shaderModules.Size(); i++)
     {
-        const VulkanShaderModule& shader_module = m_shader_modules[i];
+        const VulkanShaderModule& shaderModule = m_shaderModules[i];
 
-        switch (shader_module.type)
+        switch (shaderModule.type)
         {
-        case ShaderModuleType::RAY_MISS: /* fallthrough */
-        case ShaderModuleType::RAY_GEN:
-            m_shader_groups.PushBack({ shader_module.type,
+        case SMT_RAY_MISS: /* fallthrough */
+        case SMT_RAY_GEN:
+            m_shaderGroups.PushBack({ shaderModule.type,
                 VkRayTracingShaderGroupCreateInfoKHR {
                     .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
                     .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
@@ -110,8 +108,8 @@ RendererResult VulkanShader::CreateShaderGroups()
                     .intersectionShader = VK_SHADER_UNUSED_KHR } });
 
             break;
-        case ShaderModuleType::RAY_CLOSEST_HIT:
-            m_shader_groups.PushBack({ shader_module.type,
+        case SMT_RAY_CLOSEST_HIT:
+            m_shaderGroups.PushBack({ shaderModule.type,
                 VkRayTracingShaderGroupCreateInfoKHR {
                     .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
                     .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
@@ -129,58 +127,58 @@ RendererResult VulkanShader::CreateShaderGroups()
     HYPERION_RETURN_OK;
 }
 
-VkPipelineShaderStageCreateInfo VulkanShader::CreateShaderStage(const VulkanShaderModule& shader_module)
+VkPipelineShaderStageCreateInfo VulkanShader::CreateShaderStage(const VulkanShaderModule& shaderModule)
 {
-    VkPipelineShaderStageCreateInfo create_info { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-    create_info.module = shader_module.shader_module;
-    create_info.pName = shader_module.entry_point_name.Data();
+    VkPipelineShaderStageCreateInfo createInfo { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    createInfo.module = shaderModule.shaderModule;
+    createInfo.pName = shaderModule.entryPointName.Data();
 
-    switch (shader_module.type)
+    switch (shaderModule.type)
     {
-    case ShaderModuleType::VERTEX:
-        create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    case SMT_VERTEX:
+        createInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
         break;
-    case ShaderModuleType::FRAGMENT:
-        create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    case SMT_FRAGMENT:
+        createInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         break;
-    case ShaderModuleType::GEOMETRY:
-        create_info.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+    case SMT_GEOMETRY:
+        createInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
         break;
-    case ShaderModuleType::COMPUTE:
-        create_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    case SMT_COMPUTE:
+        createInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
         break;
-    case ShaderModuleType::TASK:
-        create_info.stage = VK_SHADER_STAGE_TASK_BIT_NV;
+    case SMT_TASK:
+        createInfo.stage = VK_SHADER_STAGE_TASK_BIT_NV;
         break;
-    case ShaderModuleType::MESH:
-        create_info.stage = VK_SHADER_STAGE_MESH_BIT_NV;
+    case SMT_MESH:
+        createInfo.stage = VK_SHADER_STAGE_MESH_BIT_NV;
         break;
-    case ShaderModuleType::TESS_CONTROL:
-        create_info.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    case SMT_TESS_CONTROL:
+        createInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
         break;
-    case ShaderModuleType::TESS_EVAL:
-        create_info.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    case SMT_TESS_EVAL:
+        createInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
         break;
-    case ShaderModuleType::RAY_GEN:
-        create_info.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    case SMT_RAY_GEN:
+        createInfo.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
         break;
-    case ShaderModuleType::RAY_INTERSECT:
-        create_info.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+    case SMT_RAY_INTERSECT:
+        createInfo.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
         break;
-    case ShaderModuleType::RAY_ANY_HIT:
-        create_info.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+    case SMT_RAY_ANY_HIT:
+        createInfo.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
         break;
-    case ShaderModuleType::RAY_CLOSEST_HIT:
-        create_info.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    case SMT_RAY_CLOSEST_HIT:
+        createInfo.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
         break;
-    case ShaderModuleType::RAY_MISS:
-        create_info.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+    case SMT_RAY_MISS:
+        createInfo.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
         break;
     default:
         HYP_THROW("Not implemented");
     }
 
-    return create_info;
+    return createInfo;
 }
 
 RendererResult VulkanShader::Create()
@@ -192,16 +190,16 @@ RendererResult VulkanShader::Create()
 
     HYPERION_BUBBLE_ERRORS(AttachSubShaders());
 
-    bool is_raytracing = false;
+    bool isRaytracing = false;
 
-    for (const VulkanShaderModule& shader_module : m_shader_modules)
+    for (const VulkanShaderModule& shaderModule : m_shaderModules)
     {
-        is_raytracing |= shader_module.IsRaytracing();
+        isRaytracing |= shaderModule.IsRaytracing();
 
-        m_vk_shader_stages.PushBack(CreateShaderStage(shader_module));
+        m_vkShaderStages.PushBack(CreateShaderStage(shaderModule));
     }
 
-    if (is_raytracing)
+    if (isRaytracing)
     {
         HYPERION_BUBBLE_ERRORS(CreateShaderGroups());
     }
@@ -216,17 +214,16 @@ RendererResult VulkanShader::Destroy()
         HYPERION_RETURN_OK;
     }
 
-    for (const VulkanShaderModule& shader_module : m_shader_modules)
+    for (const VulkanShaderModule& shaderModule : m_shaderModules)
     {
-        vkDestroyShaderModule(GetRenderingAPI()->GetDevice()->GetDevice(), shader_module.shader_module, nullptr);
+        vkDestroyShaderModule(GetRenderBackend()->GetDevice()->GetDevice(), shaderModule.shaderModule, nullptr);
     }
 
-    m_shader_modules.Clear();
+    m_shaderModules.Clear();
 
     HYPERION_RETURN_OK;
 }
 
 #pragma endregion VulkanShader
 
-} // namespace renderer
 } // namespace hyperion

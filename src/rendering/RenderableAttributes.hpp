@@ -5,7 +5,7 @@
 #include <rendering/backend/RendererStructs.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
 #include <rendering/RenderBucket.hpp>
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <core/Defines.hpp>
 #include <core/utilities/EnumFlags.hpp>
@@ -15,108 +15,98 @@
 
 namespace hyperion {
 
-using renderer::FaceCullMode;
-using renderer::FillMode;
-using renderer::Topology;
-
-using renderer::StencilCompareOp;
-using renderer::StencilFunction;
-using renderer::StencilOp;
-
-using renderer::BlendFunction;
-using renderer::BlendModeFactor;
-
-enum class MaterialAttributeFlags : uint32
+HYP_ENUM()
+enum MaterialAttributeFlags : uint32
 {
-    NONE = 0x0,
-    DEPTH_WRITE = 0x1,
-    DEPTH_TEST = 0x2
+    MAF_NONE = 0x0,
+
+    MAF_DEPTH_WRITE = 0x1,
+    MAF_DEPTH_TEST = 0x2,
+    MAF_ALPHA_DISCARD = 0x4
 };
 
 HYP_MAKE_ENUM_FLAGS(MaterialAttributeFlags)
 
 HYP_STRUCT()
-
 struct MaterialAttributes
 {
     HYP_FIELD()
-    ShaderDefinition shader_definition;
+    ShaderDefinition shaderDefinition;
 
     HYP_FIELD()
-    Bucket bucket = Bucket::BUCKET_OPAQUE;
+    RenderBucket bucket = RB_OPAQUE;
 
     HYP_FIELD()
-    FillMode fill_mode = FillMode::FILL;
+    FillMode fillMode = FM_FILL;
 
     HYP_FIELD()
-    BlendFunction blend_function = BlendFunction::None();
+    BlendFunction blendFunction = BlendFunction::None();
 
     HYP_FIELD()
-    FaceCullMode cull_faces = FaceCullMode::BACK;
+    FaceCullMode cullFaces = FCM_BACK;
 
     HYP_FIELD()
-    EnumFlags<MaterialAttributeFlags> flags = MaterialAttributeFlags::DEPTH_WRITE | MaterialAttributeFlags::DEPTH_TEST;
+    EnumFlags<MaterialAttributeFlags> flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST;
 
     HYP_FIELD()
-    StencilFunction stencil_function;
+    StencilFunction stencilFunction;
 
     HYP_FORCE_INLINE bool operator==(const MaterialAttributes& other) const
     {
-        return shader_definition == other.shader_definition
+        return shaderDefinition == other.shaderDefinition
             && bucket == other.bucket
-            && fill_mode == other.fill_mode
-            && blend_function == other.blend_function
-            && cull_faces == other.cull_faces
+            && fillMode == other.fillMode
+            && blendFunction == other.blendFunction
+            && cullFaces == other.cullFaces
             && flags == other.flags
-            && stencil_function == other.stencil_function;
+            && stencilFunction == other.stencilFunction;
     }
 
     HYP_FORCE_INLINE bool operator!=(const MaterialAttributes& other) const
     {
-        return shader_definition != other.shader_definition
+        return shaderDefinition != other.shaderDefinition
             || bucket != other.bucket
-            || fill_mode != other.fill_mode
-            || blend_function != other.blend_function
-            || cull_faces != other.cull_faces
+            || fillMode != other.fillMode
+            || blendFunction != other.blendFunction
+            || cullFaces != other.cullFaces
             || flags != other.flags
-            || stencil_function != other.stencil_function;
+            || stencilFunction != other.stencilFunction;
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(shader_definition.GetHashCode());
+        hc.Add(shaderDefinition.GetHashCode());
         hc.Add(bucket);
-        hc.Add(fill_mode);
-        hc.Add(blend_function);
-        hc.Add(cull_faces);
+        hc.Add(fillMode);
+        hc.Add(blendFunction);
+        hc.Add(cullFaces);
         hc.Add(flags);
-        hc.Add(stencil_function);
+        hc.Add(stencilFunction);
 
         return hc;
     }
 };
 
 HYP_STRUCT()
-
 struct MeshAttributes
 {
     HYP_FIELD(Property = "VertexAttributes", Serialize = true)
-    VertexAttributeSet vertex_attributes = static_mesh_vertex_attributes;
+    VertexAttributeSet vertexAttributes = staticMeshVertexAttributes;
 
     HYP_FIELD(Property = "Topology", Serialize = true)
-    Topology topology = Topology::TRIANGLES;
+    Topology topology = TOP_TRIANGLES;
 
     HYP_FORCE_INLINE bool operator==(const MeshAttributes& other) const
     {
-        return vertex_attributes == other.vertex_attributes
+        return vertexAttributes == other.vertexAttributes
             && topology == other.topology;
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(vertex_attributes);
+        hc.Add(vertexAttributes);
         hc.Add(topology);
 
         return hc;
@@ -125,21 +115,21 @@ struct MeshAttributes
 
 class RenderableAttributeSet
 {
-    MeshAttributes m_mesh_attributes;
-    MaterialAttributes m_material_attributes;
-    uint32 m_override_flags;
-    uint32 m_drawable_layer;
+    MeshAttributes m_meshAttributes;
+    MaterialAttributes m_materialAttributes;
+    uint32 m_overrideFlags;
+    uint32 m_drawableLayer;
 
-    mutable HashCode m_cached_hash_code;
-    mutable bool m_needs_hash_code_recalculation;
+    mutable HashCode m_cachedHashCode;
+    mutable bool m_needsHashCodeRecalculation;
 
 public:
-    RenderableAttributeSet(const MeshAttributes& mesh_attributes = {}, const MaterialAttributes& material_attributes = {}, uint32 override_flags = 0)
-        : m_mesh_attributes(mesh_attributes),
-          m_material_attributes(material_attributes),
-          m_override_flags(override_flags),
-          m_drawable_layer(0),
-          m_needs_hash_code_recalculation(true)
+    RenderableAttributeSet(const MeshAttributes& meshAttributes = {}, const MaterialAttributes& materialAttributes = {}, uint32 overrideFlags = 0)
+        : m_meshAttributes(meshAttributes),
+          m_materialAttributes(materialAttributes),
+          m_overrideFlags(overrideFlags),
+          m_drawableLayer(0),
+          m_needsHashCodeRecalculation(true)
     {
     }
 
@@ -166,81 +156,81 @@ public:
 
     HYP_FORCE_INLINE const ShaderDefinition& GetShaderDefinition() const
     {
-        return m_material_attributes.shader_definition;
+        return m_materialAttributes.shaderDefinition;
     }
 
-    HYP_FORCE_INLINE void SetShaderDefinition(const ShaderDefinition& shader_definition)
+    HYP_FORCE_INLINE void SetShaderDefinition(const ShaderDefinition& shaderDefinition)
     {
-        m_material_attributes.shader_definition = shader_definition;
-        m_needs_hash_code_recalculation = true;
+        m_materialAttributes.shaderDefinition = shaderDefinition;
+        m_needsHashCodeRecalculation = true;
     }
 
     HYP_FORCE_INLINE const MeshAttributes& GetMeshAttributes() const
     {
-        return m_mesh_attributes;
+        return m_meshAttributes;
     }
 
-    HYP_FORCE_INLINE void SetMeshAttributes(const MeshAttributes& mesh_attributes)
+    HYP_FORCE_INLINE void SetMeshAttributes(const MeshAttributes& meshAttributes)
     {
-        m_mesh_attributes = mesh_attributes;
-        m_needs_hash_code_recalculation = true;
+        m_meshAttributes = meshAttributes;
+        m_needsHashCodeRecalculation = true;
     }
 
     HYP_FORCE_INLINE const MaterialAttributes& GetMaterialAttributes() const
     {
-        return m_material_attributes;
+        return m_materialAttributes;
     }
 
-    HYP_FORCE_INLINE void SetMaterialAttributes(const MaterialAttributes& material_attributes)
+    HYP_FORCE_INLINE void SetMaterialAttributes(const MaterialAttributes& materialAttributes)
     {
-        m_material_attributes = material_attributes;
-        m_needs_hash_code_recalculation = true;
+        m_materialAttributes = materialAttributes;
+        m_needsHashCodeRecalculation = true;
     }
 
     HYP_FORCE_INLINE uint32 GetOverrideFlags() const
     {
-        return m_override_flags;
+        return m_overrideFlags;
     }
 
-    HYP_FORCE_INLINE void SetOverrideFlags(uint32 override_flags)
+    HYP_FORCE_INLINE void SetOverrideFlags(uint32 overrideFlags)
     {
-        m_override_flags = override_flags;
-        m_needs_hash_code_recalculation = true;
+        m_overrideFlags = overrideFlags;
+        m_needsHashCodeRecalculation = true;
     }
 
     HYP_FORCE_INLINE uint32 GetDrawableLayer() const
     {
-        return m_drawable_layer;
+        return m_drawableLayer;
     }
 
-    HYP_FORCE_INLINE void SetDrawableLayer(uint32 drawable_layer)
+    HYP_FORCE_INLINE void SetDrawableLayer(uint32 drawableLayer)
     {
-        m_drawable_layer = drawable_layer;
-        m_needs_hash_code_recalculation = true;
+        m_drawableLayer = drawableLayer;
+        m_needsHashCodeRecalculation = true;
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        if (m_needs_hash_code_recalculation)
+        if (m_needsHashCodeRecalculation)
         {
             RecalculateHashCode();
 
-            m_needs_hash_code_recalculation = false;
+            m_needsHashCodeRecalculation = false;
         }
 
-        return m_cached_hash_code;
+        return m_cachedHashCode;
     }
 
 private:
     void RecalculateHashCode() const
     {
         HashCode hc;
-        hc.Add(m_mesh_attributes.GetHashCode());
-        hc.Add(m_material_attributes.GetHashCode());
-        hc.Add(m_override_flags);
-        hc.Add(m_drawable_layer);
+        hc.Add(m_meshAttributes.GetHashCode());
+        hc.Add(m_materialAttributes.GetHashCode());
+        hc.Add(m_overrideFlags);
+        hc.Add(m_drawableLayer);
 
-        m_cached_hash_code = hc;
+        m_cachedHashCode = hc;
     }
 };
 

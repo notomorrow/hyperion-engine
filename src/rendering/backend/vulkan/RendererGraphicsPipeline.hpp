@@ -8,7 +8,7 @@
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
 #include <rendering/backend/vulkan/RendererPipeline.hpp>
-#include <rendering/backend/vulkan/RendererBuffer.hpp>
+#include <rendering/backend/vulkan/RendererGpuBuffer.hpp>
 #include <rendering/backend/vulkan/RendererDescriptorSet.hpp>
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
 
@@ -26,7 +26,8 @@
 #include <Types.hpp>
 
 namespace hyperion {
-namespace renderer {
+
+struct DescriptorTableDeclaration;
 
 class VulkanFramebuffer;
 using VulkanFramebufferRef = RenderObjectHandle_Strong<VulkanFramebuffer>;
@@ -40,53 +41,37 @@ class VulkanGraphicsPipeline final : public GraphicsPipelineBase, public VulkanP
 {
 public:
     HYP_API VulkanGraphicsPipeline();
-    HYP_API VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptor_table);
+    HYP_API VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
     HYP_API ~VulkanGraphicsPipeline();
 
     HYP_FORCE_INLINE const VulkanRenderPassRef& GetRenderPass() const
     {
-        return m_render_pass;
+        return m_renderPass;
     }
 
-    HYP_API void SetRenderPass(const VulkanRenderPassRef& render_pass);
-
-    HYP_FORCE_INLINE const Array<VulkanFramebufferRef>& GetFramebuffers() const
-    {
-        return m_framebuffers;
-    }
-
-    HYP_API void SetFramebuffers(const Array<VulkanFramebufferRef>& framebuffers);
-
-    HYP_API virtual RendererResult Create() override;
-    HYP_API virtual RendererResult Destroy() override;
+    HYP_API void SetRenderPass(const VulkanRenderPassRef& renderPass);
 
     HYP_API virtual void Bind(CommandBufferBase* cmd) override;
-    HYP_API virtual void Bind(CommandBufferBase* cmd, Vec2i viewport_offset, Vec2i viewport_extent) override;
-
-    HYP_API virtual bool MatchesSignature(
-        const ShaderBase* shader,
-        const DescriptorTableBase* descriptor_table,
-        const Array<const FramebufferBase*>& framebuffers,
-        const RenderableAttributeSet& attributes) const override;
+    HYP_API virtual void Bind(CommandBufferBase* cmd, Vec2i viewportOffset, Vec2u viewportExtent) override;
 
     HYP_API virtual void SetPushConstants(const void* data, SizeType size) override;
 
+    HYP_API virtual RendererResult Destroy() override;
+
 private:
-    RendererResult Rebuild();
+    HYP_API virtual RendererResult Rebuild() override;
 
     void BuildVertexAttributes(
-        const VertexAttributeSet& attribute_set,
-        Array<VkVertexInputAttributeDescription>& out_vk_vertex_attributes,
-        Array<VkVertexInputBindingDescription>& out_vk_vertex_binding_descriptions);
+        const VertexAttributeSet& attributeSet,
+        Array<VkVertexInputAttributeDescription>& outVkVertexAttributes,
+        Array<VkVertexInputBindingDescription>& outVkVertexBindingDescriptions);
 
-    void UpdateViewport(VulkanCommandBuffer* command_buffer, const Viewport& viewport);
+    void UpdateViewport(VulkanCommandBuffer* commandBuffer, const Viewport& viewport);
 
-    VulkanRenderPassRef m_render_pass;
-    Array<VulkanFramebufferRef> m_framebuffers;
+    VulkanRenderPassRef m_renderPass;
     Viewport m_viewport;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif // HYPERION_RENDERER_BACKEND_VULKAN_GRAPHICS_PIPELINE_HPP

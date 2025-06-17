@@ -6,7 +6,7 @@
 #include <core/containers/ContainerBase.hpp>
 #include <core/containers/FlatMap.hpp>
 #include <core/containers/FlatSet.hpp>
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 #include <core/Defines.hpp>
 
 #include <Types.hpp>
@@ -16,17 +16,17 @@ namespace hyperion {
 namespace containers {
 
 template <class Value>
-class TypeMap : public ContainerBase<TypeMap<Value>, TypeID>
+class TypeMap : public ContainerBase<TypeMap<Value>, TypeId>
 {
 protected:
-    using Map = FlatMap<TypeID, Value>;
+    using Map = FlatMap<TypeId, Value>;
 
 public:
-    static constexpr bool is_contiguous = Map::is_contiguous;
+    static constexpr bool isContiguous = Map::isContiguous;
 
     using KeyValuePairType = typename Map::KeyValuePairType;
 
-    using KeyType = TypeID;
+    using KeyType = TypeId;
     using ValueType = KeyValuePairType;
 
     using InsertResult = typename Map::InsertResult;
@@ -70,7 +70,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE InsertResult Set(const Value& value)
     {
-        const auto id = TypeID::ForType<T>();
+        const auto id = TypeId::ForType<T>();
 
         return m_map.Set(id, value);
     }
@@ -78,24 +78,24 @@ public:
     template <class T>
     HYP_FORCE_INLINE InsertResult Set(Value&& value)
     {
-        const auto id = TypeID::ForType<T>();
+        const auto id = TypeId::ForType<T>();
 
         return m_map.Set(id, std::move(value));
     }
 
-    HYP_FORCE_INLINE InsertResult Set(TypeID type_id, const Value& value)
+    HYP_FORCE_INLINE InsertResult Set(TypeId typeId, const Value& value)
     {
-        return m_map.Set(type_id, value);
+        return m_map.Set(typeId, value);
     }
 
-    HYP_FORCE_INLINE InsertResult Set(TypeID type_id, Value&& value)
+    HYP_FORCE_INLINE InsertResult Set(TypeId typeId, Value&& value)
     {
-        return m_map.Set(type_id, std::move(value));
+        return m_map.Set(typeId, std::move(value));
     }
 
-    HYP_FORCE_INLINE Value& Get(TypeID type_id)
+    HYP_FORCE_INLINE Value& Get(TypeId typeId)
     {
-        Iterator it = m_map.Find(type_id);
+        Iterator it = m_map.Find(typeId);
         AssertThrow(it != m_map.End());
 
         return it->second;
@@ -104,7 +104,7 @@ public:
     template <class T>
     HYP_FORCE_INLINE Iterator Find()
     {
-        const auto id = TypeID::ForType<T>();
+        const auto id = TypeId::ForType<T>();
 
         return m_map.Find(id);
     }
@@ -112,19 +112,19 @@ public:
     template <class T>
     HYP_FORCE_INLINE ConstIterator Find() const
     {
-        const auto id = TypeID::ForType<T>();
+        const auto id = TypeId::ForType<T>();
 
         return m_map.Find(id);
     }
 
-    HYP_FORCE_INLINE Iterator Find(TypeID type_id)
+    HYP_FORCE_INLINE Iterator Find(TypeId typeId)
     {
-        return m_map.Find(type_id);
+        return m_map.Find(typeId);
     }
 
-    HYP_FORCE_INLINE ConstIterator Find(TypeID type_id) const
+    HYP_FORCE_INLINE ConstIterator Find(TypeId typeId) const
     {
-        return m_map.Find(type_id);
+        return m_map.Find(typeId);
     }
 
     HYP_FORCE_INLINE Iterator Erase(ConstIterator it)
@@ -132,15 +132,15 @@ public:
         return m_map.Erase(it);
     }
 
-    HYP_FORCE_INLINE bool Erase(TypeID type_id)
+    HYP_FORCE_INLINE bool Erase(TypeId typeId)
     {
-        return m_map.Erase(type_id);
+        return m_map.Erase(typeId);
     }
 
     template <class T>
     HYP_FORCE_INLINE bool Erase()
     {
-        return m_map.Erase(TypeID::ForType<T>());
+        return m_map.Erase(TypeId::ForType<T>());
     }
 
     template <class T>
@@ -163,18 +163,18 @@ public:
         return it->second;
     }
 
-    HYP_FORCE_INLINE Value& At(TypeID type_id)
+    HYP_FORCE_INLINE Value& At(TypeId typeId)
     {
-        const auto it = Find(type_id);
+        const auto it = Find(typeId);
 
         AssertThrow(it != m_map.End());
 
         return it->second;
     }
 
-    HYP_FORCE_INLINE const Value& At(TypeID type_id) const
+    HYP_FORCE_INLINE const Value& At(TypeId typeId) const
     {
-        const auto it = Find(type_id);
+        const auto it = Find(typeId);
 
         AssertThrow(it != m_map.End());
 
@@ -191,27 +191,27 @@ public:
         return m_map.AtIndex(index).second;
     }
 
-    HYP_FORCE_INLINE Value& operator[](TypeID type_id)
+    HYP_FORCE_INLINE Value& operator[](TypeId typeId)
     {
-        const auto it = Find(type_id);
+        const auto it = Find(typeId);
 
         if (it == m_map.End())
         {
-            return m_map.Set(type_id, Value()).first->second;
+            return m_map.Set(typeId, Value()).first->second;
         }
 
         return it->second;
     }
 
-    HYP_FORCE_INLINE bool Contains(TypeID type_id) const
+    HYP_FORCE_INLINE bool Contains(TypeId typeId) const
     {
-        return m_map.Contains(type_id);
+        return m_map.Contains(typeId);
     }
 
     template <class T>
     HYP_FORCE_INLINE bool Contains() const
     {
-        const auto id = TypeID::ForType<T>();
+        const auto id = TypeId::ForType<T>();
 
         return m_map.Contains(id);
     }
@@ -231,9 +231,9 @@ public:
         return true;
     }
 
-    HYP_FORCE_INLINE bool Remove(TypeID type_id)
+    HYP_FORCE_INLINE bool Remove(TypeId typeId)
     {
-        const auto it = m_map.Find(type_id);
+        const auto it = m_map.Find(typeId);
 
         if (it == m_map.End())
         {
@@ -260,7 +260,7 @@ public:
         return m_map.Empty();
     }
 
-    HYP_NODISCARD HYP_FORCE_INLINE FlatSet<TypeID> Keys() const
+    HYP_NODISCARD HYP_FORCE_INLINE FlatSet<TypeId> Keys() const
     {
         return m_map.Keys();
     }

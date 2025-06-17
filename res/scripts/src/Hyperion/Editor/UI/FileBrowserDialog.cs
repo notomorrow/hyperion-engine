@@ -140,7 +140,7 @@ namespace Hyperion
                 contentsGrid = UIObject.Find<UIGrid>(new Name("File_Browser_Dialog_Contents", weak: true));
                 contentsGrid?.SetIsVisible(false);
 
-                UIDataSource dataSource = new UIDataSource(TypeID.ForType<FileInfo>(), new FileInfoUIElementFactory());
+                UIDataSource dataSource = new UIDataSource(TypeId.ForType<FileInfo>(), new FileInfoUIElementFactory());
                 contentsGrid?.SetDataSource(dataSource);
 
                 noDataPanel = UIObject.Find<UIPanel>(new Name("File_Browser_Dialog_NoData_Panel", weak: true));

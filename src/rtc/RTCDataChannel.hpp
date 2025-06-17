@@ -67,7 +67,7 @@ public:
     virtual void Send(const ByteBuffer&) override;
 
 private:
-    std::shared_ptr<rtc::DataChannel> m_data_channel;
+    std::shared_ptr<rtc::DataChannel> m_dataChannel;
 };
 
 #else

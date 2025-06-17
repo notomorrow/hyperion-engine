@@ -3,7 +3,6 @@
 #ifndef HYPERION_PHYSICS_RIGID_BODY_HPP
 #define HYPERION_PHYSICS_RIGID_BODY_HPP
 
-#include <core/Base.hpp>
 #include <core/Defines.hpp>
 #include <core/Handle.hpp>
 
@@ -192,8 +191,8 @@ class HYP_API RigidBody final : public HypObject<RigidBody>
 
 public:
     RigidBody();
-    RigidBody(const PhysicsMaterial& physics_material);
-    RigidBody(const Handle<PhysicsShape>& shape, const PhysicsMaterial& physics_material);
+    RigidBody(const PhysicsMaterial& physicsMaterial);
+    RigidBody(const Handle<PhysicsShape>& shape, const PhysicsMaterial& physicsMaterial);
 
     RigidBody(const RigidBody& other) = delete;
     RigidBody& operator=(const RigidBody& other) = delete;
@@ -223,26 +222,26 @@ public:
 
     HYP_FORCE_INLINE PhysicsMaterial& GetPhysicsMaterial()
     {
-        return m_physics_material;
+        return m_physicsMaterial;
     }
 
     HYP_FORCE_INLINE const PhysicsMaterial& GetPhysicsMaterial() const
     {
-        return m_physics_material;
+        return m_physicsMaterial;
     }
 
-    void SetPhysicsMaterial(const PhysicsMaterial& physics_material);
+    void SetPhysicsMaterial(const PhysicsMaterial& physicsMaterial);
 
     HYP_METHOD(Serialize, Property = "IsKinematic")
     HYP_FORCE_INLINE bool IsKinematic() const
     {
-        return m_is_kinematic;
+        return m_isKinematic;
     }
 
     HYP_METHOD(Serialize, Property = "IsKinematic")
-    HYP_FORCE_INLINE void SetIsKinematic(bool is_kinematic)
+    HYP_FORCE_INLINE void SetIsKinematic(bool isKinematic)
     {
-        m_is_kinematic = is_kinematic;
+        m_isKinematic = isKinematic;
     }
 
     /*! \brief Return the handle specific to the physics engine in use */
@@ -266,8 +265,8 @@ private:
 
     Transform m_transform;
     Handle<PhysicsShape> m_shape;
-    PhysicsMaterial m_physics_material;
-    bool m_is_kinematic;
+    PhysicsMaterial m_physicsMaterial;
+    bool m_isKinematic;
 
     UniquePtr<void> m_handle;
 };

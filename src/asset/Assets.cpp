@@ -38,6 +38,7 @@
 #include <core/filesystem/FsUtil.hpp>
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 #include <HyperionEngine.hpp>
 
@@ -55,29 +56,29 @@ AssetCollector::~AssetCollector()
 
 void AssetCollector::Init()
 {
-    if (!m_base_path.Any())
+    if (!m_basePath.Any())
     {
-        m_base_path = FilePath::Current();
+        m_basePath = FilePath::Current();
     }
 
-    if (!m_base_path.IsDirectory())
+    if (!m_basePath.IsDirectory())
     {
-        m_base_path = m_base_path.BasePath();
+        m_basePath = m_basePath.BasePath();
     }
 
-    if (!m_base_path.Exists())
+    if (!m_basePath.Exists())
     {
-        m_base_path.MkDir();
+        m_basePath.MkDir();
     }
 
     SetReady(true);
 }
 
-void AssetCollector::NotifyAssetChanged(const FilePath& path, AssetChangeType change_type)
+void AssetCollector::NotifyAssetChanged(const FilePath& path, AssetChangeType changeType)
 {
     AssertReady();
 
-    OnAssetChanged(path, change_type);
+    OnAssetChanged(path, changeType);
 }
 
 #pragma endregion AssetCollector
@@ -87,7 +88,7 @@ void AssetCollector::NotifyAssetChanged(const FilePath& path, AssetChangeType ch
 class AssetManagerWorkerThread : public TaskThread
 {
 public:
-    AssetManagerWorkerThread(ThreadID id)
+    AssetManagerWorkerThread(ThreadId id)
         : TaskThread(id, ThreadPriorityValue::NORMAL)
     {
     }
@@ -116,37 +117,37 @@ public:
 
 const Handle<AssetManager>& AssetManager::GetInstance()
 {
-    return g_asset_manager;
+    return g_assetManager;
 }
 
 AssetManager::AssetManager()
-    : m_asset_cache(MakeUnique<AssetCache>()),
-      m_thread_pool(MakeUnique<AssetManagerThreadPool>()),
-      m_num_pending_batches { 0 }
+    : m_assetCache(MakeUnique<AssetCache>()),
+      m_threadPool(MakeUnique<AssetManagerThreadPool>()),
+      m_numPendingBatches { 0 }
 {
 }
 
 AssetManager::~AssetManager()
 {
-    if (m_thread_pool)
+    if (m_threadPool)
     {
-        m_thread_pool->Stop();
-        m_thread_pool.Reset();
+        m_threadPool->Stop();
+        m_threadPool.Reset();
     }
 }
 
 TaskThreadPool* AssetManager::GetThreadPool() const
 {
-    return m_thread_pool.Get();
+    return m_threadPool.Get();
 }
 
 FilePath AssetManager::GetBasePath() const
 {
-    Mutex::Guard guard(m_asset_collectors_mutex);
+    Mutex::Guard guard(m_assetCollectorsMutex);
 
-    if (Handle<AssetCollector> asset_collector = m_base_asset_collector.Lock())
+    if (Handle<AssetCollector> assetCollector = m_baseAssetCollector.Lock())
     {
-        return asset_collector->GetBasePath();
+        return assetCollector->GetBasePath();
     }
 
     return FilePath::Current();
@@ -154,107 +155,107 @@ FilePath AssetManager::GetBasePath() const
 
 Handle<AssetCollector> AssetManager::GetBaseAssetCollector() const
 {
-    Mutex::Guard guard(m_asset_collectors_mutex);
+    Mutex::Guard guard(m_assetCollectorsMutex);
 
-    return m_base_asset_collector.Lock();
+    return m_baseAssetCollector.Lock();
 }
 
-void AssetManager::SetBasePath(const FilePath& base_path)
+void AssetManager::SetBasePath(const FilePath& basePath)
 {
-    Mutex::Guard guard(m_asset_collectors_mutex);
+    Mutex::Guard guard(m_assetCollectorsMutex);
 
-    Handle<AssetCollector> asset_collector;
+    Handle<AssetCollector> assetCollector;
 
-    auto asset_collectors_it = m_asset_collectors.FindIf([base_path](const Handle<AssetCollector>& asset_collector)
+    auto assetCollectorsIt = m_assetCollectors.FindIf([basePath](const Handle<AssetCollector>& assetCollector)
         {
-            return asset_collector->GetBasePath() == base_path;
+            return assetCollector->GetBasePath() == basePath;
         });
 
-    if (asset_collectors_it != m_asset_collectors.End())
+    if (assetCollectorsIt != m_assetCollectors.End())
     {
-        asset_collector = *asset_collectors_it;
+        assetCollector = *assetCollectorsIt;
     }
     else
     {
-        asset_collector = CreateObject<AssetCollector>(base_path);
-        InitObject(asset_collector);
+        assetCollector = CreateObject<AssetCollector>(basePath);
+        InitObject(assetCollector);
 
-        m_asset_collectors.PushBack(asset_collector);
+        m_assetCollectors.PushBack(assetCollector);
 
-        OnAssetCollectorAdded(asset_collector);
+        OnAssetCollectorAdded(assetCollector);
     }
 
-    if (m_base_asset_collector == asset_collector)
+    if (m_baseAssetCollector == assetCollector)
     {
         return;
     }
 
-    m_base_asset_collector = asset_collector;
+    m_baseAssetCollector = assetCollector;
 
-    OnBaseAssetCollectorChanged(asset_collector);
+    OnBaseAssetCollectorChanged(assetCollector);
 }
 
 void AssetManager::ForEachAssetCollector(const ProcRef<void(const Handle<AssetCollector>&)>& callback) const
 {
     HYP_SCOPE;
 
-    Mutex::Guard guard(m_asset_collectors_mutex);
+    Mutex::Guard guard(m_assetCollectorsMutex);
 
-    for (const Handle<AssetCollector>& asset_collector : m_asset_collectors)
+    for (const Handle<AssetCollector>& assetCollector : m_assetCollectors)
     {
-        callback(asset_collector);
+        callback(assetCollector);
     }
 }
 
-void AssetManager::AddAssetCollector(const Handle<AssetCollector>& asset_collector)
+void AssetManager::AddAssetCollector(const Handle<AssetCollector>& assetCollector)
 {
-    if (!asset_collector.IsValid())
+    if (!assetCollector.IsValid())
     {
         return;
     }
 
     {
-        Mutex::Guard guard(m_asset_collectors_mutex);
+        Mutex::Guard guard(m_assetCollectorsMutex);
 
-        if (m_asset_collectors.Contains(asset_collector))
+        if (m_assetCollectors.Contains(assetCollector))
         {
             return;
         }
 
-        m_asset_collectors.PushBack(asset_collector);
+        m_assetCollectors.PushBack(assetCollector);
     }
 
-    OnAssetCollectorAdded(asset_collector);
+    OnAssetCollectorAdded(assetCollector);
 }
 
-void AssetManager::RemoveAssetCollector(const Handle<AssetCollector>& asset_collector)
+void AssetManager::RemoveAssetCollector(const Handle<AssetCollector>& assetCollector)
 {
-    if (!asset_collector.IsValid())
+    if (!assetCollector.IsValid())
     {
         return;
     }
 
     {
-        Mutex::Guard guard(m_asset_collectors_mutex);
+        Mutex::Guard guard(m_assetCollectorsMutex);
 
-        if (!m_asset_collectors.Erase(asset_collector))
+        if (!m_assetCollectors.Erase(assetCollector))
         {
             return;
         }
     }
 
-    OnAssetCollectorRemoved(asset_collector);
+    OnAssetCollectorRemoved(assetCollector);
 }
 
 const Handle<AssetCollector>& AssetManager::FindAssetCollector(ProcRef<bool(const Handle<AssetCollector>&)> proc) const
 {
-    Mutex::Guard guard(m_asset_collectors_mutex);
+    Mutex::Guard guard(m_assetCollectorsMutex);
 
-    for (const Handle<AssetCollector>& asset_collector : m_asset_collectors)
+    for (const Handle<AssetCollector>& assetCollector : m_assetCollectors)
     {
-        if (proc(asset_collector))
+        if (proc(assetCollector))
         {
-            return asset_collector;
+            return assetCollector;
         }
     }
 
@@ -289,7 +290,7 @@ void AssetManager::RegisterDefaultLoaders()
     Register<UILoader, UIObject>();
 }
 
-const AssetLoaderDefinition* AssetManager::GetLoaderDefinition(const FilePath& path, TypeID desired_type_id)
+const AssetLoaderDefinition* AssetManager::GetLoaderDefinition(const FilePath& path, TypeId desiredTypeId)
 {
     HYP_SCOPE;
 
@@ -297,27 +298,27 @@ const AssetLoaderDefinition* AssetManager::GetLoaderDefinition(const FilePath& p
 
     AssetLoaderBase* loader = nullptr;
 
-    SortedArray<KeyValuePair<uint32, const AssetLoaderDefinition*>> loader_ptrs;
+    SortedArray<KeyValuePair<uint32, const AssetLoaderDefinition*>> loaderPtrs;
 
-    for (const AssetLoaderDefinition& asset_loader_definition : m_loaders)
+    for (const AssetLoaderDefinition& assetLoaderDefinition : m_loaders)
     {
         uint32 rank = 0;
 
-        if (desired_type_id != TypeID::Void())
+        if (desiredTypeId != TypeId::Void())
         {
-            if (!asset_loader_definition.HandlesResultType(desired_type_id))
+            if (!assetLoaderDefinition.HandlesResultType(desiredTypeId))
             {
                 continue;
             }
 
             // Result type is required to be provided for wildcard loaders to be considered
-            if (asset_loader_definition.IsWildcardExtensionLoader())
+            if (assetLoaderDefinition.IsWildcardExtensionLoader())
             {
                 rank += 1;
             }
         }
 
-        if (!extension.Empty() && asset_loader_definition.HandlesExtension(path))
+        if (!extension.Empty() && assetLoaderDefinition.HandlesExtension(path))
         {
             rank += 2;
         }
@@ -327,12 +328,12 @@ const AssetLoaderDefinition* AssetManager::GetLoaderDefinition(const FilePath& p
             continue;
         }
 
-        loader_ptrs.Insert({ rank, &asset_loader_definition });
+        loaderPtrs.Insert({ rank, &assetLoaderDefinition });
     }
 
-    if (!loader_ptrs.Empty())
+    if (!loaderPtrs.Empty())
     {
-        return loader_ptrs.Front().second;
+        return loaderPtrs.Front().second;
     }
 
     return nullptr;
@@ -342,45 +343,45 @@ void AssetManager::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
         {
-            if (m_thread_pool)
+            if (m_threadPool)
             {
-                m_thread_pool->Stop();
-                m_thread_pool.Reset();
+                m_threadPool->Stop();
+                m_threadPool.Reset();
             }
         }));
 
     RegisterDefaultLoaders();
 
-    m_thread_pool->Start();
+    m_threadPool->Start();
 
     SetReady(true);
 }
 
-void AssetManager::Update(GameCounter::TickUnit delta)
+void AssetManager::Update(float delta)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    uint32 num_pending_batches;
+    uint32 numPendingBatches;
 
-    if ((num_pending_batches = m_num_pending_batches.Get(MemoryOrder::ACQUIRE)) != 0)
+    if ((numPendingBatches = m_numPendingBatches.Get(MemoryOrder::ACQUIRE)) != 0)
     {
-        HYP_NAMED_SCOPE_FMT("Update pending batches ({})", num_pending_batches);
+        HYP_NAMED_SCOPE_FMT("Update pending batches ({})", numPendingBatches);
 
         /// \todo Set thread priorities based on number of pending batches
 
-        Mutex::Guard guard(m_pending_batches_mutex);
+        Mutex::Guard guard(m_pendingBatchesMutex);
 
-        for (auto it = m_pending_batches.Begin(); it != m_pending_batches.End();)
+        for (auto it = m_pendingBatches.Begin(); it != m_pendingBatches.End();)
         {
             if ((*it)->IsCompleted())
             {
-                m_completed_batches.PushBack(std::move(*it));
+                m_completedBatches.PushBack(std::move(*it));
 
-                it = m_pending_batches.Erase(it);
+                it = m_pendingBatches.Erase(it);
 
-                m_num_pending_batches.Decrement(1, MemoryOrder::RELEASE);
+                m_numPendingBatches.Decrement(1, MemoryOrder::RELEASE);
             }
             else
             {
@@ -389,12 +390,12 @@ void AssetManager::Update(GameCounter::TickUnit delta)
         }
     }
 
-    if (m_completed_batches.Empty())
+    if (m_completedBatches.Empty())
     {
         return;
     }
 
-    for (const RC<AssetBatch>& batch : m_completed_batches)
+    for (const RC<AssetBatch>& batch : m_completedBatches)
     {
         HYP_NAMED_SCOPE("Process completed batch");
 
@@ -408,7 +409,7 @@ void AssetManager::Update(GameCounter::TickUnit delta)
         batch->OnComplete(results);
     }
 
-    m_completed_batches.Clear();
+    m_completedBatches.Clear();
 }
 
 void AssetManager::AddPendingBatch(const RC<AssetBatch>& batch)
@@ -418,15 +419,15 @@ void AssetManager::AddPendingBatch(const RC<AssetBatch>& batch)
         return;
     }
 
-    Mutex::Guard guard(m_pending_batches_mutex);
+    Mutex::Guard guard(m_pendingBatchesMutex);
 
-    if (m_pending_batches.Contains(batch))
+    if (m_pendingBatches.Contains(batch))
     {
         return;
     }
 
-    m_pending_batches.PushBack(batch);
-    m_num_pending_batches.Increment(1, MemoryOrder::RELEASE);
+    m_pendingBatches.PushBack(batch);
+    m_numPendingBatches.Increment(1, MemoryOrder::RELEASE);
 }
 
 #pragma endregion AssetManager

@@ -7,7 +7,7 @@
 
 namespace hyperion {
 
-bool HypStruct::CreateStructInstance(dotnet::ObjectReference& out_object_reference, const void* object_ptr, SizeType size) const
+bool HypStruct::CreateStructInstance(dotnet::ObjectReference& outObjectReference, const void* objectPtr, SizeType size) const
 {
     struct ManagedStructInitializerContext
     {
@@ -15,22 +15,22 @@ bool HypStruct::CreateStructInstance(dotnet::ObjectReference& out_object_referen
         SizeType size;
     };
 
-    AssertThrow(object_ptr != nullptr);
+    AssertThrow(objectPtr != nullptr);
 
-    if (dotnet::Class* managed_class = HypClass::GetManagedClass())
+    if (dotnet::Class* managedClass = HypClass::GetManagedClass())
     {
         ManagedStructInitializerContext context;
-        context.ptr = object_ptr;
+        context.ptr = objectPtr;
         context.size = size;
 
-        out_object_reference = managed_class->NewManagedObject(&context, [](void* context_ptr, void* object_ptr, uint32 object_size)
+        outObjectReference = managedClass->NewManagedObject(&context, [](void* contextPtr, void* objectPtr, uint32 objectSize)
             {
-                ManagedStructInitializerContext& context = *static_cast<ManagedStructInitializerContext*>(context_ptr);
+                ManagedStructInitializerContext& context = *static_cast<ManagedStructInitializerContext*>(contextPtr);
 
-                AssertThrowMsg(object_size == context.size, "Type size does not match managed struct size! Expected managed struct to have size of %llu but got %u",
-                    context.size, object_size);
+                AssertThrowMsg(objectSize == context.size, "Type size does not match managed struct size! Expected managed struct to have size of %llu but got %u",
+                    context.size, objectSize);
 
-                Memory::MemCpy(object_ptr, context.ptr, context.size);
+                Memory::MemCpy(objectPtr, context.ptr, context.size);
             });
 
         return true;

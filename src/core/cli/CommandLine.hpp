@@ -64,8 +64,8 @@ struct CommandLineArgumentDefinition
     Optional<String> description;
     EnumFlags<CommandLineArgumentFlags> flags;
     CommandLineArgumentType type;
-    Optional<CommandLineArgumentValue> default_value;
-    Optional<Array<String>> enum_values;
+    Optional<CommandLineArgumentValue> defaultValue;
+    Optional<Array<String>> enumValues;
 };
 
 struct CommandLineArgumentDefinitionsImpl;
@@ -99,7 +99,7 @@ public:
         const String& description = String::empty,
         EnumFlags<CommandLineArgumentFlags> flags = CommandLineArgumentFlags::NONE,
         CommandLineArgumentType type = CommandLineArgumentType::STRING,
-        const CommandLineArgumentValue& default_value = {});
+        const CommandLineArgumentValue& defaultValue = {});
 
     // Add an enum argument
     CommandLineArgumentDefinitions& Add(
@@ -107,8 +107,8 @@ public:
         const String& shorthand = String::empty,
         const String& description = String::empty,
         EnumFlags<CommandLineArgumentFlags> flags = CommandLineArgumentFlags::NONE,
-        const Optional<Array<String>>& enum_values = {},
-        const CommandLineArgumentValue& default_value = {});
+        const Optional<Array<String>>& enumValues = {},
+        const CommandLineArgumentValue& defaultValue = {});
 
     CommandLineArgumentDefinition* Find(UTF8StringView key) const;
 
@@ -198,7 +198,7 @@ public:
         return m_definitions;
     }
 
-    HYP_API TResult<CommandLineArguments> Parse(const String& command_line) const;
+    HYP_API TResult<CommandLineArguments> Parse(const String& commandLine) const;
     HYP_API TResult<CommandLineArguments> Parse(int argc, char** argv) const;
     HYP_API TResult<CommandLineArguments> Parse(const String& command, const Array<String>& args) const;
 

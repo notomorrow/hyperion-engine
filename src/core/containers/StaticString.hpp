@@ -43,27 +43,27 @@ constexpr auto MakePairSequence(F f)
 }
 
 template <class T, SizeType N, class F, SizeType... Indices>
-constexpr auto make_seq_helper(F f, std::index_sequence<Indices...>)
+constexpr auto makeSeqHelper(F f, std::index_sequence<Indices...>)
 {
     return std::integer_sequence<T, (f()[Indices])...> {};
 }
 
 template <class T, class F>
-constexpr auto make_seq(F f)
+constexpr auto makeSeq(F f)
 {
     constexpr SizeType size = f().size();
 
-    return make_seq_helper<T, size>(f, std::make_index_sequence<size>());
+    return makeSeqHelper<T, size>(f, std::make_index_sequence<size>());
 }
 
 template <SizeType Offset, SizeType... Indices>
-constexpr std::index_sequence<(Offset + Indices)...> make_offset_index_sequence(std::index_sequence<Indices...>)
+constexpr std::index_sequence<(Offset + Indices)...> makeOffsetIndexSequence(std::index_sequence<Indices...>)
 {
     return {};
 }
 
 template <SizeType N, SizeType Offset>
-using make_offset_index_sequence_t = decltype(make_offset_index_sequence<Offset>(std::make_index_sequence<N>()));
+using make_offset_index_sequence_t = decltype(makeOffsetIndexSequence<Offset>(std::make_index_sequence<N>()));
 
 // Fwd decl of IntegerSequenceFromString template
 template <auto StaticString>
@@ -106,14 +106,14 @@ struct StaticString
     template <typename IntegerSequence, int Index = 0>
     constexpr SizeType FindFirst() const
     {
-        constexpr auto this_size = Sz - 1;                       // -1 to account for null terminator
-        constexpr auto other_size = IntegerSequence::Size() - 1; // -1 to account for null terminator
+        constexpr auto thisSize = Sz - 1;                       // -1 to account for null terminator
+        constexpr auto otherSize = IntegerSequence::Size() - 1; // -1 to account for null terminator
 
-        if constexpr (this_size < other_size)
+        if constexpr (thisSize < otherSize)
         {
             return -1;
         }
-        else if constexpr (Index > this_size - other_size)
+        else if constexpr (Index > thisSize - otherSize)
         {
             return -1;
         }
@@ -121,7 +121,7 @@ struct StaticString
         {
             bool found = true;
 
-            for (SizeType j = 0; j < other_size && j < this_size; ++j)
+            for (SizeType j = 0; j < otherSize && j < thisSize; ++j)
             {
                 if (data[Index + j] != IntegerSequence {}.Data()[j])
                 {
@@ -144,10 +144,10 @@ struct StaticString
     template <typename IntegerSequence, int Index = (int(Sz) - int(IntegerSequence::Size()))>
     constexpr SizeType FindLast() const
     {
-        constexpr auto this_size = Sz - 1;                       // -1 to account for null terminator
-        constexpr auto other_size = IntegerSequence::Size() - 1; // -1 to account for null terminator
+        constexpr auto thisSize = Sz - 1;                       // -1 to account for null terminator
+        constexpr auto otherSize = IntegerSequence::Size() - 1; // -1 to account for null terminator
 
-        if constexpr (this_size < other_size)
+        if constexpr (thisSize < otherSize)
         {
             return -1;
         }
@@ -159,7 +159,7 @@ struct StaticString
         {
             bool found = true;
 
-            for (SizeType j = 0; j < other_size; ++j)
+            for (SizeType j = 0; j < otherSize; ++j)
             {
                 if (data[Index + j] != IntegerSequence {}.Data()[j])
                 {
@@ -182,11 +182,11 @@ struct StaticString
     template <SizeType First, SizeType Last>
     constexpr auto Substr() const
     {
-        constexpr auto clamped_end = Last >= Sz ? Sz - 1 : Last;
+        constexpr auto clampedEnd = Last >= Sz ? Sz - 1 : Last;
 
-        StaticString<clamped_end - First + 1> result = { { '\0' } };
+        StaticString<clampedEnd - First + 1> result = { { '\0' } };
 
-        for (SizeType index = First; index < clamped_end; index++)
+        for (SizeType index = First; index < clampedEnd; index++)
         {
             result.data[index] = data[index];
         }
@@ -282,7 +282,7 @@ struct StaticString
 
     constexpr SizeType FindTrimLastIndex_Left_Impl() const
     {
-        constexpr char whitespace_chars[] = { ' ', '\n', '\r', '\t', '\f', '\v' };
+        constexpr char whitespaceChars[] = { ' ', '\n', '\r', '\t', '\f', '\v' };
 
         SizeType index = 0;
 
@@ -290,9 +290,9 @@ struct StaticString
         {
             bool found = false;
 
-            for (SizeType j = 0; j < std::size(whitespace_chars); j++)
+            for (SizeType j = 0; j < std::size(whitespaceChars); j++)
             {
-                if (data[index] == whitespace_chars[j])
+                if (data[index] == whitespaceChars[j])
                 {
                     found = true;
 
@@ -311,7 +311,7 @@ struct StaticString
 
     constexpr SizeType FindTrimLastIndex_Right_Impl() const
     {
-        constexpr char whitespace_chars[] = { ' ', '\n', '\r', '\t', '\f', '\v' };
+        constexpr char whitespaceChars[] = { ' ', '\n', '\r', '\t', '\f', '\v' };
 
         SizeType index = Sz - 1 /* for NUL char*/;
 
@@ -319,9 +319,9 @@ struct StaticString
         {
             bool found = false;
 
-            for (SizeType j = 0; j < std::size(whitespace_chars); j++)
+            for (SizeType j = 0; j < std::size(whitespaceChars); j++)
             {
-                if (data[index - 1] == whitespace_chars[j])
+                if (data[index - 1] == whitespaceChars[j])
                 {
                     found = true;
 
@@ -351,7 +351,7 @@ struct IntegerSequenceFromString
     using CharType = typename StaticStringType::CharType;
 
 private:
-    constexpr static auto value = make_seq<CharType>([]
+    constexpr static auto value = makeSeq<CharType>([]
         {
             return std::string_view { StaticString.data };
         });
@@ -373,9 +373,9 @@ public:
 namespace helpers {
 struct BasicStaticStringTransformer
 {
-    static constexpr bool keep_delimiter = true;
+    static constexpr bool keepDelimiter = true;
 
-    static constexpr uint32 balance_bracket_options = 0;
+    static constexpr uint32 balanceBracketOptions = 0;
 
     template <auto String>
     static constexpr auto Transform()
@@ -555,7 +555,7 @@ template <auto String, char Delimiter, class Transformer, SizeType Index>
 struct Split_Impl
 {
     static constexpr auto value = ConcatTuples(
-        MakeTuple(Transformer::template Transform<Split_ApplyDelimiter_Impl<Substr<String, 0, Index>::value, Delimiter, Transformer::keep_delimiter>::value>()),
+        MakeTuple(Transformer::template Transform<Split_ApplyDelimiter_Impl<Substr<String, 0, Index>::value, Delimiter, Transformer::keepDelimiter>::value>()),
         MakeTuple(Split<Substr<String, Index + 1, String.Size()>::value, Delimiter, Transformer>::value));
 };
 
@@ -769,7 +769,7 @@ struct FindCharCount_Impl
 
         SizeType count = 0;
 
-        int bracket_counts[(std::size(brackets) - 1) / 2] = { 0 };
+        int bracketCounts[(std::size(brackets) - 1) / 2] = { 0 };
 
         for (SizeType i = 0; i < String.Size(); i++)
         {
@@ -777,7 +777,7 @@ struct FindCharCount_Impl
             {
                 if (String.data[i] == brackets[j])
                 {
-                    bracket_counts[j / 2] += (j % 2) ? -1 : 1;
+                    bracketCounts[j / 2] += (j % 2) ? -1 : 1;
 
                     break;
                 }
@@ -785,15 +785,15 @@ struct FindCharCount_Impl
 
             if (String.data[i] == Delimiter)
             {
-                if ((BracketOptions & BALANCE_BRACKETS_SQUARE) && bracket_counts[0] > 0)
+                if ((BracketOptions & BALANCE_BRACKETS_SQUARE) && bracketCounts[0] > 0)
                 {
                     continue;
                 }
-                if ((BracketOptions & BALANCE_BRACKETS_PARENTHESES) && bracket_counts[1] > 0)
+                if ((BracketOptions & BALANCE_BRACKETS_PARENTHESES) && bracketCounts[1] > 0)
                 {
                     continue;
                 }
-                if ((BracketOptions & BALANCE_BRACKETS_ANGLE) && bracket_counts[2] > 0)
+                if ((BracketOptions & BALANCE_BRACKETS_ANGLE) && bracketCounts[2] > 0)
                 {
                     continue;
                 }
@@ -823,21 +823,21 @@ struct GetSplitIndices_Impl
     {
         return containers::MakePairSequence<Pair<SizeType, SizeType>>([]() -> std::array<Pair<SizeType, SizeType>, Count + 1>
             {
-                std::array<Pair<SizeType, SizeType>, Count + 1> split_indices = {};
+                std::array<Pair<SizeType, SizeType>, Count + 1> splitIndices = {};
 
                 if constexpr (Count == 0)
                 {
-                    split_indices[0] = Pair<SizeType, SizeType> { 0, String.Size() - 1 /* -1 for NUL char */ };
+                    splitIndices[0] = Pair<SizeType, SizeType> { 0, String.Size() - 1 /* -1 for NUL char */ };
                 }
                 else
                 {
-                    std::array<SizeType, Count> delimiter_indices = {};
+                    std::array<SizeType, Count> delimiterIndices = {};
 
                     SizeType index = 0;
 
                     constexpr char brackets[] = "[]()<>";
 
-                    int bracket_counts[(std::size(brackets) - 1) / 2] = { 0 };
+                    int bracketCounts[(std::size(brackets) - 1) / 2] = { 0 };
 
                     for (SizeType i = 0; i < String.size; i++)
                     {
@@ -845,7 +845,7 @@ struct GetSplitIndices_Impl
                         {
                             if (String.data[i] == brackets[j])
                             {
-                                bracket_counts[j / 2] += (j % 2) ? -1 : 1;
+                                bracketCounts[j / 2] += (j % 2) ? -1 : 1;
 
                                 break;
                             }
@@ -853,15 +853,15 @@ struct GetSplitIndices_Impl
 
                         if (String.data[i] == Delimiter)
                         {
-                            if ((BracketOptions & BALANCE_BRACKETS_SQUARE) && bracket_counts[0] > 0)
+                            if ((BracketOptions & BALANCE_BRACKETS_SQUARE) && bracketCounts[0] > 0)
                             {
                                 continue;
                             }
-                            if ((BracketOptions & BALANCE_BRACKETS_PARENTHESES) && bracket_counts[1] > 0)
+                            if ((BracketOptions & BALANCE_BRACKETS_PARENTHESES) && bracketCounts[1] > 0)
                             {
                                 continue;
                             }
-                            if ((BracketOptions & BALANCE_BRACKETS_ANGLE) && bracket_counts[2] > 0)
+                            if ((BracketOptions & BALANCE_BRACKETS_ANGLE) && bracketCounts[2] > 0)
                             {
                                 continue;
                             }
@@ -869,25 +869,25 @@ struct GetSplitIndices_Impl
 
                         if (String.data[i] == Delimiter)
                         {
-                            delimiter_indices[index++] = i;
+                            delimiterIndices[index++] = i;
                         }
                     }
 
-                    for (SizeType i = 0; i < std::size(delimiter_indices); i++)
+                    for (SizeType i = 0; i < std::size(delimiterIndices); i++)
                     {
-                        SizeType prev = i == 0 ? 0 : delimiter_indices[i - 1] + 1;
-                        SizeType current = delimiter_indices[i];
+                        SizeType prev = i == 0 ? 0 : delimiterIndices[i - 1] + 1;
+                        SizeType current = delimiterIndices[i];
 
-                        split_indices[i] = { prev, current };
+                        splitIndices[i] = { prev, current };
                     }
 
-                    split_indices[Count] = Pair<SizeType, SizeType> {
-                        SizeType(delimiter_indices[std::size(delimiter_indices) - 1] + 1),
+                    splitIndices[Count] = Pair<SizeType, SizeType> {
+                        SizeType(delimiterIndices[std::size(delimiterIndices) - 1] + 1),
                         String.Size() - 1 /* -1 for NUL char */
                     };
                 }
 
-                return split_indices;
+                return splitIndices;
             });
     }
 };
@@ -927,7 +927,7 @@ constexpr auto TransformSplit_Impl(PairSequence<Pair<SizeType, SizeType>, SplitI
 template <class Transformer, auto String>
 struct TransformSplit
 {
-    static constexpr auto value = TransformSplit_Impl<Transformer, String>(GetSplitIndices<String, Transformer::delimiter, Transformer::balance_bracket_options>::value);
+    static constexpr auto value = TransformSplit_Impl<Transformer, String>(GetSplitIndices<String, Transformer::delimiter, Transformer::balanceBracketOptions>::value);
 };
 
 #pragma endregion TransformSplit
@@ -969,9 +969,9 @@ struct ParseInteger
 #pragma region MakeStaticString
 
 template <class StringType>
-constexpr auto MakeStaticString(StringType str_arg)
+constexpr auto MakeStaticString(StringType strArg)
 {
-    return StaticString(HYP_GET_CONST_ARG(str_arg));
+    return StaticString(HYP_GET_CONST_ARG(strArg));
 }
 
 #define HYP_MAKE_CONST_ARG_STR(sz, str) \

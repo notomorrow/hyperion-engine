@@ -11,8 +11,7 @@
 #include <core/math/Vector2.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
-
-#include <core/IDGenerator.hpp>
+#include <core/utilities/IdGenerator.hpp>
 
 #include <util/AtlasPacker.hpp>
 
@@ -24,11 +23,11 @@ struct ShadowMapShaderData
 {
     Matrix4 projection;
     Matrix4 view;
-    Vec4f aabb_max;
-    Vec4f aabb_min;
-    Vec4f dimensions_scale; // xy = shadow map dimensions in pixels, zw = shadow map dimensions relative to the atlas dimensions
-    Vec2f offset_uv;        // offset in the atlas texture array
-    uint32 layer_index;     // index of the atlas in the shadow map texture array, or cubemap index for point lights
+    Vec4f aabbMax;
+    Vec4f aabbMin;
+    Vec4f dimensionsScale; // xy = shadow map dimensions in pixels, zw = shadow map dimensions relative to the atlas dimensions
+    Vec2f offsetUv;        // offset in the atlas texture array
+    uint32 layerIndex;     // index of the atlas in the shadow map texture array, or cubemap index for point lights
     uint32 flags;
 
     Vec4f _pad1;
@@ -40,56 +39,54 @@ struct ShadowMapShaderData
 static_assert(sizeof(ShadowMapShaderData) == 256);
 
 /* max number of shadow maps, based on size in kb */
-static const SizeType max_shadow_maps = (4ull * 1024ull) / sizeof(ShadowMapShaderData);
+static const SizeType maxShadowMaps = (4ull * 1024ull) / sizeof(ShadowMapShaderData);
 
 class RenderWorld;
 class RenderShadowMap;
 
-enum class ShadowMapFilterMode : uint32
+enum ShadowMapFilter : uint32
 {
-    STANDARD,
-    PCF,
-    CONTACT_HARDENED,
-    VSM,
+    SMF_STANDARD,
+    SMF_PCF,
+    SMF_CONTACT_HARDENED,
+    SMF_VSM,
 
-    MAX
+    SMF_MAX
 };
 
-enum class ShadowFlags : uint32
+enum ShadowFlags : uint32
 {
-    NONE = 0x0,
-    PCF = 0x1,
-    VSM = 0x2,
-    CONTACT_HARDENED = 0x4
+    SF_NONE = 0x0,
+    SF_PCF = 0x1,
+    SF_VSM = 0x2,
+    SF_CONTACT_HARDENED = 0x4
 };
 
 HYP_MAKE_ENUM_FLAGS(ShadowFlags)
 
-enum class ShadowMapType : uint32
+enum ShadowMapType : uint32
 {
-    DIRECTIONAL_SHADOW_MAP,
-    SPOT_SHADOW_MAP,
-    POINT_SHADOW_MAP,
-
-    MAX
+    SMT_DIRECTIONAL,
+    SMT_SPOT,
+    SMT_OMNI
 };
 
 struct ShadowMapAtlasElement
 {
     // Directional and spot lights only: index of the atlas in the shadow map texture array
-    uint32 atlas_index = ~0u;
+    uint32 atlasIndex = ~0u;
 
     // Point light shadow maps only: index of the cubemap in the texture array
-    uint32 point_light_index = ~0u;
+    uint32 pointLightIndex = ~0u;
 
     // Index of the element in the atlas
     uint32 index = ~0u;
 
     // Offset in the atlas texture array, in uv space
-    Vec2f offset_uv;
+    Vec2f offsetUv;
 
     // Offset in the atlas texture array, in pixels
-    Vec2u offset_coords;
+    Vec2u offsetCoords;
 
     // Dimensions of the shadow map in pixels
     Vec2u dimensions;
@@ -99,22 +96,22 @@ struct ShadowMapAtlasElement
 
     HYP_FORCE_INLINE bool operator==(const ShadowMapAtlasElement& other) const
     {
-        return atlas_index == other.atlas_index
-            && point_light_index == other.point_light_index
+        return atlasIndex == other.atlasIndex
+            && pointLightIndex == other.pointLightIndex
             && index == other.index
-            && offset_uv == other.offset_uv
-            && offset_coords == other.offset_coords
+            && offsetUv == other.offsetUv
+            && offsetCoords == other.offsetCoords
             && dimensions == other.dimensions
             && scale == other.scale;
     }
 
     HYP_FORCE_INLINE bool operator!=(const ShadowMapAtlasElement& other) const
     {
-        return atlas_index != other.atlas_index
-            || point_light_index != other.point_light_index
+        return atlasIndex != other.atlasIndex
+            || pointLightIndex != other.pointLightIndex
             || index != other.index
-            || offset_uv != other.offset_uv
-            || offset_coords != other.offset_coords
+            || offsetUv != other.offsetUv
+            || offsetCoords != other.offsetCoords
             || dimensions != other.dimensions
             || scale != other.scale;
     }
@@ -123,36 +120,36 @@ struct ShadowMapAtlasElement
 HYP_STRUCT()
 struct ShadowMapAtlas : AtlasPacker<ShadowMapAtlasElement>
 {
-    HYP_PROPERTY(AtlasDimensions, &ShadowMapAtlas::atlas_dimensions)
+    HYP_PROPERTY(AtlasDimensions, &ShadowMapAtlas::atlasDimensions)
     HYP_PROPERTY(Elements, &ShadowMapAtlas::elements)
-    HYP_PROPERTY(FreeSpaces, &ShadowMapAtlas::free_spaces)
+    HYP_PROPERTY(FreeSpaces, &ShadowMapAtlas::freeSpaces)
 
     HYP_FIELD(Property = "AtlasIndex", Serialize = true)
-    uint32 atlas_index;
+    uint32 atlasIndex;
 
     ShadowMapAtlas()
         : AtlasPacker<ShadowMapAtlasElement>(Vec2u(0, 0)),
-          atlas_index(~0u)
+          atlasIndex(~0u)
     {
     }
 
-    ShadowMapAtlas(uint32 atlas_index, const Vec2u& atlas_dimensions)
-        : AtlasPacker(atlas_dimensions),
-          atlas_index(atlas_index)
+    ShadowMapAtlas(uint32 atlasIndex, const Vec2u& atlasDimensions)
+        : AtlasPacker(atlasDimensions),
+          atlasIndex(atlasIndex)
     {
     }
 
     ShadowMapAtlas(const ShadowMapAtlas& other)
         : AtlasPacker(static_cast<const AtlasPacker<ShadowMapAtlasElement>&>(other)),
-          atlas_index(other.atlas_index)
+          atlasIndex(other.atlasIndex)
     {
     }
 
     ShadowMapAtlas(ShadowMapAtlas&& other) noexcept
         : AtlasPacker(std::move(static_cast<AtlasPacker<ShadowMapAtlasElement>&&>(other))),
-          atlas_index(other.atlas_index)
+          atlasIndex(other.atlasIndex)
     {
-        other.atlas_index = ~0u;
+        other.atlasIndex = ~0u;
     }
 
     ShadowMapAtlas& operator=(const ShadowMapAtlas& other)
@@ -163,7 +160,7 @@ struct ShadowMapAtlas : AtlasPacker<ShadowMapAtlasElement>
         }
 
         AtlasPacker<ShadowMapAtlasElement>::operator=(other);
-        atlas_index = other.atlas_index;
+        atlasIndex = other.atlasIndex;
 
         return *this;
     }
@@ -177,13 +174,13 @@ struct ShadowMapAtlas : AtlasPacker<ShadowMapAtlasElement>
 
         AtlasPacker<ShadowMapAtlasElement>::operator=(std::move(other));
 
-        atlas_index = other.atlas_index; // NOLINT(bugprone-use-after-move)
-        other.atlas_index = ~0u;
+        atlasIndex = other.atlasIndex; // NOLINT(bugprone-use-after-move)
+        other.atlasIndex = ~0u;
 
         return *this;
     }
 
-    bool AddElement(const Vec2u& element_dimensions, ShadowMapAtlasElement& out_element);
+    bool AddElement(const Vec2u& elementDimensions, ShadowMapAtlasElement& outElement);
 };
 
 class ShadowMapAllocator
@@ -194,47 +191,47 @@ public:
 
     HYP_FORCE_INLINE const ImageRef& GetAtlasImage() const
     {
-        return m_atlas_image;
+        return m_atlasImage;
     }
 
     HYP_FORCE_INLINE const ImageViewRef& GetAtlasImageView() const
     {
-        return m_atlas_image_view;
+        return m_atlasImageView;
     }
 
     HYP_FORCE_INLINE const ImageRef& GetPointLightShadowMapImage() const
     {
-        return m_point_light_shadow_map_image;
+        return m_pointLightShadowMapImage;
     }
 
     HYP_FORCE_INLINE const ImageViewRef& GetPointLightShadowMapImageView() const
     {
-        return m_point_light_shadow_map_image_view;
+        return m_pointLightShadowMapImageView;
     }
 
     void Initialize();
     void Destroy();
 
-    RenderShadowMap* AllocateShadowMap(ShadowMapType shadow_map_type, ShadowMapFilterMode filter_mode, const Vec2u& dimensions);
-    bool FreeShadowMap(RenderShadowMap* shadow_render_map);
+    RenderShadowMap* AllocateShadowMap(ShadowMapType shadowMapType, ShadowMapFilter filterMode, const Vec2u& dimensions);
+    bool FreeShadowMap(RenderShadowMap* shadowMap);
 
 private:
-    Vec2u m_atlas_dimensions;
+    Vec2u m_atlasDimensions;
     Array<ShadowMapAtlas> m_atlases;
 
-    ImageRef m_atlas_image;
-    ImageViewRef m_atlas_image_view;
+    ImageRef m_atlasImage;
+    ImageViewRef m_atlasImageView;
 
-    ImageRef m_point_light_shadow_map_image;
-    ImageViewRef m_point_light_shadow_map_image_view;
+    ImageRef m_pointLightShadowMapImage;
+    ImageViewRef m_pointLightShadowMapImageView;
 
-    IDGenerator m_point_light_shadow_map_id_generator;
+    IdGenerator m_pointLightShadowMapIdGenerator;
 };
 
 class RenderShadowMap final : public RenderResourceBase
 {
 public:
-    RenderShadowMap(ShadowMapType type, ShadowMapFilterMode filter_mode, const ShadowMapAtlasElement& atlas_element, const ImageViewRef& image_view);
+    RenderShadowMap(ShadowMapType type, ShadowMapFilter filterMode, const ShadowMapAtlasElement& atlasElement, const ImageViewRef& imageView);
     RenderShadowMap(RenderShadowMap&& other) noexcept;
     virtual ~RenderShadowMap() override;
 
@@ -243,43 +240,43 @@ public:
         return m_type;
     }
 
-    HYP_FORCE_INLINE ShadowMapFilterMode GetFilterMode() const
+    HYP_FORCE_INLINE ShadowMapFilter GetFilterMode() const
     {
-        return m_filter_mode;
+        return m_filterMode;
     }
 
     HYP_FORCE_INLINE const Vec2u& GetExtent() const
     {
-        return m_atlas_element.dimensions;
+        return m_atlasElement.dimensions;
     }
 
     HYP_FORCE_INLINE const ShadowMapAtlasElement& GetAtlasElement() const
     {
-        return m_atlas_element;
+        return m_atlasElement;
     }
 
     HYP_FORCE_INLINE const ImageViewRef& GetImageView() const
     {
-        return m_image_view;
+        return m_imageView;
     }
 
-    void SetBufferData(const ShadowMapShaderData& buffer_data);
+    void SetBufferData(const ShadowMapShaderData& bufferData);
 
 protected:
     virtual void Initialize_Internal() override;
     virtual void Destroy_Internal() override;
     virtual void Update_Internal() override;
 
-    virtual GPUBufferHolderBase* GetGPUBufferHolder() const override;
+    virtual GpuBufferHolderBase* GetGpuBufferHolder() const override;
 
 private:
     void UpdateBufferData();
 
     ShadowMapType m_type;
-    ShadowMapFilterMode m_filter_mode;
-    ShadowMapAtlasElement m_atlas_element;
-    ImageViewRef m_image_view;
-    ShadowMapShaderData m_buffer_data;
+    ShadowMapFilter m_filterMode;
+    ShadowMapAtlasElement m_atlasElement;
+    ImageViewRef m_imageView;
+    ShadowMapShaderData m_bufferData;
 };
 
 } // namespace hyperion

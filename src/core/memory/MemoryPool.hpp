@@ -17,66 +17,89 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <core/IDGenerator.hpp>
+#include <core/utilities/IdGenerator.hpp>
 
 #include <Types.hpp>
 
 namespace hyperion {
 namespace memory {
 
+template <class T>
 struct MemoryPoolInitInfo
 {
-    static constexpr uint32 num_elements_per_block = 16;
-    static constexpr uint32 num_initial_elements = num_elements_per_block;
+    static_assert(sizeof(T) <= 1024 * 1024, "Element size must be less than or equal to 1 MiB");
+
+    static constexpr uint32 numElementsPerBlock = 1024 * 1024 / sizeof(T); // 1 MiB per block
+    static constexpr uint32 numInitialElements = numElementsPerBlock;
 };
 
-template <class ElementType, class TInitInfo, void (*OnBlockAllocated)(void* ctx, ElementType* elements, uint32 start_index, uint32 count) = nullptr>
+template <class ElementType, class TInitInfo, void (*OnBlockAllocated)(void* ctx, ElementType* elements, uint32 startIndex, uint32 count) = nullptr>
 struct MemoryPoolBlock
 {
-    static constexpr uint32 num_elements_per_block = TInitInfo::num_elements_per_block;
+    static constexpr uint32 numElementsPerBlock = TInitInfo::numElementsPerBlock;
 
-    FixedArray<ElementType, num_elements_per_block> elements;
-    AtomicVar<uint32> num_elements { 0 };
+    ValueStorageArray<ubyte, numElementsPerBlock * sizeof(ElementType), alignof(ElementType)> buffer;
+    AtomicVar<uint32> numElements { 0 };
 
 #ifdef HYP_ENABLE_MT_CHECK
-    FixedArray<DataRaceDetector, num_elements_per_block> data_race_detectors;
+    FixedArray<DataRaceDetector, numElementsPerBlock> dataRaceDetectors;
 #endif
 
-    MemoryPoolBlock(void* ctx, uint32 block_index)
+    MemoryPoolBlock(void* ctx, uint32 blockIndex)
     {
+        Memory::MemSet(buffer.GetPointer(), 0, numElementsPerBlock * sizeof(ElementType));
+
         // Allow overloading assignment of elements
         if (OnBlockAllocated != nullptr)
         {
-            OnBlockAllocated(ctx, elements.Data(), block_index * num_elements_per_block, num_elements_per_block);
+            OnBlockAllocated(ctx, reinterpret_cast<ElementType*>(buffer.GetPointer()), blockIndex * numElementsPerBlock, numElementsPerBlock);
         }
         else
         {
-            if constexpr (is_pod_type<ElementType>)
-            {
-                // Default initialization for POD types - zero it out
-                Memory::MemSet(elements.Data(), 0, elements.ByteSize());
-            }
-            else if constexpr (std::is_copy_assignable_v<ElementType> || std::is_move_assignable_v<ElementType>)
+            if constexpr (!isPodType<ElementType>)
             {
                 // For non-POD types, default assign each element
-                for (uint32 i = 0; i < num_elements_per_block; i++)
+                for (uint32 i = 0; i < numElementsPerBlock; i++)
                 {
-                    elements[i] = ElementType();
+                    new (reinterpret_cast<ElementType*>(buffer.GetPointer()) + i) ElementType();
+
+                    // if constexpr (std::is_copy_assignable_v<ElementType> || std::is_move_assignable_v<ElementType>)
+                    // {
+                    //     *(reinterpret_cast<ElementType*>(buffer.GetPointer()) + i) = ElementType {};
+                    // }
                 }
+            }
+        }
+    }
+
+    MemoryPoolBlock(const MemoryPoolBlock& other) = delete;
+    MemoryPoolBlock& operator=(const MemoryPoolBlock& other) = delete;
+
+    MemoryPoolBlock(MemoryPoolBlock&& other) noexcept = delete;
+    MemoryPoolBlock& operator=(MemoryPoolBlock&& other) noexcept = delete;
+
+    ~MemoryPoolBlock()
+    {
+        // Call destructors for each element in the block
+        if constexpr (!isPodType<ElementType>)
+        {
+            for (uint32 i = 0; i < numElementsPerBlock; i++)
+            {
+                reinterpret_cast<ElementType*>(buffer.GetPointer())[i].~ElementType();
             }
         }
     }
 
     HYP_FORCE_INLINE bool IsEmpty() const
     {
-        return num_elements.Get(MemoryOrder::ACQUIRE) == 0;
+        return numElements.Get(MemoryOrder::ACQUIRE) == 0;
     }
 };
 
 class MemoryPoolManager;
 
 extern HYP_API MemoryPoolManager& GetMemoryPoolManager();
-extern HYP_API void CalculateMemoryPoolUsage(Array<SizeType>& out_bytes_per_pool);
+extern HYP_API void CalculateMemoryPoolUsage(Array<SizeType>& outBytesPerPool);
 
 class HYP_API MemoryPoolBase
 {
@@ -88,52 +111,52 @@ public:
     ~MemoryPoolBase(); // non-virtual intentionally
 
 protected:
-    MemoryPoolBase(ThreadID owner_thread_id, SizeType (*get_num_allocated_bytes)(MemoryPoolBase*));
+    MemoryPoolBase(ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*));
 
-    ThreadID m_owner_thread_id;
-    IDGenerator m_id_generator;
+    ThreadId m_ownerThreadId;
+    IdGenerator m_idGenerator;
 
 private:
     void RegisterMemoryPool();
 };
 
-template <class ElementType, class TInitInfo = MemoryPoolInitInfo, void (*OnBlockAllocated)(void* ctx, ElementType* elements, uint32 start_index, uint32 count) = nullptr>
+template <class ElementType, class TInitInfo = MemoryPoolInitInfo<ElementType>, void (*OnBlockAllocated)(void* ctx, ElementType* elements, uint32 startIndex, uint32 count) = nullptr>
 class MemoryPool : MemoryPoolBase
 {
 public:
     using InitInfo = TInitInfo;
 
-    static constexpr uint32 num_elements_per_block = InitInfo::num_elements_per_block;
+    static constexpr uint32 numElementsPerBlock = InitInfo::numElementsPerBlock;
 
 protected:
     using Block = MemoryPoolBlock<ElementType, TInitInfo, OnBlockAllocated>;
 
 protected:
-    static SizeType CalculateMemoryUsage(MemoryPoolBase* memory_pool)
+    static SizeType CalculateMemoryUsage(MemoryPoolBase* memoryPool)
     {
-        return static_cast<MemoryPool*>(memory_pool)->NumAllocatedBytes();
+        return static_cast<MemoryPool*>(memoryPool)->NumAllocatedBytes();
     }
 
     void CreateInitialBlocks()
     {
-        m_num_blocks.Set(m_initial_num_blocks, MemoryOrder::RELEASE);
+        m_numBlocks.Set(m_initialNumBlocks, MemoryOrder::RELEASE);
 
-        for (uint32 i = 0; i < m_initial_num_blocks; i++)
+        for (uint32 i = 0; i < m_initialNumBlocks; i++)
         {
-            m_blocks.EmplaceBack(m_block_init_ctx, i);
+            m_blocks.EmplaceBack(m_blockInitCtx, i);
         }
     }
 
 public:
-    static constexpr uint32 s_invalid_index = ~0u;
+    static constexpr uint32 s_invalidIndex = ~0u;
 
-    MemoryPool(uint32 initial_count = InitInfo::num_initial_elements, bool create_initial_blocks = true, void* block_init_ctx = nullptr)
-        : MemoryPoolBase(ThreadID::Current(), &CalculateMemoryUsage),
-          m_initial_num_blocks((initial_count + num_elements_per_block - 1) / num_elements_per_block),
-          m_num_blocks(0),
-          m_block_init_ctx(block_init_ctx)
+    MemoryPool(uint32 initialCount = InitInfo::numInitialElements, bool createInitialBlocks = true, void* blockInitCtx = nullptr)
+        : MemoryPoolBase(ThreadId::Current(), &CalculateMemoryUsage),
+          m_initialNumBlocks((initialCount + numElementsPerBlock - 1) / numElementsPerBlock),
+          m_numBlocks(0),
+          m_blockInitCtx(blockInitCtx)
     {
-        if (create_initial_blocks)
+        if (createInitialBlocks)
         {
             CreateInitialBlocks();
         }
@@ -143,66 +166,66 @@ public:
 
     HYP_FORCE_INLINE SizeType NumAllocatedElements() const
     {
-        return m_num_blocks.Get(MemoryOrder::ACQUIRE) * num_elements_per_block;
+        return m_numBlocks.Get(MemoryOrder::ACQUIRE) * numElementsPerBlock;
     }
 
     HYP_FORCE_INLINE SizeType NumAllocatedBytes() const
     {
-        return m_num_blocks.Get(MemoryOrder::ACQUIRE) * sizeof(Block);
+        return m_numBlocks.Get(MemoryOrder::ACQUIRE) * sizeof(Block);
     }
 
-    uint32 AcquireIndex(ElementType** out_element_ptr = nullptr)
+    uint32 AcquireIndex(ElementType** outElementPtr = nullptr)
     {
         HYP_SCOPE;
 
-        const uint32 index = m_id_generator.NextID() - 1;
+        const uint32 index = m_idGenerator.Next() - 1;
 
-        const uint32 block_index = index / num_elements_per_block;
+        const uint32 blockIndex = index / numElementsPerBlock;
 
-        if (block_index < m_initial_num_blocks)
+        if (blockIndex < m_initialNumBlocks)
         {
-            Block& block = m_blocks[block_index];
-            block.num_elements.Increment(1, MemoryOrder::RELEASE);
+            Block& block = m_blocks[blockIndex];
+            block.numElements.Increment(1, MemoryOrder::RELEASE);
 
-            if (out_element_ptr != nullptr)
+            if (outElementPtr != nullptr)
             {
-                *out_element_ptr = &block.elements[index % num_elements_per_block];
+                *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
             }
         }
         else
         {
-            Mutex::Guard guard(m_blocks_mutex);
+            Mutex::Guard guard(m_blocksMutex);
 
-            if (index < num_elements_per_block * m_num_blocks.Get(MemoryOrder::ACQUIRE))
+            if (index < numElementsPerBlock * m_numBlocks.Get(MemoryOrder::ACQUIRE))
             {
-                Block& block = m_blocks[block_index];
-                block.num_elements.Increment(1, MemoryOrder::RELEASE);
+                Block& block = m_blocks[blockIndex];
+                block.numElements.Increment(1, MemoryOrder::RELEASE);
 
-                if (out_element_ptr != nullptr)
+                if (outElementPtr != nullptr)
                 {
-                    *out_element_ptr = &block.elements[index % num_elements_per_block];
+                    *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
                 }
             }
             else
             {
                 // Add blocks until we can insert the element
-                uint32 current_block_index = uint32(m_blocks.Size());
+                uint32 currentBlockIndex = uint32(m_blocks.Size());
 
-                while (index >= num_elements_per_block * m_num_blocks.Get(MemoryOrder::ACQUIRE))
+                while (index >= numElementsPerBlock * m_numBlocks.Get(MemoryOrder::ACQUIRE))
                 {
-                    m_blocks.EmplaceBack(m_block_init_ctx, current_block_index);
+                    m_blocks.EmplaceBack(m_blockInitCtx, currentBlockIndex);
 
-                    m_num_blocks.Increment(1, MemoryOrder::RELEASE);
+                    m_numBlocks.Increment(1, MemoryOrder::RELEASE);
 
-                    ++current_block_index;
+                    ++currentBlockIndex;
                 }
 
-                Block& block = m_blocks[block_index];
-                block.num_elements.Increment(1, MemoryOrder::RELEASE);
+                Block& block = m_blocks[blockIndex];
+                block.numElements.Increment(1, MemoryOrder::RELEASE);
 
-                if (out_element_ptr != nullptr)
+                if (outElementPtr != nullptr)
                 {
-                    *out_element_ptr = &block.elements[index % num_elements_per_block];
+                    *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
                 }
             }
         }
@@ -214,53 +237,53 @@ public:
     {
         HYP_SCOPE;
 
-        m_id_generator.FreeID(index + 1);
+        m_idGenerator.ReleaseId(index + 1);
 
-        const uint32 block_index = index / num_elements_per_block;
+        const uint32 blockIndex = index / numElementsPerBlock;
 
-        if (block_index < m_initial_num_blocks)
+        if (blockIndex < m_initialNumBlocks)
         {
-            Block& block = m_blocks[block_index];
+            Block& block = m_blocks[blockIndex];
 
-            block.num_elements.Decrement(1, MemoryOrder::RELEASE);
+            block.numElements.Decrement(1, MemoryOrder::RELEASE);
         }
         else
         {
-            Mutex::Guard guard(m_blocks_mutex);
+            Mutex::Guard guard(m_blocksMutex);
 
-            AssertThrow(index < num_elements_per_block * m_num_blocks.Get(MemoryOrder::ACQUIRE));
+            AssertThrow(index < numElementsPerBlock * m_numBlocks.Get(MemoryOrder::ACQUIRE));
 
-            Block& block = m_blocks[block_index];
-            block.num_elements.Decrement(1, MemoryOrder::RELEASE);
+            Block& block = m_blocks[blockIndex];
+            block.numElements.Decrement(1, MemoryOrder::RELEASE);
         }
     }
 
     /*! \brief Ensure that the pool has enough capacity for the given index
-     * After calling, you'll need to ensure that the blocks have num_elements properly set,
+     * After calling, you'll need to ensure that the blocks have numElements properly set,
      * or else the next call to RemoveEmptyBlocks() will just remove the newly added blocks. */
     void EnsureCapacity(uint32 index)
     {
         HYP_SCOPE;
 
-        AssertThrow(index != s_invalid_index);
+        AssertThrow(index != s_invalidIndex);
 
-        const uint32 required_blocks = (index + num_elements_per_block) / num_elements_per_block;
+        const uint32 requiredBlocks = (index + numElementsPerBlock) / numElementsPerBlock;
 
-        if (required_blocks <= m_num_blocks.Get(MemoryOrder::ACQUIRE))
+        if (requiredBlocks <= m_numBlocks.Get(MemoryOrder::ACQUIRE))
         {
             return; // already has enough blocks
         }
 
-        Mutex::Guard guard(m_blocks_mutex);
+        Mutex::Guard guard(m_blocksMutex);
 
-        uint32 current_block_index = uint32(m_blocks.Size());
+        uint32 currentBlockIndex = uint32(m_blocks.Size());
 
-        while (required_blocks > m_num_blocks.Get(MemoryOrder::ACQUIRE))
+        while (requiredBlocks > m_numBlocks.Get(MemoryOrder::ACQUIRE))
         {
-            m_blocks.EmplaceBack(m_block_init_ctx, current_block_index);
-            m_num_blocks.Increment(1, MemoryOrder::RELEASE);
+            m_blocks.EmplaceBack(m_blockInitCtx, currentBlockIndex);
+            m_numBlocks.Increment(1, MemoryOrder::RELEASE);
 
-            ++current_block_index;
+            ++currentBlockIndex;
         }
     }
 
@@ -270,24 +293,24 @@ public:
 
         AssertThrow(index < NumAllocatedElements());
 
-        const uint32 block_index = index / num_elements_per_block;
-        const uint32 element_index = index % num_elements_per_block;
+        const uint32 blockIndex = index / numElementsPerBlock;
+        const uint32 elementIndex = index % numElementsPerBlock;
 
-        if (block_index < m_initial_num_blocks)
+        if (blockIndex < m_initialNumBlocks)
         {
-            Block& block = m_blocks[block_index];
-            HYP_MT_CHECK_READ(block.data_race_detectors[element_index]);
+            Block& block = m_blocks[blockIndex];
+            HYP_MT_CHECK_READ(block.dataRaceDetectors[elementIndex]);
 
-            return block.elements[element_index];
+            return reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex];
         }
         else
         {
-            Mutex::Guard guard(m_blocks_mutex);
+            Mutex::Guard guard(m_blocksMutex);
 
-            Block& block = m_blocks[block_index];
-            HYP_MT_CHECK_READ(block.data_race_detectors[element_index]);
+            Block& block = m_blocks[blockIndex];
+            HYP_MT_CHECK_READ(block.dataRaceDetectors[elementIndex]);
 
-            return block.elements[element_index];
+            return reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex];
         }
     }
 
@@ -297,26 +320,26 @@ public:
 
         AssertThrow(index < NumAllocatedElements());
 
-        const uint32 block_index = index / num_elements_per_block;
-        const uint32 element_index = index % num_elements_per_block;
+        const uint32 blockIndex = index / numElementsPerBlock;
+        const uint32 elementIndex = index % numElementsPerBlock;
 
-        if (block_index < m_initial_num_blocks)
+        if (blockIndex < m_initialNumBlocks)
         {
-            Block& block = m_blocks[block_index];
-            HYP_MT_CHECK_RW(block.data_race_detectors[element_index]);
+            Block& block = m_blocks[blockIndex];
+            HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            block.elements[element_index] = value;
+            reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex] = value;
         }
         else
         {
-            Mutex::Guard guard(m_blocks_mutex);
+            Mutex::Guard guard(m_blocksMutex);
 
-            AssertThrow(block_index < m_num_blocks.Get(MemoryOrder::ACQUIRE));
+            AssertThrow(blockIndex < m_numBlocks.Get(MemoryOrder::ACQUIRE));
 
-            Block& block = m_blocks[block_index];
-            HYP_MT_CHECK_RW(block.data_race_detectors[element_index]);
+            Block& block = m_blocks[blockIndex];
+            HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            block.elements[element_index] = value;
+            reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex] = value;
         }
     }
 
@@ -324,60 +347,70 @@ public:
     void RemoveEmptyBlocks()
     {
         HYP_SCOPE;
-        // Must be on the owner thread to remove empty blocks.
-        Threads::AssertOnThread(m_owner_thread_id);
+        // // Must be on the owner thread to remove empty blocks.
+        // Threads::AssertOnThread(m_ownerThreadId);
 
-        if (m_num_blocks.Get(MemoryOrder::ACQUIRE) <= m_initial_num_blocks)
+        if (m_numBlocks.Get(MemoryOrder::ACQUIRE) <= m_initialNumBlocks)
         {
             return;
         }
 
-        Mutex::Guard guard(m_blocks_mutex);
+        Mutex::Guard guard(m_blocksMutex);
 
-        typename LinkedList<Block>::Iterator begin_it = m_blocks.Begin();
-        typename LinkedList<Block>::Iterator end_it = m_blocks.End();
+        typename LinkedList<Block>::Iterator beginIt = m_blocks.Begin();
+        typename LinkedList<Block>::Iterator endIt = m_blocks.End();
 
-        Array<typename LinkedList<Block>::Iterator> to_remove;
+        Array<typename LinkedList<Block>::Iterator> toRemove;
 
-        for (uint32 block_index = 0; block_index < m_num_blocks.Get(MemoryOrder::ACQUIRE) && begin_it != end_it; ++block_index, ++begin_it)
+        for (uint32 blockIndex = 0; blockIndex < m_numBlocks.Get(MemoryOrder::ACQUIRE) && beginIt != endIt; ++blockIndex, ++beginIt)
         {
-            if (block_index < m_initial_num_blocks)
+            if (blockIndex < m_initialNumBlocks)
             {
                 continue;
             }
 
-            if (begin_it->IsEmpty())
+            if (beginIt->IsEmpty())
             {
-                to_remove.PushBack(begin_it);
+                toRemove.PushBack(beginIt);
             }
             else
             {
-                to_remove.Clear();
+                toRemove.Clear();
             }
         }
 
-        if (to_remove.Any())
+        if (toRemove.Any())
         {
-            m_num_blocks.Decrement(to_remove.Size(), MemoryOrder::RELEASE);
+            m_numBlocks.Decrement(toRemove.Size(), MemoryOrder::RELEASE);
 
-            while (to_remove.Any())
+            while (toRemove.Any())
             {
-                AssertThrow(&m_blocks.Back() == &*to_remove.Back());
+                AssertThrow(&m_blocks.Back() == &*toRemove.Back());
 
-                m_blocks.Erase(to_remove.PopBack());
+                m_blocks.Erase(toRemove.PopBack());
             }
         }
     }
 
+    void ClearUsedIndices()
+    {
+        HYP_SCOPE;
+
+        // // Must be on the owner thread to reset indices.
+        // Threads::AssertOnThread(m_ownerThreadId);
+
+        m_idGenerator.Reset();
+    }
+
 protected:
-    uint32 m_initial_num_blocks;
+    uint32 m_initialNumBlocks;
 
     LinkedList<Block> m_blocks;
-    AtomicVar<uint32> m_num_blocks;
-    // Needs to be locked when accessing blocks beyond initial_num_blocks or adding/removing blocks.
-    Mutex m_blocks_mutex;
+    AtomicVar<uint32> m_numBlocks;
+    // Needs to be locked when accessing blocks beyond initialNumBlocks or adding/removing blocks.
+    Mutex m_blocksMutex;
 
-    void* m_block_init_ctx;
+    void* m_blockInitCtx;
 };
 
 // struct MemoryPoolAllocator : Allocator<MemoryPoolAllocator>

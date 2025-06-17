@@ -12,18 +12,16 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
 namespace memory {
 
-/*! \brief A dynamically sized buffer, containing raw bytes. Initially has a size of zero, memory is allocated on the heap when first initialized with a non-zero size. */
-HYP_STRUCT()
-class HYP_API ByteBuffer
+template <class Allocator>
+class TByteBuffer
 {
 public:
-    using AllocatorType = DynamicAllocator;
+    using AllocatorType = Allocator;
 
     /*! \brief Constructs an empty ByteBuffer, no memory is allocated. */
-    ByteBuffer()
+    TByteBuffer()
         : m_size(0)
     {
         m_allocation.SetToInitialState();
@@ -31,7 +29,7 @@ public:
 
     /*! \brief Constructs a ByteBuffer with the given size, allocating memory on the heap if \ref{count} != 0.
      *  \param count The size of the ByteBuffer in bytes. If count is zero, no memory is allocated and the ByteBuffer is set to an empty state. */
-    explicit ByteBuffer(SizeType count)
+    explicit TByteBuffer(SizeType count)
         : m_size(count)
     {
         m_allocation.SetToInitialState();
@@ -46,7 +44,7 @@ public:
     }
 
     /*! \brief Constructs a ByteBuffer with the given size and data, allocating memory on the heap if \ref{count} != 0 and copies the data into the buffer. */
-    explicit ByteBuffer(SizeType count, const void* data)
+    explicit TByteBuffer(SizeType count, const void* data)
         : m_size(count)
     {
         m_allocation.SetToInitialState();
@@ -62,7 +60,7 @@ public:
 
     /*! \brief Constructs a ByteBuffer from a \ref{ByteView}, allocating memory on the heap if the view is not empty and copies the data into the buffer.
      *  \param view The ByteView to copy to the ByteBuffer. */
-    explicit ByteBuffer(const ByteView& view)
+    explicit TByteBuffer(const ByteView& view)
         : m_size(view.Size())
     {
         m_allocation.SetToInitialState();
@@ -78,7 +76,7 @@ public:
 
     /*! \brief Constructs a ByteBuffer from a \ref{ConstByteView}, allocating memory on the heap if the view is not empty and copies the data into the buffer.
      *  \param view The ConstByteView to copy to the ByteBuffer. */
-    explicit ByteBuffer(const ConstByteView& view)
+    explicit TByteBuffer(const ConstByteView& view)
         : m_size(view.Size())
     {
         m_allocation.SetToInitialState();
@@ -92,7 +90,7 @@ public:
         m_allocation.InitFromRangeCopy(view.Begin(), view.End());
     }
 
-    ByteBuffer(const ByteBuffer& other)
+    TByteBuffer(const TByteBuffer& other)
         : m_size(other.m_size)
     {
         m_allocation.SetToInitialState();
@@ -106,30 +104,69 @@ public:
         m_allocation.InitFromRangeCopy(other.Data(), other.Data() + m_size);
     }
 
-    ByteBuffer& operator=(const ByteBuffer& other)
+    template <class OtherAllocator>
+    TByteBuffer(const TByteBuffer<OtherAllocator>& other)
+        : m_size(other.m_size)
+    {
+        m_allocation.SetToInitialState();
+
+        if (m_size == 0)
+        {
+            return;
+        }
+
+        m_allocation.Allocate(m_size);
+        m_allocation.InitFromRangeCopy(other.Data(), other.Data() + m_size);
+    }
+
+    TByteBuffer& operator=(const TByteBuffer& other)
     {
         if (&other == this)
         {
             return *this;
         }
 
-        const SizeType previous_size = m_size;
-        const SizeType new_size = other.m_size;
+        const SizeType previousSize = m_size;
+        const SizeType newSize = other.m_size;
 
         m_allocation.Free();
 
-        if (new_size != 0)
+        if (newSize != 0)
         {
-            m_allocation.Allocate(new_size);
-            m_allocation.InitFromRangeCopy(other.Data(), other.Data() + new_size);
+            m_allocation.Allocate(newSize);
+            m_allocation.InitFromRangeCopy(other.Data(), other.Data() + newSize);
         }
 
-        m_size = new_size;
+        m_size = newSize;
 
         return *this;
     }
 
-    ByteBuffer(ByteBuffer&& other) noexcept
+    template <class OtherAllocator>
+    TByteBuffer& operator=(const TByteBuffer<OtherAllocator>& other)
+    {
+        if (&other == this)
+        {
+            return *this;
+        }
+
+        const SizeType previousSize = m_size;
+        const SizeType newSize = other.m_size;
+
+        m_allocation.Free();
+
+        if (newSize != 0)
+        {
+            m_allocation.Allocate(newSize);
+            m_allocation.InitFromRangeCopy(other.Data(), other.Data() + newSize);
+        }
+
+        m_size = newSize;
+
+        return *this;
+    }
+
+    TByteBuffer(TByteBuffer<AllocatorType>&& other) noexcept
         : m_size(other.m_size)
     {
         m_allocation.SetToInitialState();
@@ -152,41 +189,41 @@ public:
         other.m_size = 0;
     }
 
-    ByteBuffer& operator=(ByteBuffer&& other) noexcept
+    TByteBuffer& operator=(TByteBuffer<AllocatorType>&& other) noexcept
     {
         if (&other == this)
         {
             return *this;
         }
 
-        const SizeType previous_size = m_size;
-        const SizeType new_size = other.m_size;
+        const SizeType previousSize = m_size;
+        const SizeType newSize = other.m_size;
 
         m_allocation.Free();
 
         if (other.m_allocation.IsDynamic())
         {
-            m_allocation.TakeOwnership(other.Data(), other.Data() + new_size);
+            m_allocation.TakeOwnership(other.Data(), other.Data() + newSize);
 
             other.m_allocation.SetToInitialState();
         }
         else
         {
-            if (new_size != 0)
+            if (newSize != 0)
             {
-                m_allocation.Allocate(new_size);
-                m_allocation.InitFromRangeMove(other.Data(), other.Data() + new_size);
+                m_allocation.Allocate(newSize);
+                m_allocation.InitFromRangeMove(other.Data(), other.Data() + newSize);
             }
         }
 
-        m_size = new_size;
+        m_size = newSize;
 
         other.m_size = 0;
 
         return *this;
     }
 
-    ~ByteBuffer()
+    ~TByteBuffer()
     {
         m_allocation.Free();
     }
@@ -212,11 +249,11 @@ public:
      *  \return An Array of ubyte containing the ByteBuffer's data, copied from the ByteBuffer. */
     Array<ubyte> ToArray() const
     {
-        Array<ubyte> byte_array;
-        byte_array.Resize(m_size);
-        Memory::MemCpy(byte_array.Data(), Data(), m_size);
+        Array<ubyte> byteArray;
+        byteArray.Resize(m_size);
+        Memory::MemCpy(byteArray.Data(), Data(), m_size);
 
-        return byte_array;
+        return byteArray;
     }
 
     /*! \brief Returns a \ref{ByteView} of the ByteBuffer's data. The ByteView will point to the same data as the ByteBuffer, so changes to the ByteBuffer will be reflected in the ByteView.
@@ -289,26 +326,26 @@ public:
     /*! \brief Sets the size of the ByteBuffer to the given size. If the new size is larger than the current size, the new bytes are zeroed out.
      *  If the new size is smaller than the current size, the excess bytes are freed.
      *  The current data will be copied into the newly allocated memory if the size is changed. */
-    HYP_FORCE_INLINE void SetSize(SizeType new_size)
+    HYP_FORCE_INLINE void SetSize(SizeType newSize)
     {
-        if (new_size == m_size)
+        if (newSize == m_size)
         {
             return;
         }
 
-        if (new_size > m_allocation.GetCapacity())
+        if (newSize > m_allocation.GetCapacity())
         {
             // Extend the buffer's capacity to ensure we have room.
-            SetCapacity(new_size);
+            SetCapacity(newSize);
         }
 
-        if (new_size > m_size)
+        if (newSize > m_size)
         {
             // Zero out the new bytes
-            m_allocation.InitZeroed(new_size - m_size, m_size);
+            m_allocation.InitZeroed(newSize - m_size, m_size);
         }
 
-        m_size = new_size;
+        m_size = newSize;
     }
 
     /*! \brief Returns the current capacity of the ByteBuffer. The capacity is the amount of memory allocated for the ByteBuffer, which may be larger than the current size.
@@ -320,47 +357,47 @@ public:
 
     /*! \brief Sets the capacity of the ByteBuffer to the given size. If the new capacity is larger than the current capacity, the buffer is extended and the current data is copied into the newly allocated memory.
      *  If the new capacity is smaller than the current size, the excess bytes are freed and the size is adjusted accordingly. */
-    HYP_FORCE_INLINE void SetCapacity(SizeType new_capacity)
+    HYP_FORCE_INLINE void SetCapacity(SizeType newCapacity)
     {
-        const SizeType current_capacity = m_allocation.GetCapacity();
+        const SizeType currentCapacity = m_allocation.GetCapacity();
 
-        if (new_capacity == current_capacity)
+        if (newCapacity == currentCapacity)
         {
             return;
         }
 
-        Allocation<ubyte, AllocatorType> new_allocation;
-        new_allocation.SetToInitialState();
+        Allocation<ubyte, AllocatorType> newAllocation;
+        newAllocation.SetToInitialState();
 
-        if (new_capacity != 0)
+        if (newCapacity != 0)
         {
-            new_allocation.Allocate(new_capacity);
+            newAllocation.Allocate(newCapacity);
 
-            const SizeType min_capacity = current_capacity <= new_capacity ? current_capacity : new_capacity;
+            const SizeType minCapacity = currentCapacity <= newCapacity ? currentCapacity : newCapacity;
 
-            new_allocation.InitFromRangeMove(Data(), Data() + min_capacity);
+            newAllocation.InitFromRangeMove(Data(), Data() + minCapacity);
         }
 
-        // Chop size off if it is larger than new_capacity.
-        if (new_capacity < m_size)
+        // Chop size off if it is larger than newCapacity.
+        if (newCapacity < m_size)
         {
-            m_size = new_capacity;
+            m_size = newCapacity;
         }
 
         m_allocation.Free();
 
-        m_allocation = new_allocation;
+        m_allocation = newAllocation;
     }
 
     /*! \brief Reads a value from the ByteBuffer at the given offset. If the offset is out of bounds, the function returns false and does not modify the output.
      *  The output buffer must be large enough to hold the requested number of bytes.
      *  \param offset The offset in the ByteBuffer to read from.
      *  \param count The number of bytes to read from the ByteBuffer.
-     *  \param out_values The output buffer to write the read values to.
+     *  \param outValues The output buffer to write the read values to.
      *  \return Returns true if the read was successful, false if the offset is out of bounds. */
-    bool Read(SizeType offset, SizeType count, ubyte* out_values) const
+    bool Read(SizeType offset, SizeType count, ubyte* outValues) const
     {
-        AssertThrow(out_values != nullptr);
+        AssertThrow(outValues != nullptr);
 
         const SizeType size = m_size;
 
@@ -371,7 +408,7 @@ public:
 
         const ubyte* data = Data();
 
-        Memory::MemCpy(out_values, data + offset, count);
+        Memory::MemCpy(outValues, data + offset, count);
 
         return true;
     }
@@ -386,7 +423,7 @@ public:
     template <class T>
     bool Read(SizeType offset, T* out) const
     {
-        static_assert(is_pod_type<T>, "Must be POD type");
+        static_assert(isPodType<T>, "Must be POD type");
 
         AssertThrow(out != nullptr);
 
@@ -443,7 +480,8 @@ public:
      *  Two ByteBuffers are considered equal if they have the same size and their contents are identical.
      *  \param other The other ByteBuffer to compare with.
      *  \return True if the ByteBuffers are equal, false otherwise. */
-    HYP_FORCE_INLINE bool operator==(const ByteBuffer& other) const
+    template <class OtherAllocator>
+    HYP_FORCE_INLINE bool operator==(const TByteBuffer<OtherAllocator>& other) const
     {
         if (m_size != other.m_size)
         {
@@ -457,7 +495,8 @@ public:
      *  Two ByteBuffers are considered unequal if they have different sizes or their contents differ.
      *  \param other The other ByteBuffer to compare with.
      *  \return True if the ByteBuffers are not equal, false otherwise. */
-    HYP_FORCE_INLINE bool operator!=(const ByteBuffer& other) const
+    template <class OtherAllocator>
+    HYP_FORCE_INLINE bool operator!=(const TByteBuffer<OtherAllocator>& other) const
     {
         if (m_size != other.m_size)
         {
@@ -469,9 +508,9 @@ public:
 
     /*! \brief Returns a copy of the ByteBuffer.
      *  \return A new ByteBuffer with the same size and contents as this ByteBuffer. */
-    HYP_NODISCARD HYP_FORCE_INLINE ByteBuffer Copy() const
+    HYP_NODISCARD HYP_FORCE_INLINE TByteBuffer Copy() const
     {
-        return ByteBuffer(m_size, Data());
+        return TByteBuffer(m_size, Data());
     }
 
     /*! \brief Generates a HashCode based on all bytes in the buffer. Returns an empty HashCode if the ByteBuffer is empty.
@@ -491,9 +530,16 @@ private:
     SizeType m_size;
 };
 
+using ByteBuffer = TByteBuffer<DynamicAllocator>;
+
+template <SizeType Size>
+using FixedByteBuffer = TByteBuffer<FixedAllocator<Size>>;
+
 } // namespace memory
 
 using memory::ByteBuffer;
+using memory::TByteBuffer;
+using memory::FixedByteBuffer;
 
 } // namespace hyperion
 

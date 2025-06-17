@@ -12,9 +12,9 @@
 
 #ifdef HYP_FREETYPE
 
-    #include <ft2build.h>
-    #include FT_FREETYPE_H
-    #include FT_BITMAP_H
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_BITMAP_H
 
 #endif
 
@@ -22,18 +22,13 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Font);
 
-static constexpr InternalFormat g_glyph_texture_format = InternalFormat::RGBA8;
+static constexpr TextureFormat g_glyphTextureFormat = TF_RGBA8;
 
 #pragma region GlyphImageData
 
-Handle<Texture> GlyphImageData::CreateTexture() const
+UniquePtr<GlyphBitmap> GlyphImageData::CreateBitmap() const
 {
-    return CreateObject<Texture>(TextureData {
-        TextureDesc {
-            ImageType::TEXTURE_TYPE_2D,
-            g_glyph_texture_format,
-            Vec3u { uint32(dimensions.x), uint32(dimensions.y), 1 } },
-        byte_buffer });
+    return MakeUnique<GlyphBitmap>(byteBuffer.ToByteView(), uint32(dimensions.x), uint32(dimensions.y));
 }
 
 #pragma endregion GlyphImageData
@@ -68,79 +63,75 @@ void Glyph::LoadMetrics()
 #endif
 }
 
-void Glyph::Render()
+TResult<UniquePtr<GlyphBitmap>> Glyph::Rasterize()
 {
     AssertThrow(m_face != nullptr);
 
     FontEngine::Glyph glyph {};
-    PackedMetrics packed_metrics {};
 
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale)))
     {
-        HYP_LOG(Font, Error, "Error setting pixel size for font face!");
-
-        return;
+        return HYP_MAKE_ERROR(Error, "Error setting pixel size for font face!");
     }
 
     if (FT_Load_Glyph(m_face->GetFace(), m_index, FT_LOAD_DEFAULT | FT_LOAD_COLOR | FT_LOAD_RENDER | FT_PIXEL_MODE_GRAY))
     {
-        HYP_LOG(Font, Error, "Error loading glyph from font face!");
-
-        return;
+        return HYP_MAKE_ERROR(Error, "Error loading glyph from font face!");
     }
 
     glyph = m_face->GetFace()->glyph;
-    FT_Bitmap& ft_bitmap = glyph->bitmap;
+    FT_Bitmap& ftBitmap = glyph->bitmap;
 
     AssertThrow(glyph->format == FT_GLYPH_FORMAT_BITMAP);
 
-    packed_metrics = {
-        .width = uint16(glyph->bitmap.width),
-        .height = uint16(glyph->bitmap.rows),
-        .bearing_x = int16(glyph->bitmap_left),
-        .bearing_y = int16(glyph->bitmap_top),
-        .advance = uint32(glyph->advance.x)
-    };
+    m_metrics.width = uint16(glyph->bitmap.width);
+    m_metrics.height = uint16(glyph->bitmap.rows);
+    m_metrics.bearingX = int16(glyph->bitmap_left);
+    m_metrics.bearingY = int16(glyph->bitmap_top);
+    m_metrics.advance = uint32(glyph->advance.x);
 #endif
 
-    m_metrics = {
-        .metrics = packed_metrics,
-        .image_position = { 0, 0 }
-    };
+    m_metrics.imagePosition = { 0, 0 };
+
+    AssertDebug(m_metrics.width != 0 && m_metrics.height != 0);
 
 #ifdef HYP_FREETYPE
     const Vec2i dimensions = GetMax();
 
-    ByteBuffer byte_buffer;
-    byte_buffer.SetSize(dimensions.Volume() * renderer::NumComponents(g_glyph_texture_format) * renderer::NumBytes(g_glyph_texture_format));
+    ByteBuffer byteBuffer;
+    byteBuffer.SetSize(dimensions.Volume() * NumComponents(g_glyphTextureFormat) * NumBytes(g_glyphTextureFormat));
 
-    if (ft_bitmap.buffer != nullptr)
+    if (ftBitmap.buffer != nullptr)
     {
-        for (uint32 row = 0; row < ft_bitmap.rows; ++row)
+        for (uint32 row = 0; row < ftBitmap.rows; ++row)
         {
-            for (uint32 col = 0; col < ft_bitmap.width; ++col)
+            for (uint32 col = 0; col < ftBitmap.width; ++col)
             {
-                ubyte* dst_offset = byte_buffer.Data() + (row * dimensions.x + col) * renderer::NumComponents(g_glyph_texture_format) * renderer::NumBytes(g_glyph_texture_format);
+                ubyte* dstOffset = byteBuffer.Data() + (row * dimensions.x + col) * NumComponents(g_glyphTextureFormat) * NumBytes(g_glyphTextureFormat);
 
                 // Copy the grayscale value into the RGBA channels
-                for (uint32 component_index = 0; component_index < renderer::NumComponents(g_glyph_texture_format); component_index++)
+                for (uint32 componentIndex = 0; componentIndex < NumComponents(g_glyphTextureFormat); componentIndex++)
                 {
-                    for (uint32 byte_index = 0; byte_index < renderer::NumBytes(g_glyph_texture_format); byte_index++)
+                    for (uint32 byteIndex = 0; byteIndex < NumBytes(g_glyphTextureFormat); byteIndex++)
                     {
-                        dst_offset[component_index * renderer::NumBytes(g_glyph_texture_format) + byte_index] = ft_bitmap.buffer[row * ft_bitmap.pitch + col];
+                        dstOffset[componentIndex * NumBytes(g_glyphTextureFormat) + byteIndex] = ftBitmap.buffer[row * ftBitmap.pitch + col];
                     }
                 }
-                // byte_buffer.Data()[row * dimensions.x + col] = ft_bitmap.buffer[row * ft_bitmap.pitch + col];
+                // byteBuffer.Data()[row * dimensions.x + col] = ftBitmap.buffer[row * ftBitmap.pitch + col];
             }
         }
     }
 
-    m_glyph_image_data = GlyphImageData {
-        dimensions,
-        std::move(byte_buffer)
-    };
+    m_glyphImageData = GlyphImageData { dimensions, std::move(byteBuffer) };
 #endif
+
+    if (m_glyphImageData.byteBuffer.Empty())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to rasterize glyph, no font data in buffer");
+    }
+
+    return m_glyphImageData.CreateBitmap();
 }
 
 Vec2i Glyph::GetMax()

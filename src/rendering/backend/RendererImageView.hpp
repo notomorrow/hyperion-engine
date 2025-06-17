@@ -9,8 +9,6 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 class ImageViewBase : public RenderObject<ImageViewBase>
 {
 public:
@@ -30,35 +28,34 @@ protected:
     ImageViewBase(
         const ImageRef& image)
         : m_image(image),
-          m_mip_index(0),
-          m_num_mips(0),
-          m_face_index(0),
-          m_num_faces(0)
+          m_mipIndex(0),
+          m_numMips(0),
+          m_faceIndex(0),
+          m_numFaces(0)
     {
     }
 
     ImageViewBase(
         const ImageRef& image,
-        uint32 mip_index,
-        uint32 num_mips,
-        uint32 face_index,
-        uint32 num_faces)
+        uint32 mipIndex,
+        uint32 numMips,
+        uint32 faceIndex,
+        uint32 numFaces)
         : m_image(image),
-          m_mip_index(mip_index),
-          m_num_mips(num_mips),
-          m_face_index(face_index),
-          m_num_faces(num_faces)
+          m_mipIndex(mipIndex),
+          m_numMips(numMips),
+          m_faceIndex(faceIndex),
+          m_numFaces(numFaces)
     {
     }
 
     ImageRef m_image;
-    uint32 m_mip_index;
-    uint32 m_num_mips;
-    uint32 m_face_index;
-    uint32 m_num_faces;
+    uint32 m_mipIndex;
+    uint32 m_numMips;
+    uint32 m_faceIndex;
+    uint32 m_numFaces;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

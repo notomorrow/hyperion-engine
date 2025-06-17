@@ -24,17 +24,17 @@ EditorDebugOverlayBase::~EditorDebugOverlayBase()
 {
 }
 
-void EditorDebugOverlayBase::Initialize(UIObject* spawn_parent)
+void EditorDebugOverlayBase::Initialize(UIObject* spawnParent)
 {
-    Threads::AssertOnThread(g_game_thread);
-    AssertThrow(spawn_parent != nullptr);
+    Threads::AssertOnThread(g_gameThread);
+    AssertThrow(spawnParent != nullptr);
 
-    m_ui_object = CreateUIObject(spawn_parent);
+    m_uiObject = CreateUIObject(spawnParent);
 }
 
-Handle<UIObject> EditorDebugOverlayBase::CreateUIObject_Impl(UIObject* spawn_parent)
+Handle<UIObject> EditorDebugOverlayBase::CreateUIObject_Impl(UIObject* spawnParent)
 {
-    return spawn_parent->CreateUIObject<UIImage>(GetName(), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::PIXEL }, { 75, UIObjectSize::PIXEL }));
+    return spawnParent->CreateUIObject<UIImage>(GetName(), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::PIXEL }, { 75, UIObjectSize::PIXEL }));
 }
 
 #pragma endregion EditorDebugOverlayBase
@@ -50,11 +50,11 @@ TextureEditorDebugOverlay::~TextureEditorDebugOverlay()
 {
 }
 
-Handle<UIObject> TextureEditorDebugOverlay::CreateUIObject_Impl(UIObject* spawn_parent)
+Handle<UIObject> TextureEditorDebugOverlay::CreateUIObject_Impl(UIObject* spawnParent)
 {
     InitObject(m_texture);
 
-    Handle<UIImage> image = spawn_parent->CreateUIObject<UIImage>(GetName(), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::PIXEL }, { 75, UIObjectSize::PIXEL }));
+    Handle<UIImage> image = spawnParent->CreateUIObject<UIImage>(GetName(), Vec2i::Zero(), UIObjectSize({ 100, UIObjectSize::PIXEL }, { 75, UIObjectSize::PIXEL }));
     image->SetTexture(m_texture);
 
     return image;

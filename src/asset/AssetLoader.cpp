@@ -13,9 +13,9 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Assets);
 
-HYP_API void OnPostLoad_Impl(const HypClass* hyp_class, void* object_ptr)
+HYP_API void OnPostLoad_Impl(const HypClass* hypClass, void* objectPtr)
 {
-    hyp_class->PostLoad(object_ptr);
+    hypClass->PostLoad(objectPtr);
 }
 
 #pragma region LoadedAsset
@@ -28,65 +28,66 @@ HYP_API void LoadedAsset::OnPostLoad()
     }
 
     // @TODO: Change to use T::InstanceClass() from Asset<T>, as types might not be an exact match
-    const HypClass* hyp_class = GetClass(value.GetTypeID());
+    // @TODO: Walk up class heirarchy, call PostLoad() for each class
+    const HypClass* hypClass = GetClass(value.GetTypeId());
 
-    if (!hyp_class)
+    if (!hypClass)
     {
         return;
     }
 
-    hyp_class->PostLoad(value.ToRef().GetPointer());
+    hypClass->PostLoad(value.ToRef().GetPointer());
 }
 
 #pragma endregion LoadedAsset
 
 #pragma region AssetLoaderBase
 
-FilePath AssetLoaderBase::GetRebasedFilepath(const FilePath& base_path, const FilePath& filepath)
+FilePath AssetLoaderBase::GetRebasedFilepath(const FilePath& basePath, const FilePath& filepath)
 {
-    const FilePath relative_filepath = FilePath::Relative(filepath, FilePath::Current());
+    const FilePath relativeFilepath = FilePath::Relative(filepath, FilePath::Current());
 
-    if (base_path.Any())
+    if (basePath.Any())
     {
         return FilePath::Join(
-            base_path.Data(),
-            relative_filepath.Data());
+            basePath.Data(),
+            relativeFilepath.Data());
     }
 
-    return relative_filepath;
+    return relativeFilepath;
 }
 
-Array<FilePath> AssetLoaderBase::GetTryFilepaths(const FilePath& original_filepath) const
+Array<FilePath> AssetLoaderBase::GetTryFilepaths(const FilePath& originalFilepath) const
 {
-    const FilePath current_path = FilePath::Current();
+    const FilePath currentPath = FilePath::Current();
 
     Array<FilePath> paths {
-        FilePath::Relative(original_filepath, current_path)
+        FilePath::Relative(originalFilepath, currentPath)
     };
 
-    auto add_rebased_filepath = [&paths, &original_filepath, &current_path](const FilePath& base_path)
+    auto addRebasedFilepath = [&paths, &originalFilepath, &currentPath](const FilePath& basePath)
     {
-        const FilePath filepath = GetRebasedFilepath(base_path, original_filepath);
+        const FilePath filepath = GetRebasedFilepath(basePath, originalFilepath);
 
-        paths.PushBack(FilePath::Relative(filepath, current_path));
+        paths.PushBack(FilePath::Relative(filepath, currentPath));
         paths.PushBack(filepath);
     };
 
-    const FilePath& base_path = AssetManager::GetInstance()->GetBasePath();
+    const FilePath& basePath = AssetManager::GetInstance()->GetBasePath();
 
-    if (base_path.Any())
+    if (basePath.Any())
     {
-        add_rebased_filepath(base_path);
+        addRebasedFilepath(basePath);
     }
 
-    AssetManager::GetInstance()->FindAssetCollector([&add_rebased_filepath, &base_path](const Handle<AssetCollector>& asset_collector)
+    AssetManager::GetInstance()->FindAssetCollector([&addRebasedFilepath, &basePath](const Handle<AssetCollector>& assetCollector)
         {
-            if (asset_collector->GetBasePath() == base_path)
+            if (assetCollector->GetBasePath() == basePath)
             {
                 return false;
             }
 
-            add_rebased_filepath(asset_collector->GetBasePath());
+            addRebasedFilepath(assetCollector->GetBasePath());
 
             return false;
         });
@@ -94,15 +95,15 @@ Array<FilePath> AssetLoaderBase::GetTryFilepaths(const FilePath& original_filepa
     return paths;
 }
 
-AssetLoadResult AssetLoaderBase::Load(AssetManager& asset_manager, const String& path) const
+AssetLoadResult AssetLoaderBase::Load(AssetManager& assetManager, const String& path) const
 {
     HYP_SCOPE;
 
-    static const AssetLoadError default_error = HYP_MAKE_ERROR(AssetLoadError, "File could not be found", AssetLoadError::ERR_NOT_FOUND);
+    static const AssetLoadError defaultError = HYP_MAKE_ERROR(AssetLoadError, "File could not be found", AssetLoadError::ERR_NOT_FOUND);
 
-    const FilePath original_filepath(path);
+    const FilePath originalFilepath(path);
 
-    const Array<FilePath> paths = GetTryFilepaths(original_filepath);
+    const Array<FilePath> paths = GetTryFilepaths(originalFilepath);
 
     for (const FilePath& path : paths)
     {
@@ -123,7 +124,7 @@ AssetLoadResult AssetLoaderBase::Load(AssetManager& asset_manager, const String&
         }
 
         LoaderState state {
-            &asset_manager,
+            &assetManager,
             path.Data(),
             std::move(reader)
         };
@@ -148,7 +149,7 @@ AssetLoadResult AssetLoaderBase::Load(AssetManager& asset_manager, const String&
         }
     }
 
-    return default_error;
+    return defaultError;
 }
 
 #pragma endregion AssetLoaderBase

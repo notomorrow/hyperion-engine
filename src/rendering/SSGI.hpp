@@ -55,19 +55,19 @@ public:
 
     HYP_FORCE_INLINE const Handle<Texture>& GetResultTexture() const
     {
-        return m_result_texture;
+        return m_resultTexture;
     }
 
     const Handle<Texture>& GetFinalResultTexture() const;
 
     HYP_FORCE_INLINE bool IsRendered() const
     {
-        return m_is_rendered;
+        return m_isRendered;
     }
 
     void Create();
 
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     ShaderProperties GetShaderProperties() const;
@@ -76,21 +76,21 @@ private:
     void CreateBlueNoiseBuffer();
     void CreateComputePipelines();
 
-    void FillUniformBufferData(RenderView* view, SSGIUniforms& out_uniforms) const;
+    void FillUniformBufferData(RenderView* view, SSGIUniforms& outUniforms) const;
 
     SSGIConfig m_config;
 
     GBuffer* m_gbuffer;
 
-    Handle<Texture> m_result_texture;
+    Handle<Texture> m_resultTexture;
 
-    FixedArray<GPUBufferRef, max_frames_in_flight> m_uniform_buffers;
+    FixedArray<GpuBufferRef, maxFramesInFlight> m_uniformBuffers;
 
-    ComputePipelineRef m_compute_pipeline;
+    ComputePipelineRef m_computePipeline;
 
-    UniquePtr<TemporalBlending> m_temporal_blending;
+    UniquePtr<TemporalBlending> m_temporalBlending;
 
-    bool m_is_rendered;
+    bool m_isRendered;
 };
 
 } // namespace hyperion

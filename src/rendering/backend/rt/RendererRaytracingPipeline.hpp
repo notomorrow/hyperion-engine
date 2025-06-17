@@ -8,8 +8,6 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 class RaytracingPipelineBase : public RenderObject<RaytracingPipelineBase>
 {
 public:
@@ -17,12 +15,12 @@ public:
 
     HYP_FORCE_INLINE const DescriptorTableRef& GetDescriptorTable() const
     {
-        return m_descriptor_table;
+        return m_descriptorTable;
     }
 
-    HYP_FORCE_INLINE void SetDescriptorTable(const DescriptorTableRef& descriptor_table)
+    HYP_FORCE_INLINE void SetDescriptorTable(const DescriptorTableRef& descriptorTable)
     {
-        m_descriptor_table = descriptor_table;
+        m_descriptorTable = descriptorTable;
     }
 
     HYP_FORCE_INLINE const ShaderRef& GetShader() const
@@ -38,10 +36,10 @@ public:
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual void Bind(CommandBufferBase* command_buffer) = 0;
+    HYP_API virtual void Bind(CommandBufferBase* commandBuffer) = 0;
 
     HYP_API virtual void TraceRays(
-        CommandBufferBase* command_buffer,
+        CommandBufferBase* commandBuffer,
         const Vec3u& extent) const = 0;
 
     // Deprecated - will be removed to decouple from vulkan
@@ -50,17 +48,16 @@ public:
 protected:
     RaytracingPipelineBase() = default;
 
-    RaytracingPipelineBase(const ShaderRef& shader, const DescriptorTableRef& descriptor_table)
+    RaytracingPipelineBase(const ShaderRef& shader, const DescriptorTableRef& descriptorTable)
         : m_shader(shader),
-          m_descriptor_table(descriptor_table)
+          m_descriptorTable(descriptorTable)
     {
     }
 
     ShaderRef m_shader;
-    DescriptorTableRef m_descriptor_table;
+    DescriptorTableRef m_descriptorTable;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

@@ -7,10 +7,12 @@
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/PlaceholderData.hpp>
-#include <rendering/RenderState.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
+#include <rendering/GraphicsPipelineCache.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
+#include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 
@@ -24,6 +26,7 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -40,28 +43,28 @@ struct HBAOUniforms
 #pragma region Render commands
 
 struct RENDER_COMMAND(CreateHBAOUniformBuffer)
-    : renderer::RenderCommand
+    : RenderCommand
 {
     HBAOUniforms uniforms;
-    GPUBufferRef uniform_buffer;
+    GpuBufferRef uniformBuffer;
 
     RENDER_COMMAND(CreateHBAOUniformBuffer)(
         const HBAOUniforms& uniforms,
-        const GPUBufferRef& uniform_buffer)
+        const GpuBufferRef& uniformBuffer)
         : uniforms(uniforms),
-          uniform_buffer(uniform_buffer)
+          uniformBuffer(uniformBuffer)
     {
         AssertThrow(uniforms.dimension.x * uniforms.dimension.y != 0);
 
-        AssertThrow(this->uniform_buffer != nullptr);
+        AssertThrow(this->uniformBuffer != nullptr);
     }
 
     virtual ~RENDER_COMMAND(CreateHBAOUniformBuffer)() override = default;
 
     virtual RendererResult operator()() override
     {
-        HYPERION_BUBBLE_ERRORS(uniform_buffer->Create());
-        uniform_buffer->Copy(sizeof(uniforms), &uniforms);
+        HYPERION_BUBBLE_ERRORS(uniformBuffer->Create());
+        uniformBuffer->Copy(sizeof(uniforms), &uniforms);
 
         HYPERION_RETURN_OK;
     }
@@ -69,8 +72,8 @@ struct RENDER_COMMAND(CreateHBAOUniformBuffer)
 
 #pragma endregion Render commands
 
-HBAO::HBAO(HBAOConfig&& config, GBuffer* gbuffer)
-    : FullScreenPass(InternalFormat::RGBA8, gbuffer),
+HBAO::HBAO(HBAOConfig&& config, Vec2u extent, GBuffer* gbuffer)
+    : FullScreenPass(TF_RGBA8, extent, gbuffer),
       m_config(std::move(config))
 {
 }
@@ -83,48 +86,44 @@ void HBAO::Create()
 {
     HYP_SCOPE;
 
-    ShaderProperties shader_properties;
-    shader_properties.Set("HBIL_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
+    ShaderProperties shaderProperties;
+    shaderProperties.Set("HBIL_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
 
     if (ShouldRenderHalfRes())
     {
-        shader_properties.Set("HALFRES");
+        shaderProperties.Set("HALFRES");
     }
 
-    m_shader = g_shader_manager->GetOrCreate(NAME("HBAO"), shader_properties);
+    m_shader = g_shaderManager->GetOrCreate(NAME("HBAO"), shaderProperties);
 
     FullScreenPass::Create();
 }
 
-void HBAO::CreatePipeline(const RenderableAttributeSet& renderable_attributes)
+void HBAO::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
 {
     HYP_SCOPE;
 
-    const renderer::DescriptorTableDeclaration& descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    const DescriptorTableDeclaration& descriptorTableDecl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-    DescriptorTableRef descriptor_table = g_rendering_api->MakeDescriptorTable(&descriptor_table_decl);
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("HBAODescriptorSet"), frame_index);
-        AssertThrow(descriptor_set != nullptr);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("HBAODescriptorSet"), frameIndex);
+        AssertThrow(descriptorSet != nullptr);
 
-        descriptor_set->SetElement(NAME("UniformBuffer"), m_uniform_buffer);
+        descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffer);
     }
 
-    DeferCreate(descriptor_table);
+    DeferCreate(descriptorTable);
 
-    m_descriptor_table = descriptor_table;
+    m_descriptorTable = descriptorTable;
 
-    m_render_group = CreateObject<RenderGroup>(
+    m_graphicsPipeline = g_renderGlobalState->graphicsPipelineCache->GetOrCreate(
         m_shader,
-        renderable_attributes,
-        *m_descriptor_table,
-        RenderGroupFlags::NONE);
-
-    m_render_group->AddFramebuffer(m_framebuffer);
-
-    InitObject(m_render_group);
+        descriptorTable,
+        { &m_framebuffer, 1 },
+        renderableAttributes);
 }
 
 void HBAO::CreateDescriptors()
@@ -139,56 +138,57 @@ void HBAO::CreateUniformBuffers()
     uniforms.radius = m_config.radius;
     uniforms.power = m_config.power;
 
-    m_uniform_buffer = g_rendering_api->MakeGPUBuffer(GPUBufferType::CONSTANT_BUFFER, sizeof(uniforms));
+    m_uniformBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(uniforms));
 
-    PUSH_RENDER_COMMAND(CreateHBAOUniformBuffer, uniforms, m_uniform_buffer);
+    PUSH_RENDER_COMMAND(CreateHBAOUniformBuffer, uniforms, m_uniformBuffer);
 }
 
-void HBAO::Resize_Internal(Vec2u new_size)
+void HBAO::Resize_Internal(Vec2u newSize)
 {
     HYP_SCOPE;
 
-    SafeRelease(std::move(m_uniform_buffer));
+    SafeRelease(std::move(m_uniformBuffer));
 
-    FullScreenPass::Resize_Internal(new_size);
+    FullScreenPass::Resize_Internal(newSize);
 }
 
-void HBAO::Render(FrameBase* frame, const RenderSetup& render_setup)
+void HBAO::Render(FrameBase* frame, const RenderSetup& renderSetup)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    AssertDebug(render_setup.IsValid());
-    AssertDebug(render_setup.HasView());
+    AssertDebug(renderSetup.IsValid());
+    AssertDebug(renderSetup.HasView());
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    Begin(frame, render_setup);
+    Begin(frame, renderSetup);
 
     frame->GetCommandList().Add<BindDescriptorTable>(
-        GetRenderGroup()->GetPipeline()->GetDescriptorTable(),
-        GetRenderGroup()->GetPipeline(),
+        m_graphicsPipeline->GetDescriptorTable(),
+        m_graphicsPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) } } } },
-        frame_index);
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) } } } },
+        frameIndex);
 
-    const uint32 view_descriptor_set_index = GetRenderGroup()->GetPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+    const uint32 viewDescriptorSetIndex = m_graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
 
-    if (view_descriptor_set_index != ~0u)
+    if (viewDescriptorSetIndex != ~0u)
     {
-        AssertThrow(render_setup.HasView());
+        AssertThrow(renderSetup.HasView());
+        AssertThrow(renderSetup.passData != nullptr);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
-            render_setup.view->GetDescriptorSets()[frame->GetFrameIndex()],
-            m_render_group->GetPipeline(),
+            renderSetup.passData->descriptorSets[frame->GetFrameIndex()],
+            m_graphicsPipeline,
             ArrayMap<Name, uint32> {},
-            view_descriptor_set_index);
+            viewDescriptorSetIndex);
     }
 
     GetQuadMesh()->GetRenderResource().Render(frame->GetCommandList());
-    End(frame, render_setup);
+    End(frame, renderSetup);
 }
 
 } // namespace hyperion

@@ -39,19 +39,19 @@ bool HypClassAttributeValue::GetBool() const
         return false;
     }
 
-    if (const bool* bool_ptr = m_value.TryGet<bool>())
+    if (const bool* boolPtr = m_value.TryGet<bool>())
     {
-        return *bool_ptr;
+        return *boolPtr;
     }
 
-    if (const String* string_ptr = m_value.TryGet<String>())
+    if (const String* stringPtr = m_value.TryGet<String>())
     {
-        return !string_ptr->Empty();
+        return !stringPtr->Empty();
     }
 
-    if (const int* int_ptr = m_value.TryGet<int>())
+    if (const int* intPtr = m_value.TryGet<int>())
     {
-        return *int_ptr != 0;
+        return *intPtr != 0;
     }
 
     return true;
@@ -69,26 +69,26 @@ int HypClassAttributeValue::GetInt() const
         return 0;
     }
 
-    if (const int* int_ptr = m_value.TryGet<int>())
+    if (const int* intPtr = m_value.TryGet<int>())
     {
-        return *int_ptr;
+        return *intPtr;
     }
 
-    if (const String* string_ptr = m_value.TryGet<String>())
+    if (const String* stringPtr = m_value.TryGet<String>())
     {
-        int int_value;
+        int intValue;
 
-        if (StringUtil::Parse(*string_ptr, &int_value))
+        if (StringUtil::Parse(*stringPtr, &intValue))
         {
-            return int_value;
+            return intValue;
         }
 
         return 0;
     }
 
-    if (const bool* bool_ptr = m_value.TryGet<bool>())
+    if (const bool* boolPtr = m_value.TryGet<bool>())
     {
-        return *bool_ptr != false;
+        return *boolPtr != false;
     }
 
     return 0;
@@ -96,17 +96,17 @@ int HypClassAttributeValue::GetInt() const
 
 String HypClassAttributeValue::ToString() const
 {
-    json::JSONValue json_value;
+    json::JSONValue jsonValue;
 
     if (m_value.HasValue())
     {
-        Visit(m_value, [&json_value](auto&& value)
+        Visit(m_value, [&jsonValue](auto&& value)
             {
-                json_value = json::JSONValue(value);
+                jsonValue = json::JSONValue(value);
             });
     }
 
-    return json_value.ToString(true);
+    return jsonValue.ToString(true);
 }
 
 #pragma endregion HypClassAttributeValue

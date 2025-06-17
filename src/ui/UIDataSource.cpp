@@ -13,38 +13,38 @@ UIElementFactoryRegistry& UIElementFactoryRegistry::GetInstance()
     return instance;
 }
 
-UIElementFactoryBase* UIElementFactoryRegistry::GetFactory(TypeID type_id)
+UIElementFactoryBase* UIElementFactoryRegistry::GetFactory(TypeId typeId)
 {
-    auto it = m_element_factories.Find(type_id);
+    auto it = m_elementFactories.Find(typeId);
 
-    if (it == m_element_factories.End())
+    if (it == m_elementFactories.End())
     {
         return nullptr;
     }
 
-    FactoryInstance& factory_instance = it->second;
+    FactoryInstance& factoryInstance = it->second;
 
-    if (!factory_instance.factory_instance)
+    if (!factoryInstance.factoryInstance)
     {
-        factory_instance.factory_instance = factory_instance.make_factory_function();
+        factoryInstance.factoryInstance = factoryInstance.makeFactoryFunction();
     }
 
-    return factory_instance.factory_instance.Get();
+    return factoryInstance.factoryInstance.Get();
 }
 
-void UIElementFactoryRegistry::RegisterFactory(TypeID type_id, RC<UIElementFactoryBase> (*make_factory_function)(void))
+void UIElementFactoryRegistry::RegisterFactory(TypeId typeId, Handle<UIElementFactoryBase> (*makeFactoryFunction)(void))
 {
-    m_element_factories.Set(type_id, FactoryInstance { make_factory_function, nullptr });
+    m_elementFactories.Set(typeId, FactoryInstance { makeFactoryFunction, nullptr });
 }
 
 #pragma endregion UIElementFactoryRegistry
 
 #pragma region UIElementFactoryRegistrationBase
 
-UIElementFactoryRegistrationBase::UIElementFactoryRegistrationBase(TypeID type_id, RC<UIElementFactoryBase> (*make_factory_function)(void))
-    : m_make_factory_function(make_factory_function)
+UIElementFactoryRegistrationBase::UIElementFactoryRegistrationBase(TypeId typeId, Handle<UIElementFactoryBase> (*makeFactoryFunction)(void))
+    : m_makeFactoryFunction(makeFactoryFunction)
 {
-    UIElementFactoryRegistry::GetInstance().RegisterFactory(type_id, make_factory_function);
+    UIElementFactoryRegistry::GetInstance().RegisterFactory(typeId, makeFactoryFunction);
 }
 
 UIElementFactoryRegistrationBase::~UIElementFactoryRegistrationBase()

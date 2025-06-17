@@ -18,6 +18,10 @@ struct Span<T, std::enable_if_t<!std::is_const_v<T>>>
 {
     using Type = T;
 
+    // For compatibility with ContainerBase interface
+    using KeyType = SizeType;
+    using ValueType = T;
+
     using Iterator = Type*;
     using ConstIterator = Type*;
 
@@ -208,15 +212,17 @@ struct Span<T, std::enable_if_t<!std::is_const_v<T>>>
         return Span<const Type>(first, last);
     }
 
-    HYP_DEF_STL_BEGIN_END_CONSTEXPR(
-        first,
-        last)
+    HYP_DEF_STL_BEGIN_END_CONSTEXPR(first, last)
 };
 
 template <class T>
 struct Span<T, std::enable_if_t<std::is_const_v<T>>>
 {
     using Type = std::remove_const_t<T>;
+
+    // For compatibility with ContainerBase interface
+    using KeyType = SizeType;
+    using ValueType = T;
 
     using Iterator = const Type*;
     using ConstIterator = const Type*;
@@ -303,8 +309,8 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
     {
     }
 
-    constexpr Span(std::initializer_list<T> initializer_list)
-        : Span(initializer_list.begin(), initializer_list.end())
+    constexpr Span(std::initializer_list<T> initializerList)
+        : Span(initializerList.begin(), initializerList.end())
     {
     }
 
@@ -362,11 +368,11 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
             return Span();
         }
 
-        const SizeType max_size = Size() - offset;
+        const SizeType maxSize = Size() - offset;
 
-        if (count > max_size)
+        if (count > maxSize)
         {
-            count = max_size;
+            count = maxSize;
         }
 
         return Span(first + offset, first + offset + count);
@@ -377,9 +383,7 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
         return HashCode::GetHashCode(reinterpret_cast<const char*>(Begin()), reinterpret_cast<const char*>(End()));
     }
 
-    HYP_DEF_STL_BEGIN_END_CONSTEXPR(
-        first,
-        last)
+    HYP_DEF_STL_BEGIN_END_CONSTEXPR(first, last)
 };
 
 using ByteView = Span<ubyte>;

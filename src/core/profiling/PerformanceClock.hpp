@@ -22,15 +22,20 @@ public:
 
     HYP_FORCE_INLINE uint64 Elapsed() const
     {
-        return m_end_time_us - m_start_time_us;
+        return (m_endTimeUs == 0 ? Now() : m_endTimeUs) - m_startTimeUs;
+    }
+
+    HYP_FORCE_INLINE double ElapsedMs() const
+    {
+        return double(Elapsed()) / 1000.0;
     }
 
     void Start();
     void Stop();
 
 private:
-    uint64 m_start_time_us;
-    uint64 m_end_time_us;
+    uint64 m_startTimeUs;
+    uint64 m_endTimeUs;
 };
 
 } // namespace profiling

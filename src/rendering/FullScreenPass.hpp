@@ -5,7 +5,7 @@
 
 #include <rendering/RenderableAttributes.hpp>
 
-#include <rendering/rhi/RHICommandList.hpp>
+#include <rendering/rhi/CmdList.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 #include <rendering/backend/RendererStructs.hpp>
@@ -19,9 +19,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-
-using renderer::BlendFunction;
-using renderer::PushConstantData;
 
 class Engine;
 class Mesh;
@@ -38,32 +35,32 @@ public:
     friend struct RenderCommand_RecreateFullScreenPassFramebuffer;
 
     FullScreenPass(
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         GBuffer* gbuffer);
 
     FullScreenPass(
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         Vec2u extent,
         GBuffer* gbuffer);
 
     FullScreenPass(
         const ShaderRef& shader,
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         Vec2u extent,
         GBuffer* gbuffer);
 
     FullScreenPass(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table,
-        InternalFormat image_format,
+        const DescriptorTableRef& descriptorTable,
+        TextureFormat imageFormat,
         Vec2u extent,
         GBuffer* gbuffer);
 
     FullScreenPass(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table,
+        const DescriptorTableRef& descriptorTable,
         const FramebufferRef& framebuffer,
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         Vec2u extent,
         GBuffer* gbuffer);
 
@@ -76,12 +73,12 @@ public:
         return m_extent;
     }
 
-    HYP_FORCE_INLINE InternalFormat GetFormat() const
+    HYP_FORCE_INLINE TextureFormat GetFormat() const
     {
-        return m_image_format;
+        return m_imageFormat;
     }
 
-    AttachmentBase* GetAttachment(uint32 attachment_index) const;
+    AttachmentBase* GetAttachment(uint32 attachmentIndex) const;
 
     HYP_FORCE_INLINE const FramebufferRef& GetFramebuffer() const
     {
@@ -97,17 +94,17 @@ public:
 
     HYP_FORCE_INLINE const Handle<Mesh>& GetQuadMesh() const
     {
-        return m_full_screen_quad;
+        return m_fullScreenQuad;
     }
 
-    HYP_FORCE_INLINE const Handle<RenderGroup>& GetRenderGroup() const
+    HYP_FORCE_INLINE const GraphicsPipelineRef& GetGraphicsPipeline() const
     {
-        return m_render_group;
+        return m_graphicsPipeline;
     }
 
     HYP_FORCE_INLINE void SetPushConstants(const PushConstantData& pc)
     {
-        m_push_constant_data = pc;
+        m_pushConstantData = pc;
     }
 
     HYP_FORCE_INLINE void SetPushConstants(const void* ptr, SizeType size)
@@ -117,16 +114,16 @@ public:
 
     HYP_FORCE_INLINE const BlendFunction& GetBlendFunction() const
     {
-        return m_blend_function;
+        return m_blendFunction;
     }
 
     /*! \brief Sets the blend function of the render pass.
         Must be set before Create() is called. */
-    void SetBlendFunction(const BlendFunction& blend_function);
+    void SetBlendFunction(const BlendFunction& blendFunction);
 
     HYP_FORCE_INLINE const Optional<DescriptorTableRef>& GetDescriptorTable() const
     {
-        return m_descriptor_table;
+        return m_descriptorTable;
     }
 
     virtual const ImageViewRef& GetFinalImageView() const;
@@ -134,21 +131,21 @@ public:
 
     /*! \brief Resizes the full screen pass to the new size.
      *  Callable on any thread, as it enqueues a render command. */
-    void Resize(Vec2u new_size);
+    void Resize(Vec2u newSize);
 
     virtual void CreateFramebuffer();
-    virtual void CreatePipeline(const RenderableAttributeSet& renderable_attributes);
+    virtual void CreatePipeline(const RenderableAttributeSet& renderableAttributes);
     virtual void CreatePipeline();
     virtual void CreateDescriptors();
 
     /*! \brief Create the full screen pass */
     virtual void Create();
 
-    virtual void Render(FrameBase* frame, const RenderSetup& render_setup);
-    virtual void RenderToFramebuffer(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer);
+    virtual void Render(FrameBase* frame, const RenderSetup& renderSetup);
+    virtual void RenderToFramebuffer(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer);
 
-    void Begin(FrameBase* frame, const RenderSetup& render_setup);
-    void End(FrameBase* frame, const RenderSetup& render_setup);
+    void Begin(FrameBase* frame, const RenderSetup& renderSetup);
+    void End(FrameBase* frame, const RenderSetup& renderSetup);
 
 protected:
     virtual bool UsesTemporalBlending() const
@@ -161,35 +158,35 @@ protected:
         return false;
     }
 
-    virtual void Resize_Internal(Vec2u new_size);
+    virtual void Resize_Internal(Vec2u newSize);
 
     void CreateQuad();
 
-    void RenderPreviousTextureToScreen(FrameBase* frame, const RenderSetup& render_setup);
-    void CopyResultToPreviousTexture(FrameBase* frame, const RenderSetup& render_setup);
-    void MergeHalfResTextures(FrameBase* frame, const RenderSetup& render_setup);
+    void RenderPreviousTextureToScreen(FrameBase* frame, const RenderSetup& renderSetup);
+    void CopyResultToPreviousTexture(FrameBase* frame, const RenderSetup& renderSetup);
+    void MergeHalfResTextures(FrameBase* frame, const RenderSetup& renderSetup);
 
     FramebufferRef m_framebuffer;
     ShaderRef m_shader;
-    Handle<RenderGroup> m_render_group;
-    Handle<Mesh> m_full_screen_quad;
+    GraphicsPipelineRef m_graphicsPipeline;
+    Handle<Mesh> m_fullScreenQuad;
     Vec2u m_extent;
     GBuffer* m_gbuffer;
 
-    PushConstantData m_push_constant_data;
+    PushConstantData m_pushConstantData;
 
-    InternalFormat m_image_format;
+    TextureFormat m_imageFormat;
 
-    BlendFunction m_blend_function;
+    BlendFunction m_blendFunction;
 
-    Optional<DescriptorTableRef> m_descriptor_table;
+    Optional<DescriptorTableRef> m_descriptorTable;
 
-    UniquePtr<TemporalBlending> m_temporal_blending;
-    Handle<Texture> m_previous_texture;
+    UniquePtr<TemporalBlending> m_temporalBlending;
+    Handle<Texture> m_previousTexture;
 
-    UniquePtr<FullScreenPass> m_render_texture_to_screen_pass;
+    UniquePtr<FullScreenPass> m_renderTextureToScreenPass;
 
-    bool m_is_first_frame;
+    bool m_isFirstFrame;
 
 private:
     void CreateTemporalBlending();
@@ -197,10 +194,10 @@ private:
     void CreatePreviousTexture();
     void CreateMergeHalfResTexturesPass();
 
-    bool m_is_initialized;
+    bool m_isInitialized;
 
     // Used for half-res rendering
-    UniquePtr<FullScreenPass> m_merge_half_res_textures_pass;
+    UniquePtr<FullScreenPass> m_mergeHalfResTexturesPass;
 };
 
 } // namespace hyperion

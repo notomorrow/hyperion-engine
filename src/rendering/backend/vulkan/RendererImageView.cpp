@@ -2,7 +2,7 @@
 
 #include <rendering/backend/vulkan/RendererImageView.hpp>
 #include <rendering/backend/vulkan/RendererImage.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
@@ -11,13 +11,11 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 #pragma region VulkanImageView
@@ -30,11 +28,11 @@ VulkanImageView::VulkanImageView(const VulkanImageRef& image)
 
 VulkanImageView::VulkanImageView(
     const VulkanImageRef& image,
-    uint32 mip_index,
-    uint32 num_mips,
-    uint32 face_index,
-    uint32 num_faces)
-    : ImageViewBase(image, mip_index, num_mips, face_index, num_faces),
+    uint32 mipIndex,
+    uint32 numMips,
+    uint32 faceIndex,
+    uint32 numFaces)
+    : ImageViewBase(image, mipIndex, numMips, faceIndex, numFaces),
       m_handle(VK_NULL_HANDLE)
 {
 }
@@ -58,39 +56,39 @@ RendererResult VulkanImageView::Create()
         return HYP_MAKE_ERROR(RendererError, "Cannot create image view on uninitialized image");
     }
 
-    if (m_face_index >= m_image->NumFaces())
+    if (m_faceIndex >= m_image->NumFaces())
     {
         return HYP_MAKE_ERROR(RendererError, "Face index out of bounds");
     }
 
-    if (m_mip_index >= m_image->NumMipmaps())
+    if (m_mipIndex >= m_image->NumMipmaps())
     {
         return HYP_MAKE_ERROR(RendererError, "Mip index out of bounds");
     }
 
     AssertThrow(static_cast<const VulkanImage*>(m_image.Get())->GetVulkanHandle() != VK_NULL_HANDLE);
 
-    VkImageViewCreateInfo view_info { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    view_info.image = static_cast<const VulkanImage*>(m_image.Get())->GetVulkanHandle();
-    view_info.viewType = helpers::ToVkImageViewType(m_image->GetType());
-    view_info.format = helpers::ToVkFormat(m_image->GetTextureFormat());
+    VkImageViewCreateInfo viewInfo { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    viewInfo.image = static_cast<const VulkanImage*>(m_image.Get())->GetVulkanHandle();
+    viewInfo.viewType = helpers::ToVkImageViewType(m_image->GetType());
+    viewInfo.format = helpers::ToVkFormat(m_image->GetTextureFormat());
 
-    view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-    view_info.subresourceRange.aspectMask = helpers::ToVkImageAspect(m_image->GetTextureFormat());
-    view_info.subresourceRange.baseMipLevel = m_mip_index;
-    view_info.subresourceRange.levelCount = m_num_mips != 0 ? m_num_mips : m_image->NumMipmaps();
-    view_info.subresourceRange.baseArrayLayer = m_face_index;
-    view_info.subresourceRange.layerCount = m_num_faces != 0 ? m_num_faces : m_image->NumFaces();
+    viewInfo.subresourceRange.aspectMask = helpers::ToVkImageAspect(m_image->GetTextureFormat());
+    viewInfo.subresourceRange.baseMipLevel = m_mipIndex;
+    viewInfo.subresourceRange.levelCount = m_numMips != 0 ? m_numMips : m_image->NumMipmaps();
+    viewInfo.subresourceRange.baseArrayLayer = m_faceIndex;
+    viewInfo.subresourceRange.layerCount = m_numFaces != 0 ? m_numFaces : m_image->NumFaces();
 
-    // AssertThrowMsg(mipmap_layer < num_mipmaps, "mipmap layer out of bounds");
-    // AssertThrowMsg(face_layer < m_num_faces, "face layer out of bounds");
+    // AssertThrowMsg(mipmapLayer < numMipmaps, "mipmap layer out of bounds");
+    // AssertThrowMsg(faceLayer < m_numFaces, "face layer out of bounds");
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateImageView(GetRenderingAPI()->GetDevice()->GetDevice(), &view_info, nullptr, &m_handle),
+        vkCreateImageView(GetRenderBackend()->GetDevice()->GetDevice(), &viewInfo, nullptr, &m_handle),
         "Failed to create image view");
 
     HYPERION_RETURN_OK;
@@ -100,7 +98,7 @@ RendererResult VulkanImageView::Destroy()
 {
     if (m_handle != VK_NULL_HANDLE)
     {
-        vkDestroyImageView(GetRenderingAPI()->GetDevice()->GetDevice(), m_handle, nullptr);
+        vkDestroyImageView(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
 
         m_handle = VK_NULL_HANDLE;
     }
@@ -110,5 +108,4 @@ RendererResult VulkanImageView::Destroy()
 
 #pragma endregion VulkanImageView
 
-} // namespace renderer
 } // namespace hyperion

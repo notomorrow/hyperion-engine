@@ -10,52 +10,52 @@
 
 namespace hyperion {
 
-void AnimationSystem::OnEntityAdded(const Handle<Entity>& entity)
+void AnimationSystem::OnEntityAdded(Entity* entity)
 {
-    const MeshComponent& mesh_component = GetEntityManager().GetComponent<MeshComponent>(entity);
-    InitObject(mesh_component.skeleton);
+    const MeshComponent& meshComponent = GetEntityManager().GetComponent<MeshComponent>(entity);
+    InitObject(meshComponent.skeleton);
 }
 
 void AnimationSystem::Process(float delta)
 {
-    for (auto [entity_id, animation_component, mesh_component] : GetEntityManager().GetEntitySet<AnimationComponent, MeshComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, animationComponent, meshComponent] : GetEntityManager().GetEntitySet<AnimationComponent, MeshComponent>().GetScopedView(GetComponentInfos()))
     {
-        if (!mesh_component.skeleton)
+        if (!meshComponent.skeleton)
         {
             continue;
         }
 
-        AnimationPlaybackState& playback_state = animation_component.playback_state;
+        AnimationPlaybackState& playbackState = animationComponent.playbackState;
 
-        if (playback_state.status == AnimationPlaybackStatus::PLAYING)
+        if (playbackState.status == AnimationPlaybackStatus::PLAYING)
         {
-            if (playback_state.animation_index == ~0u)
+            if (playbackState.animationIndex == ~0u)
             {
-                playback_state = {};
+                playbackState = {};
 
                 continue;
             }
 
-            const Handle<Animation>& animation = mesh_component.skeleton->GetAnimation(playback_state.animation_index);
+            const Handle<Animation>& animation = meshComponent.skeleton->GetAnimation(playbackState.animationIndex);
             AssertThrow(animation.IsValid());
 
-            playback_state.current_time += delta * playback_state.speed;
+            playbackState.currentTime += delta * playbackState.speed;
 
-            if (playback_state.current_time > animation->GetLength())
+            if (playbackState.currentTime > animation->GetLength())
             {
-                playback_state.current_time = 0.0f;
+                playbackState.currentTime = 0.0f;
 
-                if (playback_state.loop_mode == AnimationLoopMode::ONCE)
+                if (playbackState.loopMode == AnimationLoopMode::ONCE)
                 {
-                    playback_state.status = AnimationPlaybackStatus::STOPPED;
-                    playback_state.current_time = 0.0f;
+                    playbackState.status = AnimationPlaybackStatus::STOPPED;
+                    playbackState.currentTime = 0.0f;
                 }
             }
 
-            animation->ApplyBlended(playback_state.current_time, 0.5f);
+            animation->ApplyBlended(playbackState.currentTime, 0.5f);
         }
 
-        mesh_component.skeleton->Update(delta);
+        meshComponent.skeleton->Update(delta);
     }
 }
 

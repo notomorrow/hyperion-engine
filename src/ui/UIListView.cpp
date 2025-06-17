@@ -20,22 +20,23 @@ HYP_DECLARE_LOG_CHANNEL(UI);
 #pragma region UIListViewItem
 
 UIListViewItem::UIListViewItem()
-    : m_expanded_element(nullptr),
-      m_is_selected_item(false),
-      m_is_expanded(false)
+    : m_expandedElement(nullptr),
+      m_isSelectedItem(false),
+      m_isExpanded(false)
 {
     SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
 
-    OnClick.Bind([this](...)
-               {
-                   if (HasSubItems())
-                   {
-                       SetIsExpanded(!IsExpanded());
-                   }
+    OnClick
+        .Bind([this](...)
+            {
+                if (HasSubItems())
+                {
+                    SetIsExpanded(!IsExpanded());
+                }
 
-                   // allow bubbling up to the UIListViewItem parent
-                   return UIEventHandlerResult::OK;
-               })
+                // allow bubbling up to the UIListViewItem parent
+                return UIEventHandlerResult::OK;
+            })
         .Detach();
 }
 
@@ -43,61 +44,61 @@ void UIListViewItem::Init()
 {
     UIObject::Init();
 
-    m_initial_background_color = GetBackgroundColor();
+    m_initialBackgroundColor = GetBackgroundColor();
 }
 
-void UIListViewItem::AddChildUIObject(const Handle<UIObject>& ui_object)
+void UIListViewItem::AddChildUIObject(const Handle<UIObject>& uiObject)
 {
     HYP_SCOPE;
 
-    if (!ui_object)
+    if (!uiObject)
     {
         return;
     }
 
-    if (ui_object->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
-        if (!m_expanded_element)
+        if (!m_expandedElement)
         {
-            Handle<UIListView> expanded_element = CreateUIObject<UIListView>(Vec2i { 10, GetActualSize().y }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
-            expanded_element->SetIsVisible(m_is_expanded);
+            Handle<UIListView> expandedElement = CreateUIObject<UIListView>(Vec2i { 10, GetActualSize().y }, UIObjectSize({ 0, UIObjectSize::AUTO }, { 0, UIObjectSize::AUTO }));
+            expandedElement->SetIsVisible(m_isExpanded);
 
-            UIObject::AddChildUIObject(expanded_element);
+            UIObject::AddChildUIObject(expandedElement);
 
-            m_expanded_element = expanded_element.Get();
+            m_expandedElement = expandedElement.Get();
         }
 
-        m_expanded_element->AddChildUIObject(ui_object);
+        m_expandedElement->AddChildUIObject(uiObject);
 
         return;
     }
 
-    UIObject::AddChildUIObject(ui_object);
+    UIObject::AddChildUIObject(uiObject);
 }
 
-bool UIListViewItem::RemoveChildUIObject(UIObject* ui_object)
+bool UIListViewItem::RemoveChildUIObject(UIObject* uiObject)
 {
     HYP_SCOPE;
 
-    if (!ui_object)
+    if (!uiObject)
     {
         return false;
     }
 
-    if (ui_object->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
-        if (!m_expanded_element)
+        if (!m_expandedElement)
         {
             return false;
         }
 
-        if (m_expanded_element->RemoveChildUIObject(ui_object))
+        if (m_expandedElement->RemoveChildUIObject(uiObject))
         {
             if (!HasSubItems())
             {
-                AssertThrow(UIObject::RemoveChildUIObject(m_expanded_element));
+                AssertThrow(UIObject::RemoveChildUIObject(m_expandedElement));
 
-                m_expanded_element = nullptr;
+                m_expandedElement = nullptr;
             }
 
             return true;
@@ -106,52 +107,52 @@ bool UIListViewItem::RemoveChildUIObject(UIObject* ui_object)
         return false;
     }
 
-    return UIObject::RemoveChildUIObject(ui_object);
+    return UIObject::RemoveChildUIObject(uiObject);
 }
 
 bool UIListViewItem::HasSubItems() const
 {
-    if (!m_expanded_element)
+    if (!m_expandedElement)
     {
         return false;
     }
 
-    return m_expanded_element->HasChildUIObjects();
+    return m_expandedElement->HasChildUIObjects();
 }
 
-void UIListViewItem::SetIsExpanded(bool is_expanded)
+void UIListViewItem::SetIsExpanded(bool isExpanded)
 {
-    if (is_expanded == m_is_expanded)
+    if (isExpanded == m_isExpanded)
     {
         return;
     }
 
-    if (is_expanded && !HasSubItems())
+    if (isExpanded && !HasSubItems())
     {
         // Can't expand if we don't have subitems
         return;
     }
 
-    m_is_expanded = is_expanded;
+    m_isExpanded = isExpanded;
 
-    m_expanded_element->SetIsVisible(m_is_expanded);
+    m_expandedElement->SetIsVisible(m_isExpanded);
 }
 
-void UIListViewItem::SetIsSelectedItem(bool is_selected_item)
+void UIListViewItem::SetIsSelectedItem(bool isSelectedItem)
 {
-    if (is_selected_item == m_is_selected_item)
+    if (isSelectedItem == m_isSelectedItem)
     {
         return;
     }
 
-    m_is_selected_item = is_selected_item;
+    m_isSelectedItem = isSelectedItem;
 
     UpdateMaterial(false);
 }
 
-void UIListViewItem::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state)
+void UIListViewItem::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState)
 {
-    UIObject::SetFocusState_Internal(focus_state);
+    UIObject::SetFocusState_Internal(focusState);
 
     UpdateMaterial(false);
 }
@@ -160,13 +161,13 @@ Material::ParameterTable UIListViewItem::GetMaterialParameters() const
 {
     Color color = GetBackgroundColor();
 
-    const EnumFlags<UIObjectFocusState> focus_state = GetFocusState();
+    const EnumFlags<UIObjectFocusState> focusState = GetFocusState();
 
-    if (m_is_selected_item)
+    if (m_isSelectedItem)
     {
         color = Color(Vec4f { 0.5f, 0.5f, 0.5f, 1.0f });
     }
-    else if (focus_state & UIObjectFocusState::HOVER)
+    else if (focusState & UIObjectFocusState::HOVER)
     {
         color = Color(Vec4f { 0.3f, 0.3f, 0.3f, 1.0f });
     }
@@ -192,14 +193,14 @@ UIListView::UIListView()
 
 UIListView::~UIListView()
 {
-    m_list_view_items.Clear();
+    m_listViewItems.Clear();
 }
 
 void UIListView::Init()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     UIPanel::Init();
 }
@@ -215,93 +216,93 @@ void UIListView::SetOrientation(UIListViewOrientation orientation)
 
     m_orientation = orientation;
 
-    for (UIListViewItem* list_view_item : m_list_view_items)
+    for (UIListViewItem* listViewItem : m_listViewItems)
     {
-        UILockedUpdatesScope scope(*list_view_item, UIObjectUpdateType::UPDATE_SIZE);
+        UILockedUpdatesScope scope(*listViewItem, UIObjectUpdateType::UPDATE_SIZE);
 
         if (m_orientation == UIListViewOrientation::VERTICAL)
         {
-            list_view_item->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+            listViewItem->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
         }
         else
         {
-            list_view_item->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT }));
+            listViewItem->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT }));
         }
     }
 
     SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, true);
 }
 
-void UIListView::AddChildUIObject(const Handle<UIObject>& ui_object)
+void UIListView::AddChildUIObject(const Handle<UIObject>& uiObject)
 {
     HYP_SCOPE;
 
-    if (!ui_object)
+    if (!uiObject)
     {
         return;
     }
 
-    UIObjectSize list_view_item_size;
+    UIObjectSize listViewItemSize;
 
     if (m_orientation == UIListViewOrientation::HORIZONTAL)
     {
-        list_view_item_size = UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT });
+        listViewItemSize = UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT });
     }
     else
     {
-        list_view_item_size = UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO });
+        listViewItemSize = UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO });
     }
 
-    Handle<UIListViewItem> list_view_item;
+    Handle<UIListViewItem> listViewItem;
 
-    if (ui_object->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
-        list_view_item = ui_object.Cast<UIListViewItem>();
-        list_view_item->SetSize(list_view_item_size);
-        m_list_view_items.PushBack(list_view_item);
+        listViewItem = ObjCast<UIListViewItem>(uiObject);
+        listViewItem->SetSize(listViewItemSize);
+        m_listViewItems.PushBack(listViewItem);
 
-        UIObject::AddChildUIObject(ui_object);
+        UIObject::AddChildUIObject(uiObject);
     }
     else
     {
-        list_view_item = CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, list_view_item_size);
-        list_view_item->AddChildUIObject(ui_object);
+        listViewItem = CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, listViewItemSize);
+        listViewItem->AddChildUIObject(uiObject);
 
-        m_list_view_items.PushBack(list_view_item);
+        m_listViewItems.PushBack(listViewItem);
 
-        UIObject::AddChildUIObject(list_view_item);
+        UIObject::AddChildUIObject(listViewItem);
     }
 
     UpdateLayout();
 }
 
-bool UIListView::RemoveChildUIObject(UIObject* ui_object)
+bool UIListView::RemoveChildUIObject(UIObject* uiObject)
 {
     HYP_SCOPE;
 
-    if (!ui_object)
+    if (!uiObject)
     {
         return false;
     }
 
-    if (ui_object->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
-        auto it = m_list_view_items.FindAs(ui_object);
+        auto it = m_listViewItems.FindAs(uiObject);
 
-        if (it != m_list_view_items.End())
+        if (it != m_listViewItems.End())
         {
-            m_list_view_items.Erase(it);
+            m_listViewItems.Erase(it);
         }
     }
 
-    return UIObject::RemoveChildUIObject(ui_object);
+    return UIObject::RemoveChildUIObject(uiObject);
 }
 
-void UIListView::UpdateSize_Internal(bool update_children)
+void UIListView::UpdateSize_Internal(bool updateChildren)
 {
     HYP_SCOPE;
 
-    UIPanel::UpdateSize_Internal(update_children);
+    UIPanel::UpdateSize_Internal(updateChildren);
 
     UpdateLayout();
 }
@@ -310,57 +311,57 @@ void UIListView::UpdateLayout()
 {
     HYP_SCOPE;
 
-    if (m_list_view_items.Empty())
+    if (m_listViewItems.Empty())
     {
         return;
     }
 
-    const Vec2i offset_multiplier = m_orientation == UIListViewOrientation::VERTICAL ? Vec2i { 0, 1 } : Vec2i { 1, 0 };
+    const Vec2i offsetMultiplier = m_orientation == UIListViewOrientation::VERTICAL ? Vec2i { 0, 1 } : Vec2i { 1, 0 };
 
     Vec2i offset;
 
-    for (SizeType i = 0; i < m_list_view_items.Size(); i++)
+    for (SizeType i = 0; i < m_listViewItems.Size(); i++)
     {
-        UIObject* list_view_item = m_list_view_items[i];
+        UIObject* listViewItem = m_listViewItems[i];
 
-        if (!list_view_item)
+        if (!listViewItem)
         {
             continue;
         }
 
         {
-            UILockedUpdatesScope scope(*list_view_item, UIObjectUpdateType::UPDATE_SIZE);
+            UILockedUpdatesScope scope(*listViewItem, UIObjectUpdateType::UPDATE_SIZE);
 
-            list_view_item->SetPosition(offset);
+            listViewItem->SetPosition(offset);
         }
 
-        offset += list_view_item->GetActualSize() * offset_multiplier;
+        offset += listViewItem->GetActualSize() * offsetMultiplier;
     }
 }
 
-void UIListView::SetDataSource_Internal(UIDataSourceBase* data_source)
+void UIListView::SetDataSource_Internal(UIDataSourceBase* dataSource)
 {
     RemoveAllChildUIObjects();
 
-    if (!data_source)
+    if (!dataSource)
     {
         return;
     }
 
     // Add initial elements
-    for (const auto& pair : data_source->GetValues())
+    for (const auto& pair : dataSource->GetValues())
     {
-        AddDataSourceElement(data_source, pair.first, pair.second);
+        AddDataSourceElement(dataSource, pair.first, pair.second);
     }
 
-    m_data_source_on_element_add_handler = data_source->OnElementAdd.Bind([this, data_source](UIDataSourceBase* data_source_ptr, UIDataSourceElement* element, UIDataSourceElement* parent)
+    m_dataSourceOnElementAddHandler = dataSource->OnElementAdd.Bind([this, dataSource](UIDataSourceBase* dataSourcePtr, UIDataSourceElement* element, UIDataSourceElement* parent)
         {
             HYP_NAMED_SCOPE("Add element from data source to list view");
 
-            AddDataSourceElement(data_source_ptr, element, parent);
+            AddDataSourceElement(dataSourcePtr, element, parent);
         });
 
-    m_data_source_on_element_remove_handler = data_source->OnElementRemove.Bind([this](UIDataSourceBase* data_source_ptr, UIDataSourceElement* element, UIDataSourceElement* parent)
+    m_dataSourceOnElementRemoveHandler = dataSource->OnElementRemove.Bind([this](UIDataSourceBase* dataSourcePtr, UIDataSourceElement* element, UIDataSourceElement* parent)
         {
             HYP_NAMED_SCOPE("Remove element from data source from list view");
 
@@ -370,20 +371,20 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase* data_source)
                 SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE);
             });
 
-            UIListViewItem* list_view_item = FindListViewItem(element->GetUUID());
+            UIListViewItem* listViewItem = FindListViewItem(element->GetUUID());
 
-            if (list_view_item)
+            if (listViewItem)
             {
                 // If the item is selected, deselect it
-                if (Handle<UIListViewItem> selected_item = m_selected_item.Lock(); list_view_item == selected_item.Get())
+                if (Handle<UIListViewItem> selectedItem = m_selectedItem.Lock(); listViewItem == selectedItem.Get())
                 {
-                    selected_item->SetIsSelectedItem(false);
-                    m_selected_item.Reset();
+                    selectedItem->SetIsSelectedItem(false);
+                    m_selectedItem.Reset();
 
                     OnSelectedItemChange(nullptr);
                 }
 
-                if (list_view_item->RemoveFromParent())
+                if (listViewItem->RemoveFromParent())
                 {
                     return;
                 }
@@ -392,17 +393,17 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase* data_source)
             HYP_LOG(UI, Warning, "Failed to remove list view item with data source element UUID {}", element->GetUUID());
         });
 
-    m_data_source_on_element_update_handler = data_source->OnElementUpdate.Bind([this, data_source](UIDataSourceBase* data_source_ptr, UIDataSourceElement* element, UIDataSourceElement* parent)
+    m_dataSourceOnElementUpdateHandler = dataSource->OnElementUpdate.Bind([this, dataSource](UIDataSourceBase* dataSourcePtr, UIDataSourceElement* element, UIDataSourceElement* parent)
         {
             HYP_NAMED_SCOPE("Update element from data source in list view");
 
             HYP_LOG(UI, Info, "Updating element {}", element->GetUUID().ToString());
 
-            if (const UIListViewItem* list_view_item = FindListViewItem(element->GetUUID()))
+            if (const UIListViewItem* listViewItem = FindListViewItem(element->GetUUID()))
             {
-                if (Handle<UIObject> ui_object = list_view_item->GetChildUIObject(0))
+                if (Handle<UIObject> uiObject = listViewItem->GetChildUIObject(0))
                 {
-                    data_source->UpdateUIObject(ui_object.Get(), element->GetValue(), {});
+                    dataSource->UpdateUIObject(uiObject.Get(), element->GetValue(), {});
                 }
                 else
                 {
@@ -416,33 +417,32 @@ void UIListView::SetDataSource_Internal(UIDataSourceBase* data_source)
         });
 }
 
-UIListViewItem* UIListView::FindListViewItem(const UUID& data_source_element_uuid) const
+UIListViewItem* UIListView::FindListViewItem(const UUID& dataSourceElementUuid) const
 {
-    return FindListViewItem(this, data_source_element_uuid);
+    return FindListViewItem(this, dataSourceElementUuid);
 }
 
-UIListViewItem* UIListView::FindListViewItem(const UIObject* parent_object, const UUID& data_source_element_uuid)
+UIListViewItem* UIListView::FindListViewItem(const UIObject* parentObject, const UUID& dataSourceElementUuid)
 {
-    if (!parent_object)
+    if (!parentObject)
     {
         return nullptr;
     }
 
-    UIListViewItem* result_ptr = nullptr;
+    UIListViewItem* resultPtr = nullptr;
 
-    parent_object->ForEachChildUIObject_Proc([&data_source_element_uuid, &result_ptr](UIObject* object)
+    parentObject->ForEachChildUIObject_Proc([&dataSourceElementUuid, &resultPtr](UIObject* object)
         {
-            if (object->IsInstanceOf<UIListViewItem>() && object->GetDataSourceElementUUID() == data_source_element_uuid)
+            if (object->IsA<UIListViewItem>() && object->GetDataSourceElementUUID() == dataSourceElementUuid)
             {
-                result_ptr = dynamic_cast<UIListViewItem*>(object);
-                AssertThrow(result_ptr != nullptr);
+                resultPtr = ObjCast<UIListViewItem>(object);
 
                 return IterationResult::STOP;
             }
 
-            if (UIListViewItem* result = FindListViewItem(object, data_source_element_uuid))
+            if (UIListViewItem* result = FindListViewItem(object, dataSourceElementUuid))
             {
-                result_ptr = result;
+                resultPtr = result;
 
                 return IterationResult::STOP;
             }
@@ -451,43 +451,44 @@ UIListViewItem* UIListView::FindListViewItem(const UIObject* parent_object, cons
         },
         false);
 
-    return result_ptr;
+    return resultPtr;
 }
 
-void UIListView::AddDataSourceElement(UIDataSourceBase* data_source, UIDataSourceElement* element, UIDataSourceElement* parent)
+void UIListView::AddDataSourceElement(UIDataSourceBase* dataSource, UIDataSourceElement* element, UIDataSourceElement* parent)
 {
     UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
 
-    Handle<UIListViewItem> list_view_item = CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-    list_view_item->SetNodeTag(NodeTag(NAME("DataSourceElementUUID"), element->GetUUID()));
-    list_view_item->SetDataSourceElementUUID(element->GetUUID());
+    Handle<UIListViewItem> listViewItem = CreateUIObject<UIListViewItem>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+    listViewItem->SetNodeTag(NodeTag(NAME("DataSourceElementUUID"), element->GetUUID()));
+    listViewItem->SetDataSourceElementUUID(element->GetUUID());
 
-    list_view_item->OnClick.Bind([this, list_view_item_weak = list_view_item.ToWeak()](const MouseEvent& event) -> UIEventHandlerResult
-                               {
-                                   Handle<UIListViewItem> list_view_item = list_view_item_weak.Lock();
+    listViewItem->OnClick
+        .Bind([this, listViewItemWeak = listViewItem.ToWeak()](const MouseEvent& event) -> UIEventHandlerResult
+            {
+                Handle<UIListViewItem> listViewItem = listViewItemWeak.Lock();
 
-                                   if (!list_view_item)
-                                   {
-                                       return UIEventHandlerResult::ERR;
-                                   }
+                if (!listViewItem)
+                {
+                    return UIEventHandlerResult::ERR;
+                }
 
-                                   SetSelectedItem(list_view_item.Get());
+                SetSelectedItem(listViewItem.Get());
 
-                                   return UIEventHandlerResult::STOP_BUBBLING;
-                               })
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
         .Detach();
 
     // create UIObject for the element and add it to the list view
-    list_view_item->AddChildUIObject(data_source->CreateUIObject(list_view_item, element->GetValue(), {}));
+    listViewItem->AddChildUIObject(dataSource->CreateUIObject(listViewItem, element->GetValue(), {}));
 
     if (parent)
     {
         // Child element - Find the parent
-        UIListViewItem* parent_list_view_item = FindListViewItem(parent->GetUUID());
+        UIListViewItem* parentListViewItem = FindListViewItem(parent->GetUUID());
 
-        if (parent_list_view_item)
+        if (parentListViewItem)
         {
-            parent_list_view_item->AddChildUIObject(list_view_item);
+            parentListViewItem->AddChildUIObject(listViewItem);
 
             SetDeferredUpdate(UIObjectUpdateType::UPDATE_SIZE, true);
 
@@ -500,84 +501,82 @@ void UIListView::AddDataSourceElement(UIDataSourceBase* data_source, UIDataSourc
     }
 
     // add the list view item to the list view
-    AddChildUIObject(list_view_item);
+    AddChildUIObject(listViewItem);
 }
 
 void UIListView::SetSelectedItemIndex(int index)
 {
     HYP_SCOPE;
 
-    if (index < 0 || index >= m_list_view_items.Size())
+    if (index < 0 || index >= m_listViewItems.Size())
     {
         return;
     }
 
-    UIListViewItem* list_view_item = m_list_view_items[index];
+    UIListViewItem* listViewItem = m_listViewItems[index];
 
-    if (m_selected_item.GetUnsafe() == list_view_item)
+    if (m_selectedItem.GetUnsafe() == listViewItem)
     {
         return;
     }
 
-    if (Handle<UIListViewItem> selected_item = m_selected_item.Lock())
+    if (Handle<UIListViewItem> selectedItem = m_selectedItem.Lock())
     {
-        selected_item->SetIsSelectedItem(false);
+        selectedItem->SetIsSelectedItem(false);
     }
 
-    list_view_item->SetIsSelectedItem(true);
+    listViewItem->SetIsSelectedItem(true);
 
-    m_selected_item = WeakHandle<UIListViewItem>(list_view_item->WeakHandleFromThis());
+    m_selectedItem = listViewItem->WeakHandleFromThis();
 
-    OnSelectedItemChange(list_view_item);
+    OnSelectedItemChange(listViewItem);
 }
 
-void UIListView::SetSelectedItem(UIListViewItem* list_view_item)
+void UIListView::SetSelectedItem(UIListViewItem* listViewItem)
 {
     HYP_SCOPE;
 
-    if (m_selected_item.GetUnsafe() == list_view_item)
+    if (m_selectedItem.GetUnsafe() == listViewItem)
     {
         return;
     }
 
     // List view item must have this as a parent
-    if (!list_view_item || !list_view_item->IsOrHasParent(this))
+    if (!listViewItem || !listViewItem->IsOrHasParent(this))
     {
         SetSelectedItemIndex(-1);
 
         return;
     }
 
-    if (Handle<UIListViewItem> selected_item = m_selected_item.Lock())
+    if (Handle<UIListViewItem> selectedItem = m_selectedItem.Lock())
     {
-        selected_item->SetIsSelectedItem(false);
+        selectedItem->SetIsSelectedItem(false);
     }
 
-    if (!list_view_item->HasFocus())
+    if (!listViewItem->HasFocus())
     {
-        list_view_item->Focus();
+        listViewItem->Focus();
     }
 
-    list_view_item->SetIsSelectedItem(true);
+    listViewItem->SetIsSelectedItem(true);
 
-    if (list_view_item->GetParentUIObject() != this)
+    if (listViewItem->GetParentUIObject() != this)
     {
         // Iterate until we reach this
-        UIObject* parent = list_view_item->GetParentUIObject();
+        UIObject* parent = listViewItem->GetParentUIObject();
 
-        bool is_expanded = false;
+        bool isExpanded = false;
 
         while (parent != nullptr && parent != this)
         {
-            if (parent->IsInstanceOf<UIListViewItem>())
+            if (UIListViewItem* parentListViewItem = ObjCast<UIListViewItem>(parent))
             {
-                UIListViewItem* parent_list_view_item = static_cast<UIListViewItem*>(parent);
-
-                if (!parent_list_view_item->IsExpanded())
+                if (!parentListViewItem->IsExpanded())
                 {
-                    parent_list_view_item->SetIsExpanded(true);
+                    parentListViewItem->SetIsExpanded(true);
 
-                    is_expanded = true;
+                    isExpanded = true;
                 }
             }
 
@@ -585,17 +584,17 @@ void UIListView::SetSelectedItem(UIListViewItem* list_view_item)
         }
 
         // Force update of the list view and children after expanding items.
-        if (is_expanded)
+        if (isExpanded)
         {
             UpdateSize();
         }
     }
 
-    ScrollToChild(list_view_item);
+    ScrollToChild(listViewItem);
 
-    m_selected_item = WeakHandle<UIListViewItem>(list_view_item->WeakHandleFromThis());
+    m_selectedItem = listViewItem->WeakHandleFromThis();
 
-    OnSelectedItemChange(list_view_item);
+    OnSelectedItemChange(listViewItem);
 }
 
 #pragma region UIListView

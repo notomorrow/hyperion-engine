@@ -23,26 +23,26 @@ class RenderView;
 HYP_STRUCT(ConfigName = "app", JSONPath = "rendering.ssr")
 struct SSRRendererConfig : public ConfigBase<SSRRendererConfig>
 {
-    HYP_FIELD(Description = "The quality level of the SSR effect. (0 = low, 1 = medium, 2 = high)")
+    HYP_FIELD(Description = "The quality level of the SSR effect. (0 = low, 1 = medium, 2 = high)", JSONPath = "quality")
     int quality = 2;
 
-    HYP_FIELD(Description = "Enables scattering of rays based on the roughness of the surface. May cause artifacts due to temporal instability.")
-    bool roughness_scattering = true;
+    HYP_FIELD(Description = "Enables scattering of rays based on the roughness of the surface. May cause artifacts due to temporal instability.", JSONPath = "roughness_scattering")
+    bool roughnessScattering = true;
 
-    HYP_FIELD(Description = "Enables cone tracing for the SSR effect. Causes the result to become blurrier based on distance of the reflection.")
-    bool cone_tracing = false;
+    HYP_FIELD(Description = "Enables cone tracing for the SSR effect. Causes the result to become blurrier based on distance of the reflection.", JSONPath = "cone_tracing")
+    bool coneTracing = false;
 
-    HYP_FIELD(Description = "The distance between rays when tracing the SSR effect.")
-    float ray_step = 3.2f;
+    HYP_FIELD(Description = "The distance between rays when tracing the SSR effect.", JSONPath = "ray_step")
+    float rayStep = 3.2f;
 
-    HYP_FIELD(Description = "The maximum number of iterations to perform for the SSR effect before stopping.")
-    uint32 num_iterations = 64;
+    HYP_FIELD(Description = "The maximum number of iterations to perform for the SSR effect before stopping.", JSONPath = "num_iterations")
+    uint32 numIterations = 64;
 
-    HYP_FIELD(Description = "Where to start and end fading the SSR effect based on the eye vector.")
-    Vec2f eye_fade = { 0.98f, 0.99f };
+    HYP_FIELD(Description = "Where to start and end fading the SSR effect based on the eye vector.", JSONPath = "eye_fade")
+    Vec2f eyeFade = { 0.98f, 0.99f };
 
-    HYP_FIELD(Description = "Where to start and end fading the SSR effect based on the screen edges.")
-    Vec2f screen_edge_fade = { 0.96f, 0.99f };
+    HYP_FIELD(Description = "Where to start and end fading the SSR effect based on the screen edges.", JSONPath = "screen_edge_fade")
+    Vec2f screenEdgeFade = { 0.96f, 0.99f };
 
     HYP_FIELD(JSONIgnore)
     Vec2u extent;
@@ -52,8 +52,8 @@ struct SSRRendererConfig : public ConfigBase<SSRRendererConfig>
     bool Validate() const
     {
         return extent.x * extent.y != 0
-            && ray_step > 0.0f
-            && num_iterations > 0;
+            && rayStep > 0.0f
+            && numIterations > 0;
     }
 
     void PostLoadCallback()
@@ -80,30 +80,30 @@ public:
     SSRRenderer(
         SSRRendererConfig&& config,
         GBuffer* gbuffer,
-        const ImageViewRef& mip_chain_image_view,
-        const ImageViewRef& deferred_result_image_view);
+        const ImageViewRef& mipChainImageView,
+        const ImageViewRef& deferredResultImageView);
     ~SSRRenderer();
 
     HYP_FORCE_INLINE const Handle<Texture>& GetUVsTexture() const
     {
-        return m_uvs_texture;
+        return m_uvsTexture;
     }
 
     HYP_FORCE_INLINE const Handle<Texture>& GetSampledResultTexture() const
     {
-        return m_sampled_result_texture;
+        return m_sampledResultTexture;
     }
 
     const Handle<Texture>& GetFinalResultTexture() const;
 
     HYP_FORCE_INLINE bool IsRendered() const
     {
-        return m_is_rendered;
+        return m_isRendered;
     }
 
     void Create();
 
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     ShaderProperties GetShaderProperties() const;
@@ -116,22 +116,22 @@ private:
 
     GBuffer* m_gbuffer;
 
-    ImageViewRef m_mip_chain_image_view;
-    ImageViewRef m_deferred_result_image_view;
+    ImageViewRef m_mipChainImageView;
+    ImageViewRef m_deferredResultImageView;
 
-    Handle<Texture> m_uvs_texture;
-    Handle<Texture> m_sampled_result_texture;
+    Handle<Texture> m_uvsTexture;
+    Handle<Texture> m_sampledResultTexture;
 
-    GPUBufferRef m_uniform_buffer;
+    GpuBufferRef m_uniformBuffer;
 
-    ComputePipelineRef m_write_uvs;
-    ComputePipelineRef m_sample_gbuffer;
+    ComputePipelineRef m_writeUvs;
+    ComputePipelineRef m_sampleGbuffer;
 
-    UniquePtr<TemporalBlending> m_temporal_blending;
+    UniquePtr<TemporalBlending> m_temporalBlending;
 
-    DelegateHandler m_on_gbuffer_resolution_changed;
+    DelegateHandler m_onGbufferResolutionChanged;
 
-    bool m_is_rendered;
+    bool m_isRendered;
 };
 
 } // namespace hyperion

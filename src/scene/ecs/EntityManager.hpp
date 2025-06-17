@@ -30,7 +30,7 @@
 #include <core/profiling/PerformanceClock.hpp>
 
 #include <core/Handle.hpp>
-#include <core/ID.hpp>
+#include <core/object/ObjId.hpp>
 
 #include <scene/Entity.hpp>
 #include <scene/ecs/EntitySet.hpp>
@@ -59,29 +59,20 @@ enum class EntityManagerFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(EntityManagerFlags)
 
-enum class EntityManagerCommandQueueFlags : uint32
-{
-    NONE = 0x0,
-    EXEC_COMMANDS = 0x1,
-
-    DEFAULT = EXEC_COMMANDS
-};
-
-HYP_MAKE_ENUM_FLAGS(EntityManagerCommandQueueFlags)
-
 class World;
 class Scene;
 struct HypData;
+class Node;
 
-static constexpr uint32 g_move_entity_write_flag = 0x1u;
-static constexpr uint32 g_move_entity_read_mask = ~0u << 1;
+static constexpr uint32 g_moveEntityWriteFlag = 0x1u;
+static constexpr uint32 g_moveEntityReadMask = ~0u << 1;
 
 /*! \brief A group of Systems that are able to be processed concurrently, as they do not share any dependencies.
  */
 class HYP_API SystemExecutionGroup
 {
 public:
-    SystemExecutionGroup(bool requires_game_thread = false, bool allow_update = true);
+    SystemExecutionGroup(bool requiresGameThread = false, bool allowUpdate = true);
     SystemExecutionGroup(const SystemExecutionGroup&) = delete;
     SystemExecutionGroup& operator=(const SystemExecutionGroup&) = delete;
     SystemExecutionGroup(SystemExecutionGroup&&) noexcept = default;
@@ -90,12 +81,12 @@ public:
 
     HYP_FORCE_INLINE bool RequiresGameThread() const
     {
-        return m_requires_game_thread;
+        return m_requiresGameThread;
     }
 
     HYP_FORCE_INLINE bool AllowUpdate() const
     {
-        return m_allow_update;
+        return m_allowUpdate;
     }
 
     HYP_FORCE_INLINE TypeMap<Handle<SystemBase>>& GetSystems()
@@ -110,57 +101,57 @@ public:
 
     HYP_FORCE_INLINE TaskBatch* GetTaskBatch() const
     {
-        return m_task_batch.Get();
+        return m_taskBatch.Get();
     }
 
 #ifdef HYP_DEBUG_MODE
     HYP_FORCE_INLINE const PerformanceClock& GetPerformanceClock() const
     {
-        return m_performance_clock;
+        return m_performanceClock;
     }
 
     HYP_FORCE_INLINE const FlatMap<SystemBase*, PerformanceClock>& GetPerformanceClocks() const
     {
-        return m_performance_clocks;
+        return m_performanceClocks;
     }
 #endif
 
     /*! \brief Checks if the SystemExecutionGroup is valid for the given System.
      *
-     *  \param[in] system_ptr The System to check.
+     *  \param[in] systemPtr The System to check.
      *
      *  \return True if the SystemExecutionGroup is valid for the given System, false otherwise.
      */
-    bool IsValidForSystem(const SystemBase* system_ptr) const
+    bool IsValidForSystem(const SystemBase* systemPtr) const
     {
-        AssertThrow(system_ptr != nullptr);
+        AssertThrow(systemPtr != nullptr);
 
         // If the system does not allow update calls, and we don't as well, return true as there will be no overlap.
         if (!AllowUpdate())
         {
-            return !system_ptr->AllowUpdate();
+            return !systemPtr->AllowUpdate();
         }
 
         // If the system requires to execute on game thread and the SystemExecutionGroup does not, it is not valid
         // and if the system does not require to execute on game thread and the SystemExecutionGroup does, it is not valid (it could be better parallelized)
-        if (system_ptr->RequiresGameThread() != RequiresGameThread())
+        if (systemPtr->RequiresGameThread() != RequiresGameThread())
         {
             return false;
         }
 
-        const Array<TypeID>& component_type_ids = system_ptr->GetComponentTypeIDs();
+        const Array<TypeId>& componentTypeIds = systemPtr->GetComponentTypeIds();
 
         for (const auto& it : m_systems)
         {
-            const SystemBase* other_system = it.second.Get();
+            const SystemBase* otherSystem = it.second.Get();
 
-            for (TypeID component_type_id : component_type_ids)
+            for (TypeId componentTypeId : componentTypeIds)
             {
-                const ComponentInfo& component_info = system_ptr->GetComponentInfo(component_type_id);
+                const ComponentInfo& componentInfo = systemPtr->GetComponentInfo(componentTypeId);
 
-                if (component_info.rw_flags & COMPONENT_RW_FLAGS_WRITE)
+                if (componentInfo.rwFlags & COMPONENT_RW_FLAGS_WRITE)
                 {
-                    if (other_system->HasComponentTypeID(component_type_id, true))
+                    if (otherSystem->HasComponentTypeId(componentTypeId, true))
                     {
                         return false;
                     }
@@ -168,7 +159,7 @@ public:
                 else
                 {
                     // This System is read-only for this component, so it can be processed with other Systems
-                    if (other_system->HasComponentTypeID(component_type_id, false))
+                    if (otherSystem->HasComponentTypeId(componentTypeId, false))
                     {
                         return false;
                     }
@@ -188,9 +179,9 @@ public:
     template <class SystemType>
     HYP_FORCE_INLINE bool HasSystem() const
     {
-        static const TypeID type_id = TypeID::ForType<SystemType>();
+        static const TypeId typeId = TypeId::ForType<SystemType>();
 
-        return m_systems.Find(type_id) != m_systems.End();
+        return m_systems.Find(typeId) != m_systems.End();
     }
 
     /*! \brief Adds a System to the SystemExecutionGroup.
@@ -202,27 +193,27 @@ public:
         AssertThrow(system.IsValid());
         AssertThrowMsg(IsValidForSystem(system.Get()), "System is not valid for this SystemExecutionGroup");
 
-        auto it = m_systems.Find(system->GetTypeID());
+        auto it = m_systems.Find(system->GetTypeId());
         AssertThrowMsg(it == m_systems.End(), "System already exists");
 
-        auto insert_result = m_systems.Set(system->GetTypeID(), system);
+        auto insertResult = m_systems.Set(system->GetTypeId(), system);
 
-        return insert_result.first->second;
+        return insertResult.first->second;
     }
 
     template <class SystemType>
     Handle<SystemType> GetSystem() const
     {
-        static const TypeID type_id = TypeID::ForType<SystemType>();
+        static const TypeId typeId = TypeId::ForType<SystemType>();
 
-        const auto it = m_systems.Find(type_id);
+        const auto it = m_systems.Find(typeId);
 
         if (it == m_systems.End() || !it->second.IsValid())
         {
             return Handle<SystemType>::empty;
         }
 
-        if (!IsInstanceOfHypClass<SystemType>(*it->second))
+        if (!IsA<SystemType>(*it->second))
         {
             HYP_BREAKPOINT;
             return Handle<SystemType>::empty;
@@ -240,166 +231,38 @@ public:
     template <class SystemType>
     bool RemoveSystem()
     {
-        static const TypeID type_id = TypeID::ForType<SystemType>();
+        static const TypeId typeId = TypeId::ForType<SystemType>();
 
-        return m_systems.Erase(type_id);
+        return m_systems.Erase(typeId);
     }
 
     /*! \brief Start processing all Systems in the SystemExecutionGroup.
      *
      *  \param[in] delta The delta time value
      */
-    void StartProcessing(GameCounter::TickUnit delta);
+    void StartProcessing(float delta);
 
     /*! \brief Waits on all processing tasks to complete */
-    void FinishProcessing(bool execute_blocking = false);
+    void FinishProcessing(bool executeBlocking = false);
 
 private:
-    bool m_requires_game_thread;
-    bool m_allow_update;
+    bool m_requiresGameThread;
+    bool m_allowUpdate;
 
     TypeMap<Handle<SystemBase>> m_systems;
-    UniquePtr<TaskBatch> m_task_batch;
+    UniquePtr<TaskBatch> m_taskBatch;
 
 #ifdef HYP_DEBUG_MODE
-    PerformanceClock m_performance_clock;
-    FlatMap<SystemBase*, PerformanceClock> m_performance_clocks;
+    PerformanceClock m_performanceClock;
+    FlatMap<SystemBase*, PerformanceClock> m_performanceClocks;
 #endif
 };
 
 class EntityManager;
-
-using EntityManagerCommandProc = Proc<void(EntityManager& mgr, GameCounter::TickUnit delta)>;
-
-class HYP_API EntityManagerCommandQueue
-{
-public:
-    EntityManagerCommandQueue(EnumFlags<EntityManagerCommandQueueFlags> flags = EntityManagerCommandQueueFlags::DEFAULT);
-    EntityManagerCommandQueue(const EntityManagerCommandQueue&) = delete;
-    EntityManagerCommandQueue& operator=(const EntityManagerCommandQueue&) = delete;
-    EntityManagerCommandQueue(EntityManagerCommandQueue&&) noexcept = delete;
-    EntityManagerCommandQueue& operator=(EntityManagerCommandQueue&&) noexcept = delete;
-    ~EntityManagerCommandQueue() = default;
-
-    HYP_FORCE_INLINE EnumFlags<EntityManagerCommandQueueFlags> GetFlags() const
-    {
-        return m_flags;
-    }
-
-    HYP_FORCE_INLINE void SetFlags(EnumFlags<EntityManagerCommandQueueFlags> flags)
-    {
-        m_flags = flags;
-    }
-
-    HYP_FORCE_INLINE bool HasUpdates() const
-    {
-        return m_count.Get(MemoryOrder::ACQUIRE) != 0;
-    }
-
-    /*! \brief Waits for the command queue to be empty.
-     *  Useful for ensuring that all commands have been processed before continuing. */
-    void AwaitEmpty();
-
-    void Push(EntityManagerCommandProc&& command);
-    void Execute(EntityManager& mgr, GameCounter::TickUnit delta);
-
-private:
-    struct EntityManagerCommandBuffer
-    {
-        Queue<EntityManagerCommandProc> commands;
-        std::mutex mutex;
-    };
-
-    EnumFlags<EntityManagerCommandQueueFlags> m_flags;
-    FixedArray<EntityManagerCommandBuffer, 2> m_command_buffers;
-    AtomicVar<uint32> m_buffer_index { 0 };
-    AtomicVar<uint32> m_count { 0 };
-    std::condition_variable m_condition_variable;
-};
-
-class EntityToEntityManagerMap
-{
-public:
-    HYP_FORCE_INLINE void Add(ID<Entity> entity_id, const WeakHandle<EntityManager>& entity_manager)
-    {
-        Mutex::Guard guard(m_mutex);
-
-#ifdef HYP_DEBUG_MODE
-        const auto it = m_map.Find(entity_id);
-        AssertThrowMsg(it == m_map.End(), "Entity already added to Entity -> EntityManager mapping!");
-#endif
-
-        m_map.Set(entity_id, entity_manager);
-    }
-
-    HYP_FORCE_INLINE void Remove(ID<Entity> entity_id)
-    {
-        Mutex::Guard guard(m_mutex);
-
-        const auto it = m_map.Find(entity_id);
-        AssertThrowMsg(it != m_map.End(), "Entity -> EntityManager mapping does not exist!");
-
-        m_map.Erase(it);
-    }
-
-    HYP_FORCE_INLINE Handle<EntityManager> GetEntityManager(ID<Entity> entity_id) const
-    {
-        Mutex::Guard guard(m_mutex);
-
-        const auto it = m_map.Find(entity_id);
-
-        if (it == m_map.End())
-        {
-            return Handle<EntityManager>::empty;
-        }
-
-        return it->second.Lock();
-    }
-
-    HYP_FORCE_INLINE void RemoveEntityManager(EntityManager* entity_manager)
-    {
-        Mutex::Guard guard(m_mutex);
-
-        Array<ID<Entity>> keys_to_remove;
-
-        for (auto& it : m_map)
-        {
-            if (it.second.GetUnsafe() == entity_manager)
-            {
-                keys_to_remove.PushBack(it.first);
-            }
-        }
-
-        for (const ID<Entity>& entity_id : keys_to_remove)
-        {
-            m_map.Erase(entity_id);
-        }
-    }
-
-    HYP_FORCE_INLINE void Remap(ID<Entity> entity_id, const WeakHandle<EntityManager>& new_entity_manager)
-    {
-        Mutex::Guard guard(m_mutex);
-
-        const auto it = m_map.Find(entity_id);
-        AssertThrowMsg(it != m_map.End(), "Entity -> EntityManager mapping does not exist!");
-
-        it->second = new_entity_manager;
-    }
-
-    HYP_API void ForEachEntityManager(ProcRef<void(EntityManager*)> proc) const;
-    HYP_API void PerformActionWithEntity_FireAndForget(ID<Entity> entity_id, Proc<void(EntityManager*, ID<Entity>)>&& callback);
-
-private:
-    HashMap<ID<Entity>, WeakHandle<EntityManager>> m_map;
-    mutable Mutex m_mutex;
-};
-
 /*! \brief The EntityManager is responsible for managing Entities, their components, and Systems within a Scene. */
 HYP_CLASS()
 class HYP_API EntityManager final : public HypObject<EntityManager>
 {
-    static EntityToEntityManagerMap s_entity_to_entity_manager_map;
-
     HYP_OBJECT_BODY(EntityManager);
 
     friend class EntityToEntityManagerMap;
@@ -407,73 +270,55 @@ class HYP_API EntityManager final : public HypObject<EntityManager>
     // Allow Entity destructor to call RemoveEntity().
     friend class Entity;
 
-    // Prevents an Entity from being moved while it is being processed on another thread.
-    // When an Entity is being moved from one EntityManager to another, the g_move_entity_write_flag is set.
-    // This prevents any other thread from reading the EntityManager while it is being moved.
-    struct MoveEntityGuard
-    {
-        const EntityManager& m_entity_manager;
-
-        MoveEntityGuard(const EntityManager& entity_manager)
-            : m_entity_manager(entity_manager)
-        {
-            uint64 state;
-            while (((state = m_entity_manager.m_move_entity_rw_mask.Increment(2, MemoryOrder::ACQUIRE)) & g_move_entity_write_flag))
-            {
-                m_entity_manager.m_move_entity_rw_mask.Decrement(2, MemoryOrder::RELAXED);
-                // wait for write flag to be released
-                Threads::Sleep(0);
-            }
-        }
-
-        ~MoveEntityGuard()
-        {
-            m_entity_manager.m_move_entity_rw_mask.Decrement(2, MemoryOrder::RELEASE);
-        }
-    };
-
 public:
-    static constexpr ComponentID invalid_component_id = 0;
+    static constexpr ComponentId invalidComponentId = 0;
 
-    EntityManager(const ThreadID& owner_thread_id, Scene* scene, EnumFlags<EntityManagerFlags> flags = EntityManagerFlags::DEFAULT);
+    EntityManager(const ThreadId& ownerThreadId, Scene* scene, EnumFlags<EntityManagerFlags> flags = EntityManagerFlags::DEFAULT);
     EntityManager(const EntityManager&) = delete;
     EntityManager& operator=(const EntityManager&) = delete;
     EntityManager(EntityManager&&) noexcept = delete;
     EntityManager& operator=(EntityManager&&) noexcept = delete;
     ~EntityManager();
 
-    static EntityToEntityManagerMap& GetEntityToEntityManagerMap();
-
     template <class Component>
     static bool IsValidComponentType()
     {
-        return IsValidComponentType(TypeID::ForType<Component>());
+        return IsValidComponentType(TypeId::ForType<Component>());
     }
 
-    static bool IsValidComponentType(TypeID component_type_id);
+    static bool IsValidComponentType(TypeId componentTypeId);
 
     template <class Component>
     static bool IsEntityTagComponent()
     {
-        return IsEntityTagComponent(TypeID::ForType<Component>());
+        return IsEntityTagComponent(TypeId::ForType<Component>());
     }
 
-    static bool IsEntityTagComponent(TypeID component_type_id);
+    static bool IsEntityTagComponent(TypeId componentTypeId);
+    static bool IsEntityTagComponent(TypeId componentTypeId, EntityTag& outTag);
+
+    template <class Component>
+    static ANSIStringView GetComponentTypeName()
+    {
+        return GetComponentTypeName(TypeId::ForType<Component>());
+    }
+
+    static ANSIStringView GetComponentTypeName(TypeId componentTypeId);
 
     /*! \brief Gets the thread mask of the thread that owns this EntityManager.
      *
      *  \return The thread mask.
      */
-    HYP_FORCE_INLINE const ThreadID& GetOwnerThreadID() const
+    HYP_FORCE_INLINE const ThreadId& GetOwnerThreadId() const
     {
-        return m_owner_thread_id;
+        return m_ownerThreadId;
     }
 
     /*! \brief Sets the thread mask of the thread that owns this EntityManager.
      *  \internal This is used by the Scene to set the thread mask of the Scene's thread. It should not be called from user code. */
-    HYP_FORCE_INLINE void SetOwnerThreadID(const ThreadID& owner_thread_id)
+    HYP_FORCE_INLINE void SetOwnerThreadId(const ThreadId& ownerThreadId)
     {
-        m_owner_thread_id = owner_thread_id;
+        m_ownerThreadId = ownerThreadId;
     }
 
     /*! \brief Gets the World that this EntityManager is associated with.
@@ -498,24 +343,6 @@ public:
         return m_scene;
     }
 
-    /*! \brief Gets the command queue for this EntityManager.
-     *
-     *  \return Reference to the command queue.
-     */
-    HYP_FORCE_INLINE EntityManagerCommandQueue& GetCommandQueue()
-    {
-        return m_command_queue;
-    }
-
-    /*! \brief Gets the command queue for this EntityManager.
-     *
-     *  \return Reference to the command queue.
-     */
-    HYP_FORCE_INLINE const EntityManagerCommandQueue& GetCommandQueue() const
-    {
-        return m_command_queue;
-    }
-
     HYP_FORCE_INLINE EntityContainer& GetEntities()
     {
         return m_entities;
@@ -530,12 +357,41 @@ public:
      *  \note Must be called from the owner thread.
      *
      *  \return The Entity that was added. */
-    HYP_METHOD()
-    HYP_NODISCARD Handle<Entity> AddEntity();
+    HYP_FORCE_INLINE Handle<Entity> AddEntity()
+    {
+        return AddBasicEntity();
+    }
+
+    /*! \brief Adds a new entity to the EntityManager.
+     *  \note Must be called from the owner thread.
+     *
+     *  \tparam T The type of the Entity to add. Must be a subclass of Entity.
+     * 
+     *  \param [in] args The arguments to pass to the Entity constructor.
+     *
+     *  \return The Entity that was added. */
+    template <class T, class... Args>
+    HYP_NODISCARD HYP_FORCE_INLINE Handle<T> AddEntity(Args&&... args)
+    {
+        static_assert(std::is_base_of_v<Entity, T>, "T must be a subclass of Entity");
+
+        Handle<T> entity = CreateObject<T>(std::forward<Args>(args)...);
+        AssertThrowMsg(entity.IsValid(), "Failed to create instance of Entity subclass %s", TypeNameWithoutNamespace<T>().Data());
+
+        AddExistingEntity(entity);
+
+        return entity;
+    }
 
     /*! \brief Adds an existing entity to the EntityManager. */
     HYP_METHOD()
-    void AddExistingEntity(const Handle<Entity>& entity);
+    HYP_FORCE_INLINE void AddExistingEntity(const Handle<Entity>& entity)
+    {
+        AddExistingEntity_Internal(entity);
+    }
+
+    HYP_METHOD()
+    Handle<Entity> AddTypedEntity(const HypClass* hypClass);
 
     /*! \brief Moves an entity from one EntityManager to another.
      *  This is useful for moving entities between scenes.
@@ -546,281 +402,283 @@ public:
      */
     void MoveEntity(const Handle<Entity>& entity, const Handle<EntityManager>& other);
 
-    HYP_FORCE_INLINE bool HasEntity(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE bool HasEntity(const Entity* entity) const
     {
-        Threads::AssertOnThread(m_owner_thread_id);
+        Threads::AssertOnThread(m_ownerThreadId);
 
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_READ(m_entities_data_race_detector);
-
-        if (!entity_id.IsValid())
+        if (!entity)
         {
             return false;
         }
 
-        return m_entities.Find(entity_id) != m_entities.End();
+        return m_entities.Find(entity) != m_entities.End();
     }
 
-    void AddTag(ID<Entity> entity_id, EntityTag tag);
-    bool RemoveTag(ID<Entity> entity_id, EntityTag tag);
-    bool HasTag(ID<Entity> entity_id, EntityTag tag) const;
+    void AddTag(Entity* entity, EntityTag tag);
+    bool RemoveTag(Entity* entity, EntityTag tag);
+    bool HasTag(const Entity* entity, EntityTag tag) const;
 
     template <EntityTag Tag>
-    HYP_FORCE_INLINE bool HasTag(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE bool HasTag(const Entity* entity) const
     {
-        return HasComponent<EntityTagComponent<Tag>>(entity_id);
+        return HasComponent<EntityTagComponent<Tag>>(entity);
     }
 
     template <EntityTag Tag>
-    HYP_FORCE_INLINE void AddTag(ID<Entity> entity_id)
+    HYP_FORCE_INLINE void AddTag(Entity* entity)
     {
-        if (HasTag<Tag>(entity_id))
+        if (HasTag<Tag>(entity))
         {
             return;
         }
 
-        AddTag(entity_id, Tag);
+        AddTag(entity, Tag);
     }
 
     template <EntityTag... Tag>
-    HYP_FORCE_INLINE void AddTags(ID<Entity> entity_id)
+    HYP_FORCE_INLINE void AddTags(Entity* entity)
     {
-        (AddTag<Tag>(entity_id), ...);
+        (AddTag<Tag>(entity), ...);
+    }
+
+    HYP_FORCE_INLINE void AddTags(Entity* entity, Span<const EntityTag> tags)
+    {
+        for (EntityTag tag : tags)
+        {
+            if (tag == EntityTag::NONE || uint32(tag) >= uint32(EntityTag::TYPE_ID))
+            {
+                continue;
+            }
+
+            AddTag(entity, tag);
+        }
     }
 
     template <EntityTag Tag>
-    HYP_FORCE_INLINE bool RemoveTag(ID<Entity> entity_id)
+    HYP_FORCE_INLINE bool RemoveTag(Entity* entity)
     {
-        if (!HasTag<Tag>(entity_id))
+        if (!HasTag<Tag>(entity))
         {
             return false;
         }
 
-        return RemoveComponent<EntityTagComponent<Tag>>(entity_id);
+        return RemoveComponent<EntityTagComponent<Tag>>(entity);
     }
 
-    HYP_FORCE_INLINE Array<EntityTag> GetTags(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE Array<EntityTag> GetSavableTags(const Entity* entity) const
     {
         Array<EntityTag> tags;
-        GetTagsHelper(entity_id, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), tags);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), tags);
 
         return tags;
     }
 
-    HYP_FORCE_INLINE uint32 GetTagsMask(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE uint32 GetSavableTagsMask(const Entity* entity) const
     {
         uint32 mask = 0;
-        GetTagsHelper(entity_id, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), mask);
+        GetTagsHelper(entity, std::make_integer_sequence<uint32, uint32(EntityTag::DESCRIPTOR_MAX) - 2>(), mask);
 
         return mask;
     }
 
     template <class Component>
-    bool HasComponent(ID<Entity> entity_id) const
+    bool HasComponent(const Entity* entity) const
     {
         EnsureValidComponentType<Component>();
 
-        if (!entity_id.IsValid())
+        if (!entity)
         {
             return false;
         }
 
-        // Threads::AssertOnThread(m_owner_thread_id);
+        // Threads::AssertOnThread(m_ownerThreadId);
 
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_READ(m_entities_data_race_detector);
+        HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
 
-        return m_entities.GetEntityData(entity_id).HasComponent<Component>();
+        return m_entities.GetEntityData(entity).HasComponent<Component>();
     }
 
-    bool HasComponent(TypeID component_type_id, ID<Entity> entity_id) const
+    bool HasComponent(TypeId componentTypeId, const Entity* entity) const
     {
-        EnsureValidComponentType(component_type_id);
+        EnsureValidComponentType(componentTypeId);
 
-        if (!entity_id.IsValid())
+        if (!entity)
         {
             return false;
         }
 
-        // Threads::AssertOnThread(m_owner_thread_id);
+        // Threads::AssertOnThread(m_ownerThreadId);
 
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_READ(m_entities_data_race_detector);
+        HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
 
-        return m_entities.GetEntityData(entity_id).HasComponent(component_type_id);
+        return m_entities.GetEntityData(entity).HasComponent(componentTypeId);
     }
 
     template <class Component>
-    HYP_FORCE_INLINE Component& GetComponent(ID<Entity> entity_id)
+    HYP_FORCE_INLINE Component& GetComponent(const Entity* entity)
     {
         EnsureValidComponentType<Component>();
 
-        AssertThrowMsg(entity_id.IsValid(), "Invalid entity ID");
+        AssertThrowMsg(entity, "Invalid entity");
 
-        // Threads::AssertOnThread(m_owner_thread_id);
+        // Threads::AssertOnThread(m_ownerThreadId);
 
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_READ(m_entities_data_race_detector);
-        HYP_MT_CHECK_READ(m_containers_data_race_detector);
+        HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
+        HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entity_data = m_entities.TryGetEntityData(entity_id);
-        AssertThrowMsg(entity_data != nullptr, "Entity does not exist");
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        AssertThrowMsg(entityData != nullptr, "Entity does not exist");
 
-        const Optional<ComponentID> component_id_opt = entity_data->TryGetComponentID<Component>();
-        AssertThrowMsg(component_id_opt.HasValue(), "Entity does not have component of type %s", TypeNameWithoutNamespace<Component>().Data());
+        const Optional<ComponentId> componentIdOpt = entityData->TryGetComponentId<Component>();
+        AssertThrowMsg(componentIdOpt.HasValue(), "Entity does not have component of type %s", TypeNameWithoutNamespace<Component>().Data());
 
-        static const TypeID component_type_id = TypeID::ForType<Component>();
+        static const TypeId componentTypeId = TypeId::ForType<Component>();
 
-        auto component_container_it = m_containers.Find(component_type_id);
-        AssertThrowMsg(component_container_it != m_containers.End(), "Component container does not exist");
+        auto componentContainerIt = m_containers.Find(componentTypeId);
+        AssertThrowMsg(componentContainerIt != m_containers.End(), "Component container does not exist");
 
-        HYP_MT_CHECK_READ(component_container_it->second->GetDataRaceDetector());
+        HYP_MT_CHECK_READ(componentContainerIt->second->GetDataRaceDetector());
 
-        return static_cast<ComponentContainer<Component>&>(*component_container_it->second).GetComponent(*component_id_opt);
+        return static_cast<ComponentContainer<Component>&>(*componentContainerIt->second).GetComponent(*componentIdOpt);
     }
 
     template <class Component>
-    HYP_FORCE_INLINE const Component& GetComponent(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE const Component& GetComponent(const Entity* entity) const
     {
-        return const_cast<EntityManager*>(this)->GetComponent<Component>(entity_id);
+        return const_cast<EntityManager*>(this)->GetComponent<Component>(entity);
     }
 
     template <class Component>
-    Component* TryGetComponent(ID<Entity> entity_id)
+    Component* TryGetComponent(const Entity* entity)
     {
         EnsureValidComponentType<Component>();
 
-        if (!entity_id.IsValid())
+        if (!entity)
         {
             return nullptr;
         }
 
-        // Threads::AssertOnThread(m_owner_thread_id);
+        // Threads::AssertOnThread(m_ownerThreadId);
 
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_READ(m_entities_data_race_detector);
-        HYP_MT_CHECK_READ(m_containers_data_race_detector);
+        HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
+        HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entity_data = m_entities.TryGetEntityData(entity_id);
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
 
-        if (!entity_data)
+        if (!entityData)
         {
             return nullptr;
         }
 
-        if (!entity_data->HasComponent<Component>())
+        if (!entityData->HasComponent<Component>())
         {
             return nullptr;
         }
 
-        static const TypeID component_type_id = TypeID::ForType<Component>();
+        static const TypeId componentTypeId = TypeId::ForType<Component>();
 
-        const Optional<ComponentID> component_id_opt = entity_data->TryGetComponentID<Component>();
+        const Optional<ComponentId> componentIdOpt = entityData->TryGetComponentId<Component>();
 
-        if (!component_id_opt)
+        if (!componentIdOpt)
         {
             return nullptr;
         }
 
-        auto component_container_it = m_containers.Find(component_type_id);
-        if (component_container_it == m_containers.End())
+        auto componentContainerIt = m_containers.Find(componentTypeId);
+        if (componentContainerIt == m_containers.End())
         {
             return nullptr;
         }
 
-        HYP_MT_CHECK_READ(component_container_it->second->GetDataRaceDetector());
+        HYP_MT_CHECK_READ(componentContainerIt->second->GetDataRaceDetector());
 
-        return &static_cast<ComponentContainer<Component>&>(*component_container_it->second).GetComponent(*component_id_opt);
+        return &static_cast<ComponentContainer<Component>&>(*componentContainerIt->second).GetComponent(*componentIdOpt);
     }
 
     template <class Component>
-    HYP_FORCE_INLINE const Component* TryGetComponent(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE const Component* TryGetComponent(const Entity* entity) const
     {
-        return const_cast<EntityManager*>(this)->TryGetComponent<Component>(entity_id);
+        return const_cast<EntityManager*>(this)->TryGetComponent<Component>(entity);
     }
 
-    /*! \brief Gets a component using the dynamic type ID.
+    /*! \brief Gets a component using the dynamic type Id.
      *
-     *  \param[in] component_type_id The type ID of the component to get.
-     *  \param[in] entity_id The ID of the entity to get the component from.
+     *  \param[in] componentTypeId The type Id of the component to get.
+     *  \param[in] entity The Entity to get the component from.
      *
      *  \return Pointer to the component as a void pointer, or nullptr if the entity does not have the component.
      */
-    AnyRef TryGetComponent(TypeID component_type_id, ID<Entity> entity_id)
+    AnyRef TryGetComponent(TypeId componentTypeId, const Entity* entity)
     {
-        EnsureValidComponentType(component_type_id);
+        EnsureValidComponentType(componentTypeId);
 
-        if (!entity_id.IsValid())
+        if (!entity)
         {
             return AnyRef::Empty();
         }
 
-        // Threads::AssertOnThread(m_owner_thread_id);
+        // Threads::AssertOnThread(m_ownerThreadId);
 
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_READ(m_entities_data_race_detector);
-        HYP_MT_CHECK_READ(m_containers_data_race_detector);
+        HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
+        HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entity_data = m_entities.TryGetEntityData(entity_id);
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
 
-        if (!entity_data)
+        if (!entity)
         {
             return AnyRef::Empty();
         }
 
-        const Optional<ComponentID> component_id_opt = entity_data->TryGetComponentID(component_type_id);
+        const Optional<ComponentId> componentIdOpt = entityData->TryGetComponentId(componentTypeId);
 
-        if (!component_id_opt)
+        if (!componentIdOpt)
         {
             return AnyRef::Empty();
         }
 
-        auto component_container_it = m_containers.Find(component_type_id);
-        AssertThrowMsg(component_container_it != m_containers.End(), "Component container does not exist");
+        auto componentContainerIt = m_containers.Find(componentTypeId);
+        AssertThrowMsg(componentContainerIt != m_containers.End(), "Component container does not exist");
 
-        return component_container_it->second->TryGetComponent(*component_id_opt);
+        return componentContainerIt->second->TryGetComponent(*componentIdOpt);
     }
 
-    /*! \brief Gets a component using the dynamic type ID.
+    /*! \brief Gets a component using the dynamic type Id.
      *
-     *  \param[in] component_type_id The type ID of the component to get.
+     *  \param[in] componentTypeId The type Id of the component to get.
      *  \param[in] entity The entity to get the component from.
      *
      *  \return Pointer to the component as a void pointer, or nullptr if the entity does not have the component.
      */
-    HYP_FORCE_INLINE ConstAnyRef TryGetComponent(TypeID component_type_id, ID<Entity> entity_id) const
+    HYP_FORCE_INLINE ConstAnyRef TryGetComponent(TypeId componentTypeId, const Entity* entity) const
     {
-        return const_cast<EntityManager*>(this)->TryGetComponent(component_type_id, entity_id);
+        return const_cast<EntityManager*>(this)->TryGetComponent(componentTypeId, entity);
     }
 
     template <class... Components>
-    HYP_FORCE_INLINE Tuple<Components&...> GetComponents(ID<Entity> entity_id)
+    HYP_FORCE_INLINE Tuple<Components&...> GetComponents(const Entity* entity)
     {
-        return Tie(GetComponent<Components>(entity_id)...);
+        return Tie(GetComponent<Components>(entity)...);
     }
 
     template <class... Components>
-    HYP_FORCE_INLINE Tuple<const Components&...> GetComponents(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE Tuple<const Components&...> GetComponents(const Entity* entity) const
     {
-        return Tie(GetComponent<Components>(entity_id)...);
+        return Tie(GetComponent<Components>(entity)...);
     }
 
     /*! \brief Get a map of all component types to respective component IDs for a given Entity.
-     *  \param entity_id The ID of entity to lookup components for
+     *  \param entity The Entity to get the components from
      *  \returns An Optional object holding a reference to the typemap if it exists, otherwise an empty optional. */
-    HYP_FORCE_INLINE Optional<const TypeMap<ComponentID>&> GetAllComponents(ID<Entity> entity_id) const
+    HYP_FORCE_INLINE Optional<const TypeMap<ComponentId>&> GetAllComponents(const Entity* entity) const
     {
-        if (!entity_id.IsValid())
+        if (!entity)
         {
             return {};
         }
 
-        Threads::AssertOnThread(m_owner_thread_id);
+        Threads::AssertOnThread(m_ownerThreadId);
 
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_RW(m_entities_data_race_detector);
-
-        auto it = m_entities.Find(entity_id);
+        auto it = m_entities.Find(entity);
         if (it == m_entities.End())
         {
             return {};
@@ -829,129 +687,154 @@ public:
         return it->second.components;
     }
 
-    void AddComponent(const Handle<Entity>& entity, AnyRef component);
-    bool RemoveComponent(TypeID component_type_id, ID<Entity> entity_id);
+    void AddComponent(Entity* entity, const HypData& componentData);
+    void AddComponent(Entity* entity, HypData&& componentData);
+
+    bool RemoveComponent(TypeId componentTypeId, Entity* entity);
 
     template <class Component, class U = Component>
-    Component& AddComponent(const Handle<Entity>& entity, U&& component)
+    Component& AddComponent(Entity* entity, U&& component)
     {
         EnsureValidComponentType<Component>();
 
-        AssertThrowMsg(entity.IsValid(), "Invalid entity");
+        AssertThrowMsg(entity, "Invalid entity");
 
-        Threads::AssertOnThread(m_owner_thread_id);
+        Threads::AssertOnThread(m_ownerThreadId);
 
-        Component* component_ptr = nullptr;
-        TypeMap<ComponentID> component_ids;
+        Handle<Entity> entityHandle = entity->HandleFromThis();
+        AssertThrow(entityHandle.IsValid());
 
-        {
-            MoveEntityGuard move_entity_guard(*this);
-            HYP_MT_CHECK_READ(m_entities_data_race_detector);
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
+        AssertThrow(entityData != nullptr);
 
-            EntityData* entity_data = m_entities.TryGetEntityData(entity);
-            AssertThrow(entity_data != nullptr);
+        Component* componentPtr = nullptr;
+        TypeMap<ComponentId> componentIds;
 
-            auto component_it = entity_data->FindComponent<Component>();
-            // @TODO: Replace the component if it already exists
-            AssertThrowMsg(component_it == entity_data->components.End(), "Entity already has component of type %s", TypeNameWithoutNamespace<Component>().Data());
+        auto componentIt = entityData->FindComponent<Component>();
+        // @TODO: Replace the component if it already exists
+        AssertThrowMsg(componentIt == entityData->components.End(), "Entity already has component of type %s", TypeNameWithoutNamespace<Component>().Data());
 
-            static const TypeID component_type_id = TypeID::ForType<Component>();
+        static const TypeId componentTypeId = TypeId::ForType<Component>();
 
-            const Pair<ComponentID, Component&> component_insert_result = GetContainer<Component>().AddComponent(std::move(component));
+        const Pair<ComponentId, Component&> componentInsertResult = GetContainer<Component>().AddComponent(std::move(component));
 
-            entity_data->components.Set<Component>(component_insert_result.first);
+        entityData->components.Set<Component>(componentInsertResult.first);
 
-            { // Lock the entity sets mutex
-                Mutex::Guard entity_sets_guard(m_entity_sets_mutex);
+        { // Lock the entity sets mutex
+            Mutex::Guard entitySetsGuard(m_entitySetsMutex);
 
-                auto component_entity_sets_it = m_component_entity_sets.Find(component_type_id);
+            auto componentEntitySetsIt = m_componentEntitySets.Find(componentTypeId);
 
-                if (component_entity_sets_it != m_component_entity_sets.End())
+            if (componentEntitySetsIt != m_componentEntitySets.End())
+            {
+                for (TypeId entitySetTypeId : componentEntitySetsIt->second)
                 {
-                    for (TypeID entity_set_type_id : component_entity_sets_it->second)
-                    {
-                        EntitySetBase& entity_set = *m_entity_sets.At(entity_set_type_id);
+                    EntitySetBase& entitySet = *m_entitySets.At(entitySetTypeId);
 
-                        entity_set.OnEntityUpdated(entity);
-                    }
+                    entitySet.OnEntityUpdated(entity);
                 }
             }
+        }
 
-            component_ptr = &component_insert_result.second;
+        componentPtr = &componentInsertResult.second;
+        componentIds = entityData->components;
 
-            component_ids = entity_data->components;
+        // Note: Call OnComponentAdded on the entity before notifying systems, as systems may remove the component
+        EntityTag tag;
+        if (IsEntityTagComponent(componentTypeId, tag))
+        {
+            // If the component is an EntityTagComponent, add the tag to the entity
+            entity->OnTagAdded(tag);
+        }
+        else
+        {
+            // Notify the entity that a component was added
+            entity->OnComponentAdded(componentPtr);
         }
 
         // Notify systems that entity is being added to them
-        NotifySystemsOfEntityAdded(entity, component_ids);
+        NotifySystemsOfEntityAdded(entityHandle, componentIds);
 
-        return *component_ptr;
+        return *componentPtr;
     }
 
     template <class Component>
-    bool RemoveComponent(ID<Entity> entity_id)
+    bool RemoveComponent(Entity* entity)
     {
         EnsureValidComponentType<Component>();
 
-        if (!entity_id.IsValid())
+        if (!entity)
         {
             return false;
         }
 
-        Threads::AssertOnThread(m_owner_thread_id);
+        Handle<Entity> entityHandle = entity->HandleFromThis();
+        AssertThrow(entityHandle.IsValid());
 
-        TypeMap<ComponentID> removed_component_ids;
+        Threads::AssertOnThread(m_ownerThreadId);
 
-        // To keep ID valid while removing the component
-        WeakHandle<Entity> entity_weak { entity_id };
+        TypeMap<ComponentId> removedComponentIds;
 
-        { // critical section for entity data
-            MoveEntityGuard move_entity_guard(*this);
-            HYP_MT_CHECK_READ(m_entities_data_race_detector);
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
 
-            EntityData* entity_data = m_entities.TryGetEntityData(entity_id);
+        if (!entityData)
+        {
+            return false;
+        }
 
-            if (!entity_data)
-            {
-                return false;
-            }
+        auto componentIt = entityData->FindComponent<Component>();
+        if (componentIt == entityData->components.End())
+        {
+            return false;
+        }
 
-            auto component_it = entity_data->FindComponent<Component>();
-            if (component_it == entity_data->components.End())
-            {
-                return false;
-            }
+        const TypeId componentTypeId = componentIt->first;
+        const ComponentId componentId = componentIt->second;
 
-            const TypeID component_type_id = component_it->first;
-            const ComponentID component_id = component_it->second;
+        // Notify systems that entity is being removed from them
+        removedComponentIds.Set(componentTypeId, componentId);
 
-            // Notify systems that entity is being removed from them
-            removed_component_ids.Set(component_type_id, component_id);
+        HypData componentHypData;
 
-            if (!GetContainer<Component>().RemoveComponent(component_id))
-            {
-                return false;
-            }
+        if (!GetContainer<Component>().RemoveComponent(componentId, componentHypData))
+        {
+            return false;
+        }
 
-            entity_data->components.Erase(component_it);
+        entityData->components.Erase(componentIt);
 
+        {
             // Lock the entity sets mutex
-            Mutex::Guard entity_sets_guard(m_entity_sets_mutex);
+            Mutex::Guard entitySetsGuard(m_entitySetsMutex);
 
-            auto component_entity_sets_it = m_component_entity_sets.Find(component_type_id);
+            auto componentEntitySetsIt = m_componentEntitySets.Find(componentTypeId);
 
-            if (component_entity_sets_it != m_component_entity_sets.End())
+            if (componentEntitySetsIt != m_componentEntitySets.End())
             {
-                for (TypeID entity_set_type_id : component_entity_sets_it->second)
+                for (TypeId entitySetTypeId : componentEntitySetsIt->second)
                 {
-                    EntitySetBase& entity_set = *m_entity_sets.At(entity_set_type_id);
+                    EntitySetBase& entitySet = *m_entitySets.At(entitySetTypeId);
 
-                    entity_set.OnEntityUpdated(entity_id);
+                    entitySet.OnEntityUpdated(entityHandle);
                 }
             }
         }
 
-        NotifySystemsOfEntityRemoved(entity_id, removed_component_ids);
+        NotifySystemsOfEntityRemoved(entity, removedComponentIds);
+
+        EntityTag tag;
+        if (IsEntityTagComponent(componentTypeId, tag))
+        {
+            // If the component is an EntityTagComponent, remove the tag from the entity
+            entity->OnTagRemoved(tag);
+        }
+        else
+        {
+            // Notify the entity that a component was removed
+            entity->OnComponentRemoved(componentHypData.ToRef());
+        }
+
+        componentHypData.Reset();
 
         return true;
     }
@@ -969,44 +852,42 @@ public:
     template <class... Components>
     EntitySet<Components...>& GetEntitySet()
     {
-        Mutex::Guard guard(m_entity_sets_mutex);
+        Mutex::Guard guard(m_entitySetsMutex);
 
-        static const TypeID entity_set_type_id = TypeID::ForType<EntitySet<Components...>>();
+        static const TypeId entitySetTypeId = TypeId::ForType<EntitySet<Components...>>();
 
-        auto entity_sets_it = m_entity_sets.Find(entity_set_type_id);
+        auto entitySetsIt = m_entitySets.Find(entitySetTypeId);
 
-        if (entity_sets_it == m_entity_sets.End())
+        if (entitySetsIt == m_entitySets.End())
         {
-            auto entity_sets_insert_result = m_entity_sets.Set(
-                entity_set_type_id,
-                MakeUnique<EntitySet<Components...>>(
-                    m_entities,
-                    GetContainer<Components>()...));
+            auto entitySetsInsertResult = m_entitySets.Set(
+                entitySetTypeId,
+                MakeUnique<EntitySet<Components...>>(m_entities, GetContainer<Components>()...));
 
-            AssertThrow(entity_sets_insert_result.second); // Make sure the element was inserted (it shouldn't already exist)
+            AssertThrow(entitySetsInsertResult.second); // Make sure the element was inserted (it shouldn't already exist)
 
-            entity_sets_it = entity_sets_insert_result.first;
+            entitySetsIt = entitySetsInsertResult.first;
 
             if constexpr (sizeof...(Components) > 0)
             {
-                // Make sure the element exists in m_component_entity_sets
-                for (TypeID component_type_id : { TypeID::ForType<Components>()... })
+                // Make sure the element exists in m_componentEntitySets
+                for (TypeId componentTypeId : { TypeId::ForType<Components>()... })
                 {
-                    auto component_entity_sets_it = m_component_entity_sets.Find(component_type_id);
+                    auto componentEntitySetsIt = m_componentEntitySets.Find(componentTypeId);
 
-                    if (component_entity_sets_it == m_component_entity_sets.End())
+                    if (componentEntitySetsIt == m_componentEntitySets.End())
                     {
-                        auto component_entity_sets_insert_result = m_component_entity_sets.Set(component_type_id, {});
+                        auto componentEntitySetsInsertResult = m_componentEntitySets.Set(componentTypeId, {});
 
-                        component_entity_sets_it = component_entity_sets_insert_result.first;
+                        componentEntitySetsIt = componentEntitySetsInsertResult.first;
                     }
 
-                    component_entity_sets_it->second.Insert(entity_set_type_id);
+                    componentEntitySetsIt->second.Insert(entitySetTypeId);
                 }
             }
         }
 
-        return static_cast<EntitySet<Components...>&>(*entity_sets_it->second);
+        return static_cast<EntitySet<Components...>&>(*entitySetsIt->second);
     }
 
     HYP_METHOD()
@@ -1023,9 +904,9 @@ public:
     template <class SystemType>
     Handle<SystemType> GetSystem() const
     {
-        for (const SystemExecutionGroup& system_execution_group : m_system_execution_groups)
+        for (const SystemExecutionGroup& systemExecutionGroup : m_systemExecutionGroups)
         {
-            if (Handle<SystemType> system = system_execution_group.GetSystem<SystemType>())
+            if (Handle<SystemType> system = systemExecutionGroup.GetSystem<SystemType>())
             {
                 return system;
             }
@@ -1035,13 +916,13 @@ public:
     }
 
     HYP_METHOD()
-    Handle<SystemBase> GetSystemByTypeID(TypeID system_type_id) const
+    Handle<SystemBase> GetSystemByTypeId(TypeId systemTypeId) const
     {
-        for (const SystemExecutionGroup& system_execution_group : m_system_execution_groups)
+        for (const SystemExecutionGroup& systemExecutionGroup : m_systemExecutionGroups)
         {
-            for (const auto& it : system_execution_group.GetSystems())
+            for (const auto& it : systemExecutionGroup.GetSystems())
             {
-                if (it.first == system_type_id)
+                if (it.first == systemTypeId)
                 {
                     return it.second;
                 }
@@ -1054,21 +935,18 @@ public:
     template <class Callback>
     HYP_FORCE_INLINE void ForEachEntity(Callback&& callback) const
     {
-        Threads::AssertOnThread(m_owner_thread_id);
-
-        MoveEntityGuard move_entity_guard(*this);
-        HYP_MT_CHECK_RW(m_entities_data_race_detector);
+        Threads::AssertOnThread(m_ownerThreadId);
 
         ForEach(m_entities, [callback = std::forward<Callback>(callback)](const auto& it)
             {
-                const WeakHandle<Entity>& entity_weak = it.first;
-                const EntityData& entity_data = it.second;
+                const WeakHandle<Entity>& entityWeak = it.first;
+                const EntityData& entityData = it.second;
 
-                Handle<Entity> entity = entity_weak.Lock();
+                Handle<Entity> entity = entityWeak.Lock();
 
                 if (entity.IsValid())
                 {
-                    return callback(entity, entity_data);
+                    return callback(entity, entityData);
                 }
 
                 return IterationResult::CONTINUE;
@@ -1077,22 +955,15 @@ public:
 
     void Shutdown();
 
-    void BeginAsyncUpdate(GameCounter::TickUnit delta);
+    void BeginAsyncUpdate(float delta);
     void EndAsyncUpdate();
-
-    void FlushCommandQueue(GameCounter::TickUnit delta);
-
-    void PushCommand(EntityManagerCommandProc&& command)
-    {
-        m_command_queue.Push(std::move(command));
-    }
 
     template <class Component>
     HYP_FORCE_INLINE ComponentContainer<Component>& GetContainer()
     {
         EnsureValidComponentType<Component>();
 
-        HYP_MT_CHECK_READ(m_containers_data_race_detector);
+        HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
         auto it = m_containers.Find<Component>();
 
@@ -1104,13 +975,13 @@ public:
         return static_cast<ComponentContainer<Component>&>(*it->second);
     }
 
-    HYP_FORCE_INLINE ComponentContainerBase* TryGetContainer(TypeID component_type_id)
+    HYP_FORCE_INLINE ComponentContainerBase* TryGetContainer(TypeId componentTypeId)
     {
-        EnsureValidComponentType(component_type_id);
+        EnsureValidComponentType(componentTypeId);
 
-        HYP_MT_CHECK_READ(m_containers_data_race_detector);
+        HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        auto it = m_containers.Find(component_type_id);
+        auto it = m_containers.Find(componentTypeId);
 
         if (it == m_containers.End())
         {
@@ -1123,6 +994,11 @@ public:
 private:
     void Init() override;
 
+    HYP_METHOD()
+    Handle<Entity> AddBasicEntity();
+
+    void AddExistingEntity_Internal(const Handle<Entity>& entity);
+
     template <class Component>
     static void EnsureValidComponentType()
     {
@@ -1131,41 +1007,41 @@ private:
 #endif
     }
 
-    static void EnsureValidComponentType(TypeID component_type_id)
+    static void EnsureValidComponentType(TypeId componentTypeId)
     {
 #ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(IsValidComponentType(component_type_id), "Invalid component type");
+        AssertThrowMsg(IsValidComponentType(componentTypeId), "Invalid component type: TypeId(%u)", componentTypeId.Value());
 #endif
     }
 
     template <uint32... Indices>
-    HYP_FORCE_INLINE void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, Indices...>, Array<EntityTag>& out_tags) const
+    HYP_FORCE_INLINE void GetTagsHelper(const Entity* entity, std::integer_sequence<uint32, Indices...>, Array<EntityTag>& outTags) const
     {
-        ((HasTag<EntityTag(Indices + 1)>(id) ? (void)(out_tags.PushBack(EntityTag(Indices + 1))) : void()), ...);
+        ((HasTag<EntityTag(Indices + 1)>(entity) ? (void)(outTags.PushBack(EntityTag(Indices + 1))) : void()), ...);
     }
 
     template <uint32... Indices>
-    HYP_FORCE_INLINE void GetTagsHelper(ID<Entity> id, std::integer_sequence<uint32, Indices...>, uint32& out_mask) const
+    HYP_FORCE_INLINE void GetTagsHelper(const Entity* entity, std::integer_sequence<uint32, Indices...>, uint32& outMask) const
     {
-        ((HasTag<EntityTag(Indices + 1)>(id) ? (void)(out_mask |= (1u << uint32(Indices))) : void()), ...);
+        ((HasTag<EntityTag(Indices + 1)>(entity) ? (void)(outMask |= (1u << uint32(Indices))) : void()), ...);
     }
 
     Handle<SystemBase> AddSystemToExecutionGroup(const Handle<SystemBase>& system)
     {
         AssertThrow(system.IsValid());
-        AssertThrow(system->m_entity_manager == nullptr || system->m_entity_manager == this);
+        AssertThrow(system->m_entityManager == nullptr || system->m_entityManager == this);
 
-        bool was_added = false;
+        bool wasAdded = false;
 
         if ((m_flags & EntityManagerFlags::PARALLEL_SYSTEM_EXECUTION) && system->AllowParallelExecution())
         {
-            for (SystemExecutionGroup& system_execution_group : m_system_execution_groups)
+            for (SystemExecutionGroup& systemExecutionGroup : m_systemExecutionGroups)
             {
-                if (system_execution_group.IsValidForSystem(system.Get()))
+                if (systemExecutionGroup.IsValidForSystem(system.Get()))
                 {
-                    if (system_execution_group.AddSystem(system))
+                    if (systemExecutionGroup.AddSystem(system))
                     {
-                        was_added = true;
+                        wasAdded = true;
 
                         break;
                     }
@@ -1173,20 +1049,20 @@ private:
             }
         }
 
-        if (!was_added)
+        if (!wasAdded)
         {
-            SystemExecutionGroup& system_execution_group = m_system_execution_groups.EmplaceBack(system->RequiresGameThread(), system->AllowUpdate());
+            SystemExecutionGroup& systemExecutionGroup = m_systemExecutionGroups.EmplaceBack(system->RequiresGameThread(), system->AllowUpdate());
 
-            if (system_execution_group.AddSystem(system))
+            if (systemExecutionGroup.AddSystem(system))
             {
-                was_added = true;
+                wasAdded = true;
             }
         }
 
-        system->m_entity_manager = this;
+        system->m_entityManager = this;
 
         // If the EntityManager is initialized, call Initialize() on the System.
-        if (IsInitCalled() && was_added)
+        if (IsInitCalled() && wasAdded)
         {
             system->InitComponentInfos_Internal();
 
@@ -1202,43 +1078,40 @@ private:
     void InitializeSystem(const Handle<SystemBase>& system);
     void ShutdownSystem(const Handle<SystemBase>& system);
 
-    void NotifySystemsOfEntityAdded(const Handle<Entity>& entity, const TypeMap<ComponentID>& component_ids);
-    void NotifySystemsOfEntityRemoved(ID<Entity> entity_id, const TypeMap<ComponentID>& component_ids);
+    void NotifySystemsOfEntityAdded(const Handle<Entity>& entity, const TypeMap<ComponentId>& componentIds);
+    void NotifySystemsOfEntityRemoved(Entity* entity, const TypeMap<ComponentId>& componentIds);
 
     /*! \brief Removes an entity from the EntityManager.
      *
-     *  \param[in] entity_id The Entity to remove.
+     *  \param[in] entity The Entity to remove.
      *
      *  \return True if the entity was removed, false otherwise.
      */
-    bool RemoveEntity(ID<Entity> entity_id);
+    bool RemoveEntity(Entity* entity);
 
-    bool IsEntityInitializedForSystem(SystemBase* system, ID<Entity> entity_id) const;
+    bool IsEntityInitializedForSystem(SystemBase* system, const Entity* entity) const;
 
-    void GetSystemClasses(Array<const HypClass*>& out_classes) const;
+    void GetSystemClasses(Array<const HypClass*>& outClasses) const;
 
-    ThreadID m_owner_thread_id;
+    ThreadId m_ownerThreadId;
     World* m_world;
     Scene* m_scene;
     EnumFlags<EntityManagerFlags> m_flags;
 
     TypeMap<UniquePtr<ComponentContainerBase>> m_containers;
-    DataRaceDetector m_containers_data_race_detector;
+    DataRaceDetector m_containersDataRaceDetector;
     EntityContainer m_entities;
-    DataRaceDetector m_entities_data_race_detector;
-    HashMap<TypeID, UniquePtr<EntitySetBase>> m_entity_sets;
-    mutable Mutex m_entity_sets_mutex;
-    TypeMap<HashSet<TypeID>> m_component_entity_sets;
-    EntityManagerCommandQueue m_command_queue;
+    DataRaceDetector m_entitiesDataRaceDetector;
+    HashMap<TypeId, UniquePtr<EntitySetBase>> m_entitySets;
+    mutable Mutex m_entitySetsMutex;
+    TypeMap<HashSet<TypeId>> m_componentEntitySets;
 
-    mutable AtomicVar<uint32> m_move_entity_rw_mask;
+    Array<SystemExecutionGroup> m_systemExecutionGroups;
 
-    Array<SystemExecutionGroup> m_system_execution_groups;
+    SystemExecutionGroup* m_rootSynchronousExecutionGroup;
 
-    SystemExecutionGroup* m_root_synchronous_execution_group;
-
-    HashMap<SystemBase*, HashSet<WeakHandle<Entity>>> m_system_entity_map;
-    mutable Mutex m_system_entity_map_mutex;
+    HashMap<SystemBase*, HashSet<Entity*>> m_systemEntityMap;
+    mutable Mutex m_systemEntityMapMutex;
 };
 
 } // namespace hyperion

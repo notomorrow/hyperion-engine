@@ -22,8 +22,8 @@ Bitmap<1> NoiseGenerator::CreateBitmap(uint32 width, uint32 height, float scale)
     {
         for (uint32 y = 0; y < height; y++)
         {
-            const auto noise_value = GetNoise(Vector2(static_cast<float>(x), static_cast<float>(y)) * scale);
-            bitmap.GetPixel(x, y).SetR(static_cast<float>(noise_value) * 0.5f + 0.5f);
+            const auto noiseValue = GetNoise(Vector2(static_cast<float>(x), static_cast<float>(y)) * scale);
+            bitmap.GetPixel(x, y).SetR(static_cast<float>(noiseValue) * 0.5f + 0.5f);
         }
     }
 
@@ -37,9 +37,9 @@ SimplexNoiseGenerator::SimplexNoiseGenerator(Seed seed)
 {
     for (int i = 0; i < OSN_OCTAVE_COUNT; i++)
     {
-        open_simplex_noise(seed, &m_simplex_noise.octaves[i]);
-        m_simplex_noise.frequencies[i] = pow(2.0, double(i));
-        m_simplex_noise.amplitudes[i] = pow(0.5, OSN_OCTAVE_COUNT - i);
+        open_simplex_noise(seed, &m_simplexNoise.octaves[i]);
+        m_simplexNoise.frequencies[i] = pow(2.0, double(i));
+        m_simplexNoise.amplitudes[i] = pow(0.5, OSN_OCTAVE_COUNT - i);
     }
 }
 
@@ -47,7 +47,7 @@ SimplexNoiseGenerator::~SimplexNoiseGenerator()
 {
     for (int i = 0; i < OSN_OCTAVE_COUNT; i++)
     {
-        open_simplex_noise_free(m_simplex_noise.octaves[i]);
+        open_simplex_noise_free(m_simplexNoise.octaves[i]);
     }
 }
 
@@ -57,7 +57,7 @@ double SimplexNoiseGenerator::GetNoise(double x, double z) const
 
     for (int i = 0; i < OSN_OCTAVE_COUNT; i++)
     {
-        result += open_simplex_noise2(m_simplex_noise.octaves[i], x / m_simplex_noise.frequencies[i], z / m_simplex_noise.frequencies[i]) * m_simplex_noise.amplitudes[i];
+        result += open_simplex_noise2(m_simplexNoise.octaves[i], x / m_simplexNoise.frequencies[i], z / m_simplexNoise.frequencies[i]) * m_simplexNoise.amplitudes[i];
     }
 
     return result;
@@ -69,7 +69,7 @@ double SimplexNoiseGenerator::GetNoise(double x, double y, double z) const
 
     for (int i = 0; i < OSN_OCTAVE_COUNT; i++)
     {
-        result += open_simplex_noise3(m_simplex_noise.octaves[i], x / m_simplex_noise.frequencies[i], y / m_simplex_noise.frequencies[i], z / m_simplex_noise.frequencies[i]) * m_simplex_noise.amplitudes[i];
+        result += open_simplex_noise3(m_simplexNoise.octaves[i], x / m_simplexNoise.frequencies[i], y / m_simplexNoise.frequencies[i], z / m_simplexNoise.frequencies[i]) * m_simplexNoise.amplitudes[i];
     }
 
     return result;
@@ -80,22 +80,22 @@ double SimplexNoiseGenerator::GetNoise(double x, double y, double z) const
 WorleyNoiseGenerator::WorleyNoiseGenerator(Seed seed)
     : NoiseGenerator(NoiseGenerationType::WORLEY_NOISE, seed)
 {
-    m_worley_noise = new WorleyNoise(seed);
+    m_worleyNoise = new WorleyNoise(seed);
 }
 
 WorleyNoiseGenerator::~WorleyNoiseGenerator()
 {
-    delete m_worley_noise;
+    delete m_worleyNoise;
 }
 
 double WorleyNoiseGenerator::GetNoise(double x, double z) const
 {
-    return m_worley_noise->Noise(x, z, 0);
+    return m_worleyNoise->Noise(x, z, 0);
 }
 
 double WorleyNoiseGenerator::GetNoise(double x, double y, double z) const
 {
-    return m_worley_noise->Noise(x, y, z);
+    return m_worleyNoise->Noise(x, y, z);
 }
 
 // factory
@@ -114,10 +114,10 @@ NoiseFactory* NoiseFactory::GetInstance()
 
 NoiseGenerator* NoiseFactory::Capture(NoiseGenerationType type, Seed seed)
 {
-    const auto type_and_seed = std::make_pair(type, seed);
-    auto it = m_noise_generators.find(type_and_seed);
+    const auto typeAndSeed = std::make_pair(type, seed);
+    auto it = m_noiseGenerators.find(typeAndSeed);
 
-    if (it == m_noise_generators.end())
+    if (it == m_noiseGenerators.end())
     {
         NoiseGeneratorRefCounter ref;
 
@@ -130,12 +130,12 @@ NoiseGenerator* NoiseFactory::Capture(NoiseGenerationType type, Seed seed)
             ref.noise = new WorleyNoiseGenerator(seed);
             break;
         default:
-            AssertThrowMsg(false, "Unsupported noise type");
+            HYP_UNREACHABLE();
         }
 
         ref.uses = 1;
 
-        m_noise_generators[type_and_seed] = ref;
+        m_noiseGenerators[typeAndSeed] = ref;
 
         return ref.noise;
     }
@@ -154,15 +154,15 @@ void NoiseFactory::Release(NoiseGenerator* noise)
 
 void NoiseFactory::Release(NoiseGenerationType type, Seed seed)
 {
-    const auto it = m_noise_generators.find(std::make_pair(type, seed));
+    const auto it = m_noiseGenerators.find(std::make_pair(type, seed));
 
-    AssertThrow(it != m_noise_generators.end());
+    AssertThrow(it != m_noiseGenerators.end());
 
     if (!--it->second.uses)
     {
         delete it->second.noise;
 
-        m_noise_generators.erase(it);
+        m_noiseGenerators.erase(it);
     }
 }
 

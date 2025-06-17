@@ -43,12 +43,25 @@ class TaskBase;
 class TaskCompleteNotifier final : public Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>
 {
 public:
+    TaskCompleteNotifier()
+        : Semaphore(0)
+    {
+    }
+
+    TaskCompleteNotifier(const TaskCompleteNotifier& other) = delete;
+    TaskCompleteNotifier& operator=(const TaskCompleteNotifier& other) = delete;
+
+    TaskCompleteNotifier(TaskCompleteNotifier&& other) noexcept = delete;
+    TaskCompleteNotifier& operator=(TaskCompleteNotifier&& other) noexcept = delete;
+
+    ~TaskCompleteNotifier() = default;
+
     /*! \brief Sets the number of tasks that need to be completed before the notifier is signalled.
      *  This is typically called when the task batch is created, and the number of tasks is known.
      */
-    void SetTargetValue(uint32 num_tasks)
+    void SetTargetValue(uint32 numTasks)
     {
-        Semaphore::SetValue(int32(num_tasks));
+        Semaphore::SetValue(int32(numTasks));
     }
 
     /*! \brief Resets the notifier to its initial state (no tasks) */
@@ -140,7 +153,7 @@ public:
 
     HYP_FORCE_INLINE explicit operator bool() const
     {
-        return m_num_callbacks.Get(MemoryOrder::ACQUIRE);
+        return m_numCallbacks.Get(MemoryOrder::ACQUIRE);
     }
 
     void Add(Proc<void()>&& callback);
@@ -149,7 +162,7 @@ public:
 
 private:
     Array<Proc<void()>> m_callbacks;
-    AtomicVar<uint32> m_num_callbacks;
+    AtomicVar<uint32> m_numCallbacks;
     Mutex m_mutex;
 };
 
@@ -171,8 +184,8 @@ class HYP_API TaskExecutorBase : public ITaskExecutor
 public:
     TaskExecutorBase()
         : m_id(TaskID::Invalid()),
-          m_initiator_thread_id(ThreadID::Invalid()),
-          m_assigned_scheduler(nullptr)
+          m_initiatorThreadId(ThreadId::Invalid()),
+          m_assignedScheduler(nullptr)
     {
         // set notifier to initial value of 1 (one task)
         m_notifier.Produce(1);
@@ -181,18 +194,7 @@ public:
     TaskExecutorBase(const TaskExecutorBase& other) = delete;
     TaskExecutorBase& operator=(const TaskExecutorBase& other) = delete;
 
-    TaskExecutorBase(TaskExecutorBase&& other) noexcept
-        : m_id(other.m_id),
-          m_initiator_thread_id(other.m_initiator_thread_id),
-          m_assigned_scheduler(other.m_assigned_scheduler),
-          m_notifier(std::move(other.m_notifier)),
-          m_callback_chain(std::move(other.m_callback_chain))
-    {
-        other.m_id = {};
-        other.m_initiator_thread_id = {};
-        other.m_assigned_scheduler = nullptr;
-    }
-
+    TaskExecutorBase(TaskExecutorBase&& other) noexcept = delete;
     TaskExecutorBase& operator=(TaskExecutorBase&& other) noexcept = delete;
 
     virtual ~TaskExecutorBase() override = default;
@@ -202,32 +204,32 @@ public:
         return m_id;
     }
 
-    /*! \internal This function is used by the Scheduler to set the task ID. */
+    /*! \internal This function is used by the Scheduler to set the task Id. */
     HYP_FORCE_INLINE void SetTaskID(TaskID id)
     {
         m_id = id;
     }
 
-    HYP_FORCE_INLINE const ThreadID& GetInitiatorThreadID() const
+    HYP_FORCE_INLINE const ThreadId& GetInitiatorThreadId() const
     {
-        return m_initiator_thread_id;
+        return m_initiatorThreadId;
     }
 
-    /*! \internal This function is used by the Scheduler to set the initiator thread ID. */
-    HYP_FORCE_INLINE void SetInitiatorThreadID(const ThreadID& initiator_thread_id)
+    /*! \internal This function is used by the Scheduler to set the initiator thread Id. */
+    HYP_FORCE_INLINE void SetInitiatorThreadId(const ThreadId& initiatorThreadId)
     {
-        m_initiator_thread_id = initiator_thread_id;
+        m_initiatorThreadId = initiatorThreadId;
     }
 
     HYP_FORCE_INLINE SchedulerBase* GetAssignedScheduler() const
     {
-        return m_assigned_scheduler;
+        return m_assignedScheduler;
     }
 
     /*! \internal This function is used by the Scheduler to set the assigned scheduler. */
-    HYP_FORCE_INLINE void SetAssignedScheduler(SchedulerBase* assigned_scheduler)
+    HYP_FORCE_INLINE void SetAssignedScheduler(SchedulerBase* assignedScheduler)
     {
-        m_assigned_scheduler = assigned_scheduler;
+        m_assignedScheduler = assignedScheduler;
     }
 
     HYP_FORCE_INLINE TaskCompleteNotifier& GetNotifier()
@@ -249,16 +251,16 @@ public:
 
     virtual TaskCallbackChain& GetCallbackChain() override final
     {
-        return m_callback_chain;
+        return m_callbackChain;
     }
 
 protected:
     TaskID m_id;
-    ThreadID m_initiator_thread_id;
-    SchedulerBase* m_assigned_scheduler;
+    ThreadId m_initiatorThreadId;
+    SchedulerBase* m_assignedScheduler;
     TaskCompleteNotifier m_notifier;
 
-    TaskCallbackChain m_callback_chain;
+    TaskCallbackChain m_callbackChain;
 };
 
 template <class ReturnType>
@@ -277,60 +279,41 @@ public:
     TaskExecutorInstance(const TaskExecutorInstance& other) = delete;
     TaskExecutorInstance& operator=(const TaskExecutorInstance& other) = delete;
 
-    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept
-        : Base(static_cast<Base&&>(other)),
-          m_fn(std::move(other.m_fn)),
-          m_result_value(std::move(other.m_result_value))
-    {
-    }
-
-    TaskExecutorInstance& operator=(TaskExecutorInstance&& other) noexcept
-    {
-        if (this == &other)
-        {
-            return *this;
-        }
-
-        Base::operator=(static_cast<Base&&>(other));
-
-        m_fn = std::move(other.m_fn);
-        m_result_value = std::move(other.m_result_value);
-
-        return *this;
-    }
+    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept = delete;
+    TaskExecutorInstance& operator=(TaskExecutorInstance&& other) noexcept = delete;
 
     virtual ~TaskExecutorInstance() override = default;
 
     HYP_FORCE_INLINE ReturnType& Result() &
     {
-        return m_result_value.Get();
+        return m_resultValue.Get();
     }
 
     HYP_FORCE_INLINE const ReturnType& Result() const&
     {
-        return m_result_value.Get();
+        return m_resultValue.Get();
     }
 
     HYP_FORCE_INLINE ReturnType Result() &&
     {
-        return std::move(m_result_value.Get());
+        return std::move(m_resultValue.Get());
     }
 
     HYP_FORCE_INLINE ReturnType Result() const&&
     {
-        return m_result_value.Get();
+        return m_resultValue.Get();
     }
 
     virtual void Execute() override
     {
         AssertThrow(m_fn.IsValid());
 
-        m_result_value.Emplace(m_fn());
+        m_resultValue.Emplace(m_fn());
     }
 
 protected:
     Function m_fn;
-    Optional<ReturnType> m_result_value;
+    Optional<ReturnType> m_resultValue;
 };
 
 /*! \brief Specialization for void return type. */
@@ -351,12 +334,7 @@ public:
     TaskExecutorInstance(const TaskExecutorInstance& other) = delete;
     TaskExecutorInstance& operator=(const TaskExecutorInstance& other) = delete;
 
-    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept
-        : Base(static_cast<Base&&>(other)),
-          m_fn(std::move(other.m_fn))
-    {
-    }
-
+    TaskExecutorInstance(TaskExecutorInstance&& other) noexcept = delete;
     TaskExecutorInstance& operator=(TaskExecutorInstance&& other) noexcept = delete;
 
     // TaskExecutorInstance &operator=(TaskExecutorInstance &&other) noexcept
@@ -399,13 +377,7 @@ public:
     TaskPromise(const TaskPromise& other) = delete;
     TaskPromise& operator=(const TaskPromise& other) = delete;
 
-    TaskPromise(TaskPromise&& other) noexcept
-        : Base(static_cast<Base&&>(other)),
-          m_task(other.m_task)
-    {
-        other.m_task = nullptr;
-    }
-
+    TaskPromise(TaskPromise&& other) noexcept = delete;
     TaskPromise& operator=(TaskPromise&& other) noexcept = delete;
 
     virtual ~TaskPromise() override = default;
@@ -419,15 +391,15 @@ public:
     {
         AssertThrow(!Base::IsCompleted());
 
-        Base::m_result_value.Set(std::move(value));
+        Base::m_resultValue.Set(std::move(value));
 
-        TaskCallbackChain& callback_chain = Base::GetCallbackChain();
+        TaskCallbackChain& callbackChain = Base::GetCallbackChain();
 
         Base::GetNotifier().Release(1);
 
-        if (callback_chain)
+        if (callbackChain)
         {
-            callback_chain();
+            callbackChain();
         }
     }
 
@@ -435,15 +407,15 @@ public:
     {
         AssertThrow(!Base::IsCompleted());
 
-        Base::m_result_value.Set(value);
+        Base::m_resultValue.Set(value);
 
-        TaskCallbackChain& callback_chain = Base::GetCallbackChain();
+        TaskCallbackChain& callbackChain = Base::GetCallbackChain();
 
         Base::GetNotifier().Release(1);
 
-        if (callback_chain)
+        if (callbackChain)
         {
-            callback_chain();
+            callbackChain();
         }
     }
 
@@ -470,13 +442,7 @@ public:
     TaskPromise(const TaskPromise& other) = delete;
     TaskPromise& operator=(const TaskPromise& other) = delete;
 
-    TaskPromise(TaskPromise&& other) noexcept
-        : Base(static_cast<Base&&>(other)),
-          m_task(other.m_task)
-    {
-        other.m_task = nullptr;
-    }
-
+    TaskPromise(TaskPromise&& other) noexcept = delete;
     TaskPromise& operator=(TaskPromise&& other) noexcept = delete;
 
     virtual ~TaskPromise() override = default;
@@ -490,13 +456,13 @@ public:
     {
         AssertThrow(!Base::IsCompleted());
 
-        TaskCallbackChain& callback_chain = Base::GetCallbackChain();
+        TaskCallbackChain& callbackChain = Base::GetCallbackChain();
 
         Base::GetNotifier().Release(1);
 
-        if (callback_chain)
+        if (callbackChain)
         {
-            callback_chain();
+            callbackChain();
         }
     }
 
@@ -514,20 +480,20 @@ class Task;
 struct TaskRef
 {
     TaskID id = {};
-    SchedulerBase* assigned_scheduler = nullptr;
+    SchedulerBase* assignedScheduler = nullptr;
 
     TaskRef() = default;
 
-    TaskRef(TaskID id, SchedulerBase* assigned_scheduler)
+    TaskRef(TaskID id, SchedulerBase* assignedScheduler)
         : id(id),
-          assigned_scheduler(assigned_scheduler)
+          assignedScheduler(assignedScheduler)
     {
     }
 
     template <class ReturnType>
     TaskRef(const Task<ReturnType>& task)
         : id(task.GetTaskID()),
-          assigned_scheduler(task.GetAssignedScheduler())
+          assignedScheduler(task.GetAssignedScheduler())
     {
     }
 
@@ -536,19 +502,24 @@ struct TaskRef
 
     TaskRef(TaskRef&& other) noexcept
         : id(other.id),
-          assigned_scheduler(other.assigned_scheduler)
+          assignedScheduler(other.assignedScheduler)
     {
         other.id = {};
-        other.assigned_scheduler = nullptr;
+        other.assignedScheduler = nullptr;
     }
 
     TaskRef& operator=(TaskRef&& other) noexcept
     {
+        if (this == &other)
+        {
+            return *this;
+        }
+
         id = other.id;
-        assigned_scheduler = other.assigned_scheduler;
+        assignedScheduler = other.assignedScheduler;
 
         other.id = {};
-        other.assigned_scheduler = nullptr;
+        other.assignedScheduler = nullptr;
 
         return *this;
     }
@@ -557,16 +528,16 @@ struct TaskRef
 
     HYP_FORCE_INLINE bool IsValid() const
     {
-        return id.IsValid() && assigned_scheduler != nullptr;
+        return id.IsValid() && assignedScheduler != nullptr;
     }
 };
 
 class TaskBase
 {
 public:
-    TaskBase(TaskID id, SchedulerBase* assigned_scheduler)
+    TaskBase(TaskID id, SchedulerBase* assignedScheduler)
         : m_id(id),
-          m_assigned_scheduler(assigned_scheduler)
+          m_assignedScheduler(assignedScheduler)
     {
     }
 
@@ -575,19 +546,19 @@ public:
 
     TaskBase(TaskBase&& other) noexcept
         : m_id(other.m_id),
-          m_assigned_scheduler(other.m_assigned_scheduler)
+          m_assignedScheduler(other.m_assignedScheduler)
     {
         other.m_id = {};
-        other.m_assigned_scheduler = nullptr;
+        other.m_assignedScheduler = nullptr;
     }
 
     TaskBase& operator=(TaskBase&& other) noexcept
     {
         m_id = other.m_id;
-        m_assigned_scheduler = other.m_assigned_scheduler;
+        m_assignedScheduler = other.m_assignedScheduler;
 
         other.m_id = {};
-        other.m_assigned_scheduler = nullptr;
+        other.m_assignedScheduler = nullptr;
 
         return *this;
     }
@@ -601,7 +572,7 @@ public:
 
     HYP_FORCE_INLINE SchedulerBase* GetAssignedScheduler() const
     {
-        return m_assigned_scheduler;
+        return m_assignedScheduler;
     }
 
     virtual TaskExecutorBase* GetTaskExecutor() const = 0;
@@ -628,11 +599,11 @@ protected:
     virtual void Reset()
     {
         m_id = TaskID::Invalid();
-        m_assigned_scheduler = nullptr;
+        m_assignedScheduler = nullptr;
     }
 
     TaskID m_id;
-    SchedulerBase* m_assigned_scheduler;
+    SchedulerBase* m_assignedScheduler;
 };
 
 // @TODO: Refactor so we can use a custom deleter for the task executor.
@@ -650,14 +621,14 @@ public:
     Task()
         : TaskBase({}, nullptr),
           m_executor(nullptr),
-          m_owns_executor(false)
+          m_ownsExecutor(false)
     {
     }
 
-    Task(TaskID id, SchedulerBase* assigned_scheduler, TaskExecutorType* executor, bool owns_executor)
-        : TaskBase(id, assigned_scheduler),
+    Task(TaskID id, SchedulerBase* assignedScheduler, TaskExecutorType* executor, bool ownsExecutor)
+        : TaskBase(id, assignedScheduler),
           m_executor(executor),
-          m_owns_executor(owns_executor)
+          m_ownsExecutor(ownsExecutor)
     {
     }
 
@@ -667,10 +638,10 @@ public:
     Task(Task&& other) noexcept
         : TaskBase(static_cast<TaskBase&&>(other)),
           m_executor(other.m_executor),
-          m_owns_executor(other.m_owns_executor)
+          m_ownsExecutor(other.m_ownsExecutor)
     {
         other.m_executor = nullptr;
-        other.m_owns_executor = false;
+        other.m_ownsExecutor = false;
     }
 
     Task& operator=(Task&& other) noexcept
@@ -680,10 +651,10 @@ public:
         TaskBase::operator=(static_cast<TaskBase&&>(other));
 
         m_executor = other.m_executor;
-        m_owns_executor = other.m_owns_executor;
+        m_ownsExecutor = other.m_ownsExecutor;
 
         other.m_executor = nullptr;
-        other.m_owns_executor = false;
+        other.m_ownsExecutor = false;
 
         return *this;
     }
@@ -709,7 +680,7 @@ public:
         m_id = TaskID { ~0u };
 
         m_executor = new TaskPromise<ReturnType>(this);
-        m_owns_executor = true;
+        m_ownsExecutor = true;
 
         return static_cast<TaskPromise<ReturnType>*>(m_executor);
     }
@@ -717,7 +688,7 @@ public:
     template <class... ArgTypes>
     void Fulfill(ArgTypes&&... args)
     {
-        AssertThrowMsg(m_assigned_scheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
+        AssertThrowMsg(m_assignedScheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
 
         TaskPromise<ReturnType>* executor = Promise();
 
@@ -769,7 +740,7 @@ protected:
 
     virtual void Reset() override
     {
-        if (m_owns_executor)
+        if (m_ownsExecutor)
         {
             // Wait for the task to complete when not in debug mode
             if (IsValid() && !IsCompleted())
@@ -781,14 +752,14 @@ protected:
         }
 
         m_executor = nullptr;
-        m_owns_executor = false;
+        m_ownsExecutor = false;
 
         TaskBase::Reset();
     }
 
 private:
     TaskExecutorType* m_executor;
-    bool m_owns_executor;
+    bool m_ownsExecutor;
 };
 
 template <>
@@ -802,14 +773,14 @@ public:
     Task()
         : TaskBase({}, nullptr),
           m_executor(nullptr),
-          m_owns_executor(false)
+          m_ownsExecutor(false)
     {
     }
 
-    Task(TaskID id, SchedulerBase* assigned_scheduler, TaskExecutorType* executor, bool owns_executor)
-        : TaskBase(id, assigned_scheduler),
+    Task(TaskID id, SchedulerBase* assignedScheduler, TaskExecutorType* executor, bool ownsExecutor)
+        : TaskBase(id, assignedScheduler),
           m_executor(executor),
-          m_owns_executor(owns_executor)
+          m_ownsExecutor(ownsExecutor)
     {
     }
 
@@ -819,10 +790,10 @@ public:
     Task(Task&& other) noexcept
         : TaskBase(static_cast<TaskBase&&>(other)),
           m_executor(other.m_executor),
-          m_owns_executor(other.m_owns_executor)
+          m_ownsExecutor(other.m_ownsExecutor)
     {
         other.m_executor = nullptr;
-        other.m_owns_executor = false;
+        other.m_ownsExecutor = false;
     }
 
     Task& operator=(Task&& other) noexcept
@@ -830,17 +801,17 @@ public:
         TaskBase::operator=(static_cast<TaskBase&&>(other));
 
         m_executor = other.m_executor;
-        m_owns_executor = other.m_owns_executor;
+        m_ownsExecutor = other.m_ownsExecutor;
 
         other.m_executor = nullptr;
-        other.m_owns_executor = false;
+        other.m_ownsExecutor = false;
 
         return *this;
     }
 
     virtual ~Task() override
     {
-        if (m_owns_executor)
+        if (m_ownsExecutor)
         {
             // Wait for the task to complete when not in debug mode
             if (IsValid() && !IsCompleted())
@@ -872,14 +843,14 @@ public:
         m_id = TaskID { ~0u };
 
         m_executor = new TaskPromise<void>(this);
-        m_owns_executor = true;
+        m_ownsExecutor = true;
 
         return static_cast<TaskPromise<void>*>(m_executor);
     }
 
     void Fulfill()
     {
-        AssertThrowMsg(m_assigned_scheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
+        AssertThrowMsg(m_assignedScheduler == nullptr, "Cannot call Fulfill() on a task that has already been initialized");
 
         TaskPromise<void>* executor = Promise();
 
@@ -904,7 +875,7 @@ protected:
 
     virtual void Reset() override
     {
-        if (m_owns_executor)
+        if (m_ownsExecutor)
         {
             delete m_executor;
         }
@@ -922,14 +893,14 @@ protected:
         }
 
         m_executor = nullptr;
-        m_owns_executor = false;
+        m_ownsExecutor = false;
 
         TaskBase::Reset();
     }
 
 private:
     TaskExecutorType* m_executor;
-    bool m_owns_executor;
+    bool m_ownsExecutor;
 };
 
 #if 0
@@ -1095,25 +1066,25 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
             AssertThrow(task.IsValid());
         }
 
-        Bitset completion_states;
-        Bitset bound_states;
+        Bitset completionStates;
+        Bitset boundStates;
 
         //debug
-        Array<int> called_states;
-        called_states.Resize(tasks.Size());
+        Array<int> calledStates;
+        calledStates.Resize(tasks.Size());
 
         Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE> semaphore(tasks.Size());
 
-        while ((completion_states | bound_states).Count() != tasks.Size()) {
+        while ((completionStates | boundStates).Count() != tasks.Size()) {
             for (SizeType i = 0; i < tasks.Size(); ++i) {
-                if (completion_states.Test(i) || bound_states.Test(i)) {
+                if (completionStates.Test(i) || boundStates.Test(i)) {
                     continue;
                 }
 
                 Task<ReturnType> &task = tasks[i];
 
                 if (task.IsCompleted()) {
-                    completion_states.Set(i, true);
+                    completionStates.Set(i, true);
 
                     semaphore.Release(1);
 
@@ -1122,16 +1093,15 @@ struct TaskAwaitAll_Impl<Task<ReturnType>>
 
                 // @TODO : What if task finished right before callback was set?
 
-                task.GetTaskExecutor()->GetCallbackChain().Add([&semaphore, &completion_states, &called_states, &tasks, task_index = i]()
+                task.GetTaskExecutor()->GetCallbackChain().Add([&semaphore, &completionStates, &calledStates, &tasks, taskIndex = i]()
                 {
-                    AssertThrow(called_states[task_index] == 0);
+                    AssertThrow(calledStates[taskIndex] == 0);
 
-                    called_states[task_index] = 1;
-                    DebugLog(LogType::Debug, "Call OnCompleted for task index %u (executor ptr: %p)\n", task_index, tasks[task_index].GetTaskExecutor());
+                    calledStates[taskIndex] = 1;
                     semaphore.Release(1);
                 });
 
-                bound_states.Set(i, true);
+                boundStates.Set(i, true);
             }
         }
 
@@ -1185,25 +1155,25 @@ struct TaskAwaitAll_Impl<Task<void>>
             AssertThrow(task.IsValid());
         }
 
-        Bitset completion_states;
-        Bitset bound_states;
+        Bitset completionStates;
+        Bitset boundStates;
 
         //debug
-        Array<int> called_states;
-        called_states.Resize(tasks.Size());
+        Array<int> calledStates;
+        calledStates.Resize(tasks.Size());
 
         Semaphore<int, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE> semaphore(int(tasks.Size()));
 
-        while ((completion_states | bound_states).Count() != tasks.Size()) {
+        while ((completionStates | boundStates).Count() != tasks.Size()) {
             for (SizeType i = 0; i < tasks.Size(); ++i) {
-                if (completion_states.Test(i) || bound_states.Test(i)) {
+                if (completionStates.Test(i) || boundStates.Test(i)) {
                     continue;
                 }
 
                 Task<void> &task = tasks[i];
 
                 if (task.IsCompleted()) {
-                    completion_states.Set(i, true);
+                    completionStates.Set(i, true);
 
                     semaphore.Release(1);
 
@@ -1212,16 +1182,15 @@ struct TaskAwaitAll_Impl<Task<void>>
 
                 // @TODO : What if task finished right before callback was set?
 
-                task.GetTaskExecutor()->GetCallbackChain().Add([&semaphore, &completion_states, &called_states, &tasks, task_index = i]()
+                task.GetTaskExecutor()->GetCallbackChain().Add([&semaphore, &completionStates, &calledStates, &tasks, taskIndex = i]()
                 {
-                    AssertThrow(called_states[task_index] == 0);
+                    AssertThrow(calledStates[taskIndex] == 0);
 
-                    called_states[task_index] = 1;
-                    DebugLog(LogType::Debug, "Call OnCompleted for task index %u (executor ptr: %p)\n", task_index, tasks[task_index].GetTaskExecutor());
+                    calledStates[taskIndex] = 1;
                     semaphore.Release(1);
                 });
 
-                bound_states.Set(i, true);
+                boundStates.Set(i, true);
             }
         }
 

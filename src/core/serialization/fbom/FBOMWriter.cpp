@@ -27,19 +27,19 @@ namespace hyperion::serialization {
 
 FBOMWriteStream::FBOMWriteStream() = default;
 
-FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueID& unique_id, const FBOMStaticData** out_static_data, const FBOMExternalObjectInfo** out_external_object_info) const
+FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueID& uniqueId, const FBOMStaticData** outStaticData, const FBOMExternalObjectInfo** outExternalObjectInfo) const
 {
-    *out_static_data = nullptr;
-    *out_external_object_info = nullptr;
+    *outStaticData = nullptr;
+    *outExternalObjectInfo = nullptr;
 
     { // check static data
-        auto it = m_static_data.Find(unique_id);
+        auto it = m_staticData.Find(uniqueId);
 
-        if (it != m_static_data.End())
+        if (it != m_staticData.End())
         {
             if (IsWritingStaticData() || it->second.IsWritten())
             {
-                *out_static_data = &it->second;
+                *outStaticData = &it->second;
 
                 if (it->second.IsWritten())
                 {
@@ -50,24 +50,24 @@ FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueID& unique_id, con
     }
 
     // check external objects
-    for (const FBOMObjectLibrary& object_library : m_object_libraries)
+    for (const FBOMObjectLibrary& objectLibrary : m_objectLibraries)
     {
-        const auto objects_it = object_library.object_data.FindIf([&unique_id](const FBOMObject& item)
+        const auto objectsIt = objectLibrary.objectData.FindIf([&uniqueId](const FBOMObject& item)
             {
-                return item.GetUniqueID() == unique_id;
+                return item.GetUniqueID() == uniqueId;
             });
 
-        if (objects_it == object_library.object_data.End())
+        if (objectsIt == objectLibrary.objectData.End())
         {
             continue;
         }
 
-        if (!objects_it->IsExternal())
+        if (!objectsIt->IsExternal())
         {
             break;
         }
 
-        *out_external_object_info = objects_it->GetExternalObjectInfo();
+        *outExternalObjectInfo = objectsIt->GetExternalObjectInfo();
 
         return FBOMDataLocation::LOC_EXT_REF;
     }
@@ -77,39 +77,39 @@ FBOMDataLocation FBOMWriteStream::GetDataLocation(const UniqueID& unique_id, con
 
 void FBOMWriteStream::AddToObjectLibrary(FBOMObject& object)
 {
-    // static constexpr SizeType desired_max_size = 1024 * 1024 * 1024 * 32; // 32 MiB
-    static constexpr SizeType desired_max_size = 10;
+    // static constexpr SizeType desiredMaxSize = 1024 * 1024 * 1024 * 32; // 32 MiB
+    static constexpr SizeType desiredMaxSize = 10;
 
-    FBOMExternalObjectInfo* external_object_info = object.GetExternalObjectInfo();
-    AssertThrow(external_object_info != nullptr);
-    AssertThrow(!external_object_info->IsLinked());
+    FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
+    AssertThrow(externalObjectInfo != nullptr);
+    AssertThrow(!externalObjectInfo->IsLinked());
 
-    // FBOMData object_data = FBOMData::FromObject(object);
-    // const SizeType object_data_size = object_data.TotalSize();
+    // FBOMData objectData = FBOMData::FromObject(object);
+    // const SizeType objectDataSize = objectData.TotalSize();
 
-    FBOMObjectLibrary* library_ptr = nullptr;
+    FBOMObjectLibrary* libraryPtr = nullptr;
 
-    for (auto it = m_object_libraries.Begin(); it != m_object_libraries.End(); ++it)
+    for (auto it = m_objectLibraries.Begin(); it != m_objectLibraries.End(); ++it)
     {
-        const SizeType library_size = it->CalculateTotalSize();
+        const SizeType librarySize = it->CalculateTotalSize();
 
-        if (library_size + 1 <= desired_max_size)
+        if (librarySize + 1 <= desiredMaxSize)
         {
-            library_ptr = it;
+            libraryPtr = it;
 
             break;
         }
     }
 
-    if (!library_ptr)
+    if (!libraryPtr)
     {
-        library_ptr = &m_object_libraries.EmplaceBack();
+        libraryPtr = &m_objectLibraries.EmplaceBack();
     }
 
-    library_ptr->Put(object);
+    libraryPtr->Put(object);
 
     // sanity check
-    AssertThrow(external_object_info->IsLinked());
+    AssertThrow(externalObjectInfo->IsLinked());
 }
 
 #pragma endregion FBOMWriteStream
@@ -121,15 +121,15 @@ FBOMWriter::FBOMWriter(const FBOMWriterConfig& config)
 {
 }
 
-FBOMWriter::FBOMWriter(const FBOMWriterConfig& config, const RC<FBOMWriteStream>& write_stream)
+FBOMWriter::FBOMWriter(const FBOMWriterConfig& config, const RC<FBOMWriteStream>& writeStream)
     : m_config(config),
-      m_write_stream(write_stream)
+      m_writeStream(writeStream)
 {
 }
 
 FBOMWriter::FBOMWriter(FBOMWriter&& other) noexcept
     : m_config(std::move(other.m_config)),
-      m_write_stream(std::move(other.m_write_stream))
+      m_writeStream(std::move(other.m_writeStream))
 {
 }
 
@@ -141,7 +141,7 @@ FBOMWriter& FBOMWriter::operator=(FBOMWriter&& other) noexcept
     }
 
     m_config = std::move(other.m_config);
-    m_write_stream = std::move(other.m_write_stream);
+    m_writeStream = std::move(other.m_writeStream);
 
     return *this;
 }
@@ -166,20 +166,20 @@ FBOMResult FBOMWriter::Append(FBOMObject&& object)
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::Emit(ByteWriter* out, bool write_header)
+FBOMResult FBOMWriter::Emit(ByteWriter* out, bool writeHeader)
 {
     // Choose a base path to write external objects to
-    FilePath external_path = FilePath::Current() / "external";
-    FilePath base_path = FilePath::Current();
+    FilePath externalPath = FilePath::Current() / "external";
+    FilePath basePath = FilePath::Current();
 
-    if (FileByteWriter* file_byte_writer = dynamic_cast<FileByteWriter*>(out))
+    if (FileByteWriter* fileByteWriter = dynamic_cast<FileByteWriter*>(out))
     {
-        base_path = file_byte_writer->GetFilePath().BasePath();
-        // @TODO Use a config property instead of `file_byte_writer->GetFilePath()` - so resaving an object doesn't change the path
-        external_path = FilePath(file_byte_writer->GetFilePath().StripExtension() + "_external");
+        basePath = fileByteWriter->GetFilePath().BasePath();
+        // @TODO Use a config property instead of `fileByteWriter->GetFilePath()` - so resaving an object doesn't change the path
+        externalPath = FilePath(fileByteWriter->GetFilePath().StripExtension() + "_external");
     }
 
-    if (FBOMResult err = m_write_stream->m_last_result)
+    if (FBOMResult err = m_writeStream->m_lastResult)
     {
         return err;
     }
@@ -191,7 +191,7 @@ FBOMResult FBOMWriter::Emit(ByteWriter* out, bool write_header)
         return err;
     }
 
-    if (write_header)
+    if (writeHeader)
     {
         if (FBOMResult err = WriteHeader(out))
         {
@@ -199,7 +199,7 @@ FBOMResult FBOMWriter::Emit(ByteWriter* out, bool write_header)
         }
     }
 
-    if (FBOMResult err = WriteExternalObjects(out, base_path, external_path))
+    if (FBOMResult err = WriteExternalObjects(out, basePath, externalPath))
     {
         return err;
     }
@@ -209,7 +209,7 @@ FBOMResult FBOMWriter::Emit(ByteWriter* out, bool write_header)
         return err;
     }
 
-    for (const FBOMObject& object : m_write_stream->m_object_data)
+    for (const FBOMObject& object : m_writeStream->m_objectData)
     {
         if (FBOMResult err = object.Visit(this, out))
         {
@@ -220,25 +220,25 @@ FBOMResult FBOMWriter::Emit(ByteWriter* out, bool write_header)
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter* out, const FilePath& base_path, const FilePath& external_path)
+FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter* out, const FilePath& basePath, const FilePath& externalPath)
 {
-    if (m_write_stream->m_object_libraries.Empty())
+    if (m_writeStream->m_objectLibraries.Empty())
     {
         // No external objects to write
         return { FBOMResult::FBOM_OK };
     }
 
-    if (!base_path.IsDirectory())
+    if (!basePath.IsDirectory())
     {
         return { FBOMResult::FBOM_ERR, "Base path is not a directory" };
     }
 
-    if (!external_path.Exists() && !external_path.MkDir())
+    if (!externalPath.Exists() && !externalPath.MkDir())
     {
         return { FBOMResult::FBOM_ERR, "Failed to create external directory" };
     }
 
-    if (!external_path.IsDirectory())
+    if (!externalPath.IsDirectory())
     {
         return { FBOMResult::FBOM_ERR, "External path is not a directory" };
     }
@@ -246,34 +246,34 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter* out, const FilePath& bas
     HashSet<FBOMResult> errors;
 
     // Mutex to lock while writing to the output stream
-    Mutex output_mutex;
-    Mutex errors_mutex;
+    Mutex outputMutex;
+    Mutex errorsMutex;
 
-    auto add_error = [&errors, &errors_mutex](FBOMResult err)
+    auto addError = [&errors, &errorsMutex](FBOMResult err)
     {
-        Mutex::Guard guard(errors_mutex);
+        Mutex::Guard guard(errorsMutex);
 
         errors.Insert(err);
     };
 
-    TaskSystem::GetInstance().ParallelForEach(m_write_stream->m_object_libraries, [&](const FBOMObjectLibrary& library, uint32, uint32) -> void
+    TaskSystem::GetInstance().ParallelForEach(m_writeStream->m_objectLibraries, [&](const FBOMObjectLibrary& library, uint32, uint32) -> void
         {
             FBOMWriter serializer { FBOMWriterConfig {} };
 
-            for (const FBOMObject& object : library.object_data)
+            for (const FBOMObject& object : library.objectData)
             {
-                const FBOMExternalObjectInfo* external_object_info = object.GetExternalObjectInfo();
-                AssertThrow(external_object_info != nullptr);
-                AssertThrow(external_object_info->IsLinked());
+                const FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
+                AssertThrow(externalObjectInfo != nullptr);
+                AssertThrow(externalObjectInfo->IsLinked());
 
-                FBOMObject object_copy(object);
+                FBOMObject objectCopy(object);
 
                 // unset to stop recursion
-                object_copy.SetIsExternal(false);
+                objectCopy.SetIsExternal(false);
 
-                if (FBOMResult err = serializer.Append(object_copy))
+                if (FBOMResult err = serializer.Append(objectCopy))
                 {
-                    add_error(err);
+                    addError(err);
 
                     return;
                 }
@@ -281,62 +281,62 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter* out, const FilePath& bas
 
             const FBOMObjectLibraryFlags flags = FBOMObjectLibraryFlags::LOCATION_EXTERNAL;
 
-            MemoryByteWriter buffered_output;
+            MemoryByteWriter bufferedOutput;
 
-            buffered_output.Write<uint8>(FBOM_OBJECT_LIBRARY_START);
+            bufferedOutput.Write<uint8>(FBOM_OBJECT_LIBRARY_START);
 
-            buffered_output.Write<UUID>(library.uuid);
-            buffered_output.Write<uint8>(uint8(flags));
+            bufferedOutput.Write<UUID>(library.uuid);
+            bufferedOutput.Write<uint8>(uint8(flags));
 
             if (flags & FBOMObjectLibraryFlags::LOCATION_INLINE)
             {
-                MemoryByteWriter byte_writer;
+                MemoryByteWriter byteWriter;
 
-                if (FBOMResult err = serializer.Emit(&byte_writer, /* write_header */ false))
+                if (FBOMResult err = serializer.Emit(&byteWriter, /* writeHeader */ false))
                 {
-                    add_error(err);
+                    addError(err);
 
                     return;
                 }
 
-                ByteBuffer buffer = std::move(byte_writer.GetBuffer());
+                ByteBuffer buffer = std::move(byteWriter.GetBuffer());
 
                 // write size of buffer
-                buffered_output.Write<uint64>(buffer.Size());
+                bufferedOutput.Write<uint64>(buffer.Size());
 
                 // write actual buffer data
-                buffered_output.Write(buffer.Data(), buffer.Size());
+                bufferedOutput.Write(buffer.Data(), buffer.Size());
             }
             else if (flags & FBOMObjectLibraryFlags::LOCATION_EXTERNAL)
             {
                 // write to external file
 
-                const FilePath filepath = external_path / (library.uuid.ToString() + ".hyp");
-                const FilePath relative_path = FilePath::Relative(filepath, base_path).BasePath();
+                const FilePath filepath = externalPath / (library.uuid.ToString() + ".hyp");
+                const FilePath relativePath = FilePath::Relative(filepath, basePath).BasePath();
 
-                FileByteWriter byte_writer { filepath };
+                FileByteWriter byteWriter { filepath };
 
-                if (FBOMResult err = serializer.Emit(&byte_writer, /* write_header */ true))
+                if (FBOMResult err = serializer.Emit(&byteWriter, /* writeHeader */ true))
                 {
-                    add_error(err);
+                    addError(err);
 
                     return;
                 }
 
-                buffered_output.WriteString(relative_path, BYTE_WRITER_FLAGS_WRITE_SIZE);
+                bufferedOutput.WriteString(relativePath, BYTE_WRITER_FLAGS_WRITE_SIZE);
             }
             else
             {
                 HYP_UNREACHABLE();
             }
 
-            buffered_output.Write<uint8>(FBOM_OBJECT_LIBRARY_END);
+            bufferedOutput.Write<uint8>(FBOM_OBJECT_LIBRARY_END);
 
             // Pipe the buffered data into the output stream
             {
-                Mutex::Guard guard(output_mutex);
+                Mutex::Guard guard(outputMutex);
 
-                out->Write(buffered_output.GetBuffer().Data(), buffered_output.GetBuffer().Size());
+                out->Write(bufferedOutput.GetBuffer().Data(), bufferedOutput.GetBuffer().Size());
             }
         });
 
@@ -345,9 +345,9 @@ FBOMResult FBOMWriter::WriteExternalObjects(ByteWriter* out, const FilePath& bas
 
 FBOMResult FBOMWriter::BuildStaticData(FBOMLoadContext& context)
 {
-    m_write_stream->LockObjectDataWriting();
+    m_writeStream->LockObjectDataWriting();
 
-    for (FBOMObject& object : m_write_stream->m_object_data)
+    for (FBOMObject& object : m_writeStream->m_objectData)
     {
         if (FBOMResult err = AddExternalObjects(context, object))
         {
@@ -355,7 +355,7 @@ FBOMResult FBOMWriter::BuildStaticData(FBOMLoadContext& context)
         }
     }
 
-    for (const FBOMObject& object : m_write_stream->m_object_data)
+    for (const FBOMObject& object : m_writeStream->m_objectData)
     {
         // will be added as static data by other instance when it is written
         if (object.IsExternal())
@@ -366,7 +366,7 @@ FBOMResult FBOMWriter::BuildStaticData(FBOMLoadContext& context)
         AddStaticData(context, object);
     }
 
-    m_write_stream->UnlockObjectDataWriting();
+    m_writeStream->UnlockObjectDataWriting();
 
     return {};
 }
@@ -375,11 +375,11 @@ FBOMResult FBOMWriter::AddExternalObjects(FBOMLoadContext& context, FBOMObject& 
 {
     if (object.IsExternal())
     {
-        FBOMExternalObjectInfo* external_object_info = object.GetExternalObjectInfo();
-        AssertThrow(external_object_info != nullptr);
-        AssertThrow(!external_object_info->IsLinked());
+        FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
+        AssertThrow(externalObjectInfo != nullptr);
+        AssertThrow(!externalObjectInfo->IsLinked());
 
-        m_write_stream->AddToObjectLibrary(object);
+        m_writeStream->AddToObjectLibrary(object);
     }
 
     for (FBOMObject& child : object.m_children)
@@ -397,66 +397,66 @@ FBOMResult FBOMWriter::WriteStaticData(ByteWriter* out)
 {
     EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE;
 
-    if (m_config.compress_static_data)
+    if (m_config.compressStaticData)
     {
         attributes |= FBOMDataAttributes::COMPRESSED;
     }
 
-    m_write_stream->BeginStaticDataWriting();
+    m_writeStream->BeginStaticDataWriting();
 
-    Array<FBOMStaticData*> static_data_ordered;
-    static_data_ordered.Reserve(m_write_stream->m_static_data.Size());
+    Array<FBOMStaticData*> staticDataOrdered;
+    staticDataOrdered.Reserve(m_writeStream->m_staticData.Size());
 
-    for (auto& it : m_write_stream->m_static_data)
+    for (auto& it : m_writeStream->m_staticData)
     {
-        static_data_ordered.PushBack(&it.second);
+        staticDataOrdered.PushBack(&it.second);
     }
 
-    std::sort(static_data_ordered.Begin(), static_data_ordered.End(), [](const FBOMStaticData* a, const FBOMStaticData* b)
+    std::sort(staticDataOrdered.Begin(), staticDataOrdered.End(), [](const FBOMStaticData* a, const FBOMStaticData* b)
         {
             return a->offset < b->offset;
         });
 
 #ifdef HYP_DEBUG_MODE
     // sanity check: make sure no duplicate offsets
-    for (SizeType i = 1; i < static_data_ordered.Size(); i++)
+    for (SizeType i = 1; i < staticDataOrdered.Size(); i++)
     {
-        AssertThrow(static_data_ordered[i]->offset == static_data_ordered[i - 1]->offset + 1);
+        AssertThrow(staticDataOrdered[i]->offset == staticDataOrdered[i - 1]->offset + 1);
     }
 #endif
 
-    AssertThrowMsg(static_data_ordered.Size() == m_write_stream->m_static_data_offset,
+    AssertThrowMsg(staticDataOrdered.Size() == m_writeStream->m_staticDataOffset,
         "Values do not match, incorrect bookkeeping");
 
-    MemoryByteWriter static_data_byte_writer;
-    Array<SizeType> static_data_buffer_offsets;
-    static_data_buffer_offsets.Resize(static_data_ordered.Size());
+    MemoryByteWriter staticDataByteWriter;
+    Array<SizeType> staticDataBufferOffsets;
+    staticDataBufferOffsets.Resize(staticDataOrdered.Size());
 
-    for (FBOMStaticData* static_data : static_data_ordered)
+    for (FBOMStaticData* staticData : staticDataOrdered)
     {
-        AssertThrow(static_data->offset < static_data_ordered.Size());
+        AssertThrow(staticData->offset < staticDataOrdered.Size());
 
-        const SizeType buffer_offset = static_data_byte_writer.Position();
+        const SizeType bufferOffset = staticDataByteWriter.Position();
 
-        AssertThrowMsg(!static_data->IsWritten(),
+        AssertThrowMsg(!staticData->IsWritten(),
             "Static data object has already been written: %s",
-            static_data->ToString().Data());
+            staticData->ToString().Data());
 
-        if (FBOMResult err = static_data->data->Visit(static_data->GetUniqueID(), this, &static_data_byte_writer, attributes))
+        if (FBOMResult err = staticData->data->Visit(staticData->GetUniqueID(), this, &staticDataByteWriter, attributes))
         {
-            m_write_stream->EndStaticDataWriting();
+            m_writeStream->EndStaticDataWriting();
 
             return err;
         }
 
-        static_data->SetIsWritten(true);
+        staticData->SetIsWritten(true);
 
-        AssertThrowMsg(static_data->IsWritten(),
+        AssertThrowMsg(staticData->IsWritten(),
             "Static data object was not written: %s\t%p",
-            static_data->ToString().Data(),
-            static_data);
+            staticData->ToString().Data(),
+            staticData);
 
-        static_data_buffer_offsets[static_data->offset] = buffer_offset;
+        staticDataBufferOffsets[staticData->offset] = bufferOffset;
     }
 
     out->Write<uint8>(FBOM_STATIC_DATA_START);
@@ -464,55 +464,55 @@ FBOMResult FBOMWriter::WriteStaticData(ByteWriter* out)
     out->Write<uint8>(FBOM_STATIC_DATA_HEADER_START);
 
     // write number of items as uint32
-    out->Write<uint32>(uint32(static_data_ordered.Size()));
+    out->Write<uint32>(uint32(staticDataOrdered.Size()));
 
     // write buffer size
-    out->Write<uint64>(uint64(static_data_byte_writer.GetBuffer().Size()));
+    out->Write<uint64>(uint64(staticDataByteWriter.GetBuffer().Size()));
 
-    for (SizeType i = 0; i < static_data_ordered.Size(); i++)
+    for (SizeType i = 0; i < staticDataOrdered.Size(); i++)
     {
-        const FBOMStaticData* static_data = static_data_ordered[i];
+        const FBOMStaticData* staticData = staticDataOrdered[i];
 
         // write index
-        out->Write<uint32>(uint32(static_data->offset));
+        out->Write<uint32>(uint32(staticData->offset));
 
         // write type
-        out->Write<uint8>(static_data->type);
+        out->Write<uint8>(staticData->type);
 
         // write start offset
-        out->Write<uint64>(static_data_buffer_offsets[i]);
+        out->Write<uint64>(staticDataBufferOffsets[i]);
 
         // write size of object
-        if (i == static_data_ordered.Size() - 1)
+        if (i == staticDataOrdered.Size() - 1)
         {
-            out->Write<uint64>(static_data_byte_writer.GetBuffer().Size() - static_data_buffer_offsets[i]);
+            out->Write<uint64>(staticDataByteWriter.GetBuffer().Size() - staticDataBufferOffsets[i]);
         }
         else
         {
-            AssertThrow(static_data_buffer_offsets[i + 1] >= static_data_buffer_offsets[i]);
+            AssertThrow(staticDataBufferOffsets[i + 1] >= staticDataBufferOffsets[i]);
 
-            out->Write<uint64>(static_data_buffer_offsets[i + 1] - static_data_buffer_offsets[i]);
+            out->Write<uint64>(staticDataBufferOffsets[i + 1] - staticDataBufferOffsets[i]);
         }
     }
 
     out->Write<uint8>(FBOM_STATIC_DATA_HEADER_END);
 
     // Write entire buffer
-    out->Write(static_data_byte_writer.GetBuffer().Data(), static_data_byte_writer.GetBuffer().Size());
+    out->Write(staticDataByteWriter.GetBuffer().Data(), staticDataByteWriter.GetBuffer().Size());
 
     out->Write<uint8>(FBOM_STATIC_DATA_END);
 
-    m_write_stream->EndStaticDataWriting();
+    m_writeStream->EndStaticDataWriting();
 
     return FBOMResult::FBOM_OK;
 }
 
 FBOMResult FBOMWriter::WriteHeader(ByteWriter* out)
 {
-    const SizeType position_before = out->Position();
+    const SizeType positionBefore = out->Position();
 
     // hyp identifier string
-    out->Write(FBOM::header_identifier, sizeof(FBOM::header_identifier));
+    out->Write(FBOM::headerIdentifier, sizeof(FBOM::headerIdentifier));
 
     // endianness
     out->Write<uint8>(IsBigEndian());
@@ -520,16 +520,16 @@ FBOMResult FBOMWriter::WriteHeader(ByteWriter* out)
     // binary version
     out->Write<uint32>(FBOM::version.value);
 
-    const SizeType position_change = SizeType(out->Position()) - position_before;
-    AssertThrow(position_change <= FBOM::header_size);
+    const SizeType positionChange = SizeType(out->Position()) - positionBefore;
+    AssertThrow(positionChange <= FBOM::headerSize);
 
-    const SizeType remaining_bytes = FBOM::header_size - position_change;
-    AssertThrow(remaining_bytes < 64);
+    const SizeType remainingBytes = FBOM::headerSize - positionChange;
+    AssertThrow(remainingBytes < 64);
 
-    void* zeros = StackAlloc(remaining_bytes);
-    Memory::MemSet(zeros, 0, remaining_bytes);
+    void* zeros = StackAlloc(remainingBytes);
+    Memory::MemSet(zeros, 0, remainingBytes);
 
-    out->Write(zeros, remaining_bytes);
+    out->Write(zeros, remainingBytes);
 
     return FBOMResult::FBOM_OK;
 }
@@ -541,38 +541,38 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
     out->Write<uint8>(FBOM_OBJECT_START);
     out->Write<uint64>(id);
 
-    const FBOMStaticData* static_data_ptr;
-    const FBOMExternalObjectInfo* external_object_info_ptr;
+    const FBOMStaticData* staticDataPtr;
+    const FBOMExternalObjectInfo* externalObjectInfoPtr;
 
-    FBOMDataLocation data_location = FBOMDataLocation::INVALID;
+    FBOMDataLocation dataLocation = FBOMDataLocation::INVALID;
 
     if (object.IsExternal() && object.GetExternalObjectInfo()->IsLinked())
     {
-        data_location = FBOMDataLocation::LOC_EXT_REF;
-        external_object_info_ptr = object.GetExternalObjectInfo();
+        dataLocation = FBOMDataLocation::LOC_EXT_REF;
+        externalObjectInfoPtr = object.GetExternalObjectInfo();
     }
     else
     {
-        data_location = m_write_stream->GetDataLocation(id, &static_data_ptr, &external_object_info_ptr);
+        dataLocation = m_writeStream->GetDataLocation(id, &staticDataPtr, &externalObjectInfoPtr);
     }
 
-    if (FBOMResult err = WriteDataAttributes(out, attributes, data_location))
+    if (FBOMResult err = WriteDataAttributes(out, attributes, dataLocation))
     {
         return err;
     }
 
-    switch (data_location)
+    switch (dataLocation)
     {
     case FBOMDataLocation::LOC_STATIC:
     {
-        AssertThrow(static_data_ptr != nullptr);
+        AssertThrow(staticDataPtr != nullptr);
 
-        return WriteStaticDataUsage(out, *static_data_ptr);
+        return WriteStaticDataUsage(out, *staticDataPtr);
     }
     case FBOMDataLocation::LOC_INPLACE:
     {
         // write typechain
-        if (FBOMResult err = object.m_object_type.Visit(this, out))
+        if (FBOMResult err = object.m_objectType.Visit(this, out))
         {
             return err;
         }
@@ -613,13 +613,13 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
     }
     case FBOMDataLocation::LOC_EXT_REF:
     {
-        AssertThrow(external_object_info_ptr != nullptr);
-        AssertThrow(external_object_info_ptr->IsLinked());
+        AssertThrow(externalObjectInfoPtr != nullptr);
+        AssertThrow(externalObjectInfoPtr->IsLinked());
 
-        out->Write<UUID>(external_object_info_ptr->library_id);
+        out->Write<UUID>(externalObjectInfoPtr->libraryId);
 
         // write object index as u32
-        out->Write<uint32>(external_object_info_ptr->index);
+        out->Write<uint32>(externalObjectInfoPtr->index);
 
         // write flags -- i.e, lazy loaded, etc.
         // not yet implemented, just write 0 for now
@@ -628,8 +628,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
         break;
     }
     default:
-        AssertThrowMsg(false, "Invalid data location type");
-        break;
+        HYP_UNREACHABLE();
     }
 
     return FBOMResult::FBOM_OK;
@@ -637,24 +636,24 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMObject& object, UniqueID
 
 FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMType& type, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
 {
-    const FBOMStaticData* static_data_ptr;
-    const FBOMExternalObjectInfo* external_object_info_ptr;
+    const FBOMStaticData* staticDataPtr;
+    const FBOMExternalObjectInfo* externalObjectInfoPtr;
 
-    const FBOMDataLocation data_location = m_write_stream->GetDataLocation(id, &static_data_ptr, &external_object_info_ptr);
+    const FBOMDataLocation dataLocation = m_writeStream->GetDataLocation(id, &staticDataPtr, &externalObjectInfoPtr);
 
-    if (FBOMResult err = WriteDataAttributes(out, attributes, data_location))
+    if (FBOMResult err = WriteDataAttributes(out, attributes, dataLocation))
     {
         return err;
     }
 
-    if (data_location == FBOMDataLocation::LOC_STATIC)
+    if (dataLocation == FBOMDataLocation::LOC_STATIC)
     {
-        AssertThrow(static_data_ptr != nullptr);
+        AssertThrow(staticDataPtr != nullptr);
 
-        return WriteStaticDataUsage(out, *static_data_ptr);
+        return WriteStaticDataUsage(out, *staticDataPtr);
     }
 
-    if (data_location == FBOMDataLocation::LOC_INPLACE)
+    if (dataLocation == FBOMDataLocation::LOC_INPLACE)
     {
         if (type.extends != nullptr)
         {
@@ -679,8 +678,8 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMType& type, UniqueID id,
         // write size of the type
         out->Write<uint64>(type.size);
 
-        // write native TypeID
-        out->Write<TypeID::ValueType>(type.GetNativeTypeID().Value());
+        // write native TypeId
+        out->Write<TypeId::ValueType>(type.GetNativeTypeId().Value());
     }
     else
     {
@@ -693,26 +692,26 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMType& type, UniqueID id,
 
 FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
 {
-    ByteWriter* writer_ptr = out;
+    ByteWriter* writerPtr = out;
 
-    const FBOMStaticData* static_data_ptr;
-    const FBOMExternalObjectInfo* external_object_info_ptr;
+    const FBOMStaticData* staticDataPtr;
+    const FBOMExternalObjectInfo* externalObjectInfoPtr;
 
-    const FBOMDataLocation data_location = m_write_stream->GetDataLocation(id, &static_data_ptr, &external_object_info_ptr);
+    const FBOMDataLocation dataLocation = m_writeStream->GetDataLocation(id, &staticDataPtr, &externalObjectInfoPtr);
 
-    if (FBOMResult err = WriteDataAttributes(out, attributes, data_location))
+    if (FBOMResult err = WriteDataAttributes(out, attributes, dataLocation))
     {
         return err;
     }
 
-    if (data_location == FBOMDataLocation::LOC_STATIC)
+    if (dataLocation == FBOMDataLocation::LOC_STATIC)
     {
-        AssertThrow(static_data_ptr != nullptr);
+        AssertThrow(staticDataPtr != nullptr);
 
-        return WriteStaticDataUsage(out, *static_data_ptr);
+        return WriteStaticDataUsage(out, *staticDataPtr);
     }
 
-    if (data_location == FBOMDataLocation::LOC_INPLACE)
+    if (dataLocation == FBOMDataLocation::LOC_INPLACE)
     {
         // write type first
         if (FBOMResult err = data.GetType().Visit(this, out))
@@ -721,9 +720,9 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id,
         }
 
         SizeType size = data.TotalSize();
-        ByteBuffer byte_buffer;
+        ByteBuffer byteBuffer;
 
-        if (FBOMResult err = data.ReadBytes(size, byte_buffer))
+        if (FBOMResult err = data.ReadBytes(size, byteBuffer))
         {
             return err;
         }
@@ -736,10 +735,10 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id,
             }
 
             // Write compressed data
-            ArchiveBuilder archive_builder;
-            archive_builder.Append(std::move(byte_buffer));
+            ArchiveBuilder archiveBuilder;
+            archiveBuilder.Append(std::move(byteBuffer));
 
-            if (FBOMResult err = WriteArchive(out, archive_builder.Build()))
+            if (FBOMResult err = WriteArchive(out, archiveBuilder.Build()))
             {
                 return err;
             }
@@ -748,7 +747,7 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id,
         {
             // raw bytebuffer - write size and then buffer
             out->Write<uint32>(uint32(size));
-            out->Write(byte_buffer.Data(), byte_buffer.Size());
+            out->Write(byteBuffer.Data(), byteBuffer.Size());
         }
     }
     else
@@ -762,24 +761,24 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMData& data, UniqueID id,
 
 FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMArray& array, UniqueID id, EnumFlags<FBOMDataAttributes> attributes)
 {
-    const FBOMStaticData* static_data_ptr;
-    const FBOMExternalObjectInfo* external_object_info_ptr;
+    const FBOMStaticData* staticDataPtr;
+    const FBOMExternalObjectInfo* externalObjectInfoPtr;
 
-    const FBOMDataLocation data_location = m_write_stream->GetDataLocation(id, &static_data_ptr, &external_object_info_ptr);
+    const FBOMDataLocation dataLocation = m_writeStream->GetDataLocation(id, &staticDataPtr, &externalObjectInfoPtr);
 
-    if (FBOMResult err = WriteDataAttributes(out, attributes, data_location))
+    if (FBOMResult err = WriteDataAttributes(out, attributes, dataLocation))
     {
         return err;
     }
 
-    if (data_location == FBOMDataLocation::LOC_STATIC)
+    if (dataLocation == FBOMDataLocation::LOC_STATIC)
     {
-        AssertThrow(static_data_ptr != nullptr);
+        AssertThrow(staticDataPtr != nullptr);
 
-        return WriteStaticDataUsage(out, *static_data_ptr);
+        return WriteStaticDataUsage(out, *staticDataPtr);
     }
 
-    if (data_location == FBOMDataLocation::LOC_INPLACE)
+    if (dataLocation == FBOMDataLocation::LOC_INPLACE)
     {
         // Write array size
         out->Write<uint32>(uint32(array.Size()));
@@ -795,8 +794,8 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMArray& array, UniqueID i
             return err;
         }
 
-        ByteWriter* writer_ptr = out;
-        MemoryByteWriter archive_writer;
+        ByteWriter* writerPtr = out;
+        MemoryByteWriter archiveWriter;
 
         if (attributes & FBOMDataAttributes::COMPRESSED)
         {
@@ -805,51 +804,51 @@ FBOMResult FBOMWriter::Write(ByteWriter* out, const FBOMArray& array, UniqueID i
                 return { FBOMResult::FBOM_ERR, "Cannot write to archive because the Archive feature is not enabled" };
             }
 
-            writer_ptr = &archive_writer;
+            writerPtr = &archiveWriter;
         }
 
         // Write each element
         for (SizeType index = 0; index < array.Size(); index++)
         {
-            const FBOMData* data_ptr = array.TryGetElement(index);
+            const FBOMData* dataPtr = array.TryGetElement(index);
 
-            if (!data_ptr)
+            if (!dataPtr)
             {
                 return { FBOMResult::FBOM_ERR, "Array had invalid element" };
             }
 
-            const FBOMData& data = *data_ptr;
-            SizeType data_size = data.TotalSize();
+            const FBOMData& data = *dataPtr;
+            SizeType dataSize = data.TotalSize();
 
-            if (data_size == 0)
+            if (dataSize == 0)
             {
                 return { FBOMResult::FBOM_ERR, HYP_FORMAT("Array element at index {} (type: {}) has size 0", index, data.GetType().name) };
             }
 
-            ByteBuffer byte_buffer;
+            ByteBuffer byteBuffer;
 
-            if (FBOMResult err = data.ReadBytes(data_size, byte_buffer))
+            if (FBOMResult err = data.ReadBytes(dataSize, byteBuffer))
             {
                 return err;
             }
 
-            if (byte_buffer.Size() != data_size)
+            if (byteBuffer.Size() != dataSize)
             {
-                return { FBOMResult::FBOM_ERR, HYP_FORMAT("Array element buffer is corrupt - expected size: {} bytes, but got {} bytes", data_size, byte_buffer.Size()) };
+                return { FBOMResult::FBOM_ERR, HYP_FORMAT("Array element buffer is corrupt - expected size: {} bytes, but got {} bytes", dataSize, byteBuffer.Size()) };
             }
 
             // raw bytebuffer - write size and then buffer
-            writer_ptr->Write<uint32>(uint32(data_size));
-            writer_ptr->Write(byte_buffer.Data(), byte_buffer.Size());
+            writerPtr->Write<uint32>(uint32(dataSize));
+            writerPtr->Write(byteBuffer.Data(), byteBuffer.Size());
         }
 
         if (attributes & FBOMDataAttributes::COMPRESSED)
         {
             // Write compressed data
-            ArchiveBuilder archive_builder;
-            archive_builder.Append(std::move(archive_writer.GetBuffer()));
+            ArchiveBuilder archiveBuilder;
+            archiveBuilder.Append(std::move(archiveWriter.GetBuffer()));
 
-            if (FBOMResult err = WriteArchive(out, archive_builder.Build()))
+            if (FBOMResult err = WriteArchive(out, archiveBuilder.Build()))
             {
                 return err;
             }
@@ -882,46 +881,46 @@ FBOMResult FBOMWriter::WriteDataAttributes(ByteWriter* out, EnumFlags<FBOMDataAt
 
 FBOMResult FBOMWriter::WriteDataAttributes(ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes, FBOMDataLocation location) const
 {
-    constexpr uint8 loc_static = (1u << uint32(FBOMDataLocation::LOC_STATIC)) << 5;
-    constexpr uint8 loc_inplace = (1u << uint32(FBOMDataLocation::LOC_INPLACE)) << 5;
-    constexpr uint8 loc_ext_ref = (1u << uint32(FBOMDataLocation::LOC_EXT_REF)) << 5;
+    constexpr uint8 locStatic = (1u << uint32(FBOMDataLocation::LOC_STATIC)) << 5;
+    constexpr uint8 locInplace = (1u << uint32(FBOMDataLocation::LOC_INPLACE)) << 5;
+    constexpr uint8 locExtRef = (1u << uint32(FBOMDataLocation::LOC_EXT_REF)) << 5;
 
-    uint8 attributes_value = uint8(attributes);
+    uint8 attributesValue = uint8(attributes);
 
     switch (location)
     {
     case FBOMDataLocation::LOC_STATIC:
-        attributes_value |= loc_static;
+        attributesValue |= locStatic;
 
         break;
     case FBOMDataLocation::LOC_INPLACE:
-        attributes_value |= loc_inplace;
+        attributesValue |= locInplace;
 
         break;
     case FBOMDataLocation::LOC_EXT_REF:
-        attributes_value |= loc_ext_ref;
+        attributesValue |= locExtRef;
 
         break;
     }
 
-    out->Write<uint8>(attributes_value);
+    out->Write<uint8>(attributesValue);
 
     return FBOMResult::FBOM_OK;
 }
 
-FBOMResult FBOMWriter::WriteStaticDataUsage(ByteWriter* out, const FBOMStaticData& static_data) const
+FBOMResult FBOMWriter::WriteStaticDataUsage(ByteWriter* out, const FBOMStaticData& staticData) const
 {
-    const auto offset = static_data.offset;
-    AssertThrow(offset < m_write_stream->m_static_data_offset);
+    const auto offset = staticData.offset;
+    AssertThrow(offset < m_writeStream->m_staticDataOffset);
 
 #ifdef HYP_DEBUG_MODE
-    const auto it = m_write_stream->m_static_data.Find(static_data.GetUniqueID());
-    AssertThrow(it != m_write_stream->m_static_data.End());
+    const auto it = m_writeStream->m_staticData.Find(staticData.GetUniqueID());
+    AssertThrow(it != m_writeStream->m_staticData.End());
 
     // AssertThrow(it->second.IsWritten());
 
-    AssertThrow(it->second.type == static_data.type);
-    AssertThrow(it->second.GetHashCode() == static_data.GetHashCode());
+    AssertThrow(it->second.type == staticData.type);
+    AssertThrow(it->second.GetHashCode() == staticData.GetHashCode());
 #endif
 
     out->Write<uint32>(uint32(offset));
@@ -933,15 +932,15 @@ void FBOMWriter::AddObjectData(const FBOMObject& object, UniqueID id)
 {
     AssertThrow(uint64(id) != 0);
 
-    AssertThrow(!m_write_stream->IsObjectDataWritingLocked());
+    AssertThrow(!m_writeStream->IsObjectDataWritingLocked());
 
-    m_write_stream->m_object_data.PushBack(object);
+    m_writeStream->m_objectData.PushBack(object);
 
-    auto it = m_write_stream->m_hash_use_count_map.Find(id);
+    auto it = m_writeStream->m_hashUseCountMap.Find(id);
 
-    if (it == m_write_stream->m_hash_use_count_map.End())
+    if (it == m_writeStream->m_hashUseCountMap.End())
     {
-        it = m_write_stream->m_hash_use_count_map.Insert(id, 0).first;
+        it = m_writeStream->m_hashUseCountMap.Insert(id, 0).first;
     }
 
     it->second++;
@@ -951,45 +950,45 @@ void FBOMWriter::AddObjectData(FBOMObject&& object, UniqueID id)
 {
     AssertThrow(uint64(id) != 0);
 
-    AssertThrow(!m_write_stream->IsObjectDataWritingLocked());
+    AssertThrow(!m_writeStream->IsObjectDataWritingLocked());
 
-    m_write_stream->m_object_data.PushBack(std::move(object));
+    m_writeStream->m_objectData.PushBack(std::move(object));
 
-    auto it = m_write_stream->m_hash_use_count_map.Find(id);
+    auto it = m_writeStream->m_hashUseCountMap.Find(id);
 
-    if (it == m_write_stream->m_hash_use_count_map.End())
+    if (it == m_writeStream->m_hashUseCountMap.End())
     {
-        it = m_write_stream->m_hash_use_count_map.Insert(id, 0).first;
+        it = m_writeStream->m_hashUseCountMap.Insert(id, 0).first;
     }
 
     it->second++;
 }
 
-UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData&& static_data)
+UniqueID FBOMWriter::AddStaticData(UniqueID id, FBOMStaticData&& staticData)
 {
-    AssertThrow(!m_write_stream->IsWritingStaticData());
+    AssertThrow(!m_writeStream->IsWritingStaticData());
 
-    auto it = m_write_stream->m_static_data.Find(id);
+    auto it = m_writeStream->m_staticData.Find(id);
 
-    if (it == m_write_stream->m_static_data.End())
+    if (it == m_writeStream->m_staticData.End())
     {
-        static_data.SetUniqueID(id);
-        static_data.offset = int64(m_write_stream->m_static_data_offset++);
+        staticData.SetUniqueID(id);
+        staticData.offset = int64(m_writeStream->m_staticDataOffset++);
 
-        const auto insert_result = m_write_stream->m_static_data.Insert(id, std::move(static_data));
-        AssertThrow(insert_result.second);
+        const auto insertResult = m_writeStream->m_staticData.Insert(id, std::move(staticData));
+        AssertThrow(insertResult.second);
     }
     else
     {
 #if 0
         // sanity check - ensure pointing to correct object
-        const HashCode hash_code = static_data.GetHashCode();
-        const HashCode other_hash_code = it->second.GetHashCode();
+        const HashCode hashCode = staticData.GetHashCode();
+        const HashCode otherHashCode = it->second.GetHashCode();
 
-        AssertThrowMsg(hash_code == other_hash_code,
+        AssertThrowMsg(hashCode == otherHashCode,
             "Hash codes do not match: %llu != %llu\n\tLeft: %s\n\tRight: %s",
-            hash_code.Value(), other_hash_code.Value(),
-            static_data.ToString().Data(), it->second.ToString().Data());
+            hashCode.Value(), otherHashCode.Value(),
+            staticData.ToString().Data(), it->second.ToString().Data());
 #endif
     }
 

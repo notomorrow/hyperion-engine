@@ -6,6 +6,7 @@
 
 #include <scene/World.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion::physics {
@@ -15,16 +16,16 @@ RigidBody::RigidBody()
 {
 }
 
-RigidBody::RigidBody(const PhysicsMaterial& physics_material)
-    : RigidBody(nullptr, physics_material)
+RigidBody::RigidBody(const PhysicsMaterial& physicsMaterial)
+    : RigidBody(nullptr, physicsMaterial)
 {
 }
 
-RigidBody::RigidBody(const Handle<PhysicsShape>& shape, const PhysicsMaterial& physics_material)
+RigidBody::RigidBody(const Handle<PhysicsShape>& shape, const PhysicsMaterial& physicsMaterial)
     : HypObject(),
       m_shape(shape),
-      m_physics_material(physics_material),
-      m_is_kinematic(true)
+      m_physicsMaterial(physicsMaterial),
+      m_isKinematic(true)
 {
 }
 
@@ -47,9 +48,9 @@ void RigidBody::SetShape(const Handle<PhysicsShape>& shape)
     }
 }
 
-void RigidBody::SetPhysicsMaterial(const PhysicsMaterial& physics_material)
+void RigidBody::SetPhysicsMaterial(const PhysicsMaterial& physicsMaterial)
 {
-    m_physics_material = physics_material;
+    m_physicsMaterial = physicsMaterial;
 
     if (IsInitCalled())
     {

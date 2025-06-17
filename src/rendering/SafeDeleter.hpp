@@ -6,19 +6,17 @@
 #include <core/containers/LinkedList.hpp>
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
-#include <core/ID.hpp>
+#include <core/object/ObjId.hpp>
 
 #include <rendering/Bindless.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderProxy.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
-#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererGpuBuffer.hpp>
 #include <rendering/backend/RenderObject.hpp>
 
 namespace hyperion {
-
-using renderer::Device;
 
 class DeletionEntryBase
 {
@@ -41,7 +39,7 @@ public:
 protected:
     virtual void PerformDeletion_Internal() = 0;
 
-    uint8 m_cycles_remaining = 0;
+    uint8 m_cyclesRemaining = 0;
 };
 
 template <class Derived>
@@ -82,11 +80,11 @@ private:
     Handle<T> m_handle;
 };
 
-template <class T>
-class DeletionEntry<renderer::RenderObjectHandle_Strong<T>> : public DeletionEntryBase
+template <>
+class DeletionEntry<AnyHandle> : public DeletionEntryBase
 {
 public:
-    DeletionEntry(renderer::RenderObjectHandle_Strong<T>&& handle)
+    DeletionEntry(AnyHandle&& handle)
         : m_handle(std::move(handle))
     {
     }
@@ -114,26 +112,61 @@ private:
         m_handle.Reset();
     }
 
-    renderer::RenderObjectHandle_Strong<T> m_handle;
+    AnyHandle m_handle;
+};
+
+template <class T>
+class DeletionEntry<RenderObjectHandle_Strong<T>> : public DeletionEntryBase
+{
+public:
+    DeletionEntry(RenderObjectHandle_Strong<T>&& handle)
+        : m_handle(std::move(handle))
+    {
+    }
+
+    DeletionEntry(const DeletionEntry& other) = delete;
+    DeletionEntry& operator=(const DeletionEntry& other) = delete;
+
+    DeletionEntry(DeletionEntry&& other) noexcept
+        : m_handle(std::move(other.m_handle))
+    {
+    }
+
+    DeletionEntry& operator=(DeletionEntry&& other) noexcept
+    {
+        m_handle = std::move(other.m_handle);
+
+        return *this;
+    }
+
+    virtual ~DeletionEntry() override = default;
+
+private:
+    virtual void PerformDeletion_Internal() override
+    {
+        m_handle.Reset();
+    }
+
+    RenderObjectHandle_Strong<T> m_handle;
 };
 
 class SafeDeleter
 {
 
 public:
-    static constexpr uint8 initial_cycles_remaining = uint8(max_frames_in_flight + 1);
+    static constexpr uint8 initialCyclesRemaining = uint8(maxFramesInFlight + 1);
 
     template <class T>
     void SafeRelease(T&& resource)
     {
         Mutex::Guard guard(m_mutex);
 
-        m_deletion_entries.PushBack(MakeUnique<DeletionEntry<T>>(std::move(resource)));
+        m_deletionEntries.PushBack(MakeUnique<DeletionEntry<T>>(std::move(resource)));
 
-        m_num_deletion_entries.Increment(1, MemoryOrder::RELEASE);
+        m_numDeletionEntries.Increment(1, MemoryOrder::RELEASE);
     }
 
-    void SafeRelease(RenderProxy&& proxy)
+    void SafeRelease(RenderProxyMesh&& proxy)
     {
         SafeRelease(std::move(proxy.mesh));
         SafeRelease(std::move(proxy.material));
@@ -145,16 +178,16 @@ public:
 
     HYP_FORCE_INLINE int32 NumEnqueuedDeletions() const
     {
-        return m_num_deletion_entries.Get(MemoryOrder::ACQUIRE);
+        return m_numDeletionEntries.Get(MemoryOrder::ACQUIRE);
     }
 
 private:
-    bool CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& out_entries);
+    bool CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& outEntries);
 
     Mutex m_mutex;
-    AtomicVar<int32> m_num_deletion_entries { 0 };
+    AtomicVar<int32> m_numDeletionEntries { 0 };
 
-    LinkedList<UniquePtr<DeletionEntryBase>> m_deletion_entries;
+    LinkedList<UniquePtr<DeletionEntryBase>> m_deletionEntries;
 };
 
 } // namespace hyperion

@@ -19,8 +19,6 @@
 #define HYP_ENABLE_VSYNC 0
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanSwapchain final : public SwapchainBase
 {
 public:
@@ -36,12 +34,12 @@ public:
 
     HYP_FORCE_INLINE const VulkanFrameRef& GetCurrentFrame() const
     {
-        return m_frames[m_current_frame_index];
+        return m_frames[m_currentFrameIndex];
     }
 
     HYP_FORCE_INLINE const VulkanCommandBufferRef& GetCurrentCommandBuffer() const
     {
-        return m_command_buffers[m_current_frame_index];
+        return m_commandBuffers[m_currentFrameIndex];
     }
 
     HYP_FORCE_INLINE uint32 NumAcquiredImages() const
@@ -53,7 +51,7 @@ public:
 
     HYP_API void NextFrame();
 
-    HYP_API RendererResult PrepareFrame(bool& out_needs_recreate);
+    HYP_API RendererResult PrepareFrame(bool& outNeedsRecreate);
     HYP_API RendererResult PresentFrame(VulkanDeviceQueue* queue) const;
 
     HYP_API virtual RendererResult Create() override;
@@ -65,17 +63,16 @@ private:
     RendererResult RetrieveSupportDetails();
     RendererResult RetrieveImageHandles();
 
-    FixedArray<VulkanFrameRef, max_frames_in_flight> m_frames;
-    FixedArray<VulkanCommandBufferRef, max_frames_in_flight> m_command_buffers;
+    FixedArray<VulkanFrameRef, maxFramesInFlight> m_frames;
+    FixedArray<VulkanCommandBufferRef, maxFramesInFlight> m_commandBuffers;
 
     VkSwapchainKHR m_handle;
     VkSurfaceKHR m_surface;
-    VkSurfaceFormatKHR m_surface_format;
-    VkPresentModeKHR m_present_mode;
-    SwapchainSupportDetails m_support_details;
+    VkSurfaceFormatKHR m_surfaceFormat;
+    VkPresentModeKHR m_presentMode;
+    SwapchainSupportDetails m_supportDetails;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif // HYPERION_RENDERER_BACKEND_VULKAN_SWAPCHAIN_HPP

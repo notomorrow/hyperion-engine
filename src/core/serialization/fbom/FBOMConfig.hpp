@@ -22,29 +22,29 @@ class IFBOMConfig
 public:
     virtual ~IFBOMConfig() = default;
 
-    virtual void SaveToJSON(json::JSONValue& out_json) const = 0;
+    virtual void SaveToJSON(json::JSONValue& outJson) const = 0;
     virtual bool LoadFromJSON(const json::JSONValue& json) = 0;
 };
 
 struct FBOMWriterConfig : public IFBOMConfig
 {
-    bool enable_static_data = true;
-    bool compress_static_data = true;
+    bool enableStaticData = true;
+    bool compressStaticData = true;
 
     virtual ~FBOMWriterConfig() override = default;
 
-    virtual void SaveToJSON(json::JSONValue& out_json) const override;
+    virtual void SaveToJSON(json::JSONValue& outJson) const override;
     virtual bool LoadFromJSON(const json::JSONValue& json) override;
 };
 
 struct FBOMReaderConfig : public IFBOMConfig
 {
-    bool continue_on_external_load_error = false;
-    String base_path;
+    bool continueOnExternalLoadError = false;
+    String basePath;
 
     virtual ~FBOMReaderConfig() override = default;
 
-    virtual void SaveToJSON(json::JSONValue& out_json) const override;
+    virtual void SaveToJSON(json::JSONValue& outJson) const override;
     virtual bool LoadFromJSON(const json::JSONValue& json) override;
 };
 

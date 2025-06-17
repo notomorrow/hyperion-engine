@@ -29,19 +29,32 @@ public:
             return err;
         }
 
-        const Texture& in_object = in.Get<Texture>();
+        const Texture& inObject = in.Get<Texture>();
 
-        if (const RC<StreamedTextureData>& streamed_texture_data = in_object.GetStreamedTextureData())
+        /// FIXME: StreamedTextureData is no longer HypObject
+        if (const RC<StreamedTextureData>& streamedTextureData = inObject.GetStreamedTextureData())
         {
-            TResourceHandle<StreamedTextureData> resource_handle(*streamed_texture_data);
+            TResourceHandle<StreamedTextureData> resourceHandle(*streamedTextureData);
 
-            const TextureData& texture_data = resource_handle->GetTextureData();
+            const TextureData& textureData = resourceHandle->GetTextureData();
 
-            out.AddChild(texture_data);
+            if (textureData.buffer.Empty())
+            {
+                HYP_LOG(Serialization, Warning, "TextureData for Texture '{}' is empty!", inObject.GetName());
+            }
+            else if (textureData.buffer.Size() != inObject.GetTextureDesc().GetByteSize())
+            {
+                HYP_LOG(Serialization, Warning, "TextureData for Texture '{}' has size {}, but TextureDesc expects size {}!",
+                    inObject.GetName(), textureData.buffer.Size(), inObject.GetTextureDesc().GetByteSize());
+            }
+            else
+            {
+                out.AddChild(textureData);
+            }
         }
         else
         {
-            const TextureDesc& desc = in_object.GetTextureDesc();
+            const TextureDesc& desc = inObject.GetTextureDesc();
 
             out.AddChild(desc);
         }
@@ -51,55 +64,55 @@ public:
 
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
-        Handle<Texture> texture_handle;
+        Handle<Texture> textureHandle;
 
-        RC<StreamedTextureData> streamed_texture_data;
-        ResourceHandle streamed_texture_data_resource_handle;
-        TextureDesc texture_desc;
+        RC<StreamedTextureData> streamedTextureData;
+        ResourceHandle streamedTextureDataResourceHandle;
+        TextureDesc textureDesc;
 
-        const auto texture_data_it = in.GetChildren().FindIf([](const FBOMObject& item)
+        const auto textureDataIt = in.GetChildren().FindIf([](const FBOMObject& item)
             {
                 return item.GetType().IsOrExtends("TextureData");
             });
 
-        if (texture_data_it != in.GetChildren().End())
+        if (textureDataIt != in.GetChildren().End())
         {
-            streamed_texture_data = MakeRefCountedPtr<StreamedTextureData>(
-                texture_data_it->m_deserialized_object->Get<TextureData>(),
-                streamed_texture_data_resource_handle);
+            streamedTextureData = MakeRefCountedPtr<StreamedTextureData>(
+                textureDataIt->m_deserializedObject->Get<TextureData>(),
+                streamedTextureDataResourceHandle);
         }
 
-        const auto texture_desc_it = in.GetChildren().FindIf([](const FBOMObject& item)
+        const auto textureDescIt = in.GetChildren().FindIf([](const FBOMObject& item)
             {
                 return item.GetType().IsOrExtends("TextureDesc");
             });
 
-        if (texture_desc_it != in.GetChildren().End())
+        if (textureDescIt != in.GetChildren().End())
         {
-            texture_desc = texture_desc_it->m_deserialized_object->Get<TextureDesc>();
+            textureDesc = textureDescIt->m_deserializedObject->Get<TextureDesc>();
         }
 
-        if (streamed_texture_data != nullptr)
+        if (streamedTextureData != nullptr)
         {
-            texture_handle = CreateObject<Texture>(streamed_texture_data);
-            streamed_texture_data_resource_handle.Reset();
+            textureHandle = CreateObject<Texture>(streamedTextureData);
+            streamedTextureDataResourceHandle.Reset();
         }
         else
         {
-            texture_handle = CreateObject<Texture>(texture_desc);
+            textureHandle = CreateObject<Texture>(textureDesc);
         }
 
-        if (!texture_handle.IsValid())
+        if (!textureHandle.IsValid())
         {
             return { FBOMResult::FBOM_ERR, "No TextureData or TextureDesc on Texture object" };
         }
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Texture::Class(), AnyRef(*texture_handle)))
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Texture::Class(), AnyRef(*textureHandle)))
         {
             return err;
         }
 
-        out = HypData(std::move(texture_handle));
+        out = HypData(std::move(textureHandle));
 
         return { FBOMResult::FBOM_OK };
     }

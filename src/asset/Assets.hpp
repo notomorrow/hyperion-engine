@@ -8,7 +8,6 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 
 #include <core/object/HypObject.hpp>
@@ -51,7 +50,7 @@ struct ProcessAssetFunctor;
 
 using AssetLoadFlags = uint32;
 
-extern HYP_API const HypClass* GetClass(TypeID type_id);
+extern HYP_API const HypClass* GetClass(TypeId typeId);
 
 enum AssetLoadFlagBits : AssetLoadFlags
 {
@@ -63,16 +62,16 @@ enum AssetLoadFlagBits : AssetLoadFlags
 HYP_STRUCT()
 struct AssetLoaderDefinition
 {
-    TypeID loader_type_id;
-    TypeID result_type_id;
-    const HypClass* result_hyp_class = nullptr;
+    TypeId loaderTypeId;
+    TypeId resultTypeId;
+    const HypClass* resultHypClass = nullptr;
     FlatSet<String> extensions;
     Handle<AssetLoaderBase> loader;
 
-    HYP_FORCE_INLINE bool HandlesResultType(TypeID type_id) const
+    HYP_FORCE_INLINE bool HandlesResultType(TypeId typeId) const
     {
-        return result_type_id == type_id
-            || (result_hyp_class != nullptr && IsInstanceOfHypClass(result_hyp_class, GetClass(type_id)));
+        return resultTypeId == typeId
+            || (resultHypClass != nullptr && IsA(resultHypClass, GetClass(typeId)));
     }
 
     HYP_FORCE_INLINE bool HandlesExtension(const String& filepath) const
@@ -110,8 +109,8 @@ public:
     // Necessary for script bindings
     AssetCollector() = default;
 
-    AssetCollector(const FilePath& base_path)
-        : m_base_path(base_path)
+    AssetCollector(const FilePath& basePath)
+        : m_basePath(basePath)
     {
     }
 
@@ -120,17 +119,17 @@ public:
     HYP_METHOD(Property = "BasePath", Serialize = true)
     HYP_FORCE_INLINE const FilePath& GetBasePath() const
     {
-        return m_base_path;
+        return m_basePath;
     }
 
     HYP_METHOD(Property = "BasePath", Serialize = true)
-    HYP_FORCE_INLINE void SetBasePath(const FilePath& base_path)
+    HYP_FORCE_INLINE void SetBasePath(const FilePath& basePath)
     {
-        m_base_path = base_path;
+        m_basePath = basePath;
     }
 
     HYP_METHOD()
-    HYP_API void NotifyAssetChanged(const FilePath& path, AssetChangeType change_type);
+    HYP_API void NotifyAssetChanged(const FilePath& path, AssetChangeType changeType);
 
     HYP_METHOD(Scriptable)
     bool IsWatching() const;
@@ -142,7 +141,7 @@ public:
     void StopWatching();
 
     HYP_METHOD(Scriptable)
-    void OnAssetChanged(const FilePath& path, AssetChangeType change_type);
+    void OnAssetChanged(const FilePath& path, AssetChangeType changeType);
 
 private:
     HYP_API void Init() override;
@@ -160,11 +159,11 @@ private:
     {
     }
 
-    void OnAssetChanged_Impl(const FilePath& path, AssetChangeType change_type)
+    void OnAssetChanged_Impl(const FilePath& path, AssetChangeType changeType)
     {
     }
 
-    FilePath m_base_path;
+    FilePath m_basePath;
 };
 
 class AssetManagerThreadPool;
@@ -180,7 +179,7 @@ class AssetManager final : public HypObject<AssetManager>
 public:
     using ProcessAssetFunctorFactory = std::add_pointer_t<UniquePtr<ProcessAssetFunctorBase>(const String& /* key */, const String& /* path */, AssetBatchCallbacks* /* callbacks */)>;
 
-    static constexpr bool asset_cache_enabled = false;
+    static constexpr bool assetCacheEnabled = false;
 
     HYP_METHOD()
     HYP_API static const Handle<AssetManager>& GetInstance();
@@ -198,7 +197,7 @@ public:
     FilePath GetBasePath() const;
 
     HYP_METHOD()
-    void SetBasePath(const FilePath& base_path);
+    void SetBasePath(const FilePath& basePath);
 
     HYP_METHOD()
     Handle<AssetCollector> GetBaseAssetCollector() const;
@@ -206,10 +205,10 @@ public:
     void ForEachAssetCollector(const ProcRef<void(const Handle<AssetCollector>&)>& callback) const;
 
     HYP_METHOD()
-    void AddAssetCollector(const Handle<AssetCollector>& asset_collector);
+    void AddAssetCollector(const Handle<AssetCollector>& assetCollector);
 
     HYP_METHOD()
-    void RemoveAssetCollector(const Handle<AssetCollector>& asset_collector);
+    void RemoveAssetCollector(const Handle<AssetCollector>& assetCollector);
 
     const Handle<AssetCollector>& FindAssetCollector(ProcRef<bool(const Handle<AssetCollector>&)>) const;
 
@@ -219,40 +218,40 @@ public:
         static_assert(std::is_base_of_v<AssetLoaderBase, Loader>,
             "Loader must be a derived class of AssetLoaderBase!");
 
-        // Threads::AssertOnThread(g_game_thread);
+        // Threads::AssertOnThread(g_gameThread);
 
-        const FixedArray<String, sizeof...(formats)> format_strings {
+        const FixedArray<String, sizeof...(formats)> formatStrings {
             String(formats)...
         };
 
-        AssetLoaderDefinition& asset_loader_definition = m_loaders.EmplaceBack();
-        asset_loader_definition.loader_type_id = TypeID::ForType<Loader>();
-        asset_loader_definition.result_type_id = TypeID::ForType<ResultType>();
-        asset_loader_definition.result_hyp_class = GetClass(TypeID::ForType<ResultType>());
-        asset_loader_definition.extensions = FlatSet<String>(format_strings.Begin(), format_strings.End());
-        asset_loader_definition.loader = CreateObject<Loader>();
+        AssetLoaderDefinition& assetLoaderDefinition = m_loaders.EmplaceBack();
+        assetLoaderDefinition.loaderTypeId = TypeId::ForType<Loader>();
+        assetLoaderDefinition.resultTypeId = TypeId::ForType<ResultType>();
+        assetLoaderDefinition.resultHypClass = GetClass(TypeId::ForType<ResultType>());
+        assetLoaderDefinition.extensions = FlatSet<String>(formatStrings.Begin(), formatStrings.End());
+        assetLoaderDefinition.loader = CreateObject<Loader>();
 
-        m_functor_factories.Set<Loader>([](const String& key, const String& path, AssetBatchCallbacks* callbacks_ptr) -> UniquePtr<ProcessAssetFunctorBase>
+        m_functorFactories.Set<Loader>([](const String& key, const String& path, AssetBatchCallbacks* callbacksPtr) -> UniquePtr<ProcessAssetFunctorBase>
             {
-                return MakeUnique<ProcessAssetFunctor<ResultType>>(key, path, callbacks_ptr);
+                return MakeUnique<ProcessAssetFunctor<ResultType>>(key, path, callbacksPtr);
             });
     }
 
     /*! \brief Load a single asset synchronously
-     *  \param type_id The TypeID of asset to load
+     *  \param typeId The TypeId of asset to load
      *  \param path The path to the asset
      *  \param flags Flags to control the loading process
      *  \return The result of the load operation */
-    HYP_NODISCARD AssetLoadResult Load(const TypeID& type_id, const String& path, AssetLoadFlags flags = ASSET_LOAD_FLAGS_CACHE_READ | ASSET_LOAD_FLAGS_CACHE_WRITE)
+    HYP_NODISCARD AssetLoadResult Load(const TypeId& typeId, const String& path, AssetLoadFlags flags = ASSET_LOAD_FLAGS_CACHE_READ | ASSET_LOAD_FLAGS_CACHE_WRITE)
     {
-        const AssetLoaderDefinition* loader_definition = GetLoaderDefinition(path, type_id);
+        const AssetLoaderDefinition* loaderDefinition = GetLoaderDefinition(path, typeId);
 
-        if (!loader_definition)
+        if (!loaderDefinition)
         {
             return HYP_MAKE_ERROR(AssetLoadError, "No registered loader for the given path", AssetLoadError::ERR_NO_LOADER);
         }
 
-        const Handle<AssetLoaderBase>& loader = loader_definition->loader;
+        const Handle<AssetLoaderBase>& loader = loaderDefinition->loader;
         AssertThrow(loader.IsValid());
 
         return AssetLoadResult(loader->Load(*this, path));
@@ -266,29 +265,29 @@ public:
     template <class T>
     HYP_NODISCARD TAssetLoadResult<T> Load(const String& path, AssetLoadFlags flags = ASSET_LOAD_FLAGS_CACHE_READ | ASSET_LOAD_FLAGS_CACHE_WRITE)
     {
-        const AssetLoaderDefinition* loader_definition = GetLoaderDefinition(path, TypeID::ForType<T>());
+        const AssetLoaderDefinition* loaderDefinition = GetLoaderDefinition(path, TypeId::ForType<T>());
 
-        if (!loader_definition)
+        if (!loaderDefinition)
         {
             return HYP_MAKE_ERROR(AssetLoadError, "No registered loader for the given path", AssetLoadError::ERR_NO_LOADER);
         }
 
-        AssetLoaderBase* loader = loader_definition->loader.Get();
+        AssetLoaderBase* loader = loaderDefinition->loader.Get();
         AssertThrow(loader != nullptr);
 
         return TAssetLoadResult<T>(loader->Load(*this, path));
     }
 
-    HYP_API const AssetLoaderDefinition* GetLoaderDefinition(const FilePath& path, TypeID desired_type_id = TypeID::Void());
+    HYP_API const AssetLoaderDefinition* GetLoaderDefinition(const FilePath& path, TypeId desiredTypeId = TypeId::Void());
 
     HYP_API RC<AssetBatch> CreateBatch();
 
     HYP_FORCE_INLINE AssetCache* GetAssetCache() const
     {
-        return m_asset_cache.Get();
+        return m_assetCache.Get();
     }
 
-    void Update(GameCounter::TickUnit delta);
+    void Update(float delta);
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
@@ -305,45 +304,45 @@ private:
     /*! \internal Called from AssetBatch on LoadAsync() */
     HYP_API void AddPendingBatch(const RC<AssetBatch>& batch);
 
-    HYP_API UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(TypeID loader_type_id, const String& key, const String& path, AssetBatchCallbacks* callbacks_ptr);
+    HYP_API UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(TypeId loaderTypeId, const String& key, const String& path, AssetBatchCallbacks* callbacksPtr);
 
     template <class Loader>
-    UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(const String& key, const String& path, AssetBatchCallbacks* callbacks_ptr)
+    UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(const String& key, const String& path, AssetBatchCallbacks* callbacksPtr)
     {
-        return CreateProcessAssetFunctor(TypeID::ForType<Loader>(), key, path, callbacks_ptr);
+        return CreateProcessAssetFunctor(TypeId::ForType<Loader>(), key, path, callbacksPtr);
     }
 
-    UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(const String& key, const String& path, AssetBatchCallbacks* callbacks_ptr)
+    UniquePtr<ProcessAssetFunctorBase> CreateProcessAssetFunctor(const String& key, const String& path, AssetBatchCallbacks* callbacksPtr)
     {
-        const AssetLoaderDefinition* loader_definition = GetLoaderDefinition(path);
+        const AssetLoaderDefinition* loaderDefinition = GetLoaderDefinition(path);
 
-        if (!loader_definition)
+        if (!loaderDefinition)
         {
             DebugLog(LogType::Error, "No registered loader for path: %s\n", path.Data());
 
             return nullptr;
         }
 
-        return CreateProcessAssetFunctor(loader_definition->loader_type_id, key, path, callbacks_ptr);
+        return CreateProcessAssetFunctor(loaderDefinition->loaderTypeId, key, path, callbacksPtr);
     }
 
     void RegisterDefaultLoaders();
 
-    UniquePtr<AssetCache> m_asset_cache;
+    UniquePtr<AssetCache> m_assetCache;
 
-    UniquePtr<AssetManagerThreadPool> m_thread_pool;
+    UniquePtr<AssetManagerThreadPool> m_threadPool;
 
-    Array<Handle<AssetCollector>> m_asset_collectors;
-    WeakHandle<AssetCollector> m_base_asset_collector;
-    mutable Mutex m_asset_collectors_mutex;
+    Array<Handle<AssetCollector>> m_assetCollectors;
+    WeakHandle<AssetCollector> m_baseAssetCollector;
+    mutable Mutex m_assetCollectorsMutex;
 
     Array<AssetLoaderDefinition> m_loaders;
-    TypeMap<ProcessAssetFunctorFactory> m_functor_factories;
+    TypeMap<ProcessAssetFunctorFactory> m_functorFactories;
 
-    Array<RC<AssetBatch>> m_pending_batches;
-    Mutex m_pending_batches_mutex;
-    AtomicVar<uint32> m_num_pending_batches;
-    Array<RC<AssetBatch>> m_completed_batches;
+    Array<RC<AssetBatch>> m_pendingBatches;
+    Mutex m_pendingBatchesMutex;
+    AtomicVar<uint32> m_numPendingBatches;
+    Array<RC<AssetBatch>> m_completedBatches;
 };
 
 } // namespace hyperion

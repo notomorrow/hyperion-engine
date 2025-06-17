@@ -4,7 +4,7 @@
 #include <rendering/RenderGroup.hpp>
 #include <rendering/Deferred.hpp>
 
-#include <rendering/backend/RenderingAPI.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 #include <rendering/backend/RendererSwapchain.hpp>
 
@@ -18,98 +18,150 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
 #pragma region GBuffer
 
-const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> GBuffer::gbuffer_resources = {
-    GBufferResource { GBufferFormat(DefaultImageFormatType::COLOR) },   // color
-    GBufferResource { GBufferFormat(DefaultImageFormatType::NORMALS) }, // normal
-    GBufferResource { GBufferFormat(InternalFormat::RGBA8) },           // material
-    GBufferResource {                                                   // lightmap
-        GBufferFormat(Array<InternalFormat> {
-            InternalFormat::R11G11B10F,
-            InternalFormat::RGBA16F }) },
-    GBufferResource { GBufferFormat(InternalFormat::RG16F) }, // velocity
-    GBufferResource {                                         // objects mask
-        GBufferFormat(Array<InternalFormat> {
-            InternalFormat::R16 }) },
-    GBufferResource { GBufferFormat(DefaultImageFormatType::NORMALS) }, // world-space normals (untextured)
-    GBufferResource { GBufferFormat(DefaultImageFormatType::DEPTH) }    // depth
+struct GBufferTargetDesc
+{
+    GBufferFormat format;
 };
 
-static InternalFormat GetImageFormat(GBufferResourceName resource)
+static const FixedArray<GBufferTargetDesc, GTN_MAX> g_targetDescs = {
+    GBufferTargetDesc { GBufferFormat(DIF_COLOR) },   // color
+    GBufferTargetDesc { GBufferFormat(DIF_NORMALS) }, // normal
+    GBufferTargetDesc { GBufferFormat(TF_RGBA8) },    // material
+    GBufferTargetDesc { GBufferFormat(Array<TextureFormat> { TF_R11G11B10F, TF_RGBA16F }) },
+    GBufferTargetDesc { GBufferFormat(TF_RG16F) }, // velocity
+    GBufferTargetDesc { GBufferFormat(Array<TextureFormat> { TF_R16 }) },
+    GBufferTargetDesc { GBufferFormat(DIF_NORMALS) }, // world-space normals (untextured)
+    GBufferTargetDesc { GBufferFormat(DIF_DEPTH) }    // depth
+};
+
+static TextureFormat GetImageFormat(GBufferTargetName targetName)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
 
-    InternalFormat color_format = InternalFormat::NONE;
+    TextureFormat colorFormat = TF_NONE;
 
-    if (const InternalFormat* format = GBuffer::gbuffer_resources[resource].format.TryGet<InternalFormat>())
+    if (const TextureFormat* format = g_targetDescs[targetName].format.TryGet<TextureFormat>())
     {
-        color_format = *format;
+        colorFormat = *format;
     }
-    else if (const DefaultImageFormatType* default_format = GBuffer::gbuffer_resources[resource].format.TryGet<DefaultImageFormatType>())
+    else if (const DefaultImageFormat* defaultFormat = g_targetDescs[targetName].format.TryGet<DefaultImageFormat>())
     {
-        color_format = g_rendering_api->GetDefaultFormat(*default_format);
+        colorFormat = g_renderBackend->GetDefaultFormat(*defaultFormat);
     }
-    else if (const Array<InternalFormat>* default_formats = GBuffer::gbuffer_resources[resource].format.TryGet<Array<InternalFormat>>())
+    else if (const Array<TextureFormat>* defaultFormats = g_targetDescs[targetName].format.TryGet<Array<TextureFormat>>())
     {
-        for (const InternalFormat format : *default_formats)
+        for (const TextureFormat format : *defaultFormats)
         {
-            if (g_rendering_api->IsSupportedFormat(format, renderer::ImageSupportType::SRV))
+            if (g_renderBackend->IsSupportedFormat(format, IS_SRV))
             {
-                color_format = format;
+                colorFormat = format;
 
                 break;
             }
         }
     }
 
-    AssertThrowMsg(color_format != InternalFormat::NONE, "Invalid value set for gbuffer image format");
+    AssertThrow(colorFormat != TF_NONE, "Invalid value set for gbuffer image format");
 
-    return color_format;
+    return colorFormat;
 }
 
 GBuffer::GBuffer(Vec2u extent)
     : m_extent(extent)
 {
-    for (uint32 bucket_index = 0; bucket_index < BUCKET_MAX - 1; bucket_index++)
+    for (uint32 bucketIndex = 0; bucketIndex < RB_MAX - 1; bucketIndex++)
     {
-        const Bucket bucket = Bucket(bucket_index + 1);
+        const RenderBucket rb = RenderBucket(bucketIndex + 1);
 
-        m_buckets[bucket_index].SetGBuffer(this);
-        m_buckets[bucket_index].SetBucket(bucket);
+        m_buckets[bucketIndex].SetGBuffer(this);
+        m_buckets[bucketIndex].SetBucket(rb);
     }
+
+    CreateBucketFramebuffers();
+}
+
+GBuffer::~GBuffer()
+{
+    for (GBufferTarget& it : m_buckets)
+    {
+        it.SetFramebuffer(nullptr);
+    }
+
+    SafeRelease(std::move(m_framebuffers));
 }
 
 void GBuffer::Create()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
 
-    for (GBufferBucket& it : m_buckets)
+    HYP_LOG(Rendering, Debug, "Creating GBuffer with resolution {}", m_extent);
+
+    for (auto& framebuffer : m_framebuffers)
     {
-        const Bucket bucket = it.GetBucket();
+        DeferCreate(framebuffer);
+    }
+}
 
-        switch (bucket)
+void GBuffer::Resize(Vec2u extent)
+{
+    HYP_SCOPE;
+
+    if (m_extent == extent)
+    {
+        return;
+    }
+
+    m_extent = extent;
+
+    for (GBufferTarget& it : m_buckets)
+    {
+        it.SetFramebuffer(nullptr);
+    }
+
+    SafeRelease(std::move(m_framebuffers));
+
+    CreateBucketFramebuffers();
+
+    for (auto& framebuffer : m_framebuffers)
+    {
+        DeferCreate(framebuffer);
+    }
+
+    OnGBufferResolutionChanged(m_extent);
+}
+
+void GBuffer::CreateBucketFramebuffers()
+{
+    HYP_SCOPE;
+
+    AssertThrow(m_framebuffers.Empty());
+
+    for (GBufferTarget& it : m_buckets)
+    {
+        const RenderBucket rb = it.GetBucket();
+
+        switch (rb)
         {
-        case BUCKET_OPAQUE:
-            it.m_framebuffer = CreateFramebuffer(nullptr, m_extent, bucket);
+        case RB_OPAQUE:
+            it.m_framebuffer = CreateFramebuffer(nullptr, m_extent, rb);
             break;
-        case BUCKET_LIGHTMAP:
-            it.m_framebuffer = CreateFramebuffer(GetBucket(BUCKET_OPAQUE).m_framebuffer, m_extent, bucket);
+        case RB_LIGHTMAP:
+            it.m_framebuffer = CreateFramebuffer(GetBucket(RB_OPAQUE).m_framebuffer, m_extent, rb);
             break;
-        case BUCKET_TRANSLUCENT:
-            it.m_framebuffer = CreateFramebuffer(GetBucket(BUCKET_OPAQUE).m_framebuffer, m_extent, bucket);
+        case RB_TRANSLUCENT:
+            it.m_framebuffer = CreateFramebuffer(GetBucket(RB_OPAQUE).m_framebuffer, m_extent, rb);
             break;
-        case BUCKET_SKYBOX:
-            it.m_framebuffer = GetBucket(BUCKET_TRANSLUCENT).m_framebuffer;
+        case RB_SKYBOX:
+            it.m_framebuffer = GetBucket(RB_TRANSLUCENT).m_framebuffer;
             break;
-        case BUCKET_DEBUG:
-            it.m_framebuffer = GetBucket(BUCKET_TRANSLUCENT).m_framebuffer;
+        case RB_DEBUG:
+            it.m_framebuffer = GetBucket(RB_TRANSLUCENT).m_framebuffer;
             break;
         default:
             HYP_UNREACHABLE();
@@ -120,77 +172,42 @@ void GBuffer::Create()
     }
 }
 
-void GBuffer::Destroy()
+FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaqueFramebuffer, Vec2u resolution, RenderBucket rb)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
-
-    for (GBufferBucket& it : m_buckets)
-    {
-        it.SetFramebuffer(nullptr);
-    }
-
-    SafeRelease(std::move(m_framebuffers));
-}
-
-void GBuffer::Resize(Vec2u extent)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
-
-    if (m_extent == extent)
-    {
-        return;
-    }
-
-    m_extent = extent;
-
-    Destroy();
-    Create();
-
-    OnGBufferResolutionChanged(m_extent);
-}
-
-FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaque_framebuffer, Vec2u resolution, Bucket bucket)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(resolution.Volume() != 0);
 
-    FramebufferRef framebuffer = g_rendering_api->MakeFramebuffer(resolution);
+    FramebufferRef framebuffer = g_renderBackend->MakeFramebuffer(resolution);
 
-    auto add_owned_attachment = [&](uint32 binding, InternalFormat format)
+    auto addOwnedAttachment = [&](uint32 binding, TextureFormat format)
     {
-        TextureDesc texture_desc;
-        texture_desc.type = ImageType::TEXTURE_TYPE_2D;
-        texture_desc.format = format;
-        texture_desc.extent = Vec3u { resolution, 1 };
-        texture_desc.filter_mode_min = renderer::FilterMode::TEXTURE_FILTER_NEAREST;
-        texture_desc.filter_mode_mag = renderer::FilterMode::TEXTURE_FILTER_NEAREST;
-        texture_desc.wrap_mode = renderer::WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE;
-        texture_desc.image_format_capabilities = ImageFormatCapabilities::ATTACHMENT | ImageFormatCapabilities::SAMPLED;
-
-        ImageRef attachment_image = g_rendering_api->MakeImage(texture_desc);
-        DeferCreate(attachment_image);
+        TextureDesc textureDesc;
+        textureDesc.type = TT_TEX2D;
+        textureDesc.format = format;
+        textureDesc.extent = Vec3u { resolution, 1 };
+        textureDesc.filterModeMin = TFM_NEAREST;
+        textureDesc.filterModeMag = TFM_NEAREST;
+        textureDesc.wrapMode = TWM_CLAMP_TO_EDGE;
+        textureDesc.imageUsage = IU_ATTACHMENT | IU_SAMPLED;
 
         framebuffer->AddAttachment(
             binding,
-            attachment_image,
-            renderer::LoadOperation::CLEAR,
-            renderer::StoreOperation::STORE);
+            g_renderBackend->MakeImage(textureDesc),
+            LoadOperation::CLEAR,
+            StoreOperation::STORE);
     };
 
-    auto add_shared_attachment = [&](uint32 binding)
+    auto addSharedAttachment = [&](uint32 binding)
     {
-        AttachmentBase* parent_attachment = opaque_framebuffer->GetAttachment(binding);
-        AssertThrow(parent_attachment != nullptr);
+        AttachmentBase* parentAttachment = opaqueFramebuffer->GetAttachment(binding);
+        AssertThrow(parentAttachment != nullptr);
 
         framebuffer->AddAttachment(
             binding,
-            parent_attachment->GetImage(),
-            renderer::LoadOperation::LOAD,
-            renderer::StoreOperation::STORE);
+            parentAttachment->GetImage(),
+            LoadOperation::LOAD,
+            StoreOperation::STORE);
     };
 
     // add gbuffer attachments
@@ -202,40 +219,38 @@ FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaque_framebuff
     //   the shaded result in the deferred pass before the translucent objects are rendered
     //   using forward rendering, and we need to be able to accommodate the high range of
     //   values that can be produced by the deferred shading pass
-    if (bucket == BUCKET_OPAQUE)
+    if (rb == RB_OPAQUE)
     {
-        add_owned_attachment(0, GetImageFormat(GBUFFER_RESOURCE_ALBEDO));
+        addOwnedAttachment(0, GetImageFormat(GTN_ALBEDO));
     }
-    else if (bucket == BUCKET_LIGHTMAP)
+    else if (rb == RB_LIGHTMAP)
     {
-        add_shared_attachment(0);
+        addSharedAttachment(0);
     }
     else
     {
-        add_owned_attachment(0, InternalFormat::RGBA16F);
+        addOwnedAttachment(0, TF_RGBA16F);
     }
 
     // opaque creates the main non-color gbuffer attachments,
     // which will be shared with other renderable buckets
-    if (opaque_framebuffer == nullptr)
+    if (opaqueFramebuffer == nullptr)
     {
-        for (uint32 i = 1; i < GBUFFER_RESOURCE_MAX; i++)
+        for (uint32 i = 1; i < GTN_MAX; i++)
         {
-            const InternalFormat format = GetImageFormat(GBufferResourceName(i));
+            const TextureFormat format = GetImageFormat(GBufferTargetName(i));
 
-            add_owned_attachment(i, format);
+            addOwnedAttachment(i, format);
         }
     }
     else
     {
         // add the attachments shared with opaque bucket
-        for (uint32 i = 1; i < GBUFFER_RESOURCE_MAX; i++)
+        for (uint32 i = 1; i < GTN_MAX; i++)
         {
-            add_shared_attachment(i);
+            addSharedAttachment(i);
         }
     }
-
-    DeferCreate(framebuffer);
 
     m_framebuffers.PushBack(framebuffer);
 
@@ -244,27 +259,26 @@ FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaque_framebuff
 
 #pragma endregion GBuffer
 
-#pragma region GBufferBucket
+#pragma region GBufferTarget
 
-GBuffer::GBufferBucket::GBufferBucket()
+GBuffer::GBufferTarget::GBufferTarget()
 {
 }
 
-GBuffer::GBufferBucket::~GBufferBucket()
+GBuffer::GBufferTarget::~GBufferTarget()
 {
 }
 
-AttachmentBase* GBuffer::GBufferBucket::GetGBufferAttachment(GBufferResourceName resource_name) const
+AttachmentBase* GBuffer::GBufferTarget::GetGBufferAttachment(GBufferTargetName resourceName) const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
 
     AssertThrow(m_framebuffer != nullptr);
-    AssertThrow(uint32(resource_name) < uint32(GBUFFER_RESOURCE_MAX));
+    AssertThrow(uint32(resourceName) < uint32(GTN_MAX));
 
-    return m_framebuffer->GetAttachment(uint32(resource_name));
+    return m_framebuffer->GetAttachment(uint32(resourceName));
 }
 
-#pragma endregion GBufferBucket
+#pragma endregion GBufferTarget
 
 } // namespace hyperion

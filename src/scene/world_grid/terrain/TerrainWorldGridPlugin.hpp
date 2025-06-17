@@ -3,7 +3,6 @@
 #ifndef HYPERION_TERRAIN_WORLD_GRID_PLUGIN_HPP
 #define HYPERION_TERRAIN_WORLD_GRID_PLUGIN_HPP
 
-#include <scene/world_grid/WorldGridPlugin.hpp>
 #include <scene/world_grid/WorldGridLayer.hpp>
 
 #include <core/Handle.hpp>
@@ -23,7 +22,7 @@ class HYP_API TerrainStreamingCell : public StreamingCell
 
 public:
     TerrainStreamingCell();
-    TerrainStreamingCell(const StreamingCellInfo& cell_info, const Handle<Scene>& scene, const Handle<Material>& material);
+    TerrainStreamingCell(const StreamingCellInfo& cellInfo, const Handle<Scene>& scene, const Handle<Material>& material);
     virtual ~TerrainStreamingCell() override;
 
 protected:
@@ -62,13 +61,13 @@ protected:
     virtual void Init() override;
 
     HYP_METHOD()
-    virtual void OnAdded_Impl(WorldGrid* world_grid) override;
+    virtual void OnAdded_Impl(WorldGrid* worldGrid) override;
 
     HYP_METHOD()
-    virtual void OnRemoved_Impl(WorldGrid* world_grid) override;
+    virtual void OnRemoved_Impl(WorldGrid* worldGrid) override;
 
     HYP_METHOD()
-    virtual Handle<StreamingCell> CreateStreamingCell_Impl(const StreamingCellInfo& cell_info) override;
+    virtual Handle<StreamingCell> CreateStreamingCell_Impl(const StreamingCellInfo& cellInfo) override;
 
     Handle<Scene> m_scene;
     Handle<Material> m_material;

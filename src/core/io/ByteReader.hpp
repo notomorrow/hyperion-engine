@@ -30,27 +30,27 @@ public:
         If that position is greater than the maximum position, the number of bytes is truncated.
         Endianness is not taken into account
         @returns The number of bytes read */
-    SizeType Read(SizeType size, ByteBuffer& out_byte_buffer)
+    SizeType Read(SizeType size, ByteBuffer& outByteBuffer)
     {
         if (Eof())
         {
             return 0;
         }
 
-        const SizeType read_to_position = MathUtil::Min(
+        const SizeType readToPosition = MathUtil::Min(
             Position() + size,
             Max());
 
-        if (read_to_position <= SizeType(Position()))
+        if (readToPosition <= SizeType(Position()))
         {
             return 0;
         }
 
-        const SizeType num_to_read = read_to_position - SizeType(Position());
+        const SizeType numToRead = readToPosition - SizeType(Position());
 
-        out_byte_buffer = ReadBytes(num_to_read);
+        outByteBuffer = ReadBytes(numToRead);
 
-        return num_to_read;
+        return numToRead;
     }
 
     /*! \brief Read from the current position to the end of the stream.
@@ -76,7 +76,7 @@ public:
     virtual SizeType Max() const = 0;
     virtual void Skip(SizeType amount) = 0;
     virtual void Rewind(SizeType amount) = 0;
-    virtual void Seek(SizeType where_to) = 0;
+    virtual void Seek(SizeType whereTo) = 0;
 
     bool Eof() const
     {
@@ -91,8 +91,8 @@ protected:
 class MemoryByteReader : public ByteReader
 {
 public:
-    MemoryByteReader(ByteBuffer* byte_buffer)
-        : m_byte_buffer(byte_buffer),
+    MemoryByteReader(ByteBuffer* byteBuffer)
+        : m_byteBuffer(byteBuffer),
           m_pos(0)
     {
     }
@@ -106,7 +106,7 @@ public:
 
     virtual SizeType Max() const override
     {
-        return m_byte_buffer != nullptr ? m_byte_buffer->Size() : 0;
+        return m_byteBuffer != nullptr ? m_byteBuffer->Size() : 0;
     }
 
     virtual void Skip(SizeType amount) override
@@ -119,36 +119,36 @@ public:
         m_pos -= amount;
     }
 
-    virtual void Seek(SizeType where_to) override
+    virtual void Seek(SizeType whereTo) override
     {
-        m_pos = where_to;
+        m_pos = whereTo;
     }
 
 protected:
-    ByteBuffer* m_byte_buffer;
+    ByteBuffer* m_byteBuffer;
     SizeType m_pos;
 
     virtual void ReadBytes(void* ptr, SizeType size) override
     {
-        if (m_byte_buffer == nullptr)
+        if (m_byteBuffer == nullptr)
         {
             return;
         }
 
-        Memory::MemCpy(ptr, m_byte_buffer->Data() + m_pos, size);
+        Memory::MemCpy(ptr, m_byteBuffer->Data() + m_pos, size);
         m_pos += size;
     }
 
     virtual ByteBuffer ReadBytes(SizeType size) override
     {
-        if (m_byte_buffer == nullptr)
+        if (m_byteBuffer == nullptr)
         {
             return ByteBuffer();
         }
 
-        const auto previous_offset = m_pos;
+        const auto previousOffset = m_pos;
         m_pos += size;
-        return ByteBuffer(size, m_byte_buffer->Data() + previous_offset);
+        return ByteBuffer(size, m_byteBuffer->Data() + previousOffset);
     }
 };
 
@@ -158,7 +158,7 @@ public:
     FileByteReader(const std::string& filepath, std::streampos begin = 0)
         : m_filepath(filepath),
           m_pos(0),
-          m_max_pos(0)
+          m_maxPos(0)
     {
         m_file = new std::ifstream(
             filepath,
@@ -166,17 +166,9 @@ public:
                 | std::ifstream::binary
                 | std::ifstream::ate);
 
-        m_max_pos = m_file->tellg();
+        m_maxPos = m_file->tellg();
         m_file->seekg(begin);
         m_pos = m_file->tellg();
-
-        if (Eof())
-        {
-            DebugLog(
-                LogType::Warn,
-                "File could not be opened at path %s\n",
-                filepath.c_str());
-        }
     }
 
     virtual ~FileByteReader() override
@@ -196,7 +188,7 @@ public:
 
     virtual SizeType Max() const override
     {
-        return m_max_pos;
+        return m_maxPos;
     }
 
     virtual void Skip(SizeType amount) override
@@ -209,15 +201,15 @@ public:
         m_file->seekg(m_pos -= amount);
     }
 
-    virtual void Seek(SizeType where_to) override
+    virtual void Seek(SizeType whereTo) override
     {
-        m_file->seekg(m_pos = where_to);
+        m_file->seekg(m_pos = whereTo);
     }
 
 protected:
     std::istream* m_file;
     SizeType m_pos;
-    SizeType m_max_pos;
+    SizeType m_maxPos;
     std::string m_filepath;
 
     virtual void ReadBytes(void* ptr, size_t size) override
@@ -230,10 +222,10 @@ protected:
     {
         m_pos += size;
 
-        ByteBuffer byte_buffer(size);
-        m_file->read(reinterpret_cast<char*>(byte_buffer.Data()), size);
+        ByteBuffer byteBuffer(size);
+        m_file->read(reinterpret_cast<char*>(byteBuffer.Data()), size);
 
-        return byte_buffer;
+        return byteBuffer;
     }
 };
 } // namespace hyperion

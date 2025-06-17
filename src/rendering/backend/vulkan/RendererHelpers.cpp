@@ -5,196 +5,194 @@
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
 #include <rendering/backend/vulkan/RendererFence.hpp>
 #include <rendering/backend/vulkan/RendererFrame.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
-#include <rendering/rhi/RHICommandList.hpp>
+#include <rendering/rhi/CmdList.hpp>
 
 #include <core/math/MathUtil.hpp>
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
-
-namespace renderer {
+extern IRenderBackend* g_renderBackend;
 
 namespace platform {
 
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 } // namespace platform
 
 namespace helpers {
 
-VkIndexType ToVkIndexType(DatumType datum_type)
+VkIndexType ToVkIndexType(GpuElemType elemType)
 {
-    switch (datum_type)
+    switch (elemType)
     {
-    case DatumType::UNSIGNED_BYTE:
+    case GET_UNSIGNED_BYTE:
         return VK_INDEX_TYPE_UINT8_EXT;
-    case DatumType::UNSIGNED_SHORT:
+    case GET_UNSIGNED_SHORT:
         return VK_INDEX_TYPE_UINT16;
-    case DatumType::UNSIGNED_INT:
+    case GET_UNSIGNED_INT:
         return VK_INDEX_TYPE_UINT32;
     default:
-        AssertThrowMsg(0, "Unsupported datum type to vulkan index type conversion: %d", int(datum_type));
+        HYP_FAIL("Unsupported gpu element type to vulkan index type conversion: %d", int(elemType));
     }
 }
 
-VkFormat ToVkFormat(InternalFormat fmt)
+VkFormat ToVkFormat(TextureFormat fmt)
 {
     switch (fmt)
     {
-    case InternalFormat::R8:
+    case TF_R8:
         return VK_FORMAT_R8_UNORM;
-    case InternalFormat::RG8:
+    case TF_RG8:
         return VK_FORMAT_R8G8_UNORM;
-    case InternalFormat::RGB8:
+    case TF_RGB8:
         return VK_FORMAT_R8G8B8_UNORM;
-    case InternalFormat::RGBA8:
+    case TF_RGBA8:
         return VK_FORMAT_R8G8B8A8_UNORM;
-    case InternalFormat::R8_SRGB:
+    case TF_R8_SRGB:
         return VK_FORMAT_R8_SRGB;
-    case InternalFormat::RG8_SRGB:
+    case TF_RG8_SRGB:
         return VK_FORMAT_R8G8_SRGB;
-    case InternalFormat::RGB8_SRGB:
+    case TF_RGB8_SRGB:
         return VK_FORMAT_R8G8B8_SRGB;
-    case InternalFormat::RGBA8_SRGB:
+    case TF_RGBA8_SRGB:
         return VK_FORMAT_R8G8B8A8_SRGB;
-    case InternalFormat::R32_:
+    case TF_R32_:
         return VK_FORMAT_R32_UINT;
-    case InternalFormat::RG16_:
+    case TF_RG16_:
         return VK_FORMAT_R16G16_UNORM;
-    case InternalFormat::R11G11B10F:
+    case TF_R11G11B10F:
         return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-    case InternalFormat::R10G10B10A2:
+    case TF_R10G10B10A2:
         return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
-    case InternalFormat::R16:
+    case TF_R16:
         return VK_FORMAT_R16_UNORM;
-    case InternalFormat::RG16:
+    case TF_RG16:
         return VK_FORMAT_R16G16_UNORM;
-    case InternalFormat::RGB16:
+    case TF_RGB16:
         return VK_FORMAT_R16G16B16_UNORM;
-    case InternalFormat::RGBA16:
+    case TF_RGBA16:
         return VK_FORMAT_R16G16B16A16_UNORM;
-    case InternalFormat::R32:
+    case TF_R32:
         return VK_FORMAT_R32_UINT;
-    case InternalFormat::RG32:
+    case TF_RG32:
         return VK_FORMAT_R32G32_UINT;
-    case InternalFormat::RGB32:
+    case TF_RGB32:
         return VK_FORMAT_R32G32B32_UINT;
-    case InternalFormat::RGBA32:
+    case TF_RGBA32:
         return VK_FORMAT_R32G32B32A32_UINT;
-    case InternalFormat::R16F:
+    case TF_R16F:
         return VK_FORMAT_R16_SFLOAT;
-    case InternalFormat::RG16F:
+    case TF_RG16F:
         return VK_FORMAT_R16G16_SFLOAT;
-    case InternalFormat::RGB16F:
+    case TF_RGB16F:
         return VK_FORMAT_R16G16B16_SFLOAT;
-    case InternalFormat::RGBA16F:
+    case TF_RGBA16F:
         return VK_FORMAT_R16G16B16A16_SFLOAT;
-    case InternalFormat::R32F:
+    case TF_R32F:
         return VK_FORMAT_R32_SFLOAT;
-    case InternalFormat::RG32F:
+    case TF_RG32F:
         return VK_FORMAT_R32G32_SFLOAT;
-    case InternalFormat::RGB32F:
+    case TF_RGB32F:
         return VK_FORMAT_R32G32B32_SFLOAT;
-    case InternalFormat::RGBA32F:
+    case TF_RGBA32F:
         return VK_FORMAT_R32G32B32A32_SFLOAT;
 
-    case InternalFormat::BGRA8:
+    case TF_BGRA8:
         return VK_FORMAT_B8G8R8A8_UNORM;
-    case InternalFormat::BGR8_SRGB:
+    case TF_BGR8_SRGB:
         return VK_FORMAT_B8G8R8_SRGB;
-    case InternalFormat::BGRA8_SRGB:
+    case TF_BGRA8_SRGB:
         return VK_FORMAT_B8G8R8A8_SRGB;
-    case InternalFormat::DEPTH_16:
+    case TF_DEPTH_16:
         return VK_FORMAT_D16_UNORM_S8_UINT;
-    case InternalFormat::DEPTH_24:
+    case TF_DEPTH_24:
         return VK_FORMAT_D24_UNORM_S8_UINT;
-    case InternalFormat::DEPTH_32F:
+    case TF_DEPTH_32F:
         return VK_FORMAT_D32_SFLOAT_S8_UINT;
     default:
         break;
     }
 
-    AssertThrowMsg(false, "Unhandled texture format case %d", int(fmt));
+    HYP_FAIL("Unhandled texture format case %d", int(fmt));
 }
 
-VkFilter ToVkFilter(FilterMode filter_mode)
+VkFilter ToVkFilter(TextureFilterMode filterMode)
 {
-    switch (filter_mode)
+    switch (filterMode)
     {
-    case FilterMode::TEXTURE_FILTER_NEAREST: // fallthrough
-    case FilterMode::TEXTURE_FILTER_NEAREST_MIPMAP:
+    case TFM_NEAREST: // fallthrough
+    case TFM_NEAREST_MIPMAP:
         return VK_FILTER_NEAREST;
-    case FilterMode::TEXTURE_FILTER_MINMAX_MIPMAP: // fallthrough
-    case FilterMode::TEXTURE_FILTER_LINEAR_MIPMAP: // fallthrough
-    case FilterMode::TEXTURE_FILTER_LINEAR:
+    case TFM_MINMAX_MIPMAP: // fallthrough
+    case TFM_LINEAR_MIPMAP: // fallthrough
+    case TFM_LINEAR:
         return VK_FILTER_LINEAR;
     default:
         break;
     }
 
-    AssertThrowMsg(false, "Unhandled texture filter mode case %d", int(filter_mode));
+    HYP_FAIL("Unhandled texture filter mode case %d", int(filterMode));
 }
 
-VkSamplerAddressMode ToVkSamplerAddressMode(WrapMode texture_wrap_mode)
+VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrapMode textureWrapMode)
 {
-    switch (texture_wrap_mode)
+    switch (textureWrapMode)
     {
-    case WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE:
+    case TWM_CLAMP_TO_EDGE:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    case WrapMode::TEXTURE_WRAP_CLAMP_TO_BORDER:
+    case TWM_CLAMP_TO_BORDER:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-    case WrapMode::TEXTURE_WRAP_REPEAT:
+    case TWM_REPEAT:
         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
     default:
         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
     }
 }
 
-VkImageAspectFlags ToVkImageAspect(InternalFormat internal_format)
+VkImageAspectFlags ToVkImageAspect(TextureFormat fmt)
 {
-    return IsDepthFormat(internal_format)
+    return IsDepthFormat(fmt)
         ? VK_IMAGE_ASPECT_DEPTH_BIT
         : VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-VkImageType ToVkImageType(ImageType type)
+VkImageType ToVkImageType(TextureType type)
 {
     switch (type)
     {
-    case ImageType::TEXTURE_TYPE_2D:
+    case TT_TEX2D:
         return VK_IMAGE_TYPE_2D;
-    case ImageType::TEXTURE_TYPE_3D:
+    case TT_TEX3D:
         return VK_IMAGE_TYPE_3D;
-    case ImageType::TEXTURE_TYPE_CUBEMAP:
+    case TT_CUBEMAP:
         return VK_IMAGE_TYPE_2D;
-    case ImageType::TEXTURE_TYPE_2D_ARRAY:
+    case TT_TEX2D_ARRAY:
         return VK_IMAGE_TYPE_2D;
-    case ImageType::TEXTURE_TYPE_CUBEMAP_ARRAY:
+    case TT_CUBEMAP_ARRAY:
         return VK_IMAGE_TYPE_2D;
     default:
         HYP_FAIL("Unhandled texture type case %d", int(type));
     }
 }
 
-VkImageViewType ToVkImageViewType(ImageType type)
+VkImageViewType ToVkImageViewType(TextureType type)
 {
     switch (type)
     {
-    case ImageType::TEXTURE_TYPE_2D:
+    case TT_TEX2D:
         return VK_IMAGE_VIEW_TYPE_2D;
-    case ImageType::TEXTURE_TYPE_3D:
+    case TT_TEX3D:
         return VK_IMAGE_VIEW_TYPE_3D;
-    case ImageType::TEXTURE_TYPE_CUBEMAP:
+    case TT_CUBEMAP:
         return VK_IMAGE_VIEW_TYPE_CUBE;
-    case ImageType::TEXTURE_TYPE_2D_ARRAY:
+    case TT_TEX2D_ARRAY:
         return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-    case ImageType::TEXTURE_TYPE_CUBEMAP_ARRAY:
+    case TT_CUBEMAP_ARRAY:
         return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
     default:
         HYP_FAIL("Unhandled texture type case %d", int(type));
@@ -209,7 +207,7 @@ VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type)
         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     case DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC:
         return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-    case DescriptorSetElementType::STORAGE_BUFFER:
+    case DescriptorSetElementType::SSBO:
         return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC:
         return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
@@ -222,7 +220,7 @@ VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type)
     case DescriptorSetElementType::TLAS:
         return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     default:
-        AssertThrowMsg(false, "Unsupported descriptor type for Vulkan");
+        HYP_UNREACHABLE();
     }
 }
 
@@ -234,7 +232,7 @@ namespace platform {
 
 template <>
 SingleTimeCommands<Platform::vulkan>::SingleTimeCommands()
-    : m_platform_impl { this }
+    : m_platformImpl { this }
 {
 }
 
@@ -246,33 +244,33 @@ SingleTimeCommands<Platform::vulkan>::~SingleTimeCommands()
 template <>
 RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
 {
-    RHICommandList command_list;
+    CmdList commandList;
 
     for (auto& fn : m_functions)
     {
-        fn(command_list);
+        fn(commandList);
     }
 
     m_functions.Clear();
 
     RendererResult result;
 
-    VulkanFrameRef temp_frame = VulkanFrameRef(GetRenderingAPI()->MakeFrame(0));
-    HYPERION_BUBBLE_ERRORS(temp_frame->Create());
+    VulkanFrameRef tempFrame = VulkanFrameRef(GetRenderBackend()->MakeFrame(0));
+    HYPERION_BUBBLE_ERRORS(tempFrame->Create());
 
-    command_list.Prepare(temp_frame);
+    commandList.Prepare(tempFrame);
 
-    temp_frame->UpdateUsedDescriptorSets();
+    tempFrame->UpdateUsedDescriptorSets();
 
-    VulkanCommandBufferRef command_buffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
-    HYPERION_BUBBLE_ERRORS(command_buffer->Create(GetRenderingAPI()->GetDevice()->GetGraphicsQueue().command_pools[0]));
+    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+    HYPERION_BUBBLE_ERRORS(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
-    HYPERION_BUBBLE_ERRORS(command_buffer->Begin());
+    HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());
 
     // Execute the command list
-    command_list.Execute(command_buffer);
+    commandList.Execute(commandBuffer);
 
-    HYPERION_PASS_ERRORS(command_buffer->End(), result);
+    HYPERION_PASS_ERRORS(commandBuffer->End(), result);
 
     // @TODO Refactor to use frame's fence instead, just need to make Frame able to not be presentable
     VulkanFenceRef fence = MakeRenderObject<VulkanFence>();
@@ -280,16 +278,16 @@ RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
     HYPERION_PASS_ERRORS(fence->Reset(), result);
 
     // Submit to the queue
-    VulkanDeviceQueue& queue_graphics = GetRenderingAPI()->GetDevice()->GetGraphicsQueue();
+    VulkanDeviceQueue& queueGraphics = GetRenderBackend()->GetDevice()->GetGraphicsQueue();
 
-    HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(&queue_graphics, fence, nullptr), result);
+    HYPERION_PASS_ERRORS(commandBuffer->SubmitPrimary(&queueGraphics, fence, nullptr), result);
 
     HYPERION_PASS_ERRORS(fence->WaitForGPU(), result);
     HYPERION_PASS_ERRORS(fence->Destroy(), result);
 
-    HYPERION_PASS_ERRORS(command_buffer->Destroy(), result);
+    HYPERION_PASS_ERRORS(commandBuffer->Destroy(), result);
 
-    HYPERION_PASS_ERRORS(temp_frame->Destroy(), result);
+    HYPERION_PASS_ERRORS(tempFrame->Destroy(), result);
 
     return result;
 }
@@ -298,5 +296,4 @@ RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
 
 } // namespace platform
 
-} // namespace renderer
 } // namespace hyperion

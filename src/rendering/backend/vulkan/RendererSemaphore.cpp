@@ -1,24 +1,22 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/vulkan/RendererSemaphore.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
-VulkanSemaphore::VulkanSemaphore(VkPipelineStageFlags pipeline_stage)
+VulkanSemaphore::VulkanSemaphore(VkPipelineStageFlags pipelineStage)
     : m_semaphore(nullptr),
-      m_pipeline_stage(pipeline_stage)
+      m_pipelineStage(pipelineStage)
 {
 }
 
@@ -29,10 +27,10 @@ VulkanSemaphore::~VulkanSemaphore()
 
 RendererResult VulkanSemaphore::Create()
 {
-    VkSemaphoreCreateInfo semaphore_info { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    VkSemaphoreCreateInfo semaphoreInfo { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateSemaphore(GetRenderingAPI()->GetDevice()->GetDevice(), &semaphore_info, nullptr, &m_semaphore),
+        vkCreateSemaphore(GetRenderBackend()->GetDevice()->GetDevice(), &semaphoreInfo, nullptr, &m_semaphore),
         "Failed to create semaphore");
 
     HYPERION_RETURN_OK;
@@ -40,7 +38,7 @@ RendererResult VulkanSemaphore::Create()
 
 RendererResult VulkanSemaphore::Destroy()
 {
-    vkDestroySemaphore(GetRenderingAPI()->GetDevice()->GetDevice(), m_semaphore, nullptr);
+    vkDestroySemaphore(GetRenderBackend()->GetDevice()->GetDevice(), m_semaphore, nullptr);
     m_semaphore = nullptr;
 
     HYPERION_RETURN_OK;
@@ -49,28 +47,28 @@ RendererResult VulkanSemaphore::Destroy()
 std::set<VulkanSemaphoreRef*> VulkanSemaphoreChain::s_refs {};
 
 VulkanSemaphoreChain::VulkanSemaphoreChain(
-    const std::vector<VkPipelineStageFlags>& wait_stage_flags,
-    const std::vector<VkPipelineStageFlags>& signal_stage_flags)
+    const std::vector<VkPipelineStageFlags>& waitStageFlags,
+    const std::vector<VkPipelineStageFlags>& signalStageFlags)
 {
-    m_wait_semaphores.reserve(wait_stage_flags.size());
-    m_signal_semaphores.reserve(signal_stage_flags.size());
+    m_waitSemaphores.reserve(waitStageFlags.size());
+    m_signalSemaphores.reserve(signalStageFlags.size());
 
-    for (const VkPipelineStageFlags wait_stage_flag : wait_stage_flags)
+    for (const VkPipelineStageFlags waitStageFlag : waitStageFlags)
     {
-        auto* ref = new VulkanSemaphoreRef(wait_stage_flag);
+        auto* ref = new VulkanSemaphoreRef(waitStageFlag);
 
         s_refs.insert(ref);
 
-        m_wait_semaphores.emplace_back(ref);
+        m_waitSemaphores.emplace_back(ref);
     }
 
-    for (const VkPipelineStageFlags signal_stage_flag : signal_stage_flags)
+    for (const VkPipelineStageFlags signalStageFlag : signalStageFlags)
     {
-        auto* ref = new VulkanSemaphoreRef(signal_stage_flag);
+        auto* ref = new VulkanSemaphoreRef(signalStageFlag);
 
         s_refs.insert(ref);
 
-        m_signal_semaphores.emplace_back(ref);
+        m_signalSemaphores.emplace_back(ref);
     }
 
     UpdateViews();
@@ -79,14 +77,14 @@ VulkanSemaphoreChain::VulkanSemaphoreChain(
 VulkanSemaphoreChain::~VulkanSemaphoreChain()
 {
     AssertThrowMsg(
-        std::all_of(m_signal_semaphores.begin(), m_signal_semaphores.end(), [](const VulkanSignalSemaphore& semaphore)
+        std::all_of(m_signalSemaphores.begin(), m_signalSemaphores.end(), [](const VulkanSignalSemaphore& semaphore)
             {
                 return semaphore.m_ref == nullptr;
             }),
         "All semaphores must have ref counts decremented via Destroy() before destructor call");
 
     AssertThrowMsg(
-        std::all_of(m_wait_semaphores.begin(), m_wait_semaphores.end(), [](const VulkanWaitSemaphore& semaphore)
+        std::all_of(m_waitSemaphores.begin(), m_waitSemaphores.end(), [](const VulkanWaitSemaphore& semaphore)
             {
                 return semaphore.m_ref == nullptr;
             }),
@@ -95,22 +93,22 @@ VulkanSemaphoreChain::~VulkanSemaphoreChain()
 
 RendererResult VulkanSemaphoreChain::Create()
 {
-    for (size_t i = 0; i < m_signal_semaphores.size(); i++)
+    for (size_t i = 0; i < m_signalSemaphores.size(); i++)
     {
-        auto& ref = m_signal_semaphores[i];
+        auto& ref = m_signalSemaphores[i];
 
         HYPERION_BUBBLE_ERRORS(ref.Get().Create());
 
-        m_signal_semaphores_view[i] = ref.Get().GetVulkanHandle();
+        m_signalSemaphoresView[i] = ref.Get().GetVulkanHandle();
     }
 
-    for (size_t i = 0; i < m_wait_semaphores.size(); i++)
+    for (size_t i = 0; i < m_waitSemaphores.size(); i++)
     {
-        auto& ref = m_wait_semaphores[i];
+        auto& ref = m_waitSemaphores[i];
 
         HYPERION_BUBBLE_ERRORS(ref.Get().Create());
 
-        m_wait_semaphores_view[i] = ref.Get().GetVulkanHandle();
+        m_waitSemaphoresView[i] = ref.Get().GetVulkanHandle();
     }
 
     HYPERION_RETURN_OK;
@@ -120,7 +118,7 @@ RendererResult VulkanSemaphoreChain::Destroy()
 {
     RendererResult result;
 
-    const auto dec_ref = [this, &result](auto& semaphore)
+    const auto decRef = [this, &result](auto& semaphore)
     {
         auto* ref = semaphore.m_ref;
 
@@ -143,66 +141,66 @@ RendererResult VulkanSemaphoreChain::Destroy()
         semaphore.m_ref = nullptr;
     };
 
-    for (auto& semaphore : m_signal_semaphores)
+    for (auto& semaphore : m_signalSemaphores)
     {
-        dec_ref(semaphore);
+        decRef(semaphore);
     }
 
-    for (auto& semaphore : m_wait_semaphores)
+    for (auto& semaphore : m_waitSemaphores)
     {
-        dec_ref(semaphore);
+        decRef(semaphore);
     }
 
     return result;
 }
 
-VulkanSemaphoreChain& VulkanSemaphoreChain::WaitsFor(const VulkanSignalSemaphore& signal_semaphore)
+VulkanSemaphoreChain& VulkanSemaphoreChain::WaitsFor(const VulkanSignalSemaphore& signalSemaphore)
 {
-    auto wait_semaphore = signal_semaphore.ConvertHeldType<VulkanSemaphoreType::WAIT>();
+    auto waitSemaphore = signalSemaphore.ConvertHeldType<VulkanSemaphoreType::WAIT>();
 
-    if (HasWaitSemaphore(wait_semaphore))
+    if (HasWaitSemaphore(waitSemaphore))
     {
         return *this;
     }
 
-    m_wait_semaphores.push_back(wait_semaphore);
-    m_wait_semaphores_view.push_back(wait_semaphore.Get().GetVulkanHandle());
-    m_wait_semaphores_stage_view.push_back(wait_semaphore.Get().GetVulkanStageFlags());
+    m_waitSemaphores.push_back(waitSemaphore);
+    m_waitSemaphoresView.push_back(waitSemaphore.Get().GetVulkanHandle());
+    m_waitSemaphoresStageView.push_back(waitSemaphore.Get().GetVulkanStageFlags());
 
     return *this;
 }
 
 VulkanSemaphoreChain& VulkanSemaphoreChain::WaitsFor(const VulkanSemaphoreChain& signaler)
 {
-    for (auto& signal_semaphore : signaler.GetSignalSemaphores())
+    for (auto& signalSemaphore : signaler.GetSignalSemaphores())
     {
-        WaitsFor(signal_semaphore);
+        WaitsFor(signalSemaphore);
     }
 
     return *this;
 }
 
-VulkanSemaphoreChain& VulkanSemaphoreChain::SignalsTo(const VulkanWaitSemaphore& wait_semaphore)
+VulkanSemaphoreChain& VulkanSemaphoreChain::SignalsTo(const VulkanWaitSemaphore& waitSemaphore)
 {
-    auto signal_semaphore = wait_semaphore.ConvertHeldType<VulkanSemaphoreType::SIGNAL>();
+    auto signalSemaphore = waitSemaphore.ConvertHeldType<VulkanSemaphoreType::SIGNAL>();
 
-    if (HasSignalSemaphore(signal_semaphore))
+    if (HasSignalSemaphore(signalSemaphore))
     {
         return *this;
     }
 
-    m_signal_semaphores.push_back(signal_semaphore);
-    m_signal_semaphores_view.push_back(signal_semaphore.Get().GetVulkanHandle());
-    m_signal_semaphores_stage_view.push_back(signal_semaphore.Get().GetVulkanStageFlags());
+    m_signalSemaphores.push_back(signalSemaphore);
+    m_signalSemaphoresView.push_back(signalSemaphore.Get().GetVulkanHandle());
+    m_signalSemaphoresStageView.push_back(signalSemaphore.Get().GetVulkanStageFlags());
 
     return *this;
 }
 
 VulkanSemaphoreChain& VulkanSemaphoreChain::SignalsTo(VulkanSemaphoreChain& waitee)
 {
-    for (auto& signal_semaphore : GetSignalSemaphores())
+    for (auto& signalSemaphore : GetSignalSemaphores())
     {
-        waitee.WaitsFor(signal_semaphore);
+        waitee.WaitsFor(signalSemaphore);
     }
 
     return waitee;
@@ -210,27 +208,26 @@ VulkanSemaphoreChain& VulkanSemaphoreChain::SignalsTo(VulkanSemaphoreChain& wait
 
 void VulkanSemaphoreChain::UpdateViews()
 {
-    m_signal_semaphores_view.resize(m_signal_semaphores.size());
-    m_signal_semaphores_stage_view.resize(m_signal_semaphores.size());
-    m_wait_semaphores_view.resize(m_wait_semaphores.size());
-    m_wait_semaphores_stage_view.resize(m_wait_semaphores.size());
+    m_signalSemaphoresView.resize(m_signalSemaphores.size());
+    m_signalSemaphoresStageView.resize(m_signalSemaphores.size());
+    m_waitSemaphoresView.resize(m_waitSemaphores.size());
+    m_waitSemaphoresStageView.resize(m_waitSemaphores.size());
 
-    for (size_t i = 0; i < m_signal_semaphores.size(); i++)
+    for (size_t i = 0; i < m_signalSemaphores.size(); i++)
     {
-        const auto& semaphore = m_signal_semaphores[i];
+        const auto& semaphore = m_signalSemaphores[i];
 
-        m_signal_semaphores_view[i] = semaphore.Get().GetVulkanHandle();
-        m_signal_semaphores_stage_view[i] = semaphore.Get().GetVulkanStageFlags();
+        m_signalSemaphoresView[i] = semaphore.Get().GetVulkanHandle();
+        m_signalSemaphoresStageView[i] = semaphore.Get().GetVulkanStageFlags();
     }
 
-    for (size_t i = 0; i < m_wait_semaphores.size(); i++)
+    for (size_t i = 0; i < m_waitSemaphores.size(); i++)
     {
-        const auto& semaphore = m_wait_semaphores[i];
+        const auto& semaphore = m_waitSemaphores[i];
 
-        m_wait_semaphores_view[i] = semaphore.Get().GetVulkanHandle();
-        m_wait_semaphores_stage_view[i] = semaphore.Get().GetVulkanStageFlags();
+        m_waitSemaphoresView[i] = semaphore.Get().GetVulkanHandle();
+        m_waitSemaphoresStageView[i] = semaphore.Get().GetVulkanStageFlags();
     }
 }
 
-} // namespace renderer
 } // namespace hyperion

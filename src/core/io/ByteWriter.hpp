@@ -27,9 +27,9 @@ enum ByteWriterFlagBits : ByteWriterFlags
 class ByteWriter
 {
 public:
-    static constexpr uint32 string_length_mask = uint32(-1) << 8;
+    static constexpr uint32 stringLengthMask = uint32(-1) << 8;
     // number of bits needed to encode string type in string header
-    static constexpr uint32 string_type_mask = uint32(MathUtil::FastLog2(uint32(StringType::MAX)) + 1);
+    static constexpr uint32 stringTypeMask = uint32(MathUtil::FastLog2(uint32(StringType::MAX)) + 1);
 
     ByteWriter() = default;
     ByteWriter(const ByteWriter& other) = delete;
@@ -45,39 +45,39 @@ public:
     void Write(const T& value)
     {
         static_assert(!std::is_pointer_v<NormalizedType<T>>, "Expected to choose other overload");
-        static_assert(is_pod_type<NormalizedType<T>>, "T must be a POD type to use this overload");
+        static_assert(isPodType<NormalizedType<T>>, "T must be a POD type to use this overload");
 
         WriteBytes(reinterpret_cast<const char*>(&value), sizeof(NormalizedType<T>));
     }
 
-    void Write(const ByteBuffer& byte_buffer)
+    void Write(const ByteBuffer& byteBuffer)
     {
-        WriteBytes(reinterpret_cast<const char*>(byte_buffer.Data()), byte_buffer.Size());
+        WriteBytes(reinterpret_cast<const char*>(byteBuffer.Data()), byteBuffer.Size());
     }
 
-    void Write(ByteView byte_view)
+    void Write(ByteView byteView)
     {
-        WriteBytes(reinterpret_cast<const char*>(byte_view.Data()), byte_view.Size());
+        WriteBytes(reinterpret_cast<const char*>(byteView.Data()), byteView.Size());
     }
 
-    void Write(ConstByteView byte_view)
+    void Write(ConstByteView byteView)
     {
-        WriteBytes(reinterpret_cast<const char*>(byte_view.Data()), byte_view.Size());
+        WriteBytes(reinterpret_cast<const char*>(byteView.Data()), byteView.Size());
     }
 
     template <int StringType>
     void WriteString(const StringView<StringType>& str, ByteWriterFlags flags = BYTE_WRITER_FLAGS_NONE)
     {
-        uint32 string_header = (uint32(str.Size() + ((flags & BYTE_WRITER_FLAGS_WRITE_NULL_CHAR) ? 1 : 0)) << 8) & string_length_mask;
+        uint32 stringHeader = (uint32(str.Size() + ((flags & BYTE_WRITER_FLAGS_WRITE_NULL_CHAR) ? 1 : 0)) << 8) & stringLengthMask;
 
         if (flags & BYTE_WRITER_FLAGS_WRITE_STRING_TYPE)
         {
-            string_header |= (uint32(StringType)) & string_type_mask;
+            stringHeader |= (uint32(StringType)) & stringTypeMask;
         }
 
         if (flags & (BYTE_WRITER_FLAGS_WRITE_SIZE | BYTE_WRITER_FLAGS_WRITE_STRING_TYPE))
         {
-            Write(&string_header, sizeof(uint32));
+            Write(&stringHeader, sizeof(uint32));
         }
 
         WriteBytes(str.Data(), str.Size() * sizeof(typename StringView<StringType>::CharType));
@@ -141,12 +141,12 @@ private:
 
     virtual void WriteBytes(const char* ptr, SizeType size) override
     {
-        const SizeType required_capacity = m_buffer.Size() + size;
+        const SizeType requiredCapacity = m_buffer.Size() + size;
 
-        if (m_buffer.GetCapacity() < required_capacity)
+        if (m_buffer.GetCapacity() < requiredCapacity)
         {
             // Add some padding to reduce number of allocations we need to do
-            m_buffer.SetCapacity(SizeType(double(required_capacity) * 1.5));
+            m_buffer.SetCapacity(SizeType(double(requiredCapacity) * 1.5));
         }
 
         m_buffer.SetSize(m_buffer.Size() + size);

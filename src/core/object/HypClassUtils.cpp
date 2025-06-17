@@ -5,9 +5,9 @@
 
 namespace hyperion {
 
-HypClassRegistrationBase::HypClassRegistrationBase(TypeID type_id, HypClass* hyp_class)
+HypClassRegistrationBase::HypClassRegistrationBase(TypeId typeId, HypClass* hypClass)
 {
-    HypClassRegistry::GetInstance().RegisterClass(type_id, hyp_class);
+    HypClassRegistry::GetInstance().RegisterClass(typeId, hypClass);
 }
 
 } // namespace hyperion

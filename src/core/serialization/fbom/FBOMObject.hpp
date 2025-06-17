@@ -53,7 +53,7 @@ struct FBOMObjectSerialize_Impl;
 
 struct FBOMExternalObjectInfo
 {
-    UUID library_id = UUID::Invalid();
+    UUID libraryId = UUID::Invalid();
     uint32 index = ~0u;
 
     HYP_FORCE_INLINE UniqueID GetUniqueID() const
@@ -63,13 +63,13 @@ struct FBOMExternalObjectInfo
 
     HYP_FORCE_INLINE bool IsLinked() const
     {
-        return library_id != UUID::Invalid() && index != ~0u;
+        return libraryId != UUID::Invalid() && index != ~0u;
     }
 
     HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(library_id);
+        hc.Add(libraryId);
         hc.Add(index);
 
         return hc;
@@ -82,15 +82,15 @@ public:
     friend class FBOMReader;
     friend class FBOMWriter;
 
-    FBOMType m_object_type;
+    FBOMType m_objectType;
     Array<FBOMObject, DynamicAllocator> m_children;
     FlatMap<ANSIString, FBOMData> properties;
-    RC<HypData> m_deserialized_object;
-    Optional<FBOMExternalObjectInfo> m_external_info;
-    UniqueID m_unique_id;
+    RC<HypData> m_deserializedObject;
+    Optional<FBOMExternalObjectInfo> m_externalInfo;
+    UniqueID m_uniqueId;
 
     FBOMObject();
-    FBOMObject(const FBOMType& loader_type);
+    FBOMObject(const FBOMType& loaderType);
     FBOMObject(const FBOMObject& other);
     FBOMObject& operator=(const FBOMObject& other);
     FBOMObject(FBOMObject&& other) noexcept;
@@ -99,34 +99,34 @@ public:
 
     HYP_FORCE_INLINE bool IsExternal() const
     {
-        return m_external_info.HasValue();
+        return m_externalInfo.HasValue();
     }
 
-    HYP_FORCE_INLINE void SetIsExternal(bool is_external)
+    HYP_FORCE_INLINE void SetIsExternal(bool isExternal)
     {
-        if (is_external)
+        if (isExternal)
         {
-            m_external_info.Set({});
+            m_externalInfo.Set({});
         }
         else
         {
-            m_external_info.Unset();
+            m_externalInfo.Unset();
         }
     }
 
     HYP_FORCE_INLINE FBOMExternalObjectInfo* GetExternalObjectInfo()
     {
-        return IsExternal() ? m_external_info.TryGet() : nullptr;
+        return IsExternal() ? m_externalInfo.TryGet() : nullptr;
     }
 
     HYP_FORCE_INLINE const FBOMExternalObjectInfo* GetExternalObjectInfo() const
     {
-        return IsExternal() ? m_external_info.TryGet() : nullptr;
+        return IsExternal() ? m_externalInfo.TryGet() : nullptr;
     }
 
     HYP_FORCE_INLINE const FBOMType& GetType() const
     {
-        return m_object_type;
+        return m_objectType;
     }
 
     HYP_FORCE_INLINE const Array<FBOMObject, DynamicAllocator>& GetChildren() const
@@ -256,15 +256,15 @@ public:
 
     virtual UniqueID GetUniqueID() const override
     {
-        return m_unique_id;
+        return m_uniqueId;
     }
 
     virtual HashCode GetHashCode() const override;
 
     template <class T, typename = std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>>>
-    static FBOMResult Serialize(const T& in, FBOMObject& out_object, EnumFlags<FBOMObjectSerializeFlags> flags = FBOMObjectSerializeFlags::NONE)
+    static FBOMResult Serialize(const T& in, FBOMObject& outObject, EnumFlags<FBOMObjectSerializeFlags> flags = FBOMObjectSerializeFlags::NONE)
     {
-        return FBOMObjectSerialize_Impl<T> {}.template Serialize<HypData>(in, out_object, flags);
+        return FBOMObjectSerialize_Impl<T> {}.template Serialize<HypData>(in, outObject, flags);
     }
 
     template <class T, typename = std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>>>
@@ -280,7 +280,7 @@ public:
         return object;
     }
 
-    static FBOMResult Deserialize(FBOMLoadContext& context, TypeID type_id, const FBOMObject& in, HypData& out);
+    static FBOMResult Deserialize(FBOMLoadContext& context, TypeId typeId, const FBOMObject& in, HypData& out);
 
     template <class T, typename = std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>>>
     static FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out)
@@ -294,22 +294,22 @@ public:
         return GetMarshal<T>() != nullptr;
     }
 
-    static FBOMMarshalerBase* GetMarshal(TypeID type_id);
+    static FBOMMarshalerBase* GetMarshal(TypeId typeId);
 
     template <class T>
     HYP_FORCE_INLINE static FBOMMarshalerBase* GetMarshal()
     {
-        return GetMarshal(TypeID::ForType<T>());
+        return GetMarshal(TypeId::ForType<T>());
     }
 
     /*! \brief Returns the associated HypClass for this object type, if applicable.
      *  The type must be registered using the "HYP_CLASS" macro.
      *
-     *  If this object's FBOMType has no native TypeID (e.g it is a FBOM-only type like `seq`), or if
+     *  If this object's FBOMType has no native TypeId (e.g it is a FBOM-only type like `seq`), or if
      *  no HypClass has been registered for the type, nullptr will be returned. */
     HYP_FORCE_INLINE const HypClass* GetHypClass() const
     {
-        return m_object_type.GetHypClass();
+        return m_objectType.GetHypClass();
     }
 };
 
@@ -352,7 +352,7 @@ template <class T>
 struct FBOMObjectSerialize_Impl<T, std::enable_if_t<!std::is_same_v<FBOMObject, NormalizedType<T>>>>
 {
     template <class HypDataType>
-    FBOMResult Serialize(const T& in, FBOMObject& out_object, EnumFlags<FBOMObjectSerializeFlags> flags = FBOMObjectSerializeFlags::NONE)
+    FBOMResult Serialize(const T& in, FBOMObject& outObject, EnumFlags<FBOMObjectSerializeFlags> flags = FBOMObjectSerializeFlags::NONE)
     {
         HYP_SCOPE;
 
@@ -363,11 +363,11 @@ struct FBOMObjectSerialize_Impl<T, std::enable_if_t<!std::is_same_v<FBOMObject, 
             return { FBOMResult::FBOM_ERR, "No registered marshal class for type" };
         }
 
-        ANSIString external_object_key;
+        ANSIString externalObjectKey;
 
-        out_object = FBOMObject(marshal->GetObjectType());
+        outObject = FBOMObject(marshal->GetObjectType());
 
-        if (FBOMResult err = marshal->Serialize(ConstAnyRef(in), out_object))
+        if (FBOMResult err = marshal->Serialize(ConstAnyRef(in), outObject))
         {
             return err;
         }
@@ -376,23 +376,23 @@ struct FBOMObjectSerialize_Impl<T, std::enable_if_t<!std::is_same_v<FBOMObject, 
         {
             if (flags & FBOMObjectSerializeFlags::KEEP_UNIQUE)
             {
-                out_object.m_unique_id = UniqueID::Generate();
+                outObject.m_uniqueId = UniqueID::Generate();
             }
             else
             {
-                const HashCode hash_code = HashCode::GetHashCode(TypeID::ForType<T>()).Add(HashCode::GetHashCode(in));
+                const HashCode hashCode = HashCode::GetHashCode(TypeId::ForType<T>()).Add(HashCode::GetHashCode(in));
 
-                out_object.m_unique_id = UniqueID(hash_code);
+                outObject.m_uniqueId = UniqueID(hashCode);
             }
         }
         else
         {
-            out_object.m_unique_id = UniqueID::Generate();
+            outObject.m_uniqueId = UniqueID::Generate();
         }
 
         if (flags & FBOMObjectSerializeFlags::EXTERNAL)
         {
-            out_object.SetIsExternal(true);
+            outObject.SetIsExternal(true);
         }
 
         return FBOMResult::FBOM_OK;

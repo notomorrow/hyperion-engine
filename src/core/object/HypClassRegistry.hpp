@@ -3,7 +3,7 @@
 #ifndef HYPERION_CORE_HYP_CLASS_REGISTRY_HPP
 #define HYPERION_CORE_HYP_CLASS_REGISTRY_HPP
 
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 #include <core/utilities/Span.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/ForEach.hpp>
@@ -70,24 +70,24 @@ public:
     {
         static_assert(std::is_class_v<T> || std::is_enum_v<T>, "T must be an class or enum type to use GetClass<T>()");
 
-        static constexpr TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+        static constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        return GetClass(type_id);
+        return GetClass(typeId);
     }
 
     /*! \brief Get the HypClass instance for the given type.
      *
-     *  \param type_id The type ID to get the HypClass instance for.
+     *  \param typeId The type Id to get the HypClass instance for.
      *  \return The HypClass instance for the given type, or nullptr if the type is not registered.
      */
-    const HypClass* GetClass(TypeID type_id) const;
+    const HypClass* GetClass(TypeId typeId) const;
 
     /*! \brief Get the HypClass instance associated with the given name.
      *
-     *  \param type_name The name of the type to get the HypClass instance for.
+     *  \param typeName The name of the type to get the HypClass instance for.
      *  \return The HypClass instance for the given type, or nullptr if the type is not registered.
      */
-    const HypClass* GetClass(WeakName type_name) const;
+    const HypClass* GetClass(WeakName typeName) const;
 
     /*! \brief Get the HypClass instance for the given type casted to HypEnum.
      *
@@ -99,45 +99,45 @@ public:
     {
         static_assert(std::is_enum_v<T>, "T must be an enum type to use GetEnum<T>()");
 
-        static constexpr TypeID type_id = TypeID::ForType<NormalizedType<T>>();
+        static constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
-        return static_cast<const HypEnumInstance<T>*>(GetEnum(type_id));
+        return static_cast<const HypEnumInstance<T>*>(GetEnum(typeId));
     }
 
     /*! \brief Get the HypClass instance for the given type casted to HypEnum.
      *
-     *  \param type_id The type to get the HypClass instance for.
+     *  \param typeId The type to get the HypClass instance for.
      *  \return The HypClass instance for the given type, or nullptr if the type is not registered or is not an enum type
      */
-    const HypEnum* GetEnum(TypeID type_id) const;
+    const HypEnum* GetEnum(TypeId typeId) const;
 
     /*! \brief Get the HypClass instance for the given type casted to HypEnum.
      *
-     *  \param type_id The type to get the HypClass instance for.
+     *  \param typeId The type to get the HypClass instance for.
      *  \return The HypClass instance for the given type, or nullptr if the type is not registered or is not an enum type
      */
-    const HypEnum* GetEnum(WeakName type_name) const;
+    const HypEnum* GetEnum(WeakName typeName) const;
 
-    void RegisterClass(TypeID type_id, HypClass* hyp_class);
+    void RegisterClass(TypeId typeId, HypClass* hypClass);
 
     // Only for Dynamic classes
-    void UnregisterClass(const HypClass* hyp_class);
+    void UnregisterClass(const HypClass* hypClass);
 
-    void ForEachClass(const ProcRef<IterationResult(const HypClass*)>& callback, bool include_dynamic_classes = true) const;
+    void ForEachClass(const ProcRef<IterationResult(const HypClass*)>& callback, bool includeDynamicClasses = true) const;
 
     void Initialize();
 
 private:
-    TypeMap<HypClass*> m_registered_classes;
+    TypeMap<HypClass*> m_registeredClasses;
 
-    mutable Mutex m_dynamic_classes_mutex;
-    TypeMap<HypClass*> m_dynamic_classes;
+    mutable Mutex m_dynamicClassesMutex;
+    TypeMap<HypClass*> m_dynamicClasses;
 
-    bool m_is_initialized;
+    bool m_isInitialized;
 
-    HashMap<HypClass*, RC<dotnet::Class>> m_managed_classes;
-    HashMap<dotnet::Class*, HypClass*> m_managed_classes_reverse_mapping;
-    mutable Mutex m_managed_classes_mutex;
+    HashMap<HypClass*, RC<dotnet::Class>> m_managedClasses;
+    HashMap<dotnet::Class*, HypClass*> m_managedClassesReverseMapping;
+    mutable Mutex m_managedClassesMutex;
 };
 
 } // namespace hyperion

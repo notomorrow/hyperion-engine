@@ -8,10 +8,12 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererInstance.hpp>
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #ifdef HYP_SDL
@@ -53,11 +55,11 @@ ApplicationWindow::ApplicationWindow(ANSIString title, Vec2i size)
 {
 }
 
-void ApplicationWindow::HandleResize(Vec2i new_size)
+void ApplicationWindow::HandleResize(Vec2i newSize)
 {
-    m_size = new_size;
+    m_size = newSize;
 
-    OnWindowSizeChanged(new_size);
+    OnWindowSizeChanged(newSize);
 }
 
 #pragma endregion ApplicationWindow
@@ -66,60 +68,60 @@ void ApplicationWindow::HandleResize(Vec2i new_size)
 
 SDLApplicationWindow::SDLApplicationWindow(ANSIString title, Vec2i size)
     : ApplicationWindow(std::move(title), size),
-      m_window_handle(nullptr)
+      m_windowHandle(nullptr)
 {
 }
 
 SDLApplicationWindow::~SDLApplicationWindow()
 {
-    SDL_DestroyWindow(static_cast<SDL_Window*>(m_window_handle));
+    SDL_DestroyWindow(static_cast<SDL_Window*>(m_windowHandle));
 }
 
-void SDLApplicationWindow::Initialize(WindowOptions window_options)
+void SDLApplicationWindow::Initialize(WindowOptions windowOptions)
 {
-    uint32 sdl_flags = 0;
+    uint32 sdlFlags = 0;
 
-    if (!(window_options.flags & WindowFlags::NO_GFX))
+    if (!(windowOptions.flags & WindowFlags::NO_GFX))
     {
 #if HYP_VULKAN
-        sdl_flags |= SDL_WINDOW_VULKAN;
+        sdlFlags |= SDL_WINDOW_VULKAN;
 #endif
     }
 
-    if (window_options.flags & WindowFlags::HIGH_DPI)
+    if (windowOptions.flags & WindowFlags::HIGH_DPI)
     {
-        sdl_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+        sdlFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
     }
 
-    if (window_options.flags & WindowFlags::HEADLESS)
+    if (windowOptions.flags & WindowFlags::HEADLESS)
     {
-        sdl_flags |= SDL_WINDOW_HIDDEN;
+        sdlFlags |= SDL_WINDOW_HIDDEN;
     }
     else
     {
-        sdl_flags |= SDL_WINDOW_SHOWN;
-        sdl_flags |= SDL_WINDOW_RESIZABLE;
+        sdlFlags |= SDL_WINDOW_SHOWN;
+        sdlFlags |= SDL_WINDOW_RESIZABLE;
 
         // make sure to use SDL_free on file name strings for these events
         SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     }
 
-    m_window_handle = SDL_CreateWindow(
+    m_windowHandle = SDL_CreateWindow(
         m_title.Data(),
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         int(m_size.x),
         int(m_size.y),
-        sdl_flags);
+        sdlFlags);
 
-    AssertThrowMsg(m_window_handle != nullptr, "Failed to initialize window: %s", SDL_GetError());
+    AssertThrowMsg(m_windowHandle != nullptr, "Failed to initialize window: %s", SDL_GetError());
 }
 
 #ifdef HYP_VULKAN
-VkSurfaceKHR SDLApplicationWindow::CreateVkSurface(renderer::Instance* instance)
+VkSurfaceKHR SDLApplicationWindow::CreateVkSurface(Instance* instance)
 {
     VkSurfaceKHR surface;
-    SDL_bool result = SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_window_handle), instance->GetInstance(), &surface);
+    SDL_bool result = SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(m_windowHandle), instance->GetInstance(), &surface);
 
     AssertThrowMsg(result == SDL_TRUE, "Failed to create Vulkan surface: %s", SDL_GetError());
 
@@ -129,7 +131,7 @@ VkSurfaceKHR SDLApplicationWindow::CreateVkSurface(renderer::Instance* instance)
 
 void SDLApplicationWindow::SetMousePosition(Vec2i position)
 {
-    SDL_WarpMouseInWindow(static_cast<SDL_Window*>(m_window_handle), position.x, position.y);
+    SDL_WarpMouseInWindow(static_cast<SDL_Window*>(m_windowHandle), position.x, position.y);
 }
 
 Vec2i SDLApplicationWindow::GetMousePosition() const
@@ -143,7 +145,7 @@ Vec2i SDLApplicationWindow::GetMousePosition() const
 Vec2i SDLApplicationWindow::GetDimensions() const
 {
     int width, height;
-    SDL_GetWindowSize(static_cast<SDL_Window*>(m_window_handle), &width, &height);
+    SDL_GetWindowSize(static_cast<SDL_Window*>(m_windowHandle), &width, &height);
 
     return Vec2i { width, height };
 }
@@ -162,23 +164,23 @@ void SDLApplicationWindow::SetIsMouseLocked(bool locked)
 
 bool SDLApplicationWindow::HasMouseFocus() const
 {
-    const SDL_Window* focus_window = SDL_GetMouseFocus();
+    const SDL_Window* focusWindow = SDL_GetMouseFocus();
 
-    return focus_window == static_cast<SDL_Window*>(m_window_handle);
+    return focusWindow == static_cast<SDL_Window*>(m_windowHandle);
 }
 
 bool SDLApplicationWindow::IsHighDPI() const
 {
-    const int display_index = SDL_GetWindowDisplayIndex(static_cast<SDL_Window*>(m_window_handle));
+    const int displayIndex = SDL_GetWindowDisplayIndex(static_cast<SDL_Window*>(m_windowHandle));
 
-    if (display_index < 0)
+    if (displayIndex < 0)
     {
         return false;
     }
 
     float ddpi, hdpi, vdpi;
 
-    if (SDL_GetDisplayDPI(display_index, &ddpi, &hdpi, &vdpi) == 0)
+    if (SDL_GetDisplayDPI(displayIndex, &ddpi, &hdpi, &vdpi) == 0)
     {
         return hdpi > 96.0f;
     }
@@ -197,17 +199,17 @@ static struct IOSSDLInitializer
     {
         SDL_SetMainReady();
     }
-} g_ios_sdl_initializer = {};
+} g_iosSdlInitializer = {};
 #endif
 
 SDLAppContext::SDLAppContext(ANSIString name, const CommandLineArguments& arguments)
     : AppContextBase(std::move(name), arguments)
 {
-    const int sdl_init_result = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+    const int sdlInitResult = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
-    if (sdl_init_result < 0)
+    if (sdlInitResult < 0)
     {
-        HYP_FAIL("Failed to initialize SDL: %s (%d)", SDL_GetError(), sdl_init_result);
+        HYP_FAIL("Failed to initialize SDL: %s (%d)", SDL_GetError(), sdlInitResult);
     }
 }
 
@@ -216,10 +218,10 @@ SDLAppContext::~SDLAppContext()
     SDL_Quit();
 }
 
-Handle<ApplicationWindow> SDLAppContext::CreateSystemWindow(WindowOptions window_options)
+Handle<ApplicationWindow> SDLAppContext::CreateSystemWindow(WindowOptions windowOptions)
 {
-    Handle<SDLApplicationWindow> window = CreateObject<SDLApplicationWindow>(window_options.title, window_options.size);
-    window->Initialize(window_options);
+    Handle<SDLApplicationWindow> window = CreateObject<SDLApplicationWindow>(windowOptions.title, windowOptions.size);
+    window->Initialize(windowOptions);
 
     return window;
 }
@@ -245,19 +247,19 @@ int SDLAppContext::PollEvent(SystemEvent& event)
 }
 
 #ifdef HYP_VULKAN
-bool SDLAppContext::GetVkExtensions(Array<const char*>& out_extensions) const
+bool SDLAppContext::GetVkExtensions(Array<const char*>& outExtensions) const
 {
-    uint32 num_extensions = 0;
-    SDL_Window* window = static_cast<SDL_Window*>(static_cast<SDLApplicationWindow*>(m_main_window.Get())->GetInternalWindowHandle());
+    uint32 numExtensions = 0;
+    SDL_Window* window = static_cast<SDL_Window*>(static_cast<SDLApplicationWindow*>(m_mainWindow.Get())->GetInternalWindowHandle());
 
-    if (!SDL_Vulkan_GetInstanceExtensions(window, &num_extensions, nullptr))
+    if (!SDL_Vulkan_GetInstanceExtensions(window, &numExtensions, nullptr))
     {
         return false;
     }
 
-    out_extensions.Resize(num_extensions);
+    outExtensions.Resize(numExtensions);
 
-    if (!SDL_Vulkan_GetInstanceExtensions(window, &num_extensions, out_extensions.Data()))
+    if (!SDL_Vulkan_GetInstanceExtensions(window, &numExtensions, outExtensions.Data()))
     {
         return false;
     }
@@ -273,13 +275,13 @@ bool SDLAppContext::GetVkExtensions(Array<const char*>& out_extensions) const
 AppContextBase::AppContextBase(ANSIString name, const CommandLineArguments& arguments)
     : m_configuration("app")
 {
-    m_input_manager = CreateObject<InputManager>();
+    m_inputManager = CreateObject<InputManager>();
 
     m_name = std::move(name);
 
     if (m_name.Empty())
     {
-        if (json::JSONValue config_app_name = m_configuration.Get("app.name"))
+        if (json::JSONValue configAppName = m_configuration.Get("app.name"))
         {
             m_name = m_configuration.Get("app.name").ToString();
         }
@@ -300,16 +302,16 @@ void AppContextBase::SetGame(const Handle<Game>& game)
 
 void AppContextBase::SetMainWindow(const Handle<ApplicationWindow>& window)
 {
-    m_main_window = window;
-    m_input_manager->SetWindow(m_main_window.Get());
+    m_mainWindow = window;
+    m_inputManager->SetWindow(m_mainWindow.Get());
 
-    OnCurrentWindowChanged(m_main_window.Get());
+    OnCurrentWindowChanged(m_mainWindow.Get());
 }
 
 void AppContextBase::UpdateConfigurationOverrides()
 {
     // if ray tracing is not supported, we need to update the configuration
-    if (!g_rendering_api->GetRenderConfig().IsRaytracingSupported())
+    if (!g_renderBackend->GetRenderConfig().IsRaytracingSupported())
     {
         m_configuration.Set("rendering.rt.enabled", false);
         m_configuration.Set("rendering.rt.reflections.enabled", false);

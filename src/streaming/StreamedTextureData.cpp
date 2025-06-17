@@ -20,24 +20,24 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Streaming);
 
-StreamedTextureData::StreamedTextureData(StreamedDataState initial_state, TextureData texture_data, ResourceHandle& out_resource_handle)
-    : StreamedDataBase(initial_state, out_resource_handle),
-      m_texture_desc(texture_data.desc),
-      m_buffer_size(texture_data.buffer.Size())
+StreamedTextureData::StreamedTextureData(StreamedDataState initialState, TextureData textureData, ResourceHandle& outResourceHandle)
+    : StreamedDataBase(initialState, outResourceHandle),
+      m_textureDesc(textureData.desc),
+      m_bufferSize(textureData.buffer.Size())
 {
-    switch (initial_state)
+    switch (initialState)
     {
     case StreamedDataState::NONE:
-        m_streamed_data.EmplaceAs<NullStreamedData>();
+        m_streamedData.EmplaceAs<NullStreamedData>();
 
         break;
     case StreamedDataState::LOADED: // fallthrough
     case StreamedDataState::UNPAGED:
-        m_texture_data.Set(std::move(texture_data));
+        m_textureData.Set(std::move(textureData));
 
-        m_streamed_data.EmplaceAs<MemoryStreamedData>(m_texture_data->GetHashCode(), [this](HashCode hc, ByteBuffer& out) -> bool
+        m_streamedData.EmplaceAs<MemoryStreamedData>(m_textureData->GetHashCode(), [this](HashCode hc, ByteBuffer& out) -> bool
             {
-                if (!m_texture_data)
+                if (!m_textureData)
                 {
                     HYP_LOG(Streaming, Error, "Texture data is unset when trying to load from memory");
 
@@ -48,7 +48,7 @@ StreamedTextureData::StreamedTextureData(StreamedDataState initial_state, Textur
 
                 FBOMWriter serializer { FBOMWriterConfig {} };
 
-                if (FBOMResult err = serializer.Append(*m_texture_data))
+                if (FBOMResult err = serializer.Append(*m_textureData))
                 {
                     HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
@@ -75,51 +75,51 @@ StreamedTextureData::StreamedTextureData(StreamedDataState initial_state, Textur
 
 StreamedTextureData::StreamedTextureData()
     : StreamedDataBase(),
-      m_streamed_data(MakeRefCountedPtr<NullStreamedData>())
+      m_streamedData(MakeRefCountedPtr<NullStreamedData>())
 {
 }
 
-StreamedTextureData::StreamedTextureData(const TextureData& texture_data, ResourceHandle& out_resource_handle)
-    : StreamedTextureData(texture_data.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, texture_data, out_resource_handle)
+StreamedTextureData::StreamedTextureData(const TextureData& textureData, ResourceHandle& outResourceHandle)
+    : StreamedTextureData(textureData.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, textureData, outResourceHandle)
 {
 }
 
-StreamedTextureData::StreamedTextureData(TextureData&& texture_data, ResourceHandle& out_resource_handle)
-    : StreamedTextureData(texture_data.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, std::move(texture_data), out_resource_handle)
+StreamedTextureData::StreamedTextureData(TextureData&& textureData, ResourceHandle& outResourceHandle)
+    : StreamedTextureData(textureData.buffer.Any() ? StreamedDataState::LOADED : StreamedDataState::NONE, std::move(textureData), outResourceHandle)
 {
 }
 
 bool StreamedTextureData::IsInMemory_Internal() const
 {
-    return m_texture_data.HasValue();
+    return m_textureData.HasValue();
 }
 
 void StreamedTextureData::Unpage_Internal()
 {
-    if (m_streamed_data)
+    if (m_streamedData)
     {
-        m_streamed_data->Unpage();
+        m_streamedData->Unpage();
     }
 
-    m_texture_data.Unset();
+    m_textureData.Unset();
 }
 
 void StreamedTextureData::Load_Internal() const
 {
-    AssertThrow(m_streamed_data != nullptr);
-    m_streamed_data->Load();
+    AssertThrow(m_streamedData != nullptr);
+    m_streamedData->Load();
 
-    if (!m_texture_data.HasValue())
+    if (!m_textureData.HasValue())
     {
-        LoadTextureData(m_streamed_data->GetByteBuffer());
+        LoadTextureData(m_streamedData->GetByteBuffer());
     }
 }
 
-void StreamedTextureData::LoadTextureData(const ByteBuffer& byte_buffer) const
+void StreamedTextureData::LoadTextureData(const ByteBuffer& byteBuffer) const
 {
-    m_texture_data.Unset();
+    m_textureData.Unset();
 
-    MemoryBufferedReaderSource source { byte_buffer.ToByteView() };
+    MemoryBufferedReaderSource source { byteBuffer.ToByteView() };
     BufferedReader reader { &source };
 
     if (!reader.IsOpen())
@@ -138,47 +138,47 @@ void StreamedTextureData::LoadTextureData(const ByteBuffer& byte_buffer) const
         return;
     }
 
-    TextureData& texture_data = value.Get<TextureData>();
+    TextureData& textureData = value.Get<TextureData>();
 
-    if (texture_data.buffer.Empty())
+    if (textureData.buffer.Empty())
     {
         HYP_LOG(Streaming, Warning, "StreamedTextureData: Texture data buffer is empty for StreamedTextureData with hash: {}", GetDataHashCode().Value());
 
         return;
     }
 
-    m_texture_data = texture_data;
-    AssertThrow(m_texture_desc == m_texture_data->desc);
+    m_textureData = textureData;
+    AssertThrow(m_textureDesc == m_textureData->desc);
 
-    m_buffer_size = m_texture_data->buffer.Size();
+    m_bufferSize = m_textureData->buffer.Size();
 
-    AssertThrowMsg(m_buffer_size == m_texture_desc.GetByteSize(),
+    AssertThrowMsg(m_bufferSize == m_textureDesc.GetByteSize(),
         "Buffer size mismatch for StreamedTextureData with hash: %llu. Expected: %u, Actual: %u",
-        GetDataHashCode().Value(), m_texture_desc.GetByteSize(), m_buffer_size);
+        GetDataHashCode().Value(), m_textureDesc.GetByteSize(), m_bufferSize);
 }
 
 const TextureData& StreamedTextureData::GetTextureData() const
 {
     WaitForTaskCompletion();
 
-    if (!m_texture_data.HasValue())
+    if (!m_textureData.HasValue())
     {
-        static const TextureData default_value {};
+        static const TextureData defaultValue {};
 
-        return default_value;
+        return defaultValue;
     }
 
-    return m_texture_data.Get();
+    return m_textureData.Get();
 }
 
-void StreamedTextureData::SetTextureData(TextureData&& texture_data)
+void StreamedTextureData::SetTextureData(TextureData&& textureData)
 {
-    Execute([this, texture_data = std::move(texture_data)]()
+    Execute([this, textureData = std::move(textureData)]()
         {
-            m_texture_desc = texture_data.desc;
-            m_buffer_size = texture_data.buffer.Size();
+            m_textureDesc = textureData.desc;
+            m_bufferSize = textureData.buffer.Size();
 
-            m_texture_data.Set(std::move(texture_data));
+            m_textureData.Set(std::move(textureData));
         });
 }
 
@@ -186,25 +186,25 @@ const TextureDesc& StreamedTextureData::GetTextureDesc() const
 {
     WaitForTaskCompletion();
 
-    if (!m_texture_data.HasValue())
+    if (!m_textureData.HasValue())
     {
-        static const TextureDesc default_value {};
+        static const TextureDesc defaultValue {};
 
-        return default_value;
+        return defaultValue;
     }
 
-    return m_texture_data->desc;
+    return m_textureData->desc;
 }
 
-void StreamedTextureData::SetTextureDesc(const TextureDesc& texture_desc)
+void StreamedTextureData::SetTextureDesc(const TextureDesc& textureDesc)
 {
-    Execute([this, texture_desc]()
+    Execute([this, textureDesc]()
         {
-            m_texture_desc = texture_desc;
+            m_textureDesc = textureDesc;
 
-            if (m_texture_data.HasValue())
+            if (m_textureData.HasValue())
             {
-                m_texture_data->desc = texture_desc;
+                m_textureData->desc = textureDesc;
             }
         });
 }

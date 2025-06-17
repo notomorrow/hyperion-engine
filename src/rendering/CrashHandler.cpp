@@ -26,7 +26,7 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(Rendering);
 
 CrashHandler::CrashHandler()
-    : m_is_initialized(false)
+    : m_isInitialized(false)
 {
 }
 
@@ -34,12 +34,12 @@ HYP_DISABLE_OPTIMIZATION;
 
 void CrashHandler::Initialize()
 {
-    if (m_is_initialized)
+    if (m_isInitialized)
     {
         return;
     }
 
-    m_is_initialized = true;
+    m_isInitialized = true;
 
 #if defined(HYP_AFTERMATH) && HYP_AFTERMATH
     auto res = GFSDK_Aftermath_EnableGpuCrashDumps(
@@ -74,28 +74,28 @@ void CrashHandler::Initialize()
                 == GFSDK_Aftermath_Result_Success);
 
             // Query GPU page fault information.
-            GFSDK_Aftermath_GpuCrashDump_PageFaultInfo fault_info = {};
-            GFSDK_Aftermath_Result result = GFSDK_Aftermath_GpuCrashDump_GetPageFaultInfo(decoder, &fault_info);
+            GFSDK_Aftermath_GpuCrashDump_PageFaultInfo faultInfo = {};
+            GFSDK_Aftermath_Result result = GFSDK_Aftermath_GpuCrashDump_GetPageFaultInfo(decoder, &faultInfo);
 
             if (GFSDK_Aftermath_SUCCEED(result) && result != GFSDK_Aftermath_Result_NotAvailable)
             {
                 // Print information about the GPU page fault.
-                HYP_LOG(Rendering, Error, "GPU page fault at {}", fault_info.faultingGpuVA);
-                HYP_LOG(Rendering, Error, "Fault Type: {}", fault_info.faultType);
-                HYP_LOG(Rendering, Error, "Access Type: {}", fault_info.accessType);
-                HYP_LOG(Rendering, Error, "Engine: {}", fault_info.engine);
-                HYP_LOG(Rendering, Error, "Client: {}", fault_info.client);
-                if (fault_info.bHasResourceInfo)
+                HYP_LOG(Rendering, Error, "GPU page fault at {}", faultInfo.faultingGpuVA);
+                HYP_LOG(Rendering, Error, "Fault Type: {}", faultInfo.faultType);
+                HYP_LOG(Rendering, Error, "Access Type: {}", faultInfo.accessType);
+                HYP_LOG(Rendering, Error, "Engine: {}", faultInfo.engine);
+                HYP_LOG(Rendering, Error, "Client: {}", faultInfo.client);
+                if (faultInfo.bHasResourceInfo)
                 {
-                    HYP_LOG(Rendering, Error, "Fault in resource starting at {}", fault_info.resourceInfo.gpuVa);
+                    HYP_LOG(Rendering, Error, "Fault in resource starting at {}", faultInfo.resourceInfo.gpuVa);
                     HYP_LOG(Rendering, Error, "Size of resource: (w x h x d x ml) = ({}, {}, {}, {}) = {} bytes",
-                        fault_info.resourceInfo.width,
-                        fault_info.resourceInfo.height,
-                        fault_info.resourceInfo.depth,
-                        fault_info.resourceInfo.mipLevels,
-                        fault_info.resourceInfo.size);
-                    HYP_LOG(Rendering, Error, "Format of resource: {}", fault_info.resourceInfo.format);
-                    HYP_LOG(Rendering, Error, "Resource was destroyed: {}", fault_info.resourceInfo.bWasDestroyed);
+                        faultInfo.resourceInfo.width,
+                        faultInfo.resourceInfo.height,
+                        faultInfo.resourceInfo.depth,
+                        faultInfo.resourceInfo.mipLevels,
+                        faultInfo.resourceInfo.size);
+                    HYP_LOG(Rendering, Error, "Format of resource: {}", faultInfo.resourceInfo.format);
+                    HYP_LOG(Rendering, Error, "Resource was destroyed: {}", faultInfo.resourceInfo.bWasDestroyed);
                 }
             }
 

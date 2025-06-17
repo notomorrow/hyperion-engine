@@ -8,19 +8,19 @@
 
 namespace hyperion {
 
-const Array<Vertex> MeshBuilder::quad_vertices = {
+const Array<Vertex> MeshBuilder::quadVertices = {
     Vertex { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
     Vertex { { 1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
     Vertex { { 1.0f, 1.0f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
     Vertex { { -1.0f, 1.0f, 0.0f }, { 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } }
 };
 
-const Array<uint32> MeshBuilder::quad_indices = {
+const Array<uint32> MeshBuilder::quadIndices = {
     0, 3, 2,
     0, 2, 1
 };
 
-const Array<Vertex> MeshBuilder::cube_vertices = {
+const Array<Vertex> MeshBuilder::cubeVertices = {
     Vertex { { -1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
     Vertex { { -1.0f, 1.0f, -1.0f }, { 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f } },
     Vertex { { -1.0f, -1.0f, -1.0f }, { 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f } },
@@ -72,13 +72,13 @@ const Array<Vertex> MeshBuilder::cube_vertices = {
 
 Handle<Mesh> MeshBuilder::Quad()
 {
-    const VertexAttributeSet vertex_attributes = static_mesh_vertex_attributes;
+    const VertexAttributeSet vertexAttributes = staticMeshVertexAttributes;
 
     Handle<Mesh> mesh = CreateObject<Mesh>(
-        quad_vertices,
-        quad_indices,
-        renderer::Topology::TRIANGLES,
-        vertex_attributes);
+        quadVertices,
+        quadIndices,
+        TOP_TRIANGLES,
+        vertexAttributes);
 
     mesh->SetName(NAME("MeshBuilder_Quad"));
 
@@ -91,15 +91,15 @@ Handle<Mesh> MeshBuilder::Cube()
 {
     Handle<Mesh> mesh;
 
-    const VertexAttributeSet vertex_attributes = static_mesh_vertex_attributes;
+    const VertexAttributeSet vertexAttributes = staticMeshVertexAttributes;
 
-    auto mesh_data = Mesh::CalculateIndices(cube_vertices);
+    auto meshData = Mesh::CalculateIndices(cubeVertices);
 
     mesh = CreateObject<Mesh>(
-        mesh_data.first,
-        mesh_data.second,
-        Topology::TRIANGLES,
-        vertex_attributes);
+        meshData.first,
+        meshData.second,
+        TOP_TRIANGLES,
+        vertexAttributes);
     mesh->SetName(NAME("MeshBuilder_Cube"));
 
     mesh->CalculateTangents();
@@ -107,9 +107,9 @@ Handle<Mesh> MeshBuilder::Cube()
     return mesh;
 }
 
-Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 num_divisions)
+Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 numDivisions)
 {
-    const float step = 1.0f / float(num_divisions);
+    const float step = 1.0f / float(numDivisions);
 
     static const Vec3f origins[6] = {
         Vector3(-1.0f, -1.0f, -1.0f),
@@ -147,41 +147,41 @@ Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 num_divisions)
         const Vec3f& right = rights[face];
         const Vec3f& up = ups[face];
 
-        for (uint32 j = 0; j < num_divisions + 1; j++)
+        for (uint32 j = 0; j < numDivisions + 1; j++)
         {
-            for (uint32 i = 0; i < num_divisions + 1; i++)
+            for (uint32 i = 0; i < numDivisions + 1; i++)
             {
                 const Vec3f point = (origin + Vec3f(step) * (Vec3f(i) * right + Vec3f(j) * up)).Normalized();
                 Vec3f position = point;
                 Vec3f normal = point;
 
                 const Vec2f uv(
-                    float(j + (face * num_divisions)) / float(num_divisions * 6),
-                    float(i + (face * num_divisions)) / float(num_divisions * 6));
+                    float(j + (face * numDivisions)) / float(numDivisions * 6),
+                    float(i + (face * numDivisions)) / float(numDivisions * 6));
 
                 vertices.PushBack(Vertex(position, uv));
             }
         }
     }
 
-    const uint32 k = num_divisions + 1;
+    const uint32 k = numDivisions + 1;
 
     for (uint32 face = 0; face < 6; face++)
     {
-        for (uint32 j = 0; j < num_divisions; j++)
+        for (uint32 j = 0; j < numDivisions; j++)
         {
-            const bool is_bottom = j < (num_divisions / 2);
+            const bool isBottom = j < (numDivisions / 2);
 
-            for (uint32 i = 0; i < num_divisions; i++)
+            for (uint32 i = 0; i < numDivisions; i++)
             {
-                const bool is_left = i < (num_divisions / 2);
+                const bool isLeft = i < (numDivisions / 2);
 
                 const uint32 a = (face * k + j) * k + i;
                 const uint32 b = (face * k + j) * k + i + 1;
                 const uint32 c = (face * k + j + 1) * k + i;
                 const uint32 d = (face * k + j + 1) * k + i + 1;
 
-                if (is_bottom ^ is_left)
+                if (isBottom ^ isLeft)
                 {
                     indices.PushBack(a);
                     indices.PushBack(c);
@@ -206,8 +206,8 @@ Handle<Mesh> MeshBuilder::NormalizedCubeSphere(uint32 num_divisions)
     Handle<Mesh> mesh = CreateObject<Mesh>(
         vertices,
         indices,
-        Topology::TRIANGLES,
-        static_mesh_vertex_attributes);
+        TOP_TRIANGLES,
+        staticMeshVertexAttributes);
 
     mesh->SetName(NAME("MeshBuilder_NormalizedCubeSphere"));
 
@@ -221,95 +221,95 @@ Handle<Mesh> MeshBuilder::ApplyTransform(const Mesh* mesh, const Transform& tran
 {
     AssertThrow(mesh != nullptr);
 
-    StreamedMeshData* streamed_mesh_data = mesh->GetStreamedMeshData();
+    StreamedMeshData* streamedMeshData = mesh->GetStreamedMeshData();
 
-    if (!streamed_mesh_data)
+    if (!streamedMeshData)
     {
         return Handle<Mesh> {};
     }
 
-    ResourceHandle resource_handle(*streamed_mesh_data);
+    ResourceHandle resourceHandle(*streamedMeshData);
 
-    const Matrix4 normal_matrix = transform.GetMatrix().Inverted().Transposed();
+    const Matrix4 normalMatrix = transform.GetMatrix().Inverted().Transposed();
 
-    Array<Vertex> new_vertices = streamed_mesh_data->GetMeshData().vertices;
+    Array<Vertex> newVertices = streamedMeshData->GetMeshData().vertices;
 
-    for (Vertex& vertex : new_vertices)
+    for (Vertex& vertex : newVertices)
     {
         vertex.SetPosition(transform.GetMatrix() * vertex.GetPosition());
-        vertex.SetNormal(normal_matrix * vertex.GetNormal());
-        vertex.SetTangent(normal_matrix * vertex.GetTangent());
-        vertex.SetBitangent(normal_matrix * vertex.GetBitangent());
+        vertex.SetNormal(normalMatrix * vertex.GetNormal());
+        vertex.SetTangent(normalMatrix * vertex.GetTangent());
+        vertex.SetBitangent(normalMatrix * vertex.GetBitangent());
     }
 
-    Handle<Mesh> new_mesh = CreateObject<Mesh>(
-        std::move(new_vertices),
-        streamed_mesh_data->GetMeshData().indices,
+    Handle<Mesh> newMesh = CreateObject<Mesh>(
+        std::move(newVertices),
+        streamedMeshData->GetMeshData().indices,
         mesh->GetTopology(),
         mesh->GetVertexAttributes());
-    new_mesh->SetName(mesh->GetName());
+    newMesh->SetName(mesh->GetName());
 
-    return new_mesh;
+    return newMesh;
 }
 
-Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b, const Transform& a_transform, const Transform& b_transform)
+Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b, const Transform& aTransform, const Transform& bTransform)
 {
     AssertThrow(a != nullptr);
     AssertThrow(b != nullptr);
 
-    Handle<Mesh> transformed_meshes[] = {
-        ApplyTransform(a, a_transform),
-        ApplyTransform(b, b_transform)
+    Handle<Mesh> transformedMeshes[] = {
+        ApplyTransform(a, aTransform),
+        ApplyTransform(b, bTransform)
     };
 
-    StreamedMeshData* streamed_mesh_datas[] = {
-        transformed_meshes[0]->GetStreamedMeshData(),
-        transformed_meshes[1]->GetStreamedMeshData()
+    StreamedMeshData* streamedMeshDatas[] = {
+        transformedMeshes[0]->GetStreamedMeshData(),
+        transformedMeshes[1]->GetStreamedMeshData()
     };
 
-    AssertThrow(streamed_mesh_datas[0] != nullptr);
-    AssertThrow(streamed_mesh_datas[1] != nullptr);
+    AssertThrow(streamedMeshDatas[0] != nullptr);
+    AssertThrow(streamedMeshDatas[1] != nullptr);
 
-    TResourceHandle<StreamedMeshData> streamed_mesh_data_refs[] = {
-        *streamed_mesh_datas[0],
-        *streamed_mesh_datas[1]
+    TResourceHandle<StreamedMeshData> streamedMeshDataRefs[] = {
+        *streamedMeshDatas[0],
+        *streamedMeshDatas[1]
     };
 
-    const VertexAttributeSet merged_vertex_attributes = a->GetVertexAttributes() | b->GetVertexAttributes();
+    const VertexAttributeSet mergedVertexAttributes = a->GetVertexAttributes() | b->GetVertexAttributes();
 
-    Array<Vertex> all_vertices;
-    all_vertices.Resize(streamed_mesh_data_refs[0]->GetMeshData().vertices.Size() + streamed_mesh_data_refs[1]->GetMeshData().vertices.Size());
+    Array<Vertex> allVertices;
+    allVertices.Resize(streamedMeshDataRefs[0]->GetMeshData().vertices.Size() + streamedMeshDataRefs[1]->GetMeshData().vertices.Size());
 
-    Array<Mesh::Index> all_indices;
-    all_indices.Resize(streamed_mesh_data_refs[0]->GetMeshData().indices.Size() + streamed_mesh_data_refs[1]->GetMeshData().indices.Size());
+    Array<Mesh::Index> allIndices;
+    allIndices.Resize(streamedMeshDataRefs[0]->GetMeshData().indices.Size() + streamedMeshDataRefs[1]->GetMeshData().indices.Size());
 
-    SizeType vertex_offset = 0,
-             index_offset = 0;
+    SizeType vertexOffset = 0,
+             indexOffset = 0;
 
-    for (SizeType mesh_index = 0; mesh_index < 2; mesh_index++)
+    for (SizeType meshIndex = 0; meshIndex < 2; meshIndex++)
     {
-        const SizeType vertex_offset_before = vertex_offset;
+        const SizeType vertexOffsetBefore = vertexOffset;
 
-        for (SizeType i = 0; i < streamed_mesh_data_refs[mesh_index]->GetMeshData().vertices.Size(); i++)
+        for (SizeType i = 0; i < streamedMeshDataRefs[meshIndex]->GetMeshData().vertices.Size(); i++)
         {
-            all_vertices[vertex_offset++] = streamed_mesh_data_refs[mesh_index]->GetMeshData().vertices[i];
+            allVertices[vertexOffset++] = streamedMeshDataRefs[meshIndex]->GetMeshData().vertices[i];
         }
 
-        for (SizeType i = 0; i < streamed_mesh_data_refs[mesh_index]->GetMeshData().indices.Size(); i++)
+        for (SizeType i = 0; i < streamedMeshDataRefs[meshIndex]->GetMeshData().indices.Size(); i++)
         {
-            all_indices[index_offset++] = streamed_mesh_data_refs[mesh_index]->GetMeshData().indices[i] + vertex_offset_before;
+            allIndices[indexOffset++] = streamedMeshDataRefs[meshIndex]->GetMeshData().indices[i] + vertexOffsetBefore;
         }
     }
 
-    Handle<Mesh> new_mesh = CreateObject<Mesh>(
-        std::move(all_vertices),
-        std::move(all_indices),
+    Handle<Mesh> newMesh = CreateObject<Mesh>(
+        std::move(allVertices),
+        std::move(allIndices),
         a->GetTopology(),
-        merged_vertex_attributes);
+        mergedVertexAttributes);
 
-    new_mesh->SetName(NAME("MeshBuilder_MergedMesh"));
+    newMesh->SetName(NAME("MeshBuilder_MergedMesh"));
 
-    return new_mesh;
+    return newMesh;
 }
 
 Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b)
@@ -317,19 +317,19 @@ Handle<Mesh> MeshBuilder::Merge(const Mesh* a, const Mesh* b)
     return Merge(a, b, Transform(), Transform());
 }
 
-Handle<Mesh> MeshBuilder::BuildVoxelMesh(VoxelGrid voxel_grid)
+Handle<Mesh> MeshBuilder::BuildVoxelMesh(VoxelGrid voxelGrid)
 {
     Handle<Mesh> mesh;
 
-    for (uint32 x = 0; x < voxel_grid.size.x; x++)
+    for (uint32 x = 0; x < voxelGrid.size.x; x++)
     {
-        for (uint32 y = 0; y < voxel_grid.size.y; y++)
+        for (uint32 y = 0; y < voxelGrid.size.y; y++)
         {
-            for (uint32 z = 0; z < voxel_grid.size.z; z++)
+            for (uint32 z = 0; z < voxelGrid.size.z; z++)
             {
-                uint32 index = voxel_grid.GetIndex(x, y, z);
+                uint32 index = voxelGrid.GetIndex(x, y, z);
 
-                if (!voxel_grid.voxels[index].filled)
+                if (!voxelGrid.voxels[index].filled)
                 {
                     continue;
                 }
@@ -340,7 +340,7 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(VoxelGrid voxel_grid)
                 {
                     mesh = ApplyTransform(
                         cube.Get(),
-                        Transform(Vec3f { float(x), float(y), float(z) } * voxel_grid.voxel_size, voxel_grid.voxel_size, Quaternion::Identity()));
+                        Transform(Vec3f { float(x), float(y), float(z) } * voxelGrid.voxelSize, voxelGrid.voxelSize, Quaternion::Identity()));
                 }
                 else
                 {
@@ -348,7 +348,7 @@ Handle<Mesh> MeshBuilder::BuildVoxelMesh(VoxelGrid voxel_grid)
                         mesh.Get(),
                         cube.Get(),
                         Transform(),
-                        Transform(Vec3f { float(x), float(y), float(z) } * voxel_grid.voxel_size, voxel_grid.voxel_size, Quaternion::Identity()));
+                        Transform(Vec3f { float(x), float(y), float(z) } * voxelGrid.voxelSize, voxelGrid.voxelSize, Quaternion::Identity()));
                 }
             }
         }

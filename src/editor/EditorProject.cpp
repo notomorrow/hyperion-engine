@@ -30,7 +30,7 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
-static const String g_default_project_name = "UntitledProject";
+static const String g_defaultProjectName = "UntitledProject";
 
 EditorProject::EditorProject()
     : EditorProject(Name::Invalid())
@@ -39,10 +39,10 @@ EditorProject::EditorProject()
 
 EditorProject::EditorProject(Name name)
     : m_name(name),
-      m_last_saved_time(~0ull)
+      m_lastSavedTime(~0ull)
 {
-    m_asset_registry = CreateObject<AssetRegistry>();
-    m_action_stack = CreateObject<EditorActionStack>();
+    m_assetRegistry = CreateObject<AssetRegistry>();
+    m_actionStack = CreateObject<EditorActionStack>(WeakHandleFromThis());
 }
 
 EditorProject::~EditorProject()
@@ -51,8 +51,8 @@ EditorProject::~EditorProject()
 
 void EditorProject::Init()
 {
-    InitObject(m_asset_registry);
-    InitObject(m_action_stack);
+    InitObject(m_assetRegistry);
+    InitObject(m_actionStack);
 
     for (const Handle<Scene>& scene : m_scenes)
     {
@@ -115,7 +115,7 @@ FilePath EditorProject::GetProjectsDirectory() const
 
 bool EditorProject::IsSaved() const
 {
-    return uint64(m_last_saved_time) != ~0ull;
+    return uint64(m_lastSavedTime) != ~0ull;
 }
 
 void EditorProject::Close()
@@ -134,7 +134,7 @@ Result EditorProject::SaveAs(FilePath filepath)
 
     if (!m_name.IsValid())
     {
-        m_name = GetNextDefaultProjectName(g_default_project_name);
+        m_name = GetNextDefaultProjectName(g_defaultProjectName);
 
         if (!m_name.IsValid())
         {
@@ -157,32 +157,32 @@ Result EditorProject::SaveAs(FilePath filepath)
         return HYP_MAKE_ERROR(Error, "Path '{}' is not a directory", filepath);
     }
 
-    const Time previous_last_saved_time = m_last_saved_time;
-    m_last_saved_time = Time::Now();
+    const Time previousLastSavedTime = m_lastSavedTime;
+    m_lastSavedTime = Time::Now();
 
-    const FilePath project_filepath = filepath / (String(*m_name) + ".hypproj");
+    const FilePath projectFilepath = filepath / (String(*m_name) + ".hypproj");
 
-    FileByteWriter byte_writer(project_filepath);
+    FileByteWriter byteWriter(projectFilepath);
 
     HYP_DEFER({
-        byte_writer.Close();
+        byteWriter.Close();
     });
 
     FBOMWriter writer { FBOMWriterConfig {} };
     writer.Append(*this);
 
-    if (auto err = writer.Emit(&byte_writer))
+    if (auto err = writer.Emit(&byteWriter))
     {
-        m_last_saved_time = previous_last_saved_time;
+        m_lastSavedTime = previousLastSavedTime;
 
         return HYP_MAKE_ERROR(Error, "Failed to write project to disk");
     }
 
-    Proc<Result(const FilePath&, const Handle<AssetPackage>&)> create_asset_package_directory;
+    Proc<Result(const FilePath&, const Handle<AssetPackage>&)> createAssetPackageDirectory;
 
-    create_asset_package_directory = [&create_asset_package_directory](const FilePath& parent_directory, const Handle<AssetPackage>& package) -> Result
+    createAssetPackageDirectory = [&createAssetPackageDirectory](const FilePath& parentDirectory, const Handle<AssetPackage>& package) -> Result
     {
-        const FilePath directory = parent_directory / package->GetName().LookupString();
+        const FilePath directory = parentDirectory / package->GetName().LookupString();
 
         if (!directory.Exists())
         {
@@ -198,11 +198,11 @@ Result EditorProject::SaveAs(FilePath filepath)
 
         for (const Handle<AssetPackage>& subpackage : package->GetSubpackages())
         {
-            Result subpackage_result = create_asset_package_directory(directory, subpackage);
+            Result subpackageResult = createAssetPackageDirectory(directory, subpackage);
 
-            if (subpackage_result.HasError())
+            if (subpackageResult.HasError())
             {
-                return subpackage_result;
+                return subpackageResult;
             }
         }
 
@@ -215,22 +215,22 @@ Result EditorProject::SaveAs(FilePath filepath)
         // temporary scope to set the root path for the asset registry
         GlobalContextScope scope { AssetRegistryRootPathContext { filepath } };
 
-        m_asset_registry->ForEachPackage([&create_asset_package_directory, &filepath, &result](const Handle<AssetPackage>& package)
+        m_assetRegistry->ForEachPackage([&createAssetPackageDirectory, &filepath, &result](const Handle<AssetPackage>& package)
             {
-                if (Result package_result = create_asset_package_directory(filepath, package); package_result.HasError())
+                if (Result packageResult = createAssetPackageDirectory(filepath, package); packageResult.HasError())
                 {
-                    result = package_result;
+                    result = packageResult;
 
                     return IterationResult::STOP;
                 }
 
                 // Save each individual object in the package
-                package->ForEachAssetObject([&result](const Handle<AssetObject>& asset_object)
+                package->ForEachAssetObject([&result](const Handle<AssetObject>& assetObject)
                     {
-                        HYP_LOG(Editor, Debug, "Saving asset object '{}', Path: '{}', FilePath: '{}'", asset_object->GetName(), asset_object->GetPath(), asset_object->GetFilePath());
-                        if (Result object_result = asset_object->Save(); object_result.HasError())
+                        HYP_LOG(Editor, Debug, "Saving asset object '{}', Path: '{}', FilePath: '{}'", assetObject->GetName(), assetObject->GetPath(), assetObject->GetFilePath());
+                        if (Result objectResult = assetObject->Save(); objectResult.HasError())
                         {
-                            result = object_result;
+                            result = objectResult;
 
                             return IterationResult::STOP;
                         }
@@ -247,7 +247,7 @@ Result EditorProject::SaveAs(FilePath filepath)
         // Update m_filepath when save was successful.
         m_filepath = filepath;
 
-        m_asset_registry->SetRootPath(FilePath::Relative(filepath, FilePath::Current()));
+        m_assetRegistry->SetRootPath(FilePath::Relative(filepath, FilePath::Current()));
     }
 
     OnProjectSaved(HandleFromThis());
@@ -260,7 +260,7 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
     HYP_SCOPE;
 
     FilePath directory;
-    FilePath project_filepath;
+    FilePath projectFilepath;
 
     if (filepath.IsDirectory())
     {
@@ -270,7 +270,7 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
         {
             if (file.EndsWith(".hypproj"))
             {
-                project_filepath = file;
+                projectFilepath = file;
 
                 break;
             }
@@ -279,7 +279,7 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
     else
     {
         directory = filepath.BasePath();
-        project_filepath = filepath;
+        projectFilepath = filepath;
     }
 
     if (!directory.Exists())
@@ -287,31 +287,31 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
         return HYP_MAKE_ERROR(Error, "Directory does not exist");
     }
 
-    if (!project_filepath.Exists())
+    if (!projectFilepath.Exists())
     {
         return HYP_MAKE_ERROR(Error, "Project file does not exist");
     }
 
-    FBOMObject project_object;
+    FBOMObject projectObject;
     FBOMReader reader({});
 
-    if (FBOMResult err = reader.LoadFromFile(project_filepath, project_object))
+    if (FBOMResult err = reader.LoadFromFile(projectFilepath, projectObject))
     {
         return HYP_MAKE_ERROR(Error, "Failed to load project");
     }
 
-    Optional<const Handle<EditorProject>&> project_opt = project_object.m_deserialized_object->TryGet<Handle<EditorProject>>();
+    Optional<const Handle<EditorProject>&> projectOpt = projectObject.m_deserializedObject->TryGet<Handle<EditorProject>>();
 
-    if (!project_opt)
+    if (!projectOpt)
     {
         return HYP_MAKE_ERROR(Error, "Failed to get project");
     }
 
-    Handle<EditorProject> project = *project_opt;
+    Handle<EditorProject> project = *projectOpt;
 
-    Proc<TResult<Handle<AssetPackage>>(const FilePath& directory)> initialize_package;
+    Proc<TResult<Handle<AssetPackage>>(const FilePath& directory)> initializePackage;
 
-    initialize_package = [&initialize_package](const FilePath& directory) -> TResult<Handle<AssetPackage>>
+    initializePackage = [&initializePackage](const FilePath& directory) -> TResult<Handle<AssetPackage>>
     {
         HYP_NAMED_SCOPE_FMT("Initialize package %s", *directory);
 
@@ -323,14 +323,14 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
         for (const FilePath& subdirectory : directory.GetSubdirectories())
         {
-            TResult<Handle<AssetPackage>> subpackage_result = initialize_package(subdirectory);
+            TResult<Handle<AssetPackage>> subpackageResult = initializePackage(subdirectory);
 
-            if (subpackage_result.HasError())
+            if (subpackageResult.HasError())
             {
-                return subpackage_result;
+                return subpackageResult;
             }
 
-            subpackages.Insert(std::move(subpackage_result.GetValue()));
+            subpackages.Insert(std::move(subpackageResult.GetValue()));
         }
 
         // @TODO Load assets from files in directory
@@ -344,22 +344,22 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
     for (const FilePath& subdirectory : directory.GetSubdirectories())
     {
-        TResult<Handle<AssetPackage>> package_result = initialize_package(subdirectory);
+        TResult<Handle<AssetPackage>> packageResult = initializePackage(subdirectory);
 
-        if (package_result.HasError())
+        if (packageResult.HasError())
         {
-            return package_result.GetError();
+            return packageResult.GetError();
         }
 
-        packages.Insert(std::move(package_result.GetValue()));
+        packages.Insert(std::move(packageResult.GetValue()));
     }
 
-    project->m_asset_registry->SetPackages(std::move(packages));
+    project->m_assetRegistry->SetPackages(std::move(packages));
 
     return project;
 }
 
-Name EditorProject::GetNextDefaultProjectName_Impl(const String& default_project_name) const
+Name EditorProject::GetNextDefaultProjectName_Impl(const String& defaultProjectName) const
 {
     return Name::Invalid();
 }

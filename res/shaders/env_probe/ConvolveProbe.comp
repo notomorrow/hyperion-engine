@@ -43,7 +43,7 @@ HYP_DESCRIPTOR_CBUFF(ConvolveProbeDescriptorSet, UniformBuffer) uniform UniformB
     uvec4 light_indices[4];
 };
 
-HYP_DESCRIPTOR_SRV(View, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_SSBO_DYNAMIC(Global, CurrentEnvProbe) readonly buffer CurrentEnvProbe
 {
     EnvProbe current_env_probe;
@@ -165,6 +165,7 @@ vec4 ConvolveProbe(uvec2 local_coord)
         {
             uint light_index = light_indices[j / 4][j % 4];
 
+            // radiance += vec4(vec3(dot(normal.xyz, lights[light_index].position_intensity.xyz)), 1.0) * float(1.0 / float(num_bound_lights));
             radiance += CalculateDirectLighting(light_index, albedo, position.xyz, normal, -sample_dir);
         }
 

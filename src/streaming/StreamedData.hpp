@@ -43,16 +43,13 @@ enum class StreamedDataState : uint32
     UNPAGED
 };
 
-HYP_CLASS(Abstract)
 class HYP_API StreamedDataBase : public EnableRefCountedPtrFromThis<StreamedDataBase>, public ResourceBase
 {
-    HYP_OBJECT_BODY(StreamedDataBase);
-
     using UnpagingSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::AtomicSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
 
 protected:
-    /*! \brief Construct the StreamedDataBase with the given initial state. If the state is LOADED, \ref{out_resource_handle} will be set to a resource handle for this. */
-    StreamedDataBase(StreamedDataState initial_state, ResourceHandle& out_resource_handle);
+    /*! \brief Construct the StreamedDataBase with the given initial state. If the state is LOADED, \ref{outResourceHandle} will be set to a resource handle for this. */
+    StreamedDataBase(StreamedDataState initialState, ResourceHandle& outResourceHandle);
 
 public:
     StreamedDataBase() = default;
@@ -85,11 +82,8 @@ private:
     virtual void Unpage_Internal() = 0;
 };
 
-HYP_CLASS()
 class HYP_API NullStreamedData final : public StreamedDataBase
 {
-    HYP_OBJECT_BODY(NullStreamedData);
-
 public:
     NullStreamedData() = default;
     virtual ~NullStreamedData() override = default;
@@ -107,16 +101,13 @@ private:
     virtual void Unpage_Internal() override;
 };
 
-HYP_CLASS()
 class HYP_API MemoryStreamedData final : public StreamedDataBase
 {
-    HYP_OBJECT_BODY(MemoryStreamedData);
-
 public:
-    MemoryStreamedData(HashCode hash_code, Proc<bool(HashCode, ByteBuffer&)>&& load_from_memory_proc = {});
-    MemoryStreamedData(HashCode hash_code, const ByteBuffer& byte_buffer, StreamedDataState initial_state, ResourceHandle& out_resource_handle);
-    MemoryStreamedData(HashCode hash_code, ByteBuffer&& byte_buffer, StreamedDataState initial_state, ResourceHandle& out_resource_handle);
-    MemoryStreamedData(HashCode hash_code, ConstByteView byte_view, StreamedDataState initial_state, ResourceHandle& out_resource_handle);
+    MemoryStreamedData(HashCode hashCode, Proc<bool(HashCode, ByteBuffer&)>&& loadFromMemoryProc = {});
+    MemoryStreamedData(HashCode hashCode, const ByteBuffer& byteBuffer, StreamedDataState initialState, ResourceHandle& outResourceHandle);
+    MemoryStreamedData(HashCode hashCode, ByteBuffer&& byteBuffer, StreamedDataState initialState, ResourceHandle& outResourceHandle);
+    MemoryStreamedData(HashCode hashCode, ConstByteView byteView, StreamedDataState initialState, ResourceHandle& outResourceHandle);
 
     MemoryStreamedData(const MemoryStreamedData& other) = delete;
     MemoryStreamedData& operator=(const MemoryStreamedData& other) = delete;
@@ -131,7 +122,7 @@ protected:
 
     virtual HashCode GetDataHashCode() const override
     {
-        return m_hash_code;
+        return m_hashCode;
     }
 
 private:
@@ -140,12 +131,12 @@ private:
     virtual void Load_Internal() const override;
     virtual void Unpage_Internal() override;
 
-    HashCode m_hash_code;
-    mutable Optional<ByteBuffer> m_byte_buffer;
-    Proc<bool(HashCode, ByteBuffer&)> m_load_from_memory_proc;
+    HashCode m_hashCode;
+    mutable Optional<ByteBuffer> m_byteBuffer;
+    Proc<bool(HashCode, ByteBuffer&)> m_loadFromMemoryProc;
 
-    DataStore* m_data_store;
-    ResourceHandle m_data_store_resource_handle;
+    DataStore* m_dataStore;
+    ResourceHandle m_dataStoreResourceHandle;
 };
 
 } // namespace hyperion

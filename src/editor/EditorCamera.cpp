@@ -20,7 +20,7 @@ HYP_DECLARE_LOG_CHANNEL(Camera);
 #pragma region EditorCameraInputHandler
 
 EditorCameraInputHandler::EditorCameraInputHandler(const WeakHandle<CameraController>& controller)
-    : m_controller(WeakHandle<EditorCameraController>(controller))
+    : m_controller(controller)
 {
     AssertThrowMsg(m_controller.IsValid(), "Null camera controller or not of type EditorCameraController");
 }
@@ -88,17 +88,17 @@ bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
         return false;
     }
 
-    const Vec2f delta = (evt.position - evt.previous_position) * 50.0f;
+    const Vec2f delta = (evt.position - evt.previousPosition) * 50.0f;
 
-    const Vec3f dir_cross_y = camera->GetDirection().Cross(camera->GetUpVector());
+    const Vec3f dirCrossY = camera->GetDirection().Cross(camera->GetUpVector());
 
-    if (evt.mouse_buttons & MouseButtonState::LEFT)
+    if (evt.mouseButtons & MouseButtonState::LEFT)
     {
-        const Vec2i delta_sign = Vec2i(MathUtil::Sign(delta));
+        const Vec2i deltaSign = Vec2i(MathUtil::Sign(delta));
 
-        if (evt.mouse_buttons & MouseButtonState::RIGHT)
+        if (evt.mouseButtons & MouseButtonState::RIGHT)
         {
-            camera->SetTranslation(camera->GetTranslation() + dir_cross_y * float(-delta_sign.y));
+            camera->SetTranslation(camera->GetTranslation() + dirCrossY * float(-deltaSign.y));
         }
         else
         {
@@ -109,17 +109,17 @@ bool EditorCameraInputHandler::OnMouseDrag_Impl(const MouseEvent& evt)
 
             camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
 
-            camera->SetTranslation(camera->GetTranslation() + forward * float(-delta_sign.y));
+            camera->SetTranslation(camera->GetTranslation() + forward * float(-deltaSign.y));
         }
     }
-    else if (evt.mouse_buttons & MouseButtonState::RIGHT)
+    else if (evt.mouseButtons & MouseButtonState::RIGHT)
     {
         camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
-        camera->Rotate(dir_cross_y, MathUtil::DegToRad(delta.y));
+        camera->Rotate(dirCrossY, MathUtil::DegToRad(delta.y));
 
         if (camera->GetDirection().y > 0.98f || camera->GetDirection().y < -0.98f)
         {
-            camera->Rotate(dir_cross_y, MathUtil::DegToRad(-delta.y));
+            camera->Rotate(dirCrossY, MathUtil::DegToRad(-delta.y));
         }
     }
 
@@ -139,8 +139,8 @@ EditorCameraController::EditorCameraController()
     : FirstPersonCameraController(),
       m_mode(EditorCameraControllerMode::INACTIVE)
 {
-    m_input_handler = CreateObject<EditorCameraInputHandler>(WeakHandleFromThis());
-    InitObject(m_input_handler);
+    m_inputHandler = CreateObject<EditorCameraInputHandler>(WeakHandleFromThis());
+    InitObject(m_inputHandler);
 }
 
 void EditorCameraController::OnActivated()
@@ -181,29 +181,29 @@ void EditorCameraController::UpdateLogic(double delta)
     Vec3f translation = m_camera->GetTranslation();
 
     const Vec3f direction = m_camera->GetDirection();
-    const Vec3f dir_cross_y = direction.Cross(m_camera->GetUpVector());
+    const Vec3f dirCrossY = direction.Cross(m_camera->GetUpVector());
 
-    if (m_input_handler->IsKeyDown(KeyCode::KEY_W))
+    if (m_inputHandler->IsKeyDown(KeyCode::KEY_W))
     {
         translation += direction * delta * speed;
     }
-    if (m_input_handler->IsKeyDown(KeyCode::KEY_S))
+    if (m_inputHandler->IsKeyDown(KeyCode::KEY_S))
     {
         translation -= direction * delta * speed;
     }
-    if (m_input_handler->IsKeyDown(KeyCode::KEY_A))
+    if (m_inputHandler->IsKeyDown(KeyCode::KEY_A))
     {
-        translation -= dir_cross_y * delta * speed;
+        translation -= dirCrossY * delta * speed;
     }
-    if (m_input_handler->IsKeyDown(KeyCode::KEY_D))
+    if (m_inputHandler->IsKeyDown(KeyCode::KEY_D))
     {
-        translation += dir_cross_y * delta * speed;
+        translation += dirCrossY * delta * speed;
     }
 
     m_camera->SetNextTranslation(translation);
 }
 
-void EditorCameraController::RespondToCommand(const CameraCommand& command, GameCounter::TickUnit dt)
+void EditorCameraController::RespondToCommand(const CameraCommand& command, float dt)
 {
     HYP_SCOPE;
 

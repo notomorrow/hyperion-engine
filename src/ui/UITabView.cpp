@@ -22,16 +22,16 @@ void UITab::Init()
 {
     UIObject::Init();
 
-    Handle<UIText> title_element = CreateUIObject<UIText>(NAME("TabTitle"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-    title_element->SetParentAlignment(UIObjectAlignment::CENTER);
-    title_element->SetOriginAlignment(UIObjectAlignment::CENTER);
-    title_element->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
-    title_element->SetText(m_text);
-    title_element->SetTextSize(12.0f);
+    Handle<UIText> titleElement = CreateUIObject<UIText>(NAME("TabTitle"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+    titleElement->SetParentAlignment(UIObjectAlignment::CENTER);
+    titleElement->SetOriginAlignment(UIObjectAlignment::CENTER);
+    titleElement->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
+    titleElement->SetText(m_text);
+    titleElement->SetTextSize(12.0f);
 
-    UIObject::AddChildUIObject(title_element);
+    UIObject::AddChildUIObject(titleElement);
 
-    m_title_element = title_element;
+    m_titleElement = titleElement;
 
     m_contents = CreateUIObject<UIPanel>(NAME("TabContents"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
     m_contents->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
@@ -42,37 +42,37 @@ void UITab::SetText(const String& text)
 {
     UIObject::SetText(text);
 
-    if (m_title_element != nullptr)
+    if (m_titleElement != nullptr)
     {
-        m_title_element->SetText(m_text);
+        m_titleElement->SetText(m_text);
     }
 }
 
-void UITab::AddChildUIObject(const Handle<UIObject>& ui_object)
+void UITab::AddChildUIObject(const Handle<UIObject>& uiObject)
 {
     if (m_contents != nullptr)
     {
-        m_contents->AddChildUIObject(ui_object);
+        m_contents->AddChildUIObject(uiObject);
 
         return;
     }
 
-    UIObject::AddChildUIObject(ui_object);
+    UIObject::AddChildUIObject(uiObject);
 }
 
-bool UITab::RemoveChildUIObject(UIObject* ui_object)
+bool UITab::RemoveChildUIObject(UIObject* uiObject)
 {
     if (m_contents != nullptr)
     {
-        return m_contents->RemoveChildUIObject(ui_object);
+        return m_contents->RemoveChildUIObject(uiObject);
     }
 
-    return UIObject::RemoveChildUIObject(ui_object);
+    return UIObject::RemoveChildUIObject(uiObject);
 }
 
-void UITab::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state)
+void UITab::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState)
 {
-    UIObject::SetFocusState_Internal(focus_state);
+    UIObject::SetFocusState_Internal(focusState);
 
     UpdateMaterial(false);
     UpdateMeshData();
@@ -92,7 +92,7 @@ Material::ParameterTable UITab::GetMaterialParameters() const
     }
     else
     {
-        color = m_background_color;
+        color = m_backgroundColor;
     }
 
     return Material::ParameterTable {
@@ -105,13 +105,13 @@ Material::ParameterTable UITab::GetMaterialParameters() const
 #pragma region UITabView
 
 UITabView::UITabView()
-    : m_selected_tab_index(~0u)
+    : m_selectedTabIndex(~0u)
 {
 }
 
 void UITabView::Init()
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     UIPanel::Init();
 
@@ -126,21 +126,21 @@ void UITabView::Init()
     SetSelectedTabIndex(0);
 }
 
-void UITabView::AddChildUIObject(const Handle<UIObject>& ui_object)
+void UITabView::AddChildUIObject(const Handle<UIObject>& uiObject)
 {
-    if (!ui_object.IsValid())
+    if (!uiObject.IsValid())
     {
         return;
     }
 
-    if (!ui_object->IsInstanceOf<UITab>())
+    if (!uiObject->IsA<UITab>())
     {
         HYP_LOG(UI, Warning, "UITabView::AddChildUIObject() called with a UIObject that is not a UITab");
 
         return;
     }
 
-    auto it = m_tabs.FindAs(ui_object);
+    auto it = m_tabs.FindAs(uiObject);
 
     if (it != m_tabs.End())
     {
@@ -149,68 +149,69 @@ void UITabView::AddChildUIObject(const Handle<UIObject>& ui_object)
         return;
     }
 
-    Handle<UIObject> tab = ui_object.Cast<UITab>();
-    AssertThrow(tab != nullptr);
+    Handle<UIObject> tab = ObjCast<UITab>(uiObject);
+    AssertThrow(tab.IsValid(), "Cast to UITab failed");
 
     tab->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 30, UIObjectSize::PIXEL }));
 
     tab->OnClick.RemoveAllDetached();
-    tab->OnClick.Bind([this, name = tab->GetName()](const MouseEvent& data) -> UIEventHandlerResult
-                    {
-                        if (data.mouse_buttons == MouseButtonState::LEFT)
-                        {
-                            const uint32 tab_index = GetTabIndex(name);
+    tab->OnClick
+        .Bind([this, name = tab->GetName()](const MouseEvent& data) -> UIEventHandlerResult
+            {
+                if (data.mouseButtons == MouseButtonState::LEFT)
+                {
+                    const uint32 tabIndex = GetTabIndex(name);
 
-                            SetSelectedTabIndex(tab_index);
+                    SetSelectedTabIndex(tabIndex);
 
-                            return UIEventHandlerResult::STOP_BUBBLING;
-                        }
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
 
-                        return UIEventHandlerResult::OK;
-                    })
+                return UIEventHandlerResult::OK;
+            })
         .Detach();
 
     UIPanel::AddChildUIObject(tab);
 
-    m_tabs.PushBack(tab.Cast<UITab>());
+    m_tabs.PushBack(ObjCast<UITab>(tab));
 
     UpdateTabSizes();
 
-    if (m_selected_tab_index == ~0u)
+    if (m_selectedTabIndex == ~0u)
     {
         SetSelectedTabIndex(0);
     }
 }
 
-bool UITabView::RemoveChildUIObject(UIObject* ui_object)
+bool UITabView::RemoveChildUIObject(UIObject* uiObject)
 {
-    auto it = m_tabs.FindAs(ui_object);
+    auto it = m_tabs.FindAs(uiObject);
 
     if (it == m_tabs.End())
     {
-        return UIPanel::RemoveChildUIObject(ui_object);
+        return UIPanel::RemoveChildUIObject(uiObject);
     }
 
     return RemoveTab((*it)->GetName());
 }
 
-void UITabView::UpdateSize_Internal(bool update_children)
+void UITabView::UpdateSize_Internal(bool updateChildren)
 {
-    UIPanel::UpdateSize_Internal(update_children);
+    UIPanel::UpdateSize_Internal(updateChildren);
 
     UpdateTabSizes();
 }
 
 void UITabView::SetSelectedTabIndex(uint32 index)
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    if (index == m_selected_tab_index)
+    if (index == m_selectedTabIndex)
     {
         return;
     }
 
-    m_selected_tab_index = index;
+    m_selectedTabIndex = index;
 
     if (Handle<Node> node = m_container->GetNode())
     {
@@ -219,7 +220,7 @@ void UITabView::SetSelectedTabIndex(uint32 index)
 
     for (SizeType i = 0; i < m_tabs.Size(); i++)
     {
-        if (i == m_selected_tab_index)
+        if (i == m_selectedTabIndex)
         {
             continue;
         }
@@ -238,17 +239,17 @@ void UITabView::SetSelectedTabIndex(uint32 index)
     {
         if (m_tabs.Any())
         {
-            m_selected_tab_index = 0;
+            m_selectedTabIndex = 0;
         }
         else
         {
-            m_selected_tab_index = ~0u;
+            m_selectedTabIndex = ~0u;
         }
 
         return;
     }
 
-    UITab* tab = m_tabs[m_selected_tab_index];
+    UITab* tab = m_tabs[m_selectedTabIndex];
 
     if (!tab || !tab->GetContents())
     {
@@ -262,7 +263,7 @@ void UITabView::SetSelectedTabIndex(uint32 index)
 
 Handle<UITab> UITabView::AddTab(Name name, const String& title)
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     Handle<UITab> tab = CreateUIObject<UITab>(name, Vec2i { 0, 0 }, UIObjectSize({ 0, UIObjectSize::PIXEL }, { 30, UIObjectSize::PIXEL }));
     tab->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
@@ -271,11 +272,11 @@ Handle<UITab> UITabView::AddTab(Name name, const String& title)
 
     tab->OnClick.Bind([this, name](const MouseEvent& data) -> UIEventHandlerResult
                     {
-                        if (data.mouse_buttons == MouseButtonState::LEFT)
+                        if (data.mouseButtons == MouseButtonState::LEFT)
                         {
-                            const uint32 tab_index = GetTabIndex(name);
+                            const uint32 tabIndex = GetTabIndex(name);
 
-                            SetSelectedTabIndex(tab_index);
+                            SetSelectedTabIndex(tabIndex);
 
                             return UIEventHandlerResult::STOP_BUBBLING;
                         }
@@ -290,7 +291,7 @@ Handle<UITab> UITabView::AddTab(Name name, const String& title)
 
     UpdateTabSizes();
 
-    if (m_selected_tab_index == ~0u)
+    if (m_selectedTabIndex == ~0u)
     {
         SetSelectedTabIndex(0);
     }
@@ -300,7 +301,7 @@ Handle<UITab> UITabView::AddTab(Name name, const String& title)
 
 UITab* UITabView::GetTab(Name name) const
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     for (UITab* tab : m_tabs)
     {
@@ -315,7 +316,7 @@ UITab* UITabView::GetTab(Name name) const
 
 uint32 UITabView::GetTabIndex(Name name) const
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     for (SizeType i = 0; i < m_tabs.Size(); i++)
     {
@@ -330,7 +331,7 @@ uint32 UITabView::GetTabIndex(Name name) const
 
 bool UITabView::RemoveTab(Name name)
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     const auto it = m_tabs.FindIf([name](UITab* tab)
         {
@@ -355,7 +356,7 @@ bool UITabView::RemoveTab(Name name)
 
     UpdateTabSizes();
 
-    if (m_selected_tab_index == index)
+    if (m_selectedTabIndex == index)
     {
         SetSelectedTabIndex(m_tabs.Any() ? m_tabs.Size() - 1 : ~0u);
     }
@@ -370,7 +371,7 @@ void UITabView::UpdateTabSizes()
         return;
     }
 
-    const Vec2i actual_size = GetActualSize();
+    const Vec2i actualSize = GetActualSize();
 
     int offset = 0;
 

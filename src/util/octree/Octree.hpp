@@ -32,57 +32,57 @@ namespace hyperion {
  *  - 6-8: index of third parent octant
  * ... and so on until the index of the octant itself.
  *
- * The maximum depth of an octree using this ID scheme is 64 bits / 3 bits for index = 21 octants.
+ * The maximum depth of an octree using this scheme is 64 bits / 3 bits for index = 21 octants.
  */
-struct OctantID
+struct OctantId
 {
     // This bit is reserved for invalid octants -- We use 3 bits for each index, leaving 1 bit left on a 64-bit integer
-    static constexpr uint64 invalid_bits = 1ull << 63;
-    static constexpr SizeType max_depth = 64 / 3;
+    static constexpr uint64 invalidBits = 1ull << 63;
+    static constexpr SizeType maxDepth = 64 / 3;
 
-    uint64 index_bits { 0 };
+    uint64 indexBits { 0 };
     uint8 depth { 0 };
 
-    OctantID() = default;
+    OctantId() = default;
 
-    explicit OctantID(uint64 index_bits, uint8 depth)
-        : index_bits(index_bits),
+    explicit OctantId(uint64 indexBits, uint8 depth)
+        : indexBits(indexBits),
           depth(depth)
     {
     }
 
-    explicit OctantID(uint8 child_index, OctantID parent_id)
-        : index_bits(!parent_id.IsInvalid()
-                  ? parent_id.index_bits | (uint64(child_index) << (uint64(parent_id.GetDepth() + uint8(1)) * 3ull))
-                  : child_index),
-          depth(parent_id.GetDepth() + uint8(1))
+    explicit OctantId(uint8 childIndex, OctantId parentId)
+        : indexBits(!parentId.IsInvalid()
+                  ? parentId.indexBits | (uint64(childIndex) << (uint64(parentId.GetDepth() + uint8(1)) * 3ull))
+                  : childIndex),
+          depth(parentId.GetDepth() + uint8(1))
     {
     }
 
-    OctantID(const OctantID& other) = default;
-    OctantID& operator=(const OctantID& other) = default;
-    OctantID(OctantID&& other) noexcept = default;
-    OctantID& operator=(OctantID&& other) noexcept = default;
-    ~OctantID() = default;
+    OctantId(const OctantId& other) = default;
+    OctantId& operator=(const OctantId& other) = default;
+    OctantId(OctantId&& other) noexcept = default;
+    OctantId& operator=(OctantId&& other) noexcept = default;
+    ~OctantId() = default;
 
     HYP_FORCE_INLINE bool IsInvalid() const
     {
-        return index_bits & invalid_bits;
+        return indexBits & invalidBits;
     }
 
-    HYP_FORCE_INLINE bool operator==(const OctantID& other) const
+    HYP_FORCE_INLINE bool operator==(const OctantId& other) const
     {
-        return index_bits == other.index_bits && depth == other.depth;
+        return indexBits == other.indexBits && depth == other.depth;
     }
 
-    HYP_FORCE_INLINE bool operator!=(const OctantID& other) const
+    HYP_FORCE_INLINE bool operator!=(const OctantId& other) const
     {
         return !(*this == other);
     }
 
     HYP_FORCE_INLINE uint8 GetIndex(uint8 depth) const
     {
-        return (index_bits >> (uint64(depth) * 3ull)) & 0x7;
+        return (indexBits >> (uint64(depth) * 3ull)) & 0x7;
     }
 
     HYP_FORCE_INLINE uint8 GetIndex() const
@@ -95,46 +95,46 @@ struct OctantID
         return depth;
     }
 
-    HYP_FORCE_INLINE bool IsSiblingOf(OctantID other) const
+    HYP_FORCE_INLINE bool IsSiblingOf(OctantId other) const
     {
-        return depth == other.depth && (index_bits & ~(~0ull << (uint64(depth) * 3ull))) == (other.index_bits & ~(~0ull << (uint64(depth) * 3ull)));
+        return depth == other.depth && (indexBits & ~(~0ull << (uint64(depth) * 3ull))) == (other.indexBits & ~(~0ull << (uint64(depth) * 3ull)));
     }
 
-    HYP_FORCE_INLINE bool IsChildOf(OctantID other) const
+    HYP_FORCE_INLINE bool IsChildOf(OctantId other) const
     {
-        return depth > other.depth && (index_bits & ~(~0ull << (uint64(other.depth) * 3ull))) == other.index_bits;
+        return depth > other.depth && (indexBits & ~(~0ull << (uint64(other.depth) * 3ull))) == other.indexBits;
     }
 
-    HYP_FORCE_INLINE bool IsParentOf(OctantID other) const
+    HYP_FORCE_INLINE bool IsParentOf(OctantId other) const
     {
-        return depth < other.depth && index_bits == (other.index_bits & ~(~0ull << (uint64(depth) * 3ull)));
+        return depth < other.depth && indexBits == (other.indexBits & ~(~0ull << (uint64(depth) * 3ull)));
     }
 
-    HYP_FORCE_INLINE OctantID GetParent() const
+    HYP_FORCE_INLINE OctantId GetParent() const
     {
         if (depth == 0)
         {
-            return OctantID::Invalid();
+            return OctantId::Invalid();
         }
 
-        return OctantID(index_bits & ~(~0ull << (uint64(depth) * 3ull)), depth - 1);
+        return OctantId(indexBits & ~(~0ull << (uint64(depth) * 3ull)), depth - 1);
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(index_bits);
+        hc.Add(indexBits);
         hc.Add(depth);
 
         return hc;
     }
 
-    /*! \brief Get the special invalid OctantID. */
-    static OctantID Invalid()
+    /*! \brief Get the special invalid OctantId. */
+    static OctantId Invalid()
     {
         // 0x80 For index bit because we reserve the highest bit for invalid octants
         // 0xff for depth because +1 (used for child octant id) will cause it to overflow to 0
-        return OctantID(invalid_bits, 0xff);
+        return OctantId(invalidBits, 0xff);
     }
 };
 
@@ -153,18 +153,18 @@ class OctreeBase;
 template <class Derived, class TEntry>
 struct OctreeState
 {
-    HashMap<TEntry, OctreeBase<Derived, TEntry>*> entry_to_octree;
+    HashMap<TEntry, OctreeBase<Derived, TEntry>*> entryToOctree;
 
     // If any octants need to be rebuilt, their topmost parent that needs to be rebuilt will be stored here
-    OctantID rebuild_state = OctantID::Invalid();
+    OctantId rebuildState = OctantId::Invalid();
 
     HYP_FORCE_INLINE bool NeedsRebuild() const
     {
-        return rebuild_state != OctantID::Invalid();
+        return rebuildState != OctantId::Invalid();
     }
 
     /*! \brief Mark the octant as dirty, meaning it needs to be rebuilt */
-    void MarkOctantDirty(OctantID octant_id);
+    void MarkOctantDirty(OctantId octantId);
 };
 
 template <class Derived, class TEntry>
@@ -177,11 +177,11 @@ protected:
         DEPTH_SEARCH_ONLY_THIS = 0
     };
 
-    static constexpr float growth_factor = 1.5f;
+    static constexpr float growthFactor = 1.5f;
     // the length value at which to stop recusively dividing
     // for a small enough object
-    static constexpr float min_aabb_size = 1.0f;
-    static const BoundingBox default_bounds;
+    static constexpr float minAabbSize = 1.0f;
+    static const BoundingBox defaultBounds;
 
 public:
     struct Result
@@ -193,24 +193,24 @@ public:
         } result;
 
         const char* message;
-        int error_code = 0;
+        int errorCode = 0;
 
         Result()
             : Result(OCTREE_OK)
         {
         }
 
-        Result(decltype(result) result, const char* message = "", int error_code = 0)
+        Result(decltype(result) result, const char* message = "", int errorCode = 0)
             : result(result),
               message(message),
-              error_code(error_code)
+              errorCode(errorCode)
         {
         }
 
         Result(const Result& other)
             : result(other.result),
               message(other.message),
-              error_code(other.error_code)
+              errorCode(other.errorCode)
         {
         }
 
@@ -225,7 +225,7 @@ public:
         }
     };
 
-    using InsertResult = Pair<Result, OctantID>;
+    using InsertResult = Pair<Result, OctantId>;
 
     struct Octant
     {
@@ -334,9 +334,9 @@ public:
         return m_entries;
     }
 
-    HYP_FORCE_INLINE OctantID GetOctantID() const
+    HYP_FORCE_INLINE OctantId GetOctantID() const
     {
-        return m_octant_id;
+        return m_octantId;
     }
 
     HYP_FORCE_INLINE const FixedArray<Octant, 8>& GetOctants() const
@@ -345,36 +345,36 @@ public:
     }
 
     /*! \brief Get the child (nested) octant with the specified index
-     *  \param octant_id The OctantID to use to find the octant (see OctantID struct)
+     *  \param octantId The OctantId to use to find the octant (see OctantId struct)
      *  \return The octant with the specified index, or nullptr if it doesn't exist
      */
-    OctreeBase* GetChildOctant(OctantID octant_id);
+    OctreeBase* GetChildOctant(OctantId octantId);
 
     HYP_FORCE_INLINE bool IsDivided() const
     {
-        return m_is_divided;
+        return m_isDivided;
     }
 
     virtual void Clear();
-    void Clear(Array<Entry>& out_entries, bool undivide);
-    void Clear(Array<TEntry>& out_entries, bool undivide);
+    void Clear(Array<Entry>& outEntries, bool undivide);
+    void Clear(Array<TEntry>& outEntries, bool undivide);
 
-    InsertResult Insert(const TEntry& value, const BoundingBox& aabb, bool allow_rebuild = false);
-    Result Remove(const TEntry& value, bool allow_rebuild = false);
+    InsertResult Insert(const TEntry& value, const BoundingBox& aabb, bool allowRebuild = false);
+    Result Remove(const TEntry& value, bool allowRebuild = false);
 
     /*! \brief Update the entry in the octree.
-     * \param id value The ID of the entry to update
+     * \param id value The id of the entry to update
      * \param aabb The new AABB of the entry
-     * \param allow_rebuild If true, the octree will be rebuilt if the entry doesn't fit in the new octant. Otherwise, the octree will be marked as dirty and rebuilt on the next call to PerformUpdates()
-     * \param force_invalidation If true, the entry will have its invalidation marker incremented, causing the octant's hash to be updated
+     * \param allowRebuild If true, the octree will be rebuilt if the entry doesn't fit in the new octant. Otherwise, the octree will be marked as dirty and rebuilt on the next call to PerformUpdates()
+     * \param forceInvalidation If true, the entry will have its invalidation marker incremented, causing the octant's hash to be updated
      */
-    InsertResult Update(const TEntry& value, const BoundingBox& aabb, bool force_invalidation = false, bool allow_rebuild = false);
+    InsertResult Update(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation = false, bool allowRebuild = false);
     InsertResult Rebuild();
-    virtual InsertResult Rebuild(const BoundingBox& new_aabb, bool allow_grow);
+    virtual InsertResult Rebuild(const BoundingBox& newAabb, bool allowGrow);
 
-    void CollectEntries(Array<const TEntry*>& out_entries) const;
-    void CollectEntries(const BoundingSphere& bounds, Array<const TEntry*>& out_entries) const;
-    void CollectEntries(const BoundingBox& bounds, Array<const TEntry*>& out_entries) const;
+    void CollectEntries(Array<const TEntry*>& outEntries) const;
+    void CollectEntries(const BoundingSphere& bounds, Array<const TEntry*>& outEntries) const;
+    void CollectEntries(const BoundingBox& bounds, Array<const TEntry*>& outEntries) const;
 
     bool GetNearestOctants(const Vec3f& position, FixedArray<Derived*, 8>& out) const;
     bool GetNearestOctant(const Vec3f& position, Derived const*& out) const;
@@ -390,10 +390,10 @@ public:
 protected:
     virtual UniquePtr<Derived> CreateChildOctant(const BoundingBox& aabb, Derived* parent, uint8 index) = 0;
 
-    /*! \brief Move the entry to a new octant. If allow_rebuild is true, the octree will be rebuilt if the entry doesn't fit in the new octant,
+    /*! \brief Move the entry to a new octant. If allowRebuild is true, the octree will be rebuilt if the entry doesn't fit in the new octant,
         and subdivided octants will be collapsed if they are empty + new octants will be created if they are needed.
      */
-    InsertResult Move(const TEntry& value, const BoundingBox& aabb, bool allow_rebuild, EntrySet::Iterator it);
+    InsertResult Move(const TEntry& value, const BoundingBox& aabb, bool allowRebuild, EntrySet::Iterator it);
 
     HYP_FORCE_INLINE bool IsRoot() const
     {
@@ -406,7 +406,7 @@ protected:
     }
 
     void SetParent(OctreeBase* parent);
-    bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint8 octant_mask = 0xff) const;
+    bool EmptyDeep(int depth = DEPTH_SEARCH_INF, uint8 octantMask = 0xff) const;
 
     void InitOctants();
     void Divide();
@@ -414,25 +414,25 @@ protected:
 
     void Invalidate();
 
-    /*! \brief If \ref{allow_rebuild} is true, removes any potentially empty octants above the entry.
-        If \ref{allow_rebuild} is false, marks them as dirty so they get removed on the next call to PerformUpdates()
+    /*! \brief If \ref{allowRebuild} is true, removes any potentially empty octants above the entry.
+        If \ref{allowRebuild} is false, marks them as dirty so they get removed on the next call to PerformUpdates()
     */
-    void CollapseParents(bool allow_rebuild);
+    void CollapseParents(bool allowRebuild);
 
     EntrySet m_entries;
     OctreeBase* m_parent;
     BoundingBox m_aabb;
     FixedArray<Octant, 8> m_octants;
-    bool m_is_divided;
+    bool m_isDivided;
     OctreeState<Derived, TEntry>* m_state;
-    OctantID m_octant_id;
-    uint32 m_invalidation_marker;
+    OctantId m_octantId;
+    uint32 m_invalidationMarker;
 
 private:
     InsertResult Insert_Internal(const TEntry& value, const BoundingBox& aabb);
-    InsertResult Update_Internal(const TEntry& value, const BoundingBox& aabb, bool force_invalidation, bool allow_rebuild);
-    Result Remove_Internal(const TEntry& value, bool allow_rebuild);
-    InsertResult RebuildExtend_Internal(const BoundingBox& extend_include_aabb);
+    InsertResult Update_Internal(const TEntry& value, const BoundingBox& aabb, bool forceInvalidation, bool allowRebuild);
+    Result Remove_Internal(const TEntry& value, bool allowRebuild);
+    InsertResult RebuildExtend_Internal(const BoundingBox& extendIncludeAabb);
 };
 
 #include <util/octree/Octree.inl>

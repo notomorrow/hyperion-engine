@@ -19,8 +19,6 @@
 #include <system/vma/VmaUsage.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 class Features;
 class DescriptorPool;
 
@@ -37,7 +35,7 @@ class DescriptorSetManager;
 template <>
 class Device<Platform::vulkan> final
 {
-    static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physical_device, VkSurfaceKHR surface);
+    static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 
 public:
     static constexpr PlatformType platform = Platform::vulkan;
@@ -70,7 +68,7 @@ public:
 
     const QueueFamilyIndices& GetQueueFamilyIndices() const
     {
-        return m_queue_family_indices;
+        return m_queueFamilyIndices;
     }
 
     const Features& GetFeatures() const
@@ -80,48 +78,48 @@ public:
 
     VulkanDeviceQueue& GetGraphicsQueue()
     {
-        return m_queue_graphics;
+        return m_queueGraphics;
     }
 
     const VulkanDeviceQueue& GetGraphicsQueue() const
     {
-        return m_queue_graphics;
+        return m_queueGraphics;
     }
 
     VulkanDeviceQueue& GetTransferQueue()
     {
-        return m_queue_transfer;
+        return m_queueTransfer;
     }
 
     const VulkanDeviceQueue& GetTransferQueue() const
     {
-        return m_queue_transfer;
+        return m_queueTransfer;
     }
 
     VulkanDeviceQueue& GetPresentQueue()
     {
-        return m_queue_present;
+        return m_queuePresent;
     }
 
     const VulkanDeviceQueue& GetPresentQueue() const
     {
-        return m_queue_present;
+        return m_queuePresent;
     }
 
     VulkanDeviceQueue& GetComputeQueue()
     {
-        return m_queue_compute;
+        return m_queueCompute;
     }
 
     const VulkanDeviceQueue& GetComputeQueue() const
     {
-        return m_queue_compute;
+        return m_queueCompute;
     }
 
-    VkQueue GetQueue(uint32 queue_family_index, uint32 queue_index = 0);
+    VkQueue GetQueue(uint32 queueFamilyIndex, uint32 queueIndex = 0);
 
-    RendererResult Create(const std::set<uint32_t>& required_queue_families);
-    RendererResult CheckDeviceSuitable(const ExtensionMap& unsupported_extensions);
+    RendererResult Create(const std::set<uint32_t>& requiredQueueFamilies);
+    RendererResult CheckDeviceSuitable(const ExtensionMap& unsupportedExtensions);
 
     /*! \brief Wait for the device to be idle */
     RendererResult Wait() const;
@@ -138,20 +136,20 @@ private:
     VmaAllocator m_allocator;
 
     UniquePtr<Features> m_features;
-    QueueFamilyIndices m_queue_family_indices;
+    QueueFamilyIndices m_queueFamilyIndices;
 
-    VulkanDeviceQueue m_queue_graphics;
-    VulkanDeviceQueue m_queue_transfer;
-    VulkanDeviceQueue m_queue_present;
-    VulkanDeviceQueue m_queue_compute;
+    VulkanDeviceQueue m_queueGraphics;
+    VulkanDeviceQueue m_queueTransfer;
+    VulkanDeviceQueue m_queuePresent;
+    VulkanDeviceQueue m_queueCompute;
 
-    ExtensionMap m_required_extensions;
+    ExtensionMap m_requiredExtensions;
 
-    UniquePtr<DescriptorPool> m_descriptor_pool;
+    UniquePtr<DescriptorPool> m_descriptorPool;
 };
 
 } // namespace platform
-} // namespace renderer
+
 } // namespace hyperion
 
 #endif // HYPERION_RENDERER_BACKEND_VULKAN_DEVICE_HPP

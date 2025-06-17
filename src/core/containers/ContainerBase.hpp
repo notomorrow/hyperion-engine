@@ -44,52 +44,6 @@ public:
     {
     }
 
-    auto& Get(KeyType key)
-    {
-        const auto it = static_cast<const Container*>(this)->Find(key);
-        AssertThrowMsg(it != static_cast<const Container*>(this)->End(), "Cannot Get(): value not found");
-
-        return *it;
-    }
-
-    const auto& Get(KeyType key) const
-    {
-        const auto it = static_cast<const Container*>(this)->Find(key);
-        AssertThrowMsg(it != static_cast<const Container*>(this)->End(), "Cannot Get(): value not found");
-
-        return *it;
-    }
-
-    auto* TryGet(KeyType key)
-    {
-        const auto it = static_cast<Container*>(this)->Find(key);
-        return it != static_cast<Container*>(this)->End()
-            ? &(*it)
-            : nullptr;
-    }
-
-    const auto* TryGet(KeyType key) const
-    {
-        const auto it = static_cast<const Container*>(this)->Find(key);
-        return it != static_cast<const Container*>(this)->End()
-            ? &(*it)
-            : nullptr;
-    }
-
-    template <class ValueType>
-    void Set(KeyType index, const ValueType& value)
-    {
-        AssertThrow(index < static_cast<KeyType>(static_cast<const Container*>(this)->Size()));
-        static_cast<Container*>(this)->operator[](index) = value;
-    }
-
-    template <class ValueType>
-    void Set(KeyType index, ValueType&& value)
-    {
-        AssertThrow(index < static_cast<KeyType>(static_cast<const Container*>(this)->Size()));
-        static_cast<Container*>(this)->operator[](index) = std::forward<ValueType>(value);
-    }
-
     template <class T>
     auto Find(const T& value)
     {
@@ -199,7 +153,7 @@ public:
     template <class T>
     auto LowerBound(const T& key)
     {
-        static_assert(Container::is_contiguous, "Container must be contiguous to perform IndexOf()");
+        static_assert(Container::isContiguous, "Container must be contiguous to perform IndexOf()");
 
         const auto _begin = static_cast<Container*>(this)->Begin();
         const auto _end = static_cast<Container*>(this)->End();
@@ -213,7 +167,7 @@ public:
     template <class T>
     auto LowerBound(const T& key) const
     {
-        static_assert(Container::is_contiguous, "Container must be contiguous to perform IndexOf()");
+        static_assert(Container::isContiguous, "Container must be contiguous to perform IndexOf()");
 
         const auto _begin = static_cast<const Container*>(this)->Begin();
         const auto _end = static_cast<const Container*>(this)->End();
@@ -227,7 +181,7 @@ public:
     template <class T>
     auto UpperBound(const T& key)
     {
-        static_assert(Container::is_contiguous, "Container must be contiguous to perform IndexOf()");
+        static_assert(Container::isContiguous, "Container must be contiguous to perform IndexOf()");
 
         const auto _begin = static_cast<Container*>(this)->Begin();
         const auto _end = static_cast<Container*>(this)->End();
@@ -241,7 +195,7 @@ public:
     template <class T>
     auto UpperBound(const T& key) const
     {
-        static_assert(Container::is_contiguous, "Container must be contiguous to perform IndexOf()");
+        static_assert(Container::isContiguous, "Container must be contiguous to perform IndexOf()");
 
         const auto _begin = static_cast<const Container*>(this)->Begin();
         const auto _end = static_cast<const Container*>(this)->End();
@@ -331,7 +285,7 @@ public:
     template <class ConstIterator>
     SizeType IndexOf(ConstIterator iter) const
     {
-        static_assert(Container::is_contiguous, "Container must be contiguous to perform IndexOf()");
+        static_assert(Container::isContiguous, "Container must be contiguous to perform IndexOf()");
 
         static_assert(std::is_convertible_v<decltype(iter),
                           typename Container::ConstIterator>,
@@ -343,22 +297,22 @@ public:
     }
 
     template <class OtherContainer>
-    bool CompareBitwise(const OtherContainer& other_container) const
+    bool CompareBitwise(const OtherContainer& otherContainer) const
     {
-        static_assert(Container::is_contiguous && OtherContainer::is_contiguous, "Containers must be contiguous to perform bitwise comparison");
+        static_assert(Container::isContiguous && OtherContainer::isContiguous, "Containers must be contiguous to perform bitwise comparison");
 
-        const SizeType this_size_bytes = static_cast<const Container*>(this)->ByteSize();
-        const SizeType other_size_bytes = other_container.ByteSize();
+        const SizeType thisSizeBytes = static_cast<const Container*>(this)->ByteSize();
+        const SizeType otherSizeBytes = otherContainer.ByteSize();
 
-        if (this_size_bytes != other_size_bytes)
+        if (thisSizeBytes != otherSizeBytes)
         {
             return false;
         }
 
         return Memory::MemCmp(
                    static_cast<const Container*>(this)->Begin(),
-                   other_container.Begin(),
-                   this_size_bytes)
+                   otherContainer.Begin(),
+                   thisSizeBytes)
             == 0;
     }
 

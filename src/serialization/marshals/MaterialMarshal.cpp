@@ -33,58 +33,58 @@ public:
             return err;
         }
 
-        const Material& in_object = in.Get<Material>();
+        const Material& inObject = in.Get<Material>();
 
-        out.SetProperty("Attributes", FBOMData::FromObject(FBOMObject().SetProperty("Bucket", uint32(in_object.GetRenderAttributes().bucket)).SetProperty("Flags", uint32(in_object.GetRenderAttributes().flags)).SetProperty("CullMode", uint32(in_object.GetRenderAttributes().cull_faces)).SetProperty("FillMode", uint32(in_object.GetRenderAttributes().fill_mode))));
+        out.SetProperty("Attributes", FBOMData::FromObject(FBOMObject().SetProperty("Bucket", uint32(inObject.GetRenderAttributes().bucket)).SetProperty("Flags", uint32(inObject.GetRenderAttributes().flags)).SetProperty("CullMode", uint32(inObject.GetRenderAttributes().cullFaces)).SetProperty("FillMode", uint32(inObject.GetRenderAttributes().fillMode))));
 
-        FBOMArray params_array { FBOMBaseObjectType() };
+        FBOMArray paramsArray { FBOMBaseObjectType() };
 
-        for (SizeType i = 0; i < in_object.GetParameters().Size(); i++)
+        for (SizeType i = 0; i < inObject.GetParameters().Size(); i++)
         {
-            const auto key_value = in_object.GetParameters().KeyValueAt(i);
+            const auto keyValue = inObject.GetParameters().KeyValueAt(i);
 
-            FBOMObject param_object;
-            param_object.SetProperty("Key", uint64(key_value.first));
-            param_object.SetProperty("Type", uint32(key_value.second.type));
+            FBOMObject paramObject;
+            paramObject.SetProperty("Key", uint64(keyValue.first));
+            paramObject.SetProperty("Type", uint32(keyValue.second.type));
 
-            if (key_value.second.IsIntType())
+            if (keyValue.second.IsIntType())
             {
-                param_object.SetProperty("Data", FBOMSequence(FBOMInt32(), ArraySize(key_value.second.values.int_values)), ArraySize(key_value.second.values.int_values) * sizeof(int32), &key_value.second.values.int_values[0]);
+                paramObject.SetProperty("Data", FBOMSequence(FBOMInt32(), ArraySize(keyValue.second.values.intValues)), ArraySize(keyValue.second.values.intValues) * sizeof(int32), &keyValue.second.values.intValues[0]);
             }
-            else if (key_value.second.IsFloatType())
+            else if (keyValue.second.IsFloatType())
             {
-                param_object.SetProperty("Data", FBOMSequence(FBOMFloat(), ArraySize(key_value.second.values.float_values)), ArraySize(key_value.second.values.int_values) * sizeof(float), &key_value.second.values.float_values[0]);
+                paramObject.SetProperty("Data", FBOMSequence(FBOMFloat(), ArraySize(keyValue.second.values.floatValues)), ArraySize(keyValue.second.values.intValues) * sizeof(float), &keyValue.second.values.floatValues[0]);
             }
 
-            params_array.AddElement(FBOMData::FromObject(std::move(param_object)));
+            paramsArray.AddElement(FBOMData::FromObject(std::move(paramObject)));
         }
 
-        out.SetProperty("Parameters", FBOMData::FromArray(std::move(params_array)));
+        out.SetProperty("Parameters", FBOMData::FromArray(std::move(paramsArray)));
 
-        FixedArray<uint32, Material::max_textures> texture_keys = { 0 };
+        FixedArray<uint32, Material::maxTextures> textureKeys = { 0 };
 
-        // for (SizeType i = 0, texture_index = 0; i < in_object.GetTextures().Size(); i++) {
-        //     if (texture_index >= texture_keys.Size()) {
+        // for (SizeType i = 0, textureIndex = 0; i < inObject.GetTextures().Size(); i++) {
+        //     if (textureIndex >= textureKeys.Size()) {
         //         break;
         //     }
 
-        //     const MaterialTextureKey key = in_object.GetTextures().KeyAt(i);
-        //     const Handle<Texture> &value = in_object.GetTextures().ValueAt(i);
+        //     const MaterialTextureKey key = inObject.GetTextures().KeyAt(i);
+        //     const Handle<Texture> &value = inObject.GetTextures().ValueAt(i);
 
         //     if (value.IsValid()) {
         //         if (FBOMResult err = out.AddChild(*value, FBOMObjectSerializeFlags::EXTERNAL)) {
         //             return err;
         //         }
 
-        //         texture_keys[texture_index++] = uint32(key);
+        //         textureKeys[textureIndex++] = uint32(key);
         //     }
         // }
 
         out.SetProperty(
             "TextureKeys",
-            FBOMSequence(FBOMUInt32(), texture_keys.Size()),
-            texture_keys.ByteSize(),
-            &texture_keys[0]);
+            FBOMSequence(FBOMUInt32(), textureKeys.Size()),
+            textureKeys.ByteSize(),
+            &textureKeys[0]);
 
         return { FBOMResult::FBOM_OK };
     }
@@ -95,111 +95,111 @@ public:
         Material::ParameterTable parameters = Material::DefaultParameters();
         Material::TextureSet textures;
 
-        FBOMObject attributes_object;
+        FBOMObject attributesObject;
 
-        if (FBOMResult err = in.GetProperty("Attributes").ReadObject(context, attributes_object))
+        if (FBOMResult err = in.GetProperty("Attributes").ReadObject(context, attributesObject))
         {
             return err;
         }
 
-        attributes_object.GetProperty("Bucket").ReadUInt32(&attributes.bucket);
-        attributes_object.GetProperty("Flags").ReadUInt32(&attributes.flags);
-        attributes_object.GetProperty("CullMode").ReadUInt32(&attributes.cull_faces);
-        attributes_object.GetProperty("FillMode").ReadUInt32(&attributes.fill_mode);
+        attributesObject.GetProperty("Bucket").ReadUInt32(&attributes.bucket);
+        attributesObject.GetProperty("Flags").ReadUInt32(&attributes.flags);
+        attributesObject.GetProperty("CullMode").ReadUInt32(&attributes.cullFaces);
+        attributesObject.GetProperty("FillMode").ReadUInt32(&attributes.fillMode);
 
-        FBOMArray params_array { FBOMUnset() };
+        FBOMArray paramsArray { FBOMUnset() };
 
-        if (FBOMResult err = in.GetProperty("Parameters").ReadArray(context, params_array))
+        if (FBOMResult err = in.GetProperty("Parameters").ReadArray(context, paramsArray))
         {
             return err;
         }
 
-        for (SizeType i = 0; i < params_array.Size(); i++)
+        for (SizeType i = 0; i < paramsArray.Size(); i++)
         {
             Material::Parameter param;
 
-            if (const FBOMData& element = params_array.GetElement(i))
+            if (const FBOMData& element = paramsArray.GetElement(i))
             {
-                FBOMObject param_object;
+                FBOMObject paramObject;
 
-                if (FBOMResult err = element.ReadObject(context, param_object))
+                if (FBOMResult err = element.ReadObject(context, paramObject))
                 {
                     return err;
                 }
 
-                Material::MaterialKey param_key;
+                Material::MaterialKey paramKey;
 
-                if (FBOMResult err = param_object.GetProperty("Key").ReadUInt64(&param_key))
+                if (FBOMResult err = paramObject.GetProperty("Key").ReadUInt64(&paramKey))
                 {
                     return err;
                 }
 
-                if (FBOMResult err = param_object.GetProperty("Type").ReadUInt32(&param.type))
+                if (FBOMResult err = paramObject.GetProperty("Type").ReadUInt32(&param.type))
                 {
                     return err;
                 }
 
                 if (param.IsIntType())
                 {
-                    if (FBOMResult err = param_object.GetProperty("Data").ReadElements(FBOMInt32(), ArraySize(param.values.int_values), &param.values.int_values[0]))
+                    if (FBOMResult err = paramObject.GetProperty("Data").ReadElements(FBOMInt32(), ArraySize(param.values.intValues), &param.values.intValues[0]))
                     {
                         return err;
                     }
                 }
                 else if (param.IsFloatType())
                 {
-                    if (FBOMResult err = param_object.GetProperty("Data").ReadElements(FBOMFloat(), ArraySize(param.values.float_values), &param.values.float_values[0]))
+                    if (FBOMResult err = paramObject.GetProperty("Data").ReadElements(FBOMFloat(), ArraySize(param.values.floatValues), &param.values.floatValues[0]))
                     {
                         return err;
                     }
                 }
 
-                parameters.Set(param_key, param);
+                parameters.Set(paramKey, param);
             }
         }
 
-        FixedArray<uint32, Material::max_textures> texture_keys { 0 };
+        FixedArray<uint32, Material::maxTextures> textureKeys { 0 };
 
-        if (FBOMResult err = in.GetProperty("TextureKeys").ReadElements(FBOMUInt32(), texture_keys.Size(), &texture_keys[0]))
+        if (FBOMResult err = in.GetProperty("TextureKeys").ReadElements(FBOMUInt32(), textureKeys.Size(), &textureKeys[0]))
         {
             return err;
         }
 
-        uint32 texture_index = 0;
+        uint32 textureIndex = 0;
 
-        ShaderRef shader = g_shader_manager->GetOrCreate(
+        ShaderRef shader = g_shaderManager->GetOrCreate(
             NAME("Forward"),
-            ShaderProperties(static_mesh_vertex_attributes));
+            ShaderProperties(staticMeshVertexAttributes));
 
-        attributes.shader_definition = shader->GetCompiledShader()->GetDefinition();
+        attributes.shaderDefinition = shader->GetCompiledShader()->GetDefinition();
 
         for (const FBOMObject& child : in.GetChildren())
         {
-            HYP_LOG(Serialization, Debug, "Material : Child TypeID: {}, TypeName: {}", child.GetType().GetNativeTypeID().Value(), child.GetType().name);
+            HYP_LOG(Serialization, Debug, "Material : Child TypeId: {}, TypeName: {}", child.GetType().GetNativeTypeId().Value(), child.GetType().name);
             if (child.GetType().IsOrExtends("Texture"))
             {
-                if (texture_index < texture_keys.Size())
+                if (textureIndex < textureKeys.Size())
                 {
-                    if (Optional<const Handle<Texture>&> texture_opt = child.m_deserialized_object->TryGet<Handle<Texture>>())
+                    if (Optional<const Handle<Texture>&> textureOpt = child.m_deserializedObject->TryGet<Handle<Texture>>())
                     {
                         textures.Set(
-                            MaterialTextureKey(texture_keys[texture_index]),
-                            *texture_opt);
+                            MaterialTextureKey(textureKeys[textureIndex]),
+                            *textureOpt);
 
-                        ++texture_index;
+                        ++textureIndex;
                     }
                 }
             }
         }
 
-        Handle<Material> material_handle = g_material_system->GetOrCreate(attributes, parameters, textures);
+        Handle<Material> materialHandle = g_materialSystem->GetOrCreate(attributes, parameters, textures);
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Material::Class(), AnyRef(*material_handle)))
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, Material::Class(), AnyRef(*materialHandle)))
         {
             return err;
         }
 
-        out = HypData(std::move(material_handle));
+        out = HypData(std::move(materialHandle));
 
         return { FBOMResult::FBOM_OK };
     }

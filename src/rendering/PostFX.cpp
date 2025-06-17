@@ -2,6 +2,7 @@
 
 #include <rendering/PostFX.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -10,48 +11,26 @@
 
 #include <util/MeshBuilder.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
 
-PostFXPass::PostFXPass(InternalFormat image_format, GBuffer* gbuffer)
-    : PostFXPass(
-          nullptr,
-          POST_PROCESSING_STAGE_PRE_SHADING,
-          ~0u,
-          image_format,
-          gbuffer)
+PostFXPass::PostFXPass(TextureFormat imageFormat, GBuffer* gbuffer)
+    : PostFXPass(nullptr, POST_PROCESSING_STAGE_PRE_SHADING, ~0u, imageFormat, gbuffer)
 {
 }
 
-PostFXPass::PostFXPass(
-    const ShaderRef& shader,
-    InternalFormat image_format,
-    GBuffer* gbuffer)
-    : PostFXPass(
-          shader,
-          POST_PROCESSING_STAGE_PRE_SHADING,
-          ~0u,
-          image_format,
-          gbuffer)
+PostFXPass::PostFXPass(const ShaderRef& shader, TextureFormat imageFormat, GBuffer* gbuffer)
+    : PostFXPass(shader, POST_PROCESSING_STAGE_PRE_SHADING, ~0u, imageFormat, gbuffer)
 {
 }
 
-PostFXPass::PostFXPass(
-    const ShaderRef& shader,
-    PostProcessingStage stage,
-    uint32 effect_index,
-    InternalFormat image_format,
-    GBuffer* gbuffer)
-    : FullScreenPass(
-          shader,
-          image_format,
-          Vec2u::Zero(),
-          gbuffer),
+PostFXPass::PostFXPass(const ShaderRef& shader, PostProcessingStage stage, uint32 effectIndex, TextureFormat imageFormat, GBuffer* gbuffer)
+    : FullScreenPass(shader, imageFormat, Vec2u::Zero(), gbuffer),
       m_stage(stage),
-      m_effect_index(effect_index)
+      m_effectIndex(effectIndex)
 {
 }
 
@@ -61,16 +40,16 @@ PostFXPass::~PostFXPass()
 
 void PostFXPass::CreateDescriptors()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    if (m_effect_index == ~0u)
+    if (m_effectIndex == ~0u)
     {
         HYP_LOG(Rendering, Warning, "Effect index not set, skipping descriptor creation");
 
         return;
     }
 
-    if (!g_rendering_api->GetRenderConfig().IsDynamicDescriptorIndexingSupported())
+    if (!g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported())
     {
         HYP_LOG(Rendering, Warning, "Creating post processing pass on a device that does not support dynamic descriptor indexing");
 
@@ -79,28 +58,19 @@ void PostFXPass::CreateDescriptors()
 
     // @TODO Reimplement
 
-    // const Name descriptor_name = m_stage == POST_PROCESSING_STAGE_PRE_SHADING
+    // const Name descriptorName = m_stage == POST_PROCESSING_STAGE_PRE_SHADING
     //     ? NAME("PostFXPreStack")
     //     : NAME("PostFXPostStack");
 
-    // for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++) {
-    //     g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index)
-    //         ->SetElement(descriptor_name, m_effect_index, m_framebuffer->GetAttachment(0)->GetImageView());
+    // for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++) {
+    //     g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+    //         ->SetElement(descriptorName, m_effectIndex, m_framebuffer->GetAttachment(0)->GetImageView());
     // }
 }
 
-PostProcessingEffect::PostProcessingEffect(
-    PostProcessingStage stage,
-    uint32 effect_index,
-    InternalFormat image_format,
-    GBuffer* gbuffer)
-    : m_pass(
-          nullptr,
-          stage,
-          effect_index,
-          image_format,
-          gbuffer),
-      m_is_enabled(true)
+PostProcessingEffect::PostProcessingEffect(PostProcessingStage stage, uint32 effectIndex, TextureFormat imageFormat, GBuffer* gbuffer)
+    : m_pass(nullptr, stage, effectIndex, imageFormat, gbuffer),
+      m_isEnabled(true)
 {
 }
 
@@ -114,17 +84,17 @@ void PostProcessingEffect::Init()
     m_pass.Create();
 }
 
-void PostProcessingEffect::RenderEffect(FrameBase* frame, const RenderSetup& render_setup, uint32 slot)
+void PostProcessingEffect::RenderEffect(FrameBase* frame, const RenderSetup& renderSetup, uint32 slot)
 {
     struct
     {
-        uint32 current_effect_index_stage; // 31bits for index, 1 bit for stage
-    } push_constants;
+        uint32 currentEffectIndexStage; // 31bits for index, 1 bit for stage
+    } pushConstants;
 
-    push_constants.current_effect_index_stage = (slot << 1) | uint32(m_pass.GetStage());
+    pushConstants.currentEffectIndexStage = (slot << 1) | uint32(m_pass.GetStage());
 
-    m_pass.SetPushConstants(&push_constants, sizeof(push_constants));
-    m_pass.Render(frame, render_setup);
+    m_pass.SetPushConstants(&pushConstants, sizeof(pushConstants));
+    m_pass.Render(frame, renderSetup);
 }
 
 PostProcessing::PostProcessing() = default;
@@ -132,11 +102,11 @@ PostProcessing::~PostProcessing() = default;
 
 void PostProcessing::Create()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    for (uint32 stage_index = 0; stage_index < 2; stage_index++)
+    for (uint32 stageIndex = 0; stageIndex < 2; stageIndex++)
     {
-        for (auto& effect : m_effects[stage_index])
+        for (auto& effect : m_effects[stageIndex])
         {
             AssertThrow(effect.second != nullptr);
 
@@ -153,49 +123,49 @@ void PostProcessing::Create()
 
 void PostProcessing::Destroy()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     {
-        std::lock_guard guard(m_effects_mutex);
+        std::lock_guard guard(m_effectsMutex);
 
-        for (uint32 stage_index = 0; stage_index < 2; stage_index++)
+        for (uint32 stageIndex = 0; stageIndex < 2; stageIndex++)
         {
-            m_effects_pending_addition[stage_index].Clear();
-            m_effects_pending_removal[stage_index].Clear();
+            m_effectsPendingAddition[stageIndex].Clear();
+            m_effectsPendingRemoval[stageIndex].Clear();
         }
     }
 
-    for (uint32 stage_index = 0; stage_index < 2; stage_index++)
+    for (uint32 stageIndex = 0; stageIndex < 2; stageIndex++)
     {
-        for (auto& it : m_effects[stage_index])
+        for (auto& it : m_effects[stageIndex])
         {
             AssertThrow(it.second != nullptr);
 
             it.second->OnRemoved();
         }
 
-        m_effects[stage_index].Clear();
+        m_effects[stageIndex].Clear();
     }
 
-    SafeRelease(std::move(m_uniform_buffer));
+    SafeRelease(std::move(m_uniformBuffer));
 }
 
 void PostProcessing::PerformUpdates()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    if (!m_effects_updated.Get(MemoryOrder::ACQUIRE))
+    if (!m_effectsUpdated.Get(MemoryOrder::ACQUIRE))
     {
         return;
     }
 
-    std::lock_guard guard(m_effects_mutex);
+    std::lock_guard guard(m_effectsMutex);
 
-    for (SizeType stage_index = 0; stage_index < 2; stage_index++)
+    for (SizeType stageIndex = 0; stageIndex < 2; stageIndex++)
     {
-        for (auto& it : m_effects_pending_addition[stage_index])
+        for (auto& it : m_effectsPendingAddition[stageIndex])
         {
-            const TypeID type_id = it.first;
+            const TypeId typeId = it.first;
             auto& effect = it.second;
 
             AssertThrow(effect != nullptr);
@@ -204,44 +174,44 @@ void PostProcessing::PerformUpdates()
 
             effect->OnAdded();
 
-            m_effects[stage_index].Set(type_id, std::move(effect));
+            m_effects[stageIndex].Set(typeId, std::move(effect));
         }
 
-        m_effects_pending_addition[stage_index].Clear();
+        m_effectsPendingAddition[stageIndex].Clear();
 
-        for (const TypeID type_id : m_effects_pending_removal[stage_index])
+        for (const TypeId typeId : m_effectsPendingRemoval[stageIndex])
         {
-            const auto effects_it = m_effects[stage_index].Find(type_id);
+            const auto effectsIt = m_effects[stageIndex].Find(typeId);
 
-            if (effects_it != m_effects[stage_index].End())
+            if (effectsIt != m_effects[stageIndex].End())
             {
-                AssertThrow(effects_it->second != nullptr);
+                AssertThrow(effectsIt->second != nullptr);
 
-                effects_it->second->OnRemoved();
+                effectsIt->second->OnRemoved();
 
-                m_effects[stage_index].Erase(effects_it);
+                m_effects[stageIndex].Erase(effectsIt);
             }
         }
 
-        m_effects_pending_removal[stage_index].Clear();
+        m_effectsPendingRemoval[stageIndex].Clear();
     }
 
-    m_effects_updated.Set(false, MemoryOrder::RELEASE);
+    m_effectsUpdated.Set(false, MemoryOrder::RELEASE);
 
     HYP_SYNC_RENDER();
 }
 
 PostProcessingUniforms PostProcessing::GetUniforms() const
 {
-    PostProcessingUniforms post_processing_uniforms {};
+    PostProcessingUniforms postProcessingUniforms {};
 
-    for (uint32 stage_index = 0; stage_index < 2; stage_index++)
+    for (uint32 stageIndex = 0; stageIndex < 2; stageIndex++)
     {
-        auto& effects = m_effects[stage_index];
+        auto& effects = m_effects[stageIndex];
 
-        post_processing_uniforms.effect_counts[stage_index] = uint32(effects.Size());
-        post_processing_uniforms.masks[stage_index] = 0u;
-        post_processing_uniforms.last_enabled_indices[stage_index] = 0u;
+        postProcessingUniforms.effectCounts[stageIndex] = uint32(effects.Size());
+        postProcessingUniforms.masks[stageIndex] = 0u;
+        postProcessingUniforms.lastEnabledIndices[stageIndex] = 0u;
 
         for (auto& it : effects)
         {
@@ -251,31 +221,31 @@ PostProcessingUniforms PostProcessing::GetUniforms() const
             {
                 AssertThrowMsg(it.second->GetEffectIndex() != ~0u, "Not yet initialized - index not set yet");
 
-                post_processing_uniforms.masks[stage_index] |= 1u << it.second->GetEffectIndex();
-                post_processing_uniforms.last_enabled_indices[stage_index] = MathUtil::Max(
-                    post_processing_uniforms.last_enabled_indices[stage_index],
+                postProcessingUniforms.masks[stageIndex] |= 1u << it.second->GetEffectIndex();
+                postProcessingUniforms.lastEnabledIndices[stageIndex] = MathUtil::Max(
+                    postProcessingUniforms.lastEnabledIndices[stageIndex],
                     it.second->GetEffectIndex());
             }
         }
     }
 
-    return post_processing_uniforms;
+    return postProcessingUniforms;
 }
 
 void PostProcessing::CreateUniformBuffer()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    const PostProcessingUniforms post_processing_uniforms = GetUniforms();
+    const PostProcessingUniforms postProcessingUniforms = GetUniforms();
 
-    m_uniform_buffer = g_rendering_api->MakeGPUBuffer(renderer::GPUBufferType::CONSTANT_BUFFER, sizeof(post_processing_uniforms));
-    HYPERION_ASSERT_RESULT(m_uniform_buffer->Create());
-    m_uniform_buffer->Copy(sizeof(PostProcessingUniforms), &post_processing_uniforms);
+    m_uniformBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(postProcessingUniforms));
+    HYPERION_ASSERT_RESULT(m_uniformBuffer->Create());
+    m_uniformBuffer->Copy(sizeof(PostProcessingUniforms), &postProcessingUniforms);
 }
 
-void PostProcessing::RenderPre(FrameBase* frame, const RenderSetup& render_setup) const
+void PostProcessing::RenderPre(FrameBase* frame, const RenderSetup& renderSetup) const
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     uint32 index = 0;
 
@@ -283,15 +253,15 @@ void PostProcessing::RenderPre(FrameBase* frame, const RenderSetup& render_setup
     {
         auto& effect = it.second;
 
-        effect->RenderEffect(frame, render_setup, index);
+        effect->RenderEffect(frame, renderSetup, index);
 
         ++index;
     }
 }
 
-void PostProcessing::RenderPost(FrameBase* frame, const RenderSetup& render_setup) const
+void PostProcessing::RenderPost(FrameBase* frame, const RenderSetup& renderSetup) const
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     uint32 index = 0;
 
@@ -299,16 +269,12 @@ void PostProcessing::RenderPost(FrameBase* frame, const RenderSetup& render_setu
     {
         auto& effect = it.second;
 
-        effect->RenderEffect(frame, render_setup, index);
+        effect->RenderEffect(frame, renderSetup, index);
 
         ++index;
     }
 }
 
-namespace renderer {
-
 HYP_DESCRIPTOR_CBUFF(View, PostProcessingUniforms, 1, sizeof(PostProcessingUniforms), false);
-
-} // namespace renderer
 
 } // namespace hyperion

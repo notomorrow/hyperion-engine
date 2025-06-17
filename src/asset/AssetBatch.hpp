@@ -28,8 +28,8 @@ struct AssetBatchCallbackData
 
     AssetKeyValuePair data;
 
-    AssetBatchCallbackData(const String& asset_key, LoadedAsset* asset)
-        : data { asset_key, asset }
+    AssetBatchCallbackData(const String& assetKey, LoadedAsset* asset)
+        : data { assetKey, asset }
     {
     }
 
@@ -61,7 +61,7 @@ struct LoadObjectWrapper
 {
     template <class AssetManager>
     HYP_FORCE_INLINE void Process(
-        AssetManager* asset_manager,
+        AssetManager* assetManager,
         AssetMap* map,
         const String& key,
         const String& path,
@@ -72,7 +72,7 @@ struct LoadObjectWrapper
 
         LoadedAsset& asset = it->second;
 
-        if (AssetLoadResult result = asset_manager->template Load<T>(path))
+        if (AssetLoadResult result = assetManager->template Load<T>(path))
         {
             asset = std::move(result.GetValue());
         }
@@ -100,7 +100,7 @@ struct ProcessAssetFunctorBase
 {
     virtual ~ProcessAssetFunctorBase() = default;
 
-    virtual TResult<void, AssetLoadError> operator()(AssetManager& asset_manager, AssetMap& asset_map) = 0;
+    virtual TResult<void, AssetLoadError> operator()(AssetManager& assetManager, AssetMap& assetMap) = 0;
 };
 
 template <class T>
@@ -124,21 +124,21 @@ struct ProcessAssetFunctor final : public ProcessAssetFunctorBase
 
     virtual ~ProcessAssetFunctor() override = default;
 
-    virtual TResult<void, AssetLoadError> operator()(AssetManager& asset_manager, AssetMap& asset_map) override
+    virtual TResult<void, AssetLoadError> operator()(AssetManager& assetManager, AssetMap& assetMap) override
     {
-        return Process_Internal(asset_manager, asset_map);
+        return Process_Internal(assetManager, assetMap);
     }
 
 private:
     template <class AssetManagerType>
-    TResult<void, AssetLoadError> Process_Internal(AssetManagerType& asset_manager, AssetMap& asset_map)
+    TResult<void, AssetLoadError> Process_Internal(AssetManagerType& assetManager, AssetMap& assetMap)
     {
-        auto it = asset_map.Find(key);
-        AssertThrow(it != asset_map.End());
+        auto it = assetMap.Find(key);
+        AssertThrow(it != assetMap.End());
 
         LoadedAsset& asset = it->second;
 
-        if (AssetLoadResult result = asset_manager.template Load<T>(path))
+        if (AssetLoadResult result = assetManager.template Load<T>(path))
         {
             asset = std::move(result.GetValue());
         }
@@ -149,6 +149,8 @@ private:
 
         if (asset.IsValid())
         {
+            asset.OnPostLoad();
+
             if (callbacks)
             {
                 callbacks->OnItemComplete(AssetBatchCallbackData(key, &asset));
@@ -168,30 +170,30 @@ private:
     }
 };
 
-class AssetBatch : private TaskBatch, public EnableRefCountedPtrFromThis<AssetBatch>
+class AssetBatch : public EnableRefCountedPtrFromThis<AssetBatch>, private TaskBatch
 {
 private:
     // make it be a ptr so this can be moved
-    UniquePtr<AssetMap> m_asset_map;
+    UniquePtr<AssetMap> m_assetMap;
 
 public:
     using TaskBatch::IsCompleted;
 
-    HYP_API AssetBatch(AssetManager* asset_manager);
+    HYP_API AssetBatch(AssetManager* assetManager);
 
     AssetBatch(const AssetBatch& other) = delete;
     AssetBatch& operator=(const AssetBatch& other) = delete;
     AssetBatch(AssetBatch&& other) noexcept = delete;
     AssetBatch& operator=(AssetBatch&& other) noexcept = delete;
 
-    ~AssetBatch()
+    virtual ~AssetBatch() override
     {
-        if (m_asset_map != nullptr)
+        if (m_assetMap != nullptr)
         {
-            // all tasks must be completed or the destruction of enqueued_assets
+            // all tasks must be completed or the destruction of enqueuedAssets
             // will cause a dangling ptr issue.
             AssertThrowMsg(
-                m_asset_map->Empty(),
+                m_assetMap->Empty(),
                 "All enqueued assets must be completed before the destructor of AssetBatch is called or else dangling pointer issues will occur.");
         }
     }
@@ -213,12 +215,12 @@ public:
 
     /*! \brief Begin loading this batch asynchronously. Note that
         you may not add any more tasks to be loaded once you call this method. */
-    HYP_API void LoadAsync(uint32 num_batches = MathUtil::MaxSafeValue<uint32>());
+    HYP_API void LoadAsync(uint32 numBatches = MathUtil::MaxSafeValue<uint32>());
 
     HYP_API AssetMap AwaitResults();
     HYP_API AssetMap ForceLoad();
 
-    AssetManager* m_asset_manager;
+    AssetManager* m_assetManager;
 
     /*! \brief Functions bound to this delegates are called in
      *  the game thread. */

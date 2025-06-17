@@ -12,7 +12,7 @@
 
 #include <core/functional/Proc.hpp>
 
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/Span.hpp>
 #include <core/utilities/Result.hpp>
@@ -35,8 +35,8 @@ class HypField : public IHypMember
 public:
     HypField(const Span<const HypClassAttribute>& attributes = {})
         : m_name(Name::Invalid()),
-          m_type_id(TypeID::Void()),
-          m_target_type_id(TypeID::Void()),
+          m_typeId(TypeId::Void()),
+          m_targetTypeId(TypeId::Void()),
           m_offset(~0u),
           m_size(0),
           m_attributes(attributes)
@@ -46,13 +46,13 @@ public:
     template <class ThisType, class FieldType>
     HypField(Name name, FieldType ThisType::* member, uint32 offset, const Span<const HypClassAttribute>& attributes = {})
         : m_name(name),
-          m_type_id(TypeID::ForType<FieldType>()),
-          m_target_type_id(TypeID::ForType<ThisType>()),
+          m_typeId(TypeId::ForType<FieldType>()),
+          m_targetTypeId(TypeId::ForType<ThisType>()),
           m_offset(offset),
           m_size(sizeof(FieldType)),
           m_attributes(attributes)
     {
-        m_get_proc = [member](const HypData& target_data) -> HypData
+        m_getProc = [member](const HypData& targetData) -> HypData
         {
             if constexpr (!std::is_copy_assignable_v<NormalizedType<FieldType>> && !std::is_array_v<NormalizedType<FieldType>>)
             {
@@ -60,17 +60,17 @@ public:
             }
             else
             {
-                ConstAnyRef target_ref = target_data.ToRef();
+                ConstAnyRef targetRef = targetData.ToRef();
 
-                AssertThrow(target_ref.HasValue());
-                AssertThrowMsg(target_ref.Is<ThisType>(), "Invalid target type: Expected %s (TypeID: %u), but got TypeID: %u",
-                    TypeName<ThisType>().Data(), TypeID::ForType<ThisType>().Value(), target_ref.GetTypeID().Value());
+                AssertThrow(targetRef.HasValue());
+                AssertThrowMsg(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
+                    TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
 
-                return HypData(static_cast<const ThisType*>(target_ref.GetPointer())->*member);
+                return HypData(static_cast<const ThisType*>(targetRef.GetPointer())->*member);
             }
         };
 
-        m_set_proc = [member](HypData& target_data, const HypData& data) -> void
+        m_setProc = [member](HypData& targetData, const HypData& data) -> void
         {
             if constexpr (!std::is_copy_assignable_v<NormalizedType<FieldType>> && !std::is_array_v<NormalizedType<FieldType>>)
             {
@@ -78,13 +78,13 @@ public:
             }
             else
             {
-                AnyRef target_ref = target_data.ToRef();
+                AnyRef targetRef = targetData.ToRef();
 
-                AssertThrow(target_ref.HasValue());
-                AssertThrowMsg(target_ref.Is<ThisType>(), "Invalid target type: Expected %s (TypeID: %u), but got TypeID: %u",
-                    TypeName<ThisType>().Data(), TypeID::ForType<ThisType>().Value(), target_ref.GetTypeID().Value());
+                AssertThrow(targetRef.HasValue());
+                AssertThrowMsg(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
+                    TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
 
-                ThisType* target = static_cast<ThisType*>(target_ref.GetPointer());
+                ThisType* target = static_cast<ThisType*>(targetRef.GetPointer());
 
                 if constexpr (std::is_array_v<NormalizedType<FieldType>>)
                 {
@@ -99,11 +99,11 @@ public:
                     }
                     else
                     {
-                        auto& array_value = data.Get<NormalizedType<FieldType>>();
+                        auto& arrayValue = data.Get<NormalizedType<FieldType>>();
 
-                        for (SizeType i = 0; i < array_value.Size(); i++)
+                        for (SizeType i = 0; i < arrayValue.Size(); i++)
                         {
-                            (target->*member)[i] = array_value[i];
+                            (target->*member)[i] = arrayValue[i];
                         }
                     }
                 }
@@ -123,7 +123,7 @@ public:
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serialize_proc = [member](const HypData& target_data) -> FBOMData
+            m_serializeProc = [member](const HypData& targetData) -> FBOMData
             {
                 FBOMData out;
 
@@ -133,13 +133,13 @@ public:
                 }
                 else
                 {
-                    ConstAnyRef target_ref = target_data.ToRef();
+                    ConstAnyRef targetRef = targetData.ToRef();
 
-                    AssertThrow(target_ref.HasValue());
-                    AssertThrowMsg(target_ref.Is<ThisType>(), "Invalid target type: Expected %s (TypeID: %u), but got TypeID: %u",
-                        TypeName<ThisType>().Data(), TypeID::ForType<ThisType>().Value(), target_ref.GetTypeID().Value());
+                    AssertThrow(targetRef.HasValue());
+                    AssertThrowMsg(targetRef.Is<ThisType>(), "Invalid target type: Expected %s (TypeId: %u), but got TypeId: %u",
+                        TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
 
-                    if (FBOMResult err = HypDataHelper<NormalizedType<FieldType>>::Serialize(static_cast<const ThisType*>(target_ref.GetPointer())->*member, out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<FieldType>>::Serialize(static_cast<const ThisType*>(targetRef.GetPointer())->*member, out))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -148,7 +148,7 @@ public:
                 return out;
             };
 
-            m_deserialize_proc = [member](FBOMLoadContext& context, HypData& target_data, const FBOMData& data) -> Result
+            m_deserializeProc = [member](FBOMLoadContext& context, HypData& targetData, const FBOMData& data) -> Result
             {
                 if constexpr (!std::is_copy_assignable_v<NormalizedType<FieldType>> && !std::is_array_v<NormalizedType<FieldType>>)
                 {
@@ -156,17 +156,17 @@ public:
                 }
                 else
                 {
-                    AnyRef target_ref = target_data.ToRef();
+                    AnyRef targetRef = targetData.ToRef();
 
-                    if (!target_ref.HasValue())
+                    if (!targetRef.HasValue())
                     {
                         return HYP_MAKE_ERROR(Error, "Invalid target reference");
                     }
 
-                    if (!target_ref.Is<ThisType>())
+                    if (!targetRef.Is<ThisType>())
                     {
-                        return HYP_MAKE_ERROR(Error, "Invalid target type: Expected {} (TypeID: {}), but got TypeID: {}",
-                            TypeName<ThisType>().Data(), TypeID::ForType<ThisType>().Value(), target_ref.GetTypeID().Value());
+                        return HYP_MAKE_ERROR(Error, "Invalid target type: Expected {} (TypeId: {}), but got TypeId: {}",
+                            TypeName<ThisType>().Data(), TypeId::ForType<ThisType>().Value(), targetRef.GetTypeId().Value());
                     }
 
                     HypData value;
@@ -176,7 +176,7 @@ public:
                         return HYP_MAKE_ERROR(Error, "Failed to deserialize data: {}", err.message);
                     }
 
-                    ThisType* target = static_cast<ThisType*>(target_ref.GetPointer());
+                    ThisType* target = static_cast<ThisType*>(targetRef.GetPointer());
 
                     if constexpr (std::is_array_v<NormalizedType<FieldType>>)
                     {
@@ -191,11 +191,11 @@ public:
                         }
                         else
                         {
-                            auto& array_value = value.Get<NormalizedType<FieldType>>();
+                            auto& arrayValue = value.Get<NormalizedType<FieldType>>();
 
-                            for (SizeType i = 0; i < array_value.Size(); i++)
+                            for (SizeType i = 0; i < arrayValue.Size(); i++)
                             {
-                                (target->*member)[i] = array_value[i];
+                                (target->*member)[i] = arrayValue[i];
                             }
                         }
                     }
@@ -233,24 +233,24 @@ public:
         return m_name;
     }
 
-    virtual TypeID GetTypeID() const override
+    virtual TypeId GetTypeId() const override
     {
-        return m_type_id;
+        return m_typeId;
     }
 
-    virtual TypeID GetTargetTypeID() const override
+    virtual TypeId GetTargetTypeId() const override
     {
-        return m_target_type_id;
+        return m_targetTypeId;
     }
 
     virtual bool CanSerialize() const override
     {
-        return IsValid() && m_serialize_proc.IsValid();
+        return IsValid() && m_serializeProc.IsValid();
     }
 
     virtual bool CanDeserialize() const override
     {
-        return IsValid() && m_deserialize_proc.IsValid();
+        return IsValid() && m_deserializeProc.IsValid();
     }
 
     HYP_FORCE_INLINE bool Serialize(const HypData& target, FBOMData& out) const
@@ -270,7 +270,7 @@ public:
             return false;
         }
 
-        out = m_serialize_proc(*args.Data());
+        out = m_serializeProc(*args.Data());
 
         return true;
     }
@@ -282,7 +282,7 @@ public:
             return false;
         }
 
-        return bool(m_deserialize_proc(context, target, data));
+        return bool(m_deserializeProc(context, target, data));
     }
 
     virtual const HypClassAttributeSet& GetAttributes() const override
@@ -295,9 +295,9 @@ public:
         return m_attributes.Get(key);
     }
 
-    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& default_value) const override
+    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& defaultValue) const override
     {
-        return m_attributes.Get(key, default_value);
+        return m_attributes.Get(key, defaultValue);
     }
 
     HYP_FORCE_INLINE explicit operator bool() const
@@ -308,7 +308,7 @@ public:
     HYP_FORCE_INLINE bool IsValid() const
     {
         return m_name.IsValid()
-            && m_type_id != TypeID::Void()
+            && m_typeId != TypeId::Void()
             && m_size != 0;
     }
 
@@ -317,30 +317,30 @@ public:
         return m_offset;
     }
 
-    HYP_FORCE_INLINE HypData Get(const HypData& target_data) const
+    HYP_FORCE_INLINE HypData Get(const HypData& targetData) const
     {
-        return m_get_proc(target_data);
+        return m_getProc(targetData);
     }
 
-    HYP_FORCE_INLINE void Set(HypData& target_data, const HypData& data) const
+    HYP_FORCE_INLINE void Set(HypData& targetData, const HypData& data) const
     {
-        return m_set_proc(target_data, data);
+        return m_setProc(targetData, data);
     }
 
 private:
     Name m_name;
-    TypeID m_type_id;
-    TypeID m_target_type_id;
+    TypeId m_typeId;
+    TypeId m_targetTypeId;
     uint32 m_offset;
     uint32 m_size;
 
     HypClassAttributeSet m_attributes;
 
-    Proc<HypData(const HypData&)> m_get_proc;
-    Proc<void(HypData&, const HypData&)> m_set_proc;
+    Proc<HypData(const HypData&)> m_getProc;
+    Proc<void(HypData&, const HypData&)> m_setProc;
 
-    Proc<FBOMData(const HypData&)> m_serialize_proc;
-    Proc<Result(FBOMLoadContext&, HypData&, const FBOMData&)> m_deserialize_proc;
+    Proc<FBOMData(const HypData&)> m_serializeProc;
+    Proc<Result(FBOMLoadContext&, HypData&, const FBOMData&)> m_deserializeProc;
 };
 
 } // namespace hyperion

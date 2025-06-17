@@ -12,17 +12,17 @@
 
 namespace hyperion {
 
-void AudioSystem::OnEntityAdded(const Handle<Entity>& entity)
+void AudioSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
-    AudioComponent& audio_component = GetEntityManager().GetComponent<AudioComponent>(entity);
+    AudioComponent& audioComponent = GetEntityManager().GetComponent<AudioComponent>(entity);
 
-    if (audio_component.audio_source.IsValid())
+    if (audioComponent.audioSource.IsValid())
     {
-        InitObject(audio_component.audio_source);
+        InitObject(audioComponent.audioSource);
 
-        audio_component.flags |= AUDIO_COMPONENT_FLAG_INIT;
+        audioComponent.flags |= AUDIO_COMPONENT_FLAG_INIT;
     }
 }
 
@@ -44,88 +44,88 @@ void AudioSystem::Process(float delta)
         }
     }
 
-    for (auto [entity_id, audio_component, transform_component] : GetEntityManager().GetEntitySet<AudioComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, audioComponent, transformComponent] : GetEntityManager().GetEntitySet<AudioComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
     {
-        if (!audio_component.audio_source.IsValid())
+        if (!audioComponent.audioSource.IsValid())
         {
-            audio_component.playback_state.status = AUDIO_PLAYBACK_STATUS_STOPPED;
-            audio_component.playback_state.current_time = 0.0f;
+            audioComponent.playbackState.status = AUDIO_PLAYBACK_STATUS_STOPPED;
+            audioComponent.playbackState.currentTime = 0.0f;
 
             continue;
         }
 
-        if (audio_component.playback_state.status == AUDIO_PLAYBACK_STATUS_PLAYING)
+        if (audioComponent.playbackState.status == AUDIO_PLAYBACK_STATUS_PLAYING)
         {
-            switch (audio_component.playback_state.loop_mode)
+            switch (audioComponent.playbackState.loopMode)
             {
             case AUDIO_LOOP_MODE_ONCE:
-                if (audio_component.playback_state.current_time > audio_component.audio_source->GetDuration())
+                if (audioComponent.playbackState.currentTime > audioComponent.audioSource->GetDuration())
                 {
-                    audio_component.playback_state.status = AUDIO_PLAYBACK_STATUS_STOPPED;
-                    audio_component.playback_state.current_time = 0.0f;
+                    audioComponent.playbackState.status = AUDIO_PLAYBACK_STATUS_STOPPED;
+                    audioComponent.playbackState.currentTime = 0.0f;
 
-                    audio_component.audio_source->Stop();
+                    audioComponent.audioSource->Stop();
                 }
 
                 continue;
 
                 break;
             case AUDIO_LOOP_MODE_REPEAT:
-                if (audio_component.playback_state.current_time > audio_component.audio_source->GetDuration())
+                if (audioComponent.playbackState.currentTime > audioComponent.audioSource->GetDuration())
                 {
-                    audio_component.playback_state.current_time = 0.0f;
+                    audioComponent.playbackState.currentTime = 0.0f;
                 }
 
                 break;
             }
 
-            audio_component.playback_state.current_time += delta * audio_component.playback_state.speed;
+            audioComponent.playbackState.currentTime += delta * audioComponent.playbackState.speed;
 
-            switch (audio_component.audio_source->GetState())
+            switch (audioComponent.audioSource->GetState())
             {
             case AudioSourceState::PLAYING:
                 break;
             case AudioSourceState::PAUSED: // fallthrough
             case AudioSourceState::STOPPED:
-                audio_component.audio_source->SetPitch(audio_component.playback_state.speed);
-                audio_component.audio_source->SetLoop(audio_component.playback_state.loop_mode == AUDIO_LOOP_MODE_REPEAT);
+                audioComponent.audioSource->SetPitch(audioComponent.playbackState.speed);
+                audioComponent.audioSource->SetLoop(audioComponent.playbackState.loopMode == AUDIO_LOOP_MODE_REPEAT);
 
-                audio_component.audio_source->Play();
+                audioComponent.audioSource->Play();
                 break;
             default:
                 break;
             }
 
-            const Vec3f& position = transform_component.transform.GetTranslation();
+            const Vec3f& position = transformComponent.transform.GetTranslation();
 
-            if (!MathUtil::ApproxEqual(position, audio_component.last_position))
+            if (!MathUtil::ApproxEqual(position, audioComponent.lastPosition))
             {
-                const Vec3f position_change = position - audio_component.last_position;
-                const GameCounter::TickUnit time_change = (audio_component.timer + delta) - audio_component.timer;
-                const Vec3f velocity = position_change / time_change;
+                const Vec3f positionChange = position - audioComponent.lastPosition;
+                const float timeChange = (audioComponent.timer + delta) - audioComponent.timer;
+                const Vec3f velocity = positionChange / timeChange;
 
-                audio_component.audio_source->SetPosition(position);
-                audio_component.audio_source->SetVelocity(velocity);
+                audioComponent.audioSource->SetPosition(position);
+                audioComponent.audioSource->SetVelocity(velocity);
 
-                audio_component.last_position = position;
+                audioComponent.lastPosition = position;
             }
         }
-        else if (audio_component.playback_state.status == AUDIO_PLAYBACK_STATUS_PAUSED)
+        else if (audioComponent.playbackState.status == AUDIO_PLAYBACK_STATUS_PAUSED)
         {
-            if (audio_component.audio_source->GetState() != AudioSourceState::PAUSED)
+            if (audioComponent.audioSource->GetState() != AudioSourceState::PAUSED)
             {
-                audio_component.audio_source->Pause();
+                audioComponent.audioSource->Pause();
             }
         }
-        else if (audio_component.playback_state.status == AUDIO_PLAYBACK_STATUS_STOPPED)
+        else if (audioComponent.playbackState.status == AUDIO_PLAYBACK_STATUS_STOPPED)
         {
-            if (audio_component.audio_source->GetState() != AudioSourceState::STOPPED)
+            if (audioComponent.audioSource->GetState() != AudioSourceState::STOPPED)
             {
-                audio_component.audio_source->Stop();
+                audioComponent.audioSource->Stop();
             }
         }
 
-        audio_component.timer += delta; // @TODO: prevent overflow
+        audioComponent.timer += delta; // @TODO: prevent overflow
     }
 }
 

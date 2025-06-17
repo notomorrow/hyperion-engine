@@ -14,6 +14,8 @@
 #include <core/math/BoundingBox.hpp>
 #include <core/math/Vertex.hpp>
 
+#include <scene/BVH.hpp>
+
 #include <rendering/RenderableAttributes.hpp>
 
 #include <rendering/backend/RendererStructs.hpp>
@@ -41,10 +43,10 @@ public:
     static Pair<Array<Vertex>, Array<uint32>> CalculateIndices(const Array<Vertex>& vertices);
 
     Mesh();
-    Mesh(RC<StreamedMeshData> streamed_mesh_data, Topology topology, const VertexAttributeSet& vertex_attributes);
-    Mesh(RC<StreamedMeshData> streamed_mesh_data, Topology topology = Topology::TRIANGLES);
-    Mesh(Array<Vertex> vertices, Array<uint32> indices, Topology topology, const VertexAttributeSet& vertex_attributes);
-    Mesh(Array<Vertex> vertices, Array<uint32> indices, Topology topology = Topology::TRIANGLES);
+    Mesh(RC<StreamedMeshData> streamedMeshData, Topology topology, const VertexAttributeSet& vertexAttributes);
+    Mesh(RC<StreamedMeshData> streamedMeshData, Topology topology = TOP_TRIANGLES);
+    Mesh(Array<Vertex> vertices, Array<uint32> indices, Topology topology, const VertexAttributeSet& vertexAttributes);
+    Mesh(Array<Vertex> vertices, Array<uint32> indices, Topology topology = TOP_TRIANGLES);
 
     Mesh(const Mesh& other) = delete;
     Mesh& operator=(const Mesh& other) = delete;
@@ -54,13 +56,13 @@ public:
 
     ~Mesh();
 
-    HYP_METHOD(Property = "Name", Serialize = true, Editor = true)
+    HYP_METHOD()
     HYP_FORCE_INLINE Name GetName() const
     {
         return m_name;
     }
 
-    HYP_METHOD(Property = "Name", Serialize = true, Editor = true)
+    HYP_METHOD()
     HYP_FORCE_INLINE void SetName(Name name)
     {
         m_name = name;
@@ -68,17 +70,15 @@ public:
 
     HYP_FORCE_INLINE RenderMesh& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     void SetVertices(Span<const Vertex> vertices);
     void SetVertices(Span<const Vertex> vertices, Span<const uint32> indices);
 
-    HYP_METHOD(Property = "StreamedMeshData")
     const RC<StreamedMeshData>& GetStreamedMeshData() const;
 
-    HYP_METHOD(Property = "StreamedMeshData")
-    void SetStreamedMeshData(RC<StreamedMeshData> streamed_mesh_data);
+    void SetStreamedMeshData(RC<StreamedMeshData> streamedMeshData);
 
     HYP_METHOD()
     uint32 NumIndices() const;
@@ -86,15 +86,15 @@ public:
     HYP_METHOD(Property = "VertexAttributes")
     HYP_FORCE_INLINE const VertexAttributeSet& GetVertexAttributes() const
     {
-        return m_mesh_attributes.vertex_attributes;
+        return m_meshAttributes.vertexAttributes;
     }
 
     HYP_METHOD(Property = "VertexAttributes")
-    void SetVertexAttributes(const VertexAttributeSet& vertex_attributes);
+    void SetVertexAttributes(const VertexAttributeSet& vertexAttributes);
 
     HYP_FORCE_INLINE const MeshAttributes& GetMeshAttributes() const
     {
-        return m_mesh_attributes;
+        return m_meshAttributes;
     }
 
     void SetMeshAttributes(const MeshAttributes& attributes);
@@ -102,7 +102,7 @@ public:
     HYP_METHOD(Property = "Topology")
     HYP_FORCE_INLINE Topology GetTopology() const
     {
-        return m_mesh_attributes.topology;
+        return m_meshAttributes.topology;
     }
 
     void CalculateNormals(bool weighted = false);
@@ -132,27 +132,37 @@ public:
      *  \note Init() must be called before this method. */
     void SetPersistentRenderResourceEnabled(bool enabled);
 
-    bool BuildBVH(BVHNode& out_bvh_node, int max_depth = 3);
+    HYP_FORCE_INLINE const BVHNode& GetBVH() const
+    {
+        return m_bvh;
+    }
+
+    HYP_METHOD()
+    bool BuildBVH(int maxDepth = 3);
 
 private:
     void Init() override;
 
     void CalculateAABB();
 
+    HYP_FIELD(Serialize, Editor)
     Name m_name;
 
-    MeshAttributes m_mesh_attributes;
+    MeshAttributes m_meshAttributes;
 
-    // Must be before m_streamed_mesh_data, needs to get constructed first to use as out parameter to construct StreamedMeshData.
-    mutable ResourceHandle m_streamed_mesh_data_resource_handle;
-    RC<StreamedMeshData> m_streamed_mesh_data;
+    // Must be before m_streamedMeshData, needs to get constructed first to use as out parameter to construct StreamedMeshData.
+    mutable ResourceHandle m_streamedMeshDataResourceHandle;
+    RC<StreamedMeshData> m_streamedMeshData;
 
     mutable BoundingBox m_aabb;
 
-    RenderMesh* m_render_resource;
-    ResourceHandle m_render_persistent;
+    HYP_FIELD(Serialize)
+    BVHNode m_bvh;
 
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    RenderMesh* m_renderResource;
+    ResourceHandle m_renderPersistent;
+
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };
 
 } // namespace hyperion

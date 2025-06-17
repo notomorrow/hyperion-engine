@@ -8,21 +8,21 @@ namespace hyperion {
 
 #pragma region StreamingThread
 
-static RC<StreamingThread> g_global_streaming_thread;
-static Mutex g_global_streaming_thread_mutex;
+static RC<StreamingThread> g_globalStreamingThread;
+static Mutex g_globalStreamingThreadMutex;
 
-HYP_API void SetGlobalStreamingThread(const RC<StreamingThread>& streaming_thread)
+HYP_API void SetGlobalStreamingThread(const RC<StreamingThread>& streamingThread)
 {
-    Mutex::Guard guard(g_global_streaming_thread_mutex);
+    Mutex::Guard guard(g_globalStreamingThreadMutex);
 
-    g_global_streaming_thread = streaming_thread;
+    g_globalStreamingThread = streamingThread;
 }
 
 HYP_API const RC<StreamingThread>& GetGlobalStreamingThread()
 {
-    Mutex::Guard guard(g_global_streaming_thread_mutex);
+    Mutex::Guard guard(g_globalStreamingThreadMutex);
 
-    return g_global_streaming_thread;
+    return g_globalStreamingThread;
 }
 
 StreamingThread::StreamingThread()

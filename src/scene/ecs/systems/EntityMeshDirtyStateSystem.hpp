@@ -20,15 +20,15 @@ class EntityMeshDirtyStateSystem : public SystemBase
     HYP_OBJECT_BODY(EntityMeshDirtyStateSystem);
 
 public:
-    EntityMeshDirtyStateSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    EntityMeshDirtyStateSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
     virtual ~EntityMeshDirtyStateSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 

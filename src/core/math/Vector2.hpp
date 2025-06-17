@@ -685,16 +685,16 @@ static_assert(sizeof(Vec2i) == 8);
 static_assert(sizeof(Vec2u) == 8);
 
 template <class T>
-inline constexpr bool is_vec2 = false;
+inline constexpr bool isVec2 = false;
 
 template <>
-inline constexpr bool is_vec2<Vec2f> = true;
+inline constexpr bool isVec2<Vec2f> = true;
 
 template <>
-inline constexpr bool is_vec2<Vec2i> = true;
+inline constexpr bool isVec2<Vec2i> = true;
 
 template <>
-inline constexpr bool is_vec2<Vec2u> = true;
+inline constexpr bool isVec2<Vec2u> = true;
 
 // transitional typedef
 using Vector2 = Vec2f;

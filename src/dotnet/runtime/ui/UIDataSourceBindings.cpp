@@ -12,23 +12,23 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void UIDataSourceBase_Push(UIDataSourceBase* data_source, const UUID* uuid, HypData* data_ptr, const UUID* parent_uuid)
+    HYP_EXPORT void UIDataSourceBase_Push(UIDataSourceBase* dataSource, const UUID* uuid, HypData* dataPtr, const UUID* parentUuid)
     {
-        AssertThrow(data_source != nullptr);
+        AssertThrow(dataSource != nullptr);
         AssertThrow(uuid != nullptr);
-        AssertThrow(data_ptr != nullptr);
-        AssertThrow(parent_uuid != nullptr);
+        AssertThrow(dataPtr != nullptr);
+        AssertThrow(parentUuid != nullptr);
 
-        data_source->Push(*uuid, std::move(*data_ptr), *parent_uuid);
+        dataSource->Push(*uuid, std::move(*dataPtr), *parentUuid);
     }
 
-    HYP_EXPORT void UIDataSource_SetElementTypeIDAndFactory(UIDataSource* data_source, const TypeID* element_type_id, UIElementFactoryBase* element_factory)
+    HYP_EXPORT void UIDataSource_SetElementTypeIdAndFactory(UIDataSource* dataSource, const TypeId* elementTypeId, UIElementFactoryBase* elementFactory)
     {
-        AssertThrow(data_source != nullptr);
-        AssertThrow(element_type_id != nullptr);
-        AssertThrow(element_factory != nullptr);
+        AssertThrow(dataSource != nullptr);
+        AssertThrow(elementTypeId != nullptr);
+        AssertThrow(elementFactory != nullptr);
 
-        data_source->SetElementTypeIDAndFactory(*element_type_id, element_factory);
+        dataSource->SetElementTypeIdAndFactory(*elementTypeId, elementFactory);
     }
 
 } // extern "C"

@@ -26,33 +26,33 @@ class FBOMMarshaler<FontAtlasTextureSet> : public FBOMObjectMarshalerBase<FontAt
 public:
     virtual ~FBOMMarshaler() override = default;
 
-    virtual FBOMResult Serialize(const FontAtlasTextureSet& texture_set, FBOMObject& out) const override
+    virtual FBOMResult Serialize(const FontAtlasTextureSet& textureSet, FBOMObject& out) const override
     {
-        uint32 main_atlas_key = uint32(-1);
+        uint32 mainAtlasKey = uint32(-1);
 
-        FBOMArray atlas_array { FBOMBaseObjectType() };
+        FBOMArray atlasArray { FBOMBaseObjectType() };
 
-        for (const auto& it : texture_set.atlases)
+        for (const auto& it : textureSet.atlases)
         {
             if (!it.second.IsValid())
             {
                 continue;
             }
 
-            if (it.second == texture_set.main_atlas)
+            if (it.second == textureSet.mainAtlas)
             {
-                main_atlas_key = it.first;
+                mainAtlasKey = it.first;
             }
 
             FBOMObject object;
             object.SetProperty("Key", it.first);
             object.SetProperty("Texture", FBOMData::FromObject(FBOMObject::Serialize(*it.second)));
 
-            atlas_array.AddElement(FBOMData::FromObject(std::move(object)));
+            atlasArray.AddElement(FBOMData::FromObject(std::move(object)));
         }
 
-        out.SetProperty("Atlases", FBOMData::FromArray(std::move(atlas_array)));
-        out.SetProperty("MainAtlas", main_atlas_key);
+        out.SetProperty("Atlases", FBOMData::FromArray(std::move(atlasArray)));
+        out.SetProperty("MainAtlas", mainAtlasKey);
 
         return { FBOMResult::FBOM_OK };
     }
@@ -61,25 +61,25 @@ public:
     {
         FontAtlasTextureSet result;
 
-        uint32 main_atlas_key = uint32(-1);
+        uint32 mainAtlasKey = uint32(-1);
 
-        if (FBOMResult err = in.GetProperty("MainAtlas").ReadUInt32(&main_atlas_key))
+        if (FBOMResult err = in.GetProperty("MainAtlas").ReadUInt32(&mainAtlasKey))
         {
             return err;
         }
 
-        FBOMArray atlas_array { FBOMUnset() };
+        FBOMArray atlasArray { FBOMUnset() };
 
-        if (FBOMResult err = in.GetProperty("Atlases").ReadArray(context, atlas_array))
+        if (FBOMResult err = in.GetProperty("Atlases").ReadArray(context, atlasArray))
         {
             return err;
         }
 
-        bool main_atlas_found = false;
+        bool mainAtlasFound = false;
 
-        for (SizeType index = 0; index < atlas_array.Size(); index++)
+        for (SizeType index = 0; index < atlasArray.Size(); index++)
         {
-            const FBOMData& element = atlas_array.GetElement(index);
+            const FBOMData& element = atlasArray.GetElement(index);
 
             FBOMObject object;
 
@@ -97,35 +97,35 @@ public:
 
             Handle<Texture> texture;
 
-            FBOMObject texture_object;
+            FBOMObject textureObject;
 
-            if (FBOMResult err = object.GetProperty("Texture").ReadObject(context, texture_object))
+            if (FBOMResult err = object.GetProperty("Texture").ReadObject(context, textureObject))
             {
                 return err;
             }
 
-            if (texture_object.m_deserialized_object == nullptr || !texture_object.m_deserialized_object->Is<Handle<Texture>>())
+            if (textureObject.m_deserializedObject == nullptr || !textureObject.m_deserializedObject->Is<Handle<Texture>>())
             {
                 return FBOMResult { FBOMResult::FBOM_ERR, "Texture object for font atlas is not a Texture" };
             }
 
-            bool is_main_atlas = key == main_atlas_key;
+            bool isMainAtlas = key == mainAtlasKey;
 
-            if (is_main_atlas)
+            if (isMainAtlas)
             {
-                if (main_atlas_found)
+                if (mainAtlasFound)
                 {
                     HYP_LOG(Serialization, Warning, "Multiple atlases would be set to main atlas");
 
-                    is_main_atlas = false;
+                    isMainAtlas = false;
                 }
                 else
                 {
-                    main_atlas_found = true;
+                    mainAtlasFound = true;
                 }
             }
 
-            result.AddAtlas(key, texture_object.m_deserialized_object->Get<Handle<Texture>>(), is_main_atlas);
+            result.AddAtlas(key, textureObject.m_deserializedObject->Get<Handle<Texture>>(), isMainAtlas);
         }
 
         out = HypData(result);
@@ -146,99 +146,99 @@ class FBOMMarshaler<FontAtlas> : public FBOMObjectMarshalerBase<FontAtlas>
 public:
     virtual ~FBOMMarshaler() override = default;
 
-    virtual FBOMResult Serialize(const FontAtlas& font_atlas, FBOMObject& out) const override
+    virtual FBOMResult Serialize(const FontAtlas& fontAtlas, FBOMObject& out) const override
     {
-        out.SetProperty("AtlasTextures", FBOMData::FromObject(FBOMObject::Serialize(font_atlas.GetAtlasTextures())));
+        out.SetProperty("AtlasTextures", FBOMData::FromObject(FBOMObject::Serialize(fontAtlas.GetAtlasTextures())));
 
-        FBOMArray symbol_list_array { FBOMUInt32() };
+        FBOMArray symbolListArray { FBOMUInt32() };
 
-        for (SizeType index = 0; index < font_atlas.GetSymbolList().Size(); index++)
+        for (SizeType index = 0; index < fontAtlas.GetSymbolList().Size(); index++)
         {
-            symbol_list_array.AddElement(FBOMData::FromUInt32(font_atlas.GetSymbolList()[index]));
+            symbolListArray.AddElement(FBOMData::FromUInt32(fontAtlas.GetSymbolList()[index]));
         }
 
-        out.SetProperty("SymbolList", FBOMData::FromArray(std::move(symbol_list_array)));
-        out.SetProperty("CellDimensions", FBOMData::FromVec2u(Vec2u(font_atlas.GetCellDimensions())));
+        out.SetProperty("SymbolList", FBOMData::FromArray(std::move(symbolListArray)));
+        out.SetProperty("CellDimensions", FBOMData::FromVec2u(Vec2u(fontAtlas.GetCellDimensions())));
 
-        FBOMType glyph_metrics_struct_type = FBOMStruct::Create<Glyph::Metrics>();
-        FBOMArray glyph_metrics_array { glyph_metrics_struct_type };
+        FBOMType glyphMetricsStructType = FBOMStruct::Create<Glyph::Metrics>();
+        FBOMArray glyphMetricsArray { glyphMetricsStructType };
 
-        for (SizeType index = 0; index < font_atlas.GetGlyphMetrics().Size(); index++)
+        for (SizeType index = 0; index < fontAtlas.GetGlyphMetrics().Size(); index++)
         {
-            glyph_metrics_array.AddElement(FBOMData::FromStruct(font_atlas.GetGlyphMetrics()[index]));
+            glyphMetricsArray.AddElement(FBOMData::FromStruct(fontAtlas.GetGlyphMetrics()[index]));
         }
 
-        out.SetProperty("GlyphMetrics", FBOMData::FromArray(std::move(glyph_metrics_array)));
+        out.SetProperty("GlyphMetrics", FBOMData::FromArray(std::move(glyphMetricsArray)));
 
         return { FBOMResult::FBOM_OK };
     }
 
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
-        FBOMObject atlas_textures_object;
+        FBOMObject atlasTexturesObject;
 
-        if (FBOMResult err = in.GetProperty("AtlasTextures").ReadObject(context, atlas_textures_object))
+        if (FBOMResult err = in.GetProperty("AtlasTextures").ReadObject(context, atlasTexturesObject))
         {
             return err;
         }
 
-        if (!atlas_textures_object.m_deserialized_object || !atlas_textures_object.m_deserialized_object->Is<FontAtlasTextureSet>())
+        if (!atlasTexturesObject.m_deserializedObject || !atlasTexturesObject.m_deserializedObject->Is<FontAtlasTextureSet>())
         {
             return { FBOMResult::FBOM_ERR, "AtlasTextures must be of type FontAtlasTextureSet" };
         }
 
-        const FontAtlasTextureSet& atlas_textures = atlas_textures_object.m_deserialized_object->Get<FontAtlasTextureSet>();
+        const FontAtlasTextureSet& atlasTextures = atlasTexturesObject.m_deserializedObject->Get<FontAtlasTextureSet>();
 
-        FBOMType glyph_metrics_struct_type = FBOMStruct::Create<Glyph::Metrics>();
-        FBOMArray glyph_metrics_array { FBOMUnset() };
+        FBOMType glyphMetricsStructType = FBOMStruct::Create<Glyph::Metrics>();
+        FBOMArray glyphMetricsArray { FBOMUnset() };
 
-        if (FBOMResult err = in.GetProperty("GlyphMetrics").ReadArray(context, glyph_metrics_array))
+        if (FBOMResult err = in.GetProperty("GlyphMetrics").ReadArray(context, glyphMetricsArray))
         {
             return err;
         }
 
-        if (!glyph_metrics_array.GetElementType().Is(glyph_metrics_struct_type))
+        if (!glyphMetricsArray.GetElementType().IsType(glyphMetricsStructType))
         {
             return { FBOMResult::FBOM_ERR, "GlyphMetrics struct type mismatch" };
         }
 
-        FontAtlas::GlyphMetricsBuffer glyph_metrics;
-        glyph_metrics.Resize(glyph_metrics_array.Size());
+        FontAtlas::GlyphMetricsBuffer glyphMetrics;
+        glyphMetrics.Resize(glyphMetricsArray.Size());
 
-        for (SizeType index = 0; index < glyph_metrics_array.Size(); index++)
+        for (SizeType index = 0; index < glyphMetricsArray.Size(); index++)
         {
-            if (FBOMResult err = glyph_metrics_array.GetElement(index).ReadStruct<Glyph::Metrics>(&glyph_metrics[index]))
+            if (FBOMResult err = glyphMetricsArray.GetElement(index).ReadStruct<Glyph::Metrics>(&glyphMetrics[index]))
             {
                 return err;
             }
         }
 
-        FBOMArray symbol_list_array { FBOMUInt32() };
+        FBOMArray symbolListArray { FBOMUInt32() };
 
-        if (FBOMResult err = in.GetProperty("SymbolList").ReadArray(context, symbol_list_array))
+        if (FBOMResult err = in.GetProperty("SymbolList").ReadArray(context, symbolListArray))
         {
             return err;
         }
 
-        FontAtlas::SymbolList symbol_list;
-        symbol_list.Resize(symbol_list_array.Size());
+        FontAtlas::SymbolList symbolList;
+        symbolList.Resize(symbolListArray.Size());
 
-        for (SizeType index = 0; index < symbol_list_array.Size(); index++)
+        for (SizeType index = 0; index < symbolListArray.Size(); index++)
         {
-            if (FBOMResult err = symbol_list_array.GetElement(index).ReadUInt32(&symbol_list[index]))
+            if (FBOMResult err = symbolListArray.GetElement(index).ReadUInt32(&symbolList[index]))
             {
                 return err;
             }
         }
 
-        Vec2u cell_dimensions;
+        Vec2u cellDimensions;
 
-        if (FBOMResult err = in.GetProperty("CellDimensions").ReadVec2u(&cell_dimensions))
+        if (FBOMResult err = in.GetProperty("CellDimensions").ReadVec2u(&cellDimensions))
         {
             return err;
         }
 
-        RC<FontAtlas> result = MakeRefCountedPtr<FontAtlas>(atlas_textures, Vec2i(cell_dimensions), std::move(glyph_metrics), std::move(symbol_list));
+        RC<FontAtlas> result = MakeRefCountedPtr<FontAtlas>(atlasTextures, Vec2i(cellDimensions), std::move(glyphMetrics), std::move(symbolList));
 
         out = HypData(std::move(result));
 

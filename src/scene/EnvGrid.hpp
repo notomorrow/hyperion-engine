@@ -3,17 +3,19 @@
 #ifndef HYPERION_ENV_GRID_HPP
 #define HYPERION_ENV_GRID_HPP
 
-#include <core/Base.hpp>
-
 #include <core/config/Config.hpp>
 
 #include <core/containers/Bitset.hpp>
+
+#include <core/object/HypObject.hpp>
 
 #include <core/threading/AtomicVar.hpp>
 
 #include <core/utilities/EnumFlags.hpp>
 
 #include <core/math/BoundingBox.hpp>
+
+#include <scene/Entity.hpp>
 
 #include <rendering/RenderResource.hpp>
 #include <rendering/RenderCollection.hpp>
@@ -30,6 +32,7 @@ class Scene;
 class RenderEnvGrid;
 class RenderEnvProbe;
 class EnvProbe;
+class Texture;
 
 enum class EnvGridFlags : uint32
 {
@@ -51,78 +54,78 @@ enum EnvGridType : uint32
 
 struct EnvProbeCollection
 {
-    uint32 num_probes = 0;
-    FixedArray<uint32, max_bound_ambient_probes * 2> indirect_indices = { 0 };
-    FixedArray<Handle<EnvProbe>, max_bound_ambient_probes> env_probes = {};
-    FixedArray<TResourceHandle<RenderEnvProbe>, max_bound_ambient_probes> env_render_probes = {};
+    uint32 numProbes = 0;
+    FixedArray<uint32, maxBoundAmbientProbes * 2> indirectIndices = { 0 };
+    FixedArray<Handle<EnvProbe>, maxBoundAmbientProbes> envProbes = {};
+    FixedArray<TResourceHandle<RenderEnvProbe>, maxBoundAmbientProbes> envRenderProbes = {};
 
     // Must be called in EnvGrid::Init(), before probes are used from the render thread.
     // returns the index
-    uint32 AddProbe(const Handle<EnvProbe>& env_probe);
+    uint32 AddProbe(const Handle<EnvProbe>& envProbe);
 
     // Must be called in EnvGrid::Init(), before probes are used from the render thread.
-    void AddProbe(uint32 index, const Handle<EnvProbe>& env_probe);
+    void AddProbe(uint32 index, const Handle<EnvProbe>& envProbe);
 
-    HYP_FORCE_INLINE void SetIndexOnGameThread(uint32 index, uint32 new_index)
+    HYP_FORCE_INLINE void SetIndexOnGameThread(uint32 index, uint32 newIndex)
     {
-        AssertThrow(index < max_bound_ambient_probes);
-        AssertThrow(new_index < max_bound_ambient_probes);
+        AssertThrow(index < maxBoundAmbientProbes);
+        AssertThrow(newIndex < maxBoundAmbientProbes);
 
-        indirect_indices[index] = new_index;
+        indirectIndices[index] = newIndex;
     }
 
     HYP_FORCE_INLINE uint32 GetIndexOnGameThread(uint32 index) const
     {
-        return indirect_indices[index];
+        return indirectIndices[index];
     }
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbeDirect(uint32 index) const
     {
-        return env_probes[index];
+        return envProbes[index];
     }
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbeOnGameThread(uint32 index) const
     {
-        return env_probes[indirect_indices[index]];
+        return envProbes[indirectIndices[index]];
     }
 
-    HYP_FORCE_INLINE void SetIndexOnRenderThread(uint32 index, uint32 new_index)
+    HYP_FORCE_INLINE void SetIndexOnRenderThread(uint32 index, uint32 newIndex)
     {
-        AssertThrow(index < max_bound_ambient_probes);
-        AssertThrow(new_index < max_bound_ambient_probes);
+        AssertThrow(index < maxBoundAmbientProbes);
+        AssertThrow(newIndex < maxBoundAmbientProbes);
 
-        indirect_indices[max_bound_ambient_probes + index] = new_index;
+        indirectIndices[maxBoundAmbientProbes + index] = newIndex;
     }
 
     HYP_FORCE_INLINE uint32 GetIndexOnRenderThread(uint32 index) const
     {
-        return indirect_indices[max_bound_ambient_probes + index];
+        return indirectIndices[maxBoundAmbientProbes + index];
     }
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbeOnRenderThread(uint32 index) const
     {
-        return env_probes[indirect_indices[max_bound_ambient_probes + index]];
+        return envProbes[indirectIndices[maxBoundAmbientProbes + index]];
     }
 };
 
 struct EnvGridOptions
 {
     EnvGridType type = ENV_GRID_TYPE_SH;
-    Vec3u density = Vec3u::Zero();
+    Vec3u density = { 3, 3, 3 };
     EnumFlags<EnvGridFlags> flags = EnvGridFlags::NONE;
 };
 
 HYP_CLASS()
-class HYP_API EnvGrid final : public HypObject<EnvGrid>
+class HYP_API EnvGrid : public Entity
 {
     HYP_OBJECT_BODY(EnvGrid);
 
 public:
     EnvGrid();
-    EnvGrid(const Handle<Scene>& parent_scene, const BoundingBox& aabb, const EnvGridOptions& options);
+    EnvGrid(const BoundingBox& aabb, const EnvGridOptions& options);
     EnvGrid(const EnvGrid& other) = delete;
     EnvGrid& operator=(const EnvGrid& other) = delete;
-    ~EnvGrid();
+    ~EnvGrid() override;
 
     HYP_FORCE_INLINE EnvGridType GetEnvGridType() const
     {
@@ -136,17 +139,32 @@ public:
 
     HYP_FORCE_INLINE EnvProbeCollection& GetEnvProbeCollection()
     {
-        return m_env_probe_collection;
+        return m_envProbeCollection;
     }
 
     HYP_FORCE_INLINE const EnvProbeCollection& GetEnvProbeCollection() const
     {
-        return m_env_probe_collection;
+        return m_envProbeCollection;
+    }
+
+    HYP_FORCE_INLINE const Handle<Texture>& GetVoxelGridTexture() const
+    {
+        return m_voxelGridTexture;
+    }
+
+    HYP_FORCE_INLINE const Handle<Texture>& GetLightFieldIrradianceTexture() const
+    {
+        return m_irradianceTexture;
+    }
+
+    HYP_FORCE_INLINE const Handle<Texture>& GetLightFieldDepthTexture() const
+    {
+        return m_depthTexture;
     }
 
     HYP_FORCE_INLINE RenderEnvGrid& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     HYP_METHOD()
@@ -157,15 +175,6 @@ public:
 
     HYP_METHOD()
     void SetAABB(const BoundingBox& aabb);
-
-    HYP_METHOD()
-    HYP_FORCE_INLINE const Handle<Scene>& GetParentScene() const
-    {
-        return m_parent_scene;
-    }
-
-    HYP_METHOD()
-    void SetParentScene(const Handle<Scene>& parent_scene);
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<View>& GetView() const
@@ -182,9 +191,20 @@ public:
     HYP_METHOD()
     void Translate(const BoundingBox& aabb, const Vec3f& translation);
 
-    void Update(GameCounter::TickUnit delta);
+    virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
     
 private:
+    virtual void OnAttachedToNode(Node* node) override;
+    virtual void OnDetachedFromNode(Node* node) override;
+
+    virtual void OnAddedToWorld(World* world) override;
+    virtual void OnRemovedFromWorld(World* world) override;
+
+    virtual void OnAddedToScene(Scene* scene) override;
+    virtual void OnRemovedFromScene(Scene* scene) override;
+
+    virtual void Update(float delta) override;
+
     HYP_FORCE_INLINE Vec3f SizeOfProbe() const
     {
         return m_aabb.GetExtent() / Vec3f(m_options.density);
@@ -194,7 +214,6 @@ private:
 
     void CreateEnvProbes();
 
-    Handle<Scene> m_parent_scene;
     Handle<View> m_view;
     Handle<Camera> m_camera;
 
@@ -204,11 +223,18 @@ private:
     BoundingBox m_aabb;
 
     Vec3f m_offset;
-    BoundingBox m_voxel_grid_aabb;
+    BoundingBox m_voxelGridAabb;
 
-    EnvProbeCollection m_env_probe_collection;
+    EnvProbeCollection m_envProbeCollection;
 
-    RenderEnvGrid* m_render_resource;
+    Handle<Texture> m_voxelGridTexture;
+
+    Handle<Texture> m_irradianceTexture;
+    Handle<Texture> m_depthTexture;
+
+    HashCode m_cachedOctantHashCode;
+
+    RenderEnvGrid* m_renderResource;
 };
 
 } // namespace hyperion

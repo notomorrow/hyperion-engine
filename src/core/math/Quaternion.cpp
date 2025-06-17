@@ -29,34 +29,34 @@ Quaternion::Quaternion(const Matrix4& m)
           m1 = m[1].GetXYZ(),
           m2 = m[2].GetXYZ();
 
-    float length_sqr = m0[0] * m0[0] + m1[0] * m1[0] + m2[0] * m2[0];
+    float lengthSqr = m0[0] * m0[0] + m1[0] * m1[0] + m2[0] * m2[0];
 
-    if (length_sqr != 1.0f && length_sqr != 0.0f)
+    if (lengthSqr != 1.0f && lengthSqr != 0.0f)
     {
-        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
-        m0[0] *= length_sqr;
-        m1[0] *= length_sqr;
-        m2[0] *= length_sqr;
+        lengthSqr = 1.0f / MathUtil::Sqrt(lengthSqr);
+        m0[0] *= lengthSqr;
+        m1[0] *= lengthSqr;
+        m2[0] *= lengthSqr;
     }
 
-    length_sqr = m0[1] * m0[1] + m1[1] * m1[1] + m2[1] * m2[1];
+    lengthSqr = m0[1] * m0[1] + m1[1] * m1[1] + m2[1] * m2[1];
 
-    if (length_sqr != 1.0f && length_sqr != 0.0f)
+    if (lengthSqr != 1.0f && lengthSqr != 0.0f)
     {
-        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
-        m0[1] *= length_sqr;
-        m1[1] *= length_sqr;
-        m2[1] *= length_sqr;
+        lengthSqr = 1.0f / MathUtil::Sqrt(lengthSqr);
+        m0[1] *= lengthSqr;
+        m1[1] *= lengthSqr;
+        m2[1] *= lengthSqr;
     }
 
-    length_sqr = m0[2] * m0[2] + m1[2] * m1[2] + m2[2] * m2[2];
+    lengthSqr = m0[2] * m0[2] + m1[2] * m1[2] + m2[2] * m2[2];
 
-    if (length_sqr != 1.0f && length_sqr != 0.0f)
+    if (lengthSqr != 1.0f && lengthSqr != 0.0f)
     {
-        length_sqr = 1.0f / MathUtil::Sqrt(length_sqr);
-        m0[2] *= length_sqr;
-        m1[2] *= length_sqr;
-        m2[2] *= length_sqr;
+        lengthSqr = 1.0f / MathUtil::Sqrt(lengthSqr);
+        m0[2] *= lengthSqr;
+        m1[2] *= lengthSqr;
+        m2[2] *= lengthSqr;
     }
 
     const float tr = m0[0] + m1[1] + m2[2];
@@ -101,21 +101,21 @@ Quaternion::Quaternion(const Matrix4& m)
 
 Quaternion::Quaternion(const Vec3f& euler)
 {
-    const float x_over2 = MathUtil::DegToRad(euler.x) * 0.5f;
-    const float y_over2 = MathUtil::DegToRad(euler.y) * 0.5f;
-    const float z_over2 = MathUtil::DegToRad(euler.z) * 0.5f;
+    const float xOver2 = MathUtil::DegToRad(euler.x) * 0.5f;
+    const float yOver2 = MathUtil::DegToRad(euler.y) * 0.5f;
+    const float zOver2 = MathUtil::DegToRad(euler.z) * 0.5f;
 
-    const float sin_x_over2 = MathUtil::Sin(x_over2);
-    const float cos_x_over2 = MathUtil::Cos(x_over2);
-    const float sin_y_over2 = MathUtil::Sin(y_over2);
-    const float cos_y_over2 = MathUtil::Cos(y_over2);
-    const float sin_z_over2 = MathUtil::Sin(z_over2);
-    const float cos_z_over2 = MathUtil::Cos(z_over2);
+    const float sinXOver2 = MathUtil::Sin(xOver2);
+    const float cosXOver2 = MathUtil::Cos(xOver2);
+    const float sinYOver2 = MathUtil::Sin(yOver2);
+    const float cosYOver2 = MathUtil::Cos(yOver2);
+    const float sinZOver2 = MathUtil::Sin(zOver2);
+    const float cosZOver2 = MathUtil::Cos(zOver2);
 
-    x = cos_y_over2 * sin_x_over2 * cos_z_over2 + sin_y_over2 * cos_x_over2 * sin_z_over2;
-    y = sin_y_over2 * cos_x_over2 * cos_z_over2 - cos_y_over2 * sin_x_over2 * sin_z_over2;
-    z = cos_y_over2 * cos_x_over2 * sin_z_over2 - sin_y_over2 * sin_x_over2 * cos_z_over2;
-    w = cos_y_over2 * cos_x_over2 * cos_z_over2 + sin_y_over2 * sin_x_over2 * sin_z_over2;
+    x = cosYOver2 * sinXOver2 * cosZOver2 + sinYOver2 * cosXOver2 * sinZOver2;
+    y = sinYOver2 * cosXOver2 * cosZOver2 - cosYOver2 * sinXOver2 * sinZOver2;
+    z = cosYOver2 * cosXOver2 * sinZOver2 - sinYOver2 * sinXOver2 * cosZOver2;
+    w = cosYOver2 * cosXOver2 * cosZOver2 + sinYOver2 * sinXOver2 * sinZOver2;
 }
 
 Quaternion::Quaternion(const Vec3f& axis, float radians)
@@ -129,13 +129,13 @@ Quaternion::Quaternion(const Vec3f& axis, float radians)
 
     if (tmp != Vec3f::Zero())
     {
-        float half_angle = radians * 0.5f;
-        float sin_half_angle = sin(half_angle);
+        float halfAngle = radians * 0.5f;
+        float sinHalfAngle = sin(halfAngle);
 
-        x = sin_half_angle * tmp.x;
-        y = sin_half_angle * tmp.y;
-        z = sin_half_angle * tmp.z;
-        w = cos(half_angle);
+        x = sinHalfAngle * tmp.x;
+        y = sinHalfAngle * tmp.y;
+        z = sinHalfAngle * tmp.z;
+        w = cos(halfAngle);
     }
     else
     {
@@ -220,11 +220,11 @@ Quaternion& Quaternion::Invert()
     float len2 = LengthSquared();
     if (len2 > 0.0)
     {
-        float inv_len2 = 1.0f / len2;
-        w = w * inv_len2;
-        x = -x * inv_len2;
-        y = -y * inv_len2;
-        z = -z * inv_len2;
+        float invLen2 = 1.0f / len2;
+        w = w * invLen2;
+        x = -x * invLen2;
+        y = -y * invLen2;
+        z = -z * invLen2;
     }
     return *this;
 }
@@ -236,17 +236,17 @@ Quaternion Quaternion::Inverse() const
 
 Quaternion& Quaternion::Slerp(const Quaternion& to, float amt)
 {
-    float cos_half_theta = w * to.w + x * to.x + y * to.y + z * to.z;
+    float cosHalfTheta = w * to.w + x * to.x + y * to.y + z * to.z;
 
-    if (abs(cos_half_theta) >= 1.0f)
+    if (abs(cosHalfTheta) >= 1.0f)
     {
         return *this;
     }
 
-    float half_theta = acos(cos_half_theta);
-    float sin_half_theta = sqrt(1.0f - cos_half_theta * cos_half_theta);
+    float halfTheta = acos(cosHalfTheta);
+    float sinHalfTheta = sqrt(1.0f - cosHalfTheta * cosHalfTheta);
 
-    if (abs(sin_half_theta) < 0.001f)
+    if (abs(sinHalfTheta) < 0.001f)
     {
         w = w * 0.5f + to.w * 0.5f;
         x = x * 0.5f + to.x * 0.5f;
@@ -255,13 +255,13 @@ Quaternion& Quaternion::Slerp(const Quaternion& to, float amt)
         return *this;
     }
 
-    float ratio_a = sin((1.0f - amt) * half_theta) / sin_half_theta;
-    float ratio_b = sin(amt * half_theta) / sin_half_theta;
+    float ratioA = sin((1.0f - amt) * halfTheta) / sinHalfTheta;
+    float ratioB = sin(amt * halfTheta) / sinHalfTheta;
 
-    w = w * ratio_a + to.w * ratio_b;
-    x = x * ratio_a + to.x * ratio_b;
-    y = y * ratio_a + to.y * ratio_b;
-    z = z * ratio_a + to.z * ratio_b;
+    w = w * ratioA + to.w * ratioB;
+    x = x * ratioA + to.x * ratioB;
+    y = y * ratioA + to.y * ratioB;
+    z = z * ratioA + to.z * ratioB;
     return *this;
 }
 

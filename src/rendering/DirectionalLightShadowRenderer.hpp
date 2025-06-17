@@ -3,6 +3,12 @@
 #ifndef HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
 #define HYPERION_DIRECTIONAL_LIGHT_SHADOW_RENDERER_HPP
 
+#include <scene/Scene.hpp>
+#include <scene/Light.hpp>
+#include <scene/Subsystem.hpp>
+
+#include <scene/camera/Camera.hpp>
+
 #include <core/utilities/EnumFlags.hpp>
 
 #include <core/threading/Semaphore.hpp>
@@ -18,11 +24,6 @@
 #include <rendering/backend/RenderObject.hpp>
 
 #include <core/math/BoundingBox.hpp>
-
-#include <scene/Scene.hpp>
-#include <scene/Light.hpp>
-
-#include <scene/camera/Camera.hpp>
 
 #include <Types.hpp>
 
@@ -47,14 +48,14 @@ class ShadowPass final : public FullScreenPass
 {
 public:
     ShadowPass(
-        const Handle<Scene>& parent_scene,
-        const TResourceHandle<RenderWorld>& world_resource_handle,
-        const TResourceHandle<RenderCamera>& camera_resource_handle,
-        const TResourceHandle<RenderShadowMap>& shadow_map_resource_handle,
-        const TResourceHandle<RenderView>& view_statics_resource_handle,
-        const TResourceHandle<RenderView>& view_dynamics_resource_handle,
+        const Handle<Scene>& parentScene,
+        const TResourceHandle<RenderWorld>& worldResourceHandle,
+        const TResourceHandle<RenderCamera>& cameraResourceHandle,
+        const TResourceHandle<RenderShadowMap>& shadowMapResourceHandle,
+        const TResourceHandle<RenderView>& viewStaticsResourceHandle,
+        const TResourceHandle<RenderView>& viewDynamicsResourceHandle,
         const ShaderRef& shader,
-        RerenderShadowsSemaphore* rerender_semaphore);
+        RerenderShadowsSemaphore* rerenderSemaphore);
     ShadowPass(const ShadowPass& other) = delete;
     ShadowPass& operator=(const ShadowPass& other) = delete;
     virtual ~ShadowPass() override;
@@ -72,9 +73,9 @@ public:
     virtual void CreateFramebuffer() override;
 
     virtual void Create() override;
-    virtual void Render(FrameBase* frame, const RenderSetup& render_setup) override;
+    virtual void Render(FrameBase* frame, const RenderSetup& renderSetup) override;
 
-    virtual void RenderToFramebuffer(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer) override
+    virtual void RenderToFramebuffer(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) override
     {
         HYP_NOT_IMPLEMENTED();
     }
@@ -84,43 +85,37 @@ private:
     void CreateCombineShadowMapsPass();
     void CreateComputePipelines();
 
-    Handle<Scene> m_parent_scene;
-    TResourceHandle<RenderWorld> m_world_resource_handle;
-    TResourceHandle<RenderCamera> m_camera_resource_handle;
-    TResourceHandle<RenderShadowMap> m_shadow_map_resource_handle;
-    TResourceHandle<RenderView> m_render_view_statics;
-    TResourceHandle<RenderView> m_render_view_dynamics;
+    Handle<Scene> m_parentScene;
+    TResourceHandle<RenderWorld> m_worldResourceHandle;
+    TResourceHandle<RenderCamera> m_cameraResourceHandle;
+    TResourceHandle<RenderShadowMap> m_shadowMapResourceHandle;
+    TResourceHandle<RenderView> m_renderViewStatics;
+    TResourceHandle<RenderView> m_renderViewDynamics;
 
     Vec3f m_origin;
-    RerenderShadowsSemaphore* m_rerender_semaphore;
+    RerenderShadowsSemaphore* m_rerenderSemaphore;
 
-    Handle<Texture> m_shadow_map_statics;
-    Handle<Texture> m_shadow_map_dynamics;
+    Handle<Texture> m_shadowMapStatics;
+    Handle<Texture> m_shadowMapDynamics;
 
-    UniquePtr<FullScreenPass> m_combine_shadow_maps_pass;
-    ComputePipelineRef m_blur_shadow_map_pipeline;
+    UniquePtr<FullScreenPass> m_combineShadowMapsPass;
+    ComputePipelineRef m_blurShadowMapPipeline;
 };
 
-HYP_CLASS()
-class DirectionalLightShadowRenderer : public RenderSubsystem
+HYP_CLASS(NoScriptBindings)
+class DirectionalLightShadowRenderer : public Subsystem
 {
     HYP_OBJECT_BODY(DirectionalLightShadowRenderer);
 
 public:
-    DirectionalLightShadowRenderer(
-        Name name,
-        const Handle<Scene>& parent_scene,
-        const TResourceHandle<RenderLight>& render_light,
-        Vec2u resolution,
-        ShadowMapFilterMode filter_mode);
-
+    DirectionalLightShadowRenderer(const Handle<Scene>& parentScene, const Handle<Light>& light, Vec2u resolution, ShadowMapFilter filterMode);
     DirectionalLightShadowRenderer(const DirectionalLightShadowRenderer& other) = delete;
     DirectionalLightShadowRenderer& operator=(const DirectionalLightShadowRenderer& other) = delete;
     virtual ~DirectionalLightShadowRenderer() override;
 
     HYP_FORCE_INLINE ShadowPass* GetPass() const
     {
-        return m_shadow_pass.Get();
+        return m_shadowPass.Get();
     }
 
     HYP_FORCE_INLINE const Handle<Camera>& GetCamera() const
@@ -138,40 +133,39 @@ public:
         m_aabb = aabb;
     }
 
-    HYP_FORCE_INLINE const TResourceHandle<RenderShadowMap>& GetShadowMapResourceHandle() const
+    HYP_FORCE_INLINE const TResourceHandle<RenderShadowMap>& GetShadowMap() const
     {
-        return m_shadow_map_resource_handle;
+        return m_shadowMapResourceHandle;
     }
+
+    virtual void OnAddedToWorld() override;
+    virtual void OnRemovedFromWorld() override;
+    virtual void Update(float delta) override;
 
 private:
     virtual void Init() override;     // init on render thread
-    virtual void InitGame() override; // init on game thread
-    virtual void OnUpdate(GameCounter::TickUnit delta) override;
-    virtual void OnRender(FrameBase* frame, const RenderSetup& render_setup) override;
-    virtual void OnRemoved() override;
 
     void CreateShader();
 
-    Handle<Scene> m_parent_scene;
-    Handle<View> m_view_statics;
-    Handle<View> m_view_dynamics;
+    Handle<Scene> m_parentScene;
+    Handle<Light> m_light;
+    Handle<View> m_viewStatics;
+    Handle<View> m_viewDynamics;
 
-    TResourceHandle<RenderLight> m_render_light;
-
-    UniquePtr<ShadowPass> m_shadow_pass;
+    UniquePtr<ShadowPass> m_shadowPass;
     Vec2u m_resolution;
-    ShadowMapFilterMode m_filter_mode;
+    ShadowMapFilter m_filterMode;
 
-    RerenderShadowsSemaphore m_rerender_semaphore;
+    RerenderShadowsSemaphore m_rerenderSemaphore;
 
     ShaderRef m_shader;
     Handle<Camera> m_camera;
     BoundingBox m_aabb;
 
-    TResourceHandle<RenderShadowMap> m_shadow_map_resource_handle;
+    TResourceHandle<RenderShadowMap> m_shadowMapResourceHandle;
 
-    HashCode m_cached_octant_hash_code_statics;
-    Matrix4 m_cached_view_matrix;
+    HashCode m_cachedOctantHashCodeStatics;
+    Matrix4 m_cachedViewMatrix;
 };
 
 } // namespace hyperion

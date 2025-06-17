@@ -5,12 +5,11 @@
 #include <core/math/MathUtil.hpp>
 
 namespace hyperion {
-namespace renderer {
 namespace helpers {
 
-uint32 MipmapSize(uint32 src_size, int lod)
+uint32 MipmapSize(uint32 srcSize, int lod)
 {
-    return MathUtil::Max(src_size >> lod, 1u);
+    return MathUtil::Max(srcSize >> lod, 1u);
 }
 
 } // namespace helpers
@@ -19,5 +18,4 @@ namespace platform {
 
 } // namespace platform
 
-} // namespace renderer
 } // namespace hyperion

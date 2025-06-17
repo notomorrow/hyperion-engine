@@ -31,12 +31,12 @@ public:
 
     /*! \brief Atomically load the boolean value indicating that this thread is actively running */
     bool IsRunning() const
-        { return m_is_running.Get(MemoryOrder::RELAXED); }
+        { return m_isRunning.Get(MemoryOrder::RELAXED); }
 
 private:
     virtual void operator()(WebSocket *) override;
 
-    AtomicVar<bool> m_is_running;
+    AtomicVar<bool> m_isRunning;
 };
 
 class HYP_API WebSocket

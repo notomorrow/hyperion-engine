@@ -3,13 +3,13 @@
 #include <rtc/RTCClient.hpp>
 
 #ifdef HYP_LIBDATACHANNEL
-    #include <rtc/description.hpp>
-    #include <rtc/peerconnection.hpp>
-    #include <rtc/rtppacketizationconfig.hpp>
-    #include <rtc/h264rtppacketizer.hpp>
-    #include <rtc/h264packetizationhandler.hpp>
-    #include <rtc/rtcpsrreporter.hpp>
-    #include <rtc/rtcpnackresponder.hpp>
+#include <rtc/description.hpp>
+#include <rtc/peerconnection.hpp>
+#include <rtc/rtppacketizationconfig.hpp>
+#include <rtc/h264rtppacketizer.hpp>
+#include <rtc/h264packetizationhandler.hpp>
+#include <rtc/rtcpsrreporter.hpp>
+#include <rtc/rtcpnackresponder.hpp>
 #endif // HYP_LIBDATACHANNEL
 
 namespace hyperion {
@@ -19,7 +19,7 @@ bool NullRTCTrack::IsOpen() const
     return true;
 }
 
-void NullRTCTrack::SendData(const ByteBuffer& data, uint64 sample_timestamp)
+void NullRTCTrack::SendData(const ByteBuffer& data, uint64 sampleTimestamp)
 {
 }
 
@@ -38,36 +38,36 @@ void LibDataChannelRTCTrack::PrepareTrack(RTCClient* client)
 {
     AssertThrow(client != nullptr);
 
-    const auto* lib_data_channel_client = dynamic_cast<LibDataChannelRTCClient*>(client);
-    AssertThrowMsg(lib_data_channel_client != nullptr,
+    const auto* libDataChannelClient = dynamic_cast<LibDataChannelRTCClient*>(client);
+    AssertThrowMsg(libDataChannelClient != nullptr,
         "client must be a LibDataChannelRTCClient instance to use on LibDataChannelRTCTrack");
 
-    AssertThrowMsg(lib_data_channel_client->m_peer_connection != nullptr,
+    AssertThrowMsg(libDataChannelClient->m_peerConnection != nullptr,
         "m_peer_connection is nullptr on the RTCClient -- make sure PrepareTrack() is being called in the right place");
 
-    switch (m_track_type)
+    switch (m_trackType)
     {
     case RTC_TRACK_TYPE_AUDIO:
         break;
     case RTC_TRACK_TYPE_VIDEO:
     {
-        auto video_description = rtc::Description::Video();
-        video_description.addH264Codec(102);
-        video_description.addSSRC(1, "video-stream", "stream1");
+        auto videoDescription = rtc::Description::Video();
+        videoDescription.addH264Codec(102);
+        videoDescription.addSSRC(1, "video-stream", "stream1");
 
-        m_track = lib_data_channel_client->m_peer_connection->addTrack(video_description);
+        m_track = libDataChannelClient->m_peerConnection->addTrack(videoDescription);
 
-        m_rtp_config = std::make_shared<rtc::RtpPacketizationConfig>(1, "video-stream", 102, rtc::H264RtpPacketizer::defaultClockRate);
-        auto packetizer = std::make_shared<rtc::H264RtpPacketizer>(rtc::NalUnit::Separator::StartSequence, m_rtp_config);
-        auto h264_handler = std::make_shared<rtc::H264PacketizationHandler>(packetizer);
+        m_rtpConfig = std::make_shared<rtc::RtpPacketizationConfig>(1, "video-stream", 102, rtc::H264RtpPacketizer::defaultClockRate);
+        auto packetizer = std::make_shared<rtc::H264RtpPacketizer>(rtc::NalUnit::Separator::StartSequence, m_rtpConfig);
+        auto h264Handler = std::make_shared<rtc::H264PacketizationHandler>(packetizer);
 
-        m_rtcp_sr_reporter = std::make_shared<rtc::RtcpSrReporter>(m_rtp_config);
-        h264_handler->addToChain(m_rtcp_sr_reporter);
+        m_rtcpSrReporter = std::make_shared<rtc::RtcpSrReporter>(m_rtpConfig);
+        h264Handler->addToChain(m_rtcpSrReporter);
 
-        auto nack_responder = std::make_shared<rtc::RtcpNackResponder>();
-        h264_handler->addToChain(nack_responder);
+        auto nackResponder = std::make_shared<rtc::RtcpNackResponder>();
+        h264Handler->addToChain(nackResponder);
 
-        m_track->setMediaHandler(h264_handler);
+        m_track->setMediaHandler(h264Handler);
         m_track->onOpen([this]
             {
                 DebugLog(LogType::Debug, "Video channel opened\n");
@@ -87,11 +87,11 @@ void LibDataChannelRTCTrack::PrepareTrack(RTCClient* client)
     }
 
     default:
-        AssertThrowMsg(false, "Invalid track type");
+        HYP_UNREACHABLE();
     }
 }
 
-void LibDataChannelRTCTrack::SendData(const ByteBuffer& data, uint64 sample_timestamp)
+void LibDataChannelRTCTrack::SendData(const ByteBuffer& data, uint64 sampleTimestamp)
 {
     if (!m_track)
     {
@@ -107,16 +107,16 @@ void LibDataChannelRTCTrack::SendData(const ByteBuffer& data, uint64 sample_time
         return;
     }
 
-    const double elapsed_time_seconds = double(sample_timestamp) / double(1000 * 1000);
+    const double elapsedTimeSeconds = double(sampleTimestamp) / double(1000 * 1000);
 
-    const uint32 elapsed_timestamp = m_rtp_config->secondsToTimestamp(elapsed_time_seconds);
-    m_rtp_config->timestamp = m_rtp_config->startTimestamp + elapsed_timestamp;
+    const uint32 elapsedTimestamp = m_rtpConfig->secondsToTimestamp(elapsedTimeSeconds);
+    m_rtpConfig->timestamp = m_rtpConfig->startTimestamp + elapsedTimestamp;
 
-    const uint32 report_elapsed_timestamp = m_rtp_config->timestamp - m_rtcp_sr_reporter->lastReportedTimestamp();
+    const uint32 reportElapsedTimestamp = m_rtpConfig->timestamp - m_rtcpSrReporter->lastReportedTimestamp();
 
-    if (m_rtp_config->timestampToSeconds(report_elapsed_timestamp) > 1)
+    if (m_rtpConfig->timestampToSeconds(reportElapsedTimestamp) > 1)
     {
-        m_rtcp_sr_reporter->setNeedsToReport();
+        m_rtcpSrReporter->setNeedsToReport();
     }
 
     m_track->send(reinterpret_cast<const rtc::byte*>(data.Data()), data.Size());

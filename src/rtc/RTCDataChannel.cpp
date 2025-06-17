@@ -19,11 +19,11 @@ void NullRTCDataChannel::Send(const ByteBuffer&)
 
 #ifdef HYP_LIBDATACHANNEL
 
-void LibDataChannelRTCDataChannel::Send(const ByteBuffer& byte_buffer)
+void LibDataChannelRTCDataChannel::Send(const ByteBuffer& byteBuffer)
 {
-    AssertThrow(m_data_channel != nullptr);
+    AssertThrow(m_dataChannel != nullptr);
 
-    m_data_channel->send(reinterpret_cast<const rtc::byte*>(byte_buffer.Data()), byte_buffer.Size());
+    m_dataChannel->send(reinterpret_cast<const rtc::byte*>(byteBuffer.Data()), byteBuffer.Size());
 }
 
 #endif

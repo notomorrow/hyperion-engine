@@ -19,8 +19,6 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanDescriptorSetLayoutWrapper;
 using VulkanDescriptorSetLayoutWrapperRef = RenderObjectHandle_Strong<VulkanDescriptorSetLayoutWrapper>;
 
@@ -28,13 +26,13 @@ struct VulkanDescriptorElementInfo
 {
     uint32 binding;
     uint32 index;
-    VkDescriptorType descriptor_type;
+    VkDescriptorType descriptorType;
 
     union
     {
-        VkDescriptorBufferInfo buffer_info;
-        VkDescriptorImageInfo image_info;
-        VkWriteDescriptorSetAccelerationStructureKHR acceleration_structure_info;
+        VkDescriptorBufferInfo bufferInfo;
+        VkDescriptorImageInfo imageInfo;
+        VkWriteDescriptorSetAccelerationStructureKHR accelerationStructureInfo;
     };
 };
 
@@ -53,7 +51,7 @@ public:
 
     HYP_FORCE_INLINE VulkanDescriptorSetLayoutWrapper* GetVulkanLayoutWrapper() const
     {
-        return m_vk_layout_wrapper.Get();
+        return m_vkLayoutWrapper.Get();
     }
 
     HYP_API virtual bool IsCreated() const override;
@@ -61,23 +59,23 @@ public:
     HYP_API virtual RendererResult Create() override;
     HYP_API virtual RendererResult Destroy() override;
 
-    HYP_API virtual void UpdateDirtyState(bool* out_is_dirty = nullptr) override;
-    HYP_API virtual void Update() override;
+    HYP_API virtual void UpdateDirtyState(bool* outIsDirty = nullptr) override;
+    HYP_API virtual void Update(bool force = false) override;
 
     HYP_API virtual DescriptorSetRef Clone() const override;
 
 protected:
-    virtual void Bind(const CommandBufferBase* command_buffer, const GraphicsPipelineBase* pipeline, uint32 bind_index) const override;
-    virtual void Bind(const CommandBufferBase* command_buffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index) const override;
-    virtual void Bind(const CommandBufferBase* command_buffer, const ComputePipelineBase* pipeline, uint32 bind_index) const override;
-    virtual void Bind(const CommandBufferBase* command_buffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index) const override;
-    virtual void Bind(const CommandBufferBase* command_buffer, const RaytracingPipelineBase* pipeline, uint32 bind_index) const override;
-    virtual void Bind(const CommandBufferBase* command_buffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index) const override;
+    virtual void Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const override;
+    virtual void Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
+    virtual void Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const override;
+    virtual void Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
+    virtual void Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const override;
+    virtual void Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const override;
 
     VkDescriptorSet m_handle;
-    ElementCache m_cached_elements;
-    VulkanDescriptorSetLayoutWrapperRef m_vk_layout_wrapper;
-    Array<VulkanDescriptorElementInfo> m_vk_descriptor_element_infos;
+    ElementCache m_cachedElements;
+    VulkanDescriptorSetLayoutWrapperRef m_vkLayoutWrapper;
+    Array<VulkanDescriptorElementInfo> m_vkDescriptorElementInfos;
 };
 
 class VulkanDescriptorTable : public DescriptorTableBase
@@ -87,7 +85,6 @@ public:
     HYP_API virtual ~VulkanDescriptorTable() override = default;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

@@ -48,24 +48,24 @@ public:
     {
         Array<std::string> tokens;
 
-        std::string working_string;
-        working_string.reserve(text.length());
+        std::string workingString;
+        workingString.reserve(text.length());
 
         for (char ch : text)
         {
             if (ch == sep)
             {
-                tokens.PushBack(working_string);
-                working_string.clear();
+                tokens.PushBack(workingString);
+                workingString.clear();
                 continue;
             }
 
-            working_string += ch;
+            workingString += ch;
         }
 
-        if (!working_string.empty())
+        if (!workingString.empty())
         {
-            tokens.PushBack(working_string);
+            tokens.PushBack(workingString);
         }
 
         return tokens;
@@ -116,7 +116,7 @@ public:
     }
 
     template <size_t Size>
-    static inline std::string Join(const std::array<std::string, Size>& args, const std::string& join_by)
+    static inline std::string Join(const std::array<std::string, Size>& args, const std::string& joinBy)
     {
         const size_t count = args.size();
 
@@ -127,9 +127,9 @@ public:
         {
             ss << str;
 
-            if (i != count - 1 && !EndsWith(str, join_by))
+            if (i != count - 1 && !EndsWith(str, joinBy))
             {
-                ss << join_by;
+                ss << joinBy;
             }
 
             i++;
@@ -146,11 +146,11 @@ public:
         {
             return result;
         }
-        size_t start_pos = 0;
-        while ((start_pos = text.find(from, start_pos)) != std::string::npos)
+        size_t startPos = 0;
+        while ((startPos = text.find(from, startPos)) != std::string::npos)
         {
-            result.replace(start_pos, from.length(), to);
-            start_pos += to.length();
+            result.replace(startPos, from.length(), to);
+            startPos += to.length();
         }
         return result;
     }
@@ -232,38 +232,38 @@ public:
 
     static inline String StripExtension(const String& filename)
     {
-        SizeType last_index = filename.FindLastIndex('.');
+        SizeType lastIndex = filename.FindLastIndex('.');
 
-        if (last_index == String::not_found)
+        if (lastIndex == String::notFound)
         {
             return filename;
         }
 
-        return filename.Substr(0, last_index);
+        return filename.Substr(0, lastIndex);
     }
 
     static inline String GetExtension(const String& path)
     {
-        Array<String> split_path = path.Split('/', '\\');
+        Array<String> splitPath = path.Split('/', '\\');
 
-        if (split_path.Empty())
+        if (splitPath.Empty())
         {
             return "";
         }
 
-        const String& filename = split_path.Back();
+        const String& filename = splitPath.Back();
 
-        SizeType last_index = filename.FindLastIndex('.');
+        SizeType lastIndex = filename.FindLastIndex('.');
 
-        if (last_index == String::not_found)
+        if (lastIndex == String::notFound)
         {
             return "";
         }
 
-        return filename.Substr(last_index + 1);
+        return filename.Substr(lastIndex + 1);
     }
 
-    static inline String ToPascalCase(const String& str, bool preserve_case = false)
+    static inline String ToPascalCase(const String& str, bool preserveCase = false)
     {
         Array<String> parts = str.Split('_', ' ', '-');
 
@@ -276,7 +276,7 @@ public:
                 continue;
             }
 
-            if (!preserve_case)
+            if (!preserveCase)
             {
                 part = String(part.Substr(0, 1)).ToUpper() + String(part.Substr(1)).ToLower();
             }
@@ -289,43 +289,28 @@ public:
         return String::Join(parts, "");
     }
 
-    static inline bool Parse(const String& str, int* out_value)
+    static inline bool Parse(const String& str, int* outValue)
     {
-        int c = 0, sign = 0, x = 0;
-        const char* p = str.Data();
-
-        for (c = *(p++); (c < 48 || c > 57); c = *(p++))
-        {
-            if (c == 45)
-            {
-                sign = 1;
-                c = *(p++);
-                break;
-            }
-        }; // eat whitespaces and check sign
-        for (; c > 47 && c < 58; c = *(p++))
-            x = (x << 1) + (x << 3) + c - 48;
-
-        *out_value = sign ? -x : x;
+        *outValue = std::strtol(str.Data(), nullptr, 0);
 
         return true;
     }
 
-    static inline bool Parse(const String& str, long* out_value)
+    static inline bool Parse(const String& str, long* outValue)
     {
-        *out_value = std::strtol(str.Data(), nullptr, 0);
+        *outValue = std::strtol(str.Data(), nullptr, 0);
 
         return true;
     }
 
-    static inline bool Parse(const String& str, long long* out_value)
+    static inline bool Parse(const String& str, long long* outValue)
     {
-        *out_value = std::strtoll(str.Data(), nullptr, 0);
+        *outValue = std::strtoll(str.Data(), nullptr, 0);
 
         return true;
     }
 
-    static inline bool Parse(const String& str, unsigned int* out_value)
+    static inline bool Parse(const String& str, unsigned int* outValue)
     {
         unsigned int val = 0;
         const char* p = str.Data();
@@ -335,27 +320,27 @@ public:
             val = (val << 1) + (val << 3) + *(p++) - 48;
         }
 
-        *out_value = val;
+        *outValue = val;
 
         return true;
     }
 
-    static inline bool Parse(const String& str, float* out_value)
+    static inline bool Parse(const String& str, float* outValue)
     {
-        *out_value = std::strtof(str.Data(), nullptr);
+        *outValue = std::strtof(str.Data(), nullptr);
 
         return true;
     }
 
-    static inline bool Parse(const String& str, double* out_value)
+    static inline bool Parse(const String& str, double* outValue)
     {
-        *out_value = std::strtod(str.Data(), nullptr);
+        *outValue = std::strtod(str.Data(), nullptr);
 
         return true;
     }
 
     template <typename T>
-    static inline bool Parse(const String& str, T* out_value)
+    static inline bool Parse(const String& str, T* outValue)
     {
         std::istringstream ss(str.Data());
         T value;
@@ -365,15 +350,15 @@ public:
             return false;
         }
 
-        *out_value = value;
+        *outValue = value;
 
         return true;
     }
 
     template <typename T>
-    static inline T Parse(const String& str, T value_on_error = T {})
+    static inline T Parse(const String& str, T valueOnError = T {})
     {
-        T value = value_on_error;
+        T value = valueOnError;
 
         Parse(str, &value);
 

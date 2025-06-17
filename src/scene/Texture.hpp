@@ -3,9 +3,8 @@
 #ifndef HYPERION_TEXTURE_HPP
 #define HYPERION_TEXTURE_HPP
 
-#include <core/Base.hpp>
-
 #include <core/memory/UniquePtr.hpp>
+#include <core/memory/Pimpl.hpp>
 
 #include <core/memory/resource/Resource.hpp>
 
@@ -44,14 +43,14 @@ class HYP_API Texture final : public HypObject<Texture>
     HYP_OBJECT_BODY(Texture);
 
 public:
-    static const FixedArray<Pair<Vec3f, Vec3f>, 6> cubemap_directions;
+    static const FixedArray<Pair<Vec3f, Vec3f>, 6> cubemapDirections;
 
     Texture();
 
-    Texture(const TextureDesc& texture_desc);
-    Texture(const TextureData& texture_data);
+    Texture(const TextureDesc& textureDesc);
+    Texture(const TextureData& textureData);
 
-    Texture(const RC<StreamedTextureData>& streamed_texture_data);
+    Texture(const RC<StreamedTextureData>& streamedTextureData);
 
     Texture(const Texture& other) = delete;
     Texture& operator=(const Texture& other) = delete;
@@ -63,7 +62,7 @@ public:
 
     HYP_FORCE_INLINE RenderTexture& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     HYP_METHOD(Property = "Name", Serialize = true, Editor = true)
@@ -78,76 +77,74 @@ public:
         m_name = name;
     }
 
-    HYP_METHOD(Property = "StreamedTextureData")
     HYP_FORCE_INLINE const RC<StreamedTextureData>& GetStreamedTextureData() const
     {
-        return m_streamed_texture_data;
+        return m_streamedTextureData;
     }
 
     /*! \brief Set streamed data for the image. If the image has already been created, no updates will occur. */
-    HYP_METHOD(Property = "StreamedTextureData")
-    void SetStreamedTextureData(const RC<StreamedTextureData>& streamed_texture_data);
+    void SetStreamedTextureData(const RC<StreamedTextureData>& streamedTextureData);
 
     HYP_FORCE_INLINE const TextureDesc& GetTextureDesc() const
     {
-        return m_texture_desc;
+        return m_textureDesc;
     }
 
-    void SetTextureDesc(const TextureDesc& texture_desc);
+    void SetTextureDesc(const TextureDesc& textureDesc);
 
-    HYP_FORCE_INLINE ImageType GetType() const
+    HYP_FORCE_INLINE TextureType GetType() const
     {
-        return m_texture_desc.type;
+        return m_textureDesc.type;
     }
 
     HYP_FORCE_INLINE uint32 NumFaces() const
     {
-        return m_texture_desc.NumFaces();
+        return m_textureDesc.NumFaces();
     }
 
     HYP_FORCE_INLINE bool IsTextureCube() const
     {
-        return m_texture_desc.IsTextureCube();
+        return m_textureDesc.IsTextureCube();
     }
 
     HYP_FORCE_INLINE bool IsPanorama() const
     {
-        return m_texture_desc.IsPanorama();
+        return m_textureDesc.IsPanorama();
     }
 
     HYP_FORCE_INLINE const Vec3u& GetExtent() const
     {
-        return m_texture_desc.extent;
+        return m_textureDesc.extent;
     }
 
-    HYP_FORCE_INLINE InternalFormat GetFormat() const
+    HYP_FORCE_INLINE TextureFormat GetFormat() const
     {
-        return m_texture_desc.format;
+        return m_textureDesc.format;
     }
 
-    HYP_FORCE_INLINE HYP_DEPRECATED FilterMode GetFilterMode() const
+    HYP_FORCE_INLINE HYP_DEPRECATED TextureFilterMode GetFilterMode() const
     {
-        return m_texture_desc.filter_mode_min;
+        return m_textureDesc.filterModeMin;
     }
 
-    HYP_FORCE_INLINE FilterMode GetMinFilterMode() const
+    HYP_FORCE_INLINE TextureFilterMode GetMinFilterMode() const
     {
-        return m_texture_desc.filter_mode_min;
+        return m_textureDesc.filterModeMin;
     }
 
-    HYP_FORCE_INLINE FilterMode GetMagFilterMode() const
+    HYP_FORCE_INLINE TextureFilterMode GetMagFilterMode() const
     {
-        return m_texture_desc.filter_mode_mag;
+        return m_textureDesc.filterModeMag;
     }
 
     HYP_FORCE_INLINE bool HasMipmaps() const
     {
-        return m_texture_desc.HasMipmaps();
+        return m_textureDesc.HasMipmaps();
     }
 
-    HYP_FORCE_INLINE WrapMode GetWrapMode() const
+    HYP_FORCE_INLINE TextureWrapMode GetWrapMode() const
     {
-        return m_texture_desc.wrap_mode;
+        return m_textureDesc.wrapMode;
     }
 
     void GenerateMipmaps();
@@ -161,7 +158,7 @@ public:
 
     void Resize(const Vec3u& extent);
 
-    Vec4f Sample(Vec3f uvw, uint32 face_index);
+    Vec4f Sample(Vec3f uvw, uint32 faceIndex);
     Vec4f Sample2D(Vec2f uv);
     Vec4f SampleCube(Vec3f direction);
 
@@ -177,16 +174,16 @@ protected:
 
     Name m_name;
 
-    RenderTexture* m_render_resource;
-    ResourceHandle m_render_persistent;
+    RenderTexture* m_renderResource;
+    ResourceHandle m_renderPersistent;
 
-    TextureDesc m_texture_desc;
+    TextureDesc m_textureDesc;
 
-    // MUST BE BEFORE m_streamed_texture_data, needs to get constructed first to use as out parameter to construct StreamedTextureData.
-    mutable ResourceHandle m_streamed_texture_data_resource_handle;
-    RC<StreamedTextureData> m_streamed_texture_data;
+    // MUST BE BEFORE m_streamedTextureData, needs to get constructed first to use as out parameter to construct StreamedTextureData.
+    mutable ResourceHandle m_streamedTextureDataResourceHandle;
+    RC<StreamedTextureData> m_streamedTextureData;
 
-    Mutex m_readback_mutex;
+    Mutex m_readbackMutex;
 };
 
 } // namespace hyperion

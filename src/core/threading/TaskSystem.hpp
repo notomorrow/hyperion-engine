@@ -3,7 +3,6 @@
 #ifndef HYPERION_TASK_SYSTEM_HPP
 #define HYPERION_TASK_SYSTEM_HPP
 
-#include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
 #include <core/containers/Array.hpp>
 #include <core/containers/LinkedList.hpp>
@@ -56,7 +55,7 @@ using OnTaskBatchCompletedCallback = Proc<void()>;
 struct TaskBatch
 {
     TaskCompleteNotifier notifier;
-    uint32 num_enqueued = 0;
+    uint32 numEnqueued = 0;
 
     /*! \brief The priority / pool lane for which to place
      * all of the threads in this batch into
@@ -64,23 +63,31 @@ struct TaskBatch
     TaskThreadPool* pool = nullptr;
 
     /* Tasks must remain constant from creation of the TaskBatch to completion. */
-    Array<TaskExecutorInstance<void>> executors;
+    LinkedList<TaskExecutorInstance<void>> executors;
 
     /* TaskRefs to be set by the TaskSystem, holding task ids and pointers to the threads
      * each task has been scheduled to. */
-    Array<TaskRef> task_refs;
+    Array<TaskRef> taskRefs;
 
     /*! \An optional dependent batch to be ran after this one has been completed.
-     *   This TaskBatch does not own next_batch, and will not delete it.
+     *   This TaskBatch does not own nextBatch, and will not delete it.
      *  proper cleanup must be done by the user. */
-    TaskBatch* next_batch = nullptr;
+    TaskBatch* nextBatch = nullptr;
 
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
-    DataRaceDetector data_race_detector;
+    DataRaceDetector dataRaceDetector;
 #endif
 
-    /*! \brief Delegate that is called when the TaskBatch is complete (before next_batch has completed) */
+    /*! \brief Delegate that is called when the TaskBatch is complete (before nextBatch has completed) */
     Delegate<void> OnComplete;
+
+    TaskBatch() = default;
+
+    TaskBatch(const TaskBatch&) = delete;
+    TaskBatch& operator=(const TaskBatch&) = delete;
+
+    TaskBatch(TaskBatch&& other) noexcept = delete;
+    TaskBatch& operator=(TaskBatch&& other) noexcept = delete;
 
     virtual ~TaskBatch()
     {
@@ -89,13 +96,14 @@ struct TaskBatch
 
     /*! \brief Add a task to be ran with this batch
      *  \note Do not call this function after the TaskBatch has been enqueued (before it has been completed). */
-    HYP_FORCE_INLINE void AddTask(TaskExecutorInstance<void>&& executor)
+    template <class Function>
+    HYP_FORCE_INLINE void AddTask(Function&& fn)
     {
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
-        HYP_MT_CHECK_RW(data_race_detector);
+        HYP_MT_CHECK_RW(dataRaceDetector);
 #endif
 
-        executors.PushBack(std::move(executor));
+        executors.EmplaceBack(std::forward<Function>(fn));
     }
 
     /*! \brief Check if all tasks in the batch have been completed. */
@@ -105,11 +113,11 @@ struct TaskBatch
     HYP_API void AwaitCompletion();
 
     /*! \brief Execute each non-enqueued task in serial (not async).
-     *  \param execute_dependent_batches If true, the next_batch will also be executed. */
-    void ExecuteBlocking(bool execute_dependent_batches = false)
+     *  \param executeDependentBatches If true, the nextBatch will also be executed. */
+    void ExecuteBlocking(bool executeDependentBatches = false)
     {
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
-        HYP_MT_CHECK_RW(data_race_detector);
+        HYP_MT_CHECK_RW(dataRaceDetector);
 #endif
 
         for (auto& it : executors)
@@ -120,25 +128,25 @@ struct TaskBatch
 
         OnComplete();
 
-        if (execute_dependent_batches && next_batch != nullptr)
+        if (executeDependentBatches && nextBatch != nullptr)
         {
-            next_batch->ExecuteBlocking(execute_dependent_batches);
+            nextBatch->ExecuteBlocking(executeDependentBatches);
         }
     }
 
     void ResetState()
     {
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
-        HYP_MT_CHECK_RW(data_race_detector);
+        HYP_MT_CHECK_RW(dataRaceDetector);
 #endif
 
         AssertThrowMsg(IsCompleted(), "TaskBatch::ResetState() must be called after all tasks have been completed");
 
         notifier.Reset();
-        num_enqueued = 0;
+        numEnqueued = 0;
         executors.Clear();
-        task_refs.Clear();
-        next_batch = nullptr;
+        taskRefs.Clear();
+        nextBatch = nullptr;
 
         OnComplete.RemoveAllDetached();
     }
@@ -150,25 +158,25 @@ protected:
     TaskThreadPool();
     TaskThreadPool(Array<UniquePtr<TaskThread>>&& threads);
 
-    TaskThreadPool(ANSIStringView base_name, uint32 num_threads)
-        : TaskThreadPool(TypeWrapper<TaskThread>(), base_name, num_threads)
+    TaskThreadPool(ANSIStringView baseName, uint32 numThreads)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), baseName, numThreads)
     {
     }
 
     template <class TaskThreadType>
-    TaskThreadPool(TypeWrapper<TaskThreadType>, ANSIStringView base_name, uint32 num_threads)
+    TaskThreadPool(TypeWrapper<TaskThreadType>, ANSIStringView baseName, uint32 numThreads)
     {
         static_assert(std::is_base_of_v<TaskThread, TaskThreadType>, "TaskThreadType must be a subclass of TaskThread");
 
-        m_thread_mask = 0;
+        m_threadMask = 0;
 
-        m_threads.Reserve(num_threads);
+        m_threads.Reserve(numThreads);
 
-        for (uint32 thread_index = 0; thread_index < num_threads; thread_index++)
+        for (uint32 threadIndex = 0; threadIndex < numThreads; threadIndex++)
         {
-            UniquePtr<TaskThread>& thread = m_threads.PushBack(MakeUnique<TaskThreadType>(CreateTaskThreadID(base_name, thread_index)));
+            UniquePtr<TaskThread>& thread = m_threads.PushBack(MakeUnique<TaskThreadType>(CreateTaskThreadId(baseName, threadIndex)));
 
-            m_thread_mask |= thread->GetID().GetMask();
+            m_threadMask |= thread->Id().GetMask();
         }
     }
 
@@ -183,7 +191,7 @@ public:
 
     virtual void Start();
     virtual void Stop();
-    virtual void Stop(Array<TaskThread*>& out_task_threads);
+    virtual void Stop(Array<TaskThread*>& outTaskThreads);
 
     HYP_FORCE_INLINE uint32 NumThreads() const
     {
@@ -202,14 +210,14 @@ public:
 
     HYP_FORCE_INLINE ThreadMask GetThreadMask() const
     {
-        return m_thread_mask;
+        return m_threadMask;
     }
 
-    HYP_FORCE_INLINE TaskThread* GetTaskThread(ThreadID thread_id) const
+    HYP_FORCE_INLINE TaskThread* GetTaskThread(ThreadId threadId) const
     {
-        const auto it = m_threads.FindIf([thread_id](const UniquePtr<TaskThread>& task_thread)
+        const auto it = m_threads.FindIf([threadId](const UniquePtr<TaskThread>& taskThread)
             {
-                return task_thread->GetID() == thread_id;
+                return taskThread->Id() == threadId;
             });
 
         if (it != m_threads.End())
@@ -221,19 +229,19 @@ public:
     }
 
     template <class Function>
-    auto Enqueue(const StaticMessage& debug_name, Function&& fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
+    auto Enqueue(const StaticMessage& debugName, Function&& fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
-        TaskThread* task_thread = GetNextTaskThread();
+        TaskThread* taskThread = GetNextTaskThread();
 
-        return task_thread->GetScheduler().Enqueue(debug_name, std::forward<Function>(fn), flags);
+        return taskThread->GetScheduler().Enqueue(debugName, std::forward<Function>(fn), flags);
     }
 
     template <class Function>
     auto Enqueue(Function&& fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
-        TaskThread* task_thread = GetNextTaskThread();
+        TaskThread* taskThread = GetNextTaskThread();
 
-        return task_thread->GetScheduler().Enqueue(std::forward<Function>(fn), flags);
+        return taskThread->GetScheduler().Enqueue(std::forward<Function>(fn), flags);
     }
 
     TaskThread* GetNextTaskThread();
@@ -241,10 +249,10 @@ public:
 protected:
     AtomicVar<uint32> m_cycle { 0u };
     Array<UniquePtr<TaskThread>> m_threads;
-    ThreadMask m_thread_mask;
+    ThreadMask m_threadMask;
 
 private:
-    static ThreadID CreateTaskThreadID(ANSIStringView base_name, uint32 thread_index);
+    static ThreadId CreateTaskThreadId(ANSIStringView baseName, uint32 threadIndex);
 };
 
 class TaskSystem
@@ -270,23 +278,23 @@ public:
     HYP_API void Start();
     HYP_API void Stop();
 
-    HYP_FORCE_INLINE TaskThreadPool& GetPool(TaskThreadPoolName pool_name) const
+    HYP_FORCE_INLINE TaskThreadPool& GetPool(TaskThreadPoolName poolName) const
     {
-        return *m_pools[uint32(pool_name)];
+        return *m_pools[uint32(poolName)];
     }
 
-    HYP_FORCE_INLINE TaskThread* GetTaskThread(TaskThreadPoolName pool_name, ThreadID thread_id) const
+    HYP_FORCE_INLINE TaskThread* GetTaskThread(TaskThreadPoolName poolName, ThreadId threadId) const
     {
-        return GetPool(pool_name).GetTaskThread(thread_id);
+        return GetPool(poolName).GetTaskThread(threadId);
     }
 
-    HYP_FORCE_INLINE TaskThread* GetTaskThread(ThreadID thread_id) const
+    HYP_FORCE_INLINE TaskThread* GetTaskThread(ThreadId threadId) const
     {
         for (const UniquePtr<TaskThreadPool>& pool : m_pools)
         {
-            if (TaskThread* task_thread = pool->GetTaskThread(thread_id))
+            if (TaskThread* taskThread = pool->GetTaskThread(threadId))
             {
-                return task_thread;
+                return taskThread;
             }
         }
 
@@ -294,11 +302,11 @@ public:
     }
 
     template <class Function>
-    auto Enqueue(const StaticMessage& debug_name, Function&& fn, TaskThreadPool& pool, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
+    auto Enqueue(const StaticMessage& debugName, Function&& fn, TaskThreadPool& pool, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
         AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
-        return pool.Enqueue(debug_name, std::forward<Function>(fn), flags);
+        return pool.Enqueue(debugName, std::forward<Function>(fn), flags);
     }
 
     template <class Function>
@@ -310,28 +318,28 @@ public:
     }
 
     template <class Function>
-    auto Enqueue(const StaticMessage& debug_name, Function&& fn, TaskThreadPoolName pool_name = THREAD_POOL_GENERIC, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
+    auto Enqueue(const StaticMessage& debugName, Function&& fn, TaskThreadPoolName poolName = THREAD_POOL_GENERIC, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
         AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
-        TaskThreadPool& pool = GetPool(pool_name);
+        TaskThreadPool& pool = GetPool(poolName);
 
-        return pool.Enqueue(debug_name, std::forward<Function>(fn), flags);
+        return pool.Enqueue(debugName, std::forward<Function>(fn), flags);
     }
 
     template <class Function>
-    auto Enqueue(Function&& fn, TaskThreadPoolName pool_name = THREAD_POOL_GENERIC, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
+    auto Enqueue(Function&& fn, TaskThreadPoolName poolName = THREAD_POOL_GENERIC, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
         AssertThrowMsg(IsRunning(), "TaskSystem::Start() must be called before enqueuing tasks");
 
-        TaskThreadPool& pool = GetPool(pool_name);
+        TaskThreadPool& pool = GetPool(poolName);
 
         return pool.Enqueue(std::forward<Function>(fn), flags);
     }
 
     /*! \brief Enqueue a batch of multiple Tasks. Each task will be enqueued to run in parallel.
      *  You will need to call AwaitCompletion() before the underlying TaskBatch is destroyed.
-     *  If enqueuing a batch with dependent tasks via \ref{TaskBatch::next_batch}, ensure all tasks are added to the next batch (and any proceding next batches in the chain)
+     *  If enqueuing a batch with dependent tasks via \ref{TaskBatch::nextBatch}, ensure all tasks are added to the next batch (and any proceding next batches in the chain)
      *  before calling this.
      *  \param batch Pointer to the TaskBatch to enqueue
      *  \param callback Optional callback to be called when all tasks in the batch have finished executing.
@@ -346,62 +354,62 @@ public:
      */
     HYP_API Array<bool> DequeueBatch(TaskBatch* batch);
 
-    /*! \brief Creates a TaskBatch which will call the lambda for \ref{num_items} times in parallel.
+    /*! \brief Creates a TaskBatch which will call the lambda for \ref{numItems} times in parallel.
      *  The tasks will be split evenly into groups, based on the number of threads in the pool for the default priority.
         The lambda will be called with (item, index) for each item. */
     template <class CallbackFunction>
-    HYP_FORCE_INLINE void ParallelForEach(uint32 num_items, CallbackFunction&& cb)
+    HYP_FORCE_INLINE void ParallelForEach(uint32 numItems, CallbackFunction&& cb)
     {
         TaskThreadPool& pool = GetPool(THREAD_POOL_GENERIC);
 
         ParallelForEach(
             pool,
             pool.GetProcessorAffinity(),
-            num_items,
+            numItems,
             std::forward<CallbackFunction>(cb));
     }
 
-    /*! \brief Creates a TaskBatch which will call the lambda for \ref{num_items} times in parallel.
+    /*! \brief Creates a TaskBatch which will call the lambda for \ref{numItems} times in parallel.
      *  The tasks will be split evenly into groups, based on the number of threads in the pool for the given priority.
         The lambda will be called with (item, index) for each item. */
     template <class CallbackFunction>
-    HYP_FORCE_INLINE void ParallelForEach(TaskThreadPool& pool, uint32 num_items, CallbackFunction&& cb)
+    HYP_FORCE_INLINE void ParallelForEach(TaskThreadPool& pool, uint32 numItems, CallbackFunction&& cb)
     {
         ParallelForEach(
             pool,
             pool.GetProcessorAffinity(),
-            num_items,
+            numItems,
             std::forward<CallbackFunction>(cb));
     }
 
-    /*! \brief Creates a TaskBatch which will call the lambda for \ref{num_items} times in parallel.
-     *  The tasks will be split evenly into \ref{num_batches} batches.
+    /*! \brief Creates a TaskBatch which will call the lambda for \ref{numItems} times in parallel.
+     *  The tasks will be split evenly into \ref{numBatches} batches.
         The lambda will be called with (item, index) for each item. */
     template <class CallbackFunction>
-    void ParallelForEach(TaskThreadPool& pool, uint32 num_batches, uint32 num_items, CallbackFunction&& cb)
+    void ParallelForEach(TaskThreadPool& pool, uint32 numBatches, uint32 numItems, CallbackFunction&& cb)
     {
         TaskBatch batch;
         batch.pool = &pool;
 
-        if (num_items == 0)
+        if (numItems == 0)
         {
             return;
         }
 
-        num_batches = MathUtil::Clamp(num_batches, 1u, num_items);
+        numBatches = MathUtil::Clamp(numBatches, 1u, numItems);
 
-        const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
+        const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
-        for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+        for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
         {
-            batch.AddTask([batch_index, items_per_batch, num_items, &cb](...)
+            batch.AddTask([batchIndex, itemsPerBatch, numItems, &cb](...)
                 {
-                    const uint32 offset_index = batch_index * items_per_batch;
-                    const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+                    const uint32 offsetIndex = batchIndex * itemsPerBatch;
+                    const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-                    for (uint32 i = offset_index; i < max_index; i++)
+                    for (uint32 i = offsetIndex; i < maxIndex; i++)
                     {
-                        cb(i, batch_index);
+                        cb(i, batchIndex);
                     }
                 });
         }
@@ -433,33 +441,33 @@ public:
     }
 
     template <class Container, class CallbackFunction>
-    void ParallelForEach(TaskThreadPool& pool, uint32 num_batches, Container&& items, CallbackFunction&& cb)
+    void ParallelForEach(TaskThreadPool& pool, uint32 numBatches, Container&& items, CallbackFunction&& cb)
     {
         TaskBatch batch;
         batch.pool = &pool;
-        const uint32 num_items = uint32(items.Size());
+        const uint32 numItems = uint32(items.Size());
 
-        if (num_items == 0)
+        if (numItems == 0)
         {
             return;
         }
 
-        num_batches = MathUtil::Clamp(num_batches, 1u, num_items);
+        numBatches = MathUtil::Clamp(numBatches, 1u, numItems);
 
-        const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
+        const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
-        auto* data_ptr = items.Data();
+        auto* dataPtr = items.Data();
 
-        for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+        for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
         {
-            batch.AddTask([data_ptr, batch_index, items_per_batch, num_items, &cb](...)
+            batch.AddTask([dataPtr, batchIndex, itemsPerBatch, numItems, &cb](...)
                 {
-                    const uint32 offset_index = batch_index * items_per_batch;
-                    const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+                    const uint32 offsetIndex = batchIndex * itemsPerBatch;
+                    const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-                    for (uint32 i = offset_index; i < max_index; i++)
+                    for (uint32 i = offsetIndex; i < maxIndex; i++)
                     {
-                        cb(*(data_ptr + i), i, batch_index);
+                        cb(*(dataPtr + i), i, batchIndex);
                     }
                 });
         }
@@ -469,98 +477,98 @@ public:
     }
 
     template <class CallbackFunction>
-    void ParallelForEach_Batch(TaskBatch& batch, uint32 num_batches, uint32 num_items, CallbackFunction&& cb)
+    void ParallelForEach_Batch(TaskBatch& batch, uint32 numBatches, uint32 numItems, CallbackFunction&& cb)
     {
-        if (num_items == 0)
+        if (numItems == 0)
         {
             return;
         }
 
-        auto proc_ref = ProcRef(std::forward<CallbackFunction>(cb));
+        auto procRef = ProcRef(std::forward<CallbackFunction>(cb));
 
-        num_batches = MathUtil::Clamp(num_batches, 1u, num_items);
+        numBatches = MathUtil::Clamp(numBatches, 1u, numItems);
 
-        const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
+        const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
-        for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+        for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
         {
-            batch.AddTask([batch_index, items_per_batch, num_items, p = proc_ref](...)
+            batch.AddTask([batchIndex, itemsPerBatch, numItems, p = procRef](...)
                 {
-                    const uint32 offset_index = batch_index * items_per_batch;
-                    const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+                    const uint32 offsetIndex = batchIndex * itemsPerBatch;
+                    const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-                    for (uint32 i = offset_index; i < max_index; i++)
+                    for (uint32 i = offsetIndex; i < maxIndex; i++)
                     {
-                        p(i, batch_index);
+                        p(i, batchIndex);
                     }
                 });
         }
     }
 
     template <class Container, class CallbackFunction>
-    void ParallelForEach_Batch(TaskBatch& batch, uint32 num_batches, Container&& items, CallbackFunction&& cb)
+    void ParallelForEach_Batch(TaskBatch& batch, uint32 numBatches, Container&& items, CallbackFunction&& cb)
     {
-        const uint32 num_items = uint32(items.Size());
+        const uint32 numItems = uint32(items.Size());
 
-        if (num_items == 0)
+        if (numItems == 0)
         {
             return;
         }
 
-        auto proc_ref = ProcRef(std::forward<CallbackFunction>(cb));
+        auto procRef = ProcRef(std::forward<CallbackFunction>(cb));
 
-        num_batches = MathUtil::Clamp(num_batches, 1u, num_items);
+        numBatches = MathUtil::Clamp(numBatches, 1u, numItems);
 
-        const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
+        const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
-        auto* data_ptr = items.Data();
+        auto* dataPtr = items.Data();
 
-        for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+        for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
         {
-            batch.AddTask([data_ptr, batch_index, items_per_batch, num_items, p = proc_ref](...)
+            batch.AddTask([dataPtr, batchIndex, itemsPerBatch, numItems, p = procRef](...)
                 {
-                    const uint32 offset_index = batch_index * items_per_batch;
-                    const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+                    const uint32 offsetIndex = batchIndex * itemsPerBatch;
+                    const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-                    for (uint32 i = offset_index; i < max_index; i++)
+                    for (uint32 i = offsetIndex; i < maxIndex; i++)
                     {
-                        p(*(data_ptr + i), i, batch_index);
+                        p(*(dataPtr + i), i, batchIndex);
                     }
                 });
         }
     }
 
     template <class CallbackFunction>
-    HYP_NODISCARD Array<Task<void>> ParallelForEach_Async(TaskThreadPool& pool, uint32 num_batches, uint32 num_items, CallbackFunction&& cb)
+    HYP_NODISCARD Array<Task<void>> ParallelForEach_Async(TaskThreadPool& pool, uint32 numBatches, uint32 numItems, CallbackFunction&& cb)
     {
         Array<Task<void>> tasks;
 
-        if (num_items == 0)
+        if (numItems == 0)
         {
             return tasks;
         }
 
-        auto proc_ref = ProcRef(std::forward<CallbackFunction>(cb));
+        auto procRef = ProcRef(std::forward<CallbackFunction>(cb));
 
-        num_batches = MathUtil::Clamp(num_batches, 1u, num_items);
+        numBatches = MathUtil::Clamp(numBatches, 1u, numItems);
 
-        const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
+        const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
-        for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+        for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
         {
-            const uint32 offset_index = batch_index * items_per_batch;
-            const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+            const uint32 offsetIndex = batchIndex * itemsPerBatch;
+            const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-            if (offset_index >= max_index)
+            if (offsetIndex >= maxIndex)
             {
                 continue;
             }
 
-            tasks.PushBack(Enqueue([batch_index, offset_index, max_index, p = proc_ref]() mutable -> void
+            tasks.PushBack(Enqueue([batchIndex, offsetIndex, maxIndex, p = procRef]() mutable -> void
                 {
-                    for (uint32 i = offset_index; i < max_index; i++)
+                    for (uint32 i = offsetIndex; i < maxIndex; i++)
                     {
-                        p(i, batch_index);
+                        p(i, batchIndex);
                     }
                 },
                 pool, TaskEnqueueFlags::NONE));
@@ -570,59 +578,59 @@ public:
     }
 
     template <class CallbackFunction>
-    HYP_NODISCARD HYP_FORCE_INLINE Array<Task<void>> ParallelForEach_Async(TaskThreadPool& pool, uint32 num_items, CallbackFunction&& cb)
+    HYP_NODISCARD HYP_FORCE_INLINE Array<Task<void>> ParallelForEach_Async(TaskThreadPool& pool, uint32 numItems, CallbackFunction&& cb)
     {
         return ParallelForEach_Async(
             pool,
             pool.NumThreads(),
-            num_items,
+            numItems,
             std::forward<CallbackFunction>(cb));
     }
 
     template <class CallbackFunction>
-    HYP_NODISCARD HYP_FORCE_INLINE Array<Task<void>> ParallelForEach_Async(uint32 num_items, CallbackFunction&& cb)
+    HYP_NODISCARD HYP_FORCE_INLINE Array<Task<void>> ParallelForEach_Async(uint32 numItems, CallbackFunction&& cb)
     {
         TaskThreadPool& pool = GetPool(THREAD_POOL_GENERIC);
 
         return ParallelForEach_Async(
             pool,
             pool.NumThreads(),
-            num_items,
+            numItems,
             std::forward<CallbackFunction>(cb));
     }
 
     template <class Container, class CallbackFunction, typename = std::enable_if_t<std::is_class_v<NormalizedType<Container>>>>
-    HYP_NODISCARD Array<Task<void>> ParallelForEach_Async(TaskThreadPool& pool, uint32 num_batches, Container&& items, CallbackFunction&& cb)
+    HYP_NODISCARD Array<Task<void>> ParallelForEach_Async(TaskThreadPool& pool, uint32 numBatches, Container&& items, CallbackFunction&& cb)
     {
-        // static_assert(Container::is_contiguous, "Container must be contiguous to use ParallelForEach");
+        // static_assert(Container::isContiguous, "Container must be contiguous to use ParallelForEach");
 
         Array<Task<void>> tasks;
 
-        const uint32 num_items = uint32(items.Size());
+        const uint32 numItems = uint32(items.Size());
 
-        if (num_items == 0)
+        if (numItems == 0)
         {
             return tasks;
         }
 
-        auto proc_ref = ProcRef(std::forward<CallbackFunction>(cb));
+        auto procRef = ProcRef(std::forward<CallbackFunction>(cb));
 
-        num_batches = MathUtil::Clamp(num_batches, 1u, num_items);
+        numBatches = MathUtil::Clamp(numBatches, 1u, numItems);
 
-        const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
+        const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
-        auto* data_ptr = items.Data();
+        auto* dataPtr = items.Data();
 
-        for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+        for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
         {
-            tasks.PushBack(Enqueue([data_ptr, batch_index, items_per_batch, num_items, p = proc_ref]() mutable -> void
+            tasks.PushBack(Enqueue([dataPtr, batchIndex, itemsPerBatch, numItems, p = procRef]() mutable -> void
                 {
-                    const uint32 offset_index = batch_index * items_per_batch;
-                    const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+                    const uint32 offsetIndex = batchIndex * itemsPerBatch;
+                    const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-                    for (uint32 i = offset_index; i < max_index; i++)
+                    for (uint32 i = offsetIndex; i < maxIndex; i++)
                     {
-                        p(*(data_ptr + i), i, batch_index);
+                        p(*(dataPtr + i), i, batchIndex);
                     }
                 },
                 pool, TaskEnqueueFlags::NONE));
@@ -659,21 +667,21 @@ public:
             std::forward<CallbackFunction>(cb));
     }
 
-    HYP_FORCE_INLINE bool CancelTask(const TaskRef& task_ref)
+    HYP_FORCE_INLINE bool CancelTask(const TaskRef& taskRef)
     {
-        if (!task_ref.IsValid())
+        if (!taskRef.IsValid())
         {
             return false;
         }
 
-        return task_ref.assigned_scheduler->Dequeue(task_ref.id);
+        return taskRef.assignedScheduler->Dequeue(taskRef.id);
     }
 
 private:
     HYP_API TaskThread* GetNextTaskThread(TaskThreadPool& pool);
 
     Array<UniquePtr<TaskThreadPool>> m_pools;
-    Array<TaskBatch*> m_running_batches;
+    Array<TaskBatch*> m_runningBatches;
     AtomicVar<bool> m_running;
 };
 

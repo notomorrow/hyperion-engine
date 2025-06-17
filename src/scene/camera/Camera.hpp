@@ -3,7 +3,6 @@
 #ifndef HYPERION_CAMERA_HPP
 #define HYPERION_CAMERA_HPP
 
-#include <core/Base.hpp>
 #include <core/Handle.hpp>
 
 #include <core/containers/Queue.hpp>
@@ -76,23 +75,23 @@ struct CameraCommand
     {
         struct
         { // NOLINT(clang-diagnostic-microsoft-anon-tag)
-            int mouse_x = 0,
-                mouse_y = 0;
+            int mouseX = 0,
+                mouseY = 0;
             float mx = 0.0f,
                   my = 0.0f; // in range -0.5f, 0.5f
-        } mag_data;
+        } magData;
 
         struct
         { // NOLINT(clang-diagnostic-microsoft-anon-tag)
-            int wheel_x = 0,
-                wheel_y = 0;
-        } scroll_data;
+            int wheelX = 0,
+                wheelY = 0;
+        } scrollData;
 
         struct
         { // NOLINT(clang-diagnostic-microsoft-anon-tag)
-            MovementType movement_type = CAMERA_MOVEMENT_NONE;
+            MovementType movementType = CAMERA_MOVEMENT_NONE;
             float amount = 1.0f;
-        } movement_data;
+        } movementData;
     };
 };
 
@@ -106,17 +105,17 @@ class HYP_API CameraController : public HypObject<CameraController>
     HYP_OBJECT_BODY(CameraController);
 
 public:
-    CameraController(CameraProjectionMode projection_mode);
+    CameraController(CameraProjectionMode projectionMode);
     virtual ~CameraController() = default;
 
     HYP_METHOD(Property = "InputHandler")
     HYP_FORCE_INLINE const Handle<InputHandlerBase>& GetInputHandler() const
     {
-        return m_input_handler;
+        return m_inputHandler;
     }
 
     HYP_METHOD(Property = "InputHandler")
-    void SetInputHandler(const Handle<InputHandlerBase>& input_handler);
+    void SetInputHandler(const Handle<InputHandlerBase>& inputHandler);
 
     HYP_METHOD(Property = "Camera")
     Camera* GetCamera() const
@@ -127,7 +126,7 @@ public:
     HYP_METHOD(Property = "ProjectionMode")
     CameraProjectionMode GetProjectionMode() const
     {
-        return m_projection_mode;
+        return m_projectionMode;
     }
 
     HYP_METHOD()
@@ -139,7 +138,7 @@ public:
     HYP_METHOD()
     bool IsMouseLockRequested() const
     {
-        return m_mouse_lock_requested;
+        return m_mouseLockRequested;
     }
 
     HYP_METHOD()
@@ -175,25 +174,25 @@ protected:
     virtual void OnActivated();
     virtual void OnDeactivated();
 
-    virtual void RespondToCommand(const CameraCommand& command, GameCounter::TickUnit dt)
+    virtual void RespondToCommand(const CameraCommand& command, float dt)
     {
     }
 
-    void UpdateCommandQueue(GameCounter::TickUnit dt);
+    void UpdateCommandQueue(float dt);
 
-    void SetIsMouseLockRequested(bool mouse_lock_requested);
+    void SetIsMouseLockRequested(bool mouseLockRequested);
 
     Camera* m_camera;
 
-    Handle<InputHandlerBase> m_input_handler;
+    Handle<InputHandlerBase> m_inputHandler;
 
-    CameraProjectionMode m_projection_mode;
+    CameraProjectionMode m_projectionMode;
 
-    std::mutex m_command_queue_mutex;
-    std::atomic_uint m_command_queue_count;
-    Queue<CameraCommand> m_command_queue;
+    std::mutex m_commandQueueMutex;
+    std::atomic_uint m_commandQueueCount;
+    Queue<CameraCommand> m_commandQueue;
 
-    bool m_mouse_lock_requested;
+    bool m_mouseLockRequested;
 
 private:
     void OnAdded(Camera* camera);
@@ -266,47 +265,47 @@ public:
     HYP_METHOD(Property = "MatchWindowSizeRatio", Serialize = true, Editor = true)
     HYP_FORCE_INLINE float GetMatchWindowSizeRatio() const
     {
-        return m_match_window_size_ratio;
+        return m_matchWindowSizeRatio;
     }
 
     HYP_METHOD(Property = "MatchWindowSizeRatio", Serialize = true, Editor = true)
-    HYP_FORCE_INLINE void SetMatchWindowSizeRatio(float match_window_size_ratio)
+    HYP_FORCE_INLINE void SetMatchWindowSizeRatio(float matchWindowSizeRatio)
     {
-        m_match_window_size_ratio = match_window_size_ratio;
+        m_matchWindowSizeRatio = matchWindowSizeRatio;
     }
 
     HYP_FORCE_INLINE RenderCamera& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     HYP_METHOD(Property = "CameraControllers", Serialize = true)
     HYP_FORCE_INLINE const Array<Handle<CameraController>>& GetCameraControllers() const
     {
-        return m_camera_controllers;
+        return m_cameraControllers;
     }
 
     /*! \internal For serialization only. */
     HYP_METHOD(Property = "CameraControllers", Serialize = true)
-    void SetCameraControllers(const Array<Handle<CameraController>>& camera_controllers);
+    void SetCameraControllers(const Array<Handle<CameraController>>& cameraControllers);
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<CameraController>& GetCameraController() const
     {
-        return m_camera_controllers.Back();
+        return m_cameraControllers.Back();
     }
 
     HYP_METHOD()
     HYP_FORCE_INLINE bool HasActiveCameraController() const
     {
-        return m_camera_controllers.Size() > 1;
+        return m_cameraControllers.Size() > 1;
     }
 
     HYP_METHOD()
-    void AddCameraController(const Handle<CameraController>& camera_controller);
+    void AddCameraController(const Handle<CameraController>& cameraController);
 
     HYP_METHOD()
-    bool RemoveCameraController(const Handle<CameraController>& camera_controller);
+    bool RemoveCameraController(const Handle<CameraController>& cameraController);
 
     void SetToPerspectiveProjection(
         float fov, float _near, float _far)
@@ -315,7 +314,7 @@ public:
         m_near = _near;
         m_far = _far;
 
-        m_proj_mat = Matrix4::Perspective(
+        m_projMat = Matrix4::Perspective(
             m_fov,
             m_width, m_height,
             m_near, m_far);
@@ -333,7 +332,7 @@ public:
         m_near = _near;
         m_far = _far;
 
-        m_proj_mat = Matrix4::Orthographic(
+        m_projMat = Matrix4::Orthographic(
             m_left, m_right,
             m_bottom, m_top,
             m_near, m_far);
@@ -522,7 +521,7 @@ public:
 
     HYP_FORCE_INLINE const Handle<CameraStreamingVolume>& GetStreamingVolume() const
     {
-        return m_streaming_volume;
+        return m_streamingVolume;
     }
 
     HYP_METHOD(Property = "Frustum", Serialize = true, Editor = true)
@@ -540,34 +539,34 @@ public:
     HYP_METHOD(Property = "ViewMatrix", Serialize = true, Editor = true)
     HYP_FORCE_INLINE const Matrix4& GetViewMatrix() const
     {
-        return m_view_mat;
+        return m_viewMat;
     }
 
     HYP_METHOD(Property = "ViewMatrix", Serialize = true, Editor = true)
-    void SetViewMatrix(const Matrix4& view_mat);
+    void SetViewMatrix(const Matrix4& viewMat);
 
     HYP_METHOD(Property = "ViewMatrix", Serialize = true, Editor = true)
     HYP_FORCE_INLINE const Matrix4& GetProjectionMatrix() const
     {
-        return m_proj_mat;
+        return m_projMat;
     }
 
     HYP_METHOD(Property = "ViewMatrix", Serialize = true, Editor = true)
-    void SetProjectionMatrix(const Matrix4& proj_mat);
+    void SetProjectionMatrix(const Matrix4& projMat);
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Matrix4& GetViewProjectionMatrix() const
     {
-        return m_view_proj_mat;
+        return m_viewProjMat;
     }
 
     HYP_METHOD()
-    void SetViewProjectionMatrix(const Matrix4& view_mat, const Matrix4& proj_mat);
+    void SetViewProjectionMatrix(const Matrix4& viewMat, const Matrix4& projMat);
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Matrix4& GetPreviousViewMatrix() const
     {
-        return m_previous_view_matrix;
+        return m_previousViewMatrix;
     }
 
     /*! \brief Transform a 2D vector of x,y ranging from [0, 1] into ndc coordinates */
@@ -597,7 +596,7 @@ public:
     HYP_METHOD()
     Vec2f GetPixelSize() const;
 
-    void Update(GameCounter::TickUnit dt);
+    void Update(float dt);
     void UpdateMatrices();
 
 protected:
@@ -611,12 +610,12 @@ protected:
 
     EnumFlags<CameraFlags> m_flags;
 
-    float m_match_window_size_ratio;
+    float m_matchWindowSizeRatio;
 
-    Array<Handle<CameraController>> m_camera_controllers;
+    Array<Handle<CameraController>> m_cameraControllers;
 
-    Vec3f m_translation, m_next_translation, m_direction, m_up;
-    Matrix4 m_view_mat, m_proj_mat;
+    Vec3f m_translation, m_nextTranslation, m_direction, m_up;
+    Matrix4 m_viewMat, m_projMat;
     Frustum m_frustum;
 
     int m_width, m_height;
@@ -631,14 +630,14 @@ protected:
 private:
     void UpdateMouseLocked();
 
-    Matrix4 m_view_proj_mat;
-    Matrix4 m_previous_view_matrix;
+    Matrix4 m_viewProjMat;
+    Matrix4 m_previousViewMatrix;
 
-    RenderCamera* m_render_resource;
+    RenderCamera* m_renderResource;
 
-    InputMouseLockScope m_mouse_lock_scope;
+    InputMouseLockScope m_mouseLockScope;
 
-    Handle<CameraStreamingVolume> m_streaming_volume;
+    Handle<CameraStreamingVolume> m_streamingVolume;
 };
 
 } // namespace hyperion

@@ -18,30 +18,30 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Streaming);
 
-StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData&& mesh_data, ResourceHandle& out_resource_handle)
-    : StreamedDataBase(initial_state, out_resource_handle),
-      m_streamed_data(nullptr),
-      m_num_vertices(mesh_data.vertices.Size()),
-      m_num_indices(mesh_data.indices.Size())
+StreamedMeshData::StreamedMeshData(StreamedDataState initialState, MeshData&& meshData, ResourceHandle& outResourceHandle)
+    : StreamedDataBase(initialState, outResourceHandle),
+      m_streamedData(nullptr),
+      m_numVertices(meshData.vertices.Size()),
+      m_numIndices(meshData.indices.Size())
 {
-    switch (initial_state)
+    switch (initialState)
     {
     case StreamedDataState::NONE:
-        m_streamed_data = MakeRefCountedPtr<NullStreamedData>();
+        m_streamedData = MakeRefCountedPtr<NullStreamedData>();
 
         break;
     case StreamedDataState::LOADED: // fallthrough
     case StreamedDataState::UNPAGED:
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        m_mesh_data.Set(std::move(mesh_data));
+        m_meshData.Set(std::move(meshData));
 
-        m_streamed_data = MakeRefCountedPtr<MemoryStreamedData>(m_mesh_data->GetHashCode(), [this](HashCode hc, ByteBuffer& out) -> bool
+        m_streamedData = MakeRefCountedPtr<MemoryStreamedData>(m_meshData->GetHashCode(), [this](HashCode hc, ByteBuffer& out) -> bool
             {
-                HYP_MT_CHECK_READ(m_data_race_detector);
+                HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-                if (!m_mesh_data.HasValue())
+                if (!m_meshData.HasValue())
                 {
                     HYP_LOG(Streaming, Error, "StreamedMeshData: Mesh data is not set when attempting to load from memory!");
 
@@ -52,7 +52,7 @@ StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData&& m
 
                 FBOMWriter serializer { FBOMWriterConfig {} };
 
-                if (FBOMResult err = serializer.Append(*m_mesh_data))
+                if (FBOMResult err = serializer.Append(*m_meshData))
                 {
                     HYP_LOG(Streaming, Error, "Failed to write streamed data: {}", err.message);
 
@@ -80,75 +80,75 @@ StreamedMeshData::StreamedMeshData(StreamedDataState initial_state, MeshData&& m
 
 StreamedMeshData::StreamedMeshData()
     : StreamedDataBase(),
-      m_streamed_data(MakeRefCountedPtr<NullStreamedData>()),
-      m_num_vertices(0),
-      m_num_indices(0)
+      m_streamedData(MakeRefCountedPtr<NullStreamedData>()),
+      m_numVertices(0),
+      m_numIndices(0)
 {
 }
 
-StreamedMeshData::StreamedMeshData(const MeshData& mesh_data, ResourceHandle& out_resource_handle)
-    : StreamedMeshData(StreamedDataState::LOADED, MeshData(mesh_data), out_resource_handle)
+StreamedMeshData::StreamedMeshData(const MeshData& meshData, ResourceHandle& outResourceHandle)
+    : StreamedMeshData(StreamedDataState::LOADED, MeshData(meshData), outResourceHandle)
 {
 }
 
-StreamedMeshData::StreamedMeshData(MeshData&& mesh_data, ResourceHandle& out_resource_handle)
-    : StreamedMeshData(StreamedDataState::LOADED, std::move(mesh_data), out_resource_handle)
+StreamedMeshData::StreamedMeshData(MeshData&& meshData, ResourceHandle& outResourceHandle)
+    : StreamedMeshData(StreamedDataState::LOADED, std::move(meshData), outResourceHandle)
 {
 }
 
 StreamedMeshData::~StreamedMeshData()
 {
-    HYP_MT_CHECK_RW(m_data_race_detector);
+    HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    if (m_streamed_data != nullptr)
+    if (m_streamedData != nullptr)
     {
-        m_streamed_data->WaitForFinalization();
-        m_streamed_data.Reset();
+        m_streamedData->WaitForFinalization();
+        m_streamedData.Reset();
     }
 }
 
 bool StreamedMeshData::IsInMemory_Internal() const
 {
-    HYP_MT_CHECK_READ(m_data_race_detector);
+    HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-    return m_mesh_data.HasValue();
+    return m_meshData.HasValue();
 }
 
 void StreamedMeshData::Unpage_Internal()
 {
-    HYP_MT_CHECK_RW(m_data_race_detector);
+    HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    if (m_streamed_data)
+    if (m_streamedData)
     {
-        m_streamed_data->Unpage();
+        m_streamedData->Unpage();
     }
 
-    m_mesh_data.Unset();
+    m_meshData.Unset();
 }
 
 void StreamedMeshData::Load_Internal() const
 {
-    HYP_MT_CHECK_RW(m_data_race_detector);
+    HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    AssertThrow(m_streamed_data != nullptr);
-    m_streamed_data->Load();
+    AssertThrow(m_streamedData != nullptr);
+    m_streamedData->Load();
 
-    if (!m_mesh_data.HasValue())
+    if (!m_meshData.HasValue())
     {
-        LoadMeshData(m_streamed_data->GetByteBuffer());
+        LoadMeshData(m_streamedData->GetByteBuffer());
     }
 }
 
-void StreamedMeshData::LoadMeshData(const ByteBuffer& byte_buffer) const
+void StreamedMeshData::LoadMeshData(const ByteBuffer& byteBuffer) const
 {
-    HYP_MT_CHECK_RW(m_data_race_detector);
+    HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    AssertThrow(byte_buffer.Size() >= 3);
-    AssertThrow(byte_buffer.Data()[0] == 'H');
-    AssertThrow(byte_buffer.Data()[1] == 'Y');
-    AssertThrow(byte_buffer.Data()[2] == 'P');
+    AssertThrow(byteBuffer.Size() >= 3);
+    AssertThrow(byteBuffer.Data()[0] == 'H');
+    AssertThrow(byteBuffer.Data()[1] == 'Y');
+    AssertThrow(byteBuffer.Data()[2] == 'P');
 
-    MemoryBufferedReaderSource source { byte_buffer.ToByteView() };
+    MemoryBufferedReaderSource source { byteBuffer.ToByteView() };
     BufferedReader reader { &source };
 
     if (!reader.IsOpen())
@@ -169,19 +169,19 @@ void StreamedMeshData::LoadMeshData(const ByteBuffer& byte_buffer) const
         return;
     }
 
-    m_mesh_data = value.Get<MeshData>();
+    m_meshData = value.Get<MeshData>();
 
-    HYP_LOG(Streaming, Debug, "StreamedMeshData: Loaded mesh data with {} vertices and {} indices on thread {}", m_mesh_data->vertices.Size(), m_mesh_data->indices.Size(),
-        ThreadID::Current().GetName());
+    HYP_LOG(Streaming, Debug, "StreamedMeshData: Loaded mesh data with {} vertices and {} indices on thread {}", m_meshData->vertices.Size(), m_meshData->indices.Size(),
+        ThreadId::Current().GetName());
 
-    if (m_mesh_data->vertices.Size() != m_num_vertices)
+    if (m_meshData->vertices.Size() != m_numVertices)
     {
-        HYP_LOG(Streaming, Warning, "StreamedMeshData: Vertex count mismatch! Expected {} vertices, but loaded data has {} vertices", m_num_vertices, m_mesh_data->vertices.Size());
+        HYP_LOG(Streaming, Warning, "StreamedMeshData: Vertex count mismatch! Expected {} vertices, but loaded data has {} vertices", m_numVertices, m_meshData->vertices.Size());
     }
 
-    if (m_mesh_data->indices.Size() != m_num_indices)
+    if (m_meshData->indices.Size() != m_numIndices)
     {
-        HYP_LOG(Streaming, Warning, "StreamedMeshData: Index count mismatch! Expected {} indices, but loaded data has {} indices", m_num_indices, m_mesh_data->indices.Size());
+        HYP_LOG(Streaming, Warning, "StreamedMeshData: Index count mismatch! Expected {} indices, but loaded data has {} indices", m_numIndices, m_meshData->indices.Size());
     }
 }
 
@@ -190,23 +190,23 @@ const MeshData& StreamedMeshData::GetMeshData() const
     // wait for loading tasks to complete on another thread
     WaitForTaskCompletion();
 
-    if (m_streamed_data)
+    if (m_streamedData)
     {
-        m_streamed_data->WaitForTaskCompletion();
+        m_streamedData->WaitForTaskCompletion();
     }
 
-    HYP_MT_CHECK_READ(m_data_race_detector);
+    HYP_MT_CHECK_READ(m_dataRaceDetector);
 
     AssertDebugMsg(ResourceBase::IsInitialized(), "StreamedMeshData: Cannot get mesh data for uninitialized resource!");
 
-    if (!m_mesh_data.HasValue())
+    if (!m_meshData.HasValue())
     {
-        static const MeshData default_value {};
+        static const MeshData defaultValue {};
 
-        return default_value;
+        return defaultValue;
     }
 
-    return m_mesh_data.Get();
+    return m_meshData.Get();
 }
 
 } // namespace hyperion

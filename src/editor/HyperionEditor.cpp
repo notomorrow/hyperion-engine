@@ -16,17 +16,16 @@
 #include <scene/World.hpp>
 #include <scene/Light.hpp>
 #include <scene/Texture.hpp>
+#include <scene/EnvGrid.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/SkyComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/AudioComponent.hpp>
-#include <scene/ecs/components/LightComponent.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/EnvGridComponent.hpp>
 #include <scene/ecs/components/ReflectionProbeComponent.hpp>
 #include <scene/ecs/components/RigidBodyComponent.hpp>
 #include <scene/ecs/components/ScriptComponent.hpp>
@@ -72,9 +71,12 @@
 
 #include <core/config/Config.hpp>
 
+#include <core/containers/SparsePagedArray.hpp>
+
 #include <core/logging/Logger.hpp>
 
 #include <HyperionEngine.hpp>
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -88,6 +90,37 @@ namespace editor {
 HyperionEditor::HyperionEditor()
     : Game()
 {
+    /*// paged array testing
+
+     Array<int*> tmpPtrs;
+
+     Pool<int, 2048> pool;
+     for (int i = 0; i < 5000; i++)
+     {
+         int& j = pool.PushBack(100 + i);
+
+         if (i % 2 == 0)
+         {
+             tmpPtrs.PushBack(&j);
+         }
+     }
+
+     for (int i = 0; i < tmpPtrs.Size(); i++)
+     {
+         pool.Free(tmpPtrs[i]);
+     }
+
+     for (int i = 0; i < 3000; i++)
+     {
+         pool.PushBack(100 + i);
+     }
+
+     for (auto&& it : pool)
+     {
+         HYP_LOG(Editor, Debug, "item : {}", it);
+     }
+
+     HYP_BREAKPOINT;*/
 }
 
 HyperionEditor::~HyperionEditor()
@@ -99,19 +132,16 @@ void HyperionEditor::Init()
 {
     Game::Init();
 
-    m_editor_subsystem = CreateObject<EditorSubsystem>(GetAppContext());
+    m_editorSubsystem = CreateObject<EditorSubsystem>(GetAppContext());
 
-    g_engine->GetWorld()->AddSubsystem(m_editor_subsystem);
+    g_engine->GetWorld()->AddSubsystem(m_editorSubsystem);
 
-    // // temp
-    // return;
-
-    if (const Handle<WorldGrid>& world_grid = g_engine->GetWorld()->GetWorldGrid())
+    if (const Handle<WorldGrid>& worldGrid = g_engine->GetWorld()->GetWorldGrid())
     {
         // // Initialize the world grid subsystem
-        // world_grid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
+        // worldGrid->AddPlugin(0, MakeRefCountedPtr<TerrainWorldGridPlugin>());
 
-        world_grid->AddLayer(CreateObject<TerrainWorldGridLayer>());
+        worldGrid->AddLayer(CreateObject<TerrainWorldGridLayer>());
     }
     else
     {
@@ -119,112 +149,111 @@ void HyperionEditor::Init()
     }
 
     Handle<Scene> scene = CreateObject<Scene>(SceneFlags::FOREGROUND);
-    m_editor_subsystem->GetCurrentProject()->AddScene(scene);
+    m_editorSubsystem->GetCurrentProject()->AddScene(scene);
 
     // Calculate memory pool usage
-    Array<SizeType> memory_usage_per_pool;
-    CalculateMemoryPoolUsage(memory_usage_per_pool);
+    Array<SizeType> memoryUsagePerPool;
+    CalculateMemoryPoolUsage(memoryUsagePerPool);
 
-    SizeType total_memory_pool_usage = 0;
-    for (SizeType i = 0; i < memory_usage_per_pool.Size(); i++)
+    SizeType totalMemoryPoolUsage = 0;
+    for (SizeType i = 0; i < memoryUsagePerPool.Size(); i++)
     {
-        DebugLog(LogType::Debug, "Memory Usage for pool %d : %f MiB\n", i, double(memory_usage_per_pool[i]) / 1024 / 1024);
-        total_memory_pool_usage += memory_usage_per_pool[i];
+        HYP_LOG(Editor, Debug, "Memory Usage for pool {} : {} MiB", i, double(memoryUsagePerPool[i]) / 1024 / 1024);
+        totalMemoryPoolUsage += memoryUsagePerPool[i];
     }
 
-    DebugLog(LogType::Debug, "Total Memory Usage for pools : %f MiB\n", double(total_memory_pool_usage) / 1024 / 1024);
+    HYP_LOG(Editor, Debug, "Total Memory Usage for pools : {} MiB", double(totalMemoryPoolUsage) / 1024 / 1024);
 
-    DebugLog(LogType::Debug, "ShaderManager memory usage: %f MiB\n",
+    HYP_LOG(Editor, Debug, "ShaderManager memory usage: {} MiB",
         double(ShaderManager::GetInstance()->CalculateMemoryUsage()) / 1024 / 1024);
 
     // return;
 
-    auto test_particle_spawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
-        .texture = AssetManager::GetInstance()->Load<Texture>("textures/spark.png").GetValue().Result(),
-        .origin = Vec3f(0.0f, 6.0f, 0.0f),
-        .start_size = 0.2f,
-        .has_physics = true });
-    InitObject(test_particle_spawner);
+    // auto testParticleSpawner = CreateObject<ParticleSpawner>(ParticleSpawnerParams {
+    //     .texture = AssetManager::GetInstance()->Load<Texture>("textures/spark.png").GetValue().Result(),
+    //     .origin = Vec3f(0.0f, 6.0f, 0.0f),
+    //     .startSize = 0.2f,
+    //     .hasPhysics = true });
+    // InitObject(testParticleSpawner);
 
-    // scene->GetWorld()->GetRenderResource().GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(test_particle_spawner);
+    // scene->GetWorld()->GetRenderResource().GetEnvironment()->GetParticleSystem()->GetParticleSpawners().Add(testParticleSpawner);
 
-    if (false)
-    { // add test area light
-        Handle<Light> light = CreateObject<Light>(
-            LightType::AREA_RECT,
-            Vec3f(0.0f, 1.25f, 0.0f),
-            Vec3f(0.0f, 0.0f, -1.0f).Normalize(),
-            Vec2f(2.0f, 2.0f),
-            Color(1.0f, 0.0f, 0.0f),
-            1.0f,
-            1.0f);
+    // if (false)
+    // { // add test area light
+    //     Handle<Light> light = CreateObject<Light>(
+    //         LT_AREA_RECT,
+    //         Vec3f(0.0f, 1.25f, 0.0f),
+    //         Vec3f(0.0f, 0.0f, -1.0f).Normalize(),
+    //         Vec2f(2.0f, 2.0f),
+    //         Color(1.0f, 0.0f, 0.0f),
+    //         1.0f,
+    //         1.0f);
 
-        Handle<Texture> dummy_light_texture;
+    //     Handle<Texture> dummyLightTexture;
 
-        if (auto dummy_light_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/brdfLUT.png"))
-        {
-            dummy_light_texture = dummy_light_texture_asset->Result();
-        }
+    //     if (auto dummyLightTextureAsset = AssetManager::GetInstance()->Load<Texture>("textures/brdfLUT.png"))
+    //     {
+    //         dummyLightTexture = dummyLightTextureAsset->Result();
+    //     }
 
-        light->SetMaterial(MaterialCache::GetInstance()->GetOrCreate(
-            { .shader_definition = ShaderDefinition {
-                  HYP_NAME(Forward),
-                  ShaderProperties(static_mesh_vertex_attributes) },
-                .bucket = Bucket::BUCKET_OPAQUE },
-            {}, { { MaterialTextureKey::ALBEDO_MAP, std::move(dummy_light_texture) } }));
-        AssertThrow(light->GetMaterial().IsValid());
+    //     light->SetMaterial(MaterialCache::GetInstance()->GetOrCreate(
+    //         { .shaderDefinition = ShaderDefinition {
+    //               HYP_NAME(Forward),
+    //               ShaderProperties(staticMeshVertexAttributes) },
+    //             .bucket = RB_OPAQUE },
+    //         {}, { { MaterialTextureKey::ALBEDO_MAP, std::move(dummyLightTexture) } }));
+    //     AssertThrow(light->GetMaterial().IsValid());
 
-        InitObject(light);
+    //     InitObject(light);
 
-        Handle<Node> light_node = scene->GetRoot()->AddChild();
-        light_node->SetName(NAME("AreaLight"));
+    //     Handle<Node> lightNode = scene->GetRoot()->AddChild();
+    //     lightNode->SetName(NAME("AreaLight"));
 
-        auto area_light_entity = scene->GetEntityManager()->AddEntity();
+    //     auto areaLightEntity = scene->GetEntityManager()->AddEntity();
 
-        scene->GetEntityManager()->AddComponent<TransformComponent>(area_light_entity, { Transform(light->GetPosition(), Vec3f(1.0f), Quaternion::Identity()) });
+    //     scene->GetEntityManager()->AddComponent<TransformComponent>(areaLightEntity, { Transform(light->GetPosition(), Vec3f(1.0f), Quaternion::Identity()) });
 
-        scene->GetEntityManager()->AddComponent<LightComponent>(area_light_entity, { light });
+    //     scene->GetEntityManager()->AddComponent<LightComponent>(areaLightEntity, { light });
 
-        light_node->SetEntity(area_light_entity);
-    }
+    //     lightNode->SetEntity(areaLightEntity);
+    // }
 
 // add sun
 #if 1
-    auto sun = CreateObject<Light>(
-        LightType::DIRECTIONAL,
+    auto sun = CreateObject<Light>();
+
+    InitObject(sun);
+
+    Handle<Node> sunNode = scene->GetRoot()->AddChild();
+    sunNode->SetName(NAME("Sun"));
+
+    Handle<Light> sunEntity = scene->GetEntityManager()->AddEntity<Light>(
+        LT_DIRECTIONAL,
         Vec3f(-0.4f, 0.8f, 0.0f).Normalize(),
         Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)),
         5.0f,
         0.0f);
+    sunNode->SetWorldTranslation(Vec3f { -0.4f, 0.8f, 0.0f }.Normalize());
 
-    InitObject(sun);
+    sunEntity->Attach(sunNode);
 
-    Handle<Node> sun_node = scene->GetRoot()->AddChild();
-    sun_node->SetName(NAME("Sun"));
-
-    Handle<Entity> sun_entity = scene->GetEntityManager()->AddEntity();
-    sun_node->SetEntity(sun_entity);
-    sun_node->SetWorldTranslation(Vec3f { -0.4f, 0.8f, 0.0f }.Normalize());
-
-    scene->GetEntityManager()->AddComponent<LightComponent>(sun_entity, LightComponent { sun });
-
-    scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sun_entity, ShadowMapComponent { .mode = ShadowMapFilterMode::PCF, .radius = 80.0f, .resolution = { 1024, 1024 } });
+    scene->GetEntityManager()->AddComponent<ShadowMapComponent>(sunEntity, ShadowMapComponent { .mode = SMF_PCF, .radius = 80.0f, .resolution = { 1024, 1024 } });
 #endif
 
     // Add Skybox
     if (true)
     {
-        Handle<Entity> skybox_entity = scene->GetEntityManager()->AddEntity();
+        Handle<Entity> skyboxEntity = scene->GetEntityManager()->AddEntity();
 
-        scene->GetEntityManager()->AddComponent<TransformComponent>(skybox_entity, TransformComponent { Transform(Vec3f::Zero(), Vec3f(1000.0f), Quaternion::Identity()) });
+        scene->GetEntityManager()->AddComponent<TransformComponent>(skyboxEntity, TransformComponent { Transform(Vec3f::Zero(), Vec3f(1000.0f), Quaternion::Identity()) });
 
-        scene->GetEntityManager()->AddComponent<SkyComponent>(skybox_entity, SkyComponent {});
-        scene->GetEntityManager()->AddComponent<VisibilityStateComponent>(skybox_entity, VisibilityStateComponent { VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE });
-        scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(skybox_entity, BoundingBoxComponent { BoundingBox(Vec3f(-1000.0f), Vec3f(1000.0f)) });
+        scene->GetEntityManager()->AddComponent<SkyComponent>(skyboxEntity, SkyComponent {});
+        scene->GetEntityManager()->AddComponent<VisibilityStateComponent>(skyboxEntity, VisibilityStateComponent { VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE });
+        scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(skyboxEntity, BoundingBoxComponent { BoundingBox(Vec3f(-1000.0f), Vec3f(1000.0f)) });
 
-        Handle<Node> skydome_node = scene->GetRoot()->AddChild();
-        skydome_node->SetEntity(skybox_entity);
-        skydome_node->SetName(NAME("Sky"));
+        Handle<Node> skydomeNode = scene->GetRoot()->AddChild();
+        skydomeNode->SetEntity(skyboxEntity);
+        skydomeNode->SetName(NAME("Sky"));
     }
 
     // temp
@@ -235,8 +264,8 @@ void HyperionEditor::Init()
     // batch->Add("zombie", "models/ogrexml/dragger_Body.mesh.xml");
     // batch->Add("house", "models/house.obj");
 
-    Handle<Entity> root_entity = scene->GetEntityManager()->AddEntity();
-    scene->GetRoot()->SetEntity(root_entity);
+    Handle<Entity> rootEntity = scene->GetEntityManager()->AddEntity();
+    scene->GetRoot()->SetEntity(rootEntity);
 
     batch->OnComplete
         .Bind([this, scene](AssetMap& results)
@@ -251,45 +280,39 @@ void HyperionEditor::Init()
                 scene->GetRoot()->AddChild(node);
 
 #if 1
-                Handle<Entity> env_grid_entity = scene->GetEntityManager()->AddEntity();
+                Handle<Node> envGridNode = scene->GetRoot()->AddChild();
+                envGridNode->SetName(NAME("EnvGrid2"));
 
-                scene->GetEntityManager()->AddComponent<TransformComponent>(env_grid_entity, TransformComponent {});
+                Handle<Entity> envGridEntity = scene->GetEntityManager()->AddEntity<EnvGrid>(node->GetWorldAABB() * 1.01f, EnvGridOptions { .type = EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, .density = Vec3u { 8, 4, 8 } });
 
-                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(env_grid_entity, BoundingBoxComponent { node->GetWorldAABB() * 1.01f, node->GetWorldAABB() * 1.01f });
+                scene->GetEntityManager()->AddComponent<TransformComponent>(envGridEntity, TransformComponent {});
+                scene->GetEntityManager()->AddComponent<BoundingBoxComponent>(envGridEntity, BoundingBoxComponent { node->GetWorldAABB() * 1.01f, node->GetWorldAABB() * 1.01f });
 
-                // Add env grid component
-                scene->GetEntityManager()->AddComponent<EnvGridComponent>(env_grid_entity, EnvGridComponent {
-                                                                                               EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD, Vec3u { 8, 4, 8 },
-                                                                                               EnvGridMobility::STATIONARY // EnvGridMobility::FOLLOW_CAMERA_X | EnvGridMobility::FOLLOW_CAMERA_Z
-                                                                                           });
-
-                Handle<Node> env_grid_node = scene->GetRoot()->AddChild();
-                env_grid_node->SetEntity(env_grid_entity);
-                env_grid_node->SetName(NAME("EnvGrid2"));
+                envGridNode->SetEntity(envGridEntity);
 #endif
 
-                if (auto& zombie_asset = results["zombie"]; zombie_asset.IsValid())
+                if (auto& zombieAsset = results["zombie"]; zombieAsset.IsValid())
                 {
-                    Handle<Node> zombie = zombie_asset.ExtractAs<Node>();
+                    Handle<Node> zombie = zombieAsset.ExtractAs<Node>();
                     zombie->Scale(0.25f);
                     zombie->Translate(Vec3f(0, 2.0f, -1.0f));
 
-                    Handle<Entity> zombie_entity = zombie->GetChild(0)->GetEntity();
+                    Handle<Entity> zombieEntity = zombie->GetChild(0)->GetEntity();
 
                     scene->GetRoot()->AddChild(zombie);
 
-                    if (zombie_entity.IsValid())
+                    if (zombieEntity.IsValid())
                     {
-                        if (auto* mesh_component = scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombie_entity))
+                        if (auto* meshComponent = scene->GetEntityManager()->TryGetComponent<MeshComponent>(zombieEntity))
                         {
-                            mesh_component->material = mesh_component->material->Clone();
-                            mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vec4f(1.0f));
-                            mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.1f);
-                            mesh_component->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
-                            InitObject(mesh_component->material);
+                            meshComponent->material = meshComponent->material->Clone();
+                            meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ALBEDO, Vec4f(1.0f));
+                            meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_ROUGHNESS, 0.1f);
+                            meshComponent->material->SetParameter(Material::MaterialKey::MATERIAL_KEY_METALNESS, 0.0f);
+                            InitObject(meshComponent->material);
                         }
 
-                        scene->GetEntityManager()->AddComponent<AudioComponent>(zombie_entity, AudioComponent { .audio_source = AssetManager::GetInstance()->Load<AudioSource>("sounds/taunt.wav")->Result(), .playback_state = { .loop_mode = AudioLoopMode::AUDIO_LOOP_MODE_ONCE, .speed = 2.0f } });
+                        scene->GetEntityManager()->AddComponent<AudioComponent>(zombieEntity, AudioComponent { .audioSource = AssetManager::GetInstance()->Load<AudioSource>("sounds/taunt.wav")->Result(), .playbackState = { .loopMode = AudioLoopMode::AUDIO_LOOP_MODE_ONCE, .speed = 2.0f } });
                     }
 
                     zombie->SetName(NAME("zombie"));
@@ -300,7 +323,7 @@ void HyperionEditor::Init()
     batch->LoadAsync();
 }
 
-void HyperionEditor::Logic(GameCounter::TickUnit delta)
+void HyperionEditor::Logic(float delta)
 {
 }
 

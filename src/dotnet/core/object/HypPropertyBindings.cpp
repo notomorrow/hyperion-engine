@@ -21,29 +21,29 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void HypProperty_GetName(const HypProperty* property, Name* out_name)
+    HYP_EXPORT void HypProperty_GetName(const HypProperty* property, Name* outName)
     {
-        if (!property || !out_name)
+        if (!property || !outName)
         {
             return;
         }
 
-        *out_name = property->GetName();
+        *outName = property->GetName();
     }
 
-    HYP_EXPORT void HypProperty_GetTypeID(const HypProperty* property, TypeID* out_type_id)
+    HYP_EXPORT void HypProperty_GetTypeId(const HypProperty* property, TypeId* outTypeId)
     {
-        if (!property || !out_type_id)
+        if (!property || !outTypeId)
         {
             return;
         }
 
-        *out_type_id = property->GetTypeID();
+        *outTypeId = property->GetTypeId();
     }
 
-    HYP_EXPORT bool HypProperty_InvokeGetter(const HypProperty* property, const HypClass* target_class, void* target_ptr, HypData* out_result)
+    HYP_EXPORT bool HypProperty_InvokeGetter(const HypProperty* property, const HypClass* targetClass, void* targetPtr, HypData* outResult)
     {
-        if (!property || !target_class || !target_ptr || !out_result)
+        if (!property || !targetClass || !targetPtr || !outResult)
         {
             return false;
         }
@@ -53,16 +53,16 @@ extern "C"
             return false;
         }
 
-        HypData target_data { AnyRef(target_class->GetTypeID(), target_ptr) };
+        HypData targetData { AnyRef(targetClass->GetTypeId(), targetPtr) };
 
-        *out_result = property->Get(target_data);
+        *outResult = property->Get(targetData);
 
         return true;
     }
 
-    HYP_EXPORT bool HypProperty_InvokeSetter(const HypProperty* property, const HypClass* target_class, void* target_ptr, HypData* value)
+    HYP_EXPORT bool HypProperty_InvokeSetter(const HypProperty* property, const HypClass* targetClass, void* targetPtr, HypData* value)
     {
-        if (!property || !target_class || !target_ptr || !value)
+        if (!property || !targetClass || !targetPtr || !value)
         {
             return false;
         }
@@ -72,9 +72,9 @@ extern "C"
             return false;
         }
 
-        HypData target_data { AnyRef(target_class->GetTypeID(), target_ptr) };
+        HypData targetData { AnyRef(targetClass->GetTypeId(), targetPtr) };
 
-        property->Set(target_data, *value);
+        property->Set(targetData, *value);
 
         return true;
     }

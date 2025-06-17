@@ -218,7 +218,7 @@ static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttribu
     {
         const SizeType equals_index = attribute.FindFirstIndex('=');
 
-        if (equals_index == String::not_found)
+        if (equals_index == String::notFound)
         {
             // No equals sign, so it's a boolean attribute (true)
             results.PushBack(Pair<String, HypClassAttributeValue> { attribute, HypClassAttributeValue(true) });
@@ -364,14 +364,14 @@ static TResult<Array<Pair<String, HypClassAttributeValue>>> BuildHypClassAttribu
 template <typename E, typename = std::enable_if_t<std::is_enum_v<E>>>
 static TResult<Pair<E, Array<Pair<String, HypClassAttributeValue>>>> ParseHypMacro(const HashMap<String, E>& usable_macros, const String& line, SizeType& out_start_index, SizeType& out_end_index, bool require_parentheses = true)
 {
-    out_start_index = String::not_found;
-    out_end_index = String::not_found;
+    out_start_index = String::notFound;
+    out_end_index = String::notFound;
 
     for (const Pair<String, E>& it : usable_macros)
     {
         SizeType macro_start_index = line.FindFirstIndex(it.first);
 
-        if (macro_start_index != String::not_found)
+        if (macro_start_index != String::notFound)
         {
             Array<Pair<String, HypClassAttributeValue>> attributes;
 
@@ -380,7 +380,7 @@ static TResult<Pair<E, Array<Pair<String, HypClassAttributeValue>>>> ParseHypMac
 
             const SizeType parenthesis_index = line.Substr(out_end_index).FindFirstIndex("(");
 
-            if (parenthesis_index == String::not_found)
+            if (parenthesis_index == String::notFound)
             {
                 if (require_parentheses)
                 {
@@ -505,7 +505,7 @@ static TResult<Array<HypClassDefinition>, AnalyzerError> BuildHypClasses(const A
             hyp_class_definition.base_class_names.PushBack(base_class_name);
         }
 
-        if (brace_index != String::not_found)
+        if (brace_index != String::notFound)
         {
             const String remaining_content = content_to_end.Substr(brace_index, content_to_end.Size());
 
@@ -669,7 +669,7 @@ static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypEnumMembers(co
 
     SizeType opening_brace_index = inner_content.FindFirstIndex('{');
 
-    if (opening_brace_index == String::not_found)
+    if (opening_brace_index == String::notFound)
     {
         return HYP_MAKE_ERROR(AnalyzerError, "Failed to find opening brace for enum", mod.GetPath());
     }
@@ -680,7 +680,7 @@ static TResult<Array<HypMemberDefinition>, AnalyzerError> BuildHypEnumMembers(co
     // Find the closing brace
     SizeType closing_brace_index = inner_content.FindLastIndex('}');
 
-    if (closing_brace_index == String::not_found)
+    if (closing_brace_index == String::notFound)
     {
         return HYP_MAKE_ERROR(AnalyzerError, "Failed to find closing brace for enum", mod.GetPath());
     }
@@ -812,7 +812,14 @@ TResult<void, AnalyzerError> Analyzer::ProcessModule(Module& mod)
                     preserve_case = false;
                 }
 
-                definition.friendly_name = StringUtil::ToPascalCase(definition.name, preserve_case);
+                String name_without_prefix = definition.name;
+
+                if (name_without_prefix.StartsWith("m_") || name_without_prefix.StartsWith("s_") || name_without_prefix.StartsWith("g_"))
+                {
+                    name_without_prefix = name_without_prefix.Substr(2);
+                }
+
+                definition.friendly_name = StringUtil::ToPascalCase(name_without_prefix, preserve_case);
 
                 break;
             }

@@ -6,12 +6,22 @@
 #include <cstdarg>
 #include <type_traits>
 
+#if defined(HYP_UNIX)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
+#elif defined(HYP_WINDOWS)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <debugapi.h>
+#endif
+
 #define HYP_DEBUG_OUTPUT_STREAM stdout
 
 namespace hyperion {
 namespace debug {
 
-static const char* g_log_type_table[] = {
+static const char* g_logTypeTable[] = {
     "INFO",
     "WARN",
     "ERROR",
@@ -26,7 +36,7 @@ static const char* g_log_type_table[] = {
 };
 
 /* Colours increase happiness by 200% */
-static const char* g_log_colour_table[] = {
+static const char* g_logColourTable[] = {
     "\33[34m",
     "\33[33m",
     "\33[31m",
@@ -42,11 +52,11 @@ static const char* g_log_colour_table[] = {
 };
 
 #ifndef HYP_DEBUG_MODE
-HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
+HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
 {
     /* Coloured files are less that ideal */
-    const int type_n = static_cast<std::underlying_type<LogType>::type>(type);
-    fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_log_type_table[type_n]);
+    const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
+    fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_logTypeTable[typeN]);
 
     va_list args;
     va_start(args, fmt);
@@ -54,14 +64,14 @@ HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
     va_end(args);
 }
 #else
-HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)
+HYP_DEPRECATED HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)
 {
-    const int type_n = static_cast<std::underlying_type<LogType>::type>(type);
+    const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
     /* Coloured files are less than ideal */
     if (HYP_DEBUG_OUTPUT_STREAM == stdout)
-        printf("%s[%s]\33[0m ", g_log_colour_table[type_n], g_log_type_table[type_n]);
+        printf("%s[%s]\33[0m ", g_logColourTable[typeN], g_logTypeTable[typeN]);
     else
-        fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_log_type_table[type_n]);
+        fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_logTypeTable[typeN]);
 
     if (callee != nullptr)
         fprintf(HYP_DEBUG_OUTPUT_STREAM, "%s(line:%u): ", callee, line);
@@ -75,6 +85,7 @@ HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, con
 
 HYP_API void DebugLog_FlushOutputStream()
 {
+    fputs("\n\n", HYP_DEBUG_OUTPUT_STREAM);
     fflush(HYP_DEBUG_OUTPUT_STREAM);
 }
 
@@ -82,6 +93,25 @@ HYP_API void WriteToStandardError(const char* msg)
 {
     fputs(msg, stderr);
     fflush(stderr);
+}
+
+HYP_API bool IsDebuggerAttached()
+{
+#ifdef HYP_WINDOWS
+    return ::IsDebuggerPresent();
+#elif defined(HYP_UNIX)
+    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+    struct kinfo_proc info {};
+    size_t size = sizeof(info);
+
+    if (sysctl(mib, 4, &info, &size, nullptr, 0) != 0)
+    {
+        return false;
+    }
+
+    // P_TRACED flag is set when a debugger is tracing the process.
+    return (info.kp_proc.p_flag & P_TRACED) != 0;
+#endif
 }
 
 } // namespace debug

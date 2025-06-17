@@ -28,19 +28,19 @@ LightmapperSubsystem::LightmapperSubsystem()
 
 void LightmapperSubsystem::OnAddedToWorld()
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 }
 
 void LightmapperSubsystem::OnRemovedFromWorld()
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     m_lightmappers.Clear();
 }
 
-void LightmapperSubsystem::Update(GameCounter::TickUnit delta)
+void LightmapperSubsystem::Update(float delta)
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     for (auto it = m_tasks.Begin(); it != m_tasks.End();)
     {
@@ -54,7 +54,7 @@ void LightmapperSubsystem::Update(GameCounter::TickUnit delta)
         }
     }
 
-    Array<ID<Scene>> lightmappers_to_remove;
+    Array<ObjId<Scene>> lightmappersToRemove;
 
     for (auto& it : m_lightmappers)
     {
@@ -62,19 +62,19 @@ void LightmapperSubsystem::Update(GameCounter::TickUnit delta)
 
         if (it.second->IsComplete())
         {
-            lightmappers_to_remove.PushBack(it.first);
+            lightmappersToRemove.PushBack(it.first);
         }
     }
 
-    for (ID<Scene> scene_id : lightmappers_to_remove)
+    for (ObjId<Scene> sceneId : lightmappersToRemove)
     {
-        m_lightmappers.Erase(scene_id);
+        m_lightmappers.Erase(sceneId);
     }
 }
 
 Task<void>* LightmapperSubsystem::GenerateLightmaps(const Handle<Scene>& scene, const BoundingBox& aabb)
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (!scene.IsValid())
     {
@@ -88,12 +88,12 @@ Task<void>* LightmapperSubsystem::GenerateLightmaps(const Handle<Scene>& scene, 
 
     if (!aabb.IsValid() || !aabb.IsFinite())
     {
-        HYP_LOG(Rendering, Error, "Invalid AABB provided for lightmapper in Scene {}", scene->GetID());
+        HYP_LOG(Rendering, Error, "Invalid AABB provided for lightmapper in Scene {}", scene->Id());
 
         return nullptr;
     }
 
-    auto it = m_lightmappers.Find(scene.GetID());
+    auto it = m_lightmappers.Find(scene.Id());
 
     if (it != m_lightmappers.End())
     {
@@ -115,7 +115,7 @@ Task<void>* LightmapperSubsystem::GenerateLightmaps(const Handle<Scene>& scene, 
 
     lightmapper->PerformLightmapping();
 
-    m_lightmappers.Insert(scene.GetID(), std::move(lightmapper));
+    m_lightmappers.Insert(scene.Id(), std::move(lightmapper));
 
     return &task;
 }

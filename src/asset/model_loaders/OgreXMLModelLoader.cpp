@@ -17,6 +17,7 @@
 
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #include <util/xml/SAXParser.hpp>
@@ -47,9 +48,9 @@ public:
         return m_model.submeshes.Back();
     }
 
-    void AddBoneAssignment(uint32 vertex_index, BoneAssignment&& bone_assignment)
+    void AddBoneAssignment(uint32 vertexIndex, BoneAssignment&& boneAssignment)
     {
-        m_model.bone_assignments[vertex_index].PushBack(std::move(bone_assignment));
+        m_model.boneAssignments[vertexIndex].PushBack(std::move(boneAssignment));
     }
 
     virtual void Begin(const String& name, const xml::AttributeMap& attributes) override
@@ -99,38 +100,38 @@ public:
                 HYP_LOG(Assets, Warning, "Ogre XML parser: `face` tag expected to have 3 attributes.");
             }
 
-            FlatMap<String, uint32> face_elements;
-            face_elements.Reserve(attributes.Size());
+            FlatMap<String, uint32> faceElements;
+            faceElements.Reserve(attributes.Size());
 
             for (const Pair<String, String>& it : attributes)
             {
-                face_elements.Insert({ it.first, StringUtil::Parse<uint32>(it.second) });
+                faceElements.Insert({ it.first, StringUtil::Parse<uint32>(it.second) });
             }
 
-            for (const Pair<String, uint32>& it : face_elements)
+            for (const Pair<String, uint32>& it : faceElements)
             {
                 LastSubMesh().indices.PushBack(it.second);
             }
         }
         else if (name == "skeletonlink")
         {
-            m_model.skeleton_name = attributes.At("name");
+            m_model.skeletonName = attributes.At("name");
         }
         else if (name == "vertexboneassignment")
         {
-            const auto vertex_index = StringUtil::Parse<uint32>(attributes.At("vertexindex"));
-            const auto bone_index = StringUtil::Parse<uint32>(attributes.At("boneindex"));
-            const auto bone_weight = StringUtil::Parse<float>(attributes.At("weight"));
+            const auto vertexIndex = StringUtil::Parse<uint32>(attributes.At("vertexindex"));
+            const auto boneIndex = StringUtil::Parse<uint32>(attributes.At("boneindex"));
+            const auto boneWeight = StringUtil::Parse<float>(attributes.At("weight"));
 
-            AddBoneAssignment(vertex_index, { bone_index, bone_weight });
+            AddBoneAssignment(vertexIndex, { boneIndex, boneWeight });
         }
         else if (name == "submesh")
         {
             String name = String("submesh_") + String::ToString(m_model.submeshes.Size());
 
-            if (auto name_it = attributes.Find("material"); name_it != attributes.End())
+            if (auto nameIt = attributes.Find("material"); nameIt != attributes.End())
             {
-                name = name_it->second;
+                name = nameIt->second;
             }
 
             m_model.submeshes.PushBack({ name,
@@ -164,8 +165,8 @@ private:
 
 void BuildVertices(OgreXMLModel& model)
 {
-    const bool has_normals = !model.normals.Empty(),
-               has_texcoords = !model.texcoords.Empty();
+    const bool hasNormals = !model.normals.Empty(),
+               hasTexcoords = !model.texcoords.Empty();
 
     Array<Vertex> vertices;
     vertices.Resize(model.positions.Size());
@@ -187,7 +188,7 @@ void BuildVertices(OgreXMLModel& model)
             continue;
         }
 
-        if (has_normals)
+        if (hasNormals)
         {
             if (i < model.normals.Size())
             {
@@ -199,7 +200,7 @@ void BuildVertices(OgreXMLModel& model)
             }
         }
 
-        if (has_texcoords)
+        if (hasTexcoords)
         {
             if (i < model.texcoords.Size())
             {
@@ -213,13 +214,13 @@ void BuildVertices(OgreXMLModel& model)
 
         vertices[i] = Vertex(position, texcoord, normal);
 
-        const auto bone_it = model.bone_assignments.Find(i);
+        const auto boneIt = model.boneAssignments.Find(i);
 
-        if (bone_it != model.bone_assignments.end())
+        if (boneIt != model.boneAssignments.end())
         {
-            auto& bone_assignments = bone_it->second;
+            auto& boneAssignments = boneIt->second;
 
-            for (SizeType j = 0; j < bone_assignments.Size(); j++)
+            for (SizeType j = 0; j < boneAssignments.Size(); j++)
             {
                 if (j == 4)
                 {
@@ -228,8 +229,8 @@ void BuildVertices(OgreXMLModel& model)
                     break;
                 }
 
-                vertices[i].AddBoneIndex(bone_assignments[j].index);
-                vertices[i].AddBoneWeight(bone_assignments[j].weight);
+                vertices[i].AddBoneIndex(boneAssignments[j].index);
+                vertices[i].AddBoneWeight(boneAssignments[j].weight);
             }
         }
     }
@@ -239,7 +240,7 @@ void BuildVertices(OgreXMLModel& model)
 
 AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.asset_manager != nullptr);
+    AssertThrow(state.assetManager != nullptr);
 
     OgreXMLModel model;
     model.filepath = state.filepath;
@@ -247,11 +248,11 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
     OgreXMLSAXHandler handler(&state, model);
 
     xml::SAXParser parser(&handler);
-    auto sax_result = parser.Parse(&state.stream);
+    auto saxResult = parser.Parse(&state.stream);
 
-    if (!sax_result)
+    if (!saxResult)
     {
-        return HYP_MAKE_ERROR(AssetLoadError, "XML error: {}", sax_result.message);
+        return HYP_MAKE_ERROR(AssetLoadError, "XML error: {}", saxResult.message);
     }
 
     BuildVertices(model);
@@ -260,48 +261,48 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
 
     Handle<Skeleton> skeleton;
 
-    if (!model.skeleton_name.Empty())
+    if (!model.skeletonName.Empty())
     {
-        const String skeleton_path((StringUtil::BasePath(model.filepath.Data()).c_str() + String("/") + model.skeleton_name + ".xml").Data());
+        const String skeletonPath((StringUtil::BasePath(model.filepath.Data()).c_str() + String("/") + model.skeletonName + ".xml").Data());
 
-        auto skeleton_asset = state.asset_manager->Load<Skeleton>(skeleton_path);
+        auto skeletonAsset = state.assetManager->Load<Skeleton>(skeletonPath);
 
-        if (skeleton_asset.HasValue())
+        if (skeletonAsset.HasValue())
         {
-            skeleton = skeleton_asset->Result();
+            skeleton = skeletonAsset->Result();
         }
         else
         {
-            HYP_LOG(Assets, Warning, "Ogre XML parser: Could not load skeleton at {}", skeleton_path);
+            HYP_LOG(Assets, Warning, "Ogre XML parser: Could not load skeleton at {}", skeletonPath);
         }
     }
 
-    for (SubMesh& sub_mesh : model.submeshes)
+    for (SubMesh& subMesh : model.submeshes)
     {
-        if (sub_mesh.indices.Empty())
+        if (subMesh.indices.Empty())
         {
             HYP_LOG(Assets, Info, "Ogre XML parser: Skipping submesh with empty indices");
 
             continue;
         }
 
-        Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadID());
+        Handle<Scene> scene = g_engine->GetDefaultWorld()->GetDetachedScene(Threads::CurrentThreadId());
 
         const Handle<Entity> entity = scene->GetEntityManager()->AddEntity();
 
         scene->GetEntityManager()->AddComponent<TransformComponent>(entity, TransformComponent {});
         scene->GetEntityManager()->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent {});
 
-        Handle<Mesh> mesh = CreateObject<Mesh>(model.vertices, sub_mesh.indices, Topology::TRIANGLES);
+        Handle<Mesh> mesh = CreateObject<Mesh>(model.vertices, subMesh.indices, TOP_TRIANGLES);
         mesh->CalculateNormals();
 
-        MaterialAttributes material_attributes {};
-        material_attributes.shader_definition = ShaderDefinition {
+        MaterialAttributes materialAttributes {};
+        materialAttributes.shaderDefinition = ShaderDefinition {
             NAME("Forward"),
             ShaderProperties(mesh->GetVertexAttributes())
         };
 
-        Handle<Material> material = CreateObject<Material>(CreateNameFromDynamicString(ANSIString(sub_mesh.name.Data())), material_attributes);
+        Handle<Material> material = CreateObject<Material>(CreateNameFromDynamicString(ANSIString(subMesh.name.Data())), materialAttributes);
 
         scene->GetEntityManager()->AddComponent<MeshComponent>(entity, MeshComponent { mesh, material, skeleton });
 
@@ -309,21 +310,20 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
 
         if (skeleton.IsValid())
         {
-            AnimationComponent animation_component {};
-            animation_component.playback_state = {
-                .animation_index = 0,
+            AnimationComponent animationComponent {};
+            animationComponent.playbackState = {
+                .animationIndex = 0,
                 .status = AnimationPlaybackStatus::PLAYING,
-                .loop_mode = AnimationLoopMode::REPEAT,
+                .loopMode = AnimationLoopMode::REPEAT,
                 .speed = 1.0f,
-                .current_time = 0.0f
+                .currentTime = 0.0f
             };
 
-            scene->GetEntityManager()->AddComponent<AnimationComponent>(entity, animation_component);
+            scene->GetEntityManager()->AddComponent<AnimationComponent>(entity, animationComponent);
         }
 
         Handle<Node> node = CreateObject<Node>();
-        node->SetFlags(NodeFlags::BUILD_BVH);
-        node->SetName(CreateNameFromDynamicString(sub_mesh.name));
+        node->SetName(CreateNameFromDynamicString(subMesh.name));
         node->SetEntity(entity);
 
         top->AddChild(std::move(node));

@@ -25,7 +25,7 @@ public:
     UITextbox& operator=(UITextbox&& other) noexcept = delete;
     virtual ~UITextbox() override = default;
 
-    virtual void SetTextColor(const Color& text_color) override;
+    virtual void SetTextColor(const Color& textColor) override;
 
     /*! \brief Sets the text value of the textbox.
      *
@@ -53,8 +53,8 @@ public:
 protected:
     virtual void Init() override;
 
-    virtual void Update_Internal(GameCounter::TickUnit delta) override;
-    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state) override;
+    virtual void Update_Internal(float delta) override;
+    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState) override;
 
     void UpdateCursor();
     void UpdateTextColor();
@@ -64,12 +64,12 @@ protected:
         return GetText().Length() == 0 && m_placeholder.Length() != 0;
     }
 
-    UIText* m_text_element;
-    Handle<UIObject> m_cursor_element;
+    UIText* m_textElement;
+    Handle<UIObject> m_cursorElement;
 
-    uint32 m_character_index;
+    uint32 m_characterIndex;
 
-    BlendVar<float> m_cursor_blink_blend_var;
+    BlendVar<float> m_cursorBlinkBlendVar;
 
     String m_placeholder;
 };

@@ -2,7 +2,7 @@
 #ifndef HYPERION_ASSET_LOADER_HPP
 #define HYPERION_ASSET_LOADER_HPP
 
-#include <core/ID.hpp>
+#include <core/object/ObjId.hpp>
 #include <core/Handle.hpp>
 
 #include <core/memory/Any.hpp>
@@ -38,7 +38,7 @@ struct AssetLoaderWrapper;
 template <class T>
 struct Asset;
 
-HYP_API extern void OnPostLoad_Impl(const HypClass* hyp_class, void* object_ptr);
+HYP_API extern void OnPostLoad_Impl(const HypClass* hypClass, void* objectPtr);
 
 struct LoadedAsset
 {
@@ -51,7 +51,7 @@ struct LoadedAsset
     {
     }
 
-    template <class T, typename = std::enable_if_t<!std::is_base_of_v<LoadedAsset, T> && !is_hypdata_v<T> && !std::is_same_v<T, TResult<LoadedAsset, AssetLoadError>>>>
+    template <class T, typename = std::enable_if_t<!std::is_base_of_v<LoadedAsset, T> && !isHypData<T> && !std::is_same_v<T, TResult<LoadedAsset, AssetLoadError>>>>
     LoadedAsset(T&& value)
         : value(std::forward<T>(value))
     {
@@ -79,9 +79,37 @@ struct LoadedAsset
     }
 
     template <class T>
-    HYP_NODISCARD HYP_FORCE_INLINE auto& ExtractAs()
+    HYP_NODISCARD HYP_FORCE_INLINE auto&& ExtractAs() const&
     {
-        return static_cast<Asset<T>*>(this)->Result();
+        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
+        {
+            return value.Get<RC<T>>();
+        }
+        else if constexpr (IsHypObject<T>::value)
+        {
+            return value.Get<Handle<T>>();
+        }
+        else
+        {
+            return value.Get<T>();
+        }
+    }
+
+    template <class T>
+    HYP_NODISCARD HYP_FORCE_INLINE auto&& ExtractAs() &&
+    {
+        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
+        {
+            return std::move(value).Get<RC<T>>();
+        }
+        else if constexpr (IsHypObject<T>::value)
+        {
+            return std::move(value).Get<Handle<T>>();
+        }
+        else
+        {
+            return std::move(value).Get<T>();
+        }
     }
 
     HYP_API void OnPostLoad();
@@ -125,20 +153,14 @@ struct Asset final : LoadedAsset
 
     virtual ~Asset() override = default;
 
-    auto&& Result()
+    decltype(auto) Result() const&
     {
-        if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
-        {
-            return value.Get<RC<T>>();
-        }
-        else if constexpr (IsHypObject<T>::value)
-        {
-            return value.Get<Handle<T>>();
-        }
-        else
-        {
-            return value.Get<T>();
-        }
+        return LoadedAsset::template ExtractAs<T>();
+    }
+
+    decltype(auto) Result() &&
+    {
+        return LoadedAsset::template ExtractAs<T>();
     }
 };
 
@@ -155,13 +177,13 @@ class HYP_API AssetLoaderBase : public HypObject<AssetLoaderBase>
 public:
     virtual ~AssetLoaderBase() = default;
 
-    AssetLoadResult Load(AssetManager& asset_manager, const String& path) const;
+    AssetLoadResult Load(AssetManager& assetManager, const String& path) const;
 
 protected:
     virtual AssetLoadResult LoadAsset(LoaderState& state) const = 0;
 
-    static FilePath GetRebasedFilepath(const FilePath& base_path, const FilePath& filepath);
-    Array<FilePath> GetTryFilepaths(const FilePath& original_filepath) const;
+    static FilePath GetRebasedFilepath(const FilePath& basePath, const FilePath& filepath);
+    Array<FilePath> GetTryFilepaths(const FilePath& originalFilepath) const;
 };
 
 template <class T>
@@ -172,19 +194,19 @@ struct AssetLoaderWrapper
 {
 private:
 public:
-    static constexpr bool is_handle = std::is_base_of_v<HypObjectBase, T>;
+    static constexpr bool isHandle = std::is_base_of_v<HypObjectBase, T>;
 
-    using CastedType = std::conditional_t<is_handle, Handle<T>, Optional<T&>>;
+    using CastedType = std::conditional_t<isHandle, Handle<T>, Optional<T&>>;
 
     AssetLoaderBase& loader;
 
     HYP_DEPRECATED static inline CastedType ExtractAssetValue(HypData& value)
     {
-        if constexpr (is_handle)
+        if constexpr (isHandle)
         {
-            if (Handle<T>* handle_ptr = value.TryGet<Handle<T>>())
+            if (Handle<T>* handlePtr = value.TryGet<Handle<T>>())
             {
-                return *handle_ptr;
+                return *handlePtr;
             }
 
             return Handle<T>::empty;

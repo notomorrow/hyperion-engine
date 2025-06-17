@@ -9,7 +9,7 @@
 
 #include <core/functional/Delegate.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
@@ -45,23 +45,23 @@ public:
         const Vec2u& extent,
         TemporalBlendTechnique technique,
         TemporalBlendFeedback feedback,
-        const ImageViewRef& input_image_view,
+        const ImageViewRef& inputImageView,
         GBuffer* gbuffer);
 
     TemporalBlending(
         const Vec2u& extent,
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         TemporalBlendTechnique technique,
         TemporalBlendFeedback feedback,
-        const FramebufferRef& input_framebuffer,
+        const FramebufferRef& inputFramebuffer,
         GBuffer* gbuffer);
 
     TemporalBlending(
         const Vec2u& extent,
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         TemporalBlendTechnique technique,
         TemporalBlendFeedback feedback,
-        const ImageViewRef& input_image_view,
+        const ImageViewRef& inputImageView,
         GBuffer* gbuffer);
 
     TemporalBlending(const TemporalBlending& other) = delete;
@@ -80,23 +80,23 @@ public:
 
     HYP_FORCE_INLINE const Handle<Texture>& GetResultTexture() const
     {
-        return m_result_texture;
+        return m_resultTexture;
     }
 
     HYP_FORCE_INLINE const Handle<Texture>& GetHistoryTexture() const
     {
-        return m_history_texture;
+        return m_historyTexture;
     }
 
     void ResetProgressiveBlending();
 
     void Create();
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
-    void Resize(Vec2u new_size);
+    void Resize(Vec2u newSize);
 
 private:
-    void Resize_Internal(Vec2u new_size);
+    void Resize_Internal(Vec2u newSize);
 
     ShaderProperties GetShaderProperties() const;
 
@@ -105,25 +105,25 @@ private:
     void CreateComputePipelines();
 
     Vec2u m_extent;
-    InternalFormat m_image_format;
+    TextureFormat m_imageFormat;
     TemporalBlendTechnique m_technique;
     TemporalBlendFeedback m_feedback;
     GBuffer* m_gbuffer;
 
-    uint16 m_blending_frame_counter;
+    uint16 m_blendingFrameCounter;
 
-    ComputePipelineRef m_perform_blending;
-    DescriptorTableRef m_descriptor_table;
+    ComputePipelineRef m_performBlending;
+    DescriptorTableRef m_descriptorTable;
 
-    ImageViewRef m_input_image_view;
-    FramebufferRef m_input_framebuffer;
+    ImageViewRef m_inputImageView;
+    FramebufferRef m_inputFramebuffer;
 
-    Handle<Texture> m_result_texture;
-    Handle<Texture> m_history_texture;
+    Handle<Texture> m_resultTexture;
+    Handle<Texture> m_historyTexture;
 
-    DelegateHandler m_on_gbuffer_resolution_changed;
+    DelegateHandler m_onGbufferResolutionChanged;
 
-    bool m_is_initialized;
+    bool m_isInitialized;
 };
 
 } // namespace hyperion

@@ -30,7 +30,7 @@ HYP_DEFINE_LOG_CHANNEL(BuildTool);
 class WorkerThread : public TaskThread
 {
 public:
-    WorkerThread(ThreadID id)
+    WorkerThread(ThreadId id)
         : TaskThread(id)
     {
     }
@@ -414,7 +414,7 @@ private:
 
     void WaitWhileTaskRunning(const Task<void>& task)
     {
-        Threads::AssertOnThread(g_main_thread);
+        Threads::AssertOnThread(g_mainThread);
 
         AssertThrow(task.IsValid());
 

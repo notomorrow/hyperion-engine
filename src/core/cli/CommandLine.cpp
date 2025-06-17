@@ -15,14 +15,14 @@ HYP_DEFINE_LOG_SUBCHANNEL(CommandLine, Core);
 
 namespace cli {
 
-static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumentValue>>& values, const String& key, CommandLineArgumentValue&& value, bool allow_multiple);
+static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumentValue>>& values, const String& key, CommandLineArgumentValue&& value, bool allowMultiple);
 
-static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumentValue>>& values, const String& key, const CommandLineArgumentValue& value, bool allow_multiple)
+static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumentValue>>& values, const String& key, const CommandLineArgumentValue& value, bool allowMultiple)
 {
-    AppendCommandLineArgumentValue(values, key, CommandLineArgumentValue(value), allow_multiple);
+    AppendCommandLineArgumentValue(values, key, CommandLineArgumentValue(value), allowMultiple);
 }
 
-static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumentValue>>& values, const String& key, CommandLineArgumentValue&& value, bool allow_multiple)
+static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumentValue>>& values, const String& key, CommandLineArgumentValue&& value, bool allowMultiple)
 {
     auto it = values.FindIf([key](const auto& item)
         {
@@ -37,7 +37,7 @@ static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumen
             return;
         }
 
-        if (allow_multiple)
+        if (allowMultiple)
         {
             if (it->second.IsArray())
             {
@@ -67,13 +67,13 @@ static void AppendCommandLineArgumentValue(Array<Pair<String, CommandLineArgumen
 
 const CommandLineArgumentValue& CommandLineArguments::operator[](UTF8StringView key) const
 {
-    static const CommandLineArgumentValue empty_value = json::JSONUndefined();
+    static const CommandLineArgumentValue emptyValue = json::JSONUndefined();
 
     const auto it = Find(key);
 
     if (it == End())
     {
-        return empty_value;
+        return emptyValue;
     }
 
     return it->second;
@@ -85,16 +85,16 @@ CommandLineArguments CommandLineArguments::Merge(const CommandLineArgumentDefini
 
     for (const Pair<String, CommandLineArgumentValue>& element : b)
     {
-        bool allow_multiple = false;
+        bool allowMultiple = false;
 
-        const auto definitions_it = definitions.Find(element.first);
+        const auto definitionsIt = definitions.Find(element.first);
 
-        if (definitions_it != definitions.End())
+        if (definitionsIt != definitions.End())
         {
-            allow_multiple = definitions_it->flags[CommandLineArgumentFlags::ALLOW_MULTIPLE];
+            allowMultiple = definitionsIt->flags[CommandLineArgumentFlags::ALLOW_MULTIPLE];
         }
 
-        AppendCommandLineArgumentValue(result.m_values, element.first, element.second, allow_multiple);
+        AppendCommandLineArgumentValue(result.m_values, element.first, element.second, allowMultiple);
     }
 
     return result;
@@ -104,10 +104,10 @@ TResult<CommandLineArgumentValue> CommandLineArguments::ParseArgumentValue(const
 {
     const CommandLineArgumentType type = definition.type;
 
-    json::ParseResult parse_result = json::JSON::Parse(str);
-    json::JSONValue value = std::move(parse_result.value);
+    json::ParseResult parseResult = json::JSON::Parse(str);
+    json::JSONValue value = std::move(parseResult.value);
 
-    if (!parse_result.ok)
+    if (!parseResult.ok)
     {
         // If string, allow unquoted on parse error
         if (type == CommandLineArgumentType::STRING)
@@ -115,8 +115,7 @@ TResult<CommandLineArgumentValue> CommandLineArguments::ParseArgumentValue(const
             return json::JSONValue(json::JSONString(str));
         }
 
-        HYP_LOG(CommandLine, Error, "Failed to parse argument \"{}\": {}",
-            str, parse_result.message);
+        HYP_LOG(CommandLine, Error, "Failed to parse argument \"{}\": {}", str, parseResult.message);
 
         return HYP_MAKE_ERROR(Error, "Failed to parse argument");
     }
@@ -127,32 +126,32 @@ TResult<CommandLineArgumentValue> CommandLineArguments::ParseArgumentValue(const
         return json::JSONValue(value.ToString());
     case CommandLineArgumentType::INTEGER:
     {
-        int32 value_int;
+        int32 valueInt;
 
         if (value.IsNumber())
         {
             return json::JSONValue(value.ToInt32());
         }
 
-        if (!StringUtil::Parse(value.ToString(), &value_int))
+        if (!StringUtil::Parse(value.ToString(), &valueInt))
         {
-            return json::JSONValue(value_int);
+            return json::JSONValue(valueInt);
         }
 
         return HYP_MAKE_ERROR(Error, "Failed to parse integer argument");
     }
     case CommandLineArgumentType::FLOAT:
     {
-        double value_double;
+        double valueDouble;
 
         if (value.IsNumber())
         {
             return json::JSONValue(value.ToDouble());
         }
 
-        if (!StringUtil::Parse(value.ToString(), &value_double))
+        if (!StringUtil::Parse(value.ToString(), &valueDouble))
         {
-            return json::JSONValue(value_double);
+            return json::JSONValue(valueDouble);
         }
 
         return HYP_MAKE_ERROR(Error, "Failed to parse float argument");
@@ -161,21 +160,21 @@ TResult<CommandLineArgumentValue> CommandLineArguments::ParseArgumentValue(const
         return json::JSONValue(value.ToBool());
     case CommandLineArgumentType::ENUM:
     {
-        json::JSONString string_value = value.ToString();
+        json::JSONString stringValue = value.ToString();
 
-        const Array<String>* enum_values = definition.enum_values.TryGet();
+        const Array<String>* enumValues = definition.enumValues.TryGet();
 
-        if (!enum_values)
+        if (!enumValues)
         {
             return HYP_MAKE_ERROR(Error, "Internal error parsing enum argument");
         }
 
-        if (!enum_values->Contains(string_value))
+        if (!enumValues->Contains(stringValue))
         {
             return HYP_MAKE_ERROR(Error, "Not a valid value for argument");
         }
 
-        return json::JSONValue(std::move(string_value));
+        return json::JSONValue(std::move(stringValue));
     }
     }
 
@@ -279,7 +278,7 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
     const String& description,
     EnumFlags<CommandLineArgumentFlags> flags,
     CommandLineArgumentType type,
-    const CommandLineArgumentValue& default_value)
+    const CommandLineArgumentValue& defaultValue)
 {
     if (!m_impl)
     {
@@ -299,7 +298,7 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
             description.Empty() ? Optional<String>() : description,
             flags,
             type,
-            default_value
+            defaultValue
         };
 
         return *this;
@@ -311,7 +310,7 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
         description.Empty() ? Optional<String>() : description,
         flags,
         type,
-        default_value });
+        defaultValue });
 
     return *this;
 }
@@ -321,8 +320,8 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
     const String& shorthand,
     const String& description,
     EnumFlags<CommandLineArgumentFlags> flags,
-    const Optional<Array<String>>& enum_values,
-    const CommandLineArgumentValue& default_value)
+    const Optional<Array<String>>& enumValues,
+    const CommandLineArgumentValue& defaultValue)
 {
     if (!m_impl)
     {
@@ -342,8 +341,8 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
             description.Empty() ? Optional<String>() : description,
             flags,
             CommandLineArgumentType::ENUM,
-            default_value,
-            enum_values
+            defaultValue,
+            enumValues
         };
 
         return *this;
@@ -355,8 +354,8 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
         description.Empty() ? Optional<String>() : description,
         flags,
         CommandLineArgumentType::ENUM,
-        default_value,
-        enum_values });
+        defaultValue,
+        enumValues });
 
     return *this;
 }
@@ -365,65 +364,65 @@ CommandLineArgumentDefinitions& CommandLineArgumentDefinitions::Add(
 
 #pragma region CommandLineParser
 
-TResult<CommandLineArguments> CommandLineParser::Parse(const String& command_line) const
+TResult<CommandLineArguments> CommandLineParser::Parse(const String& commandLine) const
 {
     String command;
     Array<String> args;
 
-    int current_string_index = 0;
-    String current_string;
+    int currentStringIndex = 0;
+    String currentString;
 
-    auto add_current_string = [&]()
+    auto addCurrentString = [&]()
     {
-        if (current_string.Any())
+        if (currentString.Any())
         {
-            if (current_string_index++ == 0)
+            if (currentStringIndex++ == 0)
             {
-                command = std::move(current_string);
+                command = std::move(currentString);
             }
             else
             {
-                args.PushBack(std::move(current_string));
+                args.PushBack(std::move(currentString));
             }
         }
     };
 
-    for (SizeType char_index = 0; char_index < command_line.Length(); char_index++)
+    for (SizeType charIndex = 0; charIndex < commandLine.Length(); charIndex++)
     {
-        uint32 current_char = command_line.GetChar(char_index);
+        uint32 currentChar = commandLine.GetChar(charIndex);
 
-        if (std::isspace(int(current_char)))
+        if (std::isspace(int(currentChar)))
         {
-            add_current_string();
+            addCurrentString();
 
             continue;
         }
 
-        if (current_char == uint32('"'))
+        if (currentChar == uint32('"'))
         {
             do
             {
-                current_string.Append(current_char);
+                currentString.Append(currentChar);
 
-                ++char_index;
+                ++charIndex;
             }
-            while (char_index < command_line.Length() && (current_char = command_line.GetChar(char_index)) != uint32('"'));
+            while (charIndex < commandLine.Length() && (currentChar = commandLine.GetChar(charIndex)) != uint32('"'));
         }
-        else if (current_char == uint32('\''))
+        else if (currentChar == uint32('\''))
         {
             do
             {
-                current_string.Append(current_char);
+                currentString.Append(currentChar);
 
-                ++char_index;
+                ++charIndex;
             }
-            while (char_index < command_line.Length() && (current_char = command_line.GetChar(char_index)) != uint32('\''));
+            while (charIndex < commandLine.Length() && (currentChar = commandLine.GetChar(charIndex)) != uint32('\''));
         }
 
-        current_string.Append(current_char);
+        currentString.Append(currentChar);
     }
 
-    add_current_string();
+    addCurrentString();
 
     return Parse(command, args);
 }
@@ -454,7 +453,7 @@ TResult<CommandLineArguments> CommandLineParser::Parse(const String& command, co
 
     CommandLineArguments result;
 
-    HashSet<String> used_arguments;
+    HashSet<String> usedArguments;
 
     for (SizeType i = 0; i < args.Size(); i++)
     {
@@ -484,27 +483,27 @@ TResult<CommandLineArguments> CommandLineParser::Parse(const String& command, co
             continue;
         }
 
-        used_arguments.Insert(it->name);
+        usedArguments.Insert(it->name);
 
-        const bool allow_multiple = it->flags[CommandLineArgumentFlags::ALLOW_MULTIPLE];
+        const bool allowMultiple = it->flags[CommandLineArgumentFlags::ALLOW_MULTIPLE];
 
         if (parts.Size() > 1)
         {
-            TResult<CommandLineArgumentValue> parsed_value = CommandLineArguments::ParseArgumentValue(*it, parts[1]);
+            TResult<CommandLineArgumentValue> parsedValue = CommandLineArguments::ParseArgumentValue(*it, parts[1]);
 
-            if (parsed_value.HasError())
+            if (parsedValue.HasError())
             {
-                return parsed_value.GetError();
+                return parsedValue.GetError();
             }
 
-            AppendCommandLineArgumentValue(result.m_values, arg, std::move(parsed_value.GetValue()), allow_multiple);
+            AppendCommandLineArgumentValue(result.m_values, arg, std::move(parsedValue.GetValue()), allowMultiple);
 
             continue;
         }
 
         if (it->type == CommandLineArgumentType::BOOLEAN)
         {
-            AppendCommandLineArgumentValue(result.m_values, arg, CommandLineArgumentValue { true }, allow_multiple);
+            AppendCommandLineArgumentValue(result.m_values, arg, CommandLineArgumentValue { true }, allowMultiple);
 
             continue;
         }
@@ -514,28 +513,28 @@ TResult<CommandLineArguments> CommandLineParser::Parse(const String& command, co
             return HYP_MAKE_ERROR(Error, "Missing value for argument");
         }
 
-        TResult<CommandLineArgumentValue> parsed_value = CommandLineArguments::ParseArgumentValue(*it, args[++i]);
+        TResult<CommandLineArgumentValue> parsedValue = CommandLineArguments::ParseArgumentValue(*it, args[++i]);
 
-        if (parsed_value.HasError())
+        if (parsedValue.HasError())
         {
-            return parsed_value.GetError();
+            return parsedValue.GetError();
         }
 
-        AppendCommandLineArgumentValue(result.m_values, arg, std::move(parsed_value.GetValue()), allow_multiple);
+        AppendCommandLineArgumentValue(result.m_values, arg, std::move(parsedValue.GetValue()), allowMultiple);
     }
 
     for (const CommandLineArgumentDefinition& def : *m_definitions)
     {
-        const bool allow_multiple = def.flags[CommandLineArgumentFlags::ALLOW_MULTIPLE];
+        const bool allowMultiple = def.flags[CommandLineArgumentFlags::ALLOW_MULTIPLE];
 
-        if (used_arguments.Contains(def.name))
+        if (usedArguments.Contains(def.name))
         {
             continue;
         }
 
-        if (def.default_value.HasValue())
+        if (def.defaultValue.HasValue())
         {
-            AppendCommandLineArgumentValue(result.m_values, def.name, *def.default_value, allow_multiple);
+            AppendCommandLineArgumentValue(result.m_values, def.name, *def.defaultValue, allowMultiple);
 
             continue;
         }

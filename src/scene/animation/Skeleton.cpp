@@ -5,7 +5,6 @@
 #include <scene/animation/Animation.hpp>
 
 #include <rendering/RenderSkeleton.hpp>
-#include <rendering/ShaderGlobals.hpp>
 #include <rendering/backend/RendererResult.hpp>
 
 #include <core/object/HypClassUtils.hpp>
@@ -13,39 +12,40 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
 
 Skeleton::Skeleton()
     : HypObject(),
-      m_mutation_state(DataMutationState::CLEAN)
+      m_mutationState(DataMutationState::CLEAN)
 {
 }
 
-Skeleton::Skeleton(const Handle<Bone>& root_bone)
+Skeleton::Skeleton(const Handle<Bone>& rootBone)
     : HypObject(),
-      m_root_bone(root_bone),
-      m_mutation_state(DataMutationState::CLEAN)
+      m_rootBone(rootBone),
+      m_mutationState(DataMutationState::CLEAN)
 {
-    if (m_root_bone)
+    if (m_rootBone)
     {
-        m_root_bone->SetSkeleton(this);
+        m_rootBone->SetSkeleton(this);
     }
 }
 
 Skeleton::~Skeleton()
 {
-    if (m_render_resource != nullptr)
+    if (m_renderResource != nullptr)
     {
-        FreeResource(m_render_resource);
+        FreeResource(m_renderResource);
 
-        m_render_resource = nullptr;
+        m_renderResource = nullptr;
     }
 
-    if (m_root_bone)
+    if (m_rootBone)
     {
-        m_root_bone->SetSkeleton(nullptr);
+        m_rootBone->SetSkeleton(nullptr);
     }
 
     SetReady(false);
@@ -55,40 +55,40 @@ void Skeleton::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
         {
-            if (m_render_resource != nullptr)
+            if (m_renderResource != nullptr)
             {
-                FreeResource(m_render_resource);
+                FreeResource(m_renderResource);
 
-                m_render_resource = nullptr;
+                m_renderResource = nullptr;
             }
         }));
 
-    m_render_resource = AllocateResource<RenderSkeleton>(this);
+    m_renderResource = AllocateResource<RenderSkeleton>(this);
 
-    m_mutation_state |= DataMutationState::DIRTY;
+    m_mutationState |= DataMutationState::DIRTY;
 
     Update(0.0166f);
 
     SetReady(true);
 }
 
-void Skeleton::Update(GameCounter::TickUnit)
+void Skeleton::Update(float)
 {
-    if (!m_mutation_state.IsDirty())
+    if (!m_mutationState.IsDirty())
     {
         return;
     }
 
-    const SizeType num_bones = MathUtil::Min(SkeletonShaderData::max_bones, NumBones());
+    const SizeType numBones = MathUtil::Min(SkeletonShaderData::maxBones, NumBones());
 
-    if (num_bones != 0)
+    if (numBones != 0)
     {
-        SkeletonShaderData shader_data {};
-        shader_data.bones[0] = m_root_bone->GetBoneMatrix();
+        SkeletonShaderData shaderData {};
+        shaderData.bones[0] = m_rootBone->GetBoneMatrix();
 
-        for (SizeType i = 1; i < num_bones; i++)
+        for (SizeType i = 1; i < numBones; i++)
         {
-            if (Node* descendent = m_root_bone->GetDescendants()[i - 1])
+            if (Node* descendent = m_rootBone->GetDescendants()[i - 1])
             {
                 if (!descendent)
                 {
@@ -100,29 +100,29 @@ void Skeleton::Update(GameCounter::TickUnit)
                     continue;
                 }
 
-                shader_data.bones[i] = static_cast<const Bone*>(descendent)->GetBoneMatrix();
+                shaderData.bones[i] = static_cast<const Bone*>(descendent)->GetBoneMatrix();
             }
         }
 
-        m_render_resource->SetBufferData(shader_data);
+        m_renderResource->SetBufferData(shaderData);
     }
 
-    m_mutation_state = DataMutationState::CLEAN;
+    m_mutationState = DataMutationState::CLEAN;
 }
 
 Bone* Skeleton::FindBone(WeakName name) const
 {
-    if (!m_root_bone)
+    if (!m_rootBone)
     {
         return nullptr;
     }
 
-    if (m_root_bone->GetName() == name)
+    if (m_rootBone->GetName() == name)
     {
-        return static_cast<Bone*>(m_root_bone.Get());
+        return static_cast<Bone*>(m_rootBone.Get());
     }
 
-    for (Node* node : m_root_bone->GetDescendants())
+    for (Node* node : m_rootBone->GetDescendants())
     {
         if (!node)
         {
@@ -147,19 +147,19 @@ Bone* Skeleton::FindBone(WeakName name) const
 
 uint32 Skeleton::FindBoneIndex(WeakName name) const
 {
-    if (!m_root_bone)
+    if (!m_rootBone)
     {
         return uint32(-1);
     }
 
     uint32 index = 0;
 
-    if (m_root_bone->GetName() == name)
+    if (m_rootBone->GetName() == name)
     {
         return index;
     }
 
-    for (Node* node : m_root_bone->GetDescendants())
+    for (Node* node : m_rootBone->GetDescendants())
     {
         ++index;
 
@@ -186,16 +186,16 @@ uint32 Skeleton::FindBoneIndex(WeakName name) const
 
 const Handle<Bone>& Skeleton::GetRootBone() const
 {
-    return m_root_bone;
+    return m_rootBone;
 }
 
 void Skeleton::SetRootBone(const Handle<Bone>& bone)
 {
-    if (m_root_bone)
+    if (m_rootBone)
     {
-        m_root_bone->SetSkeleton(nullptr);
+        m_rootBone->SetSkeleton(nullptr);
 
-        m_root_bone.Reset();
+        m_rootBone.Reset();
     }
 
     if (!bone)
@@ -203,18 +203,18 @@ void Skeleton::SetRootBone(const Handle<Bone>& bone)
         return;
     }
 
-    m_root_bone = bone;
-    m_root_bone->SetSkeleton(this);
+    m_rootBone = bone;
+    m_rootBone->SetSkeleton(this);
 }
 
 SizeType Skeleton::NumBones() const
 {
-    if (!m_root_bone)
+    if (!m_rootBone)
     {
         return 0;
     }
 
-    return 1 + m_root_bone->GetDescendants().Size();
+    return 1 + m_rootBone->GetDescendants().Size();
 }
 
 void Skeleton::AddAnimation(const Handle<Animation>& animation)
@@ -226,25 +226,25 @@ void Skeleton::AddAnimation(const Handle<Animation>& animation)
 
     for (const Handle<AnimationTrack>& track : animation->GetTracks())
     {
-        if (!track->GetDesc().bone_name.IsValid())
+        if (!track->GetDesc().boneName.IsValid())
         {
             track->SetBone(nullptr);
 
             continue;
         }
 
-        track->SetBone(FindBone(track->GetDesc().bone_name));
+        track->SetBone(FindBone(track->GetDesc().boneName));
 
         if (!track->GetBone())
         {
-            HYP_LOG(Animation, Warning, "Skeleton could not find bone with name '{}'", track->GetDesc().bone_name);
+            HYP_LOG(Animation, Warning, "Skeleton could not find bone with name '{}'", track->GetDesc().boneName);
         }
     }
 
     m_animations.PushBack(animation);
 }
 
-const Animation* Skeleton::FindAnimation(UTF8StringView name, uint32* out_index) const
+const Animation* Skeleton::FindAnimation(UTF8StringView name, uint32* outIndex) const
 {
     const auto it = m_animations.FindIf([&name](const auto& item)
         {
@@ -256,9 +256,9 @@ const Animation* Skeleton::FindAnimation(UTF8StringView name, uint32* out_index)
         return nullptr;
     }
 
-    if (out_index != nullptr)
+    if (outIndex != nullptr)
     {
-        *out_index = m_animations.IndexOf(it);
+        *outIndex = m_animations.IndexOf(it);
     }
 
     return it->Get();

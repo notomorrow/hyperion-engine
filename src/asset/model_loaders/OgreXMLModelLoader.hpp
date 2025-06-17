@@ -39,9 +39,9 @@ public:
         Array<Vertex> vertices;
 
         Array<SubMesh> submeshes;
-        FlatMap<uint32, Array<BoneAssignment>> bone_assignments;
+        FlatMap<uint32, Array<BoneAssignment>> boneAssignments;
 
-        String skeleton_name;
+        String skeletonName;
     };
 
     virtual ~OgreXMLModelLoader() = default;

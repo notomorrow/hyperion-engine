@@ -1,6 +1,8 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <editor/EditorActionStack.hpp>
+#include <editor/EditorSubsystem.hpp>
+#include <editor/EditorProject.hpp>
 
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
@@ -12,28 +14,43 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
 EditorActionStack::EditorActionStack()
-    : m_current_action_index(-1),
-      m_current_state(EditorActionStackState::NONE)
+    : m_currentActionIndex(-1),
+      m_currentState(EditorActionStackState::NONE)
+{
+}
+
+EditorActionStack::EditorActionStack(const WeakHandle<EditorProject>& editorProject)
+    : m_editorProject(editorProject),
+      m_currentActionIndex(-1),
+      m_currentState(EditorActionStackState::NONE)
 {
 }
 
 EditorActionStack::EditorActionStack(EditorActionStack&& other) noexcept
-    : m_actions(Move(other.m_actions)),
-      m_current_action_index(other.m_current_action_index),
-      m_current_state(other.m_current_state)
+    : m_editorProject(std::move(other.m_editorProject)),
+      m_actions(Move(other.m_actions)),
+      m_currentActionIndex(other.m_currentActionIndex),
+      m_currentState(other.m_currentState)
 {
-    other.m_current_action_index = -1;
-    other.m_current_state = EditorActionStackState::NONE;
+    other.m_currentActionIndex = -1;
+    other.m_currentState = EditorActionStackState::NONE;
 }
 
 EditorActionStack& EditorActionStack::operator=(EditorActionStack&& other) noexcept
 {
-    m_actions = Move(other.m_actions);
-    m_current_action_index = other.m_current_action_index;
-    m_current_state = other.m_current_state;
+    if (this == &other)
+    {
+        return *this;
+    }
 
-    other.m_current_action_index = -1;
-    other.m_current_state = EditorActionStackState::NONE;
+    m_editorProject = std::move(other.m_editorProject);
+
+    m_actions = Move(other.m_actions);
+    m_currentActionIndex = other.m_currentActionIndex;
+    m_currentState = other.m_currentState;
+
+    other.m_currentActionIndex = -1;
+    other.m_currentState = EditorActionStackState::NONE;
 
     return *this;
 }
@@ -42,36 +59,42 @@ EditorActionStack::~EditorActionStack() = default;
 
 bool EditorActionStack::CanUndo() const
 {
-    return m_current_action_index >= 0;
+    return m_currentActionIndex >= 0;
 }
 
 bool EditorActionStack::CanRedo() const
 {
-    return m_current_action_index + 1 < m_actions.Size();
+    return m_currentActionIndex + 1 < m_actions.Size();
 }
 
 void EditorActionStack::Push(const Handle<EditorActionBase>& action)
 {
     AssertThrow(action.IsValid());
 
-    const EnumFlags<EditorActionStackState> previous_state = m_current_state;
+    Handle<EditorProject> editorProject = m_editorProject.Lock();
+    AssertThrow(editorProject.IsValid());
+
+    Handle<EditorSubsystem> editorSubsystem = editorProject->GetEditorSubsystem().Lock();
+    AssertThrow(editorSubsystem.IsValid());
+
+    const EnumFlags<EditorActionStackState> previousState = m_currentState;
 
     OnBeforeActionPush(action.Get());
 
-    action->Execute();
+    action->Execute(editorSubsystem.Get(), editorProject.Get());
 
     // Chop off any actions stack that are after the current action index,
     // since we are pushing a new action.
-    if (m_current_action_index > 0)
+    if (m_currentActionIndex > 0)
     {
-        while (int(m_actions.Size()) > m_current_action_index)
+        while (int(m_actions.Size()) > m_currentActionIndex)
         {
             m_actions.PopBack();
         }
     }
 
     m_actions.PushBack(action);
-    m_current_action_index = int(m_actions.Size()) - 1;
+    m_currentActionIndex = int(m_actions.Size()) - 1;
 
     UpdateState();
 
@@ -85,13 +108,19 @@ void EditorActionStack::Undo()
         return;
     }
 
-    EditorActionBase* action = m_actions[m_current_action_index].Get();
+    Handle<EditorProject> editorProject = m_editorProject.Lock();
+    AssertThrow(editorProject.IsValid());
+
+    Handle<EditorSubsystem> editorSubsystem = editorProject->GetEditorSubsystem().Lock();
+    AssertThrow(editorSubsystem.IsValid());
+
+    EditorActionBase* action = m_actions[m_currentActionIndex].Get();
 
     OnBeforeActionPop(action);
 
-    action->Revert();
+    action->Revert(editorSubsystem.Get(), editorProject.Get());
 
-    --m_current_action_index;
+    --m_currentActionIndex;
 
     UpdateState();
 
@@ -105,13 +134,19 @@ void EditorActionStack::Redo()
         return;
     }
 
-    EditorActionBase* action = m_actions[m_current_action_index + 1].Get();
+    Handle<EditorProject> editorProject = m_editorProject.Lock();
+    AssertThrow(editorProject.IsValid());
+
+    Handle<EditorSubsystem> editorSubsystem = editorProject->GetEditorSubsystem().Lock();
+    AssertThrow(editorSubsystem.IsValid());
+
+    EditorActionBase* action = m_actions[m_currentActionIndex + 1].Get();
 
     OnBeforeActionPush(action);
 
-    action->Execute();
+    action->Execute(editorSubsystem.Get(), editorProject.Get());
 
-    ++m_current_action_index;
+    ++m_currentActionIndex;
 
     UpdateState();
 
@@ -125,9 +160,9 @@ const Handle<EditorActionBase>& EditorActionStack::GetUndoAction() const
         return Handle<EditorActionBase>::empty;
     }
 
-    AssertDebug(m_current_action_index < m_actions.Size());
+    AssertDebug(m_currentActionIndex < m_actions.Size());
 
-    const Handle<EditorActionBase>& action = m_actions[m_current_action_index];
+    const Handle<EditorActionBase>& action = m_actions[m_currentActionIndex];
     AssertDebug(action.IsValid());
 
     return action;
@@ -140,9 +175,9 @@ const Handle<EditorActionBase>& EditorActionStack::GetRedoAction() const
         return Handle<EditorActionBase>::empty;
     }
 
-    AssertDebug(m_current_action_index + 1 < m_actions.Size());
+    AssertDebug(m_currentActionIndex + 1 < m_actions.Size());
 
-    const Handle<EditorActionBase>& action = m_actions[m_current_action_index + 1];
+    const Handle<EditorActionBase>& action = m_actions[m_currentActionIndex + 1];
     AssertDebug(action.IsValid());
 
     return action;
@@ -150,15 +185,15 @@ const Handle<EditorActionBase>& EditorActionStack::GetRedoAction() const
 
 void EditorActionStack::UpdateState()
 {
-    EnumFlags<EditorActionStackState> new_state = EditorActionStackState::NONE;
-    new_state[EditorActionStackState::CAN_UNDO] = CanUndo();
-    new_state[EditorActionStackState::CAN_REDO] = CanRedo();
+    EnumFlags<EditorActionStackState> newState = EditorActionStackState::NONE;
+    newState[EditorActionStackState::CAN_UNDO] = CanUndo();
+    newState[EditorActionStackState::CAN_REDO] = CanRedo();
 
-    if (m_current_state != new_state)
+    if (m_currentState != newState)
     {
-        m_current_state = new_state;
+        m_currentState = newState;
 
-        OnStateChange(m_current_state);
+        OnStateChange(m_currentState);
     }
 }
 

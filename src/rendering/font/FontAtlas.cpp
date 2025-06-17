@@ -2,89 +2,87 @@
 
 #include <rendering/font/FontAtlas.hpp>
 #include <rendering/RenderTexture.hpp>
+#include <rendering/RenderGlobalState.hpp>
+#include <rendering/PlaceholderData.hpp>
 #include <rendering/SafeDeleter.hpp>
 
-#include <rendering/rhi/RHICommandList.hpp>
+#include <rendering/rhi/CmdList.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
+
+#include <streaming/StreamedTextureData.hpp>
 
 #include <scene/Texture.hpp>
 
 #include <core/logging/Logger.hpp>
+#include <core/utilities/DeferredScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Font);
 
-using renderer::GPUBufferType;
-
 #pragma region Render commands
 
 struct RENDER_COMMAND(FontAtlas_RenderCharacter)
-    : renderer::RenderCommand
+    : RenderCommand
 {
-    Handle<Texture> atlas_texture;
-    Handle<Texture> glyph_texture;
+    Handle<Texture> atlasTexture;
+    Handle<Texture> glyphTexture;
     Vec2i location;
-    Vec2i cell_dimensions;
+    Vec2i cellDimensions;
 
-    RENDER_COMMAND(FontAtlas_RenderCharacter)(const Handle<Texture>& atlas_texture, const Handle<Texture>& glyph_texture, Vec2i location, Vec2i cell_dimensions)
-        : atlas_texture(atlas_texture),
-          glyph_texture(glyph_texture),
+    RENDER_COMMAND(FontAtlas_RenderCharacter)(const Handle<Texture>& atlasTexture, const Handle<Texture>& glyphTexture, Vec2i location, Vec2i cellDimensions)
+        : atlasTexture(atlasTexture),
+          glyphTexture(glyphTexture),
           location(location),
-          cell_dimensions(cell_dimensions)
+          cellDimensions(cellDimensions)
     {
-        atlas_texture->GetRenderResource().IncRef();
-        glyph_texture->GetRenderResource().IncRef();
     }
 
     virtual ~RENDER_COMMAND(FontAtlas_RenderCharacter)() override
     {
-        atlas_texture->GetRenderResource().DecRef();
-        glyph_texture->GetRenderResource().DecRef();
+        atlasTexture->GetRenderResource().DecRef();
+        glyphTexture->GetRenderResource().DecRef();
     }
 
     virtual RendererResult operator()() override
     {
-        renderer::SingleTimeCommands commands;
+        SingleTimeCommands commands;
 
-        const ImageRef& image = glyph_texture->GetRenderResource().GetImage();
+        const ImageRef& image = glyphTexture->GetRenderResource().GetImage();
         AssertThrow(image.IsValid());
 
         const Vec3u& extent = image->GetExtent();
 
-        Rect<uint32> src_rect {
+        Rect<uint32> srcRect {
             0, 0,
             extent.x,
             extent.y
         };
 
-        Rect<uint32> dest_rect {
+        Rect<uint32> destRect {
             uint32(location.x),
             uint32(location.y),
             uint32(location.x + extent.x),
             uint32(location.y + extent.y)
         };
 
-        AssertThrowMsg(cell_dimensions.x >= extent.x, "Cell width (%u) is less than glyph width (%u)", cell_dimensions.x, extent.x);
-        AssertThrowMsg(cell_dimensions.y >= extent.y, "Cell height (%u) is less than glyph height (%u)", cell_dimensions.y, extent.y);
+        AssertThrowMsg(cellDimensions.x >= extent.x, "Cell width (%u) is less than glyph width (%u)", cellDimensions.x, extent.x);
+        AssertThrowMsg(cellDimensions.y >= extent.y, "Cell height (%u) is less than glyph height (%u)", cellDimensions.y, extent.y);
 
-        commands.Push([&](RHICommandList& cmd)
+        commands.Push([&](CmdList& cmd)
             {
                 // put src image in state for copying from
-                cmd.Add<InsertBarrier>(image, renderer::ResourceState::COPY_SRC);
+                cmd.Add<InsertBarrier>(image, RS_COPY_SRC);
 
                 // put dst image in state for copying to
-                cmd.Add<InsertBarrier>(atlas_texture->GetRenderResource().GetImage(), renderer::ResourceState::COPY_DST);
+                cmd.Add<InsertBarrier>(atlasTexture->GetRenderResource().GetImage(), RS_COPY_DST);
 
-                cmd.Add<BlitRect>(
-                    image,
-                    atlas_texture->GetRenderResource().GetImage(),
-                    src_rect,
-                    dest_rect);
+                cmd.Add<BlitRect>(image, atlasTexture->GetRenderResource().GetImage(), srcRect, destRect);
             });
 
         return commands.Execute();
@@ -99,15 +97,15 @@ FontAtlasTextureSet::~FontAtlasTextureSet()
 {
     for (auto& atlas : atlases)
     {
-        g_safe_deleter->SafeRelease(std::move(atlas.second));
+        g_safeDeleter->SafeRelease(std::move(atlas.second));
     }
 }
 
-void FontAtlasTextureSet::AddAtlas(uint32 pixel_size, Handle<Texture> texture, bool is_main_atlas)
+void FontAtlasTextureSet::AddAtlas(uint32 pixelSize, Handle<Texture> texture, bool isMainAtlas)
 {
-    if (is_main_atlas)
+    if (isMainAtlas)
     {
-        AssertThrowMsg(!main_atlas.IsValid(), "Main atlas already set");
+        AssertDebug(!mainAtlas.IsValid(), "Main atlas already set");
     }
 
     if (!texture.IsValid())
@@ -115,24 +113,24 @@ void FontAtlasTextureSet::AddAtlas(uint32 pixel_size, Handle<Texture> texture, b
         return;
     }
 
-    atlases[pixel_size] = texture;
+    atlases[pixelSize] = texture;
 
-    if (is_main_atlas)
+    if (isMainAtlas)
     {
-        main_atlas = texture;
+        mainAtlas = texture;
     }
 }
 
-Handle<Texture> FontAtlasTextureSet::GetAtlasForPixelSize(uint32 pixel_size) const
+Handle<Texture> FontAtlasTextureSet::GetAtlasForPixelSize(uint32 pixelSize) const
 {
-    auto it = atlases.Find(pixel_size);
+    auto it = atlases.Find(pixelSize);
 
     if (it != atlases.End())
     {
         return it->second;
     }
 
-    it = atlases.UpperBound(pixel_size);
+    it = atlases.UpperBound(pixelSize);
 
     if (it != atlases.End())
     {
@@ -146,15 +144,15 @@ Handle<Texture> FontAtlasTextureSet::GetAtlasForPixelSize(uint32 pixel_size) con
 
 #pragma region FontAtlas
 
-FontAtlas::FontAtlas(const FontAtlasTextureSet& atlas_textures, Vec2i cell_dimensions, GlyphMetricsBuffer glyph_metrics, SymbolList symbol_list)
-    : m_atlas_textures(std::move(atlas_textures)),
-      m_cell_dimensions(cell_dimensions),
-      m_glyph_metrics(std::move(glyph_metrics)),
-      m_symbol_list(std::move(symbol_list))
+FontAtlas::FontAtlas(const FontAtlasTextureSet& atlasTextures, Vec2i cellDimensions, GlyphMetricsBuffer glyphMetrics, SymbolList symbolList)
+    : m_atlasTextures(std::move(atlasTextures)),
+      m_cellDimensions(cellDimensions),
+      m_glyphMetrics(std::move(glyphMetrics)),
+      m_symbolList(std::move(symbolList))
 {
-    AssertThrow(m_symbol_list.Size() != 0);
+    AssertThrow(m_symbolList.Size() != 0);
 
-    for (auto& it : m_atlas_textures.atlases)
+    for (auto& it : m_atlasTextures.atlases)
     {
         if (!it.second.IsValid())
         {
@@ -167,124 +165,162 @@ FontAtlas::FontAtlas(const FontAtlasTextureSet& atlas_textures, Vec2i cell_dimen
 
 FontAtlas::FontAtlas(RC<FontFace> face)
     : m_face(std::move(face)),
-      m_symbol_list(GetDefaultSymbolList())
+      m_symbolList(GetDefaultSymbolList())
 {
-    AssertThrow(m_symbol_list.Size() != 0);
+    AssertThrow(m_symbolList.Size() != 0);
 
     // Each cell will be the same size at the largest symbol
-    m_cell_dimensions = FindMaxDimensions(m_face);
+    m_cellDimensions = FindMaxDimensions(m_face);
 }
+
+FontAtlas::~FontAtlas() = default;
 
 FontAtlas::SymbolList FontAtlas::GetDefaultSymbolList()
 {
     // first renderable symbol
-    static constexpr uint32 char_range_start = 33; // !
+    static constexpr uint32 charRangeStart = 33; // !
 
     // highest symbol in the ascii table
-    static constexpr uint32 char_range_end = 126; // ~ + 1
+    static constexpr uint32 charRangeEnd = 126; // ~ + 1
 
-    SymbolList symbol_list;
-    symbol_list.Reserve(char_range_end - char_range_start + 1);
+    SymbolList symbolList;
+    symbolList.Reserve(charRangeEnd - charRangeStart + 1);
 
-    for (uint32 ch = char_range_start; ch <= char_range_end; ch++)
+    for (uint32 ch = charRangeStart; ch <= charRangeEnd; ch++)
     {
-        symbol_list.PushBack(ch);
+        symbolList.PushBack(ch);
     }
 
-    return symbol_list;
+    return symbolList;
 }
 
-void FontAtlas::Render()
+Result FontAtlas::RenderAtlasTextures()
 {
     AssertThrow(m_face != nullptr);
 
-    if ((m_symbol_list.Size() / s_symbol_columns) > s_symbol_rows)
+    if ((m_symbolList.Size() / s_symbolColumns) > s_symbolRows)
     {
         HYP_LOG(Font, Warning, "Symbol list size is greater than the allocated font atlas!");
     }
 
-    m_glyph_metrics.Clear();
-    m_glyph_metrics.Resize(m_symbol_list.Size());
+    m_glyphMetrics.Clear();
+    m_glyphMetrics.Resize(m_symbolList.Size());
 
-    const auto render_glyphs = [&](float scale, bool is_main_atlas)
+    const auto renderGlyphs = [&](float scale, bool isMainAtlas) -> Result
     {
-        const Vec2i scaled_extent {
-            MathUtil::Ceil<float, int>(float(m_cell_dimensions.x) * scale),
-            MathUtil::Ceil<float, int>(float(m_cell_dimensions.y) * scale)
+        const Vec2i scaledExtent {
+            MathUtil::Ceil<float, int>(float(m_cellDimensions.x) * scale),
+            MathUtil::Ceil<float, int>(float(m_cellDimensions.y) * scale)
         };
 
-        HYP_LOG(Font, Info, "Rendering font atlas for pixel size {}", scaled_extent.y);
+        HYP_LOG(Font, Info, "Rendering font atlas for pixel size {}", scaledExtent.y);
 
-        Handle<Texture> texture = CreateObject<Texture>(TextureDesc {
-            ImageType::TEXTURE_TYPE_2D,
-            InternalFormat::RGBA8,
-            Vec3u { uint32(scaled_extent.x * s_symbol_columns), uint32(scaled_extent.y * s_symbol_rows), 1 },
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            FilterMode::TEXTURE_FILTER_NEAREST,
-            WrapMode::TEXTURE_WRAP_CLAMP_TO_EDGE });
+        UniquePtr<FontAtlasBitmap> atlasBitmap = MakeUnique<FontAtlasBitmap>(uint32(scaledExtent.x * s_symbolColumns), uint32(scaledExtent.y * s_symbolRows));
 
-        InitObject(texture);
-
-        for (SizeType i = 0; i < m_symbol_list.Size(); i++)
+        for (SizeType i = 0; i < m_symbolList.Size(); i++)
         {
-            const auto& symbol = m_symbol_list[i];
+            const auto& symbol = m_symbolList[i];
 
-            const Vec2i index { int(i % s_symbol_columns), int(i / s_symbol_columns) };
-            const Vec2i position = index * scaled_extent;
+            const Vec2i index { int(i % s_symbolColumns), int(i / s_symbolColumns) };
+            const Vec2i offset = index * scaledExtent;
 
-            Glyph glyph(m_face, m_face->GetGlyphIndex(symbol), scale);
-            // Render the glyph into a temporary texture
-            glyph.Render();
-
-            Handle<Texture> glyph_texture = glyph.GetImageData().CreateTexture();
-            AssertThrow(InitObject(glyph_texture));
-
-            if (is_main_atlas)
-            {
-                m_glyph_metrics[i] = glyph.GetMetrics();
-                m_glyph_metrics[i].image_position = position;
-            }
-
-            if (index.y > s_symbol_rows)
+            if (index.y > s_symbolRows)
             {
                 break;
             }
 
-            // Render our character texture => atlas texture
-            RenderCharacter(texture, glyph_texture, position, scaled_extent);
+            Glyph glyph { m_face, m_face->GetGlyphIndex(symbol), scale };
+
+            if (isMainAtlas)
+            {
+                m_glyphMetrics[i] = glyph.GetMetrics();
+                m_glyphMetrics[i].imagePosition = offset;
+
+                AssertDebug(m_glyphMetrics[i].width != 0 && m_glyphMetrics[i].height != 0);
+            }
+
+            TResult<UniquePtr<GlyphBitmap>> glyphRasterizeResult = glyph.Rasterize();
+
+            if (glyphRasterizeResult.HasError())
+            {
+                HYP_LOG(Font, Error, "Failed to rasterize glyph for symbol '{}': {}", symbol, glyphRasterizeResult.GetError().GetMessage());
+
+                return glyphRasterizeResult.GetError();
+            }
+
+            UniquePtr<GlyphBitmap> glyphBitmap = std::move(glyphRasterizeResult.GetValue());
+            AssertDebug(glyphBitmap != nullptr);
+
+            Rect<uint32> srcRect {
+                0, 0,
+                uint32(scaledExtent.x),
+                uint32(scaledExtent.y)
+            };
+
+            Rect<uint32> dstRect {
+                uint32(offset.x),
+                uint32(offset.y),
+                uint32(offset.x + scaledExtent.x),
+                uint32(offset.y + scaledExtent.y)
+            };
+
+            atlasBitmap->Blit(*glyphBitmap, srcRect, dstRect);
         }
 
-        // Readback the texture to streamed texture data
-        texture->Readback();
+        // debugging
+        if (!atlasBitmap->Write("TmpAtlas.bmp"))
+        {
+            HYP_FAIL("what");
+        }
+
+        // Create the atlas texture
+
+        const TextureDesc atlasTextureDesc {
+            TT_TEX2D,
+            TF_RGBA8,
+            Vec3u { atlasBitmap->GetWidth(), atlasBitmap->GetHeight(), 1 },
+            TFM_NEAREST,
+            TFM_NEAREST,
+            TWM_CLAMP_TO_EDGE
+        };
+
+        ByteBuffer byteBuffer = atlasBitmap->GetUnpackedBytes(4);
+
+        TextureData atlasTextureData {
+            atlasTextureDesc,
+            std::move(byteBuffer)
+        };
+
+        Handle<Texture> atlasTexture = CreateObject<Texture>(std::move(atlasTextureData));
+        InitObject(atlasTexture);
 
         // Add initial atlas
-        m_atlas_textures.AddAtlas(scaled_extent.y, std::move(texture), is_main_atlas);
+        m_atlasTextures.AddAtlas(scaledExtent.y, std::move(atlasTexture), isMainAtlas);
+
+        return {};
     };
 
-    render_glyphs(1.0f, true);
+    if (Result result = renderGlyphs(1.0f, true); result.HasError())
+    {
+        return result.GetError();
+    }
 
     for (float i = 1.1f; i <= 3.0f; i += 0.1f)
     {
-        render_glyphs(i, false);
+        if (auto result = renderGlyphs(i, false); result.HasError())
+        {
+            return result.GetError();
+        }
     }
 
-    if (!Threads::IsOnThread(g_render_thread))
-    {
-        // Sync render commands if not on render thread (render commands are executed inline if on render thread)
-        HYP_SYNC_RENDER();
-    }
-}
-
-void FontAtlas::RenderCharacter(const Handle<Texture>& atlas_texture, const Handle<Texture>& glyph_texture, Vec2i location, Vec2i dimensions) const
-{
-    PUSH_RENDER_COMMAND(FontAtlas_RenderCharacter, atlas_texture, glyph_texture, location, dimensions);
+    return {};
 }
 
 Vec2i FontAtlas::FindMaxDimensions(const RC<FontFace>& face) const
 {
-    Vec2i highest_dimensions = { 0, 0 };
+    Vec2i highestDimensions = { 0, 0 };
 
-    for (const auto& symbol : m_symbol_list)
+    for (const auto& symbol : m_symbolList)
     {
         // Create the glyph but only load in the metadata
         Glyph glyph(face, face->GetGlyphIndex(symbol), 1.0f);
@@ -293,68 +329,68 @@ Vec2i FontAtlas::FindMaxDimensions(const RC<FontFace>& face) const
         // Get the size of each glyph
         Vec2i size = glyph.GetMax();
 
-        if (size.x > highest_dimensions.x)
+        if (size.x > highestDimensions.x)
         {
-            highest_dimensions.x = size.x;
+            highestDimensions.x = size.x;
         }
 
-        if (size.y > highest_dimensions.y)
+        if (size.y > highestDimensions.y)
         {
-            highest_dimensions.y = size.y;
+            highestDimensions.y = size.y;
         }
     }
 
-    return highest_dimensions;
+    return highestDimensions;
 }
 
-Optional<Glyph::Metrics> FontAtlas::GetGlyphMetrics(FontFace::WChar symbol) const
+Optional<const Glyph::Metrics&> FontAtlas::GetGlyphMetrics(FontFace::WChar symbol) const
 {
-    const auto it = m_symbol_list.Find(symbol);
+    const auto it = m_symbolList.Find(symbol);
 
-    if (it == m_symbol_list.End())
+    if (it == m_symbolList.End())
     {
         return {};
     }
 
-    const auto index = std::distance(m_symbol_list.Begin(), it);
-    AssertThrowMsg(index < m_glyph_metrics.Size(), "Index (%u) out of bounds of glyph metrics buffer (%u)", index, m_glyph_metrics.Size());
+    const auto index = std::distance(m_symbolList.Begin(), it);
+    AssertThrow(index < m_glyphMetrics.Size(), "Index (%u) out of bounds of glyph metrics buffer (%u)", index, m_glyphMetrics.Size());
 
-    return m_glyph_metrics[index];
+    return m_glyphMetrics[index];
 }
 
-void FontAtlas::WriteToBuffer(uint32 pixel_size, ByteBuffer& buffer) const
+void FontAtlas::WriteToBuffer(uint32 pixelSize, ByteBuffer& buffer) const
 {
-    Handle<Texture> atlas = m_atlas_textures.GetAtlasForPixelSize(pixel_size);
+    Handle<Texture> atlas = m_atlasTextures.GetAtlasForPixelSize(pixelSize);
 
     if (!atlas.IsValid())
     {
-        HYP_LOG(Font, Error, "Failed to get atlas for pixel size {}", pixel_size);
+        HYP_LOG(Font, Error, "Failed to get atlas for pixel size {}", pixelSize);
 
         return;
     }
 
-    const uint32 buffer_size = atlas->GetTextureDesc().GetByteSize();
-    buffer.SetSize(buffer_size);
+    const uint32 bufferSize = atlas->GetTextureDesc().GetByteSize();
+    buffer.SetSize(bufferSize);
 
     struct RENDER_COMMAND(FontAtlas_WriteToBuffer)
-        : renderer::RenderCommand
+        : RenderCommand
     {
         Handle<Texture> atlas;
-        ByteBuffer& out_buffer;
-        uint32 buffer_size;
+        ByteBuffer& outBuffer;
+        uint32 bufferSize;
 
-        GPUBufferRef buffer;
+        GpuBufferRef buffer;
 
-        RENDER_COMMAND(FontAtlas_WriteToBuffer)(Handle<Texture> atlas, ByteBuffer& out_buffer, uint32 buffer_size)
+        RENDER_COMMAND(FontAtlas_WriteToBuffer)(Handle<Texture> atlas, ByteBuffer& outBuffer, uint32 bufferSize)
             : atlas(std::move(atlas)),
-              out_buffer(out_buffer),
-              buffer_size(buffer_size)
+              outBuffer(outBuffer),
+              bufferSize(bufferSize)
         {
         }
 
         virtual ~RENDER_COMMAND(FontAtlas_WriteToBuffer)() override
         {
-            g_safe_deleter->SafeRelease(std::move(atlas));
+            g_safeDeleter->SafeRelease(std::move(atlas));
 
             SafeRelease(std::move(buffer));
         }
@@ -363,7 +399,7 @@ void FontAtlas::WriteToBuffer(uint32 pixel_size, ByteBuffer& buffer) const
         {
             RendererResult result;
 
-            buffer = g_rendering_api->MakeGPUBuffer(GPUBufferType::STAGING_BUFFER, buffer_size);
+            buffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, bufferSize);
             HYPERION_ASSERT_RESULT(buffer->Create());
 
             if (!result)
@@ -371,116 +407,116 @@ void FontAtlas::WriteToBuffer(uint32 pixel_size, ByteBuffer& buffer) const
                 return result;
             }
 
-            renderer::SingleTimeCommands commands;
+            SingleTimeCommands commands;
 
             AssertThrow(atlas);
             AssertThrow(atlas->IsReady());
 
-            commands.Push([&](RHICommandList& cmd)
+            commands.Push([&](CmdList& cmd)
                 {
                     // put src image in state for copying from
-                    cmd.Add<InsertBarrier>(atlas->GetRenderResource().GetImage(), renderer::ResourceState::COPY_SRC);
+                    cmd.Add<InsertBarrier>(atlas->GetRenderResource().GetImage(), RS_COPY_SRC);
 
                     // put dst buffer in state for copying to
-                    cmd.Add<InsertBarrier>(buffer, renderer::ResourceState::COPY_DST);
+                    cmd.Add<InsertBarrier>(buffer, RS_COPY_DST);
 
                     cmd.Add<CopyImageToBuffer>(atlas->GetRenderResource().GetImage(), buffer);
 
-                    cmd.Add<InsertBarrier>(buffer, renderer::ResourceState::COPY_SRC);
+                    cmd.Add<InsertBarrier>(buffer, RS_COPY_SRC);
                 });
 
             HYPERION_PASS_ERRORS(commands.Execute(), result);
 
-            buffer->Read(buffer_size, out_buffer.Data());
+            buffer->Read(bufferSize, outBuffer.Data());
 
             HYPERION_RETURN_OK;
         }
     };
 
-    PUSH_RENDER_COMMAND(FontAtlas_WriteToBuffer, atlas, buffer, buffer_size);
+    PUSH_RENDER_COMMAND(FontAtlas_WriteToBuffer, atlas, buffer, bufferSize);
     HYP_SYNC_RENDER();
 }
 
-Bitmap<1> FontAtlas::GenerateBitmap(uint32 pixel_size) const
+Bitmap<1> FontAtlas::GenerateBitmap(uint32 pixelSize) const
 {
-    Handle<Texture> atlas = m_atlas_textures.GetAtlasForPixelSize(pixel_size);
+    Handle<Texture> atlas = m_atlasTextures.GetAtlasForPixelSize(pixelSize);
 
     if (!atlas.IsValid())
     {
-        HYP_LOG(Font, Error, "Failed to get atlas for pixel size {}", pixel_size);
+        HYP_LOG(Font, Error, "Failed to get atlas for pixel size {}", pixelSize);
 
         return {};
     }
 
-    ByteBuffer byte_buffer;
-    WriteToBuffer(pixel_size, byte_buffer);
+    ByteBuffer byteBuffer;
+    WriteToBuffer(pixelSize, byteBuffer);
 
     Bitmap<1> bitmap(atlas->GetExtent().x, atlas->GetExtent().y);
-    bitmap.SetPixels(byte_buffer);
+    bitmap.SetPixels(byteBuffer);
     bitmap.FlipVertical();
 
     return bitmap;
 }
 
-json::JSONValue FontAtlas::GenerateMetadataJSON(const String& output_directory) const
+json::JSONValue FontAtlas::GenerateMetadataJSON(const String& outputDirectory) const
 {
     json::JSONObject value;
 
-    json::JSONObject atlases_value;
-    json::JSONObject pixel_sizes_value;
+    json::JSONObject atlasesValue;
+    json::JSONObject pixelSizesValue;
 
-    uint32 main_atlas_key = uint32(-1);
+    uint32 mainAtlasKey = uint32(-1);
 
-    for (const auto& it : m_atlas_textures.atlases)
+    for (const auto& it : m_atlasTextures.atlases)
     {
         if (!it.second.IsValid())
         {
             continue;
         }
 
-        if (m_atlas_textures.main_atlas == it.second)
+        if (m_atlasTextures.mainAtlas == it.second)
         {
-            main_atlas_key = it.first;
+            mainAtlasKey = it.first;
         }
 
-        const String key_string = String::ToString(it.first);
+        const String keyString = String::ToString(it.first);
 
-        pixel_sizes_value[key_string] = FilePath(output_directory) / ("atlas_" + key_string + ".bmp");
+        pixelSizesValue[keyString] = FilePath(outputDirectory) / ("atlas_" + keyString + ".bmp");
     }
 
-    atlases_value["pixel_sizes"] = std::move(pixel_sizes_value);
-    atlases_value["main"] = json::JSONNumber(main_atlas_key);
+    atlasesValue["pixel_sizes"] = std::move(pixelSizesValue);
+    atlasesValue["main"] = json::JSONNumber(mainAtlasKey);
 
-    value["atlases"] = std::move(atlases_value);
+    value["atlases"] = std::move(atlasesValue);
 
     value["cell_dimensions"] = json::JSONObject {
-        { "width", json::JSONNumber(m_cell_dimensions.x) },
-        { "height", json::JSONNumber(m_cell_dimensions.y) }
+        { "width", json::JSONNumber(m_cellDimensions.x) },
+        { "height", json::JSONNumber(m_cellDimensions.y) }
     };
 
-    json::JSONArray metrics_array;
+    json::JSONArray metricsArray;
 
-    for (const Glyph::Metrics& metric : m_glyph_metrics)
+    for (const Glyph::Metrics& metric : m_glyphMetrics)
     {
-        metrics_array.PushBack(json::JSONObject {
-            { "width", json::JSONNumber(metric.metrics.width) },
-            { "height", json::JSONNumber(metric.metrics.height) },
-            { "bearing_x", json::JSONNumber(metric.metrics.bearing_x) },
-            { "bearing_y", json::JSONNumber(metric.metrics.bearing_y) },
-            { "advance", json::JSONNumber(metric.metrics.advance) },
-            { "image_position", json::JSONObject { { "x", json::JSONNumber(metric.image_position.x) }, { "y", json::JSONNumber(metric.image_position.y) } } } });
+        metricsArray.PushBack(json::JSONObject {
+            { "width", json::JSONNumber(metric.width) },
+            { "height", json::JSONNumber(metric.height) },
+            { "bearing_x", json::JSONNumber(metric.bearingX) },
+            { "bearing_y", json::JSONNumber(metric.bearingY) },
+            { "advance", json::JSONNumber(metric.advance) },
+            { "image_position", json::JSONObject { { "x", json::JSONNumber(metric.imagePosition.x) }, { "y", json::JSONNumber(metric.imagePosition.y) } } } });
     }
 
-    value["metrics"] = std::move(metrics_array);
+    value["metrics"] = std::move(metricsArray);
 
-    json::JSONArray symbol_list_array;
+    json::JSONArray symbolListArray;
 
-    for (const auto& symbol : m_symbol_list)
+    for (const auto& symbol : m_symbolList)
     {
-        symbol_list_array.PushBack(json::JSONNumber(symbol));
+        symbolListArray.PushBack(json::JSONNumber(symbol));
     }
 
-    value["symbol_list"] = std::move(symbol_list_array);
+    value["symbol_list"] = std::move(symbolListArray);
 
     return value;
 }

@@ -23,7 +23,7 @@ enum class MessageBoxType : int
 struct MessageBoxButton
 {
     String text;
-    Proc<void()> on_click;
+    Proc<void()> onClick;
 };
 
 class HYP_API SystemMessageBox
@@ -47,7 +47,7 @@ public:
 
     SystemMessageBox& Title(const String& title);
     SystemMessageBox& Text(const String& text);
-    SystemMessageBox& Button(const String& text, Proc<void()>&& on_click);
+    SystemMessageBox& Button(const String& text, Proc<void()>&& onClick);
 
     void Show() const;
 

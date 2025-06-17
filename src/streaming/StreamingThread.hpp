@@ -16,7 +16,7 @@ public:
     virtual ~StreamingThread() override;
 };
 
-HYP_API void SetGlobalStreamingThread(const RC<StreamingThread>& streaming_thread);
+HYP_API void SetGlobalStreamingThread(const RC<StreamingThread>& streamingThread);
 HYP_API const RC<StreamingThread>& GetGlobalStreamingThread();
 
 } // namespace hyperion

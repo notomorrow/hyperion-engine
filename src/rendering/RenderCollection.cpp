@@ -3,16 +3,15 @@
 #include <rendering/RenderCollection.hpp>
 #include <rendering/RenderGroup.hpp>
 #include <rendering/RenderProxy.hpp>
-#include <rendering/ShaderGlobals.hpp>
+#include <rendering/RenderGlobalState.hpp>
 #include <rendering/GBuffer.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/RenderCamera.hpp>
-#include <rendering/RenderState.hpp>
 #include <rendering/RenderMesh.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderView.hpp>
 
-#include <rendering/backend/RenderingAPI.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RenderConfig.hpp>
@@ -21,6 +20,8 @@
 #include <scene/Mesh.hpp>
 #include <scene/Material.hpp>
 #include <scene/View.hpp>
+#include <scene/Light.hpp>    // For LightType
+#include <scene/EnvProbe.hpp> // For EnvProbeType
 
 #include <scene/camera/Camera.hpp>
 
@@ -37,313 +38,304 @@
 
 #include <core/Util.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
 
-static constexpr bool do_parallel_collection = true;
+static constexpr bool doParallelCollection = false; // true;
 
-#pragma region Render commands
+#pragma region RenderProxyList
 
-struct RENDER_COMMAND(RebuildProxyGroups)
-    : renderer::RenderCommand
-{
-    TResourceHandle<RenderView> render_view;
-
-    RC<EntityDrawCollection> collection;
-    Array<RenderProxy> added_proxies;
-    Array<ID<Entity>> removed_proxies;
-
-    Handle<Camera> camera;
-    Optional<RenderableAttributeSet> override_attributes;
-
-    RENDER_COMMAND(RebuildProxyGroups)(
-        const TResourceHandle<RenderView>& render_view,
-        const RC<EntityDrawCollection>& collection,
-        Array<RenderProxy*>&& added_proxy_ptrs,
-        Array<ID<Entity>>&& removed_proxies,
-        const Handle<Camera>& camera = Handle<Camera>::empty,
-        const Optional<RenderableAttributeSet>& override_attributes = {})
-        : render_view(render_view),
-          collection(collection),
-          removed_proxies(std::move(removed_proxies)),
-          camera(camera),
-          override_attributes(override_attributes)
-    {
-        AssertThrow(render_view);
-
-        added_proxies.Reserve(added_proxy_ptrs.Size());
-
-        for (RenderProxy* proxy_ptr : added_proxy_ptrs)
-        {
-            added_proxies.PushBack(*proxy_ptr);
-        }
-    }
-
-    virtual ~RENDER_COMMAND(RebuildProxyGroups)() override = default;
-
-    RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxy& proxy) const
-    {
-        HYP_SCOPE;
-
-        const Handle<Mesh>& mesh = proxy.mesh;
-        AssertThrow(mesh.IsValid());
-
-        const Handle<Material>& material = proxy.material;
-        AssertThrow(material.IsValid());
-
-        RenderableAttributeSet attributes {
-            mesh->GetMeshAttributes(),
-            material->GetRenderAttributes()
-        };
-
-        if (override_attributes.HasValue())
-        {
-            if (const ShaderDefinition& override_shader_definition = override_attributes->GetShaderDefinition())
-            {
-                attributes.SetShaderDefinition(override_shader_definition);
-            }
-
-            const ShaderDefinition& shader_definition = override_attributes->GetShaderDefinition().IsValid()
-                ? override_attributes->GetShaderDefinition()
-                : attributes.GetShaderDefinition();
-
-#ifdef HYP_DEBUG_MODE
-            AssertThrow(shader_definition.IsValid());
-#endif
-
-            // Check for varying vertex attributes on the override shader compared to the entity's vertex
-            // attributes. If there is not a match, we should switch to a version of the override shader that
-            // has matching vertex attribs.
-            const VertexAttributeSet mesh_vertex_attributes = attributes.GetMeshAttributes().vertex_attributes;
-
-            MaterialAttributes new_material_attributes = override_attributes->GetMaterialAttributes();
-            new_material_attributes.shader_definition = shader_definition;
-
-            if (mesh_vertex_attributes != new_material_attributes.shader_definition.GetProperties().GetRequiredVertexAttributes())
-            {
-                new_material_attributes.shader_definition.properties.SetRequiredVertexAttributes(mesh_vertex_attributes);
-            }
-
-            // do not override bucket!
-            new_material_attributes.bucket = attributes.GetMaterialAttributes().bucket;
-
-            attributes.SetMaterialAttributes(new_material_attributes);
-        }
-
-        return attributes;
-    }
-
-    void AddRenderProxy(RenderProxyTracker& render_proxy_tracker, RenderProxy&& proxy, const RenderableAttributeSet& attributes, Bucket bucket)
-    {
-        HYP_SCOPE;
-
-        const ID<Entity> entity = proxy.entity.GetID();
-
-        // Add proxy to group
-        Handle<RenderGroup>& render_group = collection->GetProxyGroups()[uint32(bucket)][attributes];
-
-        if (!render_group.IsValid())
-        {
-            EnumFlags<RenderGroupFlags> render_group_flags = RenderGroupFlags::DEFAULT;
-
-            // Disable occlusion culling for translucent objects
-            const Bucket bucket = attributes.GetMaterialAttributes().bucket;
-
-            if (bucket == BUCKET_TRANSLUCENT || bucket == BUCKET_DEBUG)
-            {
-                render_group_flags &= ~(RenderGroupFlags::OCCLUSION_CULLING | RenderGroupFlags::INDIRECT_RENDERING);
-            }
-
-            // Create RenderGroup
-            render_group = CreateObject<RenderGroup>(
-                g_shader_manager->GetOrCreate(attributes.GetShaderDefinition()),
-                attributes,
-                render_group_flags);
-
-            FramebufferRef framebuffer;
-
-            if (camera.IsValid())
-            {
-                framebuffer = camera->GetRenderResource().GetFramebuffer();
-            }
-
-            if (framebuffer != nullptr)
-            {
-                render_group->AddFramebuffer(framebuffer);
-            }
-            else
-            {
-                AssertThrow(render_view->GetView()->GetFlags() & ViewFlags::GBUFFER);
-
-                GBuffer* gbuffer = render_view->GetGBuffer();
-                AssertThrow(gbuffer != nullptr);
-
-                const FramebufferRef& bucket_framebuffer = gbuffer->GetBucket(attributes.GetMaterialAttributes().bucket).GetFramebuffer();
-                AssertThrow(bucket_framebuffer != nullptr);
-
-                render_group->AddFramebuffer(bucket_framebuffer);
-            }
-
-            InitObject(render_group);
-        }
-
-        auto iter = render_proxy_tracker.Track(entity, std::move(proxy));
-
-        render_group->AddRenderProxy(&iter->second);
-    }
-
-    bool RemoveRenderProxy(RenderProxyTracker& render_proxy_tracker, ID<Entity> entity, const RenderableAttributeSet& attributes, Bucket bucket)
-    {
-        HYP_SCOPE;
-
-        auto& render_groups_by_attributes = collection->GetProxyGroups()[uint32(bucket)];
-
-        auto it = render_groups_by_attributes.Find(attributes);
-        AssertThrow(it != render_groups_by_attributes.End());
-
-        const Handle<RenderGroup>& render_group = it->second;
-        AssertThrow(render_group.IsValid());
-
-        const bool removed = render_group->RemoveRenderProxy(entity);
-
-        render_proxy_tracker.MarkToRemove(entity);
-
-        return removed;
-    }
-
-    virtual RendererResult operator()() override
-    {
-        HYP_SCOPE;
-
-        RenderProxyTracker& render_proxy_tracker = collection->GetRenderProxyTracker();
-
-        // Reserve to prevent iterator invalidation (pointers to proxies are stored in the render groups)
-        render_proxy_tracker.Reserve(added_proxies.Size());
-
-#if 0
-        HYP_LOG(RenderCollection, Debug,
-            "Added: {} | Removed: {}",
-            added_proxies.Size(),
-            removed_proxies.Size()
-        );
-
-        for (const auto &added : added_proxies) {
-            HYP_LOG(
-                RenderCollection,
-                Debug,
-                "Added proxy for entity {} (mesh={}, count: {}, material={}, count: {})",
-                added.entity->GetID(),
-                added.mesh ? *added.mesh->GetName() : "null", added.mesh ? added.mesh->GetRenderResource().NumRefs() : 0,
-                added.material ? *added.material->GetName() : "null", added.material ? added.material->GetRenderResource().NumRefs() : 0
-            );
-        }
-
-        for (const auto &removed : removed_proxies) {
-            HYP_LOG(
-                RenderCollection,
-                Debug,
-                "Removed proxy for entity {}",
-                removed
-            );
-        }
-#endif
-        for (RenderProxy& proxy : added_proxies)
-        {
-            proxy.IncRefs();
-        }
-
-        for (ID<Entity> entity_id : removed_proxies)
-        {
-            const RenderProxy* proxy = render_proxy_tracker.GetElement(entity_id);
-            AssertThrowMsg(proxy != nullptr, "Proxy is missing for Entity #%u", entity_id.Value());
-
-            proxy->DecRefs();
-
-            const RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy);
-            const Bucket bucket = attributes.GetMaterialAttributes().bucket;
-
-            AssertThrow(RemoveRenderProxy(render_proxy_tracker, entity_id, attributes, bucket));
-        }
-
-        for (RenderProxy& proxy : added_proxies)
-        {
-            const Handle<Mesh>& mesh = proxy.mesh;
-            AssertThrow(mesh.IsValid());
-            AssertThrow(mesh->IsReady());
-
-            const Handle<Material>& material = proxy.material;
-            AssertThrow(material.IsValid());
-
-            const RenderableAttributeSet attributes = GetRenderableAttributesForProxy(proxy);
-            const Bucket bucket = attributes.GetMaterialAttributes().bucket;
-
-            AddRenderProxy(render_proxy_tracker, std::move(proxy), attributes, bucket);
-        }
-
-        render_proxy_tracker.Advance(RenderProxyListAdvanceAction::PERSIST);
-
-        // Clear out groups that are no longer used
-        collection->RemoveEmptyProxyGroups();
-
-        HYPERION_RETURN_OK;
-    }
-};
-
-#pragma endregion Render commands
-
-#pragma region EntityDrawCollection
-
-void EntityDrawCollection::ClearProxyGroups()
+static RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxyMesh& proxy, const RenderableAttributeSet* overrideAttributes = nullptr)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_render_thread);
+    const Handle<Mesh>& mesh = proxy.mesh;
+    AssertThrow(mesh.IsValid());
+
+    const Handle<Material>& material = proxy.material;
+    AssertThrow(material.IsValid());
+
+    RenderableAttributeSet attributes {
+        mesh->GetMeshAttributes(),
+        material->GetRenderAttributes()
+    };
+
+    if (overrideAttributes)
+    {
+        if (const ShaderDefinition& overrideShaderDefinition = overrideAttributes->GetShaderDefinition())
+        {
+            attributes.SetShaderDefinition(overrideShaderDefinition);
+        }
+
+        const ShaderDefinition& shaderDefinition = overrideAttributes->GetShaderDefinition().IsValid()
+            ? overrideAttributes->GetShaderDefinition()
+            : attributes.GetShaderDefinition();
+
+#ifdef HYP_DEBUG_MODE
+        AssertThrow(shaderDefinition.IsValid());
+#endif
+
+        // Check for varying vertex attributes on the override shader compared to the entity's vertex
+        // attributes. If there is not a match, we should switch to a version of the override shader that
+        // has matching vertex attribs.
+        const VertexAttributeSet meshVertexAttributes = attributes.GetMeshAttributes().vertexAttributes;
+
+        MaterialAttributes newMaterialAttributes = overrideAttributes->GetMaterialAttributes();
+        newMaterialAttributes.shaderDefinition = shaderDefinition;
+
+        if (meshVertexAttributes != newMaterialAttributes.shaderDefinition.GetProperties().GetRequiredVertexAttributes())
+        {
+            newMaterialAttributes.shaderDefinition.properties.SetRequiredVertexAttributes(meshVertexAttributes);
+        }
+
+        // do not override bucket!
+        newMaterialAttributes.bucket = attributes.GetMaterialAttributes().bucket;
+
+        attributes.SetMaterialAttributes(newMaterialAttributes);
+    }
+
+    return attributes;
+}
+
+static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, RenderableAttributeSet& attributes)
+{
+    HYP_SCOPE;
+
+    union
+    {
+        struct
+        {
+            bool hasInstancing : 1;
+            bool hasForwardLighting : 1;
+            bool hasAlphaDiscard : 1;
+        };
+
+        uint64 overridden;
+    };
+
+    overridden = 0;
+
+    hasInstancing = proxy->instanceData.enableAutoInstancing || proxy->instanceData.numInstances > 1;
+    hasForwardLighting = attributes.GetMaterialAttributes().bucket == RB_TRANSLUCENT;
+    hasAlphaDiscard = bool(attributes.GetMaterialAttributes().flags & MAF_ALPHA_DISCARD);
+
+    if (!overridden)
+    {
+        return;
+    }
+
+    bool shaderDefinitionChanged = false;
+    ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
+
+    if (hasInstancing)
+    {
+        shaderDefinition.GetProperties().Set("INSTANCING");
+        shaderDefinitionChanged = true;
+    }
+
+    if (hasForwardLighting)
+    {
+        shaderDefinition.GetProperties().Set("FORWARD_LIGHTING");
+        shaderDefinitionChanged = true;
+    }
+
+    if (hasAlphaDiscard)
+    {
+        shaderDefinition.GetProperties().Set("ALPHA_DISCARD");
+        shaderDefinitionChanged = true;
+    }
+
+    if (shaderDefinitionChanged)
+    {
+        // Update the shader definition in the attributes
+        attributes.SetShaderDefinition(shaderDefinition);
+    }
+}
+
+static void AddRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxyMesh>& meshes, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes, RenderBucket rb)
+{
+    HYP_SCOPE;
+
+    // Add proxy to group
+    DrawCallCollectionMapping& mapping = renderProxyList->mappingsByBucket[rb][attributes];
+    Handle<RenderGroup>& rg = mapping.renderGroup;
+
+    if (!rg.IsValid())
+    {
+        EnumFlags<RenderGroupFlags> renderGroupFlags = RenderGroupFlags::DEFAULT;
+
+        // Disable occlusion culling for translucent objects
+        const RenderBucket rb = attributes.GetMaterialAttributes().bucket;
+
+        if (rb == RB_TRANSLUCENT || rb == RB_DEBUG)
+        {
+            renderGroupFlags &= ~(RenderGroupFlags::OCCLUSION_CULLING | RenderGroupFlags::INDIRECT_RENDERING);
+        }
+
+        ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
+
+        ShaderRef shader = g_shaderManager->GetOrCreate(shaderDefinition);
+
+        if (!shader.IsValid())
+        {
+            HYP_LOG(Rendering, Error, "Failed to create shader for RenderProxy");
+
+            return;
+        }
+
+        // Create RenderGroup
+        rg = CreateObject<RenderGroup>(shader, attributes, renderGroupFlags);
+
+        if (renderGroupFlags & RenderGroupFlags::INDIRECT_RENDERING)
+        {
+            AssertDebugMsg(mapping.indirectRenderer == nullptr, "Indirect renderer already exists on mapping");
+
+            mapping.indirectRenderer = new IndirectRenderer();
+            mapping.indirectRenderer->Create(rg->GetDrawCallCollectionImpl());
+
+            mapping.drawCallCollection.impl = rg->GetDrawCallCollectionImpl();
+        }
+
+        InitObject(rg);
+    }
+
+    mapping.meshProxies.Set(proxy->entity.Id().ToIndex(), proxy);
+}
+
+static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxyMesh>& meshes, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes, RenderBucket rb)
+{
+    HYP_SCOPE;
+
+    auto& mappings = renderProxyList->mappingsByBucket[rb];
+
+    auto it = mappings.Find(attributes);
+    AssertThrow(it != mappings.End());
+
+    DrawCallCollectionMapping& mapping = it->second;
+    AssertThrow(mapping.IsValid());
+
+    if (!mapping.meshProxies.HasIndex(proxy->entity.Id().ToIndex()))
+    {
+        HYP_LOG(Rendering, Warning, "RenderProxyList::RemoveRenderProxy: Render proxy not found in mapping for entity {}", proxy->entity.Id());
+        return false;
+    }
+
+    mapping.meshProxies.EraseAt(proxy->entity.Id().ToIndex());
+
+    return true;
+}
+
+RenderProxyList::RenderProxyList()
+    : viewport(Viewport { Vec2u::One(), Vec2i::Zero() }),
+      priority(0),
+      parallelRenderingStateHead(nullptr),
+      parallelRenderingStateTail(nullptr)
+{
+}
+
+RenderProxyList::~RenderProxyList()
+{
+    if (parallelRenderingStateHead)
+    {
+        ParallelRenderingState* state = parallelRenderingStateHead;
+
+        while (state != nullptr)
+        {
+            if (state->taskBatch != nullptr)
+            {
+                state->taskBatch->AwaitCompletion();
+                delete state->taskBatch;
+            }
+
+            ParallelRenderingState* nextState = state->next;
+
+            delete state;
+
+            state = nextState;
+        }
+    }
+
+    Clear();
+
+#define DO_FINALIZATION_CHECK(tracker)                                                                                                    \
+    AssertThrowMsg(tracker.NumCurrent() == 0,                                                                                             \
+        HYP_STR(tracker) " still has %u bits set. This means that there are still render proxies that have not been removed or cleared.", \
+        tracker.NumCurrent())
+
+    DO_FINALIZATION_CHECK(meshes);
+    DO_FINALIZATION_CHECK(envProbes);
+    DO_FINALIZATION_CHECK(envGrids);
+    DO_FINALIZATION_CHECK(lights);
+    DO_FINALIZATION_CHECK(lightmapVolumes);
+
+#undef DO_FINALIZATION_CHECK
+}
+
+void RenderProxyList::Clear()
+{
+    HYP_SCOPE;
 
     // Do not fully clear, keep the attribs around so that we can have memory reserved for each slot,
     // as well as render groups.
-    for (auto& render_groups_by_attributes : GetProxyGroups())
+    for (auto& mappings : mappingsByBucket)
     {
-        for (auto& it : render_groups_by_attributes)
+        for (auto& it : mappings)
         {
-            it.second->ClearProxies();
+            DrawCallCollectionMapping& mapping = it.second;
+            mapping.meshProxies.Clear();
+
+            if (mapping.indirectRenderer)
+            {
+                delete mapping.indirectRenderer;
+                mapping.indirectRenderer = nullptr;
+            }
         }
     }
 }
 
-void EntityDrawCollection::RemoveEmptyProxyGroups()
+void RenderProxyList::RemoveEmptyRenderGroups()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_render_thread);
-
-    for (auto& render_groups_by_attributes : GetProxyGroups())
+    for (auto& mappings : mappingsByBucket)
     {
-        for (auto it = render_groups_by_attributes.Begin(); it != render_groups_by_attributes.End();)
+        for (auto it = mappings.Begin(); it != mappings.End();)
         {
-            if (it->second->GetRenderProxies().Any())
+            DrawCallCollectionMapping& mapping = it->second;
+            AssertDebug(mapping.IsValid());
+
+            if (mapping.meshProxies.Any())
             {
                 ++it;
 
                 continue;
             }
 
-            it = render_groups_by_attributes.Erase(it);
+            if (mapping.indirectRenderer)
+            {
+                delete mapping.indirectRenderer;
+                mapping.indirectRenderer = nullptr;
+            }
+
+            it = mappings.Erase(it);
         }
     }
 }
 
-uint32 EntityDrawCollection::NumRenderGroups() const
+uint32 RenderProxyList::NumRenderGroups() const
 {
-    Threads::AssertOnThread(g_render_thread);
-
     uint32 count = 0;
 
-    for (const auto& render_groups_by_attributes : m_proxy_groups)
+    for (const auto& mappings : mappingsByBucket)
     {
-        for (const auto& it : render_groups_by_attributes)
+        for (const auto& it : mappings)
         {
-            if (it.second.IsValid())
+            const DrawCallCollectionMapping& mapping = it.second;
+            AssertDebug(mapping.IsValid());
+
+            if (mapping.IsValid())
             {
                 ++count;
             }
@@ -353,66 +345,183 @@ uint32 EntityDrawCollection::NumRenderGroups() const
     return count;
 }
 
-#pragma endregion EntityDrawCollection
-
-#pragma region RenderCollector
-
-RenderCollector::RenderCollector()
-    : m_draw_collection(MakeRefCountedPtr<EntityDrawCollection>()),
-      m_parallel_rendering_state(nullptr)
+void RenderProxyList::BuildRenderGroups(View* view)
 {
-}
+    HYP_SCOPE;
+    Threads::AssertOnThread(~g_renderThread);
 
-RenderCollector::~RenderCollector()
-{
-    if (m_parallel_rendering_state != nullptr)
+    AssertDebug(view != nullptr);
+    AssertDebug(view->GetOutputTarget().IsValid());
+
+    // should be in this state - this should be called from the game thread when the render proxy list is being built
+    AssertDebug(state == CS_WRITING);
+
+    const RenderableAttributeSet* overrideAttributes = view->GetOverrideAttributes().TryGet();
+
+    auto diff = meshes.GetDiff();
+
+    if (diff.NeedsUpdate())
     {
-        ParallelRenderingState* state = m_parallel_rendering_state;
+        Array<RenderProxyMesh*> removedProxies;
+        meshes.GetRemoved(removedProxies, true /* includeChanged */);
 
-        while (state != nullptr)
+        Array<RenderProxyMesh*> addedProxyPtrs;
+        meshes.GetAdded(addedProxyPtrs, true /* includeChanged */);
+
+        if (addedProxyPtrs.Any() || removedProxies.Any())
         {
-            if (state->task_batch != nullptr)
+            for (RenderProxyMesh* proxy : removedProxies)
             {
-                state->task_batch->AwaitCompletion();
-                delete state->task_batch;
+                AssertDebug(proxy != nullptr);
+
+                RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
+                UpdateRenderableAttributesDynamic(proxy, attributes);
+
+                const RenderBucket rb = attributes.GetMaterialAttributes().bucket;
+
+                AssertThrow(RemoveRenderProxy(this, meshes, proxy, attributes, rb));
             }
 
-            ParallelRenderingState* next_state = state->next;
+            for (RenderProxyMesh* proxy : addedProxyPtrs)
+            {
+                const Handle<Mesh>& mesh = proxy->mesh;
+                AssertThrow(mesh.IsValid());
+                AssertThrow(mesh->IsReady());
 
-            delete state;
+                const Handle<Material>& material = proxy->material;
+                AssertThrow(material.IsValid());
 
-            state = next_state;
+                RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
+                UpdateRenderableAttributesDynamic(proxy, attributes);
+
+                const RenderBucket rb = attributes.GetMaterialAttributes().bucket;
+
+                AddRenderProxy(this, meshes, proxy, attributes, rb);
+            }
         }
     }
 }
 
-void RenderCollector::CollectDrawCalls(FrameBase* frame, const RenderSetup& render_setup, const Bitset& bucket_bits)
+ParallelRenderingState* RenderProxyList::AcquireNextParallelRenderingState()
 {
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    ParallelRenderingState* curr = parallelRenderingStateTail;
 
-    if (bucket_bits.Count() == 0)
+    if (!curr)
     {
-        return;
+        if (!parallelRenderingStateHead)
+        {
+            parallelRenderingStateHead = new ParallelRenderingState();
+
+            TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
+
+            TaskBatch* taskBatch = new TaskBatch();
+            taskBatch->pool = &pool;
+
+            parallelRenderingStateHead->taskBatch = taskBatch;
+            parallelRenderingStateHead->numBatches = ParallelRenderingState::maxBatches;
+        }
+
+        curr = parallelRenderingStateHead;
+    }
+    else
+    {
+        if (!curr->next)
+        {
+            ParallelRenderingState* newParallelRenderingState = new ParallelRenderingState();
+
+            TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
+
+            TaskBatch* taskBatch = new TaskBatch();
+            taskBatch->pool = &pool;
+
+            newParallelRenderingState->taskBatch = taskBatch;
+            newParallelRenderingState->numBatches = ParallelRenderingState::maxBatches;
+
+            curr->next = newParallelRenderingState;
+        }
+
+        curr = curr->next;
     }
 
-    HYP_MT_CHECK_READ(m_data_race_detector);
+    parallelRenderingStateTail = curr;
 
-    static const bool is_indirect_rendering_enabled = g_rendering_api->GetRenderConfig().IsIndirectRenderingEnabled();
+    AssertDebug(curr != nullptr);
+    AssertDebug(curr->taskBatch != nullptr);
+    AssertDebug(curr->taskBatch->IsCompleted());
 
-    using IteratorType = FlatMap<RenderableAttributeSet, Handle<RenderGroup>>::Iterator;
+    return curr;
+}
+
+void RenderProxyList::CommitParallelRenderingState(CmdList& outCommandList)
+{
+    ParallelRenderingState* state = parallelRenderingStateHead;
+
+    while (state)
+    {
+        AssertDebug(state->taskBatch != nullptr);
+
+        state->taskBatch->AwaitCompletion();
+
+        outCommandList.Concat(std::move(state->baseCommandList));
+
+        // Add command lists to the frame's command list
+        for (CmdList& commandList : state->commandLists)
+        {
+            outCommandList.Concat(std::move(commandList));
+        }
+
+        // Add render stats counts to the engine's render stats
+        for (EngineRenderStatsCounts& counts : state->renderStatsCounts)
+        {
+            g_engine->GetRenderStatsCalculator().AddCounts(counts);
+
+            counts = EngineRenderStatsCounts(); // Reset counts after adding for next use
+        }
+
+        state->drawCalls.Clear();
+        state->drawCallProcs.Clear();
+        state->instancedDrawCalls.Clear();
+        state->instancedDrawCallProcs.Clear();
+
+        state->taskBatch->ResetState();
+
+        state = state->next;
+    }
+
+    parallelRenderingStateTail = nullptr;
+}
+
+#pragma endregion RenderProxyList
+
+#pragma region RenderCollector
+
+void RenderCollector::CollectDrawCalls(RenderProxyList& renderProxyList, uint32 bucketBits)
+{
+    HYP_SCOPE;
+
+    if (bucketBits == 0)
+    {
+        static constexpr uint32 allBuckets = (1u << RB_MAX) - 1;
+        bucketBits = allBuckets; // All buckets
+    }
+
+    HYP_MT_CHECK_RW(renderProxyList.dataRaceDetector);
+
+    using IteratorType = FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>::Iterator;
     Array<IteratorType> iterators;
 
-    for (Bitset::BitIndex bit_index : bucket_bits)
+    FOR_EACH_BIT(bucketBits, bitIndex)
     {
-        auto& render_groups_by_attributes = m_draw_collection->GetProxyGroups()[bit_index];
+        AssertDebug(bitIndex < renderProxyList.mappingsByBucket.Size());
 
-        if (render_groups_by_attributes.Empty())
+        auto& mappings = renderProxyList.mappingsByBucket[bitIndex];
+
+        if (mappings.Empty())
         {
             continue;
         }
 
-        for (auto& it : render_groups_by_attributes)
+        for (auto& it : mappings)
         {
             iterators.PushBack(&it);
         }
@@ -423,265 +532,262 @@ void RenderCollector::CollectDrawCalls(FrameBase* frame, const RenderSetup& rend
         return;
     }
 
-    if (do_parallel_collection && iterators.Size() > 1)
-    {
-        TaskSystem::GetInstance().ParallelForEach(
-            TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER),
-            iterators,
-            [this](IteratorType it, uint32, uint32)
-            {
-                Handle<RenderGroup>& render_group = it->second;
-                AssertThrow(render_group.IsValid());
-
-                render_group->CollectDrawCalls();
-            });
-    }
-    else
-    {
-        for (IteratorType it : iterators)
+    std::sort(iterators.Begin(), iterators.End(), [](IteratorType lhs, IteratorType rhs) -> bool
         {
-            Handle<RenderGroup>& render_group = it->second;
-            AssertThrow(render_group.IsValid());
+            return lhs->first.GetDrawableLayer() < rhs->first.GetDrawableLayer();
+        });
 
-            render_group->CollectDrawCalls();
-        }
-    }
-
-    if (is_indirect_rendering_enabled && render_setup.view->GetCullData().depth_pyramid_image_view != nullptr)
+    for (IteratorType it : iterators)
     {
-        for (SizeType index = 0; index < iterators.Size(); index++)
+        const RenderableAttributeSet& attributes = it->first;
+
+        DrawCallCollectionMapping& mapping = it->second;
+        AssertDebug(mapping.IsValid());
+
+        DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
+        drawCallCollection.impl = mapping.renderGroup->GetDrawCallCollectionImpl();
+        drawCallCollection.renderGroup = mapping.renderGroup;
+
+        static const bool uniquePerMaterial = g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial();
+
+        DrawCallCollection previousDrawState = std::move(drawCallCollection);
+
+        for (RenderProxyMesh* meshProxy : mapping.meshProxies)
         {
-            if (!(iterators[index]->second->GetFlags() & RenderGroupFlags::OCCLUSION_CULLING))
+            AssertDebug(meshProxy->mesh.IsValid());
+            AssertDebug(meshProxy->mesh->IsReady());
+
+            AssertDebug(meshProxy->material.IsValid());
+            AssertDebug(meshProxy->material->IsReady());
+
+            if (meshProxy->instanceData.numInstances == 0)
             {
                 continue;
             }
 
-            (*iterators[index]).second->PerformOcclusionCulling(frame, render_setup);
+            DrawCallID drawCallId;
+
+            if (uniquePerMaterial)
+            {
+                drawCallId = DrawCallID(meshProxy->mesh->Id(), meshProxy->material->Id());
+            }
+            else
+            {
+                drawCallId = DrawCallID(meshProxy->mesh->Id());
+            }
+
+            if (!meshProxy->instanceData.enableAutoInstancing && meshProxy->instanceData.numInstances == 1)
+            {
+                drawCallCollection.PushRenderProxy(drawCallId, *meshProxy); // NOLINT(bugprone-use-after-move)
+
+                continue;
+            }
+
+            EntityInstanceBatch* batch = nullptr;
+
+            // take a batch for reuse if a draw call was using one
+            if ((batch = previousDrawState.TakeDrawCallBatch(drawCallId)) != nullptr)
+            {
+                const uint32 batchIndex = batch->batchIndex;
+                AssertDebug(batchIndex != ~0u);
+
+                // Reset it
+                *batch = EntityInstanceBatch { batchIndex };
+
+                drawCallCollection.impl->GetEntityInstanceBatchHolder()->MarkDirty(batch->batchIndex);
+            }
+
+            drawCallCollection.PushRenderProxyInstanced(batch, drawCallId, *meshProxy);
         }
+
+        // Any draw calls that were not reused from the previous state, clear them out and release batch indices.
+        previousDrawState.ResetDrawCalls();
     }
 }
 
-void RenderCollector::ExecuteDrawCalls(
-    FrameBase* frame,
-    const RenderSetup& render_setup,
-    const Bitset& bucket_bits,
-    PushConstantData push_constant) const
-{
-    AssertDebug(render_setup.IsValid());
-    AssertDebugMsg(render_setup.HasView(), "RenderSetup must have a View attached");
-
-    const FramebufferRef& framebuffer = render_setup.view->GetCamera()->GetFramebuffer();
-    AssertDebugMsg(framebuffer, "Camera has no Framebuffer attached");
-
-    ExecuteDrawCalls(frame, render_setup, framebuffer, bucket_bits, push_constant);
-}
-
-void RenderCollector::ExecuteDrawCalls(
-    FrameBase* frame,
-    const RenderSetup& render_setup,
-    const FramebufferRef& framebuffer,
-    const Bitset& bucket_bits,
-    PushConstantData push_constant) const
+void RenderCollector::PerformOcclusionCulling(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, uint32 bucketBits)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    HYP_MT_CHECK_READ(m_data_race_detector);
+    AssertDebug(renderSetup.IsValid());
+    AssertDebugMsg(renderSetup.HasView(), "RenderSetup must have a View attached");
+    AssertDebugMsg(renderSetup.passData != nullptr, "RenderSetup must have valid PassData to perform occlusion culling");
 
-    AssertDebug(m_draw_collection != nullptr);
+    HYP_MT_CHECK_RW(renderProxyList.dataRaceDetector);
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    static const bool isIndirectRenderingEnabled = g_renderBackend->GetRenderConfig().IsIndirectRenderingEnabled();
+    const bool performOcclusionCulling = isIndirectRenderingEnabled && renderSetup.passData->cullData.depthPyramidImageView != nullptr;
 
-    ParallelRenderingState* parallel_rendering_state_head = nullptr;
-    uint32 num_parallel_rendering_states = 0;
-
-    const auto acquire_next_parallel_rendering_state = [this, &num_parallel_rendering_states, &head = parallel_rendering_state_head]() -> ParallelRenderingState*
+    if (performOcclusionCulling)
     {
-        ParallelRenderingState* parallel_rendering_state = nullptr;
-
-        if (!head)
+        FOR_EACH_BIT(bucketBits, bitIndex)
         {
-            if (!m_parallel_rendering_state)
+            AssertDebug(bitIndex < renderProxyList.mappingsByBucket.Size());
+
+            auto& mappings = renderProxyList.mappingsByBucket[bitIndex];
+
+            if (mappings.Empty())
             {
-                m_parallel_rendering_state = new ParallelRenderingState();
-
-                TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
-
-                TaskBatch* task_batch = new TaskBatch();
-                task_batch->pool = &pool;
-
-                m_parallel_rendering_state->task_batch = task_batch;
-                m_parallel_rendering_state->num_batches = ParallelRenderingState::max_batches;
+                continue;
             }
 
-            head = m_parallel_rendering_state;
-            parallel_rendering_state = head;
-        }
-        else
-        {
-            if (!head->next)
+            for (auto& it : mappings)
             {
-                ParallelRenderingState* new_parallel_rendering_state = new ParallelRenderingState();
+                DrawCallCollectionMapping& mapping = it.second;
+                AssertDebug(mapping.IsValid());
 
-                TaskThreadPool& pool = TaskSystem::GetInstance().GetPool(TaskThreadPoolName::THREAD_POOL_RENDER);
+                const Handle<RenderGroup>& renderGroup = mapping.renderGroup;
+                AssertDebug(renderGroup.IsValid());
 
-                TaskBatch* task_batch = new TaskBatch();
-                task_batch->pool = &pool;
+                DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
+                IndirectRenderer* indirectRenderer = mapping.indirectRenderer;
 
-                new_parallel_rendering_state->task_batch = task_batch;
-                new_parallel_rendering_state->num_batches = ParallelRenderingState::max_batches;
+                if (renderGroup->GetFlags() & RenderGroupFlags::OCCLUSION_CULLING)
+                {
+                    AssertDebug((renderGroup->GetFlags() & (RenderGroupFlags::INDIRECT_RENDERING | RenderGroupFlags::OCCLUSION_CULLING)) == (RenderGroupFlags::INDIRECT_RENDERING | RenderGroupFlags::OCCLUSION_CULLING));
+                    AssertDebug(indirectRenderer != nullptr);
 
-                head->next = new_parallel_rendering_state;
+                    indirectRenderer->GetDrawState().ResetDrawState();
+
+                    indirectRenderer->PushDrawCallsToIndirectState(drawCallCollection);
+                    indirectRenderer->ExecuteCullShaderInBatches(frame, renderSetup);
+                }
             }
-
-            parallel_rendering_state = head->next;
-            head = parallel_rendering_state;
         }
+    }
+}
 
-        AssertDebug(parallel_rendering_state != nullptr);
-        AssertDebug(parallel_rendering_state->task_batch != nullptr);
-        AssertDebug(parallel_rendering_state->task_batch->IsCompleted());
+void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, uint32 bucketBits)
+{
+    AssertDebug(renderSetup.IsValid());
+    AssertDebugMsg(renderSetup.HasView(), "RenderSetup must have a View attached");
 
-        ++num_parallel_rendering_states;
-
-        return parallel_rendering_state;
-    };
-
-    if (bucket_bits.Count() == 0)
+    if (renderSetup.view->GetView()->GetFlags() & ViewFlags::GBUFFER)
     {
-        return;
+        // Pass NULL framebuffer for GBuffer rendering, as it will be handled by DeferredRenderer outside of this scope.
+        ExecuteDrawCalls(frame, renderSetup, renderProxyList, FramebufferRef::Null(), bucketBits);
+    }
+    else
+    {
+        const FramebufferRef& framebuffer = renderSetup.view->GetView()->GetOutputTarget().GetFramebuffer();
+        AssertDebugMsg(framebuffer != nullptr, "Must have a valid framebuffer for rendering");
+
+        ExecuteDrawCalls(frame, renderSetup, renderProxyList, framebuffer, bucketBits);
+    }
+}
+
+void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, RenderProxyList& renderProxyList, const FramebufferRef& framebuffer, uint32 bucketBits)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
+
+    const uint32 frameIndex = frame->GetFrameIndex();
+
+    HYP_MT_CHECK_RW(renderProxyList.dataRaceDetector);
+
+    Span<FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>> groupsView;
+
+    if (bucketBits == 0)
+    {
+        static constexpr uint32 allBuckets = (1u << RB_MAX) - 1;
+        bucketBits = allBuckets; // All buckets
     }
 
-    Span<FlatMap<RenderableAttributeSet, Handle<RenderGroup>>> groups_view;
-
     // If only one bit is set, we can skip the loop by directly accessing the RenderGroup
-    if (bucket_bits.Count() == 1)
+    if (ByteUtil::BitCount(bucketBits) == 1)
     {
-        const Bucket bucket = Bucket(MathUtil::FastLog2_Pow2(bucket_bits.ToUInt64()));
+        const RenderBucket rb = RenderBucket(MathUtil::FastLog2_Pow2(bucketBits));
 
-        auto& render_groups_by_attributes = m_draw_collection->GetProxyGroups()[uint32(bucket)];
+        auto& mappings = renderProxyList.mappingsByBucket[rb];
 
-        if (render_groups_by_attributes.Empty())
+        if (mappings.Empty())
         {
             return;
         }
 
-        groups_view = { &render_groups_by_attributes, 1 };
+        groupsView = { &mappings, 1 };
     }
     else
     {
-        bool all_empty = true;
+        bool allEmpty = true;
 
-        for (const auto& render_groups_by_attributes : m_draw_collection->GetProxyGroups())
+        for (const auto& mappings : renderProxyList.mappingsByBucket)
         {
-            if (render_groups_by_attributes.Any())
+            if (mappings.Any())
             {
-                if (AnyOf(render_groups_by_attributes, [&bucket_bits](const auto& it)
+                if (AnyOf(mappings, [&bucketBits](const auto& it)
                         {
-                            return bucket_bits.Test(uint32(it.first.GetMaterialAttributes().bucket));
+                            return (bucketBits & (1u << uint32(it.first.GetMaterialAttributes().bucket))) != 0;
                         }))
                 {
-                    all_empty = false;
+                    allEmpty = false;
 
                     break;
                 }
             }
         }
 
-        if (all_empty)
+        if (allEmpty)
         {
             return;
         }
 
-        groups_view = m_draw_collection->GetProxyGroups().ToSpan();
+        groupsView = renderProxyList.mappingsByBucket.ToSpan();
     }
 
     if (framebuffer)
     {
-        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, frame_index);
+        frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, frameIndex);
     }
 
-    for (const auto& render_groups_by_attributes : groups_view)
+    for (const auto& mappings : groupsView)
     {
-        for (const auto& it : render_groups_by_attributes)
+        for (const auto& it : mappings)
         {
             const RenderableAttributeSet& attributes = it.first;
-            const Handle<RenderGroup>& render_group = it.second;
 
-            const Bucket bucket = attributes.GetMaterialAttributes().bucket;
+            const DrawCallCollectionMapping& mapping = it.second;
+            AssertDebug(mapping.IsValid());
 
-            if (!bucket_bits.Test(uint32(bucket)))
+            const RenderBucket rb = attributes.GetMaterialAttributes().bucket;
+
+            if (!(bucketBits & (1u << uint32(rb))))
             {
                 continue;
             }
 
-            if (push_constant)
+            const Handle<RenderGroup>& renderGroup = mapping.renderGroup;
+            AssertDebug(renderGroup.IsValid());
+
+            const DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
+
+            IndirectRenderer* indirectRenderer = mapping.indirectRenderer;
+
+            ParallelRenderingState* parallelRenderingState = nullptr;
+
+            if (renderGroup->GetFlags() & RenderGroupFlags::PARALLEL_RENDERING)
             {
-                render_group->GetPipeline()->SetPushConstants(push_constant.Data(), push_constant.Size());
+                parallelRenderingState = renderProxyList.AcquireNextParallelRenderingState();
             }
 
-            ParallelRenderingState* parallel_rendering_state = nullptr;
+            renderGroup->PerformRendering(frame, renderSetup, drawCallCollection, indirectRenderer, parallelRenderingState);
 
-            if (render_group->GetFlags() & RenderGroupFlags::PARALLEL_RENDERING)
+            if (parallelRenderingState != nullptr)
             {
-                parallel_rendering_state = acquire_next_parallel_rendering_state();
-            }
+                AssertDebug(parallelRenderingState->taskBatch != nullptr);
 
-            render_group->PerformRendering(frame, render_setup, parallel_rendering_state);
-
-            if (parallel_rendering_state != nullptr)
-            {
-                AssertDebug(parallel_rendering_state->task_batch != nullptr);
-
-                TaskSystem::GetInstance().EnqueueBatch(parallel_rendering_state->task_batch);
+                TaskSystem::GetInstance().EnqueueBatch(parallelRenderingState->taskBatch);
             }
         }
     }
 
     // Wait for all parallel rendering tasks to finish
-    if (num_parallel_rendering_states != 0)
-    {
-        ParallelRenderingState* state = m_parallel_rendering_state;
-
-        while (num_parallel_rendering_states)
-        {
-            AssertDebug(state != nullptr);
-            AssertDebug(state->task_batch != nullptr);
-
-            state->task_batch->AwaitCompletion();
-
-            frame->GetCommandList().Concat(std::move(state->base_command_list));
-
-            // Add command lists to the frame's command list
-            for (RHICommandList& command_list : state->command_lists)
-            {
-                frame->GetCommandList().Concat(std::move(command_list));
-            }
-
-            // Add render stats counts to the engine's render stats
-            for (EngineRenderStatsCounts& counts : state->render_stats_counts)
-            {
-                g_engine->GetRenderStatsCalculator().AddCounts(counts);
-
-                counts = EngineRenderStatsCounts(); // Reset counts after adding for next use
-            }
-
-            state->draw_calls.Clear();
-            state->draw_call_procs.Clear();
-            state->instanced_draw_calls.Clear();
-            state->instanced_draw_call_procs.Clear();
-
-            state->task_batch->ResetState();
-
-            state = state->next;
-
-            --num_parallel_rendering_states;
-        }
-    }
+    renderProxyList.CommitParallelRenderingState(frame->GetCommandList());
 
     if (framebuffer)
     {
-        frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frame_index);
+        frame->GetCommandList().Add<EndFramebuffer>(framebuffer, frameIndex);
     }
 }
 

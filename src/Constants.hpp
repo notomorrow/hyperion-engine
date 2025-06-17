@@ -24,34 +24,34 @@ namespace hyperion {
 
 #endif
 
-constexpr uint8 engine_major_version = HYP_VERSION_MAJOR;
-constexpr uint8 engine_minor_version = HYP_VERSION_MINOR;
-constexpr uint8 engine_patch_version = HYP_VERSION_PATCH;
-constexpr uint32 engine_version = (engine_major_version << 16) | (engine_minor_version << 8) | engine_patch_version;
-constexpr uint64 engine_binary_magic_number = (uint64(0x505948) << 32) | engine_version;
+constexpr uint8 engineMajorVersion = HYP_VERSION_MAJOR;
+constexpr uint8 engineMinorVersion = HYP_VERSION_MINOR;
+constexpr uint8 enginePatchVersion = HYP_VERSION_PATCH;
+constexpr uint32 engineVersion = (engineMajorVersion << 16) | (engineMinorVersion << 8) | enginePatchVersion;
+constexpr uint64 engineBinaryMagicNumber = (uint64(0x505948) << 32) | engineVersion;
 
-constexpr uint32 max_frames_in_flight = 2;
-constexpr uint32 num_async_rendering_command_buffers = 4;
-constexpr uint32 num_async_compute_command_buffers = 1;
+constexpr uint32 maxFramesInFlight = 2;
+constexpr uint32 numAsyncRenderingCommandBuffers = 4;
+constexpr uint32 numAsyncComputeCommandBuffers = 1;
 
-constexpr uint32 max_bound_reflection_probes = 16;
-constexpr uint32 max_bound_ambient_probes = 4096;
-constexpr uint32 max_bound_point_shadow_maps = 16;
-constexpr uint32 max_bound_environment_maps = 1;
-constexpr uint32 max_bound_textures = 16;
+constexpr uint32 maxBoundReflectionProbes = 16;
+constexpr uint32 maxBoundAmbientProbes = 4096;
+constexpr uint32 maxBoundPointShadowMaps = 16;
+constexpr uint32 maxBoundEnvironmentMaps = 1;
+constexpr uint32 maxBoundTextures = 16;
 
-constexpr uint32 max_bindless_resources = 4096;
+constexpr uint32 maxBindlessResources = 4096;
 
-constexpr uint32 num_gbuffer_textures = 8;
+constexpr uint32 numGbufferTargets = 8;
 
 template <class... T>
-constexpr bool resolution_failure = false;
+constexpr bool resolutionFailure = false;
 
 template <class T>
 using NormalizedType = std::conditional_t<std::is_function_v<T>, std::add_pointer_t<T>, std::remove_cvref_t<T>>;
 
 template <class T>
-constexpr bool is_pod_type = std::is_standard_layout_v<T>
+constexpr bool isPodType = std::is_standard_layout_v<T>
     && std::is_trivially_copyable_v<T>
     && std::is_trivially_copy_assignable_v<T>
     && std::is_trivially_move_constructible_v<T>
@@ -59,18 +59,18 @@ constexpr bool is_pod_type = std::is_standard_layout_v<T>
     && std::is_trivially_destructible_v<T>;
 
 template <class T, SizeType = sizeof(T)>
-std::true_type implementation_exists_impl(T*);
+std::true_type implementationExistsImpl(T*);
 
-std::false_type implementation_exists_impl(...);
+std::false_type implementationExistsImpl(...);
 
 template <class T>
-constexpr bool implementation_exists = decltype(implementation_exists_impl(std::declval<T*>()))::value;
+constexpr bool implementationExists = decltype(implementationExistsImpl(std::declval<T*>()))::value;
 
 template <class T>
 struct HandleDefinition;
 
 template <class T>
-constexpr bool is_const_pointer = std::is_pointer_v<T> && std::is_const_v<std::remove_pointer_t<T>>;
+constexpr bool isConstPointer = std::is_pointer_v<T> && std::is_const_v<std::remove_pointer_t<T>>;
 template <class T>
 using RemoveConstPointer = std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<T>>>;
 

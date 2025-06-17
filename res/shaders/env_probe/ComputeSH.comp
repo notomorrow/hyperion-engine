@@ -37,7 +37,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 #include "../include/scene.inc"
 #include "../include/Octahedron.glsl"
 
-HYP_DESCRIPTOR_SRV(View, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) buffer EnvProbesBuffer
 {
     EnvProbe env_probes[];
@@ -77,11 +77,11 @@ HYP_DESCRIPTOR_SSBO(ComputeSHDescriptorSet, OutputSHTilesBuffer) buffer OutputSH
 
 layout(push_constant) uniform PushConstant
 {
-    uint env_probe_index;
     uvec4 probe_grid_position;
     uvec4 cubemap_dimensions;
     uvec4 level_dimensions;
     vec4 world_position;
+    uint env_probe_index;
 };
 
 #if defined(MODE_BUILD_COEFFICIENTS) || defined(MODE_CLEAR)
@@ -245,8 +245,8 @@ void main(void)
 
     vec4 albedo = TextureCube(sampler_linear, cubemap_color, dir);
 
-#ifdef LIGHTING
     vec3 normal = normalize(UnpackNormalVec2(TextureCube(sampler_nearest, cubemap_normals, dir).rg));
+#ifdef LIGHTING
     vec2 dist_dist2 = TextureCube(sampler_nearest, cubemap_depth, dir).rg;
 
     vec4 position = vec4(world_position.xyz + dir * dist_dist2.r, 1.0);

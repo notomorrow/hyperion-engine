@@ -12,7 +12,7 @@
 
 #include <util/img/Bitmap.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
@@ -64,57 +64,57 @@ public:
         return m_model;
     }
 
-    const GPUBufferRef& GetSplatBuffer() const
+    const GpuBufferRef& GetSplatBuffer() const
     {
-        return m_splat_buffer;
+        return m_splatBuffer;
     }
 
-    const GPUBufferRef& GetIndirectBuffer() const
+    const GpuBufferRef& GetIndirectBuffer() const
     {
-        return m_indirect_buffer;
+        return m_indirectBuffer;
     }
 
-    const Handle<RenderGroup>& GetRenderGroup() const
+    const GraphicsPipelineRef& GetGraphicsPipeline() const
     {
-        return m_render_group;
+        return m_graphicsPipeline;
     }
 
     const ComputePipelineRef& GetUpdateSplatsComputePipeline() const
     {
-        return m_update_splats;
+        return m_updateSplats;
     }
 
     const ComputePipelineRef& GetSortSplatsComputePipeline() const
     {
-        return m_sort_splats;
+        return m_sortSplats;
     }
 
-    void Record(FrameBase* frame, const RenderSetup& render_setup);
+    void Record(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     void Init() override;
 
     void CreateBuffers();
     void CreateShader();
-    void CreateRenderGroup();
+    void CreateGraphicsPipeline();
     void CreateComputePipelines();
 
     RC<GaussianSplattingModelData> m_model;
-    GPUBufferRef m_splat_buffer;
-    GPUBufferRef m_splat_indices_buffer;
-    GPUBufferRef m_scene_buffer;
-    GPUBufferRef m_indirect_buffer;
-    ComputePipelineRef m_update_splats;
-    ComputePipelineRef m_update_splat_distances;
-    ComputePipelineRef m_sort_splats;
-    ComputePipelineRef m_sort_splats_transpose;
-    Array<DescriptorTableRef> m_sort_stage_descriptor_tables;
+    GpuBufferRef m_splatBuffer;
+    GpuBufferRef m_splatIndicesBuffer;
+    GpuBufferRef m_sceneBuffer;
+    GpuBufferRef m_indirectBuffer;
+    ComputePipelineRef m_updateSplats;
+    ComputePipelineRef m_updateSplatDistances;
+    ComputePipelineRef m_sortSplats;
+    ComputePipelineRef m_sortSplatsTranspose;
+    Array<DescriptorTableRef> m_sortStageDescriptorTables;
     ShaderRef m_shader;
-    Handle<RenderGroup> m_render_group;
+    GraphicsPipelineRef m_graphicsPipeline;
 
     // inefficient cpu-based sort, just to test
-    Array<uint32> m_cpu_sorted_indices;
-    Array<float32> m_cpu_distances;
+    Array<uint32> m_cpuSortedIndices;
+    Array<float32> m_cpuDistances;
 };
 
 HYP_CLASS()
@@ -130,25 +130,25 @@ public:
 
     const Handle<GaussianSplattingInstance>& GetGaussianSplattingInstance() const
     {
-        return m_gaussian_splatting_instance;
+        return m_gaussianSplattingInstance;
     }
 
-    void SetGaussianSplattingInstance(Handle<GaussianSplattingInstance> gaussian_splatting_instance);
+    void SetGaussianSplattingInstance(Handle<GaussianSplattingInstance> gaussianSplattingInstance);
 
-    void UpdateSplats(FrameBase* frame, const RenderSetup& render_setup);
+    void UpdateSplats(FrameBase* frame, const RenderSetup& renderSetup);
 
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     void Init() override;
     void CreateBuffers();
 
-    Handle<Mesh> m_quad_mesh;
+    Handle<Mesh> m_quadMesh;
 
     // for zeroing out data
-    GPUBufferRef m_staging_buffer;
+    GpuBufferRef m_stagingBuffer;
 
-    Handle<GaussianSplattingInstance> m_gaussian_splatting_instance;
+    Handle<GaussianSplattingInstance> m_gaussianSplattingInstance;
 };
 
 } // namespace hyperion

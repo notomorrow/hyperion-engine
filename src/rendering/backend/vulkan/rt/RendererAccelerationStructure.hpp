@@ -13,7 +13,7 @@
 
 #include <rendering/backend/Platform.hpp>
 #include <rendering/backend/RendererResult.hpp>
-#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererGpuBuffer.hpp>
 #include <rendering/backend/RendererStructs.hpp>
 
 #include <streaming/StreamedMeshData.hpp>
@@ -28,8 +28,6 @@ namespace hyperion {
 class Entity;
 class Material;
 
-namespace renderer {
-
 class VulkanAccelerationGeometry final : public RenderObject<VulkanAccelerationGeometry>
 {
 public:
@@ -37,20 +35,20 @@ public:
     friend class VulkanBLAS;
 
     HYP_API VulkanAccelerationGeometry(
-        const VulkanGPUBufferRef& packed_vertices_buffer,
-        const VulkanGPUBufferRef& packed_indices_buffer,
+        const VulkanGpuBufferRef& packedVerticesBuffer,
+        const VulkanGpuBufferRef& packedIndicesBuffer,
         const Handle<Material>& material);
 
     HYP_API virtual ~VulkanAccelerationGeometry() override;
 
-    HYP_FORCE_INLINE const VulkanGPUBufferRef& GetPackedVerticesBuffer() const
+    HYP_FORCE_INLINE const VulkanGpuBufferRef& GetPackedVerticesBuffer() const
     {
-        return m_packed_vertices_buffer;
+        return m_packedVerticesBuffer;
     }
 
-    HYP_FORCE_INLINE const VulkanGPUBufferRef& GetPackedIndicesBuffer() const
+    HYP_FORCE_INLINE const VulkanGpuBufferRef& GetPackedIndicesBuffer() const
     {
-        return m_packed_indices_buffer;
+        return m_packedIndicesBuffer;
     }
 
     HYP_FORCE_INLINE const Handle<Material>& GetMaterial() const
@@ -65,8 +63,8 @@ public:
     HYP_API RendererResult Destroy();
 
 private:
-    VulkanGPUBufferRef m_packed_vertices_buffer;
-    VulkanGPUBufferRef m_packed_indices_buffer;
+    VulkanGpuBufferRef m_packedVerticesBuffer;
+    VulkanGpuBufferRef m_packedIndicesBuffer;
 
     Handle<Material> m_material;
 
@@ -82,19 +80,19 @@ public:
     HYP_API VulkanAccelerationStructureBase(const Matrix4& transform = Matrix4::Identity());
     HYP_API virtual ~VulkanAccelerationStructureBase();
 
-    HYP_FORCE_INLINE const VulkanGPUBufferRef& GetBuffer() const
+    HYP_FORCE_INLINE const VulkanGpuBufferRef& GetBuffer() const
     {
         return m_buffer;
     }
 
     HYP_FORCE_INLINE const VkAccelerationStructureKHR& GetVulkanHandle() const
     {
-        return m_acceleration_structure;
+        return m_accelerationStructure;
     }
 
     HYP_FORCE_INLINE uint64 GetDeviceAddress() const
     {
-        return m_device_address;
+        return m_deviceAddress;
     }
 
     HYP_FORCE_INLINE AccelerationStructureFlags GetFlags() const
@@ -157,16 +155,16 @@ protected:
     RendererResult CreateAccelerationStructure(
         AccelerationStructureType type,
         const std::vector<VkAccelerationStructureGeometryKHR>& geometries,
-        const std::vector<uint32>& primitive_counts,
+        const std::vector<uint32>& primitiveCounts,
         bool update,
-        RTUpdateStateFlags& out_update_state_flags);
+        RTUpdateStateFlags& outUpdateStateFlags);
 
-    VulkanGPUBufferRef m_buffer;
-    VulkanGPUBufferRef m_scratch_buffer;
+    VulkanGpuBufferRef m_buffer;
+    VulkanGpuBufferRef m_scratchBuffer;
     Array<VulkanAccelerationGeometryRef> m_geometries;
     Matrix4 m_transform;
-    VkAccelerationStructureKHR m_acceleration_structure;
-    uint64 m_device_address;
+    VkAccelerationStructureKHR m_accelerationStructure;
+    uint64 m_deviceAddress;
     AccelerationStructureFlags m_flags;
 };
 
@@ -174,8 +172,8 @@ class VulkanBLAS final : public BLASBase, public VulkanAccelerationStructureBase
 {
 public:
     HYP_API VulkanBLAS(
-        const VulkanGPUBufferRef& packed_vertices_buffer,
-        const VulkanGPUBufferRef& packed_indices_buffer,
+        const VulkanGpuBufferRef& packedVerticesBuffer,
+        const VulkanGpuBufferRef& packedIndicesBuffer,
         const Handle<Material>& material,
         const Matrix4& transform);
     HYP_API virtual ~VulkanBLAS() override;
@@ -189,13 +187,13 @@ public:
     }
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
-    HYP_API RendererResult UpdateStructure(RTUpdateStateFlags& out_update_state_flags);
+    HYP_API RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags);
 
 private:
-    RendererResult Rebuild(RTUpdateStateFlags& out_update_state_flags);
+    RendererResult Rebuild(RTUpdateStateFlags& outUpdateStateFlags);
 
-    VulkanGPUBufferRef m_packed_vertices_buffer;
-    VulkanGPUBufferRef m_packed_indices_buffer;
+    VulkanGpuBufferRef m_packedVerticesBuffer;
+    VulkanGpuBufferRef m_packedIndicesBuffer;
     Handle<Material> m_material;
 };
 
@@ -212,10 +210,10 @@ public:
     HYP_API virtual RendererResult Destroy() override;
 
     /*! \brief Rebuild IF the rebuild flag has been set. Otherwise this is a no-op. */
-    HYP_API virtual RendererResult UpdateStructure(RTUpdateStateFlags& out_update_state_flags) override;
+    HYP_API virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) override;
 
 private:
-    RendererResult Rebuild(RTUpdateStateFlags& out_update_state_flags);
+    RendererResult Rebuild(RTUpdateStateFlags& outUpdateStateFlags);
 
     std::vector<VkAccelerationStructureGeometryKHR> GetGeometries() const;
     std::vector<uint32> GetPrimitiveCounts() const;
@@ -229,10 +227,9 @@ private:
     RendererResult RebuildMeshDescriptionsBuffer();
 
     Array<VulkanBLASRef> m_blas;
-    VulkanGPUBufferRef m_instances_buffer;
+    VulkanGpuBufferRef m_instancesBuffer;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

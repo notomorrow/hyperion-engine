@@ -31,7 +31,7 @@ template <class T, SizeType Sz>
 class FixedArray
 {
 public:
-    static constexpr bool is_contiguous = true;
+    static constexpr bool isContiguous = true;
 
     T m_values[Sz > 1 ? Sz : 1];
 
@@ -57,12 +57,12 @@ public:
         }
 
         auto it = Begin();
-        auto other_it = other.Begin();
+        auto otherIt = other.Begin();
         const auto _end = End();
 
-        for (; it != _end; ++it, ++other_it)
+        for (; it != _end; ++it, ++otherIt)
         {
-            if (!(*it == *other_it))
+            if (!(*it == *otherIt))
             {
                 return false;
             }
@@ -85,12 +85,12 @@ public:
         }
 
         auto it = Begin();
-        auto other_it = other.Begin();
+        auto otherIt = other.Begin();
         const auto _end = End();
 
-        for (; it != _end; ++it, ++other_it)
+        for (; it != _end; ++it, ++otherIt)
         {
-            if (!(*it == *other_it))
+            if (!(*it == *otherIt))
             {
                 return true;
             }
@@ -224,28 +224,28 @@ public:
      *  \return A Span<T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE operator Span<T>()
     {
-        return Span<T>(&m_values[0], Sz);
+        return Span<T>(Begin(), End());
     }
 
     /*! \brief Creates a Span<T> from the FixedArray's data.
      *  \return A Span<T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE operator Span<const T>() const
     {
-        return Span<const T>(&m_values[0], Sz);
+        return Span<const T>(Begin(), End());
     }
 
     /*! \brief Creates a Span<T> from the FixedArray's data.
      *  \return A Span<T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE Span<T> ToSpan()
     {
-        return Span<T>(Data(), Size());
+        return Span<T>(Begin(), End());
     }
 
     /*! \brief Creates a Span<const T> from the FixedArray's data.
      *  \return A Span<const T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE Span<const T> ToSpan() const
     {
-        return Span<const T>(Data(), Size());
+        return Span<const T>(Begin(), End());
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -254,7 +254,7 @@ public:
         return impl.GetHashCode();
     }
 
-    HYP_DEF_STL_BEGIN_END(&m_values[0], &m_values[Sz])
+    HYP_DEF_STL_BEGIN_END(&m_values[0], &m_values[0] + Sz)
 };
 
 // template <class T, SizeType Sz>
@@ -308,7 +308,7 @@ class FixedArrayImpl : public ContainerBase<FixedArrayImpl<T, Sz>, uint32>
 public:
     T* ptr;
 
-    static constexpr bool is_contiguous = true;
+    static constexpr bool isContiguous = true;
 
     using Iterator = T*;
     using ConstIterator = const T*;

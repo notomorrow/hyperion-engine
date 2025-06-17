@@ -15,14 +15,14 @@ class AudioSystem : public SystemBase
     HYP_OBJECT_BODY(AudioSystem);
 
 public:
-    AudioSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    AudioSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
     virtual ~AudioSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
 
     virtual void Process(float delta) override;
 

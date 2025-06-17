@@ -72,21 +72,21 @@ protected:
     virtual void OnActivated() override;
     virtual void OnDeactivated() override;
 
-    virtual void RespondToCommand(const CameraCommand& command, GameCounter::TickUnit dt) override;
+    virtual void RespondToCommand(const CameraCommand& command, float dt) override;
 
     FirstPersonCameraControllerMode m_mode;
 
-    Vec3f m_move_deltas;
-    Vec3f m_dir_cross_y;
+    Vec3f m_moveDeltas;
+    Vec3f m_dirCrossY;
 
-    float m_mouse_x;
-    float m_mouse_y;
-    float m_prev_mouse_x;
-    float m_prev_mouse_y;
+    float m_mouseX;
+    float m_mouseY;
+    float m_prevMouseX;
+    float m_prevMouseY;
 
     Vec2f m_mag;
-    Vec2f m_desired_mag;
-    Vec2f m_prev_mag;
+    Vec2f m_desiredMag;
+    Vec2f m_prevMag;
 };
 
 } // namespace hyperion

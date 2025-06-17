@@ -5,8 +5,6 @@
 
 #include <ui/UIObject.hpp>
 
-#include <core/Base.hpp>
-
 #include <core/object/HypObject.hpp>
 
 #include <core/functional/Delegate.hpp>
@@ -20,8 +18,6 @@
 
 #include <input/Mouse.hpp>
 #include <input/Keyboard.hpp>
-
-#include <core/math/Transform.hpp>
 
 #include <GameCounter.hpp>
 #include <HashCode.hpp>
@@ -45,8 +41,8 @@ class FontAtlas;
 
 struct UIObjectPressedState
 {
-    EnumFlags<MouseButtonState> mouse_buttons = MouseButtonState::NONE;
-    float held_time = 0.0f;
+    EnumFlags<MouseButtonState> mouseButtons = MouseButtonState::NONE;
+    float heldTime = 0.0f;
 };
 
 enum class UIRayTestFlags : uint32
@@ -70,11 +66,11 @@ public:
     friend class UIObject;
 
     // The minimum and maximum depth values for the UI scene for layering
-    static const int g_min_depth = -10000;
-    static const int g_max_depth = 10000;
+    static const int g_minDepth = -10000;
+    static const int g_maxDepth = 10000;
 
     UIStage();
-    UIStage(ThreadID owner_thread_id);
+    UIStage(ThreadId ownerThreadId);
     UIStage(const UIStage& other) = delete;
     UIStage& operator=(const UIStage& other) = delete;
     virtual ~UIStage() override;
@@ -85,11 +81,11 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE Vec2i GetSurfaceSize() const
     {
-        return m_surface_size;
+        return m_surfaceSize;
     }
 
     HYP_METHOD()
-    void SetSurfaceSize(Vec2i surface_size);
+    void SetSurfaceSize(Vec2i surfaceSize);
 
     /*! \brief Get the scene that contains the UI objects.
      *
@@ -119,29 +115,29 @@ public:
     /*! \brief Set the default font atlas to use for text rendering.
      *  UIText objects will use this font atlas if they don't have a font atlas set.
      *
-     *  \param font_atlas The font atlas to set. */
-    void SetDefaultFontAtlas(RC<FontAtlas> font_atlas);
+     *  \param fontAtlas The font atlas to set. */
+    void SetDefaultFontAtlas(RC<FontAtlas> fontAtlas);
 
     /*! \brief Get the UI object that is currently focused. If no object is focused, returns nullptr.
      *  \return The focused UI object. */
     HYP_FORCE_INLINE const WeakHandle<UIObject>& GetFocusedObject() const
     {
-        return m_focused_object;
+        return m_focusedObject;
     }
 
     UIEventHandlerResult OnInputEvent(
-        InputManager* input_manager,
+        InputManager* inputManager,
         const SystemEvent& event);
 
     /*! \brief Ray test the UI scene using screen space mouse coordinates */
-    bool TestRay(const Vec2f& position, Array<Handle<UIObject>>& out_objects, EnumFlags<UIRayTestFlags> flags = UIRayTestFlags::DEFAULT);
+    bool TestRay(const Vec2f& position, Array<Handle<UIObject>>& outObjects, EnumFlags<UIRayTestFlags> flags = UIRayTestFlags::DEFAULT);
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
 
 protected:
     virtual void Init() override;
-    
-    virtual void Update_Internal(GameCounter::TickUnit delta) override;
+
+    virtual void Update_Internal(float delta) override;
 
     virtual void OnAttached_Internal(UIObject* parent) override;
 
@@ -151,29 +147,29 @@ protected:
     virtual void SetStage_Internal(UIStage* stage) override;
 
 private:
-    virtual void ComputeActualSize(const UIObjectSize& in_size, Vec2i& out_actual_size, UpdateSizePhase phase, bool is_inner) override;
+    virtual void ComputeActualSize(const UIObjectSize& inSize, Vec2i& outActualSize, UpdateSizePhase phase, bool isInner) override;
 
     /*! \brief To be called internally from UIObject only */
-    void SetFocusedObject(const Handle<UIObject>& ui_object);
+    void SetFocusedObject(const Handle<UIObject>& uiObject);
 
-    Handle<UIObject> GetUIObjectForEntity(ID<Entity> entity) const;
+    Handle<UIObject> GetUIObjectForEntity(const Entity* entity) const;
 
-    bool Remove(ID<Entity> entity);
+    bool Remove(const Entity* entity);
 
-    Vec2i m_surface_size;
+    Vec2i m_surfaceSize;
 
     Handle<Scene> m_scene;
     Handle<Camera> m_camera;
 
-    RC<FontAtlas> m_default_font_atlas;
+    RC<FontAtlas> m_defaultFontAtlas;
 
-    HashMap<WeakHandle<UIObject>, UIObjectPressedState> m_mouse_button_pressed_states;
-    FlatSet<WeakHandle<UIObject>> m_hovered_ui_objects;
-    HashMap<KeyCode, Array<WeakHandle<UIObject>>> m_keyed_down_objects;
+    HashMap<WeakHandle<UIObject>, UIObjectPressedState> m_mouseButtonPressedStates;
+    FlatSet<WeakHandle<UIObject>> m_hoveredUiObjects;
+    HashMap<KeyCode, Array<WeakHandle<UIObject>>> m_keyedDownObjects;
 
-    WeakHandle<UIObject> m_focused_object;
+    WeakHandle<UIObject> m_focusedObject;
 
-    DelegateHandler m_on_current_window_changed_handler;
+    DelegateHandler m_onCurrentWindowChangedHandler;
 };
 
 } // namespace hyperion

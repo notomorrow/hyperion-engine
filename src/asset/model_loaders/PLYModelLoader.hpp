@@ -38,10 +38,10 @@ public:
 
     struct PLYModel
     {
-        HashMap<String, PLYPropertyDefinition> property_types;
-        HashMap<String, ByteBuffer> custom_data;
+        HashMap<String, PLYPropertyDefinition> propertyTypes;
+        HashMap<String, ByteBuffer> customData;
         Array<Vertex> vertices;
-        SizeType header_length = 0;
+        SizeType headerLength = 0;
     };
 
     static PLYType StringToPLYType(const String& str);

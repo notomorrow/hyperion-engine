@@ -24,31 +24,31 @@ namespace filesystem {
 
 HYP_DEFINE_LOG_SUBCHANNEL(DataStore, IO);
 
-static TypeMap<HashMap<String, DataStoreBase*>> g_global_data_store_map {};
-static Mutex g_global_data_store_mutex;
+static TypeMap<HashMap<String, DataStoreBase*>> g_globalDataStoreMap {};
+static Mutex g_globalDataStoreMutex;
 
-DataStoreBase* DataStoreBase::GetOrCreate(TypeID data_store_type_id, UTF8StringView prefix, ProcRef<DataStoreBase*(UTF8StringView)>&& create_fn)
+DataStoreBase* DataStoreBase::GetOrCreate(TypeId dataStoreTypeId, UTF8StringView prefix, ProcRef<DataStoreBase*(UTF8StringView)>&& createFn)
 {
-    Mutex::Guard guard(g_global_data_store_mutex);
+    Mutex::Guard guard(g_globalDataStoreMutex);
 
-    auto it = g_global_data_store_map.Find(data_store_type_id);
+    auto it = g_globalDataStoreMap.Find(dataStoreTypeId);
 
-    if (it == g_global_data_store_map.End())
+    if (it == g_globalDataStoreMap.End())
     {
-        it = g_global_data_store_map.Set(data_store_type_id, {}).first;
+        it = g_globalDataStoreMap.Set(dataStoreTypeId, {}).first;
     }
 
-    auto data_store_it = it->second.FindAs(prefix);
+    auto dataStoreIt = it->second.FindAs(prefix);
 
-    if (data_store_it == it->second.End())
+    if (dataStoreIt == it->second.End())
     {
-        DataStoreBase* create_result = create_fn(prefix);
-        AssertThrow(create_result != nullptr);
+        DataStoreBase* createResult = createFn(prefix);
+        AssertThrow(createResult != nullptr);
 
-        data_store_it = it->second.Insert({ prefix, create_result }).first;
+        dataStoreIt = it->second.Insert({ prefix, createResult }).first;
     }
 
-    return data_store_it->second;
+    return dataStoreIt->second;
 }
 
 DataStoreBase::DataStoreBase(const String& prefix, DataStoreOptions options)
@@ -59,7 +59,7 @@ DataStoreBase::DataStoreBase(const String& prefix, DataStoreOptions options)
 
 int DataStoreBase::IncRef()
 {
-    return m_ref_counter.Produce(1, [this](bool)
+    return m_refCounter.Produce(1, [this](bool)
         {
             if (m_options.flags & DSF_WRITE)
             {
@@ -75,27 +75,27 @@ int DataStoreBase::IncRefNoInitialize()
 
 int DataStoreBase::DecRef()
 {
-    m_shutdown_semaphore.Produce(1);
-    bool should_release = true;
+    m_shutdownSemaphore.Produce(1);
+    bool shouldRelease = true;
 
-    int result = m_ref_counter.Release(1, [this, &should_release](bool)
+    int result = m_refCounter.Release(1, [this, &shouldRelease](bool)
         {
-            should_release = false;
+            shouldRelease = false;
             TaskSystem::GetInstance().Enqueue(
                 HYP_STATIC_MESSAGE("DiscardOldFiles on DataStoreBase::DecRef"),
                 [this]()
                 {
                     DiscardOldFiles();
 
-                    m_shutdown_semaphore.Release(1);
+                    m_shutdownSemaphore.Release(1);
                 },
                 TaskThreadPoolName::THREAD_POOL_BACKGROUND,
                 TaskEnqueueFlags::FIRE_AND_FORGET);
         });
 
-    if (should_release)
+    if (shouldRelease)
     {
-        m_shutdown_semaphore.Release(1);
+        m_shutdownSemaphore.Release(1);
     }
 
     return result;
@@ -103,18 +103,18 @@ int DataStoreBase::DecRef()
 
 void DataStoreBase::WaitForTaskCompletion() const
 {
-    m_shutdown_semaphore.Acquire();
+    m_shutdownSemaphore.Acquire();
 }
 
 void DataStoreBase::WaitForFinalization() const
 {
     WaitForTaskCompletion();
-    m_ref_counter.Acquire();
+    m_refCounter.Acquire();
 }
 
 void DataStoreBase::DiscardOldFiles() const
 {
-    if (m_options.max_size == 0)
+    if (m_options.maxSize == 0)
     {
         return; // No limit
     }
@@ -123,9 +123,9 @@ void DataStoreBase::DiscardOldFiles() const
 
     const FilePath path = GetDirectory();
 
-    SizeType directory_size = path.DirectorySize();
+    SizeType directorySize = path.DirectorySize();
 
-    if (directory_size <= m_options.max_size)
+    if (directorySize <= m_options.maxSize)
     {
         return;
     }
@@ -133,32 +133,32 @@ void DataStoreBase::DiscardOldFiles() const
     const Time now = Time::Now();
 
     // Sort by oldest first -- use diff from now
-    FlatMap<TimeDiff, FilePath> files_by_time;
+    FlatMap<TimeDiff, FilePath> filesByTime;
 
     for (const FilePath& file : path.GetAllFilesInDirectory())
     {
-        files_by_time.Insert(now - file.LastModifiedTimestamp(), file);
+        filesByTime.Insert(now - file.LastModifiedTimestamp(), file);
     }
 
-    while (directory_size > m_options.max_size)
+    while (directorySize > m_options.maxSize)
     {
-        const auto it = files_by_time.Begin();
+        const auto it = filesByTime.Begin();
 
-        if (it == files_by_time.End())
+        if (it == filesByTime.End())
         {
             break;
         }
 
         const FilePath& file = it->second;
 
-        directory_size -= file.FileSize();
+        directorySize -= file.FileSize();
 
         if (!file.Remove())
         {
             HYP_LOG(DataStore, Warning, "Failed to remove file {}", file);
         }
 
-        files_by_time.Erase(it);
+        filesByTime.Erase(it);
     }
 }
 
@@ -174,21 +174,21 @@ bool DataStoreBase::MakeDirectory() const
     return true;
 }
 
-void DataStoreBase::Write(const String& key, const ByteBuffer& byte_buffer)
+void DataStoreBase::Write(const String& key, const ByteBuffer& byteBuffer)
 {
-    AssertThrowMsg(m_ref_counter.IsInSignalState(), "Cannot write to DataStore, not yet init");
+    AssertThrowMsg(m_refCounter.IsInSignalState(), "Cannot write to DataStore, not yet init");
     AssertThrowMsg(m_options.flags & DSF_WRITE, "Data store is not writable");
 
     const FilePath filepath = GetDirectory() / key;
 
     FileByteWriter writer(filepath.Data());
-    writer.Write(byte_buffer.Data(), byte_buffer.Size());
+    writer.Write(byteBuffer.Data(), byteBuffer.Size());
     writer.Close();
 }
 
-bool DataStoreBase::Read(const String& key, ByteBuffer& out_byte_buffer) const
+bool DataStoreBase::Read(const String& key, ByteBuffer& outByteBuffer) const
 {
-    AssertThrowMsg(m_ref_counter.IsInSignalState(), "Cannot read from DataStore, not yet init");
+    AssertThrowMsg(m_refCounter.IsInSignalState(), "Cannot read from DataStore, not yet init");
     AssertThrowMsg(m_options.flags & DSF_READ, "Data store is not readable");
 
     const FilePath directory = GetDirectory();
@@ -215,14 +215,14 @@ bool DataStoreBase::Read(const String& key, ByteBuffer& out_byte_buffer) const
         return false;
     }
 
-    out_byte_buffer = reader.ReadBytes();
+    outByteBuffer = reader.ReadBytes();
 
     return true;
 }
 
 bool DataStoreBase::Exists(const String& key) const
 {
-    AssertThrowMsg(m_ref_counter.IsInSignalState(), "Cannot read from DataStore, not yet init");
+    AssertThrowMsg(m_refCounter.IsInSignalState(), "Cannot read from DataStore, not yet init");
     AssertThrowMsg(m_options.flags & DSF_READ, "Data store is not readable");
 
     const FilePath directory = GetDirectory();

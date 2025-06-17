@@ -9,7 +9,6 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/LightComponent.hpp>
 
 namespace hyperion {
 
@@ -19,11 +18,16 @@ class SkySystem : public SystemBase
     HYP_OBJECT_BODY(SkySystem);
 
 public:
-    SkySystem(EntityManager& entity_manager);
+    SkySystem(EntityManager& entityManager);
     virtual ~SkySystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual bool RequiresGameThread() const override
+    {
+        return true;
+    }
+
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 
@@ -35,7 +39,6 @@ private:
 
             // calling EnvProbe::Update() calls View::Update() which reads the following components on entities it processes.
             ComponentDescriptor<MeshComponent, COMPONENT_RW_FLAGS_READ, false> {},
-            ComponentDescriptor<LightComponent, COMPONENT_RW_FLAGS_READ, false> {},
             ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ, false> {},
             ComponentDescriptor<BoundingBoxComponent, COMPONENT_RW_FLAGS_READ, false> {},
 
@@ -43,7 +46,7 @@ private:
         };
     }
 
-    void AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr, const Handle<Entity>& entity, SkyComponent& sky_component, MeshComponent* mesh_component);
+    void AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr, Entity* entity, SkyComponent& skyComponent, MeshComponent* meshComponent);
 };
 
 } // namespace hyperion

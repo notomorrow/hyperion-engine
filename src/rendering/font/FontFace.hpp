@@ -5,8 +5,6 @@
 
 #include <rendering/font/FontEngine.hpp>
 
-#include <core/Base.hpp>
-
 #include <core/Defines.hpp>
 #include <core/filesystem/FsUtil.hpp>
 
@@ -25,7 +23,7 @@ public:
 
     FontFace() = default;
 
-    HYP_API FontFace(FontEngine::Backend backend, const FilePath& file_path);
+    HYP_API FontFace(FontEngine::Backend backend, const FilePath& filePath);
 
     FontFace(const FontFace& other) = delete;
     FontFace& operator=(const FontFace& other) = delete;
@@ -37,8 +35,8 @@ public:
     HYP_API void Init();
 
     HYP_API void RequestPixelSizes(int width, int height);
-    HYP_API void SetGlyphSize(int pt_w, int pt_h, int screen_width, int screen_height);
-    HYP_API GlyphIndex GetGlyphIndex(WChar to_find);
+    HYP_API void SetGlyphSize(int ptW, int ptH, int screenWidth, int screenHeight);
+    HYP_API GlyphIndex GetGlyphIndex(WChar toFind);
     HYP_API FontEngine::Font GetFace();
 
 private:

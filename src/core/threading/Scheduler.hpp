@@ -40,55 +40,55 @@ public:
     SchedulerBase& operator=(SchedulerBase&& other) noexcept = delete;
     virtual ~SchedulerBase() = default;
 
-    HYP_FORCE_INLINE ThreadID GetOwnerThread() const
+    HYP_FORCE_INLINE ThreadId GetOwnerThread() const
     {
-        return m_owner_thread;
+        return m_ownerThread;
     }
 
-    /*! \brief Set the given thread ID to be the owner thread of this Scheduler.
+    /*! \brief Set the given thread Id to be the owner thread of this Scheduler.
      *  Tasks are to be enqueued from any other thread, and executed only from the owner thread.
      */
-    HYP_FORCE_INLINE void SetOwnerThread(ThreadID owner_thread)
+    HYP_FORCE_INLINE void SetOwnerThread(ThreadId ownerThread)
     {
-        m_owner_thread = owner_thread;
+        m_ownerThread = ownerThread;
     }
 
     void WakeUpOwnerThread()
     {
-        m_has_tasks.notify_all();
+        m_hasTasks.notify_all();
     }
 
     void RequestStop();
 
     virtual void Await(TaskID id) = 0;
 
-    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase* executor_ptr, TaskCompleteNotifier* notifier, OnTaskCompletedCallback&& callback = nullptr, const StaticMessage& debug_name = StaticMessage()) = 0;
+    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase* executorPtr, TaskCompleteNotifier* notifier, OnTaskCompletedCallback&& callback = nullptr, const StaticMessage& debugName = StaticMessage()) = 0;
 
     virtual bool Dequeue(TaskID id) = 0;
 
     virtual bool TakeOwnershipOfTask(TaskID id, TaskExecutorBase* executor) = 0;
 
-    /*! \brief Has \ref{thread_id} given us work to complete?
-     *  Returns true if \ref{thread_id} might be waiting on us to complete some work for them. */
-    virtual bool HasWorkAssignedFromThread(ThreadID thread_id) const = 0;
+    /*! \brief Has \ref{threadId} given us work to complete?
+     *  Returns true if \ref{threadId} might be waiting on us to complete some work for them. */
+    virtual bool HasWorkAssignedFromThread(ThreadId threadId) const = 0;
 
 protected:
-    SchedulerBase(ThreadID owner_thread)
-        : m_owner_thread(owner_thread)
+    SchedulerBase(ThreadId ownerThread)
+        : m_ownerThread(ownerThread)
     {
     }
 
     bool WaitForTasks(std::unique_lock<std::mutex>& lock);
 
-    uint32 m_id_counter = 0;
-    AtomicVar<uint32> m_num_enqueued { 0 };
-    AtomicVar<bool> m_stop_requested { false };
+    uint32 m_idCounter = 0;
+    AtomicVar<uint32> m_numEnqueued { 0 };
+    AtomicVar<bool> m_stopRequested { false };
 
     mutable std::mutex m_mutex;
-    std::condition_variable m_has_tasks;
-    std::condition_variable m_task_executed;
+    std::condition_variable m_hasTasks;
+    std::condition_variable m_taskExecuted;
 
-    ThreadID m_owner_thread;
+    ThreadId m_ownerThread;
 };
 
 class Scheduler final : public SchedulerBase
@@ -100,18 +100,18 @@ public:
         TaskExecutorBase* executor = nullptr;
 
         // If the executor is owned by the scheduler, it will be deleted when this object is destroyed
-        bool owns_executor = false;
+        bool ownsExecutor = false;
 
         // Task notifier to signal when the task is completed (used for batch tasks)
         TaskCompleteNotifier* notifier = nullptr;
 
         // Condition variable to notify when the task has been executed (owned by the scheduler)
-        std::condition_variable* task_executed = nullptr;
+        std::condition_variable* taskExecuted = nullptr;
 
         // Callback to be executed after the task is completed
         OnTaskCompletedCallback callback;
 
-        StaticMessage debug_name;
+        StaticMessage debugName;
 
         ScheduledTask() = default;
 
@@ -120,16 +120,16 @@ public:
 
         ScheduledTask(ScheduledTask&& other) noexcept
             : executor(other.executor),
-              owns_executor(other.owns_executor),
+              ownsExecutor(other.ownsExecutor),
               notifier(other.notifier),
-              task_executed(other.task_executed),
+              taskExecuted(other.taskExecuted),
               callback(std::move(other.callback)),
-              debug_name(std::move(other.debug_name))
+              debugName(std::move(other.debugName))
         {
             other.executor = nullptr;
-            other.owns_executor = false;
+            other.ownsExecutor = false;
             other.notifier = nullptr;
-            other.task_executed = nullptr;
+            other.taskExecuted = nullptr;
         }
 
         ScheduledTask& operator=(ScheduledTask&& other) noexcept
@@ -139,29 +139,29 @@ public:
                 return *this;
             }
 
-            if (owns_executor)
+            if (ownsExecutor)
             {
                 delete executor;
             }
 
             executor = other.executor;
-            owns_executor = other.owns_executor;
+            ownsExecutor = other.ownsExecutor;
             notifier = other.notifier;
-            task_executed = other.task_executed;
+            taskExecuted = other.taskExecuted;
             callback = std::move(other.callback);
-            debug_name = std::move(other.debug_name);
+            debugName = std::move(other.debugName);
 
             other.executor = nullptr;
-            other.owns_executor = false;
+            other.ownsExecutor = false;
             other.notifier = nullptr;
-            other.task_executed = nullptr;
+            other.taskExecuted = nullptr;
 
             return *this;
         }
 
         ~ScheduledTask()
         {
-            if (owns_executor)
+            if (ownsExecutor)
             {
                 delete executor;
             }
@@ -172,41 +172,41 @@ public:
         {
             lambda(*executor);
 
-            int counter_value = 0;
+            int counterValue = 0;
 
             if (notifier != nullptr)
             {
-                counter_value = notifier->Release(1, callback);
+                counterValue = notifier->Release(1, callback);
             }
             else if (callback.IsValid())
             {
                 callback();
             }
 
-            task_executed->notify_all();
+            taskExecuted->notify_all();
         }
 
         void Execute()
         {
             executor->Execute();
 
-            int counter_value = 0;
+            int counterValue = 0;
 
             if (notifier != nullptr)
             {
-                counter_value = notifier->Release(1, callback);
+                counterValue = notifier->Release(1, callback);
             }
             else if (callback.IsValid())
             {
                 callback();
             }
 
-            task_executed->notify_all();
+            taskExecuted->notify_all();
         }
     };
 
-    Scheduler(ThreadID owner_thread_id = Threads::CurrentThreadID())
-        : SchedulerBase(owner_thread_id)
+    Scheduler(ThreadId ownerThreadId = Threads::CurrentThreadId())
+        : SchedulerBase(ownerThreadId)
     {
     }
 
@@ -218,7 +218,7 @@ public:
 
     HYP_FORCE_INLINE uint32 NumEnqueued() const
     {
-        return m_num_enqueued.Get(MemoryOrder::ACQUIRE);
+        return m_numEnqueued.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE const Array<ScheduledTask>& GetEnqueuedTasks() const
@@ -238,11 +238,11 @@ public:
 
     /*! \brief Enqueue a function to be executed on the owner thread. This is to be
      *  called from a non-owner thread.
-     *  \param debug_name A StaticMessage instance containing the name of the task (for debugging)
+     *  \param debugName A StaticMessage instance containing the name of the task (for debugging)
      *  \param fn The function to execute
      *  \param flags Flags to control the behavior of the task - see TaskEnqueueFlags */
     template <class Function>
-    auto Enqueue(const StaticMessage& debug_name, Function&& fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
+    auto Enqueue(const StaticMessage& debugName, Function&& fn, EnumFlags<TaskEnqueueFlags> flags = TaskEnqueueFlags::NONE) -> Task<typename FunctionTraits<Function>::ReturnType>
     {
         using ReturnType = typename FunctionTraits<Function>::ReturnType;
 
@@ -250,15 +250,15 @@ public:
 
         TaskExecutorInstance<ReturnType>* executor = new TaskExecutorInstance<ReturnType>(std::forward<Function>(fn));
 
-        ScheduledTask scheduled_task;
-        scheduled_task.executor = executor;
-        scheduled_task.owns_executor = (flags & TaskEnqueueFlags::FIRE_AND_FORGET);
-        scheduled_task.notifier = &executor->GetNotifier();
-        scheduled_task.task_executed = &m_task_executed;
-        scheduled_task.callback = OnTaskCompletedCallback(&executor->GetCallbackChain());
-        scheduled_task.debug_name = debug_name;
+        ScheduledTask scheduledTask;
+        scheduledTask.executor = executor;
+        scheduledTask.ownsExecutor = (flags & TaskEnqueueFlags::FIRE_AND_FORGET);
+        scheduledTask.notifier = &executor->GetNotifier();
+        scheduledTask.taskExecuted = &m_taskExecuted;
+        scheduledTask.callback = OnTaskCompletedCallback(&executor->GetCallbackChain());
+        scheduledTask.debugName = debugName;
 
-        Enqueue_Internal(std::move(scheduled_task));
+        Enqueue_Internal(std::move(scheduledTask));
 
         Task<ReturnType> task(executor->GetTaskID(), this, executor, !(flags & TaskEnqueueFlags::FIRE_AND_FORGET));
 
@@ -271,37 +271,37 @@ public:
     /*! \brief Enqueue a task to be executed on the owner thread. This is to be
      *  called from a non-owner thread.
      *  \internal Used by TaskSystem to enqueue batches of tasks.
-     *  \param executor_ptr The TaskExecutor to execute (owned by the caller)
+     *  \param executorPtr The TaskExecutor to execute (owned by the caller)
      *  \param notifier A TaskCompleteNotifier to be used to notify when the task is completed.
      *  \param callback A callback to be executed after the task is completed.
-     *  \param debug_name A StaticMessage instance containing the name of the task (for debugging) */
-    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase* executor_ptr, TaskCompleteNotifier* notifier, OnTaskCompletedCallback&& callback = nullptr, const StaticMessage& debug_name = StaticMessage()) override
+     *  \param debugName A StaticMessage instance containing the name of the task (for debugging) */
+    virtual TaskID EnqueueTaskExecutor(TaskExecutorBase* executorPtr, TaskCompleteNotifier* notifier, OnTaskCompletedCallback&& callback = nullptr, const StaticMessage& debugName = StaticMessage()) override
     {
         std::unique_lock lock(m_mutex);
 
-        ScheduledTask scheduled_task;
-        scheduled_task.executor = executor_ptr;
-        scheduled_task.owns_executor = false;
-        scheduled_task.notifier = notifier;
-        scheduled_task.task_executed = &m_task_executed;
-        scheduled_task.callback = std::move(callback);
-        scheduled_task.debug_name = debug_name;
+        ScheduledTask scheduledTask;
+        scheduledTask.executor = executorPtr;
+        scheduledTask.ownsExecutor = false;
+        scheduledTask.notifier = notifier;
+        scheduledTask.taskExecuted = &m_taskExecuted;
+        scheduledTask.callback = std::move(callback);
+        scheduledTask.debugName = debugName;
 
-        Enqueue_Internal(std::move(scheduled_task));
+        Enqueue_Internal(std::move(scheduledTask));
 
-        const TaskID task_id = executor_ptr->GetTaskID();
+        const TaskID taskId = executorPtr->GetTaskID();
 
         lock.unlock();
 
         WakeUpOwnerThread();
 
-        return task_id;
+        return taskId;
     }
 
     /*! \brief Wait until the given task has been executed (no longer in the queue). */
     virtual void Await(TaskID id) override
     {
-        AssertThrow(!Threads::IsOnThread(m_owner_thread));
+        AssertThrow(!Threads::IsOnThread(m_ownerThread));
 
         std::unique_lock lock(m_mutex);
 
@@ -318,7 +318,7 @@ public:
             return;
         }
 
-        m_task_executed.wait(lock, [this, id]
+        m_taskExecuted.wait(lock, [this, id]
             {
                 if (m_queue.Empty())
                 {
@@ -353,12 +353,12 @@ public:
 
     virtual bool TakeOwnershipOfTask(TaskID id, TaskExecutorBase* executor) override
     {
-        AssertThrow(!Threads::IsOnThread(m_owner_thread));
+        AssertThrow(!Threads::IsOnThread(m_ownerThread));
 
         AssertThrow(id.IsValid());
         AssertThrow(executor != nullptr);
 
-        TaskExecutorBase* executor_casted = static_cast<TaskExecutorBase*>(executor);
+        TaskExecutorBase* executorCasted = static_cast<TaskExecutorBase*>(executor);
 
         std::unique_lock lock(m_mutex);
 
@@ -378,64 +378,64 @@ public:
         //     return false;
         // }
 
-        ScheduledTask& scheduled_task = *it;
+        ScheduledTask& scheduledTask = *it;
 
-        if (scheduled_task.owns_executor)
+        if (scheduledTask.ownsExecutor)
         {
-            AssertThrow(scheduled_task.executor != nullptr);
-            AssertThrow(scheduled_task.executor != executor_casted);
+            AssertThrow(scheduledTask.executor != nullptr);
+            AssertThrow(scheduledTask.executor != executorCasted);
 
-            delete scheduled_task.executor;
+            delete scheduledTask.executor;
         }
 
         // Release memory from the UniquePtr and assign it to the ScheduledTask
         // the ScheduledTask will delete the executor when it is destructed.
-        scheduled_task.executor = executor_casted;
-        scheduled_task.notifier = &executor_casted->GetNotifier();
-        scheduled_task.owns_executor = true;
+        scheduledTask.executor = executorCasted;
+        scheduledTask.notifier = &executorCasted->GetNotifier();
+        scheduledTask.ownsExecutor = true;
 
         return true;
     }
 
-    virtual bool HasWorkAssignedFromThread(ThreadID thread_id) const override
+    virtual bool HasWorkAssignedFromThread(ThreadId threadId) const override
     {
         std::unique_lock lock(m_mutex);
 
-        return AnyOf(m_queue, [thread_id](const ScheduledTask& item)
+        return AnyOf(m_queue, [threadId](const ScheduledTask& item)
             {
-                return item.executor->GetInitiatorThreadID() == thread_id;
+                return item.executor->GetInitiatorThreadId() == threadId;
             });
     }
 
     // /* Move all the next pending task in the queue to an external container. */
     // template <class Container>
-    // void AcceptNext(Container &out_container)
+    // void AcceptNext(Container &outContainer)
     // {
-    //     AssertThrow(Threads::IsOnThread(m_owner_thread));
+    //     AssertThrow(Threads::IsOnThread(m_ownerThread));
 
     //     std::unique_lock lock(m_mutex);
 
     //     if (m_queue.Any()) {
     //         auto &front = m_queue.Front();
-    //         out_container.Push(std::move(front));
+    //         outContainer.Push(std::move(front));
     //         m_queue.PopFront();
 
-    //         m_num_enqueued.Decrement(1u, MemoryOrder::RELEASE);
+    //         m_numEnqueued.Decrement(1u, MemoryOrder::RELEASE);
     //     }
     // }
 
     /* Move all tasks in the queue to an external container. */
     template <class Container>
-    void AcceptAll(Container& out_container)
+    void AcceptAll(Container& outContainer)
     {
-        AssertThrow(Threads::IsOnThread(m_owner_thread));
+        AssertThrow(Threads::IsOnThread(m_ownerThread));
 
         std::unique_lock lock(m_mutex);
 
         for (auto it = m_queue.Begin(); it != m_queue.End(); ++it)
         {
-            out_container.Push(std::move(*it));
-            m_num_enqueued.Decrement(1, MemoryOrder::RELEASE);
+            outContainer.Push(std::move(*it));
+            m_numEnqueued.Decrement(1, MemoryOrder::RELEASE);
         }
 
         m_queue.Clear();
@@ -449,16 +449,9 @@ public:
      * @returns a boolean value indicating whether or not the scheduler was stopped.
      */
     template <class Container>
-    bool WaitForTasks(Container& out_container)
+    bool WaitForTasks(Container& outContainer)
     {
-        AssertThrow(Threads::IsOnThread(m_owner_thread));
-
-#ifdef HYP_DEBUG_MODE
-        if (!out_container.Empty())
-        {
-            DebugLog(LogType::Warn, "Warning: Container is not empty when calling WaitForTasks().");
-        }
-#endif
+        AssertThrow(Threads::IsOnThread(m_ownerThread));
 
         std::unique_lock lock(m_mutex);
 
@@ -469,8 +462,8 @@ public:
 
         for (auto it = m_queue.Begin(); it != m_queue.End(); ++it)
         {
-            out_container.Push(std::move(*it));
-            m_num_enqueued.Decrement(1, MemoryOrder::RELEASE);
+            outContainer.Push(std::move(*it));
+            m_numEnqueued.Decrement(1, MemoryOrder::RELEASE);
         }
 
         m_queue.Clear();
@@ -486,10 +479,10 @@ public:
     template <class Lambda>
     void Flush(Lambda&& lambda)
     {
-        AssertThrow(Threads::IsOnThread(m_owner_thread));
+        AssertThrow(Threads::IsOnThread(m_ownerThread));
 
         AssertThrowMsg(
-            !m_stop_requested.Get(MemoryOrder::RELAXED),
+            !m_stopRequested.Get(MemoryOrder::RELAXED),
             "Scheduler::Flush() called after stop requested");
 
         std::unique_lock lock(m_mutex);
@@ -500,7 +493,7 @@ public:
 
             front.ExecuteWithLambda(lambda);
 
-            m_num_enqueued.Decrement(1, MemoryOrder::RELEASE);
+            m_numEnqueued.Decrement(1, MemoryOrder::RELEASE);
             m_queue.PopFront();
         }
 
@@ -510,16 +503,16 @@ public:
     }
 
 private:
-    void Enqueue_Internal(ScheduledTask&& scheduled_task)
+    void Enqueue_Internal(ScheduledTask&& scheduledTask)
     {
-        const TaskID task_id { ++m_id_counter };
+        const TaskID taskId { ++m_idCounter };
 
-        scheduled_task.executor->SetTaskID(task_id);
-        scheduled_task.executor->SetInitiatorThreadID(Threads::CurrentThreadID());
-        scheduled_task.executor->SetAssignedScheduler(this);
+        scheduledTask.executor->SetTaskID(taskId);
+        scheduledTask.executor->SetInitiatorThreadId(Threads::CurrentThreadId());
+        scheduledTask.executor->SetAssignedScheduler(this);
 
-        m_queue.PushBack(std::move(scheduled_task));
-        m_num_enqueued.Increment(1, MemoryOrder::RELEASE);
+        m_queue.PushBack(std::move(scheduledTask));
+        m_numEnqueued.Increment(1, MemoryOrder::RELEASE);
     }
 
     bool Dequeue_Internal(TaskID id)
@@ -537,7 +530,7 @@ private:
 
         m_queue.Erase(it);
 
-        m_num_enqueued.Decrement(1, MemoryOrder::RELEASE);
+        m_numEnqueued.Decrement(1, MemoryOrder::RELEASE);
 
         return true;
     }

@@ -3,144 +3,142 @@
 #include <rendering/backend/RendererFeatures.hpp>
 
 namespace hyperion {
-namespace renderer {
-
-Features::DynamicFunctions Features::dyn_functions = {};
+Features::DynamicFunctions Features::dynFunctions = {};
 
 Features::Features()
-    : m_physical_device(nullptr),
+    : m_physicalDevice(nullptr),
       m_properties({}),
       m_features({})
 {
 }
 
-Features::Features(VkPhysicalDevice physical_device)
+Features::Features(VkPhysicalDevice physicalDevice)
     : Features()
 {
-    SetPhysicalDevice(physical_device);
+    SetPhysicalDevice(physicalDevice);
 }
 
-void Features::SetPhysicalDevice(VkPhysicalDevice physical_device)
+void Features::SetPhysicalDevice(VkPhysicalDevice physicalDevice)
 {
-    if ((m_physical_device = physical_device))
+    if ((m_physicalDevice = physicalDevice))
     {
         m_features.samplerAnisotropy = VK_TRUE;
 
-        vkGetPhysicalDeviceProperties(physical_device, &m_properties);
-        vkGetPhysicalDeviceFeatures(physical_device, &m_features);
-        vkGetPhysicalDeviceMemoryProperties(physical_device, &m_memory_properties);
+        vkGetPhysicalDeviceProperties(physicalDevice, &m_properties);
+        vkGetPhysicalDeviceFeatures(physicalDevice, &m_features);
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &m_memoryProperties);
 
         AssertThrow(m_features.samplerAnisotropy);
 
-        auto AddToFeaturesChain = [this](auto next_feature)
+        auto AddToFeaturesChain = [this](auto nextFeature)
         {
-            using T = decltype(next_feature);
+            using T = decltype(nextFeature);
 
-            VkBaseOutStructure* chain_top = m_features_chain.Empty()
+            VkBaseOutStructure* chainTop = m_featuresChain.Empty()
                 ? nullptr
-                : m_features_chain.Back().Get();
+                : m_featuresChain.Back().Get();
 
-            m_features_chain.PushBack(MakeUnique<VkBaseOutStructure>(new T(next_feature)));
+            m_featuresChain.PushBack(MakeUnique<VkBaseOutStructure>(new T(nextFeature)));
 
-            if (chain_top != nullptr)
+            if (chainTop != nullptr)
             {
-                chain_top->pNext = m_features_chain.Back().Get();
+                chainTop->pNext = m_featuresChain.Back().Get();
             }
 
-            chain_top = m_features_chain.Back().Get();
+            chainTop = m_featuresChain.Back().Get();
         };
 
         // features
 
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
-        m_buffer_device_address_features = {
+        m_bufferDeviceAddressFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = VK_NULL_HANDLE
         };
 
-        m_raytracing_pipeline_features = {
+        m_raytracingPipelineFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-            .pNext = &m_buffer_device_address_features
+            .pNext = &m_bufferDeviceAddressFeatures
         };
 
-        m_acceleration_structure_features = {
+        m_accelerationStructureFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-            .pNext = &m_raytracing_pipeline_features
+            .pNext = &m_raytracingPipelineFeatures
         };
 
-        m_multiview_features = {
+        m_multiviewFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,
-            .pNext = &m_acceleration_structure_features
+            .pNext = &m_accelerationStructureFeatures
         };
 #else
-        m_multiview_features = {
+        m_multiviewFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR,
             .pNext = VK_NULL_HANDLE
         };
 #endif
 
-        m_indexing_features = {
+        m_indexingFeatures = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
-            .pNext = &m_multiview_features
+            .pNext = &m_multiviewFeatures
         };
 
         m_features2 = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-            .pNext = &m_indexing_features
+            .pNext = &m_indexingFeatures
         };
 
-        vkGetPhysicalDeviceFeatures2(m_physical_device, &m_features2);
+        vkGetPhysicalDeviceFeatures2(m_physicalDevice, &m_features2);
 
         // properties
 
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
-        m_raytracing_pipeline_properties = {
+        m_raytracingPipelineProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
             .pNext = VK_NULL_HANDLE
         };
 
-        m_acceleration_structure_properties = {
+        m_accelerationStructureProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
-            .pNext = &m_raytracing_pipeline_properties
+            .pNext = &m_raytracingPipelineProperties
         };
 
-        m_sampler_minmax_properties = {
+        m_samplerMinmaxProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES_EXT,
-            .pNext = &m_acceleration_structure_properties
+            .pNext = &m_accelerationStructureProperties
         };
 #else
-        m_sampler_minmax_properties = {
+        m_samplerMinmaxProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES_EXT,
             .pNext = VK_NULL_HANDLE
         };
 #endif
 
-        m_indexing_properties = {
+        m_indexingProperties = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT,
-            .pNext = &m_sampler_minmax_properties
+            .pNext = &m_samplerMinmaxProperties
         };
 
         m_properties2 = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-            .pNext = &m_indexing_properties
+            .pNext = &m_indexingProperties
         };
 
-        vkGetPhysicalDeviceProperties2(m_physical_device, &m_properties2);
+        vkGetPhysicalDeviceProperties2(m_physicalDevice, &m_properties2);
     }
 }
 
 void Features::LoadDynamicFunctions(Device* device)
 {
-#define HYP_LOAD_FN(name)                                                            \
-    do                                                                               \
-    {                                                                                \
-        auto proc_addr = vkGetDeviceProcAddr(device->GetDevice(), #name);            \
-        if (proc_addr == nullptr)                                                    \
-        {                                                                            \
-            DebugLog(LogType::Error, "Failed to load dynamic function " #name "\n"); \
-        }                                                                            \
-        dyn_functions.name = reinterpret_cast<PFN_##name>(proc_addr);                \
-    }                                                                                \
+#define HYP_LOAD_FN(name)                                                               \
+    do                                                                                  \
+    {                                                                                   \
+        auto procAddr = vkGetDeviceProcAddr(device->GetDevice(), #name);                \
+        if (procAddr == nullptr)                                                        \
+        {                                                                               \
+            HYP_LOG(RenderingBackend, Error, "Failed to load dynamic function " #name); \
+        }                                                                               \
+        dynFunctions.name = reinterpret_cast<PFN_##name>(procAddr);                     \
+    }                                                                                   \
     while (0)
 
 #if defined(HYP_FEATURES_ENABLE_RAYTRACING) && defined(HYP_FEATURES_BINDLESS_TEXTURES)
@@ -178,24 +176,23 @@ void Features::LoadDynamicFunctions(Device* device)
 void Features::SetDeviceFeatures(Device* device)
 {
 #if defined(HYP_MOLTENVK) && HYP_MOLTENVK && HYP_MOLTENVK_LINKED
-    MVKConfiguration* mvk_config = nullptr;
+    MVKConfiguration* mvkConfig = nullptr;
     size_t sz = 1;
-    dyn_functions.vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvk_config, &sz);
+    dynFunctions.vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvkConfig, &sz);
 
-    mvk_config = new MVKConfiguration[sz];
+    mvkConfig = new MVKConfiguration[sz];
 
     for (size_t i = 0; i < sz; i++)
     {
-    #ifdef HYP_DEBUG_MODE
-        mvk_config[i].debugMode = true;
-    #endif
+#ifdef HYP_DEBUG_MODE
+        mvkConfig[i].debugMode = true;
+#endif
     }
 
-    dyn_functions.vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvk_config, &sz);
+    dynFunctions.vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, mvkConfig, &sz);
 
-    delete[] mvk_config;
+    delete[] mvkConfig;
 #endif
 }
 
-} // namespace renderer
 } // namespace hyperion

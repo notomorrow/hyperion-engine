@@ -29,8 +29,8 @@ utf::u32char SourceStream::Peek() const
     char ch = m_file->GetBuffer()[pos];
 
     // the character as a utf-32 character
-    utf::u32char u32_ch = 0;
-    char* bytes = utf::get_bytes(u32_ch);
+    utf::u32char u32Ch = 0;
+    char* bytes = utf::asUtf8Char(u32Ch);
 
     // check to see if it is a utf-8 character
     const unsigned char uc = (unsigned char)ch;
@@ -64,10 +64,10 @@ utf::u32char SourceStream::Peek() const
     else
     {
         // invalid utf-8
-        u32_ch = (utf::u32char)('\0');
+        u32Ch = (utf::u32char)('\0');
     }
 
-    return u32_ch;
+    return u32Ch;
 }
 
 utf::u32char SourceStream::Next()
@@ -76,9 +76,9 @@ utf::u32char SourceStream::Next()
     return Next(tmp);
 }
 
-utf::u32char SourceStream::Next(int& pos_change)
+utf::u32char SourceStream::Next(int& posChange)
 {
-    int pos_before = m_position;
+    int posBefore = m_position;
 
     if (m_position >= m_file->GetSize())
     {
@@ -89,8 +89,8 @@ utf::u32char SourceStream::Next(int& pos_change)
     char ch = m_file->GetBuffer()[m_position++];
 
     // the character as a utf-32 character
-    utf::u32char u32_ch = 0;
-    char* bytes = utf::get_bytes(u32_ch);
+    utf::u32char u32Ch = 0;
+    char* bytes = utf::asUtf8Char(u32Ch);
 
     // check to see if it is a utf-8 character
     const unsigned char uc = (unsigned char)ch;
@@ -124,12 +124,12 @@ utf::u32char SourceStream::Next(int& pos_change)
     else
     {
         // invalid utf-8
-        u32_ch = (utf::u32char)('\0');
+        u32Ch = (utf::u32char)('\0');
     }
 
-    pos_change = m_position - pos_before;
+    posChange = m_position - posBefore;
 
-    return u32_ch;
+    return u32Ch;
 }
 
 void SourceStream::GoBack(int n)
@@ -139,11 +139,11 @@ void SourceStream::GoBack(int n)
     m_position -= n;
 }
 
-void SourceStream::Read(char* ptr, SizeType num_bytes)
+void SourceStream::Read(char* ptr, SizeType numBytes)
 {
-    AssertThrowMsg(m_position + num_bytes < m_file->GetSize(), "attempted to read past the limit");
+    AssertThrowMsg(m_position + numBytes < m_file->GetSize(), "attempted to read past the limit");
 
-    for (SizeType i = 0; i < num_bytes; i++)
+    for (SizeType i = 0; i < numBytes; i++)
     {
         ptr[i] = m_file->GetBuffer()[m_position++];
     }

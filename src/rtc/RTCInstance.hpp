@@ -16,7 +16,7 @@ namespace hyperion {
 class HYP_API RTCInstance
 {
 public:
-    RTCInstance(RTCServerParams server_params);
+    RTCInstance(RTCServerParams serverParams);
     RTCInstance(const RTCInstance& other) = delete;
     RTCInstance& operator=(const RTCInstance& other) = delete;
     RTCInstance(RTCInstance&& other) = delete;
@@ -28,8 +28,8 @@ public:
         return m_server;
     }
 
-    RC<RTCTrackBase> CreateTrack(RTCTrackType track_type);
-    RC<RTCStream> CreateStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder>&& encoder);
+    RC<RTCTrackBase> CreateTrack(RTCTrackType trackType);
+    RC<RTCStream> CreateStream(RTCStreamType streamType, UniquePtr<RTCStreamEncoder>&& encoder);
 
 private:
     RC<RTCServer> m_server;

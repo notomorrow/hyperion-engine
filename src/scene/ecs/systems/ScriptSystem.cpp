@@ -18,53 +18,54 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
 
-constexpr bool g_enable_script_reloading = true;
+constexpr bool g_enableScriptReloading = true;
 
-ScriptSystem::ScriptSystem(EntityManager& entity_manager)
-    : SystemBase(entity_manager)
+ScriptSystem::ScriptSystem(EntityManager& entityManager)
+    : SystemBase(entityManager)
 {
     // @FIXME: Issue with reloaded assemblies that spawn native objects having their classes change.
 
-    if (g_enable_script_reloading)
+    if (g_enableScriptReloading)
     {
-        m_delegate_handlers.Add(
+        m_delegateHandlers.Add(
             NAME("OnScriptStateChanged"),
             g_engine->GetScriptingService()->OnScriptStateChanged.Bind([this](const ManagedScript& script)
                 {
-                    Threads::AssertOnThread(g_game_thread);
+                    Threads::AssertOnThread(g_gameThread);
 
                     if (!(script.state & uint32(CompiledScriptState::COMPILED)))
                     {
                         return;
                     }
 
-                    for (auto [entity, script_component] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
+                    for (auto [entity, scriptComponent] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
                     {
-                        if (ANSIStringView(script.assembly_path) == ANSIStringView(script_component.script.assembly_path))
+                        if (ANSIStringView(script.assemblyPath) == ANSIStringView(scriptComponent.script.assemblyPath))
                         {
-                            HYP_LOG(Script, Info, "ScriptSystem: Reloading script for entity #{}", entity.Value());
+                            HYP_LOG(Script, Info, "ScriptSystem: Reloading script for entity #{}", entity->Id());
 
                             // Reload the script
-                            script_component.flags |= ScriptComponentFlags::RELOADING;
+                            scriptComponent.flags |= ScriptComponentFlags::RELOADING;
 
-                            script_component.script.uuid = script.uuid;
-                            script_component.script.state = script.state;
-                            script_component.script.hot_reload_version = script.hot_reload_version;
-                            script_component.script.last_modified_timestamp = script.last_modified_timestamp;
+                            scriptComponent.script.uuid = script.uuid;
+                            scriptComponent.script.state = script.state;
+                            scriptComponent.script.hotReloadVersion = script.hotReloadVersion;
+                            scriptComponent.script.lastModifiedTimestamp = script.lastModifiedTimestamp;
 
                             OnEntityRemoved(entity);
 
-                            script_component.assembly.Reset();
+                            scriptComponent.assembly.Reset();
 
-                            OnEntityAdded(Handle<Entity>(entity));
+                            OnEntityAdded(entity->HandleFromThis());
 
-                            script_component.flags &= ~ScriptComponentFlags::RELOADING;
+                            scriptComponent.flags &= ~ScriptComponentFlags::RELOADING;
 
-                            HYP_LOG(Script, Info, "ScriptSystem: Script reloaded for entity #{}", entity.Value());
+                            HYP_LOG(Script, Info, "ScriptSystem: Script reloaded for entity #{}", entity->Id());
                         }
                     }
                 }));
@@ -72,189 +73,189 @@ ScriptSystem::ScriptSystem(EntityManager& entity_manager)
 
     if (World* world = GetWorld())
     {
-        m_delegate_handlers.Add(
+        m_delegateHandlers.Add(
             NAME("OnGameStateChange"),
-            world->OnGameStateChange.Bind([this](World* world, GameStateMode previous_game_state_mode, GameStateMode current_game_state_mode)
+            world->OnGameStateChange.Bind([this](World* world, GameStateMode previousGameStateMode, GameStateMode currentGameStateMode)
                 {
-                    Threads::AssertOnThread(g_game_thread);
+                    Threads::AssertOnThread(g_gameThread);
 
-                    HandleGameStateChanged(current_game_state_mode, previous_game_state_mode);
+                    HandleGameStateChanged(currentGameStateMode, previousGameStateMode);
                 }));
     }
 
-    // m_delegate_handlers.Add(
+    // m_delegateHandlers.Add(
     //     NAME("OnWorldChange"),
-    //     OnWorldChanged.Bind([this](World* new_world, World* previous_world)
+    //     OnWorldChanged.Bind([this](World* newWorld, World* previousWorld)
     //         {
-    //             Threads::AssertOnThread(g_game_thread);
+    //             Threads::AssertOnThread(g_gameThread);
 
     //             // Remove previous OnGameStateChange handler
-    //             m_delegate_handlers.Remove(NAME("OnGameStateChange"));
+    //             m_delegateHandlers.Remove(NAME("OnGameStateChange"));
 
     //             // If we were simulating before we need to stop it
-    //             if (previous_world != nullptr && previous_world->GetGameState().mode == GameStateMode::SIMULATING)
+    //             if (previousWorld != nullptr && previousWorld->GetGameState().mode == GameStateMode::SIMULATING)
     //             {
     //                 CallScriptMethod("OnPlayStop");
     //             }
 
-    //             if (new_world != nullptr)
+    //             if (newWorld != nullptr)
     //             {
     //                 // If the newly set world is simulating we need to notify the scripts
-    //                 if (new_world->GetGameState().mode == GameStateMode::SIMULATING)
+    //                 if (newWorld->GetGameState().mode == GameStateMode::SIMULATING)
     //                 {
     //                     CallScriptMethod("OnPlayStart");
     //                 }
 
     //                 // Add new handler for the new world's game state changing
-    //                 m_delegate_handlers.Add(
+    //                 m_delegateHandlers.Add(
     //                     NAME("OnGameStateChange"),
-    //                     new_world->OnGameStateChange.Bind([this](World* world, GameStateMode game_state_mode)
+    //                     newWorld->OnGameStateChange.Bind([this](World* world, GameStateMode gameStateMode)
     //                         {
-    //                             Threads::AssertOnThread(g_game_thread);
+    //                             Threads::AssertOnThread(g_gameThread);
 
-    //                             const GameStateMode previous_game_state_mode = world->GetGameState().mode;
+    //                             const GameStateMode previousGameStateMode = world->GetGameState().mode;
 
-    //                             HandleGameStateChanged(game_state_mode, previous_game_state_mode);
+    //                             HandleGameStateChanged(gameStateMode, previousGameStateMode);
     //                         }));
     //             }
     //         }));
 }
 
-void ScriptSystem::OnEntityAdded(const Handle<Entity>& entity)
+void ScriptSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
     World* world = GetWorld();
-    ScriptComponent& script_component = GetEntityManager().GetComponent<ScriptComponent>(entity);
+    ScriptComponent& scriptComponent = GetEntityManager().GetComponent<ScriptComponent>(entity);
 
-    if (script_component.flags & ScriptComponentFlags::INITIALIZED)
+    if (scriptComponent.flags & ScriptComponentFlags::INITIALIZED)
     {
         if (world != nullptr && world->GetGameState().mode == GameStateMode::SIMULATING)
         {
-            CallScriptMethod("OnPlayStart", script_component);
+            CallScriptMethod("OnPlayStart", scriptComponent);
         }
 
         return;
     }
 
-    if (!script_component.resource || !script_component.resource->GetManagedObject() || !script_component.resource->GetManagedObject()->IsValid())
+    if (!scriptComponent.resource || !scriptComponent.resource->GetManagedObject() || !scriptComponent.resource->GetManagedObject()->IsValid())
     {
-        FreeResource<ManagedObjectResource>(script_component.resource);
-        script_component.resource = nullptr;
+        FreeResource<ManagedObjectResource>(scriptComponent.resource);
+        scriptComponent.resource = nullptr;
 
-        if (!script_component.assembly)
+        if (!scriptComponent.assembly)
         {
-            ANSIString assembly_path(script_component.script.assembly_path);
+            ANSIString assemblyPath(scriptComponent.script.assemblyPath);
 
-            if (script_component.script.hot_reload_version > 0)
+            if (scriptComponent.script.hotReloadVersion > 0)
             {
                 // @FIXME Implement FindLastIndex
-                const SizeType extension_index = assembly_path.FindFirstIndex(".dll");
+                const SizeType extensionIndex = assemblyPath.FindFirstIndex(".dll");
 
-                if (extension_index != ANSIString::not_found)
+                if (extensionIndex != ANSIString::notFound)
                 {
-                    assembly_path = assembly_path.Substr(0, extension_index)
-                        + "." + ANSIString::ToString(script_component.script.hot_reload_version)
+                    assemblyPath = assemblyPath.Substr(0, extensionIndex)
+                        + "." + ANSIString::ToString(scriptComponent.script.hotReloadVersion)
                         + ".dll";
                 }
                 else
                 {
-                    assembly_path = assembly_path
-                        + "." + ANSIString::ToString(script_component.script.hot_reload_version)
+                    assemblyPath = assemblyPath
+                        + "." + ANSIString::ToString(scriptComponent.script.hotReloadVersion)
                         + ".dll";
                 }
             }
 
-            if (RC<dotnet::Assembly> assembly = dotnet::DotNetSystem::GetInstance().LoadAssembly(assembly_path.Data()))
+            if (RC<dotnet::Assembly> assembly = dotnet::DotNetSystem::GetInstance().LoadAssembly(assemblyPath.Data()))
             {
-                script_component.assembly = std::move(assembly);
+                scriptComponent.assembly = std::move(assembly);
             }
             else
             {
-                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to load assembly '{}'", script_component.script.assembly_path);
+                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to load assembly '{}'", scriptComponent.script.assemblyPath);
 
                 return;
             }
         }
 
-        if (RC<dotnet::Class> class_ptr = script_component.assembly->FindClassByName(script_component.script.class_name))
+        if (RC<dotnet::Class> classPtr = scriptComponent.assembly->FindClassByName(scriptComponent.script.className))
         {
-            HYP_LOG(Script, Info, "ScriptSystem::OnEntityAdded: Loaded class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
+            HYP_LOG(Script, Info, "ScriptSystem::OnEntityAdded: Loaded class '{}' from assembly '{}'", scriptComponent.script.className, scriptComponent.script.assemblyPath);
 
-            if (!class_ptr->HasParentClass("Script"))
+            if (!classPtr->HasParentClass("Script"))
             {
-                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", script_component.script.class_name, script_component.script.assembly_path);
+                HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Class '{}' from assembly '{}' does not inherit from 'Script'", scriptComponent.script.className, scriptComponent.script.assemblyPath);
 
                 return;
             }
 
-            dotnet::Object* object = class_ptr->NewObject();
+            dotnet::Object* object = classPtr->NewObject();
             AssertThrow(object != nullptr);
 
-            script_component.resource = AllocateResource<ManagedObjectResource>(object, class_ptr);
-            script_component.resource->IncRef();
+            scriptComponent.resource = AllocateResource<ManagedObjectResource>(object, classPtr);
+            scriptComponent.resource->IncRef();
 
-            if (!(script_component.flags & ScriptComponentFlags::BEFORE_INIT_CALLED))
+            if (!(scriptComponent.flags & ScriptComponentFlags::BEFORE_INIT_CALLED))
             {
-                if (dotnet::Method* before_init_method_ptr = class_ptr->GetMethod("BeforeInit"))
+                if (dotnet::Method* beforeInitMethodPtr = classPtr->GetMethod("BeforeInit"))
                 {
                     HYP_NAMED_SCOPE("Call BeforeInit() on script component");
                     HYP_LOG(Script, Debug, "Calling BeforeInit() on script component");
 
-                    object->InvokeMethod<void>(before_init_method_ptr, GetWorld(), GetScene());
+                    object->InvokeMethod<void>(beforeInitMethodPtr, GetWorld(), GetScene());
 
-                    script_component.flags |= ScriptComponentFlags::BEFORE_INIT_CALLED;
+                    scriptComponent.flags |= ScriptComponentFlags::BEFORE_INIT_CALLED;
                 }
             }
 
-            if (!(script_component.flags & ScriptComponentFlags::INIT_CALLED))
+            if (!(scriptComponent.flags & ScriptComponentFlags::INIT_CALLED))
             {
-                if (dotnet::Method* init_method_ptr = class_ptr->GetMethod("Init"))
+                if (dotnet::Method* initMethodPtr = classPtr->GetMethod("Init"))
                 {
                     HYP_NAMED_SCOPE("Call Init() on script component");
                     HYP_LOG(Script, Info, "Calling Init() on script component");
 
-                    object->InvokeMethod<void>(init_method_ptr, entity);
+                    object->InvokeMethod<void>(initMethodPtr, entity);
 
-                    script_component.flags |= ScriptComponentFlags::INIT_CALLED;
+                    scriptComponent.flags |= ScriptComponentFlags::INIT_CALLED;
                 }
             }
         }
 
-        if (!script_component.resource || !script_component.resource->GetManagedObject() || !script_component.resource->GetManagedObject()->IsValid())
+        if (!scriptComponent.resource || !scriptComponent.resource->GetManagedObject() || !scriptComponent.resource->GetManagedObject()->IsValid())
         {
-            HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", script_component.script.class_name, script_component.script.assembly_path);
+            HYP_LOG(Script, Error, "ScriptSystem::OnEntityAdded: Failed to create object of class '{}' from assembly '{}'", scriptComponent.script.className, scriptComponent.script.assemblyPath);
 
-            if (script_component.resource)
+            if (scriptComponent.resource)
             {
-                script_component.resource->DecRef();
+                scriptComponent.resource->DecRef();
 
-                FreeResource<ManagedObjectResource>(script_component.resource);
-                script_component.resource = nullptr;
+                FreeResource<ManagedObjectResource>(scriptComponent.resource);
+                scriptComponent.resource = nullptr;
             }
 
             return;
         }
     }
 
-    script_component.flags |= ScriptComponentFlags::INITIALIZED;
+    scriptComponent.flags |= ScriptComponentFlags::INITIALIZED;
 
     // Call OnPlayStart on first init if we're currently simulating
     if (world != nullptr && world->GetGameState().mode == GameStateMode::SIMULATING)
     {
-        CallScriptMethod("OnPlayStart", script_component);
+        CallScriptMethod("OnPlayStart", scriptComponent);
     }
 }
 
-void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
+void ScriptSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
     World* world = GetWorld();
 
-    ScriptComponent& script_component = GetEntityManager().GetComponent<ScriptComponent>(entity);
+    ScriptComponent& scriptComponent = GetEntityManager().GetComponent<ScriptComponent>(entity);
 
-    if (!(script_component.flags & ScriptComponentFlags::INITIALIZED))
+    if (!(scriptComponent.flags & ScriptComponentFlags::INITIALIZED))
     {
         return;
     }
@@ -262,31 +263,31 @@ void ScriptSystem::OnEntityRemoved(ID<Entity> entity)
     // If we're simulating while the script is removed, call OnPlayStop so OnPlayStart never gets double called
     if (world != nullptr && world->GetGameState().mode == GameStateMode::SIMULATING)
     {
-        CallScriptMethod("OnPlayStop", script_component);
+        CallScriptMethod("OnPlayStop", scriptComponent);
     }
 
-    if (script_component.resource)
+    if (scriptComponent.resource)
     {
-        if (script_component.resource->GetManagedObject() && script_component.resource->GetManagedObject()->IsValid())
+        if (scriptComponent.resource->GetManagedObject() && scriptComponent.resource->GetManagedObject()->IsValid())
         {
-            if (dotnet::Class* class_ptr = script_component.resource->GetManagedObject()->GetClass())
+            if (dotnet::Class* classPtr = scriptComponent.resource->GetManagedObject()->GetClass())
             {
-                if (class_ptr->HasMethod("Destroy"))
+                if (classPtr->HasMethod("Destroy"))
                 {
                     HYP_NAMED_SCOPE("Call Destroy() on script component");
 
-                    script_component.resource->GetManagedObject()->InvokeMethodByName<void>("Destroy");
+                    scriptComponent.resource->GetManagedObject()->InvokeMethodByName<void>("Destroy");
                 }
             }
         }
 
-        script_component.resource->DecRef();
+        scriptComponent.resource->DecRef();
 
-        FreeResource<ManagedObjectResource>(script_component.resource);
-        script_component.resource = nullptr;
+        FreeResource<ManagedObjectResource>(scriptComponent.resource);
+        scriptComponent.resource = nullptr;
     }
 
-    script_component.flags &= ~(ScriptComponentFlags::INITIALIZED | ScriptComponentFlags::BEFORE_INIT_CALLED | ScriptComponentFlags::INIT_CALLED);
+    scriptComponent.flags &= ~(ScriptComponentFlags::INITIALIZED | ScriptComponentFlags::BEFORE_INIT_CALLED | ScriptComponentFlags::INIT_CALLED);
 }
 
 void ScriptSystem::Process(float delta)
@@ -304,21 +305,21 @@ void ScriptSystem::Process(float delta)
         return;
     }
 
-    for (auto [entity_id, script_component] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, scriptComponent] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
     {
-        if (!(script_component.flags & ScriptComponentFlags::INITIALIZED))
+        if (!(scriptComponent.flags & ScriptComponentFlags::INITIALIZED))
         {
             continue;
         }
 
-        AssertDebug(script_component.resource != nullptr);
-        AssertDebug(script_component.resource->GetManagedObject() != nullptr);
+        AssertDebug(scriptComponent.resource != nullptr);
+        AssertDebug(scriptComponent.resource->GetManagedObject() != nullptr);
 
-        if (dotnet::Class* class_ptr = script_component.resource->GetManagedObject()->GetClass())
+        if (dotnet::Class* classPtr = scriptComponent.resource->GetManagedObject()->GetClass())
         {
-            if (dotnet::Method* update_method_ptr = class_ptr->GetMethod("Update"))
+            if (dotnet::Method* updateMethodPtr = classPtr->GetMethod("Update"))
             {
-                if (update_method_ptr->GetAttributes().HasAttribute("ScriptMethodStub"))
+                if (updateMethodPtr->GetAttributes().HasAttribute("ScriptMethodStub"))
                 {
                     // Stubbed method, don't waste cycles calling it if it's not implemented
                     continue;
@@ -326,56 +327,56 @@ void ScriptSystem::Process(float delta)
 
                 HYP_NAMED_SCOPE("Call Update() on script component");
 
-                script_component.resource->GetManagedObject()->InvokeMethod<void, float>(update_method_ptr, float(delta));
+                scriptComponent.resource->GetManagedObject()->InvokeMethod<void, float>(updateMethodPtr, float(delta));
             }
         }
     }
 }
 
-void ScriptSystem::HandleGameStateChanged(GameStateMode game_state_mode, GameStateMode previous_game_state_mode)
+void ScriptSystem::HandleGameStateChanged(GameStateMode gameStateMode, GameStateMode previousGameStateMode)
 {
     HYP_SCOPE;
 
-    if (previous_game_state_mode == GameStateMode::SIMULATING)
+    if (previousGameStateMode == GameStateMode::SIMULATING)
     {
         CallScriptMethod("OnPlayStop");
     }
 
-    if (game_state_mode == GameStateMode::SIMULATING)
+    if (gameStateMode == GameStateMode::SIMULATING)
     {
         CallScriptMethod("OnPlayStart");
     }
 }
 
-void ScriptSystem::CallScriptMethod(UTF8StringView method_name)
+void ScriptSystem::CallScriptMethod(UTF8StringView methodName)
 {
-    for (auto [entity_id, script_component] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, scriptComponent] : GetEntityManager().GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
     {
-        if (!(script_component.flags & ScriptComponentFlags::INITIALIZED))
+        if (!(scriptComponent.flags & ScriptComponentFlags::INITIALIZED))
         {
             continue;
         }
 
-        AssertDebug(script_component.resource != nullptr);
-        AssertDebug(script_component.resource->GetManagedObject() != nullptr);
+        AssertDebug(scriptComponent.resource != nullptr);
+        AssertDebug(scriptComponent.resource->GetManagedObject() != nullptr);
 
-        if (dotnet::Class* class_ptr = script_component.resource->GetManagedObject()->GetClass())
+        if (dotnet::Class* classPtr = scriptComponent.resource->GetManagedObject()->GetClass())
         {
-            if (dotnet::Method* method_ptr = class_ptr->GetMethod(method_name))
+            if (dotnet::Method* methodPtr = classPtr->GetMethod(methodName))
             {
-                if (method_ptr->GetAttributes().HasAttribute("ScriptMethodStub"))
+                if (methodPtr->GetAttributes().HasAttribute("ScriptMethodStub"))
                 {
                     // Stubbed method, don't waste cycles calling it if it's not implemented
                     continue;
                 }
 
-                script_component.resource->GetManagedObject()->InvokeMethod<void>(method_ptr);
+                scriptComponent.resource->GetManagedObject()->InvokeMethod<void>(methodPtr);
             }
         }
     }
 }
 
-void ScriptSystem::CallScriptMethod(UTF8StringView method_name, ScriptComponent& target)
+void ScriptSystem::CallScriptMethod(UTF8StringView methodName, ScriptComponent& target)
 {
     if (!(target.flags & ScriptComponentFlags::INITIALIZED))
     {
@@ -385,17 +386,17 @@ void ScriptSystem::CallScriptMethod(UTF8StringView method_name, ScriptComponent&
     AssertDebug(target.resource != nullptr);
     AssertDebug(target.resource->GetManagedObject() != nullptr);
 
-    if (dotnet::Class* class_ptr = target.resource->GetManagedObject()->GetClass())
+    if (dotnet::Class* classPtr = target.resource->GetManagedObject()->GetClass())
     {
-        if (dotnet::Method* method_ptr = class_ptr->GetMethod(method_name))
+        if (dotnet::Method* methodPtr = classPtr->GetMethod(methodName))
         {
-            if (method_ptr->GetAttributes().HasAttribute("ScriptMethodStub"))
+            if (methodPtr->GetAttributes().HasAttribute("ScriptMethodStub"))
             {
                 // Stubbed method, don't waste cycles calling it if it's not implemented
                 return;
             }
 
-            target.resource->GetManagedObject()->InvokeMethod<void>(method_ptr);
+            target.resource->GetManagedObject()->InvokeMethod<void>(methodPtr);
         }
     }
 }

@@ -33,7 +33,7 @@ struct DataStoreOptions
 {
     DataStoreFlags flags = DSF_RW;
     // max size in bytes before old data is discarded - 0 means no limit
-    uint64 max_size = 5ull * 1024ull * 1024ull * 1024ull /* 5GB */;
+    uint64 maxSize = 5ull * 1024ull * 1024ull * 1024ull /* 5GB */;
 };
 
 class HYP_API DataStoreBase : public IResource
@@ -42,22 +42,22 @@ class HYP_API DataStoreBase : public IResource
     using ShutdownSemaphore = Semaphore<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE, threading::ConditionVarSemaphoreImpl<int32, SemaphoreDirection::WAIT_FOR_ZERO_OR_NEGATIVE>>;
 
 public:
-    static DataStoreBase* GetOrCreate(TypeID data_store_type_id, UTF8StringView prefix, ProcRef<DataStoreBase*(UTF8StringView)>&& create_fn);
+    static DataStoreBase* GetOrCreate(TypeId dataStoreTypeId, UTF8StringView prefix, ProcRef<DataStoreBase*(UTF8StringView)>&& createFn);
 
     template <class DataStoreType>
     static DataStoreType& GetOrCreate(UTF8StringView prefix)
     {
         static_assert(std::is_base_of_v<DataStoreBase, DataStoreType>, "DataStoreType must be a subclass of DataStoreBase");
 
-        DataStoreBase* ptr = DataStoreBase::GetOrCreate(TypeID::ForType<DataStoreType>(), prefix, [](UTF8StringView prefix) -> DataStoreBase*
+        DataStoreBase* ptr = DataStoreBase::GetOrCreate(TypeId::ForType<DataStoreType>(), prefix, [](UTF8StringView prefix) -> DataStoreBase*
             {
                 return AllocateResource<DataStoreType>(prefix);
             });
 
-        DataStoreType* ptr_casted = dynamic_cast<DataStoreType*>(ptr);
-        AssertThrow(ptr_casted != nullptr);
+        DataStoreType* ptrCasted = dynamic_cast<DataStoreType*>(ptr);
+        AssertThrow(ptrCasted != nullptr);
 
-        return *ptr_casted;
+        return *ptrCasted;
     }
 
     DataStoreBase(const String& prefix, DataStoreOptions options);
@@ -81,14 +81,14 @@ public:
 
     /*! \brief Write a byte buffer keyed by \ref{key} to the data store
      *  \param key The key to use for the data that will be written
-     *  \param byte_buffer The byte buffer to write */
-    virtual void Write(const String& key, const ByteBuffer& byte_buffer);
+     *  \param byteBuffer The byte buffer to write */
+    virtual void Write(const String& key, const ByteBuffer& byteBuffer);
 
     /*! \brief Read a byte buffer keyed by \ref{key} from the data store
      *  \param key The key to use for the data that will be read
-     *  \param out_byte_buffer The byte buffer to read into
+     *  \param outByteBuffer The byte buffer to read into
      *  \returns true if the read was successful, false otherwise */
-    virtual bool Read(const String& key, ByteBuffer& out_byte_buffer) const;
+    virtual bool Read(const String& key, ByteBuffer& outByteBuffer) const;
 
     /*! \brief Check if a key exists in the data store
      *  \param key The key to check for
@@ -97,12 +97,12 @@ public:
 
     virtual ResourceMemoryPoolHandle GetPoolHandle() const override
     {
-        return m_pool_handle;
+        return m_poolHandle;
     }
 
-    virtual void SetPoolHandle(ResourceMemoryPoolHandle pool_handle) override
+    virtual void SetPoolHandle(ResourceMemoryPoolHandle poolHandle) override
     {
-        m_pool_handle = pool_handle;
+        m_poolHandle = poolHandle;
     }
 
 protected:
@@ -119,11 +119,11 @@ protected:
     virtual void WaitForFinalization() const override final;
 
 private:
-    ResourceMemoryPoolHandle m_pool_handle;
+    ResourceMemoryPoolHandle m_poolHandle;
     String m_prefix;
     DataStoreOptions m_options;
-    RefCounter m_ref_counter;
-    ShutdownSemaphore m_shutdown_semaphore;
+    RefCounter m_refCounter;
+    ShutdownSemaphore m_shutdownSemaphore;
 };
 
 class DataStore : public DataStoreBase
@@ -172,7 +172,7 @@ static inline DataStore& GetDataStore()
     }
     else
     {
-        static_assert(resolution_failure<std::integral_constant<int, int(Flags)>>, "Cannot create DataStore with the given flags!");
+        static_assert(resolutionFailure<std::integral_constant<int, int(Flags)>>, "Cannot create DataStore with the given flags!");
     }
 }
 

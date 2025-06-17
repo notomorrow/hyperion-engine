@@ -11,24 +11,24 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void HypField_GetName(const HypField* field, Name* out_name)
+    HYP_EXPORT void HypField_GetName(const HypField* field, Name* outName)
     {
-        if (!field || !out_name)
+        if (!field || !outName)
         {
             return;
         }
 
-        *out_name = field->GetName();
+        *outName = field->GetName();
     }
 
-    HYP_EXPORT void HypField_GetTypeID(const HypField* field, TypeID* out_type_id)
+    HYP_EXPORT void HypField_GetTypeId(const HypField* field, TypeId* outTypeId)
     {
-        if (!field || !out_type_id)
+        if (!field || !outTypeId)
         {
             return;
         }
 
-        *out_type_id = field->GetTypeID();
+        *outTypeId = field->GetTypeId();
     }
 
     HYP_EXPORT uint32 HypField_GetOffset(const HypField* field)

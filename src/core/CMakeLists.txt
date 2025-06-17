@@ -24,6 +24,12 @@ set(COMMON_LIBRARIES
 
 find_package(Threads REQUIRED)
 
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Zi")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -fpermissive")
+endif()
+
 if(NOT IOS)
     if(APPLE)
         set(CURL_LIBRARY /opt/homebrew/opt/curl/lib/libcurl.dylib)

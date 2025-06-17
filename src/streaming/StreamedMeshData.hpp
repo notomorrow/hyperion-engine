@@ -104,17 +104,14 @@ struct MeshData
     }
 };
 
-HYP_CLASS()
 class HYP_API StreamedMeshData final : public StreamedDataBase
 {
-    HYP_OBJECT_BODY(StreamedMeshData);
-
-    StreamedMeshData(StreamedDataState initial_state, MeshData&& mesh_data, ResourceHandle& out_resource_handle);
+    StreamedMeshData(StreamedDataState initialState, MeshData&& meshData, ResourceHandle& outResourceHandle);
 
 public:
     StreamedMeshData();
-    StreamedMeshData(const MeshData& mesh_data, ResourceHandle& out_resource_handle);
-    StreamedMeshData(MeshData&& mesh_data, ResourceHandle& out_resource_handle);
+    StreamedMeshData(const MeshData& meshData, ResourceHandle& outResourceHandle);
+    StreamedMeshData(MeshData&& meshData, ResourceHandle& outResourceHandle);
 
     StreamedMeshData(const StreamedMeshData& other) = delete;
     StreamedMeshData& operator=(const StreamedMeshData& other) = delete;
@@ -126,17 +123,17 @@ public:
 
     HYP_FORCE_INLINE SizeType NumVertices() const
     {
-        return m_num_vertices;
+        return m_numVertices;
     }
 
     HYP_FORCE_INLINE SizeType NumIndices() const
     {
-        return m_num_indices;
+        return m_numIndices;
     }
 
     virtual HashCode GetDataHashCode() const override
     {
-        return m_streamed_data ? m_streamed_data->GetDataHashCode() : HashCode(0);
+        return m_streamedData ? m_streamedData->GetDataHashCode() : HashCode(0);
     }
 
 protected:
@@ -146,16 +143,16 @@ protected:
     virtual void Unpage_Internal() override;
 
 private:
-    void LoadMeshData(const ByteBuffer& byte_buffer) const;
+    void LoadMeshData(const ByteBuffer& byteBuffer) const;
 
-    RC<StreamedDataBase> m_streamed_data;
+    RC<StreamedDataBase> m_streamedData;
 
-    SizeType m_num_vertices;
-    SizeType m_num_indices;
+    SizeType m_numVertices;
+    SizeType m_numIndices;
 
-    mutable Optional<MeshData> m_mesh_data;
+    mutable Optional<MeshData> m_meshData;
 
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };
 
 } // namespace hyperion

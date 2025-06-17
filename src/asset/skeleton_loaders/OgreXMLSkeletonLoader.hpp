@@ -24,9 +24,9 @@ public:
             String name;
             uint32 id;
 
-            String parent_name;
-            Vector3 binding_translation;
-            Quaternion binding_rotation;
+            String parentName;
+            Vector3 bindingTranslation;
+            Quaternion bindingRotation;
         };
 
         struct KeyframeData
@@ -38,7 +38,7 @@ public:
 
         struct AnimationTrackData
         {
-            String bone_name;
+            String boneName;
             Array<KeyframeData> keyframes;
         };
 

@@ -20,7 +20,7 @@ HYP_DECLARE_LOG_CHANNEL(Assets);
 
 AssetLoadResult FBOMModelLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.asset_manager != nullptr);
+    AssertThrow(state.assetManager != nullptr);
 
     FBOMReader reader { FBOMReaderConfig {} };
 

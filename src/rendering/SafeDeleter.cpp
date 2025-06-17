@@ -1,23 +1,25 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/SafeDeleter.hpp>
-#include <rendering/ShaderGlobals.hpp>
+#include <rendering/RenderGlobalState.hpp>
+#include <rendering/Bindless.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
 #pragma region Render commands
 
 struct RENDER_COMMAND(RemoveTextureFromBindlessStorage)
-    : renderer::RenderCommand
+    : RenderCommand
 {
-    ID<Texture> id;
+    ObjId<Texture> id;
 
-    RENDER_COMMAND(RemoveTextureFromBindlessStorage)(ID<Texture> id)
+    RENDER_COMMAND(RemoveTextureFromBindlessStorage)(ObjId<Texture> id)
         : id(id)
     {
     }
@@ -26,7 +28,7 @@ struct RENDER_COMMAND(RemoveTextureFromBindlessStorage)
 
     virtual RendererResult operator()() override
     {
-        g_engine->GetRenderData()->textures.RemoveResource(id);
+        g_renderGlobalState->bindlessStorage->RemoveResource(id);
 
         HYPERION_RETURN_OK;
     }
@@ -38,24 +40,24 @@ struct RENDER_COMMAND(RemoveTextureFromBindlessStorage)
 
 bool DeletionEntryBase::DecrementCycle()
 {
-    if (m_cycles_remaining == 0)
+    if (m_cyclesRemaining == 0)
     {
         return true;
     }
 
-    --m_cycles_remaining;
+    --m_cyclesRemaining;
 
-    return m_cycles_remaining == 0;
+    return m_cyclesRemaining == 0;
 }
 
 bool DeletionEntryBase::PerformDeletion(bool force)
 {
     if (force)
     {
-        m_cycles_remaining = 0;
+        m_cyclesRemaining = 0;
     }
 
-    if (m_cycles_remaining != 0)
+    if (m_cyclesRemaining != 0)
     {
         return false;
     }
@@ -71,59 +73,59 @@ bool DeletionEntryBase::PerformDeletion(bool force)
 
 void SafeDeleter::PerformEnqueuedDeletions()
 {
-    if (int32 num_deletion_entries = m_num_deletion_entries.Get(MemoryOrder::ACQUIRE))
+    if (int32 numDeletionEntries = m_numDeletionEntries.Get(MemoryOrder::ACQUIRE))
     {
-        Array<UniquePtr<DeletionEntryBase>> deletion_entries;
+        Array<UniquePtr<DeletionEntryBase>> deletionEntries;
 
         { // Critical section
             Mutex::Guard guard(m_mutex);
 
-            CollectAllEnqueuedItems(deletion_entries);
+            CollectAllEnqueuedItems(deletionEntries);
         }
 
-        for (auto it = deletion_entries.Begin(); it != deletion_entries.End(); ++it)
+        for (auto it = deletionEntries.Begin(); it != deletionEntries.End(); ++it)
         {
             AssertThrow((*it)->PerformDeletion());
 
-            m_num_deletion_entries.Decrement(1, MemoryOrder::RELEASE);
+            m_numDeletionEntries.Decrement(1, MemoryOrder::RELEASE);
         }
     }
 }
 
 void SafeDeleter::ForceDeleteAll()
 {
-    while (int32 num_deletion_entries = m_num_deletion_entries.Get(MemoryOrder::ACQUIRE))
+    while (int32 numDeletionEntries = m_numDeletionEntries.Get(MemoryOrder::ACQUIRE))
     {
-        Array<UniquePtr<DeletionEntryBase>> deletion_entries;
+        Array<UniquePtr<DeletionEntryBase>> deletionEntries;
 
         { // Critical section
             Mutex::Guard guard(m_mutex);
 
-            CollectAllEnqueuedItems(deletion_entries);
+            CollectAllEnqueuedItems(deletionEntries);
         }
 
-        for (auto it = deletion_entries.Begin(); it != deletion_entries.End();)
+        for (auto it = deletionEntries.Begin(); it != deletionEntries.End();)
         {
             AssertThrow((*it)->PerformDeletion(true /* force */));
 
-            it = deletion_entries.Erase(it);
+            it = deletionEntries.Erase(it);
 
-            m_num_deletion_entries.Decrement(1, MemoryOrder::RELEASE);
+            m_numDeletionEntries.Decrement(1, MemoryOrder::RELEASE);
         }
     }
 }
 
-bool SafeDeleter::CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& out_entries)
+bool SafeDeleter::CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& outEntries)
 {
-    for (auto it = m_deletion_entries.Begin(); it != m_deletion_entries.End();)
+    for (auto it = m_deletionEntries.Begin(); it != m_deletionEntries.End();)
     {
         auto& entry = *it;
 
         if (entry->DecrementCycle())
         {
-            out_entries.PushBack(std::move(*it));
+            outEntries.PushBack(std::move(*it));
 
-            it = m_deletion_entries.Erase(it);
+            it = m_deletionEntries.Erase(it);
         }
         else
         {
@@ -131,7 +133,7 @@ bool SafeDeleter::CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& o
         }
     }
 
-    return m_deletion_entries.Empty();
+    return m_deletionEntries.Empty();
 }
 
 #pragma endregion SafeDeleter

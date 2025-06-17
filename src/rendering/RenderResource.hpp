@@ -18,7 +18,7 @@
 
 namespace hyperion {
 
-class GPUBufferHolderBase;
+class GpuBufferHolderBase;
 
 // Represents the objects an engine object (e.g Material) uses while it is currently being used by the renderer in some way.
 // The resources are reference counted internally, so as long as the object is being used for rendering somewhere,
@@ -44,13 +44,13 @@ public:
     /*! \note Only call from render thread or from task on a task thread that is initiated by the render thread. */
     HYP_FORCE_INLINE uint32 GetBufferIndex() const
     {
-        return m_buffer_index;
+        return m_bufferIndex;
     }
 
     /*! \note Only call from render thread or from task on a task thread that is initiated by the render thread. */
     HYP_FORCE_INLINE void* GetBufferAddress() const
     {
-        return m_buffer_address;
+        return m_bufferAddress;
     }
 
 protected:
@@ -67,13 +67,13 @@ protected:
     virtual void Destroy_Internal() = 0;
     virtual void Update_Internal() = 0;
 
-    virtual GPUBufferHolderBase* GetGPUBufferHolder() const
+    virtual GpuBufferHolderBase* GetGpuBufferHolder() const
     {
         return nullptr;
     }
 
-    uint32 m_buffer_index;
-    void* m_buffer_address;
+    uint32 m_bufferIndex;
+    void* m_bufferAddress;
 
 private:
     void AcquireBufferIndex();

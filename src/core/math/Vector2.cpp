@@ -42,8 +42,8 @@ float Vec2<float>::DistanceSquared(const Vec2<float>& other) const
 Vec2<float>& Vec2<float>::Normalize()
 {
     float len = Length();
-    float len_sqr = len * len;
-    if (len_sqr == 0 || len_sqr == 1)
+    float lenSqr = len * len;
+    if (lenSqr == 0 || lenSqr == 1)
     {
         return *this;
     }
@@ -74,9 +74,9 @@ Vec2<float> Vec2<float>::Round(const Vec2<float>& vec)
     return Vector2(std::round(vec.x), std::round(vec.y));
 }
 
-Vec2<float> Vec2<float>::Clamp(const Vec2<float>& vec, float min_value, float max_value)
+Vec2<float> Vec2<float>::Clamp(const Vec2<float>& vec, float minValue, float maxValue)
 {
-    return Max(min_value, Min(vec, max_value));
+    return Max(minValue, Min(vec, maxValue));
 }
 
 Vec2<float> Vec2<float>::Min(const Vec2<float>& a, const Vec2<float>& b)

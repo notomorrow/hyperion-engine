@@ -10,38 +10,38 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void Logger_Log(LogChannel* channel, uint32 log_level, const char* func_name, uint32 line, const char* message)
+    HYP_EXPORT void Logger_Log(LogChannel* channel, uint32 logLevel, const char* funcName, uint32 line, const char* message)
     {
         if (!channel)
         {
             channel = &Log_Script;
         }
 
-        if (log_level > uint32(LogLevel::FATAL))
+        if (logLevel > uint32(LogLevel::FATAL))
         {
-            log_level = uint32(LogLevel::FATAL);
+            logLevel = uint32(LogLevel::FATAL);
         }
 
-        switch (LogLevel(log_level))
+        switch (LogLevel(logLevel))
         {
         case LogLevel::DEBUG:
-            logging::Log_Internal<logging::Debug(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, func_name, line, message);
+            logging::LogDynamicChannel<logging::Debug(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
 
             break;
         case LogLevel::INFO:
-            logging::Log_Internal<logging::Info(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, func_name, line, message);
+            logging::LogDynamicChannel<logging::Info(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
 
             break;
         case LogLevel::WARNING:
-            logging::Log_Internal<logging::Warning(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, func_name, line, message);
+            logging::LogDynamicChannel<logging::Warning(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
 
             break;
         case LogLevel::ERR:
-            logging::Log_Internal<logging::Error(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, func_name, line, message);
+            logging::LogDynamicChannel<logging::Error(), StaticString("<script>"), StaticString("{}:{}: {}\n")>(logging::GetLogger(), *channel, funcName, line, message);
 
             break;
         case LogLevel::FATAL:
-            logging::Log_Internal<logging::Fatal(), StaticString("<script>"), StaticString("{}:{}: {}")>(logging::GetLogger(), *channel, func_name, line, message);
+            logging::LogDynamicChannel<logging::Fatal(), StaticString("<script>"), StaticString("{}:{}: {}")>(logging::GetLogger(), *channel, funcName, line, message);
 
             break;
         }
@@ -59,19 +59,19 @@ extern "C"
 
     HYP_EXPORT LogChannel* Logger_CreateLogChannel(const char* name)
     {
-        const Name channel_name = CreateNameFromDynamicString(name);
+        const Name channelName = CreateNameFromDynamicString(name);
 
-        return Logger::GetInstance().CreateDynamicLogChannel(channel_name, &Log_Script);
+        return Logger::GetInstance().CreateDynamicLogChannel(channelName, &Log_Script);
     }
 
-    HYP_EXPORT void Logger_DestroyLogChannel(LogChannel* log_channel)
+    HYP_EXPORT void Logger_DestroyLogChannel(LogChannel* logChannel)
     {
-        if (!log_channel)
+        if (!logChannel)
         {
             return;
         }
 
-        Logger::GetInstance().DestroyDynamicLogChannel(log_channel);
+        Logger::GetInstance().DestroyDynamicLogChannel(logChannel);
     }
 
 } // extern "C"

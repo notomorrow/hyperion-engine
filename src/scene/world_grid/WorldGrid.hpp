@@ -29,7 +29,6 @@ namespace hyperion {
 
 class Scene;
 class EntityManager;
-class WorldGridPlugin;
 class WorldGridLayer;
 
 HYP_CLASS()
@@ -55,14 +54,8 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<StreamingManager>& GetStreamingManager() const
     {
-        return m_streaming_manager;
+        return m_streamingManager;
     }
-
-    HYP_METHOD()
-    void AddPlugin(int priority, const RC<WorldGridPlugin>& plugin);
-
-    HYP_METHOD()
-    RC<WorldGridPlugin> GetPlugin(int priority) const;
 
     HYP_METHOD()
     void AddLayer(const Handle<WorldGridLayer>& layer);
@@ -77,26 +70,22 @@ public:
     }
 
     void Shutdown();
-    void Update(GameCounter::TickUnit delta);
+    void Update(float delta);
 
 private:
     void Init() override;
 
     // void CreatePatches();
 
-    void GetDesiredPatches(HashSet<Vec2i>& out_patch_coords) const;
-
-    RC<WorldGridPlugin> GetMainPlugin() const;
+    void GetDesiredPatches(HashSet<Vec2i>& outPatchCoords) const;
 
     World* m_world;
 
-    Handle<StreamingManager> m_streaming_manager;
+    Handle<StreamingManager> m_streamingManager;
 
     // Array<WorldGridPatchDesc> m_patches;
 
     WorldGridState m_state;
-
-    SortedArray<KeyValuePair<int, RC<WorldGridPlugin>>> m_plugins;
 
     HYP_FIELD(Property="Layers", Serialize=true)
     Array<Handle<WorldGridLayer>> m_layers;

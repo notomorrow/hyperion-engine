@@ -15,11 +15,9 @@
 
 namespace hyperion {
 
-using renderer::Platform;
-
 #pragma region RenderObjectContainerBase
 
-renderer::RenderObjectContainerBase::RenderObjectContainerBase(ANSIStringView render_object_type_name)
+RenderObjectContainerBase::RenderObjectContainerBase(ANSIStringView renderObjectTypeName)
 {
 }
 
@@ -54,18 +52,18 @@ void RenderObjectDeleter<Platform::current>::RemoveAllNow(bool force)
 {
     HYP_NAMED_SCOPE("Force delete all rendering resources");
 
-    FixedArray<AtomicVar<int32>*, s_queues.Size()> queue_num_items {};
+    FixedArray<AtomicVar<int32>*, s_queues.Size()> queueNumItems {};
 
     { // init atomic vars
         DeletionQueueBase** queue = s_queues.Data();
-        for (uint32 queue_index = 0; *queue; ++queue_index, ++queue)
+        for (uint32 queueIndex = 0; *queue; ++queueIndex, ++queue)
         {
-            queue_num_items[queue_index] = &(*queue)->num_items;
+            queueNumItems[queueIndex] = &(*queue)->numItems;
         }
     }
 
     // Loop until all queues are empty
-    while (AnyOf(queue_num_items, [](AtomicVar<int32>* count)
+    while (AnyOf(queueNumItems, [](AtomicVar<int32>* count)
         {
             return count != nullptr && count->Get(MemoryOrder::ACQUIRE) > 0;
         }))

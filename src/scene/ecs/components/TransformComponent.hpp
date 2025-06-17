@@ -18,11 +18,11 @@ struct TransformComponent
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(transform);
+        hashCode.Add(transform);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

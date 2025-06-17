@@ -6,7 +6,7 @@
 
 #include <core/utilities/GlobalContext.hpp>
 
-#include <core/ObjectPool.hpp>
+#include <core/object/ObjectPool.hpp>
 
 #include <dotnet/Object.hpp>
 #include <dotnet/Class.hpp>
@@ -21,35 +21,35 @@ extern "C"
 
     struct HypObjectInitializer
     {
-        const HypClass* hyp_class;
-        void* native_address;
+        const HypClass* hypClass;
+        void* nativeAddress;
     };
 
 #pragma region HypObject
 
-    HYP_EXPORT void HypObject_Initialize(const HypClass* hyp_class, dotnet::Class* class_object_ptr, dotnet::ObjectReference* object_reference, void** out_instance_ptr)
+    HYP_EXPORT void HypObject_Initialize(const HypClass* hypClass, dotnet::Class* classObjectPtr, dotnet::ObjectReference* objectReference, void** outInstancePtr)
     {
-        AssertThrow(hyp_class != nullptr);
-        AssertThrow(class_object_ptr != nullptr);
-        AssertThrow(object_reference != nullptr);
-        AssertThrow(out_instance_ptr != nullptr);
+        AssertThrow(hypClass != nullptr);
+        AssertThrow(classObjectPtr != nullptr);
+        AssertThrow(objectReference != nullptr);
+        AssertThrow(outInstancePtr != nullptr);
 
         HypObjectPtr ptr;
 
-        *out_instance_ptr = nullptr;
+        *outInstancePtr = nullptr;
 
         {
             // Suppress default managed object creation
-            GlobalContextScope scope(HypObjectInitializerContext { hyp_class, HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION });
+            GlobalContextScope scope(HypObjectInitializerContext { hypClass, HypObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION });
 
             HypData value;
 
-            // Set allow_abstract to true so we can use classes marked as "Abstract"
+            // Set allowAbstract to true so we can use classes marked as "Abstract"
             // allowing the managed class to override methods of an abstract class
-            bool success = hyp_class->CreateInstance(value, /* allow_abstract */ true);
-            AssertThrowMsg(success, "Failed to create instance of HypClass '%s'", hyp_class->GetName().LookupString());
+            bool success = hypClass->CreateInstance(value, /* allowAbstract */ true);
+            AssertThrowMsg(success, "Failed to create instance of HypClass '%s'", hypClass->GetName().LookupString());
 
-            ptr = HypObjectPtr(hyp_class, value.ToRef().GetPointer());
+            ptr = HypObjectPtr(hypClass, value.ToRef().GetPointer());
 
             // Ref counts are kept as 1 for Handle<T> and RC<T>, managed side is responsible for decrementing the ref count
             ptr.IncRef();
@@ -57,46 +57,46 @@ extern "C"
             value.Reset();
         }
 
-        *out_instance_ptr = ptr.GetPointer();
+        *outInstancePtr = ptr.GetPointer();
 
         IHypObjectInitializer* initializer = ptr.GetObjectInitializer();
         AssertThrow(initializer != nullptr);
 
-        ManagedObjectResource* managed_object_resource = AllocateResource<ManagedObjectResource>(
+        ManagedObjectResource* managedObjectResource = AllocateResource<ManagedObjectResource>(
             ptr,
-            class_object_ptr->RefCountedPtrFromThis(),
-            *object_reference,
+            classObjectPtr->RefCountedPtrFromThis(),
+            *objectReference,
             ObjectFlags::CREATED_FROM_MANAGED);
 
-        initializer->SetManagedObjectResource(managed_object_resource);
+        initializer->SetManagedObjectResource(managedObjectResource);
     }
 
-    HYP_EXPORT uint32 HypObject_GetRefCount_Strong(const HypClass* hyp_class, void* native_address)
+    HYP_EXPORT uint32 HypObject_GetRefCount_Strong(const HypClass* hypClass, void* nativeAddress)
     {
-        AssertThrow(hyp_class != nullptr);
-        AssertThrow(native_address != nullptr);
+        AssertThrow(hypClass != nullptr);
+        AssertThrow(nativeAddress != nullptr);
 
-        HypObjectPtr hyp_object_ptr = HypObjectPtr(hyp_class, native_address);
+        HypObjectPtr hypObjectPtr = HypObjectPtr(hypClass, nativeAddress);
 
-        return hyp_object_ptr.GetRefCount_Strong();
+        return hypObjectPtr.GetRefCount_Strong();
     }
 
-    HYP_EXPORT void HypObject_IncRef(const HypClass* hyp_class, void* native_address, int8 is_weak)
+    HYP_EXPORT void HypObject_IncRef(const HypClass* hypClass, void* nativeAddress, int8 isWeak)
     {
-        AssertThrow(hyp_class != nullptr);
-        AssertThrow(native_address != nullptr);
+        AssertThrow(hypClass != nullptr);
+        AssertThrow(nativeAddress != nullptr);
 
-        HypObjectPtr hyp_object_ptr = HypObjectPtr(hyp_class, native_address);
-        hyp_object_ptr.IncRef(is_weak);
+        HypObjectPtr hypObjectPtr = HypObjectPtr(hypClass, nativeAddress);
+        hypObjectPtr.IncRef(isWeak);
     }
 
-    HYP_EXPORT void HypObject_DecRef(const HypClass* hyp_class, void* native_address, int8 is_weak)
+    HYP_EXPORT void HypObject_DecRef(const HypClass* hypClass, void* nativeAddress, int8 isWeak)
     {
-        AssertThrow(hyp_class != nullptr);
-        AssertThrow(native_address != nullptr);
+        AssertThrow(hypClass != nullptr);
+        AssertThrow(nativeAddress != nullptr);
 
-        HypObjectPtr hyp_object_ptr = HypObjectPtr(hyp_class, native_address);
-        hyp_object_ptr.DecRef(is_weak);
+        HypObjectPtr hypObjectPtr = HypObjectPtr(hypClass, nativeAddress);
+        hypObjectPtr.DecRef(isWeak);
     }
 
 #pragma endregion HypObject

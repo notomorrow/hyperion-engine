@@ -3,10 +3,14 @@
 #include <scene/View.hpp>
 #include <scene/Scene.hpp>
 #include <scene/Light.hpp>
+#include <scene/Mesh.hpp>
+#include <scene/Material.hpp>
 #include <scene/EnvGrid.hpp>
 #include <scene/EnvProbe.hpp>
+#include <scene/Texture.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 #include <scene/camera/Camera.hpp>
+#include <scene/animation/Skeleton.hpp>
 
 #include <scene/ecs/EntityManager.hpp>
 #include <scene/ecs/EntityTag.hpp>
@@ -14,17 +18,22 @@
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/LightComponent.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>
-#include <scene/ecs/components/EnvGridComponent.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/ReflectionProbeComponent.hpp>
+#include <scene/ecs/components/SkyComponent.hpp>
 
 #include <rendering/RenderView.hpp>
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderLight.hpp>
+#include <rendering/RenderEnvGrid.hpp>
+#include <rendering/RenderEnvProbe.hpp>
+#include <rendering/RenderGlobalState.hpp>
+#include <rendering/GBuffer.hpp>
+#include <rendering/subsystems/sky/SkydomeRenderer.hpp>
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -33,10 +42,82 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 // #define HYP_DISABLE_VISIBILITY_CHECK
+// #define HYP_VISIBILITY_CHECK_DEBUG
+
 namespace hyperion {
+
+#pragma region ViewOutputTarget
+
+ViewOutputTarget::ViewOutputTarget()
+{
+}
+
+ViewOutputTarget::ViewOutputTarget(const FramebufferRef& framebuffer)
+    : m_impl(framebuffer)
+{
+}
+
+ViewOutputTarget::ViewOutputTarget(GBuffer* gbuffer)
+    : m_impl(gbuffer)
+{
+    AssertThrow(gbuffer != nullptr);
+}
+
+GBuffer* ViewOutputTarget::GetGBuffer() const
+{
+    GBuffer* const* ptr = m_impl.TryGet<GBuffer*>();
+
+    return ptr ? *ptr : nullptr;
+}
+
+const FramebufferRef& ViewOutputTarget::GetFramebuffer() const
+{
+    if (FramebufferRef const* framebuffer = m_impl.TryGet<FramebufferRef>())
+    {
+        AssertDebug(framebuffer->IsValid());
+
+        return *framebuffer;
+    }
+    else if (GBuffer* const* gbuffer = m_impl.TryGet<GBuffer*>())
+    {
+        AssertDebug(*gbuffer != nullptr);
+
+        return (*gbuffer)->GetBucket(RB_OPAQUE).GetFramebuffer();
+    }
+
+    return FramebufferRef::Null();
+}
+
+const FramebufferRef& ViewOutputTarget::GetFramebuffer(RenderBucket rb) const
+{
+    if (m_impl.Is<GBuffer*>())
+    {
+        return m_impl.Get<GBuffer*>()->GetBucket(rb).GetFramebuffer();
+    }
+
+    return m_impl.Get<FramebufferRef>();
+}
+
+Span<const FramebufferRef> ViewOutputTarget::GetFramebuffers() const
+{
+    if (!m_impl.IsValid())
+    {
+        return {};
+    }
+
+    if (m_impl.Is<GBuffer*>())
+    {
+        return m_impl.Get<GBuffer*>()->GetFramebuffers();
+    }
+
+    return { &m_impl.Get<FramebufferRef>(), 1 };
+}
+
+#pragma endregion ViewOutputTarget
 
 #pragma region View
 
@@ -45,24 +126,39 @@ View::View()
 {
 }
 
-View::View(const ViewDesc& view_desc)
-    : m_render_resource(nullptr),
-      m_flags(view_desc.flags),
-      m_viewport(view_desc.viewport),
-      m_scenes(view_desc.scenes),
-      m_camera(view_desc.camera),
-      m_priority(view_desc.priority),
-      m_entity_collection_flags(view_desc.entity_collection_flags),
-      m_override_attributes(view_desc.override_attributes)
+View::View(const ViewDesc& viewDesc)
+    : m_renderResource(nullptr),
+      m_viewDesc(viewDesc),
+      m_flags(viewDesc.flags),
+      m_viewport(viewDesc.viewport),
+      m_scenes(viewDesc.scenes),
+      m_camera(viewDesc.camera),
+      m_priority(viewDesc.priority),
+      m_overrideAttributes(viewDesc.overrideAttributes)
 {
 }
 
 View::~View()
 {
-    if (m_render_resource)
+    if (GBuffer* gbuffer = m_outputTarget.GetGBuffer())
     {
-        FreeResource(m_render_resource);
-        m_render_resource = nullptr;
+        delete gbuffer;
+
+        m_outputTarget = ViewOutputTarget();
+    }
+    else if (FramebufferRef framebuffer = m_outputTarget.GetFramebuffer())
+    {
+        m_outputTarget = ViewOutputTarget();
+
+        SafeRelease(std::move(framebuffer));
+    }
+
+    if (m_renderResource)
+    {
+        // temp shit
+        m_renderResource->DecRef();
+        FreeResource(m_renderResource);
+        m_renderResource = nullptr;
     }
 }
 
@@ -70,82 +166,171 @@ void View::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]()
         {
-            if (m_render_resource)
+            if (m_renderResource)
             {
-                FreeResource(m_render_resource);
-                m_render_resource = nullptr;
+                if (m_flags & ViewFlags::GBUFFER)
+                {
+                    m_renderResource->DecRef();
+                }
+
+                FreeResource(m_renderResource);
+                m_renderResource = nullptr;
             }
         }));
 
-    AssertThrowMsg(m_camera.IsValid(), "Camera is not valid for View with ID #%u", GetID().Value());
+    AssertThrowMsg(m_camera.IsValid(), "Camera is not valid for View with Id #%u", Id().Value());
     InitObject(m_camera);
 
-    Array<TResourceHandle<RenderScene>> render_scenes;
-    render_scenes.Reserve(m_scenes.Size());
+    const Vec2u extent = MathUtil::Max(m_viewDesc.outputTargetDesc.extent, Vec2u::One());
+
+    if (m_viewDesc.flags & ViewFlags::GBUFFER)
+    {
+        AssertDebugMsg(m_viewDesc.outputTargetDesc.attachments.Empty(),
+            "View with GBuffer flag cannot have output target attachments defined, as it will use GBuffer instead.");
+
+        m_outputTarget = ViewOutputTarget(new GBuffer(extent));
+    }
+    else if (m_viewDesc.outputTargetDesc.attachments.Any())
+    {
+        FramebufferRef framebuffer = g_renderBackend->MakeFramebuffer(extent, m_viewDesc.outputTargetDesc.numViews);
+
+        for (uint32 attachmentIndex = 0; attachmentIndex < m_viewDesc.outputTargetDesc.attachments.Size(); ++attachmentIndex)
+        {
+            const ViewOutputTargetAttachmentDesc& attachmentDesc = m_viewDesc.outputTargetDesc.attachments[attachmentIndex];
+
+            AttachmentRef attachment = framebuffer->AddAttachment(
+                attachmentIndex,
+                attachmentDesc.format,
+                attachmentDesc.imageType,
+                attachmentDesc.loadOp,
+                attachmentDesc.storeOp);
+
+            attachment->SetClearColor(attachmentDesc.clearColor);
+        }
+
+        DeferCreate(framebuffer);
+
+        m_outputTarget = ViewOutputTarget(framebuffer);
+    }
+
+    AssertThrowMsg(m_outputTarget.IsValid(), "View with id #%u must have a valid output target!", Id().Value());
+
+    Array<TResourceHandle<RenderScene>> renderScenes;
+    renderScenes.Reserve(m_scenes.Size());
 
     for (const Handle<Scene>& scene : m_scenes)
     {
-        AssertThrowMsg(scene.IsValid(), "Scene is not valid for View with ID #%u", GetID().Value());
+        AssertThrowMsg(scene.IsValid(), "Scene is not valid for View with Id #%u", Id().Value());
         InitObject(scene);
 
         AssertThrow(scene->IsReady());
 
-        render_scenes.PushBack(TResourceHandle<RenderScene>(scene->GetRenderResource()));
+        renderScenes.PushBack(TResourceHandle<RenderScene>(scene->GetRenderResource()));
     }
 
-    m_render_resource = AllocateResource<RenderView>(this);
-    m_render_resource->SetScenes(render_scenes);
-    m_render_resource->SetCamera(TResourceHandle<RenderCamera>(m_camera->GetRenderResource()));
-    m_render_resource->SetViewport(m_viewport);
-    m_render_resource->GetRenderCollector().SetOverrideAttributes(m_override_attributes);
+    m_renderResource = AllocateResource<RenderView>(this);
+    m_renderResource->SetViewport(m_viewport);
+
+    // temp shit
+    m_renderResource->IncRef();
+
+    AssertDebug(m_outputTarget.IsValid());
 
     SetReady(true);
 }
 
-bool View::TestRay(const Ray& ray, RayTestResults& out_results, bool use_bvh) const
+bool View::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    bool has_hits = false;
+    bool hasHits = false;
 
     for (const Handle<Scene>& scene : m_scenes)
     {
         AssertThrow(scene.IsValid());
 
-        if (scene->GetOctree().TestRay(ray, out_results, use_bvh))
+        if (scene->GetOctree().TestRay(ray, outResults, useBvh))
         {
-            has_hits = true;
+            hasHits = true;
         }
     }
 
-    return has_hits;
+    return hasHits;
 }
 
-void View::Update(GameCounter::TickUnit delta)
+void View::UpdateVisibility()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_gameThread);
     AssertReady();
 
-    // HYP_LOG(Scene, Debug, "View #{} Update : Has {} scenes: {}",
-    //     GetID().Value(),
-    //     m_scenes.Size(),
-    //     String::Join(Map(m_scenes, [](const Handle<Scene>& scene)
-    //                      {
-    //                          return HYP_FORMAT("(Name: {}, Nodes: {})", scene->GetName(), scene->GetRoot()->GetDescendants().Size());
-    //                      }),
-    //         ", "));
+    if (!m_camera.IsValid())
+    {
+        HYP_LOG(Scene, Warning, "Camera is not valid for View with Id #%u, cannot update visibility!", Id().Value());
+        return;
+    }
 
     for (const Handle<Scene>& scene : m_scenes)
     {
         scene->GetOctree().CalculateVisibility(m_camera);
     }
+}
 
-    CollectLights();
-    CollectLightmapVolumes();
-    CollectEnvGrids();
-    m_last_collection_result = CollectEntities();
+void View::Update(float delta)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
+    AssertReady();
+
+    RenderProxyList& rpl = RenderApi_GetProducerProxyList(this);
+    rpl.viewport = m_viewport;
+    rpl.priority = m_priority;
+
+    rpl.meshes.Advance(AdvanceAction::CLEAR);
+    rpl.envProbes.Advance(AdvanceAction::CLEAR);
+    rpl.envGrids.Advance(AdvanceAction::CLEAR);
+    rpl.lights.Advance(AdvanceAction::CLEAR);
+    rpl.lightmapVolumes.Advance(AdvanceAction::CLEAR);
+    rpl.textures.Advance(AdvanceAction::CLEAR);
+
+    CollectLights(rpl);
+    CollectLightmapVolumes(rpl);
+    CollectEnvGrids(rpl);
+    CollectEnvProbes(rpl);
+
+    m_lastMeshCollectionResult = CollectMeshEntities(rpl);
+
+    // Update refs for bound textures for this view
+    if (auto diff = rpl.textures.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<ObjId<Texture>> removed;
+        rpl.textures.GetRemoved(removed, true);
+
+        Array<Texture*> added;
+        rpl.textures.GetAdded(added, true);
+
+        for (Texture* texture : added)
+        {
+            RenderApi_AddRef(texture);
+        }
+
+        for (ObjId<Texture> id : removed)
+        {
+            RenderApi_ReleaseRef(id);
+        }
+    }
+
+    /// temp
+    constexpr uint32 bucketMask = (1 << RB_OPAQUE)
+        | (1 << RB_LIGHTMAP)
+        | (1 << RB_SKYBOX)
+        | (1 << RB_TRANSLUCENT)
+        | (1 << RB_DEBUG);
+
+    rpl.BuildRenderGroups(this);
+
+    RenderCollector::CollectDrawCalls(rpl, bucketMask);
 }
 
 void View::SetViewport(const Viewport& viewport)
@@ -154,7 +339,7 @@ void View::SetViewport(const Viewport& viewport)
 
     if (IsInitCalled())
     {
-        m_render_resource->SetViewport(viewport);
+        m_renderResource->SetViewport(viewport);
     }
 }
 
@@ -164,7 +349,7 @@ void View::SetPriority(int priority)
 
     if (IsInitCalled())
     {
-        m_render_resource->SetPriority(priority);
+        m_renderResource->SetPriority(priority);
     }
 }
 
@@ -187,8 +372,6 @@ void View::AddScene(const Handle<Scene>& scene)
     if (IsInitCalled())
     {
         InitObject(scene);
-
-        m_render_resource->AddScene(TResourceHandle<RenderScene>(scene->GetRenderResource()));
     }
 }
 
@@ -206,43 +389,25 @@ void View::RemoveScene(const Handle<Scene>& scene)
         return;
     }
 
-    if (IsInitCalled())
-    {
-        m_render_resource->RemoveScene(&scene->GetRenderResource());
-    }
-
     m_scenes.Erase(scene);
 }
 
-typename RenderProxyTracker::Diff View::CollectEntities()
-{
-    AssertReady();
-
-    switch (uint32(m_entity_collection_flags & ViewEntityCollectionFlags::COLLECT_ALL))
-    {
-    case uint32(ViewEntityCollectionFlags::COLLECT_ALL):
-        return CollectAllEntities();
-    case uint32(ViewEntityCollectionFlags::COLLECT_DYNAMIC):
-        return CollectDynamicEntities();
-    case uint32(ViewEntityCollectionFlags::COLLECT_STATIC):
-        return CollectStaticEntities();
-    default:
-        HYP_UNREACHABLE();
-    }
-}
-
-typename RenderProxyTracker::Diff View::CollectAllEntities()
+typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectMeshEntities(RenderProxyList& rpl)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
     AssertReady();
 
     if (!m_camera.IsValid())
     {
-        HYP_LOG(Scene, Warning, "Camera is not valid for View with ID #%u, cannot collect entities!", GetID().Value());
+        HYP_LOG(Scene, Warning, "Camera is not valid for View with Id #%u, cannot collect entities!", Id().Value());
 
-        return m_render_resource->UpdateTrackedRenderProxies(m_render_proxy_tracker);
+        return rpl.meshes.GetDiff();
     }
+
+    const ObjId<Camera> cameraId = m_camera->Id();
+
+    const bool skipFrustumCulling = (m_flags & ViewFlags::SKIP_FRUSTUM_CULLING);
 
     for (const Handle<Scene>& scene : m_scenes)
     {
@@ -256,371 +421,536 @@ typename RenderProxyTracker::Diff View::CollectAllEntities()
             continue;
         }
 
-        const bool skip_frustum_culling = (m_entity_collection_flags & ViewEntityCollectionFlags::SKIP_FRUSTUM_CULLING);
+        const VisibilityStateSnapshot visibilityStateSnapshot = scene->GetOctree().GetVisibilityState().GetSnapshot(cameraId);
 
-        const ID<Camera> camera_id = m_camera->GetID();
+        uint32 numCollectedEntities = 0;
+        uint32 numSkippedEntities = 0;
 
-        const VisibilityStateSnapshot visibility_state_snapshot = scene->GetOctree().GetVisibilityState().GetSnapshot(camera_id);
-
-        uint32 num_collected_entities = 0;
-        uint32 num_skipped_entities = 0;
-
-        for (auto [entity_id, mesh_component, visibility_state_component] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        switch (uint32(m_flags) & uint32(ViewFlags::COLLECT_ALL_ENTITIES))
         {
-            if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+        case uint32(ViewFlags::COLLECT_ALL_ENTITIES):
+            for (auto [entity, meshComponent, visibilityStateComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
             {
+                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                {
 #ifndef HYP_DISABLE_VISIBILITY_CHECK
-                if (!visibility_state_component.visibility_state)
-                {
+                    if (!visibilityStateComponent.visibilityState)
+                    {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    ++num_skipped_entities;
+                        ++numSkippedEntities;
 #endif
-                    continue;
+                        continue;
+                    }
+
+                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
+#endif
+
+                        continue;
+                    }
+#endif
                 }
 
-                if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot))
-                {
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    ++num_skipped_entities;
-#endif
+                ++numCollectedEntities;
 
-                    continue;
+                AssertDebug(meshComponent.proxy != nullptr);
+
+                AssertDebug(meshComponent.proxy->entity.IsValid());
+                AssertDebug(meshComponent.proxy->mesh.IsValid());
+                AssertDebug(meshComponent.proxy->material.IsValid());
+
+                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+                if (meshComponent.material.IsValid())
+                {
+                    for (const auto& it : meshComponent.material->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture.Id(), texture.Get());
+                    }
                 }
-#endif
             }
 
-            ++num_collected_entities;
-
-            AssertDebug(mesh_component.proxy != nullptr);
-
-            AssertDebug(mesh_component.proxy->entity.IsValid());
-            AssertDebug(mesh_component.proxy->mesh.IsValid());
-            AssertDebug(mesh_component.proxy->material.IsValid());
-
-            m_render_proxy_tracker.Track(entity_id, *mesh_component.proxy);
-        }
-
-#ifdef HYP_VISIBILITY_CHECK_DEBUG
-        HYP_LOG(Scene, Debug, "Collected {} entities for camera {}, {} skipped", num_collected_entities, camera->GetName(), num_skipped_entities);
-#endif
-    }
-
-    return m_render_resource->UpdateTrackedRenderProxies(m_render_proxy_tracker);
-}
-
-typename RenderProxyTracker::Diff View::CollectDynamicEntities()
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
-
-    AssertReady();
-
-    if (!m_camera.IsValid())
-    {
-        HYP_LOG(Scene, Warning, "Camera is not valid for View with ID #%u, cannot collect dynamic entities!", GetID().Value());
-        // if camera is invalid, update without adding any entities
-        return m_render_resource->UpdateTrackedRenderProxies(m_render_proxy_tracker);
-    }
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        if (scene->GetFlags() & SceneFlags::DETACHED)
-        {
-            HYP_LOG(Scene, Warning, "Scene \"{}\" has DETACHED flag set, cannot collect entities for render collector!", scene->GetName());
-
-            continue;
-        }
-
-        const bool skip_frustum_culling = (m_entity_collection_flags & ViewEntityCollectionFlags::SKIP_FRUSTUM_CULLING);
-
-        const ID<Camera> camera_id = m_camera->GetID();
-
-        const VisibilityStateSnapshot visibility_state_snapshot = scene->GetOctree().GetVisibilityState().GetSnapshot(camera_id);
-
-        for (auto [entity_id, mesh_component, visibility_state_component, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
-        {
-            if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+            break;
+            
+        case uint32(ViewFlags::COLLECT_STATIC_ENTITIES):
+            for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
             {
+                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                {
 #ifndef HYP_DISABLE_VISIBILITY_CHECK
-                if (!visibility_state_component.visibility_state)
-                {
-                    continue;
-                }
-
-                if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot))
-                {
+                    if (!visibilityStateComponent.visibilityState)
+                    {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    HYP_LOG(Scene, Debug, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
-                        entity_id.Value(), camera_id.Value());
+                        ++numSkippedEntities;
+#endif
+                        continue;
+                    }
+
+                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
 #endif
 
-                    continue;
-                }
+                        continue;
+                    }
 #endif
+                }
+
+                ++numCollectedEntities;
+
+                AssertDebug(meshComponent.proxy != nullptr);
+
+                AssertDebug(meshComponent.proxy->entity.IsValid());
+                AssertDebug(meshComponent.proxy->mesh.IsValid());
+                AssertDebug(meshComponent.proxy->material.IsValid());
+
+                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+                if (meshComponent.material.IsValid())
+                {
+                    for (const auto& it : meshComponent.material->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture.Id(), texture.Get());
+                    }
+                }
             }
 
-            AssertDebug(mesh_component.proxy != nullptr);
-
-            AssertDebug(mesh_component.proxy->entity.IsValid());
-            AssertDebug(mesh_component.proxy->mesh.IsValid());
-            AssertDebug(mesh_component.proxy->material.IsValid());
-
-            m_render_proxy_tracker.Track(entity_id, *mesh_component.proxy);
-        }
-    }
-
-    return m_render_resource->UpdateTrackedRenderProxies(m_render_proxy_tracker);
-}
-
-typename RenderProxyTracker::Diff View::CollectStaticEntities()
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
-
-    AssertReady();
-
-    if (!m_camera.IsValid())
-    {
-        // if camera is invalid, update without adding any entities
-        HYP_LOG(Scene, Warning, "Camera is not valid for View with ID #%u, cannot collect static entities!", GetID().Value());
-        return m_render_resource->UpdateTrackedRenderProxies(m_render_proxy_tracker);
-    }
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        if (scene->GetFlags() & SceneFlags::DETACHED)
-        {
-            HYP_LOG(Scene, Warning, "Scene has DETACHED flag set, cannot collect entities for render collector!");
-
-            return {};
-        }
-
-        const bool skip_frustum_culling = (m_entity_collection_flags & ViewEntityCollectionFlags::SKIP_FRUSTUM_CULLING);
-
-        const ID<Camera> camera_id = m_camera->GetID();
-
-        const VisibilityStateSnapshot visibility_state_snapshot = scene->GetOctree().GetVisibilityState().GetSnapshot(camera_id);
-
-        for (auto [entity_id, mesh_component, visibility_state_component, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::STATIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
-        {
-            if (!skip_frustum_culling && !(visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+            break;
+            
+        case uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES):
+            for (auto [entity, meshComponent, visibilityStateComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::DYNAMIC>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
             {
+                if (!skipFrustumCulling && !(visibilityStateComponent.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE))
+                {
 #ifndef HYP_DISABLE_VISIBILITY_CHECK
-                if (!visibility_state_component.visibility_state)
-                {
-                    continue;
-                }
-
-                if (!visibility_state_component.visibility_state->GetSnapshot(camera_id).ValidToParent(visibility_state_snapshot))
-                {
+                    if (!visibilityStateComponent.visibilityState)
+                    {
 #ifdef HYP_VISIBILITY_CHECK_DEBUG
-                    HYP_LOG(Scene, Debug, "Skipping entity #{} for camera #{} due to visibility state being invalid.",
-                        entity_id.Value(), camera_id.Value());
+                        ++numSkippedEntities;
 #endif
+                        continue;
+                    }
+
+                    if (!visibilityStateComponent.visibilityState->GetSnapshot(cameraId).ValidToParent(visibilityStateSnapshot))
+                    {
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+                        ++numSkippedEntities;
+#endif
+
+                        continue;
+                    }
+#endif
+                }
+
+                ++numCollectedEntities;
+
+                AssertDebug(meshComponent.proxy != nullptr);
+
+                AssertDebug(meshComponent.proxy->entity.IsValid());
+                AssertDebug(meshComponent.proxy->mesh.IsValid());
+                AssertDebug(meshComponent.proxy->material.IsValid());
+
+                rpl.meshes.Track(entity->Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+                if (meshComponent.material.IsValid())
+                {
+                    for (const auto& it : meshComponent.material->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture.Id(), texture.Get());
+                    }
+                }
+            }
+
+            break;
+        default:
+            break;
+        }
+
+#ifdef HYP_VISIBILITY_CHECK_DEBUG
+        HYP_LOG(Scene, Debug, "Collected {} entities for View {}, {} skipped", numCollectedEntities, Id(), numSkippedEntities);
+#endif
+    }
+
+    auto meshesDiff = rpl.meshes.GetDiff();
+
+    if (meshesDiff.NeedsUpdate())
+    {
+        Array<RenderProxyMesh*> removed;
+        rpl.meshes.GetRemoved(removed, true);
+
+        Array<RenderProxyMesh*> added;
+        rpl.meshes.GetAdded(added, true);
+
+        for (RenderProxyMesh* proxy : added)
+        {
+            RenderApi_AddRef(proxy->entity.GetUnsafe());
+            RenderApi_AddRef(proxy->material.Get());
+
+            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
+            RenderApi_UpdateRenderProxy(proxy->material.Id());
+
+            // for now:
+            proxy->IncRefs();
+        }
+
+        for (RenderProxyMesh* proxy : removed)
+        {
+            RenderApi_ReleaseRef(proxy->entity.Id());
+            RenderApi_ReleaseRef(proxy->material.Id());
+
+            // for now:
+            proxy->DecRefs();
+        }
+    }
+
+    return meshesDiff;
+}
+
+void View::CollectLights(RenderProxyList& rpl)
+{
+    HYP_SCOPE;
+
+    if (m_flags & ViewFlags::SKIP_LIGHTS)
+    {
+        return;
+    }
+
+    for (const Handle<Scene>& scene : m_scenes)
+    {
+        AssertThrow(scene.IsValid());
+        AssertThrow(scene->IsReady());
+
+        for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        {
+            AssertDebug(entity->IsA<Light>());
+
+            Light* light = static_cast<Light*>(entity);
+
+            bool isLightInFrustum = false;
+
+            switch (light->GetLightType())
+            {
+            case LT_DIRECTIONAL:
+                isLightInFrustum = true;
+                break;
+            case LT_POINT:
+                isLightInFrustum = m_camera->GetFrustum().ContainsBoundingSphere(light->GetBoundingSphere());
+                break;
+            case LT_SPOT:
+                // @TODO Implement frustum culling for spot lights
+                isLightInFrustum = true;
+                break;
+            case LT_AREA_RECT:
+                isLightInFrustum = m_camera->GetFrustum().ContainsAABB(light->GetAABB());
+                break;
+            default:
+                break;
+            }
+
+            if (isLightInFrustum)
+            {
+                rpl.lights.Track(light->Id(), light, light->GetRenderProxyVersionPtr());
+
+                if (light->GetMaterial().IsValid())
+                {
+                    for (const auto& it : light->GetMaterial()->GetTextures())
+                    {
+                        const Handle<Texture>& texture = it.second;
+
+                        if (!texture.IsValid())
+                        {
+                            continue;
+                        }
+
+                        rpl.textures.Track(texture->Id(), texture.Get());
+                    }
+                }
+            }
+        }
+    }
+
+    if (auto diff = rpl.lights.GetDiff(); diff.NeedsUpdate())
+    {
+        Array<Light*> removed;
+        rpl.lights.GetRemoved(removed, false);
+
+        Array<Light*> added;
+        rpl.lights.GetAdded(added, false);
+
+        for (Light* light : added)
+        {
+            // temp shit
+            light->GetRenderResource().IncRef();
+
+            RenderApi_AddRef(light);
+            RenderApi_UpdateRenderProxy(light->Id());
+        }
+
+        for (Light* light : removed)
+        {
+            // temp shit
+            light->GetRenderResource().DecRef();
+
+            RenderApi_ReleaseRef(light->Id());
+        }
+
+        Array<ObjId<Light>> changedIds;
+        rpl.lights.GetChanged(changedIds);
+
+        for (ObjId<Light> id : changedIds)
+        {
+            RenderApi_UpdateRenderProxy(id);
+        }
+    }
+}
+
+void View::CollectLightmapVolumes(RenderProxyList& rpl)
+{
+    HYP_SCOPE;
+
+    if (m_flags & ViewFlags::SKIP_LIGHTMAP_VOLUMES)
+    {
+        return;
+    }
+
+    for (const Handle<Scene>& scene : m_scenes)
+    {
+        AssertThrow(scene.IsValid());
+        AssertThrow(scene->IsReady());
+
+        for (auto [entity, lightmapVolumeComponent] : scene->GetEntityManager()->GetEntitySet<LightmapVolumeComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        {
+            if (!lightmapVolumeComponent.volume.IsValid())
+            {
+                continue;
+            }
+
+            const BoundingBox& volumeAabb = lightmapVolumeComponent.volume->GetAABB();
+
+            if (!volumeAabb.IsValid() || !volumeAabb.IsFinite())
+            {
+                HYP_LOG(Scene, Warning, "Lightmap volume {} has an invalid AABB in view {}", lightmapVolumeComponent.volume->Id(), Id());
+
+                continue;
+            }
+
+            if (!m_camera->GetFrustum().ContainsAABB(volumeAabb))
+            {
+                continue;
+            }
+
+            rpl.lightmapVolumes.Track(lightmapVolumeComponent.volume->Id(), lightmapVolumeComponent.volume,
+                lightmapVolumeComponent.volume->GetRenderProxyVersionPtr());
+        }
+    }
+
+    auto diff = rpl.lightmapVolumes.GetDiff();
+
+    // temp shit
+    if (diff.NeedsUpdate())
+    {
+        Array<LightmapVolume*> removed;
+        rpl.lightmapVolumes.GetRemoved(removed, false);
+
+        Array<LightmapVolume*> added;
+        rpl.lightmapVolumes.GetAdded(added, false);
+
+        for (LightmapVolume* volume : added)
+        {
+            RenderApi_AddRef(volume);
+            RenderApi_UpdateRenderProxy(volume->Id());
+        }
+
+        for (LightmapVolume* volume : removed)
+        {
+            RenderApi_ReleaseRef(volume->Id());
+        }
+
+        Array<ObjId<LightmapVolume>> changedIds;
+        rpl.lightmapVolumes.GetChanged(changedIds);
+
+        for (ObjId<LightmapVolume> id : changedIds)
+        {
+            RenderApi_UpdateRenderProxy(id);
+        }
+    }
+}
+
+void View::CollectEnvGrids(RenderProxyList& rpl)
+{
+    HYP_SCOPE;
+
+    if (m_flags & ViewFlags::SKIP_ENV_GRIDS)
+    {
+        return;
+    }
+
+    for (const Handle<Scene>& scene : m_scenes)
+    {
+        AssertThrow(scene.IsValid());
+        AssertThrow(scene->IsReady());
+
+        for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<EnvGrid>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        {
+            AssertDebug(entity->IsA<EnvGrid>());
+
+            EnvGrid* envGrid = static_cast<EnvGrid*>(entity);
+
+            const BoundingBox& gridAabb = envGrid->GetAABB();
+
+            if (!gridAabb.IsValid() || !gridAabb.IsFinite())
+            {
+                HYP_LOG(Scene, Warning, "EnvGrid {} has an invalid AABB in view {}", envGrid->Id(), Id());
+
+                continue;
+            }
+
+            if (!m_camera->GetFrustum().ContainsAABB(gridAabb))
+            {
+                HYP_LOG(Scene, Debug, "EnvGrid {} is not in frustum of View {}", envGrid->Id(), Id());
+
+                continue;
+            }
+
+            rpl.envGrids.Track(envGrid->Id(), envGrid, envGrid->GetRenderProxyVersionPtr());
+        }
+    }
+
+    auto diff = rpl.envGrids.GetDiff();
+
+    if (diff.NeedsUpdate())
+    {
+        Array<EnvGrid*> removed;
+        rpl.envGrids.GetRemoved(removed, false);
+
+        Array<EnvGrid*> added;
+        rpl.envGrids.GetAdded(added, false);
+
+        for (EnvGrid* envGrid : added)
+        {
+            RenderApi_AddRef(envGrid);
+            RenderApi_UpdateRenderProxy(envGrid->Id());
+        }
+
+        for (EnvGrid* envGrid : removed)
+        {
+            RenderApi_ReleaseRef(envGrid->Id());
+        }
+
+        Array<ObjId<EnvGrid>> changedIds;
+        rpl.envGrids.GetChanged(changedIds);
+
+        for (ObjId<EnvGrid> id : changedIds)
+        {
+            RenderApi_UpdateRenderProxy(id);
+        }
+    }
+}
+
+void View::CollectEnvProbes(RenderProxyList& rpl)
+{
+    HYP_SCOPE;
+
+    if (m_flags & ViewFlags::SKIP_ENV_PROBES)
+    {
+        return;
+    }
+
+    for (const Handle<Scene>& scene : m_scenes)
+    {
+        AssertThrow(scene.IsValid());
+        AssertThrow(scene->IsReady());
+
+        for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<EnvProbe>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        {
+            EnvProbe* probe = static_cast<EnvProbe*>(entity);
+
+            if (!probe->IsSkyProbe())
+            {
+                const BoundingBox& probeAabb = probe->GetAABB();
+
+                if (!probeAabb.IsValid() || !probeAabb.IsFinite())
+                {
+                    HYP_LOG(Scene, Warning, "EnvProbe {} has an invalid AABB in view {}", probe->Id(), Id());
 
                     continue;
                 }
-#endif
-            }
 
-            AssertDebug(mesh_component.proxy != nullptr);
-
-            AssertDebug(mesh_component.proxy->entity.IsValid());
-            AssertDebug(mesh_component.proxy->mesh.IsValid());
-            AssertDebug(mesh_component.proxy->material.IsValid());
-
-            m_render_proxy_tracker.Track(entity_id, *mesh_component.proxy);
-        }
-    }
-
-    return m_render_resource->UpdateTrackedRenderProxies(m_render_proxy_tracker);
-}
-
-void View::CollectLights()
-{
-    HYP_SCOPE;
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        for (auto [entity_id, light_component, transform_component, visibility_state_component] : scene->GetEntityManager()->GetEntitySet<LightComponent, TransformComponent, VisibilityStateComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
-        {
-            if (!light_component.light.IsValid())
-            {
-                continue;
-            }
-
-            bool is_light_in_frustum = false;
-
-            if (visibility_state_component.flags & VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE)
-            {
-                is_light_in_frustum = true;
-            }
-            else
-            {
-                switch (light_component.light->GetLightType())
+                if (!m_camera->GetFrustum().ContainsAABB(probeAabb))
                 {
-                case LightType::DIRECTIONAL:
-                    is_light_in_frustum = true;
-                    break;
-                case LightType::POINT:
-                    is_light_in_frustum = m_camera->GetFrustum().ContainsBoundingSphere(light_component.light->GetBoundingSphere());
-                    break;
-                case LightType::SPOT:
-                    // @TODO Implement frustum culling for spot lights
-                    is_light_in_frustum = true;
-                    break;
-                case LightType::AREA_RECT:
-                    is_light_in_frustum = m_camera->GetFrustum().ContainsAABB(light_component.light->GetAABB());
-                    break;
-                default:
-                    break;
+                    continue;
                 }
             }
 
-            if (is_light_in_frustum)
-            {
-                m_tracked_lights.Track(light_component.light->GetID(), &light_component.light->GetRenderResource());
-            }
+            rpl.envProbes.Track(probe->Id(), probe, probe->GetRenderProxyVersionPtr());
         }
-    }
 
-    m_render_resource->UpdateTrackedLights(m_tracked_lights);
-}
-
-void View::CollectLightmapVolumes()
-{
-    HYP_SCOPE;
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        for (auto [entity_id, lightmap_volume_component] : scene->GetEntityManager()->GetEntitySet<LightmapVolumeComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        // TEMP SHIT
+        for (auto [entity, skyComponent] : scene->GetEntityManager()->GetEntitySet<SkyComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            if (!lightmap_volume_component.volume.IsValid())
+            if (skyComponent.subsystem)
             {
-                continue;
+                AssertThrow(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
+                rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
             }
-
-            const BoundingBox& volume_aabb = lightmap_volume_component.volume->GetAABB();
-
-            if (!volume_aabb.IsValid() || !volume_aabb.IsFinite())
-            {
-                HYP_LOG(Scene, Warning, "Lightmap volume {} has an invalid AABB in view {}", lightmap_volume_component.volume->GetID().Value(), GetID().Value());
-
-                continue;
-            }
-
-            if (!m_camera->GetFrustum().ContainsAABB(volume_aabb))
-            {
-                continue;
-            }
-
-            ResourceTracker<ID<LightmapVolume>, RenderLightmapVolume*>::ResourceTrackState track_state;
-
-            m_tracked_lightmap_volumes.Track(
-                lightmap_volume_component.volume->GetID(),
-                &lightmap_volume_component.volume->GetRenderResource(),
-                &track_state);
-
-            if (track_state & ResourceTracker<ID<LightmapVolume>, RenderLightmapVolume*>::CHANGED)
-            {
-                HYP_LOG(Scene, Debug, "Lightmap volume {} changed in view {}", lightmap_volume_component.volume->GetID().Value(), GetID().Value());
-            }
-        }
-    }
-
-    m_render_resource->UpdateTrackedLightmapVolumes(m_tracked_lightmap_volumes);
-}
-
-void View::CollectEnvGrids()
-{
-    HYP_SCOPE;
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        for (auto [entity_id, env_grid_component] : scene->GetEntityManager()->GetEntitySet<EnvGridComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
-        {
-            if (!env_grid_component.env_grid.IsValid())
-            {
-                continue;
-            }
-
-            const BoundingBox& grid_aabb = env_grid_component.env_grid->GetAABB();
-
-            if (!grid_aabb.IsValid() || !grid_aabb.IsFinite())
-            {
-                HYP_LOG(Scene, Warning, "EnvGrid {} has an invalid AABB in view {}", env_grid_component.env_grid->GetID().Value(), GetID().Value());
-
-                continue;
-            }
-
-            if (!m_camera->GetFrustum().ContainsAABB(grid_aabb))
-            {
-                continue;
-            }
-
-            m_tracked_env_grids.Track(env_grid_component.env_grid->GetID(), &env_grid_component.env_grid->GetRenderResource());
-        }
-    }
-
-    m_render_resource->UpdateTrackedEnvGrids(m_tracked_env_grids);
-}
-
-void View::CollectEnvProbes()
-{
-    HYP_SCOPE;
-
-    for (const Handle<Scene>& scene : m_scenes)
-    {
-        AssertThrow(scene.IsValid());
-        AssertThrow(scene->IsReady());
-
-        for (auto [entity_id, reflection_probe_component] : scene->GetEntityManager()->GetEntitySet<ReflectionProbeComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
-        {
-            if (!reflection_probe_component.env_probe.IsValid())
-            {
-                continue;
-            }
-
-            const BoundingBox& probe_aabb = reflection_probe_component.env_probe->GetAABB();
-
-            if (!probe_aabb.IsValid() || !probe_aabb.IsFinite())
-            {
-                HYP_LOG(Scene, Warning, "EnvProbe {} has an invalid AABB in view {}", reflection_probe_component.env_probe->GetID().Value(), GetID().Value());
-
-                continue;
-            }
-
-            if (!m_camera->GetFrustum().ContainsAABB(probe_aabb))
-            {
-                continue;
-            }
-
-            ResourceTracker<ID<EnvProbe>, RenderEnvProbe*>::ResourceTrackState track_state;
-            m_tracked_env_probes.Track(
-                reflection_probe_component.env_probe->GetID(),
-                &reflection_probe_component.env_probe->GetRenderResource(),
-                &track_state);
         }
     }
 
     /// TODO: point light Shadow maps
 
-    m_render_resource->UpdateTrackedEnvProbes(m_tracked_env_probes);
+    auto diff = rpl.envProbes.GetDiff();
+
+    if (diff.NeedsUpdate())
+    {
+        Array<EnvProbe*> removed;
+        rpl.envProbes.GetRemoved(removed, false);
+
+        Array<EnvProbe*> added;
+        rpl.envProbes.GetAdded(added, false);
+
+        for (EnvProbe* probe : added)
+        {
+            RenderApi_AddRef(probe);
+            RenderApi_UpdateRenderProxy(probe->Id());
+        }
+
+        for (EnvProbe* probe : removed)
+        {
+            RenderApi_ReleaseRef(probe->Id());
+        }
+
+        Array<ObjId<EnvProbe>> changedIds;
+        rpl.envProbes.GetChanged(changedIds);
+
+        for (ObjId<EnvProbe> id : changedIds)
+        {
+            RenderApi_UpdateRenderProxy(id);
+        }
+    }
 }
 
 #pragma endregion View

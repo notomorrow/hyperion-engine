@@ -3,7 +3,7 @@
 #include <rendering/backend/vulkan/RendererComputePipeline.hpp>
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
 #include <rendering/backend/vulkan/RendererShader.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <core/debug/Debug.hpp>
 
@@ -19,13 +19,11 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 VulkanComputePipeline::VulkanComputePipeline()
@@ -34,9 +32,9 @@ VulkanComputePipeline::VulkanComputePipeline()
 {
 }
 
-VulkanComputePipeline::VulkanComputePipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptor_table)
+VulkanComputePipeline::VulkanComputePipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable)
     : VulkanPipelineBase(),
-      ComputePipelineBase(shader, descriptor_table)
+      ComputePipelineBase(shader, descriptorTable)
 {
 }
 
@@ -44,73 +42,73 @@ VulkanComputePipeline::~VulkanComputePipeline()
 {
 }
 
-void VulkanComputePipeline::Bind(CommandBufferBase* command_buffer)
+void VulkanComputePipeline::Bind(CommandBufferBase* commandBuffer)
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
     vkCmdBindPipeline(
-        static_cast<VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
         m_handle);
 
-    if (m_push_constants)
+    if (m_pushConstants)
     {
         vkCmdPushConstants(
-            static_cast<VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+            static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
             m_layout,
             VK_SHADER_STAGE_COMPUTE_BIT,
             0,
-            m_push_constants.Size(),
-            m_push_constants.Data());
+            m_pushConstants.Size(),
+            m_pushConstants.Data());
     }
 }
 
 void VulkanComputePipeline::Dispatch(
-    CommandBufferBase* command_buffer,
-    const Vec3u& group_size) const
+    CommandBufferBase* commandBuffer,
+    const Vec3u& groupSize) const
 {
     vkCmdDispatch(
-        static_cast<VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
-        group_size.x,
-        group_size.y,
-        group_size.z);
+        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        groupSize.x,
+        groupSize.y,
+        groupSize.z);
 }
 
 void VulkanComputePipeline::DispatchIndirect(
-    CommandBufferBase* command_buffer,
-    const GPUBufferRef& indirect_buffer,
+    CommandBufferBase* commandBuffer,
+    const GpuBufferRef& indirectBuffer,
     SizeType offset) const
 {
     vkCmdDispatchIndirect(
-        static_cast<VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
-        static_cast<VulkanGPUBuffer*>(indirect_buffer.Get())->GetVulkanHandle(),
+        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        static_cast<VulkanGpuBuffer*>(indirectBuffer.Get())->GetVulkanHandle(),
         offset);
 }
 
 RendererResult VulkanComputePipeline::Create()
 {
     /* Push constants */
-    const VkPushConstantRange push_constant_ranges[] = {
+    const VkPushConstantRange pushConstantRanges[] = {
         { .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
             .offset = 0,
-            .size = uint32(GetRenderingAPI()->GetDevice()->GetFeatures().PaddedSize<PushConstantData>()) }
+            .size = uint32(GetRenderBackend()->GetDevice()->GetFeatures().PaddedSize<PushConstantData>()) }
     };
 
     /* Pipeline layout */
-    VkPipelineLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+    VkPipelineLayoutCreateInfo layoutInfo { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
-    const Array<VkDescriptorSetLayout> used_layouts = GetPipelineVulkanDescriptorSetLayouts(*this);
-    const uint32 max_set_layouts = GetRenderingAPI()->GetDevice()->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+    const Array<VkDescriptorSetLayout> usedLayouts = GetPipelineVulkanDescriptorSetLayouts(*this);
+    const uint32 maxSetLayouts = GetRenderBackend()->GetDevice()->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
 
 #if 1
-    HYP_LOG(RenderingBackend, Debug, "Using {} descriptor set layouts in pipeline", used_layouts.Size());
+    HYP_LOG(RenderingBackend, Debug, "Using {} descriptor set layouts in pipeline", usedLayouts.Size());
 
-    for (const DescriptorSetRef& descriptor_set : m_descriptor_table->GetSets()[0])
+    for (const DescriptorSetRef& descriptorSet : m_descriptorTable->GetSets()[0])
     {
         HYP_LOG(RenderingBackend, Debug, "\tDescriptor set layout: {} ({})",
-            descriptor_set->GetLayout().GetName(), descriptor_set->GetLayout().GetDeclaration()->set_index);
+            descriptorSet->GetLayout().GetName(), descriptorSet->GetLayout().GetDeclaration()->setIndex);
 
-        for (const auto& it : descriptor_set->GetLayout().GetElements())
+        for (const auto& it : descriptorSet->GetLayout().GetElements())
         {
             HYP_LOG(RenderingBackend, Debug, "\t\tDescriptor: {}  binding: {}",
                 it.first, it.second.binding);
@@ -118,21 +116,21 @@ RendererResult VulkanComputePipeline::Create()
     }
 #endif
 
-    if (used_layouts.Size() > max_set_layouts)
+    if (usedLayouts.Size() > maxSetLayouts)
     {
         return HYP_MAKE_ERROR(RendererError, "Device max bound descriptor sets exceeded");
     }
 
-    layout_info.setLayoutCount = uint32(used_layouts.Size());
-    layout_info.pSetLayouts = used_layouts.Data();
-    layout_info.pushConstantRangeCount = uint32(std::size(push_constant_ranges));
-    layout_info.pPushConstantRanges = push_constant_ranges;
+    layoutInfo.setLayoutCount = uint32(usedLayouts.Size());
+    layoutInfo.pSetLayouts = usedLayouts.Data();
+    layoutInfo.pushConstantRangeCount = uint32(std::size(pushConstantRanges));
+    layoutInfo.pPushConstantRanges = pushConstantRanges;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreatePipelineLayout(GetRenderingAPI()->GetDevice()->GetDevice(), &layout_info, nullptr, &m_layout),
+        vkCreatePipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), &layoutInfo, nullptr, &m_layout),
         "Failed to create compute pipeline layout");
 
-    VkComputePipelineCreateInfo pipeline_info { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+    VkComputePipelineCreateInfo pipelineInfo { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
 
     if (!m_shader)
     {
@@ -151,13 +149,13 @@ RendererResult VulkanComputePipeline::Create()
         return HYP_MAKE_ERROR(RendererError, "Compute pipelines must have only one shader stage");
     }
 
-    pipeline_info.stage = stages.Front();
-    pipeline_info.layout = m_layout;
-    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-    pipeline_info.basePipelineIndex = -1;
+    pipelineInfo.stage = stages.Front();
+    pipelineInfo.layout = m_layout;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineIndex = -1;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateComputePipelines(GetRenderingAPI()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_handle),
+        vkCreateComputePipelines(GetRenderBackend()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle),
         "Failed to create compute pipeline");
 
     HYPERION_RETURN_OK;
@@ -166,7 +164,7 @@ RendererResult VulkanComputePipeline::Create()
 RendererResult VulkanComputePipeline::Destroy()
 {
     SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_descriptor_table));
+    SafeRelease(std::move(m_descriptorTable));
 
     return VulkanPipelineBase::Destroy();
 }
@@ -176,5 +174,4 @@ void VulkanComputePipeline::SetPushConstants(const void* data, SizeType size)
     VulkanPipelineBase::SetPushConstants(data, size);
 }
 
-} // namespace renderer
 } // namespace hyperion

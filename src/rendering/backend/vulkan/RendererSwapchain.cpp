@@ -3,7 +3,7 @@
 #include <rendering/backend/vulkan/RendererSwapchain.hpp>
 #include <rendering/backend/vulkan/RendererFrame.hpp>
 #include <rendering/backend/vulkan/RendererImage.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
@@ -15,41 +15,39 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
-static const bool use_srgb = true;
-static const VkImageUsageFlags image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+static const bool useSrgb = true;
+static const VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 static RendererResult HandleNextFrame(
     VulkanSwapchain* swapchain,
     VulkanFrame* frame,
     uint32* index,
-    bool& out_needs_recreate)
+    bool& outNeedsRecreate)
 {
-    VkResult vk_result = vkAcquireNextImageKHR(
-        GetRenderingAPI()->GetDevice()->GetDevice(),
+    VkResult vkResult = vkAcquireNextImageKHR(
+        GetRenderBackend()->GetDevice()->GetDevice(),
         swapchain->GetVulkanHandle(),
         UINT64_MAX,
         frame->GetPresentSemaphores().GetWaitSemaphores()[0].Get().GetVulkanHandle(),
         VK_NULL_HANDLE,
         index);
 
-    if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
+    if (vkResult == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        out_needs_recreate = true;
+        outNeedsRecreate = true;
 
         return {};
     }
-    else if (vk_result != VK_SUCCESS && vk_result != VK_SUBOPTIMAL_KHR)
+    else if (vkResult != VK_SUCCESS && vkResult != VK_SUBOPTIMAL_KHR)
     {
-        return HYP_MAKE_ERROR(RendererError, "Failed to acquire next image", int(vk_result));
+        return HYP_MAKE_ERROR(RendererError, "Failed to acquire next image", int(vkResult));
     }
 
     return {};
@@ -73,16 +71,16 @@ bool VulkanSwapchain::IsCreated() const
 
 void VulkanSwapchain::NextFrame()
 {
-    m_current_frame_index = (m_current_frame_index + 1) % max_frames_in_flight;
+    m_currentFrameIndex = (m_currentFrameIndex + 1) % maxFramesInFlight;
 }
 
-RendererResult VulkanSwapchain::PrepareFrame(bool& out_needs_recreate)
+RendererResult VulkanSwapchain::PrepareFrame(bool& outNeedsRecreate)
 {
-    static const auto handle_frame_result = [](VkResult result, bool& out_needs_recreate) -> RendererResult
+    static const auto handleFrameResult = [](VkResult result, bool& outNeedsRecreate) -> RendererResult
     {
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            out_needs_recreate = true;
+            outNeedsRecreate = true;
 
             HYPERION_RETURN_OK;
         }
@@ -96,11 +94,11 @@ RendererResult VulkanSwapchain::PrepareFrame(bool& out_needs_recreate)
 
     HYPERION_BUBBLE_ERRORS(frame->GetFence()->WaitForGPU(true));
 
-    HYPERION_BUBBLE_ERRORS(handle_frame_result(frame->GetFence()->GetLastFrameResult(), out_needs_recreate));
+    HYPERION_BUBBLE_ERRORS(handleFrameResult(frame->GetFence()->GetLastFrameResult(), outNeedsRecreate));
 
     HYPERION_BUBBLE_ERRORS(frame->ResetFrameState());
 
-    HYPERION_BUBBLE_ERRORS(HandleNextFrame(this, frame, &m_acquired_image_index, out_needs_recreate));
+    HYPERION_BUBBLE_ERRORS(HandleNextFrame(this, frame, &m_acquiredImageIndex, outNeedsRecreate));
 
     HYPERION_RETURN_OK;
 }
@@ -112,23 +110,23 @@ RendererResult VulkanSwapchain::PresentFrame(VulkanDeviceQueue* queue) const
     for (const ImageRef& image : m_images)
     {
         AssertThrow(image.IsValid());
-        AssertThrow(image->GetResourceState() == ResourceState::PRESENT);
+        AssertThrow(image->GetResourceState() == RS_PRESENT);
     }
 #endif
 
     const VulkanFrameRef& frame = GetCurrentFrame();
 
-    const auto& signal_semaphores = frame->GetPresentSemaphores().GetSignalSemaphoresView();
+    const auto& signalSemaphores = frame->GetPresentSemaphores().GetSignalSemaphoresView();
 
-    VkPresentInfoKHR present_info { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-    present_info.waitSemaphoreCount = uint32(signal_semaphores.size());
-    present_info.pWaitSemaphores = signal_semaphores.data();
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &m_handle;
-    present_info.pImageIndices = &m_acquired_image_index;
-    present_info.pResults = nullptr;
+    VkPresentInfoKHR presentInfo { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+    presentInfo.waitSemaphoreCount = uint32(signalSemaphores.size());
+    presentInfo.pWaitSemaphores = signalSemaphores.data();
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &m_handle;
+    presentInfo.pImageIndices = &m_acquiredImageIndex;
+    presentInfo.pResults = nullptr;
 
-    HYPERION_VK_CHECK(vkQueuePresentKHR(queue->queue, &present_info));
+    HYPERION_VK_CHECK(vkQueuePresentKHR(queue->queue, &presentInfo));
 
     HYPERION_RETURN_OK;
 }
@@ -145,8 +143,8 @@ RendererResult VulkanSwapchain::Create()
     HYPERION_BUBBLE_ERRORS(ChoosePresentMode());
 
     m_extent = {
-        m_support_details.capabilities.currentExtent.width,
-        m_support_details.capabilities.currentExtent.height
+        m_supportDetails.capabilities.currentExtent.width,
+        m_supportDetails.capabilities.currentExtent.height
     };
 
     if (m_extent.x * m_extent.y == 0)
@@ -154,55 +152,55 @@ RendererResult VulkanSwapchain::Create()
         return HYP_MAKE_ERROR(RendererError, "Failed to retrieve swapchain resolution!");
     }
 
-    uint32 image_count = m_support_details.capabilities.minImageCount + 1;
+    uint32 imageCount = m_supportDetails.capabilities.minImageCount + 1;
 
-    if (m_support_details.capabilities.maxImageCount > 0 && image_count > m_support_details.capabilities.maxImageCount)
+    if (m_supportDetails.capabilities.maxImageCount > 0 && imageCount > m_supportDetails.capabilities.maxImageCount)
     {
-        image_count = m_support_details.capabilities.maxImageCount;
+        imageCount = m_supportDetails.capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR create_info { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
-    create_info.surface = m_surface;
-    create_info.minImageCount = image_count;
-    create_info.imageFormat = m_surface_format.format;
-    create_info.imageColorSpace = m_surface_format.colorSpace;
-    create_info.imageExtent = { m_extent.x, m_extent.y };
-    create_info.imageArrayLayers = 1; /* This is always 1 unless we make a stereoscopic/VR application */
-    create_info.imageUsage = image_usage_flags;
+    VkSwapchainCreateInfoKHR createInfo { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+    createInfo.surface = m_surface;
+    createInfo.minImageCount = imageCount;
+    createInfo.imageFormat = m_surfaceFormat.format;
+    createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
+    createInfo.imageExtent = { m_extent.x, m_extent.y };
+    createInfo.imageArrayLayers = 1; /* This is always 1 unless we make a stereoscopic/VR application */
+    createInfo.imageUsage = imageUsageFlags;
 
     /* Graphics computations and presentation are done on separate hardware */
-    const QueueFamilyIndices& qf_indices = GetRenderingAPI()->GetDevice()->GetQueueFamilyIndices();
+    const QueueFamilyIndices& qfIndices = GetRenderBackend()->GetDevice()->GetQueueFamilyIndices();
 
-    const uint32 concurrent_families[] = {
-        qf_indices.graphics_family.Get(),
-        qf_indices.present_family.Get()
+    const uint32 concurrentFamilies[] = {
+        qfIndices.graphicsFamily.Get(),
+        qfIndices.presentFamily.Get()
     };
 
-    if (qf_indices.graphics_family.Get() != qf_indices.present_family.Get())
+    if (qfIndices.graphicsFamily.Get() != qfIndices.presentFamily.Get())
     {
-        create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        create_info.queueFamilyIndexCount = uint32(std::size(concurrent_families)); /* Two family indices(one for each process) */
-        create_info.pQueueFamilyIndices = concurrent_families;
+        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        createInfo.queueFamilyIndexCount = uint32(std::size(concurrentFamilies)); /* Two family indices(one for each process) */
+        createInfo.pQueueFamilyIndices = concurrentFamilies;
     }
     else
     {
         /* Computations and presentation are done on same hardware(most scenarios) */
-        create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        create_info.queueFamilyIndexCount = 0;     /* Optional */
-        create_info.pQueueFamilyIndices = nullptr; /* Optional */
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.queueFamilyIndexCount = 0;     /* Optional */
+        createInfo.pQueueFamilyIndices = nullptr; /* Optional */
     }
 
     /* For transformations such as rotations, etc. */
-    create_info.preTransform = m_support_details.capabilities.currentTransform;
+    createInfo.preTransform = m_supportDetails.capabilities.currentTransform;
     /* This can be used to blend with other windows in the windowing system, but we
      * simply leave it opaque.*/
-    create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    create_info.presentMode = m_present_mode;
-    create_info.clipped = VK_TRUE;
-    create_info.oldSwapchain = VK_NULL_HANDLE;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode = m_presentMode;
+    createInfo.clipped = VK_TRUE;
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateSwapchainKHR(GetRenderingAPI()->GetDevice()->GetDevice(), &create_info, nullptr, &m_handle),
+        vkCreateSwapchainKHR(GetRenderBackend()->GetDevice()->GetDevice(), &createInfo, nullptr, &m_handle),
         "Failed to create Vulkan swapchain!");
 
     HYPERION_BUBBLE_ERRORS(RetrieveImageHandles());
@@ -216,7 +214,7 @@ RendererResult VulkanSwapchain::Create()
             HYPERION_BUBBLE_ERRORS(HYP_MAKE_ERROR(RendererError, "Image is not created!"));
         }
 
-        if (image->GetResourceState() != ResourceState::PRESENT)
+        if (image->GetResourceState() != RS_PRESENT)
         {
             HYPERION_BUBBLE_ERRORS(HYP_MAKE_ERROR(RendererError, "Image resource state is not PRESENT!"));
         }
@@ -228,16 +226,16 @@ RendererResult VulkanSwapchain::Create()
         m_framebuffers.PushBack(std::move(framebuffer));
     }
 
-    VulkanDeviceQueue* queue = &GetRenderingAPI()->GetDevice()->GetGraphicsQueue();
+    VulkanDeviceQueue* queue = &GetRenderBackend()->GetDevice()->GetGraphicsQueue();
 
     for (uint32 i = 0; i < m_frames.Size(); i++)
     {
-        VkCommandPool pool = queue->command_pools[0];
+        VkCommandPool pool = queue->commandPools[0];
         AssertThrow(pool != VK_NULL_HANDLE);
 
-        VulkanCommandBufferRef command_buffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
-        HYPERION_BUBBLE_ERRORS(command_buffer->Create(pool));
-        m_command_buffers[i] = std::move(command_buffer);
+        VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+        HYPERION_BUBBLE_ERRORS(commandBuffer->Create(pool));
+        m_commandBuffers[i] = std::move(commandBuffer);
 
         VulkanFrameRef frame = MakeRenderObject<VulkanFrame>(i);
         HYPERION_BUBBLE_ERRORS(frame->Create());
@@ -257,9 +255,9 @@ RendererResult VulkanSwapchain::Destroy()
     SafeRelease(std::move(m_images));
     SafeRelease(std::move(m_framebuffers));
     SafeRelease(std::move(m_frames));
-    SafeRelease(std::move(m_command_buffers));
+    SafeRelease(std::move(m_commandBuffers));
 
-    vkDestroySwapchainKHR(GetRenderingAPI()->GetDevice()->GetDevice(), m_handle, nullptr);
+    vkDestroySwapchainKHR(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
     m_handle = VK_NULL_HANDLE;
 
     HYPERION_RETURN_OK;
@@ -267,14 +265,14 @@ RendererResult VulkanSwapchain::Destroy()
 
 RendererResult VulkanSwapchain::ChooseSurfaceFormat()
 {
-    m_surface_format = {};
+    m_surfaceFormat = {};
 
-    if (use_srgb)
+    if (useSrgb)
     {
         /* look for srgb format */
-        m_image_format = GetRenderingAPI()->GetDevice()->GetFeatures().FindSupportedSurfaceFormat(
-            m_support_details,
-            { { InternalFormat::RGBA8_SRGB, InternalFormat::BGRA8_SRGB } },
+        m_imageFormat = GetRenderBackend()->GetDevice()->GetFeatures().FindSupportedSurfaceFormat(
+            m_supportDetails,
+            { { TF_RGBA8_SRGB, TF_BGRA8_SRGB } },
             [this](auto&& format)
             {
                 if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
@@ -282,29 +280,29 @@ RendererResult VulkanSwapchain::ChooseSurfaceFormat()
                     return false;
                 }
 
-                m_surface_format = format;
+                m_surfaceFormat = format;
 
                 return true;
             });
 
-        if (m_image_format != InternalFormat::NONE)
+        if (m_imageFormat != TF_NONE)
         {
             HYPERION_RETURN_OK;
         }
     }
 
     /* look for non-srgb format */
-    m_image_format = GetRenderingAPI()->GetDevice()->GetFeatures().FindSupportedSurfaceFormat(
-        m_support_details,
-        { { InternalFormat::R11G11B10F, InternalFormat::RGBA16F, InternalFormat::RGBA8 } },
+    m_imageFormat = GetRenderBackend()->GetDevice()->GetFeatures().FindSupportedSurfaceFormat(
+        m_supportDetails,
+        { { TF_R11G11B10F, TF_RGBA16F, TF_RGBA8 } },
         [this](auto&& format)
         {
-            m_surface_format = format;
+            m_surfaceFormat = format;
 
             return true;
         });
 
-    if (m_image_format == InternalFormat::NONE)
+    if (m_imageFormat == TF_NONE)
     {
         return HYP_MAKE_ERROR(RendererError, "Failed to find a supported surface format");
     }
@@ -314,44 +312,44 @@ RendererResult VulkanSwapchain::ChooseSurfaceFormat()
 
 RendererResult VulkanSwapchain::ChoosePresentMode()
 {
-    m_present_mode = HYP_ENABLE_VSYNC ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
+    m_presentMode = HYP_ENABLE_VSYNC ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
 
     HYPERION_RETURN_OK;
 }
 
 RendererResult VulkanSwapchain::RetrieveSupportDetails()
 {
-    m_support_details = GetRenderingAPI()->GetDevice()->GetFeatures().QuerySwapchainSupport(GetRenderingAPI()->GetDevice()->GetRenderSurface());
+    m_supportDetails = GetRenderBackend()->GetDevice()->GetFeatures().QuerySwapchainSupport(GetRenderBackend()->GetDevice()->GetRenderSurface());
 
     HYPERION_RETURN_OK;
 }
 
 RendererResult VulkanSwapchain::RetrieveImageHandles()
 {
-    Array<VkImage> vk_images;
-    uint32 image_count = 0;
+    Array<VkImage> vkImages;
+    uint32 imageCount = 0;
     /* Query for the size, as we will need to create swap chains with more images
      * in the future for more complex applications. */
-    vkGetSwapchainImagesKHR(GetRenderingAPI()->GetDevice()->GetDevice(), m_handle, &image_count, nullptr);
+    vkGetSwapchainImagesKHR(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, &imageCount, nullptr);
 
-    vk_images.Resize(image_count);
+    vkImages.Resize(imageCount);
 
-    vkGetSwapchainImagesKHR(GetRenderingAPI()->GetDevice()->GetDevice(), m_handle, &image_count, vk_images.Data());
+    vkGetSwapchainImagesKHR(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, &imageCount, vkImages.Data());
 
-    m_images.Resize(image_count);
+    m_images.Resize(imageCount);
 
-    for (uint32 i = 0; i < image_count; i++)
+    for (uint32 i = 0; i < imageCount; i++)
     {
         const TextureDesc desc {
-            ImageType::TEXTURE_TYPE_2D,
-            m_image_format,
+            TT_TEX2D,
+            m_imageFormat,
             Vec3u { m_extent.x, m_extent.y, 1 }
         };
 
         VulkanImageRef image = MakeRenderObject<VulkanImage>(desc);
 
-        image->m_handle = vk_images[i];
-        image->m_is_handle_owned = false;
+        image->m_handle = vkImages[i];
+        image->m_isHandleOwned = false;
 
         HYPERION_BUBBLE_ERRORS(image->Create());
 
@@ -359,15 +357,15 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
     }
 
     // Transition each image to PRESENT state
-    renderer::SingleTimeCommands commands;
+    SingleTimeCommands commands;
 
-    commands.Push([&](RHICommandList& cmd)
+    commands.Push([&](CmdList& cmd)
         {
             for (const ImageRef& image : m_images)
             {
                 AssertThrow(image.IsValid());
 
-                cmd.Add<InsertBarrier>(image, ResourceState::PRESENT);
+                cmd.Add<InsertBarrier>(image, RS_PRESENT);
             }
         });
 
@@ -377,7 +375,7 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
     for (const ImageRef& image : m_images)
     {
         AssertThrow(image.IsValid());
-        AssertThrow(image->GetResourceState() == ResourceState::PRESENT);
+        AssertThrow(image->GetResourceState() == RS_PRESENT);
     }
 
     HYP_LOG(RenderingBackend, Info, "Created swapchain with {} images", m_images.Size());
@@ -387,5 +385,4 @@ RendererResult VulkanSwapchain::RetrieveImageHandles()
 
 #pragma endregion Swapchain
 
-} // namespace renderer
 } // namespace hyperion

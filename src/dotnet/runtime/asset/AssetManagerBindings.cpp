@@ -7,26 +7,26 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT const AssetLoaderDefinition* AssetManager_GetLoaderDefinition(AssetManager* asset_manager, const char* path, TypeID desired_type_id)
+    HYP_EXPORT const AssetLoaderDefinition* AssetManager_GetLoaderDefinition(AssetManager* assetManager, const char* path, TypeId desiredTypeId)
     {
-        AssertThrow(asset_manager != nullptr);
+        AssertThrow(assetManager != nullptr);
 
-        return asset_manager->GetLoaderDefinition(path, desired_type_id);
+        return assetManager->GetLoaderDefinition(path, desiredTypeId);
     }
 
-    HYP_EXPORT LoadedAsset* AssetManager_Load(AssetManager* asset_manager, AssetLoaderDefinition* loader_definition, const char* path)
+    HYP_EXPORT LoadedAsset* AssetManager_Load(AssetManager* assetManager, AssetLoaderDefinition* loaderDefinition, const char* path)
     {
-        AssertThrow(asset_manager != nullptr);
-        AssertThrow(loader_definition != nullptr);
+        AssertThrow(assetManager != nullptr);
+        AssertThrow(loaderDefinition != nullptr);
 
-        AssetLoaderBase* loader = loader_definition->loader.Get();
+        AssetLoaderBase* loader = loaderDefinition->loader.Get();
 
         if (!loader)
         {
             return nullptr;
         }
 
-        if (AssetLoadResult result = loader->Load(*asset_manager, path))
+        if (AssetLoadResult result = loader->Load(*assetManager, path))
         {
             return new LoadedAsset(std::move(result.GetValue()));
         }
@@ -34,7 +34,7 @@ extern "C"
         return nullptr;
     }
 
-    HYP_EXPORT void AssetManager_LoadAsync(AssetManager* asset_manager, AssetLoaderDefinition* loader_definition, const char* path, void (*callback)(void*))
+    HYP_EXPORT void AssetManager_LoadAsync(AssetManager* assetManager, AssetLoaderDefinition* loaderDefinition, const char* path, void (*callback)(void*))
     {
         HYP_NOT_IMPLEMENTED();
     }

@@ -21,69 +21,69 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void HypData_Construct(ValueStorage<HypData>* hyp_data_storage)
+    HYP_EXPORT void HypData_Construct(ValueStorage<HypData>* hypDataStorage)
     {
-        AssertThrow(hyp_data_storage != nullptr);
+        AssertThrow(hypDataStorage != nullptr);
 
-        hyp_data_storage->Construct();
+        hypDataStorage->Construct();
     }
 
-    HYP_EXPORT void HypData_Destruct(ValueStorage<HypData>* hyp_data_storage)
+    HYP_EXPORT void HypData_Destruct(ValueStorage<HypData>* hypDataStorage)
     {
-        AssertThrow(hyp_data_storage != nullptr);
+        AssertThrow(hypDataStorage != nullptr);
 
-        hyp_data_storage->Destruct();
+        hypDataStorage->Destruct();
     }
 
-    HYP_EXPORT void HypData_GetTypeID(const HypData* hyp_data, TypeID* out_type_id)
+    HYP_EXPORT void HypData_GetTypeId(const HypData* hypData, TypeId* outTypeId)
     {
-        if (!hyp_data || !out_type_id)
+        if (!hypData || !outTypeId)
         {
             return;
         }
 
-        *out_type_id = hyp_data->GetTypeID();
+        *outTypeId = hypData->GetTypeId();
     }
 
-    HYP_EXPORT const void* HypData_GetPointer(const HypData* hyp_data)
+    HYP_EXPORT const void* HypData_GetPointer(const HypData* hypData)
     {
-        if (!hyp_data)
+        if (!hypData)
         {
             return nullptr;
         }
 
-        return hyp_data->ToRef().GetPointer();
+        return hypData->ToRef().GetPointer();
     }
 
-    HYP_EXPORT int8 HypData_IsNull(const HypData* hyp_data)
+    HYP_EXPORT int8 HypData_IsNull(const HypData* hypData)
     {
-        if (!hyp_data)
+        if (!hypData)
         {
             return true;
         }
 
-        return hyp_data->IsNull();
+        return hypData->IsNull();
     }
 
-    HYP_EXPORT void HypData_Reset(HypData* hyp_data)
+    HYP_EXPORT void HypData_Reset(HypData* hypData)
     {
-        if (hyp_data)
+        if (hypData)
         {
-            hyp_data->Reset();
+            hypData->Reset();
         }
     }
 
 #define HYP_DEFINE_HYPDATA_GET(type, name)                                                   \
-    HYP_EXPORT int8 HypData_Get##name(const HypData* hyp_data, int8 strict, type* out_value) \
+    HYP_EXPORT int8 HypData_Get##name(const HypData* hypData, int8 strict, type* outValue) \
     {                                                                                        \
-        if (!hyp_data || !out_value)                                                         \
+        if (!hypData || !outValue)                                                         \
         {                                                                                    \
             return false;                                                                    \
         }                                                                                    \
                                                                                              \
-        if (hyp_data->Is<type>(bool(strict)))                                                \
+        if (hypData->Is<type>(bool(strict)))                                                \
         {                                                                                    \
-            *out_value = hyp_data->Get<type>();                                              \
+            *outValue = hypData->Get<type>();                                              \
                                                                                              \
             return true;                                                                     \
         }                                                                                    \
@@ -92,25 +92,25 @@ extern "C"
     }
 
 #define HYP_DEFINE_HYPDATA_IS(type, name)                                  \
-    HYP_EXPORT int8 HypData_Is##name(const HypData* hyp_data, int8 strict) \
+    HYP_EXPORT int8 HypData_Is##name(const HypData* hypData, int8 strict) \
     {                                                                      \
-        if (!hyp_data)                                                     \
+        if (!hypData)                                                     \
         {                                                                  \
             return false;                                                  \
         }                                                                  \
                                                                            \
-        return hyp_data->Is<type>(bool(strict));                           \
+        return hypData->Is<type>(bool(strict));                           \
     }
 
 #define HYP_DEFINE_HYPDATA_SET(type, name)                           \
-    HYP_EXPORT int8 HypData_Set##name(HypData* hyp_data, type value) \
+    HYP_EXPORT int8 HypData_Set##name(HypData* hypData, type value) \
     {                                                                \
-        if (!hyp_data)                                               \
+        if (!hypData)                                               \
         {                                                            \
             return false;                                            \
         }                                                            \
                                                                      \
-        *hyp_data = HypData(value);                                  \
+        *hypData = HypData(value);                                  \
         return true;                                                 \
     }
 
@@ -157,31 +157,31 @@ extern "C"
 #undef HYP_DEFINE_HYPDATA_IS
 #undef HYP_DEFINE_HYPDATA_SET
 
-    HYP_EXPORT int8 HypData_IsArray(const HypData* hyp_data)
+    HYP_EXPORT int8 HypData_IsArray(const HypData* hypData)
     {
-        // if (!hyp_data)
+        // if (!hypData)
         // {
         //     return false;
         // }
 
-        // return hyp_data->Is<Array<HypData>>();
+        // return hypData->Is<Array<HypData>>();
 
         HYP_NOT_IMPLEMENTED();
     }
 
-    HYP_EXPORT int8 HypData_GetArray(HypData* hyp_data, HypData** out_array, uint32* out_size)
+    HYP_EXPORT int8 HypData_GetArray(HypData* hypData, HypData** outArray, uint32* outSize)
     {
-        if (!hyp_data || !out_array || !out_size)
+        if (!hypData || !outArray || !outSize)
         {
             return false;
         }
 
-        if (hyp_data->Is<Array<HypData>>())
+        if (hypData->Is<Array<HypData>>())
         {
-            Array<HypData>& array = hyp_data->Get<Array<HypData>>();
+            Array<HypData>& array = hypData->Get<Array<HypData>>();
 
-            *out_array = array.Data();
-            *out_size = uint32(array.Size());
+            *outArray = array.Data();
+            *outSize = uint32(array.Size());
 
             return true;
         }
@@ -189,43 +189,43 @@ extern "C"
         return false;
     }
 
-    HYP_EXPORT int8 HypData_SetArray(HypData* hyp_data, const HypClass* hyp_class, HypData* elements, uint32 size)
+    HYP_EXPORT int8 HypData_SetArray(HypData* hypData, const HypClass* hypClass, HypData* elements, uint32 size)
     {
-        if (!hyp_data || !hyp_class || !elements)
+        if (!hypData || !hypClass || !elements)
         {
             return false;
         }
 
-        if (!hyp_class->CanCreateInstance())
+        if (!hypClass->CanCreateInstance())
         {
             return false;
         }
 
-        return hyp_class->CreateInstanceArray(Span<HypData>(elements, elements + size), *hyp_data, /* allow_abstract */ false);
+        return hypClass->CreateInstanceArray(Span<HypData>(elements, elements + size), *hypData, /* allowAbstract */ false);
     }
 
-    HYP_EXPORT int8 HypData_IsString(const HypData* hyp_data)
+    HYP_EXPORT int8 HypData_IsString(const HypData* hypData)
     {
-        if (!hyp_data)
+        if (!hypData)
         {
             return false;
         }
 
-        return hyp_data->Is<String>();
+        return hypData->Is<String>();
     }
 
-    HYP_EXPORT int8 HypData_GetString(const HypData* hyp_data, const char** out_str)
+    HYP_EXPORT int8 HypData_GetString(const HypData* hypData, const char** outStr)
     {
-        if (!hyp_data || !out_str)
+        if (!hypData || !outStr)
         {
             return false;
         }
 
-        if (hyp_data->Is<String>())
+        if (hypData->Is<String>())
         {
-            const String& str = hyp_data->Get<String>();
+            const String& str = hypData->Get<String>();
 
-            *out_str = str.Data();
+            *outStr = str.Data();
 
             return true;
         }
@@ -233,38 +233,38 @@ extern "C"
         return false;
     }
 
-    HYP_EXPORT int8 HypData_SetString(HypData* hyp_data, const char* str)
+    HYP_EXPORT int8 HypData_SetString(HypData* hypData, const char* str)
     {
-        if (!hyp_data || !str)
+        if (!hypData || !str)
         {
             return false;
         }
 
-        *hyp_data = HypData(String(str));
+        *hypData = HypData(String(str));
 
         return true;
     }
 
-    HYP_EXPORT int8 HypData_IsID(const HypData* hyp_data)
+    HYP_EXPORT int8 HypData_IsId(const HypData* hypData)
     {
-        if (!hyp_data)
+        if (!hypData)
         {
             return false;
         }
 
-        return hyp_data->Is<IDBase>();
+        return hypData->Is<ObjIdBase>();
     }
 
-    HYP_EXPORT int8 HypData_GetID(const HypData* hyp_data, IDBase* out_id)
+    HYP_EXPORT int8 HypData_GetId(const HypData* hypData, ObjIdBase* outId)
     {
-        if (!hyp_data || !out_id)
+        if (!hypData || !outId)
         {
             return false;
         }
 
-        if (hyp_data->Is<IDBase>())
+        if (hypData->Is<ObjIdBase>())
         {
-            *out_id = hyp_data->Get<IDBase>();
+            *outId = hypData->Get<ObjIdBase>();
 
             return true;
         }
@@ -272,38 +272,38 @@ extern "C"
         return false;
     }
 
-    HYP_EXPORT int8 HypData_SetID(HypData* hyp_data, IDBase* id)
+    HYP_EXPORT int8 HypData_SetId(HypData* hypData, ObjIdBase* id)
     {
-        if (!hyp_data || !id)
+        if (!hypData || !id)
         {
             return false;
         }
 
-        *hyp_data = HypData(*id);
+        *hypData = HypData(*id);
 
         return true;
     }
 
-    HYP_EXPORT int8 HypData_IsName(const HypData* hyp_data)
+    HYP_EXPORT int8 HypData_IsName(const HypData* hypData)
     {
-        if (!hyp_data)
+        if (!hypData)
         {
             return false;
         }
 
-        return hyp_data->Is<Name>();
+        return hypData->Is<Name>();
     }
 
-    HYP_EXPORT int8 HypData_GetName(const HypData* hyp_data, Name* out_name)
+    HYP_EXPORT int8 HypData_GetName(const HypData* hypData, Name* outName)
     {
-        if (!hyp_data || !out_name)
+        if (!hypData || !outName)
         {
             return false;
         }
 
-        if (hyp_data->Is<Name>())
+        if (hypData->Is<Name>())
         {
-            *out_name = hyp_data->Get<Name>();
+            *outName = hypData->Get<Name>();
 
             return true;
         }
@@ -311,89 +311,89 @@ extern "C"
         return false;
     }
 
-    HYP_EXPORT int8 HypData_SetName(HypData* hyp_data, Name name_value)
+    HYP_EXPORT int8 HypData_SetName(HypData* hypData, Name nameValue)
     {
-        if (!hyp_data)
+        if (!hypData)
         {
             return false;
         }
 
-        *hyp_data = HypData(name_value);
+        *hypData = HypData(nameValue);
 
         return true;
     }
 
-    HYP_EXPORT int8 HypData_GetHypObject(const HypData* hyp_data, dotnet::ObjectReference* out_object_reference)
+    HYP_EXPORT int8 HypData_GetHypObject(const HypData* hypData, dotnet::ObjectReference* outObjectReference)
     {
-        if (!hyp_data || !out_object_reference)
+        if (!hypData || !outObjectReference)
         {
             return false;
         }
 
-        if (hyp_data->IsNull())
+        if (hypData->IsNull())
         {
             HYP_LOG(Object, Error, "Cannot get HypObject from null HypData");
 
             return false;
         }
 
-        const HypClass* hyp_class = GetClass(hyp_data->GetTypeID());
+        const HypClass* hypClass = GetClass(hypData->GetTypeId());
 
-        if (!hyp_class)
+        if (!hypClass)
         {
             return false;
         }
 
-        if (!hyp_class->IsClassType())
+        if (!hypClass->IsClassType())
         {
             return false;
         }
 
-        if (!hyp_data->ToRef().HasValue())
+        if (!hypData->ToRef().HasValue())
         {
             // Null HypData refs still return true - null handling happens on managed side
             return true;
         }
 
-        dotnet::ObjectReference object_reference;
+        dotnet::ObjectReference objectReference;
 
-        if (hyp_class->GetManagedObject(hyp_data->ToRef().GetPointer(), object_reference))
+        if (hypClass->GetManagedObject(hypData->ToRef().GetPointer(), objectReference))
         {
-            *out_object_reference = object_reference;
+            *outObjectReference = objectReference;
 
             return true;
         }
 
-        HYP_LOG(Object, Error, "Failed to get managed object for instance of HypClass {}", hyp_class->GetName());
+        HYP_LOG(Object, Error, "Failed to get managed object for instance of HypClass {}", hypClass->GetName());
 
         return false;
     }
 
-    HYP_EXPORT int8 HypData_SetHypObject(HypData* hyp_data, const HypClass* hyp_class, void* address)
+    HYP_EXPORT int8 HypData_SetHypObject(HypData* hypData, const HypClass* hypClass, void* address)
     {
-        if (!hyp_data || !hyp_class || !address)
+        if (!hypData || !hypClass || !address)
         {
             return false;
         }
 
-        const TypeID type_id = hyp_class->GetTypeID();
+        const TypeId typeId = hypClass->GetTypeId();
 
-        if (hyp_class->IsClassType())
+        if (hypClass->IsClassType())
         {
-            return hyp_class->ToHypData(ByteView(reinterpret_cast<ubyte*>(address), hyp_class->GetSize()), *hyp_data);
+            return hypClass->ToHypData(ByteView(reinterpret_cast<ubyte*>(address), hypClass->GetSize()), *hypData);
         }
 
         return false;
     }
 
-    HYP_EXPORT int8 HypData_GetHypStruct(const HypData* hyp_data, dotnet::ObjectReference* out_object_reference)
+    HYP_EXPORT int8 HypData_GetHypStruct(const HypData* hypData, dotnet::ObjectReference* outObjectReference)
     {
-        if (!hyp_data || !out_object_reference)
+        if (!hypData || !outObjectReference)
         {
             return false;
         }
 
-        ConstAnyRef ref = hyp_data->ToRef();
+        ConstAnyRef ref = hypData->ToRef();
 
         if (!ref.HasValue())
         {
@@ -402,23 +402,23 @@ extern "C"
 
         // @TODO Implement for dynamic struct types
 
-        const HypClass* hyp_class = GetClass(hyp_data->GetTypeID());
+        const HypClass* hypClass = GetClass(hypData->GetTypeId());
 
-        if (!hyp_class)
+        if (!hypClass)
         {
             return false;
         }
 
-        if (!hyp_class->IsStructType())
+        if (!hypClass->IsStructType())
         {
             return false;
         }
 
-        if (RC<dotnet::Class> managed_class = hyp_class->GetManagedClass())
+        if (RC<dotnet::Class> managedClass = hypClass->GetManagedClass())
         {
-            AssertThrow(managed_class->GetMarshalObjectFunction() != nullptr);
+            AssertThrow(managedClass->GetMarshalObjectFunction() != nullptr);
 
-            *out_object_reference = managed_class->GetMarshalObjectFunction()(ref.GetPointer(), uint32(hyp_class->GetSize()));
+            *outObjectReference = managedClass->GetMarshalObjectFunction()(ref.GetPointer(), uint32(hypClass->GetSize()));
 
             return true;
         }
@@ -426,57 +426,57 @@ extern "C"
         return false;
     }
 
-    HYP_EXPORT int8 HypData_SetHypStruct(HypData* hyp_data, const HypClass* hyp_class, uint32 size, void* object_ptr)
+    HYP_EXPORT int8 HypData_SetHypStruct(HypData* hypData, const HypClass* hypClass, uint32 size, void* objectPtr)
     {
-        if (!hyp_data || !hyp_class || !object_ptr)
+        if (!hypData || !hypClass || !objectPtr)
         {
             return false;
         }
 
-        if (!hyp_class->IsStructType())
+        if (!hypClass->IsStructType())
         {
-            HYP_LOG(Object, Error, "HypClass {} is not a struct type", hyp_class->GetName());
+            HYP_LOG(Object, Error, "HypClass {} is not a struct type", hypClass->GetName());
 
             return false;
         }
 
-        if (size != hyp_class->GetSize())
+        if (size != hypClass->GetSize())
         {
             HYP_LOG(Object, Error, "Given a buffer size of {} but HypClass {} has a size of {}",
-                size, hyp_class->GetName(), hyp_class->GetSize());
+                size, hypClass->GetName(), hypClass->GetSize());
 
             return false;
         }
 
-        const HypStruct* hyp_struct = dynamic_cast<const HypStruct*>(hyp_class);
-        AssertThrow(hyp_struct != nullptr);
+        const HypStruct* hypStruct = dynamic_cast<const HypStruct*>(hypClass);
+        AssertThrow(hypStruct != nullptr);
 
-        return hyp_struct->ToHypData(ByteView(reinterpret_cast<ubyte*>(object_ptr), size), *hyp_data);
+        return hypStruct->ToHypData(ByteView(reinterpret_cast<ubyte*>(objectPtr), size), *hypData);
     }
 
-    HYP_EXPORT int8 HypData_IsByteBuffer(const HypData* hyp_data)
+    HYP_EXPORT int8 HypData_IsByteBuffer(const HypData* hypData)
     {
-        if (!hyp_data)
+        if (!hypData)
         {
             return false;
         }
 
-        return hyp_data->Is<ByteBuffer>();
+        return hypData->Is<ByteBuffer>();
     }
 
-    HYP_EXPORT int8 HypData_GetByteBuffer(const HypData* hyp_data, const void** out_ptr, uint32* out_size)
+    HYP_EXPORT int8 HypData_GetByteBuffer(const HypData* hypData, const void** outPtr, uint32* outSize)
     {
-        if (!hyp_data || !out_ptr || !out_size)
+        if (!hypData || !outPtr || !outSize)
         {
             return false;
         }
 
-        if (hyp_data->Is<ByteBuffer>())
+        if (hypData->Is<ByteBuffer>())
         {
-            const ByteBuffer& byte_buffer = hyp_data->Get<ByteBuffer>();
+            const ByteBuffer& byteBuffer = hypData->Get<ByteBuffer>();
 
-            *out_ptr = byte_buffer.Data();
-            *out_size = uint32(byte_buffer.Size());
+            *outPtr = byteBuffer.Data();
+            *outSize = uint32(byteBuffer.Size());
 
             return true;
         }
@@ -484,14 +484,14 @@ extern "C"
         return false;
     }
 
-    HYP_EXPORT int8 HypData_SetByteBuffer(HypData* hyp_data, const void* ptr, uint32 size)
+    HYP_EXPORT int8 HypData_SetByteBuffer(HypData* hypData, const void* ptr, uint32 size)
     {
-        if (!hyp_data || !ptr)
+        if (!hypData || !ptr)
         {
             return false;
         }
 
-        *hyp_data = HypData(ByteBuffer(size, ptr));
+        *hypData = HypData(ByteBuffer(size, ptr));
 
         return true;
     }

@@ -6,11 +6,11 @@
 
 namespace hyperion {
 
-static const float mouse_sensitivity = 1.0f;
-static const float mouse_blending = 0.35f;
-static const float movement_speed = 5.0f;
-static const float movement_speed_2 = movement_speed * 2.0f;
-static const float movement_blending = 0.01f;
+static const float mouseSensitivity = 1.0f;
+static const float mouseBlending = 0.35f;
+static const float movementSpeed = 5.0f;
+static const float movementSpeed2 = movementSpeed * 2.0f;
+static const float movementBlending = 0.01f;
 
 #pragma region FirstPersonCameraInputHandler
 
@@ -58,16 +58,16 @@ bool FirstPersonCameraInputHandler::OnMouseMove_Impl(const MouseEvent& evt)
         return false;
     }
 
-    const Vec2f delta = (evt.position - evt.previous_position) * 150.0f;
+    const Vec2f delta = (evt.position - evt.previousPosition) * 150.0f;
 
-    const Vec3f dir_cross_y = camera->GetDirection().Cross(camera->GetUpVector());
+    const Vec3f dirCrossY = camera->GetDirection().Cross(camera->GetUpVector());
 
     camera->Rotate(camera->GetUpVector(), MathUtil::DegToRad(delta.x));
-    camera->Rotate(dir_cross_y, MathUtil::DegToRad(delta.y));
+    camera->Rotate(dirCrossY, MathUtil::DegToRad(delta.y));
 
     if (camera->GetDirection().y > 0.98f || camera->GetDirection().y < -0.98f)
     {
-        camera->Rotate(dir_cross_y, MathUtil::DegToRad(-delta.y));
+        camera->Rotate(dirCrossY, MathUtil::DegToRad(-delta.y));
     }
 
     return true;
@@ -92,12 +92,12 @@ bool FirstPersonCameraInputHandler::OnClick_Impl(const MouseEvent& evt)
 FirstPersonCameraController::FirstPersonCameraController(FirstPersonCameraControllerMode mode)
     : PerspectiveCameraController(),
       m_mode(mode),
-      m_mouse_x(0.0f),
-      m_mouse_y(0.0f),
-      m_prev_mouse_x(0.0f),
-      m_prev_mouse_y(0.0f)
+      m_mouseX(0.0f),
+      m_mouseY(0.0f),
+      m_prevMouseX(0.0f),
+      m_prevMouseY(0.0f)
 {
-    m_input_handler = CreateObject<FirstPersonCameraInputHandler>(WeakHandleFromThis());
+    m_inputHandler = CreateObject<FirstPersonCameraInputHandler>(WeakHandleFromThis());
 }
 
 void FirstPersonCameraController::OnActivated()
@@ -142,7 +142,7 @@ void FirstPersonCameraController::Init()
 
     CameraController::Init();
 
-    InitObject(m_input_handler);
+    InitObject(m_inputHandler);
 }
 
 void FirstPersonCameraController::UpdateLogic(double dt)
@@ -150,7 +150,7 @@ void FirstPersonCameraController::UpdateLogic(double dt)
     HYP_SCOPE;
 }
 
-void FirstPersonCameraController::RespondToCommand(const CameraCommand& command, GameCounter::TickUnit dt)
+void FirstPersonCameraController::RespondToCommand(const CameraCommand& command, float dt)
 {
     HYP_SCOPE;
 
@@ -158,31 +158,31 @@ void FirstPersonCameraController::RespondToCommand(const CameraCommand& command,
     {
     case CameraCommand::CAMERA_COMMAND_MAG:
     {
-        m_mouse_x = command.mag_data.mouse_x;
-        m_mouse_y = command.mag_data.mouse_y;
+        m_mouseX = command.magData.mouseX;
+        m_mouseY = command.magData.mouseY;
 
         break;
     }
     case CameraCommand::CAMERA_COMMAND_MOVEMENT:
     {
-        const float speed = movement_speed; // * static_cast<float>(dt);
+        const float speed = movementSpeed; // * static_cast<float>(dt);
 
-        switch (command.movement_data.movement_type)
+        switch (command.movementData.movementType)
         {
         case CameraCommand::CAMERA_MOVEMENT_FORWARD:
-            m_move_deltas += m_camera->m_direction; // * speed;
+            m_moveDeltas += m_camera->m_direction; // * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_BACKWARD:
-            m_move_deltas -= m_camera->m_direction; // * speed;
+            m_moveDeltas -= m_camera->m_direction; // * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_LEFT:
-            m_move_deltas -= m_dir_cross_y; // * speed;
+            m_moveDeltas -= m_dirCrossY; // * speed;
 
             break;
         case CameraCommand::CAMERA_MOVEMENT_RIGHT:
-            m_move_deltas += m_dir_cross_y; // * speed;
+            m_moveDeltas += m_dirCrossY; // * speed;
 
             break;
         default:

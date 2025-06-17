@@ -9,7 +9,6 @@
 #include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
 
-#include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/ByteBuffer.hpp>
 
 #include <core/filesystem/FilePath.hpp>
@@ -36,10 +35,10 @@ class FileBufferedReaderSource : public BufferedReaderSource
 {
 public:
     /*! \brief Takes ownership of the file pointer to use for reading */
-    FileBufferedReaderSource(FILE* file, int (*close_func)(FILE*) = nullptr)
+    FileBufferedReaderSource(FILE* file, int (*closeFunc)(FILE*) = nullptr)
         : m_size(0),
           m_file(file),
-          m_close_func(close_func)
+          m_closeFunc(closeFunc)
     {
         if (m_file)
         {
@@ -61,9 +60,9 @@ public:
     {
         if (m_file)
         {
-            if (m_close_func)
+            if (m_closeFunc)
             {
-                m_close_func(m_file);
+                m_closeFunc(m_file);
             }
             else
             {
@@ -96,7 +95,7 @@ public:
 private:
     SizeType m_size;
     FILE* m_file;
-    int (*m_close_func)(FILE*);
+    int (*m_closeFunc)(FILE*);
 };
 
 class MemoryBufferedReaderSource : public BufferedReaderSource
@@ -104,25 +103,25 @@ class MemoryBufferedReaderSource : public BufferedReaderSource
 public:
     MemoryBufferedReaderSource() = default;
 
-    MemoryBufferedReaderSource(ConstByteView byte_view)
-        : m_byte_view(byte_view)
+    MemoryBufferedReaderSource(ConstByteView byteView)
+        : m_byteView(byteView)
     {
     }
 
-    MemoryBufferedReaderSource(const ByteBuffer& byte_buffer)
-        : m_byte_view(byte_buffer.ToByteView())
+    MemoryBufferedReaderSource(const ByteBuffer& byteBuffer)
+        : m_byteView(byteBuffer.ToByteView())
     {
     }
 
     MemoryBufferedReaderSource(const MemoryBufferedReaderSource& other)
-        : m_byte_view(other.m_byte_view)
+        : m_byteView(other.m_byteView)
     {
     }
 
     MemoryBufferedReaderSource(MemoryBufferedReaderSource&& other) noexcept
-        : m_byte_view(std::move(other.m_byte_view))
+        : m_byteView(std::move(other.m_byteView))
     {
-        other.m_byte_view = ConstByteView();
+        other.m_byteView = ConstByteView();
     }
 
     MemoryBufferedReaderSource& operator=(const MemoryBufferedReaderSource& other)
@@ -132,7 +131,7 @@ public:
             return *this;
         }
 
-        m_byte_view = other.m_byte_view;
+        m_byteView = other.m_byteView;
 
         return *this;
     }
@@ -144,8 +143,8 @@ public:
             return *this;
         }
 
-        m_byte_view = std::move(other.m_byte_view);
-        other.m_byte_view = ConstByteView();
+        m_byteView = std::move(other.m_byteView);
+        other.m_byteView = ConstByteView();
 
         return *this;
     }
@@ -154,38 +153,38 @@ public:
 
     virtual bool IsOK() const override
     {
-        return m_byte_view.Size() != 0;
+        return m_byteView.Size() != 0;
     }
 
     virtual SizeType Size() const override
     {
-        return m_byte_view.Size();
+        return m_byteView.Size();
     }
 
     virtual SizeType Read(ubyte* ptr, SizeType count, SizeType offset) override
     {
-        if (offset >= m_byte_view.Size())
+        if (offset >= m_byteView.Size())
         {
             return 0;
         }
 
-        const SizeType num_bytes = MathUtil::Min(count, m_byte_view.Size() - offset);
-        Memory::MemCpy(ptr, m_byte_view.Data() + offset, num_bytes);
-        return num_bytes;
+        const SizeType numBytes = MathUtil::Min(count, m_byteView.Size() - offset);
+        Memory::MemCpy(ptr, m_byteView.Data() + offset, numBytes);
+        return numBytes;
     }
 
 private:
-    ConstByteView m_byte_view;
+    ConstByteView m_byteView;
 };
 
 class BufferedReader
 {
 public:
-    static constexpr SizeType buffer_size = 2048;
-    static constexpr SizeType eof_pos = ~0u;
+    static constexpr SizeType bufferSize = 2048;
+    static constexpr SizeType eofPos = ~0u;
 
     BufferedReader()
-        : m_pos(eof_pos),
+        : m_pos(eofPos),
           m_source(nullptr),
           m_buffer {}
     {
@@ -193,7 +192,7 @@ public:
 
     BufferedReader(BufferedReaderSource* source)
         : m_source(source),
-          m_pos(eof_pos),
+          m_pos(eofPos),
           m_buffer {}
     {
         if (m_source != nullptr && m_source->IsOK())
@@ -211,7 +210,7 @@ public:
           m_pos(other.m_pos),
           m_buffer(std::move(other.m_buffer))
     {
-        other.m_pos = eof_pos;
+        other.m_pos = eofPos;
         other.m_source = nullptr;
     }
 
@@ -229,7 +228,7 @@ public:
         m_pos = other.m_pos;
         m_buffer = std::move(other.m_buffer);
 
-        other.m_pos = eof_pos;
+        other.m_pos = eofPos;
         other.m_source = nullptr;
 
         return *this;
@@ -294,14 +293,14 @@ public:
         m_pos += amount;
     }
 
-    void Seek(unsigned long where_to)
+    void Seek(unsigned long whereTo)
     {
-        m_pos = where_to;
+        m_pos = whereTo;
     }
 
     void Close()
     {
-        m_pos = eof_pos;
+        m_pos = eofPos;
         m_source = nullptr;
     }
 
@@ -315,13 +314,13 @@ public:
         }
 
         const SizeType remaining = m_source->Size() - m_pos;
-        const SizeType to_read = MathUtil::Min(remaining, count);
+        const SizeType toRead = MathUtil::Min(remaining, count);
 
-        ByteBuffer byte_buffer(to_read);
-        m_source->Read(byte_buffer.Data(), to_read, m_pos);
-        m_pos += to_read;
+        ByteBuffer byteBuffer(toRead);
+        m_source->Read(byteBuffer.Data(), toRead, m_pos);
+        m_pos += toRead;
 
-        return byte_buffer;
+        return byteBuffer;
     }
 
     /*! \brief Reads the entirety of the remaining bytes in file and returns ByteBuffer.
@@ -336,11 +335,11 @@ public:
 
         const SizeType remaining = m_source->Size() - m_pos;
 
-        ByteBuffer byte_buffer(remaining);
-        m_source->Read(byte_buffer.Data(), remaining, m_pos);
+        ByteBuffer byteBuffer(remaining);
+        m_source->Read(byteBuffer.Data(), remaining, m_pos);
         m_pos += remaining;
 
-        return byte_buffer;
+        return byteBuffer;
     }
 
     /*! \brief Attempts to read \ref{count} bytes from the file into
@@ -355,12 +354,12 @@ public:
         }
 
         const SizeType remaining = m_source->Size() - m_pos;
-        const SizeType to_read = MathUtil::Min(remaining, count);
+        const SizeType toRead = MathUtil::Min(remaining, count);
 
-        m_source->Read(ptr, to_read, m_pos);
-        m_pos += to_read;
+        m_source->Read(ptr, toRead, m_pos);
+        m_pos += toRead;
 
-        return to_read;
+        return toRead;
     }
 
     /*! \brief Reads the entirety of the remaining bytes in file PER LINE and returns a vector of
@@ -383,19 +382,19 @@ public:
         return lines;
     }
 
-    SizeType Read(ByteBuffer& byte_buffer)
+    SizeType Read(ByteBuffer& byteBuffer)
     {
-        return Read(byte_buffer.Data(), byte_buffer.Size(), [](void* ptr, const ubyte* buffer, SizeType chunk_size)
+        return Read(byteBuffer.Data(), byteBuffer.Size(), [](void* ptr, const ubyte* buffer, SizeType chunkSize)
             {
-                Memory::MemCpy(ptr, buffer, chunk_size);
+                Memory::MemCpy(ptr, buffer, chunkSize);
             });
     }
 
     SizeType Read(void* ptr, SizeType count)
     {
-        return Read(ptr, count, [](void* ptr, const ubyte* buffer, SizeType chunk_size)
+        return Read(ptr, count, [](void* ptr, const ubyte* buffer, SizeType chunkSize)
             {
-                Memory::MemCpy(ptr, buffer, chunk_size);
+                Memory::MemCpy(ptr, buffer, chunkSize);
             });
     }
 
@@ -408,28 +407,28 @@ public:
             return 0;
         }
 
-        SizeType total_read = 0;
+        SizeType totalRead = 0;
 
         while (count)
         {
-            const SizeType chunk_requested = MathUtil::Min(count, buffer_size);
-            const SizeType chunk_returned = Read(chunk_requested);
-            const SizeType offset = total_read;
+            const SizeType chunkRequested = MathUtil::Min(count, bufferSize);
+            const SizeType chunkReturned = Read(chunkRequested);
+            const SizeType offset = totalRead;
 
-            func(static_cast<ubyte*>(ptr) + offset, &m_buffer[0], chunk_returned);
+            func(static_cast<ubyte*>(ptr) + offset, &m_buffer[0], chunkReturned);
 
-            total_read += chunk_returned;
+            totalRead += chunkReturned;
 
-            if (chunk_returned < chunk_requested)
+            if (chunkReturned < chunkRequested)
             {
                 /* File ended */
                 break;
             }
 
-            count -= chunk_returned;
+            count -= chunkReturned;
         }
 
-        return total_read;
+        return totalRead;
     }
 
     /*! \brief Read one instance of the given template type, using sizeof(T).
@@ -456,31 +455,31 @@ public:
         }
 
         bool stop = false;
-        SizeType total_read = 0;
-        SizeType total_processed = 0;
+        SizeType totalRead = 0;
+        SizeType totalProcessed = 0;
 
         if (!buffered)
         { // not buffered, do it in one pass
-            const ByteBuffer all_bytes = ReadBytes();
-            total_read = all_bytes.Size();
+            const ByteBuffer allBytes = ReadBytes();
+            totalRead = allBytes.Size();
 
             String accum;
-            accum.Reserve(buffer_size);
+            accum.Reserve(bufferSize);
 
-            for (SizeType i = 0; i < all_bytes.Size(); i++)
+            for (SizeType i = 0; i < allBytes.Size(); i++)
             {
-                if (all_bytes[i] == '\n')
+                if (allBytes[i] == '\n')
                 {
                     func(accum, &stop);
-                    total_processed += accum.Size() + 1;
+                    totalProcessed += accum.Size() + 1;
 
                     if (stop)
                     {
-                        const SizeType amount_remaining = total_read - total_processed;
+                        const SizeType amountRemaining = totalRead - totalProcessed;
 
-                        if (amount_remaining != 0)
+                        if (amountRemaining != 0)
                         {
-                            Rewind(amount_remaining);
+                            Rewind(amountRemaining);
                         }
 
                         return;
@@ -491,13 +490,13 @@ public:
                     continue;
                 }
 
-                accum.Append(char(all_bytes[i]));
+                accum.Append(char(allBytes[i]));
             }
 
             if (accum.Any())
             {
                 func(accum, &stop);
-                total_processed += accum.Size();
+                totalProcessed += accum.Size();
             }
 
             return;
@@ -511,28 +510,28 @@ public:
         // holding onto the last one (assuming no newline at the end)
         // keep that last line and continue accumulating until a newline is found
         String accum;
-        accum.Reserve(buffer_size);
+        accum.Reserve(bufferSize);
 
-        ByteBuffer byte_buffer;
+        ByteBuffer byteBuffer;
 
-        while ((byte_buffer = ReadBytes(buffer_size)).Any())
+        while ((byteBuffer = ReadBytes(bufferSize)).Any())
         {
-            total_read += byte_buffer.Size();
+            totalRead += byteBuffer.Size();
 
-            for (SizeType i = 0; i < byte_buffer.Size(); i++)
+            for (SizeType i = 0; i < byteBuffer.Size(); i++)
             {
-                if (byte_buffer[i] == '\n')
+                if (byteBuffer[i] == '\n')
                 {
                     func(accum, &stop);
-                    total_processed += accum.Size() + 1;
+                    totalProcessed += accum.Size() + 1;
 
                     if (stop)
                     {
-                        const SizeType amount_remaining = total_read - total_processed;
+                        const SizeType amountRemaining = totalRead - totalProcessed;
 
-                        if (amount_remaining != 0)
+                        if (amountRemaining != 0)
                         {
-                            Rewind(amount_remaining);
+                            Rewind(amountRemaining);
                         }
 
                         return;
@@ -543,14 +542,14 @@ public:
                     continue;
                 }
 
-                accum.Append(char(byte_buffer[i]));
+                accum.Append(char(byteBuffer[i]));
             }
         }
 
         if (accum.Any())
         {
             func(accum, &stop);
-            total_processed += accum.Size();
+            totalProcessed += accum.Size();
         }
     }
 
@@ -570,7 +569,7 @@ private:
     FilePath m_filepath;
     BufferedReaderSource* m_source;
     SizeType m_pos;
-    FixedArray<ubyte, buffer_size> m_buffer;
+    FixedArray<ubyte, bufferSize> m_buffer;
 
     SizeType Read()
     {
@@ -579,7 +578,7 @@ private:
             return 0;
         }
 
-        const SizeType count = m_source->Read(&m_buffer[0], buffer_size, m_pos);
+        const SizeType count = m_source->Read(&m_buffer[0], bufferSize, m_pos);
 
         m_pos += count;
 
@@ -588,7 +587,7 @@ private:
 
     SizeType Read(SizeType sz)
     {
-        AssertThrow(sz <= buffer_size);
+        AssertThrow(sz <= bufferSize);
 
         if (Eof())
         {

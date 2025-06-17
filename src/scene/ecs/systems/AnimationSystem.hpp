@@ -15,14 +15,14 @@ class AnimationSystem : public SystemBase
     HYP_OBJECT_BODY(AnimationSystem);
 
 public:
-    AnimationSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    AnimationSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
     virtual ~AnimationSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
 
     virtual void Process(float delta) override;
 

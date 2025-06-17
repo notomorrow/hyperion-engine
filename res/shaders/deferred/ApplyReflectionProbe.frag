@@ -15,7 +15,6 @@ layout(location = 0) out vec4 color_output;
 #include "../include/gbuffer.inc"
 #include "../include/scene.inc"
 #include "../include/brdf.inc"
-#include "../include/tonemap.inc"
 #include "../include/noise.inc"
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer
@@ -62,7 +61,7 @@ HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;
 #define HYP_DEFERRED_NO_ENV_GRID
 
 #include "../include/env_probe.inc"
-HYP_DESCRIPTOR_SRV(View, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_SSBO(Global, EnvProbesBuffer) readonly buffer EnvProbesBuffer
 {
     EnvProbe env_probes[];

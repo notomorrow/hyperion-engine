@@ -256,10 +256,10 @@ bool BoundingBox::ContainsTriangle(const Triangle& triangle) const
     };
 
     // Get the corners of the bounding box
-    const FixedArray<Vec3f, 8> aabb_corners = GetCorners();
+    const FixedArray<Vec3f, 8> aabbCorners = GetCorners();
 
     // Get the corners of the triangle
-    const FixedArray<Vec3f, 3> triangle_corners = {
+    const FixedArray<Vec3f, 3> triangleCorners = {
         triangle.GetPoint(0).GetPosition(),
         triangle.GetPoint(1).GetPosition(),
         triangle.GetPoint(2).GetPosition()
@@ -267,29 +267,29 @@ bool BoundingBox::ContainsTriangle(const Triangle& triangle) const
 
     for (const Vec3f& axis : axes)
     {
-        float aabb_min = MathUtil::MaxSafeValue<float>();
-        float aabb_max = MathUtil::MinSafeValue<float>();
+        float aabbMin = MathUtil::MaxSafeValue<float>();
+        float aabbMax = MathUtil::MinSafeValue<float>();
 
-        for (const Vec3f& corner : aabb_corners)
+        for (const Vec3f& corner : aabbCorners)
         {
             const float projection = corner.Dot(axis);
 
-            aabb_min = MathUtil::Min(aabb_min, projection);
-            aabb_max = MathUtil::Max(aabb_max, projection);
+            aabbMin = MathUtil::Min(aabbMin, projection);
+            aabbMax = MathUtil::Max(aabbMax, projection);
         }
 
-        float triangle_min = MathUtil::MaxSafeValue<float>();
-        float triangle_max = MathUtil::MinSafeValue<float>();
+        float triangleMin = MathUtil::MaxSafeValue<float>();
+        float triangleMax = MathUtil::MinSafeValue<float>();
 
-        for (const Vec3f& corner : triangle_corners)
+        for (const Vec3f& corner : triangleCorners)
         {
             const float projection = corner.Dot(axis);
 
-            triangle_min = MathUtil::Min(triangle_min, projection);
-            triangle_max = MathUtil::Max(triangle_max, projection);
+            triangleMin = MathUtil::Min(triangleMin, projection);
+            triangleMax = MathUtil::Max(triangleMax, projection);
         }
 
-        if (aabb_max < triangle_min || aabb_min > triangle_max)
+        if (aabbMax < triangleMin || aabbMin > triangleMax)
         {
             return false;
         }

@@ -3,7 +3,7 @@
 #ifndef HYPERION_THREAD_HPP
 #define HYPERION_THREAD_HPP
 
-#include <core/threading/ThreadID.hpp>
+#include <core/threading/ThreadId.hpp>
 
 #include <core/threading/AtomicVar.hpp>
 
@@ -39,8 +39,8 @@ class HYP_API ThreadBase
 public:
     virtual ~ThreadBase();
 
-    /*! \brief Get the ID of this thread. This ID is unique to this thread and is used to identify it. */
-    HYP_FORCE_INLINE const ThreadID& GetID() const
+    /*! \brief Get the Id of this thread. This Id is unique to this thread and is used to identify it. */
+    HYP_FORCE_INLINE const ThreadId& Id() const
     {
         return m_id;
     }
@@ -61,9 +61,9 @@ public:
     virtual Scheduler& GetScheduler() = 0;
 
 protected:
-    ThreadBase(const ThreadID& id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
+    ThreadBase(const ThreadId& id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
 
-    const ThreadID m_id;
+    const ThreadId m_id;
     ThreadPriorityValue m_priority;
     ThreadLocalStorage* m_tls;
 };
@@ -75,7 +75,7 @@ template <class Scheduler, class... Args>
 class Thread : public ThreadBase
 {
 public:
-    Thread(const ThreadID& id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
+    Thread(const ThreadId& id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
     Thread(const Thread& other) = delete;
     Thread& operator=(const Thread& other) = delete;
     Thread(Thread&& other) noexcept = delete;
@@ -89,7 +89,7 @@ public:
 
     HYP_FORCE_INLINE bool IsRunning() const
     {
-        return m_is_running.Get(MemoryOrder::RELAXED);
+        return m_isRunning.Get(MemoryOrder::RELAXED);
     }
 
     /*! \brief Start the thread with the given arguments and run the thread function with them */
@@ -113,18 +113,18 @@ protected:
 
     Scheduler m_scheduler;
 
-    AtomicVar<bool> m_stop_requested;
+    AtomicVar<bool> m_stopRequested;
 
 private:
     std::thread* m_thread;
-    AtomicVar<bool> m_is_running;
+    AtomicVar<bool> m_isRunning;
 };
 
 template <class Scheduler, class... Args>
-Thread<Scheduler, Args...>::Thread(const ThreadID& id, ThreadPriorityValue priority)
+Thread<Scheduler, Args...>::Thread(const ThreadId& id, ThreadPriorityValue priority)
     : ThreadBase(id, priority),
-      m_is_running(false),
-      m_stop_requested(false),
+      m_isRunning(false),
+      m_stopRequested(false),
       m_thread(nullptr)
 {
 }
@@ -152,19 +152,19 @@ bool Thread<Scheduler, Args...>::Start(Args... args)
         return false;
     }
 
-    AssertThrowMsg(!m_is_running.Get(MemoryOrder::RELAXED), "Thread is already running");
+    AssertThrowMsg(!m_isRunning.Get(MemoryOrder::RELAXED), "Thread is already running");
 
-    m_is_running.Set(true, MemoryOrder::RELAXED);
+    m_isRunning.Set(true, MemoryOrder::RELAXED);
 
-    m_thread = new std::thread([this, tuple_args = MakeTuple(args...)](...) -> void
+    m_thread = new std::thread([this, tupleArgs = MakeTuple(args...)](...) -> void
         {
             SetCurrentThreadObject(this);
 
-            m_scheduler.SetOwnerThread(GetID());
+            m_scheduler.SetOwnerThread(Id());
 
-            (*this)((tuple_args.template GetElement<Args>())...);
+            (*this)((tupleArgs.template GetElement<Args>())...);
 
-            m_is_running.Set(false, MemoryOrder::RELAXED);
+            m_isRunning.Set(false, MemoryOrder::RELAXED);
         });
 
     return true;
@@ -173,7 +173,7 @@ bool Thread<Scheduler, Args...>::Start(Args... args)
 template <class Scheduler, class... Args>
 void Thread<Scheduler, Args...>::Stop()
 {
-    m_stop_requested.Set(true, MemoryOrder::RELAXED);
+    m_stopRequested.Set(true, MemoryOrder::RELAXED);
 
     m_scheduler.RequestStop();
 }

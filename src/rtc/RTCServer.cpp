@@ -46,13 +46,13 @@ RTCServer::~RTCServer()
     }
 }
 
-void RTCServer::EnqueueClientRemoval(String client_id)
+void RTCServer::EnqueueClientRemoval(String clientId)
 {
     AssertThrow(m_thread != nullptr && m_thread->IsRunning());
 
-    m_thread->GetScheduler().Enqueue([this, id = std::move(client_id)]() mutable
+    m_thread->GetScheduler().Enqueue([this, id = std::move(clientId)]() mutable
         {
-            Optional<RC<RTCClient>> client = m_client_list.Get(id);
+            Optional<RC<RTCClient>> client = m_clientList.Get(id);
 
             if (!client.HasValue())
             {
@@ -61,7 +61,7 @@ void RTCServer::EnqueueClientRemoval(String client_id)
 
             client.Get()->Disconnect();
 
-            m_client_list.Remove(id);
+            m_clientList.Remove(id);
         },
         TaskEnqueueFlags::FIRE_AND_FORGET);
 }
@@ -86,7 +86,7 @@ void NullRTCServer::Stop()
 RC<RTCClient> NullRTCServer::CreateClient(String id)
 {
     RC<RTCClient> client = MakeRefCountedPtr<NullRTCClient>(id, this);
-    m_client_list.Add(id, client);
+    m_clientList.Add(id, client);
 
     return client;
 }
@@ -96,7 +96,7 @@ void NullRTCServer::SendToSignallingServer(ByteBuffer bytes)
     // Do nothing
 }
 
-void NullRTCServer::SendToClient(String client_id, const ByteBuffer& bytes)
+void NullRTCServer::SendToClient(String clientId, const ByteBuffer& bytes)
 {
     // Do nothing
 }
@@ -146,7 +146,7 @@ void LibDataChannelRTCServer::Start()
                         Optional<RTCServerError>(RTCServerError { error.c_str() }) });
                 });
 
-            m_websocket->onMessage([this](rtc::message_variant data)
+            m_websocket->onMessage([this](rtc::messageVariant data)
                 {
                     if (std::holds_alternative<rtc::binary>(data))
                     {
@@ -164,7 +164,7 @@ void LibDataChannelRTCServer::Start()
                     }
                 });
 
-            const String websocket_url = m_params.address.host + ":"
+            const String websocketUrl = m_params.address.host + ":"
                 + String::ToString(m_params.address.port)
                 + (m_params.address.path.Any()
                         ? m_params.address.path.StartsWith("/")
@@ -172,9 +172,9 @@ void LibDataChannelRTCServer::Start()
                             : "/" + m_params.address.path
                         : "");
 
-            DebugLog(LogType::Debug, "Attempting to connect websocket server to url: %s\n", websocket_url.Data());
+            DebugLog(LogType::Debug, "Attempting to connect websocket server to url: %s\n", websocketUrl.Data());
 
-            m_websocket->open(websocket_url.Data());
+            m_websocket->open(websocketUrl.Data());
         },
         TaskEnqueueFlags::FIRE_AND_FORGET);
 }
@@ -185,7 +185,7 @@ void LibDataChannelRTCServer::Stop()
     {
         m_thread->GetScheduler().Enqueue([this, ws = std::move(m_websocket)](...) mutable
             {
-                for (const auto& client : m_client_list)
+                for (const auto& client : m_clientList)
                 {
                     client.second->Disconnect();
                 }
@@ -209,7 +209,7 @@ void LibDataChannelRTCServer::Stop()
 RC<RTCClient> LibDataChannelRTCServer::CreateClient(String id)
 {
     RC<RTCClient> client = MakeRefCountedPtr<LibDataChannelRTCClient>(id, this);
-    m_client_list.Add(id, client);
+    m_clientList.Add(id, client);
 
     return client;
 }
@@ -226,12 +226,12 @@ void LibDataChannelRTCServer::SendToSignallingServer(ByteBuffer bytes)
         return;
     }
 
-    m_thread->GetScheduler().Enqueue([this, byte_buffer = MakeRefCountedPtr<ByteBuffer>(std::move(bytes))]() mutable
+    m_thread->GetScheduler().Enqueue([this, byteBuffer = MakeRefCountedPtr<ByteBuffer>(std::move(bytes))]() mutable
         {
             rtc::binary bin;
-            bin.resize(byte_buffer->Size());
+            bin.resize(byteBuffer->Size());
 
-            Memory::MemCpy(bin.data(), byte_buffer->Data(), byte_buffer->Size());
+            Memory::MemCpy(bin.data(), byteBuffer->Data(), byteBuffer->Size());
 
             if (!m_websocket->send(std::move(bin)))
             {
@@ -242,11 +242,11 @@ void LibDataChannelRTCServer::SendToSignallingServer(ByteBuffer bytes)
         TaskEnqueueFlags::FIRE_AND_FORGET);
 }
 
-void LibDataChannelRTCServer::SendToClient(String client_id, const ByteBuffer& bytes)
+void LibDataChannelRTCServer::SendToClient(String clientId, const ByteBuffer& bytes)
 {
     AssertThrowMsg(m_thread->IsRunning(), "LibDataChannelRTCServer::SendToClient() called, but server is not running!");
 
-    // if (Optional<RC<RTCClient>> client = m_client_list.Get(client_id)) {
+    // if (Optional<RC<RTCClient>> client = m_clientList.Get(clientId)) {
     //     client.Get()->Send(bytes);
     // }
 }

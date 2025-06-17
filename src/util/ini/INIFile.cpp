@@ -15,14 +15,14 @@ const INIFile::Element INIFile::Element::empty = {};
 
 INIFile::INIFile(const FilePath& path)
     : m_path(path),
-      m_is_valid(false)
+      m_isValid(false)
 {
     Parse();
 }
 
 void INIFile::Parse()
 {
-    m_is_valid = false;
+    m_isValid = false;
 
     if (!m_path.Exists())
     {
@@ -39,7 +39,7 @@ void INIFile::Parse()
         return;
     }
 
-    m_is_valid = true;
+    m_isValid = true;
 
     Array<Pair<String, Section>> sections;
 
@@ -47,50 +47,50 @@ void INIFile::Parse()
 
     for (const auto& line : lines)
     {
-        String line_trimmed = line.TrimmedLeft();
+        String lineTrimmed = line.TrimmedLeft();
 
-        FixedArray<SizeType, 2> comment_indices {
-            line_trimmed.FindFirstIndex(";"),
-            line_trimmed.FindFirstIndex("#")
+        FixedArray<SizeType, 2> commentIndices {
+            lineTrimmed.FindFirstIndex(";"),
+            lineTrimmed.FindFirstIndex("#")
         };
 
-        if (comment_indices[1] < comment_indices[0])
+        if (commentIndices[1] < commentIndices[0])
         {
-            comment_indices[0] = comment_indices[1];
+            commentIndices[0] = commentIndices[1];
         }
 
-        if (comment_indices[0] != String::not_found)
+        if (commentIndices[0] != String::notFound)
         {
-            line_trimmed = line_trimmed.Substr(0, comment_indices[0]);
+            lineTrimmed = lineTrimmed.Substr(0, commentIndices[0]);
         }
 
-        if (line_trimmed.Empty())
+        if (lineTrimmed.Empty())
         {
             continue;
         }
 
         // section block
-        if (line_trimmed.GetChar(0) == '[')
+        if (lineTrimmed.GetChar(0) == '[')
         {
-            String section_name;
+            String sectionName;
 
-            for (SizeType index = 1; index < line_trimmed.Length() && line_trimmed.GetChar(index) != ']'; index++)
+            for (SizeType index = 1; index < lineTrimmed.Length() && lineTrimmed.GetChar(index) != ']'; index++)
             {
-                section_name += line_trimmed.GetChar(index);
+                sectionName += lineTrimmed.GetChar(index);
             }
 
-            if (section_name.Empty())
+            if (sectionName.Empty())
             {
                 HYP_LOG(Core, Warning, "Empty section name in INI");
             }
 
-            sections.PushBack(Pair<String, Section> { std::move(section_name), {} });
+            sections.PushBack(Pair<String, Section> { std::move(sectionName), {} });
 
             continue;
         }
 
         // key, value pair in block
-        auto split = line_trimmed.Split('=');
+        auto split = lineTrimmed.Split('=');
 
         for (auto& part : split)
         {
@@ -99,7 +99,7 @@ void INIFile::Parse()
 
         if (split.Size() < 2)
         {
-            HYP_LOG(Core, Warning, "Line is not in required format (key = value): {}", line_trimmed);
+            HYP_LOG(Core, Warning, "Line is not in required format (key = value): {}", lineTrimmed);
 
             continue;
         }
@@ -117,53 +117,53 @@ void INIFile::Parse()
 
         for (String& item : split[1].Split(','))
         {
-            String item_trimmed = item.Trimmed();
+            String itemTrimmed = item.Trimmed();
 
             Element element;
 
             // read sub-elements
-            int parentheses_depth = 0;
-            String sub_element_name;
+            int parenthesesDepth = 0;
+            String subElementName;
 
-            for (SizeType index = 0; index < item_trimmed.Size(); index++)
+            for (SizeType index = 0; index < itemTrimmed.Size(); index++)
             {
-                if (std::isspace(item_trimmed[index]))
+                if (std::isspace(itemTrimmed[index]) || itemTrimmed[index] == ',')
                 {
-                    if (sub_element_name.Any())
+                    if (subElementName.Any())
                     {
-                        element.sub_elements.PushBack(std::move(sub_element_name));
-                        sub_element_name.Clear();
+                        element.subElements.PushBack(std::move(subElementName));
+                        subElementName.Clear(); // NOLINT
                     }
 
                     continue;
                 }
 
-                if (item_trimmed[index] == '(')
+                if (itemTrimmed[index] == '(')
                 {
-                    ++parentheses_depth;
+                    ++parenthesesDepth;
                 }
-                else if (item_trimmed[index] == ')')
+                else if (itemTrimmed[index] == ')')
                 {
-                    --parentheses_depth;
+                    --parenthesesDepth;
 
-                    if (parentheses_depth == 0 && sub_element_name.Any())
+                    if (parenthesesDepth == 0 && subElementName.Any())
                     {
-                        element.sub_elements.PushBack(std::move(sub_element_name));
-                        sub_element_name.Clear();
+                        element.subElements.PushBack(std::move(subElementName));
+                        subElementName.Clear(); // NOLINT
                     }
                 }
-                else if (parentheses_depth > 0)
+                else if (parenthesesDepth > 0)
                 {
-                    sub_element_name += item_trimmed[index];
+                    subElementName += itemTrimmed[index];
                 }
-                else if (item_trimmed[index] == '=')
+                else if (itemTrimmed[index] == '=')
                 {
                     ++index;
 
                     // Skip spaces
-                    while (index < item_trimmed.Size())
+                    while (index < itemTrimmed.Size())
                     {
-                        if (std::isspace(item_trimmed[index]))
+                        if (std::isspace(itemTrimmed[index]))
                         {
                             ++index;
                         }
@@ -173,32 +173,32 @@ void INIFile::Parse()
                         }
                     }
 
-                    String value_str;
+                    String valueStr;
 
-                    while (index < item_trimmed.Size())
+                    while (index < itemTrimmed.Size())
                     {
-                        value_str += item_trimmed[index];
+                        valueStr += itemTrimmed[index];
 
                         ++index;
                     }
 
-                    if (value_str.Any())
+                    if (valueStr.Any())
                     {
-                        element.value = value_str;
+                        element.value = valueStr;
                     }
                 }
                 else
                 {
-                    element.name += item_trimmed[index];
+                    element.name += itemTrimmed[index];
                 }
             }
 
             value.elements.PushBack(std::move(element));
         }
 
-        auto& last_section = sections.Back();
+        auto& lastSection = sections.Back();
 
-        last_section.second[key] = std::move(value);
+        lastSection.second[key] = std::move(value);
     }
 
     m_sections.Clear();

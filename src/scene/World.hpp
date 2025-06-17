@@ -23,7 +23,7 @@ class WorldGrid;
 struct DetachedScenesContainer
 {
     World* world;
-    HashMap<ThreadID, Handle<Scene>> scenes;
+    HashMap<ThreadId, Handle<Scene>> scenes;
     Mutex mutex;
 
     DetachedScenesContainer(World* world)
@@ -31,25 +31,25 @@ struct DetachedScenesContainer
     {
     }
 
-    const Handle<Scene>& GetDetachedScene(const ThreadID& thread_id)
+    const Handle<Scene>& GetDetachedScene(const ThreadId& threadId)
     {
         Mutex::Guard guard(mutex);
 
-        auto it = scenes.Find(thread_id);
+        auto it = scenes.Find(threadId);
 
         if (it == scenes.End())
         {
-            it = scenes.Insert({ thread_id, CreateSceneForThread(thread_id) }).first;
+            it = scenes.Insert({ threadId, CreateSceneForThread(threadId) }).first;
         }
 
         return it->second;
     }
 
 private:
-    Handle<Scene> CreateSceneForThread(const ThreadID& thread_id)
+    Handle<Scene> CreateSceneForThread(const ThreadId& threadId)
     {
-        Handle<Scene> scene = CreateObject<Scene>(world, thread_id, SceneFlags::DETACHED);
-        scene->SetName(CreateNameFromDynamicString(ANSIString("DetachedSceneForThread_") + *thread_id.GetName()));
+        Handle<Scene> scene = CreateObject<Scene>(world, threadId, SceneFlags::DETACHED);
+        scene->SetName(CreateNameFromDynamicString(ANSIString("DetachedSceneForThread_") + *threadId.GetName()));
 
         InitObject(scene);
 
@@ -72,7 +72,7 @@ public:
 
     HYP_FORCE_INLINE RenderWorld& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     HYP_METHOD()
@@ -81,27 +81,27 @@ public:
     /*! \brief Get the placeholder Scene, used for Entities that are not attached to a Scene.
      *  This version of the function allows the caller to specify the thread the Scene uses for entity management.
      *  If the Scene does not exist for the given thread mask, it will be created.
-     *\param thread_id The thread the Scene should be associated with.
+     *\param threadId The thread the Scene should be associated with.
      * \return The handle for the detached Scene for the given thread.
      */
-    const Handle<Scene>& GetDetachedScene(const ThreadID& thread_id);
+    const Handle<Scene>& GetDetachedScene(const ThreadId& threadId);
 
     HYP_FORCE_INLINE PhysicsWorld& GetPhysicsWorld()
     {
-        return m_physics_world;
+        return m_physicsWorld;
     }
 
     HYP_FORCE_INLINE const PhysicsWorld& GetPhysicsWorld() const
     {
-        return m_physics_world;
+        return m_physicsWorld;
     }
 
-    template <class T, class... Args>
-    HYP_FORCE_INLINE Handle<T> AddSubsystem(Args&&... args)
+    template <class T>
+    HYP_FORCE_INLINE Handle<T> AddSubsystem()
     {
         static_assert(std::is_base_of_v<Subsystem, T>, "T must be a subclass of Subsystem");
 
-        return AddSubsystem(TypeID::ForType<T>(), CreateObject<T>(std::forward<Args>(args)...)).template Cast<T>();
+        return ObjCast<T>(AddSubsystem(TypeId::ForType<T>(), CreateObject<T>()));
     }
 
     template <class T>
@@ -109,34 +109,37 @@ public:
     {
         static_assert(std::is_base_of_v<Subsystem, T>, "T must be a subclass of Subsystem");
 
-        return AddSubsystem(TypeID::ForType<T>(), subsystem).template Cast<T>();
+        return ObjCast<T>(AddSubsystem(TypeId::ForType<T>(), subsystem));
     }
 
-    Handle<Subsystem> AddSubsystem(TypeID type_id, const Handle<Subsystem>& subsystem);
+    Handle<Subsystem> AddSubsystem(TypeId typeId, const Handle<Subsystem>& subsystem);
 
     template <class T>
     HYP_FORCE_INLINE T* GetSubsystem()
     {
         static_assert(std::is_base_of_v<Subsystem, T>, "T must be a subclass of Subsystem");
 
-        return static_cast<T*>(GetSubsystem(TypeID::ForType<T>()));
+        return ObjCast<T>(GetSubsystem(TypeId::ForType<T>()));
     }
 
-    Subsystem* GetSubsystem(TypeID type_id) const;
+    Subsystem* GetSubsystem(TypeId typeId) const;
 
     HYP_METHOD()
     Subsystem* GetSubsystemByName(WeakName name) const;
 
     HYP_METHOD()
+    bool RemoveSubsystem(Subsystem* subsystem);
+
+    HYP_METHOD()
     const Handle<WorldGrid>& GetWorldGrid() const
     {
-        return m_world_grid;
+        return m_worldGrid;
     }
 
     HYP_METHOD()
     HYP_FORCE_INLINE const GameState& GetGameState() const
     {
-        return m_game_state;
+        return m_gameState;
     }
 
     HYP_METHOD()
@@ -154,7 +157,7 @@ public:
     /*! \brief Get the number of Scenes in the World. Must be called on the game thread.
      *  \return The number of Scenes in the World. */
     HYP_METHOD()
-    bool HasScene(ID<Scene> scene_id) const;
+    bool HasScene(ObjId<Scene> sceneId) const;
 
     /*! \brief Find a Scene by its Name property. If no Scene with the given name exists, an empty handle is returned. Must be called on the game thread.
      *  \param name The name of the Scene to find.
@@ -182,7 +185,7 @@ public:
     /*! \brief Perform any necessary game thread specific updates to the World.
      * The main logic loop of the engine happens here. Each Scene in the World is updated,
      * and within each Scene, each Entity, etc. */
-    void Update(GameCounter::TickUnit delta);
+    void Update(float delta);
 
     Delegate<void, World*, GameStateMode, GameStateMode> OnGameStateChange;
 
@@ -192,20 +195,20 @@ public:
 private:
     void Init() override;
 
-    PhysicsWorld m_physics_world;
+    PhysicsWorld m_physicsWorld;
 
-    DetachedScenesContainer m_detached_scenes;
+    DetachedScenesContainer m_detachedScenes;
 
     Array<Handle<Scene>> m_scenes;
     Array<Handle<View>> m_views;
 
     TypeMap<Handle<Subsystem>> m_subsystems;
 
-    Handle<WorldGrid> m_world_grid;
+    Handle<WorldGrid> m_worldGrid;
 
-    GameState m_game_state;
+    GameState m_gameState;
 
-    RenderWorld* m_render_resource;
+    RenderWorld* m_renderResource;
 };
 
 } // namespace hyperion

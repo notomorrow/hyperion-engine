@@ -26,7 +26,7 @@ public:
     const ANSIString& LookupStringForName(Name name) const;
 
 private:
-    HashMap<NameID, Pair<ANSIString, uint32>> m_name_map;
+    HashMap<NameID, Pair<ANSIString, uint32>> m_nameMap;
     mutable Mutex m_mutex;
 };
 
@@ -39,17 +39,17 @@ Name NameRegistry::RegisterName(NameID id, const ANSIString& str, bool lock)
         m_mutex.Lock();
     }
 
-    auto it = m_name_map.Find(id);
+    auto it = m_nameMap.Find(id);
 
-    if (it != m_name_map.End())
+    if (it != m_nameMap.End())
     {
-        Pair<ANSIString, uint32>& string_count_pair = it->second;
+        Pair<ANSIString, uint32>& stringCountPair = it->second;
 
-        ++string_count_pair.second;
+        ++stringCountPair.second;
     }
     else
     {
-        m_name_map.Insert({ id, Pair<ANSIString, uint32> { str, 1 } });
+        m_nameMap.Insert({ id, Pair<ANSIString, uint32> { str, 1 } });
     }
 
     if (lock)
@@ -73,23 +73,23 @@ Name NameRegistry::RegisterUniqueName(const ANSIString& str, bool lock)
 
     while (!inserted)
     {
-        ANSIString str_with_suffix = str;
+        ANSIString strWithSuffix = str;
 
         if (suffix > 0)
         {
-            str_with_suffix = ANSIString(HYP_FORMAT("{}_{}", str, suffix));
+            strWithSuffix = ANSIString(HYP_FORMAT("{}_{}", str, suffix));
         }
 
-        const NameID name_id_with_suffix = NameRegistration::GenerateID(str_with_suffix);
+        const NameID nameIdWithSuffix = NameRegistration::GenerateID(strWithSuffix);
 
-        auto it = m_name_map.Find(name_id_with_suffix);
+        auto it = m_nameMap.Find(nameIdWithSuffix);
 
-        if (it == m_name_map.End())
+        if (it == m_nameMap.End())
         {
-            m_name_map.Insert({ name_id_with_suffix,
-                Pair<ANSIString, uint32> { str_with_suffix, 1 } });
+            m_nameMap.Insert({ nameIdWithSuffix,
+                Pair<ANSIString, uint32> { strWithSuffix, 1 } });
 
-            name = Name(name_id_with_suffix);
+            name = Name(nameIdWithSuffix);
 
             break;
         }
@@ -114,9 +114,9 @@ const ANSIString& NameRegistry::LookupStringForName(Name name) const
 
     Mutex::Guard guard(m_mutex);
 
-    const auto it = m_name_map.Find(name.hash_code);
+    const auto it = m_nameMap.Find(name.hashCode);
 
-    if (it == m_name_map.End())
+    if (it == m_nameMap.End())
     {
         return ANSIString::empty;
     }
@@ -124,14 +124,14 @@ const ANSIString& NameRegistry::LookupStringForName(Name name) const
     return it->second.first;
 }
 
-HYP_API Name RegisterName(NameRegistry* name_registry, NameID id, const ANSIString& str, bool lock)
+HYP_API Name RegisterName(NameRegistry* nameRegistry, NameID id, const ANSIString& str, bool lock)
 {
-    return name_registry->RegisterName(id, str, lock);
+    return nameRegistry->RegisterName(id, str, lock);
 }
 
-HYP_API const ANSIString& LookupStringForName(const NameRegistry* name_registry, Name name)
+HYP_API const ANSIString& LookupStringForName(const NameRegistry* nameRegistry, Name name)
 {
-    return name_registry->LookupStringForName(name);
+    return nameRegistry->LookupStringForName(name);
 }
 
 #pragma endregion NameRegistry
@@ -140,9 +140,9 @@ HYP_API const ANSIString& LookupStringForName(const NameRegistry* name_registry,
 
 NameRegistry* Name::GetRegistry()
 {
-    static NameRegistry name_registry;
+    static NameRegistry nameRegistry;
 
-    return &name_registry;
+    return &nameRegistry;
 }
 
 Name Name::Unique(ANSIStringView prefix)
@@ -159,9 +159,9 @@ const char* Name::LookupString() const
 
 Name CreateNameFromDynamicString(const ANSIString& str)
 {
-    const NameRegistration name_registration = NameRegistration::FromDynamicString(str);
+    const NameRegistration nameRegistration = NameRegistration::FromDynamicString(str);
 
-    return Name(name_registration.id);
+    return Name(nameRegistration.id);
 }
 
 WeakName CreateWeakNameFromDynamicString(const ANSIStringView& str)
@@ -173,8 +173,8 @@ WeakName CreateWeakNameFromDynamicString(const ANSIStringView& str)
 
 NameID NameRegistration::GenerateID(const ANSIStringView& str)
 {
-    const HashCode hash_code = HashCode::GetHashCode(str.Data());
-    const NameID id = hash_code.Value();
+    const HashCode hashCode = HashCode::GetHashCode(str.Data());
+    const NameID id = hashCode.Value();
 
     return id;
 }

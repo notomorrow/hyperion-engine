@@ -4,7 +4,6 @@
 #define HYPERION_ECS_SHADOW_MAP_UPDATER_SYSTEM_HPP
 
 #include <scene/ecs/System.hpp>
-#include <scene/ecs/components/LightComponent.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
@@ -19,11 +18,11 @@ class ShadowMapUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(ShadowMapUpdaterSystem);
 
 public:
-    ShadowMapUpdaterSystem(EntityManager& entity_manager);
+    ShadowMapUpdaterSystem(EntityManager& entityManager);
     virtual ~ShadowMapUpdaterSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 
@@ -32,13 +31,12 @@ private:
     {
         return {
             ComponentDescriptor<ShadowMapComponent, COMPONENT_RW_FLAGS_READ_WRITE> {},
-            ComponentDescriptor<LightComponent, COMPONENT_RW_FLAGS_READ> {},
             ComponentDescriptor<TransformComponent, COMPONENT_RW_FLAGS_READ> {},
             ComponentDescriptor<VisibilityStateComponent, COMPONENT_RW_FLAGS_READ, false> {}
         };
     }
 
-    void AddRenderSubsystemToEnvironment(ShadowMapComponent& shadow_map_component, LightComponent& light_component);
+    // void AddRenderSubsystemToEnvironment(ShadowMapComponent& shadowMapComponent, LightComponent& lightComponent);
 };
 
 } // namespace hyperion

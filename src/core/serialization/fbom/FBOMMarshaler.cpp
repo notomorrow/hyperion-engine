@@ -5,9 +5,9 @@
 
 namespace hyperion::serialization {
 
-FBOMMarshalerRegistrationBase::FBOMMarshalerRegistrationBase(TypeID type_id, ANSIStringView name, UniquePtr<FBOMMarshalerBase>&& marshal)
+FBOMMarshalerRegistrationBase::FBOMMarshalerRegistrationBase(TypeId typeId, ANSIStringView name, UniquePtr<FBOMMarshalerBase>&& marshal)
 {
-    FBOM::GetInstance().RegisterLoader(type_id, name, std::move(marshal));
+    FBOM::GetInstance().RegisterLoader(typeId, name, std::move(marshal));
 }
 
 } // namespace hyperion::serialization

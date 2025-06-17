@@ -32,7 +32,7 @@ float AnimationTrack::GetLength() const
         return 0.0f;
     }
 
-    return m_desc.keyframes.Back().GetTime();
+    return m_desc.keyframes.Back().time;
 }
 
 Keyframe AnimationTrack::GetKeyframe(float time) const
@@ -46,7 +46,7 @@ Keyframe AnimationTrack::GetKeyframe(float time) const
 
     for (int i = 0; i < int(m_desc.keyframes.Size() - 1); i++)
     {
-        if (MathUtil::InRange(time, { m_desc.keyframes[i].GetTime(), m_desc.keyframes[i + 1].GetTime() }))
+        if (MathUtil::InRange(time, { m_desc.keyframes[i].time, m_desc.keyframes[i + 1].time }))
         {
             first = i;
             second = i + 1;
@@ -57,16 +57,16 @@ Keyframe AnimationTrack::GetKeyframe(float time) const
 
     const Keyframe& current = m_desc.keyframes[first];
 
-    Transform transform = current.GetTransform();
+    Transform transform = current.transform;
 
     if (second > first)
     {
         const Keyframe& next = m_desc.keyframes[second];
 
-        const float delta = (time - current.GetTime()) / (next.GetTime() - current.GetTime());
+        const float delta = (time - current.time) / (next.time - current.time);
 
-        transform.GetTranslation().Lerp(next.GetTransform().GetTranslation(), delta);
-        transform.GetRotation().Slerp(next.GetTransform().GetRotation(), delta);
+        transform.translation = transform.translation.Lerp(next.transform.translation, delta);
+        transform.rotation = transform.rotation.Slerp(next.transform.rotation, delta);
         transform.UpdateMatrix();
     }
 
@@ -117,7 +117,7 @@ void Animation::ApplyBlended(float time, float blend)
             continue;
         }
 
-        if (blend <= MathUtil::epsilon_f)
+        if (blend <= MathUtil::epsilonF)
         {
             track->m_bone->ClearPose();
         }

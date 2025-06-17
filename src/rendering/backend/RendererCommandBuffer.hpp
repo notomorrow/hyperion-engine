@@ -6,14 +6,12 @@
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererRenderPass.hpp>
 #include <rendering/backend/RendererSemaphore.hpp>
-#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererGpuBuffer.hpp>
 #include <rendering/backend/Platform.hpp>
 
 #include <core/Defines.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 enum CommandBufferType
 {
     COMMAND_BUFFER_PRIMARY,
@@ -30,20 +28,19 @@ public:
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual void BindVertexBuffer(const GPUBufferBase* buffer) = 0;
-    HYP_API virtual void BindIndexBuffer(const GPUBufferBase* buffer, DatumType datum_type = DatumType::UNSIGNED_INT) = 0;
+    HYP_API virtual void BindVertexBuffer(const GpuBufferBase* buffer) = 0;
+    HYP_API virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) = 0;
 
     HYP_API virtual void DrawIndexed(
-        uint32 num_indices,
-        uint32 num_instances = 1,
-        uint32 instance_index = 0) const = 0;
+        uint32 numIndices,
+        uint32 numInstances = 1,
+        uint32 instanceIndex = 0) const = 0;
 
     HYP_API virtual void DrawIndexedIndirect(
-        const GPUBufferBase* buffer,
-        uint32 buffer_offset) const = 0;
+        const GpuBufferBase* buffer,
+        uint32 bufferOffset) const = 0;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

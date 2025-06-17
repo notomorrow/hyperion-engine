@@ -14,19 +14,19 @@ class FBOMMarshaler<MeshData> : public FBOMObjectMarshalerBase<MeshData>
 public:
     virtual ~FBOMMarshaler() override = default;
 
-    virtual FBOMResult Serialize(const MeshData& in_object, FBOMObject& out) const override
+    virtual FBOMResult Serialize(const MeshData& inObject, FBOMObject& out) const override
     {
         out.SetProperty(
             "Vertices",
-            FBOMSequence(FBOMStruct::Create<Vertex>(), in_object.vertices.Size()),
-            in_object.vertices.ByteSize(),
-            in_object.vertices.Data());
+            FBOMSequence(FBOMStruct::Create<Vertex>(), inObject.vertices.Size()),
+            inObject.vertices.ByteSize(),
+            inObject.vertices.Data());
 
         out.SetProperty(
             "Indices",
-            FBOMSequence(FBOMUInt32(), in_object.indices.Size()),
-            in_object.indices.ByteSize(),
-            in_object.indices.Data());
+            FBOMSequence(FBOMUInt32(), inObject.indices.Size()),
+            inObject.indices.ByteSize(),
+            inObject.indices.Data());
 
         return { FBOMResult::FBOM_OK };
     }
@@ -35,15 +35,15 @@ public:
     {
         Array<Vertex> vertices;
 
-        if (const FBOMData& vertices_property = in.GetProperty("Vertices"))
+        if (const FBOMData& verticesProperty = in.GetProperty("Vertices"))
         {
-            const SizeType num_vertices = vertices_property.NumElements(FBOMStruct::Create<Vertex>());
+            const SizeType numVertices = verticesProperty.NumElements(FBOMStruct::Create<Vertex>());
 
-            if (num_vertices != 0)
+            if (numVertices != 0)
             {
-                vertices.Resize(num_vertices);
+                vertices.Resize(numVertices);
 
-                if (FBOMResult err = vertices_property.ReadElements(FBOMStruct::Create<Vertex>(), num_vertices, vertices.Data()))
+                if (FBOMResult err = verticesProperty.ReadElements(FBOMStruct::Create<Vertex>(), numVertices, vertices.Data()))
                 {
                     return err;
                 }
@@ -56,15 +56,15 @@ public:
 
         Array<uint32> indices;
 
-        if (const FBOMData& indices_property = in.GetProperty("Indices"))
+        if (const FBOMData& indicesProperty = in.GetProperty("Indices"))
         {
-            const SizeType num_indices = indices_property.NumElements(FBOMUInt32());
+            const SizeType numIndices = indicesProperty.NumElements(FBOMUInt32());
 
-            if (num_indices != 0)
+            if (numIndices != 0)
             {
-                indices.Resize(num_indices);
+                indices.Resize(numIndices);
 
-                if (FBOMResult err = indices_property.ReadElements(FBOMUInt32(), num_indices, indices.Data()))
+                if (FBOMResult err = indicesProperty.ReadElements(FBOMUInt32(), numIndices, indices.Data()))
                 {
                     return err;
                 }

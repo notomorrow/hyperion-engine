@@ -36,22 +36,22 @@ class HYP_API UIElementFactoryRegistry
 {
     struct FactoryInstance
     {
-        RC<UIElementFactoryBase> (*make_factory_function)(void);
-        RC<UIElementFactoryBase> factory_instance;
+        Handle<UIElementFactoryBase> (*makeFactoryFunction)(void);
+        Handle<UIElementFactoryBase> factoryInstance;
     };
 
 public:
     static UIElementFactoryRegistry& GetInstance();
 
-    UIElementFactoryBase* GetFactory(TypeID type_id);
-    void RegisterFactory(TypeID type_id, RC<UIElementFactoryBase> (*make_factory_function)(void));
+    UIElementFactoryBase* GetFactory(TypeId typeId);
+    void RegisterFactory(TypeId typeId, Handle<UIElementFactoryBase> (*makeFactoryFunction)(void));
 
 private:
-    TypeMap<FactoryInstance> m_element_factories;
+    TypeMap<FactoryInstance> m_elementFactories;
 };
 
 HYP_CLASS(Abstract)
-class HYP_API UIElementFactoryBase : public EnableRefCountedPtrFromThis<UIElementFactoryBase>
+class HYP_API UIElementFactoryBase : public HypObject<UIElementFactoryBase>
 {
     HYP_OBJECT_BODY(UIElementFactoryBase);
 
@@ -63,7 +63,7 @@ public:
     Handle<UIObject> CreateUIObject(UIObject* parent, const HypData& value, const HypData& context) const;
 
     HYP_METHOD(Scriptable)
-    void UpdateUIObject(UIObject* ui_object, const HypData& value, const HypData& context) const;
+    void UpdateUIObject(UIObject* uiObject, const HypData& value, const HypData& context) const;
 
 protected:
     virtual Handle<UIObject> CreateUIObject_Impl(UIObject* parent, const HypData& value, const HypData& context) const
@@ -71,7 +71,7 @@ protected:
         HYP_PURE_VIRTUAL();
     }
 
-    virtual void UpdateUIObject_Impl(UIObject* ui_object, const HypData& value, const HypData& context) const
+    virtual void UpdateUIObject_Impl(UIObject* uiObject, const HypData& value, const HypData& context) const
     {
         HYP_PURE_VIRTUAL();
     }
@@ -86,14 +86,14 @@ public:
 protected:
     virtual Handle<UIObject> CreateUIObject_Impl(UIObject* parent, const HypData& value, const HypData& context) const override final
     {
-        HYP_MT_CHECK_RW(m_context_data_race_detector);
+        HYP_MT_CHECK_RW(m_contextDataRaceDetector);
 
         m_context = context.ToRef();
         HYP_DEFER({ m_context = AnyRef(); });
 
         Handle<UIObject> result;
 
-        if constexpr (is_hypdata_v<T>)
+        if constexpr (isHypData<T>)
         {
             return GetDerived().Create(parent, value);
         }
@@ -103,27 +103,27 @@ protected:
         }
     }
 
-    virtual void UpdateUIObject_Impl(UIObject* ui_object, const HypData& value, const HypData& context) const override final
+    virtual void UpdateUIObject_Impl(UIObject* uiObject, const HypData& value, const HypData& context) const override final
     {
-        HYP_MT_CHECK_RW(m_context_data_race_detector);
+        HYP_MT_CHECK_RW(m_contextDataRaceDetector);
 
         m_context = context.ToRef();
         HYP_DEFER({ m_context = AnyRef(); });
 
-        if constexpr (is_hypdata_v<T>)
+        if constexpr (isHypData<T>)
         {
-            return GetDerived().Update(ui_object, value);
+            return GetDerived().Update(uiObject, value);
         }
         else
         {
-            return GetDerived().Update(ui_object, value.Get<T>());
+            return GetDerived().Update(uiObject, value.Get<T>());
         }
     }
 
     template <class ContextType>
     const ContextType* GetContext() const
     {
-        HYP_MT_CHECK_READ(m_context_data_race_detector);
+        HYP_MT_CHECK_READ(m_contextDataRaceDetector);
 
         return m_context.TryGet<ContextType>();
     }
@@ -140,13 +140,13 @@ private:
     }
 
     mutable AnyRef m_context;
-    DataRaceDetector m_context_data_race_detector;
+    DataRaceDetector m_contextDataRaceDetector;
 };
 
 class HYP_API UIDataSourceElement
 {
 public:
-    template <class T, typename = std::enable_if_t<!is_hypdata_v<T>>>
+    template <class T, typename = std::enable_if_t<!isHypData<T>>>
     UIDataSourceElement(UUID uuid, T&& value)
         : m_uuid(uuid),
           m_value(HypData(std::forward<T>(value)))
@@ -210,10 +210,10 @@ class HYP_API UIDataSourceBase : public HypObject<UIDataSourceBase>
     HYP_OBJECT_BODY(UIDataSourceBase);
 
 protected:
-    UIDataSourceBase(UIElementFactoryBase* element_factory)
-        : m_element_factory(element_factory)
+    UIDataSourceBase(UIElementFactoryBase* elementFactory)
+        : m_elementFactory(elementFactory)
     {
-        // AssertThrowMsg(element_factory != nullptr, "No element factory registered for the data source; unable to create UIObjects");
+        // AssertThrowMsg(elementFactory != nullptr, "No element factory registered for the data source; unable to create UIObjects");
     }
 
 public:
@@ -225,10 +225,10 @@ public:
 
     HYP_FORCE_INLINE UIElementFactoryBase* GetElementFactory() const
     {
-        return m_element_factory;
+        return m_elementFactory;
     }
 
-    virtual void Push(const UUID& uuid, HypData&& value, const UUID& parent_uuid = UUID::Invalid()) = 0;
+    virtual void Push(const UUID& uuid, HypData&& value, const UUID& parentUuid = UUID::Invalid()) = 0;
     virtual const UIDataSourceElement* Get(const UUID& uuid) const = 0;
     virtual void Set(const UUID& uuid, HypData&& value) = 0;
     virtual void ForceUpdate(const UUID& uuid) = 0;
@@ -236,7 +236,7 @@ public:
     virtual void RemoveAllWithPredicate(ProcRef<bool(UIDataSourceElement*)> predicate) = 0;
 
     virtual Handle<UIObject> CreateUIObject(UIObject* parent, const HypData& value, const HypData& context) const = 0;
-    virtual void UpdateUIObject(UIObject* ui_object, const HypData& value, const HypData& context) const = 0;
+    virtual void UpdateUIObject(UIObject* uiObject, const HypData& value, const HypData& context) const = 0;
 
     virtual UIDataSourceElement* FindWithPredicate(ProcRef<bool(const UIDataSourceElement*)> predicate) = 0;
 
@@ -266,7 +266,7 @@ public:
     Delegate<void, UIDataSourceBase*, UIDataSourceElement*, UIDataSourceElement*> OnElementUpdate;
 
 protected:
-    UIElementFactoryBase* m_element_factory;
+    UIElementFactoryBase* m_elementFactory;
 };
 
 HYP_CLASS()
@@ -290,22 +290,22 @@ public:
 
     template <class T>
     UIDataSource(TypeWrapper<T>)
-        : UIDataSourceBase(UIElementFactoryRegistry::GetInstance().GetFactory(TypeID::ForType<T>())),
-          m_element_type_id(TypeID::ForType<T>())
+        : UIDataSourceBase(UIElementFactoryRegistry::GetInstance().GetFactory(TypeId::ForType<T>())),
+          m_elementTypeId(TypeId::ForType<T>())
     {
     }
 
     template <class T, class CreateUIObjectFunction, class UpdateUIObjectFunction>
-    UIDataSource(TypeWrapper<T>, CreateUIObjectFunction&& create_ui_object, UpdateUIObjectFunction&& update_ui_object)
-        : UIDataSourceBase(UIElementFactoryRegistry::GetInstance().GetFactory(TypeID::ForType<T>())),
-          m_element_type_id(TypeID::ForType<T>()),
-          m_create_ui_object_proc([func = std::forward<CreateUIObjectFunction>(create_ui_object)](UIObject* parent, const HypData& value, const HypData& context) mutable
+    UIDataSource(TypeWrapper<T>, CreateUIObjectFunction&& createUiObject, UpdateUIObjectFunction&& updateUiObject)
+        : UIDataSourceBase(UIElementFactoryRegistry::GetInstance().GetFactory(TypeId::ForType<T>())),
+          m_elementTypeId(TypeId::ForType<T>()),
+          m_createUiObjectProc([func = std::forward<CreateUIObjectFunction>(createUiObject)](UIObject* parent, const HypData& value, const HypData& context) mutable
               {
                   return func(parent, value.Get<T>(), context);
               }),
-          m_update_ui_object_proc([func = std::forward<UpdateUIObjectFunction>(update_ui_object)](UIObject* ui_object, const HypData& value, const HypData& context) mutable
+          m_updateUiObjectProc([func = std::forward<UpdateUIObjectFunction>(updateUiObject)](UIObject* uiObject, const HypData& value, const HypData& context) mutable
               {
-                  func(ui_object, value.Get<T>(), context);
+                  func(uiObject, value.Get<T>(), context);
               })
     {
     }
@@ -316,18 +316,18 @@ public:
     UIDataSource& operator=(UIDataSource&& other) noexcept = delete;
     virtual ~UIDataSource() override = default;
 
-    virtual void Push(const UUID& uuid, HypData&& value, const UUID& parent_uuid) override
+    virtual void Push(const UUID& uuid, HypData&& value, const UUID& parentUuid) override
     {
         if (value.IsNull())
         {
             return;
         }
 
-        if (value.GetTypeID() != m_element_type_id)
+        if (value.GetTypeId() != m_elementTypeId)
         {
-            HYP_FAIL("Cannot add element with TypeID %u to UIDataSource - expected TypeID %u",
-                value.GetTypeID().Value(),
-                m_element_type_id.Value());
+            HYP_FAIL("Cannot add element with TypeId %u to UIDataSource - expected TypeId %u",
+                value.GetTypeId().Value(),
+                m_elementTypeId.Value());
         }
 
         // AssertThrowMsg(value.Is<T>(), "Cannot add object not of type %s to data source", TypeName<T>().Data())
@@ -342,17 +342,17 @@ public:
             HYP_FAIL("Element with UUID %s already exists in the data source", uuid.ToString().Data());
         }
 
-        typename Forest<UIDataSourceElement>::ConstIterator parent_it = m_values.End();
+        typename Forest<UIDataSourceElement>::ConstIterator parentIt = m_values.End();
 
-        if (parent_uuid != UUID::Invalid())
+        if (parentUuid != UUID::Invalid())
         {
-            parent_it = m_values.FindIf([&parent_uuid](const auto& item)
+            parentIt = m_values.FindIf([&parentUuid](const auto& item)
                 {
-                    return item.GetUUID() == parent_uuid;
+                    return item.GetUUID() == parentUuid;
                 });
         }
 
-        it = m_values.Add(UIDataSourceElement(uuid, std::move(value)), parent_it);
+        it = m_values.Add(UIDataSourceElement(uuid, std::move(value)), parentIt);
 
         OnElementAdd(this, &*it, GetParentElementFromIterator(it));
         OnChange(this);
@@ -375,11 +375,11 @@ public:
 
     virtual void Set(const UUID& uuid, HypData&& value) override
     {
-        if (value.GetTypeID() != m_element_type_id)
+        if (value.GetTypeId() != m_elementTypeId)
         {
-            HYP_FAIL("Cannot set element with TypeID %u in UIDataSource - expected TypeID %u",
-                value.GetTypeID().Value(),
-                m_element_type_id.Value());
+            HYP_FAIL("Cannot set element with TypeId %u in UIDataSource - expected TypeId %u",
+                value.GetTypeId().Value(),
+                m_elementTypeId.Value());
         }
 
         auto it = m_values.FindIf([&uuid](const auto& item)
@@ -487,14 +487,14 @@ public:
 
     virtual Handle<UIObject> CreateUIObject(UIObject* parent, const HypData& value, const HypData& context) const override
     {
-        if (m_create_ui_object_proc.IsValid())
+        if (m_createUiObjectProc.IsValid())
         {
-            return m_create_ui_object_proc(parent, value, context);
+            return m_createUiObjectProc(parent, value, context);
         }
 
-        if (m_element_factory)
+        if (m_elementFactory)
         {
-            return m_element_factory->CreateUIObject(parent, value, context);
+            return m_elementFactory->CreateUIObject(parent, value, context);
         }
         else
         {
@@ -504,17 +504,17 @@ public:
         return nullptr;
     }
 
-    virtual void UpdateUIObject(UIObject* ui_object, const HypData& value, const HypData& context) const override
+    virtual void UpdateUIObject(UIObject* uiObject, const HypData& value, const HypData& context) const override
     {
-        if (m_update_ui_object_proc.IsValid())
+        if (m_updateUiObjectProc.IsValid())
         {
-            m_update_ui_object_proc(ui_object, value, context);
+            m_updateUiObjectProc(uiObject, value, context);
             return;
         }
 
-        if (m_element_factory)
+        if (m_elementFactory)
         {
-            m_element_factory->UpdateUIObject(ui_object, value, context);
+            m_elementFactory->UpdateUIObject(uiObject, value, context);
         }
         else
         {
@@ -557,34 +557,34 @@ public:
     }
 
     /*! \internal */
-    void SetElementTypeIDAndFactory(TypeID element_type_id, UIElementFactoryBase* element_factory)
+    void SetElementTypeIdAndFactory(TypeId elementTypeId, UIElementFactoryBase* elementFactory)
     {
-        m_element_factory = element_factory;
-        m_element_type_id = element_type_id;
+        m_elementFactory = elementFactory;
+        m_elementTypeId = elementTypeId;
     }
 
 private:
-    TypeID m_element_type_id;
+    TypeId m_elementTypeId;
     Forest<UIDataSourceElement> m_values;
 
-    Proc<Handle<UIObject>(UIObject*, const HypData&, const HypData&)> m_create_ui_object_proc;
-    Proc<void(UIObject*, const HypData&, const HypData&)> m_update_ui_object_proc;
+    Proc<Handle<UIObject>(UIObject*, const HypData&, const HypData&)> m_createUiObjectProc;
+    Proc<void(UIObject*, const HypData&, const HypData&)> m_updateUiObjectProc;
 };
 
 struct HYP_API UIElementFactoryRegistrationBase
 {
 protected:
-    RC<UIElementFactoryBase> (*m_make_factory_function)(void);
+    Handle<UIElementFactoryBase> (*m_makeFactoryFunction)(void);
 
-    UIElementFactoryRegistrationBase(TypeID type_id, RC<UIElementFactoryBase> (*make_factory_function)(void));
+    UIElementFactoryRegistrationBase(TypeId typeId, Handle<UIElementFactoryBase> (*makeFactoryFunction)(void));
     ~UIElementFactoryRegistrationBase();
 };
 
 template <class T>
 struct UIElementFactoryRegistration : public UIElementFactoryRegistrationBase
 {
-    UIElementFactoryRegistration(RC<UIElementFactoryBase> (*make_factory_function)(void))
-        : UIElementFactoryRegistrationBase(TypeID::ForType<T>(), make_factory_function)
+    UIElementFactoryRegistration(Handle<UIElementFactoryBase> (*makeFactoryFunction)(void))
+        : UIElementFactoryRegistrationBase(TypeId::ForType<T>(), makeFactoryFunction)
     {
     }
 };
@@ -594,8 +594,8 @@ struct UIElementFactoryRegistration : public UIElementFactoryRegistrationBase
 #define HYP_DEFINE_UI_ELEMENT_FACTORY(T, Factory)                                                \
     static ::hyperion::UIElementFactoryRegistration<T> HYP_UNIQUE_NAME(UIElementFactory) \
     {                                                                                            \
-        []() -> RC<UIElementFactoryBase> {                                                       \
-            return MakeRefCountedPtr<Factory>();                                                 \
+        []() -> Handle<UIElementFactoryBase> {                                                       \
+            return CreateObject<Factory>();                                                 \
         }                                                                                        \
     }
 

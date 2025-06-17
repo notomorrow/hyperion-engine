@@ -142,30 +142,30 @@
 #define HYP_GET_CONST_ARG(arg) \
     (arg)()
 
-#define HYP_DEF_STRUCT_COMPARE_EQL(hyp_class)                 \
-    bool operator==(const hyp_class& other) const             \
+#define HYP_DEF_STRUCT_COMPARE_EQL(T)                         \
+    bool operator==(const T& other) const                     \
     {                                                         \
         return std::memcmp(this, &other, sizeof(*this)) == 0; \
     }                                                         \
-    bool operator!=(const hyp_class& other) const             \
+    bool operator!=(const T& other) const                     \
     {                                                         \
         return std::memcmp(this, &other, sizeof(*this)) != 0; \
     }
 
-#define HYP_DEF_STRUCT_COMPARE_LT(hyp_class)                 \
-    bool operator<(const hyp_class& other) const             \
+#define HYP_DEF_STRUCT_COMPARE_LT(T)                         \
+    bool operator<(const T& other) const                     \
     {                                                        \
         return std::memcmp(this, &other, sizeof(*this)) < 0; \
     }
 
-#define HYP_DEF_STL_HASH(hyp_class)                   \
-    template <>                                       \
-    struct std::hash<hyp_class>                       \
-    {                                                 \
-        size_t operator()(const hyp_class& obj) const \
-        {                                             \
-            return obj.GetHashCode().Value();         \
-        }                                             \
+#define HYP_DEF_STL_HASH(T)                   \
+    template <>                               \
+    struct std::hash<T>                       \
+    {                                         \
+        size_t operator()(const T& obj) const \
+        {                                     \
+            return obj.GetHashCode().Value(); \
+        }                                     \
     }
 
 #define HYP_DEF_STL_ITERATOR(container)        \
@@ -278,8 +278,8 @@
         return _end;                                    \
     }
 
-#define HYP_ENABLE_IF(cond, return_type) \
-    typename std::enable_if_t<cond, return_type>
+#define HYP_ENABLE_IF(cond, returnType) \
+    typename std::enable_if_t<cond, returnType>
 
 #define HYP_LIKELY(cond) cond
 #define HYP_UNLIKELY(cond) cond
@@ -324,15 +324,9 @@
 
 #if HYP_ENABLE_BREAKPOINTS
 #if (defined(HYP_ARM) && HYP_ARM) || HYP_GCC
-#define HYP_BREAKPOINT    \
-    {                     \
-        __builtin_trap(); \
-    }
+#define HYP_BREAKPOINT __builtin_debugtrap()
 #else
-#define HYP_BREAKPOINT                 \
-    {                                  \
-        __asm__ volatile("int $0x03"); \
-    }
+#define HYP_BREAKPOINT __asm__ volatile("int $0x03")
 #endif
 #endif
 #elif defined(HYP_MSVC) && HYP_MSVC
@@ -384,7 +378,7 @@
 #define HYP_ENABLE_THREAD_ID
 
 #ifndef HYP_ENABLE_THREAD_ID
-#error "Thread ID is required"
+#error "Thread Id is required"
 #endif
 
 #if defined(HYP_ENABLE_THREAD_ID) && defined(HYP_DEBUG_MODE)

@@ -9,8 +9,6 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanAsyncCompute final : public AsyncComputeBase
 {
 public:
@@ -19,7 +17,7 @@ public:
 
     virtual bool IsSupported() const override
     {
-        return m_is_supported;
+        return m_isSupported;
     }
 
     HYP_API RendererResult Create();
@@ -29,13 +27,12 @@ public:
     HYP_API RendererResult WaitForFence(VulkanFrame* frame);
 
 private:
-    FixedArray<VulkanCommandBufferRef, max_frames_in_flight> m_command_buffers;
-    FixedArray<VulkanFenceRef, max_frames_in_flight> m_fences;
-    bool m_is_supported;
-    bool m_is_fallback;
+    FixedArray<VulkanCommandBufferRef, maxFramesInFlight> m_commandBuffers;
+    FixedArray<VulkanFenceRef, maxFramesInFlight> m_fences;
+    bool m_isSupported;
+    bool m_isFallback;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

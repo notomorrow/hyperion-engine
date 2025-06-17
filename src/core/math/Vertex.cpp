@@ -13,11 +13,11 @@ Array<VertexAttribute::Type> VertexAttributeSet::BuildAttributes() const
 
     for (SizeType i = 0; i < VertexAttribute::mapping.Size(); i++)
     {
-        const uint64 iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i); // NOLINT(readability-static-accessed-through-instance)
+        const uint64 iterFlagMask = VertexAttribute::mapping.OrdinalToEnum(i); // NOLINT(readability-static-accessed-through-instance)
 
-        if (flag_mask & iter_flag_mask)
+        if (flagMask & iterFlagMask)
         {
-            attributes.PushBack(VertexAttribute::Type(iter_flag_mask));
+            attributes.PushBack(VertexAttribute::Type(iterFlagMask));
         }
     }
 
@@ -30,11 +30,11 @@ SizeType VertexAttributeSet::CalculateVertexSize() const
 
     for (SizeType i = 0; i < VertexAttribute::mapping.Size(); i++)
     {
-        const uint64 iter_flag_mask = VertexAttribute::mapping.OrdinalToEnum(i); // NOLINT(readability-static-accessed-through-instance)
+        const uint64 iterFlagMask = VertexAttribute::mapping.OrdinalToEnum(i); // NOLINT(readability-static-accessed-through-instance)
 
-        if (flag_mask & iter_flag_mask)
+        if (flagMask & iterFlagMask)
         {
-            size += VertexAttribute::mapping[VertexAttribute::Type(iter_flag_mask)].size;
+            size += VertexAttribute::mapping[VertexAttribute::Type(iterFlagMask)].size;
         }
     }
 
@@ -65,10 +65,10 @@ bool Vertex::operator==(const Vertex& other) const
         && texcoord0 == other.texcoord0
         && texcoord1 == other.texcoord1
         && tangent == other.tangent
-        && num_indices == other.num_indices
-        && num_weights == other.num_weights
-        && bone_weights == other.bone_weights
-        && bone_indices == other.bone_indices;
+        && numIndices == other.numIndices
+        && numWeights == other.numWeights
+        && boneWeights == other.boneWeights
+        && boneIndices == other.boneIndices;
 }
 
 bool Vertex::operator!=(const Vertex& other) const
@@ -78,10 +78,10 @@ bool Vertex::operator!=(const Vertex& other) const
         || texcoord0 != other.texcoord0
         || texcoord1 != other.texcoord1
         || tangent != other.tangent
-        || num_indices != other.num_indices
-        || num_weights != other.num_weights
-        || bone_weights != other.bone_weights
-        || bone_indices != other.bone_indices;
+        || numIndices != other.numIndices
+        || numWeights != other.numWeights
+        || boneWeights != other.boneWeights
+        || boneIndices != other.boneIndices;
 }
 
 #pragma endregion Vertex

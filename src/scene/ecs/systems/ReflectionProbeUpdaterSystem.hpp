@@ -9,7 +9,6 @@
 #include <scene/ecs/components/TransformComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/MeshComponent.hpp>
-#include <scene/ecs/components/LightComponent.hpp>
 #include <scene/ecs/components/LightmapVolumeComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
 
@@ -21,11 +20,11 @@ class ReflectionProbeUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(ReflectionProbeUpdaterSystem);
 
 public:
-    ReflectionProbeUpdaterSystem(EntityManager& entity_manager);
+    ReflectionProbeUpdaterSystem(EntityManager& entityManager);
     virtual ~ReflectionProbeUpdaterSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 
@@ -39,7 +38,6 @@ private:
 
             // calling EnvProbe::Update() calls View::Update() which reads the following of entities.
             ComponentDescriptor<MeshComponent, COMPONENT_RW_FLAGS_READ, false> {},
-            ComponentDescriptor<LightComponent, COMPONENT_RW_FLAGS_READ, false> {},
             ComponentDescriptor<VisibilityStateComponent, COMPONENT_RW_FLAGS_READ, false> {},
             ComponentDescriptor<LightmapVolumeComponent, COMPONENT_RW_FLAGS_READ, false> {},
 
@@ -50,7 +48,7 @@ private:
         };
     }
 
-    void AddRenderSubsystemToEnvironment(ReflectionProbeComponent& reflection_probe_component);
+    void AddRenderSubsystemToEnvironment(ReflectionProbeComponent& reflectionProbeComponent);
 };
 
 } // namespace hyperion

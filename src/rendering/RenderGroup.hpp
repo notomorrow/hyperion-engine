@@ -3,11 +3,14 @@
 #ifndef HYPERION_RENDER_GROUP_HPP
 #define HYPERION_RENDER_GROUP_HPP
 
+#include <core/object/ObjId.hpp>
+#include <core/object/HypObject.hpp>
+
 #include <core/utilities/EnumFlags.hpp>
-#include <core/ID.hpp>
+
 #include <core/Defines.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/CullData.hpp>
 #include <rendering/DrawCall.hpp>
@@ -19,20 +22,17 @@
 
 namespace hyperion {
 
-using renderer::FaceCullMode;
-using renderer::FillMode;
-using renderer::Topology;
-
 class Engine;
 class Mesh;
 class Material;
 class Skeleton;
 class Entity;
 class RenderCollector;
-class GPUBufferHolderBase;
+class GpuBufferHolderBase;
 class IndirectRenderer;
 class RenderView;
 struct RenderSetup;
+struct PassData;
 
 enum class RenderGroupFlags : uint32
 {
@@ -58,23 +58,18 @@ public:
 
     RenderGroup(
         const ShaderRef& shader,
-        const RenderableAttributeSet& renderable_attributes,
+        const RenderableAttributeSet& renderableAttributes,
         EnumFlags<RenderGroupFlags> flags = RenderGroupFlags::DEFAULT);
 
     RenderGroup(
         const ShaderRef& shader,
-        const RenderableAttributeSet& renderable_attributes,
-        const DescriptorTableRef& descriptor_table,
+        const RenderableAttributeSet& renderableAttributes,
+        const DescriptorTableRef& descriptorTable,
         EnumFlags<RenderGroupFlags> flags = RenderGroupFlags::DEFAULT);
 
     RenderGroup(const RenderGroup& other) = delete;
     RenderGroup& operator=(const RenderGroup& other) = delete;
     ~RenderGroup();
-
-    HYP_FORCE_INLINE const GraphicsPipelineRef& GetPipeline() const
-    {
-        return m_pipeline;
-    }
 
     HYP_FORCE_INLINE const ShaderRef& GetShader() const
     {
@@ -85,77 +80,39 @@ public:
 
     HYP_FORCE_INLINE const RenderableAttributeSet& GetRenderableAttributes() const
     {
-        return m_renderable_attributes;
+        return m_renderableAttributes;
     }
 
-    void SetRenderableAttributes(const RenderableAttributeSet& renderable_attributes);
-
-    void AddFramebuffer(const FramebufferRef& framebuffer);
-    void RemoveFramebuffer(const FramebufferRef& framebuffer);
-
-    HYP_FORCE_INLINE const Array<FramebufferRef>& GetFramebuffers() const
-    {
-        return m_fbos;
-    }
-
-    HYP_FORCE_INLINE const DrawCallCollection& GetDrawState() const
-    {
-        return m_draw_state;
-    }
+    void SetRenderableAttributes(const RenderableAttributeSet& renderableAttributes);
 
     HYP_FORCE_INLINE EnumFlags<RenderGroupFlags> GetFlags() const
     {
         return m_flags;
     }
 
-    void ClearProxies();
+    void SetDrawCallCollectionImpl(IDrawCallCollectionImpl* drawCallCollectionImpl);
 
-    void AddRenderProxy(RenderProxy* render_proxy);
-
-    bool RemoveRenderProxy(ID<Entity> entity);
-    typename FlatMap<ID<Entity>, const RenderProxy*>::Iterator RemoveRenderProxy(typename FlatMap<ID<Entity>, const RenderProxy*>::ConstIterator iterator);
-
-    HYP_FORCE_INLINE const FlatMap<ID<Entity>, const RenderProxy*>& GetRenderProxies() const
+    HYP_FORCE_INLINE IDrawCallCollectionImpl* GetDrawCallCollectionImpl() const
     {
-        return m_render_proxies;
+        return m_drawCallCollectionImpl;
     }
 
-    void SetDrawCallCollectionImpl(IDrawCallCollectionImpl* draw_call_collection_impl);
-
-    /*! \brief Collect drawable objects, then run the culling compute shader
-     *  to mark any occluded objects as such. Must be used with indirect rendering.
-     *  If nullptr is provided for cull_data, no occlusion culling will happen.
-     */
-    void CollectDrawCalls();
-
-    /*! \brief Render objects using direct rendering, no occlusion culling is provided. */
-    void PerformRendering(FrameBase* frame, const RenderSetup& render_setup, ParallelRenderingState* parallel_rendering_state);
-
-    void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& render_setup);
+    void PerformRendering(FrameBase* frame, const RenderSetup& renderSetup, const DrawCallCollection& drawCallCollection, IndirectRenderer* indirectRenderer, ParallelRenderingState* parallelRenderingState);
 
 private:
     void Init() override;
     
-    void CreateIndirectRenderer();
-    void CreateGraphicsPipeline();
+    GraphicsPipelineRef CreateGraphicsPipeline(PassData* pd) const;
 
     EnumFlags<RenderGroupFlags> m_flags;
 
-    GraphicsPipelineRef m_pipeline;
-
     ShaderRef m_shader;
 
-    DescriptorTableRef m_descriptor_table;
+    DescriptorTableRef m_descriptorTable;
 
-    RenderableAttributeSet m_renderable_attributes;
+    RenderableAttributeSet m_renderableAttributes;
 
-    UniquePtr<IndirectRenderer> m_indirect_renderer;
-
-    Array<FramebufferRef> m_fbos;
-
-    DrawCallCollection m_draw_state;
-
-    FlatMap<ID<Entity>, const RenderProxy*> m_render_proxies;
+    IDrawCallCollectionImpl* m_drawCallCollectionImpl;
 };
 
 } // namespace hyperion

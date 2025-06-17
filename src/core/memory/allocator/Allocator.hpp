@@ -39,8 +39,8 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
     struct Allocation
     {
         // These fields are used for natvis views only.
-        static constexpr AllocationType allocation_type = AT_DYNAMIC;
-        static constexpr bool is_dynamic = true;
+        static constexpr AllocationType allocationType = AT_DYNAMIC;
+        static constexpr bool isDynamic = true;
 
 #ifdef HYP_DEBUG_MODE
         union
@@ -56,9 +56,11 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
             {
                 uintptr_t buffer;
                 SizeType capacity;
-            } dynamic_allocation;
+            } dynamicAllocation;
 
-            char data_buffer[1];
+            union {
+                char dataBuffer[1];
+            } storage;
         };
 #else
         T* buffer;
@@ -166,13 +168,13 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
             Memory::MemSet(buffer + offset, 0, count * sizeof(T));
         }
 
-        void DestructInRange(SizeType start_index, SizeType last_index)
+        void DestructInRange(SizeType startIndex, SizeType lastIndex)
         {
-            AssertDebug(last_index <= capacity);
+            AssertDebug(lastIndex <= capacity);
 
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                for (SizeType i = last_index; i > start_index;)
+                for (SizeType i = lastIndex; i > startIndex;)
                 {
                     buffer[--i].~T();
                 }
@@ -200,6 +202,21 @@ struct DynamicAllocator : Allocator<DynamicAllocator>
             return capacity;
         }
     };
+
+    void* Allocate(SizeType size, SizeType alignment)
+    {
+        AssertDebug(size > 0);
+        AssertDebug(alignment > 0);
+
+        return HYP_ALLOC_ALIGNED(size, alignment);
+    }
+
+    void Free(void* ptr)
+    {
+        AssertDebug(ptr != nullptr);
+
+        HYP_FREE_ALIGNED(ptr);
+    }
 };
 
 template <SizeType Count, class DynamicAllocatorType = DynamicAllocator>
@@ -208,43 +225,43 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
     template <class T>
     struct Allocation : AllocationBase<Allocation<T>>
     {
-        static constexpr AllocationType allocation_type = AT_INLINE;
+        static constexpr AllocationType allocationType = AT_INLINE;
         static constexpr SizeType capacity = Count;
 
         HYP_FORCE_INLINE T* GetBuffer()
         {
-            return is_dynamic ? dynamic_allocation.GetBuffer() : storage.GetPointer();
+            return isDynamic ? dynamicAllocation.GetBuffer() : storage.GetPointer();
         }
 
         HYP_FORCE_INLINE const T* GetBuffer() const
         {
-            return is_dynamic ? dynamic_allocation.GetBuffer() : storage.GetPointer();
+            return isDynamic ? dynamicAllocation.GetBuffer() : storage.GetPointer();
         }
 
         HYP_FORCE_INLINE bool IsDynamic() const
         {
-            return is_dynamic;
+            return isDynamic;
         }
 
         HYP_FORCE_INLINE SizeType GetCapacity() const
         {
-            return is_dynamic ? dynamic_allocation.GetCapacity() : Count;
+            return isDynamic ? dynamicAllocation.GetCapacity() : Count;
         }
 
         HYP_FORCE_INLINE void Allocate(SizeType count)
         {
-            AssertDebug(!is_dynamic);
+            AssertDebug(!isDynamic);
 
             if (count <= Count)
             {
                 return;
             }
 
-            dynamic_allocation = typename DynamicAllocatorType::template Allocation<T>();
-            dynamic_allocation.SetToInitialState();
-            dynamic_allocation.Allocate(count);
+            dynamicAllocation = typename DynamicAllocatorType::template Allocation<T>();
+            dynamicAllocation.SetToInitialState();
+            dynamicAllocation.Allocate(count);
 
-            is_dynamic = true;
+            isDynamic = true;
 
 #ifdef HYP_DEBUG_MODE
             AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
@@ -253,9 +270,9 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         HYP_FORCE_INLINE void Free()
         {
-            if (is_dynamic)
+            if (isDynamic)
             {
-                dynamic_allocation.Free();
+                dynamicAllocation.Free();
             }
 
 #ifdef HYP_DEBUG_MODE
@@ -267,13 +284,13 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         void TakeOwnership(T* begin, T* end)
         {
-            AssertDebug(!is_dynamic);
+            AssertDebug(!isDynamic);
 
-            dynamic_allocation = typename DynamicAllocatorType::template Allocation<T>();
-            dynamic_allocation.SetToInitialState();
-            dynamic_allocation.TakeOwnership(begin, end);
+            dynamicAllocation = typename DynamicAllocatorType::template Allocation<T>();
+            dynamicAllocation.SetToInitialState();
+            dynamicAllocation.TakeOwnership(begin, end);
 
-            is_dynamic = true;
+            isDynamic = true;
 
 #ifdef HYP_DEBUG_MODE
             AssertDebugMsg(magic == 0xBADA55u, "stomp detected!");
@@ -286,9 +303,9 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
             const SizeType count = end - begin;
 
-            if (is_dynamic)
+            if (isDynamic)
             {
-                dynamic_allocation.InitFromRangeCopy(begin, end, offset);
+                dynamicAllocation.InitFromRangeCopy(begin, end, offset);
             }
             else
             {
@@ -319,9 +336,9 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
             const SizeType count = end - begin;
 
-            if (is_dynamic)
+            if (isDynamic)
             {
-                dynamic_allocation.InitFromRangeMove(begin, end, offset);
+                dynamicAllocation.InitFromRangeMove(begin, end, offset);
             }
             else
             {
@@ -348,9 +365,9 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         void InitZeroed(SizeType count, SizeType offset = 0)
         {
-            if (is_dynamic)
+            if (isDynamic)
             {
-                dynamic_allocation.InitZeroed(count, offset);
+                dynamicAllocation.InitZeroed(count, offset);
             }
             else
             {
@@ -364,20 +381,20 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 #endif
         }
 
-        void DestructInRange(SizeType start_index, SizeType last_index)
+        void DestructInRange(SizeType startIndex, SizeType lastIndex)
         {
-            if (is_dynamic)
+            if (isDynamic)
             {
-                dynamic_allocation.DestructInRange(start_index, last_index);
+                dynamicAllocation.DestructInRange(startIndex, lastIndex);
             }
             else
             {
-                AssertDebug(last_index <= Count);
-                AssertDebug(start_index <= last_index);
+                AssertDebug(lastIndex <= Count);
+                AssertDebug(startIndex <= lastIndex);
 
                 if constexpr (!std::is_trivially_destructible_v<T>)
                 {
-                    for (SizeType i = last_index; i > start_index;)
+                    for (SizeType i = lastIndex; i > startIndex;)
                     {
                         storage.GetPointer()[--i].~T();
                     }
@@ -391,7 +408,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
 
         void SetToInitialState()
         {
-            is_dynamic = false;
+            isDynamic = false;
             storage = ValueStorageArray<T, Count, alignof(T)>();
 
 #ifdef HYP_DEBUG_MODE
@@ -403,7 +420,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
         {
             ValueStorageArray<T, Count, alignof(T)> storage;
 
-            typename DynamicAllocatorType::template Allocation<T> dynamic_allocation;
+            typename DynamicAllocatorType::template Allocation<T> dynamicAllocation;
 
 #ifdef HYP_DEBUG_MODE
             T* buffer; // for natvis
@@ -414,7 +431,7 @@ struct InlineAllocator : Allocator<InlineAllocator<Count, DynamicAllocatorType>>
         // for debugging - to ensure we haven't written past the structure; // to ensure that the union is not empty and has a valid size
         uint32 magic : 31 = 0xBADA55u;
 #endif
-        bool is_dynamic : 1 = false;
+        bool isDynamic : 1 = false;
     };
 };
 
@@ -424,7 +441,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
     template <class T>
     struct Allocation : AllocationBase<Allocation<T>>
     {
-        static constexpr AllocationType allocation_type = AT_INLINE;
+        static constexpr AllocationType allocationType = AT_INLINE;
         static constexpr SizeType capacity = Count;
 
         HYP_FORCE_INLINE T* GetBuffer()
@@ -552,14 +569,14 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
 #endif
         }
 
-        void DestructInRange(SizeType start_index, SizeType last_index)
+        void DestructInRange(SizeType startIndex, SizeType lastIndex)
         {
-            AssertDebug(last_index <= Count);
-            AssertDebug(start_index <= last_index);
+            AssertDebug(lastIndex <= Count);
+            AssertDebug(startIndex <= lastIndex);
 
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                for (SizeType i = last_index; i > start_index;)
+                for (SizeType i = lastIndex; i > startIndex;)
                 {
                     storage.GetPointer()[--i].~T();
                 }
@@ -589,7 +606,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
             {
                 uintptr_t buffer;
                 SizeType capacity;
-            } dynamic_allocation;
+            } dynamicAllocation;
 
             T* buffer; // for natvis
 #endif
@@ -598,7 +615,7 @@ struct FixedAllocator : Allocator<FixedAllocator<Count>>
 #ifdef HYP_DEBUG_MODE
         // for debugging - to ensure we haven't written past the structure; // to ensure that the union is not empty and has a valid size
         uint32 magic : 31 = 0xBADA55u;
-        bool is_dynamic : 1 = false;
+        bool isDynamic : 1 = false;
 #endif
     };
 };

@@ -32,8 +32,6 @@
 namespace hyperion {
 
 class Engine;
-
-namespace renderer {
 namespace platform {
 
 template <PlatformType PLATFORM>
@@ -47,7 +45,7 @@ struct RenderObjectHeader;
 class HYP_API RenderObjectContainerBase
 {
 protected:
-    RenderObjectContainerBase(ANSIStringView render_object_type_name);
+    RenderObjectContainerBase(ANSIStringView renderObjectTypeName);
 
 public:
     virtual ~RenderObjectContainerBase() = default;
@@ -78,19 +76,19 @@ struct RenderObjectHeaderBase
 {
     RenderObjectContainerBase* container;
     uint32 index;
-    AtomicVar<uint16> ref_count_strong;
-    AtomicVar<uint16> ref_count_weak;
+    AtomicVar<uint16> refCountStrong;
+    AtomicVar<uint16> refCountWeak;
     void (*deleter)(RenderObjectHeaderBase*);
 
 #ifdef HYP_DEBUG_MODE
-    Name debug_name;
+    Name debugName;
 #endif
 
     RenderObjectHeaderBase()
         : container(nullptr),
           index(~0u),
-          ref_count_strong(0),
-          ref_count_weak(0),
+          refCountStrong(0),
+          refCountWeak(0),
           deleter(nullptr)
     {
     }
@@ -98,8 +96,8 @@ struct RenderObjectHeaderBase
     ~RenderObjectHeaderBase()
     {
         AssertDebug(!HasValue());
-        AssertDebug(ref_count_strong.Get(MemoryOrder::ACQUIRE) == 0);
-        AssertDebug(ref_count_weak.Get(MemoryOrder::ACQUIRE) == 0);
+        AssertDebug(refCountStrong.Get(MemoryOrder::ACQUIRE) == 0);
+        AssertDebug(refCountWeak.Get(MemoryOrder::ACQUIRE) == 0);
     }
 
     HYP_FORCE_INLINE bool HasValue() const
@@ -109,17 +107,17 @@ struct RenderObjectHeaderBase
 
     HYP_FORCE_INLINE uint16 GetRefCountStrong() const
     {
-        return ref_count_strong.Get(MemoryOrder::ACQUIRE);
+        return refCountStrong.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE uint16 GetRefCountWeak() const
     {
-        return ref_count_weak.Get(MemoryOrder::ACQUIRE);
+        return refCountWeak.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE void IncRefStrong()
     {
-        ref_count_strong.Increment(1, MemoryOrder::RELEASE);
+        refCountStrong.Increment(1, MemoryOrder::RELEASE);
     }
 
     uint32 DecRefStrong()
@@ -129,13 +127,15 @@ struct RenderObjectHeaderBase
 
         uint16 count;
 
-        if ((count = ref_count_strong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        if ((count = refCountStrong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
-            ref_count_weak.Increment(1, MemoryOrder::RELEASE);
+            refCountWeak.Increment(1, MemoryOrder::RELEASE);
+
+            AssertDebug(deleter != nullptr);
 
             deleter(this);
 
-            if (ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
+            if (refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
             {
                 container->ReleaseIndex(index);
                 index = ~0u;
@@ -147,7 +147,7 @@ struct RenderObjectHeaderBase
 
     HYP_FORCE_INLINE void IncRefWeak()
     {
-        ref_count_weak.Increment(1, MemoryOrder::RELEASE);
+        refCountWeak.Increment(1, MemoryOrder::RELEASE);
     }
 
     uint32 DecRefWeak()
@@ -157,9 +157,9 @@ struct RenderObjectHeaderBase
 
         uint16 count;
 
-        if ((count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        if ((count = refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
-            if (ref_count_strong.Get(MemoryOrder::ACQUIRE) == 0)
+            if (refCountStrong.Get(MemoryOrder::ACQUIRE) == 0)
             {
                 container->ReleaseIndex(index);
                 index = ~0u;
@@ -172,7 +172,7 @@ struct RenderObjectHeaderBase
     HYP_FORCE_INLINE Name GetDebugName() const
     {
 #ifdef HYP_DEBUG_MODE
-        return debug_name;
+        return debugName;
 #else
         return HYP_NAME("<invalid>");
 #endif
@@ -181,7 +181,7 @@ struct RenderObjectHeaderBase
     HYP_FORCE_INLINE void SetDebugName(Name name)
     {
 #ifdef HYP_DEBUG_MODE
-        debug_name = name;
+        debugName = name;
 #endif
     }
 };
@@ -875,96 +875,83 @@ public:
     }
 };
 
-} // namespace renderer
+#define DEF_RENDER_PLATFORM_OBJECT_(_platform, T, _max_size)                 \
+                                                                             \
+    using T##_##_platform = platform::T<Platform::_platform>;                \
+    using T##_##_platform = T##_##_platform;                                 \
+    using T##Ref##_##_platform = RenderObjectHandle_Strong<T##_##_platform>; \
+    using T##WeakRef##_##_platform = RenderObjectHandle_Weak<T##_##_platform>;
 
-#define DEF_RENDER_PLATFORM_OBJECT_(_platform, T, _max_size)                                     \
-    namespace renderer {                                                                         \
-    using T##_##_platform = platform::T<renderer::Platform::_platform>;                          \
-    }                                                                                            \
-    using T##_##_platform = renderer::T##_##_platform;                                           \
-    using T##Ref##_##_platform = renderer::RenderObjectHandle_Strong<renderer::T##_##_platform>; \
-    using T##WeakRef##_##_platform = renderer::RenderObjectHandle_Weak<renderer::T##_##_platform>;
+#define DEF_RENDER_PLATFORM_OBJECT2_(_platform, T, _max_size)          \
+                                                                       \
+    class _platform##T;                                                \
+    using _platform##T = _platform##T;                                 \
+    using _platform##T##Ref = RenderObjectHandle_Strong<_platform##T>; \
+    using _platform##T##WeakRef = RenderObjectHandle_Weak<_platform##T>;
 
-#define DEF_RENDER_PLATFORM_OBJECT2_(_platform, T, _max_size)                              \
-    namespace renderer {                                                                   \
-    class _platform##T;                                                                    \
-    }                                                                                      \
-    using _platform##T = renderer::_platform##T;                                           \
-    using _platform##T##Ref = renderer::RenderObjectHandle_Strong<renderer::_platform##T>; \
-    using _platform##T##WeakRef = renderer::RenderObjectHandle_Weak<renderer::_platform##T>;
+#define DEF_RENDER_PLATFORM_OBJECT_NAMED_(_platform, name, T, _max_size)           \
+                                                                                   \
+    using name##_##_platform = platform::T<Platform::_platform>;                   \
+    using name##_##_platform = name##_##_platform;                                 \
+    using name##Ref##_##_platform = RenderObjectHandle_Strong<name##_##_platform>; \
+    using name##WeakRef##_##_platform = RenderObjectHandle_Weak<name##_##_platform>;
 
-#define DEF_RENDER_PLATFORM_OBJECT_NAMED_(_platform, name, T, _max_size)                               \
-    namespace renderer {                                                                               \
-    using name##_##_platform = platform::T<renderer::Platform::_platform>;                             \
-    }                                                                                                  \
-    using name##_##_platform = renderer::name##_##_platform;                                           \
-    using name##Ref##_##_platform = renderer::RenderObjectHandle_Strong<renderer::name##_##_platform>; \
-    using name##WeakRef##_##_platform = renderer::RenderObjectHandle_Weak<renderer::name##_##_platform>;
-
-#define DEF_RENDER_PLATFORM_OBJECT(T, _max_size)                        \
-    namespace renderer {                                                \
-    namespace platform {                                                \
-    template <PlatformType PLATFORM>                                    \
-    class T;                                                            \
-    }                                                                   \
-    }                                                                   \
-    DEF_RENDER_PLATFORM_OBJECT_(VULKAN, T, _max_size)                   \
-    DEF_RENDER_PLATFORM_OBJECT_(WEBGPU, T, _max_size)                   \
-    namespace renderer {                                                \
-    namespace platform {                                                \
-    template <PlatformType _platform>                                   \
-    using T##Ref = renderer::RenderObjectHandle_Strong<T<_platform>>;   \
-    template <PlatformType _platform>                                   \
-    using T##WeakRef = renderer::RenderObjectHandle_Weak<T<_platform>>; \
-    }                                                                   \
+#define DEF_RENDER_PLATFORM_OBJECT(T, _max_size)              \
+                                                              \
+    namespace platform {                                      \
+    template <PlatformType PLATFORM>                          \
+    class T;                                                  \
+    }                                                         \
+    DEF_RENDER_PLATFORM_OBJECT_(VULKAN, T, _max_size)         \
+    DEF_RENDER_PLATFORM_OBJECT_(WEBGPU, T, _max_size)         \
+                                                              \
+    namespace platform {                                      \
+    template <PlatformType _platform>                         \
+    using T##Ref = RenderObjectHandle_Strong<T<_platform>>;   \
+    template <PlatformType _platform>                         \
+    using T##WeakRef = RenderObjectHandle_Weak<T<_platform>>; \
     }
 
-#define DEF_RENDER_PLATFORM_OBJECT_WITH_BASE_CLASS(T, _max_size)        \
-    namespace renderer {                                                \
-    class T##Base;                                                      \
-    namespace platform {                                                \
-    template <PlatformType PLATFORM>                                    \
-    class T;                                                            \
-    }                                                                   \
-    }                                                                   \
-    DEF_RENDER_PLATFORM_OBJECT_(VULKAN, T, _max_size)                   \
-    DEF_RENDER_PLATFORM_OBJECT_(WEBGPU, T, _max_size)                   \
-    namespace renderer {                                                \
-    namespace platform {                                                \
-    template <PlatformType _platform>                                   \
-    using T##Ref = renderer::RenderObjectHandle_Strong<T<_platform>>;   \
-    template <PlatformType _platform>                                   \
-    using T##WeakRef = renderer::RenderObjectHandle_Weak<T<_platform>>; \
-    }                                                                   \
-    }                                                                   \
-    using renderer::T##Base;
+#define DEF_RENDER_PLATFORM_OBJECT_WITH_BASE_CLASS(T, _max_size) \
+                                                                 \
+    class T##Base;                                               \
+    namespace platform {                                         \
+    template <PlatformType PLATFORM>                             \
+    class T;                                                     \
+    }                                                            \
+    DEF_RENDER_PLATFORM_OBJECT_(VULKAN, T, _max_size)            \
+    DEF_RENDER_PLATFORM_OBJECT_(WEBGPU, T, _max_size)            \
+                                                                 \
+    namespace platform {                                         \
+    template <PlatformType _platform>                            \
+    using T##Ref = RenderObjectHandle_Strong<T<_platform>>;      \
+    template <PlatformType _platform>                            \
+    using T##WeakRef = RenderObjectHandle_Weak<T<_platform>>;    \
+    }
 
 #define DEF_RENDER_PLATFORM_OBJECT_WITH_BASE_CLASS2(T, _max_size) \
-    namespace renderer {                                          \
+                                                                  \
     class T##Base;                                                \
-    }                                                             \
     DEF_RENDER_PLATFORM_OBJECT2_(Vulkan, T, _max_size)            \
     DEF_RENDER_PLATFORM_OBJECT2_(WGPU, T, _max_size)              \
-    using renderer::T##Base;                                      \
-    using T##Ref = renderer::RenderObjectHandle_Strong<T##Base>;  \
-    using T##WeakRef = renderer::RenderObjectHandle_Weak<T##Base>;
+                                                                  \
+    using T##Ref = RenderObjectHandle_Strong<T##Base>;            \
+    using T##WeakRef = RenderObjectHandle_Weak<T##Base>;
 
-#define DEF_RENDER_PLATFORM_OBJECT_NAMED(name, T, _max_size)               \
-    namespace renderer {                                                   \
-    namespace platform {                                                   \
-    template <PlatformType PLATFORM>                                       \
-    class T;                                                               \
-    }                                                                      \
-    }                                                                      \
-    DEF_RENDER_PLATFORM_OBJECT_NAMED_(VULKAN, name, T, _max_size)          \
-    DEF_RENDER_PLATFORM_OBJECT_NAMED_(WEBGPU, name, T, _max_size)          \
-    namespace renderer {                                                   \
-    namespace platform {                                                   \
-    template <PlatformType _platform>                                      \
-    using name##Ref = renderer::RenderObjectHandle_Strong<T<_platform>>;   \
-    template <PlatformType _platform>                                      \
-    using name##WeakRef = renderer::RenderObjectHandle_Weak<T<_platform>>; \
-    }                                                                      \
+#define DEF_RENDER_PLATFORM_OBJECT_NAMED(name, T, _max_size)      \
+                                                                  \
+    namespace platform {                                          \
+    template <PlatformType PLATFORM>                              \
+    class T;                                                      \
+    }                                                             \
+    DEF_RENDER_PLATFORM_OBJECT_NAMED_(VULKAN, name, T, _max_size) \
+    DEF_RENDER_PLATFORM_OBJECT_NAMED_(WEBGPU, name, T, _max_size) \
+                                                                  \
+    namespace platform {                                          \
+    template <PlatformType _platform>                             \
+    using name##Ref = RenderObjectHandle_Strong<T<_platform>>;    \
+    template <PlatformType _platform>                             \
+    using name##WeakRef = RenderObjectHandle_Weak<T<_platform>>;  \
     }
 
 /*! \brief Enqueues a render object to be created with the given args on the render thread, or creates it immediately if already on the render thread.
@@ -976,7 +963,7 @@ template <class RefType, class... Args>
 static inline void DeferCreate(RefType ref, Args&&... args)
 {
     struct RENDER_COMMAND(CreateRenderObject)
-        : renderer::RenderCommand
+        : RenderCommand
     {
         using ArgsTuple = Tuple<std::decay_t<Args>...>;
 
@@ -1030,15 +1017,15 @@ static inline void DeferCreate(RefType ref, Args&&... args)
 #undef DEF_CURRENT_PLATFORM_RENDER_OBJECT
 
 template <class T, class... Args>
-static inline renderer::RenderObjectHandle_Strong<T> MakeRenderObject(Args&&... args)
+static inline RenderObjectHandle_Strong<T> MakeRenderObject(Args&&... args)
 {
-    return renderer::RenderObjects::Make<T>(std::forward<Args>(args)...);
+    return RenderObjects::Make<T>(std::forward<Args>(args)...);
 }
 
 struct DeletionQueueBase
 {
-    TypeID type_id;
-    AtomicVar<int32> num_items { 0 };
+    TypeId typeId;
+    AtomicVar<int32> numItems { 0 };
     std::mutex mtx;
 
     virtual ~DeletionQueueBase() = default;
@@ -1047,28 +1034,28 @@ struct DeletionQueueBase
     virtual int32 RemoveAllNow(bool force = false) = 0;
 };
 
-template <renderer::PlatformType PLATFORM>
+template <PlatformType PLATFORM>
 struct RenderObjectDeleter
 {
-    static constexpr uint32 initial_cycles_remaining = max_frames_in_flight + 1;
-    static constexpr SizeType max_queues = 63;
+    static constexpr uint32 initialCyclesRemaining = maxFramesInFlight + 1;
+    static constexpr SizeType maxQueues = 63;
 
-    static FixedArray<DeletionQueueBase*, max_queues + 1> s_queues;
-    static AtomicVar<uint16> s_queue_index;
+    static FixedArray<DeletionQueueBase*, maxQueues + 1> s_queues;
+    static AtomicVar<uint16> s_queueIndex;
 
     template <class T>
     struct DeletionQueue : DeletionQueueBase
     {
         using Base = DeletionQueueBase;
 
-        static constexpr uint32 initial_cycles_remaining = max_frames_in_flight + 1;
+        static constexpr uint32 initialCyclesRemaining = maxFramesInFlight + 1;
 
-        Array<Pair<renderer::RenderObjectHandle_Strong<T>, uint8>> items;
-        Queue<renderer::RenderObjectHandle_Strong<T>> to_delete;
+        Array<Pair<RenderObjectHandle_Strong<T>, uint8>> items;
+        Queue<RenderObjectHandle_Strong<T>> toDelete;
 
         DeletionQueue()
         {
-            Base::type_id = TypeID::ForType<T>();
+            Base::typeId = TypeId::ForType<T>();
         }
 
         DeletionQueue(const DeletionQueue& other) = delete;
@@ -1077,9 +1064,9 @@ struct RenderObjectDeleter
 
         virtual void Iterate() override
         {
-            Threads::AssertOnThread(g_render_thread);
+            Threads::AssertOnThread(g_renderThread);
 
-            if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0)
+            if (Base::numItems.Get(MemoryOrder::ACQUIRE) <= 0)
             {
                 return;
             }
@@ -1090,11 +1077,11 @@ struct RenderObjectDeleter
             {
                 if (--it->second == 0)
                 {
-                    to_delete.Push(std::move(it->first));
+                    toDelete.Push(std::move(it->first));
 
                     it = items.Erase(it);
 
-                    Base::num_items.Decrement(1, MemoryOrder::RELEASE);
+                    Base::numItems.Decrement(1, MemoryOrder::RELEASE);
                 }
                 else
                 {
@@ -1104,9 +1091,9 @@ struct RenderObjectDeleter
 
             Base::mtx.unlock();
 
-            while (to_delete.Any())
+            while (toDelete.Any())
             {
-                auto object = to_delete.Pop();
+                auto object = toDelete.Pop();
 
                 if (object.GetRefCount() > 1)
                 {
@@ -1119,33 +1106,33 @@ struct RenderObjectDeleter
 
         virtual int32 RemoveAllNow(bool force) override
         {
-            Threads::AssertOnThread(g_render_thread);
+            Threads::AssertOnThread(g_renderThread);
 
-            if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0)
+            if (Base::numItems.Get(MemoryOrder::ACQUIRE) <= 0)
             {
                 return 0;
             }
 
-            int32 num_deleted_objects = 0;
+            int32 numDeletedObjects = 0;
 
             Base::mtx.lock();
 
             for (auto it = items.Begin(); it != items.End();)
             {
-                to_delete.Push(std::move(it->first));
+                toDelete.Push(std::move(it->first));
 
                 it = items.Erase(it);
 
-                Base::num_items.Decrement(1, MemoryOrder::RELEASE);
+                Base::numItems.Decrement(1, MemoryOrder::RELEASE);
 
-                ++num_deleted_objects;
+                ++numDeletedObjects;
             }
 
             Base::mtx.unlock();
 
-            while (to_delete.Any())
+            while (toDelete.Any())
             {
-                auto object = to_delete.Pop();
+                auto object = toDelete.Pop();
 
                 if (object.GetRefCount() > 1)
                 {
@@ -1155,16 +1142,16 @@ struct RenderObjectDeleter
                 HYPERION_ASSERT_RESULT(object->Destroy());
             }
 
-            return num_deleted_objects;
+            return numDeletedObjects;
         }
 
-        void Push(renderer::RenderObjectHandle_Strong<T>&& handle)
+        void Push(RenderObjectHandle_Strong<T>&& handle)
         {
             std::lock_guard guard(Base::mtx);
 
-            items.PushBack({ std::move(handle), initial_cycles_remaining });
+            items.PushBack({ std::move(handle), initialCyclesRemaining });
 
-            Base::num_items.Increment(1, MemoryOrder::RELEASE);
+            Base::numItems.Increment(1, MemoryOrder::RELEASE);
         }
     };
 
@@ -1176,9 +1163,9 @@ struct RenderObjectDeleter
 
         DeletionQueueInstance()
         {
-            index = s_queue_index.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+            index = s_queueIndex.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
-            AssertThrowMsg(index < max_queues, "Maximum number of deletion queues added");
+            AssertThrowMsg(index < maxQueues, "Maximum number of deletion queues added");
 
             s_queues[index] = &queue;
         }
@@ -1207,25 +1194,25 @@ struct RenderObjectDeleter
     static void RemoveAllNow(bool force = false);
 };
 
-template <renderer::PlatformType PLATFORM>
-FixedArray<DeletionQueueBase*, RenderObjectDeleter<PLATFORM>::max_queues + 1> RenderObjectDeleter<PLATFORM>::s_queues = {};
+template <PlatformType PLATFORM>
+FixedArray<DeletionQueueBase*, RenderObjectDeleter<PLATFORM>::maxQueues + 1> RenderObjectDeleter<PLATFORM>::s_queues = {};
 
-template <renderer::PlatformType PLATFORM>
-AtomicVar<uint16> RenderObjectDeleter<PLATFORM>::s_queue_index = { 0 };
+template <PlatformType PLATFORM>
+AtomicVar<uint16> RenderObjectDeleter<PLATFORM>::s_queueIndex = { 0 };
 
 template <class T>
-static inline void SafeRelease(renderer::RenderObjectHandle_Strong<T>&& handle)
+static inline void SafeRelease(RenderObjectHandle_Strong<T>&& handle)
 {
     if (!handle.IsValid())
     {
         return;
     }
 
-    RenderObjectDeleter<renderer::Platform::current>::template GetQueue<typename T::Type>().Push(std::move(handle));
+    RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(handle));
 }
 
 template <class T, class AllocatorType>
-static inline void SafeRelease(Array<renderer::RenderObjectHandle_Strong<T>, AllocatorType>&& handles)
+static inline void SafeRelease(Array<RenderObjectHandle_Strong<T>, AllocatorType>&& handles)
 {
     for (auto& it : handles)
     {
@@ -1234,14 +1221,14 @@ static inline void SafeRelease(Array<renderer::RenderObjectHandle_Strong<T>, All
             continue;
         }
 
-        RenderObjectDeleter<renderer::Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
+        RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
     }
 
     handles.Clear();
 }
 
 template <class T, SizeType Sz>
-static inline void SafeRelease(FixedArray<renderer::RenderObjectHandle_Strong<T>, Sz>&& handles)
+static inline void SafeRelease(FixedArray<RenderObjectHandle_Strong<T>, Sz>&& handles)
 {
     for (auto& it : handles)
     {
@@ -1250,12 +1237,12 @@ static inline void SafeRelease(FixedArray<renderer::RenderObjectHandle_Strong<T>
             continue;
         }
 
-        RenderObjectDeleter<renderer::Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
+        RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
     }
 }
 
 template <class T, auto KeyBy>
-static inline void SafeRelease(HashSet<renderer::RenderObjectHandle_Strong<T>, KeyBy>&& handles)
+static inline void SafeRelease(HashSet<RenderObjectHandle_Strong<T>, KeyBy>&& handles)
 {
     for (auto& it : handles)
     {
@@ -1264,7 +1251,7 @@ static inline void SafeRelease(HashSet<renderer::RenderObjectHandle_Strong<T>, K
             continue;
         }
 
-        RenderObjectDeleter<renderer::Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
+        RenderObjectDeleter<Platform::current>::template GetQueue<typename T::Type>().Push(std::move(it));
     }
 
     handles.Clear();

@@ -69,7 +69,7 @@ public:
         return std::strcpy(dest, src);
     }
 
-    HYP_FORCE_INLINE static inline SizeType StrLen(const char* str)
+    static inline SizeType StrLen(const char* str)
     {
         if (!str)
         {
@@ -81,27 +81,27 @@ public:
 
     /*! \brief Alias for memset. Takes in a ubyte (unsigned char) as value,
         To signify that only the lowest byte is copied over. */
-    HYP_FORCE_INLINE static inline void* MemSet(void* dest, ubyte ch, SizeType size)
+    static inline void* MemSet(void* dest, ubyte ch, SizeType size)
     {
         return std::memset(dest, ch, size);
     }
 
-    HYP_FORCE_INLINE static inline void* MemCpy(void* dest, const void* src, SizeType size)
+    static inline void* MemCpy(void* dest, const void* src, SizeType size)
     {
         return std::memcpy(dest, src, size);
     }
 
-    HYP_FORCE_INLINE static inline void* MemMove(void* dest, const void* src, SizeType size)
+    static inline void* MemMove(void* dest, const void* src, SizeType size)
     {
         return std::memmove(dest, src, size);
     }
 
-    HYP_FORCE_INLINE static inline void* Clear(void* dest, SizeType size)
+    static inline void* Clear(void* dest, SizeType size)
     {
         return std::memset(dest, 0, size);
     }
 
-    HYP_FORCE_INLINE static void Garble(void* dest, SizeType length)
+    static void Garble(void* dest, SizeType length)
     {
         if (!dest || length == 0)
         {
@@ -112,21 +112,21 @@ public:
     }
 
     template <class T>
-    HYP_FORCE_INLINE static void Delete(void* ptr)
+    static void Delete(void* ptr)
     {
         delete static_cast<T*>(ptr);
     }
 
     template <class T, class... Args>
-    HYP_FORCE_INLINE static void Construct(void* where, Args&&... args)
+    static void Construct(void* where, Args&&... args)
     {
         new (where) T(std::forward<Args>(args)...);
     }
 
     template <class T, class Context, class... Args>
-    HYP_FORCE_INLINE static void ConstructWithContext(void* where, Args&&... args)
+    static void ConstructWithContext(void* where, Args&&... args)
     {
-        auto context_result = Context(where);
+        auto contextResult = Context(where);
 
         new (where) T(std::forward<Args>(args)...);
     }
@@ -136,7 +136,7 @@ public:
      *  \tparam Args The types of the arguments to pass to the constructor of T.
         \returns A pointer to the newly allocated and constructed object of type T. */
     template <class T, class... Args>
-    HYP_NODISCARD HYP_FORCE_INLINE static T* AllocateAndConstruct(Args&&... args)
+    HYP_NODISCARD static T* AllocateAndConstruct(Args&&... args)
     {
         void* ptr;
 
@@ -162,7 +162,7 @@ public:
      *  \tparam Args The types of the arguments to pass to the constructor of T.
      *  \returns A pointer to the newly allocated and constructed object of type T. */
     template <class T, class Context, class... Args>
-    HYP_NODISCARD HYP_FORCE_INLINE static T* AllocateAndConstructWithContext(Args&&... args)
+    HYP_NODISCARD static T* AllocateAndConstructWithContext(Args&&... args)
     {
         void* ptr;
 
@@ -177,7 +177,7 @@ public:
             ptr = HYP_ALLOC_ALIGNED(sizeof(T), alignof(T));
         }
 
-        auto context_result = Context(ptr);
+        auto contextResult = Context(ptr);
 
         new (ptr) T(std::forward<Args>(args)...);
 
@@ -185,12 +185,12 @@ public:
     }
 
     template <class T>
-    HYP_FORCE_INLINE static std::enable_if_t<std::is_trivially_destructible_v<T>> Destruct(T&)
+    static std::enable_if_t<std::is_trivially_destructible_v<T>> Destruct(T&)
     { /* Do nothing */
     }
 
     template <class T>
-    HYP_FORCE_INLINE static std::enable_if_t<!std::is_trivially_destructible_v<T>> Destruct(T& object)
+    static std::enable_if_t<!std::is_trivially_destructible_v<T>> Destruct(T& object)
     {
         object.~T();
 #ifdef HYP_DEBUG_MODE
@@ -199,12 +199,12 @@ public:
     }
 
     template <class T>
-    HYP_FORCE_INLINE static std::enable_if_t<std::is_trivially_destructible_v<T>> Destruct(void*)
+    static std::enable_if_t<std::is_trivially_destructible_v<T>> Destruct(void*)
     { /* Do nothing */
     }
 
     template <class T>
-    HYP_FORCE_INLINE static std::enable_if_t<!std::is_trivially_destructible_v<T>> Destruct(void* ptr)
+    static std::enable_if_t<!std::is_trivially_destructible_v<T>> Destruct(void* ptr)
     {
         static_cast<T*>(ptr)->~T();
 
@@ -214,7 +214,7 @@ public:
     }
 
     template <class T>
-    static typename std::enable_if_t<!std::is_same_v<void*, std::add_pointer_t<T>>, void> HYP_FORCE_INLINE DestructAndFree(void* ptr)
+    static typename std::enable_if_t<!std::is_same_v<void*, std::add_pointer_t<T>>, void> DestructAndFree(void* ptr)
     {
         if constexpr (!std::is_trivially_destructible_v<T>)
         {
@@ -269,6 +269,26 @@ public:
         {
             // Use aligned allocation if alignment is greater than max alignment
             return static_cast<T*>(HYP_ALLOC_ALIGNED(sizeof(T), alignof(T)));
+        }
+    }
+
+    template <class T>
+    HYP_FORCE_INLINE static T* Allocate(SizeType count)
+    {
+        if (count == 0)
+        {
+            return nullptr;
+        }
+
+        if constexpr (alignof(T) <= alignof(std::max_align_t))
+        {
+            // Use standard allocation if alignment is not greater than max alignment
+            return static_cast<T*>(Memory::Allocate(sizeof(T) * count));
+        }
+        else
+        {
+            // Use aligned allocation if alignment is greater than max alignment
+            return static_cast<T*>(HYP_ALLOC_ALIGNED(sizeof(T) * count, alignof(T)));
         }
     }
 };

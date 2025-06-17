@@ -51,7 +51,7 @@ public:
      */
     HYP_FORCE_INLINE const Handle<UIImage>& GetIconElement() const
     {
-        return m_icon_element;
+        return m_iconElement;
     }
 
     /*! \brief Gets the text element of the menu item.
@@ -60,7 +60,7 @@ public:
      */
     HYP_FORCE_INLINE const Handle<UIText>& GetTextElement() const
     {
-        return m_text_element;
+        return m_textElement;
     }
 
     /*! \brief Gets the drop down menu element.
@@ -69,23 +69,23 @@ public:
      */
     HYP_FORCE_INLINE const Handle<UIPanel>& GetDropDownMenuElement() const
     {
-        return m_drop_down_menu;
+        return m_dropDownMenu;
     }
 
     HYP_FORCE_INLINE const WeakHandle<UIMenuItem>& GetSelectedSubItem() const
     {
-        return m_selected_sub_item;
+        return m_selectedSubItem;
     }
 
-    void SetSelectedSubItem(const Handle<UIMenuItem>& selected_sub_item);
+    void SetSelectedSubItem(const Handle<UIMenuItem>& selectedSubItem);
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
 protected:
     virtual void Init() override;
 
-    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state) override;
+    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState) override;
 
     virtual void OnFontAtlasUpdate_Internal() override;
 
@@ -97,13 +97,13 @@ private:
     void UpdateDropDownMenu();
     void UpdateSubItemsDropDownMenu();
 
-    Array<Handle<UIObject>> m_menu_items;
+    Array<Handle<UIObject>> m_menuItems;
 
-    Handle<UIText> m_text_element;
-    Handle<UIImage> m_icon_element;
-    Handle<UIPanel> m_drop_down_menu;
-    Handle<UIPanel> m_sub_items_drop_down_menu;
-    WeakHandle<UIMenuItem> m_selected_sub_item;
+    Handle<UIText> m_textElement;
+    Handle<UIImage> m_iconElement;
+    Handle<UIPanel> m_dropDownMenu;
+    Handle<UIPanel> m_subItemsDropDownMenu;
+    WeakHandle<UIMenuItem> m_selectedSubItem;
 };
 
 #pragma endregion UIMenuItem
@@ -126,11 +126,11 @@ public:
     HYP_METHOD(Property = "DropDirection", XMLAttribute = "direction")
     HYP_FORCE_INLINE UIMenuBarDropDirection GetDropDirection() const
     {
-        return m_drop_direction;
+        return m_dropDirection;
     }
 
     HYP_METHOD(Property = "DropDirection", XMLAttribute = "direction")
-    void SetDropDirection(UIMenuBarDropDirection drop_direction);
+    void SetDropDirection(UIMenuBarDropDirection dropDirection);
 
     /*! \brief Gets the index of the selected menu item.
      *
@@ -138,7 +138,7 @@ public:
      */
     HYP_FORCE_INLINE uint32 GetSelectedMenuItemIndex() const
     {
-        return m_selected_menu_item_index;
+        return m_selectedMenuItemIndex;
     }
 
     /*! \brief Sets the selected menu item index. Set to ~0u to deselect all menu items.
@@ -154,7 +154,7 @@ public:
      */
     HYP_FORCE_INLINE const Array<UIMenuItem*>& GetMenuItems() const
     {
-        return m_menu_items;
+        return m_menuItems;
     }
 
     /*! \brief Adds a menu item to the menu bar. Returns the menu item that was added.
@@ -191,13 +191,13 @@ public:
     bool RemoveMenuItem(Name name);
 
     // overloads to allow adding a UIMenuItem
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
 protected:
     virtual void Init() override;
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
     virtual void SetStage_Internal(UIStage* stage) override;
 
@@ -206,15 +206,15 @@ protected:
 private:
     void UpdateMenuItemSizes();
 
-    Vec2i GetDropDownMenuPosition(UIMenuItem* menu_item) const;
+    Vec2i GetDropDownMenuPosition(UIMenuItem* menuItem) const;
 
-    UIMenuBarDropDirection m_drop_direction;
+    UIMenuBarDropDirection m_dropDirection;
 
-    Array<UIMenuItem*> m_menu_items;
+    Array<UIMenuItem*> m_menuItems;
 
     Handle<UIPanel> m_container;
 
-    uint32 m_selected_menu_item_index;
+    uint32 m_selectedMenuItemIndex;
 };
 
 #pragma endregion UIMenuBar

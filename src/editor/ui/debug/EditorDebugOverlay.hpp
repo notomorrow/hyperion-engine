@@ -30,16 +30,16 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<UIObject>& GetUIObject() const
     {
-        return m_ui_object;
+        return m_uiObject;
     }
 
-    void Initialize(UIObject* spawn_parent);
+    void Initialize(UIObject* spawnParent);
 
     HYP_METHOD(Scriptable)
     void Update(float delta);
 
     HYP_METHOD(Scriptable)
-    Handle<UIObject> CreateUIObject(UIObject* spawn_parent);
+    Handle<UIObject> CreateUIObject(UIObject* spawnParent);
 
     HYP_METHOD(Scriptable)
     Name GetName() const;
@@ -48,7 +48,7 @@ public:
     bool IsEnabled() const;
 
 protected:
-    virtual Handle<UIObject> CreateUIObject_Impl(UIObject* spawn_parent);
+    virtual Handle<UIObject> CreateUIObject_Impl(UIObject* spawnParent);
 
     virtual void Update_Impl(float delta)
     {
@@ -64,7 +64,7 @@ protected:
         return true;
     }
 
-    Handle<UIObject> m_ui_object;
+    Handle<UIObject> m_uiObject;
 };
 
 HYP_CLASS()
@@ -77,7 +77,7 @@ public:
     virtual ~TextureEditorDebugOverlay() override;
 
 protected:
-    virtual Handle<UIObject> CreateUIObject_Impl(UIObject* spawn_parent) override;
+    virtual Handle<UIObject> CreateUIObject_Impl(UIObject* spawnParent) override;
 
     virtual Name GetName_Impl() const override
     {

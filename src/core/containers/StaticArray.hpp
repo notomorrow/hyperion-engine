@@ -22,7 +22,7 @@ struct StaticArray
     std::array<T, Size> items;
 
     using Iterator = typename std::array<T, Size>::iterator;
-    using ConstIterator = typename std::array<T, Size>::const_iterator;
+    using ConstIterator = typename std::array<T, Size>::constIterator;
 
     constexpr const T& operator[](SizeType index) const
     {

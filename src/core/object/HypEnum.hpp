@@ -13,8 +13,8 @@ namespace hyperion {
 class HypEnum : public HypClass
 {
 public:
-    HypEnum(TypeID type_id, Name name, int static_index, uint32 num_descendants, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
-        : HypClass(type_id, name, static_index, num_descendants, parent_name, attributes, flags, members)
+    HypEnum(TypeId typeId, Name name, int staticIndex, uint32 numDescendants, Name parentName, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+        : HypClass(typeId, name, staticIndex, numDescendants, parentName, attributes, flags, members)
     {
     }
 
@@ -30,22 +30,19 @@ public:
         return HypClassAllocationMethod::NONE;
     }
 
-    virtual SizeType GetSize() const override = 0;
-    virtual SizeType GetAlignment() const override = 0;
-
-    virtual bool GetManagedObject(const void* object_ptr, dotnet::ObjectReference& out_object_reference) const override = 0;
+    virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override = 0;
 
     virtual bool CanCreateInstance() const override = 0;
 
-    virtual TypeID GetUnderlyingTypeID() const = 0;
+    virtual TypeId GetUnderlyingTypeId() const = 0;
 
 protected:
-    virtual void FixupPointer(void* target, IHypObjectInitializer* new_initializer) const override
+    virtual void FixupPointer(void* target, IHypObjectInitializer* newInitializer) const override
     {
         HYP_NOT_IMPLEMENTED();
     }
 
-    virtual IHypObjectInitializer* GetObjectInitializer_Internal(void* object_ptr) const override
+    virtual IHypObjectInitializer* GetObjectInitializer_Internal(void* objectPtr) const override
     {
         return nullptr;
     }
@@ -60,31 +57,23 @@ template <class T>
 class HypEnumInstance final : public HypEnum
 {
 public:
-    static HypEnumInstance& GetInstance(Name name, int static_index, uint32 num_descendants, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+    static HypEnumInstance& GetInstance(Name name, int staticIndex, uint32 numDescendants, Name parentName, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
     {
-        static HypEnumInstance instance { name, static_index, num_descendants, parent_name, attributes, flags, members };
+        static HypEnumInstance instance { name, staticIndex, numDescendants, parentName, attributes, flags, members };
 
         return instance;
     }
 
-    HypEnumInstance(Name name, int static_index, uint32 num_descendants, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
-        : HypEnum(TypeID::ForType<T>(), name, static_index, num_descendants, parent_name, attributes, flags, members)
+    HypEnumInstance(Name name, int staticIndex, uint32 numDescendants, Name parentName, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+        : HypEnum(TypeId::ForType<T>(), name, staticIndex, numDescendants, parentName, attributes, flags, members)
     {
+        m_size = sizeof(T);
+        m_alignment = alignof(T);
     }
 
     virtual ~HypEnumInstance() override = default;
 
-    virtual SizeType GetSize() const override
-    {
-        return sizeof(T);
-    }
-
-    virtual SizeType GetAlignment() const override
-    {
-        return alignof(T);
-    }
-
-    virtual bool GetManagedObject(const void* object_ptr, dotnet::ObjectReference& out_object_reference) const override
+    virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
         HYP_NOT_IMPLEMENTED();
     }
@@ -94,11 +83,11 @@ public:
         return true;
     }
 
-    virtual TypeID GetUnderlyingTypeID() const override
+    virtual TypeId GetUnderlyingTypeId() const override
     {
-        static const TypeID type_id = TypeID::ForType<std::underlying_type_t<T>>();
+        static const TypeId typeId = TypeId::ForType<std::underlying_type_t<T>>();
 
-        return type_id;
+        return typeId;
     }
 
 protected:

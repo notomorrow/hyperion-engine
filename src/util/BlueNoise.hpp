@@ -12,13 +12,13 @@ namespace hyperion {
 
 struct BlueNoise
 {
-    static const SizeType total_buffer_size;
+    static const SizeType totalBufferSize;
 
-    static const int32 sobol_256spp_256d[256 * 256];
-    static const int32 scrambling_tile[128 * 128 * 8];
-    static const int32 ranking_tile[128 * 128 * 8];
+    static const int32 sobol256spp256d[256 * 256];
+    static const int32 scramblingTile[128 * 128 * 8];
+    static const int32 rankingTile[128 * 128 * 8];
 
-    static float Sample(int pixel_i, int pixel_j, int sample_index, int sample_dimension);
+    static float Sample(int pixelI, int pixelJ, int sampleIndex, int sampleDimension);
 };
 
 } // namespace hyperion

@@ -14,49 +14,49 @@
 
 namespace hyperion {
 
-void EntityMeshDirtyStateSystem::OnEntityAdded(const Handle<Entity>& entity)
+void EntityMeshDirtyStateSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
-    MeshComponent& mesh_component = GetEntityManager().GetComponent<MeshComponent>(entity);
+    MeshComponent& meshComponent = GetEntityManager().GetComponent<MeshComponent>(entity);
 
-    InitObject(mesh_component.mesh);
-    InitObject(mesh_component.material);
+    InitObject(meshComponent.mesh);
+    InitObject(meshComponent.material);
 
     GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
 }
 
-void EntityMeshDirtyStateSystem::OnEntityRemoved(ID<Entity> entity)
+void EntityMeshDirtyStateSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 }
 
 void EntityMeshDirtyStateSystem::Process(float delta)
 {
-    HashSet<ID<Entity>> updated_entity_ids;
+    HashSet<WeakHandle<Entity>> updatedEntities;
 
-    for (auto [entity_id, mesh_component, transform_component] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, meshComponent, transformComponent] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
     {
         // Update the material
-        if (mesh_component.material.IsValid() && mesh_component.material->GetMutationState().IsDirty())
+        if (meshComponent.material.IsValid() && meshComponent.material->GetMutationState().IsDirty())
         {
-            mesh_component.material->EnqueueRenderUpdates();
+            meshComponent.material->EnqueueRenderUpdates();
         }
 
         // If transform has changed, mark the MeshComponent as dirty
-        if (mesh_component.previous_model_matrix != transform_component.transform.GetMatrix())
+        if (meshComponent.previousModelMatrix != transformComponent.transform.GetMatrix())
         {
-            updated_entity_ids.Insert(entity_id);
+            updatedEntities.Insert(entity->WeakHandleFromThis());
         }
     }
 
-    if (updated_entity_ids.Any())
+    if (updatedEntities.Any())
     {
-        AfterProcess([this, entity_ids = std::move(updated_entity_ids)]()
+        AfterProcess([this, updatedEntities = std::move(updatedEntities)]()
             {
-                for (const ID<Entity>& entity_id : entity_ids)
+                for (const WeakHandle<Entity>& entityWeak : updatedEntities)
                 {
-                    GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity_id);
+                    GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entityWeak.GetUnsafe());
                 }
             });
     }

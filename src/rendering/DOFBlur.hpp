@@ -20,32 +20,32 @@ public:
 
     const UniquePtr<FullScreenPass>& GetHorizontalBlurPass() const
     {
-        return m_blur_horizontal_pass;
+        return m_blurHorizontalPass;
     }
 
     const UniquePtr<FullScreenPass>& GetVerticalBlurPass() const
     {
-        return m_blur_vertical_pass;
+        return m_blurVerticalPass;
     }
 
     const UniquePtr<FullScreenPass>& GetCombineBlurPass() const
     {
-        return m_blur_mix_pass;
+        return m_blurMixPass;
     }
 
     void Create();
     void Destroy();
 
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     GBuffer* m_gbuffer;
 
     Vec2u m_extent;
 
-    UniquePtr<FullScreenPass> m_blur_horizontal_pass;
-    UniquePtr<FullScreenPass> m_blur_vertical_pass;
-    UniquePtr<FullScreenPass> m_blur_mix_pass;
+    UniquePtr<FullScreenPass> m_blurHorizontalPass;
+    UniquePtr<FullScreenPass> m_blurVerticalPass;
+    UniquePtr<FullScreenPass> m_blurMixPass;
 };
 
 } // namespace hyperion

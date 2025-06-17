@@ -2,36 +2,36 @@
 
 #include <rendering/Buffers.hpp>
 
-#include <rendering/backend/RenderingAPI.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <core/utilities/ByteUtil.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
-#pragma region GPUBufferHolderBase
+#pragma region GpuBufferHolderBase
 
-GPUBufferHolderBase::~GPUBufferHolderBase()
+GpuBufferHolderBase::~GpuBufferHolderBase()
 {
     SafeRelease(std::move(m_buffers));
 }
 
-void GPUBufferHolderBase::CreateBuffers(GPUBufferType type, SizeType initial_count, SizeType size, SizeType alignment)
+void GpuBufferHolderBase::CreateBuffers(GpuBufferType type, SizeType initialCount, SizeType size, SizeType alignment)
 {
-    if (initial_count == 0)
+    if (initialCount == 0)
     {
-        initial_count = 1;
+        initialCount = 1;
     }
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        m_buffers[frame_index] = g_rendering_api->MakeGPUBuffer(type, size * initial_count, alignment);
+        m_buffers[frameIndex] = g_renderBackend->MakeGpuBuffer(type, size * initialCount, alignment);
 
-        DeferCreate(m_buffers[frame_index]);
+        DeferCreate(m_buffers[frameIndex]);
     }
 }
 
-#pragma endregion GPUBufferHolderBase
+#pragma endregion GpuBufferHolderBase
 
 } // namespace hyperion

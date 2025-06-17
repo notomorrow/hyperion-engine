@@ -57,8 +57,7 @@ void main()
         camera_near_far.x,
         camera_near_far.y,
         velocity,
-        view_space_depth
-    );
+        view_space_depth);
 
     // vec4 result = TemporalResolve(color_texture, prev_color_texture, uv, velocity, texel_size, view_space_depth);
     vec4 result = TemporalBlendVarying(
@@ -67,8 +66,7 @@ void main()
         uv,
         velocity,
         texel_size,
-        view_space_depth
-    );
+        view_space_depth);
 
     vec4 color = Texture2D(sampler_nearest, color_texture, uv);
     vec4 previous_color = Texture2D(sampler_nearest, prev_color_texture, uv - velocity);

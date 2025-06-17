@@ -36,8 +36,6 @@
 namespace hyperion {
 
 class Game;
-
-namespace renderer {
 namespace platform {
 
 // forward declare Instance
@@ -47,8 +45,6 @@ class Instance;
 } // namespace platform
 
 using Instance = platform::Instance<Platform::current>;
-
-} // namespace renderer
 
 enum class WindowFlags : uint32
 {
@@ -96,19 +92,19 @@ public:
 
     HYP_FORCE_INLINE InputEventSink& GetInputEventSink()
     {
-        return m_input_event_sink;
+        return m_inputEventSink;
     }
 
     HYP_FORCE_INLINE const InputEventSink& GetInputEventSink() const
     {
-        return m_input_event_sink;
+        return m_inputEventSink;
     }
 
     virtual void SetMousePosition(Vec2i position) = 0;
     virtual Vec2i GetMousePosition() const = 0;
 
     virtual Vec2i GetDimensions() const = 0;
-    virtual void HandleResize(Vec2i new_size);
+    virtual void HandleResize(Vec2i newSize);
 
     virtual void SetIsMouseLocked(bool locked) = 0;
     virtual bool HasMouseFocus() const = 0;
@@ -119,7 +115,7 @@ public:
     }
 
 #ifdef HYP_VULKAN
-    virtual VkSurfaceKHR CreateVkSurface(renderer::Instance* instance) = 0;
+    virtual VkSurfaceKHR CreateVkSurface(Instance* instance) = 0;
 #endif
 
     Delegate<void, Vec2i> OnWindowSizeChanged;
@@ -127,7 +123,7 @@ public:
 protected:
     ANSIString m_title;
     Vec2i m_size;
-    InputEventSink m_input_event_sink;
+    InputEventSink m_inputEventSink;
 };
 
 HYP_CLASS()
@@ -153,15 +149,15 @@ public:
 
     void* GetInternalWindowHandle() const
     {
-        return m_window_handle;
+        return m_windowHandle;
     }
 
 #ifdef HYP_VULKAN
-    virtual VkSurfaceKHR CreateVkSurface(renderer::Instance* instance) override;
+    virtual VkSurfaceKHR CreateVkSurface(Instance* instance) override;
 #endif
 
 private:
-    void* m_window_handle = nullptr;
+    void* m_windowHandle = nullptr;
 };
 
 HYP_CLASS()
@@ -190,14 +186,14 @@ public:
 
     HYP_FORCE_INLINE ApplicationWindow* GetMainWindow() const
     {
-        return m_main_window.Get();
+        return m_mainWindow.Get();
     }
 
     void SetMainWindow(const Handle<ApplicationWindow>& window);
 
     HYP_FORCE_INLINE const Handle<InputManager>& GetInputManager() const
     {
-        return m_input_manager;
+        return m_inputManager;
     }
 
     void SetGame(const Handle<Game>& game);
@@ -209,14 +205,14 @@ public:
     virtual void UpdateConfigurationOverrides();
 
 #ifdef HYP_VULKAN
-    virtual bool GetVkExtensions(Array<const char*>& out_extensions) const = 0;
+    virtual bool GetVkExtensions(Array<const char*>& outExtensions) const = 0;
 #endif
 
     Delegate<void, ApplicationWindow*> OnCurrentWindowChanged;
 
 protected:
-    Handle<ApplicationWindow> m_main_window;
-    Handle<InputManager> m_input_manager;
+    Handle<ApplicationWindow> m_mainWindow;
+    Handle<InputManager> m_inputManager;
     ANSIString m_name;
     GlobalConfig m_configuration;
     Handle<Game> m_game;
@@ -236,7 +232,7 @@ public:
     virtual int PollEvent(SystemEvent& event) override;
 
 #ifdef HYP_VULKAN
-    virtual bool GetVkExtensions(Array<const char*>& out_extensions) const override;
+    virtual bool GetVkExtensions(Array<const char*>& outExtensions) const override;
 #endif
 };
 

@@ -19,88 +19,88 @@ using namespace json;
 
 AssetLoadResult FontAtlasLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.asset_manager != nullptr);
+    AssertThrow(state.assetManager != nullptr);
     JSONValue json;
 
-    const ByteBuffer byte_buffer = state.stream.ReadBytes();
+    const ByteBuffer byteBuffer = state.stream.ReadBytes();
 
-    if (!byte_buffer.Size())
+    if (!byteBuffer.Size())
     {
         return HYP_MAKE_ERROR(AssetLoadError, "Empty JSON file", AssetLoadError::ERR_EOF);
     }
 
-    const String json_string(byte_buffer.ToByteView());
+    const String jsonString(byteBuffer.ToByteView());
 
-    const auto json_parse_result = JSON::Parse(json_string);
+    const auto jsonParseResult = JSON::Parse(jsonString);
 
-    if (!json_parse_result.ok)
+    if (!jsonParseResult.ok)
     {
-        return HYP_MAKE_ERROR(AssetLoadError, "Failed to parse json: {}", json_parse_result.message);
+        return HYP_MAKE_ERROR(AssetLoadError, "Failed to parse json: {}", jsonParseResult.message);
     }
 
-    const json::JSONValue json_value = json_parse_result.value;
+    const json::JSONValue jsonValue = jsonParseResult.value;
 
-    FontAtlasTextureSet texture_set;
+    FontAtlasTextureSet textureSet;
 
-    if (auto atlases_value = json_value["atlases"]; atlases_value.IsObject())
+    if (auto atlasesValue = jsonValue["atlases"]; atlasesValue.IsObject())
     {
-        uint32 main_value_key;
+        uint32 mainValueKey;
 
-        if (auto main_value = atlases_value["main"]; main_value.IsNumber() || main_value.IsString())
+        if (auto mainValue = atlasesValue["main"]; mainValue.IsNumber() || mainValue.IsString())
         {
-            main_value_key = uint32(main_value.ToNumber());
+            mainValueKey = uint32(mainValue.ToNumber());
         }
         else
         {
             return HYP_MAKE_ERROR(AssetLoadError, "Failed to read 'atlases.main' integer");
         }
 
-        if (auto pixel_sizes_value = atlases_value["pixel_sizes"]; pixel_sizes_value.IsObject())
+        if (auto pixelSizesValue = atlasesValue["pixel_sizes"]; pixelSizesValue.IsObject())
         {
-            bool main_atlas_found = false;
+            bool mainAtlasFound = false;
 
-            for (const auto& it : pixel_sizes_value.AsObject())
+            for (const auto& it : pixelSizesValue.AsObject())
             {
-                Handle<Texture> bitmap_texture;
+                Handle<Texture> bitmapTexture;
 
-                auto bitmap_texture_asset = state.asset_manager->Load<Texture>(it.second.ToString());
+                auto bitmapTextureAsset = state.assetManager->Load<Texture>(it.second.ToString());
 
-                if (bitmap_texture_asset.HasValue())
+                if (bitmapTextureAsset.HasValue())
                 {
-                    bitmap_texture = bitmap_texture_asset->Result();
+                    bitmapTexture = bitmapTextureAsset->Result();
                 }
                 else
                 {
                     return HYP_MAKE_ERROR(AssetLoadError, "Failed to load bitmap texture: {}", it.second.ToString());
                 }
 
-                uint32 key_value;
+                uint32 keyValue;
 
-                if (!StringUtil::Parse(it.first, &key_value))
+                if (!StringUtil::Parse(it.first, &keyValue))
                 {
                     return HYP_MAKE_ERROR(AssetLoadError, "Invalid key for font atlas: {} is not able to be parsed as uint32", it.first);
                 }
 
-                bool is_main_atlas = key_value == main_value_key;
+                bool isMainAtlas = keyValue == mainValueKey;
 
-                if (is_main_atlas)
+                if (isMainAtlas)
                 {
-                    if (main_atlas_found)
+                    if (mainAtlasFound)
                     {
                         HYP_LOG(Assets, Warning, "Multiple elements detected as main atlas");
 
-                        is_main_atlas = false;
+                        isMainAtlas = false;
                     }
                     else
                     {
-                        main_atlas_found = true;
+                        mainAtlasFound = true;
                     }
                 }
 
-                texture_set.AddAtlas(key_value, std::move(bitmap_texture), is_main_atlas);
+                textureSet.AddAtlas(keyValue, std::move(bitmapTexture), isMainAtlas);
             }
 
-            if (!main_atlas_found)
+            if (!mainAtlasFound)
             {
                 return HYP_MAKE_ERROR(AssetLoadError, "Main atlas not found in list of atlases");
             }
@@ -115,41 +115,41 @@ AssetLoadResult FontAtlasLoader::LoadAsset(LoaderState& state) const
         return HYP_MAKE_ERROR(AssetLoadError, "Failed to read 'atlases' object");
     }
 
-    Vec2i cell_dimensions;
+    Vec2i cellDimensions;
 
-    if (auto cell_dimensions_value = json_value["cell_dimensions"])
+    if (auto cellDimensionsValue = jsonValue["cell_dimensions"])
     {
-        cell_dimensions.x = int(cell_dimensions_value["width"].ToNumber());
-        cell_dimensions.y = int(cell_dimensions_value["height"].ToNumber());
+        cellDimensions.x = int(cellDimensionsValue["width"].ToNumber());
+        cellDimensions.y = int(cellDimensionsValue["height"].ToNumber());
     }
     else
     {
         return HYP_MAKE_ERROR(AssetLoadError, "Failed to load cell dimensions");
     }
 
-    FontAtlas::GlyphMetricsBuffer glyph_metrics;
+    FontAtlas::GlyphMetricsBuffer glyphMetrics;
 
-    if (auto glyph_metrics_value = json_value["metrics"])
+    if (auto glyphMetricsValue = jsonValue["metrics"])
     {
-        if (!glyph_metrics_value.IsArray())
+        if (!glyphMetricsValue.IsArray())
         {
             return HYP_MAKE_ERROR(AssetLoadError, "Glyph metrics expected to be an array");
         }
 
-        for (const JSONValue& glyph_metric_value : glyph_metrics_value.AsArray())
+        for (const JSONValue& glyphMetricValue : glyphMetricsValue.AsArray())
         {
             Glyph::Metrics metrics {};
 
-            metrics.metrics.width = uint16(glyph_metric_value["width"].ToNumber());
-            metrics.metrics.height = uint16(glyph_metric_value["height"].ToNumber());
-            metrics.metrics.bearing_x = int16(glyph_metric_value["bearing_x"].ToNumber());
-            metrics.metrics.bearing_y = int16(glyph_metric_value["bearing_y"].ToNumber());
-            metrics.metrics.advance = uint8(glyph_metric_value["advance"].ToNumber());
+            metrics.width = uint16(glyphMetricValue["width"].ToNumber());
+            metrics.height = uint16(glyphMetricValue["height"].ToNumber());
+            metrics.bearingX = int16(glyphMetricValue["bearing_x"].ToNumber());
+            metrics.bearingY = int16(glyphMetricValue["bearing_y"].ToNumber());
+            metrics.advance = uint8(glyphMetricValue["advance"].ToNumber());
 
-            metrics.image_position.x = int32(glyph_metric_value["image_position"]["x"].ToNumber());
-            metrics.image_position.y = int32(glyph_metric_value["image_position"]["y"].ToNumber());
+            metrics.imagePosition.x = int32(glyphMetricValue["image_position"]["x"].ToNumber());
+            metrics.imagePosition.y = int32(glyphMetricValue["image_position"]["y"].ToNumber());
 
-            glyph_metrics.PushBack(metrics);
+            glyphMetrics.PushBack(metrics);
         }
     }
     else
@@ -157,26 +157,26 @@ AssetLoadResult FontAtlasLoader::LoadAsset(LoaderState& state) const
         return HYP_MAKE_ERROR(AssetLoadError, "Failed to load glyph metrics");
     }
 
-    FontAtlas::SymbolList symbol_list;
+    FontAtlas::SymbolList symbolList;
 
-    if (auto symbol_list_value = json_value["symbol_list"])
+    if (auto symbolListValue = jsonValue["symbol_list"])
     {
-        if (!symbol_list_value.IsArray())
+        if (!symbolListValue.IsArray())
         {
             return HYP_MAKE_ERROR(AssetLoadError, "Symbol list expected to be an array");
         }
 
-        for (const JSONValue& symbol_value : symbol_list_value.AsArray())
+        for (const JSONValue& symbolValue : symbolListValue.AsArray())
         {
-            if (!symbol_value.IsNumber())
+            if (!symbolValue.IsNumber())
             {
                 return HYP_MAKE_ERROR(AssetLoadError, "Symbol list expected to be an array of numbers");
             }
 
-            symbol_list.PushBack(FontFace::WChar(symbol_value.AsNumber()));
+            symbolList.PushBack(FontFace::WChar(symbolValue.AsNumber()));
         }
 
-        if (symbol_list.Empty())
+        if (symbolList.Empty())
         {
             return HYP_MAKE_ERROR(AssetLoadError, "No symbols in symbol list");
         }
@@ -186,9 +186,9 @@ AssetLoadResult FontAtlasLoader::LoadAsset(LoaderState& state) const
         return HYP_MAKE_ERROR(AssetLoadError, "Failed to load symbol list");
     }
 
-    RC<FontAtlas> font_atlas = MakeRefCountedPtr<FontAtlas>(texture_set, cell_dimensions, std::move(glyph_metrics), std::move(symbol_list));
+    RC<FontAtlas> fontAtlas = MakeRefCountedPtr<FontAtlas>(textureSet, cellDimensions, std::move(glyphMetrics), std::move(symbolList));
 
-    return AssetLoadResult { font_atlas };
+    return AssetLoadResult { fontAtlas };
 }
 
 } // namespace hyperion

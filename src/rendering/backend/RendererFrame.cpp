@@ -10,31 +10,29 @@
 #include <core/logging/LogChannels.hpp>
 
 namespace hyperion {
-namespace renderer {
-
-void FrameBase::MarkDescriptorSetUsed(DescriptorSetBase* descriptor_set)
+void FrameBase::MarkDescriptorSetUsed(DescriptorSetBase* descriptorSet)
 {
-    AssertThrow(descriptor_set != nullptr);
+    AssertThrow(descriptorSet != nullptr);
 
-    m_used_descriptor_sets.Insert(descriptor_set);
+    m_usedDescriptorSets.Insert(descriptorSet);
 
 #ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
-    descriptor_set->GetCurrentFrames().Insert(WeakHandleFromThis());
+    descriptorSet->GetCurrentFrames().Insert(WeakHandleFromThis());
 #endif
 }
 
 void FrameBase::UpdateUsedDescriptorSets()
 {
-    for (DescriptorSetBase* descriptor_set : m_used_descriptor_sets)
+    for (DescriptorSetBase* descriptorSet : m_usedDescriptorSets)
     {
-        AssertDebugMsg(descriptor_set->IsCreated(),
+        AssertDebugMsg(descriptorSet->IsCreated(),
             "Descriptor set '%s' is not yet created when updating the frame's used descriptor sets!",
-            descriptor_set->GetLayout().GetName().LookupString());
+            descriptorSet->GetLayout().GetName().LookupString());
 
-        bool is_dirty = false;
-        descriptor_set->UpdateDirtyState(&is_dirty);
+        bool isDirty = false;
+        descriptorSet->UpdateDirtyState(&isDirty);
 
-        if (!is_dirty)
+        if (!isDirty)
         {
             // If the descriptor set is not dirty, we don't need to update it
             continue;
@@ -42,11 +40,11 @@ void FrameBase::UpdateUsedDescriptorSets()
 
 #if defined(HYP_DEBUG_MODE) && defined(HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE)
         // Check to see if other frames are using the same descriptor set while we're updating them so we can assert an error if they are
-        const SizeType count = descriptor_set->GetCurrentFrames().Size() - descriptor_set->GetCurrentFrames().Count(this);
+        const SizeType count = descriptorSet->GetCurrentFrames().Size() - descriptorSet->GetCurrentFrames().Count(this);
 
         if (count != 0)
         {
-            for (auto it = descriptor_set->GetCurrentFrames().Begin(); it != descriptor_set->GetCurrentFrames().End(); ++it)
+            for (auto it = descriptorSet->GetCurrentFrames().Begin(); it != descriptorSet->GetCurrentFrames().End(); ++it)
             {
                 if ((*it) == this)
                 {
@@ -55,23 +53,22 @@ void FrameBase::UpdateUsedDescriptorSets()
                 }
 
                 HYP_FAIL("Descriptor set \"%s\" (debug name: %s, index: %u) already in use by frame \"%s\" (index: %u)!",
-                    descriptor_set->GetLayout().GetName().LookupString(),
-                    descriptor_set->GetDebugName().LookupString(),
-                    descriptor_set->GetHeader_Internal()->index,
-                    it->header->debug_name.LookupString(),
+                    descriptorSet->GetLayout().GetName().LookupString(),
+                    descriptorSet->GetDebugName().LookupString(),
+                    descriptorSet->GetHeader_Internal()->index,
+                    it->header->debugName.LookupString(),
                     it->header->index);
             }
         }
 #endif
 
         HYP_LOG(Rendering, Debug, "Updating descriptor set '{}' for frame '{}' (index: {})",
-            descriptor_set->GetLayout().GetName().LookupString(),
+            descriptorSet->GetLayout().GetName().LookupString(),
             GetDebugName().LookupString(),
-            m_frame_index);
+            m_frameIndex);
 
-        descriptor_set->Update();
+        descriptorSet->Update();
     }
 }
 
-} // namespace renderer
 } // namespace hyperion

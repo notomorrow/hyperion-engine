@@ -15,20 +15,20 @@ HYP_DECLARE_LOG_CHANNEL(Editor);
 #pragma region TickableEditorTask
 
 TickableEditorTask::TickableEditorTask()
-    : m_is_committed(false)
+    : m_isCommitted(false)
 {
 }
 
 void TickableEditorTask::Commit()
 {
-    ThreadBase* game_thread = Threads::GetThread(g_game_thread);
-    AssertThrow(game_thread != nullptr);
+    ThreadBase* gameThread = Threads::GetThread(g_gameThread);
+    AssertThrow(gameThread != nullptr);
 
-    m_task = game_thread->GetScheduler().Enqueue([weak_this = WeakHandleFromThis()]()
+    m_task = gameThread->GetScheduler().Enqueue([weakThis = WeakHandleFromThis()]()
         {
-            if (Handle<TickableEditorTask> task = Handle<TickableEditorTask>(weak_this.Lock()))
+            if (Handle<TickableEditorTask> task = weakThis.Lock())
             {
-                task->m_is_committed.Set(true, MemoryOrder::RELEASE);
+                task->m_isCommitted.Set(true, MemoryOrder::RELEASE);
 
                 task->Process();
             }
@@ -43,7 +43,7 @@ void TickableEditorTask::Cancel_Impl()
 {
     if (m_task.IsValid() && !m_task.IsCompleted())
     {
-        if (!Threads::IsOnThread(g_game_thread))
+        if (!Threads::IsOnThread(g_gameThread))
         {
             HYP_LOG(Editor, Info, "Awaiting TickableEditorTask completion");
 
@@ -63,7 +63,7 @@ void TickableEditorTask::Cancel_Impl()
         OnCancel();
     }
 
-    m_is_committed.Set(false, MemoryOrder::RELEASE);
+    m_isCommitted.Set(false, MemoryOrder::RELEASE);
 }
 
 bool TickableEditorTask::IsCompleted_Impl() const
@@ -76,7 +76,7 @@ bool TickableEditorTask::IsCompleted_Impl() const
 #pragma region LongRunningEditorTask
 
 LongRunningEditorTask::LongRunningEditorTask()
-    : m_is_committed(false)
+    : m_isCommitted(false)
 {
 }
 
@@ -84,7 +84,7 @@ void LongRunningEditorTask::Commit()
 {
     m_task = TaskSystem::GetInstance().Enqueue([this]()
         {
-            m_is_committed.Set(true, MemoryOrder::RELEASE);
+            m_isCommitted.Set(true, MemoryOrder::RELEASE);
 
             Process();
         },
@@ -105,7 +105,7 @@ void LongRunningEditorTask::Cancel_Impl()
         OnCancel();
     }
 
-    m_is_committed.Set(false, MemoryOrder::RELEASE);
+    m_isCommitted.Set(false, MemoryOrder::RELEASE);
 }
 
 bool LongRunningEditorTask::IsCompleted_Impl() const

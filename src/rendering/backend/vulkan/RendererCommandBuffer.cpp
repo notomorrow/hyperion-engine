@@ -3,7 +3,7 @@
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
 #include <rendering/backend/vulkan/RendererRenderPass.hpp>
 #include <rendering/backend/vulkan/RendererSemaphore.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererComputePipeline.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
@@ -15,19 +15,17 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 VulkanCommandBuffer::VulkanCommandBuffer(CommandBufferType type)
     : m_type(type),
       m_handle(VK_NULL_HANDLE),
-      m_command_pool(VK_NULL_HANDLE)
+      m_commandPool(VK_NULL_HANDLE)
 {
 }
 
@@ -41,23 +39,23 @@ bool VulkanCommandBuffer::IsCreated() const
     return m_handle != VK_NULL_HANDLE;
 }
 
-RendererResult VulkanCommandBuffer::Create(VkCommandPool command_pool)
+RendererResult VulkanCommandBuffer::Create(VkCommandPool commandPool)
 {
     if (IsCreated())
     {
-        AssertThrowMsg(m_command_pool == command_pool, "Command buffer already created with a different command pool");
+        AssertThrowMsg(m_commandPool == commandPool, "Command buffer already created with a different command pool");
 
         HYPERION_RETURN_OK;
     }
 
-    m_command_pool = command_pool;
+    m_commandPool = commandPool;
 
     return Create();
 }
 
 RendererResult VulkanCommandBuffer::Create()
 {
-    AssertThrow(m_command_pool != VK_NULL_HANDLE);
+    AssertThrow(m_commandPool != VK_NULL_HANDLE);
 
     VkCommandBufferLevel level;
 
@@ -70,16 +68,16 @@ RendererResult VulkanCommandBuffer::Create()
         level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
         break;
     default:
-        AssertThrowMsg(false, "Unsupported command buffer type");
+        HYP_UNREACHABLE();
     }
 
-    VkCommandBufferAllocateInfo alloc_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    alloc_info.level = level;
-    alloc_info.commandPool = m_command_pool;
-    alloc_info.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo allocInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    allocInfo.level = level;
+    allocInfo.commandPool = m_commandPool;
+    allocInfo.commandBufferCount = 1;
 
     HYPERION_VK_CHECK_MSG(
-        vkAllocateCommandBuffers(GetRenderingAPI()->GetDevice()->GetDevice(), &alloc_info, &m_handle),
+        vkAllocateCommandBuffers(GetRenderBackend()->GetDevice()->GetDevice(), &allocInfo, &m_handle),
         "Failed to allocate command buffer");
 
     HYPERION_RETURN_OK;
@@ -89,36 +87,36 @@ RendererResult VulkanCommandBuffer::Destroy()
 {
     if (m_handle != VK_NULL_HANDLE)
     {
-        AssertThrow(m_command_pool != VK_NULL_HANDLE);
+        AssertThrow(m_commandPool != VK_NULL_HANDLE);
 
-        vkFreeCommandBuffers(GetRenderingAPI()->GetDevice()->GetDevice(), m_command_pool, 1, &m_handle);
+        vkFreeCommandBuffers(GetRenderBackend()->GetDevice()->GetDevice(), m_commandPool, 1, &m_handle);
 
         m_handle = VK_NULL_HANDLE;
-        m_command_pool = VK_NULL_HANDLE;
+        m_commandPool = VK_NULL_HANDLE;
     }
 
     HYPERION_RETURN_OK;
 }
 
-RendererResult VulkanCommandBuffer::Begin(const VulkanRenderPass* render_pass)
+RendererResult VulkanCommandBuffer::Begin(const VulkanRenderPass* renderPass)
 {
-    VkCommandBufferInheritanceInfo inheritance_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
-    inheritance_info.subpass = 0;
-    inheritance_info.framebuffer = VK_NULL_HANDLE;
+    VkCommandBufferInheritanceInfo inheritanceInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+    inheritanceInfo.subpass = 0;
+    inheritanceInfo.framebuffer = VK_NULL_HANDLE;
 
-    VkCommandBufferBeginInfo begin_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    VkCommandBufferBeginInfo beginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 
     if (m_type == COMMAND_BUFFER_SECONDARY)
     {
-        if (render_pass == nullptr)
+        if (renderPass == nullptr)
         {
             return HYP_MAKE_ERROR(RendererError, "Render pass not provided for secondary command buffer!");
         }
 
-        inheritance_info.renderPass = render_pass->GetVulkanHandle();
+        inheritanceInfo.renderPass = renderPass->GetVulkanHandle();
 
-        begin_info.pInheritanceInfo = &inheritance_info;
-        begin_info.flags |= VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+        beginInfo.pInheritanceInfo = &inheritanceInfo;
+        beginInfo.flags |= VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     }
 
     if (!m_handle)
@@ -127,7 +125,7 @@ RendererResult VulkanCommandBuffer::Begin(const VulkanRenderPass* render_pass)
     }
 
     HYPERION_VK_CHECK_MSG(
-        vkBeginCommandBuffer(m_handle, &begin_info),
+        vkBeginCommandBuffer(m_handle, &beginInfo),
         "Failed to begin command buffer");
 
     HYPERION_RETURN_OK;
@@ -154,35 +152,35 @@ RendererResult VulkanCommandBuffer::Reset()
 RendererResult VulkanCommandBuffer::SubmitPrimary(
     VulkanDeviceQueue* queue,
     VulkanFence* fence,
-    VulkanSemaphoreChain* semaphore_chain)
+    VulkanSemaphoreChain* semaphoreChain)
 {
-    VkSubmitInfo submit_info { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    VkSubmitInfo submitInfo { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
-    if (semaphore_chain != nullptr)
+    if (semaphoreChain != nullptr)
     {
-        submit_info.waitSemaphoreCount = uint32(semaphore_chain->GetWaitSemaphoresView().size());
-        submit_info.pWaitSemaphores = semaphore_chain->GetWaitSemaphoresView().data();
-        submit_info.signalSemaphoreCount = uint32(semaphore_chain->GetSignalSemaphoresView().size());
-        submit_info.pSignalSemaphores = semaphore_chain->GetSignalSemaphoresView().data();
-        submit_info.pWaitDstStageMask = semaphore_chain->GetWaitSemaphoreStagesView().data();
+        submitInfo.waitSemaphoreCount = uint32(semaphoreChain->GetWaitSemaphoresView().size());
+        submitInfo.pWaitSemaphores = semaphoreChain->GetWaitSemaphoresView().data();
+        submitInfo.signalSemaphoreCount = uint32(semaphoreChain->GetSignalSemaphoresView().size());
+        submitInfo.pSignalSemaphores = semaphoreChain->GetSignalSemaphoresView().data();
+        submitInfo.pWaitDstStageMask = semaphoreChain->GetWaitSemaphoreStagesView().data();
     }
     else
     {
-        submit_info.waitSemaphoreCount = 0;
-        submit_info.pWaitSemaphores = nullptr;
-        submit_info.signalSemaphoreCount = 0;
-        submit_info.pSignalSemaphores = nullptr;
-        submit_info.pWaitDstStageMask = nullptr;
+        submitInfo.waitSemaphoreCount = 0;
+        submitInfo.pWaitSemaphores = nullptr;
+        submitInfo.signalSemaphoreCount = 0;
+        submitInfo.pSignalSemaphores = nullptr;
+        submitInfo.pWaitDstStageMask = nullptr;
     }
 
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_handle;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_handle;
 
     AssertThrow(fence != nullptr);
     AssertThrow(fence->GetVulkanHandle() != VK_NULL_HANDLE);
 
     HYPERION_VK_CHECK_MSG(
-        vkQueueSubmit(queue->queue, 1, &submit_info, fence->GetVulkanHandle()),
+        vkQueueSubmit(queue->queue, 1, &submitInfo, fence->GetVulkanHandle()),
         "Failed to submit command");
 
     HYPERION_RETURN_OK;
@@ -198,76 +196,75 @@ RendererResult VulkanCommandBuffer::SubmitSecondary(VulkanCommandBuffer* primary
     HYPERION_RETURN_OK;
 }
 
-void VulkanCommandBuffer::BindVertexBuffer(const GPUBufferBase* buffer)
+void VulkanCommandBuffer::BindVertexBuffer(const GpuBufferBase* buffer)
 {
     AssertThrow(buffer != nullptr);
-    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_VERTEX_BUFFER, "Not a vertex buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
+    AssertThrowMsg(buffer->GetBufferType() == GpuBufferType::MESH_VERTEX_BUFFER, "Not a vertex buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
 
-    const VkBuffer vertex_buffers[] = { static_cast<const VulkanGPUBuffer*>(buffer)->GetVulkanHandle() };
+    const VkBuffer vertexBuffers[] = { static_cast<const VulkanGpuBuffer*>(buffer)->GetVulkanHandle() };
     static const VkDeviceSize offsets[] = { 0 };
 
-    vkCmdBindVertexBuffers(m_handle, 0, 1, vertex_buffers, offsets);
+    vkCmdBindVertexBuffers(m_handle, 0, 1, vertexBuffers, offsets);
 }
 
-void VulkanCommandBuffer::BindIndexBuffer(const GPUBufferBase* buffer, DatumType datum_type)
+void VulkanCommandBuffer::BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType)
 {
     AssertThrow(buffer != nullptr);
-    AssertThrowMsg(buffer->GetBufferType() == GPUBufferType::MESH_INDEX_BUFFER, "Not an index buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
+    AssertThrowMsg(buffer->GetBufferType() == GpuBufferType::MESH_INDEX_BUFFER, "Not an index buffer! Got buffer type: %u", uint32(buffer->GetBufferType()));
 
     vkCmdBindIndexBuffer(
         m_handle,
-        static_cast<const VulkanGPUBuffer*>(buffer)->GetVulkanHandle(),
+        static_cast<const VulkanGpuBuffer*>(buffer)->GetVulkanHandle(),
         0,
-        helpers::ToVkIndexType(datum_type));
+        helpers::ToVkIndexType(elemType));
 }
 
 void VulkanCommandBuffer::DrawIndexed(
-    uint32 num_indices,
-    uint32 num_instances,
-    uint32 instance_index) const
+    uint32 numIndices,
+    uint32 numInstances,
+    uint32 instanceIndex) const
 {
     vkCmdDrawIndexed(
         m_handle,
-        num_indices,
-        num_instances,
+        numIndices,
+        numInstances,
         0,
         0,
-        instance_index);
+        instanceIndex);
 }
 
 void VulkanCommandBuffer::DrawIndexedIndirect(
-    const GPUBufferBase* buffer,
-    uint32 buffer_offset) const
+    const GpuBufferBase* buffer,
+    uint32 bufferOffset) const
 {
     vkCmdDrawIndexedIndirect(
         m_handle,
-        static_cast<const VulkanGPUBuffer*>(buffer)->GetVulkanHandle(),
-        buffer_offset,
+        static_cast<const VulkanGpuBuffer*>(buffer)->GetVulkanHandle(),
+        bufferOffset,
         1,
         uint32(sizeof(IndirectDrawCommand)));
 }
 
-void VulkanCommandBuffer::DebugMarkerBegin(const char* marker_name) const
+void VulkanCommandBuffer::DebugMarkerBegin(const char* markerName) const
 {
-    if (Features::dyn_functions.vkCmdDebugMarkerBeginEXT)
+    if (Features::dynFunctions.vkCmdDebugMarkerBeginEXT)
     {
         const VkDebugMarkerMarkerInfoEXT marker {
             .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
             .pNext = nullptr,
-            .pMarkerName = marker_name
+            .pMarkerName = markerName
         };
 
-        Features::dyn_functions.vkCmdDebugMarkerBeginEXT(m_handle, &marker);
+        Features::dynFunctions.vkCmdDebugMarkerBeginEXT(m_handle, &marker);
     }
 }
 
 void VulkanCommandBuffer::DebugMarkerEnd() const
 {
-    if (Features::dyn_functions.vkCmdDebugMarkerEndEXT)
+    if (Features::dynFunctions.vkCmdDebugMarkerEndEXT)
     {
-        Features::dyn_functions.vkCmdDebugMarkerEndEXT(m_handle);
+        Features::dynFunctions.vkCmdDebugMarkerEndEXT(m_handle);
     }
 }
 
-} // namespace renderer
 } // namespace hyperion

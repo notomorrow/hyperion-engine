@@ -2,7 +2,7 @@
 
 #include <rendering/DOFBlur.hpp>
 
-#include <rendering/Shader.hpp>
+#include <rendering/ShaderManager.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 
@@ -18,71 +18,56 @@ DOFBlur::~DOFBlur() = default;
 
 void DOFBlur::Create()
 {
-    ShaderRef blur_horizontal_shader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurDirection"), ShaderProperties({ "DIRECTION_HORIZONTAL" }));
-    AssertThrow(blur_horizontal_shader.IsValid());
+    ShaderRef blurHorizontalShader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurDirection"), ShaderProperties({ "DIRECTION_HORIZONTAL" }));
+    AssertThrow(blurHorizontalShader.IsValid());
 
-    m_blur_horizontal_pass = MakeUnique<FullScreenPass>(
-        blur_horizontal_shader,
-        InternalFormat::RGBA8,
-        m_extent,
-        m_gbuffer);
+    m_blurHorizontalPass = MakeUnique<FullScreenPass>(blurHorizontalShader, TF_RGBA8, m_extent, m_gbuffer);
+    m_blurHorizontalPass->Create();
 
-    m_blur_horizontal_pass->Create();
+    ShaderRef blurVerticalShader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurDirection"), ShaderProperties({ "DIRECTION_VERTICAL" }));
+    AssertThrow(blurVerticalShader.IsValid());
 
-    ShaderRef blur_vertical_shader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurDirection"), ShaderProperties({ "DIRECTION_VERTICAL" }));
-    AssertThrow(blur_vertical_shader.IsValid());
+    m_blurVerticalPass = MakeUnique<FullScreenPass>(blurVerticalShader, TF_RGBA8, m_extent, m_gbuffer);
+    m_blurVerticalPass->Create();
 
-    m_blur_vertical_pass = MakeUnique<FullScreenPass>(
-        blur_vertical_shader,
-        InternalFormat::RGBA8,
-        m_extent,
-        m_gbuffer);
+    ShaderRef blurMixShader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurMix"));
+    AssertThrow(blurMixShader.IsValid());
 
-    m_blur_vertical_pass->Create();
-
-    ShaderRef blur_mix_shader = ShaderManager::GetInstance()->GetOrCreate(NAME("DOFBlurMix"));
-    AssertThrow(blur_mix_shader.IsValid());
-
-    m_blur_mix_pass = MakeUnique<FullScreenPass>(
-        blur_mix_shader,
-        InternalFormat::RGBA8,
-        m_extent,
-        m_gbuffer);
-
-    m_blur_mix_pass->Create();
+    m_blurMixPass = MakeUnique<FullScreenPass>(blurMixShader, TF_RGBA8, m_extent, m_gbuffer);
+    m_blurMixPass->Create();
 }
 
 void DOFBlur::Destroy()
 {
-    m_blur_horizontal_pass.Reset();
-    m_blur_vertical_pass.Reset();
-    m_blur_mix_pass.Reset();
+    m_blurHorizontalPass.Reset();
+    m_blurVerticalPass.Reset();
+    m_blurMixPass.Reset();
 }
 
-void DOFBlur::Render(FrameBase* frame, const RenderSetup& render_setup)
+void DOFBlur::Render(FrameBase* frame, const RenderSetup& renderSetup)
 {
     struct
     {
         Vec2u dimension;
-    } push_constants;
+    } pushConstants;
 
-    push_constants.dimension = m_extent;
+    pushConstants.dimension = m_extent;
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    FixedArray<FullScreenPass*, 2> directional_passes {
-        m_blur_horizontal_pass.Get(),
-        m_blur_vertical_pass.Get()
+    FixedArray<FullScreenPass*, 2> directionalPasses {
+        m_blurHorizontalPass.Get(),
+        m_blurVerticalPass.Get()
     };
 
-    for (FullScreenPass* pass : directional_passes)
+    for (FullScreenPass* pass : directionalPasses)
     {
-        pass->SetPushConstants(&push_constants, sizeof(push_constants));
-        pass->Render(frame, render_setup);
+        pass->SetPushConstants(&pushConstants, sizeof(pushConstants));
+        pass->Render(frame, renderSetup);
     }
 
-    m_blur_mix_pass->SetPushConstants(&push_constants, sizeof(push_constants));
-    m_blur_mix_pass->Render(frame, render_setup);
+    m_blurMixPass->SetPushConstants(&pushConstants, sizeof(pushConstants));
+    m_blurMixPass->Render(frame, renderSetup);
 }
 
 } // namespace hyperion

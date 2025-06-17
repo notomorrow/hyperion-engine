@@ -21,8 +21,8 @@ public:
     {
     }
 
-    explicit constexpr UniqueID(const HashCode& hash_code)
-        : m_value(hash_code.Value())
+    explicit constexpr UniqueID(const HashCode& hashCode)
+        : m_value(hashCode.Value())
     {
     }
 
@@ -82,9 +82,9 @@ public:
         return UniqueID { 0 };
     }
 
-    static UniqueID FromHashCode(const HashCode& hash_code)
+    static UniqueID FromHashCode(const HashCode& hashCode)
     {
-        return UniqueID { hash_code };
+        return UniqueID { hashCode };
     }
 
     static UniqueID FromUUID(const UUID& uuid)

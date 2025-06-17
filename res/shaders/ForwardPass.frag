@@ -50,7 +50,7 @@ uniform sampler sampler_nearest;
 
 HYP_DESCRIPTOR_SRV(View, GBufferMipChain) uniform texture2D gbuffer_mip_chain;
 
-HYP_DESCRIPTOR_SRV(View, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
+HYP_DESCRIPTOR_SRV(Global, EnvProbeTextures, count = 16) uniform texture2D env_probe_textures[16];
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, EnvGridsBuffer) uniform EnvGridsBuffer
 {
     EnvGrid env_grid;
@@ -188,10 +188,12 @@ void main()
     {
         vec4 albedo_texture = SAMPLE_TEXTURE(CURRENT_MATERIAL, MATERIAL_TEXTURE_ALBEDO_map, texcoord);
 
+#ifdef ALPHA_DISCARD
         if (albedo_texture.a < alpha_threshold)
         {
             discard;
         }
+#endif
 
         gbuffer_albedo *= albedo_texture;
     }

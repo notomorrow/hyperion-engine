@@ -125,7 +125,7 @@ String Option::GetString() const
 
 static const FlatMap<OptionName, String>& GetOptionNameStrings()
 {
-    static const FlatMap<OptionName, String> option_name_strings {
+    static const FlatMap<OptionName, String> optionNameStrings {
         { CONFIG_DEBUG_MODE, "DebugMode" },
         { CONFIG_SHADER_COMPILATION, "ShaderCompilation" },
         { CONFIG_PATHTRACER, "PathTracer" },
@@ -145,7 +145,7 @@ static const FlatMap<OptionName, String>& GetOptionNameStrings()
         { CONFIG_DEBUG_ENV_GRID_PROBES, "DebugEnvGridProbes" }
     };
 
-    return option_name_strings;
+    return optionNameStrings;
 }
 
 OptionName Configuration::StringToOptionName(const String& str)
@@ -186,14 +186,14 @@ bool Configuration::LoadFromDefinitionsFile()
 
     for (const auto& it : definitions.GetSections())
     {
-        for (const auto& option_it : it.second)
+        for (const auto& optionIt : it.second)
         {
-            const OptionName option_name = StringToOptionName(option_it.first);
-            const INIFile::Value& option_value = option_it.second;
+            const OptionName optionName = StringToOptionName(optionIt.first);
+            const INIFile::Value& optionValue = optionIt.second;
 
-            if (option_name == CONFIG_NONE || option_name >= CONFIG_MAX)
+            if (optionName == CONFIG_NONE || optionName >= CONFIG_MAX)
             {
-                HYP_LOG(Config, Warning, "{}: Unknown config option", option_it.first);
+                HYP_LOG(Config, Warning, "{}: Unknown config option", optionIt.first);
 
                 continue;
             }
@@ -204,30 +204,30 @@ bool Configuration::LoadFromDefinitionsFile()
             {
                 int i;
                 float f;
-            } tmp_value;
+            } tmpValue;
 
-            if (option_value.GetValue().name == "true")
+            if (optionValue.GetValue().name == "true")
             {
                 value = true;
             }
-            else if (option_value.GetValue().name == "false")
+            else if (optionValue.GetValue().name == "false")
             {
                 value = false;
             }
-            else if (StringUtil::Parse(option_it.first.Data(), &tmp_value.i))
+            else if (StringUtil::Parse(optionIt.first.Data(), &tmpValue.i))
             {
-                value = tmp_value.i;
+                value = tmpValue.i;
             }
-            else if (StringUtil::Parse(option_it.first.Data(), &tmp_value.f))
+            else if (StringUtil::Parse(optionIt.first.Data(), &tmpValue.f))
             {
-                value = tmp_value.f;
+                value = tmpValue.f;
             }
             else
             {
                 value = false;
             }
 
-            m_variables[option_name] = std::move(value);
+            m_variables[optionName] = std::move(value);
         }
     }
 
@@ -236,25 +236,25 @@ bool Configuration::LoadFromDefinitionsFile()
 
 bool Configuration::SaveToDefinitionsFile()
 {
-    static const String default_section_name = "Default";
+    static const String defaultSectionName = "Default";
 
     // for (Option &option : m_variables) {
     //     if (!(option.GetFlags() & OptionFlags::SAVE)) {
     //         continue;
     //     }
 
-    //     String value_string = "false";
+    //     String valueString = "false";
 
     //     if (option.IsValid()) {
-    //         value_string = option.GetString();
+    //         valueString = option.GetString();
     //     }
 
-    //     m_ini_file
-    //         .GetSection(default_section_name)
+    //     m_iniFile
+    //         .GetSection(defaultSectionName)
     //         .Set()
     // }
 
-    String str_result = "[Default]\n";
+    String strResult = "[Default]\n";
 
     for (uint32 index = CONFIG_NONE + 1; index < CONFIG_MAX; index++)
     {
@@ -265,14 +265,14 @@ bool Configuration::SaveToDefinitionsFile()
             continue;
         }
 
-        String value_string = "false";
+        String valueString = "false";
 
         if (option.IsValid())
         {
-            value_string = option.GetString();
+            valueString = option.GetString();
         }
 
-        str_result += OptionNameToString(OptionName(index)) + " = " + value_string + "\n";
+        strResult += OptionNameToString(OptionName(index)) + " = " + valueString + "\n";
     }
 
     const String path = GetResourceDirectory() / "Config.ini";
@@ -284,7 +284,7 @@ bool Configuration::SaveToDefinitionsFile()
         return false;
     }
 
-    writer.Write(str_result.Data(), str_result.Size());
+    writer.Write(strResult.Data(), strResult.Size());
     writer.Close();
 
     return true;

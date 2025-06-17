@@ -4,13 +4,16 @@
 #include <rendering/backend/vulkan/RendererRenderPass.hpp>
 #include <rendering/backend/vulkan/RendererFramebuffer.hpp>
 #include <rendering/backend/vulkan/RendererShader.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <rendering/shader_compiler/ShaderCompiler.hpp> // For CompiledShader
 
 #include <core/debug/Debug.hpp>
+
+#include <core/logging/Logger.hpp>
+#include <core/logging/LogChannels.hpp>
 
 #include <core/math/MathUtil.hpp>
 #include <core/math/Transform.hpp>
@@ -21,76 +24,74 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 #pragma region Helpers
 
-static VkBlendFactor ToVkBlendFactor(BlendModeFactor blend_mode)
+static VkBlendFactor ToVkBlendFactor(BlendModeFactor blendMode)
 {
-    switch (blend_mode)
+    switch (blendMode)
     {
-    case BlendModeFactor::ONE:
+    case BMF_ONE:
         return VK_BLEND_FACTOR_ONE;
-    case BlendModeFactor::ZERO:
+    case BMF_ZERO:
         return VK_BLEND_FACTOR_ZERO;
-    case BlendModeFactor::SRC_COLOR:
+    case BMF_SRC_COLOR:
         return VK_BLEND_FACTOR_SRC_COLOR;
-    case BlendModeFactor::SRC_ALPHA:
+    case BMF_SRC_ALPHA:
         return VK_BLEND_FACTOR_SRC_ALPHA;
-    case BlendModeFactor::DST_COLOR:
+    case BMF_DST_COLOR:
         return VK_BLEND_FACTOR_DST_COLOR;
-    case BlendModeFactor::DST_ALPHA:
+    case BMF_DST_ALPHA:
         return VK_BLEND_FACTOR_DST_ALPHA;
-    case BlendModeFactor::ONE_MINUS_SRC_COLOR:
+    case BMF_ONE_MINUS_SRC_COLOR:
         return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-    case BlendModeFactor::ONE_MINUS_SRC_ALPHA:
+    case BMF_ONE_MINUS_SRC_ALPHA:
         return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    case BlendModeFactor::ONE_MINUS_DST_COLOR:
+    case BMF_ONE_MINUS_DST_COLOR:
         return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-    case BlendModeFactor::ONE_MINUS_DST_ALPHA:
+    case BMF_ONE_MINUS_DST_ALPHA:
         return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
     default:
         return VK_BLEND_FACTOR_ONE;
     }
 }
 
-static VkStencilOp ToVkStencilOp(StencilOp stencil_op)
+static VkStencilOp ToVkStencilOp(StencilOp stencilOp)
 {
-    switch (stencil_op)
+    switch (stencilOp)
     {
-    case StencilOp::KEEP:
+    case SO_KEEP:
         return VK_STENCIL_OP_KEEP;
-    case StencilOp::ZERO:
+    case SO_ZERO:
         return VK_STENCIL_OP_ZERO;
-    case StencilOp::REPLACE:
+    case SO_REPLACE:
         return VK_STENCIL_OP_REPLACE;
-    case StencilOp::INCREMENT:
+    case SO_INCREMENT:
         return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-    case StencilOp::DECREMENT:
+    case SO_DECREMENT:
         return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
     default:
         return VK_STENCIL_OP_KEEP;
     }
 }
 
-static VkCompareOp ToVkCompareOp(StencilCompareOp compare_op)
+static VkCompareOp ToVkCompareOp(StencilCompareOp compareOp)
 {
-    switch (compare_op)
+    switch (compareOp)
     {
-    case StencilCompareOp::ALWAYS:
+    case SCO_ALWAYS:
         return VK_COMPARE_OP_ALWAYS;
-    case StencilCompareOp::NEVER:
+    case SCO_NEVER:
         return VK_COMPARE_OP_NEVER;
-    case StencilCompareOp::EQUAL:
+    case SCO_EQUAL:
         return VK_COMPARE_OP_EQUAL;
-    case StencilCompareOp::NOT_EQUAL:
+    case SCO_NOT_EQUAL:
         return VK_COMPARE_OP_NOT_EQUAL;
     default:
         return VK_COMPARE_OP_ALWAYS;
@@ -107,9 +108,9 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline()
 {
 }
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptor_table)
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable)
     : VulkanPipelineBase(),
-      GraphicsPipelineBase(shader, descriptor_table)
+      GraphicsPipelineBase(shader, descriptorTable)
 {
 }
 
@@ -119,24 +120,24 @@ VulkanGraphicsPipeline::~VulkanGraphicsPipeline()
 
 void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd)
 {
-    Vec2i viewport_offset = Vec2i::Zero();
-    Vec2i viewport_extent = Vec2i::One();
+    Vec2i viewportOffset = Vec2i::Zero();
+    Vec2u viewportExtent = Vec2u::One();
 
     if (m_framebuffers.Any())
     {
-        viewport_extent = Vec2i(m_framebuffers[0]->GetExtent());
+        viewportExtent = m_framebuffers[0]->GetExtent();
     }
 
-    Bind(cmd, viewport_offset, viewport_extent);
+    Bind(cmd, viewportOffset, viewportExtent);
 }
 
-void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd, Vec2i viewport_offset, Vec2i viewport_extent)
+void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd, Vec2i viewportOffset, Vec2u viewportExtent)
 {
-    if (viewport_extent != Vec2i::Zero())
+    if (viewportExtent != Vec2u::Zero())
     {
         Viewport viewport;
-        viewport.position = viewport_offset;
-        viewport.extent = viewport_extent;
+        viewport.position = viewportOffset;
+        viewport.extent = viewportExtent;
 
         UpdateViewport(static_cast<VulkanCommandBuffer*>(cmd), viewport);
     }
@@ -146,108 +147,107 @@ void VulkanGraphicsPipeline::Bind(CommandBufferBase* cmd, Vec2i viewport_offset,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         VulkanPipelineBase::m_handle);
 
-    if (m_push_constants)
+    if (m_pushConstants)
     {
         vkCmdPushConstants(
             static_cast<VulkanCommandBuffer*>(cmd)->GetVulkanHandle(),
             VulkanPipelineBase::m_layout,
             VK_SHADER_STAGE_ALL_GRAPHICS,
             0,
-            m_push_constants.Size(),
-            m_push_constants.Data());
+            m_pushConstants.Size(),
+            m_pushConstants.Data());
     }
 }
 
+static int g_tmpNumGraphicsPipelines = 0;
 RendererResult VulkanGraphicsPipeline::Rebuild()
 {
-    Array<VkVertexInputAttributeDescription> vk_vertex_attributes;
-    Array<VkVertexInputBindingDescription> vk_vertex_binding_descriptions;
+    ++g_tmpNumGraphicsPipelines;
+    Array<VkVertexInputAttributeDescription> vkVertexAttributes;
+    Array<VkVertexInputBindingDescription> vkVertexBindingDescriptions;
 
-    BuildVertexAttributes(m_vertex_attributes, vk_vertex_attributes, vk_vertex_binding_descriptions);
+    BuildVertexAttributes(m_vertexAttributes, vkVertexAttributes, vkVertexBindingDescriptions);
 
-    VkPipelineVertexInputStateCreateInfo vertex_input_info { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    vertex_input_info.vertexBindingDescriptionCount = uint32(vk_vertex_binding_descriptions.Size());
-    vertex_input_info.pVertexBindingDescriptions = vk_vertex_binding_descriptions.Data();
-    vertex_input_info.vertexAttributeDescriptionCount = uint32(vk_vertex_attributes.Size());
-    vertex_input_info.pVertexAttributeDescriptions = vk_vertex_attributes.Data();
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    vertexInputInfo.vertexBindingDescriptionCount = uint32(vkVertexBindingDescriptions.Size());
+    vertexInputInfo.pVertexBindingDescriptions = vkVertexBindingDescriptions.Data();
+    vertexInputInfo.vertexAttributeDescriptionCount = uint32(vkVertexAttributes.Size());
+    vertexInputInfo.pVertexAttributeDescriptions = vkVertexAttributes.Data();
 
-    VkPipelineInputAssemblyStateCreateInfo input_asm_info { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-    input_asm_info.primitiveRestartEnable = VK_FALSE;
+    VkPipelineInputAssemblyStateCreateInfo inputAsmInfo { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    inputAsmInfo.primitiveRestartEnable = VK_FALSE;
 
     switch (m_topology)
     {
-    case Topology::TRIANGLES:
-        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    case TOP_TRIANGLES:
+        inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         break;
 #ifndef HYP_APPLE
-    case Topology::TRIANGLE_FAN:
-        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN; // not supported on metal
+    case TOP_TRIANGLE_FAN:
+        inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN; // not supported on metal
         break;
 #endif
-    case Topology::TRIANGLE_STRIP:
-        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    case TOP_TRIANGLE_STRIP:
+        inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         break;
-    case Topology::LINES:
-        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    case TOP_LINES:
+        inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
         break;
-    case Topology::POINTS:
-        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    case TOP_POINTS:
+        inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
         break;
     default:
-        input_asm_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         break;
     }
 
-    m_viewport = {
-        Vec2i::Zero(),
-        Vec2i(m_framebuffers[0]->GetExtent())
-    };
+    m_viewport = { m_framebuffers[0]->GetExtent(), Vec2i::Zero() };
 
-    VkViewport vk_viewport {};
-    vk_viewport.x = float(m_viewport.position.x);
-    vk_viewport.y = float(m_viewport.position.y);
-    vk_viewport.width = float(m_viewport.extent.x);
-    vk_viewport.height = float(m_viewport.extent.y);
-    vk_viewport.minDepth = 0.0f;
-    vk_viewport.maxDepth = 1.0f;
+    VkViewport vkViewport {};
+    vkViewport.x = float(m_viewport.position.x);
+    vkViewport.y = float(m_viewport.position.y);
+    vkViewport.width = float(m_viewport.extent.x);
+    vkViewport.height = float(m_viewport.extent.y);
+    vkViewport.minDepth = 0.0f;
+    vkViewport.maxDepth = 1.0f;
 
-    VkRect2D vk_scissor {};
-    vk_scissor.offset = { m_viewport.position.x, m_viewport.position.y };
-    vk_scissor.extent = { uint32(m_viewport.extent.x), uint32(m_viewport.extent.y) };
+    VkRect2D vkScissor {};
+    vkScissor.offset = { m_viewport.position.x, m_viewport.position.y };
+    vkScissor.extent = { uint32(m_viewport.extent.x), uint32(m_viewport.extent.y) };
 
-    VkPipelineViewportStateCreateInfo viewport_state { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-    viewport_state.viewportCount = 1;
-    viewport_state.pViewports = &vk_viewport;
-    viewport_state.scissorCount = 1;
-    viewport_state.pScissors = &vk_scissor;
+    VkPipelineViewportStateCreateInfo viewportState { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = &vkViewport;
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = &vkScissor;
 
     VkPipelineRasterizationStateCreateInfo rasterizer { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-    switch (m_face_cull_mode)
+    switch (m_faceCullMode)
     {
-    case FaceCullMode::BACK:
+    case FCM_BACK:
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         break;
-    case FaceCullMode::FRONT:
+    case FCM_FRONT:
         rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
         break;
-    case FaceCullMode::NONE:
+    case FCM_NONE:
         rasterizer.cullMode = VK_CULL_MODE_NONE;
         break;
     default:
         return HYP_MAKE_ERROR(RendererError, "Invalid value for face cull mode!");
     }
 
-    switch (m_fill_mode)
+    switch (m_fillMode)
     {
-    case FillMode::LINE:
+    case FM_LINE:
         rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
         rasterizer.lineWidth = 1.0f; // 2.5f; // have to set VK_DYNAMIC_STATE_LINE_WIDTH and wideLines feature to use any non-1.0 value
         break;
-    case FillMode::FILL: // fallthrough
+    case FM_FILL: // fallthrough
     default:
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
@@ -266,268 +266,183 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
     multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
     multisampling.alphaToOneEnable = VK_FALSE;      // Optional
 
-    Array<VkPipelineColorBlendAttachmentState> color_blend_attachments;
-    color_blend_attachments.Reserve(m_render_pass->GetAttachments().Size());
+    Array<VkPipelineColorBlendAttachmentState> colorBlendAttachments;
+    colorBlendAttachments.Reserve(m_renderPass->GetAttachments().Size());
 
-    for (const VulkanAttachmentRef& attachment : m_render_pass->GetAttachments())
+    for (const VulkanAttachmentRef& attachment : m_renderPass->GetAttachments())
     {
         if (attachment->IsDepthAttachment())
         {
             continue;
         }
 
-        const bool blend_enabled = attachment->AllowBlending() && m_blend_function != BlendFunction::None();
+        const bool blendEnabled = attachment->AllowBlending() && m_blendFunction != BlendFunction::None();
 
-        static const VkBlendOp color_blend_ops[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };
-        static const VkBlendOp alpha_blend_ops[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };
+        static const VkBlendOp colorBlendOps[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };
+        static const VkBlendOp alphaBlendOps[] = { VK_BLEND_OP_ADD, VK_BLEND_OP_ADD, VK_BLEND_OP_ADD };
 
-        color_blend_attachments.PushBack(VkPipelineColorBlendAttachmentState {
-            .blendEnable = blend_enabled,
-            .srcColorBlendFactor = ToVkBlendFactor(m_blend_function.GetSrcColor()),
-            .dstColorBlendFactor = ToVkBlendFactor(m_blend_function.GetDstColor()),
+        colorBlendAttachments.PushBack(VkPipelineColorBlendAttachmentState {
+            .blendEnable = blendEnabled,
+            .srcColorBlendFactor = ToVkBlendFactor(m_blendFunction.GetSrcColor()),
+            .dstColorBlendFactor = ToVkBlendFactor(m_blendFunction.GetDstColor()),
             .colorBlendOp = VK_BLEND_OP_ADD,
-            .srcAlphaBlendFactor = ToVkBlendFactor(m_blend_function.GetSrcAlpha()),
-            .dstAlphaBlendFactor = ToVkBlendFactor(m_blend_function.GetDstAlpha()),
+            .srcAlphaBlendFactor = ToVkBlendFactor(m_blendFunction.GetSrcAlpha()),
+            .dstAlphaBlendFactor = ToVkBlendFactor(m_blendFunction.GetDstAlpha()),
             .alphaBlendOp = VK_BLEND_OP_ADD,
             .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT });
     }
 
-    VkPipelineColorBlendStateCreateInfo color_blending { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-    color_blending.logicOpEnable = VK_FALSE;
-    color_blending.attachmentCount = uint32(color_blend_attachments.Size());
-    color_blending.pAttachments = color_blend_attachments.Data();
-    color_blending.blendConstants[0] = 0.0f;
-    color_blending.blendConstants[1] = 0.0f;
-    color_blending.blendConstants[2] = 0.0f;
-    color_blending.blendConstants[3] = 0.0f;
+    VkPipelineColorBlendStateCreateInfo colorBlending { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.attachmentCount = uint32(colorBlendAttachments.Size());
+    colorBlending.pAttachments = colorBlendAttachments.Data();
+    colorBlending.blendConstants[0] = 0.0f;
+    colorBlending.blendConstants[1] = 0.0f;
+    colorBlending.blendConstants[2] = 0.0f;
+    colorBlending.blendConstants[3] = 0.0f;
 
     // Allow updating viewport and scissor at runtime
-    const FixedArray<VkDynamicState, 2> dynamic_states {
+    const FixedArray<VkDynamicState, 2> dynamicStates {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR
     };
 
-    VkPipelineDynamicStateCreateInfo dynamic_state { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-    dynamic_state.dynamicStateCount = uint32(dynamic_states.Size());
-    dynamic_state.pDynamicStates = dynamic_states.Data();
+    VkPipelineDynamicStateCreateInfo dynamicState { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    dynamicState.dynamicStateCount = uint32(dynamicStates.Size());
+    dynamicState.pDynamicStates = dynamicStates.Data();
 
-    VkPipelineLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+    VkPipelineLayoutCreateInfo layoutInfo { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
-    const uint32 max_set_layouts = GetRenderingAPI()->GetDevice()->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
+    const uint32 maxSetLayouts = GetRenderBackend()->GetDevice()->GetFeatures().GetPhysicalDeviceProperties().limits.maxBoundDescriptorSets;
 
-    if (!m_descriptor_table.IsValid())
+    if (!m_descriptorTable.IsValid())
     {
         return HYP_MAKE_ERROR(RendererError, "No descriptor table set for pipeline");
     }
 
-    Array<VkDescriptorSetLayout> used_layouts = GetPipelineVulkanDescriptorSetLayouts(*this);
+    Array<VkDescriptorSetLayout> usedLayouts = GetPipelineVulkanDescriptorSetLayouts(*this);
 
-    for (VkDescriptorSetLayout vk_descriptor_set_layout : used_layouts)
+    for (VkDescriptorSetLayout vkDescriptorSetLayout : usedLayouts)
     {
-        if (vk_descriptor_set_layout == VK_NULL_HANDLE)
+        if (vkDescriptorSetLayout == VK_NULL_HANDLE)
         {
             return HYP_MAKE_ERROR(RendererError, "Null descriptor set layout in pipeline");
         }
     }
 
-    if (used_layouts.Size() > max_set_layouts)
+    if (usedLayouts.Size() > maxSetLayouts)
     {
         DebugLog(
             LogType::Debug,
             "Device max bound descriptor sets exceeded (%llu > %u)\n",
-            used_layouts.Size(),
-            max_set_layouts);
+            usedLayouts.Size(),
+            maxSetLayouts);
 
         return HYP_MAKE_ERROR(RendererError, "Device max bound descriptor sets exceeded");
     }
 
-    layout_info.setLayoutCount = uint32(used_layouts.Size());
-    layout_info.pSetLayouts = used_layouts.Data();
+    layoutInfo.setLayoutCount = uint32(usedLayouts.Size());
+    layoutInfo.pSetLayouts = usedLayouts.Data();
 
     /* Push constants */
-    const VkPushConstantRange push_constant_ranges[] = {
+    const VkPushConstantRange pushConstantRanges[] = {
         { .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
             .offset = 0,
-            .size = uint32(GetRenderingAPI()->GetDevice()->GetFeatures().PaddedSize<PushConstantData>()) }
+            .size = uint32(GetRenderBackend()->GetDevice()->GetFeatures().PaddedSize<PushConstantData>()) }
     };
 
-    layout_info.pushConstantRangeCount = uint32(std::size(push_constant_ranges));
-    layout_info.pPushConstantRanges = push_constant_ranges;
+    layoutInfo.pushConstantRangeCount = uint32(std::size(pushConstantRanges));
+    layoutInfo.pPushConstantRanges = pushConstantRanges;
 
     HYPERION_VK_CHECK_MSG(
-        vkCreatePipelineLayout(GetRenderingAPI()->GetDevice()->GetDevice(), &layout_info, nullptr, &m_layout),
+        vkCreatePipelineLayout(GetRenderBackend()->GetDevice()->GetDevice(), &layoutInfo, nullptr, &m_layout),
         "Failed to create graphics pipeline layout");
 
     /* Depth / stencil */
-    VkPipelineDepthStencilStateCreateInfo depth_stencil { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-    depth_stencil.depthTestEnable = m_depth_test;
-    depth_stencil.depthWriteEnable = m_depth_write;
-    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    depth_stencil.depthBoundsTestEnable = VK_FALSE;
-    depth_stencil.minDepthBounds = 0.0f; // Optional
-    depth_stencil.maxDepthBounds = 1.0f; // Optional
-    depth_stencil.stencilTestEnable = VK_FALSE;
-    depth_stencil.front = {};
-    depth_stencil.back = {};
+    VkPipelineDepthStencilStateCreateInfo depthStencil { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    depthStencil.depthTestEnable = m_depthTest;
+    depthStencil.depthWriteEnable = m_depthWrite;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.0f; // Optional
+    depthStencil.maxDepthBounds = 1.0f; // Optional
+    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.front = {};
+    depthStencil.back = {};
 
-    if (m_stencil_function.IsSet())
+    if (m_stencilFunction.IsSet())
     {
-        depth_stencil.stencilTestEnable = VK_TRUE;
+        depthStencil.stencilTestEnable = VK_TRUE;
 
-        depth_stencil.back = {
-            .failOp = ToVkStencilOp(m_stencil_function.fail_op),
-            .passOp = ToVkStencilOp(m_stencil_function.pass_op),
-            .depthFailOp = ToVkStencilOp(m_stencil_function.depth_fail_op),
-            .compareOp = ToVkCompareOp(m_stencil_function.compare_op),
-            .compareMask = m_stencil_function.mask,
-            .writeMask = m_stencil_function.mask,
-            .reference = m_stencil_function.value
+        depthStencil.back = {
+            .failOp = ToVkStencilOp(m_stencilFunction.failOp),
+            .passOp = ToVkStencilOp(m_stencilFunction.passOp),
+            .depthFailOp = ToVkStencilOp(m_stencilFunction.depthFailOp),
+            .compareOp = ToVkCompareOp(m_stencilFunction.compareOp),
+            .compareMask = m_stencilFunction.mask,
+            .writeMask = m_stencilFunction.mask,
+            .reference = m_stencilFunction.value
         };
 
-        depth_stencil.front = depth_stencil.back;
+        depthStencil.front = depthStencil.back;
     }
 
-    VkGraphicsPipelineCreateInfo pipeline_info { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    VkGraphicsPipelineCreateInfo pipelineInfo { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
     const Array<VkPipelineShaderStageCreateInfo>& stages = static_cast<VulkanShader*>(m_shader.Get())->GetVulkanShaderStages();
     AssertThrowMsg(stages.Any(), "No shader stages found");
 
-    pipeline_info.stageCount = uint32(stages.Size());
-    pipeline_info.pStages = stages.Data();
-    pipeline_info.pVertexInputState = &vertex_input_info;
-    pipeline_info.pInputAssemblyState = &input_asm_info;
-    pipeline_info.pViewportState = &viewport_state;
-    pipeline_info.pRasterizationState = &rasterizer;
-    pipeline_info.pMultisampleState = &multisampling;
-    pipeline_info.pDepthStencilState = &depth_stencil;
-    pipeline_info.pColorBlendState = &color_blending;
-    pipeline_info.pDynamicState = &dynamic_state;
-    pipeline_info.layout = m_layout;
-    pipeline_info.renderPass = m_render_pass->GetVulkanHandle();
-    pipeline_info.subpass = 0; /* Index of the subpass */
-    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-    pipeline_info.basePipelineIndex = -1;
+    pipelineInfo.stageCount = uint32(stages.Size());
+    pipelineInfo.pStages = stages.Data();
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAsmInfo;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = m_layout;
+    pipelineInfo.renderPass = m_renderPass->GetVulkanHandle();
+    pipelineInfo.subpass = 0; /* Index of the subpass */
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineInfo.basePipelineIndex = -1;
 
-    float specialization_info_data = 0.0f;
+    float specializationInfoData = 0.0f;
 
-    VkSpecializationMapEntry specialization_map_entry { 0, 0, sizeof(float) };
+    VkSpecializationMapEntry specializationMapEntry { 0, 0, sizeof(float) };
 
-    VkSpecializationInfo specialization_info {
+    VkSpecializationInfo specializationInfo {
         .mapEntryCount = 1,
-        .pMapEntries = &specialization_map_entry,
+        .pMapEntries = &specializationMapEntry,
         .dataSize = sizeof(float),
-        .pData = &specialization_info_data
+        .pData = &specializationInfoData
     };
 
     HYPERION_VK_CHECK_MSG(
-        vkCreateGraphicsPipelines(GetRenderingAPI()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_handle),
+        vkCreateGraphicsPipelines(GetRenderBackend()->GetDevice()->GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_handle),
         "Failed to create graphics pipeline");
 
-    HYPERION_RETURN_OK;
-}
-
-RendererResult VulkanGraphicsPipeline::Create()
-{
-    if (!m_shader.IsValid())
-    {
-        return HYP_MAKE_ERROR(RendererError, "Cannot create a graphics pipeline with no shader");
-    }
-
-    if (m_framebuffers.Empty())
-    {
-        return HYP_MAKE_ERROR(RendererError, "Cannot create a graphics pipeline with no framebuffers");
-    }
-
-    RendererResult rebuild_result = Rebuild();
-
-    if (!rebuild_result)
-    {
-        return rebuild_result;
-    }
+    HYP_LOG(Rendering, Debug, "Created graphics pipeline #{}", g_tmpNumGraphicsPipelines);
 
     HYPERION_RETURN_OK;
 }
 
 RendererResult VulkanGraphicsPipeline::Destroy()
 {
-    SafeRelease(std::move(m_framebuffers));
-    SafeRelease(std::move(m_render_pass));
-    SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_descriptor_table));
+    SafeRelease(std::move(m_renderPass));
+
+    HYP_LOG(Rendering, Debug, "Deleting graphics pipeline, now #{}", g_tmpNumGraphicsPipelines);
+    --g_tmpNumGraphicsPipelines;
 
     return VulkanPipelineBase::Destroy();
 }
 
-void VulkanGraphicsPipeline::SetRenderPass(const VulkanRenderPassRef& render_pass)
+void VulkanGraphicsPipeline::SetRenderPass(const VulkanRenderPassRef& renderPass)
 {
-    SafeRelease(std::move(m_render_pass));
+    SafeRelease(std::move(m_renderPass));
 
-    m_render_pass = render_pass;
-}
-
-void VulkanGraphicsPipeline::SetFramebuffers(const Array<VulkanFramebufferRef>& framebuffers)
-{
-    SafeRelease(std::move(m_framebuffers));
-
-    m_framebuffers = framebuffers;
-}
-
-bool VulkanGraphicsPipeline::MatchesSignature(
-    const ShaderBase* shader,
-    const DescriptorTableBase* descriptor_table,
-    const Array<const FramebufferBase*>& framebuffers,
-    const RenderableAttributeSet& attributes) const
-{
-    if (!shader != !m_shader)
-    {
-        return false;
-    }
-
-    if (!descriptor_table != !m_descriptor_table)
-    {
-        return false;
-    }
-
-    if (m_framebuffers.Size() != framebuffers.Size())
-    {
-        return false;
-    }
-
-    if (shader != nullptr)
-    {
-        if (shader->GetCompiledShader()->GetHashCode() != m_shader->GetCompiledShader()->GetHashCode())
-        {
-            return false;
-        }
-    }
-
-    if (descriptor_table != nullptr)
-    {
-        if (!m_descriptor_table.IsValid())
-        {
-            return false;
-        }
-
-        if (!descriptor_table->GetDeclaration())
-        {
-            return false;
-        }
-
-        if (descriptor_table->GetDeclaration()->GetHashCode() != m_descriptor_table->GetDeclaration()->GetHashCode())
-        {
-            return false;
-        }
-    }
-
-    for (SizeType i = 0; i < m_framebuffers.Size(); i++)
-    {
-        if (m_framebuffers[i].Get() != framebuffers[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
+    m_renderPass = renderPass;
 }
 
 void VulkanGraphicsPipeline::SetPushConstants(const void* data, SizeType size)
@@ -536,36 +451,36 @@ void VulkanGraphicsPipeline::SetPushConstants(const void* data, SizeType size)
 }
 
 void VulkanGraphicsPipeline::UpdateViewport(
-    VulkanCommandBuffer* command_buffer,
+    VulkanCommandBuffer* commandBuffer,
     const Viewport& viewport)
 {
     // if (viewport == this->viewport) {
     //    return;
     // }
 
-    VkViewport vk_viewport {};
-    vk_viewport.x = float(viewport.position.x);
-    vk_viewport.y = float(viewport.position.y);
-    vk_viewport.width = float(viewport.extent.x);
-    vk_viewport.height = float(viewport.extent.y);
-    vk_viewport.minDepth = 0.0f;
-    vk_viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(command_buffer->GetVulkanHandle(), 0, 1, &vk_viewport);
+    VkViewport vkViewport {};
+    vkViewport.x = float(viewport.position.x);
+    vkViewport.y = float(viewport.position.y);
+    vkViewport.width = float(viewport.extent.x);
+    vkViewport.height = float(viewport.extent.y);
+    vkViewport.minDepth = 0.0f;
+    vkViewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer->GetVulkanHandle(), 0, 1, &vkViewport);
 
-    VkRect2D vk_scissor {};
-    vk_scissor.offset = { viewport.position.x, viewport.position.y };
-    vk_scissor.extent = { uint32(viewport.extent.x), uint32(viewport.extent.y) };
-    vkCmdSetScissor(command_buffer->GetVulkanHandle(), 0, 1, &vk_scissor);
+    VkRect2D vkScissor {};
+    vkScissor.offset = { viewport.position.x, viewport.position.y };
+    vkScissor.extent = { uint32(viewport.extent.x), uint32(viewport.extent.y) };
+    vkCmdSetScissor(commandBuffer->GetVulkanHandle(), 0, 1, &vkScissor);
 
     m_viewport = viewport;
 }
 
 void VulkanGraphicsPipeline::BuildVertexAttributes(
-    const VertexAttributeSet& attribute_set,
-    Array<VkVertexInputAttributeDescription>& out_vk_vertex_attributes,
-    Array<VkVertexInputBindingDescription>& out_vk_vertex_binding_descriptions)
+    const VertexAttributeSet& attributeSet,
+    Array<VkVertexInputAttributeDescription>& outVkVertexAttributes,
+    Array<VkVertexInputBindingDescription>& outVkVertexBindingDescriptions)
 {
-    static constexpr VkFormat size_to_format[] = {
+    static constexpr VkFormat sizeToFormat[] = {
         VK_FORMAT_UNDEFINED,
         VK_FORMAT_R32_SFLOAT,
         VK_FORMAT_R32G32_SFLOAT,
@@ -573,31 +488,31 @@ void VulkanGraphicsPipeline::BuildVertexAttributes(
         VK_FORMAT_R32G32B32A32_SFLOAT
     };
 
-    FlatMap<uint32, uint32> binding_sizes {};
+    FlatMap<uint32, uint32> bindingSizes {};
 
-    const Array<VertexAttribute::Type> attribute_types = attribute_set.BuildAttributes();
-    out_vk_vertex_attributes.Resize(attribute_types.Size());
+    const Array<VertexAttribute::Type> attributeTypes = attributeSet.BuildAttributes();
+    outVkVertexAttributes.Resize(attributeTypes.Size());
 
-    for (SizeType i = 0; i < attribute_types.Size(); i++)
+    for (SizeType i = 0; i < attributeTypes.Size(); i++)
     {
-        const VertexAttribute& attribute = VertexAttribute::mapping[attribute_types[i]];
+        const VertexAttribute& attribute = VertexAttribute::mapping[attributeTypes[i]];
 
-        out_vk_vertex_attributes[i] = VkVertexInputAttributeDescription {
+        outVkVertexAttributes[i] = VkVertexInputAttributeDescription {
             .location = attribute.location,
             .binding = attribute.binding,
-            .format = size_to_format[attribute.size / sizeof(float)],
-            .offset = binding_sizes[attribute.binding]
+            .format = sizeToFormat[attribute.size / sizeof(float)],
+            .offset = bindingSizes[attribute.binding]
         };
 
-        binding_sizes[attribute.binding] += attribute.size;
+        bindingSizes[attribute.binding] += attribute.size;
     }
 
-    out_vk_vertex_binding_descriptions.Clear();
-    out_vk_vertex_binding_descriptions.Reserve(binding_sizes.Size());
+    outVkVertexBindingDescriptions.Clear();
+    outVkVertexBindingDescriptions.Reserve(bindingSizes.Size());
 
-    for (const auto& it : binding_sizes)
+    for (const auto& it : bindingSizes)
     {
-        out_vk_vertex_binding_descriptions.PushBack(VkVertexInputBindingDescription {
+        outVkVertexBindingDescriptions.PushBack(VkVertexInputBindingDescription {
             .binding = it.first,
             .stride = it.second,
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX });
@@ -606,5 +521,4 @@ void VulkanGraphicsPipeline::BuildVertexAttributes(
 
 #pragma endregion GraphicsPipeline
 
-} // namespace renderer
 } // namespace hyperion

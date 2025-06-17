@@ -4,17 +4,24 @@
 #define HYPERION_CORE_NET_SOCKET_HPP
 
 #include <core/Name.hpp>
+
 #include <core/threading/Thread.hpp>
 #include <core/threading/Scheduler.hpp>
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
+
 #include <core/containers/Array.hpp>
 #include <core/containers/String.hpp>
 #include <core/containers/HashMap.hpp>
+
 #include <core/memory/UniquePtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/ByteBuffer.hpp>
+
 #include <core/functional/Proc.hpp>
+
 #include <core/utilities/Variant.hpp>
+
 #include <core/Defines.hpp>
 
 #include <Types.hpp>
@@ -51,21 +58,21 @@ public:
     SocketConnection& operator=(SocketConnection&&) noexcept = delete;
     virtual ~SocketConnection() = default;
 
-    void SetEventProc(Name event_name, Proc<void(Array<SocketProcArgument>&&)>&& proc)
+    void SetEventProc(Name eventName, Proc<void(Array<SocketProcArgument>&&)>&& proc)
     {
-        m_event_procs[event_name] = std::move(proc);
+        m_eventProcs[eventName] = std::move(proc);
     }
 
-    void TriggerProc(Name event_name, Array<SocketProcArgument>&& args);
+    void TriggerProc(Name eventName, Array<SocketProcArgument>&& args);
 
 protected:
-    HashMap<Name, Proc<void(Array<SocketProcArgument>&&)>> m_event_procs;
+    HashMap<Name, Proc<void(Array<SocketProcArgument>&&)>> m_eventProcs;
 };
 
 class HYP_API SocketServerThread final : public Thread<Scheduler, SocketServer*>
 {
 public:
-    SocketServerThread(const String& socket_name);
+    SocketServerThread(const String& socketName);
     virtual ~SocketServerThread() override = default;
 
 private:
@@ -75,7 +82,7 @@ private:
 class HYP_API SocketClient : public SocketConnection
 {
 public:
-    SocketClient(Name name, SocketID internal_id);
+    SocketClient(Name name, SocketID internalId);
     SocketClient(const SocketClient&) = delete;
     SocketClient& operator=(const SocketClient&) = delete;
     SocketClient(SocketClient&&) noexcept = delete;
@@ -88,13 +95,13 @@ public:
     }
 
     SocketResultType Send(const ByteBuffer& data);
-    SocketResultType Receive(ByteBuffer& out_data);
+    SocketResultType Receive(ByteBuffer& outData);
 
     void Close();
 
 private:
     Name m_name;
-    SocketID m_internal_id;
+    SocketID m_internalId;
 };
 
 class HYP_API SocketServer : public SocketConnection
@@ -109,18 +116,18 @@ public:
     SocketServer& operator=(SocketServer&&) noexcept = delete;
     virtual ~SocketServer() override;
 
-    SocketResultType Send(Name client_name, const ByteBuffer& data);
+    SocketResultType Send(Name clientName, const ByteBuffer& data);
 
     bool Start();
     bool Stop();
 
 private:
     // for the thread
-    bool PollForConnections(Array<RC<SocketClient>>& out_connections);
+    bool PollForConnections(Array<RC<SocketClient>>& outConnections);
 
     // for the thread
     void AddConnection(RC<SocketClient>&& connection);
-    bool RemoveConnection(Name client_name);
+    bool RemoveConnection(Name clientName);
 
     String m_name;
     UniquePtr<SocketServerImpl> m_impl;
@@ -128,7 +135,7 @@ private:
 
     // SocketServerThread controls the connections list
     HashMap<Name, RC<SocketClient>> m_connections;
-    Mutex m_connections_mutex;
+    Mutex m_connectionsMutex;
 };
 
 } // namespace net

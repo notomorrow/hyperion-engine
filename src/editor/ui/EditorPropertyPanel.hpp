@@ -23,17 +23,17 @@ public:
     virtual ~EditorPropertyPanelBase() override;
 
     HYP_METHOD(Scriptable)
-    void Build(const HypData& hyp_data);
+    void Build(const HypData& hypData);
 
 protected:
     virtual void Init() override;
 
-    virtual void Build_Impl(const HypData& hyp_data)
+    virtual void Build_Impl(const HypData& hypData)
     {
         HYP_PURE_VIRTUAL();
     }
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
     virtual Material::ParameterTable GetMaterialParameters() const override;
 

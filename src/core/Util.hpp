@@ -28,16 +28,16 @@ constexpr auto ParseTypeName();
 template <auto Str>
 constexpr auto StripClassOrStruct()
 {
-    constexpr auto class_index = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("class ")>>();
-    constexpr auto struct_index = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("struct ")>>();
+    constexpr auto classIndex = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("class ")>>();
+    constexpr auto structIndex = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("struct ")>>();
 
-    if constexpr (class_index != -1 && (struct_index == -1 || class_index <= struct_index))
+    if constexpr (classIndex != -1 && (structIndex == -1 || classIndex <= structIndex))
     {
-        return containers::helpers::Substr<Str, class_index + 6, Str.Size()>::value; // 6 = length of "class "
+        return containers::helpers::Substr<Str, classIndex + 6, Str.Size()>::value; // 6 = length of "class "
     }
-    else if constexpr (struct_index != -1 && (class_index == -1 || struct_index <= class_index))
+    else if constexpr (structIndex != -1 && (classIndex == -1 || structIndex <= classIndex))
     {
-        return containers::helpers::Substr<Str, struct_index + 7, Str.Size()>::value; // 7 = length of "struct "
+        return containers::helpers::Substr<Str, structIndex + 7, Str.Size()>::value; // 7 = length of "struct "
     }
     else
     {
@@ -52,22 +52,22 @@ struct TypeNameStringTransformer
 {
     static constexpr char delimiter = ',';
 
-    static constexpr uint32 balance_bracket_options = containers::helpers::BALANCE_BRACKETS_ANGLE;
+    static constexpr uint32 balanceBracketOptions = containers::helpers::BALANCE_BRACKETS_ANGLE;
 
     template <auto String>
     static constexpr auto Transform()
     {
-        constexpr SizeType last_index = ShouldStripNamespace
+        constexpr SizeType lastIndex = ShouldStripNamespace
             ? containers::helpers::Trim<String>::value.template FindLast<containers::IntegerSequenceFromString<StaticString("::")>>()
             : SizeType(-1);
 
-        if constexpr (last_index == -1)
+        if constexpr (lastIndex == -1)
         {
             return StripClassOrStruct<containers::helpers::Trim<String>::value>();
         }
         else
         {
-            return StripClassOrStruct<containers::helpers::Substr<containers::helpers::Trim<String>::value, last_index + 2, SizeType(-1)>::value>();
+            return StripClassOrStruct<containers::helpers::Substr<containers::helpers::Trim<String>::value, lastIndex + 2, SizeType(-1)>::value>();
         }
     }
 };
@@ -77,7 +77,7 @@ struct TypeNameStringTransformer2
 {
     static constexpr char delimiter = ',';
 
-    static constexpr uint32 balance_bracket_options = containers::helpers::BALANCE_BRACKETS_ANGLE;
+    static constexpr uint32 balanceBracketOptions = containers::helpers::BALANCE_BRACKETS_ANGLE;
 
     template <auto String>
     static constexpr auto Transform()
@@ -89,17 +89,17 @@ struct TypeNameStringTransformer2
 template <auto Str, bool ShouldStripNamespace>
 constexpr auto ParseTypeName()
 {
-    constexpr auto left_arrow_index = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("<")>>();
-    constexpr auto right_arrow_index = Str.template FindLast<containers::IntegerSequenceFromString<StaticString(">")>>();
+    constexpr auto leftArrowIndex = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("<")>>();
+    constexpr auto rightArrowIndex = Str.template FindLast<containers::IntegerSequenceFromString<StaticString(">")>>();
 
-    if constexpr (left_arrow_index != SizeType(-1) && right_arrow_index != SizeType(-1))
+    if constexpr (leftArrowIndex != SizeType(-1) && rightArrowIndex != SizeType(-1))
     {
-        static_assert(left_arrow_index < right_arrow_index, "Left arrow index must be less than right arrow index or parsing will fail!");
+        static_assert(leftArrowIndex < rightArrowIndex, "Left arrow index must be less than right arrow index or parsing will fail!");
 
         return containers::helpers::Concat<
-            containers::helpers::TransformSplit<TypeNameStringTransformer2<ShouldStripNamespace>, containers::helpers::Substr<Str, 0, left_arrow_index>::value>::value,
+            containers::helpers::TransformSplit<TypeNameStringTransformer2<ShouldStripNamespace>, containers::helpers::Substr<Str, 0, leftArrowIndex>::value>::value,
             StaticString("<"),
-            containers::helpers::TransformSplit<TypeNameStringTransformer2<ShouldStripNamespace>, containers::helpers::Substr<Str, left_arrow_index + 1, right_arrow_index>::value>::value,
+            containers::helpers::TransformSplit<TypeNameStringTransformer2<ShouldStripNamespace>, containers::helpers::Substr<Str, leftArrowIndex + 1, rightArrowIndex>::value>::value,
             StaticString(">")>::value;
     }
     else
@@ -185,32 +185,32 @@ struct TypeNameHelper<T, true>
 template <auto Str>
 constexpr auto StripReturnType()
 {
-    constexpr auto first_space_index = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString(" ")>>();
+    constexpr auto firstSpaceIndex = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString(" ")>>();
 
-    if constexpr (first_space_index == SizeType(-1))
+    if constexpr (firstSpaceIndex == SizeType(-1))
     {
         return Str;
     }
     else
     {
-        constexpr auto without_return_type = containers::helpers::Substr<Str, first_space_index + 1, Str.Size()>::value;
+        constexpr auto withoutReturnType = containers::helpers::Substr<Str, firstSpaceIndex + 1, Str.Size()>::value;
 
-        constexpr auto left_angle_bracket_index = without_return_type.template FindFirst<containers::IntegerSequenceFromString<StaticString("<")>>();
-        constexpr auto left_parenthesis_index = without_return_type.template FindFirst<containers::IntegerSequenceFromString<StaticString("(")>>();
+        constexpr auto leftAngleBracketIndex = withoutReturnType.template FindFirst<containers::IntegerSequenceFromString<StaticString("<")>>();
+        constexpr auto leftParenthesisIndex = withoutReturnType.template FindFirst<containers::IntegerSequenceFromString<StaticString("(")>>();
 
-        constexpr auto first_token_index = left_angle_bracket_index != SizeType(-1) && (left_parenthesis_index == SizeType(-1) || left_angle_bracket_index < left_parenthesis_index)
-            ? left_angle_bracket_index
-            : left_parenthesis_index;
+        constexpr auto firstTokenIndex = leftAngleBracketIndex != SizeType(-1) && (leftParenthesisIndex == SizeType(-1) || leftAngleBracketIndex < leftParenthesisIndex)
+            ? leftAngleBracketIndex
+            : leftParenthesisIndex;
 
-        constexpr auto second_space_index = without_return_type.template FindFirst<containers::IntegerSequenceFromString<StaticString(" ")>>();
+        constexpr auto secondSpaceIndex = withoutReturnType.template FindFirst<containers::IntegerSequenceFromString<StaticString(" ")>>();
 
-        if constexpr (second_space_index != SizeType(-1) && first_token_index != SizeType(-1) && second_space_index < first_token_index)
+        if constexpr (secondSpaceIndex != SizeType(-1) && firstTokenIndex != SizeType(-1) && secondSpaceIndex < firstTokenIndex)
         {
-            return containers::helpers::Substr<without_return_type, second_space_index + 1, without_return_type.Size()>::value;
+            return containers::helpers::Substr<withoutReturnType, secondSpaceIndex + 1, withoutReturnType.Size()>::value;
         }
         else
         {
-            return without_return_type;
+            return withoutReturnType;
         }
     }
 }
@@ -229,11 +229,11 @@ constexpr auto StripNamespaceFromFunctionName()
     }
     else
     {
-        constexpr auto first_colon_index = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("::")>>();
+        constexpr auto firstColonIndex = Str.template FindFirst<containers::IntegerSequenceFromString<StaticString("::")>>();
 
-        if constexpr (first_colon_index != SizeType(-1))
+        if constexpr (firstColonIndex != SizeType(-1))
         {
-            constexpr auto substr = containers::helpers::Substr<Str, first_colon_index + 2, Str.Size()>::value;
+            constexpr auto substr = containers::helpers::Substr<Str, firstColonIndex + 2, Str.Size()>::value;
 
             return StripNamespaceFromFunctionName<substr>();
         }
@@ -248,25 +248,25 @@ constexpr auto StripNamespaceFromFunctionName()
 template <auto Str>
 constexpr auto PrettyFunctionName()
 {
-    constexpr auto without_return_type = StripReturnType<Str>();
+    constexpr auto withoutReturnType = StripReturnType<Str>();
 
-    constexpr auto left_angle_bracket_index = without_return_type.template FindFirst<containers::IntegerSequenceFromString<StaticString("<")>>();
-    constexpr auto left_parenthesis_index = without_return_type.template FindFirst<containers::IntegerSequenceFromString<StaticString("(")>>();
+    constexpr auto leftAngleBracketIndex = withoutReturnType.template FindFirst<containers::IntegerSequenceFromString<StaticString("<")>>();
+    constexpr auto leftParenthesisIndex = withoutReturnType.template FindFirst<containers::IntegerSequenceFromString<StaticString("(")>>();
 
-    if constexpr (left_parenthesis_index != SizeType(-1))
+    if constexpr (leftParenthesisIndex != SizeType(-1))
     {
-        if constexpr (left_angle_bracket_index != SizeType(-1) && left_angle_bracket_index < left_parenthesis_index)
+        if constexpr (leftAngleBracketIndex != SizeType(-1) && leftAngleBracketIndex < leftParenthesisIndex)
         {
-            return StripNamespaceFromFunctionName<containers::helpers::Substr<without_return_type, 0, left_angle_bracket_index>::value>();
+            return StripNamespaceFromFunctionName<containers::helpers::Substr<withoutReturnType, 0, leftAngleBracketIndex>::value>();
         }
         else
         {
-            return StripNamespaceFromFunctionName<containers::helpers::Substr<without_return_type, 0, left_parenthesis_index>::value>();
+            return StripNamespaceFromFunctionName<containers::helpers::Substr<withoutReturnType, 0, leftParenthesisIndex>::value>();
         }
     }
     else
     {
-        return without_return_type;
+        return withoutReturnType;
     }
 }
 

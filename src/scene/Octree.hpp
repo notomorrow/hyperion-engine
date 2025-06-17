@@ -35,35 +35,35 @@ class Camera;
 
 class Octree;
 
-class HYP_API Octree final : public OctreeBase<Octree, WeakHandle<Entity>>
+class HYP_API Octree final : public OctreeBase<Octree, Entity*>
 {
 public:
-    Octree(const Handle<EntityManager>& entity_manager);
-    Octree(const Handle<EntityManager>& entity_manager, const BoundingBox& aabb);
-    Octree(const Handle<EntityManager>& entity_manager, const BoundingBox& aabb, Octree* parent, uint8 index);
+    Octree(const Handle<EntityManager>& entityManager);
+    Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb);
+    Octree(const Handle<EntityManager>& entityManager, const BoundingBox& aabb, Octree* parent, uint8 index);
 
     virtual ~Octree() override;
 
     VisibilityState& GetVisibilityState()
     {
-        return m_visibility_state;
+        return m_visibilityState;
     }
 
     const VisibilityState& GetVisibilityState() const
     {
-        return m_visibility_state;
+        return m_visibilityState;
     }
 
     /*! \brief Get the EntityManager the Octree is using to manage entities.
      *  \returns The EntityManager the Octree is set to use */
     const Handle<EntityManager>& GetEntityManager() const
     {
-        return m_entity_manager;
+        return m_entityManager;
     }
 
     /*! \brief Set the EntityManager for the Octree to use. For internal use from \ref{Scene} only
      *  \internal */
-    void SetEntityManager(const Handle<EntityManager>& entity_manager);
+    void SetEntityManager(const Handle<EntityManager>& entityManager);
 
     /*! \brief Get a hashcode of all entities currently in this Octant that have the given tags (child octants affect this too)
      */
@@ -74,52 +74,52 @@ public:
 
         const uint32 mask = ((Tags == EntityTag::NONE ? 0 : (1u << (uint32(Tags) - 1))) | ...);
 
-        return HashCode(m_entry_hashes[mask])
-            .Add(m_invalidation_marker);
+        return HashCode(m_entryHashes[mask])
+            .Add(m_invalidationMarker);
     }
 
     /*! \brief Get a hashcode of all entities currently in this Octant that match the mask tag (child octants affect this too)
      */
-    HYP_FORCE_INLINE HashCode GetEntryListHash(uint32 entity_tag_mask) const
+    HYP_FORCE_INLINE HashCode GetEntryListHash(uint32 entityTagMask) const
     {
-        AssertThrow(entity_tag_mask < m_entry_hashes.Size());
+        AssertThrow(entityTagMask < m_entryHashes.Size());
 
-        return HashCode(m_entry_hashes[entity_tag_mask])
-            .Add(m_invalidation_marker);
+        return HashCode(m_entryHashes[entityTagMask])
+            .Add(m_invalidationMarker);
     }
 
-    HYP_FORCE_INLINE Octree* GetChildOctant(OctantID octant_id)
+    HYP_FORCE_INLINE Octree* GetChildOctant(OctantId octantId)
     {
-        return static_cast<Octree*>(OctreeBase::GetChildOctant(octant_id));
+        return static_cast<Octree*>(OctreeBase::GetChildOctant(octantId));
     }
 
     void NextVisibilityState();
     void CalculateVisibility(const Handle<Camera>& camera);
 
-    bool TestRay(const Ray& ray, RayTestResults& out_results, bool use_bvh = true) const;
+    bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
 
     virtual void Clear() override;
-    virtual InsertResult Rebuild(const BoundingBox& new_aabb, bool allow_grow) override;
+    virtual InsertResult Rebuild(const BoundingBox& newAabb, bool allowGrow) override;
     virtual void PerformUpdates() override;
 
 private:
-    static constexpr uint32 num_entry_hashes = 1u << uint32(EntityTag::DESCRIPTOR_MAX);
+    static constexpr uint32 numEntryHashes = 1u << uint32(EntityTag::DESCRIPTOR_MAX);
 
     virtual UniquePtr<Octree> CreateChildOctant(const BoundingBox& aabb, Octree* parent, uint8 index) override
     {
-        return MakeUnique<Octree>(m_entity_manager, aabb, this, index);
+        return MakeUnique<Octree>(m_entityManager, aabb, this, index);
     }
 
     void ResetEntriesHash();
     void RebuildEntriesHash(uint32 level = 0);
 
-    void UpdateVisibilityState(const Handle<Camera>& camera, uint16 validity_marker);
+    void UpdateVisibilityState(const Handle<Camera>& camera, uint16 validityMarker);
 
-    Handle<EntityManager> m_entity_manager;
+    Handle<EntityManager> m_entityManager;
 
-    FixedArray<HashCode, num_entry_hashes> m_entry_hashes;
+    FixedArray<HashCode, numEntryHashes> m_entryHashes;
 
-    VisibilityState m_visibility_state;
+    VisibilityState m_visibilityState;
 };
 
 } // namespace hyperion

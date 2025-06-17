@@ -61,14 +61,14 @@ class FBOMLoadContext;
 
 struct FBOMWriteStream
 {
-    Array<FBOMObject> m_object_data;
-    Array<FBOMObjectLibrary> m_object_libraries;
-    HashMap<UniqueID, FBOMStaticData> m_static_data; // map hashcodes to static data to be stored.
-    HashMap<UniqueID, int> m_hash_use_count_map;
-    uint32 m_static_data_offset = 0;
-    bool m_is_writing_static_data : 1 = false;   // is writing to static data locked? (prevents iterator invalidation)
-    bool m_object_data_write_locked : 1 = false; // is writing to object data locked? (prevents iterator invalidation)
-    FBOMResult m_last_result = FBOMResult::FBOM_OK;
+    Array<FBOMObject> m_objectData;
+    Array<FBOMObjectLibrary> m_objectLibraries;
+    HashMap<UniqueID, FBOMStaticData> m_staticData; // map hashcodes to static data to be stored.
+    HashMap<UniqueID, int> m_hashUseCountMap;
+    uint32 m_staticDataOffset = 0;
+    bool m_isWritingStaticData : 1 = false;   // is writing to static data locked? (prevents iterator invalidation)
+    bool m_objectDataWriteLocked : 1 = false; // is writing to object data locked? (prevents iterator invalidation)
+    FBOMResult m_lastResult = FBOMResult::FBOM_OK;
 
     FBOMWriteStream();
     FBOMWriteStream(const FBOMWriteStream& other) = default;
@@ -77,36 +77,36 @@ struct FBOMWriteStream
     FBOMWriteStream& operator=(FBOMWriteStream&& other) noexcept = default;
     ~FBOMWriteStream() = default;
 
-    FBOMDataLocation GetDataLocation(const UniqueID& unique_id, const FBOMStaticData** out_static_data, const FBOMExternalObjectInfo** out_external_object_info) const;
+    FBOMDataLocation GetDataLocation(const UniqueID& uniqueId, const FBOMStaticData** outStaticData, const FBOMExternalObjectInfo** outExternalObjectInfo) const;
 
     HYP_FORCE_INLINE void BeginStaticDataWriting()
     {
-        m_is_writing_static_data = true;
+        m_isWritingStaticData = true;
     }
 
     HYP_FORCE_INLINE void EndStaticDataWriting()
     {
-        m_is_writing_static_data = false;
+        m_isWritingStaticData = false;
     }
 
     HYP_FORCE_INLINE bool IsWritingStaticData() const
     {
-        return m_is_writing_static_data;
+        return m_isWritingStaticData;
     }
 
     HYP_FORCE_INLINE void LockObjectDataWriting()
     {
-        m_object_data_write_locked = true;
+        m_objectDataWriteLocked = true;
     }
 
     HYP_FORCE_INLINE void UnlockObjectDataWriting()
     {
-        m_object_data_write_locked = false;
+        m_objectDataWriteLocked = false;
     }
 
     HYP_FORCE_INLINE bool IsObjectDataWritingLocked() const
     {
-        return m_object_data_write_locked;
+        return m_objectDataWriteLocked;
     }
 
     void AddToObjectLibrary(FBOMObject& object);
@@ -116,7 +116,7 @@ class FBOMWriter
 {
 public:
     FBOMWriter(const FBOMWriterConfig& config);
-    FBOMWriter(const FBOMWriterConfig& config, const RC<FBOMWriteStream>& write_stream);
+    FBOMWriter(const FBOMWriterConfig& config, const RC<FBOMWriteStream>& writeStream);
 
     FBOMWriter(const FBOMWriter& other) = delete;
     FBOMWriter& operator=(const FBOMWriter& other) = delete;
@@ -133,7 +133,7 @@ public:
 
     HYP_FORCE_INLINE FBOMWriteStream* GetWriteStream() const
     {
-        return m_write_stream.Get();
+        return m_writeStream.Get();
     }
 
     template <class T>
@@ -144,7 +144,7 @@ public:
 
         if (FBOMResult err = FBOMObject::Serialize(in, object, flags))
         {
-            m_write_stream->m_last_result = err;
+            m_writeStream->m_lastResult = err;
 
             return err;
         }
@@ -155,7 +155,7 @@ public:
     FBOMResult Append(const FBOMObject& object);
     FBOMResult Append(FBOMObject&& object);
 
-    FBOMResult Emit(ByteWriter* out, bool write_header = true);
+    FBOMResult Emit(ByteWriter* out, bool writeHeader = true);
 
     FBOMResult Write(ByteWriter* out, const FBOMObject& object, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
     FBOMResult Write(ByteWriter* out, const FBOMType& type, UniqueID id, EnumFlags<FBOMDataAttributes> attributes = FBOMDataAttributes::NONE);
@@ -168,7 +168,7 @@ private:
     FBOMResult WriteDataAttributes(ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes) const;
     FBOMResult WriteDataAttributes(ByteWriter* out, EnumFlags<FBOMDataAttributes> attributes, FBOMDataLocation location) const;
 
-    FBOMResult WriteExternalObjects(ByteWriter* out, const FilePath& base_path, const FilePath& external_path);
+    FBOMResult WriteExternalObjects(ByteWriter* out, const FilePath& basePath, const FilePath& externalPath);
 
     FBOMResult BuildStaticData(FBOMLoadContext& context);
     FBOMResult AddExternalObjects(FBOMLoadContext& context, FBOMObject& object);
@@ -186,17 +186,17 @@ private:
     UniqueID AddStaticData(FBOMLoadContext& context, const FBOMData&);
     UniqueID AddStaticData(FBOMLoadContext& context, const FBOMArray&);
 
-    UniqueID AddStaticData(UniqueID id, FBOMStaticData&& static_data);
+    UniqueID AddStaticData(UniqueID id, FBOMStaticData&& staticData);
 
-    HYP_FORCE_INLINE UniqueID AddStaticData(FBOMStaticData&& static_data)
+    HYP_FORCE_INLINE UniqueID AddStaticData(FBOMStaticData&& staticData)
     {
-        const UniqueID id = static_data.GetUniqueID();
+        const UniqueID id = staticData.GetUniqueID();
         AssertThrow(id != UniqueID::Invalid());
 
-        return AddStaticData(id, std::move(static_data));
+        return AddStaticData(id, std::move(staticData));
     }
 
-    RC<FBOMWriteStream> m_write_stream;
+    RC<FBOMWriteStream> m_writeStream;
     FBOMWriterConfig m_config;
 };
 

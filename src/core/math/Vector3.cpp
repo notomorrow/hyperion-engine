@@ -102,12 +102,12 @@ float math::Vec3<float>::Distance(const Vec3f& other) const
 
 Vec3<float> math::Vec3<float>::Normalized() const
 {
-    return *this / MathUtil::Max(Length(), MathUtil::epsilon_f);
+    return *this / MathUtil::Max(Length(), MathUtil::epsilonF);
 }
 
 Vec3<float>& math::Vec3<float>::Normalize()
 {
-    return *this /= MathUtil::Max(Length(), MathUtil::epsilon_f);
+    return *this /= MathUtil::Max(Length(), MathUtil::epsilonF);
 }
 
 Vec3<float> math::Vec3<float>::Cross(const Vec3<float>& other) const
@@ -151,10 +151,10 @@ float math::Vec3<float>::Dot(const Vec3<float>& other) const
 
 float math::Vec3<float>::AngleBetween(const Vector3& other) const
 {
-    const float dot_product = x * other.x + y * other.y + z * other.z;
-    const float arc_cos = MathUtil::Arccos(dot_product);
+    const float dotProduct = x * other.x + y * other.y + z * other.z;
+    const float arcCos = MathUtil::Arccos(dotProduct);
 
-    return arc_cos / (Length() * other.Length());
+    return arcCos / (Length() * other.Length());
 }
 
 Vec3<float> math::Vec3<float>::Abs(const Vec3<float>& vec)
@@ -175,9 +175,9 @@ Vec3<float> math::Vec3<float>::Round(const Vec3<float>& vec)
     };
 }
 
-Vec3<float> math::Vec3<float>::Clamp(const Vec3<float>& vec, float min_value, float max_value)
+Vec3<float> math::Vec3<float>::Clamp(const Vec3<float>& vec, float minValue, float maxValue)
 {
-    return Max(min_value, Min(vec, max_value));
+    return Max(minValue, Min(vec, maxValue));
 }
 
 Vec3<float> math::Vec3<float>::Min(const Vec3<float>& a, const Vec3<float>& b)

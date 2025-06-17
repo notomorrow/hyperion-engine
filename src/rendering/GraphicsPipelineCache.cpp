@@ -2,13 +2,15 @@
 
 #include <rendering/GraphicsPipelineCache.hpp>
 #include <rendering/RenderableAttributes.hpp>
-
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererGraphicsPipeline.hpp>
 #include <rendering/backend/RendererResult.hpp>
 
 #include <core/threading/Threads.hpp>
 #include <core/threading/Task.hpp>
+
+#include <core/profiling/PerformanceClock.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
 
@@ -22,7 +24,7 @@
 // For CompiledShader
 #include <rendering/shader_compiler/ShaderCompiler.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -37,32 +39,13 @@ struct CachedPipelinesMap : HashMap<RenderableAttributeSet, Array<GraphicsPipeli
 #pragma region GraphicsPipelineCache
 
 GraphicsPipelineCache::GraphicsPipelineCache()
-    : m_cached_pipelines(new CachedPipelinesMap())
+    : m_cachedPipelines(new CachedPipelinesMap())
 {
 }
 
 GraphicsPipelineCache::~GraphicsPipelineCache()
 {
-    AssertThrowMsg(m_cached_pipelines->Empty(), "Graphics pipeline cache not empty!");
-    delete m_cached_pipelines;
-}
-
-void GraphicsPipelineCache::Initialize()
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(g_render_thread);
-}
-
-void GraphicsPipelineCache::Destroy()
-{
-    HYP_SCOPE;
-
-    Threads::AssertOnThread(g_render_thread);
-
-    Mutex::Guard guard(m_mutex);
-
-    for (auto& it : *m_cached_pipelines)
+    for (auto& it : *m_cachedPipelines)
     {
         for (GraphicsPipelineRef& pipeline : it.second)
         {
@@ -70,123 +53,164 @@ void GraphicsPipelineCache::Destroy()
         }
     }
 
-    m_cached_pipelines->Clear();
+    m_cachedPipelines->Clear();
+
+    AssertThrowMsg(m_cachedPipelines->Empty(), "Graphics pipeline cache not empty!");
+    delete m_cachedPipelines;
 }
 
 GraphicsPipelineRef GraphicsPipelineCache::GetOrCreate(
     const ShaderRef& shader,
-    const DescriptorTableRef& descriptor_table,
-    const Array<FramebufferRef>& framebuffers,
+    const DescriptorTableRef& descriptorTable,
+    Span<const FramebufferRef> framebuffers,
     const RenderableAttributeSet& attributes)
 {
     HYP_SCOPE;
 
-    GraphicsPipelineRef graphics_pipeline = FindGraphicsPipeline(
+    if (!shader.IsValid())
+    {
+        HYP_LOG(Rendering, Error, "Shader is null or invalid!");
+
+        return nullptr;
+    }
+
+    const DescriptorTableDeclaration* descriptorTableDecl = nullptr;
+
+    DescriptorTableRef table;
+
+    if (descriptorTable)
+    {
+        table = descriptorTable;
+        descriptorTableDecl = table->GetDeclaration();
+
+        AssertThrow(descriptorTableDecl != nullptr);
+    }
+    else
+    {
+        descriptorTableDecl = &shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    }
+
+    GraphicsPipelineRef graphicsPipeline = FindGraphicsPipeline(
         shader,
-        descriptor_table,
+        *descriptorTableDecl,
         framebuffers,
         attributes);
 
-    if (graphics_pipeline.IsValid())
+    if (graphicsPipeline.IsValid())
     {
-        return graphics_pipeline;
+        return graphicsPipeline;
     }
 
-    Proc<void(const GraphicsPipelineRef&)> new_callback = [this, attributes](const GraphicsPipelineRef& graphics_pipeline)
+    if (!table)
+    {
+        table = g_renderBackend->MakeDescriptorTable(descriptorTableDecl);
+        if (!table.IsValid())
+        {
+            HYP_LOG(Rendering, Error, "Failed to create descriptor table for shader: {}", shader->GetDebugName());
+
+            return nullptr;
+        }
+
+        DeferCreate(table);
+    }
+
+    Proc<void(const GraphicsPipelineRef&)> newCallback = [this, attributes](const GraphicsPipelineRef& graphicsPipeline)
     {
         Mutex::Guard guard(m_mutex);
 
-        (*m_cached_pipelines)[attributes].PushBack(graphics_pipeline);
+        HYP_LOG(Rendering, Info, "Adding graphics pipeline to cache ({})", attributes.GetHashCode().Value());
+
+        (*m_cachedPipelines)[attributes].PushBack(graphicsPipeline);
     };
 
-    graphics_pipeline = g_rendering_api->MakeGraphicsPipeline(
+    graphicsPipeline = g_renderBackend->MakeGraphicsPipeline(
         shader,
-        descriptor_table,
+        table,
         framebuffers,
         attributes);
 
     struct RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache)
-        : renderer::RenderCommand
+        : RenderCommand
     {
-        GraphicsPipelineRef graphics_pipeline;
+        GraphicsPipelineRef graphicsPipeline;
         Proc<void(const GraphicsPipelineRef&)> callback;
 
         RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache)(
-            const GraphicsPipelineRef& graphics_pipeline,
+            const GraphicsPipelineRef& graphicsPipeline,
             Proc<void(const GraphicsPipelineRef&)>&& callback)
-            : graphics_pipeline(graphics_pipeline),
+            : graphicsPipeline(graphicsPipeline),
               callback(std::move(callback))
         {
-            AssertThrow(graphics_pipeline.IsValid());
+            AssertThrow(graphicsPipeline.IsValid());
         }
 
         virtual ~RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache)() override
         {
-            SafeRelease(std::move(graphics_pipeline));
+            SafeRelease(std::move(graphicsPipeline));
         }
 
         virtual RendererResult operator()() override
         {
-            HYPERION_BUBBLE_ERRORS(graphics_pipeline->Create());
+            HYPERION_BUBBLE_ERRORS(graphicsPipeline->Create());
 
             if (callback.IsValid())
             {
-                callback(graphics_pipeline);
+                callback(graphicsPipeline);
             }
 
             return RendererResult {};
         }
     };
 
-    PUSH_RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache, graphics_pipeline, std::move(new_callback));
+    PUSH_RENDER_COMMAND(CreateGraphicsPipelineAndAddToCache, graphicsPipeline, std::move(newCallback));
 
-    return graphics_pipeline;
+    return graphicsPipeline;
 }
 
 GraphicsPipelineRef GraphicsPipelineCache::FindGraphicsPipeline(
     const ShaderRef& shader,
-    const DescriptorTableRef& descriptor_table,
-    const Array<FramebufferRef>& framebuffers,
+    const DescriptorTableDeclaration& descriptorTableDecl,
+    Span<const FramebufferRef> framebuffers,
     const RenderableAttributeSet& attributes)
 {
     HYP_SCOPE;
+
+    PerformanceClock clock;
+    clock.Start();
 
     Mutex::Guard guard(m_mutex);
 
     const RenderableAttributeSet key = attributes;
 
-    auto it = m_cached_pipelines->Find(key);
+    auto it = m_cachedPipelines->Find(key);
 
-    if (it == m_cached_pipelines->End())
+    if (it == m_cachedPipelines->End())
     {
-        return nullptr;
-    }
-
-    if (!descriptor_table->GetDeclaration())
-    {
-        HYP_LOG(Rendering, Error, "Descriptor table declaration is null for shader: {}", shader->GetCompiledShader()->GetName());
+        HYP_LOG(Rendering, Warning, "GraphicsPipelineCache cache miss ({}) ({} ms)", attributes.GetHashCode().Value(), clock.ElapsedMs());
 
         return nullptr;
     }
 
-    const HashCode shader_hash_code = shader->GetCompiledShader()->GetHashCode();
-
-    const HashCode descriptor_table_hash_code = descriptor_table->GetDeclaration()->GetHashCode();
+    const HashCode shaderHashCode = shader->GetCompiledShader()->GetHashCode();
 
     for (const GraphicsPipelineRef& pipeline : it->second)
     {
         if (pipeline->MatchesSignature(
                 shader,
-                descriptor_table,
+                descriptorTableDecl,
                 Map(framebuffers, [](const FramebufferRef& framebuffer)
                     {
                         return static_cast<const FramebufferBase*>(framebuffer.Get());
                     }),
                 attributes))
         {
+            HYP_LOG(Rendering, Info, "GraphicsPipelineCache cache hit ({}) ({} ms)", attributes.GetHashCode().Value(), clock.ElapsedMs());
+
             return pipeline;
         }
     }
+
+    HYP_LOG(Rendering, Warning, "GraphicsPipelineCache cache miss ({}) ({} ms)", attributes.GetHashCode().Value(), clock.ElapsedMs());
 
     return nullptr;
 }

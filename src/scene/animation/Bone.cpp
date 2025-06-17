@@ -20,30 +20,30 @@ Bone::~Bone() = default;
 
 Vector3 Bone::GetOffsetTranslation() const
 {
-    return m_local_transform.GetTranslation() - m_binding_transform.GetTranslation();
+    return m_localTransform.GetTranslation() - m_bindingTransform.GetTranslation();
 }
 
 Quaternion Bone::GetOffsetRotation() const
 {
-    return m_local_transform.GetRotation() * Quaternion(m_binding_transform.GetRotation()).Invert();
+    return m_localTransform.GetRotation() * Quaternion(m_bindingTransform.GetRotation()).Invert();
 }
 
 void Bone::SetKeyframe(const Keyframe& keyframe)
 {
     m_keyframe = keyframe;
 
-    m_pose_transform = m_keyframe.GetTransform();
+    m_poseTransform = m_keyframe.transform;
 
     UpdateBoneTransform();
 }
 
 void Bone::ClearPose()
 {
-    m_pose_transform = Transform();
+    m_poseTransform = Transform();
 
     UpdateBoneTransform();
 
-    for (auto& child : m_child_nodes)
+    for (auto& child : m_childNodes)
     {
         if (!child)
         {
@@ -61,10 +61,10 @@ void Bone::ClearPose()
 
 void Bone::StoreBindingPose()
 {
-    m_inv_binding_translation = m_world_bone_translation * -1.0f;
-    m_inv_binding_rotation = Quaternion(m_world_bone_rotation).Invert();
+    m_invBindingTranslation = m_worldBoneTranslation * -1.0f;
+    m_invBindingRotation = Quaternion(m_worldBoneRotation).Invert();
 
-    for (auto& child : m_child_nodes)
+    for (auto& child : m_childNodes)
     {
         if (!child)
         {
@@ -82,12 +82,12 @@ void Bone::StoreBindingPose()
 
 void Bone::SetToBindingPose()
 {
-    m_local_transform = m_binding_transform;
-    m_pose_transform = m_binding_transform;
+    m_localTransform = m_bindingTransform;
+    m_poseTransform = m_bindingTransform;
 
     UpdateBoneTransform();
 
-    for (auto& child : m_child_nodes)
+    for (auto& child : m_childNodes)
     {
         if (!child)
         {
@@ -105,17 +105,17 @@ void Bone::SetToBindingPose()
 
 void Bone::CalculateBoneTranslation()
 {
-    m_world_bone_translation = m_binding_transform.GetTranslation();
+    m_worldBoneTranslation = m_bindingTransform.GetTranslation();
 
-    if (m_parent_node != nullptr && m_parent_node->GetType() == Type::BONE)
+    if (m_parentNode != nullptr && m_parentNode->GetType() == Type::BONE)
     {
-        const auto* parent_bone = static_cast<Bone*>(m_parent_node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        const auto* parentBone = static_cast<Bone*>(m_parentNode); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 
-        m_world_bone_translation = parent_bone->m_world_bone_rotation * m_binding_transform.GetTranslation();
-        m_world_bone_translation += parent_bone->m_world_bone_translation;
+        m_worldBoneTranslation = parentBone->m_worldBoneRotation * m_bindingTransform.GetTranslation();
+        m_worldBoneTranslation += parentBone->m_worldBoneTranslation;
     }
 
-    for (auto& child : m_child_nodes)
+    for (auto& child : m_childNodes)
     {
         if (!child)
         {
@@ -133,16 +133,16 @@ void Bone::CalculateBoneTranslation()
 
 void Bone::CalculateBoneRotation()
 {
-    m_world_bone_rotation = m_binding_transform.GetRotation();
+    m_worldBoneRotation = m_bindingTransform.GetRotation();
 
-    if (m_parent_node != nullptr && m_parent_node->GetType() == Type::BONE)
+    if (m_parentNode != nullptr && m_parentNode->GetType() == Type::BONE)
     {
-        const auto* parent_bone = static_cast<Bone*>(m_parent_node); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+        const auto* parentBone = static_cast<Bone*>(m_parentNode); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
 
-        m_world_bone_rotation = parent_bone->m_world_bone_rotation * m_binding_transform.GetRotation();
+        m_worldBoneRotation = parentBone->m_worldBoneRotation * m_bindingTransform.GetRotation();
     }
 
-    for (auto& child : m_child_nodes)
+    for (auto& child : m_childNodes)
     {
         if (!child)
         {
@@ -160,15 +160,15 @@ void Bone::CalculateBoneRotation()
 
 void Bone::UpdateBoneTransform()
 {
-    m_bone_matrix = Matrix4::Translation(m_world_bone_translation * -1.0f);
-    m_bone_matrix = Matrix4::Rotation(m_world_bone_rotation * m_pose_transform.GetRotation() * GetOffsetRotation() * m_inv_binding_rotation) * m_bone_matrix;
-    m_bone_matrix = Matrix4::Translation(m_world_bone_translation + m_pose_transform.GetTranslation() + GetOffsetTranslation()) * m_bone_matrix;
+    m_boneMatrix = Matrix4::Translation(m_worldBoneTranslation * -1.0f);
+    m_boneMatrix = Matrix4::Rotation(m_worldBoneRotation * m_poseTransform.GetRotation() * GetOffsetRotation() * m_invBindingRotation) * m_boneMatrix;
+    m_boneMatrix = Matrix4::Translation(m_worldBoneTranslation + m_poseTransform.GetTranslation() + GetOffsetTranslation()) * m_boneMatrix;
 
-    if (m_parent_node != nullptr)
+    if (m_parentNode != nullptr)
     {
-        if (m_parent_node->GetType() == Type::BONE)
+        if (m_parentNode->GetType() == Type::BONE)
         {
-            m_bone_matrix = static_cast<Bone*>(m_parent_node)->GetBoneMatrix() * m_bone_matrix; // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+            m_boneMatrix = static_cast<Bone*>(m_parentNode)->GetBoneMatrix() * m_boneMatrix; // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
         }
     }
 
@@ -182,7 +182,7 @@ void Bone::SetSkeleton(Skeleton* skeleton)
 {
     m_skeleton = skeleton;
 
-    for (auto& child : m_child_nodes)
+    for (auto& child : m_childNodes)
     {
         if (!child)
         {

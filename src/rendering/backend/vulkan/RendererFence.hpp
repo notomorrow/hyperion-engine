@@ -9,8 +9,6 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanFence : public RenderObject<VulkanFence>
 {
 public:
@@ -24,23 +22,22 @@ public:
 
     HYP_FORCE_INLINE VkResult GetLastFrameResult() const
     {
-        return m_last_frame_result;
+        return m_lastFrameResult;
     }
 
     HYP_API RendererResult Create();
     HYP_API RendererResult Destroy();
-    HYP_API RendererResult WaitForGPU(bool timeout_loop = false);
+    HYP_API RendererResult WaitForGPU(bool timeoutLoop = false);
     HYP_API RendererResult Reset();
 
 private:
     VkFence m_handle = VK_NULL_HANDLE;
-    VkResult m_last_frame_result = VK_SUCCESS;
+    VkResult m_lastFrameResult = VK_SUCCESS;
 };
 
 using VulkanFenceRef = RenderObjectHandle_Strong<VulkanFence>;
 using VulkanFenceWeakRef = RenderObjectHandle_Weak<VulkanFence>;
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

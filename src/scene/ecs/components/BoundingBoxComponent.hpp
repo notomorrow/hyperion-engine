@@ -13,19 +13,19 @@ HYP_STRUCT(Component, Size = 64, Editor = false)
 struct BoundingBoxComponent
 {
     HYP_FIELD(Property = "LocalAABB", Serialize = true)
-    BoundingBox local_aabb;
+    BoundingBox localAabb;
 
     HYP_FIELD(Property = "WorldAABB", Serialize = true)
-    BoundingBox world_aabb;
+    BoundingBox worldAabb;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(local_aabb);
-        hash_code.Add(world_aabb);
+        hashCode.Add(localAabb);
+        hashCode.Add(worldAabb);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

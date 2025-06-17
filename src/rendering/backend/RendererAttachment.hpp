@@ -14,8 +14,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 enum class RenderPassStage : uint8
 {
     NONE,
@@ -50,12 +48,12 @@ public:
 
     HYP_FORCE_INLINE const ImageViewRef& GetImageView() const
     {
-        return m_image_view;
+        return m_imageView;
     }
 
-    HYP_FORCE_INLINE InternalFormat GetFormat() const
+    HYP_FORCE_INLINE TextureFormat GetFormat() const
     {
-        return m_image ? m_image->GetTextureFormat() : InternalFormat::NONE;
+        return m_image ? m_image->GetTextureFormat() : TF_NONE;
     }
 
     HYP_FORCE_INLINE bool IsDepthAttachment() const
@@ -65,32 +63,32 @@ public:
 
     HYP_FORCE_INLINE LoadOperation GetLoadOperation() const
     {
-        return m_load_operation;
+        return m_loadOperation;
     }
 
     HYP_FORCE_INLINE StoreOperation GetStoreOperation() const
     {
-        return m_store_operation;
+        return m_storeOperation;
     }
 
     HYP_FORCE_INLINE const BlendFunction& GetBlendFunction() const
     {
-        return m_blend_function;
+        return m_blendFunction;
     }
 
-    HYP_FORCE_INLINE void SetBlendFunction(const BlendFunction& blend_function)
+    HYP_FORCE_INLINE void SetBlendFunction(const BlendFunction& blendFunction)
     {
-        m_blend_function = blend_function;
+        m_blendFunction = blendFunction;
     }
 
     HYP_FORCE_INLINE Vec4f GetClearColor() const
     {
-        return m_clear_color;
+        return m_clearColor;
     }
 
-    HYP_FORCE_INLINE void SetClearColor(const Vec4f& clear_color)
+    HYP_FORCE_INLINE void SetClearColor(const Vec4f& clearColor)
     {
-        m_clear_color = clear_color;
+        m_clearColor = clearColor;
     }
 
     HYP_FORCE_INLINE uint32 GetBinding() const
@@ -110,12 +108,12 @@ public:
 
     HYP_FORCE_INLINE bool AllowBlending() const
     {
-        return m_allow_blending;
+        return m_allowBlending;
     }
 
-    HYP_FORCE_INLINE void SetAllowBlending(bool allow_blending)
+    HYP_FORCE_INLINE void SetAllowBlending(bool allowBlending)
     {
-        m_allow_blending = allow_blending;
+        m_allowBlending = allowBlending;
     }
 
     HYP_FORCE_INLINE const FramebufferWeakRef& GetFramebuffer() const
@@ -132,36 +130,35 @@ protected:
     AttachmentBase(
         const ImageRef& image,
         const FramebufferWeakRef& framebuffer,
-        LoadOperation load_operation,
-        StoreOperation store_operation,
-        BlendFunction blend_function)
+        LoadOperation loadOperation,
+        StoreOperation storeOperation,
+        BlendFunction blendFunction)
         : m_image(image),
           m_framebuffer(framebuffer),
-          m_load_operation(load_operation),
-          m_store_operation(store_operation),
-          m_blend_function(blend_function),
-          m_clear_color(Vec4f::Zero())
+          m_loadOperation(loadOperation),
+          m_storeOperation(storeOperation),
+          m_blendFunction(blendFunction),
+          m_clearColor(Vec4f::Zero())
     {
     }
 
     ImageRef m_image;
-    ImageViewRef m_image_view;
+    ImageViewRef m_imageView;
 
     FramebufferWeakRef m_framebuffer;
 
-    LoadOperation m_load_operation;
-    StoreOperation m_store_operation;
+    LoadOperation m_loadOperation;
+    StoreOperation m_storeOperation;
 
-    BlendFunction m_blend_function;
+    BlendFunction m_blendFunction;
 
-    Vec4f m_clear_color;
+    Vec4f m_clearColor;
 
     uint32 m_binding = MathUtil::MaxSafeValue<uint32>();
 
-    bool m_allow_blending = true;
+    bool m_allowBlending = true;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

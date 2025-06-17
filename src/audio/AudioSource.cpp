@@ -11,20 +11,20 @@ AudioSource::AudioSource()
     : HypObject(),
       m_format(AudioSourceFormat::MONO8),
       m_freq(0),
-      m_buffer_id(~0u),
-      m_source_id(~0u),
-      m_sample_length(0)
+      m_bufferId(~0u),
+      m_sourceId(~0u),
+      m_sampleLength(0)
 {
 }
 
-AudioSource::AudioSource(AudioSourceFormat format, const ByteBuffer& byte_buffer, uint64 freq)
+AudioSource::AudioSource(AudioSourceFormat format, const ByteBuffer& byteBuffer, uint64 freq)
     : HypObject(),
       m_format(format),
-      m_data(byte_buffer),
+      m_data(byteBuffer),
       m_freq(freq),
-      m_buffer_id(~0u),
-      m_source_id(~0u),
-      m_sample_length(0)
+      m_bufferId(~0u),
+      m_sourceId(~0u),
+      m_sampleLength(0)
 {
 }
 
@@ -33,15 +33,15 @@ AudioSource::AudioSource(AudioSource&& other) noexcept
       m_format(other.m_format),
       m_freq(other.m_freq),
       m_data(std::move(other.m_data)),
-      m_buffer_id(other.m_buffer_id),
-      m_source_id(other.m_source_id),
-      m_sample_length(other.m_sample_length)
+      m_bufferId(other.m_bufferId),
+      m_sourceId(other.m_sourceId),
+      m_sampleLength(other.m_sampleLength)
 {
     other.m_format = AudioSourceFormat::MONO8;
     other.m_freq = 0;
-    other.m_buffer_id = ~0u;
-    other.m_source_id = ~0u;
-    other.m_sample_length = 0;
+    other.m_bufferId = ~0u;
+    other.m_sourceId = ~0u;
+    other.m_sampleLength = 0;
 }
 
 AudioSource& AudioSource::operator=(AudioSource&& other) noexcept
@@ -54,15 +54,15 @@ AudioSource& AudioSource::operator=(AudioSource&& other) noexcept
     m_format = other.m_format;
     m_freq = other.m_freq;
     m_data = std::move(other.m_data);
-    m_buffer_id = other.m_buffer_id;
-    m_source_id = other.m_source_id;
-    m_sample_length = other.m_sample_length;
+    m_bufferId = other.m_bufferId;
+    m_sourceId = other.m_sourceId;
+    m_sampleLength = other.m_sampleLength;
 
     other.m_format = AudioSourceFormat::MONO8;
     other.m_freq = 0;
-    other.m_buffer_id = ~0u;
-    other.m_source_id = ~0u;
-    other.m_sample_length = 0;
+    other.m_bufferId = ~0u;
+    other.m_sourceId = ~0u;
+    other.m_sampleLength = 0;
 
     return *this;
 }
@@ -71,16 +71,16 @@ AudioSource::~AudioSource()
 {
     Stop();
 
-    if (m_source_id != ~0u)
+    if (m_sourceId != ~0u)
     {
-        alDeleteSources(1, &m_source_id);
-        m_source_id = ~0u;
+        alDeleteSources(1, &m_sourceId);
+        m_sourceId = ~0u;
     }
 
-    if (m_buffer_id != ~0u)
+    if (m_bufferId != ~0u)
     {
-        alDeleteBuffers(1, &m_buffer_id);
-        m_buffer_id = ~0u;
+        alDeleteBuffers(1, &m_bufferId);
+        m_bufferId = ~0u;
     }
 }
 
@@ -88,29 +88,29 @@ void AudioSource::Init()
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        auto al_format = AL_FORMAT_MONO8;
+        auto alFormat = AL_FORMAT_MONO8;
 
         switch (m_format)
         {
         case AudioSourceFormat::MONO8:
-            al_format = AL_FORMAT_MONO8;
+            alFormat = AL_FORMAT_MONO8;
             break;
         case AudioSourceFormat::MONO16:
-            al_format = AL_FORMAT_MONO16;
+            alFormat = AL_FORMAT_MONO16;
             break;
         case AudioSourceFormat::STEREO8:
-            al_format = AL_FORMAT_STEREO8;
+            alFormat = AL_FORMAT_STEREO8;
             break;
         case AudioSourceFormat::STEREO16:
-            al_format = AL_FORMAT_STEREO16;
+            alFormat = AL_FORMAT_STEREO16;
             break;
         }
 
-        alGenBuffers(1, &m_buffer_id);
-        alBufferData(m_buffer_id, al_format, m_data.Data(), m_data.Size(), m_freq);
+        alGenBuffers(1, &m_bufferId);
+        alBufferData(m_bufferId, alFormat, m_data.Data(), m_data.Size(), m_freq);
 
-        alGenSources(1, &m_source_id);
-        alSourcei(m_source_id, AL_BUFFER, m_buffer_id);
+        alGenSources(1, &m_sourceId);
+        alSourcei(m_sourceId, AL_BUFFER, m_bufferId);
 
         FindSampleLength();
 
@@ -129,7 +129,7 @@ AudioSourceState AudioSource::GetState() const
     }
 
     ALint state;
-    alGetSourcei(m_source_id, AL_SOURCE_STATE, &state);
+    alGetSourcei(m_sourceId, AL_SOURCE_STATE, &state);
 
     switch (state)
     {
@@ -149,7 +149,7 @@ void AudioSource::SetPosition(const Vec3f& vec)
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSource3f(m_source_id, AL_POSITION, vec.x, vec.y, vec.z);
+        alSource3f(m_sourceId, AL_POSITION, vec.x, vec.y, vec.z);
     }
 }
 
@@ -157,7 +157,7 @@ void AudioSource::SetVelocity(const Vec3f& vec)
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSource3f(m_source_id, AL_VELOCITY, vec.x, vec.y, vec.z);
+        alSource3f(m_sourceId, AL_VELOCITY, vec.x, vec.y, vec.z);
     }
 }
 
@@ -165,7 +165,7 @@ void AudioSource::SetPitch(float pitch)
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSourcef(m_source_id, AL_PITCH, pitch);
+        alSourcef(m_sourceId, AL_PITCH, pitch);
     }
 }
 
@@ -173,7 +173,7 @@ void AudioSource::SetGain(float gain)
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSourcef(m_source_id, AL_GAIN, gain);
+        alSourcef(m_sourceId, AL_GAIN, gain);
     }
 }
 
@@ -181,7 +181,7 @@ void AudioSource::SetLoop(bool loop)
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSourcei(m_source_id, AL_LOOPING, loop);
+        alSourcei(m_sourceId, AL_LOOPING, loop);
     }
 }
 
@@ -189,7 +189,7 @@ void AudioSource::Play()
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSourcePlay(m_source_id);
+        alSourcePlay(m_sourceId);
     }
 }
 
@@ -197,7 +197,7 @@ void AudioSource::Pause()
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSourcePause(m_source_id);
+        alSourcePause(m_sourceId);
     }
 }
 
@@ -205,7 +205,7 @@ void AudioSource::Stop()
 {
     if (AudioManager::GetInstance().IsInitialized())
     {
-        alSourceStop(m_source_id);
+        alSourceStop(m_sourceId);
     }
 }
 
@@ -216,15 +216,15 @@ void AudioSource::FindSampleLength()
         return;
     }
 
-    ALint byte_size;
-    ALint num_channels;
+    ALint byteSize;
+    ALint numChannels;
     ALint bits;
 
-    alGetBufferi(m_buffer_id, AL_SIZE, &byte_size);
-    alGetBufferi(m_buffer_id, AL_CHANNELS, &num_channels);
-    alGetBufferi(m_buffer_id, AL_BITS, &bits);
+    alGetBufferi(m_bufferId, AL_SIZE, &byteSize);
+    alGetBufferi(m_bufferId, AL_CHANNELS, &numChannels);
+    alGetBufferi(m_bufferId, AL_BITS, &bits);
 
-    m_sample_length = byte_size * 8 / (num_channels * bits);
+    m_sampleLength = byteSize * 8 / (numChannels * bits);
 }
 
 } // namespace hyperion

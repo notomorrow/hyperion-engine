@@ -3,8 +3,6 @@
 #ifndef HYPERION_SKELETON_HPP
 #define HYPERION_SKELETON_HPP
 
-#include <core/Base.hpp>
-
 #include <core/Handle.hpp>
 
 #include <core/utilities/DataMutationState.hpp>
@@ -68,28 +66,28 @@ class HYP_API Skeleton final : public HypObject<Skeleton>
 
 public:
     Skeleton();
-    Skeleton(const Handle<Bone>& root_bone);
+    Skeleton(const Handle<Bone>& rootBone);
     Skeleton(const Skeleton& other) = delete;
     Skeleton& operator=(const Skeleton& other) = delete;
     ~Skeleton();
 
     HYP_FORCE_INLINE RenderSkeleton& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     /*! \brief Get the mutation state of this skeleton.
      *  \returns The mutation state of this skeleton. */
     HYP_FORCE_INLINE DataMutationState GetMutationState() const
     {
-        return m_mutation_state;
+        return m_mutationState;
     }
 
     /*! \brief Set the mutation state of this skeleton. To be called by the Bone class.
      *  \note This is not intended to be called by the user. */
     HYP_FORCE_INLINE void SetMutationState(DataMutationState state)
     {
-        m_mutation_state = state;
+        m_mutationState = state;
     }
 
     /*! \brief Look up a bone with the given name/tag. If no root bone was set,
@@ -164,24 +162,24 @@ public:
 
     /*! \brief Find an animation with the given name. If the animation could not be found, nullptr is returned.
      *  \param name The name of the animation to find.
-     *  \param out_index The index of the animation, if it was found.
+     *  \param outIndex The index of the animation, if it was found.
      *  \returns The animation with the given name, or nullptr if it could not be found.
      */
-    const Animation* FindAnimation(UTF8StringView name, uint32* out_index) const;
+    const Animation* FindAnimation(UTF8StringView name, uint32* outIndex) const;
 
-    void Update(GameCounter::TickUnit delta);
+    void Update(float delta);
 
 private:
     void Init() override;
 
-    SkeletonBoneData m_bone_data;
+    SkeletonBoneData m_boneData;
 
-    Handle<Bone> m_root_bone;
+    Handle<Bone> m_rootBone;
     Array<Handle<Animation>> m_animations;
 
-    mutable DataMutationState m_mutation_state;
+    mutable DataMutationState m_mutationState;
 
-    RenderSkeleton* m_render_resource;
+    RenderSkeleton* m_renderResource;
 };
 
 } // namespace hyperion

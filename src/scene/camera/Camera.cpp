@@ -5,7 +5,6 @@
 
 #include <core/math/Halton.hpp>
 
-#include <rendering/ShaderGlobals.hpp>
 #include <rendering/RenderCamera.hpp>
 #include <rendering/backend/RendererFramebuffer.hpp>
 
@@ -20,6 +19,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -28,27 +28,27 @@ class Camera;
 
 #pragma region CameraController
 
-CameraController::CameraController(CameraProjectionMode projection_mode)
-    : m_input_handler(CreateObject<NullInputHandler>()),
+CameraController::CameraController(CameraProjectionMode projectionMode)
+    : m_inputHandler(ObjCast<InputHandlerBase>(CreateObject<NullInputHandler>())),
       m_camera(nullptr),
-      m_projection_mode(projection_mode),
-      m_command_queue_count { 0 },
-      m_mouse_lock_requested(false)
+      m_projectionMode(projectionMode),
+      m_commandQueueCount { 0 },
+      m_mouseLockRequested(false)
 {
 }
 
-void CameraController::SetInputHandler(const Handle<InputHandlerBase>& input_handler)
+void CameraController::SetInputHandler(const Handle<InputHandlerBase>& inputHandler)
 {
-    if (m_input_handler == input_handler)
+    if (m_inputHandler == inputHandler)
     {
         return;
     }
 
-    m_input_handler = input_handler;
+    m_inputHandler = inputHandler;
 
     if (IsInitCalled())
     {
-        InitObject(m_input_handler);
+        InitObject(m_inputHandler);
     }
 }
 
@@ -85,37 +85,37 @@ void CameraController::PushCommand(const CameraCommand& command)
 {
     HYP_SCOPE;
 
-    std::lock_guard guard(m_command_queue_mutex);
+    std::lock_guard guard(m_commandQueueMutex);
 
-    ++m_command_queue_count;
+    ++m_commandQueueCount;
 
-    m_command_queue.Push(command);
+    m_commandQueue.Push(command);
 }
 
-void CameraController::UpdateCommandQueue(GameCounter::TickUnit dt)
+void CameraController::UpdateCommandQueue(float dt)
 {
     HYP_SCOPE;
 
-    if (m_command_queue_count == 0)
+    if (m_commandQueueCount == 0)
     {
         return;
     }
 
-    std::lock_guard guard(m_command_queue_mutex);
+    std::lock_guard guard(m_commandQueueMutex);
 
-    while (m_command_queue.Any())
+    while (m_commandQueue.Any())
     {
-        RespondToCommand(m_command_queue.Front(), dt);
+        RespondToCommand(m_commandQueue.Front(), dt);
 
-        m_command_queue.Pop();
+        m_commandQueue.Pop();
     }
 
-    m_command_queue_count = 0;
+    m_commandQueueCount = 0;
 }
 
-void CameraController::SetIsMouseLockRequested(bool mouse_lock_requested)
+void CameraController::SetIsMouseLockRequested(bool mouseLockRequested)
 {
-    m_mouse_lock_requested = mouse_lock_requested;
+    m_mouseLockRequested = mouseLockRequested;
 }
 
 #pragma endregion CameraController
@@ -157,7 +157,7 @@ Camera::Camera(int width, int height)
     : HypObject(),
       m_name(Name::Unique("Camera_")),
       m_flags(CameraFlags::NONE),
-      m_match_window_size_ratio(1.0f),
+      m_matchWindowSizeRatio(1.0f),
       m_fov(50.0f),
       m_width(width),
       m_height(height),
@@ -170,27 +170,27 @@ Camera::Camera(int width, int height)
       m_translation(Vec3f::Zero()),
       m_direction(Vec3f::UnitZ()),
       m_up(Vec3f::UnitY()),
-      m_render_resource(nullptr)
+      m_renderResource(nullptr)
 {
     // make sure there is always at least 1 camera controller
-    m_camera_controllers.PushBack(CreateObject<NullCameraController>());
+    m_cameraControllers.PushBack(CreateObject<NullCameraController>());
 }
 
 Camera::Camera(float fov, int width, int height, float _near, float _far)
     : HypObject(),
       m_name(Name::Unique("Camera_")),
       m_flags(CameraFlags::NONE),
-      m_match_window_size_ratio(1.0f),
+      m_matchWindowSizeRatio(1.0f),
       m_fov(fov),
       m_width(width),
       m_height(height),
       m_translation(Vec3f::Zero()),
       m_direction(Vec3f::UnitZ()),
       m_up(Vec3f::UnitY()),
-      m_render_resource(nullptr)
+      m_renderResource(nullptr)
 {
     // make sure there is always at least 1 camera controller
-    m_camera_controllers.PushBack(CreateObject<NullCameraController>());
+    m_cameraControllers.PushBack(CreateObject<NullCameraController>());
 
     SetToPerspectiveProjection(fov, _near, _far);
 }
@@ -199,17 +199,17 @@ Camera::Camera(int width, int height, float left, float right, float bottom, flo
     : HypObject(),
       m_name(Name::Unique("Camera_")),
       m_flags(CameraFlags::NONE),
-      m_match_window_size_ratio(1.0f),
+      m_matchWindowSizeRatio(1.0f),
       m_fov(0.0f),
       m_width(width),
       m_height(height),
       m_translation(Vec3f::Zero()),
       m_direction(Vec3f::UnitZ()),
       m_up(Vec3f::UnitY()),
-      m_render_resource(nullptr)
+      m_renderResource(nullptr)
 {
     // make sure there is always at least 1 camera controller
-    m_camera_controllers.PushBack(CreateObject<NullCameraController>());
+    m_cameraControllers.PushBack(CreateObject<NullCameraController>());
 
     SetToOrthographicProjection(left, right, bottom, top, _near, _far);
 }
@@ -218,96 +218,97 @@ Camera::~Camera()
 {
     while (HasActiveCameraController())
     {
-        const Handle<CameraController> camera_controller = m_camera_controllers.PopBack();
+        const Handle<CameraController> cameraController = m_cameraControllers.PopBack();
 
-        camera_controller->OnDeactivated();
-        camera_controller->OnRemoved();
+        cameraController->OnDeactivated();
+        cameraController->OnRemoved();
     }
 
-    if (m_render_resource != nullptr)
+    if (m_renderResource != nullptr)
     {
-        m_render_resource->EnqueueUnbind();
-        m_render_resource->DecRef();
-        FreeResource(m_render_resource);
+        m_renderResource->DecRef();
+        FreeResource(m_renderResource);
     }
 }
 
 void Camera::Init()
 {
-    m_streaming_volume = CreateObject<CameraStreamingVolume>();
+    m_streamingVolume = CreateObject<CameraStreamingVolume>();
     /// \todo: Set a proper bounding box for the streaming volume
-    m_streaming_volume->SetBoundingBox(BoundingBox(m_translation - 10.0f, m_translation + 10.0f));
-    InitObject(m_streaming_volume);
+    m_streamingVolume->SetBoundingBox(BoundingBox(m_translation - 10.0f, m_translation + 10.0f));
+    InitObject(m_streamingVolume);
 
     if (m_flags & CameraFlags::MATCH_WINDOW_SIZE)
     {
-        auto init_match_window_size = [this]() -> TResult<>
+        auto initMatchWindowSize = [this]() -> TResult<>
         {
-            const Handle<AppContextBase>& app_context = g_engine->GetAppContext();
+            const Handle<AppContextBase>& appContext = g_engine->GetAppContext();
 
-            if (!app_context)
+            if (!appContext)
             {
                 return HYP_MAKE_ERROR(Error, "No valid app context!");
             }
 
-            if (!app_context->GetMainWindow())
+            if (!appContext->GetMainWindow())
             {
                 return HYP_MAKE_ERROR(Error, "No main window set!");
             }
 
-            const Vec2i window_size = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(app_context->GetMainWindow()->GetDimensions()) * m_match_window_size_ratio)), Vec2i::One());
+            const Vec2i windowSize = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(appContext->GetMainWindow()->GetDimensions()) * m_matchWindowSizeRatio)), Vec2i::One());
 
-            m_width = window_size.x;
-            m_height = window_size.y;
+            m_width = windowSize.x;
+            m_height = windowSize.y;
 
             RemoveDelegateHandler(NAME("HandleWindowSizeChanged"));
 
-            AddDelegateHandler(NAME("HandleWindowSizeChanged"), app_context->GetMainWindow()->OnWindowSizeChanged.Bind([this](Vec2i window_size)
-                                                                    {
-                                                                        HYP_NAMED_SCOPE("Update Camera size based on window size");
+            AddDelegateHandler(
+                NAME("HandleWindowSizeChanged"),
+                appContext->GetMainWindow()->OnWindowSizeChanged.Bind([this](Vec2i windowSize)
+                    {
+                        HYP_NAMED_SCOPE("Update Camera size based on window size");
 
-                                                                        Threads::AssertOnThread(g_game_thread);
+                        Threads::AssertOnThread(g_gameThread);
 
-                                                                        window_size = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(window_size) * m_match_window_size_ratio)), Vec2i::One());
+                        windowSize = MathUtil::Max(Vec2i(MathUtil::Round(Vec2f(windowSize) * m_matchWindowSizeRatio)), Vec2i::One());
 
-                                                                        m_width = window_size.x;
-                                                                        m_height = window_size.y;
+                        m_width = windowSize.x;
+                        m_height = windowSize.y;
 
-                                                                        HYP_LOG(Camera, Debug, "Camera window size (change): {}", window_size);
-                                                                    },
-                                                                    /* require_current_thread */ true));
+                        HYP_LOG(Camera, Debug, "Camera window size (change): {}", windowSize);
+                    },
+                    /* requireCurrentThread */ true));
 
-            HYP_LOG(Camera, Debug, "Camera window size: {}", window_size);
+            HYP_LOG(Camera, Debug, "Camera window size: {}", windowSize);
 
             return {};
         };
 
-        if (auto match_window_size_result = init_match_window_size(); match_window_size_result.HasError())
+        if (auto matchWindowSizeResult = initMatchWindowSize(); matchWindowSizeResult.HasError())
         {
-            HYP_LOG(Camera, Error, "Camera with MATCH_WINDOW_SIZE flag cannot match window size: {}", match_window_size_result.GetError().GetMessage());
+            HYP_LOG(Camera, Error, "Camera with MATCH_WINDOW_SIZE flag cannot match window size: {}", matchWindowSizeResult.GetError().GetMessage());
         }
     }
 
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
         {
-            if (m_render_resource != nullptr)
+            if (m_renderResource != nullptr)
             {
-                m_render_resource->DecRef();
-                FreeResource(m_render_resource);
+                m_renderResource->DecRef();
+                FreeResource(m_renderResource);
 
-                m_render_resource = nullptr;
+                m_renderResource = nullptr;
             }
         }));
 
-    for (const Handle<CameraController>& camera_controller : m_camera_controllers)
+    for (const Handle<CameraController>& cameraController : m_cameraControllers)
     {
-        InitObject(camera_controller);
+        InitObject(cameraController);
     }
 
-    if (const Handle<CameraController>& camera_controller = GetCameraController(); camera_controller && !camera_controller->IsInstanceOf<NullCameraController>())
+    if (const Handle<CameraController>& cameraController = GetCameraController(); cameraController && !cameraController->IsA<NullCameraController>())
     {
-        camera_controller->OnAdded(this);
-        camera_controller->OnActivated();
+        cameraController->OnAdded(this);
+        cameraController->OnActivated();
     }
 
     UpdateMouseLocked();
@@ -316,63 +317,63 @@ void Camera::Init()
     UpdateProjectionMatrix();
     UpdateViewProjectionMatrix();
 
-    m_render_resource = AllocateResource<RenderCamera>(this);
+    m_renderResource = AllocateResource<RenderCamera>(this);
 
-    m_render_resource->SetBufferData(CameraShaderData {
-        .view = m_view_mat,
-        .projection = m_proj_mat,
-        .previous_view = m_previous_view_matrix,
+    m_renderResource->SetBufferData(CameraShaderData {
+        .view = m_viewMat,
+        .projection = m_projMat,
+        .previousView = m_previousViewMatrix,
         .dimensions = Vec4u { uint32(MathUtil::Abs(m_width)), uint32(MathUtil::Abs(m_height)), 0, 1 },
-        .camera_position = Vec4f(m_translation, 1.0f),
-        .camera_direction = Vec4f(m_direction, 1.0f),
-        .camera_near = m_near,
-        .camera_far = m_far,
-        .camera_fov = m_fov,
-        .id = GetID().Value() });
+        .cameraPosition = Vec4f(m_translation, 1.0f),
+        .cameraDirection = Vec4f(m_direction, 1.0f),
+        .cameraNear = m_near,
+        .cameraFar = m_far,
+        .cameraFov = m_fov,
+        .id = Id().Value() });
 
-    m_render_resource->IncRef();
+    m_renderResource->IncRef();
 
     SetReady(true);
 }
 
-void Camera::SetCameraControllers(const Array<Handle<CameraController>>& camera_controllers)
+void Camera::SetCameraControllers(const Array<Handle<CameraController>>& cameraControllers)
 {
     HYP_SCOPE;
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& current_camera_controller = GetCameraController())
+        if (const Handle<CameraController>& currentCameraController = GetCameraController())
         {
-            current_camera_controller->OnDeactivated();
+            currentCameraController->OnDeactivated();
         }
 
-        for (SizeType i = m_camera_controllers.Size(); i > 1; --i)
+        for (SizeType i = m_cameraControllers.Size(); i > 1; --i)
         {
-            m_camera_controllers[i]->OnRemoved();
+            m_cameraControllers[i]->OnRemoved();
         }
 
-        m_camera_controllers.Resize(1); // Keep the null camera controller
+        m_cameraControllers.Resize(1); // Keep the null camera controller
     }
 
-    CameraController* active_camera_controller = nullptr;
+    CameraController* activeCameraController = nullptr;
 
-    for (const Handle<CameraController>& camera_controller : camera_controllers)
+    for (const Handle<CameraController>& cameraController : cameraControllers)
     {
-        if (!camera_controller || camera_controller->IsInstanceOf<NullCameraController>())
+        if (!cameraController || cameraController->IsA<NullCameraController>())
         {
             continue;
         }
 
-        camera_controller->OnAdded(this);
+        cameraController->OnAdded(this);
 
-        m_camera_controllers.PushBack(camera_controller);
+        m_cameraControllers.PushBack(cameraController);
 
-        active_camera_controller = camera_controller.Get();
+        activeCameraController = cameraController.Get();
     }
 
-    if (active_camera_controller != nullptr)
+    if (activeCameraController != nullptr)
     {
-        active_camera_controller->OnActivated();
+        activeCameraController->OnActivated();
 
         UpdateMouseLocked();
 
@@ -382,36 +383,36 @@ void Camera::SetCameraControllers(const Array<Handle<CameraController>>& camera_
     }
 }
 
-void Camera::AddCameraController(const Handle<CameraController>& camera_controller)
+void Camera::AddCameraController(const Handle<CameraController>& cameraController)
 {
     HYP_SCOPE;
 
-    if (!camera_controller || camera_controller->IsInstanceOf<NullCameraController>())
+    if (!cameraController || cameraController->IsA<NullCameraController>())
     {
         return;
     }
 
-    if (m_camera_controllers.Contains(camera_controller))
+    if (m_cameraControllers.Contains(cameraController))
     {
         return;
     }
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& current_camera_controller = GetCameraController())
+        if (const Handle<CameraController>& currentCameraController = GetCameraController())
         {
-            current_camera_controller->OnDeactivated();
+            currentCameraController->OnDeactivated();
         }
     }
 
-    m_camera_controllers.PushBack(camera_controller);
+    m_cameraControllers.PushBack(cameraController);
 
     if (IsInitCalled())
     {
-        InitObject(camera_controller);
+        InitObject(cameraController);
 
-        camera_controller->OnAdded(this);
-        camera_controller->OnActivated();
+        cameraController->OnAdded(this);
+        cameraController->OnActivated();
 
         UpdateMouseLocked();
 
@@ -421,42 +422,42 @@ void Camera::AddCameraController(const Handle<CameraController>& camera_controll
     }
 }
 
-bool Camera::RemoveCameraController(const Handle<CameraController>& camera_controller)
+bool Camera::RemoveCameraController(const Handle<CameraController>& cameraController)
 {
     HYP_SCOPE;
 
-    if (!camera_controller || camera_controller->IsInstanceOf<NullCameraController>())
+    if (!cameraController || cameraController->IsA<NullCameraController>())
     {
         return false;
     }
 
-    auto it = m_camera_controllers.Find(camera_controller);
+    auto it = m_cameraControllers.Find(cameraController);
 
-    if (it == m_camera_controllers.End())
+    if (it == m_cameraControllers.End())
     {
         return false;
     }
 
-    m_camera_controllers.Erase(it);
+    m_cameraControllers.Erase(it);
 
     if (IsInitCalled())
     {
-        bool should_activate_camera_controller = false;
+        bool shouldActivateCameraController = false;
 
-        if (camera_controller == GetCameraController())
+        if (cameraController == GetCameraController())
         {
-            camera_controller->OnDeactivated();
+            cameraController->OnDeactivated();
 
-            should_activate_camera_controller = true;
+            shouldActivateCameraController = true;
         }
 
-        camera_controller->OnRemoved();
+        cameraController->OnRemoved();
 
-        if (should_activate_camera_controller && HasActiveCameraController())
+        if (shouldActivateCameraController && HasActiveCameraController())
         {
-            if (const Handle<CameraController>& current_camera_controller = GetCameraController())
+            if (const Handle<CameraController>& currentCameraController = GetCameraController())
             {
-                current_camera_controller->OnActivated();
+                currentCameraController->OnActivated();
             }
         }
 
@@ -475,15 +476,15 @@ void Camera::SetTranslation(const Vec3f& translation)
     HYP_SCOPE;
 
     m_translation = translation;
-    m_next_translation = translation;
+    m_nextTranslation = translation;
 
-    m_previous_view_matrix = m_view_mat;
+    m_previousViewMatrix = m_viewMat;
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
-            camera_controller->SetTranslation(translation);
+            cameraController->SetTranslation(translation);
         }
     }
 
@@ -495,13 +496,13 @@ void Camera::SetNextTranslation(const Vec3f& translation)
 {
     HYP_SCOPE;
 
-    m_next_translation = translation;
+    m_nextTranslation = translation;
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
-            camera_controller->SetNextTranslation(translation);
+            cameraController->SetNextTranslation(translation);
         }
     }
 }
@@ -514,9 +515,9 @@ void Camera::SetDirection(const Vec3f& direction)
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
-            camera_controller->SetDirection(direction);
+            cameraController->SetDirection(direction);
         }
     }
 
@@ -532,9 +533,9 @@ void Camera::SetUpVector(const Vec3f& up)
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
-            camera_controller->SetUpVector(up);
+            cameraController->SetUpVector(up);
         }
     }
 
@@ -553,33 +554,33 @@ void Camera::Rotate(const Vec3f& axis, float radians)
     UpdateViewProjectionMatrix();
 }
 
-void Camera::SetViewMatrix(const Matrix4& view_mat)
+void Camera::SetViewMatrix(const Matrix4& viewMat)
 {
     HYP_SCOPE;
 
-    m_previous_view_matrix = m_view_mat;
-    m_view_mat = view_mat;
+    m_previousViewMatrix = m_viewMat;
+    m_viewMat = viewMat;
 
     UpdateViewProjectionMatrix();
 }
 
-void Camera::SetProjectionMatrix(const Matrix4& proj_mat)
+void Camera::SetProjectionMatrix(const Matrix4& projMat)
 {
     HYP_SCOPE;
 
-    m_proj_mat = proj_mat;
+    m_projMat = projMat;
 
     UpdateViewProjectionMatrix();
 }
 
-void Camera::SetViewProjectionMatrix(const Matrix4& view_mat, const Matrix4& proj_mat)
+void Camera::SetViewProjectionMatrix(const Matrix4& viewMat, const Matrix4& projMat)
 {
     HYP_SCOPE;
 
-    m_previous_view_matrix = m_view_mat;
+    m_previousViewMatrix = m_viewMat;
 
-    m_view_mat = view_mat;
-    m_proj_mat = proj_mat;
+    m_viewMat = viewMat;
+    m_projMat = projMat;
 
     UpdateViewProjectionMatrix();
 }
@@ -588,9 +589,9 @@ void Camera::UpdateViewProjectionMatrix()
 {
     HYP_SCOPE;
 
-    m_view_proj_mat = m_proj_mat * m_view_mat;
+    m_viewProjMat = m_projMat * m_viewMat;
 
-    m_frustum.SetFromViewProjectionMatrix(m_view_proj_mat);
+    m_frustum.SetFromViewProjectionMatrix(m_viewProjMat);
 }
 
 Vec3f Camera::TransformScreenToNDC(const Vec2f& screen) const
@@ -608,21 +609,21 @@ Vec4f Camera::TransformNDCToWorld(const Vec3f& ndc) const
 {
     const Vec4f clip(ndc, 1.0f);
 
-    Vec4f eye = m_proj_mat.Inverted() * clip;
+    Vec4f eye = m_projMat.Inverted() * clip;
     eye /= eye.w;
     // eye = Vec4f(eye.x, eye.y, -1.0f, 0.0f);
 
-    return m_view_mat.Inverted() * eye;
+    return m_viewMat.Inverted() * eye;
 }
 
 Vec3f Camera::TransformWorldToNDC(const Vec3f& world) const
 {
-    return m_view_proj_mat * world;
+    return m_viewProjMat * world;
 }
 
 Vec2f Camera::TransformWorldToScreen(const Vec3f& world) const
 {
-    return TransformNDCToScreen(m_view_proj_mat * world);
+    return TransformNDCToScreen(m_viewProjMat * world);
 }
 
 Vec2f Camera::TransformNDCToScreen(const Vec3f& ndc) const
@@ -643,59 +644,59 @@ Vec2f Camera::GetPixelSize() const
     return Vec2f::One() / Vec2f { float(GetWidth()), float(GetHeight()) };
 }
 
-void Camera::Update(GameCounter::TickUnit dt)
+void Camera::Update(float dt)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
     AssertReady();
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
             UpdateMouseLocked();
 
-            camera_controller->UpdateCommandQueue(dt);
-            camera_controller->UpdateLogic(dt);
+            cameraController->UpdateCommandQueue(dt);
+            cameraController->UpdateLogic(dt);
         }
     }
 
-    m_translation = m_next_translation;
+    m_translation = m_nextTranslation;
 
     UpdateMatrices();
 
-    if (m_streaming_volume.IsValid())
+    if (m_streamingVolume.IsValid())
     {
         /// \todo: Set a proper bounding box for the streaming volume
-        m_streaming_volume->SetBoundingBox(BoundingBox(m_translation - 10.0f, m_translation + 10.0f));
+        m_streamingVolume->SetBoundingBox(BoundingBox(m_translation - 10.0f, m_translation + 10.0f));
     }
 
-    m_render_resource->SetBufferData(CameraShaderData {
-        .view = m_view_mat,
-        .projection = m_proj_mat,
-        .previous_view = m_previous_view_matrix,
+    m_renderResource->SetBufferData(CameraShaderData {
+        .view = m_viewMat,
+        .projection = m_projMat,
+        .previousView = m_previousViewMatrix,
         .dimensions = Vec4u { uint32(MathUtil::Abs(m_width)), uint32(MathUtil::Abs(m_height)), 0, 1 },
-        .camera_position = Vec4f(m_translation, 1.0f),
-        .camera_direction = Vec4f(m_translation, 1.0f),
-        .camera_near = m_near,
-        .camera_far = m_far,
-        .camera_fov = m_fov,
-        .id = GetID().Value() });
+        .cameraPosition = Vec4f(m_translation, 1.0f),
+        .cameraDirection = Vec4f(m_translation, 1.0f),
+        .cameraNear = m_near,
+        .cameraFar = m_far,
+        .cameraFov = m_fov,
+        .id = Id().Value() });
 }
 
 void Camera::UpdateViewMatrix()
 {
     HYP_SCOPE;
 
-    m_previous_view_matrix = m_view_mat;
+    m_previousViewMatrix = m_viewMat;
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
-            camera_controller->UpdateViewMatrix();
+            cameraController->UpdateViewMatrix();
         }
     }
 }
@@ -706,9 +707,9 @@ void Camera::UpdateProjectionMatrix()
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
-            camera_controller->UpdateProjectionMatrix();
+            cameraController->UpdateProjectionMatrix();
         }
     }
 }
@@ -717,14 +718,14 @@ void Camera::UpdateMatrices()
 {
     HYP_SCOPE;
 
-    m_previous_view_matrix = m_view_mat;
+    m_previousViewMatrix = m_viewMat;
 
     if (HasActiveCameraController())
     {
-        if (const Handle<CameraController>& camera_controller = GetCameraController())
+        if (const Handle<CameraController>& cameraController = GetCameraController())
         {
-            camera_controller->UpdateViewMatrix();
-            camera_controller->UpdateProjectionMatrix();
+            cameraController->UpdateViewMatrix();
+            cameraController->UpdateProjectionMatrix();
         }
     }
 
@@ -735,29 +736,29 @@ void Camera::UpdateMouseLocked()
 {
     HYP_SCOPE;
 
-    bool should_lock_mouse = false;
+    bool shouldLockMouse = false;
 
-    if (const Handle<CameraController>& camera_controller = GetCameraController(); camera_controller && !camera_controller->IsInstanceOf<NullCameraController>())
+    if (const Handle<CameraController>& cameraController = GetCameraController(); cameraController && !cameraController->IsA<NullCameraController>())
     {
-        if (camera_controller->IsMouseLockAllowed() && camera_controller->IsMouseLockRequested())
+        if (cameraController->IsMouseLockAllowed() && cameraController->IsMouseLockRequested())
         {
-            should_lock_mouse = true;
+            shouldLockMouse = true;
         }
     }
 
-    if (should_lock_mouse)
+    if (shouldLockMouse)
     {
-        if (!m_mouse_lock_scope)
+        if (!m_mouseLockScope)
         {
-            if (const Handle<AppContextBase>& app_context = g_engine->GetAppContext())
+            if (const Handle<AppContextBase>& appContext = g_engine->GetAppContext())
             {
-                m_mouse_lock_scope = app_context->GetInputManager()->AcquireMouseLock();
+                m_mouseLockScope = appContext->GetInputManager()->AcquireMouseLock();
             }
         }
     }
     else
     {
-        m_mouse_lock_scope.Reset();
+        m_mouseLockScope.Reset();
     }
 }
 

@@ -21,103 +21,155 @@ namespace hyperion {
 
 #pragma region Helpers
 
-const HypClass* GetClass(TypeID type_id)
+const HypClass* GetClass(TypeId typeId)
 {
-    return HypClassRegistry::GetInstance().GetClass(type_id);
+    return HypClassRegistry::GetInstance().GetClass(typeId);
 }
 
-const HypClass* GetClass(WeakName type_name)
+const HypClass* GetClass(WeakName typeName)
 {
-    return HypClassRegistry::GetInstance().GetClass(type_name);
+    return HypClassRegistry::GetInstance().GetClass(typeName);
 }
 
-const HypEnum* GetEnum(TypeID type_id)
+const HypEnum* GetEnum(TypeId typeId)
 {
-    return HypClassRegistry::GetInstance().GetEnum(type_id);
+    return HypClassRegistry::GetInstance().GetEnum(typeId);
 }
 
-const HypEnum* GetEnum(WeakName type_name)
+const HypEnum* GetEnum(WeakName typeName)
 {
-    return HypClassRegistry::GetInstance().GetEnum(type_name);
+    return HypClassRegistry::GetInstance().GetEnum(typeName);
 }
 
-bool IsInstanceOfHypClass(const HypClass* hyp_class, const void* ptr, TypeID type_id)
+bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId)
 {
-    if (!hyp_class)
+    if (!hypClass)
     {
         return false;
     }
 
-    if (hyp_class->GetTypeID() == type_id)
+    if (hypClass->GetTypeId() == typeId)
     {
         return true;
     }
 
-    const HypClass* other_hyp_class = GetClass(type_id);
+    const HypClass* otherHypClass = GetClass(typeId);
 
-    if (other_hyp_class != nullptr)
+    if (otherHypClass != nullptr)
     {
-        if (other_hyp_class->GetStaticIndex() != -1)
+        // fast path
+        if (otherHypClass->GetStaticIndex() >= 0)
         {
-            return uint32(other_hyp_class->GetStaticIndex() - hyp_class->GetStaticIndex()) <= hyp_class->GetNumDescendants();
+            return uint32(otherHypClass->GetStaticIndex() - hypClass->GetStaticIndex()) <= hypClass->GetNumDescendants();
         }
 
-        // Try to get the initializer. If we can get it, use the instance class rather than just the class for the type ID.
-        if (const IHypObjectInitializer* initializer = other_hyp_class->GetObjectInitializer(ptr))
+        // Try to get the initializer. If we can get it, use the instance class rather than just the class for the type Id.
+        if (const IHypObjectInitializer* initializer = otherHypClass->GetObjectInitializer(ptr))
         {
-            other_hyp_class = initializer->GetClass();
+            otherHypClass = initializer->GetClass();
         }
     }
 
-    while (other_hyp_class != nullptr)
+    // slow path
+    while (otherHypClass != nullptr)
     {
-        if (other_hyp_class == hyp_class)
+        if (otherHypClass == hypClass)
         {
             return true;
         }
 
-        other_hyp_class = other_hyp_class->GetParent();
+        otherHypClass = otherHypClass->GetParent();
     }
 
     return false;
 }
 
-bool IsInstanceOfHypClass(const HypClass* hyp_class, const HypClass* instance_hyp_class)
+bool IsA(const HypClass* hypClass, const HypClass* instanceHypClass)
 {
-    if (!hyp_class || !instance_hyp_class)
+    if (!hypClass || !instanceHypClass)
     {
         return false;
     }
 
-    if (instance_hyp_class->GetStaticIndex() != -1)
+    // fast path
+    if (instanceHypClass->GetStaticIndex() >= 0)
     {
-        return uint32(instance_hyp_class->GetStaticIndex() - hyp_class->GetStaticIndex()) <= hyp_class->GetNumDescendants();
+        return uint32(instanceHypClass->GetStaticIndex() - hypClass->GetStaticIndex()) <= hypClass->GetNumDescendants();
     }
 
+    // slow path
     do
     {
-        if (instance_hyp_class == hyp_class)
+        if (instanceHypClass == hypClass)
         {
             return true;
         }
 
-        instance_hyp_class = instance_hyp_class->GetParent();
+        instanceHypClass = instanceHypClass->GetParent();
     }
-    while (instance_hyp_class != nullptr);
+    while (instanceHypClass != nullptr);
 
     return false;
+}
+
+int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId)
+{
+    const HypClass* base = GetClass(baseTypeId);
+    if (!base)
+    {
+        return -2;
+    }
+
+    const HypClass* subclass = GetClass(subclassTypeId);
+
+    if (!subclass)
+    {
+        return -2;
+    }
+
+    const int subclassStaticIndex = subclass->GetStaticIndex();
+    if (subclassStaticIndex < 0)
+    {
+        return -2; // subclass is not a static class
+    }
+
+    const int baseStaticIndex = base->GetStaticIndex();
+
+    if (subclassStaticIndex == baseStaticIndex)
+    {
+        return -1; // base class returns -1 for static index
+    }
+
+    if (uint32(subclassStaticIndex - base->GetStaticIndex()) <= base->GetNumDescendants())
+    {
+        // subtract one to get subclass index (has to fit within base's num descendants)
+        return subclassStaticIndex - base->GetStaticIndex() - 1;
+    }
+
+    return -2;
+}
+
+SizeType GetNumDescendants(TypeId typeId)
+{
+    const HypClass* base = GetClass(typeId);
+    if (!base)
+    {
+        return 0;
+    }
+
+    return base->GetNumDescendants();
 }
 
 #pragma endregion Helpers
 
 #pragma region HypClassMemberIterator
 
-HypClassMemberIterator::HypClassMemberIterator(const HypClass* hyp_class, EnumFlags<HypMemberType> member_types, Phase phase)
-    : m_member_types(member_types),
+HypClassMemberIterator::HypClassMemberIterator(const HypClass* hypClass, EnumFlags<HypMemberType> memberTypes, Phase phase)
+    : m_memberTypes(memberTypes),
       m_phase(phase),
-      m_target(hyp_class),
-      m_current_index(0),
-      m_current_value(nullptr)
+      m_target(hypClass),
+      m_currentIndex(0),
+      m_currentValue(nullptr)
 {
     Advance();
 }
@@ -125,7 +177,7 @@ HypClassMemberIterator::HypClassMemberIterator(const HypClass* hyp_class, EnumFl
 void HypClassMemberIterator::Advance()
 {
     // HYP_LOG(Object, Debug, "Iterating class {} members: {}, parent = {}, index = {}", target->GetName(), m_phase,
-    //     target->GetParent() ? target->GetParent()->GetName().LookupString() : "null", m_current_index);
+    //     target->GetParent() ? target->GetParent()->GetName().LookupString() : "null", m_currentIndex);
 
     if (!m_target)
     {
@@ -135,8 +187,8 @@ void HypClassMemberIterator::Advance()
     if (m_phase == Phase::MAX)
     {
         m_target = m_target->GetParent();
-        m_current_index = 0;
-        m_current_value = nullptr;
+        m_currentIndex = 0;
+        m_currentValue = nullptr;
 
         if (m_target)
         {
@@ -151,60 +203,60 @@ void HypClassMemberIterator::Advance()
     switch (m_phase)
     {
     case Phase::ITERATE_CONSTANTS:
-        if ((m_member_types & HypMemberType::TYPE_CONSTANT) && m_current_index < m_target->GetConstants().Size())
+        if ((m_memberTypes & HypMemberType::TYPE_CONSTANT) && m_currentIndex < m_target->GetConstants().Size())
         {
-            m_current_value = m_target->GetConstants()[m_current_index++];
+            m_currentValue = m_target->GetConstants()[m_currentIndex++];
         }
         else
         {
-            m_phase = NextPhase(m_member_types, m_phase);
-            m_current_index = 0;
-            m_current_value = nullptr;
+            m_phase = NextPhase(m_memberTypes, m_phase);
+            m_currentIndex = 0;
+            m_currentValue = nullptr;
 
             Advance();
         }
 
         break;
     case Phase::ITERATE_PROPERTIES:
-        if ((m_member_types & HypMemberType::TYPE_PROPERTY) && m_current_index < m_target->GetProperties().Size())
+        if ((m_memberTypes & HypMemberType::TYPE_PROPERTY) && m_currentIndex < m_target->GetProperties().Size())
         {
-            m_current_value = m_target->GetProperties()[m_current_index++];
+            m_currentValue = m_target->GetProperties()[m_currentIndex++];
         }
         else
         {
-            m_phase = NextPhase(m_member_types, m_phase);
-            m_current_index = 0;
-            m_current_value = nullptr;
+            m_phase = NextPhase(m_memberTypes, m_phase);
+            m_currentIndex = 0;
+            m_currentValue = nullptr;
 
             Advance();
         }
 
         break;
     case Phase::ITERATE_METHODS:
-        if ((m_member_types & HypMemberType::TYPE_METHOD) && m_current_index < m_target->GetMethods().Size())
+        if ((m_memberTypes & HypMemberType::TYPE_METHOD) && m_currentIndex < m_target->GetMethods().Size())
         {
-            m_current_value = m_target->GetMethods()[m_current_index++];
+            m_currentValue = m_target->GetMethods()[m_currentIndex++];
         }
         else
         {
-            m_phase = NextPhase(m_member_types, m_phase);
-            m_current_index = 0;
-            m_current_value = nullptr;
+            m_phase = NextPhase(m_memberTypes, m_phase);
+            m_currentIndex = 0;
+            m_currentValue = nullptr;
 
             Advance();
         }
 
         break;
     case Phase::ITERATE_FIELDS:
-        if ((m_member_types & HypMemberType::TYPE_FIELD) && m_current_index < m_target->GetFields().Size())
+        if ((m_memberTypes & HypMemberType::TYPE_FIELD) && m_currentIndex < m_target->GetFields().Size())
         {
-            m_current_value = m_target->GetFields()[m_current_index++];
+            m_currentValue = m_target->GetFields()[m_currentIndex++];
         }
         else
         {
-            m_phase = NextPhase(m_member_types, m_phase);
-            m_current_index = 0;
-            m_current_value = nullptr;
+            m_phase = NextPhase(m_memberTypes, m_phase);
+            m_currentIndex = 0;
+            m_currentValue = nullptr;
 
             Advance();
         }
@@ -219,17 +271,24 @@ void HypClassMemberIterator::Advance()
 
 #pragma region HypClass
 
-HypClass::HypClass(TypeID type_id, Name name, int static_index, uint32 num_descendants, Name parent_name, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
-    : m_type_id(type_id),
+HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescendants, Name parentName, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members)
+    : m_typeId(typeId),
       m_name(name),
-      m_static_index(static_index),
-      m_num_descendants(num_descendants),
-      m_parent_name(parent_name),
+      m_staticIndex(staticIndex),
+      m_numDescendants(numDescendants),
+      m_parentName(parentName),
       m_parent(nullptr),
       m_attributes(attributes),
       m_flags(flags),
-      m_serialization_mode(HypClassSerializationMode::DEFAULT)
+      m_size(0),
+      m_alignment(0),
+      m_serializationMode(HypClassSerializationMode::DEFAULT)
 {
+    if (staticIndex >= 0)
+    {
+        AssertDebug(staticIndex < g_maxStaticClassIndex, "Static index %d exceeds maximum static class index %u", staticIndex, g_maxStaticClassIndex);
+    }
+
     if (bool(m_attributes["abstract"]))
     {
         m_flags |= HypClassFlags::ABSTRACT;
@@ -240,36 +299,36 @@ HypClass::HypClass(TypeID type_id, Name name, int static_index, uint32 num_desce
     {
         if (HypProperty* property = member.value.TryGet<HypProperty>())
         {
-            HypProperty* property_ptr = new HypProperty(std::move(*property));
+            HypProperty* propertyPtr = new HypProperty(std::move(*property));
 
 #ifdef HYP_DEBUG_MODE
-            property_ptr->m_getter.type_info.target_type_id = type_id;
-            property_ptr->m_setter.type_info.target_type_id = type_id;
+            propertyPtr->m_getter.typeInfo.targetTypeId = typeId;
+            propertyPtr->m_setter.typeInfo.targetTypeId = typeId;
 #endif
 
-            m_properties.PushBack(property_ptr);
-            m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
+            m_properties.PushBack(propertyPtr);
+            m_propertiesByName.Set(propertyPtr->GetName(), propertyPtr);
         }
         else if (HypMethod* method = member.value.TryGet<HypMethod>())
         {
-            HypMethod* method_ptr = new HypMethod(std::move(*method));
+            HypMethod* methodPtr = new HypMethod(std::move(*method));
 
-            m_methods.PushBack(method_ptr);
-            m_methods_by_name.Set(method_ptr->GetName(), method_ptr);
+            m_methods.PushBack(methodPtr);
+            m_methodsByName.Set(methodPtr->GetName(), methodPtr);
         }
         else if (HypField* field = member.value.TryGet<HypField>())
         {
-            HypField* field_ptr = new HypField(std::move(*field));
+            HypField* fieldPtr = new HypField(std::move(*field));
 
-            m_fields.PushBack(field_ptr);
-            m_fields_by_name.Set(field_ptr->GetName(), field_ptr);
+            m_fields.PushBack(fieldPtr);
+            m_fieldsByName.Set(fieldPtr->GetName(), fieldPtr);
         }
         else if (HypConstant* constant = member.value.TryGet<HypConstant>())
         {
-            HypConstant* constant_ptr = new HypConstant(std::move(*constant));
+            HypConstant* constantPtr = new HypConstant(std::move(*constant));
 
-            m_constants.PushBack(constant_ptr);
-            m_constants_by_name.Set(constant_ptr->GetName(), constant_ptr);
+            m_constants.PushBack(constantPtr);
+            m_constantsByName.Set(constantPtr->GetName(), constantPtr);
         }
         else
         {
@@ -280,147 +339,147 @@ HypClass::HypClass(TypeID type_id, Name name, int static_index, uint32 num_desce
 
 HypClass::~HypClass()
 {
-    for (HypProperty* property_ptr : m_properties)
+    for (HypProperty* propertyPtr : m_properties)
     {
-        delete property_ptr;
+        delete propertyPtr;
     }
 
-    for (HypMethod* method_ptr : m_methods)
+    for (HypMethod* methodPtr : m_methods)
     {
-        delete method_ptr;
+        delete methodPtr;
     }
 
-    for (HypField* field_ptr : m_fields)
+    for (HypField* fieldPtr : m_fields)
     {
-        delete field_ptr;
+        delete fieldPtr;
     }
 
-    for (HypConstant* constant_ptr : m_constants)
+    for (HypConstant* constantPtr : m_constants)
     {
-        delete constant_ptr;
+        delete constantPtr;
     }
 }
 
 void HypClass::Initialize()
 {
-    m_serialization_mode = HypClassSerializationMode::DEFAULT;
+    m_serializationMode = HypClassSerializationMode::DEFAULT;
 
-    if (const HypClassAttributeValue& serialize_attribute = GetAttribute("serialize"))
+    if (const HypClassAttributeValue& serializeAttribute = GetAttribute("serialize"))
     {
-        if (serialize_attribute.IsString())
+        if (serializeAttribute.IsString())
         {
-            m_serialization_mode = HypClassSerializationMode::NONE;
+            m_serializationMode = HypClassSerializationMode::NONE;
 
-            const String string_value = serialize_attribute.GetString().ToLower();
+            const String stringValue = serializeAttribute.GetString().ToLower();
 
-            if (string_value == "bitwise")
+            if (stringValue == "bitwise")
             {
                 if (!IsPOD())
                 {
                     HYP_FAIL("Cannot use \"bitwise\" serialization mode for non-POD type: %s", m_name.LookupString());
                 }
 
-                m_serialization_mode = HypClassSerializationMode::BITWISE | HypClassSerializationMode::USE_MARSHAL_CLASS;
+                m_serializationMode = HypClassSerializationMode::BITWISE | HypClassSerializationMode::USE_MARSHAL_CLASS;
             }
             else
             {
-                HYP_FAIL("Unknown serialization mode: %s", string_value.Data());
+                HYP_FAIL("Unknown serialization mode: %s", stringValue.Data());
             }
         }
-        else if (!serialize_attribute.GetBool())
+        else if (!serializeAttribute.GetBool())
         {
-            m_serialization_mode = HypClassSerializationMode::NONE;
+            m_serializationMode = HypClassSerializationMode::NONE;
         }
     }
 
     // Disable USE_MARSHAL_CLASS if no marshal is registered by the time this HypClass is initialized
-    if (m_serialization_mode & HypClassSerializationMode::USE_MARSHAL_CLASS)
+    if (m_serializationMode & HypClassSerializationMode::USE_MARSHAL_CLASS)
     {
-        FBOMMarshalerBase* marshal = FBOM::GetInstance().GetMarshal(GetTypeID(), /* allow_fallback */ false);
+        FBOMMarshalerBase* marshal = FBOM::GetInstance().GetMarshal(GetTypeId(), /* allowFallback */ false);
 
         if (!marshal)
         {
-            m_serialization_mode &= ~HypClassSerializationMode::USE_MARSHAL_CLASS;
+            m_serializationMode &= ~HypClassSerializationMode::USE_MARSHAL_CLASS;
         }
     }
 
-    if (m_parent_name.IsValid())
+    if (m_parentName.IsValid())
     {
         if (!m_parent)
         {
-            m_parent = GetClass(m_parent_name);
+            m_parent = GetClass(m_parentName);
         }
 
-        AssertThrowMsg(m_parent != nullptr, "Invalid parent class: %s", m_parent_name.LookupString());
+        AssertDebug(m_parent != nullptr, "Invalid parent class: %s", m_parentName.LookupString());
     }
 
     HYP_LOG(Object, Info, "Initializing HypClass \"{}\"", m_name);
 
     // Build properties from `Property=` attributes on methods and fields
-    Array<Pair<String, Array<IHypMember*>>> properties_to_build;
+    Array<Pair<String, Array<IHypMember*>>> propertiesToBuild;
 
     for (IHypMember& member : GetMembers(false))
     {
         if (const HypClassAttributeValue& attr = member.GetAttribute("property"))
         {
-            const String& attr_string = attr.GetString();
+            const String& attrString = attr.GetString();
 
-            auto properties_to_build_it = properties_to_build.FindIf([&attr_string](const auto& item)
+            auto propertiesToBuildIt = propertiesToBuild.FindIf([&attrString](const auto& item)
                 {
-                    return item.first == attr_string;
+                    return item.first == attrString;
                 });
 
-            if (properties_to_build_it == properties_to_build.End())
+            if (propertiesToBuildIt == propertiesToBuild.End())
             {
-                properties_to_build_it = &properties_to_build.EmplaceBack(attr_string, Array<IHypMember*> {});
+                propertiesToBuildIt = &propertiesToBuild.EmplaceBack(attrString, Array<IHypMember*> {});
             }
 
-            properties_to_build_it->second.PushBack(&member);
+            propertiesToBuildIt->second.PushBack(&member);
         }
     }
 
-    for (const Pair<String, Array<IHypMember*>>& it : properties_to_build)
+    for (const Pair<String, Array<IHypMember*>>& it : propertiesToBuild)
     {
         if (it.second.Empty())
         {
             continue;
         }
 
-        const auto find_field_it = it.second.FindIf([](IHypMember* member)
+        const auto findFieldIt = it.second.FindIf([](IHypMember* member)
             {
                 return member->GetMemberType() == HypMemberType::TYPE_FIELD;
             });
 
-        if (find_field_it != it.second.End())
+        if (findFieldIt != it.second.End())
         {
-            HypProperty* property_ptr = new HypProperty(HypProperty::MakeHypProperty(static_cast<HypField*>(*find_field_it)));
+            HypProperty* propertyPtr = new HypProperty(HypProperty::MakeHypProperty(static_cast<HypField*>(*findFieldIt)));
 
-            m_properties.PushBack(property_ptr);
-            m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
+            m_properties.PushBack(propertyPtr);
+            m_propertiesByName.Set(propertyPtr->GetName(), propertyPtr);
 
             continue;
         }
 
-        const auto find_getter_it = it.second.FindIf([](IHypMember* member)
+        const auto findGetterIt = it.second.FindIf([](IHypMember* member)
             {
                 return member->GetMemberType() == HypMemberType::TYPE_METHOD
                     && static_cast<HypMethod*>(member)->GetParameters().Size() == 1;
             });
 
-        const auto find_setter_it = it.second.FindIf([](IHypMember* member)
+        const auto findSetterIt = it.second.FindIf([](IHypMember* member)
             {
                 return member->GetMemberType() == HypMemberType::TYPE_METHOD
                     && static_cast<HypMethod*>(member)->GetParameters().Size() == 2;
             });
 
-        if (find_getter_it != it.second.End() || find_setter_it != it.second.End())
+        if (findGetterIt != it.second.End() || findSetterIt != it.second.End())
         {
-            HypProperty* property_ptr = new HypProperty(HypProperty::MakeHypProperty(
-                find_getter_it != it.second.End() ? static_cast<HypMethod*>(*find_getter_it) : nullptr,
-                find_setter_it != it.second.End() ? static_cast<HypMethod*>(*find_setter_it) : nullptr));
+            HypProperty* propertyPtr = new HypProperty(HypProperty::MakeHypProperty(
+                findGetterIt != it.second.End() ? static_cast<HypMethod*>(*findGetterIt) : nullptr,
+                findSetterIt != it.second.End() ? static_cast<HypMethod*>(*findSetterIt) : nullptr));
 
-            m_properties.PushBack(property_ptr);
-            m_properties_by_name.Set(property_ptr->GetName(), property_ptr);
+            m_properties.PushBack(propertyPtr);
+            m_propertiesByName.Set(propertyPtr->GetName(), propertyPtr);
 
             continue;
         }
@@ -431,22 +490,22 @@ void HypClass::Initialize()
 
 bool HypClass::CanSerialize() const
 {
-    if (m_serialization_mode == HypClassSerializationMode::NONE)
+    if (m_serializationMode == HypClassSerializationMode::NONE)
     {
         return false;
     }
 
-    if (m_serialization_mode & HypClassSerializationMode::USE_MARSHAL_CLASS)
+    if (m_serializationMode & HypClassSerializationMode::USE_MARSHAL_CLASS)
     {
         return true;
     }
 
-    if (m_serialization_mode & HypClassSerializationMode::MEMBERWISE)
+    if (m_serializationMode & HypClassSerializationMode::MEMBERWISE)
     {
         return true;
     }
 
-    if (m_serialization_mode & HypClassSerializationMode::BITWISE)
+    if (m_serializationMode & HypClassSerializationMode::BITWISE)
     {
         if (IsStructType())
         {
@@ -484,9 +543,9 @@ IHypMember* HypClass::GetMember(WeakName name) const
 
 HypProperty* HypClass::GetProperty(WeakName name) const
 {
-    const auto it = m_properties_by_name.FindAs(name);
+    const auto it = m_propertiesByName.FindAs(name);
 
-    if (it == m_properties_by_name.End())
+    if (it == m_propertiesByName.End())
     {
         if (const HypClass* parent = GetParent())
         {
@@ -505,9 +564,9 @@ Array<HypProperty*> HypClass::GetPropertiesInherited() const
     {
         FlatSet<HypProperty*> properties { GetProperties().Begin(), GetProperties().End() };
 
-        Array<HypProperty*> inherited_properties = parent->GetPropertiesInherited();
+        Array<HypProperty*> inheritedProperties = parent->GetPropertiesInherited();
 
-        for (HypProperty* property : inherited_properties)
+        for (HypProperty* property : inheritedProperties)
         {
             properties.Insert(property);
         }
@@ -520,9 +579,9 @@ Array<HypProperty*> HypClass::GetPropertiesInherited() const
 
 HypMethod* HypClass::GetMethod(WeakName name) const
 {
-    const auto it = m_methods_by_name.FindAs(name);
+    const auto it = m_methodsByName.FindAs(name);
 
-    if (it == m_methods_by_name.End())
+    if (it == m_methodsByName.End())
     {
         if (const HypClass* parent = GetParent())
         {
@@ -541,9 +600,9 @@ Array<HypMethod*> HypClass::GetMethodsInherited() const
     {
         FlatSet<HypMethod*> methods { m_methods.Begin(), m_methods.End() };
 
-        Array<HypMethod*> inherited_methods = parent->GetMethodsInherited();
+        Array<HypMethod*> inheritedMethods = parent->GetMethodsInherited();
 
-        for (HypMethod* method : inherited_methods)
+        for (HypMethod* method : inheritedMethods)
         {
             methods.Insert(method);
         }
@@ -556,9 +615,9 @@ Array<HypMethod*> HypClass::GetMethodsInherited() const
 
 HypField* HypClass::GetField(WeakName name) const
 {
-    const auto it = m_fields_by_name.FindAs(name);
+    const auto it = m_fieldsByName.FindAs(name);
 
-    if (it == m_fields_by_name.End())
+    if (it == m_fieldsByName.End())
     {
         if (const HypClass* parent = GetParent())
         {
@@ -577,9 +636,9 @@ Array<HypField*> HypClass::GetFieldsInherited() const
     {
         FlatSet<HypField*> fields { m_fields.Begin(), m_fields.End() };
 
-        Array<HypField*> inherited_fields = parent->GetFieldsInherited();
+        Array<HypField*> inheritedFields = parent->GetFieldsInherited();
 
-        for (HypField* field : inherited_fields)
+        for (HypField* field : inheritedFields)
         {
             fields.Insert(field);
         }
@@ -592,9 +651,9 @@ Array<HypField*> HypClass::GetFieldsInherited() const
 
 HypConstant* HypClass::GetConstant(WeakName name) const
 {
-    const auto it = m_constants_by_name.FindAs(name);
+    const auto it = m_constantsByName.FindAs(name);
 
-    if (it == m_constants_by_name.End())
+    if (it == m_constantsByName.End())
     {
         if (const HypClass* parent = GetParent())
         {
@@ -613,9 +672,9 @@ Array<HypConstant*> HypClass::GetConstantsInherited() const
     {
         FlatSet<HypConstant*> constants { m_constants.Begin(), m_constants.End() };
 
-        Array<HypConstant*> inherited_constants = parent->GetConstantsInherited();
+        Array<HypConstant*> inheritedConstants = parent->GetConstantsInherited();
 
-        for (HypConstant* constant : inherited_constants)
+        for (HypConstant* constant : inheritedConstants)
         {
             constants.Insert(constant);
         }
@@ -626,41 +685,53 @@ Array<HypConstant*> HypClass::GetConstantsInherited() const
     return m_constants;
 }
 
-bool HypClass::GetManagedObjectFromObjectInitializer(const IHypObjectInitializer* object_initializer, dotnet::ObjectReference& out_object_reference)
+bool HypClass::GetManagedObjectFromObjectInitializer(const IHypObjectInitializer* objectInitializer, dotnet::ObjectReference& outObjectReference)
 {
-    if (!object_initializer)
+    if (!objectInitializer)
     {
         HYP_LOG(Object, Error, "Cannot get managed object from null object initializer");
 
         return false;
     }
 
-    if (!object_initializer->GetManagedObjectResource())
+    if (!objectInitializer->GetManagedObjectResource())
     {
         HYP_LOG(Object, Error, "Cannot get managed object from object initializer without a managed object resource");
 
         return false;
     }
 
-    TResourceHandle<ManagedObjectResource> resource_handle(*object_initializer->GetManagedObjectResource());
+    TResourceHandle<ManagedObjectResource> resourceHandle(*objectInitializer->GetManagedObjectResource());
 
-    out_object_reference = resource_handle->GetManagedObject()->GetObjectReference();
+    outObjectReference = resourceHandle->GetManagedObject()->GetObjectReference();
 
     return true;
 }
 
-bool HypClass::HasParent(const HypClass* parent_hyp_class) const
+bool HypClass::IsDerivedFrom(const HypClass* other) const
 {
-    if (!parent_hyp_class)
+    if (other == nullptr)
     {
         return false;
     }
 
+    if (this == other)
+    {
+        return true;
+    }
+
+    // fast path
+    if (m_staticIndex >= 0)
+    {
+        return uint32(m_staticIndex - other->m_staticIndex) <= other->m_numDescendants;
+    }
+
+    // slow path
     const HypClass* current = this;
 
     while (current != nullptr)
     {
-        if (current->m_parent == parent_hyp_class)
+        if (current->m_parent == other)
         {
             return true;
         }

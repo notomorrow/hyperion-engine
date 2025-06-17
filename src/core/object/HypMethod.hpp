@@ -9,7 +9,7 @@
 
 #include <core/functional/Proc.hpp>
 
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 #include <core/utilities/EnumFlags.hpp>
 
 #include <core/Defines.hpp>
@@ -26,7 +26,7 @@ class HypClass;
 
 struct HypMethodParameter
 {
-    TypeID type_id;
+    TypeId typeId;
 };
 
 #pragma region CallHypMethod
@@ -34,21 +34,21 @@ struct HypMethodParameter
 template <class FunctionType, class ReturnType, class... ArgTypes, SizeType... Indices>
 HYP_FORCE_INLINE decltype(auto) CallHypMethod_Impl(FunctionType fn, HypData** args, std::index_sequence<Indices...>)
 {
-    auto assert_arg_type = [args]<SizeType Index>(std::integral_constant<SizeType, Index>) -> bool
+    auto assertArgType = [args]<SizeType Index>(std::integral_constant<SizeType, Index>) -> bool
     {
         const bool condition = args[Index]->Is<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>(/* strict */ false);
 
         if (!condition)
         {
-            HYP_FAIL("Invalid argument at index %u: Expected %s, Got TypeID %u",
+            HYP_FAIL("Invalid argument at index %u: Expected %s, Got TypeId %u",
                 Index, TypeName<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>().Data(),
-                args[Index]->GetTypeID().Value());
+                args[Index]->GetTypeId().Value());
         }
 
         return condition;
     };
 
-    (void)(assert_arg_type(std::integral_constant<SizeType, Indices> {}) && ...);
+    (void)(assertArgType(std::integral_constant<SizeType, Indices> {}) && ...);
 
     return fn(args[Indices]->template Get<NormalizedType<ArgTypes>>()...);
 }
@@ -64,29 +64,29 @@ decltype(auto) CallHypMethod(FunctionType fn, HypData** args)
 #pragma region InitHypMethodParams
 
 template <class ReturnType, class ThisType, class... ArgTypes, SizeType... Indices>
-void InitHypMethodParams_Impl(Array<HypMethodParameter>& out_params, std::index_sequence<Indices...>)
+void InitHypMethodParams_Impl(Array<HypMethodParameter>& outParams, std::index_sequence<Indices...>)
 {
-    auto add_parameter = [&out_params]<SizeType Index>(std::integral_constant<SizeType, Index>) -> bool
+    auto addParameter = [&outParams]<SizeType Index>(std::integral_constant<SizeType, Index>) -> bool
     {
-        out_params.PushBack(HypMethodParameter {
-            TypeID::ForType<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>() });
+        outParams.PushBack(HypMethodParameter {
+            TypeId::ForType<NormalizedType<typename TupleElement<Index, ArgTypes...>::Type>>() });
 
         return true;
     };
 
-    (void)(add_parameter(std::integral_constant<SizeType, Indices> {}) && ...);
+    (void)(addParameter(std::integral_constant<SizeType, Indices> {}) && ...);
 
     if constexpr (!std::is_void_v<ThisType>)
     {
-        out_params.PushBack(HypMethodParameter {
-            TypeID::ForType<NormalizedType<ThisType>>() });
+        outParams.PushBack(HypMethodParameter {
+            TypeId::ForType<NormalizedType<ThisType>>() });
     }
 }
 
 template <class ReturnType, class ThisType, class... ArgTypes>
-void InitHypMethodParams(Array<HypMethodParameter>& out_params)
+void InitHypMethodParams(Array<HypMethodParameter>& outParams)
 {
-    InitHypMethodParams_Impl<ReturnType, ThisType, ArgTypes...>(out_params, std::make_index_sequence<sizeof...(ArgTypes)> {});
+    InitHypMethodParams_Impl<ReturnType, ThisType, ArgTypes...>(outParams, std::make_index_sequence<sizeof...(ArgTypes)> {});
 }
 
 template <class ReturnType, class ThisType, class ArgsTupleType>
@@ -95,9 +95,9 @@ struct InitHypMethodParams_Tuple;
 template <class ReturnType, class ThisType, class... ArgTypes>
 struct InitHypMethodParams_Tuple<ReturnType, ThisType, Tuple<ArgTypes...>>
 {
-    void operator()(Array<HypMethodParameter>& out_params) const
+    void operator()(Array<HypMethodParameter>& outParams) const
     {
-        InitHypMethodParams<ReturnType, ThisType, ArgTypes...>(out_params);
+        InitHypMethodParams<ReturnType, ThisType, ArgTypes...>(outParams);
     }
 };
 
@@ -116,25 +116,25 @@ template <class FunctionType, class EnableIf = void>
 struct HypMethodHelper;
 
 template <class FunctionType>
-struct HypMethodHelper<FunctionType, std::enable_if_t<FunctionTraits<FunctionType>::is_member_function && !FunctionTraits<FunctionType>::is_functor>>
+struct HypMethodHelper<FunctionType, std::enable_if_t<FunctionTraits<FunctionType>::isMemberFunction && !FunctionTraits<FunctionType>::isFunctor>>
 {
     using ThisType = typename FunctionTraits<FunctionType>::ThisType;
     using ReturnType = typename FunctionTraits<FunctionType>::ReturnType;
     using ArgTypes = typename FunctionTraits<FunctionType>::ArgTypes;
 
     static constexpr EnumFlags<HypMethodFlags> flags = HypMethodFlags::MEMBER;
-    static constexpr uint32 num_args = FunctionTraits<FunctionType>::num_args + 1;
+    static constexpr uint32 numArgs = FunctionTraits<FunctionType>::numArgs + 1;
 };
 
 template <class FunctionType>
-struct HypMethodHelper<FunctionType, std::enable_if_t<!FunctionTraits<FunctionType>::is_member_function || FunctionTraits<FunctionType>::is_functor>>
+struct HypMethodHelper<FunctionType, std::enable_if_t<!FunctionTraits<FunctionType>::isMemberFunction || FunctionTraits<FunctionType>::isFunctor>>
 {
     using ThisType = void;
     using ReturnType = typename FunctionTraits<FunctionType>::ReturnType;
     using ArgTypes = typename FunctionTraits<FunctionType>::ArgTypes;
 
     static constexpr EnumFlags<HypMethodFlags> flags = HypMethodFlags::STATIC;
-    static constexpr uint32 num_args = FunctionTraits<FunctionType>::num_args;
+    static constexpr uint32 numArgs = FunctionTraits<FunctionType>::numArgs;
 };
 
 #define HYP_METHOD_MEMBER_FN_WRAPPER(_mem_fn)                                                    \
@@ -150,23 +150,23 @@ class HypMethod : public IHypMember
 public:
     HypMethod(Span<const HypClassAttribute> attributes = {})
         : m_name(Name::Invalid()),
-          m_return_type_id(TypeID::Void()),
-          m_target_type_id(TypeID::Void()),
+          m_returnTypeId(TypeId::Void()),
+          m_targetTypeId(TypeId::Void()),
           m_flags(HypMethodFlags::NONE),
           m_attributes(attributes)
     {
     }
 
     template <class ReturnType, class TargetType, class... ArgTypes>
-    HypMethod(Name name, ReturnType (TargetType::*mem_fn)(ArgTypes...), Span<const HypClassAttribute> attributes = {})
+    HypMethod(Name name, ReturnType (TargetType::*memFn)(ArgTypes...), Span<const HypClassAttribute> attributes = {})
         : m_name(name),
           m_flags(HypMethodFlags::MEMBER),
           m_attributes(attributes),
-          m_proc([mem_fn](HypData** args, SizeType num_args) -> HypData
+          m_proc([memFn](HypData** args, SizeType numArgs) -> HypData
               {
-                  AssertThrow(num_args == sizeof...(ArgTypes) + 1);
+                  AssertThrow(numArgs == sizeof...(ArgTypes) + 1);
 
-                  const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(mem_fn);
+                  const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
                   if constexpr (std::is_void_v<ReturnType>)
                   {
@@ -180,24 +180,24 @@ public:
                   }
               })
     {
-        m_return_type_id = TypeID::ForType<NormalizedType<ReturnType>>();
-        m_target_type_id = TypeID::ForType<NormalizedType<TargetType>>();
+        m_returnTypeId = TypeId::ForType<NormalizedType<ReturnType>>();
+        m_targetTypeId = TypeId::ForType<NormalizedType<TargetType>>();
 
         m_params.Reserve(sizeof...(ArgTypes) + 1);
         InitHypMethodParams_Tuple<ReturnType, TargetType, Tuple<ArgTypes...>> {}(m_params);
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serialize_proc = [mem_fn](Span<HypData> args) -> FBOMData
+            m_serializeProc = [memFn](Span<HypData> args) -> FBOMData
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes) + 1);
 
-                const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(mem_fn);
+                const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
-                HypData** arg_ptrs = (HypData**)StackAlloc(args.Size() * sizeof(HypData*));
+                HypData** argPtrs = (HypData**)StackAlloc(args.Size() * sizeof(HypData*));
                 for (SizeType i = 0; i < args.Size(); ++i)
                 {
-                    arg_ptrs[i] = &args[i];
+                    argPtrs[i] = &args[i];
                 }
 
                 if constexpr (std::is_void_v<ReturnType> || sizeof...(ArgTypes) != 0)
@@ -208,7 +208,7 @@ public:
                 {
                     FBOMData out;
 
-                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs), out))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -217,13 +217,13 @@ public:
                 }
             };
 
-            m_deserialize_proc = [mem_fn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
+            m_deserializeProc = [memFn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes));
 
                 if constexpr (sizeof...(ArgTypes) >= 1)
                 {
-                    const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(mem_fn);
+                    const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
                     HypData value;
 
@@ -232,15 +232,15 @@ public:
                         HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
                     }
 
-                    HypData** arg_ptrs = (HypData**)StackAlloc((args.Size() + 1) * sizeof(HypData*));
+                    HypData** argPtrs = (HypData**)StackAlloc((args.Size() + 1) * sizeof(HypData*));
                     for (SizeType i = 0; i < args.Size(); ++i)
                     {
-                        arg_ptrs[i] = &args[i];
+                        argPtrs[i] = &args[i];
                     }
 
-                    arg_ptrs[args.Size()] = &value;
+                    argPtrs[args.Size()] = &value;
 
-                    CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs);
+                    CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs);
                 }
                 else
                 {
@@ -251,16 +251,16 @@ public:
     }
 
     template <class ReturnType, class TargetType, class... ArgTypes>
-    HypMethod(Name name, ReturnType (TargetType::*mem_fn)(ArgTypes...) const, Span<const HypClassAttribute> attributes = {})
+    HypMethod(Name name, ReturnType (TargetType::*memFn)(ArgTypes...) const, Span<const HypClassAttribute> attributes = {})
         : m_name(name),
           m_flags(HypMethodFlags::MEMBER),
           m_attributes(attributes),
-          m_proc([mem_fn](HypData** args, SizeType num_args) -> HypData
+          m_proc([memFn](HypData** args, SizeType numArgs) -> HypData
               {
-                  AssertThrow(num_args == sizeof...(ArgTypes) + 1);
+                  AssertThrow(numArgs == sizeof...(ArgTypes) + 1);
 
                   // replace member function with free function using target pointer as first arg
-                  const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(mem_fn);
+                  const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
                   if constexpr (std::is_void_v<ReturnType>)
                   {
@@ -274,24 +274,24 @@ public:
                   }
               })
     {
-        m_return_type_id = TypeID::ForType<NormalizedType<ReturnType>>();
-        m_target_type_id = TypeID::ForType<NormalizedType<TargetType>>();
+        m_returnTypeId = TypeId::ForType<NormalizedType<ReturnType>>();
+        m_targetTypeId = TypeId::ForType<NormalizedType<TargetType>>();
 
         m_params.Reserve(sizeof...(ArgTypes) + 1);
         InitHypMethodParams_Tuple<ReturnType, TargetType, Tuple<ArgTypes...>> {}(m_params);
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serialize_proc = [mem_fn](Span<HypData> args) -> FBOMData
+            m_serializeProc = [memFn](Span<HypData> args) -> FBOMData
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes) + 1);
 
-                const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(mem_fn);
+                const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
-                HypData** arg_ptrs = (HypData**)StackAlloc(args.Size() * sizeof(HypData*));
+                HypData** argPtrs = (HypData**)StackAlloc(args.Size() * sizeof(HypData*));
                 for (SizeType i = 0; i < args.Size(); ++i)
                 {
-                    arg_ptrs[i] = &args[i];
+                    argPtrs[i] = &args[i];
                 }
 
                 if constexpr (std::is_void_v<ReturnType> || sizeof...(ArgTypes) != 0)
@@ -302,7 +302,7 @@ public:
                 {
                     FBOMData out;
 
-                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs), out))
+                    if (FBOMResult err = HypDataHelper<NormalizedType<ReturnType>>::Serialize(CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs), out))
                     {
                         HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                     }
@@ -311,13 +311,13 @@ public:
                 }
             };
 
-            m_deserialize_proc = [mem_fn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
+            m_deserializeProc = [memFn](FBOMLoadContext& context, Span<HypData> args, const FBOMData& data) -> void
             {
                 AssertThrow(args.Size() == sizeof...(ArgTypes));
 
                 if constexpr (sizeof...(ArgTypes) >= 1)
                 {
-                    const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(mem_fn);
+                    const auto fn = HYP_METHOD_MEMBER_FN_WRAPPER(memFn);
 
                     HypData value;
 
@@ -326,15 +326,15 @@ public:
                         HYP_FAIL("Failed to deserialize data: %s", err.message.Data());
                     }
 
-                    HypData** arg_ptrs = (HypData**)StackAlloc((args.Size() + 1) * sizeof(HypData*));
+                    HypData** argPtrs = (HypData**)StackAlloc((args.Size() + 1) * sizeof(HypData*));
                     for (SizeType i = 0; i < args.Size(); ++i)
                     {
-                        arg_ptrs[i] = &args[i];
+                        argPtrs[i] = &args[i];
                     }
 
-                    arg_ptrs[args.Size()] = &value;
+                    argPtrs[args.Size()] = &value;
 
-                    CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, arg_ptrs);
+                    CallHypMethod<decltype(fn), ReturnType, TargetType*, ArgTypes...>(fn, argPtrs);
                 }
                 else
                 {
@@ -350,9 +350,9 @@ public:
         : m_name(name),
           m_flags(HypMethodFlags::STATIC),
           m_attributes(attributes),
-          m_proc([fn](HypData** args, SizeType num_args) -> HypData
+          m_proc([fn](HypData** args, SizeType numArgs) -> HypData
               {
-                  AssertThrow(num_args == sizeof...(ArgTypes));
+                  AssertThrow(numArgs == sizeof...(ArgTypes));
 
                   if constexpr (std::is_void_v<ReturnType>)
                   {
@@ -366,8 +366,8 @@ public:
                   }
               })
     {
-        m_return_type_id = TypeID::ForType<NormalizedType<ReturnType>>();
-        m_target_type_id = TypeID::Void();
+        m_returnTypeId = TypeId::ForType<NormalizedType<ReturnType>>();
+        m_targetTypeId = TypeId::Void();
 
         m_params.Reserve(sizeof...(ArgTypes));
         InitHypMethodParams_Tuple<ReturnType, void, Tuple<ArgTypes...>> {}(m_params);
@@ -389,24 +389,24 @@ public:
         return m_name;
     }
 
-    virtual TypeID GetTypeID() const override
+    virtual TypeId GetTypeId() const override
     {
-        return m_return_type_id;
+        return m_returnTypeId;
     }
 
-    virtual TypeID GetTargetTypeID() const override
+    virtual TypeId GetTargetTypeId() const override
     {
-        return m_target_type_id;
+        return m_targetTypeId;
     }
 
     virtual bool CanSerialize() const override
     {
-        return m_serialize_proc.IsValid();
+        return m_serializeProc.IsValid();
     }
 
     virtual bool CanDeserialize() const override
     {
-        return m_deserialize_proc.IsValid();
+        return m_deserializeProc.IsValid();
     }
 
     virtual bool Serialize(Span<HypData> args, FBOMData& out) const override
@@ -416,19 +416,19 @@ public:
             return false;
         }
 
-        out = m_serialize_proc(args);
+        out = m_serializeProc(args);
 
         return true;
     }
 
     virtual bool Deserialize(FBOMLoadContext& context, HypData& target, const FBOMData& data) const override
     {
-        if (!m_deserialize_proc.IsValid())
+        if (!m_deserializeProc.IsValid())
         {
             return false;
         }
 
-        m_deserialize_proc(context, Span<HypData>(&target, 1), data);
+        m_deserializeProc(context, Span<HypData>(&target, 1), data);
 
         return true;
     }
@@ -443,9 +443,9 @@ public:
         return m_attributes.Get(key);
     }
 
-    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& default_value) const override
+    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& defaultValue) const override
     {
-        return m_attributes.Get(key, default_value);
+        return m_attributes.Get(key, defaultValue);
     }
 
     HYP_FORCE_INLINE const Array<HypMethodParameter>& GetParameters() const
@@ -460,13 +460,13 @@ public:
 
     HYP_FORCE_INLINE HypData Invoke(Span<HypData> args) const
     {
-        HypData** arg_ptrs = (HypData**)StackAlloc(args.Size() * sizeof(HypData*));
+        HypData** argPtrs = (HypData**)StackAlloc(args.Size() * sizeof(HypData*));
         for (SizeType i = 0; i < args.Size(); ++i)
         {
-            arg_ptrs[i] = &args[i];
+            argPtrs[i] = &args[i];
         }
 
-        return m_proc(arg_ptrs, args.Size());
+        return m_proc(argPtrs, args.Size());
     }
 
     HYP_FORCE_INLINE HypData Invoke(Span<HypData*> args) const
@@ -481,16 +481,16 @@ public:
 
 private:
     Name m_name;
-    TypeID m_return_type_id;
-    TypeID m_target_type_id;
+    TypeId m_returnTypeId;
+    TypeId m_targetTypeId;
     Array<HypMethodParameter> m_params;
     EnumFlags<HypMethodFlags> m_flags;
     HypClassAttributeSet m_attributes;
 
     Proc<HypData(HypData**, SizeType)> m_proc;
 
-    Proc<FBOMData(Span<HypData>)> m_serialize_proc;
-    Proc<void(FBOMLoadContext&, Span<HypData>, const FBOMData&)> m_deserialize_proc;
+    Proc<FBOMData(Span<HypData>)> m_serializeProc;
+    Proc<void(FBOMLoadContext&, Span<HypData>, const FBOMData&)> m_deserializeProc;
 };
 
 #undef HYP_METHOD_MEMBER_FN_WRAPPER

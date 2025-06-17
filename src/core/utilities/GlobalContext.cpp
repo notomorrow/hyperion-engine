@@ -5,20 +5,20 @@ namespace utilities {
 
 #pragma region GlobalContextRegistry
 
-thread_local GlobalContextRegistry* g_global_context_registry = nullptr;
+thread_local GlobalContextRegistry* g_globalContextRegistry = nullptr;
 
 HYP_API GlobalContextRegistry* GetGlobalContextRegistryForCurrentThread()
 {
-    if (!g_global_context_registry)
+    if (!g_globalContextRegistry)
     {
-        g_global_context_registry = new GlobalContextRegistry();
+        g_globalContextRegistry = new GlobalContextRegistry();
     }
 
-    return g_global_context_registry;
+    return g_globalContextRegistry;
 }
 
 GlobalContextRegistry::GlobalContextRegistry()
-    : m_owner_thread_id(ThreadID::Current())
+    : m_ownerThreadId(ThreadId::Current())
 {
 }
 

@@ -21,8 +21,6 @@ class AppContextBase;
 } // namespace sys
 
 using sys::AppContextBase;
-
-namespace renderer {
 namespace platform {
 
 template <>
@@ -36,7 +34,7 @@ class Instance<Platform::vulkan>
 
 public:
     Instance();
-    RendererResult Initialize(const AppContextBase& app_context, bool load_debug_layers = false);
+    RendererResult Initialize(const AppContextBase& appContext, bool loadDebugLayers = false);
 
     HYP_FORCE_INLINE VkInstance GetInstance() const
     {
@@ -58,7 +56,7 @@ public:
         return allocator;
     }
 
-    void SetValidationLayers(Array<const char*> validation_layers);
+    void SetValidationLayers(Array<const char*> validationLayers);
 
     RendererResult CreateDevice(VkPhysicalDevice _physical_device = nullptr);
     RendererResult CreateSwapchain();
@@ -66,8 +64,8 @@ public:
 
     RendererResult Destroy();
 
-    const char* app_name;
-    const char* engine_name;
+    const char* appName;
+    const char* engineName;
 
 private:
     void CreateSurface();
@@ -80,15 +78,15 @@ private:
     Device<Platform::vulkan>* m_device = nullptr;
     VulkanSwapchainRef m_swapchain;
 
-    Array<const char*> validation_layers;
+    Array<const char*> validationLayers;
 
 #ifndef HYPERION_BUILD_RELEASE
-    VkDebugUtilsMessengerEXT debug_messenger;
+    VkDebugUtilsMessengerEXT debugMessenger;
 #endif
 };
 
 } // namespace platform
-} // namespace renderer
+
 } // namespace hyperion
 
 #endif //! RENDERER_INSTANCE

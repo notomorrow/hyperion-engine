@@ -9,16 +9,16 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void Assert_Throw(const char* message, const char* func_name, uint32 line)
+    HYP_EXPORT void Assert_Throw(const char* message, const char* funcName, uint32 line)
     {
         if (!message)
         {
             message = "<no message>";
         }
 
-        if (func_name != nullptr)
+        if (funcName != nullptr)
         {
-            HYP_FAIL("%s:%u: Assertion failed!\n\t%s", func_name, line, message);
+            HYP_FAIL("%s:%u: Assertion failed!\n\t%s", funcName, line, message);
         }
         else
         {

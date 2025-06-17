@@ -7,8 +7,6 @@
 
 #include <core/filesystem/FsUtil.hpp>
 
-#include <core/Base.hpp>
-
 #include <core/containers/HashMap.hpp>
 #include <core/containers/HashSet.hpp>
 
@@ -42,8 +40,8 @@ class AssetRegistry;
 class AssetPackage;
 class AssetObject;
 
-HYP_API extern WeakName AssetPackage_KeyByFunction(const Handle<AssetPackage>& asset_package);
-HYP_API extern WeakName AssetObject_KeyByFunction(const Handle<AssetObject>& asset_object);
+HYP_API extern WeakName AssetPackage_KeyByFunction(const Handle<AssetPackage>& assetPackage);
+HYP_API extern WeakName AssetObject_KeyByFunction(const Handle<AssetObject>& assetObject);
 
 using AssetPackageSet = HashSet<Handle<AssetPackage>, &AssetPackage_KeyByFunction>;
 using AssetObjectSet = HashSet<Handle<AssetObject>, &AssetObject_KeyByFunction>;
@@ -57,7 +55,7 @@ public:
 
     template <class T>
     AssetResourceBase(T&& value)
-        : m_loaded_asset(std::forward<T>(value))
+        : m_loadedAsset(std::forward<T>(value))
     {
     }
 
@@ -81,10 +79,10 @@ protected:
 
     virtual Result Save_Internal() = 0;
 
-    virtual TypeID GetAssetTypeID() const = 0;
+    virtual TypeId GetAssetTypeId() const = 0;
 
-    WeakHandle<AssetObject> m_asset_object;
-    LoadedAsset m_loaded_asset;
+    WeakHandle<AssetObject> m_assetObject;
+    LoadedAsset m_loadedAsset;
 };
 
 class HYP_API ObjectAssetResourceBase : public AssetResourceBase
@@ -94,14 +92,14 @@ public:
 
     ObjectAssetResourceBase(HypData&& value)
     {
-        m_asset_type_id = value.GetTypeID();
-        m_loaded_asset = std::move(value);
+        m_assetTypeId = value.GetTypeId();
+        m_loadedAsset = std::move(value);
     }
 
-    template <class T, typename = std::enable_if_t<!is_hypdata_v<NormalizedType<T>>>>
+    template <class T, typename = std::enable_if_t<!isHypData<NormalizedType<T>>>>
     ObjectAssetResourceBase(T&& value)
         : AssetResourceBase(std::forward<T>(value)),
-          m_asset_type_id(TypeID::ForType<T>())
+          m_assetTypeId(TypeId::ForType<T>())
     {
     }
 
@@ -116,12 +114,12 @@ public:
 protected:
     virtual Result Save_Internal() override;
 
-    virtual TypeID GetAssetTypeID() const override final
+    virtual TypeId GetAssetTypeId() const override final
     {
-        return m_asset_type_id;
+        return m_assetTypeId;
     }
 
-    TypeID m_asset_type_id;
+    TypeId m_assetTypeId;
 };
 
 HYP_CLASS()
@@ -142,7 +140,7 @@ public:
         m_resource = AllocateResource<ObjectAssetResourceBase>(std::move(data));
     }
 
-    template <class T, typename = std::enable_if_t<!is_hypdata_v<NormalizedType<T>>>>
+    template <class T, typename = std::enable_if_t<!isHypData<NormalizedType<T>>>>
     AssetObject(Name name, T&& value)
         : AssetObject(name)
     {
@@ -254,7 +252,7 @@ public:
 
     HYP_FORCE_INLINE const WeakHandle<AssetPackage>& GetParentPackage() const
     {
-        return m_parent_package;
+        return m_parentPackage;
     }
 
     /*! \internal Serialization only */
@@ -271,15 +269,15 @@ public:
 
     HYP_FORCE_INLINE const AssetObjectSet& GetAssetObjects() const
     {
-        return m_asset_objects;
+        return m_assetObjects;
     }
 
-    void SetAssetObjects(const AssetObjectSet& asset_objects);
+    void SetAssetObjects(const AssetObjectSet& assetObjects);
 
     template <class Callback>
     void ForEachAssetObject(Callback&& callback) const
     {
-        ForEach(m_asset_objects, m_mutex, std::forward<Callback>(callback));
+        ForEach(m_assetObjects, m_mutex, std::forward<Callback>(callback));
     }
 
     Handle<AssetObject> NewAssetObject(Name name, HypData&& data);
@@ -291,10 +289,10 @@ public:
     String BuildPackagePath() const;
 
     HYP_METHOD()
-    String BuildAssetPath(Name asset_name) const;
+    String BuildAssetPath(Name assetName) const;
 
     HYP_METHOD(Scriptable)
-    Name GetUniqueAssetName(Name base_name) const;
+    Name GetUniqueAssetName(Name baseName) const;
 
     
     Delegate<void, AssetObject*> OnAssetObjectAdded;
@@ -303,17 +301,17 @@ public:
 private:
     void Init() override;
 
-    Name GetUniqueAssetName_Impl(Name base_name) const
+    Name GetUniqueAssetName_Impl(Name baseName) const
     {
-        return base_name;
+        return baseName;
     }
 
     UUID m_uuid;
     Name m_name;
     WeakHandle<AssetRegistry> m_registry;
-    WeakHandle<AssetPackage> m_parent_package;
+    WeakHandle<AssetPackage> m_parentPackage;
     AssetPackageSet m_subpackages;
-    AssetObjectSet m_asset_objects;
+    AssetObjectSet m_assetObjects;
     mutable Mutex m_mutex;
 };
 
@@ -330,7 +328,7 @@ class HYP_API AssetRegistry final : public HypObject<AssetRegistry>
 
 public:
     AssetRegistry();
-    AssetRegistry(const String& root_path);
+    AssetRegistry(const String& rootPath);
     AssetRegistry(const AssetRegistry& other) = delete;
     AssetRegistry& operator=(const AssetRegistry& other) = delete;
     AssetRegistry(AssetRegistry&& other) noexcept = delete;
@@ -344,11 +342,11 @@ public:
     HYP_FORCE_INLINE String GetRootPath() const
     {
         Mutex::Guard guard(m_mutex);
-        return m_root_path;
+        return m_rootPath;
     }
 
     HYP_METHOD()
-    void SetRootPath(const String& root_path);
+    void SetRootPath(const String& rootPath);
 
     HYP_FORCE_INLINE const AssetPackageSet& GetPackages() const
     {
@@ -367,10 +365,10 @@ public:
     void RegisterAsset(const UTF8StringView& path, HypData&& data);
 
     HYP_METHOD()
-    Name GetUniqueAssetName(const UTF8StringView& package_path, Name base_name) const;
+    Name GetUniqueAssetName(const UTF8StringView& packagePath, Name baseName) const;
 
     HYP_METHOD()
-    Handle<AssetPackage> GetPackageFromPath(const UTF8StringView& path, bool create_if_not_exist = true);
+    Handle<AssetPackage> GetPackageFromPath(const UTF8StringView& path, bool createIfNotExist = true);
 
     
     Delegate<void, const Handle<AssetPackage>&> OnPackageAdded;
@@ -378,10 +376,10 @@ public:
 private:
     void Init() override;
 
-    Handle<AssetPackage> GetPackageFromPath_Internal(const UTF8StringView& path, AssetRegistryPathType path_type, bool create_if_not_exist, String& out_asset_name);
+    Handle<AssetPackage> GetPackageFromPath_Internal(const UTF8StringView& path, AssetRegistryPathType pathType, bool createIfNotExist, String& outAssetName);
 
     HYP_FIELD(Property = "RootPath", Serialize = true)
-    String m_root_path;
+    String m_rootPath;
 
     AssetPackageSet m_packages;
     mutable Mutex m_mutex;

@@ -1,7 +1,7 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <rendering/backend/vulkan/RendererFence.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 
@@ -9,18 +9,16 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 VulkanFence::VulkanFence()
     : m_handle(VK_NULL_HANDLE),
-      m_last_frame_result(VK_SUCCESS)
+      m_lastFrameResult(VK_SUCCESS)
 {
 }
 
@@ -34,10 +32,10 @@ RendererResult VulkanFence::Create()
     AssertThrow(m_handle == VK_NULL_HANDLE);
 
     // Create fence to ensure that the command buffer has finished executing
-    VkFenceCreateInfo fence_create_info { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    VkFenceCreateInfo fenceCreateInfo { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    HYPERION_VK_CHECK(vkCreateFence(GetRenderingAPI()->GetDevice()->GetDevice(), &fence_create_info, nullptr, &m_handle));
+    HYPERION_VK_CHECK(vkCreateFence(GetRenderBackend()->GetDevice()->GetDevice(), &fenceCreateInfo, nullptr, &m_handle));
 
     HYPERION_RETURN_OK;
 }
@@ -46,38 +44,37 @@ RendererResult VulkanFence::Destroy()
 {
     if (m_handle != VK_NULL_HANDLE)
     {
-        vkDestroyFence(GetRenderingAPI()->GetDevice()->GetDevice(), m_handle, nullptr);
+        vkDestroyFence(GetRenderBackend()->GetDevice()->GetDevice(), m_handle, nullptr);
         m_handle = VK_NULL_HANDLE;
     }
 
     HYPERION_RETURN_OK;
 }
 
-RendererResult VulkanFence::WaitForGPU(bool timeout_loop)
+RendererResult VulkanFence::WaitForGPU(bool timeoutLoop)
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
-    VkResult vk_result;
+    VkResult vkResult;
 
     do
     {
-        vk_result = vkWaitForFences(GetRenderingAPI()->GetDevice()->GetDevice(), 1, &m_handle, VK_TRUE, DEFAULT_FENCE_TIMEOUT);
+        vkResult = vkWaitForFences(GetRenderBackend()->GetDevice()->GetDevice(), 1, &m_handle, VK_TRUE, DEFAULT_FENCE_TIMEOUT);
     }
-    while (vk_result == VK_TIMEOUT && timeout_loop);
+    while (vkResult == VK_TIMEOUT && timeoutLoop);
 
-    HYPERION_VK_CHECK(vk_result);
+    HYPERION_VK_CHECK(vkResult);
 
-    m_last_frame_result = vk_result;
+    m_lastFrameResult = vkResult;
 
     HYPERION_RETURN_OK;
 }
 
 RendererResult VulkanFence::Reset()
 {
-    HYPERION_VK_CHECK(vkResetFences(GetRenderingAPI()->GetDevice()->GetDevice(), 1, &m_handle));
+    HYPERION_VK_CHECK(vkResetFences(GetRenderBackend()->GetDevice()->GetDevice(), 1, &m_handle));
 
     HYPERION_RETURN_OK;
 }
 
-} // namespace renderer
 } // namespace hyperion

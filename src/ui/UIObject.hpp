@@ -3,7 +3,6 @@
 #ifndef HYPERION_UI_OBJECT_HPP
 #define HYPERION_UI_OBJECT_HPP
 
-#include <core/Base.hpp>
 #include <core/Defines.hpp>
 
 #include <core/object/HypObject.hpp>
@@ -67,28 +66,28 @@ struct alignas(8) UIEventHandlerResult
     UIEventHandlerResult()
         : value(OK),
           message(nullptr),
-          function_name(nullptr)
+          functionName(nullptr)
     {
     }
 
     UIEventHandlerResult(uint32 value)
         : value(value),
           message(nullptr),
-          function_name(nullptr)
+          functionName(nullptr)
     {
     }
 
     UIEventHandlerResult(uint32 value, const StaticMessage& message)
         : value(value),
           message(&message),
-          function_name(nullptr)
+          functionName(nullptr)
     {
     }
 
-    UIEventHandlerResult(uint32 value, const StaticMessage& message, const StaticMessage& function_name)
+    UIEventHandlerResult(uint32 value, const StaticMessage& message, const StaticMessage& functionName)
         : value(value),
           message(&message),
-          function_name(&function_name)
+          functionName(&functionName)
     {
     }
 
@@ -97,7 +96,7 @@ struct alignas(8) UIEventHandlerResult
         this->value = value;
 
         message = nullptr;
-        function_name = nullptr;
+        functionName = nullptr;
 
         return *this;
     }
@@ -176,17 +175,17 @@ struct alignas(8) UIEventHandlerResult
 
     HYP_FORCE_INLINE Optional<ANSIStringView> GetFunctionName() const
     {
-        if (!function_name)
+        if (!functionName)
         {
             return {};
         }
 
-        return function_name->value;
+        return functionName->value;
     }
 
     uint32 value;
     const StaticMessage* message;
-    const StaticMessage* function_name;
+    const StaticMessage* functionName;
 };
 
 HYP_ENUM()
@@ -251,23 +250,23 @@ enum class UIObjectUpdateType : uint32
 HYP_MAKE_ENUM_FLAGS(UIObjectUpdateType)
 
 HYP_ENUM()
-enum class UIObjectScrollbarOrientation : uint8
+enum ScrollAxis : uint8
 {
-    NONE = 0x0,
-    HORIZONTAL = 0x1,
-    VERTICAL = 0x2,
-    ALL = HORIZONTAL | VERTICAL
+    SA_NONE = 0x0,
+    SA_HORIZONTAL = 0x1,
+    SA_VERTICAL = 0x2,
+    SA_ALL = SA_HORIZONTAL | SA_VERTICAL
 };
 
-HYP_MAKE_ENUM_FLAGS(UIObjectScrollbarOrientation)
+HYP_MAKE_ENUM_FLAGS(ScrollAxis)
 
-static constexpr inline int UIObjectScrollbarOrientationToIndex(UIObjectScrollbarOrientation orientation)
+static constexpr int g_scrollAxisIndices[4] = {
+    -1, 0, 1, -1
+};
+
+static constexpr inline int ScrollAxisToIndex(ScrollAxis axis)
 {
-    return (orientation == UIObjectScrollbarOrientation::HORIZONTAL)
-        ? 0
-        : (orientation == UIObjectScrollbarOrientation::VERTICAL)
-        ? 1
-        : -1;
+    return g_scrollAxisIndices[uint8(axis)];
 }
 
 HYP_STRUCT()
@@ -444,22 +443,22 @@ struct UILockedUpdatesScope;
 template <class UIObjectType>
 struct UIObjectSpawnContext
 {
-    UIObjectType* spawn_parent = nullptr;
+    UIObjectType* spawnParent = nullptr;
 
-    UIObjectSpawnContext(UIObjectType* spawn_parent)
-        : spawn_parent(spawn_parent)
+    UIObjectSpawnContext(UIObjectType* spawnParent)
+        : spawnParent(spawnParent)
     {
         static_assert(std::is_base_of_v<UIObject, UIObjectType>, "UIObjectType must be a subclass of UIObject");
 
-        AssertThrow(spawn_parent != nullptr);
+        AssertThrow(spawnParent != nullptr);
     }
 
-    UIObjectSpawnContext(const Handle<UIObjectType>& spawn_parent)
-        : spawn_parent(spawn_parent.Get())
+    UIObjectSpawnContext(const Handle<UIObjectType>& spawnParent)
+        : spawnParent(spawnParent.Get())
     {
         static_assert(std::is_base_of_v<UIObject, UIObjectType>, "UIObjectType must be a subclass of UIObject");
 
-        AssertThrow(spawn_parent != nullptr);
+        AssertThrow(spawnParent != nullptr);
     }
 
     UIObjectSpawnContext(const UIObjectSpawnContext& other) = delete;
@@ -474,7 +473,7 @@ struct UIObjectSpawnContext
     {
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a subclass of UIObject");
 
-        return spawn_parent->template CreateUIObject<T>(position, size);
+        return spawnParent->template CreateUIObject<T>(position, size);
     }
 
     template <class T>
@@ -482,12 +481,12 @@ struct UIObjectSpawnContext
     {
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a subclass of UIObject");
 
-        return spawn_parent->template CreateUIObject<T>(name, position, size);
+        return spawnParent->template CreateUIObject<T>(name, position, size);
     }
 
     HYP_FORCE_INLINE explicit operator bool() const
     {
-        return spawn_parent != nullptr;
+        return spawnParent != nullptr;
     }
 };
 
@@ -507,17 +506,17 @@ protected:
         AFTER_CHILDREN
     };
 
-    UIObject(const ThreadID& owner_thread_id);
+    UIObject(const ThreadId& ownerThreadId);
 
 public:
     friend class UIRenderSubsystem;
     friend class UIStage;
     friend struct UILockedUpdatesScope;
 
-    static constexpr int scrollbar_size = 15;
+    static constexpr int scrollbarSize = 15;
 
     HYP_FIELD()
-    static constexpr int tmp_field = 4;
+    static constexpr int tmpField = 4;
 
     UIObject();
     UIObject(const UIObject& other) = delete;
@@ -526,7 +525,7 @@ public:
     UIObject& operator=(UIObject&& other) noexcept = delete;
     virtual ~UIObject();
 
-    virtual void Update(GameCounter::TickUnit delta) final;
+    virtual void Update(float delta) final;
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<Entity>& GetEntity() const
@@ -561,11 +560,11 @@ public:
     HYP_METHOD(Property = "IsPositionAbsolute", XMLAttribute = "absolute")
     HYP_FORCE_INLINE bool IsPositionAbsolute() const
     {
-        return m_is_position_absolute;
+        return m_isPositionAbsolute;
     }
 
     HYP_METHOD(Property = "IsPositionAbsolute", XMLAttribute = "absolute")
-    void SetIsPositionAbsolute(bool is_position_absolute);
+    void SetIsPositionAbsolute(bool isPositionAbsolute);
 
     HYP_METHOD(Property = "Size")
     UIObjectSize GetSize() const;
@@ -591,7 +590,7 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE Vec2i GetActualSize() const
     {
-        return m_actual_size;
+        return m_actualSize;
     }
 
     /*! \brief Get the computed size (in pixels) of the UIObject, clamped within the parent's boundary.
@@ -600,7 +599,7 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE Vec2i GetActualSizeClamped() const
     {
-        return m_actual_size_clamped;
+        return m_actualSizeClamped;
     }
 
     /*! \brief Get the computed inner size (in pixels) of the UI object.
@@ -608,7 +607,7 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE Vec2i GetActualInnerSize() const
     {
-        return m_actual_inner_size;
+        return m_actualInnerSize;
     }
 
     HYP_FORCE_INLINE bool UseAutoSizing() const
@@ -622,10 +621,10 @@ public:
     Vec2i GetScrollOffset() const;
 
     /*! \brief Set the scroll offset (in pixels) of the UI object.
-     *  \param scroll_offset The scroll offset of the UI object
+     *  \param scrollOffset The scroll offset of the UI object
      *  \param smooth Whether or not to interpolate the scroll offset to the given value. If false, it will immediately move to the given value. */
     HYP_METHOD()
-    void SetScrollOffset(Vec2i scroll_offset, bool smooth);
+    void SetScrollOffset(Vec2i scrollOffset, bool smooth);
 
     HYP_METHOD()
     void ScrollToChild(UIObject* child);
@@ -633,17 +632,17 @@ public:
     HYP_METHOD()
     virtual int GetVerticalScrollbarSize() const
     {
-        return scrollbar_size;
+        return scrollbarSize;
     }
 
     HYP_METHOD()
     virtual int GetHorizontalScrollbarSize() const
     {
-        return scrollbar_size;
+        return scrollbarSize;
     }
 
     HYP_METHOD()
-    virtual bool CanScroll(UIObjectScrollbarOrientation orientation) const
+    virtual bool CanScrollOnAxis(ScrollAxis axis) const
     {
         return false;
     }
@@ -663,7 +662,7 @@ public:
 
     /*! \brief Set the depth of the UI object
      *  The depth of the UI object is used to determine the rendering order of the object in the scene relative to its sibling elements, with higher depth values being rendered on top of lower depth values.
-     *  Set the depth to a value between UIStage::g_min_depth and UIStage::g_max_depth. If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
+     *  Set the depth to a value between UIStage::g_minDepth and UIStage::g_maxDepth. If the depth value is set to 0, the depth will be determined by the node's depth in the scene.
      *  \param depth The depth of the UI object */
     HYP_METHOD(Property = "Depth")
     void SetDepth(int depth);
@@ -673,21 +672,20 @@ public:
     HYP_METHOD(Property = "AcceptsFocus")
     virtual bool AcceptsFocus() const
     {
-        return m_accepts_focus;
+        return m_acceptsFocus;
     }
 
     /*! \brief Set whether the UI object accepts focus.
      *  \details If set to true, the UI object can receive focus. If set to false, the UI object cannot receive focus.
      *  \note If a class deriving \ref{UIObject} overrides \ref{AcceptsFocus}, this function has no effect. */
     HYP_METHOD(Property = "AcceptsFocus")
-    void SetAcceptsFocus(bool accepts_focus);
+    void SetAcceptsFocus(bool acceptsFocus);
 
-    /*! \brief Check if the UI object receives update events.
-     *  \return True if the UI object receives update events, false otherwise */
-    HYP_METHOD(Property = "ReceivesUpdate")
-    virtual bool ReceivesUpdate() const
+    HYP_METHOD()
+    virtual bool NeedsUpdate() const
     {
-        return m_receives_update;
+        return m_deferredUpdates
+            || ((CanScrollOnAxis(SA_HORIZONTAL) || CanScrollOnAxis(SA_VERTICAL)) && m_scrollOffset.GetTarget() != m_scrollOffset.GetValue());
     }
 
     /*! \brief Set the focus to this UI object, if AcceptsFocus() returns true.
@@ -697,15 +695,15 @@ public:
 
     /*! \brief Remove the focus from this UI object, if AcceptsFocus() returns true.
      *  This function is called when the UI object loses focus.
-     *  \param blur_children If true, also remove focus from all child objects. */
+     *  \param blurChildren If true, also remove focus from all child objects. */
     HYP_METHOD()
-    virtual void Blur(bool blur_children = true);
+    virtual void Blur(bool blurChildren = true);
 
     /*! \brief Set whether the UI object affects the size of its parent.
      *  \details If true, the size of the parent object will be include the size of this object when calculating the parent's size.
-     *  \param affects_parent_size Whether the UI object affects the size of its parent */
+     *  \param affectsParentSize Whether the UI object affects the size of its parent */
     HYP_METHOD(Property = "AffectsParentSize")
-    void SetAffectsParentSize(bool affects_parent_size);
+    void SetAffectsParentSize(bool affectsParentSize);
 
     /*! \brief Check if the UI object affects the size of its parent.
      *  \details If true, the size of the parent object will be include the size of this object when calculating the parent's size.
@@ -713,7 +711,7 @@ public:
     HYP_METHOD(Property = "AffectsParentSize")
     HYP_FORCE_INLINE bool AffectsParentSize() const
     {
-        return m_affects_parent_size;
+        return m_affectsParentSize;
     }
 
     /*! \brief Get the border radius of the UI object
@@ -722,14 +720,14 @@ public:
     HYP_METHOD(Property = "BorderRadius")
     HYP_FORCE_INLINE uint32 GetBorderRadius() const
     {
-        return m_border_radius;
+        return m_borderRadius;
     }
 
     /*! \brief Set the border radius of the UI object
      *  \details The border radius of the UI object is used to create rounded corners for the object's border.
-     *  \param border_radius The border radius of the UI object */
+     *  \param borderRadius The border radius of the UI object */
     HYP_METHOD(Property = "BorderRadius")
-    void SetBorderRadius(uint32 border_radius);
+    void SetBorderRadius(uint32 borderRadius);
 
     /*! \brief Get the border flags of the UI object
      *  \details The border flags of the UI object are used to determine which borders of the object should be rounded, if the border radius is set to a non-zero value.
@@ -738,11 +736,11 @@ public:
     HYP_METHOD(Property = "BorderFlags")
     HYP_FORCE_INLINE EnumFlags<UIObjectBorderFlags> GetBorderFlags() const
     {
-        return m_border_flags;
+        return m_borderFlags;
     }
 
     HYP_METHOD(Property = "BorderFlags")
-    void SetBorderFlags(EnumFlags<UIObjectBorderFlags> border_flags);
+    void SetBorderFlags(EnumFlags<UIObjectBorderFlags> borderFlags);
 
     UIObjectAlignment GetOriginAlignment() const;
     void SetOriginAlignment(UIObjectAlignment alignment);
@@ -752,22 +750,22 @@ public:
 
     HYP_FORCE_INLINE bool IsPositionDependentOnSize() const
     {
-        return m_origin_alignment != UIObjectAlignment::TOP_LEFT;
+        return m_originAlignment != UIObjectAlignment::TOP_LEFT;
     }
 
     HYP_FORCE_INLINE bool IsPositionDependentOnParentSize() const
     {
-        return m_parent_alignment != UIObjectAlignment::TOP_LEFT;
+        return m_parentAlignment != UIObjectAlignment::TOP_LEFT;
     }
 
     HYP_METHOD(Property = "AspectRatio")
     HYP_FORCE_INLINE UIObjectAspectRatio GetAspectRatio() const
     {
-        return m_aspect_ratio;
+        return m_aspectRatio;
     }
 
     HYP_METHOD(Property = "AspectRatio")
-    void SetAspectRatio(UIObjectAspectRatio aspect_ratio);
+    void SetAspectRatio(UIObjectAspectRatio aspectRatio);
 
     /*! \brief Get the padding of the UI object
      *  The padding of the UI object is used to add space around the object's content.
@@ -789,13 +787,13 @@ public:
     HYP_METHOD(Property = "BackgroundColor")
     HYP_FORCE_INLINE Color GetBackgroundColor() const
     {
-        return m_background_color;
+        return m_backgroundColor;
     }
 
     /*! \brief Set the background color of the UI object
-     *  \param background_color The background color of the UI object */
+     *  \param backgroundColor The background color of the UI object */
     HYP_METHOD(Property = "BackgroundColor")
-    void SetBackgroundColor(const Color& background_color);
+    void SetBackgroundColor(const Color& backgroundColor);
 
     /*! \brief Get the blended background color of the UI object, including its parents. Blends RGB components until alpha adds up to 1.0.
      *  \note Images and other objects that use a texture will not be blended, only the background color.
@@ -808,9 +806,9 @@ public:
     Color GetTextColor() const;
 
     /*! \brief Set the text color of the UI object
-     *  \param text_color The text color of the UI object */
+     *  \param textColor The text color of the UI object */
     HYP_METHOD(Property = "TextColor")
-    virtual void SetTextColor(const Color& text_color);
+    virtual void SetTextColor(const Color& textColor);
 
     /*! \brief Gets the text to render.
      *
@@ -828,7 +826,7 @@ public:
     float GetTextSize() const;
 
     HYP_METHOD(Property = "TextSize")
-    void SetTextSize(float text_size);
+    void SetTextSize(float textSize);
 
     /*! \brief Check if the UI object is set to visible or not. This does not include computed visibility.
      *  \returns True if the object is visible, false otherwise. */
@@ -838,16 +836,16 @@ public:
     /*! \brief Set the visibility of the UI object.
      *  \details The visibility of the UI object determines whether the object is rendered in the UI scene.
      *  Can be used to hide the object without removing it from the scene.
-     *  \param is_visible Whether to set the object as visible or not. */
+     *  \param isVisible Whether to set the object as visible or not. */
     HYP_METHOD(Property = "IsVisible")
-    void SetIsVisible(bool is_visible);
+    void SetIsVisible(bool isVisible);
 
     /*! \brief Get the computed visibility of the UI object.
      *  \details The computed visibility of the UI object is used to determine if the object is currently visible.
      *  \return The computed visibility of the UI object. */
     HYP_FORCE_INLINE bool GetComputedVisibility() const
     {
-        return m_computed_visibility;
+        return m_computedVisibility;
     }
 
     /*! \brief Check if the UI object is set to enabled or not. Subclasses can use this state to provide custom behavior.
@@ -858,15 +856,15 @@ public:
 
     /*! \brief Set the enabled state of the UI object.
      *  \details The enabled state of the UI object is used to determine if the object is currently enabled.
-     *  \param is_enabled Whether to set the object as enabled or not. */
+     *  \param isEnabled Whether to set the object as enabled or not. */
     HYP_METHOD(Property = "IsEnabled")
-    void SetIsEnabled(bool is_enabled);
+    void SetIsEnabled(bool isEnabled);
 
-    /*! \brief Check if the UI object has focus. If \ref{include_children} is true, also return true if any child objects have focus.
+    /*! \brief Check if the UI object has focus. If \ref{includeChildren} is true, also return true if any child objects have focus.
      *  \details The focus state of the UI object is used to determine if the object is currently focused.
-     *  \param include_children If true, check if any child objects have focus.
+     *  \param includeChildren If true, check if any child objects have focus.
      *  \return True if the object has focus, false otherwise. */
-    bool HasFocus(bool include_children = true) const;
+    bool HasFocus(bool includeChildren = true) const;
 
     /*! \brief Check if \ref{other} is either a parent of this object or is equal to the current object.
      *  \details Comparison is performed by using \ref{Node::IsOrHasParent}. If either this or \ref{other} does not have a Node,
@@ -886,11 +884,10 @@ public:
     {
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a subclass of UIObject");
 
-        return GetClosestParentUIObject_Proc([](const UIObject* parent) -> bool
+        return ObjCast<T>(GetClosestParentUIObject_Proc([](const UIObject* parent) -> bool
             {
-                return parent->IsInstanceOf<T>();
-            })
-            .template Cast<T>();
+                return parent->IsA<T>();
+            }));
     }
 
     template <class T>
@@ -898,25 +895,24 @@ public:
     {
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a subclass of UIObject");
 
-        return GetClosestSpawnParent_Proc([](const UIObject* parent) -> bool
+        return ObjCast<T>(GetClosestSpawnParent_Proc([](const UIObject* parent) -> bool
             {
-                return parent->IsInstanceOf<T>();
-            })
-            .template Cast<T>();
+                return parent->IsA<T>();
+            }));
     }
 
     /*! \brief The UIObject that this was spawned from. Not necessarily the parent UIObject that this is attached to in the graph.
      *  \returns A weak reference to the UIObject that this was spawned from. */
     HYP_FORCE_INLINE const WeakHandle<UIObject>& GetSpawnParent() const
     {
-        return m_spawn_parent;
+        return m_spawnParent;
     }
 
     HYP_METHOD()
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object);
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject);
 
     HYP_METHOD()
-    virtual bool RemoveChildUIObject(UIObject* ui_object);
+    virtual bool RemoveChildUIObject(UIObject* uiObject);
 
     /*! \brief Remove all child UIObjects from this object.
      *  \returns The number of child UIObjects removed. */
@@ -986,8 +982,8 @@ public:
 
     /*! \brief Sets the script component for this UIObject.
      *  Adds the ScriptComponent directly to the UIObject. If the UIObject already has a ScriptComponent, it will be replaced.
-     *  \param script_component A ScriptComponent, passed as an rvalue reference. */
-    void SetScriptComponent(ScriptComponent&& script_component);
+     *  \param scriptComponent A ScriptComponent, passed as an rvalue reference. */
+    void SetScriptComponent(ScriptComponent&& scriptComponent);
 
     /*! \brief Removes the script component from this UIObject.
      *  If the UIObject has a script component, it will be removed. Only the script component directly attached to the UIObject will be removed.
@@ -1015,7 +1011,7 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const BoundingBox& GetAABBClamped() const
     {
-        return m_aabb_clamped;
+        return m_aabbClamped;
     }
 
     BoundingBox GetWorldAABB() const;
@@ -1033,32 +1029,32 @@ public:
         return UIEventHandlerResult();
     }
 
-    virtual void UpdatePosition(bool update_children = true);
-    virtual void UpdateSize(bool update_children = true);
+    virtual void UpdatePosition(bool updateChildren = true);
+    virtual void UpdateSize(bool updateChildren = true);
 
     /*! \brief Set deferred updates to apply to the UI object.
      *  \details Deferred updates are used to defer updates to the UI object until the next Update() call.
-     *  \param update_type The type of update to apply.
-     *  \param update_children If true, also apply the update on all child UIObjects when the deferred update is processed. */
-    void SetDeferredUpdate(EnumFlags<UIObjectUpdateType> update_type, bool update_children = true)
+     *  \param updateType The type of update to apply.
+     *  \param updateChildren If true, also apply the update on all child UIObjects when the deferred update is processed. */
+    void SetDeferredUpdate(EnumFlags<UIObjectUpdateType> updateType, bool updateChildren = true)
     {
-        if (update_children)
+        if (updateChildren)
         {
-            update_type |= update_type << 16;
+            updateType |= updateType << 16;
         }
 
-        m_deferred_updates |= update_type;
+        m_deferredUpdates |= updateType;
     }
 
-    void SetUpdatesLocked(EnumFlags<UIObjectUpdateType> update_type, bool locked)
+    void SetUpdatesLocked(EnumFlags<UIObjectUpdateType> updateType, bool locked)
     {
         if (locked)
         {
-            m_locked_updates |= update_type;
+            m_lockedUpdates |= updateType;
         }
         else
         {
-            m_locked_updates &= ~update_type;
+            m_lockedUpdates &= ~updateType;
         }
     }
 
@@ -1067,23 +1063,23 @@ public:
      *  \return The focus state of the UI object. */
     HYP_FORCE_INLINE EnumFlags<UIObjectFocusState> GetFocusState() const
     {
-        return m_focus_state;
+        return m_focusState;
     }
 
     /*! \brief Set the focus state of the UI object.
      *  \details The focus state of the UI object is used to determine if the object is currently focused, hovered, pressed, etc.
-     *  \param focus_state The focus state of the UI object. */
-    void SetFocusState(EnumFlags<UIObjectFocusState> focus_state);
+     *  \param focusState The focus state of the UI object. */
+    void SetFocusState(EnumFlags<UIObjectFocusState> focusState);
 
     /*! \brief Collect all nested UIObjects in the hierarchy, calling `proc` for each collected UIObject.
      *  \param proc The function to call for each collected UIObject.
-     *  \param only_visible If true, skips objects with computed visibility as non-visible */
-    void CollectObjects(ProcRef<void(UIObject*)> proc, bool only_visible = true) const;
+     *  \param onlyVisible If true, skips objects with computed visibility as non-visible */
+    void CollectObjects(ProcRef<void(UIObject*)> proc, bool onlyVisible = true) const;
 
-    /*! \brief Collect all nested UIObjects in the hierarchy and push them to the `out_objects` array.
-     *  \param out_objects The array to store the collected UIObjects in.
-     *  \param only_visible If true, skips objects with computed visibility as non-visible */
-    void CollectObjects(Array<UIObject*>& out_objects, bool only_visible = true) const;
+    /*! \brief Collect all nested UIObjects in the hierarchy and push them to the `outObjects` array.
+     *  \param outObjects The array to store the collected UIObjects in.
+     *  \param onlyVisible If true, skips objects with computed visibility as non-visible */
+    void CollectObjects(Array<UIObject*>& outObjects, bool onlyVisible = true) const;
 
     /*! \brief Transform a screen coordinate to a relative coordinate within the UIObject.
      *  \param coords The screen coordinates to transform.
@@ -1095,13 +1091,13 @@ public:
     HYP_METHOD(Property = "DataSource")
     HYP_FORCE_INLINE const Handle<UIDataSourceBase>& GetDataSource() const
     {
-        return m_data_source;
+        return m_dataSource;
     }
 
     /*! \brief Set the data source associated with this UIObject. The data source is used to populate the UIObject with data.
-     *  \param data_source The data source to associate with this UIObject. */
+     *  \param dataSource The data source to associate with this UIObject. */
     HYP_METHOD(Property = "DataSource")
-    void SetDataSource(const Handle<UIDataSourceBase>& data_source);
+    void SetDataSource(const Handle<UIDataSourceBase>& dataSource);
 
     /*! \brief Gets the UUID of the associated data source element (if applicable).
      *  Otherwise, returns an empty UUID.
@@ -1109,30 +1105,30 @@ public:
      * \return The UUID of the associated data source element. */
     HYP_FORCE_INLINE UUID GetDataSourceElementUUID() const
     {
-        return m_data_source_element_uuid;
+        return m_dataSourceElementUuid;
     }
 
     /*! \brief Sets the UUID of the associated data source element.
      *  \internal This is used by a parent UIObject to set the UUID of the associated data source element.
      *
-     *  \param data_source_element_uuid The UUID of the associated data source element. */
-    HYP_FORCE_INLINE void SetDataSourceElementUUID(UUID data_source_element_uuid)
+     *  \param dataSourceElementUuid The UUID of the associated data source element. */
+    HYP_FORCE_INLINE void SetDataSourceElementUUID(UUID dataSourceElementUuid)
     {
-        m_data_source_element_uuid = data_source_element_uuid;
+        m_dataSourceElementUuid = dataSourceElementUuid;
     }
 
     /*! \internal */
     void ForEachChildUIObject_Proc(ProcRef<IterationResult(UIObject*)> proc, bool deep = true) const;
 
-    /*! \brief Spawn a new UIObject with the given HypClass \ref{hyp_class}. The object will not be attached to the current UIStage.
+    /*! \brief Spawn a new UIObject with the given HypClass \ref{hypClass}. The object will not be attached to the current UIStage.
      *  The object will not be named. To name the object, use the other CreateUIObject overload.
      *
-     *  \param hyp_class The HypClass associated with the UIObject type you wish to spawn.
+     *  \param hypClass The HypClass associated with the UIObject type you wish to spawn.
      *  \param name The name of the UIObject.
      *  \param position The position of the UI object.
      *  \param size The size of the UI object.
      *  \return A handle to the created UI object. */
-    HYP_NODISCARD Handle<UIObject> CreateUIObject(const HypClass* hyp_class, Name name, Vec2i position, UIObjectSize size);
+    HYP_NODISCARD Handle<UIObject> CreateUIObject(const HypClass* hypClass, Name name, Vec2i position, UIObjectSize size);
 
     /*! \brief Spawn a new UIObject of type T. The object will not be attached to the current UIStage.
      *
@@ -1178,21 +1174,21 @@ public:
 
         Handle<Node> node = CreateObject<Node>(name);
 
-        // if (attach_to_root) {
+        // if (attachToRoot) {
         //     node = GetNode()->AddChild(node);
         // }
 
         // Set it to ignore parent scale so size of the UI object is not affected by the parent
         node->SetFlags(node->GetFlags() | NodeFlags::IGNORE_PARENT_SCALE);
 
-        Handle<UIObject> ui_object = CreateUIObjectInternal<T>(name, node, false /* init */);
+        Handle<UIObject> uiObject = CreateUIObjectInternal<T>(name, node, false /* init */);
 
-        ui_object->SetPosition(position);
-        ui_object->SetSize(size);
-        InitObject(ui_object);
+        uiObject->SetPosition(position);
+        uiObject->SetSize(size);
+        InitObject(uiObject);
 
-        Handle<T> result = ui_object.Cast<T>();
-        AssertThrow(result != nullptr);
+        Handle<T> result = ObjCast<T>(uiObject);
+        AssertThrow(result.IsValid(), "Failed to cast created UIObject to the requested type");
 
         return result;
     }
@@ -1272,34 +1268,28 @@ protected:
     {
         if (Scene* scene = GetScene())
         {
-            Threads::AssertOnThread(scene->GetOwnerThreadID());
+            Threads::AssertOnThread(scene->GetOwnerThreadId());
         }
     }
 
     Handle<UIObject> GetClosestParentUIObject_Proc(const ProcRef<bool(UIObject*)>& proc) const;
     Handle<UIObject> GetClosestSpawnParent_Proc(const ProcRef<bool(UIObject*)>& proc) const;
 
-    HYP_METHOD(Property = "ReceivesUpdate")
-    HYP_FORCE_INLINE void SetReceivesUpdate(bool receives_update)
-    {
-        m_receives_update = receives_update;
-    }
+    virtual void UpdateSize_Internal(bool updateChildren);
 
-    virtual void UpdateSize_Internal(bool update_children);
+    virtual void SetDataSource_Internal(UIDataSourceBase* dataSource);
 
-    virtual void SetDataSource_Internal(UIDataSourceBase* data_source);
+    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState);
 
-    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state);
-
-    virtual void Update_Internal(GameCounter::TickUnit delta);
+    virtual void Update_Internal(float delta);
 
     virtual void OnAttached_Internal(UIObject* parent);
     virtual void OnRemoved_Internal();
 
     /*! \brief Check if the object has been computed as visible or not. E.g scrolled out of view in a parent container */
-    virtual void UpdateComputedVisibility(bool update_children = true);
+    virtual void UpdateComputedVisibility(bool updateChildren = true);
 
-    void UpdateComputedDepth(bool update_children = true);
+    void UpdateComputedDepth(bool updateChildren = true);
 
     void UpdateComputedTextSize();
 
@@ -1335,15 +1325,15 @@ protected:
     Vec2i GetParentScrollOffset() const;
 
     /*! \brief Add a DelegateHandler to be removed when the object is destructed */
-    void AddDelegateHandler(DelegateHandler&& delegate_handler)
+    void AddDelegateHandler(DelegateHandler&& delegateHandler)
     {
-        m_delegate_handlers.PushBack(std::move(delegate_handler));
+        m_delegateHandlers.PushBack(std::move(delegateHandler));
     }
 
-    void UpdateMeshData(bool update_children = true);
+    void UpdateMeshData(bool updateChildren = true);
     virtual void UpdateMeshData_Internal();
 
-    void UpdateMaterial(bool update_children = true);
+    void UpdateMaterial(bool updateChildren = true);
 
     Array<UIObject*> FilterChildUIObjects(ProcRef<bool(UIObject*)> predicate, bool deep) const;
 
@@ -1368,64 +1358,64 @@ protected:
     }
 
     bool NeedsRepaint() const;
-    void SetNeedsRepaintFlag(bool needs_repaint = true);
+    void SetNeedsRepaintFlag(bool needsRepaint = true);
 
     void Repaint();
     virtual bool Repaint_Internal();
 
     UIStage* m_stage;
-    WeakHandle<UIObject> m_spawn_parent;
+    WeakHandle<UIObject> m_spawnParent;
 
     Name m_name;
 
     Vec2i m_position;
-    Vec2f m_offset_position;
+    Vec2f m_offsetPosition;
 
     UIObjectSize m_size;
-    Vec2i m_actual_size;
-    Vec2i m_actual_size_clamped;
+    Vec2i m_actualSize;
+    Vec2i m_actualSizeClamped;
 
-    UIObjectSize m_inner_size;
-    Vec2i m_actual_inner_size;
+    UIObjectSize m_innerSize;
+    Vec2i m_actualInnerSize;
 
-    UIObjectSize m_max_size;
-    Vec2i m_actual_max_size;
+    UIObjectSize m_maxSize;
+    Vec2i m_actualMaxSize;
 
     BoundingBox m_aabb;
-    BoundingBox m_aabb_clamped;
+    BoundingBox m_aabbClamped;
 
-    BlendVar<Vec2f> m_scroll_offset;
+    BlendVar<Vec2f> m_scrollOffset;
 
-    Handle<UIObject> m_vertical_scrollbar;
-    Handle<UIObject> m_horizontal_scrollbar;
+    Handle<UIObject> m_verticalScrollbar;
+    Handle<UIObject> m_horizontalScrollbar;
 
     Vec2i m_padding;
 
     int m_depth; // manually set depth; otherwise defaults to the node's depth in the scene
 
-    uint32 m_border_radius;
-    EnumFlags<UIObjectBorderFlags> m_border_flags;
+    uint32 m_borderRadius;
+    EnumFlags<UIObjectBorderFlags> m_borderFlags;
 
-    UIObjectAlignment m_origin_alignment;
-    UIObjectAlignment m_parent_alignment;
+    UIObjectAlignment m_originAlignment;
+    UIObjectAlignment m_parentAlignment;
 
-    UIObjectAspectRatio m_aspect_ratio;
+    UIObjectAspectRatio m_aspectRatio;
 
-    Color m_background_color;
-    Color m_text_color;
+    Color m_backgroundColor;
+    Color m_textColor;
 
     String m_text;
 
-    Handle<UIDataSourceBase> m_data_source;
-    DelegateHandler m_data_source_on_change_handler;
-    DelegateHandler m_data_source_on_element_add_handler;
-    DelegateHandler m_data_source_on_element_remove_handler;
-    DelegateHandler m_data_source_on_element_update_handler;
+    Handle<UIDataSourceBase> m_dataSource;
+    DelegateHandler m_dataSourceOnChangeHandler;
+    DelegateHandler m_dataSourceOnElementAddHandler;
+    DelegateHandler m_dataSourceOnElementRemoveHandler;
+    DelegateHandler m_dataSourceOnElementUpdateHandler;
 
-    UUID m_data_source_element_uuid;
+    UUID m_dataSourceElementUuid;
 
-    EnumFlags<UIObjectUpdateType> m_deferred_updates;
-    EnumFlags<UIObjectUpdateType> m_locked_updates;
+    EnumFlags<UIObjectUpdateType> m_deferredUpdates;
+    EnumFlags<UIObjectUpdateType> m_lockedUpdates;
 
 private:
     template <class T>
@@ -1435,35 +1425,35 @@ private:
 
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a derived class of UIObject");
 
-        Handle<UIObject> ui_object = CreateObject<T>();
+        Handle<UIObject> uiObject = CreateObject<T>();
 
         UIStage* stage = GetStage();
 
-        ui_object->m_spawn_parent = WeakHandleFromThis();
-        ui_object->m_stage = stage;
+        uiObject->m_spawnParent = WeakHandleFromThis();
+        uiObject->m_stage = stage;
 
         // Small optimization so UpdateComputedTextSize() doesn't need to be called when attached.
         // Computed text size is based on spawn parent rather than the node it's attached to,
         // so we can set it right here.
-        ui_object->m_computed_text_size = m_computed_text_size;
+        uiObject->m_computedTextSize = m_computedTextSize;
 
-        ui_object->SetNodeProxy(node);
-        ui_object->SetName(name);
+        uiObject->SetNodeProxy(node);
+        uiObject->SetName(name);
 
         if (init)
         {
-            InitObject(ui_object);
+            InitObject(uiObject);
 
-            ui_object->SetStage_Internal(stage);
+            uiObject->SetStage_Internal(stage);
         }
 
-        return ui_object;
+        return uiObject;
     }
 
     void ComputeOffsetPosition();
 
     void UpdateActualSizes(UpdateSizePhase phase, EnumFlags<UIObjectUpdateSizeFlags> flags);
-    virtual void ComputeActualSize(const UIObjectSize& size, Vec2i& actual_size, UpdateSizePhase phase, bool is_inner = false);
+    virtual void ComputeActualSize(const UIObjectSize& size, Vec2i& actualSize, UpdateSizePhase phase, bool isInner = false);
 
     template <class Lambda>
     void ForEachChildUIObject(Lambda&& lambda, bool deep = true) const;
@@ -1473,34 +1463,33 @@ private:
 
     void SetEntityAABB(const BoundingBox& aabb);
 
-    void UpdateClampedSize(bool update_children = true);
+    void UpdateClampedSize(bool updateChildren = true);
 
     void UpdateNodeTransform();
 
     Handle<Material> CreateMaterial() const;
 
-    EnumFlags<UIObjectFocusState> m_focus_state;
+    EnumFlags<UIObjectFocusState> m_focusState;
 
-    bool m_is_visible : 1;
-    bool m_computed_visibility : 1;
-    bool m_is_enabled : 1;
-    bool m_accepts_focus : 1;
-    bool m_receives_update : 1;
-    bool m_affects_parent_size : 1;
-    bool m_is_position_absolute : 1;
+    bool m_isVisible : 1;
+    bool m_computedVisibility : 1;
+    bool m_isEnabled : 1;
+    bool m_acceptsFocus : 1;
+    bool m_affectsParentSize : 1;
+    bool m_isPositionAbsolute : 1;
 
-    int m_computed_depth;
+    int m_computedDepth;
 
-    float m_text_size;
-    float m_computed_text_size;
+    float m_textSize;
+    float m_computedTextSize;
 
-    AtomicVar<bool> m_needs_repaint;
+    AtomicVar<bool> m_needsRepaint;
 
     Handle<Node> m_node;
 
-    Array<Handle<UIObject>> m_child_ui_objects;
+    Array<Handle<UIObject>> m_childUiObjects;
 
-    Array<DelegateHandler> m_delegate_handlers;
+    Array<DelegateHandler> m_delegateHandlers;
 };
 
 #pragma endregion UIObject
@@ -1509,11 +1498,11 @@ private:
 
 struct UILockedUpdatesScope
 {
-    UILockedUpdatesScope(UIObject& ui_object, EnumFlags<UIObjectUpdateType> value)
-        : ui_object(ui_object),
-          value(value & ~ui_object.m_locked_updates)
+    UILockedUpdatesScope(UIObject& uiObject, EnumFlags<UIObjectUpdateType> value)
+        : uiObject(uiObject),
+          value(value & ~uiObject.m_lockedUpdates)
     {
-        ui_object.m_locked_updates |= this->value;
+        uiObject.m_lockedUpdates |= this->value;
     }
 
     UILockedUpdatesScope(const UILockedUpdatesScope& other) = delete;
@@ -1524,10 +1513,10 @@ struct UILockedUpdatesScope
 
     ~UILockedUpdatesScope()
     {
-        ui_object.m_locked_updates &= ~value;
+        uiObject.m_lockedUpdates &= ~value;
     }
 
-    UIObject& ui_object;
+    UIObject& uiObject;
     EnumFlags<UIObjectUpdateType> value;
 };
 

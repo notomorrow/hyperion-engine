@@ -6,7 +6,6 @@
 #define NUM_KEYBOARD_KEYS 350
 #define NUM_MOUSE_BUTTONS 3
 
-#include <core/Base.hpp>
 #include <core/Defines.hpp>
 
 #include <core/object/HypObject.hpp>
@@ -34,12 +33,12 @@ using sys::SystemEvent;
 
 struct InputState
 {
-    bool key_states[NUM_KEYBOARD_KEYS];
-    bool mouse_button_states[int(MouseButton::MAX)];
+    bool keyStates[NUM_KEYBOARD_KEYS];
+    bool mouseButtonStates[int(MouseButton::MAX)];
 
     InputState()
-        : key_states { false },
-          mouse_button_states { false }
+        : keyStates { false },
+          mouseButtonStates { false }
     {
     }
 };
@@ -59,11 +58,11 @@ public:
     ~InputEventSink();
 
     void Push(SystemEvent&& evt);
-    bool Poll(Array<SystemEvent>& out_events);
+    bool Poll(Array<SystemEvent>& outEvents);
 
 private:
     InputEventNotifier m_notifier;
-    AtomicVar<uint64> m_lock_state;
+    AtomicVar<uint64> m_lockState;
     Array<SystemEvent, DynamicAllocator> m_events;
 };
 
@@ -88,7 +87,7 @@ public:
     HYP_API bool IsMouseLocked() const;
 
     HYP_METHOD()
-    HYP_API void PushMouseLockState(bool mouse_locked);
+    HYP_API void PushMouseLockState(bool mouseLocked);
 
     HYP_METHOD()
     HYP_API void PopMouseLockState();
@@ -98,7 +97,7 @@ public:
     HYP_METHOD()
     const Vec2i& GetMousePosition() const
     {
-        return m_mouse_position;
+        return m_mousePosition;
     }
 
     HYP_METHOD()
@@ -106,13 +105,13 @@ public:
 
     const Vec2i& GetPreviousMousePosition() const
     {
-        return m_previous_mouse_position;
+        return m_previousMousePosition;
     }
 
     HYP_METHOD()
     const Vec2i& GetWindowSize() const
     {
-        return m_window_size;
+        return m_windowSize;
     }
 
     void KeyDown(KeyCode key)
@@ -184,25 +183,25 @@ public:
     }
 
 private:
-    void SetIsMouseLocked(bool is_mouse_locked);
+    void SetIsMouseLocked(bool isMouseLocked);
 
     void UpdateMousePosition();
-    void UpdateWindowSize(Vec2i new_size);
+    void UpdateWindowSize(Vec2i newSize);
 
     void SetKey(KeyCode key, bool pressed);
     void SetMouseButton(MouseButton btn, bool pressed);
 
-    void ApplyMouseLockState(const InputMouseLockState* mouse_lock_state);
-    void RemoveMouseLockState(const InputMouseLockState* mouse_lock_state);
+    void ApplyMouseLockState(const InputMouseLockState* mouseLockState);
+    void RemoveMouseLockState(const InputMouseLockState* mouseLockState);
 
-    InputState m_input_state;
-    Vec2i m_mouse_position;
-    Vec2i m_previous_mouse_position;
-    Vec2i m_window_size;
-    bool m_is_mouse_locked;
+    InputState m_inputState;
+    Vec2i m_mousePosition;
+    Vec2i m_previousMousePosition;
+    Vec2i m_windowSize;
+    bool m_isMouseLocked;
 
-    LinkedList<InputMouseLockState> m_mouse_lock_states;
-    Mutex m_mouse_lock_states_mutex;
+    LinkedList<InputMouseLockState> m_mouseLockStates;
+    Mutex m_mouseLockStatesMutex;
 
     ApplicationWindow* m_window;
 };

@@ -14,10 +14,10 @@ namespace utilities {
 
 static uint64 RandomNumber()
 {
-    static thread_local std::mt19937 random_engine(uint32(uint64(ThreadID::Current().GetValue()) + uint64(Time::Now())));
+    static thread_local std::mt19937 randomEngine(uint32(uint64(ThreadId::Current().GetValue()) + uint64(Time::Now())));
     std::uniform_int_distribution<uint64> distribution;
 
-    return distribution(random_engine);
+    return distribution(randomEngine);
 }
 
 UUID::UUID(UUIDVersion version)

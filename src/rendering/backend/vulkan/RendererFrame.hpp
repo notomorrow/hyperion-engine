@@ -11,8 +11,6 @@
 #include <rendering/backend/RenderObject.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanFence;
 using VulkanFenceRef = RenderObjectHandle_Strong<VulkanFence>;
 
@@ -20,7 +18,7 @@ class VulkanFrame final : public FrameBase
 {
 public:
     explicit VulkanFrame();
-    explicit VulkanFrame(uint32 frame_index);
+    explicit VulkanFrame(uint32 frameIndex);
     virtual ~VulkanFrame() override;
 
     HYP_API virtual RendererResult Create() override;
@@ -28,31 +26,30 @@ public:
 
     HYP_API virtual RendererResult ResetFrameState() override;
 
-    HYP_API RendererResult Submit(VulkanDeviceQueue* device_queue, const VulkanCommandBufferRef& command_buffer);
+    HYP_API RendererResult Submit(VulkanDeviceQueue* deviceQueue, const VulkanCommandBufferRef& commandBuffer);
 
     HYP_FORCE_INLINE const VulkanFenceRef& GetFence() const
     {
-        return m_queue_submit_fence;
+        return m_queueSubmitFence;
     }
 
     HYP_FORCE_INLINE VulkanSemaphoreChain& GetPresentSemaphores()
     {
-        return m_present_semaphores;
+        return m_presentSemaphores;
     }
 
     HYP_FORCE_INLINE const VulkanSemaphoreChain& GetPresentSemaphores() const
     {
-        return m_present_semaphores;
+        return m_presentSemaphores;
     }
 
     RendererResult RecreateFence();
 
 private:
-    VulkanSemaphoreChain m_present_semaphores;
-    VulkanFenceRef m_queue_submit_fence;
+    VulkanSemaphoreChain m_presentSemaphores;
+    VulkanFenceRef m_queueSubmitFence;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

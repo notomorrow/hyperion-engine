@@ -35,12 +35,12 @@ public:
 
     virtual void OnAddedToWorld() override;
     virtual void OnRemovedFromWorld() override;
-    virtual void Update(GameCounter::TickUnit delta) override;
+    virtual void Update(float delta) override;
 
     Task<void>* GenerateLightmaps(const Handle<Scene>& scene, const BoundingBox& aabb);
 
 private:
-    HashMap<ID<Scene>, UniquePtr<Lightmapper>> m_lightmappers;
+    HashMap<ObjId<Scene>, UniquePtr<Lightmapper>> m_lightmappers;
     LinkedList<Task<void>> m_tasks;
 };
 

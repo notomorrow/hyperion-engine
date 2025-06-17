@@ -6,15 +6,13 @@
 #include <rendering/Buffers.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 #pragma region DescriptorSetDeclaration
 
 DescriptorDeclaration* DescriptorSetDeclaration::FindDescriptorDeclaration(WeakName name) const
 {
-    for (uint32 slot_index = 0; slot_index < DESCRIPTOR_SLOT_MAX; slot_index++)
+    for (uint32 slotIndex = 0; slotIndex < DESCRIPTOR_SLOT_MAX; slotIndex++)
     {
-        for (const DescriptorDeclaration& decl : slots[slot_index])
+        for (const DescriptorDeclaration& decl : slots[slotIndex])
         {
             if (decl.name == name)
             {
@@ -30,26 +28,26 @@ uint32 DescriptorSetDeclaration::CalculateFlatIndex(DescriptorSlot slot, WeakNam
 {
     AssertThrow(slot != DESCRIPTOR_SLOT_NONE && slot < DESCRIPTOR_SLOT_MAX);
 
-    uint32 flat_index = 0;
+    uint32 flatIndex = 0;
 
-    for (uint32 slot_index = 0; slot_index < uint32(slot); slot_index++)
+    for (uint32 slotIndex = 0; slotIndex < uint32(slot); slotIndex++)
     {
-        if (slot_index == uint32(slot) - 1)
+        if (slotIndex == uint32(slot) - 1)
         {
-            uint32 decl_index = 0;
+            uint32 declIndex = 0;
 
-            for (const DescriptorDeclaration& decl : slots[slot_index])
+            for (const DescriptorDeclaration& decl : slots[slotIndex])
             {
                 if (decl.name == name)
                 {
-                    return flat_index + decl_index;
+                    return flatIndex + declIndex;
                 }
 
-                decl_index++;
+                declIndex++;
             }
         }
 
-        flat_index += slots[slot_index].Size();
+        flatIndex += slots[slotIndex].Size();
     }
 
     return ~0u;
@@ -68,9 +66,9 @@ DescriptorSetDeclaration* DescriptorTableDeclaration::FindDescriptorSetDeclarati
     return nullptr;
 }
 
-DescriptorSetDeclaration* DescriptorTableDeclaration::AddDescriptorSetDeclaration(DescriptorSetDeclaration&& descriptor_set_declaration)
+DescriptorSetDeclaration* DescriptorTableDeclaration::AddDescriptorSetDeclaration(DescriptorSetDeclaration&& descriptorSetDeclaration)
 {
-    return &elements.PushBack(std::move(descriptor_set_declaration));
+    return &elements.PushBack(std::move(descriptorSetDeclaration));
 }
 
 DescriptorTableDeclaration& GetStaticDescriptorTableDeclaration()
@@ -79,10 +77,10 @@ DescriptorTableDeclaration& GetStaticDescriptorTableDeclaration()
     {
         DescriptorTableDeclaration decl;
 
-        DescriptorTableDeclaration::DeclareSet global_set { &decl, 0, NAME("Global") };
-        DescriptorTableDeclaration::DeclareSet view_set { &decl, 1, NAME("SceneView"), /* is_template */ true };
-        DescriptorTableDeclaration::DeclareSet object_set { &decl, 2, NAME("Object") };
-        DescriptorTableDeclaration::DeclareSet material_set { &decl, 3, NAME("Material"), /* is_template */ true };
+        DescriptorTableDeclaration::DeclareSet globalSet { &decl, 0, NAME("Global") };
+        DescriptorTableDeclaration::DeclareSet viewSet { &decl, 1, NAME("View"), /* isTemplate */ true };
+        DescriptorTableDeclaration::DeclareSet objectSet { &decl, 2, NAME("Object") };
+        DescriptorTableDeclaration::DeclareSet materialSet { &decl, 3, NAME("Material") };
     } initializer;
 
     return initializer.decl;
@@ -94,18 +92,18 @@ DescriptorTableDeclaration& GetStaticDescriptorTableDeclaration()
 
 DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
     : m_decl(decl),
-      m_is_template(false),
-      m_is_reference(false)
+      m_isTemplate(false),
+      m_isReference(false)
 {
     if (!decl)
     {
         return;
     }
 
-    m_is_template = decl->flags[DescriptorSetDeclarationFlags::TEMPLATE];
-    m_is_reference = decl->flags[DescriptorSetDeclarationFlags::REFERENCE];
+    m_isTemplate = decl->flags[DescriptorSetDeclarationFlags::TEMPLATE];
+    m_isReference = decl->flags[DescriptorSetDeclarationFlags::REFERENCE];
 
-    if (m_is_reference)
+    if (m_isReference)
     {
         m_decl = GetStaticDescriptorTableDeclaration().FindDescriptorSetDeclaration(decl->name);
 
@@ -116,8 +114,8 @@ DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
     {
         for (const DescriptorDeclaration& descriptor : slot)
         {
-            const uint32 descriptor_index = m_decl->CalculateFlatIndex(descriptor.slot, descriptor.name);
-            AssertThrow(descriptor_index != ~0u);
+            const uint32 descriptorIndex = m_decl->CalculateFlatIndex(descriptor.slot, descriptor.name);
+            AssertThrow(descriptorIndex != ~0u);
 
             if (descriptor.cond != nullptr && !descriptor.cond())
             {
@@ -126,56 +124,55 @@ DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
             }
 
             // HYP_LOG(RenderingBackend, Debug, "Set element {}.{}[{}] (slot: {}, count: {}, size: {}, is_dynamic: {})",
-            //     decl_ptr->name, descriptor.name, descriptor_index, int(descriptor.slot),
-            //     descriptor.count, descriptor.size, descriptor.is_dynamic);
+            //     declPtr->name, descriptor.name, descriptorIndex, int(descriptor.slot),
+            //     descriptor.count, descriptor.size, descriptor.isDynamic);
 
             switch (descriptor.slot)
             {
             case DescriptorSlot::DESCRIPTOR_SLOT_SRV:
-                AddElement(descriptor.name, DescriptorSetElementType::IMAGE, descriptor_index, descriptor.count);
+                AddElement(descriptor.name, DescriptorSetElementType::IMAGE, descriptorIndex, descriptor.count);
 
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_UAV:
-                AddElement(descriptor.name, DescriptorSetElementType::IMAGE_STORAGE, descriptor_index, descriptor.count);
+                AddElement(descriptor.name, DescriptorSetElementType::IMAGE_STORAGE, descriptorIndex, descriptor.count);
 
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_CBUFF:
-                if (descriptor.is_dynamic)
+                if (descriptor.isDynamic)
                 {
-                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC, descriptor_index, descriptor.count, descriptor.size);
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC, descriptorIndex, descriptor.count, descriptor.size);
                 }
                 else
                 {
-                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER, descriptor_index, descriptor.count, descriptor.size);
+                    AddElement(descriptor.name, DescriptorSetElementType::UNIFORM_BUFFER, descriptorIndex, descriptor.count, descriptor.size);
                 }
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_SSBO:
-                if (descriptor.is_dynamic)
+                if (descriptor.isDynamic)
                 {
-                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC, descriptor_index, descriptor.count, descriptor.size);
+                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC, descriptorIndex, descriptor.count, descriptor.size);
                 }
                 else
                 {
-                    AddElement(descriptor.name, DescriptorSetElementType::STORAGE_BUFFER, descriptor_index, descriptor.count, descriptor.size);
+                    AddElement(descriptor.name, DescriptorSetElementType::SSBO, descriptorIndex, descriptor.count, descriptor.size);
                 }
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_ACCELERATION_STRUCTURE:
-                AddElement(descriptor.name, DescriptorSetElementType::TLAS, descriptor_index, descriptor.count);
+                AddElement(descriptor.name, DescriptorSetElementType::TLAS, descriptorIndex, descriptor.count);
 
                 break;
             case DescriptorSlot::DESCRIPTOR_SLOT_SAMPLER:
-                AddElement(descriptor.name, DescriptorSetElementType::SAMPLER, descriptor_index, descriptor.count);
+                AddElement(descriptor.name, DescriptorSetElementType::SAMPLER, descriptorIndex, descriptor.count);
 
                 break;
             default:
-                AssertThrowMsg(false, "Invalid descriptor slot");
-                break;
+                HYP_UNREACHABLE();
             }
         }
     }
 
     // build a list of dynamic elements, paired by their element index so we can sort it after.
-    Array<Pair<Name, uint32>> dynamic_elements_with_index;
+    Array<Pair<Name, uint32>> dynamicElementsWithIndex;
 
     // Add to list of dynamic buffer names
     for (const auto& it : m_elements)
@@ -183,20 +180,20 @@ DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
         if (it.second.type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
             || it.second.type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC)
         {
-            dynamic_elements_with_index.PushBack({ it.first, it.second.binding });
+            dynamicElementsWithIndex.PushBack({ it.first, it.second.binding });
         }
     }
 
-    std::sort(dynamic_elements_with_index.Begin(), dynamic_elements_with_index.End(), [](const Pair<Name, uint32>& a, const Pair<Name, uint32>& b)
+    std::sort(dynamicElementsWithIndex.Begin(), dynamicElementsWithIndex.End(), [](const Pair<Name, uint32>& a, const Pair<Name, uint32>& b)
         {
             return a.second < b.second;
         });
 
-    m_dynamic_elements.Resize(dynamic_elements_with_index.Size());
+    m_dynamicElements.Resize(dynamicElementsWithIndex.Size());
 
-    for (SizeType i = 0; i < dynamic_elements_with_index.Size(); i++)
+    for (SizeType i = 0; i < dynamicElementsWithIndex.Size(); i++)
     {
-        m_dynamic_elements[i] = dynamic_elements_with_index[i].first;
+        m_dynamicElements[i] = dynamicElementsWithIndex[i].first;
     }
 }
 
@@ -206,11 +203,11 @@ DescriptorSetLayout::DescriptorSetLayout(const DescriptorSetDeclaration* decl)
 
 DescriptorSetBase::~DescriptorSetBase()
 {
-    for (auto& elements_it : m_elements)
+    for (auto& elementsIt : m_elements)
     {
-        for (auto& values_it : elements_it.second.values)
+        for (auto& valuesIt : elementsIt.second.values)
         {
-            DescriptorSetElement::ValueType& value = values_it.second;
+            DescriptorSetElement::ValueType& value = valuesIt.second;
 
             if (!value.HasValue())
             {
@@ -230,17 +227,17 @@ bool DescriptorSetBase::HasElement(Name name) const
     return m_elements.Find(name) != m_elements.End();
 }
 
-void DescriptorSetBase::SetElement(Name name, uint32 index, const GPUBufferRef& ref)
+void DescriptorSetBase::SetElement(Name name, uint32 index, const GpuBufferRef& ref)
 {
-    SetElement<GPUBufferRef>(name, index, ref);
+    SetElement<GpuBufferRef>(name, index, ref);
 }
 
-void DescriptorSetBase::SetElement(Name name, uint32 index, uint32 buffer_size, const GPUBufferRef& ref)
+void DescriptorSetBase::SetElement(Name name, uint32 index, uint32 bufferSize, const GpuBufferRef& ref)
 {
-    SetElement<GPUBufferRef>(name, index, ref);
+    SetElement<GpuBufferRef>(name, index, ref);
 }
 
-void DescriptorSetBase::SetElement(Name name, const GPUBufferRef& ref)
+void DescriptorSetBase::SetElement(Name name, const GpuBufferRef& ref)
 {
     SetElement(name, 0, ref);
 }
@@ -277,5 +274,4 @@ void DescriptorSetBase::SetElement(Name name, const TLASRef& ref)
 
 #pragma endregion DescriptorSetBase
 
-} // namespace renderer
 } // namespace hyperion

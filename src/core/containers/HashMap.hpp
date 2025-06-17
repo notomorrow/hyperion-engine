@@ -51,10 +51,10 @@ public:
 
     HashMap();
 
-    HashMap(std::initializer_list<KeyValuePair<Key, Value>> initializer_list)
+    HashMap(std::initializer_list<KeyValuePair<Key, Value>> initializerList)
         : HashMap()
     {
-        Array<KeyValuePair<Key, Value>> temp(initializer_list);
+        Array<KeyValuePair<Key, Value>> temp(initializerList);
 
         for (auto&& item : temp)
         {
@@ -97,14 +97,14 @@ public:
         {
             for (auto it = bucket.head; it != nullptr; it = it->next)
             {
-                const auto other_it = other.Find(it->value.first);
+                const auto otherIt = other.Find(it->value.first);
 
-                if (other_it == other.End())
+                if (otherIt == other.End())
                 {
                     return false;
                 }
 
-                if (other_it->second != it->value.second)
+                if (otherIt->second != it->value.second)
                 {
                     return false;
                 }
@@ -125,14 +125,14 @@ public:
         {
             for (auto it = bucket.head; it != nullptr; it = it->next)
             {
-                const auto other_it = other.Find(it->value.first);
+                const auto otherIt = other.Find(it->value.first);
 
-                if (other_it == other.End())
+                if (otherIt == other.End())
                 {
                     return true;
                 }
 
-                if (other_it->second != it->value.second)
+                if (otherIt->second != it->value.second)
                 {
                     return true;
                 }
@@ -142,8 +142,22 @@ public:
         return false;
     }
 
-    Iterator FindByHashCode(HashCode hash_code);
-    ConstIterator FindByHashCode(HashCode hash_code) const;
+    Iterator FindByHashCode(HashCode hashCode);
+    ConstIterator FindByHashCode(HashCode hashCode) const;
+
+    KeyValuePair<Key, Value>* TryGet(const KeyType& key)
+    {
+        const auto it = Find(key);
+
+        return it != End() ? &(*it) : nullptr;
+    }
+
+    const KeyValuePair<Key, Value>* TryGet(const KeyType& key) const
+    {
+        const auto it = Find(key);
+
+        return it != End() ? &(*it) : nullptr;
+    }
 
     InsertResult Set(const Key& key, const Value& value);
     InsertResult Set(const Key& key, Value&& value);
@@ -228,11 +242,11 @@ auto HashMap<Key, Value, NodeAllocatorType>::operator[](const Key& key) -> Value
 }
 
 template <class Key, class Value, class NodeAllocatorType>
-auto HashMap<Key, Value, NodeAllocatorType>::FindByHashCode(HashCode hash_code) -> Iterator
+auto HashMap<Key, Value, NodeAllocatorType>::FindByHashCode(HashCode hashCode) -> Iterator
 {
-    auto* bucket = Base::GetBucketForHash(hash_code.Value());
+    auto* bucket = Base::GetBucketForHash(hashCode.Value());
 
-    auto it = bucket->FindByHashCode(Base::key_by_fn, hash_code.Value());
+    auto it = bucket->FindByHashCode(Base::keyByFn, hashCode.Value());
 
     if (it == bucket->End())
     {
@@ -243,11 +257,11 @@ auto HashMap<Key, Value, NodeAllocatorType>::FindByHashCode(HashCode hash_code) 
 }
 
 template <class Key, class Value, class NodeAllocatorType>
-auto HashMap<Key, Value, NodeAllocatorType>::FindByHashCode(HashCode hash_code) const -> ConstIterator
+auto HashMap<Key, Value, NodeAllocatorType>::FindByHashCode(HashCode hashCode) const -> ConstIterator
 {
-    auto* bucket = Base::GetBucketForHash(hash_code.Value());
+    auto* bucket = Base::GetBucketForHash(hashCode.Value());
 
-    const auto it = bucket->FindByHashCode(Base::key_by_fn, hash_code.Value());
+    const auto it = bucket->FindByHashCode(Base::keyByFn, hashCode.Value());
 
     if (it == bucket->End())
     {

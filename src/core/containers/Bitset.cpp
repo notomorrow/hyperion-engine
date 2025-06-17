@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+/* Copyright (c) 2024-2025 No Tomorrow Games. All rights reserved. */
 
 #include <core/containers/Bitset.hpp>
 #include <core/utilities/Span.hpp>
@@ -19,13 +19,13 @@ namespace containers {
 
 static Array<Bitset::BlockType, InlineAllocator<16>> CreateBlocks_Internal(uint64 value)
 {
-    return { Bitset::BlockType(value & 0xFFFFFFFF), Bitset::BlockType((value & (0xFFFFFFFFull << 32ull)) >> 32ull) };
+    return { Bitset::BlockType(value & 0xFFFFFFFFu), Bitset::BlockType((value & (0xFFFFFFFFull << 32ull)) >> 32ull) };
 }
 
 template <uint64 InitialValue>
 static Span<const Bitset::BlockType> CreateBlocks_Static_Internal()
 {
-    static const Bitset::BlockType blocks[2] = { Bitset::BlockType(InitialValue & 0xFFFFFFFF), Bitset::BlockType((InitialValue & (0xFFFFFFFFull << 32ull)) >> 32ull) };
+    static const Bitset::BlockType blocks[2] = { Bitset::BlockType(InitialValue & 0xFFFFFFFFu), Bitset::BlockType((InitialValue & (0xFFFFFFFFull << 32ull)) >> 32ull) };
 
     return Span<const Bitset::BlockType>(&blocks[0], &blocks[0] + ArraySize(blocks));
 }
@@ -57,7 +57,7 @@ Bitset& Bitset::operator=(Bitset&& other) noexcept
 Bitset Bitset::operator~() const
 {
     Bitset result;
-    result.m_blocks.Resize(m_blocks.Size());
+    result.m_blocks.ResizeUninitialized(m_blocks.Size());
 
     for (uint32 index = 0; index < result.m_blocks.Size(); index++)
     {
@@ -73,11 +73,11 @@ Bitset Bitset::operator<<(uint32 pos) const
 {
     Bitset result;
 
-    const SizeType total_bit_size = NumBits();
+    const SizeType totalBitSize = NumBits();
 
-    for (uint32 combined_bit_index = 0; combined_bit_index < total_bit_size; ++combined_bit_index)
+    for (uint32 combinedBitIndex = 0; combinedBitIndex < totalBitSize; ++combinedBitIndex)
     {
-        result.Set(combined_bit_index + pos, Get(combined_bit_index));
+        result.Set(combinedBitIndex + pos, Get(combinedBitIndex));
     }
 
     return result;
@@ -179,25 +179,27 @@ Bitset& Bitset::operator^=(const Bitset& other)
 
 void Bitset::Set(BitIndex index, bool value)
 {
-    const uint32 block_index = GetBlockIndex(index);
+    const uint32 blockIndex = GetBlockIndex(index);
 
-    if (block_index >= m_blocks.Size())
+    if (blockIndex >= m_blocks.Size())
     {
         if (!value)
         {
             return; // not point setting if it's already unset.
         }
 
-        m_blocks.Resize(block_index + 1);
+        m_blocks.Resize(blockIndex + 1);
     }
 
     if (value)
     {
-        m_blocks[block_index] |= GetBitMask(index);
+        m_blocks[blockIndex] |= GetBitMask(index);
     }
     else
     {
-        m_blocks[block_index] &= ~GetBitMask(index);
+        m_blocks[blockIndex] &= ~GetBitMask(index);
+
+        // RemoveLeadingZeros();
     }
 }
 
@@ -206,107 +208,25 @@ void Bitset::Clear()
     m_blocks = CreateBlocks_Static_Internal<0>();
 }
 
-uint64 Bitset::Count() const
+Bitset& Bitset::SetNumBits(SizeType numBits)
 {
-    uint64 count = 0;
+    const SizeType previousNumBlocks = m_blocks.Size();
+    SizeType newNumBlocks = (numBits + (numBitsPerBlock - 1)) / numBitsPerBlock;
 
-    for (const BlockType value : m_blocks)
+    if (newNumBlocks < numPreallocatedBlocks)
     {
-        count += ByteUtil::BitCount(value);
+        newNumBlocks = numPreallocatedBlocks;
     }
 
-    return count;
-}
-
-Bitset& Bitset::Resize(SizeType num_bits)
-{
-    const SizeType previous_num_blocks = m_blocks.Size();
-    const SizeType new_num_blocks = (num_bits + (num_bits_per_block - 1)) / num_bits_per_block;
-
-    m_blocks.Resize(new_num_blocks);
-
-    const SizeType current_num_bits = NumBits();
-
-    // if (current_num_bits > num_bits && !m_blocks.Empty()) {
-    //     // @FIXME: Use bitmask
-    //     for (uint32 index = num_bits; index < current_num_bits; ++index) {
-    //         Set(index, false);
-    //     }
-    // }
-
-    if (m_blocks.Size() < num_preallocated_blocks)
+    if (newNumBlocks == m_blocks.Size())
     {
-        m_blocks.Resize(num_preallocated_blocks);
+        // no need to resize if it would be the same
+        return *this;
     }
+
+    m_blocks.Resize(newNumBlocks);
 
     return *this;
-}
-
-Bitset::BitIndex Bitset::FirstSetBitIndex() const
-{
-    for (uint32 block_index = 0; block_index < m_blocks.Size(); block_index++)
-    {
-        if (m_blocks[block_index] != 0)
-        {
-#ifdef HYP_CLANG_OR_GCC
-            const uint32 bit_index = __builtin_ffs(m_blocks[block_index]) - 1;
-#elif defined(HYP_MSVC)
-            unsigned long bit_index = 0;
-            _BitScanForward(&bit_index, m_blocks[block_index]);
-#endif
-
-            return (block_index * num_bits_per_block) + bit_index;
-        }
-    }
-
-    return not_found;
-}
-
-Bitset::BitIndex Bitset::LastSetBitIndex() const
-{
-    for (uint32 block_index = m_blocks.Size(); block_index != 0; --block_index)
-    {
-        if (m_blocks[block_index - 1] != 0)
-        {
-#ifdef HYP_CLANG_OR_GCC
-            const uint32 bit_index = Bitset::num_bits_per_block - __builtin_clz(m_blocks[block_index - 1]) - 1;
-#elif defined(HYP_MSVC)
-            unsigned long bit_index = 0;
-            _BitScanReverse(&bit_index, m_blocks[block_index - 1]);
-#endif
-
-            return ((block_index - 1) * num_bits_per_block) + bit_index;
-        }
-    }
-
-    return not_found;
-}
-
-Bitset::BitIndex Bitset::NextSetBitIndex(BitIndex offset) const
-{
-    const uint32 block_index = GetBlockIndex(offset);
-
-    uint32 mask = ~(GetBitMask(offset) - 1);
-
-    for (uint32 i = block_index; i < m_blocks.Size(); i++)
-    {
-        if ((m_blocks[i] & mask) != 0)
-        {
-#ifdef HYP_CLANG_OR_GCC
-            const uint32 bit_index = __builtin_ffs(m_blocks[i] & mask) - 1;
-#elif defined(HYP_MSVC)
-            unsigned long bit_index = 0;
-            _BitScanForward(&bit_index, m_blocks[i] & mask);
-#endif
-
-            return (i * num_bits_per_block) + bit_index;
-        }
-
-        // use all bits in next iteration of loop
-        mask = ~0u;
-    }
-
-    return not_found;
 }
 
 } // namespace containers

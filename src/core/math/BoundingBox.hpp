@@ -168,12 +168,12 @@ namespace utilities {
 template <class StringType>
 struct Formatter<StringType, BoundingBox>
 {
-    auto operator()(const BoundingBox& bounding_box) const
+    auto operator()(const BoundingBox& boundingBox) const
     {
         return StringType("BoundingBox(min: ")
-            + Formatter<StringType, Vec3f> {}(bounding_box.min)
+            + Formatter<StringType, Vec3f> {}(boundingBox.min)
             + StringType(", max: ")
-            + Formatter<StringType, Vec3f> {}(bounding_box.max)
+            + Formatter<StringType, Vec3f> {}(boundingBox.max)
             + StringType(")");
     }
 };

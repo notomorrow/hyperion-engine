@@ -21,100 +21,100 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Camera);
 
-void CameraSystem::OnEntityAdded(const Handle<Entity>& entity)
+void CameraSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
-    HYP_LOG(Camera, Debug, "CameraSystem::OnEntityAdded: CameraComponent added to scene {} entity #{}", GetEntityManager().GetScene()->GetName(), entity->GetID().Value());
+    HYP_LOG(Camera, Debug, "CameraSystem::OnEntityAdded: CameraComponent added to scene {} entity #{}", GetEntityManager().GetScene()->GetName(), entity->Id().Value());
 
-    CameraComponent& camera_component = GetEntityManager().GetComponent<CameraComponent>(entity);
-    InitObject(camera_component.camera);
+    CameraComponent& cameraComponent = GetEntityManager().GetComponent<CameraComponent>(entity);
+    InitObject(cameraComponent.camera);
 
     if (World* world = GetWorld())
     {
-        if (camera_component.camera.IsValid() && camera_component.camera->GetStreamingVolume().IsValid())
+        if (cameraComponent.camera.IsValid() && cameraComponent.camera->GetStreamingVolume().IsValid())
         {
-            world->GetWorldGrid()->GetStreamingManager()->AddStreamingVolume(camera_component.camera->GetStreamingVolume());
+            world->GetWorldGrid()->GetStreamingManager()->AddStreamingVolume(cameraComponent.camera->GetStreamingVolume());
         }
     }
 }
 
-void CameraSystem::OnEntityRemoved(ID<Entity> entity)
+void CameraSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
-    CameraComponent& camera_component = GetEntityManager().GetComponent<CameraComponent>(entity);
+    CameraComponent& cameraComponent = GetEntityManager().GetComponent<CameraComponent>(entity);
 
     if (World* world = GetWorld())
     {
-        if (camera_component.camera.IsValid() && camera_component.camera->GetStreamingVolume().IsValid())
+        if (cameraComponent.camera.IsValid() && cameraComponent.camera->GetStreamingVolume().IsValid())
         {
-            world->GetWorldGrid()->GetStreamingManager()->RemoveStreamingVolume(camera_component.camera->GetStreamingVolume());
+            world->GetWorldGrid()->GetStreamingManager()->RemoveStreamingVolume(cameraComponent.camera->GetStreamingVolume());
         }
     }
 
-    HYP_LOG(Camera, Debug, "CameraSystem::OnEntityRemoved: CameraComponent removed from scene {} entity #{}", GetEntityManager().GetScene()->GetName(), entity.Value());
+    HYP_LOG(Camera, Debug, "CameraSystem::OnEntityRemoved: CameraComponent removed from scene {} entity #{}", GetEntityManager().GetScene()->GetName(), entity->Id());
 }
 
 void CameraSystem::Process(float delta)
 {
-    HashSet<ID<Entity>> updated_entity_ids;
+    HashSet<WeakHandle<Entity>> updatedEntities;
 
     Scene* scene = GetEntityManager().GetScene();
 
-    for (auto [entity_id, camera_component, transform_component, _] : GetEntityManager().GetEntitySet<CameraComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_CAMERA_TRANSFORM>>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, cameraComponent, transformComponent, _] : GetEntityManager().GetEntitySet<CameraComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_CAMERA_TRANSFORM>>().GetScopedView(GetComponentInfos()))
     {
-        if (!camera_component.camera.IsValid())
+        if (!cameraComponent.camera.IsValid())
         {
             continue;
         }
 
-        camera_component.camera->SetTranslation(transform_component.transform.GetTranslation());
-        camera_component.camera->SetDirection((transform_component.transform.GetRotation() * Vec3f(0.0f, 0.0f, 1.0f)).Normalize());
+        cameraComponent.camera->SetTranslation(transformComponent.transform.GetTranslation());
+        cameraComponent.camera->SetDirection((transformComponent.transform.GetRotation() * Vec3f(0.0f, 0.0f, 1.0f)).Normalize());
     }
 
-    for (auto [entity_id, camera_component] : GetEntityManager().GetEntitySet<CameraComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, cameraComponent] : GetEntityManager().GetEntitySet<CameraComponent>().GetScopedView(GetComponentInfos()))
     {
-        if (!camera_component.camera.IsValid())
+        if (!cameraComponent.camera.IsValid())
         {
             continue;
         }
 
-        camera_component.camera->Update(delta);
+        cameraComponent.camera->Update(delta);
 
-        updated_entity_ids.Insert(entity_id);
+        updatedEntities.Insert(entity->WeakHandleFromThis());
     }
 
-    for (auto [entity_id, camera_component, node_link_component] : GetEntityManager().GetEntitySet<CameraComponent, NodeLinkComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, cameraComponent, nodeLinkComponent] : GetEntityManager().GetEntitySet<CameraComponent, NodeLinkComponent>().GetScopedView(GetComponentInfos()))
     {
-        if (!camera_component.camera.IsValid())
+        if (!cameraComponent.camera.IsValid())
         {
             continue;
         }
 
-        if (!node_link_component.node.IsValid())
+        if (!nodeLinkComponent.node.IsValid())
         {
             continue;
         }
 
-        Handle<Node> node = node_link_component.node.Lock();
+        Handle<Node> node = nodeLinkComponent.node.Lock();
 
         if (!node)
         {
             continue;
         }
 
-        Transform new_transform(camera_component.camera->GetTranslation(), Vec3f::One(), camera_component.camera->GetViewMatrix().ExtractRotation());
-        node->SetWorldTransform(new_transform);
+        Transform newTransform(cameraComponent.camera->GetTranslation(), Vec3f::One(), cameraComponent.camera->GetViewMatrix().ExtractRotation());
+        node->SetWorldTransform(newTransform);
     }
 
-    if (updated_entity_ids.Any())
+    if (updatedEntities.Any())
     {
-        AfterProcess([this, entity_ids = std::move(updated_entity_ids)]()
+        AfterProcess([this, updatedEntities = std::move(updatedEntities)]()
             {
-                for (const ID<Entity>& entity_id : entity_ids)
+                for (const WeakHandle<Entity>& entityWeak : updatedEntities)
                 {
-                    GetEntityManager().RemoveTag<EntityTag::UPDATE_CAMERA_TRANSFORM>(entity_id);
+                    GetEntityManager().RemoveTag<EntityTag::UPDATE_CAMERA_TRANSFORM>(entityWeak.GetUnsafe());
                 }
             });
     }

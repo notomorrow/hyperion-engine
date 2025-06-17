@@ -14,36 +14,36 @@ namespace memory {
 class MemoryPoolManager
 {
 public:
-    void RegisterPool(MemoryPoolBase* pool, SizeType (*get_num_allocated_bytes)(MemoryPoolBase*))
+    void RegisterPool(MemoryPoolBase* pool, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*))
     {
         AssertDebug(pool != nullptr);
-        AssertDebug(get_num_allocated_bytes != nullptr);
+        AssertDebug(getNumAllocatedBytes != nullptr);
 
         Mutex::Guard guard(m_mutex);
 
-        for (auto it = m_registered_pools.Begin(); it != m_registered_pools.End(); ++it)
+        for (auto it = m_registeredPools.Begin(); it != m_registeredPools.End(); ++it)
         {
             if (it->first == nullptr)
             {
-                *it = { pool, get_num_allocated_bytes };
+                *it = { pool, getNumAllocatedBytes };
 
                 return;
             }
         }
 
-        m_registered_pools.EmplaceBack(pool, get_num_allocated_bytes);
+        m_registeredPools.EmplaceBack(pool, getNumAllocatedBytes);
     }
 
     void UnregisterPool(MemoryPoolBase* pool)
     {
         Mutex::Guard guard(m_mutex);
 
-        auto it = m_registered_pools.FindIf([pool](const auto& item)
+        auto it = m_registeredPools.FindIf([pool](const auto& item)
             {
                 return item.first == pool;
             });
 
-        if (it != m_registered_pools.End())
+        if (it != m_registeredPools.End())
         {
             *it = {};
         }
@@ -51,11 +51,11 @@ public:
 
     void RemoveEmpty()
     {
-        for (auto it = m_registered_pools.Begin(); it != m_registered_pools.End();)
+        for (auto it = m_registeredPools.Begin(); it != m_registeredPools.End();)
         {
             if (it->first == nullptr)
             {
-                it = m_registered_pools.Erase(it);
+                it = m_registeredPools.Erase(it);
             }
             else
             {
@@ -64,48 +64,48 @@ public:
         }
     }
 
-    void CalculateMemoryUsage(Array<SizeType>& out_bytes_per_pool)
+    void CalculateMemoryUsage(Array<SizeType>& outBytesPerPool)
     {
         Mutex::Guard guard(m_mutex);
 
-        out_bytes_per_pool.Reserve(m_registered_pools.Size());
+        outBytesPerPool.Reserve(m_registeredPools.Size());
 
-        for (SizeType i = 0; i < m_registered_pools.Size(); i++)
+        for (SizeType i = 0; i < m_registeredPools.Size(); i++)
         {
-            if (!m_registered_pools[i].first)
+            if (!m_registeredPools[i].first)
             {
                 continue;
             }
 
-            out_bytes_per_pool.PushBack(m_registered_pools[i].second(m_registered_pools[i].first));
+            outBytesPerPool.PushBack(m_registeredPools[i].second(m_registeredPools[i].first));
         }
     }
 
 private:
     Mutex m_mutex;
-    Array<Pair<MemoryPoolBase*, SizeType (*)(MemoryPoolBase*)>> m_registered_pools;
+    Array<Pair<MemoryPoolBase*, SizeType (*)(MemoryPoolBase*)>> m_registeredPools;
 };
 
 HYP_API MemoryPoolManager& GetMemoryPoolManager()
 {
-    static MemoryPoolManager memory_pool_manager;
+    static MemoryPoolManager memoryPoolManager;
 
-    return memory_pool_manager;
+    return memoryPoolManager;
 }
 
-HYP_API void CalculateMemoryPoolUsage(Array<SizeType>& out_bytes_per_pool)
+HYP_API void CalculateMemoryPoolUsage(Array<SizeType>& outBytesPerPool)
 {
-    GetMemoryPoolManager().CalculateMemoryUsage(out_bytes_per_pool);
+    GetMemoryPoolManager().CalculateMemoryUsage(outBytesPerPool);
 }
 
 #pragma endregion MemoryPoolManager
 
 #pragma region MemoryPoolBase
 
-MemoryPoolBase::MemoryPoolBase(ThreadID owner_thread_id, SizeType (*get_num_allocated_bytes)(MemoryPoolBase*))
-    : m_owner_thread_id(owner_thread_id)
+MemoryPoolBase::MemoryPoolBase(ThreadId ownerThreadId, SizeType (*getNumAllocatedBytes)(MemoryPoolBase*))
+    : m_ownerThreadId(ownerThreadId)
 {
-    GetMemoryPoolManager().RegisterPool(this, get_num_allocated_bytes);
+    GetMemoryPoolManager().RegisterPool(this, getNumAllocatedBytes);
 }
 
 MemoryPoolBase::~MemoryPoolBase()

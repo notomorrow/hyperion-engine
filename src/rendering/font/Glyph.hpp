@@ -5,6 +5,12 @@
 
 #include <core/Handle.hpp>
 
+#include <core/utilities/Result.hpp>
+
+#include <core/memory/UniquePtr.hpp>
+
+#include <util/img/Bitmap.hpp>
+
 #include <rendering/font/FontEngine.hpp>
 #include <rendering/font/FontFace.hpp>
 
@@ -14,35 +20,28 @@ namespace hyperion {
 
 class Texture;
 
+using GlyphBitmap = Bitmap<4, ubyte>;
+
 struct GlyphImageData
 {
     Vec2i dimensions;
-    ByteBuffer byte_buffer;
+    ByteBuffer byteBuffer;
 
-    HYP_API Handle<Texture> CreateTexture() const;
+    HYP_API UniquePtr<GlyphBitmap> CreateBitmap() const;
 };
 
 class Glyph
 {
 public:
-    struct PackedMetrics
-    {
-        uint16 width;
-        uint16 height;
-        int16 bearing_x;
-        int16 bearing_y;
-        uint32 advance;
-    };
-
     struct Metrics
     {
-        PackedMetrics metrics;
-        Vec2i image_position;
+        uint16 width = 0;
+        uint16 height = 0;
+        int16 bearingX = 0;
+        int16 bearingY = 0;
+        uint32 advance = 0;
 
-        HYP_FORCE_INLINE PackedMetrics GetPackedMetrics() const
-        {
-            return metrics;
-        }
+        Vec2i imagePosition;
     };
 
     HYP_API Glyph(RC<FontFace> face, FontFace::GlyphIndex index, float scale);
@@ -61,11 +60,11 @@ public:
 
     HYP_FORCE_INLINE const GlyphImageData& GetImageData() const
     {
-        return m_glyph_image_data;
+        return m_glyphImageData;
     }
 
     HYP_API void LoadMetrics();
-    HYP_API void Render();
+    HYP_API TResult<UniquePtr<GlyphBitmap>> Rasterize();
 
     HYP_API Vec2i GetMax();
     HYP_API Vec2i GetMin();
@@ -75,9 +74,8 @@ private:
     FontFace::GlyphIndex m_index;
     float m_scale;
 
-    FontEngine::Glyph m_glyph;
-    GlyphImageData m_glyph_image_data;
-    Metrics m_metrics { 0 };
+    GlyphImageData m_glyphImageData;
+    Metrics m_metrics {};
 };
 
 }; // namespace hyperion

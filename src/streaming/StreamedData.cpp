@@ -22,14 +22,14 @@ namespace hyperion {
 
 #pragma region StreamedDataBase
 
-StreamedDataBase::StreamedDataBase(StreamedDataState initial_state, ResourceHandle& out_resource_handle)
+StreamedDataBase::StreamedDataBase(StreamedDataState initialState, ResourceHandle& outResourceHandle)
 {
-    switch (initial_state)
+    switch (initialState)
     {
     case StreamedDataState::LOADED:
         // Setup resource handle so the data stays loaded
         // Initialize can't be called since it is a virtual function and the object is not fully constructed yet
-        out_resource_handle = ResourceHandle(*this, /* should_initialize */ false);
+        outResourceHandle = ResourceHandle(*this, /* shouldInitialize */ false);
 
         break;
     default:
@@ -81,9 +81,9 @@ void StreamedDataBase::Unpage()
 
 const ByteBuffer& StreamedDataBase::GetByteBuffer() const
 {
-    static const ByteBuffer default_value {};
+    static const ByteBuffer defaultValue {};
 
-    return default_value;
+    return defaultValue;
 }
 
 ThreadBase* StreamedDataBase::GetOwnerThread() const
@@ -114,103 +114,103 @@ void NullStreamedData::Load_Internal() const
 
 #pragma region MemoryStreamedData
 
-MemoryStreamedData::MemoryStreamedData(HashCode hash_code, Proc<bool(HashCode, ByteBuffer&)>&& load_from_memory_proc)
+MemoryStreamedData::MemoryStreamedData(HashCode hashCode, Proc<bool(HashCode, ByteBuffer&)>&& loadFromMemoryProc)
     : StreamedDataBase(),
-      m_hash_code(hash_code),
-      m_load_from_memory_proc(std::move(load_from_memory_proc)),
-      m_data_store(&GetDataStore<HYP_STATIC_STRING("streaming"), DSF_RW>()),
-      m_data_store_resource_handle(*m_data_store)
+      m_hashCode(hashCode),
+      m_loadFromMemoryProc(std::move(loadFromMemoryProc)),
+      m_dataStore(&GetDataStore<HYP_STATIC_STRING("streaming"), DSF_RW>()),
+      m_dataStoreResourceHandle(*m_dataStore)
 {
-    const bool should_load_unpaged = !m_data_store->Exists(String::ToString(hash_code.Value())) && m_load_from_memory_proc.IsValid();
+    const bool shouldLoadUnpaged = !m_dataStore->Exists(String::ToString(hashCode.Value())) && m_loadFromMemoryProc.IsValid();
 
-    if (should_load_unpaged)
+    if (shouldLoadUnpaged)
     {
         MemoryStreamedData::Load_Internal();
         MemoryStreamedData::Unpage_Internal();
     }
 }
 
-MemoryStreamedData::MemoryStreamedData(HashCode hash_code, const ByteBuffer& byte_buffer, StreamedDataState initial_state, ResourceHandle& out_resource_handle)
-    : StreamedDataBase(initial_state, out_resource_handle),
-      m_hash_code(hash_code)
+MemoryStreamedData::MemoryStreamedData(HashCode hashCode, const ByteBuffer& byteBuffer, StreamedDataState initialState, ResourceHandle& outResourceHandle)
+    : StreamedDataBase(initialState, outResourceHandle),
+      m_hashCode(hashCode)
 {
-    if (initial_state == StreamedDataState::LOADED)
+    if (initialState == StreamedDataState::LOADED)
     {
-        m_byte_buffer.Set(byte_buffer);
+        m_byteBuffer.Set(byteBuffer);
     }
 }
 
-MemoryStreamedData::MemoryStreamedData(HashCode hash_code, ByteBuffer&& byte_buffer, StreamedDataState initial_state, ResourceHandle& out_resource_handle)
-    : StreamedDataBase(initial_state, out_resource_handle),
-      m_hash_code(hash_code)
+MemoryStreamedData::MemoryStreamedData(HashCode hashCode, ByteBuffer&& byteBuffer, StreamedDataState initialState, ResourceHandle& outResourceHandle)
+    : StreamedDataBase(initialState, outResourceHandle),
+      m_hashCode(hashCode)
 {
-    if (initial_state == StreamedDataState::LOADED)
+    if (initialState == StreamedDataState::LOADED)
     {
-        m_byte_buffer.Set(std::move(byte_buffer));
+        m_byteBuffer.Set(std::move(byteBuffer));
     }
 }
 
-MemoryStreamedData::MemoryStreamedData(HashCode hash_code, ConstByteView byte_view, StreamedDataState initial_state, ResourceHandle& out_resource_handle)
-    : StreamedDataBase(initial_state, out_resource_handle),
-      m_hash_code(hash_code)
+MemoryStreamedData::MemoryStreamedData(HashCode hashCode, ConstByteView byteView, StreamedDataState initialState, ResourceHandle& outResourceHandle)
+    : StreamedDataBase(initialState, outResourceHandle),
+      m_hashCode(hashCode)
 {
-    if (initial_state == StreamedDataState::LOADED)
+    if (initialState == StreamedDataState::LOADED)
     {
-        m_byte_buffer.Set(ByteBuffer(byte_view));
+        m_byteBuffer.Set(ByteBuffer(byteView));
     }
 }
 
 bool MemoryStreamedData::IsInMemory_Internal() const
 {
-    return m_byte_buffer.HasValue();
+    return m_byteBuffer.HasValue();
 }
 
 void MemoryStreamedData::Unpage_Internal()
 {
-    if (!m_byte_buffer.HasValue())
+    if (!m_byteBuffer.HasValue())
     {
         return;
     }
 
-    ByteBuffer byte_buffer = std::move(*m_byte_buffer);
-    m_byte_buffer.Unset();
+    ByteBuffer byteBuffer = std::move(*m_byteBuffer);
+    m_byteBuffer.Unset();
 
-    if (byte_buffer.Empty())
+    if (byteBuffer.Empty())
     {
         return;
     }
 
-    m_data_store->Write(String::ToString(m_hash_code.Value()), byte_buffer);
+    m_dataStore->Write(String::ToString(m_hashCode.Value()), byteBuffer);
 }
 
 void MemoryStreamedData::Load_Internal() const
 {
-    if (!m_byte_buffer.HasValue())
+    if (!m_byteBuffer.HasValue())
     {
-        m_byte_buffer.Emplace();
+        m_byteBuffer.Emplace();
 
-        if (!m_data_store->Read(String::ToString(m_hash_code.Value()), *m_byte_buffer))
+        if (!m_dataStore->Read(String::ToString(m_hashCode.Value()), *m_byteBuffer))
         {
-            if (m_load_from_memory_proc.IsValid())
+            if (m_loadFromMemoryProc.IsValid())
             {
-                if (m_load_from_memory_proc(m_hash_code, *m_byte_buffer))
+                if (m_loadFromMemoryProc(m_hashCode, *m_byteBuffer))
                 {
                     return;
                 }
 
-                HYP_LOG(Streaming, Warning, "Failed to load streamed data with hash code {} from memory", m_hash_code.Value());
+                HYP_LOG(Streaming, Warning, "Failed to load streamed data with hash code {} from memory", m_hashCode.Value());
             }
 
-            m_byte_buffer.Unset();
+            m_byteBuffer.Unset();
         }
     }
 }
 
 const ByteBuffer& MemoryStreamedData::GetByteBuffer() const
 {
-    if (m_byte_buffer.HasValue())
+    if (m_byteBuffer.HasValue())
     {
-        return *m_byte_buffer;
+        return *m_byteBuffer;
     }
 
     return StreamedDataBase::GetByteBuffer();

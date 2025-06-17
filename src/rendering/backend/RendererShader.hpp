@@ -24,8 +24,6 @@ namespace hyperion {
 
 struct CompiledShader;
 
-namespace renderer {
-
 struct ShaderObject
 {
     ByteBuffer bytes;
@@ -42,39 +40,39 @@ struct ShaderObject
 
 enum ShaderModuleType : uint32
 {
-    UNSET = 0,
+    SMT_UNSET = 0,
 
     /* Graphics and general purpose shaders */
-    VERTEX,
-    FRAGMENT,
-    GEOMETRY,
-    COMPUTE,
+    SMT_VERTEX,
+    SMT_FRAGMENT,
+    SMT_GEOMETRY,
+    SMT_COMPUTE,
 
     /* Mesh shaders */
-    TASK,
-    MESH,
+    SMT_TASK,
+    SMT_MESH,
 
     /* Tesselation */
-    TESS_CONTROL,
-    TESS_EVAL,
+    SMT_TESS_CONTROL,
+    SMT_TESS_EVAL,
 
     /* Raytracing hardware specific */
-    RAY_GEN,
-    RAY_INTERSECT,
-    RAY_ANY_HIT,
-    RAY_CLOSEST_HIT,
-    RAY_MISS,
+    SMT_RAY_GEN,
+    SMT_RAY_INTERSECT,
+    SMT_RAY_ANY_HIT,
+    SMT_RAY_CLOSEST_HIT,
+    SMT_RAY_MISS,
 
-    MAX
+    SMT_MAX
 };
 
 static inline bool IsRaytracingShaderModule(ShaderModuleType type)
 {
-    return type == ShaderModuleType::RAY_GEN
-        || type == ShaderModuleType::RAY_INTERSECT
-        || type == ShaderModuleType::RAY_ANY_HIT
-        || type == ShaderModuleType::RAY_CLOSEST_HIT
-        || type == ShaderModuleType::RAY_MISS;
+    return type == SMT_RAY_GEN
+        || type == SMT_RAY_INTERSECT
+        || type == SMT_RAY_ANY_HIT
+        || type == SMT_RAY_CLOSEST_HIT
+        || type == SMT_RAY_MISS;
 }
 
 class ShaderBase : public RenderObject<ShaderBase>
@@ -84,7 +82,7 @@ public:
 
     HYP_FORCE_INLINE const RC<CompiledShader>& GetCompiledShader() const
     {
-        return m_compiled_shader;
+        return m_compiledShader;
     }
 
     HYP_API virtual bool IsCreated() const = 0;
@@ -93,15 +91,14 @@ public:
     HYP_API virtual RendererResult Destroy() = 0;
 
 protected:
-    ShaderBase(const RC<CompiledShader>& compiled_shader)
-        : m_compiled_shader(compiled_shader)
+    ShaderBase(const RC<CompiledShader>& compiledShader)
+        : m_compiledShader(compiledShader)
     {
     }
 
-    RC<CompiledShader> m_compiled_shader;
+    RC<CompiledShader> m_compiledShader;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

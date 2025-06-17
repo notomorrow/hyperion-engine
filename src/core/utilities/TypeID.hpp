@@ -14,14 +14,14 @@
 namespace hyperion {
 namespace utilities {
 
-using TypeIDValue = uint32;
+using TypeIdValue = uint32;
 
-static constexpr uint32 g_type_id_hash_bit_offset = 2;
-static constexpr uint32 g_type_id_hash_max = (~0u << g_type_id_hash_bit_offset) >> g_type_id_hash_bit_offset;
-static constexpr uint32 g_type_id_flag_bit_mask = 0x3u;
-static constexpr uint32 g_type_id_flag_max = 0x3u;
+static constexpr uint32 g_typeIdHashBitOffset = 2;
+static constexpr uint32 g_typeIdHashMax = (~0u << g_typeIdHashBitOffset) >> g_typeIdHashBitOffset;
+static constexpr uint32 g_typeIdFlagBitMask = 0x3u;
+static constexpr uint32 g_typeIdFlagMax = 0x3u;
 
-enum TypeIDFlags : uint8
+enum TypeIdFlags : uint8
 {
     TYPE_ID_FLAGS_NONE = 0x0,
     TYPE_ID_FLAGS_DYNAMIC = 0x1, // Type is dynamic - does not map 1:1 to a native C++ type. E.g C# class
@@ -29,80 +29,80 @@ enum TypeIDFlags : uint8
 };
 
 template <class T, uint8 Flags>
-struct TypeID_Impl
+struct TypeId_Impl
 {
-    static_assert(Flags <= g_type_id_flag_max, "Flags cannot be > 0x3");
+    static_assert(Flags <= g_typeIdFlagMax, "Flags cannot be > 0x3");
 
-    static constexpr TypeIDValue value = ((TypeNameWithoutNamespace<T>().GetHashCode().Value() % HashCode::ValueType(g_type_id_hash_max)) << g_type_id_hash_bit_offset) | (Flags & g_type_id_flag_max);
+    static constexpr TypeIdValue value = ((TypeNameWithoutNamespace<T>().GetHashCode().Value() % HashCode::ValueType(g_typeIdHashMax)) << g_typeIdHashBitOffset) | (Flags & g_typeIdFlagMax);
 };
 
 template <uint8 Flags>
-struct TypeID_Impl<void, Flags>
+struct TypeId_Impl<void, Flags>
 {
-    static constexpr TypeIDValue value = 0;
+    static constexpr TypeIdValue value = 0;
 };
 
 template <uint8 Flags>
-struct TypeID_FromString_Impl
+struct TypeId_FromString_Impl
 {
-    static_assert(Flags <= g_type_id_flag_max, "Flags cannot be > 0x3");
+    static_assert(Flags <= g_typeIdFlagMax, "Flags cannot be > 0x3");
 
-    constexpr TypeIDValue operator()(const char* str) const
+    constexpr TypeIdValue operator()(const char* str) const
     {
-        return ((HashCode::GetHashCode(str).Value() % HashCode::ValueType(g_type_id_hash_max)) << g_type_id_hash_bit_offset) | (Flags & g_type_id_flag_max);
+        return ((HashCode::GetHashCode(str).Value() % HashCode::ValueType(g_typeIdHashMax)) << g_typeIdHashBitOffset) | (Flags & g_typeIdFlagMax);
     }
 };
 
 /*! \brief Simple 32-bit identifier for a given type. Stable across DLLs as the type hash is based on the name of the type. */
-struct TypeID
+struct TypeId
 {
-    using ValueType = TypeIDValue;
+    using ValueType = TypeIdValue;
 
 private:
     ValueType m_value;
 
-    static constexpr ValueType void_value = ValueType(0);
+    static constexpr ValueType voidValue = ValueType(0);
 
 public:
     template <class T>
-    static constexpr TypeID ForType()
+    static constexpr TypeId ForType()
     {
-        return TypeID { TypeID_Impl<T, TypeIDFlags::TYPE_ID_FLAGS_NONE>::value };
+        return TypeId { TypeId_Impl<T, TypeIdFlags::TYPE_ID_FLAGS_NONE>::value };
     }
 
-    static constexpr TypeID ForManagedType(const char* str)
+    static constexpr TypeId ForManagedType(const char* str)
     {
-        return TypeID { TypeID_FromString_Impl<TypeIDFlags::TYPE_ID_FLAGS_DYNAMIC> {}(str) };
+        return TypeId { TypeId_FromString_Impl<TypeIdFlags::TYPE_ID_FLAGS_DYNAMIC> {}(str) };
     }
 
-    constexpr TypeID()
-        : m_value { void_value }
+    constexpr TypeId()
+        : m_value { voidValue }
     {
     }
 
-    explicit constexpr TypeID(ValueType id)
+    explicit constexpr TypeId(ValueType id)
         : m_value(id)
     {
     }
 
-    constexpr TypeID(const TypeID& other) = default;
-    TypeID& operator=(const TypeID& other) = default;
+    constexpr TypeId(const TypeId& other) = default;
+    TypeId& operator=(const TypeId& other) = default;
 
-    constexpr TypeID(TypeID&& other) noexcept
+    constexpr TypeId(TypeId&& other) noexcept
         : m_value(other.m_value)
     {
-        other.m_value = void_value;
+        other.m_value = voidValue;
     }
 
-    constexpr TypeID& operator=(TypeID&& other) noexcept
+    constexpr TypeId& operator=(TypeId&& other) noexcept
     {
         m_value = other.m_value;
-        other.m_value = void_value;
+        other.m_value = voidValue;
 
         return *this;
     }
 
-    constexpr TypeID& operator=(ValueType id)
+    constexpr TypeId& operator=(ValueType id)
     {
         m_value = id;
 
@@ -111,52 +111,52 @@ public:
 
     HYP_FORCE_INLINE constexpr explicit operator bool() const
     {
-        return m_value != void_value;
+        return m_value != voidValue;
     }
 
     HYP_FORCE_INLINE constexpr bool operator!() const
     {
-        return m_value == void_value;
+        return m_value == voidValue;
     }
 
-    HYP_FORCE_INLINE constexpr bool operator==(const TypeID& other) const
+    HYP_FORCE_INLINE constexpr bool operator==(const TypeId& other) const
     {
         return m_value == other.m_value;
     }
 
-    HYP_FORCE_INLINE constexpr bool operator!=(const TypeID& other) const
+    HYP_FORCE_INLINE constexpr bool operator!=(const TypeId& other) const
     {
         return m_value != other.m_value;
     }
 
-    HYP_FORCE_INLINE constexpr bool operator<(const TypeID& other) const
+    HYP_FORCE_INLINE constexpr bool operator<(const TypeId& other) const
     {
         return m_value < other.m_value;
     }
 
-    HYP_FORCE_INLINE constexpr bool operator<=(const TypeID& other) const
+    HYP_FORCE_INLINE constexpr bool operator<=(const TypeId& other) const
     {
         return m_value <= other.m_value;
     }
 
-    HYP_FORCE_INLINE constexpr bool operator>(const TypeID& other) const
+    HYP_FORCE_INLINE constexpr bool operator>(const TypeId& other) const
     {
         return m_value > other.m_value;
     }
 
-    HYP_FORCE_INLINE constexpr bool operator>=(const TypeID& other) const
+    HYP_FORCE_INLINE constexpr bool operator>=(const TypeId& other) const
     {
         return m_value >= other.m_value;
     }
 
     HYP_FORCE_INLINE constexpr bool IsNativeType() const
     {
-        return !((m_value & g_type_id_flag_max) & TYPE_ID_FLAGS_DYNAMIC);
+        return !((m_value & g_typeIdFlagMax) & TYPE_ID_FLAGS_DYNAMIC);
     }
 
     HYP_FORCE_INLINE constexpr bool IsDynamicType() const
     {
-        return (m_value & g_type_id_flag_max) & TYPE_ID_FLAGS_DYNAMIC;
+        return (m_value & g_typeIdFlagMax) & TYPE_ID_FLAGS_DYNAMIC;
     }
 
     HYP_FORCE_INLINE constexpr ValueType Value() const
@@ -169,15 +169,15 @@ public:
         return HashCode::GetHashCode(m_value);
     }
 
-    HYP_FORCE_INLINE static constexpr TypeID Void()
+    HYP_FORCE_INLINE static constexpr TypeId Void()
     {
-        return TypeID { void_value };
+        return TypeId { voidValue };
     }
 };
 
 } // namespace utilities
 
-using utilities::TypeID;
+using utilities::TypeId;
 
 } // namespace hyperion
 

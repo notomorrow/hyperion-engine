@@ -3,12 +3,17 @@
 #ifndef HYPERION_ENV_PROBE_HPP
 #define HYPERION_ENV_PROBE_HPP
 
-#include <core/Base.hpp>
 #include <core/containers/Bitset.hpp>
+
 #include <core/threading/AtomicVar.hpp>
+
 #include <core/utilities/EnumFlags.hpp>
 
+#include <core/object/HypObject.hpp>
+
 #include <core/math/BoundingBox.hpp>
+
+#include <scene/Entity.hpp>
 
 #include <rendering/RenderCollection.hpp>
 
@@ -33,28 +38,20 @@ enum class EnvProbeFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(EnvProbeFlags);
 
-enum EnvProbeBindingSlot : uint32
-{
-    ENV_PROBE_BINDING_SLOT_INVALID = uint32(-1),
-
-    ENV_PROBE_BINDING_SLOT_CUBEMAP = 0,
-    ENV_PROBE_BINDING_SLOT_SHADOW_CUBEMAP = 1,
-    ENV_PROBE_BINDING_SLOT_MAX
-};
-
 HYP_ENUM()
-enum class EnvProbeType : uint32
+enum EnvProbeType : uint32
 {
-    INVALID = uint32(-1),
+    EPT_INVALID = uint32(-1),
 
-    REFLECTION = 0,
-    SKY,
-    SHADOW,
+    EPT_SKY = 0,
+    EPT_REFLECTION,
+
+    EPT_SHADOW,
 
     // These below types are controlled by EnvGrid
-    AMBIENT,
+    EPT_AMBIENT,
 
-    MAX
+    EPT_MAX
 };
 
 class EnvProbe;
@@ -65,18 +62,14 @@ class RenderEnvProbe;
  *  It can also be used to capture shadows from a light source.
  *  An EnvProbe may be controlled by an EnvGrid in the case of ambient probes, in order to reduce per-probe allocation overhead by batching them together. */
 HYP_CLASS()
-class HYP_API EnvProbe final : public HypObject<EnvProbe>
+class HYP_API EnvProbe : public Entity
 {
     HYP_OBJECT_BODY(EnvProbe);
 
 public:
     EnvProbe();
-
-    EnvProbe(
-        const Handle<Scene>& parent_scene,
-        const BoundingBox& aabb,
-        const Vec2u& dimensions,
-        EnvProbeType env_probe_type);
+    EnvProbe(EnvProbeType envProbeType);
+    EnvProbe(EnvProbeType envProbeType, const BoundingBox& aabb, const Vec2u& dimensions);
 
     EnvProbe(const EnvProbe& other) = delete;
     EnvProbe& operator=(const EnvProbe& other) = delete;
@@ -84,43 +77,78 @@ public:
 
     HYP_FORCE_INLINE RenderEnvProbe& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
+    }
+
+    HYP_FORCE_INLINE const Handle<View>& GetView() const
+    {
+        return m_view;
     }
 
     HYP_METHOD()
     EnvProbeType GetEnvProbeType() const
     {
-        return m_env_probe_type;
+        return m_envProbeType;
     }
 
     HYP_METHOD()
     bool IsReflectionProbe() const
     {
-        return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_REFLECTION;
+        return m_envProbeType == EPT_REFLECTION;
     }
 
     HYP_METHOD()
     bool IsSkyProbe() const
     {
-        return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SKY;
+        return m_envProbeType == EPT_SKY;
     }
 
     HYP_METHOD()
     bool IsShadowProbe() const
     {
-        return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_SHADOW;
+        return m_envProbeType == EPT_SHADOW;
     }
 
     HYP_METHOD()
     bool IsAmbientProbe() const
     {
-        return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT;
+        return m_envProbeType == EPT_AMBIENT;
     }
 
     HYP_METHOD()
     bool IsControlledByEnvGrid() const
     {
-        return m_env_probe_type == EnvProbeType::ENV_PROBE_TYPE_AMBIENT;
+        return m_envProbeType == EPT_AMBIENT;
+    }
+
+    HYP_FORCE_INLINE bool ShouldComputePrefilteredEnvMap() const
+    {
+        if (IsControlledByEnvGrid())
+        {
+            return false;
+        }
+
+        if (IsReflectionProbe() || IsSkyProbe())
+        {
+            return m_dimensions.Volume() > 1;
+        }
+
+        return false;
+    }
+
+    HYP_FORCE_INLINE bool ShouldComputeSphericalHarmonics() const
+    {
+        if (IsControlledByEnvGrid())
+        {
+            return false;
+        }
+
+        if (IsReflectionProbe() || IsSkyProbe())
+        {
+            return m_dimensions.Volume() > 1;
+        }
+
+        return false;
     }
 
     HYP_METHOD()
@@ -156,57 +184,50 @@ public:
         return m_camera;
     }
 
-    HYP_METHOD()
-    HYP_FORCE_INLINE const Handle<Scene>& GetParentScene() const
-    {
-        return m_parent_scene;
-    }
-
-    HYP_METHOD()
-    void SetParentScene(const Handle<Scene>& parent_scene);
-
     HYP_FORCE_INLINE Vec2u GetDimensions() const
     {
         return m_dimensions;
     }
 
-    HYP_DEPRECATED HYP_FORCE_INLINE void SetNeedsUpdate(bool needs_update)
+    HYP_FORCE_INLINE const Handle<Texture>& GetPrefilteredEnvMap() const
     {
-        m_needs_update = needs_update;
+        return m_prefilteredEnvMap;
     }
 
-    HYP_DEPRECATED HYP_FORCE_INLINE bool NeedsUpdate() const
+    HYP_DEPRECATED HYP_FORCE_INLINE void SetNeedsRender(bool needsRender)
     {
-        return m_needs_update;
-    }
-
-    HYP_DEPRECATED HYP_FORCE_INLINE void SetNeedsRender(bool needs_render)
-    {
-        if (needs_render)
+        if (needsRender)
         {
-            m_needs_render_counter.Set(1, MemoryOrder::RELAXED);
+            m_needsRenderCounter.Set(1, MemoryOrder::RELAXED);
         }
         else
         {
-            m_needs_render_counter.Set(0, MemoryOrder::RELAXED);
+            m_needsRenderCounter.Set(0, MemoryOrder::RELAXED);
         }
     }
 
     HYP_DEPRECATED HYP_FORCE_INLINE bool NeedsRender() const
     {
-        const int32 counter = m_needs_render_counter.Get(MemoryOrder::RELAXED);
+        const int32 counter = m_needsRenderCounter.Get(MemoryOrder::RELAXED);
 
         return counter > 0;
     }
 
-    HYP_DEPRECATED bool IsVisible(ID<Camera> camera_id) const;
-    HYP_DEPRECATED void SetIsVisible(ID<Camera> camera_id, bool is_visible);
+    HYP_DEPRECATED bool IsVisible(ObjId<Camera> cameraId) const;
+    HYP_DEPRECATED void SetIsVisible(ObjId<Camera> cameraId, bool isVisible);
 
-    void Update(GameCounter::TickUnit delta);
+    virtual void Update(float delta) override;
 
-    uint32 m_grid_slot = ~0u; // temp
+    virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
 
-private:
+    uint32 m_gridSlot = ~0u; // temp
+
+protected:
+    virtual void OnAddedToWorld(World* world) override;
+    virtual void OnRemovedFromWorld(World* world) override;
+    virtual void OnAddedToScene(Scene* scene) override;
+    virtual void OnRemovedFromScene(Scene* scene) override;
+
     HYP_FORCE_INLINE bool OnlyCollectStaticEntities() const
     {
         return IsReflectionProbe() || IsSkyProbe() || IsAmbientProbe();
@@ -214,14 +235,13 @@ private:
 
     HYP_FORCE_INLINE void Invalidate()
     {
-        m_octant_hash_code = HashCode();
+        m_octantHashCode = HashCode();
     }
 
-    void Init() override;
+    virtual void Init() override;
 
     void CreateView();
 
-    Handle<Scene> m_parent_scene;
     Handle<View> m_view;
 
     HYP_FIELD(Property = "AABB", Serialize = true)
@@ -231,20 +251,76 @@ private:
     Vec2u m_dimensions;
 
     HYP_FIELD(Property = "EnvProbeType", Serialize = true)
-    EnvProbeType m_env_probe_type;
+    EnvProbeType m_envProbeType;
 
-    float m_camera_near;
-    float m_camera_far;
+    float m_cameraNear;
+    float m_cameraFar;
 
     Handle<Camera> m_camera;
 
-    Bitset m_visibility_bits;
+    Bitset m_visibilityBits;
 
-    bool m_needs_update;
-    AtomicVar<int32> m_needs_render_counter;
-    HashCode m_octant_hash_code;
+    bool m_needsUpdate;
+    AtomicVar<int32> m_needsRenderCounter;
+    HashCode m_octantHashCode;
 
-    RenderEnvProbe* m_render_resource;
+    Handle<Texture> m_prefilteredEnvMap;
+
+    RenderEnvProbe* m_renderResource;
+};
+
+HYP_CLASS()
+class HYP_API ReflectionProbe : public EnvProbe
+{
+    HYP_OBJECT_BODY(ReflectionProbe);
+
+public:
+    ReflectionProbe()
+        : EnvProbe(EPT_REFLECTION)
+    {
+    }
+
+    ReflectionProbe(const BoundingBox& aabb, const Vec2u& dimensions)
+        : EnvProbe(EPT_REFLECTION, aabb, dimensions)
+    {
+    }
+
+    ReflectionProbe(const ReflectionProbe& other) = delete;
+    ReflectionProbe& operator=(const ReflectionProbe& other) = delete;
+    ~ReflectionProbe() override = default;
+};
+
+HYP_CLASS()
+class HYP_API SkyProbe : public EnvProbe
+{
+    HYP_OBJECT_BODY(SkyProbe);
+
+    friend class ReflectionProbeRenderer;
+
+public:
+    SkyProbe()
+        : EnvProbe(EPT_SKY, BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)), Vec2u(1, 1))
+    {
+    }
+
+    SkyProbe(const BoundingBox& aabb, const Vec2u& dimensions)
+        : EnvProbe(EPT_SKY, aabb, dimensions)
+    {
+    }
+
+    SkyProbe(const SkyProbe& other) = delete;
+    SkyProbe& operator=(const SkyProbe& other) = delete;
+    ~SkyProbe() override = default;
+
+    const Handle<Texture>& GetSkyboxCubemap() const
+    {
+        return m_skyboxCubemap;
+    }
+
+private:
+    void Init() override;
+
+    Handle<Texture> m_skyboxCubemap;
 };
 
 } // namespace hyperion

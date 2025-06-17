@@ -24,23 +24,23 @@ void UIButton::Init()
 {
     UIObject::Init();
 
-    Handle<UIText> text_element = CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-    text_element->SetParentAlignment(UIObjectAlignment::CENTER);
-    text_element->SetOriginAlignment(UIObjectAlignment::CENTER);
-    text_element->SetText(m_text);
+    Handle<UIText> textElement = CreateUIObject<UIText>(Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+    textElement->SetParentAlignment(UIObjectAlignment::CENTER);
+    textElement->SetOriginAlignment(UIObjectAlignment::CENTER);
+    textElement->SetText(m_text);
 
-    m_text_element = text_element;
+    m_textElement = textElement;
 
-    AddChildUIObject(text_element);
+    AddChildUIObject(textElement);
 }
 
 void UIButton::SetText(const String& text)
 {
     UIObject::SetText(text);
 
-    if (m_text_element != nullptr)
+    if (m_textElement != nullptr)
     {
-        m_text_element->SetText(m_text);
+        m_textElement->SetText(m_text);
     }
 
     // If the size is set to AUTO, we need to update the size of the button as the text changes.
@@ -50,9 +50,9 @@ void UIButton::SetText(const String& text)
     }
 }
 
-void UIButton::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state)
+void UIButton::SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState)
 {
-    UIObject::SetFocusState_Internal(focus_state);
+    UIObject::SetFocusState_Internal(focusState);
 
     UpdateMaterial(false);
     UpdateMeshData();
@@ -72,7 +72,7 @@ Material::ParameterTable UIButton::GetMaterialParameters() const
     }
     else
     {
-        color = m_background_color;
+        color = m_backgroundColor;
     }
 
     return Material::ParameterTable {

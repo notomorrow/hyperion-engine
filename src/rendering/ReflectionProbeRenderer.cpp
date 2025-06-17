@@ -2,14 +2,19 @@
 
 #include <rendering/ReflectionProbeRenderer.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/RenderState.hpp>
 #include <rendering/RenderEnvProbe.hpp>
+#include <rendering/RenderWorld.hpp>
+#include <rendering/Renderer.hpp>
 
 #include <rendering/debug/DebugDrawer.hpp>
 
+#include <rendering/backend/RenderCommand.hpp>
 #include <rendering/backend/RendererFeatures.hpp>
 
 #include <system/AppContext.hpp>
+
+#include <scene/EnvProbe.hpp>
+#include <scene/World.hpp>
 
 #include <scene/camera/PerspectiveCamera.hpp>
 
@@ -20,12 +25,10 @@
 
 namespace hyperion {
 
-ReflectionProbeRenderer::ReflectionProbeRenderer(
-    Name name,
-    const TResourceHandle<RenderEnvProbe>& env_render_probe)
+#if 0
+ReflectionProbeRenderer::ReflectionProbeRenderer(Name name, const Handle<EnvProbe>& envProbe)
     : RenderSubsystem(name),
-      m_env_render_probe(env_render_probe),
-      m_last_visibility_state(false)
+      m_envProbe(envProbe)
 {
 }
 
@@ -35,44 +38,64 @@ ReflectionProbeRenderer::~ReflectionProbeRenderer()
 
 void ReflectionProbeRenderer::Init()
 {
-}
-
-// called from game thread
-void ReflectionProbeRenderer::InitGame()
-{
-    Threads::AssertOnThread(g_game_thread);
+    InitObject(m_envProbe);
 }
 
 void ReflectionProbeRenderer::OnRemoved()
 {
+    HYP_SYNC_RENDER(); // to prevent dangling pointers
 }
 
-void ReflectionProbeRenderer::OnUpdate(GameCounter::TickUnit delta)
+void ReflectionProbeRenderer::OnUpdate(float delta)
 {
-}
-
-void ReflectionProbeRenderer::OnRender(FrameBase* frame, const RenderSetup& render_setup)
-{
-    Threads::AssertOnThread(g_render_thread);
-
-    if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.debug.reflection_probes").ToBool())
+    struct RENDER_COMMAND(RenderReflectionProbe)
+        : RenderCommand
     {
-        g_engine->GetDebugDrawer()->ReflectionProbe(
-            m_env_render_probe->GetBufferData().world_position.GetXYZ(),
-            0.5f,
-            *m_env_render_probe->GetEnvProbe());
-    }
+        RenderWorld* world;
+        RenderEnvProbe* envProbe;
 
-    if (!m_env_render_probe->GetEnvProbe()->NeedsRender())
+        RENDER_COMMAND(RenderReflectionProbe)(RenderWorld* world, RenderEnvProbe* envProbe)
+            : world(world),
+              envProbe(envProbe)
+        {
+            // world->IncRef();
+            // envProbe->IncRef();
+        }
+
+        virtual ~RENDER_COMMAND(RenderReflectionProbe)() override
+        {
+            world->DecRef();
+            envProbe->DecRef();
+        }
+
+        virtual RendererResult operator()() override
+        {
+            FrameBase* frame = g_renderBackend->GetCurrentFrame();
+
+            RenderSetup renderSetup { world, nullptr };
+
+            envProbe->Render(frame, renderSetup);
+
+            HYPERION_RETURN_OK;
+        }
+    };
+
+    if (!m_envProbe.IsValid())
     {
         return;
     }
 
-    m_env_render_probe->Render(frame, render_setup);
+    if (!m_envProbe->NeedsRender())
+    {
+        return;
+    }
 
-    HYP_LOG(Rendering, Debug, "Rendering ReflectionProbe {} (type: {})",
-        m_env_render_probe->GetEnvProbe()->GetID(),
-        (uint32)m_env_render_probe->GetEnvProbe()->GetEnvProbeType());
+    g_engine->GetWorld()->GetRenderResource().IncRef();
+    m_envProbe->GetRenderResource().IncRef();
+    PUSH_RENDER_COMMAND(RenderReflectionProbe, &g_engine->GetWorld()->GetRenderResource(), &m_envProbe->GetRenderResource());
+
+    m_envProbe->SetNeedsRender(false);
 }
+#endif
 
 } // namespace hyperion

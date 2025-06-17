@@ -18,8 +18,6 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-namespace renderer {
-
 enum RenderPassMode
 {
     RENDER_PASS_INLINE = 0,
@@ -30,7 +28,7 @@ class VulkanRenderPass final : public RenderObject<VulkanRenderPass>
 {
 public:
     VulkanRenderPass(RenderPassStage stage, RenderPassMode mode);
-    VulkanRenderPass(RenderPassStage stage, RenderPassMode mode, uint32 num_multiview_layers);
+    VulkanRenderPass(RenderPassStage stage, RenderPassMode mode, uint32 numMultiviewLayers);
     virtual ~VulkanRenderPass() override;
 
     HYP_FORCE_INLINE VkRenderPass GetVulkanHandle() const
@@ -45,12 +43,12 @@ public:
 
     bool IsMultiview() const
     {
-        return m_num_multiview_layers > 1;
+        return m_numMultiviewLayers > 1;
     }
 
     uint32 NumMultiviewLayers() const
     {
-        return m_num_multiview_layers;
+        return m_numMultiviewLayers;
     }
 
     void AddAttachment(VulkanAttachmentRef attachment);
@@ -58,13 +56,13 @@ public:
 
     const Array<VulkanAttachmentRef>& GetAttachments() const
     {
-        return m_render_pass_attachments;
+        return m_renderPassAttachments;
     }
 
     RendererResult Create();
     RendererResult Destroy();
 
-    void Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer, uint32 frame_index);
+    void Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* framebuffer, uint32 frameIndex);
     void End(VulkanCommandBuffer* cmd);
 
 private:
@@ -77,12 +75,12 @@ private:
 
     RenderPassStage m_stage;
     RenderPassMode m_mode;
-    uint32 m_num_multiview_layers;
+    uint32 m_numMultiviewLayers;
 
-    Array<VulkanAttachmentRef> m_render_pass_attachments;
+    Array<VulkanAttachmentRef> m_renderPassAttachments;
 
     Array<VkSubpassDependency> m_dependencies;
-    Array<VkClearValue> m_vk_clear_values;
+    Array<VkClearValue> m_vkClearValues;
 
     VkRenderPass m_handle;
 };
@@ -90,7 +88,6 @@ private:
 using VulkanRenderPassRef = RenderObjectHandle_Strong<VulkanRenderPass>;
 using VulkanRenderPassWeakRef = RenderObjectHandle_Weak<VulkanRenderPass>;
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

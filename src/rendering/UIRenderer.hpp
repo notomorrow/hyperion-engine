@@ -3,8 +3,6 @@
 #ifndef HYPERION_UI_RENDERER_HPP
 #define HYPERION_UI_RENDERER_HPP
 
-#include <core/Base.hpp>
-
 #include <core/functional/Delegate.hpp>
 
 #include <core/memory/RefCountedPtr.hpp>
@@ -13,12 +11,13 @@
 
 #include <core/object/HypObject.hpp>
 
-#include <rendering/RenderSubsystem.hpp>
+#include <rendering/Renderer.hpp>
 #include <rendering/RenderCollection.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
 #include <scene/Scene.hpp>
+#include <scene/Subsystem.hpp>
 
 namespace hyperion {
 
@@ -28,6 +27,7 @@ class RenderCamera;
 class View;
 class RenderView;
 struct RenderSetup;
+struct UIPassData;
 
 class UIRenderCollector : RenderCollector
 {
@@ -41,85 +41,79 @@ public:
 
     void ResetOrdering();
 
-    void PushRenderProxy(RenderProxyTracker& render_proxy_tracker, const RenderProxy& render_proxy, int computed_depth);
+    void PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes = {});
 
-    typename RenderProxyTracker::Diff PushUpdatesToRenderThread(
-        RenderProxyTracker& render_proxy_tracker,
-        const FramebufferRef& framebuffer,
-        const Optional<RenderableAttributeSet>& override_attributes = {});
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const;
 
-    void CollectDrawCalls(FrameBase* frame, const RenderSetup& render_setup);
-    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer) const;
-
-private:
-    Array<Pair<ID<Entity>, int>> m_proxy_depths;
+    Array<Pair<ObjId<Entity>, int>> proxyDepths;
 };
 
-HYP_CLASS()
-class HYP_API UIRenderSubsystem : public RenderSubsystem
+class UIRenderer : public RendererBase
+{
+public:
+    UIRenderer(const Handle<View>& view);
+    virtual ~UIRenderer() = default;
+
+    HYP_FORCE_INLINE UIRenderCollector& GetRenderCollector()
+    {
+        return m_renderCollector;
+    }
+
+    HYP_FORCE_INLINE const UIRenderCollector& GetRenderCollector() const
+    {
+        return m_renderCollector;
+    }
+
+    virtual void Initialize() override;
+    virtual void Shutdown() override;
+
+    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) override;
+
+protected:
+    PassData* CreateViewPassData(View* view, PassDataExt&) override;
+
+    Handle<View> m_view;
+    UIRenderCollector m_renderCollector;
+};
+
+HYP_CLASS(NoScriptBindings)
+class HYP_API UIRenderSubsystem : public Subsystem
 {
     HYP_OBJECT_BODY(UIRenderSubsystem);
 
 public:
-    UIRenderSubsystem(Name name, const Handle<UIStage>& ui_stage);
+    UIRenderSubsystem(const Handle<UIStage>& uiStage);
     UIRenderSubsystem(const UIRenderSubsystem& other) = delete;
     UIRenderSubsystem& operator=(const UIRenderSubsystem& other) = delete;
     virtual ~UIRenderSubsystem();
 
     HYP_FORCE_INLINE const Handle<UIStage>& GetUIStage() const
     {
-        return m_ui_stage;
+        return m_uiStage;
     }
 
-    HYP_FORCE_INLINE const FramebufferRef& GetFramebuffer() const
-    {
-        return m_framebuffer;
-    }
-
-    HYP_FORCE_INLINE UIRenderCollector& GetRenderCollector()
-    {
-        return m_render_collector;
-    }
-
-    HYP_FORCE_INLINE const UIRenderCollector& GetRenderCollector() const
-    {
-        return m_render_collector;
-    }
-
-    HYP_FORCE_INLINE RenderProxyTracker& GetRenderProxyTracker()
-    {
-        return m_render_proxy_tracker;
-    }
-
-    HYP_FORCE_INLINE const RenderProxyTracker& GetRenderProxyTracker() const
-    {
-        return m_render_proxy_tracker;
-    }
+    virtual void PreUpdate(float delta) override;
+    virtual void Update(float delta) override;
 
 private:
     virtual void Init() override;
-    virtual void InitGame() override; // init on game thread
-    virtual void OnRemoved() override;
-    virtual void OnUpdate(GameCounter::TickUnit delta) override;
-    virtual void OnRender(FrameBase* frame, const RenderSetup& render_setup) override;
+
+    virtual void OnAddedToWorld() override;
+    virtual void OnRemovedFromWorld() override;
 
     void CreateFramebuffer();
 
-    Handle<UIStage> m_ui_stage;
+    Handle<UIStage> m_uiStage;
 
-    FramebufferRef m_framebuffer;
     ShaderRef m_shader;
-    UIRenderCollector m_render_collector;
 
-    // Game thread side list, used for collecting UI objects
-    RenderProxyTracker m_render_proxy_tracker;
-
-    TResourceHandle<RenderCamera> m_camera_resource_handle;
+    TResourceHandle<RenderCamera> m_cameraResourceHandle;
 
     Handle<View> m_view;
-    TResourceHandle<RenderView> m_render_view;
 
-    DelegateHandler m_on_gbuffer_resolution_changed_handle;
+    UIRenderer* m_uiRenderer;
+
+    DelegateHandler m_onGbufferResolutionChangedHandle;
 };
 
 } // namespace hyperion

@@ -25,67 +25,67 @@ RC<Assembly> Class::GetAssembly() const
 
 Object* Class::NewObject()
 {
-    AssertThrowMsg(m_new_object_fptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
+    AssertThrowMsg(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
 
-    ObjectReference object_reference = m_new_object_fptr(/* keep_alive */ true, nullptr, nullptr, nullptr, nullptr);
+    ObjectReference objectReference = m_newObjectFptr(/* keepAlive */ true, nullptr, nullptr, nullptr, nullptr);
 
-    return new Object(RefCountedPtrFromThis(), object_reference);
+    return new Object(RefCountedPtrFromThis(), objectReference);
 }
 
-Object* Class::NewObject(const HypClass* hyp_class, void* owning_object_ptr)
+Object* Class::NewObject(const HypClass* hypClass, void* owningObjectPtr)
 {
-    AssertThrow(hyp_class != nullptr);
-    AssertThrow(owning_object_ptr != nullptr);
+    AssertThrow(hypClass != nullptr);
+    AssertThrow(owningObjectPtr != nullptr);
 
-    AssertThrowMsg(m_new_object_fptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
+    AssertThrowMsg(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
 
-    ObjectReference object_reference = m_new_object_fptr(/* keep_alive */ true, hyp_class, owning_object_ptr, nullptr, nullptr);
+    ObjectReference objectReference = m_newObjectFptr(/* keepAlive */ true, hypClass, owningObjectPtr, nullptr, nullptr);
 
-    return new Object(RefCountedPtrFromThis(), object_reference);
+    return new Object(RefCountedPtrFromThis(), objectReference);
 }
 
-ObjectReference Class::NewManagedObject(void* context_ptr, InitializeObjectCallbackFunction callback)
+ObjectReference Class::NewManagedObject(void* contextPtr, InitializeObjectCallbackFunction callback)
 {
-    AssertThrowMsg(m_new_object_fptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
+    AssertThrowMsg(m_newObjectFptr != nullptr, "New object function pointer not set for managed class %s", m_name.Data());
 
-    return m_new_object_fptr(/* keep_alive */ false, nullptr, nullptr, context_ptr, callback);
+    return m_newObjectFptr(/* keepAlive */ false, nullptr, nullptr, contextPtr, callback);
 }
 
-bool Class::HasParentClass(UTF8StringView parent_class_name) const
+bool Class::HasParentClass(UTF8StringView parentClassName) const
 {
-    const Class* parent_class = m_parent_class;
+    const Class* parentClass = m_parentClass;
 
-    while (parent_class)
+    while (parentClass)
     {
-        if (parent_class->GetName() == parent_class_name)
+        if (parentClass->GetName() == parentClassName)
         {
             return true;
         }
 
-        parent_class = parent_class->GetParentClass();
+        parentClass = parentClass->GetParentClass();
     }
 
     return false;
 }
 
-bool Class::HasParentClass(const Class* parent_class) const
+bool Class::HasParentClass(const Class* parentClass) const
 {
-    const Class* current_parent_class = m_parent_class;
+    const Class* currentParentClass = m_parentClass;
 
-    while (current_parent_class)
+    while (currentParentClass)
     {
-        if (current_parent_class == parent_class)
+        if (currentParentClass == parentClass)
         {
             return true;
         }
 
-        current_parent_class = current_parent_class->GetParentClass();
+        currentParentClass = currentParentClass->GetParentClass();
     }
 
     return false;
 }
 
-void Class::InvokeStaticMethod_Internal(const Method* method_ptr, const HypData** args_hyp_data, HypData* out_return_hyp_data)
+void Class::InvokeStaticMethod_Internal(const Method* methodPtr, const HypData** argsHypData, HypData* outReturnHypData)
 {
     RC<Assembly> assembly = m_assembly.Lock();
 
@@ -94,7 +94,7 @@ void Class::InvokeStaticMethod_Internal(const Method* method_ptr, const HypData*
         HYP_THROW("Cannot use managed class: assembly has been unloaded");
     }
 
-    method_ptr->Invoke({}, args_hyp_data, out_return_hyp_data);
+    methodPtr->Invoke({}, argsHypData, outReturnHypData);
 }
 
 } // namespace hyperion::dotnet

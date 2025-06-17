@@ -22,8 +22,8 @@ class GBuffer;
 
 struct alignas(16) PostProcessingUniforms
 {
-    Vec2u effect_counts;        // pre, post
-    Vec2u last_enabled_indices; // pre, post
+    Vec2u effectCounts;        // pre, post
+    Vec2u lastEnabledIndices; // pre, post
     Vec2u masks;                // pre, post
 };
 
@@ -39,19 +39,19 @@ class HYP_API PostFXPass final : public FullScreenPass
 {
 public:
     PostFXPass(
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         GBuffer* gbuffer);
 
     PostFXPass(
         const ShaderRef& shader,
-        InternalFormat image_format,
+        TextureFormat imageFormat,
         GBuffer* gbuffer);
 
     PostFXPass(
         const ShaderRef& shader,
         PostProcessingStage stage,
-        uint32 effect_index,
-        InternalFormat image_format,
+        uint32 effectIndex,
+        TextureFormat imageFormat,
         GBuffer* gbuffer);
 
     PostFXPass(const PostFXPass&) = delete;
@@ -68,12 +68,12 @@ public:
 
     HYP_FORCE_INLINE uint32 GetEffectIndex() const
     {
-        return m_effect_index;
+        return m_effectIndex;
     }
 
 protected:
     PostProcessingStage m_stage;
-    uint32 m_effect_index;
+    uint32 m_effectIndex;
 };
 
 class HYP_API PostProcessingEffect
@@ -81,8 +81,8 @@ class HYP_API PostProcessingEffect
 public:
     PostProcessingEffect(
         PostProcessingStage stage,
-        uint32 effect_index,
-        InternalFormat image_format,
+        uint32 effectIndex,
+        TextureFormat imageFormat,
         GBuffer* gbuffer);
     PostProcessingEffect(const PostProcessingEffect& other) = delete;
     PostProcessingEffect& operator=(const PostProcessingEffect& other) = delete;
@@ -115,12 +115,12 @@ public:
 
     bool IsEnabled() const
     {
-        return m_is_enabled;
+        return m_isEnabled;
     }
 
-    void SetIsEnabled(bool is_enabled)
+    void SetIsEnabled(bool isEnabled)
     {
-        m_is_enabled = is_enabled;
+        m_isEnabled = isEnabled;
     }
 
     void Init();
@@ -128,7 +128,7 @@ public:
     virtual void OnAdded() = 0;
     virtual void OnRemoved() = 0;
 
-    virtual void RenderEffect(FrameBase* frame, const RenderSetup& render_setup, uint32 slot);
+    virtual void RenderEffect(FrameBase* frame, const RenderSetup& renderSetup, uint32 slot);
 
 protected:
     virtual ShaderRef CreateShader() = 0;
@@ -137,13 +137,13 @@ protected:
 
 private:
     ShaderRef m_shader;
-    bool m_is_enabled;
+    bool m_isEnabled;
 };
 
 class HYP_API PostProcessing
 {
 public:
-    static constexpr uint32 max_effects_per_stage = sizeof(uint32) * CHAR_BIT;
+    static constexpr uint32 maxEffectsPerStage = sizeof(uint32) * CHAR_BIT;
 
     enum DefaultEffectIndices
     {
@@ -156,9 +156,9 @@ public:
     PostProcessing& operator=(const PostProcessing&) = delete;
     ~PostProcessing();
 
-    HYP_FORCE_INLINE const GPUBufferRef& GetUniformBuffer() const
+    HYP_FORCE_INLINE const GpuBufferRef& GetUniformBuffer() const
     {
-        return m_uniform_buffer;
+        return m_uniformBuffer;
     }
 
     /*! \brief Add an effect to the stack to be processed BEFORE deferred rendering happens.
@@ -196,8 +196,8 @@ public:
     void Create();
     void Destroy();
     void PerformUpdates();
-    void RenderPre(FrameBase* frame, const RenderSetup& render_setup) const;
-    void RenderPost(FrameBase* frame, const RenderSetup& render_setup) const;
+    void RenderPre(FrameBase* frame, const RenderSetup& renderSetup) const;
+    void RenderPost(FrameBase* frame, const RenderSetup& renderSetup) const;
 
 private:
     PostProcessingUniforms GetUniforms() const;
@@ -208,20 +208,20 @@ private:
     {
         static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
 
-        std::lock_guard guard(m_effects_mutex);
+        std::lock_guard guard(m_effectsMutex);
 
-        const auto it = m_effects_pending_addition[uint32(stage)].Find<EffectClass>();
+        const auto it = m_effectsPendingAddition[uint32(stage)].Find<EffectClass>();
 
-        if (it != m_effects_pending_addition[uint32(stage)].End())
+        if (it != m_effectsPendingAddition[uint32(stage)].End())
         {
             it->second = std::move(effect);
         }
         else
         {
-            m_effects_pending_addition[uint32(stage)].Set<EffectClass>(std::move(effect));
+            m_effectsPendingAddition[uint32(stage)].Set<EffectClass>(std::move(effect));
         }
 
-        m_effects_updated.Set(true, MemoryOrder::RELEASE);
+        m_effectsUpdated.Set(true, MemoryOrder::RELEASE);
     }
 
     template <class EffectClass>
@@ -229,7 +229,7 @@ private:
     {
         static_assert(std::is_base_of_v<PostProcessingEffect, EffectClass>, "Type must be a derived class of PostProcessingEffect.");
 
-        Threads::AssertOnThread(g_render_thread);
+        Threads::AssertOnThread(g_renderThread);
 
         auto& effects = m_effects[uint32(stage)];
 
@@ -244,12 +244,12 @@ private:
     }
 
     FixedArray<TypeMap<UniquePtr<PostProcessingEffect>>, 2> m_effects; // only touch from render thread
-    FixedArray<TypeMap<UniquePtr<PostProcessingEffect>>, 2> m_effects_pending_addition;
-    FixedArray<FlatSet<TypeID>, 2> m_effects_pending_removal;
-    std::mutex m_effects_mutex;
-    AtomicVar<bool> m_effects_updated { false };
+    FixedArray<TypeMap<UniquePtr<PostProcessingEffect>>, 2> m_effectsPendingAddition;
+    FixedArray<FlatSet<TypeId>, 2> m_effectsPendingRemoval;
+    std::mutex m_effectsMutex;
+    AtomicVar<bool> m_effectsUpdated { false };
 
-    GPUBufferRef m_uniform_buffer;
+    GpuBufferRef m_uniformBuffer;
 };
 
 } // namespace hyperion

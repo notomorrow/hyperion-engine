@@ -13,7 +13,7 @@
 
 #include <core/memory/UniquePtr.hpp>
 
-#include <core/ID.hpp>
+#include <core/object/ObjId.hpp>
 #include <core/Handle.hpp>
 
 #include <rendering/RenderResource.hpp>
@@ -42,60 +42,16 @@ struct ViewInfo;
 
 struct WorldShaderData
 {
-    Vec4f fog_params;
+    Vec4f fogParams;
 
-    float game_time;
-    uint32 frame_counter;
+    float gameTime;
+    uint32 frameCounter;
     uint32 _pad0;
     uint32 _pad1;
 };
 
 class RenderWorld final : public RenderResourceBase
 {
-public:
-    enum IndexAllocatorType
-    {
-        ENV_PROBE = 0,
-
-        MAX
-    };
-
-private:
-    static constexpr uint32 index_allocator_maximums[IndexAllocatorType::MAX] = {
-        16 // ENV_PROBE
-    };
-
-    struct IndexAllocator
-    {
-        uint32 current_index = ~0u;
-        Array<uint32> free_indices;
-
-        uint32 AllocateIndex(uint32 max)
-        {
-            if (free_indices.Empty())
-            {
-                if (current_index >= max)
-                {
-                    return ~0u;
-                }
-
-                current_index++;
-
-                return current_index;
-            }
-            else
-            {
-                const uint32 index = free_indices.PopBack();
-                return index;
-            }
-        }
-
-        void FreeIndex(uint32 index)
-        {
-            free_indices.PushBack(index);
-        }
-    };
-
 public:
     RenderWorld(World* world);
     virtual ~RenderWorld() override;
@@ -105,40 +61,32 @@ public:
         return m_world;
     }
 
-    HYP_FORCE_INLINE ShadowMapAllocator* GetShadowMapAllocator() const
-    {
-        return m_shadow_map_manager.Get();
-    }
-
     HYP_FORCE_INLINE const Array<TResourceHandle<RenderView>>& GetViews() const
     {
-        return m_render_views;
+        return m_renderViews;
     }
 
-    void AddView(TResourceHandle<RenderView>&& render_view);
-    void RemoveView(RenderView* render_view);
+    void AddView(TResourceHandle<RenderView>&& renderView);
+    void RemoveView(RenderView* renderView);
 
-    void AddScene(TResourceHandle<RenderScene>&& render_scene);
-    void RemoveScene(RenderScene* render_scene);
+    void AddScene(TResourceHandle<RenderScene>&& renderScene);
+    void RemoveScene(RenderScene* renderScene);
 
     const EngineRenderStats& GetRenderStats() const;
-    void SetRenderStats(const EngineRenderStats& render_stats);
+    void SetRenderStats(const EngineRenderStats& renderStats);
 
     HYP_FORCE_INLINE RenderEnvironment* GetEnvironment() const
     {
-        return m_render_environment.Get();
+        return m_renderEnvironment.Get();
     }
 
-    void SetBufferData(const WorldShaderData& buffer_data);
+    void SetBufferData(const WorldShaderData& bufferData);
 
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE const WorldShaderData& GetBufferData() const
     {
-        return m_buffer_data;
+        return m_bufferData;
     }
-
-    uint32 AllocateIndex(IndexAllocatorType type);
-    void FreeIndex(IndexAllocatorType type, uint32 index);
 
     void PreRender(FrameBase* frame);
     void Render(FrameBase* frame);
@@ -149,7 +97,7 @@ protected:
     virtual void Destroy_Internal() override;
     virtual void Update_Internal() override;
 
-    virtual GPUBufferHolderBase* GetGPUBufferHolder() const override;
+    virtual GpuBufferHolderBase* GetGpuBufferHolder() const override;
 
 private:
     void UpdateBufferData();
@@ -157,25 +105,21 @@ private:
 
     World* m_world;
 
-    Array<TResourceHandle<RenderView>> m_render_views;
-    Array<TResourceHandle<RenderScene>> m_render_scenes;
+    Array<TResourceHandle<RenderView>> m_renderViews;
+    Array<TResourceHandle<RenderScene>> m_renderScenes;
 
-    UniquePtr<ShadowMapAllocator> m_shadow_map_manager;
+    UniquePtr<RenderEnvironment> m_renderEnvironment;
 
-    UniquePtr<RenderEnvironment> m_render_environment;
+    FixedArray<EngineRenderStats, ThreadType::THREAD_TYPE_MAX> m_renderStats;
 
-    FixedArray<EngineRenderStats, ThreadType::THREAD_TYPE_MAX> m_render_stats;
-
-    WorldShaderData m_buffer_data;
-
-    IndexAllocator m_index_allocators[IndexAllocatorType::MAX];
+    WorldShaderData m_bufferData;
 };
 
 template <>
-struct ResourceMemoryPoolInitInfo<RenderWorld> : MemoryPoolInitInfo
+struct ResourceMemoryPoolInitInfo<RenderWorld> : MemoryPoolInitInfo<RenderWorld>
 {
-    static constexpr uint32 num_elements_per_block = 8;
-    static constexpr uint32 num_initial_elements = 8;
+    static constexpr uint32 numElementsPerBlock = 8;
+    static constexpr uint32 numInitialElements = 8;
 };
 
 } // namespace hyperion

@@ -14,7 +14,7 @@ namespace hyperion {
 
 namespace threading {
 
-extern const FlatMap<TaskThreadPoolName, UniquePtr<TaskThreadPool> (*)(void)> g_thread_pool_factories;
+extern const FlatMap<TaskThreadPoolName, UniquePtr<TaskThreadPool> (*)(void)> g_threadPoolFactories;
 
 #pragma region TaskBatch
 
@@ -25,24 +25,24 @@ bool TaskBatch::IsCompleted() const
 
 void TaskBatch::AwaitCompletion()
 {
-    if (num_enqueued < executors.Size())
+    if (numEnqueued < executors.Size())
     {
         HYP_FAIL("TaskBatch::AwaitCompletion() called before all tasks were enqueued! Expected %llu tasks, but only %u were enqueued.",
-            executors.Size(), num_enqueued);
+            executors.Size(), numEnqueued);
     }
 
-    if (num_enqueued != 0)
+    if (numEnqueued != 0)
     {
         // Sanity check - ensure not awaiting from a thread we depend on for processing any of the tasks
         // If we get here, we're probably currently on a task thread, and have a circular dependency chain.
         // Consider breaking up task dependencies.
-        const ThreadID& current_thread_id = ThreadID::Current();
+        const ThreadId& currentThreadId = ThreadId::Current();
 
-        for (const TaskRef& task_ref : task_refs)
+        for (const TaskRef& taskRef : taskRefs)
         {
-            AssertThrow(task_ref.assigned_scheduler != nullptr);
+            AssertThrow(taskRef.assignedScheduler != nullptr);
 
-            AssertThrowMsg(task_ref.assigned_scheduler->GetOwnerThread() != current_thread_id,
+            AssertThrowMsg(taskRef.assignedScheduler->GetOwnerThread() != currentThreadId,
                 "Cannot wait on a task that is dependent on the current thread!");
         }
     }
@@ -50,9 +50,9 @@ void TaskBatch::AwaitCompletion()
     notifier.Await();
 
     // ensure dependent batches are also completed
-    if (next_batch != nullptr)
+    if (nextBatch != nullptr)
     {
-        next_batch->AwaitCompletion();
+        nextBatch->AwaitCompletion();
     }
 }
 
@@ -61,19 +61,19 @@ void TaskBatch::AwaitCompletion()
 #pragma region TaskThreadPool
 
 TaskThreadPool::TaskThreadPool()
-    : m_thread_mask(0)
+    : m_threadMask(0)
 {
 }
 
 TaskThreadPool::TaskThreadPool(Array<UniquePtr<TaskThread>>&& threads)
     : m_threads(std::move(threads)),
-      m_thread_mask(0)
+      m_threadMask(0)
 {
     for (const UniquePtr<TaskThread>& thread : threads)
     {
         AssertThrow(thread != nullptr);
 
-        m_thread_mask |= thread->GetID().GetMask();
+        m_threadMask |= thread->Id().GetMask();
     }
 }
 
@@ -131,32 +131,32 @@ void TaskThreadPool::Stop()
     }
 }
 
-void TaskThreadPool::Stop(Array<TaskThread*>& out_task_threads)
+void TaskThreadPool::Stop(Array<TaskThread*>& outTaskThreads)
 {
     for (auto& it : m_threads)
     {
         AssertThrow(it != nullptr);
         it->Stop();
 
-        out_task_threads.PushBack(it.Get());
+        outTaskThreads.PushBack(it.Get());
     }
 }
 
 TaskThread* TaskThreadPool::GetNextTaskThread()
 {
-    static constexpr uint32 max_spins = 16;
+    static constexpr uint32 maxSpins = 16;
 
-    const uint32 num_threads_in_pool = uint32(m_threads.Size());
+    const uint32 numThreadsInPool = uint32(m_threads.Size());
 
-    const ThreadID current_thread_id = Threads::CurrentThreadID();
-    const bool is_on_task_thread = (m_thread_mask & current_thread_id.GetMask()) != 0;
+    const ThreadId currentThreadId = Threads::CurrentThreadId();
+    const bool isOnTaskThread = (m_threadMask & currentThreadId.GetMask()) != 0;
 
-    ThreadBase* current_thread_object = Threads::CurrentThreadObject();
+    ThreadBase* currentThreadObject = Threads::CurrentThreadObject();
 
-    uint32 cycle = m_cycle.Get(MemoryOrder::RELAXED) % num_threads_in_pool;
-    uint32 num_spins = 0;
+    uint32 cycle = m_cycle.Get(MemoryOrder::RELAXED) % numThreadsInPool;
+    uint32 numSpins = 0;
 
-    TaskThread* task_thread = nullptr;
+    TaskThread* taskThread = nullptr;
 
     // if we are currently on a task thread we need to move to the next task thread in the pool
     // if we selected the current task thread. otherwise we will have a deadlock.
@@ -165,36 +165,36 @@ TaskThread* TaskThreadPool::GetNextTaskThread()
     {
         do
         {
-            task_thread = m_threads[cycle].Get();
+            taskThread = m_threads[cycle].Get();
 
-            cycle = (cycle + 1) % num_threads_in_pool;
+            cycle = (cycle + 1) % numThreadsInPool;
             m_cycle.Increment(1, MemoryOrder::RELAXED);
 
-            ++num_spins;
+            ++numSpins;
 
-            if (num_spins >= max_spins)
+            if (numSpins >= maxSpins)
             {
-                if (is_on_task_thread)
+                if (isOnTaskThread)
                 {
-                    return static_cast<TaskThread*>(current_thread_object); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
+                    return static_cast<TaskThread*>(currentThreadObject); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
                 }
 
                 HYP_LOG(Tasks, Warning, "Maximum spins reached in GetNextTaskThread -- all task threads busy");
 
-                return task_thread;
+                return taskThread;
             }
         }
-        while (task_thread->GetID() == current_thread_id
-            || (current_thread_object != nullptr && current_thread_object->GetScheduler().HasWorkAssignedFromThread(task_thread->GetID())));
+        while (taskThread->Id() == currentThreadId
+            || (currentThreadObject != nullptr && currentThreadObject->GetScheduler().HasWorkAssignedFromThread(taskThread->Id())));
     }
-    while (!task_thread->IsRunning() && !task_thread->IsFree());
+    while (!taskThread->IsRunning() && !taskThread->IsFree());
 
-    return task_thread;
+    return taskThread;
 }
 
-ThreadID TaskThreadPool::CreateTaskThreadID(ANSIStringView base_name, uint32 thread_index)
+ThreadId TaskThreadPool::CreateTaskThreadId(ANSIStringView baseName, uint32 threadIndex)
 {
-    return ThreadID(Name::Unique(HYP_FORMAT("{}{}", base_name, thread_index).Data()), THREAD_CATEGORY_TASK);
+    return ThreadId(Name::Unique(HYP_FORMAT("{}{}", baseName, threadIndex).Data()), THREAD_CATEGORY_TASK);
 }
 
 #pragma endregion TaskThreadPool
@@ -204,8 +204,8 @@ ThreadID TaskThreadPool::CreateTaskThreadID(ANSIStringView base_name, uint32 thr
 class GenericTaskThreadPool final : public TaskThreadPool
 {
 public:
-    GenericTaskThreadPool(uint32 num_task_threads, ThreadPriorityValue priority)
-        : TaskThreadPool(TypeWrapper<TaskThread>(), "GenericTask", num_task_threads)
+    GenericTaskThreadPool(uint32 numTaskThreads, ThreadPriorityValue priority)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), "GenericTask", numTaskThreads)
     {
     }
 
@@ -219,8 +219,8 @@ public:
 class RenderTaskThreadPool final : public TaskThreadPool
 {
 public:
-    RenderTaskThreadPool(uint32 num_task_threads, ThreadPriorityValue priority)
-        : TaskThreadPool(TypeWrapper<TaskThread>(), "RenderTask", num_task_threads)
+    RenderTaskThreadPool(uint32 numTaskThreads, ThreadPriorityValue priority)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), "RenderTask", numTaskThreads)
     {
     }
 
@@ -234,8 +234,8 @@ public:
 class BackgroundTaskThreadPool final : public TaskThreadPool
 {
 public:
-    BackgroundTaskThreadPool(uint32 num_task_threads, ThreadPriorityValue priority)
-        : TaskThreadPool(TypeWrapper<TaskThread>(), "BackgroundTask", num_task_threads)
+    BackgroundTaskThreadPool(uint32 numTaskThreads, ThreadPriorityValue priority)
+        : TaskThreadPool(TypeWrapper<TaskThread>(), "BackgroundTask", numTaskThreads)
     {
     }
 
@@ -253,24 +253,26 @@ TaskSystem& TaskSystem::GetInstance()
     return instance;
 }
 
+HYP_DISABLE_OPTIMIZATION;
 TaskSystem::TaskSystem()
 {
     m_pools.Reserve(THREAD_POOL_MAX);
 
     for (uint32 i = 0; i < THREAD_POOL_MAX; i++)
     {
-        const TaskThreadPoolName pool_name { i };
+        const TaskThreadPoolName poolName { i };
 
-        auto thread_pool_factories_it = g_thread_pool_factories.Find(pool_name);
+        auto beginIt = g_threadPoolFactories.Begin();
+        auto endIt = g_threadPoolFactories.End();
 
-        AssertThrowMsg(
-            thread_pool_factories_it != g_thread_pool_factories.End(),
-            "TaskThreadPoolName for %u not found in g_thread_pool_factories",
-            i);
+        auto threadPoolFactoriesIt = g_threadPoolFactories.Find(poolName);
 
-        m_pools.PushBack(thread_pool_factories_it->second());
+        AssertThrow(threadPoolFactoriesIt != endIt, "Invalid thread pool index %u", i);
+
+        m_pools.PushBack(threadPoolFactoriesIt->second());
     }
 }
+HYP_ENABLE_OPTIMIZATION;
 
 void TaskSystem::Start()
 {
@@ -290,16 +292,16 @@ void TaskSystem::Stop()
 
     m_running.Set(false, MemoryOrder::RELAXED);
 
-    Array<TaskThread*> task_threads;
+    Array<TaskThread*> taskThreads;
 
     for (const UniquePtr<TaskThreadPool>& pool : m_pools)
     {
-        pool->Stop(task_threads);
+        pool->Stop(taskThreads);
     }
 
-    while (task_threads.Any())
+    while (taskThreads.Any())
     {
-        TaskThread* top = task_threads.PopBack();
+        TaskThread* top = taskThreads.PopBack();
         top->Join();
     }
 }
@@ -312,27 +314,27 @@ TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
     AssertDebugMsg(batch->IsCompleted(), "TaskBatch::ResetState() must be called before enqueuing tasks");
 
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
-    HYP_MT_CHECK_READ(batch->data_race_detector);
+    HYP_MT_CHECK_READ(batch->dataRaceDetector);
 #endif
 
-    TaskBatch* next_batch = batch->next_batch;
+    TaskBatch* nextBatch = batch->nextBatch;
 
     if (batch->executors.Empty())
     {
         // enqueue next batch immediately if it exists and no tasks are added to this batch
         batch->OnComplete();
-        batch->num_enqueued = 0;
+        batch->numEnqueued = 0;
 
-        if (next_batch != nullptr)
+        if (nextBatch != nullptr)
         {
-            EnqueueBatch(next_batch);
+            EnqueueBatch(nextBatch);
         }
 
         return batch;
     }
 
-    batch->num_enqueued = uint32(batch->executors.Size());
-    batch->notifier.SetTargetValue(batch->num_enqueued);
+    batch->numEnqueued = uint32(batch->executors.Size());
+    batch->notifier.SetTargetValue(batch->numEnqueued);
 
     TaskThreadPool* pool = nullptr;
 
@@ -348,27 +350,27 @@ TaskBatch* TaskSystem::EnqueueBatch(TaskBatch* batch)
     }
 
 #ifdef HYP_TASK_BATCH_DATA_RACE_DETECTION
-    HYP_MT_CHECK_RW(batch->data_race_detector);
+    HYP_MT_CHECK_RW(batch->dataRaceDetector);
 #endif
 
     for (TaskExecutorInstance<void>& executor : batch->executors)
     {
-        TaskThread* task_thread = pool->GetNextTaskThread();
-        AssertThrow(task_thread != nullptr);
+        TaskThread* taskThread = pool->GetNextTaskThread();
+        AssertThrow(taskThread != nullptr);
 
-        const TaskID task_id = task_thread->GetScheduler().EnqueueTaskExecutor(
+        const TaskID taskId = taskThread->GetScheduler().EnqueueTaskExecutor(
             &executor,
             &batch->notifier,
-            next_batch != nullptr
-                ? OnTaskCompletedCallback([this, &on_complete = batch->OnComplete, next_batch]()
+            nextBatch != nullptr
+                ? OnTaskCompletedCallback([this, &onComplete = batch->OnComplete, nextBatch]()
                       {
-                          on_complete();
+                          onComplete();
 
-                          EnqueueBatch(next_batch);
+                          EnqueueBatch(nextBatch);
                       })
                 : OnTaskCompletedCallback(batch->OnComplete ? &batch->OnComplete : nullptr));
 
-        batch->task_refs.EmplaceBack(task_id, &task_thread->GetScheduler());
+        batch->taskRefs.EmplaceBack(taskId, &taskThread->GetScheduler());
     }
 
     return batch;
@@ -381,18 +383,18 @@ Array<bool> TaskSystem::DequeueBatch(TaskBatch* batch)
     AssertThrow(batch != nullptr);
 
     Array<bool> results;
-    results.Resize(batch->task_refs.Size());
+    results.Resize(batch->taskRefs.Size());
 
-    for (SizeType i = 0; i < batch->task_refs.Size(); i++)
+    for (SizeType i = 0; i < batch->taskRefs.Size(); i++)
     {
-        const TaskRef& task_ref = batch->task_refs[i];
+        const TaskRef& taskRef = batch->taskRefs[i];
 
-        if (!task_ref.IsValid())
+        if (!taskRef.IsValid())
         {
             continue;
         }
 
-        results[i] = task_ref.assigned_scheduler->Dequeue(task_ref.id);
+        results[i] = taskRef.assignedScheduler->Dequeue(taskRef.id);
     }
 
     return results;
@@ -405,14 +407,14 @@ TaskThread* TaskSystem::GetNextTaskThread(TaskThreadPool& pool)
 
 #pragma endregion TaskSystem
 
-const FlatMap<TaskThreadPoolName, UniquePtr<TaskThreadPool> (*)(void)> g_thread_pool_factories {
+const FlatMap<TaskThreadPoolName, UniquePtr<TaskThreadPool> (*)(void)> g_threadPoolFactories {
     { TaskThreadPoolName::THREAD_POOL_GENERIC, +[]() -> UniquePtr<TaskThreadPool>
         {
-            return MakeUnique<GenericTaskThreadPool>(4, ThreadPriorityValue::HIGH);
+            return MakeUnique<GenericTaskThreadPool>(2, ThreadPriorityValue::HIGHEST);
         } },
     { TaskThreadPoolName::THREAD_POOL_RENDER, +[]() -> UniquePtr<TaskThreadPool>
         {
-            return MakeUnique<RenderTaskThreadPool>(4, ThreadPriorityValue::HIGHEST);
+            return MakeUnique<RenderTaskThreadPool>(2, ThreadPriorityValue::HIGHEST);
         } },
     { TaskThreadPoolName::THREAD_POOL_BACKGROUND, +[]() -> UniquePtr<TaskThreadPool>
         {

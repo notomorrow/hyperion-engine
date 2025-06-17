@@ -17,15 +17,15 @@ class WorldAABBUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(WorldAABBUpdaterSystem);
 
 public:
-    WorldAABBUpdaterSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    WorldAABBUpdaterSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
     virtual ~WorldAABBUpdaterSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 
@@ -40,7 +40,7 @@ private:
         };
     }
 
-    bool ProcessEntity(ID<Entity>, BoundingBoxComponent& bounding_box_component, TransformComponent& transform_component);
+    bool ProcessEntity(Entity* entity, BoundingBoxComponent& boundingBoxComponent, TransformComponent& transformComponent);
 };
 
 } // namespace hyperion

@@ -6,8 +6,8 @@
 
 namespace hyperion {
 
-StreamingCell::StreamingCell(const StreamingCellInfo& cell_info)
-    : m_cell_info(cell_info)
+StreamingCell::StreamingCell(const StreamingCellInfo& cellInfo)
+    : m_cellInfo(cellInfo)
 {
 }
 

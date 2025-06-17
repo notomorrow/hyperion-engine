@@ -27,7 +27,7 @@ struct HBAOConfig : public ConfigBase<HBAOConfig>
     float power = 0.8f;
 
     HYP_FIELD()
-    bool use_temporal_blending = false;
+    bool useTemporalBlending = false;
 
     virtual ~HBAOConfig() override = default;
 
@@ -41,16 +41,16 @@ struct HBAOConfig : public ConfigBase<HBAOConfig>
 class HBAO final : public FullScreenPass
 {
 public:
-    HBAO(HBAOConfig&& config, GBuffer* gbuffer);
+    HBAO(HBAOConfig&& config, Vec2u extent, GBuffer* gbuffer);
     HBAO(const HBAO& other) = delete;
     HBAO& operator=(const HBAO& other) = delete;
     virtual ~HBAO() override;
 
     virtual void Create() override;
 
-    virtual void Render(FrameBase* frame, const RenderSetup& render_setup) override;
+    virtual void Render(FrameBase* frame, const RenderSetup& renderSetup) override;
 
-    virtual void RenderToFramebuffer(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer) override
+    virtual void RenderToFramebuffer(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) override
     {
         HYP_NOT_IMPLEMENTED();
     }
@@ -59,7 +59,7 @@ protected:
     virtual bool UsesTemporalBlending() const override
     {
         return false;
-    } // m_config.use_temporal_blending; }
+    } // m_config.useTemporalBlending; }
 
     virtual bool ShouldRenderHalfRes() const override
     {
@@ -67,16 +67,16 @@ protected:
     }
 
     virtual void CreateDescriptors() override;
-    virtual void CreatePipeline(const RenderableAttributeSet& renderable_attributes) override;
+    virtual void CreatePipeline(const RenderableAttributeSet& renderableAttributes) override;
 
-    virtual void Resize_Internal(Vec2u new_size) override;
+    virtual void Resize_Internal(Vec2u newSize) override;
 
 private:
     void CreateUniformBuffers();
 
     HBAOConfig m_config;
 
-    GPUBufferRef m_uniform_buffer;
+    GpuBufferRef m_uniformBuffer;
 };
 
 } // namespace hyperion

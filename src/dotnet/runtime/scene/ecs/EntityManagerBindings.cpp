@@ -7,7 +7,6 @@
 #include <scene/ecs/components/MeshComponent.hpp>
 #include <scene/ecs/components/BoundingBoxComponent.hpp>
 #include <scene/ecs/components/VisibilityStateComponent.hpp>
-#include <scene/ecs/components/LightComponent.hpp>
 #include <scene/ecs/components/ShadowMapComponent.hpp>
 #include <scene/ecs/components/UIComponent.hpp>
 #include <scene/ecs/components/NodeLinkComponent.hpp>
@@ -24,34 +23,51 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT bool EntityManager_HasComponent(EntityManager* manager, uint32 component_type_id, IDBase* entity_id)
-    {
-        AssertThrow(manager != nullptr);
-        AssertThrow(entity_id != nullptr);
-
-        return manager->HasComponent(TypeID { component_type_id }, ID<Entity> { *entity_id });
-    }
-
-    HYP_EXPORT void* EntityManager_GetComponent(EntityManager* manager, uint32 component_type_id, IDBase* entity_id)
-    {
-        AssertThrow(manager != nullptr);
-        AssertThrow(entity_id != nullptr);
-
-        return manager->TryGetComponent(TypeID { component_type_id }, ID<Entity> { *entity_id }).GetPointer();
-    }
-
-    HYP_EXPORT void EntityManager_AddComponent(EntityManager* manager, Entity* entity, uint32 component_type_id, void* component_ptr)
+    HYP_EXPORT bool EntityManager_HasComponent(EntityManager* manager, uint32 componentTypeId, Entity* entity)
     {
         AssertThrow(manager != nullptr);
         AssertThrow(entity != nullptr);
-        AssertThrow(component_ptr != nullptr);
 
-        AssertThrow(manager->IsValidComponentType(TypeID { component_type_id }));
+        return manager->HasComponent(TypeId { componentTypeId }, entity);
+    }
 
-        Handle<Entity> entity_handle = entity->HandleFromThis();
-        AssertThrow(entity_handle.IsValid());
+    HYP_EXPORT void* EntityManager_GetComponent(EntityManager* manager, uint32 componentTypeId, Entity* entity)
+    {
+        AssertThrow(manager != nullptr);
+        AssertThrow(entity != nullptr);
 
-        manager->AddComponent(entity_handle, AnyRef(TypeID { component_type_id }, component_ptr));
+        return manager->TryGetComponent(TypeId { componentTypeId }, entity).GetPointer();
+    }
+
+    HYP_EXPORT void EntityManager_AddComponent(EntityManager* manager, Entity* entity, uint32 componentTypeId, HypData* componentHypData)
+    {
+        AssertThrow(manager != nullptr);
+        AssertThrow(entity != nullptr);
+        AssertThrow(componentHypData != nullptr);
+
+        AssertThrow(manager->IsValidComponentType(TypeId { componentTypeId }));
+
+        Handle<Entity> entityHandle = entity->HandleFromThis();
+
+        manager->AddComponent(entityHandle, *componentHypData);
+    }
+
+    HYP_EXPORT int8 EntityManager_AddTypedEntity(EntityManager* manager, const HypClass* hypClass, HypData* outHypData)
+    {
+        AssertThrow(manager != nullptr);
+        AssertThrow(hypClass != nullptr);
+        AssertThrow(outHypData != nullptr);
+
+        Handle<Entity> entityHandle = manager->AddTypedEntity(hypClass);
+
+        if (!entityHandle.IsValid())
+        {
+            return false;
+        }
+
+        *outHypData = HypData(entityHandle);
+
+        return true;
     }
 
 } // extern "C"

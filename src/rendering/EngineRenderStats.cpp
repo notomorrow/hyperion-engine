@@ -4,6 +4,14 @@
 
 #include <core/math/MathUtil.hpp>
 
+#include <core/logging/LogChannels.hpp>
+#include <core/logging/Logger.hpp>
+
+#include <core/profiling/ProfileScope.hpp>
+
+#include <core/threading/Threads.hpp>
+
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -13,7 +21,7 @@ namespace hyperion {
 SuppressEngineRenderStatsScope::SuppressEngineRenderStatsScope()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     g_engine->GetRenderStatsCalculator().Suppress();
 }
@@ -21,7 +29,7 @@ SuppressEngineRenderStatsScope::SuppressEngineRenderStatsScope()
 SuppressEngineRenderStatsScope::~SuppressEngineRenderStatsScope()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     g_engine->GetRenderStatsCalculator().Unsuppress();
 }
@@ -32,10 +40,11 @@ SuppressEngineRenderStatsScope::~SuppressEngineRenderStatsScope()
 
 void EngineRenderStatsCalculator::AddCounts(const EngineRenderStatsCounts& counts)
 {
+#if defined(HYP_ENABLE_RENDER_STATS) && defined(HYP_ENABLE_RENDER_STATS_COUNTERS)
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    if (m_suppress_count > 0)
+    if (m_suppressCount > 0)
     {
         return;
     }
@@ -44,68 +53,69 @@ void EngineRenderStatsCalculator::AddCounts(const EngineRenderStatsCounts& count
     {
         m_counts.counts[i] += counts.counts[i];
     }
+#endif
 }
 
 void EngineRenderStatsCalculator::AddSample(double delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    if (m_suppress_count > 0)
+    if (m_suppressCount > 0)
     {
         return;
     }
 
-    const uint32 sample_index = m_num_samples++;
+    const uint32 sampleIndex = m_numSamples++;
 
-    m_samples[sample_index % max_samples] = delta;
+    m_samples[sampleIndex % maxSamples] = delta;
 }
 
-void EngineRenderStatsCalculator::Advance(EngineRenderStats& render_stats)
+void EngineRenderStatsCalculator::Advance(EngineRenderStats& renderStats)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     m_counter.NextTick();
-    m_delta_accum += m_counter.delta;
+    m_deltaAccum += m_counter.delta;
 
-    const bool reset_min_max = m_delta_accum >= 1.0;
+    const bool resetMinMax = m_deltaAccum >= 1.0;
 
     AddSample(m_counter.delta);
 
-    EngineRenderStats new_render_stats;
-    new_render_stats.frames_per_second = CalculateFramesPerSecond();
-    new_render_stats.milliseconds_per_frame = m_counter.delta * 1000.0;
-    new_render_stats.milliseconds_per_frame_avg = CalculateMillisecondsPerFrame();
-    new_render_stats.milliseconds_per_frame_max = reset_min_max
-        ? new_render_stats.milliseconds_per_frame
-        : MathUtil::Max(render_stats.milliseconds_per_frame_max, new_render_stats.milliseconds_per_frame);
-    new_render_stats.milliseconds_per_frame_min = reset_min_max
-        ? new_render_stats.milliseconds_per_frame
-        : MathUtil::Min(render_stats.milliseconds_per_frame_min, new_render_stats.milliseconds_per_frame);
-    new_render_stats.counts = m_counts;
+    EngineRenderStats newRenderStats;
+    newRenderStats.framesPerSecond = CalculateFramesPerSecond();
+    newRenderStats.millisecondsPerFrame = m_counter.delta * 1000.0;
+    newRenderStats.millisecondsPerFrameAvg = CalculateMillisecondsPerFrame();
+    newRenderStats.millisecondsPerFrameMax = resetMinMax
+        ? newRenderStats.millisecondsPerFrame
+        : MathUtil::Max(renderStats.millisecondsPerFrameMax, newRenderStats.millisecondsPerFrame);
+    newRenderStats.millisecondsPerFrameMin = resetMinMax
+        ? newRenderStats.millisecondsPerFrame
+        : MathUtil::Min(renderStats.millisecondsPerFrameMin, newRenderStats.millisecondsPerFrame);
+    newRenderStats.counts = m_counts;
 
-    render_stats = new_render_stats;
+    renderStats = newRenderStats;
 
-    if (reset_min_max)
+    if (resetMinMax)
     {
-        m_delta_accum = 0.0;
+        m_deltaAccum = 0.0;
     }
 
-    Memory::MemSet(m_counts.counts, 0, sizeof(&m_counts.counts[0]) * ERS_MAX);
+    Memory::MemSet(m_counts.counts, 0, sizeof(m_counts.counts[0]) * ERS_MAX);
 }
 
 double EngineRenderStatsCalculator::CalculateFramesPerSecond() const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    if (m_num_samples == 0)
+    if (m_numSamples == 0)
     {
         return 0.0;
     }
 
-    const uint32 count = m_num_samples < max_samples ? m_num_samples : max_samples;
+    const uint32 count = m_numSamples < maxSamples ? m_numSamples : maxSamples;
     double total = 0.0;
 
     for (uint32 i = 0; i < count; ++i)
@@ -113,20 +123,20 @@ double EngineRenderStatsCalculator::CalculateFramesPerSecond() const
         total += 1.0 / m_samples[i];
     }
 
-    return total / MathUtil::Max(double(count), MathUtil::epsilon_d);
+    return total / MathUtil::Max(double(count), MathUtil::epsilonD);
 }
 
 double EngineRenderStatsCalculator::CalculateMillisecondsPerFrame() const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    if (m_num_samples == 0)
+    if (m_numSamples == 0)
     {
         return 0.0;
     }
 
-    const uint32 count = m_num_samples < max_samples ? m_num_samples : max_samples;
+    const uint32 count = m_numSamples < maxSamples ? m_numSamples : maxSamples;
     double total = 0.0;
 
     for (uint32 i = 0; i < count; ++i)
@@ -134,7 +144,7 @@ double EngineRenderStatsCalculator::CalculateMillisecondsPerFrame() const
         total += m_samples[i] * 1000.0;
     }
 
-    return total / MathUtil::Max(double(count), MathUtil::epsilon_d);
+    return total / MathUtil::Max(double(count), MathUtil::epsilonD);
 }
 
 #pragma endregion EngineRenderStatsCalculator

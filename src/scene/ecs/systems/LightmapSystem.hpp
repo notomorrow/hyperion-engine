@@ -18,15 +18,15 @@ class LightmapSystem : public SystemBase
     HYP_OBJECT_BODY(LightmapSystem);
 
 public:
-    LightmapSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    LightmapSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
     virtual ~LightmapSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 
@@ -42,7 +42,7 @@ private:
         };
     }
 
-    bool AssignLightmapVolume(MeshComponent& mesh_component);
+    bool AssignLightmapVolume(MeshComponent& meshComponent);
 };
 
 } // namespace hyperion

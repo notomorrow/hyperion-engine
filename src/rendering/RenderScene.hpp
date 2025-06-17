@@ -30,34 +30,25 @@ public:
         return m_scene;
     }
 
-    HYP_FORCE_INLINE const TResourceHandle<RenderCamera>& GetCameraRenderResourceHandle() const
-    {
-        return m_render_camera;
-    }
-
-    void SetCameraRenderResourceHandle(const TResourceHandle<RenderCamera>& render_camera);
-
 protected:
     virtual void Initialize_Internal() override;
     virtual void Destroy_Internal() override;
     virtual void Update_Internal() override;
 
-    virtual GPUBufferHolderBase* GetGPUBufferHolder() const override;
+    virtual GpuBufferHolderBase* GetGpuBufferHolder() const override;
 
 private:
     Scene* m_scene;
 
-    TResourceHandle<RenderCamera> m_render_camera;
-
-    ImageRef m_shadows_texture_array_image;
-    ImageViewRef m_shadows_texture_array_image_view;
+    ImageRef m_shadowsTextureArrayImage;
+    ImageViewRef m_shadowsTextureArrayImageView;
 };
 
 template <>
-struct ResourceMemoryPoolInitInfo<RenderScene> : MemoryPoolInitInfo
+struct ResourceMemoryPoolInitInfo<RenderScene> : MemoryPoolInitInfo<RenderScene>
 {
-    static constexpr uint32 num_elements_per_block = 8;
-    static constexpr uint32 num_initial_elements = 8;
+    static constexpr uint32 numElementsPerBlock = 8;
+    static constexpr uint32 numInitialElements = 8;
 };
 
 } // namespace hyperion

@@ -3,6 +3,8 @@
 #ifndef HYPERION_ECS_LIGHT_VISIBILITY_UPDATER_SYSTEM_HPP
 #define HYPERION_ECS_LIGHT_VISIBILITY_UPDATER_SYSTEM_HPP
 
+#if 0
+
 #include <scene/ecs/System.hpp>
 #include <scene/ecs/EntityTag.hpp>
 
@@ -17,21 +19,20 @@
 
 namespace hyperion {
 
-HYP_CLASS(NoScriptBindings)
 class LightVisibilityUpdaterSystem : public SystemBase
 {
     HYP_OBJECT_BODY(LightVisibilityUpdaterSystem);
 
 public:
-    LightVisibilityUpdaterSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    LightVisibilityUpdaterSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
     virtual ~LightVisibilityUpdaterSystem() override = default;
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 
@@ -56,5 +57,6 @@ private:
 };
 
 } // namespace hyperion
+#endif
 
 #endif

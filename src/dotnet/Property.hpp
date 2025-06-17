@@ -54,26 +54,26 @@ public:
     }
 
     template <class ReturnType>
-    ReturnType InvokeGetter(const Object* object_ptr)
+    ReturnType InvokeGetter(const Object* objectPtr)
     {
-        HypData return_hyp_data;
-        InvokeGetter_Internal(object_ptr, &return_hyp_data);
+        HypData returnHypData;
+        InvokeGetter_Internal(objectPtr, &returnHypData);
 
-        return std::move(return_hyp_data.Get<ReturnType>());
+        return std::move(returnHypData.Get<ReturnType>());
     }
 
     template <class PropertyType>
-    void InvokeSetter(const Object* object_ptr, PropertyType&& value)
+    void InvokeSetter(const Object* objectPtr, PropertyType&& value)
     {
-        HypData value_hyp_data(TransformArgument<PropertyType> {}(std::forward<PropertyType>(value)));
-        const HypData* value_hyp_data_ptr = &value_hyp_data;
+        HypData valueHypData(TransformArgument<PropertyType> {}(std::forward<PropertyType>(value)));
+        const HypData* valueHypDataPtr = &valueHypData;
 
-        return InvokeSetter_Internal(object_ptr, &value_hyp_data_ptr);
+        return InvokeSetter_Internal(objectPtr, &valueHypDataPtr);
     }
 
 private:
-    void InvokeGetter_Internal(const Object* object_ptr, HypData* out_return_hyp_data);
-    void InvokeSetter_Internal(const Object* object_ptr, const HypData** value_hyp_data);
+    void InvokeGetter_Internal(const Object* objectPtr, HypData* outReturnHypData);
+    void InvokeSetter_Internal(const Object* objectPtr, const HypData** valueHypData);
 
     ManagedGuid m_guid;
     AttributeSet m_attributes;

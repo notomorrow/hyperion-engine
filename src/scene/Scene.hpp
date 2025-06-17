@@ -8,7 +8,6 @@
 #include <scene/Octree.hpp>
 #include <scene/camera/Camera.hpp>
 
-#include <core/Base.hpp>
 #include <core/Name.hpp>
 
 #include <core/utilities/UUID.hpp>
@@ -39,8 +38,8 @@ class RenderScene;
 struct FogParams
 {
     Color color = Color(0xF2F8F7FF);
-    float start_distance = 250.0f;
-    float end_distance = 1000.0f;
+    float startDistance = 250.0f;
+    float endDistance = 1000.0f;
 };
 
 HYP_ENUM()
@@ -64,8 +63,8 @@ public:
     }
 
     template <auto MessageString, class... Args>
-    SceneValidationError(const StaticMessage& current_function, ValueWrapper<MessageString>, Args&&... args)
-        : Error(current_function, ValueWrapper<MessageString>(), std::forward<Args>(args)...)
+    SceneValidationError(const StaticMessage& currentFunction, ValueWrapper<MessageString>, Args&&... args)
+        : Error(currentFunction, ValueWrapper<MessageString>(), std::forward<Args>(args)...)
     {
     }
 
@@ -92,26 +91,26 @@ public:
     Scene();
     Scene(EnumFlags<SceneFlags> flags);
     Scene(World* world, EnumFlags<SceneFlags> flags = SceneFlags::NONE);
-    Scene(World* world, ThreadID owner_thread_id, EnumFlags<SceneFlags> flags = SceneFlags::NONE);
+    Scene(World* world, ThreadId ownerThreadId, EnumFlags<SceneFlags> flags = SceneFlags::NONE);
     Scene(const Scene& other) = delete;
     Scene& operator=(const Scene& other) = delete;
     ~Scene();
 
     HYP_FORCE_INLINE RenderScene& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
-    /*! \brief Get the thread ID that owns this Scene. */
-    HYP_FORCE_INLINE ThreadID GetOwnerThreadID() const
+    /*! \brief Get the thread Id that owns this Scene. */
+    HYP_FORCE_INLINE ThreadId GetOwnerThreadId() const
     {
-        return m_owner_thread_id;
+        return m_ownerThreadId;
     }
 
-    /*! \brief Set the thread ID that owns this Scene.
+    /*! \brief Set the thread Id that owns this Scene.
      *  This is used to assert that the Scene is being accessed from the correct thread.
      *  \note Only call this if you know what you are doing. */
-    void SetOwnerThreadID(ThreadID owner_thread_id);
+    void SetOwnerThreadId(ThreadId ownerThreadId);
 
     HYP_METHOD()
     const Handle<Camera>& GetPrimaryCamera() const;
@@ -147,7 +146,7 @@ public:
     }
 
     HYP_METHOD()
-    HYP_NODISCARD Handle<Node> FindNodeWithEntity(ID<Entity> entity) const;
+    HYP_NODISCARD Handle<Node> FindNodeWithEntity(const Entity* entity) const;
 
     HYP_METHOD()
     HYP_NODISCARD Handle<Node> FindNodeByName(WeakName name) const;
@@ -164,7 +163,7 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<EntityManager>& GetEntityManager() const
     {
-        return m_entity_manager;
+        return m_entityManager;
     }
 
     HYP_FORCE_INLINE Octree& GetOctree()
@@ -205,16 +204,16 @@ public:
     HYP_METHOD(Property = "IsAudioListener", Serialize = true)
     HYP_FORCE_INLINE bool IsAudioListener() const
     {
-        return m_is_audio_listener;
+        return m_isAudioListener;
     }
 
     HYP_METHOD(Property = "IsAudioListener", Serialize = true)
-    HYP_FORCE_INLINE void SetIsAudioListener(bool is_audio_listener)
+    HYP_FORCE_INLINE void SetIsAudioListener(bool isAudioListener)
     {
-        m_is_audio_listener = is_audio_listener;
+        m_isAudioListener = isAudioListener;
     }
 
-    void Update(GameCounter::TickUnit delta);
+    void Update(float delta);
 
     HYP_METHOD()
     bool AddToWorld(World* world);
@@ -225,9 +224,9 @@ public:
     /*! \brief Gets a unique name for a node in this scene. The returned name will be in the format "base_name(num)".
      *  The name will only be unique as long as another node with the same name does not exist in this scene. (no record is kept of the results from this function)
      *  \note The node name will be unique only to this scene.
-     *  \param base_name The base name to use for the node name. */
+     *  \param baseName The base name to use for the node name. */
     HYP_METHOD()
-    Name GetUniqueNodeName(UTF8StringView base_name) const;
+    Name GetUniqueNodeName(UTF8StringView baseName) const;
 
     Delegate<void, const Handle<Node>& /* new */, const Handle<Node>& /* prev */> OnRootNodeChanged;
 
@@ -248,21 +247,21 @@ private:
 
     Handle<Node> m_root;
 
-    ThreadID m_owner_thread_id;
+    ThreadId m_ownerThreadId;
 
     World* m_world;
 
-    FogParams m_fog_params;
+    FogParams m_fogParams;
 
-    Handle<EntityManager> m_entity_manager;
+    Handle<EntityManager> m_entityManager;
 
     Octree m_octree;
 
-    bool m_is_audio_listener;
+    bool m_isAudioListener;
 
-    GameCounter::TickUnit m_previous_delta;
+    float m_previousDelta;
 
-    RenderScene* m_render_resource;
+    RenderScene* m_renderResource;
 };
 
 } // namespace hyperion

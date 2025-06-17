@@ -4,13 +4,14 @@
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderView.hpp>
+#include <rendering/RenderEnvProbe.hpp>
+#include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvironment.hpp>
-#include <rendering/RenderShadowMap.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/Deferred.hpp>
 #include <rendering/Buffers.hpp>
 #include <rendering/FinalPass.hpp>
-#include <rendering/ShaderGlobals.hpp>
+#include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
 
 #include <core/profiling/ProfileScope.hpp>
@@ -22,8 +23,9 @@
 
 #include <scene/World.hpp>
 #include <scene/Scene.hpp>
+#include <scene/EnvProbe.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
@@ -31,143 +33,142 @@ namespace hyperion {
 
 RenderWorld::RenderWorld(World* world)
     : m_world(world),
-      m_shadow_map_manager(MakeUnique<ShadowMapAllocator>()),
-      m_render_environment(MakeUnique<RenderEnvironment>()),
-      m_buffer_data {}
+      m_renderEnvironment(MakeUnique<RenderEnvironment>()),
+      m_bufferData {}
 {
 }
 
 RenderWorld::~RenderWorld() = default;
 
-void RenderWorld::AddView(TResourceHandle<RenderView>&& render_view)
+void RenderWorld::AddView(TResourceHandle<RenderView>&& renderView)
 {
     HYP_SCOPE;
 
-    if (!render_view)
+    if (!renderView)
     {
         return;
     }
 
-    Execute([this, render_view = std::move(render_view)]()
+    Execute([this, renderView = std::move(renderView)]()
         {
-            m_render_views.PushBack(std::move(render_view));
+            m_renderViews.PushBack(std::move(renderView));
 
-            std::sort(m_render_views.Begin(), m_render_views.End(), [](const TResourceHandle<RenderView>& a, const TResourceHandle<RenderView>& b)
+            std::sort(m_renderViews.Begin(), m_renderViews.End(), [](const TResourceHandle<RenderView>& a, const TResourceHandle<RenderView>& b)
                 {
                     return uint32(b->GetPriority()) < uint32(a->GetPriority());
                 });
         });
 }
 
-void RenderWorld::RemoveView(RenderView* render_view)
+void RenderWorld::RemoveView(RenderView* renderView)
 {
     HYP_SCOPE;
 
-    if (!render_view)
+    if (!renderView)
     {
         return;
     }
 
-    Execute([this, render_view]()
+    Execute([this, renderView]()
         {
-            auto it = m_render_views.FindIf([render_view](const TResourceHandle<RenderView>& item)
+            auto it = m_renderViews.FindIf([renderView](const TResourceHandle<RenderView>& item)
                 {
-                    return item.Get() == render_view;
+                    return item.Get() == renderView;
                 });
 
-            if (it != m_render_views.End())
+            if (it != m_renderViews.End())
             {
-                RenderView* render_view = it->Get();
+                RenderView* renderView = it->Get();
                 it->Reset();
 
-                m_render_views.Erase(it);
+                m_renderViews.Erase(it);
             }
         });
 }
 
-void RenderWorld::AddScene(TResourceHandle<RenderScene>&& render_scene)
+void RenderWorld::AddScene(TResourceHandle<RenderScene>&& renderScene)
 {
     HYP_SCOPE;
 
-    if (!render_scene)
+    if (!renderScene)
     {
         return;
     }
 
-    Execute([this, render_scene = std::move(render_scene)]()
+    Execute([this, renderScene = std::move(renderScene)]()
         {
-            m_render_scenes.PushBack(std::move(render_scene));
+            m_renderScenes.PushBack(std::move(renderScene));
         });
 }
 
-void RenderWorld::RemoveScene(RenderScene* render_scene)
+void RenderWorld::RemoveScene(RenderScene* renderScene)
 {
     HYP_SCOPE;
 
-    if (!render_scene)
+    if (!renderScene)
     {
         return;
     }
 
-    Execute([this, render_scene]()
+    Execute([this, renderScene]()
         {
-            auto it = m_render_scenes.FindIf([render_scene](const TResourceHandle<RenderScene>& item)
+            auto it = m_renderScenes.FindIf([renderScene](const TResourceHandle<RenderScene>& item)
                 {
-                    return item.Get() == render_scene;
+                    return item.Get() == renderScene;
                 });
 
-            if (it != m_render_scenes.End())
+            if (it != m_renderScenes.End())
             {
-                m_render_scenes.Erase(it);
+                m_renderScenes.Erase(it);
             }
         });
 }
 
-// void RenderWorld::RenderAddShadowMap(const TResourceHandle<RenderShadowMap> &shadow_map_resource_handle)
+// void RenderWorld::RenderAddShadowMap(const TResourceHandle<RenderShadowMap> &shadowMapResourceHandle)
 // {
 //     HYP_SCOPE;
 
-//     if (!shadow_map_resource_handle) {
+//     if (!shadowMapResourceHandle) {
 //         return;
 //     }
 
-//     Execute([this, shadow_map_resource_handle]()
+//     Execute([this, shadowMapResourceHandle]()
 //     {
-//         m_shadow_map_resource_handles.PushBack(std::move(shadow_map_resource_handle));
-//     }, /* force_owner_thread */ true);
+//         m_shadowMapResourceHandles.PushBack(std::move(shadowMapResourceHandle));
+//     }, /* forceOwnerThread */ true);
 // }
 
-// void RenderWorld::RenderRemoveShadowMap(const RenderShadowMap *shadow_render_map)
+// void RenderWorld::RenderRemoveShadowMap(const RenderShadowMap *shadowMap)
 // {
 //     HYP_SCOPE;
 
-//     if (!shadow_render_map) {
+//     if (!shadowMap) {
 //         return;
 //     }
 
-//     Execute([this, shadow_render_map]()
+//     Execute([this, shadowMap]()
 //     {
-//         auto it = m_shadow_map_resource_handles.FindIf([shadow_render_map](const TResourceHandle<RenderShadowMap> &item)
+//         auto it = m_shadowMapResourceHandles.FindIf([shadowMap](const TResourceHandle<RenderShadowMap> &item)
 //         {
-//             return item.Get() == shadow_render_map;
+//             return item.Get() == shadowMap;
 //         });
 
-//         if (it != m_shadow_map_resource_handles.End()) {
-//             m_shadow_map_resource_handles.Erase(it);
+//         if (it != m_shadowMapResourceHandles.End()) {
+//             m_shadowMapResourceHandles.Erase(it);
 //         }
-//     }, /* force_owner_thread */ true);
+//     }, /* forceOwnerThread */ true);
 // }
 
 const EngineRenderStats& RenderWorld::GetRenderStats() const
 {
     HYP_SCOPE;
-    if (Threads::IsOnThread(g_render_thread))
+    if (Threads::IsOnThread(g_renderThread))
     {
-        return m_render_stats[ThreadType::THREAD_TYPE_RENDER];
+        return m_renderStats[ThreadType::THREAD_TYPE_RENDER];
     }
-    else if (Threads::IsOnThread(g_game_thread))
+    else if (Threads::IsOnThread(g_gameThread))
     {
-        return m_render_stats[ThreadType::THREAD_TYPE_GAME];
+        return m_renderStats[ThreadType::THREAD_TYPE_GAME];
     }
     else
     {
@@ -175,16 +176,16 @@ const EngineRenderStats& RenderWorld::GetRenderStats() const
     }
 }
 
-void RenderWorld::SetRenderStats(const EngineRenderStats& render_stats)
+void RenderWorld::SetRenderStats(const EngineRenderStats& renderStats)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    m_render_stats[ThreadType::THREAD_TYPE_GAME] = render_stats;
+    m_renderStats[ThreadType::THREAD_TYPE_GAME] = renderStats;
 
-    Execute([this, render_stats]()
+    Execute([this, renderStats]()
         {
-            m_render_stats[ThreadType::THREAD_TYPE_RENDER] = render_stats;
+            m_renderStats[ThreadType::THREAD_TYPE_RENDER] = renderStats;
         });
 }
 
@@ -192,10 +193,9 @@ void RenderWorld::Initialize_Internal()
 {
     HYP_SCOPE;
 
-    HYP_LOG(Rendering, Info, "Initializing RenderWorld for World with ID: {}", m_world->GetID());
+    HYP_LOG(Rendering, Info, "Initializing RenderWorld for World with Id: {}", m_world->Id());
 
-    m_shadow_map_manager->Initialize();
-    m_render_environment->Initialize();
+    m_renderEnvironment->Initialize();
 
     UpdateBufferData();
 }
@@ -204,9 +204,7 @@ void RenderWorld::Destroy_Internal()
 {
     HYP_SCOPE;
 
-    m_render_views.Clear();
-
-    m_shadow_map_manager->Destroy();
+    m_renderViews.Clear();
 }
 
 void RenderWorld::Update_Internal()
@@ -214,17 +212,17 @@ void RenderWorld::Update_Internal()
     HYP_SCOPE;
 }
 
-void RenderWorld::SetBufferData(const WorldShaderData& buffer_data)
+void RenderWorld::SetBufferData(const WorldShaderData& bufferData)
 {
     HYP_SCOPE;
 
-    Execute([this, buffer_data]()
+    Execute([this, bufferData]()
         {
             // Preserve the frame counter
-            const uint32 frame_counter = m_buffer_data.frame_counter;
+            const uint32 frameCounter = m_bufferData.frameCounter;
 
-            m_buffer_data = buffer_data;
-            m_buffer_data.frame_counter = frame_counter;
+            m_bufferData = bufferData;
+            m_bufferData.frameCounter = frameCounter;
 
             if (IsInitialized())
             {
@@ -237,100 +235,57 @@ void RenderWorld::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    *static_cast<WorldShaderData*>(m_buffer_address) = m_buffer_data;
+    *static_cast<WorldShaderData*>(m_bufferAddress) = m_bufferData;
 
-    GetGPUBufferHolder()->MarkDirty(m_buffer_index);
+    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
 }
 
-GPUBufferHolderBase* RenderWorld::GetGPUBufferHolder() const
+GpuBufferHolderBase* RenderWorld::GetGpuBufferHolder() const
 {
-    return g_engine->GetRenderData()->worlds;
-}
-
-uint32 RenderWorld::AllocateIndex(IndexAllocatorType type)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
-
-    AssertDebug(type < IndexAllocatorType::MAX);
-
-    uint32 index = m_index_allocators[type].AllocateIndex(index_allocator_maximums[type]);
-
-    if (index == ~0u)
-    {
-        HYP_LOG(Rendering, Error, "Failed to allocate index for type {}. Maximum index limit reached: {}", type, index_allocator_maximums[type]);
-    }
-
-    return index;
-}
-
-void RenderWorld::FreeIndex(IndexAllocatorType type, uint32 index)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
-
-    AssertDebug(type < IndexAllocatorType::MAX);
-
-    if (index >= index_allocator_maximums[type])
-    {
-        HYP_LOG(Rendering, Error, "Attempted to free index {} for type {}, but it exceeds the maximum index limit: {}", index, type, index_allocator_maximums[type]);
-        return;
-    }
-
-    m_index_allocators[type].FreeIndex(index);
+    return g_renderGlobalState->gpuBuffers[GRB_WORLDS];
 }
 
 void RenderWorld::PreRender(FrameBase* frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    for (const TResourceHandle<RenderView>& current_view : m_render_views)
+    for (const TResourceHandle<RenderView>& currentView : m_renderViews)
     {
-        current_view->PreRender(frame);
+        currentView->PreRender(frame);
     }
 }
 
 void RenderWorld::Render(FrameBase* frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    const RenderSetup render_setup { this, nullptr };
-
-    m_render_environment->RenderSubsystems(frame, render_setup);
-
-    for (const TResourceHandle<RenderView>& current_view : m_render_views)
-    {
-        current_view->Render(frame, this);
-    }
+    RenderSetup rs { this, nullptr };
+    g_renderGlobalState->mainRenderer->RenderFrame(frame, rs);
 }
 
 void RenderWorld::PostRender(FrameBase* frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    for (const TResourceHandle<RenderView>& current_view : m_render_views)
+    for (const TResourceHandle<RenderView>& currentView : m_renderViews)
     {
-        current_view->PostRender(frame);
+        currentView->PostRender(frame);
     }
 
-    ++m_buffer_data.frame_counter;
+    ++m_bufferData.frameCounter;
 
-    if (m_buffer_index != ~0u)
+    if (m_bufferIndex != ~0u)
     {
-        static_cast<WorldShaderData*>(m_buffer_address)->frame_counter = m_buffer_data.frame_counter;
-        GetGPUBufferHolder()->MarkDirty(m_buffer_index);
+        static_cast<WorldShaderData*>(m_bufferAddress)->frameCounter = m_bufferData.frameCounter;
+        GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
     }
 }
 
 #pragma endregion RenderWorld
 
-namespace renderer {
-
 HYP_DESCRIPTOR_CBUFF(Global, WorldsBuffer, 1, sizeof(WorldShaderData), true);
-
-} // namespace renderer
 
 } // namespace hyperion

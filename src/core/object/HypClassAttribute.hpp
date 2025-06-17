@@ -113,8 +113,8 @@ public:
 
     // HYP_FORCE_INLINE bool operator==(UTF8StringView other) const
     // {
-    //     if (const String *string_ptr = m_value.TryGet<String>()) {
-    //         return *string_ptr == other;
+    //     if (const String *stringPtr = m_value.TryGet<String>()) {
+    //         return *stringPtr == other;
     //     }
 
     //     return false;
@@ -122,8 +122,8 @@ public:
 
     // HYP_FORCE_INLINE bool operator!=(UTF8StringView other) const
     // {
-    //     if (const String *string_ptr = m_value.TryGet<String>()) {
-    //         return *string_ptr != other;
+    //     if (const String *stringPtr = m_value.TryGet<String>()) {
+    //         return *stringPtr != other;
     //     }
 
     //     return true;
@@ -295,18 +295,18 @@ public:
 
     const HypClassAttributeValue& Get(ANSIStringView name) const
     {
-        static const HypClassAttributeValue invalid_value {};
+        static const HypClassAttributeValue invalidValue {};
 
-        return Get(name, invalid_value);
+        return Get(name, invalidValue);
     }
 
-    const HypClassAttributeValue& Get(ANSIStringView name, const HypClassAttributeValue& default_value) const
+    const HypClassAttributeValue& Get(ANSIStringView name, const HypClassAttributeValue& defaultValue) const
     {
         const auto it = m_attributes.FindAs(name);
 
         if (it == m_attributes.End())
         {
-            return default_value;
+            return defaultValue;
         }
 
         return it->GetValue();

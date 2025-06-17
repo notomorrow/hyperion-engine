@@ -18,8 +18,8 @@ class CameraSystem final : public SystemBase
     HYP_OBJECT_BODY(CameraSystem);
 
 public:
-    CameraSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    CameraSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
@@ -30,8 +30,8 @@ public:
         return true;
     }
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity) override;
-    virtual void OnEntityRemoved(ID<Entity> entity) override;
+    virtual void OnEntityAdded(Entity* entity) override;
+    virtual void OnEntityRemoved(Entity* entity) override;
 
     virtual void Process(float delta) override;
 

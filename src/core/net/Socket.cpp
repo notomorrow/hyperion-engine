@@ -22,7 +22,7 @@ namespace net {
 
 struct SocketServerImpl
 {
-    int socket_id = 0;
+    int socketId = 0;
 
 #ifdef HYP_UNIX
     struct sockaddr_un local, remote;
@@ -47,11 +47,11 @@ SocketServer::~SocketServer()
     AssertThrow(m_thread == nullptr && !m_thread->IsRunning());
 }
 
-void SocketConnection::TriggerProc(Name event_name, Array<SocketProcArgument>&& args)
+void SocketConnection::TriggerProc(Name eventName, Array<SocketProcArgument>&& args)
 {
-    const auto it = m_event_procs.Find(event_name);
+    const auto it = m_eventProcs.Find(eventName);
 
-    if (it == m_event_procs.End())
+    if (it == m_eventProcs.End())
     {
         return;
     }
@@ -69,10 +69,10 @@ bool SocketServer::Start()
     m_impl = MakeUnique<SocketServerImpl>();
 
 #ifdef HYP_UNIX
-    m_impl->socket_id = socket(AF_UNIX, SOCK_STREAM, 0);
+    m_impl->socketId = socket(AF_UNIX, SOCK_STREAM, 0);
 #endif
 
-    if (m_impl->socket_id == -1)
+    if (m_impl->socketId == -1)
     {
         HYP_LOG(Socket, Error, "Failed to open socket server. Code: {}", errno);
 
@@ -81,51 +81,51 @@ bool SocketServer::Start()
         return false;
     }
 
-    const char* socket_path = m_name.Data();
+    const char* socketPath = m_name.Data();
 
-    constexpr SizeType max_connections = 5;
+    constexpr SizeType maxConnections = 5;
 
 #ifdef HYP_UNIX
     m_impl->local.sun_family = AF_UNIX;
-    strcpy(m_impl->local.sun_path, socket_path);
+    strcpy(m_impl->local.sun_path, socketPath);
     unlink(m_impl->local.sun_path);
 
     const int len = strlen(m_impl->local.sun_path) + sizeof(m_impl->local.sun_family);
 
-    int32 reuse_socket = 1;
+    int32 reuseSocket = 1;
 
-    if (setsockopt(m_impl->socket_id, SOL_SOCKET, SO_REUSEADDR, &reuse_socket, sizeof(reuse_socket)) != 0)
+    if (setsockopt(m_impl->socketId, SOL_SOCKET, SO_REUSEADDR, &reuseSocket, sizeof(reuseSocket)) != 0)
     {
-        const int32 error_code = errno;
+        const int32 errorCode = errno;
 
-        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(error_code))), SocketProcArgument(error_code) });
+        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(errorCode))), SocketProcArgument(errorCode) });
 
         return false;
     }
 
-    if (setsockopt(m_impl->socket_id, SOL_SOCKET, SO_REUSEPORT, &reuse_socket, sizeof(reuse_socket)) != 0)
+    if (setsockopt(m_impl->socketId, SOL_SOCKET, SO_REUSEPORT, &reuseSocket, sizeof(reuseSocket)) != 0)
     {
-        const int32 error_code = errno;
+        const int32 errorCode = errno;
 
-        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(error_code))), SocketProcArgument(error_code) });
+        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(errorCode))), SocketProcArgument(errorCode) });
 
         return false;
     }
 
-    if (bind(m_impl->socket_id, (struct sockaddr*)&m_impl->local, len) != 0)
+    if (bind(m_impl->socketId, (struct sockaddr*)&m_impl->local, len) != 0)
     {
-        const int32 error_code = errno;
+        const int32 errorCode = errno;
 
-        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(error_code))), SocketProcArgument(error_code) });
+        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(errorCode))), SocketProcArgument(errorCode) });
 
         return false;
     }
 
-    if (listen(m_impl->socket_id, max_connections) != 0)
+    if (listen(m_impl->socketId, maxConnections) != 0)
     {
-        const int32 error_code = errno;
+        const int32 errorCode = errno;
 
-        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(error_code))), SocketProcArgument(int32(errno)) });
+        TriggerProc(NAME("OnError"), { SocketProcArgument(String(strerror(errorCode))), SocketProcArgument(int32(errno)) });
 
         return false;
     }
@@ -159,7 +159,7 @@ bool SocketServer::Stop()
     }
 
     { // Close all connections
-        Mutex::Guard guard(m_connections_mutex);
+        Mutex::Guard guard(m_connectionsMutex);
 
         for (auto& pair : m_connections)
         {
@@ -173,7 +173,7 @@ bool SocketServer::Stop()
     }
 
 #ifdef HYP_UNIX
-    close(m_impl->socket_id);
+    close(m_impl->socketId);
     unlink(m_impl->local.sun_path);
 
     TriggerProc(NAME("OnServerStopped"), {});
@@ -186,36 +186,36 @@ bool SocketServer::Stop()
     return false;
 }
 
-bool SocketServer::PollForConnections(Array<RC<SocketClient>>& out_connections)
+bool SocketServer::PollForConnections(Array<RC<SocketClient>>& outConnections)
 {
     if (m_impl == nullptr)
     {
         return false;
     }
 
-    out_connections.Clear();
+    outConnections.Clear();
 
 #if defined(HYP_UNIX)
     // the client
     struct sockaddr_un remote;
     socklen_t t = sizeof(remote);
 
-    int new_socket;
+    int newSocket;
 
-    while ((new_socket = accept(m_impl->socket_id, (struct sockaddr*)&remote, &t)) != -1)
+    while ((newSocket = accept(m_impl->socketId, (struct sockaddr*)&remote, &t)) != -1)
     {
-        const Name client_name = Name::Unique("socket_client");
+        const Name clientName = Name::Unique("socket_client");
 
         // Make the socket non-blocking
-        if (fcntl(new_socket, F_SETFL, O_NONBLOCK) == -1)
+        if (fcntl(newSocket, F_SETFL, O_NONBLOCK) == -1)
         {
             HYP_LOG(Socket, Error, "Failed to set socket to non-blocking. Code: {}", errno);
 
-            close(new_socket);
+            close(newSocket);
             continue;
         }
 
-        out_connections.PushBack(MakeRefCountedPtr<SocketClient>(client_name, SocketID { new_socket }));
+        outConnections.PushBack(MakeRefCountedPtr<SocketClient>(clientName, SocketID { newSocket }));
     }
 
     return true;
@@ -232,18 +232,18 @@ void SocketServer::AddConnection(RC<SocketClient>&& connection)
         return;
     }
 
-    Mutex::Guard guard(m_connections_mutex);
+    Mutex::Guard guard(m_connectionsMutex);
 
     connection->TriggerProc(NAME("OnClientConnected"), { SocketProcArgument(connection->GetName()) });
 
     m_connections.Set(connection->GetName(), std::move(connection));
 }
 
-bool SocketServer::RemoveConnection(Name client_name)
+bool SocketServer::RemoveConnection(Name clientName)
 {
-    Mutex::Guard guard(m_connections_mutex);
+    Mutex::Guard guard(m_connectionsMutex);
 
-    const auto it = m_connections.Find(client_name);
+    const auto it = m_connections.Find(clientName);
 
     if (it == m_connections.End())
     {
@@ -262,11 +262,11 @@ bool SocketServer::RemoveConnection(Name client_name)
     return true;
 }
 
-SocketResultType SocketServer::Send(Name client_name, const ByteBuffer& data)
+SocketResultType SocketServer::Send(Name clientName, const ByteBuffer& data)
 {
-    Mutex::Guard guard(m_connections_mutex);
+    Mutex::Guard guard(m_connectionsMutex);
 
-    const auto it = m_connections.Find(client_name);
+    const auto it = m_connections.Find(clientName);
 
     if (it == m_connections.End())
     {
@@ -285,8 +285,8 @@ SocketResultType SocketServer::Send(Name client_name, const ByteBuffer& data)
 
 #pragma region SocketServerThread
 
-SocketServerThread::SocketServerThread(const String& socket_name)
-    : Thread(ThreadID(CreateNameFromDynamicString(ANSIString("SocketServerThread_") + socket_name.Data())))
+SocketServerThread::SocketServerThread(const String& socketName)
+    : Thread(ThreadId(CreateNameFromDynamicString(ANSIString("SocketServerThread_") + socketName.Data())))
 {
 }
 
@@ -294,26 +294,26 @@ void SocketServerThread::operator()(SocketServer* server)
 {
     Queue<Scheduler::ScheduledTask> tasks;
 
-    while (!m_stop_requested.Get(MemoryOrder::RELAXED))
+    while (!m_stopRequested.Get(MemoryOrder::RELAXED))
     {
         // Check for incoming connections
 
-        Array<RC<SocketClient>> new_connections;
+        Array<RC<SocketClient>> newConnections;
 
-        if (server->PollForConnections(new_connections))
+        if (server->PollForConnections(newConnections))
         {
-            for (auto& connection : new_connections)
+            for (auto& connection : newConnections)
             {
                 server->AddConnection(std::move(connection));
             }
         }
 
-        Array<RC<SocketClient>> removed_connections;
+        Array<RC<SocketClient>> removedConnections;
 
         { // Check for incoming data
-            ByteBuffer received_data;
+            ByteBuffer receivedData;
 
-            Mutex::Guard guard(server->m_connections_mutex);
+            Mutex::Guard guard(server->m_connectionsMutex);
 
             for (auto& pair : server->m_connections)
             {
@@ -322,13 +322,13 @@ void SocketServerThread::operator()(SocketServer* server)
                     continue;
                 }
 
-                const SocketResultType result = pair.second->Receive(received_data);
+                const SocketResultType result = pair.second->Receive(receivedData);
 
                 switch (result)
                 {
                 case SOCKET_RESULT_TYPE_DATA:
                     // Trigger the OnClientData event
-                    pair.second->TriggerProc(NAME("OnClientData"), { SocketProcArgument(pair.second->GetName()), SocketProcArgument(std::move(received_data)) });
+                    pair.second->TriggerProc(NAME("OnClientData"), { SocketProcArgument(pair.second->GetName()), SocketProcArgument(std::move(receivedData)) });
 
                     break;
                 case SOCKET_RESULT_TYPE_ERROR:
@@ -340,7 +340,7 @@ void SocketServerThread::operator()(SocketServer* server)
                     // No data returned, do nothing
                     break;
                 case SOCKET_RESULT_TYPE_DISCONNECTED:
-                    removed_connections.PushBack(std::move(pair.second));
+                    removedConnections.PushBack(std::move(pair.second));
 
                     break;
                 }
@@ -348,12 +348,12 @@ void SocketServerThread::operator()(SocketServer* server)
         }
 
         // Mutex is unlocked here, so we can remove the connections
-        for (auto& connection : removed_connections)
+        for (auto& connection : removedConnections)
         {
             server->RemoveConnection(connection->GetName());
         }
 
-        if (uint32 num_enqueued = m_scheduler.NumEnqueued())
+        if (uint32 numEnqueued = m_scheduler.NumEnqueued())
         {
             m_scheduler.AcceptAll(tasks);
 
@@ -375,15 +375,15 @@ void SocketServerThread::operator()(SocketServer* server)
 
 #pragma region SocketClient
 
-SocketClient::SocketClient(Name name, SocketID internal_id)
+SocketClient::SocketClient(Name name, SocketID internalId)
     : m_name(name),
-      m_internal_id(internal_id)
+      m_internalId(internalId)
 {
 }
 
 SocketResultType SocketClient::Send(const ByteBuffer& data)
 {
-    if (m_internal_id.value == 0)
+    if (m_internalId.value == 0)
     {
         return SOCKET_RESULT_TYPE_ERROR;
     }
@@ -394,7 +394,7 @@ SocketResultType SocketClient::Send(const ByteBuffer& data)
     }
 
 #if defined(HYP_UNIX)
-    const int32 sent = send(m_internal_id.value, data.Data(), data.Size(), 0);
+    const int32 sent = send(m_internalId.value, data.Data(), data.Size(), 0);
 
     if (sent == -1)
     {
@@ -407,16 +407,16 @@ SocketResultType SocketClient::Send(const ByteBuffer& data)
 #endif
 }
 
-SocketResultType SocketClient::Receive(ByteBuffer& out_data)
+SocketResultType SocketClient::Receive(ByteBuffer& outData)
 {
-    if (m_internal_id.value == 0)
+    if (m_internalId.value == 0)
     {
         return SOCKET_RESULT_TYPE_ERROR;
     }
 
 #if defined(HYP_UNIX)
-    uint32 data_size;
-    SizeType received = recv(m_internal_id.value, &data_size, sizeof(data_size), MSG_WAITALL);
+    uint32 dataSize;
+    SizeType received = recv(m_internalId.value, &dataSize, sizeof(dataSize), MSG_WAITALL);
 
     if (received < 0)
     {
@@ -436,18 +436,18 @@ SocketResultType SocketClient::Receive(ByteBuffer& out_data)
         return SOCKET_RESULT_TYPE_DISCONNECTED;
     }
 
-    if (data_size == 0)
+    if (dataSize == 0)
     {
         return SOCKET_RESULT_TYPE_NO_DATA;
     }
 
-    out_data.SetSize(data_size);
+    outData.SetSize(dataSize);
 
-    received = recv(m_internal_id.value, out_data.Data(), data_size, MSG_WAITALL);
+    received = recv(m_internalId.value, outData.Data(), dataSize, MSG_WAITALL);
 
     // TODO: handle partial data
 
-    return received == data_size ? SOCKET_RESULT_TYPE_DATA : SOCKET_RESULT_TYPE_ERROR;
+    return received == dataSize ? SOCKET_RESULT_TYPE_DATA : SOCKET_RESULT_TYPE_ERROR;
 #else
     return SOCKET_RESULT_TYPE_ERROR;
 #endif
@@ -456,13 +456,13 @@ SocketResultType SocketClient::Receive(ByteBuffer& out_data)
 void SocketClient::Close()
 {
 #if defined(HYP_UNIX)
-    if (m_internal_id.value != 0)
+    if (m_internalId.value != 0)
     {
-        close(m_internal_id.value);
+        close(m_internalId.value);
     }
 #endif
 
-    m_internal_id.value = 0;
+    m_internalId.value = 0;
 }
 
 #pragma endregion SocketClient

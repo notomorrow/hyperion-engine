@@ -17,27 +17,27 @@ class CameraTrackController : public PerspectiveCameraController
 
 public:
     CameraTrackController();
-    CameraTrackController(RC<CameraTrack> camera_track);
+    CameraTrackController(RC<CameraTrack> cameraTrack);
     virtual ~CameraTrackController() = default;
 
     const RC<CameraTrack>& GetCameraTrack() const
     {
-        return m_camera_track;
+        return m_cameraTrack;
     }
 
-    void SetCameraTrack(RC<CameraTrack> camera_track)
+    void SetCameraTrack(RC<CameraTrack> cameraTrack)
     {
-        m_camera_track = std::move(camera_track);
+        m_cameraTrack = std::move(cameraTrack);
     }
 
     virtual void UpdateLogic(double dt) override;
 
 protected:
-    RC<CameraTrack> m_camera_track;
-    double m_track_time;
+    RC<CameraTrack> m_cameraTrack;
+    double m_trackTime;
 
 private:
-    virtual void RespondToCommand(const CameraCommand& command, GameCounter::TickUnit dt) override;
+    virtual void RespondToCommand(const CameraCommand& command, float dt) override;
 };
 
 } // namespace hyperion

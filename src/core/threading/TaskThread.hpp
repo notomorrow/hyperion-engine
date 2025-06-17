@@ -15,12 +15,12 @@
 namespace hyperion {
 namespace threading {
 
-class ThreadID;
+class ThreadId;
 
 class HYP_API TaskThread : public Thread<Scheduler>
 {
 public:
-    TaskThread(const ThreadID& thread_id, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
+    TaskThread(const ThreadId& threadId, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
     TaskThread(Name name, ThreadPriorityValue priority = ThreadPriorityValue::NORMAL);
 
     virtual ~TaskThread() override = default;
@@ -34,7 +34,7 @@ public:
 
     HYP_FORCE_INLINE uint32 NumTasks() const
     {
-        return m_num_tasks.Get(MemoryOrder::ACQUIRE);
+        return m_numTasks.Get(MemoryOrder::ACQUIRE);
     }
 
 protected:
@@ -52,9 +52,9 @@ protected:
 
     virtual void operator()() override;
 
-    AtomicVar<uint32> m_num_tasks;
+    AtomicVar<uint32> m_numTasks;
 
-    Queue<Scheduler::ScheduledTask> m_task_queue;
+    Queue<Scheduler::ScheduledTask> m_taskQueue;
 };
 
 } // namespace threading

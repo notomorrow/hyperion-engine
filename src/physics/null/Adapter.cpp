@@ -21,27 +21,27 @@ void NullPhysicsAdapter::Teardown(PhysicsWorldBase* world)
 {
 }
 
-void NullPhysicsAdapter::Tick(PhysicsWorldBase* world, GameCounter::TickUnitHighPrec delta)
+void NullPhysicsAdapter::Tick(PhysicsWorldBase* world, double delta)
 {
 }
 
-void NullPhysicsAdapter::OnRigidBodyAdded(const Handle<RigidBody>& rigid_body)
+void NullPhysicsAdapter::OnRigidBodyAdded(const Handle<RigidBody>& rigidBody)
 {
 }
 
-void NullPhysicsAdapter::OnRigidBodyRemoved(const Handle<RigidBody>& rigid_body)
+void NullPhysicsAdapter::OnRigidBodyRemoved(const Handle<RigidBody>& rigidBody)
 {
 }
 
-void NullPhysicsAdapter::OnChangePhysicsShape(RigidBody* rigid_body)
+void NullPhysicsAdapter::OnChangePhysicsShape(RigidBody* rigidBody)
 {
 }
 
-void NullPhysicsAdapter::OnChangePhysicsMaterial(RigidBody* rigid_body)
+void NullPhysicsAdapter::OnChangePhysicsMaterial(RigidBody* rigidBody)
 {
 }
 
-void NullPhysicsAdapter::ApplyForceToBody(const RigidBody* rigid_body, const Vector3& force)
+void NullPhysicsAdapter::ApplyForceToBody(const RigidBody* rigidBody, const Vector3& force)
 {
 }
 

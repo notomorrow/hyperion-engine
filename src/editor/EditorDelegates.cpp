@@ -18,62 +18,62 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
 EditorDelegates::EditorDelegates()
-    : m_scheduler(g_game_thread)
+    : m_scheduler(g_gameThread)
 {
 }
 
-void EditorDelegates::AddNodeWatcher(Name watcher_key, Node* root_node, Span<const HypProperty> properties_to_watch, Proc<void(Node*, const HypProperty*)>&& proc)
+void EditorDelegates::AddNodeWatcher(Name watcherKey, Node* rootNode, Span<const HypProperty> propertiesToWatch, Proc<void(Node*, const HypProperty*)>&& proc)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(root_node != nullptr);
+    AssertThrow(rootNode != nullptr);
 
-    NodeWatcher& node_watcher = m_node_watchers.EmplaceBack(watcher_key, NodeWatcher {}).second;
-    node_watcher.root_node = root_node->WeakHandleFromThis();
-    node_watcher.OnChange.Bind(std::move(proc), g_game_thread).Detach();
+    NodeWatcher& nodeWatcher = m_nodeWatchers.EmplaceBack(watcherKey, NodeWatcher {}).second;
+    nodeWatcher.rootNode = rootNode->WeakHandleFromThis();
+    nodeWatcher.OnChange.Bind(std::move(proc), g_gameThread).Detach();
 
-    for (const HypProperty& property : properties_to_watch)
+    for (const HypProperty& property : propertiesToWatch)
     {
-        node_watcher.properties_to_watch.Insert(&property);
+        nodeWatcher.propertiesToWatch.Insert(&property);
     }
 }
 
-int EditorDelegates::RemoveNodeWatcher(WeakName watcher_key, Node* root_node)
+int EditorDelegates::RemoveNodeWatcher(WeakName watcherKey, Node* rootNode)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(root_node != nullptr);
+    AssertThrow(rootNode != nullptr);
 
-    int num_removed = 0;
+    int numRemoved = 0;
 
-    for (auto it = m_node_watchers.Begin(); it != m_node_watchers.End(); ++it)
+    for (auto it = m_nodeWatchers.Begin(); it != m_nodeWatchers.End(); ++it)
     {
-        if (it->first == watcher_key && it->second.root_node.GetUnsafe() == root_node)
+        if (it->first == watcherKey && it->second.rootNode.GetUnsafe() == rootNode)
         {
-            m_node_watchers.Erase(it);
-            ++num_removed;
+            m_nodeWatchers.Erase(it);
+            ++numRemoved;
         }
     }
 
-    return num_removed;
+    return numRemoved;
 }
 
-int EditorDelegates::RemoveNodeWatchers(WeakName watcher_key)
+int EditorDelegates::RemoveNodeWatchers(WeakName watcherKey)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    int num_removed = 0;
+    int numRemoved = 0;
 
-    for (auto it = m_node_watchers.Begin(); it != m_node_watchers.End();)
+    for (auto it = m_nodeWatchers.Begin(); it != m_nodeWatchers.End();)
     {
-        if (it->first == watcher_key)
+        if (it->first == watcherKey)
         {
-            it = m_node_watchers.Erase(it);
+            it = m_nodeWatchers.Erase(it);
 
-            ++num_removed;
+            ++numRemoved;
 
             continue;
         }
@@ -81,7 +81,7 @@ int EditorDelegates::RemoveNodeWatchers(WeakName watcher_key)
         ++it;
     }
 
-    return num_removed;
+    return numRemoved;
 }
 
 void EditorDelegates::OnNodeUpdate(Node* node, const HypProperty* property)
@@ -89,11 +89,11 @@ void EditorDelegates::OnNodeUpdate(Node* node, const HypProperty* property)
     AssertThrow(node != nullptr);
     AssertThrow(property != nullptr);
 
-    auto impl = [this, node_weak = node->WeakHandleFromThis(), property]()
+    auto impl = [this, nodeWeak = node->WeakHandleFromThis(), property]()
     {
         HYP_SCOPE;
 
-        Handle<Node> node = node_weak.Lock();
+        Handle<Node> node = nodeWeak.Lock();
 
         if (!node)
         {
@@ -102,35 +102,35 @@ void EditorDelegates::OnNodeUpdate(Node* node, const HypProperty* property)
             return;
         }
 
-        auto suppressed_nodes_it = m_suppressed_nodes.Find(node);
+        auto suppressedNodesIt = m_suppressedNodes.Find(node);
 
-        if (suppressed_nodes_it != m_suppressed_nodes.End())
+        if (suppressedNodesIt != m_suppressedNodes.End())
         {
-            if (suppressed_nodes_it->second.suppress_all_counter > 0 || suppressed_nodes_it->second.properties_to_suppress.Contains(property))
+            if (suppressedNodesIt->second.suppressAllCounter > 0 || suppressedNodesIt->second.propertiesToSuppress.Contains(property))
             {
                 return;
             }
         }
 
-        for (Pair<Name, NodeWatcher>& it : m_node_watchers)
+        for (Pair<Name, NodeWatcher>& it : m_nodeWatchers)
         {
-            NodeWatcher& node_watcher = it.second;
+            NodeWatcher& nodeWatcher = it.second;
 
-            if (node_watcher.root_node.IsValid() && !node->IsOrHasParent(node_watcher.root_node.GetUnsafe()))
+            if (nodeWatcher.rootNode.IsValid() && !node->IsOrHasParent(nodeWatcher.rootNode.GetUnsafe()))
             {
                 continue;
             }
 
-            if (node_watcher.properties_to_watch.Any() && !node_watcher.properties_to_watch.Contains(property))
+            if (nodeWatcher.propertiesToWatch.Any() && !nodeWatcher.propertiesToWatch.Contains(property))
             {
                 continue;
             }
 
-            node_watcher.OnChange(node, property);
+            nodeWatcher.OnChange(node, property);
         }
     };
 
-    if (Threads::IsOnThread(g_game_thread))
+    if (Threads::IsOnThread(g_gameThread))
     {
         impl();
     }
@@ -147,11 +147,11 @@ void EditorDelegates::Update()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     Queue<Scheduler::ScheduledTask> tasks;
 
-    if (uint32 num_enqueued = m_scheduler.NumEnqueued())
+    if (uint32 numEnqueued = m_scheduler.NumEnqueued())
     {
         m_scheduler.AcceptAll(tasks);
 

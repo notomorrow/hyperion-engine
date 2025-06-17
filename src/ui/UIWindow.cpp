@@ -16,7 +16,7 @@ HYP_DECLARE_LOG_CHANNEL(UI);
 #pragma region UIWindow
 
 UIWindow::UIWindow()
-    : m_window_flags(UIWindowFlags::DEFAULT)
+    : m_windowFlags(UIWindowFlags::DEFAULT)
 {
     SetBorderRadius(5);
     SetBorderFlags(UIObjectBorderFlags::ALL);
@@ -30,31 +30,31 @@ void UIWindow::Init()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     UIPanel::Init();
 
     { // create title bar
-        m_title_bar = CreateUIObject<UIPanel>(NAME("TitleBar"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
-        m_title_bar->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
-        m_title_bar->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);
-        m_title_bar->SetBorderRadius(5);
-        m_title_bar->SetBorderFlags(UIObjectBorderFlags::TOP | UIObjectBorderFlags::LEFT | UIObjectBorderFlags::RIGHT);
-        m_title_bar->SetPadding(Vec2i { 5, 5 });
-        m_title_bar->SetBackgroundColor(Vec4f { 0.4f, 0.4f, 0.4f, 1.0f });
+        m_titleBar = CreateUIObject<UIPanel>(NAME("TitleBar"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { 30, UIObjectSize::PIXEL }));
+        m_titleBar->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
+        m_titleBar->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);
+        m_titleBar->SetBorderRadius(5);
+        m_titleBar->SetBorderFlags(UIObjectBorderFlags::TOP | UIObjectBorderFlags::LEFT | UIObjectBorderFlags::RIGHT);
+        m_titleBar->SetPadding(Vec2i { 5, 5 });
+        m_titleBar->SetBackgroundColor(Vec4f { 0.4f, 0.4f, 0.4f, 1.0f });
 
-        Handle<UIText> title_bar_text = CreateUIObject<UIText>(NAME("TitleBarText"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
-        title_bar_text->SetParentAlignment(UIObjectAlignment::CENTER);
-        title_bar_text->SetOriginAlignment(UIObjectAlignment::CENTER);
-        title_bar_text->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
-        title_bar_text->SetText(GetText());
-        m_title_bar->AddChildUIObject(title_bar_text);
+        Handle<UIText> titleBarText = CreateUIObject<UIText>(NAME("TitleBarText"), Vec2i { 0, 0 }, UIObjectSize(UIObjectSize::AUTO));
+        titleBarText->SetParentAlignment(UIObjectAlignment::CENTER);
+        titleBarText->SetOriginAlignment(UIObjectAlignment::CENTER);
+        titleBarText->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
+        titleBarText->SetText(GetText());
+        m_titleBar->AddChildUIObject(titleBarText);
 
-        m_title_bar->OnMouseDown.Bind([this](const MouseEvent& event)
+        m_titleBar->OnMouseDown.Bind([this](const MouseEvent& event)
                                     {
-                                        if (m_window_flags & UIWindowFlags::ALLOW_DRAG)
+                                        if (m_windowFlags & UIWindowFlags::ALLOW_DRAG)
                                         {
-                                            m_mouse_drag_start = event.absolute_position;
+                                            m_mouseDragStart = event.absolutePosition;
 
                                             return UIEventHandlerResult::STOP_BUBBLING;
                                         }
@@ -63,11 +63,11 @@ void UIWindow::Init()
                                     })
             .Detach();
 
-        m_title_bar->OnMouseUp.Bind([this](const MouseEvent& event)
+        m_titleBar->OnMouseUp.Bind([this](const MouseEvent& event)
                                   {
-                                      if (m_window_flags & UIWindowFlags::ALLOW_DRAG)
+                                      if (m_windowFlags & UIWindowFlags::ALLOW_DRAG)
                                       {
-                                          m_mouse_drag_start.Unset();
+                                          m_mouseDragStart.Unset();
 
                                           return UIEventHandlerResult::STOP_BUBBLING;
                                       }
@@ -76,16 +76,16 @@ void UIWindow::Init()
                                   })
             .Detach();
 
-        m_title_bar->OnMouseDrag.Bind([this](const MouseEvent& event)
+        m_titleBar->OnMouseDrag.Bind([this](const MouseEvent& event)
                                     {
-                                        if (m_window_flags & UIWindowFlags::ALLOW_DRAG)
+                                        if (m_windowFlags & UIWindowFlags::ALLOW_DRAG)
                                         {
-                                            if (m_mouse_drag_start.HasValue())
+                                            if (m_mouseDragStart.HasValue())
                                             {
-                                                Vec2i delta = event.absolute_position - *m_mouse_drag_start;
+                                                Vec2i delta = event.absolutePosition - *m_mouseDragStart;
                                                 SetPosition(GetPosition() + delta);
 
-                                                m_mouse_drag_start = event.absolute_position;
+                                                m_mouseDragStart = event.absolutePosition;
                                             }
 
                                             return UIEventHandlerResult::STOP_BUBBLING;
@@ -95,9 +95,9 @@ void UIWindow::Init()
                                     })
             .Detach();
 
-        if (m_window_flags & UIWindowFlags::TITLE_BAR)
+        if (m_windowFlags & UIWindowFlags::TITLE_BAR)
         {
-            UIPanel::AddChildUIObject(m_title_bar);
+            UIPanel::AddChildUIObject(m_titleBar);
         }
     }
 
@@ -162,79 +162,79 @@ void UIWindow::SetText(const String& text)
 {
     HYP_SCOPE;
 
-    if (m_title_bar != nullptr)
+    if (m_titleBar != nullptr)
     {
-        if (Handle<UIObject> title_bar_text = m_title_bar->FindChildUIObject(NAME("TitleBarText")))
+        if (Handle<UIObject> titleBarText = m_titleBar->FindChildUIObject(NAME("TitleBarText")))
         {
-            title_bar_text->SetText(text);
+            titleBarText->SetText(text);
         }
     }
 
     UIObject::SetText(text);
 }
 
-void UIWindow::AddChildUIObject(const Handle<UIObject>& ui_object)
+void UIWindow::AddChildUIObject(const Handle<UIObject>& uiObject)
 {
     HYP_SCOPE;
 
-    if (!ui_object)
+    if (!uiObject)
     {
         return;
     }
 
-    m_content->AddChildUIObject(ui_object);
+    m_content->AddChildUIObject(uiObject);
 
     UpdateSize(false);
 }
 
-bool UIWindow::RemoveChildUIObject(UIObject* ui_object)
+bool UIWindow::RemoveChildUIObject(UIObject* uiObject)
 {
     HYP_SCOPE;
 
-    if (!ui_object)
+    if (!uiObject)
     {
         return false;
     }
 
-    if (m_content->RemoveChildUIObject(ui_object))
+    if (m_content->RemoveChildUIObject(uiObject))
     {
         UpdateSize(false);
 
         return true;
     }
 
-    return UIObject::RemoveChildUIObject(ui_object);
+    return UIObject::RemoveChildUIObject(uiObject);
 }
 
-void UIWindow::UpdateSize_Internal(bool update_children)
+void UIWindow::UpdateSize_Internal(bool updateChildren)
 {
     HYP_SCOPE;
 
-    UIPanel::UpdateSize_Internal(update_children);
+    UIPanel::UpdateSize_Internal(updateChildren);
 }
 
-void UIWindow::SetWindowFlags(EnumFlags<UIWindowFlags> window_flags)
+void UIWindow::SetWindowFlags(EnumFlags<UIWindowFlags> windowFlags)
 {
     HYP_SCOPE;
 
-    if (m_window_flags == window_flags)
+    if (m_windowFlags == windowFlags)
     {
         return;
     }
 
-    if ((window_flags & UIWindowFlags::TITLE_BAR) != m_window_flags)
+    if ((windowFlags & UIWindowFlags::TITLE_BAR) != m_windowFlags)
     {
-        if (window_flags & UIWindowFlags::TITLE_BAR)
+        if (windowFlags & UIWindowFlags::TITLE_BAR)
         {
-            UIPanel::AddChildUIObject(m_title_bar);
+            UIPanel::AddChildUIObject(m_titleBar);
         }
         else
         {
-            UIPanel::RemoveChildUIObject(m_title_bar);
+            UIPanel::RemoveChildUIObject(m_titleBar);
         }
     }
 
-    m_window_flags = window_flags;
+    m_windowFlags = windowFlags;
 }
 
 #pragma region UIWindow

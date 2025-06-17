@@ -10,8 +10,8 @@
 namespace hyperion {
 class WorleyNoise
 {
-    static constexpr uint32 offset_basis = 2166136261u;
-    static constexpr uint32 fnv_prime = 16777619u;
+    static constexpr uint32 offsetBasis = 2166136261u;
+    static constexpr uint32 fnvPrime = 16777619u;
 
 public:
     WorleyNoise(int seed);
@@ -40,7 +40,7 @@ private:
 
     size_t WorleyHash(size_t i, size_t j, size_t k) const
     {
-        return ((((((offset_basis ^ i) * fnv_prime) ^ j) * fnv_prime) ^ k) * fnv_prime);
+        return ((((((offsetBasis ^ i) * fnvPrime) ^ j) * fnvPrime) ^ k) * fnvPrime);
     }
 };
 } // namespace hyperion

@@ -12,59 +12,59 @@ namespace hyperion {
 
 HYP_API Ray operator*(const Matrix4& transform, const Ray& ray)
 {
-    Vec4f transformed_position = transform * Vec4f(ray.position, 1.0f);
-    transformed_position /= transformed_position.w;
+    Vec4f transformedPosition = transform * Vec4f(ray.position, 1.0f);
+    transformedPosition /= transformedPosition.w;
 
-    Vec4f transformed_direction = transform * Vec4f(ray.direction, 0.0f);
+    Vec4f transformedDirection = transform * Vec4f(ray.direction, 0.0f);
 
     Ray result;
-    result.position = transformed_position.GetXYZ();
-    result.direction = transformed_direction.GetXYZ().Normalized();
+    result.position = transformedPosition.GetXYZ();
+    result.direction = transformedDirection.GetXYZ().Normalized();
 
     return result;
 }
 
 Ray Ray::operator*(const Matrix4& transform) const
 {
-    Vec4f transformed_position = Vec4f(position, 1.0f) * transform;
-    transformed_position /= transformed_position.w;
+    Vec4f transformedPosition = Vec4f(position, 1.0f) * transform;
+    transformedPosition /= transformedPosition.w;
 
-    Vec4f transformed_direction = Vec4f(direction, 0.0f) * transform;
+    Vec4f transformedDirection = Vec4f(direction, 0.0f) * transform;
 
     Ray result;
-    result.position = transformed_position.GetXYZ();
-    result.direction = transformed_direction.GetXYZ().Normalized();
+    result.position = transformedPosition.GetXYZ();
+    result.direction = transformedDirection.GetXYZ().Normalized();
 
     return result;
 }
 
 Optional<RayHit> Ray::TestAABB(const BoundingBox& aabb) const
 {
-    RayTestResults out_results;
+    RayTestResults outResults;
 
-    if (!TestAABB(aabb, ~0, out_results))
+    if (!TestAABB(aabb, ~0, outResults))
     {
         return {};
     }
 
-    return out_results.Front();
+    return outResults.Front();
 }
 
-bool Ray::TestAABB(const BoundingBox& aabb, RayTestResults& out_results) const
+bool Ray::TestAABB(const BoundingBox& aabb, RayTestResults& outResults) const
 {
-    return TestAABB(aabb, ~0, out_results);
+    return TestAABB(aabb, ~0, outResults);
 }
 
-bool Ray::TestAABB(const BoundingBox& aabb, RayHitID hit_id, RayTestResults& out_results) const
+bool Ray::TestAABB(const BoundingBox& aabb, RayHitID hitId, RayTestResults& outResults) const
 {
-    return TestAABB(aabb, hit_id, nullptr, out_results);
+    return TestAABB(aabb, hitId, nullptr, outResults);
 }
 
-bool Ray::TestAABB(const BoundingBox& aabb, RayHitID hit_id, const void* user_data, RayTestResults& out_results) const
+bool Ray::TestAABB(const BoundingBox& aabb, RayHitID hitId, const void* userData, RayTestResults& outResults) const
 {
     if (!aabb.IsValid())
     { // drop out early
-        return RayHit::no_hit;
+        return RayHit::noHit;
     }
 
     const float t1 = (aabb.min.x - position.x) / direction.x;
@@ -98,43 +98,43 @@ bool Ray::TestAABB(const BoundingBox& aabb, RayHitID hit_id, const void* user_da
 
     const Vec3f hitpoint = position + (direction * distance);
 
-    out_results.AddHit(RayHit {
+    outResults.AddHit(RayHit {
         .hitpoint = hitpoint,
         .normal = -direction.Normalized(), // TODO: change to be box normal
         .distance = distance,
-        .id = hit_id,
-        .user_data = user_data });
+        .id = hitId,
+        .userData = userData });
 
     return true;
 }
 
 Optional<RayHit> Ray::TestPlane(const Vec3f& position, const Vec3f& normal) const
 {
-    RayTestResults out_results;
+    RayTestResults outResults;
 
-    if (!TestPlane(position, normal, ~0, out_results))
+    if (!TestPlane(position, normal, ~0, outResults))
     {
         return {};
     }
 
-    return out_results.Front();
+    return outResults.Front();
 }
 
-bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayTestResults& out_results) const
+bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayTestResults& outResults) const
 {
-    return TestPlane(position, normal, ~0, out_results);
+    return TestPlane(position, normal, ~0, outResults);
 }
 
-bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hit_id, RayTestResults& out_results) const
+bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hitId, RayTestResults& outResults) const
 {
-    return TestPlane(position, normal, hit_id, nullptr, out_results);
+    return TestPlane(position, normal, hitId, nullptr, outResults);
 }
 
-bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hit_id, const void* user_data, RayTestResults& out_results) const
+bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hitId, const void* userData, RayTestResults& outResults) const
 {
     const float denom = direction.Dot(normal);
 
-    if (MathUtil::Abs(denom) < MathUtil::epsilon_f)
+    if (MathUtil::Abs(denom) < MathUtil::epsilonF)
     {
         return false; // Ray is parallel to the plane
     }
@@ -148,39 +148,39 @@ bool Ray::TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hit_id,
 
     const Vec3f hitpoint = this->position + (direction * t);
 
-    out_results.AddHit(RayHit {
+    outResults.AddHit(RayHit {
         .hitpoint = hitpoint,
         .normal = normal,
         .distance = t,
-        .id = hit_id,
-        .user_data = user_data });
+        .id = hitId,
+        .userData = userData });
 
     return true;
 }
 
 Optional<RayHit> Ray::TestTriangle(const Triangle& triangle) const
 {
-    RayTestResults out_results;
+    RayTestResults outResults;
 
-    if (!TestTriangle(triangle, ~0, out_results))
+    if (!TestTriangle(triangle, ~0, outResults))
     {
         return {};
     }
 
-    return out_results.Front();
+    return outResults.Front();
 }
 
-bool Ray::TestTriangle(const Triangle& triangle, RayTestResults& out_results) const
+bool Ray::TestTriangle(const Triangle& triangle, RayTestResults& outResults) const
 {
-    return TestTriangle(triangle, ~0, out_results);
+    return TestTriangle(triangle, ~0, outResults);
 }
 
-bool Ray::TestTriangle(const Triangle& triangle, RayHitID hit_id, RayTestResults& out_results) const
+bool Ray::TestTriangle(const Triangle& triangle, RayHitID hitId, RayTestResults& outResults) const
 {
-    return TestTriangle(triangle, hit_id, nullptr, out_results);
+    return TestTriangle(triangle, hitId, nullptr, outResults);
 }
 
-bool Ray::TestTriangle(const Triangle& triangle, RayHitID hit_id, const void* user_data, RayTestResults& out_results) const
+bool Ray::TestTriangle(const Triangle& triangle, RayHitID hitId, const void* userData, RayTestResults& outResults) const
 {
     float t, u, v;
 
@@ -191,15 +191,15 @@ bool Ray::TestTriangle(const Triangle& triangle, RayHitID hit_id, const void* us
     float det = v0v1.Dot(pvec);
 
     // ray and triangle are parallel if det is close to 0
-    if (std::fabs(det) < MathUtil::epsilon_f)
+    if (std::fabs(det) < MathUtil::epsilonF)
     {
         return false;
     }
 
-    float inv_det = 1.0 / det;
+    float invDet = 1.0 / det;
 
     Vec3f tvec = position - triangle.GetPoint(0).GetPosition();
-    u = tvec.Dot(pvec) * inv_det;
+    u = tvec.Dot(pvec) * invDet;
 
     if (u < 0 || u > 1)
     {
@@ -207,29 +207,29 @@ bool Ray::TestTriangle(const Triangle& triangle, RayHitID hit_id, const void* us
     }
 
     Vec3f qvec = tvec.Cross(v0v1);
-    v = direction.Dot(qvec) * inv_det;
+    v = direction.Dot(qvec) * invDet;
 
     if (v < 0 || u + v > 1)
     {
         return false;
     }
 
-    t = v0v2.Dot(qvec) * inv_det;
+    t = v0v2.Dot(qvec) * invDet;
 
-    const Vec3f barycentric_coords = Vec3f(1.0f - u - v, u, v);
+    const Vec3f barycentricCoords = Vec3f(1.0f - u - v, u, v);
 
-    const Vec3f normal = triangle.GetPoint(0).GetNormal() * barycentric_coords.x
-        + triangle.GetPoint(1).GetNormal() * barycentric_coords.y
-        + triangle.GetPoint(2).GetNormal() * barycentric_coords.z;
+    const Vec3f normal = triangle.GetPoint(0).GetNormal() * barycentricCoords.x
+        + triangle.GetPoint(1).GetNormal() * barycentricCoords.y
+        + triangle.GetPoint(2).GetNormal() * barycentricCoords.z;
 
     if (t > 0.0f)
     {
-        out_results.AddHit({ .hitpoint = position + (direction * t),
+        outResults.AddHit({ .hitpoint = position + (direction * t),
             .normal = normal,
-            .barycentric_coords = barycentric_coords,
+            .barycentricCoords = barycentricCoords,
             .distance = t,
-            .id = hit_id,
-            .user_data = user_data });
+            .id = hitId,
+            .userData = userData });
 
         return true;
     }
@@ -242,73 +242,73 @@ Optional<RayHit> Ray::TestTriangleList(
     const Array<uint32>& indices,
     const Transform& transform) const
 {
-    RayTestResults out_results;
+    RayTestResults outResults;
 
-    if (!TestTriangleList(vertices, indices, transform, ~0, out_results))
+    if (!TestTriangleList(vertices, indices, transform, ~0, outResults))
     {
         return {};
     }
 
-    return out_results.Front();
+    return outResults.Front();
 }
 
 Optional<RayHit> Ray::TestTriangleList(
     const Array<Triangle>& triangles,
     const Transform& transform) const
 {
-    RayTestResults out_results;
+    RayTestResults outResults;
 
-    if (!TestTriangleList(triangles, transform, ~0, out_results))
+    if (!TestTriangleList(triangles, transform, ~0, outResults))
     {
         return {};
     }
 
-    return out_results.Front();
+    return outResults.Front();
 }
 
 bool Ray::TestTriangleList(
     const Array<Vertex>& vertices,
     const Array<uint32>& indices,
     const Transform& transform,
-    RayTestResults& out_results) const
+    RayTestResults& outResults) const
 {
-    return TestTriangleList(vertices, indices, transform, ~0, out_results);
+    return TestTriangleList(vertices, indices, transform, ~0, outResults);
 }
 
 bool Ray::TestTriangleList(
     const Array<Triangle>& triangles,
     const Transform& transform,
-    RayTestResults& out_results) const
+    RayTestResults& outResults) const
 {
-    return TestTriangleList(triangles, transform, ~0, out_results);
+    return TestTriangleList(triangles, transform, ~0, outResults);
 }
 
 bool Ray::TestTriangleList(
     const Array<Vertex>& vertices,
     const Array<uint32>& indices,
     const Transform& transform,
-    RayHitID hit_id,
-    RayTestResults& out_results) const
+    RayHitID hitId,
+    RayTestResults& outResults) const
 {
-    return TestTriangleList(vertices, indices, transform, hit_id, nullptr, out_results);
+    return TestTriangleList(vertices, indices, transform, hitId, nullptr, outResults);
 }
 
 bool Ray::TestTriangleList(
     const Array<Triangle>& triangles,
     const Transform& transform,
-    RayHitID hit_id,
-    RayTestResults& out_results) const
+    RayHitID hitId,
+    RayTestResults& outResults) const
 {
-    return TestTriangleList(triangles, transform, hit_id, nullptr, out_results);
+    return TestTriangleList(triangles, transform, hitId, nullptr, outResults);
 }
 
 bool Ray::TestTriangleList(
     const Array<Vertex>& vertices,
     const Array<uint32>& indices,
     const Transform& transform,
-    RayHitID hit_id,
-    const void* user_data,
-    RayTestResults& out_results) const
+    RayHitID hitId,
+    const void* userData,
+    RayTestResults& outResults) const
 {
     bool intersected = false;
 
@@ -319,7 +319,7 @@ bool Ray::TestTriangleList(
         return false;
     }
 
-    RayTestResults tmp_results;
+    RayTestResults tmpResults;
 
     for (SizeType i = 0; i < indices.Size(); i += 3)
     {
@@ -335,7 +335,7 @@ bool Ray::TestTriangleList(
             vertices[indices[i + 2]].GetPosition() * transform.GetMatrix()
         };
 
-        if (TestTriangle(triangle, static_cast<RayHitID>(i / 3 /* triangle index */), tmp_results))
+        if (TestTriangle(triangle, static_cast<RayHitID>(i / 3 /* triangle index */), tmpResults))
         {
             intersected = true;
         }
@@ -343,19 +343,19 @@ bool Ray::TestTriangleList(
 
     if (intersected)
     {
-        AssertThrow(!tmp_results.Empty());
+        AssertThrow(!tmpResults.Empty());
 
-        auto& first_result = tmp_results.Front();
+        auto& firstResult = tmpResults.Front();
 
-        // If hit_id is set, overwrite the id (which would be set to the mesh index)
-        if (hit_id != ~0u)
+        // If hitId is set, overwrite the id (which would be set to the mesh index)
+        if (hitId != ~0u)
         {
-            first_result.id = hit_id;
+            firstResult.id = hitId;
         }
 
-        first_result.user_data = user_data;
+        firstResult.userData = userData;
 
-        out_results.AddHit(first_result);
+        outResults.AddHit(firstResult);
 
         return true;
     }
@@ -366,19 +366,19 @@ bool Ray::TestTriangleList(
 bool Ray::TestTriangleList(
     const Array<Triangle>& triangles,
     const Transform& transform,
-    RayHitID hit_id,
-    const void* user_data,
-    RayTestResults& out_results) const
+    RayHitID hitId,
+    const void* userData,
+    RayTestResults& outResults) const
 {
     bool intersected = false;
 
-    RayTestResults tmp_results;
+    RayTestResults tmpResults;
 
     for (SizeType i = 0; i < triangles.Size(); i++)
     {
         const Triangle& triangle = triangles[i];
 
-        if (TestTriangle(triangle, static_cast<RayHitID>(i), tmp_results))
+        if (TestTriangle(triangle, static_cast<RayHitID>(i), tmpResults))
         {
             intersected = true;
         }
@@ -386,19 +386,19 @@ bool Ray::TestTriangleList(
 
     if (intersected)
     {
-        AssertThrow(!tmp_results.Empty());
+        AssertThrow(!tmpResults.Empty());
 
-        auto& first_result = tmp_results.Front();
+        auto& firstResult = tmpResults.Front();
 
-        // If hit_id is set, overwrite the id (which would be set to the mesh index)
-        if (hit_id != ~0u)
+        // If hitId is set, overwrite the id (which would be set to the mesh index)
+        if (hitId != ~0u)
         {
-            first_result.id = hit_id;
+            firstResult.id = hitId;
         }
 
-        first_result.user_data = user_data;
+        firstResult.userData = userData;
 
-        out_results.AddHit(first_result);
+        outResults.AddHit(firstResult);
 
         return true;
     }

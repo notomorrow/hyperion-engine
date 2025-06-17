@@ -32,8 +32,8 @@ enum RTCTrackType
 class HYP_API RTCTrackBase
 {
 public:
-    RTCTrackBase(RTCTrackType track_type)
-        : m_track_type(track_type)
+    RTCTrackBase(RTCTrackType trackType)
+        : m_trackType(trackType)
     {
     }
 
@@ -45,24 +45,24 @@ public:
 
     RTCTrackType GetTrackType() const
     {
-        return m_track_type;
+        return m_trackType;
     }
 
     virtual bool IsOpen() const = 0;
 
     virtual void PrepareTrack(RTCClient* client) = 0;
 
-    virtual void SendData(const ByteBuffer& data, uint64 sample_timestamp) = 0;
+    virtual void SendData(const ByteBuffer& data, uint64 sampleTimestamp) = 0;
 
 protected:
-    RTCTrackType m_track_type;
+    RTCTrackType m_trackType;
 };
 
 class HYP_API NullRTCTrack : public RTCTrackBase
 {
 public:
-    NullRTCTrack(RTCTrackType track_type)
-        : RTCTrackBase(track_type)
+    NullRTCTrack(RTCTrackType trackType)
+        : RTCTrackBase(trackType)
     {
     }
 
@@ -76,7 +76,7 @@ public:
 
     virtual void PrepareTrack(RTCClient* client) override;
 
-    virtual void SendData(const ByteBuffer& data, uint64 sample_timestamp) override;
+    virtual void SendData(const ByteBuffer& data, uint64 sampleTimestamp) override;
 };
 
 #ifdef HYP_LIBDATACHANNEL
@@ -84,8 +84,8 @@ public:
 class HYP_API LibDataChannelRTCTrack : public RTCTrackBase
 {
 public:
-    LibDataChannelRTCTrack(RTCTrackType track_type)
-        : RTCTrackBase(track_type)
+    LibDataChannelRTCTrack(RTCTrackType trackType)
+        : RTCTrackBase(trackType)
     {
     }
 
@@ -99,12 +99,12 @@ public:
 
     virtual void PrepareTrack(RTCClient* client) override;
 
-    virtual void SendData(const ByteBuffer& data, uint64 sample_timestamp) override;
+    virtual void SendData(const ByteBuffer& data, uint64 sampleTimestamp) override;
 
 private:
     std::shared_ptr<rtc::Track> m_track;
-    std::shared_ptr<rtc::RtcpSrReporter> m_rtcp_sr_reporter;
-    std::shared_ptr<rtc::RtpPacketizationConfig> m_rtp_config;
+    std::shared_ptr<rtc::RtcpSrReporter> m_rtcpSrReporter;
+    std::shared_ptr<rtc::RtpPacketizationConfig> m_rtpConfig;
 };
 
 #else

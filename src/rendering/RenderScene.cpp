@@ -21,14 +21,6 @@ RenderScene::RenderScene(Scene* scene)
 
 RenderScene::~RenderScene() = default;
 
-void RenderScene::SetCameraRenderResourceHandle(const TResourceHandle<RenderCamera>& render_camera)
-{
-    Execute([this, render_camera]()
-        {
-            m_render_camera = std::move(render_camera);
-        });
-}
-
 void RenderScene::Initialize_Internal()
 {
     HYP_SCOPE;
@@ -44,7 +36,7 @@ void RenderScene::Update_Internal()
     HYP_SCOPE;
 }
 
-GPUBufferHolderBase* RenderScene::GetGPUBufferHolder() const
+GpuBufferHolderBase* RenderScene::GetGpuBufferHolder() const
 {
     return nullptr;
 }

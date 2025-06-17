@@ -55,28 +55,28 @@ public:
         return m_flags;
     }
 
-    RC<Class> NewClass(const HypClass* hyp_class, int32 type_hash, const char* type_name, uint32 type_size, TypeID type_id, Class* parent_class, uint32 flags);
-    RC<Class> FindClassByName(const char* type_name);
-    RC<Class> FindClassByTypeHash(int32 type_hash);
+    RC<Class> NewClass(const HypClass* hypClass, int32 typeHash, const char* typeName, uint32 typeSize, TypeId typeId, Class* parentClass, uint32 flags);
+    RC<Class> FindClassByName(const char* typeName);
+    RC<Class> FindClassByTypeHash(int32 typeHash);
 
     HYP_FORCE_INLINE InvokeGetterFunction GetInvokeGetterFunction() const
     {
-        return m_invoke_getter_fptr;
+        return m_invokeGetterFptr;
     }
 
-    HYP_FORCE_INLINE void SetInvokeGetterFunction(InvokeGetterFunction invoke_getter_fptr)
+    HYP_FORCE_INLINE void SetInvokeGetterFunction(InvokeGetterFunction invokeGetterFptr)
     {
-        m_invoke_getter_fptr = invoke_getter_fptr;
+        m_invokeGetterFptr = invokeGetterFptr;
     }
 
     HYP_FORCE_INLINE InvokeSetterFunction GetInvokeSetterFunction() const
     {
-        return m_invoke_setter_fptr;
+        return m_invokeSetterFptr;
     }
 
-    HYP_FORCE_INLINE void SetInvokeSetterFunction(InvokeSetterFunction invoke_setter_fptr)
+    HYP_FORCE_INLINE void SetInvokeSetterFunction(InvokeSetterFunction invokeSetterFptr)
     {
-        m_invoke_setter_fptr = invoke_setter_fptr;
+        m_invokeSetterFptr = invokeSetterFptr;
     }
 
     HYP_FORCE_INLINE bool IsLoaded() const
@@ -91,11 +91,11 @@ private:
 
     ManagedGuid m_guid;
 
-    HashMap<int32, RC<Class>> m_class_objects;
+    HashMap<int32, RC<Class>> m_classObjects;
 
     // Function pointer to invoke a managed method
-    InvokeGetterFunction m_invoke_getter_fptr;
-    InvokeSetterFunction m_invoke_setter_fptr;
+    InvokeGetterFunction m_invokeGetterFptr;
+    InvokeSetterFunction m_invokeSetterFptr;
 };
 
 } // namespace dotnet

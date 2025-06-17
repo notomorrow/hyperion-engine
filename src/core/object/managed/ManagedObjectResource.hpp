@@ -28,10 +28,10 @@ enum class ObjectFlags : uint32;
 class HYP_API ManagedObjectResource final : public ResourceBase
 {
 public:
-    ManagedObjectResource(dotnet::Object* object_ptr, const RC<dotnet::Class>& managed_class);
-    ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::Class>& managed_class);
-    ManagedObjectResource(HypObjectPtr ptr, dotnet::Object* object_ptr, const RC<dotnet::Class>& managed_class);
-    ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::Class>& managed_class, const dotnet::ObjectReference& object_reference, EnumFlags<ObjectFlags> object_flags);
+    ManagedObjectResource(dotnet::Object* objectPtr, const RC<dotnet::Class>& managedClass);
+    ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::Class>& managedClass);
+    ManagedObjectResource(HypObjectPtr ptr, dotnet::Object* objectPtr, const RC<dotnet::Class>& managedClass);
+    ManagedObjectResource(HypObjectPtr ptr, const RC<dotnet::Class>& managedClass, const dotnet::ObjectReference& objectReference, EnumFlags<ObjectFlags> objectFlags);
 
     ManagedObjectResource(const ManagedObjectResource& other) = delete;
     ManagedObjectResource& operator=(const ManagedObjectResource& other) = delete;
@@ -43,12 +43,12 @@ public:
 
     HYP_FORCE_INLINE dotnet::Object* GetManagedObject() const
     {
-        return m_object_ptr;
+        return m_objectPtr;
     }
 
     const RC<dotnet::Class> GetManagedClass() const
     {
-        return m_managed_class;
+        return m_managedClass;
     }
 
 protected:
@@ -57,8 +57,8 @@ protected:
     virtual void Update() override final;
 
     HypObjectPtr m_ptr;
-    dotnet::Object* m_object_ptr;
-    RC<dotnet::Class> m_managed_class;
+    dotnet::Object* m_objectPtr;
+    RC<dotnet::Class> m_managedClass;
 };
 
 } // namespace hyperion

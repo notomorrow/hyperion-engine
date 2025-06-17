@@ -4,12 +4,12 @@
 #define HYPERION_DRAW_CALL_HPP
 
 #include <core/Defines.hpp>
-#include <core/ID.hpp>
+#include <core/object/ObjId.hpp>
 #include <core/Handle.hpp>
 
 #include <core/memory/UniquePtr.hpp>
 
-#include <rendering/GPUBufferHolderMap.hpp>
+#include <rendering/GpuBufferHolderMap.hpp>
 
 #include <rendering/backend/RenderObject.hpp>
 
@@ -23,40 +23,40 @@ class Material;
 class Skeleton;
 class Entity;
 class RenderGroup;
-struct RenderProxy;
+class RenderProxyMesh;
 struct DrawCommandData;
 class IndirectDrawState;
-class GPUBufferHolderBase;
+class GpuBufferHolderBase;
 struct MeshInstanceData;
 class RenderMesh;
 class RenderMaterial;
 class RenderSkeleton;
 
-extern HYP_API GPUBufferHolderMap* GetGPUBufferHolderMap();
+extern HYP_API GpuBufferHolderMap* GetGpuBufferHolderMap();
 
-static constexpr uint32 max_entities_per_instance_batch = 60;
+static constexpr uint32 maxEntitiesPerInstanceBatch = 60;
 
 struct alignas(16) EntityInstanceBatch
 {
-    uint32 batch_index;
-    uint32 num_entities;
+    uint32 batchIndex;
+    uint32 numEntities;
     uint32 _pad0;
     uint32 _pad1;
 
-    uint32 indices[max_entities_per_instance_batch];
-    Matrix4 transforms[max_entities_per_instance_batch];
+    uint32 indices[maxEntitiesPerInstanceBatch];
+    Matrix4 transforms[maxEntitiesPerInstanceBatch];
 };
 
 static_assert(sizeof(EntityInstanceBatch) == 4096);
 
-/*! \brief Unique identifier for a draw call based on Mesh ID and Material ID.
+/*! \brief Unique identifier for a draw call based on Mesh Id and Material Id.
  *  \details This struct is used to uniquely identify a draw call in the rendering system.
- *  It combines the mesh ID and material ID into a single 64-bit value, where the lower 32 bits
- *  represent the mesh ID and the upper 32 bits represent the material ID. */
+ *  It combines the mesh Id and material Id into a single 64-bit value, where the lower 32 bits
+ *  represent the mesh Id and the upper 32 bits represent the material Id. */
 struct DrawCallID
 {
-    static constexpr uint64 mesh_mask = uint64(0xFFFFFFFF);
-    static constexpr uint64 material_mask = uint64(0xFFFFFFFF) << 32;
+    static constexpr uint64 meshMask = uint64(0xFFFFFFFF);
+    static constexpr uint64 materialMask = uint64(0xFFFFFFFF) << 32;
 
     uint64 value;
 
@@ -65,13 +65,13 @@ struct DrawCallID
     {
     }
 
-    constexpr DrawCallID(ID<Mesh> mesh_id)
-        : value(mesh_id.Value())
+    constexpr DrawCallID(ObjId<Mesh> meshId)
+        : value(meshId.Value())
     {
     }
 
-    constexpr DrawCallID(ID<Mesh> mesh_id, ID<Material> material_id)
-        : value(uint64(mesh_id.Value()) | (uint64(material_id.Value()) << 32))
+    constexpr DrawCallID(ObjId<Mesh> meshId, ObjId<Material> materialId)
+        : value(uint64(meshId.Value()) | (uint64(materialId.Value()) << 32))
     {
     }
 
@@ -102,25 +102,25 @@ struct DrawCallID
 };
 
 /*! \brief Base struct for all draw calls.
- *  \details This struct contains the common data for all draw calls, such as the ID, render mesh, material, and skeleton.
+ *  \details This struct contains the common data for all draw calls, such as the Id, render mesh, material, and skeleton.
  *  It is used as a base class for both `DrawCall` and `InstancedDrawCall`. */
 struct DrawCallBase
 {
     DrawCallID id;
 
-    RenderMesh* render_mesh = nullptr;
-    RenderMaterial* render_material = nullptr;
-    RenderSkeleton* render_skeleton = nullptr;
+    RenderMesh* renderMesh = nullptr;
+    Material* material = nullptr;
+    RenderSkeleton* renderSkeleton = nullptr;
 
-    uint32 draw_command_index = 0;
+    uint32 drawCommandIndex = 0;
 };
 
 /*! \brief Represents a draw call for a single entity.
  *  \details This is used for non-instanced draw calls, where each entity has its own draw call.
- *  The `entity_id` is the ID of the entity that this draw call represents. */
+ *  The `entityId` is the Id of the entity that this draw call represents. */
 struct DrawCall : DrawCallBase
 {
-    ID<Entity> entity_id;
+    ObjId<Entity> entityId;
 };
 
 /*! \brief Represents a draw call for multiple entities sharing the same mesh and material.
@@ -131,9 +131,11 @@ struct InstancedDrawCall : DrawCallBase
     EntityInstanceBatch* batch = nullptr;
 
     uint32 count = 0;
-    ID<Entity> entity_ids[max_entities_per_instance_batch];
+    ObjId<Entity> entityIds[maxEntitiesPerInstanceBatch];
 };
 
+/// TODO: Refactor to a basic desc struct for Batch size info,
+/// and use g_renderGlobalState to acquire batch holder / acquire and release batches.
 class IDrawCallCollectionImpl
 {
 public:
@@ -142,15 +144,20 @@ public:
     virtual SizeType GetBatchSizeOf() const = 0;
     virtual EntityInstanceBatch* AcquireBatch() const = 0;
     virtual void ReleaseBatch(EntityInstanceBatch* batch) const = 0;
-    virtual GPUBufferHolderBase* GetEntityInstanceBatchHolder() const = 0;
+    virtual GpuBufferHolderBase* GetEntityInstanceBatchHolder() const = 0;
 };
 
-class DrawCallCollection
+struct DrawCallCollection
 {
-public:
-    DrawCallCollection(IDrawCallCollectionImpl* impl, RenderGroup* render_group)
-        : m_impl(impl),
-          m_render_group(render_group)
+    DrawCallCollection()
+        : impl(nullptr),
+          renderGroup(nullptr)
+    {
+    }
+
+    DrawCallCollection(IDrawCallCollectionImpl* impl, RenderGroup* renderGroup)
+        : impl(impl),
+          renderGroup(renderGroup)
     {
     }
 
@@ -162,59 +169,27 @@ public:
 
     ~DrawCallCollection();
 
-    HYP_FORCE_INLINE IDrawCallCollectionImpl* GetImpl() const
-    {
-        return m_impl;
-    }
-
-    HYP_FORCE_INLINE RenderGroup* GetRenderGroup() const
-    {
-        return m_render_group;
-    }
-
-    HYP_FORCE_INLINE Span<DrawCall> GetDrawCalls()
-    {
-        return m_draw_calls;
-    }
-
-    HYP_FORCE_INLINE Span<const DrawCall> GetDrawCalls() const
-    {
-        return m_draw_calls;
-    }
-
-    HYP_FORCE_INLINE Span<InstancedDrawCall> GetInstancedDrawCalls()
-    {
-        return m_instanced_draw_calls;
-    }
-
-    HYP_FORCE_INLINE Span<const InstancedDrawCall> GetInstancedDrawCalls() const
-    {
-        return m_instanced_draw_calls;
-    }
-
-    void PushRenderProxy(DrawCallID id, const RenderProxy& render_proxy);
-    void PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxy& render_proxy);
+    void PushRenderProxy(DrawCallID id, const RenderProxyMesh& renderProxy);
+    void PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxyMesh& renderProxy);
 
     EntityInstanceBatch* TakeDrawCallBatch(DrawCallID id);
 
     void ResetDrawCalls();
 
-protected:
-private:
-    /*! \brief Push \ref{num_instances} instances of the given entity into an entity instance batch.
+    /*! \brief Push \ref{numInstances} instances of the given entity into an entity instance batch.
      *  If not all instances could be pushed to the given draw call's batch, a positive number will be returned.
      *  Otherwise, zero will be returned. */
-    uint32 PushEntityToBatch(InstancedDrawCall& draw_call, ID<Entity> entity, const MeshInstanceData& mesh_instance_data, uint32 num_instances, uint32 instance_offset);
+    uint32 PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<Entity> entity, const MeshInstanceData& meshInstanceData, uint32 numInstances, uint32 instanceOffset);
 
-    IDrawCallCollectionImpl* m_impl;
+    IDrawCallCollectionImpl* impl;
 
-    RenderGroup* m_render_group;
+    RenderGroup* renderGroup;
 
-    Array<DrawCall, InlineAllocator<16>> m_draw_calls;
-    Array<InstancedDrawCall, InlineAllocator<16>> m_instanced_draw_calls;
+    Array<DrawCall> drawCalls;
+    Array<InstancedDrawCall> instancedDrawCalls;
 
-    // Map from draw call ID to index in instanced_draw_calls
-    HashMap<uint64, Array<SizeType>> m_index_map;
+    // Map from draw call Id to index in instancedDrawCalls
+    HashMap<uint64, Array<SizeType>> indexMap;
 };
 
 template <class EntityInstanceBatchType>
@@ -224,7 +199,7 @@ public:
     static_assert(std::is_base_of_v<EntityInstanceBatch, EntityInstanceBatchType>, "EntityInstanceBatchType must be a derived struct type of EntityInstanceBatch");
 
     DrawCallCollectionImpl()
-        : m_entity_instance_batches(GetGPUBufferHolderMap()->GetOrCreate<EntityInstanceBatchType>())
+        : m_entityInstanceBatches(GetGpuBufferHolderMap()->GetOrCreate<EntityInstanceBatchType>())
     {
     }
 
@@ -238,40 +213,40 @@ public:
     virtual EntityInstanceBatch* AcquireBatch() const override
     {
         EntityInstanceBatchType* batch;
-        const uint32 batch_index = m_entity_instance_batches->AcquireIndex(&batch);
+        const uint32 batchIndex = m_entityInstanceBatches->AcquireIndex(&batch);
 
-        batch->batch_index = batch_index;
+        batch->batchIndex = batchIndex;
 
         return batch;
     }
 
     virtual void ReleaseBatch(EntityInstanceBatch* batch) const override
     {
-        m_entity_instance_batches->ReleaseIndex(batch->batch_index);
+        m_entityInstanceBatches->ReleaseIndex(batch->batchIndex);
     }
 
-    virtual GPUBufferHolderBase* GetEntityInstanceBatchHolder() const override
+    virtual GpuBufferHolderBase* GetEntityInstanceBatchHolder() const override
     {
-        // Need to use reinterpret_cast because GPUBufferHolder is forward declared here
-        return reinterpret_cast<GPUBufferHolderBase*>(m_entity_instance_batches);
+        // Need to use reinterpret_cast because GpuBufferHolder is forward declared here
+        return reinterpret_cast<GpuBufferHolderBase*>(m_entityInstanceBatches);
     }
 
 private:
-    GPUBufferHolder<EntityInstanceBatchType, GPUBufferType::STORAGE_BUFFER>* m_entity_instance_batches;
+    GpuBufferHolder<EntityInstanceBatchType, GpuBufferType::SSBO>* m_entityInstanceBatches;
 };
 
-extern HYP_API IDrawCallCollectionImpl* GetDrawCallCollectionImpl(TypeID type_id);
-extern HYP_API IDrawCallCollectionImpl* SetDrawCallCollectionImpl(TypeID type_id, UniquePtr<IDrawCallCollectionImpl>&& impl);
+extern HYP_API IDrawCallCollectionImpl* GetDrawCallCollectionImpl(TypeId typeId);
+extern HYP_API IDrawCallCollectionImpl* SetDrawCallCollectionImpl(TypeId typeId, UniquePtr<IDrawCallCollectionImpl>&& impl);
 
 template <class EntityInstanceBatchType>
 IDrawCallCollectionImpl* GetOrCreateDrawCallCollectionImpl()
 {
-    if (IDrawCallCollectionImpl* impl = GetDrawCallCollectionImpl(TypeID::ForType<EntityInstanceBatchType>()))
+    if (IDrawCallCollectionImpl* impl = GetDrawCallCollectionImpl(TypeId::ForType<EntityInstanceBatchType>()))
     {
         return impl;
     }
 
-    return SetDrawCallCollectionImpl(TypeID::ForType<EntityInstanceBatchType>(), MakeUnique<DrawCallCollectionImpl<EntityInstanceBatchType>>());
+    return SetDrawCallCollectionImpl(TypeId::ForType<EntityInstanceBatchType>(), MakeUnique<DrawCallCollectionImpl<EntityInstanceBatchType>>());
 }
 
 } // namespace hyperion

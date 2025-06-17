@@ -8,48 +8,48 @@ namespace sys {
 
 #ifdef HYP_SDL
 
-static EnumFlags<MouseButtonState> GetMouseButtonState(int sdl_button)
+static EnumFlags<MouseButtonState> GetMouseButtonState(int sdlButton)
 {
-    EnumFlags<MouseButtonState> mouse_button_state = MouseButtonState::NONE;
+    EnumFlags<MouseButtonState> mouseButtonState = MouseButtonState::NONE;
 
-    switch (sdl_button)
+    switch (sdlButton)
     {
     case SDL_BUTTON_LEFT:
-        mouse_button_state |= MouseButtonState::LEFT;
+        mouseButtonState |= MouseButtonState::LEFT;
         break;
     case SDL_BUTTON_MIDDLE:
-        mouse_button_state |= MouseButtonState::MIDDLE;
+        mouseButtonState |= MouseButtonState::MIDDLE;
         break;
     case SDL_BUTTON_RIGHT:
-        mouse_button_state |= MouseButtonState::RIGHT;
+        mouseButtonState |= MouseButtonState::RIGHT;
         break;
     default:
         break;
     }
 
-    // Bitset bitset { uint32(sdl_button) };
+    // Bitset bitset { uint32(sdlButton) };
 
-    // Bitset::BitIndex first_set_bit_index = -1;
+    // Bitset::BitIndex firstSetBitIndex = -1;
 
-    // while ((first_set_bit_index = bitset.FirstSetBitIndex()) != -1) {
-    //     switch (first_set_bit_index + 1) {
+    // while ((firstSetBitIndex = bitset.FirstSetBitIndex()) != -1) {
+    //     switch (firstSetBitIndex + 1) {
     //     case SDL_BUTTON_LEFT:
-    //         mouse_button_state |= MouseButtonState::LEFT;
+    //         mouseButtonState |= MouseButtonState::LEFT;
     //         break;
     //     case SDL_BUTTON_MIDDLE:
-    //         mouse_button_state |= MouseButtonState::MIDDLE;
+    //         mouseButtonState |= MouseButtonState::MIDDLE;
     //         break;
     //     case SDL_BUTTON_RIGHT:
-    //         mouse_button_state |= MouseButtonState::RIGHT;
+    //         mouseButtonState |= MouseButtonState::RIGHT;
     //         break;
     //     default:
     //         break;
     //     }
 
-    //     bitset.Set(first_set_bit_index, false);
+    //     bitset.Set(firstSetBitIndex, false);
     // }
 
-    return mouse_button_state;
+    return mouseButtonState;
 }
 
 #endif
@@ -60,17 +60,17 @@ static EnumFlags<MouseButtonState> GetMouseButtonState(int sdl_button)
 
 SDL_Event* SystemEvent::GetInternalEvent()
 {
-    return &m_sdl_event;
+    return &m_sdlEvent;
 }
 
 KeyCode SystemEvent::GetKeyCode() const
 {
-    return KeyCode(m_sdl_event.key.keysym.sym);
+    return KeyCode(m_sdlEvent.key.keysym.sym);
 }
 
 EnumFlags<MouseButtonState> SystemEvent::GetMouseButtons() const
 {
-    return GetMouseButtonState(m_sdl_event.button.button);
+    return GetMouseButtonState(m_sdlEvent.button.button);
 }
 
 #pragma endregion SystemEvent

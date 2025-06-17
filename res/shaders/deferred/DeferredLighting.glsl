@@ -3,13 +3,12 @@
 
 #include "../include/shared.inc"
 #include "../include/brdf.inc"
-#include "../include/tonemap.inc"
 #include "../include/Octahedron.glsl"
 
-#define DEFERRED_FLAGS_VCT_ENABLED         0x2
-#define DEFERRED_FLAGS_ENV_PROBE_ENABLED   0x4
-#define DEFERRED_FLAGS_HBAO_ENABLED        0x8
-#define DEFERRED_FLAGS_HBIL_ENABLED        0x10
+#define DEFERRED_FLAGS_VCT_ENABLED 0x2
+#define DEFERRED_FLAGS_ENV_PROBE_ENABLED 0x4
+#define DEFERRED_FLAGS_HBAO_ENABLED 0x8
+#define DEFERRED_FLAGS_HBIL_ENABLED 0x10
 #define DEFERRED_FLAGS_RT_RADIANCE_ENABLED 0x20
 
 #define HYP_HBIL_MULTIPLIER 1.0

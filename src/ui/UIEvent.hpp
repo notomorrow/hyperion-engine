@@ -27,8 +27,8 @@ public:
 class UIMouseEvent : public IUIEvent
 {
 public:
-    UIMouseEvent(const MouseEvent& mouse_event)
-        : m_mouse_event(mouse_event)
+    UIMouseEvent(const MouseEvent& mouseEvent)
+        : m_mouseEvent(mouseEvent)
     {
     }
 
@@ -36,12 +36,12 @@ public:
 
     virtual InputManager* GetInputManager() override
     {
-        return m_mouse_event.input_manager;
+        return m_mouseEvent.inputManager;
     }
 
     virtual MouseEvent* GetMouseEvent() override
     {
-        return &m_mouse_event;
+        return &m_mouseEvent;
     }
 
     virtual KeyboardEvent* GetKeyboardEvent() override
@@ -50,14 +50,14 @@ public:
     }
 
 private:
-    MouseEvent m_mouse_event;
+    MouseEvent m_mouseEvent;
 };
 
 class UIKeyboardEvent : public IUIEvent
 {
 public:
-    UIKeyboardEvent(const KeyboardEvent& keyboard_event)
-        : m_keyboard_event(keyboard_event)
+    UIKeyboardEvent(const KeyboardEvent& keyboardEvent)
+        : m_keyboardEvent(keyboardEvent)
     {
     }
 
@@ -65,7 +65,7 @@ public:
 
     virtual InputManager* GetInputManager() override
     {
-        return m_keyboard_event.input_manager;
+        return m_keyboardEvent.inputManager;
     }
 
     virtual MouseEvent* GetMouseEvent() override
@@ -75,11 +75,11 @@ public:
 
     virtual KeyboardEvent* GetKeyboardEvent() override
     {
-        return &m_keyboard_event;
+        return &m_keyboardEvent;
     }
 
 private:
-    KeyboardEvent m_keyboard_event;
+    KeyboardEvent m_keyboardEvent;
 };
 
 } // namespace hyperion

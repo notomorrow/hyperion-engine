@@ -15,13 +15,13 @@ AudioManager& AudioManager::GetInstance()
 }
 
 AudioManager::AudioManager()
-    : m_is_initialized(false)
+    : m_isInitialized(false)
 {
 }
 
 AudioManager::~AudioManager()
 {
-    if (m_is_initialized)
+    if (m_isInitialized)
     {
         Shutdown();
     }
@@ -33,7 +33,7 @@ bool AudioManager::Initialize()
     if (!m_device)
     {
         std::cout << "Failed to open OpenAL device\n";
-        m_is_initialized = false;
+        m_isInitialized = false;
         return false;
     }
 
@@ -42,7 +42,7 @@ bool AudioManager::Initialize()
     if (!m_context)
     {
         std::cout << "Failed to open OpenAL context\n";
-        m_is_initialized = false;
+        m_isInitialized = false;
         return false;
     }
 
@@ -51,20 +51,20 @@ bool AudioManager::Initialize()
     alListener3f(AL_VELOCITY, 0, 0, 0);
     alListenerfv(AL_ORIENTATION, orientation);
 
-    m_is_initialized = true;
+    m_isInitialized = true;
     return true;
 }
 
 void AudioManager::Shutdown()
 {
-    if (m_is_initialized)
+    if (m_isInitialized)
     {
         alcMakeContextCurrent(NULL);
         alcDestroyContext(m_context);
         alcCloseDevice(m_device);
     }
 
-    m_is_initialized = false;
+    m_isInitialized = false;
 }
 
 Array<String> AudioManager::ListDevices() const

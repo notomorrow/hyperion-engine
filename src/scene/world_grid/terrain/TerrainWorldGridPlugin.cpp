@@ -32,9 +32,9 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(WorldGrid);
 
-static const float base_height = 2.0f;
-static const float mountain_height = 35.0f;
-static const float global_terrain_noise_scale = 1.0f;
+static const float baseHeight = 2.0f;
+static const float mountainHeight = 35.0f;
+static const float globalTerrainNoiseScale = 1.0f;
 
 namespace terrain {
 
@@ -44,19 +44,19 @@ struct TerrainHeight
     float erosion;
     float sediment;
     float water;
-    float new_water;
+    float newWater;
     float displacement;
 };
 
 struct TerrainHeightData
 {
-    StreamingCellInfo cell_info;
+    StreamingCellInfo cellInfo;
     Array<TerrainHeight> heights;
 
-    TerrainHeightData(const StreamingCellInfo& cell_info)
-        : cell_info(cell_info)
+    TerrainHeightData(const StreamingCellInfo& cellInfo)
+        : cellInfo(cellInfo)
     {
-        heights.Resize(cell_info.extent.x * cell_info.extent.z);
+        heights.Resize(cellInfo.extent.x * cellInfo.extent.z);
     }
 
     TerrainHeightData(const TerrainHeightData& other) = delete;
@@ -67,23 +67,23 @@ struct TerrainHeightData
 
     uint32 GetHeightIndex(int x, int z) const
     {
-        return uint32(((x + cell_info.extent.x) % cell_info.extent.x)
-            + ((z + cell_info.extent.z) % cell_info.extent.z) * cell_info.extent.x);
+        return uint32(((x + cellInfo.extent.x) % cellInfo.extent.x)
+            + ((z + cellInfo.extent.z) % cellInfo.extent.z) * cellInfo.extent.x);
     }
 };
 
 class TerrainErosion
 {
-    static constexpr uint32 num_iterations = 250u;
-    static constexpr float erosion_scale = 0.05f;
+    static constexpr uint32 numIterations = 250u;
+    static constexpr float erosionScale = 0.05f;
     static constexpr float evaporation = 0.9f;
-    static constexpr float erosion = 0.004f * erosion_scale;
-    static constexpr float deposition = 0.0000002f * erosion_scale;
+    static constexpr float erosion = 0.004f * erosionScale;
+    static constexpr float deposition = 0.0000002f * erosionScale;
 
     static const FixedArray<Pair<int, int>, 8> offsets;
 
 public:
-    static void Erode(TerrainHeightData& height_data);
+    static void Erode(TerrainHeightData& heightData);
 };
 
 const FixedArray<Pair<int, int>, 8> TerrainErosion::offsets {
@@ -97,58 +97,58 @@ const FixedArray<Pair<int, int>, 8> TerrainErosion::offsets {
     Pair<int, int> { -1, -1 }
 };
 
-void TerrainErosion::Erode(TerrainHeightData& height_data)
+void TerrainErosion::Erode(TerrainHeightData& heightData)
 {
-    for (uint32 iteration = 0; iteration < num_iterations; iteration++)
+    for (uint32 iteration = 0; iteration < numIterations; iteration++)
     {
-        for (int z = 1; z < height_data.cell_info.extent.z - 2; z++)
+        for (int z = 1; z < heightData.cellInfo.extent.z - 2; z++)
         {
-            for (int x = 1; x < height_data.cell_info.extent.x - 2; x++)
+            for (int x = 1; x < heightData.cellInfo.extent.x - 2; x++)
             {
-                TerrainHeight& height_info = height_data.heights[height_data.GetHeightIndex(x, z)];
-                height_info.displacement = 0.0f;
+                TerrainHeight& heightInfo = heightData.heights[heightData.GetHeightIndex(x, z)];
+                heightInfo.displacement = 0.0f;
 
                 for (const auto& offset : offsets)
                 {
-                    const auto& neighbor_height_info = height_data.heights[height_data.GetHeightIndex(x + offset.first, z + offset.second)];
+                    const auto& neighborHeightInfo = heightData.heights[heightData.GetHeightIndex(x + offset.first, z + offset.second)];
 
-                    height_info.displacement += MathUtil::Max(height_info.height - neighbor_height_info.height, 0.0f);
+                    heightInfo.displacement += MathUtil::Max(heightInfo.height - neighborHeightInfo.height, 0.0f);
                 }
 
-                if (height_info.displacement != 0.0f)
+                if (heightInfo.displacement != 0.0f)
                 {
-                    float water = height_info.water * evaporation;
-                    float staying_water = (water * 0.0002f) / (height_info.displacement * erosion_scale + 1);
-                    water -= staying_water;
+                    float water = heightInfo.water * evaporation;
+                    float stayingWater = (water * 0.0002f) / (heightInfo.displacement * erosionScale + 1);
+                    water -= stayingWater;
 
                     for (const auto& offset : offsets)
                     {
-                        auto& neighbor_height_info = height_data.heights[height_data.GetHeightIndex(x + offset.first, z + offset.second)];
+                        auto& neighborHeightInfo = heightData.heights[heightData.GetHeightIndex(x + offset.first, z + offset.second)];
 
-                        neighbor_height_info.new_water += MathUtil::Max(height_info.height - neighbor_height_info.height, 0.0f) / height_info.displacement * water;
+                        neighborHeightInfo.newWater += MathUtil::Max(heightInfo.height - neighborHeightInfo.height, 0.0f) / heightInfo.displacement * water;
                     }
 
-                    height_info.water = staying_water + 1.0f;
+                    heightInfo.water = stayingWater + 1.0f;
                 }
             }
         }
 
-        for (int z = 1; z < height_data.cell_info.extent.z - 2; z++)
+        for (int z = 1; z < heightData.cellInfo.extent.z - 2; z++)
         {
-            for (int x = 1; x < height_data.cell_info.extent.x - 2; x++)
+            for (int x = 1; x < heightData.cellInfo.extent.x - 2; x++)
             {
-                TerrainHeight& height_info = height_data.heights[height_data.GetHeightIndex(x, z)];
+                TerrainHeight& heightInfo = heightData.heights[heightData.GetHeightIndex(x, z)];
 
-                height_info.water += height_info.new_water;
-                height_info.new_water = 0.0f;
+                heightInfo.water += heightInfo.newWater;
+                heightInfo.newWater = 0.0f;
 
-                const float old_height = height_info.height;
-                height_info.height += (-(height_info.displacement - (0.005f / erosion_scale)) * height_info.water) * erosion + height_info.water * deposition;
-                height_info.erosion = old_height - height_info.height;
+                const float oldHeight = heightInfo.height;
+                heightInfo.height += (-(heightInfo.displacement - (0.005f / erosionScale)) * heightInfo.water) * erosion + heightInfo.water * deposition;
+                heightInfo.erosion = oldHeight - heightInfo.height;
 
-                if (old_height < height_info.height)
+                if (oldHeight < heightInfo.height)
                 {
-                    height_info.water = MathUtil::Max(height_info.water - (height_info.height - old_height) * 1000.0f, 0.0f);
+                    heightInfo.water = MathUtil::Max(heightInfo.water - (heightInfo.height - oldHeight) * 1000.0f, 0.0f);
                 }
             }
         }
@@ -158,53 +158,53 @@ void TerrainErosion::Erode(TerrainHeightData& height_data)
 class TerrainMeshBuilder
 {
 public:
-    TerrainMeshBuilder(const StreamingCellInfo& cell_info);
+    TerrainMeshBuilder(const StreamingCellInfo& cellInfo);
     TerrainMeshBuilder(const TerrainMeshBuilder& other) = delete;
     TerrainMeshBuilder& operator=(const TerrainMeshBuilder& other) = delete;
     TerrainMeshBuilder(TerrainMeshBuilder&& other) noexcept = delete;
     TerrainMeshBuilder& operator=(TerrainMeshBuilder&& other) noexcept = delete;
     ~TerrainMeshBuilder() = default;
 
-    void GenerateHeights(const NoiseCombinator& noise_combinator);
+    void GenerateHeights(const NoiseCombinator& noiseCombinator);
     Handle<Mesh> BuildMesh() const;
 
 private:
     Array<Vertex> BuildVertices() const;
     Array<Mesh::Index> BuildIndices() const;
 
-    TerrainHeightData m_height_data;
+    TerrainHeightData m_heightData;
 };
 
-TerrainMeshBuilder::TerrainMeshBuilder(const StreamingCellInfo& cell_info)
-    : m_height_data(cell_info)
+TerrainMeshBuilder::TerrainMeshBuilder(const StreamingCellInfo& cellInfo)
+    : m_heightData(cellInfo)
 {
 }
 
-void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator& noise_combinator)
+void TerrainMeshBuilder::GenerateHeights(const NoiseCombinator& noiseCombinator)
 {
     HYP_SCOPE;
 
-    for (int z = 0; z < int(m_height_data.cell_info.extent.z); z++)
+    for (int z = 0; z < int(m_heightData.cellInfo.extent.z); z++)
     {
-        for (int x = 0; x < int(m_height_data.cell_info.extent.x); x++)
+        for (int x = 0; x < int(m_heightData.cellInfo.extent.x); x++)
         {
-            const float x_offset = float(x + (m_height_data.cell_info.coord.x * int(m_height_data.cell_info.extent.x - 1))) / float(m_height_data.cell_info.extent.x);
-            const float z_offset = float(z + (m_height_data.cell_info.coord.y * int(m_height_data.cell_info.extent.z - 1))) / float(m_height_data.cell_info.extent.z);
+            const float xOffset = float(x + (m_heightData.cellInfo.coord.x * int(m_heightData.cellInfo.extent.x - 1))) / float(m_heightData.cellInfo.extent.x);
+            const float zOffset = float(z + (m_heightData.cellInfo.coord.y * int(m_heightData.cellInfo.extent.z - 1))) / float(m_heightData.cellInfo.extent.z);
 
-            const uint32 index = m_height_data.GetHeightIndex(x, z);
+            const uint32 index = m_heightData.GetHeightIndex(x, z);
 
-            m_height_data.heights[index] = TerrainHeight {
-                .height = noise_combinator.GetNoise(Vec2f(x_offset, z_offset)),
+            m_heightData.heights[index] = TerrainHeight {
+                .height = noiseCombinator.GetNoise(Vec2f(xOffset, zOffset)),
                 .erosion = 0.0f,
                 .sediment = 0.0f,
                 .water = 1.0f,
-                .new_water = 0.0f,
+                .newWater = 0.0f,
                 .displacement = 0.0f
             };
         }
     }
 
-    // TerrainErosion::Erode(m_height_data);
+    // TerrainErosion::Erode(m_heightData);
 }
 
 Handle<Mesh> TerrainMeshBuilder::BuildMesh() const
@@ -217,8 +217,8 @@ Handle<Mesh> TerrainMeshBuilder::BuildMesh() const
     Handle<Mesh> mesh = CreateObject<Mesh>(
         vertices,
         indices,
-        Topology::TRIANGLES,
-        static_mesh_vertex_attributes);
+        TOP_TRIANGLES,
+        staticMeshVertexAttributes);
 
     mesh->CalculateNormals();
     mesh->CalculateTangents();
@@ -229,19 +229,19 @@ Handle<Mesh> TerrainMeshBuilder::BuildMesh() const
 Array<Vertex> TerrainMeshBuilder::BuildVertices() const
 {
     Array<Vertex> vertices;
-    vertices.Resize(m_height_data.cell_info.extent.x * m_height_data.cell_info.extent.z);
+    vertices.Resize(m_heightData.cellInfo.extent.x * m_heightData.cellInfo.extent.z);
 
     int i = 0;
 
-    for (int z = 0; z < m_height_data.cell_info.extent.z; z++)
+    for (int z = 0; z < m_heightData.cellInfo.extent.z; z++)
     {
-        for (int x = 0; x < m_height_data.cell_info.extent.x; x++)
+        for (int x = 0; x < m_heightData.cellInfo.extent.x; x++)
         {
-            const Vec3f position = Vec3f { float(x), m_height_data.heights[i].height, float(z) } * m_height_data.cell_info.scale;
+            const Vec3f position = Vec3f { float(x), m_heightData.heights[i].height, float(z) } * m_heightData.cellInfo.scale;
 
             const Vec2f texcoord(
-                float(x) / float(m_height_data.cell_info.extent.x),
-                float(z) / float(m_height_data.cell_info.extent.z));
+                float(x) / float(m_heightData.cellInfo.extent.x),
+                float(z) / float(m_heightData.cellInfo.extent.z));
 
             vertices[i++] = Vertex(position, texcoord);
         }
@@ -253,9 +253,9 @@ Array<Vertex> TerrainMeshBuilder::BuildVertices() const
 Array<uint32> TerrainMeshBuilder::BuildIndices() const
 {
     Array<uint32> indices;
-    indices.Resize(SizeType(6 * (m_height_data.cell_info.extent.x - 1) * (m_height_data.cell_info.extent.z - 1)));
+    indices.Resize(SizeType(6 * (m_heightData.cellInfo.extent.x - 1) * (m_heightData.cellInfo.extent.z - 1)));
 
-    uint32 pitch = uint32(m_height_data.cell_info.extent.x);
+    uint32 pitch = uint32(m_heightData.cellInfo.extent.x);
     uint32 row = 0;
 
     uint32 i0 = row;
@@ -265,9 +265,9 @@ Array<uint32> TerrainMeshBuilder::BuildIndices() const
 
     uint32 i = 0;
 
-    for (uint32 z = 0; z < m_height_data.cell_info.extent.z - 1; z++)
+    for (uint32 z = 0; z < m_heightData.cellInfo.extent.z - 1; z++)
     {
-        for (uint32 x = 0; x < m_height_data.cell_info.extent.x - 1; x++)
+        for (uint32 x = 0; x < m_heightData.cellInfo.extent.x - 1; x++)
         {
             indices[i++] = i0;
             indices[i++] = i2;
@@ -297,22 +297,22 @@ static NoiseCombinator& GetTerrainNoiseCombinator()
 {
     static struct TerrainNoiseCombinatorInitializer
     {
-        NoiseCombinator noise_combinator;
+        NoiseCombinator noiseCombinator;
         TerrainNoiseCombinatorInitializer()
         {
-            noise_combinator.Use<WorleyNoiseGenerator>(0, NoiseCombinator::Mode::ADDITIVE, mountain_height, 0.0f, Vector3(0.35f, 0.35f, 0.0f) * global_terrain_noise_scale)
-                // .Use<SimplexNoiseGenerator>(1, NoiseCombinator::Mode::MULTIPLICATIVE, 0.5f, 0.5f, Vector3(50.0f, 50.0f, 0.0f) * global_terrain_noise_scale)
-                .Use<SimplexNoiseGenerator>(2, NoiseCombinator::Mode::ADDITIVE, base_height, 0.0f, Vector3(100.0f, 100.0f, 0.0f) * global_terrain_noise_scale)
-                .Use<SimplexNoiseGenerator>(3, NoiseCombinator::Mode::ADDITIVE, base_height * 0.5f, 0.0f, Vector3(50.0f, 50.0f, 0.0f) * global_terrain_noise_scale)
-                .Use<SimplexNoiseGenerator>(4, NoiseCombinator::Mode::ADDITIVE, base_height * 0.25f, 0.0f, Vector3(25.0f, 25.0f, 0.0f) * global_terrain_noise_scale)
-                .Use<SimplexNoiseGenerator>(5, NoiseCombinator::Mode::ADDITIVE, base_height * 0.125f, 0.0f, Vector3(12.5f, 12.5f, 0.0f) * global_terrain_noise_scale)
-                .Use<SimplexNoiseGenerator>(6, NoiseCombinator::Mode::ADDITIVE, base_height * 0.06f, 0.0f, Vector3(6.25f, 6.25f, 0.0f) * global_terrain_noise_scale)
-                .Use<SimplexNoiseGenerator>(7, NoiseCombinator::Mode::ADDITIVE, base_height * 0.03f, 0.0f, Vector3(3.125f, 3.125f, 0.0f) * global_terrain_noise_scale)
-                .Use<SimplexNoiseGenerator>(8, NoiseCombinator::Mode::ADDITIVE, base_height * 0.015f, 0.0f, Vector3(1.56f, 1.56f, 0.0f) * global_terrain_noise_scale);
+            noiseCombinator.Use<WorleyNoiseGenerator>(0, NoiseCombinator::Mode::ADDITIVE, mountainHeight, 0.0f, Vector3(0.35f, 0.35f, 0.0f) * globalTerrainNoiseScale)
+                // .Use<SimplexNoiseGenerator>(1, NoiseCombinator::Mode::MULTIPLICATIVE, 0.5f, 0.5f, Vector3(50.0f, 50.0f, 0.0f) * globalTerrainNoiseScale)
+                .Use<SimplexNoiseGenerator>(2, NoiseCombinator::Mode::ADDITIVE, baseHeight, 0.0f, Vector3(100.0f, 100.0f, 0.0f) * globalTerrainNoiseScale)
+                .Use<SimplexNoiseGenerator>(3, NoiseCombinator::Mode::ADDITIVE, baseHeight * 0.5f, 0.0f, Vector3(50.0f, 50.0f, 0.0f) * globalTerrainNoiseScale)
+                .Use<SimplexNoiseGenerator>(4, NoiseCombinator::Mode::ADDITIVE, baseHeight * 0.25f, 0.0f, Vector3(25.0f, 25.0f, 0.0f) * globalTerrainNoiseScale)
+                .Use<SimplexNoiseGenerator>(5, NoiseCombinator::Mode::ADDITIVE, baseHeight * 0.125f, 0.0f, Vector3(12.5f, 12.5f, 0.0f) * globalTerrainNoiseScale)
+                .Use<SimplexNoiseGenerator>(6, NoiseCombinator::Mode::ADDITIVE, baseHeight * 0.06f, 0.0f, Vector3(6.25f, 6.25f, 0.0f) * globalTerrainNoiseScale)
+                .Use<SimplexNoiseGenerator>(7, NoiseCombinator::Mode::ADDITIVE, baseHeight * 0.03f, 0.0f, Vector3(3.125f, 3.125f, 0.0f) * globalTerrainNoiseScale)
+                .Use<SimplexNoiseGenerator>(8, NoiseCombinator::Mode::ADDITIVE, baseHeight * 0.015f, 0.0f, Vector3(1.56f, 1.56f, 0.0f) * globalTerrainNoiseScale);
         }
     } initializer;
 
-    return initializer.noise_combinator;
+    return initializer.noiseCombinator;
 }
 
 } // namespace terrain
@@ -324,8 +324,8 @@ TerrainStreamingCell::TerrainStreamingCell()
 {
 }
 
-TerrainStreamingCell::TerrainStreamingCell(const StreamingCellInfo& cell_info, const Handle<Scene>& scene, const Handle<Material>& material)
-    : StreamingCell(cell_info),
+TerrainStreamingCell::TerrainStreamingCell(const StreamingCellInfo& cellInfo, const Handle<Scene>& scene, const Handle<Material>& material)
+    : StreamingCell(cellInfo),
       m_scene(scene),
       m_material(material)
 {
@@ -337,55 +337,55 @@ void TerrainStreamingCell::OnStreamStart_Impl()
 {
     HYP_SCOPE;
 
-    HYP_LOG(WorldGrid, Debug, "Generating terrain patch at coord {} with extent {} and scale {} on thread {}", m_cell_info.coord, m_cell_info.extent, m_cell_info.scale, Threads::CurrentThreadID().GetName());
+    HYP_LOG(WorldGrid, Debug, "Generating terrain patch at coord {} with extent {} and scale {} on thread {}", m_cellInfo.coord, m_cellInfo.extent, m_cellInfo.scale, Threads::CurrentThreadId().GetName());
 
-    terrain::TerrainMeshBuilder mesh_builder(m_cell_info);
-    mesh_builder.GenerateHeights(terrain::GetTerrainNoiseCombinator());
+    terrain::TerrainMeshBuilder meshBuilder(m_cellInfo);
+    meshBuilder.GenerateHeights(terrain::GetTerrainNoiseCombinator());
 
-    m_mesh = mesh_builder.BuildMesh();
+    m_mesh = meshBuilder.BuildMesh();
     InitObject(m_mesh);
 }
 
 void TerrainStreamingCell::OnLoaded_Impl()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     AssertThrowMsg(m_scene.IsValid(), "Invalid scene!");
     AssertThrowMsg(m_mesh.IsValid(), "Invalid mesh!");
     AssertThrowMsg(m_material.IsValid(), "Invalid material!");
 
-    const Handle<EntityManager>& entity_manager = m_scene->GetEntityManager();
-    AssertThrow(entity_manager != nullptr);
+    const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
+    AssertThrow(entityManager != nullptr);
 
-    HYP_LOG(WorldGrid, Debug, "Creating terrain patch at coord {} with extent {} and scale {}, bounds: {}\tMesh ID: #{}", m_cell_info.coord, m_cell_info.extent, m_cell_info.scale, m_cell_info.bounds, m_mesh.GetID().Value());
+    HYP_LOG(WorldGrid, Debug, "Creating terrain patch at coord {} with extent {} and scale {}, bounds: {}\tMesh Id: #{}", m_cellInfo.coord, m_cellInfo.extent, m_cellInfo.scale, m_cellInfo.bounds, m_mesh.Id().Value());
 
     Transform transform;
-    transform.SetTranslation(m_cell_info.bounds.min);
-    transform.SetScale(m_cell_info.scale);
+    transform.SetTranslation(m_cellInfo.bounds.min);
+    transform.SetScale(m_cellInfo.scale);
 
-    Handle<Entity> entity = entity_manager->AddEntity();
-    entity_manager->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent { VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE });
-    entity_manager->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { m_mesh->GetAABB() });
-    entity_manager->AddComponent<TransformComponent>(entity, TransformComponent { transform });
+    Handle<Entity> entity = entityManager->AddEntity();
+    entityManager->AddComponent<VisibilityStateComponent>(entity, VisibilityStateComponent { VISIBILITY_STATE_FLAG_ALWAYS_VISIBLE });
+    entityManager->AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent { m_mesh->GetAABB() });
+    entityManager->AddComponent<TransformComponent>(entity, TransformComponent { transform });
 
-    MeshComponent* mesh_component = entity_manager->TryGetComponent<MeshComponent>(entity);
+    MeshComponent* meshComponent = entityManager->TryGetComponent<MeshComponent>(entity);
 
-    if (mesh_component)
+    if (meshComponent)
     {
-        mesh_component->mesh = m_mesh;
-        mesh_component->material = m_material;
+        meshComponent->mesh = m_mesh;
+        meshComponent->material = m_material;
     }
     else
     {
         // Add MeshComponent to patch entity
-        entity_manager->AddComponent<MeshComponent>(entity, MeshComponent { m_mesh, m_material });
+        entityManager->AddComponent<MeshComponent>(entity, MeshComponent { m_mesh, m_material });
     }
 
-    entity_manager->AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
+    entityManager->AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
 
     m_node = m_scene->GetRoot()->AddChild();
-    m_node->SetName(NAME_FMT("TerrainPatch_{}", m_cell_info.coord));
+    m_node->SetName(NAME_FMT("TerrainPatch_{}", m_cellInfo.coord));
     m_node->SetEntity(entity);
     m_node->SetWorldTransform(transform);
     HYP_LOG(WorldGrid, Debug, "Created terrain patch node: {}, aabb: {} world pos: {}", m_node->GetName(), m_node->GetEntityAABB(), m_node->GetWorldTranslation());
@@ -402,7 +402,7 @@ void TerrainStreamingCell::OnLoaded_Impl()
 void TerrainStreamingCell::OnRemoved_Impl()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (m_node.IsValid())
     {
@@ -428,7 +428,7 @@ TerrainWorldGridLayer::~TerrainWorldGridLayer()
 void TerrainWorldGridLayer::Init()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     WorldGridLayer::Init();
 
@@ -438,7 +438,7 @@ void TerrainWorldGridLayer::Init()
     InitObject(m_scene);
 
     m_material = CreateObject<Material>(NAME("terrain_material"));
-    m_material->SetBucket(BUCKET_OPAQUE);
+    m_material->SetBucket(RB_OPAQUE);
     m_material->SetIsDepthTestEnabled(true);
     m_material->SetIsDepthWriteEnabled(true);
     m_material->SetParameter(Material::MATERIAL_KEY_ALBEDO, Vec4f(0.2f, 0.5f, 0.1f, 1.0f));
@@ -446,73 +446,73 @@ void TerrainWorldGridLayer::Init()
     m_material->SetParameter(Material::MATERIAL_KEY_METALNESS, 0.0f);
     m_material->SetParameter(Material::MATERIAL_KEY_UV_SCALE, Vec2f(10.0f));
 
-    // if (auto albedo_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-albedo.png"))
+    // if (auto albedoTextureAsset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-albedo.png"))
     // {
-    //     Handle<Texture> albedo_texture = albedo_texture_asset->Result();
+    //     Handle<Texture> albedoTexture = albedoTextureAsset->Result();
 
-    //     TextureDesc texture_desc = albedo_texture->GetTextureDesc();
-    //     texture_desc.format = InternalFormat::RGBA8_SRGB;
-    //     albedo_texture->SetTextureDesc(texture_desc);
+    //     TextureDesc textureDesc = albedoTexture->GetTextureDesc();
+    //     textureDesc.format = TF_RGBA8_SRGB;
+    //     albedoTexture->SetTextureDesc(textureDesc);
 
-    //     m_material->SetTexture(MaterialTextureKey::ALBEDO_MAP, albedo_texture);
+    //     m_material->SetTexture(MaterialTextureKey::ALBEDO_MAP, albedoTexture);
     // }
 
-    // if (auto ground_texture_asset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-preview.png"))
+    // if (auto groundTextureAsset = AssetManager::GetInstance()->Load<Texture>("textures/mossy-ground1-Unity/mossy-ground1-preview.png"))
     // {
-    //     m_material->SetTexture(MaterialTextureKey::NORMAL_MAP, ground_texture_asset->Result());
+    //     m_material->SetTexture(MaterialTextureKey::NORMAL_MAP, groundTextureAsset->Result());
     // }
 
     InitObject(m_material);
 }
 
-void TerrainWorldGridLayer::OnAdded_Impl(WorldGrid* world_grid)
+void TerrainWorldGridLayer::OnAdded_Impl(WorldGrid* worldGrid)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    AssertDebug(world_grid != nullptr);
+    AssertDebug(worldGrid != nullptr);
     AssertDebug(m_scene.IsValid());
 
-    world_grid->GetWorld()->AddScene(m_scene);
+    worldGrid->GetWorld()->AddScene(m_scene);
 
     HYP_LOG(WorldGrid, Info, "Adding TerrainWorldGridPlugin scene to world");
 }
 
-void TerrainWorldGridLayer::OnRemoved_Impl(WorldGrid* world_grid)
+void TerrainWorldGridLayer::OnRemoved_Impl(WorldGrid* worldGrid)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    AssertDebug(world_grid != nullptr);
+    AssertDebug(worldGrid != nullptr);
     AssertDebug(m_scene.IsValid());
 
     HYP_LOG(WorldGrid, Info, "Removing TerrainWorldGridPlugin");
 
-    world_grid->GetWorld()->RemoveScene(m_scene);
+    worldGrid->GetWorld()->RemoveScene(m_scene);
 
     // m_scene.Reset();
     // m_material.Reset();
 }
 
-// void TerrainWorldGridLayer::Shutdown_Impl(WorldGrid* world_grid)
+// void TerrainWorldGridLayer::Shutdown_Impl(WorldGrid* worldGrid)
 // {
 //     HYP_SCOPE;
-//     Threads::AssertOnThread(g_game_thread);
+//     Threads::AssertOnThread(g_gameThread);
 
-//     AssertDebug(world_grid != nullptr);
+//     AssertDebug(worldGrid != nullptr);
 
 //     HYP_LOG(WorldGrid, Info, "Shutting down TerrainWorldGridPlugin");
 
-//     world_grid->GetWorld()->RemoveScene(m_scene);
+//     worldGrid->GetWorld()->RemoveScene(m_scene);
 // }
 
 // void TerrainWorldGridPlugin::Update_Impl(float delta)
 // {
 //     HYP_SCOPE;
-//     Threads::AssertOnThread(g_game_thread);
+//     Threads::AssertOnThread(g_gameThread);
 // }
 
-Handle<StreamingCell> TerrainWorldGridLayer::CreateStreamingCell_Impl(const StreamingCellInfo& cell_info)
+Handle<StreamingCell> TerrainWorldGridLayer::CreateStreamingCell_Impl(const StreamingCellInfo& cellInfo)
 {
     if (!m_scene.IsValid())
     {
@@ -521,7 +521,7 @@ Handle<StreamingCell> TerrainWorldGridLayer::CreateStreamingCell_Impl(const Stre
         return Handle<StreamingCell>::empty;
     }
 
-    return CreateObject<TerrainStreamingCell>(cell_info, m_scene, m_material);
+    return CreateObject<TerrainStreamingCell>(cellInfo, m_scene, m_material);
 }
 
 #pragma endregion TerrainWorldGridLayer

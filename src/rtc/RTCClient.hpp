@@ -79,7 +79,7 @@ public:
     RTCClient& operator=(RTCClient&& other) noexcept = delete;
     virtual ~RTCClient() = default;
 
-    const String& GetID() const
+    const String& Id() const
     {
         return m_id;
     }
@@ -121,7 +121,7 @@ protected:
     RTCServer* m_server;
     RTCClientState m_state;
     Array<RC<RTCTrackBase>> m_tracks;
-    FlatMap<Name, RC<RTCDataChannel>> m_data_channels;
+    FlatMap<Name, RC<RTCDataChannel>> m_dataChannels;
     RTCClientCallbacks m_callbacks;
 };
 
@@ -165,8 +165,8 @@ public:
     virtual void SetRemoteDescription(const String& type, const String& sdp) override;
 
 private:
-    RC<rtc::PeerConnection> m_peer_connection;
-    std::shared_ptr<rtc::DataChannel> m_data_channel;
+    RC<rtc::PeerConnection> m_peerConnection;
+    std::shared_ptr<rtc::DataChannel> m_dataChannel;
 };
 
 #else

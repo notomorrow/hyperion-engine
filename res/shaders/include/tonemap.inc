@@ -5,12 +5,12 @@
 
 #define HDR 1
 // #define HDR_TONEMAP_UNCHARTED 1
-// #define HDR_TONEMAP_FILMIC 1
-#define HDR_TONEMAP_UNREAL 1
-//#define HDR_TONEMAP_REINHARD 1
+#define HDR_TONEMAP_FILMIC 1
+// #define HDR_TONEMAP_UNREAL 1
+// #define HDR_TONEMAP_REINHARD 1
 
 #ifndef HDR_EXPOSURE
-    #define HDR_EXPOSURE 9.0
+#define HDR_EXPOSURE 9.0
 #endif
 
 const float A = 0.15;
@@ -23,12 +23,12 @@ const float W = 11.2;
 
 vec3 _TonemapUncharted(vec3 x)
 {
-    return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
+    return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
 }
 
 vec3 TonemapUncharted(vec3 x)
 {
-    x *= HDR_EXPOSURE;  // Hardcoded Exposure Adjustment
+    x *= HDR_EXPOSURE; // Hardcoded Exposure Adjustment
 
     const float ExposureBias = 2.0;
     vec3 curr = _TonemapUncharted(x * ExposureBias);
@@ -40,15 +40,13 @@ vec3 TonemapUncharted(vec3 x)
 const mat3 ACESInputMat = mat3(
     0.59719, 0.35458, 0.04823,
     0.07600, 0.90834, 0.01566,
-    0.02840, 0.13383, 0.83777
-);
+    0.02840, 0.13383, 0.83777);
 
 // ODT_SAT => XYZ => D60_2_D65 => sRGB
 const mat3 ACESOutputMat = mat3(
     1.60475, -0.53108, -0.07367,
-    -0.10208,  1.10813, -0.00605,
-    -0.00327, -0.07276,  1.07602
-);
+    -0.10208, 1.10813, -0.00605,
+    -0.00327, -0.07276, 1.07602);
 
 vec3 RRTAndODTFit(vec3 v)
 {
@@ -129,21 +127,22 @@ vec3 ReverseTonemapReinhardSimple(vec3 x)
     return x / (vec3(1.0) - x);
 }
 
-vec3 Tonemap(vec3 x) {
+vec3 Tonemap(vec3 x)
+{
 #if defined(HDR) && HDR
-    #if HDR_TONEMAP_FILMIC
-        return TonemapFilmic(x);//TonemapACESFilmic(x);
-    #elif HDR_TONEMAP_UNREAL
-        return TonemapUnreal(x);
-    #elif HDR_TONEMAP_UNCHARTED
-        return TonemapUncharted(x);
-    #elif HDR_TONEMAP_REINHARD
-        return TonemapReinhard(x);
-    #else
-        return TonemapReinhard(x);
-    #endif
+#if HDR_TONEMAP_FILMIC
+    return TonemapFilmic(x); // TonemapACESFilmic(x);
+#elif HDR_TONEMAP_UNREAL
+    return TonemapUnreal(x);
+#elif HDR_TONEMAP_UNCHARTED
+    return TonemapUncharted(x);
+#elif HDR_TONEMAP_REINHARD
+    return TonemapReinhard(x);
 #else
-	return x;
+    return TonemapReinhard(x);
+#endif
+#else
+    return x;
 #endif
 }
 

@@ -81,12 +81,12 @@ Matrix4 Matrix4::Perspective(float fov, int w, int h, float n, float f)
     Matrix4 mat = zeros;
 
     float ar = (float)w / (float)h;
-    float tan_half_fov = MathUtil::Tan(MathUtil::DegToRad(fov / 2.0f));
+    float tanHalfFov = MathUtil::Tan(MathUtil::DegToRad(fov / 2.0f));
     float range = n - f;
 
-    mat[0][0] = 1.0f / (tan_half_fov * ar);
+    mat[0][0] = 1.0f / (tanHalfFov * ar);
 
-    mat[1][1] = -(1.0f / (tan_half_fov));
+    mat[1][1] = -(1.0f / (tanHalfFov));
 
     mat[2][2] = (-n - f) / range;
     mat[2][3] = (2.0f * f * n) / range;
@@ -101,49 +101,49 @@ Matrix4 Matrix4::Orthographic(float l, float r, float b, float t, float n, float
 {
     Matrix4 mat = zeros;
 
-    float x_orth = 2.0f / (r - l);
-    float y_orth = 2.0f / (t - b);
-    float z_orth = 1.0f / (n - f);
+    float xOrth = 2.0f / (r - l);
+    float yOrth = 2.0f / (t - b);
+    float zOrth = 1.0f / (n - f);
     float tx = -((r + l) / (r - l));
     float ty = -((t + b) / (t - b));
     float tz = ((n) / (n - f));
 
-    mat[0] = { x_orth, 0.0f, 0.0f, tx };
-    mat[1] = { 0.0f, y_orth, 0.0f, ty };
-    mat[2] = { 0.0f, 0.0f, z_orth, tz };
+    mat[0] = { xOrth, 0.0f, 0.0f, tx };
+    mat[1] = { 0.0f, yOrth, 0.0f, ty };
+    mat[2] = { 0.0f, 0.0f, zOrth, tz };
     mat[3] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
     return mat;
 }
 
-Matrix4 Matrix4::Jitter(uint32 index, uint32 width, uint32 height, Vec4f& out_jitter)
+Matrix4 Matrix4::Jitter(uint32 index, uint32 width, uint32 height, Vec4f& outJitter)
 {
     static const HaltonSequence halton;
 
-    Matrix4 offset_matrix;
+    Matrix4 offsetMatrix;
 
-    const uint32 frame_counter = index;
-    const uint32 halton_index = frame_counter % HaltonSequence::size;
+    const uint32 frameCounter = index;
+    const uint32 haltonIndex = frameCounter % HaltonSequence::size;
 
-    Vec2f jitter = halton.sequence[halton_index];
-    Vec2f previous_jitter;
+    Vec2f jitter = halton.sequence[haltonIndex];
+    Vec2f previousJitter;
 
-    if (frame_counter != 0)
+    if (frameCounter != 0)
     {
-        previous_jitter = halton.sequence[(frame_counter - 1) % HaltonSequence::size];
+        previousJitter = halton.sequence[(frameCounter - 1) % HaltonSequence::size];
     }
 
-    const Vec2f pixel_size = Vec2f::One() / Vec2f { float(width), float(height) };
+    const Vec2f pixelSize = Vec2f::One() / Vec2f { float(width), float(height) };
 
-    jitter = (jitter * 2.0f - 1.0f) * pixel_size * 0.5f;
-    previous_jitter = (previous_jitter * 2.0f - 1.0f) * pixel_size * 0.5f;
+    jitter = (jitter * 2.0f - 1.0f) * pixelSize * 0.5f;
+    previousJitter = (previousJitter * 2.0f - 1.0f) * pixelSize * 0.5f;
 
-    offset_matrix[0][3] += jitter.x;
-    offset_matrix[1][3] += jitter.y;
+    offsetMatrix[0][3] += jitter.x;
+    offsetMatrix[1][3] += jitter.y;
 
-    out_jitter = Vec4f(jitter, previous_jitter);
+    outJitter = Vec4f(jitter, previousJitter);
 
-    return offset_matrix;
+    return offsetMatrix;
 }
 
 Matrix4 Matrix4::LookAt(const Vec3f& direction, const Vec3f& up)
@@ -247,57 +247,57 @@ Matrix4& Matrix4::Invert()
 Matrix4 Matrix4::Inverted() const
 {
     const float det = Determinant();
-    float inv_det = 1.0f / det;
+    float invDet = 1.0f / det;
 
     float tmp[4][4];
 
     tmp[0][0] = (rows[1][2] * rows[2][3] * rows[3][1] - rows[1][3] * rows[2][2] * rows[3][1] + rows[1][3] * rows[2][1] * rows[3][2] - rows[1][1] * rows[2][3] * rows[3][2] - rows[1][2] * rows[2][1] * rows[3][3] + rows[1][1] * rows[2][2] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[0][1] = (rows[0][3] * rows[2][2] * rows[3][1] - rows[0][2] * rows[2][3] * rows[3][1] - rows[0][3] * rows[2][1] * rows[3][2] + rows[0][1] * rows[2][3] * rows[3][2] + rows[0][2] * rows[2][1] * rows[3][3] - rows[0][1] * rows[2][2] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[0][2] = (rows[0][2] * rows[1][3] * rows[3][1] - rows[0][3] * rows[1][2] * rows[3][1] + rows[0][3] * rows[1][1] * rows[3][2] - rows[0][1] * rows[1][3] * rows[3][2] - rows[0][2] * rows[1][1] * rows[3][3] + rows[0][1] * rows[1][2] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[0][3] = (rows[0][3] * rows[1][2] * rows[2][1] - rows[0][2] * rows[1][3] * rows[2][1] - rows[0][3] * rows[1][1] * rows[2][2] + rows[0][1] * rows[1][3] * rows[2][2] + rows[0][2] * rows[1][1] * rows[2][3] - rows[0][1] * rows[1][2] * rows[2][3])
-        * inv_det;
+        * invDet;
 
     tmp[1][0] = (rows[1][3] * rows[2][2] * rows[3][0] - rows[1][2] * rows[2][3] * rows[3][0] - rows[1][3] * rows[2][0] * rows[3][2] + rows[1][0] * rows[2][3] * rows[3][2] + rows[1][2] * rows[2][0] * rows[3][3] - rows[1][0] * rows[2][2] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[1][1] = (rows[0][2] * rows[2][3] * rows[3][0] - rows[0][3] * rows[2][2] * rows[3][0] + rows[0][3] * rows[2][0] * rows[3][2] - rows[0][0] * rows[2][3] * rows[3][2] - rows[0][2] * rows[2][0] * rows[3][3] + rows[0][0] * rows[2][2] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[1][2] = (rows[0][3] * rows[1][2] * rows[3][0] - rows[0][2] * rows[1][3] * rows[3][0] - rows[0][3] * rows[1][0] * rows[3][2] + rows[0][0] * rows[1][3] * rows[3][2] + rows[0][2] * rows[1][0] * rows[3][3] - rows[0][0] * rows[1][2] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[1][3] = (rows[0][2] * rows[1][3] * rows[2][0] - rows[0][3] * rows[1][2] * rows[2][0] + rows[0][3] * rows[1][0] * rows[2][2] - rows[0][0] * rows[1][3] * rows[2][2] - rows[0][2] * rows[1][0] * rows[2][3] + rows[0][0] * rows[1][2] * rows[2][3])
-        * inv_det;
+        * invDet;
 
     tmp[2][0] = (rows[1][1] * rows[2][3] * rows[3][0] - rows[1][3] * rows[2][1] * rows[3][0] + rows[1][3] * rows[2][0] * rows[3][1] - rows[1][0] * rows[2][3] * rows[3][1] - rows[1][1] * rows[2][0] * rows[3][3] + rows[1][0] * rows[2][1] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[2][1] = (rows[0][3] * rows[2][1] * rows[3][0] - rows[0][1] * rows[2][3] * rows[3][0] - rows[0][3] * rows[2][0] * rows[3][1] + rows[0][0] * rows[2][3] * rows[3][1] + rows[0][1] * rows[2][0] * rows[3][3] - rows[0][0] * rows[2][1] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[2][2] = (rows[0][1] * rows[1][3] * rows[3][0] - rows[0][3] * rows[1][1] * rows[3][0] + rows[0][3] * rows[1][0] * rows[3][1] - rows[0][0] * rows[1][3] * rows[3][1] - rows[0][1] * rows[1][0] * rows[3][3] + rows[0][0] * rows[1][1] * rows[3][3])
-        * inv_det;
+        * invDet;
 
     tmp[2][3] = (rows[0][3] * rows[1][1] * rows[2][0] - rows[0][1] * rows[1][3] * rows[2][0] - rows[0][3] * rows[1][0] * rows[2][1] + rows[0][0] * rows[1][3] * rows[2][1] + rows[0][1] * rows[1][0] * rows[2][3] - rows[0][0] * rows[1][1] * rows[2][3])
-        * inv_det;
+        * invDet;
 
     tmp[3][0] = (rows[1][2] * rows[2][1] * rows[3][0] - rows[1][1] * rows[2][2] * rows[3][0] - rows[1][2] * rows[2][0] * rows[3][1] + rows[1][0] * rows[2][2] * rows[3][1] + rows[1][1] * rows[2][0] * rows[3][2] - rows[1][0] * rows[2][1] * rows[3][2])
-        * inv_det;
+        * invDet;
 
     tmp[3][1] = (rows[0][1] * rows[2][2] * rows[3][0] - rows[0][2] * rows[2][1] * rows[3][0] + rows[0][2] * rows[2][0] * rows[3][1] - rows[0][0] * rows[2][2] * rows[3][1] - rows[0][1] * rows[2][0] * rows[3][2] + rows[0][0] * rows[2][1] * rows[3][2])
-        * inv_det;
+        * invDet;
 
     tmp[3][2] = (rows[0][2] * rows[1][1] * rows[3][0] - rows[0][1] * rows[1][2] * rows[3][0] - rows[0][2] * rows[1][0] * rows[3][1] + rows[0][0] * rows[1][2] * rows[3][1] + rows[0][1] * rows[1][0] * rows[3][2] - rows[0][0] * rows[1][1] * rows[3][2])
-        * inv_det;
+        * invDet;
 
     tmp[3][3] = (rows[0][1] * rows[1][2] * rows[2][0] - rows[0][2] * rows[1][1] * rows[2][0] + rows[0][2] * rows[1][0] * rows[2][1] - rows[0][0] * rows[1][2] * rows[2][1] - rows[0][1] * rows[1][0] * rows[2][2] + rows[0][0] * rows[1][1] * rows[2][2])
-        * inv_det;
+        * invDet;
 
     return Matrix4(reinterpret_cast<const float*>(tmp));
 }
@@ -316,26 +316,26 @@ Matrix4 Matrix4::Orthonormalized() const
     mat[0][1] /= length;
     mat[0][2] /= length;
 
-    float dot_product = mat[0][0] * mat[1][0] + mat[0][1] * mat[1][1] + mat[0][2] * mat[1][2];
+    float dotProduct = mat[0][0] * mat[1][0] + mat[0][1] * mat[1][1] + mat[0][2] * mat[1][2];
 
-    mat[1][0] -= dot_product * mat[0][0];
-    mat[1][1] -= dot_product * mat[0][1];
-    mat[1][2] -= dot_product * mat[0][2];
+    mat[1][0] -= dotProduct * mat[0][0];
+    mat[1][1] -= dotProduct * mat[0][1];
+    mat[1][2] -= dotProduct * mat[0][2];
 
     length = MathUtil::Sqrt((mat[1][0] * mat[1][0] + mat[1][1] * mat[1][1] + mat[1][2] * mat[1][2]));
     mat[1][0] /= length;
     mat[1][1] /= length;
     mat[1][2] /= length;
 
-    dot_product = mat[0][0] * mat[2][0] + mat[0][1] * mat[2][1] + mat[0][2] * mat[2][2];
-    mat[2][0] -= dot_product * mat[0][0];
-    mat[2][1] -= dot_product * mat[0][1];
-    mat[2][2] -= dot_product * mat[0][2];
+    dotProduct = mat[0][0] * mat[2][0] + mat[0][1] * mat[2][1] + mat[0][2] * mat[2][2];
+    mat[2][0] -= dotProduct * mat[0][0];
+    mat[2][1] -= dotProduct * mat[0][1];
+    mat[2][2] -= dotProduct * mat[0][2];
 
-    dot_product = mat[1][0] * mat[2][0] + mat[1][1] * mat[2][1] + mat[1][2] * mat[2][2];
-    mat[2][0] -= dot_product * mat[1][0];
-    mat[2][1] -= dot_product * mat[1][1];
-    mat[2][2] -= dot_product * mat[1][2];
+    dotProduct = mat[1][0] * mat[2][0] + mat[1][1] * mat[2][1] + mat[1][2] * mat[2][2];
+    mat[2][0] -= dotProduct * mat[1][0];
+    mat[2][1] -= dotProduct * mat[1][1];
+    mat[2][2] -= dotProduct * mat[1][2];
 
     length = MathUtil::Sqrt((mat[2][0] * mat[2][0] + mat[2][1] * mat[2][1] + mat[2][2] * mat[2][2]));
     mat[2][0] /= length;
@@ -485,16 +485,16 @@ Vec4f Matrix4::GetColumn(uint32 index) const
 
 Matrix4 Matrix4::Zeros()
 {
-    static constexpr float zero_array[sizeof(values) / sizeof(values[0])] = { 0.0f };
+    static constexpr float zeroArray[sizeof(values) / sizeof(values[0])] = { 0.0f };
 
-    return Matrix4(zero_array);
+    return Matrix4(zeroArray);
 }
 
 Matrix4 Matrix4::Ones()
 {
-    static constexpr float ones_array[sizeof(values) / sizeof(values[0])] = { 1.0f };
+    static constexpr float onesArray[sizeof(values) / sizeof(values[0])] = { 1.0f };
 
-    return Matrix4(ones_array);
+    return Matrix4(onesArray);
 }
 
 Matrix4 Matrix4::Identity()

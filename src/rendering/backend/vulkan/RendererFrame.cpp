@@ -3,7 +3,7 @@
 #include <rendering/backend/vulkan/RendererFrame.hpp>
 #include <rendering/backend/vulkan/RendererFence.hpp>
 #include <rendering/backend/vulkan/RendererCommandBuffer.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RenderObject.hpp>
@@ -13,41 +13,39 @@
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 VulkanFrame::VulkanFrame()
     : FrameBase(0),
-      m_present_semaphores({}, {})
+      m_presentSemaphores({}, {})
 {
 }
 
-VulkanFrame::VulkanFrame(uint32 frame_index)
-    : FrameBase(frame_index),
-      m_present_semaphores(
+VulkanFrame::VulkanFrame(uint32 frameIndex)
+    : FrameBase(frameIndex),
+      m_presentSemaphores(
           { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
           { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT })
 {
-    FrameBase::m_frame_index = frame_index;
+    FrameBase::m_frameIndex = frameIndex;
 }
 
 VulkanFrame::~VulkanFrame()
 {
-    AssertThrowMsg(!m_queue_submit_fence.IsValid(), "fc_queue_submit should have been released");
+    AssertThrowMsg(!m_queueSubmitFence.IsValid(), "fc_queue_submit should have been released");
 }
 
 RendererResult VulkanFrame::Create()
 {
-    HYPERION_BUBBLE_ERRORS(m_present_semaphores.Create());
+    HYPERION_BUBBLE_ERRORS(m_presentSemaphores.Create());
 
-    m_queue_submit_fence = MakeRenderObject<VulkanFence>();
-    HYPERION_BUBBLE_ERRORS(m_queue_submit_fence->Create());
+    m_queueSubmitFence = MakeRenderObject<VulkanFence>();
+    HYPERION_BUBBLE_ERRORS(m_queueSubmitFence->Create());
 
     HYPERION_RETURN_OK;
 }
@@ -56,9 +54,9 @@ RendererResult VulkanFrame::Destroy()
 {
     RendererResult result;
 
-    HYPERION_PASS_ERRORS(m_present_semaphores.Destroy(), result);
+    HYPERION_PASS_ERRORS(m_presentSemaphores.Destroy(), result);
 
-    SafeRelease(std::move(m_queue_submit_fence));
+    SafeRelease(std::move(m_queueSubmitFence));
 
     return result;
 }
@@ -67,22 +65,22 @@ RendererResult VulkanFrame::ResetFrameState()
 {
     RendererResult result;
 
-    HYPERION_PASS_ERRORS(m_queue_submit_fence->Reset(), result);
+    HYPERION_PASS_ERRORS(m_queueSubmitFence->Reset(), result);
 
 #ifdef HYP_DESCRIPTOR_SET_TRACK_FRAME_USAGE
-    for (DescriptorSetBase* descriptor_set : m_used_descriptor_sets)
+    for (DescriptorSetBase* descriptorSet : m_usedDescriptorSets)
     {
-        auto it = descriptor_set->GetCurrentFrames().FindAs(this);
-        if (it != descriptor_set->GetCurrentFrames().End())
+        auto it = descriptorSet->GetCurrentFrames().FindAs(this);
+        if (it != descriptorSet->GetCurrentFrames().End())
         {
             // Remove the current frame from the descriptor set's current frames
             // This is necessary to ensure that the descriptor set is not used in the next frame
-            descriptor_set->GetCurrentFrames().Erase(it);
+            descriptorSet->GetCurrentFrames().Erase(it);
         }
     }
 #endif
 
-    m_used_descriptor_sets.Clear();
+    m_usedDescriptorSets.Clear();
 
     if (OnFrameEnd.AnyBound())
     {
@@ -93,9 +91,9 @@ RendererResult VulkanFrame::ResetFrameState()
     return result;
 }
 
-RendererResult VulkanFrame::Submit(VulkanDeviceQueue* device_queue, const VulkanCommandBufferRef& command_buffer)
+RendererResult VulkanFrame::Submit(VulkanDeviceQueue* deviceQueue, const VulkanCommandBufferRef& commandBuffer)
 {
-    m_command_list.Prepare(this);
+    m_commandList.Prepare(this);
 
     UpdateUsedDescriptorSets();
 
@@ -105,23 +103,22 @@ RendererResult VulkanFrame::Submit(VulkanDeviceQueue* device_queue, const Vulkan
         OnPresent.RemoveAllDetached();
     }
 
-    command_buffer->Begin();
-    m_command_list.Execute(command_buffer);
-    command_buffer->End();
+    commandBuffer->Begin();
+    m_commandList.Execute(commandBuffer);
+    commandBuffer->End();
 
-    return command_buffer->SubmitPrimary(device_queue, m_queue_submit_fence, &m_present_semaphores);
+    return commandBuffer->SubmitPrimary(deviceQueue, m_queueSubmitFence, &m_presentSemaphores);
 }
 
 RendererResult VulkanFrame::RecreateFence()
 {
-    if (m_queue_submit_fence.IsValid())
+    if (m_queueSubmitFence.IsValid())
     {
-        SafeRelease(std::move(m_queue_submit_fence));
+        SafeRelease(std::move(m_queueSubmitFence));
     }
 
-    m_queue_submit_fence = MakeRenderObject<VulkanFence>();
-    return m_queue_submit_fence->Create();
+    m_queueSubmitFence = MakeRenderObject<VulkanFence>();
+    return m_queueSubmitFence->Create();
 }
 
-} // namespace renderer
 } // namespace hyperion

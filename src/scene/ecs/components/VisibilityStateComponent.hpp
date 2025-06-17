@@ -29,10 +29,10 @@ struct VisibilityStateComponent
     VisibilityStateFlags flags = VISIBILITY_STATE_FLAG_NONE;
 
     HYP_FIELD()
-    OctantID octant_id = OctantID::Invalid();
+    OctantId octantId = OctantId::Invalid();
 
     HYP_FIELD()
-    VisibilityState* visibility_state = nullptr;
+    VisibilityState* visibilityState = nullptr;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {

@@ -13,19 +13,19 @@
     },
     "ssr": {
       "ConeTracing": false,
-      "eye_fade": [0.980000, 0.999000],
-      "ray_step": 0.100000,
+      "eye_fade": [0.980000, 0.990000],
+      "ray_step": 3.200000,
       "NumIterations": 64,
+      "quality": 2,
       "Quality": 2,
-      "quality": 1,
       "RayStep": 3.200000,
       "RoughnessScattering": true,
-      "num_iterations": 128,
-      "screen_edge_fade": [0.980000, 0.990000],
-      "EyeFade": [0.980000, 0.990000],
+      "num_iterations": 64,
+      "screen_edge_fade": [0.960000, 0.990000],
       "roughness_scattering": true,
+      "EyeFade": [0.980000, 0.990000],
       "ScreenEdgeFade": [0.960000, 0.990000],
-      "enabled": true,
+      "enabled": false,
       "cone_tracing": false
     },
     "taa": {
@@ -33,8 +33,7 @@
     },
     "debug": {
       "debug_drawer": {
-        "Enabled": true,
-        "enabled": true
+        "enabled": false
       },
       "env_grid_probes": false,
       "reflection_probes": false,
@@ -49,7 +48,7 @@
     },
     "env_grid": {
       "gi": {
-        "enabled": true
+        "enabled": false
       },
       "reflections": {
         "enabled": false

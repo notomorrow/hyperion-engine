@@ -13,8 +13,6 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanSemaphoreChain;
 
 enum class VulkanSemaphoreType
@@ -28,7 +26,7 @@ class VulkanSemaphore
     friend class VulkanSemaphoreChain;
 
 public:
-    VulkanSemaphore(VkPipelineStageFlags pipeline_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    VulkanSemaphore(VkPipelineStageFlags pipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     ~VulkanSemaphore();
 
     VkSemaphore GetVulkanHandle() const
@@ -38,7 +36,7 @@ public:
 
     VkPipelineStageFlags GetVulkanStageFlags() const
     {
-        return m_pipeline_stage;
+        return m_pipelineStage;
     }
 
     RendererResult Create();
@@ -46,7 +44,7 @@ public:
 
 private:
     VkSemaphore m_semaphore;
-    VkPipelineStageFlags m_pipeline_stage;
+    VkPipelineStageFlags m_pipelineStage;
 };
 
 struct VulkanSemaphoreRef
@@ -54,8 +52,8 @@ struct VulkanSemaphoreRef
     VulkanSemaphore semaphore;
     mutable uint32_t count;
 
-    VulkanSemaphoreRef(VkPipelineStageFlags pipeline_stage)
-        : semaphore(pipeline_stage),
+    VulkanSemaphoreRef(VkPipelineStageFlags pipelineStage)
+        : semaphore(pipelineStage),
           count(0)
     {
     }
@@ -163,8 +161,8 @@ public:
     using VulkanSemaphoreStageView = std::vector<VkPipelineStageFlags>;
 
     VulkanSemaphoreChain(
-        const std::vector<VkPipelineStageFlags>& wait_stage_flags,
-        const std::vector<VkPipelineStageFlags>& signal_stage_flags);
+        const std::vector<VkPipelineStageFlags>& waitStageFlags,
+        const std::vector<VkPipelineStageFlags>& signalStageFlags);
     VulkanSemaphoreChain(const VulkanSemaphoreChain& other) = delete;
     VulkanSemaphoreChain& operator=(const VulkanSemaphoreChain& other) = delete;
     VulkanSemaphoreChain(VulkanSemaphoreChain&& other) noexcept = default;
@@ -173,42 +171,42 @@ public:
 
     auto& GetWaitSemaphores()
     {
-        return m_wait_semaphores;
+        return m_waitSemaphores;
     }
 
     const auto& GetWaitSemaphores() const
     {
-        return m_wait_semaphores;
+        return m_waitSemaphores;
     }
 
     auto& GetSignalSemaphores()
     {
-        return m_signal_semaphores;
+        return m_signalSemaphores;
     }
 
     const auto& GetSignalSemaphores() const
     {
-        return m_signal_semaphores;
+        return m_signalSemaphores;
     }
 
-    bool HasWaitSemaphore(const VulkanWaitSemaphore& wait_semaphore) const
+    bool HasWaitSemaphore(const VulkanWaitSemaphore& waitSemaphore) const
     {
-        return std::any_of(m_wait_semaphores.begin(), m_wait_semaphores.end(), [&wait_semaphore](const VulkanWaitSemaphore& item)
+        return std::any_of(m_waitSemaphores.begin(), m_waitSemaphores.end(), [&waitSemaphore](const VulkanWaitSemaphore& item)
             {
-                return wait_semaphore == item;
+                return waitSemaphore == item;
             });
     }
 
-    bool HasSignalSemaphore(const VulkanSignalSemaphore& signal_semaphore) const
+    bool HasSignalSemaphore(const VulkanSignalSemaphore& signalSemaphore) const
     {
-        return std::any_of(m_signal_semaphores.begin(), m_signal_semaphores.end(), [&signal_semaphore](const VulkanSignalSemaphore& item)
+        return std::any_of(m_signalSemaphores.begin(), m_signalSemaphores.end(), [&signalSemaphore](const VulkanSignalSemaphore& item)
             {
-                return signal_semaphore == item;
+                return signalSemaphore == item;
             });
     }
 
-    VulkanSemaphoreChain& WaitsFor(const VulkanSignalSemaphore& signal_semaphore);
-    VulkanSemaphoreChain& SignalsTo(const VulkanWaitSemaphore& wait_semaphore);
+    VulkanSemaphoreChain& WaitsFor(const VulkanSignalSemaphore& signalSemaphore);
+    VulkanSemaphoreChain& SignalsTo(const VulkanWaitSemaphore& waitSemaphore);
 
     /*! \brief Make this wait on all signal semaphores that `signaler` has.
      * @param signaler The chain to wait on
@@ -224,22 +222,22 @@ public:
 
     const VulkanSemaphoreView& GetSignalSemaphoresView() const
     {
-        return m_signal_semaphores_view;
+        return m_signalSemaphoresView;
     }
 
     const VulkanSemaphoreStageView& GetSignalSemaphoreStagesView() const
     {
-        return m_signal_semaphores_stage_view;
+        return m_signalSemaphoresStageView;
     }
 
     const VulkanSemaphoreView& GetWaitSemaphoresView() const
     {
-        return m_wait_semaphores_view;
+        return m_waitSemaphoresView;
     }
 
     const VulkanSemaphoreStageView& GetWaitSemaphoreStagesView() const
     {
-        return m_wait_semaphores_stage_view;
+        return m_waitSemaphoresStageView;
     }
 
     RendererResult Create();
@@ -250,16 +248,15 @@ private:
 
     void UpdateViews();
 
-    std::vector<VulkanSignalSemaphore> m_signal_semaphores;
-    std::vector<VulkanWaitSemaphore> m_wait_semaphores;
+    std::vector<VulkanSignalSemaphore> m_signalSemaphores;
+    std::vector<VulkanWaitSemaphore> m_waitSemaphores;
 
-    VulkanSemaphoreView m_signal_semaphores_view;
-    VulkanSemaphoreView m_wait_semaphores_view;
-    VulkanSemaphoreStageView m_signal_semaphores_stage_view;
-    VulkanSemaphoreStageView m_wait_semaphores_stage_view;
+    VulkanSemaphoreView m_signalSemaphoresView;
+    VulkanSemaphoreView m_waitSemaphoresView;
+    VulkanSemaphoreStageView m_signalSemaphoresStageView;
+    VulkanSemaphoreStageView m_waitSemaphoresStageView;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

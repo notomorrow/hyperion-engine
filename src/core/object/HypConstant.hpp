@@ -12,7 +12,7 @@
 
 #include <core/functional/Proc.hpp>
 
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 #include <core/utilities/EnumFlags.hpp>
 #include <core/utilities/Span.hpp>
 
@@ -35,18 +35,18 @@ public:
     template <class ConstantType, typename = std::enable_if_t<!std::is_reference_v<ConstantType>>>
     HypConstant(Name name, ConstantType value, Span<const HypClassAttribute> attributes = {})
         : m_name(name),
-          m_type_id(TypeID::ForType<NormalizedType<ConstantType>>()),
+          m_typeId(TypeId::ForType<NormalizedType<ConstantType>>()),
           m_size(sizeof(NormalizedType<ConstantType>)),
           m_attributes(attributes)
     {
-        m_get_proc = [value]() -> HypData
+        m_getProc = [value]() -> HypData
         {
             return HypData(value);
         };
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serialize_proc = [value]() -> FBOMData
+            m_serializeProc = [value]() -> FBOMData
             {
                 FBOMData out;
 
@@ -61,26 +61,26 @@ public:
     }
 
     template <class ConstantType, typename = std::enable_if_t<!std::is_reference_v<ConstantType>>>
-    HypConstant(Name name, const ConstantType* value_ptr, Span<const HypClassAttribute> attributes = {})
+    HypConstant(Name name, const ConstantType* valuePtr, Span<const HypClassAttribute> attributes = {})
         : m_name(name),
-          m_type_id(TypeID::ForType<NormalizedType<ConstantType>>()),
+          m_typeId(TypeId::ForType<NormalizedType<ConstantType>>()),
           m_size(sizeof(NormalizedType<ConstantType>)),
           m_attributes(attributes)
     {
-        m_get_proc = [value_ptr]() -> HypData
+        m_getProc = [valuePtr]() -> HypData
         {
-            return HypData(AnyRef(const_cast<NormalizedType<ConstantType>*>(value_ptr)));
+            return HypData(AnyRef(const_cast<NormalizedType<ConstantType>*>(valuePtr)));
         };
 
         if (m_attributes["serialize"] || m_attributes["xmlattribute"])
         {
-            m_serialize_proc = [value_ptr]() -> FBOMData
+            m_serializeProc = [valuePtr]() -> FBOMData
             {
-                AssertThrow(value_ptr != nullptr);
+                AssertThrow(valuePtr != nullptr);
 
                 FBOMData out;
 
-                if (FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(*value_ptr, out))
+                if (FBOMResult err = HypDataHelper<NormalizedType<ConstantType>>::Serialize(*valuePtr, out))
                 {
                     HYP_FAIL("Failed to serialize data: %s", err.message.Data());
                 }
@@ -106,19 +106,19 @@ public:
         return m_name;
     }
 
-    virtual TypeID GetTypeID() const override
+    virtual TypeId GetTypeId() const override
     {
-        return m_type_id;
+        return m_typeId;
     }
 
-    virtual TypeID GetTargetTypeID() const override
+    virtual TypeId GetTargetTypeId() const override
     {
-        return TypeID::Void();
+        return TypeId::Void();
     }
 
     virtual bool CanSerialize() const override
     {
-        return IsValid() && m_serialize_proc.IsValid();
+        return IsValid() && m_serializeProc.IsValid();
     }
 
     virtual bool CanDeserialize() const override
@@ -143,7 +143,7 @@ public:
             return false;
         }
 
-        out = m_serialize_proc();
+        out = m_serializeProc();
 
         return true;
     }
@@ -163,9 +163,9 @@ public:
         return m_attributes.Get(key);
     }
 
-    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& default_value) const override
+    virtual const HypClassAttributeValue& GetAttribute(ANSIStringView key, const HypClassAttributeValue& defaultValue) const override
     {
-        return m_attributes.Get(key, default_value);
+        return m_attributes.Get(key, defaultValue);
     }
 
     HYP_FORCE_INLINE explicit operator bool() const
@@ -176,23 +176,23 @@ public:
     HYP_FORCE_INLINE bool IsValid() const
     {
         return m_name.IsValid()
-            && m_type_id != TypeID::Void()
+            && m_typeId != TypeId::Void()
             && m_size != 0;
     }
 
     HYP_FORCE_INLINE HypData Get() const
     {
-        return m_get_proc();
+        return m_getProc();
     }
 
 private:
     Name m_name;
-    TypeID m_type_id;
+    TypeId m_typeId;
     uint32 m_size;
     HypClassAttributeSet m_attributes;
 
-    Proc<HypData()> m_get_proc;
-    Proc<FBOMData()> m_serialize_proc;
+    Proc<HypData()> m_getProc;
+    Proc<FBOMData()> m_serializeProc;
 };
 
 } // namespace hyperion

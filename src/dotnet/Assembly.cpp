@@ -22,8 +22,8 @@ Assembly::Assembly()
 Assembly::Assembly(EnumFlags<AssemblyFlags> flags)
     : m_flags(flags),
       m_guid { 0, 0 },
-      m_invoke_getter_fptr(nullptr),
-      m_invoke_setter_fptr(nullptr)
+      m_invokeGetterFptr(nullptr),
+      m_invokeSetterFptr(nullptr)
 {
 }
 
@@ -42,52 +42,52 @@ bool Assembly::Unload()
         return true;
     }
 
-    for (const auto& it : m_class_objects)
+    for (const auto& it : m_classObjects)
     {
-        const RC<Class>& class_object = it.second;
+        const RC<Class>& classObject = it.second;
 
-        if (!class_object)
+        if (!classObject)
         {
             continue;
         }
 
-        if (const HypClass* hyp_class = class_object->GetHypClass())
+        if (const HypClass* hypClass = classObject->GetHypClass())
         {
-            AssertThrowMsg(hyp_class->GetManagedClass() == class_object, "HypClass '%s' does not match the expected managed class '%s'", *hyp_class->GetName(), *class_object->GetName());
+            AssertThrowMsg(hypClass->GetManagedClass() == classObject, "HypClass '%s' does not match the expected managed class '%s'", *hypClass->GetName(), *classObject->GetName());
 
-            hyp_class->SetManagedClass(nullptr);
+            hypClass->SetManagedClass(nullptr);
         }
     }
 
     return DotNetSystem::GetInstance().UnloadAssembly(m_guid);
 }
 
-RC<Class> Assembly::NewClass(const HypClass* hyp_class, int32 type_hash, const char* type_name, uint32 type_size, TypeID type_id, Class* parent_class, uint32 flags)
+RC<Class> Assembly::NewClass(const HypClass* hypClass, int32 typeHash, const char* typeName, uint32 typeSize, TypeId typeId, Class* parentClass, uint32 flags)
 {
-    auto it = m_class_objects.Find(type_hash);
+    auto it = m_classObjects.Find(typeHash);
 
-    if (it != m_class_objects.End())
+    if (it != m_classObjects.End())
     {
-        HYP_LOG(DotNET, Warning, "Class {} (type hash: {}) already exists in assembly with GUID {}!", type_name, type_hash, m_guid);
+        HYP_LOG(DotNET, Warning, "Class {} (type hash: {}) already exists in assembly with GUID {}!", typeName, typeHash, m_guid);
 
         return it->second;
     }
 
-    it = m_class_objects.Insert(type_hash, MakeRefCountedPtr<Class>(WeakRefCountedPtrFromThis(), type_name, type_size, type_id, hyp_class, parent_class, EnumFlags<ManagedClassFlags>(flags))).first;
+    it = m_classObjects.Insert(typeHash, MakeRefCountedPtr<Class>(WeakRefCountedPtrFromThis(), typeName, typeSize, typeId, hypClass, parentClass, EnumFlags<ManagedClassFlags>(flags))).first;
 
-    if (hyp_class != nullptr)
+    if (hypClass != nullptr)
     {
-        hyp_class->SetManagedClass(it->second);
+        hypClass->SetManagedClass(it->second);
     }
 
     return it->second;
 }
 
-RC<Class> Assembly::FindClassByName(const char* type_name)
+RC<Class> Assembly::FindClassByName(const char* typeName)
 {
-    for (auto& pair : m_class_objects)
+    for (auto& pair : m_classObjects)
     {
-        if (pair.second->GetName() == type_name)
+        if (pair.second->GetName() == typeName)
         {
             return pair.second;
         }
@@ -96,11 +96,11 @@ RC<Class> Assembly::FindClassByName(const char* type_name)
     return nullptr;
 }
 
-RC<Class> Assembly::FindClassByTypeHash(int32 type_hash)
+RC<Class> Assembly::FindClassByTypeHash(int32 typeHash)
 {
-    auto it = m_class_objects.Find(type_hash);
+    auto it = m_classObjects.Find(typeHash);
 
-    if (it != m_class_objects.End())
+    if (it != m_classObjects.End())
     {
         return it->second;
     }

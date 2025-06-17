@@ -3,8 +3,7 @@
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderShadowMap.hpp>
-#include <rendering/RenderState.hpp>
-#include <rendering/ShaderGlobals.hpp>
+#include <rendering/RenderGlobalState.hpp>
 #include <rendering/SafeDeleter.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
@@ -21,6 +20,7 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -29,7 +29,7 @@ namespace hyperion {
 
 RenderLight::RenderLight(Light* light)
     : m_light(light),
-      m_buffer_data {}
+      m_bufferData {}
 {
 }
 
@@ -37,9 +37,9 @@ RenderLight::RenderLight(RenderLight&& other) noexcept
     : RenderResourceBase(static_cast<RenderResourceBase&&>(other)),
       m_light(other.m_light),
       m_material(std::move(other.m_material)),
-      m_render_material(std::move(other.m_render_material)),
-      m_shadow_render_map(std::move(other.m_shadow_render_map)),
-      m_buffer_data(std::move(other.m_buffer_data))
+      m_renderMaterial(std::move(other.m_renderMaterial)),
+      m_shadowMap(std::move(other.m_shadowMap)),
+      m_bufferData(std::move(other.m_bufferData))
 {
     other.m_light = nullptr;
 }
@@ -65,34 +65,34 @@ void RenderLight::Update_Internal()
     UpdateBufferData();
 }
 
-GPUBufferHolderBase* RenderLight::GetGPUBufferHolder() const
+GpuBufferHolderBase* RenderLight::GetGpuBufferHolder() const
 {
-    return g_engine->GetRenderData()->lights;
+    return g_renderGlobalState->gpuBuffers[GRB_LIGHTS];
 }
 
 void RenderLight::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    LightShaderData* buffer_data = static_cast<LightShaderData*>(m_buffer_address);
+    /*LightShaderData* bufferData = static_cast<LightShaderData*>(m_bufferAddress);
 
-    *buffer_data = m_buffer_data;
+    *bufferData = m_bufferData;
 
     // override material buffer index
-    buffer_data->material_index = m_render_material
-        ? m_render_material->GetBufferIndex()
+    bufferData->materialIndex = m_renderMaterial
+        ? m_renderMaterial->GetBufferIndex()
         : ~0u;
 
-    if (m_shadow_render_map)
+    if (m_shadowMap)
     {
-        buffer_data->shadow_map_index = m_shadow_render_map->GetBufferIndex();
+        bufferData->shadowMapIndex = m_shadowMap->GetBufferIndex();
     }
     else
     {
-        buffer_data->shadow_map_index = ~0u;
+        bufferData->shadowMapIndex = ~0u;
     }
 
-    GetGPUBufferHolder()->MarkDirty(m_buffer_index);
+    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);*/
 }
 
 void RenderLight::SetMaterial(const Handle<Material>& material)
@@ -105,11 +105,11 @@ void RenderLight::SetMaterial(const Handle<Material>& material)
 
             if (m_material.IsValid())
             {
-                m_render_material = TResourceHandle<RenderMaterial>(m_material->GetRenderResource());
+                m_renderMaterial = TResourceHandle<RenderMaterial>(m_material->GetRenderResource());
             }
             else
             {
-                m_render_material = TResourceHandle<RenderMaterial>();
+                m_renderMaterial = TResourceHandle<RenderMaterial>();
             }
 
             if (IsInitialized())
@@ -119,21 +119,21 @@ void RenderLight::SetMaterial(const Handle<Material>& material)
         });
 }
 
-void RenderLight::SetBufferData(const LightShaderData& buffer_data)
+void RenderLight::SetBufferData(const LightShaderData& bufferData)
 {
     HYP_SCOPE;
 
-    Execute([this, buffer_data]()
+    Execute([this, bufferData]()
         {
-            m_buffer_data = buffer_data;
+            m_bufferData = bufferData;
 
-            if (m_shadow_render_map)
+            if (m_shadowMap)
             {
-                m_buffer_data.shadow_map_index = m_shadow_render_map->GetBufferIndex();
+                m_bufferData.shadowMapIndex = m_shadowMap->GetBufferIndex();
             }
             else
             {
-                m_buffer_data.shadow_map_index = ~0u;
+                m_bufferData.shadowMapIndex = ~0u;
             }
 
             if (IsInitialized())
@@ -143,21 +143,21 @@ void RenderLight::SetBufferData(const LightShaderData& buffer_data)
         });
 }
 
-void RenderLight::SetShadowMapResourceHandle(TResourceHandle<RenderShadowMap>&& shadow_render_map)
+void RenderLight::SetShadowMap(TResourceHandle<RenderShadowMap>&& shadowMap)
 {
     HYP_SCOPE;
 
-    Execute([this, shadow_render_map = std::move(shadow_render_map)]()
+    Execute([this, shadowMap = std::move(shadowMap)]()
         {
-            m_shadow_render_map = std::move(shadow_render_map);
+            m_shadowMap = std::move(shadowMap);
 
-            if (m_shadow_render_map)
+            if (m_shadowMap)
             {
-                m_buffer_data.shadow_map_index = m_shadow_render_map->GetBufferIndex();
+                m_bufferData.shadowMapIndex = m_shadowMap->GetBufferIndex();
             }
             else
             {
-                m_buffer_data.shadow_map_index = ~0u;
+                m_bufferData.shadowMapIndex = ~0u;
             }
 
             if (IsInitialized())
@@ -169,11 +169,7 @@ void RenderLight::SetShadowMapResourceHandle(TResourceHandle<RenderShadowMap>&& 
 
 #pragma endregion RenderLight
 
-namespace renderer {
-
 HYP_DESCRIPTOR_SSBO(Global, CurrentLight, 1, sizeof(LightShaderData), true);
 HYP_DESCRIPTOR_SSBO(Global, LightsBuffer, 1, sizeof(LightShaderData), false);
-
-} // namespace renderer
 
 } // namespace hyperion

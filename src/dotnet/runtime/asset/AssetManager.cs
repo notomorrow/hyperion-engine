@@ -74,10 +74,27 @@ namespace Hyperion
 
         private bool IsHiddenOrSystemFile(string path)
         {
-            FileAttributes attributes = File.GetAttributes(path);
+            try
+            {
+                FileAttributes attributes = File.GetAttributes(path);
 
-            return (attributes & FileAttributes.Hidden) == FileAttributes.Hidden || 
-                   (attributes & FileAttributes.System) == FileAttributes.System;
+                return (attributes & FileAttributes.Hidden) == FileAttributes.Hidden || 
+                    (attributes & FileAttributes.System) == FileAttributes.System;
+            }
+            catch (FileNotFoundException)
+            {
+                // If the file doesn't exist, we can't determine its attributes
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // If we don't have permission to access the file, assume it's not hidden or system
+                return false;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         public void StopWatching()
@@ -156,7 +173,7 @@ namespace Hyperion
             if (hypClass == null)
                 throw new Exception("Failed to get HypClass for type: " + typeof(T).Name + ", cannot load asset!");
 
-            IntPtr loaderDefinitionPtr = AssetManager_GetLoaderDefinition(NativeAddress, path, ((HypClass)hypClass).TypeID);
+            IntPtr loaderDefinitionPtr = AssetManager_GetLoaderDefinition(NativeAddress, path, ((HypClass)hypClass).TypeId);
 
             if (loaderDefinitionPtr == IntPtr.Zero)
                 throw new Exception("Failed to get loader definition for path: " + path + ", cannot load asset!");
@@ -171,7 +188,7 @@ namespace Hyperion
             if (hypClass == null)
                 throw new Exception("Failed to get HypClass for type: " + typeof(T).Name + ", cannot load asset!");
 
-            IntPtr loaderDefinitionPtr = AssetManager_GetLoaderDefinition(NativeAddress, path, ((HypClass)hypClass).TypeID);
+            IntPtr loaderDefinitionPtr = AssetManager_GetLoaderDefinition(NativeAddress, path, ((HypClass)hypClass).TypeId);
 
             if (loaderDefinitionPtr == IntPtr.Zero)
                 throw new Exception("Failed to get loader definition for path: " + path + ", cannot load asset!");
@@ -194,7 +211,7 @@ namespace Hyperion
         }
 
         [DllImport("hyperion", EntryPoint = "AssetManager_GetLoaderDefinition")]
-        private static extern IntPtr AssetManager_GetLoaderDefinition([In] IntPtr assetManagerPtr, [MarshalAs(UnmanagedType.LPStr)] string path, TypeID desiredTypeID);
+        private static extern IntPtr AssetManager_GetLoaderDefinition([In] IntPtr assetManagerPtr, [MarshalAs(UnmanagedType.LPStr)] string path, TypeId desiredTypeId);
 
         [DllImport("hyperion", EntryPoint = "AssetManager_LoadAsync")]
         private static extern void AssetManager_LoadAsync(IntPtr assetManagerPtr, IntPtr handleAssetResultPtr);

@@ -35,34 +35,34 @@ public:
         GetDerivedAdapter()->DerivedAdapter::Teardown(world);
     }
 
-    void Tick(PhysicsWorldBase* world, GameCounter::TickUnitHighPrec delta)
+    void Tick(PhysicsWorldBase* world, double delta)
     {
         GetDerivedAdapter()->DerivedAdapter::Tick(world, delta);
     }
 
-    void OnRigidBodyAdded(const Handle<RigidBody>& rigid_body)
+    void OnRigidBodyAdded(const Handle<RigidBody>& rigidBody)
     {
-        GetDerivedAdapter()->DerivedAdapter::OnRigidBodyAdded(rigid_body);
+        GetDerivedAdapter()->DerivedAdapter::OnRigidBodyAdded(rigidBody);
     }
 
-    void OnRigidBodyRemoved(const Handle<RigidBody>& rigid_body)
+    void OnRigidBodyRemoved(const Handle<RigidBody>& rigidBody)
     {
-        GetDerivedAdapter()->DerivedAdapter::OnRigidBodyRemoved(rigid_body);
+        GetDerivedAdapter()->DerivedAdapter::OnRigidBodyRemoved(rigidBody);
     }
 
-    void OnChangePhysicsShape(RigidBody* rigid_body)
+    void OnChangePhysicsShape(RigidBody* rigidBody)
     {
-        GetDerivedAdapter()->DerivedAdapter::OnChangePhysicsShape(rigid_body);
+        GetDerivedAdapter()->DerivedAdapter::OnChangePhysicsShape(rigidBody);
     }
 
-    void OnChangePhysicsMaterial(RigidBody* rigid_body)
+    void OnChangePhysicsMaterial(RigidBody* rigidBody)
     {
-        GetDerivedAdapter()->DerivedAdapter::OnChangePhysicsMaterial(rigid_body);
+        GetDerivedAdapter()->DerivedAdapter::OnChangePhysicsMaterial(rigidBody);
     }
 
-    void ApplyForceToBody(const RigidBody* rigid_body, const Vector3& force)
+    void ApplyForceToBody(const RigidBody* rigidBody, const Vector3& force)
     {
-        GetDerivedAdapter()->DerivedAdapter::ApplyForceToBody(rigid_body, force);
+        GetDerivedAdapter()->DerivedAdapter::ApplyForceToBody(rigidBody, force);
     }
 };
 

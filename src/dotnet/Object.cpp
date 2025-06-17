@@ -11,37 +11,37 @@
 namespace hyperion::dotnet {
 
 Object::Object()
-    : m_class_ptr(nullptr),
-      m_object_reference { nullptr, nullptr },
-      m_object_flags(ObjectFlags::NONE),
-      m_keep_alive(false)
+    : m_classPtr(nullptr),
+      m_objectReference { nullptr, nullptr },
+      m_objectFlags(ObjectFlags::NONE),
+      m_keepAlive(false)
 {
 }
 
-Object::Object(const RC<Class>& class_ptr, ObjectReference object_reference, EnumFlags<ObjectFlags> object_flags)
-    : m_class_ptr(class_ptr),
-      m_object_reference(object_reference),
-      m_object_flags(object_flags),
-      m_keep_alive(false)
+Object::Object(const RC<Class>& classPtr, ObjectReference objectReference, EnumFlags<ObjectFlags> objectFlags)
+    : m_classPtr(classPtr),
+      m_objectReference(objectReference),
+      m_objectFlags(objectFlags),
+      m_keepAlive(false)
 {
-    if (class_ptr != nullptr)
+    if (classPtr != nullptr)
     {
 #ifdef HYP_DOTNET_OBJECT_KEEP_ASSEMBLY_ALIVE
-        m_assembly = class_ptr->GetAssembly();
+        m_assembly = classPtr->GetAssembly();
 #else
-        m_assembly = class_ptr->GetAssembly().ToWeak();
+        m_assembly = classPtr->GetAssembly().ToWeak();
 #endif
     }
 
-    if (m_object_reference.weak_handle != nullptr)
+    if (m_objectReference.weakHandle != nullptr)
     {
-        AssertThrowMsg(m_class_ptr != nullptr, "Class pointer not set!");
+        AssertThrowMsg(m_classPtr != nullptr, "Class pointer not set!");
 
-        if (!(m_object_flags & ObjectFlags::CREATED_FROM_MANAGED))
+        if (!(m_objectFlags & ObjectFlags::CREATED_FROM_MANAGED))
         {
-            // set keep_alive to true if reference is valid so we can clean up on destructor.
+            // set keepAlive to true if reference is valid so we can clean up on destructor.
             // If we call this constructor the managed object should be alive anyway (See NativeInterop.cs)
-            m_keep_alive.Set(true, MemoryOrder::RELEASE);
+            m_keepAlive.Set(true, MemoryOrder::RELEASE);
         }
     }
 }
@@ -53,21 +53,21 @@ Object::~Object()
 
 void Object::Reset()
 {
-    HYP_MT_CHECK_RW(m_data_race_detector);
+    HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-    if (IsValid() && m_keep_alive.Get(MemoryOrder::ACQUIRE))
+    if (IsValid() && m_keepAlive.Get(MemoryOrder::ACQUIRE))
     {
         AssertThrowMsg(SetKeepAlive(false), "Failed to set keep alive to false!");
     }
 
-    m_class_ptr.Reset();
+    m_classPtr.Reset();
     m_assembly.Reset();
-    m_object_reference = ObjectReference { nullptr, nullptr };
-    m_object_flags = ObjectFlags::NONE;
-    m_keep_alive.Set(false, MemoryOrder::RELEASE);
+    m_objectReference = ObjectReference { nullptr, nullptr };
+    m_objectFlags = ObjectFlags::NONE;
+    m_keepAlive.Set(false, MemoryOrder::RELEASE);
 }
 
-void Object::InvokeMethod_Internal(const Method* method_ptr, const HypData** args_hyp_data, HypData* out_return_hyp_data)
+void Object::InvokeMethod_Internal(const Method* methodPtr, const HypData** argsHypData, HypData* outReturnHypData)
 {
     AssertThrow(IsValid());
 
@@ -79,19 +79,19 @@ void Object::InvokeMethod_Internal(const Method* method_ptr, const HypData** arg
 
     AssertThrow(assembly != nullptr && assembly->IsLoaded());
 
-    method_ptr->Invoke(&m_object_reference, args_hyp_data, out_return_hyp_data);
+    methodPtr->Invoke(&m_objectReference, argsHypData, outReturnHypData);
 }
 
-const Method* Object::GetMethod(UTF8StringView method_name) const
+const Method* Object::GetMethod(UTF8StringView methodName) const
 {
     if (!IsValid())
     {
         return nullptr;
     }
 
-    auto it = m_class_ptr->GetMethods().FindAs(method_name);
+    auto it = m_classPtr->GetMethods().FindAs(methodName);
 
-    if (it == m_class_ptr->GetMethods().End())
+    if (it == m_classPtr->GetMethods().End())
     {
         return nullptr;
     }
@@ -99,16 +99,16 @@ const Method* Object::GetMethod(UTF8StringView method_name) const
     return &it->second;
 }
 
-const Property* Object::GetProperty(UTF8StringView property_name) const
+const Property* Object::GetProperty(UTF8StringView propertyName) const
 {
     if (!IsValid())
     {
         return nullptr;
     }
 
-    auto it = m_class_ptr->GetProperties().FindAs(property_name);
+    auto it = m_classPtr->GetProperties().FindAs(propertyName);
 
-    if (it == m_class_ptr->GetProperties().End())
+    if (it == m_classPtr->GetProperties().End())
     {
         return nullptr;
     }
@@ -116,25 +116,25 @@ const Property* Object::GetProperty(UTF8StringView property_name) const
     return &it->second;
 }
 
-bool Object::SetKeepAlive(bool keep_alive)
+bool Object::SetKeepAlive(bool keepAlive)
 {
     if (!IsValid())
     {
         return false;
     }
 
-    if (m_keep_alive.Get(MemoryOrder::ACQUIRE) == keep_alive)
+    if (m_keepAlive.Get(MemoryOrder::ACQUIRE) == keepAlive)
     {
         return true;
     }
 
     // used as result (inout parameter)
-    int param_result = int(keep_alive);
-    DotNetSystem::GetInstance().GetGlobalFunctions().set_keep_alive_function(&m_object_reference, &param_result);
+    int paramResult = int(keepAlive);
+    DotNetSystem::GetInstance().GetGlobalFunctions().setKeepAliveFunction(&m_objectReference, &paramResult);
 
-    if (param_result)
+    if (paramResult)
     {
-        m_keep_alive.Set(keep_alive, MemoryOrder::RELEASE);
+        m_keepAlive.Set(keepAlive, MemoryOrder::RELEASE);
 
         return true;
     }

@@ -95,11 +95,11 @@ class HYP_API ConfigurationTable
 
 protected:
     ConfigurationTable();
-    ConfigurationTable(const String& config_name, const HypClass* hyp_class);
+    ConfigurationTable(const String& configName, const HypClass* hypClass);
 
 public:
-    ConfigurationTable(const String& config_name);
-    ConfigurationTable(const String& config_name, const String& subobject_path);
+    ConfigurationTable(const String& configName);
+    ConfigurationTable(const String& configName, const String& subobjectPath);
     ConfigurationTable(const ConfigurationTable& other);
     ConfigurationTable& operator=(const ConfigurationTable& other);
     ConfigurationTable(ConfigurationTable&& other) noexcept;
@@ -128,17 +128,17 @@ public:
     }
 
 protected:
-    static const String& GetDefaultConfigName(const HypClass* hyp_class);
+    static const String& GetDefaultConfigName(const HypClass* hypClass);
 
     FilePath GetFilePath() const;
 
-    Result Read(json::JSONValue& out_value) const;
+    Result Read(json::JSONValue& outValue) const;
     Result Write(const json::JSONValue& value) const;
 
     void LogErrors() const;
     void LogErrors(UTF8StringView message) const;
 
-    bool SetHypClassFields(const HypClass* hyp_class, const void* ptr);
+    bool SetHypClassFields(const HypClass* hypClass, const void* ptr);
 
     bool Validate() const
     {
@@ -149,8 +149,8 @@ protected:
     {
     }
 
-    Optional<String> m_subobject_path;
-    json::JSONValue m_root_object;
+    Optional<String> m_subobjectPath;
+    json::JSONValue m_rootObject;
 
 private:
     json::JSONValue& GetSubobject();
@@ -159,7 +159,7 @@ private:
     String m_name;
     Array<Error> m_errors;
 
-    mutable HashCode m_cached_hash_code;
+    mutable HashCode m_cachedHashCode;
 };
 
 template <class Derived>
@@ -175,8 +175,8 @@ class ConfigBase : public ConfigurationTable
 protected:
     ConfigBase() = default;
 
-    ConfigBase(const String& config_name)
-        : ConfigurationTable(config_name, GetHypClass())
+    ConfigBase(const String& configName)
+        : ConfigurationTable(configName, GetHypClass())
     {
     }
 
@@ -189,30 +189,30 @@ public:
 
     static Derived FromConfig()
     {
-        if (const String& config_name = GetDefaultConfigName(GetHypClass()); config_name.Any())
+        if (const String& configName = GetDefaultConfigName(GetHypClass()); configName.Any())
         {
-            return FromConfig(config_name);
+            return FromConfig(configName);
         }
 
         return FromConfig(TypeNameHelper<Derived, true>::value.Data());
     }
 
-    static Derived FromConfig(const String& config_name)
+    static Derived FromConfig(const String& configName)
     {
-        if (config_name.Empty())
+        if (configName.Empty())
         {
             // @TODO Log error
             return {};
         }
 
-        const HypClass* hyp_class = GetHypClass();
+        const HypClass* hypClass = GetHypClass();
 
         Derived result;
-        static_cast<ConfigurationTable&>(result) = ConfigurationTable { config_name, hyp_class };
+        static_cast<ConfigurationTable&>(result) = ConfigurationTable { configName, hypClass };
 
-        if (hyp_class)
+        if (hypClass)
         {
-            static_cast<ConfigurationTable&>(result).SetHypClassFields(hyp_class, &result);
+            static_cast<ConfigurationTable&>(result).SetHypClassFields(hypClass, &result);
         }
 
         result.PostLoadCallback();
@@ -226,9 +226,9 @@ public:
 
         if (result.IsChanged())
         {
-            const bool save_result = result.Save();
+            const bool saveResult = result.Save();
 
-            if (!save_result)
+            if (!saveResult)
             {
                 result.LogErrors("Failed to save configuration");
             }
@@ -240,7 +240,7 @@ public:
 private:
     HYP_FORCE_INLINE static const HypClass* GetHypClass()
     {
-        return GetClass(TypeID::ForType<Derived>());
+        return GetClass(TypeId::ForType<Derived>());
     }
 };
 
@@ -252,8 +252,8 @@ public:
     {
     }
 
-    GlobalConfig(const String& config_name)
-        : ConfigBase<GlobalConfig>(config_name)
+    GlobalConfig(const String& configName)
+        : ConfigBase<GlobalConfig>(configName)
     {
     }
 
@@ -269,20 +269,20 @@ public:
 
     HYP_FORCE_INLINE const ConfigurationValue& Get(UTF8StringView key) const
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         return ConfigBase<GlobalConfig>::Get(key);
     }
 
     HYP_FORCE_INLINE void Set(UTF8StringView key, const ConfigurationValue& value)
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
         ConfigBase<GlobalConfig>::Set(key, value);
     }
 
 private:
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };
 
 } // namespace config

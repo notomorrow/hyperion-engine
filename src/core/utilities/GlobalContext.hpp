@@ -46,19 +46,19 @@ public:
     template <class T>
     HYP_FORCE_INLINE GlobalContextHolder<T>& GetContextHolder()
     {
-        auto it = m_context_holders.Find<T>();
+        auto it = m_contextHolders.Find<T>();
 
-        if (it == m_context_holders.End())
+        if (it == m_contextHolders.End())
         {
-            it = m_context_holders.Set<T>(MakeUnique<GlobalContextHolder<T>>()).first;
+            it = m_contextHolders.Set<T>(MakeUnique<GlobalContextHolder<T>>()).first;
         }
 
         return *static_cast<GlobalContextHolder<T>*>(it->second.Get());
     }
 
 private:
-    ThreadID m_owner_thread_id;
-    TypeMap<UniquePtr<IGlobalContextHolder>> m_context_holders;
+    ThreadId m_ownerThreadId;
+    TypeMap<UniquePtr<IGlobalContextHolder>> m_contextHolders;
 };
 
 template <class ContextType>

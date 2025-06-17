@@ -3,13 +3,15 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    [HypClassBinding(Name="UIObjectScrollbarOrientation")]
+    [HypClassBinding(Name= "ScrollAxis")]
     [Flags]
-    public enum UIObjectScrollbarOrientation : byte
+    public enum ScrollAxis : byte
     {
         None = 0x0,
         Horizontal = 0x1,
-        Vertical = 0x2
+        Vertical = 0x2,
+
+        All = Horizontal | Vertical
     }
 
     [HypClassBinding(Name="UIEventHandlerResult")]

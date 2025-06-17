@@ -1,10 +1,13 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
+
 #ifndef HYPERION_RTC_STREAM_HPP
 #define HYPERION_RTC_STREAM_HPP
 
 #include <core/containers/String.hpp>
+
 #include <core/memory/ByteBuffer.hpp>
 #include <core/memory/UniquePtr.hpp>
+#include <core/memory/RefCountedPtr.hpp>
 
 namespace hyperion {
 namespace threading {
@@ -30,19 +33,19 @@ struct RTCStreamDestination
 
 struct RTCStreamParams
 {
-    uint32 samples_per_second = 60;
+    uint32 samplesPerSecond = 60;
 
     uint32 GetSampleDuration() const
     {
-        return 1000 * 1000 / samples_per_second;
+        return 1000 * 1000 / samplesPerSecond;
     }
 };
 
 class HYP_API RTCStream
 {
 public:
-    RTCStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder>&& encoder, RTCStreamParams params = {})
-        : m_stream_type(stream_type),
+    RTCStream(RTCStreamType streamType, UniquePtr<RTCStreamEncoder>&& encoder, RTCStreamParams params = {})
+        : m_streamType(streamType),
           m_encoder(std::move(encoder)),
           m_params(params),
           m_timestamp(0)
@@ -57,7 +60,7 @@ public:
 
     RTCStreamType GetStreamType() const
     {
-        return m_stream_type;
+        return m_streamType;
     }
 
     const UniquePtr<RTCStreamEncoder>& GetEncoder() const
@@ -76,7 +79,7 @@ public:
     virtual void Stop();
 
 protected:
-    RTCStreamType m_stream_type;
+    RTCStreamType m_streamType;
     UniquePtr<RTCStreamEncoder> m_encoder;
     RTCStreamParams m_params;
     uint64 m_timestamp;
@@ -85,8 +88,8 @@ protected:
 class HYP_API NullRTCStream : public RTCStream
 {
 public:
-    NullRTCStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder>&& encoder)
-        : RTCStream(stream_type, std::move(encoder))
+    NullRTCStream(RTCStreamType streamType, UniquePtr<RTCStreamEncoder>&& encoder)
+        : RTCStream(streamType, std::move(encoder))
     {
     }
 
@@ -102,7 +105,7 @@ public:
 class HYP_API LibDataChannelRTCStream : public RTCStream
 {
 public:
-    LibDataChannelRTCStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder>&& encoder);
+    LibDataChannelRTCStream(RTCStreamType streamType, UniquePtr<RTCStreamEncoder>&& encoder);
     LibDataChannelRTCStream(const LibDataChannelRTCStream& other) = delete;
     LibDataChannelRTCStream& operator=(const LibDataChannelRTCStream& other) = delete;
     LibDataChannelRTCStream(LibDataChannelRTCStream&& other) noexcept = default;

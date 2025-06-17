@@ -23,19 +23,13 @@ class HYP_API UISubsystem : public Subsystem
     HYP_OBJECT_BODY(UISubsystem);
 
 public:
-    UISubsystem(const Handle<UIStage>& ui_stage);
+    UISubsystem(const Handle<UIStage>& uiStage);
     virtual ~UISubsystem() override;
-
-    bool RequiresUpdateOnGameThread() const override
-    {
-        return false;
-    }
 
     void OnAddedToWorld() override;
     void OnRemovedFromWorld() override;
 
-    void PreUpdate(GameCounter::TickUnit delta) override;
-    void Update(GameCounter::TickUnit delta) override;
+    void Update(float delta) override;
 
     void OnSceneAttached(const Handle<Scene>& scene) override;
     void OnSceneDetached(const Handle<Scene>& scene) override;
@@ -43,12 +37,12 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<UIStage>& GetUIStage() const
     {
-        return m_ui_stage;
+        return m_uiStage;
     }
 
 private:
-    Handle<UIStage> m_ui_stage;
-    RC<UIRenderSubsystem> m_ui_render_subsystem;
+    Handle<UIStage> m_uiStage;
+    Handle<UIRenderSubsystem> m_uiRenderSubsystem;
 };
 
 } // namespace hyperion

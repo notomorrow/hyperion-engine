@@ -39,6 +39,7 @@ class HYP_API EditorActionStack : public HypObject<EditorActionStack>
 
 public:
     EditorActionStack();
+    EditorActionStack(const WeakHandle<EditorProject>& editorProject);
     EditorActionStack(const EditorActionStack& other) = delete;
     EditorActionStack& operator=(const EditorActionStack& other) = delete;
     EditorActionStack(EditorActionStack&& other) noexcept;
@@ -84,10 +85,12 @@ public:
 private:
     void UpdateState();
 
-    LinkedList<Handle<EditorActionBase>> m_actions;
-    int m_current_action_index;
+    WeakHandle<EditorProject> m_editorProject;
 
-    EnumFlags<EditorActionStackState> m_current_state;
+    LinkedList<Handle<EditorActionBase>> m_actions;
+    int m_currentActionIndex;
+
+    EnumFlags<EditorActionStackState> m_currentState;
 };
 
 } // namespace hyperion

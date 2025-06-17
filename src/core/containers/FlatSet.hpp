@@ -31,10 +31,10 @@ public:
 
     FlatSet();
 
-    FlatSet(std::initializer_list<T> initializer_list)
+    FlatSet(std::initializer_list<T> initializerList)
         : Base()
     {
-        for (const auto& item : initializer_list)
+        for (const auto& item : initializerList)
         {
             Insert(item);
         }

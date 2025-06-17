@@ -3,73 +3,101 @@
 #ifndef HYPERION_RENDERER_HPP
 #define HYPERION_RENDERER_HPP
 
+#include <core/Handle.hpp>
+
 #include <core/config/Config.hpp>
 
 #include <core/debug/Debug.hpp>
 
 #include <core/utilities/Span.hpp>
 
+#include <core/containers/SparsePagedArray.hpp>
+
+#include <rendering/EngineRenderStats.hpp>
+#include <rendering/CullData.hpp>
+
 #include <rendering/backend/RenderObject.hpp>
+#include <rendering/rhi/CmdList.hpp>
 
 namespace hyperion {
 
 class RenderView;
 class RenderWorld;
-class RenderEnvProbe;
 class RenderEnvGrid;
+class RenderLight;
+class Light;
+class EnvProbe;
+class EnvGrid;
 struct CullData;
+struct DrawCall;
+struct InstancedDrawCall;
+struct PassData;
+class RendererBase;
+class RenderGroup;
+class View;
+class IDrawCallCollectionImpl;
+
+namespace threading {
+class TaskBatch;
+} // namespace threading
+
+using threading::TaskBatch;
 
 HYP_STRUCT(ConfigName = "app", JSONPath = "rendering")
 struct RendererConfig : public ConfigBase<RendererConfig>
 {
     HYP_FIELD(JSONPath = "rt.path_tracing.enabled")
-    bool path_tracer_enabled = false;
+    bool pathTracerEnabled = false;
 
     HYP_FIELD(JSONPath = "rt.reflections.enabled")
-    bool rt_reflections_enabled = false;
+    bool rtReflectionsEnabled = false;
 
     HYP_FIELD(JSONPath = "rt.gi.enabled")
-    bool rt_gi_enabled = false;
+    bool rtGiEnabled = false;
 
     HYP_FIELD(JSONPath = "hbao.enabled")
-    bool hbao_enabled = false;
+    bool hbaoEnabled = false;
 
     HYP_FIELD(JSONPath = "hbil.enabled")
-    bool hbil_enabled = false;
+    bool hbilEnabled = false;
 
     HYP_FIELD(JSONPath = "ssgi.enabled")
-    bool ssgi_enabled = false;
+    bool ssgiEnabled = false;
 
     HYP_FIELD(JSONPath = "env_grid.gi.enabled")
-    bool env_grid_gi_enabled = false;
+    bool envGridGiEnabled = false;
 
     HYP_FIELD(JSONPath = "env_grid.reflections.enabled")
-    bool env_grid_radiance_enabled = false;
+    bool envGridRadianceEnabled = false;
 
     HYP_FIELD(JSONPath = "taa.enabled")
-    bool taa_enabled = false;
+    bool taaEnabled = false;
 
     virtual ~RendererConfig() override = default;
 };
 
 /*! \brief Describes the setup for rendering a frame. All RenderSetups must have a valid RenderWorld set. Passed to almost all Render() functions throughout the renderer.
  *  Most of the time you'll want a RenderSetup with a RenderView as well, but compute-only passes can use a RenderSetup without a view. Use HasView() to check if a view is set. */
-struct RenderSetup
+struct HYP_API RenderSetup
 {
     friend const RenderSetup& NullRenderSetup();
 
     RenderWorld* world;
     RenderView* view;
-    RenderEnvProbe* env_probe;
-    RenderEnvGrid* env_grid;
+    EnvProbe* envProbe;
+    EnvGrid* envGrid;
+    Light* light;
+    PassData* passData;
 
 private:
     // Private constructor for null RenderSetup
     RenderSetup()
         : world(nullptr),
           view(nullptr),
-          env_probe(nullptr),
-          env_grid(nullptr)
+          envProbe(nullptr),
+          envGrid(nullptr),
+          light(nullptr),
+          passData(nullptr)
     {
     }
 
@@ -77,8 +105,10 @@ public:
     RenderSetup(RenderWorld* world)
         : world(world),
           view(nullptr),
-          env_probe(nullptr),
-          env_grid(nullptr)
+          envProbe(nullptr),
+          envGrid(nullptr),
+          light(nullptr),
+          passData(nullptr)
     {
         AssertDebugMsg(world != nullptr, "RenderSetup must have a valid RenderWorld");
     }
@@ -86,8 +116,10 @@ public:
     RenderSetup(RenderWorld* world, RenderView* view)
         : world(world),
           view(view),
-          env_probe(nullptr),
-          env_grid(nullptr)
+          envProbe(nullptr),
+          envGrid(nullptr),
+          light(nullptr),
+          passData(nullptr)
     {
         AssertDebugMsg(world != nullptr, "RenderSetup must have a valid RenderWorld");
     }
@@ -129,6 +161,123 @@ public:
 /*! \brief Special null RenderSetup that can be used for simple rendering tasks that don't make sense to use a RenderWorld, such as rendering texture mipmaps.
  *  \internal Use sparingly as most rendering tasks should have a valid RenderWorld and using this will cause the IsValid() check to return false */
 extern const RenderSetup& NullRenderSetup();
+
+struct PassDataExt
+{
+    TypeId typeId;
+
+    PassDataExt()
+        : typeId(TypeId::Void())
+    {
+    }
+    virtual ~PassDataExt() = default;
+
+    HYP_FORCE_INLINE explicit operator bool() const
+    {
+        constexpr TypeId invalidTypeId = TypeId::Void();
+
+        return typeId != invalidTypeId;
+    }
+
+    HYP_FORCE_INLINE bool operator!() const
+    {
+        return !bool(*this);
+    }
+
+    template <class OtherPassDataExt>
+    HYP_FORCE_INLINE OtherPassDataExt* AsType()
+    {
+        constexpr TypeId otherTypeId = TypeId::ForType<OtherPassDataExt>();
+
+        if (typeId != otherTypeId)
+        {
+            return nullptr;
+        }
+
+        return reinterpret_cast<OtherPassDataExt*>(this);
+    }
+
+    template <class OtherPassDataExt>
+    HYP_FORCE_INLINE const OtherPassDataExt* AsType() const
+    {
+        constexpr TypeId otherTypeId = TypeId::ForType<OtherPassDataExt>();
+
+        if (typeId != otherTypeId)
+        {
+            return nullptr;
+        }
+
+        return reinterpret_cast<const OtherPassDataExt*>(this);
+    }
+
+    // Create a new instance of this PassDataExt (caller owns the allocation)
+    virtual PassDataExt* Clone() = 0;
+
+protected:
+    PassDataExt(TypeId subtype)
+        : typeId(subtype)
+    {
+    }
+};
+
+/*! \brief Data and passes used for rendering a View in the Deferred Renderer. */
+struct HYP_API PassData
+{
+    struct RenderGroupCacheEntry
+    {
+        WeakHandle<RenderGroup> renderGroup;
+        GraphicsPipelineRef graphicsPipeline;
+    };
+
+    WeakHandle<View> view;
+    Viewport viewport;
+
+    // per-View descriptor sets
+    FixedArray<DescriptorSetRef, maxFramesInFlight> descriptorSets;
+
+    CullData cullData;
+
+    // cached by ObjId<RenderGroup>
+    SparsePagedArray<RenderGroupCacheEntry, 32> renderGroupCache;
+    // iterator for removing cache data over frames
+    typename SparsePagedArray<RenderGroupCacheEntry, 32>::Iterator renderGroupCacheIterator;
+
+    PassDataExt* next = nullptr;
+
+    virtual ~PassData();
+
+    /*! \brief Safely remove unused graphics pipelines that are no longer used from the cache.
+     *  A graphics pipeline is considered unused if the RenderGroup it is associated with has no more references remaining
+     *  \param maxIter The maximum number of graphics pipelines to iterate over for this frame. */
+    void CullUnusedGraphicsPipelines(uint32 maxIter = 10);
+
+    static GraphicsPipelineRef CreateGraphicsPipeline(
+        PassData* pd,
+        const ShaderRef& shader,
+        const RenderableAttributeSet& renderableAttributes,
+        const DescriptorTableRef& descriptorTable = DescriptorTableRef::Null(),
+        IDrawCallCollectionImpl* impl = nullptr); // @TODO: Make this param part of renderable attributes
+};
+
+class HYP_API RendererBase
+{
+public:
+    virtual ~RendererBase();
+
+    virtual void Initialize() = 0;
+    virtual void Shutdown() = 0;
+
+    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) = 0;
+
+protected:
+    virtual PassData* CreateViewPassData(View* view, PassDataExt& ext) = 0;
+
+    PassData* TryGetViewPassData(View* view);
+    PassData* FetchViewPassData(View* view, PassDataExt* ext = nullptr);
+
+private:
+    SparsePagedArray<PassData*, 16> m_viewPassData;
+};
 
 } // namespace hyperion
 

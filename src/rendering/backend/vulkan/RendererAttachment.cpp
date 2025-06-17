@@ -8,13 +8,11 @@
 #include <rendering/backend/RendererHelpers.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 #pragma region Helpers
 
-static VkImageLayout GetInitialLayout(LoadOperation load_operation)
+static VkImageLayout GetInitialLayout(LoadOperation loadOperation)
 {
-    switch (load_operation)
+    switch (loadOperation)
     {
     case LoadOperation::CLEAR:
         return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -25,14 +23,14 @@ static VkImageLayout GetInitialLayout(LoadOperation load_operation)
     }
 }
 
-static VkImageLayout GetFinalLayout(RenderPassStage stage, bool is_depth_attachment)
+static VkImageLayout GetFinalLayout(RenderPassStage stage, bool isDepthAttachment)
 {
     switch (stage)
     {
     case RenderPassStage::NONE:
         return VK_IMAGE_LAYOUT_UNDEFINED;
     case RenderPassStage::PRESENT:
-        return is_depth_attachment
+        return isDepthAttachment
             ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     case RenderPassStage::SHADER:
@@ -42,9 +40,9 @@ static VkImageLayout GetFinalLayout(RenderPassStage stage, bool is_depth_attachm
     }
 }
 
-static VkAttachmentLoadOp ToVkLoadOp(LoadOperation load_operation)
+static VkAttachmentLoadOp ToVkLoadOp(LoadOperation loadOperation)
 {
-    switch (load_operation)
+    switch (loadOperation)
     {
     case LoadOperation::UNDEFINED:
         return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -59,9 +57,9 @@ static VkAttachmentLoadOp ToVkLoadOp(LoadOperation load_operation)
     }
 }
 
-static VkAttachmentStoreOp ToVkStoreOp(StoreOperation store_operation)
+static VkAttachmentStoreOp ToVkStoreOp(StoreOperation storeOperation)
 {
-    switch (store_operation)
+    switch (storeOperation)
     {
     case StoreOperation::UNDEFINED:
         return VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -74,9 +72,9 @@ static VkAttachmentStoreOp ToVkStoreOp(StoreOperation store_operation)
     }
 }
 
-static VkImageLayout GetIntermediateLayout(bool is_depth_attachment)
+static VkImageLayout GetIntermediateLayout(bool isDepthAttachment)
 {
-    return is_depth_attachment
+    return isDepthAttachment
         ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
         : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 }
@@ -89,24 +87,24 @@ VulkanAttachment::VulkanAttachment(
     const VulkanImageRef& image,
     const VulkanFramebufferWeakRef& framebuffer,
     RenderPassStage stage,
-    LoadOperation load_operation,
-    StoreOperation store_operation,
-    BlendFunction blend_function)
-    : AttachmentBase(image, framebuffer, load_operation, store_operation, blend_function),
+    LoadOperation loadOperation,
+    StoreOperation storeOperation,
+    BlendFunction blendFunction)
+    : AttachmentBase(image, framebuffer, loadOperation, storeOperation, blendFunction),
       m_stage(stage)
 {
-    m_image_view = MakeRenderObject<VulkanImageView>(image);
+    m_imageView = MakeRenderObject<VulkanImageView>(image);
 }
 
 VulkanAttachment::~VulkanAttachment()
 {
     SafeRelease(std::move(m_image));
-    SafeRelease(std::move(m_image_view));
+    SafeRelease(std::move(m_imageView));
 }
 
 bool VulkanAttachment::IsCreated() const
 {
-    return m_image_view != nullptr && m_image_view->IsCreated();
+    return m_imageView != nullptr && m_imageView->IsCreated();
 }
 
 RendererResult VulkanAttachment::Create()
@@ -118,13 +116,13 @@ RendererResult VulkanAttachment::Create()
         return HYP_MAKE_ERROR(RendererError, "Image is expected to be initialized before initializing attachment");
     }
 
-    return m_image_view->Create();
+    return m_imageView->Create();
 }
 
 RendererResult VulkanAttachment::Destroy()
 {
     SafeRelease(std::move(m_image));
-    SafeRelease(std::move(m_image_view));
+    SafeRelease(std::move(m_imageView));
 
     HYPERION_RETURN_OK;
 }
@@ -158,5 +156,4 @@ VkAttachmentReference VulkanAttachment::GetVulkanHandle() const
 
 #pragma endregion VulkanAttachment
 
-} // namespace renderer
 } // namespace hyperion

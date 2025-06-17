@@ -36,8 +36,8 @@ FBOMData::FBOMData(const FBOMType& type, EnumFlags<FBOMDataFlags> flags)
     }
 }
 
-FBOMData::FBOMData(const FBOMType& type, ByteBuffer&& byte_buffer, EnumFlags<FBOMDataFlags> flags)
-    : m_bytes(std::move(byte_buffer)),
+FBOMData::FBOMData(const FBOMType& type, ByteBuffer&& byteBuffer, EnumFlags<FBOMDataFlags> flags)
+    : m_bytes(std::move(byteBuffer)),
       m_type(type),
       m_flags(flags)
 {
@@ -48,7 +48,7 @@ FBOMData::FBOMData(const FBOMData& other)
       m_type(other.m_type),
       m_bytes(other.m_bytes),
       m_flags(other.m_flags),
-      m_deserialized_object(other.m_deserialized_object)
+      m_deserializedObject(other.m_deserializedObject)
 {
 }
 
@@ -64,7 +64,7 @@ FBOMData& FBOMData::operator=(const FBOMData& other)
     m_type = other.m_type;
     m_bytes = other.m_bytes;
     m_flags = other.m_flags;
-    m_deserialized_object = other.m_deserialized_object;
+    m_deserializedObject = other.m_deserializedObject;
 
     return *this;
 }
@@ -74,7 +74,7 @@ FBOMData::FBOMData(FBOMData&& other) noexcept
       m_bytes(std::move(other.m_bytes)),
       m_type(std::move(other.m_type)),
       m_flags(other.m_flags),
-      m_deserialized_object(std::move(other.m_deserialized_object))
+      m_deserializedObject(std::move(other.m_deserializedObject))
 {
     other.m_type = FBOMUnset();
     other.m_flags = FBOMDataFlags::NONE;
@@ -92,7 +92,7 @@ FBOMData& FBOMData::operator=(FBOMData&& other) noexcept
     m_bytes = std::move(other.m_bytes);
     m_type = std::move(other.m_type);
     m_flags = other.m_flags;
-    m_deserialized_object = std::move(other.m_deserialized_object);
+    m_deserializedObject = std::move(other.m_deserializedObject);
 
     other.m_type = FBOMUnset();
     other.m_flags = FBOMDataFlags::NONE;
@@ -104,7 +104,7 @@ FBOMData::~FBOMData()
 {
 }
 
-FBOMResult FBOMData::ReadObject(FBOMLoadContext& context, FBOMObject& out_object) const
+FBOMResult FBOMData::ReadObject(FBOMLoadContext& context, FBOMObject& outObject) const
 {
     if (!IsObject())
     {
@@ -112,12 +112,12 @@ FBOMResult FBOMData::ReadObject(FBOMLoadContext& context, FBOMObject& out_object
     }
 
     MemoryBufferedReaderSource source { m_bytes.ToByteView() };
-    BufferedReader byte_reader { &source };
+    BufferedReader byteReader { &source };
 
     FBOMReader deserializer(FBOMReaderConfig {});
 
-    // return deserializer.Deserialize(byte_reader, out_object);
-    if (FBOMResult err = deserializer.ReadObject(context, &byte_reader, out_object, nullptr))
+    // return deserializer.Deserialize(byteReader, outObject);
+    if (FBOMResult err = deserializer.ReadObject(context, &byteReader, outObject, nullptr))
     {
         return err;
     }
@@ -125,57 +125,57 @@ FBOMResult FBOMData::ReadObject(FBOMLoadContext& context, FBOMObject& out_object
     return {};
 }
 
-FBOMData FBOMData::FromObject(const FBOMObject& object, bool keep_native_object)
+FBOMData FBOMData::FromObject(const FBOMObject& object, bool keepNativeObject)
 {
     FBOMWriterConfig config;
-    config.enable_static_data = false;
+    config.enableStaticData = false;
 
-    MemoryByteWriter byte_writer;
+    MemoryByteWriter byteWriter;
 
     FBOMWriter serializer { config };
 
-    if (FBOMResult err = object.Visit(&serializer, &byte_writer))
+    if (FBOMResult err = object.Visit(&serializer, &byteWriter))
     {
-        AssertThrowMsg(false, "Failed to serialize object: %s", err.message.Data());
+        HYP_FAIL("Failed to serialize object: %s", err.message.Data());
     }
 
-    FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byte_writer.GetBuffer()));
+    FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byteWriter.GetBuffer()));
     AssertThrowMsg(value.IsObject(), "Expected value to be object: Got type: %s", value.GetType().ToString().Data());
 
-    if (keep_native_object)
+    if (keepNativeObject)
     {
-        value.m_deserialized_object = object.m_deserialized_object;
+        value.m_deserializedObject = object.m_deserializedObject;
     }
 
     return value;
 }
 
-FBOMData FBOMData::FromObject(FBOMObject&& object, bool keep_native_object)
+FBOMData FBOMData::FromObject(FBOMObject&& object, bool keepNativeObject)
 {
     FBOMWriterConfig config;
-    config.enable_static_data = false;
+    config.enableStaticData = false;
 
-    MemoryByteWriter byte_writer;
+    MemoryByteWriter byteWriter;
 
     FBOMWriter serializer { config };
 
-    if (FBOMResult err = object.Visit(&serializer, &byte_writer))
+    if (FBOMResult err = object.Visit(&serializer, &byteWriter))
     {
-        AssertThrowMsg(false, "Failed to serialize object: %s", err.message.Data());
+        HYP_FAIL("Failed to serialize object: %s", err.message.Data());
     }
 
-    FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byte_writer.GetBuffer()));
+    FBOMData value = FBOMData(FBOMBaseObjectType(), std::move(byteWriter.GetBuffer()));
     AssertThrowMsg(value.IsObject(), "Expected value to be object: Got type: %s", value.GetType().ToString().Data());
 
-    if (keep_native_object)
+    if (keepNativeObject)
     {
-        value.m_deserialized_object = std::move(object.m_deserialized_object);
+        value.m_deserializedObject = std::move(object.m_deserializedObject);
     }
 
     return value;
 }
 
-FBOMResult FBOMData::ReadArray(FBOMLoadContext& context, FBOMArray& out_array) const
+FBOMResult FBOMData::ReadArray(FBOMLoadContext& context, FBOMArray& outArray) const
 {
     if (!IsArray())
     {
@@ -183,27 +183,27 @@ FBOMResult FBOMData::ReadArray(FBOMLoadContext& context, FBOMArray& out_array) c
     }
 
     MemoryBufferedReaderSource source { m_bytes.ToByteView() };
-    BufferedReader byte_reader { &source };
+    BufferedReader byteReader { &source };
 
     FBOMReader deserializer(FBOMReaderConfig {});
-    return deserializer.ReadArray(context, &byte_reader, out_array);
+    return deserializer.ReadArray(context, &byteReader, outArray);
 }
 
 FBOMData FBOMData::FromArray(const FBOMArray& array)
 {
     FBOMWriterConfig config;
-    config.enable_static_data = false;
+    config.enableStaticData = false;
 
-    MemoryByteWriter byte_writer;
+    MemoryByteWriter byteWriter;
 
     FBOMWriter serializer { config };
 
-    if (FBOMResult err = array.Visit(&serializer, &byte_writer))
+    if (FBOMResult err = array.Visit(&serializer, &byteWriter))
     {
-        AssertThrowMsg(false, "Failed to serialize array: %s", err.message.Data());
+        HYP_FAIL("Failed to serialize array: %s", err.message.Data());
     }
 
-    FBOMData value = FBOMData(FBOMArrayType(), std::move(byte_writer.GetBuffer()));
+    FBOMData value = FBOMData(FBOMArrayType(), std::move(byteWriter.GetBuffer()));
     AssertThrowMsg(value.IsArray(), "Expected value to be array: Got type: %s", value.GetType().ToString().Data());
 
     return value;
@@ -216,9 +216,9 @@ SizeType FBOMData::ReadBytes(SizeType n, void* out) const
         AssertThrowMsg(n <= m_bytes.Size(), "Attempt to read past max size of object");
     }
 
-    SizeType to_read = MathUtil::Min(n, m_bytes.Size());
-    Memory::MemCpy(out, m_bytes.Data(), to_read);
-    return to_read;
+    SizeType toRead = MathUtil::Min(n, m_bytes.Size());
+    Memory::MemCpy(out, m_bytes.Data(), toRead);
+    return toRead;
 }
 
 ByteBuffer FBOMData::ReadBytes() const
@@ -233,19 +233,19 @@ ByteBuffer FBOMData::ReadBytes(SizeType n) const
         AssertThrowMsg(n <= m_bytes.Size(), "Attempt to read past max size of object");
     }
 
-    SizeType to_read = MathUtil::Min(n, m_bytes.Size());
+    SizeType toRead = MathUtil::Min(n, m_bytes.Size());
 
-    return ByteBuffer(to_read, m_bytes.Data());
+    return ByteBuffer(toRead, m_bytes.Data());
 }
 
-void FBOMData::SetBytes(const ByteBuffer& byte_buffer)
+void FBOMData::SetBytes(const ByteBuffer& byteBuffer)
 {
     if (!m_type.IsUnbounded())
     {
-        AssertThrowMsg(byte_buffer.Size() <= m_type.size, "Attempt to insert data past size max size of object (%llu > %llu)", byte_buffer.Size(), m_type.size);
+        AssertThrowMsg(byteBuffer.Size() <= m_type.size, "Attempt to insert data past size max size of object (%llu > %llu)", byteBuffer.Size(), m_type.size);
     }
 
-    m_bytes = byte_buffer;
+    m_bytes = byteBuffer;
 }
 
 void FBOMData::SetBytes(SizeType count, const void* data)
@@ -259,7 +259,7 @@ void FBOMData::SetBytes(SizeType count, const void* data)
     m_bytes.SetData(count, data);
 }
 
-FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json) const
+FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& outJson) const
 {
     if (IsInt8())
     {
@@ -270,7 +270,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -284,7 +284,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -298,7 +298,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -312,7 +312,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -326,7 +326,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -340,7 +340,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -354,7 +354,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -368,7 +368,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -382,7 +382,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -396,7 +396,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONNumber(value);
+        outJson = json::JSONNumber(value);
 
         return {};
     }
@@ -410,7 +410,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONBool(value);
+        outJson = json::JSONBool(value);
 
         return {};
     }
@@ -424,7 +424,7 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        out_json = json::JSONString(std::move(str));
+        outJson = json::JSONString(std::move(str));
 
         return {};
     }
@@ -438,21 +438,21 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        json::JSONArray array_json;
+        json::JSONArray arrayJson;
 
         for (SizeType i = 0; i < array.Size(); i++)
         {
-            json::JSONValue element_json;
+            json::JSONValue elementJson;
 
-            if (FBOMResult err = array.GetElement(i).ToJSON(context, element_json))
+            if (FBOMResult err = array.GetElement(i).ToJSON(context, elementJson))
             {
                 return err;
             }
 
-            array_json.PushBack(std::move(element_json));
+            arrayJson.PushBack(std::move(elementJson));
         }
 
-        out_json = std::move(array_json);
+        outJson = std::move(arrayJson);
 
         return {};
     }
@@ -466,21 +466,21 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
             return err;
         }
 
-        json::JSONObject object_json;
+        json::JSONObject objectJson;
 
         for (const auto& it : object.GetProperties())
         {
-            json::JSONValue value_json;
+            json::JSONValue valueJson;
 
-            if (FBOMResult err = it.second.ToJSON(context, value_json))
+            if (FBOMResult err = it.second.ToJSON(context, valueJson))
             {
                 return err;
             }
 
-            object_json[it.first] = std::move(value_json);
+            objectJson[it.first] = std::move(valueJson);
         }
 
-        out_json = std::move(object_json);
+        outJson = std::move(objectJson);
 
         return {};
     }
@@ -488,44 +488,44 @@ FBOMResult FBOMData::ToJSON(FBOMLoadContext& context, json::JSONValue& out_json)
     return { FBOMResult::FBOM_ERR, "Data could not be converted to JSON" };
 }
 
-FBOMData FBOMData::FromJSON(const json::JSONValue& json_value)
+FBOMData FBOMData::FromJSON(const json::JSONValue& jsonValue)
 {
-    if (json_value.IsNumber())
+    if (jsonValue.IsNumber())
     {
-        const bool is_integer = MathUtil::Floor<double, double>(json_value.AsNumber()) == json_value.AsNumber();
+        const bool isInteger = MathUtil::Floor<double, double>(jsonValue.AsNumber()) == jsonValue.AsNumber();
 
-        if (is_integer)
+        if (isInteger)
         {
-            return FBOMData::FromInt64(int64(json_value.AsNumber()));
+            return FBOMData::FromInt64(int64(jsonValue.AsNumber()));
         }
         else
         {
-            return FBOMData::FromDouble(json_value.AsNumber());
+            return FBOMData::FromDouble(jsonValue.AsNumber());
         }
     }
 
-    if (json_value.IsString())
+    if (jsonValue.IsString())
     {
-        return FBOMData::FromString(json_value.AsString().ToUTF8());
+        return FBOMData::FromString(jsonValue.AsString().ToUTF8());
     }
 
-    if (json_value.IsBool())
+    if (jsonValue.IsBool())
     {
-        return FBOMData::FromBool(json_value.AsBool());
+        return FBOMData::FromBool(jsonValue.AsBool());
     }
 
-    if (json_value.IsArray())
+    if (jsonValue.IsArray())
     {
         FBOMArray array { FBOMUnset() };
 
-        const json::JSONArray& json_array = json_value.AsArray();
+        const json::JSONArray& jsonArray = jsonValue.AsArray();
 
-        if (json_array.Any())
+        if (jsonArray.Any())
         {
             Array<FBOMData> elements;
-            elements.Reserve(json_array.Size());
+            elements.Reserve(jsonArray.Size());
 
-            for (const json::JSONValue& element : json_array)
+            for (const json::JSONValue& element : jsonArray)
             {
                 elements.EmplaceBack(FBOMData::FromJSON(element));
             }
@@ -536,15 +536,15 @@ FBOMData FBOMData::FromJSON(const json::JSONValue& json_value)
         return FBOMData::FromArray(std::move(array));
     }
 
-    if (json_value.IsObject())
+    if (jsonValue.IsObject())
     {
         FBOMObject object;
 
-        const json::JSONObject& json_object = json_value.AsObject();
+        const json::JSONObject& jsonObject = jsonValue.AsObject();
 
-        if (json_object.Any())
+        if (jsonObject.Any())
         {
-            for (const Pair<json::JSONString, json::JSONValue>& pair : json_object)
+            for (const Pair<json::JSONString, json::JSONValue>& pair : jsonObject)
             {
                 object.SetProperty(ANSIString(pair.first), FBOMData::FromJSON(pair.second));
             }
@@ -556,8 +556,8 @@ FBOMData FBOMData::FromJSON(const json::JSONValue& json_value)
     return FBOMData();
 }
 
-FBOMData::FBOMData(const json::JSONValue& json_value)
-    : FBOMData(FromJSON(json_value))
+FBOMData::FBOMData(const json::JSONValue& jsonValue)
+    : FBOMData(FromJSON(jsonValue))
 {
 }
 

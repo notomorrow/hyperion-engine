@@ -15,14 +15,14 @@ namespace hyperion {
 
 #pragma region EditorObjectPropertiesBase
 
-EditorObjectPropertiesBase::EditorObjectPropertiesBase(TypeID type_id)
-    : m_type_id(type_id)
+EditorObjectPropertiesBase::EditorObjectPropertiesBase(TypeId typeId)
+    : m_typeId(typeId)
 {
 }
 
 const HypClass* EditorObjectPropertiesBase::GetClass() const
 {
-    return HypClassRegistry::GetInstance().GetClass(m_type_id);
+    return HypClassRegistry::GetInstance().GetClass(m_typeId);
 }
 
 #pragma endregion EditorObjectPropertiesBase

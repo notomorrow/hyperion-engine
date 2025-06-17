@@ -10,7 +10,6 @@
 
 #include <core/functional/Proc.hpp>
 
-#include <core/memory/RefCountedPtr.hpp>
 #include <core/memory/UniquePtr.hpp>
 
 #include <core/memory/MemoryPool.hpp>
@@ -20,8 +19,8 @@
 
 namespace hyperion {
 
-static constexpr uint64 g_initialization_mask_initialized_bit = 0x1;
-static constexpr uint64 g_initialization_mask_read_mask = uint64(-1) & ~g_initialization_mask_initialized_bit;
+static constexpr uint64 g_initializationMaskInitializedBit = 0x1;
+static constexpr uint64 g_initializationMaskReadMask = uint64(-1) & ~g_initializationMaskInitializedBit;
 
 class IResourceMemoryPool;
 
@@ -29,7 +28,7 @@ template <class T>
 class ResourceMemoryPool;
 
 template <class T>
-struct ResourceMemoryPoolInitInfo : MemoryPoolInitInfo
+struct ResourceMemoryPoolInitInfo : MemoryPoolInitInfo<T>
 {
 };
 
@@ -69,7 +68,7 @@ public:
     virtual void WaitForFinalization() const = 0;
 
     virtual ResourceMemoryPoolHandle GetPoolHandle() const = 0;
-    virtual void SetPoolHandle(ResourceMemoryPoolHandle pool_handle) = 0;
+    virtual void SetPoolHandle(ResourceMemoryPoolHandle poolHandle) = 0;
 };
 
 /*! \brief Basic abstract implementation of IResource, using reference counting to manage the lifetime of the underlying resources. */
@@ -92,7 +91,7 @@ public:
 
     HYP_FORCE_INLINE int32 NumRefs() const
     {
-        return m_ref_counter.GetValue();
+        return m_refCounter.GetValue();
     }
 
     virtual bool IsNull() const override final
@@ -113,12 +112,12 @@ public:
 
     virtual ResourceMemoryPoolHandle GetPoolHandle() const override final
     {
-        return m_pool_handle;
+        return m_poolHandle;
     }
 
-    virtual void SetPoolHandle(ResourceMemoryPoolHandle pool_handle) override final
+    virtual void SetPoolHandle(ResourceMemoryPoolHandle poolHandle) override final
     {
-        m_pool_handle = pool_handle;
+        m_poolHandle = poolHandle;
     }
 
     bool IsInitialized() const;
@@ -127,38 +126,38 @@ public:
      *  otherwise executes it inline on the calling thread. Initialization on the owner thread will not begin until at least the end of the given proc,
      *  so it is safe to use this method on any thread.
      *  \param proc The operation to perform.
-     *  \param force_owner_thread If true, the operation will be performed on the owner thread regardless of initialization state. */
+     *  \param forceOwnerThread If true, the operation will be performed on the owner thread regardless of initialization state. */
     template <class Function>
-    void Execute(Function&& function, bool force_owner_thread = false)
+    void Execute(Function&& function, bool forceOwnerThread = false)
     {
-        m_completion_semaphore.Produce(1);
+        m_completionSemaphore.Produce(1);
 
-        if (!force_owner_thread)
+        if (!forceOwnerThread)
         {
-            if (m_ref_counter.IsInSignalState())
+            if (m_refCounter.IsInSignalState())
             {
                 // Try to add read access - if it can't be acquired, we are in the process of initializing
                 // and thus we will remove our read access and enqueue the operation
-                if (!(m_initialization_mask.Increment(2, MemoryOrder::ACQUIRE) & g_initialization_mask_initialized_bit))
+                if (!(m_initializationMask.Increment(2, MemoryOrder::ACQUIRE) & g_initializationMaskInitializedBit))
                 {
                     {
                         // Check again, as it might have been initialized in between the initial check and the increment
-                        HYP_MT_CHECK_RW(m_data_race_detector);
+                        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
                         // Execute inline if not initialized yet instead of pushing to owner thread
                         function();
                     }
 
                     // Remove our read access
-                    m_initialization_mask.Decrement(2, MemoryOrder::RELAXED);
+                    m_initializationMask.Decrement(2, MemoryOrder::RELAXED);
 
-                    m_completion_semaphore.Release(1);
+                    m_completionSemaphore.Release(1);
 
                     return;
                 }
 
                 // Remove our read access
-                m_initialization_mask.Decrement(2, MemoryOrder::RELAXED);
+                m_initializationMask.Decrement(2, MemoryOrder::RELAXED);
             }
         }
 
@@ -167,24 +166,24 @@ public:
             EnqueueOp([this, f = std::forward<Function>(function)]() mutable
                 {
                     {
-                        HYP_MT_CHECK_RW(m_data_race_detector);
+                        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
                         f();
                     }
 
-                    m_completion_semaphore.Release(1);
+                    m_completionSemaphore.Release(1);
                 });
 
             return;
         }
 
         {
-            HYP_MT_CHECK_RW(m_data_race_detector);
+            HYP_MT_CHECK_RW(m_dataRaceDetector);
 
             function();
         }
 
-        m_completion_semaphore.Release(1);
+        m_completionSemaphore.Release(1);
     }
 
 protected:
@@ -208,18 +207,18 @@ protected:
     void SetNeedsUpdate();
 
 protected:
-    AtomicVar<int16> m_update_counter;
+    AtomicVar<int16> m_updateCounter;
 
-    RefCounter m_ref_counter;
-    CompletionSemaphore m_completion_semaphore;
+    RefCounter m_refCounter;
+    CompletionSemaphore m_completionSemaphore;
 
-    ResourceMemoryPoolHandle m_pool_handle;
+    ResourceMemoryPoolHandle m_poolHandle;
 
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 
 private:
-    AtomicVar<uint64> m_initialization_mask;
-    ThreadID m_initialization_thread_id; // thread that initialized this resource
+    AtomicVar<uint64> m_initializationMask;
+    ThreadId m_initializationThreadId; // thread that initialized this resource
 };
 
 class IResourceMemoryPool
@@ -228,7 +227,7 @@ public:
     virtual ~IResourceMemoryPool() = default;
 };
 
-extern HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeID type_id, UniquePtr<IResourceMemoryPool> (*create_fn)(void));
+extern HYP_API IResourceMemoryPool* GetOrCreateResourceMemoryPool(TypeId typeId, UniquePtr<IResourceMemoryPool> (*createFn)(void));
 
 template <class T>
 class ResourceMemoryPool final : private MemoryPool<ValueStorage<T>, ResourceMemoryPoolInitInfo<T>>, public IResourceMemoryPool
@@ -240,7 +239,7 @@ public:
 
     static ResourceMemoryPool<T>* GetInstance()
     {
-        static IResourceMemoryPool* pool = GetOrCreateResourceMemoryPool(TypeID::ForType<T>(), []() -> UniquePtr<IResourceMemoryPool>
+        static IResourceMemoryPool* pool = GetOrCreateResourceMemoryPool(TypeId::ForType<T>(), []() -> UniquePtr<IResourceMemoryPool>
             {
                 return MakeUnique<ResourceMemoryPool<T>>();
             });
@@ -273,13 +272,13 @@ public:
 
         ptr->WaitForFinalization();
 
-        const ResourceMemoryPoolHandle pool_handle = ptr->GetPoolHandle();
-        AssertThrowMsg(pool_handle, "Resource has no pool handle set - the resource was likely not allocated using the pool");
+        const ResourceMemoryPoolHandle poolHandle = ptr->GetPoolHandle();
+        AssertThrowMsg(poolHandle, "Resource has no pool handle set - the resource was likely not allocated using the pool");
 
         // Invoke the destructor
         ptr->~T();
 
-        Base::ReleaseIndex(pool_handle.index);
+        Base::ReleaseIndex(poolHandle.index);
     }
 };
 
@@ -311,14 +310,14 @@ public:
     }
 
     /*! \brief Construct a ResourceHandle using the given resource. The resource will have its ref count incremented if it is not null.
-     *  If \ref{should_initialize} is true (default), the resource will be initialized.
+     *  If \ref{shouldInitialize} is true (default), the resource will be initialized.
      *  Otherwise, IncRefNoInitialize() will be called (this should only be used when required, like in the constructor of base classes that have Initialize() as a virtual method). */
-    ResourceHandle(IResource& resource, bool should_initialize = true)
+    ResourceHandle(IResource& resource, bool shouldInitialize = true)
         : m_resource(&resource)
     {
         if (!resource.IsNull())
         {
-            if (should_initialize)
+            if (shouldInitialize)
             {
                 resource.IncRef();
             }
@@ -510,7 +509,7 @@ public:
 
         if (!ptr)
         {
-            HYP_FAIL("Dereferenced null resource handle");
+            HYP_FAIL("Dereferenced null resource handle (Type: %s)", TypeName<ResourceType>().Data());
         }
 
         return *ptr;

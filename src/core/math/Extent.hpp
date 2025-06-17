@@ -223,9 +223,9 @@ struct Extent3D
     {
     }
 
-    explicit Extent3D(const Extent2D& extent_2d, uint32 depth = 1) // NOLINT(cppcoreguidelines-pro-type-member-init)
-        : width(extent_2d.width),
-          height(extent_2d.height),
+    explicit Extent3D(const Extent2D& extent2d, uint32 depth = 1) // NOLINT(cppcoreguidelines-pro-type-member-init)
+        : width(extent2d.width),
+          height(extent2d.height),
           depth(depth)
     {
     }

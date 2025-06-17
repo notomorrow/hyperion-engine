@@ -51,17 +51,17 @@ struct VoxelGrid
 {
     Array<Voxel> voxels;
     Vec3u size;
-    float voxel_size;
+    float voxelSize;
 
     VoxelGrid()
         : size(Vec3u::Zero()),
-          voxel_size(0.25f)
+          voxelSize(0.25f)
     {
     }
 
-    VoxelGrid(Vec3u size, float voxel_size = 0.25f)
+    VoxelGrid(Vec3u size, float voxelSize = 0.25f)
         : size(size),
-          voxel_size(voxel_size)
+          voxelSize(voxelSize)
     {
         voxels.Resize(size.x * size.y * size.z);
 
@@ -73,8 +73,8 @@ struct VoxelGrid
                 {
                     voxels[GetIndex(x, y, z)] = Voxel {
                         BoundingBox {
-                            Vec3f(float(x), float(y), float(z)) * voxel_size,
-                            Vec3f(float(x) + 1, float(y) + 1, float(z) + 1) * voxel_size }
+                            Vec3f(float(x), float(y), float(z)) * voxelSize,
+                            Vec3f(float(x) + 1, float(y) + 1, float(z) + 1) * voxelSize }
                     };
                 }
             }
@@ -112,20 +112,20 @@ struct VoxelGrid
 
 class HYP_API MeshBuilder
 {
-    static const Array<Vertex> quad_vertices;
-    static const Array<uint32> quad_indices;
-    static const Array<Vertex> cube_vertices;
+    static const Array<Vertex> quadVertices;
+    static const Array<uint32> quadIndices;
+    static const Array<Vertex> cubeVertices;
 
 public:
     static Handle<Mesh> Quad();
     static Handle<Mesh> Cube();
-    static Handle<Mesh> NormalizedCubeSphere(uint32 num_divisions);
+    static Handle<Mesh> NormalizedCubeSphere(uint32 numDivisions);
 
     static Handle<Mesh> ApplyTransform(const Mesh* mesh, const Transform& transform);
-    static Handle<Mesh> Merge(const Mesh* a, const Mesh* b, const Transform& a_transform, const Transform& b_transform);
+    static Handle<Mesh> Merge(const Mesh* a, const Mesh* b, const Transform& aTransform, const Transform& bTransform);
     static Handle<Mesh> Merge(const Mesh* a, const Mesh* b);
 
-    static Handle<Mesh> BuildVoxelMesh(VoxelGrid voxel_grid);
+    static Handle<Mesh> BuildVoxelMesh(VoxelGrid voxelGrid);
 };
 
 } // namespace hyperion

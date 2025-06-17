@@ -8,8 +8,6 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanImage;
 
 class VulkanImageView final : public ImageViewBase
@@ -20,10 +18,10 @@ public:
 
     HYP_API VulkanImageView(
         const VulkanImageRef& image,
-        uint32 mip_index,
-        uint32 num_mips,
-        uint32 face_index,
-        uint32 num_faces);
+        uint32 mipIndex,
+        uint32 numMips,
+        uint32 faceIndex,
+        uint32 numFaces);
 
     HYP_API virtual ~VulkanImageView() override;
 
@@ -41,7 +39,6 @@ private:
     VkImageView m_handle;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

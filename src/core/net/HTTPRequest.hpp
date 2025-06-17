@@ -48,17 +48,17 @@ public:
 
     HYP_FORCE_INLINE int GetStatusCode() const
     {
-        return m_status_code;
+        return m_statusCode;
     }
 
     HYP_FORCE_INLINE bool IsSuccess() const
     {
-        return m_status_code >= 200 && m_status_code < 400;
+        return m_statusCode >= 200 && m_statusCode < 400;
     }
 
     HYP_FORCE_INLINE bool IsError() const
     {
-        return m_status_code >= 400;
+        return m_statusCode >= 400;
     }
 
     HYP_FORCE_INLINE const ByteBuffer& ToByteBuffer() const
@@ -69,13 +69,13 @@ public:
     Optional<json::JSONValue> ToJSON() const;
 
     void OnDataReceived(Span<char> data);
-    void OnComplete(int status_code);
+    void OnComplete(int statusCode);
 
     Delegate<void, Span<char>> OnDataReceivedDelegate;
     Delegate<void, int> OnCompleteDelegate;
 
 private:
-    int m_status_code;
+    int m_statusCode;
     ByteBuffer m_body;
     mutable Mutex m_mutex;
 };
@@ -107,7 +107,7 @@ private:
     String m_url;
     HTTPMethod m_method;
     ByteBuffer m_body;
-    String m_content_type;
+    String m_contentType;
 };
 
 } // namespace net

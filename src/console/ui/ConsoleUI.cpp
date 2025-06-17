@@ -36,11 +36,11 @@ struct ConsoleHistoryEntry
 class ConsoleHistory
 {
 public:
-    ConsoleHistory(const Handle<UIDataSource>& data_source, int max_history_size = 100)
-        : m_data_source(data_source),
-          m_max_history_size(max_history_size)
+    ConsoleHistory(const Handle<UIDataSource>& dataSource, int maxHistorySize = 100)
+        : m_dataSource(dataSource),
+          m_maxHistorySize(maxHistorySize)
     {
-        m_entries.Reserve(m_max_history_size);
+        m_entries.Reserve(m_maxHistorySize);
     }
 
     ~ConsoleHistory()
@@ -49,30 +49,30 @@ public:
 
     HYP_FORCE_INLINE const Handle<UIDataSource>& GetDataSource() const
     {
-        return m_data_source;
+        return m_dataSource;
     }
 
-    void AddEntry(const String& text, ConsoleHistoryEntryType entry_type)
+    void AddEntry(const String& text, ConsoleHistoryEntryType entryType)
     {
-        if (m_entries.Any() && int(m_entries.Size() + 1) > m_max_history_size)
+        if (m_entries.Any() && int(m_entries.Size() + 1) > m_maxHistorySize)
         {
             ConsoleHistoryEntry* entry = &m_entries.Front();
 
-            if (m_data_source)
+            if (m_dataSource)
             {
-                m_data_source->Remove(entry->uuid);
+                m_dataSource->Remove(entry->uuid);
             }
 
             m_entries.PopFront();
         }
 
         ConsoleHistoryEntry entry;
-        entry.type = entry_type;
+        entry.type = entryType;
         entry.text = text;
 
-        if (m_data_source)
+        if (m_dataSource)
         {
-            m_data_source->Push(entry.uuid, HypData(entry), UUID::Invalid());
+            m_dataSource->Push(entry.uuid, HypData(entry), UUID::Invalid());
         }
 
         m_entries.PushBack(std::move(entry));
@@ -82,15 +82,15 @@ public:
     {
         m_entries.Clear();
 
-        if (m_data_source)
+        if (m_dataSource)
         {
-            m_data_source->Clear();
+            m_dataSource->Clear();
         }
     }
 
 private:
-    Handle<UIDataSource> m_data_source;
-    int m_max_history_size;
+    Handle<UIDataSource> m_dataSource;
+    int m_maxHistorySize;
     Array<ConsoleHistoryEntry> m_entries;
 };
 
@@ -99,7 +99,7 @@ private:
 #pragma region ConsoleUI
 
 ConsoleUI::ConsoleUI()
-    : m_logger_redirect_id(-1)
+    : m_loggerRedirectId(-1)
 {
     SetBorderRadius(0);
     SetBorderFlags(UIObjectBorderFlags::ALL);
@@ -110,34 +110,34 @@ ConsoleUI::ConsoleUI()
     SetOriginAlignment(UIObjectAlignment::BOTTOM_LEFT);
     SetParentAlignment(UIObjectAlignment::BOTTOM_LEFT);
 
-    m_logger_redirect_id = Logger::GetInstance().GetOutputStream()->AddRedirect(
+    m_loggerRedirectId = Logger::GetInstance().GetOutputStream()->AddRedirect(
         Log_Console.GetMaskBitset(),
         (void*)this,
         [](void* context, const LogChannel& channel, const LogMessage& message)
         {
-            ConsoleUI* console_ui = (ConsoleUI*)context;
+            ConsoleUI* consoleUi = (ConsoleUI*)context;
 
-            if (console_ui->m_history)
+            if (consoleUi->m_history)
             {
-                console_ui->m_history->AddEntry(message.message, ConsoleHistoryEntryType::TEXT);
+                consoleUi->m_history->AddEntry(message.message, ConsoleHistoryEntryType::TEXT);
             }
         },
         [](void* context, const LogChannel& channel, const LogMessage& message)
         {
-            ConsoleUI* console_ui = (ConsoleUI*)context;
+            ConsoleUI* consoleUi = (ConsoleUI*)context;
 
-            if (console_ui->m_history)
+            if (consoleUi->m_history)
             {
-                console_ui->m_history->AddEntry(message.message, ConsoleHistoryEntryType::ERR);
+                consoleUi->m_history->AddEntry(message.message, ConsoleHistoryEntryType::ERR);
             }
         });
 }
 
 ConsoleUI::~ConsoleUI()
 {
-    if (m_logger_redirect_id != -1)
+    if (m_loggerRedirectId != -1)
     {
-        Logger::GetInstance().GetOutputStream()->RemoveRedirect(m_logger_redirect_id);
+        Logger::GetInstance().GetOutputStream()->RemoveRedirect(m_loggerRedirectId);
     }
 }
 
@@ -145,25 +145,25 @@ void ConsoleUI::Init()
 {
     UIObject::Init();
 
-    OnMouseDown.Bind([this](const MouseEvent& event_data) -> UIEventHandlerResult
+    OnMouseDown.Bind([this](const MouseEvent& eventData) -> UIEventHandlerResult
                    {
                        return UIEventHandlerResult::STOP_BUBBLING;
                    })
         .Detach();
 
-    OnKeyDown.Bind([this](const KeyboardEvent& event_data) -> UIEventHandlerResult
+    OnKeyDown.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
                  {
                      return UIEventHandlerResult::STOP_BUBBLING;
                  })
         .Detach();
 
-    OnKeyUp.Bind([this](const KeyboardEvent& event_data) -> UIEventHandlerResult
+    OnKeyUp.Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
                {
                    return UIEventHandlerResult::STOP_BUBBLING;
                })
         .Detach();
 
-    Handle<UIDataSource> data_source = CreateObject<UIDataSource>(
+    Handle<UIDataSource> dataSource = CreateObject<UIDataSource>(
         TypeWrapper<ConsoleHistoryEntry> {},
         [this](UIObject* parent, ConsoleHistoryEntry& value, const HypData& context) -> Handle<UIObject>
         {
@@ -189,35 +189,36 @@ void ConsoleUI::Init()
 
             return text;
         },
-        [](UIObject* ui_object, ConsoleHistoryEntry& value, const HypData& context) -> void
+        [](UIObject* uiObject, ConsoleHistoryEntry& value, const HypData& context) -> void
         {
         });
 
-    m_history = MakePimpl<ConsoleHistory>(data_source, 100);
+    m_history = MakePimpl<ConsoleHistory>(dataSource, 100);
 
-    Handle<UIListView> history_list_view = CreateUIObject<UIListView>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { GetActualSize().y - 30, UIObjectSize::PIXEL }));
-    history_list_view->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
-    history_list_view->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);
-    history_list_view->SetBackgroundColor(Vec4f { 0.0f, 0.0f, 0.0f, 0.0f });
-    history_list_view->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
-    history_list_view->SetDataSource(data_source);
+    Handle<UIListView> historyListView = CreateUIObject<UIListView>(Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::PERCENT }, { GetActualSize().y - 30, UIObjectSize::PIXEL }));
+    historyListView->SetParentAlignment(UIObjectAlignment::TOP_LEFT);
+    historyListView->SetOriginAlignment(UIObjectAlignment::TOP_LEFT);
+    historyListView->SetBackgroundColor(Vec4f { 0.0f, 0.0f, 0.0f, 0.0f });
+    historyListView->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
+    historyListView->SetDataSource(dataSource);
 
-    history_list_view->OnChildAttached.Bind([this](UIObject* child) -> UIEventHandlerResult
-                                          {
-                                              // m_history_list_view->SetScrollOffset(Vec2i {
-                                              //     m_history_list_view->GetScrollOffset().x,
-                                              //     m_history_list_view->GetActualInnerSize().y - m_history_list_view->GetActualSize().y
-                                              // }, /* smooth */ false);
+    historyListView->OnChildAttached
+        .Bind([this](UIObject* child) -> UIEventHandlerResult
+        {
+            // m_historyListView->SetScrollOffset(Vec2i {
+            //     m_historyListView->GetScrollOffset().x,
+            //     m_historyListView->GetActualInnerSize().y - m_historyListView->GetActualSize().y
+            // }, /* smooth */ false);
 
-                                              return UIEventHandlerResult::STOP_BUBBLING;
-                                          })
+            return UIEventHandlerResult::STOP_BUBBLING;
+        })
         .Detach();
 
-    AddChildUIObject(history_list_view);
+    AddChildUIObject(historyListView);
 
-    m_history_list_view = history_list_view;
+    m_historyListView = historyListView;
 
-    m_history_list_view->OnSelectedItemChange
+    m_historyListView->OnSelectedItemChange
         .Bind([this](UIListViewItem* item) -> UIEventHandlerResult
             {
                 if (item)
@@ -231,7 +232,7 @@ void ConsoleUI::Init()
             })
         .Detach();
 
-    Handle<UITextbox> textbox = CreateUIObject<UITextbox>(Vec2i { 0, history_list_view->GetActualSize().y }, UIObjectSize({ 100, UIObjectSize::FILL }, { 25, UIObjectSize::PIXEL }));
+    Handle<UITextbox> textbox = CreateUIObject<UITextbox>(Vec2i { 0, historyListView->GetActualSize().y }, UIObjectSize({ 100, UIObjectSize::FILL }, { 25, UIObjectSize::PIXEL }));
     textbox->SetPlaceholder("Enter command");
     textbox->SetBackgroundColor(Vec4f { 0.0f, 0.0f, 0.0f, 0.5f });
     textbox->SetTextColor(Vec4f { 1.0f, 1.0f, 1.0f, 1.0f });
@@ -241,9 +242,9 @@ void ConsoleUI::Init()
     m_textbox = textbox;
 
     m_textbox->OnKeyDown
-        .Bind([this](const KeyboardEvent& event_data) -> UIEventHandlerResult
+        .Bind([this](const KeyboardEvent& eventData) -> UIEventHandlerResult
             {
-                if (event_data.key_code == KeyCode::RETURN)
+                if (eventData.keyCode == KeyCode::RETURN)
                 {
                     const String& text = m_textbox->GetText();
 
@@ -267,54 +268,54 @@ void ConsoleUI::Init()
                             HYP_LOG(Console, Info, "Executed command: {}", text);
                         }
 
-                        m_current_command_text.Clear();
+                        m_currentCommandText.Clear();
                         m_textbox->SetText("");
                     }
                 }
-                else if (event_data.key_code == KeyCode::ARROW_UP)
+                else if (eventData.keyCode == KeyCode::ARROW_UP)
                 {
                     // @TODO Only cycle through COMMAND items..
-                    if (m_history_list_view && m_history_list_view->GetListViewItems().Any())
+                    if (m_historyListView && m_historyListView->GetListViewItems().Any())
                     {
-                        const int selected_item_index = m_history_list_view->GetSelectedItemIndex() - 1;
+                        const int selectedItemIndex = m_historyListView->GetSelectedItemIndex() - 1;
 
-                        if (selected_item_index >= 0 && selected_item_index < int(m_history_list_view->GetListViewItems().Size()))
+                        if (selectedItemIndex >= 0 && selectedItemIndex < int(m_historyListView->GetListViewItems().Size()))
                         {
-                            m_history_list_view->SetSelectedItemIndex(selected_item_index);
+                            m_historyListView->SetSelectedItemIndex(selectedItemIndex);
                         }
                     }
                 }
-                else if (event_data.key_code == KeyCode::ARROW_DOWN)
+                else if (eventData.keyCode == KeyCode::ARROW_DOWN)
                 {
-                    if (m_history_list_view && m_history_list_view->GetListViewItems().Any())
+                    if (m_historyListView && m_historyListView->GetListViewItems().Any())
                     {
-                        const int selected_item_index = m_history_list_view->GetSelectedItemIndex() + 1;
+                        const int selectedItemIndex = m_historyListView->GetSelectedItemIndex() + 1;
 
-                        if (selected_item_index < 0)
+                        if (selectedItemIndex < 0)
                         {
-                            m_history_list_view->SetSelectedItemIndex(0);
+                            m_historyListView->SetSelectedItemIndex(0);
                         }
-                        else if (selected_item_index < int(m_history_list_view->GetListViewItems().Size()))
+                        else if (selectedItemIndex < int(m_historyListView->GetListViewItems().Size()))
                         {
-                            m_history_list_view->SetSelectedItemIndex(selected_item_index);
+                            m_historyListView->SetSelectedItemIndex(selectedItemIndex);
                         }
                         else
                         {
-                            m_textbox->SetText(m_current_command_text);
+                            m_textbox->SetText(m_currentCommandText);
                         }
                     }
                 }
-                else if (event_data.key_code == KeyCode::ESC)
+                else if (eventData.keyCode == KeyCode::ESC)
                 {
                     m_textbox->SetText("");
-                    m_current_command_text.Clear();
+                    m_currentCommandText.Clear();
 
                     // Lose focus of the console.
                     Blur();
                 }
                 else
                 {
-                    m_current_command_text = m_textbox->GetText();
+                    m_currentCommandText = m_textbox->GetText();
                 }
 
                 return UIEventHandlerResult::STOP_BUBBLING;
@@ -327,18 +328,18 @@ void ConsoleUI::Init()
     }
 }
 
-void ConsoleUI::UpdateSize_Internal(bool update_children)
+void ConsoleUI::UpdateSize_Internal(bool updateChildren)
 {
-    UIObject::UpdateSize_Internal(update_children);
+    UIObject::UpdateSize_Internal(updateChildren);
 
-    if (m_history_list_view)
+    if (m_historyListView)
     {
-        m_history_list_view->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { GetActualSize().y - 30, UIObjectSize::PIXEL }));
+        m_historyListView->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { GetActualSize().y - 30, UIObjectSize::PIXEL }));
     }
 
     if (m_textbox)
     {
-        m_textbox->SetPosition(Vec2i { 0, m_history_list_view->GetActualSize().y });
+        m_textbox->SetPosition(Vec2i { 0, m_historyListView->GetActualSize().y });
         m_textbox->SetSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 25, UIObjectSize::PIXEL }));
     }
 }

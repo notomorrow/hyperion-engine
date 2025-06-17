@@ -8,10 +8,12 @@
 #include <rendering/backend/vulkan/RendererComputePipeline.hpp>
 #include <rendering/backend/vulkan/rt/RendererRaytracingPipeline.hpp>
 #include <rendering/backend/vulkan/rt/RendererAccelerationStructure.hpp>
-#include <rendering/backend/vulkan/VulkanRenderingAPI.hpp>
+#include <rendering/backend/vulkan/VulkanRenderBackend.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
+
+#include <rendering/RenderGlobalState.hpp>
 
 #include <core/math/MathUtil.hpp>
 
@@ -20,19 +22,18 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
 
-extern IRenderingAPI* g_rendering_api;
+extern IRenderBackend* g_renderBackend;
 
-namespace renderer {
-
-static inline VulkanRenderingAPI* GetRenderingAPI()
+static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderingAPI*>(g_rendering_api);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 #pragma region VulkanDescriptorSet
@@ -51,9 +52,9 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
         {
         case DescriptorSetElementType::UNIFORM_BUFFER:         // fallthrough
         case DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC: // fallthrough
-        case DescriptorSetElementType::STORAGE_BUFFER:         // fallthrough
+        case DescriptorSetElementType::SSBO:                   // fallthrough
         case DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC: // fallthrough
-            PrefillElements<GPUBufferRef>(name, element.count);
+            PrefillElements<GpuBufferRef>(name, element.count);
 
             break;
         case DescriptorSetElementType::IMAGE:         // fallthrough
@@ -70,9 +71,7 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
 
             break;
         default:
-            AssertThrowMsg(false, "Unhandled descriptor set element type in layout: %d", int(element.type));
-
-            break;
+            HYP_UNREACHABLE();
         }
     }
 }
@@ -82,9 +81,9 @@ VulkanDescriptorSet::~VulkanDescriptorSet()
     HYP_LOG(RenderingBackend, Debug, "Destroying descriptor set {}", GetDebugName());
 }
 
-void VulkanDescriptorSet::UpdateDirtyState(bool* out_is_dirty)
+void VulkanDescriptorSet::UpdateDirtyState(bool* outIsDirty)
 {
-    m_vk_descriptor_element_infos.Clear();
+    m_vkDescriptorElementInfos.Clear();
 
     // Ensure all cached value containers are prepared
     for (auto& it : m_elements)
@@ -92,73 +91,73 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* out_is_dirty)
         const Name name = it.first;
         const DescriptorSetElement& element = it.second;
 
-        auto cached_it = m_cached_elements.Find(name);
+        auto cachedIt = m_cachedElements.Find(name);
 
-        if (cached_it == m_cached_elements.End())
+        if (cachedIt == m_cachedElements.End())
         {
-            cached_it = m_cached_elements.Emplace(name).first;
+            cachedIt = m_cachedElements.Emplace(name).first;
         }
 
-        Array<VulkanDescriptorElementInfo>& cached_element_values = cached_it->second;
+        Array<VulkanDescriptorElementInfo>& cachedElementValues = cachedIt->second;
 
-        if (cached_element_values.Size() != element.values.Size())
+        if (cachedElementValues.Size() != element.values.Size())
         {
-            cached_element_values.ResizeZeroed(element.values.Size());
+            cachedElementValues.ResizeZeroed(element.values.Size());
         }
     }
 
-    // detect changes from cached_values
+    // detect changes from cachedValues
     for (auto& it : m_elements)
     {
         const Name name = it.first;
         DescriptorSetElement& element = it.second;
 
-        const DescriptorSetLayoutElement* layout_element = m_layout.GetElement(name);
-        AssertThrowMsg(layout_element != nullptr, "Invalid element: No item with name %s found", name.LookupString());
+        const DescriptorSetLayoutElement* layoutElement = m_layout.GetElement(name);
+        AssertThrowMsg(layoutElement != nullptr, "Invalid element: No item with name %s found", name.LookupString());
 
-        auto cached_it = m_cached_elements.Find(name);
-        AssertDebug(cached_it != m_cached_elements.End());
+        auto cachedIt = m_cachedElements.Find(name);
+        AssertDebug(cachedIt != m_cachedElements.End());
 
-        Array<VulkanDescriptorElementInfo>& cached_values = cached_it->second;
-        AssertDebug(cached_values.Size() == element.values.Size());
+        Array<VulkanDescriptorElementInfo>& cachedValues = cachedIt->second;
+        AssertDebug(cachedValues.Size() == element.values.Size());
 
-        Array<VulkanDescriptorElementInfo> local_descriptor_element_infos;
-        local_descriptor_element_infos.Reserve(element.values.Size());
+        Array<VulkanDescriptorElementInfo> localDescriptorElementInfos;
+        localDescriptorElementInfos.Reserve(element.values.Size());
 
-        switch (layout_element->type)
+        switch (layoutElement->type)
         {
         case DescriptorSetElementType::UNIFORM_BUFFER:
         case DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC:
-        case DescriptorSetElementType::STORAGE_BUFFER:
+        case DescriptorSetElementType::SSBO:
         case DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC:
         {
-            const bool layout_has_size = layout_element->size != 0 && layout_element->size != ~0u;
-            const bool is_dynamic = layout_element->type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
-                || layout_element->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
+            const bool layoutHasSize = layoutElement->size != 0 && layoutElement->size != ~0u;
+            const bool isDynamic = layoutElement->type == DescriptorSetElementType::UNIFORM_BUFFER_DYNAMIC
+                || layoutElement->type == DescriptorSetElementType::STORAGE_BUFFER_DYNAMIC;
 
-            if (is_dynamic)
+            if (isDynamic)
             {
-                AssertThrowMsg(layout_element->size != 0, "Buffer size not set for dynamic buffer element: %s.%s", m_layout.GetName().LookupString(), name.LookupString());
+                AssertThrowMsg(layoutElement->size != 0, "Buffer size not set for dynamic buffer element: %s.%s", m_layout.GetName().LookupString(), name.LookupString());
             }
 
-            for (auto& values_it : element.values)
+            for (auto& valuesIt : element.values)
             {
-                const uint32 index = values_it.first;
-                const DescriptorSetElement::ValueType& value = values_it.second;
+                const uint32 index = valuesIt.first;
+                const DescriptorSetElement::ValueType& value = valuesIt.second;
 
-                const GPUBufferRef& ref = value.Get<GPUBufferRef>();
+                const GpuBufferRef& ref = value.Get<GpuBufferRef>();
                 AssertThrowMsg(ref.IsValid(), "Invalid buffer reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
                 AssertThrowMsg(ref->IsCreated(), "Buffer not initialized for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
-                VulkanDescriptorElementInfo& descriptor_element_info = local_descriptor_element_infos.EmplaceBack();
-                descriptor_element_info.binding = layout_element->binding;
-                descriptor_element_info.index = index;
-                descriptor_element_info.descriptor_type = helpers::ToVkDescriptorType(layout_element->type);
+                VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
+                descriptorElementInfo.binding = layoutElement->binding;
+                descriptorElementInfo.index = index;
+                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
 
-                descriptor_element_info.buffer_info = VkDescriptorBufferInfo {
-                    .buffer = static_cast<VulkanGPUBuffer*>(ref.Get())->GetVulkanHandle(),
+                descriptorElementInfo.bufferInfo = VkDescriptorBufferInfo {
+                    .buffer = static_cast<VulkanGpuBuffer*>(ref.Get())->GetVulkanHandle(),
                     .offset = 0,
-                    .range = layout_has_size ? layout_element->size : ref->Size()
+                    .range = layoutHasSize ? layoutElement->size : ref->Size()
                 };
             }
 
@@ -167,26 +166,26 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* out_is_dirty)
         case DescriptorSetElementType::IMAGE:
         case DescriptorSetElementType::IMAGE_STORAGE:
         {
-            const bool is_storage_image = layout_element->type == DescriptorSetElementType::IMAGE_STORAGE;
+            const bool isStorageImage = layoutElement->type == DescriptorSetElementType::IMAGE_STORAGE;
 
-            for (auto& values_it : element.values)
+            for (auto& valuesIt : element.values)
             {
-                const uint32 index = values_it.first;
-                const DescriptorSetElement::ValueType& value = values_it.second;
+                const uint32 index = valuesIt.first;
+                const DescriptorSetElement::ValueType& value = valuesIt.second;
 
-                VulkanDescriptorElementInfo& descriptor_element_info = local_descriptor_element_infos.EmplaceBack();
-                descriptor_element_info.binding = layout_element->binding;
-                descriptor_element_info.index = index;
-                descriptor_element_info.descriptor_type = helpers::ToVkDescriptorType(layout_element->type);
+                VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
+                descriptorElementInfo.binding = layoutElement->binding;
+                descriptorElementInfo.index = index;
+                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
 
                 const ImageViewRef& ref = value.Get<ImageViewRef>();
                 AssertThrowMsg(ref.IsValid(), "Invalid image view reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
                 AssertThrowMsg(static_cast<VulkanImageView*>(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid image view for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
-                descriptor_element_info.image_info = VkDescriptorImageInfo {
+                descriptorElementInfo.imageInfo = VkDescriptorImageInfo {
                     .sampler = VK_NULL_HANDLE,
                     .imageView = static_cast<VulkanImageView*>(ref.Get())->GetVulkanHandle(),
-                    .imageLayout = is_storage_image ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    .imageLayout = isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 };
             }
 
@@ -194,22 +193,22 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* out_is_dirty)
         }
         case DescriptorSetElementType::SAMPLER:
         {
-            for (auto& values_it : element.values)
+            for (auto& valuesIt : element.values)
             {
-                const uint32 index = values_it.first;
-                const DescriptorSetElement::ValueType& value = values_it.second;
+                const uint32 index = valuesIt.first;
+                const DescriptorSetElement::ValueType& value = valuesIt.second;
 
-                VulkanDescriptorElementInfo& descriptor_element_info = local_descriptor_element_infos.EmplaceBack();
-                descriptor_element_info.binding = layout_element->binding;
-                descriptor_element_info.index = index;
-                descriptor_element_info.descriptor_type = helpers::ToVkDescriptorType(layout_element->type);
+                VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
+                descriptorElementInfo.binding = layoutElement->binding;
+                descriptorElementInfo.index = index;
+                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
 
                 const SamplerRef& ref = value.Get<SamplerRef>();
                 AssertThrowMsg(ref.IsValid(), "Invalid sampler reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
                 AssertThrowMsg(static_cast<VulkanSampler*>(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid sampler for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
-                descriptor_element_info.image_info = VkDescriptorImageInfo {
+                descriptorElementInfo.imageInfo = VkDescriptorImageInfo {
                     .sampler = static_cast<VulkanSampler*>(ref.Get())->GetVulkanHandle(),
                     .imageView = VK_NULL_HANDLE,
                     .imageLayout = VK_IMAGE_LAYOUT_UNDEFINED
@@ -220,22 +219,22 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* out_is_dirty)
         }
         case DescriptorSetElementType::TLAS:
         {
-            for (auto& values_it : element.values)
+            for (auto& valuesIt : element.values)
             {
-                const uint32 index = values_it.first;
-                const DescriptorSetElement::ValueType& value = values_it.second;
+                const uint32 index = valuesIt.first;
+                const DescriptorSetElement::ValueType& value = valuesIt.second;
 
-                VulkanDescriptorElementInfo& descriptor_element_info = local_descriptor_element_infos.EmplaceBack();
-                descriptor_element_info.binding = layout_element->binding;
-                descriptor_element_info.index = index;
-                descriptor_element_info.descriptor_type = helpers::ToVkDescriptorType(layout_element->type);
+                VulkanDescriptorElementInfo& descriptorElementInfo = localDescriptorElementInfos.EmplaceBack();
+                descriptorElementInfo.binding = layoutElement->binding;
+                descriptorElementInfo.index = index;
+                descriptorElementInfo.descriptorType = helpers::ToVkDescriptorType(layoutElement->type);
 
                 const TLASRef& ref = value.Get<TLASRef>();
                 AssertThrowMsg(ref.IsValid(), "Invalid TLAS reference for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
                 AssertThrowMsg(static_cast<VulkanTLAS*>(ref.Get())->GetVulkanHandle() != VK_NULL_HANDLE, "Invalid TLAS for descriptor set element: %s.%s[%u]", m_layout.GetName().LookupString(), name.LookupString(), index);
 
-                descriptor_element_info.acceleration_structure_info = VkWriteDescriptorSetAccelerationStructureKHR {
+                descriptorElementInfo.accelerationStructureInfo = VkWriteDescriptorSetAccelerationStructureKHR {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
                     .pNext = nullptr,
                     .accelerationStructureCount = 1,
@@ -249,80 +248,86 @@ void VulkanDescriptorSet::UpdateDirtyState(bool* out_is_dirty)
             HYP_UNREACHABLE();
         }
 
-        AssertThrowMsg(local_descriptor_element_infos.Size() <= cached_values.Size(), "Index out of range for cached values");
+        AssertThrowMsg(localDescriptorElementInfos.Size() <= cachedValues.Size(), "Index out of range for cached values");
 
-        auto local_dirty_range = Range<uint32>::Invalid();
+        auto localDirtyRange = Range<uint32>::Invalid();
 
-        for (SizeType i = 0; i < local_descriptor_element_infos.Size(); i++)
+        for (SizeType i = 0; i < localDescriptorElementInfos.Size(); i++)
         {
-            if (Memory::MemCmp(local_descriptor_element_infos.Data() + i, cached_values.Data() + i, sizeof(VulkanDescriptorElementInfo)) != 0)
+            if (Memory::MemCmp(localDescriptorElementInfos.Data() + i, cachedValues.Data() + i, sizeof(VulkanDescriptorElementInfo)) != 0)
             {
-                local_dirty_range |= { uint32(i), uint32(i + 1) };
+                localDirtyRange |= { uint32(i), uint32(i + 1) };
             }
         }
 
-        if (local_dirty_range.Distance() > 0)
+        if (localDirtyRange.Distance() > 0)
         {
-            AssertDebug(local_dirty_range.GetStart() < cached_values.Size());
-            AssertDebug(local_dirty_range.GetEnd() <= cached_values.Size());
-            AssertDebug(local_dirty_range.GetStart() < local_descriptor_element_infos.Size());
-            AssertDebug(local_dirty_range.GetEnd() <= local_descriptor_element_infos.Size());
+            AssertDebug(localDirtyRange.GetStart() < cachedValues.Size());
+            AssertDebug(localDirtyRange.GetEnd() <= cachedValues.Size());
+            AssertDebug(localDirtyRange.GetStart() < localDescriptorElementInfos.Size());
+            AssertDebug(localDirtyRange.GetEnd() <= localDescriptorElementInfos.Size());
 
-            Memory::MemCpy(cached_values.Data() + local_dirty_range.GetStart(), local_descriptor_element_infos.Data() + local_dirty_range.GetStart(), sizeof(VulkanDescriptorElementInfo) * SizeType(local_dirty_range.Distance()));
+            Memory::MemCpy(cachedValues.Data() + localDirtyRange.GetStart(), localDescriptorElementInfos.Data() + localDirtyRange.GetStart(), sizeof(VulkanDescriptorElementInfo) * SizeType(localDirtyRange.Distance()));
 
             // mark the element as dirty
-            element.dirty_range |= local_dirty_range;
+            element.dirtyRange |= localDirtyRange;
 
-            m_vk_descriptor_element_infos.Concat(std::move(local_descriptor_element_infos));
+            m_vkDescriptorElementInfos.Concat(std::move(localDescriptorElementInfos));
         }
     }
 
-    if (out_is_dirty)
+    if (outIsDirty)
     {
-        *out_is_dirty = m_vk_descriptor_element_infos.Any();
+        *outIsDirty = m_vkDescriptorElementInfos.Any();
     }
 }
 
-void VulkanDescriptorSet::Update()
+void VulkanDescriptorSet::Update(bool force)
 {
     static_assert(std::is_trivial_v<VulkanDescriptorElementInfo>, "VulkanDescriptorElementInfo should be a trivial type for fast copy and move operations");
 
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
-    if (m_vk_descriptor_element_infos.Empty())
+    if (force)
+    {
+        m_cachedElements.Clear();
+        UpdateDirtyState();
+    }
+
+    if (m_vkDescriptorElementInfos.Empty())
     {
         return;
     }
 
-    Array<VkWriteDescriptorSet> vk_write_descriptor_sets;
-    vk_write_descriptor_sets.Resize(m_vk_descriptor_element_infos.Size());
+    Array<VkWriteDescriptorSet> vkWriteDescriptorSets;
+    vkWriteDescriptorSets.Resize(m_vkDescriptorElementInfos.Size());
 
-    for (SizeType i = 0; i < vk_write_descriptor_sets.Size(); i++)
+    for (SizeType i = 0; i < vkWriteDescriptorSets.Size(); i++)
     {
-        const VulkanDescriptorElementInfo& descriptor_element_info = m_vk_descriptor_element_infos[i];
+        const VulkanDescriptorElementInfo& descriptorElementInfo = m_vkDescriptorElementInfos[i];
 
-        VkWriteDescriptorSet& write = vk_write_descriptor_sets[i];
+        VkWriteDescriptorSet& write = vkWriteDescriptorSets[i];
 
         write = VkWriteDescriptorSet { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         write.dstSet = m_handle;
-        write.dstBinding = descriptor_element_info.binding;
-        write.dstArrayElement = descriptor_element_info.index;
+        write.dstBinding = descriptorElementInfo.binding;
+        write.dstArrayElement = descriptorElementInfo.index;
         write.descriptorCount = 1;
-        write.descriptorType = descriptor_element_info.descriptor_type;
+        write.descriptorType = descriptorElementInfo.descriptorType;
 
-        if (descriptor_element_info.descriptor_type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+        if (descriptorElementInfo.descriptorType == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
         {
-            write.pNext = &descriptor_element_info.acceleration_structure_info;
+            write.pNext = &descriptorElementInfo.accelerationStructureInfo;
         }
 
-        write.pImageInfo = &descriptor_element_info.image_info;
-        write.pBufferInfo = &descriptor_element_info.buffer_info;
+        write.pImageInfo = &descriptorElementInfo.imageInfo;
+        write.pBufferInfo = &descriptorElementInfo.bufferInfo;
     }
 
     vkUpdateDescriptorSets(
-        GetRenderingAPI()->GetDevice()->GetDevice(),
-        uint32(vk_write_descriptor_sets.Size()),
-        vk_write_descriptor_sets.Data(),
+        GetRenderBackend()->GetDevice()->GetDevice(),
+        uint32(vkWriteDescriptorSets.Size()),
+        vkWriteDescriptorSets.Data(),
         0,
         nullptr);
 
@@ -330,10 +335,10 @@ void VulkanDescriptorSet::Update()
     {
         DescriptorSetElement& element = it.second;
 
-        element.dirty_range = Range<uint32>::Invalid();
+        element.dirtyRange = Range<uint32>::Invalid();
     }
 
-    m_vk_descriptor_element_infos.Clear();
+    m_vkDescriptorElementInfos.Clear();
 }
 
 RendererResult VulkanDescriptorSet::Create()
@@ -345,7 +350,7 @@ RendererResult VulkanDescriptorSet::Create()
         return HYP_MAKE_ERROR(RendererError, "Descriptor set layout is not valid: {}", 0, m_layout.GetName().LookupString());
     }
 
-    HYPERION_BUBBLE_ERRORS(GetRenderingAPI()->GetOrCreateVkDescriptorSetLayout(m_layout, m_vk_layout_wrapper));
+    HYPERION_BUBBLE_ERRORS(GetRenderBackend()->GetOrCreateVkDescriptorSetLayout(m_layout, m_vkLayoutWrapper));
 
     if (m_layout.IsTemplate())
     {
@@ -354,7 +359,7 @@ RendererResult VulkanDescriptorSet::Create()
 
     RendererResult result;
 
-    HYPERION_PASS_ERRORS(GetRenderingAPI()->CreateDescriptorSet(m_vk_layout_wrapper, m_handle), result);
+    HYPERION_PASS_ERRORS(GetRenderBackend()->CreateDescriptorSet(m_vkLayoutWrapper, m_handle), result);
 
     if (!result)
     {
@@ -366,7 +371,7 @@ RendererResult VulkanDescriptorSet::Create()
         const Name name = it.first;
         const DescriptorSetElement& element = it.second;
 
-        m_cached_elements.Emplace(name, Array<VulkanDescriptorElementInfo>(element.values.Size()));
+        m_cachedElements.Emplace(name, Array<VulkanDescriptorElementInfo>(element.values.Size()));
     }
 
     UpdateDirtyState();
@@ -381,12 +386,12 @@ RendererResult VulkanDescriptorSet::Destroy()
 
     if (m_handle != VK_NULL_HANDLE)
     {
-        GetRenderingAPI()->DestroyDescriptorSet(m_handle);
+        GetRenderBackend()->DestroyDescriptorSet(m_handle);
         m_handle = VK_NULL_HANDLE;
     }
 
     // Release reference to layout
-    m_vk_layout_wrapper.Reset();
+    m_vkLayoutWrapper.Reset();
 
     return result;
 }
@@ -396,57 +401,57 @@ bool VulkanDescriptorSet::IsCreated() const
     return m_handle != VK_NULL_HANDLE;
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const GraphicsPipelineBase* pipeline, uint32 bind_index) const
+void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, uint32 bindIndex) const
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
 #if defined(HYP_DEBUG_MODE) && false
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
-        const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
+        const Name dynamicElementName = m_layout.GetDynamicElements()[i];
 
-        HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamic_element_name);
+        HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
     }
 #endif
 
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         static_cast<const VulkanGraphicsPipeline*>(pipeline)->GetVulkanPipelineLayout(),
-        bind_index,
+        bindIndex,
         1,
         &m_handle,
         0,
         nullptr);
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index) const
+void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const GraphicsPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
-    HashSet<Name> used_offsets;
+    HashSet<Name> usedOffsets;
 
-    Array<uint32> offsets_flat;
-    offsets_flat.Resize(m_layout.GetDynamicElements().Size());
+    Array<uint32> offsetsFlat;
+    offsetsFlat.Resize(m_layout.GetDynamicElements().Size());
 
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
-        const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
+        const Name dynamicElementName = m_layout.GetDynamicElements()[i];
 
-        const auto it = offsets.Find(dynamic_element_name);
+        const auto it = offsets.Find(dynamicElementName);
 
         if (it != offsets.End())
         {
-            offsets_flat[i] = it->second;
+            offsetsFlat[i] = it->second;
 
-            used_offsets.Insert(dynamic_element_name);
+            usedOffsets.Insert(dynamicElementName);
         }
         else
         {
-            offsets_flat[i] = 0;
+            offsetsFlat[i] = 0;
 
 #if defined(HYP_DEBUG_MODE) && false
-            HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamic_element_name);
+            HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
 #endif
         }
     }
@@ -454,7 +459,7 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const Gr
 #ifdef HYP_DEBUG_MODE
     for (const auto& it : offsets)
     {
-        if (!used_offsets.Contains(it.first))
+        if (!usedOffsets.Contains(it.first))
         {
             HYP_LOG(RenderingBackend, Warning, "Unused dynamic offset for descriptor set element: {}", it.first);
         }
@@ -462,67 +467,67 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const Gr
 #endif
 
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         static_cast<const VulkanGraphicsPipeline*>(pipeline)->GetVulkanPipelineLayout(),
-        bind_index,
+        bindIndex,
         1,
         &m_handle,
-        uint32(offsets_flat.Size()),
-        offsets_flat.Data());
+        uint32(offsetsFlat.Size()),
+        offsetsFlat.Data());
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const ComputePipelineBase* pipeline, uint32 bind_index) const
+void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, uint32 bindIndex) const
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
 #if defined(HYP_DEBUG_MODE) && false
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
-        const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
+        const Name dynamicElementName = m_layout.GetDynamicElements()[i];
 
-        HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamic_element_name);
+        HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
     }
 #endif
 
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
         static_cast<const VulkanComputePipeline*>(pipeline)->GetVulkanPipelineLayout(),
-        bind_index,
+        bindIndex,
         1,
         &m_handle,
         0,
         nullptr);
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index) const
+void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const ComputePipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
-    HashSet<Name> used_offsets;
+    HashSet<Name> usedOffsets;
 
-    Array<uint32> offsets_flat;
-    offsets_flat.Resize(m_layout.GetDynamicElements().Size());
+    Array<uint32> offsetsFlat;
+    offsetsFlat.Resize(m_layout.GetDynamicElements().Size());
 
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
-        const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
+        const Name dynamicElementName = m_layout.GetDynamicElements()[i];
 
-        const auto it = offsets.Find(dynamic_element_name);
+        const auto it = offsets.Find(dynamicElementName);
 
         if (it != offsets.End())
         {
-            offsets_flat[i] = it->second;
+            offsetsFlat[i] = it->second;
 
-            used_offsets.Insert(dynamic_element_name);
+            usedOffsets.Insert(dynamicElementName);
         }
         else
         {
-            offsets_flat[i] = 0;
+            offsetsFlat[i] = 0;
 
 #if defined(HYP_DEBUG_MODE) && false
-            HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamic_element_name);
+            HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
 #endif
         }
     }
@@ -530,7 +535,7 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const Co
 #ifdef HYP_DEBUG_MODE
     for (const auto& it : offsets)
     {
-        if (!used_offsets.Contains(it.first))
+        if (!usedOffsets.Contains(it.first))
         {
             HYP_LOG(RenderingBackend, Warning, "Unused dynamic offset for descriptor set element: {}", it.first);
         }
@@ -538,67 +543,67 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const Co
 #endif
 
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_COMPUTE,
         static_cast<const VulkanComputePipeline*>(pipeline)->GetVulkanPipelineLayout(),
-        bind_index,
+        bindIndex,
         1,
         &m_handle,
-        uint32(offsets_flat.Size()),
-        offsets_flat.Data());
+        uint32(offsetsFlat.Size()),
+        offsetsFlat.Data());
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const RaytracingPipelineBase* pipeline, uint32 bind_index) const
+void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, uint32 bindIndex) const
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
 #if defined(HYP_DEBUG_MODE) && false
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
-        const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
+        const Name dynamicElementName = m_layout.GetDynamicElements()[i];
 
-        HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamic_element_name);
+        HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
     }
 #endif
 
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
         static_cast<const VulkanRaytracingPipeline*>(pipeline)->GetVulkanPipelineLayout(),
-        bind_index,
+        bindIndex,
         1,
         &m_handle,
         0,
         nullptr);
 }
 
-void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index) const
+void VulkanDescriptorSet::Bind(const CommandBufferBase* commandBuffer, const RaytracingPipelineBase* pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex) const
 {
     AssertThrow(m_handle != VK_NULL_HANDLE);
 
-    HashSet<Name> used_offsets;
+    HashSet<Name> usedOffsets;
 
-    Array<uint32> offsets_flat;
-    offsets_flat.Resize(m_layout.GetDynamicElements().Size());
+    Array<uint32> offsetsFlat;
+    offsetsFlat.Resize(m_layout.GetDynamicElements().Size());
 
     for (SizeType i = 0; i < m_layout.GetDynamicElements().Size(); i++)
     {
-        const Name dynamic_element_name = m_layout.GetDynamicElements()[i];
+        const Name dynamicElementName = m_layout.GetDynamicElements()[i];
 
-        const auto it = offsets.Find(dynamic_element_name);
+        const auto it = offsets.Find(dynamicElementName);
 
         if (it != offsets.End())
         {
-            offsets_flat[i] = it->second;
+            offsetsFlat[i] = it->second;
 
-            used_offsets.Insert(dynamic_element_name);
+            usedOffsets.Insert(dynamicElementName);
         }
         else
         {
-            offsets_flat[i] = 0;
+            offsetsFlat[i] = 0;
 
 #if defined(HYP_DEBUG_MODE) && false
-            HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamic_element_name);
+            HYP_LOG(RenderingBackend, Warning, "Missing dynamic offset for descriptor set element: {}", dynamicElementName);
 #endif
         }
     }
@@ -606,7 +611,7 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const Ra
 #ifdef HYP_DEBUG_MODE
     for (const auto& it : offsets)
     {
-        if (!used_offsets.Contains(it.first))
+        if (!usedOffsets.Contains(it.first))
         {
             HYP_LOG(RenderingBackend, Warning, "Unused dynamic offset for descriptor set element: {}", it.first);
         }
@@ -614,22 +619,22 @@ void VulkanDescriptorSet::Bind(const CommandBufferBase* command_buffer, const Ra
 #endif
 
     vkCmdBindDescriptorSets(
-        static_cast<const VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
+        static_cast<const VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
         static_cast<const VulkanRaytracingPipeline*>(pipeline)->GetVulkanPipelineLayout(),
-        bind_index,
+        bindIndex,
         1,
         &m_handle,
-        uint32(offsets_flat.Size()),
-        offsets_flat.Data());
+        uint32(offsetsFlat.Size()),
+        offsetsFlat.Data());
 }
 
 DescriptorSetRef VulkanDescriptorSet::Clone() const
 {
-    DescriptorSetRef descriptor_set = MakeRenderObject<VulkanDescriptorSet>(GetLayout());
-    descriptor_set->SetDebugName(GetDebugName());
+    DescriptorSetRef descriptorSet = MakeRenderObject<VulkanDescriptorSet>(GetLayout());
+    descriptorSet->SetDebugName(GetDebugName());
 
-    return descriptor_set;
+    return descriptorSet;
 }
 
 #pragma endregion VulkanDescriptorSet
@@ -645,42 +650,41 @@ VulkanDescriptorTable::VulkanDescriptorTable(const DescriptorTableDeclaration* d
         return;
     }
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        m_sets[frame_index].Reserve(m_decl->elements.Size());
+        m_sets[frameIndex].Reserve(m_decl->elements.Size());
     }
 
-    for (const DescriptorSetDeclaration& descriptor_set_declaration : m_decl->elements)
+    for (const DescriptorSetDeclaration& descriptorSetDeclaration : m_decl->elements)
     {
-        if (descriptor_set_declaration.flags[DescriptorSetDeclarationFlags::REFERENCE])
+        if (descriptorSetDeclaration.flags[DescriptorSetDeclarationFlags::REFERENCE])
         {
-            const DescriptorSetDeclaration* referenced_descriptor_set_declaration = GetStaticDescriptorTableDeclaration().FindDescriptorSetDeclaration(descriptor_set_declaration.name);
-            AssertThrowMsg(referenced_descriptor_set_declaration != nullptr, "Invalid global descriptor set reference: %s", descriptor_set_declaration.name.LookupString());
+            const DescriptorSetDeclaration* referencedDescriptorSetDeclaration = GetStaticDescriptorTableDeclaration().FindDescriptorSetDeclaration(descriptorSetDeclaration.name);
+            AssertThrowMsg(referencedDescriptorSetDeclaration != nullptr, "Invalid global descriptor set reference: %s", descriptorSetDeclaration.name.LookupString());
 
-            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
             {
-                DescriptorSetRef descriptor_set = g_engine->GetGlobalDescriptorTable()->GetDescriptorSet(referenced_descriptor_set_declaration->name, frame_index);
-                AssertThrowMsg(descriptor_set.IsValid(), "Invalid global descriptor set reference: %s", referenced_descriptor_set_declaration->name.LookupString());
+                DescriptorSetRef descriptorSet = g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(referencedDescriptorSetDeclaration->name, frameIndex);
+                AssertThrowMsg(descriptorSet.IsValid(), "Invalid global descriptor set reference: %s", referencedDescriptorSetDeclaration->name.LookupString());
 
-                m_sets[frame_index].PushBack(std::move(descriptor_set));
+                m_sets[frameIndex].PushBack(std::move(descriptorSet));
             }
 
             continue;
         }
 
-        DescriptorSetLayout layout { &descriptor_set_declaration };
+        DescriptorSetLayout layout { &descriptorSetDeclaration };
 
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            DescriptorSetRef descriptor_set = MakeRenderObject<VulkanDescriptorSet>(layout);
-            descriptor_set->SetDebugName(layout.GetName());
+            DescriptorSetRef descriptorSet = MakeRenderObject<VulkanDescriptorSet>(layout);
+            descriptorSet->SetDebugName(layout.GetName());
 
-            m_sets[frame_index].PushBack(std::move(descriptor_set));
+            m_sets[frameIndex].PushBack(std::move(descriptorSet));
         }
     }
 }
 
 #pragma endregion VulkanDescriptorTable
 
-} // namespace renderer
 } // namespace hyperion

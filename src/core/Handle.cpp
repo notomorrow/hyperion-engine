@@ -5,32 +5,13 @@
 
 namespace hyperion {
 
-#define DEF_HANDLE(T)                                                                                             \
-    ObjectContainerBase* g_container_ptr_##T = &ObjectPool::GetObjectContainerHolder().Add(TypeID::ForType<T>()); \
-    ObjectContainerBase* HandleDefinition<T>::GetAllottedContainerPointer()                                       \
-    {                                                                                                             \
-        return g_container_ptr_##T;                                                                               \
-    }
-
-#define DEF_HANDLE_NS(ns, T)                                                                                          \
-    ObjectContainerBase* g_container_ptr_##T = &ObjectPool::GetObjectContainerHolder().Add(TypeID::ForType<ns::T>()); \
-    ObjectContainerBase* HandleDefinition<ns::T>::GetAllottedContainerPointer()                                       \
-    {                                                                                                                 \
-        return g_container_ptr_##T;                                                                                   \
-    }
-
-#include <core/inl/HandleDefinitions.inl>
-
-#undef DEF_HANDLE
-#undef DEF_HANDLE_NS
-
 #pragma region AnyHandle
 
 const AnyHandle AnyHandle::empty = {};
 
-AnyHandle::AnyHandle(HypObjectBase* hyp_object_ptr)
-    : ptr(hyp_object_ptr),
-      type_id(hyp_object_ptr ? hyp_object_ptr->m_header->container->GetObjectTypeID() : TypeID::Void())
+AnyHandle::AnyHandle(HypObjectBase* hypObjectPtr)
+    : ptr(hypObjectPtr),
+      typeId(hypObjectPtr ? hypObjectPtr->m_header->container->GetObjectTypeId() : TypeId::Void())
 {
     if (IsValid())
     {
@@ -38,9 +19,9 @@ AnyHandle::AnyHandle(HypObjectBase* hyp_object_ptr)
     }
 }
 
-AnyHandle::AnyHandle(const HypClass* hyp_class, HypObjectBase* ptr)
+AnyHandle::AnyHandle(const HypClass* hypClass, HypObjectBase* ptr)
     : ptr(ptr),
-      type_id(hyp_class ? hyp_class->GetTypeID() : TypeID::Void())
+      typeId(hypClass ? hypClass->GetTypeId() : TypeId::Void())
 {
     if (IsValid())
     {
@@ -49,7 +30,7 @@ AnyHandle::AnyHandle(const HypClass* hyp_class, HypObjectBase* ptr)
 }
 
 AnyHandle::AnyHandle(const AnyHandle& other)
-    : type_id(other.type_id),
+    : typeId(other.typeId),
       ptr(other.ptr)
 {
     if (IsValid())
@@ -65,9 +46,9 @@ AnyHandle& AnyHandle::operator=(const AnyHandle& other)
         return *this;
     }
 
-    const bool was_same_ptr = ptr == other.ptr;
+    const bool wasSamePtr = ptr == other.ptr;
 
-    if (!was_same_ptr)
+    if (!wasSamePtr)
     {
         if (IsValid())
         {
@@ -76,9 +57,9 @@ AnyHandle& AnyHandle::operator=(const AnyHandle& other)
     }
 
     ptr = other.ptr;
-    type_id = other.type_id;
+    typeId = other.typeId;
 
-    if (!was_same_ptr)
+    if (!wasSamePtr)
     {
         if (IsValid())
         {
@@ -90,7 +71,7 @@ AnyHandle& AnyHandle::operator=(const AnyHandle& other)
 }
 
 AnyHandle::AnyHandle(AnyHandle&& other) noexcept
-    : type_id(other.type_id),
+    : typeId(other.typeId),
       ptr(other.ptr)
 {
     other.ptr = nullptr;
@@ -109,7 +90,7 @@ AnyHandle& AnyHandle::operator=(AnyHandle&& other) noexcept
     }
 
     ptr = other.ptr;
-    type_id = other.type_id;
+    typeId = other.typeId;
 
     other.ptr = nullptr;
 
@@ -124,29 +105,29 @@ AnyHandle::~AnyHandle()
     }
 }
 
-AnyHandle::IDType AnyHandle::GetID() const
+AnyHandle::IdType AnyHandle::Id() const
 {
     if (!IsValid())
     {
-        return IDType();
+        return IdType();
     }
 
-    return IDType { ptr->m_header->container->GetObjectTypeID(), ptr->m_header->index + 1 };
+    return IdType { ptr->m_header->container->GetObjectTypeId(), ptr->m_header->index + 1 };
 }
 
-TypeID AnyHandle::GetTypeID() const
+TypeId AnyHandle::GetTypeId() const
 {
-    return type_id;
+    return typeId;
 }
 
 AnyRef AnyHandle::ToRef() const
 {
     if (!IsValid())
     {
-        return AnyRef(type_id, nullptr);
+        return AnyRef(typeId, nullptr);
     }
 
-    return AnyRef(type_id, ptr);
+    return AnyRef(typeId, ptr);
 }
 
 void AnyHandle::Reset()

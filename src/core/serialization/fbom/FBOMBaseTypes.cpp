@@ -6,13 +6,13 @@
 
 namespace hyperion::serialization {
 
-FBOMObjectType::FBOMObjectType(const HypClass* hyp_class)
+FBOMObjectType::FBOMObjectType(const HypClass* hypClass)
     : FBOMType(
-          hyp_class->GetName().LookupString(),
-          hyp_class->GetSize(),
-          hyp_class->GetTypeID(),
+          hypClass->GetName().LookupString(),
+          hypClass->GetSize(),
+          hypClass->GetTypeId(),
           FBOMTypeFlags::CONTAINER,
-          hyp_class->GetParent() ? FBOMObjectType(hyp_class->GetParent()) : FBOMBaseObjectType())
+          hypClass->GetParent() ? FBOMObjectType(hypClass->GetParent()) : FBOMBaseObjectType())
 {
 }
 

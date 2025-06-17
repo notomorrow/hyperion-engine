@@ -17,7 +17,6 @@
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderEnvGrid.hpp>
-#include <rendering/RenderState.hpp>
 
 #include <rendering/backend/RendererShader.hpp>
 
@@ -40,274 +39,164 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(EnvGrid);
 
-#pragma region EnvGridRenderSubsystem
-
-class EnvGridRenderSubsystem : public RenderSubsystem
-{
-public:
-    EnvGridRenderSubsystem(Name name, const TResourceHandle<RenderEnvGrid>& env_render_grid)
-        : RenderSubsystem(name),
-          m_env_render_grid(env_render_grid)
-    {
-    }
-
-    virtual ~EnvGridRenderSubsystem() override = default;
-
-    virtual void Init() override
-    {
-        // @TODO refactor
-        g_engine->GetRenderState()->BindEnvGrid(TResourceHandle<RenderEnvGrid>(m_env_render_grid));
-    }
-
-    virtual void OnRemoved() override
-    {
-        g_engine->GetRenderState()->UnbindEnvGrid();
-    }
-
-    virtual void OnRender(FrameBase* frame, const RenderSetup& render_setup) override
-    {
-        m_env_render_grid->Render(frame, render_setup);
-    }
-
-private:
-    TResourceHandle<RenderEnvGrid> m_env_render_grid;
-};
-
-#pragma endregion EnvGridRenderSubsystem
-
 #pragma region EnvGridUpdaterSystem
 
-EnvGridUpdaterSystem::EnvGridUpdaterSystem(EntityManager& entity_manager)
-    : SystemBase(entity_manager)
+EnvGridUpdaterSystem::EnvGridUpdaterSystem(EntityManager& entityManager)
+    : SystemBase(entityManager)
 {
 }
 
-void EnvGridUpdaterSystem::OnEntityAdded(const Handle<Entity>& entity)
+void EnvGridUpdaterSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
-    EnvGridComponent& env_grid_component = GetEntityManager().GetComponent<EnvGridComponent>(entity);
-    BoundingBoxComponent& bounding_box_component = GetEntityManager().GetComponent<BoundingBoxComponent>(entity);
+    // EnvGridComponent& envGridComponent = GetEntityManager().GetComponent<EnvGridComponent>(entity);
+    // BoundingBoxComponent& boundingBoxComponent = GetEntityManager().GetComponent<BoundingBoxComponent>(entity);
 
-    if (env_grid_component.env_grid)
-    {
-        return;
-    }
+    // if (envGridComponent.envGrid)
+    // {
+    //     return;
+    // }
 
-    if (!GetWorld())
-    {
-        return;
-    }
+    // if (!GetWorld())
+    // {
+    //     return;
+    // }
 
-    EnumFlags<EnvGridFlags> flags = EnvGridFlags::NONE;
+    // EnumFlags<EnvGridFlags> flags = EnvGridFlags::NONE;
 
-    if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.reflections.enabled").ToBool()
-        || g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.mode").ToString().ToLower() == "voxel")
-    {
-        flags |= EnvGridFlags::USE_VOXEL_GRID;
-    }
+    // if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.reflections.enabled").ToBool()
+    //     || g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.mode").ToString().ToLower() == "voxel")
+    // {
+    //     flags |= EnvGridFlags::USE_VOXEL_GRID;
+    // }
 
-    env_grid_component.env_grid = CreateObject<EnvGrid>(
-        GetScene()->HandleFromThis(),
-        bounding_box_component.world_aabb,
-        EnvGridOptions {
-            .type = env_grid_component.env_grid_type,
-            .density = env_grid_component.grid_size,
-            .flags = flags });
+    // envGridComponent.envGrid = CreateObject<EnvGrid>(
+    //     GetScene()->HandleFromThis(),
+    //     boundingBoxComponent.worldAabb,
+    //     EnvGridOptions {
+    //         .type = envGridComponent.envGridType,
+    //         .density = envGridComponent.gridSize,
+    //         .flags = flags });
 
-    InitObject(env_grid_component.env_grid);
-
-    env_grid_component.env_render_grid = TResourceHandle<RenderEnvGrid>(env_grid_component.env_grid->GetRenderResource());
-    env_grid_component.env_grid_render_subsystem = GetWorld()->GetRenderResource().GetEnvironment()->AddRenderSubsystem<EnvGridRenderSubsystem>(
-        Name::Unique("EnvGridRenderSubsystem"),
-        env_grid_component.env_render_grid);
+    // InitObject(envGridComponent.envGrid);
 }
 
-void EnvGridUpdaterSystem::OnEntityRemoved(ID<Entity> entity)
+void EnvGridUpdaterSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
-    EnvGridComponent& env_grid_component = GetEntityManager().GetComponent<EnvGridComponent>(entity);
+    // EnvGridComponent& envGridComponent = GetEntityManager().GetComponent<EnvGridComponent>(entity);
 
-    env_grid_component.env_render_grid.Reset();
+    // envGridComponent.envGrid.Reset();
 
-    if (env_grid_component.env_grid_render_subsystem)
-    {
-        env_grid_component.env_grid_render_subsystem->RemoveFromEnvironment();
-        env_grid_component.env_grid_render_subsystem.Reset();
-    }
+    // if (envGridComponent.envGridRenderSubsystem)
+    // {
+    //     envGridComponent.envGridRenderSubsystem->RemoveFromEnvironment();
+    //     envGridComponent.envGridRenderSubsystem.Reset();
+    // }
 }
 
 void EnvGridUpdaterSystem::Process(float delta)
 {
-    { // Determine which EnvGrids needs to be updated on the game thread
-        AfterProcess([this]()
-            {
-                for (auto [entity_id, env_grid_component, bounding_box_component] : GetEntityManager().GetEntitySet<EnvGridComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
-                {
-                    // Skip if the entity is already marked for update
-                    if (GetEntityManager().HasTag<EntityTag::UPDATE_ENV_GRID>(entity_id))
-                    {
-                        continue;
-                    }
+    // { // Determine which EnvGrids needs to be updated on the game thread
+    //     AfterProcess([this]()
+    //         {
+    //             for (auto [entity, _, boundingBoxComponent] : GetEntityManager().GetEntitySet<EntityType<EnvGrid>, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
+    //             {
+    //                 // @TODO Store pointer to Entity rather than Id so we don't need to lock the handle
+    //                 Handle<Entity> entity { entityId };
+    //                 AssertDebug(entity->IsA<EnvGrid>());
 
-                    if (!env_grid_component.env_grid)
-                    {
-                        continue;
-                    }
+    //                 Handle<EnvGrid> envGrid = entity.Cast<EnvGrid>();
 
-                    bool should_recollect_entites = false;
+    //                 envGrid->SetReceivesUpdate(true);
+    //             }
+    //         });
+    // }
 
-                    if (!env_grid_component.env_grid->GetCamera()->IsReady())
-                    {
-                        should_recollect_entites = true;
-                    }
+    // { // Update camera data
+    //     HashSet<ObjId<Entity>> updatedEntityIds;
 
-                    Octree const* octree = &GetScene()->GetOctree();
-                    octree->GetFittingOctant(bounding_box_component.world_aabb, octree);
+    //     for (auto [entity, _t, transformComponent, boundingBoxComponent, _] : GetEntityManager().GetEntitySet<EntityType<EnvGrid>, TransformComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_ENV_GRID_TRANSFORM>>().GetScopedView(GetComponentInfos()))
+    //     {
+    //         if (!envGridComponent.envGrid)
+    //         {
+    //             continue;
+    //         }
 
-                    const HashCode octant_hash_code = octree->GetOctantID().GetHashCode().Add(octree->GetEntryListHash<EntityTag::STATIC>()).Add(octree->GetEntryListHash<EntityTag::LIGHT>());
+    //         envGridComponent.envGrid->Translate(boundingBoxComponent.worldAabb, transformComponent.transform.GetTranslation());
 
-                    if (octant_hash_code != env_grid_component.octant_hash_code)
-                    {
-                        HYP_LOG(EnvGrid, Debug, "EnvGrid octant hash code changed ({} != {}), updating probes", env_grid_component.octant_hash_code.Value(), octant_hash_code.Value());
+    //         updatedEntityIds.Insert(entityId);
+    //     }
 
-                        env_grid_component.octant_hash_code = octant_hash_code;
+    //     if (updatedEntityIds.Any())
+    //     {
+    //         AfterProcess([this, updatedEntityIds = std::move(updatedEntityIds)]()
+    //             {
+    //                 for (const ObjId<Entity>& entityId : updatedEntityIds)
+    //                 {
+    //                     GetEntityManager().RemoveTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entityId);
+    //                 }
+    //             });
+    //     }
+    // }
 
-                        should_recollect_entites = true;
-                    }
+    // { // Update EnvGrid transforms to map to the camera
+    //     HashSet<ObjId<Entity>> updatedEntityIds;
 
-                    if (!should_recollect_entites)
-                    {
-                        continue;
-                    }
+    //     for (auto [entity, envGridComponent, transformComponent, boundingBoxComponent] : GetEntityManager().GetEntitySet<EnvGridComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
+    //     {
+    //         if (!envGridComponent.envGrid)
+    //         {
+    //             continue;
+    //         }
 
-                    GetEntityManager().AddTag<EntityTag::UPDATE_ENV_GRID>(entity_id);
-                }
-            });
-    }
+    //         // Update movable envgrids
+    //         if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA)
+    //         {
+    //             const Handle<Camera>& camera = GetScene()->GetPrimaryCamera();
 
-    { // Update camera data
-        HashSet<ID<Entity>> updated_entity_ids;
+    //             if (camera.IsValid())
+    //             {
+    //                 Vec3f translation = transformComponent.transform.GetTranslation();
 
-        for (auto [entity_id, env_grid_component, transform_component, bounding_box_component, _] : GetEntityManager().GetEntitySet<EnvGridComponent, TransformComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_ENV_GRID_TRANSFORM>>().GetScopedView(GetComponentInfos()))
-        {
-            if (!env_grid_component.env_grid)
-            {
-                continue;
-            }
+    //                 if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA_X)
+    //                 {
+    //                     translation.x = camera->GetTranslation().x;
+    //                 }
 
-            env_grid_component.env_grid->Translate(bounding_box_component.world_aabb, transform_component.transform.GetTranslation());
+    //                 if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA_Y)
+    //                 {
+    //                     translation.y = camera->GetTranslation().y;
+    //                 }
 
-            updated_entity_ids.Insert(entity_id);
-        }
+    //                 if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA_Z)
+    //                 {
+    //                     translation.z = camera->GetTranslation().z;
+    //                 }
 
-        if (updated_entity_ids.Any())
-        {
-            AfterProcess([this, updated_entity_ids = std::move(updated_entity_ids)]()
-                {
-                    for (const ID<Entity>& entity_id : updated_entity_ids)
-                    {
-                        GetEntityManager().RemoveTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entity_id);
-                    }
-                });
-        }
-    }
+    //                 if (translation != transformComponent.transform.GetTranslation())
+    //                 {
+    //                     transformComponent.transform.SetTranslation(translation);
 
-    { // Update EnvGrid transforms to map to the camera
-        HashSet<ID<Entity>> updated_entity_ids;
+    //                     updatedEntityIds.Insert(entityId);
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        for (auto [entity_id, env_grid_component, transform_component, bounding_box_component] : GetEntityManager().GetEntitySet<EnvGridComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
-        {
-            if (!env_grid_component.env_grid)
-            {
-                continue;
-            }
-
-            // Update movable envgrids
-            if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA)
-            {
-                const Handle<Camera>& camera = GetScene()->GetPrimaryCamera();
-
-                if (camera.IsValid())
-                {
-                    Vec3f translation = transform_component.transform.GetTranslation();
-
-                    if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_X)
-                    {
-                        translation.x = camera->GetTranslation().x;
-                    }
-
-                    if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_Y)
-                    {
-                        translation.y = camera->GetTranslation().y;
-                    }
-
-                    if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_Z)
-                    {
-                        translation.z = camera->GetTranslation().z;
-                    }
-
-                    if (translation != transform_component.transform.GetTranslation())
-                    {
-                        transform_component.transform.SetTranslation(translation);
-
-                        updated_entity_ids.Insert(entity_id);
-                    }
-                }
-            }
-        }
-
-        if (updated_entity_ids.Any())
-        {
-            AfterProcess([this, updated_entity_ids = std::move(updated_entity_ids)]()
-                {
-                    for (const ID<Entity>& entity_id : updated_entity_ids)
-                    {
-                        GetEntityManager().AddTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entity_id);
-                    }
-                });
-        }
-    }
-
-    { // Process each EnvGrid that has the UPDATE_ENV_GRID tag
-        HashSet<ID<Entity>> updated_entity_ids;
-
-        for (auto [entity_id, env_grid_component, bounding_box_component, _] : GetEntityManager().GetEntitySet<EnvGridComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_ENV_GRID>>().GetScopedView(GetComponentInfos()))
-        {
-            if (!env_grid_component.env_grid)
-            {
-                continue;
-            }
-
-            if (!env_grid_component.env_grid->GetCamera()->IsReady())
-            {
-                continue;
-            }
-
-            UpdateEnvGrid(delta, env_grid_component, bounding_box_component);
-
-            updated_entity_ids.Insert(entity_id);
-        }
-
-        if (updated_entity_ids.Any())
-        {
-            AfterProcess([this, updated_entity_ids = std::move(updated_entity_ids)]()
-                {
-                    for (const ID<Entity>& entity_id : updated_entity_ids)
-                    {
-                        GetEntityManager().RemoveTag<EntityTag::UPDATE_ENV_GRID>(entity_id);
-                    }
-                });
-        }
-    }
-}
-
-void EnvGridUpdaterSystem::UpdateEnvGrid(GameCounter::TickUnit delta, EnvGridComponent& env_grid_component, BoundingBoxComponent& bounding_box_component)
-{
-    HYP_SCOPE;
-
-    env_grid_component.env_grid->Update(delta);
+    //     if (updatedEntityIds.Any())
+    //     {
+    //         AfterProcess([this, updatedEntityIds = std::move(updatedEntityIds)]()
+    //             {
+    //                 for (const ObjId<Entity>& entityId : updatedEntityIds)
+    //                 {
+    //                     GetEntityManager().AddTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entityId);
+    //                 }
+    //             });
+    //     }
+    // }
 }
 
 #pragma endregion EnvGridUpdaterSystem

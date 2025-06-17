@@ -44,9 +44,9 @@ struct Formatter<StringType, char>
 {
     auto operator()(char value) const
     {
-        const char char_array[2] = { value, '\0' };
+        const char charArray[2] = { value, '\0' };
 
-        return StringType(&char_array[0]);
+        return StringType(&charArray[0]);
     }
 };
 
@@ -67,13 +67,13 @@ struct Formatter<StringType, float>
         Array<ubyte, InlineAllocator<1024>> buf;
         buf.Resize(1024);
 
-        int result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
 
-        if (result_size > buf.Size())
+        if (resultSize > buf.Size())
         {
-            buf.Resize(result_size);
+            buf.Resize(resultSize);
 
-            result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -88,13 +88,13 @@ struct Formatter<StringType, double>
         Array<ubyte, InlineAllocator<1024>> buf;
         buf.Resize(1024);
 
-        int result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
 
-        if (result_size > buf.Size())
+        if (resultSize > buf.Size())
         {
-            buf.Resize(result_size);
+            buf.Resize(resultSize);
 
-            result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "%f", value) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -147,13 +147,13 @@ struct PrintfFormatter
         Array<ubyte, InlineAllocator<1024>> buf;
         buf.Resize(1024);
 
-        int result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), FormatString.data, value) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), FormatString.data, value) + 1;
 
-        if (result_size > buf.Size())
+        if (resultSize > buf.Size())
         {
-            buf.Resize(result_size);
+            buf.Resize(resultSize);
 
-            result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), FormatString.data, value) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), FormatString.data, value) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -199,37 +199,37 @@ struct Formatter<StringType, math::Vec2<T>>
     {
         if constexpr (std::is_floating_point_v<T>)
         {
-            static const char* format_string = "[%f %f]";
+            static const char* formatString = "[%f %f]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
         {
-            static const char* format_string = "[%d %d]";
+            static const char* formatString = "[%d %d]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
         {
-            static const char* format_string = "[%lld %lld]";
+            static const char* formatString = "[%lld %lld]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
         {
-            static const char* format_string = "[%u %u]";
+            static const char* formatString = "[%u %u]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
         {
-            static const char* format_string = "[%llu %llu]";
+            static const char* formatString = "[%llu %llu]";
 
-            return format_string;
+            return formatString;
         }
         else
         {
-            static_assert(resolution_failure<T>, "Cannot format Vec2 type: unknown inner type");
+            static_assert(resolutionFailure<T>, "Cannot format Vec2 type: unknown inner type");
         }
     }
 
@@ -238,13 +238,13 @@ struct Formatter<StringType, math::Vec2<T>>
         Array<ubyte, InlineAllocator<1024>> buf;
         buf.Resize(1024);
 
-        int result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y) + 1;
 
-        if (result_size > buf.Size())
+        if (resultSize > buf.Size())
         {
-            buf.Resize(result_size);
+            buf.Resize(resultSize);
 
-            result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -258,37 +258,37 @@ struct Formatter<StringType, math::Vec3<T>>
     {
         if constexpr (std::is_floating_point_v<T>)
         {
-            static const char* format_string = "[%f %f %f]";
+            static const char* formatString = "[%f %f %f]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
         {
-            static const char* format_string = "[%d %d %d]";
+            static const char* formatString = "[%d %d %d]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
         {
-            static const char* format_string = "[%lld %lld %lld]";
+            static const char* formatString = "[%lld %lld %lld]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
         {
-            static const char* format_string = "[%u %u %u]";
+            static const char* formatString = "[%u %u %u]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
         {
-            static const char* format_string = "[%llu %llu %llu]";
+            static const char* formatString = "[%llu %llu %llu]";
 
-            return format_string;
+            return formatString;
         }
         else
         {
-            static_assert(resolution_failure<T>, "Cannot format Vec3 type: unknown inner type");
+            static_assert(resolutionFailure<T>, "Cannot format Vec3 type: unknown inner type");
         }
     }
 
@@ -297,13 +297,13 @@ struct Formatter<StringType, math::Vec3<T>>
         Array<ubyte, InlineAllocator<1024>> buf;
         buf.Resize(1024);
 
-        int result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z) + 1;
 
-        if (result_size > buf.Size())
+        if (resultSize > buf.Size())
         {
-            buf.Resize(result_size);
+            buf.Resize(resultSize);
 
-            result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -317,37 +317,37 @@ struct Formatter<StringType, math::Vec4<T>>
     {
         if constexpr (std::is_floating_point_v<T>)
         {
-            static const char* format_string = "[%f %f %f %f]";
+            static const char* formatString = "[%f %f %f %f]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 4)
         {
-            static const char* format_string = "[%d %d %d %d]";
+            static const char* formatString = "[%d %d %d %d]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) <= 8)
         {
-            static const char* format_string = "[%lld %lld %lld %lld]";
+            static const char* formatString = "[%lld %lld %lld %lld]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 4)
         {
-            static const char* format_string = "[%u %u %u %u]";
+            static const char* formatString = "[%u %u %u %u]";
 
-            return format_string;
+            return formatString;
         }
         else if constexpr (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) <= 8)
         {
-            static const char* format_string = "[%llu %llu %llu %llu]";
+            static const char* formatString = "[%llu %llu %llu %llu]";
 
-            return format_string;
+            return formatString;
         }
         else
         {
-            static_assert(resolution_failure<T>, "Cannot format Vec4 type: unknown inner type");
+            static_assert(resolutionFailure<T>, "Cannot format Vec4 type: unknown inner type");
         }
     }
 
@@ -356,13 +356,13 @@ struct Formatter<StringType, math::Vec4<T>>
         Array<ubyte, InlineAllocator<1024>> buf;
         buf.Resize(1024);
 
-        int result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z, value.w) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z, value.w) + 1;
 
-        if (result_size > buf.Size())
+        if (resultSize > buf.Size())
         {
-            buf.Resize(result_size);
+            buf.Resize(resultSize);
 
-            result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z, value.w) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), GetFormatString(), value.x, value.y, value.z, value.w) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -377,13 +377,13 @@ struct Formatter<StringType, Quaternion>
         Array<ubyte, InlineAllocator<1024>> buf;
         buf.Resize(1024);
 
-        int result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
+        int resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
 
-        if (result_size > buf.Size())
+        if (resultSize > buf.Size())
         {
-            buf.Resize(result_size);
+            buf.Resize(resultSize);
 
-            result_size = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
+            resultSize = std::snprintf(reinterpret_cast<char*>(buf.Data()), buf.Size(), "[%f %f %f %f]", value.x, value.y, value.z, value.w) + 1;
         }
 
         return StringType(buf.ToByteView());
@@ -484,10 +484,10 @@ containers::String<StringType> FormatString_FormatElement_Runtime(const T& eleme
         std::add_pointer_t<std::remove_cvref_t<std::remove_pointer_t<T>>>,
         std::remove_cvref_t<T>>;
 
-    static_assert(implementation_exists<Formatter<containers::String<StringType>, FormatterSpecializationType>>, "No Formatter specialization exists for type");
+    static_assert(implementationExists<Formatter<containers::String<StringType>, FormatterSpecializationType>>, "No Formatter specialization exists for type");
 
     // if-constexpr is to prevent a huge swath of errors preventing the user from seeing the assertion failure.
-    if constexpr (implementation_exists<Formatter<containers::String<StringType>, FormatterSpecializationType>>)
+    if constexpr (implementationExists<Formatter<containers::String<StringType>, FormatterSpecializationType>>)
     {
         return Formatter<containers::String<StringType>, FormatterSpecializationType> {}(element);
     }
@@ -523,24 +523,24 @@ struct FormatString_BuildTuple_Impl
     template <class... Args>
     constexpr auto operator()(Args&&... args) const
     {
-        constexpr auto inner_value = containers::helpers::Substr<Str, StringIndexStart + 1, StringIndexEnd>::value;
+        constexpr auto innerValue = containers::helpers::Substr<Str, StringIndexStart + 1, StringIndexEnd>::value;
 
-        if constexpr (inner_value.Size() > 1 /* NUL */)
+        if constexpr (innerValue.Size() > 1 /* NUL */)
         {
             // Parse string to integer, use it as SubIndex.
-            constexpr SizeType parsed_integer = SizeType(containers::helpers::ParseInteger<inner_value>::value);
+            constexpr SizeType parsedInteger = SizeType(containers::helpers::ParseInteger<innerValue>::value);
 
-            if constexpr (parsed_integer < sizeof...(Args))
+            if constexpr (parsedInteger < sizeof...(Args))
             {
                 return ConcatTuples(
                     MakeTuple(containers::helpers::Substr<Str, 0, StringIndexStart>::value),
                     ConcatTuples(
-                        ForwardAsTuple(ForwardAsTuple(std::forward<Args>(args)...).template GetElement<parsed_integer>()),
-                        FormatString_BuildTuple<containers::helpers::Substr<Str, StringIndexEnd + 1, Str.Size() - 1>::value, Transformer, parsed_integer> {}(std::forward<Args>(args)...)));
+                        ForwardAsTuple(ForwardAsTuple(std::forward<Args>(args)...).template GetElement<parsedInteger>()),
+                        FormatString_BuildTuple<containers::helpers::Substr<Str, StringIndexEnd + 1, Str.Size() - 1>::value, Transformer, parsedInteger> {}(std::forward<Args>(args)...)));
             }
             else
             {
-                static_assert(FormatString_BadFormat_IndexOutOfBounds<Str, inner_value> {}, "String interpolation attempted to access out of range element. Explicitly provided index value was outside of the number of arguments.");
+                static_assert(FormatString_BadFormat_IndexOutOfBounds<Str, innerValue> {}, "String interpolation attempted to access out of range element. Explicitly provided index value was outside of the number of arguments.");
             }
         }
         else if constexpr (SubIndex < sizeof...(Args))

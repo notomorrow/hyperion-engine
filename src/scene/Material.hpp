@@ -3,7 +3,9 @@
 #ifndef HYPERION_MATERIAL_HPP
 #define HYPERION_MATERIAL_HPP
 
-#include <rendering/Shader.hpp>
+#include <scene/RenderProxyable.hpp>
+
+#include <rendering/ShaderManager.hpp>
 #include <rendering/RenderableAttributes.hpp>
 
 #include <core/utilities/DataMutationState.hpp>
@@ -68,13 +70,13 @@ enum class MaterialTextureKey : uint64
 };
 
 HYP_CLASS()
-class HYP_API Material final : public HypObject<Material>
+class HYP_API Material final : public RenderProxyable
 {
     HYP_OBJECT_BODY(Material);
 
 public:
-    static constexpr uint32 max_parameters = 32u;
-    static constexpr uint32 max_textures = 32u;
+    static constexpr uint32 maxParameters = 32u;
+    static constexpr uint32 maxTextures = 32u;
 
     friend class RenderMaterial;
 
@@ -82,8 +84,8 @@ public:
     {
         union
         {
-            float float_values[4];
-            int int_values[4];
+            float floatValues[4];
+            int intValues[4];
         } values;
 
         enum Type : uint32
@@ -116,11 +118,11 @@ public:
         {
             AssertThrow(count >= 1 && count <= 4);
 
-            Memory::MemCpy(values.float_values, v, count * sizeof(float));
+            Memory::MemCpy(values.floatValues, v, count * sizeof(float));
 
-            if (count < ArraySize(values.float_values))
+            if (count < ArraySize(values.floatValues))
             {
-                Memory::MemSet(&values.float_values[count], 0, (ArraySize(values.float_values) - count) * sizeof(float));
+                Memory::MemSet(&values.floatValues[count], 0, (ArraySize(values.floatValues) - count) * sizeof(float));
             }
         }
 
@@ -160,11 +162,11 @@ public:
         {
             AssertThrow(count >= 1 && count <= 4);
 
-            Memory::MemCpy(values.int_values, v, count * sizeof(int32));
+            Memory::MemCpy(values.intValues, v, count * sizeof(int32));
 
-            if (count < ArraySize(values.int_values))
+            if (count < ArraySize(values.intValues))
             {
-                Memory::MemSet(&values.int_values[count], 0, (ArraySize(values.int_values) - count) * sizeof(int32));
+                Memory::MemSet(&values.intValues[count], 0, (ArraySize(values.intValues) - count) * sizeof(int32));
             }
         }
 
@@ -246,42 +248,42 @@ public:
 
         HYP_FORCE_INLINE explicit operator int() const
         {
-            return values.int_values[0];
+            return values.intValues[0];
         }
 
         HYP_FORCE_INLINE explicit operator Vec2i() const
         {
-            return Vec2i { values.int_values[0], values.int_values[1] };
+            return Vec2i { values.intValues[0], values.intValues[1] };
         }
 
         HYP_FORCE_INLINE explicit operator Vec3i() const
         {
-            return Vec3i { values.int_values[0], values.int_values[1], values.int_values[2] };
+            return Vec3i { values.intValues[0], values.intValues[1], values.intValues[2] };
         }
 
         HYP_FORCE_INLINE explicit operator Vec4i() const
         {
-            return Vec4i { values.int_values[0], values.int_values[1], values.int_values[2], values.int_values[3] };
+            return Vec4i { values.intValues[0], values.intValues[1], values.intValues[2], values.intValues[3] };
         }
 
         HYP_FORCE_INLINE explicit operator float() const
         {
-            return values.float_values[0];
+            return values.floatValues[0];
         }
 
         HYP_FORCE_INLINE explicit operator Vec2f() const
         {
-            return Vec2f { values.float_values[0], values.float_values[1] };
+            return Vec2f { values.floatValues[0], values.floatValues[1] };
         }
 
         HYP_FORCE_INLINE explicit operator Vec3f() const
         {
-            return Vec3f { values.float_values[0], values.float_values[1], values.float_values[2] };
+            return Vec3f { values.floatValues[0], values.floatValues[1], values.floatValues[2] };
         }
 
         HYP_FORCE_INLINE explicit operator Vec4f() const
         {
-            return Vec4f { values.float_values[0], values.float_values[1], values.float_values[2], values.float_values[3] };
+            return Vec4f { values.floatValues[0], values.floatValues[1], values.floatValues[2], values.floatValues[3] };
         }
 
         HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -292,17 +294,17 @@ public:
 
             if (IsIntType())
             {
-                hc.Add(values.int_values[0]);
-                hc.Add(values.int_values[1]);
-                hc.Add(values.int_values[2]);
-                hc.Add(values.int_values[3]);
+                hc.Add(values.intValues[0]);
+                hc.Add(values.intValues[1]);
+                hc.Add(values.intValues[2]);
+                hc.Add(values.intValues[3]);
             }
             else if (IsFloatType())
             {
-                hc.Add(values.float_values[0]);
-                hc.Add(values.float_values[1]);
-                hc.Add(values.float_values[2]);
-                hc.Add(values.float_values[3]);
+                hc.Add(values.floatValues[0]);
+                hc.Add(values.floatValues[1]);
+                hc.Add(values.floatValues[2]);
+                hc.Add(values.floatValues[3]);
             }
 
             return hc;
@@ -346,15 +348,15 @@ public:
         MATERIAL_KEY_TERRAIN_LEVEL_3_HEIGHT = 1 << 21
     };
 
-    using ParameterTable = EnumOptions<MaterialKey, Parameter, max_parameters>;
+    using ParameterTable = EnumOptions<MaterialKey, Parameter, maxParameters>;
 
-    class TextureSet : public EnumOptions<MaterialTextureKey, Handle<Texture>, max_textures>
+    class TextureSet : public EnumOptions<MaterialTextureKey, Handle<Texture>, maxTextures>
     {
     public:
         TextureSet() = default;
 
-        TextureSet(std::initializer_list<KeyValuePairType> initializer_list)
-            : EnumOptions<MaterialTextureKey, Handle<Texture>, max_textures>(initializer_list)
+        TextureSet(std::initializer_list<KeyValuePairType> initializerList)
+            : EnumOptions<MaterialTextureKey, Handle<Texture>, maxTextures>(initializerList)
         {
         }
 
@@ -375,7 +377,7 @@ public:
         }
 
         TextureSet(const TextureSet& other)
-            : EnumOptions<MaterialTextureKey, Handle<Texture>, max_textures>(other)
+            : EnumOptions<MaterialTextureKey, Handle<Texture>, maxTextures>(other)
         {
         }
 
@@ -386,12 +388,12 @@ public:
                 return *this;
             }
 
-            EnumOptions<MaterialTextureKey, Handle<Texture>, max_textures>::operator=(other);
+            EnumOptions<MaterialTextureKey, Handle<Texture>, maxTextures>::operator=(other);
             return *this;
         }
 
         TextureSet(TextureSet&& other) noexcept
-            : EnumOptions<MaterialTextureKey, Handle<Texture>, max_textures>(std::move(other))
+            : EnumOptions<MaterialTextureKey, Handle<Texture>, maxTextures>(std::move(other))
         {
         }
 
@@ -402,7 +404,7 @@ public:
                 return *this;
             }
 
-            EnumOptions<MaterialTextureKey, Handle<Texture>, max_textures>::operator=(std::move(other));
+            EnumOptions<MaterialTextureKey, Handle<Texture>, maxTextures>::operator=(std::move(other));
             return *this;
         }
 
@@ -439,7 +441,7 @@ public:
     static const ParameterTable& DefaultParameters();
 
     Material();
-    Material(Name name, Bucket bucket = Bucket::BUCKET_OPAQUE);
+    Material(Name name, RenderBucket rb = RB_OPAQUE);
     Material(Name name, const MaterialAttributes& attributes);
     Material(Name name, const MaterialAttributes& attributes, const ParameterTable& parameters, const TextureSet& textures);
     Material(const Material& other) = delete;
@@ -462,14 +464,14 @@ public:
 
     HYP_FORCE_INLINE RenderMaterial& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     /*! \brief Get the current mutation state of this Material.
         \return The current mutation state of this Material */
     HYP_FORCE_INLINE DataMutationState GetMutationState() const
     {
-        return m_mutation_state;
+        return m_mutationState;
     }
 
     HYP_FORCE_INLINE ParameterTable& GetParameters()
@@ -491,14 +493,14 @@ public:
     typename std::enable_if_t<std::is_same_v<std::decay_t<T>, float>, std::decay_t<T>>
     GetParameter(MaterialKey key) const
     {
-        return m_parameters.Get(key).values.float_values[0];
+        return m_parameters.Get(key).values.floatValues[0];
     }
 
     template <class T>
     typename std::enable_if_t<std::is_same_v<std::decay_t<T>, int>, std::decay_t<T>>
     GetParameter(MaterialKey key) const
     {
-        return m_parameters.Get(key).values.int_values[0];
+        return m_parameters.Get(key).values.intValues[0];
     }
 
     template <class T>
@@ -509,7 +511,7 @@ public:
         static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
 
         T result;
-        std::memcpy(&result.values[0], &m_parameters.Get(key).values.float_values[0], sizeof(float) * ArraySize(result.values));
+        std::memcpy(&result.values[0], &m_parameters.Get(key).values.floatValues[0], sizeof(float) * ArraySize(result.values));
         return result;
     }
 
@@ -569,37 +571,37 @@ public:
 
     /*! \brief Get the bucket for this Material.
      *  \return The bucket for this Material. */
-    HYP_FORCE_INLINE Bucket GetBucket() const
+    HYP_FORCE_INLINE RenderBucket GetBucket() const
     {
-        return m_render_attributes.bucket;
+        return m_renderAttributes.bucket;
     }
 
     /*! \brief Set the bucket for this Material.
-     *  \param bucket The bucket to set. */
-    HYP_FORCE_INLINE void SetBucket(Bucket bucket)
+     *  \param rb The bucket to set. */
+    HYP_FORCE_INLINE void SetBucket(RenderBucket rb)
     {
-        m_render_attributes.bucket = bucket;
+        m_renderAttributes.bucket = rb;
     }
 
     /*! \brief Get whether this Material is alpha blended.
      *  \return True if the Material is alpha blended, false otherwise. */
     HYP_FORCE_INLINE bool IsAlphaBlended() const
     {
-        return m_render_attributes.blend_function != BlendFunction::None();
+        return m_renderAttributes.blendFunction != BlendFunction::None();
     }
 
     /*! \brief Set whether this Material is alpha blended.
-     *  \param is_alpha_blended True if the Material is alpha blended, false otherwise.
-     *  \param blend_function The blend function to use if the Material is alpha blended. By default, it is set to \ref{BlendFunction::AlphaBlending()}. */
-    HYP_FORCE_INLINE void SetIsAlphaBlended(bool is_alpha_blended, BlendFunction blend_function = BlendFunction::AlphaBlending())
+     *  \param isAlphaBlended True if the Material is alpha blended, false otherwise.
+     *  \param blendFunction The blend function to use if the Material is alpha blended. By default, it is set to \ref{BlendFunction::AlphaBlending()}. */
+    HYP_FORCE_INLINE void SetIsAlphaBlended(bool isAlphaBlended, BlendFunction blendFunction = BlendFunction::AlphaBlending())
     {
-        if (is_alpha_blended)
+        if (isAlphaBlended)
         {
-            m_render_attributes.blend_function = blend_function;
+            m_renderAttributes.blendFunction = blendFunction;
         }
         else
         {
-            m_render_attributes.blend_function = BlendFunction::None();
+            m_renderAttributes.blendFunction = BlendFunction::None();
         }
     }
 
@@ -607,34 +609,34 @@ public:
      *  \return The blend function for this Material. */
     HYP_FORCE_INLINE BlendFunction GetBlendFunction() const
     {
-        return m_render_attributes.blend_function;
+        return m_renderAttributes.blendFunction;
     }
 
     /*! \brief Set the blend function for this Material.
-     *  \param blend_function The blend function to set. */
-    HYP_FORCE_INLINE void SetBlendMode(BlendFunction blend_function)
+     *  \param blendFunction The blend function to set. */
+    HYP_FORCE_INLINE void SetBlendMode(BlendFunction blendFunction)
     {
-        m_render_attributes.blend_function = blend_function;
+        m_renderAttributes.blendFunction = blendFunction;
     }
 
     /*! \brief Get whether depth writing is enabled for this Material.
      *  \return True if depth writing is enabled, false otherwise. */
     HYP_FORCE_INLINE bool IsDepthWriteEnabled() const
     {
-        return bool(m_render_attributes.flags & MaterialAttributeFlags::DEPTH_WRITE);
+        return bool(m_renderAttributes.flags & MAF_DEPTH_WRITE);
     }
 
     /*! \brief Set whether depth writing is enabled for this Material.
-     *  \param is_depth_write_enabled True if depth writing is enabled, false otherwise. */
-    HYP_FORCE_INLINE void SetIsDepthWriteEnabled(bool is_depth_write_enabled)
+     *  \param isDepthWriteEnabled True if depth writing is enabled, false otherwise. */
+    HYP_FORCE_INLINE void SetIsDepthWriteEnabled(bool isDepthWriteEnabled)
     {
-        if (is_depth_write_enabled)
+        if (isDepthWriteEnabled)
         {
-            m_render_attributes.flags |= MaterialAttributeFlags::DEPTH_WRITE;
+            m_renderAttributes.flags |= MAF_DEPTH_WRITE;
         }
         else
         {
-            m_render_attributes.flags &= ~MaterialAttributeFlags::DEPTH_WRITE;
+            m_renderAttributes.flags &= ~MAF_DEPTH_WRITE;
         }
     }
 
@@ -642,20 +644,20 @@ public:
      *  \return True if depth testing is enabled, false otherwise. */
     HYP_FORCE_INLINE bool IsDepthTestEnabled() const
     {
-        return bool(m_render_attributes.flags & MaterialAttributeFlags::DEPTH_TEST);
+        return bool(m_renderAttributes.flags & MAF_DEPTH_TEST);
     }
 
     /*! \brief Set whether depth testing is enabled for this Material.
-     *  \param is_depth_test_enabled True if depth testing is enabled, false otherwise. */
-    HYP_FORCE_INLINE void SetIsDepthTestEnabled(bool is_depth_test_enabled)
+     *  \param isDepthTestEnabled True if depth testing is enabled, false otherwise. */
+    HYP_FORCE_INLINE void SetIsDepthTestEnabled(bool isDepthTestEnabled)
     {
-        if (is_depth_test_enabled)
+        if (isDepthTestEnabled)
         {
-            m_render_attributes.flags |= MaterialAttributeFlags::DEPTH_TEST;
+            m_renderAttributes.flags |= MAF_DEPTH_TEST;
         }
         else
         {
-            m_render_attributes.flags &= ~MaterialAttributeFlags::DEPTH_TEST;
+            m_renderAttributes.flags &= ~MAF_DEPTH_TEST;
         }
     }
 
@@ -663,28 +665,28 @@ public:
      *  \return The face culling mode for this Material. */
     HYP_FORCE_INLINE FaceCullMode GetFaceCullMode() const
     {
-        return m_render_attributes.cull_faces;
+        return m_renderAttributes.cullFaces;
     }
 
     /*! \brief Set the face culling mode for this Material.
-     *  \param cull_mode The face culling mode to set. */
-    HYP_FORCE_INLINE void SetFaceCullMode(FaceCullMode cull_mode)
+     *  \param cullMode The face culling mode to set. */
+    HYP_FORCE_INLINE void SetFaceCullMode(FaceCullMode cullMode)
     {
-        m_render_attributes.cull_faces = cull_mode;
+        m_renderAttributes.cullFaces = cullMode;
     }
 
     /*! \brief Get the render attributes of this Material.
      *  \return The render attributes of this Material. */
     HYP_FORCE_INLINE MaterialAttributes& GetRenderAttributes()
     {
-        return m_render_attributes;
+        return m_renderAttributes;
     }
 
     /*! \brief Get the render attributes of this Material.
      *  \return The render attributes of this Material. */
     HYP_FORCE_INLINE const MaterialAttributes& GetRenderAttributes() const
     {
-        return m_render_attributes;
+        return m_renderAttributes;
     }
 
     /*! \brief If a Material is static, it is expected to not change frequently and
@@ -694,7 +696,7 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE bool IsStatic() const
     {
-        return !m_is_dynamic;
+        return !m_isDynamic;
     }
 
     /*! \brief If a Material is
@@ -705,13 +707,13 @@ public:
     HYP_METHOD(Property = "IsDynamic", Serialize = true)
     HYP_FORCE_INLINE bool IsDynamic() const
     {
-        return m_is_dynamic;
+        return m_isDynamic;
     }
 
     HYP_METHOD(Property = "IsDynamic", Serialize = true)
-    HYP_FORCE_INLINE void SetIsDynamic(bool is_dynamic)
+    HYP_FORCE_INLINE void SetIsDynamic(bool isDynamic)
     {
-        m_is_dynamic = is_dynamic;
+        m_isDynamic = isDynamic;
     }
 
     /*! \brief If the Material's mutation state is dirty, this will
@@ -734,19 +736,20 @@ public:
 
 private:
     void Init() override;
+    void UpdateRenderProxy(IRenderProxy* proxy) override;
 
     Name m_name;
 
     ParameterTable m_parameters;
     TextureSet m_textures;
 
-    MaterialAttributes m_render_attributes;
+    MaterialAttributes m_renderAttributes;
 
-    bool m_is_dynamic;
+    bool m_isDynamic;
 
-    mutable DataMutationState m_mutation_state;
+    mutable DataMutationState m_mutationState;
 
-    RenderMaterial* m_render_resource;
+    RenderMaterial* m_renderResource;
 };
 
 HYP_CLASS()

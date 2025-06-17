@@ -10,7 +10,7 @@
 
 namespace hyperion {
 
-void PhysicsSystem::OnEntityAdded(const Handle<Entity>& entity)
+void PhysicsSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
@@ -19,23 +19,23 @@ void PhysicsSystem::OnEntityAdded(const Handle<Entity>& entity)
         return;
     }
 
-    RigidBodyComponent& rigid_body_component = GetEntityManager().GetComponent<RigidBodyComponent>(entity);
-    TransformComponent& transform_component = GetEntityManager().GetComponent<TransformComponent>(entity);
+    RigidBodyComponent& rigidBodyComponent = GetEntityManager().GetComponent<RigidBodyComponent>(entity);
+    TransformComponent& transformComponent = GetEntityManager().GetComponent<TransformComponent>(entity);
 
-    if (rigid_body_component.rigid_body)
+    if (rigidBodyComponent.rigidBody)
     {
-        InitObject(rigid_body_component.rigid_body);
+        InitObject(rigidBodyComponent.rigidBody);
 
-        rigid_body_component.rigid_body->SetTransform(transform_component.transform);
-        rigid_body_component.transform_hash_code = transform_component.transform.GetHashCode();
+        rigidBodyComponent.rigidBody->SetTransform(transformComponent.transform);
+        rigidBodyComponent.transformHashCode = transformComponent.transform.GetHashCode();
 
-        rigid_body_component.flags |= RIGID_BODY_COMPONENT_FLAG_INIT;
+        rigidBodyComponent.flags |= RIGID_BODY_COMPONENT_FLAG_INIT;
 
-        GetEntityManager().GetScene()->GetWorld()->GetPhysicsWorld().AddRigidBody(rigid_body_component.rigid_body);
+        GetEntityManager().GetScene()->GetWorld()->GetPhysicsWorld().AddRigidBody(rigidBodyComponent.rigidBody);
     }
 }
 
-void PhysicsSystem::OnEntityRemoved(ID<Entity> entity)
+void PhysicsSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
@@ -44,31 +44,31 @@ void PhysicsSystem::OnEntityRemoved(ID<Entity> entity)
         return;
     }
 
-    RigidBodyComponent& rigid_body_component = GetEntityManager().GetComponent<RigidBodyComponent>(entity);
+    RigidBodyComponent& rigidBodyComponent = GetEntityManager().GetComponent<RigidBodyComponent>(entity);
 
-    if (rigid_body_component.rigid_body)
+    if (rigidBodyComponent.rigidBody)
     {
-        GetEntityManager().GetScene()->GetWorld()->GetPhysicsWorld().RemoveRigidBody(rigid_body_component.rigid_body);
+        GetEntityManager().GetScene()->GetWorld()->GetPhysicsWorld().RemoveRigidBody(rigidBodyComponent.rigidBody);
     }
 }
 
 void PhysicsSystem::Process(float delta)
 {
-    for (auto [entity_id, rigid_body_component, transform_component] : GetEntityManager().GetEntitySet<RigidBodyComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, rigidBodyComponent, transformComponent] : GetEntityManager().GetEntitySet<RigidBodyComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
     {
-        Handle<physics::RigidBody>& rigid_body = rigid_body_component.rigid_body;
-        Transform& transform = transform_component.transform;
+        Handle<physics::RigidBody>& rigidBody = rigidBodyComponent.rigidBody;
+        Transform& transform = transformComponent.transform;
 
-        if (!rigid_body)
+        if (!rigidBody)
         {
             continue;
         }
 
-        Transform rigid_body_transform = rigid_body->GetTransform();
-        transform.SetTranslation(rigid_body_transform.GetTranslation());
-        transform.SetRotation(rigid_body_transform.GetRotation());
+        Transform rigidBodyTransform = rigidBody->GetTransform();
+        transform.SetTranslation(rigidBodyTransform.GetTranslation());
+        transform.SetRotation(rigidBodyTransform.GetRotation());
 
-        rigid_body->SetTransform(rigid_body_transform);
+        rigidBody->SetTransform(rigidBodyTransform);
     }
 }
 

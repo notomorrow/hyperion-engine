@@ -28,14 +28,14 @@ class Game;
 class GameThread final : public Thread<Scheduler>
 {
 public:
-    GameThread(const Handle<AppContextBase>& app_context);
+    GameThread(const Handle<AppContextBase>& appContext);
 
     void SetGame(const Handle<Game>& game);
 
 private:
     virtual void operator()() override;
 
-    Handle<AppContextBase> m_app_context;
+    Handle<AppContextBase> m_appContext;
     Handle<Game> m_game;
 };
 

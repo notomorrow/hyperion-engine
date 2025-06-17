@@ -4,14 +4,14 @@ using System.Runtime.InteropServices;
 namespace Hyperion
 {
     [HypClassBinding(Name="Entity")]
-    public class Entity : HypObject
+    public class Entity : RenderProxyable
     {
-        public IDBase ID
+        public ObjIdBase Id
         {
             get
             {
                 ulong idValue = Entity_GetID(NativeAddress);
-                return new IDBase(new TypeID((uint)(idValue >> 32)), (uint)(idValue & 0xFFFFFFFF));
+                return new ObjIdBase(new TypeId((uint)(idValue >> 32)), (uint)(idValue & 0xFFFFFFFF));
             }
         }
 

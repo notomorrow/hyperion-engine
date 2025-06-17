@@ -22,8 +22,6 @@
 #include <condition_variable>
 
 namespace hyperion {
-namespace renderer {
-
 enum RenderCommandExecuteStage : uint32
 {
     EXECUTE_STAGE_BEFORE_BUFFERS,
@@ -36,44 +34,44 @@ enum RenderCommandExecuteStage : uint32
 /*! \brief Pushes a render command to the render command queue. This is a wrapper around RenderCommands::Push.
  *  If called from the render thread, the command is executed immediately. */
 #define PUSH_RENDER_COMMAND(name, ...)                                                                                                                               \
-    if (::hyperion::Threads::IsOnThread(::hyperion::g_render_thread))                                                                                                \
+    if (::hyperion::Threads::IsOnThread(::hyperion::g_renderThread))                                                                                                \
     {                                                                                                                                                                \
-        const ::hyperion::RendererResult command_result = RENDER_COMMAND(name)(__VA_ARGS__).Call();                                                                  \
-        AssertThrowMsg(command_result, "Render command error! [%d]: %s\n", command_result.GetError().GetErrorCode(), command_result.GetError().GetMessage().Data()); \
+        const ::hyperion::RendererResult commandResult = RENDER_COMMAND(name)(__VA_ARGS__).Call();                                                                  \
+        AssertThrowMsg(commandResult, "Render command error! [%d]: %s\n", commandResult.GetError().GetErrorCode(), commandResult.GetError().GetMessage().Data()); \
     }                                                                                                                                                                \
     else                                                                                                                                                             \
     {                                                                                                                                                                \
-        ::hyperion::renderer::RenderCommands::Push<RENDER_COMMAND(name)>(__VA_ARGS__);                                                                               \
+        ::hyperion::RenderCommands::Push<RENDER_COMMAND(name)>(__VA_ARGS__);                                                                                         \
     }
 
 /*! \brief If not on the render thread, waits for the render thread to finish executing all render commands. */
 #define HYP_SYNC_RENDER(...)                                           \
-    if (!::hyperion::Threads::IsOnThread(::hyperion::g_render_thread)) \
+    if (!::hyperion::Threads::IsOnThread(::hyperion::g_renderThread)) \
     {                                                                  \
-        ::hyperion::renderer::RenderCommands::Wait();                  \
+        ::hyperion::RenderCommands::Wait();                            \
     }
 
-constexpr uint32 max_render_command_types = 128;
-constexpr SizeType render_command_cache_size_bytes = 1 << 16;
+constexpr uint32 maxRenderCommandTypes = 128;
+constexpr SizeType renderCommandCacheSizeBytes = 1 << 16;
 
-using RenderCommandFunc = void (*)(void* /*ptr */, uint32 /* buffer_index */);
+using RenderCommandFunc = void (*)(void* /*ptr */, uint32 /* bufferIndex */);
 
 template <class T>
 struct RenderCommandList
 {
     struct Block
     {
-        static constexpr SizeType render_command_cache_size = MathUtil::Max(render_command_cache_size_bytes / sizeof(T), 1);
+        static constexpr SizeType renderCommandCacheSize = MathUtil::Max(renderCommandCacheSizeBytes / sizeof(T), 1);
 
-        FixedArray<ValueStorage<T>, render_command_cache_size> storage;
+        FixedArray<ValueStorage<T>, renderCommandCacheSize> storage;
         uint32 index = 0;
 
         HYP_FORCE_INLINE bool IsFull() const
         {
-            return index >= uint32(render_command_cache_size);
+            return index >= uint32(renderCommandCacheSize);
         }
 
-        static_assert(render_command_cache_size >= 8, "Render command storage size is too large; runtime performance would be impacted due to needing to allocate more blocks to compensate.");
+        static_assert(renderCommandCacheSize >= 8, "Render command storage size is too large; runtime performance would be impacted due to needing to allocate more blocks to compensate.");
     };
 
     // Use a linked list so we can grow the container without invalidating pointers.
@@ -95,39 +93,39 @@ struct RenderCommandList
 
     ~RenderCommandList() = default;
 
-    HYP_FORCE_INLINE void* AllocCommand(uint32 buffer_index)
+    HYP_FORCE_INLINE void* AllocCommand(uint32 bufferIndex)
     {
         // always guaranteed to have at least 1 block
-        auto& blocks_buffer = blocks[buffer_index];
-        Block* last_block = &blocks_buffer.Back();
+        auto& blocksBuffer = blocks[bufferIndex];
+        Block* lastBlock = &blocksBuffer.Back();
 
-        if (last_block->IsFull())
+        if (lastBlock->IsFull())
         {
-            blocks_buffer.EmplaceBack();
-            last_block = &blocks_buffer.Back();
+            blocksBuffer.EmplaceBack();
+            lastBlock = &blocksBuffer.Back();
         }
 
-        const SizeType command_index = last_block->index++;
+        const SizeType commandIndex = lastBlock->index++;
 
-        return last_block->storage.Data() + command_index;
+        return lastBlock->storage.Data() + commandIndex;
     }
 
-    HYP_FORCE_INLINE void Rewind(uint32 buffer_index)
+    HYP_FORCE_INLINE void Rewind(uint32 bufferIndex)
     {
-        auto& blocks_buffer = blocks[buffer_index];
+        auto& blocksBuffer = blocks[bufferIndex];
         // Note: all items must have been destructed,
         // or undefined behavior will occur as the items are not properly destructed
-        while (blocks_buffer.Size() - 1)
+        while (blocksBuffer.Size() - 1)
         {
-            blocks_buffer.PopBack();
+            blocksBuffer.PopBack();
         }
 
-        blocks_buffer.Front().index = 0;
+        blocksBuffer.Front().index = 0;
     }
 
-    static void RewindFunc(void* ptr, uint32 buffer_index)
+    static void RewindFunc(void* ptr, uint32 bufferIndex)
     {
-        static_cast<RenderCommandList*>(ptr)->Rewind(buffer_index);
+        static_cast<RenderCommandList*>(ptr)->Rewind(bufferIndex);
     }
 };
 
@@ -152,25 +150,25 @@ struct RenderScheduler
     struct FlushResult
     {
         RendererResult result;
-        SizeType num_executed;
+        SizeType numExecuted;
     };
 
     Array<RenderCommand*> m_commands;
 
     std::mutex m_mutex;
-    AtomicVar<SizeType> m_num_enqueued;
+    AtomicVar<SizeType> m_numEnqueued;
 
     RenderScheduler() = default;
 
     void Commit(RenderCommand* command);
     // FlushResult Flush();
-    void AcceptAll(Array<RenderCommand*>& out_container);
+    void AcceptAll(Array<RenderCommand*>& outContainer);
 };
 
 struct RenderCommandHolder
 {
-    void* render_command_list_ptr = nullptr;
-    RenderCommandFunc rewind_func = nullptr;
+    void* renderCommandListPtr = nullptr;
+    RenderCommandFunc rewindFunc = nullptr;
 };
 
 /*! \brief A custom, overridable render command that can be used outside of
@@ -194,9 +192,9 @@ public:
 
     struct Buffer
     {
-        // last item must always have render_command_list_ptr be nullptr
-        FixedArray<RenderCommandHolder, max_render_command_types> holders;
-        AtomicVar<uint32> render_command_type_index;
+        // last item must always have renderCommandListPtr be nullptr
+        FixedArray<RenderCommandHolder, maxRenderCommandTypes> holders;
+        AtomicVar<uint32> renderCommandTypeIndex;
 
         std::mutex mtx;
 
@@ -204,10 +202,15 @@ public:
     };
 
     static Buffer s_buffers[2];
-    static AtomicVar<uint32> s_buffer_index;
+    static AtomicVar<uint32> s_bufferIndex;
     static RenderCommandSemaphore s_semaphore;
 
 public:
+    HYP_FORCE_INLINE static void SwapBuffers()
+    {
+        s_bufferIndex.Increment(1, MemoryOrder::RELEASE);
+    }
+
     /*! \brief Push a render command to the render command queue.
         \details The render command will be executed in the render thread.
 
@@ -223,22 +226,22 @@ public:
     {
         static_assert(std::is_base_of_v<RenderCommand, T>, "T must derive RenderCommand");
 
-        Threads::AssertOnThread(~g_render_thread);
+        Threads::AssertOnThread(~g_renderThread);
 
-        uint32 buffer_index = CurrentBufferIndex();
-        Buffer& buffer = s_buffers[buffer_index];
+        uint32 bufferIndex = CurrentBufferIndex();
+        Buffer& buffer = s_buffers[bufferIndex];
 
         std::unique_lock lock(buffer.mtx);
 
-        buffer.scheduler.m_num_enqueued.Increment(1, MemoryOrder::RELEASE);
+        buffer.scheduler.m_numEnqueued.Increment(1, MemoryOrder::RELEASE);
 
-        void* mem = Alloc<T>(buffer_index);
+        void* mem = Alloc<T>(bufferIndex);
         T* ptr = new (mem) T(std::forward<Args>(args)...);
 
 #ifdef HYP_RENDER_COMMANDS_DEBUG_NAME
-        static const auto type_name = TypeName<T>();
+        static const auto typeName = TypeName<T>();
 
-        ptr->_debug_name = type_name.Data();
+        ptr->_debug_name = typeName.Data();
 #endif
 
         buffer.scheduler.Commit(ptr);
@@ -258,7 +261,7 @@ public:
         };
 
         static_cast<MyCustomRenderCommand *> command = hyperion::Memory::AllocateAndConstruct<MyCustomRenderCommand>(...);
-        hyperion::renderer::RenderCommands::PushCustomRenderCommand(command);
+        hyperion::RenderCommands::PushCustomRenderCommand(command);
 
         // ... elsewhere, after the command has been executed
         HYP_FREE_ALIGNED(command);
@@ -277,16 +280,16 @@ public:
 private:
     HYP_FORCE_INLINE static uint32 CurrentBufferIndex()
     {
-        return s_buffer_index.Get(MemoryOrder::ACQUIRE) % 2;
+        return s_bufferIndex.Get(MemoryOrder::ACQUIRE) % 2;
     }
 
     template <class T>
-    HYP_FORCE_INLINE static void* Alloc(uint32 buffer_index)
+    HYP_FORCE_INLINE static void* Alloc(uint32 bufferIndex)
     {
         struct Data
         {
-            RenderCommandList<T> command_lists[2];
-            uint32 command_type_indices[2];
+            RenderCommandList<T> commandLists[2];
+            uint32 commandTypeIndices[2];
 
             Data()
             {
@@ -294,19 +297,19 @@ private:
                 {
                     RenderCommands::Buffer& buffer = RenderCommands::s_buffers[i];
 
-                    const uint32 command_type_index = buffer.render_command_type_index.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+                    const uint32 commandTypeIndex = buffer.renderCommandTypeIndex.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
                     AssertThrowMsg(
-                        command_type_index < max_render_command_types - 1,
+                        commandTypeIndex < maxRenderCommandTypes - 1,
                         "Maximum number of render command types initialized (%llu). Increase the buffer size?",
-                        max_render_command_types - 1);
+                        maxRenderCommandTypes - 1);
 
-                    buffer.holders[command_type_index] = RenderCommandHolder {
-                        &command_lists[i],
-                        &command_lists[i].RewindFunc
+                    buffer.holders[commandTypeIndex] = RenderCommandHolder {
+                        &commandLists[i],
+                        &commandLists[i].RewindFunc
                     };
 
-                    command_type_indices[i] = command_type_index;
+                    commandTypeIndices[i] = commandTypeIndex;
                 }
             }
 
@@ -321,7 +324,7 @@ private:
                 {
                     RenderCommands::Buffer& buffer = RenderCommands::s_buffers[i];
 
-                    buffer.holders[command_type_indices[i]] = RenderCommandHolder {
+                    buffer.holders[commandTypeIndices[i]] = RenderCommandHolder {
                         nullptr,
                         nullptr
                     };
@@ -331,13 +334,12 @@ private:
 
         static Data data;
 
-        return data.command_lists[buffer_index].AllocCommand(buffer_index);
+        return data.commandLists[bufferIndex].AllocCommand(bufferIndex);
     }
 
-    static void Rewind(uint32 buffer_index);
+    static void Rewind(uint32 bufferIndex);
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

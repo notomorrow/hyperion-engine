@@ -2,10 +2,10 @@
 
 #include <rendering/RenderCamera.hpp>
 #include <rendering/RenderWorld.hpp>
-#include <rendering/ShaderGlobals.hpp>
-#include <rendering/RenderState.hpp>
+#include <rendering/RenderGlobalState.hpp>
 #include <rendering/Renderer.hpp>
 
+#include <rendering/backend/RenderBackend.hpp>
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
 #include <core/math/Matrix4.hpp>
@@ -15,6 +15,7 @@
 #include <core/logging/Logger.hpp>
 #include <core/logging/LogChannels.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -23,7 +24,7 @@ namespace hyperion {
 
 RenderCamera::RenderCamera(Camera* camera)
     : m_camera(camera),
-      m_buffer_data {}
+      m_bufferData {}
 {
 }
 
@@ -36,18 +37,11 @@ void RenderCamera::Initialize_Internal()
     HYP_SCOPE;
 
     UpdateBufferData();
-
-    if (m_framebuffer.IsValid())
-    {
-        DeferCreate(m_framebuffer);
-    }
 }
 
 void RenderCamera::Destroy_Internal()
 {
     HYP_SCOPE;
-
-    SafeRelease(std::move(m_framebuffer));
 }
 
 void RenderCamera::Update_Internal()
@@ -55,27 +49,27 @@ void RenderCamera::Update_Internal()
     HYP_SCOPE;
 }
 
-GPUBufferHolderBase* RenderCamera::GetGPUBufferHolder() const
+GpuBufferHolderBase* RenderCamera::GetGpuBufferHolder() const
 {
-    return g_engine->GetRenderData()->cameras;
+    return g_renderGlobalState->gpuBuffers[GRB_CAMERAS];
 }
 
 void RenderCamera::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    *static_cast<CameraShaderData*>(m_buffer_address) = m_buffer_data;
+    *static_cast<CameraShaderData*>(m_bufferAddress) = m_bufferData;
 
-    GetGPUBufferHolder()->MarkDirty(m_buffer_index);
+    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
 }
 
-void RenderCamera::SetBufferData(const CameraShaderData& buffer_data)
+void RenderCamera::SetBufferData(const CameraShaderData& bufferData)
 {
     HYP_SCOPE;
 
-    Execute([this, buffer_data]()
+    Execute([this, bufferData]()
         {
-            m_buffer_data = buffer_data;
+            m_bufferData = bufferData;
 
             if (IsInitialized())
             {
@@ -84,75 +78,33 @@ void RenderCamera::SetBufferData(const CameraShaderData& buffer_data)
         });
 }
 
-void RenderCamera::SetFramebuffer(const FramebufferRef& framebuffer)
+void RenderCamera::ApplyJitter(const RenderSetup& renderSetup)
 {
     HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
 
-    Execute([this, framebuffer]()
-        {
-            SafeRelease(std::move(m_framebuffer));
+    static const float jitterScale = 0.25f;
 
-            m_framebuffer = framebuffer;
+    AssertThrow(m_bufferIndex != ~0u);
 
-            if (IsInitialized() && m_framebuffer.IsValid())
-            {
-                DeferCreate(m_framebuffer);
-            }
-        });
-}
+    const uint32 frameCounter = renderSetup.world->GetBufferData().frameCounter + 1;
 
-void RenderCamera::EnqueueBind()
-{
-    HYP_SCOPE;
+    CameraShaderData& bufferData = *static_cast<CameraShaderData*>(m_bufferAddress);
 
-    Execute([this]()
-        {
-            g_engine->GetRenderState()->BindCamera(TResourceHandle<RenderCamera>(*this));
-        },
-        /* force_render_thread */ true);
-}
-
-void RenderCamera::EnqueueUnbind()
-{
-    HYP_SCOPE;
-
-    Execute([this]()
-        {
-            g_engine->GetRenderState()->UnbindCamera(this);
-        },
-        /* force_render_thread */ true);
-}
-
-void RenderCamera::ApplyJitter(const RenderSetup& render_setup)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
-
-    static const float jitter_scale = 0.25f;
-
-    AssertThrow(m_buffer_index != ~0u);
-
-    const uint32 frame_counter = render_setup.world->GetBufferData().frame_counter + 1;
-
-    CameraShaderData& buffer_data = *static_cast<CameraShaderData*>(m_buffer_address);
-
-    if (buffer_data.projection[3][3] < MathUtil::epsilon_f)
+    if (bufferData.projection[3][3] < MathUtil::epsilonF)
     {
         Vec4f jitter = Vec4f::Zero();
 
-        Matrix4::Jitter(frame_counter, buffer_data.dimensions.x, buffer_data.dimensions.y, jitter);
+        Matrix4::Jitter(frameCounter, bufferData.dimensions.x, bufferData.dimensions.y, jitter);
 
-        buffer_data.jitter = jitter * jitter_scale;
+        bufferData.jitter = jitter * jitterScale;
 
-        g_engine->GetRenderData()->cameras->MarkDirty(m_buffer_index);
+        g_renderGlobalState->gpuBuffers[GRB_CAMERAS]->MarkDirty(m_bufferIndex);
     }
 }
 
 #pragma endregion RenderCamera
 
-namespace renderer {
-
 HYP_DESCRIPTOR_CBUFF(Global, CamerasBuffer, 1, sizeof(CameraShaderData), true);
 
-} // namespace renderer
 } // namespace hyperion

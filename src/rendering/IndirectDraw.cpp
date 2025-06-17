@@ -3,7 +3,7 @@
 #include <rendering/IndirectDraw.hpp>
 #include <rendering/DrawCall.hpp>
 #include <rendering/RenderMesh.hpp>
-#include <rendering/ShaderGlobals.hpp>
+#include <rendering/RenderGlobalState.hpp>
 #include <rendering/DepthPyramidRenderer.hpp>
 #include <rendering/RenderScene.hpp>
 #include <rendering/RenderCamera.hpp>
@@ -12,11 +12,11 @@
 #include <rendering/RenderWorld.hpp>
 #include <rendering/RenderView.hpp>
 #include <rendering/Deferred.hpp>
-#include <rendering/RenderState.hpp>
+#include <rendering/backend/RenderBackend.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RendererComputePipeline.hpp>
-#include <rendering/backend/RendererBuffer.hpp>
+#include <rendering/backend/RendererGpuBuffer.hpp>
 #include <rendering/backend/RendererHelpers.hpp>
 
 #include <scene/Mesh.hpp>
@@ -25,168 +25,158 @@
 
 #include <core/profiling/ProfileScope.hpp>
 
-#include <Engine.hpp>
+#include <EngineGlobals.hpp>
 
 namespace hyperion {
 
 static bool ResizeBuffer(
     FrameBase* frame,
-    const GPUBufferRef& buffer,
-    SizeType new_buffer_size)
+    const GpuBufferRef& buffer,
+    SizeType newBufferSize)
 {
-    if constexpr (IndirectDrawState::use_next_pow2_size)
+    if constexpr (IndirectDrawState::useNextPow2Size)
     {
-        new_buffer_size = MathUtil::NextPowerOf2(new_buffer_size);
+        newBufferSize = MathUtil::NextPowerOf2(newBufferSize);
     }
 
-    bool size_changed = false;
+    bool sizeChanged = false;
 
-    HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(new_buffer_size, &size_changed));
+    HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(newBufferSize, &sizeChanged));
 
-    return size_changed;
+    return sizeChanged;
 }
 
 static bool ResizeIndirectDrawCommandsBuffer(
     FrameBase* frame,
-    uint32 num_draw_commands,
-    const GPUBufferRef& indirect_buffer,
-    const GPUBufferRef& staging_buffer)
+    uint32 numDrawCommands,
+    const GpuBufferRef& indirectBuffer,
+    const GpuBufferRef& stagingBuffer)
 {
-    const bool was_created_or_resized = ResizeBuffer(
+    const bool wasCreatedOrResized = ResizeBuffer(
         frame,
-        indirect_buffer,
-        num_draw_commands * sizeof(IndirectDrawCommand));
+        indirectBuffer,
+        numDrawCommands * sizeof(IndirectDrawCommand));
 
-    if (!was_created_or_resized)
+    if (!wasCreatedOrResized)
     {
         return false;
     }
 
     // upload zeros to the buffer using a staging buffer.
-    if (!staging_buffer->IsCreated())
+    if (!stagingBuffer->IsCreated())
     {
-        HYPERION_ASSERT_RESULT(staging_buffer->Create());
+        HYPERION_ASSERT_RESULT(stagingBuffer->Create());
     }
 
-    HYPERION_ASSERT_RESULT(staging_buffer->EnsureCapacity(indirect_buffer->Size()));
+    HYPERION_ASSERT_RESULT(stagingBuffer->EnsureCapacity(indirectBuffer->Size()));
 
-    staging_buffer->Memset(staging_buffer->Size(), 0);
+    stagingBuffer->Memset(stagingBuffer->Size(), 0);
 
-    frame->GetCommandList().Add<InsertBarrier>(
-        staging_buffer,
-        renderer::ResourceState::COPY_SRC);
+    frame->GetCommandList().Add<InsertBarrier>(stagingBuffer, RS_COPY_SRC);
+    frame->GetCommandList().Add<InsertBarrier>(indirectBuffer, RS_COPY_DST);
 
-    frame->GetCommandList().Add<InsertBarrier>(
-        indirect_buffer,
-        renderer::ResourceState::COPY_DST);
+    frame->GetCommandList().Add<CopyBuffer>(stagingBuffer, indirectBuffer, stagingBuffer->Size());
 
-    frame->GetCommandList().Add<CopyBuffer>(
-        staging_buffer,
-        indirect_buffer,
-        staging_buffer->Size());
-
-    frame->GetCommandList().Add<InsertBarrier>(
-        indirect_buffer,
-        renderer::ResourceState::INDIRECT_ARG);
+    frame->GetCommandList().Add<InsertBarrier>(indirectBuffer, RS_INDIRECT_ARG);
 
     return true;
 }
 
 static bool ResizeInstancesBuffer(
     FrameBase* frame,
-    uint32 num_object_instances,
-    const GPUBufferRef& instance_buffer,
-    const GPUBufferRef& staging_buffer)
+    uint32 numObjectInstances,
+    const GpuBufferRef& instanceBuffer,
+    const GpuBufferRef& stagingBuffer)
 {
-    const bool was_created_or_resized = ResizeBuffer(
+    const bool wasCreatedOrResized = ResizeBuffer(
         frame,
-        instance_buffer,
-        num_object_instances * sizeof(ObjectInstance));
+        instanceBuffer,
+        numObjectInstances * sizeof(ObjectInstance));
 
-    if (was_created_or_resized)
+    if (wasCreatedOrResized)
     {
-        instance_buffer->Memset(instance_buffer->Size(), 0);
+        instanceBuffer->Memset(instanceBuffer->Size(), 0);
     }
 
-    return was_created_or_resized;
+    return wasCreatedOrResized;
 }
 
 static bool ResizeIfNeeded(
     FrameBase* frame,
-    const FixedArray<GPUBufferRef, max_frames_in_flight>& indirect_buffers,
-    const FixedArray<GPUBufferRef, max_frames_in_flight>& instance_buffers,
-    const FixedArray<GPUBufferRef, max_frames_in_flight>& staging_buffers,
-    uint32 num_draw_commands,
-    uint32 num_object_instances,
-    uint8 dirty_bits)
+    const FixedArray<GpuBufferRef, maxFramesInFlight>& indirectBuffers,
+    const FixedArray<GpuBufferRef, maxFramesInFlight>& instanceBuffers,
+    const FixedArray<GpuBufferRef, maxFramesInFlight>& stagingBuffers,
+    uint32 numDrawCommands,
+    uint32 numObjectInstances,
+    uint8 dirtyBits)
 {
-    bool resize_happened = false;
+    bool resizeHappened = false;
 
-    const GPUBufferRef& indirect_buffer = indirect_buffers[frame->GetFrameIndex()];
-    const GPUBufferRef& instance_buffer = instance_buffers[frame->GetFrameIndex()];
-    const GPUBufferRef& staging_buffer = staging_buffers[frame->GetFrameIndex()];
+    const GpuBufferRef& indirectBuffer = indirectBuffers[frame->GetFrameIndex()];
+    const GpuBufferRef& instanceBuffer = instanceBuffers[frame->GetFrameIndex()];
+    const GpuBufferRef& stagingBuffer = stagingBuffers[frame->GetFrameIndex()];
 
-    if ((dirty_bits & (1u << frame->GetFrameIndex())) || !indirect_buffers[frame->GetFrameIndex()].IsValid())
+    if ((dirtyBits & (1u << frame->GetFrameIndex())) || !indirectBuffers[frame->GetFrameIndex()].IsValid())
     {
-        resize_happened |= ResizeIndirectDrawCommandsBuffer(frame, num_draw_commands, indirect_buffer, staging_buffer);
+        resizeHappened |= ResizeIndirectDrawCommandsBuffer(frame, numDrawCommands, indirectBuffer, stagingBuffer);
     }
 
-    if ((dirty_bits & (1u << frame->GetFrameIndex())) || !instance_buffers[frame->GetFrameIndex()].IsValid())
+    if ((dirtyBits & (1u << frame->GetFrameIndex())) || !instanceBuffers[frame->GetFrameIndex()].IsValid())
     {
-        resize_happened |= ResizeInstancesBuffer(frame, num_object_instances, instance_buffer, staging_buffer);
+        resizeHappened |= ResizeInstancesBuffer(frame, numObjectInstances, instanceBuffer, stagingBuffer);
     }
 
-    return resize_happened;
+    return resizeHappened;
 }
 
 #pragma region Render commands
 
 struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
-    : renderer::RenderCommand
+    : RenderCommand
 {
-    FixedArray<GPUBufferRef, max_frames_in_flight> indirect_buffers;
-    FixedArray<GPUBufferRef, max_frames_in_flight> instance_buffers;
-    FixedArray<GPUBufferRef, max_frames_in_flight> staging_buffers;
+    FixedArray<GpuBufferRef, maxFramesInFlight> indirectBuffers;
+    FixedArray<GpuBufferRef, maxFramesInFlight> instanceBuffers;
+    FixedArray<GpuBufferRef, maxFramesInFlight> stagingBuffers;
 
     RENDER_COMMAND(CreateIndirectDrawStateBuffers)(
-        const FixedArray<GPUBufferRef, max_frames_in_flight>& indirect_buffers,
-        const FixedArray<GPUBufferRef, max_frames_in_flight>& instance_buffers,
-        const FixedArray<GPUBufferRef, max_frames_in_flight>& staging_buffers)
-        : indirect_buffers(indirect_buffers),
-          instance_buffers(instance_buffers),
-          staging_buffers(staging_buffers)
+        const FixedArray<GpuBufferRef, maxFramesInFlight>& indirectBuffers,
+        const FixedArray<GpuBufferRef, maxFramesInFlight>& instanceBuffers,
+        const FixedArray<GpuBufferRef, maxFramesInFlight>& stagingBuffers)
+        : indirectBuffers(indirectBuffers),
+          instanceBuffers(instanceBuffers),
+          stagingBuffers(stagingBuffers)
     {
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            AssertThrow(this->indirect_buffers[frame_index].IsValid());
-            AssertThrow(this->instance_buffers[frame_index].IsValid());
-            AssertThrow(this->staging_buffers[frame_index].IsValid());
+            AssertThrow(this->indirectBuffers[frameIndex].IsValid());
+            AssertThrow(this->instanceBuffers[frameIndex].IsValid());
+            AssertThrow(this->stagingBuffers[frameIndex].IsValid());
         }
     }
 
     virtual ~RENDER_COMMAND(CreateIndirectDrawStateBuffers)() override
     {
-        SafeRelease(std::move(indirect_buffers));
-        SafeRelease(std::move(instance_buffers));
-        SafeRelease(std::move(staging_buffers));
+        SafeRelease(std::move(indirectBuffers));
+        SafeRelease(std::move(instanceBuffers));
+        SafeRelease(std::move(stagingBuffers));
     }
 
     virtual RendererResult operator()() override
     {
-        renderer::SingleTimeCommands commands;
+        SingleTimeCommands commands;
 
-        commands.Push([this](RHICommandList& cmd)
+        commands.Push([this](CmdList& cmd)
             {
-                for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+                for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
                 {
-                    FrameRef frame = g_rendering_api->MakeFrame(frame_index);
+                    FrameRef frame = g_renderBackend->MakeFrame(frameIndex);
 
-                    if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initial_count, indirect_buffers[frame_index], staging_buffers[frame_index]))
+                    if (!ResizeIndirectDrawCommandsBuffer(frame, IndirectDrawState::initialCount, indirectBuffers[frameIndex], stagingBuffers[frameIndex]))
                     {
                         HYP_FAIL("Failed to create indirect draw commands buffer!");
                     }
 
-                    if (!ResizeInstancesBuffer(frame, IndirectDrawState::initial_count, instance_buffers[frame_index], staging_buffers[frame_index]))
+                    if (!ResizeInstancesBuffer(frame, IndirectDrawState::initialCount, instanceBuffers[frameIndex], stagingBuffers[frameIndex]))
                     {
                         HYP_FAIL("Failed to create instances buffer!");
                     }
@@ -206,363 +196,353 @@ struct RENDER_COMMAND(CreateIndirectDrawStateBuffers)
 #pragma region IndirectDrawState
 
 IndirectDrawState::IndirectDrawState()
-    : m_num_draw_commands(0),
-      m_dirty_bits(0x3)
+    : m_numDrawCommands(0),
+      m_dirtyBits(0x3)
 {
     // Allocate used buffers so they can be set in descriptor sets
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        m_indirect_buffers[frame_index] = g_rendering_api->MakeGPUBuffer(renderer::GPUBufferType::INDIRECT_ARGS_BUFFER, sizeof(IndirectDrawCommand));
-        m_instance_buffers[frame_index] = g_rendering_api->MakeGPUBuffer(renderer::GPUBufferType::STORAGE_BUFFER, sizeof(ObjectInstance));
-        m_staging_buffers[frame_index] = g_rendering_api->MakeGPUBuffer(renderer::GPUBufferType::STAGING_BUFFER, sizeof(IndirectDrawCommand));
+        m_indirectBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::INDIRECT_ARGS_BUFFER, sizeof(IndirectDrawCommand));
+        m_instanceBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::SSBO, sizeof(ObjectInstance));
+        m_stagingBuffers[frameIndex] = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, sizeof(IndirectDrawCommand));
     }
 }
 
 IndirectDrawState::~IndirectDrawState()
 {
+    SafeRelease(std::move(m_indirectBuffers));
+    SafeRelease(std::move(m_instanceBuffers));
+    SafeRelease(std::move(m_stagingBuffers));
 }
 
 void IndirectDrawState::Create()
 {
     PUSH_RENDER_COMMAND(
         CreateIndirectDrawStateBuffers,
-        m_indirect_buffers,
-        m_instance_buffers,
-        m_staging_buffers);
+        m_indirectBuffers,
+        m_instanceBuffers,
+        m_stagingBuffers);
 }
 
-void IndirectDrawState::Destroy()
-{
-    SafeRelease(std::move(m_indirect_buffers));
-    SafeRelease(std::move(m_instance_buffers));
-    SafeRelease(std::move(m_staging_buffers));
-}
-
-void IndirectDrawState::PushDrawCall(const DrawCall& draw_call, DrawCommandData& out)
+void IndirectDrawState::PushDrawCall(const DrawCall& drawCall, DrawCommandData& out)
 {
     out = {};
 
-    const uint32 draw_command_index = m_num_draw_commands++;
+    const uint32 drawCommandIndex = m_numDrawCommands++;
 
-    ObjectInstance& instance = m_object_instances.EmplaceBack();
-    instance.entity_id = draw_call.entity_id.Value();
-    instance.draw_command_index = draw_command_index;
-    instance.batch_index = ~0u;
+    ObjectInstance& instance = m_objectInstances.EmplaceBack();
+    instance.entityId = drawCall.entityId.Value();
+    instance.drawCommandIndex = drawCommandIndex;
+    instance.batchIndex = ~0u;
 
-    out.draw_command_index = draw_command_index;
+    out.drawCommandIndex = drawCommandIndex;
 
-    if (m_draw_commands.Size() < m_num_draw_commands)
+    if (m_drawCommands.Size() < m_numDrawCommands)
     {
-        m_draw_commands.Resize(m_num_draw_commands);
+        m_drawCommands.Resize(m_numDrawCommands);
     }
 
-    draw_call.render_mesh->PopulateIndirectDrawCommand(m_draw_commands[draw_command_index]);
+    drawCall.renderMesh->PopulateIndirectDrawCommand(m_drawCommands[drawCommandIndex]);
 
-    m_dirty_bits |= 0x3;
+    m_dirtyBits |= 0x3;
 }
 
-void IndirectDrawState::PushInstancedDrawCall(const InstancedDrawCall& draw_call, DrawCommandData& out)
+void IndirectDrawState::PushInstancedDrawCall(const InstancedDrawCall& drawCall, DrawCommandData& out)
 {
     out = {};
 
-    const uint32 draw_command_index = m_num_draw_commands++;
+    const uint32 drawCommandIndex = m_numDrawCommands++;
 
-    for (uint32 index = 0; index < draw_call.count; index++)
+    for (uint32 index = 0; index < drawCall.count; index++)
     {
-        ObjectInstance& instance = m_object_instances.EmplaceBack();
-        instance.entity_id = draw_call.entity_ids[index].Value();
-        instance.draw_command_index = draw_command_index;
-        instance.batch_index = draw_call.batch->batch_index;
+        ObjectInstance& instance = m_objectInstances.EmplaceBack();
+        instance.entityId = drawCall.entityIds[index].Value();
+        instance.drawCommandIndex = drawCommandIndex;
+        instance.batchIndex = drawCall.batch->batchIndex;
     }
 
-    out.draw_command_index = draw_command_index;
+    out.drawCommandIndex = drawCommandIndex;
 
-    if (m_draw_commands.Size() < m_num_draw_commands)
+    if (m_drawCommands.Size() < m_numDrawCommands)
     {
-        m_draw_commands.Resize(m_num_draw_commands);
+        m_drawCommands.Resize(m_numDrawCommands);
     }
 
-    draw_call.render_mesh->PopulateIndirectDrawCommand(m_draw_commands[draw_command_index]);
+    drawCall.renderMesh->PopulateIndirectDrawCommand(m_drawCommands[drawCommandIndex]);
 
-    m_dirty_bits |= 0x3;
+    m_dirtyBits |= 0x3;
 }
 
 void IndirectDrawState::ResetDrawState()
 {
-    // assume render thread
+    Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    m_num_draw_commands = 0;
+    m_numDrawCommands = 0;
 
-    m_object_instances.Clear();
-    m_draw_commands.Clear();
+    m_objectInstances.Clear();
+    m_drawCommands.Clear();
 
-    m_dirty_bits |= 0x3;
+    m_dirtyBits |= 0x3;
 }
 
-void IndirectDrawState::UpdateBufferData(FrameBase* frame, bool* out_was_resized)
+void IndirectDrawState::UpdateBufferData(FrameBase* frame, bool* outWasResized)
 {
-    // assume render thread
+    Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    if ((*out_was_resized = ResizeIfNeeded(
+    if ((*outWasResized = ResizeIfNeeded(
              frame,
-             m_indirect_buffers,
-             m_instance_buffers,
-             m_staging_buffers,
-             m_num_draw_commands,
-             m_object_instances.Size(),
-             m_dirty_bits)))
+             m_indirectBuffers,
+             m_instanceBuffers,
+             m_stagingBuffers,
+             m_numDrawCommands,
+             m_objectInstances.Size(),
+             m_dirtyBits)))
     {
-        m_dirty_bits |= (1u << frame_index);
+        m_dirtyBits |= (1u << frameIndex);
     }
 
-    if (!(m_dirty_bits & (1u << frame_index)))
+    if (!(m_dirtyBits & (1u << frameIndex)))
     {
         return;
     }
 
     // fill instances buffer with data of the meshes
     {
-        AssertThrow(m_staging_buffers[frame_index].IsValid());
-        AssertThrow(m_staging_buffers[frame_index]->Size() >= sizeof(IndirectDrawCommand) * m_draw_commands.Size());
+        AssertThrow(m_stagingBuffers[frameIndex].IsValid());
+        AssertThrow(m_stagingBuffers[frameIndex]->Size() >= sizeof(IndirectDrawCommand) * m_drawCommands.Size());
 
-        m_staging_buffers[frame_index]->Copy(
-            m_draw_commands.Size() * sizeof(IndirectDrawCommand),
-            m_draw_commands.Data());
-
-        frame->GetCommandList().Add<InsertBarrier>(
-            m_staging_buffers[frame_index],
-            renderer::ResourceState::COPY_SRC);
+        m_stagingBuffers[frameIndex]->Copy(
+            m_drawCommands.Size() * sizeof(IndirectDrawCommand),
+            m_drawCommands.Data());
 
         frame->GetCommandList().Add<InsertBarrier>(
-            m_indirect_buffers[frame_index],
-            renderer::ResourceState::COPY_DST);
+            m_stagingBuffers[frameIndex],
+            RS_COPY_SRC);
+
+        frame->GetCommandList().Add<InsertBarrier>(
+            m_indirectBuffers[frameIndex],
+            RS_COPY_DST);
 
         frame->GetCommandList().Add<CopyBuffer>(
-            m_staging_buffers[frame_index],
-            m_indirect_buffers[frame_index],
-            m_staging_buffers[frame_index]->Size());
+            m_stagingBuffers[frameIndex],
+            m_indirectBuffers[frameIndex],
+            m_stagingBuffers[frameIndex]->Size());
 
         frame->GetCommandList().Add<InsertBarrier>(
-            m_indirect_buffers[frame_index],
-            renderer::ResourceState::INDIRECT_ARG);
+            m_indirectBuffers[frameIndex],
+            RS_INDIRECT_ARG);
     }
 
-    AssertThrow(m_instance_buffers[frame_index]->Size() >= m_object_instances.Size() * sizeof(ObjectInstance));
+    AssertThrow(m_instanceBuffers[frameIndex]->Size() >= m_objectInstances.Size() * sizeof(ObjectInstance));
 
     // update data for object instances (cpu - gpu)
-    m_instance_buffers[frame_index]->Copy(
-        m_object_instances.Size() * sizeof(ObjectInstance),
-        m_object_instances.Data());
+    m_instanceBuffers[frameIndex]->Copy(
+        m_objectInstances.Size() * sizeof(ObjectInstance),
+        m_objectInstances.Data());
 
-    m_dirty_bits &= ~(1u << frame_index);
+    m_dirtyBits &= ~(1u << frameIndex);
 }
 
 #pragma endregion IndirectDrawState
 
 #pragma region IndirectRenderer
 
-IndirectRenderer::IndirectRenderer(DrawCallCollection* draw_call_collection)
-    : m_draw_call_collection(draw_call_collection),
-      m_cached_cull_data_updated_bits(0x0)
+IndirectRenderer::IndirectRenderer()
+    : m_cachedCullDataUpdatedBits(0x0)
 {
-    AssertThrow(m_draw_call_collection != nullptr);
 }
 
-IndirectRenderer::~IndirectRenderer() = default;
-
-void IndirectRenderer::Create()
+IndirectRenderer::~IndirectRenderer()
 {
-    m_indirect_draw_state.Create();
+    SafeRelease(std::move(m_objectVisibility));
+}
 
-    ShaderRef object_visibility_shader = g_shader_manager->GetOrCreate(NAME("ObjectVisibility"));
-    AssertThrow(object_visibility_shader.IsValid());
+void IndirectRenderer::Create(IDrawCallCollectionImpl* impl)
+{
+    m_indirectDrawState.Create();
 
-    const renderer::DescriptorTableDeclaration& descriptor_table_decl = object_visibility_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    ShaderRef objectVisibilityShader = g_shaderManager->GetOrCreate(NAME("ObjectVisibility"));
+    AssertThrow(objectVisibilityShader.IsValid());
 
-    DescriptorTableRef descriptor_table = g_rendering_api->MakeDescriptorTable(&descriptor_table_decl);
+    const DescriptorTableDeclaration& descriptorTableDecl = objectVisibilityShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-    AssertThrow(m_draw_call_collection != nullptr);
-    AssertThrow(m_draw_call_collection->GetImpl() != nullptr);
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    GPUBufferHolderBase* entity_instance_batches = m_draw_call_collection->GetImpl()->GetEntityInstanceBatchHolder();
-    const SizeType batch_sizeof = m_draw_call_collection->GetImpl()->GetBatchSizeOf();
+    AssertThrow(impl != nullptr);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
+    const SizeType batchSizeof = impl->GetBatchSizeOf();
+
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frame_index);
-        AssertThrow(descriptor_set != nullptr);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frameIndex);
+        AssertThrow(descriptorSet != nullptr);
 
-        auto* entity_instance_batches_buffer_element = descriptor_set->GetLayout().GetElement(NAME("EntityInstanceBatchesBuffer"));
-        AssertThrow(entity_instance_batches_buffer_element != nullptr);
+        auto* entityInstanceBatchesBufferElement = descriptorSet->GetLayout().GetElement(NAME("EntityInstanceBatchesBuffer"));
+        AssertThrow(entityInstanceBatchesBufferElement != nullptr);
 
-        if (entity_instance_batches_buffer_element->size != ~0u)
+        if (entityInstanceBatchesBufferElement->size != ~0u)
         {
-            const SizeType entity_instance_batches_buffer_size = entity_instance_batches_buffer_element->size;
-            const SizeType size_mod = entity_instance_batches_buffer_size % batch_sizeof;
+            const SizeType entityInstanceBatchesBufferSize = entityInstanceBatchesBufferElement->size;
+            const SizeType sizeMod = entityInstanceBatchesBufferSize % batchSizeof;
 
-            AssertThrowMsg(size_mod == 0,
+            AssertThrowMsg(sizeMod == 0,
                 "EntityInstanceBatchesBuffer descriptor has size %llu but DrawCallCollection has batch struct size of %llu",
-                entity_instance_batches_buffer_size,
-                batch_sizeof);
+                entityInstanceBatchesBufferSize,
+                batchSizeof);
         }
 
-        descriptor_set->SetElement(NAME("ObjectInstancesBuffer"), m_indirect_draw_state.GetInstanceBuffer(frame_index));
-        descriptor_set->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirect_draw_state.GetIndirectBuffer(frame_index));
-        descriptor_set->SetElement(NAME("EntityInstanceBatchesBuffer"), entity_instance_batches->GetBuffer(frame_index));
+        descriptorSet->SetElement(NAME("ObjectInstancesBuffer"), m_indirectDrawState.GetInstanceBuffer(frameIndex));
+        descriptorSet->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirectDrawState.GetIndirectBuffer(frameIndex));
+        descriptorSet->SetElement(NAME("EntityInstanceBatchesBuffer"), entityInstanceBatches->GetBuffer(frameIndex));
     }
 
-    DeferCreate(descriptor_table);
+    DeferCreate(descriptorTable);
 
-    m_object_visibility = g_rendering_api->MakeComputePipeline(
-        object_visibility_shader,
-        descriptor_table);
+    m_objectVisibility = g_renderBackend->MakeComputePipeline(
+        objectVisibilityShader,
+        descriptorTable);
 
     // use DeferCreate because our Shader might not be ready yet
-    DeferCreate(m_object_visibility);
+    DeferCreate(m_objectVisibility);
 }
 
-void IndirectRenderer::Destroy()
-{
-    SafeRelease(std::move(m_object_visibility));
-
-    m_indirect_draw_state.Destroy();
-}
-
-void IndirectRenderer::PushDrawCallsToIndirectState()
+void IndirectRenderer::PushDrawCallsToIndirectState(DrawCallCollection& drawCallCollection)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    for (DrawCall& draw_call : m_draw_call_collection->GetDrawCalls())
+    for (DrawCall& drawCall : drawCallCollection.drawCalls)
     {
-        DrawCommandData draw_command_data;
-        m_indirect_draw_state.PushDrawCall(draw_call, draw_command_data);
+        DrawCommandData drawCommandData;
+        m_indirectDrawState.PushDrawCall(drawCall, drawCommandData);
 
-        draw_call.draw_command_index = draw_command_data.draw_command_index;
+        drawCall.drawCommandIndex = drawCommandData.drawCommandIndex;
     }
 
-    for (InstancedDrawCall& draw_call : m_draw_call_collection->GetInstancedDrawCalls())
+    for (InstancedDrawCall& drawCall : drawCallCollection.instancedDrawCalls)
     {
-        DrawCommandData draw_command_data;
-        m_indirect_draw_state.PushInstancedDrawCall(draw_call, draw_command_data);
+        DrawCommandData drawCommandData;
+        m_indirectDrawState.PushInstancedDrawCall(drawCall, drawCommandData);
 
-        draw_call.draw_command_index = draw_command_data.draw_command_index;
+        drawCall.drawCommandIndex = drawCommandData.drawCommandIndex;
     }
 }
 
-void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const RenderSetup& render_setup)
+void IndirectRenderer::ExecuteCullShaderInBatches(FrameBase* frame, const RenderSetup& renderSetup)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    AssertDebug(render_setup.IsValid());
-    AssertDebug(render_setup.HasView());
+    AssertDebug(renderSetup.IsValid());
+    AssertDebug(renderSetup.HasView());
+    AssertDebug(renderSetup.passData != nullptr);
 
-    AssertThrow(render_setup.view->GetCullData().depth_pyramid_image_view != nullptr);
+    AssertThrow(renderSetup.passData->cullData.depthPyramidImageView != nullptr);
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index).IsValid());
-    AssertThrow(m_indirect_draw_state.GetIndirectBuffer(frame_index)->Size() != 0);
+    AssertThrow(m_indirectDrawState.GetIndirectBuffer(frameIndex).IsValid());
+    AssertThrow(m_indirectDrawState.GetIndirectBuffer(frameIndex)->Size() != 0);
 
-    const SizeType num_instances = m_indirect_draw_state.GetInstances().Size();
-    const uint32 num_batches = (uint32(num_instances) / IndirectDrawState::batch_size) + 1;
+    const SizeType numInstances = m_indirectDrawState.GetInstances().Size();
+    const uint32 numBatches = (uint32(numInstances) / IndirectDrawState::batchSize) + 1;
 
-    if (num_instances == 0)
+    if (numInstances == 0)
     {
         return;
     }
 
     {
-        bool was_buffer_resized = false;
-        m_indirect_draw_state.UpdateBufferData(frame, &was_buffer_resized);
+        bool wasBufferResized = false;
+        m_indirectDrawState.UpdateBufferData(frame, &wasBufferResized);
 
-        if (was_buffer_resized)
+        if (wasBufferResized)
         {
             RebuildDescriptors(frame);
         }
     }
 
-    if (m_cached_cull_data != render_setup.view->GetCullData())
+    if (m_cachedCullData != renderSetup.passData->cullData)
     {
-        m_cached_cull_data = render_setup.view->GetCullData();
-        m_cached_cull_data_updated_bits = 0xFF;
+        m_cachedCullData = renderSetup.passData->cullData;
+        m_cachedCullDataUpdatedBits = 0xFF;
     }
 
-    // if (m_cached_cull_data_updated_bits & (1u << frame_index)) {
-    //     m_descriptor_sets[frame_index]->GetDescriptor(6)
-    //         ->SetElementSRV(0, m_cached_cull_data.depth_pyramid_image_view);
+    // if (m_cachedCullDataUpdatedBits & (1u << frameIndex)) {
+    //     m_descriptorSets[frameIndex]->GetDescriptor(6)
+    //         ->SetElementSRV(0, m_cachedCullData.depthPyramidImageView);
 
-    //     m_descriptor_sets[frame_index]->ApplyUpdates();
+    //     m_descriptorSets[frameIndex]->ApplyUpdates();
 
-    //     m_cached_cull_data_updated_bits &= ~(1u << frame_index);
+    //     m_cachedCullDataUpdatedBits &= ~(1u << frameIndex);
     // }
 
     frame->GetCommandList().Add<BindDescriptorTable>(
-        m_object_visibility->GetDescriptorTable(),
-        m_object_visibility,
+        m_objectVisibility->GetDescriptorTable(),
+        m_objectVisibility,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) } } } },
-        frame_index);
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) } } } },
+        frameIndex);
 
-    const uint32 view_descriptor_set_index = m_object_visibility->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+    const uint32 viewDescriptorSetIndex = m_objectVisibility->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
 
-    if (view_descriptor_set_index != ~0u)
+    if (viewDescriptorSetIndex != ~0u)
     {
         frame->GetCommandList().Add<BindDescriptorSet>(
-            render_setup.view->GetDescriptorSets()[frame_index],
-            m_object_visibility,
+            renderSetup.passData->descriptorSets[frameIndex],
+            m_objectVisibility,
             ArrayMap<Name, uint32> {},
-            view_descriptor_set_index);
+            viewDescriptorSetIndex);
     }
 
     frame->GetCommandList().Add<InsertBarrier>(
-        m_indirect_draw_state.GetIndirectBuffer(frame_index),
-        renderer::ResourceState::INDIRECT_ARG);
+        m_indirectDrawState.GetIndirectBuffer(frameIndex),
+        RS_INDIRECT_ARG);
 
     struct
     {
-        uint32 batch_offset;
-        uint32 num_instances;
-        Vec2u depth_pyramid_dimensions;
-    } push_constants;
+        uint32 batchOffset;
+        uint32 numInstances;
+        Vec2u depthPyramidDimensions;
+    } pushConstants;
 
-    push_constants.batch_offset = 0;
-    push_constants.num_instances = num_instances;
-    push_constants.depth_pyramid_dimensions = render_setup.view->GetDepthPyramidRenderer()->GetExtent();
+    pushConstants.batchOffset = 0;
+    pushConstants.numInstances = numInstances;
+    pushConstants.depthPyramidDimensions = static_cast<DeferredPassData*>(renderSetup.passData)->depthPyramidRenderer->GetExtent();
 
-    m_object_visibility->SetPushConstants(&push_constants, sizeof(push_constants));
+    m_objectVisibility->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    frame->GetCommandList().Add<BindComputePipeline>(m_object_visibility);
+    frame->GetCommandList().Add<BindComputePipeline>(m_objectVisibility);
 
     frame->GetCommandList().Add<DispatchCompute>(
-        m_object_visibility,
-        Vec3u { num_batches, 1, 1 });
+        m_objectVisibility,
+        Vec3u { numBatches, 1, 1 });
 
     frame->GetCommandList().Add<InsertBarrier>(
-        m_indirect_draw_state.GetIndirectBuffer(frame_index),
-        renderer::ResourceState::INDIRECT_ARG);
+        m_indirectDrawState.GetIndirectBuffer(frameIndex),
+        RS_INDIRECT_ARG);
 }
 
 void IndirectRenderer::RebuildDescriptors(FrameBase* frame)
 {
     HYP_SCOPE;
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    const DescriptorTableRef& descriptor_table = m_object_visibility->GetDescriptorTable();
+    const DescriptorTableRef& descriptorTable = m_objectVisibility->GetDescriptorTable();
 
-    const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frame_index);
-    AssertThrow(descriptor_set != nullptr);
+    const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("ObjectVisibilityDescriptorSet"), frameIndex);
+    AssertThrow(descriptorSet != nullptr);
 
-    descriptor_set->SetElement(NAME("ObjectInstancesBuffer"), m_indirect_draw_state.GetInstanceBuffer(frame_index));
-    descriptor_set->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirect_draw_state.GetIndirectBuffer(frame_index));
+    descriptorSet->SetElement(NAME("ObjectInstancesBuffer"), m_indirectDrawState.GetInstanceBuffer(frameIndex));
+    descriptorSet->SetElement(NAME("IndirectDrawCommandsBuffer"), m_indirectDrawState.GetIndirectBuffer(frameIndex));
 
-    descriptor_set->Update();
+    descriptorSet->Update();
 }
 
 #pragma endregion IndirectRenderer

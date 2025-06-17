@@ -15,34 +15,31 @@
 
 namespace hyperion {
 
-HYP_CLASS()
 class HYP_API StreamedTextureData final : public StreamedDataBase
 {
-    HYP_OBJECT_BODY(StreamedTextureData);
-
-    StreamedTextureData(StreamedDataState initial_state, TextureData texture_data, ResourceHandle& out_resource_handle);
+    StreamedTextureData(StreamedDataState initialState, TextureData textureData, ResourceHandle& outResourceHandle);
 
 public:
     StreamedTextureData();
-    StreamedTextureData(const TextureData& texture_data, ResourceHandle& out_resource_handle);
-    StreamedTextureData(TextureData&& texture_data, ResourceHandle& out_resource_handle);
+    StreamedTextureData(const TextureData& textureData, ResourceHandle& outResourceHandle);
+    StreamedTextureData(TextureData&& textureData, ResourceHandle& outResourceHandle);
 
     virtual ~StreamedTextureData() override = default;
 
     const TextureData& GetTextureData() const;
-    void SetTextureData(TextureData&& texture_data);
+    void SetTextureData(TextureData&& textureData);
 
     const TextureDesc& GetTextureDesc() const;
-    void SetTextureDesc(const TextureDesc& texture_desc);
+    void SetTextureDesc(const TextureDesc& textureDesc);
 
     HYP_FORCE_INLINE SizeType GetBufferSize() const
     {
-        return m_buffer_size;
+        return m_bufferSize;
     }
 
     virtual HashCode GetDataHashCode() const override
     {
-        return m_streamed_data ? m_streamed_data->GetDataHashCode() : HashCode(0);
+        return m_streamedData ? m_streamedData->GetDataHashCode() : HashCode(0);
     }
 
 protected:
@@ -52,13 +49,13 @@ protected:
     virtual void Unpage_Internal() override;
 
 private:
-    void LoadTextureData(const ByteBuffer& byte_buffer) const;
+    void LoadTextureData(const ByteBuffer& byteBuffer) const;
 
-    RC<StreamedDataBase> m_streamed_data;
+    RC<StreamedDataBase> m_streamedData;
 
-    mutable Optional<TextureData> m_texture_data;
-    mutable TextureDesc m_texture_desc;
-    mutable SizeType m_buffer_size;
+    mutable Optional<TextureData> m_textureData;
+    mutable TextureDesc m_textureDesc;
+    mutable SizeType m_bufferSize;
 };
 
 } // namespace hyperion

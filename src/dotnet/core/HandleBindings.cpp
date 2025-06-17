@@ -7,25 +7,25 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void Handle_Get(HypObjectBase* ptr, ValueStorage<HypData>* out_hyp_data)
+    HYP_EXPORT void Handle_Get(HypObjectBase* ptr, ValueStorage<HypData>* outHypData)
     {
-        AssertThrow(out_hyp_data != nullptr);
+        AssertThrow(outHypData != nullptr);
         AssertThrow(ptr != nullptr);
 
-        out_hyp_data->Construct(AnyRef(ptr->GetObjectHeader_Internal()->container->GetObjectTypeID(), ptr));
+        outHypData->Construct(AnyRef(ptr->GetObjectHeader_Internal()->container->GetObjectTypeId(), ptr));
     }
 
-    HYP_EXPORT void Handle_Set(HypData* hyp_data, HypObjectBase** out_ptr)
+    HYP_EXPORT void Handle_Set(HypData* hypData, HypObjectBase** outPtr)
     {
-        AssertThrow(out_ptr != nullptr);
+        AssertThrow(outPtr != nullptr);
 
-        if (hyp_data != nullptr)
+        if (hypData != nullptr)
         {
-            AnyHandle& handle = hyp_data->Get<AnyHandle>();
+            AnyHandle& handle = hypData->Get<AnyHandle>();
 
             if (handle.IsValid())
             {
-                *out_ptr = handle.ptr;
+                *outPtr = handle.ptr;
 
                 (void)handle.Release();
 
@@ -33,7 +33,7 @@ extern "C"
             }
         }
 
-        *out_ptr = nullptr;
+        *outPtr = nullptr;
     }
 
     HYP_EXPORT void Handle_Destruct(HypObjectBase* ptr)
@@ -58,19 +58,19 @@ extern "C"
         return 1;
     }
 
-    HYP_EXPORT void WeakHandle_Set(HypData* hyp_data, HypObjectBase** out_ptr)
+    HYP_EXPORT void WeakHandle_Set(HypData* hypData, HypObjectBase** outPtr)
     {
-        AssertThrow(out_ptr != nullptr);
+        AssertThrow(outPtr != nullptr);
 
-        if (hyp_data != nullptr)
+        if (hypData != nullptr)
         {
-            AnyHandle& handle = hyp_data->Get<AnyHandle>();
+            AnyHandle& handle = hypData->Get<AnyHandle>();
 
             if (handle.IsValid())
             {
                 handle.ptr->GetObjectHeader_Internal()->IncRefWeak();
 
-                *out_ptr = handle.ptr;
+                *outPtr = handle.ptr;
 
                 handle.Reset();
 
@@ -78,7 +78,7 @@ extern "C"
             }
         }
 
-        *out_ptr = nullptr;
+        *outPtr = nullptr;
     }
 
     HYP_EXPORT void WeakHandle_Destruct(HypObjectBase* ptr)

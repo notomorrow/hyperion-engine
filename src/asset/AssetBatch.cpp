@@ -15,79 +15,79 @@ namespace hyperion {
 
 #pragma region AssetBatch
 
-AssetBatch::AssetBatch(AssetManager* asset_manager)
+AssetBatch::AssetBatch(AssetManager* assetManager)
     : TaskBatch(),
-      m_asset_map(MakeUnique<AssetMap>()),
-      m_asset_manager(asset_manager)
+      m_assetMap(MakeUnique<AssetMap>()),
+      m_assetManager(assetManager)
 {
-    AssertThrow(asset_manager != nullptr);
+    AssertThrow(assetManager != nullptr);
 }
 
-void AssetBatch::LoadAsync(uint32 num_batches)
+void AssetBatch::LoadAsync(uint32 numBatches)
 {
     HYP_SCOPE;
 
-    AssertThrowMsg(m_asset_map != nullptr, "AssetBatch is in invalid state");
-    AssertThrowMsg(m_asset_manager != nullptr, "AssetBatch is in invalid state");
+    AssertThrowMsg(m_assetMap != nullptr, "AssetBatch is in invalid state");
+    AssertThrowMsg(m_assetManager != nullptr, "AssetBatch is in invalid state");
 
     // Set pool to use the asset manager's thread pool if one hasn't been set to override it.
     if (!TaskBatch::pool)
     {
-        if (TaskThreadPool* thread_pool = m_asset_manager->GetThreadPool())
+        if (TaskThreadPool* threadPool = m_assetManager->GetThreadPool())
         {
-            pool = thread_pool;
+            pool = threadPool;
         }
     }
 
     m_results.Clear();
 
-    if (m_asset_map->Empty())
+    if (m_assetMap->Empty())
     {
         return;
     }
 
     // partition each proc
-    AssertThrow(m_procs.Size() == m_asset_map->Size());
+    AssertThrow(m_procs.Size() == m_assetMap->Size());
 
-    const uint32 num_items = uint32(m_procs.Size());
+    const uint32 numItems = uint32(m_procs.Size());
 
-    num_batches = MathUtil::Max(num_batches, 1u);
-    num_batches = MathUtil::Min(num_batches, num_items);
+    numBatches = MathUtil::Max(numBatches, 1u);
+    numBatches = MathUtil::Min(numBatches, numItems);
 
-    const uint32 items_per_batch = num_items / num_batches;
+    const uint32 itemsPerBatch = numItems / numBatches;
 
-    m_results.Resize(num_batches);
+    m_results.Resize(numBatches);
 
-    for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+    for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
     {
-        const uint32 offset_index = batch_index * items_per_batch;
+        const uint32 offsetIndex = batchIndex * itemsPerBatch;
 
-        const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
-        AssertThrow(max_index >= offset_index);
+        const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
+        AssertThrow(maxIndex >= offsetIndex);
 
-        Array<UniquePtr<ProcessAssetFunctorBase>, DynamicAllocator> batch_procs;
-        batch_procs.Reserve(max_index - offset_index);
+        Array<UniquePtr<ProcessAssetFunctorBase>, DynamicAllocator> batchProcs;
+        batchProcs.Reserve(maxIndex - offsetIndex);
 
-        for (uint32 i = offset_index; i < max_index; ++i)
+        for (uint32 i = offsetIndex; i < maxIndex; ++i)
         {
             AssertThrow(i < m_procs.Size());
             AssertThrow(m_procs[i] != nullptr);
-            batch_procs.PushBack(std::move(m_procs[i]));
+            batchProcs.PushBack(std::move(m_procs[i]));
         }
 
-        AddTask([this, batch_procs = std::move(batch_procs), batch_index]() mutable -> void
+        AddTask([this, batchProcs = std::move(batchProcs), batchIndex]() mutable -> void
             {
                 HYP_NAMED_SCOPE("Processing assets in batch");
 
-                Array<TResult<void, AssetLoadError>> batch_results;
-                batch_results.Reserve(batch_procs.Size());
+                Array<TResult<void, AssetLoadError>> batchResults;
+                batchResults.Reserve(batchProcs.Size());
 
-                for (auto& proc : batch_procs)
+                for (auto& proc : batchProcs)
                 {
-                    batch_results.PushBack((*proc)(*m_asset_manager, *m_asset_map));
+                    batchResults.PushBack((*proc)(*m_assetManager, *m_assetMap));
                 }
 
-                m_results[batch_index] = std::move(batch_results);
+                m_results[batchIndex] = std::move(batchResults);
             });
     }
 
@@ -95,66 +95,66 @@ void AssetBatch::LoadAsync(uint32 num_batches)
 
     TaskSystem::GetInstance().EnqueueBatch(this);
 
-    m_asset_manager->AddPendingBatch(RefCountedPtrFromThis());
+    m_assetManager->AddPendingBatch(RefCountedPtrFromThis());
 }
 
 AssetMap AssetBatch::AwaitResults()
 {
-    AssertThrowMsg(m_asset_map != nullptr, "AssetBatch is in invalid state");
+    AssertThrowMsg(m_assetMap != nullptr, "AssetBatch is in invalid state");
 
     AwaitCompletion();
 
     // @TODO Handle m_results
 
-    return std::move(*m_asset_map);
+    return std::move(*m_assetMap);
 }
 
 AssetMap AssetBatch::ForceLoad()
 {
-    AssertThrowMsg(m_asset_map != nullptr, "AssetBatch is in invalid state");
+    AssertThrowMsg(m_assetMap != nullptr, "AssetBatch is in invalid state");
 
     for (auto& proc : m_procs)
     {
-        (*proc)(*m_asset_manager, *m_asset_map);
+        (*proc)(*m_assetManager, *m_assetMap);
     }
 
     m_procs.Clear();
 
-    return std::move(*m_asset_map);
+    return std::move(*m_assetMap);
 }
 
 void AssetBatch::Add(const String& key, const String& path)
 {
     AssertThrowMsg(IsCompleted(), "Cannot add assets while loading!");
-    AssertThrowMsg(m_asset_map != nullptr, "AssetBatch is in invalid state");
+    AssertThrowMsg(m_assetMap != nullptr, "AssetBatch is in invalid state");
 
-    if (!m_asset_map->Emplace(key).second)
+    if (!m_assetMap->Emplace(key).second)
     {
         return;
     }
 
-    UniquePtr<ProcessAssetFunctorBase> functor_ptr = m_asset_manager->CreateProcessAssetFunctor(
+    UniquePtr<ProcessAssetFunctorBase> functorPtr = m_assetManager->CreateProcessAssetFunctor(
         key,
         path,
         &m_callbacks);
 
     AssertThrowMsg(
-        functor_ptr != nullptr,
+        functorPtr != nullptr,
         "Failed to create ProcessAssetFunctor - perhaps the asset type is not registered or the path is invalid");
 
-    m_procs.PushBack(std::move(functor_ptr));
+    m_procs.PushBack(std::move(functorPtr));
 }
 
 #pragma endregion AssetBatch
 
 #pragma region AssetManager
 
-UniquePtr<ProcessAssetFunctorBase> AssetManager::CreateProcessAssetFunctor(TypeID loader_type_id, const String& key, const String& path, AssetBatchCallbacks* callbacks_ptr)
+UniquePtr<ProcessAssetFunctorBase> AssetManager::CreateProcessAssetFunctor(TypeId loaderTypeId, const String& key, const String& path, AssetBatchCallbacks* callbacksPtr)
 {
-    auto it = m_functor_factories.Find(loader_type_id);
-    AssertThrow(it != m_functor_factories.End());
+    auto it = m_functorFactories.Find(loaderTypeId);
+    AssertThrow(it != m_functorFactories.End());
 
-    return it->second(key, path, callbacks_ptr);
+    return it->second(key, path, callbacksPtr);
 }
 
 #pragma endregion AssetManager

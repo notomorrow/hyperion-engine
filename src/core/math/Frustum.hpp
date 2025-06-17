@@ -15,7 +15,6 @@
 namespace hyperion {
 
 HYP_STRUCT(Size = 224, Serialize = "bitwise")
-
 struct HYP_API Frustum
 {
     HYP_FIELD()
@@ -29,7 +28,7 @@ struct HYP_API Frustum
     Frustum(const Frustum& other) = default;
     Frustum& operator=(const Frustum& other) = default;
 
-    Frustum(const Matrix4& view_proj);
+    Frustum(const Matrix4& viewProj);
 
     HYP_FORCE_INLINE FixedArray<Vec4f, 6>& GetPlanes()
     {
@@ -65,8 +64,8 @@ struct HYP_API Frustum
     bool ContainsBoundingSphere(const BoundingSphere& sphere) const;
     bool ContainsPoint(const Vec3f& point) const;
 
-    Frustum& SetFromViewProjectionMatrix(const Matrix4& view_proj);
-    Vec3f GetIntersectionPoint(uint32 plane_index_0, uint32 plane_index_1, uint32 plane_index_2) const;
+    Frustum& SetFromViewProjectionMatrix(const Matrix4& viewProj);
+    Vec3f GetIntersectionPoint(uint32 planeIndex0, uint32 planeIndex1, uint32 planeIndex2) const;
 };
 
 } // namespace hyperion

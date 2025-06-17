@@ -8,9 +8,9 @@ namespace hyperion::json {
 
 const Token Token::empty = Token(TK_EMPTY, "", SourceLocation::eof);
 
-String Token::TokenTypeToString(TokenClass token_class)
+String Token::TokenTypeToString(TokenClass tokenClass)
 {
-    switch (token_class)
+    switch (tokenClass)
     {
     case TK_INTEGER:
         return "integer";
@@ -49,16 +49,16 @@ String Token::TokenTypeToString(TokenClass token_class)
     }
 }
 
-Token::Token(TokenClass token_class, const String& value, const SourceLocation& location)
-    : m_token_class(token_class),
+Token::Token(TokenClass tokenClass, const String& value, const SourceLocation& location)
+    : m_tokenClass(tokenClass),
       m_value(value),
       m_location(location)
 {
     std::memset(m_flags, 0, sizeof(m_flags));
 }
 
-Token::Token(TokenClass token_class, const String& value, Flags flags, const SourceLocation& location)
-    : m_token_class(token_class),
+Token::Token(TokenClass tokenClass, const String& value, Flags flags, const SourceLocation& location)
+    : m_tokenClass(tokenClass),
       m_value(value),
       m_location(location)
 {
@@ -66,7 +66,7 @@ Token::Token(TokenClass token_class, const String& value, Flags flags, const Sou
 }
 
 Token::Token(const Token& other)
-    : m_token_class(other.m_token_class),
+    : m_tokenClass(other.m_tokenClass),
       m_value(other.m_value),
       m_location(other.m_location)
 {
@@ -75,7 +75,7 @@ Token::Token(const Token& other)
 
 bool Token::IsContinuationToken() const
 {
-    return m_token_class == TK_COMMA || m_token_class == TK_COLON || m_token_class == TK_DOT || m_token_class == TK_OPEN_PARENTH || m_token_class == TK_OPEN_BRACKET || m_token_class == TK_OPEN_BRACE;
+    return m_tokenClass == TK_COMMA || m_tokenClass == TK_COLON || m_tokenClass == TK_DOT || m_tokenClass == TK_OPEN_PARENTH || m_tokenClass == TK_OPEN_BRACKET || m_tokenClass == TK_OPEN_BRACE;
 }
 
 } // namespace hyperion::json

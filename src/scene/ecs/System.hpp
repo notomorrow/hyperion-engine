@@ -6,7 +6,7 @@
 #include <core/containers/Array.hpp>
 #include <core/containers/HashSet.hpp>
 
-#include <core/utilities/TypeID.hpp>
+#include <core/utilities/TypeId.hpp>
 #include <core/utilities/Tuple.hpp>
 #include <core/utilities/StringView.hpp>
 #include <core/utilities/EnumFlags.hpp>
@@ -28,21 +28,21 @@ class Scene;
 
 enum class SceneFlags : uint32;
 
-class SystemComponentDescriptors : HashSet<ComponentInfo, &ComponentInfo::type_id>
+class SystemComponentDescriptors : HashSet<ComponentInfo, &ComponentInfo::typeId>
 {
 public:
     template <class... ComponentDescriptors>
-    SystemComponentDescriptors(ComponentDescriptors&&... component_descriptors)
-        : HashSet({ std::forward<ComponentDescriptors>(component_descriptors)... })
+    SystemComponentDescriptors(ComponentDescriptors&&... componentDescriptors)
+        : HashSet({ std::forward<ComponentDescriptors>(componentDescriptors)... })
     {
         AssertThrowMsg(Size() == sizeof...(ComponentDescriptors), "Duplicate component descriptors found");
     }
 
-    SystemComponentDescriptors(Span<ComponentInfo> component_infos)
+    SystemComponentDescriptors(Span<ComponentInfo> componentInfos)
     {
-        for (ComponentInfo& component_info : component_infos)
+        for (ComponentInfo& componentInfo : componentInfos)
         {
-            Insert(component_info);
+            Insert(componentInfo);
         }
     }
 
@@ -63,7 +63,6 @@ public:
     virtual ~SystemBase() override = default;
 
     Name GetName() const;
-    TypeID GetTypeID() const;
 
     virtual bool ShouldCreateForScene(Scene* scene) const
     {
@@ -97,14 +96,14 @@ public:
         return true;
     }
 
-    /*! \brief Returns the TypeIDs of the components this System operates on.
+    /*! \brief Returns the TypeIds of the components this System operates on.
      *  To be used by the EntityManager in order to properly order the Systems based on their dependencies.
      *
-     *  \return The TypeIDs of the components this System operates on.
+     *  \return The TypeIds of the components this System operates on.
      */
-    HYP_FORCE_INLINE const Array<TypeID>& GetComponentTypeIDs() const
+    HYP_FORCE_INLINE const Array<TypeId>& GetComponentTypeIds() const
     {
-        return m_component_type_ids;
+        return m_componentTypeIds;
     }
 
     /*! \brief Returns the ComponentInfo objects of the components this System operates on.
@@ -113,34 +112,34 @@ public:
      */
     HYP_FORCE_INLINE const Array<ComponentInfo>& GetComponentInfos() const
     {
-        return m_component_infos;
+        return m_componentInfos;
     }
 
-    /*! \brief Returns true if all given TypeIDs are operated on by this System, false otherwise.
+    /*! \brief Returns true if all given TypeIds are operated on by this System, false otherwise.
      *
-     *  \param component_type_ids The TypeIDs of the components to check.
-     *  \param receive_events_context If true, this function will skip components that do not receive events for this System.
+     *  \param componentTypeIds The TypeIds of the components to check.
+     *  \param receiveEventsContext If true, this function will skip components that do not receive events for this System.
      *
-     *  \return True if all given TypeIDs are operated on by this System, false otherwise.
+     *  \return True if all given TypeIds are operated on by this System, false otherwise.
      */
-    bool ActsOnComponents(const Array<TypeID>& component_type_ids, bool receive_events_context) const
+    bool ActsOnComponents(const Array<TypeId>& componentTypeIds, bool receiveEventsContext) const
     {
-        for (const TypeID component_type_id : m_component_type_ids)
+        for (const TypeId componentTypeId : m_componentTypeIds)
         {
-            const ComponentInfo& component_info = GetComponentInfo(component_type_id);
+            const ComponentInfo& componentInfo = GetComponentInfo(componentTypeId);
 
             // skip observe-only components
-            if (!(component_info.rw_flags & COMPONENT_RW_FLAGS_READ) && !(component_info.rw_flags & COMPONENT_RW_FLAGS_WRITE))
+            if (!(componentInfo.rwFlags & COMPONENT_RW_FLAGS_READ) && !(componentInfo.rwFlags & COMPONENT_RW_FLAGS_WRITE))
             {
                 continue;
             }
 
-            if (receive_events_context && !component_info.receives_events)
+            if (receiveEventsContext && !componentInfo.receivesEvents)
             {
                 continue;
             }
 
-            if (!component_type_ids.Contains(component_type_id))
+            if (!componentTypeIds.Contains(componentTypeId))
             {
                 return false;
             }
@@ -149,55 +148,55 @@ public:
         return true;
     }
 
-    /*! \brief Returns true if this System operates on the component with the given TypeID, false otherwise.
+    /*! \brief Returns true if this System operates on the component with the given TypeId, false otherwise.
      *
-     *  \param component_type_id The TypeID of the component to check.
-     *  \param include_read_only If true, this function will return true even if the component is read-only.
+     *  \param componentTypeId The TypeId of the component to check.
+     *  \param includeReadOnly If true, this function will return true even if the component is read-only.
      *  Otherwise, read-only components will be ignored.
      *
-     *  \return True if this System operates on the component with the given TypeID, false otherwise.
+     *  \return True if this System operates on the component with the given TypeId, false otherwise.
      */
-    bool HasComponentTypeID(TypeID component_type_id, bool include_read_only = true) const
+    bool HasComponentTypeId(TypeId componentTypeId, bool includeReadOnly = true) const
     {
-        const bool has_component_type_id = m_component_type_ids.Contains(component_type_id);
+        const bool hasComponentTypeId = m_componentTypeIds.Contains(componentTypeId);
 
-        if (!has_component_type_id)
+        if (!hasComponentTypeId)
         {
             return false;
         }
 
-        if (include_read_only)
+        if (includeReadOnly)
         {
             return true;
         }
 
-        const ComponentInfo& component_info = GetComponentInfo(component_type_id);
+        const ComponentInfo& componentInfo = GetComponentInfo(componentTypeId);
 
-        return !!(component_info.rw_flags & COMPONENT_RW_FLAGS_WRITE);
+        return !!(componentInfo.rwFlags & COMPONENT_RW_FLAGS_WRITE);
     }
 
-    /*! \brief Returns the ComponentInfo of the component with the given TypeID.
+    /*! \brief Returns the ComponentInfo of the component with the given TypeId.
      *
-     *  \param component_type_id The TypeID of the component to check.
+     *  \param componentTypeId The TypeId of the component to check.
      *
-     *  \return The ComponentInfo of the component with the given TypeID.
+     *  \return The ComponentInfo of the component with the given TypeId.
      */
-    const ComponentInfo& GetComponentInfo(TypeID component_type_id) const
+    const ComponentInfo& GetComponentInfo(TypeId componentTypeId) const
     {
-        const auto it = m_component_type_ids.Find(component_type_id);
-        AssertThrowMsg(it != m_component_type_ids.End(), "Component type ID not found");
+        const auto it = m_componentTypeIds.Find(componentTypeId);
+        AssertThrowMsg(it != m_componentTypeIds.End(), "Component type Id not found");
 
-        const SizeType index = m_component_type_ids.IndexOf(it);
-        AssertThrowMsg(index != SizeType(-1), "Component type ID not found");
+        const SizeType index = m_componentTypeIds.IndexOf(it);
+        AssertThrowMsg(index != SizeType(-1), "Component type Id not found");
 
-        return m_component_infos[index];
+        return m_componentInfos[index];
     }
 
-    virtual void OnEntityAdded(const Handle<Entity>& entity)
+    virtual void OnEntityAdded(Entity* entity)
     {
     }
 
-    virtual void OnEntityRemoved(ID<Entity> entity)
+    virtual void OnEntityRemoved(Entity* entity)
     {
     }
 
@@ -209,19 +208,19 @@ public:
 
 protected:
     SystemBase()
-        : m_entity_manager(nullptr)
+        : m_entityManager(nullptr)
     {
     }
 
-    SystemBase(EntityManager& entity_manager)
-        : m_entity_manager(&entity_manager)
+    SystemBase(EntityManager& entityManager)
+        : m_entityManager(&entityManager)
     {
     }
 
     HYP_FORCE_INLINE EntityManager& GetEntityManager() const
     {
-        AssertDebug(m_entity_manager != nullptr);
-        return *m_entity_manager;
+        AssertDebug(m_entityManager != nullptr);
+        return *m_entityManager;
     }
 
     /*! \brief Set a callback to be called once after the System has processed.
@@ -232,7 +231,7 @@ protected:
     template <class Func>
     void AfterProcess(Func&& fn)
     {
-        m_after_process_procs.EmplaceBack(std::forward<Func>(fn));
+        m_afterProcessProcs.EmplaceBack(std::forward<Func>(fn));
     }
 
     virtual void Init() override
@@ -245,32 +244,32 @@ protected:
     Scene* GetScene() const;
     World* GetWorld() const;
 
-    EntityManager* m_entity_manager;
-    DelegateHandlerSet m_delegate_handlers;
+    EntityManager* m_entityManager;
+    DelegateHandlerSet m_delegateHandlers;
 
 private:
     void InitComponentInfos_Internal()
     {
-        m_component_type_ids.Clear();
-        m_component_infos.Clear();
+        m_componentTypeIds.Clear();
+        m_componentInfos.Clear();
 
-        Array<ComponentInfo> component_descriptors_array = GetComponentDescriptors().ToArray();
-        m_component_type_ids.Reserve(component_descriptors_array.Size());
-        m_component_infos.Reserve(component_descriptors_array.Size());
+        Array<ComponentInfo> componentDescriptorsArray = GetComponentDescriptors().ToArray();
+        m_componentTypeIds.Reserve(componentDescriptorsArray.Size());
+        m_componentInfos.Reserve(componentDescriptorsArray.Size());
 
-        for (const ComponentInfo& component_info : component_descriptors_array)
+        for (const ComponentInfo& componentInfo : componentDescriptorsArray)
         {
-            m_component_type_ids.PushBack(component_info.type_id);
-            m_component_infos.PushBack(component_info);
+            m_componentTypeIds.PushBack(componentInfo.typeId);
+            m_componentInfos.PushBack(componentInfo);
         }
     }
 
-    HashSet<WeakHandle<Entity>> m_initialized_entities;
+    HashSet<WeakHandle<Entity>> m_initializedEntities;
 
-    Array<TypeID> m_component_type_ids;
-    Array<ComponentInfo> m_component_infos;
+    Array<TypeId> m_componentTypeIds;
+    Array<ComponentInfo> m_componentInfos;
 
-    Array<Proc<void()>> m_after_process_procs;
+    Array<Proc<void()>> m_afterProcessProcs;
 };
 
 } // namespace hyperion

@@ -20,8 +20,8 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(UI);
 
-UISubsystem::UISubsystem(const Handle<UIStage>& ui_stage)
-    : m_ui_stage(ui_stage)
+UISubsystem::UISubsystem(const Handle<UIStage>& uiStage)
+    : m_uiStage(uiStage)
 {
 }
 
@@ -33,73 +33,30 @@ void UISubsystem::OnAddedToWorld()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_ui_stage != nullptr);
+    AssertThrow(m_uiStage != nullptr);
 
-    InitObject(m_ui_stage);
+    InitObject(m_uiStage);
 
-    m_ui_render_subsystem = GetWorld()->GetRenderResource().GetEnvironment()->AddRenderSubsystem<UIRenderSubsystem>(Name::Unique("UIRenderSubsystem"), m_ui_stage);
+    m_uiRenderSubsystem = GetWorld()->AddSubsystem(CreateObject<UIRenderSubsystem>(m_uiStage));
 }
 
 void UISubsystem::OnRemovedFromWorld()
 {
     HYP_SCOPE;
 
-    if (m_ui_render_subsystem != nullptr)
+    if (m_uiRenderSubsystem != nullptr)
     {
-        m_ui_render_subsystem->RemoveFromEnvironment();
-        m_ui_render_subsystem.Reset();
+        GetWorld()->RemoveSubsystem(m_uiRenderSubsystem);
     }
 }
 
-void UISubsystem::PreUpdate(GameCounter::TickUnit delta)
+void UISubsystem::Update(float delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    m_ui_stage->Update(delta);
-}
-
-void UISubsystem::Update(GameCounter::TickUnit delta)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
-
-    AssertThrow(m_ui_stage != nullptr);
-    AssertThrow(m_ui_render_subsystem != nullptr);
-
-    if (!m_ui_render_subsystem->IsInitialized())
-    {
-        return;
-    }
-
-    UIRenderCollector& render_collector = m_ui_render_subsystem->GetRenderCollector();
-    render_collector.ResetOrdering();
-
-    RenderProxyTracker& render_proxy_tracker = m_ui_render_subsystem->GetRenderProxyTracker();
-
-    m_ui_stage->CollectObjects([&render_collector, &render_proxy_tracker](UIObject* ui_object)
-        {
-            AssertThrow(ui_object != nullptr);
-
-            const Handle<Node>& node = ui_object->GetNode();
-            AssertThrow(node.IsValid());
-
-            const Handle<Entity>& entity = node->GetEntity();
-
-            MeshComponent& mesh_component = node->GetScene()->GetEntityManager()->GetComponent<MeshComponent>(entity);
-
-            if (!mesh_component.proxy)
-            {
-                return;
-            }
-
-            // @TODO Include a way to determine the parent tree of the UI Object because some objects will
-            // have the same depth but should be rendered in a different order.
-            render_collector.PushRenderProxy(render_proxy_tracker, *mesh_component.proxy, ui_object->GetComputedDepth());
-        },
-        /* only_visible */ true);
-
-    render_collector.PushUpdatesToRenderThread(render_proxy_tracker, m_ui_render_subsystem->GetFramebuffer());
+    AssertThrow(m_uiStage != nullptr);
+    AssertThrow(m_uiRenderSubsystem != nullptr);
 }
 
 void UISubsystem::OnSceneAttached(const Handle<Scene>& scene)

@@ -1,7 +1,6 @@
 /* Copyright (c) 2024 No Tomorrow Games. All rights reserved. */
 
 #include <scene/world_grid/WorldGrid.hpp>
-#include <scene/world_grid/WorldGridPlugin.hpp>
 #include <scene/world_grid/WorldGridLayer.hpp>
 
 #include <scene/Scene.hpp>
@@ -23,10 +22,9 @@
 #include <core/logging/LogChannels.hpp>
 #include <core/logging/Logger.hpp>
 
-#include <core/math/MathUtil.hpp>
-
 #include <core/profiling/ProfileScope.hpp>
 
+#include <EngineGlobals.hpp>
 #include <Engine.hpp>
 
 namespace hyperion {
@@ -37,11 +35,11 @@ HYP_DEFINE_LOG_SUBCHANNEL(WorldGrid, Scene);
 
 void WorldGridState::PushUpdate(StreamingCellUpdate&& update)
 {
-    Mutex::Guard guard(patch_update_queue_mutex);
+    Mutex::Guard guard(patchUpdateQueueMutex);
 
-    patch_update_queue.Push(std::move(update));
+    patchUpdateQueue.Push(std::move(update));
 
-    patch_update_queue_size.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+    patchUpdateQueueSize.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 }
 
 #pragma endregion WorldGridState
@@ -55,7 +53,7 @@ WorldGrid::WorldGrid()
 
 WorldGrid::WorldGrid(World* world)
     : m_world(world),
-      m_streaming_manager(CreateObject<StreamingManager>(WeakHandleFromThis()))
+      m_streamingManager(CreateObject<StreamingManager>(WeakHandleFromThis()))
 {
 }
 
@@ -77,13 +75,8 @@ void WorldGrid::Init()
             }
         }));
 
-    InitObject(m_streaming_manager);
-    m_streaming_manager->Start();
-
-    for (const auto& it : m_plugins)
-    {
-        it.second->Initialize(this);
-    }
+    InitObject(m_streamingManager);
+    m_streamingManager->Start();
 
     // Add a default layer if none are provided
     if (m_layers.Empty())
@@ -99,7 +92,7 @@ void WorldGrid::Init()
 
         layer->OnAdded(this);
 
-        m_streaming_manager->AddWorldGridLayer(layer);
+        m_streamingManager->AddWorldGridLayer(layer);
     }
 
     SetReady(true);
@@ -122,73 +115,25 @@ void WorldGrid::Shutdown()
         layer->OnRemoved(this);
     }
 
-    m_streaming_manager->Stop();
-
-    for (const auto& it : m_plugins)
-    {
-        it.second->Shutdown(this);
-    }
-
-    m_plugins.Clear();
+    m_streamingManager->Stop();
 
     SetReady(false);
 }
 
-void WorldGrid::Update(GameCounter::TickUnit delta)
+void WorldGrid::Update(float delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     AssertReady();
 
-    m_streaming_manager->Update(delta);
-}
-
-void WorldGrid::AddPlugin(int priority, const RC<WorldGridPlugin>& plugin)
-{
-    Threads::AssertOnThread(g_game_thread);
-
-    AssertThrow(plugin != nullptr);
-
-    if (IsReady())
-    {
-        // Initialize plugin if grid is already initialized
-
-        plugin->Initialize(this);
-    }
-
-    m_plugins.Insert(KeyValuePair<int, RC<WorldGridPlugin>>(priority, plugin));
-}
-
-RC<WorldGridPlugin> WorldGrid::GetPlugin(int priority) const
-{
-    const auto it = m_plugins.FindIf([priority](const KeyValuePair<int, RC<WorldGridPlugin>>& kv)
-        {
-            return kv.first == priority;
-        });
-
-    if (it == m_plugins.End())
-    {
-        return nullptr;
-    }
-
-    return it->second;
-}
-
-RC<WorldGridPlugin> WorldGrid::GetMainPlugin() const
-{
-    if (m_plugins.Empty())
-    {
-        return nullptr;
-    }
-
-    return m_plugins.Front().second;
+    m_streamingManager->Update(delta);
 }
 
 void WorldGrid::AddLayer(const Handle<WorldGridLayer>& layer)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (!layer.IsValid())
     {
@@ -208,14 +153,14 @@ void WorldGrid::AddLayer(const Handle<WorldGridLayer>& layer)
 
         layer->OnAdded(this);
 
-        m_streaming_manager->AddWorldGridLayer(layer);
+        m_streamingManager->AddWorldGridLayer(layer);
     }
 }
 
 bool WorldGrid::RemoveLayer(WorldGridLayer* layer)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (!layer)
     {
@@ -228,7 +173,7 @@ bool WorldGrid::RemoveLayer(WorldGridLayer* layer)
     {
         (*it)->OnRemoved(this);
 
-        m_streaming_manager->RemoveWorldGridLayer(*it);
+        m_streamingManager->RemoveWorldGridLayer(*it);
 
         m_layers.Erase(it);
 
@@ -242,32 +187,32 @@ bool WorldGrid::RemoveLayer(WorldGridLayer* layer)
 // {
 //     HYP_SCOPE;
 
-//     AssertThrow(m_streaming_manager.IsValid());
+//     AssertThrow(m_streamingManager.IsValid());
 
 //     m_patches.Clear();
-//     m_patches.Resize(m_params.grid_size.Volume());
+//     m_patches.Resize(m_params.gridSize.Volume());
 
-//     HYP_LOG(WorldGrid, Info, "Creating {} patches for world grid with size {}x{}", m_patches.Size(), m_params.grid_size.x, m_params.grid_size.y);
+//     HYP_LOG(WorldGrid, Info, "Creating {} patches for world grid with size {}x{}", m_patches.Size(), m_params.gridSize.x, m_params.gridSize.y);
 
-//     for (uint32 x = 0; x < m_params.grid_size.x; ++x)
+//     for (uint32 x = 0; x < m_params.gridSize.x; ++x)
 //     {
-//         for (uint32 z = 0; z < m_params.grid_size.y; ++z)
+//         for (uint32 z = 0; z < m_params.gridSize.y; ++z)
 //         {
 //             const Vec2i coord { int(x), int(z) };
 
-//             WorldGridPatchDesc& patch_desc = m_patches[x + z * m_params.grid_size.x];
-//             patch_desc.cell_info = StreamingCellInfo {
-//                 .extent = m_params.cell_size,
+//             WorldGridPatchDesc& patchDesc = m_patches[x + z * m_params.gridSize.x];
+//             patchDesc.cellInfo = StreamingCellInfo {
+//                 .extent = m_params.cellSize,
 //                 .coord = coord,
 //                 .scale = m_params.scale,
 //                 .state = StreamingCellState::UNLOADED,
 //                 .neighbors = GetPatchNeighbors(coord)
 //             };
 
-//             Handle<StreamingCell> patch = CreateObject<StreamingCell>(this, patch_desc.cell_info);
+//             Handle<StreamingCell> patch = CreateObject<StreamingCell>(this, patchDesc.cellInfo);
 //             AssertThrow(patch.IsValid());
 
-//             patch_desc.patch = patch;
+//             patchDesc.patch = patch;
 //         }
 //     }
 // }

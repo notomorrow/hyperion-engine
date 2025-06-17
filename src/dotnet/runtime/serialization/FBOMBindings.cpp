@@ -15,10 +15,10 @@ extern "C"
 
 #pragma region FBOMType
 
-#define FBOM_TYPE_CREATE_FUNCTION(fbom_type_name, function_suffix) \
-    HYP_EXPORT FBOMType* FBOMType_##function_suffix()              \
+#define FBOM_TYPE_CREATE_FUNCTION(fbomTypeName, functionSuffix) \
+    HYP_EXPORT FBOMType* FBOMType_##functionSuffix()              \
     {                                                              \
-        return new FBOM##fbom_type_name();                         \
+        return new FBOM##fbomTypeName();                         \
     }
 
     FBOM_TYPE_CREATE_FUNCTION(Unset, Unset)
@@ -69,14 +69,14 @@ extern "C"
         return *lhs == *rhs;
     }
 
-    HYP_EXPORT bool FBOMType_IsOrExtends(FBOMType* lhs, FBOMType* rhs, bool allow_unbounded)
+    HYP_EXPORT bool FBOMType_IsOrExtends(FBOMType* lhs, FBOMType* rhs, bool allowUnbounded)
     {
         if (!lhs || !rhs)
         {
             return false;
         }
 
-        return lhs->IsOrExtends(*rhs, allow_unbounded);
+        return lhs->IsOrExtends(*rhs, allowUnbounded);
     }
 
     HYP_EXPORT const char* FBOMType_GetName(const FBOMType* ptr)
@@ -89,14 +89,14 @@ extern "C"
         return ptr->name.Data();
     }
 
-    HYP_EXPORT void FBOMType_GetNativeTypeID(const FBOMType* ptr, TypeID* out_type_id)
+    HYP_EXPORT void FBOMType_GetNativeTypeId(const FBOMType* ptr, TypeId* outTypeId)
     {
-        if (!ptr || !out_type_id)
+        if (!ptr || !outTypeId)
         {
             return;
         }
 
-        *out_type_id = ptr->GetNativeTypeID();
+        *outTypeId = ptr->GetNativeTypeId();
     }
 
     HYP_EXPORT const HypClass* FBOMType_GetHypClass(const FBOMType* ptr)
@@ -113,9 +113,9 @@ extern "C"
 
 #pragma region FBOMData
 
-    HYP_EXPORT FBOMData* FBOMData_Create(FBOMType* type_ptr)
+    HYP_EXPORT FBOMData* FBOMData_Create(FBOMType* typePtr)
     {
-        return new FBOMData(type_ptr != nullptr ? *type_ptr : FBOMUnset());
+        return new FBOMData(typePtr != nullptr ? *typePtr : FBOMUnset());
     }
 
     HYP_EXPORT void FBOMData_Destroy(FBOMData* ptr)
@@ -148,12 +148,12 @@ extern "C"
         return data->TotalSize();
     }
 
-#define FBOM_TYPE_GET_SET_FUNCTIONS(fbom_type_name, function_suffix, c_type)         \
-    HYP_EXPORT bool FBOMData_Get##function_suffix(FBOMData* data, c_type* out_value) \
+#define FBOM_TYPE_GET_SET_FUNCTIONS(fbomTypeName, functionSuffix, cType)         \
+    HYP_EXPORT bool FBOMData_Get##functionSuffix(FBOMData* data, cType* outValue) \
     {                                                                                \
         AssertThrow(data != nullptr);                                                \
                                                                                      \
-        if (auto err = data->Read##fbom_type_name(out_value))                        \
+        if (auto err = data->Read##fbomTypeName(outValue))                        \
         {                                                                            \
             return false;                                                            \
         }                                                                            \
@@ -161,11 +161,11 @@ extern "C"
         return true;                                                                 \
     }                                                                                \
                                                                                      \
-    HYP_EXPORT void FBOMData_Set##function_suffix(FBOMData* data, c_type* in_value)  \
+    HYP_EXPORT void FBOMData_Set##functionSuffix(FBOMData* data, cType* inValue)  \
     {                                                                                \
         AssertThrow(data != nullptr);                                                \
                                                                                      \
-        *data = FBOMData::From##fbom_type_name(*in_value);                           \
+        *data = FBOMData::From##fbomTypeName(*inValue);                           \
     }
 
     FBOM_TYPE_GET_SET_FUNCTIONS(UInt8, UInt8, uint8)
@@ -193,13 +193,13 @@ extern "C"
     FBOM_TYPE_GET_SET_FUNCTIONS(Vec4u, Vec4u, Vec4u)
     FBOM_TYPE_GET_SET_FUNCTIONS(Quat4f, Quaternion, Quaternion)
 
-    HYP_EXPORT bool FBOMData_GetObject(FBOMLoadContext* context, FBOMData* data, FBOMObject* out_ptr)
+    HYP_EXPORT bool FBOMData_GetObject(FBOMLoadContext* context, FBOMData* data, FBOMObject* outPtr)
     {
         AssertThrow(context != nullptr);
         AssertThrow(data != nullptr);
-        AssertThrow(out_ptr != nullptr);
+        AssertThrow(outPtr != nullptr);
 
-        if (auto err = data->ReadObject(*context, *out_ptr))
+        if (auto err = data->ReadObject(*context, *outPtr))
         {
             return false;
         }
@@ -207,12 +207,12 @@ extern "C"
         return true;
     }
 
-    HYP_EXPORT void FBOMData_SetObject(FBOMData* data, FBOMObject* in_ptr)
+    HYP_EXPORT void FBOMData_SetObject(FBOMData* data, FBOMObject* inPtr)
     {
         AssertThrow(data != nullptr);
-        AssertThrow(in_ptr != nullptr);
+        AssertThrow(inPtr != nullptr);
 
-        *data = FBOMData::FromObject(*in_ptr);
+        *data = FBOMData::FromObject(*inPtr);
     }
 
 #undef FBOM_TYPE_GET_SET_FUNCTIONS
@@ -236,40 +236,40 @@ extern "C"
         delete ptr;
     }
 
-    HYP_EXPORT bool FBOMObject_GetProperty(FBOMObject* ptr, const char* key, FBOMData* out_data_ptr)
+    HYP_EXPORT bool FBOMObject_GetProperty(FBOMObject* ptr, const char* key, FBOMData* outDataPtr)
     {
         AssertThrow(ptr != nullptr);
         AssertThrow(key != nullptr);
-        AssertThrow(out_data_ptr != nullptr);
+        AssertThrow(outDataPtr != nullptr);
 
         if (!ptr->HasProperty(key))
         {
             return false;
         }
 
-        *out_data_ptr = ptr->GetProperty(key);
+        *outDataPtr = ptr->GetProperty(key);
 
         return true;
     }
 
-    HYP_EXPORT bool FBOMObject_SetProperty(FBOMObject* ptr, const char* name, FBOMData* data_ptr)
+    HYP_EXPORT bool FBOMObject_SetProperty(FBOMObject* ptr, const char* name, FBOMData* dataPtr)
     {
         AssertThrow(ptr != nullptr);
         AssertThrow(name != nullptr);
-        AssertThrow(data_ptr != nullptr);
+        AssertThrow(dataPtr != nullptr);
 
-        ptr->SetProperty(name, *data_ptr);
+        ptr->SetProperty(name, *dataPtr);
 
         return true;
     }
 
     // HYP_EXPORT void *FBOMObject_GetDeserializedValue(FBOMObject *ptr)
     // {
-    //     if (!ptr || !ptr->m_deserialized_object) {
+    //     if (!ptr || !ptr->m_deserializedObject) {
     //         return nullptr;
     //     }
 
-    //     return ptr->m_deserialized_object->any_value.GetPointer();
+    //     return ptr->m_deserializedObject->anyValue.GetPointer();
     // }
 
 #pragma endregion FBOMObject

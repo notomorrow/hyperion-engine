@@ -19,14 +19,13 @@
 
 namespace hyperion {
 
-class RenderSubsystem;
+class Subsystem;
 
-HYP_STRUCT(Component, Label = "Shadow Map Component", Description = "Controls shadow map rendering for a light source.", Editor = true, Size = 40)
-
+HYP_STRUCT(Component, Label = "Shadow Map Component", Description = "Controls shadow map rendering for a light source.", Editor = true, Size = 32)
 struct ShadowMapComponent
 {
     HYP_FIELD(Property = "Mode", Serialize = true, Editor = true)
-    ShadowMapFilterMode mode = ShadowMapFilterMode::STANDARD;
+    ShadowMapFilter mode = SMF_STANDARD;
 
     HYP_FIELD(Property = "Radius", Serialize = true, Editor = true)
     float radius = 20.0f;
@@ -35,19 +34,19 @@ struct ShadowMapComponent
     Vec2u resolution = Vec2u { 512, 512 };
 
     HYP_FIELD()
-    RC<RenderSubsystem> render_subsystem;
+    Handle<Subsystem> subsystem;
 
     HYP_FIELD()
-    uint32 update_counter = 0;
+    uint32 updateCounter = 0;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
-        hash_code.Add(mode);
-        hash_code.Add(radius);
-        hash_code.Add(resolution);
+        HashCode hashCode;
+        hashCode.Add(mode);
+        hashCode.Add(radius);
+        hashCode.Add(resolution);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

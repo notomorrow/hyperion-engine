@@ -62,32 +62,32 @@ static inline void ForEach(Container&& container, Mutex& mutex, Callback&& callb
     }
 }
 
-/*! \brief Execute a lambda for each item in the container, in \ref{num_batches} batches.
+/*! \brief Execute a lambda for each item in the container, in \ref{numBatches} batches.
  *  Container must be a contiguous container.
  *  Callback is called with the item, the index of the item, and the batch index and should return a IterationResult.
  *
  *  \param container The container to iterate over.
- *  \param num_batches The number of batches to split the container into.
+ *  \param numBatches The number of batches to split the container into.
  *  \param callback The function to call for each item.
  */
 template <class Container, class Callback>
-static inline void ForEachInBatches(Container&& container, uint32 num_batches, Callback&& callback)
+static inline void ForEachInBatches(Container&& container, uint32 numBatches, Callback&& callback)
 {
-    static_assert(NormalizedType<Container>::is_contiguous, "Container must be contiguous to use ForEachInBatches");
+    static_assert(NormalizedType<Container>::isContiguous, "Container must be contiguous to use ForEachInBatches");
 
-    const uint32 num_items = container.Size();
-    const uint32 items_per_batch = (num_items + num_batches - 1) / num_batches;
+    const uint32 numItems = container.Size();
+    const uint32 itemsPerBatch = (numItems + numBatches - 1) / numBatches;
 
-    auto* data_ptr = container.Data();
+    auto* dataPtr = container.Data();
 
-    for (uint32 batch_index = 0; batch_index < num_batches; batch_index++)
+    for (uint32 batchIndex = 0; batchIndex < numBatches; batchIndex++)
     {
-        const uint32 offset_index = batch_index * items_per_batch;
-        const uint32 max_index = MathUtil::Min(offset_index + items_per_batch, num_items);
+        const uint32 offsetIndex = batchIndex * itemsPerBatch;
+        const uint32 maxIndex = MathUtil::Min(offsetIndex + itemsPerBatch, numItems);
 
-        for (uint32 i = offset_index; i < max_index; ++i)
+        for (uint32 i = offsetIndex; i < maxIndex; ++i)
         {
-            IterationResult result = callback(*(data_ptr + i), i, batch_index);
+            IterationResult result = callback(*(dataPtr + i), i, batchIndex);
 
             if (result == IterationResult::STOP)
             {

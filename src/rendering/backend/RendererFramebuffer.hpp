@@ -12,8 +12,6 @@
 #include <core/Defines.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 class FramebufferBase : public RenderObject<FramebufferBase>
 {
 public:
@@ -39,22 +37,22 @@ public:
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual RendererResult Resize(Vec2u new_size) = 0;
+    HYP_API virtual RendererResult Resize(Vec2u newSize) = 0;
 
     HYP_API virtual AttachmentRef AddAttachment(const AttachmentRef& attachment) = 0;
-    HYP_API virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation load_op, StoreOperation store_op) = 0;
+    HYP_API virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation loadOp, StoreOperation storeOp) = 0;
     HYP_API virtual AttachmentRef AddAttachment(
         uint32 binding,
-        InternalFormat format,
-        ImageType type,
-        LoadOperation load_op,
-        StoreOperation store_op) = 0;
+        TextureFormat format,
+        TextureType type,
+        LoadOperation loadOp,
+        StoreOperation storeOp) = 0;
 
     HYP_API virtual bool RemoveAttachment(uint32 binding) = 0;
     HYP_API virtual AttachmentBase* GetAttachment(uint32 binding) const = 0;
 
-    HYP_API virtual void BeginCapture(CommandBufferBase* command_buffer, uint32 frame_index) = 0;
-    HYP_API virtual void EndCapture(CommandBufferBase* command_buffer, uint32 frame_index) = 0;
+    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) = 0;
+    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) = 0;
 
 protected:
     FramebufferBase(Vec2u extent)
@@ -65,7 +63,6 @@ protected:
     Vec2u m_extent;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

@@ -5,7 +5,12 @@
 
 #include <core/Defines.hpp>
 
+#include <core/containers/StaticString.hpp>
+
 #include <Types.hpp>
+
+#define HYP_DECLARE_LOG_CHANNEL(name) \
+    extern hyperion::logging::LogChannel Log_##name
 
 namespace hyperion {
 namespace logging {
@@ -15,50 +20,51 @@ class LogChannel;
 
 enum LogLevel : uint32
 {
-    DEBUG,
+    DEBUG = 0,
     INFO,
     WARNING,
     ERR,
-    FATAL
+    FATAL,
+
+    MAX
 };
 
-class LogCategory
+struct LogCategory
 {
-public:
-    enum Flags : uint8
+    enum LogCategoryFlags : uint8
     {
-        LOG_CATEGORY_FLAG_NONE = 0x0,
-        LOG_CATEGORY_FLAG_ENABLED = 0x1,
-        LOG_CATEGORY_FLAG_FATAL = 0x2,
+        LCF_NONE = 0x0,
+        LCF_ENABLED = 0x1,
+        LCF_FATAL = 0x2,
 
-        LOG_CATEGORY_FLAG_DEFAULT = LOG_CATEGORY_FLAG_ENABLED
+        LCF_DEFAULT = LCF_ENABLED
     };
 
-    constexpr LogCategory(LogLevel level, uint16 priority, uint8 flags = LOG_CATEGORY_FLAG_DEFAULT)
-        : m_value(uint32(flags) | (uint32(priority) << 8) | (uint32(level) << 24))
+    constexpr LogCategory(LogLevel level, uint16 priority, uint8 flags = LCF_DEFAULT)
+        : value(uint32(flags) | (uint32(priority) << 8) | (uint32(level) << 24))
     {
     }
 
     constexpr LogCategory(const LogCategory& other)
-        : m_value(other.m_value)
+        : value(other.value)
     {
     }
 
     LogCategory& operator=(const LogCategory& other)
     {
-        m_value = other.m_value;
+        value = other.value;
 
         return *this;
     }
 
     HYP_FORCE_INLINE constexpr bool operator==(const LogCategory& other) const
     {
-        return m_value == other.m_value;
+        return value == other.value;
     }
 
     HYP_FORCE_INLINE constexpr bool operator!=(const LogCategory& other) const
     {
-        return m_value != other.m_value;
+        return value != other.value;
     }
 
     HYP_FORCE_INLINE constexpr bool operator<(const LogCategory& other) const
@@ -68,36 +74,36 @@ public:
 
     HYP_FORCE_INLINE constexpr uint8 GetFlags() const
     {
-        return m_value & 0xFF;
+        return value & 0xFF;
     }
 
     HYP_FORCE_INLINE constexpr uint16 GetPriority() const
     {
-        return uint16((m_value >> 8) & 0xFFFF);
+        return uint16((value >> 8) & 0xFFFF);
     }
 
     HYP_FORCE_INLINE constexpr LogLevel GetLevel() const
     {
-        return LogLevel((m_value >> 24) & 0xFF);
+        return LogLevel((value >> 24) & 0xFF);
     }
 
     HYP_FORCE_INLINE constexpr bool IsEnabled() const
     {
-        return (GetFlags() & LOG_CATEGORY_FLAG_ENABLED) != 0;
+        return (GetFlags() & LCF_ENABLED) != 0;
     }
 
-    uint32 m_value;
+    uint32 value;
 };
 
 #ifdef HYP_DEBUG_MODE
 constexpr LogCategory Debug()
 {
-    return LogCategory(LogLevel::DEBUG, 10000, LogCategory::LOG_CATEGORY_FLAG_ENABLED);
+    return LogCategory(LogLevel::DEBUG, 10000, LogCategory::LCF_ENABLED);
 }
 #else
 constexpr LogCategory Debug()
 {
-    return LogCategory(LogLevel::DEBUG, 10000, LogCategory::LOG_CATEGORY_FLAG_NONE);
+    return LogCategory(LogLevel::DEBUG, 10000, LogCategory::LCF_NONE);
 }
 #endif
 
@@ -118,11 +124,14 @@ constexpr LogCategory Error()
 
 constexpr LogCategory Fatal()
 {
-    return LogCategory(LogLevel::FATAL, 1, LogCategory::LOG_CATEGORY_FLAG_FATAL);
+    return LogCategory(LogLevel::FATAL, 1, LogCategory::LCF_FATAL);
 }
 
-template <LogLevel Level, auto FunctionNameString, auto FormatString, class... Args>
-static inline void Log_Internal(Logger& logger, const LogChannel& channel, Args&&... args);
+template <LogCategory Category, auto FunctionNameString, auto FormatString, class... Args>
+static inline void LogDynamicChannel(Logger& logger, const LogChannel& channel, Args&&... args);
+
+template <LogCategory Category, auto ChannelArg, auto FunctionNameString, auto FormatString, class... Args>
+static inline void Log_Internal(Logger& logger, Args&&... args);
 
 HYP_API extern Logger& GetLogger();
 
@@ -130,21 +139,26 @@ HYP_API extern Logger& GetLogger();
 
 using logging::LogChannel;
 
+HYP_DECLARE_LOG_CHANNEL(Misc);
+
 } // namespace hyperion
 
-// Helper macros
-#define HYP_DECLARE_LOG_CHANNEL(name) \
-    extern hyperion::logging::LogChannel Log_##name
-
 #ifdef HYP_LOG
-    #error "HYP_LOG already defined!"
+#error "HYP_LOG already defined!"
 #endif
 
 #define HYP_LOG(channel, category, fmt, ...) \
-    hyperion::logging::Log_Internal<hyperion::logging::category(), HYP_PRETTY_FUNCTION_NAME, HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), Log_##channel, ##__VA_ARGS__)
+    hyperion::logging::Log_Internal<hyperion::logging::category(), HYP_MAKE_CONST_ARG(&Log_##channel), HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+
+#ifdef HYP_DEBUG_MODE
+#define HYP_LOG_TEMP(fmt, ...) \
+    hyperion::logging::Log_Internal<hyperion::logging::Debug(), HYP_MAKE_CONST_ARG(&Log_Misc), HYP_STATIC_STRING(HYP_FUNCTION_NAME_LIT), HYP_STATIC_STRING(fmt "\n")>(hyperion::logging::GetLogger(), ##__VA_ARGS__)
+#else
+#define HYP_LOG_TEMP(fmt, ...)
+#endif
 
 #ifndef HYP_LOG_ONCE
-    #define HYP_LOG_ONCE(channel, category, fmt, ...)
+#define HYP_LOG_ONCE(channel, category, fmt, ...)
 #endif
 
 #endif

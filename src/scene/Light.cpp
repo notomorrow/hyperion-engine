@@ -2,8 +2,10 @@
 
 #include <scene/Light.hpp>
 #include <scene/Material.hpp>
+#include <scene/ecs/EntityTag.hpp>
 
 #include <rendering/RenderLight.hpp>
+#include <rendering/RenderGlobalState.hpp>
 
 #include <rendering/backend/RendererDescriptorSet.hpp>
 
@@ -23,102 +25,165 @@ namespace hyperion {
 #pragma region Light
 
 Light::Light()
-    : Light(LightType::DIRECTIONAL, Vec3f::Zero(), Color::White(), 1.0f, 1.0f)
+    : Light(LT_DIRECTIONAL, Vec3f::Zero(), Color::White(), 1.0f, 1.0f)
 {
 }
 
 Light::Light(LightType type, const Vec3f& position, const Color& color, float intensity, float radius)
-    : HypObject(),
-      m_type(type),
+    : m_type(type),
       m_position(position),
       m_color(color),
       m_intensity(intensity),
       m_radius(radius),
       m_falloff(1.0f),
-      m_spot_angles(Vec2f::Zero()),
-      m_mutation_state(DataMutationState::CLEAN),
-      m_render_resource(nullptr)
+      m_spotAngles(Vec2f::Zero()),
+      m_renderResource(nullptr)
 {
+    m_entityInitInfo.canEverUpdate = false;
+    m_entityInitInfo.receivesUpdate = false;
+    m_entityInitInfo.bvhDepth = 0; // No BVH for lights
+    m_entityInitInfo.initialTags = { EntityTag::LIGHT };
 }
 
-Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const Vec2f& area_size, const Color& color, float intensity, float radius)
-    : HypObject(),
-      m_type(type),
+Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const Vec2f& areaSize, const Color& color, float intensity, float radius)
+    : m_type(type),
       m_position(position),
       m_normal(normal),
-      m_area_size(area_size),
+      m_areaSize(areaSize),
       m_color(color),
       m_intensity(intensity),
       m_radius(radius),
       m_falloff(1.0f),
-      m_spot_angles(Vec2f::Zero()),
-      m_mutation_state(DataMutationState::CLEAN),
-      m_render_resource(nullptr)
+      m_spotAngles(Vec2f::Zero()),
+      m_renderResource(nullptr)
 {
+    m_entityInitInfo.canEverUpdate = false;
+    m_entityInitInfo.receivesUpdate = false;
+    m_entityInitInfo.bvhDepth = 0; // No BVH for lights
+    m_entityInitInfo.initialTags = { EntityTag::LIGHT };
 }
 
 Light::~Light()
 {
-    if (m_render_resource != nullptr)
+    if (m_renderResource != nullptr)
     {
-        FreeResource(m_render_resource);
+        // temp shit
+        m_renderResource->DecRef();
+        FreeResource(m_renderResource);
     }
 }
 
 void Light::Init()
 {
-    m_render_resource = AllocateResource<RenderLight>(this);
+    m_renderResource = AllocateResource<RenderLight>(this);
 
     if (m_material.IsValid())
     {
         InitObject(m_material);
 
-        m_render_resource->SetMaterial(m_material);
+        m_renderResource->SetMaterial(m_material);
     }
 
-    m_mutation_state |= DataMutationState::DIRTY;
+    // temp shit
+    m_renderResource->IncRef();
 
     SetReady(true);
-
-    EnqueueRenderUpdates();
 }
 
-void Light::EnqueueRenderUpdates()
+void Light::SetPosition(const Vec3f& position)
 {
-    AssertReady();
-
-    if (m_material.IsValid() && m_material->GetMutationState().IsDirty())
-    {
-        m_mutation_state |= DataMutationState::DIRTY;
-
-        m_material->EnqueueRenderUpdates();
-    }
-
-    if (!m_mutation_state.IsDirty())
+    if (m_position == position)
     {
         return;
     }
 
-    const BoundingBox aabb = GetAABB();
+    m_position = position;
 
-    LightShaderData buffer_data {
-        .light_id = GetID().Value(),
-        .light_type = uint32(m_type),
-        .color_packed = uint32(m_color),
-        .radius = m_radius,
-        .falloff = m_falloff,
-        .area_size = m_area_size,
-        .position_intensity = Vec4f(m_position, m_intensity),
-        .normal = Vec4f(m_normal, 0.0f),
-        .spot_angles = m_spot_angles,
-        .material_index = ~0u, // set later
-        .aabb_min = Vec4f(aabb.min, 1.0f),
-        .aabb_max = Vec4f(aabb.max, 1.0f)
-    };
+    SetNeedsRenderProxyUpdate();
+}
 
-    m_render_resource->SetBufferData(buffer_data);
+void Light::SetNormal(const Vec3f& normal)
+{
+    if (m_normal == normal)
+    {
+        return;
+    }
 
-    m_mutation_state = DataMutationState::CLEAN;
+    m_normal = normal;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetAreaSize(const Vec2f& areaSize)
+{
+    if (m_areaSize == areaSize)
+    {
+        return;
+    }
+
+    m_areaSize = areaSize;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetColor(const Color& color)
+{
+    if (m_color == color)
+    {
+        return;
+    }
+
+    m_color = color;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetIntensity(float intensity)
+{
+    if (m_intensity == intensity)
+    {
+        return;
+    }
+
+    m_intensity = intensity;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetRadius(float radius)
+{
+    if (m_radius == radius)
+    {
+        return;
+    }
+
+    m_radius = radius;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetFalloff(float falloff)
+{
+    if (m_falloff == falloff)
+    {
+        return;
+    }
+
+    m_falloff = falloff;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetSpotAngles(const Vec2f& spotAngles)
+{
+    if (m_spotAngles == spotAngles)
+    {
+        return;
+    }
+
+    m_spotAngles = spotAngles;
+
+    SetNeedsRenderProxyUpdate();
 }
 
 void Light::SetMaterial(Handle<Material> material)
@@ -134,9 +199,9 @@ void Light::SetMaterial(Handle<Material> material)
     {
         InitObject(m_material);
 
-        m_render_resource->SetMaterial(m_material);
+        SetNeedsRenderProxyUpdate();
 
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_renderResource->SetMaterial(m_material);
     }
 }
 
@@ -146,27 +211,27 @@ Pair<Vec3f, Vec3f> Light::CalculateAreaLightRect() const
     Vec3f bitangent;
     MathUtil::ComputeOrthonormalBasis(m_normal, tangent, bitangent);
 
-    const float half_width = m_area_size.x * 0.5f;
-    const float half_height = m_area_size.y * 0.5f;
+    const float halfWidth = m_areaSize.x * 0.5f;
+    const float halfHeight = m_areaSize.y * 0.5f;
 
     const Vec3f center = m_position;
 
-    const Vec3f p0 = center - tangent * half_width - bitangent * half_height;
-    const Vec3f p1 = center + tangent * half_width - bitangent * half_height;
-    const Vec3f p2 = center + tangent * half_width + bitangent * half_height;
-    const Vec3f p3 = center - tangent * half_width + bitangent * half_height;
+    const Vec3f p0 = center - tangent * halfWidth - bitangent * halfHeight;
+    const Vec3f p1 = center + tangent * halfWidth - bitangent * halfHeight;
+    const Vec3f p2 = center + tangent * halfWidth + bitangent * halfHeight;
+    const Vec3f p3 = center - tangent * halfWidth + bitangent * halfHeight;
 
     return { p0, p2 };
 }
 
 BoundingBox Light::GetAABB() const
 {
-    if (m_type == LightType::DIRECTIONAL)
+    if (m_type == LT_DIRECTIONAL)
     {
         return BoundingBox::Infinity();
     }
 
-    if (m_type == LightType::AREA_RECT)
+    if (m_type == LT_AREA_RECT)
     {
         const Pair<Vec3f, Vec3f> rect = CalculateAreaLightRect();
 
@@ -176,7 +241,7 @@ BoundingBox Light::GetAABB() const
             .Union(m_position + m_normal * m_radius);
     }
 
-    if (m_type == LightType::POINT)
+    if (m_type == LT_POINT)
     {
         return BoundingBox(GetBoundingSphere());
     }
@@ -186,12 +251,35 @@ BoundingBox Light::GetAABB() const
 
 BoundingSphere Light::GetBoundingSphere() const
 {
-    if (m_type == LightType::DIRECTIONAL)
+    if (m_type == LT_DIRECTIONAL)
     {
         return BoundingSphere::infinity;
     }
 
     return BoundingSphere(m_position, m_radius);
+}
+
+void Light::UpdateRenderProxy(IRenderProxy* proxy)
+{
+    RenderProxyLight* proxyCasted = static_cast<RenderProxyLight*>(proxy);
+    proxyCasted->light = WeakHandleFromThis();
+
+    const BoundingBox aabb = GetAABB();
+
+    LightShaderData& bufferData = proxyCasted->bufferData;
+    bufferData.lightId = Id().Value();
+    bufferData.lightType = uint32(m_type);
+    bufferData.colorPacked = uint32(m_color);
+    bufferData.radius = m_radius;
+    bufferData.falloff = m_falloff;
+    bufferData.areaSize = m_areaSize;
+    bufferData.positionIntensity = Vec4f(m_position, m_intensity);
+    bufferData.normal = Vec4f(m_normal, 0.0f);
+    bufferData.spotAngles = m_spotAngles;
+    bufferData.materialIndex = ~0u; // set in RenderLight, TODO: Refactor so it is set when light is bound
+    bufferData.aabbMin = Vec4f(aabb.min, 1.0f);
+    bufferData.aabbMax = Vec4f(aabb.max, 1.0f);
+    bufferData.shadowMapIndex = ~0u; // @TODO
 }
 
 #pragma endregion Light

@@ -16,11 +16,8 @@ namespace hyperion {
 class ConsoleCommandBase;
 class ConsoleCommandManagerImpl;
 
-HYP_CLASS()
 class HYP_API ConsoleCommandManager
 {
-    HYP_OBJECT_BODY(ConsoleCommandManager);
-
 public:
     static ConsoleCommandManager& GetInstance();
 
@@ -36,7 +33,7 @@ public:
 
     void RegisterCommand(const Handle<ConsoleCommandBase>& command);
 
-    Result ExecuteCommand(const String& command_line);
+    Result ExecuteCommand(const String& commandLine);
 
 private:
     int FindAndRegisterCommands();

@@ -82,10 +82,10 @@ public:
     {
         if (name == "bone")
         {
-            String bone_name = attributes.At("name");
+            String boneName = attributes.At("name");
             const uint32 id = StringUtil::Parse<uint32>(attributes.At("id"));
 
-            m_skeleton.bones.PushBack({ .name = std::move(bone_name),
+            m_skeleton.bones.PushBack({ .name = std::move(boneName),
                 .id = id });
         }
         else if (name == "position")
@@ -96,7 +96,7 @@ public:
 
             if (!m_skeleton.bones.Empty())
             {
-                m_skeleton.bones.Back().binding_translation = Vector3(x, y, z);
+                m_skeleton.bones.Back().bindingTranslation = Vector3(x, y, z);
             }
             else
             {
@@ -105,25 +105,25 @@ public:
         }
         else if (name == "rotation")
         {
-            m_binding_angles.Push(StringUtil::Parse<float>(attributes.At("angle")));
+            m_bindingAngles.Push(StringUtil::Parse<float>(attributes.At("angle")));
         }
         else if (name == "boneparent")
         {
-            String parent_name = attributes.At("parent");
-            String child_name = attributes.At("bone");
+            String parentName = attributes.At("parent");
+            String childName = attributes.At("bone");
 
-            auto* child_bone = GetBone([&child_name](const auto& bone)
+            auto* childBone = GetBone([&childName](const auto& bone)
                 {
-                    return bone.name == child_name;
+                    return bone.name == childName;
                 });
 
-            if (child_bone != nullptr)
+            if (childBone != nullptr)
             {
-                child_bone->parent_name = std::move(parent_name);
+                childBone->parentName = std::move(parentName);
             }
             else
             {
-                HYP_LOG(Assets, Warning, "Ogre XML skeleton parser: Attempt to set child bone '{}' to parent '{}' but child bone does not exist yet", child_name, parent_name);
+                HYP_LOG(Assets, Warning, "Ogre XML skeleton parser: Attempt to set child bone '{}' to parent '{}' but child bone does not exist yet", childName, parentName);
             }
         }
         else if (name == "animation")
@@ -132,7 +132,7 @@ public:
         }
         else if (name == "track")
         {
-            LastAnimation().tracks.PushBack({ .bone_name = attributes.At("bone") });
+            LastAnimation().tracks.PushBack({ .boneName = attributes.At("bone") });
         }
         else if (name == "keyframe")
         {
@@ -148,7 +148,7 @@ public:
         }
         else if (name == "rotate")
         {
-            m_keyframe_angles.Push(StringUtil::Parse<float>(attributes.At("angle")));
+            m_keyframeAngles.Push(StringUtil::Parse<float>(attributes.At("angle")));
         }
         else if (name == "axis")
         {
@@ -158,26 +158,26 @@ public:
 
             const auto axis = Vector3(x, y, z).Normalized();
 
-            if (m_element_tags.Empty())
+            if (m_elementTags.Empty())
             {
                 HYP_LOG(Assets, Warning, "Ogre XML skeleton loader: Attempt to set rotation axis but no prior elements found");
             }
-            else if (m_element_tags.Top() == "rotate")
+            else if (m_elementTags.Top() == "rotate")
             { /* keyframe */
-                if (m_keyframe_angles.Empty())
+                if (m_keyframeAngles.Empty())
                 {
                     HYP_LOG(Assets, Warning, "Ogre XML skeleton loader: Attempt to set keyframe rotation axis but no angle was set prior");
                 }
                 else
                 {
-                    LastKeyframe().rotation = Quaternion(axis, m_keyframe_angles.Top()).Invert();
+                    LastKeyframe().rotation = Quaternion(axis, m_keyframeAngles.Top()).Invert();
 
-                    m_keyframe_angles.Pop();
+                    m_keyframeAngles.Pop();
                 }
             }
-            else if (m_element_tags.Top() == "rotation")
+            else if (m_elementTags.Top() == "rotation")
             { /* bone binding pose */
-                if (m_binding_angles.Empty())
+                if (m_bindingAngles.Empty())
                 {
                     HYP_LOG(Assets, Warning, "Ogre XML skeleton loader: Attempt to set bond binding rotation but no binding angles were set prior");
                 }
@@ -189,20 +189,20 @@ public:
                     }
                     else
                     {
-                        m_skeleton.bones.Back().binding_rotation = Quaternion(axis, m_binding_angles.Top());
+                        m_skeleton.bones.Back().bindingRotation = Quaternion(axis, m_bindingAngles.Top());
                     }
 
-                    m_binding_angles.Pop();
+                    m_bindingAngles.Pop();
                 }
             }
         }
 
-        m_element_tags.Push(name);
+        m_elementTags.Push(name);
     }
 
     virtual void End(const String& name) override
     {
-        m_element_tags.Pop();
+        m_elementTags.Pop();
     }
 
     virtual void Characters(const String& value) override
@@ -217,9 +217,9 @@ private:
     LoaderState* m_state;
     OgreXMLSkeleton& m_skeleton;
 
-    Stack<String> m_element_tags;
-    Stack<float> m_binding_angles;
-    Stack<float> m_keyframe_angles;
+    Stack<String> m_elementTags;
+    Stack<float> m_bindingAngles;
+    Stack<float> m_keyframeAngles;
 };
 
 AssetLoadResult OgreXMLSkeletonLoader::LoadAsset(LoaderState& state) const
@@ -229,82 +229,82 @@ AssetLoadResult OgreXMLSkeletonLoader::LoadAsset(LoaderState& state) const
     OgreXMLSkeletonSAXHandler handler(&state, object);
 
     xml::SAXParser parser(&handler);
-    xml::SAXParser::Result sax_result = parser.Parse(&state.stream);
+    xml::SAXParser::Result saxResult = parser.Parse(&state.stream);
 
-    if (!sax_result)
+    if (!saxResult)
     {
-        return HYP_MAKE_ERROR(AssetLoadError, "Failed to parse XML: {}", sax_result.message);
+        return HYP_MAKE_ERROR(AssetLoadError, "Failed to parse XML: {}", saxResult.message);
     }
 
-    Handle<Skeleton> skeleton_handle = CreateObject<Skeleton>();
+    Handle<Skeleton> skeletonHandle = CreateObject<Skeleton>();
 
     for (const auto& item : object.bones)
     {
         Handle<Bone> bone = CreateObject<Bone>(CreateNameFromDynamicString(item.name));
 
         bone->SetBindingTransform(Transform(
-            item.binding_translation,
+            item.bindingTranslation,
             Vec3f::One(),
-            item.binding_rotation));
+            item.bindingRotation));
 
-        if (item.parent_name.Any())
+        if (item.parentName.Any())
         {
-            if (Bone* parent_bone = skeleton_handle->FindBone(item.parent_name))
+            if (Bone* parentBone = skeletonHandle->FindBone(item.parentName))
             {
-                parent_bone->AddChild(bone);
+                parentBone->AddChild(bone);
 
                 continue;
             }
 
-            HYP_LOG(Assets, Warning, "Ogre XML parser: Parent bone '{}' not found in skeleton at this stage", item.parent_name);
+            HYP_LOG(Assets, Warning, "Ogre XML parser: Parent bone '{}' not found in skeleton at this stage", item.parentName);
         }
-        else if (skeleton_handle->GetRootBone() != nullptr)
+        else if (skeletonHandle->GetRootBone() != nullptr)
         {
             HYP_LOG(Assets, Warning, "Ogre XML parser: Attempt to set root bone to node '{}' but it has already been set", item.name);
         }
         else
         {
-            skeleton_handle->SetRootBone(bone);
+            skeletonHandle->SetRootBone(bone);
         }
     }
 
-    for (const auto& animation_it : object.animations)
+    for (const auto& animationIt : object.animations)
     {
-        Handle<Animation> animation = CreateObject<Animation>(animation_it.name);
+        Handle<Animation> animation = CreateObject<Animation>(animationIt.name);
 
-        for (const auto& track_it : animation_it.tracks)
+        for (const auto& trackIt : animationIt.tracks)
         {
-            AnimationTrackDesc animation_track_desc;
-            animation_track_desc.bone_name = CreateNameFromDynamicString(track_it.bone_name);
-            animation_track_desc.keyframes.Reserve(track_it.keyframes.Size());
+            AnimationTrackDesc animationTrackDesc;
+            animationTrackDesc.boneName = CreateNameFromDynamicString(trackIt.boneName);
+            animationTrackDesc.keyframes.Reserve(trackIt.keyframes.Size());
 
-            for (const auto& keyframe_it : track_it.keyframes)
+            for (const auto& keyframeIt : trackIt.keyframes)
             {
-                animation_track_desc.keyframes.PushBack(Keyframe(
-                    keyframe_it.time,
-                    Transform(keyframe_it.translation, Vector3::One(), keyframe_it.rotation)));
+                animationTrackDesc.keyframes.PushBack(Keyframe(
+                    keyframeIt.time,
+                    Transform(keyframeIt.translation, Vector3::One(), keyframeIt.rotation)));
             }
 
-            animation->AddTrack(CreateObject<AnimationTrack>(animation_track_desc));
+            animation->AddTrack(CreateObject<AnimationTrack>(animationTrackDesc));
         }
 
-        skeleton_handle->AddAnimation(animation);
+        skeletonHandle->AddAnimation(animation);
     }
 
-    if (Bone* root_bone = skeleton_handle->GetRootBone())
+    if (Bone* rootBone = skeletonHandle->GetRootBone())
     {
-        root_bone->SetToBindingPose();
+        rootBone->SetToBindingPose();
 
-        root_bone->CalculateBoneRotation();
-        root_bone->CalculateBoneTranslation();
+        rootBone->CalculateBoneRotation();
+        rootBone->CalculateBoneTranslation();
 
-        root_bone->StoreBindingPose();
-        root_bone->ClearPose();
+        rootBone->StoreBindingPose();
+        rootBone->ClearPose();
 
-        root_bone->UpdateBoneTransform();
+        rootBone->UpdateBoneTransform();
     }
 
-    return LoadedAsset { skeleton_handle };
+    return LoadedAsset { skeletonHandle };
 }
 
 } // namespace hyperion

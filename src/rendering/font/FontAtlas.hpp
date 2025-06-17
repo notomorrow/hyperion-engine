@@ -9,6 +9,7 @@
 #include <core/memory/ByteBuffer.hpp>
 #include <core/containers/Array.hpp>
 #include <core/utilities/Optional.hpp>
+#include <core/utilities/Result.hpp>
 
 #include <rendering/font/FontFace.hpp>
 #include <rendering/font/Glyph.hpp>
@@ -20,29 +21,30 @@
 namespace hyperion {
 
 class Texture;
+using FontAtlasBitmap = Bitmap<4, ubyte>;
 
 struct HYP_API FontAtlasTextureSet
 {
-    Handle<Texture> main_atlas;
+    Handle<Texture> mainAtlas;
     FlatMap<uint32, Handle<Texture>> atlases;
 
     ~FontAtlasTextureSet();
 
     HYP_FORCE_INLINE const Handle<Texture>& GetMainAtlas() const
     {
-        return main_atlas;
+        return mainAtlas;
     }
 
-    Handle<Texture> GetAtlasForPixelSize(uint32 pixel_size) const;
+    Handle<Texture> GetAtlasForPixelSize(uint32 pixelSize) const;
 
-    void AddAtlas(uint32 pixel_size, Handle<Texture> texture, bool is_main_atlas = false);
+    void AddAtlas(uint32 pixelSize, Handle<Texture> texture, bool isMainAtlas = false);
 };
 
-class FontAtlas
+class FontAtlas : public EnableRefCountedPtrFromThis<FontAtlas>
 {
 public:
-    static constexpr uint32 s_symbol_columns = 20;
-    static constexpr uint32 s_symbol_rows = 5;
+    static constexpr uint32 s_symbolColumns = 20;
+    static constexpr uint32 s_symbolRows = 5;
 
     using SymbolList = Array<FontFace::WChar>;
     using GlyphMetricsBuffer = Array<Glyph::Metrics>;
@@ -51,53 +53,52 @@ public:
 
     FontAtlas() = default;
 
-    HYP_API FontAtlas(const FontAtlasTextureSet& atlas_textures, Vec2i cell_dimensions, GlyphMetricsBuffer glyph_metrics, SymbolList symbol_list = GetDefaultSymbolList());
+    HYP_API FontAtlas(const FontAtlasTextureSet& atlasTextures, Vec2i cellDimensions, GlyphMetricsBuffer glyphMetrics, SymbolList symbolList = GetDefaultSymbolList());
     HYP_API FontAtlas(RC<FontFace> face);
 
     FontAtlas(const FontAtlas& other) = delete;
     FontAtlas& operator=(const FontAtlas& other) = delete;
-    FontAtlas(FontAtlas&& other) noexcept = default;
-    FontAtlas& operator=(FontAtlas&& other) noexcept = default;
-    ~FontAtlas() = default;
+    FontAtlas(FontAtlas&& other) noexcept = delete;
+    FontAtlas& operator=(FontAtlas&& other) noexcept = delete;
+    ~FontAtlas();
 
-    HYP_API void Render();
+    HYP_API Result RenderAtlasTextures();
 
     HYP_FORCE_INLINE const GlyphMetricsBuffer& GetGlyphMetrics() const
     {
-        return m_glyph_metrics;
+        return m_glyphMetrics;
     }
 
     HYP_FORCE_INLINE const FontAtlasTextureSet& GetAtlasTextures() const
     {
-        return m_atlas_textures;
+        return m_atlasTextures;
     }
 
     HYP_FORCE_INLINE const Vec2i& GetCellDimensions() const
     {
-        return m_cell_dimensions;
+        return m_cellDimensions;
     }
 
     HYP_FORCE_INLINE const SymbolList& GetSymbolList() const
     {
-        return m_symbol_list;
+        return m_symbolList;
     }
 
-    HYP_API Optional<Glyph::Metrics> GetGlyphMetrics(FontFace::WChar symbol) const;
+    HYP_API Optional<const Glyph::Metrics&> GetGlyphMetrics(FontFace::WChar symbol) const;
 
-    HYP_API void WriteToBuffer(uint32 pixel_size, ByteBuffer& buffer) const;
-    HYP_API Bitmap<1> GenerateBitmap(uint32 pixel_size) const;
-    HYP_API json::JSONValue GenerateMetadataJSON(const String& output_directory) const;
+    HYP_API void WriteToBuffer(uint32 pixelSize, ByteBuffer& buffer) const;
+    HYP_API Bitmap<1> GenerateBitmap(uint32 pixelSize) const;
+    HYP_API json::JSONValue GenerateMetadataJSON(const String& outputDirectory) const;
 
 private:
     Vec2i FindMaxDimensions(const RC<FontFace>& face) const;
-    void RenderCharacter(const Handle<Texture>& atlas, const Handle<Texture>& glyph_texture, Vec2i location, Vec2i dimensions) const;
 
     RC<FontFace> m_face;
 
-    FontAtlasTextureSet m_atlas_textures;
-    Vec2i m_cell_dimensions;
-    GlyphMetricsBuffer m_glyph_metrics;
-    SymbolList m_symbol_list;
+    FontAtlasTextureSet m_atlasTextures;
+    Vec2i m_cellDimensions;
+    GlyphMetricsBuffer m_glyphMetrics;
+    SymbolList m_symbolList;
 };
 
 } // namespace hyperion

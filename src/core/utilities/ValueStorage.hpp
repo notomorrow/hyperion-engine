@@ -28,38 +28,52 @@ struct ValueStorageAlignment<void>
     static constexpr SizeType value = 1;
 };
 
+/*! \brief A storage class for arrays of values of type T with a specified count and alignment.
+ *  \details This class provides a way to store an array of values of type T in a buffer with a specified alignment.
+ *  It allows for explicit construction, destruction, and retrieval of the values stored in the buffer.
+ *  The alignment can be specified as a template parameter, defaulting to the alignment of T. */
+template <class T, SizeType Count = 1, SizeType Alignment = ValueStorageAlignment<T>::value, typename T2 = void>
+struct ValueStorage;
+
 /*! \brief A storage class for values of type T with a specified alignment.
  *  \details This class provides a way to store values of type T in a buffer with a specified alignment.
  *  It allows for explicit construction, destruction, and retrieval of the value stored in the buffer.
  *  The alignment can be specified as a template parameter, defaulting to the alignment of T. */
-template <class T, SizeType Alignment = ValueStorageAlignment<T>::value>
-struct alignas(Alignment) ValueStorage
+template <class T, SizeType Alignment>
+struct alignas(Alignment) ValueStorage<T, 1, Alignment>
 {
+    struct ConstructTag
+    {
+    };
+
     static constexpr SizeType alignment = Alignment;
 
-    alignas(Alignment) ubyte data_buffer[sizeof(T)];
+    alignas(Alignment) ubyte dataBuffer[sizeof(T)];
 
-    ValueStorage() = default;
+    constexpr ValueStorage() = default;
 
-    template <class OtherType>
-    explicit ValueStorage(const ValueStorage<OtherType>& other) = delete;
+    template <class... Args>
+    constexpr ValueStorage(ConstructTag, Args&&... args)
+    {
+        new (dataBuffer) T(std::forward<Args>(args)...);
+    }
+
+    template <class OtherType, SizeType OtherCount, SizeType OtherAlignment>
+    explicit ValueStorage(const ValueStorage<OtherType, OtherCount, OtherAlignment>& other) = delete;
 
     template <class OtherType>
     explicit ValueStorage(const OtherType* ptr) = delete;
 
-    ValueStorage(const ValueStorage& other) = default;
+    constexpr ValueStorage(const ValueStorage& other) = default;
     ValueStorage& operator=(const ValueStorage& other) = default;
-    ValueStorage(ValueStorage&& other) noexcept = default;
+    constexpr ValueStorage(ValueStorage&& other) noexcept = default;
     ValueStorage& operator=(ValueStorage&& other) noexcept = default;
     ~ValueStorage() = default;
 
     template <class... Args>
-    HYP_FORCE_INLINE T* Construct(Args&&... args)
+    HYP_FORCE_INLINE constexpr T* Construct(Args&&... args)
     {
-        T* address = GetPointer();
-        new (address) T(std::forward<Args>(args)...);
-
-        return address;
+        return new (dataBuffer) T(std::forward<Args>(args)...);
     }
 
     HYP_FORCE_INLINE void Destruct()
@@ -69,43 +83,54 @@ struct alignas(Alignment) ValueStorage
 
     HYP_FORCE_INLINE T& Get() &
     {
-        return *reinterpret_cast<T*>(&data_buffer[0]);
+        return *reinterpret_cast<T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE const T& Get() const&
     {
-        return *reinterpret_cast<const T*>(&data_buffer[0]);
+        return *reinterpret_cast<const T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE T* GetPointer() &
     {
-        return reinterpret_cast<T*>(&data_buffer[0]);
+        return reinterpret_cast<T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE const T* GetPointer() const&
     {
-        return reinterpret_cast<const T*>(&data_buffer[0]);
+        return reinterpret_cast<const T*>(&dataBuffer[0]);
+    }
+
+    HYP_FORCE_INLINE constexpr SizeType Size() const
+    {
+        return 1;
+    }
+
+    HYP_FORCE_INLINE constexpr SizeType TotalSize() const
+    {
+        return sizeof(T);
     }
 };
 
-template <>
-struct ValueStorage<void>
+// Void type specialization
+template <SizeType Count, SizeType Alignment>
+struct ValueStorage<void, Count, Alignment>
 {
 };
 
-/*! \brief A storage class for arrays of values of type T with a specified count and alignment.
- *  \details This class provides a way to store an array of values of type T in a buffer with a specified alignment.
- *  It allows for explicit construction, destruction, and retrieval of the values stored in the buffer.
- *  The alignment can be specified as a template parameter, defaulting to the alignment of T. */
-template <class T, SizeType Count, SizeType Alignment = ValueStorageAlignment<T>::value, typename T2 = void>
-struct ValueStorageArray;
+// 0 count specialization
+template <class T, SizeType Alignment>
+struct ValueStorage<T, 0, Alignment>
+{
+};
 
+// Array specialization
 template <class T, SizeType Count, SizeType Alignment>
-struct ValueStorageArray<T, Count, Alignment, typename std::enable_if_t<Count != 0>>
+struct alignas(Alignment) ValueStorage<T, Count, Alignment, typename std::enable_if_t<(Count > 1)>>
 {
     static constexpr SizeType alignment = Alignment;
 
-    alignas(Alignment) ubyte data_buffer[sizeof(T) * Count];
+    alignas(Alignment) ubyte dataBuffer[sizeof(T) * Count];
 
     template <class... Args>
     HYP_FORCE_INLINE T* ConstructElement(SizeType index, Args&&... args)
@@ -123,22 +148,22 @@ struct ValueStorageArray<T, Count, Alignment, typename std::enable_if_t<Count !=
 
     HYP_FORCE_INLINE T* GetPointer() &
     {
-        return reinterpret_cast<T*>(&data_buffer[0]);
+        return reinterpret_cast<T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE const T* GetPointer() const&
     {
-        return reinterpret_cast<const T*>(&data_buffer[0]);
+        return reinterpret_cast<const T*>(&dataBuffer[0]);
     }
 
     HYP_DEPRECATED HYP_FORCE_INLINE void* GetRawPointer()
     {
-        return static_cast<void*>(&data_buffer[0]);
+        return static_cast<void*>(&dataBuffer[0]);
     }
 
     HYP_DEPRECATED HYP_FORCE_INLINE const void* GetRawPointer() const
     {
-        return static_cast<const void*>(&data_buffer[0]);
+        return static_cast<const void*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE constexpr SizeType Size() const
@@ -152,36 +177,9 @@ struct ValueStorageArray<T, Count, Alignment, typename std::enable_if_t<Count !=
     }
 };
 
-template <class T, SizeType Alignment>
-struct ValueStorageArray<T, 0, Alignment, void>
-{
-    ValueStorage<char> data[1];
-
-    HYP_FORCE_INLINE void* GetRawPointer()
-    {
-        return static_cast<void*>(&data[0]);
-    }
-
-    HYP_FORCE_INLINE const void* GetRawPointer() const
-    {
-        return static_cast<const void*>(&data[0]);
-    }
-
-    HYP_FORCE_INLINE constexpr SizeType Size() const
-    {
-        return 0;
-    }
-
-    HYP_FORCE_INLINE constexpr SizeType TotalSize() const
-    {
-        return 0;
-    }
-};
-
 } // namespace utilities
 
 using utilities::ValueStorage;
-using utilities::ValueStorageArray;
 
 } // namespace hyperion
 

@@ -35,24 +35,24 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(DotNET);
 } // namespace hyperion
 
-static AttributeSet InternManagedAttributeHolder(ManagedAttributeHolder* managed_attribute_holder_ptr)
+static AttributeSet InternManagedAttributeHolder(ManagedAttributeHolder* managedAttributeHolderPtr)
 {
-    if (!managed_attribute_holder_ptr)
+    if (!managedAttributeHolderPtr)
     {
         return {};
     }
 
     Array<Attribute> attributes;
-    attributes.Reserve(managed_attribute_holder_ptr->managed_attributes_size);
+    attributes.Reserve(managedAttributeHolderPtr->managedAttributesSize);
 
-    for (uint32 i = 0; i < managed_attribute_holder_ptr->managed_attributes_size; i++)
+    for (uint32 i = 0; i < managedAttributeHolderPtr->managedAttributesSize; i++)
     {
-        AssertThrow(managed_attribute_holder_ptr->managed_attributes_ptr[i].class_ptr != nullptr);
+        AssertThrow(managedAttributeHolderPtr->managedAttributesPtr[i].classPtr != nullptr);
 
         attributes.PushBack(Attribute {
             MakeUnique<Object>(
-                managed_attribute_holder_ptr->managed_attributes_ptr[i].class_ptr->RefCountedPtrFromThis(),
-                managed_attribute_holder_ptr->managed_attributes_ptr[i].object_reference,
+                managedAttributeHolderPtr->managedAttributesPtr[i].classPtr->RefCountedPtrFromThis(),
+                managedAttributeHolderPtr->managedAttributesPtr[i].objectReference,
                 ObjectFlags::CREATED_FROM_MANAGED) });
     }
 
@@ -61,27 +61,27 @@ static AttributeSet InternManagedAttributeHolder(ManagedAttributeHolder* managed
 
 extern "C"
 {
-    HYP_EXPORT bool NativeInterop_VerifyEngineVersion(uint32 assembly_engine_version, bool major, bool minor, bool patch)
+    HYP_EXPORT bool NativeInterop_VerifyEngineVersion(uint32 assemblyEngineVersion, bool major, bool minor, bool patch)
     {
-        static constexpr uint32 major_mask = (0xffu << 16u);
-        static constexpr uint32 minor_mask = (0xffu << 8u);
-        static constexpr uint32 patch_mask = 0xffu;
+        static constexpr uint32 majorMask = (0xffu << 16u);
+        static constexpr uint32 minorMask = (0xffu << 8u);
+        static constexpr uint32 patchMask = 0xffu;
 
-        const uint32 mask = (major ? major_mask : 0u)
-            | (minor ? minor_mask : 0u)
-            | (patch ? patch_mask : 0u);
+        const uint32 mask = (major ? majorMask : 0u)
+            | (minor ? minorMask : 0u)
+            | (patch ? patchMask : 0u);
 
-        const uint32 engine_version_major_minor = engine_version & mask;
+        const uint32 engineVersionMajorMinor = engineVersion & mask;
 
-        if ((assembly_engine_version & mask) != engine_version_major_minor)
+        if ((assemblyEngineVersion & mask) != engineVersionMajorMinor)
         {
             HYP_LOG(DotNET, Error, "Assembly engine version mismatch: Assembly version: {}.{}.{}, Engine version: {}.{}.{}",
-                (assembly_engine_version >> 16u) & 0xffu,
-                (assembly_engine_version >> 8u) & 0xffu,
-                assembly_engine_version & 0xffu,
-                (engine_version >> 16u) & 0xffu,
-                (engine_version >> 8u) & 0xffu,
-                engine_version & 0xffu);
+                (assemblyEngineVersion >> 16u) & 0xffu,
+                (assemblyEngineVersion >> 8u) & 0xffu,
+                assemblyEngineVersion & 0xffu,
+                (engineVersion >> 16u) & 0xffu,
+                (engineVersion >> 8u) & 0xffu,
+                engineVersion & 0xffu);
 
             return false;
         }
@@ -89,189 +89,189 @@ extern "C"
         return true;
     }
 
-    HYP_EXPORT void NativeInterop_SetInvokeGetterFunction(ManagedGuid* assembly_guid, Assembly* assembly_ptr, InvokeGetterFunction invoke_getter_fptr)
+    HYP_EXPORT void NativeInterop_SetInvokeGetterFunction(ManagedGuid* assemblyGuid, Assembly* assemblyPtr, InvokeGetterFunction invokeGetterFptr)
     {
-        AssertThrow(assembly_ptr != nullptr);
+        AssertThrow(assemblyPtr != nullptr);
 
-        assembly_ptr->SetInvokeGetterFunction(invoke_getter_fptr);
+        assemblyPtr->SetInvokeGetterFunction(invokeGetterFptr);
     }
 
-    HYP_EXPORT void NativeInterop_SetInvokeSetterFunction(ManagedGuid* assembly_guid, Assembly* assembly_ptr, InvokeSetterFunction invoke_setter_fptr)
+    HYP_EXPORT void NativeInterop_SetInvokeSetterFunction(ManagedGuid* assemblyGuid, Assembly* assemblyPtr, InvokeSetterFunction invokeSetterFptr)
     {
-        AssertThrow(assembly_ptr != nullptr);
+        AssertThrow(assemblyPtr != nullptr);
 
-        assembly_ptr->SetInvokeSetterFunction(invoke_setter_fptr);
+        assemblyPtr->SetInvokeSetterFunction(invokeSetterFptr);
     }
 
-    HYP_EXPORT void NativeInterop_SetAddObjectToCacheFunction(AddObjectToCacheFunction add_object_to_cache_fptr)
+    HYP_EXPORT void NativeInterop_SetAddObjectToCacheFunction(AddObjectToCacheFunction addObjectToCacheFptr)
     {
-        DotNetSystem::GetInstance().GetGlobalFunctions().add_object_to_cache_function = add_object_to_cache_fptr;
+        DotNetSystem::GetInstance().GetGlobalFunctions().addObjectToCacheFunction = addObjectToCacheFptr;
     }
 
-    HYP_EXPORT void NativeInterop_SetSetKeepAliveFunction(SetKeepAliveFunction set_keep_alive_function)
+    HYP_EXPORT void NativeInterop_SetSetKeepAliveFunction(SetKeepAliveFunction setKeepAliveFunction)
     {
-        DotNetSystem::GetInstance().GetGlobalFunctions().set_keep_alive_function = set_keep_alive_function;
+        DotNetSystem::GetInstance().GetGlobalFunctions().setKeepAliveFunction = setKeepAliveFunction;
     }
 
-    HYP_EXPORT void NativeInterop_SetTriggerGCFunction(TriggerGCFunction trigger_gc_function)
+    HYP_EXPORT void NativeInterop_SetTriggerGCFunction(TriggerGCFunction triggerGcFunction)
     {
-        DotNetSystem::GetInstance().GetGlobalFunctions().trigger_gc_function = trigger_gc_function;
+        DotNetSystem::GetInstance().GetGlobalFunctions().triggerGcFunction = triggerGcFunction;
     }
 
-    HYP_EXPORT void NativeInterop_SetGetAssemblyPointerFunction(GetAssemblyPointerFunction get_assembly_pointer_function)
+    HYP_EXPORT void NativeInterop_SetGetAssemblyPointerFunction(GetAssemblyPointerFunction getAssemblyPointerFunction)
     {
-        DotNetSystem::GetInstance().GetGlobalFunctions().get_assembly_pointer_function = get_assembly_pointer_function;
+        DotNetSystem::GetInstance().GetGlobalFunctions().getAssemblyPointerFunction = getAssemblyPointerFunction;
     }
 
-    HYP_EXPORT void NativeInterop_GetAssemblyPointer(ObjectReference* assembly_object_reference, Assembly** out_assembly_ptr)
+    HYP_EXPORT void NativeInterop_GetAssemblyPointer(ObjectReference* assemblyObjectReference, Assembly** outAssemblyPtr)
     {
-        AssertThrow(assembly_object_reference != nullptr);
-        AssertThrow(out_assembly_ptr != nullptr);
+        AssertThrow(assemblyObjectReference != nullptr);
+        AssertThrow(outAssemblyPtr != nullptr);
 
-        *out_assembly_ptr = nullptr;
+        *outAssemblyPtr = nullptr;
 
-        DotNetSystem::GetInstance().GetGlobalFunctions().get_assembly_pointer_function(assembly_object_reference, out_assembly_ptr);
+        DotNetSystem::GetInstance().GetGlobalFunctions().getAssemblyPointerFunction(assemblyObjectReference, outAssemblyPtr);
     }
 
-    HYP_EXPORT void NativeInterop_AddObjectToCache(void* ptr, Class** out_class_object_ptr, ObjectReference* out_object_reference, int8 weak)
+    HYP_EXPORT void NativeInterop_AddObjectToCache(void* ptr, Class** outClassObjectPtr, ObjectReference* outObjectReference, int8 weak)
     {
         AssertThrow(ptr != nullptr);
-        AssertThrow(out_class_object_ptr != nullptr);
-        AssertThrow(out_object_reference != nullptr);
+        AssertThrow(outClassObjectPtr != nullptr);
+        AssertThrow(outObjectReference != nullptr);
 
-        DotNetSystem::GetInstance().GetGlobalFunctions().add_object_to_cache_function(ptr, out_class_object_ptr, out_object_reference, weak);
+        DotNetSystem::GetInstance().GetGlobalFunctions().addObjectToCacheFunction(ptr, outClassObjectPtr, outObjectReference, weak);
     }
 
-    HYP_EXPORT void ManagedClass_Create(ManagedGuid* assembly_guid, Assembly* assembly_ptr, const HypClass* hyp_class, int32 type_hash, const char* type_name, uint32 type_size, TypeID type_id, Class* parent_class, uint32 flags, ManagedClass* out_managed_class)
+    HYP_EXPORT void ManagedClass_Create(ManagedGuid* assemblyGuid, Assembly* assemblyPtr, const HypClass* hypClass, int32 typeHash, const char* typeName, uint32 typeSize, TypeId typeId, Class* parentClass, uint32 flags, ManagedClass* outManagedClass)
     {
-        AssertThrow(assembly_guid != nullptr);
-        AssertThrow(assembly_ptr != nullptr);
+        AssertThrow(assemblyGuid != nullptr);
+        AssertThrow(assemblyPtr != nullptr);
 
-        HYP_LOG(DotNET, Info, "Registering .NET managed class {}", type_name);
+        HYP_LOG(DotNET, Info, "Registering .NET managed class {}", typeName);
 
-        RC<Class> class_object = assembly_ptr->NewClass(hyp_class, type_hash, type_name, type_size, type_id, parent_class, flags);
+        RC<Class> classObject = assemblyPtr->NewClass(hypClass, typeHash, typeName, typeSize, typeId, parentClass, flags);
 
-        if (hyp_class != nullptr && hyp_class->IsDynamic())
+        if (hypClass != nullptr && hypClass->IsDynamic())
         {
-            const DynamicHypClassInstance* dynamic_hyp_class = dynamic_cast<const DynamicHypClassInstance*>(hyp_class);
-            AssertThrowMsg(dynamic_hyp_class != nullptr, "Dynamic hyp class is not of type DynamicHypClassInstance!");
+            const DynamicHypClassInstance* dynamicHypClass = dynamic_cast<const DynamicHypClassInstance*>(hypClass);
+            AssertThrowMsg(dynamicHypClass != nullptr, "Dynamic hyp class is not of type DynamicHypClassInstance!");
 
-            if ((class_object->GetFlags() & ManagedClassFlags::ABSTRACT) && !dynamic_hyp_class->IsAbstract())
+            if ((classObject->GetFlags() & ManagedClassFlags::ABSTRACT) && !dynamicHypClass->IsAbstract())
             {
                 HYP_LOG(DotNET, Error, "Dynamic HypClass {} is not abstract but the managed class {} is abstract!",
-                    dynamic_hyp_class->GetName(), class_object->GetName());
+                    dynamicHypClass->GetName(), classObject->GetName());
             }
 
-            DynamicHypClassInstance* dynamic_hyp_class_non_const = const_cast<DynamicHypClassInstance*>(dynamic_hyp_class);
-            dynamic_hyp_class_non_const->SetManagedClass(class_object);
+            DynamicHypClassInstance* dynamicHypClassNonConst = const_cast<DynamicHypClassInstance*>(dynamicHypClass);
+            dynamicHypClassNonConst->SetManagedClass(classObject);
 
             // @TODO Implement unregistering of dynamic hyp classes
-            HypClassRegistry::GetInstance().RegisterClass(type_id, dynamic_hyp_class_non_const);
+            HypClassRegistry::GetInstance().RegisterClass(typeId, dynamicHypClassNonConst);
         }
 
-        ManagedClass& managed_class = *out_managed_class;
-        managed_class = {};
-        managed_class.type_hash = type_hash;
-        managed_class.class_object = class_object.Get();
-        managed_class.assembly_guid = *assembly_guid;
-        managed_class.flags = flags;
+        ManagedClass& managedClass = *outManagedClass;
+        managedClass = {};
+        managedClass.typeHash = typeHash;
+        managedClass.classObject = classObject.Get();
+        managedClass.assemblyGuid = *assemblyGuid;
+        managedClass.flags = flags;
     }
 
-    HYP_EXPORT int8 ManagedClass_FindByTypeHash(Assembly* assembly_ptr, int32 type_hash, Class** out_managed_class_object_ptr)
+    HYP_EXPORT int8 ManagedClass_FindByTypeHash(Assembly* assemblyPtr, int32 typeHash, Class** outManagedClassObjectPtr)
     {
-        AssertThrow(assembly_ptr != nullptr);
+        AssertThrow(assemblyPtr != nullptr);
 
-        AssertThrow(out_managed_class_object_ptr != nullptr);
+        AssertThrow(outManagedClassObjectPtr != nullptr);
 
-        RC<Class> class_object = assembly_ptr->FindClassByTypeHash(type_hash);
+        RC<Class> classObject = assemblyPtr->FindClassByTypeHash(typeHash);
 
-        if (!class_object)
+        if (!classObject)
         {
-            *out_managed_class_object_ptr = nullptr;
+            *outManagedClassObjectPtr = nullptr;
 
             return 0;
         }
 
-        *out_managed_class_object_ptr = class_object;
+        *outManagedClassObjectPtr = classObject;
 
         return 1;
     }
 
-    HYP_EXPORT void ManagedClass_SetAttributes(ManagedClass* managed_class, ManagedAttributeHolder* managed_attribute_holder_ptr)
+    HYP_EXPORT void ManagedClass_SetAttributes(ManagedClass* managedClass, ManagedAttributeHolder* managedAttributeHolderPtr)
     {
-        AssertThrow(managed_class != nullptr);
+        AssertThrow(managedClass != nullptr);
 
-        if (!managed_class->class_object || !managed_attribute_holder_ptr)
+        if (!managedClass->classObject || !managedAttributeHolderPtr)
         {
             return;
         }
 
-        AttributeSet attributes = InternManagedAttributeHolder(managed_attribute_holder_ptr);
+        AttributeSet attributes = InternManagedAttributeHolder(managedAttributeHolderPtr);
 
-        managed_class->class_object->SetAttributes(std::move(attributes));
+        managedClass->classObject->SetAttributes(std::move(attributes));
     }
 
-    HYP_EXPORT void ManagedClass_AddMethod(ManagedClass* managed_class, const char* method_name, ManagedGuid guid, InvokeMethodFunction invoke_fptr, ManagedAttributeHolder* managed_attribute_holder_ptr)
+    HYP_EXPORT void ManagedClass_AddMethod(ManagedClass* managedClass, const char* methodName, ManagedGuid guid, InvokeMethodFunction invokeFptr, ManagedAttributeHolder* managedAttributeHolderPtr)
     {
-        AssertThrow(managed_class != nullptr);
-        AssertThrow(invoke_fptr != nullptr);
+        AssertThrow(managedClass != nullptr);
+        AssertThrow(invokeFptr != nullptr);
 
-        if (!managed_class->class_object || !method_name)
+        if (!managedClass->classObject || !methodName)
         {
             return;
         }
 
-        AttributeSet attributes = InternManagedAttributeHolder(managed_attribute_holder_ptr);
+        AttributeSet attributes = InternManagedAttributeHolder(managedAttributeHolderPtr);
 
-        if (managed_class->class_object->HasMethod(method_name))
+        if (managedClass->classObject->HasMethod(methodName))
         {
-            HYP_LOG(DotNET, Error, "Class '{}' already has a method named '{}'!", managed_class->class_object->GetName(), method_name);
+            HYP_LOG(DotNET, Error, "Class '{}' already has a method named '{}'!", managedClass->classObject->GetName(), methodName);
 
             return;
         }
 
-        managed_class->class_object->AddMethod(
-            method_name,
-            Method(guid, invoke_fptr, std::move(attributes)));
+        managedClass->classObject->AddMethod(
+            methodName,
+            Method(guid, invokeFptr, std::move(attributes)));
     }
 
-    HYP_EXPORT void ManagedClass_AddProperty(ManagedClass* managed_class, const char* property_name, ManagedGuid guid, ManagedAttributeHolder* managed_attribute_holder_ptr)
+    HYP_EXPORT void ManagedClass_AddProperty(ManagedClass* managedClass, const char* propertyName, ManagedGuid guid, ManagedAttributeHolder* managedAttributeHolderPtr)
     {
-        AssertThrow(managed_class != nullptr);
+        AssertThrow(managedClass != nullptr);
 
-        if (!managed_class->class_object || !property_name)
+        if (!managedClass->classObject || !propertyName)
         {
             return;
         }
 
-        AttributeSet attributes = InternManagedAttributeHolder(managed_attribute_holder_ptr);
+        AttributeSet attributes = InternManagedAttributeHolder(managedAttributeHolderPtr);
 
-        if (managed_class->class_object->HasProperty(property_name))
+        if (managedClass->classObject->HasProperty(propertyName))
         {
-            HYP_LOG(DotNET, Error, "Class '{}' already has a property named '{}'!", managed_class->class_object->GetName(), property_name);
+            HYP_LOG(DotNET, Error, "Class '{}' already has a property named '{}'!", managedClass->classObject->GetName(), propertyName);
 
             return;
         }
 
-        managed_class->class_object->AddProperty(
-            property_name,
+        managedClass->classObject->AddProperty(
+            propertyName,
             Property(guid, std::move(attributes)));
     }
 
-    HYP_EXPORT void ManagedClass_SetNewObjectFunction(ManagedClass* managed_class, Class::NewObjectFunction new_object_fptr)
+    HYP_EXPORT void ManagedClass_SetNewObjectFunction(ManagedClass* managedClass, Class::NewObjectFunction newObjectFptr)
     {
-        AssertThrow(managed_class != nullptr);
-        AssertThrow(managed_class->class_object != nullptr);
+        AssertThrow(managedClass != nullptr);
+        AssertThrow(managedClass->classObject != nullptr);
 
-        managed_class->class_object->SetNewObjectFunction(new_object_fptr);
+        managedClass->classObject->SetNewObjectFunction(newObjectFptr);
     }
 
-    HYP_EXPORT void ManagedClass_SetMarshalObjectFunction(ManagedClass* managed_class, Class::MarshalObjectFunction marshal_object_fptr)
+    HYP_EXPORT void ManagedClass_SetMarshalObjectFunction(ManagedClass* managedClass, Class::MarshalObjectFunction marshalObjectFptr)
     {
-        AssertThrow(managed_class != nullptr);
-        AssertThrow(managed_class->class_object != nullptr);
+        AssertThrow(managedClass != nullptr);
+        AssertThrow(managedClass->classObject != nullptr);
 
-        managed_class->class_object->SetMarshalObjectFunction(marshal_object_fptr);
+        managedClass->classObject->SetMarshalObjectFunction(marshalObjectFptr);
     }
 
 } // extern "C"

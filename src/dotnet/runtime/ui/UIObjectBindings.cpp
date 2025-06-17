@@ -31,50 +31,50 @@ extern "C"
     {
         AssertThrow(result != nullptr);
 
-        if (Optional<ANSIStringView> function_name = result->GetFunctionName())
+        if (Optional<ANSIStringView> functionName = result->GetFunctionName())
         {
-            return function_name->Data();
+            return functionName->Data();
         }
 
         return nullptr;
     }
 
-    HYP_EXPORT void UIObject_Spawn(UIObject* spawn_parent, const HypClass* hyp_class, Name* name, Vec2i* position, UIObjectSize* size, HypData* out_hyp_data)
+    HYP_EXPORT void UIObject_Spawn(UIObject* spawnParent, const HypClass* hypClass, Name* name, Vec2i* position, UIObjectSize* size, HypData* outHypData)
     {
-        AssertThrow(spawn_parent != nullptr);
-        AssertThrow(hyp_class != nullptr);
+        AssertThrow(spawnParent != nullptr);
+        AssertThrow(hypClass != nullptr);
         AssertThrow(name != nullptr);
         AssertThrow(position != nullptr);
         AssertThrow(size != nullptr);
-        AssertThrow(out_hyp_data != nullptr);
+        AssertThrow(outHypData != nullptr);
 
-        Handle<UIObject> ui_object = spawn_parent->CreateUIObject(hyp_class, *name, *position, *size);
-        *out_hyp_data = HypData(std::move(ui_object));
+        Handle<UIObject> uiObject = spawnParent->CreateUIObject(hypClass, *name, *position, *size);
+        *outHypData = HypData(std::move(uiObject));
     }
 
-    HYP_EXPORT int8 UIObject_Find(UIObject* parent, const HypClass* hyp_class, Name* name, HypData* out_hyp_data)
+    HYP_EXPORT int8 UIObject_Find(UIObject* parent, const HypClass* hypClass, Name* name, HypData* outHypData)
     {
         AssertThrow(parent != nullptr);
-        AssertThrow(hyp_class != nullptr);
+        AssertThrow(hypClass != nullptr);
         AssertThrow(name != nullptr);
-        AssertThrow(out_hyp_data != nullptr);
+        AssertThrow(outHypData != nullptr);
 
-        if (hyp_class != UIObject::Class() && !hyp_class->HasParent(UIObject::Class()))
+        if (!hypClass->IsDerivedFrom(UIObject::Class()))
         {
             return false;
         }
 
-        Handle<UIObject> ui_object = parent->FindChildUIObject([hyp_class, name](UIObject* ui_object)
+        Handle<UIObject> uiObject = parent->FindChildUIObject([hypClass, name](UIObject* uiObject)
             {
-                return ui_object->IsInstanceOf(hyp_class) && ui_object->GetName() == *name;
+                return uiObject->IsA(hypClass) && uiObject->GetName() == *name;
             });
 
-        if (!ui_object)
+        if (!uiObject)
         {
             return false;
         }
 
-        *out_hyp_data = HypData(std::move(ui_object));
+        *outHypData = HypData(std::move(uiObject));
 
         return true;
     }

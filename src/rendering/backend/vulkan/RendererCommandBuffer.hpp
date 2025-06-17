@@ -5,7 +5,7 @@
 
 #include <rendering/backend/RendererCommandBuffer.hpp>
 
-#include <rendering/backend/vulkan/RendererBuffer.hpp>
+#include <rendering/backend/vulkan/RendererGpuBuffer.hpp>
 #include <rendering/backend/vulkan/RendererFence.hpp>
 
 #include <rendering/backend/RendererDevice.hpp>
@@ -18,8 +18,6 @@
 #include <Types.hpp>
 
 namespace hyperion {
-namespace renderer {
-
 class VulkanSemaphoreChain;
 class VulkanRenderPass;
 
@@ -36,7 +34,7 @@ public:
 
     HYP_FORCE_INLINE VkCommandPool GetVulkanCommandPool() const
     {
-        return m_command_pool;
+        return m_commandPool;
     }
 
     HYP_FORCE_INLINE CommandBufferType GetType() const
@@ -47,38 +45,38 @@ public:
     HYP_API virtual bool IsCreated() const override;
 
     HYP_API virtual RendererResult Create() override;
-    HYP_API RendererResult Create(VkCommandPool command_pool);
+    HYP_API RendererResult Create(VkCommandPool commandPool);
     HYP_API virtual RendererResult Destroy() override;
 
-    HYP_API RendererResult Begin(const VulkanRenderPass* render_pass = nullptr);
+    HYP_API RendererResult Begin(const VulkanRenderPass* renderPass = nullptr);
     HYP_API RendererResult End();
     HYP_API RendererResult Reset();
     HYP_API RendererResult SubmitPrimary(
         VulkanDeviceQueue* queue,
         VulkanFence* fence,
-        VulkanSemaphoreChain* semaphore_chain);
+        VulkanSemaphoreChain* semaphoreChain);
 
     HYP_API RendererResult SubmitSecondary(VulkanCommandBuffer* primary);
 
-    HYP_API virtual void BindVertexBuffer(const GPUBufferBase* buffer) override;
-    HYP_API virtual void BindIndexBuffer(const GPUBufferBase* buffer, DatumType datum_type = DatumType::UNSIGNED_INT) override;
+    HYP_API virtual void BindVertexBuffer(const GpuBufferBase* buffer) override;
+    HYP_API virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) override;
 
     HYP_API virtual void DrawIndexed(
-        uint32 num_indices,
-        uint32 num_instances = 1,
-        uint32 instance_index = 0) const override;
+        uint32 numIndices,
+        uint32 numInstances = 1,
+        uint32 instanceIndex = 0) const override;
 
     HYP_API virtual void DrawIndexedIndirect(
-        const GPUBufferBase* buffer,
-        uint32 buffer_offset) const override;
+        const GpuBufferBase* buffer,
+        uint32 bufferOffset) const override;
 
-    HYP_API void DebugMarkerBegin(const char* marker_name) const;
+    HYP_API void DebugMarkerBegin(const char* markerName) const;
     HYP_API void DebugMarkerEnd() const;
 
     template <class LambdaFunction>
-    RendererResult Record(const VulkanRenderPass* render_pass, LambdaFunction&& fn)
+    RendererResult Record(const VulkanRenderPass* renderPass, LambdaFunction&& fn)
     {
-        HYPERION_BUBBLE_ERRORS(Begin(render_pass));
+        HYPERION_BUBBLE_ERRORS(Begin(renderPass));
 
         RendererResult result = fn(this);
 
@@ -90,10 +88,9 @@ public:
 private:
     CommandBufferType m_type;
     VkCommandBuffer m_handle;
-    VkCommandPool m_command_pool;
+    VkCommandPool m_commandPool;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

@@ -44,12 +44,12 @@ public:
 
     HYP_FORCE_INLINE const Matrix4& GetBoneMatrix() const
     {
-        return m_bone_matrix;
+        return m_boneMatrix;
     }
 
     HYP_FORCE_INLINE void SetBindingTransform(const Transform& transform)
     {
-        m_binding_transform = transform;
+        m_bindingTransform = transform;
     }
 
     void SetToBindingPose();
@@ -60,14 +60,14 @@ public:
 
     void UpdateBoneTransform();
 
-    Transform m_binding_transform;
-    Transform m_pose_transform;
+    Transform m_bindingTransform;
+    Transform m_poseTransform;
 
-    Vec3f m_world_bone_translation;
-    Vec3f m_inv_binding_translation;
+    Vec3f m_worldBoneTranslation;
+    Vec3f m_invBindingTranslation;
 
-    Quaternion m_world_bone_rotation;
-    Quaternion m_inv_binding_rotation;
+    Quaternion m_worldBoneRotation;
+    Quaternion m_invBindingRotation;
 
 private:
     void SetSkeleton(Skeleton* skeleton);
@@ -78,7 +78,7 @@ private:
     }
 
     Skeleton* m_skeleton;
-    Matrix4 m_bone_matrix;
+    Matrix4 m_boneMatrix;
     Keyframe m_keyframe;
 };
 

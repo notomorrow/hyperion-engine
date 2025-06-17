@@ -20,29 +20,29 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT void HypMethod_GetName(const HypMethod* method, Name* out_name)
+    HYP_EXPORT void HypMethod_GetName(const HypMethod* method, Name* outName)
     {
-        if (!method || !out_name)
+        if (!method || !outName)
         {
             return;
         }
 
-        *out_name = method->GetName();
+        *outName = method->GetName();
     }
 
-    HYP_EXPORT void HypMethod_GetReturnTypeID(const HypMethod* method, TypeID* out_return_type_id)
+    HYP_EXPORT void HypMethod_GetReturnTypeId(const HypMethod* method, TypeId* outReturnTypeId)
     {
-        if (!method || !out_return_type_id)
+        if (!method || !outReturnTypeId)
         {
             return;
         }
 
-        *out_return_type_id = method->GetTypeID();
+        *outReturnTypeId = method->GetTypeId();
     }
 
-    HYP_EXPORT uint32 HypMethod_GetParameters(const HypMethod* method, const HypMethodParameter** out_params)
+    HYP_EXPORT uint32 HypMethod_GetParameters(const HypMethod* method, const HypMethodParameter** outParams)
     {
-        if (!method || !out_params)
+        if (!method || !outParams)
         {
             return 0;
         }
@@ -52,7 +52,7 @@ extern "C"
             return 0;
         }
 
-        *out_params = method->GetParameters().Begin();
+        *outParams = method->GetParameters().Begin();
 
         return (uint32)method->GetParameters().Size();
     }
@@ -67,21 +67,21 @@ extern "C"
         return uint32(method->GetFlags());
     }
 
-    HYP_EXPORT bool HypMethod_Invoke(const HypMethod* method, HypData* args, uint32 num_args, HypData* out_result)
+    HYP_EXPORT bool HypMethod_Invoke(const HypMethod* method, HypData* args, uint32 numArgs, HypData* outResult)
     {
-        if (!method || !out_result)
+        if (!method || !outResult)
         {
             return false;
         }
 
-        if (num_args != 0 && !args)
+        if (numArgs != 0 && !args)
         {
             return false;
         }
 
-        Span<HypData> args_view(args, num_args);
+        Span<HypData> argsView(args, numArgs);
 
-        *out_result = method->Invoke(args_view);
+        *outResult = method->Invoke(argsView);
 
         return true;
     }

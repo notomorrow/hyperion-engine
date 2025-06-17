@@ -61,9 +61,9 @@ public:
     {
     }
 
-    RunningEditorTask(const Handle<EditorTaskBase>& task, const Handle<UIObject>& ui_object)
+    RunningEditorTask(const Handle<EditorTaskBase>& task, const Handle<UIObject>& uiObject)
         : m_task(task),
-          m_ui_object(ui_object)
+          m_uiObject(uiObject)
     {
     }
 
@@ -74,14 +74,14 @@ public:
 
     HYP_FORCE_INLINE const Handle<UIObject>& GetUIObject() const
     {
-        return m_ui_object;
+        return m_uiObject;
     }
 
-    Handle<UIObject> CreateUIObject(UIStage* ui_stage) const;
+    Handle<UIObject> CreateUIObject(UIStage* uiStage) const;
 
 private:
     Handle<EditorTaskBase> m_task;
-    Handle<UIObject> m_ui_object;
+    Handle<UIObject> m_uiObject;
 };
 
 HYP_CLASS()
@@ -173,17 +173,17 @@ public:
 
     HYP_FORCE_INLINE bool IsDragging() const
     {
-        return m_is_dragging;
+        return m_isDragging;
     }
 
     HYP_FORCE_INLINE void SetCurrentProject(const WeakHandle<EditorProject>& project)
     {
-        m_current_project = project;
+        m_currentProject = project;
     }
 
-    HYP_FORCE_INLINE void SetEditorSubsystem(EditorSubsystem* editor_subsystem)
+    HYP_FORCE_INLINE void SetEditorSubsystem(EditorSubsystem* editorSubsystem)
     {
-        m_editor_subsystem = editor_subsystem;
+        m_editorSubsystem = editorSubsystem;
     }
 
     void Shutdown();
@@ -195,22 +195,22 @@ public:
         return -1;
     }
 
-    virtual void UpdateWidget(const Handle<Node>& focused_node);
+    virtual void UpdateWidget(const Handle<Node>& focusedNode);
 
-    virtual void OnDragStart(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node, const Vec3f& hitpoint);
-    virtual void OnDragEnd(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node);
+    virtual void OnDragStart(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node, const Vec3f& hitpoint);
+    virtual void OnDragEnd(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node);
 
-    virtual bool OnMouseHover(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node)
+    virtual bool OnMouseHover(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node)
     {
         return false;
     }
 
-    virtual bool OnMouseLeave(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node)
+    virtual bool OnMouseLeave(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node)
     {
         return false;
     }
 
-    virtual bool OnMouseMove(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node)
+    virtual bool OnMouseMove(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node)
     {
         return false;
     }
@@ -224,17 +224,17 @@ protected:
 
     HYP_FORCE_INLINE EditorSubsystem* GetEditorSubsystem() const
     {
-        return m_editor_subsystem;
+        return m_editorSubsystem;
     }
 
-    WeakHandle<Node> m_focused_node;
+    WeakHandle<Node> m_focusedNode;
     Handle<Node> m_node;
 
 private:
-    EditorSubsystem* m_editor_subsystem;
-    WeakHandle<EditorProject> m_current_project;
+    EditorSubsystem* m_editorSubsystem;
+    WeakHandle<EditorProject> m_currentProject;
 
-    bool m_is_dragging;
+    bool m_isDragging;
 };
 
 HYP_CLASS()
@@ -275,26 +275,26 @@ public:
         return 0;
     }
 
-    virtual void OnDragStart(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node, const Vec3f& hitpoint) override;
-    virtual void OnDragEnd(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node) override;
+    virtual void OnDragStart(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node, const Vec3f& hitpoint) override;
+    virtual void OnDragEnd(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node) override;
 
-    virtual bool OnMouseHover(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node) override;
-    virtual bool OnMouseLeave(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node) override;
-    virtual bool OnMouseMove(const Handle<Camera>& camera, const MouseEvent& mouse_event, const Handle<Node>& node) override;
+    virtual bool OnMouseHover(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node) override;
+    virtual bool OnMouseLeave(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node) override;
+    virtual bool OnMouseMove(const Handle<Camera>& camera, const MouseEvent& mouseEvent, const Handle<Node>& node) override;
 
 protected:
     struct DragData
     {
-        Vec3f axis_direction;
-        Vec3f plane_normal;
-        Vec3f plane_point;
-        Vec3f hitpoint_origin;
-        Vec3f node_origin;
+        Vec3f axisDirection;
+        Vec3f planeNormal;
+        Vec3f planePoint;
+        Vec3f hitpointOrigin;
+        Vec3f nodeOrigin;
     };
 
     virtual Handle<Node> Load_Internal() const override;
 
-    Optional<DragData> m_drag_data;
+    Optional<DragData> m_dragData;
 };
 
 class HYP_API EditorManipulationWidgetHolder
@@ -304,11 +304,11 @@ class HYP_API EditorManipulationWidgetHolder
 public:
     using OnSelectedManipulationWidgetChangeDelegate = Delegate<void, EditorManipulationWidgetBase&, EditorManipulationWidgetBase&>;
 
-    EditorManipulationWidgetHolder(EditorSubsystem* editor_subsystem);
+    EditorManipulationWidgetHolder(EditorSubsystem* editorSubsystem);
 
     HYP_FORCE_INLINE const EditorManipulationWidgetSet& GetManipulationWidgets() const
     {
-        return m_manipulation_widgets;
+        return m_manipulationWidgets;
     }
 
     EditorManipulationMode GetSelectedManipulationMode() const;
@@ -324,11 +324,11 @@ public:
     OnSelectedManipulationWidgetChangeDelegate OnSelectedManipulationWidgetChange;
 
 private:
-    EditorSubsystem* m_editor_subsystem;
-    WeakHandle<EditorProject> m_current_project;
+    EditorSubsystem* m_editorSubsystem;
+    WeakHandle<EditorProject> m_currentProject;
 
-    EditorManipulationMode m_selected_manipulation_mode;
-    EditorManipulationWidgetSet m_manipulation_widgets;
+    EditorManipulationMode m_selectedManipulationMode;
+    EditorManipulationWidgetSet m_manipulationWidgets;
 };
 
 HYP_CLASS()
@@ -337,35 +337,41 @@ class HYP_API EditorSubsystem : public Subsystem
     HYP_OBJECT_BODY(EditorSubsystem);
 
 public:
-    EditorSubsystem(const Handle<AppContextBase>& app_context);
+    EditorSubsystem(const Handle<AppContextBase>& appContext);
     virtual ~EditorSubsystem() override;
 
     void OnAddedToWorld() override;
     void OnRemovedFromWorld() override;
-    void Update(GameCounter::TickUnit delta) override;
+    void Update(float delta) override;
 
     void OnSceneAttached(const Handle<Scene>& scene) override;
     void OnSceneDetached(const Handle<Scene>& scene) override;
 
     HYP_FORCE_INLINE const Handle<AppContextBase>& GetAppContext() const
     {
-        return m_app_context;
+        return m_appContext;
     }
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<EditorProject>& GetCurrentProject() const
     {
-        return m_current_project;
+        return m_currentProject;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE Handle<Scene> GetActiveScene() const
+    {
+        return m_activeScene.Lock();
     }
 
     HYP_FORCE_INLINE EditorManipulationWidgetHolder& GetManipulationWidgetHolder()
     {
-        return m_manipulation_widget_holder;
+        return m_manipulationWidgetHolder;
     }
 
     HYP_FORCE_INLINE const EditorManipulationWidgetHolder& GetManipulationWidgetHolder() const
     {
-        return m_manipulation_widget_holder;
+        return m_manipulationWidgetHolder;
     }
 
     HYP_METHOD()
@@ -378,10 +384,10 @@ public:
     void AddTask(const Handle<EditorTaskBase>& task);
 
     HYP_METHOD()
-    void SetFocusedNode(const Handle<Node>& focused_node, bool should_select_in_outline = true);
+    void SetFocusedNode(const Handle<Node>& focusedNode, bool shouldSelectInOutline = true);
 
     HYP_METHOD()
-    void AddDebugOverlay(const Handle<EditorDebugOverlayBase>& debug_overlay);
+    void AddDebugOverlay(const Handle<EditorDebugOverlayBase>& debugOverlay);
 
     HYP_METHOD()
     bool RemoveDebugOverlay(WeakName name);
@@ -391,7 +397,7 @@ public:
 
     HYP_FORCE_INLINE EditorDelegates* GetEditorDelegates()
     {
-        return m_editor_delegates;
+        return m_editorDelegates;
     }
 
     HYP_FIELD()
@@ -420,11 +426,11 @@ private:
     void InitManipulationWidgetSelection();
     void InitActiveSceneSelection();
 
-    RC<FontAtlas> CreateFontAtlas();
+    TResult<RC<FontAtlas>> CreateFontAtlas();
 
-    void UpdateCamera(GameCounter::TickUnit delta);
-    void UpdateTasks(GameCounter::TickUnit delta);
-    void UpdateDebugOverlays(GameCounter::TickUnit delta);
+    void UpdateCamera(float delta);
+    void UpdateTasks(float delta);
+    void UpdateDebugOverlays(float delta);
 
     void StartWatchingNode(const Handle<Node>& node);
     void StopWatchingNode(const Handle<Node>& node);
@@ -436,57 +442,56 @@ private:
 
     void SetHoveredManipulationWidget(
         const MouseEvent& event,
-        EditorManipulationWidgetBase* manipulation_widget,
-        const Handle<Node>& manipulation_widget_node);
+        EditorManipulationWidgetBase* manipulationWidget,
+        const Handle<Node>& manipulationWidgetNode);
 
     HYP_FORCE_INLINE bool IsHoveringManipulationWidget() const
     {
-        return m_hovered_manipulation_widget.IsValid() && m_hovered_manipulation_widget_node.IsValid();
+        return m_hoveredManipulationWidget.IsValid() && m_hoveredManipulationWidgetNode.IsValid();
     }
 
     void SetActiveScene(const WeakHandle<Scene>& scene);
 
-    Handle<AppContextBase> m_app_context;
-    Handle<Scene> m_editor_scene;
+    Handle<AppContextBase> m_appContext;
+    Handle<Scene> m_editorScene;
     Handle<Camera> m_camera;
 
-    Handle<EditorProject> m_current_project;
-    WeakHandle<Scene> m_active_scene;
+    Handle<EditorProject> m_currentProject;
+    WeakHandle<Scene> m_activeScene;
 
-    FixedArray<Array<RunningEditorTask>, ThreadType::THREAD_TYPE_MAX> m_tasks_by_thread_type;
+    FixedArray<Array<RunningEditorTask>, ThreadType::THREAD_TYPE_MAX> m_tasksByThreadType;
 
-    EditorManipulationWidgetHolder m_manipulation_widget_holder;
+    EditorManipulationWidgetHolder m_manipulationWidgetHolder;
 
-    WeakHandle<EditorManipulationWidgetBase> m_hovered_manipulation_widget;
-    WeakHandle<Node> m_hovered_manipulation_widget_node;
+    WeakHandle<EditorManipulationWidgetBase> m_hoveredManipulationWidget;
+    WeakHandle<Node> m_hoveredManipulationWidgetNode;
 
-    Handle<Texture> m_scene_texture;
-    Handle<UIObject> m_main_panel;
+    Handle<Texture> m_sceneTexture;
+    Handle<UIObject> m_mainPanel;
 
-    WeakHandle<Node> m_focused_node;
+    WeakHandle<Node> m_focusedNode;
     // the actual node that displays the highlight for the focused item
-    Handle<Node> m_highlight_node;
+    Handle<Node> m_highlightNode;
 
-    bool m_editor_camera_enabled;
-    bool m_should_cancel_next_click;
+    bool m_editorCameraEnabled;
+    bool m_shouldCancelNextClick;
 
-    EditorDelegates* m_editor_delegates;
+    EditorDelegates* m_editorDelegates;
 
-    Array<Handle<EditorDebugOverlayBase>> m_debug_overlays;
-    Handle<UIObject> m_debug_overlay_ui_object;
+    Array<Handle<EditorDebugOverlayBase>> m_debugOverlays;
+    Handle<UIObject> m_debugOverlayUiObject;
 
-    Handle<ConsoleUI> m_console_ui;
+    Handle<ConsoleUI> m_consoleUi;
 
-    Handle<UIListView> m_content_browser_directory_list;
-    Handle<AssetPackage> m_selected_package;
+    Handle<UIListView> m_contentBrowserDirectoryList;
+    Handle<AssetPackage> m_selectedPackage;
 
-    Handle<UIGrid> m_content_browser_contents;
-    Handle<UIObject> m_content_browser_contents_empty;
+    Handle<UIGrid> m_contentBrowserContents;
+    Handle<UIObject> m_contentBrowserContentsEmpty;
 
     Array<Handle<View>> m_views;
-    Array<RC<ScreenCaptureRenderSubsystem>> m_screen_capture_render_subsystems;
 
-    DelegateHandlerSet m_delegate_handlers;
+    DelegateHandlerSet m_delegateHandlers;
 };
 
 } // namespace hyperion

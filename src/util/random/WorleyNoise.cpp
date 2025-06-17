@@ -11,19 +11,19 @@ WorleyNoise::WorleyNoise(int seed)
 
 double WorleyNoise::Noise(double x, double y, double z)
 {
-    Vector3 input_point(x, y, z);
-    Vector3 random_diff;
-    Vector3 feature_point;
+    Vector3 inputPoint(x, y, z);
+    Vector3 randomDiff;
+    Vector3 featurePoint;
 
-    size_t last_random = 0;
-    size_t num_feature_points = 0;
+    size_t lastRandom = 0;
+    size_t numFeaturePoints = 0;
 
     long long int cubex = 0, cubey = 0, cubez = 0;
-    long long int eval_cubex = std::floor((int)x);
-    long long int eval_cubey = std::floor((int)y);
-    long long int eval_cubez = std::floor((int)z);
+    long long int evalCubex = std::floor((int)x);
+    long long int evalCubey = std::floor((int)y);
+    long long int evalCubez = std::floor((int)z);
 
-    std::vector<double> distance_array { 6666, 6666, 6666 };
+    std::vector<double> distanceArray { 6666, 6666, 6666 };
 
     for (int i = -1; i < 2; i++)
     {
@@ -31,33 +31,33 @@ double WorleyNoise::Noise(double x, double y, double z)
         {
             for (int k = -1; k < 2; k++)
             {
-                cubex = eval_cubex + i;
-                cubey = eval_cubey + j;
-                cubez = eval_cubez + k;
+                cubex = evalCubex + i;
+                cubey = evalCubey + j;
+                cubez = evalCubez + k;
 
-                last_random = LCGRandom(WorleyHash(cubex + m_seed, cubey, cubez));
-                num_feature_points = ProbLookup(last_random);
+                lastRandom = LCGRandom(WorleyHash(cubex + m_seed, cubey, cubez));
+                numFeaturePoints = ProbLookup(lastRandom);
 
-                for (unsigned int l = 0; l < num_feature_points; l++)
+                for (unsigned int l = 0; l < numFeaturePoints; l++)
                 {
-                    last_random = LCGRandom(last_random);
-                    random_diff.x = double(last_random) / 0x100000000;
+                    lastRandom = LCGRandom(lastRandom);
+                    randomDiff.x = double(lastRandom) / 0x100000000;
 
-                    last_random = LCGRandom(last_random);
-                    random_diff.y = double(last_random) / 0x100000000;
+                    lastRandom = LCGRandom(lastRandom);
+                    randomDiff.y = double(lastRandom) / 0x100000000;
 
-                    last_random = LCGRandom(last_random);
-                    random_diff.z = double(last_random) / 0x100000000;
+                    lastRandom = LCGRandom(lastRandom);
+                    randomDiff.z = double(lastRandom) / 0x100000000;
 
-                    feature_point = Vector3(random_diff.x + cubex, random_diff.y + cubey, random_diff.z + cubez);
+                    featurePoint = Vector3(randomDiff.x + cubex, randomDiff.y + cubey, randomDiff.z + cubez);
 
-                    Insert(distance_array, EuclidianDistance(input_point, feature_point));
+                    Insert(distanceArray, EuclidianDistance(inputPoint, featurePoint));
                 }
             }
         }
     }
 
-    return std::min(std::max(CombinerFunc1(distance_array.data()), 0.0), 1.0);
+    return std::min(std::max(CombinerFunc1(distanceArray.data()), 0.0), 1.0);
 }
 
 double WorleyNoise::CombinerFunc1(double* data)

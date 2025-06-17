@@ -5,7 +5,7 @@
 
 #include <core/Defines.hpp>
 
-#include <core/threading/ThreadID.hpp>
+#include <core/threading/ThreadId.hpp>
 #include <core/threading/AtomicVar.hpp>
 #include <core/threading/Mutex.hpp>
 
@@ -41,19 +41,19 @@ struct SuppressDataRaceDetectorContext
 class HYP_API DataRaceDetector
 {
 public:
-    static constexpr SizeType num_preallocated_states = g_max_static_thread_ids;
+    static constexpr SizeType numPreallocatedStates = g_maxStaticThreadIds;
 
     struct DataAccessState
     {
-        ANSIStringView current_function;
+        ANSIStringView currentFunction;
         ANSIStringView message;
     };
 
     struct ThreadAccessState
     {
-        ThreadID thread_id;
+        ThreadId threadId;
         EnumFlags<DataAccessFlags> access = DataAccessFlags::ACCESS_NONE;
-        uint32 original_index = ~0u;
+        uint32 originalIndex = ~0u;
         DataAccessState state;
     };
 
@@ -66,14 +66,14 @@ public:
     private:
         EnumFlags<DataAccessFlags> m_flags;
         DataRaceDetector& m_detector;
-        ThreadID m_thread_id;
+        ThreadId m_threadId;
     };
 
     DataRaceDetector();
 
     DataRaceDetector(const DataRaceDetector& other)
-        : m_preallocated_states(other.m_preallocated_states),
-          m_dynamic_states(other.m_dynamic_states),
+        : m_preallocatedStates(other.m_preallocatedStates),
+          m_dynamicStates(other.m_dynamicStates),
           m_writers(other.m_writers.Get(MemoryOrder::ACQUIRE)),
           m_readers(other.m_readers.Get(MemoryOrder::ACQUIRE))
     {
@@ -82,8 +82,8 @@ public:
     DataRaceDetector& operator=(const DataRaceDetector& other) = delete;
 
     DataRaceDetector(DataRaceDetector&& other) noexcept
-        : m_preallocated_states(std::move(other.m_preallocated_states)),
-          m_dynamic_states(std::move(other.m_dynamic_states)),
+        : m_preallocatedStates(std::move(other.m_preallocatedStates)),
+          m_dynamicStates(std::move(other.m_dynamicStates)),
           m_writers(other.m_writers.Exchange(0, MemoryOrder::ACQUIRE_RELEASE)),
           m_readers(other.m_readers.Exchange(0, MemoryOrder::ACQUIRE_RELEASE))
     {
@@ -92,17 +92,17 @@ public:
     DataRaceDetector& operator=(DataRaceDetector&& other) = delete;
     ~DataRaceDetector();
 
-    EnumFlags<DataAccessFlags> AddAccess(ThreadID thread_id, EnumFlags<DataAccessFlags> access_flags, const DataAccessState& state = {});
-    void RemoveAccess(ThreadID thread_id, EnumFlags<DataAccessFlags> access_flags);
+    EnumFlags<DataAccessFlags> AddAccess(ThreadId threadId, EnumFlags<DataAccessFlags> accessFlags, const DataAccessState& state = {});
+    void RemoveAccess(ThreadId threadId, EnumFlags<DataAccessFlags> accessFlags);
 
 private:
-    void LogDataRace(uint64 readers_mask, uint64 writers_mask) const;
-    void GetThreadIDs(uint64 readers_mask, uint64 writers_mask, Array<Pair<ThreadID, DataAccessState>>& out_reader_thread_ids, Array<Pair<ThreadID, DataAccessState>>& out_writer_thread_ids) const;
+    void LogDataRace(uint64 readersMask, uint64 writersMask) const;
+    void GetThreadIds(uint64 readersMask, uint64 writersMask, Array<Pair<ThreadId, DataAccessState>>& outReaderThreadIds, Array<Pair<ThreadId, DataAccessState>>& outWriterThreadIds) const;
 
-    Array<ThreadAccessState, DynamicAllocator> m_preallocated_states;
+    Array<ThreadAccessState, DynamicAllocator> m_preallocatedStates;
 
-    Array<ThreadAccessState, DynamicAllocator> m_dynamic_states;
-    mutable Mutex m_dynamic_states_mutex;
+    Array<ThreadAccessState, DynamicAllocator> m_dynamicStates;
+    mutable Mutex m_dynamicStatesMutex;
 
     // Indices of ThreadAccessState
     AtomicVar<uint64> m_writers;

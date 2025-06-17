@@ -38,7 +38,7 @@ void RTCStream::SendSample(const RTCStreamDestination& destination)
         return;
     }
 
-    uint32 num_samples = 0;
+    uint32 numSamples = 0;
 
     while (auto sample = m_encoder->PullData())
     {
@@ -52,18 +52,18 @@ void RTCStream::SendSample(const RTCStreamDestination& destination)
             track->SendData(sample.Get(), m_timestamp);
         }
 
-        ++num_samples;
+        ++numSamples;
     }
 
     m_timestamp += m_params.GetSampleDuration();
 
-    // DebugLog(LogType::Debug, "Sent %u samples to %llu tracks\n", num_samples, destination.tracks.Size());
+    // DebugLog(LogType::Debug, "Sent %u samples to %llu tracks\n", numSamples, destination.tracks.Size());
 }
 
 #ifdef HYP_LIBDATACHANNEL
 
-LibDataChannelRTCStream::LibDataChannelRTCStream(RTCStreamType stream_type, UniquePtr<RTCStreamEncoder>&& encoder)
-    : RTCStream(stream_type, std::move(encoder), { 60 })
+LibDataChannelRTCStream::LibDataChannelRTCStream(RTCStreamType streamType, UniquePtr<RTCStreamEncoder>&& encoder)
+    : RTCStream(streamType, std::move(encoder), { 60 })
 {
 }
 

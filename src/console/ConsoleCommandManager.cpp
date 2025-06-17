@@ -65,11 +65,11 @@ ConsoleCommandManager::~ConsoleCommandManager()
 
 void ConsoleCommandManager::Initialize()
 {
-    int num_registered_commands = FindAndRegisterCommands();
+    int numRegisteredCommands = FindAndRegisterCommands();
 
-    if (num_registered_commands > 0)
+    if (numRegisteredCommands > 0)
     {
-        HYP_LOG(Console, Info, "Registered {} console command(s)", num_registered_commands);
+        HYP_LOG(Console, Info, "Registered {} console command(s)", numRegisteredCommands);
     }
     else
     {
@@ -86,28 +86,28 @@ void ConsoleCommandManager::Shutdown()
 
 int ConsoleCommandManager::FindAndRegisterCommands()
 {
-    const HypClass* parent_hyp_class = ConsoleCommandBase::Class();
+    const HypClass* parentHypClass = ConsoleCommandBase::Class();
 
     Array<Handle<ConsoleCommandBase>> commands;
 
-    HypClassRegistry::GetInstance().ForEachClass([this, parent_hyp_class, &commands](const HypClass* hyp_class)
+    HypClassRegistry::GetInstance().ForEachClass([this, parentHypClass, &commands](const HypClass* hypClass)
         {
-            if (hyp_class->IsAbstract())
+            if (hypClass->IsAbstract())
             {
                 return IterationResult::CONTINUE;
             }
 
-            if (hyp_class->HasParent(parent_hyp_class))
+            if (hypClass->IsDerivedFrom(parentHypClass))
             {
-                HypData hyp_data;
-                if (!hyp_class->CreateInstance(hyp_data))
+                HypData hypData;
+                if (!hypClass->CreateInstance(hypData))
                 {
-                    HYP_LOG(Console, Error, "Failed to create instance of class: {}", hyp_class->GetName());
+                    HYP_LOG(Console, Error, "Failed to create instance of class: {}", hypClass->GetName());
 
                     return IterationResult::CONTINUE;
                 }
 
-                commands.PushBack(std::move(hyp_data.Get<Handle<ConsoleCommandBase>>()));
+                commands.PushBack(std::move(hypData.Get<Handle<ConsoleCommandBase>>()));
 
                 return IterationResult::CONTINUE;
             }
@@ -122,7 +122,7 @@ int ConsoleCommandManager::FindAndRegisterCommands()
 
     Mutex::Guard guard(m_impl->m_mutex);
 
-    int num_registered_commands = 0;
+    int numRegisteredCommands = 0;
 
     for (const Handle<ConsoleCommandBase>& command : commands)
     {
@@ -141,10 +141,10 @@ int ConsoleCommandManager::FindAndRegisterCommands()
 
         m_impl->m_commands.Set(std::move(command));
 
-        ++num_registered_commands;
+        ++numRegisteredCommands;
     }
 
-    return num_registered_commands;
+    return numRegisteredCommands;
 }
 
 void ConsoleCommandManager::RegisterCommand(const Handle<ConsoleCommandBase>& command)
@@ -166,46 +166,46 @@ void ConsoleCommandManager::RegisterCommand(const Handle<ConsoleCommandBase>& co
     m_impl->m_commands.Set(command);
 }
 
-Result ConsoleCommandManager::ExecuteCommand(const String& command_line)
+Result ConsoleCommandManager::ExecuteCommand(const String& commandLine)
 {
-    if (command_line.Empty())
+    if (commandLine.Empty())
     {
         return {};
     }
 
-    Array<String> split = command_line.Trimmed().Split(' ');
+    Array<String> split = commandLine.Trimmed().Split(' ');
 
     if (split.Empty())
     {
         return {};
     }
 
-    String command_name = split[0].ToLower();
+    String commandName = split[0].ToLower();
 
     Mutex::Guard guard(m_impl->m_mutex);
 
-    auto it = m_impl->m_commands.Find(command_name.Data());
+    auto it = m_impl->m_commands.Find(commandName.Data());
 
     if (it == m_impl->m_commands.End())
     {
-        HYP_LOG(Console, Error, "Command not found: {}", command_name);
+        HYP_LOG(Console, Error, "Command not found: {}", commandName);
 
-        return HYP_MAKE_ERROR(Error, "Command not found: {}", command_name);
+        return HYP_MAKE_ERROR(Error, "Command not found: {}", commandName);
     }
 
     const CommandLineArgumentDefinitions& definitions = (*it)->GetDefinitions();
 
-    CommandLineParser command_line_parser { &definitions };
+    CommandLineParser commandLineParser { &definitions };
 
-    if (auto parse_result = command_line_parser.Parse(command_line); parse_result.HasValue())
+    if (auto parseResult = commandLineParser.Parse(commandLine); parseResult.HasValue())
     {
-        return (*it)->Execute(parse_result.GetValue());
+        return (*it)->Execute(parseResult.GetValue());
     }
     else
     {
-        HYP_LOG(Console, Error, "Failed to parse command line: {}", parse_result.GetError().GetMessage());
+        HYP_LOG(Console, Error, "Failed to parse command line: {}", parseResult.GetError().GetMessage());
 
-        return parse_result.GetError();
+        return parseResult.GetError();
     }
 
     return {};

@@ -9,8 +9,6 @@
 #include <vulkan/vulkan.h>
 
 namespace hyperion {
-namespace renderer {
-
 extern HYP_API VkDescriptorSetLayout GetVkDescriptorSetLayout(const VulkanDescriptorSetLayoutWrapper& layout);
 
 template <class PipelineType>
@@ -18,19 +16,19 @@ static inline Array<VkDescriptorSetLayout> GetPipelineVulkanDescriptorSetLayouts
 {
     AssertThrowMsg(pipeline.GetDescriptorTable().IsValid(), "Invalid DescriptorTable provided to Pipeline");
 
-    Array<VkDescriptorSetLayout> used_layouts;
+    Array<VkDescriptorSetLayout> usedLayouts;
 
-    for (const DescriptorSetRef& descriptor_set : pipeline.GetDescriptorTable()->GetSets()[0])
+    for (const DescriptorSetRef& descriptorSet : pipeline.GetDescriptorTable()->GetSets()[0])
     {
-        VulkanDescriptorSetRef vulkan_descriptor_set = VulkanDescriptorSetRef(descriptor_set);
+        VulkanDescriptorSetRef vulkanDescriptorSet = VulkanDescriptorSetRef(descriptorSet);
 
-        AssertThrow(vulkan_descriptor_set != nullptr);
-        AssertThrow(vulkan_descriptor_set->GetVulkanLayoutWrapper() != nullptr);
+        AssertThrow(vulkanDescriptorSet != nullptr);
+        AssertThrow(vulkanDescriptorSet->GetVulkanLayoutWrapper() != nullptr);
 
-        used_layouts.PushBack(GetVkDescriptorSetLayout(*vulkan_descriptor_set->GetVulkanLayoutWrapper()));
+        usedLayouts.PushBack(GetVkDescriptorSetLayout(*vulkanDescriptorSet->GetVulkanLayoutWrapper()));
     }
 
-    return used_layouts;
+    return usedLayouts;
 }
 
 class VulkanPipelineBase
@@ -61,10 +59,9 @@ protected:
     VkPipeline m_handle;
     VkPipelineLayout m_layout;
 
-    PushConstantData m_push_constants;
+    PushConstantData m_pushConstants;
 };
 
-} // namespace renderer
 } // namespace hyperion
 
 #endif

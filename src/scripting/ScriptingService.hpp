@@ -35,9 +35,9 @@ class HYP_API ScriptingService
 {
 public:
     ScriptingService(
-        const FilePath& watch_directory,
-        const FilePath& intermediate_directory,
-        const FilePath& binary_output_directory);
+        const FilePath& watchDirectory,
+        const FilePath& intermediateDirectory,
+        const FilePath& binaryOutputDirectory);
     ScriptingService(const ScriptingService& other) = delete;
     ScriptingService& operator=(const ScriptingService& other) = delete;
     ScriptingService(ScriptingService&& other) noexcept = delete;
@@ -60,9 +60,9 @@ private:
 
     UniquePtr<ScriptingServiceThread> m_thread;
 
-    Queue<ScriptEvent> m_script_event_queue;
-    Mutex m_script_event_queue_mutex;
-    AtomicVar<uint32> m_script_event_queue_count;
+    Queue<ScriptEvent> m_scriptEventQueue;
+    Mutex m_scriptEventQueueMutex;
+    AtomicVar<uint32> m_scriptEventQueueCount;
 };
 
 } // namespace hyperion

@@ -21,15 +21,20 @@ HYP_API Logger& GetLogger()
     return Logger::GetInstance();
 }
 
-class LogChannelIDGenerator
+HYP_API ANSIStringView GetCurrentThreadName()
+{
+    return *Threads::CurrentThreadId().GetName();
+}
+
+class LogChannelIdGenerator
 {
 public:
-    LogChannelIDGenerator() = default;
-    LogChannelIDGenerator(const LogChannelIDGenerator& other) = delete;
-    LogChannelIDGenerator& operator=(const LogChannelIDGenerator& other) = delete;
-    LogChannelIDGenerator(LogChannelIDGenerator&& other) noexcept = delete;
-    LogChannelIDGenerator& operator=(LogChannelIDGenerator&& other) noexcept = delete;
-    ~LogChannelIDGenerator() = default;
+    LogChannelIdGenerator() = default;
+    LogChannelIdGenerator(const LogChannelIdGenerator& other) = delete;
+    LogChannelIdGenerator& operator=(const LogChannelIdGenerator& other) = delete;
+    LogChannelIdGenerator(LogChannelIdGenerator&& other) noexcept = delete;
+    LogChannelIdGenerator& operator=(LogChannelIdGenerator&& other) noexcept = delete;
+    ~LogChannelIdGenerator() = default;
 
     HYP_NODISCARD HYP_FORCE_INLINE uint32 Next()
     {
@@ -40,23 +45,23 @@ private:
     AtomicVar<uint32> m_counter { 0 };
 };
 
-static LogChannelIDGenerator g_log_channel_id_generator {};
+static LogChannelIdGenerator g_logChannelIdGenerator {};
 
 #pragma region LoggerOutputStream
 
 struct LoggerRedirect
 {
-    Bitset channel_mask;
+    Bitset channelMask;
     void* context = nullptr;
-    LoggerWriteFnPtr write_fnptr;
-    LoggerWriteFnPtr write_error_fnptr;
+    LoggerWriteFnPtr writeFnptr;
+    LoggerWriteFnPtr writeErrorFnptr;
 };
 
 class BasicLoggerOutputStream : public ILoggerOutputStream
 {
 public:
-    static constexpr uint64 write_flag = 0x1;
-    static constexpr uint64 read_mask = uint64(-1) & ~write_flag;
+    static constexpr uint64 writeFlag = 0x1;
+    static constexpr uint64 readMask = uint64(-1) & ~writeFlag;
 
     static BasicLoggerOutputStream& GetDefaultInstance()
     {
@@ -65,49 +70,49 @@ public:
         return instance;
     }
 
-    BasicLoggerOutputStream(FILE* output, FILE* output_error)
+    BasicLoggerOutputStream(FILE* output, FILE* outputError)
         : m_output(output),
-          m_output_error(output_error),
-          m_rw_marker(0),
-          m_redirect_enabled_mask(0),
-          m_redirect_id_counter(-1)
+          m_outputError(outputError),
+          m_rwMarker(0),
+          m_redirectEnabledMask(0),
+          m_redirectIdCounter(-1)
     {
-        for (uint32 i = 0; i < Logger::max_channels; i++)
+        for (uint32 i = 0; i < Logger::maxChannels; i++)
         {
             m_contexts[i] = (void*)this;
-            m_write_fnptr_table[i] = &Write_Static;
-            m_write_error_fnptr_table[i] = &WriteError_Static;
+            m_writeFnptrTable[i] = &Write_Static;
+            m_writeErrorFnptrTable[i] = &WriteError_Static;
         }
     }
 
     virtual ~BasicLoggerOutputStream() override = default;
 
     // @FIXME: Needs to redirect all CHILD channels as well, not parent channels!
-    virtual int AddRedirect(const Bitset& channel_mask, void* context, LoggerWriteFnPtr write_fnptr, LoggerWriteFnPtr write_error_fnptr) override
+    virtual int AddRedirect(const Bitset& channelMask, void* context, LoggerWriteFnPtr writeFnptr, LoggerWriteFnPtr writeErrorFnptr) override
     {
         Mutex::Guard guard(m_mutex);
 
-        uint64 state = m_rw_marker.BitOr(write_flag, MemoryOrder::ACQUIRE);
-        while (state & read_mask)
+        uint64 state = m_rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
+        while (state & readMask)
         {
-            state = m_rw_marker.Get(MemoryOrder::ACQUIRE);
-            Threads::Sleep(0);
+            state = m_rwMarker.Get(MemoryOrder::ACQUIRE);
+            HYP_WAIT_IDLE();
         }
 
-        const int id = ++m_redirect_id_counter;
+        const int id = ++m_redirectIdCounter;
 
-        m_redirects.Emplace(id, LoggerRedirect { channel_mask, context, write_fnptr, write_error_fnptr });
+        m_redirects.Emplace(id, LoggerRedirect { channelMask, context, writeFnptr, writeErrorFnptr });
 
-        for (Bitset::BitIndex bit_index : channel_mask)
+        for (Bitset::BitIndex bitIndex : channelMask)
         {
-            m_contexts[bit_index] = context;
-            m_write_fnptr_table[bit_index] = write_fnptr;
-            m_write_error_fnptr_table[bit_index] = write_error_fnptr;
+            m_contexts[bitIndex] = context;
+            m_writeFnptrTable[bitIndex] = writeFnptr;
+            m_writeErrorFnptrTable[bitIndex] = writeErrorFnptr;
         }
 
-        m_redirect_enabled_mask.BitOr(1ull << channel_mask.LastSetBitIndex(), MemoryOrder::RELEASE);
+        m_redirectEnabledMask.BitOr(1ull << channelMask.LastSetBitIndex(), MemoryOrder::RELEASE);
 
-        m_rw_marker.BitAnd(~write_flag, MemoryOrder::RELEASE);
+        m_rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
 
         return id;
     }
@@ -116,11 +121,11 @@ public:
     {
         Mutex::Guard guard(m_mutex);
 
-        uint64 state = m_rw_marker.BitOr(write_flag, MemoryOrder::ACQUIRE);
-        while (state & read_mask)
+        uint64 state = m_rwMarker.BitOr(writeFlag, MemoryOrder::ACQUIRE);
+        while (state & readMask)
         {
-            state = m_rw_marker.Get(MemoryOrder::ACQUIRE);
-            Threads::Sleep(0);
+            state = m_rwMarker.Get(MemoryOrder::ACQUIRE);
+            HYP_WAIT_IDLE();
         }
 
         auto it = m_redirects.Find(id);
@@ -130,109 +135,109 @@ public:
             return;
         }
 
-        for (Bitset::BitIndex bit_index : it->second.channel_mask)
+        for (Bitset::BitIndex bitIndex : it->second.channelMask)
         {
-            if (m_contexts[bit_index] != it->second.context)
+            if (m_contexts[bitIndex] != it->second.context)
             {
                 continue;
             }
 
-            m_contexts[bit_index] = (void*)this;
-            m_write_fnptr_table[bit_index] = &Write_Static;
-            m_write_error_fnptr_table[bit_index] = &WriteError_Static;
+            m_contexts[bitIndex] = (void*)this;
+            m_writeFnptrTable[bitIndex] = &Write_Static;
+            m_writeErrorFnptrTable[bitIndex] = &WriteError_Static;
         }
 
         m_redirects.Erase(it);
 
-        m_redirect_enabled_mask.BitAnd(~(1ull << it->second.channel_mask.LastSetBitIndex()), MemoryOrder::RELEASE);
+        m_redirectEnabledMask.BitAnd(~(1ull << it->second.channelMask.LastSetBitIndex()), MemoryOrder::RELEASE);
 
-        m_rw_marker.BitAnd(~write_flag, MemoryOrder::RELEASE);
+        m_rwMarker.BitAnd(~writeFlag, MemoryOrder::RELEASE);
     }
 
     virtual void Write(const LogChannel& channel, const LogMessage& message) override
     {
-        const LogChannel* channel_ptr = &channel;
+        const LogChannel* channelPtr = &channel;
 
-        if (channel.GetID() >= Logger::max_channels)
+        if (channel.Id() >= Logger::maxChannels)
         {
-            channel_ptr = &Log_Core;
+            channelPtr = &Log_Core;
             return;
         }
 
         // set read flags
         uint64 state;
-        while (((state = m_rw_marker.Increment(2, MemoryOrder::ACQUIRE)) & write_flag))
+        while (((state = m_rwMarker.Increment(2, MemoryOrder::ACQUIRE)) & writeFlag))
         {
-            m_rw_marker.Decrement(2, MemoryOrder::RELAXED);
+            m_rwMarker.Decrement(2, MemoryOrder::RELAXED);
             // wait for write flag to be released
-            Threads::Sleep(0);
+            HYP_WAIT_IDLE();
         }
 
-        void* context = m_contexts[channel_ptr->GetID()];
-        LoggerWriteFnPtr fnptr = m_write_fnptr_table[channel_ptr->GetID()];
+        void* context = m_contexts[channelPtr->Id()];
+        LoggerWriteFnPtr fnptr = m_writeFnptrTable[channelPtr->Id()];
 
-        uint32 bit_index;
-        uint64 mask = channel_ptr->GetMaskBitset().ToUInt64() & ~(1ull << channel_ptr->GetID());
+        uint32 bitIndex;
+        uint64 mask = channelPtr->GetMaskBitset().ToUInt64() & ~(1ull << channelPtr->Id());
 
-        while ((bit_index = ByteUtil::HighestSetBitIndex(mask)) != -1)
+        while ((bitIndex = ByteUtil::HighestSetBitIndex(mask)) != -1)
         {
-            if (m_redirect_enabled_mask.Get(MemoryOrder::ACQUIRE) & (1ull << bit_index))
+            if (m_redirectEnabledMask.Get(MemoryOrder::ACQUIRE) & (1ull << bitIndex))
             {
-                context = m_contexts[bit_index];
-                fnptr = m_write_fnptr_table[bit_index];
+                context = m_contexts[bitIndex];
+                fnptr = m_writeFnptrTable[bitIndex];
 
                 break;
             }
 
-            mask &= ~(1ull << bit_index);
+            mask &= ~(1ull << bitIndex);
         }
 
-        fnptr(context, *channel_ptr, message);
+        fnptr(context, *channelPtr, message);
 
-        m_rw_marker.Decrement(2, MemoryOrder::RELEASE);
+        m_rwMarker.Decrement(2, MemoryOrder::RELEASE);
     }
 
     virtual void WriteError(const LogChannel& channel, const LogMessage& message) override
     {
-        const LogChannel* channel_ptr = &channel;
+        const LogChannel* channelPtr = &channel;
 
-        if (channel.GetID() >= Logger::max_channels)
+        if (channel.Id() >= Logger::maxChannels)
         {
-            channel_ptr = &Log_Core;
+            channelPtr = &Log_Core;
             return;
         }
 
         // set read flags
         uint64 state;
-        while (((state = m_rw_marker.Increment(2, MemoryOrder::ACQUIRE)) & write_flag))
+        while (((state = m_rwMarker.Increment(2, MemoryOrder::ACQUIRE)) & writeFlag))
         {
-            m_rw_marker.Decrement(2, MemoryOrder::RELAXED);
+            m_rwMarker.Decrement(2, MemoryOrder::RELAXED);
             // wait for write flag to be released
-            Threads::Sleep(0);
+            HYP_WAIT_IDLE();
         }
 
-        void* context = m_contexts[channel_ptr->GetID()];
-        LoggerWriteFnPtr fnptr = m_write_error_fnptr_table[channel_ptr->GetID()];
+        void* context = m_contexts[channelPtr->Id()];
+        LoggerWriteFnPtr fnptr = m_writeErrorFnptrTable[channelPtr->Id()];
 
-        uint32 bit_index;
-        uint64 mask = channel_ptr->GetMaskBitset().ToUInt64() & ~(1ull << channel_ptr->GetID());
+        uint32 bitIndex;
+        uint64 mask = channelPtr->GetMaskBitset().ToUInt64() & ~(1ull << channelPtr->Id());
 
-        while ((bit_index = ByteUtil::HighestSetBitIndex(mask)) != -1)
+        while ((bitIndex = ByteUtil::HighestSetBitIndex(mask)) != -1)
         {
-            if (m_redirect_enabled_mask.Get(MemoryOrder::ACQUIRE) & (1ull << bit_index))
+            if (m_redirectEnabledMask.Get(MemoryOrder::ACQUIRE) & (1ull << bitIndex))
             {
-                context = m_contexts[bit_index];
-                fnptr = m_write_error_fnptr_table[bit_index];
+                context = m_contexts[bitIndex];
+                fnptr = m_writeErrorFnptrTable[bitIndex];
 
                 break;
             }
 
-            mask &= ~(1ull << bit_index);
+            mask &= ~(1ull << bitIndex);
         }
 
-        fnptr(context, *channel_ptr, message);
+        fnptr(context, *channelPtr, message);
 
-        m_rw_marker.Decrement(2, MemoryOrder::RELEASE);
+        m_rwMarker.Decrement(2, MemoryOrder::RELEASE);
     }
 
 private:
@@ -243,23 +248,23 @@ private:
 
     static void WriteError_Static(void* context, const LogChannel& channel, const LogMessage& message)
     {
-        std::fwrite(*message.message, 1, message.message.Size(), ((BasicLoggerOutputStream*)context)->m_output_error);
+        std::fwrite(*message.message, 1, message.message.Size(), ((BasicLoggerOutputStream*)context)->m_outputError);
     }
 
-    AtomicVar<uint64> m_rw_marker;
+    AtomicVar<uint64> m_rwMarker;
 
     FILE* m_output;
-    FILE* m_output_error;
+    FILE* m_outputError;
 
-    void* m_contexts[Logger::max_channels];
+    void* m_contexts[Logger::maxChannels];
 
-    LoggerWriteFnPtr m_write_fnptr_table[Logger::max_channels];
-    LoggerWriteFnPtr m_write_error_fnptr_table[Logger::max_channels];
+    LoggerWriteFnPtr m_writeFnptrTable[Logger::maxChannels];
+    LoggerWriteFnPtr m_writeErrorFnptrTable[Logger::maxChannels];
 
     Mutex m_mutex;
     HashMap<int, LoggerRedirect> m_redirects;
-    AtomicVar<uint64> m_redirect_enabled_mask;
-    int m_redirect_id_counter;
+    AtomicVar<uint64> m_redirectEnabledMask;
+    int m_redirectIdCounter;
 };
 
 #pragma endregion LoggerOutputStream
@@ -267,22 +272,22 @@ private:
 #pragma region LogChannel
 
 LogChannel::LogChannel(Name name)
-    : m_id(g_log_channel_id_generator.Next()),
+    : m_id(g_logChannelIdGenerator.Next()),
       m_name(name),
       m_flags(LogChannelFlags::NONE),
-      m_parent_channel(nullptr),
-      m_mask_bitset(1ull << m_id)
+      m_parentChannel(nullptr),
+      m_maskBitset(1ull << m_id)
 {
 }
 
-LogChannel::LogChannel(Name name, LogChannel* parent_channel)
+LogChannel::LogChannel(Name name, LogChannel* parentChannel)
     : LogChannel(name)
 {
-    m_parent_channel = parent_channel;
+    m_parentChannel = parentChannel;
 
-    if (m_parent_channel != nullptr)
+    if (m_parentChannel != nullptr)
     {
-        m_mask_bitset |= m_parent_channel->m_mask_bitset;
+        m_maskBitset |= m_parentChannel->m_maskBitset;
     }
 }
 
@@ -306,9 +311,9 @@ Logger::Logger()
 {
 }
 
-Logger::Logger(NotNullPtr<ILoggerOutputStream> output_stream)
-    : m_log_mask(uint64(-1)),
-      m_output_stream(output_stream)
+Logger::Logger(NotNullPtr<ILoggerOutputStream> outputStream)
+    : m_logMask(uint64(-1)),
+      m_outputStream(outputStream)
 {
 }
 
@@ -316,7 +321,7 @@ Logger::~Logger() = default;
 
 const LogChannel* Logger::FindLogChannel(WeakName name) const
 {
-    for (LogChannel* channel : m_log_channels)
+    for (LogChannel* channel : m_logChannels)
     {
         if (!channel)
         {
@@ -329,9 +334,9 @@ const LogChannel* Logger::FindLogChannel(WeakName name) const
         }
     }
 
-    Mutex::Guard guard(m_dynamic_log_channels_mutex);
+    Mutex::Guard guard(m_dynamicLogChannelsMutex);
 
-    for (const LogChannel& channel : m_dynamic_log_channels)
+    for (const LogChannel& channel : m_dynamicLogChannels)
     {
         return &channel;
     }
@@ -342,68 +347,68 @@ const LogChannel* Logger::FindLogChannel(WeakName name) const
 void Logger::RegisterChannel(LogChannel* channel)
 {
     AssertThrow(channel != nullptr);
-    AssertThrow(channel->GetID() < m_log_channels.Size());
+    AssertThrow(channel->Id() < m_logChannels.Size());
 
-    m_log_channels[channel->GetID()] = channel;
+    m_logChannels[channel->Id()] = channel;
 }
 
-LogChannel* Logger::CreateDynamicLogChannel(Name name, LogChannel* parent_channel)
+LogChannel* Logger::CreateDynamicLogChannel(Name name, LogChannel* parentChannel)
 {
-    Mutex::Guard guard(m_dynamic_log_channels_mutex);
+    Mutex::Guard guard(m_dynamicLogChannelsMutex);
 
-    return &m_dynamic_log_channels.EmplaceBack(name, parent_channel);
+    return &m_dynamicLogChannels.EmplaceBack(name, parentChannel);
 }
 
 void Logger::DestroyDynamicLogChannel(Name name)
 {
-    Mutex::Guard guard(m_dynamic_log_channels_mutex);
+    Mutex::Guard guard(m_dynamicLogChannelsMutex);
 
-    auto it = m_dynamic_log_channels.FindIf([name](const auto& item)
+    auto it = m_dynamicLogChannels.FindIf([name](const auto& item)
         {
             return item.GetName() == name;
         });
 
-    if (it == m_dynamic_log_channels.End())
+    if (it == m_dynamicLogChannels.End())
     {
         return;
     }
 
-    m_dynamic_log_channels.Erase(it);
+    m_dynamicLogChannels.Erase(it);
 }
 
 void Logger::DestroyDynamicLogChannel(LogChannel* channel)
 {
-    Mutex::Guard guard(m_dynamic_log_channels_mutex);
+    Mutex::Guard guard(m_dynamicLogChannelsMutex);
 
-    auto it = m_dynamic_log_channels.FindIf([channel](const auto& item)
+    auto it = m_dynamicLogChannels.FindIf([channel](const auto& item)
         {
             return &item == channel;
         });
 
-    if (it == m_dynamic_log_channels.End())
+    if (it == m_dynamicLogChannels.End())
     {
         return;
     }
 
-    m_dynamic_log_channels.Erase(it);
+    m_dynamicLogChannels.Erase(it);
 }
 
 bool Logger::IsChannelEnabled(const LogChannel& channel) const
 {
-    const uint64 channel_mask_bitset = channel.GetMaskBitset().ToUInt64();
+    const uint64 channelMaskBitset = channel.GetMaskBitset().ToUInt64();
 
-    return (m_log_mask.Get(MemoryOrder::RELAXED) & channel_mask_bitset) == channel_mask_bitset;
+    return (m_logMask.Get(MemoryOrder::RELAXED) & channelMaskBitset) == channelMaskBitset;
 }
 
 void Logger::SetChannelEnabled(const LogChannel& channel, bool enabled)
 {
     if (enabled)
     {
-        m_log_mask.BitOr(1ull << channel.GetID(), MemoryOrder::RELAXED);
+        m_logMask.BitOr(1ull << channel.Id(), MemoryOrder::RELAXED);
     }
     else
     {
-        m_log_mask.BitAnd(~(1ull << channel.GetID()), MemoryOrder::RELAXED);
+        m_logMask.BitAnd(~(1ull << channel.Id()), MemoryOrder::RELAXED);
     }
 }
 
@@ -411,11 +416,11 @@ void Logger::Log(const LogChannel& channel, const LogMessage& message)
 {
     if (uint32(message.level) >= uint32(LogLevel::WARNING))
     {
-        m_output_stream->WriteError(channel, message);
+        m_outputStream->WriteError(channel, message);
     }
     else
     {
-        m_output_stream->Write(channel, message);
+        m_outputStream->Write(channel, message);
     }
 }
 
