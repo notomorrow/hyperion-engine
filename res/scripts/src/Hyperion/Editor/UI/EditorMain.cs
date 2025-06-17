@@ -172,7 +172,6 @@ namespace Hyperion
 
                 if (fpsTextElement != null)
                 {
-                    Logger.Log(LogType.Debug, "FPS : " + renderStats.framesPerSecond + ", ms/frame: " + renderStats.millisecondsPerFrame);
                     ((UIText)fpsTextElement).SetText(string.Format("Render: {0} frames/sec, {1:0.00} ms/frame (avg: {2:0.00}, min: {3:0.00}, max: {4:0.00})",
                         (int)renderStats.framesPerSecond, renderStats.millisecondsPerFrame,
                         renderStats.millisecondsPerFrameAvg, renderStats.millisecondsPerFrameMin, renderStats.millisecondsPerFrameMax));
@@ -232,8 +231,6 @@ namespace Hyperion
             public override void Init(Entity entity)
             {
                 base.Init(entity);
-
-                Logger.Log(LogType.Info, "EditorMain Init");
 
                 var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
                 Assert.Throw(editorSubsystem != null, "EditorSubsystem not found");
