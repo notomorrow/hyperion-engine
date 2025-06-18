@@ -15,7 +15,6 @@ layout(location = 0) out vec4 color_output;
 #include "../include/gbuffer.inc"
 #include "../include/scene.inc"
 #include "../include/brdf.inc"
-#include "../include/tonemap.inc"
 #include "../include/noise.inc"
 
 HYP_DESCRIPTOR_CBUFF_DYNAMIC(Global, CamerasBuffer) uniform CamerasBuffer

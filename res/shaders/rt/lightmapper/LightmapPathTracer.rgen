@@ -6,7 +6,6 @@
 #include "../../include/defines.inc"
 #include "../../include/noise.inc"
 #include "../../include/packing.inc"
-#include "../../include/tonemap.inc"
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerNearest) uniform sampler sampler_nearest;
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler sampler_linear;

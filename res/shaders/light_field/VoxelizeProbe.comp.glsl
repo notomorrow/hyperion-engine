@@ -20,7 +20,6 @@ layout(local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE) in;
 
 #include "../include/defines.inc"
 #include "../include/shared.inc"
-#include "../include/tonemap.inc"
 #include "../include/brdf.inc"
 #include "../include/noise.inc"
 
@@ -36,9 +35,15 @@ HYP_DESCRIPTOR_SAMPLER(VoxelizeProbeDescriptorSet, SamplerNearest) uniform sampl
 
 HYP_DESCRIPTOR_UAV(VoxelizeProbeDescriptorSet, OutVoxelGridImage, format = rgba8) uniform image3D voxel_grid_image;
 
-HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer { EnvGrid env_grid; };
+HYP_DESCRIPTOR_CBUFF_DYNAMIC(VoxelizeProbeDescriptorSet, EnvGridBuffer) uniform EnvGridBuffer
+{
+    EnvGrid env_grid;
+};
 
-HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer { EnvProbe env_probes[]; };
+HYP_DESCRIPTOR_SSBO(VoxelizeProbeDescriptorSet, EnvProbesBuffer) readonly buffer EnvProbesBuffer
+{
+    EnvProbe env_probes[];
+};
 
 layout(push_constant) uniform PushConstant
 {
@@ -48,14 +53,14 @@ layout(push_constant) uniform PushConstant
 #ifdef MODE_OFFSET
     ivec4 offset;
 #else
-    vec4  world_position;
+    vec4 world_position;
 #endif
 };
 
 vec2 NormalizeOctahedralCoord(uvec2 coord)
 {
     ivec2 oct_coord = ivec2(coord) % ivec2(256);
-    
+
     return (vec2(oct_coord) + vec2(0.5)) * (2.0 / vec2(256.0)) - vec2(1.0);
 }
 
@@ -98,9 +103,7 @@ void DoPixel(uint probe_index, uvec3 coord)
     vec3 scaled_position = ((point_world_position - voxel_grid_aabb_center) / voxel_grid_aabb_extent) + vec3(0.5);
     voxel_storage_position = ivec3((scaled_position * vec3(voxel_texture_dimensions.xyz)));
 
-    if (voxel_storage_position.x < 0 || voxel_storage_position.x >= voxel_texture_dimensions.x ||
-        voxel_storage_position.y < 0 || voxel_storage_position.y >= voxel_texture_dimensions.y ||
-        voxel_storage_position.z < 0 || voxel_storage_position.z >= voxel_texture_dimensions.z)
+    if (voxel_storage_position.x < 0 || voxel_storage_position.x >= voxel_texture_dimensions.x || voxel_storage_position.y < 0 || voxel_storage_position.y >= voxel_texture_dimensions.y || voxel_storage_position.z < 0 || voxel_storage_position.z >= voxel_texture_dimensions.z)
     {
         return;
     }
@@ -108,7 +111,7 @@ void DoPixel(uint probe_index, uvec3 coord)
 #ifdef MODE_VOXELIZE
     // color_sample.rgb = pow(color_sample.rgb, vec3(1.0 / 2.2));
 
-    imageStore(voxel_grid_image, voxel_storage_position, color_sample);//vec4(UINT_TO_VEC4(env_probe.position_in_grid.w).rgb, 1.0));
+    imageStore(voxel_grid_image, voxel_storage_position, color_sample); // vec4(UINT_TO_VEC4(env_probe.position_in_grid.w).rgb, 1.0));
 #endif
 }
 

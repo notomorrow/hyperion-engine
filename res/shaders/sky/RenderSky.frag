@@ -32,7 +32,6 @@ uniform sampler sampler_linear;
 #include "../include/material.inc"
 #include "../include/gbuffer.inc"
 #include "../include/env_probe.inc"
-#include "../include/tonemap.inc"
 #include "../include/noise.inc"
 #include "../include/object.inc"
 #include "../include/packing.inc"

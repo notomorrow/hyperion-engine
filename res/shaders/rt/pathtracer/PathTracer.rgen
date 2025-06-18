@@ -6,7 +6,6 @@
 #include "../../include/defines.inc"
 #include "../../include/noise.inc"
 #include "../../include/packing.inc"
-#include "../../include/tonemap.inc"
 
 #ifdef HYP_FEATURES_DYNAMIC_DESCRIPTOR_INDEXING
 HYP_DESCRIPTOR_SRV(View, GBufferTextures, count = 8) uniform texture2D gbuffer_textures[8];
