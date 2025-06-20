@@ -6,17 +6,17 @@
 
 #include "include/defines.inc"
 
-layout(location=0) in vec3 v_position;
-layout(location=1) in vec3 v_normal;
-layout(location=2) in vec2 v_texcoord0;
-layout(location=3) in flat uint v_object_index;
+layout(location = 0) in vec3 v_position;
+layout(location = 1) in vec3 v_normal;
+layout(location = 2) in vec2 v_texcoord0;
+layout(location = 3) in flat uint v_object_index;
 
-layout(location=0) out vec4 gbuffer_albedo;
-layout(location=1) out vec4 gbuffer_normals;
-layout(location=2) out vec4 gbuffer_material;
-layout(location=4) out vec2 gbuffer_velocity;
-layout(location=5) out vec4 gbuffer_mask;
-layout(location=6) out vec4 gbuffer_ws_normals;
+layout(location = 0) out vec4 gbuffer_albedo;
+layout(location = 1) out vec4 gbuffer_normals;
+layout(location = 2) out vec4 gbuffer_material;
+layout(location = 4) out vec2 gbuffer_velocity;
+layout(location = 5) out vec4 gbuffer_mask;
+layout(location = 6) out vec4 gbuffer_ws_normals;
 
 HYP_DESCRIPTOR_SAMPLER(Global, SamplerLinear) uniform sampler texture_sampler;
 
@@ -47,7 +47,7 @@ HYP_DESCRIPTOR_SSBO(Object, MaterialsBuffer) readonly buffer MaterialsBuffer
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL (materials[object.material_index])
+#define CURRENT_MATERIAL (materials[object.material_index])
 #endif
 #else
 
@@ -57,7 +57,7 @@ HYP_DESCRIPTOR_SSBO_DYNAMIC(Object, MaterialsBuffer) readonly buffer MaterialsBu
 };
 
 #ifndef CURRENT_MATERIAL
-    #define CURRENT_MATERIAL material
+#define CURRENT_MATERIAL material
 #endif
 #endif
 

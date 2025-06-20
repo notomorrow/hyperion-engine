@@ -25,7 +25,7 @@
       "roughness_scattering": true,
       "EyeFade": [0.980000, 0.990000],
       "ScreenEdgeFade": [0.960000, 0.990000],
-      "enabled": true,
+      "enabled": false,
       "cone_tracing": false
     },
     "taa": {
@@ -56,13 +56,9 @@
       }
     },
     "hbao": {
-      "Radius": 2.500000,
-      "Power": 0.800000,
-      "enabled": false,
-      "UseTemporalBlending": false
+      "enabled": false
     },
     "ssgi": {
-      "Quality": 0,
       "enabled": false
     }
   },
