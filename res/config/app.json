@@ -5,6 +5,8 @@
         "enabled": false
       },
       "reflections": {
+        "Extent": [1024, 1024],
+        "PathTracing": false,
         "enabled": false
       },
       "gi": {
@@ -56,9 +58,13 @@
       }
     },
     "hbao": {
-      "enabled": false
+      "Radius": 2.500000,
+      "Power": 0.800000,
+      "enabled": false,
+      "UseTemporalBlending": false
     },
     "ssgi": {
+      "Quality": 0,
       "enabled": false
     }
   },
