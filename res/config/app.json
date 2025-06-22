@@ -56,9 +56,13 @@
       }
     },
     "hbao": {
-      "enabled": false
+      "Radius": 2.500000,
+      "Power": 0.800000,
+      "enabled": false,
+      "UseTemporalBlending": false
     },
     "ssgi": {
+      "Quality": 0,
       "enabled": false
     }
   },

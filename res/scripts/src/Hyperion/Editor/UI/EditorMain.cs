@@ -20,7 +20,7 @@ namespace Hyperion
             {
                 return new ComponentInfo[]
                 {
-                    new ComponentInfo(HypClass.GetClass<LightComponent>().TypeID, ComponentRWFlags.Read, true)
+                    // new ComponentInfo(HypClass.GetClass<LightComponent>().TypeID, ComponentRWFlags.Read, true)
                 };
             }
 
