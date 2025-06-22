@@ -886,23 +886,17 @@ namespace Hyperion
                     return UIEventHandlerResult.Error;
                 }
 
-                var envProbeEntity = activeScene.GetEntityManager().AddEntity();
-
-                activeScene.GetEntityManager().AddComponent<ReflectionProbeComponent>(envProbeEntity, new ReflectionProbeComponent {
-                    Dimensions = new Vec2u(256, 256)
-                });
+                var envProbeEntity = activeScene.GetEntityManager().AddEntity<ReflectionProbe>();
                 activeScene.GetEntityManager().AddComponent<BoundingBoxComponent>(envProbeEntity, new BoundingBoxComponent {
                     LocalAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f)),
                     WorldAABB = new BoundingBox(new Vec3f(-15.0f, 0.0f, -15.0f), new Vec3f(15.0f, 15.0f, 15.0f))
                 });
-                activeScene.GetEntityManager().AddComponent<TransformComponent>(envProbeEntity, new TransformComponent {
-                    Transform = new Transform()
-                });
 
                 var envProbeNode = new Node();
                 envProbeNode.SetName(activeScene.GetUniqueNodeName("ReflectionProbe"));
-                envProbeNode.SetEntity(envProbeEntity);
                 envProbeNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+
+                envProbeEntity.Attach(envProbeNode);
 
                 currentProject.GetActionStack().Push(new EditorAction(
                     new Name("AddReflectionProbe"),
