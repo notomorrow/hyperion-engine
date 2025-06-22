@@ -648,27 +648,20 @@ namespace Hyperion
                     return UIEventHandlerResult.Error;
                 }
 
-                Light light = new Light();
+                Light light = activeScene.GetEntityManager().AddEntity<Light>();
                 light.SetLightType(LightType.Point);
                 light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
                 light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
                 light.SetRadius(30.0f);
                 light.SetIntensity(20.0f);
 
-                Entity lightEntity = activeScene.GetEntityManager().AddEntity();
-
-                activeScene.GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent
-                {
-                    Light = light
-                });
-
-                activeScene.GetEntityManager().AddComponent<ShadowMapComponent>(lightEntity, new ShadowMapComponent
+                activeScene.GetEntityManager().AddComponent<ShadowMapComponent>(light, new ShadowMapComponent
                 {
                 });
 
                 var lightNode = new Node();
                 lightNode.SetName(activeScene.GetUniqueNodeName("PointLight"));
-                lightNode.SetEntity(lightEntity);
+                lightNode.SetEntity(light);
                 lightNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
 
                 currentProject.GetActionStack().Push(new EditorAction(
