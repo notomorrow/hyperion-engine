@@ -367,7 +367,7 @@ void main()
     gbuffer_albedo_lightmap = (lm_irradiance + lm_radiance) * float(bool(mask & OBJECT_MASK_LIGHTMAP));
 
     gbuffer_normals = EncodeNormal(N);
-    gbuffer_material = vec4(roughness, metalness, transmission, ao);
+    gbuffer_material = vec4(0.001, metalness, transmission, ao);
     gbuffer_velocity = velocity;
     gbuffer_mask = UINT_TO_VEC4(mask);
     gbuffer_ws_normals = EncodeNormal(ws_normals);

@@ -105,7 +105,7 @@ void main()
 
     vec4 ibl = vec4(0.0);
 
-    const uint probe_texture_index = 0; // max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
+    const uint probe_texture_index = max(0, min(current_env_probe.texture_index, HYP_MAX_BOUND_REFLECTION_PROBES - 1));
 
     vec3 tangent;
     vec3 bitangent;
