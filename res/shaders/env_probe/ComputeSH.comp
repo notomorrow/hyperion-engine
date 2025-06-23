@@ -263,9 +263,6 @@ void main(void)
     vec4 color = albedo;
 #endif
 
-    // temp
-    color = vec4(albedo.rgb * 5.0, 1.0);
-
     float sh_values[27] = ProjectOntoSH9Color(dir, color.rgb);
 
     float temp = 1.0 + sample_point.x * sample_point.x + sample_point.y * sample_point.y;
