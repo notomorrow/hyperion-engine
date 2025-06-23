@@ -196,5 +196,7 @@ void main(void)
 
     vec4 color = ConvolveProbe(coord);
 
+    color = vec4(0.0, 1.0, 0.0, 1.0); // test
+
     imageStore(out_image, ivec2(coord), color);
 }
