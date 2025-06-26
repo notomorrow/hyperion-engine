@@ -126,7 +126,4 @@ void main()
 
     color_output = radiance;
 #endif
-
-    // //debugging checkerboarding
-    // color_output = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), float(world_shader_data.frame_counter & 1));
 }
