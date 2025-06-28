@@ -574,45 +574,36 @@ namespace Hyperion
             {
                 Logger.Log(LogType.Info, "Generate Lightmaps clicked");
 
-                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                // if (editorSubsystem == null)
-                // {
-                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                //     return UIEventHandlerResult.Error;
-                // }
+                    return UIEventHandlerResult.Error;
+                }
 
-                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                Scene scene = editorSubsystem.GetActiveScene();
 
-                // if (currentProject == null)
-                // {
-                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
+                if (scene == null)
+                {
+                    Logger.Log(LogType.Error, "No active scene; cannot generate lightmaps");
 
-                //     return UIEventHandlerResult.Error;
-                // }
+                    return UIEventHandlerResult.Error;
+                }
 
-                // Scene scene = currentProject.GetScene();
+                World world = this.World;
+                Assert.Throw(world != null);
 
-                // if (scene == null)
-                // {
-                //     Logger.Log(LogType.Error, "No scene loaded; cannot generate lightmaps");
+                // @TODO: Allow building a bounding box in editor before starting the task.
+                BoundingBox lightmapVolumeAabb = new BoundingBox(new Vec3f(-20.0f, 0.0f, -20.0f), new Vec3f(20.0f, 25.0f, 20.0f));
 
-                //     return UIEventHandlerResult.Error;
-                // }
+                GenerateLightmapsEditorTask generateLightmapsTask = new GenerateLightmapsEditorTask();
+                generateLightmapsTask.SetScene(scene);
+                generateLightmapsTask.SetWorld(world);
+                generateLightmapsTask.SetAABB(lightmapVolumeAabb);
 
-                // World world = this.World;
-                // Assert.Throw(world != null);
-
-                // // @TODO: Allow building a bounding box in editor before starting the task.
-                // BoundingBox lightmapVolumeAabb = new BoundingBox(new Vec3f(-20.0f, 0.0f, -20.0f), new Vec3f(20.0f, 25.0f, 20.0f));
-
-                // GenerateLightmapsEditorTask generateLightmapsTask = new GenerateLightmapsEditorTask();
-                // generateLightmapsTask.SetScene(scene);
-                // generateLightmapsTask.SetWorld(world);
-                // generateLightmapsTask.SetAABB(lightmapVolumeAabb);
-
-                // editorSubsystem.AddTask(generateLightmapsTask);
+                editorSubsystem.AddTask(generateLightmapsTask);
 
                 return UIEventHandlerResult.Ok;
             }

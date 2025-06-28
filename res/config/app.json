@@ -33,8 +33,7 @@
     },
     "debug": {
       "debug_drawer": {
-        "enabled": false,
-        "Enabled": true
+        "enabled": false
       },
       "env_grid_probes": false,
       "reflection_probes": false,
@@ -49,7 +48,7 @@
     },
     "env_grid": {
       "gi": {
-        "enabled": true
+        "enabled": false
       },
       "reflections": {
         "enabled": false
