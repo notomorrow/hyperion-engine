@@ -20,7 +20,7 @@ namespace Hyperion
             {
                 return new ComponentInfo[]
                 {
-                    // new ComponentInfo(HypClass.GetClass<LightComponent>().TypeID, ComponentRWFlags.Read, true)
+                    // new ComponentInfo(HypClass.GetClass<LightComponent>().TypeId, ComponentRWFlags.Read, true)
                 };
             }
 
@@ -31,7 +31,7 @@ namespace Hyperion
 
             public override void OnEntityAdded(Entity entity)
             {
-                Logger.Log(LogType.Info, "CustomSystem OnEntityAdded called for entity: " + entity.ID);
+                Logger.Log(LogType.Info, "CustomSystem OnEntityAdded called for entity: " + entity.Id);
             }
 
             public override void Init()
