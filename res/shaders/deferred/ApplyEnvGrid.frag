@@ -126,7 +126,4 @@ void main()
 
     color_output = radiance;
 #endif
-
-    // temp
-    color_output = vec4(1.0, 0.0, 0.0, 1.0);
 }
