@@ -9,7 +9,8 @@
       },
       "gi": {
         "enabled": false
-      }
+      },
+      "enabled": false
     },
     "ssr": {
       "ConeTracing": false,
@@ -48,7 +49,7 @@
     },
     "env_grid": {
       "gi": {
-        "enabled": false
+        "enabled": true
       },
       "reflections": {
         "enabled": false
