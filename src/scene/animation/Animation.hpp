@@ -24,7 +24,7 @@ class Bone;
 
 struct AnimationTrackDesc
 {
-    Name bone_name;
+    Name boneName;
     Array<Keyframe> keyframes;
 };
 

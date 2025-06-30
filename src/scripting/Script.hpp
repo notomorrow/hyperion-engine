@@ -38,8 +38,8 @@ struct ScriptDesc
     FilePath path;
 };
 
-static constexpr SizeType script_max_path_length = 1024;
-static constexpr SizeType script_max_class_name_length = 1024;
+static constexpr SizeType scriptMaxPathLength = 1024;
+static constexpr SizeType scriptMaxClassNameLength = 1024;
 
 HYP_STRUCT()
 
@@ -49,34 +49,34 @@ struct ManagedScript
     UUID uuid;
 
     HYP_FIELD(Serialize, Property = "Path")
-    char path[script_max_path_length];
+    char path[scriptMaxPathLength];
 
     HYP_FIELD(Serialize, Property = "AssemblyPath")
-    char assembly_path[script_max_path_length];
+    char assemblyPath[scriptMaxPathLength];
 
     HYP_FIELD(Serialize, Property = "ClassName")
-    char class_name[script_max_class_name_length];
+    char className[scriptMaxClassNameLength];
 
     HYP_FIELD(Serialize, Property = "State")
     uint32 state;
 
     HYP_FIELD(Serialize, Property = "HotReloadVersion")
-    int32 hot_reload_version;
+    int32 hotReloadVersion;
 
     HYP_FIELD(Serialize, Property = "LastModifiedTimestamp")
-    uint64 last_modified_timestamp;
+    uint64 lastModifiedTimestamp;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(uuid);
-        hash_code.Add(&path[0]);
-        hash_code.Add(&assembly_path[0]);
-        hash_code.Add(&class_name[0]);
-        hash_code.Add(state);
+        hashCode.Add(uuid);
+        hashCode.Add(&path[0]);
+        hashCode.Add(&assemblyPath[0]);
+        hashCode.Add(&className[0]);
+        hashCode.Add(state);
 
-        return hash_code;
+        return hashCode;
     }
 };
 
@@ -105,24 +105,24 @@ public:
 
     HYP_FORCE_INLINE ManagedScript& GetManagedScript()
     {
-        return m_managed_script;
+        return m_managedScript;
     }
 
     HYP_FORCE_INLINE const ManagedScript& GetManagedScript() const
     {
-        return m_managed_script;
+        return m_managedScript;
     }
 
-    HYP_FORCE_INLINE void SetManagedScript(const ManagedScript& managed_script)
+    HYP_FORCE_INLINE void SetManagedScript(const ManagedScript& managedScript)
     {
-        m_managed_script = managed_script;
+        m_managedScript = managedScript;
     }
 
     EnumFlags<CompiledScriptState> GetState() const;
 
 private:
     ScriptDesc m_desc;
-    ManagedScript m_managed_script;
+    ManagedScript m_managedScript;
 };
 
 } // namespace hyperion

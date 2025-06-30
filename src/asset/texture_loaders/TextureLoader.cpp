@@ -16,7 +16,7 @@ struct LoadedTextureData
 {
     int width;
     int height;
-    int num_components;
+    int numComponents;
     TextureFormat format;
 };
 
@@ -25,9 +25,9 @@ static const stbi_io_callbacks callbacks {
     {
         LoaderState* state = static_cast<LoaderState*>(user);
 
-        return int(state->stream.Read(data, SizeType(size), [](void* ptr, const unsigned char* buffer, SizeType chunk_size)
+        return int(state->stream.Read(data, SizeType(size), [](void* ptr, const unsigned char* buffer, SizeType chunkSize)
             {
-                Memory::MemCpy(ptr, buffer, chunk_size);
+                Memory::MemCpy(ptr, buffer, chunkSize);
             }));
     },
     .skip = [](void* user, int n)
@@ -55,15 +55,15 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
 {
     LoadedTextureData data;
 
-    unsigned char* image_bytes = stbi_load_from_callbacks(
+    unsigned char* imageBytes = stbi_load_from_callbacks(
         &callbacks,
         (void*)&state,
         &data.width,
         &data.height,
-        &data.num_components,
+        &data.numComponents,
         0);
 
-    switch (data.num_components)
+    switch (data.numComponents)
     {
     case STBI_rgb_alpha:
         data.format = TF_RGBA8;
@@ -84,9 +84,9 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
     // data.width = 1;
     // data.height = 1;
 
-    const SizeType image_bytes_count = SizeType(data.width)
+    const SizeType imageBytesCount = SizeType(data.width)
         * SizeType(data.height)
-        * SizeType(data.num_components);
+        * SizeType(data.numComponents);
 
     Handle<Texture> texture = CreateObject<Texture>(TextureData {
         TextureDesc {
@@ -96,9 +96,9 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
             TFM_LINEAR_MIPMAP,
             TFM_LINEAR,
             TWM_REPEAT },
-        ByteBuffer(image_bytes_count, image_bytes) });
+        ByteBuffer(imageBytesCount, imageBytes) });
 
-    stbi_image_free(image_bytes);
+    stbi_image_free(imageBytes);
 
     texture->SetName(CreateNameFromDynamicString(StringUtil::Basename(state.filepath.Data()).c_str()));
 

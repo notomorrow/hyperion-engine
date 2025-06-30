@@ -17,8 +17,8 @@
 
 namespace hyperion {
 
-HYP_API extern SizeType GetNumDescendants(TypeId type_id);
-HYP_API extern int GetSubclassIndex(TypeId base_type_id, TypeId subclass_type_id);
+HYP_API extern SizeType GetNumDescendants(TypeId typeId);
+HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 
 /*! \brief The action to take on call to Advance for a ResourceTracker. */
 enum class AdvanceAction : uint32
@@ -37,77 +37,77 @@ class ResourceTracker
 
         ResourceTrackerType* tracker;
 
-        // index into m_subclass_impls (and m_subclass_impls_initialized)
-        SizeType subclass_impl_index;
-        SizeType element_index;
+        // index into m_subclassImpls (and m_subclassImplsInitialized)
+        SizeType subclassImplIndex;
+        SizeType elementIndex;
 
-        IteratorBase(ResourceTrackerType* tracker, SizeType subclass_idx, SizeType elem_idx)
+        IteratorBase(ResourceTrackerType* tracker, SizeType subclassIdx, SizeType elemIdx)
             : tracker(tracker),
-              subclass_impl_index(subclass_idx),
-              element_index(elem_idx)
+              subclassImplIndex(subclassIdx),
+              elementIndex(elemIdx)
         {
-            if (subclass_impl_index == Bitset::not_found && element_index == Bitset::not_found)
+            if (subclassImplIndex == Bitset::notFound && elementIndex == Bitset::notFound)
             {
-                // both set to not_found : at end
+                // both set to notFound : at end
                 return;
             }
 
             // find valid element - first check m_impl then try subclasses if not found
-            if (subclass_impl_index == Bitset::not_found)
+            if (subclassImplIndex == Bitset::notFound)
             {
-                element_index = FindNextSet(tracker->m_impl.GetCurrentBits(), element_index);
+                elementIndex = FindNextSet(tracker->m_impl.GetCurrentBits(), elementIndex);
 
-                if (element_index != Bitset::not_found)
+                if (elementIndex != Bitset::notFound)
                 {
                     // We found an element at the given index in our main impl.
                     return;
                 }
 
                 // Need to search subclasses - set indices to zero so we land on the first subclass that is valid and has a valid element
-                subclass_impl_index = 0;
-                element_index = 0;
+                subclassImplIndex = 0;
+                elementIndex = 0;
             }
 
             // Find first subclass that is set (if it exists),
             // next part will handle finding the element index.
-            subclass_impl_index = FindNextSet(tracker->m_subclass_impls_initialized, subclass_impl_index);
+            subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, subclassImplIndex);
 
-            while (subclass_impl_index != Bitset::not_found)
+            while (subclassImplIndex != Bitset::notFound)
             {
-                AssertDebug(subclass_impl_index < tracker->m_subclass_impls.Size());
+                AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
 
-                auto& impl = tracker->m_subclass_impls[subclass_impl_index].Get();
-                element_index = FindNextSet(impl.GetCurrentBits(), element_index);
+                auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
+                elementIndex = FindNextSet(impl.GetCurrentBits(), elementIndex);
 
                 // Found valid element in subclass impl.
-                if (element_index != Bitset::not_found)
+                if (elementIndex != Bitset::notFound)
                 {
                     return;
                 }
 
                 // If we are at the end of the current subclass impl, move to the next one.
-                subclass_impl_index = FindNextSet(tracker->m_subclass_impls_initialized, subclass_impl_index + 1);
-                element_index = 0;
+                subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, subclassImplIndex + 1);
+                elementIndex = 0;
             }
 
             // exhausted all subclass elements
-            subclass_impl_index = Bitset::not_found;
-            element_index = Bitset::not_found;
+            subclassImplIndex = Bitset::notFound;
+            elementIndex = Bitset::notFound;
         }
 
         Derived& operator++()
         {
             // at the end check
-            if (subclass_impl_index == Bitset::not_found && element_index == Bitset::not_found)
+            if (subclassImplIndex == Bitset::notFound && elementIndex == Bitset::notFound)
             {
                 HYP_FAIL("At end! cannot increment");
             }
 
-            if (subclass_impl_index == Bitset::not_found)
+            if (subclassImplIndex == Bitset::notFound)
             {
-                element_index = FindNextSet(tracker->m_impl.GetCurrentBits(), element_index + 1);
+                elementIndex = FindNextSet(tracker->m_impl.GetCurrentBits(), elementIndex + 1);
 
-                if (element_index != Bitset::not_found)
+                if (elementIndex != Bitset::notFound)
                 {
                     // We found an element at the given index in our main impl.
                     return static_cast<Derived&>(*this);
@@ -115,32 +115,32 @@ class ResourceTracker
 
                 // Find first subclass that is set (if it exists),
                 // next part will handle finding the element index.
-                subclass_impl_index = FindNextSet(tracker->m_subclass_impls_initialized, 0);
-                element_index = SizeType(-1); // wrap around for next
+                subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, 0);
+                elementIndex = SizeType(-1); // wrap around for next
             }
 
-            while (subclass_impl_index != Bitset::not_found)
+            while (subclassImplIndex != Bitset::notFound)
             {
-                AssertDebug(subclass_impl_index < tracker->m_subclass_impls.Size());
+                AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
 
-                auto& impl = tracker->m_subclass_impls[subclass_impl_index].Get();
+                auto& impl = tracker->m_subclassImpls[subclassImplIndex].Get();
 
-                element_index = FindNextSet(impl.GetCurrentBits(), element_index + 1);
+                elementIndex = FindNextSet(impl.GetCurrentBits(), elementIndex + 1);
 
-                if (element_index != Bitset::not_found)
+                if (elementIndex != Bitset::notFound)
                 {
                     // Found a valid subclass element with valid element
                     return static_cast<Derived&>(*this);
                 }
 
                 // If we are at the end of the current subclass impl, move to the next one.
-                subclass_impl_index = FindNextSet(tracker->m_subclass_impls_initialized, subclass_impl_index + 1);
-                element_index = SizeType(-1); // wrap around for next
+                subclassImplIndex = FindNextSet(tracker->m_subclassImplsInitialized, subclassImplIndex + 1);
+                elementIndex = SizeType(-1); // wrap around for next
             }
 
             // exhausted all subclass elements
-            subclass_impl_index = Bitset::not_found;
-            element_index = Bitset::not_found;
+            subclassImplIndex = Bitset::notFound;
+            elementIndex = Bitset::notFound;
 
             return static_cast<Derived&>(*this);
         }
@@ -154,20 +154,20 @@ class ResourceTracker
 
         auto operator*() const -> std::conditional_t<IsConst, const ElementType, ElementType>&
         {
-            if (subclass_impl_index == Bitset::not_found && element_index == Bitset::not_found)
+            if (subclassImplIndex == Bitset::notFound && elementIndex == Bitset::notFound)
             {
                 HYP_FAIL("At end! cannot dereference!");
             }
 
-            if (subclass_impl_index == Bitset::not_found) // primary search phase
+            if (subclassImplIndex == Bitset::notFound) // primary search phase
             {
-                return tracker->m_impl.elements.Get(element_index);
+                return tracker->m_impl.elements.Get(elementIndex);
             }
             else
             {
-                AssertDebug(subclass_impl_index < tracker->m_subclass_impls.Size());
+                AssertDebug(subclassImplIndex < tracker->m_subclassImpls.Size());
 
-                return tracker->m_subclass_impls[subclass_impl_index].Get().elements.Get(element_index);
+                return tracker->m_subclassImpls[subclassImplIndex].Get().elements.Get(elementIndex);
             }
 
             HYP_FAIL("Invalid iterator phase");
@@ -181,22 +181,22 @@ class ResourceTracker
         bool operator==(const Derived& other) const
         {
             return tracker == other.tracker
-                && subclass_impl_index == other.subclass_impl_index
-                && element_index == other.element_index;
+                && subclassImplIndex == other.subclassImplIndex
+                && elementIndex == other.elementIndex;
         }
 
         bool operator!=(const Derived& other) const
         {
             return tracker != other.tracker
-                || subclass_impl_index != other.subclass_impl_index
-                || element_index != other.element_index;
+                || subclassImplIndex != other.subclassImplIndex
+                || elementIndex != other.elementIndex;
         }
 
     private:
         HYP_FORCE_INLINE bool IsAtEnd() const
         {
-            return subclass_impl_index == Bitset::not_found
-                && element_index == Bitset::not_found;
+            return subclassImplIndex == Bitset::notFound
+                && elementIndex == Bitset::notFound;
         }
 
         HYP_FORCE_INLINE static Bitset::BitIndex FindNextSet(const Bitset& bs, Bitset::BitIndex idx)
@@ -212,8 +212,8 @@ public:
     {
         Iterator() = delete;
 
-        Iterator(ResourceTracker* tracker, SizeType subclass_impl_index, SizeType element_index)
-            : IteratorBase<Iterator, false>(tracker, subclass_impl_index, element_index)
+        Iterator(ResourceTracker* tracker, SizeType subclassImplIndex, SizeType elementIndex)
+            : IteratorBase<Iterator, false>(tracker, subclassImplIndex, elementIndex)
         {
         }
 
@@ -222,8 +222,8 @@ public:
         {
             return ConstIterator(
                 IteratorBase<Iterator, false>::tracker,
-                IteratorBase<Iterator, false>::subclass_impl_index,
-                IteratorBase<Iterator, false>::element_index);
+                IteratorBase<Iterator, false>::subclassImplIndex,
+                IteratorBase<Iterator, false>::elementIndex);
         }
     };
 
@@ -231,8 +231,8 @@ public:
     {
         ConstIterator() = delete;
 
-        ConstIterator(const ResourceTracker* tracker, SizeType subclass_impl_index, SizeType element_index)
-            : IteratorBase<ConstIterator, true>(tracker, subclass_impl_index, element_index)
+        ConstIterator(const ResourceTracker* tracker, SizeType subclassImplIndex, SizeType elementIndex)
+            : IteratorBase<ConstIterator, true>(tracker, subclassImplIndex, elementIndex)
         {
         }
     };
@@ -248,13 +248,13 @@ public:
 
     struct Diff
     {
-        uint32 num_added = 0;
-        uint32 num_removed = 0;
-        uint32 num_changed = 0;
+        uint32 numAdded = 0;
+        uint32 numRemoved = 0;
+        uint32 numChanged = 0;
 
         HYP_FORCE_INLINE bool NeedsUpdate() const
         {
-            return num_added > 0 || num_removed > 0 || num_changed > 0;
+            return numAdded > 0 || numRemoved > 0 || numChanged > 0;
         }
     };
 
@@ -267,12 +267,12 @@ public:
     static_assert(std::is_base_of_v<ObjIdBase, IdType>, "IdType must be derived from ObjIdBase (must use numeric id)");
 
     ResourceTracker()
-        : m_impl(IdType::type_id_static) // default impl for base class
+        : m_impl(IdType::typeIdStatic) // default impl for base class
     {
         // Setup the subclass implementations array, we initialize them as they get used
-        const SizeType num_descendants = GetNumDescendants(IdType::type_id_static);
-        m_subclass_impls.Resize(num_descendants);
-        m_subclass_impls_initialized.Resize(num_descendants);
+        const SizeType numDescendants = GetNumDescendants(IdType::typeIdStatic);
+        m_subclassImpls.Resize(numDescendants);
+        m_subclassImplsInitialized.Resize(numDescendants);
     }
 
     ResourceTracker(const ResourceTracker& other) = delete;
@@ -284,11 +284,11 @@ public:
     ~ResourceTracker()
     {
         // destruct subtype containers
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            AssertDebug(i < m_subclass_impls.Size());
+            AssertDebug(i < m_subclassImpls.Size());
 
-            m_subclass_impls[i].Destruct();
+            m_subclassImpls[i].Destruct();
         }
     }
 
@@ -298,67 +298,67 @@ public:
 
         uint32 count = m_impl.GetCurrentBits().Count();
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            AssertDebug(i < m_subclass_impls.Size());
+            AssertDebug(i < m_subclassImpls.Size());
 
-            count += m_subclass_impls[i].Get().GetCurrentBits().Count();
+            count += m_subclassImpls[i].Get().GetCurrentBits().Count();
         }
 
         return count;
     }
 
-    uint32 NumCurrent(TypeId type_id) const
+    uint32 NumCurrent(TypeId typeId) const
     {
-        if (type_id == IdType::type_id_static)
+        if (typeId == IdType::typeIdStatic)
         {
             return m_impl.GetCurrentBits().Count();
         }
 
-        const int subclass_index = GetSubclassIndex(m_impl.type_id, type_id);
-        AssertDebugMsg(subclass_index >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclass_index < m_subclass_impls.Size(), "Invalid subclass index");
+        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
-        if (m_subclass_impls_initialized.Test(subclass_index))
+        if (m_subclassImplsInitialized.Test(subclassIndex))
         {
-            return m_subclass_impls[subclass_index].Get().GetCurrent().Count();
+            return m_subclassImpls[subclassIndex].Get().GetCurrent().Count();
         }
 
         return 0;
     }
 
-    const ElementArrayType& GetElements(TypeId type_id) const
+    const ElementArrayType& GetElements(TypeId typeId) const
     {
-        static const ElementArrayType empty_array {};
+        static const ElementArrayType emptyArray {};
 
-        if (type_id == IdType::type_id_static)
+        if (typeId == IdType::typeIdStatic)
         {
             return m_impl.elements;
         }
 
-        const int subclass_index = GetSubclassIndex(m_impl.type_id, type_id);
-        AssertDebugMsg(subclass_index >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclass_index < m_subclass_impls.Size(), "Invalid subclass index");
+        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
-        if (m_subclass_impls_initialized.Test(subclass_index))
+        if (m_subclassImplsInitialized.Test(subclassIndex))
         {
-            return m_subclass_impls[subclass_index].Get().elements;
+            return m_subclassImpls[subclassIndex].Get().elements;
         }
 
-        return empty_array;
+        return emptyArray;
     }
 
     template <class T>
     const ElementArrayType& GetElements() const
     {
-        static constexpr TypeId type_id = TypeId::ForType<T>();
+        static constexpr TypeId typeId = TypeId::ForType<T>();
 
-        return GetElements(type_id);
+        return GetElements(typeId);
     }
 
     HYP_FORCE_INLINE const Bitset& GetSubclassBits() const
     {
-        return m_subclass_impls_initialized;
+        return m_subclassImplsInitialized;
     }
 
     Diff GetDiff() const
@@ -367,17 +367,17 @@ public:
 
         Diff diff;
 
-        diff.num_added = m_impl.GetAdded().Count();
-        diff.num_removed = m_impl.GetRemoved().Count();
-        diff.num_changed = m_impl.GetChanged().Count();
+        diff.numAdded = m_impl.GetAdded().Count();
+        diff.numRemoved = m_impl.GetRemoved().Count();
+        diff.numChanged = m_impl.GetChanged().Count();
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            AssertDebug(i < m_subclass_impls.Size());
+            AssertDebug(i < m_subclassImpls.Size());
 
-            diff.num_added += m_subclass_impls[i].Get().GetAdded().Count();
-            diff.num_removed += m_subclass_impls[i].Get().GetRemoved().Count();
-            diff.num_changed += m_subclass_impls[i].Get().GetChanged().Count();
+            diff.numAdded += m_subclassImpls[i].Get().GetAdded().Count();
+            diff.numRemoved += m_subclassImpls[i].Get().GetRemoved().Count();
+            diff.numChanged += m_subclassImpls[i].Get().GetChanged().Count();
         }
 
         return diff;
@@ -386,155 +386,155 @@ public:
     /*! \brief Marks an element to be considered valid for this frame
      *  \param id The ID of the element to track, used as a key / index
      *  \param element The element to track
-     *  \param version_ptr Optional pointer to an integer that holds the version of the element. If the version does not match what is stored,
+     *  \param versionPtr Optional pointer to an integer that holds the version of the element. If the version does not match what is stored,
      *  the element will be considered changed and the data marked for update.
      */
-    void Track(IdType id, const ElementType& element, const int* version_ptr = nullptr)
+    void Track(IdType id, const ElementType& element, const int* versionPtr = nullptr)
     {
         HYP_SCOPE;
 
-        TypeId type_id = id.GetTypeId();
+        TypeId typeId = id.GetTypeId();
 
-        if (type_id == m_impl.type_id)
+        if (typeId == m_impl.typeId)
         {
-            m_impl.Track(id, element, version_ptr);
+            m_impl.Track(id, element, versionPtr);
             return;
         }
 
-        const int subclass_index = GetSubclassIndex(m_impl.type_id, type_id);
-        AssertDebugMsg(subclass_index >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclass_index < m_subclass_impls.Size(), "Invalid subclass index");
+        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclass_impls_initialized.Test(subclass_index))
+        if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
-            m_subclass_impls[subclass_index].Construct(type_id);
-            m_subclass_impls_initialized.Set(subclass_index, true);
+            m_subclassImpls[subclassIndex].Construct(typeId);
+            m_subclassImplsInitialized.Set(subclassIndex, true);
         }
 
-        m_subclass_impls[subclass_index].Get().Track(id, element, version_ptr);
+        m_subclassImpls[subclassIndex].Get().Track(id, element, versionPtr);
     }
 
     bool MarkToKeep(IdType id)
     {
         HYP_SCOPE;
 
-        TypeId type_id = id.GetTypeId();
+        TypeId typeId = id.GetTypeId();
 
-        if (type_id == m_impl.type_id)
+        if (typeId == m_impl.typeId)
         {
             return m_impl.MarkToKeep(id);
         }
 
-        const int subclass_index = GetSubclassIndex(m_impl.type_id, type_id);
-        AssertDebugMsg(subclass_index >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclass_index < m_subclass_impls.Size(), "Invalid subclass index");
+        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclass_impls_initialized.Test(subclass_index))
+        if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
             return false;
         }
 
-        return m_subclass_impls[subclass_index].Get().MarkToKeep(id);
+        return m_subclassImpls[subclassIndex].Get().MarkToKeep(id);
     }
 
     void MarkToRemove(IdType id)
     {
-        TypeId type_id = id.GetTypeId();
+        TypeId typeId = id.GetTypeId();
 
-        if (type_id == m_impl.type_id)
+        if (typeId == m_impl.typeId)
         {
             m_impl.MarkToRemove(id);
 
             return;
         }
 
-        const int subclass_index = GetSubclassIndex(m_impl.type_id, type_id);
-        AssertDebugMsg(subclass_index >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclass_index < m_subclass_impls.Size(), "Invalid subclass index");
+        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclass_impls_initialized.Test(subclass_index))
+        if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
             return;
         }
 
-        m_subclass_impls[subclass_index].Get().MarkToRemove(id);
+        m_subclassImpls[subclassIndex].Get().MarkToRemove(id);
     }
 
     template <class AllocatorType>
-    void GetRemoved(Array<IdType, AllocatorType>& out_ids, bool include_changed) const
+    void GetRemoved(Array<IdType, AllocatorType>& outIds, bool includeChanged) const
     {
         HYP_SCOPE;
 
-        m_impl.GetRemoved(out_ids, include_changed);
+        m_impl.GetRemoved(outIds, includeChanged);
 
-        for (Bitset::BitIndex bit_index : m_subclass_impls_initialized)
+        for (Bitset::BitIndex bitIndex : m_subclassImplsInitialized)
         {
-            m_subclass_impls[bit_index].Get().GetRemoved(out_ids, include_changed);
+            m_subclassImpls[bitIndex].Get().GetRemoved(outIds, includeChanged);
         }
     }
 
     template <class AllocatorType>
-    void GetRemoved(Array<ElementType, AllocatorType>& out, bool include_changed) const
+    void GetRemoved(Array<ElementType, AllocatorType>& out, bool includeChanged) const
     {
         HYP_SCOPE;
 
-        m_impl.GetRemoved(out, include_changed);
+        m_impl.GetRemoved(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetRemoved(out, include_changed);
+            m_subclassImpls[i].Get().GetRemoved(out, includeChanged);
         }
     }
 
     template <class AllocatorType>
-    void GetRemoved(Array<ElementType*, AllocatorType>& out, bool include_changed) const
+    void GetRemoved(Array<ElementType*, AllocatorType>& out, bool includeChanged) const
     {
         HYP_SCOPE;
 
-        m_impl.GetRemoved(out, include_changed);
+        m_impl.GetRemoved(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetRemoved(out, include_changed);
+            m_subclassImpls[i].Get().GetRemoved(out, includeChanged);
         }
     }
 
     template <class AllocatorType>
-    void GetAdded(Array<ElementType, AllocatorType>& out, bool include_changed) const
+    void GetAdded(Array<ElementType, AllocatorType>& out, bool includeChanged) const
     {
         HYP_SCOPE;
 
-        m_impl.GetAdded(out, include_changed);
+        m_impl.GetAdded(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetAdded(out, include_changed);
+            m_subclassImpls[i].Get().GetAdded(out, includeChanged);
         }
     }
 
     template <class AllocatorType>
-    void GetAdded(Array<ElementType*, AllocatorType>& out, bool include_changed) const
+    void GetAdded(Array<ElementType*, AllocatorType>& out, bool includeChanged) const
     {
         HYP_SCOPE;
 
-        m_impl.GetAdded(out, include_changed);
+        m_impl.GetAdded(out, includeChanged);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetAdded(out, include_changed);
+            m_subclassImpls[i].Get().GetAdded(out, includeChanged);
         }
     }
 
     template <class AllocatorType>
-    void GetChanged(Array<IdType, AllocatorType>& out_ids) const
+    void GetChanged(Array<IdType, AllocatorType>& outIds) const
     {
         HYP_SCOPE;
 
-        m_impl.GetChanged(out_ids);
+        m_impl.GetChanged(outIds);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetChanged(out_ids);
+            m_subclassImpls[i].Get().GetChanged(outIds);
         }
     }
 
@@ -545,9 +545,9 @@ public:
 
         m_impl.GetChanged(out);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetChanged(out);
+            m_subclassImpls[i].Get().GetChanged(out);
         }
     }
 
@@ -558,9 +558,9 @@ public:
 
         m_impl.GetChanged(out);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetChanged(out);
+            m_subclassImpls[i].Get().GetChanged(out);
         }
     }
 
@@ -571,9 +571,9 @@ public:
 
         m_impl.GetCurrent(out);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetCurrent(out);
+            m_subclassImpls[i].Get().GetCurrent(out);
         }
     }
 
@@ -584,9 +584,9 @@ public:
 
         m_impl.GetCurrent(out);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().GetCurrent(out);
+            m_subclassImpls[i].Get().GetCurrent(out);
         }
     }
 
@@ -594,23 +594,23 @@ public:
     {
         HYP_SCOPE;
 
-        TypeId type_id = id.GetTypeId();
+        TypeId typeId = id.GetTypeId();
 
-        if (type_id == m_impl.type_id)
+        if (typeId == m_impl.typeId)
         {
             return m_impl.GetElement(id);
         }
 
-        const int subclass_index = GetSubclassIndex(m_impl.type_id, type_id);
-        AssertDebugMsg(subclass_index >= 0, "Invalid subclass index");
-        AssertDebugMsg(subclass_index < m_subclass_impls.Size(), "Invalid subclass index");
+        const int subclassIndex = GetSubclassIndex(m_impl.typeId, typeId);
+        AssertDebugMsg(subclassIndex >= 0, "Invalid subclass index");
+        AssertDebugMsg(subclassIndex < m_subclassImpls.Size(), "Invalid subclass index");
 
-        if (!m_subclass_impls_initialized.Test(subclass_index))
+        if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
             return nullptr;
         }
 
-        return m_subclass_impls[subclass_index].Get().GetElement(id);
+        return m_subclassImpls[subclassIndex].Get().GetElement(id);
     }
 
     void Advance(AdvanceAction action)
@@ -619,9 +619,9 @@ public:
 
         m_impl.Advance(action);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().Advance(action);
+            m_subclassImpls[i].Get().Advance(action);
         }
     }
 
@@ -629,13 +629,13 @@ public:
     {
         m_impl.Reset();
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            m_subclass_impls[i].Get().Reset();
+            m_subclassImpls[i].Get().Reset();
         }
     }
 
-    HYP_DEF_STL_BEGIN_END(Iterator(const_cast<ResourceTracker*>(this), Bitset::not_found, 0), Iterator(const_cast<ResourceTracker*>(this), Bitset::not_found, Bitset::not_found))
+    HYP_DEF_STL_BEGIN_END(Iterator(const_cast<ResourceTracker*>(this), Bitset::notFound, 0), Iterator(const_cast<ResourceTracker*>(this), Bitset::notFound, Bitset::notFound))
 
 protected:
     struct Impl final
@@ -643,7 +643,7 @@ protected:
         /*! \brief Checks if the ResourceTracker<ObjId<Entity>, RenderProxy> already has a proxy for the given Id from the previous frame */
         HYP_FORCE_INLINE bool HasElement(IdType id) const
         {
-            AssertDebugMsg(id.GetTypeId() == type_id, "ResourceTracker typeid mismatch");
+            AssertDebugMsg(id.GetTypeId() == typeId, "ResourceTracker typeid mismatch");
 
             return previous.Test(id.ToIndex());
         }
@@ -655,16 +655,16 @@ protected:
 
         HYP_FORCE_INLINE Bitset GetAdded() const
         {
-            const SizeType new_nubits = MathUtil::Max(previous.NumBits(), next.NumBits());
+            const SizeType newNubits = MathUtil::Max(previous.NumBits(), next.NumBits());
 
-            return Bitset(next).Resize(new_nubits) & ~Bitset(previous).Resize(new_nubits);
+            return Bitset(next).Resize(newNubits) & ~Bitset(previous).Resize(newNubits);
         }
 
         HYP_FORCE_INLINE Bitset GetRemoved() const
         {
-            const SizeType new_nubits = MathUtil::Max(previous.NumBits(), next.NumBits());
+            const SizeType newNubits = MathUtil::Max(previous.NumBits(), next.NumBits());
 
-            return Bitset(previous).Resize(new_nubits) & ~Bitset(next).Resize(new_nubits);
+            return Bitset(previous).Resize(newNubits) & ~Bitset(next).Resize(newNubits);
         }
 
         HYP_FORCE_INLINE const Bitset& GetChanged() const
@@ -672,12 +672,12 @@ protected:
             return changed;
         }
 
-        void Track(IdType id, const ElementType& value, const int* version_ptr = nullptr)
+        void Track(IdType id, const ElementType& value, const int* versionPtr = nullptr)
         {
-            ElementType* current_value_ptr = nullptr;
-            int* current_version_ptr = nullptr;
+            ElementType* currentValuePtr = nullptr;
+            int* currentVersionPtr = nullptr;
 
-            ResourceTrackState track_state = ResourceTrackState::UNCHANGED;
+            ResourceTrackState trackState = ResourceTrackState::UNCHANGED;
 
             AssertThrowMsg(!next.Test(id.ToIndex()), "Id #%u already marked to be added for this iteration!", id.Value());
 
@@ -685,17 +685,17 @@ protected:
             {
                 AssertDebug(elements.HasIndex(id.ToIndex()));
 
-                current_value_ptr = &elements.Get(id.ToIndex());
-                current_version_ptr = &versions.Get(id.ToIndex());
+                currentValuePtr = &elements.Get(id.ToIndex());
+                currentVersionPtr = &versions.Get(id.ToIndex());
             }
 
-            if (current_value_ptr != nullptr)
+            if (currentValuePtr != nullptr)
             {
                 // elements and versions must be kept in sync
-                AssertDebug(current_version_ptr != nullptr);
+                AssertDebug(currentVersionPtr != nullptr);
 
                 // Advance if version has changed or if elements are not equal
-                if (value != *current_value_ptr || (version_ptr != nullptr && *version_ptr != *current_version_ptr))
+                if (value != *currentValuePtr || (versionPtr != nullptr && *versionPtr != *currentVersionPtr))
                 { // element.version != iter->second.version) {
                     // Sanity check - must not contain duplicates or it will mess up safe releasing the previous RenderProxy objects
                     AssertDebug(!changed.Test(id.ToIndex()));
@@ -703,14 +703,14 @@ protected:
                     // Mark as changed if it is found in the previous iteration
                     changed.Set(id.ToIndex(), true);
 
-                    *current_value_ptr = value;
-                    *current_version_ptr = version_ptr ? *version_ptr : 0;
+                    *currentValuePtr = value;
+                    *currentVersionPtr = versionPtr ? *versionPtr : 0;
 
-                    track_state = ResourceTrackState::CHANGED_MODIFIED;
+                    trackState = ResourceTrackState::CHANGED_MODIFIED;
                 }
                 else
                 {
-                    track_state = ResourceTrackState::UNCHANGED;
+                    trackState = ResourceTrackState::UNCHANGED;
                 }
             }
             else
@@ -720,9 +720,9 @@ protected:
 
                 // use emplace to destruct / reconstruct current element
                 elements.Emplace(id.ToIndex(), value);
-                versions.Set(id.ToIndex(), version_ptr ? *version_ptr : 0);
+                versions.Set(id.ToIndex(), versionPtr ? *versionPtr : 0);
 
-                track_state = ResourceTrackState::CHANGED_ADDED;
+                trackState = ResourceTrackState::CHANGED_ADDED;
             }
 
             next.Set(id.ToIndex(), true);
@@ -746,165 +746,165 @@ protected:
         }
 
         template <class AllocatorType>
-        void GetRemoved(Array<IdType, AllocatorType>& out_ids, bool include_changed) const
+        void GetRemoved(Array<IdType, AllocatorType>& outIds, bool includeChanged) const
         {
             HYP_SCOPE;
 
-            Bitset removed_bits = GetRemoved();
+            Bitset removedBits = GetRemoved();
 
-            if (include_changed)
+            if (includeChanged)
             {
-                removed_bits |= GetChanged();
+                removedBits |= GetChanged();
             }
 
-            out_ids.Reserve(removed_bits.Count());
+            outIds.Reserve(removedBits.Count());
 
-            SizeType first_set_bit_index;
+            SizeType firstSetBitIndex;
 
-            while ((first_set_bit_index = removed_bits.FirstSetBitIndex()) != -1)
+            while ((firstSetBitIndex = removedBits.FirstSetBitIndex()) != -1)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
-                out_ids.PushBack(id);
+                outIds.PushBack(id);
 
-                removed_bits.Set(first_set_bit_index, false);
+                removedBits.Set(firstSetBitIndex, false);
             }
         }
 
         template <class AllocatorType>
-        void GetRemoved(Array<ElementType, AllocatorType>& out, bool include_changed) const
+        void GetRemoved(Array<ElementType, AllocatorType>& out, bool includeChanged) const
         {
             HYP_SCOPE;
 
-            Bitset removed_bits = GetRemoved();
+            Bitset removedBits = GetRemoved();
 
-            if (include_changed)
+            if (includeChanged)
             {
-                removed_bits |= GetChanged();
+                removedBits |= GetChanged();
             }
 
-            out.Reserve(out.Size() + removed_bits.Count());
+            out.Reserve(out.Size() + removedBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = removed_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = removedBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(*elem);
 
-                removed_bits.Set(first_set_bit_index, false);
+                removedBits.Set(firstSetBitIndex, false);
             }
         }
 
         template <class AllocatorType>
-        void GetRemoved(Array<ElementType*, AllocatorType>& out, bool include_changed) const
+        void GetRemoved(Array<ElementType*, AllocatorType>& out, bool includeChanged) const
         {
             HYP_SCOPE;
 
-            Bitset removed_bits = GetRemoved();
+            Bitset removedBits = GetRemoved();
 
-            if (include_changed)
+            if (includeChanged)
             {
-                removed_bits |= GetChanged();
+                removedBits |= GetChanged();
             }
 
-            out.Reserve(out.Size() + removed_bits.Count());
+            out.Reserve(out.Size() + removedBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = removed_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = removedBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(const_cast<ElementType*>(elem));
 
-                removed_bits.Set(first_set_bit_index, false);
+                removedBits.Set(firstSetBitIndex, false);
             }
         }
 
         template <class AllocatorType>
-        void GetAdded(Array<ElementType, AllocatorType>& out, bool include_changed) const
+        void GetAdded(Array<ElementType, AllocatorType>& out, bool includeChanged) const
         {
             HYP_SCOPE;
 
-            Bitset newly_added_bits = GetAdded();
+            Bitset newlyAddedBits = GetAdded();
 
-            if (include_changed)
+            if (includeChanged)
             {
-                newly_added_bits |= GetChanged();
+                newlyAddedBits |= GetChanged();
             }
 
-            out.Reserve(out.Size() + newly_added_bits.Count());
+            out.Reserve(out.Size() + newlyAddedBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = newly_added_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = newlyAddedBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(*elem);
 
-                newly_added_bits.Set(first_set_bit_index, false);
+                newlyAddedBits.Set(firstSetBitIndex, false);
             }
         }
 
         template <class AllocatorType>
-        void GetAdded(Array<ElementType*, AllocatorType>& out, bool include_changed) const
+        void GetAdded(Array<ElementType*, AllocatorType>& out, bool includeChanged) const
         {
             HYP_SCOPE;
 
-            Bitset newly_added_bits = GetAdded();
+            Bitset newlyAddedBits = GetAdded();
 
-            if (include_changed)
+            if (includeChanged)
             {
-                newly_added_bits |= GetChanged();
+                newlyAddedBits |= GetChanged();
             }
 
-            out.Reserve(out.Size() + newly_added_bits.Count());
+            out.Reserve(out.Size() + newlyAddedBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = newly_added_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = newlyAddedBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(const_cast<ElementType*>(elem));
 
-                newly_added_bits.Set(first_set_bit_index, false);
+                newlyAddedBits.Set(firstSetBitIndex, false);
             }
         }
 
         template <class AllocatorType>
-        void GetChanged(Array<IdType, AllocatorType>& out_ids) const
+        void GetChanged(Array<IdType, AllocatorType>& outIds) const
         {
             HYP_SCOPE;
 
-            Bitset changed_bits = GetChanged();
+            Bitset changedBits = GetChanged();
 
-            out_ids.Reserve(changed_bits.Count());
+            outIds.Reserve(changedBits.Count());
 
-            SizeType first_set_bit_index;
+            SizeType firstSetBitIndex;
 
-            while ((first_set_bit_index = changed_bits.FirstSetBitIndex()) != -1)
+            while ((firstSetBitIndex = changedBits.FirstSetBitIndex()) != -1)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
-                out_ids.PushBack(id);
+                outIds.PushBack(id);
 
-                changed_bits.Set(first_set_bit_index, false);
+                changedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -913,22 +913,22 @@ protected:
         {
             HYP_SCOPE;
 
-            Bitset changed_bits = GetChanged();
+            Bitset changedBits = GetChanged();
 
-            out.Reserve(out.Size() + changed_bits.Count());
+            out.Reserve(out.Size() + changedBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = changed_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = changedBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(*elem);
 
-                changed_bits.Set(first_set_bit_index, false);
+                changedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -937,22 +937,22 @@ protected:
         {
             HYP_SCOPE;
 
-            Bitset changed_bits = GetChanged();
+            Bitset changedBits = GetChanged();
 
-            out.Reserve(out.Size() + changed_bits.Count());
+            out.Reserve(out.Size() + changedBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = changed_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = changedBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(const_cast<ElementType*>(elem));
 
-                changed_bits.Set(first_set_bit_index, false);
+                changedBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -961,22 +961,22 @@ protected:
         {
             HYP_SCOPE;
 
-            Bitset current_bits = previous;
+            Bitset currentBits = previous;
 
-            out.Reserve(out.Size() + current_bits.Count());
+            out.Reserve(out.Size() + currentBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = current_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = currentBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(*elem);
 
-                current_bits.Set(first_set_bit_index, false);
+                currentBits.Set(firstSetBitIndex, false);
             }
         }
 
@@ -985,30 +985,30 @@ protected:
         {
             HYP_SCOPE;
 
-            Bitset current_bits = previous;
+            Bitset currentBits = previous;
 
-            out.Reserve(out.Size() + current_bits.Count());
+            out.Reserve(out.Size() + currentBits.Count());
 
-            Bitset::BitIndex first_set_bit_index;
+            Bitset::BitIndex firstSetBitIndex;
 
-            while ((first_set_bit_index = current_bits.FirstSetBitIndex()) != Bitset::not_found)
+            while ((firstSetBitIndex = currentBits.FirstSetBitIndex()) != Bitset::notFound)
             {
-                const IdType id = IdType(ObjIdBase { type_id, uint32(first_set_bit_index + 1) });
+                const IdType id = IdType(ObjIdBase { typeId, uint32(firstSetBitIndex + 1) });
 
                 const ElementType* elem = elements.TryGet(id.ToIndex());
                 AssertDebug(elem != nullptr);
 
                 out.PushBack(const_cast<ElementType*>(elem));
 
-                current_bits.Set(first_set_bit_index, false);
+                currentBits.Set(firstSetBitIndex, false);
             }
         }
 
         ElementType* GetElement(IdType id)
         {
-            AssertDebug(id.GetTypeId() == type_id);
+            AssertDebug(id.GetTypeId() == typeId);
 
-            if (id.GetTypeId() != type_id)
+            if (id.GetTypeId() != typeId)
             {
                 return nullptr;
             }
@@ -1061,7 +1061,7 @@ protected:
             changed.Clear();
         }
 
-        TypeId type_id;
+        TypeId typeId;
 
         ElementArrayType elements;
         // per-element version identifier array - mirrors elements array
@@ -1076,8 +1076,8 @@ protected:
     Impl m_impl;
 
     // per-subtype implementations (only constructed and setup on first Bind() call with that type)
-    Array<ValueStorage<Impl>> m_subclass_impls;
-    Bitset m_subclass_impls_initialized;
+    Array<ValueStorage<Impl>> m_subclassImpls;
+    Bitset m_subclassImplsInitialized;
 };
 
 } // namespace hyperion

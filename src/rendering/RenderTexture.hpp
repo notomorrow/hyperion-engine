@@ -42,7 +42,7 @@ public:
 
     HYP_FORCE_INLINE const ImageViewRef& GetImageView() const
     {
-        return m_image_view;
+        return m_imageView;
     }
 
     /*! \brief Enqueues a render command to generate mipmaps for the texture and waits for it to finish.
@@ -51,7 +51,7 @@ public:
 
     /*! \brief Enqueues a render command to copy the texture data to a buffer and waits for it to finish.
      *  Thread-safe, blocking function. Use sparingly. */
-    void Readback(ByteBuffer& out_byte_buffer);
+    void Readback(ByteBuffer& outByteBuffer);
 
     void Resize(const Vec3u& extent);
 
@@ -68,7 +68,7 @@ private:
     Texture* m_texture;
 
     ImageRef m_image;
-    ImageViewRef m_image_view;
+    ImageViewRef m_imageView;
 };
 
 } // namespace hyperion

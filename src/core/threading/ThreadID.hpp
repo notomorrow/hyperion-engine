@@ -16,10 +16,10 @@
 namespace hyperion {
 namespace threading {
 
-constexpr uint32 g_thread_dynamic_mask = ~(~0u >> 1); // last bit
-constexpr uint32 g_thread_category_mask = ~(~0u << 4);
-constexpr uint32 g_thread_id_mask = ~(g_thread_category_mask | g_thread_dynamic_mask);
-constexpr uint32 g_max_static_thread_ids = uint32(MathUtil::FastLog2_Pow2((~0u & g_thread_id_mask) >> 4));
+constexpr uint32 g_threadDynamicMask = ~(~0u >> 1); // last bit
+constexpr uint32 g_threadCategoryMask = ~(~0u << 4);
+constexpr uint32 g_threadIdMask = ~(g_threadCategoryMask | g_threadDynamicMask);
+constexpr uint32 g_maxStaticThreadIds = uint32(MathUtil::FastLog2_Pow2((~0u & g_threadIdMask) >> 4));
 
 using ThreadMask = uint32;
 
@@ -45,8 +45,8 @@ public:
     {
     }
 
-    HYP_API ThreadId(Name name, bool force_unique = false);
-    HYP_API ThreadId(Name name, ThreadCategory category, bool force_unique = false);
+    HYP_API ThreadId(Name name, bool forceUnique = false);
+    HYP_API ThreadId(Name name, ThreadCategory category, bool forceUnique = false);
 
     constexpr ThreadId(const ThreadId& other) = default;
     ThreadId& operator=(const ThreadId& other) = default;
@@ -78,17 +78,17 @@ public:
      *  \returns True if this is a dynamic thread Id, false otherwise. */
     HYP_FORCE_INLINE constexpr bool IsDynamic() const
     {
-        return (m_value & g_thread_dynamic_mask) >> 31;
+        return (m_value & g_threadDynamicMask) >> 31;
     }
 
     HYP_FORCE_INLINE constexpr bool IsStatic() const
     {
-        return !((m_value & g_thread_dynamic_mask) >> 31);
+        return !((m_value & g_threadDynamicMask) >> 31);
     }
 
     HYP_FORCE_INLINE constexpr ThreadCategory GetCategory() const
     {
-        return ThreadCategory(m_value & g_thread_category_mask);
+        return ThreadCategory(m_value & g_threadCategoryMask);
     }
 
     HYP_FORCE_INLINE constexpr uint32 GetValue() const
@@ -101,7 +101,7 @@ public:
      *  For dyanmic thread IDs, the dynamic bit and thread category are preserved but the actual value is not */
     HYP_FORCE_INLINE constexpr ThreadMask GetMask() const
     {
-        return IsDynamic() ? (m_value & ~g_thread_id_mask) : m_value;
+        return IsDynamic() ? (m_value & ~g_threadIdMask) : m_value;
     }
 
     HYP_FORCE_INLINE constexpr bool IsValid() const
@@ -115,7 +115,7 @@ public:
     }
 
 protected:
-    HYP_API ThreadId(Name name, ThreadCategory category, uint32 allocate_flags);
+    HYP_API ThreadId(Name name, ThreadCategory category, uint32 allocateFlags);
 
     uint32 m_value;
     Name m_name;
@@ -135,11 +135,11 @@ public:
 
     /*! \brief Allocate a new StaticThreadId with the given Name.
      *  \param name The name to use to allocate the ThreadId.
-     *  \param force_unique If true, a new index will be allocated for the ThreadId regardless of whether or not one already exists with the given name. */
-    explicit StaticThreadId(Name name, bool force_unique = false);
+     *  \param forceUnique If true, a new index will be allocated for the ThreadId regardless of whether or not one already exists with the given name. */
+    explicit StaticThreadId(Name name, bool forceUnique = false);
 
     /*! \brief Construct a StaticThreadId from an pre-allocated static thread Id index */
-    explicit StaticThreadId(uint32 static_thread_index);
+    explicit StaticThreadId(uint32 staticThreadIndex);
 
     constexpr StaticThreadId(const StaticThreadId& other) = default;
     StaticThreadId& operator=(const StaticThreadId& other) = default;
@@ -180,7 +180,7 @@ public:
 
     HYP_FORCE_INLINE constexpr uint32 GetStaticThreadIndex() const
     {
-        return uint32(MathUtil::FastLog2_Pow2((m_value & g_thread_id_mask) >> 4));
+        return uint32(MathUtil::FastLog2_Pow2((m_value & g_threadIdMask) >> 4));
     }
 };
 

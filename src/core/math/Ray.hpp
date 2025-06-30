@@ -49,19 +49,19 @@ struct HYP_API Ray
     Ray operator*(const Matrix4& transform) const;
 
     Optional<RayHit> TestAABB(const BoundingBox& aabb) const;
-    bool TestAABB(const BoundingBox& aabb, RayTestResults& out_results) const;
-    bool TestAABB(const BoundingBox& aabb, RayHitID hit_id, RayTestResults& out_results) const;
-    bool TestAABB(const BoundingBox& aabb, RayHitID hit_id, const void* user_data, RayTestResults& out_results) const;
+    bool TestAABB(const BoundingBox& aabb, RayTestResults& outResults) const;
+    bool TestAABB(const BoundingBox& aabb, RayHitID hitId, RayTestResults& outResults) const;
+    bool TestAABB(const BoundingBox& aabb, RayHitID hitId, const void* userData, RayTestResults& outResults) const;
 
     Optional<RayHit> TestPlane(const Vec3f& position, const Vec3f& normal) const;
-    bool TestPlane(const Vec3f& position, const Vec3f& normal, RayTestResults& out_results) const;
-    bool TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hit_id, RayTestResults& out_results) const;
-    bool TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hit_id, const void* user_data, RayTestResults& out_results) const;
+    bool TestPlane(const Vec3f& position, const Vec3f& normal, RayTestResults& outResults) const;
+    bool TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hitId, RayTestResults& outResults) const;
+    bool TestPlane(const Vec3f& position, const Vec3f& normal, RayHitID hitId, const void* userData, RayTestResults& outResults) const;
 
     Optional<RayHit> TestTriangle(const Triangle& triangle) const;
-    bool TestTriangle(const Triangle& triangle, RayTestResults& out_results) const;
-    bool TestTriangle(const Triangle& triangle, RayHitID hit_id, RayTestResults& out_results) const;
-    bool TestTriangle(const Triangle& triangle, RayHitID hit_id, const void* user_data, RayTestResults& out_results) const;
+    bool TestTriangle(const Triangle& triangle, RayTestResults& outResults) const;
+    bool TestTriangle(const Triangle& triangle, RayHitID hitId, RayTestResults& outResults) const;
+    bool TestTriangle(const Triangle& triangle, RayHitID hitId, const void* userData, RayTestResults& outResults) const;
 
     Optional<RayHit> TestTriangleList(
         const Array<Vertex>& vertices,
@@ -76,40 +76,40 @@ struct HYP_API Ray
         const Array<Vertex>& vertices,
         const Array<uint32>& indices,
         const Transform& transform,
-        RayTestResults& out_results) const;
+        RayTestResults& outResults) const;
 
     bool TestTriangleList(
         const Array<Triangle>& triangles,
         const Transform& transform,
-        RayTestResults& out_results) const;
+        RayTestResults& outResults) const;
 
     bool TestTriangleList(
         const Array<Vertex>& vertices,
         const Array<uint32>& indices,
         const Transform& transform,
-        RayHitID hit_id,
-        RayTestResults& out_results) const;
+        RayHitID hitId,
+        RayTestResults& outResults) const;
 
     bool TestTriangleList(
         const Array<Triangle>& triangles,
         const Transform& transform,
-        RayHitID hit_id,
-        RayTestResults& out_results) const;
+        RayHitID hitId,
+        RayTestResults& outResults) const;
 
     bool TestTriangleList(
         const Array<Vertex>& vertices,
         const Array<uint32>& indices,
         const Transform& transform,
-        RayHitID hit_id,
-        const void* user_data,
-        RayTestResults& out_results) const;
+        RayHitID hitId,
+        const void* userData,
+        RayTestResults& outResults) const;
 
     bool TestTriangleList(
         const Array<Triangle>& triangles,
         const Transform& transform,
-        RayHitID hit_id,
-        const void* user_data,
-        RayTestResults& out_results) const;
+        RayHitID hitId,
+        const void* userData,
+        RayTestResults& outResults) const;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
@@ -125,14 +125,14 @@ HYP_API Ray operator*(const Matrix4& transform, const Ray& ray);
 
 struct RayHit
 {
-    static constexpr bool no_hit = false;
+    static constexpr bool noHit = false;
 
     Vec3f hitpoint;
     Vec3f normal;
-    Vec3f barycentric_coords;
+    Vec3f barycentricCoords;
     float distance = 0.0f;
     RayHitID id = ~0u;
-    const void* user_data = nullptr;
+    const void* userData = nullptr;
 
     bool operator<(const RayHit& other) const
     {
@@ -140,16 +140,16 @@ struct RayHit
                    distance,
                    hitpoint,
                    normal,
-                   barycentric_coords,
+                   barycentricCoords,
                    id,
-                   user_data)
+                   userData)
             < Tie(
                 other.distance,
                 other.hitpoint,
                 other.normal,
-                other.barycentric_coords,
+                other.barycentricCoords,
                 other.id,
-                other.user_data);
+                other.userData);
     }
 
     bool operator==(const RayHit& other) const
@@ -157,9 +157,9 @@ struct RayHit
         return distance == other.distance
             && hitpoint == other.hitpoint
             && normal == other.normal
-            && barycentric_coords == other.barycentric_coords
+            && barycentricCoords == other.barycentricCoords
             && id == other.id
-            && user_data == other.user_data;
+            && userData == other.userData;
     }
 
     HashCode GetHashCode() const
@@ -169,9 +169,9 @@ struct RayHit
         hc.Add(distance);
         hc.Add(hitpoint.GetHashCode());
         hc.Add(normal.GetHashCode());
-        hc.Add(barycentric_coords.GetHashCode());
+        hc.Add(barycentricCoords.GetHashCode());
         hc.Add(id);
-        hc.Add(uintptr_t(user_data));
+        hc.Add(uintptr_t(userData));
 
         return hc;
     }

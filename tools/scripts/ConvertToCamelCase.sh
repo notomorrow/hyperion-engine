@@ -87,11 +87,17 @@ if (( convert )); then
                     || $id =~ /^tuple_size$/
                     || $id =~ /^always_inline$/
                     || $id =~ /^warn_unused_result$/
+                    || $id =~ /^aligned_alloc$/
+                    || $id =~ /^notify_all$/
+                    || $id =~ /^notify_one$/
+                    || $id =~ /^fetch_(add|sub|and|or|xor|min|max)$/
+                    || $id =~ /^is_enum_v$/
                     || $id =~ /_v$/
                     || $id =~ /^curl_/
                     || $id =~ /^pthread_/
                     || $id =~ /^st_/
                     || $id =~ /^tv_/
+                    || $id =~ /^va_/
                 ) {
                     $q.$id;
                 } elsif ($id =~ /^([mgs]_)(.+)$/) {

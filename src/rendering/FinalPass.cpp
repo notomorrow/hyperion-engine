@@ -40,14 +40,14 @@ HYP_DECLARE_LOG_CHANNEL(Rendering);
 struct RENDER_COMMAND(SetUILayerImageView)
     : RenderCommand
 {
-    FinalPass& final_pass;
-    ImageViewRef image_view;
+    FinalPass& finalPass;
+    ImageViewRef imageView;
 
     RENDER_COMMAND(SetUILayerImageView)(
-        FinalPass& final_pass,
-        const ImageViewRef& image_view)
-        : final_pass(final_pass),
-          image_view(image_view)
+        FinalPass& finalPass,
+        const ImageViewRef& imageView)
+        : finalPass(finalPass),
+          imageView(imageView)
     {
     }
 
@@ -55,7 +55,7 @@ struct RENDER_COMMAND(SetUILayerImageView)
 
     virtual RendererResult operator()() override
     {
-        SafeRelease(std::move(final_pass.m_ui_layer_image_view));
+        SafeRelease(std::move(finalPass.m_uiLayerImageView));
 
         if (g_engine->IsShuttingDown())
         {
@@ -64,30 +64,30 @@ struct RENDER_COMMAND(SetUILayerImageView)
             HYPERION_RETURN_OK;
         }
 
-        if (final_pass.m_render_texture_to_screen_pass != nullptr)
+        if (finalPass.m_renderTextureToScreenPass != nullptr)
         {
-            const DescriptorTableRef& descriptor_table = final_pass.m_render_texture_to_screen_pass->GetGraphicsPipeline()->GetDescriptorTable();
-            AssertThrow(descriptor_table.IsValid());
+            const DescriptorTableRef& descriptorTable = finalPass.m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable();
+            AssertThrow(descriptorTable.IsValid());
 
-            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
             {
-                const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
-                AssertThrow(descriptor_set != nullptr);
+                const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
+                AssertThrow(descriptorSet != nullptr);
 
-                if (image_view != nullptr)
+                if (imageView != nullptr)
                 {
-                    descriptor_set->SetElement(NAME("InTexture"), image_view);
+                    descriptorSet->SetElement(NAME("InTexture"), imageView);
                 }
                 else
                 {
-                    descriptor_set->SetElement(NAME("InTexture"), g_render_global_state->PlaceholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+                    descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->PlaceholderData->DefaultTexture2D->GetRenderResource().GetImageView());
                 }
             }
         }
 
         // Set frames to be dirty so the descriptor sets get updated before we render the UI
-        final_pass.m_dirty_frame_indices = (1u << max_frames_in_flight) - 1;
-        final_pass.m_ui_layer_image_view = image_view;
+        finalPass.m_dirtyFrameIndices = (1u << maxFramesInFlight) - 1;
+        finalPass.m_uiLayerImageView = imageView;
 
         HYPERION_RETURN_OK;
     }
@@ -99,110 +99,110 @@ struct RENDER_COMMAND(SetUILayerImageView)
 
 FinalPass::FinalPass(const SwapchainRef& swapchain)
     : m_swapchain(swapchain),
-      m_dirty_frame_indices(0)
+      m_dirtyFrameIndices(0)
 {
 }
 
 FinalPass::~FinalPass()
 {
-    m_quad_mesh.Reset();
+    m_quadMesh.Reset();
 
-    if (m_render_texture_to_screen_pass != nullptr)
+    if (m_renderTextureToScreenPass != nullptr)
     {
-        m_render_texture_to_screen_pass.Reset();
+        m_renderTextureToScreenPass.Reset();
     }
 
-    SafeRelease(std::move(m_ui_layer_image_view));
+    SafeRelease(std::move(m_uiLayerImageView));
     SafeRelease(std::move(m_swapchain));
 }
 
-void FinalPass::SetUILayerImageView(const ImageViewRef& image_view)
+void FinalPass::SetUILayerImageView(const ImageViewRef& imageView)
 {
-    PUSH_RENDER_COMMAND(SetUILayerImageView, *this, image_view);
+    PUSH_RENDER_COMMAND(SetUILayerImageView, *this, imageView);
 }
 
 void FinalPass::Create()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     AssertThrow(m_swapchain != nullptr);
 
     m_extent = m_swapchain->GetExtent();
-    m_image_format = m_swapchain->GetImageFormat();
+    m_imageFormat = m_swapchain->GetImageFormat();
 
     AssertThrow(m_extent.Volume() != 0);
 
-    m_quad_mesh = MeshBuilder::Quad();
-    InitObject(m_quad_mesh);
-    m_quad_mesh->SetPersistentRenderResourceEnabled(true);
+    m_quadMesh = MeshBuilder::Quad();
+    InitObject(m_quadMesh);
+    m_quadMesh->SetPersistentRenderResourceEnabled(true);
 
-    ShaderRef render_texture_to_screen_shader = g_shader_manager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
-    AssertThrow(render_texture_to_screen_shader.IsValid());
+    ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
+    AssertThrow(renderTextureToScreenShader.IsValid());
 
-    const DescriptorTableDeclaration& descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
-    DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+    const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
-        AssertThrow(descriptor_set != nullptr);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
+        AssertThrow(descriptorSet != nullptr);
 
-        if (m_ui_layer_image_view != nullptr)
+        if (m_uiLayerImageView != nullptr)
         {
-            descriptor_set->SetElement(NAME("InTexture"), m_ui_layer_image_view);
+            descriptorSet->SetElement(NAME("InTexture"), m_uiLayerImageView);
         }
         else
         {
-            descriptor_set->SetElement(NAME("InTexture"), g_render_global_state->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("InTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         }
     }
 
-    DeferCreate(descriptor_table);
+    DeferCreate(descriptorTable);
 
-    m_render_texture_to_screen_pass = MakeUnique<FullScreenPass>(
-        render_texture_to_screen_shader,
-        std::move(descriptor_table),
-        m_image_format,
+    m_renderTextureToScreenPass = MakeUnique<FullScreenPass>(
+        renderTextureToScreenShader,
+        std::move(descriptorTable),
+        m_imageFormat,
         m_extent,
         nullptr);
 
-    m_render_texture_to_screen_pass->SetBlendFunction(BlendFunction(
+    m_renderTextureToScreenPass->SetBlendFunction(BlendFunction(
         BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
         BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA));
 
-    m_render_texture_to_screen_pass->Create();
+    m_renderTextureToScreenPass->Create();
 }
 
-void FinalPass::Render(FrameBase* frame, RenderWorld* render_world)
+void FinalPass::Render(FrameBase* frame, RenderWorld* renderWorld)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    const uint32 frame_index = frame->GetFrameIndex();
-    const uint32 acquired_image_index = m_swapchain->GetAcquiredImageIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
+    const uint32 acquiredImageIndex = m_swapchain->GetAcquiredImageIndex();
 
-    const FramebufferRef& framebuffer = m_swapchain->GetFramebuffers()[acquired_image_index];
+    const FramebufferRef& framebuffer = m_swapchain->GetFramebuffers()[acquiredImageIndex];
     AssertDebug(framebuffer != nullptr);
 
     frame->GetCommandList().Add<BeginFramebuffer>(framebuffer, 0);
-    frame->GetCommandList().Add<BindGraphicsPipeline>(m_render_texture_to_screen_pass->GetGraphicsPipeline());
+    frame->GetCommandList().Add<BindGraphicsPipeline>(m_renderTextureToScreenPass->GetGraphicsPipeline());
 
     frame->GetCommandList().Add<BindDescriptorTable>(
-        m_render_texture_to_screen_pass->GetGraphicsPipeline()->GetDescriptorTable(),
-        m_render_texture_to_screen_pass->GetGraphicsPipeline(),
+        m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable(),
+        m_renderTextureToScreenPass->GetGraphicsPipeline(),
         ArrayMap<Name, ArrayMap<Name, uint32>> {},
-        frame_index);
+        frameIndex);
 
-    const uint32 descriptor_set_index = m_render_texture_to_screen_pass->GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("RenderTextureToScreenDescriptorSet"));
-    AssertDebug(descriptor_set_index != ~0u);
+    const uint32 descriptorSetIndex = m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSetIndex(NAME("RenderTextureToScreenDescriptorSet"));
+    AssertDebug(descriptorSetIndex != ~0u);
 
     // Render each sub-view
-    DeferredRenderer* dr = static_cast<DeferredRenderer*>(g_render_global_state->Renderer);
+    DeferredRenderer* dr = static_cast<DeferredRenderer*>(g_renderGlobalState->Renderer);
     AssertDebug(dr != nullptr);
 
     // ordered by priority of the view
-    for (const Pair<View*, DeferredPassData*>& it : dr->GetLastFrameData().pass_data)
+    for (const Pair<View*, DeferredPassData*>& it : dr->GetLastFrameData().passData)
     {
         View* view = it.first;
         AssertDebug(view != nullptr);
@@ -210,38 +210,38 @@ void FinalPass::Render(FrameBase* frame, RenderWorld* render_world)
         DeferredPassData* pd = it.second;
         AssertDebug(pd != nullptr);
 
-        AssertDebug(pd->final_pass_descriptor_set);
+        AssertDebug(pd->finalPassDescriptorSet);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
-            pd->final_pass_descriptor_set,
-            m_render_texture_to_screen_pass->GetGraphicsPipeline(),
+            pd->finalPassDescriptorSet,
+            m_renderTextureToScreenPass->GetGraphicsPipeline(),
             ArrayMap<Name, uint32> {},
-            descriptor_set_index);
+            descriptorSetIndex);
 
-        m_quad_mesh->GetRenderResource().Render(frame->GetCommandList());
+        m_quadMesh->GetRenderResource().Render(frame->GetCommandList());
     }
 
 #ifdef HYP_RENDER_UI_IN_FINAL_PASS
     // Render UI onto screen, blending with the scene render pass
-    if (m_ui_layer_image_view != nullptr)
+    if (m_uiLayerImageView != nullptr)
     {
         // If the UI pass has needs to be updated for the current frame index, do it
-        if (m_dirty_frame_indices & (1u << frame_index))
+        if (m_dirtyFrameIndices & (1u << frameIndex))
         {
-            m_render_texture_to_screen_pass->GetGraphicsPipeline()->GetDescriptorTable()->Update(frame_index);
+            m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable()->Update(frameIndex);
 
-            m_dirty_frame_indices &= ~(1u << frame_index);
+            m_dirtyFrameIndices &= ~(1u << frameIndex);
         }
 
         frame->GetCommandList().Add<BindDescriptorSet>(
-            m_render_texture_to_screen_pass->GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index),
-            m_render_texture_to_screen_pass->GetGraphicsPipeline(),
+            m_renderTextureToScreenPass->GetGraphicsPipeline()->GetDescriptorTable()->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex),
+            m_renderTextureToScreenPass->GetGraphicsPipeline(),
             ArrayMap<Name, uint32> {},
-            descriptor_set_index);
+            descriptorSetIndex);
 
-        m_quad_mesh->GetRenderResource().Render(frame->GetCommandList());
+        m_quadMesh->GetRenderResource().Render(frame->GetCommandList());
 
-        // DebugLog(LogType::Debug, "Rendering UI layer to screen for frame index %u\n", frame_index);
+        // DebugLog(LogType::Debug, "Rendering UI layer to screen for frame index %u\n", frameIndex);
     }
 #endif
 

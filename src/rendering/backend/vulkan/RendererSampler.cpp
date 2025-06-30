@@ -11,19 +11,19 @@
 
 namespace hyperion {
 
-extern IRenderBackend* g_render_backend;
+extern IRenderBackend* g_renderBackend;
 
 static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderBackend*>(g_render_backend);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
-VulkanSampler::VulkanSampler(TextureFilterMode min_filter_mode, TextureFilterMode mag_filter_mode, TextureWrapMode wrap_mode)
+VulkanSampler::VulkanSampler(TextureFilterMode minFilterMode, TextureFilterMode magFilterMode, TextureWrapMode wrapMode)
     : m_handle(VK_NULL_HANDLE)
 {
-    m_min_filter_mode = min_filter_mode;
-    m_mag_filter_mode = mag_filter_mode;
-    m_wrap_mode = wrap_mode;
+    m_minFilterMode = minFilterMode;
+    m_magFilterMode = magFilterMode;
+    m_wrapMode = wrapMode;
 }
 
 VulkanSampler::~VulkanSampler()
@@ -40,60 +40,60 @@ RendererResult VulkanSampler::Create()
 {
     AssertThrow(m_handle == VK_NULL_HANDLE);
 
-    VkSamplerCreateInfo sampler_info { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-    sampler_info.magFilter = helpers::ToVkFilter(m_mag_filter_mode);
-    sampler_info.minFilter = helpers::ToVkFilter(m_min_filter_mode);
-    sampler_info.addressModeU = helpers::ToVkSamplerAddressMode(m_wrap_mode);
-    sampler_info.addressModeV = helpers::ToVkSamplerAddressMode(m_wrap_mode);
-    sampler_info.addressModeW = helpers::ToVkSamplerAddressMode(m_wrap_mode);
+    VkSamplerCreateInfo samplerInfo { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    samplerInfo.magFilter = helpers::ToVkFilter(m_magFilterMode);
+    samplerInfo.minFilter = helpers::ToVkFilter(m_minFilterMode);
+    samplerInfo.addressModeU = helpers::ToVkSamplerAddressMode(m_wrapMode);
+    samplerInfo.addressModeV = helpers::ToVkSamplerAddressMode(m_wrapMode);
+    samplerInfo.addressModeW = helpers::ToVkSamplerAddressMode(m_wrapMode);
 
     // if (device->GetFeatures().GetPhysicalDeviceFeatures().samplerAnisotropy) {
-    //     sampler_info.anisotropyEnable = VK_TRUE;
-    //     sampler_info.maxAnisotropy = 1.0f;//device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
+    //     samplerInfo.anisotropyEnable = VK_TRUE;
+    //     samplerInfo.maxAnisotropy = 1.0f;//device->GetFeatures().GetPhysicalDeviceProperties().limits.maxSamplerAnisotropy;
     // } else {
-    sampler_info.anisotropyEnable = VK_FALSE;
-    sampler_info.maxAnisotropy = 1.0f;
+    samplerInfo.anisotropyEnable = VK_FALSE;
+    samplerInfo.maxAnisotropy = 1.0f;
     //}
 
-    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    sampler_info.unnormalizedCoordinates = VK_FALSE;
-    sampler_info.compareEnable = VK_FALSE;
-    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
-    switch (m_min_filter_mode)
+    switch (m_minFilterMode)
     {
     case TFM_NEAREST_MIPMAP:
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         break;
     case TFM_LINEAR_MIPMAP:
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         break;
     case TFM_MINMAX_MIPMAP:
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         break;
     default:
-        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         break;
     }
 
-    sampler_info.mipLodBias = 0.0f;
-    sampler_info.minLod = 0.0f;
-    sampler_info.maxLod = 12.0f; // 65535.0f;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 12.0f; // 65535.0f;
 
-    VkSamplerReductionModeCreateInfoEXT reduction_info { VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT };
+    VkSamplerReductionModeCreateInfoEXT reductionInfo { VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT };
 
-    if (m_min_filter_mode == TFM_MINMAX_MIPMAP)
+    if (m_minFilterMode == TFM_MINMAX_MIPMAP)
     {
         if (!GetRenderBackend()->GetDevice()->GetFeatures().GetSamplerMinMaxProperties().filterMinmaxSingleComponentFormats)
         {
             return HYP_MAKE_ERROR(RendererError, "Device does not support min/max sampler formats");
         }
 
-        reduction_info.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
-        sampler_info.pNext = &reduction_info;
+        reductionInfo.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
+        samplerInfo.pNext = &reductionInfo;
     }
 
-    if (vkCreateSampler(GetRenderBackend()->GetDevice()->GetDevice(), &sampler_info, nullptr, &m_handle) != VK_SUCCESS)
+    if (vkCreateSampler(GetRenderBackend()->GetDevice()->GetDevice(), &samplerInfo, nullptr, &m_handle) != VK_SUCCESS)
     {
         return HYP_MAKE_ERROR(RendererError, "Failed to create sampler!");
     }

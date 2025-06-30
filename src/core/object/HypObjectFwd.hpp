@@ -46,7 +46,7 @@ class ManagedObjectResource;
 
 enum class HypClassFlags : uint32;
 
-extern HYP_API const HypClass* GetClass(TypeId type_id);
+extern HYP_API const HypClass* GetClass(TypeId typeId);
 
 HYP_API extern void FixupObjectInitializerPointer(void* target, IHypObjectInitializer* initializer);
 
@@ -59,7 +59,7 @@ public:
 
     virtual const HypClass* GetClass() const = 0;
 
-    virtual void SetManagedObjectResource(ManagedObjectResource* managed_object_resource) = 0;
+    virtual void SetManagedObjectResource(ManagedObjectResource* managedObjectResource) = 0;
     virtual ManagedObjectResource* GetManagedObjectResource() const = 0;
 
     virtual dotnet::Object* GetManagedObject() const = 0;
@@ -81,7 +81,7 @@ struct IsHypObject
  *  \note A type is considered a HypObject if it is derived from HypObjectBase or if it has HYP_OBJECT_BODY(...) in the class body.
  *  \tparam T The type to check. */
 template <class T>
-struct IsHypObject<T, std::enable_if_t<std::is_base_of_v<HypObjectBase, T> || (T::HypObjectData::is_hyp_object)>>
+struct IsHypObject<T, std::enable_if_t<std::is_base_of_v<HypObjectBase, T> || (T::HypObjectData::isHypObject)>>
 {
     static constexpr bool value = true;
 
@@ -98,7 +98,7 @@ HYP_MAKE_ENUM_FLAGS(HypObjectInitializerFlags)
 
 struct HypObjectInitializerContext
 {
-    const HypClass* hyp_class = nullptr;
+    const HypClass* hypClass = nullptr;
     EnumFlags<HypObjectInitializerFlags> flags = HypObjectInitializerFlags::NONE;
 };
 
@@ -107,26 +107,26 @@ class HypObjectPtr
 public:
     HypObjectPtr()
         : m_ptr(nullptr),
-          m_hyp_class(nullptr)
+          m_hypClass(nullptr)
     {
     }
 
     HypObjectPtr(std::nullptr_t)
         : m_ptr(nullptr),
-          m_hyp_class(nullptr)
+          m_hypClass(nullptr)
     {
     }
 
-    HypObjectPtr(const HypClass* hyp_class, void* ptr)
+    HypObjectPtr(const HypClass* hypClass, void* ptr)
         : m_ptr(ptr),
-          m_hyp_class(hyp_class)
+          m_hypClass(hypClass)
     {
     }
 
     template <class T, typename = std::enable_if_t<IsHypObject<T>::value>>
     HypObjectPtr(T* ptr)
         : m_ptr(ptr),
-          m_hyp_class(GetHypClass(TypeId::ForType<typename IsHypObject<T>::Type>()))
+          m_hypClass(GetHypClass(TypeId::ForType<typename IsHypObject<T>::Type>()))
     {
     }
 
@@ -138,12 +138,12 @@ public:
 
     HYP_FORCE_INLINE explicit operator bool() const
     {
-        return m_ptr != nullptr && m_hyp_class != nullptr;
+        return m_ptr != nullptr && m_hypClass != nullptr;
     }
 
     HYP_FORCE_INLINE bool operator!() const
     {
-        return !m_ptr || !m_hyp_class;
+        return !m_ptr || !m_hypClass;
     }
 
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
@@ -168,12 +168,12 @@ public:
 
     HYP_FORCE_INLINE bool IsValid() const
     {
-        return m_ptr != nullptr && m_hyp_class != nullptr;
+        return m_ptr != nullptr && m_hypClass != nullptr;
     }
 
     HYP_FORCE_INLINE const HypClass* GetClass() const
     {
-        return m_hyp_class;
+        return m_hypClass;
     }
 
     HYP_FORCE_INLINE void* GetPointer() const
@@ -190,10 +190,10 @@ public:
     HYP_API void DecRef(bool weak = false);
 
 private:
-    HYP_API const HypClass* GetHypClass(TypeId type_id) const;
+    HYP_API const HypClass* GetHypClass(TypeId typeId) const;
 
     void* m_ptr;
-    const HypClass* m_hyp_class;
+    const HypClass* m_hypClass;
 };
 
 HYP_API void HypObject_OnIncRefCount_Strong(HypObjectPtr ptr, uint32 count);
@@ -209,7 +209,7 @@ struct HypObjectInitializerGuardBase
     HypObjectPtr ptr;
 
 #ifdef HYP_DEBUG_MODE
-    ThreadId initializer_thread_id;
+    ThreadId initializerThreadId;
 #else
     uint32 count;
 #endif
@@ -226,11 +226,11 @@ struct HypObjectInitializerGuard : HypObjectInitializerGuardBase
     static const HypClass* GetClassAndEnsureValid()
     {
         using HypObjectType = typename IsHypObject<T>::Type;
-        static const HypClass* hyp_class = GetClass(TypeId::ForType<HypObjectType>());
+        static const HypClass* hypClass = GetClass(TypeId::ForType<HypObjectType>());
 
-        AssertThrowMsg(hyp_class != nullptr, "HypClass not registered for type %s", TypeNameWithoutNamespace<T>().Data());
+        AssertThrowMsg(hypClass != nullptr, "HypClass not registered for type %s", TypeNameWithoutNamespace<T>().Data());
 
-        return hyp_class;
+        return hypClass;
     }
 };
 

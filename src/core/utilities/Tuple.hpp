@@ -355,14 +355,14 @@ namespace helpers {
 
 template <class... FirstTypes, SizeType... FirstIndices, class... SecondTypes, SizeType... SecondIndices>
 constexpr auto ConcatTuples_Impl(
-    const Tuple<FirstTypes...>& first_tuple,
+    const Tuple<FirstTypes...>& firstTuple,
     hyperion::utilities::TupleIndices<FirstIndices...>,
-    const Tuple<SecondTypes...>& second_tuple,
+    const Tuple<SecondTypes...>& secondTuple,
     hyperion::utilities::TupleIndices<SecondIndices...>)
 {
     return Tuple<FirstTypes..., SecondTypes...> {
-        first_tuple.template GetElement<FirstIndices>()...,
-        second_tuple.template GetElement<SecondIndices>()...
+        firstTuple.template GetElement<FirstIndices>()...,
+        secondTuple.template GetElement<SecondIndices>()...
     };
 }
 
@@ -429,11 +429,11 @@ constexpr auto Apply_Impl(FunctionType&& function, Tuple<Types...>&& args, hyper
 }
 
 template <class FunctionType, class TupleType>
-constexpr auto Apply(FunctionType&& function, TupleType&& args_tuple)
+constexpr auto Apply(FunctionType&& function, TupleType&& argsTuple)
 {
     return Apply_Impl(
         std::forward<FunctionType>(function),
-        std::forward<TupleType>(args_tuple),
+        std::forward<TupleType>(argsTuple),
         typename NormalizedType<TupleType>::Indices {});
 }
 
@@ -575,7 +575,7 @@ public:
 
         if constexpr (index == SizeType(-1))
         {
-            static_assert(resolution_failure<T>, "Tuple does not contain element of given type");
+            static_assert(resolutionFailure<T>, "Tuple does not contain element of given type");
 
             // to silence errors for wrong type being returned
             return *((T*)(nullptr));
@@ -593,7 +593,7 @@ public:
 
         if constexpr (index == SizeType(-1))
         {
-            static_assert(resolution_failure<T>, "Tuple does not contain element of given type");
+            static_assert(resolutionFailure<T>, "Tuple does not contain element of given type");
 
             // to silence errors for wrong type being returned
             return *((const T*)(nullptr));

@@ -10,7 +10,7 @@ namespace hyperion {
 #pragma region InputHandlerBase
 
 InputHandlerBase::InputHandlerBase()
-    : m_input_state(MakePimpl<InputState>())
+    : m_inputState(MakePimpl<InputState>())
 {
 }
 
@@ -20,9 +20,9 @@ InputHandlerBase::~InputHandlerBase()
 
 bool InputHandlerBase::OnKeyDown_Impl(const KeyboardEvent& evt)
 {
-    if (uint32(evt.key_code) < NUM_KEYBOARD_KEYS)
+    if (uint32(evt.keyCode) < NUM_KEYBOARD_KEYS)
     {
-        m_input_state->key_states[uint32(evt.key_code)] = true;
+        m_inputState->keyStates[uint32(evt.keyCode)] = true;
     }
 
     return true;
@@ -30,9 +30,9 @@ bool InputHandlerBase::OnKeyDown_Impl(const KeyboardEvent& evt)
 
 bool InputHandlerBase::OnKeyUp_Impl(const KeyboardEvent& evt)
 {
-    if (uint32(evt.key_code) < NUM_KEYBOARD_KEYS)
+    if (uint32(evt.keyCode) < NUM_KEYBOARD_KEYS)
     {
-        m_input_state->key_states[uint32(evt.key_code)] = false;
+        m_inputState->keyStates[uint32(evt.keyCode)] = false;
     }
 
     return true;
@@ -40,11 +40,11 @@ bool InputHandlerBase::OnKeyUp_Impl(const KeyboardEvent& evt)
 
 bool InputHandlerBase::OnMouseDown_Impl(const MouseEvent& evt)
 {
-    FOR_EACH_BIT(uint32(evt.mouse_buttons), i)
+    FOR_EACH_BIT(uint32(evt.mouseButtons), i)
     {
         if (i < NUM_MOUSE_BUTTONS)
         {
-            m_input_state->mouse_button_states[i] = true;
+            m_inputState->mouseButtonStates[i] = true;
         }
     }
 
@@ -53,11 +53,11 @@ bool InputHandlerBase::OnMouseDown_Impl(const MouseEvent& evt)
 
 bool InputHandlerBase::OnMouseUp_Impl(const MouseEvent& evt)
 {
-    FOR_EACH_BIT(uint32(evt.mouse_buttons), i)
+    FOR_EACH_BIT(uint32(evt.mouseButtons), i)
     {
         if (i < NUM_MOUSE_BUTTONS)
         {
-            m_input_state->mouse_button_states[i] = false;
+            m_inputState->mouseButtonStates[i] = false;
         }
     }
 
@@ -68,7 +68,7 @@ bool InputHandlerBase::IsKeyDown(KeyCode key) const
 {
     if (uint32(key) < NUM_KEYBOARD_KEYS)
     {
-        return m_input_state->key_states[uint32(key)];
+        return m_inputState->keyStates[uint32(key)];
     }
 
     return false;
@@ -78,7 +78,7 @@ bool InputHandlerBase::IsKeyUp(KeyCode key) const
 {
     if (uint32(key) < NUM_KEYBOARD_KEYS)
     {
-        return !m_input_state->key_states[uint32(key)];
+        return !m_inputState->keyStates[uint32(key)];
     }
 
     return false;
@@ -88,7 +88,7 @@ bool InputHandlerBase::IsMouseButtonDown(MouseButton btn) const
 {
     if (uint32(btn) < NUM_MOUSE_BUTTONS)
     {
-        return m_input_state->mouse_button_states[uint32(btn)];
+        return m_inputState->mouseButtonStates[uint32(btn)];
     }
 
     return false;
@@ -98,7 +98,7 @@ bool InputHandlerBase::IsMouseButtonUp(MouseButton btn) const
 {
     if (uint32(btn) < NUM_MOUSE_BUTTONS)
     {
-        return !m_input_state->mouse_button_states[uint32(btn)];
+        return !m_inputState->mouseButtonStates[uint32(btn)];
     }
 
     return false;

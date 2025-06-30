@@ -13,13 +13,13 @@ namespace hyperion::dotnet {
 extern "C"
 {
 
-    HYP_EXPORT DelegateHandler* ScriptableDelegate_Bind(IScriptableDelegate* delegate, dotnet::Class* class_object_ptr, ObjectReference* object_reference)
+    HYP_EXPORT DelegateHandler* ScriptableDelegate_Bind(IScriptableDelegate* delegate, dotnet::Class* classObjectPtr, ObjectReference* objectReference)
     {
         AssertThrow(delegate != nullptr);
-        AssertThrow(object_reference != nullptr);
-        AssertThrow(class_object_ptr != nullptr);
+        AssertThrow(objectReference != nullptr);
+        AssertThrow(classObjectPtr != nullptr);
 
-        return new DelegateHandler(delegate->BindManaged("DynamicInvoke", MakeUnique<dotnet::Object>(class_object_ptr->RefCountedPtrFromThis(), *object_reference, ObjectFlags::CREATED_FROM_MANAGED)));
+        return new DelegateHandler(delegate->BindManaged("DynamicInvoke", MakeUnique<dotnet::Object>(classObjectPtr->RefCountedPtrFromThis(), *objectReference, ObjectFlags::CREATED_FROM_MANAGED)));
     }
 
     HYP_EXPORT int ScriptableDelegate_RemoveAllDetached(IScriptableDelegate* delegate)
@@ -29,37 +29,37 @@ extern "C"
         return delegate->RemoveAllDetached();
     }
 
-    HYP_EXPORT int8 ScriptableDelegate_Remove(IScriptableDelegate* delegate, DelegateHandler* delegate_handler)
+    HYP_EXPORT int8 ScriptableDelegate_Remove(IScriptableDelegate* delegate, DelegateHandler* delegateHandler)
     {
         AssertThrow(delegate != nullptr);
 
-        if (!delegate_handler)
+        if (!delegateHandler)
         {
             return 0;
         }
 
-        return delegate->Remove(std::move(*delegate_handler));
+        return delegate->Remove(std::move(*delegateHandler));
     }
 
-    HYP_EXPORT void DelegateHandler_Detach(DelegateHandler* delegate_handler)
+    HYP_EXPORT void DelegateHandler_Detach(DelegateHandler* delegateHandler)
     {
-        AssertThrow(delegate_handler != nullptr);
+        AssertThrow(delegateHandler != nullptr);
 
-        delegate_handler->Detach();
+        delegateHandler->Detach();
     }
 
-    HYP_EXPORT void DelegateHandler_Remove(DelegateHandler* delegate_handler)
+    HYP_EXPORT void DelegateHandler_Remove(DelegateHandler* delegateHandler)
     {
-        AssertThrow(delegate_handler != nullptr);
+        AssertThrow(delegateHandler != nullptr);
 
-        delegate_handler->Reset();
+        delegateHandler->Reset();
     }
 
-    HYP_EXPORT void DelegateHandler_Destroy(DelegateHandler* delegate_handler)
+    HYP_EXPORT void DelegateHandler_Destroy(DelegateHandler* delegateHandler)
     {
-        AssertThrow(delegate_handler != nullptr);
+        AssertThrow(delegateHandler != nullptr);
 
-        delete delegate_handler;
+        delete delegateHandler;
     }
 
 } // extern "C"

@@ -16,16 +16,16 @@ public:
 
     ErrorList& GetErrorList()
     {
-        return m_error_list;
+        return m_errorList;
     }
 
     const ErrorList& GetErrorList() const
     {
-        return m_error_list;
+        return m_errorList;
     }
 
 private:
-    ErrorList m_error_list;
+    ErrorList m_errorList;
 };
 
 } // namespace hyperion::json

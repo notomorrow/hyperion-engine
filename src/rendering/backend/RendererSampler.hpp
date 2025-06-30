@@ -17,17 +17,17 @@ public:
 
     HYP_FORCE_INLINE TextureFilterMode GetMinFilterMode() const
     {
-        return m_min_filter_mode;
+        return m_minFilterMode;
     }
 
     HYP_FORCE_INLINE TextureFilterMode GetMagFilterMode() const
     {
-        return m_mag_filter_mode;
+        return m_magFilterMode;
     }
 
     HYP_FORCE_INLINE TextureWrapMode GetWrapMode() const
     {
-        return m_wrap_mode;
+        return m_wrapMode;
     }
 
     HYP_API virtual bool IsCreated() const = 0;
@@ -36,9 +36,9 @@ public:
     HYP_API virtual RendererResult Destroy() = 0;
 
 protected:
-    TextureFilterMode m_min_filter_mode = TFM_NEAREST;
-    TextureFilterMode m_mag_filter_mode = TFM_NEAREST;
-    TextureWrapMode m_wrap_mode = TWM_CLAMP_TO_EDGE;
+    TextureFilterMode m_minFilterMode = TFM_NEAREST;
+    TextureFilterMode m_magFilterMode = TFM_NEAREST;
+    TextureWrapMode m_wrapMode = TWM_CLAMP_TO_EDGE;
 };
 
 } // namespace hyperion

@@ -38,17 +38,17 @@ public:
 
     HYP_FORCE_INLINE TextureFormat GetImageFormat() const
     {
-        return m_image_format;
+        return m_imageFormat;
     }
 
     HYP_FORCE_INLINE uint32 GetAcquiredImageIndex() const
     {
-        return m_acquired_image_index;
+        return m_acquiredImageIndex;
     }
 
     HYP_FORCE_INLINE uint32 GetCurrentFrameIndex() const
     {
-        return m_current_frame_index;
+        return m_currentFrameIndex;
     }
 
     virtual RendererResult Create() = 0;
@@ -57,17 +57,17 @@ public:
 protected:
     SwapchainBase()
         : m_extent(Vec2i::Zero()),
-          m_acquired_image_index(0),
-          m_current_frame_index(0)
+          m_acquiredImageIndex(0),
+          m_currentFrameIndex(0)
     {
     }
 
     Array<ImageRef> m_images;
     Array<FramebufferRef> m_framebuffers;
     Vec2u m_extent;
-    TextureFormat m_image_format = TF_NONE;
-    uint32 m_acquired_image_index;
-    uint32 m_current_frame_index;
+    TextureFormat m_imageFormat = TF_NONE;
+    uint32 m_acquiredImageIndex;
+    uint32 m_currentFrameIndex;
 };
 
 } // namespace hyperion

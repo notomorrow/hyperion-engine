@@ -45,40 +45,40 @@ public:
     RenderEnvironment& operator=(const RenderEnvironment& other) = delete;
     ~RenderEnvironment();
 
-    const FixedArray<TLASRef, max_frames_in_flight>& GetTopLevelAccelerationStructures() const
+    const FixedArray<TLASRef, maxFramesInFlight>& GetTopLevelAccelerationStructures() const
     {
-        return m_top_level_acceleration_structures;
+        return m_topLevelAccelerationStructures;
     }
 
     const Handle<ParticleSystem>& GetParticleSystem() const
     {
-        return m_particle_system;
+        return m_particleSystem;
     }
 
     const Handle<GaussianSplatting>& GetGaussianSplatting() const
     {
-        return m_gaussian_splatting;
+        return m_gaussianSplatting;
     }
 
     void Initialize();
 
-    void RenderRTRadiance(FrameBase* frame, const RenderSetup& render_setup);
-    void RenderDDGIProbes(FrameBase* frame, const RenderSetup& render_setup);
+    void RenderRTRadiance(FrameBase* frame, const RenderSetup& renderSetup);
+    void RenderDDGIProbes(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
-    HYP_FORCE_INLINE void AddUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type)
+    HYP_FORCE_INLINE void AddUpdateMarker(RenderEnvironmentUpdates value, ThreadType threadType)
     {
-        m_update_marker.BitOr(value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(thread_type)), MemoryOrder::RELEASE);
+        m_updateMarker.BitOr(value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(threadType)), MemoryOrder::RELEASE);
     }
 
-    HYP_FORCE_INLINE void RemoveUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type)
+    HYP_FORCE_INLINE void RemoveUpdateMarker(RenderEnvironmentUpdates value, ThreadType threadType)
     {
-        m_update_marker.BitAnd(~(value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(thread_type))), MemoryOrder::RELEASE);
+        m_updateMarker.BitAnd(~(value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(threadType))), MemoryOrder::RELEASE);
     }
 
-    HYP_FORCE_INLINE bool GetUpdateMarker(RenderEnvironmentUpdates value, ThreadType thread_type) const
+    HYP_FORCE_INLINE bool GetUpdateMarker(RenderEnvironmentUpdates value, ThreadType threadType) const
     {
-        return m_update_marker.Get(MemoryOrder::ACQUIRE) & (value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(thread_type)));
+        return m_updateMarker.Get(MemoryOrder::ACQUIRE) & (value << (RENDER_ENVIRONMENT_UPDATES_THREAD_MASK * uint64(threadType)));
     }
 
     void ApplyTLASUpdates(FrameBase* frame, RTUpdateStateFlags flags);
@@ -86,18 +86,18 @@ private:
     void InitializeRT();
     bool CreateTopLevelAccelerationStructures();
 
-    AtomicVar<RenderEnvironmentUpdates> m_update_marker { RENDER_ENVIRONMENT_UPDATES_NONE };
+    AtomicVar<RenderEnvironmentUpdates> m_updateMarker { RENDER_ENVIRONMENT_UPDATES_NONE };
 
-    Handle<ParticleSystem> m_particle_system;
+    Handle<ParticleSystem> m_particleSystem;
 
-    Handle<GaussianSplatting> m_gaussian_splatting;
+    Handle<GaussianSplatting> m_gaussianSplatting;
 
-    UniquePtr<RaytracingReflections> m_rt_radiance;
+    UniquePtr<RaytracingReflections> m_rtRadiance;
     DDGI m_ddgi;
-    bool m_has_rt_radiance;
-    bool m_has_ddgi_probes;
-    bool m_rt_initialized;
-    FixedArray<TLASRef, max_frames_in_flight> m_top_level_acceleration_structures;
+    bool m_hasRtRadiance;
+    bool m_hasDdgiProbes;
+    bool m_rtInitialized;
+    FixedArray<TLASRef, maxFramesInFlight> m_topLevelAccelerationStructures;
 };
 
 } // namespace hyperion

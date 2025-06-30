@@ -47,31 +47,31 @@ HYP_STRUCT(ConfigName = "app", JSONPath = "rendering")
 struct RendererConfig : public ConfigBase<RendererConfig>
 {
     HYP_FIELD(JSONPath = "rt.path_tracing.enabled")
-    bool path_tracer_enabled = false;
+    bool pathTracerEnabled = false;
 
     HYP_FIELD(JSONPath = "rt.reflections.enabled")
-    bool rt_reflections_enabled = false;
+    bool rtReflectionsEnabled = false;
 
     HYP_FIELD(JSONPath = "rt.gi.enabled")
-    bool rt_gi_enabled = false;
+    bool rtGiEnabled = false;
 
     HYP_FIELD(JSONPath = "hbao.enabled")
-    bool hbao_enabled = false;
+    bool hbaoEnabled = false;
 
     HYP_FIELD(JSONPath = "hbil.enabled")
-    bool hbil_enabled = false;
+    bool hbilEnabled = false;
 
     HYP_FIELD(JSONPath = "ssgi.enabled")
-    bool ssgi_enabled = false;
+    bool ssgiEnabled = false;
 
     HYP_FIELD(JSONPath = "env_grid.gi.enabled")
-    bool env_grid_gi_enabled = false;
+    bool envGridGiEnabled = false;
 
     HYP_FIELD(JSONPath = "env_grid.reflections.enabled")
-    bool env_grid_radiance_enabled = false;
+    bool envGridRadianceEnabled = false;
 
     HYP_FIELD(JSONPath = "taa.enabled")
-    bool taa_enabled = false;
+    bool taaEnabled = false;
 
     virtual ~RendererConfig() override = default;
 };
@@ -84,20 +84,20 @@ struct HYP_API RenderSetup
 
     RenderWorld* world;
     RenderView* view;
-    EnvProbe* env_probe;
-    EnvGrid* env_grid;
+    EnvProbe* envProbe;
+    EnvGrid* envGrid;
     Light* light;
-    PassData* pass_data;
+    PassData* passData;
 
 private:
     // Private constructor for null RenderSetup
     RenderSetup()
         : world(nullptr),
           view(nullptr),
-          env_probe(nullptr),
-          env_grid(nullptr),
+          envProbe(nullptr),
+          envGrid(nullptr),
           light(nullptr),
-          pass_data(nullptr)
+          passData(nullptr)
     {
     }
 
@@ -105,10 +105,10 @@ public:
     RenderSetup(RenderWorld* world)
         : world(world),
           view(nullptr),
-          env_probe(nullptr),
-          env_grid(nullptr),
+          envProbe(nullptr),
+          envGrid(nullptr),
           light(nullptr),
-          pass_data(nullptr)
+          passData(nullptr)
     {
         AssertDebugMsg(world != nullptr, "RenderSetup must have a valid RenderWorld");
     }
@@ -116,10 +116,10 @@ public:
     RenderSetup(RenderWorld* world, RenderView* view)
         : world(world),
           view(view),
-          env_probe(nullptr),
-          env_grid(nullptr),
+          envProbe(nullptr),
+          envGrid(nullptr),
           light(nullptr),
-          pass_data(nullptr)
+          passData(nullptr)
     {
         AssertDebugMsg(world != nullptr, "RenderSetup must have a valid RenderWorld");
     }
@@ -164,19 +164,19 @@ extern const RenderSetup& NullRenderSetup();
 
 struct PassDataExt
 {
-    TypeId type_id;
+    TypeId typeId;
 
     PassDataExt()
-        : type_id(TypeId::Void())
+        : typeId(TypeId::Void())
     {
     }
     virtual ~PassDataExt() = default;
 
     HYP_FORCE_INLINE explicit operator bool() const
     {
-        constexpr TypeId invalid_type_id = TypeId::Void();
+        constexpr TypeId invalidTypeId = TypeId::Void();
 
-        return type_id != invalid_type_id;
+        return typeId != invalidTypeId;
     }
 
     HYP_FORCE_INLINE bool operator!() const
@@ -187,9 +187,9 @@ struct PassDataExt
     template <class OtherPassDataExt>
     HYP_FORCE_INLINE OtherPassDataExt* AsType()
     {
-        constexpr TypeId other_type_id = TypeId::ForType<OtherPassDataExt>();
+        constexpr TypeId otherTypeId = TypeId::ForType<OtherPassDataExt>();
 
-        if (type_id != other_type_id)
+        if (typeId != otherTypeId)
         {
             return nullptr;
         }
@@ -200,9 +200,9 @@ struct PassDataExt
     template <class OtherPassDataExt>
     HYP_FORCE_INLINE const OtherPassDataExt* AsType() const
     {
-        constexpr TypeId other_type_id = TypeId::ForType<OtherPassDataExt>();
+        constexpr TypeId otherTypeId = TypeId::ForType<OtherPassDataExt>();
 
-        if (type_id != other_type_id)
+        if (typeId != otherTypeId)
         {
             return nullptr;
         }
@@ -215,7 +215,7 @@ struct PassDataExt
 
 protected:
     PassDataExt(TypeId subtype)
-        : type_id(subtype)
+        : typeId(subtype)
     {
     }
 };
@@ -225,22 +225,22 @@ struct HYP_API PassData
 {
     struct RenderGroupCacheEntry
     {
-        WeakHandle<RenderGroup> render_group;
-        GraphicsPipelineRef graphics_pipeline;
+        WeakHandle<RenderGroup> renderGroup;
+        GraphicsPipelineRef graphicsPipeline;
     };
 
     WeakHandle<View> view;
     Viewport viewport;
 
     // per-View descriptor sets
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
+    FixedArray<DescriptorSetRef, maxFramesInFlight> descriptorSets;
 
-    CullData cull_data;
+    CullData cullData;
 
     // cached by ObjId<RenderGroup>
-    SparsePagedArray<RenderGroupCacheEntry, 32> render_group_cache;
+    SparsePagedArray<RenderGroupCacheEntry, 32> renderGroupCache;
     // iterator for removing cache data over frames
-    typename SparsePagedArray<RenderGroupCacheEntry, 32>::Iterator render_group_cache_iterator;
+    typename SparsePagedArray<RenderGroupCacheEntry, 32>::Iterator renderGroupCacheIterator;
 
     PassDataExt* next = nullptr;
 
@@ -248,14 +248,14 @@ struct HYP_API PassData
 
     /*! \brief Safely remove unused graphics pipelines that are no longer used from the cache.
      *  A graphics pipeline is considered unused if the RenderGroup it is associated with has no more references remaining
-     *  \param max_iter The maximum number of graphics pipelines to iterate over for this frame. */
-    void CullUnusedGraphicsPipelines(uint32 max_iter = 10);
+     *  \param maxIter The maximum number of graphics pipelines to iterate over for this frame. */
+    void CullUnusedGraphicsPipelines(uint32 maxIter = 10);
 
     static GraphicsPipelineRef CreateGraphicsPipeline(
         PassData* pd,
         const ShaderRef& shader,
-        const RenderableAttributeSet& renderable_attributes,
-        const DescriptorTableRef& descriptor_table = DescriptorTableRef::Null(),
+        const RenderableAttributeSet& renderableAttributes,
+        const DescriptorTableRef& descriptorTable = DescriptorTableRef::Null(),
         IDrawCallCollectionImpl* impl = nullptr); // @TODO: Make this param part of renderable attributes
 };
 
@@ -267,7 +267,7 @@ public:
     virtual void Initialize() = 0;
     virtual void Shutdown() = 0;
 
-    virtual void RenderFrame(FrameBase* frame, const RenderSetup& render_setup) = 0;
+    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) = 0;
 
 protected:
     virtual PassData* CreateViewPassData(View* view, PassDataExt& ext) = 0;
@@ -276,7 +276,7 @@ protected:
     PassData* FetchViewPassData(View* view, PassDataExt* ext = nullptr);
 
 private:
-    SparsePagedArray<PassData*, 16> m_view_pass_data;
+    SparsePagedArray<PassData*, 16> m_viewPassData;
 };
 
 } // namespace hyperion

@@ -41,14 +41,14 @@ class Error : public IError
 public:
     Error()
         : m_message(String::empty),
-          m_current_function("<unknown>")
+          m_currentFunction("<unknown>")
     {
     }
 
     template <auto FormatString, class... Args>
-    Error(const StaticMessage& current_function, ValueWrapper<FormatString>, Args&&... args)
+    Error(const StaticMessage& currentFunction, ValueWrapper<FormatString>, Args&&... args)
         : m_message(Format<FormatString>(std::forward<Args>(args)...)),
-          m_current_function(current_function.value)
+          m_currentFunction(currentFunction.value)
     {
     }
 
@@ -61,12 +61,12 @@ public:
 
     virtual ANSIStringView GetFunctionName() const override
     {
-        return m_current_function;
+        return m_currentFunction;
     }
 
 protected:
     String m_message;
-    ANSIStringView m_current_function;
+    ANSIStringView m_currentFunction;
 };
 
 #define HYP_MAKE_ERROR(ErrorType, message, ...) ErrorType(HYP_STATIC_MESSAGE(HYP_FUNCTION_NAME_LIT), ValueWrapper<HYP_STATIC_STRING(message)>(), ##__VA_ARGS__)
@@ -230,17 +230,17 @@ public:
         return std::move(m_value).template GetUnchecked<T>();
     }
 
-    HYP_FORCE_INLINE T GetValueOr(T&& default_value) const&
+    HYP_FORCE_INLINE T GetValueOr(T&& defaultValue) const&
     {
         if (HasValue())
         {
             return m_value.template GetUnchecked<T>();
         }
 
-        return std::forward<T>(default_value);
+        return std::forward<T>(defaultValue);
     }
 
-    HYP_FORCE_INLINE T GetValueOr(T&& default_value) &&
+    HYP_FORCE_INLINE T GetValueOr(T&& defaultValue) &&
     {
         if (HasValue())
         {
@@ -248,7 +248,7 @@ public:
         }
         else
         {
-            return std::forward<T>(default_value);
+            return std::forward<T>(defaultValue);
         }
     }
 
@@ -325,7 +325,7 @@ public:
 private:
     HYP_FORCE_INLINE ErrorType& GetError_NonConst()
     {
-        static const ErrorType null_error;
+        static const ErrorType nullError;
 
         if (HasError())
         {
@@ -333,7 +333,7 @@ private:
         }
         else
         {
-            return const_cast<ErrorType&>(null_error);
+            return const_cast<ErrorType&>(nullError);
         }
     }
 
@@ -386,7 +386,7 @@ public:
 
     HYP_FORCE_INLINE const ErrorType& GetError() const
     {
-        static const ErrorType null_error;
+        static const ErrorType nullError;
 
         if (HasError())
         {
@@ -394,7 +394,7 @@ public:
         }
         else
         {
-            return null_error;
+            return nullError;
         }
     }
 

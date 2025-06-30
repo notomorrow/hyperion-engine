@@ -53,21 +53,21 @@ public:
     SystemEvent& operator=(const SystemEvent& other) = delete;
 
     SystemEvent(SystemEvent&& other) noexcept
-        : m_sdl_event(other.m_sdl_event),
-          m_event_data(std::move(other.m_event_data))
+        : m_sdlEvent(other.m_sdlEvent),
+          m_eventData(std::move(other.m_eventData))
     {
-        Memory::MemSet(&other.m_sdl_event, 0x00, sizeof(SDL_Event));
+        Memory::MemSet(&other.m_sdlEvent, 0x00, sizeof(SDL_Event));
     }
 
     SystemEvent& operator=(SystemEvent&& other) noexcept
     {
-        // sdl_event better not have any leakable memory!
+        // sdlEvent better not have any leakable memory!
         // we free filedrop memory as soon as we receive the event...
 
-        m_sdl_event = other.m_sdl_event;
-        Memory::MemSet(&other.m_sdl_event, 0x0, sizeof(SDL_Event));
+        m_sdlEvent = other.m_sdlEvent;
+        Memory::MemSet(&other.m_sdlEvent, 0x0, sizeof(SDL_Event));
 
-        m_event_data = std::move(other.m_event_data);
+        m_eventData = std::move(other.m_eventData);
 
         return *this;
     }
@@ -76,12 +76,12 @@ public:
 
     SystemEventType GetType() const
     {
-        return (SystemEventType)m_sdl_event.type;
+        return (SystemEventType)m_sdlEvent.type;
     }
 
     SystemWindowEventType GetWindowEventType() const
     {
-        return (SystemWindowEventType)m_sdl_event.window.event;
+        return (SystemWindowEventType)m_sdlEvent.window.event;
     }
 
     KeyCode GetKeyCode() const;
@@ -105,13 +105,13 @@ public:
 
     void GetMouseWheel(int* x, int* y) const
     {
-        *x = m_sdl_event.wheel.x;
-        *y = m_sdl_event.wheel.y;
+        *x = m_sdlEvent.wheel.x;
+        *y = m_sdlEvent.wheel.y;
     }
 
     uint32 GetWindowId() const
     {
-        return m_sdl_event.window.windowID;
+        return m_sdlEvent.window.windowID;
     }
 
     Vec2i GetWindowResizeDimensions()
@@ -129,18 +129,18 @@ public:
 
     EventData& GetEventData()
     {
-        return m_event_data;
+        return m_eventData;
     }
 
     const EventData& GetEventData() const
     {
-        return m_event_data;
+        return m_eventData;
     }
 
 private:
-    SDL_Event m_sdl_event;
+    SDL_Event m_sdlEvent;
 
-    EventData m_event_data;
+    EventData m_eventData;
 };
 
 } // namespace sys

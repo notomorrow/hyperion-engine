@@ -24,8 +24,8 @@ class EntityRenderProxySystem_Mesh : public SystemBase
     HYP_OBJECT_BODY(EntityRenderProxySystem_Mesh);
 
 public:
-    EntityRenderProxySystem_Mesh(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    EntityRenderProxySystem_Mesh(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

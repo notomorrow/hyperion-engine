@@ -7,26 +7,26 @@
 
 namespace hyperion {
 
-void MeshInstanceData_PostLoad(MeshInstanceData& mesh_instance_data)
+void MeshInstanceData_PostLoad(MeshInstanceData& meshInstanceData)
 {
     // Ensure at least one instance
-    mesh_instance_data.num_instances = MathUtil::Max(mesh_instance_data.num_instances, 1u);
+    meshInstanceData.numInstances = MathUtil::Max(meshInstanceData.numInstances, 1u);
 
-    if (mesh_instance_data.buffers.Any())
+    if (meshInstanceData.buffers.Any())
     {
-        for (uint32 buffer_index = 0; buffer_index < MathUtil::Min(MeshInstanceData::max_buffers, uint32(mesh_instance_data.buffers.Size())); buffer_index++)
+        for (uint32 bufferIndex = 0; bufferIndex < MathUtil::Min(MeshInstanceData::maxBuffers, uint32(meshInstanceData.buffers.Size())); bufferIndex++)
         {
-            if (mesh_instance_data.buffers[buffer_index].Size() / mesh_instance_data.buffer_struct_sizes[buffer_index] != mesh_instance_data.num_instances)
+            if (meshInstanceData.buffers[bufferIndex].Size() / meshInstanceData.bufferStructSizes[bufferIndex] != meshInstanceData.numInstances)
             {
                 HYP_LOG(Rendering, Warning, "Expected mesh instance data to have a buffer size that is equal to (buffer struct size / number of instances). Buffer size: {}, Buffer struct size: {}, Num instances: {}",
-                    mesh_instance_data.buffers[buffer_index].Size(), mesh_instance_data.buffer_struct_sizes[buffer_index],
-                    mesh_instance_data.num_instances);
+                    meshInstanceData.buffers[bufferIndex].Size(), meshInstanceData.bufferStructSizes[bufferIndex],
+                    meshInstanceData.numInstances);
             }
         }
 
-        if (mesh_instance_data.buffers.Size() > MeshInstanceData::max_buffers)
+        if (meshInstanceData.buffers.Size() > MeshInstanceData::maxBuffers)
         {
-            HYP_LOG(Rendering, Warning, "MeshInstanceData has more buffers than the maximum allowed: {} > {}", mesh_instance_data.buffers.Size(), MeshInstanceData::max_buffers);
+            HYP_LOG(Rendering, Warning, "MeshInstanceData has more buffers than the maximum allowed: {} > {}", meshInstanceData.buffers.Size(), MeshInstanceData::maxBuffers);
         }
     }
 }

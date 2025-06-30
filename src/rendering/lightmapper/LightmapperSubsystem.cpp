@@ -28,19 +28,19 @@ LightmapperSubsystem::LightmapperSubsystem()
 
 void LightmapperSubsystem::OnAddedToWorld()
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 }
 
 void LightmapperSubsystem::OnRemovedFromWorld()
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     m_lightmappers.Clear();
 }
 
 void LightmapperSubsystem::Update(float delta)
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     for (auto it = m_tasks.Begin(); it != m_tasks.End();)
     {
@@ -54,7 +54,7 @@ void LightmapperSubsystem::Update(float delta)
         }
     }
 
-    Array<ObjId<Scene>> lightmappers_to_remove;
+    Array<ObjId<Scene>> lightmappersToRemove;
 
     for (auto& it : m_lightmappers)
     {
@@ -62,19 +62,19 @@ void LightmapperSubsystem::Update(float delta)
 
         if (it.second->IsComplete())
         {
-            lightmappers_to_remove.PushBack(it.first);
+            lightmappersToRemove.PushBack(it.first);
         }
     }
 
-    for (ObjId<Scene> scene_id : lightmappers_to_remove)
+    for (ObjId<Scene> sceneId : lightmappersToRemove)
     {
-        m_lightmappers.Erase(scene_id);
+        m_lightmappers.Erase(sceneId);
     }
 }
 
 Task<void>* LightmapperSubsystem::GenerateLightmaps(const Handle<Scene>& scene, const BoundingBox& aabb)
 {
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (!scene.IsValid())
     {

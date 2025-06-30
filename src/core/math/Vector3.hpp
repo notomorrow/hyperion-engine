@@ -679,16 +679,16 @@ using Vec3u = Vec3<uint32>;
 using Vec3f = Vec3<float>;
 
 template <class T>
-inline constexpr bool is_vec3 = false;
+inline constexpr bool isVec3 = false;
 
 template <>
-inline constexpr bool is_vec3<Vec3i> = true;
+inline constexpr bool isVec3<Vec3i> = true;
 
 template <>
-inline constexpr bool is_vec3<Vec3u> = true;
+inline constexpr bool isVec3<Vec3u> = true;
 
 template <>
-inline constexpr bool is_vec3<Vec3f> = true;
+inline constexpr bool isVec3<Vec3f> = true;
 
 static_assert(sizeof(Vec3i) == 16);
 static_assert(sizeof(Vec3u) == 16);

@@ -19,8 +19,8 @@ class PhysicsSystem : public SystemBase
     HYP_OBJECT_BODY(PhysicsSystem);
 
 public:
-    PhysicsSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    PhysicsSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

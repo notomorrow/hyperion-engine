@@ -33,56 +33,56 @@ HYP_STRUCT(Size = 56)
 struct MouseEvent
 {
     HYP_FIELD()
-    InputManager* input_manager = nullptr;
+    InputManager* inputManager = nullptr;
 
     HYP_FIELD()
     Vec2f position;
 
     HYP_FIELD()
-    Vec2f previous_position;
+    Vec2f previousPosition;
 
     HYP_FIELD()
-    Vec2i absolute_position;
+    Vec2i absolutePosition;
 
     HYP_FIELD()
-    EnumFlags<MouseButtonState> mouse_buttons = MouseButtonState::NONE;
+    EnumFlags<MouseButtonState> mouseButtons = MouseButtonState::NONE;
 
     HYP_FIELD()
     Vec2i wheel;
 
     HYP_FIELD(Deprecated)
-    bool is_down = false;
+    bool isDown = false;
 };
 
 struct InputMouseLockState
 {
-    InputManager* input_manager = nullptr;
+    InputManager* inputManager = nullptr;
     bool locked = false;
 
     HYP_FORCE_INLINE bool operator==(const InputMouseLockState& other) const
     {
-        return input_manager == other.input_manager
+        return inputManager == other.inputManager
             && locked == other.locked;
     }
 
     HYP_FORCE_INLINE bool operator!=(const InputMouseLockState& other) const
     {
-        return input_manager != other.input_manager
+        return inputManager != other.inputManager
             || locked != other.locked;
     }
 };
 
 struct InputMouseLockScope
 {
-    InputMouseLockState* mouse_lock_state;
+    InputMouseLockState* mouseLockState;
 
     InputMouseLockScope()
-        : mouse_lock_state(nullptr)
+        : mouseLockState(nullptr)
     {
     }
 
-    InputMouseLockScope(InputMouseLockState& mouse_lock_state)
-        : mouse_lock_state(&mouse_lock_state)
+    InputMouseLockScope(InputMouseLockState& mouseLockState)
+        : mouseLockState(&mouseLockState)
     {
     }
 
@@ -90,7 +90,7 @@ struct InputMouseLockScope
     InputMouseLockScope& operator=(const InputMouseLockScope& other) = delete;
 
     InputMouseLockScope(InputMouseLockScope&& other) noexcept
-        : mouse_lock_state(other.mouse_lock_state)
+        : mouseLockState(other.mouseLockState)
     {
     }
 
@@ -102,12 +102,12 @@ struct InputMouseLockScope
 
     HYP_FORCE_INLINE explicit operator bool() const
     {
-        return mouse_lock_state != nullptr && mouse_lock_state->locked;
+        return mouseLockState != nullptr && mouseLockState->locked;
     }
 
     HYP_FORCE_INLINE bool operator!() const
     {
-        return mouse_lock_state == nullptr || !mouse_lock_state->locked;
+        return mouseLockState == nullptr || !mouseLockState->locked;
     }
 };
 

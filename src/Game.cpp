@@ -41,19 +41,19 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(GameThread);
 
 Game::Game()
-    : m_managed_game_object(nullptr)
+    : m_managedGameObject(nullptr)
 {
 }
 
-Game::Game(Optional<ManagedGameInfo> managed_game_info)
-    : m_managed_game_info(std::move(managed_game_info)),
-      m_managed_game_object(nullptr)
+Game::Game(Optional<ManagedGameInfo> managedGameInfo)
+    : m_managedGameInfo(std::move(managedGameInfo)),
+      m_managedGameObject(nullptr)
 {
 }
 
 Game::~Game()
 {
-    delete m_managed_game_object;
+    delete m_managedGameObject;
 }
 
 void Game::Update(float delta)
@@ -64,9 +64,9 @@ void Game::Update(float delta)
 
     Logic(delta);
 
-    if (m_managed_game_object && m_managed_game_object->IsValid())
+    if (m_managedGameObject && m_managedGameObject->IsValid())
     {
-        m_managed_game_object->InvokeMethodByName<void, float>("Update", float(delta));
+        m_managedGameObject->InvokeMethodByName<void, float>("Update", float(delta));
     }
 
     g_engine->GetWorld()->Update(delta);
@@ -75,18 +75,18 @@ void Game::Update(float delta)
 void Game::Init()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    if (m_managed_game_info.HasValue())
+    if (m_managedGameInfo.HasValue())
     {
-        if (RC<dotnet::Assembly> managed_assembly = dotnet::DotNetSystem::GetInstance().LoadAssembly(m_managed_game_info->assembly_name.Data()))
+        if (RC<dotnet::Assembly> managedAssembly = dotnet::DotNetSystem::GetInstance().LoadAssembly(m_managedGameInfo->assemblyName.Data()))
         {
-            if (RC<dotnet::Class> class_ptr = managed_assembly->FindClassByName(m_managed_game_info->class_name.Data()))
+            if (RC<dotnet::Class> classPtr = managedAssembly->FindClassByName(m_managedGameInfo->className.Data()))
             {
-                m_managed_game_object = class_ptr->NewObject();
+                m_managedGameObject = classPtr->NewObject();
             }
 
-            m_managed_assembly = std::move(managed_assembly);
+            m_managedAssembly = std::move(managedAssembly);
         }
     }
 
@@ -94,26 +94,26 @@ void Game::Init()
     AssertThrow(world.IsValid());
     InitObject(world);
 
-    Handle<UIStage> ui_stage = CreateObject<UIStage>(g_game_thread);
-    m_ui_subsystem = world->AddSubsystem<UISubsystem>(ui_stage);
+    Handle<UIStage> uiStage = CreateObject<UIStage>(g_gameThread);
+    m_uiSubsystem = world->AddSubsystem<UISubsystem>(uiStage);
 
-    if (m_managed_game_object && m_managed_game_object->IsValid())
+    if (m_managedGameObject && m_managedGameObject->IsValid())
     {
-        m_managed_game_object->InvokeMethodByName<void>(
+        m_managedGameObject->InvokeMethodByName<void>(
             "BeforeInit",
             world,
-            m_app_context->GetInputManager(),
+            m_appContext->GetInputManager(),
             AssetManager::GetInstance(),
-            m_ui_subsystem->GetUIStage());
+            m_uiSubsystem->GetUIStage());
 
-        m_managed_game_object->InvokeMethodByName<void>("Init");
+        m_managedGameObject->InvokeMethodByName<void>("Init");
     }
 }
 
 void Game::HandleEvent(SystemEvent&& event)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     OnInputEvent(std::move(event));
 }
@@ -122,10 +122,10 @@ void Game::OnInputEvent(const SystemEvent& event)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     // forward to UI
-    if (m_ui_subsystem->GetUIStage()->OnInputEvent(m_app_context->GetInputManager().Get(), event) & UIEventHandlerResult::STOP_BUBBLING)
+    if (m_uiSubsystem->GetUIStage()->OnInputEvent(m_appContext->GetInputManager().Get(), event) & UIEventHandlerResult::STOP_BUBBLING)
     {
         // ui handled the event
         return;
@@ -140,20 +140,20 @@ void Game::OnInputEvent(const SystemEvent& event)
     {
         if (m_scene.IsValid())
         {
-            if (const Handle<Camera>& primary_camera = m_scene->GetPrimaryCamera())
+            if (const Handle<Camera>& primaryCamera = m_scene->GetPrimaryCamera())
             {
-                int wheel_x;
-                int wheel_y;
+                int wheelX;
+                int wheelY;
 
-                event.GetMouseWheel(&wheel_x, &wheel_y);
+                event.GetMouseWheel(&wheelX, &wheelY);
 
-                if (const Handle<CameraController>& controller = primary_camera->GetCameraController())
+                if (const Handle<CameraController>& controller = primaryCamera->GetCameraController())
                 {
                     controller->PushCommand(CameraCommand {
                         .command = CameraCommand::CAMERA_COMMAND_SCROLL,
-                        .scroll_data = {
-                            .wheel_x = wheel_x,
-                            .wheel_y = wheel_y } });
+                        .scrollData = {
+                            .wheelX = wheelX,
+                            .wheelY = wheelY } });
                 }
             }
         }
@@ -162,31 +162,31 @@ void Game::OnInputEvent(const SystemEvent& event)
     }
     case SystemEventType::EVENT_MOUSEMOTION:
     {
-        if (m_app_context->GetInputManager()->GetWindow()->HasMouseFocus())
+        if (m_appContext->GetInputManager()->GetWindow()->HasMouseFocus())
         {
-            const Vec2i mouse_position = m_app_context->GetInputManager()->GetMousePosition();
-            const Vec2i window_size = m_app_context->GetInputManager()->GetWindow()->GetDimensions();
+            const Vec2i mousePosition = m_appContext->GetInputManager()->GetMousePosition();
+            const Vec2i windowSize = m_appContext->GetInputManager()->GetWindow()->GetDimensions();
 
-            const float mx = (float(mouse_position.x) - float(window_size.x) * 0.5f) / (float(window_size.x));
-            const float my = (float(mouse_position.y) - float(window_size.y) * 0.5f) / (float(window_size.y));
+            const float mx = (float(mousePosition.x) - float(windowSize.x) * 0.5f) / (float(windowSize.x));
+            const float my = (float(mousePosition.y) - float(windowSize.y) * 0.5f) / (float(windowSize.y));
 
             if (m_scene.IsValid())
             {
-                if (const Handle<Camera>& primary_camera = m_scene->GetPrimaryCamera())
+                if (const Handle<Camera>& primaryCamera = m_scene->GetPrimaryCamera())
                 {
-                    if (const Handle<CameraController>& controller = primary_camera->GetCameraController())
+                    if (const Handle<CameraController>& controller = primaryCamera->GetCameraController())
                     {
                         controller->PushCommand(CameraCommand {
                             .command = CameraCommand::CAMERA_COMMAND_MAG,
-                            .mag_data = {
-                                .mouse_x = mouse_position.x,
-                                .mouse_y = mouse_position.y,
+                            .magData = {
+                                .mouseX = mousePosition.x,
+                                .mouseY = mousePosition.y,
                                 .mx = mx,
                                 .my = my } });
 
                         if (controller->IsMouseLockRequested())
                         {
-                            m_app_context->GetInputManager()->SetMousePosition(Vec2i { int(window_size.x / 2), int(window_size.y / 2) });
+                            m_appContext->GetInputManager()->SetMousePosition(Vec2i { int(windowSize.x / 2), int(windowSize.y / 2) });
                         }
                     }
                 }

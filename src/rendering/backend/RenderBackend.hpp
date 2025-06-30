@@ -43,12 +43,12 @@ enum class RenderPassStage : uint8;
 
 struct QueryImageCapabilitiesResult
 {
-    bool supports_2d = false;
-    bool supports_3d = false;
-    bool supports_cubemap = false;
-    bool supports_array = false;
-    bool supports_mipmaps = false;
-    bool supports_storage = false;
+    bool supports2d = false;
+    bool supports3d = false;
+    bool supportsCubemap = false;
+    bool supportsArray = false;
+    bool supportsMipmaps = false;
+    bool supportsStorage = false;
 };
 
 class IDescriptorSetManager
@@ -62,7 +62,7 @@ class IRenderBackend
 public:
     virtual ~IRenderBackend() = default;
 
-    virtual RendererResult Initialize(AppContextBase& app_context) = 0;
+    virtual RendererResult Initialize(AppContextBase& appContext) = 0;
     virtual RendererResult Destroy() = 0;
 
     virtual const IRenderConfig& GetRenderConfig() const = 0;
@@ -82,47 +82,47 @@ public:
 
     virtual GraphicsPipelineRef MakeGraphicsPipeline(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table,
+        const DescriptorTableRef& descriptorTable,
         Span<const FramebufferRef> framebuffers,
         const RenderableAttributeSet& attributes) = 0;
 
     virtual ComputePipelineRef MakeComputePipeline(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table) = 0;
+        const DescriptorTableRef& descriptorTable) = 0;
 
     virtual RaytracingPipelineRef MakeRaytracingPipeline(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table) = 0;
+        const DescriptorTableRef& descriptorTable) = 0;
 
-    virtual GpuBufferRef MakeGpuBuffer(GpuBufferType buffer_type, SizeType size, SizeType alignment = 0) = 0;
+    virtual GpuBufferRef MakeGpuBuffer(GpuBufferType bufferType, SizeType size, SizeType alignment = 0) = 0;
 
-    virtual ImageRef MakeImage(const TextureDesc& texture_desc) = 0;
+    virtual ImageRef MakeImage(const TextureDesc& textureDesc) = 0;
 
     virtual ImageViewRef MakeImageView(const ImageRef& image) = 0;
-    virtual ImageViewRef MakeImageView(const ImageRef& image, uint32 mip_index, uint32 num_mips, uint32 face_index, uint32 num_faces) = 0;
+    virtual ImageViewRef MakeImageView(const ImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces) = 0;
 
-    virtual SamplerRef MakeSampler(TextureFilterMode filter_mode_min, TextureFilterMode filter_mode_mag, TextureWrapMode wrap_mode) = 0;
+    virtual SamplerRef MakeSampler(TextureFilterMode filterModeMin, TextureFilterMode filterModeMag, TextureWrapMode wrapMode) = 0;
 
-    virtual FramebufferRef MakeFramebuffer(Vec2u extent, uint32 num_views = 1) = 0;
-    virtual FramebufferRef MakeFramebuffer(Vec2u extent, RenderPassStage stage, uint32 num_views = 1) = 0;
+    virtual FramebufferRef MakeFramebuffer(Vec2u extent, uint32 numViews = 1) = 0;
+    virtual FramebufferRef MakeFramebuffer(Vec2u extent, RenderPassStage stage, uint32 numViews = 1) = 0;
 
-    virtual FrameRef MakeFrame(uint32 frame_index) = 0;
+    virtual FrameRef MakeFrame(uint32 frameIndex) = 0;
 
-    virtual ShaderRef MakeShader(const RC<CompiledShader>& compiled_shader) = 0;
+    virtual ShaderRef MakeShader(const RC<CompiledShader>& compiledShader) = 0;
 
     virtual BLASRef MakeBLAS(
-        const GpuBufferRef& packed_vertices_buffer,
-        const GpuBufferRef& packed_indices_buffer,
+        const GpuBufferRef& packedVerticesBuffer,
+        const GpuBufferRef& packedIndicesBuffer,
         const Handle<Material>& material,
         const Matrix4& transform) = 0;
     virtual TLASRef MakeTLAS() = 0;
 
     virtual TextureFormat GetDefaultFormat(DefaultImageFormat type) const = 0;
 
-    virtual bool IsSupportedFormat(TextureFormat format, ImageSupport support_type) const = 0;
-    virtual TextureFormat FindSupportedFormat(Span<TextureFormat> possible_formats, ImageSupport support_type) const = 0;
+    virtual bool IsSupportedFormat(TextureFormat format, ImageSupport supportType) const = 0;
+    virtual TextureFormat FindSupportedFormat(Span<TextureFormat> possibleFormats, ImageSupport supportType) const = 0;
 
-    virtual QueryImageCapabilitiesResult QueryImageCapabilities(const TextureDesc& texture_desc) const = 0;
+    virtual QueryImageCapabilitiesResult QueryImageCapabilities(const TextureDesc& textureDesc) const = 0;
 
     virtual Delegate<void, SwapchainBase*>& GetOnSwapchainRecreatedDelegate() = 0;
 };

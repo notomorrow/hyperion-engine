@@ -16,7 +16,7 @@ namespace hyperion {
 class CmdList;
 namespace helpers {
 
-uint32 MipmapSize(uint32 src_size, int lod);
+uint32 MipmapSize(uint32 srcSize, int lod);
 
 } // namespace helpers
 
@@ -39,7 +39,7 @@ public:
     SingleTimeCommands& operator=(SingleTimeCommands&& other) noexcept = delete;
     HYP_API ~SingleTimeCommands();
 
-    void Push(Proc<void(CmdList& command_list)>&& fn)
+    void Push(Proc<void(CmdList& commandList)>&& fn)
     {
         m_functions.PushBack(std::move(fn));
     }
@@ -47,10 +47,10 @@ public:
     RendererResult Execute();
 
 private:
-    SingleTimeCommandsPlatformImpl<PLATFORM> m_platform_impl;
+    SingleTimeCommandsPlatformImpl<PLATFORM> m_platformImpl;
 
     Device<PLATFORM>* m_device;
-    Array<Proc<void(CmdList& command_list)>> m_functions;
+    Array<Proc<void(CmdList& commandList)>> m_functions;
 };
 
 } // namespace platform

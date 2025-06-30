@@ -16,8 +16,8 @@ class ScenePrimaryCameraSystem final : public SystemBase
     HYP_OBJECT_BODY(ScenePrimaryCameraSystem);
 
 public:
-    ScenePrimaryCameraSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    ScenePrimaryCameraSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

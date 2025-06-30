@@ -63,21 +63,21 @@ public:
 
     /*! \brief Advances the blend variable towards the target value.
      *  \param delta The amount to advance the blend variable.
-     *  \param out_delta The delta between the previous value and current value
+     *  \param outDelta The delta between the previous value and current value
      *  \return True if the blend variable has changed since the last advancement. False if the blend variable has reached the target value.
      */
-    bool Advance(double delta, T& out_delta)
+    bool Advance(double delta, T& outDelta)
     {
         m_fract = MathUtil::Clamp(m_fract + delta, 0.0, 1.0);
 
-        T next_value = MathUtil::Lerp(m_value, m_target, m_fract);
+        T nextValue = MathUtil::Lerp(m_value, m_target, m_fract);
 
-        out_delta = next_value - m_value;
+        outDelta = nextValue - m_value;
 
-        // T next_value = m_value + (m_target - m_value) * T(std::log(1.0 + 25.0 * m_fract) / std::log(1.0 + 25.0));
-        const bool changed = m_value != next_value; //! MathUtil::ApproxEqual(m_value, m_target);
+        // T nextValue = m_value + (m_target - m_value) * T(std::log(1.0 + 25.0 * m_fract) / std::log(1.0 + 25.0));
+        const bool changed = m_value != nextValue; //! MathUtil::ApproxEqual(m_value, m_target);
 
-        m_value = next_value;
+        m_value = nextValue;
 
         return changed;
     }
@@ -88,9 +88,9 @@ public:
      */
     bool Advance(double delta)
     {
-        T tmp_delta;
+        T tmpDelta;
 
-        return Advance(delta, tmp_delta);
+        return Advance(delta, tmpDelta);
     }
 
 private:

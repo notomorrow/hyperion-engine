@@ -44,15 +44,15 @@ protected:
     }
 
     HYP_METHOD()
-    virtual bool GetBoundingBox_Impl(BoundingBox& out_aabb) const override
+    virtual bool GetBoundingBox_Impl(BoundingBox& outAabb) const override
     {
-        out_aabb = m_aabb;
+        outAabb = m_aabb;
 
         return true;
     }
 
     HYP_METHOD()
-    virtual bool GetBoundingSphere_Impl(BoundingSphere& out_sphere) const override
+    virtual bool GetBoundingSphere_Impl(BoundingSphere& outSphere) const override
     {
         return false;
     }

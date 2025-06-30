@@ -31,16 +31,16 @@ public:
 
     HYP_FORCE_INLINE CmdList& GetCommandList()
     {
-        return m_command_list;
+        return m_commandList;
     }
 
-    HYP_FORCE_INLINE const CmdList& GetCommandList(uint32 frame_index) const
+    HYP_FORCE_INLINE const CmdList& GetCommandList(uint32 frameIndex) const
     {
-        return m_command_list;
+        return m_commandList;
     }
 
 protected:
-    CmdList m_command_list;
+    CmdList m_commandList;
 };
 
 } // namespace hyperion

@@ -27,7 +27,7 @@ private:
     Array<KeyValuePairType> m_vector;
 
 public:
-    static constexpr bool is_contiguous = true;
+    static constexpr bool isContiguous = true;
 
     using Base = ContainerBase<FlatMap<Key, Value>, Key>;
 
@@ -62,11 +62,11 @@ public:
         }
     }
 
-    FlatMap(std::initializer_list<Pair<Key, Value>> initializer_list)
+    FlatMap(std::initializer_list<Pair<Key, Value>> initializerList)
     {
-        m_vector.Reserve(initializer_list.size());
+        m_vector.Reserve(initializerList.size());
 
-        for (const auto& it : initializer_list)
+        for (const auto& it : initializerList)
         {
             Insert(it);
         }
@@ -344,16 +344,16 @@ auto FlatMap<Key, Value>::Find(const Key& key) const -> ConstIterator
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Insert_Internal(Pair<Key, Value>&& pair) -> InsertResult
 {
-    const auto lower_bound = m_vector.LowerBound(pair.first);
+    const auto lowerBound = m_vector.LowerBound(pair.first);
 
-    if (lower_bound == End() || !(lower_bound->first == pair.first))
+    if (lowerBound == End() || !(lowerBound->first == pair.first))
     {
-        auto it = m_vector.Insert(lower_bound, std::move(pair));
+        auto it = m_vector.Insert(lowerBound, std::move(pair));
 
         return { it, true };
     }
 
-    return { lower_bound, false };
+    return { lowerBound, false };
 }
 
 template <class Key, class Value>
@@ -383,18 +383,18 @@ auto FlatMap<Key, Value>::Insert(Pair<Key, Value>&& pair) -> InsertResult
 template <class Key, class Value>
 auto FlatMap<Key, Value>::Set_Internal(Pair<Key, Value>&& pair) -> InsertResult
 {
-    const auto lower_bound = m_vector.LowerBound(pair.first); // FlatMap<Key, Value>::Base::LowerBound(key);
+    const auto lowerBound = m_vector.LowerBound(pair.first); // FlatMap<Key, Value>::Base::LowerBound(key);
 
-    if (lower_bound == End() || !(lower_bound->first == pair.first))
+    if (lowerBound == End() || !(lowerBound->first == pair.first))
     {
-        auto it = m_vector.Insert(lower_bound, std::move(pair));
+        auto it = m_vector.Insert(lowerBound, std::move(pair));
 
         return { it, true };
     }
 
-    lower_bound->second = std::move(pair.second);
+    lowerBound->second = std::move(pair.second);
 
-    return InsertResult { lower_bound, true };
+    return InsertResult { lowerBound, true };
 }
 
 template <class Key, class Value>

@@ -64,10 +64,10 @@ public:
 
     virtual RC<RTCClient> CreateClient(String id) = 0;
 
-    void EnqueueClientRemoval(String client_id);
+    void EnqueueClientRemoval(String clientId);
 
     virtual void SendToSignallingServer(ByteBuffer bytes) = 0;
-    virtual void SendToClient(String client_id, const ByteBuffer& bytes) = 0;
+    virtual void SendToClient(String clientId, const ByteBuffer& bytes) = 0;
 
     const RTCServerParams& GetParams() const
     {
@@ -86,18 +86,18 @@ public:
 
     RTCClientList& GetClientList()
     {
-        return m_client_list;
+        return m_clientList;
     }
 
     const RTCClientList& GetClientList() const
     {
-        return m_client_list;
+        return m_clientList;
     }
 
 protected:
     RTCServerParams m_params;
     RTCServerCallbacks m_callbacks;
-    RTCClientList m_client_list;
+    RTCClientList m_clientList;
     UniquePtr<RTCServerThread> m_thread;
 };
 
@@ -117,7 +117,7 @@ public:
     virtual RC<RTCClient> CreateClient(String id) override;
 
     virtual void SendToSignallingServer(ByteBuffer bytes) override;
-    virtual void SendToClient(String client_id, const ByteBuffer& bytes) override;
+    virtual void SendToClient(String clientId, const ByteBuffer& bytes) override;
 };
 
 #ifdef HYP_LIBDATACHANNEL
@@ -138,7 +138,7 @@ public:
     virtual RC<RTCClient> CreateClient(String id) override;
 
     virtual void SendToSignallingServer(ByteBuffer bytes) override;
-    virtual void SendToClient(String client_id, const ByteBuffer& bytes) override;
+    virtual void SendToClient(String clientId, const ByteBuffer& bytes) override;
 
 private:
     UniquePtr<rtc::WebSocket> m_websocket;

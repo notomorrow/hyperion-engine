@@ -48,7 +48,7 @@ struct TransformArgument<T, std::enable_if_t<std::is_arithmetic_v<T>>> : Default
 };
 
 template <class T>
-struct TransformArgument<T, std::enable_if_t<std::is_class_v<T> && is_pod_type<T>>> : DefaultTransformArgument<T>
+struct TransformArgument<T, std::enable_if_t<std::is_class_v<T> && isPodType<T>>> : DefaultTransformArgument<T>
 {
 };
 
@@ -185,12 +185,12 @@ static inline const HypData* SetArg_HypData(HypData* arr, SizeType index, T&& ar
 
 // NOLINTBEGIN
 // ^^^ clang-lint wants to treat this as a global variable?
-// Expand over each argument to fill args_array and args_array_ptr
+// Expand over each argument to fill argsArray and argsArrayPtr
 template <class... Args, SizeType... Indices>
-static inline void SetArgs_HypData(std::index_sequence<Indices...>, HypData* arr, const HypData* (&array_ptr)[sizeof...(Args) + 1], Args&&... args)
+static inline void SetArgs_HypData(std::index_sequence<Indices...>, HypData* arr, const HypData* (&arrayPtr)[sizeof...(Args) + 1], Args&&... args)
 {
-    ((array_ptr[Indices] = SetArg_HypData(arr, Indices, std::forward<Args>(args))), ...);
-    array_ptr[sizeof...(Args)] = nullptr;
+    ((arrayPtr[Indices] = SetArg_HypData(arr, Indices, std::forward<Args>(args))), ...);
+    arrayPtr[sizeof...(Args)] = nullptr;
 }
 
 // NOLINTEND

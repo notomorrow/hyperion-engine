@@ -21,14 +21,14 @@ namespace hyperion {
 
 struct IdGenerator
 {
-    AtomicVar<uint32> id_counter;
-    AtomicVar<uint32> num_free_indices;
-    Bitset free_indices;
-    Mutex free_id_mutex;
+    AtomicVar<uint32> idCounter;
+    AtomicVar<uint32> numFreeIndices;
+    Bitset freeIndices;
+    Mutex freeIdMutex;
 
     IdGenerator()
-        : id_counter(0),
-          num_free_indices(0)
+        : idCounter(0),
+          numFreeIndices(0)
     {
     }
 
@@ -36,9 +36,9 @@ struct IdGenerator
     IdGenerator& operator=(const IdGenerator&) = delete;
 
     IdGenerator(IdGenerator&& other) noexcept
-        : id_counter(other.id_counter.Exchange(0, MemoryOrder::ACQUIRE)),
-          num_free_indices(other.num_free_indices.Exchange(0, MemoryOrder::ACQUIRE)),
-          free_indices(std::move(other.free_indices))
+        : idCounter(other.idCounter.Exchange(0, MemoryOrder::ACQUIRE)),
+          numFreeIndices(other.numFreeIndices.Exchange(0, MemoryOrder::ACQUIRE)),
+          freeIndices(std::move(other.freeIndices))
     {
     }
 
@@ -48,50 +48,50 @@ struct IdGenerator
 
     uint32 NextID()
     {
-        uint32 current_num_free_indices;
+        uint32 currentNumFreeIndices;
 
-        if ((current_num_free_indices = num_free_indices.Get(MemoryOrder::ACQUIRE)) != 0)
+        if ((currentNumFreeIndices = numFreeIndices.Get(MemoryOrder::ACQUIRE)) != 0)
         {
-            Mutex::Guard guard(free_id_mutex);
+            Mutex::Guard guard(freeIdMutex);
 
             // Check that it hasn't changed before the lock
-            if (free_indices.Count() != 0)
+            if (freeIndices.Count() != 0)
             {
-                Bitset::BitIndex bit_index = free_indices.LastSetBitIndex();
-                AssertDebug(bit_index != Bitset::not_found);
-                AssertDebug(free_indices.Test(bit_index) == true);
-                free_indices.Set(bit_index, false);
+                Bitset::BitIndex bitIndex = freeIndices.LastSetBitIndex();
+                AssertDebug(bitIndex != Bitset::notFound);
+                AssertDebug(freeIndices.Test(bitIndex) == true);
+                freeIndices.Set(bitIndex, false);
 
-                const uint32 index = bit_index + 1;
+                const uint32 index = bitIndex + 1;
 
-                num_free_indices.Decrement(1, MemoryOrder::RELEASE);
+                numFreeIndices.Decrement(1, MemoryOrder::RELEASE);
 
                 return index;
             }
         }
 
-        return id_counter.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+        return idCounter.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
     }
 
     void FreeID(uint32 index)
     {
         AssertThrowMsg(index != 0, "Invalid index");
 
-        Mutex::Guard guard(free_id_mutex);
+        Mutex::Guard guard(freeIdMutex);
 
-        AssertDebug(!free_indices.Test(index - 1));
+        AssertDebug(!freeIndices.Test(index - 1));
 
-        free_indices.Set(index - 1, true);
-        num_free_indices.Increment(1, MemoryOrder::RELEASE);
+        freeIndices.Set(index - 1, true);
+        numFreeIndices.Increment(1, MemoryOrder::RELEASE);
     }
 
     void Reset()
     {
-        Mutex::Guard guard(free_id_mutex);
+        Mutex::Guard guard(freeIdMutex);
 
-        id_counter.Set(0, MemoryOrder::RELEASE);
-        num_free_indices.Set(0, MemoryOrder::RELEASE);
-        free_indices.Clear();
+        idCounter.Set(0, MemoryOrder::RELEASE);
+        numFreeIndices.Set(0, MemoryOrder::RELEASE);
+        freeIndices.Clear();
     }
 };
 

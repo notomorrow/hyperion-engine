@@ -242,10 +242,10 @@ struct HYP_API JSONSubscriptWrapper<JSONValue>
      *  If the path does not exist, or the value is not an object, an undefined value is returned.
      *
      *  \param path The path to the value.
-     *  \param create_intermediate_objects If true, intermediate objects are created between the path elements if they do not exist.
+     *  \param createIntermediateObjects If true, intermediate objects are created between the path elements if they do not exist.
      *  \return A JSONSubscriptWrapper object.
      */
-    JSONSubscriptWrapper<JSONValue> Get(UTF8StringView path, bool create_intermediate_objects = false);
+    JSONSubscriptWrapper<JSONValue> Get(UTF8StringView path, bool createIntermediateObjects = false);
 
     /*! \brief Get a value within the JSON object using a path (e.g. "key1.key2.key3").
      *  If the path does not exist, or the value is not an object, an undefined value is returned.
@@ -509,10 +509,10 @@ public:
 
     /*! \brief Convert the JSON value to a number. If the value is undefined, the default value is returned.
      *
-     *  \param default_value The default value to return if the value is not a number. (Default: 0.0)
+     *  \param defaultValue The default value to return if the value is not a number. (Default: 0.0)
      *  \return The number value.
      */
-    HYP_FORCE_INLINE JSONNumber ToNumber(JSONNumber default_value = 0.0) const
+    HYP_FORCE_INLINE JSONNumber ToNumber(JSONNumber defaultValue = 0.0) const
     {
         if (IsNumber())
         {
@@ -526,7 +526,7 @@ public:
 
         if (IsUndefined())
         {
-            return default_value;
+            return defaultValue;
         }
 
         if (IsBool())
@@ -536,60 +536,60 @@ public:
 
         if (IsString())
         {
-            return StringUtil::Parse<JSONNumber>(AsString().Data(), default_value);
+            return StringUtil::Parse<JSONNumber>(AsString().Data(), defaultValue);
         }
 
-        return default_value;
+        return defaultValue;
     }
 
-    HYP_FORCE_INLINE int8 ToInt8(int8 default_value = 0) const
+    HYP_FORCE_INLINE int8 ToInt8(int8 defaultValue = 0) const
     {
-        return static_cast<int8>(ToNumber(JSONNumber(default_value)));
+        return static_cast<int8>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE int16 ToInt16(int16 default_value = 0) const
+    HYP_FORCE_INLINE int16 ToInt16(int16 defaultValue = 0) const
     {
-        return static_cast<int16>(ToNumber(JSONNumber(default_value)));
+        return static_cast<int16>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE int32 ToInt32(int32 default_value = 0) const
+    HYP_FORCE_INLINE int32 ToInt32(int32 defaultValue = 0) const
     {
-        return static_cast<int32>(ToNumber(JSONNumber(default_value)));
+        return static_cast<int32>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE int64 ToInt64(int64 default_value = 0) const
+    HYP_FORCE_INLINE int64 ToInt64(int64 defaultValue = 0) const
     {
-        return static_cast<int64>(ToNumber(JSONNumber(default_value)));
+        return static_cast<int64>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE uint8 ToUInt8(uint8 default_value = 0) const
+    HYP_FORCE_INLINE uint8 ToUInt8(uint8 defaultValue = 0) const
     {
-        return static_cast<uint8>(ToNumber(JSONNumber(default_value)));
+        return static_cast<uint8>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE uint16 ToUInt16(uint16 default_value = 0) const
+    HYP_FORCE_INLINE uint16 ToUInt16(uint16 defaultValue = 0) const
     {
-        return static_cast<uint16>(ToNumber(JSONNumber(default_value)));
+        return static_cast<uint16>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE uint32 ToUInt32(uint32 default_value = 0) const
+    HYP_FORCE_INLINE uint32 ToUInt32(uint32 defaultValue = 0) const
     {
-        return static_cast<uint32>(ToNumber(JSONNumber(default_value)));
+        return static_cast<uint32>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE uint64 ToUInt64(uint64 default_value = 0) const
+    HYP_FORCE_INLINE uint64 ToUInt64(uint64 defaultValue = 0) const
     {
-        return static_cast<uint64>(ToNumber(JSONNumber(default_value)));
+        return static_cast<uint64>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE float ToFloat(float default_value = 0.0f) const
+    HYP_FORCE_INLINE float ToFloat(float defaultValue = 0.0f) const
     {
-        return static_cast<float>(ToNumber(JSONNumber(default_value)));
+        return static_cast<float>(ToNumber(JSONNumber(defaultValue)));
     }
 
-    HYP_FORCE_INLINE double ToDouble(double default_value = 0.0) const
+    HYP_FORCE_INLINE double ToDouble(double defaultValue = 0.0) const
     {
-        return ToNumber(JSONNumber(default_value));
+        return ToNumber(JSONNumber(defaultValue));
     }
 
     HYP_FORCE_INLINE JSONBool AsBool() const
@@ -601,10 +601,10 @@ public:
 
     /*! \brief Convert the JSON value to a boolean. If the value is undefined, the default value is returned.
      *
-     *  \param default_value The default value to return if the value is not a boolean. (Default: false)
+     *  \param defaultValue The default value to return if the value is not a boolean. (Default: false)
      *  \return The boolean value.
      */
-    HYP_FORCE_INLINE JSONBool ToBool(JSONBool default_value = false) const
+    HYP_FORCE_INLINE JSONBool ToBool(JSONBool defaultValue = false) const
     {
         if (IsBool())
         {
@@ -613,7 +613,7 @@ public:
 
         if (IsUndefined())
         {
-            return default_value;
+            return defaultValue;
         }
 
         if (IsNull())
@@ -641,7 +641,7 @@ public:
             return JSONBool(true);
         }
 
-        return default_value;
+        return defaultValue;
     }
 
     HYP_FORCE_INLINE JSONArray& AsArray()
@@ -670,9 +670,9 @@ public:
             return JSONArray();
         }
 
-        JSONArray array_value;
-        array_value.PushBack(*this);
-        return array_value;
+        JSONArray arrayValue;
+        arrayValue.PushBack(*this);
+        return arrayValue;
     }
 
     HYP_FORCE_INLINE JSONObject& AsObject()
@@ -711,9 +711,9 @@ public:
         return JSONSubscriptWrapper<const JSONValue>(this)[key];
     }
 
-    HYP_FORCE_INLINE JSONSubscriptWrapper<JSONValue> Get(UTF8StringView path, bool create_intermediate_objects = false)
+    HYP_FORCE_INLINE JSONSubscriptWrapper<JSONValue> Get(UTF8StringView path, bool createIntermediateObjects = false)
     {
-        return JSONSubscriptWrapper<JSONValue>(this).Get(path, create_intermediate_objects);
+        return JSONSubscriptWrapper<JSONValue>(this).Get(path, createIntermediateObjects);
     }
 
     HYP_FORCE_INLINE JSONSubscriptWrapper<const JSONValue> Get(UTF8StringView path) const
@@ -742,8 +742,8 @@ public:
 
     JSONObject() = default;
 
-    JSONObject(std::initializer_list<KeyValuePair<JSONString, JSONValue>> initializer_list)
-        : Base(initializer_list)
+    JSONObject(std::initializer_list<KeyValuePair<JSONString, JSONValue>> initializerList)
+        : Base(initializerList)
     {
     }
 
@@ -782,9 +782,9 @@ public:
     static const JSONValue& True();
     static const JSONValue& False();
 
-    static ParseResult Parse(const String& json_string);
+    static ParseResult Parse(const String& jsonString);
     static ParseResult Parse(BufferedReader& reader);
-    static ParseResult Parse(const SourceFile& source_file);
+    static ParseResult Parse(const SourceFile& sourceFile);
 };
 
 } // namespace json

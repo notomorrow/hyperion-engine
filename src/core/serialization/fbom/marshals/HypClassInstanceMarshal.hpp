@@ -47,11 +47,11 @@ protected:
     /*! \brief Deserialize into an existing object.
      *
      *  \param in The FBOMObject to deserialize.
-     *  \param hyp_class The HypClass of the instance.
+     *  \param hypClass The HypClass of the instance.
      *  \param ref The instance to deserialize into.
      *  \return The result of the deserialization.
      */
-    virtual FBOMResult Deserialize_Internal(FBOMLoadContext& context, const FBOMObject& in, const HypClass* hyp_class, AnyRef ref) const;
+    virtual FBOMResult Deserialize_Internal(FBOMLoadContext& context, const FBOMObject& in, const HypClass* hypClass, AnyRef ref) const;
 };
 
 } // namespace hyperion::serialization

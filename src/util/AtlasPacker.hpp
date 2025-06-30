@@ -17,16 +17,16 @@ namespace hyperion {
 template <class AtlasElement>
 struct AtlasPacker
 {
-    Vec2u atlas_dimensions;
+    Vec2u atlasDimensions;
     Array<AtlasElement, DynamicAllocator> elements;
-    Array<Pair<Vec2i, Vec2i>> free_spaces;
+    Array<Pair<Vec2i, Vec2i>> freeSpaces;
 
     AtlasPacker()
-        : atlas_dimensions(Vec2u::One())
+        : atlasDimensions(Vec2u::One())
     {
     }
 
-    AtlasPacker(const Vec2u& atlas_dimensions);
+    AtlasPacker(const Vec2u& atlasDimensions);
 
     AtlasPacker(const AtlasPacker<AtlasElement>& other) = default;
     AtlasPacker<AtlasElement>& operator=(const AtlasPacker<AtlasElement>& other) = default;
@@ -37,69 +37,69 @@ struct AtlasPacker
     ~AtlasPacker() = default;
 
     /*! \brief Adds an element to the atlas, if it will fit.
-     *  \param element_dimensions The dimensions of the element to add.
-     *  \param out_element The element that was added, with its offset, scale and other properties set.
-     *  \param shrink_to_fit If true, the dimensions element will be shrunk to fit the atlas if it doesn't fit. Aspect ratio will be maintained.
-     *  \param downscale_limit The lowest downscale ratio compared to `element_dimensions` to apply when shrinking the element to fit before giving up. (default: 0.25 = 25% of `element_dimensions`)
+     *  \param elementDimensions The dimensions of the element to add.
+     *  \param outElement The element that was added, with its offset, scale and other properties set.
+     *  \param shrinkToFit If true, the dimensions element will be shrunk to fit the atlas if it doesn't fit. Aspect ratio will be maintained.
+     *  \param downscaleLimit The lowest downscale ratio compared to `elementDimensions` to apply when shrinking the element to fit before giving up. (default: 0.25 = 25% of `elementDimensions`)
      *  \return True if the element was added successfully, false otherwise.
      */
-    bool AddElement(const Vec2u& element_dimensions, AtlasElement& out_element, bool shrink_to_fit = true, float downscale_limit = 0.25f);
+    bool AddElement(const Vec2u& elementDimensions, AtlasElement& outElement, bool shrinkToFit = true, float downscaleLimit = 0.25f);
     bool RemoveElement(const AtlasElement& element);
 
     void Clear();
 
-    bool CalculateFitOffset(uint32 index, const Vec2u& dimensions, Vec2u& out_offset) const;
-    void AddSkylineNode(uint32 before_index, const Vec2u& dimensions, const Vec2u& offset);
+    bool CalculateFitOffset(uint32 index, const Vec2u& dimensions, Vec2u& outOffset) const;
+    void AddSkylineNode(uint32 beforeIndex, const Vec2u& dimensions, const Vec2u& offset);
     void MergeSkyline();
 };
 
 template <class AtlasElement>
-AtlasPacker<AtlasElement>::AtlasPacker(const Vec2u& atlas_dimensions)
-    : atlas_dimensions(atlas_dimensions)
+AtlasPacker<AtlasElement>::AtlasPacker(const Vec2u& atlasDimensions)
+    : atlasDimensions(atlasDimensions)
 {
-    free_spaces.EmplaceBack(Vec2i::Zero(), Vec2i { int(atlas_dimensions.x), 0 });
+    freeSpaces.EmplaceBack(Vec2i::Zero(), Vec2i { int(atlasDimensions.x), 0 });
 }
 
 template <class AtlasElement>
-bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& element_dimensions, AtlasElement& out_element, bool shrink_to_fit, float downscale_limit)
+bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& elementDimensions, AtlasElement& outElement, bool shrinkToFit, float downscaleLimit)
 {
-    if (element_dimensions.x == 0 || element_dimensions.y == 0)
+    if (elementDimensions.x == 0 || elementDimensions.y == 0)
     {
         return false;
     }
 
-    auto try_add_element_to_skyline = [this, &out_element](const Vec2u& dim) -> bool
+    auto tryAddElementToSkyline = [this, &outElement](const Vec2u& dim) -> bool
     {
-        int best_y = INT32_MAX;
-        int best_x = -1;
-        int best_index = -1;
+        int bestY = INT32_MAX;
+        int bestX = -1;
+        int bestIndex = -1;
 
-        for (SizeType i = 0; i < free_spaces.Size(); i++)
+        for (SizeType i = 0; i < freeSpaces.Size(); i++)
         {
             Vec2u offset;
 
             if (CalculateFitOffset(uint32(i), dim, offset))
             {
-                if (int(offset.y) < best_y)
+                if (int(offset.y) < bestY)
                 {
-                    best_x = int(offset.x);
-                    best_y = int(offset.y);
-                    best_index = int(i);
+                    bestX = int(offset.x);
+                    bestY = int(offset.y);
+                    bestIndex = int(i);
                 }
             }
         }
 
-        if (best_index != -1)
+        if (bestIndex != -1)
         {
-            out_element.index = elements.Size();
-            out_element.offset_coords = Vec2u { uint32(best_x), uint32(best_y) };
-            out_element.offset_uv = Vec2f(out_element.offset_coords) / Vec2f(atlas_dimensions - 1);
-            out_element.dimensions = dim;
-            out_element.scale = Vec2f(dim) / Vec2f(atlas_dimensions);
+            outElement.index = elements.Size();
+            outElement.offsetCoords = Vec2u { uint32(bestX), uint32(bestY) };
+            outElement.offsetUv = Vec2f(outElement.offsetCoords) / Vec2f(atlasDimensions - 1);
+            outElement.dimensions = dim;
+            outElement.scale = Vec2f(dim) / Vec2f(atlasDimensions);
 
-            elements.PushBack(out_element);
+            elements.PushBack(outElement);
 
-            AddSkylineNode(uint32(best_index), dim, Vec2u { uint32(best_x), uint32(best_y) });
+            AddSkylineNode(uint32(bestIndex), dim, Vec2u { uint32(bestX), uint32(bestY) });
 
             return true;
         }
@@ -107,47 +107,47 @@ bool AtlasPacker<AtlasElement>::AddElement(const Vec2u& element_dimensions, Atla
         return false;
     };
 
-    if (element_dimensions.x <= atlas_dimensions.x && element_dimensions.y <= atlas_dimensions.y)
+    if (elementDimensions.x <= atlasDimensions.x && elementDimensions.y <= atlasDimensions.y)
     {
-        if (try_add_element_to_skyline(element_dimensions))
+        if (tryAddElementToSkyline(elementDimensions))
         {
             return true;
         }
     }
 
-    if (shrink_to_fit)
+    if (shrinkToFit)
     {
         // Maintain ratio, shrink the element dimensions to attempt to fit it into the atlas
-        const float aspect_ratio = float(element_dimensions.x) / float(element_dimensions.y);
+        const float aspectRatio = float(elementDimensions.x) / float(elementDimensions.y);
 
-        Vec2u new_dimensions = element_dimensions;
+        Vec2u newDimensions = elementDimensions;
 
-        if (new_dimensions.x > atlas_dimensions.x || new_dimensions.y > atlas_dimensions.y)
+        if (newDimensions.x > atlasDimensions.x || newDimensions.y > atlasDimensions.y)
         {
-            if (new_dimensions.x > atlas_dimensions.x)
+            if (newDimensions.x > atlasDimensions.x)
             {
-                new_dimensions.x = atlas_dimensions.x;
-                new_dimensions.y = uint32(float(new_dimensions.x) / aspect_ratio);
+                newDimensions.x = atlasDimensions.x;
+                newDimensions.y = uint32(float(newDimensions.x) / aspectRatio);
             }
 
-            if (new_dimensions.y > atlas_dimensions.y)
+            if (newDimensions.y > atlasDimensions.y)
             {
-                new_dimensions.y = atlas_dimensions.y;
-                new_dimensions.x = uint32(float(new_dimensions.y) * aspect_ratio);
+                newDimensions.y = atlasDimensions.y;
+                newDimensions.x = uint32(float(newDimensions.y) * aspectRatio);
             }
         }
 
         do
         {
-            if (try_add_element_to_skyline(new_dimensions))
+            if (tryAddElementToSkyline(newDimensions))
             {
                 return true;
             }
 
             // Reduce the dimensions by half each time until we reach the minimum downscale ratio
-            new_dimensions /= 2;
+            newDimensions /= 2;
         }
-        while ((Vec2f(new_dimensions) / Vec2f(element_dimensions)).Length() >= downscale_limit);
+        while ((Vec2f(newDimensions) / Vec2f(elementDimensions)).Length() >= downscaleLimit);
     }
 
     return false;
@@ -163,9 +163,9 @@ bool AtlasPacker<AtlasElement>::RemoveElement(const AtlasElement& element)
         return false;
     }
 
-    free_spaces.EmplaceBack(Vec2i(element.offset_uv * Vec2f(atlas_dimensions)), Vec2i(element.dimensions));
+    freeSpaces.EmplaceBack(Vec2i(element.offsetUv * Vec2f(atlasDimensions)), Vec2i(element.dimensions));
 
-    std::sort(free_spaces.Begin(), free_spaces.End(), [](const auto& a, const auto& b)
+    std::sort(freeSpaces.Begin(), freeSpaces.End(), [](const auto& a, const auto& b)
         {
             return a.first.x < b.first.x;
         });
@@ -180,69 +180,69 @@ bool AtlasPacker<AtlasElement>::RemoveElement(const AtlasElement& element)
 template <class AtlasElement>
 void AtlasPacker<AtlasElement>::Clear()
 {
-    free_spaces.Clear();
+    freeSpaces.Clear();
     elements.Clear();
 
     // Add the initial skyline node
-    free_spaces.EmplaceBack(Vec2i::Zero(), Vec2i { int(atlas_dimensions.x), 0 });
+    freeSpaces.EmplaceBack(Vec2i::Zero(), Vec2i { int(atlasDimensions.x), 0 });
 }
 
 // Based on: https://jvernay.fr/en/blog/skyline-2d-packer/implementation/
 template <class AtlasElement>
-bool AtlasPacker<AtlasElement>::CalculateFitOffset(uint32 index, const Vec2u& dimensions, Vec2u& out_offset) const
+bool AtlasPacker<AtlasElement>::CalculateFitOffset(uint32 index, const Vec2u& dimensions, Vec2u& outOffset) const
 {
-    Vec2i space_offset = free_spaces[index].first;
-    Vec2i space_dimensions = free_spaces[index].second;
+    Vec2i spaceOffset = freeSpaces[index].first;
+    Vec2i spaceDimensions = freeSpaces[index].second;
 
-    const int x = space_offset.x;
-    int y = space_offset.y + space_dimensions.y;
+    const int x = spaceOffset.x;
+    int y = spaceOffset.y + spaceDimensions.y;
 
-    int remaining_width = dimensions.x;
+    int remainingWidth = dimensions.x;
 
-    if (x + dimensions.x > atlas_dimensions.x)
+    if (x + dimensions.x > atlasDimensions.x)
     {
         return false;
     }
 
-    for (uint32 i = index; i < free_spaces.Size() && remaining_width > 0; i++)
+    for (uint32 i = index; i < freeSpaces.Size() && remainingWidth > 0; i++)
     {
-        int node_top_y = free_spaces[i].first.y + free_spaces[i].second.y;
+        int nodeTopY = freeSpaces[i].first.y + freeSpaces[i].second.y;
 
-        y = MathUtil::Max(y, node_top_y);
+        y = MathUtil::Max(y, nodeTopY);
 
-        if (y + dimensions.y > atlas_dimensions.y)
+        if (y + dimensions.y > atlasDimensions.y)
         {
             return false;
         }
 
-        remaining_width -= free_spaces[i].second.x;
+        remainingWidth -= freeSpaces[i].second.x;
     }
 
-    out_offset = Vec2u { uint32(x), uint32(y) };
+    outOffset = Vec2u { uint32(x), uint32(y) };
 
     return true;
 }
 
 template <class AtlasElement>
-void AtlasPacker<AtlasElement>::AddSkylineNode(uint32 before_index, const Vec2u& dimensions, const Vec2u& offset)
+void AtlasPacker<AtlasElement>::AddSkylineNode(uint32 beforeIndex, const Vec2u& dimensions, const Vec2u& offset)
 {
-    free_spaces.Insert(free_spaces.Begin() + before_index, { Vec2i(offset), Vec2i(dimensions) });
+    freeSpaces.Insert(freeSpaces.Begin() + beforeIndex, { Vec2i(offset), Vec2i(dimensions) });
 
-    for (SizeType i = before_index + 1; i < free_spaces.Size();)
+    for (SizeType i = beforeIndex + 1; i < freeSpaces.Size();)
     {
-        auto& space_offset = free_spaces[i].first;
-        auto& space_dimensions = free_spaces[i].second;
+        auto& spaceOffset = freeSpaces[i].first;
+        auto& spaceDimensions = freeSpaces[i].second;
 
-        if (space_offset.x < offset.x + dimensions.x)
+        if (spaceOffset.x < offset.x + dimensions.x)
         {
-            int shrink = offset.x + dimensions.x - space_offset.x;
+            int shrink = offset.x + dimensions.x - spaceOffset.x;
 
-            space_offset.x += shrink;
-            space_dimensions.x -= shrink;
+            spaceOffset.x += shrink;
+            spaceDimensions.x -= shrink;
 
-            if (space_dimensions.x <= 0)
+            if (spaceDimensions.x <= 0)
             {
-                free_spaces.EraseAt(i);
+                freeSpaces.EraseAt(i);
             }
             else
             {
@@ -262,17 +262,17 @@ template <class AtlasElement>
 void AtlasPacker<AtlasElement>::MergeSkyline()
 {
     // Should never happen as we always add at least one free space, but this will make debugging easier
-    AssertThrow(free_spaces.Any());
+    AssertThrow(freeSpaces.Any());
 
-    for (SizeType i = 0; i < free_spaces.Size() - 1;)
+    for (SizeType i = 0; i < freeSpaces.Size() - 1;)
     {
-        int y0 = free_spaces[i].first.y + free_spaces[i].second.y;
-        int y1 = free_spaces[i + 1].first.y + free_spaces[i + 1].second.y;
+        int y0 = freeSpaces[i].first.y + freeSpaces[i].second.y;
+        int y1 = freeSpaces[i + 1].first.y + freeSpaces[i + 1].second.y;
 
         if (y0 == y1)
         {
-            free_spaces[i].second.x += free_spaces[i + 1].second.x;
-            free_spaces.EraseAt(i + 1);
+            freeSpaces[i].second.x += freeSpaces[i + 1].second.x;
+            freeSpaces.EraseAt(i + 1);
         }
         else
         {

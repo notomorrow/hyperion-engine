@@ -26,7 +26,7 @@ struct RENDER_COMMAND(RemoveTextureFromBindlessStorage)
 
     virtual RendererResult operator()() override
     {
-        g_render_global_state->BindlessTextures.RemoveResource(id);
+        g_renderGlobalState->BindlessTextures.RemoveResource(id);
 
         HYPERION_RETURN_OK;
     }
@@ -38,24 +38,24 @@ struct RENDER_COMMAND(RemoveTextureFromBindlessStorage)
 
 bool DeletionEntryBase::DecrementCycle()
 {
-    if (m_cycles_remaining == 0)
+    if (m_cyclesRemaining == 0)
     {
         return true;
     }
 
-    --m_cycles_remaining;
+    --m_cyclesRemaining;
 
-    return m_cycles_remaining == 0;
+    return m_cyclesRemaining == 0;
 }
 
 bool DeletionEntryBase::PerformDeletion(bool force)
 {
     if (force)
     {
-        m_cycles_remaining = 0;
+        m_cyclesRemaining = 0;
     }
 
-    if (m_cycles_remaining != 0)
+    if (m_cyclesRemaining != 0)
     {
         return false;
     }
@@ -71,59 +71,59 @@ bool DeletionEntryBase::PerformDeletion(bool force)
 
 void SafeDeleter::PerformEnqueuedDeletions()
 {
-    if (int32 num_deletion_entries = m_num_deletion_entries.Get(MemoryOrder::ACQUIRE))
+    if (int32 numDeletionEntries = m_numDeletionEntries.Get(MemoryOrder::ACQUIRE))
     {
-        Array<UniquePtr<DeletionEntryBase>> deletion_entries;
+        Array<UniquePtr<DeletionEntryBase>> deletionEntries;
 
         { // Critical section
             Mutex::Guard guard(m_mutex);
 
-            CollectAllEnqueuedItems(deletion_entries);
+            CollectAllEnqueuedItems(deletionEntries);
         }
 
-        for (auto it = deletion_entries.Begin(); it != deletion_entries.End(); ++it)
+        for (auto it = deletionEntries.Begin(); it != deletionEntries.End(); ++it)
         {
             AssertThrow((*it)->PerformDeletion());
 
-            m_num_deletion_entries.Decrement(1, MemoryOrder::RELEASE);
+            m_numDeletionEntries.Decrement(1, MemoryOrder::RELEASE);
         }
     }
 }
 
 void SafeDeleter::ForceDeleteAll()
 {
-    while (int32 num_deletion_entries = m_num_deletion_entries.Get(MemoryOrder::ACQUIRE))
+    while (int32 numDeletionEntries = m_numDeletionEntries.Get(MemoryOrder::ACQUIRE))
     {
-        Array<UniquePtr<DeletionEntryBase>> deletion_entries;
+        Array<UniquePtr<DeletionEntryBase>> deletionEntries;
 
         { // Critical section
             Mutex::Guard guard(m_mutex);
 
-            CollectAllEnqueuedItems(deletion_entries);
+            CollectAllEnqueuedItems(deletionEntries);
         }
 
-        for (auto it = deletion_entries.Begin(); it != deletion_entries.End();)
+        for (auto it = deletionEntries.Begin(); it != deletionEntries.End();)
         {
             AssertThrow((*it)->PerformDeletion(true /* force */));
 
-            it = deletion_entries.Erase(it);
+            it = deletionEntries.Erase(it);
 
-            m_num_deletion_entries.Decrement(1, MemoryOrder::RELEASE);
+            m_numDeletionEntries.Decrement(1, MemoryOrder::RELEASE);
         }
     }
 }
 
-bool SafeDeleter::CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& out_entries)
+bool SafeDeleter::CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& outEntries)
 {
-    for (auto it = m_deletion_entries.Begin(); it != m_deletion_entries.End();)
+    for (auto it = m_deletionEntries.Begin(); it != m_deletionEntries.End();)
     {
         auto& entry = *it;
 
         if (entry->DecrementCycle())
         {
-            out_entries.PushBack(std::move(*it));
+            outEntries.PushBack(std::move(*it));
 
-            it = m_deletion_entries.Erase(it);
+            it = m_deletionEntries.Erase(it);
         }
         else
         {
@@ -131,7 +131,7 @@ bool SafeDeleter::CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& o
         }
     }
 
-    return m_deletion_entries.Empty();
+    return m_deletionEntries.Empty();
 }
 
 #pragma endregion SafeDeleter

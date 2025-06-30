@@ -166,38 +166,38 @@ public:
 
         HYP_FORCE_INLINE T& operator*() const
         {
-            return current_node->m_value;
+            return currentNode->m_value;
         }
 
         HYP_FORCE_INLINE T* operator->() const
         {
-            return &current_node->m_value;
+            return &currentNode->m_value;
         }
 
         HYP_FORCE_INLINE bool operator==(const Iterator& other) const
         {
-            return current_node == other.current_node;
+            return currentNode == other.currentNode;
         }
 
         HYP_FORCE_INLINE bool operator!=(const Iterator& other) const
         {
-            return current_node != other.current_node;
+            return currentNode != other.currentNode;
         }
 
         HYP_FORCE_INLINE Node* GetCurrentNode() const
         {
-            return current_node;
+            return currentNode;
         }
 
         void Advance()
         {
             if (queue.Any())
             {
-                current_node = queue.Pop();
+                currentNode = queue.Pop();
 
-                if (current_node)
+                if (currentNode)
                 {
-                    Node* child = current_node->m_child.Get();
+                    Node* child = currentNode->m_child.Get();
 
                     while (child != nullptr)
                     {
@@ -209,12 +209,12 @@ public:
             }
             else
             {
-                current_node = nullptr;
+                currentNode = nullptr;
             }
         }
 
         Queue<Node*> queue;
-        Node* current_node = nullptr;
+        Node* currentNode = nullptr;
     };
 
     using ConstIterator = Iterator;
@@ -225,23 +225,23 @@ public:
 
     Iterator Add(T&& value, const T& parent)
     {
-        auto parent_it = Find(parent);
+        auto parentIt = Find(parent);
 
-        if (parent_it == End())
+        if (parentIt == End())
         {
             return Add(std::move(value), Iterator(nullptr));
         }
 
-        return Add(std::move(value), parent_it);
+        return Add(std::move(value), parentIt);
     }
 
-    Iterator Add(T&& value, ConstIterator parent_iterator = Iterator(nullptr))
+    Iterator Add(T&& value, ConstIterator parentIterator = Iterator(nullptr))
     {
-        UniquePtr<Node> new_node = MakeUnique<Node>(std::move(value));
+        UniquePtr<Node> newNode = MakeUnique<Node>(std::move(value));
 
-        Node* ptr = new_node.Get();
+        Node* ptr = newNode.Get();
 
-        if (parent_iterator == End())
+        if (parentIterator == End())
         {
             if (m_root)
             {
@@ -252,18 +252,18 @@ public:
                     sibling = sibling->m_next.Get();
                 }
 
-                new_node->m_prev = sibling;
-                sibling->m_next = std::move(new_node);
+                newNode->m_prev = sibling;
+                sibling->m_next = std::move(newNode);
             }
             else
             {
-                m_root = std::move(new_node);
+                m_root = std::move(newNode);
             }
 
             return Iterator(ptr);
         }
 
-        Node* parent = parent_iterator.current_node;
+        Node* parent = parentIterator.currentNode;
 
         ptr->m_parent = parent;
 
@@ -276,12 +276,12 @@ public:
                 sibling = sibling->m_next.Get();
             }
 
-            new_node->m_prev = sibling;
-            sibling->m_next = std::move(new_node);
+            newNode->m_prev = sibling;
+            sibling->m_next = std::move(newNode);
         }
         else
         {
-            parent->m_child = std::move(new_node);
+            parent->m_child = std::move(newNode);
         }
 
         return Iterator(ptr);
@@ -294,7 +294,7 @@ public:
             return End();
         }
 
-        if (m_root.Get() == it.current_node)
+        if (m_root.Get() == it.currentNode)
         {
             // if we are the root, remove it
             m_root.Reset();
@@ -305,23 +305,23 @@ public:
         Iterator next = it;
         next.Advance();
 
-        if (it.current_node->m_next)
+        if (it.currentNode->m_next)
         {
-            it.current_node->m_next->m_prev = it.current_node->m_prev;
+            it.currentNode->m_next->m_prev = it.currentNode->m_prev;
         }
 
-        if (it.current_node->m_prev)
+        if (it.currentNode->m_prev)
         {
-            UniquePtr<Node> _this_node = std::move(it.current_node->m_prev->m_next);
+            UniquePtr<Node> _this_node = std::move(it.currentNode->m_prev->m_next);
             // If we are a sibling in a chain, update the left sibling to point to our right sibling (if any)
             _this_node->m_prev->m_next = std::move(_this_node->m_next);
             // this is released
             return next;
         }
 
-        if (it.current_node->m_parent && it.current_node->m_parent->m_child.Get() == it.current_node)
+        if (it.currentNode->m_parent && it.currentNode->m_parent->m_child.Get() == it.currentNode)
         {
-            UniquePtr<Node> _this_node = std::move(it.current_node->m_parent->m_child);
+            UniquePtr<Node> _this_node = std::move(it.currentNode->m_parent->m_child);
             // If we are the first child, update the parent to refer to our right sibling (if any) as the first child
             _this_node->m_parent->m_child = std::move(_this_node->m_next);
             // this is released
@@ -349,19 +349,19 @@ public:
 
         while (queue.Any())
         {
-            Node* current_node = queue.Pop();
+            Node* currentNode = queue.Pop();
 
-            if (!current_node)
+            if (!currentNode)
             {
                 continue;
             }
 
-            if (current_node->m_value == value)
+            if (currentNode->m_value == value)
             {
-                return Iterator(current_node);
+                return Iterator(currentNode);
             }
 
-            Node* child = current_node->m_child.Get();
+            Node* child = currentNode->m_child.Get();
 
             while (child != nullptr)
             {
@@ -398,19 +398,19 @@ public:
 
         while (queue.Any())
         {
-            Node* current_node = queue.Pop();
+            Node* currentNode = queue.Pop();
 
-            if (!current_node)
+            if (!currentNode)
             {
                 continue;
             }
 
-            if (pred(**current_node))
+            if (pred(**currentNode))
             {
-                return Iterator(current_node);
+                return Iterator(currentNode);
             }
 
-            Node* child = current_node->m_child.Get();
+            Node* child = currentNode->m_child.Get();
 
             while (child != nullptr)
             {

@@ -32,9 +32,9 @@ public:
     {
         Mutex::Guard guard(m_mutex);
 
-        auto it = m_reverse_name_mapping.Find(index);
+        auto it = m_reverseNameMapping.Find(index);
 
-        if (it == m_reverse_name_mapping.End())
+        if (it == m_reverseNameMapping.End())
         {
             return Name();
         }
@@ -44,13 +44,13 @@ public:
 
     uint32 AllocateIndex(Name name)
     {
-        const uint32 index = m_id_generator.NextID();
+        const uint32 index = m_idGenerator.NextID();
 
         {
             Mutex::Guard guard(m_mutex);
 
-            m_name_mapping[name].PushBack(index);
-            m_reverse_name_mapping[index] = name;
+            m_nameMapping[name].PushBack(index);
+            m_reverseNameMapping[index] = name;
         }
 
         return index;
@@ -60,15 +60,15 @@ public:
     {
         Mutex::Guard guard(m_mutex);
 
-        if (uint32* index_ptr = FindIndexByName_Internal(name))
+        if (uint32* indexPtr = FindIndexByName_Internal(name))
         {
-            return *index_ptr;
+            return *indexPtr;
         }
 
-        const uint32 index = m_id_generator.NextID();
+        const uint32 index = m_idGenerator.NextID();
 
-        m_name_mapping[name].PushBack(index);
-        m_reverse_name_mapping[index] = name;
+        m_nameMapping[name].PushBack(index);
+        m_reverseNameMapping[index] = name;
 
         return index;
     }
@@ -76,9 +76,9 @@ public:
 private:
     uint32* FindIndexByName_Internal(Name name)
     {
-        auto it = m_name_mapping.Find(name);
+        auto it = m_nameMapping.Find(name);
 
-        if (it != m_name_mapping.End() && it->second.Any())
+        if (it != m_nameMapping.End() && it->second.Any())
         {
             return &it->second.Front();
         }
@@ -86,10 +86,10 @@ private:
         return nullptr;
     }
 
-    IdGenerator m_id_generator;
+    IdGenerator m_idGenerator;
 
-    HashMap<Name, Array<uint32>> m_name_mapping;
-    HashMap<uint32, Name> m_reverse_name_mapping;
+    HashMap<Name, Array<uint32>> m_nameMapping;
+    HashMap<uint32, Name> m_reverseNameMapping;
 
     mutable Mutex m_mutex;
 };
@@ -110,41 +110,41 @@ static GlobalThreadIdCache& GetDynamicThreadIdCache()
 
 #pragma region ThreadId
 
-static uint32 AllocateThreadId(Name name, uint32 allocate_flags)
+static uint32 AllocateThreadId(Name name, uint32 allocateFlags)
 {
-    uint32 thread_id_value;
+    uint32 threadIdValue;
 
-    if (allocate_flags & ThreadId::AllocateFlags::DYNAMIC)
+    if (allocateFlags & ThreadId::AllocateFlags::DYNAMIC)
     {
-        thread_id_value = (allocate_flags & ThreadId::AllocateFlags::FORCE_UNIQUE)
+        threadIdValue = (allocateFlags & ThreadId::AllocateFlags::FORCE_UNIQUE)
             ? GetDynamicThreadIdCache().AllocateIndex(name)
             : GetDynamicThreadIdCache().FindOrAllocateIndex(name);
     }
     else
     {
-        thread_id_value = (allocate_flags & ThreadId::AllocateFlags::FORCE_UNIQUE)
+        threadIdValue = (allocateFlags & ThreadId::AllocateFlags::FORCE_UNIQUE)
             ? GetStaticThreadIdCache().AllocateIndex(name)
             : GetStaticThreadIdCache().FindOrAllocateIndex(name);
 
-        AssertThrowMsg(thread_id_value < g_max_static_thread_ids, "Maximum static thread id value exceeded!");
+        AssertThrowMsg(threadIdValue < g_maxStaticThreadIds, "Maximum static thread id value exceeded!");
 
-        thread_id_value = 1u << (thread_id_value - 1);
+        threadIdValue = 1u << (threadIdValue - 1);
     }
 
-    AssertThrowMsg((((thread_id_value << 4) & g_thread_id_mask) >> 4) == thread_id_value,
+    AssertThrowMsg((((threadIdValue << 4) & g_threadIdMask) >> 4) == threadIdValue,
         "Thread Id value %u exceeds maximum value!",
-        thread_id_value);
+        threadIdValue);
 
-    return thread_id_value;
+    return threadIdValue;
 }
 
-static uint32 MakeThreadIdValue(Name name, ThreadCategory category, uint32 allocate_flags)
+static uint32 MakeThreadIdValue(Name name, ThreadCategory category, uint32 allocateFlags)
 {
     uint32 value = 0;
 
-    value |= (uint32(category) & g_thread_category_mask);
-    value |= (AllocateThreadId(name, allocate_flags) << 4) & g_thread_id_mask;
-    value |= ((allocate_flags & ThreadId::AllocateFlags::DYNAMIC) ? 1u : 0u) << 31;
+    value |= (uint32(category) & g_threadCategoryMask);
+    value |= (AllocateThreadId(name, allocateFlags) << 4) & g_threadIdMask;
+    value |= ((allocateFlags & ThreadId::AllocateFlags::DYNAMIC) ? 1u : 0u) << 31;
 
     return value;
 }
@@ -159,23 +159,23 @@ const ThreadId& ThreadId::Invalid()
     return invalid;
 }
 
-ThreadId::ThreadId(Name name, bool force_unique)
-    : ThreadId(name, THREAD_CATEGORY_NONE, force_unique)
+ThreadId::ThreadId(Name name, bool forceUnique)
+    : ThreadId(name, THREAD_CATEGORY_NONE, forceUnique)
 {
 }
 
-ThreadId::ThreadId(Name name, ThreadCategory category, bool force_unique)
+ThreadId::ThreadId(Name name, ThreadCategory category, bool forceUnique)
     : ThreadId(
           name,
           category,
           AllocateFlags::DYNAMIC
-              | (force_unique ? AllocateFlags::FORCE_UNIQUE : AllocateFlags::NONE))
+              | (forceUnique ? AllocateFlags::FORCE_UNIQUE : AllocateFlags::NONE))
 {
 }
 
-ThreadId::ThreadId(Name name, ThreadCategory category, uint32 allocate_flags)
+ThreadId::ThreadId(Name name, ThreadCategory category, uint32 allocateFlags)
     : m_name(name),
-      m_value(MakeThreadIdValue(name, category, allocate_flags))
+      m_value(MakeThreadIdValue(name, category, allocateFlags))
 {
 }
 
@@ -183,15 +183,15 @@ ThreadId::ThreadId(Name name, ThreadCategory category, uint32 allocate_flags)
 
 #pragma region StaticThreadId
 
-StaticThreadId::StaticThreadId(Name name, bool force_unique)
-    : ThreadId(name, THREAD_CATEGORY_NONE, force_unique ? AllocateFlags::FORCE_UNIQUE : AllocateFlags::NONE)
+StaticThreadId::StaticThreadId(Name name, bool forceUnique)
+    : ThreadId(name, THREAD_CATEGORY_NONE, forceUnique ? AllocateFlags::FORCE_UNIQUE : AllocateFlags::NONE)
 {
 }
 
-StaticThreadId::StaticThreadId(uint32 static_thread_index)
+StaticThreadId::StaticThreadId(uint32 staticThreadIndex)
 {
-    m_name = GetStaticThreadIdCache().FindNameByIndex(static_thread_index + 1);
-    m_value = ((1u << static_thread_index) << 4) & g_thread_id_mask;
+    m_name = GetStaticThreadIdCache().FindNameByIndex(staticThreadIndex + 1);
+    m_value = ((1u << staticThreadIndex) << 4) & g_threadIdMask;
 }
 
 #pragma endregion StaticThreadId

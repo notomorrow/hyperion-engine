@@ -24,10 +24,10 @@ class JSONObject;
 
 } // namespace json
 
-bool JSONToHypData(const json::JSONValue& json_value, TypeId type_id, HypData& out_hyp_data);
-bool HypDataToJSON(const HypData& value, json::JSONValue& out_json);
-bool ObjectToJSON(const HypClass* hyp_class, const HypData& target, json::JSONObject& out_json);
-bool JSONToObject(const json::JSONObject& json_object, const HypClass* hyp_class, HypData& target);
+bool JSONToHypData(const json::JSONValue& jsonValue, TypeId typeId, HypData& outHypData);
+bool HypDataToJSON(const HypData& value, json::JSONValue& outJson);
+bool ObjectToJSON(const HypClass* hypClass, const HypData& target, json::JSONObject& outJson);
+bool JSONToObject(const json::JSONObject& jsonObject, const HypClass* hypClass, HypData& target);
 
 } // namespace hyperion
 

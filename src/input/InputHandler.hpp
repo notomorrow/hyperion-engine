@@ -79,7 +79,7 @@ protected:
     virtual bool OnClick_Impl(const MouseEvent& evt) = 0;
 
 private:
-    Pimpl<InputState> m_input_state;
+    Pimpl<InputState> m_inputState;
 };
 
 HYP_CLASS()

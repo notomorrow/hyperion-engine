@@ -20,8 +20,8 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(UI);
 
-UISubsystem::UISubsystem(const Handle<UIStage>& ui_stage)
-    : m_ui_stage(ui_stage)
+UISubsystem::UISubsystem(const Handle<UIStage>& uiStage)
+    : m_uiStage(uiStage)
 {
 }
 
@@ -33,30 +33,30 @@ void UISubsystem::OnAddedToWorld()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_ui_stage != nullptr);
+    AssertThrow(m_uiStage != nullptr);
 
-    InitObject(m_ui_stage);
+    InitObject(m_uiStage);
 
-    m_ui_render_subsystem = GetWorld()->AddSubsystem<UIRenderSubsystem>(m_ui_stage);
+    m_uiRenderSubsystem = GetWorld()->AddSubsystem<UIRenderSubsystem>(m_uiStage);
 }
 
 void UISubsystem::OnRemovedFromWorld()
 {
     HYP_SCOPE;
 
-    if (m_ui_render_subsystem != nullptr)
+    if (m_uiRenderSubsystem != nullptr)
     {
-        GetWorld()->RemoveSubsystem(m_ui_render_subsystem);
+        GetWorld()->RemoveSubsystem(m_uiRenderSubsystem);
     }
 }
 
 void UISubsystem::Update(float delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    AssertThrow(m_ui_stage != nullptr);
-    AssertThrow(m_ui_render_subsystem != nullptr);
+    AssertThrow(m_uiStage != nullptr);
+    AssertThrow(m_uiRenderSubsystem != nullptr);
 }
 
 void UISubsystem::OnSceneAttached(const Handle<Scene>& scene)

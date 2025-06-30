@@ -42,10 +42,10 @@ struct ViewInfo;
 
 struct WorldShaderData
 {
-    Vec4f fog_params;
+    Vec4f fogParams;
 
-    float game_time;
-    uint32 frame_counter;
+    float gameTime;
+    uint32 frameCounter;
     uint32 _pad0;
     uint32 _pad1;
 };
@@ -63,29 +63,29 @@ public:
 
     HYP_FORCE_INLINE const Array<TResourceHandle<RenderView>>& GetViews() const
     {
-        return m_render_views;
+        return m_renderViews;
     }
 
-    void AddView(TResourceHandle<RenderView>&& render_view);
-    void RemoveView(RenderView* render_view);
+    void AddView(TResourceHandle<RenderView>&& renderView);
+    void RemoveView(RenderView* renderView);
 
-    void AddScene(TResourceHandle<RenderScene>&& render_scene);
-    void RemoveScene(RenderScene* render_scene);
+    void AddScene(TResourceHandle<RenderScene>&& renderScene);
+    void RemoveScene(RenderScene* renderScene);
 
     const EngineRenderStats& GetRenderStats() const;
-    void SetRenderStats(const EngineRenderStats& render_stats);
+    void SetRenderStats(const EngineRenderStats& renderStats);
 
     HYP_FORCE_INLINE RenderEnvironment* GetEnvironment() const
     {
-        return m_render_environment.Get();
+        return m_renderEnvironment.Get();
     }
 
-    void SetBufferData(const WorldShaderData& buffer_data);
+    void SetBufferData(const WorldShaderData& bufferData);
 
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE const WorldShaderData& GetBufferData() const
     {
-        return m_buffer_data;
+        return m_bufferData;
     }
 
     void PreRender(FrameBase* frame);
@@ -105,21 +105,21 @@ private:
 
     World* m_world;
 
-    Array<TResourceHandle<RenderView>> m_render_views;
-    Array<TResourceHandle<RenderScene>> m_render_scenes;
+    Array<TResourceHandle<RenderView>> m_renderViews;
+    Array<TResourceHandle<RenderScene>> m_renderScenes;
 
-    UniquePtr<RenderEnvironment> m_render_environment;
+    UniquePtr<RenderEnvironment> m_renderEnvironment;
 
-    FixedArray<EngineRenderStats, ThreadType::THREAD_TYPE_MAX> m_render_stats;
+    FixedArray<EngineRenderStats, ThreadType::THREAD_TYPE_MAX> m_renderStats;
 
-    WorldShaderData m_buffer_data;
+    WorldShaderData m_bufferData;
 };
 
 template <>
 struct ResourceMemoryPoolInitInfo<RenderWorld> : MemoryPoolInitInfo<RenderWorld>
 {
-    static constexpr uint32 num_elements_per_block = 8;
-    static constexpr uint32 num_initial_elements = 8;
+    static constexpr uint32 numElementsPerBlock = 8;
+    static constexpr uint32 numInitialElements = 8;
 };
 
 } // namespace hyperion

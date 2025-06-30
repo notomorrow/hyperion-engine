@@ -17,7 +17,7 @@
 namespace hyperion {
 namespace debug {
 
-static const char* g_log_type_table[] = {
+static const char* g_logTypeTable[] = {
     "INFO",
     "WARN",
     "ERROR",
@@ -32,7 +32,7 @@ static const char* g_log_type_table[] = {
 };
 
 /* Colours increase happiness by 200% */
-static const char* g_log_colour_table[] = {
+static const char* g_logColourTable[] = {
     "\33[34m",
     "\33[33m",
     "\33[31m",
@@ -51,23 +51,23 @@ static const char* g_log_colour_table[] = {
 HYP_API void DebugLog_Write(LogType type, const char* fmt, ...)
 {
     /* Coloured files are less that ideal */
-    const int type_n = static_cast<std::underlying_type<LogType>::type>(type);
-    fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_log_type_table[type_n]);
+    const int typeN = static_cast<std::underlyingType<LogType>::type>(type);
+    fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_logTypeTable[typeN]);
 
-    va_list args;
-    va_start(args, fmt);
+    vaList args;
+    vaStart(args, fmt);
     vfprintf(HYP_DEBUG_OUTPUT_STREAM, fmt, args);
-    va_end(args);
+    vaEnd(args);
 }
 #else
 HYP_API void DebugLog_Write(LogType type, const char* callee, uint32_t line, const char* fmt, ...)
 {
-    const int type_n = static_cast<std::underlying_type<LogType>::type>(type);
+    const int typeN = static_cast<std::underlying_type_t<LogType>>(type);
     /* Coloured files are less than ideal */
     if (HYP_DEBUG_OUTPUT_STREAM == stdout)
-        printf("%s[%s]\33[0m ", g_log_colour_table[type_n], g_log_type_table[type_n]);
+        printf("%s[%s]\33[0m ", g_logColourTable[typeN], g_logTypeTable[typeN]);
     else
-        fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_log_type_table[type_n]);
+        fprintf(HYP_DEBUG_OUTPUT_STREAM, "[%s] ", g_logTypeTable[typeN]);
 
     if (callee != nullptr)
         fprintf(HYP_DEBUG_OUTPUT_STREAM, "%s(line:%u): ", callee, line);

@@ -16,7 +16,7 @@ class BLASUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(BLASUpdaterSystem);
 
 public:
-    BLASUpdaterSystem(EntityManager& entity_manager);
+    BLASUpdaterSystem(EntityManager& entityManager);
     virtual ~BLASUpdaterSystem() override = default;
 
     virtual bool ShouldCreateForScene(Scene* scene) const override;

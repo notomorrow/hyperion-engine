@@ -21,7 +21,7 @@ struct StaticMap
     std::array<std::pair<Key, Value>, Size> pairs;
 
     using Iterator = typename std::array<std::pair<Key, Value>, Size>::iterator;
-    using ConstIterator = typename std::array<std::pair<Key, Value>, Size>::const_iterator;
+    using ConstIterator = typename std::array<std::pair<Key, Value>, Size>::constIterator;
 
     // constexpr const Value &operator[](const Key &key) const
     // {

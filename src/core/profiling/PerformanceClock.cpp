@@ -3,10 +3,10 @@
 #include <core/utilities/Time.hpp>
 
 #ifdef HYP_UNIX
-    #include <sys/time.h>
+#include <sys/time.h>
 #elif defined(HYP_WINDOWS)
-    #define WIN32_LEAN_AND_MEAN
-    #include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #endif
 
 namespace hyperion {
@@ -39,20 +39,20 @@ uint64 PerformanceClock::TimeSince(uint64 microseconds)
 }
 
 PerformanceClock::PerformanceClock()
-    : m_start_time_us(0),
-      m_end_time_us(0)
+    : m_startTimeUs(0),
+      m_endTimeUs(0)
 {
 }
 
 void PerformanceClock::Start()
 {
-    m_start_time_us = Now();
-    m_end_time_us = 0;
+    m_startTimeUs = Now();
+    m_endTimeUs = 0;
 }
 
 void PerformanceClock::Stop()
 {
-    m_end_time_us = Now();
+    m_endTimeUs = Now();
 }
 
 } // namespace profiling

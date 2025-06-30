@@ -39,7 +39,7 @@ namespace hyperion {
 
 HYP_API void Node_OnPostLoad(Node& node)
 {
-    node.SetScene(g_engine->GetDefaultWorld()->GetDetachedScene(g_game_thread));
+    node.SetScene(g_engine->GetDefaultWorld()->GetDetachedScene(g_gameThread));
 }
 
 #pragma region NodeTag
@@ -70,36 +70,36 @@ String NodeTag::ToString() const
 // this Node is held on a component that the EntityManager has.
 // In practice it only really shows up on UI objects where UIObject holds a reference to a Node.
 
-Node::Node(Name name, const Transform& local_transform)
-    : Node(name, Handle<Entity>::empty, local_transform)
+Node::Node(Name name, const Transform& localTransform)
+    : Node(name, Handle<Entity>::empty, localTransform)
 {
 }
 
-Node::Node(Name name, const Handle<Entity>& entity, const Transform& local_transform)
-    : Node(Type::NODE, name, entity, local_transform, GetDefaultScene())
+Node::Node(Name name, const Handle<Entity>& entity, const Transform& localTransform)
+    : Node(Type::NODE, name, entity, localTransform, GetDefaultScene())
 {
 }
 
-Node::Node(Name name, const Handle<Entity>& entity, const Transform& local_transform, Scene* scene)
-    : Node(Type::NODE, name, entity, local_transform, scene)
+Node::Node(Name name, const Handle<Entity>& entity, const Transform& localTransform, Scene* scene)
+    : Node(Type::NODE, name, entity, localTransform, scene)
 {
 }
 
-Node::Node(Type type, Name name, const Handle<Entity>& entity, const Transform& local_transform, Scene* scene)
+Node::Node(Type type, Name name, const Handle<Entity>& entity, const Transform& localTransform, Scene* scene)
     : m_type(type),
       m_name(name.IsValid() ? name : NAME("<unnamed>")),
-      m_parent_node(nullptr),
-      m_local_transform(local_transform),
+      m_parentNode(nullptr),
+      m_localTransform(localTransform),
       m_scene(scene != nullptr ? scene : GetDefaultScene()),
-      m_transform_locked(false),
-      m_transform_changed(false),
+      m_transformLocked(false),
+      m_transformChanged(false),
       m_delegates(MakeUnique<Delegates>())
 {
     SetEntity(entity);
 
     if (scene != nullptr)
     {
-        for (const Handle<Node>& child : m_child_nodes)
+        for (const Handle<Node>& child : m_childNodes)
         {
             if (!child.IsValid())
             {
@@ -115,38 +115,38 @@ Node::Node(Node&& other) noexcept
     : m_type(other.m_type),
       m_flags(other.m_flags),
       m_name(other.m_name),
-      m_parent_node(other.m_parent_node),
-      m_local_transform(other.m_local_transform),
-      m_world_transform(other.m_world_transform),
-      m_entity_aabb(other.m_entity_aabb),
+      m_parentNode(other.m_parentNode),
+      m_localTransform(other.m_localTransform),
+      m_worldTransform(other.m_worldTransform),
+      m_entityAabb(other.m_entityAabb),
       m_scene(other.m_scene),
-      m_transform_locked(other.m_transform_locked),
-      m_transform_changed(other.m_transform_changed),
+      m_transformLocked(other.m_transformLocked),
+      m_transformChanged(other.m_transformChanged),
       m_delegates(std::move(other.m_delegates))
 {
     other.m_type = Type::NODE;
     other.m_flags = NodeFlags::NONE;
     other.m_name = NAME("<unnamed>");
-    other.m_parent_node = nullptr;
-    other.m_local_transform = Transform::identity;
-    other.m_world_transform = Transform::identity;
-    other.m_entity_aabb = BoundingBox::Empty();
+    other.m_parentNode = nullptr;
+    other.m_localTransform = Transform::identity;
+    other.m_worldTransform = Transform::identity;
+    other.m_entityAabb = BoundingBox::Empty();
     other.m_scene = GetDefaultScene();
-    other.m_transform_locked = false;
-    other.m_transform_changed = false;
+    other.m_transformLocked = false;
+    other.m_transformChanged = false;
 
     Handle<Entity> entity = other.m_entity;
     other.m_entity = Handle<Entity>::empty;
     SetEntity(entity);
 
-    m_child_nodes = std::move(other.m_child_nodes);
+    m_childNodes = std::move(other.m_childNodes);
     m_descendants = std::move(other.m_descendants);
 
-    for (const Handle<Node>& node : m_child_nodes)
+    for (const Handle<Node>& node : m_childNodes)
     {
         AssertThrow(node.IsValid());
 
-        node->m_parent_node = this;
+        node->m_parentNode = this;
         node->SetScene(m_scene);
     }
 }
@@ -171,23 +171,23 @@ Node& Node::operator=(Node&& other) noexcept
     m_flags = other.m_flags;
     other.m_flags = NodeFlags::NONE;
 
-    m_parent_node = other.m_parent_node;
-    other.m_parent_node = nullptr;
+    m_parentNode = other.m_parentNode;
+    other.m_parentNode = nullptr;
 
-    m_transform_locked = other.m_transform_locked;
-    other.m_transform_locked = false;
+    m_transformLocked = other.m_transformLocked;
+    other.m_transformLocked = false;
 
-    m_transform_changed = other.m_transform_changed;
-    other.m_transform_changed = false;
+    m_transformChanged = other.m_transformChanged;
+    other.m_transformChanged = false;
 
-    m_local_transform = other.m_local_transform;
-    other.m_local_transform = Transform::identity;
+    m_localTransform = other.m_localTransform;
+    other.m_localTransform = Transform::identity;
 
-    m_world_transform = other.m_world_transform;
-    other.m_world_transform = Transform::identity;
+    m_worldTransform = other.m_worldTransform;
+    other.m_worldTransform = Transform::identity;
 
-    m_entity_aabb = other.m_entity_aabb;
-    other.m_entity_aabb = BoundingBox::Empty();
+    m_entityAabb = other.m_entityAabb;
+    other.m_entityAabb = BoundingBox::Empty();
 
     m_scene = other.m_scene;
     other.m_scene = GetDefaultScene();
@@ -198,14 +198,14 @@ Node& Node::operator=(Node&& other) noexcept
 
     m_name = std::move(other.m_name);
 
-    m_child_nodes = std::move(other.m_child_nodes);
+    m_childNodes = std::move(other.m_childNodes);
     m_descendants = std::move(other.m_descendants);
 
-    for (const Handle<Node>& node : m_child_nodes)
+    for (const Handle<Node>& node : m_childNodes)
     {
         AssertThrow(node.IsValid());
 
-        node->m_parent_node = this;
+        node->m_parentNode = this;
         node->SetScene(m_scene);
     }
 
@@ -216,14 +216,14 @@ Node::~Node()
 {
     HYP_LOG(Node, Debug, "Destroying Node {}", m_name);
 
-    for (const Handle<Node>& child : m_child_nodes)
+    for (const Handle<Node>& child : m_childNodes)
     {
         if (!child.IsValid())
         {
             continue;
         }
 
-        child->m_parent_node = nullptr;
+        child->m_parentNode = nullptr;
     }
 }
 
@@ -234,7 +234,7 @@ void Node::Init()
         InitObject(m_entity);
     }
 
-    for (const Handle<Node>& child : m_child_nodes)
+    for (const Handle<Node>& child : m_childNodes)
     {
         InitObject(child);
     }
@@ -257,9 +257,9 @@ void Node::SetName(Name name)
     m_name = name;
 
 #ifdef HYP_EDITOR
-    GetEditorDelegates([this](EditorDelegates* editor_delegates)
+    GetEditorDelegates([this](EditorDelegates* editorDelegates)
         {
-            editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Name")));
+            editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Name")));
         });
 #endif
 }
@@ -281,9 +281,9 @@ void Node::SetFlags(EnumFlags<NodeFlags> flags)
     m_flags = flags;
 
 #ifdef HYP_EDITOR
-    GetEditorDelegates([this](EditorDelegates* editor_delegates)
+    GetEditorDelegates([this](EditorDelegates* editorDelegates)
         {
-            editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Flags")));
+            editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Flags")));
         });
 #endif
 }
@@ -300,12 +300,12 @@ bool Node::IsOrHasParent(const Node* node) const
         return true;
     }
 
-    if (m_parent_node == nullptr)
+    if (m_parentNode == nullptr)
     {
         return false;
     }
 
-    return m_parent_node->IsOrHasParent(node);
+    return m_parentNode->IsOrHasParent(node);
 }
 
 Node* Node::FindParentWithName(UTF8StringView name) const
@@ -315,12 +315,12 @@ Node* Node::FindParentWithName(UTF8StringView name) const
         return const_cast<Node*>(this);
     }
 
-    if (m_parent_node == nullptr)
+    if (m_parentNode == nullptr)
     {
         return nullptr;
     }
 
-    return m_parent_node->FindParentWithName(name);
+    return m_parentNode->FindParentWithName(name);
 }
 
 void Node::SetScene(Scene* scene)
@@ -334,11 +334,11 @@ void Node::SetScene(Scene* scene)
 
     if (m_scene != scene)
     {
-        Scene* previous_scene = m_scene;
+        Scene* previousScene = m_scene;
 
 #ifdef HYP_DEBUG_MODE
         AssertThrowMsg(
-            previous_scene != nullptr,
+            previousScene != nullptr,
             "Previous scene is null when setting new scene for Node %s - should be set to detached world scene by default",
             m_name.LookupString());
 #endif
@@ -346,22 +346,22 @@ void Node::SetScene(Scene* scene)
         m_scene = scene;
 
 #ifdef HYP_EDITOR
-        GetEditorDelegates([this](EditorDelegates* editor_delegates)
+        GetEditorDelegates([this](EditorDelegates* editorDelegates)
             {
-                editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Scene")));
+                editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Scene")));
             });
 #endif
 
         // Move entity from previous scene to new scene
         if (m_entity.IsValid())
         {
-            if (previous_scene->GetEntityManager() != m_scene->GetEntityManager())
+            if (previousScene->GetEntityManager() != m_scene->GetEntityManager())
             {
-                if (previous_scene != nullptr && previous_scene->GetEntityManager() != nullptr)
+                if (previousScene != nullptr && previousScene->GetEntityManager() != nullptr)
                 {
                     AssertThrow(m_scene->GetEntityManager() != nullptr);
 
-                    previous_scene->GetEntityManager()->MoveEntity(m_entity, m_scene->GetEntityManager());
+                    previousScene->GetEntityManager()->MoveEntity(m_entity, m_scene->GetEntityManager());
                 }
                 else
                 {
@@ -371,9 +371,9 @@ void Node::SetScene(Scene* scene)
                     m_entity.Reset();
 
 #ifdef HYP_EDITOR
-                    GetEditorDelegates([this](EditorDelegates* editor_delegates)
+                    GetEditorDelegates([this](EditorDelegates* editorDelegates)
                         {
-                            editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
+                            editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
                         });
 #endif
                 }
@@ -381,7 +381,7 @@ void Node::SetScene(Scene* scene)
         }
     }
 
-    for (const Handle<Node>& child : m_child_nodes)
+    for (const Handle<Node>& child : m_childNodes)
     {
         if (!child.IsValid())
         {
@@ -403,9 +403,9 @@ void Node::OnNestedNodeAdded(Node* node, bool direct)
 {
     m_descendants.PushBack(node);
 
-    if (m_parent_node != nullptr)
+    if (m_parentNode != nullptr)
     {
-        m_parent_node->OnNestedNodeAdded(node, false);
+        m_parentNode->OnNestedNodeAdded(node, false);
     }
 }
 
@@ -418,9 +418,9 @@ void Node::OnNestedNodeRemoved(Node* node, bool direct)
         m_descendants.Erase(it);
     }
 
-    if (m_parent_node != nullptr)
+    if (m_parentNode != nullptr)
     {
-        m_parent_node->OnNestedNodeRemoved(node, false);
+        m_parentNode->OnNestedNodeRemoved(node, false);
     }
 }
 
@@ -450,22 +450,22 @@ Handle<Node> Node::AddChild(const Handle<Node>& node)
         node->GetName().LookupString(),
         GetName().LookupString());
 
-    m_child_nodes.PushBack(node);
+    m_childNodes.PushBack(node);
 
-    bool was_transform_locked = false;
+    bool wasTransformLocked = false;
 
-    if (node->m_transform_locked)
+    if (node->m_transformLocked)
     {
-        was_transform_locked = true;
+        wasTransformLocked = true;
 
         node->UnlockTransform();
     }
 
-    node->m_parent_node = this;
+    node->m_parentNode = this;
     node->SetScene(m_scene);
     node->UpdateWorldTransform();
 
-    if (was_transform_locked)
+    if (wasTransformLocked)
     {
         node->LockTransform();
     }
@@ -475,13 +475,13 @@ Handle<Node> Node::AddChild(const Handle<Node>& node)
         InitObject(node);
     }
 
-    Node* current_parent = this;
+    Node* currentParent = this;
 
-    while (current_parent != nullptr && current_parent->m_delegates != nullptr)
+    while (currentParent != nullptr && currentParent->m_delegates != nullptr)
     {
-        current_parent->m_delegates->OnChildAdded(node, /* direct */ current_parent == this);
+        currentParent->m_delegates->OnChildAdded(node, /* direct */ currentParent == this);
 
-        current_parent = current_parent->m_parent_node;
+        currentParent = currentParent->m_parentNode;
     }
 
     OnNestedNodeAdded(node, true);
@@ -501,47 +501,47 @@ bool Node::RemoveChild(const Node* node)
         return false;
     }
 
-    auto it = m_child_nodes.FindIf([node](const Handle<Node>& it)
+    auto it = m_childNodes.FindIf([node](const Handle<Node>& it)
         {
             return it.Get() == node;
         });
 
-    if (it == m_child_nodes.End())
+    if (it == m_childNodes.End())
     {
         return false;
     }
 
-    Handle<Node> child_node = std::move(*it);
-    m_child_nodes.Erase(it);
+    Handle<Node> childNode = std::move(*it);
+    m_childNodes.Erase(it);
 
-    AssertThrow(child_node.IsValid());
-    AssertThrow(child_node->GetParent() == this);
+    AssertThrow(childNode.IsValid());
+    AssertThrow(childNode->GetParent() == this);
 
-    bool was_transform_locked = false;
+    bool wasTransformLocked = false;
 
-    if (node->m_transform_locked)
+    if (node->m_transformLocked)
     {
-        was_transform_locked = true;
+        wasTransformLocked = true;
 
-        child_node->UnlockTransform();
+        childNode->UnlockTransform();
     }
 
-    child_node->m_parent_node = nullptr;
-    child_node->SetScene(nullptr);
-    child_node->UpdateWorldTransform();
+    childNode->m_parentNode = nullptr;
+    childNode->SetScene(nullptr);
+    childNode->UpdateWorldTransform();
 
-    if (was_transform_locked)
+    if (wasTransformLocked)
     {
-        child_node->LockTransform();
+        childNode->LockTransform();
     }
 
-    Node* current_parent = this;
+    Node* currentParent = this;
 
-    while (current_parent != nullptr && current_parent->m_delegates != nullptr)
+    while (currentParent != nullptr && currentParent->m_delegates != nullptr)
     {
-        current_parent->m_delegates->OnChildRemoved(const_cast<Node*>(node), /* direct */ current_parent == this);
+        currentParent->m_delegates->OnChildRemoved(const_cast<Node*>(node), /* direct */ currentParent == this);
 
-        current_parent = current_parent->m_parent_node;
+        currentParent = currentParent->m_parentNode;
     }
 
     for (Node* nested : node->GetDescendants())
@@ -549,7 +549,7 @@ bool Node::RemoveChild(const Node* node)
         OnNestedNodeRemoved(nested, false);
     }
 
-    OnNestedNodeRemoved(child_node, true);
+    OnNestedNodeRemoved(childNode, true);
 
     UpdateWorldTransform();
 
@@ -560,47 +560,47 @@ bool Node::RemoveAt(int index)
 {
     if (index < 0)
     {
-        index = int(m_child_nodes.Size()) + index;
+        index = int(m_childNodes.Size()) + index;
     }
 
-    if (index >= m_child_nodes.Size())
+    if (index >= m_childNodes.Size())
     {
         return false;
     }
 
-    const Handle<Node>& child_node = m_child_nodes[index];
+    const Handle<Node>& childNode = m_childNodes[index];
 
-    return RemoveChild(child_node.Get());
+    return RemoveChild(childNode.Get());
 }
 
 bool Node::Remove()
 {
-    if (!m_parent_node)
+    if (!m_parentNode)
     {
         SetScene(nullptr);
 
         return true;
     }
 
-    return m_parent_node->RemoveChild(this);
+    return m_parentNode->RemoveChild(this);
 }
 
 void Node::RemoveAllChildren()
 {
-    for (auto it = m_child_nodes.begin(); it != m_child_nodes.end();)
+    for (auto it = m_childNodes.begin(); it != m_childNodes.end();)
     {
         if (const Handle<Node>& node = *it)
         {
             AssertThrow(node.IsValid());
             AssertThrow(node->GetParent() == this);
 
-            Node* current_parent = this;
+            Node* currentParent = this;
 
-            while (current_parent != nullptr && current_parent->m_delegates != nullptr)
+            while (currentParent != nullptr && currentParent->m_delegates != nullptr)
             {
-                current_parent->m_delegates->OnChildRemoved(node, /* direct */ current_parent == this);
+                currentParent->m_delegates->OnChildRemoved(node, /* direct */ currentParent == this);
 
-                current_parent = current_parent->m_parent_node;
+                currentParent = currentParent->m_parentNode;
             }
 
             for (Node* nested : node->GetDescendants())
@@ -610,11 +610,11 @@ void Node::RemoveAllChildren()
 
             OnNestedNodeRemoved(node, true);
 
-            node->m_parent_node = nullptr;
+            node->m_parentNode = nullptr;
             node->SetScene(nullptr);
         }
 
-        it = m_child_nodes.Erase(it);
+        it = m_childNodes.Erase(it);
     }
 
     UpdateWorldTransform();
@@ -624,15 +624,15 @@ Handle<Node> Node::GetChild(int index) const
 {
     if (index < 0)
     {
-        index = int(m_child_nodes.Size()) + index;
+        index = int(m_childNodes.Size()) + index;
     }
 
-    if (index >= m_child_nodes.Size())
+    if (index >= m_childNodes.Size())
     {
         return Handle<Node>::empty;
     }
 
-    return m_child_nodes[index];
+    return m_childNodes[index];
 }
 
 Handle<Node> Node::Select(UTF8StringView selector) const
@@ -647,47 +647,47 @@ Handle<Node> Node::Select(UTF8StringView selector) const
     char ch;
 
     char buffer[256];
-    uint32 buffer_index = 0;
-    uint32 selector_index = 0;
+    uint32 bufferIndex = 0;
+    uint32 selectorIndex = 0;
 
-    const Node* search_node = this;
+    const Node* searchNode = this;
 
     const char* str = selector.Data();
 
-    while ((ch = str[selector_index]) != '\0')
+    while ((ch = str[selectorIndex]) != '\0')
     {
-        const char prev_selector_char = selector_index == 0
+        const char prevSelectorChar = selectorIndex == 0
             ? '\0'
-            : str[selector_index - 1];
+            : str[selectorIndex - 1];
 
-        ++selector_index;
+        ++selectorIndex;
 
-        if (ch == '/' && prev_selector_char != '\\')
+        if (ch == '/' && prevSelectorChar != '\\')
         {
-            const auto it = search_node->FindChild(buffer);
+            const auto it = searchNode->FindChild(buffer);
 
-            if (it == search_node->GetChildren().End())
+            if (it == searchNode->GetChildren().End())
             {
                 return Handle<Node>::empty;
             }
 
-            search_node = it->Get();
+            searchNode = it->Get();
             result = *it;
 
-            if (!search_node)
+            if (!searchNode)
             {
                 return Handle<Node>::empty;
             }
 
-            buffer_index = 0;
+            bufferIndex = 0;
         }
         else if (ch != '\\')
         {
-            buffer[buffer_index] = ch;
+            buffer[bufferIndex] = ch;
 
-            ++buffer_index;
+            ++bufferIndex;
 
-            if (buffer_index == std::size(buffer))
+            if (bufferIndex == std::size(buffer))
             {
                 HYP_LOG(Node, Warning, "Node search string too long, must be within buffer size limit of {}",
                     std::size(buffer));
@@ -696,20 +696,20 @@ Handle<Node> Node::Select(UTF8StringView selector) const
             }
         }
 
-        buffer[buffer_index] = '\0';
+        buffer[bufferIndex] = '\0';
     }
 
     // find remaining
-    if (buffer_index != 0)
+    if (bufferIndex != 0)
     {
-        const auto it = search_node->FindChild(buffer);
+        const auto it = searchNode->FindChild(buffer);
 
-        if (it == search_node->GetChildren().End())
+        if (it == searchNode->GetChildren().End())
         {
             return Handle<Node>::empty;
         }
 
-        search_node = it->Get();
+        searchNode = it->Get();
         result = *it;
     }
 
@@ -718,7 +718,7 @@ Handle<Node> Node::Select(UTF8StringView selector) const
 
 Node::NodeList::Iterator Node::FindChild(const Node* node)
 {
-    return m_child_nodes.FindIf([node](const auto& it)
+    return m_childNodes.FindIf([node](const auto& it)
         {
             return it.Get() == node;
         });
@@ -726,7 +726,7 @@ Node::NodeList::Iterator Node::FindChild(const Node* node)
 
 Node::NodeList::ConstIterator Node::FindChild(const Node* node) const
 {
-    return m_child_nodes.FindIf([node](const auto& it)
+    return m_childNodes.FindIf([node](const auto& it)
         {
             return it.Get() == node;
         });
@@ -734,53 +734,53 @@ Node::NodeList::ConstIterator Node::FindChild(const Node* node) const
 
 Node::NodeList::Iterator Node::FindChild(const char* name)
 {
-    const WeakName weak_name { name };
+    const WeakName weakName { name };
 
-    return m_child_nodes.FindIf([weak_name](const auto& it)
+    return m_childNodes.FindIf([weakName](const auto& it)
         {
             if (!it.IsValid())
             {
                 return false;
             }
 
-            return it->GetName() == weak_name;
+            return it->GetName() == weakName;
         });
 }
 
 Node::NodeList::ConstIterator Node::FindChild(const char* name) const
 {
-    const WeakName weak_name { name };
+    const WeakName weakName { name };
 
-    return m_child_nodes.FindIf([weak_name](const auto& it)
+    return m_childNodes.FindIf([weakName](const auto& it)
         {
             if (!it.IsValid())
             {
                 return false;
             }
 
-            return it->GetName() == weak_name;
+            return it->GetName() == weakName;
         });
 }
 
 void Node::LockTransform()
 {
-    m_transform_locked = true;
+    m_transformLocked = true;
 
     // set entity to static
     if (m_entity.IsValid())
     {
-        if (const Handle<EntityManager>& entity_manager = m_scene->GetEntityManager())
+        if (const Handle<EntityManager>& entityManager = m_scene->GetEntityManager())
         {
-            entity_manager->AddTag<EntityTag::STATIC>(m_entity);
-            entity_manager->RemoveTag<EntityTag::DYNAMIC>(m_entity);
+            entityManager->AddTag<EntityTag::STATIC>(m_entity);
+            entityManager->RemoveTag<EntityTag::DYNAMIC>(m_entity);
 
             HYP_LOG(Node, Debug, "Node: {} Make Entity #{} static", m_name, m_entity.Id().Value());
         }
 
-        m_transform_changed = false;
+        m_transformChanged = false;
     }
 
-    for (const Handle<Node>& child : m_child_nodes)
+    for (const Handle<Node>& child : m_childNodes)
     {
         if (!child.IsValid())
         {
@@ -793,9 +793,9 @@ void Node::LockTransform()
 
 void Node::UnlockTransform()
 {
-    m_transform_locked = false;
+    m_transformLocked = false;
 
-    for (const Handle<Node>& child : m_child_nodes)
+    for (const Handle<Node>& child : m_childNodes)
     {
         if (!child.IsValid())
         {
@@ -808,24 +808,24 @@ void Node::UnlockTransform()
 
 void Node::SetLocalTransform(const Transform& transform)
 {
-    if (m_transform_locked)
+    if (m_transformLocked)
     {
         return;
     }
 
-    if (m_local_transform == transform)
+    if (m_localTransform == transform)
     {
         return;
     }
 
-    m_local_transform = transform;
+    m_localTransform = transform;
 
     UpdateWorldTransform();
 }
 
-Transform Node::GetRelativeTransform(const Transform& parent_transform) const
+Transform Node::GetRelativeTransform(const Transform& parentTransform) const
 {
-    return parent_transform.GetInverse() * m_world_transform;
+    return parentTransform.GetInverse() * m_worldTransform;
 }
 
 void Node::SetEntity(const Handle<Entity>& entity)
@@ -848,17 +848,17 @@ void Node::SetEntity(const Handle<Entity>& entity)
 
     if (entity.IsValid() && m_scene != nullptr && m_scene->GetEntityManager() != nullptr)
     {
-        EntityManager* previous_entity_manager = entity->GetEntityManager();
+        EntityManager* previousEntityManager = entity->GetEntityManager();
 
         // need to move the entity between EntityManagers
-        if (previous_entity_manager)
+        if (previousEntityManager)
         {
             // Detach entity from its current node, if applicable
             entity->Detach();
 
-            if (previous_entity_manager != m_scene->GetEntityManager().Get())
+            if (previousEntityManager != m_scene->GetEntityManager().Get())
             {
-                previous_entity_manager->MoveEntity(entity, m_scene->GetEntityManager());
+                previousEntityManager->MoveEntity(entity, m_scene->GetEntityManager());
             }
         }
         else
@@ -873,20 +873,20 @@ void Node::SetEntity(const Handle<Entity>& entity)
         m_entity = entity;
 
 #ifdef HYP_EDITOR
-        GetEditorDelegates([this](EditorDelegates* editor_delegates)
+        GetEditorDelegates([this](EditorDelegates* editorDelegates)
             {
-                editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
+                editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
             });
 #endif
 
         // If a TransformComponent already exists on the Entity, allow it to keep its current transform by moving the Node
         // to match it, as long as we're not locked
         // If transform is locked, the Entity's TransformComponent will be synced with the Node's current transform
-        if (TransformComponent* transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity))
+        if (TransformComponent* transformComponent = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity))
         {
             if (!IsTransformLocked())
             {
-                SetWorldTransform(transform_component->transform);
+                SetWorldTransform(transformComponent->transform);
             }
         }
 
@@ -903,13 +903,13 @@ void Node::SetEntity(const Handle<Entity>& entity)
             m_scene->GetEntityManager()->RemoveTag<EntityTag::DYNAMIC>(m_entity);
         }
 
-        // set transform_changed to false until entity is set to DYNAMIC
-        m_transform_changed = false;
+        // set transformChanged to false until entity is set to DYNAMIC
+        m_transformChanged = false;
 
         // Update / add a NodeLinkComponent to the new entity
-        if (NodeLinkComponent* node_link_component = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(m_entity))
+        if (NodeLinkComponent* nodeLinkComponent = m_scene->GetEntityManager()->TryGetComponent<NodeLinkComponent>(m_entity))
         {
-            node_link_component->node = WeakHandleFromThis();
+            nodeLinkComponent->node = WeakHandleFromThis();
         }
         else
         {
@@ -928,12 +928,12 @@ void Node::SetEntity(const Handle<Entity>& entity)
     {
         m_entity = Handle<Entity>::empty;
 
-        m_transform_changed = false;
+        m_transformChanged = false;
 
 #ifdef HYP_EDITOR
-        GetEditorDelegates([this](EditorDelegates* editor_delegates)
+        GetEditorDelegates([this](EditorDelegates* editorDelegates)
             {
-                editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
+                editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("Entity")));
             });
 #endif
 
@@ -947,19 +947,19 @@ void Node::SetEntity(const Handle<Entity>& entity)
 
 void Node::SetEntityAABB(const BoundingBox& aabb)
 {
-    if (m_entity_aabb == aabb)
+    if (m_entityAabb == aabb)
     {
         return;
     }
 
-    m_entity_aabb = aabb;
+    m_entityAabb = aabb;
 
 #ifdef HYP_EDITOR
-    GetEditorDelegates([this](EditorDelegates* editor_delegates)
+    GetEditorDelegates([this](EditorDelegates* editorDelegates)
         {
-            editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("EntityAABB")));
-            editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("LocalAABB")));
-            editor_delegates->OnNodeUpdate(this, Class()->GetProperty(NAME("WorldAABB")));
+            editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("EntityAABB")));
+            editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("LocalAABB")));
+            editorDelegates->OnNodeUpdate(this, Class()->GetProperty(NAME("WorldAABB")));
         });
 #endif
 }
@@ -986,7 +986,7 @@ BoundingBox Node::GetLocalAABBExcludingSelf() const
 
 BoundingBox Node::GetLocalAABB() const
 {
-    BoundingBox aabb = m_entity_aabb.IsValid() ? m_entity_aabb : BoundingBox::Zero();
+    BoundingBox aabb = m_entityAabb.IsValid() ? m_entityAabb : BoundingBox::Zero();
 
     for (const Handle<Node>& child : GetChildren())
     {
@@ -1006,7 +1006,7 @@ BoundingBox Node::GetLocalAABB() const
 
 BoundingBox Node::GetWorldAABB() const
 {
-    BoundingBox aabb = m_world_transform * (m_entity_aabb.IsValid() ? m_entity_aabb : BoundingBox::Zero());
+    BoundingBox aabb = m_worldTransform * (m_entityAabb.IsValid() ? m_entityAabb : BoundingBox::Zero());
 
     for (const Handle<Node>& child : GetChildren())
     {
@@ -1024,9 +1024,9 @@ BoundingBox Node::GetWorldAABB() const
     return aabb;
 }
 
-void Node::UpdateWorldTransform(bool update_child_transforms)
+void Node::UpdateWorldTransform(bool updateChildTransforms)
 {
-    if (m_transform_locked)
+    if (m_transformLocked)
     {
         return;
     }
@@ -1036,70 +1036,70 @@ void Node::UpdateWorldTransform(bool update_child_transforms)
         static_cast<Bone*>(this)->UpdateBoneTransform(); // NOLINT(cppcoreguidelines-pro-type-static-cast-downcast)
     }
 
-    const Transform transform_before = m_world_transform;
+    const Transform transformBefore = m_worldTransform;
 
-    Transform world_transform = m_local_transform;
+    Transform worldTransform = m_localTransform;
 
-    if (m_parent_node != nullptr)
+    if (m_parentNode != nullptr)
     {
-        world_transform = m_parent_node->GetWorldTransform() * m_local_transform;
+        worldTransform = m_parentNode->GetWorldTransform() * m_localTransform;
 
         if (m_flags & NodeFlags::IGNORE_PARENT_TRANSFORM)
         {
             if (m_flags & NodeFlags::IGNORE_PARENT_TRANSLATION)
             {
-                world_transform.GetTranslation() = m_local_transform.GetTranslation();
+                worldTransform.GetTranslation() = m_localTransform.GetTranslation();
             }
 
             if (m_flags & NodeFlags::IGNORE_PARENT_ROTATION)
             {
-                world_transform.GetRotation() = m_local_transform.GetRotation();
+                worldTransform.GetRotation() = m_localTransform.GetRotation();
             }
 
             if (m_flags & NodeFlags::IGNORE_PARENT_SCALE)
             {
-                world_transform.GetScale() = m_local_transform.GetScale();
+                worldTransform.GetScale() = m_localTransform.GetScale();
             }
         }
     }
 
-    m_world_transform = world_transform;
+    m_worldTransform = worldTransform;
 
-    if (m_world_transform == transform_before)
+    if (m_worldTransform == transformBefore)
     {
         return;
     }
 
     if (m_entity.IsValid())
     {
-        const Handle<EntityManager>& entity_manager = m_scene->GetEntityManager();
+        const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
 
-        // if (!m_transform_changed) {
+        // if (!m_transformChanged) {
         //     // Set to dynamic
-        //     if (entity_manager != nullptr) {
-        //         entity_manager->AddTag<EntityTag::DYNAMIC>(m_entity);
-        //         entity_manager->RemoveTag<EntityTag::STATIC>(m_entity);
+        //     if (entityManager != nullptr) {
+        //         entityManager->AddTag<EntityTag::DYNAMIC>(m_entity);
+        //         entityManager->RemoveTag<EntityTag::STATIC>(m_entity);
 
         //         HYP_LOG(Node, Debug, "Node: {}; Make Entity #{} dynamic",
         //             GetName(),
         //             m_entity.Id().Value());
         //     }
 
-        //     m_transform_changed = true;
+        //     m_transformChanged = true;
         // }
 
-        if (entity_manager.IsValid())
+        if (entityManager.IsValid())
         {
-            if (TransformComponent* transform_component = entity_manager->TryGetComponent<TransformComponent>(m_entity))
+            if (TransformComponent* transformComponent = entityManager->TryGetComponent<TransformComponent>(m_entity))
             {
-                transform_component->transform = m_world_transform;
+                transformComponent->transform = m_worldTransform;
             }
             else
             {
-                entity_manager->AddComponent<TransformComponent>(m_entity, TransformComponent { m_world_transform });
+                entityManager->AddComponent<TransformComponent>(m_entity, TransformComponent { m_worldTransform });
             }
 
-            entity_manager->AddTags<
+            entityManager->AddTags<
                 EntityTag::UPDATE_AABB,
                 EntityTag::UPDATE_LIGHT_TRANSFORM,
                 EntityTag::UPDATE_CAMERA_TRANSFORM,
@@ -1107,21 +1107,21 @@ void Node::UpdateWorldTransform(bool update_child_transforms)
         }
     }
 
-    if (update_child_transforms)
+    if (updateChildTransforms)
     {
-        for (const Handle<Node>& node : m_child_nodes)
+        for (const Handle<Node>& node : m_childNodes)
         {
             node->UpdateWorldTransform(true);
         }
     }
 
 #ifdef HYP_EDITOR
-    GetEditorDelegates([this](EditorDelegates* editor_delegates)
+    GetEditorDelegates([this](EditorDelegates* editorDelegates)
         {
-            editor_delegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("LocalTransform")));
-            editor_delegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("WorldTransform")));
-            editor_delegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("LocalAABB")));
-            editor_delegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("WorldAABB")));
+            editorDelegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("LocalTransform")));
+            editorDelegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("WorldTransform")));
+            editorDelegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("LocalAABB")));
+            editorDelegates->OnNodeUpdate(this, Node::Class()->GetProperty(NAME("WorldAABB")));
         });
 #endif
 }
@@ -1130,22 +1130,22 @@ void Node::RefreshEntityTransform()
 {
     if (m_entity.IsValid() && m_scene != nullptr && m_scene->GetEntityManager() != nullptr)
     {
-        if (BoundingBoxComponent* bounding_box_component = m_scene->GetEntityManager()->TryGetComponent<BoundingBoxComponent>(m_entity))
+        if (BoundingBoxComponent* boundingBoxComponent = m_scene->GetEntityManager()->TryGetComponent<BoundingBoxComponent>(m_entity))
         {
-            SetEntityAABB(bounding_box_component->local_aabb);
+            SetEntityAABB(boundingBoxComponent->localAabb);
         }
         else
         {
             SetEntityAABB(BoundingBox::Empty());
         }
 
-        if (TransformComponent* transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity))
+        if (TransformComponent* transformComponent = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity))
         {
-            transform_component->transform = m_world_transform;
+            transformComponent->transform = m_worldTransform;
         }
         else
         {
-            m_scene->GetEntityManager()->AddComponent<TransformComponent>(m_entity, TransformComponent { m_world_transform });
+            m_scene->GetEntityManager()->AddComponent<TransformComponent>(m_entity, TransformComponent { m_worldTransform });
         }
 
         m_scene->GetEntityManager()->AddTags<EntityTag::UPDATE_AABB, EntityTag::UPDATE_LIGHT_TRANSFORM, EntityTag::UPDATE_CAMERA_TRANSFORM, EntityTag::UPDATE_ENV_GRID_TRANSFORM>(m_entity);
@@ -1160,7 +1160,7 @@ uint32 Node::CalculateDepth() const
 {
     uint32 depth = 0;
 
-    Node* parent = m_parent_node;
+    Node* parent = m_parentNode;
 
     while (parent != nullptr)
     {
@@ -1173,106 +1173,106 @@ uint32 Node::CalculateDepth() const
 
 uint32 Node::FindSelfIndex() const
 {
-    if (m_parent_node == nullptr)
+    if (m_parentNode == nullptr)
     {
         return ~0u;
     }
 
-    const auto it = m_parent_node->FindChild(this);
+    const auto it = m_parentNode->FindChild(this);
 
-    if (it == m_parent_node->GetChildren().End())
+    if (it == m_parentNode->GetChildren().End())
     {
         return 0;
     }
 
-    return uint32(it - m_parent_node->GetChildren().Begin());
+    return uint32(it - m_parentNode->GetChildren().Begin());
 }
 
-bool Node::TestRay(const Ray& ray, RayTestResults& out_results, bool use_bvh) const
+bool Node::TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh) const
 {
-    const BoundingBox world_aabb = GetWorldAABB();
+    const BoundingBox worldAabb = GetWorldAABB();
 
-    bool has_entity_hit = false;
+    bool hasEntityHit = false;
 
-    if (ray.TestAABB(world_aabb))
+    if (ray.TestAABB(worldAabb))
     {
         if (m_entity.IsValid())
         {
             const BVHNode* bvh = nullptr;
-            Matrix4 model_matrix = Matrix4::Identity();
+            Matrix4 modelMatrix = Matrix4::Identity();
 
-            if (use_bvh && m_scene && m_scene->GetEntityManager())
+            if (useBvh && m_scene && m_scene->GetEntityManager())
             {
-                if (MeshComponent* mesh_component = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(m_entity); mesh_component && mesh_component->mesh.IsValid())
+                if (MeshComponent* meshComponent = m_scene->GetEntityManager()->TryGetComponent<MeshComponent>(m_entity); meshComponent && meshComponent->mesh.IsValid())
                 {
-                    if (mesh_component->mesh->GetBVH().IsValid())
+                    if (meshComponent->mesh->GetBVH().IsValid())
                     {
-                        bvh = &mesh_component->mesh->GetBVH();
+                        bvh = &meshComponent->mesh->GetBVH();
                     }
                 }
 
-                if (TransformComponent* transform_component = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity))
+                if (TransformComponent* transformComponent = m_scene->GetEntityManager()->TryGetComponent<TransformComponent>(m_entity))
                 {
-                    model_matrix = transform_component->transform.GetMatrix();
+                    modelMatrix = transformComponent->transform.GetMatrix();
                 }
             }
 
             if (bvh)
             {
-                const Ray local_space_ray = model_matrix.Inverted() * ray;
+                const Ray localSpaceRay = modelMatrix.Inverted() * ray;
 
-                RayTestResults local_bvh_results = bvh->TestRay(local_space_ray);
+                RayTestResults localBvhResults = bvh->TestRay(localSpaceRay);
 
-                if (local_bvh_results.Any())
+                if (localBvhResults.Any())
                 {
-                    const Matrix4 normal_matrix = model_matrix.Transposed().Inverted();
+                    const Matrix4 normalMatrix = modelMatrix.Transposed().Inverted();
 
-                    RayTestResults bvh_results;
+                    RayTestResults bvhResults;
 
-                    for (RayHit hit : local_bvh_results)
+                    for (RayHit hit : localBvhResults)
                     {
                         hit.id = m_entity.Id().Value();
-                        hit.user_data = nullptr;
+                        hit.userData = nullptr;
 
-                        Vec4f transformed_normal = normal_matrix * Vec4f(hit.normal, 0.0f);
-                        hit.normal = transformed_normal.GetXYZ().Normalized();
+                        Vec4f transformedNormal = normalMatrix * Vec4f(hit.normal, 0.0f);
+                        hit.normal = transformedNormal.GetXYZ().Normalized();
 
-                        Vec4f transformed_position = model_matrix * Vec4f(hit.hitpoint, 1.0f);
-                        transformed_position /= transformed_position.w;
+                        Vec4f transformedPosition = modelMatrix * Vec4f(hit.hitpoint, 1.0f);
+                        transformedPosition /= transformedPosition.w;
 
-                        hit.hitpoint = transformed_position.GetXYZ();
+                        hit.hitpoint = transformedPosition.GetXYZ();
 
                         hit.distance = (hit.hitpoint - ray.position).Length();
 
-                        bvh_results.AddHit(hit);
+                        bvhResults.AddHit(hit);
                     }
 
-                    out_results.Merge(std::move(bvh_results));
+                    outResults.Merge(std::move(bvhResults));
 
-                    has_entity_hit = true;
+                    hasEntityHit = true;
                 }
             }
             else
             {
-                has_entity_hit = ray.TestAABB(world_aabb, m_entity.Id().Value(), nullptr, out_results);
+                hasEntityHit = ray.TestAABB(worldAabb, m_entity.Id().Value(), nullptr, outResults);
             }
         }
 
-        for (const Handle<Node>& child_node : m_child_nodes)
+        for (const Handle<Node>& childNode : m_childNodes)
         {
-            if (!child_node.IsValid())
+            if (!childNode.IsValid())
             {
                 continue;
             }
 
-            if (child_node->TestRay(ray, out_results, use_bvh))
+            if (childNode->TestRay(ray, outResults, useBvh))
             {
-                has_entity_hit = true;
+                hasEntityHit = true;
             }
         }
     }
 
-    return has_entity_hit;
+    return hasEntityHit;
 }
 
 Handle<Node> Node::FindChildWithEntity(const Entity* entity) const
@@ -1394,13 +1394,13 @@ const NodeTag& Node::GetTag(WeakName key) const
 {
     HYP_SCOPE;
 
-    static const NodeTag empty_tag = NodeTag();
+    static const NodeTag emptyTag = NodeTag();
 
     const auto it = m_tags.FindAs(key);
 
     if (it == m_tags.End())
     {
-        return empty_tag;
+        return emptyTag;
     }
 
     return *it;
@@ -1424,11 +1424,11 @@ EditorDelegates* Node::GetEditorDelegates()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    if (EditorSubsystem* editor_subsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
+    if (EditorSubsystem* editorSubsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
     {
-        return editor_subsystem->GetEditorDelegates();
+        return editorSubsystem->GetEditorDelegates();
     }
 
     return nullptr;
@@ -1437,22 +1437,22 @@ EditorDelegates* Node::GetEditorDelegates()
 template <class Function>
 void Node::GetEditorDelegates(Function&& func)
 {
-    if (Threads::IsOnThread(g_game_thread))
+    if (Threads::IsOnThread(g_gameThread))
     {
-        if (EditorSubsystem* editor_subsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
+        if (EditorSubsystem* editorSubsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
         {
-            func(editor_subsystem->GetEditorDelegates());
+            func(editorSubsystem->GetEditorDelegates());
         }
     }
     else
     {
-        Threads::GetThread(g_game_thread)->GetScheduler().Enqueue([weak_this = WeakHandleFromThis(), func = std::forward<Function>(func)]()
+        Threads::GetThread(g_gameThread)->GetScheduler().Enqueue([weakThis = WeakHandleFromThis(), func = std::forward<Function>(func)]()
             {
-                if (Handle<Node> strong_this = weak_this.Lock())
+                if (Handle<Node> strongThis = weakThis.Lock())
                 {
-                    if (EditorSubsystem* editor_subsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
+                    if (EditorSubsystem* editorSubsystem = g_engine->GetDefaultWorld()->GetSubsystem<EditorSubsystem>())
                     {
-                        func(editor_subsystem->GetEditorDelegates());
+                        func(editorSubsystem->GetEditorDelegates());
                     }
 
                     return;

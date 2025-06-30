@@ -22,7 +22,7 @@ namespace hyperion {
 
 RenderCamera::RenderCamera(Camera* camera)
     : m_camera(camera),
-      m_buffer_data {}
+      m_bufferData {}
 {
 }
 
@@ -49,25 +49,25 @@ void RenderCamera::Update_Internal()
 
 GpuBufferHolderBase* RenderCamera::GetGpuBufferHolder() const
 {
-    return g_render_global_state->gpu_buffers[GRB_CAMERAS];
+    return g_renderGlobalState->gpuBuffers[GRB_CAMERAS];
 }
 
 void RenderCamera::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    *static_cast<CameraShaderData*>(m_buffer_address) = m_buffer_data;
+    *static_cast<CameraShaderData*>(m_bufferAddress) = m_bufferData;
 
-    GetGpuBufferHolder()->MarkDirty(m_buffer_index);
+    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
 }
 
-void RenderCamera::SetBufferData(const CameraShaderData& buffer_data)
+void RenderCamera::SetBufferData(const CameraShaderData& bufferData)
 {
     HYP_SCOPE;
 
-    Execute([this, buffer_data]()
+    Execute([this, bufferData]()
         {
-            m_buffer_data = buffer_data;
+            m_bufferData = bufferData;
 
             if (IsInitialized())
             {
@@ -76,28 +76,28 @@ void RenderCamera::SetBufferData(const CameraShaderData& buffer_data)
         });
 }
 
-void RenderCamera::ApplyJitter(const RenderSetup& render_setup)
+void RenderCamera::ApplyJitter(const RenderSetup& renderSetup)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    static const float jitter_scale = 0.25f;
+    static const float jitterScale = 0.25f;
 
-    AssertThrow(m_buffer_index != ~0u);
+    AssertThrow(m_bufferIndex != ~0u);
 
-    const uint32 frame_counter = render_setup.world->GetBufferData().frame_counter + 1;
+    const uint32 frameCounter = renderSetup.world->GetBufferData().frameCounter + 1;
 
-    CameraShaderData& buffer_data = *static_cast<CameraShaderData*>(m_buffer_address);
+    CameraShaderData& bufferData = *static_cast<CameraShaderData*>(m_bufferAddress);
 
-    if (buffer_data.projection[3][3] < MathUtil::epsilon_f)
+    if (bufferData.projection[3][3] < MathUtil::epsilonF)
     {
         Vec4f jitter = Vec4f::Zero();
 
-        Matrix4::Jitter(frame_counter, buffer_data.dimensions.x, buffer_data.dimensions.y, jitter);
+        Matrix4::Jitter(frameCounter, bufferData.dimensions.x, bufferData.dimensions.y, jitter);
 
-        buffer_data.jitter = jitter * jitter_scale;
+        bufferData.jitter = jitter * jitterScale;
 
-        g_render_global_state->gpu_buffers[GRB_CAMERAS]->MarkDirty(m_buffer_index);
+        g_renderGlobalState->gpuBuffers[GRB_CAMERAS]->MarkDirty(m_bufferIndex);
     }
 }
 

@@ -39,27 +39,27 @@ App::~App()
 
 void App::LaunchGame(const Handle<Game>& game)
 {
-    Threads::AssertOnThread(g_main_thread);
+    Threads::AssertOnThread(g_mainThread);
 
     AssertThrow(game.IsValid());
 
-    Handle<AppContextBase> app_context;
+    Handle<AppContextBase> appContext;
 
 #ifdef HYP_SDL
-    app_context = CreateObject<SDLAppContext>("Hyperion", GetCommandLineArguments());
+    appContext = CreateObject<SDLAppContext>("Hyperion", GetCommandLineArguments());
 #else
     HYP_FAIL("AppContext not implemented for this platform");
 #endif
 
-    app_context->SetGame(game);
+    appContext->SetGame(game);
 
     Vec2i resolution = { 1280, 720 };
 
-    EnumFlags<WindowFlags> window_flags = WindowFlags::HIGH_DPI;
+    EnumFlags<WindowFlags> windowFlags = WindowFlags::HIGH_DPI;
 
     if (GetCommandLineArguments()["Headless"].ToBool())
     {
-        window_flags |= WindowFlags::HEADLESS;
+        windowFlags |= WindowFlags::HEADLESS;
     }
 
     if (GetCommandLineArguments()["ResX"].IsNumber())
@@ -72,40 +72,40 @@ void App::LaunchGame(const Handle<Game>& game)
         resolution.y = GetCommandLineArguments()["ResY"].ToInt32();
     }
 
-    if (!(window_flags & WindowFlags::HEADLESS))
+    if (!(windowFlags & WindowFlags::HEADLESS))
     {
         HYP_LOG(Core, Info, "Running in windowed mode: {}x{}", resolution.x, resolution.y);
 
-        app_context->SetMainWindow(app_context->CreateSystemWindow({ "Hyperion Engine", resolution, window_flags }));
+        appContext->SetMainWindow(appContext->CreateSystemWindow({ "Hyperion Engine", resolution, windowFlags }));
     }
     else
     {
         HYP_LOG(Core, Info, "Running in headless mode");
     }
 
-    AssertThrow(g_render_backend != nullptr);
-    HYPERION_ASSERT_RESULT(g_render_backend->Initialize(*app_context));
+    AssertThrow(g_renderBackend != nullptr);
+    HYPERION_ASSERT_RESULT(g_renderBackend->Initialize(*appContext));
 
     RenderObjectDeleter<Platform::current>::Initialize();
 
-    g_render_global_state = new RenderGlobalState();
+    g_renderGlobalState = new RenderGlobalState();
 
-    g_engine->SetAppContext(app_context);
+    g_engine->SetAppContext(appContext);
     InitObject(g_engine);
 
-    m_game_thread = MakeUnique<GameThread>(app_context);
-    m_game_thread->SetGame(game);
-    m_game_thread->Start();
+    m_gameThread = MakeUnique<GameThread>(appContext);
+    m_gameThread->SetGame(game);
+    m_gameThread->Start();
 
     // Loop blocks the main thread until the game is done.
     AssertThrow(g_engine->StartRenderLoop());
 
-    delete g_render_global_state;
-    g_render_global_state = nullptr;
+    delete g_renderGlobalState;
+    g_renderGlobalState = nullptr;
 
     RenderObjectDeleter<Platform::current>::RemoveAllNow(/* force */ true);
 
-    HYPERION_ASSERT_RESULT(g_render_backend->Destroy());
+    HYPERION_ASSERT_RESULT(g_renderBackend->Destroy());
 }
 
 } // namespace sys

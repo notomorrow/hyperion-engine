@@ -38,22 +38,22 @@ struct WorldGridPatchGenerationQueue
 {
     Mutex mutex;
     Queue<Handle<StreamingCell>> queue;
-    AtomicVar<bool> has_updates;
+    AtomicVar<bool> hasUpdates;
 };
 
 struct WorldGridState
 {
-    FlatMap<Vec2i, Task<void>> patch_generation_tasks;
+    FlatMap<Vec2i, Task<void>> patchGenerationTasks;
 
-    Queue<StreamingCellUpdate> patch_update_queue;
-    AtomicVar<uint32> patch_update_queue_size { 0 };
-    mutable Mutex patch_update_queue_mutex;
+    Queue<StreamingCellUpdate> patchUpdateQueue;
+    AtomicVar<uint32> patchUpdateQueueSize { 0 };
+    mutable Mutex patchUpdateQueueMutex;
 
     FlatMap<Vec2i, Handle<StreamingCell>> patches;
-    mutable Mutex patches_mutex;
+    mutable Mutex patchesMutex;
 
     // Keep track of the last desired patches to avoid unnecessary comparison and locking
-    HashCode::ValueType previous_desired_patch_coords_hash = 0;
+    HashCode::ValueType previousDesiredPatchCoordsHash = 0;
 
     void PushUpdate(StreamingCellUpdate&& update);
 };

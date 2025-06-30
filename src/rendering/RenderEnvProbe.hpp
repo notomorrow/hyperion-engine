@@ -31,51 +31,51 @@ public:
     friend class EnvProbeRenderer;
     friend class ReflectionProbeRenderer;
 
-    RenderEnvProbe(EnvProbe* env_probe);
+    RenderEnvProbe(EnvProbe* envProbe);
     virtual ~RenderEnvProbe() override;
 
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE EnvProbe* GetEnvProbe() const
     {
-        return m_env_probe;
+        return m_envProbe;
     }
 
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE uint32 GetTextureSlot() const
     {
-        return m_texture_slot;
+        return m_textureSlot;
     }
 
-    void SetTextureSlot(uint32 texture_slot);
+    void SetTextureSlot(uint32 textureSlot);
 
     HYP_FORCE_INLINE const Vec4i& GetPositionInGrid() const
     {
-        return m_position_in_grid;
+        return m_positionInGrid;
     }
 
-    void SetPositionInGrid(const Vec4i& position_in_grid);
+    void SetPositionInGrid(const Vec4i& positionInGrid);
 
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE const EnvProbeShaderData& GetBufferData() const
     {
-        return m_buffer_data;
+        return m_bufferData;
     }
 
-    void SetBufferData(const EnvProbeShaderData& buffer_data);
+    void SetBufferData(const EnvProbeShaderData& bufferData);
 
     HYP_FORCE_INLINE const TResourceHandle<RenderView>& GetViewRenderResourceHandle() const
     {
-        return m_render_view;
+        return m_renderView;
     }
 
-    void SetViewResourceHandle(TResourceHandle<RenderView>&& render_view);
+    void SetViewResourceHandle(TResourceHandle<RenderView>&& renderView);
 
     HYP_FORCE_INLINE const TResourceHandle<RenderShadowMap>& GetShadowMapRenderResourceHandle() const
     {
-        return m_shadow_map;
+        return m_shadowMap;
     }
 
-    void SetShadowMap(TResourceHandle<RenderShadowMap>&& shadow_map);
+    void SetShadowMap(TResourceHandle<RenderShadowMap>&& shadowMap);
 
     HYP_FORCE_INLINE const ShaderRef& GetShader() const
     {
@@ -84,12 +84,12 @@ public:
 
     HYP_FORCE_INLINE const EnvProbeSphericalHarmonics& GetSphericalHarmonics() const
     {
-        return m_spherical_harmonics;
+        return m_sphericalHarmonics;
     }
 
-    void SetSphericalHarmonics(const EnvProbeSphericalHarmonics& spherical_harmonics);
+    void SetSphericalHarmonics(const EnvProbeSphericalHarmonics& sphericalHarmonics);
 
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 protected:
     virtual void Initialize_Internal() override;
@@ -103,21 +103,21 @@ private:
 
     void UpdateBufferData();
 
-    EnvProbe* m_env_probe;
+    EnvProbe* m_envProbe;
 
-    EnvProbeShaderData m_buffer_data;
+    EnvProbeShaderData m_bufferData;
 
-    uint32 m_texture_slot;
+    uint32 m_textureSlot;
 
-    Vec4i m_position_in_grid;
+    Vec4i m_positionInGrid;
 
     ShaderRef m_shader;
 
     // temp
-    EnvProbeSphericalHarmonics m_spherical_harmonics;
+    EnvProbeSphericalHarmonics m_sphericalHarmonics;
 
-    TResourceHandle<RenderView> m_render_view;
-    TResourceHandle<RenderShadowMap> m_shadow_map;
+    TResourceHandle<RenderView> m_renderView;
+    TResourceHandle<RenderShadowMap> m_shadowMap;
 };
 
 class EnvProbeRenderer : public RendererBase
@@ -128,12 +128,12 @@ public:
     virtual void Initialize() override;
     virtual void Shutdown() override;
 
-    virtual void RenderFrame(FrameBase* frame, const RenderSetup& render_setup) override final;
+    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) override final;
 
 protected:
     EnvProbeRenderer();
 
-    virtual void RenderProbe(FrameBase* frame, const RenderSetup& render_setup, EnvProbe* env_probe) = 0;
+    virtual void RenderProbe(FrameBase* frame, const RenderSetup& renderSetup, EnvProbe* envProbe) = 0;
 
     PassData* CreateViewPassData(View* view, PassDataExt&) override;
 };
@@ -150,10 +150,10 @@ public:
 protected:
     void CreateShader();
 
-    virtual void RenderProbe(FrameBase* frame, const RenderSetup& render_setup, EnvProbe* env_probe) override;
+    virtual void RenderProbe(FrameBase* frame, const RenderSetup& renderSetup, EnvProbe* envProbe) override;
 
-    void ComputePrefilteredEnvMap(FrameBase* frame, const RenderSetup& render_setup, EnvProbe* env_probe);
-    void ComputeSH(FrameBase* frame, const RenderSetup& render_setup, EnvProbe* env_probe);
+    void ComputePrefilteredEnvMap(FrameBase* frame, const RenderSetup& renderSetup, EnvProbe* envProbe);
+    void ComputeSH(FrameBase* frame, const RenderSetup& renderSetup, EnvProbe* envProbe);
 
     ShaderRef m_shader;
 };

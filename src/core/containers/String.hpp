@@ -55,27 +55,27 @@ public:
     using Iterator = typename Base::Iterator;
     using ConstIterator = typename Base::ConstIterator;
 
-    static constexpr bool is_contiguous = true;
+    static constexpr bool isContiguous = true;
 
     static const String empty;
 
-    static constexpr bool is_ansi = TStringType == ANSI;
-    static constexpr bool is_utf8 = TStringType == UTF8;
-    static constexpr bool is_utf16 = TStringType == UTF16;
-    static constexpr bool is_utf32 = TStringType == UTF32;
-    static constexpr bool is_wide = TStringType == WIDE_CHAR;
+    static constexpr bool isAnsi = TStringType == ANSI;
+    static constexpr bool isUtf8 = TStringType == UTF8;
+    static constexpr bool isUtf16 = TStringType == UTF16;
+    static constexpr bool isUtf32 = TStringType == UTF32;
+    static constexpr bool isWide = TStringType == WIDE_CHAR;
 
-    static_assert(!is_utf8 || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "UTF-8 Strings must have CharType equal to char or unsigned char");
-    static_assert(!is_ansi || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "ANSI Strings must have CharType equal to char or unsigned char");
-    static_assert(!is_utf16 || std::is_same_v<CharType, utf::u16char>, "UTF-16 Strings must have CharType equal to utf::u16char");
-    static_assert(!is_utf32 || std::is_same_v<CharType, utf::u32char>, "UTF-32 Strings must have CharType equal to utf::u32char");
-    static_assert(!is_wide || std::is_same_v<CharType, wchar_t>, "Wide Strings must have CharType equal to wchar_t");
+    static_assert(!isUtf8 || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "UTF-8 Strings must have CharType equal to char or unsigned char");
+    static_assert(!isAnsi || (std::is_same_v<CharType, char> || std::is_same_v<CharType, unsigned char>), "ANSI Strings must have CharType equal to char or unsigned char");
+    static_assert(!isUtf16 || std::is_same_v<CharType, utf::u16char>, "UTF-16 Strings must have CharType equal to utf::u16char");
+    static_assert(!isUtf32 || std::is_same_v<CharType, utf::u32char>, "UTF-32 Strings must have CharType equal to utf::u32char");
+    static_assert(!isWide || std::is_same_v<CharType, wchar_t>, "Wide Strings must have CharType equal to wchar_t");
 
-    static constexpr int string_type = TStringType;
+    static constexpr int stringType = TStringType;
 
-    static constexpr SizeType not_found = SizeType(-1);
+    static constexpr SizeType notFound = SizeType(-1);
 
-    static_assert(!is_utf8 || std::is_same_v<CharType, char>, "UTF-8 Strings must have CharType equal to char");
+    static_assert(!isUtf8 || std::is_same_v<CharType, char>, "UTF-8 Strings must have CharType equal to char");
 
     template <int FirstStringType, int SecondStringType>
     friend constexpr bool operator<(const containers::String<FirstStringType>& lhs, const StringView<SecondStringType>& rhs);
@@ -96,9 +96,9 @@ public:
         *this = other;
     }
 
-    String(const utilities::StringView<TStringType>& string_view)
+    String(const utilities::StringView<TStringType>& stringView)
         : Base(),
-          m_length(string_view.Length())
+          m_length(stringView.Length())
     {
         if (m_length == 0)
         {
@@ -107,21 +107,21 @@ public:
             return;
         }
 
-        Base::ResizeUninitialized(string_view.Size() + 1);
-        Memory::MemCpy(Base::Data(), string_view.Data(), string_view.Size() * sizeof(CharType));
+        Base::ResizeUninitialized(stringView.Size() + 1);
+        Memory::MemCpy(Base::Data(), stringView.Data(), stringView.Size() * sizeof(CharType));
         Base::Data()[Base::m_size - 1] = CharType('\0'); // Null-terminate the string
     }
 
     String(const CharType* str);
     String(const CharType* _begin, const CharType* _end);
 
-    explicit String(ConstByteView byte_view);
+    explicit String(ConstByteView byteView);
 
     template <int TOtherStringType, typename = std::enable_if_t<TOtherStringType != TStringType>>
-    String(const utilities::StringView<TOtherStringType>& string_view)
+    String(const utilities::StringView<TOtherStringType>& stringView)
         : String()
     {
-        *this = string_view;
+        *this = stringView;
     }
 
     String(String&& other) noexcept;
@@ -131,10 +131,10 @@ public:
     String& operator=(String&& other) noexcept;
 
     template <int TOtherStringType, typename = std::enable_if_t<TOtherStringType != TStringType>>
-    HYP_FORCE_INLINE String& operator=(const utilities::StringView<TOtherStringType>& string_view)
+    HYP_FORCE_INLINE String& operator=(const utilities::StringView<TOtherStringType>& stringView)
     {
         Clear();
-        Append(string_view.Data(), string_view.Data() + string_view.Size());
+        Append(stringView.Data(), stringView.Data() + stringView.Size());
 
         return *this;
     }
@@ -178,19 +178,19 @@ public:
         return *this;
     }
 
-    String operator+(const utilities::StringView<TStringType>& string_view) const;
-    String& operator+=(const utilities::StringView<TStringType>& string_view);
+    String operator+(const utilities::StringView<TStringType>& stringView) const;
+    String& operator+=(const utilities::StringView<TStringType>& stringView);
 
     String operator+(CharType ch) const;
     String& operator+=(CharType ch);
 
-    template <class TWidestCharType, typename = std::enable_if_t<is_utf8 && std::is_same_v<TWidestCharType, WidestCharType>>>
+    template <class TWidestCharType, typename = std::enable_if_t<isUtf8 && std::is_same_v<TWidestCharType, WidestCharType>>>
     HYP_FORCE_INLINE String operator+(TWidestCharType ch) const
     {
         return String(*this) += ch;
     }
 
-    template <class TWidestCharType, typename = std::enable_if_t<is_utf8 && std::is_same_v<TWidestCharType, WidestCharType>>>
+    template <class TWidestCharType, typename = std::enable_if_t<isUtf8 && std::is_same_v<TWidestCharType, WidestCharType>>>
     HYP_FORCE_INLINE String& operator+=(TWidestCharType ch)
     {
         Append(ch);
@@ -289,13 +289,13 @@ public:
     /*! \brief Check if the string contains the given character. */
     HYP_FORCE_INLINE bool Contains(WidestCharType ch) const
     {
-        return ch != CharType { 0 } && utilities::StringView<TStringType>(*this).FindFirstIndex(ch) != not_found;
+        return ch != CharType { 0 } && utilities::StringView<TStringType>(*this).FindFirstIndex(ch) != notFound;
     }
 
     /*! \brief Check if the string contains the given string. */
     HYP_FORCE_INLINE bool Contains(const utilities::StringView<TStringType>& substr) const
     {
-        return FindFirstIndex(substr) != not_found;
+        return FindFirstIndex(substr) != notFound;
     }
 
     /*! \brief Find the index of the first occurrence of the character. */
@@ -355,30 +355,30 @@ public:
         Base::Refit();
     }
 
-    void Append(const utilities::StringView<TStringType>& string_view);
+    void Append(const utilities::StringView<TStringType>& stringView);
     void Append(CharType value);
 
     void Append(const CharType* str);
     void Append(const CharType* _begin, const CharType* _end);
 
-    template <class OtherCharType, typename = std::enable_if_t<is_utf8 && !std::is_same_v<OtherCharType, CharType> && (std::is_same_v<OtherCharType, u32char> || std::is_same_v<OtherCharType, u16char> || std::is_same_v<OtherCharType, wchar_t>)>>
+    template <class OtherCharType, typename = std::enable_if_t<isUtf8 && !std::is_same_v<OtherCharType, CharType> && (std::is_same_v<OtherCharType, u32char> || std::is_same_v<OtherCharType, u16char> || std::is_same_v<OtherCharType, wchar_t>)>>
     void Append(const OtherCharType* str)
     {
-        const SizeType size = utf::utf_strlen<OtherCharType, false>(str);
+        const SizeType size = utf::utfStrlen<OtherCharType, false>(str);
 
         Append(str, str + size);
     }
 
-    template <class OtherCharType, typename = std::enable_if_t<is_utf8 && !std::is_same_v<OtherCharType, CharType> && (std::is_same_v<OtherCharType, u32char> || std::is_same_v<OtherCharType, u16char> || std::is_same_v<OtherCharType, wchar_t>)>>
+    template <class OtherCharType, typename = std::enable_if_t<isUtf8 && !std::is_same_v<OtherCharType, CharType> && (std::is_same_v<OtherCharType, u32char> || std::is_same_v<OtherCharType, u16char> || std::is_same_v<OtherCharType, wchar_t>)>>
     void Append(const OtherCharType* _begin, const OtherCharType* _end)
     {
-        // const int size = utf::utf_strlen<OtherCharType, false>(str);
+        // const int size = utf::utfStrlen<OtherCharType, false>(str);
 
         // const SizeType size = SizeType(_end - _begin);
 
         if constexpr (std::is_same_v<OtherCharType, u32char>)
         {
-            const SizeType len = utf::utf32_to_utf8(_begin, _end, nullptr);
+            const SizeType len = utf::utf32ToUtf8(_begin, _end, nullptr);
 
             if (len == 0)
             {
@@ -387,7 +387,7 @@ public:
 
             Array<utf::u8char> buffer;
             buffer.Resize(len + 1);
-            utf::utf32_to_utf8(_begin, _end, buffer.Data());
+            utf::utf32ToUtf8(_begin, _end, buffer.Data());
 
             for (SizeType i = 0; i < buffer.Size(); i++)
             {
@@ -396,7 +396,7 @@ public:
         }
         else if constexpr (std::is_same_v<OtherCharType, u16char>)
         {
-            const SizeType len = utf::utf16_to_utf8(_begin, _end, nullptr);
+            const SizeType len = utf::utf16ToUtf8(_begin, _end, nullptr);
 
             if (len == 0)
             {
@@ -405,7 +405,7 @@ public:
 
             Array<utf::u8char> buffer;
             buffer.Resize(len + 1);
-            utf::utf16_to_utf8(_begin, _end, buffer.Data());
+            utf::utf16ToUtf8(_begin, _end, buffer.Data());
 
             for (SizeType i = 0; i < buffer.Size(); i++)
             {
@@ -414,7 +414,7 @@ public:
         }
         else if constexpr (std::is_same_v<OtherCharType, wchar_t>)
         {
-            const SizeType len = utf::wide_to_utf8(_begin, _end, nullptr);
+            const SizeType len = utf::wideToUtf8(_begin, _end, nullptr);
 
             if (len == 0)
             {
@@ -423,7 +423,7 @@ public:
 
             Array<utf::u8char> buffer;
             buffer.Resize(len + 1);
-            utf::wide_to_utf8(_begin, _end, buffer.Data());
+            utf::wideToUtf8(_begin, _end, buffer.Data());
 
             for (SizeType i = 0; i < buffer.Size(); i++)
             {
@@ -432,11 +432,11 @@ public:
         }
         else
         {
-            static_assert(resolution_failure<OtherCharType>, "Invalid character type");
+            static_assert(resolutionFailure<OtherCharType>, "Invalid character type");
         }
     }
 
-    template <class OtherCharType, typename = std::enable_if_t<is_utf8 && !std::is_same_v<OtherCharType, CharType> && (std::is_same_v<OtherCharType, u32char> || std::is_same_v<OtherCharType, u16char> || std::is_same_v<OtherCharType, wchar_t>)>>
+    template <class OtherCharType, typename = std::enable_if_t<isUtf8 && !std::is_same_v<OtherCharType, CharType> && (std::is_same_v<OtherCharType, u32char> || std::is_same_v<OtherCharType, u16char> || std::is_same_v<OtherCharType, wchar_t>)>>
     HYP_FORCE_INLINE void Append(OtherCharType ch)
     {
         SizeType codepoints = 0;
@@ -449,10 +449,10 @@ public:
         }
     }
 
-    /*template <int other_string_type>
+    /*template <int otherStringType>
     void Concat(const String<other_string_type> &other);
 
-    template <int other_string_type>
+    template <int otherStringType>
     void Concat(String<other_string_type> &&other);*/
 
     typename Base::ValueType PopBack();
@@ -482,30 +482,30 @@ public:
     template <class... SeparatorType>
     HYP_NODISCARD Array<String> Split(SeparatorType... separators) const
     {
-        hyperion::FixedArray<WidestCharType, sizeof...(separators)> separator_values { WidestCharType(separators)... };
+        hyperion::FixedArray<WidestCharType, sizeof...(separators)> separatorValues { WidestCharType(separators)... };
 
         const CharType* data = Base::Data();
         const SizeType size = Size();
 
         Array<String> tokens;
 
-        String working_string;
-        working_string.Reserve(size);
+        String workingString;
+        workingString.Reserve(size);
 
-        if (!is_utf8 || m_length == size)
+        if (!isUtf8 || m_length == size)
         {
             for (SizeType i = 0; i < size; i++)
             {
                 const CharType ch = data[i];
 
-                if (separator_values.Contains(ch))
+                if (separatorValues.Contains(ch))
                 {
-                    tokens.PushBack(std::move(working_string));
-                    // working_string now cleared
+                    tokens.PushBack(std::move(workingString));
+                    // workingString now cleared
                     continue;
                 }
 
-                working_string.Append(ch);
+                workingString.Append(ch);
             }
         }
         else
@@ -514,28 +514,28 @@ public:
             {
                 SizeType codepoints = 0;
 
-                const utf::u32char char_32 = utf::Char8to32(
+                const utf::u32char char32 = utf::Char8to32(
                     data + i,
                     MathUtil::Min(sizeof(utf::u32char), size - i),
                     codepoints);
 
                 i += codepoints;
 
-                if (separator_values.Contains(char_32))
+                if (separatorValues.Contains(char32))
                 {
-                    tokens.PushBack(std::move(working_string));
+                    tokens.PushBack(std::move(workingString));
 
                     continue;
                 }
 
-                working_string.Append(char_32);
+                workingString.Append(char32);
             }
         }
 
         // finalize by pushing back remaining string
-        if (working_string.Any())
+        if (workingString.Any())
         {
-            tokens.PushBack(std::move(working_string));
+            tokens.PushBack(std::move(workingString));
         }
 
         return tokens;
@@ -560,15 +560,15 @@ public:
     }
 
     template <class Container, class JoinByFunction>
-    static String Join(const Container& container, const String& separator, JoinByFunction&& join_by_function)
+    static String Join(const Container& container, const String& separator, JoinByFunction&& joinByFunction)
     {
-        FunctionWrapper<NormalizedType<JoinByFunction>> join_by_func(std::forward<JoinByFunction>(join_by_function));
+        FunctionWrapper<NormalizedType<JoinByFunction>> joinByFunc(std::forward<JoinByFunction>(joinByFunction));
 
         String result;
 
         for (auto it = container.Begin(); it != container.End(); ++it)
         {
-            result.Append(ToString(join_by_func(*it)));
+            result.Append(ToString(joinByFunc(*it)));
 
             if (it != container.End() - 1)
             {
@@ -590,19 +590,19 @@ public:
 
             if (it != container.End() - 1)
             {
-                if constexpr (is_utf8 && std::is_same_v<utf::u32char, decltype(separator)>)
+                if constexpr (isUtf8 && std::is_same_v<utf::u32char, decltype(separator)>)
                 {
                     SizeType codepoints = 0;
-                    utf::u8char separator_bytes[sizeof(utf::u32char) + 1] = { '\0' };
-                    utf::Char32to8(separator, separator_bytes, codepoints);
+                    utf::u8char separatorBytes[sizeof(utf::u32char) + 1] = { '\0' };
+                    utf::Char32to8(separator, separatorBytes, codepoints);
 
 #ifdef HYP_DEBUG_MODE
-                    AssertThrow(codepoints <= HYP_ARRAY_SIZE(separator_bytes));
+                    AssertThrow(codepoints <= HYP_ARRAY_SIZE(separatorBytes));
 #endif
 
                     for (SizeType codepoint = 0; codepoint < codepoints; codepoint++)
                     {
-                        result.Append(separator_bytes[codepoint]);
+                        result.Append(separatorBytes[codepoint]);
                     }
                 }
                 else
@@ -616,31 +616,31 @@ public:
     }
 
     template <class Container, class JoinByFunction>
-    HYP_NODISCARD static String Join(const Container& container, WidestCharType separator, JoinByFunction&& join_by_function)
+    HYP_NODISCARD static String Join(const Container& container, WidestCharType separator, JoinByFunction&& joinByFunction)
     {
-        FunctionWrapper<NormalizedType<JoinByFunction>> join_by_func(std::forward<JoinByFunction>(join_by_function));
+        FunctionWrapper<NormalizedType<JoinByFunction>> joinByFunc(std::forward<JoinByFunction>(joinByFunction));
 
         String result;
 
         for (auto it = container.Begin(); it != container.End(); ++it)
         {
-            result.Append(ToString(join_by_func(*it)));
+            result.Append(ToString(joinByFunc(*it)));
 
             if (it != container.End() - 1)
             {
-                if constexpr (is_utf8 && std::is_same_v<utf::u32char, decltype(separator)>)
+                if constexpr (isUtf8 && std::is_same_v<utf::u32char, decltype(separator)>)
                 {
                     SizeType codepoints = 0;
-                    utf::u8char separator_bytes[sizeof(utf::u32char) + 1] = { '\0' };
-                    utf::Char32to8(separator, separator_bytes, codepoints);
+                    utf::u8char separatorBytes[sizeof(utf::u32char) + 1] = { '\0' };
+                    utf::Char32to8(separator, separatorBytes, codepoints);
 
 #ifdef HYP_DEBUG_MODE
-                    AssertThrow(codepoints <= HYP_ARRAY_SIZE(separator_bytes));
+                    AssertThrow(codepoints <= HYP_ARRAY_SIZE(separatorBytes));
 #endif
 
                     for (SizeType codepoint = 0; codepoint < codepoints; codepoint++)
                     {
-                        result.Append(separator_bytes[codepoint]);
+                        result.Append(separatorBytes[codepoint]);
                     }
                 }
                 else
@@ -689,7 +689,7 @@ public:
 
     HYP_NODISCARD static Array<ubyte> Base64Decode(const String& in)
     {
-        static const int lookup_table[] = {
+        static const int lookupTable[] = {
             -1, -1, -1, -1, -1, -1, -1, -1,
             -1, -1, -1, -1, -1, -1, -1, -1,
             -1, -1, -1, -1, -1, -1, -1, -1,
@@ -731,12 +731,12 @@ public:
 
         for (auto&& c : in)
         {
-            if (lookup_table[c] == -1)
+            if (lookupTable[c] == -1)
             {
                 break;
             }
 
-            i = (i << 6) + lookup_table[c];
+            i = (i << 6) + lookupTable[c];
             j += 6;
 
             if (j >= 0)
@@ -751,17 +751,17 @@ public:
 
     HYP_NODISCARD String<UTF8> ToUTF8() const
     {
-        if constexpr (is_utf8)
+        if constexpr (isUtf8)
         {
             return *this;
         }
-        else if constexpr (is_ansi)
+        else if constexpr (isAnsi)
         {
             return String<UTF8>(Data());
         }
-        else if constexpr (is_utf16)
+        else if constexpr (isUtf16)
         {
-            SizeType len = utf::utf16_to_utf8(Data(), Data() + Size(), nullptr);
+            SizeType len = utf::utf16ToUtf8(Data(), Data() + Size(), nullptr);
 
             if (len == 0)
             {
@@ -771,13 +771,13 @@ public:
             Array<utf::u8char> buffer;
             buffer.Resize(len + 1);
 
-            utf::utf16_to_utf8(Data(), Data() + Size(), buffer.Data());
+            utf::utf16ToUtf8(Data(), Data() + Size(), buffer.Data());
 
             return String<UTF8>(buffer.ToByteView());
         }
-        else if constexpr (is_utf32)
+        else if constexpr (isUtf32)
         {
-            SizeType len = utf::utf32_to_utf8(Data(), Data() + Size(), nullptr);
+            SizeType len = utf::utf32ToUtf8(Data(), Data() + Size(), nullptr);
 
             if (len == 0)
             {
@@ -787,13 +787,13 @@ public:
             Array<utf::u8char> buffer;
             buffer.Resize(len + 1);
 
-            utf::utf32_to_utf8(Data(), Data() + Size(), buffer.Data());
+            utf::utf32ToUtf8(Data(), Data() + Size(), buffer.Data());
 
             return String<UTF8>(buffer.ToByteView());
         }
-        else if constexpr (is_wide)
+        else if constexpr (isWide)
         {
-            SizeType len = utf::wide_to_utf8(Data(), Data() + Size(), nullptr);
+            SizeType len = utf::wideToUtf8(Data(), Data() + Size(), nullptr);
 
             if (len == 0)
             {
@@ -803,7 +803,7 @@ public:
             Array<utf::u8char> buffer;
             buffer.Resize(len + 1);
 
-            utf::wide_to_utf8(Data(), Data() + Size(), buffer.Data());
+            utf::wideToUtf8(Data(), Data() + Size(), buffer.Data());
 
             return String<UTF8>(buffer.ToByteView());
         }
@@ -815,13 +815,13 @@ public:
 
     HYP_NODISCARD String<WIDE_CHAR> ToWide() const
     {
-        if constexpr (is_wide)
+        if constexpr (isWide)
         {
             return *this;
         }
-        else if constexpr (is_utf8 || is_ansi)
+        else if constexpr (isUtf8 || isAnsi)
         {
-            SizeType len = utf::utf8_to_wide(reinterpret_cast<const utf::u8char*>(Data()), reinterpret_cast<const utf::u8char*>(Data()) + Size(), nullptr);
+            SizeType len = utf::utf8ToWide(reinterpret_cast<const utf::u8char*>(Data()), reinterpret_cast<const utf::u8char*>(Data()) + Size(), nullptr);
 
             if (len == 0)
             {
@@ -831,13 +831,13 @@ public:
             Array<wchar_t> buffer;
             buffer.Resize(len + 1);
 
-            utf::utf8_to_wide(reinterpret_cast<const utf::u8char*>(Data()), reinterpret_cast<const utf::u8char*>(Data()) + Size(), buffer.Data());
+            utf::utf8ToWide(reinterpret_cast<const utf::u8char*>(Data()), reinterpret_cast<const utf::u8char*>(Data()) + Size(), buffer.Data());
 
             return String<WIDE_CHAR>(buffer.Data());
         }
-        else if constexpr (is_utf16)
+        else if constexpr (isUtf16)
         {
-            SizeType len = utf::utf16_to_wide(Data(), Data() + Size(), nullptr);
+            SizeType len = utf::utf16ToWide(Data(), Data() + Size(), nullptr);
 
             if (len == 0)
             {
@@ -847,13 +847,13 @@ public:
             Array<wchar_t> buffer;
             buffer.Resize(len + 1);
 
-            utf::utf16_to_wide(Data(), Data() + Size(), buffer.Data());
+            utf::utf16ToWide(Data(), Data() + Size(), buffer.Data());
 
             return String<WIDE_CHAR>(buffer.Data());
         }
-        else if constexpr (is_utf32)
+        else if constexpr (isUtf32)
         {
-            SizeType len = utf::utf32_to_wide(Data(), Data() + Size(), nullptr);
+            SizeType len = utf::utf32ToWide(Data(), Data() + Size(), nullptr);
 
             if (len == 0)
             {
@@ -863,7 +863,7 @@ public:
             Array<wchar_t> buffer;
             buffer.Resize(len + 1);
 
-            utf::utf32_to_wide(Data(), Data() + Size(), buffer.Data());
+            utf::utf32ToWide(Data(), Data() + Size(), buffer.Data());
 
             return String<WIDE_CHAR>(buffer.Data());
         }
@@ -876,20 +876,20 @@ public:
     template <class Integral, typename = std::enable_if_t<std::is_integral_v<NormalizedType<Integral>>>>
     HYP_NODISCARD static String ToString(Integral value)
     {
-        SizeType result_size;
-        utf::utf_to_str<Integral, CharType>(value, result_size, nullptr);
+        SizeType resultSize;
+        utf::utfToStr<Integral, CharType>(value, resultSize, nullptr);
 
-        AssertThrow(result_size >= 1);
+        AssertThrow(resultSize >= 1);
 
         String result;
-        result.Reserve(result_size - 1); // String class automatically adds 1 for null character
+        result.Reserve(resultSize - 1); // String class automatically adds 1 for null character
 
         Array<CharType> buffer;
-        buffer.Resize(result_size);
+        buffer.Resize(resultSize);
 
-        utf::utf_to_str<Integral, CharType>(value, result_size, buffer.Data());
+        utf::utfToStr<Integral, CharType>(value, resultSize, buffer.Data());
 
-        for (SizeType i = 0; i < result_size - 1; i++)
+        for (SizeType i = 0; i < resultSize - 1; i++)
         {
             result.Append(buffer[i]);
         }
@@ -946,7 +946,7 @@ String<TStringType>::String(const CharType* str)
     }
 
     SizeType codepoints;
-    const SizeType len = utf::utf_strlen<CharType, is_utf8>(str, codepoints);
+    const SizeType len = utf::utfStrlen<CharType, isUtf8>(str, codepoints);
 
     if (len == -1)
     {
@@ -977,9 +977,9 @@ String<TStringType>::String(const CharType* _begin, const CharType* _end)
 
     const SizeType size = SizeType(_end - _begin);
 
-    if constexpr (is_utf8)
+    if constexpr (isUtf8)
     {
-        const SizeType len = utf::utf8_strlen(_begin, _end);
+        const SizeType len = utf::utf8Strlen(_begin, _end);
 
         if (len == -1)
         {
@@ -1020,20 +1020,20 @@ String<TStringType>::String(String&& other) noexcept
 }
 
 template <int TStringType>
-String<TStringType>::String(ConstByteView byte_view)
+String<TStringType>::String(ConstByteView byteView)
     : Base(),
       m_length(0)
 {
-    SizeType size = byte_view.Size();
+    SizeType size = byteView.Size();
 
     for (SizeType index = 0; index < size; ++index)
     {
 
 #ifdef HYP_DEBUG_MODE
-        AssertThrowMsg(byte_view.Data()[index] >= 0 && byte_view.Data()[index] <= 255, "Out of character range");
+        AssertThrowMsg(byteView.Data()[index] >= 0 && byteView.Data()[index] <= 255, "Out of character range");
 #endif
 
-        if (byte_view.Data()[index] == '\0')
+        if (byteView.Data()[index] == '\0')
         {
             size = index;
 
@@ -1042,9 +1042,9 @@ String<TStringType>::String(ConstByteView byte_view)
     }
 
     Base::ResizeZeroed((size / sizeof(CharType)) + 1); // +1 for null char
-    Memory::MemCpy(Data(), byte_view.Data(), size / sizeof(CharType));
+    Memory::MemCpy(Data(), byteView.Data(), size / sizeof(CharType));
 
-    m_length = utf::utf_strlen<CharType, is_utf8>(Base::Data());
+    m_length = utf::utfStrlen<CharType, isUtf8>(Base::Data());
 }
 
 template <int TStringType>
@@ -1115,18 +1115,18 @@ auto String<TStringType>::operator=(String&& other) noexcept -> String&
 // }
 
 template <int TStringType>
-auto String<TStringType>::operator+(const utilities::StringView<TStringType>& string_view) const -> String
+auto String<TStringType>::operator+(const utilities::StringView<TStringType>& stringView) const -> String
 {
     String result(*this);
-    result.Append(string_view);
+    result.Append(stringView);
 
     return result;
 }
 
 template <int TStringType>
-auto String<TStringType>::operator+=(const utilities::StringView<TStringType>& string_view) -> String&
+auto String<TStringType>::operator+=(const utilities::StringView<TStringType>& stringView) -> String&
 {
-    Append(string_view);
+    Append(stringView);
 
     return *this;
 }
@@ -1166,7 +1166,7 @@ bool String<TStringType>::operator==(const String& other) const
         return true;
     }
 
-    return utf::utf_strcmp<CharType, is_utf8>(Base::Data(), other.Data()) == 0;
+    return utf::utfStrcmp<CharType, isUtf8>(Base::Data(), other.Data()) == 0;
 }
 
 template <int TStringType>
@@ -1183,7 +1183,7 @@ bool String<TStringType>::operator==(const CharType* str) const
         return *this == empty;
     }
 
-    const SizeType len = utf::utf_strlen<CharType, is_utf8>(str);
+    const SizeType len = utf::utfStrlen<CharType, isUtf8>(str);
 
     if (len == -1)
     {
@@ -1200,7 +1200,7 @@ bool String<TStringType>::operator==(const CharType* str) const
         return true;
     }
 
-    return utf::utf_strcmp<CharType, is_utf8>(Base::Data(), str) == 0;
+    return utf::utfStrcmp<CharType, isUtf8>(Base::Data(), str) == 0;
 }
 
 template <int TStringType>
@@ -1212,7 +1212,7 @@ bool String<TStringType>::operator!=(const CharType* str) const
 template <int TStringType>
 bool String<TStringType>::operator<(const String& other) const
 {
-    return utf::utf_strcmp<CharType, is_utf8>(Base::Data(), other.Data()) < 0;
+    return utf::utfStrcmp<CharType, isUtf8>(Base::Data(), other.Data()) < 0;
 }
 
 template <int TStringType>
@@ -1230,9 +1230,9 @@ auto String<TStringType>::GetChar(SizeType index) const -> WidestCharType
     AssertThrow(index < size);
 #endif
 
-    if constexpr (is_utf8)
+    if constexpr (isUtf8)
     {
-        return utf::utf8_charat(reinterpret_cast<const utf::u8char*>(Data()), size, index);
+        return utf::utf8Charat(reinterpret_cast<const utf::u8char*>(Data()), size, index);
     }
     else
     {
@@ -1241,17 +1241,17 @@ auto String<TStringType>::GetChar(SizeType index) const -> WidestCharType
 }
 
 template <int TStringType>
-void String<TStringType>::Append(const utilities::StringView<TStringType>& string_view)
+void String<TStringType>::Append(const utilities::StringView<TStringType>& stringView)
 {
-    if (Size() + string_view.Size() + 1 >= Base::Capacity())
+    if (Size() + stringView.Size() + 1 >= Base::Capacity())
     {
-        if (Base::Capacity() >= Size() + string_view.Size() + 1)
+        if (Base::Capacity() >= Size() + stringView.Size() + 1)
         {
             Base::ResetOffsets();
         }
         else
         {
-            Base::SetCapacity(Base::CalculateDesiredCapacity(Size() + string_view.Size() + 1));
+            Base::SetCapacity(Base::CalculateDesiredCapacity(Size() + stringView.Size() + 1));
         }
     }
 
@@ -1259,13 +1259,13 @@ void String<TStringType>::Append(const utilities::StringView<TStringType>& strin
 
     auto* buffer = Base::GetBuffer();
 
-    Memory::MemCpy(buffer + Base::m_size, string_view.Data(), string_view.Size() * sizeof(CharType));
+    Memory::MemCpy(buffer + Base::m_size, stringView.Data(), stringView.Size() * sizeof(CharType));
 
-    Base::m_size += string_view.Size();
+    Base::m_size += stringView.Size();
 
     Base::PushBack(CharType { 0 });
 
-    m_length += string_view.m_length;
+    m_length += stringView.m_length;
 }
 
 template <int TStringType>
@@ -1315,14 +1315,14 @@ auto String<TStringType>::PopBack() -> typename Base::ValueType
 {
     AssertDebugMsg(Base::m_size > 1, "Cannot pop back from an empty string");
 
-    CharType last_char = 0;
-    std::swap(Base::GetBuffer()[Base::m_size - 2], last_char); // -2 because we want the last character before the null terminator
+    CharType lastChar = 0;
+    std::swap(Base::GetBuffer()[Base::m_size - 2], lastChar); // -2 because we want the last character before the null terminator
 
     Base::PopBack(); // remove current null terminator, leaving the last character in place
 
     --m_length;
 
-    return last_char;
+    return lastChar;
 }
 
 template <int TStringType>
@@ -1363,21 +1363,21 @@ auto String<TStringType>::ToLower() const -> String
 
     for (SizeType i = 0; i < Size();)
     {
-        if constexpr (is_utf8)
+        if constexpr (isUtf8)
         {
             SizeType codepoints = 0;
 
             union
             {
-                utf::u32char char_u32;
-                int char_i32;
+                utf::u32char charU32;
+                int charI32;
             };
 
             // evil union byte magic
-            char_u32 = utf::Char8to32(Data() + i, sizeof(utf::u32char), codepoints);
-            char_i32 = std::tolower(char_i32);
+            charU32 = utf::Char8to32(Data() + i, sizeof(utf::u32char), codepoints);
+            charI32 = std::tolower(charI32);
 
-            result.Append(char_u32);
+            result.Append(charU32);
 
             i += codepoints;
         }
@@ -1400,21 +1400,21 @@ auto String<TStringType>::ToUpper() const -> String
 
     for (SizeType i = 0; i < Size();)
     {
-        if constexpr (is_utf8)
+        if constexpr (isUtf8)
         {
             SizeType codepoints = 0;
 
             union
             {
-                utf::u32char char_u32;
-                int char_i32;
+                utf::u32char charU32;
+                int charI32;
             };
 
             // evil union byte magic
-            char_u32 = utf::Char8to32(Data() + i, sizeof(utf::u32char), codepoints);
-            char_i32 = std::toupper(char_i32);
+            charU32 = utf::Char8to32(Data() + i, sizeof(utf::u32char), codepoints);
+            charI32 = std::toupper(charI32);
 
-            result.Append(char_u32);
+            result.Append(charU32);
 
             i += codepoints;
         }
@@ -1441,17 +1441,17 @@ auto String<TStringType>::TrimmedLeft() const -> String
     String res;
     res.Reserve(Size());
 
-    SizeType start_index;
+    SizeType startIndex;
 
-    for (start_index = 0; start_index < Size(); ++start_index)
+    for (startIndex = 0; startIndex < Size(); ++startIndex)
     {
-        if (!std::isspace(Data()[start_index]))
+        if (!std::isspace(Data()[startIndex]))
         {
             break;
         }
     }
 
-    for (SizeType index = start_index; index < Size(); ++index)
+    for (SizeType index = startIndex; index < Size(); ++index)
     {
         res.Append(Data()[index]);
     }
@@ -1465,17 +1465,17 @@ auto String<TStringType>::TrimmedRight() const -> String
     String res;
     res.Reserve(Size());
 
-    SizeType start_index;
+    SizeType startIndex;
 
-    for (start_index = Size(); start_index > 0; --start_index)
+    for (startIndex = Size(); startIndex > 0; --startIndex)
     {
-        if (!std::isspace(Data()[start_index - 1]))
+        if (!std::isspace(Data()[startIndex - 1]))
         {
             break;
         }
     }
 
-    for (SizeType index = 0; index < start_index; ++index)
+    for (SizeType index = 0; index < startIndex; ++index)
     {
         res.Append(Data()[index]);
     }
@@ -1495,19 +1495,19 @@ String<TStringType> String<TStringType>::ReplaceAll(const String& search, const 
 
     while (index < Length())
     {
-        auto found_index = tmp.FindFirstIndex(search);
+        auto foundIndex = tmp.FindFirstIndex(search);
 
-        if (found_index == not_found)
+        if (foundIndex == notFound)
         {
             result.Append(tmp);
             break;
         }
 
-        result.Append(tmp.Substr(0, found_index));
+        result.Append(tmp.Substr(0, foundIndex));
         result.Append(replace);
 
-        tmp = tmp.Substr(found_index + search.Length());
-        index += found_index + search.Length();
+        tmp = tmp.Substr(foundIndex + search.Length());
+        index += foundIndex + search.Length();
     }
 
     return result;
@@ -1522,7 +1522,7 @@ String<TStringType> String<TStringType>::Escape() const
     String result;
     result.Reserve(size);
 
-    if (!is_utf8 || m_length == size)
+    if (!isUtf8 || m_length == size)
     {
         for (SizeType i = 0; i < size; i++)
         {
@@ -1574,18 +1574,18 @@ String<TStringType> String<TStringType>::Escape() const
 
             union
             {
-                uint32 char_u32;
-                uint8 char_u8[sizeof(utf::u32char)];
+                uint32 charU32;
+                uint8 charU8[sizeof(utf::u32char)];
             };
 
-            char_u32 = utf::Char8to32(
+            charU32 = utf::Char8to32(
                 Data() + i,
                 MathUtil::Min(sizeof(utf::u32char), size - i),
                 codepoints);
 
             i += codepoints;
 
-            switch (char_u32)
+            switch (charU32)
             {
             case uint32('\n'):
                 result.Append("\\n");
@@ -1618,21 +1618,21 @@ String<TStringType> String<TStringType>::Escape() const
                 result.Append("\\\'");
                 break;
             default:
-                result.Append(char_u8[0]);
+                result.Append(charU8[0]);
 
                 if (codepoints >= 2)
                 {
-                    result.Append(char_u8[1]);
+                    result.Append(charU8[1]);
                 }
 
                 if (codepoints >= 3)
                 {
-                    result.Append(char_u8[2]);
+                    result.Append(charU8[2]);
                 }
 
                 if (codepoints == 4)
                 {
-                    result.Append(char_u8[3]);
+                    result.Append(charU8[3]);
                 }
 
                 break;
@@ -1655,19 +1655,19 @@ auto String<TStringType>::Substr(SizeType first, SizeType last) const -> String
 
     const auto size = Size();
 
-    if constexpr (is_utf8) {
+    if constexpr (isUtf8) {
         String result;
 
-        SizeType char_index = 0;
+        SizeType charIndex = 0;
 
         for (SizeType i = 0; i < size;) {
             auto c = Base::operator[](i);
 
-            if (char_index >= last) {
+            if (charIndex >= last) {
                 break;
             }
 
-            if (char_index >= first) {
+            if (charIndex >= first) {
                 if (c >= 0 && c <= 127) {
                     result.Append(Base::operator[](i++));
                 } else if ((c & 0xE0) == 0xC0) {
@@ -1707,7 +1707,7 @@ auto String<TStringType>::Substr(SizeType first, SizeType last) const -> String
                 }
             }
 
-            ++char_index;
+            ++charIndex;
         }
 
         return result;
@@ -1755,8 +1755,8 @@ constexpr bool operator<(const String<TStringType>& lhs, const utilities::String
         return false;
     }
 
-    // @FIXME: Use strncmp instead as string_view may not be null-terminated
-    return utf::utf_strncmp<typename utilities::StringView<TStringType>::CharType, utilities::StringView<TStringType>::is_utf8>(lhs.Data(), rhs.Data(), MathUtil::Min(lhs.Length(), rhs.Length())) < 0;
+    // @FIXME: Use strncmp instead as stringView may not be null-terminated
+    return utf::utfStrncmp<typename utilities::StringView<TStringType>::CharType, utilities::StringView<TStringType>::isUtf8>(lhs.Data(), rhs.Data(), MathUtil::Min(lhs.Length(), rhs.Length())) < 0;
 }
 
 template <int TStringType>
@@ -1772,8 +1772,8 @@ constexpr bool operator<(const utilities::StringView<TStringType>& lhs, const St
         return false;
     }
 
-    // @FIXME: Use strncmp instead as string_view may not be null-terminated
-    return utf::utf_strncmp<typename utilities::StringView<TStringType>::CharType, utilities::StringView<TStringType>::is_utf8>(lhs.Data(), rhs.Data(), MathUtil::Min(lhs.Length(), rhs.Length())) < 0;
+    // @FIXME: Use strncmp instead as stringView may not be null-terminated
+    return utf::utfStrncmp<typename utilities::StringView<TStringType>::CharType, utilities::StringView<TStringType>::isUtf8>(lhs.Data(), rhs.Data(), MathUtil::Min(lhs.Length(), rhs.Length())) < 0;
 }
 
 template <int TStringType>

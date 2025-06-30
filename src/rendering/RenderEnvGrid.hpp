@@ -25,17 +25,17 @@ class RenderScene;
 class RenderEnvGrid final : public RenderResourceBase
 {
 public:
-    RenderEnvGrid(EnvGrid* env_grid);
+    RenderEnvGrid(EnvGrid* envGrid);
     virtual ~RenderEnvGrid() override;
 
     HYP_FORCE_INLINE EnvGrid* GetEnvGrid() const
     {
-        return m_env_grid;
+        return m_envGrid;
     }
 
     void SetProbeIndices(Array<uint32>&& indices);
 
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 protected:
     virtual void Initialize_Internal() override;
@@ -45,7 +45,7 @@ protected:
     virtual GpuBufferHolderBase* GetGpuBufferHolder() const override;
 
 private:
-    EnvGrid* m_env_grid;
+    EnvGrid* m_envGrid;
 };
 
 struct HYP_API EnvGridPassData : PassData
@@ -55,35 +55,35 @@ struct HYP_API EnvGridPassData : PassData
     ShaderRef shader;
     FramebufferRef framebuffer;
 
-    ComputePipelineRef clear_sh;
-    ComputePipelineRef compute_sh;
-    ComputePipelineRef reduce_sh;
-    ComputePipelineRef finalize_sh;
+    ComputePipelineRef clearSh;
+    ComputePipelineRef computeSh;
+    ComputePipelineRef reduceSh;
+    ComputePipelineRef finalizeSh;
 
-    Array<DescriptorTableRef> compute_sh_descriptor_tables;
-    Array<GpuBufferRef> sh_tiles_buffers;
+    Array<DescriptorTableRef> computeShDescriptorTables;
+    Array<GpuBufferRef> shTilesBuffers;
 
-    ComputePipelineRef clear_voxels;
-    ComputePipelineRef voxelize_probe;
-    ComputePipelineRef offset_voxel_grid;
-    ComputePipelineRef generate_voxel_grid_mipmaps;
+    ComputePipelineRef clearVoxels;
+    ComputePipelineRef voxelizeProbe;
+    ComputePipelineRef offsetVoxelGrid;
+    ComputePipelineRef generateVoxelGridMipmaps;
 
-    Array<ImageViewRef> voxel_grid_mips;
-    Array<DescriptorTableRef> generate_voxel_grid_mipmaps_descriptor_tables;
+    Array<ImageViewRef> voxelGridMips;
+    Array<DescriptorTableRef> generateVoxelGridMipmapsDescriptorTables;
 
-    Array<GpuBufferRef> uniform_buffers;
+    Array<GpuBufferRef> uniformBuffers;
 
-    ComputePipelineRef compute_irradiance;
-    ComputePipelineRef compute_filtered_depth;
-    ComputePipelineRef copy_border_texels;
+    ComputePipelineRef computeIrradiance;
+    ComputePipelineRef computeFilteredDepth;
+    ComputePipelineRef copyBorderTexels;
 
-    uint32 current_probe_index;
-    Queue<uint32> next_render_indices;
+    uint32 currentProbeIndex;
+    Queue<uint32> nextRenderIndices;
 };
 
 struct EnvGridPassDataExt : PassDataExt
 {
-    EnvGrid* env_grid = nullptr;
+    EnvGrid* envGrid = nullptr;
 
     EnvGridPassDataExt()
         : PassDataExt(TypeId::ForType<EnvGridPassDataExt>())
@@ -95,7 +95,7 @@ struct EnvGridPassDataExt : PassDataExt
     virtual PassDataExt* Clone() override
     {
         EnvGridPassDataExt* clone = new EnvGridPassDataExt;
-        clone->env_grid = env_grid;
+        clone->envGrid = envGrid;
 
         return clone;
     }
@@ -110,20 +110,20 @@ public:
     virtual void Initialize() override;
     virtual void Shutdown() override;
 
-    virtual void RenderFrame(FrameBase* frame, const RenderSetup& render_setup) override final;
+    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) override final;
 
 protected:
-    void RenderProbe(FrameBase* frame, const RenderSetup& render_setup, uint32 probe_index);
+    void RenderProbe(FrameBase* frame, const RenderSetup& renderSetup, uint32 probeIndex);
 
-    void ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* frame, const RenderSetup& render_setup, const Handle<EnvProbe>& probe);
-    void ComputeEnvProbeIrradiance_LightField(FrameBase* frame, const RenderSetup& render_setup, const Handle<EnvProbe>& probe);
-    void OffsetVoxelGrid(FrameBase* frame, const RenderSetup& render_setup, Vec3i offset);
-    void VoxelizeProbe(FrameBase* frame, const RenderSetup& render_setup, uint32 probe_index);
+    void ComputeEnvProbeIrradiance_SphericalHarmonics(FrameBase* frame, const RenderSetup& renderSetup, const Handle<EnvProbe>& probe);
+    void ComputeEnvProbeIrradiance_LightField(FrameBase* frame, const RenderSetup& renderSetup, const Handle<EnvProbe>& probe);
+    void OffsetVoxelGrid(FrameBase* frame, const RenderSetup& renderSetup, Vec3i offset);
+    void VoxelizeProbe(FrameBase* frame, const RenderSetup& renderSetup, uint32 probeIndex);
 
     PassData* CreateViewPassData(View* view, PassDataExt& ext) override;
-    void CreateVoxelGridData(EnvGrid* env_grid, EnvGridPassData& pd);
-    void CreateSphericalHarmonicsData(EnvGrid* env_grid, EnvGridPassData& pd);
-    void CreateLightFieldData(EnvGrid* env_grid, EnvGridPassData& pd);
+    void CreateVoxelGridData(EnvGrid* envGrid, EnvGridPassData& pd);
+    void CreateSphericalHarmonicsData(EnvGrid* envGrid, EnvGridPassData& pd);
+    void CreateLightFieldData(EnvGrid* envGrid, EnvGridPassData& pd);
 };
 
 } // namespace hyperion

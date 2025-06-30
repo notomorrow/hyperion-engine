@@ -77,7 +77,7 @@ public:
         return m_config;
     }
 
-    FBOMResult Deserialize(FBOMLoadContext& context, BufferedReader& reader, FBOMObjectLibrary& out, bool read_header = true);
+    FBOMResult Deserialize(FBOMLoadContext& context, BufferedReader& reader, FBOMObjectLibrary& out, bool readHeader = true);
     FBOMResult Deserialize(FBOMLoadContext& context, BufferedReader& reader, FBOMObject& out);
     FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out);
     FBOMResult Deserialize(FBOMLoadContext& context, BufferedReader& reader, HypData& out);
@@ -85,12 +85,12 @@ public:
     FBOMResult LoadFromFile(const String& path, FBOMObject& out);
     FBOMResult LoadFromFile(const String& path, HypData& out);
 
-    FBOMResult ReadObject(FBOMLoadContext& context, BufferedReader* reader, FBOMObject& out_object, FBOMObject* root);
-    FBOMResult ReadObjectType(FBOMLoadContext& context, BufferedReader* reader, FBOMType& out_type);
-    FBOMResult ReadObjectLibrary(FBOMLoadContext& context, BufferedReader* reader, FBOMObjectLibrary& out_library);
-    FBOMResult ReadData(FBOMLoadContext& context, BufferedReader* reader, FBOMData& out_data);
-    FBOMResult ReadArray(FBOMLoadContext& context, BufferedReader* reader, FBOMArray& out_array);
-    FBOMResult ReadPropertyName(FBOMLoadContext& context, BufferedReader* reader, Name& out_property_name);
+    FBOMResult ReadObject(FBOMLoadContext& context, BufferedReader* reader, FBOMObject& outObject, FBOMObject* root);
+    FBOMResult ReadObjectType(FBOMLoadContext& context, BufferedReader* reader, FBOMType& outType);
+    FBOMResult ReadObjectLibrary(FBOMLoadContext& context, BufferedReader* reader, FBOMObjectLibrary& outLibrary);
+    FBOMResult ReadData(FBOMLoadContext& context, BufferedReader* reader, FBOMData& outData);
+    FBOMResult ReadArray(FBOMLoadContext& context, BufferedReader* reader, FBOMArray& outArray);
+    FBOMResult ReadPropertyName(FBOMLoadContext& context, BufferedReader* reader, Name& outPropertyName);
 
 private:
     struct FBOMStaticDataIndexMap
@@ -129,13 +129,13 @@ private:
     template <class T>
     void CheckEndianness(T& value)
     {
-        static_assert(is_pod_type<T>, "T must be POD to use CheckEndianness()");
+        static_assert(isPodType<T>, "T must be POD to use CheckEndianness()");
 
         if constexpr (sizeof(T) == 1)
         {
             return;
         }
-        else if (m_swap_endianness)
+        else if (m_swapEndianness)
         {
             SwapEndianness(value);
         }
@@ -143,41 +143,41 @@ private:
 
     FBOMMarshalerBase* GetMarshalForType(const FBOMType& type) const;
 
-    FBOMResult RequestExternalObject(FBOMLoadContext& context, UUID library_id, uint32 index, FBOMObject& out_object);
+    FBOMResult RequestExternalObject(FBOMLoadContext& context, UUID libraryId, uint32 index, FBOMObject& outObject);
 
     FBOMCommand NextCommand(BufferedReader*);
     FBOMCommand PeekCommand(BufferedReader*);
     FBOMResult Eat(BufferedReader*, FBOMCommand, bool read = true);
 
-    FBOMResult ReadDataAttributes(BufferedReader*, EnumFlags<FBOMDataAttributes>& out_attributes, FBOMDataLocation& out_location);
+    FBOMResult ReadDataAttributes(BufferedReader*, EnumFlags<FBOMDataAttributes>& outAttributes, FBOMDataLocation& outLocation);
 
     template <class StringType>
-    FBOMResult ReadString(BufferedReader*, StringType& out_string);
+    FBOMResult ReadString(BufferedReader*, StringType& outString);
 
-    FBOMResult ReadArchive(BufferedReader*, Archive& out_archive);
-    FBOMResult ReadArchive(const ByteBuffer& in_buffer, ByteBuffer& out_buffer);
+    FBOMResult ReadArchive(BufferedReader*, Archive& outArchive);
+    FBOMResult ReadArchive(const ByteBuffer& inBuffer, ByteBuffer& outBuffer);
 
-    FBOMResult ReadRawData(BufferedReader*, SizeType count, ByteBuffer& out_buffer);
+    FBOMResult ReadRawData(BufferedReader*, SizeType count, ByteBuffer& outBuffer);
 
     template <class T>
-    FBOMResult ReadRawData(BufferedReader* reader, T* out_ptr)
+    FBOMResult ReadRawData(BufferedReader* reader, T* outPtr)
     {
-        static_assert(is_pod_type<NormalizedType<T>>, "T must be POD to read as raw data");
+        static_assert(isPodType<NormalizedType<T>>, "T must be POD to read as raw data");
 
-        AssertThrow(out_ptr != nullptr);
+        AssertThrow(outPtr != nullptr);
 
         constexpr SizeType size = sizeof(NormalizedType<T>);
 
-        ByteBuffer byte_buffer;
+        ByteBuffer byteBuffer;
 
-        if (FBOMResult err = ReadRawData(reader, size, byte_buffer))
+        if (FBOMResult err = ReadRawData(reader, size, byteBuffer))
         {
             return err;
         }
 
-        Memory::MemCpy(static_cast<void*>(out_ptr), static_cast<const void*>(byte_buffer.Data()), size);
+        Memory::MemCpy(static_cast<void*>(outPtr), static_cast<const void*>(byteBuffer.Data()), size);
 
-        CheckEndianness(*out_ptr);
+        CheckEndianness(*outPtr);
 
         return FBOMResult::FBOM_OK;
     }
@@ -189,11 +189,11 @@ private:
 public:
     FBOMReaderConfig m_config;
 
-    bool m_in_static_data;
-    FBOMStaticDataIndexMap m_static_data_index_map;
-    ByteBuffer m_static_data_buffer;
+    bool m_inStaticData;
+    FBOMStaticDataIndexMap m_staticDataIndexMap;
+    ByteBuffer m_staticDataBuffer;
 
-    bool m_swap_endianness;
+    bool m_swapEndianness;
 };
 
 } // namespace serialization

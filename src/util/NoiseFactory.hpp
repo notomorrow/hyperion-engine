@@ -78,7 +78,7 @@ public:
     BasicNoiseGenerator(Seed seed, const Range<T>& range)
         : m_seed(seed),
           m_range(range),
-          m_mt { m_random_device() },
+          m_mt { m_randomDevice() },
           m_distribution { range.GetStart(), range.GetEnd() }
     {
     }
@@ -99,7 +99,7 @@ protected:
 
     Range<T> m_range;
 
-    std::random_device m_random_device;
+    std::random_device m_randomDevice;
     std::mt19937 m_mt;
     std::uniform_real_distribution<T> m_distribution;
 };
@@ -114,7 +114,7 @@ public:
     virtual double GetNoise(double x, double y, double z) const override;
 
 private:
-    SimplexNoiseData m_simplex_noise;
+    SimplexNoiseData m_simplexNoise;
 };
 
 class HYP_API WorleyNoiseGenerator : public NoiseGenerator
@@ -127,7 +127,7 @@ public:
     virtual double GetNoise(double x, double y, double z) const override;
 
 private:
-    WorleyNoise* m_worley_noise;
+    WorleyNoise* m_worleyNoise;
 };
 
 class HYP_API NoiseCombinator
@@ -233,21 +233,21 @@ public:
     }
 
 protected:
-    static void ApplyNoiseValue(Mode mode, float noise_value, float& final_result, bool& first)
+    static void ApplyNoiseValue(Mode mode, float noiseValue, float& finalResult, bool& first)
     {
         switch (mode)
         {
         case Mode::ADDITIVE:
-            final_result += noise_value;
+            finalResult += noiseValue;
 
             break;
         case Mode::MULTIPLICATIVE:
             if (first)
             {
-                final_result = 1.0f;
+                finalResult = 1.0f;
             }
 
-            final_result *= noise_value;
+            finalResult *= noiseValue;
 
             break;
         }
@@ -282,7 +282,7 @@ private:
     std::map<
         std::pair<NoiseGenerationType, Seed>,
         NoiseGeneratorRefCounter>
-        m_noise_generators;
+        m_noiseGenerators;
 };
 
 } // namespace hyperion

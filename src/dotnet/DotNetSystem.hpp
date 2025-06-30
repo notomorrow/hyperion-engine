@@ -21,20 +21,20 @@ class Class;
 class DotNetImplBase;
 class DotNetImpl;
 
-using AddObjectToCacheFunction = void (*)(void* ptr, Class** out_class_object_ptr, ObjectReference* out_object_reference, int8 is_weak);
-using SetKeepAliveFunction = void (*)(ObjectReference* object_reference, int32* keep_alive);
+using AddObjectToCacheFunction = void (*)(void* ptr, Class** outClassObjectPtr, ObjectReference* outObjectReference, int8 isWeak);
+using SetKeepAliveFunction = void (*)(ObjectReference* objectReference, int32* keepAlive);
 using TriggerGCFunction = void (*)();
-using GetAssemblyPointerFunction = void (*)(ObjectReference* assembly_object_reference, Assembly** out_assembly_ptr);
+using GetAssemblyPointerFunction = void (*)(ObjectReference* assemblyObjectReference, Assembly** outAssemblyPtr);
 
 class DotNetSystem
 {
 public:
     struct GlobalFunctions
     {
-        AddObjectToCacheFunction add_object_to_cache_function = nullptr;
-        SetKeepAliveFunction set_keep_alive_function = nullptr;
-        TriggerGCFunction trigger_gc_function = nullptr;
-        GetAssemblyPointerFunction get_assembly_pointer_function = nullptr;
+        AddObjectToCacheFunction addObjectToCacheFunction = nullptr;
+        SetKeepAliveFunction setKeepAliveFunction = nullptr;
+        TriggerGCFunction triggerGcFunction = nullptr;
+        GetAssemblyPointerFunction getAssemblyPointerFunction = nullptr;
     };
 
     static DotNetSystem& GetInstance();
@@ -49,12 +49,12 @@ public:
 
     HYP_FORCE_INLINE GlobalFunctions& GetGlobalFunctions()
     {
-        return m_global_functions;
+        return m_globalFunctions;
     }
 
     HYP_FORCE_INLINE const GlobalFunctions& GetGlobalFunctions() const
     {
-        return m_global_functions;
+        return m_globalFunctions;
     }
 
     RC<Assembly> LoadAssembly(const char* path) const;
@@ -65,16 +65,16 @@ public:
 
     bool IsInitialized() const;
 
-    void Initialize(const FilePath& base_path);
+    void Initialize(const FilePath& basePath);
     void Shutdown();
 
 private:
     bool EnsureInitialized() const;
 
-    bool m_is_initialized;
+    bool m_isInitialized;
     RC<DotNetImplBase> m_impl;
 
-    GlobalFunctions m_global_functions;
+    GlobalFunctions m_globalFunctions;
 };
 
 } // namespace dotnet

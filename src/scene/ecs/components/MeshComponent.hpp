@@ -47,7 +47,7 @@ struct MeshComponent
     // 24
 
     HYP_FIELD(Property = "InstanceData", Serialize = true, Editor = true)
-    MeshInstanceData instance_data;
+    MeshInstanceData instanceData;
 
     // 128
 
@@ -62,41 +62,41 @@ struct MeshComponent
     // 140 + 4 padding
 
     HYP_FIELD()
-    Matrix4 previous_model_matrix;
+    Matrix4 previousModelMatrix;
 
     // 208
 
     HYP_FIELD()
-    MeshRaytracingData* raytracing_data = nullptr;
+    MeshRaytracingData* raytracingData = nullptr;
 
     // 224
 
     HYP_FIELD()
-    MeshComponentUserData user_data;
+    MeshComponentUserData userData;
 
     // 256
 
     HYP_FIELD(Property = "LightmapVolume", Serialize = false)
-    WeakHandle<LightmapVolume> lightmap_volume;
+    WeakHandle<LightmapVolume> lightmapVolume;
 
     // 264
 
     HYP_FIELD(Property = "LightmapVolumeUUID", Serialize = true)
-    UUID lightmap_volume_uuid = UUID::Invalid();
+    UUID lightmapVolumeUuid = UUID::Invalid();
 
     // 280
 
     HYP_FIELD(Property = "LightmapElementIndex", Serialize = true)
-    uint32 lightmap_element_index = ~0u;
+    uint32 lightmapElementIndex = ~0u;
 
     HYP_FORCE_INLINE bool operator==(const MeshComponent& other) const
     {
         return mesh == other.mesh
             && material == other.material
             && skeleton == other.skeleton
-            && instance_data == other.instance_data
-            && lightmap_volume_uuid == other.lightmap_volume_uuid
-            && lightmap_element_index == other.lightmap_element_index;
+            && instanceData == other.instanceData
+            && lightmapVolumeUuid == other.lightmapVolumeUuid
+            && lightmapElementIndex == other.lightmapElementIndex;
     }
 
     HYP_FORCE_INLINE bool operator!=(const MeshComponent& other) const
@@ -111,16 +111,16 @@ struct MeshComponent
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(mesh);
-        hash_code.Add(material);
-        hash_code.Add(skeleton);
-        hash_code.Add(instance_data);
-        hash_code.Add(lightmap_volume_uuid);
-        hash_code.Add(lightmap_element_index);
+        hashCode.Add(mesh);
+        hashCode.Add(material);
+        hashCode.Add(skeleton);
+        hashCode.Add(instanceData);
+        hashCode.Add(lightmapVolumeUuid);
+        hashCode.Add(lightmapElementIndex);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

@@ -13,11 +13,11 @@ class ImageUtil
 public:
     static inline void ConvertBPP(
         uint32 width, uint32 height, uint32 depth,
-        uint8 in_bpp, uint8 out_bpp,
-        const ubyte* const in_bytes,
-        ubyte* out_bytes)
+        uint8 inBpp, uint8 outBpp,
+        const ubyte* const inBytes,
+        ubyte* outBytes)
     {
-        const auto min_bpp = MathUtil::Min(in_bpp, out_bpp);
+        const auto minBpp = MathUtil::Min(inBpp, outBpp);
 
         for (uint32 x = 0; x < width; x++)
         {
@@ -26,17 +26,17 @@ public:
                 for (uint32 z = 0; z < depth; z++)
                 {
                     const uint32 idx = x * height * depth + y * depth + z;
-                    const uint32 in_index = idx * in_bpp;
-                    const uint32 out_index = idx * out_bpp;
+                    const uint32 inIndex = idx * inBpp;
+                    const uint32 outIndex = idx * outBpp;
 
-                    for (uint8 i = 0; i < min_bpp; i++)
+                    for (uint8 i = 0; i < minBpp; i++)
                     {
-                        out_bytes[out_index + i] = in_bytes[in_index + i];
+                        outBytes[outIndex + i] = inBytes[inIndex + i];
                     }
 
-                    for (uint8 i = min_bpp; i < out_bpp; i++)
+                    for (uint8 i = minBpp; i < outBpp; i++)
                     {
-                        out_bytes[out_index + i] = 255;
+                        outBytes[outIndex + i] = 255;
                     }
                 }
             }

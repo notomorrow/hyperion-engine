@@ -57,10 +57,10 @@ struct LightmapElement
     Array<LightmapElementTextureEntry> entries;
 
     HYP_FIELD(Property = "OffsetUV", Serialize = true)
-    Vec2f offset_uv;
+    Vec2f offsetUv;
 
     HYP_FIELD(Property = "OffsetCoords", Serialize = true)
-    Vec2u offset_coords;
+    Vec2u offsetCoords;
 
     HYP_FIELD(Property = "Dimensions", Serialize = true)
     Vec2u dimensions;
@@ -79,14 +79,14 @@ HYP_STRUCT()
 
 struct LightmapVolumeAtlas : AtlasPacker<LightmapElement>
 {
-    HYP_PROPERTY(AtlasDimensions, &LightmapVolumeAtlas::atlas_dimensions)
+    HYP_PROPERTY(AtlasDimensions, &LightmapVolumeAtlas::atlasDimensions)
     HYP_PROPERTY(Elements, &LightmapVolumeAtlas::elements)
-    HYP_PROPERTY(FreeSpaces, &LightmapVolumeAtlas::free_spaces)
+    HYP_PROPERTY(FreeSpaces, &LightmapVolumeAtlas::freeSpaces)
 
     LightmapVolumeAtlas() = default;
 
-    LightmapVolumeAtlas(const Vec2u& atlas_dimensions)
-        : AtlasPacker<LightmapElement>(atlas_dimensions)
+    LightmapVolumeAtlas(const Vec2u& atlasDimensions)
+        : AtlasPacker<LightmapElement>(atlasDimensions)
     {
     }
 
@@ -125,7 +125,7 @@ public:
 
     HYP_FORCE_INLINE const HashMap<LightmapTextureType, Handle<Texture>>& GetAtlasTextures() const
     {
-        return m_atlas_textures;
+        return m_atlasTextures;
     }
 
     HYP_FORCE_INLINE const LightmapVolumeAtlas& GetAtlas() const
@@ -134,11 +134,11 @@ public:
     }
 
     /*! \brief Add a LightmapElement to this volume. */
-    bool AddElement(const LightmapUVMap& uv_map, LightmapElement& out_element, bool shrink_to_fit = true, float downscale_limit = 0.1f);
+    bool AddElement(const LightmapUVMap& uvMap, LightmapElement& outElement, bool shrinkToFit = true, float downscaleLimit = 0.1f);
 
     const LightmapElement* GetElement(uint32 index) const;
 
-    bool BuildElementTextures(const LightmapUVMap& uv_map, uint32 index);
+    bool BuildElementTextures(const LightmapUVMap& uvMap, uint32 index);
 
 private:
     void Init() override;
@@ -153,7 +153,7 @@ private:
     BoundingBox m_aabb;
 
     HYP_FIELD(Serialize = true)
-    HashMap<LightmapTextureType, Handle<Texture>> m_atlas_textures;
+    HashMap<LightmapTextureType, Handle<Texture>> m_atlasTextures;
     
     HYP_FIELD(Serialize = true)
     LightmapVolumeAtlas m_atlas;

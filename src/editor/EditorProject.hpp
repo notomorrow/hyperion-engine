@@ -46,7 +46,7 @@ public:
 
     HYP_FORCE_INLINE const WeakHandle<EditorSubsystem>& GetEditorSubsystem() const
     {
-        return m_editor_subsystem;
+        return m_editorSubsystem;
     }
 
     HYP_METHOD(Property = "UUID", Serialize = true)
@@ -77,14 +77,14 @@ public:
     HYP_METHOD(Property = "LastSavedTime", Serialize = true)
     HYP_FORCE_INLINE Time GetLastSavedTime() const
     {
-        return m_last_saved_time;
+        return m_lastSavedTime;
     }
 
     /*! \internal For serialization only. */
     HYP_METHOD(Property = "LastSavedTime", Serialize = true)
-    HYP_FORCE_INLINE void SetLastSavedTime(Time last_saved_time)
+    HYP_FORCE_INLINE void SetLastSavedTime(Time lastSavedTime)
     {
-        m_last_saved_time = last_saved_time;
+        m_lastSavedTime = lastSavedTime;
     }
 
     HYP_METHOD(Property = "FilePath", Serialize = true)
@@ -102,7 +102,7 @@ public:
     HYP_METHOD(Property = "AssetRegistry")
     HYP_FORCE_INLINE const Handle<AssetRegistry>& GetAssetRegistry() const
     {
-        return m_asset_registry;
+        return m_assetRegistry;
     }
 
     HYP_METHOD(Property = "Scenes")
@@ -130,12 +130,12 @@ public:
     Result SaveAs(FilePath filepath);
 
     HYP_METHOD(Scriptable)
-    Name GetNextDefaultProjectName(const String& default_project_name) const;
+    Name GetNextDefaultProjectName(const String& defaultProjectName) const;
 
     HYP_METHOD()
     const Handle<EditorActionStack>& GetActionStack() const
     {
-        return m_action_stack;
+        return m_actionStack;
     }
 
     static TResult<Handle<EditorProject>> Load(const FilePath& filepath);
@@ -155,29 +155,29 @@ public:
 private:
     void Init() override;
 
-    HYP_FORCE_INLINE void SetEditorSubsystem(const WeakHandle<EditorSubsystem>& editor_subsystem)
+    HYP_FORCE_INLINE void SetEditorSubsystem(const WeakHandle<EditorSubsystem>& editorSubsystem)
     {
-        m_editor_subsystem = editor_subsystem;
+        m_editorSubsystem = editorSubsystem;
     }
 
-    Name GetNextDefaultProjectName_Impl(const String& default_project_name) const;
+    Name GetNextDefaultProjectName_Impl(const String& defaultProjectName) const;
 
     UUID m_uuid;
 
     Name m_name;
 
-    Time m_last_saved_time;
+    Time m_lastSavedTime;
 
     FilePath m_filepath;
 
     HYP_FIELD(Property = "Scenes", Serialize = true)
     Array<Handle<Scene>> m_scenes;
 
-    Handle<AssetRegistry> m_asset_registry;
+    Handle<AssetRegistry> m_assetRegistry;
 
-    Handle<EditorActionStack> m_action_stack;
+    Handle<EditorActionStack> m_actionStack;
 
-    WeakHandle<EditorSubsystem> m_editor_subsystem;
+    WeakHandle<EditorSubsystem> m_editorSubsystem;
 };
 
 } // namespace hyperion

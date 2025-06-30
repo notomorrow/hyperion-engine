@@ -16,14 +16,14 @@ namespace hyperion {
 
 ShaderManager* ShaderManager::GetInstance()
 {
-    return g_shader_manager;
+    return g_shaderManager;
 }
 
 ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
 {
     HYP_NAMED_SCOPE("Get shader from cache or create");
 
-    const auto ensure_contains_properties = [](const ShaderProperties& expected, const ShaderProperties& received) -> bool
+    const auto ensureContainsProperties = [](const ShaderProperties& expected, const ShaderProperties& received) -> bool
     {
         if (!received.HasRequiredVertexAttributes(expected.GetRequiredVertexAttributes()))
         {
@@ -42,7 +42,7 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
     };
 
     RC<ShaderMapEntry> entry;
-    bool should_add_entry_to_cache = false;
+    bool shouldAddEntryToCache = false;
 
     { // pulling value from cache if it exists
         Mutex::Guard guard(m_mutex);
@@ -55,46 +55,46 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
         }
         else
         {
-            should_add_entry_to_cache = true;
+            shouldAddEntryToCache = true;
         }
     }
 
     if (entry != nullptr)
     {
-        constexpr int max_spins = 1024;
-        int num_spins = 0;
+        constexpr int maxSpins = 1024;
+        int numSpins = 0;
 
         // loading from another thread -- wait until state is no longer LOADING
         while (entry->state.Get(MemoryOrder::SEQUENTIAL) == ShaderMapEntry::State::LOADING)
         {
             // sanity check - should never happen
-            AssertThrow(entry->loading_thread_id != Threads::CurrentThreadId());
+            AssertThrow(entry->loadingThreadId != Threads::CurrentThreadId());
 
-            if (num_spins == max_spins)
+            if (numSpins == maxSpins)
             {
                 HYP_LOG(Shader, Warning,
                     "Shader {} is loading for too long! Skipping reuse attempt and loading on this thread. (Loading thread: {}, current thread: {})",
                     definition.GetName(),
-                    entry->loading_thread_id.GetName(),
+                    entry->loadingThreadId.GetName(),
                     Threads::CurrentThreadId().GetName());
 
                 entry = MakeRefCountedPtr<ShaderMapEntry>();
                 entry->state.Set(ShaderMapEntry::State::LOADING, MemoryOrder::SEQUENTIAL);
-                entry->loading_thread_id = Threads::CurrentThreadId();
+                entry->loadingThreadId = Threads::CurrentThreadId();
 
-                should_add_entry_to_cache = false;
+                shouldAddEntryToCache = false;
 
                 break;
             }
 
             Threads::Sleep(0);
 
-            num_spins++;
+            numSpins++;
         }
 
         if (ShaderRef shader = entry->shader.Lock())
         {
-            if (ensure_contains_properties(definition.GetProperties(), shader->GetCompiledShader()->GetProperties()))
+            if (ensureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetProperties()))
             {
                 return shader;
             }
@@ -111,17 +111,17 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
         // @TODO: remove bad value from cache?
     }
 
-    RC<CompiledShader> compiled_shader = MakeRefCountedPtr<CompiledShader>();
+    RC<CompiledShader> compiledShader = MakeRefCountedPtr<CompiledShader>();
 
     if (!entry)
     {
         entry = MakeRefCountedPtr<ShaderMapEntry>();
-        entry->compiled_shader = compiled_shader;
+        entry->compiledShader = compiledShader;
         entry->state.Set(ShaderMapEntry::State::LOADING, MemoryOrder::SEQUENTIAL);
-        entry->loading_thread_id = Threads::CurrentThreadId();
+        entry->loadingThreadId = Threads::CurrentThreadId();
     }
 
-    if (should_add_entry_to_cache)
+    if (shouldAddEntryToCache)
     {
         AssertDebug(entry != nullptr);
 
@@ -140,25 +140,25 @@ ShaderRef ShaderManager::GetOrCreate(const ShaderDefinition& definition)
 
     { // loading / compilation of shader (outside of mutex lock)
 
-        bool is_valid_compiled_shader = true;
+        bool isValidCompiledShader = true;
 
-        is_valid_compiled_shader &= g_engine->GetShaderCompiler().GetCompiledShader(
+        isValidCompiledShader &= g_engine->GetShaderCompiler().GetCompiledShader(
             definition.GetName(),
             definition.GetProperties(),
-            *compiled_shader);
+            *compiledShader);
 
-        is_valid_compiled_shader &= compiled_shader->GetDefinition().IsValid();
+        isValidCompiledShader &= compiledShader->GetDefinition().IsValid();
 
         AssertThrowMsg(
-            is_valid_compiled_shader,
+            isValidCompiledShader,
             "Failed to get compiled shader with name %s and props hash %llu!\n",
             definition.GetName().LookupString(),
             definition.GetProperties().GetHashCode().Value());
 
-        shader = g_render_backend->MakeShader(std::move(compiled_shader));
+        shader = g_renderBackend->MakeShader(std::move(compiledShader));
 
 #ifdef HYP_DEBUG_MODE
-        AssertThrow(ensure_contains_properties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));
+        AssertThrow(ensureContainsProperties(definition.GetProperties(), shader->GetCompiledShader()->GetDefinition().GetProperties()));
 #endif
 
         DeferCreate(shader);
@@ -184,28 +184,28 @@ SizeType ShaderManager::CalculateMemoryUsage() const
 {
     HYP_NAMED_SCOPE("ShaderManager::CalculateMemoryUsage");
 
-    SizeType total_memory_usage = 0;
+    SizeType totalMemoryUsage = 0;
 
     Mutex::Guard guard(m_mutex);
 
     for (const auto& it : m_map)
     {
-        total_memory_usage += sizeof(it.first);
-        total_memory_usage += sizeof(it.second);
+        totalMemoryUsage += sizeof(it.first);
+        totalMemoryUsage += sizeof(it.second);
 
         if (const RC<ShaderMapEntry>& entry = it.second)
         {
             if (ShaderRef shader = entry->shader.Lock())
             {
-                for (const ByteBuffer& byte_buffer : shader->GetCompiledShader()->GetModules())
+                for (const ByteBuffer& byteBuffer : shader->GetCompiledShader()->GetModules())
                 {
-                    total_memory_usage += byte_buffer.Size();
+                    totalMemoryUsage += byteBuffer.Size();
                 }
             }
         }
     }
 
-    return total_memory_usage;
+    return totalMemoryUsage;
 }
 
 } // namespace hyperion

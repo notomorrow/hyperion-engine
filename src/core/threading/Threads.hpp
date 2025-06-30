@@ -34,12 +34,12 @@ class HYP_API Threads
 {
 public:
     static void AssertOnThread(ThreadMask mask, const char* message = nullptr);
-    static void AssertOnThread(const ThreadId& thread_id, const char* message = nullptr);
-    static bool IsThreadInMask(const ThreadId& thread_id, ThreadMask mask);
+    static void AssertOnThread(const ThreadId& threadId, const char* message = nullptr);
+    static bool IsThreadInMask(const ThreadId& threadId, ThreadMask mask);
     static bool IsOnThread(ThreadMask mask);
-    static bool IsOnThread(const ThreadId& thread_id);
+    static bool IsOnThread(const ThreadId& threadId);
 
-    static ThreadBase* GetThread(const ThreadId& thread_id);
+    static ThreadBase* GetThread(const ThreadId& threadId);
 
     static ThreadBase* CurrentThreadObject();
 
@@ -65,9 +65,9 @@ using threading::ThreadCategory;
 using threading::Threads;
 using threading::ThreadType;
 
-HYP_API extern const StaticThreadId g_main_thread;
-HYP_API extern const StaticThreadId g_render_thread;
-HYP_API extern const StaticThreadId g_game_thread;
+HYP_API extern const StaticThreadId g_mainThread;
+HYP_API extern const StaticThreadId g_renderThread;
+HYP_API extern const StaticThreadId g_gameThread;
 
 } // namespace hyperion
 

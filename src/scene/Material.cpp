@@ -48,30 +48,30 @@ const Material::ParameterTable& Material::DefaultParameters()
 }
 
 Material::Material()
-    : m_render_attributes {
-          .shader_definition = ShaderDefinition { NAME("Forward"), static_mesh_vertex_attributes },
+    : m_renderAttributes {
+          .shaderDefinition = ShaderDefinition { NAME("Forward"), staticMeshVertexAttributes },
           .bucket = RB_OPAQUE,
-          .fill_mode = FM_FILL,
-          .blend_function = BlendFunction::None(),
-          .cull_faces = FCM_BACK,
+          .fillMode = FM_FILL,
+          .blendFunction = BlendFunction::None(),
+          .cullFaces = FCM_BACK,
           .flags = MaterialAttributeFlags::DEPTH_WRITE | MaterialAttributeFlags::DEPTH_TEST
       },
-      m_is_dynamic(false),
-      m_mutation_state(DataMutationState::CLEAN),
-      m_render_resource(nullptr)
+      m_isDynamic(false),
+      m_mutationState(DataMutationState::CLEAN),
+      m_renderResource(nullptr)
 {
     ResetParameters();
 }
 
 Material::Material(Name name, RenderBucket rb)
     : m_name(name),
-      m_render_attributes {
-          .shader_definition = ShaderDefinition { NAME("Forward"), static_mesh_vertex_attributes },
+      m_renderAttributes {
+          .shaderDefinition = ShaderDefinition { NAME("Forward"), staticMeshVertexAttributes },
           .bucket = rb
       },
-      m_is_dynamic(false),
-      m_mutation_state(DataMutationState::CLEAN),
-      m_render_resource(nullptr)
+      m_isDynamic(false),
+      m_mutationState(DataMutationState::CLEAN),
+      m_renderResource(nullptr)
 {
     ResetParameters();
 }
@@ -85,18 +85,18 @@ Material::Material(Name name, const MaterialAttributes& attributes, const Parame
     : m_name(name),
       m_parameters(parameters),
       m_textures(textures),
-      m_render_attributes(attributes),
-      m_is_dynamic(false),
-      m_mutation_state(DataMutationState::CLEAN),
-      m_render_resource(nullptr)
+      m_renderAttributes(attributes),
+      m_isDynamic(false),
+      m_mutationState(DataMutationState::CLEAN),
+      m_renderResource(nullptr)
 {
 }
 
 Material::~Material()
 {
-    if (m_render_resource != nullptr)
+    if (m_renderResource != nullptr)
     {
-        FreeResource(m_render_resource);
+        FreeResource(m_renderResource);
     }
 
     SetReady(false);
@@ -109,7 +109,7 @@ Material::~Material()
 
 void Material::Init()
 {
-    m_render_resource = AllocateResource<RenderMaterial>(this);
+    m_renderResource = AllocateResource<RenderMaterial>(this);
 
     FlatMap<MaterialTextureKey, Handle<Texture>> textures;
 
@@ -125,9 +125,9 @@ void Material::Init()
         }
     }
 
-    m_render_resource->SetTextures(std::move(textures));
+    m_renderResource->SetTextures(std::move(textures));
 
-    m_mutation_state |= DataMutationState::DIRTY;
+    m_mutationState |= DataMutationState::DIRTY;
 
     SetReady(true);
 
@@ -138,35 +138,35 @@ void Material::EnqueueRenderUpdates()
 {
     AssertReady();
 
-    static const bool is_bindless_supported = g_render_backend->GetRenderConfig().IsBindlessSupported();
+    static const bool isBindlessSupported = g_renderBackend->GetRenderConfig().IsBindlessSupported();
 
-    if (!m_mutation_state.IsDirty())
+    if (!m_mutationState.IsDirty())
     {
         HYP_LOG_ONCE(Material, Warning, "EnqueueRenderUpdates called on material with Id {} (name: {}) that is not dirty", Id(), GetName());
 
         return;
     }
 
-    static const uint32 num_bound_textures = MathUtil::Min(
-        max_textures,
-        is_bindless_supported ? max_bindless_resources : max_bound_textures);
+    static const uint32 numBoundTextures = MathUtil::Min(
+        maxTextures,
+        isBindlessSupported ? maxBindlessResources : maxBoundTextures);
 
-    Array<ObjId<Texture>> bound_texture_ids;
-    bound_texture_ids.Resize(num_bound_textures);
+    Array<ObjId<Texture>> boundTextureIds;
+    boundTextureIds.Resize(numBoundTextures);
 
-    for (uint32 i = 0; i < num_bound_textures; i++)
+    for (uint32 i = 0; i < numBoundTextures; i++)
     {
         if (const Handle<Texture>& texture = m_textures.ValueAt(i))
         {
-            bound_texture_ids[i] = texture->Id();
+            boundTextureIds[i] = texture->Id();
         }
     }
 
-    m_render_resource->SetBoundTextureIDs(bound_texture_ids);
+    m_renderResource->SetBoundTextureIDs(boundTextureIds);
 
-    MaterialShaderData buffer_data {
+    MaterialShaderData bufferData {
         .albedo = GetParameter<Vec4f>(MATERIAL_KEY_ALBEDO),
-        .packed_params = Vec4u(
+        .packedParams = Vec4u(
             ByteUtil::PackVec4f(Vec4f(
                 GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
                 GetParameter<float>(MATERIAL_KEY_METALNESS),
@@ -176,13 +176,13 @@ void Material::EnqueueRenderUpdates()
                 GetParameter<float>(MATERIAL_KEY_ALPHA_THRESHOLD))),
             ByteUtil::PackVec4f(Vec4f {}),
             ByteUtil::PackVec4f(Vec4f {})),
-        .uv_scale = GetParameter<Vec2f>(MATERIAL_KEY_UV_SCALE),
-        .parallax_height = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
+        .uvScale = GetParameter<Vec2f>(MATERIAL_KEY_UV_SCALE),
+        .parallaxHeight = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
     };
 
-    m_render_resource->SetBufferData(buffer_data);
+    m_renderResource->SetBufferData(bufferData);
 
-    m_mutation_state = DataMutationState::CLEAN;
+    m_mutationState = DataMutationState::CLEAN;
 }
 
 void Material::SetParameter(MaterialKey key, const Parameter& value)
@@ -204,7 +204,7 @@ void Material::SetParameter(MaterialKey key, const Parameter& value)
 
     if (IsInitCalled())
     {
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 }
 
@@ -222,7 +222,7 @@ void Material::SetParameters(const ParameterTable& parameters)
 
     if (IsInitCalled())
     {
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 }
 
@@ -240,7 +240,7 @@ void Material::ResetParameters()
 
     if (IsInitCalled())
     {
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 }
 
@@ -265,9 +265,9 @@ void Material::SetTexture(MaterialTextureKey key, const Handle<Texture>& texture
     {
         InitObject(texture);
 
-        m_render_resource->SetTexture(key, texture);
+        m_renderResource->SetTexture(key, texture);
 
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 }
 
@@ -305,7 +305,7 @@ void Material::SetTextures(const TextureSet& textures)
             InitObject(m_textures.ValueAt(i));
         }
 
-        if (!g_render_backend->GetRenderConfig().IsBindlessSupported())
+        if (!g_renderBackend->GetRenderConfig().IsBindlessSupported())
         {
             FlatMap<MaterialTextureKey, Handle<Texture>> textures;
 
@@ -319,10 +319,10 @@ void Material::SetTextures(const TextureSet& textures)
                 }
             }
 
-            m_render_resource->SetTextures(std::move(textures));
+            m_renderResource->SetTextures(std::move(textures));
         }
 
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 }
 
@@ -340,12 +340,12 @@ Handle<Material> Material::Clone() const
 {
     Handle<Material> material = CreateObject<Material>(
         Name::Unique(ANSIString(*m_name) + "_dynamic"),
-        m_render_attributes,
+        m_renderAttributes,
         m_parameters,
         m_textures);
 
     // cloned materials are dynamic by default
-    material->m_is_dynamic = true;
+    material->m_isDynamic = true;
 
     return material;
 }
@@ -356,7 +356,7 @@ HashCode Material::GetHashCode() const
 
     hc.Add(m_parameters.GetHashCode());
     hc.Add(m_textures.GetHashCode());
-    hc.Add(m_render_attributes.GetHashCode());
+    hc.Add(m_renderAttributes.GetHashCode());
 
     return hc;
 }
@@ -414,7 +414,7 @@ bool MaterialGroup::Remove(const String& name)
 
 MaterialCache* MaterialCache::GetInstance()
 {
-    return g_material_system;
+    return g_materialSystem;
 }
 
 void MaterialCache::Add(const Handle<Material>& material)
@@ -442,11 +442,11 @@ Handle<Material> MaterialCache::CreateMaterial(
     const Material::ParameterTable& parameters,
     const Material::TextureSet& textures)
 {
-    if (!attributes.shader_definition)
+    if (!attributes.shaderDefinition)
     {
-        attributes.shader_definition = ShaderDefinition {
+        attributes.shaderDefinition = ShaderDefinition {
             NAME("Forward"),
-            static_mesh_vertex_attributes
+            staticMeshVertexAttributes
         };
     }
 
@@ -467,11 +467,11 @@ Handle<Material> MaterialCache::GetOrCreate(
     const Material::ParameterTable& parameters,
     const Material::TextureSet& textures)
 {
-    if (!attributes.shader_definition)
+    if (!attributes.shaderDefinition)
     {
-        attributes.shader_definition = ShaderDefinition {
+        attributes.shaderDefinition = ShaderDefinition {
             NAME("Forward"),
-            static_mesh_vertex_attributes
+            staticMeshVertexAttributes
         };
     }
 

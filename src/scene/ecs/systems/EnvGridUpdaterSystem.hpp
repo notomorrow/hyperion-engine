@@ -19,7 +19,7 @@ class EnvGridUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(EnvGridUpdaterSystem);
 
 public:
-    EnvGridUpdaterSystem(EntityManager& entity_manager);
+    EnvGridUpdaterSystem(EntityManager& entityManager);
     virtual ~EnvGridUpdaterSystem() override = default;
 
     virtual bool RequiresGameThread() const override

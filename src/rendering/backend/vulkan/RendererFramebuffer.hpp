@@ -28,7 +28,7 @@ struct VulkanAttachmentMap
     using Iterator = typename FlatMap<uint32, VulkanAttachmentDef>::Iterator;
     using ConstIterator = typename FlatMap<uint32, VulkanAttachmentDef>::ConstIterator;
 
-    VulkanFramebufferWeakRef framebuffer_weak;
+    VulkanFramebufferWeakRef framebufferWeak;
     FlatMap<uint32, VulkanAttachmentDef> attachments;
 
     ~VulkanAttachmentMap()
@@ -37,7 +37,7 @@ struct VulkanAttachmentMap
     }
 
     RendererResult Create();
-    RendererResult Resize(Vec2u new_size);
+    RendererResult Resize(Vec2u newSize);
 
     void Reset()
     {
@@ -91,18 +91,18 @@ struct VulkanAttachmentMap
         TextureFormat format,
         TextureType type,
         RenderPassStage stage,
-        LoadOperation load_op,
-        StoreOperation store_op)
+        LoadOperation loadOp,
+        StoreOperation storeOp)
     {
-        TextureDesc texture_desc;
-        texture_desc.type = type;
-        texture_desc.format = format;
-        texture_desc.extent = Vec3u { extent.x, extent.y, 1 };
-        texture_desc.image_usage = IU_SAMPLED | IU_ATTACHMENT;
+        TextureDesc textureDesc;
+        textureDesc.type = type;
+        textureDesc.format = format;
+        textureDesc.extent = Vec3u { extent.x, extent.y, 1 };
+        textureDesc.imageUsage = IU_SAMPLED | IU_ATTACHMENT;
 
-        VulkanImageRef image = MakeRenderObject<VulkanImage>(texture_desc);
+        VulkanImageRef image = MakeRenderObject<VulkanImage>(textureDesc);
 
-        VulkanAttachmentRef attachment = MakeRenderObject<VulkanAttachment>(image, framebuffer_weak, stage, load_op, store_op);
+        VulkanAttachmentRef attachment = MakeRenderObject<VulkanAttachment>(image, framebufferWeak, stage, loadOp, storeOp);
         attachment->SetBinding(binding);
 
         attachments.Set(
@@ -123,29 +123,29 @@ public:
     HYP_API VulkanFramebuffer(
         Vec2u extent,
         RenderPassStage stage = RenderPassStage::SHADER,
-        uint32 num_multiview_layers = 0);
+        uint32 numMultiviewLayers = 0);
 
     HYP_API virtual ~VulkanFramebuffer() override;
 
-    HYP_FORCE_INLINE const FixedArray<VkFramebuffer, max_frames_in_flight>& GetVulkanHandles() const
+    HYP_FORCE_INLINE const FixedArray<VkFramebuffer, maxFramesInFlight>& GetVulkanHandles() const
     {
         return m_handles;
     }
 
     HYP_FORCE_INLINE const VulkanRenderPassRef& GetRenderPass() const
     {
-        return m_render_pass;
+        return m_renderPass;
     }
 
     HYP_API virtual AttachmentRef AddAttachment(const AttachmentRef& attachment) override;
-    HYP_API virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation load_op, StoreOperation store_op) override;
+    HYP_API virtual AttachmentRef AddAttachment(uint32 binding, const ImageRef& image, LoadOperation loadOp, StoreOperation storeOp) override;
 
     HYP_API virtual AttachmentRef AddAttachment(
         uint32 binding,
         TextureFormat format,
         TextureType type,
-        LoadOperation load_op,
-        StoreOperation store_op) override;
+        LoadOperation loadOp,
+        StoreOperation storeOp) override;
 
     HYP_API virtual bool RemoveAttachment(uint32 binding) override;
 
@@ -153,7 +153,7 @@ public:
 
     HYP_FORCE_INLINE const VulkanAttachmentMap& GetAttachmentMap() const
     {
-        return m_attachment_map;
+        return m_attachmentMap;
     }
 
     HYP_API virtual bool IsCreated() const override;
@@ -161,15 +161,15 @@ public:
     HYP_API virtual RendererResult Create() override;
     HYP_API virtual RendererResult Destroy() override;
 
-    HYP_API virtual RendererResult Resize(Vec2u new_size) override;
+    HYP_API virtual RendererResult Resize(Vec2u newSize) override;
 
-    HYP_API virtual void BeginCapture(CommandBufferBase* command_buffer, uint32 frame_index) override;
-    HYP_API virtual void EndCapture(CommandBufferBase* command_buffer, uint32 frame_index) override;
+    HYP_API virtual void BeginCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) override;
+    HYP_API virtual void EndCapture(CommandBufferBase* commandBuffer, uint32 frameIndex) override;
 
 private:
-    FixedArray<VkFramebuffer, max_frames_in_flight> m_handles;
-    VulkanRenderPassRef m_render_pass;
-    VulkanAttachmentMap m_attachment_map;
+    FixedArray<VkFramebuffer, maxFramesInFlight> m_handles;
+    VulkanRenderPassRef m_renderPass;
+    VulkanAttachmentMap m_attachmentMap;
 };
 
 } // namespace hyperion

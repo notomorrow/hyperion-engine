@@ -18,8 +18,8 @@ class VisibilityStateUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(VisibilityStateUpdaterSystem);
 
 public:
-    VisibilityStateUpdaterSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    VisibilityStateUpdaterSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

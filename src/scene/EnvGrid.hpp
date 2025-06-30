@@ -54,57 +54,57 @@ enum EnvGridType : uint32
 
 struct EnvProbeCollection
 {
-    uint32 num_probes = 0;
-    FixedArray<uint32, max_bound_ambient_probes * 2> indirect_indices = { 0 };
-    FixedArray<Handle<EnvProbe>, max_bound_ambient_probes> env_probes = {};
-    FixedArray<TResourceHandle<RenderEnvProbe>, max_bound_ambient_probes> env_render_probes = {};
+    uint32 numProbes = 0;
+    FixedArray<uint32, maxBoundAmbientProbes * 2> indirectIndices = { 0 };
+    FixedArray<Handle<EnvProbe>, maxBoundAmbientProbes> envProbes = {};
+    FixedArray<TResourceHandle<RenderEnvProbe>, maxBoundAmbientProbes> envRenderProbes = {};
 
     // Must be called in EnvGrid::Init(), before probes are used from the render thread.
     // returns the index
-    uint32 AddProbe(const Handle<EnvProbe>& env_probe);
+    uint32 AddProbe(const Handle<EnvProbe>& envProbe);
 
     // Must be called in EnvGrid::Init(), before probes are used from the render thread.
-    void AddProbe(uint32 index, const Handle<EnvProbe>& env_probe);
+    void AddProbe(uint32 index, const Handle<EnvProbe>& envProbe);
 
-    HYP_FORCE_INLINE void SetIndexOnGameThread(uint32 index, uint32 new_index)
+    HYP_FORCE_INLINE void SetIndexOnGameThread(uint32 index, uint32 newIndex)
     {
-        AssertThrow(index < max_bound_ambient_probes);
-        AssertThrow(new_index < max_bound_ambient_probes);
+        AssertThrow(index < maxBoundAmbientProbes);
+        AssertThrow(newIndex < maxBoundAmbientProbes);
 
-        indirect_indices[index] = new_index;
+        indirectIndices[index] = newIndex;
     }
 
     HYP_FORCE_INLINE uint32 GetIndexOnGameThread(uint32 index) const
     {
-        return indirect_indices[index];
+        return indirectIndices[index];
     }
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbeDirect(uint32 index) const
     {
-        return env_probes[index];
+        return envProbes[index];
     }
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbeOnGameThread(uint32 index) const
     {
-        return env_probes[indirect_indices[index]];
+        return envProbes[indirectIndices[index]];
     }
 
-    HYP_FORCE_INLINE void SetIndexOnRenderThread(uint32 index, uint32 new_index)
+    HYP_FORCE_INLINE void SetIndexOnRenderThread(uint32 index, uint32 newIndex)
     {
-        AssertThrow(index < max_bound_ambient_probes);
-        AssertThrow(new_index < max_bound_ambient_probes);
+        AssertThrow(index < maxBoundAmbientProbes);
+        AssertThrow(newIndex < maxBoundAmbientProbes);
 
-        indirect_indices[max_bound_ambient_probes + index] = new_index;
+        indirectIndices[maxBoundAmbientProbes + index] = newIndex;
     }
 
     HYP_FORCE_INLINE uint32 GetIndexOnRenderThread(uint32 index) const
     {
-        return indirect_indices[max_bound_ambient_probes + index];
+        return indirectIndices[maxBoundAmbientProbes + index];
     }
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbeOnRenderThread(uint32 index) const
     {
-        return env_probes[indirect_indices[max_bound_ambient_probes + index]];
+        return envProbes[indirectIndices[maxBoundAmbientProbes + index]];
     }
 };
 
@@ -139,32 +139,32 @@ public:
 
     HYP_FORCE_INLINE EnvProbeCollection& GetEnvProbeCollection()
     {
-        return m_env_probe_collection;
+        return m_envProbeCollection;
     }
 
     HYP_FORCE_INLINE const EnvProbeCollection& GetEnvProbeCollection() const
     {
-        return m_env_probe_collection;
+        return m_envProbeCollection;
     }
 
     HYP_FORCE_INLINE const Handle<Texture>& GetVoxelGridTexture() const
     {
-        return m_voxel_grid_texture;
+        return m_voxelGridTexture;
     }
 
     HYP_FORCE_INLINE const Handle<Texture>& GetLightFieldIrradianceTexture() const
     {
-        return m_irradiance_texture;
+        return m_irradianceTexture;
     }
 
     HYP_FORCE_INLINE const Handle<Texture>& GetLightFieldDepthTexture() const
     {
-        return m_depth_texture;
+        return m_depthTexture;
     }
 
     HYP_FORCE_INLINE RenderEnvGrid& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     HYP_METHOD()
@@ -223,18 +223,18 @@ private:
     BoundingBox m_aabb;
 
     Vec3f m_offset;
-    BoundingBox m_voxel_grid_aabb;
+    BoundingBox m_voxelGridAabb;
 
-    EnvProbeCollection m_env_probe_collection;
+    EnvProbeCollection m_envProbeCollection;
 
-    Handle<Texture> m_voxel_grid_texture;
+    Handle<Texture> m_voxelGridTexture;
 
-    Handle<Texture> m_irradiance_texture;
-    Handle<Texture> m_depth_texture;
+    Handle<Texture> m_irradianceTexture;
+    Handle<Texture> m_depthTexture;
 
-    HashCode m_cached_octant_hash_code;
+    HashCode m_cachedOctantHashCode;
 
-    RenderEnvGrid* m_render_resource;
+    RenderEnvGrid* m_renderResource;
 };
 
 } // namespace hyperion

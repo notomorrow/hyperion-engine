@@ -5,15 +5,15 @@
 
 namespace hyperion {
 
-HYP_API ANSIStringView GetClassName(const TypeId& type_id)
+HYP_API ANSIStringView GetClassName(const TypeId& typeId)
 {
-    if (type_id != TypeId::Void())
+    if (typeId != TypeId::Void())
     {
-        const HypClass* hyp_class = GetClass(type_id);
+        const HypClass* hypClass = GetClass(typeId);
 
-        if (hyp_class)
+        if (hypClass)
         {
-            return hyp_class->GetName().LookupString();
+            return hypClass->GetName().LookupString();
         }
     }
 

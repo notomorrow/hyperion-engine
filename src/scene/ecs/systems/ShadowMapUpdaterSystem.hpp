@@ -18,7 +18,7 @@ class ShadowMapUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(ShadowMapUpdaterSystem);
 
 public:
-    ShadowMapUpdaterSystem(EntityManager& entity_manager);
+    ShadowMapUpdaterSystem(EntityManager& entityManager);
     virtual ~ShadowMapUpdaterSystem() override = default;
 
     virtual void OnEntityAdded(Entity* entity) override;
@@ -36,7 +36,7 @@ private:
         };
     }
 
-    // void AddRenderSubsystemToEnvironment(ShadowMapComponent& shadow_map_component, LightComponent& light_component);
+    // void AddRenderSubsystemToEnvironment(ShadowMapComponent& shadowMapComponent, LightComponent& lightComponent);
 };
 
 } // namespace hyperion

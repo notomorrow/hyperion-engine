@@ -29,16 +29,16 @@ public:
     HYP_API virtual RendererResult Destroy() = 0;
 
     HYP_API virtual void BindVertexBuffer(const GpuBufferBase* buffer) = 0;
-    HYP_API virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elem_type = GET_UNSIGNED_INT) = 0;
+    HYP_API virtual void BindIndexBuffer(const GpuBufferBase* buffer, GpuElemType elemType = GET_UNSIGNED_INT) = 0;
 
     HYP_API virtual void DrawIndexed(
-        uint32 num_indices,
-        uint32 num_instances = 1,
-        uint32 instance_index = 0) const = 0;
+        uint32 numIndices,
+        uint32 numInstances = 1,
+        uint32 instanceIndex = 0) const = 0;
 
     HYP_API virtual void DrawIndexedIndirect(
         const GpuBufferBase* buffer,
-        uint32 buffer_offset) const = 0;
+        uint32 bufferOffset) const = 0;
 };
 
 } // namespace hyperion

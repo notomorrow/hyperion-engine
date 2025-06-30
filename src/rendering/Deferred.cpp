@@ -58,32 +58,32 @@
 
 namespace hyperion {
 
-static constexpr TextureFormat env_grid_radiance_format = TF_RGBA8;
-static constexpr TextureFormat env_grid_irradiance_format = TF_R11G11B10F;
+static constexpr TextureFormat envGridRadianceFormat = TF_RGBA8;
+static constexpr TextureFormat envGridIrradianceFormat = TF_R11G11B10F;
 
-static constexpr TextureFormat env_grid_pass_formats[EGPM_MAX] = {
-    env_grid_radiance_format,  // EGPM_RADIANCE
-    env_grid_irradiance_format // EGPM_IRRADIANCE
+static constexpr TextureFormat envGridPassFormats[EGPM_MAX] = {
+    envGridRadianceFormat,  // EGPM_RADIANCE
+    envGridIrradianceFormat // EGPM_IRRADIANCE
 };
 
-static const Float16 s_ltc_matrix[] = {
+static const Float16 s_ltcMatrix[] = {
 #include <rendering/inl/LTCMatrix.inl>
 };
 
-static_assert(sizeof(s_ltc_matrix) == 64 * 64 * 4 * 2, "Invalid LTC matrix size");
+static_assert(sizeof(s_ltcMatrix) == 64 * 64 * 4 * 2, "Invalid LTC matrix size");
 
-static const Float16 s_ltc_brdf[] = {
+static const Float16 s_ltcBrdf[] = {
 #include <rendering/inl/LTCBRDF.inl>
 };
 
-static_assert(sizeof(s_ltc_brdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
+static_assert(sizeof(s_ltcBrdf) == 64 * 64 * 4 * 2, "Invalid LTC BRDF size");
 
-void GetDeferredShaderProperties(ShaderProperties& out_shader_properties)
+void GetDeferredShaderProperties(ShaderProperties& outShaderProperties)
 {
     ShaderProperties properties;
 
-    properties.Set("RT_REFLECTIONS_ENABLED", g_render_backend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.reflections.enabled").ToBool());
-    properties.Set("RT_GI_ENABLED", g_render_backend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.gi.enabled").ToBool());
+    properties.Set("RT_REFLECTIONS_ENABLED", g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.reflections.enabled").ToBool());
+    properties.Set("RT_GI_ENABLED", g_renderBackend->GetRenderConfig().IsRaytracingSupported() && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.gi.enabled").ToBool());
     properties.Set("ENV_GRID_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.env_grid.gi.enabled").ToBool());
     properties.Set("HBIL_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbil.enabled").ToBool());
     properties.Set("HBAO_ENABLED", g_engine->GetAppContext()->GetConfiguration().Get("rendering.hbao.enabled").ToBool());
@@ -97,10 +97,10 @@ void GetDeferredShaderProperties(ShaderProperties& out_shader_properties)
         properties.Set("DEBUG_IRRADIANCE");
     }
 
-    out_shader_properties = std::move(properties);
+    outShaderProperties = std::move(properties);
 }
 
-static constexpr TypeId g_env_probe_type_to_type_id[EPT_MAX] = {
+static constexpr TypeId g_envProbeTypeToTypeId[EPT_MAX] = {
     TypeId::ForType<SkyProbe>(),        // EPT_SKY
     TypeId::ForType<ReflectionProbe>(), // EPT_REFLECTION
     TypeId::ForType<EnvProbe>(),        // EPT_SHADOW (fixme when derived class)
@@ -118,7 +118,7 @@ DeferredPass::DeferredPass(DeferredPassMode mode, Vec2u extent, GBuffer* gbuffer
 
 DeferredPass::~DeferredPass()
 {
-    SafeRelease(std::move(m_ltc_sampler));
+    SafeRelease(std::move(m_ltcSampler));
 }
 
 void DeferredPass::Create()
@@ -130,7 +130,7 @@ void DeferredPass::Create()
 
 void DeferredPass::CreateShader()
 {
-    static const FixedArray<ShaderProperties, LT_MAX> light_type_properties {
+    static const FixedArray<ShaderProperties, LT_MAX> lightTypeProperties {
         ShaderProperties { { "LIGHT_TYPE_DIRECTIONAL" } },
         ShaderProperties { { "LIGHT_TYPE_POINT" } },
         ShaderProperties { { "LIGHT_TYPE_SPOT" } },
@@ -141,10 +141,10 @@ void DeferredPass::CreateShader()
     {
     case DeferredPassMode::INDIRECT_LIGHTING:
     {
-        ShaderProperties shader_properties;
-        GetDeferredShaderProperties(shader_properties);
+        ShaderProperties shaderProperties;
+        GetDeferredShaderProperties(shaderProperties);
 
-        m_shader = g_shader_manager->GetOrCreate(NAME("DeferredIndirect"), shader_properties);
+        m_shader = g_shaderManager->GetOrCreate(NAME("DeferredIndirect"), shaderProperties);
         AssertThrow(m_shader.IsValid());
 
         break;
@@ -152,14 +152,14 @@ void DeferredPass::CreateShader()
     case DeferredPassMode::DIRECT_LIGHTING:
         for (uint32 i = 0; i < LT_MAX; i++)
         {
-            ShaderProperties shader_properties;
-            GetDeferredShaderProperties(shader_properties);
+            ShaderProperties shaderProperties;
+            GetDeferredShaderProperties(shaderProperties);
 
-            shader_properties.Merge(light_type_properties[i]);
+            shaderProperties.Merge(lightTypeProperties[i]);
 
-            m_direct_light_shaders[i] = g_shader_manager->GetOrCreate(NAME("DeferredDirect"), shader_properties);
+            m_directLightShaders[i] = g_shaderManager->GetOrCreate(NAME("DeferredDirect"), shaderProperties);
 
-            AssertThrow(m_direct_light_shaders[i].IsValid());
+            AssertThrow(m_directLightShaders[i].IsValid());
         }
 
         break;
@@ -168,25 +168,25 @@ void DeferredPass::CreateShader()
     }
 }
 
-void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderable_attributes)
+void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
 {
     if (m_mode == DeferredPassMode::INDIRECT_LIGHTING)
     {
-        FullScreenPass::CreatePipeline(renderable_attributes);
+        FullScreenPass::CreatePipeline(renderableAttributes);
         return;
     }
 
     { // linear transform cosines texture data
-        m_ltc_sampler = g_render_backend->MakeSampler(
+        m_ltcSampler = g_renderBackend->MakeSampler(
             TFM_NEAREST,
             TFM_LINEAR,
             TWM_CLAMP_TO_EDGE);
 
-        DeferCreate(m_ltc_sampler);
+        DeferCreate(m_ltcSampler);
 
-        ByteBuffer ltc_matrix_data(sizeof(s_ltc_matrix), s_ltc_matrix);
+        ByteBuffer ltcMatrixData(sizeof(s_ltcMatrix), s_ltcMatrix);
 
-        m_ltc_matrix_texture = CreateObject<Texture>(TextureData {
+        m_ltcMatrixTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
                 TT_TEX2D,
                 TF_RGBA16F,
@@ -194,15 +194,15 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderable_attri
                 TFM_LINEAR,
                 TFM_LINEAR,
                 TWM_CLAMP_TO_EDGE },
-            std::move(ltc_matrix_data) });
+            std::move(ltcMatrixData) });
 
-        InitObject(m_ltc_matrix_texture);
+        InitObject(m_ltcMatrixTexture);
 
-        m_ltc_matrix_texture->SetPersistentRenderResourceEnabled(true);
+        m_ltcMatrixTexture->SetPersistentRenderResourceEnabled(true);
 
-        ByteBuffer ltc_brdf_data(sizeof(s_ltc_brdf), s_ltc_brdf);
+        ByteBuffer ltcBrdfData(sizeof(s_ltcBrdf), s_ltcBrdf);
 
-        m_ltc_brdf_texture = CreateObject<Texture>(TextureData {
+        m_ltcBrdfTexture = CreateObject<Texture>(TextureData {
             TextureDesc {
                 TT_TEX2D,
                 TF_RGBA16F,
@@ -210,54 +210,54 @@ void DeferredPass::CreatePipeline(const RenderableAttributeSet& renderable_attri
                 TFM_LINEAR,
                 TFM_LINEAR,
                 TWM_CLAMP_TO_EDGE },
-            std::move(ltc_brdf_data) });
+            std::move(ltcBrdfData) });
 
-        InitObject(m_ltc_brdf_texture);
+        InitObject(m_ltcBrdfTexture);
 
-        m_ltc_brdf_texture->SetPersistentRenderResourceEnabled(true);
+        m_ltcBrdfTexture->SetPersistentRenderResourceEnabled(true);
     }
 
     for (uint32 i = 0; i < LT_MAX; i++)
     {
-        ShaderRef& shader = m_direct_light_shaders[i];
+        ShaderRef& shader = m_directLightShaders[i];
         AssertThrow(shader.IsValid());
 
-        const DescriptorTableDeclaration& descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+        const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-        DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+        DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("DeferredDirectDescriptorSet"), frame_index);
-            AssertThrow(descriptor_set.IsValid());
+            const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("DeferredDirectDescriptorSet"), frameIndex);
+            AssertThrow(descriptorSet.IsValid());
 
-            descriptor_set->SetElement(NAME("MaterialsBuffer"), g_render_global_state->gpu_buffers[GRB_MATERIALS]->GetBuffer(frame_index));
+            descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
 
-            descriptor_set->SetElement(NAME("LTCSampler"), m_ltc_sampler);
-            descriptor_set->SetElement(NAME("LTCMatrixTexture"), m_ltc_matrix_texture->GetRenderResource().GetImageView());
-            descriptor_set->SetElement(NAME("LTCBRDFTexture"), m_ltc_brdf_texture->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("LTCSampler"), m_ltcSampler);
+            descriptorSet->SetElement(NAME("LTCMatrixTexture"), m_ltcMatrixTexture->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("LTCBRDFTexture"), m_ltcBrdfTexture->GetRenderResource().GetImageView());
         }
 
-        DeferCreate(descriptor_table);
+        DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphics_pipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+        GraphicsPipelineRef graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
             shader,
-            descriptor_table,
+            descriptorTable,
             { &m_framebuffer, 1 },
-            renderable_attributes);
+            renderableAttributes);
 
-        m_direct_light_graphics_pipelines[i] = graphics_pipeline;
+        m_directLightGraphicsPipelines[i] = graphicsPipeline;
 
         if (i == 0)
         {
-            m_graphics_pipeline = graphics_pipeline;
+            m_graphicsPipeline = graphicsPipeline;
         }
     }
 }
 
-void DeferredPass::Resize_Internal(Vec2u new_size)
+void DeferredPass::Resize_Internal(Vec2u newSize)
 {
-    FullScreenPass::Resize_Internal(new_size);
+    FullScreenPass::Resize_Internal(newSize);
 }
 
 void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
@@ -266,7 +266,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
 
     AssertDebug(rs.IsValid());
     AssertDebug(rs.HasView());
-    AssertDebug(rs.pass_data != nullptr);
+    AssertDebug(rs.passData != nullptr);
 
     if (m_mode == DeferredPassMode::INDIRECT_LIGHTING)
     {
@@ -283,55 +283,55 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
         return;
     }
 
-    static const bool use_bindless_textures = g_render_backend->GetRenderConfig().IsBindlessSupported();
+    static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
 
     // render with each light
-    for (uint32 light_type_index = 0; light_type_index < LT_MAX; light_type_index++)
+    for (uint32 lightTypeIndex = 0; lightTypeIndex < LT_MAX; lightTypeIndex++)
     {
-        const LightType light_type = LightType(light_type_index);
+        const LightType lightType = LightType(lightTypeIndex);
 
-        bool is_first_light = true;
+        bool isFirstLight = true;
 
         for (Light* light : rpl.lights)
         {
-            if (light->GetLightType() != light_type_index)
+            if (light->GetLightType() != lightTypeIndex)
             {
                 continue;
             }
 
-            const GraphicsPipelineRef& pipeline = m_direct_light_graphics_pipelines[light_type_index];
+            const GraphicsPipelineRef& pipeline = m_directLightGraphicsPipelines[lightTypeIndex];
 
-            const uint32 global_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-            const uint32 view_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
-            const uint32 material_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
-            const uint32 deferred_direct_descriptor_set_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("DeferredDirectDescriptorSet"));
+            const uint32 globalDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+            const uint32 viewDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+            const uint32 materialDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Material"));
+            const uint32 deferredDirectDescriptorSetIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("DeferredDirectDescriptorSet"));
 
-            if (is_first_light)
+            if (isFirstLight)
             {
-                pipeline->SetPushConstants(m_push_constant_data.Data(), m_push_constant_data.Size());
+                pipeline->SetPushConstants(m_pushConstantData.Data(), m_pushConstantData.Size());
 
                 frame->GetCommandList().Add<BindGraphicsPipeline>(pipeline);
 
                 // Bind textures globally (bindless)
-                if (material_descriptor_set_index != ~0u && use_bindless_textures)
+                if (materialDescriptorSetIndex != ~0u && useBindlessTextures)
                 {
                     frame->GetCommandList().Add<BindDescriptorSet>(
                         pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Material"), frame->GetFrameIndex()),
                         pipeline,
                         ArrayMap<Name, uint32> {},
-                        material_descriptor_set_index);
+                        materialDescriptorSetIndex);
                 }
 
-                if (deferred_direct_descriptor_set_index != ~0u)
+                if (deferredDirectDescriptorSetIndex != ~0u)
                 {
                     frame->GetCommandList().Add<BindDescriptorSet>(
                         pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("DeferredDirectDescriptorSet"), frame->GetFrameIndex()),
                         pipeline,
                         ArrayMap<Name, uint32> {},
-                        deferred_direct_descriptor_set_index);
+                        deferredDirectDescriptorSetIndex);
                 }
 
-                is_first_light = false;
+                isFirstLight = false;
             }
 
             frame->GetCommandList().Add<BindDescriptorSet>(
@@ -341,31 +341,31 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
                     { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*rs.world) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*rs.view->GetCamera()) },
                     { NAME("CurrentLight"), ShaderDataOffset<LightShaderData>(light, 0) } },
-                global_descriptor_set_index);
+                globalDescriptorSetIndex);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
-                rs.pass_data->descriptor_sets[frame->GetFrameIndex()],
+                rs.passData->descriptorSets[frame->GetFrameIndex()],
                 pipeline,
                 ArrayMap<Name, uint32> {},
-                view_descriptor_set_index);
+                viewDescriptorSetIndex);
 
             // Bind material descriptor set (for area lights)
-            if (material_descriptor_set_index != ~0u && !use_bindless_textures)
+            if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
             {
-                const DescriptorSetRef& material_descriptor_set = light->GetMaterial().IsValid()
+                const DescriptorSetRef& materialDescriptorSet = light->GetMaterial().IsValid()
                     ? light->GetMaterial()->GetRenderResource().GetDescriptorSets()[frame->GetFrameIndex()]
                     : g_engine->GetMaterialDescriptorSetManager()->GetInvalidMaterialDescriptorSet(frame->GetFrameIndex());
 
-                AssertThrow(material_descriptor_set != nullptr);
+                AssertThrow(materialDescriptorSet != nullptr);
 
                 frame->GetCommandList().Add<BindDescriptorSet>(
-                    material_descriptor_set,
+                    materialDescriptorSet,
                     pipeline,
                     ArrayMap<Name, uint32> {},
-                    material_descriptor_set_index);
+                    materialDescriptorSetIndex);
             }
 
-            m_full_screen_quad->GetRenderResource().Render(frame->GetCommandList());
+            m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
         }
     }
 }
@@ -385,7 +385,7 @@ TonemapPass::~TonemapPass()
 
 void TonemapPass::Create()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     FullScreenPass::Create();
 }
@@ -393,24 +393,24 @@ void TonemapPass::Create()
 void TonemapPass::CreatePipeline()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    RenderableAttributeSet renderable_attributes(
+    RenderableAttributeSet renderableAttributes(
         MeshAttributes {
-            .vertex_attributes = static_mesh_vertex_attributes },
+            .vertexAttributes = staticMeshVertexAttributes },
         MaterialAttributes {
-            .fill_mode = FM_FILL,
-            .blend_function = BlendFunction::None(),
+            .fillMode = FM_FILL,
+            .blendFunction = BlendFunction::None(),
             .flags = MaterialAttributeFlags::NONE });
 
-    m_shader = g_shader_manager->GetOrCreate(NAME("Tonemap"));
+    m_shader = g_shaderManager->GetOrCreate(NAME("Tonemap"));
 
-    FullScreenPass::CreatePipeline(renderable_attributes);
+    FullScreenPass::CreatePipeline(renderableAttributes);
 }
 
-void TonemapPass::Resize_Internal(Vec2u new_size)
+void TonemapPass::Resize_Internal(Vec2u newSize)
 {
-    FullScreenPass::Resize_Internal(new_size);
+    FullScreenPass::Resize_Internal(newSize);
 }
 
 void TonemapPass::Render(FrameBase* frame, const RenderSetup& rs)
@@ -439,7 +439,7 @@ LightmapPass::~LightmapPass()
 
 void LightmapPass::Create()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     FullScreenPass::Create();
 }
@@ -447,26 +447,26 @@ void LightmapPass::Create()
 void LightmapPass::CreatePipeline()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    RenderableAttributeSet renderable_attributes(
+    RenderableAttributeSet renderableAttributes(
         MeshAttributes {
-            .vertex_attributes = static_mesh_vertex_attributes },
+            .vertexAttributes = staticMeshVertexAttributes },
         MaterialAttributes {
-            .fill_mode = FM_FILL,
-            .blend_function = BlendFunction(
+            .fillMode = FM_FILL,
+            .blendFunction = BlendFunction(
                 BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
                 BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA),
             .flags = MaterialAttributeFlags::NONE });
 
-    m_shader = g_shader_manager->GetOrCreate(NAME("ApplyLightmap"));
+    m_shader = g_shaderManager->GetOrCreate(NAME("ApplyLightmap"));
 
-    FullScreenPass::CreatePipeline(renderable_attributes);
+    FullScreenPass::CreatePipeline(renderableAttributes);
 }
 
-void LightmapPass::Resize_Internal(Vec2u new_size)
+void LightmapPass::Resize_Internal(Vec2u newSize)
 {
-    FullScreenPass::Resize_Internal(new_size);
+    FullScreenPass::Resize_Internal(newSize);
 }
 
 void LightmapPass::Render(FrameBase* frame, const RenderSetup& rs)
@@ -494,9 +494,9 @@ static EnvGridApplyMode EnvGridTypeToApplyEnvGridMode(EnvGridType type)
 }
 
 EnvGridPass::EnvGridPass(EnvGridPassMode mode, Vec2u extent, GBuffer* gbuffer)
-    : FullScreenPass(env_grid_pass_formats[mode], extent, gbuffer),
+    : FullScreenPass(envGridPassFormats[mode], extent, gbuffer),
       m_mode(mode),
-      m_is_first_frame(true)
+      m_isFirstFrame(true)
 {
     if (mode == EGPM_RADIANCE)
     {
@@ -512,7 +512,7 @@ EnvGridPass::~EnvGridPass()
 
 void EnvGridPass::Create()
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     FullScreenPass::Create();
 }
@@ -520,128 +520,128 @@ void EnvGridPass::Create()
 void EnvGridPass::CreatePipeline()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    RenderableAttributeSet renderable_attributes(
+    RenderableAttributeSet renderableAttributes(
         MeshAttributes {
-            .vertex_attributes = static_mesh_vertex_attributes },
+            .vertexAttributes = staticMeshVertexAttributes },
         MaterialAttributes {
-            .fill_mode = FM_FILL,
-            .blend_function = BlendFunction(BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
+            .fillMode = FM_FILL,
+            .blendFunction = BlendFunction(BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
                 BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA),
             .flags = MaterialAttributeFlags::NONE });
 
     if (m_mode == EGPM_RADIANCE)
     {
-        m_shader = g_shader_manager->GetOrCreate(NAME("ApplyEnvGrid"), ShaderProperties { { "MODE_RADIANCE" } });
+        m_shader = g_shaderManager->GetOrCreate(NAME("ApplyEnvGrid"), ShaderProperties { { "MODE_RADIANCE" } });
 
-        FullScreenPass::CreatePipeline(renderable_attributes);
+        FullScreenPass::CreatePipeline(renderableAttributes);
 
         return;
     }
 
-    static const FixedArray<Pair<EnvGridApplyMode, ShaderProperties>, EGAM_MAX> apply_env_grid_passes = {
+    static const FixedArray<Pair<EnvGridApplyMode, ShaderProperties>, EGAM_MAX> applyEnvGridPasses = {
         Pair<EnvGridApplyMode, ShaderProperties> { EGAM_SH, ShaderProperties { { "MODE_IRRADIANCE", "IRRADIANCE_MODE_SH" } } },
         Pair<EnvGridApplyMode, ShaderProperties> { EGAM_VOXEL, ShaderProperties { { "MODE_IRRADIANCE", "IRRADIANCE_MODE_VOXEL" } } },
         Pair<EnvGridApplyMode, ShaderProperties> { EGAM_LIGHT_FIELD, ShaderProperties { { "MODE_IRRADIANCE", "IRRADIANCE_MODE_LIGHT_FIELD" } } }
     };
 
-    for (const auto& it : apply_env_grid_passes)
+    for (const auto& it : applyEnvGridPasses)
     {
-        ShaderRef shader = g_shader_manager->GetOrCreate(NAME("ApplyEnvGrid"), it.second);
+        ShaderRef shader = g_shaderManager->GetOrCreate(NAME("ApplyEnvGrid"), it.second);
         AssertThrow(shader.IsValid());
 
-        const DescriptorTableDeclaration& descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+        const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-        DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
-        DeferCreate(descriptor_table);
+        DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
+        DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphics_pipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+        GraphicsPipelineRef graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
             shader,
-            descriptor_table,
+            descriptorTable,
             { &m_framebuffer, 1 },
-            renderable_attributes);
+            renderableAttributes);
 
-        m_graphics_pipelines[uint32(it.first)] = std::move(graphics_pipeline);
+        m_graphicsPipelines[uint32(it.first)] = std::move(graphicsPipeline);
     }
 
-    m_graphics_pipeline = m_graphics_pipelines[EGAM_SH];
+    m_graphicsPipeline = m_graphicsPipelines[EGAM_SH];
 }
 
-void EnvGridPass::Resize_Internal(Vec2u new_size)
+void EnvGridPass::Resize_Internal(Vec2u newSize)
 {
-    FullScreenPass::Resize_Internal(new_size);
+    FullScreenPass::Resize_Internal(newSize);
 }
 
 HYP_DISABLE_OPTIMIZATION;
 void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     AssertDebug(rs.IsValid());
     AssertDebug(rs.HasView());
-    AssertDebug(rs.pass_data != nullptr);
+    AssertDebug(rs.passData != nullptr);
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
 
     // shouldn't be called if no env grids are present
-    AssertDebug(rpl.env_grids.NumCurrent() != 0);
+    AssertDebug(rpl.envGrids.NumCurrent() != 0);
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer, frame_index);
+    frame->GetCommandList().Add<BeginFramebuffer>(m_framebuffer, frameIndex);
 
     // render previous frame's result to screen
-    if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr)
+    if (!m_isFirstFrame && m_renderTextureToScreenPass != nullptr)
     {
         RenderPreviousTextureToScreen(frame, rs);
     }
 
-    for (EnvGrid* env_grid : rpl.env_grids)
+    for (EnvGrid* envGrid : rpl.envGrids)
     {
-        const GraphicsPipelineRef& graphics_pipeline = m_mode == EGPM_RADIANCE
-            ? m_graphics_pipeline
-            : m_graphics_pipelines[EnvGridTypeToApplyEnvGridMode(env_grid->GetEnvGridType())];
+        const GraphicsPipelineRef& graphicsPipeline = m_mode == EGPM_RADIANCE
+            ? m_graphicsPipeline
+            : m_graphicsPipelines[EnvGridTypeToApplyEnvGridMode(envGrid->GetEnvGridType())];
 
-        AssertThrow(graphics_pipeline.IsValid());
+        AssertThrow(graphicsPipeline.IsValid());
 
-        const uint32 global_descriptor_set_index = graphics_pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-        const uint32 view_descriptor_set_index = graphics_pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+        const uint32 globalDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+        const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
 
-        graphics_pipeline->SetPushConstants(m_push_constant_data.Data(), m_push_constant_data.Size());
+        graphicsPipeline->SetPushConstants(m_pushConstantData.Data(), m_pushConstantData.Size());
 
         if (ShouldRenderHalfRes())
         {
-            const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frame_counter & 1);
-            const Vec2u viewport_extent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
+            const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frameCounter & 1);
+            const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphics_pipeline, viewport_offset, viewport_extent);
+            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline, viewportOffset, viewportExtent);
         }
         else
         {
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphics_pipeline);
+            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline);
         }
 
         frame->GetCommandList().Add<BindDescriptorSet>(
-            graphics_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index),
-            graphics_pipeline,
+            graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
+            graphicsPipeline,
             ArrayMap<Name, uint32> {
                 { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*rs.world) },
                 { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*rs.view->GetCamera()) },
-                { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(env_grid, 0) } },
-            global_descriptor_set_index);
+                { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(envGrid, 0) } },
+            globalDescriptorSetIndex);
 
         frame->GetCommandList().Add<BindDescriptorSet>(
-            rs.pass_data->descriptor_sets[frame_index],
-            graphics_pipeline,
+            rs.passData->descriptorSets[frameIndex],
+            graphicsPipeline,
             ArrayMap<Name, uint32> {},
-            view_descriptor_set_index);
+            viewDescriptorSetIndex);
 
-        m_full_screen_quad->GetRenderResource().Render(frame->GetCommandList());
+        m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frame_index);
+    frame->GetCommandList().Add<EndFramebuffer>(m_framebuffer, frameIndex);
 
     if (ShouldRenderHalfRes())
     {
@@ -655,10 +655,10 @@ void EnvGridPass::Render(FrameBase* frame, const RenderSetup& rs)
             CopyResultToPreviousTexture(frame, rs);
         }
 
-        m_temporal_blending->Render(frame, rs);
+        m_temporalBlending->Render(frame, rs);
     }
 
-    m_is_first_frame = false;
+    m_isFirstFrame = false;
 }
 HYP_ENABLE_OPTIMIZATION;
 
@@ -666,11 +666,11 @@ HYP_ENABLE_OPTIMIZATION;
 
 #pragma region ReflectionsPass
 
-ReflectionsPass::ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const ImageViewRef& mip_chain_image_view, const ImageViewRef& deferred_result_image_view)
+ReflectionsPass::ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const ImageViewRef& mipChainImageView, const ImageViewRef& deferredResultImageView)
     : FullScreenPass(TF_R10G10B10A2, extent, gbuffer),
-      m_mip_chain_image_view(mip_chain_image_view),
-      m_deferred_result_image_view(deferred_result_image_view),
-      m_is_first_frame(true)
+      m_mipChainImageView(mipChainImageView),
+      m_deferredResultImageView(deferredResultImageView),
+      m_isFirstFrame(true)
 {
     SetBlendFunction(BlendFunction(
         BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
@@ -679,7 +679,7 @@ ReflectionsPass::ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const ImageView
 
 ReflectionsPass::~ReflectionsPass()
 {
-    m_ssr_renderer.Reset();
+    m_ssrRenderer.Reset();
 }
 
 void ReflectionsPass::Create()
@@ -697,49 +697,49 @@ void ReflectionsPass::CreatePipeline()
 
     CreatePipeline(RenderableAttributeSet(
         MeshAttributes {
-            .vertex_attributes = static_mesh_vertex_attributes },
+            .vertexAttributes = staticMeshVertexAttributes },
         MaterialAttributes {
-            .fill_mode = FM_FILL,
-            .blend_function = BlendFunction(BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
+            .fillMode = FM_FILL,
+            .blendFunction = BlendFunction(BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
                 BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA),
             .flags = MaterialAttributeFlags::NONE }));
 }
 
-void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderable_attributes)
+void ReflectionsPass::CreatePipeline(const RenderableAttributeSet& renderableAttributes)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     // Default pass type (non parallax corrected)
 
-    static const FixedArray<Pair<ApplyReflectionProbeMode, ShaderProperties>, ApplyReflectionProbeMode::MAX> apply_reflection_probe_passes = {
+    static const FixedArray<Pair<ApplyReflectionProbeMode, ShaderProperties>, ApplyReflectionProbeMode::MAX> applyReflectionProbePasses = {
         Pair<ApplyReflectionProbeMode, ShaderProperties> { ApplyReflectionProbeMode::DEFAULT, ShaderProperties {} },
         Pair<ApplyReflectionProbeMode, ShaderProperties> { ApplyReflectionProbeMode::PARALLAX_CORRECTED, ShaderProperties { { "ENV_PROBE_PARALLAX_CORRECTED" } } }
     };
 
-    for (const auto& it : apply_reflection_probe_passes)
+    for (const auto& it : applyReflectionProbePasses)
     {
-        ShaderRef shader = g_shader_manager->GetOrCreate(
+        ShaderRef shader = g_shaderManager->GetOrCreate(
             NAME("ApplyReflectionProbe"),
             it.second);
 
         AssertThrow(shader.IsValid());
 
-        const DescriptorTableDeclaration& descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+        const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-        DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
-        DeferCreate(descriptor_table);
+        DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
+        DeferCreate(descriptorTable);
 
-        GraphicsPipelineRef graphics_pipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
+        GraphicsPipelineRef graphicsPipeline = g_engine->GetGraphicsPipelineCache()->GetOrCreate(
             shader,
-            descriptor_table,
+            descriptorTable,
             { &m_framebuffer, 1 },
-            renderable_attributes);
+            renderableAttributes);
 
-        m_graphics_pipelines[it.first] = std::move(graphics_pipeline);
+        m_graphicsPipelines[it.first] = std::move(graphicsPipeline);
     }
 
-    m_graphics_pipeline = m_graphics_pipelines[ApplyReflectionProbeMode::DEFAULT];
+    m_graphicsPipeline = m_graphicsPipelines[ApplyReflectionProbeMode::DEFAULT];
 }
 
 bool ReflectionsPass::ShouldRenderSSR() const
@@ -750,45 +750,45 @@ bool ReflectionsPass::ShouldRenderSSR() const
 
 void ReflectionsPass::CreateSSRRenderer()
 {
-    m_ssr_renderer = MakeUnique<SSRRenderer>(SSRRendererConfig::FromConfig(), m_gbuffer, m_mip_chain_image_view, m_deferred_result_image_view);
-    m_ssr_renderer->Create();
+    m_ssrRenderer = MakeUnique<SSRRenderer>(SSRRendererConfig::FromConfig(), m_gbuffer, m_mipChainImageView, m_deferredResultImageView);
+    m_ssrRenderer->Create();
 
-    ShaderRef render_texture_to_screen_shader = g_shader_manager->GetOrCreate(NAME("RenderTextureToScreen"));
-    AssertThrow(render_texture_to_screen_shader.IsValid());
+    ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen"));
+    AssertThrow(renderTextureToScreenShader.IsValid());
 
-    const DescriptorTableDeclaration& descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
-    DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+    const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
-        AssertThrow(descriptor_set != nullptr);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
+        AssertThrow(descriptorSet != nullptr);
 
-        descriptor_set->SetElement(NAME("InTexture"), m_ssr_renderer->GetFinalResultTexture()->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("InTexture"), m_ssrRenderer->GetFinalResultTexture()->GetRenderResource().GetImageView());
     }
 
-    DeferCreate(descriptor_table);
+    DeferCreate(descriptorTable);
 
-    m_render_ssr_to_screen_pass = MakeUnique<FullScreenPass>(
-        render_texture_to_screen_shader,
-        std::move(descriptor_table),
-        m_image_format,
+    m_renderSsrToScreenPass = MakeUnique<FullScreenPass>(
+        renderTextureToScreenShader,
+        std::move(descriptorTable),
+        m_imageFormat,
         m_extent,
         m_gbuffer);
 
     // Use alpha blending to blend SSR into the reflection probes
-    m_render_ssr_to_screen_pass->SetBlendFunction(BlendFunction(
+    m_renderSsrToScreenPass->SetBlendFunction(BlendFunction(
         BMF_SRC_ALPHA, BMF_ONE_MINUS_SRC_ALPHA,
         BMF_ONE, BMF_ONE_MINUS_SRC_ALPHA));
 
-    m_render_ssr_to_screen_pass->Create();
+    m_renderSsrToScreenPass->Create();
 }
 
-void ReflectionsPass::Resize_Internal(Vec2u new_size)
+void ReflectionsPass::Resize_Internal(Vec2u newSize)
 {
     HYP_SCOPE;
 
-    FullScreenPass::Resize_Internal(new_size);
+    FullScreenPass::Resize_Internal(newSize);
 
     if (ShouldRenderSSR())
     {
@@ -799,129 +799,129 @@ void ReflectionsPass::Resize_Internal(Vec2u new_size)
 void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     AssertDebug(rs.IsValid());
     AssertDebug(rs.HasView());
-    AssertDebug(rs.pass_data != nullptr);
+    AssertDebug(rs.passData != nullptr);
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(rs.view->GetView());
 
     if (ShouldRenderSSR())
     {
-        m_ssr_renderer->Render(frame, rs);
+        m_ssrRenderer->Render(frame, rs);
     }
 
     // Sky renders first
-    static const FixedArray<EnvProbeType, ApplyReflectionProbeMode::MAX> reflection_probe_types {
+    static const FixedArray<EnvProbeType, ApplyReflectionProbeMode::MAX> reflectionProbeTypes {
         EPT_SKY,
         EPT_REFLECTION
     };
 
-    static const FixedArray<ApplyReflectionProbeMode, ApplyReflectionProbeMode::MAX> reflection_probe_modes {
+    static const FixedArray<ApplyReflectionProbeMode, ApplyReflectionProbeMode::MAX> reflectionProbeModes {
         ApplyReflectionProbeMode::DEFAULT,           // ENV_PROBE_TYPE_SKY
         ApplyReflectionProbeMode::PARALLAX_CORRECTED // ENV_PROBE_TYPE_REFLECTION
     };
 
-    FixedArray<Pair<GraphicsPipelineRef*, Array<EnvProbe*>>, ApplyReflectionProbeMode::MAX> pass_ptrs;
+    FixedArray<Pair<GraphicsPipelineRef*, Array<EnvProbe*>>, ApplyReflectionProbeMode::MAX> passPtrs;
 
-    for (uint32 mode_index = ApplyReflectionProbeMode::DEFAULT; mode_index < ApplyReflectionProbeMode::MAX; mode_index++)
+    for (uint32 modeIndex = ApplyReflectionProbeMode::DEFAULT; modeIndex < ApplyReflectionProbeMode::MAX; modeIndex++)
     {
-        pass_ptrs[mode_index] = { &m_graphics_pipelines[mode_index], {} };
+        passPtrs[modeIndex] = { &m_graphicsPipelines[modeIndex], {} };
 
-        const EnvProbeType env_probe_type = reflection_probe_types[mode_index];
+        const EnvProbeType envProbeType = reflectionProbeTypes[modeIndex];
 
-        for (EnvProbe* env_probe : rpl.env_probes.GetElements(g_env_probe_type_to_type_id[env_probe_type]))
+        for (EnvProbe* envProbe : rpl.envProbes.GetElements(g_envProbeTypeToTypeId[envProbeType]))
         {
-            pass_ptrs[mode_index].second.PushBack(env_probe);
+            passPtrs[modeIndex].second.PushBack(envProbe);
         }
     }
 
-    frame->GetCommandList().Add<BeginFramebuffer>(GetFramebuffer(), frame_index);
+    frame->GetCommandList().Add<BeginFramebuffer>(GetFramebuffer(), frameIndex);
 
     // render previous frame's result to screen
-    if (!m_is_first_frame && m_render_texture_to_screen_pass != nullptr)
+    if (!m_isFirstFrame && m_renderTextureToScreenPass != nullptr)
     {
         RenderPreviousTextureToScreen(frame, rs);
     }
 
-    uint32 num_rendered_env_probes = 0;
+    uint32 numRenderedEnvProbes = 0;
 
-    for (uint32 reflection_probe_type_index = 0; reflection_probe_type_index < ArraySize(reflection_probe_types); reflection_probe_type_index++)
+    for (uint32 reflectionProbeTypeIndex = 0; reflectionProbeTypeIndex < ArraySize(reflectionProbeTypes); reflectionProbeTypeIndex++)
     {
-        const EnvProbeType env_probe_type = reflection_probe_types[reflection_probe_type_index];
-        const ApplyReflectionProbeMode mode = reflection_probe_modes[reflection_probe_type_index];
+        const EnvProbeType envProbeType = reflectionProbeTypes[reflectionProbeTypeIndex];
+        const ApplyReflectionProbeMode mode = reflectionProbeModes[reflectionProbeTypeIndex];
 
-        const Pair<GraphicsPipelineRef*, Array<EnvProbe*>>& it = pass_ptrs[mode];
+        const Pair<GraphicsPipelineRef*, Array<EnvProbe*>>& it = passPtrs[mode];
 
         if (it.second.Empty())
         {
             continue;
         }
 
-        const GraphicsPipelineRef& graphics_pipeline = *it.first;
-        const Array<EnvProbe*>& env_probes = it.second;
+        const GraphicsPipelineRef& graphicsPipeline = *it.first;
+        const Array<EnvProbe*>& envProbes = it.second;
 
-        graphics_pipeline->SetPushConstants(m_push_constant_data.Data(), m_push_constant_data.Size());
+        graphicsPipeline->SetPushConstants(m_pushConstantData.Data(), m_pushConstantData.Size());
 
         if (ShouldRenderHalfRes())
         {
-            const Vec2i viewport_offset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frame_counter & 1);
-            const Vec2u viewport_extent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
+            const Vec2i viewportOffset = (Vec2i(m_framebuffer->GetExtent().x, 0) / 2) * (rs.world->GetBufferData().frameCounter & 1);
+            const Vec2u viewportExtent = Vec2u(m_framebuffer->GetExtent().x / 2, m_framebuffer->GetExtent().y);
 
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphics_pipeline, viewport_offset, viewport_extent);
+            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline, viewportOffset, viewportExtent);
         }
         else
         {
-            frame->GetCommandList().Add<BindGraphicsPipeline>(graphics_pipeline);
+            frame->GetCommandList().Add<BindGraphicsPipeline>(graphicsPipeline);
         }
 
-        const uint32 global_descriptor_set_index = graphics_pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
-        const uint32 view_descriptor_set_index = graphics_pipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
+        const uint32 globalDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("Global"));
+        const uint32 viewDescriptorSetIndex = graphicsPipeline->GetDescriptorTable()->GetDescriptorSetIndex(NAME("View"));
 
-        for (EnvProbe* env_probe : env_probes)
+        for (EnvProbe* envProbe : envProbes)
         {
-            if (num_rendered_env_probes >= max_bound_reflection_probes)
+            if (numRenderedEnvProbes >= maxBoundReflectionProbes)
             {
                 HYP_LOG(Rendering, Warning, "Attempting to render too many reflection probes.");
 
                 break;
             }
 
-            // RenderProxyEnvProbe* env_probe_proxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(env_probe->Id()));
-            // AssertThrow(env_probe_proxy != nullptr);
-            // AssertDebug(env_probe_proxy->buffer_data.texture_index != ~0u, "EnvProbe texture index not set: not bound for proxy %p at frame idx %u!", (void*)env_probe_proxy,
+            // RenderProxyEnvProbe* envProbeProxy = static_cast<RenderProxyEnvProbe*>(RenderApi_GetRenderProxy(envProbe->Id()));
+            // AssertThrow(envProbeProxy != nullptr);
+            // AssertDebug(envProbeProxy->bufferData.textureIndex != ~0u, "EnvProbe texture index not set: not bound for proxy %p at frame idx %u!", (void*)envProbeProxy,
             //     RenderApi_GetFrameIndex_RenderThread());
 
             frame->GetCommandList().Add<BindDescriptorSet>(
-                graphics_pipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frame_index),
-                graphics_pipeline,
+                graphicsPipeline->GetDescriptorTable()->GetDescriptorSet(NAME("Global"), frameIndex),
+                graphicsPipeline,
                 ArrayMap<Name, uint32> {
                     { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*rs.world) },
                     { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*rs.view->GetCamera()) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(env_probe) } },
-                global_descriptor_set_index);
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(envProbe) } },
+                globalDescriptorSetIndex);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
-                rs.pass_data->descriptor_sets[frame_index],
-                graphics_pipeline,
+                rs.passData->descriptorSets[frameIndex],
+                graphicsPipeline,
                 ArrayMap<Name, uint32> {},
-                view_descriptor_set_index);
+                viewDescriptorSetIndex);
 
-            m_full_screen_quad->GetRenderResource().Render(frame->GetCommandList());
+            m_fullScreenQuad->GetRenderResource().Render(frame->GetCommandList());
 
-            ++num_rendered_env_probes;
+            ++numRenderedEnvProbes;
         }
     }
 
     if (ShouldRenderSSR())
     {
-        m_render_ssr_to_screen_pass->RenderToFramebuffer(frame, rs, GetFramebuffer());
+        m_renderSsrToScreenPass->RenderToFramebuffer(frame, rs, GetFramebuffer());
     }
 
-    frame->GetCommandList().Add<EndFramebuffer>(GetFramebuffer(), frame_index);
+    frame->GetCommandList().Add<EndFramebuffer>(GetFramebuffer(), frameIndex);
 
     if (ShouldRenderHalfRes())
     {
@@ -935,10 +935,10 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
             CopyResultToPreviousTexture(frame, rs);
         }
 
-        m_temporal_blending->Render(frame, rs);
+        m_temporalBlending->Render(frame, rs);
     }
 
-    m_is_first_frame = false;
+    m_isFirstFrame = false;
 }
 
 #pragma endregion ReflectionsPass
@@ -947,44 +947,44 @@ void ReflectionsPass::Render(FrameBase* frame, const RenderSetup& rs)
 
 DeferredPassData::~DeferredPassData()
 {
-    SafeRelease(std::move(final_pass_descriptor_set));
+    SafeRelease(std::move(finalPassDescriptorSet));
 
-    depth_pyramid_renderer.Reset();
+    depthPyramidRenderer.Reset();
 
     hbao.Reset();
 
-    temporal_aa.Reset();
+    temporalAa.Reset();
 
-    // m_dof_blur->Destroy();
+    // m_dofBlur->Destroy();
 
     ssgi.Reset();
 
-    post_processing->Destroy();
-    post_processing.Reset();
+    postProcessing->Destroy();
+    postProcessing.Reset();
 
-    combine_pass.Reset();
+    combinePass.Reset();
 
-    env_grid_radiance_pass.Reset();
-    env_grid_irradiance_pass.Reset();
+    envGridRadiancePass.Reset();
+    envGridIrradiancePass.Reset();
 
-    reflections_pass.Reset();
+    reflectionsPass.Reset();
 
-    lightmap_pass.Reset();
-    tonemap_pass.Reset();
-    mip_chain.Reset();
-    indirect_pass.Reset();
-    direct_pass.Reset();
+    lightmapPass.Reset();
+    tonemapPass.Reset();
+    mipChain.Reset();
+    indirectPass.Reset();
+    directPass.Reset();
 }
 
 #pragma endregion DeferredPassData
 
 #pragma region DeferredRenderer
 
-constexpr Vec2u mip_chain_extent { 512, 512 };
-constexpr TextureFormat mip_chain_format = TF_R10G10B10A2;
+constexpr Vec2u mipChainExtent { 512, 512 };
+constexpr TextureFormat mipChainFormat = TF_R10G10B10A2;
 
 DeferredRenderer::DeferredRenderer()
-    : m_renderer_config(RendererConfig::FromConfig())
+    : m_rendererConfig(RendererConfig::FromConfig())
 {
 }
 
@@ -1021,66 +1021,66 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
 
     HYP_LOG(Rendering, Info, "Creating renderer for view '{}' with GBuffer '{}'", view->Id(), gbuffer->GetExtent());
 
-    const FramebufferRef& opaque_fbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
-    const FramebufferRef& lightmap_fbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
-    const FramebufferRef& translucent_fbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
+    const FramebufferRef& opaqueFbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
+    const FramebufferRef& lightmapFbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
+    const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
 
-    pd->env_grid_radiance_pass = MakeUnique<EnvGridPass>(EGPM_RADIANCE, pd->viewport.extent, gbuffer);
-    pd->env_grid_radiance_pass->Create();
+    pd->envGridRadiancePass = MakeUnique<EnvGridPass>(EGPM_RADIANCE, pd->viewport.extent, gbuffer);
+    pd->envGridRadiancePass->Create();
 
-    pd->env_grid_irradiance_pass = MakeUnique<EnvGridPass>(EGPM_IRRADIANCE, pd->viewport.extent, gbuffer);
-    pd->env_grid_irradiance_pass->Create();
+    pd->envGridIrradiancePass = MakeUnique<EnvGridPass>(EGPM_IRRADIANCE, pd->viewport.extent, gbuffer);
+    pd->envGridIrradiancePass->Create();
 
     pd->ssgi = MakeUnique<SSGI>(SSGIConfig::FromConfig(), gbuffer);
     pd->ssgi->Create();
 
-    pd->post_processing = MakeUnique<PostProcessing>();
-    pd->post_processing->Create();
+    pd->postProcessing = MakeUnique<PostProcessing>();
+    pd->postProcessing->Create();
 
-    pd->indirect_pass = MakeUnique<DeferredPass>(DeferredPassMode::INDIRECT_LIGHTING, pd->viewport.extent, gbuffer);
-    pd->indirect_pass->Create();
+    pd->indirectPass = MakeUnique<DeferredPass>(DeferredPassMode::INDIRECT_LIGHTING, pd->viewport.extent, gbuffer);
+    pd->indirectPass->Create();
 
-    pd->direct_pass = MakeUnique<DeferredPass>(DeferredPassMode::DIRECT_LIGHTING, pd->viewport.extent, gbuffer);
-    pd->direct_pass->Create();
+    pd->directPass = MakeUnique<DeferredPass>(DeferredPassMode::DIRECT_LIGHTING, pd->viewport.extent, gbuffer);
+    pd->directPass->Create();
 
-    pd->depth_pyramid_renderer = MakeUnique<DepthPyramidRenderer>(gbuffer);
-    pd->depth_pyramid_renderer->Create();
+    pd->depthPyramidRenderer = MakeUnique<DepthPyramidRenderer>(gbuffer);
+    pd->depthPyramidRenderer->Create();
 
-    pd->cull_data.depth_pyramid_image_view = pd->depth_pyramid_renderer->GetResultImageView();
-    pd->cull_data.depth_pyramid_dimensions = pd->depth_pyramid_renderer->GetExtent();
+    pd->cullData.depthPyramidImageView = pd->depthPyramidRenderer->GetResultImageView();
+    pd->cullData.depthPyramidDimensions = pd->depthPyramidRenderer->GetExtent();
 
-    pd->mip_chain = CreateObject<Texture>(TextureDesc {
+    pd->mipChain = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
-        mip_chain_format,
-        Vec3u { mip_chain_extent.x, mip_chain_extent.y, 1 },
+        mipChainFormat,
+        Vec3u { mipChainExtent.x, mipChainExtent.y, 1 },
         TFM_LINEAR_MIPMAP,
         TFM_LINEAR_MIPMAP,
         TWM_CLAMP_TO_EDGE });
 
-    InitObject(pd->mip_chain);
+    InitObject(pd->mipChain);
 
-    pd->mip_chain->SetPersistentRenderResourceEnabled(true);
+    pd->mipChain->SetPersistentRenderResourceEnabled(true);
 
     pd->hbao = MakeUnique<HBAO>(HBAOConfig::FromConfig(), pd->viewport.extent, gbuffer);
     pd->hbao->Create();
 
-    // m_dof_blur = MakeUnique<DOFBlur>(gbuffer->GetResolution(), gbuffer);
-    // m_dof_blur->Create();
+    // m_dofBlur = MakeUnique<DOFBlur>(gbuffer->GetResolution(), gbuffer);
+    // m_dofBlur->Create();
 
     CreateViewCombinePass(view, *pd);
 
-    pd->reflections_pass = MakeUnique<ReflectionsPass>(pd->viewport.extent, gbuffer, pd->mip_chain->GetRenderResource().GetImageView(), pd->combine_pass->GetFinalImageView());
-    pd->reflections_pass->Create();
+    pd->reflectionsPass = MakeUnique<ReflectionsPass>(pd->viewport.extent, gbuffer, pd->mipChain->GetRenderResource().GetImageView(), pd->combinePass->GetFinalImageView());
+    pd->reflectionsPass->Create();
 
-    pd->tonemap_pass = MakeUnique<TonemapPass>(pd->viewport.extent, gbuffer);
-    pd->tonemap_pass->Create();
+    pd->tonemapPass = MakeUnique<TonemapPass>(pd->viewport.extent, gbuffer);
+    pd->tonemapPass->Create();
 
     // We'll render the lightmap pass into the translucent framebuffer after deferred shading has been applied to OPAQUE objects.
-    pd->lightmap_pass = MakeUnique<LightmapPass>(translucent_fbo, pd->viewport.extent, gbuffer);
-    pd->lightmap_pass->Create();
+    pd->lightmapPass = MakeUnique<LightmapPass>(translucentFbo, pd->viewport.extent, gbuffer);
+    pd->lightmapPass->Create();
 
-    pd->temporal_aa = MakeUnique<TemporalAA>(pd->tonemap_pass->GetFinalImageView(), pd->viewport.extent, gbuffer);
-    pd->temporal_aa->Create();
+    pd->temporalAa = MakeUnique<TemporalAA>(pd->tonemapPass->GetFinalImageView(), pd->viewport.extent, gbuffer);
+    pd->temporalAa->Create();
 
     CreateViewDescriptorSets(view, *pd);
     CreateViewFinalPassDescriptorSet(view, *pd);
@@ -1088,47 +1088,47 @@ PassData* DeferredRenderer::CreateViewPassData(View* view, PassDataExt&)
     return pd;
 }
 
-void DeferredRenderer::CreateViewFinalPassDescriptorSet(View* view, DeferredPassData& pass_data)
+void DeferredRenderer::CreateViewFinalPassDescriptorSet(View* view, DeferredPassData& passData)
 {
     HYP_SCOPE;
 
-    ShaderRef render_texture_to_screen_shader = g_shader_manager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
-    AssertThrow(render_texture_to_screen_shader.IsValid());
+    ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
+    AssertThrow(renderTextureToScreenShader.IsValid());
 
-    const ImageViewRef& input_image_view = m_renderer_config.taa_enabled
-        ? pass_data.temporal_aa->GetResultTexture()->GetRenderResource().GetImageView()
-        : pass_data.combine_pass->GetFinalImageView();
+    const ImageViewRef& inputImageView = m_rendererConfig.taaEnabled
+        ? passData.temporalAa->GetResultTexture()->GetRenderResource().GetImageView()
+        : passData.combinePass->GetFinalImageView();
 
-    AssertThrow(input_image_view.IsValid());
+    AssertThrow(inputImageView.IsValid());
 
-    const DescriptorTableDeclaration& descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-    DescriptorSetDeclaration* decl = descriptor_table_decl.FindDescriptorSetDeclaration(NAME("RenderTextureToScreenDescriptorSet"));
+    DescriptorSetDeclaration* decl = descriptorTableDecl.FindDescriptorSetDeclaration(NAME("RenderTextureToScreenDescriptorSet"));
     AssertThrow(decl != nullptr);
 
     const DescriptorSetLayout layout { decl };
 
-    DescriptorSetRef descriptor_set = g_render_backend->MakeDescriptorSet(layout);
-    descriptor_set->SetDebugName(NAME("FinalPassDescriptorSet"));
-    descriptor_set->SetElement(NAME("InTexture"), input_image_view);
+    DescriptorSetRef descriptorSet = g_renderBackend->MakeDescriptorSet(layout);
+    descriptorSet->SetDebugName(NAME("FinalPassDescriptorSet"));
+    descriptorSet->SetElement(NAME("InTexture"), inputImageView);
 
-    DeferCreate(descriptor_set);
+    DeferCreate(descriptorSet);
 
-    pass_data.final_pass_descriptor_set = std::move(descriptor_set);
+    passData.finalPassDescriptorSet = std::move(descriptorSet);
 }
 
-void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pass_data)
+void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& passData)
 {
     HYP_SCOPE;
 
-    const DescriptorSetDeclaration* decl = g_render_global_state->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("View"));
+    const DescriptorSetDeclaration* decl = g_renderGlobalState->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("View"));
     AssertThrow(decl != nullptr);
 
     const DescriptorSetLayout layout { decl };
 
-    FixedArray<DescriptorSetRef, max_frames_in_flight> descriptor_sets;
+    FixedArray<DescriptorSetRef, maxFramesInFlight> descriptorSets;
 
-    static const FixedArray<Name, GBUFFER_RESOURCE_MAX> gbuffer_texture_names {
+    static const FixedArray<Name, GBUFFER_RESOURCE_MAX> gbufferTextureNames {
         NAME("GBufferAlbedoTexture"),
         NAME("GBufferNormalsTexture"),
         NAME("GBufferMaterialTexture"),
@@ -1139,185 +1139,185 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
         NAME("GBufferTranslucentTexture")
     };
 
-    const FramebufferRef& opaque_fbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
-    const FramebufferRef& lightmap_fbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
-    const FramebufferRef& translucent_fbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
+    const FramebufferRef& opaqueFbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
+    const FramebufferRef& lightmapFbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
+    const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
 
     // depth attachment goes into separate slot
-    AttachmentBase* depth_attachment = opaque_fbo->GetAttachment(GBUFFER_RESOURCE_MAX - 1);
-    AssertThrow(depth_attachment != nullptr);
+    AttachmentBase* depthAttachment = opaqueFbo->GetAttachment(GBUFFER_RESOURCE_MAX - 1);
+    AssertThrow(depthAttachment != nullptr);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        DescriptorSetRef descriptor_set = g_render_backend->MakeDescriptorSet(layout);
-        descriptor_set->SetDebugName(NAME_FMT("SceneViewDescriptorSet_{}", frame_index));
+        DescriptorSetRef descriptorSet = g_renderBackend->MakeDescriptorSet(layout);
+        descriptorSet->SetDebugName(NAME_FMT("SceneViewDescriptorSet_{}", frameIndex));
 
-        if (g_render_backend->GetRenderConfig().IsDynamicDescriptorIndexingSupported())
+        if (g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported())
         {
-            uint32 gbuffer_element_index = 0;
+            uint32 gbufferElementIndex = 0;
 
             // not including depth texture here (hence the - 1)
-            for (uint32 attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++)
+            for (uint32 attachmentIndex = 0; attachmentIndex < GBUFFER_RESOURCE_MAX - 1; attachmentIndex++)
             {
-                descriptor_set->SetElement(NAME("GBufferTextures"), gbuffer_element_index++, opaque_fbo->GetAttachment(attachment_index)->GetImageView());
+                descriptorSet->SetElement(NAME("GBufferTextures"), gbufferElementIndex++, opaqueFbo->GetAttachment(attachmentIndex)->GetImageView());
             }
 
             // add translucent bucket's albedo
-            descriptor_set->SetElement(NAME("GBufferTextures"), gbuffer_element_index++, translucent_fbo->GetAttachment(0)->GetImageView());
+            descriptorSet->SetElement(NAME("GBufferTextures"), gbufferElementIndex++, translucentFbo->GetAttachment(0)->GetImageView());
         }
         else
         {
-            for (uint32 attachment_index = 0; attachment_index < GBUFFER_RESOURCE_MAX - 1; attachment_index++)
+            for (uint32 attachmentIndex = 0; attachmentIndex < GBUFFER_RESOURCE_MAX - 1; attachmentIndex++)
             {
-                descriptor_set->SetElement(gbuffer_texture_names[attachment_index], opaque_fbo->GetAttachment(attachment_index)->GetImageView());
+                descriptorSet->SetElement(gbufferTextureNames[attachmentIndex], opaqueFbo->GetAttachment(attachmentIndex)->GetImageView());
             }
 
             // add translucent bucket's albedo
-            descriptor_set->SetElement(NAME("GBufferTranslucentTexture"), translucent_fbo->GetAttachment(0)->GetImageView());
+            descriptorSet->SetElement(NAME("GBufferTranslucentTexture"), translucentFbo->GetAttachment(0)->GetImageView());
         }
 
-        descriptor_set->SetElement(NAME("GBufferDepthTexture"), depth_attachment->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferDepthTexture"), depthAttachment->GetImageView());
 
-        descriptor_set->SetElement(NAME("GBufferMipChain"), pass_data.mip_chain->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("GBufferMipChain"), passData.mipChain->GetRenderResource().GetImageView());
 
-        descriptor_set->SetElement(NAME("PostProcessingUniforms"), pass_data.post_processing->GetUniformBuffer());
+        descriptorSet->SetElement(NAME("PostProcessingUniforms"), passData.postProcessing->GetUniformBuffer());
 
-        descriptor_set->SetElement(NAME("DepthPyramidResult"), pass_data.depth_pyramid_renderer->GetResultImageView());
+        descriptorSet->SetElement(NAME("DepthPyramidResult"), passData.depthPyramidRenderer->GetResultImageView());
 
-        descriptor_set->SetElement(NAME("TAAResultTexture"), pass_data.temporal_aa->GetResultTexture()->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("TAAResultTexture"), passData.temporalAa->GetResultTexture()->GetRenderResource().GetImageView());
 
-        if (pass_data.reflections_pass->ShouldRenderSSR())
+        if (passData.reflectionsPass->ShouldRenderSSR())
         {
-            descriptor_set->SetElement(NAME("SSRResultTexture"), pass_data.reflections_pass->GetSSRRenderer()->GetFinalResultTexture()->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("SSRResultTexture"), passData.reflectionsPass->GetSSRRenderer()->GetFinalResultTexture()->GetRenderResource().GetImageView());
         }
         else
         {
-            descriptor_set->SetElement(NAME("SSRResultTexture"), g_render_global_state->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("SSRResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         }
 
-        if (pass_data.ssgi)
+        if (passData.ssgi)
         {
-            descriptor_set->SetElement(NAME("SSGIResultTexture"), pass_data.ssgi->GetFinalResultTexture()->GetRenderResource().GetImageView());
+            descriptorSet->SetElement(NAME("SSGIResultTexture"), passData.ssgi->GetFinalResultTexture()->GetRenderResource().GetImageView());
         }
         else
         {
-            descriptor_set->SetElement(NAME("SSGIResultTexture"), g_render_global_state->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("SSGIResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         }
 
-        if (pass_data.hbao)
+        if (passData.hbao)
         {
-            descriptor_set->SetElement(NAME("SSAOResultTexture"), pass_data.hbao->GetFinalImageView());
+            descriptorSet->SetElement(NAME("SSAOResultTexture"), passData.hbao->GetFinalImageView());
         }
         else
         {
-            descriptor_set->SetElement(NAME("SSAOResultTexture"), g_render_global_state->PlaceholderData->GetImageView2D1x1R8());
+            descriptorSet->SetElement(NAME("SSAOResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         }
 
-        descriptor_set->SetElement(NAME("DeferredResult"), pass_data.combine_pass->GetFinalImageView());
+        descriptorSet->SetElement(NAME("DeferredResult"), passData.combinePass->GetFinalImageView());
 
-        descriptor_set->SetElement(NAME("DeferredIndirectResultTexture"), pass_data.indirect_pass->GetFinalImageView());
+        descriptorSet->SetElement(NAME("DeferredIndirectResultTexture"), passData.indirectPass->GetFinalImageView());
 
-        descriptor_set->SetElement(NAME("ReflectionProbeResultTexture"), pass_data.reflections_pass->GetFinalImageView());
+        descriptorSet->SetElement(NAME("ReflectionProbeResultTexture"), passData.reflectionsPass->GetFinalImageView());
 
-        descriptor_set->SetElement(NAME("EnvGridRadianceResultTexture"), pass_data.env_grid_radiance_pass->GetFinalImageView());
-        descriptor_set->SetElement(NAME("EnvGridIrradianceResultTexture"), pass_data.env_grid_irradiance_pass->GetFinalImageView());
+        descriptorSet->SetElement(NAME("EnvGridRadianceResultTexture"), passData.envGridRadiancePass->GetFinalImageView());
+        descriptorSet->SetElement(NAME("EnvGridIrradianceResultTexture"), passData.envGridIrradiancePass->GetFinalImageView());
 
-        HYPERION_ASSERT_RESULT(descriptor_set->Create());
+        HYPERION_ASSERT_RESULT(descriptorSet->Create());
 
-        descriptor_sets[frame_index] = std::move(descriptor_set);
+        descriptorSets[frameIndex] = std::move(descriptorSet);
     }
 
-    pass_data.descriptor_sets = std::move(descriptor_sets);
+    passData.descriptorSets = std::move(descriptorSets);
 }
 
-void DeferredRenderer::CreateViewCombinePass(View* view, DeferredPassData& pass_data)
+void DeferredRenderer::CreateViewCombinePass(View* view, DeferredPassData& passData)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     // The combine pass will render into the translucent bucket's framebuffer with the shaded result.
-    const FramebufferRef& translucent_fbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
-    AssertThrow(translucent_fbo != nullptr);
+    const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
+    AssertThrow(translucentFbo != nullptr);
 
-    ShaderRef render_texture_to_screen_shader = g_shader_manager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
-    AssertThrow(render_texture_to_screen_shader.IsValid());
+    ShaderRef renderTextureToScreenShader = g_shaderManager->GetOrCreate(NAME("RenderTextureToScreen_UI"));
+    AssertThrow(renderTextureToScreenShader.IsValid());
 
-    const DescriptorTableDeclaration& descriptor_table_decl = render_texture_to_screen_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
-    DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+    const DescriptorTableDeclaration& descriptorTableDecl = renderTextureToScreenShader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frame_index);
-        AssertThrow(descriptor_set != nullptr);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RenderTextureToScreenDescriptorSet"), frameIndex);
+        AssertThrow(descriptorSet != nullptr);
 
-        descriptor_set->SetElement(NAME("InTexture"), pass_data.indirect_pass->GetFinalImageView());
+        descriptorSet->SetElement(NAME("InTexture"), passData.indirectPass->GetFinalImageView());
     }
 
-    DeferCreate(descriptor_table);
+    DeferCreate(descriptorTable);
 
-    pass_data.combine_pass = MakeUnique<FullScreenPass>(
-        render_texture_to_screen_shader,
-        std::move(descriptor_table),
-        translucent_fbo,
-        translucent_fbo->GetAttachment(0)->GetFormat(),
-        translucent_fbo->GetExtent(),
+    passData.combinePass = MakeUnique<FullScreenPass>(
+        renderTextureToScreenShader,
+        std::move(descriptorTable),
+        translucentFbo,
+        translucentFbo->GetAttachment(0)->GetFormat(),
+        translucentFbo->GetExtent(),
         nullptr);
 
-    pass_data.combine_pass->Create();
+    passData.combinePass->Create();
 }
 
-void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassData& pass_data)
+void DeferredRenderer::ResizeView(Viewport viewport, View* view, DeferredPassData& passData)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     HYP_LOG(Rendering, Debug, "Resizing View '{}' to {}x{}", view->Id(), viewport.extent.x, viewport.extent.y);
 
     AssertThrow(viewport.extent.Volume() > 0);
 
-    const Vec2u new_size = Vec2u(viewport.extent);
+    const Vec2u newSize = Vec2u(viewport.extent);
 
     GBuffer* gbuffer = view->GetOutputTarget().GetGBuffer();
     AssertDebug(gbuffer != nullptr);
 
-    gbuffer->Resize(new_size);
+    gbuffer->Resize(newSize);
 
-    const FramebufferRef& opaque_fbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
-    const FramebufferRef& lightmap_fbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
-    const FramebufferRef& translucent_fbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
+    const FramebufferRef& opaqueFbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
+    const FramebufferRef& lightmapFbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
+    const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
 
-    pass_data.hbao->Resize(new_size);
+    passData.hbao->Resize(newSize);
 
-    pass_data.direct_pass->Resize(new_size);
-    pass_data.indirect_pass->Resize(new_size);
+    passData.directPass->Resize(newSize);
+    passData.indirectPass->Resize(newSize);
 
-    pass_data.combine_pass.Reset();
-    CreateViewCombinePass(view, pass_data);
+    passData.combinePass.Reset();
+    CreateViewCombinePass(view, passData);
 
-    pass_data.env_grid_radiance_pass->Resize(new_size);
-    pass_data.env_grid_irradiance_pass->Resize(new_size);
+    passData.envGridRadiancePass->Resize(newSize);
+    passData.envGridIrradiancePass->Resize(newSize);
 
-    pass_data.reflections_pass->Resize(new_size);
+    passData.reflectionsPass->Resize(newSize);
 
-    pass_data.tonemap_pass->Resize(new_size);
+    passData.tonemapPass->Resize(newSize);
 
-    pass_data.lightmap_pass = MakeUnique<LightmapPass>(translucent_fbo, new_size, gbuffer);
-    pass_data.lightmap_pass->Create();
+    passData.lightmapPass = MakeUnique<LightmapPass>(translucentFbo, newSize, gbuffer);
+    passData.lightmapPass->Create();
 
-    pass_data.temporal_aa = MakeUnique<TemporalAA>(pass_data.tonemap_pass->GetFinalImageView(), new_size, gbuffer);
-    pass_data.temporal_aa->Create();
+    passData.temporalAa = MakeUnique<TemporalAA>(passData.tonemapPass->GetFinalImageView(), newSize, gbuffer);
+    passData.temporalAa->Create();
 
-    pass_data.depth_pyramid_renderer = MakeUnique<DepthPyramidRenderer>(gbuffer);
-    pass_data.depth_pyramid_renderer->Create();
+    passData.depthPyramidRenderer = MakeUnique<DepthPyramidRenderer>(gbuffer);
+    passData.depthPyramidRenderer->Create();
 
-    SafeRelease(std::move(pass_data.descriptor_sets));
-    CreateViewDescriptorSets(view, pass_data);
+    SafeRelease(std::move(passData.descriptorSets));
+    CreateViewDescriptorSets(view, passData);
 
-    SafeRelease(std::move(pass_data.final_pass_descriptor_set));
-    CreateViewFinalPassDescriptorSet(view, pass_data);
+    SafeRelease(std::move(passData.finalPassDescriptorSet));
+    CreateViewFinalPassDescriptorSet(view, passData);
 
-    pass_data.view = view->WeakHandleFromThis();
-    pass_data.viewport = viewport;
+    passData.view = view->WeakHandleFromThis();
+    passData.viewport = viewport;
 }
 
 void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
@@ -1328,26 +1328,26 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
     EngineRenderStatsCounts counts {};
 
-    Array<RenderProxyList*> render_proxy_lists;
+    Array<RenderProxyList*> renderProxyLists;
 
     // Collect view-independent renderable types from all views, binned
     /// @TODO: We could use the existing binning by subclass that ResourceTracker now provides.
-    FixedArray<Array<EnvProbe*>, EPT_MAX> env_probes;
+    FixedArray<Array<EnvProbe*>, EPT_MAX> envProbes;
     FixedArray<Array<Light*>, LT_MAX> lights;
-    Array<EnvGrid*> env_grids;
+    Array<EnvGrid*> envGrids;
 
     // For rendering EnvGrids and EnvProbes, we use a directional light from one of the Views that references it (if found)
     /// TODO: This could be a little bit more robust.
-    HashMap<EnvGrid*, Light*> env_grid_lights;
-    HashMap<EnvProbe*, Light*> env_probe_lights;
+    HashMap<EnvGrid*, Light*> envGridLights;
+    HashMap<EnvProbe*, Light*> envProbeLights;
 
     // init view pass data and collect global rendering resources
     // (env probes, env grids)
-    for (const TResourceHandle<RenderView>& render_view : rs.world->GetViews())
+    for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
     {
-        AssertThrow(render_view);
+        AssertThrow(renderView);
 
-        View* view = render_view->GetView();
+        View* view = renderView->GetView();
 
         if (!view)
         {
@@ -1355,7 +1355,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         }
 
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
-        render_proxy_lists.PushBack(&rpl);
+        renderProxyLists.PushBack(&rpl);
 
         DeferredPassData* pd = static_cast<DeferredPassData*>(FetchViewPassData(view));
         if (pd->viewport != view->GetRenderResource().GetViewport())
@@ -1373,20 +1373,20 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
             lights[light->GetLightType()].PushBack(light);
         }
 
-        for (EnvProbe* env_probe : rpl.env_probes)
+        for (EnvProbe* envProbe : rpl.envProbes)
         {
-            if (env_probe->IsControlledByEnvGrid())
+            if (envProbe->IsControlledByEnvGrid())
             {
                 // skip it if it is controlled by an EnvGrid, we don't handle them here
                 continue;
             }
 
-            if (env_probes[env_probe->GetEnvProbeType()].Contains(env_probe))
+            if (envProbes[envProbe->GetEnvProbeType()].Contains(envProbe))
             {
                 continue;
             }
 
-            if (!env_probe_lights.Contains(env_probe))
+            if (!envProbeLights.Contains(envProbe))
             {
                 for (Light* light : rpl.lights)
                 {
@@ -1394,72 +1394,72 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
                     if (light->GetLightType() == LT_DIRECTIONAL)
                     {
-                        env_probe_lights[env_probe] = light;
+                        envProbeLights[envProbe] = light;
 
                         break;
                     }
                 }
             }
 
-            env_probes[env_probe->GetEnvProbeType()].PushBack(env_probe);
+            envProbes[envProbe->GetEnvProbeType()].PushBack(envProbe);
         }
 
-        for (EnvGrid* env_grid : rpl.env_grids)
+        for (EnvGrid* envGrid : rpl.envGrids)
         {
-            if (env_grids.Contains(env_grid))
+            if (envGrids.Contains(envGrid))
             {
                 continue;
             }
 
-            if (!env_grid_lights.Contains(env_grid))
+            if (!envGridLights.Contains(envGrid))
             {
                 for (Light* light : rpl.lights)
                 {
                     if (light->GetLightType() == LT_DIRECTIONAL)
                     {
-                        env_grid_lights[env_grid] = light;
+                        envGridLights[envGrid] = light;
 
                         break;
                     }
                 }
             }
 
-            env_grids.PushBack(env_grid);
+            envGrids.PushBack(envGrid);
         }
 #endif
     }
 
     // Render global environment probes and grids and set fallbacks
-    RenderSetup new_rs = rs;
+    RenderSetup newRs = rs;
 
 #if 1
     {
         // Set sky as fallback probe
-        if (env_probes[EPT_SKY].Any())
+        if (envProbes[EPT_SKY].Any())
         {
-            new_rs.env_probe = env_probes[EPT_SKY][0];
+            newRs.envProbe = envProbes[EPT_SKY][0];
         }
 
         if (lights[LT_DIRECTIONAL].Any())
         {
-            new_rs.light = lights[LT_DIRECTIONAL][0];
+            newRs.light = lights[LT_DIRECTIONAL][0];
         }
 
-        if (env_probes.Any())
+        if (envProbes.Any())
         {
-            for (uint32 env_probe_type = 0; env_probe_type <= EPT_REFLECTION; env_probe_type++)
+            for (uint32 envProbeType = 0; envProbeType <= EPT_REFLECTION; envProbeType++)
             {
-                for (EnvProbe* env_probe : env_probes[env_probe_type])
+                for (EnvProbe* envProbe : envProbes[envProbeType])
                 {
-                    if (env_probe->NeedsRender())
+                    if (envProbe->NeedsRender())
                     {
-                        EnvProbeRenderer* env_probe_renderer = g_render_global_state->EnvProbeRenderers[env_probe_type];
+                        EnvProbeRenderer* envProbeRenderer = g_renderGlobalState->EnvProbeRenderers[envProbeType];
 
-                        if (env_probe_renderer)
+                        if (envProbeRenderer)
                         {
-                            new_rs.env_probe = env_probe;
-                            env_probe_renderer->RenderFrame(frame, new_rs);
-                            new_rs.env_probe = nullptr; // reset for next probe
+                            newRs.envProbe = envProbe;
+                            envProbeRenderer->RenderFrame(frame, newRs);
+                            newRs.envProbe = nullptr; // reset for next probe
 
                             counts[ERS_ENV_PROBES]++;
                         }
@@ -1469,28 +1469,28 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                             HYP_LOG(Rendering, Warning, "No EnvProbeRenderer found for EnvProbeType {}! Skipping rendering of env probes of this type.", EPT_REFLECTION);
                         }
 
-                        env_probe->SetNeedsRender(false);
+                        envProbe->SetNeedsRender(false);
                     }
                 }
             }
         }
 
-        if (env_grids.Any())
+        if (envGrids.Any())
         {
-            for (EnvGrid* env_grid : env_grids)
+            for (EnvGrid* envGrid : envGrids)
             {
                 // Set global directional light as fallback
-                if (env_grid_lights.Contains(env_grid))
+                if (envGridLights.Contains(envGrid))
                 {
-                    new_rs.light = env_grid_lights[env_grid];
+                    newRs.light = envGridLights[envGrid];
                 }
 
-                new_rs.env_grid = env_grid;
+                newRs.envGrid = envGrid;
 
-                g_render_global_state->EnvGridRenderer->RenderFrame(frame, new_rs);
+                g_renderGlobalState->EnvGridRenderer->RenderFrame(frame, newRs);
 
-                new_rs.light = nullptr;
-                new_rs.env_grid = nullptr;
+                newRs.light = nullptr;
+                newRs.envGrid = nullptr;
 
                 counts[ERS_ENV_GRIDS]++;
             }
@@ -1499,14 +1499,14 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 #endif
 
     // reset renderer state back to what it was before
-    new_rs = rs;
+    newRs = rs;
 
 #if 1
-    for (const TResourceHandle<RenderView>& render_view : rs.world->GetViews())
+    for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
     {
-        AssertThrow(render_view);
+        AssertThrow(renderView);
 
-        View* view = render_view->GetView();
+        View* view = renderView->GetView();
 
         if (!view)
         {
@@ -1516,13 +1516,13 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         DeferredPassData* pd = static_cast<DeferredPassData*>(FetchViewPassData(view));
         AssertDebug(pd != nullptr);
 
-        new_rs.view = render_view.Get();
-        new_rs.pass_data = pd;
+        newRs.view = renderView.Get();
+        newRs.passData = pd;
 
-        RenderFrameForView(frame, new_rs);
+        RenderFrameForView(frame, newRs);
 
-        new_rs.view = nullptr;
-        new_rs.pass_data = nullptr;
+        newRs.view = nullptr;
+        newRs.passData = nullptr;
 
         pd->CullUnusedGraphicsPipelines();
 
@@ -1530,10 +1530,10 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
         RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
 
         counts[ERS_VIEWS]++;
-        counts[ERS_LIGHTMAP_VOLUMES] += rpl.lightmap_volumes.NumCurrent();
+        counts[ERS_LIGHTMAP_VOLUMES] += rpl.lightmapVolumes.NumCurrent();
         counts[ERS_LIGHTS] += rpl.lights.NumCurrent();
-        counts[ERS_ENV_GRIDS] += rpl.env_grids.NumCurrent();
-        counts[ERS_ENV_PROBES] += rpl.env_probes.NumCurrent();
+        counts[ERS_ENV_GRIDS] += rpl.envGrids.NumCurrent();
+        counts[ERS_ENV_PROBES] += rpl.envProbes.NumCurrent();
 #endif
     }
 
@@ -1554,11 +1554,11 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
     AssertThrow(rs.IsValid());
     AssertThrow(rs.HasView());
 
-    uint32 global_frame_index = RenderApi_GetFrameIndex_RenderThread();
-    if (m_last_frame_data.frame_id != global_frame_index)
+    uint32 globalFrameIndex = RenderApi_GetFrameIndex_RenderThread();
+    if (m_lastFrameData.frameId != globalFrameIndex)
     {
-        m_last_frame_data.frame_id = global_frame_index;
-        m_last_frame_data.pass_data.Clear();
+        m_lastFrameData.frameId = globalFrameIndex;
+        m_lastFrameData.passData.Clear();
     }
 
     View* view = rs.view->GetView();
@@ -1570,199 +1570,199 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
 
     RenderProxyList& rpl = RenderApi_GetConsumerProxyList(view);
 
-    DeferredPassData* pd = static_cast<DeferredPassData*>(rs.pass_data);
+    DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
     AssertDebug(pd != nullptr);
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
     // @TODO: Refactor to put this in the RenderWorld
     RenderEnvironment* environment = rs.world->GetEnvironment();
 
-    const FramebufferRef& opaque_fbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
-    const FramebufferRef& lightmap_fbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
-    const FramebufferRef& translucent_fbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
+    const FramebufferRef& opaqueFbo = view->GetOutputTarget().GetFramebuffer(RB_OPAQUE);
+    const FramebufferRef& lightmapFbo = view->GetOutputTarget().GetFramebuffer(RB_LIGHTMAP);
+    const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
 
-    CHECK_FRAMEBUFFER_SIZE(opaque_fbo);
-    CHECK_FRAMEBUFFER_SIZE(lightmap_fbo);
-    CHECK_FRAMEBUFFER_SIZE(translucent_fbo);
+    CHECK_FRAMEBUFFER_SIZE(opaqueFbo);
+    CHECK_FRAMEBUFFER_SIZE(lightmapFbo);
+    CHECK_FRAMEBUFFER_SIZE(translucentFbo);
 
-    const bool do_particles = true;
-    const bool do_gaussian_splatting = false; // environment && environment->IsReady();
+    const bool doParticles = true;
+    const bool doGaussianSplatting = false; // environment && environment->IsReady();
 
-    const bool use_rt_radiance = m_renderer_config.path_tracer_enabled || m_renderer_config.rt_reflections_enabled;
-    const bool use_ddgi = m_renderer_config.rt_gi_enabled;
-    const bool use_hbao = m_renderer_config.hbao_enabled;
-    const bool use_hbil = m_renderer_config.hbil_enabled;
-    const bool use_ssgi = m_renderer_config.ssgi_enabled;
+    const bool useRtRadiance = m_rendererConfig.pathTracerEnabled || m_rendererConfig.rtReflectionsEnabled;
+    const bool useDdgi = m_rendererConfig.rtGiEnabled;
+    const bool useHbao = m_rendererConfig.hbaoEnabled;
+    const bool useHbil = m_rendererConfig.hbilEnabled;
+    const bool useSsgi = m_rendererConfig.ssgiEnabled;
 
-    const bool use_env_grid_irradiance = rpl.env_grids.NumCurrent() && m_renderer_config.env_grid_gi_enabled;
-    const bool use_env_grid_radiance = rpl.env_grids.NumCurrent() && m_renderer_config.env_grid_radiance_enabled;
+    const bool useEnvGridIrradiance = rpl.envGrids.NumCurrent() && m_rendererConfig.envGridGiEnabled;
+    const bool useEnvGridRadiance = rpl.envGrids.NumCurrent() && m_rendererConfig.envGridRadianceEnabled;
 
-    const bool use_temporal_aa = pd->temporal_aa != nullptr && m_renderer_config.taa_enabled;
+    const bool useTemporalAa = pd->temporalAa != nullptr && m_rendererConfig.taaEnabled;
 
-    // const bool use_reflection_probes = rpl.tracked_env_probes.NumCurrent(TypeId::ForType<SkyProbe>()) != 0
-    //     || rpl.tracked_env_probes.NumCurrent(TypeId::ForType<ReflectionProbe>()) != 0;
+    // const bool useReflectionProbes = rpl.trackedEnvProbes.NumCurrent(TypeId::ForType<SkyProbe>()) != 0
+    //     || rpl.trackedEnvProbes.NumCurrent(TypeId::ForType<ReflectionProbe>()) != 0;
 
-    const bool use_reflection_probes = rpl.env_probes.GetElements<SkyProbe>().Any()
-        || rpl.env_probes.GetElements<ReflectionProbe>().Any();
+    const bool useReflectionProbes = rpl.envProbes.GetElements<SkyProbe>().Any()
+        || rpl.envProbes.GetElements<ReflectionProbe>().Any();
 
-    if (use_temporal_aa)
+    if (useTemporalAa)
     {
-        view->GetRenderResource().m_render_camera->ApplyJitter(rs);
+        view->GetRenderResource().m_renderCamera->ApplyJitter(rs);
     }
 
     struct
     {
         uint32 flags;
-        uint32 screen_width;
-        uint32 screen_height;
-    } deferred_data;
+        uint32 screenWidth;
+        uint32 screenHeight;
+    } deferredData;
 
-    Memory::MemSet(&deferred_data, 0, sizeof(deferred_data));
+    Memory::MemSet(&deferredData, 0, sizeof(deferredData));
 
-    deferred_data.flags |= use_hbao ? DEFERRED_FLAGS_HBAO_ENABLED : 0;
-    deferred_data.flags |= use_hbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
-    deferred_data.flags |= use_rt_radiance ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
-    deferred_data.flags |= use_ddgi ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
+    deferredData.flags |= useHbao ? DEFERRED_FLAGS_HBAO_ENABLED : 0;
+    deferredData.flags |= useHbil ? DEFERRED_FLAGS_HBIL_ENABLED : 0;
+    deferredData.flags |= useRtRadiance ? DEFERRED_FLAGS_RT_RADIANCE_ENABLED : 0;
+    deferredData.flags |= useDdgi ? DEFERRED_FLAGS_DDGI_ENABLED : 0;
 
-    deferred_data.screen_width = view->GetRenderResource().GetViewport().extent.x;  // rpl.viewport.extent.x;
-    deferred_data.screen_height = view->GetRenderResource().GetViewport().extent.y; // rpl.viewport.extent.y;
+    deferredData.screenWidth = view->GetRenderResource().GetViewport().extent.x;  // rpl.viewport.extent.x;
+    deferredData.screenHeight = view->GetRenderResource().GetViewport().extent.y; // rpl.viewport.extent.y;
 
     PerformOcclusionCulling(frame, rs);
 
-    if (do_particles)
+    if (doParticles)
     {
         environment->GetParticleSystem()->UpdateParticles(frame, rs);
     }
 
-    if (do_gaussian_splatting)
+    if (doGaussianSplatting)
     {
         environment->GetGaussianSplatting()->UpdateSplats(frame, rs);
     }
 
-    pd->indirect_pass->SetPushConstants(&deferred_data, sizeof(deferred_data));
-    pd->direct_pass->SetPushConstants(&deferred_data, sizeof(deferred_data));
+    pd->indirectPass->SetPushConstants(&deferredData, sizeof(deferredData));
+    pd->directPass->SetPushConstants(&deferredData, sizeof(deferredData));
 
     { // render opaque objects into separate framebuffer
-        frame->GetCommandList().Add<BeginFramebuffer>(opaque_fbo, frame_index);
+        frame->GetCommandList().Add<BeginFramebuffer>(opaqueFbo, frameIndex);
 
         ExecuteDrawCalls(frame, rs, (1u << RB_OPAQUE));
 
-        frame->GetCommandList().Add<EndFramebuffer>(opaque_fbo, frame_index);
+        frame->GetCommandList().Add<EndFramebuffer>(opaqueFbo, frameIndex);
     }
 
-    if (use_env_grid_irradiance || use_env_grid_radiance)
+    if (useEnvGridIrradiance || useEnvGridRadiance)
     {
-        if (use_env_grid_irradiance)
+        if (useEnvGridIrradiance)
         {
-            pd->env_grid_irradiance_pass->SetPushConstants(&deferred_data, sizeof(deferred_data));
-            pd->env_grid_irradiance_pass->Render(frame, rs);
+            pd->envGridIrradiancePass->SetPushConstants(&deferredData, sizeof(deferredData));
+            pd->envGridIrradiancePass->Render(frame, rs);
         }
 
-        if (use_env_grid_radiance)
+        if (useEnvGridRadiance)
         {
-            pd->env_grid_radiance_pass->SetPushConstants(&deferred_data, sizeof(deferred_data));
-            pd->env_grid_radiance_pass->Render(frame, rs);
+            pd->envGridRadiancePass->SetPushConstants(&deferredData, sizeof(deferredData));
+            pd->envGridRadiancePass->Render(frame, rs);
         }
     }
 
-    if (use_reflection_probes)
+    if (useReflectionProbes)
     {
-        pd->reflections_pass->SetPushConstants(&deferred_data, sizeof(deferred_data));
-        pd->reflections_pass->Render(frame, rs);
+        pd->reflectionsPass->SetPushConstants(&deferredData, sizeof(deferredData));
+        pd->reflectionsPass->Render(frame, rs);
     }
 
     // @FIXME: RT Radiance should be moved away from the RenderEnvironment and be part of the RenderView,
     // otherwise the same pass will be executed for each view (shared).
     // DDGI Should be a RenderSubsystem instead of existing on the RenderEnvironment directly,
     // so it is rendered with the RenderWorld rather than the RenderView.
-    if (use_rt_radiance)
+    if (useRtRadiance)
     {
         environment->RenderRTRadiance(frame, rs);
     }
 
-    if (use_ddgi)
+    if (useDdgi)
     {
         environment->RenderDDGIProbes(frame, rs);
     }
 
-    if (use_hbao || use_hbil)
+    if (useHbao || useHbil)
     {
         pd->hbao->Render(frame, rs);
     }
 
-    if (use_ssgi)
+    if (useSsgi)
     {
-        RenderSetup new_render_setup = rs;
+        RenderSetup newRenderSetup = rs;
 
-        // if (const auto& sky_probes = rpl.tracked_env_probes.GetElements<SkyProbe>(); sky_probes.Any())
-        if (const auto& sky_probes = rpl.env_probes.GetElements<SkyProbe>(); sky_probes.Any())
+        // if (const auto& skyProbes = rpl.trackedEnvProbes.GetElements<SkyProbe>(); skyProbes.Any())
+        if (const auto& skyProbes = rpl.envProbes.GetElements<SkyProbe>(); skyProbes.Any())
         {
-            new_render_setup.env_probe = sky_probes.Front();
+            newRenderSetup.envProbe = skyProbes.Front();
         }
 
         pd->ssgi->Render(frame, rs);
     }
 
-    pd->post_processing->RenderPre(frame, rs);
+    pd->postProcessing->RenderPre(frame, rs);
 
     // render indirect and direct lighting into the same framebuffer
-    const FramebufferRef& deferred_pass_framebuffer = pd->indirect_pass->GetFramebuffer();
-    CHECK_FRAMEBUFFER_SIZE(deferred_pass_framebuffer);
+    const FramebufferRef& deferredPassFramebuffer = pd->indirectPass->GetFramebuffer();
+    CHECK_FRAMEBUFFER_SIZE(deferredPassFramebuffer);
 
     { // deferred lighting on opaque objects
-        frame->GetCommandList().Add<BeginFramebuffer>(deferred_pass_framebuffer, frame_index);
+        frame->GetCommandList().Add<BeginFramebuffer>(deferredPassFramebuffer, frameIndex);
 
-        pd->indirect_pass->Render(frame, rs);
-        pd->direct_pass->Render(frame, rs);
+        pd->indirectPass->Render(frame, rs);
+        pd->directPass->Render(frame, rs);
 
-        frame->GetCommandList().Add<EndFramebuffer>(deferred_pass_framebuffer, frame_index);
+        frame->GetCommandList().Add<EndFramebuffer>(deferredPassFramebuffer, frameIndex);
     }
 
-    if (rpl.lightmap_volumes.NumCurrent())
+    if (rpl.lightmapVolumes.NumCurrent())
     { // render objects to be lightmapped, separate from the opaque objects.
         // The lightmap bucket's framebuffer has a color attachment that will write into the opaque framebuffer's color attachment.
-        frame->GetCommandList().Add<BeginFramebuffer>(lightmap_fbo, frame_index);
+        frame->GetCommandList().Add<BeginFramebuffer>(lightmapFbo, frameIndex);
 
         ExecuteDrawCalls(frame, rs, (1u << RB_LIGHTMAP));
 
-        frame->GetCommandList().Add<EndFramebuffer>(lightmap_fbo, frame_index);
+        frame->GetCommandList().Add<EndFramebuffer>(lightmapFbo, frameIndex);
     }
 
     { // generate mipchain after rendering opaque objects' lighting, now we can use it for transmission
-        const ImageRef& src_image = deferred_pass_framebuffer->GetAttachment(0)->GetImage();
-        GenerateMipChain(frame, rs, src_image);
+        const ImageRef& srcImage = deferredPassFramebuffer->GetAttachment(0)->GetImage();
+        GenerateMipChain(frame, rs, srcImage);
     }
 
     { // translucent objects
-        frame->GetCommandList().Add<BeginFramebuffer>(translucent_fbo, frame_index);
+        frame->GetCommandList().Add<BeginFramebuffer>(translucentFbo, frameIndex);
 
         { // Render the deferred lighting into the translucent pass framebuffer with a full screen quad.
-            frame->GetCommandList().Add<BindGraphicsPipeline>(pd->combine_pass->GetGraphicsPipeline());
+            frame->GetCommandList().Add<BindGraphicsPipeline>(pd->combinePass->GetGraphicsPipeline());
 
             frame->GetCommandList().Add<BindDescriptorTable>(
-                pd->combine_pass->GetGraphicsPipeline()->GetDescriptorTable(),
-                pd->combine_pass->GetGraphicsPipeline(),
+                pd->combinePass->GetGraphicsPipeline()->GetDescriptorTable(),
+                pd->combinePass->GetGraphicsPipeline(),
                 ArrayMap<Name, ArrayMap<Name, uint32>> {},
-                frame_index);
+                frameIndex);
 
-            pd->combine_pass->GetQuadMesh()->GetRenderResource().Render(frame->GetCommandList());
+            pd->combinePass->GetQuadMesh()->GetRenderResource().Render(frame->GetCommandList());
         }
 
         // Render the objects to have lightmaps applied into the translucent pass framebuffer with a full screen quad.
         // Apply lightmaps over the now shaded opaque objects.
-        pd->lightmap_pass->RenderToFramebuffer(frame, rs, translucent_fbo);
+        pd->lightmapPass->RenderToFramebuffer(frame, rs, translucentFbo);
 
         // begin translucent with forward rendering
         ExecuteDrawCalls(frame, rs, (1u << RB_TRANSLUCENT));
         ExecuteDrawCalls(frame, rs, (1u << RB_DEBUG));
 
-        // if (do_particles)
+        // if (doParticles)
         // {
         //     environment->GetParticleSystem()->Render(frame, rs);
         // }
 
-        // if (do_gaussian_splatting)
+        // if (doGaussianSplatting)
         // {
         //     environment->GetGaussianSplatting()->Render(frame, rs);
         // }
@@ -1772,39 +1772,39 @@ void DeferredRenderer::RenderFrameForView(FrameBase* frame, const RenderSetup& r
         // // render debug draw
         // g_engine->GetDebugDrawer()->Render(frame, rs);
 
-        frame->GetCommandList().Add<EndFramebuffer>(translucent_fbo, frame_index);
+        frame->GetCommandList().Add<EndFramebuffer>(translucentFbo, frameIndex);
     }
 
     { // render depth pyramid
-        pd->depth_pyramid_renderer->Render(frame);
+        pd->depthPyramidRenderer->Render(frame);
         // update culling info now that depth pyramid has been rendered
-        pd->cull_data.depth_pyramid_image_view = pd->depth_pyramid_renderer->GetResultImageView();
-        pd->cull_data.depth_pyramid_dimensions = pd->depth_pyramid_renderer->GetExtent();
+        pd->cullData.depthPyramidImageView = pd->depthPyramidRenderer->GetResultImageView();
+        pd->cullData.depthPyramidDimensions = pd->depthPyramidRenderer->GetExtent();
     }
 
-    pd->post_processing->RenderPost(frame, rs);
+    pd->postProcessing->RenderPost(frame, rs);
 
-    pd->tonemap_pass->Render(frame, rs);
+    pd->tonemapPass->Render(frame, rs);
 
-    if (use_temporal_aa)
+    if (useTemporalAa)
     {
-        pd->temporal_aa->Render(frame, rs);
+        pd->temporalAa->Render(frame, rs);
     }
 
     // depth of field
-    // m_dof_blur->Render(frame);
+    // m_dofBlur->Render(frame);
 
     // Ordered by View priority
-    auto last_frame_data_it = std::lower_bound(
-        m_last_frame_data.pass_data.Begin(),
-        m_last_frame_data.pass_data.End(),
+    auto lastFrameDataIt = std::lower_bound(
+        m_lastFrameData.passData.Begin(),
+        m_lastFrameData.passData.End(),
         Pair<View*, DeferredPassData*> { view, pd },
         [view](const Pair<View*, DeferredPassData*>& a, const Pair<View*, DeferredPassData*>& b)
         {
             return a.second->priority < b.second->priority;
         });
 
-    m_last_frame_data.pass_data.Insert(last_frame_data_it, Pair<View*, DeferredPassData*> { view, pd });
+    m_lastFrameData.passData.Insert(lastFrameDataIt, Pair<View*, DeferredPassData*> { view, pd });
 }
 
 #undef CHECK_FRAMEBUFFER_SIZE
@@ -1813,46 +1813,46 @@ void DeferredRenderer::PerformOcclusionCulling(FrameBase* frame, const RenderSet
 {
     HYP_SCOPE;
 
-    constexpr uint32 bucket_mask = (1 << RB_OPAQUE)
+    constexpr uint32 bucketMask = (1 << RB_OPAQUE)
         | (1 << RB_LIGHTMAP)
         | (1 << RB_SKYBOX)
         | (1 << RB_TRANSLUCENT)
         | (1 << RB_DEBUG);
 
-    RenderCollector::PerformOcclusionCulling(frame, rs, RenderApi_GetConsumerProxyList(rs.view->GetView()), bucket_mask);
+    RenderCollector::PerformOcclusionCulling(frame, rs, RenderApi_GetConsumerProxyList(rs.view->GetView()), bucketMask);
 }
 
-void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, uint32 bucket_mask)
+void DeferredRenderer::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, uint32 bucketMask)
 {
     HYP_SCOPE;
 
-    RenderCollector::ExecuteDrawCalls(frame, rs, RenderApi_GetConsumerProxyList(rs.view->GetView()), bucket_mask);
+    RenderCollector::ExecuteDrawCalls(frame, rs, RenderApi_GetConsumerProxyList(rs.view->GetView()), bucketMask);
 }
 
-void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, const ImageRef& src_image)
+void DeferredRenderer::GenerateMipChain(FrameBase* frame, const RenderSetup& rs, const ImageRef& srcImage)
 {
     HYP_SCOPE;
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    DeferredPassData* pd = static_cast<DeferredPassData*>(rs.pass_data);
+    DeferredPassData* pd = static_cast<DeferredPassData*>(rs.passData);
 
-    const ImageRef& mipmapped_result = pd->mip_chain->GetRenderResource().GetImage();
-    AssertThrow(mipmapped_result.IsValid());
+    const ImageRef& mipmappedResult = pd->mipChain->GetRenderResource().GetImage();
+    AssertThrow(mipmappedResult.IsValid());
 
-    frame->GetCommandList().Add<InsertBarrier>(src_image, RS_COPY_SRC);
-    frame->GetCommandList().Add<InsertBarrier>(mipmapped_result, RS_COPY_DST);
+    frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_COPY_SRC);
+    frame->GetCommandList().Add<InsertBarrier>(mipmappedResult, RS_COPY_DST);
 
     // Blit into the mipmap chain img
     frame->GetCommandList().Add<BlitRect>(
-        src_image,
-        mipmapped_result,
-        Rect<uint32> { 0, 0, src_image->GetExtent().x, src_image->GetExtent().y },
-        Rect<uint32> { 0, 0, mipmapped_result->GetExtent().x, mipmapped_result->GetExtent().y });
+        srcImage,
+        mipmappedResult,
+        Rect<uint32> { 0, 0, srcImage->GetExtent().x, srcImage->GetExtent().y },
+        Rect<uint32> { 0, 0, mipmappedResult->GetExtent().x, mipmappedResult->GetExtent().y });
 
-    frame->GetCommandList().Add<GenerateMipmaps>(mipmapped_result);
+    frame->GetCommandList().Add<GenerateMipmaps>(mipmappedResult);
 
-    frame->GetCommandList().Add<InsertBarrier>(src_image, RS_SHADER_RESOURCE);
+    frame->GetCommandList().Add<InsertBarrier>(srcImage, RS_SHADER_RESOURCE);
 }
 
 #pragma endregion DeferredRenderer

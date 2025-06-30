@@ -6,21 +6,21 @@
 
 namespace hyperion::net {
 
-static RC<NetRequestThread> g_global_net_request_thread;
-static Mutex g_global_net_request_thread_mutex;
+static RC<NetRequestThread> g_globalNetRequestThread;
+static Mutex g_globalNetRequestThreadMutex;
 
-HYP_API void SetGlobalNetRequestThread(const RC<NetRequestThread>& net_request_thread)
+HYP_API void SetGlobalNetRequestThread(const RC<NetRequestThread>& netRequestThread)
 {
-    Mutex::Guard guard(g_global_net_request_thread_mutex);
+    Mutex::Guard guard(g_globalNetRequestThreadMutex);
 
-    g_global_net_request_thread = net_request_thread;
+    g_globalNetRequestThread = netRequestThread;
 }
 
 HYP_API const RC<NetRequestThread>& GetGlobalNetRequestThread()
 {
-    Mutex::Guard guard(g_global_net_request_thread_mutex);
+    Mutex::Guard guard(g_globalNetRequestThreadMutex);
 
-    return g_global_net_request_thread;
+    return g_globalNetRequestThread;
 }
 
 NetRequestThread::NetRequestThread()

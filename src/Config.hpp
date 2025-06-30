@@ -76,26 +76,26 @@ public:
     {
     }
 
-    Option(int int_value, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
-        : Base(int_value),
+    Option(int intValue, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
+        : Base(intValue),
           m_flags(flags)
     {
     }
 
-    Option(float float_value, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
-        : Base(float_value),
+    Option(float floatValue, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
+        : Base(floatValue),
           m_flags(flags)
     {
     }
 
-    Option(bool bool_value, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
-        : Base(bool_value),
+    Option(bool boolValue, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
+        : Base(boolValue),
           m_flags(flags)
     {
     }
 
-    Option(const String& string_value, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
-        : Base(string_value),
+    Option(const String& stringValue, EnumFlags<OptionFlags> flags = OptionFlags::SAVE)
+        : Base(stringValue),
           m_flags(flags)
     {
     }

@@ -36,18 +36,18 @@ private:
     virtual void RespondToCommand(const CameraCommand& command, float dt) override;
 
     Vec3f m_offset,
-        m_real_offset;
+        m_realOffset;
 
     Vec3f m_target;
 
     float m_mx,
         m_my,
-        m_prev_mx,
-        m_prev_my,
-        m_desired_distance;
+        m_prevMx,
+        m_prevMy,
+        m_desiredDistance;
 
     Vec2f m_mag,
-        m_prev_mag;
+        m_prevMag;
 };
 
 } // namespace hyperion

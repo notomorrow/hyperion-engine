@@ -11,8 +11,8 @@ struct ThreadSignal
 {
     using ValueType = uint32;
 
-    ThreadSignal(ValueType initial_value = ValueType())
-        : value(initial_value)
+    ThreadSignal(ValueType initialValue = ValueType())
+        : value(initialValue)
     {
     }
 
@@ -24,9 +24,9 @@ struct ThreadSignal
 
     bool Consume()
     {
-        ValueType current_value = value.Get(MemoryOrder::ACQUIRE);
+        ValueType currentValue = value.Get(MemoryOrder::ACQUIRE);
 
-        if (current_value)
+        if (currentValue)
         {
             value.Decrement(1, MemoryOrder::RELEASE);
 

@@ -18,7 +18,7 @@ class SkySystem : public SystemBase
     HYP_OBJECT_BODY(SkySystem);
 
 public:
-    SkySystem(EntityManager& entity_manager);
+    SkySystem(EntityManager& entityManager);
     virtual ~SkySystem() override = default;
 
     virtual bool RequiresGameThread() const override
@@ -46,7 +46,7 @@ private:
         };
     }
 
-    void AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr, Entity* entity, SkyComponent& sky_component, MeshComponent* mesh_component);
+    void AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr, Entity* entity, SkyComponent& skyComponent, MeshComponent* meshComponent);
 };
 
 } // namespace hyperion

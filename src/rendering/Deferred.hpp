@@ -75,7 +75,7 @@ enum class DeferredPassMode
     DIRECT_LIGHTING
 };
 
-void GetDeferredShaderProperties(ShaderProperties& out_shader_properties);
+void GetDeferredShaderProperties(ShaderProperties& outShaderProperties);
 
 class DeferredPass final : public FullScreenPass
 {
@@ -93,19 +93,19 @@ public:
 protected:
     void CreateShader();
 
-    virtual void CreatePipeline(const RenderableAttributeSet& renderable_attributes) override;
+    virtual void CreatePipeline(const RenderableAttributeSet& renderableAttributes) override;
 
-    virtual void Resize_Internal(Vec2u new_size) override;
+    virtual void Resize_Internal(Vec2u newSize) override;
 
 private:
     const DeferredPassMode m_mode;
 
-    FixedArray<ShaderRef, LT_MAX> m_direct_light_shaders;
-    FixedArray<GraphicsPipelineRef, LT_MAX> m_direct_light_graphics_pipelines;
+    FixedArray<ShaderRef, LT_MAX> m_directLightShaders;
+    FixedArray<GraphicsPipelineRef, LT_MAX> m_directLightGraphicsPipelines;
 
-    Handle<Texture> m_ltc_matrix_texture;
-    Handle<Texture> m_ltc_brdf_texture;
-    SamplerRef m_ltc_sampler;
+    Handle<Texture> m_ltcMatrixTexture;
+    Handle<Texture> m_ltcBrdfTexture;
+    SamplerRef m_ltcSampler;
 };
 
 enum EnvGridPassMode : uint8
@@ -150,7 +150,7 @@ private:
         return false;
     }
 
-    virtual void Resize_Internal(Vec2u new_size) override;
+    virtual void Resize_Internal(Vec2u newSize) override;
 };
 
 class LightmapPass final : public FullScreenPass
@@ -178,7 +178,7 @@ private:
         return false;
     }
 
-    virtual void Resize_Internal(Vec2u new_size) override;
+    virtual void Resize_Internal(Vec2u newSize) override;
 };
 
 class EnvGridPass final : public FullScreenPass
@@ -211,11 +211,11 @@ private:
         return false;
     }
 
-    virtual void Resize_Internal(Vec2u new_size) override;
+    virtual void Resize_Internal(Vec2u newSize) override;
 
     const EnvGridPassMode m_mode;
-    FixedArray<GraphicsPipelineRef, EGAM_MAX> m_graphics_pipelines;
-    bool m_is_first_frame;
+    FixedArray<GraphicsPipelineRef, EGAM_MAX> m_graphicsPipelines;
+    bool m_isFirstFrame;
 };
 
 class ReflectionsPass final : public FullScreenPass
@@ -229,24 +229,24 @@ class ReflectionsPass final : public FullScreenPass
     };
 
 public:
-    ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const ImageViewRef& mip_chain_image_view, const ImageViewRef& deferred_result_image_view);
+    ReflectionsPass(Vec2u extent, GBuffer* gbuffer, const ImageViewRef& mipChainImageView, const ImageViewRef& deferredResultImageView);
     ReflectionsPass(const ReflectionsPass& other) = delete;
     ReflectionsPass& operator=(const ReflectionsPass& other) = delete;
     virtual ~ReflectionsPass() override;
 
     HYP_FORCE_INLINE const ImageViewRef& GetMipChainImageView() const
     {
-        return m_mip_chain_image_view;
+        return m_mipChainImageView;
     }
 
     HYP_FORCE_INLINE const ImageViewRef& GetDeferredResultImageView() const
     {
-        return m_deferred_result_image_view;
+        return m_deferredResultImageView;
     }
 
     HYP_FORCE_INLINE SSRRenderer* GetSSRRenderer() const
     {
-        return m_ssr_renderer.Get();
+        return m_ssrRenderer.Get();
     }
 
     bool ShouldRenderSSR() const;
@@ -271,22 +271,22 @@ private:
     }
 
     virtual void CreatePipeline() override;
-    virtual void CreatePipeline(const RenderableAttributeSet& renderable_attributes) override;
+    virtual void CreatePipeline(const RenderableAttributeSet& renderableAttributes) override;
 
     void CreateSSRRenderer();
 
-    virtual void Resize_Internal(Vec2u new_size) override;
+    virtual void Resize_Internal(Vec2u newSize) override;
 
-    ImageViewRef m_mip_chain_image_view;
-    ImageViewRef m_deferred_result_image_view;
+    ImageViewRef m_mipChainImageView;
+    ImageViewRef m_deferredResultImageView;
 
-    FixedArray<GraphicsPipelineRef, ApplyReflectionProbeMode::MAX> m_graphics_pipelines;
+    FixedArray<GraphicsPipelineRef, ApplyReflectionProbeMode::MAX> m_graphicsPipelines;
 
-    UniquePtr<SSRRenderer> m_ssr_renderer;
+    UniquePtr<SSRRenderer> m_ssrRenderer;
 
-    UniquePtr<FullScreenPass> m_render_ssr_to_screen_pass;
+    UniquePtr<FullScreenPass> m_renderSsrToScreenPass;
 
-    bool m_is_first_frame;
+    bool m_isFirstFrame;
 };
 
 struct DeferredPassData : PassData
@@ -294,24 +294,24 @@ struct DeferredPassData : PassData
     int priority = 0;
 
     // Descriptor set used when rendering the View in FinalPass.
-    DescriptorSetRef final_pass_descriptor_set;
+    DescriptorSetRef finalPassDescriptorSet;
 
-    Handle<Texture> mip_chain;
+    Handle<Texture> mipChain;
 
-    UniquePtr<DeferredPass> indirect_pass;
-    UniquePtr<DeferredPass> direct_pass;
-    UniquePtr<EnvGridPass> env_grid_radiance_pass;
-    UniquePtr<EnvGridPass> env_grid_irradiance_pass;
-    UniquePtr<ReflectionsPass> reflections_pass;
-    UniquePtr<LightmapPass> lightmap_pass;
-    UniquePtr<TonemapPass> tonemap_pass;
-    UniquePtr<PostProcessing> post_processing;
+    UniquePtr<DeferredPass> indirectPass;
+    UniquePtr<DeferredPass> directPass;
+    UniquePtr<EnvGridPass> envGridRadiancePass;
+    UniquePtr<EnvGridPass> envGridIrradiancePass;
+    UniquePtr<ReflectionsPass> reflectionsPass;
+    UniquePtr<LightmapPass> lightmapPass;
+    UniquePtr<TonemapPass> tonemapPass;
+    UniquePtr<PostProcessing> postProcessing;
     UniquePtr<HBAO> hbao;
-    UniquePtr<TemporalAA> temporal_aa;
+    UniquePtr<TemporalAA> temporalAa;
     UniquePtr<SSGI> ssgi;
-    UniquePtr<FullScreenPass> combine_pass;
-    UniquePtr<DepthPyramidRenderer> depth_pyramid_renderer;
-    UniquePtr<DOFBlur> dof_blur;
+    UniquePtr<FullScreenPass> combinePass;
+    UniquePtr<DepthPyramidRenderer> depthPyramidRenderer;
+    UniquePtr<DOFBlur> dofBlur;
 
     virtual ~DeferredPassData() override;
 };
@@ -322,14 +322,14 @@ public:
     struct LastFrameData
     {
         // View pass data from the most recent frame, sorted by View priority
-        uint8 frame_id = uint8(-1);
+        uint8 frameId = uint8(-1);
 
         // The pass data for the last frame (per-View), sorted by View priority.
-        Array<Pair<View*, DeferredPassData*>> pass_data;
+        Array<Pair<View*, DeferredPassData*>> passData;
 
         DeferredPassData* GetPassDataForView(const View* view) const
         {
-            for (const auto& pair : pass_data)
+            for (const auto& pair : passData)
             {
                 if (pair.first == view)
                 {
@@ -348,12 +348,12 @@ public:
 
     HYP_FORCE_INLINE const LastFrameData& GetLastFrameData() const
     {
-        return m_last_frame_data;
+        return m_lastFrameData;
     }
 
     HYP_FORCE_INLINE const RendererConfig& GetRendererConfig() const
     {
-        return m_renderer_config;
+        return m_rendererConfig;
     }
 
     virtual void Initialize() override;
@@ -366,19 +366,19 @@ private:
 
     // Called on initialization or when the view changes
     virtual PassData* CreateViewPassData(View* view, PassDataExt&) override;
-    void CreateViewFinalPassDescriptorSet(View* view, DeferredPassData& pass_data);
-    void CreateViewDescriptorSets(View* view, DeferredPassData& pass_data);
-    void CreateViewCombinePass(View* view, DeferredPassData& pass_data);
+    void CreateViewFinalPassDescriptorSet(View* view, DeferredPassData& passData);
+    void CreateViewDescriptorSets(View* view, DeferredPassData& passData);
+    void CreateViewCombinePass(View* view, DeferredPassData& passData);
 
-    void ResizeView(Viewport viewport, View* view, DeferredPassData& pass_data);
+    void ResizeView(Viewport viewport, View* view, DeferredPassData& passData);
 
     void PerformOcclusionCulling(FrameBase* frame, const RenderSetup& rs);
-    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, uint32 bucket_mask);
-    void GenerateMipChain(FrameBase* frame, const RenderSetup& rs, const ImageRef& src_image);
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rs, uint32 bucketMask);
+    void GenerateMipChain(FrameBase* frame, const RenderSetup& rs, const ImageRef& srcImage);
 
-    LastFrameData m_last_frame_data;
+    LastFrameData m_lastFrameData;
 
-    RendererConfig m_renderer_config;
+    RendererConfig m_rendererConfig;
 };
 
 } // namespace hyperion

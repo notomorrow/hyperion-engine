@@ -47,18 +47,18 @@ Matrix3& Matrix3::Transpose()
 Matrix3 Matrix3::Inverted() const
 {
     const float det = Determinant();
-    const float inv_det = 1.0f / det;
+    const float invDet = 1.0f / det;
 
     Matrix3 result;
-    result[0][0] = (rows[1][1] * rows[2][2] - rows[2][1] * rows[1][2]) * inv_det;
-    result[0][1] = (rows[0][2] * rows[2][1] - rows[0][1] * rows[2][2]) * inv_det;
-    result[0][2] = (rows[0][1] * rows[1][2] - rows[0][2] * rows[1][1]) * inv_det;
-    result[1][0] = (rows[1][2] * rows[2][0] - rows[1][0] * rows[2][2]) * inv_det;
-    result[1][1] = (rows[0][0] * rows[2][2] - rows[0][2] * rows[2][0]) * inv_det;
-    result[1][2] = (rows[1][0] * rows[0][2] - rows[0][0] * rows[1][2]) * inv_det;
-    result[2][0] = (rows[1][0] * rows[2][1] - rows[2][0] * rows[1][1]) * inv_det;
-    result[2][1] = (rows[2][0] * rows[0][1] - rows[0][0] * rows[2][1]) * inv_det;
-    result[2][2] = (rows[0][0] * rows[1][1] - rows[1][0] * rows[0][1]) * inv_det;
+    result[0][0] = (rows[1][1] * rows[2][2] - rows[2][1] * rows[1][2]) * invDet;
+    result[0][1] = (rows[0][2] * rows[2][1] - rows[0][1] * rows[2][2]) * invDet;
+    result[0][2] = (rows[0][1] * rows[1][2] - rows[0][2] * rows[1][1]) * invDet;
+    result[1][0] = (rows[1][2] * rows[2][0] - rows[1][0] * rows[2][2]) * invDet;
+    result[1][1] = (rows[0][0] * rows[2][2] - rows[0][2] * rows[2][0]) * invDet;
+    result[1][2] = (rows[1][0] * rows[0][2] - rows[0][0] * rows[1][2]) * invDet;
+    result[2][0] = (rows[1][0] * rows[2][1] - rows[2][0] * rows[1][1]) * invDet;
+    result[2][1] = (rows[2][0] * rows[0][1] - rows[0][0] * rows[2][1]) * invDet;
+    result[2][2] = (rows[0][0] * rows[1][1] - rows[1][0] * rows[0][1]) * invDet;
 
     return result;
 }
@@ -158,16 +158,16 @@ float& Matrix3::At(int i, int j)
 
 Matrix3 Matrix3::Zeros()
 {
-    float zero_array[sizeof(values) / sizeof(values[0])] = { 0.0f };
+    float zeroArray[sizeof(values) / sizeof(values[0])] = { 0.0f };
 
-    return Matrix3(zero_array);
+    return Matrix3(zeroArray);
 }
 
 Matrix3 Matrix3::Ones()
 {
-    float ones_array[sizeof(values) / sizeof(values[0])] = { 1.0f };
+    float onesArray[sizeof(values) / sizeof(values[0])] = { 1.0f };
 
-    return Matrix3(ones_array);
+    return Matrix3(onesArray);
 }
 
 Matrix3 Matrix3::Identity()

@@ -30,9 +30,9 @@ public:
             return err;
         }
 
-        const AssetRegistry& in_object = in.Get<AssetRegistry>();
+        const AssetRegistry& inObject = in.Get<AssetRegistry>();
 
-        for (const Handle<AssetPackage>& package : in_object.GetPackages())
+        for (const Handle<AssetPackage>& package : inObject.GetPackages())
         {
             if (!package.IsValid())
             {
@@ -50,9 +50,9 @@ public:
 
     virtual FBOMResult Deserialize(FBOMLoadContext& context, const FBOMObject& in, HypData& out) const override
     {
-        Handle<AssetRegistry> asset_registry_handle = CreateObject<AssetRegistry>();
+        Handle<AssetRegistry> assetRegistryHandle = CreateObject<AssetRegistry>();
 
-        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, AssetRegistry::Class(), AnyRef(*asset_registry_handle)))
+        if (FBOMResult err = HypClassInstanceMarshal::Deserialize_Internal(context, in, AssetRegistry::Class(), AnyRef(*assetRegistryHandle)))
         {
             return err;
         }
@@ -63,20 +63,20 @@ public:
         {
             if (child.GetType().IsOrExtends("AssetPackage"))
             {
-                const Handle<AssetPackage>& asset_package = child.m_deserialized_object->Get<Handle<AssetPackage>>();
+                const Handle<AssetPackage>& assetPackage = child.m_deserializedObject->Get<Handle<AssetPackage>>();
 
-                if (!asset_package)
+                if (!assetPackage)
                 {
                     continue;
                 }
 
-                packages.Set(asset_package);
+                packages.Set(assetPackage);
             }
         }
 
-        asset_registry_handle->SetPackages(packages);
+        assetRegistryHandle->SetPackages(packages);
 
-        out = HypData(std::move(asset_registry_handle));
+        out = HypData(std::move(assetRegistryHandle));
 
         return { FBOMResult::FBOM_OK };
     }

@@ -40,11 +40,11 @@ enum RTRadianceUpdates : uint32
 struct RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)
     : RenderCommand
 {
-    FixedArray<ImageViewRef, max_frames_in_flight> image_views;
+    FixedArray<ImageViewRef, maxFramesInFlight> imageViews;
 
     RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)(
-        const FixedArray<ImageViewRef, max_frames_in_flight>& image_views)
-        : image_views(image_views)
+        const FixedArray<ImageViewRef, maxFramesInFlight>& imageViews)
+        : imageViews(imageViews)
     {
     }
 
@@ -52,9 +52,9 @@ struct RENDER_COMMAND(SetRTRadianceImageInGlobalDescriptorSet)
 
     virtual RendererResult operator()() override
     {
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_render_global_state->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("RTRadianceResultTexture"), image_views[frame_index]);
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), imageViews[frameIndex]);
         }
 
         HYPERION_RETURN_OK;
@@ -71,9 +71,9 @@ struct RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet)
         RendererResult result;
 
         // remove result image from global descriptor set
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_render_global_state->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("RTRadianceResultTexture"), g_render_global_state->PlaceholderData->GetImageView2D1x1R8());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("RTRadianceResultTexture"), g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         }
 
         return result;
@@ -105,111 +105,111 @@ void RaytracingReflections::Destroy()
 {
     m_shader.Reset();
 
-    SafeRelease(std::move(m_raytracing_pipeline));
+    SafeRelease(std::move(m_raytracingPipeline));
 
-    SafeRelease(std::move(m_uniform_buffers));
+    SafeRelease(std::move(m_uniformBuffers));
 
     // remove result image from global descriptor set
-    g_safe_deleter->SafeRelease(std::move(m_texture));
+    g_safeDeleter->SafeRelease(std::move(m_texture));
 
     PUSH_RENDER_COMMAND(UnsetRTRadianceImageInGlobalDescriptorSet);
 
     HYP_SYNC_RENDER();
 }
 
-void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& render_setup)
+void RaytracingReflections::UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(render_setup.view->GetView());
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view->GetView());
 
     RTRadianceUniforms uniforms {};
 
     Memory::MemSet(&uniforms, 0, sizeof(uniforms));
 
-    uniforms.min_roughness = 0.4f;
-    uniforms.output_image_resolution = Vec2i(m_config.extent);
+    uniforms.minRoughness = 0.4f;
+    uniforms.outputImageResolution = Vec2i(m_config.extent);
 
-    uint32 num_bound_lights = 0;
+    uint32 numBoundLights = 0;
 
-    const uint32 max_bound_lights = ArraySize(uniforms.light_indices);
+    const uint32 maxBoundLights = ArraySize(uniforms.lightIndices);
 
     for (Light* light : rpl.lights)
     {
-        const LightType light_type = light->GetLightType();
+        const LightType lightType = light->GetLightType();
 
-        if (light_type != LT_DIRECTIONAL && light_type != LT_POINT)
+        if (lightType != LT_DIRECTIONAL && lightType != LT_POINT)
         {
             continue;
         }
 
-        if (num_bound_lights >= max_bound_lights)
+        if (numBoundLights >= maxBoundLights)
         {
             break;
         }
 
-        uniforms.light_indices[num_bound_lights++] = light->GetRenderResource().GetBufferIndex();
+        uniforms.lightIndices[numBoundLights++] = light->GetRenderResource().GetBufferIndex();
     }
 
-    uniforms.num_bound_lights = num_bound_lights;
+    uniforms.numBoundLights = numBoundLights;
 
-    m_uniform_buffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
+    m_uniformBuffers[frame->GetFrameIndex()]->Copy(sizeof(uniforms), &uniforms);
 
     if (m_updates[frame->GetFrameIndex()])
     {
-        const DescriptorSetRef& descriptor_set = m_raytracing_pipeline->GetDescriptorTable()
+        const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
                                                      ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame->GetFrameIndex());
 
-        AssertThrow(descriptor_set.IsValid());
+        AssertThrow(descriptorSet.IsValid());
 
-        descriptor_set->Update();
+        descriptorSet->Update();
 
         m_updates[frame->GetFrameIndex()] = RT_RADIANCE_UPDATES_NONE;
     }
 }
 
-void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& render_setup)
+void RaytracingReflections::Render(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    AssertDebug(render_setup.IsValid());
-    AssertDebug(render_setup.HasView());
+    AssertDebug(renderSetup.IsValid());
+    AssertDebug(renderSetup.HasView());
 
-    UpdateUniforms(frame, render_setup);
+    UpdateUniforms(frame, renderSetup);
 
-    frame->GetCommandList().Add<BindRaytracingPipeline>(m_raytracing_pipeline);
+    frame->GetCommandList().Add<BindRaytracingPipeline>(m_raytracingPipeline);
 
     frame->GetCommandList().Add<BindDescriptorTable>(
-        m_raytracing_pipeline->GetDescriptorTable(),
-        m_raytracing_pipeline,
+        m_raytracingPipeline->GetDescriptorTable(),
+        m_raytracingPipeline,
         ArrayMap<Name, ArrayMap<Name, uint32>> {
             { NAME("Global"),
-                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*render_setup.world) },
-                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*render_setup.view->GetCamera()) },
-                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(render_setup.env_grid, 0) },
-                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(render_setup.env_probe, 0) } } } },
+                { { NAME("WorldsBuffer"), ShaderDataOffset<WorldShaderData>(*renderSetup.world) },
+                    { NAME("CamerasBuffer"), ShaderDataOffset<CameraShaderData>(*renderSetup.view->GetCamera()) },
+                    { NAME("EnvGridsBuffer"), ShaderDataOffset<EnvGridShaderData>(renderSetup.envGrid, 0) },
+                    { NAME("CurrentEnvProbe"), ShaderDataOffset<EnvProbeShaderData>(renderSetup.envProbe, 0) } } } },
         frame->GetFrameIndex());
 
     frame->GetCommandList().Add<InsertBarrier>(m_texture->GetRenderResource().GetImage(), RS_UNORDERED_ACCESS);
 
-    const Vec3u image_extent = m_texture->GetRenderResource().GetImage()->GetExtent();
+    const Vec3u imageExtent = m_texture->GetRenderResource().GetImage()->GetExtent();
 
-    const SizeType num_pixels = image_extent.Volume();
-    // const SizeType half_num_pixels = num_pixels / 2;
+    const SizeType numPixels = imageExtent.Volume();
+    // const SizeType halfNumPixels = numPixels / 2;
 
     frame->GetCommandList().Add<TraceRays>(
-        m_raytracing_pipeline,
-        Vec3u { uint32(num_pixels), 1, 1 });
+        m_raytracingPipeline,
+        Vec3u { uint32(numPixels), 1, 1 });
 
     frame->GetCommandList().Add<InsertBarrier>(
         m_texture->GetRenderResource().GetImage(),
         RS_SHADER_RESOURCE);
 
     // Reset progressive blending if the camera view matrix has changed (for path tracing)
-    if (IsPathTracer() && render_setup.view->GetCamera()->GetBufferData().view != m_previous_view_matrix)
+    if (IsPathTracer() && renderSetup.view->GetCamera()->GetBufferData().view != m_previousViewMatrix)
     {
-        m_temporal_blending->ResetProgressiveBlending();
+        m_temporalBlending->ResetProgressiveBlending();
 
-        m_previous_view_matrix = render_setup.view->GetCamera()->GetBufferData().view;
+        m_previousViewMatrix = renderSetup.view->GetCamera()->GetBufferData().view;
     }
 
-    m_temporal_blending->Render(frame, render_setup);
+    m_temporalBlending->Render(frame, renderSetup);
 }
 
 void RaytracingReflections::CreateImages()
@@ -234,15 +234,15 @@ void RaytracingReflections::CreateUniformBuffer()
     RTRadianceUniforms uniforms;
     Memory::MemSet(&uniforms, 0, sizeof(uniforms));
 
-    m_uniform_buffers = {
-        g_render_backend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(RTRadianceUniforms)),
-        g_render_backend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(RTRadianceUniforms))
+    m_uniformBuffers = {
+        g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(RTRadianceUniforms)),
+        g_renderBackend->MakeGpuBuffer(GpuBufferType::CBUFF, sizeof(RTRadianceUniforms))
     };
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        HYPERION_ASSERT_RESULT(m_uniform_buffers[frame_index]->Create());
-        m_uniform_buffers[frame_index]->Copy(sizeof(uniforms), &uniforms);
+        HYPERION_ASSERT_RESULT(m_uniformBuffers[frameIndex]->Create());
+        m_uniformBuffers[frameIndex]->Copy(sizeof(uniforms), &uniforms);
     }
 }
 
@@ -253,26 +253,26 @@ void RaytracingReflections::ApplyTLASUpdates(RTUpdateStateFlags flags)
         return;
     }
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        const DescriptorSetRef& descriptor_set = m_raytracing_pipeline->GetDescriptorTable()
-                                                     ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame_index);
+        const DescriptorSetRef& descriptorSet = m_raytracingPipeline->GetDescriptorTable()
+                                                     ->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
 
-        AssertThrow(descriptor_set != nullptr);
+        AssertThrow(descriptorSet != nullptr);
 
         if (flags & RT_UPDATE_STATE_FLAGS_UPDATE_ACCELERATION_STRUCTURE)
         {
             // update acceleration structure in descriptor set
-            descriptor_set->SetElement(NAME("TLAS"), m_top_level_acceleration_structures[frame_index]);
+            descriptorSet->SetElement(NAME("TLAS"), m_topLevelAccelerationStructures[frameIndex]);
         }
 
         if (flags & RT_UPDATE_STATE_FLAGS_UPDATE_MESH_DESCRIPTIONS)
         {
             // update mesh descriptions buffer in descriptor set
-            descriptor_set->SetElement(NAME("MeshDescriptionsBuffer"), m_top_level_acceleration_structures[frame_index]->GetMeshDescriptionsBuffer());
+            descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), m_topLevelAccelerationStructures[frameIndex]->GetMeshDescriptionsBuffer());
         }
 
-        m_updates[frame_index] |= RT_RADIANCE_UPDATES_TLAS;
+        m_updates[frameIndex] |= RT_RADIANCE_UPDATES_TLAS;
     }
 }
 
@@ -280,54 +280,54 @@ void RaytracingReflections::CreateRaytracingPipeline()
 {
     if (IsPathTracer())
     {
-        m_shader = g_shader_manager->GetOrCreate(NAME("PathTracer"));
+        m_shader = g_shaderManager->GetOrCreate(NAME("PathTracer"));
     }
     else
     {
-        m_shader = g_shader_manager->GetOrCreate(NAME("RTRadiance"));
+        m_shader = g_shaderManager->GetOrCreate(NAME("RTRadiance"));
     }
 
     AssertThrow(m_shader.IsValid());
 
-    const DescriptorTableDeclaration& descriptor_table_decl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    const DescriptorTableDeclaration& descriptorTableDecl = m_shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-    DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        AssertThrow(m_top_level_acceleration_structures[frame_index] != nullptr);
+        AssertThrow(m_topLevelAccelerationStructures[frameIndex] != nullptr);
 
-        const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frame_index);
-        AssertThrow(descriptor_set != nullptr);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("RTRadianceDescriptorSet"), frameIndex);
+        AssertThrow(descriptorSet != nullptr);
 
-        descriptor_set->SetElement(NAME("TLAS"), m_top_level_acceleration_structures[frame_index]);
-        descriptor_set->SetElement(NAME("MeshDescriptionsBuffer"), m_top_level_acceleration_structures[frame_index]->GetMeshDescriptionsBuffer());
+        descriptorSet->SetElement(NAME("TLAS"), m_topLevelAccelerationStructures[frameIndex]);
+        descriptorSet->SetElement(NAME("MeshDescriptionsBuffer"), m_topLevelAccelerationStructures[frameIndex]->GetMeshDescriptionsBuffer());
 
-        descriptor_set->SetElement(NAME("OutputImage"), m_texture->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("OutputImage"), m_texture->GetRenderResource().GetImageView());
 
-        descriptor_set->SetElement(NAME("LightsBuffer"), g_render_global_state->gpu_buffers[GRB_LIGHTS]->GetBuffer(frame_index));
-        descriptor_set->SetElement(NAME("MaterialsBuffer"), g_render_global_state->gpu_buffers[GRB_MATERIALS]->GetBuffer(frame_index));
-        descriptor_set->SetElement(NAME("RTRadianceUniforms"), m_uniform_buffers[frame_index]);
+        descriptorSet->SetElement(NAME("LightsBuffer"), g_renderGlobalState->gpuBuffers[GRB_LIGHTS]->GetBuffer(frameIndex));
+        descriptorSet->SetElement(NAME("MaterialsBuffer"), g_renderGlobalState->gpuBuffers[GRB_MATERIALS]->GetBuffer(frameIndex));
+        descriptorSet->SetElement(NAME("RTRadianceUniforms"), m_uniformBuffers[frameIndex]);
     }
 
-    DeferCreate(descriptor_table);
+    DeferCreate(descriptorTable);
 
-    m_raytracing_pipeline = g_render_backend->MakeRaytracingPipeline(
+    m_raytracingPipeline = g_renderBackend->MakeRaytracingPipeline(
         m_shader,
-        descriptor_table);
+        descriptorTable);
 
-    DeferCreate(m_raytracing_pipeline);
+    DeferCreate(m_raytracingPipeline);
 
     PUSH_RENDER_COMMAND(
         SetRTRadianceImageInGlobalDescriptorSet,
-        FixedArray<ImageViewRef, max_frames_in_flight> {
-            m_temporal_blending->GetResultTexture()->GetRenderResource().GetImageView(),
-            m_temporal_blending->GetResultTexture()->GetRenderResource().GetImageView() });
+        FixedArray<ImageViewRef, maxFramesInFlight> {
+            m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView(),
+            m_temporalBlending->GetResultTexture()->GetRenderResource().GetImageView() });
 }
 
 void RaytracingReflections::CreateTemporalBlending()
 {
-    m_temporal_blending = MakeUnique<TemporalBlending>(
+    m_temporalBlending = MakeUnique<TemporalBlending>(
         m_config.extent,
         TF_RGBA16F,
         IsPathTracer()
@@ -339,7 +339,7 @@ void RaytracingReflections::CreateTemporalBlending()
         m_texture->GetRenderResource().GetImageView(),
         m_gbuffer);
 
-    m_temporal_blending->Create();
+    m_temporalBlending->Create();
 }
 
 } // namespace hyperion

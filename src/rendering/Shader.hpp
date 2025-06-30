@@ -41,9 +41,9 @@ private:
         };
 
         ShaderWeakRef shader;
-        RC<CompiledShader> compiled_shader;
+        RC<CompiledShader> compiledShader;
         AtomicVar<State> state = State::UNLOADED;
-        ThreadId loading_thread_id;
+        ThreadId loadingThreadId;
     };
 
     HashMap<ShaderDefinition, RC<ShaderMapEntry>> m_map;

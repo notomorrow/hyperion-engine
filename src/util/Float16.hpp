@@ -16,17 +16,17 @@ struct alignas(2) Float16
 
     Float16() = default;
 
-    Float16(float float_value)
+    Float16(float floatValue)
     {
-        static constexpr uint32 sign_mask = 0x80000000;
-        static constexpr uint32 exp_mask = 0x7F800000;
-        static constexpr uint32 frac_mask = 0x007FFFFF;
+        static constexpr uint32 signMask = 0x80000000;
+        static constexpr uint32 expMask = 0x7F800000;
+        static constexpr uint32 fracMask = 0x007FFFFF;
 
-        const uint32 float_bits = *reinterpret_cast<uint32*>(&float_value);
-        const uint32 sign = (float_bits & sign_mask) >> 16;
+        const uint32 floatBits = *reinterpret_cast<uint32*>(&floatValue);
+        const uint32 sign = (floatBits & signMask) >> 16;
 
-        int32 exponent = (float_bits & exp_mask) >> 23;
-        uint32 fraction = float_bits & frac_mask;
+        int32 exponent = (floatBits & expMask) >> 23;
+        uint32 fraction = floatBits & fracMask;
 
         exponent -= 127;
         exponent += 15;
@@ -62,13 +62,13 @@ struct alignas(2) Float16
 
     explicit operator float() const
     {
-        static constexpr uint16 sign_mask = 0x8000;
-        static constexpr uint16 exp_mask = 0x7C00;
-        static constexpr uint16 frac_mask = 0x03FF;
+        static constexpr uint16 signMask = 0x8000;
+        static constexpr uint16 expMask = 0x7C00;
+        static constexpr uint16 fracMask = 0x03FF;
 
-        uint32 sign = (this->value & sign_mask) << 16;
-        int32 exponent = (this->value & exp_mask) >> 10;
-        uint32 fraction = (this->value & frac_mask) << 13;
+        uint32 sign = (this->value & signMask) << 16;
+        int32 exponent = (this->value & expMask) >> 10;
+        uint32 fraction = (this->value & fracMask) << 13;
 
         if (exponent == 0)
         {
@@ -97,9 +97,9 @@ struct alignas(2) Float16
             exponent += 127;
         }
 
-        uint32 float_bits = sign | (exponent << 23) | fraction;
+        uint32 floatBits = sign | (exponent << 23) | fraction;
 
-        return *reinterpret_cast<float*>(&float_bits);
+        return *reinterpret_cast<float*>(&floatBits);
     }
 
     HYP_NODISCARD HYP_FORCE_INLINE Float16 operator+(Float16 other) const

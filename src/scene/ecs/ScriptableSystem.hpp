@@ -50,9 +50,9 @@ public:
 private:
     virtual SystemComponentDescriptors GetComponentDescriptors() const override
     {
-        Array<ComponentInfo> component_infos = GetComponentInfos();
+        Array<ComponentInfo> componentInfos = GetComponentInfos();
 
-        return SystemComponentDescriptors(component_infos.ToSpan());
+        return SystemComponentDescriptors(componentInfos.ToSpan());
     }
 
     HYP_METHOD(Scriptable)

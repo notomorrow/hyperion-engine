@@ -29,7 +29,7 @@ public:
 
     const Handle<AppContextBase>& GetAppContext() const
     {
-        return m_app_context;
+        return m_appContext;
     }
 
     void LaunchGame(const Handle<Game>& game);
@@ -40,8 +40,8 @@ protected:
 private:
     void RunMainLoop(Game* game);
 
-    Handle<AppContextBase> m_app_context;
-    UniquePtr<GameThread> m_game_thread;
+    Handle<AppContextBase> m_appContext;
+    UniquePtr<GameThread> m_gameThread;
 };
 
 } // namespace sys

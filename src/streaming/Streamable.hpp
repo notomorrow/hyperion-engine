@@ -25,12 +25,12 @@ struct StreamableKey
     UUID uuid = UUID::Invalid();
 
     HYP_FIELD(Property = "AssetPath", Serialize = true)
-    Name asset_path;
+    Name assetPath;
 
     HYP_FORCE_INLINE bool operator==(const StreamableKey& other) const
     {
         return uuid == other.uuid
-            && asset_path == other.asset_path;
+            && assetPath == other.assetPath;
     }
 
     HYP_FORCE_INLINE bool operator!=(const StreamableKey& other) const
@@ -41,7 +41,7 @@ struct StreamableKey
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         return HashCode::GetHashCode(uuid)
-            .Combine(HashCode::GetHashCode(asset_path));
+            .Combine(HashCode::GetHashCode(assetPath));
     }
 };
 

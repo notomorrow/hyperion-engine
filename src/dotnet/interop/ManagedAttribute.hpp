@@ -19,16 +19,16 @@ extern "C"
 
     struct ManagedAttribute
     {
-        Class* class_ptr;
-        ObjectReference object_reference;
+        Class* classPtr;
+        ObjectReference objectReference;
     };
 
     static_assert(sizeof(ManagedAttribute) == 24, "sizeof(ManagedAttribute) must match C# struct size");
 
     struct ManagedAttributeHolder
     {
-        uint32 managed_attributes_size;
-        ManagedAttribute* managed_attributes_ptr;
+        uint32 managedAttributesSize;
+        ManagedAttribute* managedAttributesPtr;
     };
 
     static_assert(sizeof(ManagedAttributeHolder) == 16, "sizeof(ManagedAttributeHolder) must match C# struct size");

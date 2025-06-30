@@ -24,10 +24,10 @@ namespace hyperion {
 class Texture;
 
 template <TextureFormat Format>
-void FillPlaceholderBuffer_Tex2D(Vec2u dimensions, ByteBuffer& out_buffer);
+void FillPlaceholderBuffer_Tex2D(Vec2u dimensions, ByteBuffer& outBuffer);
 
 template <TextureFormat Format>
-void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& out_buffer);
+void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& outBuffer);
 
 class HYP_API PlaceholderData
 {
@@ -59,23 +59,23 @@ public:                                          \
 private:                                         \
     type##Ref member
 
-    HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8, m_image_2d_1x1_r8);
-    HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8, m_image_view_2d_1x1_r8);
-    HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8Storage, m_image_2d_1x1_r8_storage);
-    HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8Storage, m_image_view_2d_1x1_r8_storage);
-    HYP_DEF_DUMMY_DATA(Image, Image3D1x1x1R8, m_image_3d_1x1x1_r8);
-    HYP_DEF_DUMMY_DATA(ImageView, ImageView3D1x1x1R8, m_image_view_3d_1x1x1_r8);
-    HYP_DEF_DUMMY_DATA(Image, Image3D1x1x1R8Storage, m_image_3d_1x1x1_r8_storage);
-    HYP_DEF_DUMMY_DATA(ImageView, ImageView3D1x1x1R8Storage, m_image_view_3d_1x1x1_r8_storage);
-    HYP_DEF_DUMMY_DATA(Image, ImageCube1x1R8, m_image_cube_1x1_r8);
-    HYP_DEF_DUMMY_DATA(ImageView, ImageViewCube1x1R8, m_image_view_cube_1x1_r8);
-    HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8Array, m_image_2d_1x1_r8_array);
-    HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8Array, m_image_view_2d_1x1_r8_array);
-    HYP_DEF_DUMMY_DATA(Image, ImageCube1x1R8Array, m_image_cube_1x1_r8_array);
-    HYP_DEF_DUMMY_DATA(ImageView, ImageViewCube1x1R8Array, m_image_view_cube_1x1_r8_array);
-    HYP_DEF_DUMMY_DATA(Sampler, SamplerLinear, m_sampler_linear);
-    HYP_DEF_DUMMY_DATA(Sampler, SamplerLinearMipmap, m_sampler_linear_mipmap);
-    HYP_DEF_DUMMY_DATA(Sampler, SamplerNearest, m_sampler_nearest);
+    HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8, m_image2d1x1R8);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8, m_imageView2d1x1R8);
+    HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8Storage, m_image2d1x1R8Storage);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8Storage, m_imageView2d1x1R8Storage);
+    HYP_DEF_DUMMY_DATA(Image, Image3D1x1x1R8, m_image3d1x1x1R8);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageView3D1x1x1R8, m_imageView3d1x1x1R8);
+    HYP_DEF_DUMMY_DATA(Image, Image3D1x1x1R8Storage, m_image3d1x1x1R8Storage);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageView3D1x1x1R8Storage, m_imageView3d1x1x1R8Storage);
+    HYP_DEF_DUMMY_DATA(Image, ImageCube1x1R8, m_imageCube1x1R8);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageViewCube1x1R8, m_imageViewCube1x1R8);
+    HYP_DEF_DUMMY_DATA(Image, Image2D1x1R8Array, m_image2d1x1R8Array);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageView2D1x1R8Array, m_imageView2d1x1R8Array);
+    HYP_DEF_DUMMY_DATA(Image, ImageCube1x1R8Array, m_imageCube1x1R8Array);
+    HYP_DEF_DUMMY_DATA(ImageView, ImageViewCube1x1R8Array, m_imageViewCube1x1R8Array);
+    HYP_DEF_DUMMY_DATA(Sampler, SamplerLinear, m_samplerLinear);
+    HYP_DEF_DUMMY_DATA(Sampler, SamplerLinearMipmap, m_samplerLinearMipmap);
+    HYP_DEF_DUMMY_DATA(Sampler, SamplerNearest, m_samplerNearest);
 
 #undef HYP_DEF_DUMMY_DATA
 
@@ -84,30 +84,30 @@ public:
     void Destroy();
 
     /*! \brief Get or create a buffer of at least the given size */
-    GpuBufferRef GetOrCreateBuffer(GpuBufferType buffer_type, SizeType required_size, bool exact_size = false)
+    GpuBufferRef GetOrCreateBuffer(GpuBufferType bufferType, SizeType requiredSize, bool exactSize = false)
     {
-        // Threads::AssertOnThread(g_render_thread);
+        // Threads::AssertOnThread(g_renderThread);
 
-        if (!m_buffers.Contains(buffer_type))
+        if (!m_buffers.Contains(bufferType))
         {
-            m_buffers.Set(buffer_type, {});
+            m_buffers.Set(bufferType, {});
         }
 
-        auto& buffer_container = m_buffers.At(buffer_type);
+        auto& bufferContainer = m_buffers.At(bufferType);
 
         // typename FlatMap<SizeType, GpuBufferWeakRef>::Iterator it;
         typename FlatMap<SizeType, GpuBufferRef>::Iterator it;
 
-        if (exact_size)
+        if (exactSize)
         {
-            it = buffer_container.Find(required_size);
+            it = bufferContainer.Find(requiredSize);
         }
         else
         {
-            it = buffer_container.LowerBound(required_size);
+            it = bufferContainer.LowerBound(requiredSize);
         }
 
-        if (it != buffer_container.End())
+        if (it != bufferContainer.End())
         {
             // if (auto ref = it->second.Lock(); ref.IsValid()) {
             //     return ref;
@@ -119,28 +119,28 @@ public:
             }
         }
 
-        if (!exact_size)
+        if (!exactSize)
         {
             // use next power of 2 if exact size is not required,
             // this will allow this placeholder buffer to be re-used more.
-            required_size = MathUtil::NextPowerOf2(required_size);
+            requiredSize = MathUtil::NextPowerOf2(requiredSize);
         }
 
-        GpuBufferRef buffer = CreateGpuBuffer(buffer_type, required_size);
+        GpuBufferRef buffer = CreateGpuBuffer(bufferType, requiredSize);
 
         if (buffer->IsCpuAccessible())
         {
-            buffer->Memset(required_size, 0); // fill with zeros
+            buffer->Memset(requiredSize, 0); // fill with zeros
         }
 
-        const auto insert_result = buffer_container.Insert(required_size, buffer);
-        AssertThrow(insert_result.second); // was inserted
+        const auto insertResult = bufferContainer.Insert(requiredSize, buffer);
+        AssertThrow(insertResult.second); // was inserted
 
         return buffer;
     }
 
 private:
-    GpuBufferRef CreateGpuBuffer(GpuBufferType buffer_type, SizeType size);
+    GpuBufferRef CreateGpuBuffer(GpuBufferType bufferType, SizeType size);
 
     FlatMap<GpuBufferType, FlatMap<SizeType, GpuBufferRef>> m_buffers;
 };

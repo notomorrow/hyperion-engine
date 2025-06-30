@@ -43,16 +43,16 @@ public:
 
     void ResetOrdering();
 
-    void PushRenderProxy(ResourceTracker<ObjId<Entity>, RenderProxy>& meshes, const RenderProxy& render_proxy, int computed_depth);
+    void PushRenderProxy(ResourceTracker<ObjId<Entity>, RenderProxy>& meshes, const RenderProxy& renderProxy, int computedDepth);
 
     typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff PushUpdatesToRenderThread(
         ResourceTracker<ObjId<Entity>, RenderProxy>& meshes,
-        const Optional<RenderableAttributeSet>& override_attributes = {});
+        const Optional<RenderableAttributeSet>& overrideAttributes = {});
 
-    void CollectDrawCalls(FrameBase* frame, const RenderSetup& render_setup);
-    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& render_setup, const FramebufferRef& framebuffer) const;
+    void CollectDrawCalls(FrameBase* frame, const RenderSetup& renderSetup);
+    void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const;
 
-    Array<Pair<ObjId<Entity>, int>> proxy_depths;
+    Array<Pair<ObjId<Entity>, int>> proxyDepths;
     RC<RenderProxyList> rpl;
 };
 
@@ -63,23 +63,23 @@ public:
 
     HYP_FORCE_INLINE UIRenderCollector& GetRenderCollector()
     {
-        return m_render_collector;
+        return m_renderCollector;
     }
 
     HYP_FORCE_INLINE const UIRenderCollector& GetRenderCollector() const
     {
-        return m_render_collector;
+        return m_renderCollector;
     }
 
     virtual void Initialize() override;
     virtual void Shutdown() override;
 
-    virtual void RenderFrame(FrameBase* frame, const RenderSetup& render_setup) override;
+    virtual void RenderFrame(FrameBase* frame, const RenderSetup& renderSetup) override;
 
 protected:
     PassData* CreateViewPassData(View* view, PassDataExt&) override;
 
-    UIRenderCollector m_render_collector;
+    UIRenderCollector m_renderCollector;
 };
 
 HYP_CLASS(NoScriptBindings)
@@ -88,24 +88,24 @@ class HYP_API UIRenderSubsystem : public Subsystem
     HYP_OBJECT_BODY(UIRenderSubsystem);
 
 public:
-    UIRenderSubsystem(const Handle<UIStage>& ui_stage);
+    UIRenderSubsystem(const Handle<UIStage>& uiStage);
     UIRenderSubsystem(const UIRenderSubsystem& other) = delete;
     UIRenderSubsystem& operator=(const UIRenderSubsystem& other) = delete;
     virtual ~UIRenderSubsystem();
 
     HYP_FORCE_INLINE const Handle<UIStage>& GetUIStage() const
     {
-        return m_ui_stage;
+        return m_uiStage;
     }
 
     HYP_FORCE_INLINE ResourceTracker<ObjId<Entity>, RenderProxy>& GetRenderProxyTracker()
     {
-        return m_render_proxy_tracker;
+        return m_renderProxyTracker;
     }
 
     HYP_FORCE_INLINE const ResourceTracker<ObjId<Entity>, RenderProxy>& GetRenderProxyTracker() const
     {
-        return m_render_proxy_tracker;
+        return m_renderProxyTracker;
     }
 
     virtual void PreUpdate(float delta) override;
@@ -119,20 +119,20 @@ private:
 
     void CreateFramebuffer();
 
-    Handle<UIStage> m_ui_stage;
+    Handle<UIStage> m_uiStage;
 
     ShaderRef m_shader;
 
     // Game thread side list, used for collecting UI objects
-    ResourceTracker<ObjId<Entity>, RenderProxy> m_render_proxy_tracker;
+    ResourceTracker<ObjId<Entity>, RenderProxy> m_renderProxyTracker;
 
-    TResourceHandle<RenderCamera> m_camera_resource_handle;
+    TResourceHandle<RenderCamera> m_cameraResourceHandle;
 
     Handle<View> m_view;
 
-    UIRenderer* m_ui_renderer;
+    UIRenderer* m_uiRenderer;
 
-    DelegateHandler m_on_gbuffer_resolution_changed_handle;
+    DelegateHandler m_onGbufferResolutionChangedHandle;
 };
 
 } // namespace hyperion

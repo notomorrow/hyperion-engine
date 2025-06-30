@@ -20,50 +20,50 @@ void LightVisibilityUpdaterSystem::OnEntityAdded(Entity* entity)
 
     GetEntityManager().AddTag<EntityTag::LIGHT>(entity);
 
-    LightComponent& light_component = GetEntityManager().GetComponent<LightComponent>(entity);
+    LightComponent& lightComponent = GetEntityManager().GetComponent<LightComponent>(entity);
 
-    if (!light_component.light)
+    if (!lightComponent.light)
     {
         return;
     }
 
-    Handle<Light> light = light_component.light;
+    Handle<Light> light = lightComponent.light;
     InitObject(light);
 
-    const Transform initial_transform(light->GetPosition());
+    const Transform initialTransform(light->GetPosition());
 
     // Set initial transform on the TransformComponent
-    TransformComponent* transform_component = GetEntityManager().TryGetComponent<TransformComponent>(entity);
+    TransformComponent* transformComponent = GetEntityManager().TryGetComponent<TransformComponent>(entity);
 
-    if (!transform_component)
+    if (!transformComponent)
     {
-        GetEntityManager().AddComponent<TransformComponent>(entity, TransformComponent { initial_transform });
-        transform_component = &GetEntityManager().GetComponent<TransformComponent>(entity);
+        GetEntityManager().AddComponent<TransformComponent>(entity, TransformComponent { initialTransform });
+        transformComponent = &GetEntityManager().GetComponent<TransformComponent>(entity);
     }
 
-    transform_component->transform = initial_transform;
+    transformComponent->transform = initialTransform;
 
-    const Transform transform = transform_component->transform;
+    const Transform transform = transformComponent->transform;
 
     { // Add a bounding box component to the entity or update if it already exists
-        BoundingBoxComponent* bounding_box_component = GetEntityManager().TryGetComponent<BoundingBoxComponent>(entity);
+        BoundingBoxComponent* boundingBoxComponent = GetEntityManager().TryGetComponent<BoundingBoxComponent>(entity);
 
-        if (!bounding_box_component)
+        if (!boundingBoxComponent)
         {
             GetEntityManager().AddComponent<BoundingBoxComponent>(entity, BoundingBoxComponent {});
-            bounding_box_component = &GetEntityManager().GetComponent<BoundingBoxComponent>(entity);
+            boundingBoxComponent = &GetEntityManager().GetComponent<BoundingBoxComponent>(entity);
         }
 
         switch (light->GetLightType())
         {
         case LT_DIRECTIONAL:
-            bounding_box_component->local_aabb = BoundingBox::Infinity();
-            bounding_box_component->world_aabb = BoundingBox::Infinity();
+            boundingBoxComponent->localAabb = BoundingBox::Infinity();
+            boundingBoxComponent->worldAabb = BoundingBox::Infinity();
             break;
         case LT_POINT: // fallthrough
         case LT_AREA_RECT:
-            bounding_box_component->local_aabb = light->GetAABB();
-            bounding_box_component->world_aabb = transform * bounding_box_component->local_aabb;
+            boundingBoxComponent->localAabb = light->GetAABB();
+            boundingBoxComponent->worldAabb = transform * boundingBoxComponent->localAabb;
             break;
         default:
             break;
@@ -71,9 +71,9 @@ void LightVisibilityUpdaterSystem::OnEntityAdded(Entity* entity)
     }
 
     { // Add a VisibilityStateComponent if it doesn't exist yet
-        VisibilityStateComponent* visibility_state_component = GetEntityManager().TryGetComponent<VisibilityStateComponent>(entity);
+        VisibilityStateComponent* visibilityStateComponent = GetEntityManager().TryGetComponent<VisibilityStateComponent>(entity);
 
-        if (!visibility_state_component)
+        if (!visibilityStateComponent)
         {
             // Directional light sources are always visible
             if (light->GetLightType() == LT_DIRECTIONAL)
@@ -100,66 +100,66 @@ void LightVisibilityUpdaterSystem::OnEntityRemoved(Entity* entity)
 void LightVisibilityUpdaterSystem::Process(float delta)
 {
     { // Invalidate visibility state of directional lights that have had their transforms update to refresh the octree
-        for (auto [entity, light_component, visibility_state_component, _] : GetEntityManager().GetEntitySet<LightComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::UPDATE_LIGHT_TRANSFORM>>().GetScopedView(GetComponentInfos()))
+        for (auto [entity, lightComponent, visibilityStateComponent, _] : GetEntityManager().GetEntitySet<LightComponent, VisibilityStateComponent, EntityTagComponent<EntityTag::UPDATE_LIGHT_TRANSFORM>>().GetScopedView(GetComponentInfos()))
         {
-            if (!light_component.light.IsValid() || !light_component.light->IsReady())
+            if (!lightComponent.light.IsValid() || !lightComponent.light->IsReady())
             {
                 continue;
             }
 
-            if (light_component.light->GetLightType() == LT_DIRECTIONAL)
+            if (lightComponent.light->GetLightType() == LT_DIRECTIONAL)
             {
-                visibility_state_component.flags |= VISIBILITY_STATE_FLAG_INVALIDATED;
+                visibilityStateComponent.flags |= VISIBILITY_STATE_FLAG_INVALIDATED;
             }
         }
     }
 
     { // Update light transforms if they have the UPDATE_LIGHT_TRANSFORM tag
-        HashSet<WeakHandle<Entity>> updated_entities;
+        HashSet<WeakHandle<Entity>> updatedEntities;
 
-        for (auto [entity, light_component, transform_component, _] : GetEntityManager().GetEntitySet<LightComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_LIGHT_TRANSFORM>>().GetScopedView(GetComponentInfos()))
+        for (auto [entity, lightComponent, transformComponent, _] : GetEntityManager().GetEntitySet<LightComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_LIGHT_TRANSFORM>>().GetScopedView(GetComponentInfos()))
         {
-            if (!light_component.light.IsValid() || !light_component.light->IsReady())
+            if (!lightComponent.light.IsValid() || !lightComponent.light->IsReady())
             {
                 continue;
             }
 
-            if (light_component.light->GetLightType() == LT_DIRECTIONAL)
+            if (lightComponent.light->GetLightType() == LT_DIRECTIONAL)
             {
                 // Normalize the translation*rotation to set the direction of directional lights
-                light_component.light->SetPosition((transform_component.transform.GetTranslation() * transform_component.transform.GetRotation()).Normalized());
+                lightComponent.light->SetPosition((transformComponent.transform.GetTranslation() * transformComponent.transform.GetRotation()).Normalized());
             }
             else
             {
-                light_component.light->SetPosition(transform_component.transform.GetTranslation());
+                lightComponent.light->SetPosition(transformComponent.transform.GetTranslation());
             }
 
-            updated_entities.Insert(entity->WeakHandleFromThis());
+            updatedEntities.Insert(entity->WeakHandleFromThis());
         }
 
-        if (updated_entities.Any())
+        if (updatedEntities.Any())
         {
-            AfterProcess([this, updated_entities = std::move(updated_entities)]()
+            AfterProcess([this, updatedEntities = std::move(updatedEntities)]()
                 {
-                    for (const WeakHandle<Entity>& entity_weak : updated_entities)
+                    for (const WeakHandle<Entity>& entityWeak : updatedEntities)
                     {
-                        GetEntityManager().RemoveTag<EntityTag::UPDATE_LIGHT_TRANSFORM>(entity_weak.GetUnsafe());
+                        GetEntityManager().RemoveTag<EntityTag::UPDATE_LIGHT_TRANSFORM>(entityWeak.GetUnsafe());
                     }
                 });
         }
     }
 
     // Recalculate light visibility for the scene's camera
-    for (auto [entity, light_component, transform_component, bounding_box_component] : GetEntityManager().GetEntitySet<LightComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, lightComponent, transformComponent, boundingBoxComponent] : GetEntityManager().GetEntitySet<LightComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
     {
-        if (!light_component.light.IsValid() || !light_component.light->IsReady())
+        if (!lightComponent.light.IsValid() || !lightComponent.light->IsReady())
         {
             continue;
         }
 
-        for (auto [camera_entity_id, camera_component] : GetEntityManager().GetEntitySet<CameraComponent>().GetScopedView(GetComponentInfos()))
+        for (auto [cameraEntityId, cameraComponent] : GetEntityManager().GetEntitySet<CameraComponent>().GetScopedView(GetComponentInfos()))
         {
-            const Handle<Camera>& camera = camera_component.camera;
+            const Handle<Camera>& camera = cameraComponent.camera;
 
             if (!camera.IsValid())
             {
@@ -167,19 +167,19 @@ void LightVisibilityUpdaterSystem::Process(float delta)
             }
 
             // For area lights, update the material Id if the entity has a MeshComponent.
-            if (light_component.light->GetLightType() == LT_AREA_RECT)
+            if (lightComponent.light->GetLightType() == LT_AREA_RECT)
             {
-                /*if (MeshComponent *mesh_component = entity_manager.TryGetComponent<MeshComponent>(entity)) {
-                    light_component.light->SetMaterial(mesh_component->material);
+                /*if (MeshComponent *meshComponent = entityManager.TryGetComponent<MeshComponent>(entity)) {
+                    lightComponent.light->SetMaterial(meshComponent->material);
                 } else {
-                    light_component.light->SetMaterial(Handle<Material>::empty);
+                    lightComponent.light->SetMaterial(Handle<Material>::empty);
                 }*/
             }
         }
 
-        if (light_component.light->GetMutationState().IsDirty())
+        if (lightComponent.light->GetMutationState().IsDirty())
         {
-            light_component.light->EnqueueRenderUpdates();
+            lightComponent.light->EnqueueRenderUpdates();
         }
     }
 }

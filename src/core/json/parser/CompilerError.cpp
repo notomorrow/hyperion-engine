@@ -4,7 +4,7 @@
 
 namespace hyperion::json {
 
-const HashMap<ErrorMessage, String> CompilerError::error_message_strings {
+const HashMap<ErrorMessage, String> CompilerError::errorMessageStrings {
     /* Fatal errors */
     { MSG_INTERNAL_ERROR, "Internal error" },
     { MSG_CUSTOM_ERROR, "%" },

@@ -73,7 +73,7 @@ public:
     HYP_METHOD()
     virtual bool IsCommitted() const override final
     {
-        return m_is_committed.Get(MemoryOrder::ACQUIRE);
+        return m_isCommitted.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_METHOD(Scriptable)
@@ -106,7 +106,7 @@ protected:
     }
 
 private:
-    AtomicVar<bool> m_is_committed;
+    AtomicVar<bool> m_isCommitted;
     Task<void> m_task;
 };
 
@@ -127,7 +127,7 @@ public:
     HYP_METHOD()
     virtual bool IsCommitted() const override final
     {
-        return m_is_committed.Get(MemoryOrder::ACQUIRE);
+        return m_isCommitted.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_METHOD(Scriptable)
@@ -157,7 +157,7 @@ protected:
         HYP_PURE_VIRTUAL();
     }
 
-    AtomicVar<bool> m_is_committed;
+    AtomicVar<bool> m_isCommitted;
     Task<void> m_task;
 };
 

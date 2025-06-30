@@ -23,16 +23,16 @@ struct CameraShaderData
 {
     Matrix4 view;
     Matrix4 projection;
-    Matrix4 previous_view;
+    Matrix4 previousView;
 
     Vec4u dimensions;
-    Vec4f camera_position;
-    Vec4f camera_direction;
+    Vec4f cameraPosition;
+    Vec4f cameraDirection;
     Vec4f jitter;
 
-    float camera_near;
-    float camera_far;
-    float camera_fov;
+    float cameraNear;
+    float cameraFar;
+    float cameraFov;
     uint32 id;
 
     Vec4f _pad1;
@@ -55,15 +55,15 @@ public:
         return m_camera;
     }
 
-    void SetBufferData(const CameraShaderData& buffer_data);
+    void SetBufferData(const CameraShaderData& bufferData);
 
     /*! \note This method is only safe to call from the render thread. */
     HYP_FORCE_INLINE const CameraShaderData& GetBufferData() const
     {
-        return m_buffer_data;
+        return m_bufferData;
     }
 
-    void ApplyJitter(const RenderSetup& render_setup);
+    void ApplyJitter(const RenderSetup& renderSetup);
 
 protected:
     virtual void Initialize_Internal() override;
@@ -76,7 +76,7 @@ private:
     void UpdateBufferData();
 
     Camera* m_camera;
-    CameraShaderData m_buffer_data;
+    CameraShaderData m_bufferData;
 };
 
 } // namespace hyperion

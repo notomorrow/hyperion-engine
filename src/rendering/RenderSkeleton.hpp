@@ -15,9 +15,9 @@ class Skeleton;
 
 struct SkeletonShaderData
 {
-    static constexpr SizeType max_bones = 256;
+    static constexpr SizeType maxBones = 256;
 
-    Matrix4 bones[max_bones];
+    Matrix4 bones[maxBones];
 };
 
 class RenderSkeleton final : public RenderResourceBase
@@ -27,7 +27,7 @@ public:
     RenderSkeleton(RenderSkeleton&& other) noexcept;
     virtual ~RenderSkeleton() override;
 
-    void SetBufferData(const SkeletonShaderData& buffer_data);
+    void SetBufferData(const SkeletonShaderData& bufferData);
 
 protected:
     virtual void Initialize_Internal() override;
@@ -40,7 +40,7 @@ private:
     void UpdateBufferData();
 
     Skeleton* m_skeleton;
-    SkeletonShaderData m_buffer_data;
+    SkeletonShaderData m_bufferData;
 };
 
 } // namespace hyperion

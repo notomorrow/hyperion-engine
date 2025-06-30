@@ -61,7 +61,7 @@ public:
 
     HYP_FORCE_INLINE ResourceState GetResourceState() const
     {
-        return m_resource_state;
+        return m_resourceState;
     }
 
     HYP_API virtual RendererResult Create() = 0;
@@ -70,30 +70,30 @@ public:
     HYP_API virtual bool IsCreated() const = 0;
     HYP_API virtual bool IsCpuAccessible() const = 0;
 
-    HYP_API virtual void InsertBarrier(CommandBufferBase* command_buffer, ResourceState new_state) const = 0;
-    HYP_API virtual void InsertBarrier(CommandBufferBase* command_buffer, ResourceState new_state, ShaderModuleType shader_type) const = 0;
+    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState) const = 0;
+    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const = 0;
 
     HYP_API virtual void CopyFrom(
-        CommandBufferBase* command_buffer,
-        const GpuBufferBase* src_buffer,
+        CommandBufferBase* commandBuffer,
+        const GpuBufferBase* srcBuffer,
         SizeType count) = 0;
 
     HYP_API virtual RendererResult EnsureCapacity(
-        SizeType minimum_size,
-        bool* out_size_changed = nullptr) = 0;
+        SizeType minimumSize,
+        bool* outSizeChanged = nullptr) = 0;
 
     HYP_API virtual RendererResult EnsureCapacity(
-        SizeType minimum_size,
+        SizeType minimumSize,
         SizeType alignment,
-        bool* out_size_changed = nullptr) = 0;
+        bool* outSizeChanged = nullptr) = 0;
 
     HYP_API virtual void Memset(SizeType count, ubyte value) = 0;
 
     HYP_API virtual void Copy(SizeType count, const void* ptr) = 0;
     HYP_API virtual void Copy(SizeType offset, SizeType count, const void* ptr) = 0;
 
-    HYP_API virtual void Read(SizeType count, void* out_ptr) const = 0;
-    HYP_API virtual void Read(SizeType offset, SizeType count, void* out_ptr) const = 0;
+    HYP_API virtual void Read(SizeType count, void* outPtr) const = 0;
+    HYP_API virtual void Read(SizeType offset, SizeType count, void* outPtr) const = 0;
 
     HYP_API virtual void Map() const = 0;
     HYP_API virtual void Unmap() const = 0;
@@ -103,7 +103,7 @@ protected:
         : m_type(type),
           m_size(size),
           m_alignment(alignment),
-          m_resource_state(RS_UNDEFINED)
+          m_resourceState(RS_UNDEFINED)
     {
     }
 
@@ -111,7 +111,7 @@ protected:
     SizeType m_size;
     SizeType m_alignment;
 
-    mutable ResourceState m_resource_state;
+    mutable ResourceState m_resourceState;
 };
 
 } // namespace hyperion

@@ -37,18 +37,18 @@ public:
 
     GraphicsPipelineRef GetOrCreate(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table,
+        const DescriptorTableRef& descriptorTable,
         Span<const FramebufferRef> framebuffers,
         const RenderableAttributeSet& attributes);
 
 private:
     GraphicsPipelineRef FindGraphicsPipeline(
         const ShaderRef& shader,
-        const DescriptorTableDeclaration& descriptor_table_decl,
+        const DescriptorTableDeclaration& descriptorTableDecl,
         Span<const FramebufferRef> framebuffers,
         const RenderableAttributeSet& attributes);
 
-    CachedPipelinesMap* m_cached_pipelines;
+    CachedPipelinesMap* m_cachedPipelines;
     Mutex m_mutex;
 };
 

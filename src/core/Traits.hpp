@@ -111,7 +111,7 @@ struct IsFunctor
 };
 
 template <class T>
-struct IsFunctor<T, std::enable_if_t<implementation_exists<decltype(&T::operator())>>>
+struct IsFunctor<T, std::enable_if_t<implementationExists<decltype(&T::operator())>>>
 {
     static constexpr bool value = true;
 };
@@ -132,18 +132,18 @@ struct FunctionTraits<R(Args...)>
     using ArgTypes = Tuple<Args...>;
     using ThisType = void;
 
-    static constexpr uint32 num_args = sizeof...(Args);
-    static constexpr bool is_member_function = false;
-    static constexpr bool is_nonconst_member_function = false;
-    static constexpr bool is_const_member_function = false;
-    static constexpr bool is_volatile_member_function = false;
-    static constexpr bool is_functor = false;
-    static constexpr bool is_function_pointer = false;
+    static constexpr uint32 numArgs = sizeof...(Args);
+    static constexpr bool isMemberFunction = false;
+    static constexpr bool isNonconstMemberFunction = false;
+    static constexpr bool isConstMemberFunction = false;
+    static constexpr bool isVolatileMemberFunction = false;
+    static constexpr bool isFunctor = false;
+    static constexpr bool isFunctionPointer = false;
 
     template <uint32 N>
     struct Arg
     {
-        static_assert(N < num_args, "Invalid argument index");
+        static_assert(N < numArgs, "Invalid argument index");
         using Type = typename std::tuple_element<N, std::tuple<Args...>>::type;
     };
 };
@@ -153,7 +153,7 @@ struct FunctionTraits<R (*)(Args...)> : public FunctionTraits<R(Args...)>
 {
     using Type = R (*)(Args...);
 
-    static constexpr bool is_function_pointer = true;
+    static constexpr bool isFunctionPointer = true;
 };
 
 template <class R, class C, class... Args>
@@ -163,8 +163,8 @@ struct FunctionTraits<R (C::*)(Args...), std::enable_if_t<!IsFunctor<R (C::*)(Ar
 
     using ThisType = C;
 
-    static constexpr bool is_member_function = true;
-    static constexpr bool is_nonconst_member_function = true;
+    static constexpr bool isMemberFunction = true;
+    static constexpr bool isNonconstMemberFunction = true;
 };
 
 template <class R, class C, class... Args>
@@ -174,8 +174,8 @@ struct FunctionTraits<R (C::*)(Args...) const, std::enable_if_t<!IsFunctor<R (C:
 
     using ThisType = C;
 
-    static constexpr bool is_member_function = true;
-    static constexpr bool is_const_member_function = true;
+    static constexpr bool isMemberFunction = true;
+    static constexpr bool isConstMemberFunction = true;
 };
 
 template <class R, class C, class... Args>
@@ -185,9 +185,9 @@ struct FunctionTraits<R (C::*)(Args...) volatile, std::enable_if_t<!IsFunctor<R 
 
     using ThisType = C;
 
-    static constexpr bool is_member_function = true;
-    static constexpr bool is_nonconst_member_function = true;
-    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool isMemberFunction = true;
+    static constexpr bool isNonconstMemberFunction = true;
+    static constexpr bool isVolatileMemberFunction = true;
 };
 
 template <class R, class C, class... Args>
@@ -197,9 +197,9 @@ struct FunctionTraits<R (C::*)(Args...) const volatile, std::enable_if_t<!IsFunc
 
     using ThisType = C;
 
-    static constexpr bool is_member_function = true;
-    static constexpr bool is_const_member_function = true;
-    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool isMemberFunction = true;
+    static constexpr bool isConstMemberFunction = true;
+    static constexpr bool isVolatileMemberFunction = true;
 };
 
 template <class T>
@@ -207,7 +207,7 @@ struct FunctionTraits<T, std::enable_if_t<IsFunctor<T>::value>> : public Functio
 {
     using Type = T;
 
-    static constexpr bool is_functor = true;
+    static constexpr bool isFunctor = true;
 };
 
 // template <class R, class C, class... Args>
@@ -215,7 +215,7 @@ struct FunctionTraits<T, std::enable_if_t<IsFunctor<T>::value>> : public Functio
 // {
 //     using ThisType = C;
 
-//     static constexpr bool is_member_function = true;
+//     static constexpr bool isMemberFunction = true;
 // };
 
 // template <class R, class C, class... Args>
@@ -223,7 +223,7 @@ struct FunctionTraits<T, std::enable_if_t<IsFunctor<T>::value>> : public Functio
 // {
 //     using ThisType = C;
 
-//     static constexpr bool is_member_function = true;
+//     static constexpr bool isMemberFunction = true;
 // };
 
 // template <class R, class C, class... Args>
@@ -231,7 +231,7 @@ struct FunctionTraits<T, std::enable_if_t<IsFunctor<T>::value>> : public Functio
 // {
 //     using ThisType = C;
 
-//     static constexpr bool is_member_function = true;
+//     static constexpr bool isMemberFunction = true;
 // };
 
 // template <class R, class C, class... Args>
@@ -239,7 +239,7 @@ struct FunctionTraits<T, std::enable_if_t<IsFunctor<T>::value>> : public Functio
 // {
 //     using ThisType = C;
 
-//     static constexpr bool is_member_function = true;
+//     static constexpr bool isMemberFunction = true;
 // };
 
 template <class T>
@@ -279,49 +279,49 @@ struct FunctionTraits<T const volatile> : public FunctionTraits<T>
 
 #pragma endregion FunctionTraits
 
-/*! \brief This macro generates a struct that has a static constexpr bool value that indicates if the type T has a member function with the name method_name.
- *  \param method_name The name of the method to check for.
+/*! \brief This macro generates a struct that has a static constexpr bool value that indicates if the type T has a member function with the name methodName.
+ *  \param methodName The name of the method to check for.
  *  \details Usage:
  *      HYP_MAKE_HAS_METHOD(ToString);
  *
  *      static_assert(HYP_HAS_METHOD(MyType, ToString), "MyType must have a ToString method");
  */
-#define HYP_MAKE_HAS_METHOD(method_name)                                                                              \
-    template <class T, class Enabled = void>                                                                          \
-    struct HasMethod_##method_name                                                                                    \
-    {                                                                                                                 \
-        static constexpr bool value = false;                                                                          \
-    };                                                                                                                \
-                                                                                                                      \
-    template <class T>                                                                                                \
-    struct HasMethod_##method_name<T, std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::method_name)>>> \
-    {                                                                                                                 \
-        static constexpr bool value = true;                                                                           \
+#define HYP_MAKE_HAS_METHOD(methodName)                                                                             \
+    template <class T, class Enabled = void>                                                                        \
+    struct HasMethod_##methodName                                                                                   \
+    {                                                                                                               \
+        static constexpr bool value = false;                                                                        \
+    };                                                                                                              \
+                                                                                                                    \
+    template <class T>                                                                                              \
+    struct HasMethod_##methodName<T, std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::methodName)>>> \
+    {                                                                                                               \
+        static constexpr bool value = true;                                                                         \
     }
 
-#define HYP_HAS_METHOD(T, method_name) HasMethod_##method_name<T>::value
+#define HYP_HAS_METHOD(T, methodName) HasMethod_##methodName<T>::value
 
-/*! \brief This macro generates a struct that has a static constexpr bool value that indicates if the type T has a static member function with the name method_name.
- *  \param method_name The name of the method to check for.
+/*! \brief This macro generates a struct that has a static constexpr bool value that indicates if the type T has a static member function with the name methodName.
+ *  \param methodName The name of the method to check for.
  *  \details Usage:
  *      HYP_MAKE_HAS_STATIC_METHOD(ToString);
  *
  *      static_assert(HYP_HAS_STATIC_METHOD(MyType, Create), "MyType must have a Create static method");
  */
-#define HYP_MAKE_HAS_STATIC_METHOD(method_name)                                                              \
-    template <class T, class Enabled = void>                                                                 \
-    struct HasStaticMethod_##method_name                                                                     \
-    {                                                                                                        \
-        static constexpr bool value = false;                                                                 \
-    };                                                                                                       \
-                                                                                                             \
-    template <class T>                                                                                       \
-    struct HasStaticMethod_##method_name<T, std::enable_if_t<std::is_function_v<decltype(&T::method_name)>>> \
-    {                                                                                                        \
-        static constexpr bool value = true;                                                                  \
+#define HYP_MAKE_HAS_STATIC_METHOD(methodName)                                                             \
+    template <class T, class Enabled = void>                                                               \
+    struct HasStaticMethod_##methodName                                                                    \
+    {                                                                                                      \
+        static constexpr bool value = false;                                                               \
+    };                                                                                                     \
+                                                                                                           \
+    template <class T>                                                                                     \
+    struct HasStaticMethod_##methodName<T, std::enable_if_t<std::is_function_v<decltype(&T::methodName)>>> \
+    {                                                                                                      \
+        static constexpr bool value = true;                                                                \
     }
 
-#define HYP_HAS_STATIC_METHOD(T, method_name) HasStaticMethod_##method_name<T>::value
+#define HYP_HAS_STATIC_METHOD(T, methodName) HasStaticMethod_##methodName<T>::value
 
 } // namespace hyperion
 

@@ -7,7 +7,7 @@
 
 extern "C"
 {
-    extern int ShowMessageBox(int type, const char* title, const char* message, int buttons, const char* button_texts[3]);
+    extern int ShowMessageBox(int type, const char* title, const char* message, int buttons, const char* buttonTexts[3]);
 }
 
 namespace hyperion {
@@ -75,7 +75,7 @@ SystemMessageBox& SystemMessageBox::Text(const String& text)
     return *this;
 }
 
-SystemMessageBox& SystemMessageBox::Button(const String& text, Proc<void()>&& on_click)
+SystemMessageBox& SystemMessageBox::Button(const String& text, Proc<void()>&& onClick)
 {
     if (m_buttons.Size() >= 3)
     {
@@ -84,34 +84,34 @@ SystemMessageBox& SystemMessageBox::Button(const String& text, Proc<void()>&& on
         return *this;
     }
 
-    m_buttons.PushBack(MessageBoxButton { text, std::move(on_click) });
+    m_buttons.PushBack(MessageBoxButton { text, std::move(onClick) });
 
     return *this;
 }
 
 void SystemMessageBox::Show() const
 {
-    const char* button_texts[3] = {};
+    const char* buttonTexts[3] = {};
 
     for (int i = 0; i < int(m_buttons.Size()); i++)
     {
-        button_texts[i] = m_buttons[i].text.Data();
+        buttonTexts[i] = m_buttons[i].text.Data();
     }
 
-    int button_index = ShowMessageBox(int(m_type), m_title.Data(), m_message.Data(), int(m_buttons.Size()), button_texts);
+    int buttonIndex = ShowMessageBox(int(m_type), m_title.Data(), m_message.Data(), int(m_buttons.Size()), buttonTexts);
 
     if (m_buttons.Any())
     {
-        if (button_index < 0 || button_index >= m_buttons.Size())
+        if (buttonIndex < 0 || buttonIndex >= m_buttons.Size())
         {
-            HYP_LOG(Core, Warning, "MessageBox Show() returned invalid index: {}, {} buttons", button_index, m_buttons.Size());
+            HYP_LOG(Core, Warning, "MessageBox Show() returned invalid index: {}, {} buttons", buttonIndex, m_buttons.Size());
 
             return;
         }
 
-        if (m_buttons[button_index].on_click.IsValid())
+        if (m_buttons[buttonIndex].onClick.IsValid())
         {
-            m_buttons[button_index].on_click();
+            m_buttons[buttonIndex].onClick();
         }
     }
 }

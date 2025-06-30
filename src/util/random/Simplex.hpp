@@ -7,7 +7,7 @@
 
 #define OSN_OCTAVE_COUNT 8
 
-struct osn_context;
+struct osnContext;
 
 namespace hyperion {
 struct SimplexNoiseData

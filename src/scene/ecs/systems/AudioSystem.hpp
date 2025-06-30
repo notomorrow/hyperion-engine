@@ -15,8 +15,8 @@ class AudioSystem : public SystemBase
     HYP_OBJECT_BODY(AudioSystem);
 
 public:
-    AudioSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    AudioSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

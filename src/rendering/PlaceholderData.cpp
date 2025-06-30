@@ -16,19 +16,19 @@ namespace hyperion {
 template <TextureFormat Format>
 struct TextureFormatHelper
 {
-    static constexpr uint32 num_components = NumComponents(Format);
-    static constexpr uint32 num_bytes = NumBytes(Format);
-    static constexpr bool is_float_type = uint32(Format) >= TF_RGBA16F && uint32(Format) <= TF_RGBA32F;
+    static constexpr uint32 numComponents = NumComponents(Format);
+    static constexpr uint32 numBytes = NumBytes(Format);
+    static constexpr bool isFloatType = uint32(Format) >= TF_RGBA16F && uint32(Format) <= TF_RGBA32F;
 
-    using ElementType = std::conditional_t<is_float_type, float, ubyte>;
+    using ElementType = std::conditional_t<isFloatType, float, ubyte>;
 };
 
 template <TextureFormat Format>
-HYP_API void FillPlaceholderBuffer_Tex2D(Vec2u dimensions, ByteBuffer& out_buffer)
+HYP_API void FillPlaceholderBuffer_Tex2D(Vec2u dimensions, ByteBuffer& outBuffer)
 {
     using Helper = TextureFormatHelper<Format>;
 
-    auto bitmap = Bitmap<Helper::num_components, typename Helper::ElementType>(dimensions.x, dimensions.y);
+    auto bitmap = Bitmap<Helper::numComponents, typename Helper::ElementType>(dimensions.x, dimensions.y);
 
     // Set to default color to assist in debugging
     for (uint32 y = 0; y < dimensions.y; y++)
@@ -39,23 +39,23 @@ HYP_API void FillPlaceholderBuffer_Tex2D(Vec2u dimensions, ByteBuffer& out_buffe
         }
     }
 
-    if constexpr (Helper::is_float_type)
+    if constexpr (Helper::isFloatType)
     {
-        out_buffer = ByteBuffer(bitmap.GetUnpackedFloats().ToByteView());
+        outBuffer = ByteBuffer(bitmap.GetUnpackedFloats().ToByteView());
     }
     else
     {
-        out_buffer = bitmap.GetUnpackedBytes(Helper::num_bytes * Helper::num_components);
+        outBuffer = bitmap.GetUnpackedBytes(Helper::numBytes * Helper::numComponents);
     }
 }
 
 template <TextureFormat Format>
-HYP_API void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& out_buffer)
+HYP_API void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& outBuffer)
 {
     using Helper = TextureFormatHelper<Format>;
-    static_assert(!Helper::is_float_type, "FillPlaceholderBuffer_Cubemap not implemented for floating point type textures");
+    static_assert(!Helper::isFloatType, "FillPlaceholderBuffer_Cubemap not implemented for floating point type textures");
 
-    auto bitmap = Bitmap<Helper::num_components, typename Helper::ElementType>(dimensions.x, dimensions.y);
+    auto bitmap = Bitmap<Helper::numComponents, typename Helper::ElementType>(dimensions.x, dimensions.y);
 
     // Set to default color to assist in debugging
     for (uint32 y = 0; y < dimensions.y; y++)
@@ -66,26 +66,26 @@ HYP_API void FillPlaceholderBuffer_Cubemap(Vec2u dimensions, ByteBuffer& out_buf
         }
     }
 
-    ByteBuffer face_byte_buffer = bitmap.GetUnpackedBytes(Helper::num_bytes * Helper::num_components);
+    ByteBuffer faceByteBuffer = bitmap.GetUnpackedBytes(Helper::numBytes * Helper::numComponents);
 
-    out_buffer.SetSize(face_byte_buffer.Size() * 6);
+    outBuffer.SetSize(faceByteBuffer.Size() * 6);
 
     for (uint32 i = 0; i < 6; i++)
     {
-        out_buffer.Write(face_byte_buffer.Size(), i * face_byte_buffer.Size(), face_byte_buffer.Data());
+        outBuffer.Write(faceByteBuffer.Size(), i * faceByteBuffer.Size(), faceByteBuffer.Data());
     }
 }
 
-template void FillPlaceholderBuffer_Tex2D<TF_R8>(Vec2u dimensions, ByteBuffer& out_buffer);      // R8
-template void FillPlaceholderBuffer_Tex2D<TF_RGBA8>(Vec2u dimensions, ByteBuffer& out_buffer);   // RGBA8
-template void FillPlaceholderBuffer_Tex2D<TF_RGBA16F>(Vec2u dimensions, ByteBuffer& out_buffer); // RGBA16F
-template void FillPlaceholderBuffer_Tex2D<TF_RGBA32F>(Vec2u dimensions, ByteBuffer& out_buffer); // RGBA32F
+template void FillPlaceholderBuffer_Tex2D<TF_R8>(Vec2u dimensions, ByteBuffer& outBuffer);      // R8
+template void FillPlaceholderBuffer_Tex2D<TF_RGBA8>(Vec2u dimensions, ByteBuffer& outBuffer);   // RGBA8
+template void FillPlaceholderBuffer_Tex2D<TF_RGBA16F>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA16F
+template void FillPlaceholderBuffer_Tex2D<TF_RGBA32F>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA32F
 
-template void FillPlaceholderBuffer_Cubemap<TF_R8>(Vec2u dimensions, ByteBuffer& out_buffer);    // R8
-template void FillPlaceholderBuffer_Cubemap<TF_RGBA8>(Vec2u dimensions, ByteBuffer& out_buffer); // RGBA8
+template void FillPlaceholderBuffer_Cubemap<TF_R8>(Vec2u dimensions, ByteBuffer& outBuffer);    // R8
+template void FillPlaceholderBuffer_Cubemap<TF_RGBA8>(Vec2u dimensions, ByteBuffer& outBuffer); // RGBA8
 
 PlaceholderData::PlaceholderData()
-    : m_image_2d_1x1_r8(g_render_backend->MakeImage(TextureDesc {
+    : m_image2d1x1R8(g_renderBackend->MakeImage(TextureDesc {
           TT_TEX2D,
           TF_R8,
           Vec3u::One(),
@@ -94,8 +94,8 @@ PlaceholderData::PlaceholderData()
           TWM_CLAMP_TO_EDGE,
           1,
           IU_SAMPLED })),
-      m_image_view_2d_1x1_r8(g_render_backend->MakeImageView(m_image_2d_1x1_r8)),
-      m_image_2d_1x1_r8_storage(g_render_backend->MakeImage(TextureDesc {
+      m_imageView2d1x1R8(g_renderBackend->MakeImageView(m_image2d1x1R8)),
+      m_image2d1x1R8Storage(g_renderBackend->MakeImage(TextureDesc {
           TT_TEX2D,
           TF_R8,
           Vec3u::One(),
@@ -104,8 +104,8 @@ PlaceholderData::PlaceholderData()
           TWM_CLAMP_TO_EDGE,
           1,
           IU_STORAGE | IU_SAMPLED })),
-      m_image_view_2d_1x1_r8_storage(g_render_backend->MakeImageView(m_image_2d_1x1_r8_storage)),
-      m_image_3d_1x1x1_r8(g_render_backend->MakeImage(TextureDesc {
+      m_imageView2d1x1R8Storage(g_renderBackend->MakeImageView(m_image2d1x1R8Storage)),
+      m_image3d1x1x1R8(g_renderBackend->MakeImage(TextureDesc {
           TT_TEX3D,
           TF_R8,
           Vec3u::One(),
@@ -114,8 +114,8 @@ PlaceholderData::PlaceholderData()
           TWM_CLAMP_TO_EDGE,
           1,
           IU_SAMPLED })),
-      m_image_view_3d_1x1x1_r8(g_render_backend->MakeImageView(m_image_3d_1x1x1_r8)),
-      m_image_3d_1x1x1_r8_storage(g_render_backend->MakeImage(TextureDesc {
+      m_imageView3d1x1x1R8(g_renderBackend->MakeImageView(m_image3d1x1x1R8)),
+      m_image3d1x1x1R8Storage(g_renderBackend->MakeImage(TextureDesc {
           TT_TEX3D,
           TF_R8,
           Vec3u::One(),
@@ -124,8 +124,8 @@ PlaceholderData::PlaceholderData()
           TWM_CLAMP_TO_EDGE,
           1,
           IU_STORAGE | IU_SAMPLED })),
-      m_image_view_3d_1x1x1_r8_storage(g_render_backend->MakeImageView(m_image_3d_1x1x1_r8_storage)),
-      m_image_cube_1x1_r8(g_render_backend->MakeImage(TextureDesc {
+      m_imageView3d1x1x1R8Storage(g_renderBackend->MakeImageView(m_image3d1x1x1R8Storage)),
+      m_imageCube1x1R8(g_renderBackend->MakeImage(TextureDesc {
           TT_CUBEMAP,
           TF_R8,
           Vec3u::One(),
@@ -134,8 +134,8 @@ PlaceholderData::PlaceholderData()
           TWM_CLAMP_TO_EDGE,
           1,
           IU_SAMPLED })),
-      m_image_view_cube_1x1_r8(g_render_backend->MakeImageView(m_image_cube_1x1_r8)),
-      m_image_2d_1x1_r8_array(g_render_backend->MakeImage(TextureDesc {
+      m_imageViewCube1x1R8(g_renderBackend->MakeImageView(m_imageCube1x1R8)),
+      m_image2d1x1R8Array(g_renderBackend->MakeImage(TextureDesc {
           TT_TEX2D_ARRAY,
           TF_R8,
           Vec3u::One(),
@@ -144,8 +144,8 @@ PlaceholderData::PlaceholderData()
           TWM_CLAMP_TO_EDGE,
           1,
           IU_SAMPLED })),
-      m_image_view_2d_1x1_r8_array(g_render_backend->MakeImageView(m_image_2d_1x1_r8_array)),
-      m_image_cube_1x1_r8_array(g_render_backend->MakeImage(TextureDesc {
+      m_imageView2d1x1R8Array(g_renderBackend->MakeImageView(m_image2d1x1R8Array)),
+      m_imageCube1x1R8Array(g_renderBackend->MakeImage(TextureDesc {
           TT_CUBEMAP_ARRAY,
           TF_R8,
           Vec3u::One(),
@@ -154,16 +154,16 @@ PlaceholderData::PlaceholderData()
           TWM_CLAMP_TO_EDGE,
           1,
           IU_SAMPLED })),
-      m_image_view_cube_1x1_r8_array(g_render_backend->MakeImageView(m_image_cube_1x1_r8_array)),
-      m_sampler_linear(g_render_backend->MakeSampler(
+      m_imageViewCube1x1R8Array(g_renderBackend->MakeImageView(m_imageCube1x1R8Array)),
+      m_samplerLinear(g_renderBackend->MakeSampler(
           TFM_LINEAR,
           TFM_LINEAR,
           TWM_REPEAT)),
-      m_sampler_linear_mipmap(g_render_backend->MakeSampler(
+      m_samplerLinearMipmap(g_renderBackend->MakeSampler(
           TFM_LINEAR_MIPMAP,
           TFM_LINEAR,
           TWM_REPEAT)),
-      m_sampler_nearest(g_render_backend->MakeSampler(
+      m_samplerNearest(g_renderBackend->MakeSampler(
           TFM_NEAREST,
           TFM_NEAREST,
           TWM_CLAMP_TO_EDGE))
@@ -179,56 +179,56 @@ void PlaceholderData::Create()
 {
 #pragma region Image and ImageView
     // These will soon be deprecated (except the samplers) - we will instead use Texture instead of individual image/image view
-    m_image_2d_1x1_r8->SetDebugName(NAME("Placeholder_2D_1x1_R8"));
-    DeferCreate(m_image_2d_1x1_r8);
+    m_image2d1x1R8->SetDebugName(NAME("Placeholder_2D_1x1_R8"));
+    DeferCreate(m_image2d1x1R8);
 
-    m_image_view_2d_1x1_r8->SetDebugName(NAME("Placeholder_2D_1x1_R8_View"));
-    DeferCreate(m_image_view_2d_1x1_r8);
+    m_imageView2d1x1R8->SetDebugName(NAME("Placeholder_2D_1x1_R8_View"));
+    DeferCreate(m_imageView2d1x1R8);
 
-    m_image_2d_1x1_r8_storage->SetDebugName(NAME("Placeholder_2D_1x1_R8_Storage"));
-    DeferCreate(m_image_2d_1x1_r8_storage);
+    m_image2d1x1R8Storage->SetDebugName(NAME("Placeholder_2D_1x1_R8_Storage"));
+    DeferCreate(m_image2d1x1R8Storage);
 
-    m_image_view_2d_1x1_r8_storage->SetDebugName(NAME("Placeholder_2D_1x1_R8_Storage_View"));
-    DeferCreate(m_image_view_2d_1x1_r8_storage);
+    m_imageView2d1x1R8Storage->SetDebugName(NAME("Placeholder_2D_1x1_R8_Storage_View"));
+    DeferCreate(m_imageView2d1x1R8Storage);
 
-    m_image_3d_1x1x1_r8->SetDebugName(NAME("Placeholder_3D_1x1x1_R8"));
-    DeferCreate(m_image_3d_1x1x1_r8);
+    m_image3d1x1x1R8->SetDebugName(NAME("Placeholder_3D_1x1x1_R8"));
+    DeferCreate(m_image3d1x1x1R8);
 
-    m_image_view_3d_1x1x1_r8->SetDebugName(NAME("Placeholder_3D_1x1x1_R8_View"));
-    DeferCreate(m_image_view_3d_1x1x1_r8);
+    m_imageView3d1x1x1R8->SetDebugName(NAME("Placeholder_3D_1x1x1_R8_View"));
+    DeferCreate(m_imageView3d1x1x1R8);
 
-    m_image_3d_1x1x1_r8_storage->SetDebugName(NAME("Placeholder_3D_1x1x1_R8_Storage"));
-    DeferCreate(m_image_3d_1x1x1_r8_storage);
+    m_image3d1x1x1R8Storage->SetDebugName(NAME("Placeholder_3D_1x1x1_R8_Storage"));
+    DeferCreate(m_image3d1x1x1R8Storage);
 
-    m_image_view_3d_1x1x1_r8_storage->SetDebugName(NAME("Placeholder_3D_1x1x1_R8_Storage_View"));
-    DeferCreate(m_image_view_3d_1x1x1_r8_storage);
+    m_imageView3d1x1x1R8Storage->SetDebugName(NAME("Placeholder_3D_1x1x1_R8_Storage_View"));
+    DeferCreate(m_imageView3d1x1x1R8Storage);
 
-    m_image_cube_1x1_r8->SetDebugName(NAME("Placeholder_Cube_1x1_R8"));
-    DeferCreate(m_image_cube_1x1_r8);
+    m_imageCube1x1R8->SetDebugName(NAME("Placeholder_Cube_1x1_R8"));
+    DeferCreate(m_imageCube1x1R8);
 
-    m_image_view_cube_1x1_r8->SetDebugName(NAME("Placeholder_Cube_1x1_R8_View"));
-    DeferCreate(m_image_view_cube_1x1_r8);
+    m_imageViewCube1x1R8->SetDebugName(NAME("Placeholder_Cube_1x1_R8_View"));
+    DeferCreate(m_imageViewCube1x1R8);
 
-    m_image_2d_1x1_r8_array->SetDebugName(NAME("Placeholder_2D_1x1_R8_Array"));
-    DeferCreate(m_image_2d_1x1_r8_array);
+    m_image2d1x1R8Array->SetDebugName(NAME("Placeholder_2D_1x1_R8_Array"));
+    DeferCreate(m_image2d1x1R8Array);
 
-    m_image_view_2d_1x1_r8_array->SetDebugName(NAME("Placeholder_2D_1x1_R8_Array_View"));
-    DeferCreate(m_image_view_2d_1x1_r8_array);
+    m_imageView2d1x1R8Array->SetDebugName(NAME("Placeholder_2D_1x1_R8_Array_View"));
+    DeferCreate(m_imageView2d1x1R8Array);
 
-    m_image_cube_1x1_r8_array->SetDebugName(NAME("Placeholder_Cube_1x1_R8_Array"));
-    DeferCreate(m_image_cube_1x1_r8_array);
+    m_imageCube1x1R8Array->SetDebugName(NAME("Placeholder_Cube_1x1_R8_Array"));
+    DeferCreate(m_imageCube1x1R8Array);
 
-    m_image_view_cube_1x1_r8_array->SetDebugName(NAME("Placeholder_Cube_1x1_R8_Array_View"));
-    DeferCreate(m_image_view_cube_1x1_r8_array);
+    m_imageViewCube1x1R8Array->SetDebugName(NAME("Placeholder_Cube_1x1_R8_Array_View"));
+    DeferCreate(m_imageViewCube1x1R8Array);
 
 #pragma endregion Image and ImageView
 
 #pragma region Textures
-    ByteBuffer placeholder_buffer_tex2d_rgba8;
-    FillPlaceholderBuffer_Tex2D<TF_RGBA8>(Vec2u::One(), placeholder_buffer_tex2d_rgba8);
+    ByteBuffer placeholderBufferTex2dRgba8;
+    FillPlaceholderBuffer_Tex2D<TF_RGBA8>(Vec2u::One(), placeholderBufferTex2dRgba8);
 
-    ByteBuffer placeholder_buffer_cubemap_rgba8;
-    FillPlaceholderBuffer_Cubemap<TF_RGBA8>(Vec2u::One(), placeholder_buffer_cubemap_rgba8);
+    ByteBuffer placeholderBufferCubemapRgba8;
+    FillPlaceholderBuffer_Cubemap<TF_RGBA8>(Vec2u::One(), placeholderBufferCubemapRgba8);
 
     DefaultTexture2D = CreateObject<Texture>(TextureData {
         TextureDesc {
@@ -240,7 +240,7 @@ void PlaceholderData::Create()
             TWM_CLAMP_TO_EDGE,
             1,
             IU_SAMPLED | IU_STORAGE },
-        placeholder_buffer_tex2d_rgba8 });
+        placeholderBufferTex2dRgba8 });
 
     DefaultTexture2D->SetName(NAME("Placeholder_Texture_2D_1x1_R8"));
     InitObject(DefaultTexture2D);
@@ -271,7 +271,7 @@ void PlaceholderData::Create()
             TWM_CLAMP_TO_EDGE,
             1,
             IU_SAMPLED | IU_STORAGE },
-        placeholder_buffer_cubemap_rgba8 });
+        placeholderBufferCubemapRgba8 });
 
     DefaultCubemap->SetName(NAME("Placeholder_Texture_Cube_1x1_R8"));
     InitObject(DefaultCubemap);
@@ -311,41 +311,41 @@ void PlaceholderData::Create()
 
 #pragma region Samplers
 
-    m_sampler_linear->SetDebugName(NAME("Placeholder_Sampler_Linear"));
-    DeferCreate(m_sampler_linear);
+    m_samplerLinear->SetDebugName(NAME("Placeholder_Sampler_Linear"));
+    DeferCreate(m_samplerLinear);
 
-    m_sampler_linear_mipmap->SetDebugName(NAME("Placeholder_Sampler_Linear_Mipmap"));
-    DeferCreate(m_sampler_linear_mipmap);
+    m_samplerLinearMipmap->SetDebugName(NAME("Placeholder_Sampler_Linear_Mipmap"));
+    DeferCreate(m_samplerLinearMipmap);
 
-    m_sampler_nearest->SetDebugName(NAME("Placeholder_Sampler_Nearest"));
-    DeferCreate(m_sampler_nearest);
+    m_samplerNearest->SetDebugName(NAME("Placeholder_Sampler_Nearest"));
+    DeferCreate(m_samplerNearest);
 
 #pragma endregion Samplers
 }
 
 void PlaceholderData::Destroy()
 {
-    SafeRelease(std::move(m_image_2d_1x1_r8));
-    SafeRelease(std::move(m_image_view_2d_1x1_r8));
-    SafeRelease(std::move(m_image_2d_1x1_r8_storage));
-    SafeRelease(std::move(m_image_view_2d_1x1_r8_storage));
-    SafeRelease(std::move(m_image_3d_1x1x1_r8));
-    SafeRelease(std::move(m_image_view_3d_1x1x1_r8));
-    SafeRelease(std::move(m_image_3d_1x1x1_r8_storage));
-    SafeRelease(std::move(m_image_view_3d_1x1x1_r8_storage));
-    SafeRelease(std::move(m_image_cube_1x1_r8));
-    SafeRelease(std::move(m_image_view_cube_1x1_r8));
-    SafeRelease(std::move(m_image_2d_1x1_r8_array));
-    SafeRelease(std::move(m_image_view_2d_1x1_r8_array));
-    SafeRelease(std::move(m_image_cube_1x1_r8_array));
-    SafeRelease(std::move(m_image_view_cube_1x1_r8_array));
-    SafeRelease(std::move(m_sampler_linear));
-    SafeRelease(std::move(m_sampler_linear_mipmap));
-    SafeRelease(std::move(m_sampler_nearest));
+    SafeRelease(std::move(m_image2d1x1R8));
+    SafeRelease(std::move(m_imageView2d1x1R8));
+    SafeRelease(std::move(m_image2d1x1R8Storage));
+    SafeRelease(std::move(m_imageView2d1x1R8Storage));
+    SafeRelease(std::move(m_image3d1x1x1R8));
+    SafeRelease(std::move(m_imageView3d1x1x1R8));
+    SafeRelease(std::move(m_image3d1x1x1R8Storage));
+    SafeRelease(std::move(m_imageView3d1x1x1R8Storage));
+    SafeRelease(std::move(m_imageCube1x1R8));
+    SafeRelease(std::move(m_imageViewCube1x1R8));
+    SafeRelease(std::move(m_image2d1x1R8Array));
+    SafeRelease(std::move(m_imageView2d1x1R8Array));
+    SafeRelease(std::move(m_imageCube1x1R8Array));
+    SafeRelease(std::move(m_imageViewCube1x1R8Array));
+    SafeRelease(std::move(m_samplerLinear));
+    SafeRelease(std::move(m_samplerLinearMipmap));
+    SafeRelease(std::move(m_samplerNearest));
 
-    for (auto& buffer_map : m_buffers)
+    for (auto& bufferMap : m_buffers)
     {
-        for (auto& it : buffer_map.second)
+        for (auto& it : bufferMap.second)
         {
             SafeRelease(std::move(it.second));
         }
@@ -354,12 +354,12 @@ void PlaceholderData::Destroy()
     m_buffers.Clear();
 }
 
-GpuBufferRef PlaceholderData::CreateGpuBuffer(GpuBufferType buffer_type, SizeType size)
+GpuBufferRef PlaceholderData::CreateGpuBuffer(GpuBufferType bufferType, SizeType size)
 {
-    GpuBufferRef gpu_buffer = g_render_backend->MakeGpuBuffer(buffer_type, size);
-    HYPERION_ASSERT_RESULT(gpu_buffer->Create());
+    GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(bufferType, size);
+    HYPERION_ASSERT_RESULT(gpuBuffer->Create());
 
-    return gpu_buffer;
+    return gpuBuffer;
 }
 
 } // namespace hyperion

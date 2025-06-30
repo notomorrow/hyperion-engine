@@ -16,10 +16,10 @@ namespace utilities {
 
 using TypeIdValue = uint32;
 
-static constexpr uint32 g_type_id_hash_bit_offset = 2;
-static constexpr uint32 g_type_id_hash_max = (~0u << g_type_id_hash_bit_offset) >> g_type_id_hash_bit_offset;
-static constexpr uint32 g_type_id_flag_bit_mask = 0x3u;
-static constexpr uint32 g_type_id_flag_max = 0x3u;
+static constexpr uint32 g_typeIdHashBitOffset = 2;
+static constexpr uint32 g_typeIdHashMax = (~0u << g_typeIdHashBitOffset) >> g_typeIdHashBitOffset;
+static constexpr uint32 g_typeIdFlagBitMask = 0x3u;
+static constexpr uint32 g_typeIdFlagMax = 0x3u;
 
 enum TypeIdFlags : uint8
 {
@@ -31,9 +31,9 @@ enum TypeIdFlags : uint8
 template <class T, uint8 Flags>
 struct TypeId_Impl
 {
-    static_assert(Flags <= g_type_id_flag_max, "Flags cannot be > 0x3");
+    static_assert(Flags <= g_typeIdFlagMax, "Flags cannot be > 0x3");
 
-    static constexpr TypeIdValue value = ((TypeNameWithoutNamespace<T>().GetHashCode().Value() % HashCode::ValueType(g_type_id_hash_max)) << g_type_id_hash_bit_offset) | (Flags & g_type_id_flag_max);
+    static constexpr TypeIdValue value = ((TypeNameWithoutNamespace<T>().GetHashCode().Value() % HashCode::ValueType(g_typeIdHashMax)) << g_typeIdHashBitOffset) | (Flags & g_typeIdFlagMax);
 };
 
 template <uint8 Flags>
@@ -45,11 +45,11 @@ struct TypeId_Impl<void, Flags>
 template <uint8 Flags>
 struct TypeId_FromString_Impl
 {
-    static_assert(Flags <= g_type_id_flag_max, "Flags cannot be > 0x3");
+    static_assert(Flags <= g_typeIdFlagMax, "Flags cannot be > 0x3");
 
     constexpr TypeIdValue operator()(const char* str) const
     {
-        return ((HashCode::GetHashCode(str).Value() % HashCode::ValueType(g_type_id_hash_max)) << g_type_id_hash_bit_offset) | (Flags & g_type_id_flag_max);
+        return ((HashCode::GetHashCode(str).Value() % HashCode::ValueType(g_typeIdHashMax)) << g_typeIdHashBitOffset) | (Flags & g_typeIdFlagMax);
     }
 };
 
@@ -61,7 +61,7 @@ struct TypeId
 private:
     ValueType m_value;
 
-    static constexpr ValueType void_value = ValueType(0);
+    static constexpr ValueType voidValue = ValueType(0);
 
 public:
     template <class T>
@@ -76,7 +76,7 @@ public:
     }
 
     constexpr TypeId()
-        : m_value { void_value }
+        : m_value { voidValue }
     {
     }
 
@@ -91,13 +91,13 @@ public:
     constexpr TypeId(TypeId&& other) noexcept
         : m_value(other.m_value)
     {
-        other.m_value = void_value;
+        other.m_value = voidValue;
     }
 
     constexpr TypeId& operator=(TypeId&& other) noexcept
     {
         m_value = other.m_value;
-        other.m_value = void_value;
+        other.m_value = voidValue;
 
         return *this;
     }
@@ -111,12 +111,12 @@ public:
 
     HYP_FORCE_INLINE constexpr explicit operator bool() const
     {
-        return m_value != void_value;
+        return m_value != voidValue;
     }
 
     HYP_FORCE_INLINE constexpr bool operator!() const
     {
-        return m_value == void_value;
+        return m_value == voidValue;
     }
 
     HYP_FORCE_INLINE constexpr bool operator==(const TypeId& other) const
@@ -151,12 +151,12 @@ public:
 
     HYP_FORCE_INLINE constexpr bool IsNativeType() const
     {
-        return !((m_value & g_type_id_flag_max) & TYPE_ID_FLAGS_DYNAMIC);
+        return !((m_value & g_typeIdFlagMax) & TYPE_ID_FLAGS_DYNAMIC);
     }
 
     HYP_FORCE_INLINE constexpr bool IsDynamicType() const
     {
-        return (m_value & g_type_id_flag_max) & TYPE_ID_FLAGS_DYNAMIC;
+        return (m_value & g_typeIdFlagMax) & TYPE_ID_FLAGS_DYNAMIC;
     }
 
     HYP_FORCE_INLINE constexpr ValueType Value() const
@@ -171,7 +171,7 @@ public:
 
     HYP_FORCE_INLINE static constexpr TypeId Void()
     {
-        return TypeId { void_value };
+        return TypeId { voidValue };
     }
 };
 

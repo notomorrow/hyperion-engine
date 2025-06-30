@@ -15,21 +15,21 @@ class RendererError final : public Error
 public:
     RendererError()
         : Error(),
-          m_error_code(0)
+          m_errorCode(0)
     {
     }
 
     template <auto MessageString>
-    RendererError(const StaticMessage& current_function, ValueWrapper<MessageString>)
-        : Error(current_function, ValueWrapper<MessageString>()),
-          m_error_code(0)
+    RendererError(const StaticMessage& currentFunction, ValueWrapper<MessageString>)
+        : Error(currentFunction, ValueWrapper<MessageString>()),
+          m_errorCode(0)
     {
     }
 
     template <auto MessageString, class... Args>
-    RendererError(const StaticMessage& current_function, ValueWrapper<MessageString>, int error_code, Args&&... args)
-        : Error(current_function, ValueWrapper<MessageString>(), std::forward<Args>(args)...),
-          m_error_code(error_code)
+    RendererError(const StaticMessage& currentFunction, ValueWrapper<MessageString>, int errorCode, Args&&... args)
+        : Error(currentFunction, ValueWrapper<MessageString>(), std::forward<Args>(args)...),
+          m_errorCode(errorCode)
     {
     }
 
@@ -37,11 +37,11 @@ public:
 
     HYP_FORCE_INLINE int GetErrorCode() const
     {
-        return m_error_code;
+        return m_errorCode;
     }
 
 private:
-    int m_error_code;
+    int m_errorCode;
 };
 
 using RendererResult = TResult<void, RendererError>;
@@ -53,12 +53,12 @@ using RendererResult = TResult<void, RendererError>;
     }                                         \
     while (0)
 
-#define HYPERION_PASS_ERRORS(result, out_result)       \
+#define HYPERION_PASS_ERRORS(result, outResult)       \
     do                                                 \
     {                                                  \
         ::hyperion::RendererResult _result = (result); \
-        if ((out_result) && !_result)                  \
-            (out_result) = _result;                    \
+        if ((outResult) && !_result)                  \
+            (outResult) = _result;                    \
     }                                                  \
     while (0)
 

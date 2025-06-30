@@ -69,10 +69,10 @@ public:
     StreamingVolumeShape GetShape() const;
 
     HYP_METHOD(Scriptable)
-    bool GetBoundingBox(BoundingBox& out_aabb) const;
+    bool GetBoundingBox(BoundingBox& outAabb) const;
 
     HYP_METHOD(Scriptable)
-    bool GetBoundingSphere(BoundingSphere& out_sphere) const;
+    bool GetBoundingSphere(BoundingSphere& outSphere) const;
 
     HYP_METHOD(Scriptable)
     bool ContainsPoint(const Vec3f& point) const;
@@ -85,13 +85,13 @@ protected:
     }
 
     HYP_METHOD()
-    virtual bool GetBoundingBox_Impl(BoundingBox& out_aabb) const
+    virtual bool GetBoundingBox_Impl(BoundingBox& outAabb) const
     {
         HYP_PURE_VIRTUAL();
     }
 
     HYP_METHOD()
-    virtual bool GetBoundingSphere_Impl(BoundingSphere& out_sphere) const
+    virtual bool GetBoundingSphere_Impl(BoundingSphere& outSphere) const
     {
         HYP_PURE_VIRTUAL();
     }

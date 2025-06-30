@@ -35,7 +35,7 @@ public:
     static Matrix4 Scaling(const Vec3f& scaling);
     static Matrix4 Perspective(float fov, int w, int h, float n, float f);
     static Matrix4 Orthographic(float l, float r, float b, float t, float n, float f);
-    static Matrix4 Jitter(uint32 index, uint32 width, uint32 height, Vec4f& out_jitter);
+    static Matrix4 Jitter(uint32 index, uint32 width, uint32 height, Vec4f& outJitter);
     static Matrix4 LookAt(const Vec3f& dir, const Vec3f& up);
     static Matrix4 LookAt(const Vec3f& pos, const Vec3f& target, const Vec3f& up);
 

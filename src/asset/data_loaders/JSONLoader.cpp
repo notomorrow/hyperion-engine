@@ -10,26 +10,26 @@ namespace hyperion {
 
 AssetLoadResult JSONLoader::LoadAsset(LoaderState& state) const
 {
-    AssertThrow(state.asset_manager != nullptr);
+    AssertThrow(state.assetManager != nullptr);
     JSONValue json;
 
-    const ByteBuffer byte_buffer = state.stream.ReadBytes();
+    const ByteBuffer byteBuffer = state.stream.ReadBytes();
 
-    if (!byte_buffer.Size())
+    if (!byteBuffer.Size())
     {
         return HYP_MAKE_ERROR(AssetLoadError, "Empty JSON file");
     }
 
-    const String json_string(byte_buffer.ToByteView());
+    const String jsonString(byteBuffer.ToByteView());
 
-    const auto json_parse_result = JSON::Parse(json_string);
+    const auto jsonParseResult = JSON::Parse(jsonString);
 
-    if (!json_parse_result.ok)
+    if (!jsonParseResult.ok)
     {
-        return HYP_MAKE_ERROR(AssetLoadError, "Failed to parse json: {}", json_parse_result.message);
+        return HYP_MAKE_ERROR(AssetLoadError, "Failed to parse json: {}", jsonParseResult.message);
     }
 
-    return LoadedAsset { json_parse_result.value };
+    return LoadedAsset { jsonParseResult.value };
 }
 
 } // namespace hyperion

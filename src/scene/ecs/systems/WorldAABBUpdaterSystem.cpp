@@ -32,47 +32,47 @@ void WorldAABBUpdaterSystem::OnEntityRemoved(Entity* entity)
 
 void WorldAABBUpdaterSystem::Process(float delta)
 {
-    HashSet<WeakHandle<Entity>> updated_entities;
+    HashSet<WeakHandle<Entity>> updatedEntities;
 
-    for (auto [entity, bounding_box_component, transform_component, _] : GetEntityManager().GetEntitySet<BoundingBoxComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_AABB>>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, boundingBoxComponent, transformComponent, _] : GetEntityManager().GetEntitySet<BoundingBoxComponent, TransformComponent, EntityTagComponent<EntityTag::UPDATE_AABB>>().GetScopedView(GetComponentInfos()))
     {
-        if (ProcessEntity(entity, bounding_box_component, transform_component))
+        if (ProcessEntity(entity, boundingBoxComponent, transformComponent))
         {
-            updated_entities.Insert(entity->WeakHandleFromThis());
+            updatedEntities.Insert(entity->WeakHandleFromThis());
         }
     }
 
-    if (updated_entities.Any())
+    if (updatedEntities.Any())
     {
-        AfterProcess([this, updated_entities = std::move(updated_entities)]()
+        AfterProcess([this, updatedEntities = std::move(updatedEntities)]()
             {
-                for (const WeakHandle<Entity>& entity_weak : updated_entities)
+                for (const WeakHandle<Entity>& entityWeak : updatedEntities)
                 {
-                    GetEntityManager().AddTags<EntityTag::UPDATE_RENDER_PROXY, EntityTag::UPDATE_VISIBILITY_STATE, EntityTag::UPDATE_ENV_PROBE_TRANSFORM, EntityTag::UPDATE_BLAS>(entity_weak.GetUnsafe());
+                    GetEntityManager().AddTags<EntityTag::UPDATE_RENDER_PROXY, EntityTag::UPDATE_VISIBILITY_STATE, EntityTag::UPDATE_ENV_PROBE_TRANSFORM, EntityTag::UPDATE_BLAS>(entityWeak.GetUnsafe());
 
-                    GetEntityManager().RemoveTag<EntityTag::UPDATE_AABB>(entity_weak.GetUnsafe());
+                    GetEntityManager().RemoveTag<EntityTag::UPDATE_AABB>(entityWeak.GetUnsafe());
                 }
             });
     }
 }
 
-bool WorldAABBUpdaterSystem::ProcessEntity(Entity* entity, BoundingBoxComponent& bounding_box_component, TransformComponent& transform_component)
+bool WorldAABBUpdaterSystem::ProcessEntity(Entity* entity, BoundingBoxComponent& boundingBoxComponent, TransformComponent& transformComponent)
 {
-    const BoundingBox local_aabb = bounding_box_component.local_aabb;
-    BoundingBox world_aabb = bounding_box_component.world_aabb;
+    const BoundingBox localAabb = boundingBoxComponent.localAabb;
+    BoundingBox worldAabb = boundingBoxComponent.worldAabb;
 
-    world_aabb = BoundingBox::Empty();
+    worldAabb = BoundingBox::Empty();
 
-    if (local_aabb.IsValid())
+    if (localAabb.IsValid())
     {
-        for (const Vec3f& corner : local_aabb.GetCorners())
+        for (const Vec3f& corner : localAabb.GetCorners())
         {
-            world_aabb = world_aabb.Union(transform_component.transform.GetMatrix() * corner);
+            worldAabb = worldAabb.Union(transformComponent.transform.GetMatrix() * corner);
         }
     }
 
-    bounding_box_component.local_aabb = local_aabb;
-    bounding_box_component.world_aabb = world_aabb;
+    boundingBoxComponent.localAabb = localAabb;
+    boundingBoxComponent.worldAabb = worldAabb;
 
     return true;
 }

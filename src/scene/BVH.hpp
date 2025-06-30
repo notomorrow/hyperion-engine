@@ -32,7 +32,7 @@ struct BVHNode
     Array<Triangle, DynamicAllocator> triangles;
 
     HYP_FIELD(Serialize)
-    bool is_leaf_node = false;
+    bool isLeafNode = false;
 
     HYP_FORCE_INLINE bool IsValid() const
     {
@@ -44,9 +44,9 @@ struct BVHNode
         triangles.PushBack(triangle);
     }
 
-    void Split(int max_depth = 3)
+    void Split(int maxDepth = 3)
     {
-        Split_Internal(0, max_depth);
+        Split_Internal(0, maxDepth);
     }
 
     HYP_NODISCARD RayTestResults TestRay(const Ray& ray) const
@@ -55,13 +55,13 @@ struct BVHNode
 
         if (ray.TestAABB(aabb))
         {
-            if (is_leaf_node)
+            if (isLeafNode)
             {
-                for (SizeType triangle_index = 0; triangle_index < triangles.Size(); triangle_index++)
+                for (SizeType triangleIndex = 0; triangleIndex < triangles.Size(); triangleIndex++)
                 {
-                    const Triangle& triangle = triangles[triangle_index];
+                    const Triangle& triangle = triangles[triangleIndex];
 
-                    ray.TestTriangle(triangle, triangle_index, this, results);
+                    ray.TestTriangle(triangle, triangleIndex, this, results);
                 }
             }
             else
@@ -77,13 +77,13 @@ struct BVHNode
     }
 
 private:
-    void Split_Internal(int depth, int max_depth)
+    void Split_Internal(int depth, int maxDepth)
     {
-        if (is_leaf_node)
+        if (isLeafNode)
         {
             if (triangles.Any())
             {
-                if (depth < max_depth)
+                if (depth < maxDepth)
                 {
                     const Vec3f center = aabb.GetCenter();
                     const Vec3f extent = aabb.GetExtent();
@@ -97,17 +97,17 @@ private:
                         {
                             for (int k = 0; k < 2; k++)
                             {
-                                const Vec3f new_min = Vec3f(
+                                const Vec3f newMin = Vec3f(
                                     i == 0 ? min.x : center.x,
                                     j == 0 ? min.y : center.y,
                                     k == 0 ? min.z : center.z);
 
-                                const Vec3f new_max = Vec3f(
+                                const Vec3f newMax = Vec3f(
                                     i == 0 ? center.x : max.x,
                                     j == 0 ? center.y : max.y,
                                     k == 0 ? center.z : max.z);
 
-                                children.EmplaceBack(BoundingBox(new_min, new_max));
+                                children.EmplaceBack(BoundingBox(newMin, newMax));
                             }
                         }
                     }
@@ -125,14 +125,14 @@ private:
 
                     triangles.Clear();
 
-                    is_leaf_node = false;
+                    isLeafNode = false;
                 }
             }
         }
 
         for (BVHNode& node : children)
         {
-            node.Split_Internal(depth + 1, max_depth);
+            node.Split_Internal(depth + 1, maxDepth);
         }
     }
 };

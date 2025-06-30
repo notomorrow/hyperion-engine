@@ -36,8 +36,8 @@ class RenderScene;
 
 struct ManagedGameInfo
 {
-    String assembly_name;
-    String class_name;
+    String assemblyName;
+    String className;
 };
 
 HYP_CLASS(Abstract)
@@ -50,17 +50,17 @@ class HYP_API Game : public HypObject<Game>
 
 public:
     Game();
-    Game(Optional<ManagedGameInfo> managed_game_info);
+    Game(Optional<ManagedGameInfo> managedGameInfo);
     virtual ~Game();
 
     const Handle<AppContextBase>& GetAppContext() const
     {
-        return m_app_context;
+        return m_appContext;
     }
 
-    void SetAppContext(const Handle<AppContextBase>& app_context)
+    void SetAppContext(const Handle<AppContextBase>& appContext)
     {
-        m_app_context = app_context;
+        m_appContext = appContext;
     }
 
     virtual void Update(float delta) final;
@@ -74,18 +74,18 @@ protected:
 
     const Handle<UISubsystem>& GetUISubsystem() const
     {
-        return m_ui_subsystem;
+        return m_uiSubsystem;
     }
 
-    Handle<AppContextBase> m_app_context;
+    Handle<AppContextBase> m_appContext;
 
-    Handle<UISubsystem> m_ui_subsystem;
+    Handle<UISubsystem> m_uiSubsystem;
 
-    RC<dotnet::Assembly> m_managed_assembly;
-    dotnet::Object* m_managed_game_object;
+    RC<dotnet::Assembly> m_managedAssembly;
+    dotnet::Object* m_managedGameObject;
 
 private:
-    Optional<ManagedGameInfo> m_managed_game_info;
+    Optional<ManagedGameInfo> m_managedGameInfo;
 };
 
 } // namespace hyperion

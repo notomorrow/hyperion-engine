@@ -20,19 +20,19 @@ class Method
 {
 public:
     Method()
-        : m_invoke_fptr(nullptr)
+        : m_invokeFptr(nullptr)
     {
     }
 
-    Method(ManagedGuid guid, InvokeMethodFunction invoke_fptr)
+    Method(ManagedGuid guid, InvokeMethodFunction invokeFptr)
         : m_guid(guid),
-          m_invoke_fptr(invoke_fptr)
+          m_invokeFptr(invokeFptr)
     {
     }
 
-    Method(ManagedGuid guid, InvokeMethodFunction invoke_fptr, AttributeSet&& attributes)
+    Method(ManagedGuid guid, InvokeMethodFunction invokeFptr, AttributeSet&& attributes)
         : m_guid(guid),
-          m_invoke_fptr(invoke_fptr),
+          m_invokeFptr(invokeFptr),
           m_attributes(std::move(attributes))
     {
     }
@@ -52,7 +52,7 @@ public:
 
     HYP_FORCE_INLINE InvokeMethodFunction GetFunctionPointer() const
     {
-        return m_invoke_fptr;
+        return m_invokeFptr;
     }
 
     HYP_FORCE_INLINE const AttributeSet& GetAttributes() const
@@ -60,15 +60,15 @@ public:
         return m_attributes;
     }
 
-    HYP_FORCE_INLINE void Invoke(ObjectReference* this_object_reference, const HypData** args_hyp_data, HypData* out_return_hyp_data) const
+    HYP_FORCE_INLINE void Invoke(ObjectReference* thisObjectReference, const HypData** argsHypData, HypData* outReturnHypData) const
     {
-        AssertDebug(m_invoke_fptr != nullptr);
-        m_invoke_fptr(this_object_reference, args_hyp_data, out_return_hyp_data);
+        AssertDebug(m_invokeFptr != nullptr);
+        m_invokeFptr(thisObjectReference, argsHypData, outReturnHypData);
     }
 
 private:
     ManagedGuid m_guid;
-    InvokeMethodFunction m_invoke_fptr;
+    InvokeMethodFunction m_invokeFptr;
     AttributeSet m_attributes;
 };
 

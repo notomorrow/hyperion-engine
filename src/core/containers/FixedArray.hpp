@@ -31,7 +31,7 @@ template <class T, SizeType Sz>
 class FixedArray
 {
 public:
-    static constexpr bool is_contiguous = true;
+    static constexpr bool isContiguous = true;
 
     T m_values[Sz > 1 ? Sz : 1];
 
@@ -57,12 +57,12 @@ public:
         }
 
         auto it = Begin();
-        auto other_it = other.Begin();
+        auto otherIt = other.Begin();
         const auto _end = End();
 
-        for (; it != _end; ++it, ++other_it)
+        for (; it != _end; ++it, ++otherIt)
         {
-            if (!(*it == *other_it))
+            if (!(*it == *otherIt))
             {
                 return false;
             }
@@ -85,12 +85,12 @@ public:
         }
 
         auto it = Begin();
-        auto other_it = other.Begin();
+        auto otherIt = other.Begin();
         const auto _end = End();
 
-        for (; it != _end; ++it, ++other_it)
+        for (; it != _end; ++it, ++otherIt)
         {
-            if (!(*it == *other_it))
+            if (!(*it == *otherIt))
             {
                 return true;
             }
@@ -308,7 +308,7 @@ class FixedArrayImpl : public ContainerBase<FixedArrayImpl<T, Sz>, uint32>
 public:
     T* ptr;
 
-    static constexpr bool is_contiguous = true;
+    static constexpr bool isContiguous = true;
 
     using Iterator = T*;
     using ConstIterator = const T*;

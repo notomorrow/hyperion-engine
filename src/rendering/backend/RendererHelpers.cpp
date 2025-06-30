@@ -7,9 +7,9 @@
 namespace hyperion {
 namespace helpers {
 
-uint32 MipmapSize(uint32 src_size, int lod)
+uint32 MipmapSize(uint32 srcSize, int lod)
 {
-    return MathUtil::Max(src_size >> lod, 1u);
+    return MathUtil::Max(srcSize >> lod, 1u);
 }
 
 } // namespace helpers

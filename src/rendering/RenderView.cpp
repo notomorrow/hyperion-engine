@@ -63,7 +63,7 @@ void RenderView::Initialize_Internal()
     {
         AssertThrow(m_view->GetCamera().IsValid());
 
-        m_render_camera = TResourceHandle<RenderCamera>(m_view->GetCamera()->GetRenderResource());
+        m_renderCamera = TResourceHandle<RenderCamera>(m_view->GetCamera()->GetRenderResource());
     }
 }
 
@@ -71,7 +71,7 @@ void RenderView::Destroy_Internal()
 {
     HYP_SCOPE;
 
-    m_render_camera.Reset();
+    m_renderCamera.Reset();
 }
 
 GBuffer* RenderView::GetGBuffer() const
@@ -92,13 +92,13 @@ void RenderView::Update_Internal()
 void RenderView::CreateRenderer()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 }
 
 void RenderView::DestroyRenderer()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 }
 
 void RenderView::SetViewport(const Viewport& viewport)
@@ -133,13 +133,13 @@ void RenderView::SetPriority(int priority)
 void RenderView::PreRender(FrameBase* frame)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     AssertThrow(IsInitialized());
 
-    // if (m_post_processing)
+    // if (m_postProcessing)
     // {
-    //     m_post_processing->PerformUpdates();
+    //     m_postProcessing->PerformUpdates();
     // }
 }
 

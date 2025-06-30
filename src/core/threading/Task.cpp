@@ -13,7 +13,7 @@ TaskCallbackChain::TaskCallbackChain(TaskCallbackChain&& other) noexcept
     Mutex::Guard guard(other.m_mutex);
 
     m_callbacks = std::move(other.m_callbacks);
-    m_num_callbacks.Set(other.m_num_callbacks.Exchange(0, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+    m_numCallbacks.Set(other.m_numCallbacks.Exchange(0, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
 }
 
 TaskCallbackChain& TaskCallbackChain::operator=(TaskCallbackChain&& other) noexcept
@@ -23,11 +23,11 @@ TaskCallbackChain& TaskCallbackChain::operator=(TaskCallbackChain&& other) noexc
         return *this;
     }
 
-    Mutex::Guard this_guard(m_mutex);
-    Mutex::Guard other_guard(other.m_mutex);
+    Mutex::Guard thisGuard(m_mutex);
+    Mutex::Guard otherGuard(other.m_mutex);
 
     m_callbacks = std::move(other.m_callbacks);
-    m_num_callbacks.Set(other.m_num_callbacks.Exchange(0, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+    m_numCallbacks.Set(other.m_numCallbacks.Exchange(0, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
 
     return *this;
 }
@@ -40,12 +40,12 @@ void TaskCallbackChain::Add(Proc<void()>&& callback)
 
     m_callbacks.PushBack(std::move(callback));
 
-    m_num_callbacks.Increment(1, MemoryOrder::RELEASE);
+    m_numCallbacks.Increment(1, MemoryOrder::RELEASE);
 }
 
 void TaskCallbackChain::operator()()
 {
-    if (m_num_callbacks.Get(MemoryOrder::ACQUIRE))
+    if (m_numCallbacks.Get(MemoryOrder::ACQUIRE))
     {
         Mutex::Guard guard(m_mutex);
 
@@ -62,15 +62,15 @@ void TaskCallbackChain::operator()()
 
 bool TaskBase::Cancel()
 {
-    if (!m_id.IsValid() || !m_assigned_scheduler)
+    if (!m_id.IsValid() || !m_assignedScheduler)
     {
         return false;
     }
 
-    if (m_assigned_scheduler->Dequeue(m_id))
+    if (m_assignedScheduler->Dequeue(m_id))
     {
         m_id = {};
-        m_assigned_scheduler = nullptr;
+        m_assignedScheduler = nullptr;
 
         // Reset the task state since it was dequeued.
         Reset();

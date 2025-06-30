@@ -24,124 +24,124 @@
 
 namespace hyperion {
 
-void OnBindingChanged_ReflectionProbe(EnvProbe* env_probe, uint32 prev, uint32 next)
+void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
 {
-    AssertDebug(env_probe != nullptr);
-    AssertDebug(env_probe->IsReady());
+    AssertDebug(envProbe != nullptr);
+    AssertDebug(envProbe->IsReady());
 
-    AssertThrow(env_probe->IsInstanceOf(SkyProbe::Class()) || env_probe->IsInstanceOf(ReflectionProbe::Class()));
+    AssertThrow(envProbe->IsInstanceOf(SkyProbe::Class()) || envProbe->IsInstanceOf(ReflectionProbe::Class()));
 
-    if (!env_probe->GetPrefilteredEnvMap().IsValid())
+    if (!envProbe->GetPrefilteredEnvMap().IsValid())
     {
-        HYP_LOG(Rendering, Error, "EnvProbe {} (class: {}) has no prefiltered env map set!\n", env_probe->Id(),
-            env_probe->InstanceClass()->GetName());
+        HYP_LOG(Rendering, Error, "EnvProbe {} (class: {}) has no prefiltered env map set!\n", envProbe->Id(),
+            envProbe->InstanceClass()->GetName());
 
         return;
     }
 
-    DebugLog(LogType::Debug, "EnvProbe %u (class: %s) binding changed from %u to %u\n", env_probe->Id().Value(),
-        *env_probe->InstanceClass()->GetName(),
+    DebugLog(LogType::Debug, "EnvProbe %u (class: %s) binding changed from %u to %u\n", envProbe->Id().Value(),
+        *envProbe->InstanceClass()->GetName(),
         prev, next);
 
     if (prev != ~0u)
     {
         HYP_LOG(Rendering, Debug, "UN setting env probe texture at index: {}", prev);
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_render_global_state->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frame_index)->SetElement(NAME("EnvProbeTextures"), prev, g_render_global_state->PlaceholderData->DefaultTexture2D->GetRenderResource().GetImageView());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)->SetElement(NAME("EnvProbeTextures"), prev, g_renderGlobalState->PlaceholderData->DefaultTexture2D->GetRenderResource().GetImageView());
         }
     }
     else
     {
-        env_probe->GetRenderResource().IncRef();
-        env_probe->GetPrefilteredEnvMap()->GetRenderResource().IncRef();
+        envProbe->GetRenderResource().IncRef();
+        envProbe->GetPrefilteredEnvMap()->GetRenderResource().IncRef();
     }
 
-    IRenderProxy* proxy = RenderApi_GetRenderProxy(env_probe->Id());
+    IRenderProxy* proxy = RenderApi_GetRenderProxy(envProbe->Id());
     AssertThrow(proxy != nullptr);
 
-    RenderProxyEnvProbe* proxy_casted = static_cast<RenderProxyEnvProbe*>(proxy);
+    RenderProxyEnvProbe* proxyCasted = static_cast<RenderProxyEnvProbe*>(proxy);
 
     // temp shit
-    AssertDebug(env_probe->GetRenderResource().GetBufferIndex() != ~0u);
-    RenderApi_AssignResourceBinding(env_probe, env_probe->GetRenderResource().GetBufferIndex());
+    AssertDebug(envProbe->GetRenderResource().GetBufferIndex() != ~0u);
+    RenderApi_AssignResourceBinding(envProbe, envProbe->GetRenderResource().GetBufferIndex());
 
-    HYP_LOG(Rendering, Debug, "Setting env probe texture at index: {} to tex with id: {}  proxy: {}  at frame {}", next, env_probe->GetPrefilteredEnvMap().Id(), (void*)proxy,
+    HYP_LOG(Rendering, Debug, "Setting env probe texture at index: {} to tex with id: {}  proxy: {}  at frame {}", next, envProbe->GetPrefilteredEnvMap().Id(), (void*)proxy,
         RenderApi_GetFrameIndex_RenderThread());
 
-    // proxy_casted->buffer_data.texture_index = next;
+    // proxyCasted->bufferData.textureIndex = next;
 
     if (next != ~0u)
     {
-        AssertDebug(env_probe->GetPrefilteredEnvMap().IsValid());
-        AssertDebug(env_probe->GetPrefilteredEnvMap()->IsReady());
+        AssertDebug(envProbe->GetPrefilteredEnvMap().IsValid());
+        AssertDebug(envProbe->GetPrefilteredEnvMap()->IsReady());
 
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_render_global_state->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frame_index)
-                ->SetElement(NAME("EnvProbeTextures"), next, env_probe->GetPrefilteredEnvMap()->GetRenderResource().GetImageView());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+                ->SetElement(NAME("EnvProbeTextures"), next, envProbe->GetPrefilteredEnvMap()->GetRenderResource().GetImageView());
         }
     }
     else
     {
-        env_probe->GetRenderResource().DecRef();
-        env_probe->GetPrefilteredEnvMap()->GetRenderResource().DecRef();
+        envProbe->GetRenderResource().DecRef();
+        envProbe->GetPrefilteredEnvMap()->GetRenderResource().DecRef();
     }
 }
 
-void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpu_buffer_holder, uint32 idx, void* buffer_data, SizeType size)
+void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, void* bufferData, SizeType size)
 {
-    AssertDebug(gpu_buffer_holder != nullptr);
+    AssertDebug(gpuBufferHolder != nullptr);
     AssertDebug(idx != ~0u);
 
-    EnvProbeShaderData* buffer_data_casted = reinterpret_cast<EnvProbeShaderData*>(buffer_data);
-    buffer_data_casted->texture_index = idx;
+    EnvProbeShaderData* bufferDataCasted = reinterpret_cast<EnvProbeShaderData*>(bufferData);
+    bufferDataCasted->textureIndex = idx;
 
-    gpu_buffer_holder->WriteBufferData(idx, buffer_data_casted, size);
+    gpuBufferHolder->WriteBufferData(idx, bufferDataCasted, size);
 }
 
-void OnBindingChanged_AmbientProbe(EnvProbe* env_probe, uint32 prev, uint32 next)
+void OnBindingChanged_AmbientProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
 {
-    AssertDebug(env_probe != nullptr);
-    AssertDebug(env_probe->IsReady());
+    AssertDebug(envProbe != nullptr);
+    AssertDebug(envProbe->IsReady());
 
-    AssertDebug(env_probe->GetEnvProbeType() == EPT_AMBIENT);
+    AssertDebug(envProbe->GetEnvProbeType() == EPT_AMBIENT);
 
     // temp shit
-    RenderApi_AssignResourceBinding(env_probe, env_probe->GetRenderResource().GetBufferIndex());
+    RenderApi_AssignResourceBinding(envProbe, envProbe->GetRenderResource().GetBufferIndex());
 }
 
-void OnBindingChanged_EnvGrid(EnvGrid* env_grid, uint32 prev, uint32 next)
+void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
 {
-    AssertDebug(env_grid != nullptr);
+    AssertDebug(envGrid != nullptr);
 
-    IRenderProxy* proxy = RenderApi_GetRenderProxy(env_grid->Id());
+    IRenderProxy* proxy = RenderApi_GetRenderProxy(envGrid->Id());
     AssertThrow(proxy != nullptr);
 
-    RenderProxyEnvGrid* proxy_casted = static_cast<RenderProxyEnvGrid*>(proxy);
+    RenderProxyEnvGrid* proxyCasted = static_cast<RenderProxyEnvGrid*>(proxy);
 
     // temp shit
 
-    AssertDebug(env_grid->GetRenderResource().GetBufferIndex() != ~0u);
-    RenderApi_AssignResourceBinding(env_grid, env_grid->GetRenderResource().GetBufferIndex());
+    AssertDebug(envGrid->GetRenderResource().GetBufferIndex() != ~0u);
+    RenderApi_AssignResourceBinding(envGrid, envGrid->GetRenderResource().GetBufferIndex());
 
     // if (next != ~0u)
     // {
-    switch (env_grid->GetEnvGridType())
+    switch (envGrid->GetEnvGridType())
     {
     case EnvGridType::ENV_GRID_TYPE_LIGHT_FIELD:
     {
-        AssertDebug(env_grid->GetLightFieldIrradianceTexture().IsValid());
-        AssertDebug(env_grid->GetLightFieldDepthTexture().IsValid());
+        AssertDebug(envGrid->GetLightFieldIrradianceTexture().IsValid());
+        AssertDebug(envGrid->GetLightFieldDepthTexture().IsValid());
 
         // @TODO: Set based on binding index
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_render_global_state->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frame_index)
-                ->SetElement(NAME("LightFieldColorTexture"), env_grid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImageView());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+                ->SetElement(NAME("LightFieldColorTexture"), envGrid->GetLightFieldIrradianceTexture()->GetRenderResource().GetImageView());
 
-            g_render_global_state->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frame_index)
-                ->SetElement(NAME("LightFieldDepthTexture"), env_grid->GetLightFieldDepthTexture()->GetRenderResource().GetImageView());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+                ->SetElement(NAME("LightFieldDepthTexture"), envGrid->GetLightFieldDepthTexture()->GetRenderResource().GetImageView());
         }
 
         return;
@@ -150,15 +150,15 @@ void OnBindingChanged_EnvGrid(EnvGrid* env_grid, uint32 prev, uint32 next)
         break;
     }
 
-    if (env_grid->GetOptions().flags & EnvGridFlags::USE_VOXEL_GRID)
+    if (envGrid->GetOptions().flags & EnvGridFlags::USE_VOXEL_GRID)
     {
-        AssertDebug(env_grid->GetVoxelGridTexture().IsValid());
+        AssertDebug(envGrid->GetVoxelGridTexture().IsValid());
 
         // Set our voxel grid texture in the global descriptor set so we can use it in shaders
-        for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            g_render_global_state->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frame_index)
-                ->SetElement(NAME("VoxelGridTexture"), env_grid->GetVoxelGridTexture()->GetRenderResource().GetImageView());
+            g_renderGlobalState->GlobalDescriptorTable->GetDescriptorSet(NAME("Global"), frameIndex)
+                ->SetElement(NAME("VoxelGridTexture"), envGrid->GetVoxelGridTexture()->GetRenderResource().GetImageView());
         }
     }
     // }
@@ -172,9 +172,9 @@ void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
     RenderApi_AssignResourceBinding(light, light->GetRenderResource().GetBufferIndex());
 }
 
-void OnBindingChanged_LightmapVolume(LightmapVolume* lightmap_volume, uint32 prev, uint32 next)
+void OnBindingChanged_LightmapVolume(LightmapVolume* lightmapVolume, uint32 prev, uint32 next)
 {
-    RenderApi_AssignResourceBinding(lightmap_volume, next);
+    RenderApi_AssignResourceBinding(lightmapVolume, next);
 }
 
 } // namespace hyperion

@@ -22,7 +22,7 @@ Triangle::Triangle(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2)
 Vertex& Triangle::Closest(const Vec3f& vec)
 {
     float distances[3];
-    uint32 shortest_index = 0;
+    uint32 shortestIndex = 0;
 
     for (uint32 i = 0; i < 3; i++)
     {
@@ -30,14 +30,14 @@ Vertex& Triangle::Closest(const Vec3f& vec)
 
         if (i != 0)
         {
-            if (distances[i] < distances[shortest_index])
+            if (distances[i] < distances[shortestIndex])
             {
-                shortest_index = i;
+                shortestIndex = i;
             }
         }
     }
 
-    return points[shortest_index];
+    return points[shortestIndex];
 }
 
 const Vertex& Triangle::Closest(const Vec3f& vec) const
@@ -70,9 +70,9 @@ bool Triangle::ContainsPoint(const Vec3f& pt) const
     const float dot11 = v1.Dot(v1);
     const float dot12 = v1.Dot(v2);
 
-    const float inv_denom = 1.0f / (dot00 * dot11 - dot01 * dot01);
-    const float u = (dot11 * dot02 - dot01 * dot12) * inv_denom;
-    const float v = (dot00 * dot12 - dot01 * dot02) * inv_denom;
+    const float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+    const float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+    const float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
 
     return (u >= 0.0f) && (v >= 0.0f) && (u + v < 1.0f);
 }

@@ -57,13 +57,13 @@ FontFace::~FontFace()
 #endif
 }
 
-void FontFace::SetGlyphSize(int pt_w, int pt_h, int screen_width, int screen_height)
+void FontFace::SetGlyphSize(int ptW, int ptH, int screenWidth, int screenHeight)
 {
 #ifdef HYP_FREETYPE
-    int error = FT_Set_Char_Size(m_face, pt_w * 64, pt_h * 64, screen_width, screen_height);
+    int error = FT_Set_Char_Size(m_face, ptW * 64, ptH * 64, screenWidth, screenHeight);
     if (error)
     {
-        HYP_LOG(Font, Error, "Error! could not set the height of fontface to {}, {}", pt_w, pt_h);
+        HYP_LOG(Font, Error, "Error! could not set the height of fontface to {}, {}", ptW, ptH);
     }
 #endif
 }
@@ -78,11 +78,11 @@ void FontFace::RequestPixelSizes(int width, int height)
 #endif
 }
 
-FontFace::GlyphIndex FontFace::GetGlyphIndex(WChar to_find)
+FontFace::GlyphIndex FontFace::GetGlyphIndex(WChar toFind)
 {
 #ifdef HYP_FREETYPE
     AssertThrow(m_face != nullptr);
-    return FT_Get_Char_Index(m_face, to_find);
+    return FT_Get_Char_Index(m_face, toFind);
 #else
     return -1;
 #endif

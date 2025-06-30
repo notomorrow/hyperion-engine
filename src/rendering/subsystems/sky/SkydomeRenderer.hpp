@@ -32,7 +32,7 @@ public:
 
     HYP_FORCE_INLINE const Handle<EnvProbe>& GetEnvProbe() const
     {
-        return m_env_probe;
+        return m_envProbe;
     }
 
     virtual void OnAddedToWorld() override;
@@ -46,8 +46,8 @@ private:
     Handle<Texture> m_cubemap;
     Handle<Camera> m_camera;
 
-    Handle<Scene> m_virtual_scene;
-    Handle<EnvProbe> m_env_probe;
+    Handle<Scene> m_virtualScene;
+    Handle<EnvProbe> m_envProbe;
 };
 
 } // namespace hyperion

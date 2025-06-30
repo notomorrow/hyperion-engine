@@ -32,7 +32,7 @@ public:
 
     AttributeSet(AttributeSet&& other) noexcept
         : m_values(std::move(other.m_values)),
-          m_values_by_name(std::move(other.m_values_by_name))
+          m_valuesByName(std::move(other.m_valuesByName))
     {
     }
 
@@ -41,7 +41,7 @@ public:
         if (this != &other)
         {
             m_values = std::move(other.m_values);
-            m_values_by_name = std::move(other.m_values_by_name);
+            m_valuesByName = std::move(other.m_valuesByName);
         }
 
         return *this;
@@ -61,9 +61,9 @@ public:
 
     HYP_FORCE_INLINE Attribute* GetAttribute(UTF8StringView name) const
     {
-        const auto it = m_values_by_name.FindAs(name);
+        const auto it = m_valuesByName.FindAs(name);
 
-        if (it == m_values_by_name.End())
+        if (it == m_valuesByName.End())
         {
             return nullptr;
         }
@@ -71,11 +71,11 @@ public:
         return it->second;
     }
 
-    HYP_FORCE_INLINE Attribute* GetAttributeByHash(HashCode hash_code) const
+    HYP_FORCE_INLINE Attribute* GetAttributeByHash(HashCode hashCode) const
     {
-        const auto it = m_values_by_name.FindByHashCode(hash_code);
+        const auto it = m_valuesByName.FindByHashCode(hashCode);
 
-        if (it == m_values_by_name.End())
+        if (it == m_valuesByName.End())
         {
             return nullptr;
         }
@@ -85,7 +85,7 @@ public:
 
 private:
     Array<Attribute> m_values;
-    HashMap<String, Attribute*> m_values_by_name;
+    HashMap<String, Attribute*> m_valuesByName;
 };
 
 } // namespace hyperion::dotnet

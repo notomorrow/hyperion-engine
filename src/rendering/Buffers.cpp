@@ -17,18 +17,18 @@ GpuBufferHolderBase::~GpuBufferHolderBase()
     SafeRelease(std::move(m_buffers));
 }
 
-void GpuBufferHolderBase::CreateBuffers(GpuBufferType type, SizeType initial_count, SizeType size, SizeType alignment)
+void GpuBufferHolderBase::CreateBuffers(GpuBufferType type, SizeType initialCount, SizeType size, SizeType alignment)
 {
-    if (initial_count == 0)
+    if (initialCount == 0)
     {
-        initial_count = 1;
+        initialCount = 1;
     }
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        m_buffers[frame_index] = g_render_backend->MakeGpuBuffer(type, size * initial_count, alignment);
+        m_buffers[frameIndex] = g_renderBackend->MakeGpuBuffer(type, size * initialCount, alignment);
 
-        DeferCreate(m_buffers[frame_index]);
+        DeferCreate(m_buffers[frameIndex]);
     }
 }
 

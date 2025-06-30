@@ -14,8 +14,8 @@ extern "C"
 
     struct ObjectReference
     {
-        void* weak_handle;
-        void* strong_handle;
+        void* weakHandle;
+        void* strongHandle;
 
         bool operator==(const ObjectReference& other) const = default;
         bool operator!=(const ObjectReference& other) const = default;

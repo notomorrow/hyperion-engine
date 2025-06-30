@@ -50,10 +50,10 @@ void SkydomeRenderer::Init()
     InitObject(m_cubemap);
     m_cubemap->SetPersistentRenderResourceEnabled(true);
 
-    m_virtual_scene = CreateObject<Scene>(SceneFlags::NONE);
-    m_virtual_scene->SetOwnerThreadId(g_game_thread);
-    m_virtual_scene->SetName(Name::Unique("SkydomeRendererScene"));
-    InitObject(m_virtual_scene);
+    m_virtualScene = CreateObject<Scene>(SceneFlags::NONE);
+    m_virtualScene->SetOwnerThreadId(g_gameThread);
+    m_virtualScene->SetName(Name::Unique("SkydomeRendererScene"));
+    InitObject(m_virtualScene);
 
     m_camera = CreateObject<Camera>(
         90.0f,
@@ -65,66 +65,66 @@ void SkydomeRenderer::Init()
 
     InitObject(m_camera);
 
-    Handle<Node> camera_node = m_virtual_scene->GetRoot()->AddChild();
-    camera_node->SetName(m_camera->GetName());
+    Handle<Node> cameraNode = m_virtualScene->GetRoot()->AddChild();
+    cameraNode->SetName(m_camera->GetName());
 
-    Handle<Entity> camera_entity = m_virtual_scene->GetEntityManager()->AddEntity();
-    m_virtual_scene->GetEntityManager()->AddTag<EntityTag::CAMERA_PRIMARY>(camera_entity);
-    m_virtual_scene->GetEntityManager()->AddComponent<CameraComponent>(camera_entity, CameraComponent { m_camera });
+    Handle<Entity> cameraEntity = m_virtualScene->GetEntityManager()->AddEntity();
+    m_virtualScene->GetEntityManager()->AddTag<EntityTag::CAMERA_PRIMARY>(cameraEntity);
+    m_virtualScene->GetEntityManager()->AddComponent<CameraComponent>(cameraEntity, CameraComponent { m_camera });
 
-    camera_node->SetEntity(camera_entity);
+    cameraNode->SetEntity(cameraEntity);
 
-    m_env_probe = m_virtual_scene->GetEntityManager()->AddEntity<SkyProbe>(BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)), m_dimensions);
-    InitObject(m_env_probe);
+    m_envProbe = m_virtualScene->GetEntityManager()->AddEntity<SkyProbe>(BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)), m_dimensions);
+    InitObject(m_envProbe);
 
-    auto dome_node_asset = g_asset_manager->Load<Node>("models/inv_sphere.obj");
+    auto domeNodeAsset = g_assetManager->Load<Node>("models/inv_sphere.obj");
 
-    if (dome_node_asset.HasValue())
+    if (domeNodeAsset.HasValue())
     {
-        Handle<Node> dome_node = dome_node_asset->Result();
-        dome_node->Scale(Vec3f(10.0f));
-        dome_node->LockTransform();
+        Handle<Node> domeNode = domeNodeAsset->Result();
+        domeNode->Scale(Vec3f(10.0f));
+        domeNode->LockTransform();
 
-        m_virtual_scene->GetRoot()->AddChild(dome_node);
+        m_virtualScene->GetRoot()->AddChild(domeNode);
     }
 }
 
 void SkydomeRenderer::OnAddedToWorld()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    AssertDebug(m_virtual_scene.IsValid());
+    AssertDebug(m_virtualScene.IsValid());
     AssertDebug(m_camera.IsValid());
     AssertDebug(m_cubemap.IsValid());
 
-    GetWorld()->AddScene(m_virtual_scene);
+    GetWorld()->AddScene(m_virtualScene);
 }
 
 void SkydomeRenderer::OnRemovedFromWorld()
 {
-    if (m_env_probe)
+    if (m_envProbe)
     {
-        m_env_probe.Reset();
+        m_envProbe.Reset();
     }
 
     m_camera.Reset();
     m_cubemap.Reset();
 
-    GetWorld()->RemoveScene(m_virtual_scene);
+    GetWorld()->RemoveScene(m_virtualScene);
 }
 
 void SkydomeRenderer::Update(float delta)
 {
-    if (!m_env_probe->ReceivesUpdate())
+    if (!m_envProbe->ReceivesUpdate())
     {
         return;
     }
 
-    m_env_probe->Update(delta);
-    m_env_probe->SetNeedsRender(true);
+    m_envProbe->Update(delta);
+    m_envProbe->SetNeedsRender(true);
 
-    m_env_probe->SetReceivesUpdate(false);
+    m_envProbe->SetReceivesUpdate(false);
 }
 
 } // namespace hyperion

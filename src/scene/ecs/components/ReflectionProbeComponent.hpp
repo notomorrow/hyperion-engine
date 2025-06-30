@@ -28,10 +28,10 @@ struct ReflectionProbeComponent
     Vec2u dimensions = Vec2u { 256, 256 };
 
     HYP_FIELD(Property = "EnvProbe", Serialize = true, Editor = true, Label = "EnvProbe")
-    Handle<EnvProbe> env_probe;
+    Handle<EnvProbe> envProbe;
 
     HYP_FIELD(Property = "ReflectionProbeRenderer", Serialize = false, Editor = false)
-    RC<ReflectionProbeRenderer> reflection_probe_renderer;
+    RC<ReflectionProbeRenderer> reflectionProbeRenderer;
 };
 
 } // namespace hyperion

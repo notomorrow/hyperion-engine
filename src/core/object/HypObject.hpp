@@ -47,27 +47,27 @@ namespace dotnet {
 class Class;
 } // namespace dotnet
 
-extern HYP_API const HypClass* GetClass(TypeId type_id);
+extern HYP_API const HypClass* GetClass(TypeId typeId);
 
-extern HYP_API bool IsInstanceOfHypClass(const HypClass* hyp_class, const void* ptr, TypeId type_id);
-extern HYP_API bool IsInstanceOfHypClass(const HypClass* hyp_class, const HypClass* instance_hyp_class);
+extern HYP_API bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId typeId);
+extern HYP_API bool IsInstanceOfHypClass(const HypClass* hypClass, const HypClass* instanceHypClass);
 
 template <class ExpectedType>
-bool IsInstanceOfHypClass(const HypClass* instance_hyp_class)
+bool IsInstanceOfHypClass(const HypClass* instanceHypClass)
 {
-    if (!instance_hyp_class)
+    if (!instanceHypClass)
     {
         return false;
     }
 
-    const HypClass* hyp_class = GetClass(TypeId::ForType<ExpectedType>());
+    const HypClass* hypClass = GetClass(TypeId::ForType<ExpectedType>());
 
-    if (!hyp_class)
+    if (!hypClass)
     {
         return false;
     }
 
-    return IsInstanceOfHypClass(hyp_class, instance_hyp_class);
+    return IsInstanceOfHypClass(hypClass, instanceHypClass);
 }
 
 template <class ExpectedType, class InstanceType>
@@ -82,16 +82,16 @@ bool IsInstanceOfHypClass(const InstanceType* instance)
         return false;
     }
 
-    const HypClass* instance_hyp_class = GetClass(TypeId::ForType<InstanceType>());
+    const HypClass* instanceHypClass = GetClass(TypeId::ForType<InstanceType>());
 
-    if (!instance_hyp_class)
+    if (!instanceHypClass)
     {
         return false;
     }
 
-    const HypClass* hyp_class = GetClass(TypeId::ForType<ExpectedType>());
+    const HypClass* hypClass = GetClass(TypeId::ForType<ExpectedType>());
 
-    if (!hyp_class)
+    if (!hypClass)
     {
         return false;
     }
@@ -102,7 +102,7 @@ bool IsInstanceOfHypClass(const InstanceType* instance)
         return true;
     }
 
-    return IsInstanceOfHypClass(hyp_class, instance_hyp_class);
+    return IsInstanceOfHypClass(hypClass, instanceHypClass);
 }
 
 template <class ExpectedType, class InstanceType, typename = std::enable_if_t<!std::is_pointer_v<InstanceType>>>
@@ -114,54 +114,54 @@ bool IsInstanceOfHypClass(const InstanceType& instance)
 class HYP_API DynamicHypObjectInitializer final : public IHypObjectInitializer
 {
 public:
-    DynamicHypObjectInitializer(const HypClass* hyp_class, IHypObjectInitializer* parent_initializer);
+    DynamicHypObjectInitializer(const HypClass* hypClass, IHypObjectInitializer* parentInitializer);
     virtual ~DynamicHypObjectInitializer() override;
 
     virtual TypeId GetTypeId() const override;
 
     virtual const HypClass* GetClass() const override
     {
-        return m_hyp_class;
+        return m_hypClass;
     }
 
-    virtual void SetManagedObjectResource(ManagedObjectResource* managed_object_resource) override
+    virtual void SetManagedObjectResource(ManagedObjectResource* managedObjectResource) override
     {
-        m_parent_initializer->SetManagedObjectResource(managed_object_resource);
+        m_parentInitializer->SetManagedObjectResource(managedObjectResource);
     }
 
     virtual ManagedObjectResource* GetManagedObjectResource() const override
     {
-        return m_parent_initializer->GetManagedObjectResource();
+        return m_parentInitializer->GetManagedObjectResource();
     }
 
     virtual dotnet::Object* GetManagedObject() const override
     {
-        return m_parent_initializer->GetManagedObject();
+        return m_parentInitializer->GetManagedObject();
     }
 
     virtual void IncRef(void* _this, bool weak) const override
     {
-        m_parent_initializer->IncRef(_this, weak);
+        m_parentInitializer->IncRef(_this, weak);
     }
 
     virtual void DecRef(void* _this, bool weak) const override
     {
-        m_parent_initializer->DecRef(_this, weak);
+        m_parentInitializer->DecRef(_this, weak);
     }
 
     virtual uint32 GetRefCount_Strong(void* _this) const override
     {
-        return m_parent_initializer->GetRefCount_Strong(_this);
+        return m_parentInitializer->GetRefCount_Strong(_this);
     }
 
     virtual uint32 GetRefCount_Weak(void* _this) const override
     {
-        return m_parent_initializer->GetRefCount_Weak(_this);
+        return m_parentInitializer->GetRefCount_Weak(_this);
     }
 
 private:
-    const HypClass* m_hyp_class;
-    IHypObjectInitializer* m_parent_initializer;
+    const HypClass* m_hypClass;
+    IHypObjectInitializer* m_parentInitializer;
 };
 
 template <class T>
@@ -169,16 +169,16 @@ class HypObjectInitializer final : public IHypObjectInitializer
 {
 public:
     HypObjectInitializer(T* _this)
-        : m_managed_object_resource(nullptr)
+        : m_managedObjectResource(nullptr)
     {
     }
 
     virtual ~HypObjectInitializer() override
     {
-        if (m_managed_object_resource)
+        if (m_managedObjectResource)
         {
-            FreeResource(m_managed_object_resource);
-            m_managed_object_resource = nullptr;
+            FreeResource(m_managedObjectResource);
+            m_managedObjectResource = nullptr;
         }
     }
 
@@ -192,20 +192,20 @@ public:
         return GetClass_Static();
     }
 
-    virtual void SetManagedObjectResource(ManagedObjectResource* managed_object_resource) override
+    virtual void SetManagedObjectResource(ManagedObjectResource* managedObjectResource) override
     {
-        AssertThrow(m_managed_object_resource == nullptr);
-        m_managed_object_resource = managed_object_resource;
+        AssertThrow(m_managedObjectResource == nullptr);
+        m_managedObjectResource = managedObjectResource;
     }
 
     virtual ManagedObjectResource* GetManagedObjectResource() const override
     {
-        return m_managed_object_resource;
+        return m_managedObjectResource;
     }
 
     virtual dotnet::Object* GetManagedObject() const override
     {
-        return m_managed_object_resource ? m_managed_object_resource->GetManagedObject() : nullptr;
+        return m_managedObjectResource ? m_managedObjectResource->GetManagedObject() : nullptr;
     }
 
     virtual void IncRef(void* _this, bool weak) const override
@@ -223,8 +223,8 @@ public:
         }
         else if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
         {
-            auto* ref_count_data = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weak_this.GetRefCountData_Internal();
-            ref_count_data->inc_ref_count(_this, *ref_count_data, weak);
+            auto* refCountData = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weakThis.GetRefCountData_Internal();
+            refCountData->incRefCount(_this, *refCountData, weak);
         }
         else
         {
@@ -247,15 +247,15 @@ public:
         }
         else if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
         {
-            auto* ref_count_data = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weak_this.GetRefCountData_Internal();
+            auto* refCountData = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weakThis.GetRefCountData_Internal();
 
             if (weak)
             {
-                ref_count_data->DecRefCount_Weak(_this);
+                refCountData->DecRefCount_Weak(_this);
             }
             else
             {
-                ref_count_data->DecRefCount_Strong(_this);
+                refCountData->DecRefCount_Strong(_this);
             }
         }
         else
@@ -277,8 +277,8 @@ public:
         }
         else if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
         {
-            auto* ref_count_data = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weak_this.GetRefCountData_Internal();
-            return ref_count_data->UseCount_Strong();
+            auto* refCountData = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weakThis.GetRefCountData_Internal();
+            return refCountData->UseCount_Strong();
         }
         else
         {
@@ -300,8 +300,8 @@ public:
         }
         else if constexpr (std::is_base_of_v<EnableRefCountedPtrFromThisBase<>, T>)
         {
-            auto* ref_count_data = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weak_this.GetRefCountData_Internal();
-            return ref_count_data->UseCount_Weak();
+            auto* refCountData = static_cast<EnableRefCountedPtrFromThisBase<>*>(static_cast<T*>(_this))->weakThis.GetRefCountData_Internal();
+            return refCountData->UseCount_Weak();
         }
         else
         {
@@ -313,20 +313,20 @@ public:
 
     HYP_FORCE_INLINE static TypeId GetTypeId_Static()
     {
-        static constexpr TypeId type_id = TypeId::ForType<T>();
+        static constexpr TypeId typeId = TypeId::ForType<T>();
 
-        return type_id;
+        return typeId;
     }
 
     HYP_FORCE_INLINE static const HypClass* GetClass_Static()
     {
-        static const HypClass* hyp_class = ::hyperion::GetClass(TypeId::ForType<T>());
+        static const HypClass* hypClass = ::hyperion::GetClass(TypeId::ForType<T>());
 
-        return hyp_class;
+        return hypClass;
     }
 
 private:
-    ManagedObjectResource* m_managed_object_resource;
+    ManagedObjectResource* m_managedObjectResource;
 };
 
 #define HYP_OBJECT_BODY(T, ...)                                                      \
@@ -336,15 +336,15 @@ private:                                                                        
     friend class HypClassInstance<T>;                                                \
     friend struct HypClassRegistration<T>;                                           \
                                                                                      \
-    HypObjectInitializer<T> m_hyp_object_initializer { this };                       \
-    IHypObjectInitializer* m_hyp_object_initializer_ptr = &m_hyp_object_initializer; \
+    HypObjectInitializer<T> m_hypObjectInitializer { this };                       \
+    IHypObjectInitializer* m_hypObjectInitializerPtr = &m_hypObjectInitializer; \
                                                                                      \
 public:                                                                              \
     struct HypObjectData                                                             \
     {                                                                                \
         using Type = T;                                                              \
                                                                                      \
-        static constexpr bool is_hyp_object = true;                                  \
+        static constexpr bool isHypObject = true;                                  \
     };                                                                               \
                                                                                      \
     HYP_FORCE_INLINE ObjId<T> Id() const                                             \
@@ -354,12 +354,12 @@ public:                                                                         
                                                                                      \
     HYP_FORCE_INLINE IHypObjectInitializer* GetObjectInitializer() const             \
     {                                                                                \
-        return m_hyp_object_initializer_ptr;                                         \
+        return m_hypObjectInitializerPtr;                                         \
     }                                                                                \
                                                                                      \
     HYP_FORCE_INLINE ManagedObjectResource* GetManagedObjectResource() const         \
     {                                                                                \
-        return m_hyp_object_initializer_ptr->GetManagedObjectResource();             \
+        return m_hypObjectInitializerPtr->GetManagedObjectResource();             \
     }                                                                                \
                                                                                      \
     HYP_FORCE_INLINE static const HypClass* Class()                                  \
@@ -376,22 +376,22 @@ public:                                                                         
         }                                                                            \
         else                                                                         \
         {                                                                            \
-            const HypClass* other_hyp_class = GetClass(TypeId::ForType<TOther>());   \
-            if (!other_hyp_class)                                                    \
+            const HypClass* otherHypClass = GetClass(TypeId::ForType<TOther>());   \
+            if (!otherHypClass)                                                    \
             {                                                                        \
                 return false;                                                        \
             }                                                                        \
-            return IsInstanceOfHypClass(other_hyp_class, InstanceClass());           \
+            return IsInstanceOfHypClass(otherHypClass, InstanceClass());           \
         }                                                                            \
     }                                                                                \
                                                                                      \
-    HYP_FORCE_INLINE bool IsInstanceOf(const HypClass* other_hyp_class) const        \
+    HYP_FORCE_INLINE bool IsInstanceOf(const HypClass* otherHypClass) const        \
     {                                                                                \
-        if (!other_hyp_class)                                                        \
+        if (!otherHypClass)                                                        \
         {                                                                            \
             return false;                                                            \
         }                                                                            \
-        return IsInstanceOfHypClass(other_hyp_class, InstanceClass());               \
+        return IsInstanceOfHypClass(otherHypClass, InstanceClass());               \
     }                                                                                \
                                                                                      \
 private:
@@ -453,12 +453,12 @@ public:
 
     HYP_FORCE_INLINE bool IsInitCalled() const
     {
-        return m_init_state.Get(MemoryOrder::RELAXED) & INIT_STATE_INIT_CALLED;
+        return m_initState.Get(MemoryOrder::RELAXED) & INIT_STATE_INIT_CALLED;
     }
 
     HYP_FORCE_INLINE bool IsReady() const
     {
-        return m_init_state.Get(MemoryOrder::RELAXED) & INIT_STATE_READY;
+        return m_initState.Get(MemoryOrder::RELAXED) & INIT_STATE_READY;
     }
 
 protected:
@@ -475,8 +475,8 @@ protected:
     HypObjectBase& operator=(const HypObjectBase& other) = delete;
 
     HypObjectBase(HypObjectBase&& other) noexcept
-        : m_init_state(other.m_init_state.Exchange(INIT_STATE_UNINITIALIZED, MemoryOrder::ACQUIRE_RELEASE)),
-          m_delegate_handlers(std::move(other.m_delegate_handlers))
+        : m_initState(other.m_initState.Exchange(INIT_STATE_UNINITIALIZED, MemoryOrder::ACQUIRE_RELEASE)),
+          m_delegateHandlers(std::move(other.m_delegateHandlers))
     {
     }
 
@@ -487,8 +487,8 @@ protected:
             return *this;
         }
 
-        m_init_state.Set(other.m_init_state.Exchange(INIT_STATE_UNINITIALIZED, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
-        m_delegate_handlers = std::move(other.m_delegate_handlers);
+        m_initState.Set(other.m_initState.Exchange(INIT_STATE_UNINITIALIZED, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+        m_delegateHandlers = std::move(other.m_delegateHandlers);
 
         return *this;
     }
@@ -499,15 +499,15 @@ protected:
         // Do nothing by default.
     }
 
-    void SetReady(bool is_ready)
+    void SetReady(bool isReady)
     {
-        if (is_ready)
+        if (isReady)
         {
-            m_init_state.BitOr(INIT_STATE_READY, MemoryOrder::RELAXED);
+            m_initState.BitOr(INIT_STATE_READY, MemoryOrder::RELAXED);
         }
         else
         {
-            m_init_state.BitAnd(~INIT_STATE_READY, MemoryOrder::RELAXED);
+            m_initState.BitAnd(~INIT_STATE_READY, MemoryOrder::RELAXED);
         }
     }
 
@@ -525,24 +525,24 @@ protected:
         AssertThrowMsg(IsInitCalled(), "Object has not had Init() called on it!");
     }
 
-    void AddDelegateHandler(Name name, DelegateHandler&& delegate_handler)
+    void AddDelegateHandler(Name name, DelegateHandler&& delegateHandler)
     {
-        m_delegate_handlers.Add(name, std::move(delegate_handler));
+        m_delegateHandlers.Add(name, std::move(delegateHandler));
     }
 
-    void AddDelegateHandler(DelegateHandler&& delegate_handler)
+    void AddDelegateHandler(DelegateHandler&& delegateHandler)
     {
-        m_delegate_handlers.Add(std::move(delegate_handler));
+        m_delegateHandlers.Add(std::move(delegateHandler));
     }
 
     bool RemoveDelegateHandler(WeakName name)
     {
-        return m_delegate_handlers.Remove(name);
+        return m_delegateHandlers.Remove(name);
     }
 
     // Pointer to the header of the object, holding container, index and ref counts. Must be the first member.
     HypObjectHeader* m_header;
-    DelegateHandlerSet m_delegate_handlers;
+    DelegateHandlerSet m_delegateHandlers;
 
 private:
     // Used internally by InitObject() to call derived Init() methods.
@@ -551,7 +551,7 @@ private:
         Init();
     }
 
-    AtomicVar<uint16> m_init_state;
+    AtomicVar<uint16> m_initState;
 };
 
 template <class T>

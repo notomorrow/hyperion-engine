@@ -18,7 +18,7 @@ class ScriptSystem final : public SystemBase
     HYP_OBJECT_BODY(ScriptSystem);
 
 public:
-    ScriptSystem(EntityManager& entity_manager);
+    ScriptSystem(EntityManager& entityManager);
     virtual ~ScriptSystem() override = default;
 
     // This system does not support parallel execution because scripts may modify
@@ -46,10 +46,10 @@ private:
         };
     }
 
-    void HandleGameStateChanged(GameStateMode game_state_mode, GameStateMode previous_game_state_mode);
+    void HandleGameStateChanged(GameStateMode gameStateMode, GameStateMode previousGameStateMode);
 
-    void CallScriptMethod(UTF8StringView method_name);
-    void CallScriptMethod(UTF8StringView method_name, ScriptComponent& target);
+    void CallScriptMethod(UTF8StringView methodName);
+    void CallScriptMethod(UTF8StringView methodName, ScriptComponent& target);
 };
 
 } // namespace hyperion

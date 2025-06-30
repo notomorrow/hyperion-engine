@@ -22,7 +22,7 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Font);
 
-static constexpr TextureFormat g_glyph_texture_format = TF_RGBA8;
+static constexpr TextureFormat g_glyphTextureFormat = TF_RGBA8;
 
 #pragma region GlyphImageData
 
@@ -31,9 +31,9 @@ Handle<Texture> GlyphImageData::CreateTexture() const
     return CreateObject<Texture>(TextureData {
         TextureDesc {
             TT_TEX2D,
-            g_glyph_texture_format,
+            g_glyphTextureFormat,
             Vec3u { uint32(dimensions.x), uint32(dimensions.y), 1 } },
-        byte_buffer });
+        byteBuffer });
 }
 
 #pragma endregion GlyphImageData
@@ -73,7 +73,7 @@ void Glyph::Render()
     AssertThrow(m_face != nullptr);
 
     FontEngine::Glyph glyph {};
-    PackedMetrics packed_metrics {};
+    PackedMetrics packedMetrics {};
 
 #ifdef HYP_FREETYPE
     if (FT_Set_Pixel_Sizes(m_face->GetFace(), 0, MathUtil::Floor<float, uint32>(64.0f * m_scale)))
@@ -91,54 +91,54 @@ void Glyph::Render()
     }
 
     glyph = m_face->GetFace()->glyph;
-    FT_Bitmap& ft_bitmap = glyph->bitmap;
+    FT_Bitmap& ftBitmap = glyph->bitmap;
 
     AssertThrow(glyph->format == FT_GLYPH_FORMAT_BITMAP);
 
-    packed_metrics = {
+    packedMetrics = {
         .width = uint16(glyph->bitmap.width),
         .height = uint16(glyph->bitmap.rows),
-        .bearing_x = int16(glyph->bitmap_left),
-        .bearing_y = int16(glyph->bitmap_top),
+        .bearingX = int16(glyph->bitmap_left),
+        .bearingY = int16(glyph->bitmap_top),
         .advance = uint32(glyph->advance.x)
     };
 #endif
 
     m_metrics = {
-        .metrics = packed_metrics,
-        .image_position = { 0, 0 }
+        .metrics = packedMetrics,
+        .imagePosition = { 0, 0 }
     };
 
 #ifdef HYP_FREETYPE
     const Vec2i dimensions = GetMax();
 
-    ByteBuffer byte_buffer;
-    byte_buffer.SetSize(dimensions.Volume() * NumComponents(g_glyph_texture_format) * NumBytes(g_glyph_texture_format));
+    ByteBuffer byteBuffer;
+    byteBuffer.SetSize(dimensions.Volume() * NumComponents(g_glyphTextureFormat) * NumBytes(g_glyphTextureFormat));
 
-    if (ft_bitmap.buffer != nullptr)
+    if (ftBitmap.buffer != nullptr)
     {
-        for (uint32 row = 0; row < ft_bitmap.rows; ++row)
+        for (uint32 row = 0; row < ftBitmap.rows; ++row)
         {
-            for (uint32 col = 0; col < ft_bitmap.width; ++col)
+            for (uint32 col = 0; col < ftBitmap.width; ++col)
             {
-                ubyte* dst_offset = byte_buffer.Data() + (row * dimensions.x + col) * NumComponents(g_glyph_texture_format) * NumBytes(g_glyph_texture_format);
+                ubyte* dstOffset = byteBuffer.Data() + (row * dimensions.x + col) * NumComponents(g_glyphTextureFormat) * NumBytes(g_glyphTextureFormat);
 
                 // Copy the grayscale value into the RGBA channels
-                for (uint32 component_index = 0; component_index < NumComponents(g_glyph_texture_format); component_index++)
+                for (uint32 componentIndex = 0; componentIndex < NumComponents(g_glyphTextureFormat); componentIndex++)
                 {
-                    for (uint32 byte_index = 0; byte_index < NumBytes(g_glyph_texture_format); byte_index++)
+                    for (uint32 byteIndex = 0; byteIndex < NumBytes(g_glyphTextureFormat); byteIndex++)
                     {
-                        dst_offset[component_index * NumBytes(g_glyph_texture_format) + byte_index] = ft_bitmap.buffer[row * ft_bitmap.pitch + col];
+                        dstOffset[componentIndex * NumBytes(g_glyphTextureFormat) + byteIndex] = ftBitmap.buffer[row * ftBitmap.pitch + col];
                     }
                 }
-                // byte_buffer.Data()[row * dimensions.x + col] = ft_bitmap.buffer[row * ft_bitmap.pitch + col];
+                // byteBuffer.Data()[row * dimensions.x + col] = ftBitmap.buffer[row * ftBitmap.pitch + col];
             }
         }
     }
 
-    m_glyph_image_data = GlyphImageData {
+    m_glyphImageData = GlyphImageData {
         dimensions,
-        std::move(byte_buffer)
+        std::move(byteBuffer)
     };
 #endif
 }

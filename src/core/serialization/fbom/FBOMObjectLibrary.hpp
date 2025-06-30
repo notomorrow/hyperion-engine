@@ -37,73 +37,73 @@ namespace serialization {
 struct FBOMObjectLibrary
 {
     UUID uuid;
-    Array<FBOMObject> object_data;
+    Array<FBOMObject> objectData;
 
     bool TryGet(uint32 index, FBOMObject& out) const
     {
-        if (index >= object_data.Size())
+        if (index >= objectData.Size())
         {
             return false;
         }
 
-        out = object_data[index];
+        out = objectData[index];
 
         return true;
     }
 
     void Put(FBOMObject& object)
     {
-        const uint32 next_index = uint32(object_data.Size());
+        const uint32 nextIndex = uint32(objectData.Size());
 
-        FBOMExternalObjectInfo* external_object_info = object.GetExternalObjectInfo();
-        AssertThrow(external_object_info != nullptr);
-        AssertThrow(!external_object_info->IsLinked());
+        FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
+        AssertThrow(externalObjectInfo != nullptr);
+        AssertThrow(!externalObjectInfo->IsLinked());
 
-        external_object_info->index = next_index;
-        external_object_info->library_id = uuid;
+        externalObjectInfo->index = nextIndex;
+        externalObjectInfo->libraryId = uuid;
 
-        object_data.Resize(next_index + 1);
+        objectData.Resize(nextIndex + 1);
 
-        object_data[next_index] = object;
+        objectData[nextIndex] = object;
     }
 
     void Put(FBOMObject&& object)
     {
-        const uint32 next_index = uint32(object_data.Size());
+        const uint32 nextIndex = uint32(objectData.Size());
 
-        FBOMExternalObjectInfo* external_object_info = object.GetExternalObjectInfo();
-        AssertThrow(external_object_info != nullptr);
-        AssertThrow(!external_object_info->IsLinked());
+        FBOMExternalObjectInfo* externalObjectInfo = object.GetExternalObjectInfo();
+        AssertThrow(externalObjectInfo != nullptr);
+        AssertThrow(!externalObjectInfo->IsLinked());
 
-        external_object_info->index = next_index;
-        external_object_info->library_id = uuid;
+        externalObjectInfo->index = nextIndex;
+        externalObjectInfo->libraryId = uuid;
 
-        object_data.Resize(next_index + 1);
+        objectData.Resize(nextIndex + 1);
 
-        object_data[next_index] = std::move(object);
+        objectData[nextIndex] = std::move(object);
     }
 
     // uint32 Put(FBOMData &&data)
     // {
-    //     const uint32 next_index = uint32(object_data.Size());
-    //     object_data.Resize(next_index + 1);
+    //     const uint32 nextIndex = uint32(objectData.Size());
+    //     objectData.Resize(nextIndex + 1);
 
-    //     object_data[next_index] = std::move(data);
+    //     objectData[nextIndex] = std::move(data);
 
-    //     return next_index;
+    //     return nextIndex;
     // }
 
     SizeType CalculateTotalSize() const
     {
         // SizeType size = 0;
 
-        // for (const FBOMData &data : object_data) {
+        // for (const FBOMData &data : objectData) {
         //     size += data.TotalSize();
         // }
 
         // return size;
 
-        return object_data.Size();
+        return objectData.Size();
     }
 };
 

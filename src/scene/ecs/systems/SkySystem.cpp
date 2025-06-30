@@ -29,8 +29,8 @@
 
 namespace hyperion {
 
-SkySystem::SkySystem(EntityManager& entity_manager)
-    : SystemBase(entity_manager)
+SkySystem::SkySystem(EntityManager& entityManager)
+    : SystemBase(entityManager)
 {
 }
 
@@ -42,15 +42,15 @@ void SkySystem::OnEntityAdded(Entity* entity)
 
     HYP_LOG(ECS, Debug, "Adding sky system for entity: #{}, Scene: {}", entity->Id(), GetScene()->GetName());
 
-    SkyComponent& sky_component = GetEntityManager().GetComponent<SkyComponent>(entity);
-    MeshComponent* mesh_component = GetEntityManager().TryGetComponent<MeshComponent>(entity);
+    SkyComponent& skyComponent = GetEntityManager().GetComponent<SkyComponent>(entity);
+    MeshComponent* meshComponent = GetEntityManager().TryGetComponent<MeshComponent>(entity);
 
-    if (sky_component.subsystem)
+    if (skyComponent.subsystem)
     {
-        GetWorld()->RemoveSubsystem(sky_component.subsystem);
+        GetWorld()->RemoveSubsystem(skyComponent.subsystem);
     }
 
-    AddRenderSubsystemToEnvironment(GetWorld(), GetEntityManager(), entity, sky_component, mesh_component);
+    AddRenderSubsystemToEnvironment(GetWorld(), GetEntityManager(), entity, skyComponent, meshComponent);
 
     GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
 }
@@ -63,79 +63,79 @@ void SkySystem::OnEntityRemoved(Entity* entity)
 
     HYP_LOG(ECS, Debug, "Removing sky system for entity: #{}, Scene: {}", entity->Id(), GetScene()->GetName());
 
-    SkyComponent& sky_component = GetEntityManager().GetComponent<SkyComponent>(entity);
-    MeshComponent& mesh_component = GetEntityManager().GetComponent<MeshComponent>(entity);
+    SkyComponent& skyComponent = GetEntityManager().GetComponent<SkyComponent>(entity);
+    MeshComponent& meshComponent = GetEntityManager().GetComponent<MeshComponent>(entity);
 
-    if (sky_component.subsystem)
+    if (skyComponent.subsystem)
     {
-        GetWorld()->RemoveSubsystem(sky_component.subsystem);
+        GetWorld()->RemoveSubsystem(skyComponent.subsystem);
     }
 }
 
 void SkySystem::Process(float delta)
 {
     // /// @TODO: Remove this
-    // for (auto [entity, sky_component] : GetEntityManager().GetEntitySet<SkyComponent>().GetScopedView(GetComponentInfos()))
+    // for (auto [entity, skyComponent] : GetEntityManager().GetEntitySet<SkyComponent>().GetScopedView(GetComponentInfos()))
     // {
-    //     if (!sky_component.render_subsystem)
+    //     if (!skyComponent.renderSubsystem)
     //     {
     //         continue;
     //     }
 
-    //     const Handle<EnvProbe>& env_probe = sky_component.render_subsystem->GetEnvProbe();
+    //     const Handle<EnvProbe>& envProbe = skyComponent.renderSubsystem->GetEnvProbe();
 
-    //     if (!env_probe.IsValid() || !env_probe->IsReady())
+    //     if (!envProbe.IsValid() || !envProbe->IsReady())
     //     {
     //         continue;
     //     }
 
-    //     // env_probe->Update(delta);
+    //     // envProbe->Update(delta);
     // }
 }
 
-void SkySystem::AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr, Entity* entity, SkyComponent& sky_component, MeshComponent* mesh_component)
+void SkySystem::AddRenderSubsystemToEnvironment(World* world, EntityManager& mgr, Entity* entity, SkyComponent& skyComponent, MeshComponent* meshComponent)
 {
     AssertThrow(world != nullptr);
 
-    if (sky_component.subsystem)
+    if (skyComponent.subsystem)
     {
-        world->AddSubsystem(sky_component.subsystem);
+        world->AddSubsystem(skyComponent.subsystem);
     }
     else
     {
-        sky_component.subsystem = world->AddSubsystem<SkydomeRenderer>();
+        skyComponent.subsystem = world->AddSubsystem<SkydomeRenderer>();
 
-        Handle<Mesh> mesh = mesh_component ? mesh_component->mesh : Handle<Mesh>::empty;
-        Handle<Material> material = mesh_component ? mesh_component->material : Handle<Material>::empty;
+        Handle<Mesh> mesh = meshComponent ? meshComponent->mesh : Handle<Mesh>::empty;
+        Handle<Material> material = meshComponent ? meshComponent->material : Handle<Material>::empty;
 
         if (!mesh.IsValid())
         {
             mesh = MeshBuilder::Cube();
-            // mesh_component.mesh->InvertNormals();
+            // meshComponent.mesh->InvertNormals();
             InitObject(mesh);
         }
 
         if (!material)
         {
-            MaterialAttributes material_attributes {};
-            material_attributes.shader_definition = ShaderDefinition {
+            MaterialAttributes materialAttributes {};
+            materialAttributes.shaderDefinition = ShaderDefinition {
                 NAME("Skybox"),
                 ShaderProperties(mesh->GetVertexAttributes())
             };
-            material_attributes.bucket = RB_SKYBOX;
-            material_attributes.cull_faces = FCM_FRONT;
-            material_attributes.flags = MaterialAttributeFlags::DEPTH_TEST;
+            materialAttributes.bucket = RB_SKYBOX;
+            materialAttributes.cullFaces = FCM_FRONT;
+            materialAttributes.flags = MaterialAttributeFlags::DEPTH_TEST;
 
-            material = CreateObject<Material>(NAME("SkyboxMaterial"), material_attributes);
-            material->SetTexture(MaterialTextureKey::ALBEDO_MAP, Handle<SkyProbe>(sky_component.subsystem->GetEnvProbe())->GetSkyboxCubemap());
+            material = CreateObject<Material>(NAME("SkyboxMaterial"), materialAttributes);
+            material->SetTexture(MaterialTextureKey::ALBEDO_MAP, Handle<SkyProbe>(skyComponent.subsystem->GetEnvProbe())->GetSkyboxCubemap());
 
             InitObject(material);
         }
 
-        if (mesh_component)
+        if (meshComponent)
         {
-            mesh_component->mesh = std::move(mesh);
-            mesh_component->material = std::move(material);
+            meshComponent->mesh = std::move(mesh);
+            meshComponent->material = std::move(material);
 
             mgr.AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
         }

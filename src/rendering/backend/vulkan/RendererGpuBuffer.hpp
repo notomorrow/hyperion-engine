@@ -22,15 +22,15 @@ public:
     HYP_API virtual bool IsCreated() const override;
     HYP_API virtual bool IsCpuAccessible() const override;
 
-    HYP_API virtual void InsertBarrier(CommandBufferBase* command_buffer, ResourceState new_state) const override;
-    HYP_API virtual void InsertBarrier(CommandBufferBase* command_buffer, ResourceState new_state, ShaderModuleType shader_type) const override;
+    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState) const override;
+    HYP_API virtual void InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const override;
 
-    HYP_API void InsertBarrier(VulkanCommandBuffer* command_buffer, ResourceState new_state) const;
-    HYP_API void InsertBarrier(VulkanCommandBuffer* command_buffer, ResourceState new_state, ShaderModuleType shader_type) const;
+    HYP_API void InsertBarrier(VulkanCommandBuffer* commandBuffer, ResourceState newState) const;
+    HYP_API void InsertBarrier(VulkanCommandBuffer* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const;
 
     HYP_API virtual void CopyFrom(
-        CommandBufferBase* command_buffer,
-        const GpuBufferBase* src_buffer,
+        CommandBufferBase* commandBuffer,
+        const GpuBufferBase* srcBuffer,
         SizeType count) override;
 
     HYP_API RendererResult CheckCanAllocate(SizeType size) const;
@@ -41,29 +41,29 @@ public:
     HYP_API virtual RendererResult Destroy() override;
 
     HYP_API virtual RendererResult EnsureCapacity(
-        SizeType minimum_size,
-        bool* out_size_changed = nullptr) override;
+        SizeType minimumSize,
+        bool* outSizeChanged = nullptr) override;
 
     HYP_API virtual RendererResult EnsureCapacity(
-        SizeType minimum_size,
+        SizeType minimumSize,
         SizeType alignment,
-        bool* out_size_changed = nullptr) override;
+        bool* outSizeChanged = nullptr) override;
 
     HYP_API virtual void Memset(SizeType count, ubyte value) override;
 
     HYP_API virtual void Copy(SizeType count, const void* ptr) override;
     HYP_API virtual void Copy(SizeType offset, SizeType count, const void* ptr) override;
 
-    HYP_API virtual void Read(SizeType count, void* out_ptr) const override;
-    HYP_API virtual void Read(SizeType offset, SizeType count, void* out_ptr) const override;
+    HYP_API virtual void Read(SizeType count, void* outPtr) const override;
+    HYP_API virtual void Read(SizeType offset, SizeType count, void* outPtr) const override;
 
     HYP_API virtual void Map() const override;
     HYP_API virtual void Unmap() const override;
 
 private:
     RendererResult CheckCanAllocate(
-        const VkBufferCreateInfo& buffer_create_info,
-        const VmaAllocationCreateInfo& allocation_create_info,
+        const VkBufferCreateInfo& bufferCreateInfo,
+        const VmaAllocationCreateInfo& allocationCreateInfo,
         SizeType size) const;
 
     VmaAllocationCreateInfo GetAllocationCreateInfo() const;
@@ -71,10 +71,10 @@ private:
 
     VkBuffer m_handle = VK_NULL_HANDLE;
 
-    VkBufferUsageFlags m_vk_buffer_usage_flags = 0;
-    VmaMemoryUsage m_vma_usage = VMA_MEMORY_USAGE_UNKNOWN;
-    VmaAllocationCreateFlags m_vma_allocation_create_flags = 0;
-    VmaAllocation m_vma_allocation = VK_NULL_HANDLE;
+    VkBufferUsageFlags m_vkBufferUsageFlags = 0;
+    VmaMemoryUsage m_vmaUsage = VMA_MEMORY_USAGE_UNKNOWN;
+    VmaAllocationCreateFlags m_vmaAllocationCreateFlags = 0;
+    VmaAllocation m_vmaAllocation = VK_NULL_HANDLE;
 
     mutable void* m_mapping = nullptr;
 };

@@ -13,20 +13,20 @@
 
 extern "C"
 {
-    HYP_EXPORT void AssetMap_Destroy(ManagedAssetMap managed_map)
+    HYP_EXPORT void AssetMap_Destroy(ManagedAssetMap managedMap)
     {
-        AssertThrowMsg(managed_map.map != nullptr, "ManagedAssetMap map is null");
+        AssertThrowMsg(managedMap.map != nullptr, "ManagedAssetMap map is null");
 
-        delete managed_map.map;
+        delete managedMap.map;
     }
 
-    HYP_EXPORT LoadedAsset* AssetMap_GetAsset(ManagedAssetMap managed_map, const char* key)
+    HYP_EXPORT LoadedAsset* AssetMap_GetAsset(ManagedAssetMap managedMap, const char* key)
     {
-        AssertThrowMsg(managed_map.map != nullptr, "ManagedAssetMap map is null");
+        AssertThrowMsg(managedMap.map != nullptr, "ManagedAssetMap map is null");
 
-        auto it = managed_map.map->Find(key);
+        auto it = managedMap.map->Find(key);
 
-        if (it != managed_map.map->End())
+        if (it != managedMap.map->End())
         {
             return &it->second;
         }

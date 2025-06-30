@@ -20,7 +20,7 @@ class UIObject;
 class EditorObjectPropertiesBase
 {
 protected:
-    EditorObjectPropertiesBase(TypeId type_id);
+    EditorObjectPropertiesBase(TypeId typeId);
 
 public:
     EditorObjectPropertiesBase(const EditorObjectPropertiesBase&) = delete;
@@ -34,7 +34,7 @@ public:
     virtual Handle<UIObject> CreateUIObject(UIObject* parent) const = 0;
 
 private:
-    TypeId m_type_id;
+    TypeId m_typeId;
 };
 
 template <class T>

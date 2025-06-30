@@ -8,9 +8,9 @@ using namespace hyperion;
 
 extern "C"
 {
-    HYP_EXPORT float BoundingBox_GetRadius(BoundingBox* bounding_box)
+    HYP_EXPORT float BoundingBox_GetRadius(BoundingBox* boundingBox)
     {
-        return bounding_box->GetRadius();
+        return boundingBox->GetRadius();
     }
 
     HYP_EXPORT bool BoundingBox_Contains(BoundingBox* left, BoundingBox* right)
@@ -18,8 +18,8 @@ extern "C"
         return left->Contains(*right);
     }
 
-    HYP_EXPORT bool BoundingBox_ContainsPoint(BoundingBox* bounding_box, Vec3f* point)
+    HYP_EXPORT bool BoundingBox_ContainsPoint(BoundingBox* boundingBox, Vec3f* point)
     {
-        return bounding_box->ContainsPoint(*point);
+        return boundingBox->ContainsPoint(*point);
     }
 } // extern "C"

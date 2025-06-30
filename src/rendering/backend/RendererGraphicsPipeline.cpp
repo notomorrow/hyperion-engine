@@ -21,11 +21,11 @@ RendererResult GraphicsPipelineBase::Create()
         return HYP_MAKE_ERROR(RendererError, "Cannot create a graphics pipeline with no framebuffers");
     }
 
-    RendererResult rebuild_result = Rebuild();
+    RendererResult rebuildResult = Rebuild();
 
-    if (!rebuild_result)
+    if (!rebuildResult)
     {
-        return rebuild_result;
+        return rebuildResult;
     }
 
     HYPERION_RETURN_OK;
@@ -35,14 +35,14 @@ RendererResult GraphicsPipelineBase::Destroy()
 {
     SafeRelease(std::move(m_framebuffers));
     SafeRelease(std::move(m_shader));
-    SafeRelease(std::move(m_descriptor_table));
+    SafeRelease(std::move(m_descriptorTable));
 
     HYPERION_RETURN_OK;
 }
 
-void GraphicsPipelineBase::SetDescriptorTable(const DescriptorTableRef& descriptor_table)
+void GraphicsPipelineBase::SetDescriptorTable(const DescriptorTableRef& descriptorTable)
 {
-    m_descriptor_table = descriptor_table;
+    m_descriptorTable = descriptorTable;
 }
 
 void GraphicsPipelineBase::SetShader(const ShaderRef& shader)
@@ -58,7 +58,7 @@ void GraphicsPipelineBase::SetFramebuffers(const Array<FramebufferRef>& framebuf
 
 bool GraphicsPipelineBase::MatchesSignature(
     const ShaderBase* shader,
-    const DescriptorTableDeclaration& descriptor_table_decl,
+    const DescriptorTableDeclaration& descriptorTableDecl,
     const Array<const FramebufferBase*>& framebuffers,
     const RenderableAttributeSet& attributes) const
 {
@@ -80,7 +80,7 @@ bool GraphicsPipelineBase::MatchesSignature(
         }
     }
 
-    if (descriptor_table_decl.GetHashCode() != m_descriptor_table->GetDeclaration()->GetHashCode())
+    if (descriptorTableDecl.GetHashCode() != m_descriptorTable->GetDeclaration()->GetHashCode())
     {
         return false;
     }

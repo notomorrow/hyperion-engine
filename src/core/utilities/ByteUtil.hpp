@@ -110,10 +110,10 @@ public:
 uint32 ByteUtil::LowestSetBitIndex(uint64 bits)
 {
 #ifdef HYP_CLANG_OR_GCC
-    const int bit_index = bits != 0 ? (__builtin_ffsll(bits) - 1) : uint32(-1);
+    const int bitIndex = bits != 0 ? (__builtin_ffsll(bits) - 1) : uint32(-1);
 #elif defined(HYP_MSVC)
-    unsigned long bit_index = 0;
-    if (!_BitScanForward64(&bit_index, bits))
+    unsigned long bitIndex = 0;
+    if (!_BitScanForward64(&bitIndex, bits))
     {
         return uint32(-1);
     }
@@ -121,23 +121,23 @@ uint32 ByteUtil::LowestSetBitIndex(uint64 bits)
 #error "ByteUtil::LowestSetBitIndex() not implemented for this platform"
 #endif
 
-    return uint32(bit_index);
+    return uint32(bitIndex);
 }
 
 uint32 ByteUtil::HighestSetBitIndex(uint64 bits)
 {
 #ifdef HYP_CLANG_OR_GCC
-    const int bit_index = bits != 0 ? (63 - __builtin_clzll(bits)) : uint32(-1);
+    const int bitIndex = bits != 0 ? (63 - __builtin_clzll(bits)) : uint32(-1);
 #elif defined(HYP_MSVC)
-    unsigned long bit_index = 0;
-    if (!_BitScanReverse64(&bit_index, bits))
+    unsigned long bitIndex = 0;
+    if (!_BitScanReverse64(&bitIndex, bits))
     {
         return uint32(-1);
     }
 #else
 #error "ByteUtil::HighestSetBitIndex() not implemented for this platform"
 #endif
-    return uint32(bit_index);
+    return uint32(bitIndex);
 }
 
 uint64 ByteUtil::BitCount(uint64 value)

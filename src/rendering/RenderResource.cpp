@@ -20,18 +20,18 @@ HYP_DECLARE_LOG_CHANNEL(Resource);
 #pragma region RenderResourceBase
 
 RenderResourceBase::RenderResourceBase()
-    : m_buffer_index(~0u),
-      m_buffer_address(nullptr)
+    : m_bufferIndex(~0u),
+      m_bufferAddress(nullptr)
 {
 }
 
 RenderResourceBase::RenderResourceBase(RenderResourceBase&& other) noexcept
     : ResourceBase(static_cast<ResourceBase&&>(other)),
-      m_buffer_index(other.m_buffer_index),
-      m_buffer_address(other.m_buffer_address)
+      m_bufferIndex(other.m_bufferIndex),
+      m_bufferAddress(other.m_bufferAddress)
 {
-    other.m_buffer_index = ~0u;
-    other.m_buffer_address = nullptr;
+    other.m_bufferIndex = ~0u;
+    other.m_bufferAddress = nullptr;
 }
 
 RenderResourceBase::~RenderResourceBase()
@@ -40,7 +40,7 @@ RenderResourceBase::~RenderResourceBase()
 
 void RenderResourceBase::Initialize()
 {
-    AssertThrow(m_buffer_index == ~0u);
+    AssertThrow(m_bufferIndex == ~0u);
     AcquireBufferIndex();
 
     Initialize_Internal();
@@ -48,7 +48,7 @@ void RenderResourceBase::Initialize()
 
 void RenderResourceBase::Destroy()
 {
-    if (m_buffer_index != ~0u)
+    if (m_bufferIndex != ~0u)
     {
         ReleaseBufferIndex();
     }
@@ -63,14 +63,14 @@ void RenderResourceBase::Update()
 
 ThreadBase* RenderResourceBase::GetOwnerThread() const
 {
-    static ThreadBase* const render_thread = Threads::GetThread(g_render_thread);
+    static ThreadBase* const renderThread = Threads::GetThread(g_renderThread);
 
-    return render_thread;
+    return renderThread;
 }
 
 bool RenderResourceBase::CanExecuteInline() const
 {
-    return Threads::IsOnThread(g_render_thread);
+    return Threads::IsOnThread(g_renderThread);
 }
 
 void RenderResourceBase::FlushScheduledTasks() const
@@ -108,9 +108,9 @@ void RenderResourceBase::AcquireBufferIndex()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(m_buffer_index == ~0u);
+    AssertThrow(m_bufferIndex == ~0u);
 
     GpuBufferHolderBase* holder = GetGpuBufferHolder();
 
@@ -119,24 +119,24 @@ void RenderResourceBase::AcquireBufferIndex()
         return;
     }
 
-    m_buffer_index = holder->AcquireIndex(&m_buffer_address);
+    m_bufferIndex = holder->AcquireIndex(&m_bufferAddress);
 }
 
 void RenderResourceBase::ReleaseBufferIndex()
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(m_buffer_index != ~0u);
+    AssertThrow(m_bufferIndex != ~0u);
 
     GpuBufferHolderBase* holder = GetGpuBufferHolder();
     AssertThrow(holder != nullptr);
 
-    holder->ReleaseIndex(m_buffer_index);
+    holder->ReleaseIndex(m_bufferIndex);
 
-    m_buffer_index = ~0u;
-    m_buffer_address = nullptr;
+    m_bufferIndex = ~0u;
+    m_bufferAddress = nullptr;
 }
 
 #pragma endregion RenderResourceBase

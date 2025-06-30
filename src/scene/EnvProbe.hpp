@@ -65,8 +65,8 @@ class HYP_API EnvProbe : public Entity
 
 public:
     EnvProbe();
-    EnvProbe(EnvProbeType env_probe_type);
-    EnvProbe(EnvProbeType env_probe_type, const BoundingBox& aabb, const Vec2u& dimensions);
+    EnvProbe(EnvProbeType envProbeType);
+    EnvProbe(EnvProbeType envProbeType, const BoundingBox& aabb, const Vec2u& dimensions);
 
     EnvProbe(const EnvProbe& other) = delete;
     EnvProbe& operator=(const EnvProbe& other) = delete;
@@ -74,7 +74,7 @@ public:
 
     HYP_FORCE_INLINE RenderEnvProbe& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     HYP_FORCE_INLINE const Handle<View>& GetView() const
@@ -85,37 +85,37 @@ public:
     HYP_METHOD()
     EnvProbeType GetEnvProbeType() const
     {
-        return m_env_probe_type;
+        return m_envProbeType;
     }
 
     HYP_METHOD()
     bool IsReflectionProbe() const
     {
-        return m_env_probe_type == EPT_REFLECTION;
+        return m_envProbeType == EPT_REFLECTION;
     }
 
     HYP_METHOD()
     bool IsSkyProbe() const
     {
-        return m_env_probe_type == EPT_SKY;
+        return m_envProbeType == EPT_SKY;
     }
 
     HYP_METHOD()
     bool IsShadowProbe() const
     {
-        return m_env_probe_type == EPT_SHADOW;
+        return m_envProbeType == EPT_SHADOW;
     }
 
     HYP_METHOD()
     bool IsAmbientProbe() const
     {
-        return m_env_probe_type == EPT_AMBIENT;
+        return m_envProbeType == EPT_AMBIENT;
     }
 
     HYP_METHOD()
     bool IsControlledByEnvGrid() const
     {
-        return m_env_probe_type == EPT_AMBIENT;
+        return m_envProbeType == EPT_AMBIENT;
     }
 
     HYP_FORCE_INLINE bool ShouldComputePrefilteredEnvMap() const
@@ -188,36 +188,36 @@ public:
 
     HYP_FORCE_INLINE const Handle<Texture>& GetPrefilteredEnvMap() const
     {
-        return m_prefiltered_env_map;
+        return m_prefilteredEnvMap;
     }
 
-    HYP_DEPRECATED HYP_FORCE_INLINE void SetNeedsRender(bool needs_render)
+    HYP_DEPRECATED HYP_FORCE_INLINE void SetNeedsRender(bool needsRender)
     {
-        if (needs_render)
+        if (needsRender)
         {
-            m_needs_render_counter.Set(1, MemoryOrder::RELAXED);
+            m_needsRenderCounter.Set(1, MemoryOrder::RELAXED);
         }
         else
         {
-            m_needs_render_counter.Set(0, MemoryOrder::RELAXED);
+            m_needsRenderCounter.Set(0, MemoryOrder::RELAXED);
         }
     }
 
     HYP_DEPRECATED HYP_FORCE_INLINE bool NeedsRender() const
     {
-        const int32 counter = m_needs_render_counter.Get(MemoryOrder::RELAXED);
+        const int32 counter = m_needsRenderCounter.Get(MemoryOrder::RELAXED);
 
         return counter > 0;
     }
 
-    HYP_DEPRECATED bool IsVisible(ObjId<Camera> camera_id) const;
-    HYP_DEPRECATED void SetIsVisible(ObjId<Camera> camera_id, bool is_visible);
+    HYP_DEPRECATED bool IsVisible(ObjId<Camera> cameraId) const;
+    HYP_DEPRECATED void SetIsVisible(ObjId<Camera> cameraId, bool isVisible);
 
     virtual void Update(float delta) override;
 
     virtual void UpdateRenderProxy(IRenderProxy* proxy) override;
 
-    uint32 m_grid_slot = ~0u; // temp
+    uint32 m_gridSlot = ~0u; // temp
 
 protected:
     virtual void OnAddedToWorld(World* world) override;
@@ -232,7 +232,7 @@ protected:
 
     HYP_FORCE_INLINE void Invalidate()
     {
-        m_octant_hash_code = HashCode();
+        m_octantHashCode = HashCode();
     }
 
     virtual void Init() override;
@@ -248,22 +248,22 @@ protected:
     Vec2u m_dimensions;
 
     HYP_FIELD(Property = "EnvProbeType", Serialize = true)
-    EnvProbeType m_env_probe_type;
+    EnvProbeType m_envProbeType;
 
-    float m_camera_near;
-    float m_camera_far;
+    float m_cameraNear;
+    float m_cameraFar;
 
     Handle<Camera> m_camera;
 
-    Bitset m_visibility_bits;
+    Bitset m_visibilityBits;
 
-    bool m_needs_update;
-    AtomicVar<int32> m_needs_render_counter;
-    HashCode m_octant_hash_code;
+    bool m_needsUpdate;
+    AtomicVar<int32> m_needsRenderCounter;
+    HashCode m_octantHashCode;
 
-    Handle<Texture> m_prefiltered_env_map;
+    Handle<Texture> m_prefilteredEnvMap;
 
-    RenderEnvProbe* m_render_resource;
+    RenderEnvProbe* m_renderResource;
 };
 
 HYP_CLASS()
@@ -311,13 +311,13 @@ public:
 
     const Handle<Texture>& GetSkyboxCubemap() const
     {
-        return m_skybox_cubemap;
+        return m_skyboxCubemap;
     }
 
 private:
     void Init() override;
 
-    Handle<Texture> m_skybox_cubemap;
+    Handle<Texture> m_skyboxCubemap;
 };
 
 } // namespace hyperion

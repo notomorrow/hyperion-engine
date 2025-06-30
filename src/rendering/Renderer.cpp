@@ -20,8 +20,8 @@ namespace hyperion {
 
 const RenderSetup& NullRenderSetup()
 {
-    static const RenderSetup null_render_setup;
-    return null_render_setup;
+    static const RenderSetup nullRenderSetup;
+    return nullRenderSetup;
 }
 
 #pragma region PassData
@@ -36,59 +36,59 @@ PassData::~PassData()
         next = nullptr;
     }
 
-    for (auto& entry : render_group_cache)
+    for (auto& entry : renderGroupCache)
     {
-        HYP_LOG(Rendering, Debug, "Destroying RenderGroupCacheEntry for RenderGroup '{}'", entry.render_group.Id());
+        HYP_LOG(Rendering, Debug, "Destroying RenderGroupCacheEntry for RenderGroup '{}'", entry.renderGroup.Id());
 
-        SafeRelease(std::move(entry.graphics_pipeline));
+        SafeRelease(std::move(entry.graphicsPipeline));
     }
 
-    SafeRelease(std::move(descriptor_sets));
+    SafeRelease(std::move(descriptorSets));
 }
 
-void PassData::CullUnusedGraphicsPipelines(uint32 max_iter)
+void PassData::CullUnusedGraphicsPipelines(uint32 maxIter)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     // Ensures the iterator is valid: the Iterator type for SparsePagedArray will find the next available slot in the constructor
     // elements may have been added in the middle or removed in the meantime.
     // elements that were added will be handled after the next time this loops around; elements that were removed will be skipped over to find the next valid entry.
-    render_group_cache_iterator = typename SparsePagedArray<RenderGroupCacheEntry, 32>::Iterator(
-        &render_group_cache,
-        render_group_cache_iterator.page,
-        render_group_cache_iterator.elem);
+    renderGroupCacheIterator = typename SparsePagedArray<RenderGroupCacheEntry, 32>::Iterator(
+        &renderGroupCache,
+        renderGroupCacheIterator.page,
+        renderGroupCacheIterator.elem);
 
     // Loop around to the beginning of the container when the end is reached.
-    if (render_group_cache_iterator == render_group_cache.End())
+    if (renderGroupCacheIterator == renderGroupCache.End())
     {
-        render_group_cache_iterator = render_group_cache.Begin();
+        renderGroupCacheIterator = renderGroupCache.Begin();
     }
 
-    for (uint32 i = 0; render_group_cache_iterator != render_group_cache.End() && i < max_iter; i++)
+    for (uint32 i = 0; renderGroupCacheIterator != renderGroupCache.End() && i < maxIter; i++)
     {
-        RenderGroupCacheEntry& entry = *render_group_cache_iterator;
+        RenderGroupCacheEntry& entry = *renderGroupCacheIterator;
 
-        if (!entry.render_group.Lock())
+        if (!entry.renderGroup.Lock())
         {
-            HYP_LOG(Rendering, Debug, "Removing graphics pipeline for RenderGroup '{}' as it is no longer valid.", entry.render_group.Id());
+            HYP_LOG(Rendering, Debug, "Removing graphics pipeline for RenderGroup '{}' as it is no longer valid.", entry.renderGroup.Id());
 
-            SafeRelease(std::move(entry.graphics_pipeline));
+            SafeRelease(std::move(entry.graphicsPipeline));
 
-            render_group_cache_iterator = render_group_cache.Erase(render_group_cache_iterator);
+            renderGroupCacheIterator = renderGroupCache.Erase(renderGroupCacheIterator);
 
             continue;
         }
 
-        ++render_group_cache_iterator;
+        ++renderGroupCacheIterator;
     }
 }
 
 GraphicsPipelineRef PassData::CreateGraphicsPipeline(
     PassData* pd,
     const ShaderRef& shader,
-    const RenderableAttributeSet& renderable_attributes,
-    const DescriptorTableRef& descriptor_table,
+    const RenderableAttributeSet& renderableAttributes,
+    const DescriptorTableRef& descriptorTable,
     IDrawCallCollectionImpl* impl)
 {
     HYP_SCOPE;
@@ -103,17 +103,17 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
     DescriptorTableRef table;
 
-    if (!descriptor_table.IsValid())
+    if (!descriptorTable.IsValid())
     {
-        const DescriptorTableDeclaration& descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+        const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-        table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+        table = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
         table->SetDebugName(NAME_FMT("DescriptorTable_{}", shader->GetCompiledShader()->GetName()));
 
         // Setup instancing buffers if "Instancing" descriptor set exists
-        const uint32 instancing_descriptor_set_index = table->GetDescriptorSetIndex(NAME("Instancing"));
+        const uint32 instancingDescriptorSetIndex = table->GetDescriptorSetIndex(NAME("Instancing"));
 
-        if (instancing_descriptor_set_index != ~0u)
+        if (instancingDescriptorSetIndex != ~0u)
         {
             if (!impl)
             {
@@ -122,15 +122,15 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
 
             AssertDebug(impl != nullptr);
 
-            for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
             {
-                const GpuBufferRef& gpu_buffer = impl->GetEntityInstanceBatchHolder()->GetBuffer(frame_index);
-                AssertThrow(gpu_buffer.IsValid());
+                const GpuBufferRef& gpuBuffer = impl->GetEntityInstanceBatchHolder()->GetBuffer(frameIndex);
+                AssertThrow(gpuBuffer.IsValid());
 
-                const DescriptorSetRef& instancing_descriptor_set = table->GetDescriptorSet(NAME("Instancing"), frame_index);
-                AssertThrow(instancing_descriptor_set.IsValid());
+                const DescriptorSetRef& instancingDescriptorSet = table->GetDescriptorSet(NAME("Instancing"), frameIndex);
+                AssertThrow(instancingDescriptorSet.IsValid());
 
-                instancing_descriptor_set->SetElement(NAME("EntityInstanceBatchesBuffer"), gpu_buffer);
+                instancingDescriptorSet->SetElement(NAME("EntityInstanceBatchesBuffer"), gpuBuffer);
             }
         }
 
@@ -138,7 +138,7 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
     }
     else
     {
-        table = descriptor_table;
+        table = descriptorTable;
     }
 
     AssertThrow(table.IsValid());
@@ -147,7 +147,7 @@ GraphicsPipelineRef PassData::CreateGraphicsPipeline(
         shader,
         table,
         view->GetOutputTarget().GetFramebuffers(),
-        renderable_attributes);
+        renderableAttributes);
 }
 
 #pragma endregion PassData
@@ -164,7 +164,7 @@ struct NullPassDataExt final : PassDataExt
 
 RendererBase::~RendererBase()
 {
-    for (PassData* pd : m_view_pass_data)
+    for (PassData* pd : m_viewPassData)
     {
         delete pd;
     }
@@ -177,9 +177,9 @@ PassData* RendererBase::TryGetViewPassData(View* view)
         return nullptr;
     }
 
-    if (PassData** pd_ptr = m_view_pass_data.TryGet(view->Id().ToIndex()))
+    if (PassData** pdPtr = m_viewPassData.TryGet(view->Id().ToIndex()))
     {
-        return *pd_ptr;
+        return *pdPtr;
     }
 
     return nullptr;
@@ -194,36 +194,36 @@ PassData* RendererBase::FetchViewPassData(View* view, PassDataExt* ext)
 
     PassData* pd = nullptr;
 
-    if (PassData** pd_ptr = m_view_pass_data.TryGet(view->Id().ToIndex()))
+    if (PassData** pdPtr = m_viewPassData.TryGet(view->Id().ToIndex()))
     {
-        pd = *pd_ptr;
+        pd = *pdPtr;
     }
 
     if (!pd)
     {
-        NullPassDataExt null_pass_data_ext {};
+        NullPassDataExt nullPassDataExt {};
 
         // call virtual function to alloc / create
 
-        pd = CreateViewPassData(view, ext ? *ext : null_pass_data_ext);
+        pd = CreateViewPassData(view, ext ? *ext : nullPassDataExt);
         AssertDebug(pd != nullptr);
 
         pd->next = ext ? ext->Clone() : nullptr;
 
-        m_view_pass_data.Set(view->Id().ToIndex(), pd);
+        m_viewPassData.Set(view->Id().ToIndex(), pd);
     }
     else if (pd->view.GetUnsafe() != view)
     {
         delete pd;
 
-        NullPassDataExt null_pass_data_ext {};
+        NullPassDataExt nullPassDataExt {};
 
-        pd = CreateViewPassData(view, ext ? *ext : null_pass_data_ext);
+        pd = CreateViewPassData(view, ext ? *ext : nullPassDataExt);
         AssertDebug(pd != nullptr);
 
         pd->next = ext ? ext->Clone() : nullptr;
 
-        m_view_pass_data.Set(view->Id().ToIndex(), pd);
+        m_viewPassData.Set(view->Id().ToIndex(), pd);
     }
 
     AssertDebug(pd->view.GetUnsafe() == view);

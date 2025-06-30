@@ -18,10 +18,10 @@ void EntityMeshDirtyStateSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
-    MeshComponent& mesh_component = GetEntityManager().GetComponent<MeshComponent>(entity);
+    MeshComponent& meshComponent = GetEntityManager().GetComponent<MeshComponent>(entity);
 
-    InitObject(mesh_component.mesh);
-    InitObject(mesh_component.material);
+    InitObject(meshComponent.mesh);
+    InitObject(meshComponent.material);
 
     GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
 }
@@ -33,30 +33,30 @@ void EntityMeshDirtyStateSystem::OnEntityRemoved(Entity* entity)
 
 void EntityMeshDirtyStateSystem::Process(float delta)
 {
-    HashSet<WeakHandle<Entity>> updated_entities;
+    HashSet<WeakHandle<Entity>> updatedEntities;
 
-    for (auto [entity, mesh_component, transform_component] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
+    for (auto [entity, meshComponent, transformComponent] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent>().GetScopedView(GetComponentInfos()))
     {
         // Update the material
-        if (mesh_component.material.IsValid() && mesh_component.material->GetMutationState().IsDirty())
+        if (meshComponent.material.IsValid() && meshComponent.material->GetMutationState().IsDirty())
         {
-            mesh_component.material->EnqueueRenderUpdates();
+            meshComponent.material->EnqueueRenderUpdates();
         }
 
         // If transform has changed, mark the MeshComponent as dirty
-        if (mesh_component.previous_model_matrix != transform_component.transform.GetMatrix())
+        if (meshComponent.previousModelMatrix != transformComponent.transform.GetMatrix())
         {
-            updated_entities.Insert(entity->WeakHandleFromThis());
+            updatedEntities.Insert(entity->WeakHandleFromThis());
         }
     }
 
-    if (updated_entities.Any())
+    if (updatedEntities.Any())
     {
-        AfterProcess([this, updated_entities = std::move(updated_entities)]()
+        AfterProcess([this, updatedEntities = std::move(updatedEntities)]()
             {
-                for (const WeakHandle<Entity>& entity_weak : updated_entities)
+                for (const WeakHandle<Entity>& entityWeak : updatedEntities)
                 {
-                    GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entity_weak.GetUnsafe());
+                    GetEntityManager().AddTag<EntityTag::UPDATE_RENDER_PROXY>(entityWeak.GetUnsafe());
                 }
             });
     }

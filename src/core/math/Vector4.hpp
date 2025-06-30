@@ -728,16 +728,16 @@ static_assert(sizeof(Vec4i) == sizeof(int) * 4, "sizeof(Vec4i) must be equal to 
 static_assert(sizeof(Vec4u) == sizeof(uint32) * 4, "sizeof(Vec4u) must be equal to sizeof(uint32) * 4");
 
 template <class T>
-inline constexpr bool is_vec4 = false;
+inline constexpr bool isVec4 = false;
 
 template <>
-inline constexpr bool is_vec4<Vec4f> = true;
+inline constexpr bool isVec4<Vec4f> = true;
 
 template <>
-inline constexpr bool is_vec4<Vec4i> = true;
+inline constexpr bool isVec4<Vec4i> = true;
 
 template <>
-inline constexpr bool is_vec4<Vec4u> = true;
+inline constexpr bool isVec4<Vec4u> = true;
 
 // transitional typedef
 using Vector4 = Vec4f;

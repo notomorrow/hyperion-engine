@@ -29,11 +29,11 @@ struct PhysicsMaterial
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(mass);
+        hashCode.Add(mass);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

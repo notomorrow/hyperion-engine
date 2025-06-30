@@ -35,98 +35,98 @@ namespace hyperion {
 RenderEnvironment::RenderEnvironment()
     : m_ddgi(DDGIInfo {
           .aabb = { { -45.0f, -5.0f, -45.0f }, { 45.0f, 60.0f, 45.0f } } }),
-      m_has_rt_radiance(false),
-      m_has_ddgi_probes(false),
-      m_rt_initialized(false)
+      m_hasRtRadiance(false),
+      m_hasDdgiProbes(false),
+      m_rtInitialized(false)
 {
 }
 
 RenderEnvironment::~RenderEnvironment()
 {
-    m_particle_system.Reset();
+    m_particleSystem.Reset();
 
-    m_gaussian_splatting.Reset();
+    m_gaussianSplatting.Reset();
 
-    if (m_has_rt_radiance)
+    if (m_hasRtRadiance)
     {
-        m_rt_radiance->Destroy();
-        m_rt_radiance.Reset();
+        m_rtRadiance->Destroy();
+        m_rtRadiance.Reset();
     }
 
-    if (m_has_ddgi_probes)
+    if (m_hasDdgiProbes)
     {
         m_ddgi.Destroy();
     }
 
-    SafeRelease(std::move(m_top_level_acceleration_structures));
+    SafeRelease(std::move(m_topLevelAccelerationStructures));
 }
 
 void RenderEnvironment::Initialize()
 {
-    m_particle_system = CreateObject<ParticleSystem>();
-    InitObject(m_particle_system);
+    m_particleSystem = CreateObject<ParticleSystem>();
+    InitObject(m_particleSystem);
 
-    m_gaussian_splatting = CreateObject<GaussianSplatting>();
-    InitObject(m_gaussian_splatting);
+    m_gaussianSplatting = CreateObject<GaussianSplatting>();
+    InitObject(m_gaussianSplatting);
 
     /// FIXME: GetCurrentView() should not be used here
-    // m_rt_radiance = MakeUnique<RaytracingReflections>(
+    // m_rtRadiance = MakeUnique<RaytracingReflections>(
     //     RaytracingReflectionsConfig::FromConfig(),
     //     g_engine->GetCurrentView()->GetGBuffer());
 
-    if (g_render_backend->GetRenderConfig().IsRaytracingSupported()
+    if (g_renderBackend->GetRenderConfig().IsRaytracingSupported()
         && g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool())
     {
         CreateTopLevelAccelerationStructures();
 
-        m_rt_radiance->SetTopLevelAccelerationStructures(m_top_level_acceleration_structures);
-        m_rt_radiance->Create();
+        m_rtRadiance->SetTopLevelAccelerationStructures(m_topLevelAccelerationStructures);
+        m_rtRadiance->Create();
 
-        m_ddgi.SetTopLevelAccelerationStructures(m_top_level_acceleration_structures);
+        m_ddgi.SetTopLevelAccelerationStructures(m_topLevelAccelerationStructures);
         m_ddgi.Init();
 
-        m_has_rt_radiance = true;
-        m_has_ddgi_probes = true;
+        m_hasRtRadiance = true;
+        m_hasDdgiProbes = true;
     }
 }
 
 void RenderEnvironment::ApplyTLASUpdates(FrameBase* frame, RTUpdateStateFlags flags)
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    static const bool is_raytracing_supported = g_render_backend->GetRenderConfig().IsRaytracingSupported();
-    AssertThrow(is_raytracing_supported);
+    static const bool isRaytracingSupported = g_renderBackend->GetRenderConfig().IsRaytracingSupported();
+    AssertThrow(isRaytracingSupported);
 
-    if (m_has_rt_radiance)
+    if (m_hasRtRadiance)
     {
-        m_rt_radiance->ApplyTLASUpdates(flags);
+        m_rtRadiance->ApplyTLASUpdates(flags);
     }
 
-    if (m_has_ddgi_probes)
+    if (m_hasDdgiProbes)
     {
         m_ddgi.ApplyTLASUpdates(flags);
     }
 }
 
-void RenderEnvironment::RenderRTRadiance(FrameBase* frame, const RenderSetup& render_setup)
+void RenderEnvironment::RenderRTRadiance(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    if (m_has_rt_radiance)
+    if (m_hasRtRadiance)
     {
-        m_rt_radiance->Render(frame, render_setup);
+        m_rtRadiance->Render(frame, renderSetup);
     }
 }
 
-void RenderEnvironment::RenderDDGIProbes(FrameBase* frame, const RenderSetup& render_setup)
+void RenderEnvironment::RenderDDGIProbes(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(g_render_backend->GetRenderConfig().IsRaytracingSupported());
+    AssertThrow(g_renderBackend->GetRenderConfig().IsRaytracingSupported());
 
-    if (m_has_ddgi_probes)
+    if (m_hasDdgiProbes)
     {
-        m_ddgi.Render(frame, render_setup);
+        m_ddgi.Render(frame, renderSetup);
     }
 }
 
@@ -134,42 +134,42 @@ void RenderEnvironment::InitializeRT()
 {
     if (g_engine->GetAppContext()->GetConfiguration().Get("rendering.rt.enabled").ToBool())
     {
-        if (m_has_rt_radiance)
+        if (m_hasRtRadiance)
         {
-            m_rt_radiance->Destroy();
+            m_rtRadiance->Destroy();
         }
 
-        if (m_has_ddgi_probes)
+        if (m_hasDdgiProbes)
         {
             m_ddgi.Destroy();
         }
 
-        m_ddgi.SetTopLevelAccelerationStructures(m_top_level_acceleration_structures);
-        m_rt_radiance->SetTopLevelAccelerationStructures(m_top_level_acceleration_structures);
+        m_ddgi.SetTopLevelAccelerationStructures(m_topLevelAccelerationStructures);
+        m_rtRadiance->SetTopLevelAccelerationStructures(m_topLevelAccelerationStructures);
 
-        m_rt_radiance->Create();
+        m_rtRadiance->Create();
         m_ddgi.Init();
 
-        m_has_rt_radiance = true;
-        m_has_ddgi_probes = true;
+        m_hasRtRadiance = true;
+        m_hasDdgiProbes = true;
     }
     else
     {
-        if (m_has_rt_radiance)
+        if (m_hasRtRadiance)
         {
-            m_rt_radiance->Destroy();
+            m_rtRadiance->Destroy();
         }
 
-        if (m_has_ddgi_probes)
+        if (m_hasDdgiProbes)
         {
             m_ddgi.Destroy();
         }
 
-        m_has_rt_radiance = false;
-        m_has_ddgi_probes = false;
+        m_hasRtRadiance = false;
+        m_hasDdgiProbes = false;
     }
 
-    m_rt_initialized = true;
+    m_rtInitialized = true;
 }
 
 bool RenderEnvironment::CreateTopLevelAccelerationStructures()
@@ -183,28 +183,28 @@ bool RenderEnvironment::CreateTopLevelAccelerationStructures()
 
     // @FIXME: Hack solution since TLAS can only be created if it has a non-zero number of BLASes.
     // This whole thing should be reworked
-    Handle<Mesh> default_mesh = MeshBuilder::Cube();
-    InitObject(default_mesh);
+    Handle<Mesh> defaultMesh = MeshBuilder::Cube();
+    InitObject(defaultMesh);
 
-    Handle<Material> default_material = CreateObject<Material>();
-    InitObject(default_material);
+    Handle<Material> defaultMaterial = CreateObject<Material>();
+    InitObject(defaultMaterial);
 
     BLASRef blas;
 
     {
-        TResourceHandle<RenderMesh> mesh_resource_handle(default_mesh->GetRenderResource());
+        TResourceHandle<RenderMesh> meshResourceHandle(defaultMesh->GetRenderResource());
 
-        blas = mesh_resource_handle->BuildBLAS(default_material);
+        blas = meshResourceHandle->BuildBLAS(defaultMaterial);
     }
 
     DeferCreate(blas);
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        m_top_level_acceleration_structures[frame_index] = g_render_backend->MakeTLAS();
-        m_top_level_acceleration_structures[frame_index]->AddBLAS(blas);
+        m_topLevelAccelerationStructures[frameIndex] = g_renderBackend->MakeTLAS();
+        m_topLevelAccelerationStructures[frameIndex]->AddBLAS(blas);
 
-        DeferCreate(m_top_level_acceleration_structures[frame_index]);
+        DeferCreate(m_topLevelAccelerationStructures[frameIndex]);
     }
 
     return true;

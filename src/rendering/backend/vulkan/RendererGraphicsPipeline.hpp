@@ -41,18 +41,18 @@ class VulkanGraphicsPipeline final : public GraphicsPipelineBase, public VulkanP
 {
 public:
     HYP_API VulkanGraphicsPipeline();
-    HYP_API VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptor_table);
+    HYP_API VulkanGraphicsPipeline(const VulkanShaderRef& shader, const VulkanDescriptorTableRef& descriptorTable);
     HYP_API ~VulkanGraphicsPipeline();
 
     HYP_FORCE_INLINE const VulkanRenderPassRef& GetRenderPass() const
     {
-        return m_render_pass;
+        return m_renderPass;
     }
 
-    HYP_API void SetRenderPass(const VulkanRenderPassRef& render_pass);
+    HYP_API void SetRenderPass(const VulkanRenderPassRef& renderPass);
 
     HYP_API virtual void Bind(CommandBufferBase* cmd) override;
-    HYP_API virtual void Bind(CommandBufferBase* cmd, Vec2i viewport_offset, Vec2u viewport_extent) override;
+    HYP_API virtual void Bind(CommandBufferBase* cmd, Vec2i viewportOffset, Vec2u viewportExtent) override;
 
     HYP_API virtual void SetPushConstants(const void* data, SizeType size) override;
 
@@ -62,13 +62,13 @@ private:
     HYP_API virtual RendererResult Rebuild() override;
 
     void BuildVertexAttributes(
-        const VertexAttributeSet& attribute_set,
-        Array<VkVertexInputAttributeDescription>& out_vk_vertex_attributes,
-        Array<VkVertexInputBindingDescription>& out_vk_vertex_binding_descriptions);
+        const VertexAttributeSet& attributeSet,
+        Array<VkVertexInputAttributeDescription>& outVkVertexAttributes,
+        Array<VkVertexInputBindingDescription>& outVkVertexBindingDescriptions);
 
-    void UpdateViewport(VulkanCommandBuffer* command_buffer, const Viewport& viewport);
+    void UpdateViewport(VulkanCommandBuffer* commandBuffer, const Viewport& viewport);
 
-    VulkanRenderPassRef m_render_pass;
+    VulkanRenderPassRef m_renderPass;
     Viewport m_viewport;
 };
 

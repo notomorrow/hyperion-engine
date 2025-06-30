@@ -59,19 +59,19 @@ public:
 
     bool ErrorsSuppressed() const
     {
-        return m_error_suppression_depth > 0;
+        return m_errorSuppressionDepth > 0;
     }
 
     void SuppressErrors(bool suppress)
     {
         if (suppress)
         {
-            m_error_suppression_depth++;
+            m_errorSuppressionDepth++;
         }
         else
         {
-            AssertThrow(m_error_suppression_depth > 0);
-            m_error_suppression_depth--;
+            AssertThrow(m_errorSuppressionDepth > 0);
+            m_errorSuppressionDepth--;
         }
     }
 
@@ -79,7 +79,7 @@ public:
 
 private:
     FlatSet<CompilerError> m_errors;
-    uint32 m_error_suppression_depth;
+    uint32 m_errorSuppressionDepth;
 };
 
 } // namespace hyperion::json

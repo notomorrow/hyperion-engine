@@ -40,14 +40,14 @@ class Texture;
 
 struct UITextOptions
 {
-    float line_height = 1.0f;
+    float lineHeight = 1.0f;
 };
 
 struct UITextCharacter
 {
     Matrix4 transform;
-    Vec2f texcoord_start;
-    Vec2f texcoord_end;
+    Vec2f texcoordStart;
+    Vec2f texcoordEnd;
 };
 
 HYP_CLASS()
@@ -74,14 +74,14 @@ public:
      * \return The font atlas used for rendering the text. */
     HYP_FORCE_INLINE const RC<FontAtlas>& GetFontAtlas() const
     {
-        return m_font_atlas;
+        return m_fontAtlas;
     }
 
     /*! \brief Sets the font atlas to use for rendering the text.
      *  If the font atlas is null, the default font atlas from the parent UIStage is used.
      *
-     * \param font_atlas The font atlas to set. */
-    void SetFontAtlas(const RC<FontAtlas>& font_atlas);
+     * \param fontAtlas The font atlas to set. */
+    void SetFontAtlas(const RC<FontAtlas>& fontAtlas);
 
     /*! \brief Gets the options for rendering the text.
      *
@@ -100,7 +100,7 @@ public:
     }
 
     HYP_METHOD()
-    Vec2f GetCharacterOffset(int character_index) const;
+    Vec2f GetCharacterOffset(int characterIndex) const;
 
     /*! \brief Overriden from UIObject to return false as text is not focusable
      *
@@ -119,7 +119,7 @@ protected:
     virtual Material::ParameterTable GetMaterialParameters() const override;
     virtual Material::TextureSet GetMaterialTextures() const override;
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
     virtual void OnFontAtlasUpdate_Internal() override;
 
@@ -134,7 +134,7 @@ protected:
 
     const RC<FontAtlas>& GetFontAtlasOrDefault() const;
 
-    RC<FontAtlas> m_font_atlas;
+    RC<FontAtlas> m_fontAtlas;
 
     UITextOptions m_options;
 
@@ -143,12 +143,12 @@ private:
 
     Vec2i GetParentBounds() const;
 
-    BoundingBox m_text_aabb_with_bearing;
-    BoundingBox m_text_aabb_without_bearing;
+    BoundingBox m_textAabbWithBearing;
+    BoundingBox m_textAabbWithoutBearing;
 
-    Handle<Texture> m_current_font_atlas_texture;
+    Handle<Texture> m_currentFontAtlasTexture;
 
-    Array<Vec2f> m_character_offsets;
+    Array<Vec2f> m_characterOffsets;
 };
 
 } // namespace hyperion

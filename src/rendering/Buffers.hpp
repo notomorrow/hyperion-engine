@@ -36,7 +36,7 @@ using Device = platform::Device<Platform::current>;
 
 namespace hyperion {
 
-static constexpr SizeType max_probes_in_sh_grid_buffer = max_bound_ambient_probes;
+static constexpr SizeType maxProbesInShGridBuffer = maxBoundAmbientProbes;
 
 struct alignas(16) ParticleShaderData
 {
@@ -60,15 +60,15 @@ static_assert(sizeof(GaussianSplattingInstanceShaderData) == 64);
 
 struct GaussianSplattingSceneShaderData
 {
-    Matrix4 model_matrix;
+    Matrix4 modelMatrix;
 };
 
 static_assert(sizeof(GaussianSplattingSceneShaderData) == 64);
 
 struct CubemapUniforms
 {
-    Matrix4 projection_matrices[6];
-    Matrix4 view_matrices[6];
+    Matrix4 projectionMatrices[6];
+    Matrix4 viewMatrices[6];
 };
 
 static_assert(sizeof(CubemapUniforms) % 256 == 0);
@@ -81,31 +81,31 @@ enum EntityGPUDataFlags : uint32
 
 struct alignas(16) EntityUserData
 {
-    Vec4u user_data0;
-    Vec4u user_data1;
+    Vec4u userData0;
+    Vec4u userData1;
 };
 
 struct EntityShaderData
 {
-    Matrix4 model_matrix;
-    Matrix4 previous_model_matrix;
+    Matrix4 modelMatrix;
+    Matrix4 previousModelMatrix;
 
     Vec4f _pad0;
     Vec4f _pad1;
-    Vec4f world_aabb_max;
-    Vec4f world_aabb_min;
+    Vec4f worldAabbMax;
+    Vec4f worldAabbMin;
 
-    uint32 entity_index;
-    uint32 lightmap_volume_index;
-    uint32 material_index;
-    uint32 skeleton_index;
+    uint32 entityIndex;
+    uint32 lightmapVolumeIndex;
+    uint32 materialIndex;
+    uint32 skeletonIndex;
 
     uint32 bucket;
     uint32 flags;
     uint32 _pad3;
     uint32 _pad4;
 
-    EntityUserData user_data;
+    EntityUserData userData;
 };
 
 static_assert(sizeof(EntityShaderData) == 256);
@@ -113,9 +113,9 @@ static_assert(sizeof(EntityShaderData) == 256);
 struct ImmediateDrawShaderData
 {
     Matrix4 transform;
-    uint32 color_packed;
-    uint32 env_probe_type;
-    uint32 env_probe_index;
+    uint32 colorPacked;
+    uint32 envProbeType;
+    uint32 envProbeIndex;
     uint32 _pad0;
 };
 
@@ -130,7 +130,7 @@ static_assert(sizeof(SH9Buffer) == 256);
 
 struct SHTile
 {
-    Vec4f coeffs_weights[9];
+    Vec4f coeffsWeights[9];
 };
 
 static_assert(sizeof(SHTile) == 144);
@@ -138,8 +138,8 @@ static_assert(sizeof(SHTile) == 144);
 struct VoxelUniforms
 {
     Vec4f extent;
-    Vec4f aabb_max;
-    Vec4f aabb_min;
+    Vec4f aabbMax;
+    Vec4f aabbMin;
     Vec4u dimensions; // num mipmaps stored in w component
 };
 
@@ -147,18 +147,18 @@ static_assert(sizeof(VoxelUniforms) == 64);
 
 struct BlueNoiseBuffer
 {
-    Vec4i sobol_256spp_256d[256 * 256 / 4];
-    Vec4i scrambling_tile[128 * 128 * 8 / 4];
-    Vec4i ranking_tile[128 * 128 * 8 / 4];
+    Vec4i sobol256spp256d[256 * 256 / 4];
+    Vec4i scramblingTile[128 * 128 * 8 / 4];
+    Vec4i rankingTile[128 * 128 * 8 / 4];
 };
 
 struct alignas(16) RTRadianceUniforms
 {
-    uint32 num_bound_lights;
-    uint32 ray_offset; // for lightmapper
-    float min_roughness;
-    Vec2i output_image_resolution;
-    uint32 light_indices[16];
+    uint32 numBoundLights;
+    uint32 rayOffset; // for lightmapper
+    float minRoughness;
+    Vec2i outputImageResolution;
+    uint32 lightIndices[16];
 };
 
 class GpuBufferHolderBase
@@ -166,8 +166,8 @@ class GpuBufferHolderBase
 protected:
     template <class T>
     GpuBufferHolderBase(TypeWrapper<T>)
-        : m_struct_type_id(TypeId::ForType<T>()),
-          m_struct_size(sizeof(T))
+        : m_structTypeId(TypeId::ForType<T>()),
+          m_structSize(sizeof(T))
     {
     }
 
@@ -176,41 +176,41 @@ public:
 
     HYP_FORCE_INLINE TypeId GetStructTypeId() const
     {
-        return m_struct_type_id;
+        return m_structTypeId;
     }
 
     HYP_FORCE_INLINE SizeType GetStructSize() const
     {
-        return m_struct_size;
+        return m_structSize;
     }
 
-    HYP_FORCE_INLINE SizeType GetGpuBufferOffset(uint32 element_index) const
+    HYP_FORCE_INLINE SizeType GetGpuBufferOffset(uint32 elementIndex) const
     {
-        return m_struct_size * element_index;
+        return m_structSize * elementIndex;
     }
 
     virtual SizeType Count() const = 0;
 
     virtual uint32 NumElementsPerBlock() const = 0;
 
-    HYP_FORCE_INLINE const GpuBufferRef& GetBuffer(uint32 frame_index) const
+    HYP_FORCE_INLINE const GpuBufferRef& GetBuffer(uint32 frameIndex) const
     {
-        return m_buffers[frame_index];
+        return m_buffers[frameIndex];
     }
 
     virtual void MarkDirty(uint32 index) = 0;
 
-    virtual void UpdateBufferSize(uint32 frame_index) = 0;
-    virtual void UpdateBufferData(uint32 frame_index) = 0;
+    virtual void UpdateBufferSize(uint32 frameIndex) = 0;
+    virtual void UpdateBufferData(uint32 frameIndex) = 0;
 
     /*! \brief Copy an element from the GPU back to the CPU side buffer.
-     * \param frame_index The index of the frame to copy the element from.
+     * \param frameIndex The index of the frame to copy the element from.
      * \param index The index of the element to copy.
      * \param dst The destination pointer to copy the element to.
      */
-    virtual void ReadbackElement(uint32 frame_index, uint32 index, void* dst) = 0;
+    virtual void ReadbackElement(uint32 frameIndex, uint32 index, void* dst) = 0;
 
-    virtual uint32 AcquireIndex(void** out_element_ptr = nullptr) = 0;
+    virtual uint32 AcquireIndex(void** outElementPtr = nullptr) = 0;
     virtual void ReleaseIndex(uint32 index) = 0;
 
     // Ensures capacity for the given index.
@@ -218,20 +218,20 @@ public:
 
     void WriteBufferData(uint32 index, const void* ptr, SizeType size)
     {
-        AssertDebug(size == m_struct_size, "Size does not match the expected size! Size = %llu, Expected = %llu", size, m_struct_size);
+        AssertDebug(size == m_structSize, "Size does not match the expected size! Size = %llu, Expected = %llu", size, m_structSize);
 
         WriteBufferData_Internal(index, ptr);
     }
 
-    static void WriteBufferData_Static(GpuBufferHolderBase* gpu_buffer_holder, uint32 index, void* buffer_data_ptr, SizeType buffer_size)
+    static void WriteBufferData_Static(GpuBufferHolderBase* gpuBufferHolder, uint32 index, void* bufferDataPtr, SizeType bufferSize)
     {
-        AssertDebug(gpu_buffer_holder != nullptr);
-        AssertDebug(buffer_size == gpu_buffer_holder->m_struct_size,
+        AssertDebug(gpuBufferHolder != nullptr);
+        AssertDebug(bufferSize == gpuBufferHolder->m_structSize,
             "Size does not match the expected size! Size = %llu, Expected = %llu",
-            buffer_size,
-            gpu_buffer_holder->m_struct_size);
+            bufferSize,
+            gpuBufferHolder->m_structSize);
 
-        gpu_buffer_holder->WriteBufferData_Internal(index, buffer_data_ptr);
+        gpuBufferHolder->WriteBufferData_Internal(index, bufferDataPtr);
     }
 
 protected:
@@ -239,11 +239,11 @@ protected:
 
     virtual void WriteBufferData_Internal(uint32 index, const void* ptr) = 0;
 
-    TypeId m_struct_type_id;
-    SizeType m_struct_size;
+    TypeId m_structTypeId;
+    SizeType m_structSize;
 
-    FixedArray<GpuBufferRef, max_frames_in_flight> m_buffers;
-    FixedArray<Range<uint32>, max_frames_in_flight> m_dirty_ranges;
+    FixedArray<GpuBufferRef, maxFramesInFlight> m_buffers;
+    FixedArray<Range<uint32>, maxFramesInFlight> m_dirtyRanges;
 };
 
 template <class StructType>
@@ -252,14 +252,14 @@ class GpuBufferHolderMemoryPool final : public MemoryPool<StructType>
 public:
     using Base = MemoryPool<StructType>;
 
-    GpuBufferHolderMemoryPool(uint32 initial_count = Base::InitInfo::num_initial_elements)
-        : Base(initial_count, /* create_initial_blocks */ true, /* block_init_ctx */ nullptr)
+    GpuBufferHolderMemoryPool(uint32 initialCount = Base::InitInfo::numInitialElements)
+        : Base(initialCount, /* createInitialBlocks */ true, /* blockInitCtx */ nullptr)
     {
     }
 
     HYP_FORCE_INLINE void MarkDirty(uint32 index)
     {
-        for (auto& it : m_dirty_ranges)
+        for (auto& it : m_dirtyRanges)
         {
             it |= { index, index + 1 };
         }
@@ -272,93 +272,93 @@ public:
         MarkDirty(index);
     }
 
-    void EnsureGpuBufferCapacity(const GpuBufferRef& buffer, uint32 frame_index)
+    void EnsureGpuBufferCapacity(const GpuBufferRef& buffer, uint32 frameIndex)
     {
-        bool was_resized = false;
-        HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(Base::NumAllocatedElements() * sizeof(StructType), &was_resized));
+        bool wasResized = false;
+        HYPERION_ASSERT_RESULT(buffer->EnsureCapacity(Base::NumAllocatedElements() * sizeof(StructType), &wasResized));
 
-        if (was_resized)
+        if (wasResized)
         {
             // Reset the dirty ranges
-            m_dirty_ranges[frame_index].SetStart(0);
-            m_dirty_ranges[frame_index].SetEnd(Base::NumAllocatedElements());
+            m_dirtyRanges[frameIndex].SetStart(0);
+            m_dirtyRanges[frameIndex].SetEnd(Base::NumAllocatedElements());
         }
     }
 
-    void CopyToGpuBuffer(const GpuBufferRef& buffer, uint32 frame_index)
+    void CopyToGpuBuffer(const GpuBufferRef& buffer, uint32 frameIndex)
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        if (!m_dirty_ranges[frame_index])
+        if (!m_dirtyRanges[frameIndex])
         {
             return;
         }
 
-        const uint32 range_end = m_dirty_ranges[frame_index].GetEnd(),
-                     range_start = m_dirty_ranges[frame_index].GetStart();
+        const uint32 rangeEnd = m_dirtyRanges[frameIndex].GetEnd(),
+                     rangeStart = m_dirtyRanges[frameIndex].GetStart();
 
-        AssertThrowMsg(buffer->Size() >= range_end * sizeof(StructType),
+        AssertThrowMsg(buffer->Size() >= rangeEnd * sizeof(StructType),
             "Buffer does not have enough space for the current number of elements! Buffer size = %llu",
             buffer->Size());
 
-        uint32 block_index = 0;
+        uint32 blockIndex = 0;
 
-        typename LinkedList<typename Base::Block>::Iterator begin_it = Base::m_blocks.Begin();
-        typename LinkedList<typename Base::Block>::Iterator end_it = Base::m_blocks.End();
+        typename LinkedList<typename Base::Block>::Iterator beginIt = Base::m_blocks.Begin();
+        typename LinkedList<typename Base::Block>::Iterator endIt = Base::m_blocks.End();
 
-        for (uint32 block_index = 0; block_index < Base::m_num_blocks.Get(MemoryOrder::ACQUIRE) && begin_it != end_it; ++block_index, ++begin_it)
+        for (uint32 blockIndex = 0; blockIndex < Base::m_numBlocks.Get(MemoryOrder::ACQUIRE) && beginIt != endIt; ++blockIndex, ++beginIt)
         {
-            if (block_index < range_start / Base::num_elements_per_block)
+            if (blockIndex < rangeStart / Base::numElementsPerBlock)
             {
                 continue;
             }
 
-            if (block_index * Base::num_elements_per_block >= range_end)
+            if (blockIndex * Base::numElementsPerBlock >= rangeEnd)
             {
                 break;
             }
 
-            const SizeType buffer_size = buffer->Size();
+            const SizeType bufferSize = buffer->Size();
 
-            const uint32 index = block_index * Base::num_elements_per_block;
+            const uint32 index = blockIndex * Base::numElementsPerBlock;
 
             const SizeType offset = index;
-            const SizeType count = Base::num_elements_per_block;
+            const SizeType count = Base::numElementsPerBlock;
 
             // sanity checks
-            AssertThrow(offset - index < begin_it->elements.Size());
+            AssertThrow(offset - index < beginIt->elements.Size());
 
-            AssertThrowMsg(count <= int64(buffer_size / sizeof(StructType)) - int64(offset),
+            AssertThrowMsg(count <= int64(bufferSize / sizeof(StructType)) - int64(offset),
                 "Buffer does not have enough space for the current number of elements! Buffer size = %llu, Required size = %llu",
-                buffer_size,
+                bufferSize,
                 (offset + count) * sizeof(StructType));
 
             buffer->Copy(
                 offset * sizeof(StructType),
                 count * sizeof(StructType),
-                &begin_it->elements[offset - index]);
+                &beginIt->elements[offset - index]);
         }
 
-        m_dirty_ranges[frame_index].Reset();
+        m_dirtyRanges[frameIndex].Reset();
     }
 
 private:
     // @TODO Make atomic
-    FixedArray<Range<uint32>, 2> m_dirty_ranges;
+    FixedArray<Range<uint32>, 2> m_dirtyRanges;
 
 protected:
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };
 
 template <class StructType, GpuBufferType BufferType>
 class GpuBufferHolder final : public GpuBufferHolderBase
 {
 public:
-    GpuBufferHolder(uint32 initial_count = 0)
+    GpuBufferHolder(uint32 initialCount = 0)
         : GpuBufferHolderBase(TypeWrapper<StructType> {}),
-          m_pool(initial_count)
+          m_pool(initialCount)
     {
-        GpuBufferHolderBase::CreateBuffers(BufferType, initial_count, sizeof(StructType));
+        GpuBufferHolderBase::CreateBuffers(BufferType, initialCount, sizeof(StructType));
     }
 
     GpuBufferHolder(const GpuBufferHolder& other) = delete;
@@ -373,18 +373,18 @@ public:
 
     virtual uint32 NumElementsPerBlock() const override
     {
-        return m_pool.num_elements_per_block;
+        return m_pool.numElementsPerBlock;
     }
 
-    virtual void UpdateBufferSize(uint32 frame_index) override
+    virtual void UpdateBufferSize(uint32 frameIndex) override
     {
         // m_pool.RemoveEmptyBlocks();
-        m_pool.EnsureGpuBufferCapacity(m_buffers[frame_index], frame_index);
+        m_pool.EnsureGpuBufferCapacity(m_buffers[frameIndex], frameIndex);
     }
 
-    virtual void UpdateBufferData(uint32 frame_index) override
+    virtual void UpdateBufferData(uint32 frameIndex) override
     {
-        m_pool.CopyToGpuBuffer(m_buffers[frame_index], frame_index);
+        m_pool.CopyToGpuBuffer(m_buffers[frameIndex], frameIndex);
     }
 
     virtual void MarkDirty(uint32 index) override
@@ -392,34 +392,34 @@ public:
         m_pool.MarkDirty(index);
     }
 
-    virtual void ReadbackElement(uint32 frame_index, uint32 index, void* dst) override
+    virtual void ReadbackElement(uint32 frameIndex, uint32 index, void* dst) override
     {
         AssertThrowMsg(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = %u, Size = %u", index, m_pool.NumAllocatedElements());
 
-        m_buffers[frame_index]->Read(sizeof(StructType) * index, sizeof(StructType), dst);
+        m_buffers[frameIndex]->Read(sizeof(StructType) * index, sizeof(StructType), dst);
     }
 
-    HYP_FORCE_INLINE uint32 AcquireIndex(StructType** out_element_ptr)
+    HYP_FORCE_INLINE uint32 AcquireIndex(StructType** outElementPtr)
     {
-        return m_pool.AcquireIndex(out_element_ptr);
+        return m_pool.AcquireIndex(outElementPtr);
     }
 
-    virtual uint32 AcquireIndex(void** out_element_ptr = nullptr) override
+    virtual uint32 AcquireIndex(void** outElementPtr = nullptr) override
     {
-        StructType* element_ptr;
-        const uint32 index = m_pool.AcquireIndex(&element_ptr);
+        StructType* elementPtr;
+        const uint32 index = m_pool.AcquireIndex(&elementPtr);
 
-        if (out_element_ptr != nullptr)
+        if (outElementPtr != nullptr)
         {
-            *out_element_ptr = element_ptr;
+            *outElementPtr = elementPtr;
         }
 
         return index;
     }
 
-    virtual void ReleaseIndex(uint32 batch_index) override
+    virtual void ReleaseIndex(uint32 batchIndex) override
     {
-        return m_pool.ReleaseIndex(batch_index);
+        return m_pool.ReleaseIndex(batchIndex);
     }
 
     virtual void EnsureCapacity(uint32 index) override
@@ -433,9 +433,9 @@ public:
     }
 
 private:
-    virtual void WriteBufferData_Internal(uint32 index, const void* buffer_data_ptr) override
+    virtual void WriteBufferData_Internal(uint32 index, const void* bufferDataPtr) override
     {
-        WriteBufferData(index, *reinterpret_cast<const StructType*>(buffer_data_ptr));
+        WriteBufferData(index, *reinterpret_cast<const StructType*>(bufferDataPtr));
     }
 
     GpuBufferHolderMemoryPool<StructType> m_pool;

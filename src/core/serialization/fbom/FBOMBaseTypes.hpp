@@ -128,19 +128,19 @@ struct FBOMBool : FBOMType
 struct FBOMStruct : FBOMType
 {
     template <class T>
-    static constexpr bool is_valid_struct_type = !std::is_pointer_v<T>
+    static constexpr bool isValidStructType = !std::is_pointer_v<T>
         && !std::is_reference_v<T>
         && !std::is_const_v<T>
         && !std::is_volatile_v<T>
-        && is_pod_type<T>;
+        && isPodType<T>;
 
     FBOMStruct()
         : FBOMType("struct", -1, /* no valid native TypeId */ TypeId::Void())
     {
     }
 
-    FBOMStruct(const ANSIStringView& type_name, SizeType sz, TypeId type_id)
-        : FBOMType(type_name, sz, type_id, FBOMType("struct", sz, type_id))
+    FBOMStruct(const ANSIStringView& typeName, SizeType sz, TypeId typeId)
+        : FBOMType(typeName, sz, typeId, FBOMType("struct", sz, typeId))
     {
     }
 
@@ -148,7 +148,7 @@ struct FBOMStruct : FBOMType
     FBOMStruct(TypeWrapper<T>, std::bool_constant<CompileTimeChecked> = {})
         : FBOMType(TypeNameWithoutNamespace<T>(), sizeof(T), TypeId::ForType<T>(), FBOMType("struct", sizeof(T), TypeId::ForType<T>()))
     {
-        AssertStaticMsgCond(CompileTimeChecked, is_valid_struct_type<T>, "T is not a valid type to use with FBOMStruct");
+        AssertStaticMsgCond(CompileTimeChecked, isValidStructType<T>, "T is not a valid type to use with FBOMStruct");
     }
 
     template <class T, bool CompileTimeChecked = true>
@@ -165,16 +165,16 @@ struct FBOMSequence : FBOMType
     {
     }
 
-    FBOMSequence(const FBOMType& held_type)
+    FBOMSequence(const FBOMType& heldType)
         : FBOMType("seq", -1, /* no valid TypeId */ TypeId::Void())
     {
-        AssertThrowMsg(!held_type.IsUnbounded(), "Cannot create sequence of unbounded type");
+        AssertThrowMsg(!heldType.IsUnbounded(), "Cannot create sequence of unbounded type");
     }
 
-    FBOMSequence(const FBOMType& held_type, SizeType count)
-        : FBOMType("seq", held_type.size * count, /* no valid TypeId */ TypeId::Void())
+    FBOMSequence(const FBOMType& heldType, SizeType count)
+        : FBOMType("seq", heldType.size * count, /* no valid TypeId */ TypeId::Void())
     {
-        AssertThrowMsg(!held_type.IsUnbounded(), "Cannot create sequence of unbounded type");
+        AssertThrowMsg(!heldType.IsUnbounded(), "Cannot create sequence of unbounded type");
     }
 };
 
@@ -360,27 +360,27 @@ struct FBOMObjectType : FBOMType
             TypeNameWithoutNamespace<T>().Data(), extends.name.Data());
     }
 
-    FBOMObjectType(const ANSIStringView& name, const TypeId& type_id)
-        : FBOMType(name, 0, type_id, FBOMTypeFlags::CONTAINER, FBOMBaseObjectType())
+    FBOMObjectType(const ANSIStringView& name, const TypeId& typeId)
+        : FBOMType(name, 0, typeId, FBOMTypeFlags::CONTAINER, FBOMBaseObjectType())
     {
     }
 
-    FBOMObjectType(const ANSIStringView& name, const TypeId& type_id, const FBOMType& extends)
-        : FBOMType(name, 0, type_id, FBOMTypeFlags::CONTAINER, extends)
+    FBOMObjectType(const ANSIStringView& name, const TypeId& typeId, const FBOMType& extends)
+        : FBOMType(name, 0, typeId, FBOMTypeFlags::CONTAINER, extends)
     {
     }
 
-    FBOMObjectType(const ANSIStringView& name, const TypeId& type_id, EnumFlags<FBOMTypeFlags> flags)
-        : FBOMType(name, 0, type_id, flags, FBOMBaseObjectType())
+    FBOMObjectType(const ANSIStringView& name, const TypeId& typeId, EnumFlags<FBOMTypeFlags> flags)
+        : FBOMType(name, 0, typeId, flags, FBOMBaseObjectType())
     {
     }
 
-    FBOMObjectType(const ANSIStringView& name, const TypeId& type_id, EnumFlags<FBOMTypeFlags> flags, const FBOMType& extends)
-        : FBOMType(name, 0, type_id, flags, extends)
+    FBOMObjectType(const ANSIStringView& name, const TypeId& typeId, EnumFlags<FBOMTypeFlags> flags, const FBOMType& extends)
+        : FBOMType(name, 0, typeId, flags, extends)
     {
     }
 
-    explicit FBOMObjectType(const HypClass* hyp_class);
+    explicit FBOMObjectType(const HypClass* hypClass);
 };
 
 struct FBOMPlaceholderType : FBOMType

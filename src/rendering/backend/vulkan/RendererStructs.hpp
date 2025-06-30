@@ -16,19 +16,19 @@ struct MeshBindingDescription
 {
     uint32 binding;
     uint32 stride;
-    VkVertexInputRate input_rate;
+    VkVertexInputRate inputRate;
 
     MeshBindingDescription()
         : binding(0),
           stride(0),
-          input_rate(VK_VERTEX_INPUT_RATE_VERTEX)
+          inputRate(VK_VERTEX_INPUT_RATE_VERTEX)
     {
     }
 
-    MeshBindingDescription(uint32 binding, uint32 stride, VkVertexInputRate input_rate)
+    MeshBindingDescription(uint32 binding, uint32 stride, VkVertexInputRate inputRate)
         : binding(binding),
           stride(stride),
-          input_rate(input_rate)
+          inputRate(inputRate)
     {
     }
 
@@ -37,33 +37,33 @@ struct MeshBindingDescription
         VkVertexInputBindingDescription bind;
         bind.binding = this->binding;
         bind.stride = this->stride;
-        bind.inputRate = this->input_rate;
+        bind.inputRate = this->inputRate;
         return bind;
     }
 };
 
 struct QueueFamilyIndices
 {
-    Optional<uint32> graphics_family;
-    Optional<uint32> transfer_family;
-    Optional<uint32> present_family;
-    Optional<uint32> compute_family;
+    Optional<uint32> graphicsFamily;
+    Optional<uint32> transferFamily;
+    Optional<uint32> presentFamily;
+    Optional<uint32> computeFamily;
 
     bool IsComplete() const
     {
-        return graphics_family.HasValue()
-            && transfer_family.HasValue()
-            && present_family.HasValue()
-            && compute_family.HasValue();
+        return graphicsFamily.HasValue()
+            && transferFamily.HasValue()
+            && presentFamily.HasValue()
+            && computeFamily.HasValue();
     }
 };
 
 struct SwapchainSupportDetails
 {
     VkSurfaceCapabilitiesKHR capabilities;
-    Array<VkQueueFamilyProperties> queue_family_properties;
+    Array<VkQueueFamilyProperties> queueFamilyProperties;
     Array<VkSurfaceFormatKHR> formats;
-    Array<VkPresentModeKHR> present_modes;
+    Array<VkPresentModeKHR> presentModes;
 };
 
 struct IndirectDrawCommand

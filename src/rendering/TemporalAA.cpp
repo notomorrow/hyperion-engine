@@ -30,23 +30,23 @@
 
 namespace hyperion {
 
-TemporalAA::TemporalAA(const ImageViewRef& input_image_view, const Vec2u& extent, GBuffer* gbuffer)
-    : m_input_image_view(input_image_view),
+TemporalAA::TemporalAA(const ImageViewRef& inputImageView, const Vec2u& extent, GBuffer* gbuffer)
+    : m_inputImageView(inputImageView),
       m_extent(extent),
       m_gbuffer(gbuffer),
-      m_is_initialized(false)
+      m_isInitialized(false)
 {
 }
 
 TemporalAA::~TemporalAA()
 {
-    SafeRelease(std::move(m_input_image_view));
-    SafeRelease(std::move(m_compute_taa));
+    SafeRelease(std::move(m_inputImageView));
+    SafeRelease(std::move(m_computeTaa));
 }
 
 void TemporalAA::Create()
 {
-    if (m_is_initialized)
+    if (m_isInitialized)
     {
         return;
     }
@@ -56,19 +56,19 @@ void TemporalAA::Create()
     CreateImages();
     CreateComputePipelines();
 
-    m_on_gbuffer_resolution_changed = m_gbuffer->OnGBufferResolutionChanged.Bind([this](Vec2u new_size)
+    m_onGbufferResolutionChanged = m_gbuffer->OnGBufferResolutionChanged.Bind([this](Vec2u newSize)
         {
-            SafeRelease(std::move(m_compute_taa));
+            SafeRelease(std::move(m_computeTaa));
 
             CreateComputePipelines();
         });
 
-    m_is_initialized = true;
+    m_isInitialized = true;
 }
 
 void TemporalAA::CreateImages()
 {
-    m_result_texture = CreateObject<Texture>(TextureDesc {
+    m_resultTexture = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
         TF_RGBA16F,
         Vec3u { m_extent.x, m_extent.y, 1 },
@@ -78,11 +78,11 @@ void TemporalAA::CreateImages()
         1,
         IU_STORAGE | IU_SAMPLED });
 
-    InitObject(m_result_texture);
+    InitObject(m_resultTexture);
 
-    m_result_texture->SetPersistentRenderResourceEnabled(true);
+    m_resultTexture->SetPersistentRenderResourceEnabled(true);
 
-    m_history_texture = CreateObject<Texture>(TextureDesc {
+    m_historyTexture = CreateObject<Texture>(TextureDesc {
         TT_TEX2D,
         TF_RGBA16F,
         Vec3u { m_extent.x, m_extent.y, 1 },
@@ -92,96 +92,96 @@ void TemporalAA::CreateImages()
         1,
         IU_STORAGE | IU_SAMPLED });
 
-    InitObject(m_history_texture);
+    InitObject(m_historyTexture);
 
-    m_history_texture->SetPersistentRenderResourceEnabled(true);
+    m_historyTexture->SetPersistentRenderResourceEnabled(true);
 }
 
 void TemporalAA::CreateComputePipelines()
 {
-    ShaderRef shader = g_shader_manager->GetOrCreate(NAME("TemporalAA"));
+    ShaderRef shader = g_shaderManager->GetOrCreate(NAME("TemporalAA"));
     AssertThrow(shader.IsValid());
 
-    const DescriptorTableDeclaration& descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+    const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-    DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+    DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
     const FixedArray<Handle<Texture>*, 2> textures = {
-        &m_result_texture,
-        &m_history_texture
+        &m_resultTexture,
+        &m_historyTexture
     };
 
-    for (uint32 frame_index = 0; frame_index < max_frames_in_flight; frame_index++)
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
         // create descriptor sets for depth pyramid generation.
-        const DescriptorSetRef& descriptor_set = descriptor_table->GetDescriptorSet(NAME("TemporalAADescriptorSet"), frame_index);
-        AssertThrow(descriptor_set != nullptr);
+        const DescriptorSetRef& descriptorSet = descriptorTable->GetDescriptorSet(NAME("TemporalAADescriptorSet"), frameIndex);
+        AssertThrow(descriptorSet != nullptr);
 
-        descriptor_set->SetElement(NAME("InColorTexture"), m_input_image_view);
-        descriptor_set->SetElement(NAME("InPrevColorTexture"), (*textures[(frame_index + 1) % 2])->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("InColorTexture"), m_inputImageView);
+        descriptorSet->SetElement(NAME("InPrevColorTexture"), (*textures[(frameIndex + 1) % 2])->GetRenderResource().GetImageView());
 
-        descriptor_set->SetElement(NAME("InVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
+        descriptorSet->SetElement(NAME("InVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
 
-        descriptor_set->SetElement(NAME("InDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
+        descriptorSet->SetElement(NAME("InDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
 
-        descriptor_set->SetElement(NAME("SamplerLinear"), g_render_global_state->PlaceholderData->GetSamplerLinear());
-        descriptor_set->SetElement(NAME("SamplerNearest"), g_render_global_state->PlaceholderData->GetSamplerNearest());
+        descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->PlaceholderData->GetSamplerLinear());
+        descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->PlaceholderData->GetSamplerNearest());
 
-        descriptor_set->SetElement(NAME("OutColorImage"), (*textures[frame_index % 2])->GetRenderResource().GetImageView());
+        descriptorSet->SetElement(NAME("OutColorImage"), (*textures[frameIndex % 2])->GetRenderResource().GetImageView());
     }
 
-    DeferCreate(descriptor_table);
+    DeferCreate(descriptorTable);
 
-    m_compute_taa = g_render_backend->MakeComputePipeline(
+    m_computeTaa = g_renderBackend->MakeComputePipeline(
         shader,
-        descriptor_table);
+        descriptorTable);
 
-    DeferCreate(m_compute_taa);
+    DeferCreate(m_computeTaa);
 }
 
-void TemporalAA::Render(FrameBase* frame, const RenderSetup& render_setup)
+void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
 {
     HYP_NAMED_SCOPE("Temporal AA");
 
-    AssertDebug(render_setup.IsValid());
-    AssertDebug(render_setup.HasView());
+    AssertDebug(renderSetup.IsValid());
+    AssertDebug(renderSetup.HasView());
 
-    const uint32 frame_index = frame->GetFrameIndex();
+    const uint32 frameIndex = frame->GetFrameIndex();
 
-    const ImageRef& active_image = frame->GetFrameIndex() % 2 == 0
-        ? m_result_texture->GetRenderResource().GetImage()
-        : m_history_texture->GetRenderResource().GetImage();
+    const ImageRef& activeImage = frame->GetFrameIndex() % 2 == 0
+        ? m_resultTexture->GetRenderResource().GetImage()
+        : m_historyTexture->GetRenderResource().GetImage();
 
-    frame->GetCommandList().Add<InsertBarrier>(active_image, RS_UNORDERED_ACCESS);
+    frame->GetCommandList().Add<InsertBarrier>(activeImage, RS_UNORDERED_ACCESS);
 
     struct
     {
         Vec2u dimensions;
-        Vec2u depth_texture_dimensions;
-        Vec2f camera_near_far;
-    } push_constants;
+        Vec2u depthTextureDimensions;
+        Vec2f cameraNearFar;
+    } pushConstants;
 
-    const Vec3u depth_texture_dimensions = m_gbuffer->GetBucket(RB_OPAQUE)
+    const Vec3u depthTextureDimensions = m_gbuffer->GetBucket(RB_OPAQUE)
                                                .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)
                                                ->GetImage()
                                                ->GetExtent();
 
-    push_constants.dimensions = m_extent;
-    push_constants.depth_texture_dimensions = Vec2u { depth_texture_dimensions.x, depth_texture_dimensions.y };
-    push_constants.camera_near_far = Vec2f { render_setup.view->GetCamera()->GetBufferData().camera_near, render_setup.view->GetCamera()->GetBufferData().camera_far };
+    pushConstants.dimensions = m_extent;
+    pushConstants.depthTextureDimensions = Vec2u { depthTextureDimensions.x, depthTextureDimensions.y };
+    pushConstants.cameraNearFar = Vec2f { renderSetup.view->GetCamera()->GetBufferData().cameraNear, renderSetup.view->GetCamera()->GetBufferData().cameraFar };
 
-    m_compute_taa->SetPushConstants(&push_constants, sizeof(push_constants));
+    m_computeTaa->SetPushConstants(&pushConstants, sizeof(pushConstants));
 
-    frame->GetCommandList().Add<BindComputePipeline>(m_compute_taa);
+    frame->GetCommandList().Add<BindComputePipeline>(m_computeTaa);
 
     frame->GetCommandList().Add<BindDescriptorTable>(
-        m_compute_taa->GetDescriptorTable(),
-        m_compute_taa,
+        m_computeTaa->GetDescriptorTable(),
+        m_computeTaa,
         ArrayMap<Name, ArrayMap<Name, uint32>> {},
-        frame_index);
+        frameIndex);
 
-    frame->GetCommandList().Add<DispatchCompute>(m_compute_taa, Vec3u { (m_extent.x + 7) / 8, (m_extent.y + 7) / 8, 1 });
-    frame->GetCommandList().Add<InsertBarrier>(active_image, RS_SHADER_RESOURCE);
+    frame->GetCommandList().Add<DispatchCompute>(m_computeTaa, Vec3u { (m_extent.x + 7) / 8, (m_extent.y + 7) / 8, 1 });
+    frame->GetCommandList().Add<InsertBarrier>(activeImage, RS_SHADER_RESOURCE);
 }
 
 } // namespace hyperion

@@ -26,9 +26,9 @@
 namespace hyperion {
 
 #if 0
-ReflectionProbeRenderer::ReflectionProbeRenderer(Name name, const Handle<EnvProbe>& env_probe)
+ReflectionProbeRenderer::ReflectionProbeRenderer(Name name, const Handle<EnvProbe>& envProbe)
     : RenderSubsystem(name),
-      m_env_probe(env_probe)
+      m_envProbe(envProbe)
 {
 }
 
@@ -38,7 +38,7 @@ ReflectionProbeRenderer::~ReflectionProbeRenderer()
 
 void ReflectionProbeRenderer::Init()
 {
-    InitObject(m_env_probe);
+    InitObject(m_envProbe);
 }
 
 void ReflectionProbeRenderer::OnRemoved()
@@ -52,49 +52,49 @@ void ReflectionProbeRenderer::OnUpdate(float delta)
         : RenderCommand
     {
         RenderWorld* world;
-        RenderEnvProbe* env_probe;
+        RenderEnvProbe* envProbe;
 
-        RENDER_COMMAND(RenderReflectionProbe)(RenderWorld* world, RenderEnvProbe* env_probe)
+        RENDER_COMMAND(RenderReflectionProbe)(RenderWorld* world, RenderEnvProbe* envProbe)
             : world(world),
-              env_probe(env_probe)
+              envProbe(envProbe)
         {
             // world->IncRef();
-            // env_probe->IncRef();
+            // envProbe->IncRef();
         }
 
         virtual ~RENDER_COMMAND(RenderReflectionProbe)() override
         {
             world->DecRef();
-            env_probe->DecRef();
+            envProbe->DecRef();
         }
 
         virtual RendererResult operator()() override
         {
-            FrameBase* frame = g_render_backend->GetCurrentFrame();
+            FrameBase* frame = g_renderBackend->GetCurrentFrame();
 
-            RenderSetup render_setup { world, nullptr };
+            RenderSetup renderSetup { world, nullptr };
 
-            env_probe->Render(frame, render_setup);
+            envProbe->Render(frame, renderSetup);
 
             HYPERION_RETURN_OK;
         }
     };
 
-    if (!m_env_probe.IsValid())
+    if (!m_envProbe.IsValid())
     {
         return;
     }
 
-    if (!m_env_probe->NeedsRender())
+    if (!m_envProbe->NeedsRender())
     {
         return;
     }
 
     g_engine->GetWorld()->GetRenderResource().IncRef();
-    m_env_probe->GetRenderResource().IncRef();
-    PUSH_RENDER_COMMAND(RenderReflectionProbe, &g_engine->GetWorld()->GetRenderResource(), &m_env_probe->GetRenderResource());
+    m_envProbe->GetRenderResource().IncRef();
+    PUSH_RENDER_COMMAND(RenderReflectionProbe, &g_engine->GetWorld()->GetRenderResource(), &m_envProbe->GetRenderResource());
 
-    m_env_probe->SetNeedsRender(false);
+    m_envProbe->SetNeedsRender(false);
 }
 #endif
 

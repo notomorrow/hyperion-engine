@@ -56,7 +56,7 @@ void CmdList::FreeCommand(CmdBase* command)
 {
     AssertThrow(command != nullptr);
 
-    CmdMemoryPoolBase* pool = command->m_pool_handle.pool;
+    CmdMemoryPoolBase* pool = command->m_poolHandle.pool;
     AssertThrow(pool != nullptr);
 
     pool->FreeCommand(command);
@@ -68,9 +68,9 @@ void CmdList::FreeCommand(CmdBase* command)
 
 void BindDescriptorSet::Prepare(FrameBase* frame)
 {
-    AssertThrow(m_descriptor_set->IsCreated());
+    AssertThrow(m_descriptorSet->IsCreated());
 
-    frame->MarkDescriptorSetUsed(m_descriptor_set);
+    frame->MarkDescriptorSetUsed(m_descriptorSet);
 }
 
 #pragma endregion BindDescriptorSet
@@ -79,16 +79,16 @@ void BindDescriptorSet::Prepare(FrameBase* frame)
 
 void BindDescriptorTable::Prepare(FrameBase* frame)
 {
-    for (const DescriptorSetRef& descriptor_set : m_descriptor_table->GetSets()[frame->GetFrameIndex()])
+    for (const DescriptorSetRef& descriptorSet : m_descriptorTable->GetSets()[frame->GetFrameIndex()])
     {
-        if (descriptor_set->GetLayout().IsTemplate())
+        if (descriptorSet->GetLayout().IsTemplate())
         {
             continue;
         }
 
-        AssertThrow(descriptor_set->IsCreated());
+        AssertThrow(descriptorSet->IsCreated());
 
-        frame->MarkDescriptorSetUsed(descriptor_set);
+        frame->MarkDescriptorSetUsed(descriptorSet);
     }
 }
 
@@ -97,14 +97,14 @@ void BindDescriptorTable::Prepare(FrameBase* frame)
 #pragma region BeginFramebuffer
 
 #ifdef HYP_DEBUG_MODE
-static FramebufferBase* g_active_framebuffer = nullptr;
+static FramebufferBase* g_activeFramebuffer = nullptr;
 
-BeginFramebuffer::BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frame_index)
+BeginFramebuffer::BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex)
     : m_framebuffer(framebuffer),
-      m_frame_index(frame_index)
+      m_frameIndex(frameIndex)
 {
-    AssertThrowMsg(!g_active_framebuffer, "Cannot begin framebuffer: already in a framebuffer");
-    g_active_framebuffer = framebuffer.Get();
+    AssertThrowMsg(!g_activeFramebuffer, "Cannot begin framebuffer: already in a framebuffer");
+    g_activeFramebuffer = framebuffer.Get();
 }
 
 void BeginFramebuffer::Prepare(FrameBase* frame)
@@ -118,13 +118,13 @@ void BeginFramebuffer::Prepare(FrameBase* frame)
 
 #ifdef HYP_DEBUG_MODE
 
-EndFramebuffer::EndFramebuffer(const FramebufferRef& framebuffer, uint32 frame_index)
+EndFramebuffer::EndFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex)
     : m_framebuffer(framebuffer),
-      m_frame_index(frame_index)
+      m_frameIndex(frameIndex)
 {
-    AssertThrowMsg(g_active_framebuffer, "Cannot end framebuffer: not in a framebuffer");
-    AssertThrowMsg(g_active_framebuffer == framebuffer.Get(), "Cannot end framebuffer: mismatched framebuffer");
-    g_active_framebuffer = nullptr;
+    AssertThrowMsg(g_activeFramebuffer, "Cannot end framebuffer: not in a framebuffer");
+    AssertThrowMsg(g_activeFramebuffer == framebuffer.Get(), "Cannot end framebuffer: mismatched framebuffer");
+    g_activeFramebuffer = nullptr;
 }
 
 void EndFramebuffer::Prepare(FrameBase* frame)
@@ -138,18 +138,18 @@ void EndFramebuffer::Prepare(FrameBase* frame)
 
 #ifdef HYP_DEBUG_MODE
 
-BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, Vec2i viewport_offset, Vec2u viewport_extent)
+BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, Vec2i viewportOffset, Vec2u viewportExtent)
     : m_pipeline(pipeline),
-      m_viewport_offset(viewport_offset),
-      m_viewport_extent(viewport_extent)
+      m_viewportOffset(viewportOffset),
+      m_viewportExtent(viewportExtent)
 {
-    AssertThrowMsg(g_active_framebuffer != nullptr, "Cannot bind graphics pipeline: not in a framebuffer");
-    //     AssertThrowMsg(pipeline->GetFramebuffers().FindAs(g_active_framebuffer) != pipeline->GetFramebuffers().End(), "Cannot bind graphics pipeline: framebuffer does not match pipeline");
+    AssertThrowMsg(g_activeFramebuffer != nullptr, "Cannot bind graphics pipeline: not in a framebuffer");
+    //     AssertThrowMsg(pipeline->GetFramebuffers().FindAs(g_activeFramebuffer) != pipeline->GetFramebuffers().End(), "Cannot bind graphics pipeline: framebuffer does not match pipeline");
     // #ifdef HYP_VULKAN
-    //     VulkanFramebuffer* vulkan_framebuffer = static_cast<VulkanFramebuffer*>(g_active_framebuffer);
-    //     VulkanGraphicsPipeline* vulkan_pipeline = static_cast<VulkanGraphicsPipeline*>(pipeline.Get());
+    //     VulkanFramebuffer* vulkanFramebuffer = static_cast<VulkanFramebuffer*>(g_activeFramebuffer);
+    //     VulkanGraphicsPipeline* vulkanPipeline = static_cast<VulkanGraphicsPipeline*>(pipeline.Get());
 
-    //     AssertThrowMsg(vulkan_framebuffer->GetRenderPass()->GetAttachments()[0]->GetFormat() == vulkan_pipeline->GetRenderPass()->GetAttachments()[0]->GetFormat(),
+    //     AssertThrowMsg(vulkanFramebuffer->GetRenderPass()->GetAttachments()[0]->GetFormat() == vulkanPipeline->GetRenderPass()->GetAttachments()[0]->GetFormat(),
     //         "Cannot bind graphics pipeline: render pass does not match framebuffer render pass");
     // #endif
 }
@@ -157,13 +157,13 @@ BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, 
 BindGraphicsPipeline::BindGraphicsPipeline(const GraphicsPipelineRef& pipeline)
     : m_pipeline(pipeline)
 {
-    AssertThrowMsg(g_active_framebuffer != nullptr, "Cannot bind graphics pipeline: not in a framebuffer");
-    //     AssertThrowMsg(pipeline->GetFramebuffers().FindAs(g_active_framebuffer) != pipeline->GetFramebuffers().End(), "Cannot bind graphics pipeline: framebuffer does not match pipeline");
+    AssertThrowMsg(g_activeFramebuffer != nullptr, "Cannot bind graphics pipeline: not in a framebuffer");
+    //     AssertThrowMsg(pipeline->GetFramebuffers().FindAs(g_activeFramebuffer) != pipeline->GetFramebuffers().End(), "Cannot bind graphics pipeline: framebuffer does not match pipeline");
     // #ifdef HYP_VULKAN
-    //     VulkanFramebuffer* vulkan_framebuffer = static_cast<VulkanFramebuffer*>(g_active_framebuffer);
-    //     VulkanGraphicsPipeline* vulkan_pipeline = static_cast<VulkanGraphicsPipeline*>(pipeline.Get());
+    //     VulkanFramebuffer* vulkanFramebuffer = static_cast<VulkanFramebuffer*>(g_activeFramebuffer);
+    //     VulkanGraphicsPipeline* vulkanPipeline = static_cast<VulkanGraphicsPipeline*>(pipeline.Get());
 
-    //     AssertThrowMsg(vulkan_framebuffer->GetRenderPass()->GetAttachments()[0]->GetFormat() == vulkan_pipeline->GetRenderPass()->GetAttachments()[0]->GetFormat(),
+    //     AssertThrowMsg(vulkanFramebuffer->GetRenderPass()->GetAttachments()[0]->GetFormat() == vulkanPipeline->GetRenderPass()->GetAttachments()[0]->GetFormat(),
     //         "Cannot bind graphics pipeline: render pass does not match framebuffer render pass");
     // #endif
 }

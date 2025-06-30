@@ -6,66 +6,66 @@
 
 namespace hyperion {
 
-HYP_API bool KeyCodeToChar(KeyCode key_code, bool shift, bool alt, bool ctrl, char& out_char)
+HYP_API bool KeyCodeToChar(KeyCode keyCode, bool shift, bool alt, bool ctrl, char& outChar)
 {
-    DebugLog(LogType::Debug, "KeyCodeToChar: key_code = %u\n", uint32(key_code));
+    DebugLog(LogType::Debug, "KeyCodeToChar: key_code = %u\n", uint32(keyCode));
 
-    if (uint32(key_code) >= uint32(KeyCode::KEY_A) && uint32(key_code) <= uint32(KeyCode::KEY_Z))
+    if (uint32(keyCode) >= uint32(KeyCode::KEY_A) && uint32(keyCode) <= uint32(KeyCode::KEY_Z))
     {
-        out_char = char(uint32(key_code) - uint32(KeyCode::KEY_A)) + (shift ? 'A' : 'a');
+        outChar = char(uint32(keyCode) - uint32(KeyCode::KEY_A)) + (shift ? 'A' : 'a');
         return true;
     }
 
-    if (uint32(key_code) >= uint32(KeyCode::KEY_0) && uint32(key_code) <= uint32(KeyCode::KEY_9))
+    if (uint32(keyCode) >= uint32(KeyCode::KEY_0) && uint32(keyCode) <= uint32(KeyCode::KEY_9))
     {
-        static const char num_codes[] = {
+        static const char numCodes[] = {
             ')', '!', '@', '#', '$', '%', '^', '&', '*', '('
         };
 
-        out_char = (shift ? num_codes[uint32(key_code) - uint32(KeyCode::KEY_0)] : (char(uint32(key_code) - uint32(KeyCode::KEY_0)) + '0'));
+        outChar = (shift ? numCodes[uint32(keyCode) - uint32(KeyCode::KEY_0)] : (char(uint32(keyCode) - uint32(KeyCode::KEY_0)) + '0'));
         return true;
     }
 
-    switch ((int)key_code)
+    switch ((int)keyCode)
     {
     case (int)' ':
-        out_char = ' ';
+        outChar = ' ';
         return true;
     case (int)'`':
-        out_char = shift ? '~' : '`';
+        outChar = shift ? '~' : '`';
         return true;
     case (int)',':
-        out_char = shift ? '<' : ',';
+        outChar = shift ? '<' : ',';
         return true;
     case (int)'.':
-        out_char = shift ? '>' : '.';
+        outChar = shift ? '>' : '.';
         return true;
     case (int)'/':
-        out_char = shift ? '?' : '/';
+        outChar = shift ? '?' : '/';
         return true;
     case (int)';':
-        out_char = shift ? ':' : ';';
+        outChar = shift ? ':' : ';';
         return true;
     case (int)'\'':
-        out_char = shift ? '"' : '\'';
+        outChar = shift ? '"' : '\'';
         return true;
     case (int)'-':
-        out_char = shift ? '_' : '-';
+        outChar = shift ? '_' : '-';
         return true;
     case (int)'=':
-        out_char = shift ? '+' : '=';
+        outChar = shift ? '+' : '=';
         return true;
     case (int)'\r':
-        out_char = '\n';
+        outChar = '\n';
         return true;
     case (int)'\n':
-        out_char = '\n';
+        outChar = '\n';
         return true;
     case (int)'\t':
-        out_char = '\t';
+        outChar = '\t';
         return true;
     case (int)'\b':
-        out_char = '\b';
+        outChar = '\b';
         return true;
 
     default:

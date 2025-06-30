@@ -278,8 +278,8 @@
         return _end;                                    \
     }
 
-#define HYP_ENABLE_IF(cond, return_type) \
-    typename std::enable_if_t<cond, return_type>
+#define HYP_ENABLE_IF(cond, returnType) \
+    typename std::enable_if_t<cond, returnType>
 
 #define HYP_LIKELY(cond) cond
 #define HYP_UNLIKELY(cond) cond

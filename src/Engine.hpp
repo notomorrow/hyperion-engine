@@ -78,12 +78,12 @@ public:
 
     HYP_FORCE_INLINE const Handle<AppContextBase>& GetAppContext() const
     {
-        return m_app_context;
+        return m_appContext;
     }
 
-    HYP_FORCE_INLINE void SetAppContext(const Handle<AppContextBase>& app_context)
+    HYP_FORCE_INLINE void SetAppContext(const Handle<AppContextBase>& appContext)
     {
-        m_app_context = app_context;
+        m_appContext = appContext;
     }
 
     HYP_METHOD()
@@ -110,37 +110,37 @@ public:
 
     HYP_FORCE_INLINE ShaderCompiler& GetShaderCompiler()
     {
-        return m_shader_compiler;
+        return m_shaderCompiler;
     }
 
     HYP_FORCE_INLINE const ShaderCompiler& GetShaderCompiler() const
     {
-        return m_shader_compiler;
+        return m_shaderCompiler;
     }
 
     HYP_FORCE_INLINE DebugDrawer* GetDebugDrawer() const
     {
-        return m_debug_drawer.Get();
+        return m_debugDrawer.Get();
     }
 
     HYP_FORCE_INLINE FinalPass* GetFinalPass() const
     {
-        return m_final_pass.Get();
+        return m_finalPass.Get();
     }
 
     HYP_FORCE_INLINE ScriptingService* GetScriptingService() const
     {
-        return m_scripting_service.Get();
+        return m_scriptingService.Get();
     }
 
     HYP_FORCE_INLINE MaterialDescriptorSetManager* GetMaterialDescriptorSetManager()
     {
-        return m_material_descriptor_set_manager.Get();
+        return m_materialDescriptorSetManager.Get();
     }
 
     HYP_FORCE_INLINE GraphicsPipelineCache* GetGraphicsPipelineCache() const
     {
-        return m_graphics_pipeline_cache.Get();
+        return m_graphicsPipelineCache.Get();
     }
 
     HYP_FORCE_INLINE EngineDelegates& GetDelegates()
@@ -155,12 +155,12 @@ public:
 
     HYP_FORCE_INLINE EngineRenderStatsCalculator& GetRenderStatsCalculator()
     {
-        return m_render_stats_calculator;
+        return m_renderStatsCalculator;
     }
 
     HYP_FORCE_INLINE bool IsShuttingDown() const
     {
-        return m_is_shutting_down.Get(MemoryOrder::SEQUENTIAL);
+        return m_isShuttingDown.Get(MemoryOrder::SEQUENTIAL);
     }
 
     HYP_API bool IsRenderLoopActive() const;
@@ -180,33 +180,33 @@ private:
 
     void FindTextureFormatDefaults();
 
-    Handle<AppContextBase> m_app_context;
+    Handle<AppContextBase> m_appContext;
 
-    UniquePtr<RenderThread> m_render_thread;
+    UniquePtr<RenderThread> m_renderThread;
 
-    ShaderCompiler m_shader_compiler;
+    ShaderCompiler m_shaderCompiler;
 
-    UniquePtr<MaterialDescriptorSetManager> m_material_descriptor_set_manager;
+    UniquePtr<MaterialDescriptorSetManager> m_materialDescriptorSetManager;
 
     Handle<World> m_world;
 
     Configuration m_configuration;
 
-    UniquePtr<DebugDrawer> m_debug_drawer;
+    UniquePtr<DebugDrawer> m_debugDrawer;
 
-    UniquePtr<FinalPass> m_final_pass;
+    UniquePtr<FinalPass> m_finalPass;
 
-    UniquePtr<ScriptingService> m_scripting_service;
+    UniquePtr<ScriptingService> m_scriptingService;
 
-    UniquePtr<GraphicsPipelineCache> m_graphics_pipeline_cache;
+    UniquePtr<GraphicsPipelineCache> m_graphicsPipelineCache;
 
     EngineDelegates m_delegates;
 
-    EngineRenderStatsCalculator m_render_stats_calculator;
-    EngineRenderStats m_render_stats;
+    EngineRenderStatsCalculator m_renderStatsCalculator;
+    EngineRenderStats m_renderStats;
 
-    AtomicVar<bool> m_is_shutting_down;
-    bool m_should_recreate_swapchain;
+    AtomicVar<bool> m_isShuttingDown;
+    bool m_shouldRecreateSwapchain;
 };
 
 } // namespace hyperion

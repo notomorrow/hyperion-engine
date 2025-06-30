@@ -27,8 +27,8 @@ extern "C"
         batch->LoadAsync();
 
         // Note: Will be deleted when AssetMap_Destroy is called from C#.
-        AssetMap* asset_map = new AssetMap(batch->AwaitResults());
-        callback(asset_map);
+        AssetMap* assetMap = new AssetMap(batch->AwaitResults());
+        callback(assetMap);
     }
 
     HYP_EXPORT AssetMap* AssetBatch_AwaitResults(AssetBatch* batch)

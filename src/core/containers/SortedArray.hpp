@@ -25,8 +25,8 @@ public:
 
     SortedArray();
 
-    SortedArray(std::initializer_list<T> initializer_list)
-        : Base(initializer_list)
+    SortedArray(std::initializer_list<T> initializerList)
+        : Base(initializerList)
     {
         std::sort(Begin(), End());
     }

@@ -7,8 +7,8 @@
 #include <core/Defines.hpp>
 
 #ifdef HYP_UNIX
-    #include <sys/mman.h>
-    #include <sys/fcntl.h>
+#include <sys/mman.h>
+#include <sys/fcntl.h>
 #endif
 
 namespace hyperion {
@@ -68,13 +68,13 @@ bool SharedMemory::Close()
     }
 
 #ifdef HYP_UNIX
-    const int munmap_result = munmap(m_address, m_size);
+    const int munmapResult = munmap(m_address, m_size);
 
     m_handle = -1;
     m_address = nullptr;
     m_size = 0;
 
-    if (munmap_result == 0)
+    if (munmapResult == 0)
     {
         return true;
     }

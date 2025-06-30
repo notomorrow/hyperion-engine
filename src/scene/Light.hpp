@@ -58,7 +58,7 @@ public:
         LightType type,
         const Vec3f& position,
         const Vec3f& normal,
-        const Vec2f& area_size,
+        const Vec2f& areaSize,
         const Color& color,
         float intensity,
         float radius);
@@ -73,7 +73,7 @@ public:
 
     HYP_FORCE_INLINE RenderLight& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     /*! \brief Get the current mutation state of the light.
@@ -82,7 +82,7 @@ public:
      */
     HYP_FORCE_INLINE DataMutationState GetMutationState() const
     {
-        return m_mutation_state;
+        return m_mutationState;
     }
 
     /*! \brief Get the type of the light.
@@ -105,7 +105,7 @@ public:
         }
 
         m_type = type;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the position for the light. For directional lights, this is the direction the light is pointing.
@@ -129,7 +129,7 @@ public:
         }
 
         m_position = position;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the normal for the light. This is used only for area lights.
@@ -153,7 +153,7 @@ public:
         }
 
         m_normal = normal;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the area size for the light. This is used only for area lights.
@@ -162,22 +162,22 @@ public:
     HYP_METHOD(Property = "AreaSize", Serialize = true, Editor = true)
     const Vec2f& GetAreaSize() const
     {
-        return m_area_size;
+        return m_areaSize;
     }
 
     /*! \brief Set the area size for the light. This is used only for area lights.
      *
-     *  \param area_size The area size to set. (x = width, y = height) */
+     *  \param areaSize The area size to set. (x = width, y = height) */
     HYP_METHOD(Property = "AreaSize", Serialize = true, Editor = true)
-    void SetAreaSize(const Vec2f& area_size)
+    void SetAreaSize(const Vec2f& areaSize)
     {
-        if (m_area_size == area_size)
+        if (m_areaSize == areaSize)
         {
             return;
         }
 
-        m_area_size = area_size;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_areaSize = areaSize;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the color for the light.
@@ -201,7 +201,7 @@ public:
         }
 
         m_color = color;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the intensity for the light. This is used to determine how bright the light is.
@@ -225,7 +225,7 @@ public:
         }
 
         m_intensity = intensity;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the radius for the light. This is used to determine the maximum distance at which this light is visible. (point lights only)
@@ -257,7 +257,7 @@ public:
         }
 
         m_radius = radius;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the falloff for the light. This is used to determine how the light intensity falls off with distance (point lights only).
@@ -281,7 +281,7 @@ public:
         }
 
         m_falloff = falloff;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the angles for the spotlight (x = outer, y = inner). This is used to determine the angle of the light cone (spot lights only).
@@ -290,22 +290,22 @@ public:
     HYP_METHOD(Property = "SpotAngles", Serialize = true, Editor = true)
     const Vec2f& GetSpotAngles() const
     {
-        return m_spot_angles;
+        return m_spotAngles;
     }
 
     /*! \brief Set the angles for the spotlight (x = outer, y = inner). This is used to determine the angle of the light cone (spot lights only).
      *
-     *  \param spot_angles The angles to set for the spotlight. */
+     *  \param spotAngles The angles to set for the spotlight. */
     HYP_METHOD(Property = "SpotAngles", Serialize = true, Editor = true)
-    void SetSpotAngles(const Vec2f& spot_angles)
+    void SetSpotAngles(const Vec2f& spotAngles)
     {
-        if (m_spot_angles == spot_angles)
+        if (m_spotAngles == spotAngles)
         {
             return;
         }
 
-        m_spot_angles = spot_angles;
-        m_mutation_state |= DataMutationState::DIRTY;
+        m_spotAngles = spotAngles;
+        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the material  for the light. Used for area lights.
@@ -338,20 +338,20 @@ protected:
     LightType m_type;
     Vec3f m_position;
     Vec3f m_normal;
-    Vec2f m_area_size;
+    Vec2f m_areaSize;
     Color m_color;
     float m_intensity;
     float m_radius;
     float m_falloff;
-    Vec2f m_spot_angles;
+    Vec2f m_spotAngles;
     Handle<Material> m_material;
 
 private:
     Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
 
-    mutable DataMutationState m_mutation_state;
+    mutable DataMutationState m_mutationState;
 
-    RenderLight* m_render_resource;
+    RenderLight* m_renderResource;
 };
 
 } // namespace hyperion

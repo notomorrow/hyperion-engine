@@ -25,7 +25,7 @@ public:
 
     bool IsInitialized() const
     {
-        return m_is_initialized;
+        return m_isInitialized;
     }
 
     Array<String> ListDevices() const;
@@ -46,7 +46,7 @@ public:
 private:
     static AudioManager* s_instance;
 
-    bool m_is_initialized;
+    bool m_isInitialized;
 
     ALCdevice* m_device;
     ALCcontext* m_context;

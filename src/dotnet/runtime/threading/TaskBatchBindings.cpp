@@ -17,49 +17,49 @@ extern "C"
         return new TaskBatch();
     }
 
-    HYP_EXPORT void TaskBatch_Destroy(TaskBatch* task_batch)
+    HYP_EXPORT void TaskBatch_Destroy(TaskBatch* taskBatch)
     {
-        delete task_batch;
+        delete taskBatch;
     }
 
-    HYP_EXPORT bool TaskBatch_IsCompleted(const TaskBatch* task_batch)
+    HYP_EXPORT bool TaskBatch_IsCompleted(const TaskBatch* taskBatch)
     {
-        return task_batch->IsCompleted();
+        return taskBatch->IsCompleted();
     }
 
-    HYP_EXPORT int32 TaskBatch_NumCompleted(const TaskBatch* task_batch)
+    HYP_EXPORT int32 TaskBatch_NumCompleted(const TaskBatch* taskBatch)
     {
-        return task_batch->notifier.GetValue();
+        return taskBatch->notifier.GetValue();
     }
 
-    HYP_EXPORT int32 TaskBatch_NumEnqueued(const TaskBatch* task_batch)
+    HYP_EXPORT int32 TaskBatch_NumEnqueued(const TaskBatch* taskBatch)
     {
-        return int32(task_batch->executors.Size());
+        return int32(taskBatch->executors.Size());
     }
 
-    HYP_EXPORT void TaskBatch_AwaitCompletion(TaskBatch* task_batch)
+    HYP_EXPORT void TaskBatch_AwaitCompletion(TaskBatch* taskBatch)
     {
-        task_batch->AwaitCompletion();
+        taskBatch->AwaitCompletion();
     }
 
-    HYP_EXPORT void TaskBatch_AddTask(TaskBatch* task_batch, TaskDelegate delegate)
+    HYP_EXPORT void TaskBatch_AddTask(TaskBatch* taskBatch, TaskDelegate delegate)
     {
-        task_batch->AddTask([delegate](...)
+        taskBatch->AddTask([delegate](...)
             {
                 delegate();
             });
     }
 
-    HYP_EXPORT void TaskBatch_Launch(TaskBatch* task_batch, void (*callback)(void))
+    HYP_EXPORT void TaskBatch_Launch(TaskBatch* taskBatch, void (*callback)(void))
     {
-        if (!task_batch)
+        if (!taskBatch)
         {
             return;
         }
 
-        task_batch->OnComplete.Bind(callback).Detach();
+        taskBatch->OnComplete.Bind(callback).Detach();
 
-        TaskSystem::GetInstance().EnqueueBatch(task_batch);
+        TaskSystem::GetInstance().EnqueueBatch(taskBatch);
     }
 
 } // extern "C"

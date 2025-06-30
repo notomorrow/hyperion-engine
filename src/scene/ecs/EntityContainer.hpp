@@ -21,7 +21,7 @@ class Entity;
 
 struct EntityData
 {
-    TypeId type_id;
+    TypeId typeId;
     TypeMap<ComponentId> components;
 
     template <class Component>
@@ -30,9 +30,9 @@ struct EntityData
         return components.Contains<Component>();
     }
 
-    HYP_FORCE_INLINE bool HasComponent(TypeId component_type_id) const
+    HYP_FORCE_INLINE bool HasComponent(TypeId componentTypeId) const
     {
-        return components.Contains(component_type_id);
+        return components.Contains(componentTypeId);
     }
 
     template <class... Components>
@@ -41,11 +41,11 @@ struct EntityData
         return (HasComponent<Components>() && ...);
     }
 
-    HYP_FORCE_INLINE bool HasComponents(Span<const TypeId> component_type_ids) const
+    HYP_FORCE_INLINE bool HasComponents(Span<const TypeId> componentTypeIds) const
     {
-        for (const TypeId& type_id : component_type_ids)
+        for (const TypeId& typeId : componentTypeIds)
         {
-            if (!components.Contains(type_id))
+            if (!components.Contains(typeId))
             {
                 return false;
             }
@@ -60,9 +60,9 @@ struct EntityData
         return components.At<Component>();
     }
 
-    HYP_FORCE_INLINE ComponentId GetComponentId(TypeId component_type_id) const
+    HYP_FORCE_INLINE ComponentId GetComponentId(TypeId componentTypeId) const
     {
-        return components.At(component_type_id);
+        return components.At(componentTypeId);
     }
 
     template <class Component>
@@ -78,9 +78,9 @@ struct EntityData
         return it->second;
     }
 
-    HYP_FORCE_INLINE Optional<ComponentId> TryGetComponentId(TypeId component_type_id) const
+    HYP_FORCE_INLINE Optional<ComponentId> TryGetComponentId(TypeId componentTypeId) const
     {
-        auto it = components.Find(component_type_id);
+        auto it = components.Find(componentTypeId);
 
         if (it == components.End())
         {
@@ -96,9 +96,9 @@ struct EntityData
         return components.Find<Component>();
     }
 
-    HYP_FORCE_INLINE typename TypeMap<ComponentId>::Iterator FindComponent(TypeId component_type_id)
+    HYP_FORCE_INLINE typename TypeMap<ComponentId>::Iterator FindComponent(TypeId componentTypeId)
     {
-        return components.Find(component_type_id);
+        return components.Find(componentTypeId);
     }
 
     template <class Component>
@@ -107,9 +107,9 @@ struct EntityData
         return components.Find<Component>();
     }
 
-    HYP_FORCE_INLINE typename TypeMap<ComponentId>::ConstIterator FindComponent(TypeId component_type_id) const
+    HYP_FORCE_INLINE typename TypeMap<ComponentId>::ConstIterator FindComponent(TypeId componentTypeId) const
     {
-        return components.Find(component_type_id);
+        return components.Find(componentTypeId);
     }
 };
 
@@ -119,17 +119,17 @@ public:
     using Iterator = HashMap<Entity*, EntityData>::Iterator;
     using ConstIterator = HashMap<Entity*, EntityData>::ConstIterator;
 
-    HYP_FORCE_INLINE void Add(TypeId type_id, Entity* entity)
+    HYP_FORCE_INLINE void Add(TypeId typeId, Entity* entity)
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        auto it = m_entities.Insert(entity, { type_id });
+        auto it = m_entities.Insert(entity, { typeId });
         AssertThrow(it.second);
     }
 
     HYP_FORCE_INLINE EntityData* TryGetEntityData(const Entity* entity)
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         auto it = m_entities.FindAs(entity);
 
@@ -138,7 +138,7 @@ public:
 
     HYP_FORCE_INLINE const EntityData* TryGetEntityData(const Entity* entity) const
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         auto it = m_entities.FindAs(entity);
 
@@ -163,21 +163,21 @@ public:
 
     HYP_FORCE_INLINE Iterator Find(const Entity* entity)
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         return m_entities.FindAs(entity);
     }
 
     HYP_FORCE_INLINE ConstIterator Find(const Entity* entity) const
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         return m_entities.FindAs(entity);
     }
 
     HYP_FORCE_INLINE void Erase(ConstIterator it)
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
         m_entities.Erase(it);
     }
@@ -187,7 +187,7 @@ public:
 private:
     HashMap<Entity*, EntityData> m_entities;
 
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };
 
 } // namespace hyperion

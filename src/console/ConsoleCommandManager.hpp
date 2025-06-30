@@ -33,7 +33,7 @@ public:
 
     void RegisterCommand(const Handle<ConsoleCommandBase>& command);
 
-    Result ExecuteCommand(const String& command_line);
+    Result ExecuteCommand(const String& commandLine);
 
 private:
     int FindAndRegisterCommands();

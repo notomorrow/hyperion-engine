@@ -207,9 +207,9 @@ struct Handle final : HandleBase
      *  \return The TypeId of the object. */
     HYP_FORCE_INLINE const TypeId& GetTypeId() const
     {
-        static const TypeId type_id = TypeId::ForType<T>();
+        static const TypeId typeId = TypeId::ForType<T>();
 
-        return ptr ? ptr->m_header->container->GetObjectTypeId() : type_id;
+        return ptr ? ptr->m_header->container->GetObjectTypeId() : typeId;
     }
 
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
@@ -304,8 +304,8 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instance_of_check = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instance_of_check, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<const Handle<Ty>&>(*this);
@@ -316,8 +316,8 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instance_of_check = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instance_of_check, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<Handle<Ty>&&>(*this);
@@ -340,8 +340,8 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instance_of_check = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instance_of_check, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<const Handle<Ty>&>(*this);
@@ -352,8 +352,8 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instance_of_check = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instance_of_check, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
+            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<Handle<Ty>&&>(*this);
@@ -538,7 +538,7 @@ struct WeakHandle final
 
         /// \todo: Fix this potential race condition. What if the object is destroyed while we are locking it?
         /// we should instead increment the strong reference count and then check if it is still alive. (we'll need to update the semantics around HypObject_OnIncRefCount_Strong first)
-        return ptr->m_header->ref_count_strong.Get(MemoryOrder::ACQUIRE) != 0
+        return ptr->m_header->refCountStrong.Get(MemoryOrder::ACQUIRE) != 0
             ? Handle<T>(ptr)
             : Handle<T>();
     }
@@ -576,9 +576,9 @@ struct WeakHandle final
      *  \return The TypeId of the object. */
     HYP_FORCE_INLINE const TypeId& GetTypeId() const
     {
-        static const TypeId type_id = TypeId::ForType<T>();
+        static const TypeId typeId = TypeId::ForType<T>();
 
-        return ptr ? ptr->m_header->container->GetObjectTypeId() : type_id;
+        return ptr ? ptr->m_header->container->GetObjectTypeId() : typeId;
     }
 
     HYP_FORCE_INLINE bool operator==(std::nullptr_t) const
@@ -668,8 +668,8 @@ struct WeakHandle final
     {
         if (ptr)
         {
-            const bool instance_of_check = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instance_of_check, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
+            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            AssertThrowMsg(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<const WeakHandle<Ty>&>(*this);
@@ -680,8 +680,8 @@ struct WeakHandle final
     {
         if (ptr)
         {
-            const bool instance_of_check = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
-            AssertThrowMsg(instance_of_check, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
+            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            AssertThrowMsg(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
         }
 
         return reinterpret_cast<WeakHandle<Ty>&&>(*this);
@@ -701,24 +701,24 @@ struct AnyHandle final
     using IdType = ObjIdBase;
 
     HypObjectBase* ptr;
-    TypeId type_id;
+    TypeId typeId;
 
 public:
     static const AnyHandle empty;
 
     AnyHandle()
         : ptr(nullptr),
-          type_id(TypeId::Void())
+          typeId(TypeId::Void())
     {
     }
 
-    HYP_API explicit AnyHandle(HypObjectBase* hyp_object_ptr);
-    HYP_API AnyHandle(const HypClass* hyp_class, HypObjectBase* ptr);
+    HYP_API explicit AnyHandle(HypObjectBase* hypObjectPtr);
+    HYP_API AnyHandle(const HypClass* hypClass, HypObjectBase* ptr);
 
     template <class T, typename = std::enable_if_t<std::is_base_of_v<HypObjectBase, T> && !std::is_same_v<HypObjectBase, T>>>
     explicit AnyHandle(T* ptr)
         : ptr(static_cast<HypObjectBase*>(ptr)),
-          type_id(this->ptr != nullptr ? this->ptr->m_header->container->GetObjectTypeId() : TypeId::ForType<T>())
+          typeId(this->ptr != nullptr ? this->ptr->m_header->container->GetObjectTypeId() : TypeId::ForType<T>())
     {
         if (IsValid())
         {
@@ -729,7 +729,7 @@ public:
     template <class T>
     AnyHandle(const Handle<T>& handle)
         : ptr(handle.ptr),
-          type_id(this->ptr != nullptr ? this->ptr->m_header->container->GetObjectTypeId() : TypeId::ForType<T>())
+          typeId(this->ptr != nullptr ? this->ptr->m_header->container->GetObjectTypeId() : TypeId::ForType<T>())
     {
         if (handle.IsValid())
         {
@@ -740,7 +740,7 @@ public:
     template <class T>
     AnyHandle(Handle<T>&& handle)
         : ptr(handle.ptr),
-          type_id(this->ptr != nullptr ? this->ptr->m_header->container->GetObjectTypeId() : TypeId::ForType<T>())
+          typeId(this->ptr != nullptr ? this->ptr->m_header->container->GetObjectTypeId() : TypeId::ForType<T>())
     {
         handle.ptr = nullptr;
     }
@@ -842,9 +842,9 @@ public:
     template <class T>
     HYP_FORCE_INLINE bool Is() const
     {
-        constexpr TypeId other_type_id = TypeId::ForType<T>();
-        return type_id == other_type_id
-            || IsInstanceOfHypClass(GetClass(other_type_id), ptr, type_id);
+        constexpr TypeId otherTypeId = TypeId::ForType<T>();
+        return typeId == otherTypeId
+            || IsInstanceOfHypClass(GetClass(otherTypeId), ptr, typeId);
     }
 
     template <class T>
@@ -868,7 +868,7 @@ public:
             AssertThrowMsg(Is<T>(), "Cannot cast AnyHandle to Handle<T> because the type does not match or is not a base class of T!");
         }
 
-        // This is "safe" because the type_id is checked above
+        // This is "safe" because the typeId is checked above
         // It is hacky, but we ensure that the structs are the same size and the pointer to HypObjectHeader is the first member
         return reinterpret_cast<const Handle<T>&>(*this);
     }
@@ -883,7 +883,7 @@ public:
             AssertThrowMsg(Is<T>(), "Cannot cast AnyHandle to Handle<T> because the type does not match or is not a base class of T!");
         }
 
-        // This is "safe" because the type_id is checked above
+        // This is "safe" because the typeId is checked above
         // It is hacky, but we ensure that the structs are the same size and the pointer to HypObjectHeader is the first member
         return reinterpret_cast<Handle<T>&&>(std::move(*this));
     }
@@ -919,7 +919,7 @@ inline Handle<T> CreateObject(Args&&... args)
     HypObjectMemory<T>* header = container.Allocate();
 
     // Add initial strong reference for the Handle<T> - if the object is alive, it will have at least 1 strong ref.
-    header->ref_count_strong.Increment(1, MemoryOrder::RELEASE);
+    header->refCountStrong.Increment(1, MemoryOrder::RELEASE);
 
     T* ptr = header->storage.GetPointer();
 
@@ -935,9 +935,9 @@ template <class T>
 inline bool InitObject(const Handle<T>& handle)
 {
     // provide a better error message for attempting to initialize incomplete types.
-    if constexpr (!implementation_exists<T>)
+    if constexpr (!implementationExists<T>)
     {
-        static_assert(implementation_exists<T>, "Cannot initialize an incomplete type. Make sure the type is fully defined before calling InitObject.");
+        static_assert(implementationExists<T>, "Cannot initialize an incomplete type. Make sure the type is fully defined before calling InitObject.");
     }
     else if constexpr (!std::is_base_of_v<HypObjectBase, T>)
     {
@@ -949,17 +949,17 @@ inline bool InitObject(const Handle<T>& handle)
         return false;
     }
 
-    HypObjectBase* base_ptr = static_cast<HypObjectBase*>(handle.Get());
+    HypObjectBase* basePtr = static_cast<HypObjectBase*>(handle.Get());
 
-    if (base_ptr->m_init_state.BitOr(HypObjectBase::INIT_STATE_INIT_CALLED, MemoryOrder::ACQUIRE_RELEASE) & HypObjectBase::INIT_STATE_INIT_CALLED)
+    if (basePtr->m_initState.BitOr(HypObjectBase::INIT_STATE_INIT_CALLED, MemoryOrder::ACQUIRE_RELEASE) & HypObjectBase::INIT_STATE_INIT_CALLED)
     {
         // Already initialized
         return true;
     }
 
-    AssertDebug(!base_ptr->IsReady());
+    AssertDebug(!basePtr->IsReady());
 
-    base_ptr->Init_Internal();
+    basePtr->Init_Internal();
 
     return true;
 }

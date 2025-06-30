@@ -24,8 +24,8 @@ class LightVisibilityUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(LightVisibilityUpdaterSystem);
 
 public:
-    LightVisibilityUpdaterSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    LightVisibilityUpdaterSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

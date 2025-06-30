@@ -6,13 +6,13 @@ namespace hyperion {
 
 AssetLoadResult FontFaceLoader::LoadAsset(LoaderState& state) const
 {
-    FontEngine& font_engine = FontEngine::GetInstance();
+    FontEngine& fontEngine = FontEngine::GetInstance();
 
-    RC<FontFace> font_face = MakeRefCountedPtr<FontFace>(
-        font_engine.GetFontBackend(),
+    RC<FontFace> fontFace = MakeRefCountedPtr<FontFace>(
+        fontEngine.GetFontBackend(),
         state.filepath);
 
-    return LoadedAsset { font_face };
+    return LoadedAsset { fontFace };
 }
 
 } // namespace hyperion

@@ -21,9 +21,9 @@ public:
         const VulkanImageRef& image,
         const VulkanFramebufferWeakRef& framebuffer,
         RenderPassStage stage,
-        LoadOperation load_operation = LoadOperation::CLEAR,
-        StoreOperation store_operation = StoreOperation::STORE,
-        BlendFunction blend_function = BlendFunction::None());
+        LoadOperation loadOperation = LoadOperation::CLEAR,
+        StoreOperation storeOperation = StoreOperation::STORE,
+        BlendFunction blendFunction = BlendFunction::None());
     HYP_API virtual ~VulkanAttachment() override;
 
     HYP_API VkAttachmentReference GetVulkanHandle() const;

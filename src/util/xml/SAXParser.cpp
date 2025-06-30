@@ -32,19 +32,19 @@ SAXParser::Result SAXParser::Parse(BufferedReader* reader)
         return Result(Result::SRT_ERR, "File could not be read.");
     }
 
-    bool is_reading = false,
-         is_opening = false,
-         is_closing = false,
-         in_element = false,
-         in_comment = false,
-         in_characters = false,
-         in_header = false,
-         in_attributes = false,
-         in_attribute_value = false,
-         in_attribute_name = false;
+    bool isReading = false,
+         isOpening = false,
+         isClosing = false,
+         inElement = false,
+         inComment = false,
+         inCharacters = false,
+         inHeader = false,
+         inAttributes = false,
+         inAttributeValue = false,
+         inAttributeName = false;
 
-    utf::u32char last_char = utf::u32char(-1);
-    String element_str, comment_str, value_str;
+    utf::u32char lastChar = utf::u32char(-1);
+    String elementStr, commentStr, valueStr;
     Array<Pair<String, String>> attribs;
 
     reader->ReadChars([&](char ch)
@@ -53,51 +53,51 @@ SAXParser::Result SAXParser::Parse(BufferedReader* reader)
             {
                 if (ch == '<')
                 {
-                    element_str.Clear();
-                    in_characters = false;
+                    elementStr.Clear();
+                    inCharacters = false;
 
-                    if (!value_str.Empty())
+                    if (!valueStr.Empty())
                     {
-                        m_handler->Characters(value_str);
+                        m_handler->Characters(valueStr);
                     }
 
-                    is_opening = true;
-                    is_reading = true;
-                    in_element = true;
-                    in_attributes = false;
-                    is_closing = false;
-                    value_str.Clear();
+                    isOpening = true;
+                    isReading = true;
+                    inElement = true;
+                    inAttributes = false;
+                    isClosing = false;
+                    valueStr.Clear();
                     attribs.Clear();
                 }
-                else if (ch == '!' && in_element)
+                else if (ch == '!' && inElement)
                 {
-                    in_comment = true;
-                    comment_str = "";
+                    inComment = true;
+                    commentStr = "";
                 }
-                else if (ch == '?' && in_element)
+                else if (ch == '?' && inElement)
                 {
-                    in_header = true;
+                    inHeader = true;
                 }
-                else if (ch == '/' && (in_element || (in_attributes && !in_attribute_value)))
+                else if (ch == '/' && (inElement || (inAttributes && !inAttributeValue)))
                 {
-                    is_opening = false;
-                    is_closing = true;
+                    isOpening = false;
+                    isClosing = true;
                 }
                 else if (ch == '>')
                 {
-                    in_characters = true;
-                    if (in_comment)
+                    inCharacters = true;
+                    if (inComment)
                     {
-                        in_comment = false;
-                        m_handler->Comment(comment_str);
+                        inComment = false;
+                        m_handler->Comment(commentStr);
                     }
-                    else if (in_header)
+                    else if (inHeader)
                     {
-                        in_header = false;
+                        inHeader = false;
                     }
                     else
                     {
-                        if (is_opening || last_char == '/')
+                        if (isOpening || lastChar == '/')
                         {
                             AttributeMap locals;
 
@@ -109,81 +109,81 @@ SAXParser::Result SAXParser::Parse(BufferedReader* reader)
                                 }
                             }
 
-                            m_handler->Begin(element_str, locals);
-                            is_opening = false;
+                            m_handler->Begin(elementStr, locals);
+                            isOpening = false;
                         }
 
-                        if (is_closing)
+                        if (isClosing)
                         {
-                            m_handler->End(element_str);
+                            m_handler->End(elementStr);
                         }
 
-                        in_attributes = false;
-                        in_element = false;
-                        is_closing = false;
-                        is_reading = false;
+                        inAttributes = false;
+                        inElement = false;
+                        isClosing = false;
+                        isReading = false;
 
                         attribs.Clear();
                     }
                 }
                 else
                 {
-                    if (!in_comment && !in_header)
+                    if (!inComment && !inHeader)
                     {
-                        if (is_reading)
+                        if (isReading)
                         {
-                            if (in_element)
+                            if (inElement)
                             {
                                 if (ch == ' ')
                                 {
-                                    in_element = false;
-                                    in_attributes = true;
+                                    inElement = false;
+                                    inAttributes = true;
                                     attribs.PushBack({ "", "" });
                                 }
                                 else
                                 {
-                                    element_str += ch;
+                                    elementStr += ch;
                                 }
                             }
-                            else if (in_attributes && is_opening)
+                            else if (inAttributes && isOpening)
                             {
-                                if (!in_attribute_value && ch == ' ')
+                                if (!inAttributeValue && ch == ' ')
                                 {
                                     attribs.PushBack({ "", "" });
                                 }
-                                else if (ch == '\"' && last_char != '\\')
+                                else if (ch == '\"' && lastChar != '\\')
                                 {
-                                    in_attribute_value = !in_attribute_value;
+                                    inAttributeValue = !inAttributeValue;
                                 }
                                 else if (ch != '\\')
                                 {
                                     auto& last = attribs.Back();
-                                    if (!in_attribute_value && ch != '=')
+                                    if (!inAttributeValue && ch != '=')
                                     {
                                         last.first += ch;
                                     }
-                                    else if (in_attribute_value)
+                                    else if (inAttributeValue)
                                     {
                                         last.second += ch;
                                     }
                                 }
                             }
                         }
-                        else if (in_characters)
+                        else if (inCharacters)
                         {
-                            if (ch != ' ' || (last_char != ' ' && (last_char != '\n' && last_char != '<')))
+                            if (ch != ' ' || (lastChar != ' ' && (lastChar != '\n' && lastChar != '<')))
                             {
-                                value_str += ch;
+                                valueStr += ch;
                             }
                         }
                     }
-                    else if (in_comment && ch != '-')
+                    else if (inComment && ch != '-')
                     {
-                        comment_str += ch;
+                        commentStr += ch;
                     }
                 }
             }
-            last_char = ch;
+            lastChar = ch;
         });
 
     return { Result::SRT_OK };

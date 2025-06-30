@@ -17,15 +17,15 @@
 
 namespace hyperion {
 
-extern HYP_API SafeDeleter* g_safe_deleter;
+extern HYP_API SafeDeleter* g_safeDeleter;
 
 #pragma region RenderProxy
 
 void RenderProxy::SafeRelease()
 {
-    g_safe_deleter->SafeRelease(std::move(mesh));
-    g_safe_deleter->SafeRelease(std::move(material));
-    g_safe_deleter->SafeRelease(std::move(skeleton));
+    g_safeDeleter->SafeRelease(std::move(mesh));
+    g_safeDeleter->SafeRelease(std::move(material));
+    g_safeDeleter->SafeRelease(std::move(skeleton));
 }
 
 void RenderProxy::IncRefs() const

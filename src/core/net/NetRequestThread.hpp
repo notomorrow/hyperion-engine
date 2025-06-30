@@ -17,7 +17,7 @@ public:
     virtual ~NetRequestThread() override;
 };
 
-HYP_API void SetGlobalNetRequestThread(const RC<NetRequestThread>& net_request_thread);
+HYP_API void SetGlobalNetRequestThread(const RC<NetRequestThread>& netRequestThread);
 HYP_API const RC<NetRequestThread>& GetGlobalNetRequestThread();
 
 } // namespace net

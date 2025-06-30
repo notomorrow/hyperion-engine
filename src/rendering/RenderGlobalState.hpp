@@ -36,8 +36,8 @@ class SkyProbe;
 class RenderGlobalState;
 class RenderResourceLock;
 
-HYP_API extern SizeType GetNumDescendants(TypeId type_id);
-HYP_API extern int GetSubclassIndex(TypeId base_type_id, TypeId subclass_type_id);
+HYP_API extern SizeType GetNumDescendants(TypeId typeId);
+HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 
 // Call at start of engine before render / game thread start ticking.
 // Allocates containers declared in RenderGlobalState.cpp via DECLARE_RENDER_DATA_CONTAINER
@@ -133,14 +133,14 @@ public:
     EnvProbeRenderer** EnvProbeRenderers;
     class EnvGridRenderer* EnvGridRenderer;
 
-    GlobalGpuBuffers gpu_buffers;
-    ResourceBindings* resource_bindings;
+    GlobalGpuBuffers gpuBuffers;
+    ResourceBindings* resourceBindings;
 
 private:
     void CreateBlueNoiseBuffer();
     void CreateSphereSamplesBuffer();
 
-    void SetDefaultDescriptorSetElements(uint32 frame_index);
+    void SetDefaultDescriptorSetElements(uint32 frameIndex);
 };
 
 } // namespace hyperion

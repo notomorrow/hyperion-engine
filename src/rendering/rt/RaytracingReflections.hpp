@@ -30,7 +30,7 @@ struct RaytracingReflectionsConfig : public ConfigBase<RaytracingReflectionsConf
     Vec2u extent = { 1024, 1024 };
 
     HYP_FIELD()
-    bool path_tracing = false;
+    bool pathTracing = false;
 
     virtual ~RaytracingReflectionsConfig() override = default;
 
@@ -54,12 +54,12 @@ public:
 
     HYP_FORCE_INLINE bool IsPathTracer() const
     {
-        return m_config.path_tracing;
+        return m_config.pathTracing;
     }
 
-    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, max_frames_in_flight>& tlas)
+    HYP_FORCE_INLINE void SetTopLevelAccelerationStructures(const FixedArray<TLASRef, maxFramesInFlight>& tlas)
     {
-        m_top_level_acceleration_structures = tlas;
+        m_topLevelAccelerationStructures = tlas;
     }
 
     HYP_API void ApplyTLASUpdates(RTUpdateStateFlags flags);
@@ -67,32 +67,32 @@ public:
     HYP_API void Create();
     HYP_API void Destroy();
 
-    HYP_API void Render(FrameBase* frame, const RenderSetup& render_setup);
+    HYP_API void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     void CreateImages();
     void CreateUniformBuffer();
     void CreateRaytracingPipeline();
     void CreateTemporalBlending();
-    void UpdateUniforms(FrameBase* frame, const RenderSetup& render_setup);
+    void UpdateUniforms(FrameBase* frame, const RenderSetup& renderSetup);
 
     RaytracingReflectionsConfig m_config;
 
     GBuffer* m_gbuffer;
 
-    FixedArray<TLASRef, max_frames_in_flight> m_top_level_acceleration_structures;
+    FixedArray<TLASRef, maxFramesInFlight> m_topLevelAccelerationStructures;
 
-    FixedArray<uint32, max_frames_in_flight> m_updates;
+    FixedArray<uint32, maxFramesInFlight> m_updates;
 
     ShaderRef m_shader;
 
     Handle<Texture> m_texture;
-    UniquePtr<TemporalBlending> m_temporal_blending;
+    UniquePtr<TemporalBlending> m_temporalBlending;
 
-    RaytracingPipelineRef m_raytracing_pipeline;
-    FixedArray<GpuBufferRef, max_frames_in_flight> m_uniform_buffers;
+    RaytracingPipelineRef m_raytracingPipeline;
+    FixedArray<GpuBufferRef, maxFramesInFlight> m_uniformBuffers;
 
-    Matrix4 m_previous_view_matrix;
+    Matrix4 m_previousViewMatrix;
 };
 
 } // namespace hyperion

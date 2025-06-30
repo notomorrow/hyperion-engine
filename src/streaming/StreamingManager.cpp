@@ -51,10 +51,10 @@ static const FixedArray<StreamingCellNeighbor, 8> GetCellNeighbors(const Vec2i& 
     };
 }
 
-static Vec2i WorldSpaceToCellCoord(const WorldGridLayerInfo& layer_info, const Vec3f& world_position)
+static Vec2i WorldSpaceToCellCoord(const WorldGridLayerInfo& layerInfo, const Vec3f& worldPosition)
 {
-    Vec3f scaled = world_position - layer_info.offset;
-    scaled *= Vec3f::One() / (layer_info.scale * (Vec3f(layer_info.cell_size) - 1.0f));
+    Vec3f scaled = worldPosition - layerInfo.offset;
+    scaled *= Vec3f::One() / (layerInfo.scale * (Vec3f(layerInfo.cellSize) - 1.0f));
     scaled = MathUtil::Floor(scaled);
 
     return { int(scaled.x), int(scaled.z) };
@@ -106,9 +106,9 @@ class StreamingManagerThread final : public Thread<Scheduler, StreamingManager*>
 
         Handle<WorldGridLayer> layer;
         StreamingCellCollection cells;
-        Queue<StreamingCellUpdate> cell_update_queue;
+        Queue<StreamingCellUpdate> cellUpdateQueue;
         AtomicVar<uint8> flags { LDF_NONE };
-        AtomicVar<uint32> lock_count { 0 };
+        AtomicVar<uint32> lockCount { 0 };
 
         LayerData(const Handle<WorldGridLayer>& layer)
             : layer(layer)
@@ -118,18 +118,18 @@ class StreamingManagerThread final : public Thread<Scheduler, StreamingManager*>
 
         void Lock()
         {
-            lock_count.Increment(1, MemoryOrder::RELEASE);
+            lockCount.Increment(1, MemoryOrder::RELEASE);
         }
 
         void Unlock()
         {
-            uint32 value = lock_count.Decrement(1, MemoryOrder::RELEASE);
+            uint32 value = lockCount.Decrement(1, MemoryOrder::RELEASE);
             AssertDebugMsg(value > 0, "Lock count cannot be negative!");
         }
 
         bool IsLocked() const
         {
-            return lock_count.Get(MemoryOrder::ACQUIRE) > 0;
+            return lockCount.Get(MemoryOrder::ACQUIRE) > 0;
         }
 
         void SetPendingRemoval()
@@ -148,7 +148,7 @@ public:
 
     StreamingManagerThread()
         : Thread(ThreadId(Name::Unique("StreamingManagerThread")), ThreadPriorityValue::NORMAL),
-          m_thread_pool(MakeUnique<StreamingThreadPool>())
+          m_threadPool(MakeUnique<StreamingThreadPool>())
     {
     }
 
@@ -293,9 +293,9 @@ public:
 
     void SinkGameThreadUpdates(Array<Pair<Handle<StreamingCell>, StreamingCellState>>& out)
     {
-        Threads::AssertOnThread(g_game_thread);
+        Threads::AssertOnThread(g_gameThread);
 
-        out.Concat(std::move(m_cell_updates_game_thread));
+        out.Concat(std::move(m_cellUpdatesGameThread));
     }
 
     HYP_FORCE_INLINE StreamingNotifier& GetNotifier()
@@ -305,23 +305,23 @@ public:
 
     void Stop()
     {
-        m_thread_pool->Stop();
+        m_threadPool->Stop();
 
-        m_stop_requested.Set(true, MemoryOrder::RELAXED);
+        m_stopRequested.Set(true, MemoryOrder::RELAXED);
         m_notifier.Produce(1); // Wake up the thread if it's waiting on the notifier.
     }
 
 private:
-    virtual void operator()(StreamingManager* streaming_manager) override
+    virtual void operator()(StreamingManager* streamingManager) override
     {
         for (const Handle<StreamingVolumeBase>& volume : m_volumes)
         {
             InitObject(volume);
         }
 
-        for (const LayerData& layer_data : m_layers)
+        for (const LayerData& layerData : m_layers)
         {
-            InitObject(layer_data.layer);
+            InitObject(layerData.layer);
         }
 
         StartWorkerThreadPool();
@@ -329,7 +329,7 @@ private:
         // Set the notifier to the initial value of 1 so it won't block the first call.
         m_notifier.Produce(1);
 
-        while (!m_stop_requested.Get(MemoryOrder::RELAXED))
+        while (!m_stopRequested.Get(MemoryOrder::RELAXED))
         {
             m_notifier.Acquire();
 
@@ -337,80 +337,80 @@ private:
 
             do
             {
-                DoWork(streaming_manager);
+                DoWork(streamingManager);
 
                 num = m_notifier.Release(num);
 
                 AssertDebug(num >= 0); // sanity check
             }
-            while (num > 0 && !m_stop_requested.Get(MemoryOrder::RELAXED));
+            while (num > 0 && !m_stopRequested.Get(MemoryOrder::RELAXED));
 
             Threads::Sleep(1000);
         }
     }
 
     void StartWorkerThreadPool();
-    void DoWork(StreamingManager* streaming_manager);
-    void ProcessCellUpdatesForLayer(LayerData& layer_data);
-    void GetDesiredCellsForLayer(const LayerData& layer_data, const Handle<StreamingVolumeBase>& volume, HashSet<Vec2i>& out_cell_coords) const;
+    void DoWork(StreamingManager* streamingManager);
+    void ProcessCellUpdatesForLayer(LayerData& layerData);
+    void GetDesiredCellsForLayer(const LayerData& layerData, const Handle<StreamingVolumeBase>& volume, HashSet<Vec2i>& outCellCoords) const;
 
     void PostCellUpdateToGameThread(Handle<StreamingCell> cell, StreamingCellState state)
     {
-        Mutex::Guard guard(m_game_thread_futures_mutex);
+        Mutex::Guard guard(m_gameThreadFuturesMutex);
 
-        Task<void>& future = m_game_thread_futures.EmplaceBack();
+        Task<void>& future = m_gameThreadFutures.EmplaceBack();
         TaskPromise<void>* promise = future.Promise();
 
-        Threads::GetThread(g_game_thread)->GetScheduler().Enqueue([this, promise, cell = std::move(cell), state]()
+        Threads::GetThread(g_gameThread)->GetScheduler().Enqueue([this, promise, cell = std::move(cell), state]()
             {
-                m_cell_updates_game_thread.EmplaceBack(std::move(cell), state);
+                m_cellUpdatesGameThread.EmplaceBack(std::move(cell), state);
 
                 promise->Fulfill();
 
-                Mutex::Guard guard(m_game_thread_futures_mutex);
+                Mutex::Guard guard(m_gameThreadFuturesMutex);
 
-                auto it = m_game_thread_futures.FindIf([promise](const Task<void>& task)
+                auto it = m_gameThreadFutures.FindIf([promise](const Task<void>& task)
                     {
                         return task.GetTaskExecutor() == promise;
                     });
 
-                AssertThrowMsg(it != m_game_thread_futures.End(), "Task not found in game thread tasks!");
+                AssertThrowMsg(it != m_gameThreadFutures.End(), "Task not found in game thread tasks!");
 
-                m_game_thread_futures.Erase(it);
+                m_gameThreadFutures.Erase(it);
             },
             TaskEnqueueFlags::FIRE_AND_FORGET);
     }
 
-    UniquePtr<StreamingThreadPool> m_thread_pool;
+    UniquePtr<StreamingThreadPool> m_threadPool;
 
     Array<Handle<StreamingVolumeBase>> m_volumes;
     LinkedList<LayerData> m_layers;
 
-    Array<Pair<Handle<StreamingCell>, StreamingCellState>> m_cell_updates_game_thread;
-    LinkedList<Task<void>> m_game_thread_futures;
-    Mutex m_game_thread_futures_mutex;
+    Array<Pair<Handle<StreamingCell>, StreamingCellState>> m_cellUpdatesGameThread;
+    LinkedList<Task<void>> m_gameThreadFutures;
+    Mutex m_gameThreadFuturesMutex;
 
     StreamingNotifier m_notifier;
 };
 
 void StreamingManagerThread::StartWorkerThreadPool()
 {
-    AssertThrow(m_thread_pool != nullptr);
-    AssertThrow(!m_thread_pool->IsRunning());
+    AssertThrow(m_threadPool != nullptr);
+    AssertThrow(!m_threadPool->IsRunning());
 
-    m_thread_pool->Start();
+    m_threadPool->Start();
 
-    while (!m_thread_pool->IsRunning())
+    while (!m_threadPool->IsRunning())
     {
         Threads::Sleep(0);
     }
 }
 
-void StreamingManagerThread::DoWork(StreamingManager* streaming_manager)
+void StreamingManagerThread::DoWork(StreamingManager* streamingManager)
 {
     Queue<Scheduler::ScheduledTask> tasks;
 
-    if (uint32 num_enqueued = m_scheduler.NumEnqueued())
+    if (uint32 numEnqueued = m_scheduler.NumEnqueued())
     {
         m_scheduler.AcceptAll(tasks);
 
@@ -427,45 +427,45 @@ void StreamingManagerThread::DoWork(StreamingManager* streaming_manager)
     //     String::Join(
     //         Map(
     //             m_layers,
-    //             [](const LayerData& layer_data)
+    //             [](const LayerData& layerData)
     //             {
-    //                 return HYP_FORMAT("Layer: #{} : {}", layer_data.layer->Id().Value(), layer_data.cells.Size());
+    //                 return HYP_FORMAT("Layer: #{} : {}", layerData.layer->Id().Value(), layerData.cells.Size());
     //             }),
     //         ", "));
 
     for (auto it = m_layers.Begin(); it != m_layers.End();)
     {
-        LayerData& layer_data = *it;
+        LayerData& layerData = *it;
 
-        if (layer_data.IsLocked())
+        if (layerData.IsLocked())
         {
-            HYP_LOG(Streaming, Debug, "Layer {} is locked, skipping processing", layer_data.layer->GetLayerInfo().grid_size);
+            HYP_LOG(Streaming, Debug, "Layer {} is locked, skipping processing", layerData.layer->GetLayerInfo().gridSize);
 
             ++it;
 
             continue;
         }
 
-        if (layer_data.IsPendingRemoval())
+        if (layerData.IsPendingRemoval())
         {
-            HYP_LOG(Streaming, Debug, "Layer {} is pending removal, erasing", layer_data.layer->GetLayerInfo().grid_size);
+            HYP_LOG(Streaming, Debug, "Layer {} is pending removal, erasing", layerData.layer->GetLayerInfo().gridSize);
 
             it = m_layers.Erase(it);
 
             continue;
         }
 
-        const Handle<WorldGridLayer>& layer = layer_data.layer;
+        const Handle<WorldGridLayer>& layer = layerData.layer;
         AssertThrow(layer.IsValid());
 
-        StreamingCellCollection& cells = layer_data.cells;
-        Queue<StreamingCellUpdate>& cell_update_queue = layer_data.cell_update_queue;
+        StreamingCellCollection& cells = layerData.cells;
+        Queue<StreamingCellUpdate>& cellUpdateQueue = layerData.cellUpdateQueue;
 
-        HYP_LOG(Streaming, Debug, "Processing layer: {} {}", layer->GetLayerInfo().grid_size, layer->GetLayerInfo().cell_size);
+        HYP_LOG(Streaming, Debug, "Processing layer: {} {}", layer->GetLayerInfo().gridSize, layer->GetLayerInfo().cellSize);
 
-        const WorldGridLayerInfo& layer_info = layer->GetLayerInfo();
+        const WorldGridLayerInfo& layerInfo = layer->GetLayerInfo();
 
-        HashSet<Vec2i> desired_cells;
+        HashSet<Vec2i> desiredCells;
 
         for (const Handle<StreamingVolumeBase>& volume : m_volumes)
         {
@@ -474,40 +474,40 @@ void StreamingManagerThread::DoWork(StreamingManager* streaming_manager)
                 continue;
             }
 
-            GetDesiredCellsForLayer(layer_data, volume, desired_cells);
+            GetDesiredCellsForLayer(layerData, volume, desiredCells);
         }
 
         // @TODO Use bitset via IDs, or by cell index (x * height + y, would need constant max dimensions for that) to track desired cells and undesired cells.
-        Array<Vec2i> cells_to_add = desired_cells.ToArray();
-        Array<Handle<StreamingCell>> cells_to_remove;
+        Array<Vec2i> cellsToAdd = desiredCells.ToArray();
+        Array<Handle<StreamingCell>> cellsToRemove;
 
-        for (const StreamingCellRuntimeInfo& cell_runtime_info : cells)
+        for (const StreamingCellRuntimeInfo& cellRuntimeInfo : cells)
         {
-            auto it = desired_cells.Find(cell_runtime_info.coord);
+            auto it = desiredCells.Find(cellRuntimeInfo.coord);
 
-            if (it == desired_cells.End())
+            if (it == desiredCells.End())
             {
-                AssertThrow(cell_runtime_info.cell.IsValid());
+                AssertThrow(cellRuntimeInfo.cell.IsValid());
 
                 // Lock so we can use it safely in the loop below for pushing to queue.
-                if (!cells.SetCellLockState(cell_runtime_info.coord, true))
+                if (!cells.SetCellLockState(cellRuntimeInfo.coord, true))
                 {
                     // Already locked, skip adding for removal
                     continue;
                 }
 
-                cells_to_remove.PushBack(cell_runtime_info.cell);
+                cellsToRemove.PushBack(cellRuntimeInfo.cell);
             }
             else
             {
                 // Already have the cell
-                cells_to_add.Erase(cell_runtime_info.coord);
+                cellsToAdd.Erase(cellRuntimeInfo.coord);
             }
         }
 
-        if (cells_to_remove.Any())
+        if (cellsToRemove.Any())
         {
-            for (const Handle<StreamingCell>& cell : cells_to_remove)
+            for (const Handle<StreamingCell>& cell : cellsToRemove)
             {
                 AssertThrow(cell.IsValid());
                 AssertDebugMsg(cells.IsCellLocked(cell->GetPatchInfo().coord),
@@ -515,40 +515,40 @@ void StreamingManagerThread::DoWork(StreamingManager* streaming_manager)
                     cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y);
 
                 // Cell is locked here -- request unloading.
-                cell_update_queue.Push(StreamingCellUpdate { cell->GetPatchInfo().coord, StreamingCellState::UNLOADING });
+                cellUpdateQueue.Push(StreamingCellUpdate { cell->GetPatchInfo().coord, StreamingCellState::UNLOADING });
             }
         }
 
-        if (cells_to_add.Any())
+        if (cellsToAdd.Any())
         {
-            for (const Vec2i& coord : cells_to_add)
+            for (const Vec2i& coord : cellsToAdd)
             {
                 AssertThrowMsg(!cells.HasCell(coord), "StreamingCell with coord %d,%d already exists!", coord.x, coord.y);
 
-                cell_update_queue.Push(StreamingCellUpdate { coord, StreamingCellState::WAITING });
+                cellUpdateQueue.Push(StreamingCellUpdate { coord, StreamingCellState::WAITING });
             }
         }
 
-        ProcessCellUpdatesForLayer(layer_data);
+        ProcessCellUpdatesForLayer(layerData);
 
         ++it;
     }
 }
 
-void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layer_data)
+void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layerData)
 {
-    const WorldGridLayerInfo& layer_info = layer_data.layer->GetLayerInfo();
-    StreamingCellCollection& cells = layer_data.cells;
-    Queue<StreamingCellUpdate>& cell_update_queue = layer_data.cell_update_queue;
+    const WorldGridLayerInfo& layerInfo = layerData.layer->GetLayerInfo();
+    StreamingCellCollection& cells = layerData.cells;
+    Queue<StreamingCellUpdate>& cellUpdateQueue = layerData.cellUpdateQueue;
 
-    if (cell_update_queue.Empty())
+    if (cellUpdateQueue.Empty())
     {
         return;
     }
 
-    while (cell_update_queue.Any())
+    while (cellUpdateQueue.Any())
     {
-        StreamingCellUpdate update = cell_update_queue.Pop();
+        StreamingCellUpdate update = cellUpdateQueue.Pop();
 
         HYP_LOG(Streaming, Debug, "Processing StreamingCellUpdate for coord: {}, state: {}", update.coord, update.state);
 
@@ -558,18 +558,18 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layer_data)
         {
             AssertThrowMsg(!cells.HasCell(update.coord), "StreamingCell with coord %d,%d already exists!", update.coord.x, update.coord.y);
 
-            StreamingCellInfo cell_info;
-            cell_info.coord = update.coord;
-            cell_info.extent = layer_info.cell_size;
-            cell_info.scale = layer_info.scale;
-            cell_info.bounds.min = {
-                layer_info.offset.x + (float(cell_info.coord.x) - 0.5f) * (float(cell_info.extent.x) - 1.0f) * cell_info.scale.x,
-                layer_info.offset.y,
-                layer_info.offset.z + (float(cell_info.coord.y) - 0.5f) * (float(cell_info.extent.y) - 1.0f) * cell_info.scale.z
+            StreamingCellInfo cellInfo;
+            cellInfo.coord = update.coord;
+            cellInfo.extent = layerInfo.cellSize;
+            cellInfo.scale = layerInfo.scale;
+            cellInfo.bounds.min = {
+                layerInfo.offset.x + (float(cellInfo.coord.x) - 0.5f) * (float(cellInfo.extent.x) - 1.0f) * cellInfo.scale.x,
+                layerInfo.offset.y,
+                layerInfo.offset.z + (float(cellInfo.coord.y) - 0.5f) * (float(cellInfo.extent.y) - 1.0f) * cellInfo.scale.z
             };
-            cell_info.bounds.max = cell_info.bounds.min + Vec3f(cell_info.extent) * cell_info.scale;
+            cellInfo.bounds.max = cellInfo.bounds.min + Vec3f(cellInfo.extent) * cellInfo.scale;
 
-            Handle<StreamingCell> cell = layer_data.layer->CreateStreamingCell(cell_info);
+            Handle<StreamingCell> cell = layerData.layer->CreateStreamingCell(cellInfo);
 
             if (!cell.IsValid())
             {
@@ -579,97 +579,97 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layer_data)
 
             InitObject(cell);
 
-            const bool was_cell_added = cells.AddCell(cell, StreamingCellState::WAITING, /* lock */ true);
-            AssertThrowMsg(was_cell_added, "Failed to add StreamingCell with coord: %d,%d", update.coord.x, update.coord.y);
+            const bool wasCellAdded = cells.AddCell(cell, StreamingCellState::WAITING, /* lock */ true);
+            AssertThrowMsg(wasCellAdded, "Failed to add StreamingCell with coord: %d,%d", update.coord.x, update.coord.y);
 
             PostCellUpdateToGameThread(cell, StreamingCellState::WAITING);
 
-            layer_data.Lock();
+            layerData.Lock();
 
-            TaskSystem::GetInstance().Enqueue([this, &layer_data, cell]()
+            TaskSystem::GetInstance().Enqueue([this, &layerData, cell]()
                 {
                     HYP_LOG(Streaming, Debug, "Loading StreamingCell at coord: {} on thread: {} for layer: {}",
-                        cell->GetPatchInfo().coord, Threads::CurrentThreadId().GetName(), layer_data.layer->InstanceClass()->GetName());
+                        cell->GetPatchInfo().coord, Threads::CurrentThreadId().GetName(), layerData.layer->InstanceClass()->GetName());
 
-                    bool is_ok = true;
+                    bool isOk = true;
 
-                    is_ok &= layer_data.cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::LOADING);
-                    AssertDebugMsg(is_ok, "Failed to update StreamingCell state to LOADING for coord: %d,%d for layer: %s",
+                    isOk &= layerData.cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::LOADING);
+                    AssertDebugMsg(isOk, "Failed to update StreamingCell state to LOADING for coord: %d,%d for layer: %s",
                         cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                        layer_data.layer->InstanceClass()->GetName().LookupString());
+                        layerData.layer->InstanceClass()->GetName().LookupString());
 
                     PostCellUpdateToGameThread(cell, StreamingCellState::LOADING);
 
                     cell->OnStreamStart();
 
-                    is_ok &= layer_data.cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::LOADED);
-                    AssertDebugMsg(is_ok, "Failed to update StreamingCell state to LOADED for coord: %d,%d for layer: %s\tCurrent state: %u",
+                    isOk &= layerData.cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::LOADED);
+                    AssertDebugMsg(isOk, "Failed to update StreamingCell state to LOADED for coord: %d,%d for layer: %s\tCurrent state: %u",
                         cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                        layer_data.layer->InstanceClass()->GetName().LookupString(),
-                        layer_data.cells.GetCellState(cell->GetPatchInfo().coord));
+                        layerData.layer->InstanceClass()->GetName().LookupString(),
+                        layerData.cells.GetCellState(cell->GetPatchInfo().coord));
 
-                    is_ok &= layer_data.cells.SetCellLockState(cell->GetPatchInfo().coord, false);
-                    AssertDebugMsg(is_ok, "Failed to unlock StreamingCell with coord: %d,%d for layer: %s",
+                    isOk &= layerData.cells.SetCellLockState(cell->GetPatchInfo().coord, false);
+                    AssertDebugMsg(isOk, "Failed to unlock StreamingCell with coord: %d,%d for layer: %s",
                         cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                        layer_data.layer->InstanceClass()->GetName().LookupString());
+                        layerData.layer->InstanceClass()->GetName().LookupString());
 
                     PostCellUpdateToGameThread(cell, StreamingCellState::LOADED);
 
-                    layer_data.Unlock();
+                    layerData.Unlock();
                 },
-                *m_thread_pool, TaskEnqueueFlags::FIRE_AND_FORGET);
+                *m_threadPool, TaskEnqueueFlags::FIRE_AND_FORGET);
 
             break;
         }
         case StreamingCellState::UNLOADING:
         {
-            bool is_ok = true;
+            bool isOk = true;
 
-            is_ok &= cells.HasCell(update.coord);
-            AssertThrowMsg(is_ok, "StreamingCell with coord %d,%d does not exist!", update.coord.x, update.coord.y);
+            isOk &= cells.HasCell(update.coord);
+            AssertThrowMsg(isOk, "StreamingCell with coord %d,%d does not exist!", update.coord.x, update.coord.y);
 
             // Locked here - see StreamingManagerThread::DoWork where we lock before pushing UNLOADING state.
 
-            is_ok &= cells.IsCellLocked(update.coord);
-            AssertThrowMsg(is_ok, "StreamingCell with coord %d,%d for layer %s is not locked for unloading!",
-                update.coord.x, update.coord.y, layer_data.layer->InstanceClass()->GetName().LookupString());
+            isOk &= cells.IsCellLocked(update.coord);
+            AssertThrowMsg(isOk, "StreamingCell with coord %d,%d for layer %s is not locked for unloading!",
+                update.coord.x, update.coord.y, layerData.layer->InstanceClass()->GetName().LookupString());
 
             Handle<StreamingCell> cell = cells.GetCell(update.coord);
             AssertThrowMsg(cell.IsValid(), "StreamingCell with coord %d,%d for layer %s is not valid!",
-                update.coord.x, update.coord.y, layer_data.layer->InstanceClass()->GetName().LookupString());
+                update.coord.x, update.coord.y, layerData.layer->InstanceClass()->GetName().LookupString());
 
-            is_ok &= cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::UNLOADING);
-            AssertDebugMsg(is_ok, "Failed to update StreamingCell state to UNLOADING for coord: %d,%d for layer: %s",
+            isOk &= cells.UpdateCellState(cell->GetPatchInfo().coord, StreamingCellState::UNLOADING);
+            AssertDebugMsg(isOk, "Failed to update StreamingCell state to UNLOADING for coord: %d,%d for layer: %s",
                 cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                layer_data.layer->InstanceClass()->GetName().LookupString());
+                layerData.layer->InstanceClass()->GetName().LookupString());
 
             PostCellUpdateToGameThread(cell, StreamingCellState::UNLOADING);
 
-            is_ok &= cells.RemoveCell(cell->GetPatchInfo().coord);
-            AssertDebugMsg(is_ok, "Failed to remove StreamingCell with coord: %d,%d for layer: %s",
+            isOk &= cells.RemoveCell(cell->GetPatchInfo().coord);
+            AssertDebugMsg(isOk, "Failed to remove StreamingCell with coord: %d,%d for layer: %s",
                 cell->GetPatchInfo().coord.x, cell->GetPatchInfo().coord.y,
-                layer_data.layer->InstanceClass()->GetName().LookupString());
+                layerData.layer->InstanceClass()->GetName().LookupString());
 
             HYP_LOG(Streaming, Debug, "Removed StreamingCell at coord: {} for layer: {} on thread: {}",
-                cell->GetPatchInfo().coord, layer_data.layer->InstanceClass()->GetName().LookupString(),
+                cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
                 Threads::CurrentThreadId().GetName());
 
-            layer_data.Lock();
+            layerData.Lock();
 
             // Call OnStreamEnd on the cell and then Unload it
-            TaskSystem::GetInstance().Enqueue([this, cell = std::move(cell), &layer_data]()
+            TaskSystem::GetInstance().Enqueue([this, cell = std::move(cell), &layerData]()
                 {
                     HYP_LOG(Streaming, Debug, "Unloading StreamingCell at coord: {} for layer: {} on thread: {}",
-                        cell->GetPatchInfo().coord, layer_data.layer->InstanceClass()->GetName().LookupString(),
+                        cell->GetPatchInfo().coord, layerData.layer->InstanceClass()->GetName().LookupString(),
                         Threads::CurrentThreadId().GetName());
 
                     // cell->OnStreamEnd();
 
                     PostCellUpdateToGameThread(cell, StreamingCellState::UNLOADED);
 
-                    layer_data.Unlock();
+                    layerData.Unlock();
                 },
-                *m_thread_pool, TaskEnqueueFlags::FIRE_AND_FORGET);
+                *m_threadPool, TaskEnqueueFlags::FIRE_AND_FORGET);
 
             break;
         }
@@ -681,11 +681,11 @@ void StreamingManagerThread::ProcessCellUpdatesForLayer(LayerData& layer_data)
     }
 }
 
-void StreamingManagerThread::GetDesiredCellsForLayer(const LayerData& layer_data, const Handle<StreamingVolumeBase>& volume, HashSet<Vec2i>& out_cell_coords) const
+void StreamingManagerThread::GetDesiredCellsForLayer(const LayerData& layerData, const Handle<StreamingVolumeBase>& volume, HashSet<Vec2i>& outCellCoords) const
 {
-    constexpr Vec2i cell_neighbor_directions[4] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+    constexpr Vec2i cellNeighborDirections[4] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
 
-    const WorldGridLayerInfo& layer_info = layer_data.layer->GetLayerInfo();
+    const WorldGridLayerInfo& layerInfo = layerData.layer->GetLayerInfo();
 
     BoundingBox aabb;
 
@@ -697,26 +697,26 @@ void StreamingManagerThread::GetDesiredCellsForLayer(const LayerData& layer_data
     Queue<Vec2f> queue;
     HashSet<Vec2i> visited;
 
-    const Vec2f center_coord = Vec2f(WorldSpaceToCellCoord(layer_info, aabb.GetCenter()));
+    const Vec2f centerCoord = Vec2f(WorldSpaceToCellCoord(layerInfo, aabb.GetCenter()));
 
-    queue.Push(center_coord);
-    visited.Insert(Vec2i(center_coord));
+    queue.Push(centerCoord);
+    visited.Insert(Vec2i(centerCoord));
 
-    const float max_dist_sq = layer_info.max_distance * layer_info.max_distance;
+    const float maxDistSq = layerInfo.maxDistance * layerInfo.maxDistance;
 
     while (queue.Any())
     {
         const Vec2f current = queue.Pop();
 
         // euclidean distance check
-        if (Vec2f(current).DistanceSquared(center_coord) > max_dist_sq)
+        if (Vec2f(current).DistanceSquared(centerCoord) > maxDistSq)
         {
             continue;
         }
 
-        out_cell_coords.Insert(Vec2i(current));
+        outCellCoords.Insert(Vec2i(current));
 
-        for (const Vec2i dir : cell_neighbor_directions)
+        for (const Vec2i dir : cellNeighborDirections)
         {
             const Vec2f neighbor = current + Vec2f(dir);
 
@@ -737,8 +737,8 @@ StreamingManager::StreamingManager()
 {
 }
 
-StreamingManager::StreamingManager(const WeakHandle<WorldGrid>& world_grid)
-    : m_world_grid(world_grid),
+StreamingManager::StreamingManager(const WeakHandle<WorldGrid>& worldGrid)
+    : m_worldGrid(worldGrid),
       m_thread(MakeUnique<StreamingManagerThread>())
 {
 }
@@ -751,7 +751,7 @@ StreamingManager::~StreamingManager()
 void StreamingManager::AddStreamingVolume(const Handle<StreamingVolumeBase>& volume)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     AssertThrow(volume.IsValid());
 
@@ -763,7 +763,7 @@ void StreamingManager::AddStreamingVolume(const Handle<StreamingVolumeBase>& vol
 void StreamingManager::RemoveStreamingVolume(StreamingVolumeBase* volume)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (!volume)
     {
@@ -778,7 +778,7 @@ void StreamingManager::RemoveStreamingVolume(StreamingVolumeBase* volume)
 void StreamingManager::AddWorldGridLayer(const Handle<WorldGridLayer>& layer)
 {
     HYP_SCOPE;
-    // Threads::AssertOnThread(g_game_thread);
+    // Threads::AssertOnThread(g_gameThread);
 
     AssertThrow(layer.IsValid());
 
@@ -788,7 +788,7 @@ void StreamingManager::AddWorldGridLayer(const Handle<WorldGridLayer>& layer)
 void StreamingManager::RemoveWorldGridLayer(WorldGridLayer* layer)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (!layer)
     {
@@ -833,7 +833,7 @@ void StreamingManager::Init()
 void StreamingManager::Update(float delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     Array<Pair<Handle<StreamingCell>, StreamingCellState>> updates;
     m_thread->SinkGameThreadUpdates(updates);

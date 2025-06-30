@@ -40,15 +40,15 @@ protected:
 private:
     Scene* m_scene;
 
-    ImageRef m_shadows_texture_array_image;
-    ImageViewRef m_shadows_texture_array_image_view;
+    ImageRef m_shadowsTextureArrayImage;
+    ImageViewRef m_shadowsTextureArrayImageView;
 };
 
 template <>
 struct ResourceMemoryPoolInitInfo<RenderScene> : MemoryPoolInitInfo<RenderScene>
 {
-    static constexpr uint32 num_elements_per_block = 8;
-    static constexpr uint32 num_initial_elements = 8;
+    static constexpr uint32 numElementsPerBlock = 8;
+    static constexpr uint32 numInitialElements = 8;
 };
 
 } // namespace hyperion

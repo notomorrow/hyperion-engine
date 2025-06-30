@@ -36,26 +36,26 @@ public:
     template <class... String>
     static inline std::string Join(String&&... args)
     {
-        std::array<std::string, sizeof...(args)> args_array = { args... };
+        std::array<std::string, sizeof...(args)> argsArray = { args... };
 
         enum
         {
             SEPARATOR_MODE_WINDOWS,
             SEPARATOR_MODE_UNIX
-        } separator_mode;
+        } separatorMode;
 
         if (!std::strcmp(HYP_FILESYSTEM_SEPARATOR, "\\"))
         {
-            separator_mode = SEPARATOR_MODE_WINDOWS;
+            separatorMode = SEPARATOR_MODE_WINDOWS;
         }
         else
         {
-            separator_mode = SEPARATOR_MODE_UNIX;
+            separatorMode = SEPARATOR_MODE_UNIX;
         }
 
-        for (auto& arg : args_array)
+        for (auto& arg : argsArray)
         {
-            if (separator_mode == SEPARATOR_MODE_WINDOWS)
+            if (separatorMode == SEPARATOR_MODE_WINDOWS)
             {
                 arg = StringUtil::ReplaceAll(arg, "/", "\\");
             }
@@ -65,7 +65,7 @@ public:
             }
         }
 
-        return StringUtil::Join(args_array, HYP_FILESYSTEM_SEPARATOR);
+        return StringUtil::Join(argsArray, HYP_FILESYSTEM_SEPARATOR);
     }
 };
 } // namespace filesystem

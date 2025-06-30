@@ -41,58 +41,58 @@ namespace hyperion {
 struct RENDER_COMMAND(CreateTexture)
     : RenderCommand
 {
-    WeakHandle<Texture> texture_weak;
-    TResourceHandle<StreamedTextureData> streamed_texture_data_handle;
-    ResourceState initial_state;
+    WeakHandle<Texture> textureWeak;
+    TResourceHandle<StreamedTextureData> streamedTextureDataHandle;
+    ResourceState initialState;
     ImageRef image;
-    ImageViewRef image_view;
+    ImageViewRef imageView;
 
     RENDER_COMMAND(CreateTexture)(
-        const WeakHandle<Texture>& texture_weak,
-        TResourceHandle<StreamedTextureData>&& streamed_texture_data_handle,
-        ResourceState initial_state,
+        const WeakHandle<Texture>& textureWeak,
+        TResourceHandle<StreamedTextureData>&& streamedTextureDataHandle,
+        ResourceState initialState,
         ImageRef image,
-        ImageViewRef image_view)
-        : texture_weak(texture_weak),
-          streamed_texture_data_handle(std::move(streamed_texture_data_handle)),
-          initial_state(initial_state),
+        ImageViewRef imageView)
+        : textureWeak(textureWeak),
+          streamedTextureDataHandle(std::move(streamedTextureDataHandle)),
+          initialState(initialState),
           image(std::move(image)),
-          image_view(std::move(image_view))
+          imageView(std::move(imageView))
     {
         AssertThrow(this->image.IsValid());
-        AssertThrow(this->image_view.IsValid());
+        AssertThrow(this->imageView.IsValid());
     }
 
     virtual ~RENDER_COMMAND(CreateTexture)() override = default;
 
     virtual RendererResult operator()() override
     {
-        if (Handle<Texture> texture = texture_weak.Lock())
+        if (Handle<Texture> texture = textureWeak.Lock())
         {
             if (!image->IsCreated())
             {
                 HYPERION_BUBBLE_ERRORS(image->Create());
 
-                if (streamed_texture_data_handle && streamed_texture_data_handle->GetBufferSize() != 0)
+                if (streamedTextureDataHandle && streamedTextureDataHandle->GetBufferSize() != 0)
                 {
-                    const TextureData& texture_data = streamed_texture_data_handle->GetTextureData();
-                    const TextureDesc& texture_desc = streamed_texture_data_handle->GetTextureDesc();
+                    const TextureData& textureData = streamedTextureDataHandle->GetTextureData();
+                    const TextureDesc& textureDesc = streamedTextureDataHandle->GetTextureDesc();
 
-                    AssertThrowMsg(texture_data.buffer.Size() == texture_desc.GetByteSize(),
+                    AssertThrowMsg(textureData.buffer.Size() == textureDesc.GetByteSize(),
                         "Streamed texture data buffer size mismatch in CreateTexture! Texture Id: %u, Texture name: %s, Expected: %u, Actual: %u (HashCode: %llu)",
                         texture->Id().Value(), texture->GetName().LookupString(),
-                        texture_desc.GetByteSize(), texture_data.buffer.Size(), streamed_texture_data_handle->GetDataHashCode().Value());
+                        textureDesc.GetByteSize(), textureData.buffer.Size(), streamedTextureDataHandle->GetDataHashCode().Value());
 
-                    AssertThrowMsg(streamed_texture_data_handle->GetTextureData().buffer.Size() == streamed_texture_data_handle->GetBufferSize(),
+                    AssertThrowMsg(streamedTextureDataHandle->GetTextureData().buffer.Size() == streamedTextureDataHandle->GetBufferSize(),
                         "Streamed texture data buffer size mismatch! Expected: %u, Actual: %u (HashCode: %llu)",
-                        streamed_texture_data_handle->GetBufferSize(), streamed_texture_data_handle->GetTextureData().buffer.Size(),
-                        streamed_texture_data_handle->GetDataHashCode().Value());
+                        streamedTextureDataHandle->GetBufferSize(), streamedTextureDataHandle->GetTextureData().buffer.Size(),
+                        streamedTextureDataHandle->GetDataHashCode().Value());
 
-                    GpuBufferRef staging_buffer = g_render_backend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, texture_data.buffer.Size());
-                    HYPERION_BUBBLE_ERRORS(staging_buffer->Create());
-                    staging_buffer->Copy(texture_data.buffer.Size(), texture_data.buffer.Data());
+                    GpuBufferRef stagingBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, textureData.buffer.Size());
+                    HYPERION_BUBBLE_ERRORS(stagingBuffer->Create());
+                    stagingBuffer->Copy(textureData.buffer.Size(), textureData.buffer.Data());
 
-                    HYP_DEFER({ SafeRelease(std::move(staging_buffer)); });
+                    HYP_DEFER({ SafeRelease(std::move(stagingBuffer)); });
 
                     // @FIXME add back ConvertTo32BPP
 
@@ -104,16 +104,16 @@ struct RENDER_COMMAND(CreateTexture)
                                 image,
                                 RS_COPY_DST);
 
-                            cmd.Add<CopyBufferToImage>(staging_buffer, image);
+                            cmd.Add<CopyBufferToImage>(stagingBuffer, image);
 
-                            if (texture_data.desc.HasMipmaps())
+                            if (textureData.desc.HasMipmaps())
                             {
                                 cmd.Add<GenerateMipmaps>(image);
                             }
 
                             cmd.Add<InsertBarrier>(
                                 image,
-                                initial_state);
+                                initialState);
                         });
 
                     if (RendererResult result = commands.Execute(); result.HasError())
@@ -121,14 +121,14 @@ struct RENDER_COMMAND(CreateTexture)
                         return result;
                     }
                 }
-                else if (initial_state != RS_UNDEFINED)
+                else if (initialState != RS_UNDEFINED)
                 {
                     SingleTimeCommands commands;
 
                     commands.Push([&](CmdList& cmd)
                         {
                             // Transition to initial state
-                            cmd.Add<InsertBarrier>(image, initial_state);
+                            cmd.Add<InsertBarrier>(image, initialState);
                         });
 
                     if (RendererResult result = commands.Execute(); result.HasError())
@@ -138,14 +138,14 @@ struct RENDER_COMMAND(CreateTexture)
                 }
             }
 
-            if (!image_view->IsCreated())
+            if (!imageView->IsCreated())
             {
-                HYPERION_BUBBLE_ERRORS(image_view->Create());
+                HYPERION_BUBBLE_ERRORS(imageView->Create());
             }
 
-            if (g_render_backend->GetRenderConfig().IsBindlessSupported())
+            if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
             {
-                g_render_global_state->BindlessTextures.AddResource(texture.Id(), image_view);
+                g_renderGlobalState->BindlessTextures.AddResource(texture.Id(), imageView);
             }
         }
 
@@ -176,9 +176,9 @@ struct RENDER_COMMAND(DestroyTexture)
             HYPERION_RETURN_OK;
         }
 
-        if (g_render_backend->GetRenderConfig().IsBindlessSupported())
+        if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
         {
-            g_render_global_state->BindlessTextures.RemoveResource(texture.Id());
+            g_renderGlobalState->BindlessTextures.RemoveResource(texture.Id());
         }
 
         HYPERION_RETURN_OK;
@@ -189,28 +189,28 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
     : RenderCommand
 {
     ImageRef m_image;
-    ImageViewRef m_image_view;
-    Array<ImageViewRef> m_mip_image_views;
+    ImageViewRef m_imageView;
+    Array<ImageViewRef> m_mipImageViews;
     Array<RC<FullScreenPass>> m_passes;
 
     RENDER_COMMAND(RenderTextureMipmapLevels)(
         ImageRef image,
-        ImageViewRef image_view,
-        Array<ImageViewRef> mip_image_views,
+        ImageViewRef imageView,
+        Array<ImageViewRef> mipImageViews,
         Array<RC<FullScreenPass>> passes)
         : m_image(std::move(image)),
-          m_image_view(std::move(image_view)),
-          m_mip_image_views(std::move(mip_image_views)),
+          m_imageView(std::move(imageView)),
+          m_mipImageViews(std::move(mipImageViews)),
           m_passes(std::move(passes))
     {
         AssertThrow(m_image != nullptr);
-        AssertThrow(m_image_view != nullptr);
+        AssertThrow(m_imageView != nullptr);
 
-        AssertThrow(m_passes.Size() == m_mip_image_views.Size());
+        AssertThrow(m_passes.Size() == m_mipImageViews.Size());
 
-        for (SizeType index = 0; index < m_mip_image_views.Size(); index++)
+        for (SizeType index = 0; index < m_mipImageViews.Size(); index++)
         {
-            AssertThrow(m_mip_image_views[index] != nullptr);
+            AssertThrow(m_mipImageViews[index] != nullptr);
             AssertThrow(m_passes[index] != nullptr);
         }
     }
@@ -224,94 +224,94 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
             {
                 const Vec3u extent = m_image->GetExtent();
 
-                uint32 mip_width = extent.x,
-                       mip_height = extent.y;
+                uint32 mipWidth = extent.x,
+                       mipHeight = extent.y;
 
-                ImageRef& dst_image = m_image;
+                ImageRef& dstImage = m_image;
 
-                for (uint32 mip_level = 0; mip_level < uint32(m_mip_image_views.Size()); mip_level++)
+                for (uint32 mipLevel = 0; mipLevel < uint32(m_mipImageViews.Size()); mipLevel++)
                 {
-                    RC<FullScreenPass>& pass = m_passes[mip_level];
+                    RC<FullScreenPass>& pass = m_passes[mipLevel];
                     AssertThrow(pass != nullptr);
 
-                    const uint32 prev_mip_width = mip_width,
-                                 prev_mip_height = mip_height;
+                    const uint32 prevMipWidth = mipWidth,
+                                 prevMipHeight = mipHeight;
 
-                    mip_width = MathUtil::Max(1u, extent.x >> (mip_level));
-                    mip_height = MathUtil::Max(1u, extent.y >> (mip_level));
+                    mipWidth = MathUtil::Max(1u, extent.x >> (mipLevel));
+                    mipHeight = MathUtil::Max(1u, extent.y >> (mipLevel));
 
                     struct
                     {
                         Vec4u dimensions;
-                        Vec4u prev_dimensions;
-                        uint32 mip_level;
-                    } push_constants;
+                        Vec4u prevDimensions;
+                        uint32 mipLevel;
+                    } pushConstants;
 
-                    push_constants.dimensions = { mip_width, mip_height, 0, 0 };
-                    push_constants.prev_dimensions = { prev_mip_width, prev_mip_height, 0, 0 };
-                    push_constants.mip_level = mip_level;
+                    pushConstants.dimensions = { mipWidth, mipHeight, 0, 0 };
+                    pushConstants.prevDimensions = { prevMipWidth, prevMipHeight, 0, 0 };
+                    pushConstants.mipLevel = mipLevel;
 
                     {
-                        FrameRef temp_frame = g_render_backend->MakeFrame(0);
+                        FrameRef tempFrame = g_renderBackend->MakeFrame(0);
 
-                        pass->GetGraphicsPipeline()->SetPushConstants(&push_constants, sizeof(push_constants));
-                        pass->Begin(temp_frame, NullRenderSetup());
+                        pass->GetGraphicsPipeline()->SetPushConstants(&pushConstants, sizeof(pushConstants));
+                        pass->Begin(tempFrame, NullRenderSetup());
 
-                        temp_frame->GetCommandList().Add<BindDescriptorTable>(
+                        tempFrame->GetCommandList().Add<BindDescriptorTable>(
                             pass->GetGraphicsPipeline()->GetDescriptorTable(),
                             pass->GetGraphicsPipeline(),
                             ArrayMap<Name, ArrayMap<Name, uint32>> {},
-                            temp_frame->GetFrameIndex());
+                            tempFrame->GetFrameIndex());
 
-                        pass->GetQuadMesh()->GetRenderResource().Render(temp_frame->GetCommandList());
-                        pass->End(temp_frame, NullRenderSetup());
+                        pass->GetQuadMesh()->GetRenderResource().Render(tempFrame->GetCommandList());
+                        pass->End(tempFrame, NullRenderSetup());
 
-                        cmd.Concat(std::move(temp_frame->GetCommandList()));
+                        cmd.Concat(std::move(tempFrame->GetCommandList()));
 
-                        HYPERION_ASSERT_RESULT(temp_frame->Destroy());
+                        HYPERION_ASSERT_RESULT(tempFrame->Destroy());
                     }
 
-                    const ImageRef& src_image = pass->GetAttachment(0)->GetImage();
+                    const ImageRef& srcImage = pass->GetAttachment(0)->GetImage();
 
                     // Blit into mip level
                     cmd.Add<InsertBarrier>(
-                        dst_image,
+                        dstImage,
                         RS_COPY_DST,
-                        ImageSubResource { .base_mip_level = mip_level });
+                        ImageSubResource { .baseMipLevel = mipLevel });
 
                     cmd.Add<InsertBarrier>(
-                        src_image,
+                        srcImage,
                         RS_COPY_SRC,
-                        ImageSubResource { .base_mip_level = mip_level });
+                        ImageSubResource { .baseMipLevel = mipLevel });
 
                     cmd.Add<BlitRect>(
-                        src_image,
-                        dst_image,
+                        srcImage,
+                        dstImage,
                         Rect<uint32> {
                             .x0 = 0,
                             .y0 = 0,
-                            .x1 = src_image->GetExtent().x,
-                            .y1 = src_image->GetExtent().y },
+                            .x1 = srcImage->GetExtent().x,
+                            .y1 = srcImage->GetExtent().y },
                         Rect<uint32> {
                             .x0 = 0,
                             .y0 = 0,
-                            .x1 = dst_image->GetExtent().x,
-                            .y1 = dst_image->GetExtent().y });
+                            .x1 = dstImage->GetExtent().x,
+                            .y1 = dstImage->GetExtent().y });
 
                     cmd.Add<InsertBarrier>(
-                        src_image,
+                        srcImage,
                         RS_SHADER_RESOURCE,
-                        ImageSubResource { .base_mip_level = mip_level });
+                        ImageSubResource { .baseMipLevel = mipLevel });
 
                     cmd.Add<InsertBarrier>(
-                        dst_image,
+                        dstImage,
                         RS_SHADER_RESOURCE,
-                        ImageSubResource { .base_mip_level = mip_level });
+                        ImageSubResource { .baseMipLevel = mipLevel });
                 }
 
                 // all mip levels have been transitioned into this state
                 cmd.Add<InsertBarrier>(
-                    dst_image,
+                    dstImage,
                     RS_SHADER_RESOURCE);
 
                 HYPERION_RETURN_OK;
@@ -328,55 +328,55 @@ struct RENDER_COMMAND(RenderTextureMipmapLevels)
 class TextureMipmapRenderer // Come back to this for: UI rendering (caching each object as its own texture)
 {
 public:
-    TextureMipmapRenderer(ImageRef image, ImageViewRef image_view)
+    TextureMipmapRenderer(ImageRef image, ImageViewRef imageView)
         : m_image(std::move(image)),
-          m_image_view(std::move(image_view))
+          m_imageView(std::move(imageView))
     {
     }
 
     void Create()
     {
-        const uint32 num_mip_levels = m_image->NumMipmaps();
+        const uint32 numMipLevels = m_image->NumMipmaps();
 
-        m_mip_image_views.Resize(num_mip_levels);
-        m_passes.Resize(num_mip_levels);
+        m_mipImageViews.Resize(numMipLevels);
+        m_passes.Resize(numMipLevels);
 
         const Vec3u extent = m_image->GetExtent();
 
-        ShaderRef shader = g_shader_manager->GetOrCreate(
+        ShaderRef shader = g_shaderManager->GetOrCreate(
             NAME("GenerateMipmaps"),
             ShaderProperties());
 
-        for (uint32 mip_level = 0; mip_level < num_mip_levels; mip_level++)
+        for (uint32 mipLevel = 0; mipLevel < numMipLevels; mipLevel++)
         {
-            const DescriptorTableDeclaration& descriptor_table_decl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
+            const DescriptorTableDeclaration& descriptorTableDecl = shader->GetCompiledShader()->GetDescriptorTableDeclaration();
 
-            DescriptorTableRef descriptor_table = g_render_backend->MakeDescriptorTable(&descriptor_table_decl);
+            DescriptorTableRef descriptorTable = g_renderBackend->MakeDescriptorTable(&descriptorTableDecl);
 
-            const uint32 mip_width = MathUtil::Max(1u, extent.x >> mip_level);
-            const uint32 mip_height = MathUtil::Max(1u, extent.y >> mip_level);
+            const uint32 mipWidth = MathUtil::Max(1u, extent.x >> mipLevel);
+            const uint32 mipHeight = MathUtil::Max(1u, extent.y >> mipLevel);
 
-            ImageViewRef mip_image_view = g_render_backend->MakeImageView(m_image, mip_level, 1, 0, m_image->NumFaces());
-            DeferCreate(mip_image_view);
+            ImageViewRef mipImageView = g_renderBackend->MakeImageView(m_image, mipLevel, 1, 0, m_image->NumFaces());
+            DeferCreate(mipImageView);
 
-            const DescriptorSetRef& generate_mipmaps_descriptor_set = descriptor_table->GetDescriptorSet(NAME("GenerateMipmapsDescriptorSet"), 0);
-            AssertThrow(generate_mipmaps_descriptor_set != nullptr);
-            generate_mipmaps_descriptor_set->SetElement(NAME("InputTexture"), mip_level == 0 ? m_image_view : m_mip_image_views[mip_level - 1]);
-            DeferCreate(descriptor_table);
+            const DescriptorSetRef& generateMipmapsDescriptorSet = descriptorTable->GetDescriptorSet(NAME("GenerateMipmapsDescriptorSet"), 0);
+            AssertThrow(generateMipmapsDescriptorSet != nullptr);
+            generateMipmapsDescriptorSet->SetElement(NAME("InputTexture"), mipLevel == 0 ? m_imageView : m_mipImageViews[mipLevel - 1]);
+            DeferCreate(descriptorTable);
 
-            m_mip_image_views[mip_level] = std::move(mip_image_view);
+            m_mipImageViews[mipLevel] = std::move(mipImageView);
 
             {
                 RC<FullScreenPass> pass = MakeRefCountedPtr<FullScreenPass>(
                     shader,
-                    descriptor_table,
+                    descriptorTable,
                     m_image->GetTextureFormat(),
-                    Vec2u { mip_width, mip_height },
+                    Vec2u { mipWidth, mipHeight },
                     nullptr);
 
                 pass->Create();
 
-                m_passes[mip_level] = std::move(pass);
+                m_passes[mipLevel] = std::move(pass);
             }
         }
     }
@@ -386,8 +386,8 @@ public:
         m_passes.Clear();
 
         SafeRelease(std::move(m_image));
-        SafeRelease(std::move(m_image_view));
-        SafeRelease(std::move(m_mip_image_views));
+        SafeRelease(std::move(m_imageView));
+        SafeRelease(std::move(m_mipImageViews));
     }
 
     void Render()
@@ -395,15 +395,15 @@ public:
         PUSH_RENDER_COMMAND(
             RenderTextureMipmapLevels,
             m_image,
-            m_image_view,
-            m_mip_image_views,
+            m_imageView,
+            m_mipImageViews,
             m_passes);
     }
 
 private:
     ImageRef m_image;
-    ImageViewRef m_image_view;
-    Array<ImageViewRef> m_mip_image_views;
+    ImageViewRef m_imageView;
+    Array<ImageViewRef> m_mipImageViews;
     Array<RC<FullScreenPass>> m_passes;
 };
 
@@ -413,15 +413,15 @@ private:
 
 RenderTexture::RenderTexture(Texture* texture)
     : m_texture(texture),
-      m_image(g_render_backend->MakeImage(texture->GetTextureDesc())),
-      m_image_view(g_render_backend->MakeImageView(m_image))
+      m_image(g_renderBackend->MakeImage(texture->GetTextureDesc())),
+      m_imageView(g_renderBackend->MakeImageView(m_image))
 {
 }
 
 RenderTexture::~RenderTexture()
 {
     SafeRelease(std::move(m_image));
-    SafeRelease(std::move(m_image_view));
+    SafeRelease(std::move(m_imageView));
 }
 
 void RenderTexture::Initialize_Internal()
@@ -434,7 +434,7 @@ void RenderTexture::Initialize_Internal()
         m_texture->GetStreamedTextureData() ? TResourceHandle<StreamedTextureData>(*m_texture->GetStreamedTextureData()) : TResourceHandle<StreamedTextureData>(),
         RS_SHADER_RESOURCE,
         m_image,
-        m_image_view);
+        m_imageView);
 }
 
 void RenderTexture::Destroy_Internal()
@@ -455,14 +455,14 @@ void RenderTexture::RenderMipmaps()
 
     Execute([this]()
         {
-            TextureMipmapRenderer mipmap_renderer(m_image, m_image_view);
-            mipmap_renderer.Create();
-            mipmap_renderer.Render();
-            mipmap_renderer.Destroy();
+            TextureMipmapRenderer mipmapRenderer(m_image, m_imageView);
+            mipmapRenderer.Create();
+            mipmapRenderer.Render();
+            mipmapRenderer.Destroy();
         });
 }
 
-void RenderTexture::Readback(ByteBuffer& out_byte_buffer)
+void RenderTexture::Readback(ByteBuffer& outByteBuffer)
 {
     HYP_SCOPE;
 
@@ -475,27 +475,27 @@ void RenderTexture::Readback(ByteBuffer& out_byte_buffer)
         return;
     }
 
-    Execute([this, &out_byte_buffer, promise = task.Promise()]()
+    Execute([this, &outByteBuffer, promise = task.Promise()]()
         {
-            Threads::AssertOnThread(g_render_thread);
+            Threads::AssertOnThread(g_renderThread);
 
-            GpuBufferRef gpu_buffer = g_render_backend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_image->GetByteSize());
-            HYPERION_ASSERT_RESULT(gpu_buffer->Create());
-            gpu_buffer->Map();
+            GpuBufferRef gpuBuffer = g_renderBackend->MakeGpuBuffer(GpuBufferType::STAGING_BUFFER, m_image->GetByteSize());
+            HYPERION_ASSERT_RESULT(gpuBuffer->Create());
+            gpuBuffer->Map();
 
             SingleTimeCommands commands;
 
-            commands.Push([this, &gpu_buffer](CmdList& cmd)
+            commands.Push([this, &gpuBuffer](CmdList& cmd)
                 {
-                    const ResourceState previous_resource_state = m_image->GetResourceState();
+                    const ResourceState previousResourceState = m_image->GetResourceState();
 
                     cmd.Add<InsertBarrier>(m_image, RS_COPY_SRC);
-                    cmd.Add<InsertBarrier>(gpu_buffer, RS_COPY_DST);
+                    cmd.Add<InsertBarrier>(gpuBuffer, RS_COPY_DST);
 
-                    cmd.Add<CopyImageToBuffer>(m_image, gpu_buffer);
+                    cmd.Add<CopyImageToBuffer>(m_image, gpuBuffer);
 
-                    cmd.Add<InsertBarrier>(gpu_buffer, RS_COPY_SRC);
-                    cmd.Add<InsertBarrier>(m_image, previous_resource_state);
+                    cmd.Add<InsertBarrier>(gpuBuffer, RS_COPY_SRC);
+                    cmd.Add<InsertBarrier>(m_image, previousResourceState);
                 });
 
             RendererResult result = commands.Execute();
@@ -507,14 +507,14 @@ void RenderTexture::Readback(ByteBuffer& out_byte_buffer)
                 return;
             }
 
-            out_byte_buffer.SetSize(gpu_buffer->Size());
-            gpu_buffer->Read(out_byte_buffer.Size(), out_byte_buffer.Data());
+            outByteBuffer.SetSize(gpuBuffer->Size());
+            gpuBuffer->Read(outByteBuffer.Size(), outByteBuffer.Data());
 
-            gpu_buffer->Destroy();
+            gpuBuffer->Destroy();
 
             promise->Fulfill(Result());
         },
-        /* force_owner_thread */ true);
+        /* forceOwnerThread */ true);
 
     Result result = task.Await();
 
@@ -528,28 +528,28 @@ void RenderTexture::Resize(const Vec3u& extent)
 {
     HYP_SCOPE;
 
-    TextureDesc texture_desc = m_texture->GetTextureDesc();
+    TextureDesc textureDesc = m_texture->GetTextureDesc();
 
-    Execute([this, extent, texture_desc]()
+    Execute([this, extent, textureDesc]()
         {
             // HYPERION_ASSERT_RESULT(m_image->Resize(extent));
 
-            // if (m_image_view->IsCreated())
+            // if (m_imageView->IsCreated())
             // {
-            //     m_image_view->Destroy();
-            //     HYPERION_ASSERT_RESULT(m_image_view->Create());
+            //     m_imageView->Destroy();
+            //     HYPERION_ASSERT_RESULT(m_imageView->Create());
             // }
 
             SafeRelease(std::move(m_image));
-            SafeRelease(std::move(m_image_view));
+            SafeRelease(std::move(m_imageView));
 
-            m_image = g_render_backend->MakeImage(texture_desc);
+            m_image = g_renderBackend->MakeImage(textureDesc);
             HYPERION_ASSERT_RESULT(m_image->Create());
 
-            m_image_view = g_render_backend->MakeImageView(m_image);
-            HYPERION_ASSERT_RESULT(m_image_view->Create());
+            m_imageView = g_renderBackend->MakeImageView(m_image);
+            HYPERION_ASSERT_RESULT(m_imageView->Create());
         },
-        /* force_owner_thread */ true);
+        /* forceOwnerThread */ true);
 }
 
 GpuBufferHolderBase* RenderTexture::GetGpuBufferHolder() const

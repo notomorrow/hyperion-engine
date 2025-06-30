@@ -39,7 +39,7 @@ public:
 protected:
     virtual void PerformDeletion_Internal() = 0;
 
-    uint8 m_cycles_remaining = 0;
+    uint8 m_cyclesRemaining = 0;
 };
 
 template <class Derived>
@@ -154,16 +154,16 @@ class SafeDeleter
 {
 
 public:
-    static constexpr uint8 initial_cycles_remaining = uint8(max_frames_in_flight + 1);
+    static constexpr uint8 initialCyclesRemaining = uint8(maxFramesInFlight + 1);
 
     template <class T>
     void SafeRelease(T&& resource)
     {
         Mutex::Guard guard(m_mutex);
 
-        m_deletion_entries.PushBack(MakeUnique<DeletionEntry<T>>(std::move(resource)));
+        m_deletionEntries.PushBack(MakeUnique<DeletionEntry<T>>(std::move(resource)));
 
-        m_num_deletion_entries.Increment(1, MemoryOrder::RELEASE);
+        m_numDeletionEntries.Increment(1, MemoryOrder::RELEASE);
     }
 
     void SafeRelease(RenderProxy&& proxy)
@@ -178,16 +178,16 @@ public:
 
     HYP_FORCE_INLINE int32 NumEnqueuedDeletions() const
     {
-        return m_num_deletion_entries.Get(MemoryOrder::ACQUIRE);
+        return m_numDeletionEntries.Get(MemoryOrder::ACQUIRE);
     }
 
 private:
-    bool CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& out_entries);
+    bool CollectAllEnqueuedItems(Array<UniquePtr<DeletionEntryBase>>& outEntries);
 
     Mutex m_mutex;
-    AtomicVar<int32> m_num_deletion_entries { 0 };
+    AtomicVar<int32> m_numDeletionEntries { 0 };
 
-    LinkedList<UniquePtr<DeletionEntryBase>> m_deletion_entries;
+    LinkedList<UniquePtr<DeletionEntryBase>> m_deletionEntries;
 };
 
 } // namespace hyperion

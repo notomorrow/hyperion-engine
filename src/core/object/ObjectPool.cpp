@@ -11,18 +11,18 @@ ObjectPool::ObjectContainerMap& ObjectPool::GetObjectContainerHolder()
     return holder;
 }
 
-ObjectContainerBase& ObjectPool::ObjectContainerMap::Get(TypeId type_id)
+ObjectContainerBase& ObjectPool::ObjectContainerMap::Get(TypeId typeId)
 {
     Mutex::Guard guard(m_mutex);
 
-    const auto it = m_map.FindIf([type_id](const auto& element)
+    const auto it = m_map.FindIf([typeId](const auto& element)
         {
-            return element.first == type_id;
+            return element.first == typeId;
         });
 
     if (it == m_map.End())
     {
-        HYP_FAIL("No object container for TypeId: %u", type_id.Value());
+        HYP_FAIL("No object container for TypeId: %u", typeId.Value());
     }
 
     AssertThrow(it->second != nullptr);
@@ -30,13 +30,13 @@ ObjectContainerBase& ObjectPool::ObjectContainerMap::Get(TypeId type_id)
     return *it->second;
 }
 
-ObjectContainerBase* ObjectPool::ObjectContainerMap::TryGet(TypeId type_id)
+ObjectContainerBase* ObjectPool::ObjectContainerMap::TryGet(TypeId typeId)
 {
     Mutex::Guard guard(m_mutex);
 
-    const auto it = m_map.FindIf([type_id](const auto& element)
+    const auto it = m_map.FindIf([typeId](const auto& element)
         {
-            return element.first == type_id;
+            return element.first == typeId;
         });
 
     if (it == m_map.End())

@@ -13,7 +13,7 @@ namespace hyperion {
 
 RenderEnvironment* RenderSubsystem::GetParent() const
 {
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     return m_parent;
 }
@@ -21,7 +21,7 @@ RenderEnvironment* RenderSubsystem::GetParent() const
 void RenderSubsystem::SetParent(RenderEnvironment* parent)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
     m_parent = parent;
 }
@@ -33,10 +33,10 @@ void RenderSubsystem::RemoveFromEnvironment()
     // struct RENDER_COMMAND(RemoveRenderSubsystemFromEnvironment)
     //     : public RenderCommand
     // {
-    //     Handle<RenderSubsystem> render_subsystem;
+    //     Handle<RenderSubsystem> renderSubsystem;
 
-    //     RENDER_COMMAND(RemoveRenderSubsystemFromEnvironment)(Handle<RenderSubsystem>&& render_subsystem)
-    //         : render_subsystem(render_subsystem)
+    //     RENDER_COMMAND(RemoveRenderSubsystemFromEnvironment)(Handle<RenderSubsystem>&& renderSubsystem)
+    //         : renderSubsystem(renderSubsystem)
     //     {
     //     }
 
@@ -44,13 +44,13 @@ void RenderSubsystem::RemoveFromEnvironment()
 
     //     virtual RendererResult operator()() override
     //     {
-    //         if (render_subsystem)
+    //         if (renderSubsystem)
     //         {
-    //             RenderEnvironment* parent = render_subsystem->GetParent();
+    //             RenderEnvironment* parent = renderSubsystem->GetParent();
 
     //             if (parent != nullptr)
     //             {
-    //                 parent->RemoveRenderSubsystem(render_subsystem);
+    //                 parent->RemoveRenderSubsystem(renderSubsystem);
     //             }
     //         }
 

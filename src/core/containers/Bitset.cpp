@@ -73,11 +73,11 @@ Bitset Bitset::operator<<(uint32 pos) const
 {
     Bitset result;
 
-    const SizeType total_bit_size = NumBits();
+    const SizeType totalBitSize = NumBits();
 
-    for (uint32 combined_bit_index = 0; combined_bit_index < total_bit_size; ++combined_bit_index)
+    for (uint32 combinedBitIndex = 0; combinedBitIndex < totalBitSize; ++combinedBitIndex)
     {
-        result.Set(combined_bit_index + pos, Get(combined_bit_index));
+        result.Set(combinedBitIndex + pos, Get(combinedBitIndex));
     }
 
     return result;
@@ -179,25 +179,25 @@ Bitset& Bitset::operator^=(const Bitset& other)
 
 void Bitset::Set(BitIndex index, bool value)
 {
-    const uint32 block_index = GetBlockIndex(index);
+    const uint32 blockIndex = GetBlockIndex(index);
 
-    if (block_index >= m_blocks.Size())
+    if (blockIndex >= m_blocks.Size())
     {
         if (!value)
         {
             return; // not point setting if it's already unset.
         }
 
-        m_blocks.Resize(block_index + 1);
+        m_blocks.Resize(blockIndex + 1);
     }
 
     if (value)
     {
-        m_blocks[block_index] |= GetBitMask(index);
+        m_blocks[blockIndex] |= GetBitMask(index);
     }
     else
     {
-        m_blocks[block_index] &= ~GetBitMask(index);
+        m_blocks[blockIndex] &= ~GetBitMask(index);
     }
 }
 
@@ -206,25 +206,25 @@ void Bitset::Clear()
     m_blocks = CreateBlocks_Static_Internal<0>();
 }
 
-Bitset& Bitset::Resize(SizeType num_bits)
+Bitset& Bitset::Resize(SizeType numBits)
 {
-    const SizeType previous_num_blocks = m_blocks.Size();
-    const SizeType new_num_blocks = (num_bits + (num_bits_per_block - 1)) / num_bits_per_block;
+    const SizeType previousNumBlocks = m_blocks.Size();
+    const SizeType newNumBlocks = (numBits + (numBitsPerBlock - 1)) / numBitsPerBlock;
 
-    m_blocks.Resize(new_num_blocks);
+    m_blocks.Resize(newNumBlocks);
 
-    const SizeType current_num_bits = NumBits();
+    const SizeType currentNumBits = NumBits();
 
-    // if (current_num_bits > num_bits && !m_blocks.Empty()) {
+    // if (currentNumBits > numBits && !m_blocks.Empty()) {
     //     // @FIXME: Use bitmask
-    //     for (uint32 index = num_bits; index < current_num_bits; ++index) {
+    //     for (uint32 index = numBits; index < currentNumBits; ++index) {
     //         Set(index, false);
     //     }
     // }
 
-    if (m_blocks.Size() < num_preallocated_blocks)
+    if (m_blocks.Size() < numPreallocatedBlocks)
     {
-        m_blocks.Resize(num_preallocated_blocks);
+        m_blocks.Resize(numPreallocatedBlocks);
     }
 
     return *this;

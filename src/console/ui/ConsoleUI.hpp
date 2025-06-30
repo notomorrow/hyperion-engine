@@ -29,18 +29,18 @@ public:
 
 protected:
     virtual void Init() override;
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
     virtual Material::ParameterTable GetMaterialParameters() const override;
 
-    Handle<UIListView> m_history_list_view;
+    Handle<UIListView> m_historyListView;
     Handle<UITextbox> m_textbox;
 
     Pimpl<ConsoleHistory> m_history;
 
-    String m_current_command_text;
+    String m_currentCommandText;
 
-    int m_logger_redirect_id;
+    int m_loggerRedirectId;
 };
 
 } // namespace hyperion

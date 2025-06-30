@@ -31,9 +31,9 @@
 
 namespace hyperion {
 
-PointLightShadowRenderer::PointLightShadowRenderer(Name name, const Handle<Scene>& parent_scene, const Handle<Light>& light, const Vec2u& extent)
+PointLightShadowRenderer::PointLightShadowRenderer(Name name, const Handle<Scene>& parentScene, const Handle<Light>& light, const Vec2u& extent)
     : RenderSubsystem(name),
-      m_parent_scene(parent_scene),
+      m_parentScene(parentScene),
       m_light(light),
       m_extent(extent)
 {
@@ -46,28 +46,28 @@ PointLightShadowRenderer::~PointLightShadowRenderer()
 
 void PointLightShadowRenderer::Init()
 {
-    AssertThrow(m_parent_scene.IsValid());
-    AssertThrow(m_parent_scene->IsReady());
+    AssertThrow(m_parentScene.IsValid());
+    AssertThrow(m_parentScene->IsReady());
 
-    RenderShadowMap* shadow_map = g_render_global_state->ShadowMapAllocator->AllocateShadowMap(
+    RenderShadowMap* shadowMap = g_renderGlobalState->ShadowMapAllocator->AllocateShadowMap(
         SMT_OMNI,
         SMF_VSM,
         m_extent);
-    AssertThrowMsg(shadow_map != nullptr, "Failed to allocate shadow map");
+    AssertThrowMsg(shadowMap != nullptr, "Failed to allocate shadow map");
 
-    m_shadow_map = TResourceHandle<RenderShadowMap>(*shadow_map);
+    m_shadowMap = TResourceHandle<RenderShadowMap>(*shadowMap);
     m_aabb = m_light->GetAABB();
 
-    m_env_probe = m_parent_scene->GetEntityManager()->AddEntity<EnvProbe>(EPT_SHADOW, m_aabb, m_extent);
-    InitObject(m_env_probe);
+    m_envProbe = m_parentScene->GetEntityManager()->AddEntity<EnvProbe>(EPT_SHADOW, m_aabb, m_extent);
+    InitObject(m_envProbe);
 
-    m_env_probe->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadow_map));
+    m_envProbe->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadowMap));
 
     if (m_light.IsValid())
     {
         InitObject(m_light);
 
-        m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadow_map));
+        m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>(m_shadowMap));
     }
 }
 
@@ -78,22 +78,22 @@ void PointLightShadowRenderer::OnRemoved()
         m_light->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>());
     }
 
-    // if (m_env_probe.IsValid())
+    // if (m_envProbe.IsValid())
     // {
-    //     m_env_probe->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>());
+    //     m_envProbe->GetRenderResource().SetShadowMap(TResourceHandle<RenderShadowMap>());
 
-    //     m_env_probe->GetRenderResource().DecRef(); // temp testing
+    //     m_envProbe->GetRenderResource().DecRef(); // temp testing
     // }
 
-    // m_env_probe.Reset();
+    // m_envProbe.Reset();
 
-    if (m_shadow_map)
+    if (m_shadowMap)
     {
-        RenderShadowMap* shadow_map = m_shadow_map.Get();
+        RenderShadowMap* shadowMap = m_shadowMap.Get();
 
-        m_shadow_map.Reset();
+        m_shadowMap.Reset();
 
-        if (!g_render_global_state->ShadowMapAllocator->FreeShadowMap(shadow_map))
+        if (!g_renderGlobalState->ShadowMapAllocator->FreeShadowMap(shadowMap))
         {
             HYP_FAIL("Failed to free shadow map!");
         }
@@ -103,17 +103,17 @@ void PointLightShadowRenderer::OnRemoved()
 void PointLightShadowRenderer::OnUpdate(float delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
-    AssertThrow(m_env_probe.IsValid());
+    AssertThrow(m_envProbe.IsValid());
     AssertThrow(m_light.IsValid());
 
-    const BoundingBox& env_probe_aabb = m_env_probe->GetAABB();
-    const BoundingBox light_aabb = m_light->GetAABB();
+    const BoundingBox& envProbeAabb = m_envProbe->GetAABB();
+    const BoundingBox lightAabb = m_light->GetAABB();
 
-    if (env_probe_aabb != light_aabb)
+    if (envProbeAabb != lightAabb)
     {
-        m_env_probe->SetAABB(light_aabb);
+        m_envProbe->SetAABB(lightAabb);
     }
 }
 

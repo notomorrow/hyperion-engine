@@ -20,10 +20,10 @@ struct GameState
     GameStateMode mode = GameStateMode::EDITOR;
 
     HYP_FIELD()
-    float delta_time = 0.0;
+    float deltaTime = 0.0;
 
     HYP_FIELD()
-    float game_time = 0.0;
+    float gameTime = 0.0;
 
     HYP_METHOD()
     HYP_FORCE_INLINE bool IsEditor() const

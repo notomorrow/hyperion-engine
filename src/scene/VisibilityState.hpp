@@ -13,17 +13,17 @@ class Camera;
 
 struct VisibilityStateSnapshot
 {
-    uint16 validity_marker { 0u };
+    uint16 validityMarker { 0u };
 
     HYP_FORCE_INLINE bool ValidToParent(const VisibilityStateSnapshot& parent) const
     {
-        return validity_marker == parent.validity_marker;
+        return validityMarker == parent.validityMarker;
     }
 };
 
 struct VisibilityState
 {
-    uint16 validity_marker { 0u };
+    uint16 validityMarker { 0u };
     HashMap<ObjId<Camera>, VisibilityStateSnapshot> snapshots;
 
     VisibilityState() = default;
@@ -35,7 +35,7 @@ struct VisibilityState
 
     HYP_FORCE_INLINE void Next()
     {
-        ++validity_marker;
+        ++validityMarker;
     }
 
     HYP_FORCE_INLINE VisibilityStateSnapshot GetSnapshot(ObjId<Camera> id) const
@@ -56,11 +56,11 @@ struct VisibilityState
 
         if (it == snapshots.End())
         {
-            snapshots.Insert(id, VisibilityStateSnapshot { validity_marker });
+            snapshots.Insert(id, VisibilityStateSnapshot { validityMarker });
         }
         else
         {
-            it->second.validity_marker = validity_marker;
+            it->second.validityMarker = validityMarker;
         }
     }
 };

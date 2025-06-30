@@ -46,12 +46,12 @@ public:
 
     HYP_FORCE_INLINE const TypeId& GetObjectTypeId() const
     {
-        return m_type_id;
+        return m_typeId;
     }
 
     HYP_FORCE_INLINE const HypClass* GetHypClass() const
     {
-        return m_hyp_class;
+        return m_hypClass;
     }
 
     virtual SizeType NumAllocatedElements() const = 0;
@@ -69,16 +69,16 @@ public:
     virtual void ReleaseIndex(uint32 index) = 0;
 
 protected:
-    ObjectContainerBase(TypeId type_id, const HypClass* hyp_class)
-        : m_type_id(type_id),
-          m_hyp_class(hyp_class)
+    ObjectContainerBase(TypeId typeId, const HypClass* hypClass)
+        : m_typeId(typeId),
+          m_hypClass(hypClass)
     {
-        AssertDebug(type_id != TypeId::Void());
-        // AssertDebug(hyp_class != nullptr);
+        AssertDebug(typeId != TypeId::Void());
+        // AssertDebug(hypClass != nullptr);
     }
 
-    TypeId m_type_id;
-    const HypClass* m_hyp_class;
+    TypeId m_typeId;
+    const HypClass* m_hypClass;
 };
 
 /*! \brief Metadata for a generic object in the object pool. */
@@ -86,14 +86,14 @@ struct HypObjectHeader
 {
     ObjectContainerBase* container;
     uint32 index;
-    AtomicVar<uint32> ref_count_strong;
-    AtomicVar<uint32> ref_count_weak;
+    AtomicVar<uint32> refCountStrong;
+    AtomicVar<uint32> refCountWeak;
 
     HypObjectHeader()
         : container(nullptr),
           index(~0u),
-          ref_count_strong(0),
-          ref_count_weak(0)
+          refCountStrong(0),
+          refCountWeak(0)
     {
     }
 
@@ -110,12 +110,12 @@ struct HypObjectHeader
 
     HYP_FORCE_INLINE uint32 GetRefCountStrong() const
     {
-        return ref_count_strong.Get(MemoryOrder::ACQUIRE);
+        return refCountStrong.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE uint32 GetRefCountWeak() const
     {
-        return ref_count_weak.Get(MemoryOrder::ACQUIRE);
+        return refCountWeak.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE void IncRefStrong()
@@ -162,7 +162,7 @@ struct HypObjectMemory final : HypObjectHeader
 
     uint32 IncRefStrong()
     {
-        const uint32 count = ref_count_strong.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+        const uint32 count = refCountStrong.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
 
         HypObject_OnIncRefCount_Strong(HypObjectPtr(GetPointer()), count);
 
@@ -171,23 +171,23 @@ struct HypObjectMemory final : HypObjectHeader
 
     uint32 IncRefWeak()
     {
-        return ref_count_weak.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
+        return refCountWeak.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
     }
 
     uint32 DecRefStrong()
     {
         uint32 count;
 
-        if ((count = ref_count_strong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        if ((count = refCountStrong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
             // Increment weak reference count by 1 so any WeakHandleFromThis() calls in the destructor do not immediately cause the item to be removed from the pool
-            ref_count_weak.Increment(1, MemoryOrder::RELEASE);
+            refCountWeak.Increment(1, MemoryOrder::RELEASE);
 
             HypObject_OnDecRefCount_Strong(HypObjectPtr(GetPointer()), count - 1);
 
             GetPointer()->~T();
 
-            if (ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
+            if (refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
             {
                 // Free the slot for this
                 container->ReleaseIndex(index);
@@ -205,9 +205,9 @@ struct HypObjectMemory final : HypObjectHeader
     {
         uint32 count;
 
-        if ((count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        if ((count = refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
-            if (ref_count_strong.Get(MemoryOrder::ACQUIRE) == 0)
+            if (refCountStrong.Get(MemoryOrder::ACQUIRE) == 0)
             {
                 // Free the slot for this
                 container->ReleaseIndex(index);
@@ -265,7 +265,7 @@ class ObjectContainer final : public ObjectContainerBase
 public:
     ObjectContainer()
         : ObjectContainerBase(TypeId::ForType<T>(), GetClass(TypeId::ForType<T>())),
-          m_pool(2048, /* create_initial_blocks */ true, /* block_init_ctx */ this)
+          m_pool(2048, /* createInitialBlocks */ true, /* blockInitCtx */ this)
     {
     }
 
@@ -374,33 +374,33 @@ public:
             return container;
         }
 
-        HYP_API ObjectContainerBase& Get(TypeId type_id);
-        HYP_API ObjectContainerBase* TryGet(TypeId type_id);
+        HYP_API ObjectContainerBase& Get(TypeId typeId);
+        HYP_API ObjectContainerBase* TryGet(TypeId typeId);
 
     private:
-        ObjectContainerBase& GetOrCreate(TypeId type_id, UniquePtr<ObjectContainerBase> (*create_fn)(void))
+        ObjectContainerBase& GetOrCreate(TypeId typeId, UniquePtr<ObjectContainerBase> (*createFn)(void))
         {
             Mutex::Guard guard(m_mutex);
 
-            auto it = m_map.FindIf([type_id](const auto& element)
+            auto it = m_map.FindIf([typeId](const auto& element)
                 {
-                    return element.first == type_id;
+                    return element.first == typeId;
                 });
 
             if (it != m_map.End())
             {
                 if (it->second == nullptr)
                 {
-                    it->second = create_fn();
+                    it->second = createFn();
                 }
 
                 return *it->second;
             }
 
-            UniquePtr<ObjectContainerBase> container = create_fn();
+            UniquePtr<ObjectContainerBase> container = createFn();
             AssertThrow(container != nullptr);
 
-            return *m_map.EmplaceBack(type_id, std::move(container)).second;
+            return *m_map.EmplaceBack(typeId, std::move(container)).second;
         }
     };
 

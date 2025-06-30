@@ -11,11 +11,11 @@
 
 namespace hyperion {
 
-extern IRenderBackend* g_render_backend;
+extern IRenderBackend* g_renderBackend;
 
 static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderBackend*>(g_render_backend);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 #pragma region VulkanPipelineBase
@@ -58,7 +58,7 @@ void VulkanPipelineBase::SetPushConstants(const void* data, SizeType size)
 {
     AssertThrowMsg(size <= 128, "Push constant data size exceeds 128 bytes");
 
-    m_push_constants = PushConstantData(data, size);
+    m_pushConstants = PushConstantData(data, size);
 }
 
 #pragma endregion VulkanPipelineBase

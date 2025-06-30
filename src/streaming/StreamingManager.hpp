@@ -45,7 +45,7 @@ class HYP_API StreamingManager final : public HypObject<StreamingManager>
 
 public:
     StreamingManager();
-    StreamingManager(const WeakHandle<WorldGrid>& world_grid);
+    StreamingManager(const WeakHandle<WorldGrid>& worldGrid);
     StreamingManager(const StreamingManager& other) = delete;
     StreamingManager& operator=(const StreamingManager& other) = delete;
     StreamingManager(StreamingManager&& other) noexcept = delete;
@@ -54,7 +54,7 @@ public:
 
     HYP_FORCE_INLINE const WeakHandle<WorldGrid>& GetWorldGrid() const
     {
-        return m_world_grid;
+        return m_worldGrid;
     }
 
     HYP_METHOD()
@@ -73,7 +73,7 @@ public:
 private:
     void Init() override;
 
-    WeakHandle<WorldGrid> m_world_grid;
+    WeakHandle<WorldGrid> m_worldGrid;
 
     UniquePtr<StreamingManagerThread> m_thread;
 };

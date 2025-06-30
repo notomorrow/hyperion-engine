@@ -41,14 +41,14 @@ struct alignas(Alignment) ValueStorage
 
     static constexpr SizeType alignment = Alignment;
 
-    alignas(Alignment) ubyte data_buffer[sizeof(T)];
+    alignas(Alignment) ubyte dataBuffer[sizeof(T)];
 
     constexpr ValueStorage() = default;
 
     template <class... Args>
     constexpr ValueStorage(ConstructTag, Args&&... args)
     {
-        new (data_buffer) T(std::forward<Args>(args)...);
+        new (dataBuffer) T(std::forward<Args>(args)...);
     }
 
     template <class OtherType>
@@ -66,7 +66,7 @@ struct alignas(Alignment) ValueStorage
     template <class... Args>
     HYP_FORCE_INLINE constexpr T* Construct(Args&&... args)
     {
-        return new (data_buffer) T(std::forward<Args>(args)...);
+        return new (dataBuffer) T(std::forward<Args>(args)...);
     }
 
     HYP_FORCE_INLINE void Destruct()
@@ -76,22 +76,22 @@ struct alignas(Alignment) ValueStorage
 
     HYP_FORCE_INLINE T& Get() &
     {
-        return *reinterpret_cast<T*>(&data_buffer[0]);
+        return *reinterpret_cast<T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE const T& Get() const&
     {
-        return *reinterpret_cast<const T*>(&data_buffer[0]);
+        return *reinterpret_cast<const T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE T* GetPointer() &
     {
-        return reinterpret_cast<T*>(&data_buffer[0]);
+        return reinterpret_cast<T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE const T* GetPointer() const&
     {
-        return reinterpret_cast<const T*>(&data_buffer[0]);
+        return reinterpret_cast<const T*>(&dataBuffer[0]);
     }
 };
 
@@ -112,7 +112,7 @@ struct ValueStorageArray<T, Count, Alignment, typename std::enable_if_t<Count !=
 {
     static constexpr SizeType alignment = Alignment;
 
-    alignas(Alignment) ubyte data_buffer[sizeof(T) * Count];
+    alignas(Alignment) ubyte dataBuffer[sizeof(T) * Count];
 
     template <class... Args>
     HYP_FORCE_INLINE T* ConstructElement(SizeType index, Args&&... args)
@@ -130,22 +130,22 @@ struct ValueStorageArray<T, Count, Alignment, typename std::enable_if_t<Count !=
 
     HYP_FORCE_INLINE T* GetPointer() &
     {
-        return reinterpret_cast<T*>(&data_buffer[0]);
+        return reinterpret_cast<T*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE const T* GetPointer() const&
     {
-        return reinterpret_cast<const T*>(&data_buffer[0]);
+        return reinterpret_cast<const T*>(&dataBuffer[0]);
     }
 
     HYP_DEPRECATED HYP_FORCE_INLINE void* GetRawPointer()
     {
-        return static_cast<void*>(&data_buffer[0]);
+        return static_cast<void*>(&dataBuffer[0]);
     }
 
     HYP_DEPRECATED HYP_FORCE_INLINE const void* GetRawPointer() const
     {
-        return static_cast<const void*>(&data_buffer[0]);
+        return static_cast<const void*>(&dataBuffer[0]);
     }
 
     HYP_FORCE_INLINE constexpr SizeType Size() const

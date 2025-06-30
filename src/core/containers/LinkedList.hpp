@@ -29,7 +29,7 @@ class LinkedList : public ContainerBase<LinkedList<T>, SizeType>
     using Node = containers::LinkedListNode<T>;
 
 public:
-    static constexpr bool is_contiguous = false;
+    static constexpr bool isContiguous = false;
 
     struct ConstIterator;
 
@@ -214,47 +214,47 @@ public:
     template <class... Args>
     ValueType& EmplaceBack(Args&&... args)
     {
-        Node* new_node = new Node;
-        new_node->previous = m_tail;
-        new_node->value.Construct(std::forward<Args>(args)...);
+        Node* newNode = new Node;
+        newNode->previous = m_tail;
+        newNode->value.Construct(std::forward<Args>(args)...);
 
         if (m_size == 0)
         {
-            m_head = new_node;
+            m_head = newNode;
             m_tail = m_head;
         }
         else
         {
-            m_tail->next = new_node;
-            m_tail = new_node;
+            m_tail->next = newNode;
+            m_tail = newNode;
         }
 
         ++m_size;
 
-        return new_node->value.Get();
+        return newNode->value.Get();
     }
 
     template <class... Args>
     ValueType& EmplaceFront(Args&&... args)
     {
-        Node* new_node = new Node;
-        new_node->next = m_head;
-        new_node->value.Construct(std::forward<Args>(args)...);
+        Node* newNode = new Node;
+        newNode->next = m_head;
+        newNode->value.Construct(std::forward<Args>(args)...);
 
         if (m_size != 0)
         {
-            m_head->previous = new_node;
+            m_head->previous = newNode;
             m_tail = m_head;
         }
         else
         {
-            m_tail = new_node;
+            m_tail = newNode;
         }
 
-        m_head = new_node;
+        m_head = newNode;
         ++m_size;
 
-        return new_node->value.Get();
+        return newNode->value.Get();
     }
 
     /*! \brief Push an item to the back of the container.*/
@@ -303,11 +303,11 @@ public:
         }
 
         auto it = Begin();
-        auto other_it = other.Begin();
+        auto otherIt = other.Begin();
         const auto _end = End();
 
-        for (; it != _end; ++it, ++other_it) {
-            if (!(*it == *other_it)) {
+        for (; it != _end; ++it, ++otherIt) {
+            if (!(*it == *otherIt)) {
                 return false;
             }
         }
@@ -420,95 +420,95 @@ LinkedList<T>::~LinkedList()
 template <class T>
 auto LinkedList<T>::PushBack(const ValueType& value) -> ValueType&
 {
-    Node* new_node = new Node;
-    new_node->previous = m_tail;
-    new_node->value.Construct(value);
+    Node* newNode = new Node;
+    newNode->previous = m_tail;
+    newNode->value.Construct(value);
 
     if (m_size == 0)
     {
-        m_head = new_node;
+        m_head = newNode;
         m_tail = m_head;
     }
     else
     {
-        m_tail->next = new_node;
-        m_tail = new_node;
+        m_tail->next = newNode;
+        m_tail = newNode;
     }
 
     ++m_size;
 
-    return new_node->value.Get();
+    return newNode->value.Get();
 }
 
 template <class T>
 auto LinkedList<T>::PushBack(ValueType&& value) -> ValueType&
 {
-    Node* new_node = new Node;
-    new_node->previous = m_tail;
-    new_node->value.Construct(std::move(value));
+    Node* newNode = new Node;
+    newNode->previous = m_tail;
+    newNode->value.Construct(std::move(value));
 
     if (m_size == 0)
     {
-        m_head = new_node;
+        m_head = newNode;
         m_tail = m_head;
     }
     else
     {
-        m_tail->next = new_node;
-        m_tail = new_node;
+        m_tail->next = newNode;
+        m_tail = newNode;
     }
 
     ++m_size;
 
-    return new_node->value.Get();
+    return newNode->value.Get();
 }
 
 template <class T>
 auto LinkedList<T>::PushFront(const ValueType& value) -> ValueType&
 {
-    Node* new_node = new Node;
-    new_node->next = m_head;
-    new_node->value.Construct(value);
+    Node* newNode = new Node;
+    newNode->next = m_head;
+    newNode->value.Construct(value);
 
     if (m_size != 0)
     {
-        m_head->previous = new_node;
+        m_head->previous = newNode;
         m_tail = m_head;
     }
     else
     {
-        m_tail = new_node;
+        m_tail = newNode;
     }
 
-    m_head = new_node;
+    m_head = newNode;
 
     ++m_size;
 
-    return new_node->value.Get();
+    return newNode->value.Get();
 }
 
 template <class T>
 auto LinkedList<T>::PushFront(ValueType&& value) -> ValueType&
 {
-    Node* new_node = new Node;
-    new_node->next = m_head;
-    new_node->value.Construct(std::move(value));
+    Node* newNode = new Node;
+    newNode->next = m_head;
+    newNode->value.Construct(std::move(value));
 
     if (m_size != 0)
     {
-        m_head->previous = new_node;
+        m_head->previous = newNode;
         m_tail = m_head;
     }
     else
     {
-        m_tail = new_node;
+        m_tail = newNode;
     }
 
-    m_head = new_node;
+    m_head = newNode;
 
     ++m_size;
 
-    return new_node->value.Get();
+    return newNode->value.Get();
 }
 
 template <class T>

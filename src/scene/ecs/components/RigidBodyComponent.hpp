@@ -25,25 +25,25 @@ HYP_STRUCT(Component, Label = "Rigid Body Component", Description = "Controls th
 struct RigidBodyComponent
 {
     HYP_FIELD(Serialize, Property = "RigidBody")
-    Handle<physics::RigidBody> rigid_body;
+    Handle<physics::RigidBody> rigidBody;
 
     HYP_FIELD(Serialize, Property = "PhysicsMaterial")
-    physics::PhysicsMaterial physics_material;
+    physics::PhysicsMaterial physicsMaterial;
 
     HYP_FIELD()
     RigidBodyComponentFlags flags = RIGID_BODY_COMPONENT_FLAG_NONE;
 
     HYP_FIELD()
-    HashCode transform_hash_code;
+    HashCode transformHashCode;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(rigid_body);
-        hash_code.Add(physics_material);
+        hashCode.Add(rigidBody);
+        hashCode.Add(physicsMaterial);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

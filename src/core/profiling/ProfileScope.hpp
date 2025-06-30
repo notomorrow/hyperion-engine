@@ -25,7 +25,7 @@ struct ProfileScopeEntry;
 
 struct ProfilerConnectionParams
 {
-    String endpoint_url;
+    String endpointUrl;
     bool enabled;
 };
 

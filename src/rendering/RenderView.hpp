@@ -77,12 +77,12 @@ public:
 
     HYP_FORCE_INLINE const TResourceHandle<RenderCamera>& GetCamera() const
     {
-        return m_render_camera;
+        return m_renderCamera;
     }
 
-    HYP_FORCE_INLINE void SetCamera(const TResourceHandle<RenderCamera>& render_camera)
+    HYP_FORCE_INLINE void SetCamera(const TResourceHandle<RenderCamera>& renderCamera)
     {
-        m_render_camera = render_camera;
+        m_renderCamera = renderCamera;
     }
 
     GBuffer* GetGBuffer() const;
@@ -104,7 +104,7 @@ protected:
 
     int m_priority;
 
-    TResourceHandle<RenderCamera> m_render_camera;
+    TResourceHandle<RenderCamera> m_renderCamera;
 };
 
 } // namespace hyperion

@@ -23,50 +23,50 @@ using namespace hyperion;
 extern "C"
 {
 
-    HYP_EXPORT bool EntityManager_HasComponent(EntityManager* manager, uint32 component_type_id, Entity* entity)
+    HYP_EXPORT bool EntityManager_HasComponent(EntityManager* manager, uint32 componentTypeId, Entity* entity)
     {
         AssertThrow(manager != nullptr);
         AssertThrow(entity != nullptr);
 
-        return manager->HasComponent(TypeId { component_type_id }, entity);
+        return manager->HasComponent(TypeId { componentTypeId }, entity);
     }
 
-    HYP_EXPORT void* EntityManager_GetComponent(EntityManager* manager, uint32 component_type_id, Entity* entity)
+    HYP_EXPORT void* EntityManager_GetComponent(EntityManager* manager, uint32 componentTypeId, Entity* entity)
     {
         AssertThrow(manager != nullptr);
         AssertThrow(entity != nullptr);
 
-        return manager->TryGetComponent(TypeId { component_type_id }, entity).GetPointer();
+        return manager->TryGetComponent(TypeId { componentTypeId }, entity).GetPointer();
     }
 
-    HYP_EXPORT void EntityManager_AddComponent(EntityManager* manager, Entity* entity, uint32 component_type_id, HypData* component_hyp_data)
+    HYP_EXPORT void EntityManager_AddComponent(EntityManager* manager, Entity* entity, uint32 componentTypeId, HypData* componentHypData)
     {
         AssertThrow(manager != nullptr);
         AssertThrow(entity != nullptr);
-        AssertThrow(component_hyp_data != nullptr);
+        AssertThrow(componentHypData != nullptr);
 
-        AssertThrow(manager->IsValidComponentType(TypeId { component_type_id }));
+        AssertThrow(manager->IsValidComponentType(TypeId { componentTypeId }));
 
-        Handle<Entity> entity_handle = entity->HandleFromThis();
-        AssertThrow(entity_handle.IsValid());
+        Handle<Entity> entityHandle = entity->HandleFromThis();
+        AssertThrow(entityHandle.IsValid());
 
-        manager->AddComponent(entity_handle, *component_hyp_data);
+        manager->AddComponent(entityHandle, *componentHypData);
     }
 
-    HYP_EXPORT int8 EntityManager_AddTypedEntity(EntityManager* manager, const HypClass* hyp_class, HypData* out_hyp_data)
+    HYP_EXPORT int8 EntityManager_AddTypedEntity(EntityManager* manager, const HypClass* hypClass, HypData* outHypData)
     {
         AssertThrow(manager != nullptr);
-        AssertThrow(hyp_class != nullptr);
-        AssertThrow(out_hyp_data != nullptr);
+        AssertThrow(hypClass != nullptr);
+        AssertThrow(outHypData != nullptr);
 
-        Handle<Entity> entity_handle = manager->AddTypedEntity(hyp_class);
+        Handle<Entity> entityHandle = manager->AddTypedEntity(hypClass);
 
-        if (!entity_handle.IsValid())
+        if (!entityHandle.IsValid())
         {
             return false;
         }
 
-        *out_hyp_data = HypData(entity_handle);
+        *outHypData = HypData(entityHandle);
 
         return true;
     }

@@ -32,15 +32,15 @@ struct MaterialShaderData
     Vec4f albedo;
 
     // 4 vec4s of 0.0..1.0 values stuffed into uint32s
-    Vec4u packed_params;
+    Vec4u packedParams;
 
-    Vec2f uv_scale;
-    float parallax_height;
+    Vec2f uvScale;
+    float parallaxHeight;
     float _pad0;
 
-    uint32 texture_index[16];
+    uint32 textureIndex[16];
 
-    uint32 texture_usage;
+    uint32 textureUsage;
     uint32 _pad1;
     uint32 _pad2;
     uint32 _pad3;
@@ -64,17 +64,17 @@ public:
     }
 
     /*! \note Only call this method from the render thread or task initiated by the render thread */
-    HYP_FORCE_INLINE const FixedArray<DescriptorSetRef, max_frames_in_flight>& GetDescriptorSets() const
+    HYP_FORCE_INLINE const FixedArray<DescriptorSetRef, maxFramesInFlight>& GetDescriptorSets() const
     {
-        return m_descriptor_sets;
+        return m_descriptorSets;
     }
 
-    void SetTexture(MaterialTextureKey texture_key, const Handle<Texture>& texture);
+    void SetTexture(MaterialTextureKey textureKey, const Handle<Texture>& texture);
     void SetTextures(FlatMap<MaterialTextureKey, Handle<Texture>>&& textures);
 
-    void SetBoundTextureIDs(const Array<ObjId<Texture>>& bound_texture_ids);
+    void SetBoundTextureIDs(const Array<ObjId<Texture>>& boundTextureIds);
 
-    void SetBufferData(const MaterialShaderData& buffer_data);
+    void SetBufferData(const MaterialShaderData& bufferData);
 
 protected:
     virtual void Initialize_Internal() override;
@@ -91,10 +91,10 @@ private:
 
     Material* m_material;
     FlatMap<MaterialTextureKey, Handle<Texture>> m_textures;
-    HashMap<ObjId<Texture>, TResourceHandle<RenderTexture>> m_render_textures;
-    Array<ObjId<Texture>> m_bound_texture_ids;
-    MaterialShaderData m_buffer_data;
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_descriptor_sets;
+    HashMap<ObjId<Texture>, TResourceHandle<RenderTexture>> m_renderTextures;
+    Array<ObjId<Texture>> m_boundTextureIds;
+    MaterialShaderData m_bufferData;
+    FixedArray<DescriptorSetRef, maxFramesInFlight> m_descriptorSets;
 };
 
 class HYP_API MaterialDescriptorSetManager
@@ -107,19 +107,19 @@ public:
     MaterialDescriptorSetManager& operator=(MaterialDescriptorSetManager&& other) noexcept = delete;
     ~MaterialDescriptorSetManager();
 
-    HYP_FORCE_INLINE const DescriptorSetRef& GetInvalidMaterialDescriptorSet(uint32 frame_index) const
+    HYP_FORCE_INLINE const DescriptorSetRef& GetInvalidMaterialDescriptorSet(uint32 frameIndex) const
     {
-        return m_invalid_material_descriptor_sets[frame_index];
+        return m_invalidMaterialDescriptorSets[frameIndex];
     }
 
     /*! \brief Get the descriptor set for the given material and frame index. Only
      *   to be used from the render thread. If the descriptor set is not found, nullptr
      *   is returned.
      *   \param material The material to get the descriptor set for
-     *   \param frame_index The frame index to get the descriptor set for
+     *   \param frameIndex The frame index to get the descriptor set for
      *   \returns The descriptor set for the given material and frame index or nullptr if not found
      */
-    const DescriptorSetRef& GetDescriptorSet(const RenderMaterial* material, uint32 frame_index) const;
+    const DescriptorSetRef& GetDescriptorSet(const RenderMaterial* material, uint32 frameIndex) const;
 
     /*! \brief Add a material to the manager. This will create a descriptor set for
      *  the material and add it to the manager. Usable from any thread.
@@ -128,7 +128,7 @@ public:
      *  be created on the next call to Update.
      *  \param material The material to add
      */
-    FixedArray<DescriptorSetRef, max_frames_in_flight> AddMaterial(RenderMaterial* material);
+    FixedArray<DescriptorSetRef, maxFramesInFlight> AddMaterial(RenderMaterial* material);
 
     /*! \brief Add a material to the manager. This will create a descriptor set for
      *  the material and add it to the manager. Usable from any thread.
@@ -138,7 +138,7 @@ public:
      *  \param material The material to add
      *  \param textures The textures to add to the material
      */
-    FixedArray<DescriptorSetRef, max_frames_in_flight> AddMaterial(RenderMaterial* material, FixedArray<Handle<Texture>, max_bound_textures>&& textures);
+    FixedArray<DescriptorSetRef, maxFramesInFlight> AddMaterial(RenderMaterial* material, FixedArray<Handle<Texture>, maxBoundTextures>&& textures);
 
     /*! \brief Remove a material from the manager. Only to be used from the render thread.
      *  \param material The Id of the material to remove
@@ -157,18 +157,18 @@ public:
 private:
     void CreateInvalidMaterialDescriptorSet();
 
-    FixedArray<DescriptorSetRef, max_frames_in_flight> m_invalid_material_descriptor_sets;
+    FixedArray<DescriptorSetRef, maxFramesInFlight> m_invalidMaterialDescriptorSets;
 
-    HashMap<RenderMaterial*, FixedArray<DescriptorSetRef, max_frames_in_flight>> m_material_descriptor_sets;
+    HashMap<RenderMaterial*, FixedArray<DescriptorSetRef, maxFramesInFlight>> m_materialDescriptorSets;
 
-    Array<Pair<RenderMaterial*, FixedArray<DescriptorSetRef, max_frames_in_flight>>> m_pending_addition;
-    Array<RenderMaterial*> m_pending_removal;
-    Mutex m_pending_mutex;
-    AtomicVar<bool> m_pending_addition_flag;
+    Array<Pair<RenderMaterial*, FixedArray<DescriptorSetRef, maxFramesInFlight>>> m_pendingAddition;
+    Array<RenderMaterial*> m_pendingRemoval;
+    Mutex m_pendingMutex;
+    AtomicVar<bool> m_pendingAdditionFlag;
 
-    FixedArray<Array<RenderMaterial*>, max_frames_in_flight> m_descriptor_sets_to_update;
-    Mutex m_descriptor_sets_to_update_mutex;
-    AtomicVar<uint32> m_descriptor_sets_to_update_flag;
+    FixedArray<Array<RenderMaterial*>, maxFramesInFlight> m_descriptorSetsToUpdate;
+    Mutex m_descriptorSetsToUpdateMutex;
+    AtomicVar<uint32> m_descriptorSetsToUpdateFlag;
 };
 
 } // namespace hyperion

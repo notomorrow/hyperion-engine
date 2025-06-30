@@ -28,9 +28,9 @@ void EditorPropertyPanelBase::Init()
     UIObject::Init();
 }
 
-void EditorPropertyPanelBase::UpdateSize_Internal(bool update_children)
+void EditorPropertyPanelBase::UpdateSize_Internal(bool updateChildren)
 {
-    UIObject::UpdateSize_Internal(update_children);
+    UIObject::UpdateSize_Internal(updateChildren);
 }
 
 Material::ParameterTable EditorPropertyPanelBase::GetMaterialParameters() const

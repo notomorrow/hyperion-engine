@@ -32,7 +32,7 @@ enum class TypeAttributeFlags : uint32
 HYP_MAKE_ENUM_FLAGS(TypeAttributeFlags)
 
 class HypClass;
-extern HYP_API const HypClass* GetClass(TypeId type_id);
+extern HYP_API const HypClass* GetClass(TypeId typeId);
 
 namespace utilities {
 
@@ -57,7 +57,7 @@ struct TypeAttributes
     template <class T>
     static TypeAttributes ForType()
     {
-        constexpr TypeId type_id = TypeId::ForType<NormalizedType<T>>();
+        constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
         EnumFlags<TypeAttributeFlags> flags = TypeAttributeFlags::NONE;
 
@@ -65,12 +65,12 @@ struct TypeAttributes
         {
             flags |= TypeAttributeFlags::CLASS_TYPE;
 
-            if (const HypClass* hyp_class = GetClass(type_id))
+            if (const HypClass* hypClass = GetClass(typeId))
             {
                 flags |= TypeAttributeFlags::HYP_CLASS;
             }
 
-            if constexpr (is_pod_type<NormalizedType<T>>)
+            if constexpr (isPodType<NormalizedType<T>>)
             {
                 flags |= TypeAttributeFlags::POD_TYPE;
             }
@@ -102,7 +102,7 @@ struct TypeAttributes
         }
 
         return {
-            type_id,
+            typeId,
             CreateNameFromDynamicString(TypeNameWithoutNamespace<NormalizedType<T>>().Data()),
             sizeof(NormalizedType<T>),
             alignof(NormalizedType<T>),

@@ -44,19 +44,19 @@ public:
 
     platform::Device<Platform::vulkan>* GetDevice() const;
 
-    virtual RendererResult Initialize(AppContextBase& app_context) override;
+    virtual RendererResult Initialize(AppContextBase& appContext) override;
     virtual RendererResult Destroy() override;
 
     virtual const IRenderConfig& GetRenderConfig() const override
     {
-        return *m_render_config;
+        return *m_renderConfig;
     }
 
     virtual SwapchainBase* GetSwapchain() const override;
 
     virtual AsyncComputeBase* GetAsyncCompute() const override
     {
-        return m_async_compute;
+        return m_asyncCompute;
     }
 
     virtual FrameBase* GetCurrentFrame() const override;
@@ -69,73 +69,73 @@ public:
 
     virtual GraphicsPipelineRef MakeGraphicsPipeline(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table,
+        const DescriptorTableRef& descriptorTable,
         Span<const FramebufferRef> framebuffers,
         const RenderableAttributeSet& attributes) override;
 
     virtual ComputePipelineRef MakeComputePipeline(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table) override;
+        const DescriptorTableRef& descriptorTable) override;
 
     virtual RaytracingPipelineRef MakeRaytracingPipeline(
         const ShaderRef& shader,
-        const DescriptorTableRef& descriptor_table) override;
+        const DescriptorTableRef& descriptorTable) override;
 
-    virtual GpuBufferRef MakeGpuBuffer(GpuBufferType buffer_type, SizeType size, SizeType alignment = 0) override;
+    virtual GpuBufferRef MakeGpuBuffer(GpuBufferType bufferType, SizeType size, SizeType alignment = 0) override;
 
-    virtual ImageRef MakeImage(const TextureDesc& texture_desc) override;
+    virtual ImageRef MakeImage(const TextureDesc& textureDesc) override;
 
     virtual ImageViewRef MakeImageView(const ImageRef& image) override;
-    virtual ImageViewRef MakeImageView(const ImageRef& image, uint32 mip_index, uint32 num_mips, uint32 face_index, uint32 num_faces) override;
+    virtual ImageViewRef MakeImageView(const ImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces) override;
 
-    virtual SamplerRef MakeSampler(TextureFilterMode filter_mode_min, TextureFilterMode filter_mode_mag, TextureWrapMode wrap_mode) override;
+    virtual SamplerRef MakeSampler(TextureFilterMode filterModeMin, TextureFilterMode filterModeMag, TextureWrapMode wrapMode) override;
 
-    virtual FramebufferRef MakeFramebuffer(Vec2u extent, uint32 num_views = 1) override;
-    virtual FramebufferRef MakeFramebuffer(Vec2u extent, RenderPassStage stage, uint32 num_views = 1) override;
+    virtual FramebufferRef MakeFramebuffer(Vec2u extent, uint32 numViews = 1) override;
+    virtual FramebufferRef MakeFramebuffer(Vec2u extent, RenderPassStage stage, uint32 numViews = 1) override;
 
-    virtual FrameRef MakeFrame(uint32 frame_index) override;
+    virtual FrameRef MakeFrame(uint32 frameIndex) override;
 
-    virtual ShaderRef MakeShader(const RC<CompiledShader>& compiled_shader) override;
+    virtual ShaderRef MakeShader(const RC<CompiledShader>& compiledShader) override;
 
     virtual BLASRef MakeBLAS(
-        const GpuBufferRef& packed_vertices_buffer,
-        const GpuBufferRef& packed_indices_buffer,
+        const GpuBufferRef& packedVerticesBuffer,
+        const GpuBufferRef& packedIndicesBuffer,
         const Handle<Material>& material,
         const Matrix4& transform) override;
     virtual TLASRef MakeTLAS() override;
 
     virtual TextureFormat GetDefaultFormat(DefaultImageFormat type) const override;
 
-    virtual bool IsSupportedFormat(TextureFormat format, ImageSupport support_type) const override;
-    virtual TextureFormat FindSupportedFormat(Span<TextureFormat> possible_formats, ImageSupport support_type) const override;
+    virtual bool IsSupportedFormat(TextureFormat format, ImageSupport supportType) const override;
+    virtual TextureFormat FindSupportedFormat(Span<TextureFormat> possibleFormats, ImageSupport supportType) const override;
 
-    virtual QueryImageCapabilitiesResult QueryImageCapabilities(const TextureDesc& texture_desc) const override;
+    virtual QueryImageCapabilitiesResult QueryImageCapabilities(const TextureDesc& textureDesc) const override;
 
     virtual Delegate<void, SwapchainBase*>& GetOnSwapchainRecreatedDelegate() override
     {
         return OnSwapchainRecreated;
     }
 
-    HYP_API RendererResult CreateDescriptorSet(const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& out_vk_descriptor_set);
-    HYP_API RendererResult DestroyDescriptorSet(VkDescriptorSet vk_descriptor_set);
-    HYP_API RendererResult GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& out_ref);
+    HYP_API RendererResult CreateDescriptorSet(const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet);
+    HYP_API RendererResult DestroyDescriptorSet(VkDescriptorSet vkDescriptorSet);
+    HYP_API RendererResult GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& outRef);
 
 private:
     Delegate<void, SwapchainBase*> OnSwapchainRecreated;
 
     platform::Instance<Platform::vulkan>* m_instance;
 
-    IRenderConfig* m_render_config;
+    IRenderConfig* m_renderConfig;
 
-    CrashHandler m_crash_handler;
+    CrashHandler m_crashHandler;
 
-    VulkanDescriptorSetManager* m_descriptor_set_manager;
+    VulkanDescriptorSetManager* m_descriptorSetManager;
 
-    AsyncComputeBase* m_async_compute;
+    AsyncComputeBase* m_asyncCompute;
 
-    HashMap<DefaultImageFormat, TextureFormat> m_default_formats;
+    HashMap<DefaultImageFormat, TextureFormat> m_defaultFormats;
 
-    bool m_should_recreate_swapchain;
+    bool m_shouldRecreateSwapchain;
 };
 
 } // namespace hyperion

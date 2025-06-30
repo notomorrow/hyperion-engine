@@ -13,22 +13,22 @@
 
 namespace hyperion {
 
-extern IRenderBackend* g_render_backend;
+extern IRenderBackend* g_renderBackend;
 
 namespace platform {
 
 static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderBackend*>(g_render_backend);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 } // namespace platform
 
 namespace helpers {
 
-VkIndexType ToVkIndexType(GpuElemType elem_type)
+VkIndexType ToVkIndexType(GpuElemType elemType)
 {
-    switch (elem_type)
+    switch (elemType)
     {
     case GET_UNSIGNED_BYTE:
         return VK_INDEX_TYPE_UINT8_EXT;
@@ -37,7 +37,7 @@ VkIndexType ToVkIndexType(GpuElemType elem_type)
     case GET_UNSIGNED_INT:
         return VK_INDEX_TYPE_UINT32;
     default:
-        HYP_FAIL("Unsupported gpu element type to vulkan index type conversion: %d", int(elem_type));
+        HYP_FAIL("Unsupported gpu element type to vulkan index type conversion: %d", int(elemType));
     }
 }
 
@@ -121,9 +121,9 @@ VkFormat ToVkFormat(TextureFormat fmt)
     AssertThrowMsg(false, "Unhandled texture format case %d", int(fmt));
 }
 
-VkFilter ToVkFilter(TextureFilterMode filter_mode)
+VkFilter ToVkFilter(TextureFilterMode filterMode)
 {
-    switch (filter_mode)
+    switch (filterMode)
     {
     case TFM_NEAREST: // fallthrough
     case TFM_NEAREST_MIPMAP:
@@ -136,12 +136,12 @@ VkFilter ToVkFilter(TextureFilterMode filter_mode)
         break;
     }
 
-    AssertThrowMsg(false, "Unhandled texture filter mode case %d", int(filter_mode));
+    AssertThrowMsg(false, "Unhandled texture filter mode case %d", int(filterMode));
 }
 
-VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrapMode texture_wrap_mode)
+VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrapMode textureWrapMode)
 {
-    switch (texture_wrap_mode)
+    switch (textureWrapMode)
     {
     case TWM_CLAMP_TO_EDGE:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -232,7 +232,7 @@ namespace platform {
 
 template <>
 SingleTimeCommands<Platform::vulkan>::SingleTimeCommands()
-    : m_platform_impl { this }
+    : m_platformImpl { this }
 {
 }
 
@@ -244,33 +244,33 @@ SingleTimeCommands<Platform::vulkan>::~SingleTimeCommands()
 template <>
 RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
 {
-    CmdList command_list;
+    CmdList commandList;
 
     for (auto& fn : m_functions)
     {
-        fn(command_list);
+        fn(commandList);
     }
 
     m_functions.Clear();
 
     RendererResult result;
 
-    VulkanFrameRef temp_frame = VulkanFrameRef(GetRenderBackend()->MakeFrame(0));
-    HYPERION_BUBBLE_ERRORS(temp_frame->Create());
+    VulkanFrameRef tempFrame = VulkanFrameRef(GetRenderBackend()->MakeFrame(0));
+    HYPERION_BUBBLE_ERRORS(tempFrame->Create());
 
-    command_list.Prepare(temp_frame);
+    commandList.Prepare(tempFrame);
 
-    temp_frame->UpdateUsedDescriptorSets();
+    tempFrame->UpdateUsedDescriptorSets();
 
-    VulkanCommandBufferRef command_buffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
-    HYPERION_BUBBLE_ERRORS(command_buffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().command_pools[0]));
+    VulkanCommandBufferRef commandBuffer = MakeRenderObject<VulkanCommandBuffer>(CommandBufferType::COMMAND_BUFFER_PRIMARY);
+    HYPERION_BUBBLE_ERRORS(commandBuffer->Create(GetRenderBackend()->GetDevice()->GetGraphicsQueue().commandPools[0]));
 
-    HYPERION_BUBBLE_ERRORS(command_buffer->Begin());
+    HYPERION_BUBBLE_ERRORS(commandBuffer->Begin());
 
     // Execute the command list
-    command_list.Execute(command_buffer);
+    commandList.Execute(commandBuffer);
 
-    HYPERION_PASS_ERRORS(command_buffer->End(), result);
+    HYPERION_PASS_ERRORS(commandBuffer->End(), result);
 
     // @TODO Refactor to use frame's fence instead, just need to make Frame able to not be presentable
     VulkanFenceRef fence = MakeRenderObject<VulkanFence>();
@@ -278,16 +278,16 @@ RendererResult SingleTimeCommands<Platform::vulkan>::Execute()
     HYPERION_PASS_ERRORS(fence->Reset(), result);
 
     // Submit to the queue
-    VulkanDeviceQueue& queue_graphics = GetRenderBackend()->GetDevice()->GetGraphicsQueue();
+    VulkanDeviceQueue& queueGraphics = GetRenderBackend()->GetDevice()->GetGraphicsQueue();
 
-    HYPERION_PASS_ERRORS(command_buffer->SubmitPrimary(&queue_graphics, fence, nullptr), result);
+    HYPERION_PASS_ERRORS(commandBuffer->SubmitPrimary(&queueGraphics, fence, nullptr), result);
 
     HYPERION_PASS_ERRORS(fence->WaitForGPU(), result);
     HYPERION_PASS_ERRORS(fence->Destroy(), result);
 
-    HYPERION_PASS_ERRORS(command_buffer->Destroy(), result);
+    HYPERION_PASS_ERRORS(commandBuffer->Destroy(), result);
 
-    HYPERION_PASS_ERRORS(temp_frame->Destroy(), result);
+    HYPERION_PASS_ERRORS(tempFrame->Destroy(), result);
 
     return result;
 }

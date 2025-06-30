@@ -13,60 +13,60 @@ namespace compression {
 
 ArchiveBuilder& ArchiveBuilder::Append(ByteBuffer&& buffer)
 {
-    if (m_uncompressed_buffer.Empty())
+    if (m_uncompressedBuffer.Empty())
     {
-        m_uncompressed_buffer = std::move(buffer);
+        m_uncompressedBuffer = std::move(buffer);
 
         return *this;
     }
 
-    const SizeType offset = m_uncompressed_buffer.Size();
-    m_uncompressed_buffer.SetSize(m_uncompressed_buffer.Size() + buffer.Size());
-    m_uncompressed_buffer.Write(buffer.Size(), offset, buffer.Data());
+    const SizeType offset = m_uncompressedBuffer.Size();
+    m_uncompressedBuffer.SetSize(m_uncompressedBuffer.Size() + buffer.Size());
+    m_uncompressedBuffer.Write(buffer.Size(), offset, buffer.Data());
 
     return *this;
 }
 
 ArchiveBuilder& ArchiveBuilder::Append(const ByteBuffer& buffer)
 {
-    if (m_uncompressed_buffer.Empty())
+    if (m_uncompressedBuffer.Empty())
     {
-        m_uncompressed_buffer = buffer;
+        m_uncompressedBuffer = buffer;
 
         return *this;
     }
 
-    const SizeType offset = m_uncompressed_buffer.Size();
-    m_uncompressed_buffer.SetSize(m_uncompressed_buffer.Size() + buffer.Size());
-    m_uncompressed_buffer.Write(buffer.Size(), offset, buffer.Data());
+    const SizeType offset = m_uncompressedBuffer.Size();
+    m_uncompressedBuffer.SetSize(m_uncompressedBuffer.Size() + buffer.Size());
+    m_uncompressedBuffer.Write(buffer.Size(), offset, buffer.Data());
 
     return *this;
 }
 
 Archive ArchiveBuilder::Build() const
 {
-    const unsigned long uncompressed_size = m_uncompressed_buffer.Size();
-    ByteBuffer compressed_buffer;
+    const unsigned long uncompressedSize = m_uncompressedBuffer.Size();
+    ByteBuffer compressedBuffer;
 
 #ifdef HYP_ZLIB
     // https://bobobobo.wordpress.com/2008/02/23/how-to-use-zlib/
-    unsigned long compressed_size = static_cast<unsigned long>(double(uncompressed_size) * 1.1) + 12;
-    compressed_buffer.SetSize(compressed_size);
+    unsigned long compressedSize = static_cast<unsigned long>(double(uncompressedSize) * 1.1) + 12;
+    compressedBuffer.SetSize(compressedSize);
 
-    const int compress_result = compress(
-        compressed_buffer.Data(),
-        &compressed_size,
-        m_uncompressed_buffer.Data(),
-        uncompressed_size);
+    const int compressResult = compress(
+        compressedBuffer.Data(),
+        &compressedSize,
+        m_uncompressedBuffer.Data(),
+        uncompressedSize);
 
-    AssertThrowMsg(compress_result == Z_OK, "zlib compression failed with error %d", compress_result);
+    AssertThrowMsg(compressResult == Z_OK, "zlib compression failed with error %d", compressResult);
 
-    compressed_buffer.SetSize(compressed_size);
+    compressedBuffer.SetSize(compressedSize);
 #else
     HYP_THROW("Cannot build Archive - zlib not linked to library");
 #endif
 
-    return Archive(std::move(compressed_buffer), uncompressed_size);
+    return Archive(std::move(compressedBuffer), uncompressedSize);
 }
 
 #pragma endregion ArchiveBuilder
@@ -83,21 +83,21 @@ bool Archive::IsEnabled()
 }
 
 Archive::Archive()
-    : m_uncompressed_size(0)
+    : m_uncompressedSize(0)
 {
 }
 
-Archive::Archive(ByteBuffer&& compressed_buffer, SizeType uncompressed_size)
-    : m_compressed_buffer(std::move(compressed_buffer)),
-      m_uncompressed_size(uncompressed_size)
+Archive::Archive(ByteBuffer&& compressedBuffer, SizeType uncompressedSize)
+    : m_compressedBuffer(std::move(compressedBuffer)),
+      m_uncompressedSize(uncompressedSize)
 {
 }
 
 Archive::Archive(Archive&& other) noexcept
-    : m_compressed_buffer(std::move(other.m_compressed_buffer)),
-      m_uncompressed_size(other.m_uncompressed_size)
+    : m_compressedBuffer(std::move(other.m_compressedBuffer)),
+      m_uncompressedSize(other.m_uncompressedSize)
 {
-    other.m_uncompressed_size = 0;
+    other.m_uncompressedSize = 0;
 }
 
 Archive& Archive::operator=(Archive&& other) noexcept
@@ -107,38 +107,38 @@ Archive& Archive::operator=(Archive&& other) noexcept
         return *this;
     }
 
-    m_compressed_buffer = std::move(other.m_compressed_buffer);
+    m_compressedBuffer = std::move(other.m_compressedBuffer);
 
-    m_uncompressed_size = other.m_uncompressed_size;
-    other.m_uncompressed_size = 0;
+    m_uncompressedSize = other.m_uncompressedSize;
+    other.m_uncompressedSize = 0;
 
     return *this;
 }
 
 Archive::~Archive() = default;
 
-Result Archive::Decompress(ByteBuffer& out_buffer) const
+Result Archive::Decompress(ByteBuffer& outBuffer) const
 {
 #ifdef HYP_ZLIB
-    out_buffer.SetSize(m_uncompressed_size);
+    outBuffer.SetSize(m_uncompressedSize);
 
-    unsigned long compressed_size = m_compressed_buffer.Size();
-    unsigned long decompressed_size = m_uncompressed_size;
+    unsigned long compressedSize = m_compressedBuffer.Size();
+    unsigned long decompressedSize = m_uncompressedSize;
 
-    const unsigned long compressed_size_before = compressed_size;
-    const unsigned long decompressed_size_before = decompressed_size;
+    const unsigned long compressedSizeBefore = compressedSize;
+    const unsigned long decompressedSizeBefore = decompressedSize;
 
-    if (uncompress2(out_buffer.Data(), &decompressed_size, m_compressed_buffer.Data(), &compressed_size) != Z_OK)
+    if (uncompress2(outBuffer.Data(), &decompressedSize, m_compressedBuffer.Data(), &compressedSize) != Z_OK)
     {
         return HYP_MAKE_ERROR(Error, "Failed to decompress: zlib returned an error");
     }
 
-    if (compressed_size != compressed_size_before)
+    if (compressedSize != compressedSizeBefore)
     {
         return HYP_MAKE_ERROR(Error, "Compressed data size was incorrect");
     }
 
-    if (decompressed_size != decompressed_size_before)
+    if (decompressedSize != decompressedSizeBefore)
     {
         return HYP_MAKE_ERROR(Error, "Decompressed data size was incorrect");
     }

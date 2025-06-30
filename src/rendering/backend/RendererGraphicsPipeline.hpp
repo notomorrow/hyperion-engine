@@ -23,12 +23,12 @@ public:
 
     HYP_FORCE_INLINE const VertexAttributeSet& GetVertexAttributes() const
     {
-        return m_vertex_attributes;
+        return m_vertexAttributes;
     }
 
-    HYP_FORCE_INLINE void SetVertexAttributes(const VertexAttributeSet& vertex_attributes)
+    HYP_FORCE_INLINE void SetVertexAttributes(const VertexAttributeSet& vertexAttributes)
     {
-        m_vertex_attributes = vertex_attributes;
+        m_vertexAttributes = vertexAttributes;
     }
 
     HYP_FORCE_INLINE Topology GetTopology() const
@@ -43,70 +43,70 @@ public:
 
     HYP_FORCE_INLINE FaceCullMode GetCullMode() const
     {
-        return m_face_cull_mode;
+        return m_faceCullMode;
     }
 
-    HYP_FORCE_INLINE void SetCullMode(FaceCullMode face_cull_mode)
+    HYP_FORCE_INLINE void SetCullMode(FaceCullMode faceCullMode)
     {
-        m_face_cull_mode = face_cull_mode;
+        m_faceCullMode = faceCullMode;
     }
 
     HYP_FORCE_INLINE FillMode GetFillMode() const
     {
-        return m_fill_mode;
+        return m_fillMode;
     }
 
-    HYP_FORCE_INLINE void SetFillMode(FillMode fill_mode)
+    HYP_FORCE_INLINE void SetFillMode(FillMode fillMode)
     {
-        m_fill_mode = fill_mode;
+        m_fillMode = fillMode;
     }
 
     HYP_FORCE_INLINE const BlendFunction& GetBlendFunction() const
     {
-        return m_blend_function;
+        return m_blendFunction;
     }
 
-    HYP_FORCE_INLINE void SetBlendFunction(const BlendFunction& blend_function)
+    HYP_FORCE_INLINE void SetBlendFunction(const BlendFunction& blendFunction)
     {
-        m_blend_function = blend_function;
+        m_blendFunction = blendFunction;
     }
 
     HYP_FORCE_INLINE const StencilFunction& GetStencilFunction() const
     {
-        return m_stencil_function;
+        return m_stencilFunction;
     }
 
-    HYP_FORCE_INLINE void SetStencilFunction(const StencilFunction& stencil_function)
+    HYP_FORCE_INLINE void SetStencilFunction(const StencilFunction& stencilFunction)
     {
-        m_stencil_function = stencil_function;
+        m_stencilFunction = stencilFunction;
     }
 
     HYP_FORCE_INLINE bool GetDepthTest() const
     {
-        return m_depth_test;
+        return m_depthTest;
     }
 
-    HYP_FORCE_INLINE void SetDepthTest(bool depth_test)
+    HYP_FORCE_INLINE void SetDepthTest(bool depthTest)
     {
-        m_depth_test = depth_test;
+        m_depthTest = depthTest;
     }
 
     HYP_FORCE_INLINE bool GetDepthWrite() const
     {
-        return m_depth_write;
+        return m_depthWrite;
     }
 
-    HYP_FORCE_INLINE void SetDepthWrite(bool depth_write)
+    HYP_FORCE_INLINE void SetDepthWrite(bool depthWrite)
     {
-        m_depth_write = depth_write;
+        m_depthWrite = depthWrite;
     }
 
     HYP_FORCE_INLINE const DescriptorTableRef& GetDescriptorTable() const
     {
-        return m_descriptor_table;
+        return m_descriptorTable;
     }
 
-    HYP_API void SetDescriptorTable(const DescriptorTableRef& descriptor_table);
+    HYP_API void SetDescriptorTable(const DescriptorTableRef& descriptorTable);
 
     HYP_FORCE_INLINE const ShaderRef& GetShader() const
     {
@@ -125,12 +125,12 @@ public:
     HYP_API virtual RendererResult Create();
     HYP_API virtual RendererResult Destroy();
 
-    HYP_API virtual void Bind(CommandBufferBase* command_buffer) = 0;
-    HYP_API virtual void Bind(CommandBufferBase* command_buffer, Vec2i viewport_offset, Vec2u viewport_extent) = 0;
+    HYP_API virtual void Bind(CommandBufferBase* commandBuffer) = 0;
+    HYP_API virtual void Bind(CommandBufferBase* commandBuffer, Vec2i viewportOffset, Vec2u viewportExtent) = 0;
 
     HYP_API virtual bool MatchesSignature(
         const ShaderBase* shader,
-        const DescriptorTableDeclaration& descriptor_table_decl,
+        const DescriptorTableDeclaration& descriptorTableDecl,
         const Array<const FramebufferBase*>& framebuffers,
         const RenderableAttributeSet& attributes) const;
 
@@ -140,28 +140,28 @@ public:
 protected:
     GraphicsPipelineBase() = default;
 
-    GraphicsPipelineBase(const ShaderRef& shader, const DescriptorTableRef& descriptor_table)
+    GraphicsPipelineBase(const ShaderRef& shader, const DescriptorTableRef& descriptorTable)
         : m_shader(shader),
-          m_descriptor_table(descriptor_table)
+          m_descriptorTable(descriptorTable)
     {
     }
 
     virtual RendererResult Rebuild() = 0;
 
-    VertexAttributeSet m_vertex_attributes;
+    VertexAttributeSet m_vertexAttributes;
 
     Topology m_topology = TOP_TRIANGLES;
-    FaceCullMode m_face_cull_mode = FCM_BACK;
-    FillMode m_fill_mode = FM_FILL;
-    BlendFunction m_blend_function = BlendFunction::None();
+    FaceCullMode m_faceCullMode = FCM_BACK;
+    FillMode m_fillMode = FM_FILL;
+    BlendFunction m_blendFunction = BlendFunction::None();
 
-    StencilFunction m_stencil_function;
+    StencilFunction m_stencilFunction;
 
-    bool m_depth_test = true;
-    bool m_depth_write = true;
+    bool m_depthTest = true;
+    bool m_depthWrite = true;
 
     ShaderRef m_shader;
-    DescriptorTableRef m_descriptor_table;
+    DescriptorTableRef m_descriptorTable;
     Array<FramebufferRef> m_framebuffers;
 };
 

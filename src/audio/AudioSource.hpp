@@ -38,7 +38,7 @@ class AudioSource final : public HypObject<AudioSource>
 
 public:
     AudioSource();
-    AudioSource(AudioSourceFormat format, const ByteBuffer& byte_buffer, uint64 freq);
+    AudioSource(AudioSourceFormat format, const ByteBuffer& byteBuffer, uint64 freq);
 
     AudioSource(const AudioSource& other) = delete;
     AudioSource& operator=(const AudioSource& other) = delete;
@@ -87,26 +87,26 @@ public:
     HYP_METHOD(Property = "SampleLength", Serialize = true, Editor = true)
     HYP_FORCE_INLINE uint32 GetSampleLength() const
     {
-        return m_sample_length;
+        return m_sampleLength;
     }
 
     HYP_METHOD(Property = "SampleLength", Serialize = true, Editor = true)
-    HYP_FORCE_INLINE void SetSampleLength(uint32 sample_length)
+    HYP_FORCE_INLINE void SetSampleLength(uint32 sampleLength)
     {
-        m_sample_length = sample_length;
+        m_sampleLength = sampleLength;
     }
 
     /*! \brief Get duration in seconds. */
     HYP_METHOD(Property = "Duration", Serialize = true, Editor = true)
     HYP_FORCE_INLINE double GetDuration() const
     {
-        return double(m_sample_length) / double(m_freq);
+        return double(m_sampleLength) / double(m_freq);
     }
 
     HYP_METHOD(Property = "Duration", Serialize = true, Editor = true)
     HYP_FORCE_INLINE void SetDuration(double duration)
     {
-        m_sample_length = uint32(duration * double(m_freq));
+        m_sampleLength = uint32(duration * double(m_freq));
     }
 
     AudioSourceState GetState() const;
@@ -130,9 +130,9 @@ private:
     ByteBuffer m_data;
     uint64 m_freq;
 
-    uint32 m_buffer_id;
-    uint32 m_source_id;
-    uint32 m_sample_length;
+    uint32 m_bufferId;
+    uint32 m_sourceId;
+    uint32 m_sampleLength;
 };
 
 } // namespace hyperion

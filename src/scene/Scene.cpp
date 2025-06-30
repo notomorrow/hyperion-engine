@@ -54,25 +54,25 @@ namespace hyperion {
 #pragma region SceneValidation
 
 static SceneValidationResult MergeSceneValidationResults(
-    const SceneValidationResult& result_a,
-    const SceneValidationResult& result_b)
+    const SceneValidationResult& resultA,
+    const SceneValidationResult& resultB)
 {
     SceneValidationResult result;
 
-    if (result_a.HasError())
+    if (resultA.HasError())
     {
-        result = result_a;
+        result = resultA;
     }
 
-    if (result_b.HasError())
+    if (resultB.HasError())
     {
         if (result.HasError())
         {
-            result = HYP_MAKE_ERROR(SceneValidationError, "{}\n{}", result_a.GetError().GetMessage(), result_b.GetError().GetMessage());
+            result = HYP_MAKE_ERROR(SceneValidationError, "{}\n{}", resultA.GetError().GetMessage(), resultB.GetError().GetMessage());
         }
         else
         {
-            result = result_b;
+            result = resultB;
         }
     }
 
@@ -81,9 +81,9 @@ static SceneValidationResult MergeSceneValidationResults(
 
 static SceneValidationResult ValidateSceneLights(const Scene* scene)
 {
-    auto validate_multiple_directional_lights = [](const Scene* scene) -> SceneValidationResult
+    auto validateMultipleDirectionalLights = [](const Scene* scene) -> SceneValidationResult
     {
-        int num_directional_lights = 0;
+        int numDirectionalLights = 0;
 
         for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
@@ -93,11 +93,11 @@ static SceneValidationResult ValidateSceneLights(const Scene* scene)
 
             if (light->GetLightType() == LT_DIRECTIONAL)
             {
-                ++num_directional_lights;
+                ++numDirectionalLights;
             }
         }
 
-        if (num_directional_lights > 1)
+        if (numDirectionalLights > 1)
         {
             return HYP_MAKE_ERROR(SceneValidationError, "Multiple directional lights found in scene");
         }
@@ -106,7 +106,7 @@ static SceneValidationResult ValidateSceneLights(const Scene* scene)
     };
 
     SceneValidationResult result;
-    result = MergeSceneValidationResults(result, validate_multiple_directional_lights(scene));
+    result = MergeSceneValidationResults(result, validateMultipleDirectionalLights(scene));
 
     return result;
 }
@@ -138,16 +138,16 @@ Scene::Scene(World* world, EnumFlags<SceneFlags> flags)
 {
 }
 
-Scene::Scene(World* world, ThreadId owner_thread_id, EnumFlags<SceneFlags> flags)
+Scene::Scene(World* world, ThreadId ownerThreadId, EnumFlags<SceneFlags> flags)
     : m_name(Name::Unique("Scene")),
       m_flags(flags),
-      m_owner_thread_id(owner_thread_id),
+      m_ownerThreadId(ownerThreadId),
       m_world(world),
-      m_is_audio_listener(false),
-      m_entity_manager(CreateObject<EntityManager>(owner_thread_id, this)),
-      m_octree(m_entity_manager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
-      m_previous_delta(0.01667f),
-      m_render_resource(nullptr)
+      m_isAudioListener(false),
+      m_entityManager(CreateObject<EntityManager>(ownerThreadId, this)),
+      m_octree(m_entityManager, BoundingBox(Vec3f(-250.0f), Vec3f(250.0f))),
+      m_previousDelta(0.01667f),
+      m_renderResource(nullptr)
 {
     m_root = CreateObject<Node>(NAME("<ROOT>"), Handle<Entity>::empty, Transform::identity, this);
 }
@@ -159,9 +159,9 @@ Scene::~Scene()
 
     if (m_root.IsValid())
     {
-        if (m_owner_thread_id.IsValid() && !Threads::IsOnThread(m_owner_thread_id))
+        if (m_ownerThreadId.IsValid() && !Threads::IsOnThread(m_ownerThreadId))
         {
-            Task<void> task = Threads::GetThread(m_owner_thread_id)->GetScheduler().Enqueue([&node = m_root]()
+            Task<void> task = Threads::GetThread(m_ownerThreadId)->GetScheduler().Enqueue([&node = m_root]()
                 {
                     node->SetScene(nullptr);
                 });
@@ -175,33 +175,33 @@ Scene::~Scene()
     }
 
     // Move so destruction of components can check GetEntityManager() returns nullptr
-    if (Handle<EntityManager> entity_manager = std::move(m_entity_manager))
+    if (Handle<EntityManager> entityManager = std::move(m_entityManager))
     {
-        if (Threads::IsOnThread(entity_manager->GetOwnerThreadId()))
+        if (Threads::IsOnThread(entityManager->GetOwnerThreadId()))
         {
             // If we are on the same thread, we can safely shutdown the entity manager here:
-            entity_manager->Shutdown();
+            entityManager->Shutdown();
         }
         else
         {
             // have to enqueue a task to shut down the entity manager on its owner thread
-            Task<void> task = Threads::GetThread(entity_manager->GetOwnerThreadId())->GetScheduler().Enqueue([&entity_manager]()
+            Task<void> task = Threads::GetThread(entityManager->GetOwnerThreadId())->GetScheduler().Enqueue([&entityManager]()
                 {
-                    entity_manager->Shutdown();
+                    entityManager->Shutdown();
                 });
 
             // Wait for shut down to complete
             task.Await();
         }
 
-        entity_manager.Reset();
+        entityManager.Reset();
     }
 
-    if (m_render_resource != nullptr)
+    if (m_renderResource != nullptr)
     {
-        FreeResource(m_render_resource);
+        FreeResource(m_renderResource);
 
-        m_render_resource = nullptr;
+        m_renderResource = nullptr;
     }
 }
 
@@ -209,17 +209,17 @@ void Scene::Init()
 {
     AddDelegateHandler(g_engine->GetDelegates().OnShutdown.Bind([this]
         {
-            if (m_render_resource != nullptr)
+            if (m_renderResource != nullptr)
             {
-                FreeResource(m_render_resource);
+                FreeResource(m_renderResource);
 
-                m_render_resource = nullptr;
+                m_renderResource = nullptr;
             }
         }));
 
-    m_entity_manager->SetWorld(m_world);
+    m_entityManager->SetWorld(m_world);
 
-    m_render_resource = AllocateResource<RenderScene>(this);
+    m_renderResource = AllocateResource<RenderScene>(this);
 
     AddSystemIfApplicable<CameraSystem>();
     AddSystemIfApplicable<ScenePrimaryCameraSystem>();
@@ -243,35 +243,35 @@ void Scene::Init()
     SetReady(true);
 
     InitObject(m_root);
-    InitObject(m_entity_manager);
+    InitObject(m_entityManager);
 }
 
-void Scene::SetOwnerThreadId(ThreadId owner_thread_id)
+void Scene::SetOwnerThreadId(ThreadId ownerThreadId)
 {
-    if (m_owner_thread_id == owner_thread_id)
+    if (m_ownerThreadId == ownerThreadId)
     {
         return;
     }
 
-    m_owner_thread_id = owner_thread_id;
-    m_entity_manager->SetOwnerThreadId(owner_thread_id);
+    m_ownerThreadId = ownerThreadId;
+    m_entityManager->SetOwnerThreadId(ownerThreadId);
 }
 
 const Handle<Camera>& Scene::GetPrimaryCamera() const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread | ThreadCategory::THREAD_CATEGORY_TASK);
+    Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    if (!m_entity_manager)
+    if (!m_entityManager)
     {
         return Handle<Camera>::empty;
     }
 
-    for (auto [entity, camera_component, _] : m_entity_manager->GetEntitySet<CameraComponent, EntityTagComponent<EntityTag::CAMERA_PRIMARY>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+    for (auto [entity, cameraComponent, _] : m_entityManager->GetEntitySet<CameraComponent, EntityTagComponent<EntityTag::CAMERA_PRIMARY>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
     {
-        if (camera_component.camera.IsValid())
+        if (cameraComponent.camera.IsValid())
         {
-            return camera_component.camera;
+            return cameraComponent.camera;
         }
     }
 
@@ -281,7 +281,7 @@ const Handle<Camera>& Scene::GetPrimaryCamera() const
 void Scene::SetWorld(World* world)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
+    Threads::AssertOnThread(m_ownerThreadId);
 
     if (m_world == world)
     {
@@ -294,7 +294,7 @@ void Scene::SetWorld(World* world)
     }
 
     // When world is changed, entity manager needs all systems to have this change reflected
-    m_entity_manager->SetWorld(world);
+    m_entityManager->SetWorld(world);
 
     m_world = world;
 }
@@ -302,7 +302,7 @@ void Scene::SetWorld(World* world)
 Handle<Node> Scene::FindNodeWithEntity(const Entity* entity) const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
+    Threads::AssertOnThread(m_ownerThreadId);
 
     AssertThrow(m_root);
 
@@ -317,7 +317,7 @@ Handle<Node> Scene::FindNodeWithEntity(const Entity* entity) const
 Handle<Node> Scene::FindNodeByName(WeakName name) const
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
+    Threads::AssertOnThread(m_ownerThreadId);
 
     AssertThrow(m_root);
 
@@ -332,7 +332,7 @@ Handle<Node> Scene::FindNodeByName(WeakName name) const
 void Scene::Update(float delta)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
+    Threads::AssertOnThread(m_ownerThreadId);
 
     AssertReady();
 
@@ -350,7 +350,7 @@ void Scene::Update(float delta)
 void Scene::SetRoot(const Handle<Node>& root)
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(m_owner_thread_id);
+    Threads::AssertOnThread(m_ownerThreadId);
 
     if (root == m_root)
     {
@@ -361,11 +361,11 @@ void Scene::SetRoot(const Handle<Node>& root)
     RemoveDelegateHandler(NAME("ValidateScene"));
 #endif
 
-    Handle<Node> prev_root = m_root;
+    Handle<Node> prevRoot = m_root;
 
-    if (prev_root.IsValid() && prev_root->GetScene() == this)
+    if (prevRoot.IsValid() && prevRoot->GetScene() == this)
     {
-        prev_root->SetScene(nullptr);
+        prevRoot->SetScene(nullptr);
     }
 
     m_root = root;
@@ -377,33 +377,33 @@ void Scene::SetRoot(const Handle<Node>& root)
 #ifdef HYP_DEBUG_MODE
         AddDelegateHandler(
             NAME("ValidateScene"),
-            m_root->GetDelegates()->OnChildAdded.Bind([weak_this = WeakHandleFromThis()](Node*, bool)
+            m_root->GetDelegates()->OnChildAdded.Bind([weakThis = WeakHandleFromThis()](Node*, bool)
                 {
-                    Handle<Scene> scene = weak_this.Lock();
+                    Handle<Scene> scene = weakThis.Lock();
 
                     if (!scene.IsValid())
                     {
                         return;
                     }
 
-                    SceneValidationResult validation_result = SceneValidation::ValidateScene(scene.Get());
+                    SceneValidationResult validationResult = SceneValidation::ValidateScene(scene.Get());
 
-                    if (validation_result.HasError())
+                    if (validationResult.HasError())
                     {
-                        HYP_LOG(Scene, Error, "Scene validation failed: {}", validation_result.GetError().GetMessage());
+                        HYP_LOG(Scene, Error, "Scene validation failed: {}", validationResult.GetError().GetMessage());
                     }
                 }));
 #endif
     }
 
-    OnRootNodeChanged(m_root, prev_root);
+    OnRootNodeChanged(m_root, prevRoot);
 }
 
 bool Scene::AddToWorld(World* world)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (world == m_world)
     {
@@ -425,7 +425,7 @@ bool Scene::AddToWorld(World* world)
 bool Scene::RemoveFromWorld()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_game_thread);
+    Threads::AssertOnThread(g_gameThread);
 
     if (m_world == nullptr)
     {
@@ -437,38 +437,38 @@ bool Scene::RemoveFromWorld()
     return true;
 }
 
-Name Scene::GetUniqueNodeName(UTF8StringView base_name) const
+Name Scene::GetUniqueNodeName(UTF8StringView baseName) const
 {
-    String unique_name = base_name;
+    String uniqueName = baseName;
     int counter = 1;
 
-    // Return base_name directly if it's not already used.
-    if (!FindNodeByName(unique_name).IsValid())
+    // Return baseName directly if it's not already used.
+    if (!FindNodeByName(uniqueName).IsValid())
     {
-        return CreateNameFromDynamicString(unique_name);
+        return CreateNameFromDynamicString(uniqueName);
     }
 
     // Otherwise, append an increasing counter until a unique name is found.
-    while (FindNodeByName(unique_name).IsValid())
+    while (FindNodeByName(uniqueName).IsValid())
     {
-        unique_name = HYP_FORMAT("{}{}", base_name, counter);
+        uniqueName = HYP_FORMAT("{}{}", baseName, counter);
         ++counter;
     }
 
-    return CreateNameFromDynamicString(unique_name);
+    return CreateNameFromDynamicString(uniqueName);
 }
 
 template <class SystemType>
 void Scene::AddSystemIfApplicable()
 {
-    Handle<SystemType> system = CreateObject<SystemType>(*m_entity_manager);
+    Handle<SystemType> system = CreateObject<SystemType>(*m_entityManager);
 
     if (!system->ShouldCreateForScene(this))
     {
         return;
     }
 
-    m_entity_manager->AddSystem(system);
+    m_entityManager->AddSystem(system);
 }
 
 #pragma endregion Scene

@@ -27,7 +27,7 @@ struct EditorNodePropertyRef
 
 class UIElementFactoryBase;
 
-HYP_API UIElementFactoryBase* GetEditorUIElementFactory(TypeId type_id);
+HYP_API UIElementFactoryBase* GetEditorUIElementFactory(TypeId typeId);
 
 template <class T>
 static UIElementFactoryBase* GetEditorUIElementFactory()

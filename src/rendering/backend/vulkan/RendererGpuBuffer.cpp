@@ -20,23 +20,23 @@
 
 namespace hyperion {
 
-extern IRenderBackend* g_render_backend;
+extern IRenderBackend* g_renderBackend;
 
 static inline VulkanRenderBackend* GetRenderBackend()
 {
-    return static_cast<VulkanRenderBackend*>(g_render_backend);
+    return static_cast<VulkanRenderBackend*>(g_renderBackend);
 }
 
 #pragma region Helpers
 
-static uint32 FindMemoryType(uint32 vk_type_filter, VkMemoryPropertyFlags vk_memory_property_flags)
+static uint32 FindMemoryType(uint32 vkTypeFilter, VkMemoryPropertyFlags vkMemoryPropertyFlags)
 {
-    VkPhysicalDeviceMemoryProperties mem_properties;
-    vkGetPhysicalDeviceMemoryProperties(GetRenderBackend()->GetDevice()->GetPhysicalDevice(), &mem_properties);
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(GetRenderBackend()->GetDevice()->GetPhysicalDevice(), &memProperties);
 
-    for (uint32 i = 0; i < mem_properties.memoryTypeCount; i++)
+    for (uint32 i = 0; i < memProperties.memoryTypeCount; i++)
     {
-        if ((vk_type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & vk_memory_property_flags) == vk_memory_property_flags)
+        if ((vkTypeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & vkMemoryPropertyFlags) == vkMemoryPropertyFlags)
         {
             HYP_LOG(RenderingBackend, Debug, "Found Memory type {}", i);
             return i;
@@ -117,7 +117,7 @@ VkAccessFlags GetVkAccessMask(ResourceState state)
     }
 }
 
-VkPipelineStageFlags GetVkShaderStageMask(ResourceState state, bool src, ShaderModuleType shader_type = SMT_UNSET)
+VkPipelineStageFlags GetVkShaderStageMask(ResourceState state, bool src, ShaderModuleType shaderType = SMT_UNSET)
 {
     switch (state)
     {
@@ -138,7 +138,7 @@ VkPipelineStageFlags GetVkShaderStageMask(ResourceState state, bool src, ShaderM
     case RS_UNORDERED_ACCESS:
     case RS_CONSTANT_BUFFER:
     case RS_SHADER_RESOURCE:
-        switch (shader_type)
+        switch (shaderType)
         {
         case SMT_VERTEX:
             return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
@@ -356,7 +356,7 @@ void VulkanGpuBuffer::Map() const
 
     AssertThrowMsg(IsCpuAccessible(), "Attempt to map a buffer that is not CPU accessible!");
 
-    vmaMapMemory(GetRenderBackend()->GetDevice()->GetAllocator(), m_vma_allocation, &m_mapping);
+    vmaMapMemory(GetRenderBackend()->GetDevice()->GetAllocator(), m_vmaAllocation, &m_mapping);
 }
 
 void VulkanGpuBuffer::Unmap() const
@@ -366,11 +366,11 @@ void VulkanGpuBuffer::Unmap() const
         return;
     }
 
-    vmaUnmapMemory(GetRenderBackend()->GetDevice()->GetAllocator(), m_vma_allocation);
+    vmaUnmapMemory(GetRenderBackend()->GetDevice()->GetAllocator(), m_vmaAllocation);
     m_mapping = nullptr;
 }
 
-void VulkanGpuBuffer::Read(SizeType count, void* out_ptr) const
+void VulkanGpuBuffer::Read(SizeType count, void* outPtr) const
 {
     if (m_mapping == nullptr)
     {
@@ -379,10 +379,10 @@ void VulkanGpuBuffer::Read(SizeType count, void* out_ptr) const
         HYP_LOG(RenderingBackend, Warning, "Attempt to Read() from buffer but data has not been mapped previously");
     }
 
-    Memory::MemCpy(out_ptr, m_mapping, count);
+    Memory::MemCpy(outPtr, m_mapping, count);
 }
 
-void VulkanGpuBuffer::Read(SizeType offset, SizeType count, void* out_ptr) const
+void VulkanGpuBuffer::Read(SizeType offset, SizeType count, void* outPtr) const
 {
     if (m_mapping == nullptr)
     {
@@ -391,7 +391,7 @@ void VulkanGpuBuffer::Read(SizeType offset, SizeType count, void* out_ptr) const
         HYP_LOG(RenderingBackend, Warning, "Attempt to Read() from buffer but data has not been mapped previously");
     }
 
-    Memory::MemCpy(out_ptr, reinterpret_cast<void*>(uintptr_t(m_mapping) + uintptr_t(offset)), count);
+    Memory::MemCpy(outPtr, reinterpret_cast<void*>(uintptr_t(m_mapping) + uintptr_t(offset)), count);
 }
 
 bool VulkanGpuBuffer::IsCreated() const
@@ -401,15 +401,15 @@ bool VulkanGpuBuffer::IsCreated() const
 
 bool VulkanGpuBuffer::IsCpuAccessible() const
 {
-    return m_vma_usage != VMA_MEMORY_USAGE_GPU_ONLY;
+    return m_vmaUsage != VMA_MEMORY_USAGE_GPU_ONLY;
 }
 
 RendererResult VulkanGpuBuffer::CheckCanAllocate(SizeType size) const
 {
-    const VkBufferCreateInfo create_info = GetBufferCreateInfo();
-    const VmaAllocationCreateInfo alloc_info = GetAllocationCreateInfo();
+    const VkBufferCreateInfo createInfo = GetBufferCreateInfo();
+    const VmaAllocationCreateInfo allocInfo = GetAllocationCreateInfo();
 
-    return CheckCanAllocate(create_info, alloc_info, m_size);
+    return CheckCanAllocate(createInfo, allocInfo, m_size);
 }
 
 uint64 VulkanGpuBuffer::GetBufferDeviceAddress() const
@@ -423,29 +423,29 @@ uint64 VulkanGpuBuffer::GetBufferDeviceAddress() const
     VkBufferDeviceAddressInfoKHR info { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
     info.buffer = m_handle;
 
-    return GetRenderBackend()->GetDevice()->GetFeatures().dyn_functions.vkGetBufferDeviceAddressKHR(
+    return GetRenderBackend()->GetDevice()->GetFeatures().dynFunctions.vkGetBufferDeviceAddressKHR(
         GetRenderBackend()->GetDevice()->GetDevice(),
         &info);
 }
 
-void VulkanGpuBuffer::InsertBarrier(CommandBufferBase* command_buffer, ResourceState new_state) const
+void VulkanGpuBuffer::InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState) const
 {
     InsertBarrier(
-        static_cast<VulkanCommandBuffer*>(command_buffer),
-        new_state);
+        static_cast<VulkanCommandBuffer*>(commandBuffer),
+        newState);
 }
 
-void VulkanGpuBuffer::InsertBarrier(CommandBufferBase* command_buffer, ResourceState new_state, ShaderModuleType shader_type) const
+void VulkanGpuBuffer::InsertBarrier(CommandBufferBase* commandBuffer, ResourceState newState, ShaderModuleType shaderType) const
 {
     InsertBarrier(
-        static_cast<VulkanCommandBuffer*>(command_buffer),
-        new_state,
-        shader_type);
+        static_cast<VulkanCommandBuffer*>(commandBuffer),
+        newState,
+        shaderType);
 }
 
 void VulkanGpuBuffer::InsertBarrier(
-    VulkanCommandBuffer* command_buffer,
-    ResourceState new_state) const
+    VulkanCommandBuffer* commandBuffer,
+    ResourceState newState) const
 {
     if (!IsCreated())
     {
@@ -455,8 +455,8 @@ void VulkanGpuBuffer::InsertBarrier(
     }
 
     VkBufferMemoryBarrier barrier { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-    barrier.srcAccessMask = GetVkAccessMask(m_resource_state);
-    barrier.dstAccessMask = GetVkAccessMask(new_state);
+    barrier.srcAccessMask = GetVkAccessMask(m_resourceState);
+    barrier.dstAccessMask = GetVkAccessMask(newState);
     barrier.buffer = m_handle;
     barrier.offset = 0;
     barrier.size = m_size;
@@ -464,21 +464,21 @@ void VulkanGpuBuffer::InsertBarrier(
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
     vkCmdPipelineBarrier(
-        command_buffer->GetVulkanHandle(),
-        GetVkShaderStageMask(m_resource_state, true),
-        GetVkShaderStageMask(new_state, false),
+        commandBuffer->GetVulkanHandle(),
+        GetVkShaderStageMask(m_resourceState, true),
+        GetVkShaderStageMask(newState, false),
         0,
         0, nullptr,
         1, &barrier,
         0, nullptr);
 
-    m_resource_state = new_state;
+    m_resourceState = newState;
 }
 
 void VulkanGpuBuffer::InsertBarrier(
-    VulkanCommandBuffer* command_buffer,
-    ResourceState new_state,
-    ShaderModuleType shader_type) const
+    VulkanCommandBuffer* commandBuffer,
+    ResourceState newState,
+    ShaderModuleType shaderType) const
 {
     if (!IsCreated())
     {
@@ -488,8 +488,8 @@ void VulkanGpuBuffer::InsertBarrier(
     }
 
     VkBufferMemoryBarrier barrier { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-    barrier.srcAccessMask = GetVkAccessMask(m_resource_state);
-    barrier.dstAccessMask = GetVkAccessMask(new_state);
+    barrier.srcAccessMask = GetVkAccessMask(m_resourceState);
+    barrier.dstAccessMask = GetVkAccessMask(newState);
     barrier.buffer = m_handle;
     barrier.offset = 0;
     barrier.size = m_size;
@@ -497,20 +497,20 @@ void VulkanGpuBuffer::InsertBarrier(
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
     vkCmdPipelineBarrier(
-        command_buffer->GetVulkanHandle(),
-        GetVkShaderStageMask(m_resource_state, true, shader_type),
-        GetVkShaderStageMask(new_state, false, shader_type),
+        commandBuffer->GetVulkanHandle(),
+        GetVkShaderStageMask(m_resourceState, true, shaderType),
+        GetVkShaderStageMask(newState, false, shaderType),
         0,
         0, nullptr,
         1, &barrier,
         0, nullptr);
 
-    m_resource_state = new_state;
+    m_resourceState = newState;
 }
 
 void VulkanGpuBuffer::CopyFrom(
-    CommandBufferBase* command_buffer,
-    const GpuBufferBase* src_buffer,
+    CommandBufferBase* commandBuffer,
+    const GpuBufferBase* srcBuffer,
     SizeType count)
 {
     if (!IsCreated())
@@ -520,22 +520,22 @@ void VulkanGpuBuffer::CopyFrom(
         return;
     }
 
-    if (!src_buffer->IsCreated())
+    if (!srcBuffer->IsCreated())
     {
         HYP_LOG(RenderingBackend, Warning, "Attempt to copy from buffer but src buffer was not created");
 
         return;
     }
 
-    InsertBarrier(command_buffer, RS_COPY_DST);
-    src_buffer->InsertBarrier(command_buffer, RS_COPY_SRC);
+    InsertBarrier(commandBuffer, RS_COPY_DST);
+    srcBuffer->InsertBarrier(commandBuffer, RS_COPY_SRC);
 
     VkBufferCopy region {};
     region.size = count;
 
     vkCmdCopyBuffer(
-        static_cast<VulkanCommandBuffer*>(command_buffer)->GetVulkanHandle(),
-        static_cast<const VulkanGpuBuffer*>(src_buffer)->m_handle,
+        static_cast<VulkanCommandBuffer*>(commandBuffer)->GetVulkanHandle(),
+        static_cast<const VulkanGpuBuffer*>(srcBuffer)->m_handle,
         m_handle,
         1,
         &region);
@@ -553,11 +553,11 @@ RendererResult VulkanGpuBuffer::Destroy()
         Unmap();
     }
 
-    vmaDestroyBuffer(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_vma_allocation);
+    vmaDestroyBuffer(GetRenderBackend()->GetDevice()->GetAllocator(), m_handle, m_vmaAllocation);
 
     m_handle = VK_NULL_HANDLE;
-    m_vma_allocation = VK_NULL_HANDLE;
-    m_resource_state = RS_UNDEFINED;
+    m_vmaAllocation = VK_NULL_HANDLE;
+    m_resourceState = RS_UNDEFINED;
 
     HYPERION_RETURN_OK;
 }
@@ -577,9 +577,9 @@ RendererResult VulkanGpuBuffer::Create()
         HYPERION_BUBBLE_ERRORS(Destroy());
     }
 
-    m_vk_buffer_usage_flags = GetVkUsageFlags(m_type);
-    m_vma_usage = GetVkMemoryUsage(m_type);
-    m_vma_allocation_create_flags = GetVkAllocationCreateFlags(m_type)
+    m_vkBufferUsageFlags = GetVkUsageFlags(m_type);
+    m_vmaUsage = GetVkMemoryUsage(m_type);
+    m_vmaAllocationCreateFlags = GetVkAllocationCreateFlags(m_type)
         | VMA_ALLOCATION_CREATE_USER_DATA_COPY_STRING_BIT;
 
     if (m_size == 0)
@@ -591,21 +591,21 @@ RendererResult VulkanGpuBuffer::Create()
         return HYP_MAKE_ERROR(RendererError, "Creating empty gpu buffer will result in errors!");
     }
 
-    const auto create_info = GetBufferCreateInfo();
-    const auto alloc_info = GetAllocationCreateInfo();
+    const auto createInfo = GetBufferCreateInfo();
+    const auto allocInfo = GetAllocationCreateInfo();
 
-    HYPERION_BUBBLE_ERRORS(CheckCanAllocate(create_info, alloc_info, m_size));
+    HYPERION_BUBBLE_ERRORS(CheckCanAllocate(createInfo, allocInfo, m_size));
 
     if (m_alignment != 0)
     {
         HYPERION_VK_CHECK_MSG(
             vmaCreateBufferWithAlignment(
                 GetRenderBackend()->GetDevice()->GetAllocator(),
-                &create_info,
-                &alloc_info,
+                &createInfo,
+                &allocInfo,
                 m_alignment,
                 &m_handle,
-                &m_vma_allocation,
+                &m_vmaAllocation,
                 nullptr),
             "Failed to create aligned gpu buffer!");
     }
@@ -614,10 +614,10 @@ RendererResult VulkanGpuBuffer::Create()
         HYPERION_VK_CHECK_MSG(
             vmaCreateBuffer(
                 GetRenderBackend()->GetDevice()->GetAllocator(),
-                &create_info,
-                &alloc_info,
+                &createInfo,
+                &allocInfo,
                 &m_handle,
-                &m_vma_allocation,
+                &m_vmaAllocation,
                 nullptr),
             "Failed to create gpu buffer!");
     }
@@ -632,22 +632,22 @@ RendererResult VulkanGpuBuffer::Create()
 }
 
 RendererResult VulkanGpuBuffer::EnsureCapacity(
-    SizeType minimum_size,
+    SizeType minimumSize,
     SizeType alignment,
-    bool* out_size_changed)
+    bool* outSizeChanged)
 {
-    if (minimum_size == 0)
+    if (minimumSize == 0)
     {
         HYPERION_RETURN_OK;
     }
 
     RendererResult result;
 
-    if (minimum_size <= m_size)
+    if (minimumSize <= m_size)
     {
-        if (out_size_changed != nullptr)
+        if (outSizeChanged != nullptr)
         {
-            *out_size_changed = false;
+            *outSizeChanged = false;
         }
 
         HYPERION_RETURN_OK;
@@ -659,25 +659,25 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
 
         if (!result)
         {
-            if (out_size_changed != nullptr)
+            if (outSizeChanged != nullptr)
             {
-                *out_size_changed = false;
+                *outSizeChanged = false;
             }
 
             return result;
         }
     }
 
-    m_size = minimum_size;
+    m_size = minimumSize;
     m_alignment = alignment;
 
     HYPERION_PASS_ERRORS(Create(), result);
 
     if (result)
     {
-        if (out_size_changed != nullptr)
+        if (outSizeChanged != nullptr)
         {
-            *out_size_changed = true;
+            *outSizeChanged = true;
         }
     }
     else
@@ -690,61 +690,61 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
 }
 
 RendererResult VulkanGpuBuffer::EnsureCapacity(
-    SizeType minimum_size,
-    bool* out_size_changed)
+    SizeType minimumSize,
+    bool* outSizeChanged)
 {
-    return EnsureCapacity(minimum_size, 0, out_size_changed);
+    return EnsureCapacity(minimumSize, 0, outSizeChanged);
 }
 
 VkBufferCreateInfo VulkanGpuBuffer::GetBufferCreateInfo() const
 {
-    const QueueFamilyIndices& qf_indices = GetRenderBackend()->GetDevice()->GetQueueFamilyIndices();
-    const uint32 buffer_family_indices[] = { qf_indices.graphics_family.Get(), qf_indices.compute_family.Get() };
+    const QueueFamilyIndices& qfIndices = GetRenderBackend()->GetDevice()->GetQueueFamilyIndices();
+    const uint32 bufferFamilyIndices[] = { qfIndices.graphicsFamily.Get(), qfIndices.computeFamily.Get() };
 
-    VkBufferCreateInfo vk_buffer_info { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    vk_buffer_info.size = m_size;
-    vk_buffer_info.usage = m_vk_buffer_usage_flags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    vk_buffer_info.pQueueFamilyIndices = buffer_family_indices;
-    vk_buffer_info.queueFamilyIndexCount = ArraySize(buffer_family_indices);
+    VkBufferCreateInfo vkBufferInfo { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    vkBufferInfo.size = m_size;
+    vkBufferInfo.usage = m_vkBufferUsageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vkBufferInfo.pQueueFamilyIndices = bufferFamilyIndices;
+    vkBufferInfo.queueFamilyIndexCount = ArraySize(bufferFamilyIndices);
 
-    return vk_buffer_info;
+    return vkBufferInfo;
 }
 
 VmaAllocationCreateInfo VulkanGpuBuffer::GetAllocationCreateInfo() const
 {
-    VmaAllocationCreateInfo alloc_info {};
-    alloc_info.flags = m_vma_allocation_create_flags;
-    alloc_info.usage = m_vma_usage;
+    VmaAllocationCreateInfo allocInfo {};
+    allocInfo.flags = m_vmaAllocationCreateFlags;
+    allocInfo.usage = m_vmaUsage;
 
-    return alloc_info;
+    return allocInfo;
 }
 
 RendererResult VulkanGpuBuffer::CheckCanAllocate(
-    const VkBufferCreateInfo& buffer_create_info,
-    const VmaAllocationCreateInfo& allocation_create_info,
+    const VkBufferCreateInfo& bufferCreateInfo,
+    const VmaAllocationCreateInfo& allocationCreateInfo,
     SizeType size) const
 {
     const Features& features = GetRenderBackend()->GetDevice()->GetFeatures();
 
     RendererResult result;
 
-    uint32 memory_type_index = UINT32_MAX;
+    uint32 memoryTypeIndex = UINT32_MAX;
 
     HYPERION_VK_PASS_ERRORS(
         vmaFindMemoryTypeIndexForBufferInfo(
             GetRenderBackend()->GetDevice()->GetAllocator(),
-            &buffer_create_info,
-            &allocation_create_info,
-            &memory_type_index),
+            &bufferCreateInfo,
+            &allocationCreateInfo,
+            &memoryTypeIndex),
         result);
 
     /* check that we have enough space in the memory type */
-    const auto& memory_properties = features.GetPhysicalDeviceMemoryProperties();
+    const auto& memoryProperties = features.GetPhysicalDeviceMemoryProperties();
 
-    AssertThrow(memory_type_index < memory_properties.memoryTypeCount);
+    AssertThrow(memoryTypeIndex < memoryProperties.memoryTypeCount);
 
-    const auto heap_index = memory_properties.memoryTypes[memory_type_index].heapIndex;
-    const auto& heap = memory_properties.memoryHeaps[heap_index];
+    const auto heapIndex = memoryProperties.memoryTypes[memoryTypeIndex].heapIndex;
+    const auto& heap = memoryProperties.memoryHeaps[heapIndex];
 
     if (heap.size < size)
     {

@@ -27,17 +27,17 @@ public:
     }
 
     template <class T, GpuBufferType BufferType = GpuBufferType::SSBO>
-    GpuBufferHolder<T, BufferType>* GetOrCreate(uint32 initial_count = 0)
+    GpuBufferHolder<T, BufferType>* GetOrCreate(uint32 initialCount = 0)
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         auto it = m_holders.Find<T>();
 
         if (it == m_holders.End())
         {
-            HYP_MT_CHECK_WRITE(m_data_race_detector);
+            HYP_MT_CHECK_WRITE(m_dataRaceDetector);
 
-            it = m_holders.Set<T>(MakeUnique<GpuBufferHolder<T, BufferType>>(initial_count)).first;
+            it = m_holders.Set<T>(MakeUnique<GpuBufferHolder<T, BufferType>>(initialCount)).first;
         }
 
         return static_cast<GpuBufferHolder<T, BufferType>*>(it->second.Get());
@@ -46,7 +46,7 @@ public:
 private:
     TypeMap<UniquePtr<GpuBufferHolderBase>> m_holders;
 
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 };
 
 } // namespace hyperion

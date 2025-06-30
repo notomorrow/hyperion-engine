@@ -76,14 +76,14 @@ struct EntityType_Impl
         : EntityTag((static_cast<uint64>(TypeId::ForType<T>().Value()) << 32) | uint64(EntityTag::TYPE_ID));
 };
 
-static constexpr inline EntityTag MakeEntityTypeTag(TypeId type_id)
+static constexpr inline EntityTag MakeEntityTypeTag(TypeId typeId)
 {
-    if (type_id == TypeId::Void() || type_id == TypeId::ForType<Entity>())
+    if (typeId == TypeId::Void() || typeId == TypeId::ForType<Entity>())
     {
         return EntityTag::TYPE_ID;
     }
 
-    return EntityTag((static_cast<uint64>(type_id.Value()) << 32) | uint64(EntityTag::TYPE_ID));
+    return EntityTag((static_cast<uint64>(typeId.Value()) << 32) | uint64(EntityTag::TYPE_ID));
 }
 
 /*! \brief An EntityTag is a special component that is used to tag an entity with a specific flag.

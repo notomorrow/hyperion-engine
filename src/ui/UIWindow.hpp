@@ -40,28 +40,28 @@ public:
 
     HYP_FORCE_INLINE EnumFlags<UIWindowFlags> GetWindowFlags() const
     {
-        return m_window_flags;
+        return m_windowFlags;
     }
 
-    void SetWindowFlags(EnumFlags<UIWindowFlags> window_flags);
+    void SetWindowFlags(EnumFlags<UIWindowFlags> windowFlags);
 
     virtual void SetText(const String& text) override;
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
 protected:
     virtual void Init() override;
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
-    EnumFlags<UIWindowFlags> m_window_flags;
+    EnumFlags<UIWindowFlags> m_windowFlags;
 
-    Handle<UIPanel> m_title_bar;
+    Handle<UIPanel> m_titleBar;
     Handle<UIPanel> m_content;
 
 private:
-    Optional<Vec2i> m_mouse_drag_start;
+    Optional<Vec2i> m_mouseDragStart;
 };
 
 #pragma endregion UIWindow

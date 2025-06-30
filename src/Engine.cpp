@@ -76,25 +76,25 @@ static struct GlobalDescriptorSetsDeclarations
     {
 #include <rendering/inl/DescriptorSets.inl>
     }
-} g_global_descriptor_sets_declarations;
+} g_globalDescriptorSetsDeclarations;
 
 class RenderThread final : public Thread<Scheduler>
 {
 public:
-    RenderThread(const Handle<AppContextBase>& app_context)
-        : Thread(g_render_thread, ThreadPriorityValue::HIGHEST),
-          m_app_context(app_context),
-          m_is_running(false)
+    RenderThread(const Handle<AppContextBase>& appContext)
+        : Thread(g_renderThread, ThreadPriorityValue::HIGHEST),
+          m_appContext(appContext),
+          m_isRunning(false)
     {
     }
 
     // Overrides Start() to not create a thread object. Runs the render loop on the main thread.
     bool Start()
     {
-        AssertThrow(m_is_running.Exchange(true, MemoryOrder::ACQUIRE_RELEASE) == false);
+        AssertThrow(m_isRunning.Exchange(true, MemoryOrder::ACQUIRE_RELEASE) == false);
 
         // Must be current thread
-        Threads::AssertOnThread(g_render_thread);
+        Threads::AssertOnThread(g_renderThread);
 
         SetCurrentThreadObject(this);
         m_scheduler.SetOwnerThread(Id());
@@ -106,34 +106,34 @@ public:
 
     void Stop()
     {
-        m_is_running.Set(false, MemoryOrder::RELEASE);
+        m_isRunning.Set(false, MemoryOrder::RELEASE);
     }
 
     HYP_FORCE_INLINE bool IsRunning() const
     {
-        return m_is_running.Get(MemoryOrder::ACQUIRE);
+        return m_isRunning.Get(MemoryOrder::ACQUIRE);
     }
 
 private:
     virtual void operator()() override
     {
-        AssertThrow(m_app_context != nullptr);
+        AssertThrow(m_appContext != nullptr);
 
         SystemEvent event;
 
         Queue<Scheduler::ScheduledTask> tasks;
 
-        while (m_is_running.Get(MemoryOrder::RELAXED))
+        while (m_isRunning.Get(MemoryOrder::RELAXED))
         {
             // input manager stuff
-            while (m_app_context->PollEvent(event))
+            while (m_appContext->PollEvent(event))
             {
-                m_app_context->GetMainWindow()->GetInputEventSink().Push(std::move(event));
+                m_appContext->GetMainWindow()->GetInputEventSink().Push(std::move(event));
             }
 
             RenderApi_BeginFrame_RenderThread();
 
-            if (uint32 num_enqueued = m_scheduler.NumEnqueued())
+            if (uint32 numEnqueued = m_scheduler.NumEnqueued())
             {
                 m_scheduler.AcceptAll(tasks);
 
@@ -149,8 +149,8 @@ private:
         }
     }
 
-    Handle<AppContextBase> m_app_context;
-    AtomicVar<bool> m_is_running;
+    Handle<AppContextBase> m_appContext;
+    AtomicVar<bool> m_isRunning;
 };
 
 #pragma region Render commands
@@ -158,10 +158,10 @@ private:
 struct RENDER_COMMAND(RecreateSwapchain)
     : RenderCommand
 {
-    WeakHandle<Engine> engine_weak;
+    WeakHandle<Engine> engineWeak;
 
     RENDER_COMMAND(RecreateSwapchain)(const Handle<Engine>& engine)
-        : engine_weak(engine)
+        : engineWeak(engine)
     {
     }
 
@@ -169,7 +169,7 @@ struct RENDER_COMMAND(RecreateSwapchain)
 
     virtual RendererResult operator()() override
     {
-        Handle<Engine> engine = engine_weak.Lock();
+        Handle<Engine> engine = engineWeak.Lock();
 
         if (!engine)
         {
@@ -177,7 +177,7 @@ struct RENDER_COMMAND(RecreateSwapchain)
             HYPERION_RETURN_OK;
         }
 
-        engine->m_should_recreate_swapchain = true;
+        engine->m_shouldRecreateSwapchain = true;
 
         HYPERION_RETURN_OK;
     }
@@ -193,8 +193,8 @@ const Handle<Engine>& Engine::GetInstance()
 }
 
 Engine::Engine()
-    : m_is_shutting_down(false),
-      m_should_recreate_swapchain(false)
+    : m_isShuttingDown(false),
+      m_shouldRecreateSwapchain(false)
 {
 }
 
@@ -205,88 +205,88 @@ Engine::~Engine()
 HYP_API void Engine::Init()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_main_thread);
+    Threads::AssertOnThread(g_mainThread);
 
     // Set ready to false after render thread stops running.
     HYP_DEFER({ SetReady(false); });
 
-    AssertThrowMsg(m_app_context != nullptr, "App context must be set before initializing the engine!");
+    AssertThrowMsg(m_appContext != nullptr, "App context must be set before initializing the engine!");
 
-    m_render_thread = MakeUnique<RenderThread>(m_app_context);
+    m_renderThread = MakeUnique<RenderThread>(m_appContext);
     RenderApi_InitResourceContainers();
 
-    AssertThrow(m_app_context->GetMainWindow() != nullptr);
+    AssertThrow(m_appContext->GetMainWindow() != nullptr);
 
-    // m_app_context->GetMainWindow()->OnWindowSizeChanged.Bind(
-    //                                                        [this](Vec2i new_window_size)
+    // m_appContext->GetMainWindow()->OnWindowSizeChanged.Bind(
+    //                                                        [this](Vec2i newWindowSize)
     //                                                        {
-    //                                                            HYP_LOG(Engine, Info, "Resize window to {}", new_window_size);
+    //                                                            HYP_LOG(Engine, Info, "Resize window to {}", newWindowSize);
 
-    //                                                            // m_final_pass->Resize(Vec2u(new_window_size));
+    //                                                            // m_finalPass->Resize(Vec2u(newWindowSize));
     //                                                        })
     //     .Detach();
 
     TaskSystem::GetInstance().Start();
 
-    AssertThrow(g_render_backend != nullptr);
+    AssertThrow(g_renderBackend != nullptr);
 
-    g_render_backend->GetOnSwapchainRecreatedDelegate()
+    g_renderBackend->GetOnSwapchainRecreatedDelegate()
         .Bind([this](SwapchainBase* swapchain)
             {
-                m_final_pass = MakeUnique<FinalPass>(swapchain->HandleFromThis());
-                m_final_pass->Create();
+                m_finalPass = MakeUnique<FinalPass>(swapchain->HandleFromThis());
+                m_finalPass->Create();
             })
         .Detach();
 
     // Update app configuration to reflect device, after instance is created (e.g RT is not supported)
-    m_app_context->UpdateConfigurationOverrides();
+    m_appContext->UpdateConfigurationOverrides();
 
     m_configuration.SetToDefaultConfiguration();
     m_configuration.LoadFromDefinitionsFile();
 
-    if (!m_shader_compiler.LoadShaderDefinitions())
+    if (!m_shaderCompiler.LoadShaderDefinitions())
     {
         HYP_FAIL("Failed to load shaders from definitions file!");
     }
 
 #ifdef HYP_EDITOR
     // Create script compilation service
-    m_scripting_service = MakeUnique<ScriptingService>(
+    m_scriptingService = MakeUnique<ScriptingService>(
         GetResourceDirectory() / "scripts" / "src",
         GetResourceDirectory() / "scripts" / "projects",
         GetResourceDirectory() / "scripts" / "bin");
 
-    m_scripting_service->Start();
+    m_scriptingService->Start();
 #endif
 
-    RC<NetRequestThread> net_request_thread = MakeRefCountedPtr<NetRequestThread>();
-    SetGlobalNetRequestThread(net_request_thread);
-    net_request_thread->Start();
+    RC<NetRequestThread> netRequestThread = MakeRefCountedPtr<NetRequestThread>();
+    SetGlobalNetRequestThread(netRequestThread);
+    netRequestThread->Start();
 
-    RC<StreamingThread> streaming_thread = MakeRefCountedPtr<StreamingThread>();
-    SetGlobalStreamingThread(streaming_thread);
-    streaming_thread->Start();
+    RC<StreamingThread> streamingThread = MakeRefCountedPtr<StreamingThread>();
+    SetGlobalStreamingThread(streamingThread);
+    streamingThread->Start();
 
-    // g_streaming_manager->Start();
+    // g_streamingManager->Start();
 
     // must start after net request thread
     if (GetCommandLineArguments()["Profile"])
     {
         StartProfilerConnectionThread(ProfilerConnectionParams {
-            /* endpoint_url */ GetCommandLineArguments()["TraceURL"].ToString(),
+            /* endpointUrl */ GetCommandLineArguments()["TraceURL"].ToString(),
             /* enabled */ true });
     }
 
-    m_material_descriptor_set_manager = MakeUnique<MaterialDescriptorSetManager>();
-    m_material_descriptor_set_manager->Initialize();
+    m_materialDescriptorSetManager = MakeUnique<MaterialDescriptorSetManager>();
+    m_materialDescriptorSetManager->Initialize();
 
-    m_graphics_pipeline_cache = MakeUnique<GraphicsPipelineCache>();
-    m_graphics_pipeline_cache->Initialize();
+    m_graphicsPipelineCache = MakeUnique<GraphicsPipelineCache>();
+    m_graphicsPipelineCache->Initialize();
 
-    m_final_pass = MakeUnique<FinalPass>(g_render_backend->GetSwapchain()->HandleFromThis());
-    m_final_pass->Create();
+    m_finalPass = MakeUnique<FinalPass>(g_renderBackend->GetSwapchain()->HandleFromThis());
+    m_finalPass->Create();
 
-    m_debug_drawer = MakeUnique<DebugDrawer>();
+    m_debugDrawer = MakeUnique<DebugDrawer>();
 
     m_world = CreateObject<World>();
 
@@ -295,39 +295,39 @@ HYP_API void Engine::Init()
 
 bool Engine::IsRenderLoopActive() const
 {
-    return m_render_thread != nullptr
-        && m_render_thread->IsRunning();
+    return m_renderThread != nullptr
+        && m_renderThread->IsRunning();
 }
 
 bool Engine::StartRenderLoop()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_main_thread);
+    Threads::AssertOnThread(g_mainThread);
 
-    if (m_render_thread == nullptr)
+    if (m_renderThread == nullptr)
     {
         HYP_LOG(Engine, Error, "Render thread is not initialized!");
         return false;
     }
 
-    if (m_render_thread->IsRunning())
+    if (m_renderThread->IsRunning())
     {
         HYP_LOG(Engine, Warning, "Render thread is already running!");
         return true;
     }
 
-    m_render_thread->Start();
+    m_renderThread->Start();
 
     return true;
 }
 
 void Engine::RequestStop()
 {
-    if (m_render_thread != nullptr)
+    if (m_renderThread != nullptr)
     {
-        if (m_render_thread->IsRunning())
+        if (m_renderThread->IsRunning())
         {
-            m_render_thread->Stop();
+            m_renderThread->Stop();
         }
     }
 }
@@ -335,50 +335,50 @@ void Engine::RequestStop()
 void Engine::FinalizeStop()
 {
     HYP_SCOPE;
-    Threads::AssertOnThread(g_main_thread);
+    Threads::AssertOnThread(g_mainThread);
 
-    m_is_shutting_down.Set(true, MemoryOrder::SEQUENTIAL);
+    m_isShuttingDown.Set(true, MemoryOrder::SEQUENTIAL);
 
     HYP_LOG(Engine, Info, "Stopping all engine processes");
 
     m_delegates.OnShutdown();
 
-    if (m_scripting_service)
+    if (m_scriptingService)
     {
-        m_scripting_service->Stop();
-        m_scripting_service.Reset();
+        m_scriptingService->Stop();
+        m_scriptingService.Reset();
     }
 
     // must stop before net request thread
     StopProfilerConnectionThread();
 
-    // g_streaming_manager->Stop();
+    // g_streamingManager->Stop();
 
-    if (RC<StreamingThread> streaming_thread = GetGlobalStreamingThread())
+    if (RC<StreamingThread> streamingThread = GetGlobalStreamingThread())
     {
-        if (streaming_thread->IsRunning())
+        if (streamingThread->IsRunning())
         {
-            streaming_thread->Stop();
+            streamingThread->Stop();
         }
 
-        if (streaming_thread->CanJoin())
+        if (streamingThread->CanJoin())
         {
-            streaming_thread->Join();
+            streamingThread->Join();
         }
 
         SetGlobalStreamingThread(nullptr);
     }
 
-    if (RC<NetRequestThread> net_request_thread = GetGlobalNetRequestThread())
+    if (RC<NetRequestThread> netRequestThread = GetGlobalNetRequestThread())
     {
-        if (net_request_thread->IsRunning())
+        if (netRequestThread->IsRunning())
         {
-            net_request_thread->Stop();
+            netRequestThread->Stop();
         }
 
-        if (net_request_thread->CanJoin())
+        if (netRequestThread->CanJoin())
         {
-            net_request_thread->Join();
+            netRequestThread->Join();
         }
 
         SetGlobalNetRequestThread(nullptr);
@@ -395,19 +395,19 @@ void Engine::FinalizeStop()
         HYP_LOG(Tasks, Info, "Task system stopped");
     }
 
-    m_graphics_pipeline_cache->Destroy();
-    m_graphics_pipeline_cache.Reset();
+    m_graphicsPipelineCache->Destroy();
+    m_graphicsPipelineCache.Reset();
 
-    m_material_descriptor_set_manager.Reset();
+    m_materialDescriptorSetManager.Reset();
 
-    m_debug_drawer.Reset();
+    m_debugDrawer.Reset();
 
-    m_final_pass.Reset();
+    m_finalPass.Reset();
 
-    g_safe_deleter->ForceDeleteAll();
+    g_safeDeleter->ForceDeleteAll();
 
-    m_render_thread->Join();
-    m_render_thread.Reset();
+    m_renderThread->Join();
+    m_renderThread.Reset();
 }
 
 HYP_API void Engine::RenderNextFrame()
@@ -415,11 +415,11 @@ HYP_API void Engine::RenderNextFrame()
     HYP_PROFILE_BEGIN;
 
 #ifdef HYP_ENABLE_RENDER_STATS
-    m_render_stats_calculator.Advance(m_render_stats);
-    OnRenderStatsUpdated(m_render_stats);
+    m_renderStatsCalculator.Advance(m_renderStats);
+    OnRenderStatsUpdated(m_renderStats);
 #endif
 
-    FrameBase* frame = g_render_backend->PrepareNextFrame();
+    FrameBase* frame = g_renderBackend->PrepareNextFrame();
 
     PreFrameUpdate(frame);
 
@@ -428,31 +428,31 @@ HYP_API void Engine::RenderNextFrame()
     {
         m_world->GetRenderResource().Render(frame);
 
-        m_final_pass->Render(frame, &m_world->GetRenderResource());
+        m_finalPass->Render(frame, &m_world->GetRenderResource());
 
         m_world->GetRenderResource().PostRender(frame);
     }
 
-    g_render_global_state->UpdateBuffers(frame);
+    g_renderGlobalState->UpdateBuffers(frame);
 
-    g_render_backend->PresentFrame(frame);
+    g_renderBackend->PresentFrame(frame);
 }
 
 void Engine::PreFrameUpdate(FrameBase* frame)
 {
     HYP_SCOPE;
 
-    Threads::AssertOnThread(g_render_thread);
+    Threads::AssertOnThread(g_renderThread);
 
-    m_material_descriptor_set_manager->UpdatePendingDescriptorSets(frame);
-    m_material_descriptor_set_manager->Update(frame);
+    m_materialDescriptorSetManager->UpdatePendingDescriptorSets(frame);
+    m_materialDescriptorSetManager->Update(frame);
 
     if (m_world->IsReady())
         m_world->GetRenderResource().PreRender(frame);
 
     RenderObjectDeleter<Platform::current>::Iterate();
 
-    g_safe_deleter->PerformEnqueuedDeletions();
+    g_safeDeleter->PerformEnqueuedDeletions();
 }
 
 #pragma endregion Engine

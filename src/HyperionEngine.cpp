@@ -43,49 +43,49 @@ namespace hyperion {
 HYP_DECLARE_LOG_CHANNEL(Core);
 
 Handle<Engine> g_engine = {};
-Handle<AssetManager> g_asset_manager {};
-ShaderManager* g_shader_manager = nullptr;
-MaterialCache* g_material_system = nullptr;
-SafeDeleter* g_safe_deleter = nullptr;
-IRenderBackend* g_render_backend = nullptr;
-RenderGlobalState* g_render_global_state = nullptr;
+Handle<AssetManager> g_assetManager {};
+ShaderManager* g_shaderManager = nullptr;
+MaterialCache* g_materialSystem = nullptr;
+SafeDeleter* g_safeDeleter = nullptr;
+IRenderBackend* g_renderBackend = nullptr;
+RenderGlobalState* g_renderGlobalState = nullptr;
 
-static CommandLineArguments g_command_line_arguments;
+static CommandLineArguments g_commandLineArguments;
 
 static bool InitializeCommandLineArguments(int argc, char** argv)
 {
-    CommandLineParser arg_parse { &DefaultCommandLineArgumentDefinitions() };
+    CommandLineParser argParse { &DefaultCommandLineArgumentDefinitions() };
 
-    TResult<CommandLineArguments> parse_result = arg_parse.Parse(argc, argv);
+    TResult<CommandLineArguments> parseResult = argParse.Parse(argc, argv);
 
-    if (parse_result.HasError())
+    if (parseResult.HasError())
     {
-        const Error& error = parse_result.GetError();
+        const Error& error = parseResult.GetError();
 
         HYP_LOG(Core, Error, "Failed to parse command line arguments!\n\t{}", error.GetMessage().Any() ? error.GetMessage() : "<no message>");
 
-        g_command_line_arguments = CommandLineArguments();
+        g_commandLineArguments = CommandLineArguments();
 
         return false;
     }
 
     GlobalConfig config { "app" };
 
-    if (json::JSONValue config_args = config.Get("app.args"))
+    if (json::JSONValue configArgs = config.Get("app.args"))
     {
-        json::JSONString config_args_string = config_args.ToString();
-        Array<String> config_args_string_split = config_args_string.Split(' ');
+        json::JSONString configArgsString = configArgs.ToString();
+        Array<String> configArgsStringSplit = configArgsString.Split(' ');
 
-        parse_result = arg_parse.Parse(g_command_line_arguments.GetCommand(), config_args_string_split);
+        parseResult = argParse.Parse(g_commandLineArguments.GetCommand(), configArgsStringSplit);
 
-        if (parse_result.HasError())
+        if (parseResult.HasError())
         {
-            HYP_LOG(Core, Error, "Failed to parse config command line value \"{}\":\n\t{}", config_args_string, parse_result.GetError().GetMessage());
+            HYP_LOG(Core, Error, "Failed to parse config command line value \"{}\":\n\t{}", configArgsString, parseResult.GetError().GetMessage());
 
             return false;
         }
 
-        g_command_line_arguments = CommandLineArguments::Merge(*arg_parse.GetDefinitions(), *parse_result, g_command_line_arguments);
+        g_commandLineArguments = CommandLineArguments::Merge(*argParse.GetDefinitions(), *parseResult, g_commandLineArguments);
     }
 
     return true;
@@ -93,14 +93,14 @@ static bool InitializeCommandLineArguments(int argc, char** argv)
 
 HYP_API const CommandLineArguments& GetCommandLineArguments()
 {
-    return g_command_line_arguments;
+    return g_commandLineArguments;
 }
 
 HYP_API const FilePath& GetExecutablePath()
 {
-    static FilePath executable_path = FilePath(g_command_line_arguments.GetCommand()).BasePath();
+    static FilePath executablePath = FilePath(g_commandLineArguments.GetCommand()).BasePath();
 
-    return executable_path;
+    return executablePath;
 }
 
 HYP_API const FilePath& GetResourceDirectory()
@@ -121,14 +121,14 @@ HYP_API const FilePath& GetResourceDirectory()
             AssertThrowMsg(path.CanRead(), "Resource directory is not readable: %s", path.Data());
             AssertThrowMsg(path.CanWrite(), "Resource directory is not writable: %s", path.Data());
         }
-    } resource_directory_data;
+    } resourceDirectoryData;
 
-    return resource_directory_data.path;
+    return resourceDirectoryData.path;
 }
 
 HYP_API bool InitializeEngine(int argc, char** argv)
 {
-    Threads::SetCurrentThreadId(g_main_thread);
+    Threads::SetCurrentThreadId(g_mainThread);
 
     HypClassRegistry::GetInstance().Initialize();
 
@@ -137,26 +137,26 @@ HYP_API bool InitializeEngine(int argc, char** argv)
         return false;
     }
 
-    const FilePath base_path = GetExecutablePath();
+    const FilePath basePath = GetExecutablePath();
 
-    dotnet::DotNetSystem::GetInstance().Initialize(base_path);
+    dotnet::DotNetSystem::GetInstance().Initialize(basePath);
     ConsoleCommandManager::GetInstance().Initialize();
     AudioManager::GetInstance().Initialize();
 
 #ifdef HYP_VULKAN
-    g_render_backend = new VulkanRenderBackend();
+    g_renderBackend = new VulkanRenderBackend();
 #else
 #error Unsupported rendering backend
 #endif
 
     g_engine = CreateObject<Engine>();
 
-    g_asset_manager = CreateObject<AssetManager>();
-    InitObject(g_asset_manager);
+    g_assetManager = CreateObject<AssetManager>();
+    InitObject(g_assetManager);
 
-    g_shader_manager = new ShaderManager;
-    g_material_system = new MaterialCache;
-    g_safe_deleter = new SafeDeleter;
+    g_shaderManager = new ShaderManager;
+    g_materialSystem = new MaterialCache;
+    g_safeDeleter = new SafeDeleter;
 
     ComponentInterfaceRegistry::GetInstance().Initialize();
 
@@ -165,7 +165,7 @@ HYP_API bool InitializeEngine(int argc, char** argv)
 
 HYP_API void DestroyEngine()
 {
-    Threads::AssertOnThread(g_main_thread);
+    Threads::AssertOnThread(g_mainThread);
 
     AssertThrowMsg(
         g_engine != nullptr,
@@ -178,18 +178,18 @@ HYP_API void DestroyEngine()
     ConsoleCommandManager::GetInstance().Shutdown();
     AudioManager::GetInstance().Shutdown();
 
-    g_asset_manager.Reset();
+    g_assetManager.Reset();
 
-    delete g_shader_manager;
-    g_shader_manager = nullptr;
+    delete g_shaderManager;
+    g_shaderManager = nullptr;
 
-    delete g_material_system;
-    g_material_system = nullptr;
+    delete g_materialSystem;
+    g_materialSystem = nullptr;
 
     g_engine.Reset();
 
-    delete g_render_backend;
-    g_render_backend = nullptr;
+    delete g_renderBackend;
+    g_renderBackend = nullptr;
 }
 
 } // namespace hyperion

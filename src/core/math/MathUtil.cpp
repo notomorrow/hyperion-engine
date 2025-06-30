@@ -48,20 +48,20 @@ Vec2i MathUtil::ReshapeExtent(Vec2i extent)
         factors.End(),
         [](const Vec2f& a, const Vec2f& b)
         {
-            const float a_diff = MathUtil::Abs(a[0] - a[1]);
-            const float b_diff = MathUtil::Abs(b[0] - b[1]);
+            const float aDiff = MathUtil::Abs(a[0] - a[1]);
+            const float bDiff = MathUtil::Abs(b[0] - b[1]);
 
-            return a_diff < b_diff;
+            return aDiff < bDiff;
         });
 
-    const Vec2f most_balanced_pair = factors[0];
+    const Vec2f mostBalancedPair = factors[0];
 
-    return Vec2i(most_balanced_pair);
+    return Vec2i(mostBalancedPair);
 }
 
-Vec2f MathUtil::Hammersley(uint32 sample_index, uint32 num_samples)
+Vec2f MathUtil::Hammersley(uint32 sampleIndex, uint32 numSamples)
 {
-    return { float(sample_index) / float(num_samples), VanDerCorpus(sample_index) };
+    return { float(sampleIndex) / float(numSamples), VanDerCorpus(sampleIndex) };
 }
 
 Vec3f MathUtil::RandomInSphere(Vec3f rnd)
@@ -69,9 +69,9 @@ Vec3f MathUtil::RandomInSphere(Vec3f rnd)
     float ang1 = (rnd.x + 1.0) * pi<float>;
     float u = rnd.y;
     float u2 = u * u;
-    float sqrt1_minus_u2 = Sqrt(1.0f - u2);
-    float x = sqrt1_minus_u2 * Cos(ang1);
-    float y = sqrt1_minus_u2 * Sin(ang1);
+    float sqrt1MinusU2 = Sqrt(1.0f - u2);
+    float x = sqrt1MinusU2 * Cos(ang1);
+    float y = sqrt1MinusU2 * Sin(ang1);
     float z = u;
 
     return { x, y, z };
@@ -84,12 +84,12 @@ Vec3f MathUtil::RandomInHemisphere(Vec3f rnd, Vec3f n)
     return v * float(Sign(v.Dot(n.Normalize())));
 }
 
-Vec2f MathUtil::VogelDisk(uint32 sample_index, uint32 num_samples, float phi)
+Vec2f MathUtil::VogelDisk(uint32 sampleIndex, uint32 numSamples, float phi)
 {
-    constexpr float golden_angle = 2.4f;
+    constexpr float goldenAngle = 2.4f;
 
-    float r = Sqrt(float(sample_index) + 0.5f) / Sqrt(float(num_samples));
-    float theta = sample_index * golden_angle + phi;
+    float r = Sqrt(float(sampleIndex) + 0.5f) / Sqrt(float(numSamples));
+    float theta = sampleIndex * goldenAngle + phi;
 
     return { r * Cos(theta), r * Sin(theta) };
 }
@@ -100,11 +100,11 @@ Vec3f MathUtil::ImportanceSampleGGX(Vec2f xi, Vec3f n, float roughness)
     float alpha2 = alpha * alpha;
 
     float phi = 2.0f * pi<float> * xi.x;
-    float cos_theta = Sqrt((1.0f - xi.y) / (1.0f + (alpha2 - 1.0f) * xi.y));
-    float sin_theta = Sqrt(1.0f - cos_theta * cos_theta);
+    float cosTheta = Sqrt((1.0f - xi.y) / (1.0f + (alpha2 - 1.0f) * xi.y));
+    float sinTheta = Sqrt(1.0f - cosTheta * cosTheta);
 
     // from spherical coordinates to cartesian coordinates
-    return { Cos(phi) * sin_theta, Sin(phi) * sin_theta, cos_theta };
+    return { Cos(phi) * sinTheta, Sin(phi) * sinTheta, cosTheta };
 }
 
 Vec3f MathUtil::CalculateBarycentricCoordinates(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, const Vec3f& p)
@@ -149,15 +149,15 @@ Vec3f MathUtil::CalculateBarycentricCoordinates(const Vec2f& v0, const Vec2f& v1
     return Vec3f(-1, 1, 1);
 }
 
-void MathUtil::ComputeOrthonormalBasis(const Vec3f& normal, Vec3f& out_tangent, Vec3f& out_bitangent)
+void MathUtil::ComputeOrthonormalBasis(const Vec3f& normal, Vec3f& outTangent, Vec3f& outBitangent)
 {
     Vec3f t;
     t = normal.Cross(Vec3f::UnitY());
-    t = Lerp(normal.Cross(Vec3f::UnitX()), Vec3f::UnitX(), Step(epsilon_f, t.Dot(t)));
+    t = Lerp(normal.Cross(Vec3f::UnitX()), Vec3f::UnitX(), Step(epsilonF, t.Dot(t)));
     t.Normalize();
 
-    out_tangent = t;
-    out_bitangent = normal.Cross(t).Normalize();
+    outTangent = t;
+    outBitangent = normal.Cross(t).Normalize();
 }
 
 } // namespace hyperion

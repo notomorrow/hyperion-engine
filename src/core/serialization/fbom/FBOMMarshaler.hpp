@@ -46,7 +46,7 @@ class FBOMMarshaler;
 struct FBOMMarshalerRegistrationBase
 {
 protected:
-    FBOMMarshalerRegistrationBase(TypeId type_id, ANSIStringView name, UniquePtr<FBOMMarshalerBase>&& marshal);
+    FBOMMarshalerRegistrationBase(TypeId typeId, ANSIStringView name, UniquePtr<FBOMMarshalerBase>&& marshal);
 };
 
 template <class T, class MarshalerType>
@@ -101,7 +101,7 @@ public:
 };
 
 #define HYP_DEFINE_MARSHAL(T, MarshalType)                                                             \
-    static ::hyperion::FBOMMarshalerRegistration<T, MarshalType> HYP_UNIQUE_NAME(marshal_registration) \
+    static ::hyperion::FBOMMarshalerRegistration<T, MarshalType> HYP_UNIQUE_NAME(marshalRegistration) \
     {                                                                                                  \
     }
 

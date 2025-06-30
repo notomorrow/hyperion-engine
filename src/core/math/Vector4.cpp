@@ -52,12 +52,12 @@ float math::Vec4<float>::Distance(const Vec4& other) const
 
 Vec4<float> math::Vec4<float>::Normalized() const
 {
-    return *this / MathUtil::Max(Length(), MathUtil::epsilon_f);
+    return *this / MathUtil::Max(Length(), MathUtil::epsilonF);
 }
 
 Vec4<float>& math::Vec4<float>::Normalize()
 {
-    return *this /= MathUtil::Max(Length(), MathUtil::epsilon_f);
+    return *this /= MathUtil::Max(Length(), MathUtil::epsilonF);
 }
 
 Vec4<float>& math::Vec4<float>::Rotate(const Vec3<float>& axis, float radians)
@@ -166,9 +166,9 @@ Vec4<float> math::Vec4<float>::Round(const Vec4<float>& vec)
     };
 }
 
-Vec4<float> math::Vec4<float>::Clamp(const Vec4<float>& vec, float min_value, float max_value)
+Vec4<float> math::Vec4<float>::Clamp(const Vec4<float>& vec, float minValue, float maxValue)
 {
-    return Max(min_value, Min(vec, max_value));
+    return Max(minValue, Min(vec, maxValue));
 }
 
 Vec4<float> math::Vec4<float>::Min(const Vec4<float>& a, const Vec4<float>& b)

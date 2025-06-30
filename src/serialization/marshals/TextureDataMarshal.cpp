@@ -27,17 +27,17 @@ public:
     {
         TextureData result;
 
-        const auto desc_it = in.GetChildren().FindIf([](const FBOMObject& item)
+        const auto descIt = in.GetChildren().FindIf([](const FBOMObject& item)
             {
                 return item.GetType().IsOrExtends("TextureDesc");
             });
 
-        if (desc_it == in.GetChildren().End())
+        if (descIt == in.GetChildren().End())
         {
             return { FBOMResult::FBOM_ERR, "No TextureDesc child object on TextureData" };
         }
 
-        result.desc = desc_it->m_deserialized_object->Get<TextureDesc>();
+        result.desc = descIt->m_deserializedObject->Get<TextureDesc>();
 
         if (FBOMResult err = in.GetProperty("Buffer").ReadByteBuffer(result.buffer))
         {

@@ -29,7 +29,7 @@ private:
     Array<KeyValuePairType> m_vector;
 
 public:
-    static constexpr bool is_contiguous = true;
+    static constexpr bool isContiguous = true;
 
     using Base = ContainerBase<ArrayMap<Key, Value>, Key>;
 
@@ -42,8 +42,8 @@ public:
 
     ArrayMap();
 
-    ArrayMap(std::initializer_list<KeyValuePairType> initializer_list)
-        : m_vector(initializer_list)
+    ArrayMap(std::initializer_list<KeyValuePairType> initializerList)
+        : m_vector(initializerList)
     {
     }
 

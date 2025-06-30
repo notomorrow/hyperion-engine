@@ -24,7 +24,7 @@ namespace hyperion {
 
 #pragma region GBuffer
 
-const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> GBuffer::gbuffer_resources = {
+const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> GBuffer::gbufferResources = {
     GBufferResource { GBufferFormat(DIF_COLOR) },   // color
     GBufferResource { GBufferFormat(DIF_NORMALS) }, // normal
     GBufferResource { GBufferFormat(TF_RGBA8) },    // material
@@ -44,43 +44,43 @@ static TextureFormat GetImageFormat(GBufferResourceName resource)
 {
     HYP_SCOPE;
 
-    TextureFormat color_format = TF_NONE;
+    TextureFormat colorFormat = TF_NONE;
 
-    if (const TextureFormat* format = GBuffer::gbuffer_resources[resource].format.TryGet<TextureFormat>())
+    if (const TextureFormat* format = GBuffer::gbufferResources[resource].format.TryGet<TextureFormat>())
     {
-        color_format = *format;
+        colorFormat = *format;
     }
-    else if (const DefaultImageFormat* default_format = GBuffer::gbuffer_resources[resource].format.TryGet<DefaultImageFormat>())
+    else if (const DefaultImageFormat* defaultFormat = GBuffer::gbufferResources[resource].format.TryGet<DefaultImageFormat>())
     {
-        color_format = g_render_backend->GetDefaultFormat(*default_format);
+        colorFormat = g_renderBackend->GetDefaultFormat(*defaultFormat);
     }
-    else if (const Array<TextureFormat>* default_formats = GBuffer::gbuffer_resources[resource].format.TryGet<Array<TextureFormat>>())
+    else if (const Array<TextureFormat>* defaultFormats = GBuffer::gbufferResources[resource].format.TryGet<Array<TextureFormat>>())
     {
-        for (const TextureFormat format : *default_formats)
+        for (const TextureFormat format : *defaultFormats)
         {
-            if (g_render_backend->IsSupportedFormat(format, IS_SRV))
+            if (g_renderBackend->IsSupportedFormat(format, IS_SRV))
             {
-                color_format = format;
+                colorFormat = format;
 
                 break;
             }
         }
     }
 
-    AssertThrowMsg(color_format != TF_NONE, "Invalid value set for gbuffer image format");
+    AssertThrowMsg(colorFormat != TF_NONE, "Invalid value set for gbuffer image format");
 
-    return color_format;
+    return colorFormat;
 }
 
 GBuffer::GBuffer(Vec2u extent)
     : m_extent(extent)
 {
-    for (uint32 bucket_index = 0; bucket_index < RB_MAX - 1; bucket_index++)
+    for (uint32 bucketIndex = 0; bucketIndex < RB_MAX - 1; bucketIndex++)
     {
-        const RenderBucket rb = RenderBucket(bucket_index + 1);
+        const RenderBucket rb = RenderBucket(bucketIndex + 1);
 
-        m_buckets[bucket_index].SetGBuffer(this);
-        m_buckets[bucket_index].SetBucket(rb);
+        m_buckets[bucketIndex].SetGBuffer(this);
+        m_buckets[bucketIndex].SetBucket(rb);
     }
 
     CreateBucketFramebuffers();
@@ -172,40 +172,40 @@ void GBuffer::CreateBucketFramebuffers()
     }
 }
 
-FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaque_framebuffer, Vec2u resolution, RenderBucket rb)
+FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaqueFramebuffer, Vec2u resolution, RenderBucket rb)
 {
     HYP_SCOPE;
 
     AssertThrow(resolution.Volume() != 0);
 
-    FramebufferRef framebuffer = g_render_backend->MakeFramebuffer(resolution);
+    FramebufferRef framebuffer = g_renderBackend->MakeFramebuffer(resolution);
 
-    auto add_owned_attachment = [&](uint32 binding, TextureFormat format)
+    auto addOwnedAttachment = [&](uint32 binding, TextureFormat format)
     {
-        TextureDesc texture_desc;
-        texture_desc.type = TT_TEX2D;
-        texture_desc.format = format;
-        texture_desc.extent = Vec3u { resolution, 1 };
-        texture_desc.filter_mode_min = TFM_NEAREST;
-        texture_desc.filter_mode_mag = TFM_NEAREST;
-        texture_desc.wrap_mode = TWM_CLAMP_TO_EDGE;
-        texture_desc.image_usage = IU_ATTACHMENT | IU_SAMPLED;
+        TextureDesc textureDesc;
+        textureDesc.type = TT_TEX2D;
+        textureDesc.format = format;
+        textureDesc.extent = Vec3u { resolution, 1 };
+        textureDesc.filterModeMin = TFM_NEAREST;
+        textureDesc.filterModeMag = TFM_NEAREST;
+        textureDesc.wrapMode = TWM_CLAMP_TO_EDGE;
+        textureDesc.imageUsage = IU_ATTACHMENT | IU_SAMPLED;
 
         framebuffer->AddAttachment(
             binding,
-            g_render_backend->MakeImage(texture_desc),
+            g_renderBackend->MakeImage(textureDesc),
             LoadOperation::CLEAR,
             StoreOperation::STORE);
     };
 
-    auto add_shared_attachment = [&](uint32 binding)
+    auto addSharedAttachment = [&](uint32 binding)
     {
-        AttachmentBase* parent_attachment = opaque_framebuffer->GetAttachment(binding);
-        AssertThrow(parent_attachment != nullptr);
+        AttachmentBase* parentAttachment = opaqueFramebuffer->GetAttachment(binding);
+        AssertThrow(parentAttachment != nullptr);
 
         framebuffer->AddAttachment(
             binding,
-            parent_attachment->GetImage(),
+            parentAttachment->GetImage(),
             LoadOperation::LOAD,
             StoreOperation::STORE);
     };
@@ -221,26 +221,26 @@ FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaque_framebuff
     //   values that can be produced by the deferred shading pass
     if (rb == RB_OPAQUE)
     {
-        add_owned_attachment(0, GetImageFormat(GBUFFER_RESOURCE_ALBEDO));
+        addOwnedAttachment(0, GetImageFormat(GBUFFER_RESOURCE_ALBEDO));
     }
     else if (rb == RB_LIGHTMAP)
     {
-        add_shared_attachment(0);
+        addSharedAttachment(0);
     }
     else
     {
-        add_owned_attachment(0, TF_RGBA16F);
+        addOwnedAttachment(0, TF_RGBA16F);
     }
 
     // opaque creates the main non-color gbuffer attachments,
     // which will be shared with other renderable buckets
-    if (opaque_framebuffer == nullptr)
+    if (opaqueFramebuffer == nullptr)
     {
         for (uint32 i = 1; i < GBUFFER_RESOURCE_MAX; i++)
         {
             const TextureFormat format = GetImageFormat(GBufferResourceName(i));
 
-            add_owned_attachment(i, format);
+            addOwnedAttachment(i, format);
         }
     }
     else
@@ -248,7 +248,7 @@ FramebufferRef GBuffer::CreateFramebuffer(const FramebufferRef& opaque_framebuff
         // add the attachments shared with opaque bucket
         for (uint32 i = 1; i < GBUFFER_RESOURCE_MAX; i++)
         {
-            add_shared_attachment(i);
+            addSharedAttachment(i);
         }
     }
 
@@ -269,14 +269,14 @@ GBuffer::GBufferBucket::~GBufferBucket()
 {
 }
 
-AttachmentBase* GBuffer::GBufferBucket::GetGBufferAttachment(GBufferResourceName resource_name) const
+AttachmentBase* GBuffer::GBufferBucket::GetGBufferAttachment(GBufferResourceName resourceName) const
 {
     HYP_SCOPE;
 
     AssertThrow(m_framebuffer != nullptr);
-    AssertThrow(uint32(resource_name) < uint32(GBUFFER_RESOURCE_MAX));
+    AssertThrow(uint32(resourceName) < uint32(GBUFFER_RESOURCE_MAX));
 
-    return m_framebuffer->GetAttachment(uint32(resource_name));
+    return m_framebuffer->GetAttachment(uint32(resourceName));
 }
 
 #pragma endregion GBufferBucket

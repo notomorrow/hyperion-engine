@@ -15,8 +15,8 @@ class AnimationSystem : public SystemBase
     HYP_OBJECT_BODY(AnimationSystem);
 
 public:
-    AnimationSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    AnimationSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

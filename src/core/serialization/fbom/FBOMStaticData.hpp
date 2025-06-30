@@ -168,9 +168,9 @@ struct FBOMStaticData
         return flags & FBOMStaticDataFlags::WRITTEN;
     }
 
-    HYP_FORCE_INLINE void SetIsWritten(bool is_written)
+    HYP_FORCE_INLINE void SetIsWritten(bool isWritten)
     {
-        if (is_written)
+        if (isWritten)
         {
             flags |= FBOMStaticDataFlags::WRITTEN;
         }

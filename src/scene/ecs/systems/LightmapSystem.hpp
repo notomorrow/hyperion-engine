@@ -18,8 +18,8 @@ class LightmapSystem : public SystemBase
     HYP_OBJECT_BODY(LightmapSystem);
 
 public:
-    LightmapSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    LightmapSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
@@ -42,7 +42,7 @@ private:
         };
     }
 
-    bool AssignLightmapVolume(MeshComponent& mesh_component);
+    bool AssignLightmapVolume(MeshComponent& meshComponent);
 };
 
 } // namespace hyperion

@@ -23,22 +23,22 @@ struct StreamingCellRuntimeInfo
 {
     Vec2i coord;
     StreamingCellState state; // used internally on streaming thread and worker threads - not game thread safe.
-    AtomicVar<bool> is_locked;
+    AtomicVar<bool> isLocked;
     Handle<StreamingCell> cell;
 
     StreamingCellRuntimeInfo()
         : coord(Vec2i::Zero()),
           cell(),
           state(StreamingCellState::INVALID),
-          is_locked(false)
+          isLocked(false)
     {
     }
 
-    StreamingCellRuntimeInfo(const Vec2i& coord, const Handle<StreamingCell>& cell, StreamingCellState state, bool is_locked = false)
+    StreamingCellRuntimeInfo(const Vec2i& coord, const Handle<StreamingCell>& cell, StreamingCellState state, bool isLocked = false)
         : coord(coord),
           cell(cell),
           state(state),
-          is_locked(is_locked)
+          isLocked(isLocked)
     {
     }
 
@@ -49,7 +49,7 @@ struct StreamingCellRuntimeInfo
         : coord(std::move(other.coord)),
           cell(std::move(other.cell)),
           state(other.state),
-          is_locked(other.is_locked.Exchange(false, MemoryOrder::ACQUIRE_RELEASE))
+          isLocked(other.isLocked.Exchange(false, MemoryOrder::ACQUIRE_RELEASE))
     {
         other.state = StreamingCellState::INVALID;
     }
@@ -61,7 +61,7 @@ struct StreamingCellRuntimeInfo
             coord = std::move(other.coord);
             cell = std::move(other.cell);
             state = other.state;
-            is_locked.Exchange(other.is_locked.Exchange(false, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
+            isLocked.Exchange(other.isLocked.Exchange(false, MemoryOrder::ACQUIRE_RELEASE), MemoryOrder::RELEASE);
 
             other.state = StreamingCellState::INVALID;
         }
@@ -92,7 +92,7 @@ public:
     using HashSet::Empty;
     using HashSet::Size;
 
-    bool AddCell(const Handle<StreamingCell>& cell, StreamingCellState initial_state, bool lock = false)
+    bool AddCell(const Handle<StreamingCell>& cell, StreamingCellState initialState, bool lock = false)
     {
         if (!cell.IsValid())
         {
@@ -106,8 +106,8 @@ public:
             return false;
         }
 
-        auto insert_result = HashSet::Emplace(cell->GetPatchInfo().coord, cell, initial_state, lock);
-        AssertDebug(insert_result.second);
+        auto insertResult = HashSet::Emplace(cell->GetPatchInfo().coord, cell, initialState, lock);
+        AssertDebug(insertResult.second);
 
         return true;
     }
@@ -146,7 +146,7 @@ public:
         auto it = HashSet::Find(coord);
         if (it != HashSet::End())
         {
-            if (it->is_locked.Exchange(lock, MemoryOrder::ACQUIRE_RELEASE) == lock)
+            if (it->isLocked.Exchange(lock, MemoryOrder::ACQUIRE_RELEASE) == lock)
             {
                 return false;
             }
@@ -162,18 +162,18 @@ public:
         auto it = HashSet::Find(coord);
         if (it != HashSet::End())
         {
-            return it->is_locked.Get(MemoryOrder::ACQUIRE);
+            return it->isLocked.Get(MemoryOrder::ACQUIRE);
         }
 
         return false;
     }
 
-    bool UpdateCellState(const Vec2i& coord, StreamingCellState new_state)
+    bool UpdateCellState(const Vec2i& coord, StreamingCellState newState)
     {
         auto it = HashSet::Find(coord);
         if (it != HashSet::End())
         {
-            it->state = new_state;
+            it->state = newState;
             return true;
         }
 

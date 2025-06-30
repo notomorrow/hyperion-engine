@@ -67,40 +67,40 @@ BoundingSphere& BoundingSphere::Extend(const BoundingBox& box)
 {
     // https://github.com/openscenegraph/OpenSceneGraph/blob/master/include/osg/BoundingSphere
 
-    BoundingBox new_aabb(box);
+    BoundingBox newAabb(box);
 
-    Vec3f direction_vector;
+    Vec3f directionVector;
 
     for (const Vec3f& corner : box.GetCorners())
     {
-        direction_vector = (corner - center).Normalized();
-        direction_vector *= -radius;
-        direction_vector += center;
+        directionVector = (corner - center).Normalized();
+        directionVector *= -radius;
+        directionVector += center;
 
-        new_aabb = new_aabb.Union(direction_vector);
+        newAabb = newAabb.Union(directionVector);
     }
 
-    center = new_aabb.GetCenter();
-    radius = new_aabb.GetRadius();
+    center = newAabb.GetCenter();
+    radius = newAabb.GetRadius();
 
     return *this;
 }
 
 bool BoundingSphere::Overlaps(const BoundingSphere& other) const
 {
-    float distance_squared = (other.center - center).LengthSquared();
-    float radius_sum = radius + other.radius;
+    float distanceSquared = (other.center - center).LengthSquared();
+    float radiusSum = radius + other.radius;
 
-    return distance_squared <= (radius_sum * radius_sum);
+    return distanceSquared <= (radiusSum * radiusSum);
 }
 
 bool BoundingSphere::Overlaps(const BoundingBox& box) const
 {
-    Vec3f closest_point = MathUtil::Clamp(center, box.min, box.max);
-    float distance_squared = (center - closest_point).LengthSquared();
-    float radius_squared = radius * radius;
+    Vec3f closestPoint = MathUtil::Clamp(center, box.min, box.max);
+    float distanceSquared = (center - closestPoint).LengthSquared();
+    float radiusSquared = radius * radius;
 
-    return distance_squared <= radius_squared;
+    return distanceSquared <= radiusSquared;
 }
 
 bool BoundingSphere::ContainsPoint(const Vec3f& point) const

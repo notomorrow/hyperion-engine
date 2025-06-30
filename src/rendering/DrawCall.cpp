@@ -16,20 +16,20 @@ namespace hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(RenderCollection);
 
-extern RenderGlobalState* g_render_global_state;
+extern RenderGlobalState* g_renderGlobalState;
 
 HYP_API GpuBufferHolderMap* GetGpuBufferHolderMap()
 {
-    return g_render_global_state->GpuBufferHolderMap.Get();
+    return g_renderGlobalState->GpuBufferHolderMap.Get();
 }
 
 #pragma region DrawCallCollection
 
 DrawCallCollection::DrawCallCollection(DrawCallCollection&& other) noexcept
     : impl(other.impl),
-      draw_calls(std::move(other.draw_calls)),
-      instanced_draw_calls(std::move(other.instanced_draw_calls)),
-      index_map(std::move(other.index_map))
+      drawCalls(std::move(other.drawCalls)),
+      instancedDrawCalls(std::move(other.instancedDrawCalls)),
+      indexMap(std::move(other.indexMap))
 {
 }
 
@@ -43,9 +43,9 @@ DrawCallCollection& DrawCallCollection::operator=(DrawCallCollection&& other) no
     ResetDrawCalls();
 
     impl = other.impl;
-    draw_calls = std::move(other.draw_calls);
-    instanced_draw_calls = std::move(other.instanced_draw_calls);
-    index_map = std::move(other.index_map);
+    drawCalls = std::move(other.drawCalls);
+    instancedDrawCalls = std::move(other.instancedDrawCalls);
+    indexMap = std::move(other.indexMap);
 
     return *this;
 }
@@ -58,54 +58,54 @@ DrawCallCollection::~DrawCallCollection()
     }
 }
 
-void DrawCallCollection::PushRenderProxy(DrawCallID id, const RenderProxy& render_proxy)
+void DrawCallCollection::PushRenderProxy(DrawCallID id, const RenderProxy& renderProxy)
 {
-    AssertDebug(render_proxy.mesh.IsValid());
-    AssertDebug(render_proxy.material.IsValid());
+    AssertDebug(renderProxy.mesh.IsValid());
+    AssertDebug(renderProxy.material.IsValid());
 
-    DrawCall& draw_call = draw_calls.EmplaceBack();
-    draw_call.id = id;
-    draw_call.render_mesh = &render_proxy.mesh->GetRenderResource();
-    draw_call.render_material = &render_proxy.material->GetRenderResource();
-    draw_call.render_skeleton = render_proxy.skeleton.IsValid() ? &render_proxy.skeleton->GetRenderResource() : nullptr;
-    draw_call.entity_id = render_proxy.entity.Id();
-    draw_call.draw_command_index = ~0u;
+    DrawCall& drawCall = drawCalls.EmplaceBack();
+    drawCall.id = id;
+    drawCall.renderMesh = &renderProxy.mesh->GetRenderResource();
+    drawCall.renderMaterial = &renderProxy.material->GetRenderResource();
+    drawCall.renderSkeleton = renderProxy.skeleton.IsValid() ? &renderProxy.skeleton->GetRenderResource() : nullptr;
+    drawCall.entityId = renderProxy.entity.Id();
+    drawCall.drawCommandIndex = ~0u;
 }
 
-void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxy& render_proxy)
+void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxy& renderProxy)
 {
     // Auto-instancing: check if we already have a drawcall we can use for the given DrawCallID.
-    auto index_map_it = index_map.Find(uint64(id));
+    auto indexMapIt = indexMap.Find(uint64(id));
 
-    if (index_map_it == index_map.End())
+    if (indexMapIt == indexMap.End())
     {
-        index_map_it = index_map.Insert(uint64(id), {}).first;
+        indexMapIt = indexMap.Insert(uint64(id), {}).first;
     }
 
-    const uint32 initial_index_map_size = index_map_it->second.Size();
+    const uint32 initialIndexMapSize = indexMapIt->second.Size();
 
-    uint32 index_map_index = 0;
-    uint32 instance_offset = 0;
+    uint32 indexMapIndex = 0;
+    uint32 instanceOffset = 0;
 
-    const uint32 initial_num_instances = render_proxy.instance_data.num_instances;
-    uint32 num_instances = initial_num_instances;
+    const uint32 initialNumInstances = renderProxy.instanceData.numInstances;
+    uint32 numInstances = initialNumInstances;
 
-    AssertDebug(initial_num_instances > 0);
+    AssertDebug(initialNumInstances > 0);
 
-    GpuBufferHolderBase* entity_instance_batches = impl->GetEntityInstanceBatchHolder();
-    AssertThrow(entity_instance_batches != nullptr);
+    GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
+    AssertThrow(entityInstanceBatches != nullptr);
 
-    while (num_instances != 0)
+    while (numInstances != 0)
     {
-        InstancedDrawCall* draw_call;
+        InstancedDrawCall* drawCall;
 
-        if (index_map_index < initial_index_map_size)
+        if (indexMapIndex < initialIndexMapSize)
         {
             // we have elements for the specific DrawCallID -- try to reuse them as much as possible
-            draw_call = &instanced_draw_calls[index_map_it->second[index_map_index++]];
+            drawCall = &instancedDrawCalls[indexMapIt->second[indexMapIndex++]];
 
-            AssertDebug(draw_call->id == id);
-            AssertDebug(draw_call->batch != nullptr);
+            AssertDebug(drawCall->id == id);
+            AssertDebug(drawCall->batch != nullptr);
         }
         else
         {
@@ -115,29 +115,29 @@ void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, Dr
                 batch = impl->AcquireBatch();
             }
 
-            AssertDebug(batch->batch_index != ~0u);
+            AssertDebug(batch->batchIndex != ~0u);
 
-            draw_call = &instanced_draw_calls.EmplaceBack();
+            drawCall = &instancedDrawCalls.EmplaceBack();
 
-            *draw_call = InstancedDrawCall {};
-            draw_call->id = id;
-            draw_call->batch = batch;
-            draw_call->draw_command_index = ~0u;
-            draw_call->render_mesh = &render_proxy.mesh->GetRenderResource();
-            draw_call->render_material = &render_proxy.material->GetRenderResource();
-            draw_call->render_skeleton = render_proxy.skeleton.IsValid() ? &render_proxy.skeleton->GetRenderResource() : nullptr;
-            draw_call->count = 0;
+            *drawCall = InstancedDrawCall {};
+            drawCall->id = id;
+            drawCall->batch = batch;
+            drawCall->drawCommandIndex = ~0u;
+            drawCall->renderMesh = &renderProxy.mesh->GetRenderResource();
+            drawCall->renderMaterial = &renderProxy.material->GetRenderResource();
+            drawCall->renderSkeleton = renderProxy.skeleton.IsValid() ? &renderProxy.skeleton->GetRenderResource() : nullptr;
+            drawCall->count = 0;
 
-            index_map_it->second.PushBack(instanced_draw_calls.Size() - 1);
+            indexMapIt->second.PushBack(instancedDrawCalls.Size() - 1);
 
             // Used, set it to nullptr so it doesn't get released
             batch = nullptr;
         }
 
-        const uint32 remaining_instances = PushEntityToBatch(*draw_call, render_proxy.entity.Id(), render_proxy.instance_data, num_instances, instance_offset);
+        const uint32 remainingInstances = PushEntityToBatch(*drawCall, renderProxy.entity.Id(), renderProxy.instanceData, numInstances, instanceOffset);
 
-        instance_offset += num_instances - remaining_instances;
-        num_instances = remaining_instances;
+        instanceOffset += numInstances - remainingInstances;
+        numInstances = remainingInstances;
     }
 
     if (batch != nullptr)
@@ -149,22 +149,22 @@ void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, Dr
 
 EntityInstanceBatch* DrawCallCollection::TakeDrawCallBatch(DrawCallID id)
 {
-    const auto it = index_map.Find(id.Value());
+    const auto it = indexMap.Find(id.Value());
 
-    if (it != index_map.End())
+    if (it != indexMap.End())
     {
-        for (SizeType draw_call_index : it->second)
+        for (SizeType drawCallIndex : it->second)
         {
-            InstancedDrawCall& draw_call = instanced_draw_calls[draw_call_index];
+            InstancedDrawCall& drawCall = instancedDrawCalls[drawCallIndex];
 
-            if (!draw_call.batch)
+            if (!drawCall.batch)
             {
                 continue;
             }
 
-            EntityInstanceBatch* batch = draw_call.batch;
+            EntityInstanceBatch* batch = drawCall.batch;
 
-            draw_call.batch = nullptr;
+            drawCall.batch = nullptr;
 
             return batch;
         }
@@ -177,104 +177,104 @@ void DrawCallCollection::ResetDrawCalls()
 {
     AssertDebug(impl != nullptr);
 
-    GpuBufferHolderBase* entity_instance_batches = impl->GetEntityInstanceBatchHolder();
-    AssertDebug(entity_instance_batches != nullptr);
+    GpuBufferHolderBase* entityInstanceBatches = impl->GetEntityInstanceBatchHolder();
+    AssertDebug(entityInstanceBatches != nullptr);
 
-    for (InstancedDrawCall& draw_call : instanced_draw_calls)
+    for (InstancedDrawCall& drawCall : instancedDrawCalls)
     {
-        if (draw_call.batch != nullptr)
+        if (drawCall.batch != nullptr)
         {
-            const uint32 batch_index = draw_call.batch->batch_index;
-            AssertDebug(batch_index != ~0u);
+            const uint32 batchIndex = drawCall.batch->batchIndex;
+            AssertDebug(batchIndex != ~0u);
 
-            *draw_call.batch = EntityInstanceBatch { batch_index };
+            *drawCall.batch = EntityInstanceBatch { batchIndex };
 
-            impl->ReleaseBatch(draw_call.batch);
+            impl->ReleaseBatch(drawCall.batch);
 
-            draw_call.batch = nullptr;
+            drawCall.batch = nullptr;
         }
     }
 
-    draw_calls.Clear();
-    instanced_draw_calls.Clear();
-    index_map.Clear();
+    drawCalls.Clear();
+    instancedDrawCalls.Clear();
+    indexMap.Clear();
 }
 
-uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& draw_call, ObjId<Entity> entity_id, const MeshInstanceData& mesh_instance_data, uint32 num_instances, uint32 instance_offset)
+uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& drawCall, ObjId<Entity> entityId, const MeshInstanceData& meshInstanceData, uint32 numInstances, uint32 instanceOffset)
 {
 #ifdef HYP_DEBUG_MODE // Sanity check
-    AssertThrow(num_instances <= mesh_instance_data.num_instances);
+    AssertThrow(numInstances <= meshInstanceData.numInstances);
 
-    for (uint32 buffer_index = 0; buffer_index < uint32(mesh_instance_data.buffers.Size()); buffer_index++)
+    for (uint32 bufferIndex = 0; bufferIndex < uint32(meshInstanceData.buffers.Size()); bufferIndex++)
     {
-        AssertThrow(mesh_instance_data.buffers[buffer_index].Size() / mesh_instance_data.buffer_struct_sizes[buffer_index] == mesh_instance_data.num_instances);
+        AssertThrow(meshInstanceData.buffers[bufferIndex].Size() / meshInstanceData.bufferStructSizes[bufferIndex] == meshInstanceData.numInstances);
     }
 #endif
 
-    const SizeType batch_sizeof = impl->GetBatchSizeOf();
+    const SizeType batchSizeof = impl->GetBatchSizeOf();
 
     bool dirty = false;
 
-    if (mesh_instance_data.buffers.Any())
+    if (meshInstanceData.buffers.Any())
     {
-        while (draw_call.batch->num_entities < max_entities_per_instance_batch && num_instances != 0)
+        while (drawCall.batch->numEntities < maxEntitiesPerInstanceBatch && numInstances != 0)
         {
-            const uint32 entity_index = draw_call.batch->num_entities++;
+            const uint32 entityIndex = drawCall.batch->numEntities++;
 
-            draw_call.batch->indices[entity_index] = uint32(entity_id.ToIndex());
+            drawCall.batch->indices[entityIndex] = uint32(entityId.ToIndex());
 
             // Starts at the offset of `transforms` in EntityInstanceBatch - data in buffers is expected to be
             // after the `indices` element
-            uint32 field_offset = offsetof(EntityInstanceBatch, transforms);
+            uint32 fieldOffset = offsetof(EntityInstanceBatch, transforms);
 
-            for (uint32 buffer_index = 0; buffer_index < uint32(mesh_instance_data.buffers.Size()); buffer_index++)
+            for (uint32 bufferIndex = 0; bufferIndex < uint32(meshInstanceData.buffers.Size()); bufferIndex++)
             {
-                const uint32 buffer_struct_size = mesh_instance_data.buffer_struct_sizes[buffer_index];
-                const uint32 buffer_struct_alignment = mesh_instance_data.buffer_struct_alignments[buffer_index];
+                const uint32 bufferStructSize = meshInstanceData.bufferStructSizes[bufferIndex];
+                const uint32 bufferStructAlignment = meshInstanceData.bufferStructAlignments[bufferIndex];
 
-                AssertDebugMsg(mesh_instance_data.buffers[buffer_index].Size() % buffer_struct_size == 0,
+                AssertDebugMsg(meshInstanceData.buffers[bufferIndex].Size() % bufferStructSize == 0,
                     "Buffer size is not a multiple of buffer struct size! Buffer size: %u, Buffer struct size: %u",
-                    mesh_instance_data.buffers[buffer_index].Size(), buffer_struct_size);
+                    meshInstanceData.buffers[bufferIndex].Size(), bufferStructSize);
 
-                field_offset = ByteUtil::AlignAs(field_offset, buffer_struct_alignment);
+                fieldOffset = ByteUtil::AlignAs(fieldOffset, bufferStructAlignment);
 
-                void* dst_ptr = reinterpret_cast<void*>((uintptr_t(draw_call.batch)) + field_offset + (entity_index * buffer_struct_size));
-                void* src_ptr = reinterpret_cast<void*>(uintptr_t(mesh_instance_data.buffers[buffer_index].Data()) + (instance_offset * buffer_struct_size));
+                void* dstPtr = reinterpret_cast<void*>((uintptr_t(drawCall.batch)) + fieldOffset + (entityIndex * bufferStructSize));
+                void* srcPtr = reinterpret_cast<void*>(uintptr_t(meshInstanceData.buffers[bufferIndex].Data()) + (instanceOffset * bufferStructSize));
 
                 // sanity checks
-                AssertDebugMsg((uintptr_t(dst_ptr) + buffer_struct_size) - uintptr_t(draw_call.batch) <= batch_sizeof,
+                AssertDebugMsg((uintptr_t(dstPtr) + bufferStructSize) - uintptr_t(drawCall.batch) <= batchSizeof,
                     "Buffer struct size is larger than batch size! Buffer struct size: %u, Buffer struct alignment: %u, Batch size: %u, Entity index: %u, Field offset: %u",
-                    buffer_struct_size, buffer_struct_alignment, batch_sizeof, entity_index, field_offset);
-                AssertDebugMsg(mesh_instance_data.buffers[buffer_index].Size() >= (instance_offset + 1) * buffer_struct_size,
+                    bufferStructSize, bufferStructAlignment, batchSizeof, entityIndex, fieldOffset);
+                AssertDebugMsg(meshInstanceData.buffers[bufferIndex].Size() >= (instanceOffset + 1) * bufferStructSize,
                     "Buffer size is not large enough to copy data! Buffer size: %u, Buffer struct size: %u, Instance offset: %u",
-                    mesh_instance_data.buffers[buffer_index].Size(), buffer_struct_size, instance_offset);
+                    meshInstanceData.buffers[bufferIndex].Size(), bufferStructSize, instanceOffset);
 
-                Memory::MemCpy(dst_ptr, src_ptr, buffer_struct_size);
+                Memory::MemCpy(dstPtr, srcPtr, bufferStructSize);
 
-                field_offset += max_entities_per_instance_batch * buffer_struct_size;
+                fieldOffset += maxEntitiesPerInstanceBatch * bufferStructSize;
             }
 
-            instance_offset++;
+            instanceOffset++;
 
-            draw_call.entity_ids[draw_call.count++] = entity_id;
+            drawCall.entityIds[drawCall.count++] = entityId;
 
-            --num_instances;
+            --numInstances;
 
             dirty = true;
         }
     }
     else
     {
-        while (draw_call.batch->num_entities < max_entities_per_instance_batch && num_instances != 0)
+        while (drawCall.batch->numEntities < maxEntitiesPerInstanceBatch && numInstances != 0)
         {
-            const uint32 entity_index = draw_call.batch->num_entities++;
+            const uint32 entityIndex = drawCall.batch->numEntities++;
 
-            draw_call.batch->indices[entity_index] = uint32(entity_id.ToIndex());
-            draw_call.batch->transforms[entity_index] = Matrix4::identity;
+            drawCall.batch->indices[entityIndex] = uint32(entityId.ToIndex());
+            drawCall.batch->transforms[entityIndex] = Matrix4::identity;
 
-            draw_call.entity_ids[draw_call.count++] = entity_id;
+            drawCall.entityIds[drawCall.count++] = entityId;
 
-            --num_instances;
+            --numInstances;
 
             dirty = true;
         }
@@ -282,33 +282,33 @@ uint32 DrawCallCollection::PushEntityToBatch(InstancedDrawCall& draw_call, ObjId
 
     if (dirty)
     {
-        impl->GetEntityInstanceBatchHolder()->MarkDirty(draw_call.batch->batch_index);
+        impl->GetEntityInstanceBatchHolder()->MarkDirty(drawCall.batch->batchIndex);
     }
 
-    return num_instances;
+    return numInstances;
 }
 
 #pragma endregion DrawCallCollection
 
 #pragma region DrawCallCollectionImpl
 
-static TypeMap<UniquePtr<IDrawCallCollectionImpl>> g_draw_call_collection_impl_map = {};
-static Mutex g_draw_call_collection_impl_map_mutex = {};
+static TypeMap<UniquePtr<IDrawCallCollectionImpl>> g_drawCallCollectionImplMap = {};
+static Mutex g_drawCallCollectionImplMapMutex = {};
 
-HYP_API IDrawCallCollectionImpl* GetDrawCallCollectionImpl(TypeId type_id)
+HYP_API IDrawCallCollectionImpl* GetDrawCallCollectionImpl(TypeId typeId)
 {
-    Mutex::Guard guard(g_draw_call_collection_impl_map_mutex);
+    Mutex::Guard guard(g_drawCallCollectionImplMapMutex);
 
-    auto it = g_draw_call_collection_impl_map.Find(type_id);
+    auto it = g_drawCallCollectionImplMap.Find(typeId);
 
-    return it != g_draw_call_collection_impl_map.End() ? it->second.Get() : nullptr;
+    return it != g_drawCallCollectionImplMap.End() ? it->second.Get() : nullptr;
 }
 
-HYP_API IDrawCallCollectionImpl* SetDrawCallCollectionImpl(TypeId type_id, UniquePtr<IDrawCallCollectionImpl>&& impl)
+HYP_API IDrawCallCollectionImpl* SetDrawCallCollectionImpl(TypeId typeId, UniquePtr<IDrawCallCollectionImpl>&& impl)
 {
-    Mutex::Guard guard(g_draw_call_collection_impl_map_mutex);
+    Mutex::Guard guard(g_drawCallCollectionImplMapMutex);
 
-    auto it = g_draw_call_collection_impl_map.Set(type_id, std::move(impl)).first;
+    auto it = g_drawCallCollectionImplMap.Set(typeId, std::move(impl)).first;
 
     return it->second.Get();
 }

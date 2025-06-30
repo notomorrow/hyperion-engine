@@ -23,7 +23,7 @@ class SparsePagedArray : public ContainerBase<SparsePagedArray<T, PageSize>, Siz
     struct Page
     {
         ValueStorageArray<T, PageSize, alignof(T)> storage;
-        Bitset initialized_bits;
+        Bitset initializedBits;
 
         Page() = default;
 
@@ -36,7 +36,7 @@ class SparsePagedArray : public ContainerBase<SparsePagedArray<T, PageSize>, Siz
 
         ~Page()
         {
-            for (Bitset::BitIndex bit : initialized_bits)
+            for (Bitset::BitIndex bit : initializedBits)
             {
                 storage.GetPointer()[bit].~T();
             }
@@ -44,7 +44,7 @@ class SparsePagedArray : public ContainerBase<SparsePagedArray<T, PageSize>, Siz
     };
 
 public:
-    static constexpr bool is_contiguous = false;
+    static constexpr bool isContiguous = false;
 
     using KeyType = SizeType;
     using ValueType = T;
@@ -64,10 +64,10 @@ public:
         }
 
         template <class ArrayType>
-        IteratorBase(ArrayType* array, uint32 page_index, uint32 element_index)
+        IteratorBase(ArrayType* array, uint32 pageIndex, uint32 elementIndex)
             : array(array),
-              page(page_index),
-              elem(element_index)
+              page(pageIndex),
+              elem(elementIndex)
         {
             AssertDebug(array);
 
@@ -81,19 +81,19 @@ public:
 
             while (page != ~0u)
             {
-                if (array->m_valid_pages.Test(page))
+                if (array->m_validPages.Test(page))
                 {
-                    Bitset::BitIndex next_bit = array->m_pages[page]->initialized_bits.NextSetBitIndex(elem);
+                    Bitset::BitIndex nextBit = array->m_pages[page]->initializedBits.NextSetBitIndex(elem);
 
-                    if (next_bit < PageSize)
+                    if (nextBit < PageSize)
                     {
-                        elem = next_bit;
+                        elem = nextBit;
 
                         break;
                     }
                 }
 
-                page = array->m_valid_pages.NextSetBitIndex(page + 1);
+                page = array->m_validPages.NextSetBitIndex(page + 1);
 
                 // no valid pages remaining after this
                 if (page == ~0u)
@@ -131,20 +131,20 @@ public:
 
             while (true)
             {
-                if (page != ~0u && array->m_valid_pages.Test(page))
+                if (page != ~0u && array->m_validPages.Test(page))
                 {
-                    Bitset::BitIndex next_bit = array->m_pages[page]->initialized_bits.NextSetBitIndex(elem + 1);
+                    Bitset::BitIndex nextBit = array->m_pages[page]->initializedBits.NextSetBitIndex(elem + 1);
 
-                    if (next_bit < PageSize)
+                    if (nextBit < PageSize)
                     {
-                        elem = next_bit;
+                        elem = nextBit;
 
                         break;
                     }
                 }
 
                 // try to move to next page
-                page = array->m_valid_pages.NextSetBitIndex(page + 1);
+                page = array->m_validPages.NextSetBitIndex(page + 1);
 
                 // No more valid pages
                 if (page == ~0u)
@@ -184,8 +184,8 @@ public:
         Iterator() = default;
 
         template <class ArrayType>
-        Iterator(ArrayType* array, uint32 page_index, uint32 element_index)
-            : IteratorBase<Iterator, false>(array, page_index, element_index)
+        Iterator(ArrayType* array, uint32 pageIndex, uint32 elementIndex)
+            : IteratorBase<Iterator, false>(array, pageIndex, elementIndex)
         {
         }
 
@@ -202,8 +202,8 @@ public:
         ConstIterator() = default;
 
         template <class ArrayType>
-        ConstIterator(const ArrayType* array, uint32 page_index, uint32 element_index)
-            : IteratorBase<ConstIterator, true>(array, page_index, element_index)
+        ConstIterator(const ArrayType* array, uint32 pageIndex, uint32 elementIndex)
+            : IteratorBase<ConstIterator, true>(array, pageIndex, elementIndex)
         {
         }
 
@@ -233,9 +233,9 @@ public:
     {
     }
 
-    SparsePagedArray(std::initializer_list<KeyValuePair<KeyType, T>> initializer_list)
+    SparsePagedArray(std::initializer_list<KeyValuePair<KeyType, T>> initializerList)
     {
-        for (const auto& item : initializer_list)
+        for (const auto& item : initializerList)
         {
             Set(item.first, item.second);
         }
@@ -246,7 +246,7 @@ public:
 
     SparsePagedArray(SparsePagedArray&& other) noexcept
         : m_pages(std::move(other.m_pages)),
-          m_valid_pages(std::move(other.m_valid_pages))
+          m_validPages(std::move(other.m_validPages))
     {
     }
 
@@ -257,7 +257,7 @@ public:
             return *this;
         }
 
-        for (Bitset::BitIndex bit : m_valid_pages)
+        for (Bitset::BitIndex bit : m_validPages)
         {
             AssertDebug(bit < m_pages.Size());
 
@@ -266,14 +266,14 @@ public:
         }
 
         m_pages = std::move(other.m_pages);
-        m_valid_pages = std::move(other.m_valid_pages);
+        m_validPages = std::move(other.m_validPages);
 
         return *this;
     }
 
     ~SparsePagedArray()
     {
-        for (Bitset::BitIndex bit : m_valid_pages)
+        for (Bitset::BitIndex bit : m_validPages)
         {
             AssertDebug(bit < m_pages.Size());
 
@@ -284,12 +284,12 @@ public:
 
     HYP_FORCE_INLINE bool Empty() const
     {
-        return m_valid_pages.Count() == 0;
+        return m_validPages.Count() == 0;
     }
 
     HYP_FORCE_INLINE bool Any() const
     {
-        return m_valid_pages.Count() != 0;
+        return m_validPages.Count() != 0;
     }
 
     /*! \brief Counts the total number of set elements in each valid page.
@@ -300,9 +300,9 @@ public:
     {
         SizeType size = 0;
 
-        for (Bitset::BitIndex bit : m_valid_pages)
+        for (Bitset::BitIndex bit : m_validPages)
         {
-            size += m_pages[bit]->initialized_bits.Count();
+            size += m_pages[bit]->initializedBits.Count();
         }
 
         return size;
@@ -310,92 +310,92 @@ public:
 
     HYP_FORCE_INLINE T& Front()
     {
-        AssertDebug(m_valid_pages.Count() != 0);
+        AssertDebug(m_validPages.Count() != 0);
 
         return *Begin();
     }
 
     HYP_FORCE_INLINE const T& Front() const
     {
-        AssertDebug(m_valid_pages.Count() != 0);
+        AssertDebug(m_validPages.Count() != 0);
 
         return *Begin();
     }
 
     HYP_FORCE_INLINE T& Back()
     {
-        AssertDebug(m_valid_pages.Count() != 0);
+        AssertDebug(m_validPages.Count() != 0);
 
-        Page* last_page = m_pages[m_valid_pages.LastSetBitIndex()];
+        Page* lastPage = m_pages[m_validPages.LastSetBitIndex()];
 
-        AssertDebug(last_page != nullptr);
-        AssertDebug(last_page->initialized_bits.Count() > 0);
+        AssertDebug(lastPage != nullptr);
+        AssertDebug(lastPage->initializedBits.Count() > 0);
 
-        SizeType last_index = last_page->initialized_bits.LastSetBitIndex();
-        AssertDebug(last_index < PageSize);
+        SizeType lastIndex = lastPage->initializedBits.LastSetBitIndex();
+        AssertDebug(lastIndex < PageSize);
 
-        return last_page->storage.GetPointer()[last_index];
+        return lastPage->storage.GetPointer()[lastIndex];
     }
 
     HYP_FORCE_INLINE const T& Back() const
     {
-        AssertDebug(m_valid_pages.Count() != 0);
+        AssertDebug(m_validPages.Count() != 0);
 
-        Page* last_page = m_pages[m_valid_pages.LastSetBitIndex()];
+        Page* lastPage = m_pages[m_validPages.LastSetBitIndex()];
 
-        AssertDebug(last_page != nullptr);
-        AssertDebug(last_page->initialized_bits.Count() > 0);
+        AssertDebug(lastPage != nullptr);
+        AssertDebug(lastPage->initializedBits.Count() > 0);
 
-        SizeType last_index = last_page->initialized_bits.LastSetBitIndex();
-        AssertDebug(last_index < PageSize);
+        SizeType lastIndex = lastPage->initializedBits.LastSetBitIndex();
+        AssertDebug(lastIndex < PageSize);
 
-        return last_page->storage.GetPointer()[last_index];
+        return lastPage->storage.GetPointer()[lastIndex];
     }
 
     HYP_FORCE_INLINE bool HasIndex(SizeType index) const
     {
-        const SizeType page_index = PageIndex(index);
-        const SizeType element_index = ElementIndex(index);
+        const SizeType pageIndex = PageIndex(index);
+        const SizeType elementIndex = ElementIndex(index);
 
-        if (!m_valid_pages.Test(page_index))
+        if (!m_validPages.Test(pageIndex))
         {
             return false;
         }
 
-        AssertDebug(m_pages[page_index] != nullptr);
+        AssertDebug(m_pages[pageIndex] != nullptr);
 
-        return m_pages[page_index]->initialized_bits.Test(element_index);
+        return m_pages[pageIndex]->initializedBits.Test(elementIndex);
     }
 
     /*T& operator[](SizeType index)
     {
-        const SizeType page_index = PageIndex(index);
-        const SizeType element_index = ElementIndex(index);
+        const SizeType pageIndex = PageIndex(index);
+        const SizeType elementIndex = ElementIndex(index);
 
-        Page* page = GetOrAllocatePage(page_index);
+        Page* page = GetOrAllocatePage(pageIndex);
 
-        if (!page->initialized_bits.Test(element_index))
+        if (!page->initializedBits.Test(elementIndex))
         {
-            page->storage.ConstructElement(element_index);
-            page->initialized_bits.Set(element_index, true);
+            page->storage.ConstructElement(elementIndex);
+            page->initializedBits.Set(elementIndex, true);
         }
 
-        return page->storage.GetPointer()[element_index];
+        return page->storage.GetPointer()[elementIndex];
     }*/
 
     T& Get(SizeType index)
     {
-        const SizeType page_index = PageIndex(index);
-        const SizeType element_index = ElementIndex(index);
+        const SizeType pageIndex = PageIndex(index);
+        const SizeType elementIndex = ElementIndex(index);
 
-        AssertDebug(m_valid_pages.Test(page_index));
+        AssertDebug(m_validPages.Test(pageIndex));
 
-        Page* page = m_pages[page_index];
+        Page* page = m_pages[pageIndex];
         AssertDebug(page != nullptr);
 
-        AssertDebug(page->initialized_bits.Test(element_index));
+        AssertDebug(page->initializedBits.Test(elementIndex));
 
-        return page->storage.GetPointer()[element_index];
+        return page->storage.GetPointer()[elementIndex];
     }
 
     const T& Get(SizeType index) const
@@ -405,22 +405,22 @@ public:
 
     T* TryGet(SizeType index)
     {
-        const SizeType page_index = PageIndex(index);
-        const SizeType element_index = ElementIndex(index);
+        const SizeType pageIndex = PageIndex(index);
+        const SizeType elementIndex = ElementIndex(index);
 
-        if (!m_valid_pages.Test(page_index))
+        if (!m_validPages.Test(pageIndex))
         {
             return nullptr;
         }
 
-        AssertDebug(m_pages[page_index] != nullptr);
+        AssertDebug(m_pages[pageIndex] != nullptr);
 
-        if (!m_pages[page_index]->initialized_bits.Test(element_index))
+        if (!m_pages[pageIndex]->initializedBits.Test(elementIndex))
         {
             return nullptr;
         }
 
-        return &m_pages[page_index]->storage.GetPointer()[element_index];
+        return &m_pages[pageIndex]->storage.GetPointer()[elementIndex];
     }
 
     const T* TryGet(SizeType index) const
@@ -430,60 +430,60 @@ public:
 
     Iterator Set(SizeType index, const T& value)
     {
-        SizeType page_index = PageIndex(index);
-        SizeType element_index = ElementIndex(index);
+        SizeType pageIndex = PageIndex(index);
+        SizeType elementIndex = ElementIndex(index);
 
-        Page* page = GetOrAllocatePage(page_index);
+        Page* page = GetOrAllocatePage(pageIndex);
         AssertDebug(page != nullptr);
 
-        if (page->initialized_bits.Test(element_index))
+        if (page->initializedBits.Test(elementIndex))
         {
-            page->storage.DestructElement(element_index);
+            page->storage.DestructElement(elementIndex);
         }
 
-        page->storage.ConstructElement(element_index, value);
-        page->initialized_bits.Set(element_index, true);
+        page->storage.ConstructElement(elementIndex, value);
+        page->initializedBits.Set(elementIndex, true);
 
-        return Iterator(this, page_index, element_index);
+        return Iterator(this, pageIndex, elementIndex);
     }
 
     Iterator Set(SizeType index, T&& value)
     {
-        SizeType page_index = PageIndex(index);
-        SizeType element_index = ElementIndex(index);
+        SizeType pageIndex = PageIndex(index);
+        SizeType elementIndex = ElementIndex(index);
 
-        Page* page = GetOrAllocatePage(page_index);
+        Page* page = GetOrAllocatePage(pageIndex);
         AssertDebug(page != nullptr);
 
-        if (page->initialized_bits.Test(element_index))
+        if (page->initializedBits.Test(elementIndex))
         {
-            page->storage.DestructElement(element_index);
+            page->storage.DestructElement(elementIndex);
         }
 
-        page->storage.ConstructElement(element_index, std::move(value));
-        page->initialized_bits.Set(element_index, true);
+        page->storage.ConstructElement(elementIndex, std::move(value));
+        page->initializedBits.Set(elementIndex, true);
 
-        return Iterator(this, page_index, element_index);
+        return Iterator(this, pageIndex, elementIndex);
     }
 
     template <class... Args>
     Iterator Emplace(SizeType index, Args&&... args)
     {
-        SizeType page_index = PageIndex(index);
-        SizeType element_index = ElementIndex(index);
+        SizeType pageIndex = PageIndex(index);
+        SizeType elementIndex = ElementIndex(index);
 
-        Page* page = GetOrAllocatePage(page_index);
+        Page* page = GetOrAllocatePage(pageIndex);
         AssertDebug(page != nullptr);
 
-        if (page->initialized_bits.Test(element_index))
+        if (page->initializedBits.Test(elementIndex))
         {
-            page->storage.DestructElement(element_index);
+            page->storage.DestructElement(elementIndex);
         }
 
-        page->storage.ConstructElement(element_index, std::forward<Args>(args)...);
-        page->initialized_bits.Set(element_index, true);
+        page->storage.ConstructElement(elementIndex, std::forward<Args>(args)...);
+        page->initializedBits.Set(elementIndex, true);
 
-        return Iterator(this, page_index, element_index);
+        return Iterator(this, pageIndex, elementIndex);
     }
 
     Iterator Erase(ConstIterator iter)
@@ -498,31 +498,31 @@ public:
 
     Iterator EraseAt(SizeType index)
     {
-        SizeType page_index = PageIndex(index);
-        SizeType element_index = ElementIndex(index);
+        SizeType pageIndex = PageIndex(index);
+        SizeType elementIndex = ElementIndex(index);
 
-        if (!m_valid_pages.Test(page_index) || !m_pages[page_index]->initialized_bits.Test(element_index))
+        if (!m_validPages.Test(pageIndex) || !m_pages[pageIndex]->initializedBits.Test(elementIndex))
         {
             // element does not exist, nothing to erase
             // note: iterator will automatically skip to next
-            return Iterator(this, page_index, element_index);
+            return Iterator(this, pageIndex, elementIndex);
         }
 
-        Page* page = m_pages[page_index];
-        page->storage.DestructElement(element_index);
-        page->initialized_bits.Set(element_index, false);
+        Page* page = m_pages[pageIndex];
+        page->storage.DestructElement(elementIndex);
+        page->initializedBits.Set(elementIndex, false);
 
-        if (page->initialized_bits.Count() == 0)
+        if (page->initializedBits.Count() == 0)
         {
             // no elems remaining, delete the page
-            m_valid_pages.Set(page_index, false);
+            m_validPages.Set(pageIndex, false);
 
             delete page;
-            m_pages[page_index] = nullptr;
+            m_pages[pageIndex] = nullptr;
         }
 
         // Note: if page deleted, iterator will automatically skip to next element or END if none
-        return Iterator(this, page_index, element_index + 1);
+        return Iterator(this, pageIndex, elementIndex + 1);
     }
 
     Iterator Find(const T& value)
@@ -563,16 +563,16 @@ public:
         return const_cast<SparsePagedArray&>(*this).FindIf(std::forward<Predicate>(predicate));
     }
 
-    void Clear(bool delete_pages = true)
+    void Clear(bool deletePages = true)
     {
-        for (Bitset::BitIndex bit : m_valid_pages)
+        for (Bitset::BitIndex bit : m_validPages)
         {
             AssertDebug(bit < m_pages.Size());
 
             Page* page = m_pages[bit];
             AssertDebug(page != nullptr);
 
-            if (delete_pages)
+            if (deletePages)
             {
                 delete page;
                 m_pages[bit] = nullptr;
@@ -581,19 +581,19 @@ public:
             {
                 // Just destruct the elements in the page, without freeing the allocated memory.
                 // we want to reuse this page later, to avoid additional reallocs!
-                for (Bitset::BitIndex elem_bit : page->initialized_bits)
+                for (Bitset::BitIndex elemBit : page->initializedBits)
                 {
-                    AssertDebug(elem_bit < PageSize);
-                    page->storage.DestructElement(elem_bit);
+                    AssertDebug(elemBit < PageSize);
+                    page->storage.DestructElement(elemBit);
                 }
 
-                page->initialized_bits.Clear();
+                page->initializedBits.Clear();
             }
         }
 
-        m_valid_pages.Clear();
+        m_validPages.Clear();
 
-        if (delete_pages)
+        if (deletePages)
         {
             m_pages.Clear();
         }
@@ -614,26 +614,26 @@ protected:
         return index % PageSize;
     }
 
-    Page* GetOrAllocatePage(SizeType page_index)
+    Page* GetOrAllocatePage(SizeType pageIndex)
     {
-        if (!m_valid_pages.Test(page_index))
+        if (!m_validPages.Test(pageIndex))
         {
-            AssertDebugMsg(page_index < UINT32_MAX, "Invalid page index requested - will cause OOM crash!");
+            AssertDebugMsg(pageIndex < UINT32_MAX, "Invalid page index requested - will cause OOM crash!");
 
-            if (m_pages.Size() <= page_index)
+            if (m_pages.Size() <= pageIndex)
             {
-                m_pages.Resize(page_index + 1);
+                m_pages.Resize(pageIndex + 1);
             }
 
-            m_pages[page_index] = new Page;
-            m_valid_pages.Set(page_index, true);
+            m_pages[pageIndex] = new Page;
+            m_validPages.Set(pageIndex, true);
         }
 
-        return m_pages[page_index];
+        return m_pages[pageIndex];
     }
 
     Array<Page*, InlineAllocator<8>> m_pages;
-    Bitset m_valid_pages;
+    Bitset m_validPages;
 };
 
 } // namespace containers

@@ -17,15 +17,15 @@ using DynamicHypStructInstance_DestructFunction = void (*)(void*);
 class DynamicHypStructInstance final : public HypStruct
 {
 public:
-    DynamicHypStructInstance(TypeId type_id, Name name, uint32 size, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members, DynamicHypStructInstance_DestructFunction destruct_function)
-        : HypStruct(type_id, name, -1, 0, Name::Invalid(), attributes, flags, members),
-          m_destruct_function(destruct_function)
+    DynamicHypStructInstance(TypeId typeId, Name name, uint32 size, Span<const HypClassAttribute> attributes, EnumFlags<HypClassFlags> flags, Span<HypMember> members, DynamicHypStructInstance_DestructFunction destructFunction)
+        : HypStruct(typeId, name, -1, 0, Name::Invalid(), attributes, flags, members),
+          m_destructFunction(destructFunction)
     {
         m_size = size;
         m_alignment = alignof(void*);
 
         // @TODO Register the ManagedClass (dotnet::Class) for this. We need the assembly.
-        HypClassRegistry::GetInstance().RegisterClass(type_id, this);
+        HypClassRegistry::GetInstance().RegisterClass(typeId, this);
     }
 
     virtual ~DynamicHypStructInstance() override
@@ -33,12 +33,12 @@ public:
         HypClassRegistry::GetInstance().UnregisterClass(this);
     }
 
-    virtual bool GetManagedObject(const void* object_ptr, dotnet::ObjectReference& out_object_reference) const override
+    virtual bool GetManagedObject(const void* objectPtr, dotnet::ObjectReference& outObjectReference) const override
     {
-        AssertThrow(object_ptr != nullptr);
+        AssertThrow(objectPtr != nullptr);
 
         // Construct a new instance of the struct and return an ObjectReference pointing to it.
-        if (!CreateStructInstance(out_object_reference, object_ptr, m_size))
+        if (!CreateStructInstance(outObjectReference, objectPtr, m_size))
         {
             return false;
         }
@@ -56,7 +56,7 @@ public:
         void* data = Memory::Allocate(m_size);
         Memory::MemCpy(data, memory.Data(), m_size);
 
-        out = HypData(Any::FromVoidPointer(m_type_id, data, m_destruct_function));
+        out = HypData(Any::FromVoidPointer(m_typeId, data, m_destructFunction));
 
         return true;
     }
@@ -72,7 +72,7 @@ public:
     }
 
 protected:
-    virtual void PostLoad_Internal(void* object_ptr) const override
+    virtual void PostLoad_Internal(void* objectPtr) const override
     {
     }
 
@@ -95,16 +95,16 @@ protected:
         HYP_NOT_IMPLEMENTED();
     }
 
-    DynamicHypStructInstance_DestructFunction m_destruct_function;
+    DynamicHypStructInstance_DestructFunction m_destructFunction;
 };
 
 extern "C"
 {
 
-    HYP_EXPORT HypStruct* HypStruct_CreateDynamicHypStruct(const TypeId* type_id, const char* type_name, uint32 size, DynamicHypStructInstance_DestructFunction destruct_function)
+    HYP_EXPORT HypStruct* HypStruct_CreateDynamicHypStruct(const TypeId* typeId, const char* typeName, uint32 size, DynamicHypStructInstance_DestructFunction destructFunction)
     {
-        AssertThrow(type_id != nullptr);
-        AssertThrow(type_name != nullptr);
+        AssertThrow(typeId != nullptr);
+        AssertThrow(typeName != nullptr);
 
         if (size == 0)
         {
@@ -113,14 +113,14 @@ extern "C"
             return nullptr;
         }
 
-        return new DynamicHypStructInstance(*type_id, CreateNameFromDynamicString(type_name), size, Span<const HypClassAttribute>(), HypClassFlags::STRUCT_TYPE | HypClassFlags::DYNAMIC, Span<HypMember>(), destruct_function);
+        return new DynamicHypStructInstance(*typeId, CreateNameFromDynamicString(typeName), size, Span<const HypClassAttribute>(), HypClassFlags::STRUCT_TYPE | HypClassFlags::DYNAMIC, Span<HypMember>(), destructFunction);
     }
 
-    HYP_EXPORT void HypStruct_DestroyDynamicHypStruct(HypStruct* hyp_struct)
+    HYP_EXPORT void HypStruct_DestroyDynamicHypStruct(HypStruct* hypStruct)
     {
-        AssertThrow(hyp_struct != nullptr);
+        AssertThrow(hypStruct != nullptr);
 
-        delete hyp_struct;
+        delete hypStruct;
     }
 
 } // extern "C"

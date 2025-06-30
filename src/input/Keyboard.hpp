@@ -89,17 +89,17 @@ enum class KeyCode : uint16
     ESC = 27
 };
 
-HYP_API bool KeyCodeToChar(KeyCode key_code, bool shift, bool alt, bool ctrl, char& out_char);
+HYP_API bool KeyCodeToChar(KeyCode keyCode, bool shift, bool alt, bool ctrl, char& outChar);
 
 HYP_STRUCT(Size = 16)
 
 struct KeyboardEvent
 {
     HYP_FIELD()
-    InputManager* input_manager = nullptr;
+    InputManager* inputManager = nullptr;
 
     HYP_FIELD()
-    KeyCode key_code = KeyCode::UNKNOWN;
+    KeyCode keyCode = KeyCode::UNKNOWN;
 };
 
 } // namespace hyperion

@@ -49,7 +49,7 @@ public:
 
     HYP_FORCE_INLINE const GpuBufferRef& GetMeshDescriptionsBuffer() const
     {
-        return m_mesh_descriptions_buffer;
+        return m_meshDescriptionsBuffer;
     }
 
     HYP_API virtual void AddBLAS(const BLASRef& blas) = 0;
@@ -58,10 +58,10 @@ public:
     HYP_API virtual RendererResult Create() = 0;
     HYP_API virtual RendererResult Destroy() = 0;
 
-    HYP_API virtual RendererResult UpdateStructure(RTUpdateStateFlags& out_update_state_flags) = 0;
+    HYP_API virtual RendererResult UpdateStructure(RTUpdateStateFlags& outUpdateStateFlags) = 0;
 
 protected:
-    GpuBufferRef m_mesh_descriptions_buffer;
+    GpuBufferRef m_meshDescriptionsBuffer;
 };
 
 class BLASBase : public RenderObject<BLASBase>

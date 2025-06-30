@@ -75,20 +75,20 @@ HYP_STRUCT()
 struct VertexAttributeSet
 {
     HYP_FIELD(Property = "FlagMask", Serialize = true)
-    uint64 flag_mask;
+    uint64 flagMask;
 
     constexpr VertexAttributeSet()
-        : flag_mask(0)
+        : flagMask(0)
     {
     }
 
-    constexpr VertexAttributeSet(uint64 flag_mask)
-        : flag_mask(flag_mask)
+    constexpr VertexAttributeSet(uint64 flagMask)
+        : flagMask(flagMask)
     {
     }
 
     constexpr VertexAttributeSet(VertexAttribute::Type flags)
-        : flag_mask(uint64(flags))
+        : flagMask(uint64(flags))
     {
     }
 
@@ -98,81 +98,81 @@ struct VertexAttributeSet
 
     HYP_FORCE_INLINE explicit operator bool() const
     {
-        return flag_mask != 0;
+        return flagMask != 0;
     }
 
     HYP_FORCE_INLINE bool operator==(const VertexAttributeSet& other) const
     {
-        return flag_mask == other.flag_mask;
+        return flagMask == other.flagMask;
     }
 
     HYP_FORCE_INLINE bool operator!=(const VertexAttributeSet& other) const
     {
-        return flag_mask != other.flag_mask;
+        return flagMask != other.flagMask;
     }
 
     HYP_FORCE_INLINE bool operator==(uint64 flags) const
     {
-        return flag_mask == flags;
+        return flagMask == flags;
     }
 
     HYP_FORCE_INLINE bool operator!=(uint64 flags) const
     {
-        return flag_mask != flags;
+        return flagMask != flags;
     }
 
     HYP_FORCE_INLINE VertexAttributeSet operator~() const
     {
-        return ~flag_mask;
+        return ~flagMask;
     }
 
     HYP_FORCE_INLINE VertexAttributeSet operator&(const VertexAttributeSet& other) const
     {
-        return { flag_mask & other.flag_mask };
+        return { flagMask & other.flagMask };
     }
 
     HYP_FORCE_INLINE VertexAttributeSet& operator&=(const VertexAttributeSet& other)
     {
-        flag_mask &= other.flag_mask;
+        flagMask &= other.flagMask;
         return *this;
     }
 
     HYP_FORCE_INLINE VertexAttributeSet operator&(uint64 flags) const
     {
-        return { flag_mask & flags };
+        return { flagMask & flags };
     }
 
     HYP_FORCE_INLINE VertexAttributeSet& operator&=(uint64 flags)
     {
-        flag_mask &= flags;
+        flagMask &= flags;
         return *this;
     }
 
     HYP_FORCE_INLINE VertexAttributeSet operator|(const VertexAttributeSet& other) const
     {
-        return { flag_mask | other.flag_mask };
+        return { flagMask | other.flagMask };
     }
 
     HYP_FORCE_INLINE VertexAttributeSet& operator|=(const VertexAttributeSet& other)
     {
-        flag_mask |= other.flag_mask;
+        flagMask |= other.flagMask;
         return *this;
     }
 
     HYP_FORCE_INLINE VertexAttributeSet operator|(uint64 flags) const
     {
-        return { flag_mask | flags };
+        return { flagMask | flags };
     }
 
     HYP_FORCE_INLINE VertexAttributeSet& operator|=(uint64 flags)
     {
-        flag_mask |= flags;
+        flagMask |= flags;
         return *this;
     }
 
     HYP_FORCE_INLINE bool operator<(const VertexAttributeSet& other) const
     {
-        return flag_mask < other.flag_mask;
+        return flagMask < other.flagMask;
     }
 
     HYP_FORCE_INLINE bool Has(VertexAttribute::Type type) const
@@ -184,11 +184,11 @@ struct VertexAttributeSet
     {
         if (enable)
         {
-            flag_mask |= flags;
+            flagMask |= flags;
         }
         else
         {
-            flag_mask &= ~flags;
+            flagMask &= ~flags;
         }
     }
 
@@ -199,22 +199,22 @@ struct VertexAttributeSet
 
     HYP_FORCE_INLINE void Merge(const VertexAttributeSet& other)
     {
-        flag_mask |= other.flag_mask;
+        flagMask |= other.flagMask;
     }
 
     HYP_FORCE_INLINE uint64 GetFlagMask() const
     {
-        return flag_mask;
+        return flagMask;
     }
 
     HYP_FORCE_INLINE void SetFlagMask(uint64 flags)
     {
-        flag_mask = flags;
+        flagMask = flags;
     }
 
     HYP_FORCE_INLINE uint32 Size() const
     {
-        return uint32(ByteUtil::BitCount(flag_mask));
+        return uint32(ByteUtil::BitCount(flagMask));
     }
 
     HYP_API Array<VertexAttribute::Type> BuildAttributes() const;
@@ -223,13 +223,13 @@ struct VertexAttributeSet
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(flag_mask);
+        hc.Add(flagMask);
 
         return hc;
     }
 };
 
-constexpr VertexAttributeSet static_mesh_vertex_attributes(
+constexpr VertexAttributeSet staticMeshVertexAttributes(
     VertexAttribute::MESH_INPUT_ATTRIBUTE_POSITION
     | VertexAttribute::MESH_INPUT_ATTRIBUTE_NORMAL
     | VertexAttribute::MESH_INPUT_ATTRIBUTE_TEXCOORD0
@@ -237,7 +237,7 @@ constexpr VertexAttributeSet static_mesh_vertex_attributes(
     | VertexAttribute::MESH_INPUT_ATTRIBUTE_TANGENT
     | VertexAttribute::MESH_INPUT_ATTRIBUTE_BITANGENT);
 
-constexpr VertexAttributeSet skeleton_vertex_attributes(
+constexpr VertexAttributeSet skeletonVertexAttributes(
     VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS
     | VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES);
 
@@ -250,38 +250,38 @@ HYP_STRUCT(Size = 128, Serialize = "bitwise")
 struct alignas(16) Vertex
 {
     Vertex()
-        : num_indices(0),
-          num_weights(0)
+        : numIndices(0),
+          numWeights(0)
     {
         for (int i = 0; i < MAX_BONE_INDICES; i++)
         {
-            bone_indices[i] = 0;
-            bone_weights[i] = 0;
+            boneIndices[i] = 0;
+            boneWeights[i] = 0;
         }
     }
 
     explicit Vertex(const Vector3& position)
         : position(position),
-          num_indices(0),
-          num_weights(0)
+          numIndices(0),
+          numWeights(0)
     {
         for (int i = 0; i < MAX_BONE_INDICES; i++)
         {
-            bone_indices[i] = 0;
-            bone_weights[i] = 0;
+            boneIndices[i] = 0;
+            boneWeights[i] = 0;
         }
     }
 
     explicit Vertex(const Vector3& position, const Vector2& texcoord0)
         : position(position),
           texcoord0(texcoord0),
-          num_indices(0),
-          num_weights(0)
+          numIndices(0),
+          numWeights(0)
     {
         for (int i = 0; i < MAX_BONE_INDICES; i++)
         {
-            bone_indices[i] = 0;
-            bone_weights[i] = 0;
+            boneIndices[i] = 0;
+            boneWeights[i] = 0;
         }
     }
 
@@ -289,13 +289,13 @@ struct alignas(16) Vertex
         : position(position),
           normal(normal),
           texcoord0(texcoord0),
-          num_indices(0),
-          num_weights(0)
+          numIndices(0),
+          numWeights(0)
     {
         for (int i = 0; i < MAX_BONE_INDICES; i++)
         {
-            bone_indices[i] = 0;
-            bone_weights[i] = 0;
+            boneIndices[i] = 0;
+            boneWeights[i] = 0;
         }
     }
 
@@ -373,80 +373,80 @@ struct alignas(16) Vertex
 
     HYP_FORCE_INLINE void AddBoneWeight(float val)
     {
-        if (num_weights < MAX_BONE_WEIGHTS)
-            bone_weights[num_weights++] = val;
+        if (numWeights < MAX_BONE_WEIGHTS)
+            boneWeights[numWeights++] = val;
     }
 
     HYP_FORCE_INLINE void SetBoneWeight(int i, float val)
     {
-        bone_weights[i] = val;
+        boneWeights[i] = val;
     }
 
     HYP_FORCE_INLINE float GetBoneWeight(int i) const
     {
-        return bone_weights[i];
+        return boneWeights[i];
     }
 
     HYP_FORCE_INLINE int GetNumWeights() const
     {
-        return num_weights;
+        return numWeights;
     }
 
     HYP_FORCE_INLINE const FixedArray<float, MAX_BONE_WEIGHTS>& GetBoneWeights() const
     {
-        return bone_weights;
+        return boneWeights;
     }
 
     HYP_FORCE_INLINE void SetBoneWeights(const FixedArray<float, MAX_BONE_WEIGHTS>& weights)
     {
-        num_weights = 0;
+        numWeights = 0;
 
         for (int i = 0; i < MAX_BONE_WEIGHTS; i++)
         {
             if (weights[i] != 0.0f)
             {
-                bone_weights[i] = weights[i];
-                num_weights = i + 1;
+                boneWeights[i] = weights[i];
+                numWeights = i + 1;
             }
         }
     }
 
     HYP_FORCE_INLINE void AddBoneIndex(int val)
     {
-        if (num_indices < MAX_BONE_INDICES)
-            bone_indices[num_indices++] = val;
+        if (numIndices < MAX_BONE_INDICES)
+            boneIndices[numIndices++] = val;
     }
 
     HYP_FORCE_INLINE void SetBoneIndex(int i, int val)
     {
-        bone_indices[i] = val;
+        boneIndices[i] = val;
     }
 
     HYP_FORCE_INLINE int GetBoneIndex(int i) const
     {
-        return bone_indices[i];
+        return boneIndices[i];
     }
 
     HYP_FORCE_INLINE int GetNumIndices() const
     {
-        return num_indices;
+        return numIndices;
     }
 
     HYP_FORCE_INLINE const FixedArray<uint32, MAX_BONE_INDICES>& GetBoneIndices() const
     {
-        return bone_indices;
+        return boneIndices;
     }
 
     HYP_FORCE_INLINE void SetBoneIndices(const FixedArray<uint32, MAX_BONE_INDICES>& indices)
     {
-        num_indices = 0;
+        numIndices = 0;
 
         for (int i = 0; i < MAX_BONE_INDICES; i++)
         {
             if (indices[i] != 0)
             {
-                bone_indices[i] = indices[i];
-                num_indices = i + 1;
+                boneIndices[i] = indices[i];
+                numIndices = i + 1;
             }
         }
     }
@@ -480,10 +480,10 @@ struct alignas(16) Vertex
             Memory::MemCpy(ptr, &texcoord1, sizeof(float) * 2);
             break;
         case VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_INDICES:
-            Memory::MemCpy(ptr, bone_indices.Data(), sizeof(uint32) * MAX_BONE_INDICES);
+            Memory::MemCpy(ptr, boneIndices.Data(), sizeof(uint32) * MAX_BONE_INDICES);
             break;
         case VertexAttribute::MESH_INPUT_ATTRIBUTE_BONE_WEIGHTS:
-            Memory::MemCpy(ptr, bone_weights.Data(), sizeof(float) * MAX_BONE_WEIGHTS);
+            Memory::MemCpy(ptr, boneWeights.Data(), sizeof(float) * MAX_BONE_WEIGHTS);
             break;
         default:
             // Do nothing
@@ -500,17 +500,17 @@ struct alignas(16) Vertex
         hc.Add(texcoord1.GetHashCode());
         hc.Add(tangent.GetHashCode());
         hc.Add(bitangent.GetHashCode());
-        hc.Add(num_indices);
-        hc.Add(num_weights);
+        hc.Add(numIndices);
+        hc.Add(numWeights);
 
         for (int i = 0; i < MAX_BONE_INDICES; i++)
         {
-            hc.Add(bone_indices[i]);
+            hc.Add(boneIndices[i]);
         }
 
         for (int i = 0; i < MAX_BONE_WEIGHTS; i++)
         {
-            hc.Add(bone_weights[i]);
+            hc.Add(boneWeights[i]);
         }
 
         return hc;
@@ -535,16 +535,16 @@ struct alignas(16) Vertex
     Vec2f texcoord1;
 
     HYP_FIELD(Property = "BoneWeights", Serialize = true)
-    FixedArray<float, MAX_BONE_WEIGHTS> bone_weights;
+    FixedArray<float, MAX_BONE_WEIGHTS> boneWeights;
 
     HYP_FIELD(Property = "BoneIndices", Serialize = true)
-    FixedArray<uint32, MAX_BONE_INDICES> bone_indices;
+    FixedArray<uint32, MAX_BONE_INDICES> boneIndices;
 
     HYP_FIELD(Property = "NumIndices", Serialize = true)
-    uint8 num_indices;
+    uint8 numIndices;
 
     HYP_FIELD(Property = "NumWeights", Serialize = true)
-    uint8 num_weights;
+    uint8 numWeights;
 };
 
 static_assert(alignof(Vertex) == 16, "Vertex alignment is not 16 bytes, ensure size matches C# Vertex struct alignment");

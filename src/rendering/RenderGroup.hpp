@@ -55,13 +55,13 @@ public:
 
     RenderGroup(
         const ShaderRef& shader,
-        const RenderableAttributeSet& renderable_attributes,
+        const RenderableAttributeSet& renderableAttributes,
         EnumFlags<RenderGroupFlags> flags = RenderGroupFlags::DEFAULT);
 
     RenderGroup(
         const ShaderRef& shader,
-        const RenderableAttributeSet& renderable_attributes,
-        const DescriptorTableRef& descriptor_table,
+        const RenderableAttributeSet& renderableAttributes,
+        const DescriptorTableRef& descriptorTable,
         EnumFlags<RenderGroupFlags> flags = RenderGroupFlags::DEFAULT);
 
     RenderGroup(const RenderGroup& other) = delete;
@@ -77,30 +77,30 @@ public:
 
     HYP_FORCE_INLINE const RenderableAttributeSet& GetRenderableAttributes() const
     {
-        return m_renderable_attributes;
+        return m_renderableAttributes;
     }
 
-    void SetRenderableAttributes(const RenderableAttributeSet& renderable_attributes);
+    void SetRenderableAttributes(const RenderableAttributeSet& renderableAttributes);
 
     HYP_FORCE_INLINE EnumFlags<RenderGroupFlags> GetFlags() const
     {
         return m_flags;
     }
 
-    void SetDrawCallCollectionImpl(IDrawCallCollectionImpl* draw_call_collection_impl);
+    void SetDrawCallCollectionImpl(IDrawCallCollectionImpl* drawCallCollectionImpl);
 
     HYP_FORCE_INLINE IDrawCallCollectionImpl* GetDrawCallCollectionImpl() const
     {
-        return m_draw_call_collection_impl;
+        return m_drawCallCollectionImpl;
     }
 
     /*! \brief Collect drawable objects, then run the culling compute shader
      *  to mark any occluded objects as such. Must be used with indirect rendering.
-     *  If nullptr is provided for cull_data, no occlusion culling will happen.
+     *  If nullptr is provided for cullData, no occlusion culling will happen.
      */
-    void CollectDrawCalls(DrawCallCollection& draw_call_collection);
+    void CollectDrawCalls(DrawCallCollection& drawCallCollection);
 
-    void PerformRendering(FrameBase* frame, const RenderSetup& render_setup, const DrawCallCollection& draw_call_collection, IndirectRenderer* indirect_renderer, ParallelRenderingState* parallel_rendering_state);
+    void PerformRendering(FrameBase* frame, const RenderSetup& renderSetup, const DrawCallCollection& drawCallCollection, IndirectRenderer* indirectRenderer, ParallelRenderingState* parallelRenderingState);
 
 private:
     void Init() override;
@@ -111,11 +111,11 @@ private:
 
     ShaderRef m_shader;
 
-    DescriptorTableRef m_descriptor_table;
+    DescriptorTableRef m_descriptorTable;
 
-    RenderableAttributeSet m_renderable_attributes;
+    RenderableAttributeSet m_renderableAttributes;
 
-    IDrawCallCollectionImpl* m_draw_call_collection_impl;
+    IDrawCallCollectionImpl* m_drawCallCollectionImpl;
 };
 
 } // namespace hyperion

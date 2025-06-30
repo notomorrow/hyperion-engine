@@ -17,7 +17,7 @@ class Texture;
 struct GlyphImageData
 {
     Vec2i dimensions;
-    ByteBuffer byte_buffer;
+    ByteBuffer byteBuffer;
 
     HYP_API Handle<Texture> CreateTexture() const;
 };
@@ -29,15 +29,15 @@ public:
     {
         uint16 width;
         uint16 height;
-        int16 bearing_x;
-        int16 bearing_y;
+        int16 bearingX;
+        int16 bearingY;
         uint32 advance;
     };
 
     struct Metrics
     {
         PackedMetrics metrics;
-        Vec2i image_position;
+        Vec2i imagePosition;
 
         HYP_FORCE_INLINE PackedMetrics GetPackedMetrics() const
         {
@@ -61,7 +61,7 @@ public:
 
     HYP_FORCE_INLINE const GlyphImageData& GetImageData() const
     {
-        return m_glyph_image_data;
+        return m_glyphImageData;
     }
 
     HYP_API void LoadMetrics();
@@ -76,7 +76,7 @@ private:
     float m_scale;
 
     FontEngine::Glyph m_glyph;
-    GlyphImageData m_glyph_image_data;
+    GlyphImageData m_glyphImageData;
     Metrics m_metrics { 0 };
 };
 

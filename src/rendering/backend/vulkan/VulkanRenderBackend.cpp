@@ -25,9 +25,9 @@
 
 namespace hyperion {
 #ifdef HYP_DEBUG_MODE
-static constexpr bool g_use_debug_layers = true;
+static constexpr bool g_useDebugLayers = true;
 #else
-static constexpr bool g_use_debug_layers = false;
+static constexpr bool g_useDebugLayers = false;
 #endif
 
 #pragma region VulkanRenderConfig
@@ -35,8 +35,8 @@ static constexpr bool g_use_debug_layers = false;
 class VulkanRenderConfig final : public IRenderConfig
 {
 public:
-    VulkanRenderConfig(VulkanRenderBackend* rendering_api)
-        : m_rendering_api(rendering_api)
+    VulkanRenderConfig(VulkanRenderBackend* renderingApi)
+        : m_renderingApi(renderingApi)
     {
     }
 
@@ -49,12 +49,12 @@ public:
 
     virtual bool IsBindlessSupported() const override
     {
-        return m_rendering_api->GetDevice()->GetFeatures().SupportsBindlessTextures();
+        return m_renderingApi->GetDevice()->GetFeatures().SupportsBindlessTextures();
     }
 
     virtual bool IsRaytracingSupported() const override
     {
-        return m_rendering_api->GetDevice()->GetFeatures().IsRaytracingSupported();
+        return m_renderingApi->GetDevice()->GetFeatures().IsRaytracingSupported();
     }
 
     virtual bool IsIndirectRenderingEnabled() const override
@@ -69,11 +69,11 @@ public:
 
     virtual bool IsDynamicDescriptorIndexingSupported() const override
     {
-        return false; // m_rendering_api->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
+        return false; // m_renderingApi->GetDevice()->GetFeatures().SupportsDynamicDescriptorIndexing();
     }
 
 private:
-    VulkanRenderBackend* m_rendering_api;
+    VulkanRenderBackend* m_renderingApi;
 };
 
 #pragma endregion VulkanRenderConfig
@@ -84,24 +84,24 @@ class VulkanDescriptorSetLayoutWrapper : public RenderObject<VulkanDescriptorSet
 {
     VkDescriptorSetLayout m_handle;
     platform::Device<Platform::vulkan>* m_device;
-    RendererResult (*m_delete_fn)(platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper*);
+    RendererResult (*m_deleteFn)(platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper*);
 
 public:
-    VulkanDescriptorSetLayoutWrapper(platform::Device<Platform::vulkan>* device, RendererResult (*delete_fn)(platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper*))
+    VulkanDescriptorSetLayoutWrapper(platform::Device<Platform::vulkan>* device, RendererResult (*deleteFn)(platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper*))
         : RenderObject<VulkanDescriptorSetLayoutWrapper>(),
           m_handle(VK_NULL_HANDLE),
           m_device(device),
-          m_delete_fn(delete_fn)
+          m_deleteFn(deleteFn)
     {
-        AssertThrow(m_delete_fn != nullptr);
+        AssertThrow(m_deleteFn != nullptr);
     }
 
     virtual ~VulkanDescriptorSetLayoutWrapper() override
     {
         if (m_handle != VK_NULL_HANDLE)
         {
-            AssertThrow(m_delete_fn != nullptr);
-            HYPERION_ASSERT_RESULT(m_delete_fn(m_device, this));
+            AssertThrow(m_deleteFn != nullptr);
+            HYPERION_ASSERT_RESULT(m_deleteFn(m_device, this));
         }
     }
 
@@ -114,32 +114,32 @@ public:
     {
         AssertThrow(m_handle == VK_NULL_HANDLE);
 
-        static constexpr VkDescriptorBindingFlags bindless_flags = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+        static constexpr VkDescriptorBindingFlags bindlessFlags = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
 
         Array<VkDescriptorSetLayoutBinding> bindings;
         bindings.Reserve(layout.GetElements().Size());
 
-        Array<VkDescriptorBindingFlags> binding_flags;
-        binding_flags.Reserve(layout.GetElements().Size());
+        Array<VkDescriptorBindingFlags> bindingFlags;
+        bindingFlags.Reserve(layout.GetElements().Size());
 
         for (const auto& it : layout.GetElements())
         {
             const Name name = it.first;
             const DescriptorSetLayoutElement& element = it.second;
 
-            uint32 descriptor_count = element.count;
+            uint32 descriptorCount = element.count;
 
             if (element.IsBindless())
             {
-                descriptor_count = max_bindless_resources;
+                descriptorCount = maxBindlessResources;
             }
 
-            // if (descriptor_count > 1 && !m_device->GetFeatures().SupportsDynamicDescriptorIndexing()) {
+            // if (descriptorCount > 1 && !m_device->GetFeatures().SupportsDynamicDescriptorIndexing()) {
             //     return HYP_MAKE_ERROR(RendererError, "Device does not support descriptor indexing, cannot create descriptor set with element {} that uses an array of elements", 0, name);
             // }
 
             VkDescriptorSetLayoutBinding binding {};
-            binding.descriptorCount = descriptor_count;
+            binding.descriptorCount = descriptorCount;
             binding.descriptorType = helpers::ToVkDescriptorType(element.type);
             binding.pImmutableSamplers = nullptr;
             binding.stageFlags = VK_SHADER_STAGE_ALL;
@@ -151,25 +151,25 @@ public:
 
             if (element.IsBindless())
             {
-                flags |= bindless_flags;
+                flags |= bindlessFlags;
             }
 
-            binding_flags.PushBack(flags);
+            bindingFlags.PushBack(flags);
         }
 
-        VkDescriptorSetLayoutBindingFlagsCreateInfo extended_info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
-        extended_info.bindingCount = uint32(binding_flags.Size());
-        extended_info.pBindingFlags = binding_flags.Data();
+        VkDescriptorSetLayoutBindingFlagsCreateInfo extendedInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+        extendedInfo.bindingCount = uint32(bindingFlags.Size());
+        extendedInfo.pBindingFlags = bindingFlags.Data();
 
-        VkDescriptorSetLayoutCreateInfo layout_info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        layout_info.pBindings = bindings.Data();
-        layout_info.bindingCount = uint32(bindings.Size());
-        layout_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-        layout_info.pNext = &extended_info;
+        VkDescriptorSetLayoutCreateInfo layoutInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+        layoutInfo.pBindings = bindings.Data();
+        layoutInfo.bindingCount = uint32(bindings.Size());
+        layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        layoutInfo.pNext = &extendedInfo;
 
         HYPERION_VK_CHECK(vkCreateDescriptorSetLayout(
             device->GetDevice(),
-            &layout_info,
+            &layoutInfo,
             nullptr,
             &m_handle));
 
@@ -198,7 +198,7 @@ public:
 class VulkanDescriptorSetManager final : public IDescriptorSetManager
 {
 public:
-    static constexpr uint32 max_descriptor_sets = 4096;
+    static constexpr uint32 maxDescriptorSets = 4096;
 
     VulkanDescriptorSetManager();
     virtual ~VulkanDescriptorSetManager() override;
@@ -206,20 +206,20 @@ public:
     RendererResult Create(platform::Device<Platform::vulkan>* device);
     RendererResult Destroy(platform::Device<Platform::vulkan>* device);
 
-    RendererResult CreateDescriptorSet(platform::Device<Platform::vulkan>* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& out_vk_descriptor_set);
-    RendererResult DestroyDescriptorSet(platform::Device<Platform::vulkan>* device, VkDescriptorSet vk_descriptor_set);
+    RendererResult CreateDescriptorSet(platform::Device<Platform::vulkan>* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet);
+    RendererResult DestroyDescriptorSet(platform::Device<Platform::vulkan>* device, VkDescriptorSet vkDescriptorSet);
 
     VulkanDescriptorSetLayoutWrapperRef GetOrCreateVkDescriptorSetLayout(platform::Device<Platform::vulkan>* device, const DescriptorSetLayout& layout);
 
 private:
     Mutex m_mutex;
-    HashMap<HashCode, VulkanDescriptorSetLayoutWrapperWeakRef> m_vk_descriptor_set_layouts;
+    HashMap<HashCode, VulkanDescriptorSetLayoutWrapperWeakRef> m_vkDescriptorSetLayouts;
 
-    VkDescriptorPool m_vk_descriptor_pool;
+    VkDescriptorPool m_vkDescriptorPool;
 };
 
 VulkanDescriptorSetManager::VulkanDescriptorSetManager()
-    : m_vk_descriptor_pool(VK_NULL_HANDLE)
+    : m_vkDescriptorPool(VK_NULL_HANDLE)
 {
 }
 
@@ -227,7 +227,7 @@ VulkanDescriptorSetManager::~VulkanDescriptorSetManager() = default;
 
 RendererResult VulkanDescriptorSetManager::Create(platform::Device<Platform::vulkan>* device)
 {
-    static const Array<VkDescriptorPoolSize> pool_sizes = {
+    static const Array<VkDescriptorPoolSize> poolSizes = {
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
         { VK_DESCRIPTOR_TYPE_SAMPLER, 256 },
         { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 8 },
@@ -239,19 +239,19 @@ RendererResult VulkanDescriptorSetManager::Create(platform::Device<Platform::vul
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 32000 }
     };
 
-    AssertThrow(m_vk_descriptor_pool == VK_NULL_HANDLE);
+    AssertThrow(m_vkDescriptorPool == VK_NULL_HANDLE);
 
-    VkDescriptorPoolCreateInfo pool_info { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-    pool_info.maxSets = max_descriptor_sets;
-    pool_info.poolSizeCount = uint32(pool_sizes.Size());
-    pool_info.pPoolSizes = pool_sizes.Data();
+    VkDescriptorPoolCreateInfo poolInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+    poolInfo.maxSets = maxDescriptorSets;
+    poolInfo.poolSizeCount = uint32(poolSizes.Size());
+    poolInfo.pPoolSizes = poolSizes.Data();
 
     HYPERION_VK_CHECK(vkCreateDescriptorPool(
         device->GetDevice(),
-        &pool_info,
+        &poolInfo,
         nullptr,
-        &m_vk_descriptor_pool));
+        &m_vkDescriptorPool));
 
     return RendererResult {};
 }
@@ -260,7 +260,7 @@ RendererResult VulkanDescriptorSetManager::Destroy(platform::Device<Platform::vu
 {
     RendererResult result = RendererResult {};
 
-    for (auto& it : m_vk_descriptor_set_layouts)
+    for (auto& it : m_vkDescriptorSetLayouts)
     {
         if (auto rc = it.second.Lock())
         {
@@ -270,93 +270,93 @@ RendererResult VulkanDescriptorSetManager::Destroy(platform::Device<Platform::vu
         }
     }
 
-    m_vk_descriptor_set_layouts.Clear();
+    m_vkDescriptorSetLayouts.Clear();
 
-    if (m_vk_descriptor_pool != VK_NULL_HANDLE)
+    if (m_vkDescriptorPool != VK_NULL_HANDLE)
     {
         vkDestroyDescriptorPool(
             device->GetDevice(),
-            m_vk_descriptor_pool,
+            m_vkDescriptorPool,
             nullptr);
 
-        m_vk_descriptor_pool = VK_NULL_HANDLE;
+        m_vkDescriptorPool = VK_NULL_HANDLE;
     }
 
     return result;
 }
 
-RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(platform::Device<Platform::vulkan>* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& out_vk_descriptor_set)
+RendererResult VulkanDescriptorSetManager::CreateDescriptorSet(platform::Device<Platform::vulkan>* device, const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet)
 {
-    AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
+    AssertThrow(m_vkDescriptorPool != VK_NULL_HANDLE);
 
     AssertThrow(layout != nullptr);
     AssertThrow(layout->GetVulkanHandle() != VK_NULL_HANDLE);
 
     VkDescriptorSetLayout layouts[] = { layout->GetVulkanHandle() };
 
-    VkDescriptorSetAllocateInfo alloc_info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-    alloc_info.descriptorPool = m_vk_descriptor_pool;
-    alloc_info.descriptorSetCount = ArraySize(layouts);
-    alloc_info.pSetLayouts = &layouts[0];
+    VkDescriptorSetAllocateInfo allocInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+    allocInfo.descriptorPool = m_vkDescriptorPool;
+    allocInfo.descriptorSetCount = ArraySize(layouts);
+    allocInfo.pSetLayouts = &layouts[0];
 
-    const VkResult vk_result = vkAllocateDescriptorSets(
+    const VkResult vkResult = vkAllocateDescriptorSets(
         device->GetDevice(),
-        &alloc_info,
-        &out_vk_descriptor_set);
+        &allocInfo,
+        &outVkDescriptorSet);
 
-    if (vk_result != VK_SUCCESS)
+    if (vkResult != VK_SUCCESS)
     {
-        return HYP_MAKE_ERROR(RendererError, "Failed to allocate descriptor set", int(vk_result));
+        return HYP_MAKE_ERROR(RendererError, "Failed to allocate descriptor set", int(vkResult));
     }
 
     return RendererResult {};
 }
 
-RendererResult VulkanDescriptorSetManager::DestroyDescriptorSet(platform::Device<Platform::vulkan>* device, VkDescriptorSet vk_descriptor_set)
+RendererResult VulkanDescriptorSetManager::DestroyDescriptorSet(platform::Device<Platform::vulkan>* device, VkDescriptorSet vkDescriptorSet)
 {
-    AssertThrow(m_vk_descriptor_pool != VK_NULL_HANDLE);
+    AssertThrow(m_vkDescriptorPool != VK_NULL_HANDLE);
 
-    AssertThrow(vk_descriptor_set != VK_NULL_HANDLE);
+    AssertThrow(vkDescriptorSet != VK_NULL_HANDLE);
 
     vkFreeDescriptorSets(
         device->GetDevice(),
-        m_vk_descriptor_pool,
+        m_vkDescriptorPool,
         1,
-        &vk_descriptor_set);
+        &vkDescriptorSet);
 
     return RendererResult {};
 }
 
 VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDescriptorSetLayout(platform::Device<Platform::vulkan>* device, const DescriptorSetLayout& layout)
 {
-    const HashCode hash_code = layout.GetHashCode();
+    const HashCode hashCode = layout.GetHashCode();
 
-    VulkanDescriptorSetLayoutWrapperRef vk_descriptor_set_layout;
+    VulkanDescriptorSetLayoutWrapperRef vkDescriptorSetLayout;
 
     Mutex::Guard guard(m_mutex);
 
-    auto it = m_vk_descriptor_set_layouts.Find(hash_code);
+    auto it = m_vkDescriptorSetLayouts.Find(hashCode);
 
-    if (it != m_vk_descriptor_set_layouts.End())
+    if (it != m_vkDescriptorSetLayouts.End())
     {
-        vk_descriptor_set_layout = it->second.Lock();
+        vkDescriptorSetLayout = it->second.Lock();
     }
 
-    if (vk_descriptor_set_layout != nullptr)
+    if (vkDescriptorSetLayout != nullptr)
     {
-        return vk_descriptor_set_layout;
+        return vkDescriptorSetLayout;
     }
 
-    vk_descriptor_set_layout = MakeRenderObject<VulkanDescriptorSetLayoutWrapper>(device, [](platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper* wrapper)
+    vkDescriptorSetLayout = MakeRenderObject<VulkanDescriptorSetLayoutWrapper>(device, [](platform::Device<Platform::vulkan>* device, VulkanDescriptorSetLayoutWrapper* wrapper)
         {
             return wrapper->Destroy(device);
         });
 
-    HYPERION_ASSERT_RESULT(vk_descriptor_set_layout->Create(device, layout));
+    HYPERION_ASSERT_RESULT(vkDescriptorSetLayout->Create(device, layout));
 
-    m_vk_descriptor_set_layouts.Set(hash_code, vk_descriptor_set_layout);
+    m_vkDescriptorSetLayouts.Set(hashCode, vkDescriptorSetLayout);
 
-    return vk_descriptor_set_layout;
+    return vkDescriptorSetLayout;
 }
 
 #pragma endregion VulkanDescriptorSetManager
@@ -365,17 +365,17 @@ VulkanDescriptorSetLayoutWrapperRef VulkanDescriptorSetManager::GetOrCreateVkDes
 
 VulkanRenderBackend::VulkanRenderBackend()
     : m_instance(nullptr),
-      m_render_config(new VulkanRenderConfig(this)),
-      m_descriptor_set_manager(new VulkanDescriptorSetManager()),
-      m_async_compute(nullptr),
-      m_should_recreate_swapchain(false)
+      m_renderConfig(new VulkanRenderConfig(this)),
+      m_descriptorSetManager(new VulkanDescriptorSetManager()),
+      m_asyncCompute(nullptr),
+      m_shouldRecreateSwapchain(false)
 {
 }
 
 VulkanRenderBackend::~VulkanRenderBackend()
 {
-    delete m_render_config;
-    delete m_descriptor_set_manager;
+    delete m_renderConfig;
+    delete m_descriptorSetManager;
 }
 
 platform::Device<Platform::vulkan>* VulkanRenderBackend::GetDevice() const
@@ -388,38 +388,38 @@ SwapchainBase* VulkanRenderBackend::GetSwapchain() const
     return m_instance->GetSwapchain();
 }
 
-RendererResult VulkanRenderBackend::Initialize(AppContextBase& app_context)
+RendererResult VulkanRenderBackend::Initialize(AppContextBase& appContext)
 {
     m_instance = new platform::Instance<Platform::vulkan>();
-    HYPERION_BUBBLE_ERRORS(m_instance->Initialize(app_context, g_use_debug_layers));
+    HYPERION_BUBBLE_ERRORS(m_instance->Initialize(appContext, g_useDebugLayers));
 
-    m_crash_handler.Initialize();
+    m_crashHandler.Initialize();
 
-    HYPERION_BUBBLE_ERRORS(m_descriptor_set_manager->Create(m_instance->GetDevice()));
+    HYPERION_BUBBLE_ERRORS(m_descriptorSetManager->Create(m_instance->GetDevice()));
 
-    VulkanAsyncCompute* async_compute = new VulkanAsyncCompute();
-    HYPERION_BUBBLE_ERRORS(async_compute->Create());
-    m_async_compute = async_compute;
+    VulkanAsyncCompute* asyncCompute = new VulkanAsyncCompute();
+    HYPERION_BUBBLE_ERRORS(asyncCompute->Create());
+    m_asyncCompute = asyncCompute;
 
-    m_default_formats.Set(
+    m_defaultFormats.Set(
         DIF_COLOR,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
             { { TF_RGBA8, TF_R10G10B10A2, TF_RGBA16F } },
             IS_SRV));
 
-    m_default_formats.Set(
+    m_defaultFormats.Set(
         DIF_DEPTH,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
             { { TF_DEPTH_24, TF_DEPTH_32F, TF_DEPTH_16 } },
             IS_DEPTH));
 
-    m_default_formats.Set(
+    m_defaultFormats.Set(
         DIF_NORMALS,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
             { { TF_RGBA16F, TF_RGBA32F, TF_RGBA8 } },
             IS_SRV));
 
-    m_default_formats.Set(
+    m_defaultFormats.Set(
         DIF_STORAGE,
         m_instance->GetDevice()->GetFeatures().FindSupportedFormat(
             { { TF_RGBA16F } },
@@ -430,10 +430,10 @@ RendererResult VulkanRenderBackend::Initialize(AppContextBase& app_context)
 
 RendererResult VulkanRenderBackend::Destroy()
 {
-    m_descriptor_set_manager->Destroy(m_instance->GetDevice());
+    m_descriptorSetManager->Destroy(m_instance->GetDevice());
 
-    delete m_async_compute;
-    m_async_compute = nullptr;
+    delete m_asyncCompute;
+    m_asyncCompute = nullptr;
 
     HYPERION_BUBBLE_ERRORS(m_instance->GetDevice()->Wait());
     HYPERION_BUBBLE_ERRORS(m_instance->Destroy());
@@ -451,13 +451,13 @@ FrameBase* VulkanRenderBackend::GetCurrentFrame() const
 
 FrameBase* VulkanRenderBackend::PrepareNextFrame()
 {
-    RendererResult frame_result = m_instance->GetSwapchain()->PrepareFrame(m_should_recreate_swapchain);
+    RendererResult frameResult = m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain);
 
     VulkanFrame* frame = m_instance->GetSwapchain()->GetCurrentFrame();
 
-    if (m_should_recreate_swapchain)
+    if (m_shouldRecreateSwapchain)
     {
-        m_should_recreate_swapchain = false;
+        m_shouldRecreateSwapchain = false;
 
         HYPERION_ASSERT_RESULT(m_instance->GetDevice()->Wait());
         HYPERION_ASSERT_RESULT(m_instance->RecreateSwapchain());
@@ -466,47 +466,47 @@ FrameBase* VulkanRenderBackend::PrepareNextFrame()
         HYPERION_ASSERT_RESULT(m_instance->GetSwapchain()->GetCurrentFrame()->RecreateFence());
 
         // Need to prepare frame again now that swapchain has been recreated.
-        HYPERION_ASSERT_RESULT(m_instance->GetSwapchain()->PrepareFrame(m_should_recreate_swapchain));
+        HYPERION_ASSERT_RESULT(m_instance->GetSwapchain()->PrepareFrame(m_shouldRecreateSwapchain));
 
-        AssertThrow(!m_should_recreate_swapchain);
+        AssertThrow(!m_shouldRecreateSwapchain);
 
         frame = m_instance->GetSwapchain()->GetCurrentFrame();
 
         OnSwapchainRecreated(m_instance->GetSwapchain());
     }
 
-    if (!frame_result)
+    if (!frameResult)
     {
-        m_crash_handler.HandleGPUCrash(frame_result);
+        m_crashHandler.HandleGPUCrash(frameResult);
 
         return nullptr;
     }
 
-    VulkanAsyncCompute* async_compute = static_cast<VulkanAsyncCompute*>(m_async_compute);
+    VulkanAsyncCompute* asyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute);
 
-    HYPERION_ASSERT_RESULT(async_compute->PrepareForFrame(frame));
+    HYPERION_ASSERT_RESULT(asyncCompute->PrepareForFrame(frame));
 
     return frame;
 }
 
 void VulkanRenderBackend::PresentFrame(FrameBase* frame)
 {
-    const CommandBufferRef& command_buffer = m_instance->GetSwapchain()->GetCurrentCommandBuffer();
+    const CommandBufferRef& commandBuffer = m_instance->GetSwapchain()->GetCurrentCommandBuffer();
 
-    VulkanFrame* vulkan_frame = static_cast<VulkanFrame*>(frame);
-    VulkanCommandBufferRef vulkan_command_buffer = VulkanCommandBufferRef(command_buffer);
-    VulkanAsyncCompute* vulkan_async_compute = static_cast<VulkanAsyncCompute*>(m_async_compute);
+    VulkanFrame* vulkanFrame = static_cast<VulkanFrame*>(frame);
+    VulkanCommandBufferRef vulkanCommandBuffer = VulkanCommandBufferRef(commandBuffer);
+    VulkanAsyncCompute* vulkanAsyncCompute = static_cast<VulkanAsyncCompute*>(m_asyncCompute);
 
-    RendererResult submit_result = vulkan_frame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkan_command_buffer);
+    RendererResult submitResult = vulkanFrame->Submit(&m_instance->GetDevice()->GetGraphicsQueue(), vulkanCommandBuffer);
 
-    if (!submit_result)
+    if (!submitResult)
     {
-        m_crash_handler.HandleGPUCrash(submit_result);
+        m_crashHandler.HandleGPUCrash(submitResult);
 
         return;
     }
 
-    HYPERION_ASSERT_RESULT(vulkan_async_compute->Submit(vulkan_frame));
+    HYPERION_ASSERT_RESULT(vulkanAsyncCompute->Submit(vulkanFrame));
 
     m_instance->GetSwapchain()->PresentFrame(&m_instance->GetDevice()->GetGraphicsQueue());
     m_instance->GetSwapchain()->NextFrame();
@@ -514,14 +514,14 @@ void VulkanRenderBackend::PresentFrame(FrameBase* frame)
 
 DescriptorSetRef VulkanRenderBackend::MakeDescriptorSet(const DescriptorSetLayout& layout)
 {
-    DescriptorSetLayout new_layout { layout.GetDeclaration() };
-    new_layout.SetIsTemplate(false);
-    new_layout.SetIsReference(false);
+    DescriptorSetLayout newLayout { layout.GetDeclaration() };
+    newLayout.SetIsTemplate(false);
+    newLayout.SetIsReference(false);
 
-    DescriptorSetRef descriptor_set = MakeRenderObject<VulkanDescriptorSet>(new_layout);
-    descriptor_set->SetDebugName(layout.GetName());
+    DescriptorSetRef descriptorSet = MakeRenderObject<VulkanDescriptorSet>(newLayout);
+    descriptorSet->SetDebugName(layout.GetName());
 
-    return descriptor_set;
+    return descriptorSet;
 }
 
 DescriptorTableRef VulkanRenderBackend::MakeDescriptorTable(const DescriptorTableDeclaration* decl)
@@ -531,80 +531,80 @@ DescriptorTableRef VulkanRenderBackend::MakeDescriptorTable(const DescriptorTabl
 
 GraphicsPipelineRef VulkanRenderBackend::MakeGraphicsPipeline(
     const ShaderRef& shader,
-    const DescriptorTableRef& descriptor_table,
+    const DescriptorTableRef& descriptorTable,
     Span<const FramebufferRef> framebuffers,
     const RenderableAttributeSet& attributes)
 {
-    VulkanRenderPassRef render_pass;
+    VulkanRenderPassRef renderPass;
 
     for (const FramebufferRef& framebuffer : framebuffers)
     {
         AssertThrow(framebuffer.IsValid());
 
-        VulkanFramebuffer* vulkan_framebuffer = static_cast<VulkanFramebuffer*>(framebuffer.Get());
+        VulkanFramebuffer* vulkanFramebuffer = static_cast<VulkanFramebuffer*>(framebuffer.Get());
 
-        if (vulkan_framebuffer->GetRenderPass() != nullptr)
+        if (vulkanFramebuffer->GetRenderPass() != nullptr)
         {
-            render_pass = vulkan_framebuffer->GetRenderPass();
+            renderPass = vulkanFramebuffer->GetRenderPass();
 
             break;
         }
     }
 
-    VulkanGraphicsPipelineRef graphics_pipeline;
+    VulkanGraphicsPipelineRef graphicsPipeline;
 
-    if (descriptor_table.IsValid())
+    if (descriptorTable.IsValid())
     {
-        graphics_pipeline = MakeRenderObject<VulkanGraphicsPipeline>(VulkanShaderRef::unset, VulkanDescriptorTableRef(descriptor_table));
+        graphicsPipeline = MakeRenderObject<VulkanGraphicsPipeline>(VulkanShaderRef::unset, VulkanDescriptorTableRef(descriptorTable));
     }
     else
     {
-        graphics_pipeline = MakeRenderObject<VulkanGraphicsPipeline>();
+        graphicsPipeline = MakeRenderObject<VulkanGraphicsPipeline>();
     }
 
     if (shader.IsValid())
     {
-        graphics_pipeline->SetShader(shader);
+        graphicsPipeline->SetShader(shader);
     }
 
-    AssertThrow(graphics_pipeline->GetDescriptorTable().IsValid());
+    AssertThrow(graphicsPipeline->GetDescriptorTable().IsValid());
 
-    graphics_pipeline->SetVertexAttributes(attributes.GetMeshAttributes().vertex_attributes);
-    graphics_pipeline->SetTopology(attributes.GetMeshAttributes().topology);
-    graphics_pipeline->SetCullMode(attributes.GetMaterialAttributes().cull_faces);
-    graphics_pipeline->SetFillMode(attributes.GetMaterialAttributes().fill_mode);
-    graphics_pipeline->SetBlendFunction(attributes.GetMaterialAttributes().blend_function);
-    graphics_pipeline->SetStencilFunction(attributes.GetMaterialAttributes().stencil_function);
-    graphics_pipeline->SetDepthTest(bool(attributes.GetMaterialAttributes().flags & MaterialAttributeFlags::DEPTH_TEST));
-    graphics_pipeline->SetDepthWrite(bool(attributes.GetMaterialAttributes().flags & MaterialAttributeFlags::DEPTH_WRITE));
-    graphics_pipeline->SetRenderPass(render_pass);
-    graphics_pipeline->SetFramebuffers(framebuffers);
+    graphicsPipeline->SetVertexAttributes(attributes.GetMeshAttributes().vertexAttributes);
+    graphicsPipeline->SetTopology(attributes.GetMeshAttributes().topology);
+    graphicsPipeline->SetCullMode(attributes.GetMaterialAttributes().cullFaces);
+    graphicsPipeline->SetFillMode(attributes.GetMaterialAttributes().fillMode);
+    graphicsPipeline->SetBlendFunction(attributes.GetMaterialAttributes().blendFunction);
+    graphicsPipeline->SetStencilFunction(attributes.GetMaterialAttributes().stencilFunction);
+    graphicsPipeline->SetDepthTest(bool(attributes.GetMaterialAttributes().flags & MaterialAttributeFlags::DEPTH_TEST));
+    graphicsPipeline->SetDepthWrite(bool(attributes.GetMaterialAttributes().flags & MaterialAttributeFlags::DEPTH_WRITE));
+    graphicsPipeline->SetRenderPass(renderPass);
+    graphicsPipeline->SetFramebuffers(framebuffers);
 
-    return graphics_pipeline;
+    return graphicsPipeline;
 }
 
 ComputePipelineRef VulkanRenderBackend::MakeComputePipeline(
     const ShaderRef& shader,
-    const DescriptorTableRef& descriptor_table)
+    const DescriptorTableRef& descriptorTable)
 {
-    return MakeRenderObject<VulkanComputePipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptor_table));
+    return MakeRenderObject<VulkanComputePipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptorTable));
 }
 
 RaytracingPipelineRef VulkanRenderBackend::MakeRaytracingPipeline(
     const ShaderRef& shader,
-    const DescriptorTableRef& descriptor_table)
+    const DescriptorTableRef& descriptorTable)
 {
-    return MakeRenderObject<VulkanRaytracingPipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptor_table));
+    return MakeRenderObject<VulkanRaytracingPipeline>(VulkanShaderRef(shader), VulkanDescriptorTableRef(descriptorTable));
 }
 
-GpuBufferRef VulkanRenderBackend::MakeGpuBuffer(GpuBufferType buffer_type, SizeType size, SizeType alignment)
+GpuBufferRef VulkanRenderBackend::MakeGpuBuffer(GpuBufferType bufferType, SizeType size, SizeType alignment)
 {
-    return MakeRenderObject<VulkanGpuBuffer>(buffer_type, size, alignment);
+    return MakeRenderObject<VulkanGpuBuffer>(bufferType, size, alignment);
 }
 
-ImageRef VulkanRenderBackend::MakeImage(const TextureDesc& texture_desc)
+ImageRef VulkanRenderBackend::MakeImage(const TextureDesc& textureDesc)
 {
-    return MakeRenderObject<VulkanImage>(texture_desc);
+    return MakeRenderObject<VulkanImage>(textureDesc);
 }
 
 ImageViewRef VulkanRenderBackend::MakeImageView(const ImageRef& image)
@@ -612,51 +612,51 @@ ImageViewRef VulkanRenderBackend::MakeImageView(const ImageRef& image)
     return MakeRenderObject<VulkanImageView>(VulkanImageRef(image));
 }
 
-ImageViewRef VulkanRenderBackend::MakeImageView(const ImageRef& image, uint32 mip_index, uint32 num_mips, uint32 face_index, uint32 num_faces)
+ImageViewRef VulkanRenderBackend::MakeImageView(const ImageRef& image, uint32 mipIndex, uint32 numMips, uint32 faceIndex, uint32 numFaces)
 {
-    return MakeRenderObject<VulkanImageView>(VulkanImageRef(image), mip_index, num_mips, face_index, num_faces);
+    return MakeRenderObject<VulkanImageView>(VulkanImageRef(image), mipIndex, numMips, faceIndex, numFaces);
 }
 
-SamplerRef VulkanRenderBackend::MakeSampler(TextureFilterMode filter_mode_min, TextureFilterMode filter_mode_mag, TextureWrapMode wrap_mode)
+SamplerRef VulkanRenderBackend::MakeSampler(TextureFilterMode filterModeMin, TextureFilterMode filterModeMag, TextureWrapMode wrapMode)
 {
-    return MakeRenderObject<VulkanSampler>(filter_mode_min, filter_mode_mag, wrap_mode);
+    return MakeRenderObject<VulkanSampler>(filterModeMin, filterModeMag, wrapMode);
 }
 
-FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, uint32 num_views)
+FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, uint32 numViews)
 {
     return MakeRenderObject<VulkanFramebuffer>(
         extent,
         RenderPassStage::SHADER,
-        num_views);
+        numViews);
 }
 
-FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, RenderPassStage stage, uint32 num_views)
+FramebufferRef VulkanRenderBackend::MakeFramebuffer(Vec2u extent, RenderPassStage stage, uint32 numViews)
 {
     return MakeRenderObject<VulkanFramebuffer>(
         extent,
         stage,
-        num_views);
+        numViews);
 }
 
-FrameRef VulkanRenderBackend::MakeFrame(uint32 frame_index)
+FrameRef VulkanRenderBackend::MakeFrame(uint32 frameIndex)
 {
-    return MakeRenderObject<VulkanFrame>(frame_index);
+    return MakeRenderObject<VulkanFrame>(frameIndex);
 }
 
-ShaderRef VulkanRenderBackend::MakeShader(const RC<CompiledShader>& compiled_shader)
+ShaderRef VulkanRenderBackend::MakeShader(const RC<CompiledShader>& compiledShader)
 {
-    return MakeRenderObject<VulkanShader>(compiled_shader);
+    return MakeRenderObject<VulkanShader>(compiledShader);
 }
 
 BLASRef VulkanRenderBackend::MakeBLAS(
-    const GpuBufferRef& packed_vertices_buffer,
-    const GpuBufferRef& packed_indices_buffer,
+    const GpuBufferRef& packedVerticesBuffer,
+    const GpuBufferRef& packedIndicesBuffer,
     const Handle<Material>& material,
     const Matrix4& transform)
 {
     return MakeRenderObject<VulkanBLAS>(
-        VulkanGpuBufferRef(packed_vertices_buffer),
-        VulkanGpuBufferRef(packed_indices_buffer),
+        VulkanGpuBufferRef(packedVerticesBuffer),
+        VulkanGpuBufferRef(packedIndicesBuffer),
         material,
         transform);
 }
@@ -668,8 +668,8 @@ TLASRef VulkanRenderBackend::MakeTLAS()
 
 TextureFormat VulkanRenderBackend::GetDefaultFormat(DefaultImageFormat type) const
 {
-    auto it = m_default_formats.Find(type);
-    if (it != m_default_formats.End())
+    auto it = m_defaultFormats.Find(type);
+    if (it != m_defaultFormats.End())
     {
         return it->second;
     }
@@ -677,89 +677,89 @@ TextureFormat VulkanRenderBackend::GetDefaultFormat(DefaultImageFormat type) con
     return TF_NONE;
 }
 
-bool VulkanRenderBackend::IsSupportedFormat(TextureFormat format, ImageSupport support_type) const
+bool VulkanRenderBackend::IsSupportedFormat(TextureFormat format, ImageSupport supportType) const
 {
-    return m_instance->GetDevice()->GetFeatures().IsSupportedFormat(format, support_type);
+    return m_instance->GetDevice()->GetFeatures().IsSupportedFormat(format, supportType);
 }
 
-TextureFormat VulkanRenderBackend::FindSupportedFormat(Span<TextureFormat> possible_formats, ImageSupport support_type) const
+TextureFormat VulkanRenderBackend::FindSupportedFormat(Span<TextureFormat> possibleFormats, ImageSupport supportType) const
 {
-    return m_instance->GetDevice()->GetFeatures().FindSupportedFormat(possible_formats, support_type);
+    return m_instance->GetDevice()->GetFeatures().FindSupportedFormat(possibleFormats, supportType);
 }
 
-QueryImageCapabilitiesResult VulkanRenderBackend::QueryImageCapabilities(const TextureDesc& texture_desc) const
+QueryImageCapabilitiesResult VulkanRenderBackend::QueryImageCapabilities(const TextureDesc& textureDesc) const
 {
     QueryImageCapabilitiesResult result;
 
-    const TextureFormat format = texture_desc.format;
-    const TextureType type = texture_desc.type;
+    const TextureFormat format = textureDesc.format;
+    const TextureType type = textureDesc.type;
 
-    const bool is_attachment_texture = texture_desc.image_usage[IU_ATTACHMENT];
-    const bool is_rw_texture = texture_desc.image_usage[IU_STORAGE];
+    const bool isAttachmentTexture = textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool isRwTexture = textureDesc.imageUsage[IU_STORAGE];
 
-    const bool is_depth_stencil = texture_desc.IsDepthStencil();
-    const bool is_srgb = texture_desc.IsSRGB();
-    const bool is_blended = texture_desc.image_usage[IU_BLENDED];
+    const bool isDepthStencil = textureDesc.IsDepthStencil();
+    const bool isSrgb = textureDesc.IsSRGB();
+    const bool isBlended = textureDesc.imageUsage[IU_BLENDED];
 
-    const bool has_mipmaps = texture_desc.HasMipmaps();
-    const uint32 num_mipmaps = texture_desc.NumMipmaps();
-    const uint32 num_faces = texture_desc.NumFaces();
+    const bool hasMipmaps = textureDesc.HasMipmaps();
+    const uint32 numMipmaps = textureDesc.NumMipmaps();
+    const uint32 numFaces = textureDesc.NumFaces();
 
-    VkFormat vk_format = helpers::ToVkFormat(format);
-    VkImageType vk_image_type = helpers::ToVkImageType(type);
-    VkImageCreateFlags vk_image_create_flags = 0;
-    VkFormatFeatureFlags vk_format_features = 0;
-    VkImageFormatProperties vk_image_format_properties {};
+    VkFormat vkFormat = helpers::ToVkFormat(format);
+    VkImageType vkImageType = helpers::ToVkImageType(type);
+    VkImageCreateFlags vkImageCreateFlags = 0;
+    VkFormatFeatureFlags vkFormatFeatures = 0;
+    VkImageFormatProperties vkImageFormatProperties {};
 
-    VkImageTiling vk_tiling = VK_IMAGE_TILING_OPTIMAL;
-    VkImageUsageFlags vk_usage_flags = VK_IMAGE_USAGE_SAMPLED_BIT;
+    VkImageTiling vkTiling = VK_IMAGE_TILING_OPTIMAL;
+    VkImageUsageFlags vkUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT;
 
-    if (is_attachment_texture)
+    if (isAttachmentTexture)
     {
-        vk_usage_flags |= (is_depth_stencil ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+        vkUsageFlags |= (isDepthStencil ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
             | VK_IMAGE_USAGE_TRANSFER_SRC_BIT; /* for mip chain */
     }
 
-    if (is_rw_texture)
+    if (isRwTexture)
     {
-        vk_usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT /* allow readback */
+        vkUsageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT /* allow readback */
             | VK_IMAGE_USAGE_STORAGE_BIT;
     }
     else
     {
-        vk_usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        vkUsageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
-    if (has_mipmaps)
+    if (hasMipmaps)
     {
         /* Mipmapped image needs linear blitting. */
-        vk_format_features |= VK_FORMAT_FEATURE_BLIT_DST_BIT
+        vkFormatFeatures |= VK_FORMAT_FEATURE_BLIT_DST_BIT
             | VK_FORMAT_FEATURE_BLIT_SRC_BIT;
 
-        vk_usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        vkUsageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-        switch (texture_desc.filter_mode_min)
+        switch (textureDesc.filterModeMin)
         {
         case TFM_LINEAR: // fallthrough
         case TFM_LINEAR_MIPMAP:
-            vk_format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+            vkFormatFeatures |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
             break;
         case TFM_MINMAX_MIPMAP:
-            vk_format_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT;
+            vkFormatFeatures |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT;
             break;
         default:
             break;
         }
     }
 
-    if (is_blended)
+    if (isBlended)
     {
-        vk_format_features |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+        vkFormatFeatures |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
     }
 
-    if (texture_desc.IsTextureCube() || texture_desc.IsTextureCubeArray())
+    if (textureDesc.IsTextureCube() || textureDesc.IsTextureCubeArray())
     {
-        vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        vkImageCreateFlags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
 
     // @TODO Implement me.
@@ -767,21 +767,21 @@ QueryImageCapabilitiesResult VulkanRenderBackend::QueryImageCapabilities(const T
     HYP_NOT_IMPLEMENTED();
 }
 
-RendererResult VulkanRenderBackend::CreateDescriptorSet(const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& out_vk_descriptor_set)
+RendererResult VulkanRenderBackend::CreateDescriptorSet(const VulkanDescriptorSetLayoutWrapperRef& layout, VkDescriptorSet& outVkDescriptorSet)
 {
-    return m_descriptor_set_manager->CreateDescriptorSet(m_instance->GetDevice(), layout, out_vk_descriptor_set);
+    return m_descriptorSetManager->CreateDescriptorSet(m_instance->GetDevice(), layout, outVkDescriptorSet);
 }
 
-RendererResult VulkanRenderBackend::DestroyDescriptorSet(VkDescriptorSet vk_descriptor_set)
+RendererResult VulkanRenderBackend::DestroyDescriptorSet(VkDescriptorSet vkDescriptorSet)
 {
-    return m_descriptor_set_manager->DestroyDescriptorSet(m_instance->GetDevice(), vk_descriptor_set);
+    return m_descriptorSetManager->DestroyDescriptorSet(m_instance->GetDevice(), vkDescriptorSet);
 }
 
-RendererResult VulkanRenderBackend::GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& out_ref)
+RendererResult VulkanRenderBackend::GetOrCreateVkDescriptorSetLayout(const DescriptorSetLayout& layout, VulkanDescriptorSetLayoutWrapperRef& outRef)
 {
-    out_ref = m_descriptor_set_manager->GetOrCreateVkDescriptorSetLayout(m_instance->GetDevice(), layout);
+    outRef = m_descriptorSetManager->GetOrCreateVkDescriptorSetLayout(m_instance->GetDevice(), layout);
 
-    if (out_ref.IsValid())
+    if (outRef.IsValid())
     {
         return RendererResult {};
     }

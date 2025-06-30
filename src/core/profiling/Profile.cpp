@@ -7,23 +7,23 @@
 namespace hyperion {
 namespace profiling {
 
-Array<double> Profile::RunInterleved(Array<Profile*>&& profiles, SizeType runs_per, SizeType num_iterations, SizeType runs_per_iteration)
+Array<double> Profile::RunInterleved(Array<Profile*>&& profiles, SizeType runsPer, SizeType numIterations, SizeType runsPerIteration)
 {
     Array<double> results;
     results.Resize(profiles.Size());
 
-    SizeType run_index = 0;
+    SizeType runIndex = 0;
 
-    for (SizeType i = 0; i < runs_per; i++)
+    for (SizeType i = 0; i < runsPer; i++)
     {
 
         // size_t index = 0;
-        SizeType index = run_index++ % profiles.Size();
+        SizeType index = runIndex++ % profiles.Size();
         SizeType counter = 0;
 
         while (counter < profiles.Size())
         {
-            profiles[index]->Run(num_iterations, runs_per_iteration);
+            profiles[index]->Run(numIterations, runsPerIteration);
 
             index = ++index % profiles.Size();
 
@@ -39,35 +39,32 @@ Array<double> Profile::RunInterleved(Array<Profile*>&& profiles, SizeType runs_p
     return results;
 }
 
-Profile& Profile::Run(SizeType num_iterations, SizeType runs_per_iteration)
+Profile& Profile::Run(SizeType numIterations, SizeType runsPerIteration)
 {
-    using namespace std;
-    using namespace std::chrono;
+    double* times = new double[numIterations];
 
-    auto* times = new double[num_iterations];
-
-    for (SizeType i = 0; i < num_iterations; i++)
+    for (SizeType i = 0; i < numIterations; i++)
     {
-        auto start = high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
 
-        for (int j = 0; j < runs_per_iteration; j++)
+        for (int j = 0; j < runsPerIteration; j++)
         {
-            m_profile_function();
+            m_profileFunction();
         }
 
-        auto stop = high_resolution_clock::now();
+        auto stop = std::chrono::high_resolution_clock::now();
 
         times[i] = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1>>>(stop - start).count();
     }
 
     double result = 0.0;
 
-    for (SizeType i = 0; i < num_iterations; i++)
+    for (SizeType i = 0; i < numIterations; i++)
     {
         result += times[i];
     }
 
-    result /= double(num_iterations);
+    result /= double(numIterations);
 
     m_result += result; //= (m_result + result) * (1.0 / (m_iteration + 1));
     m_iteration++;

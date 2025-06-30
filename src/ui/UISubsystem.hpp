@@ -23,7 +23,7 @@ class HYP_API UISubsystem : public Subsystem
     HYP_OBJECT_BODY(UISubsystem);
 
 public:
-    UISubsystem(const Handle<UIStage>& ui_stage);
+    UISubsystem(const Handle<UIStage>& uiStage);
     virtual ~UISubsystem() override;
 
     void OnAddedToWorld() override;
@@ -37,12 +37,12 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<UIStage>& GetUIStage() const
     {
-        return m_ui_stage;
+        return m_uiStage;
     }
 
 private:
-    Handle<UIStage> m_ui_stage;
-    Handle<UIRenderSubsystem> m_ui_render_subsystem;
+    Handle<UIStage> m_uiStage;
+    Handle<UIRenderSubsystem> m_uiRenderSubsystem;
 };
 
 } // namespace hyperion

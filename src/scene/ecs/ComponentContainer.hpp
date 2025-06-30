@@ -41,41 +41,41 @@ struct ComponentDescriptor
 {
     using Type = T;
 
-    constexpr static ComponentRWFlags rw_flags = RWFlags;
-    constexpr static bool receives_events = ReceivesEvents;
+    constexpr static ComponentRWFlags rwFlags = RWFlags;
+    constexpr static bool receivesEvents = ReceivesEvents;
 };
 
 HYP_STRUCT(Size = 12)
 struct ComponentInfo
 {
     HYP_FIELD()
-    TypeId type_id;
+    TypeId typeId;
 
     HYP_FIELD()
-    ComponentRWFlags rw_flags;
+    ComponentRWFlags rwFlags;
 
     HYP_FIELD()
-    bool receives_events;
+    bool receivesEvents;
 
     ComponentInfo()
-        : type_id(TypeId::Void()),
-          rw_flags(COMPONENT_RW_FLAGS_NONE),
-          receives_events(false)
+        : typeId(TypeId::Void()),
+          rwFlags(COMPONENT_RW_FLAGS_NONE),
+          receivesEvents(false)
     {
     }
 
-    ComponentInfo(TypeId type_id, ComponentRWFlags rw_flags = COMPONENT_RW_FLAGS_NONE, bool receives_events = false)
-        : type_id(type_id),
-          rw_flags(rw_flags),
-          receives_events(receives_events)
+    ComponentInfo(TypeId typeId, ComponentRWFlags rwFlags = COMPONENT_RW_FLAGS_NONE, bool receivesEvents = false)
+        : typeId(typeId),
+          rwFlags(rwFlags),
+          receivesEvents(receivesEvents)
     {
     }
 
     template <class ComponentDescriptorType>
     ComponentInfo(ComponentDescriptorType)
-        : type_id(TypeId::ForType<typename NormalizedType<ComponentDescriptorType>::Type>()),
-          rw_flags(NormalizedType<ComponentDescriptorType>::rw_flags),
-          receives_events(NormalizedType<ComponentDescriptorType>::receives_events)
+        : typeId(TypeId::ForType<typename NormalizedType<ComponentDescriptorType>::Type>()),
+          rwFlags(NormalizedType<ComponentDescriptorType>::rwFlags),
+          receivesEvents(NormalizedType<ComponentDescriptorType>::receivesEvents)
     {
     }
 };
@@ -105,12 +105,12 @@ public:
 #ifdef HYP_ENABLE_MT_CHECK
     HYP_FORCE_INLINE DataRaceDetector& GetDataRaceDetector()
     {
-        return m_data_race_detector;
+        return m_dataRaceDetector;
     }
 
     HYP_FORCE_INLINE const DataRaceDetector& GetDataRaceDetector() const
     {
-        return m_data_race_detector;
+        return m_dataRaceDetector;
     }
 #endif
 
@@ -139,11 +139,11 @@ public:
     /*! \brief Tries to get the component with the given Id from the component container.
      *
      *  \param id The Id of the component to get.
-     *  \param out_hyp_data The value to store a reference to the component in
+     *  \param outHypData The value to store a reference to the component in
      *
      *  \return True if the component was found, false otherwise
      */
-    virtual bool TryGetComponent(ComponentId id, HypData& out_hyp_data) = 0;
+    virtual bool TryGetComponent(ComponentId id, HypData& outHypData) = 0;
 
     /*! \brief Checks if the component container has a component with the given Id.
      *
@@ -155,19 +155,19 @@ public:
 
     /*! \brief Adds a component to the component container, using HypData to store the component data generically.
      *
-     *  \param component_data The HypData containing the component data to add.
+     *  \param componentData The HypData containing the component data to add.
      *
      *  \return The Id of the added component.
      */
-    virtual ComponentId AddComponent(const HypData& component_data) = 0;
+    virtual ComponentId AddComponent(const HypData& componentData) = 0;
 
     /*! \brief Adds a component to the component container, using HypData to store the component data generically.
      *
-     *  \param component_data The HypData containing the component data to add.
+     *  \param componentData The HypData containing the component data to add.
      *
      *  \return The Id of the added component.
      */
-    virtual ComponentId AddComponent(HypData&& component_data) = 0;
+    virtual ComponentId AddComponent(HypData&& componentData) = 0;
 
     /*! \brief Removes the component with the given Id from the component container.
      *
@@ -180,11 +180,11 @@ public:
     /*! \brief Removes the component with the given Id from the component container and stores the component object in HypData
      *
      *  \param id The Id of the component to remove.
-     *  \param out_hyp_data Out reference to store the component data in
+     *  \param outHypData Out reference to store the component data in
      *
      *  \return True if the component was removed, false otherwise.
      */
-    virtual bool RemoveComponent(ComponentId id, HypData& out_hyp_data) = 0;
+    virtual bool RemoveComponent(ComponentId id, HypData& outHypData) = 0;
 
     /*! \brief Moves the component with the given Id from this component container to the given component container.
      *       The component container must be of the same type as this component container, otherwise an assertion will be thrown.
@@ -197,7 +197,7 @@ public:
     virtual Optional<ComponentId> MoveComponent(ComponentId id, ComponentContainerBase& other) = 0;
 
 protected:
-    HYP_DECLARE_MT_CHECK(m_data_race_detector);
+    HYP_DECLARE_MT_CHECK(m_dataRaceDetector);
 
 private:
     ComponentContainerFactoryBase* m_factory;
@@ -252,21 +252,21 @@ public:
 
     virtual TypeId GetComponentTypeId() const override
     {
-        static const TypeId type_id = TypeId::ForType<Component>();
+        static const TypeId typeId = TypeId::ForType<Component>();
 
-        return type_id;
+        return typeId;
     }
 
     virtual bool HasComponent(ComponentId id) const override
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         return m_components.Contains(id);
     }
 
     virtual AnyRef TryGetComponent(ComponentId id) override
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         auto it = m_components.Find(id);
 
@@ -280,7 +280,7 @@ public:
 
     virtual ConstAnyRef TryGetComponent(ComponentId id) const override
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         auto it = m_components.Find(id);
 
@@ -292,9 +292,9 @@ public:
         return ConstAnyRef(&it->second);
     }
 
-    virtual bool TryGetComponent(ComponentId id, HypData& out_hyp_data) override
+    virtual bool TryGetComponent(ComponentId id, HypData& outHypData) override
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         auto it = m_components.Find(id);
 
@@ -303,14 +303,14 @@ public:
             return false;
         }
 
-        out_hyp_data = HypData(&it->second);
+        outHypData = HypData(&it->second);
 
         return true;
     }
 
     HYP_FORCE_INLINE Component& GetComponent(ComponentId id)
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         AssertThrowMsg(HasComponent(id), "Component of type `%s` with Id %u does not exist", TypeNameWithoutNamespace<Component>().Data(), id);
 
@@ -319,7 +319,7 @@ public:
 
     HYP_FORCE_INLINE const Component& GetComponent(ComponentId id) const
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         AssertThrowMsg(HasComponent(id), "Component of type `%s` with Id %u does not exist", TypeNameWithoutNamespace<Component>().Data(), id);
 
@@ -328,45 +328,45 @@ public:
 
     HYP_FORCE_INLINE Pair<ComponentId, Component&> AddComponent(const Component& component)
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        ComponentId id = ++m_component_id_counter;
+        ComponentId id = ++m_componentIdCounter;
 
-        auto insert_result = m_components.Set(id, component);
+        auto insertResult = m_components.Set(id, component);
 
-        return Pair<ComponentId, Component&> { id, insert_result.first->second };
+        return Pair<ComponentId, Component&> { id, insertResult.first->second };
     }
 
     HYP_FORCE_INLINE Pair<ComponentId, Component&> AddComponent(Component&& component)
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
-        ComponentId id = ++m_component_id_counter;
+        ComponentId id = ++m_componentIdCounter;
 
-        auto insert_result = m_components.Set(id, std::move(component));
+        auto insertResult = m_components.Set(id, std::move(component));
 
-        return Pair<ComponentId, Component&> { id, insert_result.first->second };
+        return Pair<ComponentId, Component&> { id, insertResult.first->second };
     }
 
-    virtual ComponentId AddComponent(const HypData& component_data) override
+    virtual ComponentId AddComponent(const HypData& componentData) override
     {
-        AssertThrowMsg(component_data.IsValid(), "Cannot add an invalid component");
-        AssertThrowMsg(component_data.Is<Component>(), "Component data is not of the correct type");
+        AssertThrowMsg(componentData.IsValid(), "Cannot add an invalid component");
+        AssertThrowMsg(componentData.Is<Component>(), "Component data is not of the correct type");
 
-        return AddComponent(component_data.Get<Component>()).first;
+        return AddComponent(componentData.Get<Component>()).first;
     }
 
-    virtual ComponentId AddComponent(HypData&& component_data) override
+    virtual ComponentId AddComponent(HypData&& componentData) override
     {
-        AssertThrowMsg(component_data.IsValid(), "Cannot add an invalid component");
-        AssertThrowMsg(component_data.Is<Component>(), "Component is not of the correct type");
+        AssertThrowMsg(componentData.IsValid(), "Cannot add an invalid component");
+        AssertThrowMsg(componentData.Is<Component>(), "Component is not of the correct type");
 
-        return AddComponent(std::move(component_data.Get<Component>())).first;
+        return AddComponent(std::move(componentData.Get<Component>())).first;
     }
 
     virtual bool RemoveComponent(ComponentId id) override
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
         auto it = m_components.Find(id);
 
@@ -380,15 +380,15 @@ public:
         return false;
     }
 
-    virtual bool RemoveComponent(ComponentId id, HypData& out_hyp_data) override
+    virtual bool RemoveComponent(ComponentId id, HypData& outHypData) override
     {
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
         auto it = m_components.Find(id);
 
         if (it != m_components.End())
         {
-            out_hyp_data = HypData(std::move(it->second));
+            outHypData = HypData(std::move(it->second));
 
             m_components.Erase(it);
 
@@ -402,7 +402,7 @@ public:
     {
         AssertThrowMsg(other.GetComponentTypeId() == GetComponentTypeId(), "Component container is not of the same type");
 
-        HYP_MT_CHECK_RW(m_data_race_detector);
+        HYP_MT_CHECK_RW(m_dataRaceDetector);
 
         auto it = m_components.Find(id);
 
@@ -410,11 +410,11 @@ public:
         {
             Component& component = it->second;
 
-            const ComponentId new_component_id = static_cast<ComponentContainer<Component>&>(other).AddComponent(std::move(component)).first;
+            const ComponentId newComponentId = static_cast<ComponentContainer<Component>&>(other).AddComponent(std::move(component)).first;
 
             m_components.Erase(it);
 
-            return new_component_id;
+            return newComponentId;
         }
 
         return {};
@@ -422,17 +422,17 @@ public:
 
     HYP_FORCE_INLINE SizeType Size() const
     {
-        HYP_MT_CHECK_READ(m_data_race_detector);
+        HYP_MT_CHECK_READ(m_dataRaceDetector);
 
         return m_components.Size();
     }
 
 private:
-    ComponentId m_component_id_counter = 0;
+    ComponentId m_componentIdCounter = 0;
 
     /// TODO: Change to MemoryPool and use Component* rather than ComponentId
     HashMap<ComponentId, Component> m_components;
-    // MemoryPool<Component> m_component_pool;
+    // MemoryPool<Component> m_componentPool;
 };
 
 template <class Component>

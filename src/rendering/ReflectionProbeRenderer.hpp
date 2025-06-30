@@ -24,7 +24,7 @@ class HYP_API ReflectionProbeRenderer : public RenderSubsystem
     HYP_OBJECT_BODY(ReflectionProbeRenderer);
 
 public:
-    ReflectionProbeRenderer(Name name, const Handle<EnvProbe>& env_probe);
+    ReflectionProbeRenderer(Name name, const Handle<EnvProbe>& envProbe);
 
     ReflectionProbeRenderer(const ReflectionProbeRenderer& other) = delete;
     ReflectionProbeRenderer& operator=(const ReflectionProbeRenderer& other) = delete;
@@ -35,7 +35,7 @@ private:
     virtual void OnRemoved() override;
     virtual void OnUpdate(float delta) override;
 
-    Handle<EnvProbe> m_env_probe;
+    Handle<EnvProbe> m_envProbe;
 };
 #endif
 

@@ -29,19 +29,19 @@ public:
     HYP_METHOD(Property = "ColumnSize", XMLAttribute = "colsize")
     HYP_FORCE_INLINE int GetColumnSize() const
     {
-        return m_column_size;
+        return m_columnSize;
     }
 
     HYP_METHOD(Property = "ColumnSize", XMLAttribute = "colsize")
-    HYP_FORCE_INLINE void SetColumnSize(int column_size)
+    HYP_FORCE_INLINE void SetColumnSize(int columnSize)
     {
-        m_column_size = column_size;
+        m_columnSize = columnSize;
     }
 
 private:
     virtual void Init() override;
 
-    int m_column_size;
+    int m_columnSize;
 };
 
 #pragma endregion UIGridColumn
@@ -72,7 +72,7 @@ public:
     }
 
     int GetNumColumns() const;
-    void SetNumColumns(int num_columns);
+    void SetNumColumns(int numColumns);
 
     /*! \brief Adds a new column to the row.
      *
@@ -98,15 +98,15 @@ public:
     void UpdateColumnSizes();
     void UpdateColumnOffsets();
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
 private:
     virtual void Init() override;
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
-    int m_num_columns;
+    int m_numColumns;
 
     Array<UIGridColumn*> m_columns;
 };
@@ -134,14 +134,14 @@ public:
     HYP_METHOD(Property = "NumColumns")
     HYP_FORCE_INLINE int GetNumColumns() const
     {
-        return m_num_columns;
+        return m_numColumns;
     }
 
     /*! \brief Sets the number of columns in the grid.
      *
-     * \param num_columns The number of columns to set. */
+     * \param numColumns The number of columns to set. */
     HYP_METHOD(Property = "NumColumns", XMLAttribute = "cols")
-    void SetNumColumns(int num_columns);
+    void SetNumColumns(int numColumns);
 
     /*! \brief Gets the number of rows in the grid.
      *
@@ -154,26 +154,26 @@ public:
 
     /*! \brief Sets the number of rows in the grid.
      *
-     * \param num_rows The number of rows to set. */
+     * \param numRows The number of rows to set. */
     HYP_METHOD(Property = "NumRows", XMLAttribute = "rows")
-    void SetNumRows(uint32 num_rows);
+    void SetNumRows(uint32 numRows);
 
     Handle<UIGridRow> AddRow();
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
 protected:
     virtual void Init() override;
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
-    virtual void SetDataSource_Internal(UIDataSourceBase* data_source) override;
+    virtual void SetDataSource_Internal(UIDataSourceBase* dataSource) override;
 
 private:
     void UpdateLayout();
 
-    int m_num_columns;
+    int m_numColumns;
 
     Array<UIGridRow*> m_rows;
 };

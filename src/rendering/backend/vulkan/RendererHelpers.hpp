@@ -26,7 +26,7 @@ VkIndexType ToVkIndexType(GpuElemType);
 VkFormat ToVkFormat(TextureFormat);
 VkFilter ToVkFilter(TextureFilterMode);
 VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrapMode);
-VkImageAspectFlags ToVkImageAspect(TextureFormat internal_format);
+VkImageAspectFlags ToVkImageAspect(TextureFormat internalFormat);
 VkImageType ToVkImageType(TextureType);
 VkImageViewType ToVkImageViewType(TextureType type);
 VkDescriptorType ToVkDescriptorType(DescriptorSetElementType type);
@@ -40,7 +40,7 @@ struct SingleTimeCommandsPlatformImpl<Platform::vulkan>
 {
     SingleTimeCommands<Platform::vulkan>* self = nullptr;
     VkCommandPool pool {};
-    QueueFamilyIndices family_indices {};
+    QueueFamilyIndices familyIndices {};
 };
 
 } // namespace platform

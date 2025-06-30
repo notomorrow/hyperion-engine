@@ -8,14 +8,14 @@ namespace hyperion::serialization {
 
 #pragma region FBOMWriterConfig
 
-void FBOMWriterConfig::SaveToJSON(json::JSONValue& out_json) const
+void FBOMWriterConfig::SaveToJSON(json::JSONValue& outJson) const
 {
     json::JSONObject object = {
-        { "enable_static_data", enable_static_data },
-        { "compress_static_data", compress_static_data }
+        { "enable_static_data", enableStaticData },
+        { "compress_static_data", compressStaticData }
     };
 
-    out_json = object;
+    outJson = object;
 }
 
 bool FBOMWriterConfig::LoadFromJSON(const json::JSONValue& json)
@@ -27,8 +27,8 @@ bool FBOMWriterConfig::LoadFromJSON(const json::JSONValue& json)
 
     json::JSONObject object = json.AsObject();
 
-    enable_static_data = object["enable_static_data"].ToBool();
-    compress_static_data = object["compress_static_data"].ToBool();
+    enableStaticData = object["enable_static_data"].ToBool();
+    compressStaticData = object["compress_static_data"].ToBool();
 
     return true;
 }
@@ -37,16 +37,16 @@ bool FBOMWriterConfig::LoadFromJSON(const json::JSONValue& json)
 
 #pragma region FBOMReaderConfig
 
-void FBOMReaderConfig::SaveToJSON(json::JSONValue& out_json) const
+void FBOMReaderConfig::SaveToJSON(json::JSONValue& outJson) const
 {
     json::JSONObject object = {
-        { "continue_on_external_load_error", continue_on_external_load_error },
-        { "base_path", base_path }
+        { "continue_on_external_load_error", continueOnExternalLoadError },
+        { "base_path", basePath }
     };
 
-    // Don't save external_data_cache
+    // Don't save externalDataCache
 
-    out_json = object;
+    outJson = object;
 }
 
 bool FBOMReaderConfig::LoadFromJSON(const json::JSONValue& json)
@@ -58,8 +58,8 @@ bool FBOMReaderConfig::LoadFromJSON(const json::JSONValue& json)
 
     json::JSONObject object = json.AsObject();
 
-    continue_on_external_load_error = object["continue_on_external_load_error"].ToBool();
-    base_path = object["base_path"].ToString();
+    continueOnExternalLoadError = object["continue_on_external_load_error"].ToBool();
+    basePath = object["base_path"].ToString();
 
     return true;
 }

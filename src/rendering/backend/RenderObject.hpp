@@ -45,7 +45,7 @@ struct RenderObjectHeader;
 class HYP_API RenderObjectContainerBase
 {
 protected:
-    RenderObjectContainerBase(ANSIStringView render_object_type_name);
+    RenderObjectContainerBase(ANSIStringView renderObjectTypeName);
 
 public:
     virtual ~RenderObjectContainerBase() = default;
@@ -76,19 +76,19 @@ struct RenderObjectHeaderBase
 {
     RenderObjectContainerBase* container;
     uint32 index;
-    AtomicVar<uint16> ref_count_strong;
-    AtomicVar<uint16> ref_count_weak;
+    AtomicVar<uint16> refCountStrong;
+    AtomicVar<uint16> refCountWeak;
     void (*deleter)(RenderObjectHeaderBase*);
 
 #ifdef HYP_DEBUG_MODE
-    Name debug_name;
+    Name debugName;
 #endif
 
     RenderObjectHeaderBase()
         : container(nullptr),
           index(~0u),
-          ref_count_strong(0),
-          ref_count_weak(0),
+          refCountStrong(0),
+          refCountWeak(0),
           deleter(nullptr)
     {
     }
@@ -96,8 +96,8 @@ struct RenderObjectHeaderBase
     ~RenderObjectHeaderBase()
     {
         AssertDebug(!HasValue());
-        AssertDebug(ref_count_strong.Get(MemoryOrder::ACQUIRE) == 0);
-        AssertDebug(ref_count_weak.Get(MemoryOrder::ACQUIRE) == 0);
+        AssertDebug(refCountStrong.Get(MemoryOrder::ACQUIRE) == 0);
+        AssertDebug(refCountWeak.Get(MemoryOrder::ACQUIRE) == 0);
     }
 
     HYP_FORCE_INLINE bool HasValue() const
@@ -107,17 +107,17 @@ struct RenderObjectHeaderBase
 
     HYP_FORCE_INLINE uint16 GetRefCountStrong() const
     {
-        return ref_count_strong.Get(MemoryOrder::ACQUIRE);
+        return refCountStrong.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE uint16 GetRefCountWeak() const
     {
-        return ref_count_weak.Get(MemoryOrder::ACQUIRE);
+        return refCountWeak.Get(MemoryOrder::ACQUIRE);
     }
 
     HYP_FORCE_INLINE void IncRefStrong()
     {
-        ref_count_strong.Increment(1, MemoryOrder::RELEASE);
+        refCountStrong.Increment(1, MemoryOrder::RELEASE);
     }
 
     uint32 DecRefStrong()
@@ -127,13 +127,13 @@ struct RenderObjectHeaderBase
 
         uint16 count;
 
-        if ((count = ref_count_strong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        if ((count = refCountStrong.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
-            ref_count_weak.Increment(1, MemoryOrder::RELEASE);
+            refCountWeak.Increment(1, MemoryOrder::RELEASE);
 
             deleter(this);
 
-            if (ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
+            if (refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)
             {
                 container->ReleaseIndex(index);
                 index = ~0u;
@@ -145,7 +145,7 @@ struct RenderObjectHeaderBase
 
     HYP_FORCE_INLINE void IncRefWeak()
     {
-        ref_count_weak.Increment(1, MemoryOrder::RELEASE);
+        refCountWeak.Increment(1, MemoryOrder::RELEASE);
     }
 
     uint32 DecRefWeak()
@@ -155,9 +155,9 @@ struct RenderObjectHeaderBase
 
         uint16 count;
 
-        if ((count = ref_count_weak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
+        if ((count = refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE)) == 1)
         {
-            if (ref_count_strong.Get(MemoryOrder::ACQUIRE) == 0)
+            if (refCountStrong.Get(MemoryOrder::ACQUIRE) == 0)
             {
                 container->ReleaseIndex(index);
                 index = ~0u;
@@ -170,7 +170,7 @@ struct RenderObjectHeaderBase
     HYP_FORCE_INLINE Name GetDebugName() const
     {
 #ifdef HYP_DEBUG_MODE
-        return debug_name;
+        return debugName;
 #else
         return HYP_NAME("<invalid>");
 #endif
@@ -179,7 +179,7 @@ struct RenderObjectHeaderBase
     HYP_FORCE_INLINE void SetDebugName(Name name)
     {
 #ifdef HYP_DEBUG_MODE
-        debug_name = name;
+        debugName = name;
 #endif
     }
 };
@@ -1022,8 +1022,8 @@ static inline RenderObjectHandle_Strong<T> MakeRenderObject(Args&&... args)
 
 struct DeletionQueueBase
 {
-    TypeId type_id;
-    AtomicVar<int32> num_items { 0 };
+    TypeId typeId;
+    AtomicVar<int32> numItems { 0 };
     std::mutex mtx;
 
     virtual ~DeletionQueueBase() = default;
@@ -1035,25 +1035,25 @@ struct DeletionQueueBase
 template <PlatformType PLATFORM>
 struct RenderObjectDeleter
 {
-    static constexpr uint32 initial_cycles_remaining = max_frames_in_flight + 1;
-    static constexpr SizeType max_queues = 63;
+    static constexpr uint32 initialCyclesRemaining = maxFramesInFlight + 1;
+    static constexpr SizeType maxQueues = 63;
 
-    static FixedArray<DeletionQueueBase*, max_queues + 1> s_queues;
-    static AtomicVar<uint16> s_queue_index;
+    static FixedArray<DeletionQueueBase*, maxQueues + 1> s_queues;
+    static AtomicVar<uint16> s_queueIndex;
 
     template <class T>
     struct DeletionQueue : DeletionQueueBase
     {
         using Base = DeletionQueueBase;
 
-        static constexpr uint32 initial_cycles_remaining = max_frames_in_flight + 1;
+        static constexpr uint32 initialCyclesRemaining = maxFramesInFlight + 1;
 
         Array<Pair<RenderObjectHandle_Strong<T>, uint8>> items;
-        Queue<RenderObjectHandle_Strong<T>> to_delete;
+        Queue<RenderObjectHandle_Strong<T>> toDelete;
 
         DeletionQueue()
         {
-            Base::type_id = TypeId::ForType<T>();
+            Base::typeId = TypeId::ForType<T>();
         }
 
         DeletionQueue(const DeletionQueue& other) = delete;
@@ -1062,9 +1062,9 @@ struct RenderObjectDeleter
 
         virtual void Iterate() override
         {
-            Threads::AssertOnThread(g_render_thread);
+            Threads::AssertOnThread(g_renderThread);
 
-            if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0)
+            if (Base::numItems.Get(MemoryOrder::ACQUIRE) <= 0)
             {
                 return;
             }
@@ -1075,11 +1075,11 @@ struct RenderObjectDeleter
             {
                 if (--it->second == 0)
                 {
-                    to_delete.Push(std::move(it->first));
+                    toDelete.Push(std::move(it->first));
 
                     it = items.Erase(it);
 
-                    Base::num_items.Decrement(1, MemoryOrder::RELEASE);
+                    Base::numItems.Decrement(1, MemoryOrder::RELEASE);
                 }
                 else
                 {
@@ -1089,9 +1089,9 @@ struct RenderObjectDeleter
 
             Base::mtx.unlock();
 
-            while (to_delete.Any())
+            while (toDelete.Any())
             {
-                auto object = to_delete.Pop();
+                auto object = toDelete.Pop();
 
                 if (object.GetRefCount() > 1)
                 {
@@ -1104,33 +1104,33 @@ struct RenderObjectDeleter
 
         virtual int32 RemoveAllNow(bool force) override
         {
-            Threads::AssertOnThread(g_render_thread);
+            Threads::AssertOnThread(g_renderThread);
 
-            if (Base::num_items.Get(MemoryOrder::ACQUIRE) <= 0)
+            if (Base::numItems.Get(MemoryOrder::ACQUIRE) <= 0)
             {
                 return 0;
             }
 
-            int32 num_deleted_objects = 0;
+            int32 numDeletedObjects = 0;
 
             Base::mtx.lock();
 
             for (auto it = items.Begin(); it != items.End();)
             {
-                to_delete.Push(std::move(it->first));
+                toDelete.Push(std::move(it->first));
 
                 it = items.Erase(it);
 
-                Base::num_items.Decrement(1, MemoryOrder::RELEASE);
+                Base::numItems.Decrement(1, MemoryOrder::RELEASE);
 
-                ++num_deleted_objects;
+                ++numDeletedObjects;
             }
 
             Base::mtx.unlock();
 
-            while (to_delete.Any())
+            while (toDelete.Any())
             {
-                auto object = to_delete.Pop();
+                auto object = toDelete.Pop();
 
                 if (object.GetRefCount() > 1)
                 {
@@ -1140,16 +1140,16 @@ struct RenderObjectDeleter
                 HYPERION_ASSERT_RESULT(object->Destroy());
             }
 
-            return num_deleted_objects;
+            return numDeletedObjects;
         }
 
         void Push(RenderObjectHandle_Strong<T>&& handle)
         {
             std::lock_guard guard(Base::mtx);
 
-            items.PushBack({ std::move(handle), initial_cycles_remaining });
+            items.PushBack({ std::move(handle), initialCyclesRemaining });
 
-            Base::num_items.Increment(1, MemoryOrder::RELEASE);
+            Base::numItems.Increment(1, MemoryOrder::RELEASE);
         }
     };
 
@@ -1161,9 +1161,9 @@ struct RenderObjectDeleter
 
         DeletionQueueInstance()
         {
-            index = s_queue_index.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+            index = s_queueIndex.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
 
-            AssertThrowMsg(index < max_queues, "Maximum number of deletion queues added");
+            AssertThrowMsg(index < maxQueues, "Maximum number of deletion queues added");
 
             s_queues[index] = &queue;
         }
@@ -1193,10 +1193,10 @@ struct RenderObjectDeleter
 };
 
 template <PlatformType PLATFORM>
-FixedArray<DeletionQueueBase*, RenderObjectDeleter<PLATFORM>::max_queues + 1> RenderObjectDeleter<PLATFORM>::s_queues = {};
+FixedArray<DeletionQueueBase*, RenderObjectDeleter<PLATFORM>::maxQueues + 1> RenderObjectDeleter<PLATFORM>::s_queues = {};
 
 template <PlatformType PLATFORM>
-AtomicVar<uint16> RenderObjectDeleter<PLATFORM>::s_queue_index = { 0 };
+AtomicVar<uint16> RenderObjectDeleter<PLATFORM>::s_queueIndex = { 0 };
 
 template <class T>
 static inline void SafeRelease(RenderObjectHandle_Strong<T>&& handle)

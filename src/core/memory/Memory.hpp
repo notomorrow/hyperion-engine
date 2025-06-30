@@ -126,7 +126,7 @@ public:
     template <class T, class Context, class... Args>
     HYP_FORCE_INLINE static void ConstructWithContext(void* where, Args&&... args)
     {
-        auto context_result = Context(where);
+        auto contextResult = Context(where);
 
         new (where) T(std::forward<Args>(args)...);
     }
@@ -177,7 +177,7 @@ public:
             ptr = HYP_ALLOC_ALIGNED(sizeof(T), alignof(T));
         }
 
-        auto context_result = Context(ptr);
+        auto contextResult = Context(ptr);
 
         new (ptr) T(std::forward<Args>(args)...);
 

@@ -20,7 +20,7 @@ class ReflectionProbeUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(ReflectionProbeUpdaterSystem);
 
 public:
-    ReflectionProbeUpdaterSystem(EntityManager& entity_manager);
+    ReflectionProbeUpdaterSystem(EntityManager& entityManager);
     virtual ~ReflectionProbeUpdaterSystem() override = default;
 
     virtual void OnEntityAdded(Entity* entity) override;
@@ -48,7 +48,7 @@ private:
         };
     }
 
-    void AddRenderSubsystemToEnvironment(ReflectionProbeComponent& reflection_probe_component);
+    void AddRenderSubsystemToEnvironment(ReflectionProbeComponent& reflectionProbeComponent);
 };
 
 } // namespace hyperion

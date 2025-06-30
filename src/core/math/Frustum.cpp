@@ -4,7 +4,7 @@
 
 namespace hyperion {
 
-static const FixedArray<Vec4f, 8> frustucorners_ndc {
+static const FixedArray<Vec4f, 8> frustucornersNdc {
     Vec4f { -1.0f, -1.0f, 0.0f, 1.0f },
     Vec4f { -1.0f, 1.0f, 0.0f, 1.0f },
     Vec4f { 1.0f, 1.0f, 0.0f, 1.0f },
@@ -19,9 +19,9 @@ Frustum::Frustum()
 {
 }
 
-Frustum::Frustum(const Matrix4& view_proj)
+Frustum::Frustum(const Matrix4& viewProj)
 {
-    SetFromViewProjectionMatrix(view_proj);
+    SetFromViewProjectionMatrix(viewProj);
 }
 
 bool Frustum::ContainsAABB(const BoundingBox& aabb) const
@@ -79,9 +79,9 @@ bool Frustum::ContainsPoint(const Vec3f& point) const
     return true;
 }
 
-Frustum& Frustum::SetFromViewProjectionMatrix(const Matrix4& view_proj)
+Frustum& Frustum::SetFromViewProjectionMatrix(const Matrix4& viewProj)
 {
-    const Matrix4 mat = view_proj.Transposed();
+    const Matrix4 mat = viewProj.Transposed();
 
     planes[0][0] = mat[0][3] - mat[0][0];
     planes[0][1] = mat[1][3] - mat[1][0];
@@ -119,11 +119,11 @@ Frustum& Frustum::SetFromViewProjectionMatrix(const Matrix4& view_proj)
     planes[5][3] = mat[3][3] + mat[3][2];
     // planes[5].Normalize();
 
-    const Matrix4 clip_to_world = view_proj.Inverted();
+    const Matrix4 clipToWorld = viewProj.Inverted();
 
     for (uint32 i = 0; i < 8; i++)
     {
-        Vec4f corner = clip_to_world * frustucorners_ndc[i];
+        Vec4f corner = clipToWorld * frustucornersNdc[i];
         corner /= corner.w;
 
         corners[i] = corner.GetXYZ();
@@ -132,9 +132,9 @@ Frustum& Frustum::SetFromViewProjectionMatrix(const Matrix4& view_proj)
     return *this;
 }
 
-Vec3f Frustum::GetIntersectionPoint(uint32 plane_index_0, uint32 plane_index_1, uint32 plane_index_2) const
+Vec3f Frustum::GetIntersectionPoint(uint32 planeIndex0, uint32 planeIndex1, uint32 planeIndex2) const
 {
-    const Vec4f planes[3] = { GetPlane(plane_index_0), GetPlane(plane_index_1), GetPlane(plane_index_2) };
+    const Vec4f planes[3] = { GetPlane(planeIndex0), GetPlane(planeIndex1), GetPlane(planeIndex2) };
 
     Vec3f bxc = planes[1].GetXYZ().Cross(planes[2].GetXYZ());
     Vec3f cxa = planes[2].GetXYZ().Cross(planes[0].GetXYZ());

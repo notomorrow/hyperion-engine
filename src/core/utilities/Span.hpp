@@ -309,8 +309,8 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
     {
     }
 
-    constexpr Span(std::initializer_list<T> initializer_list)
-        : Span(initializer_list.begin(), initializer_list.end())
+    constexpr Span(std::initializer_list<T> initializerList)
+        : Span(initializerList.begin(), initializerList.end())
     {
     }
 
@@ -368,11 +368,11 @@ struct Span<T, std::enable_if_t<std::is_const_v<T>>>
             return Span();
         }
 
-        const SizeType max_size = Size() - offset;
+        const SizeType maxSize = Size() - offset;
 
-        if (count > max_size)
+        if (count > maxSize)
         {
-            count = max_size;
+            count = maxSize;
         }
 
         return Span(first + offset, first + offset + count);

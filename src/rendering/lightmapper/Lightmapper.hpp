@@ -24,7 +24,7 @@
 
 namespace hyperion {
 
-static constexpr int max_bounces_cpu = 2;
+static constexpr int maxBouncesCpu = 2;
 
 namespace threading {
 struct TaskBatch;
@@ -60,7 +60,7 @@ HYP_STRUCT(ConfigName = "app", JSONPath = "lightmapper")
 struct LightmapperConfig : public ConfigBase<LightmapperConfig>
 {
     HYP_FIELD(JSONPath = "trace_mode")
-    LightmapTraceMode trace_mode = LightmapTraceMode::GPU_PATH_TRACING;
+    LightmapTraceMode traceMode = LightmapTraceMode::GPU_PATH_TRACING;
 
     HYP_FIELD(JSONPath = "radiance")
     bool radiance = true;
@@ -69,13 +69,13 @@ struct LightmapperConfig : public ConfigBase<LightmapperConfig>
     bool irradiance = true;
 
     HYP_FIELD(JSONPath = "num_samples")
-    uint32 num_samples = 16;
+    uint32 numSamples = 16;
 
     HYP_FIELD(JSONPath = "max_rays_per_frame")
-    uint32 max_rays_per_frame = 512 * 512;
+    uint32 maxRaysPerFrame = 512 * 512;
 
     HYP_FIELD(JSONPath = "ideal_triangles_per_job")
-    uint32 ideal_triangles_per_job = 8192;
+    uint32 idealTrianglesPerJob = 8192;
 
     virtual ~LightmapperConfig() override = default;
 
@@ -85,7 +85,7 @@ struct LightmapperConfig : public ConfigBase<LightmapperConfig>
     {
         bool valid = true;
 
-        if (uint32(trace_mode) >= uint32(LightmapTraceMode::MAX))
+        if (uint32(traceMode) >= uint32(LightmapTraceMode::MAX))
         {
             AddError(HYP_MAKE_ERROR(Error, "Invalid trace mode"));
 
@@ -99,21 +99,21 @@ struct LightmapperConfig : public ConfigBase<LightmapperConfig>
             valid = false;
         }
 
-        if (num_samples == 0)
+        if (numSamples == 0)
         {
             AddError(HYP_MAKE_ERROR(Error, "Number of samples must be greater than zero"));
 
             valid = false;
         }
 
-        if (max_rays_per_frame == 0 || max_rays_per_frame > 1024 * 1024)
+        if (maxRaysPerFrame == 0 || maxRaysPerFrame > 1024 * 1024)
         {
             AddError(HYP_MAKE_ERROR(Error, "Max rays per frame must be greater than zero and less than or equal to 1024*1024"));
 
             valid = false;
         }
 
-        if (ideal_triangles_per_job == 0 || ideal_triangles_per_job > 100000)
+        if (idealTrianglesPerJob == 0 || idealTrianglesPerJob > 100000)
         {
             AddError(HYP_MAKE_ERROR(Error, "Ideal triangles per job must be greater than zero and less than or equal to 100000"));
 
@@ -140,9 +140,9 @@ struct LightmapRayHitPayload
     Vec4f radiance;
     Vec3f normal;
     float distance = -1.0f;
-    Vec3f barycentric_coords;
-    ObjId<Mesh> mesh_id;
-    uint32 triangle_index = ~0u;
+    Vec3f barycentricCoords;
+    ObjId<Mesh> meshId;
+    uint32 triangleIndex = ~0u;
 };
 
 class ILightmapRenderer
@@ -156,8 +156,8 @@ public:
 
     virtual void Create() = 0;
     virtual void UpdateRays(Span<const LightmapRay> rays) = 0;
-    virtual void ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> out_hits) = 0;
-    virtual void Render(FrameBase* frame, const RenderSetup& render_setup, LightmapJob* job, Span<const LightmapRay> rays, uint32 ray_offset) = 0;
+    virtual void ReadHitsBuffer(FrameBase* frame, Span<LightmapHit> outHits) = 0;
+    virtual void Render(FrameBase* frame, const RenderSetup& renderSetup, LightmapJob* job, Span<const LightmapRay> rays, uint32 rayOffset) = 0;
 };
 
 struct LightmapJobParams
@@ -167,10 +167,10 @@ struct LightmapJobParams
     Handle<Scene> scene;
     Handle<LightmapVolume> volume;
 
-    Span<LightmapSubElement> sub_elements_view;
-    HashMap<Handle<Entity>, LightmapSubElement*>* sub_elements_by_entity;
+    Span<LightmapSubElement> subElementsView;
+    HashMap<Handle<Entity>, LightmapSubElement*>* subElementsByEntity;
 
-    LightmapTopLevelAccelerationStructure* acceleration_structure;
+    LightmapTopLevelAccelerationStructure* accelerationStructure;
 
     Array<ILightmapRenderer*> renderers;
 };
@@ -204,27 +204,27 @@ public:
 
     HYP_FORCE_INLINE LightmapUVBuilder& GetUVBuilder()
     {
-        return m_uv_builder;
+        return m_uvBuilder;
     }
 
     HYP_FORCE_INLINE const LightmapUVBuilder& GetUVBuilder() const
     {
-        return m_uv_builder;
+        return m_uvBuilder;
     }
 
     HYP_FORCE_INLINE LightmapUVMap& GetUVMap()
     {
-        return *m_uv_map;
+        return *m_uvMap;
     }
 
     HYP_FORCE_INLINE const LightmapUVMap& GetUVMap() const
     {
-        return *m_uv_map;
+        return *m_uvMap;
     }
 
     HYP_FORCE_INLINE uint32 GetElementIndex() const
     {
-        return m_element_index;
+        return m_elementIndex;
     }
 
     HYP_FORCE_INLINE Scene* GetScene() const
@@ -234,31 +234,31 @@ public:
 
     HYP_FORCE_INLINE Span<LightmapSubElement> GetSubElements() const
     {
-        return m_params.sub_elements_view;
+        return m_params.subElementsView;
     }
 
     HYP_FORCE_INLINE uint32 GetTexelIndex() const
     {
-        return m_texel_index;
+        return m_texelIndex;
     }
 
     HYP_FORCE_INLINE const Array<uint32>& GetTexelIndices() const
     {
-        return m_texel_indices;
+        return m_texelIndices;
     }
 
-    HYP_FORCE_INLINE void GetPreviousFrameRays(Array<LightmapRay>& out_rays) const
+    HYP_FORCE_INLINE void GetPreviousFrameRays(Array<LightmapRay>& outRays) const
     {
-        Mutex::Guard guard(m_previous_frame_rays_mutex);
+        Mutex::Guard guard(m_previousFrameRaysMutex);
 
-        out_rays = m_previous_frame_rays;
+        outRays = m_previousFrameRays;
     }
 
     HYP_FORCE_INLINE void SetPreviousFrameRays(const Array<LightmapRay>& rays)
     {
-        Mutex::Guard guard(m_previous_frame_rays_mutex);
+        Mutex::Guard guard(m_previousFrameRaysMutex);
 
-        m_previous_frame_rays = rays;
+        m_previousFrameRays = rays;
     }
 
     HYP_FORCE_INLINE const Result& GetResult() const
@@ -269,27 +269,27 @@ public:
     void Start();
     void Process();
 
-    void GatherRays(uint32 max_ray_hits, Array<LightmapRay>& out_rays);
+    void GatherRays(uint32 maxRayHits, Array<LightmapRay>& outRays);
 
-    void AddTask(TaskBatch* task_batch);
+    void AddTask(TaskBatch* taskBatch);
 
     /*! \brief Integrate ray hits into the lightmap.
      *  \param rays The rays that were traced.
      *  \param hits The hits to integrate.
      */
-    void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shading_type);
+    void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType);
 
     bool IsCompleted() const;
 
     HYP_FORCE_INLINE bool IsRunning() const
     {
-        return m_running_semaphore.IsInSignalState();
+        return m_runningSemaphore.IsInSignalState();
     }
 
 private:
     HYP_FORCE_INLINE bool HasRemainingTexels() const
     {
-        return m_texel_index < m_texel_indices.Size() * m_params.config->num_samples;
+        return m_texelIndex < m_texelIndices.Size() * m_params.config->numSamples;
     }
 
     /*! \brief Get the next texel index to process, advancing the teexl counter
@@ -297,10 +297,10 @@ private:
      */
     HYP_FORCE_INLINE uint32 NextTexel()
     {
-        const uint32 current_texel_index = m_texel_indices[m_texel_index % m_texel_indices.Size()];
-        m_texel_index++;
+        const uint32 currentTexelIndex = m_texelIndices[m_texelIndex % m_texelIndices.Size()];
+        m_texelIndex++;
 
-        return current_texel_index;
+        return currentTexelIndex;
     }
 
     void Stop();
@@ -312,28 +312,28 @@ private:
 
     Handle<View> m_view;
 
-    Array<uint32> m_texel_indices; // flattened texel indices, flattened so that meshes are grouped together
+    Array<uint32> m_texelIndices; // flattened texel indices, flattened so that meshes are grouped together
 
-    Array<LightmapRay> m_previous_frame_rays;
-    mutable Mutex m_previous_frame_rays_mutex;
+    Array<LightmapRay> m_previousFrameRays;
+    mutable Mutex m_previousFrameRaysMutex;
 
-    LightmapUVBuilder m_uv_builder;
-    Optional<LightmapUVMap> m_uv_map;
-    Task<TResult<LightmapUVMap>> m_build_uv_map_task;
+    LightmapUVBuilder m_uvBuilder;
+    Optional<LightmapUVMap> m_uvMap;
+    Task<TResult<LightmapUVMap>> m_buildUvMapTask;
 
-    uint32 m_element_index;
+    uint32 m_elementIndex;
 
-    Array<TaskBatch*> m_current_tasks;
-    mutable Mutex m_current_tasks_mutex;
+    Array<TaskBatch*> m_currentTasks;
+    mutable Mutex m_currentTasksMutex;
 
-    Semaphore<int32> m_running_semaphore;
-    uint32 m_texel_index;
+    Semaphore<int32> m_runningSemaphore;
+    uint32 m_texelIndex;
 
-    double m_last_logged_percentage;
+    double m_lastLoggedPercentage;
 
-    AtomicVar<uint32> m_num_concurrent_rendering_tasks;
+    AtomicVar<uint32> m_numConcurrentRenderingTasks;
 
-    Array<ResourceHandle> m_resource_cache;
+    Array<ResourceHandle> m_resourceCache;
 
     Result m_result;
 };
@@ -357,17 +357,17 @@ public:
 
 private:
     LightmapJobParams CreateLightmapJobParams(
-        SizeType start_index,
-        SizeType end_index,
-        LightmapTopLevelAccelerationStructure* acceleration_structure);
+        SizeType startIndex,
+        SizeType endIndex,
+        LightmapTopLevelAccelerationStructure* accelerationStructure);
 
     void AddJob(UniquePtr<LightmapJob>&& job)
     {
-        Mutex::Guard guard(m_queue_mutex);
+        Mutex::Guard guard(m_queueMutex);
 
         m_queue.Push(std::move(job));
 
-        m_num_jobs.Increment(1, MemoryOrder::RELEASE);
+        m_numJobs.Increment(1, MemoryOrder::RELEASE);
     }
 
     void HandleCompletedJob(LightmapJob* job);
@@ -379,16 +379,16 @@ private:
 
     Handle<LightmapVolume> m_volume;
 
-    Array<UniquePtr<ILightmapRenderer>> m_lightmap_renderers;
+    Array<UniquePtr<ILightmapRenderer>> m_lightmapRenderers;
 
-    UniquePtr<LightmapTopLevelAccelerationStructure> m_acceleration_structure;
+    UniquePtr<LightmapTopLevelAccelerationStructure> m_accelerationStructure;
 
     Queue<UniquePtr<LightmapJob>> m_queue;
-    Mutex m_queue_mutex;
-    AtomicVar<uint32> m_num_jobs;
+    Mutex m_queueMutex;
+    AtomicVar<uint32> m_numJobs;
 
-    Array<LightmapSubElement> m_sub_elements;
-    HashMap<Handle<Entity>, LightmapSubElement*> m_sub_elements_by_entity;
+    Array<LightmapSubElement> m_subElements;
+    HashMap<Handle<Entity>, LightmapSubElement*> m_subElementsByEntity;
 };
 
 } // namespace hyperion

@@ -17,10 +17,10 @@ class Profile
 public:
     using ProfileFunction = void (*)(void);
 
-    static Array<double> RunInterleved(Array<Profile*>&&, SizeType runs_per = 5, SizeType num_iterations = 100, SizeType runs_per_iteration = 100);
+    static Array<double> RunInterleved(Array<Profile*>&&, SizeType runsPer = 5, SizeType numIterations = 100, SizeType runsPerIteration = 100);
 
-    Profile(ProfileFunction profile_function)
-        : m_profile_function(profile_function),
+    Profile(ProfileFunction profileFunction)
+        : m_profileFunction(profileFunction),
           m_result(0.0),
           m_iteration(0)
     {
@@ -33,7 +33,7 @@ public:
 
     ~Profile() = default;
 
-    Profile& Run(SizeType num_iterations = 100, SizeType runs_per_iteration = 100);
+    Profile& Run(SizeType numIterations = 100, SizeType runsPerIteration = 100);
 
     double GetResult() const
     {
@@ -49,7 +49,7 @@ public:
     }
 
 private:
-    ProfileFunction m_profile_function;
+    ProfileFunction m_profileFunction;
     double m_result;
     SizeType m_iteration;
 };

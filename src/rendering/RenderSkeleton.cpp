@@ -16,14 +16,14 @@ namespace hyperion {
 
 RenderSkeleton::RenderSkeleton(Skeleton* skeleton)
     : m_skeleton(skeleton),
-      m_buffer_data {}
+      m_bufferData {}
 {
 }
 
 RenderSkeleton::RenderSkeleton(RenderSkeleton&& other) noexcept
     : RenderResourceBase(static_cast<RenderResourceBase&&>(other)),
       m_skeleton(other.m_skeleton),
-      m_buffer_data(std::move(other.m_buffer_data))
+      m_bufferData(std::move(other.m_bufferData))
 {
     other.m_skeleton = nullptr;
 }
@@ -51,26 +51,26 @@ void RenderSkeleton::Update_Internal()
 
 GpuBufferHolderBase* RenderSkeleton::GetGpuBufferHolder() const
 {
-    return g_render_global_state->gpu_buffers[GRB_SKELETONS];
+    return g_renderGlobalState->gpuBuffers[GRB_SKELETONS];
 }
 
 void RenderSkeleton::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    AssertThrow(m_buffer_index != ~0u);
+    AssertThrow(m_bufferIndex != ~0u);
 
-    *static_cast<SkeletonShaderData*>(m_buffer_address) = m_buffer_data;
-    GetGpuBufferHolder()->MarkDirty(m_buffer_index);
+    *static_cast<SkeletonShaderData*>(m_bufferAddress) = m_bufferData;
+    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
 }
 
-void RenderSkeleton::SetBufferData(const SkeletonShaderData& buffer_data)
+void RenderSkeleton::SetBufferData(const SkeletonShaderData& bufferData)
 {
     HYP_SCOPE;
 
-    Execute([this, buffer_data]()
+    Execute([this, bufferData]()
         {
-            m_buffer_data = buffer_data;
+            m_bufferData = bufferData;
 
             if (IsInitialized())
             {

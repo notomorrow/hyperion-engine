@@ -29,7 +29,7 @@ public:
     void Destroy();
 
     /*! \brief Add a texture to the bindless descriptor set. */
-    void AddResource(ObjId<Texture> id, const ImageViewRef& image_view);
+    void AddResource(ObjId<Texture> id, const ImageViewRef& imageView);
     /*! \brief Remove the given texture from the bindless descriptor set. */
     void RemoveResource(ObjId<Texture> id);
 

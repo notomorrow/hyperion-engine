@@ -12,9 +12,9 @@ class VulkanSampler final : public SamplerBase
 {
 public:
     HYP_API VulkanSampler(
-        TextureFilterMode min_filter_mode = TFM_NEAREST,
-        TextureFilterMode mag_filter_mode = TFM_NEAREST,
-        TextureWrapMode wrap_mode = TWM_CLAMP_TO_EDGE);
+        TextureFilterMode minFilterMode = TFM_NEAREST,
+        TextureFilterMode magFilterMode = TFM_NEAREST,
+        TextureWrapMode wrapMode = TWM_CLAMP_TO_EDGE);
 
     HYP_API virtual ~VulkanSampler() override;
 

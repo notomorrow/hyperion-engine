@@ -39,7 +39,7 @@ class HYP_API ScreenCaptureRenderSubsystem : public Subsystem
     HYP_OBJECT_BODY(ScreenCaptureRenderSubsystem);
 
 public:
-    ScreenCaptureRenderSubsystem(const Handle<View>& view, ScreenCaptureMode screen_capture_mode = ScreenCaptureMode::TO_TEXTURE);
+    ScreenCaptureRenderSubsystem(const Handle<View>& view, ScreenCaptureMode screenCaptureMode = ScreenCaptureMode::TO_TEXTURE);
     ScreenCaptureRenderSubsystem(const ScreenCaptureRenderSubsystem& other) = delete;
     ScreenCaptureRenderSubsystem& operator=(const ScreenCaptureRenderSubsystem& other) = delete;
     ScreenCaptureRenderSubsystem(ScreenCaptureRenderSubsystem&& other) noexcept = delete;
@@ -68,7 +68,7 @@ private:
     void CaptureFrame(FrameBase* frame);
 
     Handle<View> m_view;
-    ScreenCaptureMode m_screen_capture_mode;
+    ScreenCaptureMode m_screenCaptureMode;
     Handle<Texture> m_texture;
     GpuBufferRef m_buffer;
 };

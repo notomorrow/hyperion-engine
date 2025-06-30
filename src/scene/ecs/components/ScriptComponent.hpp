@@ -48,11 +48,11 @@ struct ScriptComponent
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
+        HashCode hashCode;
 
-        hash_code.Add(script);
+        hashCode.Add(script);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

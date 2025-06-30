@@ -41,8 +41,8 @@ HYP_DECLARE_LOG_CHANNEL(EnvGrid);
 
 #pragma region EnvGridUpdaterSystem
 
-EnvGridUpdaterSystem::EnvGridUpdaterSystem(EntityManager& entity_manager)
-    : SystemBase(entity_manager)
+EnvGridUpdaterSystem::EnvGridUpdaterSystem(EntityManager& entityManager)
+    : SystemBase(entityManager)
 {
 }
 
@@ -50,10 +50,10 @@ void EnvGridUpdaterSystem::OnEntityAdded(Entity* entity)
 {
     SystemBase::OnEntityAdded(entity);
 
-    // EnvGridComponent& env_grid_component = GetEntityManager().GetComponent<EnvGridComponent>(entity);
-    // BoundingBoxComponent& bounding_box_component = GetEntityManager().GetComponent<BoundingBoxComponent>(entity);
+    // EnvGridComponent& envGridComponent = GetEntityManager().GetComponent<EnvGridComponent>(entity);
+    // BoundingBoxComponent& boundingBoxComponent = GetEntityManager().GetComponent<BoundingBoxComponent>(entity);
 
-    // if (env_grid_component.env_grid)
+    // if (envGridComponent.envGrid)
     // {
     //     return;
     // }
@@ -71,29 +71,29 @@ void EnvGridUpdaterSystem::OnEntityAdded(Entity* entity)
     //     flags |= EnvGridFlags::USE_VOXEL_GRID;
     // }
 
-    // env_grid_component.env_grid = CreateObject<EnvGrid>(
+    // envGridComponent.envGrid = CreateObject<EnvGrid>(
     //     GetScene()->HandleFromThis(),
-    //     bounding_box_component.world_aabb,
+    //     boundingBoxComponent.worldAabb,
     //     EnvGridOptions {
-    //         .type = env_grid_component.env_grid_type,
-    //         .density = env_grid_component.grid_size,
+    //         .type = envGridComponent.envGridType,
+    //         .density = envGridComponent.gridSize,
     //         .flags = flags });
 
-    // InitObject(env_grid_component.env_grid);
+    // InitObject(envGridComponent.envGrid);
 }
 
 void EnvGridUpdaterSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
-    // EnvGridComponent& env_grid_component = GetEntityManager().GetComponent<EnvGridComponent>(entity);
+    // EnvGridComponent& envGridComponent = GetEntityManager().GetComponent<EnvGridComponent>(entity);
 
-    // env_grid_component.env_grid.Reset();
+    // envGridComponent.envGrid.Reset();
 
-    // if (env_grid_component.env_grid_render_subsystem)
+    // if (envGridComponent.envGridRenderSubsystem)
     // {
-    //     env_grid_component.env_grid_render_subsystem->RemoveFromEnvironment();
-    //     env_grid_component.env_grid_render_subsystem.Reset();
+    //     envGridComponent.envGridRenderSubsystem->RemoveFromEnvironment();
+    //     envGridComponent.envGridRenderSubsystem.Reset();
     // }
 }
 
@@ -102,97 +102,97 @@ void EnvGridUpdaterSystem::Process(float delta)
     // { // Determine which EnvGrids needs to be updated on the game thread
     //     AfterProcess([this]()
     //         {
-    //             for (auto [entity, _, bounding_box_component] : GetEntityManager().GetEntitySet<EntityType<EnvGrid>, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
+    //             for (auto [entity, _, boundingBoxComponent] : GetEntityManager().GetEntitySet<EntityType<EnvGrid>, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
     //             {
     //                 // @TODO Store pointer to Entity rather than Id so we don't need to lock the handle
-    //                 Handle<Entity> entity { entity_id };
+    //                 Handle<Entity> entity { entityId };
     //                 AssertDebug(entity->IsInstanceOf<EnvGrid>());
 
-    //                 Handle<EnvGrid> env_grid = entity.Cast<EnvGrid>();
+    //                 Handle<EnvGrid> envGrid = entity.Cast<EnvGrid>();
 
-    //                 env_grid->SetReceivesUpdate(true);
+    //                 envGrid->SetReceivesUpdate(true);
     //             }
     //         });
     // }
 
     // { // Update camera data
-    //     HashSet<ObjId<Entity>> updated_entity_ids;
+    //     HashSet<ObjId<Entity>> updatedEntityIds;
 
-    //     for (auto [entity, _t, transform_component, bounding_box_component, _] : GetEntityManager().GetEntitySet<EntityType<EnvGrid>, TransformComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_ENV_GRID_TRANSFORM>>().GetScopedView(GetComponentInfos()))
+    //     for (auto [entity, _t, transformComponent, boundingBoxComponent, _] : GetEntityManager().GetEntitySet<EntityType<EnvGrid>, TransformComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_ENV_GRID_TRANSFORM>>().GetScopedView(GetComponentInfos()))
     //     {
-    //         if (!env_grid_component.env_grid)
+    //         if (!envGridComponent.envGrid)
     //         {
     //             continue;
     //         }
 
-    //         env_grid_component.env_grid->Translate(bounding_box_component.world_aabb, transform_component.transform.GetTranslation());
+    //         envGridComponent.envGrid->Translate(boundingBoxComponent.worldAabb, transformComponent.transform.GetTranslation());
 
-    //         updated_entity_ids.Insert(entity_id);
+    //         updatedEntityIds.Insert(entityId);
     //     }
 
-    //     if (updated_entity_ids.Any())
+    //     if (updatedEntityIds.Any())
     //     {
-    //         AfterProcess([this, updated_entity_ids = std::move(updated_entity_ids)]()
+    //         AfterProcess([this, updatedEntityIds = std::move(updatedEntityIds)]()
     //             {
-    //                 for (const ObjId<Entity>& entity_id : updated_entity_ids)
+    //                 for (const ObjId<Entity>& entityId : updatedEntityIds)
     //                 {
-    //                     GetEntityManager().RemoveTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entity_id);
+    //                     GetEntityManager().RemoveTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entityId);
     //                 }
     //             });
     //     }
     // }
 
     // { // Update EnvGrid transforms to map to the camera
-    //     HashSet<ObjId<Entity>> updated_entity_ids;
+    //     HashSet<ObjId<Entity>> updatedEntityIds;
 
-    //     for (auto [entity, env_grid_component, transform_component, bounding_box_component] : GetEntityManager().GetEntitySet<EnvGridComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
+    //     for (auto [entity, envGridComponent, transformComponent, boundingBoxComponent] : GetEntityManager().GetEntitySet<EnvGridComponent, TransformComponent, BoundingBoxComponent>().GetScopedView(GetComponentInfos()))
     //     {
-    //         if (!env_grid_component.env_grid)
+    //         if (!envGridComponent.envGrid)
     //         {
     //             continue;
     //         }
 
     //         // Update movable envgrids
-    //         if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA)
+    //         if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA)
     //         {
     //             const Handle<Camera>& camera = GetScene()->GetPrimaryCamera();
 
     //             if (camera.IsValid())
     //             {
-    //                 Vec3f translation = transform_component.transform.GetTranslation();
+    //                 Vec3f translation = transformComponent.transform.GetTranslation();
 
-    //                 if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_X)
+    //                 if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA_X)
     //                 {
     //                     translation.x = camera->GetTranslation().x;
     //                 }
 
-    //                 if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_Y)
+    //                 if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA_Y)
     //                 {
     //                     translation.y = camera->GetTranslation().y;
     //                 }
 
-    //                 if (env_grid_component.mobility & EnvGridMobility::FOLLOW_CAMERA_Z)
+    //                 if (envGridComponent.mobility & EnvGridMobility::FOLLOW_CAMERA_Z)
     //                 {
     //                     translation.z = camera->GetTranslation().z;
     //                 }
 
-    //                 if (translation != transform_component.transform.GetTranslation())
+    //                 if (translation != transformComponent.transform.GetTranslation())
     //                 {
-    //                     transform_component.transform.SetTranslation(translation);
+    //                     transformComponent.transform.SetTranslation(translation);
 
-    //                     updated_entity_ids.Insert(entity_id);
+    //                     updatedEntityIds.Insert(entityId);
     //                 }
     //             }
     //         }
     //     }
 
-    //     if (updated_entity_ids.Any())
+    //     if (updatedEntityIds.Any())
     //     {
-    //         AfterProcess([this, updated_entity_ids = std::move(updated_entity_ids)]()
+    //         AfterProcess([this, updatedEntityIds = std::move(updatedEntityIds)]()
     //             {
-    //                 for (const ObjId<Entity>& entity_id : updated_entity_ids)
+    //                 for (const ObjId<Entity>& entityId : updatedEntityIds)
     //                 {
-    //                     GetEntityManager().AddTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entity_id);
+    //                     GetEntityManager().AddTag<EntityTag::UPDATE_ENV_GRID_TRANSFORM>(entityId);
     //                 }
     //             });
     //     }

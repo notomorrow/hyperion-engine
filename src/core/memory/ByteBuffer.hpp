@@ -113,18 +113,18 @@ public:
             return *this;
         }
 
-        const SizeType previous_size = m_size;
-        const SizeType new_size = other.m_size;
+        const SizeType previousSize = m_size;
+        const SizeType newSize = other.m_size;
 
         m_allocation.Free();
 
-        if (new_size != 0)
+        if (newSize != 0)
         {
-            m_allocation.Allocate(new_size);
-            m_allocation.InitFromRangeCopy(other.Data(), other.Data() + new_size);
+            m_allocation.Allocate(newSize);
+            m_allocation.InitFromRangeCopy(other.Data(), other.Data() + newSize);
         }
 
-        m_size = new_size;
+        m_size = newSize;
 
         return *this;
     }
@@ -159,27 +159,27 @@ public:
             return *this;
         }
 
-        const SizeType previous_size = m_size;
-        const SizeType new_size = other.m_size;
+        const SizeType previousSize = m_size;
+        const SizeType newSize = other.m_size;
 
         m_allocation.Free();
 
         if (other.m_allocation.IsDynamic())
         {
-            m_allocation.TakeOwnership(other.Data(), other.Data() + new_size);
+            m_allocation.TakeOwnership(other.Data(), other.Data() + newSize);
 
             other.m_allocation.SetToInitialState();
         }
         else
         {
-            if (new_size != 0)
+            if (newSize != 0)
             {
-                m_allocation.Allocate(new_size);
-                m_allocation.InitFromRangeMove(other.Data(), other.Data() + new_size);
+                m_allocation.Allocate(newSize);
+                m_allocation.InitFromRangeMove(other.Data(), other.Data() + newSize);
             }
         }
 
-        m_size = new_size;
+        m_size = newSize;
 
         other.m_size = 0;
 
@@ -212,11 +212,11 @@ public:
      *  \return An Array of ubyte containing the ByteBuffer's data, copied from the ByteBuffer. */
     Array<ubyte> ToArray() const
     {
-        Array<ubyte> byte_array;
-        byte_array.Resize(m_size);
-        Memory::MemCpy(byte_array.Data(), Data(), m_size);
+        Array<ubyte> byteArray;
+        byteArray.Resize(m_size);
+        Memory::MemCpy(byteArray.Data(), Data(), m_size);
 
-        return byte_array;
+        return byteArray;
     }
 
     /*! \brief Returns a \ref{ByteView} of the ByteBuffer's data. The ByteView will point to the same data as the ByteBuffer, so changes to the ByteBuffer will be reflected in the ByteView.
@@ -289,26 +289,26 @@ public:
     /*! \brief Sets the size of the ByteBuffer to the given size. If the new size is larger than the current size, the new bytes are zeroed out.
      *  If the new size is smaller than the current size, the excess bytes are freed.
      *  The current data will be copied into the newly allocated memory if the size is changed. */
-    HYP_FORCE_INLINE void SetSize(SizeType new_size)
+    HYP_FORCE_INLINE void SetSize(SizeType newSize)
     {
-        if (new_size == m_size)
+        if (newSize == m_size)
         {
             return;
         }
 
-        if (new_size > m_allocation.GetCapacity())
+        if (newSize > m_allocation.GetCapacity())
         {
             // Extend the buffer's capacity to ensure we have room.
-            SetCapacity(new_size);
+            SetCapacity(newSize);
         }
 
-        if (new_size > m_size)
+        if (newSize > m_size)
         {
             // Zero out the new bytes
-            m_allocation.InitZeroed(new_size - m_size, m_size);
+            m_allocation.InitZeroed(newSize - m_size, m_size);
         }
 
-        m_size = new_size;
+        m_size = newSize;
     }
 
     /*! \brief Returns the current capacity of the ByteBuffer. The capacity is the amount of memory allocated for the ByteBuffer, which may be larger than the current size.
@@ -320,47 +320,47 @@ public:
 
     /*! \brief Sets the capacity of the ByteBuffer to the given size. If the new capacity is larger than the current capacity, the buffer is extended and the current data is copied into the newly allocated memory.
      *  If the new capacity is smaller than the current size, the excess bytes are freed and the size is adjusted accordingly. */
-    HYP_FORCE_INLINE void SetCapacity(SizeType new_capacity)
+    HYP_FORCE_INLINE void SetCapacity(SizeType newCapacity)
     {
-        const SizeType current_capacity = m_allocation.GetCapacity();
+        const SizeType currentCapacity = m_allocation.GetCapacity();
 
-        if (new_capacity == current_capacity)
+        if (newCapacity == currentCapacity)
         {
             return;
         }
 
-        Allocation<ubyte, AllocatorType> new_allocation;
-        new_allocation.SetToInitialState();
+        Allocation<ubyte, AllocatorType> newAllocation;
+        newAllocation.SetToInitialState();
 
-        if (new_capacity != 0)
+        if (newCapacity != 0)
         {
-            new_allocation.Allocate(new_capacity);
+            newAllocation.Allocate(newCapacity);
 
-            const SizeType min_capacity = current_capacity <= new_capacity ? current_capacity : new_capacity;
+            const SizeType minCapacity = currentCapacity <= newCapacity ? currentCapacity : newCapacity;
 
-            new_allocation.InitFromRangeMove(Data(), Data() + min_capacity);
+            newAllocation.InitFromRangeMove(Data(), Data() + minCapacity);
         }
 
-        // Chop size off if it is larger than new_capacity.
-        if (new_capacity < m_size)
+        // Chop size off if it is larger than newCapacity.
+        if (newCapacity < m_size)
         {
-            m_size = new_capacity;
+            m_size = newCapacity;
         }
 
         m_allocation.Free();
 
-        m_allocation = new_allocation;
+        m_allocation = newAllocation;
     }
 
     /*! \brief Reads a value from the ByteBuffer at the given offset. If the offset is out of bounds, the function returns false and does not modify the output.
      *  The output buffer must be large enough to hold the requested number of bytes.
      *  \param offset The offset in the ByteBuffer to read from.
      *  \param count The number of bytes to read from the ByteBuffer.
-     *  \param out_values The output buffer to write the read values to.
+     *  \param outValues The output buffer to write the read values to.
      *  \return Returns true if the read was successful, false if the offset is out of bounds. */
-    bool Read(SizeType offset, SizeType count, ubyte* out_values) const
+    bool Read(SizeType offset, SizeType count, ubyte* outValues) const
     {
-        AssertThrow(out_values != nullptr);
+        AssertThrow(outValues != nullptr);
 
         const SizeType size = m_size;
 
@@ -371,7 +371,7 @@ public:
 
         const ubyte* data = Data();
 
-        Memory::MemCpy(out_values, data + offset, count);
+        Memory::MemCpy(outValues, data + offset, count);
 
         return true;
     }
@@ -386,7 +386,7 @@ public:
     template <class T>
     bool Read(SizeType offset, T* out) const
     {
-        static_assert(is_pod_type<T>, "Must be POD type");
+        static_assert(isPodType<T>, "Must be POD type");
 
         AssertThrow(out != nullptr);
 

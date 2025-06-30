@@ -49,20 +49,20 @@ public:
         return m_material;
     }
 
-    void SetBufferData(const LightShaderData& buffer_data);
+    void SetBufferData(const LightShaderData& bufferData);
 
     /*! \note Only to be called from render thread or render task */
     HYP_FORCE_INLINE const LightShaderData& GetBufferData() const
     {
-        return m_buffer_data;
+        return m_bufferData;
     }
 
     HYP_FORCE_INLINE const TResourceHandle<RenderShadowMap>& GetShadowMap() const
     {
-        return m_shadow_map;
+        return m_shadowMap;
     }
 
-    void SetShadowMap(TResourceHandle<RenderShadowMap>&& shadow_map);
+    void SetShadowMap(TResourceHandle<RenderShadowMap>&& shadowMap);
 
 protected:
     virtual void Initialize_Internal() override;
@@ -76,9 +76,9 @@ private:
 
     Light* m_light;
     Handle<Material> m_material;
-    TResourceHandle<RenderMaterial> m_render_material;
-    TResourceHandle<RenderShadowMap> m_shadow_map;
-    LightShaderData m_buffer_data;
+    TResourceHandle<RenderMaterial> m_renderMaterial;
+    TResourceHandle<RenderShadowMap> m_shadowMap;
+    LightShaderData m_bufferData;
 };
 
 } // namespace hyperion

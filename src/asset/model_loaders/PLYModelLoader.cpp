@@ -11,9 +11,9 @@
 
 namespace hyperion {
 
-constexpr bool create_obj_indices = true;
-constexpr bool mesh_per_material = true; // set true to create a new mesh on each instance of 'use <mtllib>'
-constexpr bool load_materials = true;
+constexpr bool createObjIndices = true;
+constexpr bool meshPerMaterial = true; // set true to create a new mesh on each instance of 'use <mtllib>'
+constexpr bool loadMaterials = true;
 
 using PLYModel = PLYModelLoader::PLYModel;
 
@@ -64,7 +64,7 @@ SizeType PLYModelLoader::PLYTypeSize(PLYType type)
         return 0;
     }
 
-    static constexpr SizeType type_size_map[PLYType::PLY_TYPE_MAX] = {
+    static constexpr SizeType typeSizeMap[PLYType::PLY_TYPE_MAX] = {
         8, // PLY_TYPE_DOUBLE
         4, // PLY_TYPE_FLOAT
         4, // PLY_TYPE_INT
@@ -75,41 +75,41 @@ SizeType PLYModelLoader::PLYTypeSize(PLYType type)
         1  // PLY_TYPE_UCHAR
     };
 
-    return type_size_map[type];
+    return typeSizeMap[type];
 }
 
-static void ReadPropertyValue(ByteBuffer& buffer, PLYModelLoader::PLYModel& model, SizeType row_offset, const String& property_name, SizeType count, void* out_ptr);
+static void ReadPropertyValue(ByteBuffer& buffer, PLYModelLoader::PLYModel& model, SizeType rowOffset, const String& propertyName, SizeType count, void* outPtr);
 
 template <class T>
-static void ReadPropertyValue(ByteBuffer& buffer, PLYModelLoader::PLYModel& model, SizeType row_offset, const String& property_name, void* out_ptr)
+static void ReadPropertyValue(ByteBuffer& buffer, PLYModelLoader::PLYModel& model, SizeType rowOffset, const String& propertyName, void* outPtr)
 {
-    ReadPropertyValue(buffer, model, row_offset, property_name, sizeof(T), out_ptr);
+    ReadPropertyValue(buffer, model, rowOffset, propertyName, sizeof(T), outPtr);
 }
 
-static void ReadPropertyValue(ByteBuffer& buffer, PLYModelLoader::PLYModel& model, SizeType row_offset, const String& property_name, SizeType count, void* out_ptr)
+static void ReadPropertyValue(ByteBuffer& buffer, PLYModelLoader::PLYModel& model, SizeType rowOffset, const String& propertyName, SizeType count, void* outPtr)
 {
-    const auto it = model.property_types.Find(property_name);
+    const auto it = model.propertyTypes.Find(propertyName);
 
-    AssertThrowMsg(it != model.property_types.End(), "Property with name %s not found", property_name.Data());
+    AssertThrowMsg(it != model.propertyTypes.End(), "Property with name %s not found", propertyName.Data());
 
-    const SizeType offset = it->second.offset + row_offset;
+    const SizeType offset = it->second.offset + rowOffset;
     AssertThrowMsg(offset < buffer.Size(), "Offset out of bounds (%u > %u)", offset, buffer.Size());
     AssertThrowMsg(offset + count <= buffer.Size(), "Offset + Size out of bounds (%u + %llu > %u)", offset, count, buffer.Size());
 
-    buffer.Read(offset, count, static_cast<ubyte*>(out_ptr));
+    buffer.Read(offset, count, static_cast<ubyte*>(outPtr));
 }
 
 PLYModel PLYModelLoader::LoadModel(LoaderState& state)
 {
     PLYModel model;
 
-    SizeType row_length = 0;
+    SizeType rowLength = 0;
 
-    state.stream.ReadLines([&](const String& line, bool* stop_ptr)
+    state.stream.ReadLines([&](const String& line, bool* stopPtr)
         {
             if (line == "end_header")
             {
-                *stop_ptr = true;
+                *stopPtr = true;
 
                 return;
             }
@@ -125,14 +125,14 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
             {
                 AssertThrowMsg(split.Size() >= 3, "Invalid model header -- property declaration should have at least 3 elements");
 
-                const auto property_type_string = split[1];
-                const auto property_name = split[2];
+                const auto propertyTypeString = split[1];
+                const auto propertyName = split[2];
 
-                const PLYType property_type = StringToPLYType(property_type_string);
+                const PLYType propertyType = StringToPLYType(propertyTypeString);
 
-                model.property_types.Set(property_name, PLYPropertyDefinition { property_type, row_length });
+                model.propertyTypes.Set(propertyName, PLYPropertyDefinition { propertyType, rowLength });
 
-                row_length += PLYTypeSize(property_type);
+                rowLength += PLYTypeSize(propertyType);
             }
             else if (split[0] == "element")
             {
@@ -140,20 +140,20 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
 
                 if (split[1] == "vertex")
                 {
-                    const uint32 num_vertices = StringUtil::Parse<uint32>(split[2].Data());
+                    const uint32 numVertices = StringUtil::Parse<uint32>(split[2].Data());
 
-                    model.vertices.Resize(num_vertices);
+                    model.vertices.Resize(numVertices);
                 }
             }
         });
 
-    model.header_length = state.stream.Position();
+    model.headerLength = state.stream.Position();
 
-    const SizeType num_vertices = model.vertices.Size();
+    const SizeType numVertices = model.vertices.Size();
 
     ByteBuffer buffer = state.stream.ReadBytes();
 
-    const auto is_custom_property_name = [](const String& str)
+    const auto isCustomPropertyName = [](const String& str)
     {
         if (str == "x" || str == "y" || str == "z")
         {
@@ -163,66 +163,66 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
         return true;
     };
 
-    for (auto& it : model.property_types)
+    for (auto& it : model.propertyTypes)
     {
         /*AssertThrowMsg(
-            it.value.offset >= model.header_length,
+            it.value.offset >= model.headerLength,
             "Offset out of range of header length (%u >= %u)",
             it.value.offset,
-            model.header_length
+            model.headerLength
         );
 
-        it.value.offset -= model.header_length;*/
+        it.value.offset -= model.headerLength;*/
 
         DebugLog(LogType::Debug, "%s offset = %u type = %u\n", it.first.Data(), it.second.offset, it.second.type);
 
-        if (is_custom_property_name(it.first))
+        if (isCustomPropertyName(it.first))
         {
-            const auto custom_data_it = model.custom_data.Find(it.first);
+            const auto customDataIt = model.customData.Find(it.first);
 
-            if (custom_data_it == model.custom_data.End())
+            if (customDataIt == model.customData.End())
             {
-                model.custom_data.Set(it.first, ByteBuffer(num_vertices * PLYTypeSize(it.second.type)));
+                model.customData.Set(it.first, ByteBuffer(numVertices * PLYTypeSize(it.second.type)));
             }
         }
     }
 
-    AssertThrow(buffer.Size() + model.header_length == state.stream.Position());
+    AssertThrow(buffer.Size() + model.headerLength == state.stream.Position());
 
-    for (SizeType index = 0; index < num_vertices; index++)
+    for (SizeType index = 0; index < numVertices; index++)
     {
-        const SizeType row_offset = index * row_length;
+        const SizeType rowOffset = index * rowLength;
 
         Vector3 position(NAN, NAN, NAN);
 
-        ReadPropertyValue<float>(buffer, model, row_offset, "x", &position.x);
-        ReadPropertyValue<float>(buffer, model, row_offset, "y", &position.y);
-        ReadPropertyValue<float>(buffer, model, row_offset, "z", &position.z);
+        ReadPropertyValue<float>(buffer, model, rowOffset, "x", &position.x);
+        ReadPropertyValue<float>(buffer, model, rowOffset, "y", &position.y);
+        ReadPropertyValue<float>(buffer, model, rowOffset, "z", &position.z);
 
         Vertex vertex;
         vertex.SetPosition(Vector3(position.x, position.y, position.z));
         model.vertices[index] = vertex;
 
-        for (const auto& it : model.property_types)
+        for (const auto& it : model.propertyTypes)
         {
-            if (!is_custom_property_name(it.first))
+            if (!isCustomPropertyName(it.first))
             {
                 continue;
             }
 
-            const auto custom_data_it = model.custom_data.Find(it.first);
-            AssertThrow(custom_data_it != model.custom_data.End());
+            const auto customDataIt = model.customData.Find(it.first);
+            AssertThrow(customDataIt != model.customData.End());
 
-            const SizeType data_type_size = PLYTypeSize(it.second.type);
-            const SizeType offset = index * data_type_size;
+            const SizeType dataTypeSize = PLYTypeSize(it.second.type);
+            const SizeType offset = index * dataTypeSize;
 
             ReadPropertyValue(
                 buffer,
                 model,
-                row_offset,
+                rowOffset,
                 it.first,
-                data_type_size,
-                custom_data_it->second.Data() + offset);
+                dataTypeSize,
+                customDataIt->second.Data() + offset);
         }
     }
 
@@ -231,11 +231,11 @@ PLYModel PLYModelLoader::LoadModel(LoaderState& state)
 
 LoadedAsset PLYModelLoader::BuildModel(LoaderState& state, PLYModel& model)
 {
-    AssertThrow(state.asset_manager != nullptr);
+    AssertThrow(state.assetManager != nullptr);
 
-    RC<PLYModel> ply_model_ptr = MakeRefCountedPtr<PLYModel>(model);
+    RC<PLYModel> plyModelPtr = MakeRefCountedPtr<PLYModel>(model);
 
-    return LoadedAsset { ply_model_ptr };
+    return LoadedAsset { plyModelPtr };
 }
 
 } // namespace hyperion

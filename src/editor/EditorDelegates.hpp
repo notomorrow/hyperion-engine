@@ -36,8 +36,8 @@ class HypProperty;
 
 struct NodeWatcher
 {
-    WeakHandle<Node> root_node;
-    FlatSet<const HypProperty*> properties_to_watch;
+    WeakHandle<Node> rootNode;
+    FlatSet<const HypProperty*> propertiesToWatch;
     Delegate<void, Node*, const HypProperty*> OnChange;
 };
 
@@ -45,31 +45,31 @@ class EditorDelegates
 {
     struct SuppressedNode
     {
-        FlatSet<const HypProperty*> properties_to_suppress;
-        int suppress_all_counter = 0;
+        FlatSet<const HypProperty*> propertiesToSuppress;
+        int suppressAllCounter = 0;
     };
 
 public:
     struct SuppressUpdatesScope
     {
-        SuppressUpdatesScope(EditorDelegates& editor_delegates, Node* node, const FlatSet<const HypProperty*>& properties_to_suppress = {})
-            : editor_delegates(editor_delegates),
+        SuppressUpdatesScope(EditorDelegates& editorDelegates, Node* node, const FlatSet<const HypProperty*>& propertiesToSuppress = {})
+            : editorDelegates(editorDelegates),
               node(node)
         {
-            SuppressedNode& suppressed_node = editor_delegates.m_suppressed_nodes[node];
+            SuppressedNode& suppressedNode = editorDelegates.m_suppressedNodes[node];
 
-            if (properties_to_suppress.Empty())
+            if (propertiesToSuppress.Empty())
             {
-                ++suppressed_node.suppress_all_counter;
-                suppress_all = true;
+                ++suppressedNode.suppressAllCounter;
+                suppressAll = true;
             }
             else
             {
-                for (const HypProperty* property : properties_to_suppress)
+                for (const HypProperty* property : propertiesToSuppress)
                 {
-                    if (!suppressed_node.properties_to_suppress.Contains(property))
+                    if (!suppressedNode.propertiesToSuppress.Contains(property))
                     {
-                        this->properties_to_suppress.Insert(property);
+                        this->propertiesToSuppress.Insert(property);
                     }
                 }
             }
@@ -77,28 +77,28 @@ public:
 
         ~SuppressUpdatesScope()
         {
-            SuppressedNode& suppressed_node = editor_delegates.m_suppressed_nodes[node];
+            SuppressedNode& suppressedNode = editorDelegates.m_suppressedNodes[node];
 
-            if (suppress_all)
+            if (suppressAll)
             {
-                --suppressed_node.suppress_all_counter;
+                --suppressedNode.suppressAllCounter;
             }
 
-            for (const HypProperty* property : properties_to_suppress)
+            for (const HypProperty* property : propertiesToSuppress)
             {
-                suppressed_node.properties_to_suppress.Erase(property);
+                suppressedNode.propertiesToSuppress.Erase(property);
             }
 
-            if (suppressed_node.properties_to_suppress.Empty() && suppress_all == 0)
+            if (suppressedNode.propertiesToSuppress.Empty() && suppressAll == 0)
             {
-                editor_delegates.m_suppressed_nodes.Erase(node);
+                editorDelegates.m_suppressedNodes.Erase(node);
             }
         }
 
-        EditorDelegates& editor_delegates;
+        EditorDelegates& editorDelegates;
         Node* node = nullptr;
-        FlatSet<const HypProperty*> properties_to_suppress;
-        bool suppress_all = false;
+        FlatSet<const HypProperty*> propertiesToSuppress;
+        bool suppressAll = false;
     };
 
     HYP_API EditorDelegates();
@@ -108,18 +108,18 @@ public:
     EditorDelegates& operator=(EditorDelegates&& other) = delete;
     ~EditorDelegates() = default;
 
-    /*! \brief Receive events and changes to any node that is a descendant of the given \ref{root_node}. */
-    HYP_API void AddNodeWatcher(Name watcher_key, Node* root_node, Span<const HypProperty> properties_to_watch, Proc<void(Node*, const HypProperty*)>&& proc);
-    HYP_API int RemoveNodeWatcher(WeakName watcher_key, Node* root_node);
-    HYP_API int RemoveNodeWatchers(WeakName watcher_key);
+    /*! \brief Receive events and changes to any node that is a descendant of the given \ref{rootNode}. */
+    HYP_API void AddNodeWatcher(Name watcherKey, Node* rootNode, Span<const HypProperty> propertiesToWatch, Proc<void(Node*, const HypProperty*)>&& proc);
+    HYP_API int RemoveNodeWatcher(WeakName watcherKey, Node* rootNode);
+    HYP_API int RemoveNodeWatchers(WeakName watcherKey);
 
     HYP_API void OnNodeUpdate(Node* node, const HypProperty* property);
 
     HYP_API void Update();
 
 private:
-    Array<Pair<Name, NodeWatcher>> m_node_watchers;
-    HashMap<Node*, SuppressedNode> m_suppressed_nodes;
+    Array<Pair<Name, NodeWatcher>> m_nodeWatchers;
+    HashMap<Node*, SuppressedNode> m_suppressedNodes;
 
     Scheduler m_scheduler;
 };

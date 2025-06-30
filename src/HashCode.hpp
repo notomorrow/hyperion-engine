@@ -18,13 +18,13 @@ HYP_MAKE_HAS_METHOD(GetHashCode);
 
 struct FNV1
 {
-    static constexpr uint64 offset_basis = 14695981039346656037ull;
-    static constexpr uint64 fnv_prime = 1099511628211ull;
+    static constexpr uint64 offsetBasis = 14695981039346656037ull;
+    static constexpr uint64 fnvPrime = 1099511628211ull;
 
     template <class CharType, SizeType Size>
     static constexpr uint64 HashString(const CharType (&str)[Size])
     {
-        uint64 hash = offset_basis;
+        uint64 hash = offsetBasis;
 
         for (SizeType i = 0; i < Size; ++i)
         {
@@ -34,7 +34,7 @@ struct FNV1
             }
 
             hash ^= str[i];
-            hash *= fnv_prime;
+            hash *= fnvPrime;
         }
 
         return hash;
@@ -43,12 +43,12 @@ struct FNV1
     template <class CharType>
     static constexpr uint64 HashString(const CharType* str)
     {
-        uint64 hash = offset_basis;
+        uint64 hash = offsetBasis;
 
         while (*str)
         {
             hash ^= *str;
-            hash *= fnv_prime;
+            hash *= fnvPrime;
 
             ++str;
         }
@@ -59,12 +59,12 @@ struct FNV1
     template <class CharType>
     static constexpr uint64 HashString(const CharType* _begin, const CharType* _end)
     {
-        uint64 hash = offset_basis;
+        uint64 hash = offsetBasis;
 
         while (*_begin && _begin != _end)
         {
             hash ^= *_begin;
-            hash *= fnv_prime;
+            hash *= fnvPrime;
 
             ++_begin;
         }
@@ -74,12 +74,12 @@ struct FNV1
 
     static constexpr uint64 HashBytes(const ubyte* _begin, const ubyte* _end)
     {
-        uint64 hash = offset_basis;
+        uint64 hash = offsetBasis;
 
         while (_begin != _end)
         {
             hash ^= *_begin;
-            hash *= fnv_prime;
+            hash *= fnvPrime;
 
             ++_begin;
         }
@@ -182,9 +182,9 @@ struct HashCode
         return GetHashCode(uintptr_t(ptr));
     }
 
-    static constexpr inline HashCode GetHashCode(const HashCode& hash_code)
+    static constexpr inline HashCode GetHashCode(const HashCode& hashCode)
     {
-        return hash_code;
+        return hashCode;
     }
 
     template <SizeType Size>

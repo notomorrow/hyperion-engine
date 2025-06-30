@@ -15,9 +15,9 @@
 
 namespace hyperion {
 
-HYP_API const StaticThreadId g_main_thread = StaticThreadId(NAME("Main"));
-HYP_API const StaticThreadId g_render_thread = g_main_thread;
-HYP_API const StaticThreadId g_game_thread = StaticThreadId(NAME("Game"));
+HYP_API const StaticThreadId g_mainThread = StaticThreadId(NAME("Main"));
+HYP_API const StaticThreadId g_renderThread = g_mainThread;
+HYP_API const StaticThreadId g_gameThread = StaticThreadId(NAME("Game"));
 
 namespace threading {
 
@@ -41,11 +41,11 @@ public:
     ThreadMap(const ThreadMap& other) = delete;
     ThreadMap& operator=(const ThreadMap& other) = delete;
 
-    ThreadBase* Get(const ThreadId& thread_id)
+    ThreadBase* Get(const ThreadId& threadId)
     {
         Mutex::Guard guard(m_mutex);
 
-        auto it = m_threads.Find(thread_id);
+        auto it = m_threads.Find(threadId);
 
         if (it == m_threads.End())
         {
@@ -75,11 +75,11 @@ public:
     }
 
     /*! \brief Remove a thread from the map. Returns false if the thread is not in the map. Returns true on success. */
-    bool Remove(const ThreadId& thread_id)
+    bool Remove(const ThreadId& threadId)
     {
         Mutex::Guard guard(m_mutex);
 
-        auto it = m_threads.Find(thread_id);
+        auto it = m_threads.Find(threadId);
 
         if (it == m_threads.End())
         {
@@ -96,29 +96,29 @@ private:
     Mutex m_mutex;
 };
 
-static ThreadMap g_static_thread_map = {};
-static ThreadMap g_dynamic_thread_map = {};
+static ThreadMap g_staticThreadMap = {};
+static ThreadMap g_dynamicThreadMap = {};
 
-thread_local ThreadBase* g_current_thread = nullptr;
+thread_local ThreadBase* g_currentThread = nullptr;
 
 #ifdef HYP_ENABLE_THREAD_ID
-thread_local ThreadId g_current_thread_id = ThreadId::Invalid();
+thread_local ThreadId g_currentThreadId = ThreadId::Invalid();
 #else
-static const ThreadId g_current_thread_id = ThreadId::Invalid();
+static const ThreadId g_currentThreadId = ThreadId::Invalid();
 #endif
 
 void Threads::SetCurrentThreadId(const ThreadId& id)
 {
 #ifdef HYP_ENABLE_THREAD_ID
-    g_current_thread_id = id;
+    g_currentThreadId = id;
 #endif
 
 #ifdef HYP_WINDOWS
-    HRESULT set_thread_result = SetThreadDescription(
+    HRESULT setThreadResult = SetThreadDescription(
         GetCurrentThread(),
         &HYP_UTF8_TOWIDE(id.GetName().LookupString())[0]);
 
-    if (FAILED(set_thread_result))
+    if (FAILED(setThreadResult))
     {
         HYP_LOG(Threading, Error, "Failed to set Win32 thread name for thread {}", id.GetName());
     }
@@ -138,11 +138,11 @@ void Threads::RegisterThread(const ThreadId& id, ThreadBase* thread)
 
     if (id.IsDynamic())
     {
-        success = g_dynamic_thread_map.Add(thread);
+        success = g_dynamicThreadMap.Add(thread);
     }
     else
     {
-        success = g_static_thread_map.Add(thread);
+        success = g_staticThreadMap.Add(thread);
     }
 
     AssertThrowMsg(success, "Thread %u (%s) could not be registered",
@@ -158,11 +158,11 @@ void Threads::UnregisterThread(const ThreadId& id)
 
     if (id.IsDynamic())
     {
-        g_dynamic_thread_map.Remove(id);
+        g_dynamicThreadMap.Remove(id);
     }
     else
     {
-        g_static_thread_map.Remove(id);
+        g_staticThreadMap.Remove(id);
     }
 }
 
@@ -175,34 +175,34 @@ bool Threads::IsThreadRegistered(const ThreadId& id)
 
     if (id.IsDynamic())
     {
-        return g_dynamic_thread_map.Get(id) != nullptr;
+        return g_dynamicThreadMap.Get(id) != nullptr;
     }
     else
     {
-        return g_static_thread_map.Get(id) != nullptr;
+        return g_staticThreadMap.Get(id) != nullptr;
     }
 }
 
-ThreadBase* Threads::GetThread(const ThreadId& thread_id)
+ThreadBase* Threads::GetThread(const ThreadId& threadId)
 {
-    if (!thread_id.IsValid())
+    if (!threadId.IsValid())
     {
         return nullptr;
     }
 
-    if (thread_id.IsDynamic())
+    if (threadId.IsDynamic())
     {
-        return g_dynamic_thread_map.Get(thread_id);
+        return g_dynamicThreadMap.Get(threadId);
     }
     else
     {
-        return g_static_thread_map.Get(thread_id);
+        return g_staticThreadMap.Get(threadId);
     }
 }
 
 ThreadBase* Threads::CurrentThreadObject()
 {
-    return g_current_thread;
+    return g_currentThread;
 }
 
 void Threads::SetCurrentThreadObject(ThreadBase* thread)
@@ -212,7 +212,7 @@ void Threads::SetCurrentThreadObject(ThreadBase* thread)
     AssertThrowMsg(IsThreadRegistered(thread->Id()), "Thread %u (%s) is not registered",
         thread->Id().GetValue(), *thread->Id().GetName());
 
-    g_current_thread = thread;
+    g_currentThread = thread;
 
     SetCurrentThreadId(thread->Id());
     SetCurrentThreadPriority(thread->GetPriority());
@@ -222,14 +222,14 @@ void Threads::AssertOnThread(ThreadMask mask, const char* message)
 {
 #ifdef HYP_ENABLE_THREAD_ASSERTIONS
 #ifdef HYP_ENABLE_THREAD_ID
-    thread_local const ThreadId& current_thread_id = CurrentThreadId();
+    thread_local const ThreadId& currentThreadId = CurrentThreadId();
 
     AssertThrowMsg(
-        mask & current_thread_id.GetMask(),
+        mask & currentThreadId.GetMask(),
         "Expected current thread to be in mask %u, but got %u (%s). Message: %s",
         mask,
-        current_thread_id.GetMask(),
-        current_thread_id.GetName().LookupString(),
+        currentThreadId.GetMask(),
+        currentThreadId.GetName().LookupString(),
         message ? message : "(no message)");
 
 #else
@@ -238,17 +238,17 @@ void Threads::AssertOnThread(ThreadMask mask, const char* message)
 #endif
 }
 
-void Threads::AssertOnThread(const ThreadId& thread_id, const char* message)
+void Threads::AssertOnThread(const ThreadId& threadId, const char* message)
 {
 #ifdef HYP_ENABLE_THREAD_ASSERTIONS
 #ifdef HYP_ENABLE_THREAD_ID
-    thread_local const ThreadId& current_thread_id = CurrentThreadId();
+    thread_local const ThreadId& currentThreadId = CurrentThreadId();
 
     AssertThrowMsg(
-        thread_id == current_thread_id,
+        threadId == currentThreadId,
         "Expected current thread to be %s, but got %s. Message: %s",
-        thread_id.GetName().LookupString(),
-        current_thread_id.GetName().LookupString(),
+        threadId.GetName().LookupString(),
+        currentThreadId.GetName().LookupString(),
         message ? message : "(no message)");
 #else
     HYP_LOG(Threading, Error, "AssertOnThread() called but thread IDs are currently disabled!");
@@ -256,17 +256,17 @@ void Threads::AssertOnThread(const ThreadId& thread_id, const char* message)
 #endif
 }
 
-bool Threads::IsThreadInMask(const ThreadId& thread_id, ThreadMask mask)
+bool Threads::IsThreadInMask(const ThreadId& threadId, ThreadMask mask)
 {
-    return mask & thread_id.GetMask();
+    return mask & threadId.GetMask();
 }
 
 bool Threads::IsOnThread(ThreadMask mask)
 {
 #ifdef HYP_ENABLE_THREAD_ID
-    thread_local const ThreadId& current_thread_id = CurrentThreadId();
+    thread_local const ThreadId& currentThreadId = CurrentThreadId();
 
-    if (mask & current_thread_id.GetMask())
+    if (mask & currentThreadId.GetMask())
     {
         return true;
     }
@@ -278,12 +278,12 @@ bool Threads::IsOnThread(ThreadMask mask)
     return false;
 }
 
-bool Threads::IsOnThread(const ThreadId& thread_id)
+bool Threads::IsOnThread(const ThreadId& threadId)
 {
 #ifdef HYP_ENABLE_THREAD_ID
-    thread_local const ThreadId& current_thread_id = CurrentThreadId();
+    thread_local const ThreadId& currentThreadId = CurrentThreadId();
 
-    if (thread_id == current_thread_id)
+    if (threadId == currentThreadId)
     {
         return true;
     }
@@ -300,71 +300,71 @@ const ThreadId& Threads::CurrentThreadId()
     // For non-thread object threads (e.g .NET finalizer threads),
     // read the thread name from the OS and allocate a new thread Id.
     // SetCurrentThreadId() should be called before CurrentThreadId() for any threads that should not use the OS-created name.
-    if (!g_current_thread_id.IsValid())
+    if (!g_currentThreadId.IsValid())
     {
 #ifdef HYP_WINDOWS
-        PWCHAR thread_name[256];
-        HRESULT result = GetThreadDescription(GetCurrentThread(), &thread_name[0]);
+        PWCHAR threadName[256];
+        HRESULT result = GetThreadDescription(GetCurrentThread(), &threadName[0]);
 
-        char thread_name_mb[256];
+        char threadNameMb[256];
         WideCharToMultiByte(
             CP_ACP,
             0,
-            thread_name[0],
+            threadName[0],
             -1,
-            thread_name_mb,
-            sizeof(thread_name_mb),
+            threadNameMb,
+            sizeof(threadNameMb),
             nullptr,
             nullptr);
 
         if (SUCCEEDED(result))
         {
-            g_current_thread_id = ThreadId(CreateNameFromDynamicString(&thread_name_mb[0]), /* force_unique */ true);
+            g_currentThreadId = ThreadId(CreateNameFromDynamicString(&threadNameMb[0]), /* forceUnique */ true);
         }
         else
         {
-            g_current_thread_id = ThreadId(NAME("Unknown"), /* force_unique */ true);
+            g_currentThreadId = ThreadId(NAME("Unknown"), /* forceUnique */ true);
         }
 #elif HYP_UNIX
-        char thread_name[256];
-        pthread_getname_np(pthread_self(), thread_name, sizeof(thread_name));
+        char threadName[256];
+        pthread_getname_np(pthread_self(), threadName, sizeof(threadName));
 
-        g_current_thread_id = ThreadId(CreateNameFromDynamicString(thread_name), /* force_unique */ true);
+        g_currentThreadId = ThreadId(CreateNameFromDynamicString(threadName), /* forceUnique */ true);
 #endif
     }
 
-    return g_current_thread_id;
+    return g_currentThreadId;
 }
 
 void Threads::SetCurrentThreadPriority(ThreadPriorityValue priority)
 {
 #ifdef HYP_WINDOWS
-    int win_priority = THREAD_PRIORITY_NORMAL;
+    int winPriority = THREAD_PRIORITY_NORMAL;
 
     switch (priority)
     {
     case ThreadPriorityValue::LOWEST:
-        win_priority = THREAD_PRIORITY_LOWEST;
+        winPriority = THREAD_PRIORITY_LOWEST;
         break;
 
     case ThreadPriorityValue::LOW:
-        win_priority = THREAD_PRIORITY_BELOW_NORMAL;
+        winPriority = THREAD_PRIORITY_BELOW_NORMAL;
         break;
 
     case ThreadPriorityValue::NORMAL:
-        win_priority = THREAD_PRIORITY_NORMAL;
+        winPriority = THREAD_PRIORITY_NORMAL;
         break;
 
     case ThreadPriorityValue::HIGH:
-        win_priority = THREAD_PRIORITY_ABOVE_NORMAL;
+        winPriority = THREAD_PRIORITY_ABOVE_NORMAL;
         break;
 
     case ThreadPriorityValue::HIGHEST:
-        win_priority = THREAD_PRIORITY_HIGHEST;
+        winPriority = THREAD_PRIORITY_HIGHEST;
         break;
     }
 
-    SetThreadPriority(GetCurrentThread(), win_priority);
+    SetThreadPriority(GetCurrentThread(), winPriority);
 #elif defined(HYP_LINUX) || defined(HYP_APPLE)
     int policy = SCHED_OTHER;
     struct sched_param param;

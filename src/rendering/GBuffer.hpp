@@ -38,7 +38,7 @@ enum GBufferResourceName : uint32
     GBUFFER_RESOURCE_MAX
 };
 
-static_assert(uint32(GBufferResourceName::GBUFFER_RESOURCE_MAX) == num_gbuffer_textures, "GBufferResourceName enum does not match num_gbuffer_textures");
+static_assert(uint32(GBufferResourceName::GBUFFER_RESOURCE_MAX) == numGbufferTextures, "GBufferResourceName enum does not match num_gbuffer_textures");
 
 struct GBufferResource
 {
@@ -48,7 +48,7 @@ struct GBufferResource
 class GBuffer
 {
 public:
-    static const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> gbuffer_resources;
+    static const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> gbufferResources;
 
     class GBufferBucket
     {
@@ -96,7 +96,7 @@ public:
             m_framebuffer = framebuffer;
         }
 
-        AttachmentBase* GetGBufferAttachment(GBufferResourceName resource_name) const;
+        AttachmentBase* GetGBufferAttachment(GBufferResourceName resourceName) const;
     };
 
     GBuffer(Vec2u extent);
@@ -138,7 +138,7 @@ public:
 
 private:
     void CreateBucketFramebuffers();
-    FramebufferRef CreateFramebuffer(const FramebufferRef& opaque_framebuffer, Vec2u resolution, RenderBucket rb);
+    FramebufferRef CreateFramebuffer(const FramebufferRef& opaqueFramebuffer, Vec2u resolution, RenderBucket rb);
 
     FixedArray<GBufferBucket, uint32(RB_MAX) - 1> m_buckets;
     Array<FramebufferRef> m_framebuffers;

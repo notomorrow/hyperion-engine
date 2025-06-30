@@ -38,8 +38,8 @@ class GBuffer;
 // /// ViewID is used to identify a View in a single frame. When a View is used in a frame, the global render state assigns an Id to it.
 // /// It is not persistent across frames, and should not be used to identify a View across multiple frames.
 // using ViewID = uint32;
-// constexpr ViewID invalid_view_id = ViewID(-1);
-// constexpr ViewID max_view_id = 15;
+// constexpr ViewID invalidViewId = ViewID(-1);
+// constexpr ViewID maxViewId = 15;
 
 enum class ViewFlags : uint32
 {
@@ -67,28 +67,28 @@ HYP_MAKE_ENUM_FLAGS(ViewFlags)
 struct ViewOutputTargetAttachmentDesc
 {
     TextureFormat format = TF_RGBA8;
-    TextureType image_type = TT_TEX2D;
-    LoadOperation load_op = LoadOperation::LOAD;
-    StoreOperation store_op = StoreOperation::STORE;
-    Vec4f clear_color = Vec4f::Zero();
+    TextureType imageType = TT_TEX2D;
+    LoadOperation loadOp = LoadOperation::LOAD;
+    StoreOperation storeOp = StoreOperation::STORE;
+    Vec4f clearColor = Vec4f::Zero();
 };
 
 struct ViewOutputTargetDesc
 {
     Vec2u extent = Vec2u::One();
     Array<ViewOutputTargetAttachmentDesc> attachments;
-    uint32 num_views = 1;
+    uint32 numViews = 1;
 };
 
 struct ViewDesc
 {
     EnumFlags<ViewFlags> flags = ViewFlags::DEFAULT;
     Viewport viewport;
-    ViewOutputTargetDesc output_target_desc;
+    ViewOutputTargetDesc outputTargetDesc;
     Array<Handle<Scene>> scenes;
     Handle<Camera> camera;
     int priority = 0;
-    Optional<RenderableAttributeSet> override_attributes;
+    Optional<RenderableAttributeSet> overrideAttributes;
 };
 
 class HYP_API ViewOutputTarget
@@ -105,14 +105,14 @@ public:
 
     HYP_FORCE_INLINE bool IsValid() const
     {
-        bool is_valid = false;
+        bool isValid = false;
 
-        m_impl.Visit([&is_valid](auto&& value)
+        m_impl.Visit([&isValid](auto&& value)
             {
-                is_valid = bool(value);
+                isValid = bool(value);
             });
 
-        return is_valid;
+        return isValid;
     }
 
     GBuffer* GetGBuffer() const;
@@ -132,7 +132,7 @@ class HYP_API View final : public HypObject<View>
 public:
     View();
 
-    View(const ViewDesc& view_desc);
+    View(const ViewDesc& viewDesc);
 
     View(const View& other) = delete;
     View& operator=(const View& other) = delete;
@@ -144,12 +144,12 @@ public:
 
     HYP_FORCE_INLINE RenderView& GetRenderResource() const
     {
-        return *m_render_resource;
+        return *m_renderResource;
     }
 
     HYP_FORCE_INLINE const ViewDesc& GetViewDesc() const
     {
-        return m_view_desc;
+        return m_viewDesc;
     }
 
     HYP_FORCE_INLINE EnumFlags<ViewFlags> GetFlags() const
@@ -177,7 +177,7 @@ public:
 
     HYP_FORCE_INLINE const ViewOutputTarget& GetOutputTarget() const
     {
-        return m_output_target;
+        return m_outputTarget;
     }
 
     HYP_FORCE_INLINE const Viewport& GetViewport() const
@@ -198,15 +198,15 @@ public:
 
     HYP_FORCE_INLINE const Optional<RenderableAttributeSet>& GetOverrideAttributes() const
     {
-        return m_override_attributes;
+        return m_overrideAttributes;
     }
 
     HYP_FORCE_INLINE const typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff& GetLastCollectionResult() const
     {
-        return m_last_collection_result;
+        return m_lastCollectionResult;
     }
 
-    bool TestRay(const Ray& ray, RayTestResults& out_results, bool use_bvh = true) const;
+    bool TestRay(const Ray& ray, RayTestResults& outResults, bool useBvh = true) const;
 
     void UpdateVisibility();
     void Update(float delta);
@@ -224,9 +224,9 @@ protected:
     typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff CollectDynamicEntities(RenderProxyList& rpl);
     typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff CollectStaticEntities(RenderProxyList& rpl);
 
-    ViewDesc m_view_desc;
+    ViewDesc m_viewDesc;
 
-    RenderView* m_render_resource;
+    RenderView* m_renderResource;
 
     EnumFlags<ViewFlags> m_flags;
 
@@ -234,15 +234,15 @@ protected:
 
     Array<Handle<Scene>> m_scenes;
     Handle<Camera> m_camera;
-    ViewOutputTarget m_output_target;
+    ViewOutputTarget m_outputTarget;
 
-    // ViewID m_view_id; // unique Id for this view in the current frame
+    // ViewID m_viewId; // unique Id for this view in the current frame
 
     int m_priority;
 
-    Optional<RenderableAttributeSet> m_override_attributes;
+    Optional<RenderableAttributeSet> m_overrideAttributes;
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff m_last_collection_result;
+    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff m_lastCollectionResult;
 };
 
 } // namespace hyperion

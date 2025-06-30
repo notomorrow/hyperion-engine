@@ -17,8 +17,8 @@ class WorldAABBUpdaterSystem : public SystemBase
     HYP_OBJECT_BODY(WorldAABBUpdaterSystem);
 
 public:
-    WorldAABBUpdaterSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    WorldAABBUpdaterSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 
@@ -40,7 +40,7 @@ private:
         };
     }
 
-    bool ProcessEntity(Entity* entity, BoundingBoxComponent& bounding_box_component, TransformComponent& transform_component);
+    bool ProcessEntity(Entity* entity, BoundingBoxComponent& boundingBoxComponent, TransformComponent& transformComponent);
 };
 
 } // namespace hyperion

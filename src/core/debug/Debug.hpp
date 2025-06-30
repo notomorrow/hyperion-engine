@@ -138,8 +138,8 @@ using debug::LogType;
 #define HYP_PURE_VIRTUAL() HYP_FAIL("Pure virtual function call: " HYP_STR(HYP_DEBUG_FUNC_SHORT) " is missing an implementation ")
 
 #define AssertStatic(cond) static_assert((cond), "Static assertion failed: " #cond)
-#define AssertStaticCond(use_static_assert, cond)                 \
-    if constexpr ((use_static_assert))                            \
+#define AssertStaticCond(useStaticAssert, cond)                 \
+    if constexpr ((useStaticAssert))                            \
     {                                                             \
         static_assert((cond), "Static assertion failed: " #cond); \
     }                                                             \
@@ -148,8 +148,8 @@ using debug::LogType;
         AssertThrow(cond);                                        \
     }
 #define AssertStaticMsg(cond, msg) static_assert((cond), "Static assertion failed: " #cond "\n\t" #msg "\n")
-#define AssertStaticMsgCond(use_static_assert, cond, msg)                          \
-    if constexpr ((use_static_assert))                                             \
+#define AssertStaticMsgCond(useStaticAssert, cond, msg)                          \
+    if constexpr ((useStaticAssert))                                             \
     {                                                                              \
         static_assert((cond), "Static assertion failed: " #cond "\n\t" #msg "\n"); \
     }                                                                              \

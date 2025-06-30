@@ -20,8 +20,8 @@ class EntityMeshDirtyStateSystem : public SystemBase
     HYP_OBJECT_BODY(EntityMeshDirtyStateSystem);
 
 public:
-    EntityMeshDirtyStateSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    EntityMeshDirtyStateSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

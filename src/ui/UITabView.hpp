@@ -33,18 +33,18 @@ public:
         return m_contents;
     }
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
 protected:
     virtual void Init() override;
 
-    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focus_state) override;
+    virtual void SetFocusState_Internal(EnumFlags<UIObjectFocusState> focusState) override;
 
     virtual Material::ParameterTable GetMaterialParameters() const override;
 
 private:
-    Handle<UIText> m_title_element;
+    Handle<UIText> m_titleElement;
     Handle<UIPanel> m_contents;
 };
 
@@ -71,7 +71,7 @@ public:
      */
     HYP_FORCE_INLINE uint32 GetSelectedTabIndex() const
     {
-        return m_selected_tab_index;
+        return m_selectedTabIndex;
     }
 
     /*! \brief Sets the selected tab by index.
@@ -114,14 +114,14 @@ public:
      */
     bool RemoveTab(Name name);
 
-    virtual void AddChildUIObject(const Handle<UIObject>& ui_object) override;
-    virtual bool RemoveChildUIObject(UIObject* ui_object) override;
+    virtual void AddChildUIObject(const Handle<UIObject>& uiObject) override;
+    virtual bool RemoveChildUIObject(UIObject* uiObject) override;
 
 protected:
     virtual void Init() override;
 
 private:
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
     void UpdateTabSizes();
 
@@ -129,7 +129,7 @@ private:
 
     Array<UITab*> m_tabs;
 
-    uint32 m_selected_tab_index;
+    uint32 m_selectedTabIndex;
 };
 
 #pragma endregion UITabView

@@ -18,8 +18,8 @@ class CameraSystem final : public SystemBase
     HYP_OBJECT_BODY(CameraSystem);
 
 public:
-    CameraSystem(EntityManager& entity_manager)
-        : SystemBase(entity_manager)
+    CameraSystem(EntityManager& entityManager)
+        : SystemBase(entityManager)
     {
     }
 

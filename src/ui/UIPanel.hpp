@@ -29,25 +29,25 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE bool IsHorizontalScrollEnabled() const
     {
-        return m_is_scroll_enabled & UIObjectScrollbarOrientation::HORIZONTAL;
+        return m_isScrollEnabled & UIObjectScrollbarOrientation::HORIZONTAL;
     }
 
     HYP_METHOD()
     HYP_FORCE_INLINE bool IsVerticalScrollEnabled() const
     {
-        return m_is_scroll_enabled & UIObjectScrollbarOrientation::VERTICAL;
+        return m_isScrollEnabled & UIObjectScrollbarOrientation::VERTICAL;
     }
 
     HYP_METHOD()
-    void SetIsScrollEnabled(UIObjectScrollbarOrientation orientation, bool is_scroll_enabled);
+    void SetIsScrollEnabled(UIObjectScrollbarOrientation orientation, bool isScrollEnabled);
 
     virtual bool CanScroll(UIObjectScrollbarOrientation orientation) const override
     {
-        const int orientation_index = UIObjectScrollbarOrientationToIndex(orientation);
-        AssertThrow(orientation_index != -1);
+        const int orientationIndex = UIObjectScrollbarOrientationToIndex(orientation);
+        AssertThrow(orientationIndex != -1);
 
-        return (m_is_scroll_enabled & orientation)
-            && GetActualInnerSize()[orientation_index] > GetActualSize()[orientation_index];
+        return (m_isScrollEnabled & orientation)
+            && GetActualInnerSize()[orientationIndex] > GetActualSize()[orientationIndex];
     }
 
 protected:
@@ -55,7 +55,7 @@ protected:
 
     virtual void OnAttached_Internal(UIObject* parent) override;
 
-    virtual void UpdateSize_Internal(bool update_children) override;
+    virtual void UpdateSize_Internal(bool updateChildren) override;
 
     virtual void OnScrollOffsetUpdate_Internal(Vec2f delta) override;
 
@@ -70,12 +70,12 @@ private:
     void UpdateScrollbarSize(UIObjectScrollbarOrientation orientation);
     void UpdateScrollbarThumbPosition(UIObjectScrollbarOrientation orientation);
 
-    UIEventHandlerResult HandleScroll(const MouseEvent& event_data);
+    UIEventHandlerResult HandleScroll(const MouseEvent& eventData);
 
-    EnumFlags<UIObjectScrollbarOrientation> m_is_scroll_enabled;
-    DelegateHandler m_on_scroll_handler;
+    EnumFlags<UIObjectScrollbarOrientation> m_isScrollEnabled;
+    DelegateHandler m_onScrollHandler;
 
-    FixedArray<Vec2i, 2> m_initial_drag_position;
+    FixedArray<Vec2i, 2> m_initialDragPosition;
 };
 
 #pragma endregion UIPanel

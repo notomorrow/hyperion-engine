@@ -300,18 +300,18 @@ static inline constexpr uint32 NumBytes(TextureFormat format)
 
 /*! \brief returns a texture format that has a shifted bytes-per-pixel count
  * e.g calling with RGB16 and num components = 4 --> RGBA16 */
-static inline constexpr TextureFormat FormatChangeNumComponents(TextureFormat fmt, uint8 new_num_components)
+static inline constexpr TextureFormat FormatChangeNumComponents(TextureFormat fmt, uint8 newNumComponents)
 {
-    if (new_num_components == 0)
+    if (newNumComponents == 0)
     {
         return TF_NONE;
     }
 
-    new_num_components = MathUtil::Clamp(new_num_components, static_cast<uint8>(1), static_cast<uint8>(4));
+    newNumComponents = MathUtil::Clamp(newNumComponents, static_cast<uint8>(1), static_cast<uint8>(4));
 
-    int current_num_components = int(NumComponents(fmt));
+    int currentNumComponents = int(NumComponents(fmt));
 
-    return TextureFormat(int(fmt) + int(new_num_components) - current_num_components);
+    return TextureFormat(int(fmt) + int(newNumComponents) - currentNumComponents);
 }
 
 static inline constexpr bool IsDepthFormat(TextureFormatBase fmt)
@@ -342,28 +342,28 @@ struct TextureDesc
     Vec3u extent = Vec3u::One();
 
     HYP_FIELD(Serialize, Property = "MinFilterMode")
-    TextureFilterMode filter_mode_min = TFM_NEAREST;
+    TextureFilterMode filterModeMin = TFM_NEAREST;
 
     HYP_FIELD(Serialize, Property = "MagFilterMode")
-    TextureFilterMode filter_mode_mag = TFM_NEAREST;
+    TextureFilterMode filterModeMag = TFM_NEAREST;
 
     HYP_FIELD(Serialize, Property = "TextureWrapMode")
-    TextureWrapMode wrap_mode = TWM_CLAMP_TO_EDGE;
+    TextureWrapMode wrapMode = TWM_CLAMP_TO_EDGE;
 
     HYP_FIELD(Serialize, Property = "NumLayers")
-    uint32 num_layers = 1;
+    uint32 numLayers = 1;
 
     HYP_FIELD(Serialize, Property = "ImageUsage")
-    EnumFlags<ImageUsage> image_usage = IU_SAMPLED;
+    EnumFlags<ImageUsage> imageUsage = IU_SAMPLED;
 
     HYP_FORCE_INLINE bool operator==(const TextureDesc& other) const = default;
     HYP_FORCE_INLINE bool operator!=(const TextureDesc& other) const = default;
 
     HYP_FORCE_INLINE bool HasMipmaps() const
     {
-        return filter_mode_min == TFM_NEAREST_MIPMAP
-            || filter_mode_min == TFM_LINEAR_MIPMAP
-            || filter_mode_min == TFM_MINMAX_MIPMAP;
+        return filterModeMin == TFM_NEAREST_MIPMAP
+            || filterModeMin == TFM_LINEAR_MIPMAP
+            || filterModeMin == TFM_MINMAX_MIPMAP;
     }
 
     HYP_FORCE_INLINE uint32 NumMipmaps() const
@@ -385,7 +385,7 @@ struct TextureDesc
 
     HYP_FORCE_INLINE bool IsBlended() const
     {
-        return image_usage[IU_BLENDED];
+        return imageUsage[IU_BLENDED];
     }
 
     HYP_FORCE_INLINE bool IsTextureCube() const
@@ -422,14 +422,14 @@ struct TextureDesc
 
     HYP_FORCE_INLINE uint32 NumFaces() const
     {
-        const uint32 num_array_layers = num_layers;
+        const uint32 numArrayLayers = numLayers;
 
         if (IsTextureCube() || IsTextureCubeArray())
         {
-            return 6 * num_array_layers;
+            return 6 * numArrayLayers;
         }
 
-        return num_array_layers;
+        return numArrayLayers;
     }
 
     HYP_FORCE_INLINE uint32 GetByteSize() const
@@ -446,10 +446,10 @@ struct TextureDesc
         hc.Add(type);
         hc.Add(format);
         hc.Add(extent);
-        hc.Add(filter_mode_min);
-        hc.Add(filter_mode_mag);
-        hc.Add(wrap_mode);
-        hc.Add(num_layers);
+        hc.Add(filterModeMin);
+        hc.Add(filterModeMag);
+        hc.Add(wrapMode);
+        hc.Add(numLayers);
 
         return hc;
     }
@@ -477,14 +477,14 @@ struct TextureData
 
 struct alignas(16) PackedVertex
 {
-    float position_x,
-        position_y,
-        position_z,
-        normal_x,
-        normal_y,
-        normal_z,
-        texcoord0_x,
-        texcoord0_y;
+    float positionX,
+        positionY,
+        positionZ,
+        normalX,
+        normalY,
+        normalZ,
+        texcoord0X,
+        texcoord0Y;
 };
 
 static_assert(sizeof(PackedVertex) == sizeof(float32) * 8);
@@ -558,8 +558,8 @@ struct BlendFunction
     {
     }
 
-    BlendFunction(BlendModeFactor src_color, BlendModeFactor dst_color, BlendModeFactor src_alpha, BlendModeFactor dst_alpha)
-        : value((uint32(src_color) << 0) | (uint32(dst_color) << 4) | (uint32(src_alpha) << 8) | (uint32(dst_alpha) << 12))
+    BlendFunction(BlendModeFactor srcColor, BlendModeFactor dstColor, BlendModeFactor srcAlpha, BlendModeFactor dstAlpha)
+        : value((uint32(srcColor) << 0) | (uint32(dstColor) << 4) | (uint32(srcAlpha) << 8) | (uint32(dstAlpha) << 12))
     {
     }
 
@@ -672,16 +672,16 @@ HYP_STRUCT()
 struct StencilFunction
 {
     HYP_FIELD()
-    StencilOp pass_op = SO_KEEP;
+    StencilOp passOp = SO_KEEP;
 
     HYP_FIELD()
-    StencilOp fail_op = SO_REPLACE;
+    StencilOp failOp = SO_REPLACE;
 
     HYP_FIELD()
-    StencilOp depth_fail_op = SO_REPLACE;
+    StencilOp depthFailOp = SO_REPLACE;
 
     HYP_FIELD()
-    StencilCompareOp compare_op = SCO_ALWAYS;
+    StencilCompareOp compareOp = SCO_ALWAYS;
 
     HYP_FIELD()
     uint8 mask = 0x0;
@@ -775,13 +775,13 @@ struct PushConstantData
 namespace hyperion {
 struct alignas(16) MeshDescription
 {
-    uint64 vertex_buffer_address;
-    uint64 index_buffer_address;
+    uint64 vertexBufferAddress;
+    uint64 indexBufferAddress;
 
     uint32 _pad0;
-    uint32 material_index;
-    uint32 num_indices;
-    uint32 num_vertices;
+    uint32 materialIndex;
+    uint32 numIndices;
+    uint32 numVertices;
 };
 
 using ImageSubResourceFlagBits = uint32;
@@ -794,42 +794,42 @@ enum ImageSubResourceFlags : ImageSubResourceFlagBits
     IMAGE_SUB_RESOURCE_FLAGS_STENCIL = 1 << 2
 };
 
-static inline uint64 GetImageSubResourceKey(uint32 base_array_layer, uint32 base_mip_level)
+static inline uint64 GetImageSubResourceKey(uint32 baseArrayLayer, uint32 baseMipLevel)
 {
-    return (uint64(base_array_layer) << 32) | (uint64(base_mip_level));
+    return (uint64(baseArrayLayer) << 32) | (uint64(baseMipLevel));
 }
 
 /* images */
 struct ImageSubResource
 {
     ImageSubResourceFlagBits flags = IMAGE_SUB_RESOURCE_FLAGS_COLOR;
-    uint32 base_array_layer = 0;
-    uint32 base_mip_level = 0;
-    uint32 num_layers = 1;
-    uint32 num_levels = 1;
+    uint32 baseArrayLayer = 0;
+    uint32 baseMipLevel = 0;
+    uint32 numLayers = 1;
+    uint32 numLevels = 1;
 
     bool operator==(const ImageSubResource& other) const
     {
         return flags == other.flags
-            && base_array_layer == other.base_array_layer
-            && num_layers == other.num_layers
-            && base_mip_level == other.base_mip_level
-            && num_levels == other.num_levels;
+            && baseArrayLayer == other.baseArrayLayer
+            && numLayers == other.numLayers
+            && baseMipLevel == other.baseMipLevel
+            && numLevels == other.numLevels;
     }
 
     uint64 GetSubResourceKey() const
     {
-        return GetImageSubResourceKey(base_array_layer, base_mip_level);
+        return GetImageSubResourceKey(baseArrayLayer, baseMipLevel);
     }
 
     HashCode GetHashCode() const
     {
         HashCode hc;
         hc.Add(flags);
-        hc.Add(base_array_layer);
-        hc.Add(num_layers);
-        hc.Add(base_mip_level);
-        hc.Add(num_levels);
+        hc.Add(baseArrayLayer);
+        hc.Add(numLayers);
+        hc.Add(baseMipLevel);
+        hc.Add(numLevels);
 
         return hc;
     }

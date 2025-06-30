@@ -37,16 +37,16 @@ struct ShadowMapComponent
     Handle<Subsystem> subsystem;
 
     HYP_FIELD()
-    uint32 update_counter = 0;
+    uint32 updateCounter = 0;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        HashCode hash_code;
-        hash_code.Add(mode);
-        hash_code.Add(radius);
-        hash_code.Add(resolution);
+        HashCode hashCode;
+        hashCode.Add(mode);
+        hashCode.Add(radius);
+        hashCode.Add(resolution);
 
-        return hash_code;
+        return hashCode;
     }
 };
 

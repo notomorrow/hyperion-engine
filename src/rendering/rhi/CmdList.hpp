@@ -68,10 +68,10 @@ public:
     virtual void Execute(const CommandBufferRef& cmd) = 0;
 
 private:
-    CmdPoolHandle m_pool_handle;
+    CmdPoolHandle m_poolHandle;
 
 #ifdef HYP_RHI_COMMAND_STACK_TRACE
-    char* m_stack_trace = "";
+    char* m_stackTrace = "";
 #endif
 };
 
@@ -91,40 +91,40 @@ public:
     template <class... Args>
     CmdType* NewCommand(Args&&... args)
     {
-        ValueStorage<CmdType>* command_storage;
+        ValueStorage<CmdType>* commandStorage;
 
-        const uint32 index = MemoryPool<ValueStorage<CmdType>>::AcquireIndex(&command_storage);
+        const uint32 index = MemoryPool<ValueStorage<CmdType>>::AcquireIndex(&commandStorage);
 
-        command_storage->Construct(std::forward<Args>(args)...);
-        command_storage->Get().m_pool_handle = { static_cast<CmdMemoryPoolBase*>(this), index };
+        commandStorage->Construct(std::forward<Args>(args)...);
+        commandStorage->Get().m_poolHandle = { static_cast<CmdMemoryPoolBase*>(this), index };
 
 #ifdef HYP_RHI_COMMAND_STACK_TRACE
         // Allocate string and copy stack trace (creating stack trace is extremely SLOW, enable for debugging only!)
         String dump = StackDump(10, 2).ToString();
-        command_storage->Get().m_stack_trace = (char*)std::malloc(dump.Size() + 1);
-        std::strncpy(command_storage->Get().m_stack_trace, dump.Data(), dump.Size());
-        command_storage->Get().m_stack_trace[dump.Size()] = '\0';
+        commandStorage->Get().m_stackTrace = (char*)std::malloc(dump.Size() + 1);
+        std::strncpy(commandStorage->Get().m_stackTrace, dump.Data(), dump.Size());
+        commandStorage->Get().m_stackTrace[dump.Size()] = '\0';
 #endif
 
-        return &command_storage->Get();
+        return &commandStorage->Get();
     }
 
     virtual void FreeCommand(CmdBase* command) override
     {
         AssertDebug(command != nullptr);
-        AssertDebug(command->m_pool_handle.pool == this);
+        AssertDebug(command->m_poolHandle.pool == this);
 
 #ifdef HYP_RHI_COMMAND_STACK_TRACE
-        if (command->m_stack_trace != nullptr)
+        if (command->m_stackTrace != nullptr)
         {
-            std::free(command->m_stack_trace);
-            command->m_stack_trace = nullptr;
+            std::free(command->m_stackTrace);
+            command->m_stackTrace = nullptr;
         }
 #endif
 
         command->~CmdBase();
 
-        MemoryPool<ValueStorage<CmdType>>::ReleaseIndex(command->m_pool_handle.index);
+        MemoryPool<ValueStorage<CmdType>>::ReleaseIndex(command->m_poolHandle.index);
     }
 };
 
@@ -165,102 +165,102 @@ private:
 class DrawIndexed final : public CmdBase
 {
 public:
-    DrawIndexed(uint32 num_indices, uint32 num_instance, uint32 instance_index)
-        : m_num_indices(num_indices),
-          m_num_instances(num_instance),
-          m_instance_index(instance_index)
+    DrawIndexed(uint32 numIndices, uint32 numInstance, uint32 instanceIndex)
+        : m_numIndices(numIndices),
+          m_numInstances(numInstance),
+          m_instanceIndex(instanceIndex)
     {
     }
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        cmd->DrawIndexed(m_num_indices, m_num_instances, m_instance_index);
+        cmd->DrawIndexed(m_numIndices, m_numInstances, m_instanceIndex);
     }
 
 private:
-    uint32 m_num_indices;
-    uint32 m_num_instances;
-    uint32 m_instance_index;
+    uint32 m_numIndices;
+    uint32 m_numInstances;
+    uint32 m_instanceIndex;
 };
 
 class DrawIndexedIndirect final : public CmdBase
 {
 public:
-    DrawIndexedIndirect(const GpuBufferRef& buffer, uint32 buffer_offset)
+    DrawIndexedIndirect(const GpuBufferRef& buffer, uint32 bufferOffset)
         : m_buffer(buffer),
-          m_buffer_offset(buffer_offset)
+          m_bufferOffset(bufferOffset)
     {
     }
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        cmd->DrawIndexedIndirect(m_buffer, m_buffer_offset);
+        cmd->DrawIndexedIndirect(m_buffer, m_bufferOffset);
     }
 
 private:
     GpuBufferRef m_buffer;
-    uint32 m_buffer_offset;
+    uint32 m_bufferOffset;
 };
 
 class BeginFramebuffer final : public CmdBase
 {
 public:
 #ifdef HYP_DEBUG_MODE
-    HYP_API BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frame_index);
+    HYP_API BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex);
     HYP_API virtual void Prepare(FrameBase* frame) override;
 #else
-    BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frame_index)
+    BeginFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex)
         : m_framebuffer(framebuffer),
-          m_frame_index(frame_index)
+          m_frameIndex(frameIndex)
     {
     }
 #endif
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_framebuffer->BeginCapture(cmd, m_frame_index);
+        m_framebuffer->BeginCapture(cmd, m_frameIndex);
     }
 
 private:
     FramebufferRef m_framebuffer;
-    uint32 m_frame_index;
+    uint32 m_frameIndex;
 };
 
 class EndFramebuffer final : public CmdBase
 {
 public:
 #ifdef HYP_DEBUG_MODE
-    HYP_API EndFramebuffer(const FramebufferRef& framebuffer, uint32 frame_index);
+    HYP_API EndFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex);
     HYP_API virtual void Prepare(FrameBase* frame) override;
 #else
-    EndFramebuffer(const FramebufferRef& framebuffer, uint32 frame_index)
+    EndFramebuffer(const FramebufferRef& framebuffer, uint32 frameIndex)
         : m_framebuffer(framebuffer),
-          m_frame_index(frame_index)
+          m_frameIndex(frameIndex)
     {
     }
 #endif
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_framebuffer->EndCapture(cmd, m_frame_index);
+        m_framebuffer->EndCapture(cmd, m_frameIndex);
     }
 
 private:
     FramebufferRef m_framebuffer;
-    uint32 m_frame_index;
+    uint32 m_frameIndex;
 };
 
 class BindGraphicsPipeline final : public CmdBase
 {
 public:
 #ifdef HYP_DEBUG_MODE
-    HYP_API BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, Vec2i viewport_offset, Vec2u viewport_extent);
+    HYP_API BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, Vec2i viewportOffset, Vec2u viewportExtent);
     HYP_API BindGraphicsPipeline(const GraphicsPipelineRef& pipeline);
 #else
-    BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, Vec2i viewport_offset, Vec2u viewport_extent)
+    BindGraphicsPipeline(const GraphicsPipelineRef& pipeline, Vec2i viewportOffset, Vec2u viewportExtent)
         : m_pipeline(pipeline),
-          m_viewport_offset(viewport_offset),
-          m_viewport_extent(viewport_extent)
+          m_viewportOffset(viewportOffset),
+          m_viewportExtent(viewportExtent)
     {
     }
 
@@ -272,9 +272,9 @@ public:
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        if (m_viewport_offset != Vec2i(0, 0) || m_viewport_extent != Vec2u(0, 0))
+        if (m_viewportOffset != Vec2i(0, 0) || m_viewportExtent != Vec2u(0, 0))
         {
-            m_pipeline->Bind(cmd, m_viewport_offset, m_viewport_extent);
+            m_pipeline->Bind(cmd, m_viewportOffset, m_viewportExtent);
         }
         else
         {
@@ -284,8 +284,8 @@ public:
 
 private:
     GraphicsPipelineRef m_pipeline;
-    Vec2i m_viewport_offset;
-    Vec2u m_viewport_extent;
+    Vec2i m_viewportOffset;
+    Vec2u m_viewportExtent;
 };
 
 class BindComputePipeline final : public CmdBase
@@ -325,73 +325,73 @@ private:
 class BindDescriptorSet final : public CmdBase
 {
 public:
-    BindDescriptorSet(const DescriptorSetRef& descriptor_set, const GraphicsPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
-        : m_descriptor_set(descriptor_set),
+    BindDescriptorSet(const DescriptorSetRef& descriptorSet, const GraphicsPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
+        : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets)
     {
-        AssertThrowMsg(descriptor_set != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptor_set->IsCreated(), "Descriptor set is not created yet");
+        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
-        m_bind_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptor_set->GetLayout().GetName());
-        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index for descriptor set %s", descriptor_set->GetLayout().GetName().LookupString());
+        m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
+        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
     }
 
-    BindDescriptorSet(const DescriptorSetRef& descriptor_set, const GraphicsPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index)
-        : m_descriptor_set(descriptor_set),
+    BindDescriptorSet(const DescriptorSetRef& descriptorSet, const GraphicsPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
+        : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets),
-          m_bind_index(bind_index)
+          m_bindIndex(bindIndex)
     {
-        AssertThrowMsg(descriptor_set != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptor_set->IsCreated(), "Descriptor set is not created yet");
-        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index");
+        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index");
     }
 
-    BindDescriptorSet(const DescriptorSetRef& descriptor_set, const ComputePipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
-        : m_descriptor_set(descriptor_set),
+    BindDescriptorSet(const DescriptorSetRef& descriptorSet, const ComputePipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
+        : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets)
     {
-        AssertThrowMsg(descriptor_set != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptor_set->IsCreated(), "Descriptor set is not created yet");
+        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
-        m_bind_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptor_set->GetLayout().GetName());
-        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index for descriptor set %s", descriptor_set->GetLayout().GetName().LookupString());
+        m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
+        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
     }
 
-    BindDescriptorSet(const DescriptorSetRef& descriptor_set, const ComputePipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index)
-        : m_descriptor_set(descriptor_set),
+    BindDescriptorSet(const DescriptorSetRef& descriptorSet, const ComputePipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
+        : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets),
-          m_bind_index(bind_index)
+          m_bindIndex(bindIndex)
     {
-        AssertThrowMsg(descriptor_set != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptor_set->IsCreated(), "Descriptor set is not created yet");
-        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index");
+        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index");
     }
 
-    BindDescriptorSet(const DescriptorSetRef& descriptor_set, const RaytracingPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
-        : m_descriptor_set(descriptor_set),
+    BindDescriptorSet(const DescriptorSetRef& descriptorSet, const RaytracingPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
+        : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets)
     {
-        AssertThrowMsg(descriptor_set != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptor_set->IsCreated(), "Descriptor set is not created yet");
+        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
-        m_bind_index = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptor_set->GetLayout().GetName());
-        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index for descriptor set %s", descriptor_set->GetLayout().GetName().LookupString());
+        m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
+        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
     }
 
-    BindDescriptorSet(const DescriptorSetRef& descriptor_set, const RaytracingPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bind_index)
-        : m_descriptor_set(descriptor_set),
+    BindDescriptorSet(const DescriptorSetRef& descriptorSet, const RaytracingPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
+        : m_descriptorSet(descriptorSet),
           m_pipeline(pipeline),
           m_offsets(offsets),
-          m_bind_index(bind_index)
+          m_bindIndex(bindIndex)
     {
-        AssertThrowMsg(descriptor_set != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptor_set->IsCreated(), "Descriptor set is not created yet");
-        AssertThrowMsg(m_bind_index != ~0u, "Invalid bind index");
+        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index");
     }
 
     HYP_API virtual void Prepare(FrameBase* frame) override;
@@ -400,45 +400,45 @@ public:
     {
         m_pipeline.Visit([this, &cmd](const auto& pipeline)
             {
-                m_descriptor_set->Bind(cmd, pipeline, m_offsets, m_bind_index);
+                m_descriptorSet->Bind(cmd, pipeline, m_offsets, m_bindIndex);
             });
     }
 
 private:
-    DescriptorSetRef m_descriptor_set;
+    DescriptorSetRef m_descriptorSet;
     Variant<GraphicsPipelineRef, ComputePipelineRef, RaytracingPipelineRef> m_pipeline;
     ArrayMap<Name, uint32> m_offsets;
-    uint32 m_bind_index;
+    uint32 m_bindIndex;
 };
 
 class BindDescriptorTable final : public CmdBase
 {
 public:
-    BindDescriptorTable(const DescriptorTableRef& descriptor_table, const GraphicsPipelineRef& graphics_pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frame_index)
-        : m_descriptor_table(descriptor_table),
-          m_pipeline(graphics_pipeline),
+    BindDescriptorTable(const DescriptorTableRef& descriptorTable, const GraphicsPipelineRef& graphicsPipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
+        : m_descriptorTable(descriptorTable),
+          m_pipeline(graphicsPipeline),
           m_offsets(offsets),
-          m_frame_index(frame_index)
+          m_frameIndex(frameIndex)
     {
-        AssertThrowMsg(descriptor_table != nullptr, "Descriptor table must not be null");
+        AssertThrowMsg(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
-    BindDescriptorTable(const DescriptorTableRef& descriptor_table, const ComputePipelineRef& compute_pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frame_index)
-        : m_descriptor_table(descriptor_table),
-          m_pipeline(compute_pipeline),
+    BindDescriptorTable(const DescriptorTableRef& descriptorTable, const ComputePipelineRef& computePipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
+        : m_descriptorTable(descriptorTable),
+          m_pipeline(computePipeline),
           m_offsets(offsets),
-          m_frame_index(frame_index)
+          m_frameIndex(frameIndex)
     {
-        AssertThrowMsg(descriptor_table != nullptr, "Descriptor table must not be null");
+        AssertThrowMsg(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
-    BindDescriptorTable(const DescriptorTableRef& descriptor_table, const RaytracingPipelineRef& raytracing_pipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frame_index)
-        : m_descriptor_table(descriptor_table),
-          m_pipeline(raytracing_pipeline),
+    BindDescriptorTable(const DescriptorTableRef& descriptorTable, const RaytracingPipelineRef& raytracingPipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
+        : m_descriptorTable(descriptorTable),
+          m_pipeline(raytracingPipeline),
           m_offsets(offsets),
-          m_frame_index(frame_index)
+          m_frameIndex(frameIndex)
     {
-        AssertThrowMsg(descriptor_table != nullptr, "Descriptor table must not be null");
+        AssertThrowMsg(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
     HYP_API virtual void Prepare(FrameBase* frame) override;
@@ -447,39 +447,39 @@ public:
     {
         m_pipeline.Visit([this, &cmd](const auto& pipeline)
             {
-                m_descriptor_table->Bind(cmd, m_frame_index, pipeline, m_offsets);
+                m_descriptorTable->Bind(cmd, m_frameIndex, pipeline, m_offsets);
             });
     }
 
 private:
-    DescriptorTableRef m_descriptor_table;
+    DescriptorTableRef m_descriptorTable;
     Variant<GraphicsPipelineRef, ComputePipelineRef, RaytracingPipelineRef> m_pipeline;
     ArrayMap<Name, ArrayMap<Name, uint32>> m_offsets;
-    uint32 m_frame_index;
+    uint32 m_frameIndex;
 };
 
 class InsertBarrier final : public CmdBase
 {
 public:
-    InsertBarrier(const GpuBufferRef& buffer, const ResourceState& state, ShaderModuleType shader_module_type = SMT_UNSET)
+    InsertBarrier(const GpuBufferRef& buffer, const ResourceState& state, ShaderModuleType shaderModuleType = SMT_UNSET)
         : m_buffer(buffer),
           m_state(state),
-          m_shader_module_type(shader_module_type)
+          m_shaderModuleType(shaderModuleType)
     {
     }
 
-    InsertBarrier(const ImageRef& image, const ResourceState& state, ShaderModuleType shader_module_type = SMT_UNSET)
+    InsertBarrier(const ImageRef& image, const ResourceState& state, ShaderModuleType shaderModuleType = SMT_UNSET)
         : m_image(image),
           m_state(state),
-          m_shader_module_type(shader_module_type)
+          m_shaderModuleType(shaderModuleType)
     {
     }
 
-    InsertBarrier(const ImageRef& image, const ResourceState& state, const ImageSubResource& sub_resource, ShaderModuleType shader_module_type = SMT_UNSET)
+    InsertBarrier(const ImageRef& image, const ResourceState& state, const ImageSubResource& subResource, ShaderModuleType shaderModuleType = SMT_UNSET)
         : m_image(image),
           m_state(state),
-          m_sub_resource(sub_resource),
-          m_shader_module_type(shader_module_type)
+          m_subResource(subResource),
+          m_shaderModuleType(shaderModuleType)
     {
     }
 
@@ -487,17 +487,17 @@ public:
     {
         if (m_buffer)
         {
-            m_buffer->InsertBarrier(cmd, m_state, m_shader_module_type);
+            m_buffer->InsertBarrier(cmd, m_state, m_shaderModuleType);
         }
         else if (m_image)
         {
-            if (m_sub_resource)
+            if (m_subResource)
             {
-                m_image->InsertBarrier(cmd, *m_sub_resource, m_state, m_shader_module_type);
+                m_image->InsertBarrier(cmd, *m_subResource, m_state, m_shaderModuleType);
             }
             else
             {
-                m_image->InsertBarrier(cmd, m_state, m_shader_module_type);
+                m_image->InsertBarrier(cmd, m_state, m_shaderModuleType);
             }
         }
     }
@@ -506,60 +506,60 @@ private:
     GpuBufferRef m_buffer;
     ImageRef m_image;
     ResourceState m_state;
-    Optional<ImageSubResource> m_sub_resource;
-    ShaderModuleType m_shader_module_type;
+    Optional<ImageSubResource> m_subResource;
+    ShaderModuleType m_shaderModuleType;
 };
 
 class Blit final : public CmdBase
 {
 public:
-    Blit(const ImageRef& src_image, const ImageRef& dst_image)
-        : m_src_image(src_image),
-          m_dst_image(dst_image)
+    Blit(const ImageRef& srcImage, const ImageRef& dstImage)
+        : m_srcImage(srcImage),
+          m_dstImage(dstImage)
     {
     }
 
-    Blit(const ImageRef& src_image, const ImageRef& dst_image, const Rect<uint32>& src_rect, const Rect<uint32>& dst_rect)
-        : m_src_image(src_image),
-          m_dst_image(dst_image),
-          m_src_rect(src_rect),
-          m_dst_rect(dst_rect)
+    Blit(const ImageRef& srcImage, const ImageRef& dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect)
+        : m_srcImage(srcImage),
+          m_dstImage(dstImage),
+          m_srcRect(srcRect),
+          m_dstRect(dstRect)
     {
     }
 
-    Blit(const ImageRef& src_image, const ImageRef& dst_image, const Rect<uint32>& src_rect, const Rect<uint32>& dst_rect, uint32 src_mip, uint32 dst_mip, uint32 src_face, uint32 dst_face)
-        : m_src_image(src_image),
-          m_dst_image(dst_image),
-          m_src_rect(src_rect),
-          m_dst_rect(dst_rect),
-          m_mip_face_info(MipFaceInfo { src_mip, dst_mip, src_face, dst_face })
+    Blit(const ImageRef& srcImage, const ImageRef& dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect, uint32 srcMip, uint32 dstMip, uint32 srcFace, uint32 dstFace)
+        : m_srcImage(srcImage),
+          m_dstImage(dstImage),
+          m_srcRect(srcRect),
+          m_dstRect(dstRect),
+          m_mipFaceInfo(MipFaceInfo { srcMip, dstMip, srcFace, dstFace })
     {
     }
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        if (m_mip_face_info)
+        if (m_mipFaceInfo)
         {
-            MipFaceInfo info = *m_mip_face_info;
+            MipFaceInfo info = *m_mipFaceInfo;
 
-            if (m_src_rect && m_dst_rect)
+            if (m_srcRect && m_dstRect)
             {
-                m_dst_image->Blit(cmd, m_src_image, *m_src_rect, *m_dst_rect, info.src_mip, info.dst_mip, info.src_face, info.dst_face);
+                m_dstImage->Blit(cmd, m_srcImage, *m_srcRect, *m_dstRect, info.srcMip, info.dstMip, info.srcFace, info.dstFace);
             }
             else
             {
-                m_dst_image->Blit(cmd, m_src_image, info.src_mip, info.dst_mip, info.src_face, info.dst_face);
+                m_dstImage->Blit(cmd, m_srcImage, info.srcMip, info.dstMip, info.srcFace, info.dstFace);
             }
         }
         else
         {
-            if (m_src_rect && m_dst_rect)
+            if (m_srcRect && m_dstRect)
             {
-                m_dst_image->Blit(cmd, m_src_image, *m_src_rect, *m_dst_rect);
+                m_dstImage->Blit(cmd, m_srcImage, *m_srcRect, *m_dstRect);
             }
             else
             {
-                m_dst_image->Blit(cmd, m_src_image);
+                m_dstImage->Blit(cmd, m_srcImage);
             }
         }
     }
@@ -567,42 +567,42 @@ public:
 private:
     struct MipFaceInfo
     {
-        uint32 src_mip;
-        uint32 dst_mip;
-        uint32 src_face;
-        uint32 dst_face;
+        uint32 srcMip;
+        uint32 dstMip;
+        uint32 srcFace;
+        uint32 dstFace;
     };
 
-    ImageRef m_src_image;
-    ImageRef m_dst_image;
+    ImageRef m_srcImage;
+    ImageRef m_dstImage;
 
-    Optional<Rect<uint32>> m_src_rect;
-    Optional<Rect<uint32>> m_dst_rect;
+    Optional<Rect<uint32>> m_srcRect;
+    Optional<Rect<uint32>> m_dstRect;
 
-    Optional<MipFaceInfo> m_mip_face_info;
+    Optional<MipFaceInfo> m_mipFaceInfo;
 };
 
 class BlitRect final : public CmdBase
 {
 public:
-    BlitRect(const ImageRef& src_image, const ImageRef& dst_image, const Rect<uint32>& src_rect, const Rect<uint32>& dst_rect)
-        : m_src_image(src_image),
-          m_dst_image(dst_image),
-          m_src_rect(src_rect),
-          m_dst_rect(dst_rect)
+    BlitRect(const ImageRef& srcImage, const ImageRef& dstImage, const Rect<uint32>& srcRect, const Rect<uint32>& dstRect)
+        : m_srcImage(srcImage),
+          m_dstImage(dstImage),
+          m_srcRect(srcRect),
+          m_dstRect(dstRect)
     {
     }
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_dst_image->Blit(cmd, m_src_image, m_src_rect, m_dst_rect);
+        m_dstImage->Blit(cmd, m_srcImage, m_srcRect, m_dstRect);
     }
 
 private:
-    ImageRef m_src_image;
-    ImageRef m_dst_image;
-    Rect<uint32> m_src_rect;
-    Rect<uint32> m_dst_rect;
+    ImageRef m_srcImage;
+    ImageRef m_dstImage;
+    Rect<uint32> m_srcRect;
+    Rect<uint32> m_dstRect;
 };
 
 class CopyImageToBuffer final : public CmdBase
@@ -646,21 +646,21 @@ private:
 class CopyBuffer final : public CmdBase
 {
 public:
-    CopyBuffer(const GpuBufferRef& src_buffer, const GpuBufferRef& dst_buffer, SizeType size)
-        : m_src_buffer(src_buffer),
-          m_dst_buffer(dst_buffer),
+    CopyBuffer(const GpuBufferRef& srcBuffer, const GpuBufferRef& dstBuffer, SizeType size)
+        : m_srcBuffer(srcBuffer),
+          m_dstBuffer(dstBuffer),
           m_size(size)
     {
     }
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_dst_buffer->CopyFrom(cmd, m_src_buffer, m_size);
+        m_dstBuffer->CopyFrom(cmd, m_srcBuffer, m_size);
     }
 
 private:
-    GpuBufferRef m_src_buffer;
-    GpuBufferRef m_dst_buffer;
+    GpuBufferRef m_srcBuffer;
+    GpuBufferRef m_dstBuffer;
     SizeType m_size;
 };
 
@@ -684,39 +684,39 @@ private:
 class DispatchCompute final : public CmdBase
 {
 public:
-    DispatchCompute(const ComputePipelineRef& pipeline, Vec3u workgroup_count)
+    DispatchCompute(const ComputePipelineRef& pipeline, Vec3u workgroupCount)
         : m_pipeline(pipeline),
-          m_workgroup_count(workgroup_count)
+          m_workgroupCount(workgroupCount)
     {
     }
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_pipeline->Dispatch(cmd, m_workgroup_count);
+        m_pipeline->Dispatch(cmd, m_workgroupCount);
     }
 
 private:
     ComputePipelineRef m_pipeline;
-    Vec3u m_workgroup_count;
+    Vec3u m_workgroupCount;
 };
 
 class TraceRays final : public CmdBase
 {
 public:
-    TraceRays(const RaytracingPipelineRef& pipeline, const Vec3u& workgroup_count)
+    TraceRays(const RaytracingPipelineRef& pipeline, const Vec3u& workgroupCount)
         : m_pipeline(pipeline),
-          m_workgroup_count(workgroup_count)
+          m_workgroupCount(workgroupCount)
     {
     }
 
     virtual void Execute(const CommandBufferRef& cmd) override
     {
-        m_pipeline->TraceRays(cmd, m_workgroup_count);
+        m_pipeline->TraceRays(cmd, m_workgroupCount);
     }
 
 private:
     RaytracingPipelineRef m_pipeline;
-    Vec3u m_workgroup_count;
+    Vec3u m_workgroupCount;
 };
 
 class CmdList

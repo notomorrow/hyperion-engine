@@ -36,7 +36,7 @@ HYP_STRUCT()
 struct MeshRaytracingData
 {
     HYP_FIELD()
-    FixedArray<BLASRef, max_frames_in_flight> bottom_level_acceleration_structures;
+    FixedArray<BLASRef, maxFramesInFlight> bottomLevelAccelerationStructures;
 };
 
 class IRenderProxy
@@ -61,11 +61,11 @@ public:
     Handle<Mesh> mesh;
     Handle<Material> material;
     Handle<Skeleton> skeleton;
-    Matrix4 model_matrix;
-    Matrix4 previous_model_matrix;
+    Matrix4 modelMatrix;
+    Matrix4 previousModelMatrix;
     BoundingBox aabb;
-    UserData<32, 16> user_data;
-    MeshInstanceData instance_data;
+    UserData<32, 16> userData;
+    MeshInstanceData instanceData;
     int version = 0;
 
     ~RenderProxy() override = default;
@@ -83,11 +83,11 @@ public:
             && mesh == other.mesh
             && material == other.material
             && skeleton == other.skeleton
-            && model_matrix == other.model_matrix
-            && previous_model_matrix == other.previous_model_matrix
+            && modelMatrix == other.modelMatrix
+            && previousModelMatrix == other.previousModelMatrix
             && aabb == other.aabb
-            && user_data == other.user_data
-            && instance_data == other.instance_data;
+            && userData == other.userData
+            && instanceData == other.instanceData;
     }
 
     bool operator!=(const RenderProxy& other) const
@@ -98,11 +98,11 @@ public:
             || mesh != other.mesh
             || material != other.material
             || skeleton != other.skeleton
-            || model_matrix != other.model_matrix
-            || previous_model_matrix != other.previous_model_matrix
+            || modelMatrix != other.modelMatrix
+            || previousModelMatrix != other.previousModelMatrix
             || aabb != other.aabb
-            || user_data != other.user_data
-            || instance_data != other.instance_data;
+            || userData != other.userData
+            || instanceData != other.instanceData;
     }
 };
 
@@ -113,20 +113,20 @@ struct EnvProbeSphericalHarmonics
 
 struct EnvProbeShaderData
 {
-    Matrix4 face_view_matrices[6];
+    Matrix4 faceViewMatrices[6];
 
-    Vec4f aabb_max;
-    Vec4f aabb_min;
-    Vec4f world_position;
+    Vec4f aabbMax;
+    Vec4f aabbMin;
+    Vec4f worldPosition;
 
-    uint32 texture_index = ~0u;
+    uint32 textureIndex = ~0u;
     uint32 flags = 0;
-    float camera_near = 0.01f;
-    float camera_far = 100.0f;
+    float cameraNear = 0.01f;
+    float cameraFar = 100.0f;
 
     Vec2u dimensions;
-    uint64 visibility_bits = 0;
-    Vec4i position_in_grid;
+    uint64 visibilityBits = 0;
+    Vec4i positionInGrid;
 
     EnvProbeSphericalHarmonics sh;
 };
@@ -136,26 +136,26 @@ class RenderProxyEnvProbe : public IRenderProxy
 public:
     ~RenderProxyEnvProbe() override = default;
 
-    WeakHandle<EnvProbe> env_probe;
-    EnvProbeShaderData buffer_data {};
+    WeakHandle<EnvProbe> envProbe;
+    EnvProbeShaderData bufferData {};
 };
 
 struct EnvGridShaderData
 {
-    uint32 probe_indices[max_bound_ambient_probes];
+    uint32 probeIndices[maxBoundAmbientProbes];
 
     Vec4f center;
     Vec4f extent;
-    Vec4f aabb_max;
-    Vec4f aabb_min;
+    Vec4f aabbMax;
+    Vec4f aabbMin;
 
     Vec4u density;
 
-    Vec4f voxel_grid_aabb_max;
-    Vec4f voxel_grid_aabb_min;
+    Vec4f voxelGridAabbMax;
+    Vec4f voxelGridAabbMin;
 
-    Vec2i light_field_image_dimensions;
-    Vec2i irradiance_octahedron_size;
+    Vec2i lightFieldImageDimensions;
+    Vec2i irradianceOctahedronSize;
 };
 
 class RenderProxyEnvGrid : public IRenderProxy
@@ -163,33 +163,33 @@ class RenderProxyEnvGrid : public IRenderProxy
 public:
     ~RenderProxyEnvGrid() override = default;
 
-    WeakHandle<EnvGrid> env_grid;
-    EnvGridShaderData buffer_data {};
+    WeakHandle<EnvGrid> envGrid;
+    EnvGridShaderData bufferData {};
 };
 
 struct LightShaderData
 {
-    uint32 light_id;
-    uint32 light_type;
-    uint32 color_packed;
+    uint32 lightId;
+    uint32 lightType;
+    uint32 colorPacked;
     float radius;
     // 16
 
     float falloff;
-    uint32 shadow_map_index;
-    Vec2f area_size;
+    uint32 shadowMapIndex;
+    Vec2f areaSize;
     // 32
 
-    Vec4f position_intensity;
+    Vec4f positionIntensity;
     Vec4f normal;
     // 64
 
-    Vec2f spot_angles;
-    uint32 material_index;
+    Vec2f spotAngles;
+    uint32 materialIndex;
     uint32 _pad2;
 
-    Vec4f aabb_min;
-    Vec4f aabb_max;
+    Vec4f aabbMin;
+    Vec4f aabbMax;
 
     Vec4u pad5;
 };
@@ -202,15 +202,15 @@ public:
     ~RenderProxyLight() override = default;
 
     WeakHandle<Light> light;
-    LightShaderData buffer_data {};
+    LightShaderData bufferData {};
 };
 
 struct LightmapVolumeShaderData
 {
-    Vec4f aabb_max;
-    Vec4f aabb_min;
+    Vec4f aabbMax;
+    Vec4f aabbMin;
 
-    uint32 texture_index;
+    uint32 textureIndex;
     uint32 _pad0;
     uint32 _pad1;
     uint32 _pad2;
@@ -221,8 +221,8 @@ class RenderProxyLightmapVolume : public IRenderProxy
 public:
     ~RenderProxyLightmapVolume() override = default;
 
-    WeakHandle<LightmapVolume> lightmap_volume;
-    LightmapVolumeShaderData buffer_data {};
+    WeakHandle<LightmapVolume> lightmapVolume;
+    LightmapVolumeShaderData bufferData {};
 };
 
 } // namespace hyperion

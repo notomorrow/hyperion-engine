@@ -21,7 +21,7 @@ struct VulkanDeviceQueue
 {
     VulkanDeviceQueueType type;
     VkQueue queue;
-    FixedArray<VkCommandPool, 8> command_pools;
+    FixedArray<VkCommandPool, 8> commandPools;
 };
 
 } // namespace hyperion

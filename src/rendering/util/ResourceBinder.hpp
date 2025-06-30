@@ -9,71 +9,71 @@
 
 namespace hyperion {
 
-HYP_API extern SizeType GetNumDescendants(TypeId type_id);
-HYP_API extern int GetSubclassIndex(TypeId base_type_id, TypeId subclass_type_id);
+HYP_API extern SizeType GetNumDescendants(TypeId typeId);
+HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 
 class RenderGlobalState;
 
 struct ResourceBindingAllocatorBase
 {
-    static constexpr uint32 invalid_binding = ~0u;
+    static constexpr uint32 invalidBinding = ~0u;
 
-    ResourceBindingAllocatorBase(uint32 max_size)
-        : max_size(max_size)
+    ResourceBindingAllocatorBase(uint32 maxSize)
+        : maxSize(maxSize)
     {
-        if (max_size != ~0u)
+        if (maxSize != ~0u)
         {
-            used_indices.Resize(max_size);
+            usedIndices.Resize(maxSize);
         }
     }
 
     uint32 AllocateIndex()
     {
-        const uint32 free_index = used_indices.FirstZeroBitIndex();
+        const uint32 freeIndex = usedIndices.FirstZeroBitIndex();
 
-        // if max_size is not ~0u we have to check up to max_size
-        if (max_size != ~0u && free_index >= max_size)
+        // if maxSize is not ~0u we have to check up to maxSize
+        if (maxSize != ~0u && freeIndex >= maxSize)
         {
-            return invalid_binding;
+            return invalidBinding;
         }
 
-        used_indices.Set(free_index, true);
+        usedIndices.Set(freeIndex, true);
 
-        return free_index;
+        return freeIndex;
     }
 
     void FreeIndex(uint32 index)
     {
-        if (!used_indices.Test(index))
+        if (!usedIndices.Test(index))
         {
             // already not set
             return;
         }
 
-        if ((max_size != ~0u && index >= max_size) || index == invalid_binding)
+        if ((maxSize != ~0u && index >= maxSize) || index == invalidBinding)
         {
             return;
         }
 
-        used_indices.Set(index, false);
+        usedIndices.Set(index, false);
     }
 
     void ResetStat()
     {
-        current_frame_count = 0;
+        currentFrameCount = 0;
     }
 
     // the maximum size of this allocator, i.e. the maximum number of bindings that can be allocated in a single frame
     // if set to ~0u, no limit is used when allocating indices
-    const uint32 max_size;
+    const uint32 maxSize;
 
     // number of claims for the current from
     // NOTE: not same as bindings (bindings are set after ApplyUpdates() is called so we can calculate reuse)
-    uint32 current_frame_count = 0;
+    uint32 currentFrameCount = 0;
 
     // Bits representing whether an index is allocated or not.
     // we find free indices by iterating over this bitset to find the first unset bit.
-    Bitset used_indices;
+    Bitset usedIndices;
 };
 
 template <uint32 MaxSize = ~0u>
@@ -92,7 +92,7 @@ public:
 
     HYP_FORCE_INLINE ResourceBindingAllocatorBase* GetBindingAllocator() const
     {
-        return m_binding_allocator;
+        return m_bindingAllocator;
     }
 
     // Mark the object to be considered to be a bound resource for the current frame
@@ -105,15 +105,15 @@ public:
     virtual void ApplyUpdates() = 0;
 
     // Get a bitset containing all the bound resources of a given type.
-    virtual const Bitset& GetBoundIndices(TypeId type_id) const = 0;
+    virtual const Bitset& GetBoundIndices(TypeId typeId) const = 0;
 
 protected:
-    ResourceBinderBase(ResourceBindingAllocatorBase* binding_allocator)
-        : m_binding_allocator(binding_allocator)
+    ResourceBinderBase(ResourceBindingAllocatorBase* bindingAllocator)
+        : m_bindingAllocator(bindingAllocator)
     {
     }
 
-    ResourceBindingAllocatorBase* m_binding_allocator;
+    ResourceBindingAllocatorBase* m_bindingAllocator;
 };
 
 /*! \brief This class manages bindings slots for objects of a given resource type. Subclasses of T are also able to be managed,
@@ -125,8 +125,8 @@ class ResourceBinder : public ResourceBinderBase
 {
     struct Impl final
     {
-        Impl(TypeId type_id)
-            : type_id(type_id)
+        Impl(TypeId typeId)
+            : typeId(typeId)
         {
         }
 
@@ -134,9 +134,9 @@ class ResourceBinder : public ResourceBinderBase
         {
             DebugLog(LogType::Debug, "ResourceBinder<%s>::ReleaseBindings() called\n", TypeNameWithoutNamespace<T>().Data());
             // Unbind all objects that were bound in the last frame
-            for (Bitset::BitIndex i : last_frame_ids)
+            for (Bitset::BitIndex i : lastFrameIds)
             {
-                const ObjId<T> id = ObjId<T>(ObjIdBase { type_id, uint32(i + 1) });
+                const ObjId<T> id = ObjId<T>(ObjIdBase { typeId, uint32(i + 1) });
 
                 const auto it = bindings.FindAs(id);
                 AssertDebug(it != bindings.End());
@@ -148,7 +148,7 @@ class ResourceBinder : public ResourceBinderBase
 
                     if (OnBindingChanged != nullptr)
                     {
-                        OnBindingChanged(object, binding, ResourceBindingAllocatorBase::invalid_binding);
+                        OnBindingChanged(object, binding, ResourceBindingAllocatorBase::invalidBinding);
                     }
 
                     allocator->FreeIndex(binding);
@@ -168,9 +168,9 @@ class ResourceBinder : public ResourceBinderBase
                 return;
             }
 
-            ++allocator->current_frame_count;
+            ++allocator->currentFrameCount;
 
-            current_frame_ids.Set(id.ToIndex(), true);
+            currentFrameIds.Set(id.ToIndex(), true);
         }
 
         void Deconsider(ResourceBindingAllocatorBase* allocator, HypObjectBase* object)
@@ -182,37 +182,37 @@ class ResourceBinder : public ResourceBinderBase
                 return;
             }
 
-            current_frame_ids.Set(id.ToIndex(), false);
+            currentFrameIds.Set(id.ToIndex(), false);
         }
 
         void ApplyUpdates(ResourceBindingAllocatorBase* allocator)
         {
             const Bitset removed = GetRemoved();
-            const Bitset newly_added = GetNewlyAdded();
-            const Bitset after = (last_frame_ids & ~removed) | newly_added;
+            const Bitset newlyAdded = GetNewlyAdded();
+            const Bitset after = (lastFrameIds & ~removed) | newlyAdded;
 
-            AssertDebug(after.Count() <= allocator->max_size);
+            AssertDebug(after.Count() <= allocator->maxSize);
 
             if (removed.AnyBitsSet())
             {
-                Array<KeyValuePair<WeakHandle<T>, uint32>> removed_elements;
-                removed_elements.Reserve(removed.Count());
+                Array<KeyValuePair<WeakHandle<T>, uint32>> removedElements;
+                removedElements.Reserve(removed.Count());
 
                 for (Bitset::BitIndex i : removed)
                 {
-                    const ObjId<T> id = ObjId<T>(ObjIdBase { type_id, uint32(i + 1) });
+                    const ObjId<T> id = ObjId<T>(ObjIdBase { typeId, uint32(i + 1) });
 
                     auto it = bindings.FindAs(id);
                     AssertDebug(it != bindings.End());
 
                     if (it != bindings.End())
                     {
-                        removed_elements.PushBack(std::move(*it));
+                        removedElements.PushBack(std::move(*it));
                         bindings.Erase(it);
                     }
                 }
 
-                for (KeyValuePair<WeakHandle<T>, uint32>& it : removed_elements)
+                for (KeyValuePair<WeakHandle<T>, uint32>& it : removedElements)
                 {
                     T* object = it.first.GetUnsafe();
                     AssertDebug(object != nullptr);
@@ -221,16 +221,16 @@ class ResourceBinder : public ResourceBinderBase
 
                     if (OnBindingChanged != nullptr)
                     {
-                        OnBindingChanged(object, binding, ResourceBindingAllocatorBase::invalid_binding);
+                        OnBindingChanged(object, binding, ResourceBindingAllocatorBase::invalidBinding);
                     }
 
                     allocator->FreeIndex(binding);
                 }
             }
 
-            for (Bitset::BitIndex i : newly_added)
+            for (Bitset::BitIndex i : newlyAdded)
             {
-                const ObjId<T> id = ObjId<T>(ObjIdBase { type_id, uint32(i + 1) });
+                const ObjId<T> id = ObjId<T>(ObjIdBase { typeId, uint32(i + 1) });
 
                 if (bindings.FindAs(id) != bindings.End())
                 {
@@ -239,72 +239,72 @@ class ResourceBinder : public ResourceBinderBase
                 }
 
                 const uint32 index = allocator->AllocateIndex();
-                if (index == ResourceBindingAllocatorBase::invalid_binding)
+                if (index == ResourceBindingAllocatorBase::invalidBinding)
                 {
                     DebugLog(LogType::Warn, "ResourceBinder<%s>: Maximum size of %u reached, cannot bind more objects!\n",
                         TypeNameWithoutNamespace<T>().Data(),
-                        allocator->max_size);
+                        allocator->maxSize);
 
                     continue; // no more space to bind
                 }
 
-                auto insert_result = bindings.Insert(WeakHandle<T> { id }, index);
-                AssertDebugMsg(insert_result.second, "Failed to insert binding for object with Id %u - it should not already exist!", id.Value());
+                auto insertResult = bindings.Insert(WeakHandle<T> { id }, index);
+                AssertDebugMsg(insertResult.second, "Failed to insert binding for object with Id %u - it should not already exist!", id.Value());
 
                 if (OnBindingChanged != nullptr)
                 {
-                    OnBindingChanged(insert_result.first->first.GetUnsafe(), ResourceBindingAllocatorBase::invalid_binding, index);
+                    OnBindingChanged(insertResult.first->first.GetUnsafe(), ResourceBindingAllocatorBase::invalidBinding, index);
                 }
             }
 
-            if (newly_added.Count() != 0 || removed.Count() != 0)
+            if (newlyAdded.Count() != 0 || removed.Count() != 0)
             {
                 DebugLog(LogType::Debug, "ResourceBinder<%s>: %u objects added, %u objects removed, %u total bindings\n",
                     TypeNameWithoutNamespace<T>().Data(),
-                    newly_added.Count(),
+                    newlyAdded.Count(),
                     removed.Count(),
                     after.Count());
             }
 
             // swap id bitsets
-            last_frame_ids = std::move(current_frame_ids);
-            current_frame_ids.Clear();
+            lastFrameIds = std::move(currentFrameIds);
+            currentFrameIds.Clear();
         }
 
         HYP_FORCE_INLINE Bitset GetNewlyAdded() const
         {
-            const SizeType count = MathUtil::Max(last_frame_ids.NumBits(), current_frame_ids.NumBits());
+            const SizeType count = MathUtil::Max(lastFrameIds.NumBits(), currentFrameIds.NumBits());
 
-            return Bitset(current_frame_ids).Resize(count) & ~Bitset(last_frame_ids).Resize(count);
+            return Bitset(currentFrameIds).Resize(count) & ~Bitset(lastFrameIds).Resize(count);
         }
 
         HYP_FORCE_INLINE Bitset GetRemoved() const
         {
-            const SizeType count = MathUtil::Max(last_frame_ids.NumBits(), current_frame_ids.NumBits());
+            const SizeType count = MathUtil::Max(lastFrameIds.NumBits(), currentFrameIds.NumBits());
 
-            return Bitset(last_frame_ids).Resize(count) & ~Bitset(current_frame_ids).Resize(count);
+            return Bitset(lastFrameIds).Resize(count) & ~Bitset(currentFrameIds).Resize(count);
         }
 
-        TypeId type_id;
+        TypeId typeId;
         // these bitsets are used to track which objects were bound in the last frame with bitwise operations
-        Bitset last_frame_ids;
-        Bitset current_frame_ids;
+        Bitset lastFrameIds;
+        Bitset currentFrameIds;
         HashMap<WeakHandle<T>, uint32> bindings;
     };
 
 public:
-    ResourceBinder(ResourceBindingAllocatorBase* binding_allocator)
-        : ResourceBinderBase(binding_allocator),
+    ResourceBinder(ResourceBindingAllocatorBase* bindingAllocator)
+        : ResourceBinderBase(bindingAllocator),
           m_impl(TypeId::ForType<T>())
     {
-        AssertDebug(m_binding_allocator != nullptr);
+        AssertDebug(m_bindingAllocator != nullptr);
 
-        const SizeType num_descendants = GetNumDescendants(TypeId::ForType<T>());
+        const SizeType numDescendants = GetNumDescendants(TypeId::ForType<T>());
 
         // Create storage for subclass implementations
         // subclasses use a bitset (indexing by the subclass' StaticIndex) to determine which implementations are initialized
-        m_subclass_impls.Resize(num_descendants);
-        m_subclass_impls_initialized.Resize(num_descendants);
+        m_subclassImpls.Resize(numDescendants);
+        m_subclassImplsInitialized.Resize(numDescendants);
     }
 
     ResourceBinder(const ResourceBinder&) = delete;
@@ -314,17 +314,17 @@ public:
 
     virtual ~ResourceBinder() override
     {
-        m_impl.ReleaseBindings(m_binding_allocator);
+        m_impl.ReleaseBindings(m_bindingAllocator);
 
         // Loop over the set bits and destruct subclass impls
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            AssertDebug(i < m_subclass_impls.Size());
+            AssertDebug(i < m_subclassImpls.Size());
 
-            Impl& impl = m_subclass_impls[i].Get();
-            impl.ReleaseBindings(m_binding_allocator);
+            Impl& impl = m_subclassImpls[i].Get();
+            impl.ReleaseBindings(m_bindingAllocator);
 
-            m_subclass_impls[i].Destruct();
+            m_subclassImpls[i].Destruct();
         }
     }
 
@@ -335,100 +335,100 @@ public:
             return;
         }
 
-        constexpr TypeId base_type_id = TypeId::ForType<T>();
-        const TypeId object_type_id = object->GetTypeId();
+        constexpr TypeId baseTypeId = TypeId::ForType<T>();
+        const TypeId objectTypeId = object->GetTypeId();
 
-        if (object_type_id == base_type_id)
+        if (objectTypeId == baseTypeId)
         {
-            m_impl.Consider(m_binding_allocator, object);
+            m_impl.Consider(m_bindingAllocator, object);
 
             return;
         }
 
-        const int subclass_index = GetSubclassIndex(base_type_id, object_type_id);
-        AssertDebugMsg(subclass_index >= 0 && subclass_index < int(m_subclass_impls.Size()),
+        const int subclassIndex = GetSubclassIndex(baseTypeId, objectTypeId);
+        AssertDebugMsg(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
             "ResourceBinder<%s>: Attempted to bind object with TypeId %u which is not a subclass of the expected TypeId (%u) or has no static index",
-            TypeNameWithoutNamespace<T>().Data(), object_type_id.Value(), base_type_id.Value());
+            TypeNameWithoutNamespace<T>().Data(), objectTypeId.Value(), baseTypeId.Value());
 
-        if (!m_subclass_impls_initialized.Test(subclass_index))
+        if (!m_subclassImplsInitialized.Test(subclassIndex))
         {
-            m_subclass_impls[subclass_index].Construct(object_type_id);
-            m_subclass_impls_initialized.Set(subclass_index, true);
+            m_subclassImpls[subclassIndex].Construct(objectTypeId);
+            m_subclassImplsInitialized.Set(subclassIndex, true);
         }
 
-        Impl& impl = m_subclass_impls[subclass_index].Get();
+        Impl& impl = m_subclassImpls[subclassIndex].Get();
 
-        impl.Consider(m_binding_allocator, object);
+        impl.Consider(m_bindingAllocator, object);
     }
 
     virtual void Deconsider(HypObjectBase* object) override
     {
         AssertDebug(object != nullptr);
 
-        constexpr TypeId type_id = TypeId::ForType<T>();
+        constexpr TypeId typeId = TypeId::ForType<T>();
 
-        if (object->GetTypeId() == type_id)
+        if (object->GetTypeId() == typeId)
         {
-            m_impl.Deconsider(m_binding_allocator, object);
+            m_impl.Deconsider(m_bindingAllocator, object);
         }
         else
         {
-            const int subclass_index = GetSubclassIndex(type_id, object->GetTypeId());
-            AssertDebugMsg(subclass_index >= 0 && subclass_index < int(m_subclass_impls.Size()),
+            const int subclassIndex = GetSubclassIndex(typeId, object->GetTypeId());
+            AssertDebugMsg(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
                 "ResourceBinder<%s>: Attempted to Deconsider object with TypeId %u which is not a subclass of the expected TypeId (%u) or has no static index",
-                TypeNameWithoutNamespace<T>().Data(), object->GetTypeId().Value(), type_id.Value());
+                TypeNameWithoutNamespace<T>().Data(), object->GetTypeId().Value(), typeId.Value());
 
-            if (!m_subclass_impls_initialized.Test(subclass_index))
+            if (!m_subclassImplsInitialized.Test(subclassIndex))
             {
                 // don't do anything if not set here since we're just Deconsidering
                 return;
             }
 
-            Impl& impl = m_subclass_impls[subclass_index].Get();
-            impl.Deconsider(m_binding_allocator, object);
+            Impl& impl = m_subclassImpls[subclassIndex].Get();
+            impl.Deconsider(m_bindingAllocator, object);
         }
     }
 
     virtual void ApplyUpdates() override
     {
-        m_impl.ApplyUpdates(m_binding_allocator);
+        m_impl.ApplyUpdates(m_bindingAllocator);
 
-        for (Bitset::BitIndex i : m_subclass_impls_initialized)
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
         {
-            Impl& impl = m_subclass_impls[i].Get();
-            impl.ApplyUpdates(m_binding_allocator);
+            Impl& impl = m_subclassImpls[i].Get();
+            impl.ApplyUpdates(m_bindingAllocator);
         }
     }
 
-    virtual const Bitset& GetBoundIndices(TypeId type_id) const override
+    virtual const Bitset& GetBoundIndices(TypeId typeId) const override
     {
-        static const Bitset empty_bitset;
+        static const Bitset emptyBitset;
 
-        constexpr TypeId base_type_id = TypeId::ForType<T>();
+        constexpr TypeId baseTypeId = TypeId::ForType<T>();
 
-        if (type_id == TypeId::Void())
+        if (typeId == TypeId::Void())
         {
-            return empty_bitset;
+            return emptyBitset;
         }
 
-        if (type_id == base_type_id)
+        if (typeId == baseTypeId)
         {
-            return m_impl.last_frame_ids;
+            return m_impl.lastFrameIds;
         }
         else
         {
-            const int subclass_index = GetSubclassIndex(base_type_id, type_id);
-            AssertDebugMsg(subclass_index >= 0 && subclass_index < int(m_subclass_impls.Size()),
+            const int subclassIndex = GetSubclassIndex(baseTypeId, typeId);
+            AssertDebugMsg(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
                 "ResourceBinder<%s>: Attempted to get bound indices for TypeId %u which is not a subclass of the expected TypeId (%u) or has no static index",
-                TypeNameWithoutNamespace<T>().Data(), type_id.Value(), base_type_id.Value());
+                TypeNameWithoutNamespace<T>().Data(), typeId.Value(), baseTypeId.Value());
 
-            if (!m_subclass_impls_initialized.Test(subclass_index))
+            if (!m_subclassImplsInitialized.Test(subclassIndex))
             {
                 // not initialized, return empty bitset
-                return empty_bitset;
+                return emptyBitset;
             }
 
-            return m_subclass_impls[subclass_index].Get().last_frame_ids;
+            return m_subclassImpls[subclassIndex].Get().lastFrameIds;
         }
     }
 
@@ -437,8 +437,8 @@ protected:
     Impl m_impl;
 
     // per-subtype implementations (only constructed and setup on first Consider() call with that type)
-    Array<ValueStorage<Impl>> m_subclass_impls;
-    Bitset m_subclass_impls_initialized;
+    Array<ValueStorage<Impl>> m_subclassImpls;
+    Bitset m_subclassImplsInitialized;
 };
 
 } // namespace hyperion

@@ -16,19 +16,19 @@
 
 namespace hyperion {
 
-HYP_API extern ANSIStringView GetClassName(const TypeId& type_id);
+HYP_API extern ANSIStringView GetClassName(const TypeId& typeId);
 
 struct ObjIdBase
 {
     constexpr ObjIdBase() = default;
 
-    constexpr ObjIdBase(TypeId type_id, uint32 value)
-        : type_id_value(type_id.Value()),
+    constexpr ObjIdBase(TypeId typeId, uint32 value)
+        : typeIdValue(typeId.Value()),
           value(value)
     {
     }
 
-    ObjIdBase(uint32 value) = delete; // delete so we cannot create an ObjIdBase with just a value, it must have a type_id
+    ObjIdBase(uint32 value) = delete; // delete so we cannot create an ObjIdBase with just a value, it must have a typeId
 
     constexpr ObjIdBase(const ObjIdBase& other) = default;
     ObjIdBase& operator=(const ObjIdBase& other) = default;
@@ -38,7 +38,7 @@ struct ObjIdBase
 
     HYP_FORCE_INLINE constexpr bool IsValid() const
     {
-        return type_id_value != 0 && value != 0;
+        return typeIdValue != 0 && value != 0;
     }
 
     HYP_FORCE_INLINE constexpr uint32 Value() const
@@ -48,7 +48,7 @@ struct ObjIdBase
 
     HYP_FORCE_INLINE constexpr TypeId GetTypeId() const
     {
-        return TypeId { type_id_value };
+        return TypeId { typeIdValue };
     }
 
     HYP_FORCE_INLINE explicit constexpr operator bool() const
@@ -63,19 +63,19 @@ struct ObjIdBase
 
     HYP_FORCE_INLINE constexpr bool operator==(const ObjIdBase& other) const
     {
-        return type_id_value == other.type_id_value && value == other.value;
+        return typeIdValue == other.typeIdValue && value == other.value;
     }
 
     HYP_FORCE_INLINE constexpr bool operator!=(const ObjIdBase& other) const
     {
-        return type_id_value != other.type_id_value || value != other.value;
+        return typeIdValue != other.typeIdValue || value != other.value;
     }
 
     HYP_FORCE_INLINE constexpr bool operator<(const ObjIdBase& other) const
     {
-        if (type_id_value != other.type_id_value)
+        if (typeIdValue != other.typeIdValue)
         {
-            return type_id_value < other.type_id_value;
+            return typeIdValue < other.typeIdValue;
         }
 
         return value < other.value;
@@ -85,9 +85,9 @@ struct ObjIdBase
         to be used as a storage index. If the value is zero (invalid state),
         zero is returned. Ideally a validation check would be performed before you use this,
         unless you are totally sure that 0 is a valid index. */
-    HYP_FORCE_INLINE constexpr uint32 ToIndex(uint32 invalid_value = 0) const
+    HYP_FORCE_INLINE constexpr uint32 ToIndex(uint32 invalidValue = 0) const
     {
-        return value ? value - 1 : invalid_value;
+        return value ? value - 1 : invalidValue;
     }
 
     HYP_FORCE_INLINE operator UniqueID() const
@@ -98,13 +98,13 @@ struct ObjIdBase
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(type_id_value);
+        hc.Add(typeIdValue);
         hc.Add(value);
 
         return hc;
     }
 
-    uint32 type_id_value = 0;
+    uint32 typeIdValue = 0;
     uint32 value = 0;
 };
 
@@ -117,10 +117,10 @@ struct ObjId : ObjIdBase
     using ObjectType = T;
 
     static const ObjId invalid;
-    static constexpr TypeId type_id_static = TypeId::ForType<T>();
+    static constexpr TypeId typeIdStatic = TypeId::ForType<T>();
 
     constexpr ObjId()
-        : ObjIdBase { type_id_static, 0 }
+        : ObjIdBase { typeIdStatic, 0 }
     {
     }
 
@@ -139,7 +139,7 @@ struct ObjId : ObjIdBase
 
     static ObjId FromIndex(uint32 index)
     {
-        return ObjId { ObjIdBase { type_id_static, index + 1 } };
+        return ObjId { ObjIdBase { typeIdStatic, index + 1 } };
     }
 
     /*! \brief Allows implicit conversion to ObjId<Ty> where T is convertible to Ty.
@@ -160,7 +160,7 @@ struct ObjId : ObjIdBase
             return ObjId<Ty>::invalid;
         }
 
-        /// \todo Add a AssertDebug here to ensure that type_id is in the hierarchy of Ty
+        /// \todo Add a AssertDebug here to ensure that typeId is in the hierarchy of Ty
 
         return ObjId<Ty>(static_cast<const ObjIdBase&>(*this));
     }

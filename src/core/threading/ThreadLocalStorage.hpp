@@ -40,21 +40,21 @@ public:
 
     void* Alloc(SizeType size, SizeType alignment = 0)
     {
-        SizeType current_size = m_data.Size();
+        SizeType currentSize = m_data.Size();
 
         if (alignment > 0)
         {
             // Align the current size to the specified alignment
-            current_size = ((current_size + alignment - 1) / alignment) * alignment;
+            currentSize = ((currentSize + alignment - 1) / alignment) * alignment;
         }
 
-        if (current_size + size >= capacity)
+        if (currentSize + size >= capacity)
         {
-            HYP_FAIL("ThreadLocalStorage: Allocating %llu bytes exceeds capacity of %llu bytes", current_size + size, capacity);
+            HYP_FAIL("ThreadLocalStorage: Allocating %llu bytes exceeds capacity of %llu bytes", currentSize + size, capacity);
         }
 
-        void* ptr = m_data.Data() + current_size;
-        m_data.SetSize(current_size + size);
+        void* ptr = m_data.Data() + currentSize;
+        m_data.SetSize(currentSize + size);
 
         return ptr;
     }

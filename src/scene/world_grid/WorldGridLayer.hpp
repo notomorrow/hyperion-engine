@@ -21,10 +21,10 @@ HYP_STRUCT(Size = 80)
 struct WorldGridLayerInfo
 {
     HYP_FIELD(Property = "GridSize", Serialize = true)
-    Vec2u grid_size { 64, 64 };
+    Vec2u gridSize { 64, 64 };
 
     HYP_FIELD(Property = "CellSize", Serialize = true)
-    Vec3u cell_size { 32, 32, 32 };
+    Vec3u cellSize { 32, 32, 32 };
 
     HYP_FIELD(Property = "Offset", Serialize = true)
     Vec3f offset { 0.0f, 0.0f, 0.0f };
@@ -33,16 +33,16 @@ struct WorldGridLayerInfo
     Vec3f scale { 1.0f, 1.0f, 1.0f };
 
     HYP_FIELD(Property = "MaxDistance", Serialize = true)
-    float max_distance = 2.5f;
+    float maxDistance = 2.5f;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
-        hc.Add(grid_size);
-        hc.Add(cell_size);
+        hc.Add(gridSize);
+        hc.Add(cellSize);
         hc.Add(offset);
         hc.Add(scale);
-        hc.Add(max_distance);
+        hc.Add(maxDistance);
 
         return hc;
     }
@@ -56,8 +56,8 @@ class HYP_API WorldGridLayer : public HypObject<WorldGridLayer>
 public:
     WorldGridLayer() = default;
 
-    WorldGridLayer(const WorldGridLayerInfo& layer_info)
-        : m_layer_info(layer_info)
+    WorldGridLayer(const WorldGridLayerInfo& layerInfo)
+        : m_layerInfo(layerInfo)
     {
     }
 
@@ -70,42 +70,42 @@ public:
     HYP_METHOD()
     HYP_FORCE_INLINE const WorldGridLayerInfo& GetLayerInfo() const
     {
-        return m_layer_info;
+        return m_layerInfo;
     }
 
     HYP_METHOD(Scriptable)
-    void OnAdded(WorldGrid* world_grid);
+    void OnAdded(WorldGrid* worldGrid);
 
     HYP_METHOD(Scriptable)
-    void OnRemoved(WorldGrid* world_grid);
+    void OnRemoved(WorldGrid* worldGrid);
 
     HYP_METHOD(Scriptable)
-    Handle<StreamingCell> CreateStreamingCell(const StreamingCellInfo& cell_info);
+    Handle<StreamingCell> CreateStreamingCell(const StreamingCellInfo& cellInfo);
 
 protected:
     HYP_METHOD(Scriptable)
     virtual void Init() override;
 
     HYP_METHOD()
-    virtual void OnAdded_Impl(WorldGrid* world_grid)
+    virtual void OnAdded_Impl(WorldGrid* worldGrid)
     {
     }
 
     HYP_METHOD()
-    virtual void OnRemoved_Impl(WorldGrid* world_grid)
+    virtual void OnRemoved_Impl(WorldGrid* worldGrid)
     {
     }
 
     HYP_METHOD()
-    virtual Handle<StreamingCell> CreateStreamingCell_Impl(const StreamingCellInfo& cell_info)
+    virtual Handle<StreamingCell> CreateStreamingCell_Impl(const StreamingCellInfo& cellInfo)
     {
-        return CreateObject<StreamingCell>(cell_info);
+        return CreateObject<StreamingCell>(cellInfo);
     }
 
     HYP_METHOD(Scriptable)
     virtual WorldGridLayerInfo CreateLayerInfo() const;
 
-    WorldGridLayerInfo m_layer_info;
+    WorldGridLayerInfo m_layerInfo;
 
 private:
     HYP_METHOD()
@@ -118,7 +118,7 @@ private:
     HYP_METHOD()
     virtual void Init_Impl()
     {
-        m_layer_info = CreateLayerInfo();
+        m_layerInfo = CreateLayerInfo();
 
         SetReady(true);
     }

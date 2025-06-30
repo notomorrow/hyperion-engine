@@ -26,12 +26,12 @@ enum class EntityTag : uint64;
 
 struct EntityInitInfo
 {
-    bool receives_update : 1 = false;
-    bool can_ever_update : 1 = true;
-    uint8 bvh_depth : 3 = 3; // 0 means no BVH, 1 means 1 level deep, etc.
+    bool receivesUpdate : 1 = false;
+    bool canEverUpdate : 1 = true;
+    uint8 bvhDepth : 3 = 3; // 0 means no BVH, 1 means 1 level deep, etc.
 
     // Initial tags to add to the Entity when it is created
-    Array<EntityTag, InlineAllocator<4>> initial_tags;
+    Array<EntityTag, InlineAllocator<4>> initialTags;
 };
 
 HYP_CLASS()
@@ -60,20 +60,20 @@ public:
 
     HYP_FORCE_INLINE const Matrix4& GetPrevModelMatrix() const
     {
-        return m_prev_model_matrix;
+        return m_prevModelMatrix;
     }
 
     EntityManager* GetEntityManager() const;
 
     bool ReceivesUpdate() const;
-    void SetReceivesUpdate(bool receives_update);
+    void SetReceivesUpdate(bool receivesUpdate);
 
     /*! \brief Attaches this Entity to a Node. If the Entity is already attached to a Node, it will be detached first.
      *
-     *  \param [in] attach_node The Node to attach the Entity to.
+     *  \param [in] attachNode The Node to attach the Entity to.
      */
     HYP_METHOD()
-    virtual void Attach(const Handle<Node>& attach_node);
+    virtual void Attach(const Handle<Node>& attachNode);
 
     /*! \brief Detaches this Entity from its current Node, if it is attached to one.
      *
@@ -84,7 +84,7 @@ public:
 
     virtual void UpdateRenderProxy(IRenderProxy* proxy);
 
-    const int* GetRenderProxyVersionPtr() const { return &m_render_proxy_version; }
+    const int* GetRenderProxyVersionPtr() const { return &m_renderProxyVersion; }
 
 protected:
     virtual void Init() override;
@@ -114,15 +114,15 @@ protected:
     /*! \brief Marks this Entity as needing its render proxy to be updated on the next time it is collected. */
     void SetNeedsRenderProxyUpdate();
 
-    EntityInitInfo m_entity_init_info;
+    EntityInitInfo m_entityInitInfo;
 
 private:
     World* m_world;
     Scene* m_scene;
 
-    Matrix4 m_prev_model_matrix;
+    Matrix4 m_prevModelMatrix;
 
-    int m_render_proxy_version;
+    int m_renderProxyVersion;
 };
 
 } // namespace hyperion

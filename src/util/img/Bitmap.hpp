@@ -23,7 +23,7 @@ namespace hyperion {
 template <class ComponentType, uint32 NumComponents>
 struct Pixel
 {
-    static constexpr uint32 num_components = NumComponents;
+    static constexpr uint32 numComponents = NumComponents;
 
     ComponentType components[NumComponents];
 
@@ -35,17 +35,17 @@ struct Pixel
         {
             components[0] = ubyte(float(color.r) * 255.0f);
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = ubyte(float(color.g) * 255.0f);
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = ubyte(float(color.b) * 255.0f);
             }
 
-            if constexpr (num_components >= 4)
+            if constexpr (numComponents >= 4)
             {
                 components[3] = ubyte(float(color.a) * 255.0f);
             }
@@ -54,17 +54,17 @@ struct Pixel
         {
             components[0] = color.r;
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = color.g;
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = color.b;
             }
 
-            if constexpr (num_components >= 4)
+            if constexpr (numComponents >= 4)
             {
                 components[3] = color.a;
             }
@@ -77,7 +77,7 @@ struct Pixel
         {
             components[0] = ubyte(rg.x * 255.0f);
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = ubyte(rg.y * 255.0f);
             }
@@ -86,7 +86,7 @@ struct Pixel
         {
             components[0] = rg.x;
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = rg.y;
             }
@@ -99,12 +99,12 @@ struct Pixel
         {
             components[0] = ubyte(rgb.x * 255.0f);
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = ubyte(rgb.y * 255.0f);
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = ubyte(rgb.z * 255.0f);
             }
@@ -113,12 +113,12 @@ struct Pixel
         {
             components[0] = rgb.x;
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = rgb.y;
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = rgb.z;
             }
@@ -131,17 +131,17 @@ struct Pixel
         {
             components[0] = ubyte(rgba.x * 255.0f);
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = ubyte(rgba.y * 255.0f);
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = ubyte(rgba.z * 255.0f);
             }
 
-            if constexpr (num_components >= 4)
+            if constexpr (numComponents >= 4)
             {
                 components[3] = ubyte(rgba.w * 255.0f);
             }
@@ -150,17 +150,17 @@ struct Pixel
         {
             components[0] = rgba.x;
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = rgba.y;
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = rgba.z;
             }
 
-            if constexpr (num_components >= 4)
+            if constexpr (numComponents >= 4)
             {
                 components[3] = rgba.w;
             }
@@ -176,7 +176,7 @@ struct Pixel
     {
         components[0] = r;
 
-        if constexpr (num_components >= 2)
+        if constexpr (numComponents >= 2)
         {
             components[1] = g;
         }
@@ -186,12 +186,12 @@ struct Pixel
     {
         components[0] = r;
 
-        if constexpr (num_components >= 2)
+        if constexpr (numComponents >= 2)
         {
             components[1] = g;
         }
 
-        if constexpr (num_components >= 3)
+        if constexpr (numComponents >= 3)
         {
             components[2] = b;
         }
@@ -201,17 +201,17 @@ struct Pixel
     {
         components[0] = r;
 
-        if constexpr (num_components >= 2)
+        if constexpr (numComponents >= 2)
         {
             components[1] = g;
         }
 
-        if constexpr (num_components >= 3)
+        if constexpr (numComponents >= 3)
         {
             components[2] = b;
         }
 
-        if constexpr (num_components >= 4)
+        if constexpr (numComponents >= 4)
         {
             components[3] = a;
         }
@@ -225,7 +225,7 @@ struct Pixel
 
     float GetComponent(uint32 index) const
     {
-        if (index >= num_components)
+        if (index >= numComponents)
         {
             return 0.0f;
         }
@@ -242,7 +242,7 @@ struct Pixel
 
     void SetComponent(uint32 index, float value)
     {
-        if (index >= num_components)
+        if (index >= numComponents)
         {
             return;
         }
@@ -275,7 +275,7 @@ struct Pixel
         {
             components[0] = ubyte(r * 255.0f);
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = ubyte(g * 255.0f);
             }
@@ -284,7 +284,7 @@ struct Pixel
         {
             components[0] = r;
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = g;
             }
@@ -297,12 +297,12 @@ struct Pixel
         {
             components[0] = ubyte(r * 255.0f);
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = ubyte(g * 255.0f);
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = ubyte(b * 255.0f);
             }
@@ -311,12 +311,12 @@ struct Pixel
         {
             components[0] = r;
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = g;
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = b;
             }
@@ -329,17 +329,17 @@ struct Pixel
         {
             components[0] = ubyte(r * 255.0f);
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = ubyte(g * 255.0f);
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = ubyte(b * 255.0f);
             }
 
-            if constexpr (num_components >= 4)
+            if constexpr (numComponents >= 4)
             {
                 components[3] = ubyte(a * 255.0f);
             }
@@ -348,17 +348,17 @@ struct Pixel
         {
             components[0] = r;
 
-            if constexpr (num_components >= 2)
+            if constexpr (numComponents >= 2)
             {
                 components[1] = g;
             }
 
-            if constexpr (num_components >= 3)
+            if constexpr (numComponents >= 3)
             {
                 components[2] = b;
             }
 
-            if constexpr (num_components >= 4)
+            if constexpr (numComponents >= 4)
             {
                 components[3] = a;
             }
@@ -492,11 +492,11 @@ public:
     {
         m_pixels.Resize(width * height);
 
-        const uint32 num_components = PixelType::num_components;
+        const uint32 numComponents = PixelType::numComponents;
 
-        for (uint32 i = 0, j = 0; i < floats.Size() && j < m_pixels.Size(); i += num_components, j++)
+        for (uint32 i = 0, j = 0; i < floats.Size() && j < m_pixels.Size(); i += numComponents, j++)
         {
-            for (uint32 k = 0; k < num_components; k++)
+            for (uint32 k = 0; k < numComponents; k++)
             {
                 m_pixels[j].SetComponent(k, floats[i + k]);
             }
@@ -568,7 +568,7 @@ public:
     {
         return SizeType(m_width)
             * SizeType(m_height)
-            * SizeType(PixelType::num_components)
+            * SizeType(PixelType::numComponents)
             * sizeof(PixelComponentType);
     }
 
@@ -606,62 +606,62 @@ public:
         m_pixels[index] = pixel;
     }
 
-    void SetPixels(const ByteBuffer& byte_buffer)
+    void SetPixels(const ByteBuffer& byteBuffer)
     {
-        AssertThrowMsg(byte_buffer.Size() == GetByteSize(), "Byte buffer size does not match bitmap size! (%u != %u)", byte_buffer.Size(), GetByteSize());
+        AssertThrowMsg(byteBuffer.Size() == GetByteSize(), "Byte buffer size does not match bitmap size! (%u != %u)", byteBuffer.Size(), GetByteSize());
 
-        const uint32 num_components = PixelType::num_components;
+        const uint32 numComponents = PixelType::numComponents;
 
-        m_pixels.Resize(byte_buffer.Size() / num_components);
+        m_pixels.Resize(byteBuffer.Size() / numComponents);
 
-        for (SizeType i = 0, j = 0; i < byte_buffer.Size() && j < m_pixels.Size(); i += num_components, j++)
+        for (SizeType i = 0, j = 0; i < byteBuffer.Size() && j < m_pixels.Size(); i += numComponents, j++)
         {
-            for (uint32 k = 0; k < num_components; k++)
+            for (uint32 k = 0; k < numComponents; k++)
             {
-                m_pixels[j].SetComponent(k, float(byte_buffer.Data()[i + k] / 255.0f));
+                m_pixels[j].SetComponent(k, float(byteBuffer.Data()[i + k] / 255.0f));
             }
         }
     }
 
     ByteBuffer ToByteBuffer() const
     {
-        ByteBuffer byte_buffer;
-        byte_buffer.SetSize(GetByteSize());
+        ByteBuffer byteBuffer;
+        byteBuffer.SetSize(GetByteSize());
 
-        for (SizeType i = 0, j = 0; i < byte_buffer.Size() && j < m_pixels.Size(); i += PixelType::num_components * sizeof(PixelComponentType), j++)
+        for (SizeType i = 0, j = 0; i < byteBuffer.Size() && j < m_pixels.Size(); i += PixelType::numComponents * sizeof(PixelComponentType), j++)
         {
-            for (uint32 k = 0; k < PixelType::num_components; k++)
+            for (uint32 k = 0; k < PixelType::numComponents; k++)
             {
-                Memory::MemCpy(&byte_buffer.Data()[i + k * sizeof(PixelComponentType)], &m_pixels[j].components[k], sizeof(PixelComponentType));
+                Memory::MemCpy(&byteBuffer.Data()[i + k * sizeof(PixelComponentType)], &m_pixels[j].components[k], sizeof(PixelComponentType));
             }
         }
 
-        return byte_buffer;
+        return byteBuffer;
     }
 
-    ByteBuffer GetUnpackedBytes(uint32 bytes_per_pixel) const
+    ByteBuffer GetUnpackedBytes(uint32 bytesPerPixel) const
     {
-        ByteBuffer byte_buffer;
-        byte_buffer.SetSize(m_pixels.Size() * bytes_per_pixel);
+        ByteBuffer byteBuffer;
+        byteBuffer.SetSize(m_pixels.Size() * bytesPerPixel);
 
-        ubyte* bytes = byte_buffer.Data();
+        ubyte* bytes = byteBuffer.Data();
 
-        if (bytes_per_pixel == 1)
+        if (bytesPerPixel == 1)
         {
             for (uint32 i = 0; i < m_pixels.Size(); i++)
             {
                 Vec4f pixel;
 
-                for (uint32 j = 0; j < PixelType::num_components; j++)
+                for (uint32 j = 0; j < PixelType::numComponents; j++)
                 {
                     pixel[j] = m_pixels[i].GetComponent(j);
                 }
 
                 const Color color { pixel };
 
-                for (uint32 j = 0; j < MathUtil::Min(PixelType::num_components, bytes_per_pixel); j++)
+                for (uint32 j = 0; j < MathUtil::Min(PixelType::numComponents, bytesPerPixel); j++)
                 {
-                    bytes[i * bytes_per_pixel + j] = color.bytes[j];
+                    bytes[i * bytesPerPixel + j] = color.bytes[j];
                 }
             }
         }
@@ -669,26 +669,26 @@ public:
         {
             for (uint32 i = 0; i < m_pixels.Size(); i++)
             {
-                for (uint32 j = 0; j < MathUtil::Min(PixelType::num_components, bytes_per_pixel); j++)
+                for (uint32 j = 0; j < MathUtil::Min(PixelType::numComponents, bytesPerPixel); j++)
                 {
-                    bytes[i * bytes_per_pixel + j] = ubyte(m_pixels[i].GetComponent(j) * 255.0f);
+                    bytes[i * bytesPerPixel + j] = ubyte(m_pixels[i].GetComponent(j) * 255.0f);
                 }
             }
         }
 
-        return byte_buffer;
+        return byteBuffer;
     }
 
     Array<float> GetUnpackedFloats() const
     {
         Array<float> floats;
-        floats.Resize(m_pixels.Size() * PixelType::num_components);
+        floats.Resize(m_pixels.Size() * PixelType::numComponents);
 
         for (uint32 i = 0; i < m_pixels.Size(); i++)
         {
-            for (uint32 j = 0; j < PixelType::num_components; j++)
+            for (uint32 j = 0; j < PixelType::numComponents; j++)
             {
-                floats[i * PixelType::num_components + j] = m_pixels[i].GetComponent(j);
+                floats[i * PixelType::numComponents + j] = m_pixels[i].GetComponent(j);
             }
         }
 
@@ -698,15 +698,15 @@ public:
     bool Write(const String& filepath) const
     {
         // WriteBitmap uses 3 bytes per pixel
-        ByteBuffer unpacked_bytes = GetUnpackedBytes(3);
+        ByteBuffer unpackedBytes = GetUnpackedBytes(3);
 
         // BMP stores in BGR format, so swap R and B
-        for (uint32 i = 0; i < unpacked_bytes.Size(); i += 3)
+        for (uint32 i = 0; i < unpackedBytes.Size(); i += 3)
         {
-            Swap(unpacked_bytes[i], unpacked_bytes[i + 2]);
+            Swap(unpackedBytes[i], unpackedBytes[i + 2]);
         }
 
-        return WriteBitmap::Write(filepath.Data(), m_width, m_height, unpacked_bytes.Data());
+        return WriteBitmap::Write(filepath.Data(), m_width, m_height, unpackedBytes.Data());
     }
 
     void FlipVertical()
@@ -771,18 +771,18 @@ public:
             std::swap(t1, t2);
         }
 
-        int total_height = t2.y - t0.y;
+        int totalHeight = t2.y - t0.y;
 
-        if (total_height == 0)
+        if (totalHeight == 0)
         {
             return;
         }
 
         for (int y = t0.y; y <= t1.y; y++)
         {
-            int segment_height = t1.y - t0.y + 1;
-            float alpha = (float)(y - t0.y) / total_height;
-            float beta = (float)(y - t0.y) / segment_height;
+            int segmentHeight = t1.y - t0.y + 1;
+            float alpha = (float)(y - t0.y) / totalHeight;
+            float beta = (float)(y - t0.y) / segmentHeight;
 
             Vec2i a = t0 + (t2 - t0) * alpha;
             Vec2i b = t0 + (t1 - t0) * beta;
@@ -800,9 +800,9 @@ public:
 
         for (int y = t1.y; y <= t2.y; y++)
         {
-            int segment_height = t2.y - t1.y + 1;
-            float alpha = (float)(y - t0.y) / total_height;
-            float beta = (float)(y - t1.y) / segment_height;
+            int segmentHeight = t2.y - t1.y + 1;
+            float alpha = (float)(y - t0.y) / totalHeight;
+            float beta = (float)(y - t1.y) / segmentHeight;
 
             Vec2i a = t0 + (t2 - t0) * alpha;
             Vec2i b = t1 + (t2 - t1) * beta;

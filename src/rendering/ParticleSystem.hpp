@@ -26,13 +26,13 @@ struct RenderSetup;
 struct ParticleSpawnerParams
 {
     Handle<Texture> texture;
-    SizeType max_particles = 256u;
+    SizeType maxParticles = 256u;
     Vec3f origin = Vec3f::Zero();
-    float start_size = 0.035f;
+    float startSize = 0.035f;
     float radius = 1.0f;
     float randomness = 0.5f;
     float lifespan = 1.0f;
-    bool has_physics = false;
+    bool hasPhysics = false;
 };
 
 HYP_CLASS()
@@ -54,22 +54,22 @@ public:
 
     HYP_FORCE_INLINE const GpuBufferRef& GetParticleBuffer() const
     {
-        return m_particle_buffer;
+        return m_particleBuffer;
     }
 
     HYP_FORCE_INLINE const GpuBufferRef& GetIndirectBuffer() const
     {
-        return m_indirect_buffer;
+        return m_indirectBuffer;
     }
 
     HYP_FORCE_INLINE const GraphicsPipelineRef& GetGraphicsPipeline() const
     {
-        return m_graphics_pipeline;
+        return m_graphicsPipeline;
     }
 
     HYP_FORCE_INLINE const ComputePipelineRef& GetComputePipeline() const
     {
-        return m_update_particles;
+        return m_updateParticles;
     }
 
     HYP_FORCE_INLINE BoundingSphere GetBoundingSphere() const
@@ -86,13 +86,13 @@ private:
     void CreateGraphicsPipeline();
 
     ParticleSpawnerParams m_params;
-    GpuBufferRef m_particle_buffer;
-    GpuBufferRef m_indirect_buffer;
-    GpuBufferRef m_noise_buffer;
-    ComputePipelineRef m_update_particles;
-    GraphicsPipelineRef m_graphics_pipeline;
+    GpuBufferRef m_particleBuffer;
+    GpuBufferRef m_indirectBuffer;
+    GpuBufferRef m_noiseBuffer;
+    ComputePipelineRef m_updateParticles;
+    GraphicsPipelineRef m_graphicsPipeline;
     ShaderRef m_shader;
-    Bitmap<1> m_noise_map;
+    Bitmap<1> m_noiseMap;
 };
 
 HYP_CLASS()
@@ -108,30 +108,30 @@ public:
 
     HYP_FORCE_INLINE ThreadSafeContainer<ParticleSpawner>& GetParticleSpawners()
     {
-        return m_particle_spawners;
+        return m_particleSpawners;
     }
 
     HYP_FORCE_INLINE const ThreadSafeContainer<ParticleSpawner>& GetParticleSpawners() const
     {
-        return m_particle_spawners;
+        return m_particleSpawners;
     }
 
     // called in render thread, updates particles using compute shader
-    void UpdateParticles(FrameBase* frame, const RenderSetup& render_setup);
+    void UpdateParticles(FrameBase* frame, const RenderSetup& renderSetup);
 
-    void Render(FrameBase* frame, const RenderSetup& render_setup);
+    void Render(FrameBase* frame, const RenderSetup& renderSetup);
 
 private:
     void Init() override;
 
     void CreateBuffers();
 
-    Handle<Mesh> m_quad_mesh;
+    Handle<Mesh> m_quadMesh;
 
     // for zeroing out data
-    GpuBufferRef m_staging_buffer;
+    GpuBufferRef m_stagingBuffer;
 
-    ThreadSafeContainer<ParticleSpawner> m_particle_spawners;
+    ThreadSafeContainer<ParticleSpawner> m_particleSpawners;
 
     uint32 m_counter;
 };
