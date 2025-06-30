@@ -142,30 +142,30 @@
 #define HYP_GET_CONST_ARG(arg) \
     (arg)()
 
-#define HYP_DEF_STRUCT_COMPARE_EQL(hyp_class)                 \
-    bool operator==(const hyp_class& other) const             \
+#define HYP_DEF_STRUCT_COMPARE_EQL(T)                         \
+    bool operator==(const T& other) const                     \
     {                                                         \
         return std::memcmp(this, &other, sizeof(*this)) == 0; \
     }                                                         \
-    bool operator!=(const hyp_class& other) const             \
+    bool operator!=(const T& other) const                     \
     {                                                         \
         return std::memcmp(this, &other, sizeof(*this)) != 0; \
     }
 
-#define HYP_DEF_STRUCT_COMPARE_LT(hyp_class)                 \
-    bool operator<(const hyp_class& other) const             \
+#define HYP_DEF_STRUCT_COMPARE_LT(T)                         \
+    bool operator<(const T& other) const                     \
     {                                                        \
         return std::memcmp(this, &other, sizeof(*this)) < 0; \
     }
 
-#define HYP_DEF_STL_HASH(hyp_class)                   \
-    template <>                                       \
-    struct std::hash<hyp_class>                       \
-    {                                                 \
-        size_t operator()(const hyp_class& obj) const \
-        {                                             \
-            return obj.GetHashCode().Value();         \
-        }                                             \
+#define HYP_DEF_STL_HASH(T)                   \
+    template <>                               \
+    struct std::hash<T>                       \
+    {                                         \
+        size_t operator()(const T& obj) const \
+        {                                     \
+            return obj.GetHashCode().Value(); \
+        }                                     \
     }
 
 #define HYP_DEF_STL_ITERATOR(container)        \
