@@ -3,6 +3,7 @@
 #include <rendering/RenderEnvGrid.hpp>
 #include <rendering/RenderEnvProbe.hpp>
 #include <rendering/RenderLight.hpp>
+#include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderTexture.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
@@ -11,6 +12,7 @@
 #include <scene/EnvProbe.hpp>
 #include <scene/Light.hpp>
 #include <scene/Texture.hpp>
+#include <scene/Material.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 
 #include <core/object/HypClass.hpp>
@@ -176,6 +178,18 @@ void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next)
 void OnBindingChanged_LightmapVolume(LightmapVolume* lightmapVolume, uint32 prev, uint32 next)
 {
     RenderApi_AssignResourceBinding(lightmapVolume, next);
+}
+
+void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
+{
+    AssertDebug(material != nullptr);
+
+    HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {}\n", material->Id(), prev, next);
+
+    AssertDebug(material->GetRenderResource().GetBufferIndex() != ~0u);
+
+    // temp shit
+    RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
 }
 
 } // namespace hyperion

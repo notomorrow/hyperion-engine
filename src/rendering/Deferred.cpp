@@ -1341,6 +1341,12 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
     HashMap<EnvGrid*, Light*> envGridLights;
     HashMap<EnvProbe*, Light*> envProbeLights;
 
+    // Render UI to render targets
+    for (RendererBase* renderer : g_renderGlobalState->globalRenderers[GRT_UI])
+    {
+        renderer->RenderFrame(frame, rs);
+    }
+
     // init view pass data and collect global rendering resources
     // (env probes, env grids)
     for (const TResourceHandle<RenderView>& renderView : rs.world->GetViews())
@@ -1453,12 +1459,10 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
                 {
                     if (envProbe->NeedsRender())
                     {
-                        EnvProbeRenderer* envProbeRenderer = g_renderGlobalState->EnvProbeRenderers[envProbeType];
-
-                        if (envProbeRenderer)
+                        if (RendererBase* renderer = g_renderGlobalState->globalRenderers[GRT_ENV_PROBE][envProbeType])
                         {
                             newRs.envProbe = envProbe;
-                            envProbeRenderer->RenderFrame(frame, newRs);
+                            renderer->RenderFrame(frame, newRs);
                             newRs.envProbe = nullptr; // reset for next probe
 
                             counts[ERS_ENV_PROBES]++;
@@ -1487,7 +1491,7 @@ void DeferredRenderer::RenderFrame(FrameBase* frame, const RenderSetup& rs)
 
                 newRs.envGrid = envGrid;
 
-                g_renderGlobalState->EnvGridRenderer->RenderFrame(frame, newRs);
+                g_renderGlobalState->globalRenderers[GRT_ENV_GRID][0]->RenderFrame(frame, newRs);
 
                 newRs.light = nullptr;
                 newRs.envGrid = nullptr;

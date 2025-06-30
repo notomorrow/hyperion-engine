@@ -3,6 +3,8 @@
 #ifndef HYPERION_MATERIAL_HPP
 #define HYPERION_MATERIAL_HPP
 
+#include <scene/RenderProxyable.hpp>
+
 #include <rendering/Shader.hpp>
 #include <rendering/RenderableAttributes.hpp>
 
@@ -68,7 +70,7 @@ enum class MaterialTextureKey : uint64
 };
 
 HYP_CLASS()
-class HYP_API Material final : public HypObject<Material>
+class HYP_API Material final : public RenderProxyable
 {
     HYP_OBJECT_BODY(Material);
 
@@ -734,6 +736,7 @@ public:
 
 private:
     void Init() override;
+    void UpdateRenderProxy(IRenderProxy* proxy) override;
 
     Name m_name;
 
@@ -743,6 +746,8 @@ private:
     MaterialAttributes m_renderAttributes;
 
     bool m_isDynamic;
+
+    Array<ObjId<Texture>> m_boundTextureIds;
 
     mutable DataMutationState m_mutationState;
 

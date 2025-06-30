@@ -640,7 +640,7 @@ public:
 protected:
     struct Impl final
     {
-        /*! \brief Checks if the ResourceTracker<ObjId<Entity>, RenderProxy> already has a proxy for the given Id from the previous frame */
+        /*! \brief Checks if it already has a proxy for the given Id from the previous frame */
         HYP_FORCE_INLINE bool HasElement(IdType id) const
         {
             AssertDebugMsg(id.GetTypeId() == typeId, "ResourceTracker typeid mismatch");

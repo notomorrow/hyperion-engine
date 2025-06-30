@@ -35,6 +35,7 @@ class ReflectionProbe;
 class SkyProbe;
 class RenderGlobalState;
 class RenderResourceLock;
+class UIRenderer;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -97,6 +98,17 @@ enum GlobalRenderBuffer : uint8
     GRB_MAX
 };
 
+enum GlobalRendererType : uint32
+{
+    GRT_NONE = ~0u, //<! Not a global renderer type
+
+    GRT_ENV_PROBE = 0, //<! Global renderer for EnvProbe objects
+    GRT_ENV_GRID,      //<! Global renderer for EnvGrids
+    GRT_UI,            //<! Globally registered UIRenderer instance
+
+    GRT_MAX
+};
+
 struct GlobalGpuBuffers
 {
     GpuBufferHolderBase* buffers[GRB_MAX];
@@ -121,6 +133,9 @@ public:
     void Destroy();
     void UpdateBuffers(FrameBase* frame);
 
+    void AddRenderer(GlobalRendererType globalRendererType, RendererBase* renderer);
+    void RemoveRenderer(GlobalRendererType globalRendererType, RendererBase* renderer);
+
     BindlessStorage BindlessTextures;
 
     UniquePtr<class ShadowMapAllocator> ShadowMapAllocator;
@@ -129,9 +144,8 @@ public:
 
     DescriptorTableRef GlobalDescriptorTable;
 
-    RendererBase* Renderer;
-    EnvProbeRenderer** EnvProbeRenderers;
-    class EnvGridRenderer* EnvGridRenderer;
+    RendererBase* Renderer; // main renderer
+    FixedArray<Array<RendererBase*>, GRT_MAX> globalRenderers;
 
     GlobalGpuBuffers gpuBuffers;
     ResourceBindings* resourceBindings;

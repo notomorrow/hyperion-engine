@@ -73,6 +73,43 @@ struct UIPassData : PassData
 
 #pragma region Render commands
 
+struct RENDER_COMMAND(AddUIRenderer)
+    : RenderCommand
+{
+    UIRenderer* uiRenderer;
+
+    RENDER_COMMAND(AddUIRenderer)(UIRenderer* uiRenderer)
+        : uiRenderer(uiRenderer)
+    {
+        AssertDebug(uiRenderer != nullptr);
+    }
+
+    virtual RendererResult operator()() override
+    {
+        g_renderGlobalState->AddRenderer(GRT_UI, uiRenderer);
+
+        HYPERION_RETURN_OK;
+    }
+};
+
+struct RENDER_COMMAND(RemoveUIRenderer)
+    : RenderCommand
+{
+    UIRenderer* uiRenderer;
+
+    RENDER_COMMAND(RemoveUIRenderer)(UIRenderer* uiRenderer)
+        : uiRenderer(uiRenderer)
+    {
+    }
+
+    virtual RendererResult operator()() override
+    {
+        g_renderGlobalState->RemoveRenderer(GRT_UI, uiRenderer);
+
+        HYPERION_RETURN_OK;
+    }
+};
+
 struct RENDER_COMMAND(SetFinalPassImageView)
     : RenderCommand
 {
@@ -172,9 +209,9 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI)
         return attributes;
     }
 
-    void BuildProxyGroupsInOrder()
+    void BuildRenderGroups()
     {
-        HYP_NAMED_SCOPE("Rebuild UI Proxy Groups: BuildProxyGroupsInOrder");
+        HYP_NAMED_SCOPE("Rebuild UI Proxy Groups: BuildRenderGroups");
 
         renderProxyList->Clear();
 
@@ -316,7 +353,7 @@ struct RENDER_COMMAND(RebuildProxyGroups_UI)
 
         meshes.Advance(AdvanceAction::PERSIST);
 
-        BuildProxyGroupsInOrder();
+        BuildRenderGroups();
 
         HYPERION_RETURN_OK;
     }
@@ -364,9 +401,108 @@ struct RENDER_COMMAND(RenderUI)
 
 #pragma region UIRenderCollector
 
+static RenderableAttributeSet GetMergedRenderableAttributes(const RenderableAttributeSet& entityAttributes, const Optional<RenderableAttributeSet>& overrideAttributes)
+{
+    HYP_NAMED_SCOPE("Rebuild UI Proxy Groups: GetMergedRenderableAttributes");
+
+    RenderableAttributeSet attributes = entityAttributes;
+
+    if (overrideAttributes.HasValue())
+    {
+        if (const ShaderDefinition& overrideShaderDefinition = overrideAttributes->GetShaderDefinition())
+        {
+            attributes.SetShaderDefinition(overrideShaderDefinition);
+        }
+
+        ShaderDefinition shaderDefinition = overrideAttributes->GetShaderDefinition().IsValid()
+            ? overrideAttributes->GetShaderDefinition()
+            : attributes.GetShaderDefinition();
+
+#ifdef HYP_DEBUG_MODE
+        AssertThrow(shaderDefinition.IsValid());
+#endif
+
+        // Check for varying vertex attributes on the override shader compared to the entity's vertex
+        // attributes. If there is not a match, we should switch to a version of the override shader that
+        // has matching vertex attribs.
+        const VertexAttributeSet meshVertexAttributes = attributes.GetMeshAttributes().vertexAttributes;
+
+        if (meshVertexAttributes != shaderDefinition.GetProperties().GetRequiredVertexAttributes())
+        {
+            shaderDefinition.properties.SetRequiredVertexAttributes(meshVertexAttributes);
+        }
+
+        MaterialAttributes newMaterialAttributes = overrideAttributes->GetMaterialAttributes();
+        newMaterialAttributes.shaderDefinition = shaderDefinition;
+        // do not override bucket!
+        newMaterialAttributes.bucket = attributes.GetMaterialAttributes().bucket;
+
+        attributes.SetMaterialAttributes(newMaterialAttributes);
+    }
+
+    return attributes;
+}
+
+static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entity>, int>>& proxyDepths, const Optional<RenderableAttributeSet>& overrideAttributes)
+{
+    rpl.Clear();
+
+    for (const Pair<ObjId<Entity>, int>& pair : proxyDepths)
+    {
+        RenderProxy* proxy = rpl.meshes.GetElement(pair.first);
+
+        if (!proxy)
+        {
+            continue;
+        }
+
+        const Handle<Mesh>& mesh = proxy->mesh;
+        const Handle<Material>& material = proxy->material;
+
+        if (!mesh.IsValid() || !material.IsValid())
+        {
+            continue;
+        }
+
+        RenderableAttributeSet attributes = GetMergedRenderableAttributes(RenderableAttributeSet { mesh->GetMeshAttributes(), material->GetRenderAttributes() }, overrideAttributes);
+
+        const RenderBucket rb = attributes.GetMaterialAttributes().bucket;
+
+        attributes.SetDrawableLayer(pair.second);
+
+        DrawCallCollectionMapping& mapping = rpl.mappingsByBucket[rb][attributes];
+        Handle<RenderGroup>& rg = mapping.renderGroup;
+
+        if (!rg.IsValid())
+        {
+            ShaderDefinition shaderDefinition = attributes.GetShaderDefinition();
+            shaderDefinition.GetProperties().Set("INSTANCING");
+
+            ShaderRef shader = g_shaderManager->GetOrCreate(shaderDefinition);
+            AssertThrow(shader.IsValid());
+
+            rg = CreateObject<RenderGroup>(shader, attributes, RenderGroupFlags::NONE);
+            rg->SetDrawCallCollectionImpl(GetOrCreateDrawCallCollectionImpl<UIEntityInstanceBatch>());
+
+#ifdef HYP_DEBUG_MODE
+            if (!rg.IsValid())
+            {
+                HYP_LOG(UI, Error, "Render group not valid for attribute set {}!", attributes.GetHashCode().Value());
+
+                continue;
+            }
+#endif
+
+            InitObject(rg);
+        }
+
+        auto insertResult = mapping.renderProxies.Insert(proxy->entity.Id(), proxy);
+        AssertDebug(insertResult.second);
+    }
+}
+
 UIRenderCollector::UIRenderCollector()
-    : RenderCollector(),
-      rpl(MakeRefCountedPtr<RenderProxyList>())
+    : RenderCollector()
 {
 }
 
@@ -377,57 +513,49 @@ void UIRenderCollector::ResetOrdering()
     proxyDepths.Clear();
 }
 
-void UIRenderCollector::PushRenderProxy(ResourceTracker<ObjId<Entity>, RenderProxy>& meshes, const RenderProxy& renderProxy, int computedDepth)
-{
-    AssertThrow(renderProxy.entity.IsValid());
-    AssertThrow(renderProxy.mesh.IsValid());
-    AssertThrow(renderProxy.material.IsValid());
-
-    meshes.Track(renderProxy.entity, renderProxy, &renderProxy.version);
-
-    proxyDepths.EmplaceBack(renderProxy.entity.Id(), computedDepth);
-}
-
-typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff UIRenderCollector::PushUpdatesToRenderThread(ResourceTracker<ObjId<Entity>, RenderProxy>& meshes, const Optional<RenderableAttributeSet>& overrideAttributes)
+typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
 {
     HYP_SCOPE;
 
     // UISubsystem can have Update() called on a task thread.
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    auto diff = meshes.GetDiff();
+    auto diff = rpl.meshes.GetDiff();
 
     if (diff.NeedsUpdate())
     {
-        Array<ObjId<Entity>> removedEntities;
-        meshes.GetRemoved(removedEntities, true /* includeChanged */);
+        Array<RenderProxy*> removed;
+        rpl.meshes.GetRemoved(removed, true);
 
-        Array<RenderProxy*> addedProxiesPtrs;
-        meshes.GetAdded(addedProxiesPtrs, true /* includeChanged */);
+        Array<RenderProxy*> added;
+        rpl.meshes.GetAdded(added, true);
 
-        if (addedProxiesPtrs.Any() || removedEntities.Any())
+        for (RenderProxy* proxy : added)
         {
-            PUSH_RENDER_COMMAND(
-                RebuildProxyGroups_UI,
-                rpl,
-                std::move(addedProxiesPtrs),
-                std::move(removedEntities),
-                proxyDepths,
-                overrideAttributes);
+            RenderApi_AddRef(proxy->entity.GetUnsafe());
+            RenderApi_AddRef(proxy->material.Get());
+
+            RenderApi_UpdateRenderProxy(proxy->material.Id());
+
+            // for now:
+            proxy->IncRefs();
+        }
+
+        for (RenderProxy* proxy : removed)
+        {
+            RenderApi_ReleaseRef(proxy->entity.Id());
+            RenderApi_ReleaseRef(proxy->material.Id());
+
+            // for now:
+            proxy->DecRefs();
         }
     }
 
-    meshes.Advance(AdvanceAction::CLEAR);
+    BuildRenderGroups(rpl, proxyDepths, overrideAttributes);
+
+    RenderCollector::CollectDrawCalls(rpl, 0);
 
     return diff;
-}
-
-void UIRenderCollector::CollectDrawCalls(FrameBase* frame, const RenderSetup& renderSetup)
-{
-    HYP_SCOPE;
-    Threads::AssertOnThread(g_renderThread);
-
-    RenderCollector::CollectDrawCalls(*rpl, 0);
 }
 
 void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const
@@ -436,7 +564,12 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
     Threads::AssertOnThread(g_renderThread);
 
-    AssertThrow(rpl != nullptr);
+    AssertDebug(renderSetup.IsValid());
+    AssertDebug(renderSetup.HasView());
+
+    RenderProxyList& rpl = RenderApi_GetConsumerProxyList(renderSetup.view->GetView());
+
+    HYP_LOG(UI, Debug, "UI Render Collector: Executing {} draw calls", rpl.NumDrawCallsCollected());
 
     const uint32 frameIndex = frame->GetFrameIndex();
 
@@ -448,7 +581,7 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
     using IteratorType = FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>::ConstIterator;
     Array<IteratorType> iterators;
 
-    for (const auto& mappings : rpl->mappingsByBucket)
+    for (const auto& mappings : rpl.mappingsByBucket)
     {
         for (const auto& it : mappings)
         {
@@ -496,6 +629,12 @@ void UIRenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& re
 
 #pragma region UIRenderer
 
+UIRenderer::UIRenderer(const Handle<View>& view)
+    : m_view(view)
+{
+    AssertDebug(view.IsValid());
+}
+
 void UIRenderer::Initialize()
 {
 }
@@ -506,29 +645,26 @@ void UIRenderer::Shutdown()
 
 void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
 {
-    View* view = renderSetup.view->GetView();
-    AssertThrow(view != nullptr);
-
-    UIPassData* pd = static_cast<UIPassData*>(FetchViewPassData(view));
+    UIPassData* pd = static_cast<UIPassData*>(FetchViewPassData(m_view));
     AssertDebug(pd != nullptr);
 
-    if (pd->viewport != view->GetRenderResource().GetViewport())
+    RenderSetup rs = renderSetup;
+    rs.view = &m_view->GetRenderResource();
+    rs.passData = pd;
+
+    if (pd->viewport != m_view->GetRenderResource().GetViewport())
     {
         /// @TODO: Implement me!
 
         HYP_LOG(UI, Warning, "UIRenderer: Viewport size changed from {} to {}, resizing view pass data",
-            pd->viewport.extent, view->GetRenderResource().GetViewport().extent);
+            pd->viewport.extent, m_view->GetRenderResource().GetViewport().extent);
 
         // ResizeView(view->GetRenderResource().GetViewport(), view, *pd);
     }
 
-    RenderSetup rs = renderSetup;
-    rs.passData = pd;
-
-    const ViewOutputTarget& outputTarget = view->GetOutputTarget();
+    const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
     AssertThrow(outputTarget.IsValid());
 
-    m_renderCollector.CollectDrawCalls(frame, rs);
     m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
 }
 
@@ -556,30 +692,9 @@ UIRenderSubsystem::UIRenderSubsystem(const Handle<UIStage>& uiStage)
 
 UIRenderSubsystem::~UIRenderSubsystem()
 {
-    // push render command to delete UIRenderer on the render thread
     if (m_uiRenderer)
     {
-        struct RENDER_COMMAND(DeleteUIRenderer)
-            : RenderCommand
-        {
-            UIRenderer* uiRenderer;
-
-            RENDER_COMMAND(DeleteUIRenderer)(UIRenderer* uiRenderer)
-                : uiRenderer(uiRenderer)
-            {
-            }
-
-            virtual ~RENDER_COMMAND(DeleteUIRenderer)() override = default;
-
-            virtual RendererResult operator()() override
-            {
-                delete uiRenderer;
-
-                HYPERION_RETURN_OK;
-            }
-        };
-
-        PUSH_RENDER_COMMAND(DeleteUIRenderer, m_uiRenderer);
+        PUSH_RENDER_COMMAND(RemoveUIRenderer, m_uiRenderer);
         m_uiRenderer = nullptr;
     }
 }
@@ -612,8 +727,6 @@ void UIRenderSubsystem::Init()
     AssertThrow(m_uiStage->GetCamera().IsValid());
     AssertThrow(m_uiStage->GetCamera()->IsReady());
 
-    m_uiRenderer = new UIRenderer();
-
     m_cameraResourceHandle = TResourceHandle<RenderCamera>(m_uiStage->GetCamera()->GetRenderResource());
 
     const Vec2u surfaceSize = Vec2u(m_uiStage->GetSurfaceSize());
@@ -639,6 +752,10 @@ void UIRenderSubsystem::Init()
     m_view->GetRenderResource().IncRef();
 
     CreateFramebuffer();
+
+    m_uiRenderer = new UIRenderer(m_view);
+
+    PUSH_RENDER_COMMAND(AddUIRenderer, m_uiRenderer);
 }
 
 void UIRenderSubsystem::OnAddedToWorld()
@@ -674,10 +791,13 @@ void UIRenderSubsystem::PreUpdate(float delta)
 
 void UIRenderSubsystem::Update(float delta)
 {
+    RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
+    rpl.meshes.Advance(AdvanceAction::CLEAR);
+
     UIRenderCollector& renderCollector = m_uiRenderer->GetRenderCollector();
     renderCollector.ResetOrdering();
 
-    m_uiStage->CollectObjects([&renderCollector, &meshes = m_renderProxyTracker](UIObject* uiObject)
+    m_uiStage->CollectObjects([&renderCollector, &rpl](UIObject* uiObject)
         {
             AssertThrow(uiObject != nullptr);
 
@@ -695,13 +815,15 @@ void UIRenderSubsystem::Update(float delta)
 
             // @TODO Include a way to determine the parent tree of the UI Object because some objects will
             // have the same depth but should be rendered in a different order.
-            renderCollector.PushRenderProxy(meshes, *meshComponent.proxy, uiObject->GetComputedDepth());
+            // renderCollector.PushRenderProxy(meshes, *meshComponent.proxy, uiObject->GetComputedDepth());
+
+            rpl.meshes.Track(meshComponent.proxy->entity.Id(), *meshComponent.proxy, &meshComponent.proxy->version);
+
+            renderCollector.proxyDepths.EmplaceBack(meshComponent.proxy->entity.Id(), uiObject->GetComputedDepth());
         },
         /* onlyVisible */ true);
 
-    renderCollector.PushUpdatesToRenderThread(m_renderProxyTracker);
-
-    PUSH_RENDER_COMMAND(RenderUI, m_uiRenderer, m_uiStage, &GetWorld()->GetRenderResource(), &m_view->GetRenderResource());
+    renderCollector.PushUpdates(rpl);
 }
 
 void UIRenderSubsystem::CreateFramebuffer()

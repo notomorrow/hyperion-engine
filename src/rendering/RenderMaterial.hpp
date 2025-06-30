@@ -6,6 +6,7 @@
 #include <rendering/Shader.hpp>
 #include <rendering/RenderableAttributes.hpp>
 #include <rendering/RenderResource.hpp>
+#include <rendering/RenderProxy.hpp>
 
 #include <rendering/backend/RendererFrame.hpp>
 #include <rendering/backend/RenderObject.hpp>
@@ -26,30 +27,6 @@ class Texture;
 class RenderTexture;
 
 enum class MaterialTextureKey : uint64;
-
-struct MaterialShaderData
-{
-    Vec4f albedo;
-
-    // 4 vec4s of 0.0..1.0 values stuffed into uint32s
-    Vec4u packedParams;
-
-    Vec2f uvScale;
-    float parallaxHeight;
-    float _pad0;
-
-    uint32 textureIndex[16];
-
-    uint32 textureUsage;
-    uint32 _pad1;
-    uint32 _pad2;
-    uint32 _pad3;
-
-    Vec4f _pad4[4];
-    Vec4f _pad5[4];
-};
-
-static_assert(sizeof(MaterialShaderData) == 256);
 
 class RenderMaterial final : public RenderResourceBase
 {

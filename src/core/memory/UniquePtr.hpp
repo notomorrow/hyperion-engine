@@ -22,7 +22,7 @@ namespace hyperion {
 class HypClass;
 
 extern HYP_API const HypClass* GetClass(TypeId typeId);
-extern HYP_API bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId typeId);
+extern HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
 
 namespace memory {
 
@@ -473,7 +473,7 @@ public:
             || std::is_same_v<Ty, void>
             || GetTypeId() == typeId
             || GetBaseTypeId() == typeId
-            || IsInstanceOfHypClass(GetClass(typeId), m_holder.value, GetTypeId());
+            || IsA(GetClass(typeId), m_holder.value, GetTypeId());
     }
 
     /*! \brief Returns a boolean indicating whether the type of this UniquePtr is the same as the given type, or if the given type is a base class of the type of this UniquePtr.
@@ -607,7 +607,7 @@ public:
         return std::is_same_v<Ty, void>
             || GetTypeId() == typeId
             || GetBaseTypeId() == typeId
-            || IsInstanceOfHypClass(GetClass(typeId), m_holder.value, GetTypeId());
+            || IsA(GetClass(typeId), m_holder.value, GetTypeId());
     }
 
     /*! \brief Attempts to cast the pointer directly to the given type.

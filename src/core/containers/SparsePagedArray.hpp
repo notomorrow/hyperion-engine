@@ -385,6 +385,8 @@ public:
 
     T& Get(SizeType index)
     {
+        AssertDebug(HasIndex(index), "Index %u is not initialized in SparsePagedArray!", index);
+
         const SizeType pageIndex = PageIndex(index);
         const SizeType elementIndex = ElementIndex(index);
 

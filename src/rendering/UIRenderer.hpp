@@ -43,22 +43,19 @@ public:
 
     void ResetOrdering();
 
-    void PushRenderProxy(ResourceTracker<ObjId<Entity>, RenderProxy>& meshes, const RenderProxy& renderProxy, int computedDepth);
-
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff PushUpdatesToRenderThread(
-        ResourceTracker<ObjId<Entity>, RenderProxy>& meshes,
+    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff PushUpdates(
+        RenderProxyList& rpl,
         const Optional<RenderableAttributeSet>& overrideAttributes = {});
 
-    void CollectDrawCalls(FrameBase* frame, const RenderSetup& renderSetup);
     void ExecuteDrawCalls(FrameBase* frame, const RenderSetup& renderSetup, const FramebufferRef& framebuffer) const;
 
     Array<Pair<ObjId<Entity>, int>> proxyDepths;
-    RC<RenderProxyList> rpl;
 };
 
 class UIRenderer : public RendererBase
 {
 public:
+    UIRenderer(const Handle<View>& view);
     virtual ~UIRenderer() = default;
 
     HYP_FORCE_INLINE UIRenderCollector& GetRenderCollector()
@@ -79,6 +76,7 @@ public:
 protected:
     PassData* CreateViewPassData(View* view, PassDataExt&) override;
 
+    Handle<View> m_view;
     UIRenderCollector m_renderCollector;
 };
 
@@ -98,16 +96,6 @@ public:
         return m_uiStage;
     }
 
-    HYP_FORCE_INLINE ResourceTracker<ObjId<Entity>, RenderProxy>& GetRenderProxyTracker()
-    {
-        return m_renderProxyTracker;
-    }
-
-    HYP_FORCE_INLINE const ResourceTracker<ObjId<Entity>, RenderProxy>& GetRenderProxyTracker() const
-    {
-        return m_renderProxyTracker;
-    }
-
     virtual void PreUpdate(float delta) override;
     virtual void Update(float delta) override;
 
@@ -122,9 +110,6 @@ private:
     Handle<UIStage> m_uiStage;
 
     ShaderRef m_shader;
-
-    // Game thread side list, used for collecting UI objects
-    ResourceTracker<ObjId<Entity>, RenderProxy> m_renderProxyTracker;
 
     TResourceHandle<RenderCamera> m_cameraResourceHandle;
 

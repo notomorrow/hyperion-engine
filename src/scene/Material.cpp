@@ -4,6 +4,7 @@
 #include <scene/Texture.hpp>
 
 #include <rendering/RenderMaterial.hpp>
+#include <rendering/RenderProxy.hpp>
 
 #include <rendering/backend/RenderConfig.hpp>
 
@@ -96,6 +97,9 @@ Material::~Material()
 {
     if (m_renderResource != nullptr)
     {
+        // temp shit
+        m_renderResource->DecRef();
+
         FreeResource(m_renderResource);
     }
 
@@ -126,6 +130,8 @@ void Material::Init()
     }
 
     m_renderResource->SetTextures(std::move(textures));
+    // temp shit
+    m_renderResource->IncRef();
 
     m_mutationState |= DataMutationState::DIRTY;
 
@@ -151,18 +157,17 @@ void Material::EnqueueRenderUpdates()
         maxTextures,
         isBindlessSupported ? maxBindlessResources : maxBoundTextures);
 
-    Array<ObjId<Texture>> boundTextureIds;
-    boundTextureIds.Resize(numBoundTextures);
+    m_boundTextureIds.Resize(numBoundTextures);
 
     for (uint32 i = 0; i < numBoundTextures; i++)
     {
         if (const Handle<Texture>& texture = m_textures.ValueAt(i))
         {
-            boundTextureIds[i] = texture->Id();
+            m_boundTextureIds[i] = texture->Id();
         }
     }
 
-    m_renderResource->SetBoundTextureIDs(boundTextureIds);
+    m_renderResource->SetBoundTextureIDs(m_boundTextureIds);
 
     MaterialShaderData bufferData {
         .albedo = GetParameter<Vec4f>(MATERIAL_KEY_ALBEDO),
@@ -181,6 +186,8 @@ void Material::EnqueueRenderUpdates()
     };
 
     m_renderResource->SetBufferData(bufferData);
+
+    SetNeedsRenderProxyUpdate();
 
     m_mutationState = DataMutationState::CLEAN;
 }
@@ -205,6 +212,8 @@ void Material::SetParameter(MaterialKey key, const Parameter& value)
     if (IsInitCalled())
     {
         m_mutationState |= DataMutationState::DIRTY;
+
+        SetNeedsRenderProxyUpdate();
     }
 }
 
@@ -223,6 +232,8 @@ void Material::SetParameters(const ParameterTable& parameters)
     if (IsInitCalled())
     {
         m_mutationState |= DataMutationState::DIRTY;
+
+        SetNeedsRenderProxyUpdate();
     }
 }
 
@@ -241,6 +252,8 @@ void Material::ResetParameters()
     if (IsInitCalled())
     {
         m_mutationState |= DataMutationState::DIRTY;
+
+        SetNeedsRenderProxyUpdate();
     }
 }
 
@@ -266,6 +279,8 @@ void Material::SetTexture(MaterialTextureKey key, const Handle<Texture>& texture
         InitObject(texture);
 
         m_renderResource->SetTexture(key, texture);
+
+        SetNeedsRenderProxyUpdate();
 
         m_mutationState |= DataMutationState::DIRTY;
     }
@@ -322,6 +337,8 @@ void Material::SetTextures(const TextureSet& textures)
             m_renderResource->SetTextures(std::move(textures));
         }
 
+        SetNeedsRenderProxyUpdate();
+
         m_mutationState |= DataMutationState::DIRTY;
     }
 }
@@ -348,6 +365,52 @@ Handle<Material> Material::Clone() const
     material->m_isDynamic = true;
 
     return material;
+}
+
+void Material::UpdateRenderProxy(IRenderProxy* proxy)
+{
+    RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
+    proxyCasted->material = WeakHandleFromThis();
+
+    static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
+
+    MaterialShaderData& bufferData = proxyCasted->bufferData;
+
+    bufferData.albedo = GetParameter<Vec4f>(MATERIAL_KEY_ALBEDO);
+    bufferData.packedParams = Vec4u(
+        ByteUtil::PackVec4f(Vec4f(
+            GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
+            GetParameter<float>(MATERIAL_KEY_METALNESS),
+            GetParameter<float>(MATERIAL_KEY_TRANSMISSION),
+            GetParameter<float>(MATERIAL_KEY_NORMAL_MAP_INTENSITY))),
+        ByteUtil::PackVec4f(Vec4f(GetParameter<float>(MATERIAL_KEY_ALPHA_THRESHOLD))),
+        ByteUtil::PackVec4f(Vec4f {}),
+        ByteUtil::PackVec4f(Vec4f {}));
+    bufferData.uvScale = GetParameter<Vec2f>(MATERIAL_KEY_UV_SCALE);
+    bufferData.parallaxHeight = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT);
+
+    bufferData.textureUsage = 0;
+    Memory::MemSet(bufferData.textureIndex, 0, sizeof(bufferData.textureIndex));
+
+    if (m_boundTextureIds.Any())
+    {
+        for (SizeType i = 0; i < m_boundTextureIds.Size(); i++)
+        {
+            if (m_boundTextureIds[i] != ObjId<Texture>::invalid)
+            {
+                if (useBindlessTextures)
+                {
+                    bufferData.textureIndex[i] = m_boundTextureIds[i].ToIndex();
+                }
+                else
+                {
+                    bufferData.textureIndex[i] = i;
+                }
+
+                bufferData.textureUsage |= 1 << i;
+            }
+        }
+    }
 }
 
 HashCode Material::GetHashCode() const

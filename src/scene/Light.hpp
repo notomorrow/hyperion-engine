@@ -233,11 +233,10 @@ public:
     BoundingBox GetAABB() const;
 
     BoundingSphere GetBoundingSphere() const;
-
-    void UpdateRenderProxy(IRenderProxy* proxy) override;
     
 protected:
     void Init() override;
+    void UpdateRenderProxy(IRenderProxy* proxy) override;
 
     // For managed code only - to be removed at some point
     HYP_METHOD()

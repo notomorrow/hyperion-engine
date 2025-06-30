@@ -249,7 +249,7 @@ namespace Hyperion
     }
 
     [HypClassBinding(Name="Material")]
-    public class Material : HypObject
+    public class Material : RenderProxyable
     {
         public Material()
         {

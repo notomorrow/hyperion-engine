@@ -32,6 +32,7 @@
 #include <scene/View.hpp>
 #include <scene/EnvProbe.hpp>
 #include <scene/EnvGrid.hpp>
+#include <scene/Material.hpp>
 #include <scene/Light.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 
@@ -89,6 +90,8 @@ extern void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
 extern void OnBindingChanged_Light(Light* light, uint32 prev, uint32 next);
 extern void OnBindingChanged_LightmapVolume(LightmapVolume* lightmapVolume, uint32 prev, uint32 next);
 
+extern void OnBindingChanged_Material(Material* lightmapVolume, uint32 prev, uint32 next);
+
 struct ResourceBindings
 {
     struct SubtypeResourceBindings
@@ -118,6 +121,9 @@ struct ResourceBindings
 
     ResourceBindingAllocator<> lightmapVolumeBindingsAllocator;
     ResourceBinder<LightmapVolume, &OnBindingChanged_LightmapVolume> lightmapVolumeBinder { &lightmapVolumeBindingsAllocator };
+
+    ResourceBindingAllocator<> materialBindingsAllocator;
+    ResourceBinder<Material, &OnBindingChanged_Material> materialBinder { &materialBindingsAllocator };
 
     void Assign(HypObjectBase* resource, uint32 binding)
     {
@@ -859,6 +865,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     g_renderGlobalState->resourceBindings->envGridBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->lightBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->lightmapVolumeBinder.ApplyUpdates();
+    g_renderGlobalState->resourceBindings->materialBinder.ApplyUpdates();
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
     {
@@ -887,8 +894,8 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
                 const ObjIdBase resourceId = ObjIdBase(subtypeData.typeId, uint32(i + 1));
 
                 const uint32 boundIndex = g_renderGlobalState->resourceBindings->Retrieve(resourceId);
-                AssertDebug(boundIndex != ~0u, "Failed to retrieve binding for resource: %u of type %s in frame %u!",
-                    resourceId.Value(), *GetClass(resourceId.GetTypeId())->GetName(), slot);
+                AssertDebug(boundIndex != ~0u, "Failed to retrieve binding for resource: %u of type %s in frame %u, but it is marked as bound (index: %u)",
+                    resourceId.Value(), *GetClass(resourceId.GetTypeId())->GetName(), slot, i);
 
                 IRenderProxy* proxy = subtypeData.proxies.Get(i);
                 AssertDebug(proxy != nullptr);
@@ -1010,6 +1017,7 @@ HYP_API void RenderApi_EndFrame_RenderThread()
     g_renderGlobalState->resourceBindings->envGridBindingsAllocator.ResetStat();
     g_renderGlobalState->resourceBindings->lightBindingsAllocator.ResetStat();
     g_renderGlobalState->resourceBindings->lightmapVolumeBindingsAllocator.ResetStat();
+    g_renderGlobalState->resourceBindings->materialBindingsAllocator.ResetStat();
 
     g_consumerIndex.store((slot + 1) % numFrames, std::memory_order_relaxed);
 
@@ -1055,13 +1063,11 @@ RenderGlobalState::RenderGlobalState()
     Renderer = new DeferredRenderer();
     Renderer->Initialize();
 
-    EnvProbeRenderers = new EnvProbeRenderer*[EPT_MAX];
-    Memory::MemSet(EnvProbeRenderers, 0, sizeof(EnvProbeRenderer*) * EPT_MAX);
+    globalRenderers[GRT_ENV_PROBE].Resize(EPT_MAX);
+    globalRenderers[GRT_ENV_PROBE][EPT_REFLECTION] = new ReflectionProbeRenderer();
+    globalRenderers[GRT_ENV_PROBE][EPT_SKY] = new ReflectionProbeRenderer();
 
-    EnvProbeRenderers[EPT_REFLECTION] = new ReflectionProbeRenderer();
-    EnvProbeRenderers[EPT_SKY] = new ReflectionProbeRenderer();
-
-    EnvGridRenderer = new class EnvGridRenderer;
+    globalRenderers[GRT_ENV_GRID].PushBack(new EnvGridRenderer());
 }
 
 RenderGlobalState::~RenderGlobalState()
@@ -1073,18 +1079,17 @@ RenderGlobalState::~RenderGlobalState()
     GlobalDescriptorTable->Destroy();
     PlaceholderData->Destroy();
 
-    for (uint32 i = 0; i < EPT_MAX; i++)
+    for (uint32 i = 0; i < GRT_MAX; i++)
     {
-        if (EnvProbeRenderers[i])
+        for (uint32 j = 0; j < globalRenderers[i].Size(); j++)
         {
-            EnvProbeRenderers[i]->Shutdown();
-            delete EnvProbeRenderers[i];
+            if (globalRenderers[i][j])
+            {
+                globalRenderers[i][j]->Shutdown();
+                delete globalRenderers[i][j];
+            }
         }
     }
-
-    delete[] EnvProbeRenderers;
-
-    delete EnvGridRenderer;
 
     Renderer->Shutdown();
     delete Renderer;
@@ -1101,6 +1106,34 @@ void RenderGlobalState::UpdateBuffers(FrameBase* frame)
         it.second->UpdateBufferSize(frame->GetFrameIndex());
         it.second->UpdateBufferData(frame->GetFrameIndex());
     }
+}
+
+void RenderGlobalState::AddRenderer(GlobalRendererType globalRendererType, RendererBase* renderer)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
+
+    AssertDebug(globalRendererType != GRT_NONE && globalRendererType < GRT_MAX);
+
+    AssertDebug(renderer != nullptr);
+    AssertDebug(!globalRenderers[globalRendererType].Contains(renderer));
+
+    globalRenderers[globalRendererType].PushBack(renderer);
+}
+
+void RenderGlobalState::RemoveRenderer(GlobalRendererType globalRendererType, RendererBase* renderer)
+{
+    HYP_SCOPE;
+    Threads::AssertOnThread(g_renderThread);
+
+    AssertDebug(globalRendererType != GRT_NONE && globalRendererType < GRT_MAX);
+
+    AssertDebug(renderer != nullptr);
+    AssertDebug(globalRenderers[globalRendererType].Contains(renderer));
+
+    delete renderer;
+
+    globalRenderers[globalRendererType].Erase(renderer);
 }
 
 void RenderGlobalState::CreateBlueNoiseBuffer()
@@ -1243,5 +1276,6 @@ DECLARE_RENDER_DATA_CONTAINER(SkyProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &Re
 DECLARE_RENDER_DATA_CONTAINER(EnvProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::ambientProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(Light, RenderProxyLight, GRB_LIGHTS, &ResourceBindings::lightBinder);
 DECLARE_RENDER_DATA_CONTAINER(LightmapVolume, RenderProxyLightmapVolume, GRB_LIGHTMAP_VOLUMES, &ResourceBindings::lightmapVolumeBinder);
+DECLARE_RENDER_DATA_CONTAINER(Material, RenderProxyMaterial, GRB_MATERIALS, &ResourceBindings::materialBinder);
 
 } // namespace hyperion
