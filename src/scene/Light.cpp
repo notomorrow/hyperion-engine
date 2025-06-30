@@ -37,7 +37,6 @@ Light::Light(LightType type, const Vec3f& position, const Color& color, float in
       m_radius(radius),
       m_falloff(1.0f),
       m_spotAngles(Vec2f::Zero()),
-      m_mutationState(DataMutationState::CLEAN),
       m_renderResource(nullptr)
 {
     m_entityInitInfo.canEverUpdate = false;
@@ -56,7 +55,6 @@ Light::Light(LightType type, const Vec3f& position, const Vec3f& normal, const V
       m_radius(radius),
       m_falloff(1.0f),
       m_spotAngles(Vec2f::Zero()),
-      m_mutationState(DataMutationState::CLEAN),
       m_renderResource(nullptr)
 {
     m_entityInitInfo.canEverUpdate = false;
@@ -89,50 +87,103 @@ void Light::Init()
     // temp shit
     m_renderResource->IncRef();
 
-    m_mutationState |= DataMutationState::DIRTY;
-
     SetReady(true);
-
-    EnqueueRenderUpdates();
 }
 
-void Light::EnqueueRenderUpdates()
+void Light::SetPosition(const Vec3f& position)
 {
-    AssertReady();
-
-    if (m_material.IsValid() && m_material->GetMutationState().IsDirty())
-    {
-        m_mutationState |= DataMutationState::DIRTY;
-
-        m_material->EnqueueRenderUpdates();
-    }
-
-    if (!m_mutationState.IsDirty())
+    if (m_position == position)
     {
         return;
     }
 
-    const BoundingBox aabb = GetAABB();
+    m_position = position;
 
-    // temp shit
-    LightShaderData bufferData {
-        .lightId = Id().Value(),
-        .lightType = uint32(m_type),
-        .colorPacked = uint32(m_color),
-        .radius = m_radius,
-        .falloff = m_falloff,
-        .areaSize = m_areaSize,
-        .positionIntensity = Vec4f(m_position, m_intensity),
-        .normal = Vec4f(m_normal, 0.0f),
-        .spotAngles = m_spotAngles,
-        .materialIndex = ~0u, // set later
-        .aabbMin = Vec4f(aabb.min, 1.0f),
-        .aabbMax = Vec4f(aabb.max, 1.0f)
-    };
+    SetNeedsRenderProxyUpdate();
+}
 
-    m_renderResource->SetBufferData(bufferData);
+void Light::SetNormal(const Vec3f& normal)
+{
+    if (m_normal == normal)
+    {
+        return;
+    }
 
-    m_mutationState = DataMutationState::CLEAN;
+    m_normal = normal;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetAreaSize(const Vec2f& areaSize)
+{
+    if (m_areaSize == areaSize)
+    {
+        return;
+    }
+
+    m_areaSize = areaSize;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetColor(const Color& color)
+{
+    if (m_color == color)
+    {
+        return;
+    }
+
+    m_color = color;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetIntensity(float intensity)
+{
+    if (m_intensity == intensity)
+    {
+        return;
+    }
+
+    m_intensity = intensity;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetRadius(float radius)
+{
+    if (m_radius == radius)
+    {
+        return;
+    }
+
+    m_radius = radius;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetFalloff(float falloff)
+{
+    if (m_falloff == falloff)
+    {
+        return;
+    }
+
+    m_falloff = falloff;
+
+    SetNeedsRenderProxyUpdate();
+}
+
+void Light::SetSpotAngles(const Vec2f& spotAngles)
+{
+    if (m_spotAngles == spotAngles)
+    {
+        return;
+    }
+
+    m_spotAngles = spotAngles;
+
+    SetNeedsRenderProxyUpdate();
 }
 
 void Light::SetMaterial(Handle<Material> material)
@@ -148,9 +199,9 @@ void Light::SetMaterial(Handle<Material> material)
     {
         InitObject(m_material);
 
-        m_renderResource->SetMaterial(m_material);
+        SetNeedsRenderProxyUpdate();
 
-        m_mutationState |= DataMutationState::DIRTY;
+        m_renderResource->SetMaterial(m_material);
     }
 }
 
@@ -211,7 +262,7 @@ BoundingSphere Light::GetBoundingSphere() const
 void Light::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyLight* proxyCasted = static_cast<RenderProxyLight*>(proxy);
-    proxyCasted->light = WeakHandle<Light>(WeakHandleFromThis());
+    proxyCasted->light = WeakHandleFromThis();
 
     const BoundingBox aabb = GetAABB();
 
@@ -228,6 +279,7 @@ void Light::UpdateRenderProxy(IRenderProxy* proxy)
     bufferData.materialIndex = ~0u; // set in RenderLight, TODO: Refactor so it is set when light is bound
     bufferData.aabbMin = Vec4f(aabb.min, 1.0f);
     bufferData.aabbMax = Vec4f(aabb.max, 1.0f);
+    bufferData.shadowMapIndex = ~0u; // @TODO
 }
 
 #pragma endregion Light

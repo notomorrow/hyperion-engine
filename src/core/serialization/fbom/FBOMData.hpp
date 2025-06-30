@@ -83,16 +83,16 @@ struct FBOMDataTypeOps<FBOMData, T, FBOMTypeClass, std::enable_if_t<std::is_fund
 {
     const FBOMData& target;
 
-    HYP_FORCE_INLINE bool Is() const
+    HYP_FORCE_INLINE bool IsType() const
     {
-        return target.GetType().Is(FBOMTypeClass(), /* allowUnbounded */ true);
+        return target.GetType().IsType(FBOMTypeClass(), /* allowUnbounded */ true);
     }
 
     HYP_FORCE_INLINE FBOMResult Read(T* out) const
     {
         const TypeId typeId = target.GetType().GetNativeTypeId();
 
-        auto ReadAsType = [this, &out, &typeId]<class TReadAsType>(TypeWrapper<TReadAsType>) -> bool
+        auto readAsType = [this, &out, &typeId]<class TReadAsType>(TypeWrapper<TReadAsType>) -> bool
         {
             if (typeId == TypeId::ForType<TReadAsType>())
             {
@@ -107,7 +107,7 @@ struct FBOMDataTypeOps<FBOMData, T, FBOMTypeClass, std::enable_if_t<std::is_fund
             return false;
         };
 
-        if (Is())
+        if (IsType())
         {
             target.ReadBytes(FBOMTypeClass().size, out);
 
@@ -121,9 +121,9 @@ struct FBOMDataTypeOps<FBOMData, T, FBOMTypeClass, std::enable_if_t<std::is_fund
             {
                 AssertThrowMsg(typeId != TypeId::Void(), "Type must have a valid native TypeId if it is numeric");
 
-                if (ReadAsType(TypeWrapper<uint8> {}) || ReadAsType(TypeWrapper<uint16> {}) || ReadAsType(TypeWrapper<uint32> {}) || ReadAsType(TypeWrapper<uint64> {})
-                    || ReadAsType(TypeWrapper<int8> {}) || ReadAsType(TypeWrapper<int16> {}) || ReadAsType(TypeWrapper<int32> {}) || ReadAsType(TypeWrapper<int64> {})
-                    || ReadAsType(TypeWrapper<float> {}) || ReadAsType(TypeWrapper<double> {}))
+                if (readAsType(TypeWrapper<uint8> {}) || readAsType(TypeWrapper<uint16> {}) || readAsType(TypeWrapper<uint32> {}) || readAsType(TypeWrapper<uint64> {})
+                    || readAsType(TypeWrapper<int8> {}) || readAsType(TypeWrapper<int16> {}) || readAsType(TypeWrapper<int32> {}) || readAsType(TypeWrapper<int64> {})
+                    || readAsType(TypeWrapper<float> {}) || readAsType(TypeWrapper<double> {}))
                 {
                     FBOM_RETURN_OK;
                 }
@@ -237,7 +237,7 @@ public:
 #define FBOM_TYPE_FUNCTIONS(typeName, cType)                                                                         \
     bool Is##typeName() const                                                                                        \
     {                                                                                                                \
-        return FBOMDataTypeOps<FBOMData, cType, FBOM##typeName> { *this }.Is();                                      \
+        return FBOMDataTypeOps<FBOMData, cType, FBOM##typeName> { *this }.IsType();                                  \
     }                                                                                                                \
                                                                                                                      \
     FBOMResult Read(cType* out) const                                                                                \

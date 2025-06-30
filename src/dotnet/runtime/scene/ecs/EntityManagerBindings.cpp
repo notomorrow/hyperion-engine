@@ -48,7 +48,6 @@ extern "C"
         AssertThrow(manager->IsValidComponentType(TypeId { componentTypeId }));
 
         Handle<Entity> entityHandle = entity->HandleFromThis();
-        AssertThrow(entityHandle.IsValid());
 
         manager->AddComponent(entityHandle, *componentHypData);
     }

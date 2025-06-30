@@ -166,7 +166,7 @@ bool FBOMType::IsOrExtends(const ANSIStringView& name, bool allowUnbounded, bool
     return extends->IsOrExtends(name, allowUnbounded, allowVoidTypeId);
 }
 
-bool FBOMType::Is(const FBOMType& other, bool allowUnbounded, bool allowVoidTypeId) const
+bool FBOMType::IsType(const FBOMType& other, bool allowUnbounded, bool allowVoidTypeId) const
 {
     if (name != other.name)
     {
@@ -196,7 +196,7 @@ bool FBOMType::Is(const FBOMType& other, bool allowUnbounded, bool allowVoidType
             return false;
         }
 
-        return extends->Is(*other.extends, allowUnbounded, allowVoidTypeId);
+        return extends->IsType(*other.extends, allowUnbounded, allowVoidTypeId);
     }
 
     return true;
@@ -204,7 +204,7 @@ bool FBOMType::Is(const FBOMType& other, bool allowUnbounded, bool allowVoidType
 
 bool FBOMType::IsOrExtends(const FBOMType& other, bool allowUnbounded, bool allowVoidTypeId) const
 {
-    if (Is(other, allowUnbounded, allowVoidTypeId))
+    if (IsType(other, allowUnbounded, allowVoidTypeId))
     {
         return true;
     }
@@ -231,7 +231,7 @@ bool FBOMType::Extends(const FBOMType& other, bool allowUnbounded, bool allowVoi
         return false;
     }
 
-    if (extends->Is(other, allowUnbounded, allowVoidTypeId))
+    if (extends->IsType(other, allowUnbounded, allowVoidTypeId))
     {
         return true;
     }

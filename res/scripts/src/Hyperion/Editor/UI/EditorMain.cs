@@ -793,57 +793,68 @@ namespace Hyperion
 
             public UIEventHandlerResult AddAreaRectLight()
             {
-                // var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                // if (editorSubsystem == null)
-                // {
-                //     Logger.Log(LogType.Error, "EditorSubsystem not found");
+                Logger.Log(LogType.Info, "Add AreaRect Light clicked");
 
-                //     return UIEventHandlerResult.Error;
-                // }
+                var editorSubsystem = World.GetSubsystem<EditorSubsystem>();
 
-                // EditorProject currentProject = editorSubsystem.GetCurrentProject();
+                if (editorSubsystem == null)
+                {
+                    Logger.Log(LogType.Error, "EditorSubsystem not found");
 
-                // if (currentProject == null)
-                // {
-                //     Logger.Log(LogType.Error, "No project loaded; cannot save");
+                    return UIEventHandlerResult.Error;
+                }
 
-                //     return UIEventHandlerResult.Error;
-                // }
+                EditorProject currentProject = editorSubsystem.GetCurrentProject();
 
-                // var light = new Light();
-                // light.SetLightType(LightType.AreaRect);
-                // light.SetPosition(new Vec3f(0.0f, 0.0f, 0.0f));
-                // light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
-                // light.SetIntensity(5.0f);
-                // light.SetAreaSize(new Vec2f(2.0f, 2.0f));
+                if (currentProject == null)
+                {
+                    Logger.Log(LogType.Error, "No project loaded; cannot add AreaRect light");
 
-                // var lightEntity = currentProject.GetScene().GetEntityManager().AddEntity();
+                    return UIEventHandlerResult.Error;
+                }
 
-                // currentProject.GetScene().GetEntityManager().AddComponent<LightComponent>(lightEntity, new LightComponent {
-                //     Light = light
-                // });
+                Scene activeScene = editorSubsystem.GetActiveScene();
 
-                // var lightNode = new Node();
-                // lightNode.SetName(currentProject.GetScene().GetUniqueNodeName("AreaRectLight"));
-                // lightNode.SetEntity(lightEntity);
-                // lightNode.SetWorldTranslation(new Vec3f(0.0f, 0.0f, 0.0f));
+                if (activeScene == null)
+                {
+                    Logger.Log(LogType.Error, "No active scene found");
 
-                // currentProject.GetActionStack().Push(new EditorAction(
-                //     new Name("AddAreaRectLight"),
-                //     (EditorSubsystem editorSubsystem, EditorProject project) =>
-                //     {
-                //         currentProject.GetScene().GetRoot().AddChild(lightNode);
-                //         editorSubsystem.SetFocusedNode(lightNode, true);
-                //     },
-                //     (EditorSubsystem editorSubsystem, EditorProject project) =>
-                //     {
-                //         lightNode.Remove();
+                    return UIEventHandlerResult.Error;
+                }
 
-                //         if (editorSubsystem.GetFocusedNode() == lightNode)
-                //             editorSubsystem.SetFocusedNode(null, true);
-                //     }
-                // ));
+                Light light = activeScene.GetEntityManager().AddEntity<Light>();
+                light.SetLightType(LightType.AreaRect);
+                light.SetPosition(new Vec3f(0.0f, 5.0f, 0.0f));
+                light.SetColor(new Color(1.0f, 1.0f, 1.0f, 1.0f));
+                light.SetRadius(30.0f);
+                light.SetIntensity(5.0f);
+                light.SetAreaSize(new Vec2f(2.0f, 2.0f));
+
+                activeScene.GetEntityManager().AddComponent<ShadowMapComponent>(light, new ShadowMapComponent
+                {
+                });
+
+                var lightNode = new Node();
+                lightNode.SetName(activeScene.GetUniqueNodeName("AreaRectLight"));
+                lightNode.SetEntity(light);
+                lightNode.SetWorldTranslation(new Vec3f(0.0f, 5.0f, 0.0f));
+
+                currentProject.GetActionStack().Push(new EditorAction(
+                    new Name("AddAreaRectLight"),
+                    (EditorSubsystem editorSubsystem, EditorProject project) =>
+                    {
+                        activeScene.GetRoot().AddChild(lightNode);
+                        editorSubsystem.SetFocusedNode(lightNode, true);
+                    },
+                    (EditorSubsystem editorSubsystem, EditorProject project) =>
+                    {
+                        lightNode.Remove();
+
+                        if (editorSubsystem.GetFocusedNode() == lightNode)
+                            editorSubsystem.SetFocusedNode(null, true);
+                    }
+                ));
 
                 return UIEventHandlerResult.Ok;
             }

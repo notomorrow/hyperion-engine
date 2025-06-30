@@ -101,7 +101,7 @@ public:
     {
         static_assert(std::is_base_of_v<Subsystem, T>, "T must be a subclass of Subsystem");
 
-        return AddSubsystem(TypeId::ForType<T>(), CreateObject<T>(std::forward<Args>(args)...)).template Cast<T>();
+        return ObjCast<T>(AddSubsystem(TypeId::ForType<T>(), CreateObject<T>(std::forward<Args>(args)...)));
     }
 
     template <class T>
@@ -109,7 +109,7 @@ public:
     {
         static_assert(std::is_base_of_v<Subsystem, T>, "T must be a subclass of Subsystem");
 
-        return AddSubsystem(TypeId::ForType<T>(), subsystem).template Cast<T>();
+        return ObjCast<T>(AddSubsystem(TypeId::ForType<T>(), subsystem));
     }
 
     Handle<Subsystem> AddSubsystem(TypeId typeId, const Handle<Subsystem>& subsystem);
@@ -119,7 +119,7 @@ public:
     {
         static_assert(std::is_base_of_v<Subsystem, T>, "T must be a subclass of Subsystem");
 
-        return static_cast<T*>(GetSubsystem(TypeId::ForType<T>()));
+        return ObjCast<T>(GetSubsystem(TypeId::ForType<T>()));
     }
 
     Subsystem* GetSubsystem(TypeId typeId) const;

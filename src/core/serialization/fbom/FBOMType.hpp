@@ -61,7 +61,7 @@ public:
 
     bool HasAnyFlagsSet(EnumFlags<FBOMTypeFlags> flags, bool includeParents = true) const;
 
-    bool Is(const FBOMType& other, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
+    bool IsType(const FBOMType& other, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
     bool IsOrExtends(const ANSIStringView& name, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
     bool IsOrExtends(const FBOMType& other, bool allowUnbounded = true, bool allowVoidTypeId = true) const;
     bool Extends(const FBOMType& other, bool allowUnbounded = true, bool allowVoidTypeId = true) const;

@@ -698,7 +698,7 @@ void View::CollectLights(RenderProxyList& rpl)
 
         for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            AssertDebug(entity->IsInstanceOf<Light>());
+            AssertDebug(entity->IsA<Light>());
 
             Light* light = static_cast<Light*>(entity);
 
@@ -726,12 +726,6 @@ void View::CollectLights(RenderProxyList& rpl)
             if (isLightInFrustum)
             {
                 rpl.lights.Track(light->Id(), light, light->GetRenderProxyVersionPtr());
-            }
-
-            /// TODO: Move this
-            if (light->GetMutationState().IsDirty())
-            {
-                light->EnqueueRenderUpdates();
             }
         }
     }
@@ -861,7 +855,7 @@ void View::CollectEnvGrids(RenderProxyList& rpl)
 
         for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<EnvGrid>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            AssertDebug(entity->IsInstanceOf<EnvGrid>());
+            AssertDebug(entity->IsA<EnvGrid>());
 
             EnvGrid* envGrid = static_cast<EnvGrid*>(entity);
 
@@ -959,7 +953,7 @@ void View::CollectEnvProbes(RenderProxyList& rpl)
         {
             if (skyComponent.subsystem)
             {
-                AssertThrow(skyComponent.subsystem->GetEnvProbe()->IsInstanceOf<SkyProbe>());
+                AssertThrow(skyComponent.subsystem->GetEnvProbe()->IsA<SkyProbe>());
                 rpl.envProbes.Track(skyComponent.subsystem->GetEnvProbe()->Id(), skyComponent.subsystem->GetEnvProbe(), skyComponent.subsystem->GetEnvProbe()->GetRenderProxyVersionPtr());
             }
         }

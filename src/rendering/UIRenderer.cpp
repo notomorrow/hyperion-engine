@@ -594,7 +594,7 @@ void UIRenderSubsystem::Init()
 
             HYP_LOG(UI, Debug, "UIRenderSubsystem: resizing to {}", g_engine->GetAppContext()->GetMainWindow()->GetDimensions());
 
-            Handle<UIRenderSubsystem> subsystem = weakThis.Lock().Cast<UIRenderSubsystem>();
+            Handle<UIRenderSubsystem> subsystem = weakThis.Lock();
 
             if (!subsystem)
             {
@@ -714,7 +714,7 @@ void UIRenderSubsystem::CreateFramebuffer()
     {
         HYP_NAMED_SCOPE("Create UI Render Subsystem view");
 
-        Handle<UIRenderSubsystem> subsystem = weakThis.Lock().Cast<UIRenderSubsystem>();
+        Handle<UIRenderSubsystem> subsystem = weakThis.Lock();
 
         if (!subsystem)
         {

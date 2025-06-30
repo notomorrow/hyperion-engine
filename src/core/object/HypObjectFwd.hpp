@@ -35,6 +35,9 @@ class HypObject;
 template <class T>
 struct Handle;
 
+template <class T>
+struct WeakHandle;
+
 class IHypObjectInitializer;
 
 struct HypObjectHeader;
@@ -236,6 +239,116 @@ struct HypObjectInitializerGuard : HypObjectInitializerGuardBase
 
 template <class T>
 struct HypClassRegistration;
+
+/// Casts
+
+template <class Other, class T>
+static inline Other* ObjCast(T* objectPtr)
+{
+    static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
+
+    if (!objectPtr)
+    {
+        return nullptr;
+    }
+
+    if (objectPtr->IsA(Other::Class()))
+    {
+        return static_cast<Other*>(objectPtr);
+    }
+
+    return nullptr;
+}
+
+template <class Other, class T>
+static inline const Other* ObjCast(const T* objectPtr)
+{
+    static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
+
+    if (!objectPtr)
+    {
+        return nullptr;
+    }
+
+    if (objectPtr->IsA(Other::Class()))
+    {
+        return static_cast<const Other*>(const_cast<T*>(objectPtr));
+    }
+
+    return nullptr;
+}
+
+template <class Other, class T>
+static inline const Handle<Other>& ObjCast(const Handle<T>& handle)
+{
+    static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
+
+    if (!handle.IsValid())
+    {
+        return Handle<Other>::empty;
+    }
+
+    if (handle->IsA(Other::Class()))
+    {
+        return reinterpret_cast<const Handle<Other>&>(handle);
+    }
+
+    return Handle<Other>::empty;
+}
+
+template <class Other, class T>
+static inline Handle<Other> ObjCast(Handle<T>&& handle)
+{
+    static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
+
+    if (!handle.IsValid())
+    {
+        return Handle<Other>::empty;
+    }
+
+    if (handle->IsA(Other::Class()))
+    {
+        return reinterpret_cast<Handle<Other>&&>(handle);
+    }
+
+    return Handle<Other>::empty;
+}
+
+template <class Other, class T>
+static inline const WeakHandle<Other>& ObjCast(const WeakHandle<T>& handle)
+{
+    static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
+
+    if (!handle.IsValid())
+    {
+        return WeakHandle<Other>::empty;
+    }
+
+    if (handle->IsA(Other::Class()))
+    {
+        return reinterpret_cast<const WeakHandle<Other>&>(handle);
+    }
+
+    return WeakHandle<Other>::empty;
+}
+
+template <class Other, class T>
+static inline WeakHandle<Other> ObjCast(WeakHandle<T>&& handle)
+{
+    static_assert(std::is_class_v<Other>, "Other must be a class type to use with ObjCast");
+
+    if (!handle.IsValid())
+    {
+        return WeakHandle<Other>::empty;
+    }
+
+    if (handle->IsA(Other::Class()))
+    {
+        return reinterpret_cast<WeakHandle<Other>&&>(handle);
+    }
+
+    return WeakHandle<Other>::empty;
+}
 
 } // namespace hyperion
 

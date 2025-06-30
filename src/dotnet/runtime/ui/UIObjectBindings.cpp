@@ -66,7 +66,7 @@ extern "C"
 
         Handle<UIObject> uiObject = parent->FindChildUIObject([hypClass, name](UIObject* uiObject)
             {
-                return uiObject->IsInstanceOf(hypClass) && uiObject->GetName() == *name;
+                return uiObject->IsA(hypClass) && uiObject->GetName() == *name;
             });
 
         if (!uiObject)

@@ -194,7 +194,7 @@ public:
     {
         HYP_SCOPE;
 
-        if (!in.GetType().Is(FBOMObjectType(this)))
+        if (!in.GetType().IsType(FBOMObjectType(this)))
         {
             return { FBOMResult::FBOM_ERR, "Cannot deserialize object into struct - type mismatch" };
         }

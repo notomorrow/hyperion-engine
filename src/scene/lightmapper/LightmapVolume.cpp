@@ -310,7 +310,7 @@ void LightmapVolume::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyLightmapVolume* proxyCasted = static_cast<RenderProxyLightmapVolume*>(proxy);
 
-    proxyCasted->lightmapVolume = WeakHandle<LightmapVolume>(WeakHandleFromThis());
+    proxyCasted->lightmapVolume = WeakHandleFromThis();
 
     proxyCasted->bufferData.aabbMax = Vec4f(m_aabb.max, 1.0f);
     proxyCasted->bufferData.aabbMin = Vec4f(m_aabb.min, 1.0f);
@@ -354,7 +354,7 @@ void LightmapVolume::UpdateAtlasTextures()
     {
         PUSH_RENDER_COMMAND(
             BakeLightmapVolumeTexture,
-            WeakHandle<LightmapVolume>(WeakHandleFromThis()),
+            WeakHandleFromThis(),
             m_atlas.elements,
             elementTextures);
     }

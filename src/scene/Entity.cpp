@@ -27,8 +27,7 @@ namespace hyperion {
 
 Entity::Entity()
     : m_world(nullptr),
-      m_scene(nullptr),
-      m_renderProxyVersion(0)
+      m_scene(nullptr)
 {
 }
 
@@ -375,16 +374,6 @@ void Entity::DetachChild(const Handle<Entity>& child)
             HYP_LOG(ECS, Warning, "Entity {} has a NodeLinkComponent but the node is not valid, cannot detach child {}", Id(), child.Id());
         }
     }
-}
-
-void Entity::UpdateRenderProxy(IRenderProxy* proxy)
-{
-    // no impl
-}
-
-void Entity::SetNeedsRenderProxyUpdate()
-{
-    ++m_renderProxyVersion;
 }
 
 } // namespace hyperion

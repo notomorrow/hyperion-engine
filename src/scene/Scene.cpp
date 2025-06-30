@@ -87,9 +87,7 @@ static SceneValidationResult ValidateSceneLights(const Scene* scene)
 
         for (auto [entity, _] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
         {
-            AssertDebug(entity->IsInstanceOf<Light>());
-
-            Light* light = static_cast<Light*>(entity);
+            Light* light = ObjCast<Light>(entity);
 
             if (light->GetLightType() == LT_DIRECTIONAL)
             {

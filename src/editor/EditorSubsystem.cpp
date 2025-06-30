@@ -1149,8 +1149,8 @@ void EditorSubsystem::LoadEditorUIDefinitions()
     auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/Editor.Main.ui.xml");
     AssertThrowMsg(loadedUiAsset.HasValue(), "Failed to load editor UI definitions!");
 
-    Handle<UIStage> loadedUi = loadedUiAsset->Result().Cast<UIStage>();
-    AssertThrowMsg(loadedUi != nullptr, "Failed to load editor UI");
+    Handle<UIStage> loadedUi = ObjCast<UIStage>(loadedUiAsset->Result());
+    AssertThrowMsg(loadedUi.IsValid(), "Failed to load editor UI");
 
     loadedUi->SetDefaultFontAtlas(fontAtlas);
 
@@ -1304,8 +1304,8 @@ void EditorSubsystem::InitViewport()
             return UIEventHandlerResult::OK;
         }));
 
-    Handle<UIImage> uiImage = sceneImageObject.Cast<UIImage>();
-    AssertThrow(uiImage != nullptr);
+    Handle<UIImage> uiImage = ObjCast<UIImage>(sceneImageObject);
+    AssertThrow(uiImage.IsValid());
 
     m_sceneTexture.Reset();
 
@@ -1668,10 +1668,10 @@ void EditorSubsystem::InitViewport()
 void EditorSubsystem::InitSceneOutline()
 {
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    AssertDebug(uiSubsystem != nullptr);
 
-    Handle<UIListView> listView = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")).Cast<UIListView>();
-    AssertThrow(listView != nullptr);
+    Handle<UIListView> listView = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")));
+    AssertDebug(listView.IsValid());
 
     listView->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
     listView->SetDataSource(CreateObject<UIDataSource>(TypeWrapper<WeakHandle<Node>> {}));
@@ -1792,10 +1792,10 @@ void EditorSubsystem::StartWatchingNode(const Handle<Node>& node)
     AssertThrow(node->GetScene() != nullptr);
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    AssertDebug(uiSubsystem != nullptr);
 
-    Handle<UIListView> listView = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")).Cast<UIListView>();
-    AssertThrow(listView != nullptr);
+    Handle<UIListView> listView = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")));
+    AssertDebug(listView.IsValid());
 
     HYP_LOG(Editor, Debug, "Start watching node: {}", *node->GetName());
 
@@ -1891,10 +1891,10 @@ void EditorSubsystem::StopWatchingNode(const Handle<Node>& node)
     }
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    AssertDebug(uiSubsystem != nullptr);
 
-    Handle<UIListView> listView = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")).Cast<UIListView>();
-    AssertThrow(listView != nullptr);
+    Handle<UIListView> listView = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")));
+    AssertDebug(listView.IsValid());
 
     if (const Handle<UIDataSourceBase>& dataSource = listView->GetDataSource())
     {
@@ -1915,10 +1915,10 @@ void EditorSubsystem::ClearWatchedNodes()
     HYP_SCOPE;
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    AssertDebug(uiSubsystem != nullptr);
 
-    Handle<UIListView> listView = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")).Cast<UIListView>();
-    AssertThrow(listView != nullptr);
+    Handle<UIListView> listView = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")));
+    AssertDebug(listView.IsValid());
 
     if (const Handle<UIDataSourceBase>& dataSource = listView->GetDataSource())
     {
@@ -1972,13 +1972,13 @@ void EditorSubsystem::UpdateWatchedNodes()
 void EditorSubsystem::InitDetailView()
 {
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    AssertDebug(uiSubsystem != nullptr);
 
-    Handle<UIListView> detailsListView = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Detail_View_ListView")).Cast<UIListView>();
-    AssertThrow(detailsListView != nullptr);
+    Handle<UIListView> detailsListView = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Detail_View_ListView")));
+    AssertDebug(detailsListView.IsValid());
 
-    Handle<UIListView> outlineListView = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")).Cast<UIListView>();
-    AssertThrow(outlineListView != nullptr);
+    Handle<UIListView> outlineListView = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Outline_ListView")));
+    AssertDebug(outlineListView.IsValid());
 
     detailsListView->SetInnerSize(UIObjectSize({ 100, UIObjectSize::PERCENT }, { 0, UIObjectSize::AUTO }));
 
@@ -2115,7 +2115,7 @@ void EditorSubsystem::InitConsoleUI()
     HYP_SCOPE;
 
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
-    AssertThrow(uiSubsystem != nullptr);
+    AssertDebug(uiSubsystem != nullptr);
 
     if (m_consoleUi != nullptr)
     {
@@ -2123,15 +2123,15 @@ void EditorSubsystem::InitConsoleUI()
     }
 
     m_consoleUi = uiSubsystem->GetUIStage()->CreateUIObject<ConsoleUI>(NAME("Console"), Vec2i { 0, 0 }, UIObjectSize({ 100, UIObjectSize::FILL }, { 100, UIObjectSize::PIXEL }));
-    AssertThrow(m_consoleUi.IsValid());
+    AssertDebug(m_consoleUi.IsValid());
 
     m_consoleUi->SetDepth(150);
     m_consoleUi->SetIsVisible(false);
 
     if (Handle<UIObject> sceneImageObject = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image")))
     {
-        Handle<UIImage> sceneImage = sceneImageObject.Cast<UIImage>();
-        AssertThrow(sceneImage != nullptr);
+        Handle<UIImage> sceneImage = ObjCast<UIImage>(sceneImageObject);
+        AssertDebug(sceneImage.IsValid());
 
         sceneImage->AddChildUIObject(m_consoleUi);
     }
@@ -2167,7 +2167,7 @@ void EditorSubsystem::InitDebugOverlays()
         }
     }
 
-    if (Handle<UIImage> sceneImage = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image")).Cast<UIImage>())
+    if (Handle<UIImage> sceneImage = ObjCast<UIImage>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image"))))
     {
         sceneImage->AddChildUIObject(m_debugOverlayUiObject);
     }
@@ -2229,7 +2229,7 @@ void EditorSubsystem::InitManipulationWidgetSelection()
 
     if (Handle<UIObject> sceneImageObject = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Scene_Image")))
     {
-        Handle<UIImage> sceneImage = sceneImageObject.Cast<UIImage>();
+        Handle<UIImage> sceneImage = ObjCast<UIImage>(sceneImageObject);
         AssertThrow(sceneImage != nullptr);
 
         sceneImage->AddChildUIObject(manipulationWidgetSelection);
@@ -2254,7 +2254,7 @@ void EditorSubsystem::InitActiveSceneSelection()
         return;
     }
 
-    Handle<UIMenuItem> activeSceneMenuItem = activeSceneSelection.Cast<UIMenuItem>();
+    Handle<UIMenuItem> activeSceneMenuItem = ObjCast<UIMenuItem>(activeSceneSelection);
 
     if (!activeSceneMenuItem.IsValid())
     {
@@ -2287,7 +2287,7 @@ void EditorSubsystem::InitActiveSceneSelection()
     //             {
     //                 Handle<UIObject> selectedSubItem = activeSceneMenuItem->FindChildUIObject([&scene](UIObject* uiObject)
     //                     {
-    //                         if (uiObject->IsInstanceOf<UIMenuItem>())
+    //                         if (uiObject->IsA<UIMenuItem>())
     //                         {
     //                             const NodeTag& tag = uiObject->GetNodeTag("Scene");
     //                             HYP_LOG(Editor, Debug, "Checking scene menu item with tag: {}", tag.ToString());
@@ -2382,7 +2382,7 @@ void EditorSubsystem::InitContentBrowser()
     UISubsystem* uiSubsystem = GetWorld()->GetSubsystem<UISubsystem>();
     AssertThrow(uiSubsystem != nullptr);
 
-    m_contentBrowserDirectoryList = uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Directory_List").Cast<UIListView>();
+    m_contentBrowserDirectoryList = ObjCast<UIListView>(uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Directory_List"));
     AssertThrow(m_contentBrowserDirectoryList != nullptr);
 
     m_contentBrowserDirectoryList->SetDataSource(CreateObject<UIDataSource>(TypeWrapper<AssetPackage> {}));
@@ -2413,7 +2413,7 @@ void EditorSubsystem::InitContentBrowser()
                     SetSelectedPackage(Handle<AssetPackage>::empty);
                 }));
 
-    m_contentBrowserContents = uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Contents").Cast<UIGrid>();
+    m_contentBrowserContents = ObjCast<UIGrid>(uiSubsystem->GetUIStage()->FindChildUIObject("ContentBrowser_Contents"));
     AssertThrow(m_contentBrowserContents != nullptr);
     m_contentBrowserContents->SetDataSource(CreateObject<UIDataSource>(TypeWrapper<AssetObject> {}));
     m_contentBrowserContents->SetIsVisible(false);
@@ -2645,7 +2645,7 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
 
         if (project.IsValid())
         {
-            project->SetEditorSubsystem(WeakHandle<EditorSubsystem>(WeakHandleFromThis()));
+            project->SetEditorSubsystem(WeakHandleFromThis());
         }
 
         OnProjectOpened(m_currentProject);
@@ -2672,7 +2672,7 @@ void EditorSubsystem::AddTask(const Handle<EditorTaskBase>& task)
 
     RunningEditorTask& runningTask = m_tasksByThreadType[threadType].EmplaceBack(task);
 
-    Handle<UIMenuItem> tasksMenuItem = uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Tasks_MenuItem")).Cast<UIMenuItem>();
+    Handle<UIMenuItem> tasksMenuItem = ObjCast<UIMenuItem>(uiSubsystem->GetUIStage()->FindChildUIObject(NAME("Tasks_MenuItem")));
 
     if (tasksMenuItem != nullptr)
     {

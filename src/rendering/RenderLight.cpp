@@ -73,7 +73,7 @@ void RenderLight::UpdateBufferData()
 {
     HYP_SCOPE;
 
-    LightShaderData* bufferData = static_cast<LightShaderData*>(m_bufferAddress);
+    /*LightShaderData* bufferData = static_cast<LightShaderData*>(m_bufferAddress);
 
     *bufferData = m_bufferData;
 
@@ -91,7 +91,7 @@ void RenderLight::UpdateBufferData()
         bufferData->shadowMapIndex = ~0u;
     }
 
-    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
+    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);*/
 }
 
 void RenderLight::SetMaterial(const Handle<Material>& material)

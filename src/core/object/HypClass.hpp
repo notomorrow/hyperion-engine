@@ -75,6 +75,8 @@ enum class HypClassSerializationMode : uint8
 
 HYP_MAKE_ENUM_FLAGS(HypClassSerializationMode)
 
+static constexpr uint32 g_maxStaticClassIndex = 0xFFFu;
+
 #pragma region Helpers
 
 HYP_API const HypClass* GetClass(TypeId typeId);
@@ -112,8 +114,8 @@ HYP_FORCE_INLINE const HypEnumInstance<T>* GetEnum()
     return static_cast<const HypEnumInstance<T>*>(GetEnum(TypeId::ForType<T>()));
 }
 
-HYP_API bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId typeId);
-HYP_API bool IsInstanceOfHypClass(const HypClass* hypClass, const HypClass* instanceHypClass);
+HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
+HYP_API bool IsA(const HypClass* hypClass, const HypClass* instanceHypClass);
 
 #pragma endregion Helpers
 

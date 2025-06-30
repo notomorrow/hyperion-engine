@@ -72,7 +72,7 @@ struct AssetLoaderDefinition
     HYP_FORCE_INLINE bool HandlesResultType(TypeId typeId) const
     {
         return resultTypeId == typeId
-            || (resultHypClass != nullptr && IsInstanceOfHypClass(resultHypClass, GetClass(typeId)));
+            || (resultHypClass != nullptr && IsA(resultHypClass, GetClass(typeId)));
     }
 
     HYP_FORCE_INLINE bool HandlesExtension(const String& filepath) const

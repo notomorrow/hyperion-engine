@@ -707,17 +707,17 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
     AssertDebug(proxy);
     AssertDebug(data.resource);
 
-    if (IsInstanceOfHypClass(Entity::Class(), data.resource->InstanceClass()))
+    if (data.resource->InstanceClass()->IsDerivedFrom(RenderProxyable::Class()))
     {
-        Entity* entity = static_cast<Entity*>(data.resource);
-        entity->UpdateRenderProxy(proxy);
+        RenderProxyable* renderProxyable = static_cast<RenderProxyable*>(data.resource);
+        renderProxyable->UpdateRenderProxy(proxy);
 
         // mark for buffer data update from render thread
         subtypeData.indicesPendingUpdate.Set(id.ToIndex(), true);
     }
     else
     {
-        HYP_LOG(Rendering, Warning, "UpdateRenderProxy called for resource id {} of type {} which is not an Entity! Skipping proxy update.\n",
+        HYP_LOG(Rendering, Warning, "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
             id, GetClass(subtypeData.typeId)->GetName());
     }
 }
@@ -866,14 +866,6 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
         {
             AssertDebug(subtypeData.resourceBinder != nullptr);
 
-            // auto& subtypeBindings = g_renderGlobalState->resourceBindings->GetSubtypeBindings(subtypeData.typeId);
-
-            // if (subtypeBindings.data.Empty())
-            // {
-            //     // early out; nothing is bound.
-            //     continue;
-            // }
-
             const Bitset& currentBoundIndices = subtypeData.resourceBinder->GetBoundIndices(subtypeData.typeId);
 
             if (currentBoundIndices.Count() == 0)
@@ -887,13 +879,6 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
                 i != Bitset::notFound;
                 i = subtypeData.indicesPendingUpdate.NextSetBitIndex(i + 1))
             {
-                // if the bit is not set, we failed to bind the resource to a slot and cannot update it
-                // skip updating the data this time -- maybe next frame a slot will be freed
-                // if (const uint32* p = subtypeBindings.data.TryGet(i); !p || *p == ~0u)
-                // {
-                //     continue;
-                // }
-
                 if (!currentBoundIndices.Test(i))
                 {
                     continue;

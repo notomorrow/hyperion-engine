@@ -411,7 +411,7 @@ UIStage* UIObject::GetStage() const
         return m_stage;
     }
 
-    // if (IsInstanceOf<UIStage>()) {
+    // if (IsA<UIStage>()) {
     //     return const_cast<UIStage *>(static_cast<const UIStage *>(this));
     // }
 
@@ -1255,7 +1255,7 @@ void UIObject::UpdateComputedVisibility(bool updateChildren)
     bool computedVisibility = m_computedVisibility;
 
     // If the object is visible and has a stage (or if this is a UIStage), consider it
-    const bool hasStage = m_stage != nullptr || IsInstanceOf<UIStage>();
+    const bool hasStage = m_stage != nullptr || IsA<UIStage>();
 
     if (IsVisible() && hasStage)
     {
@@ -2118,9 +2118,9 @@ void UIObject::ComputeActualSize(const UIObjectSize& inSize, Vec2i& actualSize, 
         selfPadding = GetPadding();
         parentSize = m_stage->GetSurfaceSize();
     }
-    else if (IsInstanceOf<UIStage>())
+    else if (IsA<UIStage>())
     {
-        actualSize = static_cast<UIStage*>(this)->GetSurfaceSize();
+        actualSize = ObjCast<UIStage>(this)->GetSurfaceSize();
     }
     else
     {

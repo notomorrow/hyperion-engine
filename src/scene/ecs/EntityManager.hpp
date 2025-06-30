@@ -213,7 +213,7 @@ public:
             return Handle<SystemType>::empty;
         }
 
-        if (!IsInstanceOfHypClass<SystemType>(*it->second))
+        if (!IsA<SystemType>(*it->second))
         {
             HYP_BREAKPOINT;
             return Handle<SystemType>::empty;

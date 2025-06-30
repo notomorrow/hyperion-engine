@@ -55,7 +55,7 @@ void UIListViewItem::AddChildUIObject(const Handle<UIObject>& uiObject)
         return;
     }
 
-    if (uiObject->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
         if (!m_expandedElement)
         {
@@ -84,7 +84,7 @@ bool UIListViewItem::RemoveChildUIObject(UIObject* uiObject)
         return false;
     }
 
-    if (uiObject->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
         if (!m_expandedElement)
         {
@@ -254,9 +254,9 @@ void UIListView::AddChildUIObject(const Handle<UIObject>& uiObject)
 
     Handle<UIListViewItem> listViewItem;
 
-    if (uiObject->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
-        listViewItem = uiObject.Cast<UIListViewItem>();
+        listViewItem = ObjCast<UIListViewItem>(uiObject);
         listViewItem->SetSize(listViewItemSize);
         m_listViewItems.PushBack(listViewItem);
 
@@ -284,7 +284,7 @@ bool UIListView::RemoveChildUIObject(UIObject* uiObject)
         return false;
     }
 
-    if (uiObject->IsInstanceOf<UIListViewItem>())
+    if (uiObject->IsA<UIListViewItem>())
     {
         auto it = m_listViewItems.FindAs(uiObject);
 
@@ -432,10 +432,9 @@ UIListViewItem* UIListView::FindListViewItem(const UIObject* parentObject, const
 
     parentObject->ForEachChildUIObject_Proc([&dataSourceElementUuid, &resultPtr](UIObject* object)
         {
-            if (object->IsInstanceOf<UIListViewItem>() && object->GetDataSourceElementUUID() == dataSourceElementUuid)
+            if (object->IsA<UIListViewItem>() && object->GetDataSourceElementUUID() == dataSourceElementUuid)
             {
-                resultPtr = dynamic_cast<UIListViewItem*>(object);
-                AssertThrow(resultPtr != nullptr);
+                resultPtr = ObjCast<UIListViewItem>(object);
 
                 return IterationResult::STOP;
             }
@@ -462,19 +461,20 @@ void UIListView::AddDataSourceElement(UIDataSourceBase* dataSource, UIDataSource
     listViewItem->SetNodeTag(NodeTag(NAME("DataSourceElementUUID"), element->GetUUID()));
     listViewItem->SetDataSourceElementUUID(element->GetUUID());
 
-    listViewItem->OnClick.Bind([this, listViewItemWeak = listViewItem.ToWeak()](const MouseEvent& event) -> UIEventHandlerResult
-                               {
-                                   Handle<UIListViewItem> listViewItem = listViewItemWeak.Lock();
+    listViewItem->OnClick
+        .Bind([this, listViewItemWeak = listViewItem.ToWeak()](const MouseEvent& event) -> UIEventHandlerResult
+            {
+                Handle<UIListViewItem> listViewItem = listViewItemWeak.Lock();
 
-                                   if (!listViewItem)
-                                   {
-                                       return UIEventHandlerResult::ERR;
-                                   }
+                if (!listViewItem)
+                {
+                    return UIEventHandlerResult::ERR;
+                }
 
-                                   SetSelectedItem(listViewItem.Get());
+                SetSelectedItem(listViewItem.Get());
 
-                                   return UIEventHandlerResult::STOP_BUBBLING;
-                               })
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
         .Detach();
 
     // create UIObject for the element and add it to the list view
@@ -526,7 +526,7 @@ void UIListView::SetSelectedItemIndex(int index)
 
     listViewItem->SetIsSelectedItem(true);
 
-    m_selectedItem = WeakHandle<UIListViewItem>(listViewItem->WeakHandleFromThis());
+    m_selectedItem = listViewItem->WeakHandleFromThis();
 
     OnSelectedItemChange(listViewItem);
 }
@@ -569,10 +569,8 @@ void UIListView::SetSelectedItem(UIListViewItem* listViewItem)
 
         while (parent != nullptr && parent != this)
         {
-            if (parent->IsInstanceOf<UIListViewItem>())
+            if (UIListViewItem* parentListViewItem = ObjCast<UIListViewItem>(parent))
             {
-                UIListViewItem* parentListViewItem = static_cast<UIListViewItem*>(parent);
-
                 if (!parentListViewItem->IsExpanded())
                 {
                     parentListViewItem->SetIsExpanded(true);
@@ -593,7 +591,7 @@ void UIListView::SetSelectedItem(UIListViewItem* listViewItem)
 
     ScrollToChild(listViewItem);
 
-    m_selectedItem = WeakHandle<UIListViewItem>(listViewItem->WeakHandleFromThis());
+    m_selectedItem = listViewItem->WeakHandleFromThis();
 
     OnSelectedItemChange(listViewItem);
 }

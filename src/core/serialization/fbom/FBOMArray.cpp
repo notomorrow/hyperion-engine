@@ -105,7 +105,7 @@ FBOMArray& FBOMArray::AddElement(const FBOMData& value)
     }
 
     AssertThrowMsg(
-        value.GetType().Is(m_elementType),
+        value.GetType().IsType(m_elementType),
         "Cannot add element of type '%s' to Array with element type '%s'",
         value.GetType().name.Data(),
         m_elementType.name.Data());
@@ -124,7 +124,7 @@ FBOMArray& FBOMArray::AddElement(FBOMData&& value)
     }
 
     AssertThrowMsg(
-        value.GetType().Is(m_elementType),
+        value.GetType().IsType(m_elementType),
         "Cannot add element of type '%s' to Array with element type '%s'",
         value.GetType().name.Data(),
         m_elementType.name.Data());

@@ -26,7 +26,7 @@ void TickableEditorTask::Commit()
 
     m_task = gameThread->GetScheduler().Enqueue([weakThis = WeakHandleFromThis()]()
         {
-            if (Handle<TickableEditorTask> task = Handle<TickableEditorTask>(weakThis.Lock()))
+            if (Handle<TickableEditorTask> task = weakThis.Lock())
             {
                 task->m_isCommitted.Set(true, MemoryOrder::RELEASE);
 

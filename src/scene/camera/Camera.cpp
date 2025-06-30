@@ -305,7 +305,7 @@ void Camera::Init()
         InitObject(cameraController);
     }
 
-    if (const Handle<CameraController>& cameraController = GetCameraController(); cameraController && !cameraController->IsInstanceOf<NullCameraController>())
+    if (const Handle<CameraController>& cameraController = GetCameraController(); cameraController && !cameraController->IsA<NullCameraController>())
     {
         cameraController->OnAdded(this);
         cameraController->OnActivated();
@@ -359,7 +359,7 @@ void Camera::SetCameraControllers(const Array<Handle<CameraController>>& cameraC
 
     for (const Handle<CameraController>& cameraController : cameraControllers)
     {
-        if (!cameraController || cameraController->IsInstanceOf<NullCameraController>())
+        if (!cameraController || cameraController->IsA<NullCameraController>())
         {
             continue;
         }
@@ -387,7 +387,7 @@ void Camera::AddCameraController(const Handle<CameraController>& cameraControlle
 {
     HYP_SCOPE;
 
-    if (!cameraController || cameraController->IsInstanceOf<NullCameraController>())
+    if (!cameraController || cameraController->IsA<NullCameraController>())
     {
         return;
     }
@@ -426,7 +426,7 @@ bool Camera::RemoveCameraController(const Handle<CameraController>& cameraContro
 {
     HYP_SCOPE;
 
-    if (!cameraController || cameraController->IsInstanceOf<NullCameraController>())
+    if (!cameraController || cameraController->IsA<NullCameraController>())
     {
         return false;
     }
@@ -738,7 +738,7 @@ void Camera::UpdateMouseLocked()
 
     bool shouldLockMouse = false;
 
-    if (const Handle<CameraController>& cameraController = GetCameraController(); cameraController && !cameraController->IsInstanceOf<NullCameraController>())
+    if (const Handle<CameraController>& cameraController = GetCameraController(); cameraController && !cameraController->IsA<NullCameraController>())
     {
         if (cameraController->IsMouseLockAllowed() && cameraController->IsMouseLockRequested())
         {

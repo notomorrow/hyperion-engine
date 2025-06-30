@@ -106,7 +106,7 @@ void EnvGridUpdaterSystem::Process(float delta)
     //             {
     //                 // @TODO Store pointer to Entity rather than Id so we don't need to lock the handle
     //                 Handle<Entity> entity { entityId };
-    //                 AssertDebug(entity->IsInstanceOf<EnvGrid>());
+    //                 AssertDebug(entity->IsA<EnvGrid>());
 
     //                 Handle<EnvGrid> envGrid = entity.Cast<EnvGrid>();
 

@@ -48,11 +48,11 @@ void UIGridRow::AddChildUIObject(const Handle<UIObject>& uiObject)
 {
     HYP_SCOPE;
 
-    if (uiObject.IsValid() && uiObject->IsInstanceOf<UIGridColumn>())
+    if (uiObject.IsValid() && uiObject->IsA<UIGridColumn>())
     {
         UIObject::AddChildUIObject(uiObject);
 
-        m_columns.PushBack(Handle<UIGridColumn>(uiObject));
+        m_columns.PushBack(ObjCast<UIGridColumn>(uiObject));
 
         UpdateColumnSizes();
         UpdateColumnOffsets();
@@ -90,7 +90,7 @@ bool UIGridRow::RemoveChildUIObject(UIObject* uiObject)
         return false;
     }
 
-    if (IsInstanceOfHypClass<UIGridColumn>(uiObject))
+    if (uiObjectHandle->IsA<UIGridColumn>())
     {
         auto it = m_columns.FindAs(uiObject);
 
@@ -250,7 +250,7 @@ void UIGrid::SetNumColumns(int numColumns)
 
     ForEachChildUIObject_Proc([this](UIObject* uiObject)
         {
-            if (!uiObject->IsInstanceOf<UIGridRow>())
+            if (!uiObject->IsA<UIGridRow>())
             {
                 return IterationResult::CONTINUE;
             }
@@ -332,9 +332,8 @@ void UIGrid::AddChildUIObject(const Handle<UIObject>& uiObject)
         return;
     }
 
-    if (uiObject->IsInstanceOf<UIGridRow>())
+    if (const Handle<UIGridRow>& row = ObjCast<UIGridRow>(uiObject))
     {
-        Handle<UIGridRow> row = Handle<UIGridRow>(uiObject);
         row->SetNumColumns(m_numColumns);
 
         UIObject::AddChildUIObject(row);
@@ -399,7 +398,7 @@ bool UIGrid::RemoveChildUIObject(UIObject* uiObject)
         return false;
     }
 
-    if (uiObject->IsInstanceOf<UIGridRow>())
+    if (uiObject->IsA<UIGridRow>())
     {
         UILockedUpdatesScope scope(*this, UIObjectUpdateType::UPDATE_SIZE);
 

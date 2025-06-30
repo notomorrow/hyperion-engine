@@ -470,7 +470,8 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
     HYP_LOG(EnvProbe, Debug, "Rendering EnvProbe {} (type: {})",
         envProbe->Id(), envProbe->GetEnvProbeType());
 
-    if (envProbe->IsInstanceOf(SkyProbe::Class()))
+#ifdef HYP_DEBUG_MODE
+    if (envProbe->IsA<SkyProbe>())
     {
         if (!renderSetup.light)
         {
@@ -481,6 +482,7 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
             HYP_LOG(Rendering, Warning, "Light bound to SkyProbe pass is not a directional light: {} in view {}", renderSetup.light->Id(), view->Id());
         }
     }
+#endif
 
     RenderCollector::ExecuteDrawCalls(frame, renderSetup, rpl, ((1u << RB_OPAQUE) | (1u << RB_TRANSLUCENT)));
 
@@ -502,9 +504,8 @@ void ReflectionProbeRenderer::RenderProbe(FrameBase* frame, const RenderSetup& r
         ComputeSH(frame, renderSetup, envProbe);
     }
 
-    if (envProbe->IsInstanceOf(SkyProbe::Class()))
+    if (SkyProbe* skyProbe = ObjCast<SkyProbe>(envProbe))
     {
-        SkyProbe* skyProbe = static_cast<SkyProbe*>(envProbe);
         AssertThrow(skyProbe->GetSkyboxCubemap().IsValid());
 
         const ImageRef& dstImage = skyProbe->GetSkyboxCubemap()->GetRenderResource().GetImage();
@@ -796,7 +797,7 @@ void ReflectionProbeRenderer::ComputeSH(FrameBase* frame, const RenderSetup& ren
     {
         skyProbe = skyProbes.Front();
         AssertDebug(skyProbe != nullptr);
-        AssertDebug(skyProbe->IsInstanceOf<SkyProbe>());
+        AssertDebug(skyProbe->IsA<SkyProbe>());
     }
 
     const Vec2u cubemapDimensions = colorAttachment->GetImage()->GetExtent().GetXY();

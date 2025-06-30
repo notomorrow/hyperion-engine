@@ -886,11 +886,10 @@ public:
     {
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a subclass of UIObject");
 
-        return GetClosestParentUIObject_Proc([](const UIObject* parent) -> bool
+        return ObjCast<T>(GetClosestParentUIObject_Proc([](const UIObject* parent) -> bool
             {
-                return parent->IsInstanceOf<T>();
-            })
-            .template Cast<T>();
+                return parent->IsA<T>();
+            }));
     }
 
     template <class T>
@@ -898,11 +897,10 @@ public:
     {
         static_assert(std::is_base_of_v<UIObject, T>, "T must be a subclass of UIObject");
 
-        return GetClosestSpawnParent_Proc([](const UIObject* parent) -> bool
+        return ObjCast<T>(GetClosestSpawnParent_Proc([](const UIObject* parent) -> bool
             {
-                return parent->IsInstanceOf<T>();
-            })
-            .template Cast<T>();
+                return parent->IsA<T>();
+            }));
     }
 
     /*! \brief The UIObject that this was spawned from. Not necessarily the parent UIObject that this is attached to in the graph.
@@ -1191,8 +1189,8 @@ public:
         uiObject->SetSize(size);
         InitObject(uiObject);
 
-        Handle<T> result = uiObject.Cast<T>();
-        AssertThrow(result != nullptr);
+        Handle<T> result = ObjCast<T>(uiObject);
+        AssertThrow(result.IsValid(), "Failed to cast created UIObject to the requested type");
 
         return result;
     }

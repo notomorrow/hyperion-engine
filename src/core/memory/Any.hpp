@@ -18,7 +18,7 @@ namespace hyperion {
 class HypClass;
 
 extern HYP_API const HypClass* GetClass(TypeId typeId);
-extern HYP_API bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId typeId);
+extern HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
 
 namespace memory {
 
@@ -193,7 +193,7 @@ public:
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
         return m_typeId == typeId
-            || IsInstanceOfHypClass(GetClass(typeId), m_ptr, m_typeId);
+            || IsA(GetClass(typeId), m_ptr, m_typeId);
     }
 
     /*! \brief Returns true if the held object is of type \ref{typeId}.
@@ -201,7 +201,7 @@ public:
     HYP_FORCE_INLINE bool Is(TypeId typeId) const
     {
         return m_typeId == typeId
-            || IsInstanceOfHypClass(GetClass(typeId), m_ptr, m_typeId);
+            || IsA(GetClass(typeId), m_ptr, m_typeId);
     }
 
     /*! \brief Returns the held object as a reference to type T. If the held object is not of type T, an assertion will fail. */
@@ -583,7 +583,7 @@ public:
         constexpr TypeId typeId = TypeId::ForType<NormalizedType<T>>();
 
         return m_typeId == typeId
-            || IsInstanceOfHypClass(GetClass(typeId), m_ptr, m_typeId);
+            || IsA(GetClass(typeId), m_ptr, m_typeId);
     }
 
     /*! \brief Returns true if the held object is of type \ref{typeId}.
@@ -591,7 +591,7 @@ public:
     HYP_FORCE_INLINE bool Is(TypeId typeId) const
     {
         return m_typeId == typeId
-            || IsInstanceOfHypClass(GetClass(typeId), m_ptr, m_typeId);
+            || IsA(GetClass(typeId), m_ptr, m_typeId);
     }
 
     /*! \brief Returns the held object as a reference to type T. If the held object is not of type T, an assertion will fail. */

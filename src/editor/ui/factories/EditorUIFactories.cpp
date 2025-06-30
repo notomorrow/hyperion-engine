@@ -292,16 +292,13 @@ public:
 
     void Update(UIObject* uiObject, const Quaternion& value) const
     {
-        uiObject->FindChildUIObject(NAME("QuaternionPanel_Roll_Value"))
-            .Cast<UITextbox>()
+        ObjCast<UITextbox>(uiObject->FindChildUIObject(NAME("QuaternionPanel_Roll_Value")))
             ->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Roll())));
 
-        uiObject->FindChildUIObject(NAME("QuaternionPanel_Pitch_Value"))
-            .Cast<UITextbox>()
+        ObjCast<UITextbox>(uiObject->FindChildUIObject(NAME("QuaternionPanel_Pitch_Value")))
             ->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Pitch())));
 
-        uiObject->FindChildUIObject(NAME("QuaternionPanel_Yaw_Value"))
-            .Cast<UITextbox>()
+        ObjCast<UITextbox>(uiObject->FindChildUIObject(NAME("QuaternionPanel_Yaw_Value")))
             ->SetText(HYP_FORMAT("{}", MathUtil::RadToDeg(value.Yaw())));
     }
 };
@@ -668,7 +665,7 @@ public:
                         continue;
                     }
 
-                    Handle<EditorPropertyPanelBase> propertyPanelCasted = std::move(propertyPanel).Cast<EditorPropertyPanelBase>();
+                    Handle<EditorPropertyPanelBase> propertyPanelCasted = ObjCast<EditorPropertyPanelBase>(std::move(propertyPanel));
 
                     if (!propertyPanelCasted)
                     {
@@ -780,7 +777,7 @@ public:
                 addComponentButton->SetText("Add Component");
                 addComponentButton->OnClick.Bind([stageWeak = parent->GetStage()->WeakHandleFromThis()](...)
                 {
-                    if (Handle<UIStage> stage = stageWeak.Lock().Cast<UIStage>()) {
+                    if (Handle<UIStage> stage = stageWeak.Lock()) {
                         auto loadedUiAsset = AssetManager::GetInstance()->Load<UIObject>("ui/dialog/Component.Add.ui.xml");
                         
                         if (loadedUiAsset.HasValue()) {

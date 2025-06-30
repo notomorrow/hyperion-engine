@@ -6,7 +6,7 @@
 #include <core/object/ObjId.hpp>
 #include <core/object/ObjectPool.hpp>
 
-#include <core/object/HypObject.hpp>
+#include <core/object/HypObjectBase.hpp>
 
 #include <core/Util.hpp>
 
@@ -304,7 +304,7 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
             AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
@@ -316,7 +316,7 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
             AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
@@ -340,7 +340,7 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
             AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
@@ -352,7 +352,7 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
             AssertThrowMsg(instanceOfCheck, "Cannot cast Handle<T> to Handle<Ty> because T is not a base class of Ty!");
         }
 
@@ -668,7 +668,7 @@ struct WeakHandle final
     {
         if (ptr)
         {
-            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
             AssertThrowMsg(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
         }
 
@@ -680,7 +680,7 @@ struct WeakHandle final
     {
         if (ptr)
         {
-            const bool instanceOfCheck = IsInstanceOfHypClass(GetClass(TypeId::ForType<Ty>()), ptr, ptr->m_header->container->GetObjectTypeId());
+            const bool instanceOfCheck = IsA(Ty::Class(), ptr, ptr->m_header->container->GetObjectTypeId());
             AssertThrowMsg(instanceOfCheck, "Cannot cast WeakHandle<T> to WeakHandle<Ty> because T is not a base class of Ty!");
         }
 
@@ -843,8 +843,9 @@ public:
     HYP_FORCE_INLINE bool Is() const
     {
         constexpr TypeId otherTypeId = TypeId::ForType<T>();
+
         return typeId == otherTypeId
-            || IsInstanceOfHypClass(GetClass(otherTypeId), ptr, typeId);
+            || IsA(GetClass(otherTypeId), ptr, typeId);
     }
 
     template <class T>

@@ -197,7 +197,7 @@ public:
             return err;
         }
 
-        if (!glyphMetricsArray.GetElementType().Is(glyphMetricsStructType))
+        if (!glyphMetricsArray.GetElementType().IsType(glyphMetricsStructType))
         {
             return { FBOMResult::FBOM_ERR, "GlyphMetrics struct type mismatch" };
         }

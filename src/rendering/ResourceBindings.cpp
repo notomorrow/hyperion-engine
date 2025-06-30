@@ -29,7 +29,8 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
     AssertDebug(envProbe != nullptr);
     AssertDebug(envProbe->IsReady());
 
-    AssertThrow(envProbe->IsInstanceOf(SkyProbe::Class()) || envProbe->IsInstanceOf(ReflectionProbe::Class()));
+    AssertThrow(envProbe->IsA<SkyProbe>() || envProbe->IsA<ReflectionProbe>(),
+        "EnvProbe must be a SkyProbe or ReflectionProbe, but is: %s", envProbe->InstanceClass()->GetName());
 
     if (!envProbe->GetPrefilteredEnvMap().IsValid())
     {

@@ -41,7 +41,7 @@ const HypEnum* GetEnum(WeakName typeName)
     return HypClassRegistry::GetInstance().GetEnum(typeName);
 }
 
-bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId typeId)
+bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId)
 {
     if (!hypClass)
     {
@@ -58,7 +58,7 @@ bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId type
     if (otherHypClass != nullptr)
     {
         // fast path
-        if (otherHypClass->GetStaticIndex() != -1)
+        if (otherHypClass->GetStaticIndex() >= 0)
         {
             return uint32(otherHypClass->GetStaticIndex() - hypClass->GetStaticIndex()) <= hypClass->GetNumDescendants();
         }
@@ -84,7 +84,7 @@ bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId type
     return false;
 }
 
-bool IsInstanceOfHypClass(const HypClass* hypClass, const HypClass* instanceHypClass)
+bool IsA(const HypClass* hypClass, const HypClass* instanceHypClass)
 {
     if (!hypClass || !instanceHypClass)
     {
@@ -92,7 +92,7 @@ bool IsInstanceOfHypClass(const HypClass* hypClass, const HypClass* instanceHypC
     }
 
     // fast path
-    if (instanceHypClass->GetStaticIndex() != -1)
+    if (instanceHypClass->GetStaticIndex() >= 0)
     {
         return uint32(instanceHypClass->GetStaticIndex() - hypClass->GetStaticIndex()) <= hypClass->GetNumDescendants();
     }
@@ -284,6 +284,11 @@ HypClass::HypClass(TypeId typeId, Name name, int staticIndex, uint32 numDescenda
       m_alignment(0),
       m_serializationMode(HypClassSerializationMode::DEFAULT)
 {
+    if (staticIndex >= 0)
+    {
+        AssertDebug(staticIndex < g_maxStaticClassIndex, "Static index %d exceeds maximum static class index %u", staticIndex, g_maxStaticClassIndex);
+    }
+
     if (bool(m_attributes["abstract"]))
     {
         m_flags |= HypClassFlags::ABSTRACT;
@@ -405,7 +410,7 @@ void HypClass::Initialize()
             m_parent = GetClass(m_parentName);
         }
 
-        AssertThrowMsg(m_parent != nullptr, "Invalid parent class: %s", m_parentName.LookupString());
+        AssertDebug(m_parent != nullptr, "Invalid parent class: %s", m_parentName.LookupString());
     }
 
     HYP_LOG(Object, Info, "Initializing HypClass \"{}\"", m_name);
@@ -716,7 +721,7 @@ bool HypClass::IsDerivedFrom(const HypClass* other) const
     }
 
     // fast path
-    if (m_staticIndex != -1)
+    if (m_staticIndex >= 0)
     {
         return uint32(m_staticIndex - other->m_staticIndex) <= other->m_numDescendants;
     }

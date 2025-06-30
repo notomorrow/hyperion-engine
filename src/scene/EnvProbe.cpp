@@ -440,7 +440,7 @@ void EnvProbe::Update(float delta)
 void EnvProbe::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyEnvProbe* proxyCasted = static_cast<RenderProxyEnvProbe*>(proxy);
-    proxyCasted->envProbe = WeakHandle<EnvProbe>(WeakHandleFromThis());
+    proxyCasted->envProbe = WeakHandleFromThis();
 
     EnvProbeShaderData& bufferData = proxyCasted->bufferData;
     bufferData.aabbMin = Vec4f(m_aabb.min, 1.0f);

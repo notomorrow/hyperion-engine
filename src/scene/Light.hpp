@@ -76,36 +76,14 @@ public:
         return *m_renderResource;
     }
 
-    /*! \brief Get the current mutation state of the light.
-     *
-     *  \return The mutation state.
-     */
-    HYP_FORCE_INLINE DataMutationState GetMutationState() const
-    {
-        return m_mutationState;
-    }
-
     /*! \brief Get the type of the light.
      *
      *  \return The type.
      */
-    HYP_METHOD(Property = "Type", Serialize = true)
+    HYP_METHOD()
     LightType GetLightType() const
     {
         return m_type;
-    }
-
-    /*! \brief Set the type of the light. */
-    HYP_METHOD(Property = "Type", Serialize = true)
-    void SetLightType(LightType type)
-    {
-        if (m_type == type)
-        {
-            return;
-        }
-
-        m_type = type;
-        m_mutationState |= DataMutationState::DIRTY;
     }
 
     /*! \brief Get the position for the light. For directional lights, this is the direction the light is pointing.
@@ -121,16 +99,7 @@ public:
      *
      *  \param position The position or direction to set. */
     HYP_METHOD(Property = "Position", Serialize = true, Editor = true)
-    void SetPosition(const Vec3f& position)
-    {
-        if (m_position == position)
-        {
-            return;
-        }
-
-        m_position = position;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetPosition(const Vec3f& position);
 
     /*! \brief Get the normal for the light. This is used only for area lights.
      *
@@ -145,16 +114,7 @@ public:
      *
      *  \param normal The normal to set. */
     HYP_METHOD(Property = "Normal", Serialize = true, Editor = true)
-    void SetNormal(const Vec3f& normal)
-    {
-        if (m_normal == normal)
-        {
-            return;
-        }
-
-        m_normal = normal;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetNormal(const Vec3f& normal);
 
     /*! \brief Get the area size for the light. This is used only for area lights.
      *
@@ -169,16 +129,7 @@ public:
      *
      *  \param areaSize The area size to set. (x = width, y = height) */
     HYP_METHOD(Property = "AreaSize", Serialize = true, Editor = true)
-    void SetAreaSize(const Vec2f& areaSize)
-    {
-        if (m_areaSize == areaSize)
-        {
-            return;
-        }
-
-        m_areaSize = areaSize;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetAreaSize(const Vec2f& areaSize);
 
     /*! \brief Get the color for the light.
      *
@@ -193,16 +144,7 @@ public:
      *
      *  \param color The color to set. */
     HYP_METHOD(Property = "Color", Serialize = true, Editor = true)
-    void SetColor(const Color& color)
-    {
-        if (m_color == color)
-        {
-            return;
-        }
-
-        m_color = color;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetColor(const Color& color);
 
     /*! \brief Get the intensity for the light. This is used to determine how bright the light is.
      *
@@ -217,16 +159,7 @@ public:
      *
      *  \param intensity The intensity to set. */
     HYP_METHOD(Property = "Intensity", Serialize = true, Editor = true)
-    void SetIntensity(float intensity)
-    {
-        if (m_intensity == intensity)
-        {
-            return;
-        }
-
-        m_intensity = intensity;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetIntensity(float intensity);
 
     /*! \brief Get the radius for the light. This is used to determine the maximum distance at which this light is visible. (point lights only)
      *
@@ -249,16 +182,7 @@ public:
      *
      *  \param radius The radius to set. */
     HYP_METHOD(Property = "Radius", Serialize = true, Editor = true)
-    void SetRadius(float radius)
-    {
-        if (m_radius == radius)
-        {
-            return;
-        }
-
-        m_radius = radius;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetRadius(float radius);
 
     /*! \brief Get the falloff for the light. This is used to determine how the light intensity falls off with distance (point lights only).
      *
@@ -273,16 +197,7 @@ public:
      *
      *  \param falloff The falloff to set. */
     HYP_METHOD(Property = "Falloff", Serialize = true, Editor = true)
-    void SetFalloff(float falloff)
-    {
-        if (m_falloff == falloff)
-        {
-            return;
-        }
-
-        m_falloff = falloff;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetFalloff(float falloff);
 
     /*! \brief Get the angles for the spotlight (x = outer, y = inner). This is used to determine the angle of the light cone (spot lights only).
      *
@@ -297,16 +212,7 @@ public:
      *
      *  \param spotAngles The angles to set for the spotlight. */
     HYP_METHOD(Property = "SpotAngles", Serialize = true, Editor = true)
-    void SetSpotAngles(const Vec2f& spotAngles)
-    {
-        if (m_spotAngles == spotAngles)
-        {
-            return;
-        }
-
-        m_spotAngles = spotAngles;
-        m_mutationState |= DataMutationState::DIRTY;
-    }
+    void SetSpotAngles(const Vec2f& spotAngles);
 
     /*! \brief Get the material  for the light. Used for area lights.
      *
@@ -328,13 +234,19 @@ public:
 
     BoundingSphere GetBoundingSphere() const;
 
-    void EnqueueRenderUpdates();
-
     void UpdateRenderProxy(IRenderProxy* proxy) override;
     
 protected:
     void Init() override;
 
+    // For managed code only - to be removed at some point
+    HYP_METHOD()
+    void SetLightType(LightType type)
+    {
+        m_type = type;
+    }
+
+    HYP_FIELD(Property = "Type", Serialize = true)
     LightType m_type;
     Vec3f m_position;
     Vec3f m_normal;

@@ -28,7 +28,7 @@ namespace hyperion {
 class HypClass;
 
 extern HYP_API const HypClass* GetClass(TypeId typeId);
-extern HYP_API bool IsInstanceOfHypClass(const HypClass* hypClass, const void* ptr, TypeId typeId);
+extern HYP_API bool IsA(const HypClass* hypClass, const void* ptr, TypeId typeId);
 
 namespace memory {
 
@@ -953,7 +953,7 @@ public:
 
             return Base::GetTypeId() == typeId
                 || std::is_convertible_v<std::add_pointer_t<T>, std::add_pointer_t<Ty>>
-                || IsInstanceOfHypClass(GetClass(typeId), Base::m_ptr, Base::GetTypeId())
+                || IsA(GetClass(typeId), Base::m_ptr, Base::GetTypeId())
                 || (std::is_polymorphic_v<Ty> && dynamic_cast<Ty*>(static_cast<T*>(Base::m_ptr)) != nullptr);
         }
     }
@@ -1198,7 +1198,7 @@ public:
 
         return std::is_same_v<Ty, void>
             || Base::GetTypeId() == typeId
-            || IsInstanceOfHypClass(GetClass(typeId), Base::m_ptr, Base::GetTypeId());
+            || IsA(GetClass(typeId), Base::m_ptr, Base::GetTypeId());
     }
 
     /*! \brief Releases the reference to the currently held value, if any, and returns it.

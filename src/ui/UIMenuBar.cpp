@@ -92,14 +92,14 @@ void UIMenuItem::AddChildUIObject(const Handle<UIObject>& uiObject)
 
     UpdateDropDownMenu();
 
-    if (uiObject.IsValid() && uiObject->IsInstanceOf<UIMenuItem>())
+    if (uiObject.IsValid() && uiObject->IsA<UIMenuItem>())
     {
-        Handle<UIMenuItem> menuItem = uiObject.Cast<UIMenuItem>();
+        Handle<UIMenuItem> menuItem = ObjCast<UIMenuItem>(uiObject);
 
         menuItem->OnMouseHover
             .Bind([weakThis = WeakHandleFromThis(), subMenuItemWeak = menuItem.ToWeak()](const MouseEvent& event) -> UIEventHandlerResult
                 {
-                    Handle<UIMenuItem> menuItem = weakThis.Lock().Cast<UIMenuItem>();
+                    Handle<UIMenuItem> menuItem = weakThis.Lock();
                     Handle<UIMenuItem> subMenuItem = subMenuItemWeak.Lock();
 
                     if (!menuItem || !subMenuItem)
@@ -133,7 +133,7 @@ bool UIMenuItem::RemoveChildUIObject(UIObject* uiObject)
         return false;
     }
 
-    if (uiObject->IsInstanceOf<UIMenuItem>())
+    if (uiObject->IsA<UIMenuItem>())
     {
         auto it = m_menuItems.FindAs(uiObject);
 
@@ -264,7 +264,7 @@ void UIMenuItem::UpdateSubItemsDropDownMenu()
     m_subItemsDropDownMenu->OnClick
         .Bind([weakThis = WeakHandleFromThis()](const MouseEvent& data) -> UIEventHandlerResult
             {
-                Handle<UIMenuItem> menuItem = weakThis.Lock().Cast<UIMenuItem>();
+                Handle<UIMenuItem> menuItem = weakThis.Lock();
 
                 if (!menuItem)
                 {
@@ -530,7 +530,7 @@ void UIMenuBar::SetSelectedMenuItemIndex(uint32 index)
 
 void UIMenuBar::AddChildUIObject(const Handle<UIObject>& uiObject)
 {
-    if (!uiObject->IsInstanceOf<UIMenuItem>())
+    if (!uiObject->IsA<UIMenuItem>())
     {
         HYP_LOG(UI, Warning, "UIMenuBar::AddChildUIObject() called with a UIObject that is not a UIMenuItem");
 
@@ -555,8 +555,8 @@ void UIMenuBar::AddChildUIObject(const Handle<UIObject>& uiObject)
 
     AssertThrow(uiObjectHandle.IsValid());
 
-    Handle<UIMenuItem> menuItem = uiObjectHandle.Cast<UIMenuItem>();
-    AssertThrow(menuItem != nullptr);
+    Handle<UIMenuItem> menuItem = ObjCast<UIMenuItem>(uiObjectHandle);
+    AssertThrow(menuItem.IsValid(), "Cast to UIMenuItem failed");
 
     menuItem->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 100, UIObjectSize::PERCENT }));
 
@@ -564,17 +564,18 @@ void UIMenuBar::AddChildUIObject(const Handle<UIObject>& uiObject)
 
     // Mouse hover: set selected menu item index if this menu bar has focus
     menuItem->OnMouseHover.RemoveAllDetached();
-    menuItem->OnMouseHover.Bind([this, name](const MouseEvent& data) -> UIEventHandlerResult
-                               {
-                                   if (m_container->HasFocus(true))
-                                   {
-                                       const uint32 menuItemIndex = GetMenuItemIndex(name);
+    menuItem->OnMouseHover
+        .Bind([this, name](const MouseEvent& data) -> UIEventHandlerResult
+            {
+                if (m_container->HasFocus(true))
+                {
+                    const uint32 menuItemIndex = GetMenuItemIndex(name);
 
-                                       SetSelectedMenuItemIndex(menuItemIndex);
-                                   }
+                    SetSelectedMenuItemIndex(menuItemIndex);
+                }
 
-                                   return UIEventHandlerResult::STOP_BUBBLING;
-                               })
+                return UIEventHandlerResult::STOP_BUBBLING;
+            })
         .Detach();
 
     // Mouse click: toggle selected menu item index
@@ -583,7 +584,7 @@ void UIMenuBar::AddChildUIObject(const Handle<UIObject>& uiObject)
     menuItem->OnClick
         .Bind([weakThis = WeakHandleFromThis(), name](const MouseEvent& data) -> UIEventHandlerResult
             {
-                Handle<UIMenuBar> menuBar = weakThis.Lock().Cast<UIMenuBar>();
+                Handle<UIMenuBar> menuBar = weakThis.Lock();
 
                 if (!menuBar)
                 {

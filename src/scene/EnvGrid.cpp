@@ -543,7 +543,7 @@ void EnvGrid::Update(float delta)
 void EnvGrid::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyEnvGrid* proxyCasted = static_cast<RenderProxyEnvGrid*>(proxy);
-    proxyCasted->envGrid = WeakHandle<EnvGrid>(WeakHandleFromThis());
+    proxyCasted->envGrid = WeakHandleFromThis();
 
     EnvGridShaderData& bufferData = proxyCasted->bufferData;
     bufferData.center = Vec4f(m_aabb.GetCenter(), 1.0f);

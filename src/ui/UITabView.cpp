@@ -133,7 +133,7 @@ void UITabView::AddChildUIObject(const Handle<UIObject>& uiObject)
         return;
     }
 
-    if (!uiObject->IsInstanceOf<UITab>())
+    if (!uiObject->IsA<UITab>())
     {
         HYP_LOG(UI, Warning, "UITabView::AddChildUIObject() called with a UIObject that is not a UITab");
 
@@ -149,30 +149,31 @@ void UITabView::AddChildUIObject(const Handle<UIObject>& uiObject)
         return;
     }
 
-    Handle<UIObject> tab = uiObject.Cast<UITab>();
-    AssertThrow(tab != nullptr);
+    Handle<UIObject> tab = ObjCast<UITab>(uiObject);
+    AssertThrow(tab.IsValid(), "Cast to UITab failed");
 
     tab->SetSize(UIObjectSize({ 0, UIObjectSize::AUTO }, { 30, UIObjectSize::PIXEL }));
 
     tab->OnClick.RemoveAllDetached();
-    tab->OnClick.Bind([this, name = tab->GetName()](const MouseEvent& data) -> UIEventHandlerResult
-                    {
-                        if (data.mouseButtons == MouseButtonState::LEFT)
-                        {
-                            const uint32 tabIndex = GetTabIndex(name);
+    tab->OnClick
+        .Bind([this, name = tab->GetName()](const MouseEvent& data) -> UIEventHandlerResult
+            {
+                if (data.mouseButtons == MouseButtonState::LEFT)
+                {
+                    const uint32 tabIndex = GetTabIndex(name);
 
-                            SetSelectedTabIndex(tabIndex);
+                    SetSelectedTabIndex(tabIndex);
 
-                            return UIEventHandlerResult::STOP_BUBBLING;
-                        }
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
 
-                        return UIEventHandlerResult::OK;
-                    })
+                return UIEventHandlerResult::OK;
+            })
         .Detach();
 
     UIPanel::AddChildUIObject(tab);
 
-    m_tabs.PushBack(tab.Cast<UITab>());
+    m_tabs.PushBack(ObjCast<UITab>(tab));
 
     UpdateTabSizes();
 
