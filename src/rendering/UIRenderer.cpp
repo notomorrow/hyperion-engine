@@ -86,7 +86,7 @@ struct RENDER_COMMAND(AddUIRenderer)
 
     virtual RendererResult operator()() override
     {
-        g_renderGlobalState->AddRenderer(GRT_UI, uiRenderer);
+        // g_renderGlobalState->AddRenderer(GRT_UI, uiRenderer);
 
         HYPERION_RETURN_OK;
     }
@@ -104,7 +104,7 @@ struct RENDER_COMMAND(RemoveUIRenderer)
 
     virtual RendererResult operator()() override
     {
-        g_renderGlobalState->RemoveRenderer(GRT_UI, uiRenderer);
+        // g_renderGlobalState->RemoveRenderer(GRT_UI, uiRenderer);
 
         HYPERION_RETURN_OK;
     }
@@ -273,6 +273,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff UIRenderCollector
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
 
+            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
             RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:
@@ -401,7 +402,9 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
     const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
     AssertThrow(outputTarget.IsValid());
 
-    m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
+    RenderCollector::ExecuteDrawCalls(frame, rs, RenderApi_GetConsumerProxyList(m_view), 0);
+
+    // m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
 }
 
 PassData* UIRenderer::CreateViewPassData(View* view, PassDataExt&)
@@ -527,6 +530,7 @@ void UIRenderSubsystem::PreUpdate(float delta)
 
 void UIRenderSubsystem::Update(float delta)
 {
+    return; // tempp
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
     rpl.meshes.Advance(AdvanceAction::CLEAR);
 

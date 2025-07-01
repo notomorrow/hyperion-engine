@@ -89,7 +89,10 @@ public:
     const DescriptorSetRef& ForBoundMaterial(const Material* material, uint32 frameIndex);
 
     FixedArray<DescriptorSetRef, maxFramesInFlight> Allocate(uint32 boundIndex);
-    FixedArray<DescriptorSetRef, maxFramesInFlight> Allocate(uint32 boundIndex, const FixedArray<Handle<Texture>, maxBoundTextures>& textures);
+    FixedArray<DescriptorSetRef, maxFramesInFlight> Allocate(
+        uint32 boundIndex,
+        Span<const uint32> textureIndirectIndices,
+        Span<const Handle<Texture>> textures);
     void Remove(uint32 boundIndex);
 
     void CreateFallbackMaterialDescriptorSet();

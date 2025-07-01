@@ -1124,7 +1124,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
 
     FixedArray<DescriptorSetRef, maxFramesInFlight> descriptorSets;
 
-    static const FixedArray<Name, GBUFFER_RESOURCE_MAX> gbufferTextureNames {
+    static const FixedArray<Name, GTN_MAX> gbufferTextureNames {
         NAME("GBufferAlbedoTexture"),
         NAME("GBufferNormalsTexture"),
         NAME("GBufferMaterialTexture"),
@@ -1140,7 +1140,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
     const FramebufferRef& translucentFbo = view->GetOutputTarget().GetFramebuffer(RB_TRANSLUCENT);
 
     // depth attachment goes into separate slot
-    AttachmentBase* depthAttachment = opaqueFbo->GetAttachment(GBUFFER_RESOURCE_MAX - 1);
+    AttachmentBase* depthAttachment = opaqueFbo->GetAttachment(GTN_MAX - 1);
     AssertThrow(depthAttachment != nullptr);
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
@@ -1153,7 +1153,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
             uint32 gbufferElementIndex = 0;
 
             // not including depth texture here (hence the - 1)
-            for (uint32 attachmentIndex = 0; attachmentIndex < GBUFFER_RESOURCE_MAX - 1; attachmentIndex++)
+            for (uint32 attachmentIndex = 0; attachmentIndex < GTN_MAX - 1; attachmentIndex++)
             {
                 descriptorSet->SetElement(NAME("GBufferTextures"), gbufferElementIndex++, opaqueFbo->GetAttachment(attachmentIndex)->GetImageView());
             }
@@ -1163,7 +1163,7 @@ void DeferredRenderer::CreateViewDescriptorSets(View* view, DeferredPassData& pa
         }
         else
         {
-            for (uint32 attachmentIndex = 0; attachmentIndex < GBUFFER_RESOURCE_MAX - 1; attachmentIndex++)
+            for (uint32 attachmentIndex = 0; attachmentIndex < GTN_MAX - 1; attachmentIndex++)
             {
                 descriptorSet->SetElement(gbufferTextureNames[attachmentIndex], opaqueFbo->GetAttachment(attachmentIndex)->GetImageView());
             }

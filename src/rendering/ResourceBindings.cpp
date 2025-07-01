@@ -5,6 +5,7 @@
 #include <rendering/RenderLight.hpp>
 #include <rendering/RenderMaterial.hpp>
 #include <rendering/RenderTexture.hpp>
+#include <rendering/RenderSkeleton.hpp>
 #include <rendering/PlaceholderData.hpp>
 #include <rendering/lightmapper/RenderLightmapVolume.hpp>
 
@@ -13,6 +14,7 @@
 #include <scene/Light.hpp>
 #include <scene/Texture.hpp>
 #include <scene/Material.hpp>
+#include <scene/animation/Skeleton.hpp>
 #include <scene/lightmapper/LightmapVolume.hpp>
 
 #include <core/object/HypClass.hpp>
@@ -25,6 +27,37 @@
 #include <Engine.hpp>
 
 namespace hyperion {
+
+void OnBindingChanged_MeshEntity(Entity* entity, uint32 prev, uint32 next)
+{
+    // For now, use Entity ID as index.
+    RenderApi_AssignResourceBinding(entity, entity->Id().ToIndex());
+
+    // HYP_LOG(Rendering, Debug,
+    //     "MeshEntity {} binding changed from {} to {}",
+    //     entity->Id(), prev, next);
+}
+
+void WriteBufferData_MeshEntity(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)
+{
+    AssertDebug(gpuBufferHolder != nullptr);
+    AssertDebug(idx != ~0u);
+
+    RenderProxyMesh* proxyCasted = static_cast<RenderProxyMesh*>(proxy);
+    AssertDebug(proxyCasted != nullptr);
+
+    AssertDebug(idx == proxyCasted->entity.Id().ToIndex());
+
+    proxyCasted->bufferData.entityIndex = proxyCasted->entity.Id().ToIndex();
+    proxyCasted->bufferData.materialIndex = RenderApi_RetrieveResourceBinding(proxyCasted->material);
+
+    // temp shit:
+    proxyCasted->bufferData.skeletonIndex = proxyCasted->skeleton ? proxyCasted->skeleton->GetRenderResource().GetBufferIndex() : ~0u;
+    // proxyCasted->bufferData.skeletonIndex = RenderApi_RetrieveResourceBinding(proxyCasted->skeleton);
+
+    gpuBufferHolder->EnsureCapacity(idx);
+    gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
+}
 
 void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
 {
@@ -82,15 +115,17 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
     }
 }
 
-void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, void* bufferData, SizeType size)
+void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)
 {
     AssertDebug(gpuBufferHolder != nullptr);
     AssertDebug(idx != ~0u);
 
-    EnvProbeShaderData* bufferDataCasted = reinterpret_cast<EnvProbeShaderData*>(bufferData);
-    bufferDataCasted->textureIndex = idx;
+    RenderProxyEnvProbe* proxyCasted = static_cast<RenderProxyEnvProbe*>(proxy);
+    AssertDebug(proxyCasted != nullptr);
 
-    gpuBufferHolder->WriteBufferData(idx, bufferDataCasted, size);
+    proxyCasted->bufferData.textureIndex = idx;
+
+    gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
 }
 
 void OnBindingChanged_AmbientProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
@@ -165,16 +200,15 @@ void OnBindingChanged_LightmapVolume(LightmapVolume* lightmapVolume, uint32 prev
     RenderApi_AssignResourceBinding(lightmapVolume, next);
 }
 
+HYP_DISABLE_OPTIMIZATION;
 // @TODO: Handle update if a texture is changed
 void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 {
+    Threads::AssertOnThread(g_renderThread);
+
     AssertDebug(material != nullptr);
 
-    HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {}\n", material->Id(), prev, next);
-
-    // temp shit
-    AssertDebug(material->GetRenderResource().GetBufferIndex() != ~0u);
-    RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
+    HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {} for frame {}", material->Id(), prev, next, RenderApi_GetFrameIndex_RenderThread());
     // RenderApi_AssignResourceBinding(material, next);
 
     // if (prev != ~0u)
@@ -184,13 +218,25 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
     if (next != ~0u)
     {
+        // temp shit
+        AssertDebug(material->GetRenderResource().GetBufferIndex() != ~0u);
+        RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
+
         IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
         AssertThrow(proxy != nullptr);
 
         RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
 
-        g_renderGlobalState->materialDescriptorSetManager->Allocate(next, proxyCasted->boundTextures);
+        g_renderGlobalState->materialDescriptorSetManager->Allocate(
+            material->GetRenderResource().GetBufferIndex(), // next,
+            proxyCasted->boundTextureIndices.ToSpan(),
+            proxyCasted->boundTextures.ToSpan());
+    }
+    else
+    {
+        RenderApi_AssignResourceBinding(material, ~0u);
     }
 }
+HYP_ENABLE_OPTIMIZATION;
 
 } // namespace hyperion

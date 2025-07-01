@@ -30,6 +30,7 @@ namespace hyperion {
 
 #pragma region Render commands
 
+#if 0
 struct RENDER_COMMAND(UpdateEntityDrawData)
     : RenderCommand
 {
@@ -94,6 +95,7 @@ struct RENDER_COMMAND(UpdateEntityDrawData)
         HYPERION_RETURN_OK;
     }
 };
+#endif
 
 #pragma endregion Render commands
 
@@ -116,14 +118,17 @@ void EntityRenderProxySystem_Mesh::OnEntityAdded(Entity* entity)
         meshComponent.proxy->mesh = meshComponent.mesh;
         meshComponent.proxy->material = meshComponent.material;
         meshComponent.proxy->skeleton = meshComponent.skeleton;
-        meshComponent.proxy->modelMatrix = Matrix4::Identity();
-        meshComponent.proxy->previousModelMatrix = Matrix4::Identity();
-        meshComponent.proxy->aabb = BoundingBox::Empty();
-        meshComponent.proxy->userData = meshComponent.userData;
         meshComponent.proxy->instanceData = meshComponent.instanceData;
         meshComponent.proxy->version = 0;
+        meshComponent.proxy->bufferData.bucket = meshComponent.material.IsValid() ? meshComponent.material->GetRenderAttributes().bucket : RB_NONE;
+        meshComponent.proxy->bufferData.flags = meshComponent.skeleton.IsValid() ? ENTITY_GPU_FLAG_HAS_SKELETON : ENTITY_GPU_FLAG_NONE;
+        meshComponent.proxy->bufferData.modelMatrix = Matrix4::Identity();
+        meshComponent.proxy->bufferData.previousModelMatrix = Matrix4::Identity();
+        meshComponent.proxy->bufferData.worldAabbMax = BoundingBox::Empty().max;
+        meshComponent.proxy->bufferData.worldAabbMin = BoundingBox::Empty().min;
+        meshComponent.proxy->bufferData.userData = reinterpret_cast<EntityShaderData::EntityUserData&>(meshComponent.userData);
 
-        PUSH_RENDER_COMMAND(UpdateEntityDrawData, Array<RenderProxyMesh*> { meshComponent.proxy });
+        // PUSH_RENDER_COMMAND(UpdateEntityDrawData, Array<RenderProxyMesh*> { meshComponent.proxy });
 
         GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
     }
@@ -189,16 +194,19 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
         // @TODO: Include RT info on RenderProxy, add a system that will update BLAS on the render thread.
         // @TODO Add Lightmap volume info
         RenderProxyMesh& proxy = *meshComponent.proxy;
+
         proxy.entity = entity->WeakHandleFromThis();
         proxy.mesh = meshComponent.mesh;
         proxy.material = meshComponent.material;
         proxy.skeleton = meshComponent.skeleton;
-        proxy.modelMatrix = transformComponent.transform.GetMatrix();
-        proxy.previousModelMatrix = meshComponent.previousModelMatrix;
-        proxy.aabb = boundingBoxComponent.worldAabb;
-        proxy.userData = meshComponent.userData;
         proxy.instanceData = meshComponent.instanceData;
         proxy.version = renderProxyVersion;
+
+        proxy.bufferData.modelMatrix = transformComponent.transform.GetMatrix();
+        proxy.bufferData.previousModelMatrix = meshComponent.previousModelMatrix;
+        proxy.bufferData.worldAabbMax = boundingBoxComponent.worldAabb.max;
+        proxy.bufferData.worldAabbMin = boundingBoxComponent.worldAabb.min;
+        proxy.bufferData.userData = reinterpret_cast<EntityShaderData::EntityUserData&>(meshComponent.userData);
 
         renderProxyPtrs.PushBack(meshComponent.proxy);
 
@@ -225,7 +233,7 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
 
     if (renderProxyPtrs.Any())
     {
-        PUSH_RENDER_COMMAND(UpdateEntityDrawData, std::move(renderProxyPtrs));
+        // PUSH_RENDER_COMMAND(UpdateEntityDrawData, std::move(renderProxyPtrs));
     }
 }
 

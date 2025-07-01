@@ -330,11 +330,11 @@ public:
           m_pipeline(pipeline),
           m_offsets(offsets)
     {
-        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertDebug(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
         m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
-        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const GraphicsPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
@@ -343,9 +343,9 @@ public:
           m_offsets(offsets),
           m_bindIndex(bindIndex)
     {
-        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
-        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index");
+        AssertDebug(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index");
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const ComputePipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
@@ -353,11 +353,11 @@ public:
           m_pipeline(pipeline),
           m_offsets(offsets)
     {
-        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertDebug(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
         m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
-        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const ComputePipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
@@ -366,9 +366,9 @@ public:
           m_offsets(offsets),
           m_bindIndex(bindIndex)
     {
-        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
-        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index");
+        AssertDebug(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index");
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const RaytracingPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets = {})
@@ -376,11 +376,11 @@ public:
           m_pipeline(pipeline),
           m_offsets(offsets)
     {
-        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertDebug(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
 
         m_bindIndex = pipeline->GetDescriptorTable()->GetDescriptorSetIndex(descriptorSet->GetLayout().GetName());
-        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index for descriptor set %s", descriptorSet->GetLayout().GetName().LookupString());
     }
 
     BindDescriptorSet(const DescriptorSetRef& descriptorSet, const RaytracingPipelineRef& pipeline, const ArrayMap<Name, uint32>& offsets, uint32 bindIndex)
@@ -389,9 +389,9 @@ public:
           m_offsets(offsets),
           m_bindIndex(bindIndex)
     {
-        AssertThrowMsg(descriptorSet != nullptr, "Descriptor set must not be null");
-        AssertThrowMsg(descriptorSet->IsCreated(), "Descriptor set is not created yet");
-        AssertThrowMsg(m_bindIndex != ~0u, "Invalid bind index");
+        AssertDebug(descriptorSet != nullptr, "Descriptor set must not be null");
+        AssertDebug(descriptorSet->IsCreated(), "Descriptor set is not created yet");
+        AssertDebug(m_bindIndex != ~0u, "Invalid bind index");
     }
 
     HYP_API virtual void Prepare(FrameBase* frame) override;
@@ -420,7 +420,7 @@ public:
           m_offsets(offsets),
           m_frameIndex(frameIndex)
     {
-        AssertThrowMsg(descriptorTable != nullptr, "Descriptor table must not be null");
+        AssertDebug(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
     BindDescriptorTable(const DescriptorTableRef& descriptorTable, const ComputePipelineRef& computePipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
@@ -429,7 +429,7 @@ public:
           m_offsets(offsets),
           m_frameIndex(frameIndex)
     {
-        AssertThrowMsg(descriptorTable != nullptr, "Descriptor table must not be null");
+        AssertDebug(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
     BindDescriptorTable(const DescriptorTableRef& descriptorTable, const RaytracingPipelineRef& raytracingPipeline, const ArrayMap<Name, ArrayMap<Name, uint32>>& offsets, uint32 frameIndex)
@@ -438,7 +438,7 @@ public:
           m_offsets(offsets),
           m_frameIndex(frameIndex)
     {
-        AssertThrowMsg(descriptorTable != nullptr, "Descriptor table must not be null");
+        AssertDebug(descriptorTable != nullptr, "Descriptor table must not be null");
     }
 
     HYP_API virtual void Prepare(FrameBase* frame) override;

@@ -69,7 +69,7 @@ HYP_API extern void RenderApi_AddRef(HypObjectBase* resource);
 HYP_API extern void RenderApi_ReleaseRef(ObjIdBase id);
 
 HYP_API extern void RenderApi_UpdateRenderProxy(ObjIdBase id);
-HYP_API extern void RenderApi_UpdateRenderProxy(ObjIdBase id, IRenderProxy* srcProxy);
+HYP_API extern void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcProxy);
 
 // Call on render thread or render thread tasks only (consumer)
 HYP_API extern IRenderProxy* RenderApi_GetRenderProxy(ObjIdBase id);

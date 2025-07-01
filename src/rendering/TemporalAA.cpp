@@ -120,9 +120,9 @@ void TemporalAA::CreateComputePipelines()
         descriptorSet->SetElement(NAME("InColorTexture"), m_inputImageView);
         descriptorSet->SetElement(NAME("InPrevColorTexture"), (*textures[(frameIndex + 1) % 2])->GetRenderResource().GetImageView());
 
-        descriptorSet->SetElement(NAME("InVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_VELOCITY)->GetImageView());
+        descriptorSet->SetElement(NAME("InVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
 
-        descriptorSet->SetElement(NAME("InDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)->GetImageView());
+        descriptorSet->SetElement(NAME("InDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_DEPTH)->GetImageView());
 
         descriptorSet->SetElement(NAME("SamplerLinear"), g_renderGlobalState->PlaceholderData->GetSamplerLinear());
         descriptorSet->SetElement(NAME("SamplerNearest"), g_renderGlobalState->PlaceholderData->GetSamplerNearest());
@@ -162,9 +162,9 @@ void TemporalAA::Render(FrameBase* frame, const RenderSetup& renderSetup)
     } pushConstants;
 
     const Vec3u depthTextureDimensions = m_gbuffer->GetBucket(RB_OPAQUE)
-                                               .GetGBufferAttachment(GBUFFER_RESOURCE_DEPTH)
-                                               ->GetImage()
-                                               ->GetExtent();
+                                             .GetGBufferAttachment(GTN_DEPTH)
+                                             ->GetImage()
+                                             ->GetExtent();
 
     pushConstants.dimensions = m_extent;
     pushConstants.depthTextureDimensions = Vec2u { depthTextureDimensions.x, depthTextureDimensions.y };

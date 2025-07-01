@@ -473,6 +473,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectAllE
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
 
+            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
             RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:
@@ -572,6 +573,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectDyna
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
 
+            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
             RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:
@@ -671,6 +673,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectStat
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
 
+            RenderApi_UpdateRenderProxy(proxy->entity.Id(), proxy);
             RenderApi_UpdateRenderProxy(proxy->material.Id());
 
             // for now:

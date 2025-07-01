@@ -230,10 +230,10 @@ void SSRRenderer::CreateComputePipelines()
         descriptorSet->SetElement(NAME("UVImage"), m_uvsTexture->GetRenderResource().GetImageView());
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffer);
 
-        descriptorSet->SetElement(NAME("GBufferNormalsTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_NORMALS)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferMaterialTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_MATERIAL)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_VELOCITY)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_DEPTH)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferNormalsTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_NORMALS)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferMaterialTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_MATERIAL)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_DEPTH)->GetImageView());
         descriptorSet->SetElement(NAME("GBufferMipChain"), m_mipChainImageView ? m_mipChainImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         descriptorSet->SetElement(NAME("DeferredResult"), m_deferredResultImageView ? m_deferredResultImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
     }
@@ -263,10 +263,10 @@ void SSRRenderer::CreateComputePipelines()
         descriptorSet->SetElement(NAME("SampleImage"), m_sampledResultTexture->GetRenderResource().GetImageView());
         descriptorSet->SetElement(NAME("UniformBuffer"), m_uniformBuffer);
 
-        descriptorSet->SetElement(NAME("GBufferNormalsTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_NORMALS)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferMaterialTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_MATERIAL)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_VELOCITY)->GetImageView());
-        descriptorSet->SetElement(NAME("GBufferDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GBufferResourceName::GBUFFER_RESOURCE_DEPTH)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferNormalsTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_NORMALS)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferMaterialTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_MATERIAL)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferVelocityTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_VELOCITY)->GetImageView());
+        descriptorSet->SetElement(NAME("GBufferDepthTexture"), m_gbuffer->GetBucket(RB_OPAQUE).GetGBufferAttachment(GTN_DEPTH)->GetImageView());
         descriptorSet->SetElement(NAME("GBufferMipChain"), m_mipChainImageView ? m_mipChainImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         descriptorSet->SetElement(NAME("DeferredResult"), m_deferredResultImageView ? m_deferredResultImageView : g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
     }

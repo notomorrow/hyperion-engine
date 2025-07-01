@@ -436,7 +436,10 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Al
     return descriptorSets;
 }
 
-FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Allocate(uint32 boundIndex, const FixedArray<Handle<Texture>, maxBoundTextures>& textures)
+FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Allocate(
+    uint32 boundIndex,
+    Span<const uint32> textureIndirectIndices,
+    Span<const Handle<Texture>> textures)
 {
     if (boundIndex == ~0u)
     {
@@ -460,21 +463,31 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Al
         descriptorSet->SetDebugName(NAME_FMT("MaterialDescriptorSet_{}_{}", boundIndex, frameIndex));
 #endif
 
-        for (uint32 textureIndex = 0; textureIndex < maxBoundTextures; textureIndex++)
+        // set initial placeholder elements that will get overridden
+        for (uint32 i = 0; i < maxBoundTextures; i++)
         {
-            if (textureIndex < textures.Size())
+            descriptorSet->SetElement(NAME("Textures"), i, g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+        }
+
+        for (uint32 slot = 0; slot < uint32(textureIndirectIndices.Size()); slot++)
+        {
+            const uint32 textureIndex = textureIndirectIndices[slot];
+
+            if (textureIndex == ~0u)
             {
-                const Handle<Texture>& texture = textures[textureIndex];
-
-                if (texture.IsValid() && texture->GetRenderResource().GetImageView() != nullptr)
-                {
-                    descriptorSet->SetElement(NAME("Textures"), textureIndex, texture->GetRenderResource().GetImageView());
-
-                    continue;
-                }
+                continue;
             }
 
-            descriptorSet->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            AssertDebug(textureIndex < textures.Size(),
+                "Texture index %u is out of bounds of textures array size %llu",
+                textureIndex, textures.Size());
+
+            const Handle<Texture>& texture = textures[textureIndex];
+
+            if (texture.IsValid() && texture->GetRenderResource().GetImageView() != nullptr)
+            {
+                descriptorSet->SetElement(NAME("Textures"), textureIndex, texture->GetRenderResource().GetImageView());
+            }
         }
 
         descriptorSets[frameIndex] = std::move(descriptorSet);

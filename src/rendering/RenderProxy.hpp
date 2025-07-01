@@ -53,6 +53,35 @@ public:
 #endif
 };
 
+struct EntityShaderData
+{
+    Matrix4 modelMatrix;
+    Matrix4 previousModelMatrix;
+
+    Vec4f _pad0;
+    Vec4f _pad1;
+    Vec3f worldAabbMax;
+    Vec3f worldAabbMin;
+
+    uint32 entityIndex = ~0u;
+    uint32 lightmapVolumeIndex = ~0u;
+    uint32 materialIndex = ~0u;
+    uint32 skeletonIndex = ~0u;
+
+    uint32 bucket;
+    uint32 flags;
+    uint32 _pad3;
+    uint32 _pad4;
+
+    struct alignas(16) EntityUserData
+    {
+        Vec4u userData0;
+        Vec4u userData1;
+    } userData;
+};
+
+static_assert(sizeof(EntityShaderData) == 256);
+
 /*! \brief Proxy for a renderable Entity with a valid Mesh and Material assigned */
 class RenderProxyMesh : public IRenderProxy
 {
@@ -61,11 +90,10 @@ public:
     Handle<Mesh> mesh;
     Handle<Material> material;
     Handle<Skeleton> skeleton;
-    Matrix4 modelMatrix;
-    Matrix4 previousModelMatrix;
-    BoundingBox aabb;
-    UserData<32, 16> userData;
     MeshInstanceData instanceData;
+
+    EntityShaderData bufferData {};
+
     int version = 0;
 
     ~RenderProxyMesh() override = default;
@@ -75,34 +103,26 @@ public:
     void IncRefs() const;
     void DecRefs() const;
 
-    bool operator==(const RenderProxyMesh& other) const
+    HYP_FORCE_INLINE bool operator==(const RenderProxyMesh& other) const
     {
-        // Check version first for faster comparison
         return version == other.version
             && entity == other.entity
             && mesh == other.mesh
             && material == other.material
             && skeleton == other.skeleton
-            && modelMatrix == other.modelMatrix
-            && previousModelMatrix == other.previousModelMatrix
-            && aabb == other.aabb
-            && userData == other.userData
-            && instanceData == other.instanceData;
+            && instanceData == other.instanceData
+            && Memory::MemCmp(&bufferData, &other.bufferData, sizeof(EntityShaderData)) == 0;
     }
 
-    bool operator!=(const RenderProxyMesh& other) const
+    HYP_FORCE_INLINE bool operator!=(const RenderProxyMesh& other) const
     {
-        // Check version first for faster comparison
         return version != other.version
             || entity != other.entity
             || mesh != other.mesh
             || material != other.material
             || skeleton != other.skeleton
-            || modelMatrix != other.modelMatrix
-            || previousModelMatrix != other.previousModelMatrix
-            || aabb != other.aabb
-            || userData != other.userData
-            || instanceData != other.instanceData;
+            || instanceData != other.instanceData
+            || Memory::MemCmp(&bufferData, &other.bufferData, sizeof(EntityShaderData)) != 0;
     }
 };
 
@@ -252,11 +272,20 @@ static_assert(sizeof(MaterialShaderData) == 256);
 class RenderProxyMaterial : public IRenderProxy
 {
 public:
+    RenderProxyMaterial()
+    {
+        for (uint32 i = 0; i < maxBoundTextures; ++i)
+        {
+            boundTextureIndices[i] = ~0u;
+        }
+    }
+
     ~RenderProxyMaterial() override = default;
 
     WeakHandle<Material> material;
     MaterialShaderData bufferData {};
-    FixedArray<Handle<Texture>, 16> boundTextures;
+    FixedArray<uint32, maxBoundTextures> boundTextureIndices;
+    Array<Handle<Texture>> boundTextures;
 };
 
 } // namespace hyperion

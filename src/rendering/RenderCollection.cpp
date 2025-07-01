@@ -525,6 +525,11 @@ void RenderCollector::CollectDrawCalls(RenderProxyList& renderProxyList, uint32 
         return;
     }
 
+    std::sort(iterators.Begin(), iterators.End(), [](IteratorType lhs, IteratorType rhs) -> bool
+        {
+            return lhs->first.GetDrawableLayer() < rhs->first.GetDrawableLayer();
+        });
+
     for (IteratorType it : iterators)
     {
         const RenderableAttributeSet& attributes = it->first;
@@ -687,6 +692,12 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
     HYP_MT_CHECK_RW(renderProxyList.dataRaceDetector);
 
     Span<FlatMap<RenderableAttributeSet, DrawCallCollectionMapping>> groupsView;
+
+    if (bucketBits == 0)
+    {
+        static constexpr uint32 allBuckets = (1u << RB_MAX) - 1;
+        bucketBits = allBuckets; // All buckets
+    }
 
     // If only one bit is set, we can skip the loop by directly accessing the RenderGroup
     if (ByteUtil::BitCount(bucketBits) == 1)

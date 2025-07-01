@@ -14,7 +14,7 @@ HYP_DESCRIPTOR_SRV(Object, LightmapVolumeIrradianceTexture, 1);
 HYP_DESCRIPTOR_SRV(Object, LightmapVolumeRadianceTexture, 1);
 HYP_DESCRIPTOR_SSBO(Object, CurrentObject, 1, sizeof(EntityShaderData), true); // For non-instanced objects
 
-HYP_DESCRIPTOR_SRV_COND(View, GBufferTextures, numGbufferTextures, g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
+HYP_DESCRIPTOR_SRV_COND(View, GBufferTextures, numGbufferTargets, g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferAlbedoTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferNormalsTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());
 HYP_DESCRIPTOR_SRV_COND(View, GBufferMaterialTexture, 1, !g_renderBackend->GetRenderConfig().IsDynamicDescriptorIndexingSupported());

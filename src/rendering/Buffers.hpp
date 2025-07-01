@@ -79,37 +79,6 @@ enum EntityGPUDataFlags : uint32
     ENTITY_GPU_FLAG_HAS_SKELETON = 0x1
 };
 
-struct alignas(16) EntityUserData
-{
-    Vec4u userData0;
-    Vec4u userData1;
-};
-
-struct EntityShaderData
-{
-    Matrix4 modelMatrix;
-    Matrix4 previousModelMatrix;
-
-    Vec4f _pad0;
-    Vec4f _pad1;
-    Vec4f worldAabbMax;
-    Vec4f worldAabbMin;
-
-    uint32 entityIndex;
-    uint32 lightmapVolumeIndex;
-    uint32 materialIndex;
-    uint32 skeletonIndex;
-
-    uint32 bucket;
-    uint32 flags;
-    uint32 _pad3;
-    uint32 _pad4;
-
-    EntityUserData userData;
-};
-
-static_assert(sizeof(EntityShaderData) == 256);
-
 struct ImmediateDrawShaderData
 {
     Matrix4 transform;

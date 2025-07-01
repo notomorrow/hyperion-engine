@@ -58,18 +58,9 @@ struct ResourceBindingAllocatorBase
         usedIndices.Set(index, false);
     }
 
-    void ResetStat()
-    {
-        currentFrameCount = 0;
-    }
-
     // the maximum size of this allocator, i.e. the maximum number of bindings that can be allocated in a single frame
     // if set to ~0u, no limit is used when allocating indices
     const uint32 maxSize;
-
-    // number of claims for the current from
-    // NOTE: not same as bindings (bindings are set after ApplyUpdates() is called so we can calculate reuse)
-    uint32 currentFrameCount = 0;
 
     // Bits representing whether an index is allocated or not.
     // we find free indices by iterating over this bitset to find the first unset bit.
@@ -167,8 +158,6 @@ class ResourceBinder : public ResourceBinderBase
             {
                 return;
             }
-
-            ++allocator->currentFrameCount;
 
             currentFrameIds.Set(id.ToIndex(), true);
         }

@@ -24,33 +24,26 @@ class Engine;
 
 using GBufferFormat = Variant<DefaultImageFormat, TextureFormat, Array<TextureFormat>>;
 
-enum GBufferResourceName : uint32
+enum GBufferTargetName : uint32
 {
-    GBUFFER_RESOURCE_ALBEDO = 0,
-    GBUFFER_RESOURCE_NORMALS = 1,
-    GBUFFER_RESOURCE_MATERIAL = 2,
-    GBUFFER_RESOURCE_TANGENTS = 3,
-    GBUFFER_RESOURCE_VELOCITY = 4,
-    GBUFFER_RESOURCE_MASK = 5,
-    GBUFFER_RESOURCE_WS_NORMALS = 6,
-    GBUFFER_RESOURCE_DEPTH = 7,
+    GTN_ALBEDO = 0,
+    GTN_NORMALS,
+    GTN_MATERIAL,
+    GTN_TANGENTS,
+    GTN_VELOCITY,
+    GTN_MASK,
+    GTN_WS_NORMALS,
+    GTN_DEPTH,
 
-    GBUFFER_RESOURCE_MAX
+    GTN_MAX
 };
 
-static_assert(uint32(GBufferResourceName::GBUFFER_RESOURCE_MAX) == numGbufferTextures, "GBufferResourceName enum does not match num_gbuffer_textures");
-
-struct GBufferResource
-{
-    GBufferFormat format;
-};
+static_assert(GTN_MAX == numGbufferTargets, "GTN_MAX does not match numGbufferTargets");
 
 class GBuffer
 {
 public:
-    static const FixedArray<GBufferResource, GBUFFER_RESOURCE_MAX> gbufferResources;
-
-    class GBufferBucket
+    class GBufferTarget
     {
         friend class GBuffer;
 
@@ -59,12 +52,12 @@ public:
         FramebufferRef m_framebuffer;
 
     public:
-        GBufferBucket();
-        GBufferBucket(const GBufferBucket& other) = delete;
-        GBufferBucket& operator=(const GBufferBucket& other) = delete;
-        GBufferBucket(GBufferBucket&& other) noexcept = delete;
-        GBufferBucket& operator=(GBufferBucket&& other) noexcept = delete;
-        ~GBufferBucket();
+        GBufferTarget();
+        GBufferTarget(const GBufferTarget& other) = delete;
+        GBufferTarget& operator=(const GBufferTarget& other) = delete;
+        GBufferTarget(GBufferTarget&& other) noexcept = delete;
+        GBufferTarget& operator=(GBufferTarget&& other) noexcept = delete;
+        ~GBufferTarget();
 
         HYP_FORCE_INLINE GBuffer* GetGBuffer() const
         {
@@ -96,7 +89,7 @@ public:
             m_framebuffer = framebuffer;
         }
 
-        AttachmentBase* GetGBufferAttachment(GBufferResourceName resourceName) const;
+        AttachmentBase* GetGBufferAttachment(GBufferTargetName resourceName) const;
     };
 
     GBuffer(Vec2u extent);
@@ -106,14 +99,14 @@ public:
     GBuffer& operator=(GBuffer&& other) noexcept = delete;
     ~GBuffer();
 
-    HYP_FORCE_INLINE GBufferBucket& GetBucket(RenderBucket rb)
+    HYP_FORCE_INLINE GBufferTarget& GetBucket(RenderBucket rb)
     {
         AssertDebug(rb > RenderBucket::RB_NONE && rb < RenderBucket::RB_MAX);
 
         return m_buckets[int(rb) - 1];
     }
 
-    HYP_FORCE_INLINE const GBufferBucket& GetBucket(RenderBucket rb) const
+    HYP_FORCE_INLINE const GBufferTarget& GetBucket(RenderBucket rb) const
     {
         AssertDebug(rb > RenderBucket::RB_NONE && rb < RenderBucket::RB_MAX);
 
@@ -140,7 +133,7 @@ private:
     void CreateBucketFramebuffers();
     FramebufferRef CreateFramebuffer(const FramebufferRef& opaqueFramebuffer, Vec2u resolution, RenderBucket rb);
 
-    FixedArray<GBufferBucket, uint32(RB_MAX) - 1> m_buckets;
+    FixedArray<GBufferTarget, uint32(RB_MAX) - 1> m_buckets;
     Array<FramebufferRef> m_framebuffers;
 
     Vec2u m_extent;

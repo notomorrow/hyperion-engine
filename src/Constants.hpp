@@ -42,7 +42,7 @@ constexpr uint32 maxBoundTextures = 16;
 
 constexpr uint32 maxBindlessResources = 4096;
 
-constexpr uint32 numGbufferTextures = 8;
+constexpr uint32 numGbufferTargets = 8;
 
 template <class... T>
 constexpr bool resolutionFailure = false;

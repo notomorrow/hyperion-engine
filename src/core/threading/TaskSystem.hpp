@@ -3,7 +3,6 @@
 #ifndef HYPERION_TASK_SYSTEM_HPP
 #define HYPERION_TASK_SYSTEM_HPP
 
-#include <core/containers/FixedArray.hpp>
 #include <core/containers/String.hpp>
 #include <core/containers/Array.hpp>
 #include <core/containers/LinkedList.hpp>

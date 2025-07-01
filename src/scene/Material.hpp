@@ -747,8 +747,6 @@ private:
 
     bool m_isDynamic;
 
-    Array<ObjId<Texture>> m_boundTextureIds;
-
     mutable DataMutationState m_mutationState;
 
     RenderMaterial* m_renderResource;

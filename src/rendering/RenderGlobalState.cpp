@@ -79,11 +79,26 @@ static std::counting_semaphore<numFrames> g_freeSemaphore { numFrames }; // game
 
 #pragma region ResourceBindings
 
-typedef void (*WriteBufferDataFunction)(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, void* bufferData, SizeType size);
+typedef void (*WriteBufferDataFunction)(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
+
+template <class ProxyType>
+static void DefaultWriteBufferDataFunction(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy)
+{
+    AssertDebug(gpuBufferHolder != nullptr);
+    AssertDebug(idx != ~0u, "Invalid index for writing buffer data!");
+
+    ProxyType* proxyCasted = static_cast<ProxyType*>(proxy);
+    AssertDebug(proxyCasted != nullptr, "Proxy is null!");
+
+    gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
+}
+
+extern void OnBindingChanged_MeshEntity(Entity* envProbe, uint32 prev, uint32 next);
+extern void WriteBufferData_MeshEntity(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
 
 extern void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 next);
 extern void OnBindingChanged_AmbientProbe(EnvProbe* envProbe, uint32 prev, uint32 next);
-extern void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, void* bufferData, SizeType size);
+extern void WriteBufferData_EnvProbe(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
 
 extern void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next);
 
@@ -104,6 +119,9 @@ struct ResourceBindings
 
     SparsePagedArray<SubtypeResourceBindings, 16> subtypeBindings;
     HashMap<TypeId, SubtypeResourceBindings*> cache;
+
+    ResourceBindingAllocator<> meshEntityBindingsAllocator;
+    ResourceBinder<Entity, &OnBindingChanged_MeshEntity> meshEntityBinder { &meshEntityBindingsAllocator };
 
     // Shared index allocator for reflection probes and sky probes.
     ResourceBindingAllocator<maxBoundReflectionProbes> reflectionProbeBindingsAllocator;
@@ -295,31 +313,24 @@ struct ResourceSubtypeData final
 {
     static constexpr uint32 poolPageSize = 1024;
 
-    // subtype TypeId (Id should map to the same TypeId have it as a base class)
     TypeId typeId;
 
-    // Map from Id -> ResourceData holding ptr to resource and use count.
+    // Map from id -> ResourceData
     SparsePagedArray<ResourceData, 256> data;
 
-    // Indices marked for deletion from the render thread, to be removed from the resource container and SafeRelease()'d
     Bitset indicesPendingDelete;
-
-    // Indices marked for update from the game thread, for the render thread to perform GPU buffer updates to
     Bitset indicesPendingUpdate;
 
-    ResourceBinderBase* resourceBinder = nullptr;
-    GpuBufferHolderBase* gpuBufferHolder = nullptr;
-    WriteBufferDataFunction writeBufferDataFn = nullptr;
+    ResourceBinderBase* resourceBinder;
+    GpuBufferHolderBase* gpuBufferHolder;
+
+    WriteBufferDataFunction writeBufferDataFn;
 
     // == optional render proxy data ==
-    // a pool for allocating render proxies:
     RenderProxyAllocator proxyAllocator;
-
-    // and a map (sparse array) from Id -> proxy ptr (allocated from that pool)
     SparsePagedArray<IRenderProxy*, 256> proxies;
     IRenderProxy* (*constructProxyFn)(void* ptr);
-    void (*assignProxyFn)(IRenderProxy* dst, IRenderProxy* dst);
-    void (*setGpuElemFn)(ResourceSubtypeData* _this, uint32 idx, IRenderProxy* proxy);
+    void (*assignProxyFn)(IRenderProxy* dst, const IRenderProxy* src);
     bool hasProxyData : 1;
 
     template <class ResourceType, class ProxyType>
@@ -328,12 +339,11 @@ struct ResourceSubtypeData final
         TypeWrapper<ProxyType>,
         GpuBufferHolderBase* gpuBufferHolder = nullptr,
         ResourceBinderBase* resourceBinder = nullptr,
-        WriteBufferDataFunction writeBufferDataFn = &GpuBufferHolderBase::WriteBufferData_Static)
+        WriteBufferDataFunction writeBufferDataFn = &DefaultWriteBufferDataFunction<ProxyType>)
         : typeId(TypeId::ForType<ResourceType>()),
           hasProxyData(false),
           constructProxyFn(nullptr),
           assignProxyFn(nullptr),
-          setGpuElemFn(nullptr),
           gpuBufferHolder(gpuBufferHolder),
           resourceBinder(resourceBinder),
           writeBufferDataFn(writeBufferDataFn)
@@ -351,23 +361,14 @@ struct ResourceSubtypeData final
                 return new (ptr) ProxyType;
             };
 
-            assignProxyFn = [](IRenderProxy* dst, IRenderProxy* src)
+            assignProxyFn = [](IRenderProxy* dst, const IRenderProxy* src)
             {
                 AssertDebug(dst != nullptr && src != nullptr);
 
                 ProxyType* dstCasted = static_cast<ProxyType*>(dst);
-                ProxyType* srcCasted = static_cast<ProxyType*>(src);
+                const ProxyType* srcCasted = static_cast<const ProxyType*>(src);
 
                 *dstCasted = *srcCasted;
-            };
-
-            setGpuElemFn = [](ResourceSubtypeData* _this, uint32 idx, IRenderProxy* proxy)
-            {
-                AssertDebug(idx != ~0u);
-
-                ProxyType* proxyCasted = static_cast<ProxyType*>(proxy);
-
-                _this->writeBufferDataFn(_this->gpuBufferHolder, idx, &proxyCasted->bufferData, sizeof(ProxyType::bufferData));
             };
         }
     }
@@ -392,6 +393,15 @@ struct ResourceSubtypeData final
         }
 
         AssertDebug(proxies.Empty());
+    }
+
+    HYP_FORCE_INLINE void SetGpuElem(uint32 idx, IRenderProxy* proxy)
+    {
+        AssertDebug(writeBufferDataFn != nullptr);
+        AssertDebug(gpuBufferHolder != nullptr);
+        AssertDebug(idx != ~0u);
+
+        writeBufferDataFn(gpuBufferHolder, idx, proxy);
     }
 };
 
@@ -472,6 +482,7 @@ struct ResourceContainerFactory
         return staticIndex;
     }
 
+#if 0
     ResourceContainerFactory()
     {
         ResourceContainerFactoryRegistry::GetInstance()
@@ -494,12 +505,13 @@ struct ResourceContainerFactory
                         TypeWrapper<ProxyType>());
                 });
     }
+#endif
 
     template <class ResourceBinderType>
     ResourceContainerFactory(
-        GlobalRenderBuffer buf = GRB_INVALID,
-        ResourceBinderType ResourceBindings::* memResourceBinder = nullptr,
-        WriteBufferDataFunction writeBufferDataFn = &GpuBufferHolderBase::WriteBufferData_Static)
+        GlobalRenderBuffer buf,
+        ResourceBinderType ResourceBindings::* memResourceBinder,
+        WriteBufferDataFunction writeBufferDataFn = &DefaultWriteBufferDataFunction<ProxyType>)
     {
         ResourceContainerFactoryRegistry::GetInstance()
             .funcs.PushBack([=](ResourceBindings& resourceBindings, ResourceContainer& container)
@@ -515,17 +527,11 @@ struct ResourceContainerFactory
                         "SubtypeData container already exists for TypeId %u (HypClass: %s)! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
                         typeId.Value(), *GetClass(typeId)->GetName());
 
-                    GpuBufferHolderBase* gpuBufferHolder = nullptr;
+                    GpuBufferHolderBase* gpuBufferHolder = buf < GRB_MAX ? g_renderGlobalState->gpuBuffers[buf] : nullptr;
+                    AssertDebug(gpuBufferHolder != nullptr, "GlobalRenderBuffer %u is not initialized");
 
-                    if (buf != GRB_INVALID)
-                    {
-                        gpuBufferHolder = g_renderGlobalState->gpuBuffers[buf];
-                        AssertDebug(gpuBufferHolder != nullptr, "GlobalRenderBuffer %u is not initialized");
-                    }
-
-                    ResourceBinderType* resourceBinder = memResourceBinder
-                        ? &(resourceBindings.*memResourceBinder)
-                        : nullptr;
+                    ResourceBinderType* resourceBinder = memResourceBinder ? &(resourceBindings.*memResourceBinder) : nullptr;
+                    AssertDebug(resourceBinder != nullptr, "ResourceBinderType is null");
 
                     container.dataByType.Emplace(
                         staticIndex,
@@ -745,7 +751,7 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
     }
 }
 
-HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, IRenderProxy* srcProxy)
+HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, const IRenderProxy* srcProxy)
 {
     if (!id.IsValid())
     {
@@ -932,15 +938,13 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
             {
                 AssertDebug(elem.resource != nullptr);
                 subtypeData.resourceBinder->Consider(elem.resource);
-
-                // HYP_LOG(Rendering, Debug, "Check proxy for elem: {}", elem.resource->Id());
-                // AssertDebug(RenderApi_GetRenderProxy(elem.resource->Id()) != nullptr);
             }
         }
     }
 
     // assign the actual bindings:
     /// TODO: This should be done in the ResourceBinder itself, not here.
+    g_renderGlobalState->resourceBindings->meshEntityBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->ambientProbeBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->reflectionProbeBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->envGridBinder.ApplyUpdates();
@@ -984,7 +988,8 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
                 AssertDebug(subtypeData.writeBufferDataFn != nullptr, "write_buffer_data_fn is not set for type %s!",
                     *GetClass(subtypeData.typeId)->GetName());
 
-                subtypeData.setGpuElemFn(&subtypeData, boundIndex, proxy);
+                subtypeData.SetGpuElem(boundIndex, proxy);
+
                 subtypeData.indicesPendingUpdate.Set(i, false);
             }
         }
@@ -1093,15 +1098,6 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
         subtypeData.indicesPendingDelete.Clear();
     }
-
-    // Resource counters for binding allocators
-    /// TODO: This should be done in the ResourceBinder itself, not here.
-    g_renderGlobalState->resourceBindings->ambientProbeBindingsAllocator.ResetStat();
-    g_renderGlobalState->resourceBindings->reflectionProbeBindingsAllocator.ResetStat();
-    g_renderGlobalState->resourceBindings->envGridBindingsAllocator.ResetStat();
-    g_renderGlobalState->resourceBindings->lightBindingsAllocator.ResetStat();
-    g_renderGlobalState->resourceBindings->lightmapVolumeBindingsAllocator.ResetStat();
-    g_renderGlobalState->resourceBindings->materialBindingsAllocator.ResetStat();
 
     g_consumerIndex.store((slot + 1) % numFrames, std::memory_order_relaxed);
 
@@ -1357,7 +1353,7 @@ void RenderGlobalState::SetDefaultDescriptorSetElements(uint32 frameIndex)
 
 #pragma endregion RenderGlobalState
 
-DECLARE_RENDER_DATA_CONTAINER(Entity, NullProxy);
+DECLARE_RENDER_DATA_CONTAINER(Entity, RenderProxyMesh, GRB_ENTITIES, &ResourceBindings::meshEntityBinder, &WriteBufferData_MeshEntity);
 DECLARE_RENDER_DATA_CONTAINER(EnvGrid, RenderProxyEnvGrid, GRB_ENV_GRIDS, &ResourceBindings::envGridBinder);
 DECLARE_RENDER_DATA_CONTAINER(ReflectionProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);
 DECLARE_RENDER_DATA_CONTAINER(SkyProbe, RenderProxyEnvProbe, GRB_ENV_PROBES, &ResourceBindings::reflectionProbeBinder, &WriteBufferData_EnvProbe);

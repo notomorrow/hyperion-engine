@@ -153,39 +153,23 @@ void Material::EnqueueRenderUpdates()
         return;
     }
 
-    static const uint32 numBoundTextures = MathUtil::Min(
-        maxTextures,
-        isBindlessSupported ? maxBindlessResources : maxBoundTextures);
+    // MaterialShaderData bufferData {
+    //     .albedo = GetParameter<Vec4f>(MATERIAL_KEY_ALBEDO),
+    //     .packedParams = Vec4u(
+    //         ByteUtil::PackVec4f(Vec4f(
+    //             GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
+    //             GetParameter<float>(MATERIAL_KEY_METALNESS),
+    //             GetParameter<float>(MATERIAL_KEY_TRANSMISSION),
+    //             GetParameter<float>(MATERIAL_KEY_NORMAL_MAP_INTENSITY))),
+    //         ByteUtil::PackVec4f(Vec4f(
+    //             GetParameter<float>(MATERIAL_KEY_ALPHA_THRESHOLD))),
+    //         ByteUtil::PackVec4f(Vec4f {}),
+    //         ByteUtil::PackVec4f(Vec4f {})),
+    //     .uvScale = GetParameter<Vec2f>(MATERIAL_KEY_UV_SCALE),
+    //     .parallaxHeight = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
+    // };
 
-    m_boundTextureIds.Resize(numBoundTextures);
-
-    for (uint32 i = 0; i < numBoundTextures; i++)
-    {
-        if (const Handle<Texture>& texture = m_textures.ValueAt(i))
-        {
-            m_boundTextureIds[i] = texture->Id();
-        }
-    }
-
-    m_renderResource->SetBoundTextureIDs(m_boundTextureIds);
-
-    MaterialShaderData bufferData {
-        .albedo = GetParameter<Vec4f>(MATERIAL_KEY_ALBEDO),
-        .packedParams = Vec4u(
-            ByteUtil::PackVec4f(Vec4f(
-                GetParameter<float>(MATERIAL_KEY_ROUGHNESS),
-                GetParameter<float>(MATERIAL_KEY_METALNESS),
-                GetParameter<float>(MATERIAL_KEY_TRANSMISSION),
-                GetParameter<float>(MATERIAL_KEY_NORMAL_MAP_INTENSITY))),
-            ByteUtil::PackVec4f(Vec4f(
-                GetParameter<float>(MATERIAL_KEY_ALPHA_THRESHOLD))),
-            ByteUtil::PackVec4f(Vec4f {}),
-            ByteUtil::PackVec4f(Vec4f {})),
-        .uvScale = GetParameter<Vec2f>(MATERIAL_KEY_UV_SCALE),
-        .parallaxHeight = GetParameter<float>(MATERIAL_KEY_PARALLAX_HEIGHT)
-    };
-
-    m_renderResource->SetBufferData(bufferData);
+    // m_renderResource->SetBufferData(bufferData);
 
     SetNeedsRenderProxyUpdate();
 
@@ -367,6 +351,7 @@ Handle<Material> Material::Clone() const
     return material;
 }
 
+HYP_DISABLE_OPTIMIZATION;
 void Material::UpdateRenderProxy(IRenderProxy* proxy)
 {
     RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
@@ -392,32 +377,53 @@ void Material::UpdateRenderProxy(IRenderProxy* proxy)
     bufferData.textureUsage = 0;
     Memory::MemSet(bufferData.textureIndex, 0, sizeof(bufferData.textureIndex));
 
-    proxyCasted->boundTextures = {};
+    const uint32 numTextureSlots = MathUtil::Min(maxTextures, useBindlessTextures ? maxBindlessResources : maxBoundTextures);
+    uint32 remainingTextureSlots = numTextureSlots;
 
-    if (m_boundTextureIds.Any())
+    proxyCasted->boundTextures.Clear();
+
+    // unset all bound texture indices
+    for (uint32 i = 0; i < maxBoundTextures; ++i)
     {
-        AssertDebug(m_boundTextureIds.Size() <= proxyCasted->boundTextures.Size());
+        proxyCasted->boundTextureIndices[i] = ~0u;
+    }
 
-        for (SizeType i = 0; i < m_boundTextureIds.Size(); i++)
+    for (const auto& it : m_textures)
+    {
+        if (remainingTextureSlots == 0)
         {
-            if (m_boundTextureIds[i].IsValid())
+            break;
+        }
+
+        const uint32 slot = MathUtil::FastLog2_Pow2(uint32(it.first));
+        const Handle<Texture>& texture = it.second;
+
+        if (texture.IsValid())
+        {
+            AssertDebug(slot < maxBoundTextures);
+
+            const uint32 idx = uint32(proxyCasted->boundTextures.Size());
+            proxyCasted->boundTextures.PushBack(texture);
+
+            if (useBindlessTextures)
             {
-                if (useBindlessTextures)
-                {
-                    bufferData.textureIndex[i] = m_boundTextureIds[i].ToIndex();
-                }
-                else
-                {
-                    bufferData.textureIndex[i] = i;
-                }
-
-                bufferData.textureUsage |= 1 << i;
-
-                proxyCasted->boundTextures[i] = Handle<Texture> { m_boundTextureIds[i] };
+                bufferData.textureIndex[slot] = texture.Id().ToIndex();
             }
+            else
+            {
+                bufferData.textureIndex[slot] = idx;
+            }
+
+            // enable this slot for the texture
+            bufferData.textureUsage |= 1u << slot;
+
+            proxyCasted->boundTextureIndices[slot] = idx;
+
+            --remainingTextureSlots;
         }
     }
 }
+HYP_ENABLE_OPTIMIZATION;
 
 HashCode Material::GetHashCode() const
 {

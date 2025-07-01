@@ -62,7 +62,7 @@ void DepthPyramidRenderer::Create()
     const FramebufferRef& opaqueFramebuffer = m_gbuffer->GetBucket(RB_OPAQUE).GetFramebuffer();
     AssertThrow(opaqueFramebuffer.IsValid());
 
-    AttachmentBase* depthAttachment = opaqueFramebuffer->GetAttachment(GBUFFER_RESOURCE_MAX - 1);
+    AttachmentBase* depthAttachment = opaqueFramebuffer->GetAttachment(GTN_MAX - 1);
     AssertThrow(depthAttachment != nullptr);
 
     m_depthImageView = depthAttachment->GetImageView();

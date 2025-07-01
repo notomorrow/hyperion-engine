@@ -351,11 +351,7 @@ static void RenderAll(
                 offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
             }
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
-                entityDescriptorSet,
-                pipeline,
-                offsets,
-                entityDescriptorSetIndex);
+            frame->GetCommandList().Add<BindDescriptorSet>(entityDescriptorSet, pipeline, offsets, entityDescriptorSetIndex);
         }
 
         // Bind material descriptor set
@@ -363,11 +359,7 @@ static void RenderAll(
         {
             const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frame->GetFrameIndex());
 
-            frame->GetCommandList().Add<BindDescriptorSet>(
-                materialDescriptorSet,
-                pipeline,
-                ArrayMap<Name, uint32> {},
-                materialDescriptorSetIndex);
+            frame->GetCommandList().Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
         }
 
         if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)
@@ -559,11 +551,7 @@ static void RenderAll_Parallel(
                             offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
                         }
 
-                        commandList.Add<BindDescriptorSet>(
-                            entityDescriptorSet,
-                            pipeline,
-                            offsets,
-                            entityDescriptorSetIndex);
+                        commandList.Add<BindDescriptorSet>(entityDescriptorSet, pipeline, offsets, entityDescriptorSetIndex);
                     }
 
                     // Bind material descriptor set
@@ -571,11 +559,7 @@ static void RenderAll_Parallel(
                     {
                         const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frameIndex);
 
-                        commandList.Add<BindDescriptorSet>(
-                            materialDescriptorSet,
-                            pipeline,
-                            ArrayMap<Name, uint32> {},
-                            materialDescriptorSetIndex);
+                        commandList.Add<BindDescriptorSet>(materialDescriptorSet, pipeline, ArrayMap<Name, uint32> {}, materialDescriptorSetIndex);
                     }
 
                     if (UseIndirectRendering && drawCall.drawCommandIndex != ~0u)

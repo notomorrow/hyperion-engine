@@ -224,28 +224,28 @@ public:
      *  \return A Span<T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE operator Span<T>()
     {
-        return Span<T>(&m_values[0], Sz);
+        return Span<T>(Begin(), End());
     }
 
     /*! \brief Creates a Span<T> from the FixedArray's data.
      *  \return A Span<T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE operator Span<const T>() const
     {
-        return Span<const T>(&m_values[0], Sz);
+        return Span<const T>(Begin(), End());
     }
 
     /*! \brief Creates a Span<T> from the FixedArray's data.
      *  \return A Span<T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE Span<T> ToSpan()
     {
-        return Span<T>(Data(), Size());
+        return Span<T>(Begin(), End());
     }
 
     /*! \brief Creates a Span<const T> from the FixedArray's data.
      *  \return A Span<const T> of the FixedArray's data. */
     HYP_NODISCARD HYP_FORCE_INLINE Span<const T> ToSpan() const
     {
-        return Span<const T>(Data(), Size());
+        return Span<const T>(Begin(), End());
     }
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -254,7 +254,7 @@ public:
         return impl.GetHashCode();
     }
 
-    HYP_DEF_STL_BEGIN_END(&m_values[0], &m_values[Sz])
+    HYP_DEF_STL_BEGIN_END(&m_values[0], &m_values[0] + Sz)
 };
 
 // template <class T, SizeType Sz>
