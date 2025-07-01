@@ -203,6 +203,8 @@ public:
         gpuBufferHolder->WriteBufferData_Internal(index, bufferDataPtr);
     }
 
+    virtual void* GetCpuMapping(uint32 index) = 0;
+
 protected:
     void CreateBuffers(GpuBufferType type, SizeType count, SizeType size, SizeType alignment = 0);
 
@@ -266,7 +268,7 @@ public:
         const uint32 rangeEnd = m_dirtyRanges[frameIndex].GetEnd(),
                      rangeStart = m_dirtyRanges[frameIndex].GetStart();
 
-        AssertThrowMsg(buffer->Size() >= rangeEnd * sizeof(StructType),
+        AssertDebug(buffer->Size() >= rangeEnd * sizeof(StructType),
             "Buffer does not have enough space for the current number of elements! Buffer size = %llu",
             buffer->Size());
 
@@ -295,9 +297,8 @@ public:
             const SizeType count = Base::numElementsPerBlock;
 
             // sanity checks
-            AssertThrow(offset - index < beginIt->elements.Size());
-
-            AssertThrowMsg(count <= int64(bufferSize / sizeof(StructType)) - int64(offset),
+            AssertDebug((offset - index) * sizeof(StructType) < sizeof(beginIt->buffer));
+            AssertDebug(count <= int64(bufferSize / sizeof(StructType)) - int64(offset),
                 "Buffer does not have enough space for the current number of elements! Buffer size = %llu, Required size = %llu",
                 bufferSize,
                 (offset + count) * sizeof(StructType));
@@ -305,7 +306,7 @@ public:
             buffer->Copy(
                 offset * sizeof(StructType),
                 count * sizeof(StructType),
-                &beginIt->elements[offset - index]);
+                &reinterpret_cast<StructType*>(beginIt->buffer.GetPointer())[offset - index]);
         }
 
         m_dirtyRanges[frameIndex].Reset();
@@ -363,7 +364,7 @@ public:
 
     virtual void ReadbackElement(uint32 frameIndex, uint32 index, void* dst) override
     {
-        AssertThrowMsg(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = %u, Size = %u", index, m_pool.NumAllocatedElements());
+        AssertDebug(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = %u, Size = %u", index, m_pool.NumAllocatedElements());
 
         m_buffers[frameIndex]->Read(sizeof(StructType) * index, sizeof(StructType), dst);
     }
@@ -399,6 +400,13 @@ public:
     HYP_FORCE_INLINE void WriteBufferData(uint32 index, const StructType& value)
     {
         m_pool.SetElement(index, value);
+    }
+
+    virtual void* GetCpuMapping(uint32 index) override
+    {
+        AssertDebug(index < m_pool.NumAllocatedElements(), "Index out of bounds! Index = %u, Size = %u", index, m_pool.NumAllocatedElements());
+
+        return &m_pool.GetElement(index);
     }
 
 private:

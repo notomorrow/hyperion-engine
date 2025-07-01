@@ -79,6 +79,7 @@ static std::counting_semaphore<numFrames> g_freeSemaphore { numFrames }; // game
 
 #pragma region ResourceBindings
 
+/// TODO: refactor to use mappings instead of idx (void* directly to element on cpu)
 typedef void (*WriteBufferDataFunction)(GpuBufferHolderBase* gpuBufferHolder, uint32 idx, IRenderProxy* proxy);
 
 template <class ProxyType>
@@ -111,10 +112,16 @@ struct ResourceBindings
 {
     struct SubtypeResourceBindings
     {
-        // Map Id -> binding value
-        SparsePagedArray<uint32, 1024> data;
-        // Map Id -> resource reference count
-        SparsePagedArray<AtomicVar<uint32>, 1024> refCounts;
+        GpuBufferHolderBase* gpuBufferHolder;
+
+        // Element binding index to mapping in CPU memory
+        SparsePagedArray<Pair<uint32, void*>, 1024> indexAndMapping;
+
+        SubtypeResourceBindings(GpuBufferHolderBase* gpuBufferHolder)
+            : gpuBufferHolder(gpuBufferHolder)
+        {
+            AssertDebug(gpuBufferHolder != nullptr);
+        }
     };
 
     SparsePagedArray<SubtypeResourceBindings, 16> subtypeBindings;
@@ -154,57 +161,37 @@ struct ResourceBindings
 
         if (binding == ~0u)
         {
-            bindings.data.EraseAt(id.ToIndex());
-            bindings.refCounts.EraseAt(id.ToIndex());
+            bindings.indexAndMapping.EraseAt(id.ToIndex());
+
+            return;
         }
-        else
-        {
-            bindings.data.Set(id.ToIndex(), binding);
-            bindings.refCounts.Emplace(id.ToIndex(), 0);
-        }
+
+        /// TODO: Move this to somewhere else (like when the binding gets created?)
+        bindings.gpuBufferHolder->EnsureCapacity(binding);
+
+        void* cpuMapping = bindings.gpuBufferHolder->GetCpuMapping(binding);
+        AssertDebug(cpuMapping != nullptr);
+
+        bindings.indexAndMapping.Emplace(id.ToIndex(), binding, cpuMapping);
     }
 
-    HYP_FORCE_INLINE uint32 Retrieve(const HypObjectBase* resource) const
+    HYP_FORCE_INLINE Pair<uint32, void*> Retrieve(const HypObjectBase* resource) const
     {
-        return resource ? Retrieve(resource->Id()) : ~0u;
+        return resource ? Retrieve(resource->Id()) : Pair<uint32, void*>(~0u, nullptr);
     }
 
-    HYP_FORCE_INLINE uint32 Retrieve(ObjIdBase id) const
+    HYP_FORCE_INLINE Pair<uint32, void*> Retrieve(ObjIdBase id) const
     {
         if (!id.IsValid())
         {
-            return ~0u; // invalid resource
+            return Pair<uint32, void*>(~0u, nullptr); // invalid resource
         }
 
         const SubtypeResourceBindings& bindings = const_cast<ResourceBindings*>(this)->GetSubtypeBindings(id.GetTypeId());
 
-        const uint32* binding = bindings.data.TryGet(id.ToIndex());
+        const auto* elem = bindings.indexAndMapping.TryGet(id.ToIndex());
 
-        return binding ? *binding : ~0u;
-    }
-
-    void AddRef(ObjIdBase id)
-    {
-        AssertDebug(id.IsValid());
-
-        SubtypeResourceBindings& bindings = GetSubtypeBindings(id.GetTypeId());
-
-        AtomicVar<uint32>* refCount = bindings.refCounts.TryGet(id.ToIndex());
-        AssertDebug(refCount != nullptr, "No ref count for resource with id %u!", id.Value());
-
-        refCount->Increment(1, MemoryOrder::RELEASE);
-    }
-
-    void ReleaseRef(ObjIdBase id)
-    {
-        AssertDebug(id.IsValid());
-
-        SubtypeResourceBindings& bindings = GetSubtypeBindings(id.GetTypeId());
-
-        AtomicVar<uint32>* refCount = bindings.refCounts.TryGet(id.ToIndex());
-        AssertDebug(refCount != nullptr, "No ref count for resource with id %u!", id.Value());
-
-        refCount->Decrement(1, MemoryOrder::RELEASE);
+        return elem ? *elem : Pair<uint32, void*>(~0u, nullptr);
     }
 
     SubtypeResourceBindings& GetSubtypeBindings(TypeId typeId)
@@ -518,20 +505,20 @@ struct ResourceContainerFactory
                 {
                     const int staticIndex = GetStaticIndexOrFail();
 
-                    if (!resourceBindings.subtypeBindings.HasIndex(staticIndex))
-                    {
-                        resourceBindings.subtypeBindings.Emplace(staticIndex);
-                    }
-
-                    AssertDebugMsg(!container.dataByType.HasIndex(staticIndex),
-                        "SubtypeData container already exists for TypeId %u (HypClass: %s)! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
-                        typeId.Value(), *GetClass(typeId)->GetName());
-
                     GpuBufferHolderBase* gpuBufferHolder = buf < GRB_MAX ? g_renderGlobalState->gpuBuffers[buf] : nullptr;
                     AssertDebug(gpuBufferHolder != nullptr, "GlobalRenderBuffer %u is not initialized");
 
                     ResourceBinderType* resourceBinder = memResourceBinder ? &(resourceBindings.*memResourceBinder) : nullptr;
                     AssertDebug(resourceBinder != nullptr, "ResourceBinderType is null");
+
+                    if (!resourceBindings.subtypeBindings.HasIndex(staticIndex))
+                    {
+                        resourceBindings.subtypeBindings.Emplace(staticIndex, gpuBufferHolder);
+                    }
+
+                    AssertDebugMsg(!container.dataByType.HasIndex(staticIndex),
+                        "SubtypeData container already exists for TypeId %u (HypClass: %s)! Duplicate DECLARE_RENDER_DATA_CONTAINER() macro invocation for type?",
+                        typeId.Value(), *GetClass(typeId)->GetName());
 
                     container.dataByType.Emplace(
                         staticIndex,
@@ -856,7 +843,7 @@ HYP_API uint32 RenderApi_RetrieveResourceBinding(const HypObjectBase* resource)
     Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 #endif
 
-    return g_renderGlobalState->resourceBindings->Retrieve(resource);
+    return g_renderGlobalState->resourceBindings->Retrieve(resource).first;
 }
 
 HYP_API void RenderApi_BeginFrame_GameThread()
@@ -978,17 +965,14 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
 
                 const ObjIdBase resourceId = ObjIdBase(subtypeData.typeId, uint32(i + 1));
 
-                const uint32 boundIndex = g_renderGlobalState->resourceBindings->Retrieve(resourceId);
-                AssertDebug(boundIndex != ~0u, "Failed to retrieve binding for resource: %u of type %s in frame %u, but it is marked as bound (index: %u)",
+                const Pair<uint32, void*> bindingData = g_renderGlobalState->resourceBindings->Retrieve(resourceId);
+                AssertDebug(bindingData.first != ~0u && bindingData.second != nullptr, "Failed to retrieve binding for resource: %u of type %s in frame %u, but it is marked as bound (index: %u)",
                     resourceId.Value(), *GetClass(resourceId.GetTypeId())->GetName(), slot, i);
 
                 IRenderProxy* proxy = subtypeData.proxies.Get(i);
                 AssertDebug(proxy != nullptr);
 
-                AssertDebug(subtypeData.writeBufferDataFn != nullptr, "write_buffer_data_fn is not set for type %s!",
-                    *GetClass(subtypeData.typeId)->GetName());
-
-                subtypeData.SetGpuElem(boundIndex, proxy);
+                subtypeData.SetGpuElem(bindingData.first, proxy);
 
                 subtypeData.indicesPendingUpdate.Set(i, false);
             }

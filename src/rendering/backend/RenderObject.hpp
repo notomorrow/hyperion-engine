@@ -131,6 +131,8 @@ struct RenderObjectHeaderBase
         {
             refCountWeak.Increment(1, MemoryOrder::RELEASE);
 
+            AssertDebug(deleter != nullptr);
+
             deleter(this);
 
             if (refCountWeak.Decrement(1, MemoryOrder::ACQUIRE_RELEASE) == 1)

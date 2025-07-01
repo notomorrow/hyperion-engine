@@ -47,6 +47,8 @@ struct MemoryPoolBlock
 
     MemoryPoolBlock(void* ctx, uint32 blockIndex)
     {
+        Memory::MemSet(buffer.GetPointer(), 0, numElementsPerBlock * sizeof(ElementType));
+
         // Allow overloading assignment of elements
         if (OnBlockAllocated != nullptr)
         {
@@ -54,19 +56,17 @@ struct MemoryPoolBlock
         }
         else
         {
-            if constexpr (isPodType<ElementType>)
-            {
-                // Default initialization for POD types - zero it out
-                Memory::MemSet(reinterpret_cast<ElementType*>(buffer.GetPointer()), 0, numElementsPerBlock * sizeof(ElementType));
-            }
-            else if constexpr (std::is_copy_assignable_v<ElementType> || std::is_move_assignable_v<ElementType>)
+            if constexpr (!isPodType<ElementType>)
             {
                 // For non-POD types, default assign each element
                 for (uint32 i = 0; i < numElementsPerBlock; i++)
                 {
-                    const uint32 offset = i * sizeof(ElementType);
+                    new (reinterpret_cast<ElementType*>(buffer.GetPointer()) + i) ElementType();
 
-                    new (reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buffer.GetPointer()) + offset)) ElementType();
+                    // if constexpr (std::is_copy_assignable_v<ElementType> || std::is_move_assignable_v<ElementType>)
+                    // {
+                    //     *(reinterpret_cast<ElementType*>(buffer.GetPointer()) + i) = ElementType {};
+                    // }
                 }
             }
         }
@@ -189,7 +189,7 @@ public:
 
             if (outElementPtr != nullptr)
             {
-                *outElementPtr = &block.elements[index % numElementsPerBlock];
+                *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
             }
         }
         else
@@ -203,7 +203,7 @@ public:
 
                 if (outElementPtr != nullptr)
                 {
-                    *outElementPtr = &block.elements[index % numElementsPerBlock];
+                    *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
                 }
             }
             else
@@ -225,7 +225,7 @@ public:
 
                 if (outElementPtr != nullptr)
                 {
-                    *outElementPtr = &block.elements[index % numElementsPerBlock];
+                    *outElementPtr = &reinterpret_cast<ElementType*>(block.buffer.GetPointer())[index % numElementsPerBlock];
                 }
             }
         }
@@ -301,7 +301,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_READ(block.dataRaceDetectors[elementIndex]);
 
-            return block.elements[elementIndex];
+            return reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex];
         }
         else
         {
@@ -310,7 +310,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_READ(block.dataRaceDetectors[elementIndex]);
 
-            return block.elements[elementIndex];
+            return reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex];
         }
     }
 
@@ -328,7 +328,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            block.elements[elementIndex] = value;
+            reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex] = value;
         }
         else
         {
@@ -339,7 +339,7 @@ public:
             Block& block = m_blocks[blockIndex];
             HYP_MT_CHECK_RW(block.dataRaceDetectors[elementIndex]);
 
-            block.elements[elementIndex] = value;
+            reinterpret_cast<ElementType*>(block.buffer.GetPointer())[elementIndex] = value;
         }
     }
 
