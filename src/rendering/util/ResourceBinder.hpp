@@ -58,6 +58,16 @@ struct ResourceBindingAllocatorBase
         usedIndices.Set(index, false);
     }
 
+    HYP_FORCE_INLINE uint32 GetHighestUsedIndex() const
+    {
+        if (!usedIndices.AnyBitsSet())
+        {
+            return 0;
+        }
+
+        return usedIndices.LastSetBitIndex();
+    }
+
     // the maximum size of this allocator, i.e. the maximum number of bindings that can be allocated in a single frame
     // if set to ~0u, no limit is used when allocating indices
     const uint32 maxSize;
@@ -97,6 +107,8 @@ public:
 
     // Get a bitset containing all the bound resources of a given type.
     virtual const Bitset& GetBoundIndices(TypeId typeId) const = 0;
+
+    virtual uint32 TotalBoundResources() const = 0;
 
 protected:
     ResourceBinderBase(ResourceBindingAllocatorBase* bindingAllocator)
@@ -255,9 +267,7 @@ class ResourceBinder : public ResourceBinderBase
                     after.Count());
             }
 
-            // swap id bitsets
-            lastFrameIds = std::move(currentFrameIds);
-            currentFrameIds.Clear();
+            lastFrameIds = currentFrameIds;
         }
 
         HYP_FORCE_INLINE Bitset GetNewlyAdded() const
@@ -419,6 +429,18 @@ public:
 
             return m_subclassImpls[subclassIndex].Get().lastFrameIds;
         }
+    }
+
+    virtual uint32 TotalBoundResources() const override
+    {
+        uint32 total = m_impl.currentFrameIds.Count();
+
+        for (Bitset::BitIndex i : m_subclassImplsInitialized)
+        {
+            total += m_subclassImpls[i].Get().currentFrameIds.Count();
+        }
+
+        return total;
     }
 
 protected:

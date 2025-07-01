@@ -55,7 +55,6 @@ void WriteBufferData_MeshEntity(GpuBufferHolderBase* gpuBufferHolder, uint32 idx
     proxyCasted->bufferData.skeletonIndex = proxyCasted->skeleton ? proxyCasted->skeleton->GetRenderResource().GetBufferIndex() : ~0u;
     // proxyCasted->bufferData.skeletonIndex = RenderApi_RetrieveResourceBinding(proxyCasted->skeleton);
 
-    gpuBufferHolder->EnsureCapacity(idx);
     gpuBufferHolder->WriteBufferData(idx, &proxyCasted->bufferData, sizeof(proxyCasted->bufferData));
 }
 
@@ -207,6 +206,12 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     Threads::AssertOnThread(g_renderThread);
 
     AssertDebug(material != nullptr);
+
+    // // debugging :
+    // if (next == ~0u && material->Id().Value() == 8)
+    // {
+    //     HYP_BREAKPOINT;
+    // }
 
     HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {} for frame {}", material->Id(), prev, next, RenderApi_GetFrameIndex_RenderThread());
     // RenderApi_AssignResourceBinding(material, next);

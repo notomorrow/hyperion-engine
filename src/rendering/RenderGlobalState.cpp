@@ -152,6 +152,10 @@ struct ResourceBindings
 
     void Assign(HypObjectBase* resource, uint32 binding)
     {
+#ifdef HYP_DEBUG_MODE
+        Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
+#endif
+
         AssertDebug(resource != nullptr);
 
         ObjIdBase id = resource->Id();
@@ -177,11 +181,19 @@ struct ResourceBindings
 
     HYP_FORCE_INLINE Pair<uint32, void*> Retrieve(const HypObjectBase* resource) const
     {
+#ifdef HYP_DEBUG_MODE
+        Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
+#endif
+
         return resource ? Retrieve(resource->Id()) : Pair<uint32, void*>(~0u, nullptr);
     }
 
     HYP_FORCE_INLINE Pair<uint32, void*> Retrieve(ObjIdBase id) const
     {
+#ifdef HYP_DEBUG_MODE
+        Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
+#endif
+
         if (!id.IsValid())
         {
             return Pair<uint32, void*>(~0u, nullptr); // invalid resource
@@ -196,6 +208,10 @@ struct ResourceBindings
 
     SubtypeResourceBindings& GetSubtypeBindings(TypeId typeId)
     {
+#ifdef HYP_DEBUG_MODE
+        Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
+#endif
+
         auto cacheIt = cache.Find(typeId);
         if (cacheIt != cache.End())
         {
@@ -939,6 +955,14 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
     g_renderGlobalState->resourceBindings->lightmapVolumeBinder.ApplyUpdates();
     g_renderGlobalState->resourceBindings->materialBinder.ApplyUpdates();
 
+    HYP_LOG(Rendering, Debug, "Mesh entities: {} bound", g_renderGlobalState->resourceBindings->meshEntityBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Ambient probes: {} bound", g_renderGlobalState->resourceBindings->ambientProbeBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Reflection probes: {} bound", g_renderGlobalState->resourceBindings->reflectionProbeBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Env grids: {} bound", g_renderGlobalState->resourceBindings->envGridBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Lights: {} bound", g_renderGlobalState->resourceBindings->lightBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Lightmap volumes: {} bound", g_renderGlobalState->resourceBindings->lightmapVolumeBinder.TotalBoundResources());
+    HYP_LOG(Rendering, Debug, "Materials: {} bound", g_renderGlobalState->resourceBindings->materialBinder.TotalBoundResources());
+
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
     {
         if (subtypeData.indicesPendingUpdate.Count() != 0)
@@ -1022,18 +1046,8 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
     for (ResourceSubtypeData& subtypeData : frameData.resources.dataByType)
     {
-        if (subtypeData.resourceBinder)
-        {
-            for (ResourceData& elem : subtypeData.data)
-            {
-                AssertDebug(elem.resource != nullptr);
-
-                subtypeData.resourceBinder->Deconsider(elem.resource);
-            }
-        }
-
         // @TODO: for deletion, have a fixed number to iterate over per frame so we don't spend too much time on it.
-        // Remove resources pending deletion via SafeDelete() for indices marked for deletion from the game thread
+        // Remove resources pending deletion via SafeRelease() for indices marked for deletion from the game thread
         for (Bitset::BitIndex i : subtypeData.indicesPendingDelete)
         {
             ResourceData& rd = subtypeData.data.Get(i);
@@ -1042,6 +1056,8 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
             // if we delete it, we want to make sure it is not in marked for update state (don't want to iterate over dead items)
             subtypeData.indicesPendingUpdate.Set(i, false);
+
+            subtypeData.resourceBinder->Deconsider(rd.resource);
 
             // Swap refcount owner over to the Handle
             AnyHandle resource { rd.resource };

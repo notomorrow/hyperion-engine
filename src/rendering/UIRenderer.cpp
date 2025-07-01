@@ -86,7 +86,7 @@ struct RENDER_COMMAND(AddUIRenderer)
 
     virtual RendererResult operator()() override
     {
-        // g_renderGlobalState->AddRenderer(GRT_UI, uiRenderer);
+        g_renderGlobalState->AddRenderer(GRT_UI, uiRenderer);
 
         HYPERION_RETURN_OK;
     }
@@ -104,7 +104,7 @@ struct RENDER_COMMAND(RemoveUIRenderer)
 
     virtual RendererResult operator()() override
     {
-        // g_renderGlobalState->RemoveRenderer(GRT_UI, uiRenderer);
+        g_renderGlobalState->RemoveRenderer(GRT_UI, uiRenderer);
 
         HYPERION_RETURN_OK;
     }
@@ -402,9 +402,7 @@ void UIRenderer::RenderFrame(FrameBase* frame, const RenderSetup& renderSetup)
     const ViewOutputTarget& outputTarget = m_view->GetOutputTarget();
     AssertThrow(outputTarget.IsValid());
 
-    RenderCollector::ExecuteDrawCalls(frame, rs, RenderApi_GetConsumerProxyList(m_view), 0);
-
-    // m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
+    m_renderCollector.ExecuteDrawCalls(frame, rs, outputTarget.GetFramebuffer());
 }
 
 PassData* UIRenderer::CreateViewPassData(View* view, PassDataExt&)
@@ -524,14 +522,18 @@ void UIRenderSubsystem::PreUpdate(float delta)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread);
-
-    m_uiStage->Update(delta);
 }
 
 void UIRenderSubsystem::Update(float delta)
 {
-    return; // tempp
+    m_uiStage->Update(delta);
+
+    m_view->UpdateVisibility();
+    // m_view->Update(delta);
+
     RenderProxyList& rpl = RenderApi_GetProducerProxyList(m_view);
+    rpl.viewport = m_view->GetViewport();
+    rpl.priority = m_view->GetPriority();
     rpl.meshes.Advance(AdvanceAction::CLEAR);
 
     UIRenderCollector& renderCollector = m_uiRenderer->GetRenderCollector();

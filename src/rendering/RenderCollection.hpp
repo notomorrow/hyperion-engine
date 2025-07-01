@@ -75,7 +75,7 @@ struct ParallelRenderingState
 struct DrawCallCollectionMapping
 {
     Handle<RenderGroup> renderGroup;
-    HashMap<ObjId<Entity>, RenderProxyMesh*> renderProxies;
+    SparsePagedArray<RenderProxyMesh*, 128> meshProxies;
     DrawCallCollection drawCallCollection;
     IndirectRenderer* indirectRenderer = nullptr;
 

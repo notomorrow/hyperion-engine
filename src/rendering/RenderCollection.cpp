@@ -538,9 +538,6 @@ void RenderCollector::CollectDrawCalls(RenderProxyList& renderProxyList, uint32 
         AssertDebug(mapping.IsValid());
 
         DrawCallCollection& drawCallCollection = mapping.drawCallCollection;
-
-        // mapping.renderGroup->CollectDrawCalls(mapping.drawCallCollection);
-
         drawCallCollection.impl = mapping.renderGroup->GetDrawCallCollectionImpl();
         drawCallCollection.renderGroup = mapping.renderGroup;
 
@@ -548,18 +545,15 @@ void RenderCollector::CollectDrawCalls(RenderProxyList& renderProxyList, uint32 
 
         DrawCallCollection previousDrawState = std::move(drawCallCollection);
 
-        for (const auto& it : mapping.renderProxies)
+        for (RenderProxyMesh* meshProxy : mapping.meshProxies)
         {
-            const RenderProxyMesh* renderProxy = it.second;
-            AssertDebug(renderProxy != nullptr);
+            AssertDebug(meshProxy->mesh.IsValid());
+            AssertDebug(meshProxy->mesh->IsReady());
 
-            AssertDebug(renderProxy->mesh.IsValid());
-            AssertDebug(renderProxy->mesh->IsReady());
+            AssertDebug(meshProxy->material.IsValid());
+            AssertDebug(meshProxy->material->IsReady());
 
-            AssertDebug(renderProxy->material.IsValid());
-            AssertDebug(renderProxy->material->IsReady());
-
-            if (renderProxy->instanceData.numInstances == 0)
+            if (meshProxy->instanceData.numInstances == 0)
             {
                 continue;
             }
@@ -568,17 +562,16 @@ void RenderCollector::CollectDrawCalls(RenderProxyList& renderProxyList, uint32 
 
             if (uniquePerMaterial)
             {
-                drawCallId = DrawCallID(renderProxy->mesh->Id(), renderProxy->material->Id());
+                drawCallId = DrawCallID(meshProxy->mesh->Id(), meshProxy->material->Id());
             }
             else
             {
-                drawCallId = DrawCallID(renderProxy->mesh->Id());
+                drawCallId = DrawCallID(meshProxy->mesh->Id());
             }
 
-            if (!renderProxy->instanceData.enableAutoInstancing
-                && renderProxy->instanceData.numInstances == 1)
+            if (!meshProxy->instanceData.enableAutoInstancing && meshProxy->instanceData.numInstances == 1)
             {
-                drawCallCollection.PushRenderProxy(drawCallId, *renderProxy); // NOLINT(bugprone-use-after-move)
+                drawCallCollection.PushRenderProxy(drawCallId, *meshProxy); // NOLINT(bugprone-use-after-move)
 
                 continue;
             }
@@ -597,7 +590,7 @@ void RenderCollector::CollectDrawCalls(RenderProxyList& renderProxyList, uint32 
                 drawCallCollection.impl->GetEntityInstanceBatchHolder()->MarkDirty(batch->batchIndex);
             }
 
-            drawCallCollection.PushRenderProxyInstanced(batch, drawCallId, *renderProxy);
+            drawCallCollection.PushRenderProxyInstanced(batch, drawCallId, *meshProxy);
         }
 
         // Any draw calls that were not reused from the previous state, clear them out and release batch indices.
@@ -665,7 +658,7 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
 
     if (renderSetup.view->GetView()->GetFlags() & ViewFlags::GBUFFER)
     {
-        // Pass NULL framebuffer for GBuffer rendering, as it will be handled by the GBuffer renderer outside of this.
+        // Pass NULL framebuffer for GBuffer rendering, as it will be handled by DeferredRenderer outside of this scope.
         ExecuteDrawCalls(frame, renderSetup, renderProxyList, FramebufferRef::Null(), bucketBits);
     }
     else
@@ -683,11 +676,6 @@ void RenderCollector::ExecuteDrawCalls(FrameBase* frame, const RenderSetup& rend
     Threads::AssertOnThread(g_renderThread);
 
     const uint32 frameIndex = frame->GetFrameIndex();
-
-    if (!ByteUtil::BitCount(bucketBits))
-    {
-        return;
-    }
 
     HYP_MT_CHECK_RW(renderProxyList.dataRaceDetector);
 
