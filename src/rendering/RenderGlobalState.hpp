@@ -36,6 +36,7 @@ class SkyProbe;
 class RenderGlobalState;
 class RenderResourceLock;
 class UIRenderer;
+class MaterialDescriptorSetManager;
 
 HYP_API extern SizeType GetNumDescendants(TypeId typeId);
 HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
@@ -149,6 +150,8 @@ public:
 
     GlobalGpuBuffers gpuBuffers;
     ResourceBindings* resourceBindings;
+
+    MaterialDescriptorSetManager* materialDescriptorSetManager;
 
 private:
     void CreateBlueNoiseBuffer();

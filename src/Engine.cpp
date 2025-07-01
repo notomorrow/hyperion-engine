@@ -277,9 +277,6 @@ HYP_API void Engine::Init()
             /* enabled */ true });
     }
 
-    m_materialDescriptorSetManager = MakeUnique<MaterialDescriptorSetManager>();
-    m_materialDescriptorSetManager->Initialize();
-
     m_graphicsPipelineCache = MakeUnique<GraphicsPipelineCache>();
     m_graphicsPipelineCache->Initialize();
 
@@ -398,8 +395,6 @@ void Engine::FinalizeStop()
     m_graphicsPipelineCache->Destroy();
     m_graphicsPipelineCache.Reset();
 
-    m_materialDescriptorSetManager.Reset();
-
     m_debugDrawer.Reset();
 
     m_finalPass.Reset();
@@ -443,9 +438,6 @@ void Engine::PreFrameUpdate(FrameBase* frame)
     HYP_SCOPE;
 
     Threads::AssertOnThread(g_renderThread);
-
-    m_materialDescriptorSetManager->UpdatePendingDescriptorSets(frame);
-    m_materialDescriptorSetManager->Update(frame);
 
     if (m_world->IsReady())
         m_world->GetRenderResource().PreRender(frame);

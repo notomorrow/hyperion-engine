@@ -97,51 +97,51 @@ void RenderMaterial::Update_Internal()
 
     AssertThrow(m_material != nullptr);
 
-    static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
+    // static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
 
-    if (!useBindlessTextures)
-    {
+    // if (!useBindlessTextures)
+    // {
 
-        auto setMaterialTexture = [this](const Handle<Material>& material, uint32 textureIndex, const Handle<Texture>& texture)
-        {
-            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-            {
-                const DescriptorSetRef& descriptorSet = g_engine->GetMaterialDescriptorSetManager()->GetDescriptorSet(this, frameIndex);
-                AssertThrow(descriptorSet != nullptr);
+    //     auto setMaterialTexture = [this](const Handle<Material>& material, uint32 textureIndex, const Handle<Texture>& texture)
+    //     {
+    //         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
+    //         {
+    //             const DescriptorSetRef& descriptorSet = g_engine->GetMaterialDescriptorSetManager()->GetDescriptorSet(this, frameIndex);
+    //             AssertThrow(descriptorSet != nullptr);
 
-                if (texture.IsValid())
-                {
-                    AssertThrow(texture->GetRenderResource().GetImageView() != nullptr);
+    //             if (texture.IsValid())
+    //             {
+    //                 AssertThrow(texture->GetRenderResource().GetImageView() != nullptr);
 
-                    descriptorSet->SetElement(NAME("Textures"), textureIndex, texture->GetRenderResource().GetImageView());
-                }
-                else
-                {
-                    descriptorSet->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
-                }
-            }
-        };
+    //                 descriptorSet->SetElement(NAME("Textures"), textureIndex, texture->GetRenderResource().GetImageView());
+    //             }
+    //             else
+    //             {
+    //                 descriptorSet->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+    //             }
+    //         }
+    //     };
 
-        Handle<Material> materialLocked = m_material->HandleFromThis();
+    //     Handle<Material> materialLocked = m_material->HandleFromThis();
 
-        HYP_LOG(Material, Debug, "Updating Material {} (name: {})", materialLocked->Id(), *materialLocked->GetName());
+    //     HYP_LOG(Material, Debug, "Updating Material {} (name: {})", materialLocked->Id(), *materialLocked->GetName());
 
-        for (const auto& it : m_textures)
-        {
-            const uint32 textureIndex = uint32(Material::TextureSet::EnumToOrdinal(it.first));
+    //     for (const auto& it : m_textures)
+    //     {
+    //         const uint32 textureIndex = uint32(Material::TextureSet::EnumToOrdinal(it.first));
 
-            if (textureIndex >= maxBoundTextures)
-            {
-                HYP_LOG(Material, Warning, "Texture index {} is out of bounds of max bound textures ({})", textureIndex, maxBoundTextures);
+    //         if (textureIndex >= maxBoundTextures)
+    //         {
+    //             HYP_LOG(Material, Warning, "Texture index {} is out of bounds of max bound textures ({})", textureIndex, maxBoundTextures);
 
-                continue;
-            }
+    //             continue;
+    //         }
 
-            const Handle<Texture>& texture = it.second;
+    //         const Handle<Texture>& texture = it.second;
 
-            setMaterialTexture(materialLocked, textureIndex, texture);
-        }
-    }
+    //         setMaterialTexture(materialLocked, textureIndex, texture);
+    //     }
+    // }
 }
 
 GpuBufferHolderBase* RenderMaterial::GetGpuBufferHolder() const
@@ -155,24 +155,24 @@ void RenderMaterial::CreateDescriptorSets()
 
     AssertThrow(m_material != nullptr);
 
-    FixedArray<Handle<Texture>, maxBoundTextures> textureBindings;
+    // FixedArray<Handle<Texture>, maxBoundTextures> textureBindings;
 
-    for (const Pair<MaterialTextureKey, Handle<Texture>>& it : m_textures)
-    {
-        const SizeType textureIndex = Material::TextureSet::EnumToOrdinal(it.first);
+    // for (const Pair<MaterialTextureKey, Handle<Texture>>& it : m_textures)
+    // {
+    //     const SizeType textureIndex = Material::TextureSet::EnumToOrdinal(it.first);
 
-        if (textureIndex >= textureBindings.Size())
-        {
-            continue;
-        }
+    //     if (textureIndex >= textureBindings.Size())
+    //     {
+    //         continue;
+    //     }
 
-        if (const Handle<Texture>& texture = it.second)
-        {
-            textureBindings[textureIndex] = texture;
-        }
-    }
+    //     if (const Handle<Texture>& texture = it.second)
+    //     {
+    //         textureBindings[textureIndex] = texture;
+    //     }
+    // }
 
-    m_descriptorSets = g_engine->GetMaterialDescriptorSetManager()->AddMaterial(this, std::move(textureBindings));
+    // m_descriptorSets = g_engine->GetMaterialDescriptorSetManager()->AddMaterial(this, std::move(textureBindings));
 }
 
 void RenderMaterial::DestroyDescriptorSets()
@@ -180,9 +180,6 @@ void RenderMaterial::DestroyDescriptorSets()
     HYP_SCOPE;
 
     AssertThrow(m_material != nullptr);
-
-    g_engine->GetMaterialDescriptorSetManager()->RemoveMaterial(this);
-    m_descriptorSets = {};
 }
 
 void RenderMaterial::UpdateBufferData()
@@ -191,34 +188,34 @@ void RenderMaterial::UpdateBufferData()
 
     AssertThrow(m_bufferIndex != ~0u);
 
-    static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
+    // static const bool useBindlessTextures = g_renderBackend->GetRenderConfig().IsBindlessSupported();
 
-    m_bufferData.textureUsage = 0;
-    Memory::MemSet(m_bufferData.textureIndex, 0, sizeof(m_bufferData.textureIndex));
+    // m_bufferData.textureUsage = 0;
+    // Memory::MemSet(m_bufferData.textureIndex, 0, sizeof(m_bufferData.textureIndex));
 
-    if (m_boundTextureIds.Any())
-    {
-        for (SizeType i = 0; i < m_boundTextureIds.Size(); i++)
-        {
-            if (m_boundTextureIds[i] != ObjId<Texture>::invalid)
-            {
-                if (useBindlessTextures)
-                {
-                    m_bufferData.textureIndex[i] = m_boundTextureIds[i].ToIndex();
-                }
-                else
-                {
-                    m_bufferData.textureIndex[i] = i;
-                }
+    // if (m_boundTextureIds.Any())
+    // {
+    //     for (SizeType i = 0; i < m_boundTextureIds.Size(); i++)
+    //     {
+    //         if (m_boundTextureIds[i] != ObjId<Texture>::invalid)
+    //         {
+    //             if (useBindlessTextures)
+    //             {
+    //                 m_bufferData.textureIndex[i] = m_boundTextureIds[i].ToIndex();
+    //             }
+    //             else
+    //             {
+    //                 m_bufferData.textureIndex[i] = i;
+    //             }
 
-                m_bufferData.textureUsage |= 1 << i;
-            }
-        }
-    }
+    //             m_bufferData.textureUsage |= 1 << i;
+    //         }
+    //     }
+    // }
 
-    *static_cast<MaterialShaderData*>(m_bufferAddress) = m_bufferData;
+    // *static_cast<MaterialShaderData*>(m_bufferAddress) = m_bufferData;
 
-    GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
+    // GetGpuBufferHolder()->MarkDirty(m_bufferIndex);
 }
 
 void RenderMaterial::SetTexture(MaterialTextureKey textureKey, const Handle<Texture>& texture)
@@ -317,9 +314,8 @@ void RenderMaterial::SetBufferData(const MaterialShaderData& bufferData)
 #pragma region MaterialDescriptorSetManager
 
 MaterialDescriptorSetManager::MaterialDescriptorSetManager()
-    : m_pendingAdditionFlag { false },
-      m_descriptorSetsToUpdateFlag { 0 }
 {
+    CreateInvalidMaterialDescriptorSet();
 }
 
 MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
@@ -330,18 +326,6 @@ MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
     }
 
     m_materialDescriptorSets.Clear();
-
-    m_pendingMutex.Lock();
-
-    for (auto& it : m_pendingAddition)
-    {
-        SafeRelease(std::move(it.second));
-    }
-
-    m_pendingAddition.Clear();
-    m_pendingRemoval.Clear();
-
-    m_pendingMutex.Unlock();
 }
 
 void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
@@ -369,19 +353,19 @@ void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
         DeferCreate(m_invalidMaterialDescriptorSets[frameIndex]);
     }
 
-    m_materialDescriptorSets.Set(nullptr, m_invalidMaterialDescriptorSets);
+    m_materialDescriptorSets.Set(~0u, m_invalidMaterialDescriptorSets);
 }
 
-const DescriptorSetRef& MaterialDescriptorSetManager::GetDescriptorSet(const RenderMaterial* material, uint32 frameIndex) const
+const DescriptorSetRef& MaterialDescriptorSetManager::GetMaterialDescriptorSet(uint32 boundIndex, uint32 frameIndex) const
 {
-    if (!material)
+    if (boundIndex == ~0u)
     {
         return m_invalidMaterialDescriptorSets[frameIndex];
     }
 
     Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    const auto it = m_materialDescriptorSets.FindAs(material);
+    const auto it = m_materialDescriptorSets.Find(boundIndex);
 
     if (it == m_materialDescriptorSets.End())
     {
@@ -391,12 +375,14 @@ const DescriptorSetRef& MaterialDescriptorSetManager::GetDescriptorSet(const Ren
     return it->second[frameIndex];
 }
 
-FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::AddMaterial(RenderMaterial* material)
+FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Allocate(uint32 boundIndex)
 {
-    if (!material)
+    if (boundIndex == ~0u)
     {
         return {};
     }
+
+    Threads::AssertOnThread(g_renderThread);
 
     const DescriptorSetDeclaration* decl = g_renderGlobalState->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("Material"));
     AssertThrow(decl != nullptr);
@@ -410,7 +396,7 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Ad
         DescriptorSetRef descriptorSet = g_renderBackend->MakeDescriptorSet(layout);
 
 #ifdef HYP_DEBUG_MODE
-        descriptorSet->SetDebugName(NAME_FMT("MaterialDescriptorSet_{}_{}", material->GetMaterial()->GetName(), frameIndex));
+        descriptorSet->SetDebugName(NAME_FMT("MaterialDescriptorSet_{}_{}", boundIndex, frameIndex));
 #endif
 
         for (uint32 textureIndex = 0; textureIndex < maxBoundTextures; textureIndex++)
@@ -421,35 +407,30 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Ad
         descriptorSets[frameIndex] = std::move(descriptorSet);
     }
 
-    // if on render thread, initialize and add immediately
-    if (Threads::IsOnThread(g_renderThread))
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-        {
-            HYPERION_ASSERT_RESULT(descriptorSets[frameIndex]->Create());
-        }
-
-        m_materialDescriptorSets.Insert(material, descriptorSets);
+        HYPERION_ASSERT_RESULT(descriptorSets[frameIndex]->Create());
     }
-    else
+
+    auto it = m_materialDescriptorSets.Find(boundIndex);
+    if (it != m_materialDescriptorSets.End())
     {
-        Mutex::Guard guard(m_pendingMutex);
-
-        m_pendingAddition.PushBack({ material,
-            descriptorSets });
-
-        m_pendingAdditionFlag.Set(true, MemoryOrder::RELEASE);
+        SafeRelease(std::move(it->second));
     }
+
+    m_materialDescriptorSets[boundIndex] = descriptorSets;
 
     return descriptorSets;
 }
 
-FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::AddMaterial(RenderMaterial* material, FixedArray<Handle<Texture>, maxBoundTextures>&& textures)
+FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Allocate(uint32 boundIndex, const FixedArray<Handle<Texture>, maxBoundTextures>& textures)
 {
-    if (!material)
+    if (boundIndex == ~0u)
     {
         return {};
     }
+
+    Threads::AssertOnThread(g_renderThread);
 
     const DescriptorSetDeclaration* decl = g_renderGlobalState->GlobalDescriptorTable->GetDeclaration()->FindDescriptorSetDeclaration(NAME("Material"));
     AssertThrow(decl != nullptr);
@@ -463,7 +444,7 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Ad
         DescriptorSetRef descriptorSet = g_renderBackend->MakeDescriptorSet(layout);
 
 #ifdef HYP_DEBUG_MODE
-        descriptorSet->SetDebugName(NAME_FMT("MaterialDescriptorSet_{}_{}", material->GetMaterial()->GetName(), frameIndex));
+        descriptorSet->SetDebugName(NAME_FMT("MaterialDescriptorSet_{}_{}", boundIndex, frameIndex));
 #endif
 
         for (uint32 textureIndex = 0; textureIndex < maxBoundTextures; textureIndex++)
@@ -486,157 +467,41 @@ FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Ad
         descriptorSets[frameIndex] = std::move(descriptorSet);
     }
 
-    // if on render thread, initialize and add immediately
-    if (Threads::IsOnThread(g_renderThread))
+    for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-        {
-            HYPERION_ASSERT_RESULT(descriptorSets[frameIndex]->Create());
-        }
-
-        m_materialDescriptorSets.Insert(material, descriptorSets);
+        HYPERION_ASSERT_RESULT(descriptorSets[frameIndex]->Create());
     }
-    else
+
+    auto it = m_materialDescriptorSets.Find(boundIndex);
+    if (it != m_materialDescriptorSets.End())
     {
-        Mutex::Guard guard(m_pendingMutex);
-
-        m_pendingAddition.PushBack({ material,
-            std::move(descriptorSets) });
-
-        m_pendingAdditionFlag.Set(true, MemoryOrder::RELEASE);
+        SafeRelease(std::move(it->second));
     }
+
+    m_materialDescriptorSets[boundIndex] = descriptorSets;
 
     return descriptorSets;
 }
 
-void MaterialDescriptorSetManager::RemoveMaterial(const RenderMaterial* material)
+void MaterialDescriptorSetManager::Remove(uint32 boundIndex)
 {
     Threads::AssertOnThread(g_renderThread);
 
-    if (!material)
+    if (boundIndex == ~0u)
     {
         return;
     }
 
-    { // remove from pending
-        Mutex::Guard guard(m_pendingMutex);
+    const auto it = m_materialDescriptorSets.Find(boundIndex);
 
-        while (true)
-        {
-            const auto pendingAdditionIt = m_pendingAddition.FindIf([material](const auto& item)
-                {
-                    return item.first == material;
-                });
-
-            if (pendingAdditionIt == m_pendingAddition.End())
-            {
-                break;
-            }
-
-            m_pendingAddition.Erase(pendingAdditionIt);
-        }
-
-        const auto pendingRemovalIt = m_pendingRemoval.FindAs(material);
-
-        if (pendingRemovalIt != m_pendingRemoval.End())
-        {
-            m_pendingRemoval.Erase(pendingRemovalIt);
-        }
-    }
-
-    const auto materialDescriptorSetsIt = m_materialDescriptorSets.FindAs(material);
-
-    if (materialDescriptorSetsIt != m_materialDescriptorSets.End())
+    if (it != m_materialDescriptorSets.End())
     {
         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
         {
-            SafeRelease(std::move(materialDescriptorSetsIt->second[frameIndex]));
+            SafeRelease(std::move(it->second[frameIndex]));
         }
 
-        m_materialDescriptorSets.Erase(materialDescriptorSetsIt);
-    }
-}
-
-void MaterialDescriptorSetManager::Initialize()
-{
-    CreateInvalidMaterialDescriptorSet();
-}
-
-void MaterialDescriptorSetManager::UpdatePendingDescriptorSets(FrameBase* frame)
-{
-    Threads::AssertOnThread(g_renderThread);
-
-    const uint32 frameIndex = frame->GetFrameIndex();
-
-    if (!m_pendingAdditionFlag.Get(MemoryOrder::ACQUIRE))
-    {
-        return;
-    }
-
-    Mutex::Guard guard(m_pendingMutex);
-
-    for (auto it = m_pendingRemoval.Begin(); it != m_pendingRemoval.End();)
-    {
-        const auto materialDescriptorSetsIt = m_materialDescriptorSets.FindAs(*it);
-
-        if (materialDescriptorSetsIt != m_materialDescriptorSets.End())
-        {
-            for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-            {
-                SafeRelease(std::move(materialDescriptorSetsIt->second[frameIndex]));
-            }
-
-            m_materialDescriptorSets.Erase(materialDescriptorSetsIt);
-        }
-
-        it = m_pendingRemoval.Erase(it);
-    }
-
-    for (auto it = m_pendingAddition.Begin(); it != m_pendingAddition.End();)
-    {
-        for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
-        {
-            AssertThrow(it->second[frameIndex].IsValid());
-
-            HYPERION_ASSERT_RESULT(it->second[frameIndex]->Create());
-        }
-
-        m_materialDescriptorSets.Insert(it->first, std::move(it->second));
-
-        it = m_pendingAddition.Erase(it);
-    }
-
-    m_pendingAdditionFlag.Set(false, MemoryOrder::RELEASE);
-}
-
-void MaterialDescriptorSetManager::Update(FrameBase* frame)
-{
-    Threads::AssertOnThread(g_renderThread);
-
-    const uint32 frameIndex = frame->GetFrameIndex();
-
-    const uint32 descriptorSetsToUpdateFlag = m_descriptorSetsToUpdateFlag.Get(MemoryOrder::ACQUIRE);
-
-    if (descriptorSetsToUpdateFlag & (1u << frameIndex))
-    {
-        Mutex::Guard guard(m_descriptorSetsToUpdateMutex);
-
-        for (RenderMaterial* material : m_descriptorSetsToUpdate[frameIndex])
-        {
-            const auto it = m_materialDescriptorSets.Find(material);
-
-            if (it == m_materialDescriptorSets.End())
-            {
-                continue;
-            }
-
-            AssertThrow(it->second[frameIndex].IsValid());
-            it->second[frameIndex]->Update();
-        }
-
-        m_descriptorSetsToUpdate[frameIndex].Clear();
-
-        m_descriptorSetsToUpdateFlag.BitAnd(~(1u << frameIndex), MemoryOrder::RELEASE);
+        m_materialDescriptorSets.Erase(it);
     }
 }
 

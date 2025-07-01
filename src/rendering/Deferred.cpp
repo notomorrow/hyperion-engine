@@ -353,10 +353,8 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
             if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
             {
                 const DescriptorSetRef& materialDescriptorSet = light->GetMaterial().IsValid()
-                    ? light->GetMaterial()->GetRenderResource().GetDescriptorSets()[frame->GetFrameIndex()]
-                    : g_engine->GetMaterialDescriptorSetManager()->GetInvalidMaterialDescriptorSet(frame->GetFrameIndex());
-
-                AssertThrow(materialDescriptorSet != nullptr);
+                    ? g_renderGlobalState->materialDescriptorSetManager->GetMaterialDescriptorSet(RenderApi_RetrieveResourceBinding(light->GetMaterial()), frame->GetFrameIndex())
+                    : g_renderGlobalState->materialDescriptorSetManager->GetInvalidMaterialDescriptorSet(frame->GetFrameIndex());
 
                 frame->GetCommandList().Add<BindDescriptorSet>(
                     materialDescriptorSet,

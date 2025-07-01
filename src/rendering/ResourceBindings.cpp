@@ -180,6 +180,7 @@ void OnBindingChanged_LightmapVolume(LightmapVolume* lightmapVolume, uint32 prev
     RenderApi_AssignResourceBinding(lightmapVolume, next);
 }
 
+// @TODO: Handle update if a texture is changed
 void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 {
     AssertDebug(material != nullptr);
@@ -188,8 +189,23 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
     AssertDebug(material->GetRenderResource().GetBufferIndex() != ~0u);
 
+    IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
+    AssertThrow(proxy != nullptr);
+
+    RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
+
     // temp shit
     RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
+
+    // if (prev != ~0u)
+    // {
+    //     g_renderGlobalState->materialDescriptorSetManager->Remove(prev);
+    // }
+
+    if (next != ~0u)
+    {
+        g_renderGlobalState->materialDescriptorSetManager->Allocate(next, proxyCasted->boundTextures);
+    }
 }
 
 } // namespace hyperion

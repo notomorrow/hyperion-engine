@@ -1030,7 +1030,8 @@ RenderGlobalState::RenderGlobalState()
     : ShadowMapAllocator(MakeUnique<class ShadowMapAllocator>()),
       GpuBufferHolderMap(MakeUnique<class GpuBufferHolderMap>()),
       PlaceholderData(MakeUnique<class PlaceholderData>()),
-      resourceBindings(new ResourceBindings)
+      resourceBindings(new ResourceBindings),
+      materialDescriptorSetManager(new MaterialDescriptorSetManager())
 {
     gpuBuffers.buffers[GRB_WORLDS] = GpuBufferHolderMap->GetOrCreate<WorldShaderData, GpuBufferType::CBUFF>();
     gpuBuffers.buffers[GRB_CAMERAS] = GpuBufferHolderMap->GetOrCreate<CameraShaderData, GpuBufferType::CBUFF>();
@@ -1090,6 +1091,9 @@ RenderGlobalState::~RenderGlobalState()
             }
         }
     }
+
+    delete materialDescriptorSetManager;
+    materialDescriptorSetManager = nullptr;
 
     Renderer->Shutdown();
     delete Renderer;

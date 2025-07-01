@@ -392,11 +392,15 @@ void Material::UpdateRenderProxy(IRenderProxy* proxy)
     bufferData.textureUsage = 0;
     Memory::MemSet(bufferData.textureIndex, 0, sizeof(bufferData.textureIndex));
 
+    proxyCasted->boundTextures = {};
+
     if (m_boundTextureIds.Any())
     {
+        AssertDebug(m_boundTextureIds.Size() <= proxyCasted->boundTextures.Size());
+
         for (SizeType i = 0; i < m_boundTextureIds.Size(); i++)
         {
-            if (m_boundTextureIds[i] != ObjId<Texture>::invalid)
+            if (m_boundTextureIds[i].IsValid())
             {
                 if (useBindlessTextures)
                 {
@@ -408,6 +412,8 @@ void Material::UpdateRenderProxy(IRenderProxy* proxy)
                 }
 
                 bufferData.textureUsage |= 1 << i;
+
+                proxyCasted->boundTextures[i] = Handle<Texture> { m_boundTextureIds[i] };
             }
         }
     }

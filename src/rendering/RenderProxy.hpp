@@ -256,6 +256,7 @@ public:
 
     WeakHandle<Material> material;
     MaterialShaderData bufferData {};
+    FixedArray<Handle<Texture>, 16> boundTextures;
 };
 
 } // namespace hyperion

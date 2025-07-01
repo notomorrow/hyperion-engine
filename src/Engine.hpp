@@ -52,7 +52,6 @@ class PlaceholderData;
 class RenderThread;
 class SafeDeleter;
 class RenderState;
-class MaterialDescriptorSetManager;
 class GraphicsPipelineCache;
 
 struct EngineDelegates
@@ -133,11 +132,6 @@ public:
         return m_scriptingService.Get();
     }
 
-    HYP_FORCE_INLINE MaterialDescriptorSetManager* GetMaterialDescriptorSetManager()
-    {
-        return m_materialDescriptorSetManager.Get();
-    }
-
     HYP_FORCE_INLINE GraphicsPipelineCache* GetGraphicsPipelineCache() const
     {
         return m_graphicsPipelineCache.Get();
@@ -185,8 +179,6 @@ private:
     UniquePtr<RenderThread> m_renderThread;
 
     ShaderCompiler m_shaderCompiler;
-
-    UniquePtr<MaterialDescriptorSetManager> m_materialDescriptorSetManager;
 
     Handle<World> m_world;
 
