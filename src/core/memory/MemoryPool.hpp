@@ -38,7 +38,7 @@ struct MemoryPoolBlock
 {
     static constexpr uint32 numElementsPerBlock = TInitInfo::numElementsPerBlock;
 
-    FixedArray<ElementType, numElementsPerBlock> elements;
+    ValueStorageArray<ubyte, numElementsPerBlock * sizeof(ElementType), alignof(ElementType)> buffer;
     AtomicVar<uint32> numElements { 0 };
 
 #ifdef HYP_ENABLE_MT_CHECK
@@ -50,21 +50,23 @@ struct MemoryPoolBlock
         // Allow overloading assignment of elements
         if (OnBlockAllocated != nullptr)
         {
-            OnBlockAllocated(ctx, elements.Data(), blockIndex * numElementsPerBlock, numElementsPerBlock);
+            OnBlockAllocated(ctx, reinterpret_cast<ElementType*>(buffer.GetPointer()), blockIndex * numElementsPerBlock, numElementsPerBlock);
         }
         else
         {
             if constexpr (isPodType<ElementType>)
             {
                 // Default initialization for POD types - zero it out
-                Memory::MemSet(elements.Data(), 0, elements.ByteSize());
+                Memory::MemSet(reinterpret_cast<ElementType*>(buffer.GetPointer()), 0, numElementsPerBlock * sizeof(ElementType));
             }
             else if constexpr (std::is_copy_assignable_v<ElementType> || std::is_move_assignable_v<ElementType>)
             {
                 // For non-POD types, default assign each element
                 for (uint32 i = 0; i < numElementsPerBlock; i++)
                 {
-                    elements[i] = ElementType();
+                    const uint32 offset = i * sizeof(ElementType);
+
+                    new (reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buffer.GetPointer()) + offset)) ElementType();
                 }
             }
         }
@@ -75,6 +77,18 @@ struct MemoryPoolBlock
 
     MemoryPoolBlock(MemoryPoolBlock&& other) noexcept = delete;
     MemoryPoolBlock& operator=(MemoryPoolBlock&& other) noexcept = delete;
+
+    ~MemoryPoolBlock()
+    {
+        // Call destructors for each element in the block
+        if constexpr (!isPodType<ElementType>)
+        {
+            for (uint32 i = 0; i < numElementsPerBlock; i++)
+            {
+                reinterpret_cast<ElementType*>(buffer.GetPointer())[i].~ElementType();
+            }
+        }
+    }
 
     HYP_FORCE_INLINE bool IsEmpty() const
     {
