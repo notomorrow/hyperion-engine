@@ -46,7 +46,7 @@ static constexpr bool doParallelCollection = false; // true;
 
 #pragma region RenderProxyList
 
-static RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxy& proxy, const RenderableAttributeSet* overrideAttributes = nullptr)
+static RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxyMesh& proxy, const RenderableAttributeSet* overrideAttributes = nullptr)
 {
     HYP_SCOPE;
 
@@ -98,7 +98,7 @@ static RenderableAttributeSet GetRenderableAttributesForProxy(const RenderProxy&
     return attributes;
 }
 
-static void UpdateRenderableAttributesDynamic(const RenderProxy* proxy, RenderableAttributeSet& attributes)
+static void UpdateRenderableAttributesDynamic(const RenderProxyMesh* proxy, RenderableAttributeSet& attributes)
 {
     HYP_SCOPE;
 
@@ -145,7 +145,7 @@ static void UpdateRenderableAttributesDynamic(const RenderProxy* proxy, Renderab
     }
 }
 
-static void AddRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxy>& meshes, RenderProxy* proxy, View* view, const RenderableAttributeSet& attributes, RenderBucket rb)
+static void AddRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxyMesh>& meshes, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes, RenderBucket rb)
 {
     HYP_SCOPE;
 
@@ -195,7 +195,7 @@ static void AddRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<Obj
     mapping.renderProxies.Insert(proxy->entity.Id(), proxy);
 }
 
-static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxy>& meshes, RenderProxy* proxy, const RenderableAttributeSet& attributes, RenderBucket rb)
+static bool RemoveRenderProxy(RenderProxyList* renderProxyList, ResourceTracker<ObjId<Entity>, RenderProxyMesh>& meshes, RenderProxyMesh* proxy, const RenderableAttributeSet& attributes, RenderBucket rb)
 {
     HYP_SCOPE;
 
@@ -355,19 +355,17 @@ void RenderProxyList::BuildRenderGroups(View* view)
 
     if (diff.NeedsUpdate())
     {
-        Array<RenderProxy*> removedProxies;
+        Array<RenderProxyMesh*> removedProxies;
         meshes.GetRemoved(removedProxies, true /* includeChanged */);
 
-        Array<RenderProxy*> addedProxyPtrs;
+        Array<RenderProxyMesh*> addedProxyPtrs;
         meshes.GetAdded(addedProxyPtrs, true /* includeChanged */);
 
         if (addedProxyPtrs.Any() || removedProxies.Any())
         {
-            for (RenderProxy* proxy : removedProxies)
+            for (RenderProxyMesh* proxy : removedProxies)
             {
                 AssertDebug(proxy != nullptr);
-
-                // proxy->DecRefs();
 
                 RenderableAttributeSet attributes = GetRenderableAttributesForProxy(*proxy, overrideAttributes);
                 UpdateRenderableAttributesDynamic(proxy, attributes);
@@ -377,7 +375,7 @@ void RenderProxyList::BuildRenderGroups(View* view)
                 AssertThrow(RemoveRenderProxy(this, meshes, proxy, attributes, rb));
             }
 
-            for (RenderProxy* proxy : addedProxyPtrs)
+            for (RenderProxyMesh* proxy : addedProxyPtrs)
             {
                 const Handle<Mesh>& mesh = proxy->mesh;
                 AssertThrow(mesh.IsValid());
@@ -391,7 +389,7 @@ void RenderProxyList::BuildRenderGroups(View* view)
 
                 const RenderBucket rb = attributes.GetMaterialAttributes().bucket;
 
-                AddRenderProxy(this, meshes, proxy, view, attributes, rb);
+                AddRenderProxy(this, meshes, proxy, attributes, rb);
             }
         }
     }
@@ -547,7 +545,7 @@ void RenderCollector::CollectDrawCalls(RenderProxyList& renderProxyList, uint32 
 
         for (const auto& it : mapping.renderProxies)
         {
-            const RenderProxy* renderProxy = it.second;
+            const RenderProxyMesh* renderProxy = it.second;
             AssertDebug(renderProxy != nullptr);
 
             AssertDebug(renderProxy->mesh.IsValid());

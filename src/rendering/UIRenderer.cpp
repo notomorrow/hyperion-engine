@@ -187,7 +187,7 @@ static void BuildRenderGroups(RenderProxyList& rpl, const Array<Pair<ObjId<Entit
 
     for (const Pair<ObjId<Entity>, int>& pair : proxyDepths)
     {
-        RenderProxy* proxy = rpl.meshes.GetElement(pair.first);
+        RenderProxyMesh* proxy = rpl.meshes.GetElement(pair.first);
 
         if (!proxy)
         {
@@ -251,7 +251,7 @@ void UIRenderCollector::ResetOrdering()
     proxyDepths.Clear();
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
+typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff UIRenderCollector::PushUpdates(RenderProxyList& rpl, const Optional<RenderableAttributeSet>& overrideAttributes)
 {
     HYP_SCOPE;
 
@@ -262,13 +262,13 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff UIRenderCollector::Pu
 
     if (diff.NeedsUpdate())
     {
-        Array<RenderProxy*> removed;
+        Array<RenderProxyMesh*> removed;
         rpl.meshes.GetRemoved(removed, true);
 
-        Array<RenderProxy*> added;
+        Array<RenderProxyMesh*> added;
         rpl.meshes.GetAdded(added, true);
 
-        for (RenderProxy* proxy : added)
+        for (RenderProxyMesh* proxy : added)
         {
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
@@ -279,7 +279,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff UIRenderCollector::Pu
             proxy->IncRefs();
         }
 
-        for (RenderProxy* proxy : removed)
+        for (RenderProxyMesh* proxy : removed)
         {
             RenderApi_ReleaseRef(proxy->entity.Id());
             RenderApi_ReleaseRef(proxy->material.Id());

@@ -21,14 +21,14 @@ extern HYP_API SafeDeleter* g_safeDeleter;
 
 #pragma region RenderProxy
 
-void RenderProxy::SafeRelease()
+void RenderProxyMesh::SafeRelease()
 {
     g_safeDeleter->SafeRelease(std::move(mesh));
     g_safeDeleter->SafeRelease(std::move(material));
     g_safeDeleter->SafeRelease(std::move(skeleton));
 }
 
-void RenderProxy::IncRefs() const
+void RenderProxyMesh::IncRefs() const
 {
     if (material.IsValid())
     {
@@ -46,7 +46,7 @@ void RenderProxy::IncRefs() const
     }
 }
 
-void RenderProxy::DecRefs() const
+void RenderProxyMesh::DecRefs() const
 {
     if (material.IsValid())
     {

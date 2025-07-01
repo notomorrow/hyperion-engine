@@ -33,13 +33,13 @@ namespace hyperion {
 struct RENDER_COMMAND(UpdateEntityDrawData)
     : RenderCommand
 {
-    Array<RenderProxy> renderProxies;
+    Array<RenderProxyMesh> renderProxies;
 
-    RENDER_COMMAND(UpdateEntityDrawData)(Array<RenderProxy*>&& renderProxyPtrs)
+    RENDER_COMMAND(UpdateEntityDrawData)(Array<RenderProxyMesh*>&& renderProxyPtrs)
     {
         renderProxies.Reserve(renderProxyPtrs.Size());
 
-        for (RenderProxy* renderProxyPtr : renderProxyPtrs)
+        for (RenderProxyMesh* renderProxyPtr : renderProxyPtrs)
         {
             renderProxies.PushBack(*renderProxyPtr);
         }
@@ -51,7 +51,7 @@ struct RENDER_COMMAND(UpdateEntityDrawData)
     {
         uint32 maxEntityIdIndex = 0;
 
-        for (const RenderProxy& proxy : renderProxies)
+        for (const RenderProxyMesh& proxy : renderProxies)
         {
             if (!proxy.entity.IsValid())
             {
@@ -63,7 +63,7 @@ struct RENDER_COMMAND(UpdateEntityDrawData)
 
         g_renderGlobalState->gpuBuffers[GRB_ENTITIES]->EnsureCapacity(maxEntityIdIndex);
 
-        for (const RenderProxy& proxy : renderProxies)
+        for (const RenderProxyMesh& proxy : renderProxies)
         {
             if (!proxy.entity.IsValid())
             {
@@ -111,7 +111,7 @@ void EntityRenderProxySystem_Mesh::OnEntityAdded(Entity* entity)
 
     if (meshComponent.mesh.IsValid() && meshComponent.material.IsValid())
     {
-        meshComponent.proxy = new RenderProxy;
+        meshComponent.proxy = new RenderProxyMesh;
         meshComponent.proxy->entity = entity->WeakHandleFromThis();
         meshComponent.proxy->mesh = meshComponent.mesh;
         meshComponent.proxy->material = meshComponent.material;
@@ -123,7 +123,7 @@ void EntityRenderProxySystem_Mesh::OnEntityAdded(Entity* entity)
         meshComponent.proxy->instanceData = meshComponent.instanceData;
         meshComponent.proxy->version = 0;
 
-        PUSH_RENDER_COMMAND(UpdateEntityDrawData, Array<RenderProxy*> { meshComponent.proxy });
+        PUSH_RENDER_COMMAND(UpdateEntityDrawData, Array<RenderProxyMesh*> { meshComponent.proxy });
 
         GetEntityManager().RemoveTag<EntityTag::UPDATE_RENDER_PROXY>(entity);
     }
@@ -157,7 +157,7 @@ void EntityRenderProxySystem_Mesh::OnEntityRemoved(Entity* entity)
 void EntityRenderProxySystem_Mesh::Process(float delta)
 {
     HashSet<WeakHandle<Entity>> updatedEntities;
-    Array<RenderProxy*> renderProxyPtrs;
+    Array<RenderProxyMesh*> renderProxyPtrs;
 
     for (auto [entity, meshComponent, transformComponent, boundingBoxComponent, _] : GetEntityManager().GetEntitySet<MeshComponent, TransformComponent, BoundingBoxComponent, EntityTagComponent<EntityTag::UPDATE_RENDER_PROXY>>().GetScopedView(GetComponentInfos()))
     {
@@ -180,7 +180,7 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
 
         if (!meshComponent.proxy)
         {
-            meshComponent.proxy = new RenderProxy {};
+            meshComponent.proxy = new RenderProxyMesh {};
         }
 
         const uint32 renderProxyVersion = meshComponent.proxy->version + 1;
@@ -188,7 +188,7 @@ void EntityRenderProxySystem_Mesh::Process(float delta)
         // Update MeshComponent's proxy
         // @TODO: Include RT info on RenderProxy, add a system that will update BLAS on the render thread.
         // @TODO Add Lightmap volume info
-        RenderProxy& proxy = *meshComponent.proxy;
+        RenderProxyMesh& proxy = *meshComponent.proxy;
         proxy.entity = entity->WeakHandleFromThis();
         proxy.mesh = meshComponent.mesh;
         proxy.material = meshComponent.material;

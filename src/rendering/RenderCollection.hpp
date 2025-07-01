@@ -75,7 +75,7 @@ struct ParallelRenderingState
 struct DrawCallCollectionMapping
 {
     Handle<RenderGroup> renderGroup;
-    HashMap<ObjId<Entity>, RenderProxy*> renderProxies;
+    HashMap<ObjId<Entity>, RenderProxyMesh*> renderProxies;
     DrawCallCollection drawCallCollection;
     IndirectRenderer* indirectRenderer = nullptr;
 
@@ -149,7 +149,7 @@ struct HYP_API RenderProxyList
     Viewport viewport;
     int priority;
 
-    ResourceTracker<ObjId<Entity>, RenderProxy> meshes;
+    ResourceTracker<ObjId<Entity>, RenderProxyMesh> meshes;
     ResourceTracker<ObjId<EnvProbe>, EnvProbe*> envProbes;
     ResourceTracker<ObjId<Light>, Light*> lights;
     ResourceTracker<ObjId<EnvGrid>, EnvGrid*> envGrids;

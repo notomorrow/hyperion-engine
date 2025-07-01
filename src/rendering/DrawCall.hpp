@@ -23,7 +23,7 @@ class Material;
 class Skeleton;
 class Entity;
 class RenderGroup;
-class RenderProxy;
+class RenderProxyMesh;
 struct DrawCommandData;
 class IndirectDrawState;
 class GpuBufferHolderBase;
@@ -169,8 +169,8 @@ struct DrawCallCollection
 
     ~DrawCallCollection();
 
-    void PushRenderProxy(DrawCallID id, const RenderProxy& renderProxy);
-    void PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxy& renderProxy);
+    void PushRenderProxy(DrawCallID id, const RenderProxyMesh& renderProxy);
+    void PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxyMesh& renderProxy);
 
     EntityInstanceBatch* TakeDrawCallBatch(DrawCallID id);
 

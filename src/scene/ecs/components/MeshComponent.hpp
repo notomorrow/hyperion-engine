@@ -16,7 +16,7 @@ class Mesh;
 class Material;
 class Skeleton;
 class BVHNode;
-class RenderProxy;
+class RenderProxyMesh;
 struct MeshRaytracingData;
 
 using MeshComponentFlags = uint32;
@@ -52,7 +52,7 @@ struct MeshComponent
     // 128
 
     HYP_FIELD()
-    RenderProxy* proxy = nullptr; /// TODO: Move RenderProxy over to Entity so lights, envprobes etc all have proxies as
+    RenderProxyMesh* proxy = nullptr; /// TODO: Move RenderProxy over to Entity so lights, envprobes etc all have proxies as
 
     // 136
 

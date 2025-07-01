@@ -173,7 +173,9 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
     HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {}\n", material->Id(), prev, next);
 
     // temp shit
-    RenderApi_AssignResourceBinding(material, next);
+    AssertDebug(material->GetRenderResource().GetBufferIndex() != ~0u);
+    RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
+    // RenderApi_AssignResourceBinding(material, next);
 
     // if (prev != ~0u)
     // {

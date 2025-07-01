@@ -54,7 +54,7 @@ public:
 };
 
 /*! \brief Proxy for a renderable Entity with a valid Mesh and Material assigned */
-class RenderProxy : public IRenderProxy
+class RenderProxyMesh : public IRenderProxy
 {
 public:
     WeakHandle<Entity> entity;
@@ -68,14 +68,14 @@ public:
     MeshInstanceData instanceData;
     int version = 0;
 
-    ~RenderProxy() override = default;
+    ~RenderProxyMesh() override = default;
 
     HYP_API virtual void SafeRelease() override;
 
     void IncRefs() const;
     void DecRefs() const;
 
-    bool operator==(const RenderProxy& other) const
+    bool operator==(const RenderProxyMesh& other) const
     {
         // Check version first for faster comparison
         return version == other.version
@@ -90,7 +90,7 @@ public:
             && instanceData == other.instanceData;
     }
 
-    bool operator!=(const RenderProxy& other) const
+    bool operator!=(const RenderProxyMesh& other) const
     {
         // Check version first for faster comparison
         return version != other.version

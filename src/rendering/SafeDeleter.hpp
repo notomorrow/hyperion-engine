@@ -166,7 +166,7 @@ public:
         m_numDeletionEntries.Increment(1, MemoryOrder::RELEASE);
     }
 
-    void SafeRelease(RenderProxy&& proxy)
+    void SafeRelease(RenderProxyMesh&& proxy)
     {
         SafeRelease(std::move(proxy.mesh));
         SafeRelease(std::move(proxy.material));

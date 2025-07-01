@@ -317,8 +317,9 @@ struct ResourceSubtypeData final
 
     // and a map (sparse array) from Id -> proxy ptr (allocated from that pool)
     SparsePagedArray<IRenderProxy*, 256> proxies;
-    IRenderProxy* (*proxyCtor)(void* ptr);
-    void (*setGpuElem)(ResourceSubtypeData* _this, uint32 idx, IRenderProxy* proxy);
+    IRenderProxy* (*constructProxyFn)(void* ptr);
+    void (*assignProxyFn)(IRenderProxy* dst, IRenderProxy* dst);
+    void (*setGpuElemFn)(ResourceSubtypeData* _this, uint32 idx, IRenderProxy* proxy);
     bool hasProxyData : 1;
 
     template <class ResourceType, class ProxyType>
@@ -330,8 +331,9 @@ struct ResourceSubtypeData final
         WriteBufferDataFunction writeBufferDataFn = &GpuBufferHolderBase::WriteBufferData_Static)
         : typeId(TypeId::ForType<ResourceType>()),
           hasProxyData(false),
-          proxyCtor(nullptr),
-          setGpuElem(nullptr),
+          constructProxyFn(nullptr),
+          assignProxyFn(nullptr),
+          setGpuElemFn(nullptr),
           gpuBufferHolder(gpuBufferHolder),
           resourceBinder(resourceBinder),
           writeBufferDataFn(writeBufferDataFn)
@@ -344,12 +346,22 @@ struct ResourceSubtypeData final
             proxyAllocator.classSize = sizeof(ProxyType);
             proxyAllocator.classAlignment = alignof(ProxyType);
 
-            proxyCtor = [](void* ptr) -> IRenderProxy*
+            constructProxyFn = [](void* ptr) -> IRenderProxy*
             {
                 return new (ptr) ProxyType;
             };
 
-            setGpuElem = [](ResourceSubtypeData* _this, uint32 idx, IRenderProxy* proxy)
+            assignProxyFn = [](IRenderProxy* dst, IRenderProxy* src)
+            {
+                AssertDebug(dst != nullptr && src != nullptr);
+
+                ProxyType* dstCasted = static_cast<ProxyType*>(dst);
+                ProxyType* srcCasted = static_cast<ProxyType*>(src);
+
+                *dstCasted = *srcCasted;
+            };
+
+            setGpuElemFn = [](ResourceSubtypeData* _this, uint32 idx, IRenderProxy* proxy)
             {
                 AssertDebug(idx != ~0u);
 
@@ -706,8 +718,8 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
         AssertDebug(ptr != nullptr, "Failed to allocate render proxy!");
 
         // construct proxy object
-        AssertDebug(subtypeData.proxyCtor != nullptr);
-        proxy = subtypeData.proxyCtor(ptr);
+        AssertDebug(subtypeData.constructProxyFn != nullptr);
+        proxy = subtypeData.constructProxyFn(ptr);
 
         subtypeData.proxies.Emplace(id.ToIndex(), proxy);
 
@@ -722,6 +734,67 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
     {
         RenderProxyable* renderProxyable = static_cast<RenderProxyable*>(data.resource);
         renderProxyable->UpdateRenderProxy(proxy);
+
+        // mark for buffer data update from render thread
+        subtypeData.indicesPendingUpdate.Set(id.ToIndex(), true);
+    }
+    else
+    {
+        HYP_LOG(Rendering, Warning, "UpdateRenderProxy called for resource id {} of type {} which is not a RenderProxyable! Skipping proxy update.\n",
+            id, GetClass(subtypeData.typeId)->GetName());
+    }
+}
+
+HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id, IRenderProxy* srcProxy)
+{
+    if (!id.IsValid())
+    {
+        return;
+    }
+
+    AssertDebug(srcProxy != nullptr);
+
+    Threads::AssertOnThread(g_gameThread);
+
+    const uint32 slot = g_producerIndex.load(std::memory_order_relaxed);
+
+    FrameData& fd = g_frameData[slot];
+
+    ResourceSubtypeData& subtypeData = fd.resources.GetSubtypeData(id.GetTypeId());
+    ResourceData& data = subtypeData.data.Get(id.ToIndex());
+
+    AssertDebug(data.count.Get(MemoryOrder::RELAXED), "expected ref count to be > 0 when calling UpdateRenderProxy()");
+    AssertDebug(!subtypeData.indicesPendingDelete.Test(id.ToIndex()), "Why is it marked for delete?");
+
+    AssertDebug(subtypeData.hasProxyData, "Cannot use UpdateResource() for type which does not have proxy data! TypeId: %u, HypClass %s",
+        subtypeData.typeId.Value(), *GetClass(subtypeData.typeId)->GetName());
+
+    IRenderProxy* dstProxy;
+
+    if (IRenderProxy** p = subtypeData.proxies.TryGet(id.ToIndex()))
+    {
+        dstProxy = *p;
+    }
+    else
+    {
+        void* ptr = subtypeData.proxyAllocator.Alloc();
+        AssertDebug(ptr != nullptr, "Failed to allocate render proxy!");
+
+        // construct proxy object
+        dstProxy = subtypeData.constructProxyFn(ptr);
+
+        subtypeData.proxies.Emplace(id.ToIndex(), dstProxy);
+
+        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}",
+            id, GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
+    }
+
+    subtypeData.assignProxyFn(dstProxy, srcProxy);
+
+    if (data.resource->InstanceClass()->IsDerivedFrom(RenderProxyable::Class()))
+    {
+        RenderProxyable* renderProxyable = static_cast<RenderProxyable*>(data.resource);
+        renderProxyable->UpdateRenderProxy(dstProxy);
 
         // mark for buffer data update from render thread
         subtypeData.indicesPendingUpdate.Set(id.ToIndex(), true);
@@ -860,8 +933,8 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
                 AssertDebug(elem.resource != nullptr);
                 subtypeData.resourceBinder->Consider(elem.resource);
 
-                HYP_LOG(Rendering, Debug, "Check proxy for elem: {}", elem.resource->Id());
-                AssertDebug(RenderApi_GetRenderProxy(elem.resource->Id()) != nullptr);
+                // HYP_LOG(Rendering, Debug, "Check proxy for elem: {}", elem.resource->Id());
+                // AssertDebug(RenderApi_GetRenderProxy(elem.resource->Id()) != nullptr);
             }
         }
     }
@@ -911,7 +984,7 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
                 AssertDebug(subtypeData.writeBufferDataFn != nullptr, "write_buffer_data_fn is not set for type %s!",
                     *GetClass(subtypeData.typeId)->GetName());
 
-                subtypeData.setGpuElem(&subtypeData, boundIndex, proxy);
+                subtypeData.setGpuElemFn(&subtypeData, boundIndex, proxy);
                 subtypeData.indicesPendingUpdate.Set(i, false);
             }
         }

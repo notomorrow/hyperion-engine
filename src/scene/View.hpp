@@ -201,7 +201,7 @@ public:
         return m_overrideAttributes;
     }
 
-    HYP_FORCE_INLINE const typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff& GetLastCollectionResult() const
+    HYP_FORCE_INLINE const typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff& GetLastCollectionResult() const
     {
         return m_lastCollectionResult;
     }
@@ -219,10 +219,10 @@ protected:
     void CollectEnvGrids(RenderProxyList& rpl);
     void CollectEnvProbes(RenderProxyList& rpl);
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff CollectEntities(RenderProxyList& rpl);
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff CollectAllEntities(RenderProxyList& rpl);
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff CollectDynamicEntities(RenderProxyList& rpl);
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff CollectStaticEntities(RenderProxyList& rpl);
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectEntities(RenderProxyList& rpl);
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectAllEntities(RenderProxyList& rpl);
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectDynamicEntities(RenderProxyList& rpl);
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff CollectStaticEntities(RenderProxyList& rpl);
 
     ViewDesc m_viewDesc;
 
@@ -242,7 +242,7 @@ protected:
 
     Optional<RenderableAttributeSet> m_overrideAttributes;
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff m_lastCollectionResult;
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff m_lastCollectionResult;
 };
 
 } // namespace hyperion

@@ -58,7 +58,7 @@ DrawCallCollection::~DrawCallCollection()
     }
 }
 
-void DrawCallCollection::PushRenderProxy(DrawCallID id, const RenderProxy& renderProxy)
+void DrawCallCollection::PushRenderProxy(DrawCallID id, const RenderProxyMesh& renderProxy)
 {
     AssertDebug(renderProxy.mesh.IsValid());
     AssertDebug(renderProxy.material.IsValid());
@@ -72,7 +72,7 @@ void DrawCallCollection::PushRenderProxy(DrawCallID id, const RenderProxy& rende
     drawCall.drawCommandIndex = ~0u;
 }
 
-void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxy& renderProxy)
+void DrawCallCollection::PushRenderProxyInstanced(EntityInstanceBatch* batch, DrawCallID id, const RenderProxyMesh& renderProxy)
 {
     // Auto-instancing: check if we already have a drawcall we can use for the given DrawCallID.
     auto indexMapIt = indexMap.Find(uint64(id));

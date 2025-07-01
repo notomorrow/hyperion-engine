@@ -367,7 +367,7 @@ void View::RemoveScene(const Handle<Scene>& scene)
     m_scenes.Erase(scene);
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectEntities(RenderProxyList& rpl)
+typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectEntities(RenderProxyList& rpl)
 {
     AssertReady();
 
@@ -384,7 +384,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectEntities
     }
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectAllEntities(RenderProxyList& rpl)
+typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectAllEntities(RenderProxyList& rpl)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -462,13 +462,13 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectAllEntit
 
     if (diff.NeedsUpdate())
     {
-        Array<RenderProxy*> removed;
+        Array<RenderProxyMesh*> removed;
         rpl.meshes.GetRemoved(removed, true);
 
-        Array<RenderProxy*> added;
+        Array<RenderProxyMesh*> added;
         rpl.meshes.GetAdded(added, true);
 
-        for (RenderProxy* proxy : added)
+        for (RenderProxyMesh* proxy : added)
         {
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
@@ -479,7 +479,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectAllEntit
             proxy->IncRefs();
         }
 
-        for (RenderProxy* proxy : removed)
+        for (RenderProxyMesh* proxy : removed)
         {
             RenderApi_ReleaseRef(proxy->entity.Id());
             RenderApi_ReleaseRef(proxy->material.Id());
@@ -492,7 +492,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectAllEntit
     return diff;
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectDynamicEntities(RenderProxyList& rpl)
+typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectDynamicEntities(RenderProxyList& rpl)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -561,13 +561,13 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectDynamicE
 
     if (diff.NeedsUpdate())
     {
-        Array<RenderProxy*> removed;
+        Array<RenderProxyMesh*> removed;
         rpl.meshes.GetRemoved(removed, true);
 
-        Array<RenderProxy*> added;
+        Array<RenderProxyMesh*> added;
         rpl.meshes.GetAdded(added, true);
 
-        for (RenderProxy* proxy : added)
+        for (RenderProxyMesh* proxy : added)
         {
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
@@ -578,7 +578,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectDynamicE
             proxy->IncRefs();
         }
 
-        for (RenderProxy* proxy : removed)
+        for (RenderProxyMesh* proxy : removed)
         {
             RenderApi_ReleaseRef(proxy->entity.Id());
             RenderApi_ReleaseRef(proxy->material.Id());
@@ -591,7 +591,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectDynamicE
     return diff;
 }
 
-typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectStaticEntities(RenderProxyList& rpl)
+typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff View::CollectStaticEntities(RenderProxyList& rpl)
 {
     HYP_SCOPE;
     Threads::AssertOnThread(g_gameThread | ThreadCategory::THREAD_CATEGORY_TASK);
@@ -660,13 +660,13 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectStaticEn
 
     if (diff.NeedsUpdate())
     {
-        Array<RenderProxy*> removed;
+        Array<RenderProxyMesh*> removed;
         rpl.meshes.GetRemoved(removed, true);
 
-        Array<RenderProxy*> added;
+        Array<RenderProxyMesh*> added;
         rpl.meshes.GetAdded(added, true);
 
-        for (RenderProxy* proxy : added)
+        for (RenderProxyMesh* proxy : added)
         {
             RenderApi_AddRef(proxy->entity.GetUnsafe());
             RenderApi_AddRef(proxy->material.Get());
@@ -677,7 +677,7 @@ typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff View::CollectStaticEn
             proxy->IncRefs();
         }
 
-        for (RenderProxy* proxy : removed)
+        for (RenderProxyMesh* proxy : removed)
         {
             RenderApi_ReleaseRef(proxy->entity.Id());
             RenderApi_ReleaseRef(proxy->material.Id());

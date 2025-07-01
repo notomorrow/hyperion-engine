@@ -43,7 +43,7 @@ public:
 
     void ResetOrdering();
 
-    typename ResourceTracker<ObjId<Entity>, RenderProxy>::Diff PushUpdates(
+    typename ResourceTracker<ObjId<Entity>, RenderProxyMesh>::Diff PushUpdates(
         RenderProxyList& rpl,
         const Optional<RenderableAttributeSet>& overrideAttributes = {});
 
