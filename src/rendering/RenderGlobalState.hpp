@@ -43,7 +43,7 @@ HYP_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
 
 // Call at start of engine before render / game thread start ticking.
 // Allocates containers declared in RenderGlobalState.cpp via DECLARE_RENDER_DATA_CONTAINER
-HYP_API extern void RenderApi_InitResourceContainers();
+HYP_API extern void RenderApi_Init();
 
 HYP_API extern uint32 RenderApi_GetFrameIndex_RenderThread();
 HYP_API extern uint32 RenderApi_GetFrameIndex_GameThread();

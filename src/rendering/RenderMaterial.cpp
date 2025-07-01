@@ -106,7 +106,7 @@ void RenderMaterial::Update_Internal()
     //     {
     //         for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     //         {
-    //             const DescriptorSetRef& descriptorSet = g_engine->GetMaterialDescriptorSetManager()->GetDescriptorSet(this, frameIndex);
+    //             const DescriptorSetRef& descriptorSet = g_engine->ForBoundMaterialManager()->GetDescriptorSet(this, frameIndex);
     //             AssertThrow(descriptorSet != nullptr);
 
     //             if (texture.IsValid())
@@ -172,7 +172,7 @@ void RenderMaterial::CreateDescriptorSets()
     //     }
     // }
 
-    // m_descriptorSets = g_engine->GetMaterialDescriptorSetManager()->AddMaterial(this, std::move(textureBindings));
+    // m_descriptorSets = g_engine->ForBoundMaterialManager()->AddMaterial(this, std::move(textureBindings));
 }
 
 void RenderMaterial::DestroyDescriptorSets()
@@ -315,11 +315,12 @@ void RenderMaterial::SetBufferData(const MaterialShaderData& bufferData)
 
 MaterialDescriptorSetManager::MaterialDescriptorSetManager()
 {
-    CreateInvalidMaterialDescriptorSet();
 }
 
 MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
 {
+    SafeRelease(std::move(m_fallbackMaterialDescriptorSets));
+
     for (auto& it : m_materialDescriptorSets)
     {
         SafeRelease(std::move(it.second));
@@ -328,7 +329,7 @@ MaterialDescriptorSetManager::~MaterialDescriptorSetManager()
     m_materialDescriptorSets.Clear();
 }
 
-void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
+void MaterialDescriptorSetManager::CreateFallbackMaterialDescriptorSet()
 {
     if (g_renderBackend->GetRenderConfig().IsBindlessSupported())
     {
@@ -342,37 +343,49 @@ void MaterialDescriptorSetManager::CreateInvalidMaterialDescriptorSet()
 
     for (uint32 frameIndex = 0; frameIndex < maxFramesInFlight; frameIndex++)
     {
-        m_invalidMaterialDescriptorSets[frameIndex] = g_renderBackend->MakeDescriptorSet(layout);
-        m_invalidMaterialDescriptorSets[frameIndex]->SetDebugName(NAME_FMT("MaterialDescriptorSet_INVALID_{}", frameIndex));
+        m_fallbackMaterialDescriptorSets[frameIndex] = g_renderBackend->MakeDescriptorSet(layout);
+        m_fallbackMaterialDescriptorSets[frameIndex]->SetDebugName(NAME_FMT("MaterialDescriptorSet_INVALID_{}", frameIndex));
 
         for (uint32 textureIndex = 0; textureIndex < maxBoundTextures; textureIndex++)
         {
-            m_invalidMaterialDescriptorSets[frameIndex]->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
+            m_fallbackMaterialDescriptorSets[frameIndex]->SetElement(NAME("Textures"), textureIndex, g_renderGlobalState->PlaceholderData->GetImageView2D1x1R8());
         }
 
-        DeferCreate(m_invalidMaterialDescriptorSets[frameIndex]);
+        DeferCreate(m_fallbackMaterialDescriptorSets[frameIndex]);
     }
 
-    m_materialDescriptorSets.Set(~0u, m_invalidMaterialDescriptorSets);
+    m_materialDescriptorSets.Set(~0u, m_fallbackMaterialDescriptorSets);
 }
 
-const DescriptorSetRef& MaterialDescriptorSetManager::GetMaterialDescriptorSet(uint32 boundIndex, uint32 frameIndex) const
+const DescriptorSetRef& MaterialDescriptorSetManager::ForBoundMaterial(const Material* material, uint32 frameIndex)
 {
-    if (boundIndex == ~0u)
-    {
-        return m_invalidMaterialDescriptorSets[frameIndex];
-    }
-
+    HYP_SCOPE;
     Threads::AssertOnThread(g_renderThread | ThreadCategory::THREAD_CATEGORY_TASK);
 
-    const auto it = m_materialDescriptorSets.Find(boundIndex);
+    uint32 boundIndex = ~0u;
 
-    if (it == m_materialDescriptorSets.End())
+    if (material)
     {
-        return DescriptorSetRef::unset;
+        boundIndex = RenderApi_RetrieveResourceBinding(material);
+
+        AssertDebug(boundIndex != ~0u, "Material with ID: %u is not bound for this frame!", material->Id().Value());
     }
 
-    return it->second[frameIndex];
+    if (boundIndex != ~0u)
+    {
+        const auto it = m_materialDescriptorSets.Find(boundIndex);
+
+        if (it != m_materialDescriptorSets.End() && it->second[frameIndex].IsValid())
+        {
+
+            return it->second[frameIndex];
+        }
+    }
+
+    AssertDebug(m_fallbackMaterialDescriptorSets[frameIndex].IsValid()
+        && m_fallbackMaterialDescriptorSets[frameIndex]->IsCreated());
+
+    return m_fallbackMaterialDescriptorSets[frameIndex];
 }
 
 FixedArray<DescriptorSetRef, maxFramesInFlight> MaterialDescriptorSetManager::Allocate(uint32 boundIndex)

@@ -548,7 +548,7 @@ struct FrameData
 
 static FrameData g_frameData[numFrames];
 
-HYP_API void RenderApi_InitResourceContainers()
+HYP_API void RenderApi_Init()
 {
     Threads::AssertOnThread(g_mainThread);
 
@@ -560,6 +560,8 @@ HYP_API void RenderApi_InitResourceContainers()
     }
 
     registry.funcs.Clear();
+
+    g_renderGlobalState->materialDescriptorSetManager->CreateFallbackMaterialDescriptorSet();
 }
 
 HYP_API uint32 RenderApi_GetFrameIndex_RenderThread()
@@ -708,6 +710,9 @@ HYP_API void RenderApi_UpdateRenderProxy(ObjIdBase id)
         proxy = subtypeData.proxyCtor(ptr);
 
         subtypeData.proxies.Emplace(id.ToIndex(), proxy);
+
+        HYP_LOG(Rendering, Debug, "Created render proxy for resource id {} of type {} at index {} for frame {}",
+            id, GetClass(subtypeData.typeId)->GetName(), id.ToIndex(), slot);
     }
 
     AssertDebug(proxy);
@@ -854,6 +859,9 @@ HYP_API void RenderApi_BeginFrame_RenderThread()
             {
                 AssertDebug(elem.resource != nullptr);
                 subtypeData.resourceBinder->Consider(elem.resource);
+
+                HYP_LOG(Rendering, Debug, "Check proxy for elem: {}", elem.resource->Id());
+                AssertDebug(RenderApi_GetRenderProxy(elem.resource->Id()) != nullptr);
             }
         }
     }
@@ -979,10 +987,13 @@ HYP_API void RenderApi_EndFrame_RenderThread()
 
             if (subtypeData.hasProxyData)
             {
-                AssertDebugMsg(subtypeData.proxies.HasIndex(i), "proxy missing at index: %u", i);
+                AssertDebug(subtypeData.proxies.HasIndex(i), "proxy missing at index: %u", i);
 
                 IRenderProxy* proxy = subtypeData.proxies.Get(i);
-                AssertDebug(proxy);
+                AssertDebug(proxy != nullptr);
+
+                HYP_LOG(Rendering, Debug, "Deleting render proxy for resource id {} of type {} at index {} for frame {}",
+                    resource.Id(), GetClass(subtypeData.typeId)->GetName(), i, slot);
 
                 subtypeData.proxies.EraseAt(i);
 

@@ -734,12 +734,14 @@ RendererResult VulkanTLAS::UpdateMeshDescriptionsBuffer(uint32 first, uint32 las
 
             if (material.IsValid())
             {
+                /// FIXME: This needs to use new resource binding system
                 // Must be initialized (AccelerationGeometry calls IncRef() and DecRef())
                 AssertThrow(material->GetRenderResource().GetBufferIndex() != ~0u);
             }
 
             meshDescription.vertexBufferAddress = blas->GetGeometries()[0]->GetPackedVerticesBuffer()->GetBufferDeviceAddress();
             meshDescription.indexBufferAddress = blas->GetGeometries()[0]->GetPackedIndicesBuffer()->GetBufferDeviceAddress();
+            /// FIXME: This needs to use new resource binding system
             meshDescription.materialIndex = material.IsValid() ? material->GetRenderResource().GetBufferIndex() : ~0u;
             meshDescription.numIndices = uint32(blas->GetGeometries()[0]->GetPackedIndicesBuffer()->Size() / sizeof(uint32));
             meshDescription.numVertices = uint32(blas->GetGeometries()[0]->GetPackedVerticesBuffer()->Size() / sizeof(PackedVertex));

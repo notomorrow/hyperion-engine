@@ -60,19 +60,9 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
         envProbe->GetPrefilteredEnvMap()->GetRenderResource().IncRef();
     }
 
-    IRenderProxy* proxy = RenderApi_GetRenderProxy(envProbe->Id());
-    AssertThrow(proxy != nullptr);
-
-    RenderProxyEnvProbe* proxyCasted = static_cast<RenderProxyEnvProbe*>(proxy);
-
     // temp shit
     AssertDebug(envProbe->GetRenderResource().GetBufferIndex() != ~0u);
     RenderApi_AssignResourceBinding(envProbe, envProbe->GetRenderResource().GetBufferIndex());
-
-    HYP_LOG(Rendering, Debug, "Setting env probe texture at index: {} to tex with id: {}  proxy: {}  at frame {}", next, envProbe->GetPrefilteredEnvMap().Id(), (void*)proxy,
-        RenderApi_GetFrameIndex_RenderThread());
-
-    // proxyCasted->bufferData.textureIndex = next;
 
     if (next != ~0u)
     {
@@ -117,11 +107,6 @@ void OnBindingChanged_AmbientProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
 void OnBindingChanged_EnvGrid(EnvGrid* envGrid, uint32 prev, uint32 next)
 {
     AssertDebug(envGrid != nullptr);
-
-    IRenderProxy* proxy = RenderApi_GetRenderProxy(envGrid->Id());
-    AssertThrow(proxy != nullptr);
-
-    RenderProxyEnvGrid* proxyCasted = static_cast<RenderProxyEnvGrid*>(proxy);
 
     // temp shit
 
@@ -187,15 +172,8 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
     HYP_LOG(Rendering, Debug, "Material {} binding changed from {} to {}\n", material->Id(), prev, next);
 
-    AssertDebug(material->GetRenderResource().GetBufferIndex() != ~0u);
-
-    IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
-    AssertThrow(proxy != nullptr);
-
-    RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
-
     // temp shit
-    RenderApi_AssignResourceBinding(material, material->GetRenderResource().GetBufferIndex());
+    RenderApi_AssignResourceBinding(material, next);
 
     // if (prev != ~0u)
     // {
@@ -204,6 +182,11 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
     if (next != ~0u)
     {
+        IRenderProxy* proxy = RenderApi_GetRenderProxy(material->Id());
+        AssertThrow(proxy != nullptr);
+
+        RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
+
         g_renderGlobalState->materialDescriptorSetManager->Allocate(next, proxyCasted->boundTextures);
     }
 }

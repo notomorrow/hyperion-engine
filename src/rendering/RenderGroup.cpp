@@ -348,7 +348,7 @@ static void RenderAll(
 
             if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
             {
-                offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.renderMaterial != nullptr ? drawCall.renderMaterial->GetBufferIndex() : 0);
+                offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
             }
 
             frame->GetCommandList().Add<BindDescriptorSet>(
@@ -361,8 +361,7 @@ static void RenderAll(
         // Bind material descriptor set
         if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
         {
-            const DescriptorSetRef& materialDescriptorSet = drawCall.renderMaterial->GetDescriptorSets()[frameIndex];
-            AssertThrow(materialDescriptorSet.IsValid());
+            const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frame->GetFrameIndex());
 
             frame->GetCommandList().Add<BindDescriptorSet>(
                 materialDescriptorSet,
@@ -401,7 +400,7 @@ static void RenderAll(
 
             if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
             {
-                offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.renderMaterial != nullptr ? drawCall.renderMaterial->GetBufferIndex() : 0);
+                offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
             }
 
             frame->GetCommandList().Add<BindDescriptorSet>(
@@ -423,8 +422,7 @@ static void RenderAll(
         // Bind material descriptor set
         if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
         {
-            const DescriptorSetRef& materialDescriptorSet = drawCall.renderMaterial->GetDescriptorSets()[frameIndex];
-            AssertThrow(materialDescriptorSet.IsValid());
+            const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frameIndex);
 
             frame->GetCommandList().Add<BindDescriptorSet>(
                 materialDescriptorSet,
@@ -558,7 +556,7 @@ static void RenderAll_Parallel(
 
                         if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
                         {
-                            offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.renderMaterial != nullptr ? drawCall.renderMaterial->GetBufferIndex() : 0);
+                            offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
                         }
 
                         commandList.Add<BindDescriptorSet>(
@@ -571,8 +569,7 @@ static void RenderAll_Parallel(
                     // Bind material descriptor set
                     if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
                     {
-                        const DescriptorSetRef& materialDescriptorSet = drawCall.renderMaterial->GetDescriptorSets()[frameIndex];
-                        AssertDebug(materialDescriptorSet.IsValid());
+                        const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frameIndex);
 
                         commandList.Add<BindDescriptorSet>(
                             materialDescriptorSet,
@@ -639,7 +636,7 @@ static void RenderAll_Parallel(
 
                         if (g_renderBackend->GetRenderConfig().ShouldCollectUniqueDrawCallPerMaterial())
                         {
-                            offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.renderMaterial != nullptr ? drawCall.renderMaterial->GetBufferIndex() : 0);
+                            offsets[NAME("MaterialsBuffer")] = ShaderDataOffset<MaterialShaderData>(drawCall.material, 0);
                         }
 
                         commandList.Add<BindDescriptorSet>(
@@ -661,8 +658,7 @@ static void RenderAll_Parallel(
                     // Bind material descriptor set
                     if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
                     {
-                        const DescriptorSetRef& materialDescriptorSet = drawCall.renderMaterial->GetDescriptorSets()[frameIndex];
-                        AssertDebug(materialDescriptorSet.IsValid());
+                        const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(drawCall.material, frameIndex);
 
                         commandList.Add<BindDescriptorSet>(
                             materialDescriptorSet,

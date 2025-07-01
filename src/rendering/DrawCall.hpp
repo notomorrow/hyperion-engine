@@ -109,7 +109,7 @@ struct DrawCallBase
     DrawCallID id;
 
     RenderMesh* renderMesh = nullptr;
-    RenderMaterial* renderMaterial = nullptr;
+    Material* material = nullptr;
     RenderSkeleton* renderSkeleton = nullptr;
 
     uint32 drawCommandIndex = 0;

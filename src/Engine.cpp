@@ -213,7 +213,7 @@ HYP_API void Engine::Init()
     AssertThrowMsg(m_appContext != nullptr, "App context must be set before initializing the engine!");
 
     m_renderThread = MakeUnique<RenderThread>(m_appContext);
-    RenderApi_InitResourceContainers();
+    RenderApi_Init();
 
     AssertThrow(m_appContext->GetMainWindow() != nullptr);
 

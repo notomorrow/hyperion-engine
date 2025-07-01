@@ -352,9 +352,7 @@ void DeferredPass::Render(FrameBase* frame, const RenderSetup& rs)
             // Bind material descriptor set (for area lights)
             if (materialDescriptorSetIndex != ~0u && !useBindlessTextures)
             {
-                const DescriptorSetRef& materialDescriptorSet = light->GetMaterial().IsValid()
-                    ? g_renderGlobalState->materialDescriptorSetManager->GetMaterialDescriptorSet(RenderApi_RetrieveResourceBinding(light->GetMaterial()), frame->GetFrameIndex())
-                    : g_renderGlobalState->materialDescriptorSetManager->GetInvalidMaterialDescriptorSet(frame->GetFrameIndex());
+                const DescriptorSetRef& materialDescriptorSet = g_renderGlobalState->materialDescriptorSetManager->ForBoundMaterial(light->GetMaterial(), frame->GetFrameIndex());
 
                 frame->GetCommandList().Add<BindDescriptorSet>(
                     materialDescriptorSet,

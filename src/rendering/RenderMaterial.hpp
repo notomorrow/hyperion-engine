@@ -84,24 +84,18 @@ public:
     MaterialDescriptorSetManager& operator=(MaterialDescriptorSetManager&& other) noexcept = delete;
     ~MaterialDescriptorSetManager();
 
-    HYP_FORCE_INLINE const DescriptorSetRef& GetInvalidMaterialDescriptorSet(uint32 frameIndex) const
-    {
-        return m_invalidMaterialDescriptorSets[frameIndex];
-    }
-
-    const DescriptorSetRef& GetMaterialDescriptorSet(uint32 boundIndex, uint32 frameIndex) const;
+    /*! \brief Retrieve the descriptor set for the material and the given frame index. The material must be bound in this frame
+     *  \detail Only call from the render thread or a render task */
+    const DescriptorSetRef& ForBoundMaterial(const Material* material, uint32 frameIndex);
 
     FixedArray<DescriptorSetRef, maxFramesInFlight> Allocate(uint32 boundIndex);
     FixedArray<DescriptorSetRef, maxFramesInFlight> Allocate(uint32 boundIndex, const FixedArray<Handle<Texture>, maxBoundTextures>& textures);
     void Remove(uint32 boundIndex);
 
-    /*! \brief Update the descriptor sets for the given frame. Usable from the render thread. */
-    void Update(FrameBase* frame);
+    void CreateFallbackMaterialDescriptorSet();
 
 private:
-    void CreateInvalidMaterialDescriptorSet();
-
-    FixedArray<DescriptorSetRef, maxFramesInFlight> m_invalidMaterialDescriptorSets;
+    FixedArray<DescriptorSetRef, maxFramesInFlight> m_fallbackMaterialDescriptorSets;
 
     // bound index => descriptor sets
     HashMap<uint32, FixedArray<DescriptorSetRef, maxFramesInFlight>> m_materialDescriptorSets;
